@@ -82,7 +82,7 @@
           <el-radio :value="0">{{ $t('关闭') }}</el-radio>
         </el-radio-group>
       </el-form-item>
-      <el-form-item v-if="this.is_open_tablet || this.is_open_scan" for="no_click" :label="nameReturn()" :rules="[{ required: true, message: '' }]">
+      <el-form-item v-if="is_open_tablet || is_open_scan" for="no_click" :label="nameReturn()" :rules="[{ required: true, message: '' }]">
         <el-radio-group v-model="form.is_remain_continue">
           <el-radio :value="1">{{ $t('开') }}</el-radio>
           <el-radio :value="0">{{ $t('关') }}</el-radio>
@@ -305,403 +305,391 @@
   </el-dialog>
 </template>
 
-<script>
-  import ProductApi from '@/api/product.js';
-  import autoTips from './autoTips.vue';
-  import productList from '@/components/productList/productList.vue';
-  import UniqueNameForm from '@/components/product/UniqueNameForm.vue';
+<script setup>
+// 中文注释：改为箭头函数语法，统一在语句末尾添加分号
+import { ref, reactive, computed, watch, onMounted, nextTick, getCurrentInstance } from 'vue';
+import ProductApi from '@/api/product.js';
+import autoTips from './autoTips.vue';
+import productList from '@/components/productList/productList.vue';
+import UniqueNameForm from '@/components/product/UniqueNameForm.vue';
+import { useUserStore } from '@/store';
+import { storeToRefs } from 'pinia';
 
-  import { useUserStore } from '@/store';
+const props = defineProps({
+  open_dialog: { type: Boolean, default: false },
+  title: { type: String, default: '' },
+  editData: { type: [String, Object], default: '' },
+});
+const emit = defineEmits(['closeDialog']);
 
-  const { userInfo, computedSupplier } = useUserStore();
-  const supplier = computedSupplier().supplier;
-  const is_open_tablet = supplier.value?.is_open_tablet || 0;
-  const is_open_assistant = supplier.value?.is_open_assistant || 0;
-  const is_open_kitchen_kds = supplier.value?.is_open_kitchen_kds || 0;
-  const is_open_scan = supplier.value?.is_open_scan || 0;
+const { proxy } = getCurrentInstance();
 
-  export default {
-    name: 'ProductBuffetListAddEdit',
-    components: { productList, autoTips, UniqueNameForm },
-    data() {
-      return {
-        dialogVisible: false,
-        loading: false,
-        open_product: false,
+const userStore = useUserStore();
+const { userInfo } = storeToRefs(userStore);
+const { computedSupplier } = userStore;
+const supplier = computedSupplier().supplier;
+const is_open_tablet = computed(() => supplier.value?.is_open_tablet || 0);
+const is_open_assistant = computed(() => supplier.value?.is_open_assistant || 0);
+const is_open_kitchen_kds = computed(() => supplier.value?.is_open_kitchen_kds || 0);
+const is_open_scan = computed(() => supplier.value?.is_open_scan || 0);
 
-        form: {
-          id: undefined,
-          name: {},
-          sort: null,
-          is_time_limit: 1,
-          time_limit: 90,
-          status: 1,
-          is_comb: 1,
-          buy_limit_status: 0,
-          buy_limit_products: [],
-          products: [],
-          customer_type: [],
-          is_remain_continue: 1,
-          remain_continue_notice_time: 5,
-          remain_continue_time: 20,
-          buffetTaxes: [
-            {
-              buffet_tax_type: '1',
-              tax_category_id: '',
-            },
-          ],
-          product_ids: [],
-          open_overall_discount: 1,
-        },
-        select_list: [],
-        limit_list: [],
-        multiple_selection: [],
-        limit_ids: '',
-        selectType: '',
-        customerList: [],
-        taxList: [],
-        userInfo: userInfo,
-        is_open_tablet: is_open_tablet,
-        is_open_assistant: is_open_assistant,
-        is_open_kitchen_kds: is_open_kitchen_kds,
-        is_open_scan: is_open_scan,
-      };
+const dialogVisible = ref(false);
+const loading = ref(false);
+const open_product = ref(false);
+
+const form = reactive({
+  id: undefined,
+  name: {},
+  sort: null,
+  is_time_limit: 1,
+  time_limit: 90,
+  status: 1,
+  is_comb: 1,
+  buy_limit_status: 0,
+  buy_limit_products: [],
+  products: [],
+  customer_type: [],
+  is_remain_continue: 1,
+  remain_continue_notice_time: 5,
+  remain_continue_time: 20,
+  buffetTaxes: [
+    {
+      buffet_tax_type: '1',
+      tax_category_id: '',
     },
-    props: {
-      open_dialog: {
-        type: Boolean,
-        default: false,
+  ],
+  product_ids: [],
+  open_overall_discount: 1,
+});
+
+const select_list = ref([]);
+const limit_list = ref([]);
+const multiple_selection = ref([]);
+const limit_ids = ref('');
+const selectType = ref('');
+const customerList = ref([]);
+const taxList = ref([]);
+
+const formRef = ref();
+const uniqueNameFormRef = ref();
+
+const maxNum = computed(() => {
+  let result = 999;
+  if (form.is_time_limit == 1 && form.time_limit > 0) {
+    result = form.time_limit - 1;
+  }
+  return result;
+});
+
+watch(
+  () => props.open_dialog,
+  (val) => {
+    dialogVisible.value = val;
+  },
+  { immediate: true }
+);
+
+const initFromEditData = () => {
+  const copyData = props.editData ? JSON.parse(JSON.stringify(props.editData)) : null;
+  if (!copyData) return;
+
+  form.id = copyData.id;
+  try {
+    const _names = typeof copyData.name === 'string' ? JSON.parse(copyData.name) : copyData.name ?? {};
+    form.name = _names;
+  } catch (error) {
+    console.error('parse name faild', error);
+  }
+  form.sort = Number(copyData.sort);
+  form.is_time_limit = copyData.time_limit > 0 ? 1 : 0;
+  form.time_limit = Number(copyData.time_limit);
+  form.status = copyData.status;
+  form.is_comb = copyData.is_comb;
+  form.is_remain_continue = copyData.is_remain_continue;
+  form.remain_continue_time = copyData.remain_continue_time;
+  form.remain_continue_notice_time = copyData.remain_continue_notice_time;
+
+  select_list.value = (copyData.buffetProducts || []).map((item) => ({ ...item, product_name_text: item.product.product_name_text }));
+  form.price = Number(copyData.price);
+  form.product_ids = (copyData.buffetProducts || []).map((item) => item.product_id);
+  form.open_overall_discount = copyData.open_overall_discount;
+
+  form.customer_type = (copyData.buffetCustomerType || []).map((item) => ({ ...item, price: Number(item.price || 0) }));
+  form.buy_limit_status = copyData.buy_limit_status;
+  limit_ids.value = form.product_ids.join(',');
+  limit_list.value = copyData.buffetLimitProducts || [];
+  form.buy_limit_products = limit_list.value.map(({ product, product_id, limit_num }) => ({ name: product.product_name_text, product_id, limit_num }));
+
+  form.buffetTaxes = [];
+  if ((copyData.buffetTaxes || []).length == 0) {
+    form.buffetTaxes = [
+      {
+        buffet_tax_type: '1',
+        tax_category_id: '',
       },
-      title: {
-        default: '',
-      },
-      editData: {
-        default: '',
-      },
-    },
-    computed: {
-      maxNum() {
-        let result = 999;
-        if (this.form.is_time_limit == 1 && this.form.time_limit > 0) {
-          result = this.form.time_limit - 1;
-        }
-        return result;
-      },
-    },
-    created() {
-      this.dialogVisible = this.open_dialog;
-      this.getCustomer();
-      if (this.userInfo.isOpenTax == '1') {
-        this.getTaxData();
+    ];
+  } else {
+    form.buffetTaxes = copyData.buffetTaxes.map((item) => ({ buffet_tax_type: item.buffet_tax_type, tax_category_id: item.tax_category_id }));
+  }
+};
+
+watch(
+  () => props.editData,
+  () => {
+    initFromEditData();
+  },
+  { immediate: true }
+);
+
+onMounted(async () => {
+  await getCustomer();
+  if (userInfo.value.isOpenTax == '1') {
+    await getTaxData();
+  }
+  if (!is_open_tablet.value && !is_open_scan.value) {
+    form.is_remain_continue = '0';
+  }
+});
+
+const getTaxData = async () => {
+  try {
+    const res = await ProductApi.getTaxList({}, true);
+    taxList.value = res.data.list;
+  } catch (e) {
+    // 忽略错误
+  }
+};
+
+const getCustomer = async () => {
+  loading.value = true;
+  try {
+    const params = { page: 1, list_rows: 100 };
+    const data = await ProductApi.getCustomerList(params, true);
+    customerList.value = data.data.list;
+    const ids = customerList.value.map((item) => item.id);
+    (form.customer_type || []).forEach((item, index) => {
+      if (!ids.includes(item.customer_type_id)) {
+        form.customer_type[index].customer_type_id = '';
       }
-      if (this.editData) {
-        const copyData = JSON.parse(JSON.stringify(this.editData));
-        this.form.id = copyData.id;
-        try {
-          const _names = typeof copyData.name === 'string' ? JSON.parse(copyData.name) : copyData.name ?? {};
-          this.form.name = _names;
-        } catch (error) {
-          console.error('parse name faild', error);
-        }
-        this.form.sort = Number(copyData.sort);
-        this.form.is_time_limit = copyData.time_limit > 0 ? 1 : 0;
-        this.form.time_limit = Number(copyData.time_limit);
-        this.form.status = copyData.status;
-        this.form.is_comb = copyData.is_comb;
-        this.form.is_remain_continue = copyData.is_remain_continue;
-        this.form.remain_continue_time = copyData.remain_continue_time;
-        this.form.remain_continue_notice_time = copyData.remain_continue_notice_time;
-        this.select_list = copyData.buffetProducts.map((item) => ({ ...item, product_name_text: item.product.product_name_text }));
-        this.form.price = Number(copyData.price);
-        this.form.product_ids = copyData.buffetProducts.map((item) => item.product_id);
-        this.form.open_overall_discount = copyData.open_overall_discount;
+    });
+  } catch (e) {
+    // 忽略错误
+  } finally {
+    loading.value = false;
+  }
+};
 
-        this.form.customer_type = copyData.buffetCustomerType.map((item) => ({ ...item, price: Number(item.price || 0) }));
-        this.form.buy_limit_status = copyData.buy_limit_status;
-        this.limit_ids = this.form.product_ids.join(',');
-        this.limit_list = copyData.buffetLimitProducts;
-        this.form.buy_limit_products = this.limit_list.map(({ product, product_id, limit_num }) => ({ name: product.product_name_text, product_id, limit_num }));
-        //税率处理
-        this.form.buffetTaxes = [];
-        if (copyData.buffetTaxes.length == 0) {
-          this.form.buffetTaxes = [
-            {
-              buffet_tax_type: '1',
-              tax_category_id: '',
-            },
-          ];
-        } else {
-          this.form.buffetTaxes = copyData.buffetTaxes.map((item) => ({ buffet_tax_type: item.buffet_tax_type, tax_category_id: item.tax_category_id }));
-        }
+const submit = async () => {
+  loading.value = true;
+  try {
+    const validForm = await formRef.value.validate();
+    if (!validForm) return;
+
+    const validUniqueName = await uniqueNameFormRef.value.validate();
+    if (!validUniqueName) return;
+
+    const _name = uniqueNameFormRef.value.data;
+    const params = JSON.parse(JSON.stringify(form));
+    params.name = JSON.stringify(_name);
+
+    params.customer_type = (form.customer_type || []).map(({ customer_type_id, price }) => ({ customer_type_id, price }));
+    params.buy_limit_products = (form.buy_limit_products || []).map(({ product_id, limit_num }) => ({ product_id, limit_num }));
+    params.products = (select_list.value || []).map(({ product_id, is_show_cashier, is_show_tablet, is_show_kitchen, is_show_assistant }) => ({
+      product_id,
+      is_show_cashier,
+      is_show_tablet,
+      is_show_kitchen,
+      is_show_assistant,
+    }));
+
+    if (form.is_time_limit == 1 && (form.time_limit <= form.remain_continue_time || form.time_limit <= form.remain_continue_notice_time)) {
+      proxy.$ElMessage({
+        message: proxy.$t('平板时间不能大于用餐时间'),
+        type: 'warning',
+      });
+      return;
+    }
+
+    params.products.map((item) => {
+      if (!is_open_tablet.value) {
+        item.is_show_tablet = 2;
       }
-
-      if (!this.is_open_tablet && !this.is_open_scan) {
-        this.form.is_remain_continue = '0';
+      if (!is_open_assistant.value) {
+        item.is_show_assistant = 2;
       }
-    },
-    methods: {
-      /*获取基础数据*/
-      getTaxData() {
-        const self = this;
-        ProductApi.getTaxList({}, true)
-          .then((res) => {
-            self.taxList = res.data.list;
-          })
-          .catch(() => {});
-      },
-      /*获取基础数据*/
-      getCustomer() {
-        const self = this;
-        self.loading = true;
-        let params = {};
-        params.page = 1;
-        params.list_rows = 100;
-        ProductApi.getCustomerList(params, true)
-          .then((data) => {
-            self.loading = false;
-            self.customerList = data.data.list;
-            const ids = this.customerList.map((item) => item.id);
-            this.form.customer_type.forEach((item, index) => {
-              if (!ids.includes(item.customer_type_id)) {
-                this.form.customer_type[index].customer_type_id = '';
-              }
-            });
-          })
-          .catch(() => {
-            self.loading = false;
-          });
-      },
+      if (!is_open_kitchen_kds.value) {
+        item.is_show_kitchen = 2;
+      }
+      return item;
+    });
 
-      async submit() {
-        const self = this;
-        // 调用表单验证方法，valid为验证结果
-        self.loading = true;
-        try {
-          const validForm = await self.$refs.formRef.validate();
-          if (!validForm) return;
+    try {
+      if (props.editData) {
+        params.buffet_id = params.id;
+        await ProductApi.editBuffet(params, true);
+      } else {
+        await ProductApi.addBuffet(params, true);
+      }
+      proxy.$ElMessage({
+        message: props.editData ? proxy.$t('编辑成功') : proxy.$t('添加成功'),
+        type: 'success',
+      });
+      handleClose(true);
+    } catch (err) {
+      // 忽略错误
+    }
+  } catch (error) {
+    scrollToError();
+  } finally {
+    loading.value = false;
+  }
+};
 
-          const validUniqueName = await self.$refs.uniqueNameFormRef.validate();
-          if (!validUniqueName) return;
+const scrollToError = () => {
+  setTimeout(() => {
+    const errorItems = document.querySelectorAll('.el-form-item__error');
+    if (errorItems.length > 0) {
+      const firstErrorItem = errorItems[0];
+      firstErrorItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, 200);
+};
 
-          const _name = self.$refs.uniqueNameFormRef.data;
-          const params = JSON.parse(JSON.stringify(self.form));
-          params.name = JSON.stringify(_name);
+const selectList = (e) => {
+  if (e == 'select') {
+    selectType.value = e;
+    multiple_selection.value = select_list.value;
+  }
+  if (e == 'limit') {
+    selectType.value = e;
+    multiple_selection.value = limit_list.value;
+    limit_ids.value = form.product_ids.join(',');
+  }
+  open_product.value = true;
+};
 
-          // 将customer_type字段转换为数组
-          params.customer_type = self.form.customer_type.map(({ customer_type_id, price }) => ({ customer_type_id, price }));
-          // 将buy_limit_products字段转换为数组
-          params.buy_limit_products = (self.form?.buy_limit_products || []).map(({ product_id, limit_num }) => ({ product_id, limit_num }));
-          // 将select_list字段转换为数组
-          params.products = self.select_list.map(({ product_id, is_show_cashier, is_show_tablet, is_show_kitchen, is_show_assistant }) => ({
-            product_id,
-            is_show_cashier,
-            is_show_tablet,
-            is_show_kitchen,
-            is_show_assistant,
-          }));
-
-          // 如果时间限制开启，且时间限制小于等于用餐时间或用餐时间提醒时间，则提示错误信息
-          if (self.form.is_time_limit == 1 && (self.form.time_limit <= self.form.remain_continue_time || self.form.time_limit <= self.form.remain_continue_notice_time)) {
-            self.$ElMessage({
-              message: self.$t('平板时间不能大于用餐时间'),
-              type: 'warning',
-            });
-            return;
-          }
-
-          //权限判断
-          params.products.map((item) => {
-            // 如果平板权限关闭，则将is_show_tablet字段赋值为2
-            if (!self.is_open_tablet) {
-              item.is_show_tablet = 2;
-            }
-            // 如果助手权限关闭，则将is_show_assistant字段赋值为2
-            if (!self.is_open_assistant) {
-              item.is_show_assistant = 2;
-            }
-            // 如果厨房权限关闭，则将is_show_kitchen字段赋值为2
-            if (!self.is_open_kitchen_kds) {
-              item.is_show_kitchen = 2;
-            }
-          });
-
-          try {
-            if (self.editData) {
-              params.buffet_id = params.id;
-              await ProductApi.editBuffet(params, true);
-            } else {
-              await ProductApi.addBuffet(params, true);
-            }
-            self.$ElMessage({
-              message: self.editData ? self.$t('编辑成功') : self.$t('添加成功'),
-              type: 'success',
-            });
-            // 关闭对话框
-            self.handleClose(true);
-          } catch (err) {
-            //
-          }
-        } catch (error) {
-          self.scrollToError();
-        } finally {
-          self.loading = false;
-        }
-      },
-
-      scrollToError() {
-        setTimeout(() => {
-          const errorItems = document.querySelectorAll('.el-form-item__error');
-          if (errorItems.length > 0) {
-            const firstErrorItem = errorItems[0];
-            firstErrorItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        }, 200);
-      },
-
-      selectList(e) {
-        if (e == 'select') {
-          this.selectType = e;
-          this.multiple_selection = this.select_list;
-        }
-        if (e == 'limit') {
-          this.selectType = e;
-          this.multiple_selection = this.limit_list;
-          this.limit_ids = this.form.product_ids.join(',');
-        }
-        this.open_product = true;
-      },
-
-      /*关闭弹窗*/
-      closeDialogFunc(e) {
-        this.open_product = e.openDialog;
-        if (e.type == 'select') {
-          e.data.map((item) => {
-            if (!this.form.product_ids.includes(item.product_id)) {
-              this.select_list.push({
-                product_id: item.product_id,
-                product_name_text: item.product_name_text,
-                is_show_cashier: 1,
-                is_show_kitchen: 1,
-                is_show_tablet: 1,
-                is_show_assistant: 1,
-              });
-            }
-          });
-
-          this.form.product_ids = [];
-          this.select_list.map((item) => {
-            this.form.product_ids.push(item.product_id);
-          });
-
-          this.$refs.formRef.validateField('product_ids');
-
-          this.limit_ids = this.form.product_ids.join(',');
-        }
-        if (e.type == 'limit') {
-          let map = new Map();
-          [this.limit_list, e.data].flat().forEach((obj) => map.set(obj.product_id, obj));
-          this.limit_list = Array.from(map.values());
-          let arr = [];
-          this.form.buy_limit_products.map((item) => {
-            arr.push(item.product_id);
-          });
-          this.limit_list.map((item) => {
-            if (!arr.includes(item.product_id)) {
-              this.form.buy_limit_products.push({
-                name: item.product_name_text,
-                product_id: item.product_id,
-                limit_num: null,
-              });
-            }
-          });
-          this.$refs.formRef.validateField('buy_limit_products');
-        }
-      },
-
-      deleteOne(index, product_id) {
-        this.select_list.splice(index, 1);
-        this.form.product_ids = [];
-        this.select_list.map((item) => {
-          this.form.product_ids.push(item.product_id);
+const closeDialogFunc = (e) => {
+  open_product.value = e.openDialog;
+  if (e.type == 'select') {
+    e.data.map((item) => {
+      if (!form.product_ids.includes(item.product_id)) {
+        select_list.value.push({
+          product_id: item.product_id,
+          product_name_text: item.product_name_text,
+          is_show_cashier: 1,
+          is_show_kitchen: 1,
+          is_show_tablet: 1,
+          is_show_assistant: 1,
         });
-        this.limit_ids = this.form.product_ids.join(',');
-        this.form.buy_limit_products.map((item, index) => {
-          if (product_id == item.product_id) {
-            this.handleDelete(index);
-          }
-        });
-        this.$refs.formRef.validateField('product_ids');
-      },
+      }
+      return item;
+    });
 
-      handleDelete(index) {
-        this.form.buy_limit_products.splice(index, 1);
-        this.limit_list.splice(index, 1);
-        this.$refs.formRef.validateField('buy_limit_products');
-      },
+    form.product_ids = [];
+    select_list.value.map((item) => {
+      form.product_ids.push(item.product_id);
+      return item;
+    });
 
-      /*关闭弹窗*/
-      handleClose(isSuccess = false, data) {
-        this.$emit('closeDialog', {
-          type: isSuccess ? 'success' : 'error',
-          openDialog: false,
-          data: data,
-        });
-      },
-      // 添加顾客类型
-      addCustomerType() {
-        this.form.customer_type.push({
-          customer_type_id: '',
-          price: null,
-        });
-      },
-      // 删除顾客类型
-      handleDeleteCustomer(index) {
-        this.form.customer_type.splice(index, 1);
-      },
+    formRef.value?.validateField('product_ids');
 
-      numChange(index) {
-        this.$nextTick(() => {
-          this.form.customer_type[index].price = Number(this.$priceTwo(this.form.customer_type[index].price));
-        });
-      },
+    limit_ids.value = form.product_ids.join(',');
+  }
+  if (e.type == 'limit') {
+    const map = new Map();
+    [limit_list.value, e.data].flat().forEach((obj) => map.set(obj.product_id, obj));
+    limit_list.value = Array.from(map.values());
 
-      //名字返回
-      nameReturn() {
-        if (this.is_open_tablet) {
-          if (this.is_open_scan) {
-            return this.$t('平板/扫码H5时间');
-          }
-          return this.$t('平板时间');
-        } else {
-          if (this.is_open_scan) {
-            return this.$t('扫码H5时间');
-          }
-        }
-        return '';
-      },
+    const arr = [];
+    (form.buy_limit_products || []).map((item) => {
+      arr.push(item.product_id);
+      return item;
+    });
 
-      returnType(type) {
-        return type == '1' ? this.$t('堂食税类：') : this.$t('外带税类：');
-      },
-      returnMessage(type) {
-        return type == '1' ? this.$t('请选择堂食税类') : this.$t('请选择外带税类');
-      },
-      /*翻译*/
-      translate(lang) {
-        this.languageList.map((item) => {
-          lang.map((items) => {
-            let key = item.name;
-            if (key == 'zhtw') {
-              key = 'zh-TW';
-            }
-            if (items[key]) {
-              this.form.name[item.key] = items[key];
-            }
-          });
+    limit_list.value.map((item) => {
+      if (!arr.includes(item.product_id)) {
+        form.buy_limit_products.push({
+          name: item.product_name_text,
+          product_id: item.product_id,
+          limit_num: null,
         });
-      },
-    },
-  };
+      }
+      return item;
+    });
+
+    formRef.value?.validateField('buy_limit_products');
+  }
+};
+
+const deleteOne = (index, product_id) => {
+  select_list.value.splice(index, 1);
+  form.product_ids = [];
+  select_list.value.map((item) => {
+    form.product_ids.push(item.product_id);
+    return item;
+  });
+  limit_ids.value = form.product_ids.join(',');
+  (form.buy_limit_products || []).map((item, i) => {
+    if (product_id == item.product_id) {
+      handleDelete(i);
+    }
+    return item;
+  });
+  formRef.value?.validateField('product_ids');
+};
+
+const handleDelete = (index) => {
+  form.buy_limit_products.splice(index, 1);
+  limit_list.value.splice(index, 1);
+  formRef.value?.validateField('buy_limit_products');
+};
+
+const handleClose = (isSuccess = false, data) => {
+  emit('closeDialog', {
+    type: isSuccess ? 'success' : 'error',
+    openDialog: false,
+    data: data,
+  });
+};
+
+const addCustomerType = () => {
+  form.customer_type.push({
+    customer_type_id: '',
+    price: null,
+  });
+};
+
+const handleDeleteCustomer = (index) => {
+  form.customer_type.splice(index, 1);
+};
+
+const numChange = (index) => {
+  nextTick(() => {
+    form.customer_type[index].price = Number(proxy.$priceTwo(form.customer_type[index].price));
+  });
+};
+
+const nameReturn = () => {
+  if (is_open_tablet.value) {
+    if (is_open_scan.value) {
+      return proxy.$t('平板/扫码H5时间');
+    }
+    return proxy.$t('平板时间');
+  } else {
+    if (is_open_scan.value) {
+      return proxy.$t('扫码H5时间');
+    }
+  }
+  return '';
+};
+
+const returnType = (type) => {
+  return type == '1' ? proxy.$t('堂食税类：') : proxy.$t('外带税类：');
+};
+
+const returnMessage = (type) => {
+  return type == '1' ? proxy.$t('请选择堂食税类') : proxy.$t('请选择外带税类');
+};
 </script>
 
 <style lang="scss" scoped>

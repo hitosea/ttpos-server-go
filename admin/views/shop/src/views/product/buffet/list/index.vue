@@ -30,7 +30,7 @@
               <div class="product-info">
                 <div class="info">
                   <div class="name">{{ scope.row.name_text }}</div>
-                  <div class="price"> {{ $t('销售价：') }}{{ this.$formatPrice(scope.row.buffetCustomerType[0]?.price || 0) }} </div>
+                  <div class="price"> {{ $t('销售价：') }}{{ proxy.$formatPrice(scope.row.buffetCustomerType[0]?.price || 0) }} </div>
                 </div>
               </div>
             </template>
@@ -46,7 +46,7 @@
           <el-table-column prop="open_overall_discount" :label="$t('整单折扣')" width="100">
             <template #default="scope">
               <el-switch
-                :disabled="!this.$filter.isAuth('/product/buffet/list/overallDiscount')"
+                :disabled="!proxy.$filter.isAuth('/product/buffet/list/overallDiscount')"
                 :model-value="scope.row.open_overall_discount == 1 ? true : false"
                 @click="handleOpenOverallDiscount(scope.row)"
               ></el-switch>
@@ -55,7 +55,7 @@
           <el-table-column prop="is_comb" :label="$t('组合')" width="100">
             <template #default="scope">
               <el-switch
-                :disabled="!this.$filter.isAuth('/product/buffet/list/assembly')"
+                :disabled="!proxy.$filter.isAuth('/product/buffet/list/assembly')"
                 :model-value="scope.row.is_comb == 1 ? true : false"
                 @click="handleComb(scope.row, scope.row.is_comb == 1 ? 0 : 1)"
               ></el-switch>
@@ -64,7 +64,7 @@
           <el-table-column prop="status" :label="$t('状态')" width="100">
             <template #default="scope">
               <el-switch
-                :disabled="!this.$filter.isAuth('/product/buffet/list/status')"
+                :disabled="!proxy.$filter.isAuth('/product/buffet/list/status')"
                 :model-value="scope.row.status == 1 ? true : false"
                 @click="handleStatus(scope.row)"
               ></el-switch>
@@ -75,9 +75,9 @@
           <el-table-column fixed="right" :label="$t('操作')" width="120">
             <template #default="scope">
               <el-button @click="editClick(scope.row)" type="primary" link size="small" v-auth="'/product/buffet/list/edit'">{{ $t('编辑') }}</el-button>
-              <el-button @click="deleteClick(scope.row)" :disabled="scope.row.can_delete == 0" type="primary" link size="small" v-auth="'/product/buffet/list/delete'">{{
-                $t('删除')
-              }}</el-button>
+              <el-button @click="deleteClick(scope.row)" :disabled="scope.row.can_delete == 0" type="primary" link size="small" v-auth="'/product/buffet/list/delete'">
+                {{ $t('删除') }}
+              </el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -99,220 +99,182 @@
     <addEdit v-if="open_dialog" :title="title" :open_dialog="open_dialog" :editData="editData" @closeDialog="closeDialogFunc($event)"> </addEdit>
   </div>
 </template>
-<script>
+
+<script setup>
+  import { ref, reactive, onMounted, getCurrentInstance } from 'vue';
+  import { ElMessage, ElMessageBox } from 'element-plus';
   import addEdit from './addEdit.vue';
   import PorductApi from '@/api/product.js';
-  export default {
-    components: { addEdit },
-    data() {
-      return {
-        loading: false,
-        searchForm: {
-          status: '',
-          name: '',
-        },
-        /*一页多少条*/
-        pageSize: 10,
-        /*一共多少条数据*/
-        totalDataNumber: 0,
-        /*当前是第几页*/
-        curPage: 1,
-        tableData: [],
-        open_dialog: false,
-        title: '',
-        editData: '',
-        searchLoading: '',
-      };
-    },
-    mounted() {
-      this.getData();
-    },
-    methods: {
-      /*搜索查询*/
-      onSearch() {
-        clearTimeout(this.searchLoading);
-        this.searchLoading = setTimeout(() => {
-          this.curPage = 1;
-          this.getData();
-        }, 200);
-      },
 
-      addClick(e) {
-        this.title = $t('添加自助餐');
-        this.open_dialog = true;
-      },
+  // 获取实例
+  const { proxy } = getCurrentInstance();
 
-      editClick(row) {
-        this.title = $t('编辑自助餐');
-        this.editData = row;
-        this.open_dialog = true;
-      },
+  // 响应式数据
+  const loading = ref(false);
+  const searchForm = reactive({
+    status: '',
+    name: '',
+  });
+  const pageSize = ref(10);
+  const totalDataNumber = ref(0);
+  const curPage = ref(1);
+  const tableData = ref([]);
+  const open_dialog = ref(false);
+  const title = ref('');
+  const editData = ref('');
+  const searchLoading = ref('');
 
-      getData() {
-        let self = this;
-        self.loading = true;
-        let Params = {};
-        Params.name = self.searchForm.name;
-        Params.status = self.searchForm.status;
-        Params.page = self.curPage;
-        Params.list_rows = self.pageSize;
-        PorductApi.getBuffetList(Params, true)
-          .then((data) => {
-            self.loading = false;
-            self.tableData = data.data.list.data;
-            self.totalDataNumber = data.data.list.total;
-          })
-          .catch((error) => {
-            console.log(error);
-          });
-      },
-
-      deleteClick(row) {
-        let self = this;
-        ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
-          confirmButtonText: $t('确定'),
-          cancelButtonText: $t('取消'),
-          type: 'warning',
-        })
-          .then(() => {
-            self.loading = true;
-            PorductApi.deleteBuffet(
-              {
-                buffet_id: row.id,
-              },
-              true
-            )
-              .then((data) => {
-                self.loading = false;
-                if (data.code == 1) {
-                  this.$ElMessage({
-                    message: data.msg,
-                    type: 'success',
-                  });
-                  self.getData();
-                } else {
-                  ElMessage.error($t('操作失败'));
-                }
-              })
-              .catch((error) => {
-                self.loading = false;
-              });
-          })
-          .catch(() => {});
-      },
-
-      //改变组合
-      handleComb(row) {
-        if (!this.$filter.isAuth('/product/buffet/list/assembly')) {
-          return;
-        }
-        let self = this;
-        let war = '';
-        let war_ = '';
-        if (row.is_comb == 1) {
-          (war = $t('确认要关闭组合吗?')), (war_ = $t('关闭'));
-        } else if (row.is_comb == 0) {
-          (war = $t('确认要开启组合吗?')), (war_ = $t('开启'));
-        }
-        ElMessageBox.confirm(war, $t('提示'), {
-          type: 'warning',
-        }).then(() => {
-          PorductApi.combBuffet({
-            buffet_id: row.id,
-            is_comb: row.is_comb == 1 ? 0 : 1,
-          }).then((data) => {
-            this.$ElMessage({
-              message: war_ + $t('成功'),
-              type: 'success',
-            });
-            self.getData();
-          });
-        });
-      },
-
-      //改变状态
-      handleStatus(row) {
-        if (!this.$filter.isAuth('/product/buffet/list/status')) {
-          return;
-        }
-        let self = this;
-        let war = '';
-        let war_ = '';
-        if (row.status == 1) {
-          (war = $t('确认要强制下架吗?')), (war_ = $t('下架'));
-        } else if (row.status == 0) {
-          (war = $t('确认要重新上架吗?')), (war_ = $t('上架'));
-        }
-        ElMessageBox.confirm(war, $t('提示'), {
-          type: 'warning',
-        }).then(() => {
-          PorductApi.stateBuffet({
-            buffet_id: row.id,
-            state: row.status == 1 ? 0 : 1,
-          }).then((data) => {
-            this.$ElMessage({
-              message: war_ + $t('成功'),
-              type: 'success',
-            });
-            self.getData();
-          });
-        });
-      },
-
-      //整单折扣
-      handleOpenOverallDiscount(row) {
-        if (!this.$filter.isAuth('/product/buffet/list/overallDiscount')) {
-          return;
-        }
-        let self = this;
-        let war = '';
-        let war_ = '';
-        if (row.open_overall_discount == 1) {
-          (war = $t('确认要关闭整单折扣吗?')), (war_ = $t('关闭'));
-        } else if (row.open_overall_discount == 0) {
-          (war = $t('确认要开启整单折扣吗?')), (war_ = $t('开启'));
-        }
-        ElMessageBox.confirm(war, $t('提示'), {
-          type: 'warning',
-        }).then(() => {
-          PorductApi.openOverallDiscount({
-            buffet_id: row.id,
-            open_overall_discount: row.open_overall_discount == 1 ? 0 : 1,
-          }).then((data) => {
-            this.$ElMessage({
-              message: war_ + $t('成功'),
-              type: 'success',
-            });
-            self.getData();
-          });
-        });
-      },
-
-      /*选择第几页*/
-      handleCurrentChange(val) {
-        let self = this;
-        self.curPage = val;
-        self.getData();
-      },
-
-      /*每页多少条*/
-      handleSizeChange(val) {
-        this.pageSize = val;
-        this.curPage = 1;
-        this.getData();
-      },
-
-      /*关闭弹窗*/
-      closeDialogFunc(e) {
-        this.open_dialog = e.openDialog;
-        this.editData = '';
-        if (e.type == 'success') {
-          this.getData();
-        }
-      },
-    },
+  // 搜索查询（防抖）
+  const onSearch = () => {
+    clearTimeout(searchLoading.value);
+    searchLoading.value = setTimeout(() => {
+      curPage.value = 1;
+      getData();
+    }, 200);
   };
+
+  // 获取数据列表
+  const getData = async () => {
+    loading.value = true;
+    try {
+      const Params = {
+        name: searchForm.name,
+        status: searchForm.status,
+        page: curPage.value,
+        list_rows: pageSize.value,
+      };
+      const data = await PorductApi.getBuffetList(Params, true);
+      loading.value = false;
+      tableData.value = data.data.list.data;
+      totalDataNumber.value = data.data.list.total;
+    } catch (error) {
+      loading.value = false;
+      console.log(error);
+    }
+  };
+
+  // 新增
+  const addClick = () => {
+    title.value = $t('添加自助餐');
+    open_dialog.value = true;
+  };
+
+  // 编辑
+  const editClick = (row) => {
+    title.value = $t('编辑自助餐');
+    editData.value = row;
+    open_dialog.value = true;
+  };
+
+  // 删除
+  const deleteClick = (row) => {
+    ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
+      confirmButtonText: $t('确定'),
+      cancelButtonText: $t('取消'),
+      type: 'warning',
+    })
+      .then(async () => {
+        try {
+          loading.value = true;
+          const resp = await PorductApi.deleteBuffet({ buffet_id: row.id }, true);
+          loading.value = false;
+          if (resp.code == 1) {
+            ElMessage({ message: resp.msg, type: 'success' });
+            getData();
+          } else {
+            ElMessage.error($t('操作失败'));
+          }
+        } catch (e) {
+          loading.value = false;
+        }
+      })
+      .catch(() => {});
+  };
+
+  // 改变组合
+  const handleComb = (row) => {
+    if (!proxy.$filter.isAuth('/product/buffet/list/assembly')) return;
+    let war = '';
+    let war_ = '';
+    if (row.is_comb == 1) {
+      war = $t('确认要关闭组合吗?');
+      war_ = $t('关闭');
+    } else if (row.is_comb == 0) {
+      war = $t('确认要开启组合吗?');
+      war_ = $t('开启');
+    }
+    ElMessageBox.confirm(war, $t('提示'), { type: 'warning' }).then(async () => {
+      await PorductApi.combBuffet({ buffet_id: row.id, is_comb: row.is_comb == 1 ? 0 : 1 });
+      ElMessage({ message: war_ + $t('成功'), type: 'success' });
+      getData();
+    });
+  };
+
+  // 改变状态
+  const handleStatus = (row) => {
+    if (!proxy.$filter.isAuth('/product/buffet/list/status')) return;
+    let war = '';
+    let war_ = '';
+    if (row.status == 1) {
+      war = $t('确认要强制下架吗?');
+      war_ = $t('下架');
+    } else if (row.status == 0) {
+      war = $t('确认要重新上架吗?');
+      war_ = $t('上架');
+    }
+    ElMessageBox.confirm(war, $t('提示'), { type: 'warning' }).then(async () => {
+      await PorductApi.stateBuffet({ buffet_id: row.id, state: row.status == 1 ? 0 : 1 });
+      ElMessage({ message: war_ + $t('成功'), type: 'success' });
+      getData();
+    });
+  };
+
+  // 整单折扣
+  const handleOpenOverallDiscount = (row) => {
+    if (!proxy.$filter.isAuth('/product/buffet/list/overallDiscount')) return;
+    let war = '';
+    let war_ = '';
+    if (row.open_overall_discount == 1) {
+      war = $t('确认要关闭整单折扣吗?');
+      war_ = $t('关闭');
+    } else if (row.open_overall_discount == 0) {
+      war = $t('确认要开启整单折扣吗?');
+      war_ = $t('开启');
+    }
+    ElMessageBox.confirm(war, $t('提示'), { type: 'warning' }).then(async () => {
+      await PorductApi.openOverallDiscount({ buffet_id: row.id, open_overall_discount: row.open_overall_discount == 1 ? 0 : 1 });
+      ElMessage({ message: war_ + $t('成功'), type: 'success' });
+      getData();
+    });
+  };
+
+  /*选择第几页*/
+  const handleCurrentChange = (val) => {
+    curPage.value = val;
+    getData();
+  };
+
+  /*每页多少条*/
+  const handleSizeChange = (val) => {
+    pageSize.value = val;
+    curPage.value = 1;
+    getData();
+  };
+
+  /*关闭弹窗*/
+  const closeDialogFunc = (e) => {
+    open_dialog.value = e.openDialog;
+    editData.value = '';
+    if (e.type == 'success') {
+      getData();
+    }
+  };
+
+  onMounted(() => {
+    getData();
+  });
 </script>
+
 <style lang="scss" scoped>
   .common-search-wrap {
     display: flex;

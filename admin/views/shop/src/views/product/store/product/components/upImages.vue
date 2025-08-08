@@ -403,21 +403,21 @@
 
     loading.value = true;
     emit('loading', true);
-    ProductApi.batchReplaceProductImage(formData, true)
-      .then((data) => {
-        dialogVisible.value = false;
-        loading.value = false;
-        emit('loading', false);
-        ElMessage({
-          type: 'success',
-          message: $t('上传成功'),
-        });
-        emit('close');
-      })
-      .catch((error) => {
-        loading.value = false;
-        emit('loading', false);
+
+    try {
+      await ProductApi.batchReplaceProductImage(formData, true);
+      dialogVisible.value = false;
+      loading.value = false;
+      emit('loading', false);
+      ElMessage({
+        type: 'success',
+        message: $t('上传成功'),
       });
+      emit('close');
+    } catch (error) {
+      loading.value = false;
+      emit('loading', false);
+    }
   };
 
   //删除图片
