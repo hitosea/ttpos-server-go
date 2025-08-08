@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"database/sql"
 	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
@@ -40,8 +41,15 @@ type IProductRepo interface {
 	WhereBomIsSoldOut() DBOption                                                                            // 沽清 产品是否售罄
 	UpdateProductBomSoldOut(opts []DBOption, vars map[string]any) error                                     // 沽清 更新产品售罄状态
 
-	WhereUuid(uuid uint64) DBOption                 // 查询条件 产品单位 uuid
-	WhereUuidIn(uuids []uint64) DBOption            // 查询条件 产品单位 uuid 列表
+	WhereUuid(uuid uint64) DBOption             // 查询条件 产品单位 uuid
+	WhereUuidIn(uuids []uint64) DBOption        // 查询条件 产品单位 uuid 列表
+	WhereCategoryKey(key string) DBOption       // 查询条件 产品分类key
+	WhereByIsSpecial(isSpecial uint) DBOption   // 查询条件 产品分类是否特殊
+	WhereParentUuid(parentUuid uint64) DBOption // 查询条件 产品分类父级uuid
+
+	WhereCategoryUuid(categoryUuid uint64) DBOption               // 查询条件 产品分类uuid
+	WhereSpecialCategoryUuid(specialCategoryUuid uint64) DBOption // 查询条件 特色分类uuid
+
 	WithProductPackages() DBOption                  // 预加载产品单位关联的商品
 	WithProductPackagesMultiLanguageName() DBOption // 预加载产品单位关联的商品多语言名称
 
@@ -55,7 +63,11 @@ type IProductQueryRepo interface {
 	GetProductListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductPackage, int64, error) // 分页获取商品列表
 	GetProductPackageListByUuids(uuids []uint64) ([]model.ProductPackage, error)                                    // 通过uuid列表获取商品列表
 	GetProductCategoryList(opts ...DBOption) ([]model.ProductCategory, error)                                       // 获取产品类别列表
+	GetProductCategory(opts ...DBOption) (model.ProductCategory, error)                                             // 获取产品分类详情
+	GetProductCategoryCount(opts ...DBOption) (int64, error)                                                        // 获取产品分类数量
+	GetProductCategoryMaxSort(opts ...DBOption) (int64, error)                                                      // 获取产品分类最大排序
 	GetProduct(opts ...DBOption) (model.ProductPackage, error)                                                      // 获取商品详情
+	GetProductCount(opts ...DBOption) (int64, error)                                                                // 获取商品数量
 	GetProductFlavor(opts ...DBOption) (model.ProductFlavor, error)                                                 // 获取商品口味详情
 	GetProductBom(opts ...DBOption) (model.ProductBom, error)                                                       // 获取商品BOM详情
 	PaginateGetProductUnitList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductUnit, int64, error)      // 分页获取产品单位列表
@@ -248,6 +260,40 @@ func (r *productRepo) GetProductCategoryList(opts ...DBOption) ([]model.ProductC
 	return categories, nil
 }
 
+// GetProductCategoryCount 获取产品分类数量
+func (r *productRepo) GetProductCategoryCount(opts ...DBOption) (int64, error) {
+	var total int64
+	db := r.db.Model(&model.ProductCategory{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Count(&total).Error
+	return total, errors.WithMessage(err)
+}
+
+// GetProductCategoryMaxSort 获取产品分类最大排序
+func (r *productRepo) GetProductCategoryMaxSort(opts ...DBOption) (int64, error) {
+	var sort sql.NullInt64
+	db := r.db.Model(&model.ProductCategory{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Select("MAX(sort) as sort").Find(&sort).Error
+	return sort.Int64, errors.WithMessage(err)
+}
+
+// GetProductCategory 获取产品分类详情
+func (r *productRepo) GetProductCategory(opts ...DBOption) (model.ProductCategory, error) {
+	var productCategory model.ProductCategory
+	db := r.db.Model(&model.ProductCategory{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	err := db.First(&productCategory).Error
+	return productCategory, errors.WithMessage(err)
+}
+
 // GetProduct 获取商品详情
 func (r *productRepo) GetProduct(opts ...DBOption) (model.ProductPackage, error) {
 	var product model.ProductPackage
@@ -261,6 +307,18 @@ func (r *productRepo) GetProduct(opts ...DBOption) (model.ProductPackage, error)
 	err := db.First(&product).Error
 
 	return product, errors.WithMessage(err)
+}
+
+// GetProductCount 获取商品数量
+func (r *productRepo) GetProductCount(opts ...DBOption) (int64, error) {
+	var total int64
+	db := r.db.Model(&model.ProductPackage{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	err := db.Count(&total).Error
+	return total, errors.WithMessage(err)
 }
 
 // GetProductFlavor 获取商品规格详情
@@ -545,6 +603,41 @@ func (r *productRepo) WhereUuid(uuid uint64) DBOption {
 func (r *productRepo) WhereUuidIn(uuids []uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("uuid IN (?)", uuids)
+	}
+}
+
+// WhereCategoryKey 根据分类key查询
+func (r *productRepo) WhereCategoryKey(key string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("category_key = ?", key)
+	}
+}
+
+// WhereByIsSpecial 根据是否特殊查询
+func (r *productRepo) WhereByIsSpecial(isSpecial uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_special = ?", isSpecial)
+	}
+}
+
+// WhereParentUuid 根据父级分类uuid查询
+func (r *productRepo) WhereParentUuid(parentUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("parent_uuid = ?", parentUuid)
+	}
+}
+
+// WhereCategoryUuid 根据分类uuid查询
+func (r *productRepo) WhereCategoryUuid(categoryUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("category_uuid = ?", categoryUuid)
+	}
+}
+
+// WhereSpecialCategoryUuid 根据特色分类uuid查询
+func (r *productRepo) WhereSpecialCategoryUuid(specialCategoryUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("special_category_uuid = ?", specialCategoryUuid)
 	}
 }
 

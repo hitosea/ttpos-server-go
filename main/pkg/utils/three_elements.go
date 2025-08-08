@@ -56,3 +56,11 @@ func IfSlice(is bool, trueVal, falseVal []dto.LocaleResponse) []dto.LocaleRespon
 	}
 	return falseVal
 }
+
+// 三元
+func IfUint(is bool, trueVal, falseVal uint) uint {
+	if is {
+		return trueVal
+	}
+	return falseVal
+}

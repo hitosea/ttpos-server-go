@@ -27,12 +27,19 @@ type ProductHandler struct {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} product_resp.ProductCategoryListResp "成功"
+// @Success 200 {object} product_resp.ProductShopCategoryListResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /shop/product/category/list [get]
 func (h *ProductHandler) GetProductCategoryList(c *gin.Context) {
 	// 获取商品分类列表
-	res, err := h.productSrv.GetProductCategoryList(helper.GetCompanyUuid(c))
+	ctx := helper.GetContext(c)
+	listReq := req.ProductShopCategoryListReq{}
+
+	if err := c.ShouldBindQuery(&listReq); err != nil {
+		helper.HandleValidationError(c, err, listReq, dto.PageReqMessage)
+		return
+	}
+	res, err := h.productSrv.GetProductShopCategoryList(ctx, listReq)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -40,6 +47,113 @@ func (h *ProductHandler) GetProductCategoryList(c *gin.Context) {
 	}
 	// 返回结果
 	helper.Success(c, res)
+}
+
+// SortProductCategory 排序商品分类
+// @Summary 排序商品分类
+// @Description 排序商品分类
+// @Tags 商家端.商品分类
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductShopCategorySortReq true "商品分类排序请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/category/sort [post]
+func (h *ProductHandler) SortProductCategory(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	sortReq := req.ProductShopCategorySortReq{}
+
+	if err := c.ShouldBindJSON(&sortReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 排序商品单位
+	err := h.productSrv.SortProductShopCategory(ctx, sortReq)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// AddProductCategory 添加商品分类
+// @Summary 添加商品分类
+// @Description 添加商品分类
+// @Tags 商家端.商品分类
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductShopCategoryAddReq true "商品分类添加请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/category/add [post]
+func (h *ProductHandler) AddProductCategory(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	addReq := req.ProductShopCategoryAddReq{}
+	if err := c.ShouldBindJSON(&addReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	err := h.productSrv.AddProductShopCategory(ctx, addReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// EditProductCategory 编辑商品分类
+// @Summary 编辑商品分类
+// @Description 编辑商品分类
+// @Tags 商家端.商品分类
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductShopCategoryEditReq true "商品分类编辑请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/category/edit [post]
+func (h *ProductHandler) EditProductCategory(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	editReq := req.ProductShopCategoryEditReq{}
+	if err := c.ShouldBindJSON(&editReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	err := h.productSrv.EditProductShopCategory(ctx, editReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// DeleteProductCategory 删除商品分类
+// @Summary 删除商品分类
+// @Description 删除商品分类
+// @Tags 商家端.商品分类
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductShopCategoryReq true "商品分类删除请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/category [delete]
+func (h *ProductHandler) DeleteProductCategory(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	deleteReq := req.ProductShopCategoryReq{}
+	if err := c.ShouldBindJSON(&deleteReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	err := h.productSrv.DeleteProductShopCategory(ctx, deleteReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
 }
 
 // GetProductUnitList 获取商品单位列表
@@ -403,6 +517,10 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/product/category/list", wrapper.GetProductCategoryList) // 获取商品分类列表
+		privateApi.POST("/product/category/sort", wrapper.SortProductCategory)   // 排序商品分类
+		privateApi.POST("/product/category/add", wrapper.AddProductCategory)     // 添加商品分类
+		privateApi.POST("/product/category/edit", wrapper.EditProductCategory)   // 编辑商品分类
+		privateApi.DELETE("/product/category", wrapper.DeleteProductCategory)    // 删除商品分类
 
 		privateApi.GET("/product/unit/list", wrapper.GetProductUnitList) // 获取商品单位列表
 		privateApi.GET("/product/unit", wrapper.GetProductUnit)          // 获取商品单位详情
