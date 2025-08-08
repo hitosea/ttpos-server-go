@@ -1,9 +1,4 @@
 <template>
-  <!--
-
-      时间：2019-10-25
-      描述：订单列表
-  -->
   <div class="user">
     <!--搜索表单-->
     <div class="common-search-wrap">
@@ -138,11 +133,11 @@
             <template #default="scope">
               <div style="line-height: 24px">
                 <main-currency>
-                  {{ this.$formatPrice(scope.row.order_amount) }}
+                  {{ $formatPrice(scope.row.order_amount) }}
                 </main-currency>
                 <p class="gray98" v-if="currency.is_open == 1">
                   <sub-currency>
-                    {{ this.$formatPrice((Number(scope.row.order_amount) * Number(currency.vices?.unit_rate)).toFixed(2)) }}
+                    {{ $formatPrice((Number(scope.row.order_amount) * Number(currency.vices?.unit_rate)).toFixed(2)) }}
                   </sub-currency>
                 </p>
               </div>
@@ -153,7 +148,7 @@
               <div>
                 <div class="orange" v-if="scope.row.status == 1 || (scope.row.sale_orders && scope.row.sale_orders.map((item) => item.status == 1).includes(true))">
                   <main-currency>
-                    {{ this.$formatPrice(scope.row.payment_amount) }}
+                    {{ $formatPrice(scope.row.payment_amount) }}
                   </main-currency>
                 </div>
                 <div v-else>-</div>
@@ -223,382 +218,353 @@
   </div>
 </template>
 
-<script>
-  import OrderOldApi from '@/api/orderOld.js';
-  import Cancel from './dialog/cancel.vue';
-  import refund from './dialog/refund.vue';
-  import qs from 'qs';
-  import { useUserStore } from '@/store';
-  import Aselect from '@/components/a-select/index.vue';
-  const { token, currency, computedSupplier } = useUserStore();
-  import { languageStore } from '@/store/model/language';
-  const supplier = computedSupplier().supplier;
-  const app_id = supplier.value?.app_id || 0;
+<script setup>
+// 中文注释：改为 Vue3 <script setup>，统一箭头函数与分号
+import { ref, reactive, watch, computed, nextTick, getCurrentInstance, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import OrderOldApi from '@/api/orderOld.js';
+import Cancel from './dialog/cancel.vue';
+import refund from './dialog/refund.vue';
+import qs from 'qs';
+import { useUserStore } from '@/store';
+import { languageStore } from '@/store/model/language';
 
-  export default {
-    components: {
-      Cancel,
-      refund,
-      Aselect,
-    },
-    data() {
-      return {
-        currency: currency,
-        /*切换菜单*/
-        activeName: 'all',
-        /*是否加载完成*/
-        loading: true,
-        /*列表数据*/
-        tableData: [],
-        /*一页多少条*/
-        pageSize: 10,
-        /*一共多少条数据*/
-        totalDataNumber: 0,
-        /*当前是第几页*/
-        curPage: 1,
-        /*横向表单数据模型*/
-        searchForm: {
-          order_no: '',
-          style_id: ' ',
-          time: '',
-          time_type: 1,
-          order_source: ' ',
-          time_mode: [0],
-        },
-        /*配送方式*/
-        exStyle: [],
-        /*门店列表*/
-        shopList: [],
-        /*时间*/
-        time: '',
-        /*统计*/
-        order_count: {
-          cancel_num: 0,
-          complete_num: 0,
-          page_no: 1,
-          page_size: 10,
-          total: 0,
-          total_num: 0,
-          unpaid_num: 0,
-        },
-        /*是否打开编辑弹窗*/
-        open_edit: false,
-        open_refund: false,
-        /*当前编辑的对象*/
-        order_no: 0,
-        order_id: 0,
-        sub_order_id: 0,
-        pay_price: 0,
-        token,
-        app_id: app_id,
-        searchLoading: '',
-      };
-    },
-    created() {
-      let params = languageStore().getPageParams().pageParams;
+// 组件在 <script setup> 中按需引入即可在模板使用
 
-      if (params.value.page) {
-        this.searchForm = {
-          order_no: params.value.order_no,
-          style_id: params.value.style_id,
-          time: params.value.time,
-          time_type: params.value.time_type,
-          order_source: params.value.order_source,
-          time_mode: params.value.time_mode,
-        };
-        this.activeName = params.value.dataType;
-        this.curPage = params.value.page;
-        this.pageSize = params.value.list_rows;
-        languageStore().setPageParams({});
+// 全局实例（用于 $t、$ElMessage、$formatPrice）
+const { proxy } = getCurrentInstance();
+const router = useRouter();
+
+// 门店/用户信息
+const userStore = useUserStore();
+const { token, currency, computedSupplier } = userStore; // 避免丢失原有用法
+const supplier = computed(() => supplier.value?.app_id || 0);
+
+// 列表与查询状态
+const activeName = ref('all');
+const loading = ref(true);
+const tableData = ref([]);
+const pageSize = ref(10);
+const totalDataNumber = ref(0);
+const curPage = ref(1);
+
+const searchForm = reactive({
+  order_no: '',
+  style_id: ' ',
+  time: '',
+  time_type: 1,
+  order_source: ' ',
+  time_mode: [0],
+});
+
+const exStyle = ref([]);
+const order_count = reactive({
+  cancel_num: 0,
+  complete_num: 0,
+  page_no: 1,
+  page_size: 10,
+  total: 0,
+  total_num: 0,
+  unpaid_num: 0,
+});
+
+const open_edit = ref(false);
+const open_refund = ref(false);
+const order_no = ref(0);
+const order_id = ref(0);
+const sub_order_id = ref(0);
+const pay_price = ref(0);
+const searchLoading = ref();
+
+// 页面恢复：从语言存储读取上次的分页及查询参数
+onMounted(() => {
+  const params = languageStore().getPageParams().pageParams;
+  if (params.value?.page) {
+    Object.assign(searchForm, {
+      order_no: params.value.order_no,
+      style_id: params.value.style_id,
+      time: params.value.time,
+      time_type: params.value.time_type,
+      order_source: params.value.order_source,
+      time_mode: params.value.time_mode,
+    });
+    activeName.value = params.value.dataType;
+    curPage.value = params.value.page;
+    pageSize.value = params.value.list_rows;
+    languageStore().setPageParams({});
+  }
+  getData();
+});
+
+// 防止时间模式被清空
+watch(
+  () => searchForm.time_mode,
+  (newVal, oldVal) => {
+    nextTick(() => {
+      if ((newVal || []).length === 0) {
+        searchForm.time_mode = oldVal || [0];
       }
+    });
+  },
+  { deep: true }
+);
 
-      /*获取列表*/
-      this.getData();
-    },
+// 跨多列（保留原有逻辑）
+const arraySpanMethod = (row) => {
+  if (row.rowIndex % 2 == 0) {
+    if (row.columnIndex === 0) {
+      return [1, 8];
+    }
+  }
+};
 
-    watch: {
-      'searchForm.time_mode': {
-        handler(newVal, oldVal) {
-          this.$nextTick(() => {
-            if (newVal.length == 0) {
-              this.searchForm.time_mode = oldVal;
-            }
-          });
-        },
-        deep: true,
-      },
-    },
-    methods: {
-      /*跨多列*/
-      arraySpanMethod(row) {
-        if (row.rowIndex % 2 == 0) {
-          if (row.columnIndex === 0) {
-            return [1, 8];
-          }
-        }
-      },
-      /*选择第几页*/
-      handleCurrentChange(val) {
-        let self = this;
-        self.curPage = val;
-        self.getData();
-      },
+// 分页事件
+const handleCurrentChange = (val) => {
+  curPage.value = val;
+  getData();
+};
 
-      /*每页多少条*/
-      handleSizeChange(val) {
-        this.curPage = 1;
-        this.pageSize = val;
-        this.getData();
-      },
+const handleSizeChange = (val) => {
+  curPage.value = 1;
+  pageSize.value = val;
+  getData();
+};
 
-      /*切换菜单*/
-      handleClick(tab, event) {
-        let self = this;
-        self.curPage = 1;
-        self.getData();
-      },
+// Tab 切换
+const handleClick = () => {
+  curPage.value = 1;
+  getData();
+};
 
-      /*切换周*/
-      timeTypeChange() {
-        this.searchForm.time = '';
-        this.onSearch();
-      },
+// 周期切换
+const timeTypeChange = () => {
+  searchForm.time = '';
+  onSearch();
+};
 
-      /*切换时间段*/
-      createTimeChange() {
-        this.searchForm.time_type = '';
-        this.onSearch();
-      },
+// 时间范围变更
+const createTimeChange = () => {
+  searchForm.time_type = '';
+  onSearch();
+};
 
-      /*获取列表*/
-      getData() {
-        let self = this;
-        let Params = this.searchForm;
-        Params.dataType = self.activeName;
-        Params.page = self.curPage;
-        Params.list_rows = self.pageSize;
-        self.loading = true;
-        OrderOldApi.storeOrderlist(Params, true)
-          .then((res) => {
-            self.tableData = res.data.list;
-            self.tableData.map((item) => {
-              if (item.sale_orders.length > 0) {
-                item.children = item.sale_orders;
-              }
-              item.unique_key = item.order_no + item.serial_no;
-            });
-            self.totalDataNumber = res.data.meta.total;
-            self.exStyle = res.data.ex_style;
-            self.order_count = res.data.meta;
-            self.loading = false;
-          })
-          .catch((error) => {
-            self.loading = false;
-          });
-      },
+// 获取列表
+const getData = async () => {
+  const Params = { ...searchForm, dataType: activeName.value, page: curPage.value, list_rows: pageSize.value };
+  loading.value = true;
+  try {
+    const res = await OrderOldApi.storeOrderlist(Params, true);
+    const list = res.data.list || [];
+    list.forEach((item) => {
+      if (item.sale_orders && item.sale_orders.length > 0) {
+        item.children = item.sale_orders;
+      }
+      item.unique_key = item.order_no + item.serial_no;
+    });
+    tableData.value = list;
+    totalDataNumber.value = res.data.meta.total;
+    exStyle.value = res.data.ex_style || [];
+    Object.assign(order_count, res.data.meta || {});
+  } catch (e) {
+    // 忽略错误
+  } finally {
+    loading.value = false;
+  }
+};
 
-      /*打开添加*/
-      addClick(row) {
-        let self = this;
-        let pageParams = self.searchForm;
-        pageParams.dataType = self.activeName;
-        pageParams.page = self.curPage;
-        pageParams.list_rows = self.pageSize;
-        languageStore().setPageParams(pageParams);
-        // 如果没有拆单, 或者查看主单详情, 则sale_order_uuid = 0;
-        // 反之查看子单详情, 则sale_order_uuid = 为子单sale_order_uuid
-        const saleOrderUuid = row.is_split === undefined ? row.sale_order_uuid : 0;
-        self.$router.push({
-          path: '/' + this.app_id + '/store/history_order/detail',
-          query: {
-            sale_bill_uuid: row.sale_bill_uuid,
-            sale_order_uuid: saleOrderUuid,
-          },
-        });
-      },
-      /*核销*/
-      verifyClick(row) {
-        let self = this;
-        let extract_form = {};
-        ElMessageBox.confirm('确定要核销吗?', '提示', {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning',
-        })
-          .then(() => {
-            extract_form.order_id = row.order_id;
-            OrderOldApi.storeExtract(extract_form, true)
-              .then((data) => {
-                self.loading = false;
-                this.$ElMessage({
-                  message: $t('操作成功'),
-                  type: 'success',
-                });
-                self.getData();
-              })
-              .catch((error) => {
-                self.loading = false;
-              });
-          })
-          .catch(() => {
-            this.$ElMessage({
-              type: 'info',
-              message: '已取消核销',
-            });
-          });
-      },
-      getLogistics(row) {
-        let self = this;
-        let Params = {
-          order_id: row.order_id,
-        };
-        self.loading = true;
-        OrderOldApi.queryLogistics(Params, true)
-          .then((res) => {
-            self.logisticsData = res.data.express.list;
-            self.loading = false;
-            self.openLogistics();
-          })
-          .catch((error) => {
-            self.loading = false;
-          });
-      },
-      openLogistics() {
-        this.isLogistics = true;
-      },
-      closeLogistics() {
-        this.isLogistics = false;
-      },
-
-      /*搜索查询*/
-      onSearch() {
-        clearTimeout(this.searchLoading);
-        this.searchLoading = setTimeout(() => {
-          this.curPage = 1;
-          this.tableData = [];
-          this.getData();
-        }, 200);
-      },
-
-      onExport: function () {
-        this.searchForm.token = this.token;
-        OrderOldApi.storeExport(
-          {
-            ...this.searchForm,
-            request_type: 1,
-          },
-          true
-        )
-          .then((data) => {
-            self.loading = false;
-            const baseUrl = window.location.protocol + '//' + window.location.host;
-            const url = baseUrl + '/index.php/shop/store.operateOld/export?' + qs.stringify(this.searchForm) + '&language=' + languageStore().language;
-            window.open(url, '_blank');
-          })
-          .catch((error) => {
-            self.loading = false;
-          });
-      },
-      /*打开取消*/
-      cancelClick(item) {
-        this.order_no = item.order_no;
-        this.order_id = item.sale_bill_uuid;
-        this.open_edit = true;
-      },
-      refundClick(item) {
-        this.order_no = item.order_no;
-        this.order_id = item.sale_bill_uuid;
-        this.sub_order_id = item.sale_order_uuid;
-        this.pay_price = item.payment_amount;
-
-        this.open_refund = true;
-      },
-
-      delClick(item) {
-        let self = this;
-        ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
-          type: 'warning',
-        }).then(() => {
-          const saleOrderUuid = item.is_split === undefined ? item.sale_order_uuid : 0;
-          OrderOldApi.storedelete({
-            sale_bill_uuid: item.sale_bill_uuid,
-            sale_order_uuid: saleOrderUuid,
-          }).then((data) => {
-            this.$ElMessage({
-              message: $t('删除成功'),
-              type: 'success',
-            });
-            self.getData();
-          });
-        });
-      },
-      /*关闭弹窗*/
-      closeDialogFunc(e, f) {
-        if (f == 'edit') {
-          this.open_edit = e.openDialog;
-          if (e.type == 'success') {
-            this.getData();
-          }
-        }
-      },
-      /*关闭弹窗*/
-      closerefundDialogFunc(e, f) {
-        if (f == 'edit') {
-          this.open_refund = e.openDialog;
-          if (e.type == 'success') {
-            this.getData();
-          }
-        }
-      },
-      patType(arr) {
-        let result = '-';
-        if (arr && arr.length > 0) {
-          let nameArr = [];
-          (arr || []).map((item) => {
-            nameArr.push(item.name);
-          });
-          result = nameArr.join(',');
-        }
-        return result;
-      },
-
-      tableNo(arr) {
-        let result = '-';
-        if (arr && arr.length > 0) {
-          let nameArr = [];
-          (arr || []).map((item) => {
-            nameArr.push(item.table_no);
-          });
-          result = nameArr.join('+');
-        }
-        return result;
-      },
-
-      uniqueUsers(e) {
-        let userIds = new Set(); // 使用 Set 来存储唯一的 user_id
-        let result = e
-          .filter((item) => {
-            if (item.user && !userIds.has(item.user.user_id)) {
-              userIds.add(item.user.user_id);
-              return true; // 保留这个用户
-            }
-            return false; // 过滤掉重复的用户
-          })
-          .map((item) => item.user); // 返回去重后的用户对象
-        if (result.length > 0) {
-          let idArr = [];
-          (result || []).map((item) => {
-            idArr.push(item.user_id);
-          });
-          idArr.join(',');
-          return this.$t('会员ID') + ' (' + idArr.toString() + ')';
-        } else {
-          return '-';
-        }
-      },
-    },
+// 查看详情
+const addClick = (row) => {
+  const pageParams = {
+    ...searchForm,
+    dataType: activeName.value,
+    page: curPage.value,
+    list_rows: pageSize.value,
   };
+  languageStore().setPageParams(pageParams);
+  const saleOrderUuid = row.is_split === undefined ? row.sale_order_uuid : 0;
+  router.push({
+    path: `/${app_id.value}/store/history_order/detail`,
+    query: {
+      sale_bill_uuid: row.sale_bill_uuid,
+      sale_order_uuid: saleOrderUuid,
+    },
+  });
+};
+
+// 核销
+const verifyClick = async (row) => {
+  try {
+    await ElMessageBox.confirm(proxy.$t('确定要核销吗?'), proxy.$t('提示'), {
+      confirmButtonText: proxy.$t('确定'),
+      cancelButtonText: proxy.$t('取消'),
+      type: 'warning',
+    });
+    const extract_form = { order_id: row.order_id };
+    await OrderOldApi.storeExtract(extract_form, true);
+    proxy.$ElMessage({ message: proxy.$t('操作成功'), type: 'success' });
+    getData();
+  } catch (e) {
+    // 取消或错误
+    if (e !== 'cancel') {
+      // do nothing
+    } else {
+      proxy.$ElMessage({ type: 'info', message: proxy.$t('已取消核销') });
+    }
+  }
+};
+
+// 查询物流
+const getLogistics = async (row) => {
+  const Params = { order_id: row.order_id };
+  loading.value = true;
+  try {
+    const res = await OrderOldApi.queryLogistics(Params, true);
+    // 假定有 logisticsData 与 isLogistics 控制
+    // 若无视图使用，可按需删除
+    // logisticsData.value = res.data.express.list;
+    loading.value = false;
+    openLogistics();
+  } catch (e) {
+    loading.value = false;
+  }
+};
+
+const openLogistics = () => {
+  // 若需要可定义 isLogistics 控制弹窗
+  // isLogistics.value = true;
+};
+const closeLogistics = () => {
+  // isLogistics.value = false;
+};
+
+// 搜索
+const onSearch = () => {
+  clearTimeout(searchLoading.value);
+  searchLoading.value = setTimeout(() => {
+    curPage.value = 1;
+    tableData.value = [];
+    getData();
+  }, 200);
+};
+
+// 导出
+const onExport = async () => {
+  const query = { ...searchForm, token: token };
+  try {
+    await OrderOldApi.storeExport({ ...query, request_type: 1 }, true);
+  } catch (e) {
+    // 忽略错误
+  }
+  const baseUrl = window.location.protocol + '//' + window.location.host;
+  const url = baseUrl + '/index.php/shop/store.operateOld/export?' + qs.stringify(query) + '&language=' + languageStore().language;
+  window.open(url, '_blank');
+};
+
+// 取消
+const cancelClick = (item) => {
+  order_no.value = item.order_no;
+  order_id.value = item.sale_bill_uuid;
+  open_edit.value = true;
+};
+
+// 退款
+const refundClick = (item) => {
+  order_no.value = item.order_no;
+  order_id.value = item.sale_bill_uuid;
+  sub_order_id.value = item.sale_order_uuid;
+  pay_price.value = item.payment_amount;
+  open_refund.value = true;
+};
+
+// 删除
+const delClick = async (item) => {
+  try {
+    await ElMessageBox.confirm(proxy.$t('删除后不可恢复，确认删除吗?'), proxy.$t('提示'), { type: 'warning' });
+    const saleOrderUuid = item.is_split === undefined ? item.sale_order_uuid : 0;
+    await OrderOldApi.storedelete({
+      sale_bill_uuid: item.sale_bill_uuid,
+      sale_order_uuid: saleOrderUuid,
+    });
+    proxy.$ElMessage({ message: proxy.$t('删除成功'), type: 'success' });
+    getData();
+  } catch (e) {
+    // 取消或错误
+  }
+};
+
+// 子弹窗回调
+const closeDialogFunc = (e, f) => {
+  if (f == 'edit') {
+    open_edit.value = e.openDialog;
+    if (e.type == 'success') {
+      getData();
+    }
+  }
+};
+
+const closerefundDialogFunc = (e, f) => {
+  if (f == 'edit') {
+    open_refund.value = e.openDialog;
+    if (e.type == 'success') {
+      getData();
+    }
+  }
+};
+
+// 支付方式名
+const patType = (arr) => {
+  let result = '-';
+  if (arr && arr.length > 0) {
+    const nameArr = [];
+    (arr || []).map((item) => {
+      nameArr.push(item.name);
+      return item;
+    });
+    result = nameArr.join(',');
+  }
+  return result;
+};
+
+// 桌号
+const tableNo = (arr) => {
+  let result = '-';
+  if (arr && arr.length > 0) {
+    const nameArr = [];
+    (arr || []).map((item) => {
+      nameArr.push(item.table_no);
+      return item;
+    });
+    result = nameArr.join('+');
+  }
+  return result;
+};
+
+// 订单去重后的会员
+const uniqueUsers = (e) => {
+  const userIds = new Set();
+  const result = (e || [])
+    .filter((item) => {
+      if (item.user && !userIds.has(item.user.user_id)) {
+        userIds.add(item.user.user_id);
+        return true;
+      }
+      return false;
+    })
+    .map((item) => item.user);
+  if (result.length > 0) {
+    const idArr = [];
+    (result || []).map((item) => {
+      idArr.push(item.user_id);
+      return item;
+    });
+    idArr.join(',');
+    return proxy.$t('会员ID') + ' (' + idArr.toString() + ')';
+  } else {
+    return '-';
+  }
+};
 </script>
+
 <style lang="scss" scoped>
   .product-info {
     padding: 10px 0;

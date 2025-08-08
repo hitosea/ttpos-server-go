@@ -1,12 +1,7 @@
 <template>
-    <!--
-      
-      时间：2019-10-25
-      描述：会员-用户列表-会员充值
-  -->
     <div>
-        <el-dialog :title="$t('取消订单')" v-model="dialogVisible" @close='dialogFormVisible' :close-on-click-modal="false" :close-on-press-escape="false">
-            <el-form size="small" ref="form" :model="form" label-position="top">
+        <el-dialog :title="$t('取消订单')" v-model="dialogVisible" @close="dialogFormVisible" :close-on-click-modal="false" :close-on-press-escape="false">
+            <el-form size="small" ref="formRef" :model="form" label-position="top">
                 <el-form-item for="no_click" :label="$t('订单号')" :label-width="formLabelWidth" prop="order_no" :rules="[{ required: true, message: ' ' }]">
                     <el-input v-model="form.order_no" disabled :placeholder="$t('请输入订单号')" :readonly="true"></el-input>
                 </el-form-item>
@@ -24,69 +19,70 @@
     </div>
 </template>
 
-<script>
+<script setup>
+import { ref, reactive, watch, getCurrentInstance, onMounted } from 'vue';
 import OrderApi from '@/api/order.js';
-import draggable from 'vuedraggable';
-export default {
-    components: {
-        draggable
-    },
-    data() {
-        return {
-            loading: false,
-            /*左边长度*/
-            formLabelWidth: '120px',
-            /*是否显示*/
-            dialogVisible: false,
-            form: {
-                order_id: '',
-                cancel_remark: '',
-                order_no: ''
-            },
-        };
-    },
-    props: ['open_edit', 'order_no', 'order_id'],
-    created() {
-        this.dialogVisible = this.open_edit;
-        this.form.order_no = this.order_no;
-        this.form.order_id = this.order_id;
-    },
-    methods: {
-        /*处理*/
-        submit() {
-            let self = this;
-            let form = self.form;
-            self.$refs.form.validate((valid) => {
-                if (valid) {
-                    self.loading = true;
-                    OrderApi.storeConfirm(form, true).then(data => {
-                        self.loading = false;
-                        this.$ElMessage({
-                            message: data.msg,
-                            type: 'success'
-                        });
-                        self.dialogFormVisible(true);
-                    })
-                        .catch(error => {
-                            self.loading = false;
-                        });
-                }
-            });
-        },
-        /*关闭弹窗*/
-        dialogFormVisible(e) {
-            if (e) {
-                this.$emit('closeDialog', {
-                    type: 'success',
-                    openDialog: false
-                })
-            } else {
-                this.$emit('closeDialog', {
-                    type: 'error',
-                    openDialog: false
-                })
-            }
-        },
-    }
+
+const props = defineProps({
+  open_edit: { type: Boolean, default: false },
+  order_no: { type: [String, Number], default: '' },
+  order_id: { type: [String, Number], default: '' },
+});
+const emit = defineEmits(['closeDialog']);
+
+const { proxy } = getCurrentInstance();
+
+const loading = ref(false);
+const formLabelWidth = ref('120px');
+const dialogVisible = ref(false);
+const formRef = ref();
+
+const form = reactive({
+  order_id: '',
+  cancel_remark: '',
+  order_no: '',
+});
+
+watch(
+  () => [props.open_edit, props.order_no, props.order_id],
+  ([open, no, id]) => {
+    dialogVisible.value = open;
+    form.order_no = String(no ?? '');
+    form.order_id = String(id ?? '');
+  },
+  { immediate: true }
+);
+
+onMounted(() => {
+  if (form.order_no === '' && props.order_no) form.order_no = String(props.order_no);
+  if (form.order_id === '' && props.order_id) form.order_id = String(props.order_id);
+});
+
+// 提交处理
+const submit = async () => {
+  const valid = await formRef.value.validate();
+  if (!valid) return;
+
+  loading.value = true;
+  try {
+    const data = await OrderApi.storeConfirm({ ...form }, true);
+    proxy.$ElMessage({
+      message: data.msg,
+      type: 'success',
+    });
+    dialogFormVisible(true);
+  } catch (e) {
+    // 忽略错误，loading 在 finally 关闭
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 关闭弹窗
+const dialogFormVisible = (e = false) => {
+  emit('closeDialog', {
+    type: e ? 'success' : 'error',
+    openDialog: false,
+  });
 };
 </script>

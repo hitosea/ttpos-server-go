@@ -49,3 +49,4 @@ proxy从vue引入getCurrentInstance, this.$filter.isAuth 替换成proxy.$filter.
 国际化（i18n）script 标签里面的也可以直接使用$t(''),this.$t('')无须proxy.$t('')。
 script 标签里面的方法，函数吗，变量，需要加分号结束。
 el-form 表单的例如ref="form"的时候，需要改为ref="formRef" 这样不会和他的数据form冲突。
+每个方法如果没有加上注释，也帮我加上一些必要的注释。
