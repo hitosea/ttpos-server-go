@@ -33,9 +33,6 @@
             </template>
           </el-dropdown>
         </div>
-        <!-- <div class="header-navbar-icon">
-                    <span class="gray">当前版本：{{ userInfo.version }}</span>
-                </div> -->
         <div class="header-navbar-icon">
           <span class="ml4 icon iconfont icon-geren9"></span>
           <span class="text ml4 blue">{{ userInfo.userName }}，{{ $t('欢迎您！') }}</span>
@@ -180,7 +177,7 @@
   };
 
   // 暴露到模板
-  const { menu_title, tabList, activeValue, is_password, tab_type } = toRefs(state);
+  const { is_password } = toRefs(state);
 </script>
 
 <style lang="scss">
