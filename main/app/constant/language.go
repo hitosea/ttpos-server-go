@@ -11,6 +11,7 @@ const (
 	LocaleKO   LocaleType = "ko"
 	LocaleMY   LocaleType = "my"
 	LocaleTR   LocaleType = "tr"
+	LocaleSV   LocaleType = "sv"
 )
 
 type Locales []LocaleType

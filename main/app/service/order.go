@@ -1645,6 +1645,11 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 				if saleOrderProduct.IsDelete() {
 					continue
 				}
+				// 过滤掉套餐子商品
+				if saleOrderProduct.IsPackageSubProduct() {
+					continue
+				}
+
 				// 过滤掉未接单的商品
 				if !saleOrderProduct.IsAcceptOrderProduct() {
 					continue
@@ -1655,10 +1660,48 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 				}
 				cancelReason := saleOrderProduct.GetCancelReason()
 				giftReason := saleOrderProduct.GetGiftReason()
+
+				attributeName := saleOrderProduct.GetAttributeName()
+				if saleOrderProduct.IsPackageProduct() {
+					// 如果是套餐商品，则获取各个子商品的名称、数量、规格、属性，如：“牛排*1（标准，黑椒汁）；可乐*2（大杯，少冰）；沙拉*1（大份，沙拉酱，蜂蜜酱）”
+					subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+					zh := ""
+					th := ""
+					en := ""
+					zhtw := ""
+					ja := ""
+					ko := ""
+					my := ""
+					tr := ""
+					sv := ""
+					for _, subProduct := range subProducts {
+						zh += subProduct.GetProductNameAttributes(string(constant.LocaleZH)) + "；"
+						th += subProduct.GetProductNameAttributes(string(constant.LocaleTH)) + "；"
+						en += subProduct.GetProductNameAttributes(string(constant.LocaleEN)) + "；"
+						zhtw += subProduct.GetProductNameAttributes(string(constant.LocaleZHTW)) + "；"
+						ja += subProduct.GetProductNameAttributes(string(constant.LocaleJA)) + "；"
+						ko += subProduct.GetProductNameAttributes(string(constant.LocaleKO)) + "；"
+						my += subProduct.GetProductNameAttributes(string(constant.LocaleMY)) + "；"
+						tr += subProduct.GetProductNameAttributes(string(constant.LocaleTR)) + "；"
+						sv += subProduct.GetProductNameAttributes(string(constant.LocaleSV)) + "；"
+					}
+					attributeName = dto.LocaleResponse{
+						ZH:   zh,
+						TH:   th,
+						EN:   en,
+						ZHTW: zhtw,
+						JA:   ja,
+						KO:   ko,
+						MY:   my,
+						TR:   tr,
+						SV:   sv,
+					}
+				}
+
 				products = append(products, resp.OrderProduct{
 					Uuid:                saleOrderProduct.Uuid,
 					LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
-					LocaleAttributeName: saleOrderProduct.GetAttributeName(),
+					LocaleAttributeName: attributeName,
 					Price:               saleOrderProduct.SalePrice,
 					Num:                 saleOrderProduct.Num,
 					SalePrice:           saleOrderProduct.GetTotalPriceOrigin(),
