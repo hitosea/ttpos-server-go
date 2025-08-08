@@ -4894,6 +4894,29 @@ func (s *orderSrv) GetProductDetail(ctx context.Context, productPackageUuid uint
 
 // OrderCartProductPackageAdd 往购物车添加套餐
 func (s *orderSrv) OrderCartProductPackageAdd(ctx context.Context, request req.OrderCartProductPackageAddReq) (*resp.ShopCart, error) {
+
+	// 当不填销售账单ID时，表示要新建一个销售账单
+	if request.SaleBillUuid == 0 {
+		// 判断是否有待支付、未挂单的订单
+		billInfo, hasInstantOrder, err := HasInstantOrder(ctx, s.dbm.GetDB(ctx.GetDbId()))
+		if err != nil {
+			return nil, err
+		}
+		if billInfo != nil && hasInstantOrder {
+			request.SaleBillUuid = billInfo.Uuid
+			request.SaleOrderUuid = billInfo.SaleOrders[0].Uuid
+		} else {
+			order, err := s.CreateInstantOrder(ctx)
+			if err != nil {
+				ctx.Log().Info("添加商品时点餐订单创建失败", zap.Any("err", err.Error()))
+				return nil, errors.WithMessage(err)
+			}
+			ctx.Log().Debug("添加商品时点餐订单创建成功", zap.Any("order info", order))
+			request.SaleBillUuid = order.SaleBillUuid
+			request.SaleOrderUuid = order.SaleOrderUuid
+		}
+	}
+
 	// 上锁防止并发操作
 	if ctx.NoLock() {
 		s.lock.LockUuid(request.SaleBillUuid)

@@ -451,6 +451,35 @@ func (h *InstantHandler) OrderCartProductAdd(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderCartProductPackageAdd 向购物车添加套餐
+// @Summary 向购物车添加套餐
+// @Description 向购物车添加套餐
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderCartProductPackageAddReq true "套餐参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/cart/product_package/add [post]
+func (h *InstantHandler) OrderCartProductPackageAdd(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartProductPackageAddReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	// 向购物车添加套餐
+	res, err := h.orderSrv.OrderCartProductPackageAdd(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // OrderCartProductNum 修改购物车商品数量
 // @Summary 修改购物车某个商品的数量
 // @Description 修改购物车商品数量
@@ -1336,6 +1365,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/product/remark", wrapper.OrderProductRemark)                             // 点餐订单商品备注
 		privateApi.GET("/instant/order/cart/info", wrapper.OrderCartInfo)                                        // 查询点餐购物车信息
 		privateApi.POST("/instant/order/cart/product/add", wrapper.OrderCartProductAdd)                          // 向购物车添加商品
+		privateApi.POST("/instant/order/cart/product_package/add", wrapper.OrderCartProductPackageAdd)           // 向购物车添加套餐
 		privateApi.POST("/instant/order/cart/product/num", wrapper.OrderCartProductNum)                          // 修改购物车商品数量
 		privateApi.POST("/instant/order/cart/cooking", wrapper.OrderCartProductCooking)                          // 送厨购物车商品
 		privateApi.POST("/instant/order/cart/product/returning", wrapper.OrderCartProductReturning)              // 退菜购物车商品
