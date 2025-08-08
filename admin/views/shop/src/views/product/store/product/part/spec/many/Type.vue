@@ -4,33 +4,33 @@
 </template>
 
 <script setup>
-import { inject } from 'vue'
-import { languageStore } from '@/store/model/language.js'
+  import { inject } from 'vue';
+  import { languageStore } from '@/store/model/language.js';
 
-// 获取语言数据
-const languageData = JSON.stringify(languageStore().getLanguageKeyForm())
+  // 获取语言数据
+  const languageData = JSON.stringify(languageStore().getLanguageKeyForm());
 
-// 注入form
-const form = inject('form', {})
+  // 注入form
+  const form = inject('form', {});
 
-// 方法定义
-/*显示/隐藏添加规则组 */
-const onToggleAddGroupForm = () => {
-  if (!Array.isArray(form.model.sku)) {
-    form.model.sku = []
-  }
-  form.model.sku.push({
-    spec_name: JSON.parse(languageData),
-    product_price: null,
-    stock_num: null,
-    barcode: '', //条形码
-    purchase_price: null, //单价
-    material: [], //材料
-    spec_id: null, //材料库存
-    barcodeUniqueness: true, //条形码是否唯一
-  })
-  form.many_select_list.push([])
-}
+  // 方法定义
+  /*显示/隐藏添加规则组 */
+  const onToggleAddGroupForm = () => {
+    if (!Array.isArray(form.model.sku)) {
+      form.model.sku = [];
+    }
+    form.model.sku.push({
+      spec_name: JSON.parse(languageData),
+      product_price: null,
+      stock_num: null,
+      barcode: '', //条形码
+      purchase_price: null, //单价
+      material: [], //材料
+      spec_id: null, //材料库存
+      barcodeUniqueness: true, //条形码是否唯一
+    });
+    form.many_select_list.push([]);
+  };
 </script>
 
 <style scoped>

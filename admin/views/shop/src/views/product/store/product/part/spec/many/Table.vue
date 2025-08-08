@@ -370,7 +370,6 @@
       form.spec.unshift(e.data);
     }
   };
-      
 </script>
 
 <style scoped>

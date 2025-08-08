@@ -57,7 +57,7 @@
       for="no_click"
       :label="$t('图片名称：')"
       prop="model.img_name"
-      :rules="[{ validator: uniqueNameValidator('product_img', form.model.product_id , 'SINGLE', undefined, false), trigger: 'blur' }]"
+      :rules="[{ validator: uniqueNameValidator('product_img', form.model.product_id, 'SINGLE', undefined, false), trigger: 'blur' }]"
     >
       <el-input type="text" :placeholder="$t('请输入图片名称')" v-model="form.model.img_name" :maxlength="50" class="max-w460"></el-input>
     </el-form-item>
@@ -75,144 +75,143 @@
 </template>
 
 <script setup>
-import { ref, inject, watch, onMounted, nextTick } from 'vue'
-import Upload from '@/components/file/Upload.vue'
-import Add from '../../category/Add.vue'
-import PurchaseApi from '@/api/purchase.js'
-import { useUserStore } from '@/store'
-import UniqueNameForm from '@/components/product/UniqueNameForm.vue'
-import { uniqueNameValidator } from '@/utils/form.js'
+  import { ref, inject, watch, onMounted, nextTick } from 'vue';
+  import Upload from '@/components/file/Upload.vue';
+  import Add from '../../category/Add.vue';
+  import PurchaseApi from '@/api/purchase.js';
+  import { useUserStore } from '@/store';
+  import UniqueNameForm from '@/components/product/UniqueNameForm.vue';
+  import { uniqueNameValidator } from '@/utils/form.js';
 
-// 获取用户信息
-const { computedSupplier } = useUserStore()
-const supplier = computedSupplier().supplier
-const baseSale = supplier.value?.sale_stock || 0
+  // 获取用户信息
+  const { computedSupplier } = useUserStore();
+  const supplier = computedSupplier().supplier;
+  const baseSale = supplier.value?.sale_stock || 0;
 
-// 定义props
-const props = defineProps({
-  disableChangeType: {
-    type: Boolean,
-    default: false,
-  },
-})
+  // 定义props
+  const props = defineProps({
+    disableChangeType: {
+      type: Boolean,
+      default: false,
+    },
+  });
 
-// 定义emit
-const emit = defineEmits(['validateField'])
+  // 定义emit
+  const emit = defineEmits(['validateField']);
 
-// 注入form
-const form = inject('form', {})
+  // 注入form
+  const form = inject('form', {});
 
-// 响应式数据
-const isProductUpload = ref(false)
-const open_add = ref(false)
-const options = ref([])
-const supplierList = ref([])
+  // 响应式数据
+  const isProductUpload = ref(false);
+  const open_add = ref(false);
+  const options = ref([]);
+  const supplierList = ref([]);
 
-// 模板引用
-const uniqueNameFormRef = ref(null)
+  // 模板引用
+  const uniqueNameFormRef = ref(null);
 
-// 组件挂载时初始化
-onMounted(() => {
-  getData()
-})
+  // 组件挂载时初始化
+  onMounted(() => {
+    getData();
+  });
 
-// 监听form变化
-watch(
-  () => form,
-  (val) => {
-    options.value = []
-    val.category.map((item, index) => {
-      options.value.push({
-        value: item.category_id,
-        label: item.name_text,
-        children: [],
-      })
-      item.child.map((items) => {
-        options.value[index].children.push({
-          value: items.category_id,
-          label: items.name_text,
-        })
-      })
-    })
-  },
-  { deep: true, immediate: true }
-)
+  // 监听form变化
+  watch(
+    () => form,
+    (val) => {
+      options.value = [];
+      val.category.map((item, index) => {
+        options.value.push({
+          value: item.category_id,
+          label: item.name_text,
+          children: [],
+        });
+        item.child.map((items) => {
+          options.value[index].children.push({
+            value: items.category_id,
+            label: items.name_text,
+          });
+        });
+      });
+    },
+    { deep: true, immediate: true }
+  );
 
-// 方法定义
-//获取供应商
-const getData = async () => {
-  try {
-    let Params = {}
-    Params.list_rows = 1000
-    const data = await PurchaseApi.supplierList(Params, true)
-    supplierList.value = data.data.list.data
-    nextTick(() => {
-      let arr = []
-      supplierList.value.map((item) => {
-        arr.push(item.id)
-      })
-      if (!arr.includes(form.model.erp_supplier_id)) {
-        form.model.erp_supplier_id = ''
-      }
-    })
-  } catch (error) {
-    // 错误处理
-  }
-}
+  // 方法定义
+  //获取供应商
+  const getData = async () => {
+    try {
+      let Params = {};
+      Params.list_rows = 1000;
+      const data = await PurchaseApi.supplierList(Params, true);
+      supplierList.value = data.data.list.data;
+      nextTick(() => {
+        let arr = [];
+        supplierList.value.map((item) => {
+          arr.push(item.id);
+        });
+        if (!arr.includes(form.model.erp_supplier_id)) {
+          form.model.erp_supplier_id = '';
+        }
+      });
+    } catch (error) {
+      // 错误处理
+    }
+  };
 
-const addCategory = () => {
-  open_add.value = true
-}
+  const addCategory = () => {
+    open_add.value = true;
+  };
 
-/*关闭弹窗*/
-const closeDialogFunc = (e, f) => {
-  if (f == 'add') {
-    open_add.value = e.openDialog
-    if (e.type == 'success' && e.data) {
-      e.data.parent_id = Number(e.data.parent_id)
-      if (e.data.parent_id) {
-        form.category.map((item) => {
-          if (item.category_id == e.data.parent_id) {
-            item.child.push(e.data)
-          }
-        })
-      } else {
-        e.data.child = []
-        form.category.unshift(e.data)
+  /*关闭弹窗*/
+  const closeDialogFunc = (e, f) => {
+    if (f == 'add') {
+      open_add.value = e.openDialog;
+      if (e.type == 'success' && e.data) {
+        e.data.parent_id = Number(e.data.parent_id);
+        if (e.data.parent_id) {
+          form.category.map((item) => {
+            if (item.category_id == e.data.parent_id) {
+              item.child.push(e.data);
+            }
+          });
+        } else {
+          e.data.child = [];
+          form.category.unshift(e.data);
+        }
       }
     }
-  }
-}
+  };
 
-const changeType = () => {
-  form.model.sku[0].material = []
-  form.model.sku = form.model.sku.slice(0, 1)
-  form.single_select_list = []
-  form.many_select_list = [[]]
-  form.ing_select_list = [[]]
-  form.model.type == 10 ? (form.model.spec_type = 20) : (form.model.spec_type = 10)
-}
+  const changeType = () => {
+    form.model.sku[0].material = [];
+    form.model.sku = form.model.sku.slice(0, 1);
+    form.single_select_list = [];
+    form.many_select_list = [[]];
+    form.ing_select_list = [[]];
+    form.model.type == 10 ? (form.model.spec_type = 20) : (form.model.spec_type = 10);
+  };
 
-/*打开上传图片*/
-const openProductUpload = () => {
-  isProductUpload.value = true
-}
+  /*打开上传图片*/
+  const openProductUpload = () => {
+    isProductUpload.value = true;
+  };
 
-/*上传商品图片*/
-const returnProductImgsFunc = (e) => {
-  if (e != null) {
-    let imgs = form.model.image.concat(e)
-    form.model['image'] = imgs
-  }
-  isProductUpload.value = false
-  emit('validateField', 'model.image')
-}
+  /*上传商品图片*/
+  const returnProductImgsFunc = (e) => {
+    if (e != null) {
+      let imgs = form.model.image.concat(e);
+      form.model['image'] = imgs;
+    }
+    isProductUpload.value = false;
+    emit('validateField', 'model.image');
+  };
 
-/*删除商品图片*/
-const deleteImg = (index) => {
-  form.model.image.splice(index, 1)
-}
+  /*删除商品图片*/
+  const deleteImg = (index) => {
+    form.model.image.splice(index, 1);
+  };
 </script>
 
-<style lang="scss" scoped>
-</style>
+<style lang="scss" scoped></style>

@@ -112,422 +112,422 @@
 </template>
 
 <script setup>
-import { ref, watch, getCurrentInstance } from 'vue'
-import { ElMessage } from 'element-plus'
-import JSZip from 'jszip'
-import ProductApi from '@/api/product.js'
+  import { ref, watch, getCurrentInstance } from 'vue';
+  import { ElMessage } from 'element-plus';
+  import JSZip from 'jszip';
+  import ProductApi from '@/api/product.js';
 
-// 获取组件实例
-const { proxy } = getCurrentInstance()
+  // 获取组件实例
+  const { proxy } = getCurrentInstance();
 
-// 定义props
-const props = defineProps({
-  product_list: {
-    type: Array,
-    default: () => []
-  }
-})
+  // 定义props
+  const props = defineProps({
+    product_list: {
+      type: Array,
+      default: () => [],
+    },
+  });
 
-// 定义emits
-const emit = defineEmits(['loading', 'close'])
+  // 定义emits
+  const emit = defineEmits(['loading', 'close']);
 
-// 响应式数据
-const tableData = ref([])
-const files = ref([])
-const filesList = ref([])
-const imgList = ref([])
-const folderName = ref([])
-const nameList = ref([])
-const repeat_list = ref([])
-const request_cache = ref(false)
-const dialogVisible = ref(false)
-const loading = ref(false)
-const page = ref(1)
-const page_size = ref(10)
-const totalDataNumber = ref(0)
+  // 响应式数据
+  const tableData = ref([]);
+  const files = ref([]);
+  const filesList = ref([]);
+  const imgList = ref([]);
+  const folderName = ref([]);
+  const nameList = ref([]);
+  const repeat_list = ref([]);
+  const request_cache = ref(false);
+  const dialogVisible = ref(false);
+  const loading = ref(false);
+  const page = ref(1);
+  const page_size = ref(10);
+  const totalDataNumber = ref(0);
 
-// 监听product_list变化
-watch(
-  () => props.product_list,
-  async (val) => {
-    // 新的加料id
-    const newIds = await Promise.resolve().then(() => {
-      const ids = []
-      ;(val || []).map((item) => {
-        ids.push(item.product_id)
-      })
-      return ids
-    })
+  // 监听product_list变化
+  watch(
+    () => props.product_list,
+    async (val) => {
+      // 新的加料id
+      const newIds = await Promise.resolve().then(() => {
+        const ids = [];
+        (val || []).map((item) => {
+          ids.push(item.product_id);
+        });
+        return ids;
+      });
 
-    // 需要新增的id
-    const _pushIds = await Promise.resolve().then(() => {
-      return newIds.filter((item) => tableData.value.findIndex((items) => items.product_id == item) == -1)
-    })
+      // 需要新增的id
+      const _pushIds = await Promise.resolve().then(() => {
+        return newIds.filter((item) => tableData.value.findIndex((items) => items.product_id == item) == -1);
+      });
 
-    // 需要删除的id
-    const _needToDeleteIds = await Promise.resolve().then(() => {
-      return tableData.value.filter((item) => newIds.findIndex((items) => items == item.product_id) == -1)
-    })
+      // 需要删除的id
+      const _needToDeleteIds = await Promise.resolve().then(() => {
+        return tableData.value.filter((item) => newIds.findIndex((items) => items == item.product_id) == -1);
+      });
 
-    // 第一步：删除不需要的id
-    await Promise.resolve().then(() => {
-      _needToDeleteIds.map((item) => {
-        tableData.value.map((items, indexs) => {
-          if (items.product_id == item.product_id) {
-            tableData.value.splice(indexs, 1)
-            imgList.value.splice(indexs, 1)
+      // 第一步：删除不需要的id
+      await Promise.resolve().then(() => {
+        _needToDeleteIds.map((item) => {
+          tableData.value.map((items, indexs) => {
+            if (items.product_id == item.product_id) {
+              tableData.value.splice(indexs, 1);
+              imgList.value.splice(indexs, 1);
+            }
+          });
+        });
+      });
+
+      // 第二步：插入需要新增的id（
+      await Promise.resolve().then(() => {
+        (val || []).map((item) => {
+          if (_pushIds.indexOf(item.product_id) != -1) {
+            tableData.value.push(item);
+            imgList.value.push({
+              product_name_text: item.product_name_text,
+              product_id: item.product_id,
+              url: '',
+              file: '',
+            });
           }
-        })
-      })
-    })
+        });
+      });
+    },
+    { immediate: true, deep: true }
+  );
 
-    // 第二步：插入需要新增的id（
-    await Promise.resolve().then(() => {
-      ;(val || []).map((item) => {
-        if (_pushIds.indexOf(item.product_id) != -1) {
-          tableData.value.push(item)
-          imgList.value.push({
-            product_name_text: item.product_name_text,
-            product_id: item.product_id,
-            url: '',
-            file: '',
-          })
-        }
-      })
-    })
-  },
-  { immediate: true, deep: true }
-)
+  // 方法定义
+  //上传文件夹
+  const handleFolderSelect = async (event) => {
+    if (event.target.files.length == 0) return;
 
-// 方法定义
-//上传文件夹
-const handleFolderSelect = async (event) => {
-  if (event.target.files.length == 0) return
+    files.value = [];
+    filesList.value = [];
+    folderName.value = [];
+    nameList.value = [];
+    const selectedFiles = event.target.files;
+    filesList.value.push([]);
+    Array.from(selectedFiles).map((file) => {
+      filesList.value[0].push(file);
+    });
 
-  files.value = []
-  filesList.value = []
-  folderName.value = []
-  nameList.value = []
-  const selectedFiles = event.target.files
-  filesList.value.push([])
-  Array.from(selectedFiles).map((file) => {
-    filesList.value[0].push(file)
-  })
+    // 获取文件夹名称
+    folderName.value.push(filesList.value[0][0].webkitRelativePath.split('/')[0]);
 
-  // 获取文件夹名称
-  folderName.value.push(filesList.value[0][0].webkitRelativePath.split('/')[0])
-
-  for (const item of filesList.value) {
-    for (const file of item) {
-      if ((file.type.includes('jpg') || file.type.includes('png') || file.type.includes('jpeg') || file.type.includes('webp')) && file.size < 15 * 1024 * 1024) {
-        const isType = await checkImageType(file)
-        if (isType) {
-          files.value.push(file)
-        } else {
-          const changeFile = await convertWebp(file)
-          files.value.push(changeFile)
+    for (const item of filesList.value) {
+      for (const file of item) {
+        if ((file.type.includes('jpg') || file.type.includes('png') || file.type.includes('jpeg') || file.type.includes('webp')) && file.size < 15 * 1024 * 1024) {
+          const isType = await checkImageType(file);
+          if (isType) {
+            files.value.push(file);
+          } else {
+            const changeFile = await convertWebp(file);
+            files.value.push(changeFile);
+          }
         }
       }
     }
-  }
 
-  filterList()
-}
+    filterList();
+  };
 
-//删除文件夹
-const deleteFolder = (index) => {
-  filesList.value.splice(index, 1)
-  folderName.value.splice(index, 1)
-  files.value = []
-  imgList.value.map((item) => {
-    item.img_name = ''
-    item.url = ''
-  })
+  //删除文件夹
+  const deleteFolder = (index) => {
+    filesList.value.splice(index, 1);
+    folderName.value.splice(index, 1);
+    files.value = [];
+    imgList.value.map((item) => {
+      item.img_name = '';
+      item.url = '';
+    });
 
-  document.getElementById('input-id-files').value = ''
-  filterList(true)
-}
+    document.getElementById('input-id-files').value = '';
+    filterList(true);
+  };
 
-//过滤列表
-const filterList = (e) => {
-  //过滤只剩图片文件
-  const filteredFiles = files.value.filter((file) => {
-    const fileType = file.type.toLowerCase()
-    return (fileType.includes('jpg') || fileType.includes('png') || fileType.includes('jpeg') || fileType.includes('webp')) && file.size < 15 * 1024 * 1024
-  })
-  //过滤重复名字的图片
-  const uniqueArray = filteredFiles.filter((obj, index, self) => index === self.findIndex((t) => t.name === obj.name))
-  files.value = uniqueArray
+  //过滤列表
+  const filterList = (e) => {
+    //过滤只剩图片文件
+    const filteredFiles = files.value.filter((file) => {
+      const fileType = file.type.toLowerCase();
+      return (fileType.includes('jpg') || fileType.includes('png') || fileType.includes('jpeg') || fileType.includes('webp')) && file.size < 15 * 1024 * 1024;
+    });
+    //过滤重复名字的图片
+    const uniqueArray = filteredFiles.filter((obj, index, self) => index === self.findIndex((t) => t.name === obj.name));
+    files.value = uniqueArray;
 
-  if (files.value.length > 0) {
-    // 显示图片
-    // 用于存储文件名的数组
-    nameList.value = []
-    files.value.map((file) => {
-      nameList.value.push(file.name.replace(/\.(png|jpg|jpeg|webp)/gi, ''))
-    })
+    if (files.value.length > 0) {
+      // 显示图片
+      // 用于存储文件名的数组
+      nameList.value = [];
+      files.value.map((file) => {
+        nameList.value.push(file.name.replace(/\.(png|jpg|jpeg|webp)/gi, ''));
+      });
 
-    //图片数组
-    tableData.value.map((item, index) => {
-      imgList.value[index].file = files.value[nameList.value.indexOf(item.img_name)]
-      if (nameList.value.includes(item.img_name)) {
-        const reader = new FileReader()
-        reader.onload = (e) => {
-          const base64String = e.target.result
-          imgList.value[index].url = base64String
+      //图片数组
+      tableData.value.map((item, index) => {
+        imgList.value[index].file = files.value[nameList.value.indexOf(item.img_name)];
+        if (nameList.value.includes(item.img_name)) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const base64String = e.target.result;
+            imgList.value[index].url = base64String;
+          };
+          reader.readAsDataURL(files.value[nameList.value.indexOf(item.img_name)]);
         }
-        reader.readAsDataURL(files.value[nameList.value.indexOf(item.img_name)])
+      });
+    } else if (files.value.length == 0 && e) {
+      ElMessage({
+        type: 'warning',
+        message: $t('没有相匹配的图片'),
+      });
+    }
+  };
+
+  /*选择第几页*/
+  const handleCurrentChange = (val) => {
+    loading.value = true;
+    page.value = val;
+    repeatList();
+  };
+
+  /*每页多少条*/
+  const handleSizeChange = (val) => {
+    page_size.value = val;
+    repeatList();
+  };
+
+  // 批量修改分类验证（方法二）
+  const repeatList = async () => {
+    // 第一步：构建列表（方法二）
+    const list = await Promise.resolve().then(() => {
+      const temp = [];
+      imgList.value.map((item) => {
+        if (item.file) {
+          temp.push({
+            product_id: item.product_id,
+            file_name: item.file.name,
+            img_name: item.file.name.replace(/\.(png|jpg|jpeg|webp)/gi, ''),
+            product_name_text: item.product_name_text,
+          });
+        }
+      });
+      return temp;
+    });
+
+    if (list.length === 0) {
+      ElMessage({
+        type: 'warning',
+        message: $t('没有相匹配的图片'),
+      });
+      return;
+    }
+
+    try {
+      loading.value = true;
+      // 第二步：请求接口（真实异步）
+      const res = await ProductApi.repeatList(
+        {
+          list,
+          page: page.value,
+          page_size: page_size.value,
+        },
+        true
+      );
+      loading.value = false;
+
+      if (res.data?.data?.length > 0) {
+        // 第三步：写入响应数据（方法二）
+        await Promise.resolve().then(() => {
+          repeat_list.value = res.data?.data;
+          request_cache.value = true;
+          totalDataNumber.value = res.data?.total;
+        });
+
+        // 第四步：补充 path_name_text（方法二）
+        await Promise.resolve().then(() => {
+          if (repeat_list.value.length > 0) {
+            (repeat_list.value || []).map((item) => {
+              tableData.value.map((item2) => {
+                if (item2.product_id === item.product_id) {
+                  item.path_name_text = item2.path_name_text;
+                }
+              });
+            });
+          }
+        });
+
+        dialogVisible.value = true;
+      } else {
+        // 第五步：无重复则直接打包上传（真实异步）
+        await packaging();
       }
-    })
-  } else if (files.value.length == 0 && e) {
-    ElMessage({
-      type: 'warning',
-      message: $t('没有相匹配的图片'),
-    })
-  }
-}
+    } catch (error) {
+      loading.value = false;
+    }
+  };
 
-/*选择第几页*/
-const handleCurrentChange = (val) => {
-  loading.value = true
-  page.value = val
-  repeatList()
-}
+  //提交数据
+  const packaging = async () => {
+    const zip = new JSZip();
+    for (const imgData of imgList.value) {
+      if (imgData.file) {
+        zip.file(imgData.file.name, imgData.file);
+      }
+    }
 
-/*每页多少条*/
-const handleSizeChange = (val) => {
-  page_size.value = val
-  repeatList()
-}
-
-// 批量修改分类验证（方法二）
-const repeatList = async () => {
-  // 第一步：构建列表（方法二）
-  const list = await Promise.resolve().then(() => {
-    const temp = []
+    const list = [];
     imgList.value.map((item) => {
       if (item.file) {
-        temp.push({
+        list.push({
           product_id: item.product_id,
           file_name: item.file.name,
           img_name: item.file.name.replace(/\.(png|jpg|jpeg|webp)/gi, ''),
           product_name_text: item.product_name_text,
-        })
+        });
       }
-    })
-    return temp
-  })
+    });
 
-  if (list.length === 0) {
-    ElMessage({
-      type: 'warning',
-      message: $t('没有相匹配的图片'),
-    })
-    return
-  }
+    if (list.length === 0) return;
+    const content = await zip.generateAsync({ type: 'blob' });
+    const formData = new FormData();
+    formData.append('iFile', content);
+    formData.append('file_type', content.type);
+    formData.append('size', content.size);
+    formData.append('name', 'filename.zip');
+    formData.append('list', JSON.stringify(list));
+    formData.append('is_overlay', request_cache.value ? 1 : 0);
 
-  try {
-    loading.value = true
-    // 第二步：请求接口（真实异步）
-    const res = await ProductApi.repeatList(
-      {
-        list,
-        page: page.value,
-        page_size: page_size.value,
-      },
-      true
-    )
-    loading.value = false
-
-    if (res.data?.data?.length > 0) {
-      // 第三步：写入响应数据（方法二）
-      await Promise.resolve().then(() => {
-        repeat_list.value = res.data?.data
-        request_cache.value = true
-        totalDataNumber.value = res.data?.total
+    loading.value = true;
+    emit('loading', true);
+    ProductApi.batchReplaceProductImage(formData, true)
+      .then((data) => {
+        dialogVisible.value = false;
+        loading.value = false;
+        emit('loading', false);
+        ElMessage({
+          type: 'success',
+          message: $t('上传成功'),
+        });
+        emit('close');
       })
+      .catch((error) => {
+        loading.value = false;
+        emit('loading', false);
+      });
+  };
 
-      // 第四步：补充 path_name_text（方法二）
-      await Promise.resolve().then(() => {
-        if (repeat_list.value.length > 0) {
-          ;(repeat_list.value || []).map((item) => {
-            tableData.value.map((item2) => {
-              if (item2.product_id === item.product_id) {
-                item.path_name_text = item2.path_name_text
-              }
-            })
-          })
-        }
-      })
+  //删除图片
+  const deleteImg = (index) => {
+    imgList.value[index].url = '';
+    imgList.value[index].file = '';
+  };
 
-      dialogVisible.value = true
-    } else {
-      // 第五步：无重复则直接打包上传（真实异步）
-      await packaging()
-    }
-  } catch (error) {
-    loading.value = false
-  }
-}
-
-//提交数据
-const packaging = async () => {
-  const zip = new JSZip()
-  for (const imgData of imgList.value) {
-    if (imgData.file) {
-      zip.file(imgData.file.name, imgData.file)
-    }
-  }
-
-  const list = []
-  imgList.value.map((item) => {
-    if (item.file) {
-      list.push({
-        product_id: item.product_id,
-        file_name: item.file.name,
-        img_name: item.file.name.replace(/\.(png|jpg|jpeg|webp)/gi, ''),
-        product_name_text: item.product_name_text,
-      })
-    }
-  })
-
-  if (list.length === 0) return
-  const content = await zip.generateAsync({ type: 'blob' })
-  const formData = new FormData()
-  formData.append('iFile', content)
-  formData.append('file_type', content.type)
-  formData.append('size', content.size)
-  formData.append('name', 'filename.zip')
-  formData.append('list', JSON.stringify(list))
-  formData.append('is_overlay', request_cache.value ? 1 : 0)
-
-  loading.value = true
-  emit('loading', true)
-  ProductApi.batchReplaceProductImage(formData, true)
-    .then((data) => {
-      dialogVisible.value = false
-      loading.value = false
-      emit('loading', false)
-      ElMessage({
-        type: 'success',
-        message: $t('上传成功'),
-      })
-      emit('close')
-    })
-    .catch((error) => {
-      loading.value = false
-      emit('loading', false)
-    })
-}
-
-//删除图片
-const deleteImg = (index) => {
-  imgList.value[index].url = ''
-  imgList.value[index].file = ''
-}
-
-//上传图片
-const beforeAvatarUpload = async (file, index) => {
-  const fileType = file.type.toLowerCase()
-  if ((fileType.includes('jpg') || fileType.includes('png') || fileType.includes('jpeg') || fileType.includes('webp')) && file.size < 15 * 1024 * 1024) {
-    const isType = await checkImageType(file)
-    if (!isType) {
-      const changeFile = await convertWebp(file)
-      imgList.value[index].file = changeFile
-    } else {
-      imgList.value[index].file = file
-    }
-
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const base64String = e.target.result
-      imgList.value[index].url = base64String
-    }
-    reader.readAsDataURL(file)
-  } else {
-    ElMessage({
-      type: 'warning',
-      message: $t('请上传大小在15M以内的jpg、png、webp图片'),
-    })
-  }
-
-  return false
-}
-
-const checkImageType = async (file) => {
-  return await new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onloadend = (e) => {
-      const arr = new Uint8Array(e.target?.result).subarray(0, 12)
-      let header = ''
-      for (let i = 0; i < arr.length; i++) {
-        header += arr[i].toString(16).padStart(2, '0')
-      }
-
-      // WebP 的魔数是 "52494646"(RIFF) 后跟文件大小，然后是 "57454250"(WEBP)
-      if (header.startsWith('52494646') && header.includes('57454250')) {
-        resolve(false)
-      } else if (header.startsWith('89504e47')) {
-        resolve(true)
-      } else if (header.startsWith('ffd8ff')) {
-        resolve(true)
+  //上传图片
+  const beforeAvatarUpload = async (file, index) => {
+    const fileType = file.type.toLowerCase();
+    if ((fileType.includes('jpg') || fileType.includes('png') || fileType.includes('jpeg') || fileType.includes('webp')) && file.size < 15 * 1024 * 1024) {
+      const isType = await checkImageType(file);
+      if (!isType) {
+        const changeFile = await convertWebp(file);
+        imgList.value[index].file = changeFile;
       } else {
-        resolve(false)
+        imgList.value[index].file = file;
       }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64String = e.target.result;
+        imgList.value[index].url = base64String;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      ElMessage({
+        type: 'warning',
+        message: $t('请上传大小在15M以内的jpg、png、webp图片'),
+      });
     }
-    reader.readAsArrayBuffer(file)
-  })
-}
 
-const convertWebp = async (file) => {
-  return await new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = function (event) {
-      const img = new Image()
-      img.onload = function () {
-        const canvas = document.createElement('canvas')
-        canvas.width = img.width
-        canvas.height = img.height
-        const ctx = canvas.getContext('2d')
-        ctx.drawImage(img, 0, 0, img.width, img.height)
-        const pngUrl = canvas.toDataURL('image/jpg')
-        resolve(base64ToFile(pngUrl, file.name.replace(/\.(png|jpg|jpeg|webp)/gi, '') + '.png'))
-      }
-      img.src = event.target.result
+    return false;
+  };
+
+  const checkImageType = async (file) => {
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = (e) => {
+        const arr = new Uint8Array(e.target?.result).subarray(0, 12);
+        let header = '';
+        for (let i = 0; i < arr.length; i++) {
+          header += arr[i].toString(16).padStart(2, '0');
+        }
+
+        // WebP 的魔数是 "52494646"(RIFF) 后跟文件大小，然后是 "57454250"(WEBP)
+        if (header.startsWith('52494646') && header.includes('57454250')) {
+          resolve(false);
+        } else if (header.startsWith('89504e47')) {
+          resolve(true);
+        } else if (header.startsWith('ffd8ff')) {
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
+  const convertWebp = async (file) => {
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        const img = new Image();
+        img.onload = function () {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, img.width, img.height);
+          const pngUrl = canvas.toDataURL('image/jpg');
+          resolve(base64ToFile(pngUrl, file.name.replace(/\.(png|jpg|jpeg|webp)/gi, '') + '.png'));
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const base64ToFile = (base64, filename) => {
+    // 分割 MIME 类型和 Base64 数据部分
+    const [metadata, base64Data] = base64.split(',');
+    const mimeString = metadata.match(/:(.*?);/)[1]; // 提取 MIME 类型
+    const byteString = atob(base64Data); // 解码 Base64
+    const arrayBuffer = new Uint8Array(byteString.length);
+
+    // 将解码后的数据填充到 Uint8Array
+    for (let i = 0; i < byteString.length; i++) {
+      arrayBuffer[i] = byteString.charCodeAt(i);
     }
-    reader.readAsDataURL(file)
-  })
-}
 
-const base64ToFile = (base64, filename) => {
-  // 分割 MIME 类型和 Base64 数据部分
-  const [metadata, base64Data] = base64.split(',')
-  const mimeString = metadata.match(/:(.*?);/)[1] // 提取 MIME 类型
-  const byteString = atob(base64Data) // 解码 Base64
-  const arrayBuffer = new Uint8Array(byteString.length)
+    // 创建 Blob 对象
+    const blob = new Blob([arrayBuffer], { type: mimeString });
 
-  // 将解码后的数据填充到 Uint8Array
-  for (let i = 0; i < byteString.length; i++) {
-    arrayBuffer[i] = byteString.charCodeAt(i)
-  }
+    // 创建 File 对象
+    const file = new File([blob], filename, { type: mimeString });
 
-  // 创建 Blob 对象
-  const blob = new Blob([arrayBuffer], { type: mimeString })
+    return file;
+  };
 
-  // 创建 File 对象
-  const file = new File([blob], filename, { type: mimeString })
+  const dialogFormVisible = () => {
+    dialogVisible.value = false;
+    request_cache.value = '';
+  };
 
-  return file
-}
-
-const dialogFormVisible = () => {
-  dialogVisible.value = false
-  request_cache.value = ''
-}
-
-defineExpose({
-  repeatList
-})
+  defineExpose({
+    repeatList,
+  });
 </script>
 
 <style scoped>

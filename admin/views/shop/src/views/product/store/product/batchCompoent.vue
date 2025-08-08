@@ -103,143 +103,147 @@
 </template>
 
 <script setup>
-import { ref, reactive, provide, watch, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import ProductSelector from '@/components/product/Selector.vue'
-import upImages from './components/upImages.vue'
-import typeChange from './components/typeChange.vue'
-import taxChange from './components/taxChange.vue'
+  import { ref, reactive, provide, watch, onMounted } from 'vue';
+  import { useRouter, useRoute } from 'vue-router';
+  import ProductSelector from '@/components/product/Selector.vue';
+  import upImages from './components/upImages.vue';
+  import typeChange from './components/typeChange.vue';
+  import taxChange from './components/taxChange.vue';
 
-// 获取路由实例
-const router = useRouter()
-const route = useRoute()
+  // 获取路由实例
+  const router = useRouter();
+  const route = useRoute();
 
-// 响应式数据
-const loading = ref(false)
-const openProductSelector = ref(false)
-const model = ref({})
-const form = reactive({
-  product_ids: [],
-  category_id: '',
-  productTaxes: [
-    {
-      product_tax_type: '1',
-      tax_category_id: '',
+  // 响应式数据
+  const loading = ref(false);
+  const openProductSelector = ref(false);
+  const model = ref({});
+  const form = reactive({
+    product_ids: [],
+    category_id: '',
+    productTaxes: [
+      {
+        product_tax_type: '1',
+        tax_category_id: '',
+      },
+      {
+        product_tax_type: '2',
+        tax_category_id: '',
+      },
+    ],
+  });
+  const product_list = ref([]);
+  const type = ref(1);
+  const title = ref('');
+
+  // 模板引用
+  const formRef = ref(null);
+  const upImagesRef = ref(null);
+  const typeChangeRef = ref(null);
+  const taxChangeRef = ref(null);
+
+  // 提供form给子组件
+  provide('form', form);
+
+  // 监听product_list变化
+  watch(
+    product_list,
+    (val) => {
+      form.product_ids = val.map((item) => {
+        return item.product_id;
+      });
+
+      if (formRef.value) {
+        formRef.value.validateField('product_ids');
+      }
     },
-    {
-      product_tax_type: '2',
-      tax_category_id: '',
-    },
-  ],
-})
-const product_list = ref([])
-const type = ref(1)
-const title = ref('')
+    { deep: true, immediate: true }
+  );
 
-// 模板引用
-const formRef = ref(null)
-const upImagesRef = ref(null)
-const typeChangeRef = ref(null)
-const taxChangeRef = ref(null)
-
-// 提供form给子组件
-provide('form', form)
-
-// 监听product_list变化
-watch(product_list, (val) => {
-  form.product_ids = val.map((item) => {
-    return item.product_id
-  })
-
-  if (formRef.value) {
-    formRef.value.validateField('product_ids')
-  }
-}, { deep: true, immediate: true })
-
-// 组件挂载时初始化
-onMounted(() => {
-  type.value = route.query.type
-  switch (type.value) {
-    case '1':
-      title.value = $t('修改图片')
-      break
-    case '2':
-      title.value = $t('修改分类')
-      break
-    case '3':
-      title.value = $t('修改税类')
-      break
-    case '5':
-      title.value = $t('商品批量导入')
-      break
-  }
-})
-
-// 方法定义
-const dialogFormVisible = () => {
-  router.go(-1)
-}
-
-const handleClick = () => {
-  formRef.value.validate((valid) => {
-    if (valid) {
-      if (type.value == 1) {
-        upImagesRef.value.repeatList()
-      }
-      if (type.value == 2) {
-        typeChangeRef.value.submit()
-      }
-      if (type.value == 3) {
-        taxChangeRef.value.submit()
-      }
+  // 组件挂载时初始化
+  onMounted(() => {
+    type.value = route.query.type;
+    switch (type.value) {
+      case '1':
+        title.value = $t('修改图片');
+        break;
+      case '2':
+        title.value = $t('修改分类');
+        break;
+      case '3':
+        title.value = $t('修改税类');
+        break;
+      case '5':
+        title.value = $t('商品批量导入');
+        break;
     }
-  })
-}
+  });
 
-const addProduct = () => {
-  openProductSelector.value = true
-  model.value.product_ids = []
-  if (product_list.value.length > 0) {
-    product_list.value.map((item) => {
-      model.value.product_ids.push({
-        product_id: item.product_id,
-      })
-    })
-  }
-}
+  // 方法定义
+  const dialogFormVisible = () => {
+    router.go(-1);
+  };
 
-const handleProductSelectorClose = (list, categories) => {
-  if (Array.isArray(list)) {
-    product_list.value = list
-  }
-  if (Array.isArray(categories)) {
-    product_list.value.map((item) => {
-      item.path_name_text = ''
-      categories.map((item2) => {
-        if (item.category_id == item2.category_id) {
-          item.path_name_text = item2.path_name_text
+  const handleClick = () => {
+    formRef.value.validate((valid) => {
+      if (valid) {
+        if (type.value == 1) {
+          upImagesRef.value.repeatList();
         }
-        if (item2.child.length > 0) {
-          item2.child.map((item3) => {
-            if (item.category_id == item3.category_id) {
-              item.path_name_text = item3.path_name_text
-            }
-          })
+        if (type.value == 2) {
+          typeChangeRef.value.submit();
         }
-      })
-    })
-  }
+        if (type.value == 3) {
+          taxChangeRef.value.submit();
+        }
+      }
+    });
+  };
 
-  openProductSelector.value = false
-}
+  const addProduct = () => {
+    openProductSelector.value = true;
+    model.value.product_ids = [];
+    if (product_list.value.length > 0) {
+      product_list.value.map((item) => {
+        model.value.product_ids.push({
+          product_id: item.product_id,
+        });
+      });
+    }
+  };
 
-const returnBack = () => {
-  router.go(-1)
-}
+  const handleProductSelectorClose = (list, categories) => {
+    if (Array.isArray(list)) {
+      product_list.value = list;
+    }
+    if (Array.isArray(categories)) {
+      product_list.value.map((item) => {
+        item.path_name_text = '';
+        categories.map((item2) => {
+          if (item.category_id == item2.category_id) {
+            item.path_name_text = item2.path_name_text;
+          }
+          if (item2.child.length > 0) {
+            item2.child.map((item3) => {
+              if (item.category_id == item3.category_id) {
+                item.path_name_text = item3.path_name_text;
+              }
+            });
+          }
+        });
+      });
+    }
 
-const removeProduct = (index) => {
-  product_list.value.splice(index, 1)
-}
+    openProductSelector.value = false;
+  };
+
+  const returnBack = () => {
+    router.go(-1);
+  };
+
+  const removeProduct = (index) => {
+    product_list.value.splice(index, 1);
+  };
 </script>
 
 <style lang="scss" scoped>
