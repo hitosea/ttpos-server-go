@@ -6957,6 +6957,14 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		} else {
 			saleOrderProduct.SetCancelInfo(req.Reason, returnFoodReasonList)
 			returnSaleOrderProduct = saleOrderProduct
+			// 如果是套餐商品，则更新套餐子商品退菜信息
+			subProducts := make([]*model.SaleOrderProduct, 0)
+			if saleOrderProduct.IsPackageProduct() {
+				subProducts = saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+				for _, subProduct := range subProducts {
+					subProduct.SetCancelInfo(req.Reason, nil)
+				}
+			}
 		}
 	} else {
 		// 如果退菜数量小于该商品的数量，则新建一个销售订单商品并在新商品的退菜原因列表中添加退菜原因
