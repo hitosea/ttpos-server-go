@@ -4,37 +4,37 @@
     <div class="common-search-wrap">
       <el-form size="small" :inline="true" :model="searchForm" class="demo-form-inline">
         <el-form-item :label="$t('商品类型')">
-          <a-select size="small" v-model:value="material_type" clearable :placeholder="$t('全部类型')" @change="onSearch">
+          <Aselect size="small" v-model:value="material_type" clearable :placeholder="$t('全部类型')" @change="onSearch">
             <el-option :label="$t('全部类型')" value=" "></el-option>
             <el-option :label="$t('材料')" value="20"></el-option>
             <el-option :label="$t('套餐')" value="30"></el-option>
             <el-option :label="$t('成品')" value="10"></el-option>
-          </a-select>
+          </Aselect>
         </el-form-item>
         <el-form-item :label="$t('商品分类')">
-          <a-cascader
+          <Acascader
             :options="categoryList"
             :props="{ checkStrictly: true, expandTrigger: 'hover' }"
             v-model:value="searchForm.category_id"
             :placeholder="$t('请选择分类')"
             @change="onSearch('1')"
           >
-          </a-cascader>
+          </Acascader>
         </el-form-item>
         <el-form-item :label="$t('商品库存')">
-          <a-select size="small" v-model:value="stock" :placeholder="$t('全部库存')" @change="onSearch">
+          <Aselect size="small" v-model:value="stock" :placeholder="$t('全部库存')" @change="onSearch">
             <el-option :label="$t('全部')" value=" "></el-option>
             <el-option :label="$t('库存低于10')" value="10"></el-option>
             <el-option :label="$t('库存低于20')" value="20"></el-option>
             <el-option :label="$t('库存低于50')" value="50"></el-option>
-          </a-select>
+          </Aselect>
         </el-form-item>
         <el-form-item :label="$t('商品状态')">
-          <a-select size="small" v-model:value="activeName" :placeholder="$t('商品状态')" @change="onSearch">
+          <Aselect size="small" v-model:value="activeName" :placeholder="$t('商品状态')" @change="onSearch">
             <el-option :label="$t('全部')" value="all"></el-option>
             <el-option :label="$t('上架中')" value="sell"></el-option>
             <el-option :label="$t('下架中')" value="lower"></el-option>
-          </a-select>
+          </Aselect>
         </el-form-item>
         <el-form-item :label="$t('商品名称')">
           <el-input size="small" v-model="searchForm.product_name" :placeholder="$t('请输入商品名称')" @input="onSearch"></el-input>
@@ -162,11 +162,13 @@
 </template>
 
 <script setup>
-  import { ref, reactive, onMounted, getCurrentInstance } from 'vue';
+  import { ref, reactive, onMounted, getCurrentInstance, nextTick } from 'vue';
   import { useRouter, useRoute } from 'vue-router';
   import { ElMessageBox, ElMessage } from 'element-plus';
   import PorductApi from '@/api/product.js';
   import ProductSelector from '@/components/product/Selector.vue';
+  import Aselect from '@/components/a-select/index.vue';
+  import Acascader from '@/components/a-cascader/index.vue';
   import { useUserStore } from '@/store/index';
   import { languageStore } from '@/store/model/language';
   import defaultImg from '@/assets/img/default.png';
@@ -198,7 +200,7 @@
   const openProductSelector = ref(false);
 
   // 初始化参数
-  onMounted(() => {
+  onMounted(async () => {
     let params = languageStore().getPageParams().pageParams;
     if (params.value && params.value.page) {
       searchForm.category_id = params.value.category_id;
@@ -210,10 +212,13 @@
       material_type.value = params.value.material_type;
       languageStore().setPageParams({});
     }
+
     if (route.query.inventory) {
       stock.value = '10';
       material_type.value = '10';
-      route.query = {};
+      // 清除查询参数
+      router.replace({ query: {} });
+        
     }
     getData();
   });
