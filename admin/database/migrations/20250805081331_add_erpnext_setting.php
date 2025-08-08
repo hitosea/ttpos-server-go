@@ -40,7 +40,7 @@ class AddErpnextSetting extends Migrator
             $db->name('setting')->insert([
                 'key' => 'erpnext_site',
                 'describe' => 'erpnext站点',
-                'values' => '[{"name":"TTPOS","code":1,"url":"http://192.168.100.206:15080"},{"name":"华莱士","code":2,"url":"http://192.168.100.206:15080"},{"name":"小熊座","code":3,"url":"http://192.168.100.206:15080"}]',
+                'values' => '[{"name":"TTPOS","code":"1"},{"name":"华莱士","code":"2"},{"name":"小熊座","code":"3"}]',
                 'create_time' => time(),
                 'update_time' => time(),
                 'delete_time' => 0,

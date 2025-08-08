@@ -493,6 +493,33 @@ func (h *ProductHandler) SortProductSauce(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// GetProductAttributeGroupList 获取商品属性分组列表
+// @Summary 获取商品属性分组列表
+// @Description 获取商品属性分组列表
+// @Tags 商家端.商品属性分组
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param page_no query int false "页码"
+// @Param page_size query int false "每页条数"
+// @Success 200 {object} product_resp.ProductAttributeGroupListResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/attribute/group/list [get]
+func (h *ProductHandler) GetProductAttributeGroupList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	attributeGroupListReq := req.ProductAttributeGroupListReq{}
+	if err := c.ShouldBindQuery(&attributeGroupListReq); err != nil {
+		helper.HandleValidationError(c, err, attributeGroupListReq, dto.PageReqMessage)
+		return
+	}
+	res, err := h.productSrv.GetProductAttributeGroupList(ctx, attributeGroupListReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
 func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -535,5 +562,12 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/product/sauce/edit", wrapper.EditProductSauce)   // 编辑商品加料
 		privateApi.DELETE("/product/sauce", wrapper.DeleteProductSauce)    // 删除商品加料
 		privateApi.POST("/product/sauce/sort", wrapper.SortProductSauce)   // 排序商品加料
+
+		privateApi.GET("/product/attribute/group/list", wrapper.GetProductAttributeGroupList) // 获取商品属性分组列表
+		// privateApi.GET("/product/attribute/group", wrapper.GetProductAttributeGroup)          // 获取商品属性分组详情
+		// privateApi.POST("/product/attribute/add", wrapper.AddProductAttribute)     // 添加商品属性
+		// privateApi.POST("/product/attribute/edit", wrapper.EditProductAttribute)   // 编辑商品属性
+		// privateApi.DELETE("/product/attribute", wrapper.DeleteProductAttribute)    // 删除商品属性
+		// privateApi.POST("/product/attribute/sort", wrapper.SortProductAttribute)   // 排序商品属性
 	}
 }

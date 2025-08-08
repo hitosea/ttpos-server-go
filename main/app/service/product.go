@@ -51,6 +51,8 @@ type IProductSrv interface {
 	EditProductSauce(ctx context.Context, req req.ProductSauceEditReq) error                                         // 编辑商品加料
 	DeleteProductSauce(ctx context.Context, req req.ProductSauceReq) error                                           // 删除商品加料
 	SortProductSauce(ctx context.Context, req req.ProductSauceSortReq) error                                         // 排序商品加料
+
+	GetProductAttributeGroupList(ctx context.Context, req req.ProductAttributeGroupListReq) (product_resp.ProductAttributeGroupListResp, error) // 获取商品属性分组列表
 }
 
 type productSrv struct {
@@ -1529,4 +1531,40 @@ func (s *productSrv) SortProductSauce(ctx context.Context, sortReq req.ProductSa
 		return nil
 	})
 	return err
+}
+
+func (s *productSrv) GetProductAttributeGroupList(ctx context.Context, req req.ProductAttributeGroupListReq) (product_resp.ProductAttributeGroupListResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	productRepo := repository.NewProductRepo(db)
+	language := ctx.GetLanguage()
+
+	productAttributeGroupList, total, err := productRepo.PaginateGetProductAttributeGroupList(
+		req.PageNo, req.PageSize,
+		productRepo.WithMultiLanguageName(),
+		productRepo.WithProductAttributes(),
+		productRepo.WithProductAttributesMultiLanguageName(),
+	)
+	if err != nil {
+		return product_resp.ProductAttributeGroupListResp{}, errors.WithMessage(err, "获取商品属性分组列表失败")
+	}
+	productAttributeGroupListResp := make([]product_resp.ProductAttributeGroupItem, 0, len(productAttributeGroupList))
+	for _, productAttributeGroup := range productAttributeGroupList {
+		attributeNames := make([]string, 0, len(productAttributeGroup.ProductAttributes))
+		for _, productAttribute := range productAttributeGroup.ProductAttributes {
+			attributeNames = append(attributeNames, productAttribute.MultiLanguageName.GetNameByLang(language))
+		}
+		productAttributeGroupListResp = append(productAttributeGroupListResp, product_resp.ProductAttributeGroupItem{
+			Uuid:          productAttributeGroup.Uuid,
+			Name:          productAttributeGroup.MultiLanguageName.GetNameByLang(language),
+			AttributeName: strings.Join(attributeNames, "、"),
+		})
+	}
+	return product_resp.ProductAttributeGroupListResp{
+		List: productAttributeGroupListResp,
+		Meta: dto.PageResponse{
+			PageNo:   req.PageNo,
+			PageSize: req.PageSize,
+			Total:    total,
+		},
+	}, nil
 }

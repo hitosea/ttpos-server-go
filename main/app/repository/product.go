@@ -56,6 +56,9 @@ type IProductRepo interface {
 	WithActiveProductBoms() DBOption                                 // 预加载商品BOM
 	WithActiveProductBomsProductPackages() DBOption                  // 预加载商品BOM关联的商品包
 	WithActiveProductBomsProductPackagesMultiLanguageName() DBOption // 预加载商品BOM关联的商品包多语言名称
+
+	WithProductAttributes() DBOption                  // 预加载商品属性
+	WithProductAttributesMultiLanguageName() DBOption // 预加载商品属性多语言名称
 }
 
 // IProductQueryRepo 商品查询仓库接口
@@ -77,6 +80,8 @@ type IProductQueryRepo interface {
 	PaginateGetProductSauceList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductSauce, int64, error) // 分页获取商品加料列表
 	GetProductSauce(opts ...DBOption) (model.ProductSauce, error)                                                // 获取商品加料详情
 	GetProductSauceCount(opts ...DBOption) (int64, error)                                                        // 获取商品加料数量
+
+	PaginateGetProductAttributeGroupList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductAttributeGroup, int64, error) // 分页获取商品属性分组列表
 }
 
 // productRepo 商品仓库
@@ -712,6 +717,37 @@ func (r *productRepo) WithActiveProductBomsProductPackages() DBOption {
 func (r *productRepo) WithActiveProductBomsProductPackagesMultiLanguageName() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("ProductBoms.ProductPackage.MultiLanguageName", func(db *gorm.DB) *gorm.DB {
+			return db.Scopes(NotDeleted)
+		})
+	}
+}
+
+func (r *productRepo) PaginateGetProductAttributeGroupList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductAttributeGroup, int64, error) {
+	var attributeGroups []model.ProductAttributeGroup
+	var total int64
+	db := r.db.Model(&model.ProductAttributeGroup{}).Where("delete_time = ?", constant.NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Count(&total).Error
+	if err != nil {
+		return nil, 0, errors.WithMessage(err)
+	}
+	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&attributeGroups).Error
+	return attributeGroups, total, errors.WithMessage(err)
+}
+
+func (r *productRepo) WithProductAttributes() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductAttributes", func(db *gorm.DB) *gorm.DB {
+			return db.Scopes(NotDeleted)
+		})
+	}
+}
+
+func (r *productRepo) WithProductAttributesMultiLanguageName() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductAttributes.MultiLanguageName", func(db *gorm.DB) *gorm.DB {
 			return db.Scopes(NotDeleted)
 		})
 	}

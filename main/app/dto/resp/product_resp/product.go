@@ -238,3 +238,14 @@ type ProductShopCategory struct {
 type ProductShopCategoryListResp struct {
 	List []ProductShopCategory `json:"list"`
 }
+
+type ProductAttributeGroupItem struct {
+	Uuid          uint64 `json:"uuid"`           // 商品属性分组UUID
+	Name          string `json:"name"`           // 商品属性分组名称
+	AttributeName string `json:"attribute_name"` // 商品属性名称
+}
+
+type ProductAttributeGroupListResp struct {
+	List []ProductAttributeGroupItem `json:"list"`
+	Meta dto.PageResponse            `json:"meta"`
+}

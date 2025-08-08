@@ -124,3 +124,7 @@ type ProductShopCategoryEditReq struct {
 type ProductShopCategoryReq struct {
 	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 商品分类UUID
 }
+
+type ProductAttributeGroupListReq struct {
+	dto.PageReq // 分页参数
+}

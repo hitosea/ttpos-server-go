@@ -67,7 +67,8 @@ type ProductAttributeGroup struct {
 	Name                  string `gorm:"default:'';column:name;comment:'名称'"`
 	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 
-	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
+	MultiLanguageName MultiLanguageName  `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
+	ProductAttributes []ProductAttribute `gorm:"foreignKey:attribute_group_uuid;references:uuid"`     // 商品属性
 }
 
 // ProductAttribute 商品属性表,定义商品的属性信息 ttpos_product_attribute
