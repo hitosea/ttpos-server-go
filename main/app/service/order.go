@@ -7315,15 +7315,33 @@ func (s *orderSrv) InstantOrderCartProductGiving(ctx context.Context, req req.Or
 		reasons = _reasons
 	}
 	// 设置赠菜时间
-	saleOrderProduct.GiftTime = time.Now().Unix()
-	saleOrderProduct.SetUpdate()
+	saleOrderProduct.SetGiftProduct(req.Reason)
+	// 如果是套餐商品，则更新套餐子商品赠菜时间
+	subProducts := make([]*model.SaleOrderProduct, 0)
+	if saleOrderProduct.IsPackageProduct() {
+		subProducts = saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+		for _, subProduct := range subProducts {
+			subProduct.SetGiftProduct(req.Reason)
+		}
+	}
+
 	// 执行
 	if errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
 			GiftTime:   saleOrderProduct.GiftTime,
-			Sign:       saleOrderProduct.GenerateProductSign(),
-			GiftReason: req.Reason,
+			Sign:       saleOrderProduct.Sign,
+			GiftReason: saleOrderProduct.GiftReason,
 		})
+		// 更新套餐子商品赠菜时间
+		if len(subProducts) > 0 {
+			for _, subProduct := range subProducts {
+				saleBill.SetProductFields(subProduct.Uuid, model.SaleOrderProduct{
+					GiftTime:   subProduct.GiftTime,
+					Sign:       subProduct.Sign,
+					GiftReason: subProduct.GiftReason,
+				})
+			}
+		}
 		// 添加赠菜原因
 		if len(reasons) > 0 {
 			if err := repository.NewSaleOrderProductRepo(tx).CreateSaleOrderProductReasons(
