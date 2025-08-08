@@ -24,6 +24,7 @@ type OrderProduct struct {
 	IsBuffet        bool                 `json:"is_buffet"`        // 是否自助餐
 	IsWrap          bool                 `json:"is_wrap"`          // 是否打包
 	Remark          string               `json:"remark"`           // 备注
+	SubProducts     []OrderProduct       `json:"sub_products"`     // 套餐子商品
 }
 
 // Products 送厨商品列表

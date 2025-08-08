@@ -387,6 +387,15 @@ func (s *productionSrv) Finish(ctx context.Context, productUuid uint64) error {
 						return product.SaleOrderProduct.IsWrapProduct()
 					}(),
 					Remark: product.SaleOrderProduct.Remark,
+					// SubProducts: func() event.Products {
+					// 	subProducts := event.Products{}
+					// 	for _, subProduct := range product.GetSubProducts() {
+					// 		subProducts = append(subProducts, event.OrderProduct{
+					// 			OrderProductId: subProduct.Uuid,
+					// 		})
+					// 	}
+					// 	return subProducts
+					// }(),
 				},
 			},
 		})

@@ -18,6 +18,7 @@ type OrderProduct struct {
 	Remark                string               `json:"remark"`              // 备注
 	Reason                dto.LocaleResponse   `json:"reason"`              // 退菜原因
 	CustomReason          string               `json:"custom_reason"`       // 自定义退菜原因
+	SubProducts           []OrderProduct       `json:"sub_products"`        // 套餐子商品
 }
 
 // ProductPrinter 商品打印机

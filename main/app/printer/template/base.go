@@ -2,6 +2,8 @@
 package template
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"net/url"
 	"os"
@@ -55,10 +57,11 @@ type MergeSaleOrderBuffetDelayProducts struct {
 
 // MergeSaleOrderProduct 合并销售订单商品数据
 type MergeSaleOrderProduct struct {
-	ProductName       string  `json:"product_name"`
-	ProductPrice      float64 `json:"product_price"`
-	ProductNum        float64 `json:"product_num"`
-	ProductTotalPrice float64 `json:"product_total_price"`
+	ProductName       string                  `json:"product_name"`
+	ProductPrice      float64                 `json:"product_price"`
+	ProductNum        float64                 `json:"product_num"`
+	ProductTotalPrice float64                 `json:"product_total_price"`
+	SubProducts       []MergeSaleOrderProduct `json:"sub_products"`
 }
 
 // printerTemplate 模板基类
@@ -458,19 +461,60 @@ func (p *printerTemplate) MergeSaleOrderBuffetDelayProducts(saleOrder *model.Sal
 	return delays, num.Round(3).InexactFloat64()
 }
 
+// ColumnConfig 列配置结构体
+type MergeSaleOrderProductOptions struct {
+	saleBill             *model.SaleBill
+	saleOrder            *model.SaleOrder
+	saleOrderProductUuid uint64 // 提取套餐子商品
+	IsShowSku            bool   // 是否显示sku
+	IsShowWrap           bool   // 是否显示打包
+}
+
 // 合并销售订单商品数据
-func (p *printerTemplate) MergeSaleOrderProduct(saleBill *model.SaleBill, saleOrder *model.SaleOrder, isShowSku bool, isShowWrap bool) ([]MergeSaleOrderProduct, float64) {
+func (p *printerTemplate) MergeSaleOrderProduct(options MergeSaleOrderProductOptions) ([]MergeSaleOrderProduct, float64) {
+	saleBill := options.saleBill
+	saleOrder := options.saleOrder
 	productNum := decimal.NewFromFloat(0)
 	productMap := make(map[string]*MergeSaleOrderProduct)
 	products := make([]MergeSaleOrderProduct, 0)
 	keyOrder := make([]string, 0)
-	for _, item := range saleOrder.SaleOrderProducts {
+	//
+	saleOrderProducts := saleOrder.SaleOrderProducts
+	if options.saleOrderProductUuid != 0 {
+		saleOrderProducts = saleOrder.GetPackageSubProductList(options.saleOrderProductUuid)
+	}
+	for _, item := range saleOrderProducts {
 		if item.IsDelete() || item.IsUnCookingProduct() || item.IsUnAcceptOrderBool() || item.IsCancelProduct() {
 			continue
 		}
 		if item.IsBuffetProduct() && item.GetTotalSaucePrice() <= 0 {
 			continue
 		}
+
+		// 提取套餐子商品
+		subProducts := make([]MergeSaleOrderProduct, 0)
+		md5SubProductsStr := ""
+		if options.saleOrderProductUuid == 0 {
+			if item.IsPackageSubProduct() {
+				continue
+			}
+			if item.IsPackageProduct() {
+				subProducts, _ = p.MergeSaleOrderProduct(MergeSaleOrderProductOptions{
+					saleBill:             saleBill,
+					saleOrder:            saleOrder,
+					saleOrderProductUuid: item.Uuid,
+					IsShowSku:            options.IsShowSku,
+					IsShowWrap:           options.IsShowWrap,
+				})
+				//
+				for _, subProduct := range subProducts {
+					md5SubProductsStr += subProduct.ProductName + item.GetAttributeNamesByLang(p.Lang, options.IsShowSku)
+				}
+				hexStr := md5.Sum([]byte(md5SubProductsStr))
+				md5SubProductsStr = hex.EncodeToString(hexStr[:])
+			}
+		}
+
 		// 商品数量
 		productNum = productNum.Add(decimal.NewFromFloat(item.Num).Round(3))
 		// 商品价格
@@ -484,7 +528,7 @@ func (p *printerTemplate) MergeSaleOrderProduct(saleBill *model.SaleBill, saleOr
 		}
 		// 打包商品
 		var wrap string
-		if isShowWrap {
+		if options.IsShowWrap {
 			if item.IsWrapProduct() || (saleBill.IsTakeout() && saleBill.MemberSaleOrderUuid == 0) {
 				wrap = "(" + p.Translate("打包") + ") "
 				productTotalPrice = 0
@@ -492,17 +536,22 @@ func (p *printerTemplate) MergeSaleOrderProduct(saleBill *model.SaleBill, saleOr
 		}
 
 		// 商品名称
-		productAttr := item.GetAttributeNamesByLang(p.Lang, isShowSku)
-		productName := wrap + gift + item.MultiLanguageName.GetNameByLang(p.Lang)
+		productAttr := item.GetAttributeNamesByLang(p.Lang, options.IsShowSku)
+		productName := utils.IfString(item.IsPackageSubProduct(), "--", "") + wrap + gift + item.MultiLanguageName.GetNameByLang(p.Lang)
 		if productAttr != "" {
-			productName = productName + "\n(" + productAttr + ")"
+			productName = productName + "\n" + utils.IfString(item.IsPackageSubProduct(), "  ", "") + "(" + productAttr + ")"
 		}
 		// 按产品名称分组累加
-		key := fmt.Sprintf("%s(%v)(%v)", productName, productPrice, item.ProductPackageUuid)
+		key := fmt.Sprintf("%s(%v)(%v)(%v)(%s)", productName, productPrice, item.ProductPackageUuid, item.PackageUuid, md5SubProductsStr)
 		if _, exists := productMap[key]; exists {
 			// 如果产品名称已存在，则累加数量和总价
 			productMap[key].ProductNum = decimal.NewFromFloat(productMap[key].ProductNum).Add(decimal.NewFromFloat(item.Num).Round(3)).InexactFloat64()
 			productMap[key].ProductTotalPrice = decimal.NewFromFloat(productMap[key].ProductTotalPrice).Add(decimal.NewFromFloat(productTotalPrice).Round(2)).InexactFloat64()
+			// 累加套餐子商品
+			for i := 0; i < len(subProducts); i++ {
+				productMap[key].SubProducts[i].ProductNum = decimal.NewFromFloat(productMap[key].SubProducts[i].ProductNum).Add(decimal.NewFromFloat(subProducts[i].ProductNum).Round(3)).InexactFloat64()
+				productMap[key].SubProducts[i].ProductTotalPrice = decimal.NewFromFloat(productMap[key].SubProducts[i].ProductTotalPrice).Add(decimal.NewFromFloat(subProducts[i].ProductTotalPrice).Round(2)).InexactFloat64()
+			}
 		} else {
 			// 如果产品名称不存在，则创建新记录
 			productMap[key] = &MergeSaleOrderProduct{
@@ -510,6 +559,7 @@ func (p *printerTemplate) MergeSaleOrderProduct(saleBill *model.SaleBill, saleOr
 				ProductPrice:      productPrice,
 				ProductNum:        item.Num,
 				ProductTotalPrice: productTotalPrice,
+				SubProducts:       subProducts,
 			}
 			// 记录key首次出现的顺序
 			keyOrder = append(keyOrder, key)
