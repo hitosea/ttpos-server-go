@@ -50,6 +50,9 @@ func (p *PrinterRepoImpl) PrintingInvoice(
 	// 打印方式
 	printMethod := p.SetPrinterMethod(settingPrinterInfo.PrintMethod)
 
+	// 设置打印机宽度
+	p.SetPrinterWidth(settingPrinterInfo.PrinterWidth)
+
 	// 打印日志服务
 	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
 
@@ -137,12 +140,22 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 
 	// 图片打印
 	if p.IsImagePrinterMethod() {
-		return template.NewInvoiceImgTemplate(base).GetPrintContent(
-			settingPrinterInfo,
-			tmpInfo,
-			saleBill,
-			saleOrder,
-		)
+		if !p.Is58mmPrinter() {
+			return template.NewInvoiceImgTemplate(base).GetPrintContent(
+				settingPrinterInfo,
+				tmpInfo,
+				saleBill,
+				saleOrder,
+			)
+		} else {
+			return template.NewInvoiceImg58mmTemplate(base).GetPrintContent58mm(
+				settingPrinterInfo,
+				tmpInfo,
+				saleBill,
+				saleOrder,
+			)
+		}
+
 	}
 
 	/* *

@@ -37,6 +37,9 @@ type PPrinterRepo interface {
 	PrintingTakeoutOrder(memberSaleOrder *model.MemberSaleOrder, saleBill *model.SaleBill, saleOrderUuid uint64) (*resp.PrinterData, error)
 	SetFinishedTime(finishedTime int64) // 设置完成时间
 	GetFinishedTime() int64             // 获取完成时间
+	SetPrinterWidth(printerWidth int)   // 设置打印机宽度
+	GetPrinterWidth() int               // 获取打印机宽度
+	Is58mmPrinter() bool                // 是否58mm打印机
 }
 
 type PrinterRepoImpl struct {
@@ -50,6 +53,7 @@ type PrinterRepoImpl struct {
 	printMethod     int
 	Lang            string // 可选语言参数
 	finishedTime    int64  // 完成时间
+	printerWidth    int    // 打印机宽度mm
 }
 
 func NewPrinterRepo(ctx context.Context, langs ...string) PPrinterRepo {
@@ -282,6 +286,11 @@ func (p *PrinterRepoImpl) IsImagePrinterMethod(isKitchen ...bool) bool {
 	return p.GetPrinterMethod(isKitchen...) == constant.PrinterLogPrintMethodImage
 }
 
+// 获取打印机宽度
+func (p *PrinterRepoImpl) Is58mmPrinter() bool {
+	return p.GetPrinterWidth() == 58
+}
+
 // 设置完成时间
 func (p *PrinterRepoImpl) SetFinishedTime(finishedTime int64) {
 	p.finishedTime = finishedTime
@@ -290,4 +299,14 @@ func (p *PrinterRepoImpl) SetFinishedTime(finishedTime int64) {
 // 获取完成时间
 func (p *PrinterRepoImpl) GetFinishedTime() int64 {
 	return p.finishedTime
+}
+
+// 设置打印机宽度
+func (p *PrinterRepoImpl) SetPrinterWidth(printerWidth int) {
+	p.printerWidth = printerWidth
+}
+
+// 获取打印机宽度
+func (p *PrinterRepoImpl) GetPrinterWidth() int {
+	return p.printerWidth
 }

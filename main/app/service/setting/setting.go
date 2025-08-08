@@ -397,6 +397,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		isUsbPrinter           bool // 是否usb打印机
 		printMethod            int  // 打印方式 1文本打印, 2图片打印
 		printerSn              string
+		printerWidth           int = 80 // 默认80mm打印机
 	)
 
 	// 收银机开启
@@ -439,6 +440,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 			// 由当前点击的设备进行打印
 			printerCashierDeviceSn = deviceSn
 			printMethod = int(printer.PrintMethod)
+			printerWidth = printer.Width
 		} else if printerId != "0" && printerId != "" {
 			// 收银机内置的打印机
 			printerCashierDeviceSn = printerId
@@ -469,6 +471,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		IsUsbPrinter:           isUsbPrinter,
 		PrintMethod:            printMethod,
 		PrinterSn:              printerSn,
+		PrinterWidth:           printerWidth,
 	}, nil
 }
 
