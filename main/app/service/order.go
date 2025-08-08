@@ -4573,6 +4573,7 @@ func (s *orderSrv) GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, err
 // OrderProductRemark  修改订单商品备注
 func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
 	dbId := ctx.GetDbId()
+	db := s.dbm.GetDB(dbId)
 	// 禁止并发操作
 	if ctx.NoLock() {
 		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
@@ -4603,9 +4604,12 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 	}
 
 	// 修改订单商品备注
-	if err := orderRepo.ChangeProductRemark(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid, req.Remark); err != nil {
-		return nil, errors.WithMessage(err)
-	}
+	repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		if err := repository.NewOrderRepo(db).ChangeProductRemark(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid, req.Remark); err != nil {
+			return errors.WithMessage(err)
+		}
+		return nil
+	})
 
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid, opts...)

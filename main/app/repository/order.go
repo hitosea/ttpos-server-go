@@ -2022,6 +2022,16 @@ func (r *orderRepo) ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint6
 	if err != nil {
 		return fmt.Errorf("ChangeProductRemark: %v", err)
 	}
+	// 如果是套餐商品，则更新套餐子商品备注
+	err = r.db.Model(&model.SaleOrderProduct{}).
+		Where("delete_time = ?", constant.NotDeleted).
+		Where("sale_bill_uuid = ? AND sale_order_uuid = ? AND package_uuid = ?", saleBillUuid, saleOrderUuid, orderProductUuid).
+		Updates(map[string]interface{}{
+			"remark": remark,
+		}).Error
+	if err != nil {
+		return fmt.Errorf("ChangeSubProductRemark: %v", err)
+	}
 	return nil
 }
 
