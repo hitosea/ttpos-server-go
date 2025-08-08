@@ -2,12 +2,14 @@ package erp
 
 import (
 	"context"
+	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/resp"
 
 	"google.golang.org/grpc/metadata"
 )
 
 type IErpSrv interface {
-	GetCompanyList(ctx context.Context) error
+	GetCompanyList(ctx context.Context, erpnextSiteCompanyReq req.ErpnextSiteCompanyReq) (resp.ErpnextSiteCompanyResp, error)
 }
 type erpSrv struct {
 }

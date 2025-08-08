@@ -85,3 +85,42 @@ type ProductSauceSortItem struct {
 type ProductSauceSortReq struct {
 	List []ProductSauceSortItem `json:"list" binding:"required,dive"` // 商品加料排序列表
 }
+
+// ProductShopCategoryListReq 商品分类列表查询
+type ProductShopCategoryListReq struct {
+	Keyword    *string `form:"keyword"`     // 搜索关键词, 可选
+	ParentUuid *uint64 `form:"parent_uuid"` // 父级分类UUID, 可选
+	IsSpecial  *bool   `form:"is_special"`  // 是否特色分类, false-否 true-是, 可选
+}
+
+// ProductShopCategorySortItem 商品分类排序项
+type ProductShopCategorySortItem struct {
+	Uuid uint64 `json:"uuid" binding:"required"` // 商品分类UUID
+	Sort int    `json:"sort" binding:"required"` // 排序
+}
+
+// ProductShopCategorySortReq 商品分类排序请求
+type ProductShopCategorySortReq struct {
+	List []ProductShopCategorySortItem `json:"list" binding:"required,dive"` // 商品分类排序列表
+}
+
+// ProductShopCategoryAddReq 商品分类添加请求
+type ProductShopCategoryAddReq struct {
+	IsSpecial  bool               `json:"is_special"`                     // 是否特殊分类, false-否 true-是
+	ParentUuid uint64             `json:"parent_uuid"`                    // 父级分类UUID, 一级分类为0, 二级分类为一级分类的uuid
+	LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品分类名称, 多语言
+	Status     int                `json:"status"`                         // 商品分类状态 0-关闭 1-开启
+}
+
+// ProductShopCategoryEditReq 商品分类编辑请求
+type ProductShopCategoryEditReq struct {
+	Uuid       uint64             `json:"uuid" binding:"required"`        // 商品分类UUID
+	ParentUuid uint64             `json:"parent_uuid"`                    // 父级分类UUID, 一级分类为0, 二级分类为一级分类的uuid
+	LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品分类名称, 多语言
+	Status     int                `json:"status"`                         // 商品分类状态 0-关闭 1-开启
+}
+
+// ProductShopCategoryReq 商品分类请求
+type ProductShopCategoryReq struct {
+	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 商品分类UUID
+}

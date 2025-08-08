@@ -1549,6 +1549,39 @@ definitions:
           $ref: '#/definitions/product_resp.ProductSauceProductPackage'
         type: array
     type: object
+  product_resp.ProductShopCategory:
+    properties:
+      children:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductShopCategoryListResp'
+        description: 子级类别
+      is_special:
+        description: 是否特色类别
+        type: boolean
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品类别名称
+      parent_uuid:
+        description: 父级类别UUID
+        type: integer
+      sort:
+        description: 商品类别排序
+        type: integer
+      status:
+        description: 商品类别状态 0-关闭 1-开启
+        type: integer
+      uuid:
+        description: 商品类别UUID
+        type: integer
+    type: object
+  product_resp.ProductShopCategoryListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductShopCategory'
+        type: array
+    type: object
   product_resp.ProductUnitDetail:
     properties:
       locale_name:
@@ -2924,6 +2957,73 @@ definitions:
         description: 商品加料排序列表
         items:
           $ref: '#/definitions/req.ProductSauceSortItem'
+        type: array
+    required:
+    - list
+    type: object
+  req.ProductShopCategoryAddReq:
+    properties:
+      is_special:
+        description: 是否特殊分类, false-否 true-是
+        type: boolean
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品分类名称, 多语言
+      parent_uuid:
+        description: 父级分类UUID, 一级分类为0, 二级分类为一级分类的uuid
+        type: integer
+      status:
+        description: 商品分类状态 0-关闭 1-开启
+        type: integer
+    required:
+    - locale_name
+    type: object
+  req.ProductShopCategoryEditReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品分类名称, 多语言
+      parent_uuid:
+        description: 父级分类UUID, 一级分类为0, 二级分类为一级分类的uuid
+        type: integer
+      status:
+        description: 商品分类状态 0-关闭 1-开启
+        type: integer
+      uuid:
+        description: 商品分类UUID
+        type: integer
+    required:
+    - locale_name
+    - uuid
+    type: object
+  req.ProductShopCategoryReq:
+    properties:
+      uuid:
+        description: 商品分类UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.ProductShopCategorySortItem:
+    properties:
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 商品分类UUID
+        type: integer
+    required:
+    - sort
+    - uuid
+    type: object
+  req.ProductShopCategorySortReq:
+    properties:
+      list:
+        description: 商品分类排序列表
+        items:
+          $ref: '#/definitions/req.ProductShopCategorySortItem'
         type: array
     required:
     - list
@@ -8784,6 +8884,35 @@ info:
   title: ttpos-server-go API
   version: "1.0"
 paths:
+  /admin/erpnext/site/company:
+    get:
+      consumes:
+      - application/json
+      description: 获取ERPNext站点公司名称
+      parameters:
+      - description: ERPNext站点编码
+        in: query
+        name: erpnext_code
+        required: true
+        type: string
+      - description: 公司名称
+        in: query
+        name: company_name
+        type: string
+      - description: 公司缩写
+        in: query
+        name: company_abbr
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 获取ERPNext站点公司名称
+      tags:
+      - admin
   /assistant/base:
     get:
       consumes:
@@ -19483,6 +19612,78 @@ paths:
       summary: 退款订单
       tags:
       - 商家端.订单
+  /shop/product/category:
+    delete:
+      consumes:
+      - application/json
+      description: 删除商品分类
+      parameters:
+      - description: 商品分类删除请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductShopCategoryReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 删除商品分类
+      tags:
+      - 商家端.商品分类
+  /shop/product/category/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加商品分类
+      parameters:
+      - description: 商品分类添加请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductShopCategoryAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 添加商品分类
+      tags:
+      - 商家端.商品分类
+  /shop/product/category/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑商品分类
+      parameters:
+      - description: 商品分类编辑请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductShopCategoryEditReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 编辑商品分类
+      tags:
+      - 商家端.商品分类
   /shop/product/category/list:
     get:
       consumes:
@@ -19494,12 +19695,36 @@ paths:
         "200":
           description: 成功
           schema:
-            $ref: '#/definitions/product_resp.ProductCategoryListResp'
+            $ref: '#/definitions/product_resp.ProductShopCategoryListResp'
         "400":
           description: 错误请求
       security:
       - JwtToken: []
       summary: 获取商品分类列表
+      tags:
+      - 商家端.商品分类
+  /shop/product/category/sort:
+    post:
+      consumes:
+      - application/json
+      description: 排序商品分类
+      parameters:
+      - description: 商品分类排序请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductShopCategorySortReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 排序商品分类
       tags:
       - 商家端.商品分类
   /shop/product/sauce:

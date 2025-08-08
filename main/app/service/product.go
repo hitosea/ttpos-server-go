@@ -17,6 +17,7 @@ import (
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
@@ -27,11 +28,17 @@ import (
 // IProductSrv 定义产品服务接口
 type IProductSrv interface {
 	GetProductList(ctx context.Context, req req.ProductListReq) (product_resp.ProductListWithPaginationResp, error)               // 获取产品列表
-	GetProductCategoryList(dbId uint64) (product_resp.ProductCategoryListResp, error)                                             // 获取产品类别列表
+	GetProductCategoryList(dbId uint64) (product_resp.ProductCategoryListResp, error)                                             // 获取产品类别列表（销售端）
 	GetProductUnitList(ctx context.Context, req req.ProductUnitListReq) (product_resp.ProductUnitListResp, error)                 // 获取产品单位列表
 	GetProductUnit(ctx context.Context, req req.ProductUnitReq) (product_resp.ProductUnitDetail, error)                           // 获取产品单位详情
 	GetProductRecommendList(ctx context.Context, req req.ProductRecommendListReq) (*product_resp.ProductRecommendListResp, error) // 获取产品推荐列表
 	SearchProducts(ctx context.Context, req req.ProductSearchReq) (*product_resp.ProductSearchResp, error)                        // 搜索商品
+
+	GetProductShopCategoryList(ctx context.Context, req req.ProductShopCategoryListReq) (product_resp.ProductShopCategoryListResp, error) // 获取产品类别列表（商家端）
+	SortProductShopCategory(ctx context.Context, req req.ProductShopCategorySortReq) error                                                // 排序产品分类
+	AddProductShopCategory(ctx context.Context, req req.ProductShopCategoryAddReq) error                                                  // 添加产品分类
+	EditProductShopCategory(ctx context.Context, req req.ProductShopCategoryEditReq) error                                                // 编辑产品分类
+	DeleteProductShopCategory(ctx context.Context, req req.ProductShopCategoryReq) error                                                  // 删除产品分类
 
 	AddProductUnit(ctx context.Context, req req.ProductUnitAddReq) error   // 添加产品单位
 	EditProductUnit(ctx context.Context, req req.ProductUnitEditReq) error // 编辑产品单位
@@ -514,6 +521,344 @@ func (s *productSrv) GetProductCategoryList(dbId uint64) (product_resp.ProductCa
 	return product_resp.ProductCategoryListResp{
 		List: list,
 	}, nil
+}
+
+// GetProductShopCategoryList 获取产品类别列表（商家端）
+func (s *productSrv) GetProductShopCategoryList(ctx context.Context, req req.ProductShopCategoryListReq) (product_resp.ProductShopCategoryListResp, error) {
+	dbId := s.dbm.GetDB(ctx.GetDbId())
+	commonRepo := repository.NewCommonRepo()
+	productRepo := repository.NewProductRepo(dbId)
+	// 查询/关联
+	opts := []repository.DBOption{
+		commonRepo.Preload(
+			repository.WithPreload{
+				Query: "MultiLanguageName",
+			},
+		),
+		productRepo.WhereCategoryKey(""),
+		commonRepo.WhereBySoftDelete(),
+		commonRepo.SortWithIsSpecial("DESC"),
+		commonRepo.SortWithSort("ASC"),
+		commonRepo.SortWithID("DESC"),
+	}
+	// 搜索关键词
+	if req.Keyword != nil && *req.Keyword != "" {
+		opts = append(opts, commonRepo.WhereLikeByName(*req.Keyword))
+	}
+	// 父级分类
+	if req.ParentUuid != nil {
+		opts = append(opts, productRepo.WhereParentUuid(*req.ParentUuid))
+	}
+	// 是否特色分类
+	if req.IsSpecial != nil {
+		if *req.IsSpecial {
+			opts = append(opts, productRepo.WhereByIsSpecial(1))
+		} else {
+			opts = append(opts, productRepo.WhereByIsSpecial(0))
+		}
+	}
+	// 获取产品类别列表
+	categories, err := repository.NewProductRepo(dbId).GetProductCategoryList(opts...)
+	if err != nil {
+		return product_resp.ProductShopCategoryListResp{}, errors.WithMessage(err, "获取分类列表失败")
+	}
+
+	// 根据parent_uuid分组转换为响应对象
+	list := make([]product_resp.ProductShopCategory, 0, len(categories))
+	for _, category := range categories {
+		if category.ParentUuid == 0 {
+			children := make([]product_resp.ProductShopCategory, 0)
+			for _, child := range categories {
+				if child.ParentUuid != 0 && child.ParentUuid == category.Uuid {
+					children = append(children, product_resp.ProductShopCategory{
+						Uuid:       child.Uuid,
+						LocaleName: s.localeSrv.GetLocaleNames(child.MultiLanguageName),
+						ParentUuid: child.ParentUuid,
+						IsSpecial:  child.IsSpecial == 1,
+						Sort:       child.Sort,
+						Status:     child.Status,
+						Children: product_resp.ProductShopCategoryListResp{
+							List: make([]product_resp.ProductShopCategory, 0),
+						},
+					})
+				}
+			}
+			list = append(list, product_resp.ProductShopCategory{
+				Uuid:       category.Uuid,
+				LocaleName: s.localeSrv.GetLocaleNames(category.MultiLanguageName),
+				ParentUuid: category.ParentUuid,
+				IsSpecial:  category.IsSpecial == 1,
+				Sort:       category.Sort,
+				Status:     category.Status,
+				Children: product_resp.ProductShopCategoryListResp{
+					List: children,
+				},
+			})
+		}
+	}
+
+	// 返回响应对象
+	return product_resp.ProductShopCategoryListResp{
+		List: list,
+	}, nil
+}
+
+// SortProductShopCategory 排序产品分类
+func (s *productSrv) SortProductShopCategory(ctx context.Context, req req.ProductShopCategorySortReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	commonRepo := repository.NewCommonRepo()
+	productRepo := repository.NewProductRepo(db)
+
+	productCategoryUuids := make([]uint64, 0, len(req.List))
+	for _, item := range req.List {
+		productCategoryUuids = append(productCategoryUuids, item.Uuid)
+	}
+	productCategories, _ := productRepo.GetProductCategoryCount(
+		commonRepo.WhereBySoftDelete(),
+		productRepo.WhereUuidIn(productCategoryUuids),
+	)
+	if productCategories != int64(len(productCategoryUuids)) {
+		return errors.New("分类不存在")
+	}
+	err := db.Transaction(func(tx *gorm.DB) error {
+		for _, item := range req.List {
+			tx.Model(&model.ProductCategory{}).Where("uuid = ?", item.Uuid).Updates(map[string]any{
+				"sort": item.Sort,
+			})
+		}
+		return nil
+	})
+	return err
+}
+
+// AddProductShopCategory 添加产品分类
+func (s *productSrv) AddProductShopCategory(ctx context.Context, addReq req.ProductShopCategoryAddReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	commonRepo := repository.NewCommonRepo()
+	productRepo := repository.NewProductRepo(db)
+	checkService := NewCheckNameSrv(s.dbm)
+	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
+	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
+		Source: "category",
+		Names:  names,
+	})
+	if exists {
+		return errors.New("名称已存在")
+	}
+	if addReq.Status != 0 && addReq.Status != 1 {
+		return errors.New("分类状态不正确")
+	}
+	if addReq.IsSpecial && addReq.ParentUuid != 0 {
+		return errors.New("特色分类不能有一级分类")
+	}
+	if addReq.ParentUuid != 0 {
+		count, err := productRepo.GetProductCategoryCount(
+			commonRepo.WhereBySoftDelete(),
+			productRepo.WhereUuid(addReq.ParentUuid),
+			productRepo.WhereParentUuid(0),
+		)
+		if err != nil {
+			return errors.WithMessage(err, "获取一级分类失败")
+		}
+		if count == 0 {
+			return errors.New("一级分类不存在")
+		}
+
+	}
+	maxSort, err := productRepo.GetProductCategoryMaxSort(
+		commonRepo.WhereBySoftDelete(),
+		productRepo.WhereParentUuid(addReq.ParentUuid),
+		productRepo.WhereByIsSpecial(utils.IfUint(addReq.IsSpecial, 1, 0)),
+	)
+	if err != nil {
+		return errors.WithMessage(err, "获取一级分类最大排序失败")
+	}
+	sort := uint(maxSort + 1)
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		// 保存多语言名称
+		multiLanguageName := model.MultiLanguageName{
+			ZhName:   addReq.LocaleName.ZH,
+			ThName:   addReq.LocaleName.TH,
+			EnName:   addReq.LocaleName.EN,
+			ZhTwName: addReq.LocaleName.ZHTW,
+			JaName:   addReq.LocaleName.JA,
+			KoName:   addReq.LocaleName.KO,
+			MyName:   addReq.LocaleName.MY,
+			TrName:   addReq.LocaleName.TR,
+			SvName:   addReq.LocaleName.SV,
+		}
+		err := tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
+		if err != nil {
+			return err
+		}
+		// 保存产品分类
+		productCategory := model.ProductCategory{
+			ParentUuid:            addReq.ParentUuid,
+			MultiLanguageNameUuid: multiLanguageName.Uuid,
+			Name:                  addReq.LocaleName.ToJson(),
+			Sort:                  sort,
+			IsSpecial:             utils.IfInt(addReq.IsSpecial, 1, 0),
+			Status:                addReq.Status,
+		}
+		err = tx.Model(&model.ProductCategory{}).Create(&productCategory).Error
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
+		logger.Logger.Error("添加产品分类失败", zap.Any("func", "AddProductShopCategory"), zap.Any("params", addReq), zap.Error(err))
+		return errors.WithMessage(err, "添加产品分类失败")
+	}
+
+	return nil
+}
+
+// EditProductShopCategory 编辑产品分类
+func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.ProductShopCategoryEditReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	commonRepo := repository.NewCommonRepo()
+	productRepo := repository.NewProductRepo(db)
+
+	productCategory, err := productRepo.GetProductCategory(
+		commonRepo.WhereBySoftDelete(),
+		productRepo.WhereUuid(editReq.Uuid),
+	)
+	if err != nil {
+		return errors.WithMessage(err, "获取分类详情失败")
+	}
+	if productCategory.Uuid == 0 {
+		return errors.New("分类不存在")
+	}
+	if productCategory.IsSpecial == 1 && editReq.ParentUuid != 0 {
+		return errors.New("特色分类不能修改为二级分类")
+	}
+	if productCategory.ParentUuid == 0 && editReq.ParentUuid != 0 {
+		return errors.New("一级分类不能修改为二级分类")
+	}
+	if productCategory.ParentUuid != 0 && editReq.ParentUuid == 0 {
+		return errors.New("二级分类不能修改为一级分类")
+	}
+	if editReq.Status != 0 && editReq.Status != 1 {
+		return errors.New("分类状态不正确")
+	}
+	if editReq.ParentUuid != 0 {
+		count, err := productRepo.GetProductCategoryCount(
+			commonRepo.WhereBySoftDelete(),
+			productRepo.WhereUuid(editReq.ParentUuid),
+			productRepo.WhereParentUuid(0),
+		)
+		if err != nil {
+			return errors.WithMessage(err, "获取一级分类失败")
+		}
+		if count == 0 {
+			return errors.New("一级分类不存在")
+		}
+	}
+	checkService := NewCheckNameSrv(s.dbm)
+	names := checkService.MakeCheckNameList(ctx, editReq.LocaleName)
+	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
+		Uuid:   editReq.Uuid,
+		Source: "category",
+		Names:  names,
+	})
+	if exists {
+		return errors.New("名称已存在")
+	}
+	err = db.Transaction(func(tx *gorm.DB) error {
+		err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productCategory.MultiLanguageNameUuid).Updates(map[string]any{
+			"zh_name":    editReq.LocaleName.ZH,
+			"th_name":    editReq.LocaleName.TH,
+			"en_name":    editReq.LocaleName.EN,
+			"zh_tw_name": editReq.LocaleName.ZHTW,
+			"ja_name":    editReq.LocaleName.JA,
+			"ko_name":    editReq.LocaleName.KO,
+			"my_name":    editReq.LocaleName.MY,
+			"tr_name":    editReq.LocaleName.TR,
+			"sv_name":    editReq.LocaleName.SV,
+		}).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(&model.ProductCategory{}).Where("uuid = ?", editReq.Uuid).Updates(map[string]any{
+			"parent_uuid": editReq.ParentUuid,
+			"name":        editReq.LocaleName.ToJson(),
+			"status":      editReq.Status,
+		}).Error
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		logger.Logger.Error("编辑产品分类失败", zap.Any("func", "EditProductShopCategory"), zap.Any("params", editReq), zap.Error(err))
+		return errors.WithMessage(err, "编辑分类失败")
+	}
+
+	return nil
+}
+
+// DeleteProductShopCategory 删除产品分类
+func (s *productSrv) DeleteProductShopCategory(ctx context.Context, deleteReq req.ProductShopCategoryReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	commonRepo := repository.NewCommonRepo()
+	productRepo := repository.NewProductRepo(db)
+
+	productCategory, err := productRepo.GetProductCategory(
+		commonRepo.WhereBySoftDelete(),
+		productRepo.WhereUuid(deleteReq.Uuid),
+	)
+	if productCategory.Uuid == 0 || err != nil {
+		return errors.New("分类不存在")
+	}
+	opts := []repository.DBOption{
+		commonRepo.WhereBySoftDelete(),
+	}
+	if productCategory.IsSpecial == 1 {
+		opts = append(opts, productRepo.WhereSpecialCategoryUuid(deleteReq.Uuid))
+	} else {
+		opts = append(opts, productRepo.WhereCategoryUuid(deleteReq.Uuid))
+	}
+	productCount, err := productRepo.GetProductCount(opts...)
+	if err != nil {
+		return errors.WithMessage(err, "获取商品数量失败")
+	}
+	if productCount > 0 {
+		return errors.New("分类下有商品，不能删除")
+	}
+	if productCategory.ParentUuid == 0 && productCategory.IsSpecial == 0 {
+		categoryCount, err := productRepo.GetProductCategoryCount(
+			commonRepo.WhereBySoftDelete(),
+			productRepo.WhereParentUuid(deleteReq.Uuid),
+		)
+		if err != nil {
+			return errors.WithMessage(err, "获取子分类数量失败")
+		}
+		if categoryCount > 0 {
+			return errors.New("分类下有子分类，不能删除")
+		}
+	}
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		err := tx.Model(&model.ProductCategory{}).Where("uuid = ?", deleteReq.Uuid).Updates(map[string]any{
+			"delete_time": time.Now().Unix(),
+		}).Error
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
+		logger.Logger.Error("删除分类失败", zap.Any("func", "DeleteProductShopCategory"), zap.Any("params", deleteReq), zap.Error(err))
+		return errors.WithMessage(err, "删除分类失败")
+	}
+
+	return nil
 }
 
 // GetProductRecommendList 获取产品推荐列表

@@ -9,7 +9,7 @@ ARG RPC_PORT=14032
 WORKDIR /app/ttpos-bmp
 
 # 设置代理
-# ENV GOPROXY=https://goproxy.cn,direct
+ENV GOPROXY=https://goproxy.cn,direct
 RUN go install github.com/gogf/gf/cmd/gf/v2@latest
 # 复制源代码
 COPY . .

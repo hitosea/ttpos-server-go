@@ -151,7 +151,7 @@ type ProductRecommendListResp struct {
 	IsOpen bool      `json:"is_open"` // 是否开启推荐, true-开启, false-关闭
 }
 
-// ProductCategory 商品类别
+// ProductCategory 商品类别（销售端）
 type ProductCategory struct {
 	Uuid        uint64                  `json:"uuid"`         // 商品类别UUID
 	LocaleName  dto.LocaleResponse      `json:"locale_name"`  // 商品类别名称
@@ -161,7 +161,7 @@ type ProductCategory struct {
 	CategoryKey string                  `json:"category_key"` // all-表示全部
 }
 
-// ProductCategoryListResp 商品类别列表响应
+// ProductCategoryListResp 商品类别列表响应（销售端）
 type ProductCategoryListResp struct {
 	List []ProductCategory `json:"list"`
 }
@@ -221,4 +221,20 @@ type ProductSauceDetail struct {
 	Price           float64                        `json:"price"`            // 商品加料价格
 	LocaleName      dto.LocaleResponse             `json:"locale_name"`      // 商品单位名称
 	ProductPackages ProductSauceProductPackageList `json:"product_packages"` // 商品包列表
+}
+
+// ProductShopCategory 商品类别（商家端）
+type ProductShopCategory struct {
+	Uuid       uint64                      `json:"uuid"`        // 商品类别UUID
+	LocaleName dto.LocaleResponse          `json:"locale_name"` // 商品类别名称
+	ParentUuid uint64                      `json:"parent_uuid"` // 父级类别UUID
+	IsSpecial  bool                        `json:"is_special"`  // 是否特色类别
+	Sort       uint                        `json:"sort"`        // 商品类别排序
+	Status     int                         `json:"status"`      // 商品类别状态 0-关闭 1-开启
+	Children   ProductShopCategoryListResp `json:"children"`    // 子级类别
+}
+
+// ProductShopCategoryListResp 商品类别列表响应（商家端）
+type ProductShopCategoryListResp struct {
+	List []ProductShopCategory `json:"list"`
 }

@@ -15,6 +15,50 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/admin/erpnext/site/company": {
+            "get": {
+                "description": "获取ERPNext站点公司名称",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "获取ERPNext站点公司名称",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ERPNext站点编码",
+                        "name": "erpnext_code",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "公司名称",
+                        "name": "company_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "公司缩写",
+                        "name": "company_abbr",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/assistant/base": {
             "get": {
                 "security": [
@@ -18167,6 +18211,123 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/product/category": {
+            "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除商品分类",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品分类"
+                ],
+                "summary": "删除商品分类",
+                "parameters": [
+                    {
+                        "description": "商品分类删除请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductShopCategoryReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/category/add": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "添加商品分类",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品分类"
+                ],
+                "summary": "添加商品分类",
+                "parameters": [
+                    {
+                        "description": "商品分类添加请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductShopCategoryAddReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/category/edit": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "编辑商品分类",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品分类"
+                ],
+                "summary": "编辑商品分类",
+                "parameters": [
+                    {
+                        "description": "商品分类编辑请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductShopCategoryEditReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/product/category/list": {
             "get": {
                 "security": [
@@ -18189,8 +18350,47 @@ const docTemplate = `{
                     "200": {
                         "description": "成功",
                         "schema": {
-                            "$ref": "#/definitions/product_resp.ProductCategoryListResp"
+                            "$ref": "#/definitions/product_resp.ProductShopCategoryListResp"
                         }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/category/sort": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "排序商品分类",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品分类"
+                ],
+                "summary": "排序商品分类",
+                "parameters": [
+                    {
+                        "description": "商品分类排序请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductShopCategorySortReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
                     },
                     "400": {
                         "description": "错误请求"
@@ -23225,6 +23425,58 @@ const docTemplate = `{
                 }
             }
         },
+        "product_resp.ProductShopCategory": {
+            "type": "object",
+            "properties": {
+                "children": {
+                    "description": "子级类别",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/product_resp.ProductShopCategoryListResp"
+                        }
+                    ]
+                },
+                "is_special": {
+                    "description": "是否特色类别",
+                    "type": "boolean"
+                },
+                "locale_name": {
+                    "description": "商品类别名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "parent_uuid": {
+                    "description": "父级类别UUID",
+                    "type": "integer"
+                },
+                "sort": {
+                    "description": "商品类别排序",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "商品类别状态 0-关闭 1-开启",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "商品类别UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "product_resp.ProductShopCategoryListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product_resp.ProductShopCategory"
+                    }
+                }
+            }
+        },
         "product_resp.ProductUnitDetail": {
             "type": "object",
             "properties": {
@@ -25181,6 +25433,107 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/req.ProductSauceSortItem"
+                    }
+                }
+            }
+        },
+        "req.ProductShopCategoryAddReq": {
+            "type": "object",
+            "required": [
+                "locale_name"
+            ],
+            "properties": {
+                "is_special": {
+                    "description": "是否特殊分类, false-否 true-是",
+                    "type": "boolean"
+                },
+                "locale_name": {
+                    "description": "商品分类名称, 多语言",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "parent_uuid": {
+                    "description": "父级分类UUID, 一级分类为0, 二级分类为一级分类的uuid",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "商品分类状态 0-关闭 1-开启",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.ProductShopCategoryEditReq": {
+            "type": "object",
+            "required": [
+                "locale_name",
+                "uuid"
+            ],
+            "properties": {
+                "locale_name": {
+                    "description": "商品分类名称, 多语言",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "parent_uuid": {
+                    "description": "父级分类UUID, 一级分类为0, 二级分类为一级分类的uuid",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "商品分类状态 0-关闭 1-开启",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "商品分类UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.ProductShopCategoryReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "商品分类UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.ProductShopCategorySortItem": {
+            "type": "object",
+            "required": [
+                "sort",
+                "uuid"
+            ],
+            "properties": {
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "商品分类UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.ProductShopCategorySortReq": {
+            "type": "object",
+            "required": [
+                "list"
+            ],
+            "properties": {
+                "list": {
+                    "description": "商品分类排序列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.ProductShopCategorySortItem"
                     }
                 }
             }
