@@ -143,6 +143,9 @@
       <el-form-item for="no_click" :label="$t('营业时间')" prop="opening_hours" :rules="[{ required: true, message: $t('请选择营业时间') }]">
         <TimePicker v-model="form.opening_hours" @update:modelValue="updateOpeningHours" />
       </el-form-item>
+      <el-form-item for="no_click" :label="$t('开始序列号')" prop="start_serial_no" :rules="[{ required: true, message: '' }]" class="start-serial-no">
+        <el-input v-model="form.start_serial_no" :placeholder="$t('请输入开始序列号')" class="max-w400" />
+      </el-form-item>
     </el-form>
     <!--提交-->
     <div class="common-button-wrapper">
@@ -222,6 +225,7 @@
           dish_card_style: 1,
           opening_hours: '',
           delivery_price_ratio: 100,
+          start_serial_no: '0001',
         },
         company_link: '',
         formRules: {
@@ -365,6 +369,7 @@
             self.form.opening_hours = data.data.vars.values.opening_hours
               ? [data.data.vars.values.opening_hours.split('-')[0], data.data.vars.values.opening_hours.split('-')[1]]
               : [];
+            self.form.start_serial_no = data.data.vars.values.start_serial_no || '0001';
             self.form.delivery_price_ratio = Number(data.data.vars.values.delivery_price_ratio) || 100;
 
             self.freeTagCount = Number(data.data.free_tag_count) || 0;
@@ -383,6 +388,7 @@
         let self = this;
         let params = JSON.parse(JSON.stringify(self.form));
         params.opening_hours = params.opening_hours.join('-');
+        params.start_serial_no = params.start_serial_no.trim();
         self.$refs.form.validate((valid) => {
           if (valid) {
             self.loading = true;
@@ -478,5 +484,8 @@
   }
   .max-w320 {
     max-width: 320px;
+  }
+  .max-w400 {
+    max-width: 400px;
   }
 </style>
