@@ -41,259 +41,248 @@
   </div>
 </template>
 
-<script>
+<script setup>
+  import { reactive, toRefs, nextTick, onMounted, watch } from 'vue';
+  import { useRouter, useRoute } from 'vue-router';
   import { useUserStore } from '@/store';
-  import { reactive, toRefs, defineComponent, nextTick } from 'vue';
   import { languageStore } from '@/store/model/language.js';
-  import { useRoute } from 'vue-router';
 
-  // import { Value } from 'sass';
-  export default defineComponent({
-    components: {},
-    setup(props, { emit }) {
-      const { userInfo, bus_emit, menus, computedRenderMenus } = useUserStore();
-      const renderMenus = computedRenderMenus().renderMenus;
-      const route = useRoute();
-      const language = languageStore();
-      const cloudBasic = language.getCloudBasic().cloudBasic;
-      const { computedSupplier } = useUserStore();
-      const supplier = computedSupplier().supplier;
+  const router = useRouter();
+  const route = useRoute();
+  const { userInfo, bus_emit, menus, computedRenderMenus } = useUserStore();
+  const renderMenus = computedRenderMenus().renderMenus;
+  const language = languageStore();
+  const cloudBasic = language.getCloudBasic().cloudBasic;
+  const { computedSupplier } = useUserStore();
+  const supplier = computedSupplier().supplier;
 
-      const state = reactive({
-        route,
-        /*传到顶部的标题*/
-        munu_name: $t('首页'),
-        /*选中的菜单*/
-        active_menu: null,
-        /*子菜单选择*/
-        active_child: 0,
-        /*菜单数据*/
-        menuList: renderMenus,
-        /*商城名称*/
-        shop_name: '',
-        menus,
-        app_id: supplier.value?.app_id || 0,
-      });
+  const state = reactive({
+    /*传到顶部的标题*/
+    munu_name: $t('首页'),
+    /*选中的菜单*/
+    active_menu: null,
+    /*子菜单选择*/
+    active_child: 0,
+    /*菜单数据*/
+    menuList: renderMenus,
+    /*商城名称*/
+    shop_name: '',
+    menus,
+    app_id: supplier.value?.app_id || 0,
+  });
 
-      /*菜单*/
-      const selectMenu = (to) => {
-        let menupath = to.path;
-        let active_menu = null;
-        let active_child = null;
-        if (state.menuList && state.menuList.length > 0) {
-          for (let i = 0; i < state.menuList.length; i++) {
-            if (state.menuList[i].path == menupath) {
+  const emit = defineEmits(['selectMenu']);
+
+  /*菜单选择逻辑*/
+  const selectMenu = (to) => {
+    let menupath = to.path;
+    let active_menu = null;
+    let active_child = null;
+    if (state.menuList && state.menuList.length > 0) {
+      for (let i = 0; i < state.menuList.length; i++) {
+        if (state.menuList[i].path == menupath) {
+          active_menu = i;
+          break;
+        }
+        if (state.menuList[i].children) {
+          for (let j = 0; j < state.menuList[i].children.length; j++) {
+            if (state.menuList[i].children[j].path == menupath) {
               active_menu = i;
+              active_child = j;
               break;
             }
-            if (state.menuList[i].children) {
-              for (let j = 0; j < state.menuList[i].children.length; j++) {
-                if (state.menuList[i].children[j].path == menupath) {
-                  active_menu = i;
-                  active_child = j;
-                  break;
-                }
-              }
-            }
-            if (!active_menu && !active_child) {
-              if (state.menuList[i].childrenList.includes(menupath)) {
-                active_menu = i;
-                break;
-              }
-            }
           }
-          state.active_menu = active_menu;
-          state.active_child = active_child;
-          emit('selectMenu', active_menu);
         }
-        nextTick(() => {
-          bus_emit('MenuName', (to.meta && to.meta.showMenuTitle) || to.meta.title);
-        });
-      };
+        if (!active_menu && !active_child) {
+          if (state.menuList[i].childrenList.includes(menupath)) {
+            active_menu = i;
+            break;
+          }
+        }
+      }
+      state.active_menu = active_menu;
+      state.active_child = active_child;
+      emit('selectMenu', active_menu);
+    }
+    nextTick(() => {
+      bus_emit('MenuName', (to.meta && to.meta.showMenuTitle) || to.meta.title);
+    });
+  };
 
-      selectMenu(route);
-      return {
-        ...toRefs(state),
-        userInfo,
-        selectMenu,
-        bus_emit,
-        cloudBasic,
-      };
-    },
-    mounted() {
-      if (this.route.path.includes('/home')) {
-        this.$emit('selectMenu', null);
+  // 初始化菜单选择
+  selectMenu(route);
+
+  // 点击菜单跳转
+  const choseMenu = (type, item, index, query) => {
+    if (type == 1) {
+      state.active_menu = null;
+      state.active_child = null;
+      router.push('/');
+      emit('selectMenu', null);
+    } else if (type == 2) {
+      state.active_menu = index;
+      state.active_child = 0;
+      if (item.children) {
+        emit('selectMenu', false);
+        query ? router.push({ path: item.children[0].path, query }) : router.push(item.children[0].path);
+      } else {
+        router.push(item.redirect_name);
+        emit('selectMenu', null);
+      }
+    } else if (type == 3) {
+      let path = item.path;
+      if (item.redirect_name) {
+        path = item.redirect_name;
+      }
+      state.active_child = index;
+      router.push(path);
+    }
+  };
+
+  // 监听路由变化
+  watch(
+    () => route,
+    (newVal) => {
+      if (
+        newVal.meta.topTree == '/product/store/product/add' ||
+        newVal.meta.topTree == '/product/store/product/edit' ||
+        newVal.meta.topTree == '/product/store/product/batch' ||
+        newVal.meta.topTree == '/product/store/product/importProduct'
+      ) {
+        state.menuList.map((item, index) => {
+          if (item.name == '商品管理') {
+            state.active_menu = index;
+            state.active_child = 0;
+            emit('selectMenu', false);
+          }
+        });
+      }
+      if (newVal.meta.topTree == '/supplier/table/table/importQrcode') {
+        state.menuList.map((item, index) => {
+          if (item.name == '门店管理') {
+            state.active_menu = index;
+            item.children.map((child, i) => {
+              if (child.name == '桌码管理') state.active_child = i;
+            });
+            emit('selectMenu', false);
+          }
+        });
+      }
+      if (newVal.meta.topTree == '/store/order/detail') {
+        state.menuList.map((item, index) => {
+          if (item.name == '订单管理') {
+            state.active_menu = index;
+            item.children.map((child, i) => {
+              if (child.name == '用餐订单') state.active_child = i;
+            });
+            emit('selectMenu', false);
+          }
+        });
+      }
+      if (newVal.meta.topTree == '/store/takeout/detail') {
+        state.menuList.map((item, index) => {
+          if (item.name == '订单管理') {
+            state.active_menu = index;
+            item.children.map((child, i) => {
+              if (child.name == '外送订单') state.active_child = i;
+            });
+            emit('selectMenu', false);
+          }
+        });
+      }
+      if (newVal.meta.topTree == '/store/history_order/detail') {
+        state.menuList.map((item, index) => {
+          if (item.name == '订单管理') {
+            state.active_menu = index;
+            item.children.map((child, i) => {
+              if (child.name == '历史用餐订单') state.active_child = i;
+            });
+            emit('selectMenu', false);
+          }
+        });
+      }
+      if (newVal.meta.topTree == '/store/recharge/detail') {
+        state.menuList.map((item, index) => {
+          if (item.name == '订单管理') {
+            state.active_menu = index;
+            item.children.map((child, i) => {
+              if (child.name == '充值订单') state.active_child = i;
+            });
+            emit('selectMenu', false);
+          }
+        });
+      }
+      if (newVal.meta.topTree == '/auth/role/edit' || newVal.meta.topTree == '/auth/role/add') {
+        state.menuList.map((item, index) => {
+          if (item.name == '用户管理') {
+            state.active_menu = index;
+            item.children.map((child, i) => {
+              if (child.name == '角色管理') state.active_child = i;
+            });
+            emit('selectMenu', false);
+          }
+        });
+      }
+      if (newVal.meta.topTree == '/marketing/activity/add' || newVal.meta.topTree == '/marketing/activity/edit') {
+        state.menuList.map((item, index) => {
+          if (item.name == '营销管理') {
+            state.active_menu = index;
+            item.children.map((child, i) => {
+              if (child.name == '营销活动') state.active_child = i;
+            });
+            emit('selectMenu', false);
+          }
+        });
+      }
+      if (newVal.meta.topTree == '/home') {
+        state.menuList.map((item, index) => {
+          if (item.name == '首页') {
+            state.active_menu = index;
+          }
+          emit('selectMenu', null);
+        });
       }
     },
-    watch: {
-      $route: {
-        handler(newVal) {
-          if (
-            newVal.meta.topTree == '/product/store/product/add' ||
-            newVal.meta.topTree == '/product/store/product/edit' ||
-            newVal.meta.topTree == '/product/store/product/batch' ||
-            newVal.meta.topTree == '/product/store/product/importProduct'
-          ) {
-            this.menuList.map((item, index) => {
-              if (item.name == '商品管理') {
-                this.active_menu = index;
-                this.active_child = 0;
-                this.$emit('selectMenu', false);
-              }
-            });
-          }
-          if (newVal.meta.topTree == '/supplier/table/table/importQrcode') {
-            this.menuList.map((item, index) => {
-              if (item.name == '门店管理') {
-                this.active_menu = index;
-                item.children.map((child, i) => {
-                  if (child.name == '桌码管理') this.active_child = i;
-                });
+    { deep: true, immediate: true }
+  );
 
-                this.$emit('selectMenu', false);
+  // 监听菜单列表变化
+  watch(
+    () => state.menuList,
+    (newVal) => {
+      if (newVal && newVal.length > 0) {
+        state.menuList.map((item) => {
+          if (item.path.includes('undefined')) {
+            item.path = item.path.replace('undefined', state.app_id);
+          }
+          if (item.children && item.children.length > 0) {
+            item.children.map((child) => {
+              if (child.path.includes('undefined')) {
+                child.path = child.path.replace('undefined', state.app_id);
               }
             });
           }
-          if (newVal.meta.topTree == '/store/order/detail') {
-            this.menuList.map((item, index) => {
-              if (item.name == '订单管理') {
-                this.active_menu = index;
-                item.children.map((child, i) => {
-                  if (child.name == '用餐订单') this.active_child = i;
-                });
-
-                this.$emit('selectMenu', false);
-              }
-            });
-          }
-
-          if (newVal.meta.topTree == '/store/takeout/detail') {
-            this.menuList.map((item, index) => {
-              if (item.name == '订单管理') {
-                this.active_menu = index;
-                item.children.map((child, i) => {
-                  if (child.name == '外送订单') this.active_child = i;
-                });
-
-                this.$emit('selectMenu', false);
-              }
-            });
-          }
-          if (newVal.meta.topTree == '/store/history_order/detail') {
-            this.menuList.map((item, index) => {
-              if (item.name == '订单管理') {
-                this.active_menu = index;
-                item.children.map((child, i) => {
-                  if (child.name == '历史用餐订单') this.active_child = i;
-                });
-
-                this.$emit('selectMenu', false);
-              }
-            });
-          }
-          if (newVal.meta.topTree == '/store/recharge/detail') {
-            this.menuList.map((item, index) => {
-              if (item.name == '订单管理') {
-                this.active_menu = index;
-                item.children.map((child, i) => {
-                  if (child.name == '充值订单') this.active_child = i;
-                });
-
-                this.$emit('selectMenu', false);
-              }
-            });
-          }
-          if (newVal.meta.topTree == '/auth/role/edit' || newVal.meta.topTree == '/auth/role/add') {
-            this.menuList.map((item, index) => {
-              if (item.name == '用户管理') {
-                this.active_menu = index;
-                item.children.map((child, i) => {
-                  if (child.name == '角色管理') this.active_child = i;
-                });
-
-                this.$emit('selectMenu', false);
-              }
-            });
-          }
-          if (newVal.meta.topTree == '/marketing/activity/add' || newVal.meta.topTree == '/marketing/activity/edit') {
-            this.menuList.map((item, index) => {
-              if (item.name == '营销管理') {
-                this.active_menu = index;
-                item.children.map((child, i) => {
-                  if (child.name == '营销活动') this.active_child = i;
-                });
-
-                this.$emit('selectMenu', false);
-              }
-            });
-          }
-          if (newVal.meta.topTree == '/home') {
-            this.menuList.map((item, index) => {
-              if (item.name == '首页') {
-                this.active_menu = index;
-              }
-              this.$emit('selectMenu', null);
-            });
-          }
-        },
-        deep: true,
-        immediate: true,
-      },
-      menuList: {
-        handler(newVal) {
-          if (newVal && newVal.length > 0) {
-            this.menuList.map((item) => {
-              if (item.path.includes('undefined')) {
-                item.path = item.path.replace('undefined', this.app_id);
-              }
-              if (item.children && item.children.length > 0) {
-                item.children.map((child) => {
-                  if (child.path.includes('undefined')) {
-                    child.path = child.path.replace('undefined', this.app_id);
-                  }
-                });
-              }
-            });
-          }
-        },
-        deep: true,
-        immediate: true,
-      },
+        });
+      }
     },
-    methods: {
-      /*点击菜单跳转*/
-      choseMenu(type, item, index, query) {
-        if (type == 1) {
-          this.active_menu = null;
-          this.active_child = null;
-          this.$router.push('/');
-          this.$emit('selectMenu', null);
-          // this.bus_emit('MenuName', '首页');
-        } else if (type == 2) {
-          this.active_menu = index;
-          this.active_child = 0;
-          // this.bus_emit('MenuName', item.name);
-          if (item.children) {
-            this.$emit('selectMenu', false);
-            query ? this.$router.push({ path: item.children[0].path, query }) : this.$router.push(item.children[0].path);
-          } else {
-            this.$router.push(item.redirect_name);
-            this.$emit('selectMenu', null);
-          }
-        } else if (type == 3) {
-          let path = item.path;
-          if (item.redirect_name) {
-            path = item.redirect_name;
-          }
-          this.active_child = index;
-          // this.bus_emit('MenuName', item.name);
+    { deep: true, immediate: true }
+  );
 
-          this.$router.push(path);
-        }
-      },
-    },
+  // 组件挂载后处理
+  onMounted(() => {
+    if (route.path.includes('/home')) {
+      emit('selectMenu', null);
+    }
+  });
+
+  // 暴露到模板
+  const { active_menu, active_child, menuList } = toRefs(state);
+
+  defineExpose({
+    choseMenu,
   });
 </script>
+
 <style scoped>
   .home-login .icon-tubiaozhizuomoban- {
     color: #3a8ee6;
