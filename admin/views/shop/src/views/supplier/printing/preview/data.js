@@ -1058,7 +1058,37 @@ export const previewData = {
                 typeShow: '2',
                 flexWidth: true,
             },
-
+            {
+                name: $t('商品名称商品名称品名称商品名称商品名称品名称'),
+                label: 'X2',
+                font24: true,
+                typeShow: '3',
+                flexWidth: true,
+            },
+            {
+                name: `<span class="grey">${$t('少冰')}</span>` + '\n' + `<span class="grey">${$t('加珍珠')}</span>`,
+                typeShow: '3',
+                flexWidth: true,
+                font24: true,
+                right: false,
+                showSkuAttr: true,
+                lineHeight: '2-5',
+            },
+            {
+                name: `<span class="grey">${$t('这是备注这是备注这是备注')}</span>`,
+                typeShow: '3',
+                flexWidth: true,
+                font24: true,
+                right: false,
+                lineHeight: '2-5',
+            },
+            {
+                name: $t('（打包）') + $t('商品名称商品名称'),
+                label: 'X2',
+                font24: true,
+                typeShow: '3',
+                flexWidth: true,
+            },
         ],
     ],
     seven: [

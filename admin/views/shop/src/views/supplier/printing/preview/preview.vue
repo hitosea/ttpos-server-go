@@ -146,7 +146,7 @@
         <div @click="modeChange(2)" class="tabs-button" :class="mode == 2 ? 'tabs-active' : ''">
           {{ $t('模板2') }}
         </div>
-        <div @click="modeChange(3)" v-if=" title != $t('退菜单') && title != $t('整单打印') " class="tabs-button" :class="mode == 3 ? 'tabs-active' : ''">
+        <div @click="modeChange(3)" v-if=" title != $t('退菜单')" class="tabs-button" :class="mode == 3 ? 'tabs-active' : ''">
           {{ $t('模板3') }}
         </div>
         <div @click="modeChange(4)" v-if="title == $t('结账单') || title == $t('预结账单')" class="tabs-button" :class="mode == 4 ? 'tabs-active' : ''">
