@@ -1874,5 +1874,7 @@
     "根据子商品库存动态计算，库存变化自动更新": "Alt ürün stoğuna göre dinamik olarak hesaplanır, stok değişiklikleri otomatik olarak güncellenir",
     "是否开启库存": "Stok etkinleştirilsin mi",
     "套餐可售总量": "Paketin satılabilir toplam miktarı",
-    "库存为0时套餐自动售罄": "Stok sıfır olduğunda paket otomatik olarak tükenir"
+    "库存为0时套餐自动售罄": "Stok sıfır olduğunda paket otomatik olarak tükenir",
+    "开始序列号": "Başlangıç seri numarası",
+    "请输入开始序列号": "Lütfen başlangıç seri numarasını girin"
 }

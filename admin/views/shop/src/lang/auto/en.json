@@ -2120,5 +2120,7 @@
     "根据子商品库存动态计算，库存变化自动更新": "Dynamically calculated based on sub-product inventory, stock changes are automatically updated",
     "是否开启库存": "Enable inventory?",
     "套餐可售总量": "Total saleable quantity of the set",
-    "库存为0时套餐自动售罄": "When inventory is zero, the package will be automatically sold out"
+    "库存为0时套餐自动售罄": "When inventory is zero, the package will be automatically sold out",
+    "开始序列号": "Start Serial Number",
+    "请输入开始序列号": "Please enter the start serial number"
 }

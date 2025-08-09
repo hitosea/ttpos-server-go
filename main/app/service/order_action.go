@@ -45,6 +45,33 @@ func WithOnlyCheckCooking() func(option *ActionCookingOption) {
 	}
 }
 
+// 转换器
+func (s *orderSrv) convertToEventOrderProduct(saleOrderProduct *model.SaleOrderProduct, saleBill *model.SaleBill, saleOrder *model.SaleOrder) event.OrderProduct {
+	orderProduct := event.OrderProduct{
+		OrderProductId:  saleOrderProduct.Uuid,
+		ProductId:       saleOrderProduct.ProductPackageUuid,
+		ProductName:     saleOrderProduct.MultiLanguageName.GetNames(),
+		ProductAttr:     saleOrderProduct.GetAttributeName(),
+		ProductAttrList: saleOrderProduct.GetAttributeNameList(),
+		TotalNum:        saleOrderProduct.Num,
+		NumType:         saleOrderProduct.NumType,
+		IsBuffet:        saleOrderProduct.IsBuffet == 1,
+		IsWrap:          saleOrderProduct.CalculateIsWrap(saleBill),
+		Remark:          saleOrderProduct.Remark,
+	}
+
+	// 如果是套餐主商品，添加子商品
+	if saleOrderProduct.IsPackageProduct() && saleOrder != nil {
+		subProducts := make([]event.OrderProduct, 0)
+		for _, subProduct := range saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid) {
+			subProducts = append(subProducts, s.convertToEventOrderProduct(subProduct, saleBill, nil))
+		}
+		orderProduct.SubProducts = subProducts
+	}
+
+	return orderProduct
+}
+
 // ActionCooking 送厨
 func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill *model.SaleBill, unCookingSaleOrderProducts []*model.SaleOrderProduct, h5OrderUuid uint64, isAutoOrder bool, options ...func(option *ActionCookingOption)) (*resp.OrderCheckServiceRes, error) {
 	option := &ActionCookingOption{}
@@ -120,8 +147,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		productionOrder = newProductionOrder(ctx, saleOrderUuid, saleBill.Uuid, saleBill.DeskUuid, unCookingSaleOrderProducts)
 
 		// 修改商品状态为已送厨
-		for index, _ := range unCookingSaleOrderProducts {
-			product := unCookingSaleOrderProducts[index]
+		for _, product := range unCookingSaleOrderProducts {
 			product.SetCooking(productionOrder.Uuid)
 		}
 
@@ -228,30 +254,6 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		}
 
 		// 发起“送厨”操作的事件
-		products := make(event.Products, 0)
-		for _, unCookingSaleOrderProduct := range unCookingSaleOrderProducts {
-			// 套餐子商品不显示送厨记录
-			if unCookingSaleOrderProduct.IsPackageSubProduct() {
-				continue
-			}
-			products = append(products, event.OrderProduct{
-				OrderProductId:  unCookingSaleOrderProduct.Uuid,
-				ProductId:       unCookingSaleOrderProduct.ProductPackageUuid,
-				ProductName:     unCookingSaleOrderProduct.MultiLanguageName.GetNames(),
-				ProductAttr:     unCookingSaleOrderProduct.GetAttributeName(),
-				ProductAttrList: unCookingSaleOrderProduct.GetAttributeNameList(),
-				TotalNum:        unCookingSaleOrderProduct.Num,
-				NumType:         unCookingSaleOrderProduct.NumType,
-				IsBuffet:        unCookingSaleOrderProduct.IsBuffet == 1,
-				IsWrap: func() bool {
-					if saleBill.IsTakeout() && saleBill.MemberSaleOrderUuid == 0 {
-						return true
-					}
-					return unCookingSaleOrderProduct.IsWrapProduct()
-				}(),
-				Remark: unCookingSaleOrderProduct.Remark,
-			})
-		}
 		go s.bus.PublishSentCookingEvent(event.SentCookingPayload{
 			BasePayload: event.BasePayload{ // 送厨
 				Ctx:           ctx,
@@ -262,7 +264,21 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 				H5OrderUuid:   h5OrderUuid,
 				OperatorUuid:  int64(ctx.GetStaffUuid()),
 			},
-			Products: products,
+			Products: func() event.Products {
+				products := make(event.Products, 0)
+				for _, unCookingSaleOrderProduct := range unCookingSaleOrderProducts {
+					// 套餐子商品不显示送厨记录
+					if unCookingSaleOrderProduct.IsPackageSubProduct() {
+						continue
+					}
+					products = append(products, s.convertToEventOrderProduct(
+						unCookingSaleOrderProduct,
+						saleBill,
+						saleBill.GetSaleOrder(saleOrderUuid),
+					))
+				}
+				return products
+			}(),
 		})
 		// 送厨成功后，推送更新订单
 		go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{

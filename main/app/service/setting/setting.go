@@ -496,6 +496,14 @@ func (s *Srv) GetBusinessSetting(ctx context.Context) (setting.Business, error) 
 		st.Values = re.ReplaceAllString(st.Values, `"dish_card_style":"$2"`)
 	}
 
+	// 兼容v1.0版本start_serial_no字段为数字的情况
+	{
+		// 正则表达式用于匹配 start_serial_no 后面的任意数字
+		re := regexp.MustCompile(`"start_serial_no":(\s*)(\d+)`)
+		// 替换为带引号的字符串数字
+		st.Values = re.ReplaceAllString(st.Values, `"start_serial_no":"$2"`)
+	}
+
 	err := json.Unmarshal([]byte(st.Values), &business)
 	if err != nil {
 		ctx.Log().Error("解析门店-业务设置失败", zap.Error(err))

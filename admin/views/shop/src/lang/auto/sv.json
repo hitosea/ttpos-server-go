@@ -2116,5 +2116,7 @@
     "根据子商品库存动态计算，库存变化自动更新": "Beräknas dynamiskt baserat på underprodukters lager, lagersaldon uppdateras automatiskt",
     "是否开启库存": "Aktivera lager?",
     "套餐可售总量": "Total försäljningskvantitet för paketet",
-    "库存为0时套餐自动售罄": "När lagret är noll säljs paketet automatiskt slut"
+    "库存为0时套餐自动售罄": "När lagret är noll säljs paketet automatiskt slut",
+    "开始序列号": "Startserienummer",
+    "请输入开始序列号": "Ange startserienummern"
 }

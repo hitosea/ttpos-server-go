@@ -1062,6 +1062,15 @@ func (model *SaleOrderProduct) IsGiftProduct() bool {
 	return model.GiftTime > 0
 }
 
+// 专门处理 IsWrap 逻辑的方法
+func (sop *SaleOrderProduct) CalculateIsWrap(saleBill *SaleBill) bool {
+	// 如果是打包订单且不是会员订单，则强制打包
+	if saleBill.IsTakeout() && saleBill.MemberSaleOrderUuid == 0 {
+		return true
+	}
+	return sop.IsWrapProduct()
+}
+
 // 是否是包装商品
 func (model *SaleOrderProduct) IsWrapProduct() bool {
 	return model.WrapTime > 0

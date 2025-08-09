@@ -15,6 +15,7 @@ import (
 	respSetting "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
+	"ttpos-server-go/app/printer/printer_model"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	image "ttpos-server-go/pkg/Image"
@@ -595,4 +596,99 @@ func (p *printerTemplate) GetCashierSn(printerSn string) string {
 	}
 	//
 	return ""
+}
+
+// 打印图片商品
+func (p *printerTemplate) PrintCompleteOrderImgProducts(
+	img *pkg.ImgFont,
+	tmpInfo model.PrinterTemplate,
+	products printer_model.Products,
+	opts ...interface{},
+) {
+	tmp := tmpInfo.Template
+	isShowSku := tmpInfo.IsShowSku
+	//
+	for _, product := range products {
+		// 处理自助餐文本
+		buffetText := ""
+		if p.PrinterSetting.BuffetSignOpen == "1" {
+			if product.IsBuffet {
+				buffetText = p.Translate("自助餐") + "-"
+			}
+		}
+
+		if tmp == 2 || tmp == 3 {
+			if p.Lang == "my" {
+				img.SetTextLineHeight(75)
+			} else {
+				img.SetTextLineHeight(60)
+			}
+			img.SetTextLineHeight(60)
+		} else {
+			img.SetTextLineHeight(50)
+		}
+		img.LineFeed(1, 12)
+
+		// 打包商品
+		wrapText := ""
+		if product.IsWrap {
+			wrapText = "(" + p.Translate("打包") + ") "
+		}
+
+		// 打印产品名称和数量
+		productName := utils.IfString(len(opts) > 0, "--", "") + wrapText + buffetText + product.ProductName.GetLocale(p.Lang)
+		totalNum := "x" + p.FloatToString(product.TotalNum)
+		productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*7), 480)
+		if tmp == 2 || tmp == 3 {
+			img.PrintInColumns(
+				pkg.ColumnConfig{Text: productName, Width: productNameWidth, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
+				pkg.ColumnConfig{Text: totalNum, Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: utils.IfInt(tmp == 3, 90, 42)},
+			)
+		} else {
+			img.PrintInColumns(
+				pkg.ColumnConfig{Text: productName, Width: productNameWidth, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 20},
+				pkg.ColumnConfig{Text: totalNum, Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 20, LineHeight: 42},
+			)
+		}
+		if p.Lang == "my" {
+			img.LineFeed(1, 12)
+		}
+
+		// 分割处理属性
+		for _, attr := range utils.IfSlice(isShowSku == 0, product.ProductSauceNamesList, product.ProductAttrList) {
+			if attr.GetLocale(p.Lang) == "" {
+				continue
+			}
+			if tmp == 3 {
+				img.SetTextLineHeight(utils.IfInt(p.Lang == "my", 110, 100))
+				img.SetFontSize(28)
+			} else {
+				img.SetTextLineHeight(utils.IfInt(p.Lang == "my", 50, 40))
+			}
+			img.AppendText(utils.IfString(len(opts) > 0, "  ", "") + attr.GetLocale(p.Lang))
+			img.LineFeed(1, utils.IfInt(tmp == 3, 100, 40))
+			img.SetFontSize(20)
+		}
+
+		// 打印备注
+		if product.Remark != "" && len(opts) == 0 {
+			img.SetTextLineHeight(utils.IfInt(p.IsMyText(product.Remark), 68, 50))
+			img.LineFeed(1, 12)
+			img.SetFontSize(28)
+			img.AppendText(product.Remark)
+			img.LineFeed(1, 50)
+			img.SetFontSize(20)
+		}
+
+		// 换行
+		img.LineFeed(1, 12)
+
+		// 打印套餐子商品
+		if len(product.SubProducts) > 0 {
+			p.PrintCompleteOrderImgProducts(img, tmpInfo, product.SubProducts, 1)
+		}
+
+		// 设置文本行高
+		img.SetTextLineHeight(50)
+	}
 }

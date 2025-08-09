@@ -319,26 +319,47 @@ func (s *orderSrv) createInstantOrderSerialNo(ctx context.Context, db *gorm.DB) 
 	if err != nil {
 		return "", errors.WithMessage(err)
 	}
+
+	startSerialNo := "0001"
+
+	// 获取业务设置
+	businessSetting, err := setting.NewSrv(s.dbm, ctx.GetCache()).GetBusinessSetting(ctx)
+	if err == nil {
+		startSerialNo = businessSetting.StartSerialNo
+	}
+
 	// 如果没有查询到账单，则设置为0001
 	if saleBill == nil {
-		serialNo = "0001"
+		serialNo = startSerialNo
 		return serialNo, nil
 	}
 	createTime := saleBill.CreateTime
 	setting := ctx.GetCompanySetting()
+
 	if !IsToday(setting.GetTimezone(), createTime) {
-		serialNo = "0001"
+		serialNo = startSerialNo
 	} else {
 		oldSerialNo := saleBill.SerialNo
 		if oldSerialNo == "" {
-			// 如果serialNo为空，则设置为0001. 兼容老数据没有serialNo的情况
-			serialNo = "0001"
+			// 如果serialNo为空，则设置为startSerialNo. 兼容老数据没有serialNo的情况
+			serialNo = startSerialNo
 		} else {
 			serialNoNum, err := strconv.Atoi(oldSerialNo)
 			if err != nil {
 				return "", errors.WithMessage(err)
 			}
-			serialNo = strconv.Itoa(serialNoNum + 1)
+
+			startSerialNoNum, err := strconv.Atoi(startSerialNo)
+			if err != nil {
+				return "", errors.WithMessage(err)
+			}
+
+			// 如果当前序列号少于起始序列号，则设置为起始序列号，否则加1
+			if serialNoNum < startSerialNoNum {
+				serialNo = startSerialNo
+			} else {
+				serialNo = strconv.Itoa(serialNoNum + 1)
+			}
 		}
 		if len(serialNo) < 4 {
 			serialNo = strings.Repeat("0", 4-len(serialNo)) + serialNo

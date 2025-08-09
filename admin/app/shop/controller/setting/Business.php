@@ -92,6 +92,7 @@ class Business extends Controller
             'is_invoice' => $data['is_invoice'] ?? 0,
             'opening_hours' => $opening_hours,
             'delivery_price_ratio' => $deliveryPriceRation,
+            'start_serial_no' => $data['start_serial_no'] ?? '0001',
         ];
         if ($update_style_time) {
             $arr['dish_card_style_time'] = time() . '';
