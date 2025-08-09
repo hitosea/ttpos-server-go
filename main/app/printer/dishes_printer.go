@@ -11,6 +11,7 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
 )
@@ -127,9 +128,15 @@ func (p *PrinterRepoImpl) PrintingDishes(
 			productIds := productPrinter.GetPrinterProductIds()
 			newProducts := make(printer_model.Products, 0)
 			for _, product := range products {
-				if !slices.Contains(productIds, product.ProductId) {
+				// 套餐商品列表 - 使用通用过滤方法
+				subProducts := utils.FilterByContains(product.SubProducts, productIds, func(p printer_model.OrderProduct) uint64 {
+					return p.ProductId
+				})
+				if !slices.Contains(productIds, product.ProductId) && len(subProducts) == 0 {
 					continue
 				}
+				// 套餐商品
+				product.SubProducts = subProducts
 				newProducts = append(newProducts, product)
 			}
 
@@ -195,26 +202,40 @@ func (p *PrinterRepoImpl) PrintingDishes(
 				// 一菜一单打印
 				if productPrinter.PrintMethod == constant.Yes || productPrinter.PrintMethod == constant.All {
 					for _, product := range newProducts {
-						if data := p.getPrintProductOneContent(productPrinter, printerItem, billInfo, product); data != "" {
-							_, err = pinterLogSrv.AddLog(p.ctx, resp.PrinterInfo{
-								PrinterType:   printerType,
-								PrinterConfig: printerItem.Printer.ConfigJson,
-							}, model.PrinterLog{
-								PrintMethod:        printMethod,
-								RelatedType:        0,
-								RelatedUuid:        saleBillUuid,
-								PrinterUuid:        printerItem.PrinterUuid,
-								CashierDeviceId:    cashierDeviceId,
-								DataType:           constant.PrinterTemplateOneDishOneMenu,
-								Data:               data,
-								Type:               1,
-								FirstExecution:     0,
-								ProductPrinterUuid: productPrinter.Uuid,
-								Copies:             productPrinter.Copies,
-							}, "")
-							if err != nil {
-								logger.Logger.Error("添加打印日志失败", zap.Error(err))
+						// 定义产品导出函数
+						exportation := func(product printer_model.OrderProduct) {
+							if data := p.getPrintProductOneContent(productPrinter, printerItem, billInfo, product); data != "" {
+								_, err = pinterLogSrv.AddLog(p.ctx, resp.PrinterInfo{
+									PrinterType:   printerType,
+									PrinterConfig: printerItem.Printer.ConfigJson,
+								}, model.PrinterLog{
+									PrintMethod:        printMethod,
+									RelatedType:        0,
+									RelatedUuid:        saleBillUuid,
+									PrinterUuid:        printerItem.PrinterUuid,
+									CashierDeviceId:    cashierDeviceId,
+									DataType:           constant.PrinterTemplateOneDishOneMenu,
+									Data:               data,
+									Type:               1,
+									FirstExecution:     0,
+									ProductPrinterUuid: productPrinter.Uuid,
+									Copies:             productPrinter.Copies,
+								}, "")
+								if err != nil {
+									logger.Logger.Error("添加打印日志失败", zap.Error(err))
+								}
 							}
+						}
+						// 套餐商品列表
+						subProducts := utils.FilterByContains(product.SubProducts, productIds, func(p printer_model.OrderProduct) uint64 {
+							return p.ProductId
+						})
+						if len(subProducts) > 0 {
+							for _, subProduct := range subProducts {
+								exportation(subProduct)
+							}
+						} else {
+							exportation(product)
 						}
 					}
 					if productPrinter.PrintMethod != constant.All {

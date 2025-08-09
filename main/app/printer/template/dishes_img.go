@@ -93,6 +93,7 @@ func (t *dishesImgTemplate) CompleteOrder(
 	img.AppendSplitLine()
 	img.LineFeed(1)
 	img.SetTextLineHeight(utils.IfInt(tmp == 2 || tmp == 3, 50, 40))
+	//
 	t.base.PrintCompleteOrderImgProducts(img, tmpInfo, products)
 	//
 	img.LineFeed(3, 110)
