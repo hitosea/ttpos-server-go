@@ -3609,6 +3609,7 @@ func (s *orderSrv) InstantHideOrderList(ctx context.Context, req req.HideSaleBil
 								Uuid:       subProduct.Uuid,
 								LocaleName: subProduct.MultiLanguageName.GetNames(),
 								Num:        subProduct.Num,
+								UnitNum:    subProduct.UnitNum,
 							})
 						}
 						newProduct.PackageProductList = resp.PackageProductList{

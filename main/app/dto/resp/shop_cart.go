@@ -219,6 +219,7 @@ type PackageProduct struct {
 	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品名称
 	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
 	Num                 float64            `json:"num"`                   // 数量
+	UnitNum             float64            `json:"unit_num"`              // 单位数量
 }
 
 // GetPrice 获取商品价格(折后价)

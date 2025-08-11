@@ -559,6 +559,7 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []res
 					LocaleName:          subProduct.MultiLanguageName.GetNames(),
 					LocaleAttributeName: subProduct.GetAttributeName(),
 					Num:                 subProduct.Num,
+					UnitNum:             subProduct.UnitNum,
 				})
 			}
 		}
