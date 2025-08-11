@@ -14,5 +14,3 @@ message ResponseInfo {
   google.protobuf.Any data = 3 ; // 响应数据，根据实际情况定义
 }
 
-
-

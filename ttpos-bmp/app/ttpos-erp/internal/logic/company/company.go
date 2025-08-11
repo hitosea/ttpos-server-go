@@ -29,6 +29,9 @@ func (s *sCompany) GetCompanyList(ctx context.Context, req *company.GetCompanyLi
 	if len(req.CompanyAbbr) > 0 {
 		filters = append(filters, g.ArrayStr{"abbr", "like", "%" + req.CompanyAbbr + "%"})
 	}
+	if len(req.ParentCompany) > 0 {
+		filters = append(filters, g.ArrayStr{"parent_company", "like", "%" + req.ParentCompany + "%"})
+	}
 	// 1. 调用 erpnext document 服务获取公司信息
 	erpCompanyList, err := service.Document().List(ctx, &dto.ErpReq{
 		DocType: "Company",
@@ -41,9 +44,6 @@ func (s *sCompany) GetCompanyList(ctx context.Context, req *company.GetCompanyLi
 		return nil, err
 	}
 	if j, err := gjson.DecodeToJson(erpCompanyList.Bytes()); err == nil {
-		if j.Contains("error") {
-			return nil, gerror.Newf("获取公司列表失败, err: %v", j.Get("error"))
-		}
 		// 遍历j.Get("data") 返回的数组字段，设置到 CompanyList 中
 		companyList := make([]*company.CompanyInfo, 0)
 		dataArray := j.GetJsons("data")

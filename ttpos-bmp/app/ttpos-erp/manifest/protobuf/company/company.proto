@@ -13,6 +13,7 @@ option go_package = "ttpos-bmp/app/ttpos-erp/api/company";
 message GetCompanyListReq {
   string company_name = 1; // 公司名称模糊查询，可选，如: %公司名称%
   string company_abbr = 2; // 公司缩写编码模糊查询，可选，如: %公司缩写%
+  string parent_company = 3; // 父公司，可选，如: %父公司%
 }
 
 // 获取公司列表响应消息

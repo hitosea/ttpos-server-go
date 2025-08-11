@@ -4,6 +4,7 @@ import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc/company"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc/item"
+	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc/selling"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc/setup"
 	"ttpos-bmp/internal/pkg/nacos/service"
 
@@ -24,6 +25,7 @@ func initRpcServer() {
 	company.Register(service.RpcServer.GRpc)
 	item.Register(service.RpcServer.GRpc)
 	setup.Register(service.RpcServer.GRpc)
+	selling.Register(service.RpcServer.GRpc)
 	go service.RpcServer.GRpc.Run()
 }
 
