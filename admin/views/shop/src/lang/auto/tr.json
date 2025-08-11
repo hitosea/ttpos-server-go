@@ -1856,5 +1856,7 @@
     "状态设置失败": "Durum ayarlanamadı",
     "请选择显示": "Lütfen gösterilecek olanı seçin",
     "外送序号/订单号": "Teslimat Numarası/Sipariş Numarası",
-    "外送序号": "Teslimat Sıra Numarası"
+    "外送序号": "Teslimat Sıra Numarası",
+    "开始序列号": "Başlangıç seri numarası",
+    "请输入开始序列号": "Lütfen başlangıç seri numarasını girin"
 }

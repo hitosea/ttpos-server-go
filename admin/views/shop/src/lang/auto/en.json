@@ -2102,5 +2102,7 @@
     "状态设置失败": "Failed to set status",
     "请选择显示": "Please select display",
     "外送序号/订单号": "Deli Number/Order Number",
-    "外送序号": "Deli Sequence Number"
+    "外送序号": "Deli Sequence Number",
+    "开始序列号": "Start Serial Number",
+    "请输入开始序列号": "Please enter the start serial number"
 }

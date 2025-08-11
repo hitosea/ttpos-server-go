@@ -6,6 +6,7 @@ import (
 	"strings"
 	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/pkg/cache"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -64,6 +65,7 @@ type Context interface {
 	Version(op Operator, version string) bool              // 比较版本
 	GetRemoteIp() string                                   // 获取客户端IP
 	IsMobile() bool                                        // 判断是否是移动端
+	GetCache() cache.Cache                                 // 获取缓存
 }
 
 type ContextImpl struct {
@@ -450,4 +452,8 @@ func (c *ContextImpl) IsMobile() bool {
 	}
 	//
 	return false
+}
+
+func (c *ContextImpl) GetCache() cache.Cache {
+	return cache.Global
 }
