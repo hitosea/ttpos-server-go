@@ -7038,9 +7038,6 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 	var returnSaleOrderProduct *model.SaleOrderProduct
 	// var returnSubSaleOrderProducts []*model.SaleOrderProduct // 套餐子商品退菜列表
 	var keepNum float64
-	// 提前获取属性和属性列表
-	productAttr := saleOrderProduct.GetAttributeName()
-	productAttrList := saleOrderProduct.GetAttributeNameList()
 
 	// 如果退菜数量等于该商品的数量，则标记该商品为退菜并在商品的退菜原因列表中添加退菜原因
 	if saleOrderProduct.Num == req.Num {
@@ -7078,9 +7075,8 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			saleOrderProduct.SetCancelInfo(req.Reason, returnFoodReasonList)
 			returnSaleOrderProduct = saleOrderProduct
 			// 如果是套餐商品，则更新套餐子商品退菜信息
-			subProducts := make([]*model.SaleOrderProduct, 0)
 			if saleOrderProduct.IsPackageProduct() {
-				subProducts = saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+				subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
 				for _, subProduct := range subProducts {
 					subProduct.SetCancelInfo(req.Reason, nil)
 				}
@@ -7190,6 +7186,37 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 
 	// 发布"退菜"事件
 	go func() {
+		var convertToEventOrderProduct func(saleOrderProduct *model.SaleOrderProduct, isSubProduct bool) event.CancelSaleOrderProductProduct
+		convertToEventOrderProduct = func(saleOrderProduct *model.SaleOrderProduct, isSubProduct bool) event.CancelSaleOrderProductProduct {
+			return event.CancelSaleOrderProductProduct{
+				OrderProductId:  req.SaleOrderProductUuid,
+				ProductId:       saleOrderProduct.ProductPackageUuid,
+				ProductName:     saleOrderProduct.MultiLanguageName.GetNames(),
+				ProductAttr:     saleOrderProduct.GetAttributeName(),
+				ProductAttrList: saleOrderProduct.GetAttributeNameList(),
+				TotalNum: func() float64 {
+					if !isSubProduct {
+						return req.Num
+					}
+					return decimal.NewFromFloat(req.Num).Mul(decimal.NewFromFloat(saleOrderProduct.UnitNum)).Round(3).InexactFloat64()
+				}(),
+				IsBuffet:     saleOrderProduct.IsBuffet == 1,
+				Remark:       saleOrderProduct.Remark,
+				Reason:       model.GetReturnFoodReasonNames(returnFoodReason),
+				CustomReason: saleOrderProduct.CancelReason,
+				Sign:         saleOrderProduct.Sign,
+				SubProducts: func() []event.CancelSaleOrderProductProduct {
+					if saleOrderProduct.IsPackageProduct() {
+						subProducts := make([]event.CancelSaleOrderProductProduct, 0)
+						for _, subProduct := range saleOrder.GetPackageSubProductList(returnSaleOrderProduct.Uuid) {
+							subProducts = append(subProducts, convertToEventOrderProduct(subProduct, true))
+						}
+						return subProducts
+					}
+					return nil
+				}(),
+			}
+		}
 		s.bus.PublishCancelSaleOrderProductEvent(event.CancelSaleOrderProductPayload{
 			BasePayload: event.BasePayload{ // 退菜
 				Ctx:           ctx,
@@ -7199,17 +7226,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 				SaleOrderUuid: req.SaleOrderUuid,
 				OperatorUuid:  int64(ctx.GetStaffUuid()),
 			},
-			OrderProductId:  req.SaleOrderProductUuid,
-			ProductId:       returnSaleOrderProduct.ProductPackageUuid,
-			ProductName:     returnSaleOrderProduct.MultiLanguageName.GetNames(),
-			ProductAttr:     productAttr,
-			ProductAttrList: productAttrList,
-			TotalNum:        req.Num,
-			IsBuffet:        returnSaleOrderProduct.IsBuffet == 1,
-			Remark:          returnSaleOrderProduct.Remark,
-			Reason:          model.GetReturnFoodReasonNames(returnFoodReason),
-			CustomReason:    returnSaleOrderProduct.CancelReason,
-			Sign:            returnSaleOrderProduct.Sign,
+			CancelSaleOrderProductProduct: convertToEventOrderProduct(returnSaleOrderProduct, false),
 		})
 	}()
 
