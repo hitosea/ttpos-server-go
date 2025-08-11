@@ -5109,7 +5109,163 @@ func (s *orderSrv) OrderCartProductFlavorAndAttribute(ctx context.Context, reque
 }
 
 func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context, request req.OrderCartProductFlavorAndAttributeChangeReq) (*resp.ShopCart, error) {
-	return nil, nil
+
+	if ctx.NoLock() {
+		s.lock.LockUuid(request.SaleBillUuid)
+		defer s.lock.UnlockUuid(request.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+	// 获取销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errors.WithMessage(errSaleBill)
+	}
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.WithMessage(errors.New("销售订单不存在"), "销售订单不存在")
+	}
+
+	// 如果是修改普通商品
+	if request.ProductType == 0 {
+		// 普通商品
+		saleOrderProduct, _, errProduct := saleOrder.GetSaleOrderProduct(request.SaleOrderProductUuid)
+		if errProduct != nil {
+			return nil, errors.WithMessage(errProduct)
+		}
+		if !saleOrderProduct.IsCanEdit() {
+			return nil, errors.WithMessage(errors.New("商品不可编辑"), "商品不可编辑")
+		}
+		// 删除所有规格、加料和属性
+		saleOrderProduct.DeleteAllSaleOrderProductBomsAndAttributes()
+		// 添加新的规格、加料和属性
+		// 添加新规格
+		flavorProductBom, errFlavorProductBom := repository.NewProductBomRepo(db).GetFlavorProductBomByUuid(request.FlavorUuid)
+		if errFlavorProductBom != nil {
+			return nil, errors.WithMessage(errFlavorProductBom)
+		}
+		saleOrderProduct.SaleOrderProductBoms = append(saleOrderProduct.SaleOrderProductBoms, model.NewSaleOrderProductFlavor(saleOrderProduct.Uuid, saleOrder.Uuid, model.Flavor{
+			Name:           flavorProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			Price:          flavorProductBom.Price,
+			ProductBomUuid: request.FlavorUuid,
+		}))
+		// 添加新加料
+		sauceProductBoms, errSauceProductBoms := GetSauceInfo(ctx, db, request.SauceUuidList, saleOrderProduct.Num)
+		if errSauceProductBoms != nil {
+			return nil, errors.WithMessage(errSauceProductBoms)
+		}
+		sauces := make([]model.Sauce, 0)
+		for sauceProductBomUuid, sauceProductBom := range sauceProductBoms {
+			sauce := model.Sauce{
+				Name:           sauceProductBom.ProductSauce.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
+				Price:          sauceProductBom.Price,
+				ProductBomUuid: sauceProductBomUuid,
+			}
+			sauces = append(sauces, sauce)
+		}
+		for _, sauce := range sauces {
+			saleOrderProduct.SaleOrderProductBoms = append(saleOrderProduct.SaleOrderProductBoms, model.NewSaleOrderProductSauce(saleOrderProduct.Uuid, saleOrder.Uuid, sauce))
+		}
+		// 添加新属性
+		productAttributes, errProductAttributes := GetAttributeInfo(ctx, db, request.AttributeUuidList)
+		if errProductAttributes != nil {
+			return nil, errors.WithMessage(errProductAttributes)
+		}
+		for _, productAttribute := range productAttributes {
+			saleOrderProduct.SaleOrderProductAttributes = append(saleOrderProduct.SaleOrderProductAttributes,
+				model.NewSaleOrderProductAttribute(saleOrderProduct.Uuid, saleOrder.Uuid, model.Attribute{
+					Name:                 productAttribute.Attribute.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
+					ProductAttributeUuid: productAttribute.Attribute.Uuid,
+				}))
+		}
+
+		// 从新计算订单并保存
+		if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+			if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+				return errors.WithMessage(err)
+			}
+			return nil
+		}); err != nil {
+			return nil, errors.WithMessage(err)
+		}
+	} else {
+
+	}
+
+	// 获取新的购物车商品数据
+	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return info, nil
+}
+
+// 获取商品规格信息。用于加购商品时作为订单商品数据的数据来源
+func GetAttributeInfo(ctx context.Context, db *gorm.DB, productPackageAttributeUuidList []uint64) (map[uint64]*model.ProductPackageAttribute, error) {
+	// 获取属性信息
+	productAttributes := make(map[uint64]*model.ProductPackageAttribute)
+	if len(productPackageAttributeUuidList) > 0 {
+		productAttributeList, errProductAttributeList := repository.NewProductPackageAttributeRepo(db).GetProductPackageAttributesByUuids(productPackageAttributeUuidList)
+		if errProductAttributeList != nil {
+			return nil, errors.WithMessage(errProductAttributeList)
+		}
+		for i, attribute := range productAttributeList {
+			productAttributes[attribute.Uuid] = productAttributeList[i]
+		}
+	}
+	return productAttributes, nil
+}
+
+// 获取加料信息。用于加购商品时作为订单商品数据的数据来源
+func GetSauceInfo(ctx context.Context, db *gorm.DB, sauceProductBomUuidList []uint64, productNum float64) (map[uint64]*model.ProductBom, error) {
+	// 获取加料信息
+	sauceProductBoms := make(map[uint64]*model.ProductBom)
+	if len(sauceProductBomUuidList) > 0 {
+		sauceProductBomList, errSauceProductBomList := repository.NewProductBomRepo(db).GetSauceProductBomsByUuids(sauceProductBomUuidList)
+		if errSauceProductBomList != nil {
+			return nil, errors.WithMessage(errSauceProductBomList)
+		}
+		if len(sauceProductBomList) != len(sauceProductBomUuidList) {
+			sauceUuidMap := make(map[uint64]struct{})
+			for _, uuid := range sauceProductBomUuidList {
+				sauceUuidMap[uuid] = struct{}{}
+			}
+			for _, bom := range sauceProductBomList {
+				delete(sauceUuidMap, bom.Uuid)
+			}
+			names := make([]string, 0)
+			for uuid := range sauceUuidMap {
+				bom, err := repository.NewProductBomRepo(db).GetSauceProductBomByUuid(uuid)
+				if err != nil {
+					return nil, errors.WithMessage(err)
+				}
+				sauceName := bom.ProductSauce.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+				names = append(names, sauceName)
+			}
+			tipStrPrefix := i18n.Translate(ctx.GetLanguage(), "加料")
+			tipStr := i18n.Translate(ctx.GetLanguage(), "已下架，请重新选择其他加料")
+			return nil, errors.New(tipStrPrefix + " " + strings.Join(names, ",") + " " + tipStr)
+		}
+		for i, bom := range sauceProductBomList {
+			sauceProductBoms[bom.Uuid] = sauceProductBomList[i]
+			sauceName := bom.ProductSauce.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+			if bom.GetStockNum() < productNum {
+				return nil, errors.WithMessage(fmt.Errorf("%s %s", sauceName, i18n.Translate(ctx.GetLanguage(), "库存不足")))
+			}
+			// 检查加料材料库存是否充足
+			if len(bom.ProductSauce.SauceMaterials) > 0 {
+				for _, sauceMaterial := range bom.ProductSauce.SauceMaterials {
+					if sauceMaterial.Material.StockNum < sauceMaterial.GetDecreaseNum(productNum) {
+						return nil, errors.WithMessage(fmt.Errorf("%s %s", sauceName, i18n.Translate(ctx.GetLanguage(), "加料材料库存不足")))
+					}
+				}
+			}
+		}
+	}
+	return sauceProductBoms, nil
 }
 
 // InstantOrderCartProductAdd 点餐页面，往购物车添加商品。
@@ -5651,60 +5807,15 @@ func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, 
 	}
 
 	// 获取加料信息
-	sauceProductBoms := make(map[uint64]*model.ProductBom)
-	if len(product.SauceProductBomUuidList) > 0 {
-		sauceProductBomList, errSauceProductBomList := repository.NewProductBomRepo(db).GetSauceProductBomsByUuids(product.SauceProductBomUuidList)
-		if errSauceProductBomList != nil {
-			return nil, errors.WithMessage(errSauceProductBomList)
-		}
-		if len(sauceProductBomList) != len(product.SauceProductBomUuidList) {
-			sauceUuidMap := make(map[uint64]struct{})
-			for _, uuid := range product.SauceProductBomUuidList {
-				sauceUuidMap[uuid] = struct{}{}
-			}
-			for _, bom := range sauceProductBomList {
-				delete(sauceUuidMap, bom.Uuid)
-			}
-			names := make([]string, 0)
-			for uuid := range sauceUuidMap {
-				bom, err := repository.NewProductBomRepo(db).GetSauceProductBomByUuid(uuid)
-				if err != nil {
-					return nil, errors.WithMessage(err)
-				}
-				sauceName := bom.ProductSauce.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
-				names = append(names, sauceName)
-			}
-			tipStrPrefix := i18n.Translate(ctx.GetLanguage(), "加料")
-			tipStr := i18n.Translate(ctx.GetLanguage(), "已下架，请重新选择其他加料")
-			return nil, errors.New(tipStrPrefix + " " + strings.Join(names, ",") + " " + tipStr)
-		}
-		for i, bom := range sauceProductBomList {
-			sauceProductBoms[bom.Uuid] = sauceProductBomList[i]
-			sauceName := bom.ProductSauce.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
-			if bom.GetStockNum() < product.Num {
-				return nil, errors.WithMessage(fmt.Errorf("%s %s", sauceName, i18n.Translate(ctx.GetLanguage(), "库存不足")))
-			}
-			// 检查加料材料库存是否充足
-			if len(bom.ProductSauce.SauceMaterials) > 0 {
-				for _, sauceMaterial := range bom.ProductSauce.SauceMaterials {
-					if sauceMaterial.Material.StockNum < sauceMaterial.GetDecreaseNum(product.Num) {
-						return nil, errors.WithMessage(fmt.Errorf("%s %s", sauceName, i18n.Translate(ctx.GetLanguage(), "加料材料库存不足")))
-					}
-				}
-			}
-		}
+	sauceProductBoms, errSauceProductBoms := GetSauceInfo(ctx, db, product.SauceProductBomUuidList, product.Num)
+	if errSauceProductBoms != nil {
+		return nil, errors.WithMessage(errSauceProductBoms)
 	}
 
 	// 获取属性信息
-	productAttributes := make(map[uint64]*model.ProductPackageAttribute)
-	if len(product.ProductPackageAttributeUuidList) > 0 {
-		productAttributeList, errProductAttributeList := repository.NewProductPackageAttributeRepo(db).GetProductPackageAttributesByUuids(product.ProductPackageAttributeUuidList)
-		if errProductAttributeList != nil {
-			return nil, errors.WithMessage(errProductAttributeList)
-		}
-		for i, attribute := range productAttributeList {
-			productAttributes[attribute.Uuid] = productAttributeList[i]
-		}
+	productAttributes, errProductAttributes := GetAttributeInfo(ctx, db, product.ProductPackageAttributeUuidList)
+	if errProductAttributes != nil {
+		return nil, errors.WithMessage(errProductAttributes)
 	}
 
 	// 构建加料信息
@@ -5774,7 +5885,6 @@ func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, 
 		deviceSn = jwt.SourceH5 // 扫码h5订单，设备sn为h5
 	}
 
-	flavorPrice := flavorProductBom.Price
 	saleOrderProduct := model.NewDefaultSaleOrderProduct(model.DefaultSaleOrderProduct{
 		DeviceId:               deviceSn,
 		Name:                   productPackage.Name,
@@ -5802,7 +5912,7 @@ func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, 
 		PackageUuid: packageUuid,
 		Flavor: model.Flavor{
 			Name:           flavorProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 填顾客下单时规格的名字 todo preload
-			Price:          flavorPrice,
+			Price:          flavorProductBom.Price,
 			ProductBomUuid: product.FlavorProductBomUuid,
 		},
 		Attribute:     attributes,

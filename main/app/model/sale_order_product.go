@@ -121,6 +121,19 @@ type SaleOrderProduct struct {
 	unOrderH5Product bool   `gorm:"-"` // 是否为未下单的h5订单商品。 特别标记该商品为正在下单的h5订单商品
 }
 
+// 删除所有规格、加料和属性
+func (model *SaleOrderProduct) DeleteAllSaleOrderProductBomsAndAttributes() {
+	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
+		saleOrderProductBom.SetDelete()
+		saleOrderProductBom.SetUpdate()
+	}
+	for _, saleOrderProductAttribute := range model.SaleOrderProductAttributes {
+		saleOrderProductAttribute.SetDelete()
+		saleOrderProductAttribute.SetUpdate()
+	}
+	model.SetUpdate()
+}
+
 // 获取商品的简要，如 牛排*1（标准，黑椒汁）
 func (model *SaleOrderProduct) GetProductNameAttributes(language string) string {
 	name := model.MultiLanguageName.GetNameByLang(language)
@@ -1311,33 +1324,14 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 	saleOrderProductUuid, _ := utils.GetID()
 	saleOrderProductBoms := make([]*SaleOrderProductBom, 0)
 	for _, bom := range def.Sauces {
-		saleOrderProductBom := &SaleOrderProductBom{
-			Name:                 bom.Name,
-			Price:                bom.Price,
-			IsFlavorBom:          0,
-			SaleOrderProductUuid: saleOrderProductUuid,
-			SaleOrderUuid:        def.SaleOrderUuid,
-			ProductBomUuid:       bom.ProductBomUuid,
-		}
+		saleOrderProductBom := NewSaleOrderProductSauce(saleOrderProductUuid, def.SaleOrderUuid, bom)
 		saleOrderProductBoms = append(saleOrderProductBoms, saleOrderProductBom)
 	}
-	saleOrderProductBoms = append(saleOrderProductBoms, &SaleOrderProductBom{
-		Name:                 def.Flavor.Name,
-		Price:                def.Flavor.Price,
-		IsFlavorBom:          1,
-		SaleOrderUuid:        def.SaleOrderUuid,
-		SaleOrderProductUuid: saleOrderProductUuid,
-		ProductBomUuid:       def.Flavor.ProductBomUuid,
-	})
+	saleOrderProductBoms = append(saleOrderProductBoms, NewSaleOrderProductFlavor(saleOrderProductUuid, def.SaleOrderUuid, def.Flavor))
 
 	saleOrderProductAttributes := []*SaleOrderProductAttribute{}
 	for _, attribute := range def.Attribute {
-		saleOrderProductAttribute := &SaleOrderProductAttribute{
-			Name:                 attribute.Name,
-			SaleOrderUuid:        def.SaleOrderUuid,
-			SaleOrderProductUuid: saleOrderProductUuid,
-			ProductAttributeUuid: attribute.ProductAttributeUuid,
-		}
+		saleOrderProductAttribute := NewSaleOrderProductAttribute(saleOrderProductUuid, def.SaleOrderUuid, attribute)
 		saleOrderProductAttributes = append(saleOrderProductAttributes, saleOrderProductAttribute)
 	}
 	product := SaleOrderProduct{
@@ -1385,6 +1379,40 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 		product.SetSubOperation()
 	}
 	return &product
+}
+
+// 构建“销售订单商品”的规格
+func NewSaleOrderProductFlavor(saleOrderProductUuid uint64, saleOrderUuid uint64, flavor Flavor) *SaleOrderProductBom {
+	return &SaleOrderProductBom{
+		Name:                 flavor.Name,
+		Price:                flavor.Price,
+		IsFlavorBom:          1,
+		SaleOrderUuid:        saleOrderUuid,
+		SaleOrderProductUuid: saleOrderProductUuid,
+		ProductBomUuid:       flavor.ProductBomUuid,
+	}
+}
+
+// 构建“销售订单商品”的加料
+func NewSaleOrderProductSauce(saleOrderProductUuid uint64, saleOrderUuid uint64, sauce Sauce) *SaleOrderProductBom {
+	return &SaleOrderProductBom{
+		Name:                 sauce.Name,
+		Price:                sauce.Price,
+		IsFlavorBom:          0,
+		SaleOrderProductUuid: saleOrderProductUuid,
+		SaleOrderUuid:        saleOrderUuid,
+		ProductBomUuid:       sauce.ProductBomUuid,
+	}
+}
+
+// 构建“销售订单商品”的属性
+func NewSaleOrderProductAttribute(saleOrderProductUuid uint64, saleOrderUuid uint64, attribute Attribute) *SaleOrderProductAttribute {
+	return &SaleOrderProductAttribute{
+		Name:                 attribute.Name,
+		SaleOrderUuid:        saleOrderUuid,
+		SaleOrderProductUuid: saleOrderProductUuid,
+		ProductAttributeUuid: attribute.ProductAttributeUuid,
+	}
 }
 
 // 判断商品有没有改价
