@@ -134,9 +134,9 @@ func databaseConf(opt copier.Option) {
 		Database:        "db",
 		TablePrefix:     "ttpos_",
 		SlowQueryTime:   2,
-		MaxIdleConns:    10,
-		MaxOpenConns:    100,
-		ConnMaxLifetime: 20,
+		MaxIdleConns:    20,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 300,
 	}
 	copier.CopyWithOption(&Database, DatabaseConf{
 		DBType:          viper.GetString("DB_TYPE"),

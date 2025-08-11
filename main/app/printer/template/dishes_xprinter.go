@@ -4,6 +4,7 @@ package template
 import (
 	"fmt"
 
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/app/printer/printer_model"
@@ -973,6 +974,11 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 	products printer_model.Products,
 	finishedTime int64,
 ) string {
+
+	if len(products) == 0 {
+		return ""
+	}
+
 	// 人的翻译
 	name := t.base.Translate("人")
 	// 自助餐标记开关
@@ -989,8 +995,6 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 	if mdPrinter.PrinterType != nil {
 		printerType = mdPrinter.PrinterType.Key
 	}
-	// 是否有打印内容
-	isPrinter := false
 
 	// 创建打印机实例
 	printer := pkg.NewPrinter(567, "", "")
@@ -1080,8 +1084,13 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 		if product.IsWrap {
 			wrapText = "(" + t.base.Translate("打包") + ") "
 		}
+		// 套餐
+		packageText := ""
+		if product.ProductType > constant.ProductTypeProduct {
+			packageText = t.base.Translate("套餐") + "-"
+		}
 		// 产品名称
-		productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
+		productName := packageText + wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 
 		// 设置字符大小和行间距
 		if printerType == PrinterTypeXPrinterWifi {
@@ -1139,14 +1148,6 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 			// 恢复默认行间距
 			printer.RestoreDefaultLineSpacing()
 		}
-
-		// 标记已有打印内容
-		isPrinter = true
-	}
-
-	// 检查是否有打印内容
-	if !isPrinter {
-		return ""
 	}
 
 	// 打印额外行

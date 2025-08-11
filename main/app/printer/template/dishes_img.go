@@ -4,6 +4,7 @@ package template
 import (
 	"fmt"
 
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/app/printer/printer_model"
@@ -550,6 +551,11 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 	products printer_model.Products,
 	finishedTime int64,
 ) string {
+
+	if len(products) == 0 {
+		return ""
+	}
+
 	// 人的翻译
 	name := t.base.Translate("人")
 	// 自助餐标记开关
@@ -561,8 +567,6 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 	if order.MealNum > 0 {
 		mealNumStr = fmt.Sprintf(" (%d%s)", order.MealNum, name)
 	}
-	// 是否有打印内容
-	isPrinter := false
 
 	// 创建打印机实例
 	img := pkg.NewImgFont(568, 0, 0)
@@ -633,13 +637,16 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 			wrapText = "(" + t.base.Translate("打包") + ") "
 		}
 
-		// 产品名称
-		productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
-		if t.base.Lang == "my" {
-			img.SetTextLineHeight(90)
-		} else {
-			img.SetTextLineHeight(64)
+		// 套餐
+		packageText := ""
+		if product.ProductType > constant.ProductTypeProduct {
+			packageText = t.base.Translate("套餐") + "-"
 		}
+
+		// 产品名称
+		productName := packageText + wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
+		// 套餐-
+		img.SetTextLineHeight(utils.IfInt(t.base.Lang == "my", 90, 64))
 		img.LineFeed(1, 12)
 
 		// 打印产品名称和数量
@@ -655,34 +662,19 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 
 		// 分割处理属性
 		for _, attr := range product.ProductAttrList {
-			if t.base.Lang == "my" {
-				img.SetTextLineHeight(50)
-			} else {
-				img.SetTextLineHeight(40)
-			}
+			img.SetTextLineHeight(utils.IfInt(t.base.Lang == "my", 50, 40))
 			img.AppendText(attr.GetLocale(t.base.Lang))
 			img.LineFeed(1, 50)
 		}
 
 		if product.Remark != "" {
-			if t.base.IsMyText(product.Remark) {
-				img.SetTextLineHeight(50)
-			} else {
-				img.SetTextLineHeight(40)
-			}
+			img.SetTextLineHeight(utils.IfInt(t.base.IsMyText(product.Remark), 50, 40))
 			img.AppendText(product.Remark)
 			img.LineFeed(1, 50)
 		}
 
 		img.LineFeed(1, 12)
 		img.SetTextLineHeight(50)
-
-		// 标记已打印
-		isPrinter = true
-	}
-
-	if !isPrinter {
-		return ""
 	}
 
 	// 设置行间距
