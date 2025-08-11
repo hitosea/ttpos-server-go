@@ -751,7 +751,7 @@ func (r *productRepo) PaginateGetProductAttributeGroupList(pageNo int, pageSize 
 func (r *productRepo) WithProductAttributes() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("ProductAttributes", func(db *gorm.DB) *gorm.DB {
-			return db.Scopes(NotDeleted)
+			return db.Order("sort asc, create_time asc").Scopes(NotDeleted)
 		})
 	}
 }
@@ -770,7 +770,7 @@ func (r *productRepo) GetProductAttributeGroup(opts ...DBOption) (model.ProductA
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	err := db.Debug().First(&attributeGroup).Error
+	err := db.First(&attributeGroup).Error
 	return attributeGroup, errors.WithMessage(err)
 }
 

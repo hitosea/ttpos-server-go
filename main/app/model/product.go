@@ -66,6 +66,7 @@ type ProductAttributeGroup struct {
 	BaseModel
 	Name                  string `gorm:"default:'';column:name;comment:'名称'"`
 	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
+	Sort                  int    `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
 
 	MultiLanguageName MultiLanguageName  `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 	ProductAttributes []ProductAttribute `gorm:"foreignKey:attribute_group_uuid;references:uuid"`     // 商品属性
@@ -77,6 +78,7 @@ type ProductAttribute struct {
 	Name                  string `gorm:"default:'';column:name;comment:'名称'"`
 	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	AttributeGroupUuid    uint64 `gorm:"default:0;column:attribute_group_uuid;comment:'属性组UUID'"`
+	Sort                  int    `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
 
 	// 关联ttpos_product_package_attribute，ttpos_product_package_attribute的attribute_uuid等于当前商品属性的uuid
 	ProductPackageAttributes []ProductPackageAttribute `gorm:"foreignKey:attribute_uuid;references:uuid"` // 产品包属性
