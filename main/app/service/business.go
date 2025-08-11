@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"sort"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -219,6 +220,8 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 			QueryStartTime: int64(printerParam.QueryStartTime),
 			QueryEndTime:   int64(printerParam.QueryEndTime),
 			CategoryType:   printerParam.CategoryType,
+			SortType:       printerParam.SortType,
+			SortDirection:  printerParam.SortDirection,
 		})
 
 		paymentData, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, req.BusinessDataCountReq{
@@ -695,6 +698,29 @@ func (s *businessSrv) BuildCategoryList(ctx context.Context, req req.BusinessDat
 			SalesNum: category.SaleNum,
 			Prices:   category.SaleAmount,
 		})
+	}
+
+	// 排序
+	if req.SortType == 1 {
+		if req.SortDirection == 1 {
+			sort.Slice(list, func(i, j int) bool {
+				return list[i].SalesNum < list[j].SalesNum
+			})
+		} else if req.SortDirection == 2 {
+			sort.Slice(list, func(i, j int) bool {
+				return list[i].SalesNum > list[j].SalesNum
+			})
+		}
+	} else if req.SortType == 2 {
+		if req.SortDirection == 1 {
+			sort.Slice(list, func(i, j int) bool {
+				return list[i].Prices < list[j].Prices
+			})
+		} else if req.SortDirection == 2 {
+			sort.Slice(list, func(i, j int) bool {
+				return list[i].Prices > list[j].Prices
+			})
+		}
 	}
 
 	return categoryData, list
