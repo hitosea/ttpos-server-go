@@ -3963,6 +3963,16 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 		if errUpdateProduct := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProductRecord(*saleOrderProduct); errUpdateProduct != nil {
 			return errUpdateProduct
 		}
+		// 更新套餐商品的子商品的签名
+		if saleOrderProduct.IsPackageProduct() {
+			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+			for _, subProduct := range subProducts {
+				subProduct.Sign = subProduct.GenerateProductSign()
+				if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProductRecord(*subProduct); errUpdate != nil {
+					return errUpdate
+				}
+			}
+		}
 		// 更新完整个销售订单
 		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
 			return errUpdate
@@ -4676,7 +4686,7 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
 
 	// 获取订单信息
-	billInfo, err := orderRepo.GetSaleBillInfoAndProduct(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
+	billInfo, err := orderRepo.GetSaleBillInfoAndProduct(req.SaleBillUuid, req.SaleOrderUuid, 0)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -4689,15 +4699,39 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 		return nil, errors.WithMessage(err)
 	}
 
-	// 判断商品
-	if len(billInfo.SaleOrders) == 0 || len(billInfo.SaleOrders[0].SaleOrderProducts) == 0 {
-		return nil, errors.New("找不到订单商品")
+	// 获取销售订单
+	saleOrder := billInfo.GetSaleOrder(req.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
 	}
 
 	// 修改订单商品备注
+	var saleOrderProduct *model.SaleOrderProduct
+	for _, product := range saleOrder.SaleOrderProducts {
+		if product.Uuid == req.OrderProductUuid {
+			saleOrderProduct = product
+			break
+		}
+	}
+	if saleOrderProduct == nil {
+		return nil, errors.New("订单商品不存在")
+	}
+
+	// 更新订单商品备注
 	repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
-		if err := repository.NewOrderRepo(db).ChangeProductRemark(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid, req.Remark); err != nil {
+		sign := saleOrderProduct.GenerateProductSign()
+		if err := repository.NewOrderRepo(db).ChangeProductRemark(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid, req.Remark, sign); err != nil {
 			return errors.WithMessage(err)
+		}
+		// 更新套餐商品的子商品的签名
+		if saleOrderProduct.IsPackageProduct() {
+			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+			for _, subProduct := range subProducts {
+				subProduct.Sign = subProduct.GenerateProductSign()
+				if err := repository.NewOrderRepo(db).ChangeProductRemark(req.SaleBillUuid, req.SaleOrderUuid, subProduct.Uuid, req.Remark, subProduct.Sign); err != nil {
+					return errors.WithMessage(err)
+				}
+			}
 		}
 		return nil
 	})

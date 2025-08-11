@@ -30,7 +30,7 @@ type IOrderRepo interface {
 	HideOrder(saleBillUuid uint64) error                                                                                       // 隐藏订单
 	DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) error                           // 删除订单产品
 	ChangePopulation(saleBillUuid uint64, population int) error                                                                // 修改订单人数
-	ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string) error               // 修改订单商品备注
+	ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string, sign string) error  // 修改订单商品备注
 	SetLock(saleBillUuid uint64, isLock bool) error                                                                            // 设置订单锁定状态
 	SaveOrUpdateInvoiceInfo(saleOrderUuid uint64, invoiceInfo model.SaleOrderInvoiceInfo) (*model.SaleOrderInvoiceInfo, error) // 设置订单发票信息
 }
@@ -2012,25 +2012,16 @@ func (r *orderRepo) ChangePopulation(saleBillUuid uint64, population int) error 
 }
 
 // ChangeProductRemark 修改订单商品备注
-func (r *orderRepo) ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string) error {
+func (r *orderRepo) ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string, sign string) error {
 	err := r.db.Model(&model.SaleOrderProduct{}).
 		Where("delete_time = ?", constant.NotDeleted).
 		Where("sale_bill_uuid = ? AND sale_order_uuid = ? AND uuid = ?", saleBillUuid, saleOrderUuid, orderProductUuid).
 		Updates(map[string]interface{}{
 			"remark": remark,
+			"sign":   sign,
 		}).Error
 	if err != nil {
 		return fmt.Errorf("ChangeProductRemark: %v", err)
-	}
-	// 如果是套餐商品，则更新套餐子商品备注
-	err = r.db.Model(&model.SaleOrderProduct{}).
-		Where("delete_time = ?", constant.NotDeleted).
-		Where("sale_bill_uuid = ? AND sale_order_uuid = ? AND package_uuid = ?", saleBillUuid, saleOrderUuid, orderProductUuid).
-		Updates(map[string]interface{}{
-			"remark": remark,
-		}).Error
-	if err != nil {
-		return fmt.Errorf("ChangeSubProductRemark: %v", err)
 	}
 	return nil
 }
