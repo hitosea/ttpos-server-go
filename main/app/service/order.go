@@ -10477,82 +10477,129 @@ func (s *orderSrv) moveSaleOrderProduct(ctx context.Context, saleBill *model.Sal
 			continue
 		}
 		toSaleOrderProductSignMap[saleOrderProduct.Sign] = saleOrderTo.SaleOrderProducts[i]
+		// 处理套餐商品
+		if saleOrderProduct.IsPackageProduct() {
+			subProducts := saleOrderFrom.GetPackageSubProductList(saleOrderProduct.Uuid)
+			for _, subProduct := range subProducts {
+				if subProduct.IsDelete() || subProduct.SaleOrderUuid != saleOrderTo.Uuid {
+					continue
+				}
+				toSaleOrderProductSignMap[subProduct.Sign] = subProduct
+			}
+		}
 	}
 
 	// 遍历要移动的订单商品，移动到目标订单中
-	for _, saleOrderProduct := range saleOrderProducts {
-		ctx.Log().Debug("移动商品", zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
-		moveProductNum, ok := moveNumMap[saleOrderProduct.Uuid]
-		if !ok {
-			return nil, nil, errors.WithMessage(errors.New("商品可能移动到其他销售订单中"), fmt.Sprintf("sale_order_product_uuid:%d", saleOrderProduct.Uuid))
-		}
-		if moveProductNum > saleOrderProduct.Num {
-			return nil, nil, errors.WithMessage(errors.New("移动数量大于销售订单商品数量"), fmt.Sprintf("sale_order_product_uuid:%d", saleOrderProduct.Uuid))
-		}
-		hasHandle := false // 是否已经处理过。因为一个商品被一个处理方式处理过后，可能又满足多种移动方式，所以需要一个标志来判断是否已经处理过
-		// 第一种移动方式：原销售订单商品数量大于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中有签名一样的商品，该商品数量增加移动数量
-		if !hasHandle && MoreThanMoveNum(saleOrderProduct.Num, moveProductNum) && IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
-			hasHandle = true
-			ctx.Log().Debug("移动商品，第一种移动方式", zap.Any("from", saleOrderProduct.SaleOrderUuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
-			// 修改原销售订单商品数量，更新记录，重新计算订单金额
-			saleOrderProduct.Num -= moveProductNum
-			// 修改目标销售订单商品数量，更新记录，重新计算订单金额
-			toSaleOrderProductSignMap[saleOrderProduct.Sign].Num += moveProductNum
-			// 记录到待更新列表中
-			waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
-			waitUpdateSaleOrderProductMap[toSaleOrderProductSignMap[saleOrderProduct.Sign].Uuid] = toSaleOrderProductSignMap[saleOrderProduct.Sign]
-		}
+	var handleProduct func(saleOrderProducts []*model.SaleOrderProduct, packageProductUuid uint64, moveNum float64) error
+	handleProduct = func(saleOrderProducts []*model.SaleOrderProduct, packageProductUuid uint64, moveNum float64) error {
+		for _, saleOrderProduct := range saleOrderProducts {
+			ctx.Log().Debug("移动商品", zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
 
-		// 第二种移动方式：原销售订单商品数量大于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
-		if !hasHandle && MoreThanMoveNum(saleOrderProduct.Num, moveProductNum) && !IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
-			hasHandle = true
-			ctx.Log().Debug("移动商品，第二种移动方式", zap.Any("from", saleOrderProduct.SaleOrderUuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
-			ctx.Log().Debug("移动商品", zap.Any("原销售订单商品修改前数量", saleOrderProduct.Num))
-			// 修改原销售订单商品数量，更新记录，重新计算订单金额
-			saleOrderProduct.Num -= moveProductNum
-			// 新建一个销售订单商品，该商品数量为移动数量
-			newSaleOrderProduct := saleOrderProduct.CopyOrderProduct(saleOrderTo.Uuid)
-			newSaleOrderProduct.Num = moveProductNum
-			// 计算商品数据。折扣、税费、服务
-			discountInfo := saleOrderTo.GetDiscountInfo()
-			newSaleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
-			newSaleOrderProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
-			// 在目标销售订单中新建一个销售订单商品
-			saleOrderTo.SaleOrderProducts = append(saleOrderTo.SaleOrderProducts, newSaleOrderProduct)
-			// 记录到待更新列表中
-			waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
-			waitCreateSaleOrderProductMap[newSaleOrderProduct.Uuid] = newSaleOrderProduct
-			ctx.Log().Debug("移动商品", zap.Any("原销售订单商品数量", saleOrderProduct.Num), zap.Any("目标销售订单商品数量", newSaleOrderProduct.Num))
-		}
+			// 记录套餐商品的uuid
+			subPackageUuid := saleOrderProduct.Uuid
 
-		// 第三种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中有签名一样的商品，该商品数量增加移动数量
-		if !hasHandle && EqualMoveNum(saleOrderProduct.Num, moveProductNum) && IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
-			hasHandle = true
-			ctx.Log().Debug("移动商品，第三种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
-			// 删除原销售订单商品，更新表记录，重新计算原订单金额；
-			saleOrderProduct.DeleteTime = time.Now().Unix()
-			// 修改目标销售订单商品数量，更新记录，重新计算订单金额
-			toSaleOrderProductSignMap[saleOrderProduct.Sign].Num += moveProductNum
-			// 记录到待更新列表中
-			waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
-			waitUpdateSaleOrderProductMap[toSaleOrderProductSignMap[saleOrderProduct.Sign].Uuid] = toSaleOrderProductSignMap[saleOrderProduct.Sign]
-		}
+			// 获取移动数量。套餐商品的移动数量为子商品的单位数量乘以移动数量
+			var moveProductNum float64
+			if packageProductUuid == 0 {
+				moveProductMapNum, ok := moveNumMap[saleOrderProduct.Uuid]
+				if !ok {
+					return errors.WithMessage(errors.New("商品可能移动到其他销售订单中"), fmt.Sprintf("sale_order_product_uuid:%d", saleOrderProduct.Uuid))
+				}
+				if moveProductMapNum > saleOrderProduct.Num {
+					return errors.WithMessage(errors.New("移动数量大于销售订单商品数量"), fmt.Sprintf("sale_order_product_uuid:%d", saleOrderProduct.Uuid))
+				}
+				moveProductNum = moveProductMapNum
+			} else {
+				unitNum := decimal.NewFromFloat(saleOrderProduct.UnitNum)
+				moveProductNum = decimal.NewFromFloat(moveNum).Mul(unitNum).Round(3).InexactFloat64()
+			}
 
-		// 第四种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
-		if !hasHandle && EqualMoveNum(saleOrderProduct.Num, moveProductNum) && !IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
-			hasHandle = true
-			ctx.Log().Debug("移动商品，第四种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
-			// 修改原销售订单商品的销售订单uuid为目标销售订单的uuid，使用目标销售订单的折扣优惠，更新记录，重新计算原订单金额；
-			discountInfo := saleOrderTo.GetDiscountInfo()
-			saleOrderProduct.SaleOrderUuid = saleOrderTo.Uuid
-			saleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
-			// 计算商品数据。折扣、税费、服务
-			saleOrderProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
-			// 目标销售订单的商品数组增加这条记录，重新计算订单金额
-			saleOrderTo.SaleOrderProducts = append(saleOrderTo.SaleOrderProducts, saleOrderProduct)
-			// 记录到待更新列表中
-			waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
+			hasHandle := false // 是否已经处理过。因为一个商品被一个处理方式处理过后，可能又满足多种移动方式，所以需要一个标志来判断是否已经处理过
+			// 第一种移动方式：原销售订单商品数量大于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中有签名一样的商品，该商品数量增加移动数量
+			if !hasHandle && MoreThanMoveNum(saleOrderProduct.Num, moveProductNum) && IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
+				hasHandle = true
+				ctx.Log().Debug("移动商品，第一种移动方式", zap.Any("from", saleOrderProduct.SaleOrderUuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
+				// 修改原销售订单商品数量，更新记录，重新计算订单金额
+				saleOrderProduct.Num -= moveProductNum
+				// 更新套餐商品的子商品数量
+				saleOrderProduct.PackageUuid = packageProductUuid
+				// 修改目标销售订单商品数量，更新记录，重新计算订单金额
+				toSaleOrderProductSignMap[saleOrderProduct.Sign].Num += moveProductNum
+				// 记录到待更新列表中
+				waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
+				waitUpdateSaleOrderProductMap[toSaleOrderProductSignMap[saleOrderProduct.Sign].Uuid] = toSaleOrderProductSignMap[saleOrderProduct.Sign]
+			}
+
+			// 第二种移动方式：原销售订单商品数量大于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
+			if !hasHandle && MoreThanMoveNum(saleOrderProduct.Num, moveProductNum) && !IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
+				hasHandle = true
+				ctx.Log().Debug("移动商品，第二种移动方式", zap.Any("from", saleOrderProduct.SaleOrderUuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
+				ctx.Log().Debug("移动商品", zap.Any("原销售订单商品修改前数量", saleOrderProduct.Num))
+				// 修改原销售订单商品数量，更新记录，重新计算订单金额
+				saleOrderProduct.Num -= moveProductNum
+				// 新建一个销售订单商品，该商品数量为移动数量
+				newSaleOrderProduct := saleOrderProduct.CopyOrderProduct(saleOrderTo.Uuid)
+				newSaleOrderProduct.Num = moveProductNum
+				// 更新套餐商品的子商品数量
+				newSaleOrderProduct.PackageUuid = packageProductUuid
+				// 计算商品数据。折扣、税费、服务
+				discountInfo := saleOrderTo.GetDiscountInfo()
+				newSaleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
+				newSaleOrderProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
+				// 记录套餐商品的uuid
+				subPackageUuid = newSaleOrderProduct.Uuid
+				// 在目标销售订单中新建一个销售订单商品
+				saleOrderTo.SaleOrderProducts = append(saleOrderTo.SaleOrderProducts, newSaleOrderProduct)
+				// 记录到待更新列表中
+				waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
+				waitCreateSaleOrderProductMap[newSaleOrderProduct.Uuid] = newSaleOrderProduct
+				ctx.Log().Debug("移动商品", zap.Any("原销售订单商品数量", saleOrderProduct.Num), zap.Any("目标销售订单商品数量", newSaleOrderProduct.Num))
+			}
+
+			// 第三种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中有签名一样的商品，该商品数量增加移动数量
+			if !hasHandle && EqualMoveNum(saleOrderProduct.Num, moveProductNum) && IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
+				hasHandle = true
+				ctx.Log().Debug("移动商品，第三种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
+				// 删除原销售订单商品，更新表记录，重新计算原订单金额；
+				saleOrderProduct.DeleteTime = time.Now().Unix()
+				// 修改目标销售订单商品数量，更新记录，重新计算订单金额
+				toSaleOrderProductSignMap[saleOrderProduct.Sign].Num += moveProductNum
+				// 记录到待更新列表中
+				waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
+				waitUpdateSaleOrderProductMap[toSaleOrderProductSignMap[saleOrderProduct.Sign].Uuid] = toSaleOrderProductSignMap[saleOrderProduct.Sign]
+			}
+
+			// 第四种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
+			if !hasHandle && EqualMoveNum(saleOrderProduct.Num, moveProductNum) && !IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
+				hasHandle = true
+				ctx.Log().Debug("移动商品，第四种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
+				// 修改原销售订单商品的销售订单uuid为目标销售订单的uuid，使用目标销售订单的折扣优惠，更新记录，重新计算原订单金额；
+				discountInfo := saleOrderTo.GetDiscountInfo()
+				saleOrderProduct.SaleOrderUuid = saleOrderTo.Uuid
+				saleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
+				// 计算商品数据。折扣、税费、服务
+				saleOrderProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
+				// 目标销售订单的商品数组增加这条记录，重新计算订单金额
+				saleOrderTo.SaleOrderProducts = append(saleOrderTo.SaleOrderProducts, saleOrderProduct)
+				// 记录到待更新列表中
+				waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
+			}
+
+			// 处理套餐商品
+			if saleOrderProduct.IsPackageProduct() {
+				err := handleProduct(saleOrderFrom.GetPackageSubProductList(saleOrderProduct.Uuid), subPackageUuid, moveProductNum)
+				if err != nil {
+					return errors.WithMessage(err)
+				}
+			}
 		}
+		return nil
+	}
+
+	// 处理商品
+	err := handleProduct(saleOrderProducts, 0, 0)
+	if err != nil {
+		return nil, nil, errors.WithMessage(err)
 	}
 
 	return waitUpdateSaleOrderProductMap, waitCreateSaleOrderProductMap, nil
@@ -11201,7 +11248,7 @@ func (s *orderSrv) getMoveProductList(saleOrderFrom *model.SaleOrder) []req.Move
 	moveProductList := make([]req.MoveProduct, 0) // 移动商品列表,包括订单商品、订单顾客、订单加钟商品
 	// 获取要移动的商品
 	for _, saleOrderProduct := range saleOrderFrom.SaleOrderProducts {
-		if saleOrderProduct.IsDelete() || saleOrderProduct.Num == 0 {
+		if saleOrderProduct.IsDelete() || saleOrderProduct.Num == 0 || saleOrderProduct.ProductType == constant.ProductTypePackageSubProduct {
 			continue
 		}
 		moveProductList = append(moveProductList, req.MoveProduct{
