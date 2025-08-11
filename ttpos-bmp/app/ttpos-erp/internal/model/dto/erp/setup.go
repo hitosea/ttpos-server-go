@@ -35,3 +35,8 @@ type CreateUserInp struct {
 	UserEmail string `json:"user_email"`
 	FirstName string `json:"first_name"`
 }
+
+type CreateModePaymentAccountInp struct {
+	CompanyAbbr string `json:"company_abbr"`
+	PaymentType string `json:"payment_type"`
+}

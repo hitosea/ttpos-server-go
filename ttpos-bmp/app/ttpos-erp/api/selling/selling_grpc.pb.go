@@ -21,7 +21,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SellingService_GetPosProfileList_FullMethodName = "/selling.SellingService/GetPosProfileList"
+	SellingService_GetPosProfileList_FullMethodName    = "/selling.SellingService/GetPosProfileList"
+	SellingService_CreatePaymentAccount_FullMethodName = "/selling.SellingService/CreatePaymentAccount"
 )
 
 // SellingServiceClient is the client API for SellingService service.
@@ -32,6 +33,8 @@ const (
 type SellingServiceClient interface {
 	// 查询Pos Profile
 	GetPosProfileList(ctx context.Context, in *PosProfileReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 在erpnext 新增支付账号
+	CreatePaymentAccount(ctx context.Context, in *CreatePaymentAccountReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 }
 
 type sellingServiceClient struct {
@@ -52,6 +55,16 @@ func (c *sellingServiceClient) GetPosProfileList(ctx context.Context, in *PosPro
 	return out, nil
 }
 
+func (c *sellingServiceClient) CreatePaymentAccount(ctx context.Context, in *CreatePaymentAccountReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, SellingService_CreatePaymentAccount_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SellingServiceServer is the server API for SellingService service.
 // All implementations must embed UnimplementedSellingServiceServer
 // for forward compatibility.
@@ -60,6 +73,8 @@ func (c *sellingServiceClient) GetPosProfileList(ctx context.Context, in *PosPro
 type SellingServiceServer interface {
 	// 查询Pos Profile
 	GetPosProfileList(context.Context, *PosProfileReq) (*api.ResponseInfo, error)
+	// 在erpnext 新增支付账号
+	CreatePaymentAccount(context.Context, *CreatePaymentAccountReq) (*api.ResponseInfo, error)
 	mustEmbedUnimplementedSellingServiceServer()
 }
 
@@ -72,6 +87,9 @@ type UnimplementedSellingServiceServer struct{}
 
 func (UnimplementedSellingServiceServer) GetPosProfileList(context.Context, *PosProfileReq) (*api.ResponseInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPosProfileList not implemented")
+}
+func (UnimplementedSellingServiceServer) CreatePaymentAccount(context.Context, *CreatePaymentAccountReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreatePaymentAccount not implemented")
 }
 func (UnimplementedSellingServiceServer) mustEmbedUnimplementedSellingServiceServer() {}
 func (UnimplementedSellingServiceServer) testEmbeddedByValue()                        {}
@@ -112,6 +130,24 @@ func _SellingService_GetPosProfileList_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SellingService_CreatePaymentAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreatePaymentAccountReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SellingServiceServer).CreatePaymentAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SellingService_CreatePaymentAccount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SellingServiceServer).CreatePaymentAccount(ctx, req.(*CreatePaymentAccountReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SellingService_ServiceDesc is the grpc.ServiceDesc for SellingService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -122,6 +158,10 @@ var SellingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetPosProfileList",
 			Handler:    _SellingService_GetPosProfileList_Handler,
+		},
+		{
+			MethodName: "CreatePaymentAccount",
+			Handler:    _SellingService_CreatePaymentAccount_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

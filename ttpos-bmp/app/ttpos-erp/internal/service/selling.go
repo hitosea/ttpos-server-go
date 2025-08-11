@@ -8,6 +8,7 @@ package service
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 )
 
 type (
@@ -16,6 +17,7 @@ type (
 		// 参数：ctx 上下文，req 查询请求
 		// 返回：erp.ResponseInfo，错误信息
 		GetPosProfileList(ctx context.Context, req *selling.PosProfileReq) (res *selling.PosProfileListResp, err error)
+		CreateDefaultModePaymentAccount(ctx context.Context, req *erp.CreateModePaymentAccountInp) (err error)
 	}
 )
 

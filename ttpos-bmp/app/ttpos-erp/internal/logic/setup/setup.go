@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/setup"
+	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
@@ -174,6 +175,16 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (branchNa
 	if err != nil {
 		return "", gerror.Wrapf(err, "创建用户失败")
 	}
+	//创建默认的 Cash  Balance 账号关联
+	err = service.Selling().CreateDefaultModePaymentAccount(ctx, &erp.CreateModePaymentAccountInp{
+		CompanyAbbr: req.CompanyAbbr,
+		PaymentType: string(consts.ModeOfPaymentCash),
+	})
+
+	err = service.Selling().CreateDefaultModePaymentAccount(ctx, &erp.CreateModePaymentAccountInp{
+		CompanyAbbr: req.CompanyAbbr,
+		PaymentType: string(consts.ModeOfPaymentBalance),
+	})
 
 	// 仓库/pos profile 先不建
 	return branchName, nil

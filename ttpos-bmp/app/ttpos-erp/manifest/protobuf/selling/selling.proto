@@ -11,6 +11,8 @@ message PosProfileReq {
   // Pos Profile名称
   string name = 1;
   string company = 2; // 公司名称
+  string company_abbr = 3; // 公司缩写, 必填
+
 }
 
 // PosProfile 查询Pos Profile响应消息
@@ -29,8 +31,17 @@ message PosProfileListResp {
 
 }
 
+message CreatePaymentAccountReq {
+  string company_abbr = 1; // 公司缩写, 必填
+  string payment_type = 2; // 支付类型，必填 Cash/Balance/Wechat Pay/Alipay
+  string branch = 3; // 分店名称,可选
+  string payment_source = 4; // 支付来源,可选 2= lianlianpay
+}
+
 // SellingService 服务定义
 service SellingService {
   // 查询Pos Profile
   rpc GetPosProfileList (PosProfileReq) returns (erp.ResponseInfo);
+  // 在erpnext 新增支付账号
+  rpc CreatePaymentAccount (CreatePaymentAccountReq) returns (erp.ResponseInfo);
 }

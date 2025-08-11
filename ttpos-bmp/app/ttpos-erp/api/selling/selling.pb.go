@@ -28,7 +28,8 @@ type PosProfileReq struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Pos Profile名称
 	Name          string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty" dc:"Pos Profile名称"`
-	Company       string `protobuf:"bytes,2,opt,name=company,proto3" json:"company,omitempty" dc:"公司名称"` // 公司名称
+	Company       string `protobuf:"bytes,2,opt,name=company,proto3" json:"company,omitempty" dc:"公司名称"`                                // 公司名称
+	CompanyAbbr   string `protobuf:"bytes,3,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写, 必填"` // 公司缩写, 必填
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -73,6 +74,13 @@ func (x *PosProfileReq) GetName() string {
 func (x *PosProfileReq) GetCompany() string {
 	if x != nil {
 		return x.Company
+	}
+	return ""
+}
+
+func (x *PosProfileReq) GetCompanyAbbr() string {
+	if x != nil {
+		return x.CompanyAbbr
 	}
 	return ""
 }
@@ -192,14 +200,83 @@ func (x *PosProfileListResp) GetProfileList() []*PosProfile {
 	return nil
 }
 
+type CreatePaymentAccountReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CompanyAbbr   string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写, 必填"`                               // 公司缩写, 必填
+	PaymentType   string                 `protobuf:"bytes,2,opt,name=payment_type,json=paymentType,proto3" json:"payment_type,omitempty" dc:"支付类型，必填 Cash/Balance/Wechat Pay/Alipay"` // 支付类型，必填 Cash/Balance/Wechat Pay/Alipay
+	Branch        string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty" dc:"分店名称,可选"`                                                             // 分店名称,可选
+	PaymentSource string                 `protobuf:"bytes,4,opt,name=payment_source,json=paymentSource,proto3" json:"payment_source,omitempty" dc:"支付来源,可选 2= lianlianpay"`           // 支付来源,可选 2= lianlianpay
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreatePaymentAccountReq) Reset() {
+	*x = CreatePaymentAccountReq{}
+	mi := &file_selling_selling_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreatePaymentAccountReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreatePaymentAccountReq) ProtoMessage() {}
+
+func (x *CreatePaymentAccountReq) ProtoReflect() protoreflect.Message {
+	mi := &file_selling_selling_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreatePaymentAccountReq.ProtoReflect.Descriptor instead.
+func (*CreatePaymentAccountReq) Descriptor() ([]byte, []int) {
+	return file_selling_selling_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *CreatePaymentAccountReq) GetCompanyAbbr() string {
+	if x != nil {
+		return x.CompanyAbbr
+	}
+	return ""
+}
+
+func (x *CreatePaymentAccountReq) GetPaymentType() string {
+	if x != nil {
+		return x.PaymentType
+	}
+	return ""
+}
+
+func (x *CreatePaymentAccountReq) GetBranch() string {
+	if x != nil {
+		return x.Branch
+	}
+	return ""
+}
+
+func (x *CreatePaymentAccountReq) GetPaymentSource() string {
+	if x != nil {
+		return x.PaymentSource
+	}
+	return ""
+}
+
 var File_selling_selling_proto protoreflect.FileDescriptor
 
 const file_selling_selling_proto_rawDesc = "" +
 	"\n" +
-	"\x15selling/selling.proto\x12\aselling\x1a\terp.proto\"=\n" +
+	"\x15selling/selling.proto\x12\aselling\x1a\terp.proto\"`\n" +
 	"\rPosProfileReq\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
-	"\acompany\x18\x02 \x01(\tR\acompany\"p\n" +
+	"\acompany\x18\x02 \x01(\tR\acompany\x12!\n" +
+	"\fcompany_abbr\x18\x03 \x01(\tR\vcompanyAbbr\"p\n" +
 	"\n" +
 	"PosProfile\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
@@ -207,9 +284,15 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x06branch\x18\x03 \x01(\tR\x06branch\x12\x1c\n" +
 	"\twarehouse\x18\x04 \x01(\tR\twarehouse\"L\n" +
 	"\x12PosProfileListResp\x126\n" +
-	"\fprofile_list\x18\x01 \x03(\v2\x13.selling.PosProfileR\vprofileList2P\n" +
+	"\fprofile_list\x18\x01 \x03(\v2\x13.selling.PosProfileR\vprofileList\"\x9e\x01\n" +
+	"\x17CreatePaymentAccountReq\x12!\n" +
+	"\fcompany_abbr\x18\x01 \x01(\tR\vcompanyAbbr\x12!\n" +
+	"\fpayment_type\x18\x02 \x01(\tR\vpaymentType\x12\x16\n" +
+	"\x06branch\x18\x03 \x01(\tR\x06branch\x12%\n" +
+	"\x0epayment_source\x18\x04 \x01(\tR\rpaymentSource2\x9d\x01\n" +
 	"\x0eSellingService\x12>\n" +
-	"\x11GetPosProfileList\x12\x16.selling.PosProfileReq\x1a\x11.erp.ResponseInfoB%Z#ttpos-bmp/app/ttpos-erp/api/sellingb\x06proto3"
+	"\x11GetPosProfileList\x12\x16.selling.PosProfileReq\x1a\x11.erp.ResponseInfo\x12K\n" +
+	"\x14CreatePaymentAccount\x12 .selling.CreatePaymentAccountReq\x1a\x11.erp.ResponseInfoB%Z#ttpos-bmp/app/ttpos-erp/api/sellingb\x06proto3"
 
 var (
 	file_selling_selling_proto_rawDescOnce sync.Once
@@ -223,19 +306,22 @@ func file_selling_selling_proto_rawDescGZIP() []byte {
 	return file_selling_selling_proto_rawDescData
 }
 
-var file_selling_selling_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_selling_selling_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_selling_selling_proto_goTypes = []any{
-	(*PosProfileReq)(nil),      // 0: selling.PosProfileReq
-	(*PosProfile)(nil),         // 1: selling.PosProfile
-	(*PosProfileListResp)(nil), // 2: selling.PosProfileListResp
-	(*api.ResponseInfo)(nil),   // 3: erp.ResponseInfo
+	(*PosProfileReq)(nil),           // 0: selling.PosProfileReq
+	(*PosProfile)(nil),              // 1: selling.PosProfile
+	(*PosProfileListResp)(nil),      // 2: selling.PosProfileListResp
+	(*CreatePaymentAccountReq)(nil), // 3: selling.CreatePaymentAccountReq
+	(*api.ResponseInfo)(nil),        // 4: erp.ResponseInfo
 }
 var file_selling_selling_proto_depIdxs = []int32{
 	1, // 0: selling.PosProfileListResp.profile_list:type_name -> selling.PosProfile
 	0, // 1: selling.SellingService.GetPosProfileList:input_type -> selling.PosProfileReq
-	3, // 2: selling.SellingService.GetPosProfileList:output_type -> erp.ResponseInfo
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
+	3, // 2: selling.SellingService.CreatePaymentAccount:input_type -> selling.CreatePaymentAccountReq
+	4, // 3: selling.SellingService.GetPosProfileList:output_type -> erp.ResponseInfo
+	4, // 4: selling.SellingService.CreatePaymentAccount:output_type -> erp.ResponseInfo
+	3, // [3:5] is the sub-list for method output_type
+	1, // [1:3] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -252,7 +338,7 @@ func file_selling_selling_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_selling_selling_proto_rawDesc), len(file_selling_selling_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

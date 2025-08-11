@@ -4,7 +4,9 @@ import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
+	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
@@ -26,5 +28,23 @@ func (*Controller) GetPosProfileList(ctx context.Context, req *selling.PosProfil
 	} else {
 		res = rpc.ApiError(err.Error())
 	}
+	return
+}
+
+func (*Controller) CreatePaymentAccount(ctx context.Context, req *selling.CreatePaymentAccountReq) (res *api.ResponseInfo, err error) {
+	//LianlianPay 时增加前缀
+	paymentType := req.PaymentType
+	if req.PaymentSource == "2" {
+		paymentType = consts.LianlianPayPrefix + paymentType
+	}
+	if err = service.Selling().CreateDefaultModePaymentAccount(ctx, &erp.CreateModePaymentAccountInp{
+		CompanyAbbr: req.CompanyAbbr,
+		PaymentType: paymentType,
+	}); err != nil {
+		res = rpc.ApiError(err.Error())
+	} else {
+		res = rpc.ApiSuccess("创建成功")
+	}
+
 	return
 }

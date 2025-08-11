@@ -4,6 +4,7 @@ import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/v2/encoding/gjson"
@@ -34,10 +35,18 @@ func (s *sSelling) GetPosProfileList(ctx context.Context, req *selling.PosProfil
 	if len(req.Company) > 0 {
 		filters = append(filters, []string{"company", "like", req.Company})
 	}
+	if len(req.CompanyAbbr) > 0 {
+		company, err := service.Company().GetCompanyWithAbbr(ctx, req.CompanyAbbr)
+		if err != nil {
+			g.Log().Error(ctx, "根据公司缩写查询公司失败", err)
+			return nil, gerror.Wrapf(err, "根据公司缩写查询公司失败")
+		}
+		filters = append(filters, []string{"company", "like", company.CompanyName})
+	}
 
 	// 查询Pos Profile列表
 	list, err := service.Document().List(ctx, &dto.ErpReq{
-		DocType: "Pos Profile",
+		DocType: "POS Profile",
 	}, &dto.RequestParams{
 		Fields:  []string{"name", "company", "warehouse", "branch"},
 		Filters: filters,
@@ -65,4 +74,11 @@ func (s *sSelling) GetPosProfileList(ctx context.Context, req *selling.PosProfil
 
 	}
 	return
+}
+
+func (s *sSelling) CreateDefaultModePaymentAccount(ctx context.Context, req *erp.CreateModePaymentAccountInp) (err error) {
+	_, err = service.Rpc().Execute(ctx, &dto.ErpReq{
+		Method: "init_shop_cash_account",
+	}, req)
+	return nil
 }
