@@ -346,7 +346,12 @@ func (model *SaleOrderProduct) IsSubOperation() bool {
 }
 
 // 判断购物车中的商品是否可以编辑。只有套餐商品和非单规格的商品可以编辑
-func (model *SaleOrderProduct) CanEdit() bool {
+func (model *SaleOrderProduct) IsCanEdit() bool {
+	// 已送出的商品不可编辑
+	if model.IsSendKitchen() {
+		return false
+	}
+
 	// 套餐商品可以编辑
 	if model.IsPackageProduct() {
 		return true
