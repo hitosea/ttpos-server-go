@@ -101,6 +101,9 @@ func (s *sSetup) CreateWarehouse(ctx context.Context, req *erp.CreateWarehouseIn
 		"custom_aliasname": req.AliasName,
 		"company":          company.CompanyName,
 	}
+	if req.WhType == "Transit" {
+		warehousePayload["warehouse_type"] = "Transit"
+	}
 	if _, err := service.Document().Create(ctx, "Warehouse", warehousePayload); err != nil {
 		g.Log().Error(ctx, "创建仓库失败", err)
 		return "", gerror.Wrapf(err, "创建仓库失败")
@@ -151,6 +154,27 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (branchNa
 	if err != nil {
 		return "", gerror.Wrapf(err, "创建用户失败")
 	}
+	//创建默认仓库
+	_, err = s.CreateWarehouse(ctx, &erp.CreateWarehouseInp{
+		Branch:      branchName,
+		WhType:      "Normal",
+		AliasName:   "Default",
+		CompanyAbbr: req.CompanyAbbr,
+	})
+	if err != nil {
+		return "", gerror.New("创建默认仓库失败")
+	}
+	//创建在途仓
+	_, err = s.CreateWarehouse(ctx, &erp.CreateWarehouseInp{
+		Branch:      branchName,
+		WhType:      "Transit",
+		AliasName:   "Transit",
+		CompanyAbbr: req.CompanyAbbr,
+	})
+	if err != nil {
+		return "", gerror.Wrapf(err, "创建用户失败")
+	}
+
 	// 仓库/pos profile 先不建
 	return branchName, nil
 }
