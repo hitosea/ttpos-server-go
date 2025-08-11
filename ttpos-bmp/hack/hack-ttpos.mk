@@ -1,7 +1,7 @@
 # 加载环境变量并替换数据库连接配置
 .PHONY: conf
 conf:
-	@sh hack/init_conf.sh
+	@/bin/bash hack/init_conf.sh
 
 # Check and install envsubst.
 .PHONY: envsubst.install
