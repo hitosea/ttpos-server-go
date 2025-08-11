@@ -121,17 +121,24 @@ type SaleOrderProduct struct {
 	unOrderH5Product bool   `gorm:"-"` // 是否为未下单的h5订单商品。 特别标记该商品为正在下单的h5订单商品
 }
 
+// 更换规格，重新计算商品的价格
+func (model *SaleOrderProduct) ChangeFlavor(flavor *SaleOrderProductBom) {
+	model.FlavorPrice = flavor.Price
+	model.FlavorName = flavor.Name
+	model.SetUpdate() // 标记该记录要更新
+}
+
 // 删除所有规格、加料和属性
 func (model *SaleOrderProduct) DeleteAllSaleOrderProductBomsAndAttributes() {
 	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
 		saleOrderProductBom.SetDelete()
-		saleOrderProductBom.SetUpdate()
+		saleOrderProductBom.SetUpdate() // 标记该记录要更新
 	}
 	for _, saleOrderProductAttribute := range model.SaleOrderProductAttributes {
 		saleOrderProductAttribute.SetDelete()
-		saleOrderProductAttribute.SetUpdate()
+		saleOrderProductAttribute.SetUpdate() // 标记该记录要更新
 	}
-	model.SetUpdate()
+	model.SetUpdate() // 标记该记录要更新
 }
 
 // 获取商品的简要，如 牛排*1（标准，黑椒汁）
