@@ -748,6 +748,12 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts.ProductPackage",
 						},
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductBoms",
+						},
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductPackageAttributeGroups",
+						},
 					),
 					CommonRepo.Preload(
 						WithPreload{
@@ -981,6 +987,12 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 					},
 					WithPreload{
 						Query: "SaleOrders.SaleOrderProducts.ProductPackage",
+					},
+					WithPreload{
+						Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductBoms",
+					},
+					WithPreload{
+						Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductPackageAttributeGroups",
 					},
 				),
 				CommonRepo.Preload(
