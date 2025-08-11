@@ -57,8 +57,15 @@ type IProductRepo interface {
 	WithActiveProductBomsProductPackages() DBOption                  // 预加载商品BOM关联的商品包
 	WithActiveProductBomsProductPackagesMultiLanguageName() DBOption // 预加载商品BOM关联的商品包多语言名称
 
-	WithProductAttributes() DBOption                  // 预加载商品属性
-	WithProductAttributesMultiLanguageName() DBOption // 预加载商品属性多语言名称
+	WithProductAttributes() DBOption                                                                                    // 预加载商品属性
+	WithProductAttributesMultiLanguageName() DBOption                                                                   // 预加载商品属性多语言名称
+	WithProductAttributesProductPackageAttributes() DBOption                                                            // 预加载商品属性关联的产品包属性
+	WithProductAttributesProductPackageAttributesProductPackageAttributeGroup() DBOption                                // 预加载商品属性关联的产品包属性组
+	WithProductAttributesProductPackageAttributesProductPackageAttributeGroupProductPackage() DBOption                  // 预加载商品属性关联的产品包属性组关联的产品包
+	WithProductAttributesProductPackageAttributesProductPackageAttributeGroupProductPackageMultiLanguageName() DBOption // 预加载商品属性关联的产品包属性组关联的产品包多语言名称
+
+	WhereProductAttributeGroupUuid(uuid uint64) DBOption // 查询条件 商品属性分组uuid
+	WithProductPackageAttributes() DBOption              // 预加载商品属性关联的产品包属性
 }
 
 // IProductQueryRepo 商品查询仓库接口
@@ -82,6 +89,10 @@ type IProductQueryRepo interface {
 	GetProductSauceCount(opts ...DBOption) (int64, error)                                                        // 获取商品加料数量
 
 	PaginateGetProductAttributeGroupList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductAttributeGroup, int64, error) // 分页获取商品属性分组列表
+	GetProductAttributeGroups(opts ...DBOption) ([]model.ProductAttributeGroup, error)                                             // 获取商品属性分组列表
+	GetProductAttributeGroup(opts ...DBOption) (model.ProductAttributeGroup, error)                                                // 获取商品属性分组详情
+	GetProductAttribute(opts ...DBOption) ([]model.ProductAttribute, error)                                                        // 获取商品属性列表
+	GetProductPackageAttributeGroups(opts ...DBOption) ([]model.ProductPackageAttributeGroup, error)                               // 获取商品包属性组列表
 }
 
 // productRepo 商品仓库
@@ -751,4 +762,90 @@ func (r *productRepo) WithProductAttributesMultiLanguageName() DBOption {
 			return db.Scopes(NotDeleted)
 		})
 	}
+}
+
+func (r *productRepo) GetProductAttributeGroup(opts ...DBOption) (model.ProductAttributeGroup, error) {
+	var attributeGroup model.ProductAttributeGroup
+	db := r.db.Model(&model.ProductAttributeGroup{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Debug().First(&attributeGroup).Error
+	return attributeGroup, errors.WithMessage(err)
+}
+
+func (r *productRepo) WithProductAttributesProductPackageAttributes() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductAttributes.ProductPackageAttributes", func(db *gorm.DB) *gorm.DB {
+			return db.Scopes(NotDeleted)
+		})
+	}
+}
+
+func (r *productRepo) WithProductAttributesProductPackageAttributesProductPackageAttributeGroup() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductAttributes.ProductPackageAttributes.ProductPackageAttributeGroup", func(db *gorm.DB) *gorm.DB {
+			return db.Scopes(NotDeleted)
+		})
+	}
+}
+
+func (r *productRepo) WithProductAttributesProductPackageAttributesProductPackageAttributeGroupProductPackage() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductAttributes.ProductPackageAttributes.ProductPackageAttributeGroup.ProductPackage", func(db *gorm.DB) *gorm.DB {
+			return db.Scopes(NotDeleted)
+		})
+	}
+}
+
+func (r *productRepo) WithProductAttributesProductPackageAttributesProductPackageAttributeGroupProductPackageMultiLanguageName() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductAttributes.ProductPackageAttributes.ProductPackageAttributeGroup.ProductPackage.MultiLanguageName", func(db *gorm.DB) *gorm.DB {
+			return db.Scopes(NotDeleted)
+		})
+	}
+}
+
+func (r *productRepo) GetProductAttribute(opts ...DBOption) ([]model.ProductAttribute, error) {
+	var attributes []model.ProductAttribute
+	db := r.db.Model(&model.ProductAttribute{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Find(&attributes).Error
+	return attributes, errors.WithMessage(err)
+}
+
+func (r *productRepo) GetProductPackageAttributeGroups(opts ...DBOption) ([]model.ProductPackageAttributeGroup, error) {
+	var attributeGroups []model.ProductPackageAttributeGroup
+	db := r.db.Model(&model.ProductPackageAttributeGroup{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Find(&attributeGroups).Error
+	return attributeGroups, errors.WithMessage(err)
+}
+
+func (r *productRepo) WhereProductAttributeGroupUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("product_attribute_group_uuid = ?", uuid)
+	}
+}
+
+func (r *productRepo) WithProductPackageAttributes() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductPackageAttributes", func(db *gorm.DB) *gorm.DB {
+			return db.Scopes(NotDeleted)
+		})
+	}
+}
+
+func (r *productRepo) GetProductAttributeGroups(opts ...DBOption) ([]model.ProductAttributeGroup, error) {
+	var attributeGroups []model.ProductAttributeGroup
+	db := r.db.Model(&model.ProductAttributeGroup{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Find(&attributeGroups).Error
+	return attributeGroups, errors.WithMessage(err)
 }

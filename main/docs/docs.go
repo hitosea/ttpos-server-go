@@ -18211,6 +18211,160 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/product/attribute/group": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取商品属性分组详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品属性分组"
+                ],
+                "summary": "获取商品属性分组详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "商品属性分组UUID",
+                        "name": "uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.ProductAttributeGroupDetail"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除商品属性分组",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品属性分组"
+                ],
+                "summary": "删除商品属性分组",
+                "parameters": [
+                    {
+                        "description": "商品属性分组删除请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductAttributeGroupReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/attribute/group/add": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "添加商品属性分组，商品属性一起添加",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品属性分组"
+                ],
+                "summary": "添加商品属性分组，商品属性一起添加",
+                "parameters": [
+                    {
+                        "description": "商品属性分组添加请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductAttributeGroupAddReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/attribute/group/edit": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "编辑商品属性分组，商品属性一起编辑",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品属性分组"
+                ],
+                "summary": "编辑商品属性分组，商品属性一起编辑",
+                "parameters": [
+                    {
+                        "description": "商品属性分组编辑请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductAttributeGroupEditReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/product/attribute/group/list": {
             "get": {
                 "security": [
@@ -18249,6 +18403,84 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/product_resp.ProductAttributeGroupListResp"
                         }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/attribute/group/sort": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "排序商品属性分组",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品属性分组"
+                ],
+                "summary": "排序商品属性分组",
+                "parameters": [
+                    {
+                        "description": "商品属性分组排序请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductAttributeGroupSortReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/attribute/sort": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "排序商品属性",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品属性"
+                ],
+                "summary": "排序商品属性",
+                "parameters": [
+                    {
+                        "description": "商品属性排序请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductAttributeSortReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
                     },
                     "400": {
                         "description": "错误请求"
@@ -23101,6 +23333,31 @@ const docTemplate = `{
                 }
             }
         },
+        "product_resp.ProductAttribute": {
+            "type": "object",
+            "properties": {
+                "locale_name": {
+                    "description": "商品属性名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "product_packages": {
+                    "description": "关联商品包列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/product_resp.ProductAttributeProductPackageList"
+                        }
+                    ]
+                },
+                "uuid": {
+                    "description": "商品属性UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "product_resp.ProductAttributeGroup": {
             "type": "object",
             "properties": {
@@ -23130,6 +23387,31 @@ const docTemplate = `{
                 },
                 "uuid": {
                     "description": "商品属性组UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "product_resp.ProductAttributeGroupDetail": {
+            "type": "object",
+            "properties": {
+                "attributes": {
+                    "description": "商品属性值列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/product_resp.ProductAttributes"
+                        }
+                    ]
+                },
+                "locale_name": {
+                    "description": "商品属性分组名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "uuid": {
+                    "description": "商品属性分组UUID",
                     "type": "integer"
                 }
             }
@@ -23176,6 +23458,30 @@ const docTemplate = `{
                 }
             }
         },
+        "product_resp.ProductAttributeProductPackage": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "商品包名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "商品包UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "product_resp.ProductAttributeProductPackageList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product_resp.ProductAttributeProductPackage"
+                    }
+                }
+            }
+        },
         "product_resp.ProductAttributeValue": {
             "type": "object",
             "properties": {
@@ -23204,6 +23510,17 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/product_resp.ProductAttributeValue"
+                    }
+                }
+            }
+        },
+        "product_resp.ProductAttributes": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product_resp.ProductAttribute"
                     }
                 }
             }
@@ -23882,6 +24199,14 @@ const docTemplate = `{
                     "description": "查询开始时间戳",
                     "type": "integer"
                 },
+                "sortDirection": {
+                    "description": "排序方向 0=默认、 1=升序、 2=降序",
+                    "type": "integer"
+                },
+                "sortType": {
+                    "description": "排序类型 0=默认、 1=按销售数量、 2=按原销售额",
+                    "type": "integer"
+                },
                 "staffUuid": {
                     "description": "操作员UUID",
                     "type": "integer"
@@ -23909,6 +24234,14 @@ const docTemplate = `{
                 },
                 "query_start_time": {
                     "description": "查询开始时间戳",
+                    "type": "integer"
+                },
+                "sort_direction": {
+                    "description": "排序方向 0=默认、 1=升序、 2=降序",
+                    "type": "integer"
+                },
+                "sort_type": {
+                    "description": "排序类型 0=默认、 1=按销售数量、 2=按原销售额",
                     "type": "integer"
                 },
                 "statistics_type": {
@@ -25335,6 +25668,190 @@ const docTemplate = `{
             ],
             "properties": {
                 "uuid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "req.ProductAttributeGroupAddProductAttributeReq": {
+            "type": "object",
+            "required": [
+                "locale_name"
+            ],
+            "properties": {
+                "locale_name": {
+                    "description": "商品属性名称, 多语言",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "product_package_uuids": {
+                    "description": "关联商品包UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "req.ProductAttributeGroupAddReq": {
+            "type": "object",
+            "required": [
+                "locale_name",
+                "product_attributes"
+            ],
+            "properties": {
+                "locale_name": {
+                    "description": "商品属性分组名称, 多语言",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "product_attributes": {
+                    "description": "商品属性",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.ProductAttributeGroupAddProductAttributeReq"
+                    }
+                }
+            }
+        },
+        "req.ProductAttributeGroupEditProductAttributeReq": {
+            "type": "object",
+            "required": [
+                "locale_name"
+            ],
+            "properties": {
+                "locale_name": {
+                    "description": "商品属性名称, 多语言",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "product_package_uuids": {
+                    "description": "关联商品包UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "uuid": {
+                    "description": "商品属性UUID, 可选，如果有，是编辑，没有是添加",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.ProductAttributeGroupEditReq": {
+            "type": "object",
+            "required": [
+                "locale_name",
+                "product_attributes",
+                "uuid"
+            ],
+            "properties": {
+                "locale_name": {
+                    "description": "商品属性分组名称, 多语言",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "product_attributes": {
+                    "description": "商品属性",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.ProductAttributeGroupEditProductAttributeReq"
+                    }
+                },
+                "uuid": {
+                    "description": "商品属性分组UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.ProductAttributeGroupReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "商品属性分组UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.ProductAttributeGroupSortItem": {
+            "type": "object",
+            "required": [
+                "sort",
+                "uuid"
+            ],
+            "properties": {
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "商品属性分组UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.ProductAttributeGroupSortReq": {
+            "type": "object",
+            "required": [
+                "list"
+            ],
+            "properties": {
+                "list": {
+                    "description": "商品属性分组排序列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.ProductAttributeGroupSortItem"
+                    }
+                }
+            }
+        },
+        "req.ProductAttributeSortItem": {
+            "type": "object",
+            "required": [
+                "sort",
+                "uuid"
+            ],
+            "properties": {
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "商品属性UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.ProductAttributeSortReq": {
+            "type": "object",
+            "required": [
+                "list",
+                "product_attribute_group_uuid"
+            ],
+            "properties": {
+                "list": {
+                    "description": "商品属性排序列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.ProductAttributeSortItem"
+                    }
+                },
+                "product_attribute_group_uuid": {
+                    "description": "商品属性分组UUID",
                     "type": "integer"
                 }
             }
@@ -33586,6 +34103,10 @@ const docTemplate = `{
                 },
                 "qr_code": {
                     "description": "电子菜单二维码校验失效值，6位数数字",
+                    "type": "string"
+                },
+                "start_serial_no": {
+                    "description": "开始序列号",
                     "type": "string"
                 },
                 "zeroing_method": {

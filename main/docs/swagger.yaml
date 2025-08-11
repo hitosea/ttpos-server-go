@@ -1314,6 +1314,20 @@ definitions:
         description: 商品UUID
         type: integer
     type: object
+  product_resp.ProductAttribute:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性名称
+      product_packages:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductAttributeProductPackageList'
+        description: 关联商品包列表
+      uuid:
+        description: 商品属性UUID
+        type: integer
+    type: object
   product_resp.ProductAttributeGroup:
     properties:
       attributes:
@@ -1332,6 +1346,20 @@ definitions:
         type: integer
       uuid:
         description: 商品属性组UUID
+        type: integer
+    type: object
+  product_resp.ProductAttributeGroupDetail:
+    properties:
+      attributes:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductAttributes'
+        description: 商品属性值列表
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性分组名称
+      uuid:
+        description: 商品属性分组UUID
         type: integer
     type: object
   product_resp.ProductAttributeGroupItem:
@@ -1362,6 +1390,22 @@ definitions:
       meta:
         $ref: '#/definitions/dto.PageResponse'
     type: object
+  product_resp.ProductAttributeProductPackage:
+    properties:
+      name:
+        description: 商品包名称
+        type: string
+      uuid:
+        description: 商品包UUID
+        type: integer
+    type: object
+  product_resp.ProductAttributeProductPackageList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductAttributeProductPackage'
+        type: array
+    type: object
   product_resp.ProductAttributeValue:
     properties:
       is_default_selected:
@@ -1380,6 +1424,13 @@ definitions:
       list:
         items:
           $ref: '#/definitions/product_resp.ProductAttributeValue'
+        type: array
+    type: object
+  product_resp.ProductAttributes:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductAttribute'
         type: array
     type: object
   product_resp.ProductCategory:
@@ -1834,6 +1885,12 @@ definitions:
       queryStartTime:
         description: 查询开始时间戳
         type: integer
+      sortDirection:
+        description: 排序方向 0=默认、 1=升序、 2=降序
+        type: integer
+      sortType:
+        description: 排序类型 0=默认、 1=按销售数量、 2=按原销售额
+        type: integer
       staffUuid:
         description: 操作员UUID
         type: integer
@@ -1854,6 +1911,12 @@ definitions:
         type: integer
       query_start_time:
         description: 查询开始时间戳
+        type: integer
+      sort_direction:
+        description: 排序方向 0=默认、 1=升序、 2=降序
+        type: integer
+      sort_type:
+        description: 排序类型 0=默认、 1=按销售数量、 2=按原销售额
         type: integer
       statistics_type:
         description: 统计类型 (0 全部, 1 按支付方式, 2 按商品分类, 3 按商品)
@@ -2862,6 +2925,127 @@ definitions:
         type: integer
     required:
     - uuid
+    type: object
+  req.ProductAttributeGroupAddProductAttributeReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性名称, 多语言
+      product_package_uuids:
+        description: 关联商品包UUID列表
+        items:
+          type: integer
+        type: array
+    required:
+    - locale_name
+    type: object
+  req.ProductAttributeGroupAddReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性分组名称, 多语言
+      product_attributes:
+        description: 商品属性
+        items:
+          $ref: '#/definitions/req.ProductAttributeGroupAddProductAttributeReq'
+        type: array
+    required:
+    - locale_name
+    - product_attributes
+    type: object
+  req.ProductAttributeGroupEditProductAttributeReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性名称, 多语言
+      product_package_uuids:
+        description: 关联商品包UUID列表
+        items:
+          type: integer
+        type: array
+      uuid:
+        description: 商品属性UUID, 可选，如果有，是编辑，没有是添加
+        type: integer
+    required:
+    - locale_name
+    type: object
+  req.ProductAttributeGroupEditReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性分组名称, 多语言
+      product_attributes:
+        description: 商品属性
+        items:
+          $ref: '#/definitions/req.ProductAttributeGroupEditProductAttributeReq'
+        type: array
+      uuid:
+        description: 商品属性分组UUID
+        type: integer
+    required:
+    - locale_name
+    - product_attributes
+    - uuid
+    type: object
+  req.ProductAttributeGroupReq:
+    properties:
+      uuid:
+        description: 商品属性分组UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.ProductAttributeGroupSortItem:
+    properties:
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 商品属性分组UUID
+        type: integer
+    required:
+    - sort
+    - uuid
+    type: object
+  req.ProductAttributeGroupSortReq:
+    properties:
+      list:
+        description: 商品属性分组排序列表
+        items:
+          $ref: '#/definitions/req.ProductAttributeGroupSortItem'
+        type: array
+    required:
+    - list
+    type: object
+  req.ProductAttributeSortItem:
+    properties:
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 商品属性UUID
+        type: integer
+    required:
+    - sort
+    - uuid
+    type: object
+  req.ProductAttributeSortReq:
+    properties:
+      list:
+        description: 商品属性排序列表
+        items:
+          $ref: '#/definitions/req.ProductAttributeSortItem'
+        type: array
+      product_attribute_group_uuid:
+        description: 商品属性分组UUID
+        type: integer
+    required:
+    - list
+    - product_attribute_group_uuid
     type: object
   req.ProductParams:
     properties:
@@ -8391,6 +8575,9 @@ definitions:
         type: string
       qr_code:
         description: 电子菜单二维码校验失效值，6位数数字
+        type: string
+      start_serial_no:
+        description: 开始序列号
         type: string
       zeroing_method:
         description: '优惠折扣自动抹零方式: 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入到整数'
@@ -19636,6 +19823,101 @@ paths:
       summary: 退款订单
       tags:
       - 商家端.订单
+  /shop/product/attribute/group:
+    delete:
+      consumes:
+      - application/json
+      description: 删除商品属性分组
+      parameters:
+      - description: 商品属性分组删除请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductAttributeGroupReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 删除商品属性分组
+      tags:
+      - 商家端.商品属性分组
+    get:
+      consumes:
+      - application/json
+      description: 获取商品属性分组详情
+      parameters:
+      - description: 商品属性分组UUID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductAttributeGroupDetail'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品属性分组详情
+      tags:
+      - 商家端.商品属性分组
+  /shop/product/attribute/group/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加商品属性分组，商品属性一起添加
+      parameters:
+      - description: 商品属性分组添加请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductAttributeGroupAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 添加商品属性分组，商品属性一起添加
+      tags:
+      - 商家端.商品属性分组
+  /shop/product/attribute/group/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑商品属性分组，商品属性一起编辑
+      parameters:
+      - description: 商品属性分组编辑请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductAttributeGroupEditReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 编辑商品属性分组，商品属性一起编辑
+      tags:
+      - 商家端.商品属性分组
   /shop/product/attribute/group/list:
     get:
       consumes:
@@ -19664,6 +19946,54 @@ paths:
       summary: 获取商品属性分组列表
       tags:
       - 商家端.商品属性分组
+  /shop/product/attribute/group/sort:
+    post:
+      consumes:
+      - application/json
+      description: 排序商品属性分组
+      parameters:
+      - description: 商品属性分组排序请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductAttributeGroupSortReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 排序商品属性分组
+      tags:
+      - 商家端.商品属性分组
+  /shop/product/attribute/sort:
+    post:
+      consumes:
+      - application/json
+      description: 排序商品属性
+      parameters:
+      - description: 商品属性排序请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductAttributeSortReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 排序商品属性
+      tags:
+      - 商家端.商品属性
   /shop/product/category:
     delete:
       consumes:

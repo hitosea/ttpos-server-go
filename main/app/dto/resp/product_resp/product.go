@@ -249,3 +249,28 @@ type ProductAttributeGroupListResp struct {
 	List []ProductAttributeGroupItem `json:"list"`
 	Meta dto.PageResponse            `json:"meta"`
 }
+
+type ProductAttributeGroupDetail struct {
+	Uuid       uint64             `json:"uuid"`        // 商品属性分组UUID
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品属性分组名称
+	Attributes ProductAttributes  `json:"attributes"`  // 商品属性值列表
+}
+
+type ProductAttributes struct {
+	List []ProductAttribute `json:"list"`
+}
+
+type ProductAttribute struct {
+	Uuid            uint64                             `json:"uuid"`             // 商品属性UUID
+	LocaleName      dto.LocaleResponse                 `json:"locale_name"`      // 商品属性名称
+	ProductPackages ProductAttributeProductPackageList `json:"product_packages"` // 关联商品包列表
+}
+
+type ProductAttributeProductPackage struct {
+	Uuid uint64 `json:"uuid"` // 商品包UUID
+	Name string `json:"name"` // 商品包名称
+}
+
+type ProductAttributeProductPackageList struct {
+	List []ProductAttributeProductPackage `json:"list"`
+}

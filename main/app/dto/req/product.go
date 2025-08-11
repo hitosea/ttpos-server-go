@@ -128,3 +128,48 @@ type ProductShopCategoryReq struct {
 type ProductAttributeGroupListReq struct {
 	dto.PageReq // 分页参数
 }
+
+type ProductAttributeGroupReq struct {
+	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 商品属性分组UUID
+}
+
+type ProductAttributeGroupAddReq struct {
+	LocaleName        dto.LocaleResponse                            `json:"locale_name" binding:"required"`             // 商品属性分组名称, 多语言
+	ProductAttributes []ProductAttributeGroupAddProductAttributeReq `json:"product_attributes" binding:"required,dive"` // 商品属性
+}
+
+type ProductAttributeGroupAddProductAttributeReq struct {
+	LocaleName          dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品属性名称, 多语言
+	ProductPackageUuids []uint64           `json:"product_package_uuids"`          // 关联商品包UUID列表
+}
+
+type ProductAttributeGroupEditReq struct {
+	Uuid              uint64                                         `json:"uuid" binding:"required"`                    // 商品属性分组UUID
+	LocaleName        dto.LocaleResponse                             `json:"locale_name" binding:"required"`             // 商品属性分组名称, 多语言
+	ProductAttributes []ProductAttributeGroupEditProductAttributeReq `json:"product_attributes" binding:"required,dive"` // 商品属性
+}
+
+type ProductAttributeGroupEditProductAttributeReq struct {
+	Uuid                uint64             `json:"uuid"`                           // 商品属性UUID, 可选，如果有，是编辑，没有是添加
+	LocaleName          dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品属性名称, 多语言
+	ProductPackageUuids []uint64           `json:"product_package_uuids"`          // 关联商品包UUID列表
+}
+
+type ProductAttributeGroupSortItem struct {
+	Uuid uint64 `json:"uuid" binding:"required"` // 商品属性分组UUID
+	Sort int    `json:"sort" binding:"required"` // 排序
+}
+
+type ProductAttributeGroupSortReq struct {
+	List []ProductAttributeGroupSortItem `json:"list" binding:"required,dive"` // 商品属性分组排序列表
+}
+
+type ProductAttributeSortItem struct {
+	Uuid uint64 `json:"uuid" binding:"required"` // 商品属性UUID
+	Sort int    `json:"sort" binding:"required"` // 排序
+}
+
+type ProductAttributeSortReq struct {
+	ProductAttributeGroupUuid uint64                     `json:"product_attribute_group_uuid" binding:"required"` // 商品属性分组UUID
+	List                      []ProductAttributeSortItem `json:"list" binding:"required,dive"`                    // 商品属性排序列表
+}
