@@ -30,3 +30,13 @@ type CreatePosProfileInp struct {
 	//销帐成本中心
 	WriteOffCostCenter string `json:"write_off_cost_center"`
 }
+
+type CreateUserInp struct {
+	UserEmail string `json:"user_email"`
+	FirstName string `json:"first_name"`
+}
+
+type CreateModePaymentAccountInp struct {
+	CompanyAbbr string `json:"company_abbr"`
+	PaymentType string `json:"payment_type"`
+}

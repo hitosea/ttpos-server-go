@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/setup"
+	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
@@ -30,17 +31,14 @@ func init() {
 func (s *sSetup) CreateBranch(ctx context.Context, req *setup.InitShopReq) (branchName string, err error) {
 	// 参数验证
 	if strings.TrimSpace(req.ShopUuid) == "" {
-		g.Log().Error(ctx, "店铺UUID不能为空")
 		return "", gerror.New("店铺UUID不能为空")
 	}
 
 	if strings.TrimSpace(req.ShopName) == "" {
-		g.Log().Error(ctx, "店铺名称不能为空")
 		return "", gerror.New("店铺名称不能为空")
 	}
 
 	if strings.TrimSpace(req.CompanyAbbr) == "" {
-		g.Log().Error(ctx, "公司缩写编码不能为空")
 		return "", gerror.New("公司缩写编码不能为空")
 	}
 
@@ -56,24 +54,23 @@ func (s *sSetup) CreateBranch(ctx context.Context, req *setup.InitShopReq) (bran
 	}
 	if _, err := service.Document().Create(ctx, "Branch", branchPayload); err != nil {
 		g.Log().Error(ctx, "创建分支失败", err)
-		return "", gerror.New("创建分支失败")
+		return "", gerror.Wrapf(err, "创建分支失败")
 	}
 
 	return req.ShopName, nil
 }
 
-func (s *sSetup) CreateUser(ctx context.Context, req *setup.InitShopReq) (userEmail string, err error) {
-	userEmail = fmt.Sprintf("%s@ttpos-user.com", req.AdminUuid)
+func (s *sSetup) CreateUser(ctx context.Context, req *erp.CreateUserInp) (userEmail string, err error) {
 	userPayload := g.Map{
-		"email":              userEmail,
-		"first_name":         req.ShopName,
+		"email":              req.UserEmail,
+		"first_name":         req.FirstName,
 		"user_type":          "Website User",
 		"enabled":            1,
 		"send_welcome_email": false,
 	}
 	if _, err := service.Document().Create(ctx, "User", userPayload); err != nil {
 		g.Log().Error(ctx, "创建网站用户失败", err)
-		return userEmail, gerror.New("创建网站用户失败")
+		return userEmail, gerror.Wrapf(err, "创建网站用户失败")
 	}
 	//限制用户数据权限 如果用户需要登录erp系统就约束
 
@@ -90,7 +87,7 @@ func (s *sSetup) CreateWarehouse(ctx context.Context, req *erp.CreateWarehouseIn
 	company, err := companyService.GetCompanyWithAbbr(ctx, req.CompanyAbbr)
 	if err != nil {
 		g.Log().Error(ctx, "获取公司信息失败", err)
-		return "", gerror.New("获取公司信息失败")
+		return "", gerror.Wrapf(err, "获取公司信息失败")
 	}
 
 	// 仓库名称规则：[分支名]-[仓库类型]-[仓库名称]
@@ -105,9 +102,12 @@ func (s *sSetup) CreateWarehouse(ctx context.Context, req *erp.CreateWarehouseIn
 		"custom_aliasname": req.AliasName,
 		"company":          company.CompanyName,
 	}
+	if req.WhType == "Transit" {
+		warehousePayload["warehouse_type"] = "Transit"
+	}
 	if _, err := service.Document().Create(ctx, "Warehouse", warehousePayload); err != nil {
 		g.Log().Error(ctx, "创建仓库失败", err)
-		return "", gerror.New("创建仓库失败")
+		return "", gerror.Wrapf(err, "创建仓库失败")
 	}
 
 	return warehouseName, nil
@@ -120,7 +120,7 @@ func (s *sSetup) CreatePosProfile(ctx context.Context, req *erp.CreatePosProfile
 	company, err := companyService.GetCompanyWithAbbr(ctx, req.CompanyAbbr)
 	if err != nil {
 		g.Log().Error(ctx, "获取公司信息失败", err)
-		return "", gerror.New("获取公司信息失败")
+		return "", gerror.Wrapf(err, "获取公司信息失败")
 	}
 
 	posProfilePayload := g.Map{
@@ -131,8 +131,7 @@ func (s *sSetup) CreatePosProfile(ctx context.Context, req *erp.CreatePosProfile
 		"currency":         req.Currency,
 	}
 	if _, err := service.Document().Create(ctx, "Pos Profile", posProfilePayload); err != nil {
-		g.Log().Error(ctx, "创建pos profile失败", err)
-		return "", gerror.New("创建pos profile失败")
+		return "", gerror.Wrapf(err, "创建pos profile失败")
 	}
 	return
 }
@@ -145,17 +144,19 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (branchNa
 	//创建分支
 	branchName, err = s.CreateBranch(ctx, req)
 	if err != nil {
-		return "", gerror.New("创建分店失败")
+		return "", gerror.Wrapf(err, "创建分店失败")
 	}
 
-	//创建用户
-	_, err = s.CreateUser(ctx, req)
+	//创建默认用户
+	_, err = s.CreateUser(ctx, &erp.CreateUserInp{
+		UserEmail: fmt.Sprintf("%s@ttpos-user.com", req.AdminUuid),
+		FirstName: req.ShopName,
+	})
 	if err != nil {
-		return "", gerror.New("创建用户失败")
+		return "", gerror.Wrapf(err, "创建用户失败")
 	}
-
 	//创建默认仓库
-	warehouseName, err := s.CreateWarehouse(ctx, &erp.CreateWarehouseInp{
+	_, err = s.CreateWarehouse(ctx, &erp.CreateWarehouseInp{
 		Branch:      branchName,
 		WhType:      "Normal",
 		AliasName:   "Default",
@@ -167,29 +168,24 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (branchNa
 	//创建在途仓
 	_, err = s.CreateWarehouse(ctx, &erp.CreateWarehouseInp{
 		Branch:      branchName,
-		WhType:      "InTransit",
-		AliasName:   "Default",
+		WhType:      "Transit",
+		AliasName:   "Transit",
 		CompanyAbbr: req.CompanyAbbr,
 	})
 	if err != nil {
-		return "", gerror.New("创建在途仓失败")
+		return "", gerror.Wrapf(err, "创建用户失败")
 	}
-
-	//创建默认pos profile
-	_, err = s.CreatePosProfile(ctx, &erp.CreatePosProfileInp{
-		PosProfileName: "Default",
-		CompanyAbbr:    req.CompanyAbbr,
-		Warehouse:      warehouseName,
-		Branch:         branchName,
-
-		Currency:           "THB",
-		WriteOffAccount:    fmt.Sprintf("Sales - %s", req.CompanyAbbr),
-		WriteOffLimit:      "1.00",
-		WriteOffCostCenter: fmt.Sprintf("Main - %s", req.CompanyAbbr),
+	//创建默认的 Cash  Balance 账号关联
+	err = service.Selling().CreateDefaultModePaymentAccount(ctx, &erp.CreateModePaymentAccountInp{
+		CompanyAbbr: req.CompanyAbbr,
+		PaymentType: string(consts.ModeOfPaymentCash),
 	})
-	if err != nil {
-		return "", gerror.New("创建默认pos profile失败")
-	}
 
+	err = service.Selling().CreateDefaultModePaymentAccount(ctx, &erp.CreateModePaymentAccountInp{
+		CompanyAbbr: req.CompanyAbbr,
+		PaymentType: string(consts.ModeOfPaymentBalance),
+	})
+
+	// 仓库/pos profile 先不建
 	return branchName, nil
 }

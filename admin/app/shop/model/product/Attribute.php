@@ -32,7 +32,7 @@ class Attribute extends AttributeModel
             ->withAttr('id', function ($value, $data) {
                 return $data['uuid'] ?: 0;
             })
-            ->order(['create_time' => 'desc'])
+            ->order(['sort' => 'asc', 'create_time' => 'asc'])
             ->paginate($data);
         }
 
@@ -68,7 +68,7 @@ class Attribute extends AttributeModel
         $model = $model->alias('a')
             ->leftJoin('product_attribute_group parent', 'a.attribute_group_uuid = parent.uuid')
             ->field('a.*, parent.name as parent_attribute_name')
-            ->order(['a.create_time' => 'desc']);
+            ->order(['a.sort' => 'asc', 'a.create_time' => 'asc']);
         return $model->paginate($data);
     }
 
@@ -85,6 +85,9 @@ class Attribute extends AttributeModel
         $attribute_name = is_array($data['attribute_name']) ? json_encode($data['attribute_name']) : ($data['attribute_name'] ?: '');
         $model = null;
         if ($parent_id > 0) {
+            // 获取最大排序
+            $maxSort = $this->where('attribute_group_uuid', $parent_id)->max('sort');
+            $data['sort'] = $maxSort + 1;
             $model = $this;
             $isExist = $this->where('attribute_group_uuid', '>', 0)->where('name', $attribute_name)->count();
             if ($isExist) {
@@ -93,6 +96,8 @@ class Attribute extends AttributeModel
             }
         } else {
             $model = new AttributeGroup;
+            $maxSort = $model->max('sort');
+            $data['sort'] = $maxSort + 1;
             $isExist = $model->where('name', $attribute_name)->count();
             if ($isExist) {
                 $this->error = '名称已存在';

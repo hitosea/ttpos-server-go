@@ -128,3 +128,102 @@ type ProductShopCategoryReq struct {
 type ProductAttributeGroupListReq struct {
 	dto.PageReq // 分页参数
 }
+
+type ProductAttributeGroupReq struct {
+	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 商品属性分组UUID
+}
+
+type ProductAttributeGroupAddReq struct {
+	LocaleName        dto.LocaleResponse                            `json:"locale_name" binding:"required"`             // 商品属性分组名称, 多语言
+	ProductAttributes []ProductAttributeGroupAddProductAttributeReq `json:"product_attributes" binding:"required,dive"` // 商品属性
+}
+
+type ProductAttributeGroupAddProductAttributeReq struct {
+	LocaleName          dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品属性名称, 多语言
+	ProductPackageUuids []uint64           `json:"product_package_uuids"`          // 关联商品包UUID列表
+}
+
+type ProductAttributeGroupEditReq struct {
+	Uuid              uint64                                         `json:"uuid" binding:"required"`                    // 商品属性分组UUID
+	LocaleName        dto.LocaleResponse                             `json:"locale_name" binding:"required"`             // 商品属性分组名称, 多语言
+	ProductAttributes []ProductAttributeGroupEditProductAttributeReq `json:"product_attributes" binding:"required,dive"` // 商品属性
+}
+
+type ProductAttributeGroupEditProductAttributeReq struct {
+	Uuid                uint64             `json:"uuid"`                           // 商品属性UUID, 可选，如果有，是编辑，没有是添加
+	LocaleName          dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品属性名称, 多语言
+	ProductPackageUuids []uint64           `json:"product_package_uuids"`          // 关联商品包UUID列表
+}
+
+type ProductAttributeGroupSortItem struct {
+	Uuid uint64 `json:"uuid" binding:"required"` // 商品属性分组UUID
+	Sort int    `json:"sort" binding:"required"` // 排序
+}
+
+type ProductAttributeGroupSortReq struct {
+	List []ProductAttributeGroupSortItem `json:"list" binding:"required,dive"` // 商品属性分组排序列表
+}
+
+type ProductAttributeSortItem struct {
+	Uuid uint64 `json:"uuid" binding:"required"` // 商品属性UUID
+	Sort int    `json:"sort" binding:"required"` // 排序
+}
+
+type ProductAttributeSortReq struct {
+	ProductAttributeGroupUuid uint64                     `json:"product_attribute_group_uuid" binding:"required"` // 商品属性分组UUID
+	List                      []ProductAttributeSortItem `json:"list" binding:"required,dive"`                    // 商品属性排序列表
+}
+
+// ProductFlavorListReq 商品规格列表查询
+type ProductFlavorListReq struct {
+	dto.PageReq        // 分页参数
+	Keyword     string `form:"keyword" json:"keyword"` // 搜索关键词
+}
+
+// ProductFlavorReq 商品规格请求
+type ProductFlavorReq struct {
+	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 商品规格UUID
+}
+
+// ProductFlavorAddReq 商品规格添加请求
+type ProductFlavorAddReq struct {
+	LocaleName dto.LocaleResponse               `json:"locale_name" binding:"required"` // 商品规格名称
+	List       []ProductFlavorAddProductPackage `json:"list"`                           // 关联商品包列表
+}
+
+// ProductFlavorAddProductPackage 商品规格添加商品包
+type ProductFlavorAddProductPackage struct {
+	Uuid  uint64  `json:"uuid" binding:"required"`  // 商品包UUID
+	Price float64 `json:"price" binding:"required"` // 商品包价格
+}
+
+// ProductFlavorDeleteReq 商品规格删除请求
+type ProductFlavorDeleteReq struct {
+	Uuid uint64 `json:"uuid" binding:"required"` // 商品规格UUID
+}
+
+// ProductFlavorSortItem 商品规格排序项
+type ProductFlavorSortItemReq struct {
+	Uuid uint64 `json:"uuid" binding:"required"` // 商品规格UUID
+	Sort int    `json:"sort" binding:"required"` // 排序
+}
+
+// ProductFlavorSortReq 商品规格排序请求
+type ProductFlavorSortReq struct {
+	List []ProductFlavorSortItemReq `json:"list" binding:"required,dive"` // 商品规格排序列表
+}
+
+// ProdudctFlavorEditReq 商品规格编辑请求
+type ProdudctFlavorEditReq struct {
+	Uuid       uint64                               `json:"uuid" binding:"required"`        // 商品规格UUID
+	LocaleName dto.LocaleResponse                   `json:"locale_name" binding:"required"` // 商品规格名称
+	List       []ProductFlavorEditProductPackageReq `json:"list"`                           // 关联商品包列表
+}
+
+// ProductFlavorEditProductPackageReq 商品规格编辑商品包请求
+type ProductFlavorEditProductPackageReq struct {
+	Uuid     uint64  `json:"uuid" binding:"required"`  // 商品UUID
+	BomUuid  uint64  `json:"bom_uuid"`                 // 商品BOM UUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID
+	Price    float64 `json:"price" binding:"required"` // 商品价格
+	IsDelete bool    `json:"is_delete"`                // 是否删除, 如果是新增/编辑，则传false，删除时传true
+}

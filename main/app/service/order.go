@@ -3963,6 +3963,16 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 		if errUpdateProduct := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProductRecord(*saleOrderProduct); errUpdateProduct != nil {
 			return errUpdateProduct
 		}
+		// 更新套餐商品的子商品的签名
+		if saleOrderProduct.IsPackageProduct() {
+			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+			for _, subProduct := range subProducts {
+				subProduct.Sign = subProduct.GenerateProductSign()
+				if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProductRecord(*subProduct); errUpdate != nil {
+					return errUpdate
+				}
+			}
+		}
 		// 更新完整个销售订单
 		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
 			return errUpdate
@@ -4676,7 +4686,7 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
 
 	// 获取订单信息
-	billInfo, err := orderRepo.GetSaleBillInfoAndProduct(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
+	billInfo, err := orderRepo.GetSaleBillInfoAndProduct(req.SaleBillUuid, req.SaleOrderUuid, 0)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -4689,15 +4699,39 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 		return nil, errors.WithMessage(err)
 	}
 
-	// 判断商品
-	if len(billInfo.SaleOrders) == 0 || len(billInfo.SaleOrders[0].SaleOrderProducts) == 0 {
-		return nil, errors.New("找不到订单商品")
+	// 获取销售订单
+	saleOrder := billInfo.GetSaleOrder(req.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
 	}
 
 	// 修改订单商品备注
+	var saleOrderProduct *model.SaleOrderProduct
+	for _, product := range saleOrder.SaleOrderProducts {
+		if product.Uuid == req.OrderProductUuid {
+			saleOrderProduct = product
+			break
+		}
+	}
+	if saleOrderProduct == nil {
+		return nil, errors.New("订单商品不存在")
+	}
+
+	// 更新订单商品备注
 	repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
-		if err := repository.NewOrderRepo(db).ChangeProductRemark(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid, req.Remark); err != nil {
+		sign := saleOrderProduct.GenerateProductSign()
+		if err := repository.NewOrderRepo(db).ChangeProductRemark(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid, req.Remark, sign); err != nil {
 			return errors.WithMessage(err)
+		}
+		// 更新套餐商品的子商品的签名
+		if saleOrderProduct.IsPackageProduct() {
+			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+			for _, subProduct := range subProducts {
+				subProduct.Sign = subProduct.GenerateProductSign()
+				if err := repository.NewOrderRepo(db).ChangeProductRemark(req.SaleBillUuid, req.SaleOrderUuid, subProduct.Uuid, req.Remark, subProduct.Sign); err != nil {
+					return errors.WithMessage(err)
+				}
+			}
 		}
 		return nil
 	})
@@ -7163,9 +7197,6 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 	var returnSaleOrderProduct *model.SaleOrderProduct
 	// var returnSubSaleOrderProducts []*model.SaleOrderProduct // 套餐子商品退菜列表
 	var keepNum float64
-	// 提前获取属性和属性列表
-	productAttr := saleOrderProduct.GetAttributeName()
-	productAttrList := saleOrderProduct.GetAttributeNameList()
 
 	// 如果退菜数量等于该商品的数量，则标记该商品为退菜并在商品的退菜原因列表中添加退菜原因
 	if saleOrderProduct.Num == req.Num {
@@ -7174,7 +7205,6 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		newSaleOrderProduct.SetNum(req.Num)
 		newSaleOrderProduct.SetCancelInfo(req.Reason, returnFoodReasonList)
 		sameSignSaleOrderProduct := saleOrder.GetSaleOrderProductBySign(newSaleOrderProduct.Sign)
-		//sameSignSaleOrderProduct := saleOrder.GetSaleOrderProductBySign(saleOrderProduct.Sign)
 		if sameSignSaleOrderProduct != nil {
 			// 有相同签名的商品。将两个商品合并，数量相加
 			sameSignSaleOrderProduct.SetNum(sameSignSaleOrderProduct.Num + req.Num)
@@ -7203,9 +7233,8 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			saleOrderProduct.SetCancelInfo(req.Reason, returnFoodReasonList)
 			returnSaleOrderProduct = saleOrderProduct
 			// 如果是套餐商品，则更新套餐子商品退菜信息
-			subProducts := make([]*model.SaleOrderProduct, 0)
 			if saleOrderProduct.IsPackageProduct() {
-				subProducts = saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+				subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
 				for _, subProduct := range subProducts {
 					subProduct.SetCancelInfo(req.Reason, nil)
 				}
@@ -7254,6 +7283,16 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 					newSubSaleOrderProduct.SetCancelInfo(req.Reason, returnFoodReasonList)
 					saleOrder.SaleOrderProducts = append(saleOrder.SaleOrderProducts, newSubSaleOrderProduct)
 				}
+			}
+		}
+
+		// 更新旧的子商品的数量
+		if saleOrderProduct.IsPackageProduct() {
+			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+			for _, subProduct := range subProducts {
+				unitNum := decimal.NewFromFloat(subProduct.UnitNum)
+				num := decimal.NewFromFloat(keepNum).Mul(unitNum).Round(3).InexactFloat64()
+				subProduct.SetNum(num)
 			}
 		}
 	}
@@ -7308,6 +7347,19 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 				return errors.WithMessage(err)
 			}
 		}
+
+		// 修改送厨子商品的数量
+		if saleOrderProduct.IsPackageProduct() {
+			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+			for _, subProduct := range subProducts {
+				num := utils.IfFloat64(subProduct.IsDelete(), 0, subProduct.Num)
+				if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereSaleOrderProductUuid(subProduct.Uuid)},
+					map[string]any{"num": num}); err != nil {
+					return errors.WithMessage(err)
+				}
+			}
+		}
+
 		return nil
 	}); errUpdateDB != nil {
 		return nil, errors.WithMessage(errUpdateDB, "更新数据失败")
@@ -7315,6 +7367,37 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 
 	// 发布"退菜"事件
 	go func() {
+		var convertToEventOrderProduct func(saleOrderProduct *model.SaleOrderProduct, isSubProduct bool) event.CancelSaleOrderProductProduct
+		convertToEventOrderProduct = func(saleOrderProduct *model.SaleOrderProduct, isSubProduct bool) event.CancelSaleOrderProductProduct {
+			return event.CancelSaleOrderProductProduct{
+				OrderProductId:  req.SaleOrderProductUuid,
+				ProductId:       saleOrderProduct.ProductPackageUuid,
+				ProductName:     saleOrderProduct.MultiLanguageName.GetNames(),
+				ProductAttr:     saleOrderProduct.GetAttributeName(),
+				ProductAttrList: saleOrderProduct.GetAttributeNameList(),
+				TotalNum: func() float64 {
+					if !isSubProduct {
+						return req.Num
+					}
+					return decimal.NewFromFloat(req.Num).Mul(decimal.NewFromFloat(saleOrderProduct.UnitNum)).Round(3).InexactFloat64()
+				}(),
+				IsBuffet:     saleOrderProduct.IsBuffet == 1,
+				Remark:       saleOrderProduct.Remark,
+				Reason:       model.GetReturnFoodReasonNames(returnFoodReason),
+				CustomReason: saleOrderProduct.CancelReason,
+				Sign:         saleOrderProduct.Sign,
+				SubProducts: func() []event.CancelSaleOrderProductProduct {
+					if saleOrderProduct.IsPackageProduct() {
+						subProducts := make([]event.CancelSaleOrderProductProduct, 0)
+						for _, subProduct := range saleOrder.GetPackageSubProductList(returnSaleOrderProduct.Uuid) {
+							subProducts = append(subProducts, convertToEventOrderProduct(subProduct, true))
+						}
+						return subProducts
+					}
+					return nil
+				}(),
+			}
+		}
 		s.bus.PublishCancelSaleOrderProductEvent(event.CancelSaleOrderProductPayload{
 			BasePayload: event.BasePayload{ // 退菜
 				Ctx:           ctx,
@@ -7324,17 +7407,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 				SaleOrderUuid: req.SaleOrderUuid,
 				OperatorUuid:  int64(ctx.GetStaffUuid()),
 			},
-			OrderProductId:  req.SaleOrderProductUuid,
-			ProductId:       returnSaleOrderProduct.ProductPackageUuid,
-			ProductName:     returnSaleOrderProduct.MultiLanguageName.GetNames(),
-			ProductAttr:     productAttr,
-			ProductAttrList: productAttrList,
-			TotalNum:        req.Num,
-			IsBuffet:        returnSaleOrderProduct.IsBuffet == 1,
-			Remark:          returnSaleOrderProduct.Remark,
-			Reason:          model.GetReturnFoodReasonNames(returnFoodReason),
-			CustomReason:    returnSaleOrderProduct.CancelReason,
-			Sign:            returnSaleOrderProduct.Sign,
+			CancelSaleOrderProductProduct: convertToEventOrderProduct(returnSaleOrderProduct, false),
 		})
 	}()
 
@@ -7499,83 +7572,92 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 		return nil, errors.WithMessage(err)
 	}
 
-	// 获取原生产单Uuid
-	oldProductionOrderUuid := saleOrderProduct.ProductionOrderUuid
-
-	var newProductionOrderUuid uint64
-	if oldProductionOrderUuid != 0 {
-		newProductionOrderUuid, _ = utils.GetID()
-	}
-
-	// 修改生产单Uuid
-	saleOrderProduct.ProductionOrderUuid = newProductionOrderUuid
-	// 设置已接单
-	saleOrderProduct.SetAcceptOrderProduct()
-	// h5订单只有一个商品时拒单
-	if saleOrderProduct.H5OrderUuid != 0 {
-		// 如果这个商品是h5订单的最后一个商品，则删除拒单该h5订单
-		s.deleteOrRejectH5OrderProduct(ctx, db, saleOrderProduct)
-		// 删除掉h5订单uuid
-		saleOrderProduct.H5OrderUuid = 0
-	}
-	// 更新销售订单商品
-	saleOrderProduct.SaleBillUuid = targetDesk.SaleBillUuid
-	saleOrderProduct.SaleOrderUuid = targetSaleOrder.Uuid
-	// 将商品的折扣改为使用目标桌台的折扣
-	saleOrderProduct.MemberDiscountRate = targetSaleOrder.MemberDiscountRate
-	saleOrderProduct.MemberCardDiscountRate = targetSaleOrder.MemberCardDiscountRate
-	saleOrderProduct.CustomDiscountRate = targetSaleOrder.CustomDiscountRate
-	// 判断商品是否在目标桌台是否是自助餐商品
-	productPackageUuidMap := targetSaleBill.GetBuffetProductMap()
-	if _, ok := productPackageUuidMap[saleOrderProduct.ProductPackageUuid]; ok {
-		saleOrderProduct.SetIsBuffet()
-	} else {
-		saleOrderProduct.SetNotBuffet()
-	}
-	saleOrderProduct.SetUpdate() // 标记该商品的记录要更新，会在原桌台账单的CalcAndSaveSaleBill方法中更新
-	// 将商品添加到目标桌台的销售订单中
-	targetSaleOrder.SaleOrderProducts = append(targetSaleOrder.SaleOrderProducts, saleOrderProduct)
-
-	// TODO
-	// 如果商品已经送厨且未完成出餐，要为这个商品生成一个目标桌台的送厨单并从原桌台的送厨单中删除该商品
-
-	// TODO
-	// 如果商品已经送厨且已完成出餐，要为这个商品生成一个目标桌台的送厨单并完成出餐，并从原桌台的送厨单中删除该商品。考虑到该商品制作完成后，在厨显撤回制作完成，此时该商品不应该在原桌台的送厨单上
-
-	// TODO 重新生成订单商品签名
-
+	// 更新数据
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-		// 重新计算原桌台的销售账单
-		if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
-			return errors.WithMessage(err)
-		}
+		// 处理订单商品
+		var handleOrderProducts func(saleOrder *model.SaleOrder, saleOrderProduct *model.SaleOrderProduct) error
+		handleOrderProducts = func(saleOrder *model.SaleOrder, saleOrderProduct *model.SaleOrderProduct) error {
+			// 获取原生产单Uuid
+			oldProductionOrderUuid := saleOrderProduct.ProductionOrderUuid
 
-		// 重新计算目标桌台的销售账单
-		if err := s.CalcAndSaveSaleBill(ctx, tx, targetSaleBill); err != nil {
-			return errors.WithMessage(err)
-		}
+			var newProductionOrderUuid uint64
+			if oldProductionOrderUuid != 0 {
+				newProductionOrderUuid, _ = utils.GetID()
+			}
 
-		productionRepo := repository.NewProductionRepo(db)
-		oldProductionOrder, _ := productionRepo.GetProductionOrder(productionRepo.WhereUuid(oldProductionOrderUuid))
-		if oldProductionOrder != nil {
-			if err := productionRepo.CreateProductionOrder(&model.ProductionOrder{
-				BaseModel:     model.BaseModel{Uuid: newProductionOrderUuid},
-				DeskUuid:      targetDesk.Uuid,
-				SaleOrderUuid: targetSaleOrder.Uuid,
-				SaleBillUuid:  targetSaleBill.Uuid,
-				Source:        oldProductionOrder.Source,
-			}); err != nil {
+			// 修改生产单Uuid
+			saleOrderProduct.ProductionOrderUuid = newProductionOrderUuid
+			// 设置已接单
+			saleOrderProduct.SetAcceptOrderProduct()
+			// h5订单只有一个商品时拒单
+			if saleOrderProduct.H5OrderUuid != 0 {
+				// 如果这个商品是h5订单的最后一个商品，则删除拒单该h5订单
+				s.deleteOrRejectH5OrderProduct(ctx, db, saleOrderProduct)
+				// 删除掉h5订单uuid
+				saleOrderProduct.H5OrderUuid = 0
+			}
+			// 更新销售订单商品
+			saleOrderProduct.SaleBillUuid = targetDesk.SaleBillUuid
+			saleOrderProduct.SaleOrderUuid = targetSaleOrder.Uuid
+			// 将商品的折扣改为使用目标桌台的折扣
+			saleOrderProduct.MemberDiscountRate = targetSaleOrder.MemberDiscountRate
+			saleOrderProduct.MemberCardDiscountRate = targetSaleOrder.MemberCardDiscountRate
+			saleOrderProduct.CustomDiscountRate = targetSaleOrder.CustomDiscountRate
+			// 判断商品是否在目标桌台是否是自助餐商品
+			productPackageUuidMap := targetSaleBill.GetBuffetProductMap()
+			if _, ok := productPackageUuidMap[saleOrderProduct.ProductPackageUuid]; ok {
+				saleOrderProduct.SetIsBuffet()
+			} else {
+				saleOrderProduct.SetNotBuffet()
+			}
+			saleOrderProduct.SetUpdate() // 标记该商品的记录要更新，会在原桌台账单的CalcAndSaveSaleBill方法中更新
+
+			// 将商品添加到目标桌台的销售订单中
+			targetSaleOrder.SaleOrderProducts = append(targetSaleOrder.SaleOrderProducts, saleOrderProduct)
+
+			// 重新计算原桌台的销售账单
+			if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
 				return errors.WithMessage(err)
 			}
-			if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereSaleOrderProductUuid(saleOrderProduct.Uuid)}, map[string]any{
-				"sale_bill_uuid":        targetSaleBill.Uuid,
-				"production_order_uuid": newProductionOrderUuid,
-			}); err != nil {
+
+			// 重新计算目标桌台的销售账单
+			if err := s.CalcAndSaveSaleBill(ctx, tx, targetSaleBill); err != nil {
 				return errors.WithMessage(err)
 			}
-		}
 
-		return nil
+			// 更新生产单
+			productionRepo := repository.NewProductionRepo(db)
+			oldProductionOrder, _ := productionRepo.GetProductionOrder(productionRepo.WhereUuid(oldProductionOrderUuid))
+			if oldProductionOrder != nil {
+				if err := productionRepo.CreateProductionOrder(&model.ProductionOrder{
+					BaseModel:     model.BaseModel{Uuid: newProductionOrderUuid},
+					DeskUuid:      targetDesk.Uuid,
+					SaleOrderUuid: targetSaleOrder.Uuid,
+					SaleBillUuid:  targetSaleBill.Uuid,
+					Source:        oldProductionOrder.Source,
+				}); err != nil {
+					return errors.WithMessage(err)
+				}
+				if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereSaleOrderProductUuid(saleOrderProduct.Uuid)}, map[string]any{
+					"sale_bill_uuid":        targetSaleBill.Uuid,
+					"production_order_uuid": newProductionOrderUuid,
+				}); err != nil {
+					return errors.WithMessage(err)
+				}
+			}
+
+			// 如果是套餐商品，则更新套餐子商品
+			if saleOrderProduct.IsPackageProduct() {
+				subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+				for _, subProduct := range subProducts {
+					handleOrderProducts(saleOrder, subProduct)
+				}
+			}
+
+			return nil
+		}
+		return handleOrderProducts(saleOrder, saleOrderProduct)
+
 	}); err != nil {
 		return nil, errors.WithMessage(err, "更新数据失败")
 	}
@@ -10561,82 +10643,129 @@ func (s *orderSrv) moveSaleOrderProduct(ctx context.Context, saleBill *model.Sal
 			continue
 		}
 		toSaleOrderProductSignMap[saleOrderProduct.Sign] = saleOrderTo.SaleOrderProducts[i]
+		// 处理套餐商品
+		if saleOrderProduct.IsPackageProduct() {
+			subProducts := saleOrderFrom.GetPackageSubProductList(saleOrderProduct.Uuid)
+			for _, subProduct := range subProducts {
+				if subProduct.IsDelete() || subProduct.SaleOrderUuid != saleOrderTo.Uuid {
+					continue
+				}
+				toSaleOrderProductSignMap[subProduct.Sign] = subProduct
+			}
+		}
 	}
 
 	// 遍历要移动的订单商品，移动到目标订单中
-	for _, saleOrderProduct := range saleOrderProducts {
-		ctx.Log().Debug("移动商品", zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
-		moveProductNum, ok := moveNumMap[saleOrderProduct.Uuid]
-		if !ok {
-			return nil, nil, errors.WithMessage(errors.New("商品可能移动到其他销售订单中"), fmt.Sprintf("sale_order_product_uuid:%d", saleOrderProduct.Uuid))
-		}
-		if moveProductNum > saleOrderProduct.Num {
-			return nil, nil, errors.WithMessage(errors.New("移动数量大于销售订单商品数量"), fmt.Sprintf("sale_order_product_uuid:%d", saleOrderProduct.Uuid))
-		}
-		hasHandle := false // 是否已经处理过。因为一个商品被一个处理方式处理过后，可能又满足多种移动方式，所以需要一个标志来判断是否已经处理过
-		// 第一种移动方式：原销售订单商品数量大于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中有签名一样的商品，该商品数量增加移动数量
-		if !hasHandle && MoreThanMoveNum(saleOrderProduct.Num, moveProductNum) && IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
-			hasHandle = true
-			ctx.Log().Debug("移动商品，第一种移动方式", zap.Any("from", saleOrderProduct.SaleOrderUuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
-			// 修改原销售订单商品数量，更新记录，重新计算订单金额
-			saleOrderProduct.Num -= moveProductNum
-			// 修改目标销售订单商品数量，更新记录，重新计算订单金额
-			toSaleOrderProductSignMap[saleOrderProduct.Sign].Num += moveProductNum
-			// 记录到待更新列表中
-			waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
-			waitUpdateSaleOrderProductMap[toSaleOrderProductSignMap[saleOrderProduct.Sign].Uuid] = toSaleOrderProductSignMap[saleOrderProduct.Sign]
-		}
+	var handleProduct func(saleOrderProducts []*model.SaleOrderProduct, packageProductUuid uint64, moveNum float64) error
+	handleProduct = func(saleOrderProducts []*model.SaleOrderProduct, packageProductUuid uint64, moveNum float64) error {
+		for _, saleOrderProduct := range saleOrderProducts {
+			ctx.Log().Debug("移动商品", zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
 
-		// 第二种移动方式：原销售订单商品数量大于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
-		if !hasHandle && MoreThanMoveNum(saleOrderProduct.Num, moveProductNum) && !IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
-			hasHandle = true
-			ctx.Log().Debug("移动商品，第二种移动方式", zap.Any("from", saleOrderProduct.SaleOrderUuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
-			ctx.Log().Debug("移动商品", zap.Any("原销售订单商品修改前数量", saleOrderProduct.Num))
-			// 修改原销售订单商品数量，更新记录，重新计算订单金额
-			saleOrderProduct.Num -= moveProductNum
-			// 新建一个销售订单商品，该商品数量为移动数量
-			newSaleOrderProduct := saleOrderProduct.CopyOrderProduct(saleOrderTo.Uuid)
-			newSaleOrderProduct.Num = moveProductNum
-			// 计算商品数据。折扣、税费、服务
-			discountInfo := saleOrderTo.GetDiscountInfo()
-			newSaleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
-			newSaleOrderProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
-			// 在目标销售订单中新建一个销售订单商品
-			saleOrderTo.SaleOrderProducts = append(saleOrderTo.SaleOrderProducts, newSaleOrderProduct)
-			// 记录到待更新列表中
-			waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
-			waitCreateSaleOrderProductMap[newSaleOrderProduct.Uuid] = newSaleOrderProduct
-			ctx.Log().Debug("移动商品", zap.Any("原销售订单商品数量", saleOrderProduct.Num), zap.Any("目标销售订单商品数量", newSaleOrderProduct.Num))
-		}
+			// 记录套餐商品的uuid
+			subPackageUuid := saleOrderProduct.Uuid
 
-		// 第三种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中有签名一样的商品，该商品数量增加移动数量
-		if !hasHandle && EqualMoveNum(saleOrderProduct.Num, moveProductNum) && IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
-			hasHandle = true
-			ctx.Log().Debug("移动商品，第三种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
-			// 删除原销售订单商品，更新表记录，重新计算原订单金额；
-			saleOrderProduct.DeleteTime = time.Now().Unix()
-			// 修改目标销售订单商品数量，更新记录，重新计算订单金额
-			toSaleOrderProductSignMap[saleOrderProduct.Sign].Num += moveProductNum
-			// 记录到待更新列表中
-			waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
-			waitUpdateSaleOrderProductMap[toSaleOrderProductSignMap[saleOrderProduct.Sign].Uuid] = toSaleOrderProductSignMap[saleOrderProduct.Sign]
-		}
+			// 获取移动数量。套餐商品的移动数量为子商品的单位数量乘以移动数量
+			var moveProductNum float64
+			if packageProductUuid == 0 {
+				moveProductMapNum, ok := moveNumMap[saleOrderProduct.Uuid]
+				if !ok {
+					return errors.WithMessage(errors.New("商品可能移动到其他销售订单中"), fmt.Sprintf("sale_order_product_uuid:%d", saleOrderProduct.Uuid))
+				}
+				if moveProductMapNum > saleOrderProduct.Num {
+					return errors.WithMessage(errors.New("移动数量大于销售订单商品数量"), fmt.Sprintf("sale_order_product_uuid:%d", saleOrderProduct.Uuid))
+				}
+				moveProductNum = moveProductMapNum
+			} else {
+				unitNum := decimal.NewFromFloat(saleOrderProduct.UnitNum)
+				moveProductNum = decimal.NewFromFloat(moveNum).Mul(unitNum).Round(3).InexactFloat64()
+			}
 
-		// 第四种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
-		if !hasHandle && EqualMoveNum(saleOrderProduct.Num, moveProductNum) && !IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
-			hasHandle = true
-			ctx.Log().Debug("移动商品，第四种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
-			// 修改原销售订单商品的销售订单uuid为目标销售订单的uuid，使用目标销售订单的折扣优惠，更新记录，重新计算原订单金额；
-			discountInfo := saleOrderTo.GetDiscountInfo()
-			saleOrderProduct.SaleOrderUuid = saleOrderTo.Uuid
-			saleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
-			// 计算商品数据。折扣、税费、服务
-			saleOrderProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
-			// 目标销售订单的商品数组增加这条记录，重新计算订单金额
-			saleOrderTo.SaleOrderProducts = append(saleOrderTo.SaleOrderProducts, saleOrderProduct)
-			// 记录到待更新列表中
-			waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
+			hasHandle := false // 是否已经处理过。因为一个商品被一个处理方式处理过后，可能又满足多种移动方式，所以需要一个标志来判断是否已经处理过
+			// 第一种移动方式：原销售订单商品数量大于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中有签名一样的商品，该商品数量增加移动数量
+			if !hasHandle && MoreThanMoveNum(saleOrderProduct.Num, moveProductNum) && IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
+				hasHandle = true
+				ctx.Log().Debug("移动商品，第一种移动方式", zap.Any("from", saleOrderProduct.SaleOrderUuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
+				// 修改原销售订单商品数量，更新记录，重新计算订单金额
+				saleOrderProduct.Num -= moveProductNum
+				// 更新套餐商品的子商品数量
+				saleOrderProduct.PackageUuid = packageProductUuid
+				// 修改目标销售订单商品数量，更新记录，重新计算订单金额
+				toSaleOrderProductSignMap[saleOrderProduct.Sign].Num += moveProductNum
+				// 记录到待更新列表中
+				waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
+				waitUpdateSaleOrderProductMap[toSaleOrderProductSignMap[saleOrderProduct.Sign].Uuid] = toSaleOrderProductSignMap[saleOrderProduct.Sign]
+			}
+
+			// 第二种移动方式：原销售订单商品数量大于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
+			if !hasHandle && MoreThanMoveNum(saleOrderProduct.Num, moveProductNum) && !IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
+				hasHandle = true
+				ctx.Log().Debug("移动商品，第二种移动方式", zap.Any("from", saleOrderProduct.SaleOrderUuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
+				ctx.Log().Debug("移动商品", zap.Any("原销售订单商品修改前数量", saleOrderProduct.Num))
+				// 修改原销售订单商品数量，更新记录，重新计算订单金额
+				saleOrderProduct.Num -= moveProductNum
+				// 新建一个销售订单商品，该商品数量为移动数量
+				newSaleOrderProduct := saleOrderProduct.CopyOrderProduct(saleOrderTo.Uuid)
+				newSaleOrderProduct.Num = moveProductNum
+				// 更新套餐商品的子商品数量
+				newSaleOrderProduct.PackageUuid = packageProductUuid
+				// 计算商品数据。折扣、税费、服务
+				discountInfo := saleOrderTo.GetDiscountInfo()
+				newSaleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
+				newSaleOrderProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
+				// 记录套餐商品的uuid
+				subPackageUuid = newSaleOrderProduct.Uuid
+				// 在目标销售订单中新建一个销售订单商品
+				saleOrderTo.SaleOrderProducts = append(saleOrderTo.SaleOrderProducts, newSaleOrderProduct)
+				// 记录到待更新列表中
+				waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
+				waitCreateSaleOrderProductMap[newSaleOrderProduct.Uuid] = newSaleOrderProduct
+				ctx.Log().Debug("移动商品", zap.Any("原销售订单商品数量", saleOrderProduct.Num), zap.Any("目标销售订单商品数量", newSaleOrderProduct.Num))
+			}
+
+			// 第三种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中有签名一样的商品，该商品数量增加移动数量
+			if !hasHandle && EqualMoveNum(saleOrderProduct.Num, moveProductNum) && IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
+				hasHandle = true
+				ctx.Log().Debug("移动商品，第三种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
+				// 删除原销售订单商品，更新表记录，重新计算原订单金额；
+				saleOrderProduct.DeleteTime = time.Now().Unix()
+				// 修改目标销售订单商品数量，更新记录，重新计算订单金额
+				toSaleOrderProductSignMap[saleOrderProduct.Sign].Num += moveProductNum
+				// 记录到待更新列表中
+				waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
+				waitUpdateSaleOrderProductMap[toSaleOrderProductSignMap[saleOrderProduct.Sign].Uuid] = toSaleOrderProductSignMap[saleOrderProduct.Sign]
+			}
+
+			// 第四种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
+			if !hasHandle && EqualMoveNum(saleOrderProduct.Num, moveProductNum) && !IsSameSignature(saleOrderProduct.Sign, toSaleOrderProductSignMap) {
+				hasHandle = true
+				ctx.Log().Debug("移动商品，第四种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", saleOrderProduct.Uuid), zap.Any("saleOrderProduct", saleOrderProduct.MultiLanguageName.GetNameByLang(ctx.GetLanguage())))
+				// 修改原销售订单商品的销售订单uuid为目标销售订单的uuid，使用目标销售订单的折扣优惠，更新记录，重新计算原订单金额；
+				discountInfo := saleOrderTo.GetDiscountInfo()
+				saleOrderProduct.SaleOrderUuid = saleOrderTo.Uuid
+				saleOrderProduct.SetDiscountInfo(discountInfo.MemberDiscountRate, discountInfo.MemberCardDiscountRate, discountInfo.CustomDiscountRate)
+				// 计算商品数据。折扣、税费、服务
+				saleOrderProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
+				// 目标销售订单的商品数组增加这条记录，重新计算订单金额
+				saleOrderTo.SaleOrderProducts = append(saleOrderTo.SaleOrderProducts, saleOrderProduct)
+				// 记录到待更新列表中
+				waitUpdateSaleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
+			}
+
+			// 处理套餐商品
+			if saleOrderProduct.IsPackageProduct() {
+				err := handleProduct(saleOrderFrom.GetPackageSubProductList(saleOrderProduct.Uuid), subPackageUuid, moveProductNum)
+				if err != nil {
+					return errors.WithMessage(err)
+				}
+			}
 		}
+		return nil
+	}
+
+	// 处理商品
+	err := handleProduct(saleOrderProducts, 0, 0)
+	if err != nil {
+		return nil, nil, errors.WithMessage(err)
 	}
 
 	return waitUpdateSaleOrderProductMap, waitCreateSaleOrderProductMap, nil
@@ -11285,7 +11414,7 @@ func (s *orderSrv) getMoveProductList(saleOrderFrom *model.SaleOrder) []req.Move
 	moveProductList := make([]req.MoveProduct, 0) // 移动商品列表,包括订单商品、订单顾客、订单加钟商品
 	// 获取要移动的商品
 	for _, saleOrderProduct := range saleOrderFrom.SaleOrderProducts {
-		if saleOrderProduct.IsDelete() || saleOrderProduct.Num == 0 {
+		if saleOrderProduct.IsDelete() || saleOrderProduct.Num == 0 || saleOrderProduct.ProductType == constant.ProductTypePackageSubProduct {
 			continue
 		}
 		moveProductList = append(moveProductList, req.MoveProduct{

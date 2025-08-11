@@ -32,6 +32,7 @@ type GetCompanyListReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	CompanyName   string                 `protobuf:"bytes,1,opt,name=company_name,json=companyName,proto3" json:"company_name,omitempty" dc:"公司名称模糊查询，可选，如: %公司名称%"`   // 公司名称模糊查询，可选，如: %公司名称%
 	CompanyAbbr   string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写编码模糊查询，可选，如: %公司缩写%"` // 公司缩写编码模糊查询，可选，如: %公司缩写%
+	ParentCompany string                 `protobuf:"bytes,3,opt,name=parent_company,json=parentCompany,proto3" json:"parent_company,omitempty" dc:"父公司，可选，如: %父公司%"`   // 父公司，可选，如: %父公司%
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -76,6 +77,13 @@ func (x *GetCompanyListReq) GetCompanyName() string {
 func (x *GetCompanyListReq) GetCompanyAbbr() string {
 	if x != nil {
 		return x.CompanyAbbr
+	}
+	return ""
+}
+
+func (x *GetCompanyListReq) GetParentCompany() string {
+	if x != nil {
+		return x.ParentCompany
 	}
 	return ""
 }
@@ -184,10 +192,11 @@ var File_company_company_proto protoreflect.FileDescriptor
 
 const file_company_company_proto_rawDesc = "" +
 	"\n" +
-	"\x15company/company.proto\x12\acompany\x1a\terp.proto\"Y\n" +
+	"\x15company/company.proto\x12\acompany\x1a\terp.proto\"\x80\x01\n" +
 	"\x11GetCompanyListReq\x12!\n" +
 	"\fcompany_name\x18\x01 \x01(\tR\vcompanyName\x12!\n" +
-	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\"M\n" +
+	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12%\n" +
+	"\x0eparent_company\x18\x03 \x01(\tR\rparentCompany\"M\n" +
 	"\x12GetCompanyListResp\x127\n" +
 	"\fcompany_list\x18\x01 \x03(\v2\x14.company.CompanyInfoR\vcompanyList\"S\n" +
 	"\vCompanyInfo\x12!\n" +

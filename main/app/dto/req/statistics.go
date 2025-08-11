@@ -12,6 +12,8 @@ type BusinessDataPrinterReq struct {
 	QueryEndTime   uint `json:"query_end_time"`   // 查询结束时间戳
 	CategoryType   int  `json:"category_type"`    // 分类类型 (-1 未选择, 1 按一级分类, 2 按二级分类)
 	NotQueryFree   bool `json:"not_query_free"`   // 是否不查询免费使用场景
+	SortType       int  `json:"sort_type"`        // 排序类型 0=默认、 1=按销售数量、 2=按原销售额
+	SortDirection  int  `json:"sort_direction"`   // 排序方向 0=默认、 1=升序、 2=降序
 }
 
 // GetParam 获取参数
@@ -46,6 +48,8 @@ func (r *BusinessDataPrinterReq) GetParam(timezone string, openingHours string) 
 		QueryEndTime:   uint(queryEndTime),
 		CategoryType:   r.CategoryType,
 		NotQueryFree:   r.NotQueryFree,
+		SortType:       r.SortType,
+		SortDirection:  r.SortDirection,
 	}
 }
 
@@ -58,6 +62,8 @@ type BusinessDataCountReq struct {
 	DutyNo         string `form:"duty_no"`          // 班次编号
 	NotQueryFree   bool   `form:"not_query_free"`   // 是否不查询免费使用场景
 	StaffUuid      uint64 `form:"staff_uuid"`       // 操作员UUID
+	SortType       int    `form:"sort_type"`        // 排序类型 0=默认、 1=按销售数量、 2=按原销售额
+	SortDirection  int    `form:"sort_direction"`   // 排序方向 0=默认、 1=升序、 2=降序
 }
 
 // GetParam 获取参数
@@ -92,6 +98,8 @@ func (r *BusinessDataCountReq) GetParam(timezone string, openingHours string) Bu
 		CategoryType:   r.CategoryType,
 		DutyNo:         r.DutyNo,
 		NotQueryFree:   r.NotQueryFree,
+		SortType:       r.SortType,
+		SortDirection:  r.SortDirection,
 	}
 }
 

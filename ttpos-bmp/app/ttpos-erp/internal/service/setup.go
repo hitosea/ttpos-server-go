@@ -17,7 +17,7 @@ type (
 		// 参数：店铺名称和公司缩写编码
 		// 返回：ERP用户名和创建结果
 		CreateBranch(ctx context.Context, req *setup.InitShopReq) (branchName string, err error)
-		CreateUser(ctx context.Context, req *setup.InitShopReq) (userEmail string, err error)
+		CreateUser(ctx context.Context, req *erp.CreateUserInp) (userEmail string, err error)
 		// CreateWarehouse 创建仓库
 		// 参数：ctx 上下文，req 包含 shop_name、company_abbr
 		// 返回：仓库名称，错误信息

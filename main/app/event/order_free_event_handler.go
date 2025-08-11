@@ -40,6 +40,7 @@ func freeSaleOrderEventHandler() {
 					OrderProductId:        saleOrderProduct.Uuid,
 					ProductId:             saleOrderProduct.ProductPackageUuid,
 					ProductName:           saleOrderProduct.MultiLanguageName.GetNames(),
+					ProductType:           saleOrderProduct.ProductType,
 					ProductAttr:           saleOrderProduct.GetAttributeName(),
 					ProductAttrList:       saleOrderProduct.GetAttributeNameList(),
 					ProductSauceNamesList: saleOrderProduct.GetSauceNamesList(),

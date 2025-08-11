@@ -4,6 +4,7 @@ import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api"
 	"ttpos-bmp/app/ttpos-erp/api/company"
+	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
@@ -20,17 +21,11 @@ func Register(s *grpcx.GrpcServer) {
 
 func (*Controller) GetCompanyList(ctx context.Context, req *company.GetCompanyListReq) (res *api.ResponseInfo, err error) {
 	// 调用服务层, 这里不转换, 直接返回服务层的结果
-	resp, err := service.Company().GetCompanyList(ctx, req)
-	if err != nil {
-		return &api.ResponseInfo{
-			Code:    "1",
-			Message: err.Error(),
-		}, err
+	if resp, err := service.Company().GetCompanyList(ctx, req); err != nil {
+		res = rpc.ApiError(err.Error())
+	} else {
+		res = rpc.ApiSuccess("获取成功")
+		res.Data, _ = anypb.New(resp)
 	}
-	res = &api.ResponseInfo{
-		Code:    "0",
-		Message: "success",
-	}
-	res.Data, _ = anypb.New(resp)
-	return res, err
+	return
 }

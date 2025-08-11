@@ -200,7 +200,7 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 			if productMove.ProductAttr.GetLocale(language) != "" {
 				attrString = " (" + productMove.ProductAttr.GetLocale(language) + ")"
 			}
-			desc := fmt.Sprintf("%s %s *%f(%s%s)", productMove.ProductName.GetLocale(language), attrString, productMove.TotalNum, i18n.Translate(language, "转至"), productMove.ToTableNo)
+			desc := fmt.Sprintf("%s %s *%v(%s%s)", productMove.ProductName.GetLocale(language), attrString, productMove.TotalNum, i18n.Translate(language, "转至"), productMove.ToTableNo)
 			return ActionDescription{Desc: desc, SplitMessage: ""}
 		}
 	case constant.OrderDiscount: // 优惠折扣

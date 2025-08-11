@@ -520,6 +520,319 @@ func (h *ProductHandler) GetProductAttributeGroupList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetProductAttributeGroup 获取商品属性分组详情
+// @Summary 获取商品属性分组详情
+// @Description 获取商品属性分组详情
+// @Tags 商家端.商品属性分组
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param uuid query string false "商品属性分组UUID"
+// @Success 200 {object} product_resp.ProductAttributeGroupDetail "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/attribute/group [get]
+func (h *ProductHandler) GetProductAttributeGroup(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	attributeGroupReq := req.ProductAttributeGroupReq{}
+	if err := c.ShouldBindQuery(&attributeGroupReq); err != nil {
+		helper.HandleValidationError(c, err, attributeGroupReq, dto.PageReqMessage)
+		return
+	}
+	res, err := h.productSrv.GetProductAttributeGroup(ctx, attributeGroupReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
+// AddProductAttributeGroup 添加商品属性分组，商品属性一起添加
+// @Summary 添加商品属性分组，商品属性一起添加
+// @Description 添加商品属性分组，商品属性一起添加
+// @Tags 商家端.商品属性分组
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductAttributeGroupAddReq true "商品属性分组添加请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/attribute/group/add [post]
+func (h *ProductHandler) AddProductAttributeGroup(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	addReq := req.ProductAttributeGroupAddReq{}
+	if err := c.ShouldBindJSON(&addReq); err != nil {
+		helper.HandleValidationError(c, err, addReq, dto.PageReqMessage)
+		return
+	}
+	err := h.productSrv.AddProductAttributeGroup(ctx, addReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// GetProductFlavor 获取商品规格详情
+// @Summary 获取商品规格详情
+// @Description 获取商品规格详情
+// @Tags 商家端.商品规格
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param uuid query string false "商品规格UUID"
+// @Success 200 {object} product_resp.ProductFlavorDetailResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/flavor [get]
+func (h *ProductHandler) GetProductFlavor(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	flavorReq := req.ProductFlavorReq{}
+	if err := c.ShouldBindQuery(&flavorReq); err != nil {
+		helper.HandleValidationError(c, err, flavorReq, dto.PageReqMessage)
+		return
+	}
+	res, err := h.productSrv.GetProductFlavor(ctx, flavorReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
+// AddProductFlavor 添加商品规格
+// @Summary 添加商品规格
+// @Description 添加商品规格
+// @Tags 商家端.商品规格
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductFlavorAddReq true "商品规格添加请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/flavor/add [post]
+func (h *ProductHandler) AddProductFlavor(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	addReq := req.ProductFlavorAddReq{}
+	if err := c.ShouldBindJSON(&addReq); err != nil {
+		helper.HandleValidationError(c, err, addReq, dto.PageReqMessage)
+		return
+	}
+	err := h.productSrv.AddProductFlavor(ctx, addReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// GetProductFlavorList 获取商品规格列表
+// @Summary 获取商品规格列表
+// @Description 获取商品规格列表
+// @Tags 商家端.商品规格
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param page_no query int false "页码"
+// @Param page_size query int false "每页条数"
+// @Success 200 {object} product_resp.ProductFlavorListResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/flavor/list [get]
+func (h *ProductHandler) GetProductFlavorList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	flavorListReq := req.ProductFlavorListReq{}
+	if err := c.ShouldBindQuery(&flavorListReq); err != nil {
+		helper.HandleValidationError(c, err, flavorListReq, dto.PageReqMessage)
+		return
+	}
+	res, err := h.productSrv.GetProductFlavorList(ctx, flavorListReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
+// EditProductAttributeGroup 编辑商品属性分组，商品属性一起编辑
+// @Summary 编辑商品属性分组，商品属性一起编辑
+// @Description 编辑商品属性分组，商品属性一起编辑
+// @Tags 商家端.商品属性分组
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductAttributeGroupEditReq true "商品属性分组编辑请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/attribute/group/edit [post]
+func (h *ProductHandler) EditProductAttributeGroup(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	editReq := req.ProductAttributeGroupEditReq{}
+	if err := c.ShouldBindJSON(&editReq); err != nil {
+		helper.HandleValidationError(c, err, editReq, dto.PageReqMessage)
+		return
+	}
+	err := h.productSrv.EditProductAttributeGroup(ctx, editReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// DeleteProductAttributeGroup 删除商品属性分组
+// @Summary 删除商品属性分组
+// @Description 删除商品属性分组
+// @Tags 商家端.商品属性分组
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductAttributeGroupReq true "商品属性分组删除请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/attribute/group [delete]
+func (h *ProductHandler) DeleteProductAttributeGroup(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	deleteReq := req.ProductAttributeGroupReq{}
+	if err := c.ShouldBindJSON(&deleteReq); err != nil {
+		helper.HandleValidationError(c, err, deleteReq, dto.PageReqMessage)
+		return
+	}
+	err := h.productSrv.DeleteProductAttributeGroup(ctx, deleteReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// DeleteProductFlavor 删除商品规格
+// @Summary 删除商品规格
+// @Description 删除商品规格
+// @Tags 商家端.商品规格
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductFlavorDeleteReq true "商品规格删除请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/flavor [delete]
+func (h *ProductHandler) DeleteProductFlavor(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	deleteReq := req.ProductFlavorDeleteReq{}
+	if err := c.ShouldBindJSON(&deleteReq); err != nil {
+		helper.HandleValidationError(c, err, deleteReq, dto.PageReqMessage)
+		return
+	}
+	err := h.productSrv.DeleteProductFlavor(ctx, deleteReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// SortProductAttributeGroup 排序商品属性分组
+// @Summary 排序商品属性分组
+// @Description 排序商品属性分组
+// @Tags 商家端.商品属性分组
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductAttributeGroupSortReq true "商品属性分组排序请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/attribute/group/sort [post]
+func (h *ProductHandler) SortProductAttributeGroup(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	sortReq := req.ProductAttributeGroupSortReq{}
+	if err := c.ShouldBindJSON(&sortReq); err != nil {
+		helper.HandleValidationError(c, err, sortReq, dto.PageReqMessage)
+		return
+	}
+	err := h.productSrv.SortProductAttributeGroup(ctx, sortReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// SortProductFlavor 排序商品规格
+// @Summary 排序商品规格
+// @Description 排序商品规格
+// @Tags 商家端.商品规格
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductFlavorSortReq true "商品规格排序请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/flavor/sort [post]
+func (h *ProductHandler) SortProductFlavor(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	sortReq := req.ProductFlavorSortReq{}
+	if err := c.ShouldBindJSON(&sortReq); err != nil {
+		helper.HandleValidationError(c, err, sortReq, dto.PageReqMessage)
+		return
+	}
+	err := h.productSrv.SortProductFlavor(ctx, sortReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// SortProductAttribute 排序商品属性
+// @Summary 排序商品属性
+// @Description 排序商品属性
+// @Tags 商家端.商品属性
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductAttributeSortReq true "商品属性排序请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/attribute/sort [post]
+func (h *ProductHandler) SortProductAttribute(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	sortReq := req.ProductAttributeSortReq{}
+	if err := c.ShouldBindJSON(&sortReq); err != nil {
+		helper.HandleValidationError(c, err, sortReq, dto.PageReqMessage)
+		return
+	}
+	err := h.productSrv.SortProductAttribute(ctx, sortReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// EditProductFlavor 编辑商品规格
+// @Summary 编辑商品规格
+// @Description 编辑商品规格
+// @Tags 商家端.商品规格
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProdudctFlavorEditReq true "商品规格编辑请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/flavor/edit [post]
+func (h *ProductHandler) EditProductFlavor(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	editReq := req.ProdudctFlavorEditReq{}
+	if err := c.ShouldBindJSON(&editReq); err != nil {
+		helper.HandleValidationError(c, err, editReq, dto.PageReqMessage)
+		return
+	}
+	err := h.productSrv.EditProductFlavor(ctx, editReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
 func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -564,10 +877,23 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/product/sauce/sort", wrapper.SortProductSauce)   // 排序商品加料
 
 		privateApi.GET("/product/attribute/group/list", wrapper.GetProductAttributeGroupList) // 获取商品属性分组列表
+		privateApi.GET("/product/attribute/group", wrapper.GetProductAttributeGroup)          // 获取商品属性分组详情
+		privateApi.POST("/product/attribute/group/add", wrapper.AddProductAttributeGroup)     // 添加商品属性分组，商品属性一起添加
+		privateApi.POST("/product/attribute/group/edit", wrapper.EditProductAttributeGroup)   // 编辑商品属性分组，商品属性一起编辑
+		privateApi.DELETE("/product/attribute/group", wrapper.DeleteProductAttributeGroup)    // 删除商品属性组
+		privateApi.POST("/product/attribute/group/sort", wrapper.SortProductAttributeGroup)   // 排序商品属性组
+		privateApi.GET("/product/attribute/sort", wrapper.SortProductAttribute)               // 排序商品属性
 		// privateApi.GET("/product/attribute/group", wrapper.GetProductAttributeGroup)          // 获取商品属性分组详情
 		// privateApi.POST("/product/attribute/add", wrapper.AddProductAttribute)     // 添加商品属性
 		// privateApi.POST("/product/attribute/edit", wrapper.EditProductAttribute)   // 编辑商品属性
 		// privateApi.DELETE("/product/attribute", wrapper.DeleteProductAttribute)    // 删除商品属性
 		// privateApi.POST("/product/attribute/sort", wrapper.SortProductAttribute)   // 排序商品属性
+
+		privateApi.GET("/product/flavor/list", wrapper.GetProductFlavorList) // 获取商品规格列表
+		privateApi.GET("/product/flavor", wrapper.GetProductFlavor)          // 获取商品规格详情
+		privateApi.POST("/product/flavor/add", wrapper.AddProductFlavor)     // 添加商品规格
+		privateApi.POST("/product/flavor/edit", wrapper.EditProductFlavor)   // 编辑商品规格
+		privateApi.DELETE("/product/flavor", wrapper.DeleteProductFlavor)    // 删除商品规格
+		privateApi.POST("/product/flavor/sort", wrapper.SortProductFlavor)   // 排序商品规格
 	}
 }

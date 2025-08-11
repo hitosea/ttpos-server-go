@@ -13,8 +13,14 @@ type ProductFlavor struct {
 	BaseModel
 	Name                  string `gorm:"default:'';column:name;comment:'名称'"`
 	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
+	Sort                  int    `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
+
+	ProductBoms []ProductBom `gorm:"foreignKey:product_flavor_uuid;references:uuid"`
+
+	// 表里面没有这个product_package_count字段，但是查询的时候会自动统计关联商品数量
+	ProductPackageCount int `gorm:"->"`
 }
 
 // ProductSauce 商品小料表,定义商品小料的相关信息 ttpos_product_sauce
@@ -66,6 +72,7 @@ type ProductAttributeGroup struct {
 	BaseModel
 	Name                  string `gorm:"default:'';column:name;comment:'名称'"`
 	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
+	Sort                  int    `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
 
 	MultiLanguageName MultiLanguageName  `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 	ProductAttributes []ProductAttribute `gorm:"foreignKey:attribute_group_uuid;references:uuid"`     // 商品属性
@@ -77,6 +84,10 @@ type ProductAttribute struct {
 	Name                  string `gorm:"default:'';column:name;comment:'名称'"`
 	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	AttributeGroupUuid    uint64 `gorm:"default:0;column:attribute_group_uuid;comment:'属性组UUID'"`
+	Sort                  int    `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
+
+	// 关联ttpos_product_package_attribute，ttpos_product_package_attribute的attribute_uuid等于当前商品属性的uuid
+	ProductPackageAttributes []ProductPackageAttribute `gorm:"foreignKey:attribute_uuid;references:uuid"` // 产品包属性
 
 	MultiLanguageName MultiLanguageName     `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 	AttributeGroup    ProductAttributeGroup `gorm:"foreignKey:attribute_group_uuid;references:uuid"`     // 属性组
@@ -89,6 +100,8 @@ type ProductPackageAttributeGroup struct {
 	MaxSelection              uint   `gorm:"default:0;column:max_selection;comment:'最大选择数量'"`
 	ProductPackageUuid        uint64 `gorm:"default:0;column:product_package_uuid;comment:'产品包UUID'"`
 	ProductAttributeGroupUuid uint64 `gorm:"default:0;column:product_attribute_group_uuid;comment:'商品属性组UUID'"`
+	// 关联ttpos_product_package
+	ProductPackage ProductPackage `gorm:"foreignKey:product_package_uuid;references:uuid" json:"-"` // 产品包
 
 	ProductAttributeGroup    ProductAttributeGroup     `gorm:"foreignKey:product_attribute_group_uuid;references:uuid" json:"-"` // 商品属性组
 	ProductPackageAttributes []ProductPackageAttribute `gorm:"foreignKey:product_package_attribute_group_uuid;references:uuid"`  // 产品包属性
@@ -110,7 +123,9 @@ type ProductPackageAttribute struct {
 	AttributeUuid                    uint64 `gorm:"default:0;column:attribute_uuid;comment:'产品属性UUID'"`
 	IsDefaultSelected                uint   `gorm:"default:0;column:is_default_selected;comment:'是否默认选中, 0-否 1-是'"`
 
-	Attribute ProductAttribute `gorm:"foreignKey:attribute_uuid;references:uuid" json:"-"` // 产品属性
+	// 关联ttpos_product_package_attribute_group
+	ProductPackageAttributeGroup ProductPackageAttributeGroup `gorm:"foreignKey:product_package_attribute_group_uuid;references:uuid" json:"-"` // 产品包属性组
+	Attribute                    ProductAttribute             `gorm:"foreignKey:attribute_uuid;references:uuid" json:"-"`                       // 产品属性
 }
 
 func (model *ProductPackageAttribute) SetNil() {

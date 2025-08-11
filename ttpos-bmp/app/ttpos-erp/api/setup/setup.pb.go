@@ -96,6 +96,7 @@ func (x *InitShopReq) GetAdminUuid() string {
 type CreatePosUserReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserEmail     string                 `protobuf:"bytes,1,opt,name=user_email,json=userEmail,proto3" json:"user_email,omitempty" dc:"用户邮箱，必填"` // 用户邮箱，必填
+	UserName      string                 `protobuf:"bytes,2,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty" dc:"用户名称，必填"`    // 用户名称，必填
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -137,6 +138,65 @@ func (x *CreatePosUserReq) GetUserEmail() string {
 	return ""
 }
 
+func (x *CreatePosUserReq) GetUserName() string {
+	if x != nil {
+		return x.UserName
+	}
+	return ""
+}
+
+type CreatePosUserResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserEmail     string                 `protobuf:"bytes,1,opt,name=user_email,json=userEmail,proto3" json:"user_email,omitempty" dc:"用户邮箱"` // 用户邮箱
+	UserName      string                 `protobuf:"bytes,2,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty" dc:"用户名称"`    // 用户名称
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreatePosUserResp) Reset() {
+	*x = CreatePosUserResp{}
+	mi := &file_setup_setup_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreatePosUserResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreatePosUserResp) ProtoMessage() {}
+
+func (x *CreatePosUserResp) ProtoReflect() protoreflect.Message {
+	mi := &file_setup_setup_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreatePosUserResp.ProtoReflect.Descriptor instead.
+func (*CreatePosUserResp) Descriptor() ([]byte, []int) {
+	return file_setup_setup_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *CreatePosUserResp) GetUserEmail() string {
+	if x != nil {
+		return x.UserEmail
+	}
+	return ""
+}
+
+func (x *CreatePosUserResp) GetUserName() string {
+	if x != nil {
+		return x.UserName
+	}
+	return ""
+}
+
 // 创建分店响应消息
 // 服务端返回的创建分店结果
 type InitShopResp struct {
@@ -148,7 +208,7 @@ type InitShopResp struct {
 
 func (x *InitShopResp) Reset() {
 	*x = InitShopResp{}
-	mi := &file_setup_setup_proto_msgTypes[2]
+	mi := &file_setup_setup_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -160,7 +220,7 @@ func (x *InitShopResp) String() string {
 func (*InitShopResp) ProtoMessage() {}
 
 func (x *InitShopResp) ProtoReflect() protoreflect.Message {
-	mi := &file_setup_setup_proto_msgTypes[2]
+	mi := &file_setup_setup_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -173,7 +233,7 @@ func (x *InitShopResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InitShopResp.ProtoReflect.Descriptor instead.
 func (*InitShopResp) Descriptor() ([]byte, []int) {
-	return file_setup_setup_proto_rawDescGZIP(), []int{2}
+	return file_setup_setup_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *InitShopResp) GetBranchName() string {
@@ -193,10 +253,15 @@ const file_setup_setup_proto_rawDesc = "" +
 	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12\x1b\n" +
 	"\tshop_uuid\x18\x03 \x01(\tR\bshopUuid\x12\x1d\n" +
 	"\n" +
-	"admin_uuid\x18\x04 \x01(\tR\tadminUuid\"1\n" +
+	"admin_uuid\x18\x04 \x01(\tR\tadminUuid\"N\n" +
 	"\x10CreatePosUserReq\x12\x1d\n" +
 	"\n" +
-	"user_email\x18\x01 \x01(\tR\tuserEmail\"/\n" +
+	"user_email\x18\x01 \x01(\tR\tuserEmail\x12\x1b\n" +
+	"\tuser_name\x18\x02 \x01(\tR\buserName\"O\n" +
+	"\x11CreatePosUserResp\x12\x1d\n" +
+	"\n" +
+	"user_email\x18\x01 \x01(\tR\tuserEmail\x12\x1b\n" +
+	"\tuser_name\x18\x02 \x01(\tR\buserName\"/\n" +
 	"\fInitShopResp\x12\x1f\n" +
 	"\vbranch_name\x18\x01 \x01(\tR\n" +
 	"branchName2~\n" +
@@ -216,18 +281,19 @@ func file_setup_setup_proto_rawDescGZIP() []byte {
 	return file_setup_setup_proto_rawDescData
 }
 
-var file_setup_setup_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_setup_setup_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_setup_setup_proto_goTypes = []any{
-	(*InitShopReq)(nil),      // 0: setup.InitShopReq
-	(*CreatePosUserReq)(nil), // 1: setup.CreatePosUserReq
-	(*InitShopResp)(nil),     // 2: setup.InitShopResp
-	(*api.ResponseInfo)(nil), // 3: erp.ResponseInfo
+	(*InitShopReq)(nil),       // 0: setup.InitShopReq
+	(*CreatePosUserReq)(nil),  // 1: setup.CreatePosUserReq
+	(*CreatePosUserResp)(nil), // 2: setup.CreatePosUserResp
+	(*InitShopResp)(nil),      // 3: setup.InitShopResp
+	(*api.ResponseInfo)(nil),  // 4: erp.ResponseInfo
 }
 var file_setup_setup_proto_depIdxs = []int32{
 	0, // 0: setup.SetupService.InitShop:input_type -> setup.InitShopReq
 	1, // 1: setup.SetupService.CreatePosUser:input_type -> setup.CreatePosUserReq
-	3, // 2: setup.SetupService.InitShop:output_type -> erp.ResponseInfo
-	3, // 3: setup.SetupService.CreatePosUser:output_type -> erp.ResponseInfo
+	4, // 2: setup.SetupService.InitShop:output_type -> erp.ResponseInfo
+	4, // 3: setup.SetupService.CreatePosUser:output_type -> erp.ResponseInfo
 	2, // [2:4] is the sub-list for method output_type
 	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
@@ -246,7 +312,7 @@ func file_setup_setup_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_setup_setup_proto_rawDesc), len(file_setup_setup_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

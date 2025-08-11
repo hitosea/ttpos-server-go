@@ -4,6 +4,7 @@ package template
 import (
 	"fmt"
 
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/app/printer/printer_model"
@@ -367,6 +368,11 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 	order model.SaleBill,
 	products printer_model.Products,
 ) string {
+
+	if len(products) == 0 {
+		return ""
+	}
+
 	// 人的翻译
 	name := t.base.Translate("人")
 	// 自助餐标记开关
@@ -378,8 +384,6 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 	if order.MealNum > 0 {
 		mealNumStr = fmt.Sprintf(" (%d%s)", order.MealNum, name)
 	}
-	// 是否有打印内容
-	isPrinter := false
 
 	// 创建打印机实例
 	img := pkg.NewImgFont(568, 0, 0)
@@ -441,80 +445,81 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 	img.SetTextLineHeight(50)
 
 	// 商品和数量
-	for _, product := range products {
-		// 处理自助餐文本
-		buffetText := ""
-		if buffetSignOpen == "1" {
-			if product.IsBuffet {
-				buffetText = t.base.Translate("自助餐") + "-"
+	var processProducts func(products printer_model.Products, isSubProduct bool)
+	processProducts = func(products printer_model.Products, isSubProduct bool) {
+		for _, product := range products {
+			// 处理自助餐文本
+			buffetText := ""
+			if buffetSignOpen == "1" {
+				if product.IsBuffet {
+					buffetText = t.base.Translate("自助餐") + "-"
+				}
 			}
-		}
 
-		// 产品名称
-		productName := utils.IfString(tmp == 2, "!!!", "") + "(" + t.base.Translate("退") + ") " + buffetText + product.ProductName.GetLocale(t.base.Lang)
-		if t.base.Lang == "my" {
-			img.SetTextLineHeight(90)
-		} else {
-			img.SetTextLineHeight(64)
-		}
-		img.LineFeed(1, 12)
+			// 产品名称
+			productName := utils.IfString(tmp == 2, "!!!", "") + "(" + t.base.Translate("退") + ") " + buffetText + product.ProductName.GetLocale(t.base.Lang)
+			if isSubProduct {
+				productName = "--" + buffetText + product.ProductName.GetLocale(t.base.Lang)
+			}
 
-		// 打印产品名称和数量
-		totalNum := utils.IfString(tmp == 2, "-", "x") + t.base.FloatToString(product.TotalNum)
-		productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*7), 480)
-		img.PrintInColumns(
-			pkg.ColumnConfig{Text: productName, Width: productNameWidth, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
-			pkg.ColumnConfig{Text: totalNum, Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},
-		)
-		if t.base.Lang == "my" {
+			// 设置行间距
+			img.SetTextLineHeight(utils.IfInt(t.base.Lang == "my", 90, 64))
 			img.LineFeed(1, 12)
-		}
 
-		// 分割处理属性
-		for _, attr := range product.ProductAttrList {
+			// 打印产品名称和数量
+			totalNum := utils.IfString(tmp == 2, "-", "x") + t.base.FloatToString(product.TotalNum)
+			productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*7), 480)
+			img.PrintInColumns(
+				pkg.ColumnConfig{Text: productName, Width: productNameWidth, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
+				pkg.ColumnConfig{Text: totalNum, Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},
+			)
 			if t.base.Lang == "my" {
-				img.SetTextLineHeight(50)
-			} else {
-				img.SetTextLineHeight(40)
+				img.LineFeed(1, 12)
 			}
-			img.AppendText(attr.GetLocale(t.base.Lang))
-			img.LineFeed(1, 50)
-		}
 
-		if product.Remark != "" {
-			if t.base.IsMyText(product.Remark) {
-				img.SetTextLineHeight(50)
-			} else {
-				img.SetTextLineHeight(40)
+			// 分割处理属性
+			for _, attr := range product.ProductAttrList {
+				if attr.GetLocale(t.base.Lang) == "" {
+					continue
+				}
+				img.SetTextLineHeight(utils.IfInt(t.base.Lang == "my", 50, 40))
+				img.AppendText(utils.IfString(isSubProduct, "  ", "") + attr.GetLocale(t.base.Lang))
+				img.LineFeed(1, 50)
 			}
-			img.AppendText(product.Remark)
-			img.LineFeed(1, 50)
-		}
 
-		img.LineFeed(1, 12)
-		img.SetTextLineHeight(50)
-
-		// 标记已打印
-		isPrinter = true
-
-		// 退菜原因
-		img.AppendSplitLine()
-		img.LineFeed(1, 34)
-		// 获取退菜原因文本
-		reasonText := product.Reason.GetLocale(t.base.Lang)
-		// 如果有自定义原因，则添加
-		if product.CustomReason != "" {
-			if reasonText != "" {
-				reasonText += "、"
+			if product.Remark != "" {
+				img.SetTextLineHeight(utils.IfInt(t.base.IsMyText(product.Remark), 50, 40))
+				img.AppendText(product.Remark)
+				img.LineFeed(1, 50)
 			}
-			reasonText += product.CustomReason
+
+			img.LineFeed(1, 12)
+			img.SetTextLineHeight(50)
+
+			// 打印套餐子商品
+			if len(product.SubProducts) > 0 {
+				processProducts(product.SubProducts, true)
+			}
+
+			// 退菜原因
+			if !isSubProduct {
+				img.AppendSplitLine()
+				img.LineFeed(1, 34)
+				// 获取退菜原因文本
+				reasonText := product.Reason.GetLocale(t.base.Lang)
+				// 如果有自定义原因，则添加
+				if product.CustomReason != "" {
+					if reasonText != "" {
+						reasonText += "、"
+					}
+					reasonText += product.CustomReason
+				}
+				img.AppendText(fmt.Sprintf("%s： %s", t.base.Translate("退菜原因"), reasonText))
+			}
+
 		}
-		img.AppendText(fmt.Sprintf("%s： %s", t.base.Translate("退菜原因"), reasonText))
 	}
-
-	if !isPrinter {
-		return ""
-	}
+	processProducts(products, false)
 
 	// 换行
 	if tmp == 2 {
@@ -546,6 +551,11 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 	products printer_model.Products,
 	finishedTime int64,
 ) string {
+
+	if len(products) == 0 {
+		return ""
+	}
+
 	// 人的翻译
 	name := t.base.Translate("人")
 	// 自助餐标记开关
@@ -557,8 +567,6 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 	if order.MealNum > 0 {
 		mealNumStr = fmt.Sprintf(" (%d%s)", order.MealNum, name)
 	}
-	// 是否有打印内容
-	isPrinter := false
 
 	// 创建打印机实例
 	img := pkg.NewImgFont(568, 0, 0)
@@ -629,13 +637,16 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 			wrapText = "(" + t.base.Translate("打包") + ") "
 		}
 
-		// 产品名称
-		productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
-		if t.base.Lang == "my" {
-			img.SetTextLineHeight(90)
-		} else {
-			img.SetTextLineHeight(64)
+		// 套餐
+		packageText := ""
+		if product.ProductType > constant.ProductTypeProduct {
+			packageText = t.base.Translate("套餐") + "-"
 		}
+
+		// 产品名称
+		productName := packageText + wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
+		// 套餐-
+		img.SetTextLineHeight(utils.IfInt(t.base.Lang == "my", 90, 64))
 		img.LineFeed(1, 12)
 
 		// 打印产品名称和数量
@@ -651,34 +662,19 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 
 		// 分割处理属性
 		for _, attr := range product.ProductAttrList {
-			if t.base.Lang == "my" {
-				img.SetTextLineHeight(50)
-			} else {
-				img.SetTextLineHeight(40)
-			}
+			img.SetTextLineHeight(utils.IfInt(t.base.Lang == "my", 50, 40))
 			img.AppendText(attr.GetLocale(t.base.Lang))
 			img.LineFeed(1, 50)
 		}
 
 		if product.Remark != "" {
-			if t.base.IsMyText(product.Remark) {
-				img.SetTextLineHeight(50)
-			} else {
-				img.SetTextLineHeight(40)
-			}
+			img.SetTextLineHeight(utils.IfInt(t.base.IsMyText(product.Remark), 50, 40))
 			img.AppendText(product.Remark)
 			img.LineFeed(1, 50)
 		}
 
 		img.LineFeed(1, 12)
 		img.SetTextLineHeight(50)
-
-		// 标记已打印
-		isPrinter = true
-	}
-
-	if !isPrinter {
-		return ""
 	}
 
 	// 设置行间距

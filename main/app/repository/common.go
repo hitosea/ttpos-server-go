@@ -129,6 +129,7 @@ type ICommonRepo interface {
 	WhereByCountGtZero() DBOption                                       // 根据count大于零查询
 	WhereByValidTime() DBOption                                         // 是否在有效期内
 	WhereByStartTimeEndTime() DBOption                                  // 是否在有效期内
+	WhereLike(field string, keyword string) DBOption                    // 根据字段模糊查询
 	DBOption(opt DBOption) func(*gorm.DB) *gorm.DB                      // 将DBOption转为func(*gorm.DB) *gorm.DB
 	Transaction(db *gorm.DB, fn func(tx *gorm.DB) error) error          // 事务
 }
@@ -542,6 +543,12 @@ func (r *commonRepo) WhereByStartTimeEndTime() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		nowTimestamp := time.Now().Unix()
 		return db.Where("start_time <= ? AND end_time >= ?", nowTimestamp, nowTimestamp)
+	}
+}
+
+func (r *commonRepo) WhereLike(field string, keyword string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where(field+" LIKE ?", Like(keyword))
 	}
 }
 
