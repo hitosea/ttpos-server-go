@@ -775,6 +775,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 								CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
 									return db.Order("id asc")
 								}),
+								CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 							},
 						},
 					),
@@ -790,6 +791,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 								CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
 									return db.Order("product_bom_uuid asc")
 								}),
+								CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 							},
 						},
 					),
@@ -898,6 +900,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 								CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
 									return db.Order("id asc")
 								}),
+								CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 							},
 						},
 					),
@@ -913,6 +916,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 								CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
 									return db.Order("product_bom_uuid asc")
 								}),
+								CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 							},
 						},
 					),
@@ -1012,6 +1016,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 							CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
 								return db.Order("id asc")
 							}),
+							CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 						},
 					},
 				),
@@ -1027,6 +1032,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 							CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
 								return db.Order("product_bom_uuid asc")
 							}),
+							CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 						},
 					},
 				),
@@ -1851,6 +1857,7 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64, opts ...GetSaleBillA
 					CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
 						return db.Order("id asc")
 					}),
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 				},
 			},
 			WithPreload{
@@ -1863,6 +1870,7 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64, opts ...GetSaleBillA
 					CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
 						return db.Order("product_bom_uuid asc")
 					}),
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 				},
 			},
 			WithPreload{

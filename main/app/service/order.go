@@ -5146,11 +5146,13 @@ func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context,
 		if errFlavorProductBom != nil {
 			return nil, errors.WithMessage(errFlavorProductBom)
 		}
-		saleOrderProduct.SaleOrderProductBoms = append(saleOrderProduct.SaleOrderProductBoms, model.NewSaleOrderProductFlavor(saleOrderProduct.Uuid, saleOrder.Uuid, model.Flavor{
+		flavor := model.NewSaleOrderProductFlavor(saleOrderProduct.Uuid, saleOrder.Uuid, model.Flavor{
 			Name:           flavorProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 			Price:          flavorProductBom.Price,
 			ProductBomUuid: request.FlavorUuid,
-		}))
+		})
+		flavor.SetUpdate()
+		saleOrderProduct.SaleOrderProductBoms = append(saleOrderProduct.SaleOrderProductBoms, flavor)
 		// 添加新加料
 		sauceProductBoms, errSauceProductBoms := GetSauceInfo(ctx, db, request.SauceUuidList, saleOrderProduct.Num)
 		if errSauceProductBoms != nil {
@@ -5166,7 +5168,9 @@ func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context,
 			sauces = append(sauces, sauce)
 		}
 		for _, sauce := range sauces {
-			saleOrderProduct.SaleOrderProductBoms = append(saleOrderProduct.SaleOrderProductBoms, model.NewSaleOrderProductSauce(saleOrderProduct.Uuid, saleOrder.Uuid, sauce))
+			sauce := model.NewSaleOrderProductSauce(saleOrderProduct.Uuid, saleOrder.Uuid, sauce)
+			sauce.SetUpdate()
+			saleOrderProduct.SaleOrderProductBoms = append(saleOrderProduct.SaleOrderProductBoms, sauce)
 		}
 		// 添加新属性
 		productAttributes, errProductAttributes := GetAttributeInfo(ctx, db, request.AttributeUuidList)
@@ -5174,11 +5178,13 @@ func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context,
 			return nil, errors.WithMessage(errProductAttributes)
 		}
 		for _, productAttribute := range productAttributes {
-			saleOrderProduct.SaleOrderProductAttributes = append(saleOrderProduct.SaleOrderProductAttributes,
-				model.NewSaleOrderProductAttribute(saleOrderProduct.Uuid, saleOrder.Uuid, model.Attribute{
-					Name:                 productAttribute.Attribute.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
-					ProductAttributeUuid: productAttribute.Attribute.Uuid,
-				}))
+			attribute := model.NewSaleOrderProductAttribute(saleOrderProduct.Uuid, saleOrder.Uuid, model.Attribute{
+				Name:                        productAttribute.Attribute.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
+				ProductAttributeUuid:        productAttribute.Attribute.Uuid,
+				ProductPackageAttributeUuid: productAttribute.Uuid,
+			})
+			attribute.SetUpdate()
+			saleOrderProduct.SaleOrderProductAttributes = append(saleOrderProduct.SaleOrderProductAttributes, attribute)
 		}
 
 		// 从新计算订单并保存
@@ -10427,7 +10433,14 @@ func CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleB
 				}
 				for _, saleOrderProductBom := range saleOrderProduct.SaleOrderProductBoms {
 					if saleOrderProductBom.GetUpdate() {
-						if err := repository.NewOrderProductBomRepo(db).UpdateSaleOrderProductBomRecord(*saleOrderProductBom); err != nil {
+						if err := repository.NewOrderProductBomRepo(db).UpdateOrCreateSaleOrderProductBomRecord(*saleOrderProductBom); err != nil {
+							return errors.WithMessage(err)
+						}
+					}
+				}
+				for _, saleOrderProductAttribute := range saleOrderProduct.SaleOrderProductAttributes {
+					if saleOrderProductAttribute.GetUpdate() {
+						if err := repository.NewSaleOrderProductAttributeRepo(db).UpdateOrCreateSaleOrderProductAttributeRecord(*saleOrderProductAttribute); err != nil {
 							return errors.WithMessage(err)
 						}
 					}
