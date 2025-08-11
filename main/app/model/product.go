@@ -180,6 +180,22 @@ func (model *ProductPackage) SetNil() {
 	model.ImageFile = File{}
 }
 
+// 判断商品包是否是单规格商品且没有属性的商品
+func (model *ProductPackage) IsSingleFlavor() bool {
+	return len(model.GetFlavorList()) == 1 && len(model.ProductPackageAttributeGroups) == 0
+}
+
+// 获取商品包的商品规格列表
+func (model *ProductPackage) GetFlavorList() []ProductBom {
+	flavorList := make([]ProductBom, 0)
+	for _, bom := range model.ProductBoms {
+		if bom.IsFlavor() {
+			flavorList = append(flavorList, bom)
+		}
+	}
+	return flavorList
+}
+
 // IsCookingDeductStock 判断商品包是否是下单减库存
 func (model *ProductPackage) IsCookingDeductStock() bool {
 	return model.DeductStockType == constant.ProductPackageDeductStockTypeCooking

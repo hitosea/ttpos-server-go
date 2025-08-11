@@ -345,6 +345,26 @@ func (model *SaleOrderProduct) IsSubOperation() bool {
 	return model.operation == "sub"
 }
 
+// 判断购物车中的商品是否可以编辑。只有套餐商品和非单规格的商品可以编辑
+func (model *SaleOrderProduct) CanEdit() bool {
+	// 套餐商品可以编辑
+	if model.IsPackageProduct() {
+		return true
+	}
+	// 不是单规格的商品可以编辑
+	if !model.IsSingleFlavorPackageProduct() {
+		return true
+	}
+
+	// 默认不可编辑
+	return false
+}
+
+// 判断套餐商品是否是单规格商品
+func (model *SaleOrderProduct) IsSingleFlavorPackageProduct() bool {
+	return model.ProductPackage.IsSingleFlavor()
+}
+
 // 设置打包时间
 func (model *SaleOrderProduct) SetWrap() {
 	defer model.SetUpdate() // 标记要更新model

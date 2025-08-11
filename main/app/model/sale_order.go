@@ -594,6 +594,7 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []res
 			PackageProductList: resp.PackageProductList{
 				List: packageProductList,
 			},
+			CanEdit: saleOrderProduct.CanEdit(),
 		}
 		if saleOrderProduct.ProductionOrderProduct != nil {
 			if saleOrderProduct.ProductionOrderProduct.Status == constant.ProductionOrderProductStatusFinished {

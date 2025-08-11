@@ -15,7 +15,7 @@ type ProductFlavorAndAttributeRes struct {
 
 // 商品信息
 type ProductInfo struct {
-	Product                product_resp.Product     `json:"product"`                  // 商品信息
+	Product                product_resp.Product     `json:"product"`                  // 商品/套餐信息
 	SelectedProduct        *ProductPackageDetail    `json:"selected_product"`         // 已选购的商品信息
 	SelectedProductPackage *ProductSelectedInfoList `json:"selected_product_package"` // 已选购的商品套餐信息
 }
@@ -196,6 +196,7 @@ type Product struct {
 	IsShowKitchen       uint               `json:"is_show_kitchen"`       // 是否在厨显端显示
 	ProductType         uint               `json:"product_type"`          // 商品类型 0-商品 1-套餐
 	PackageProductList  PackageProductList `json:"package_product_list"`  // 套餐商品列表
+	CanEdit             bool               `json:"can_edit"`              // 是否可以编辑
 	// 后端使用，前端不返回
 	CreateTime         int64   `json:"-"` // 创建时间（点餐助手未送厨）
 	SendKitchenTime    int64   `json:"-"` // 送厨时间
