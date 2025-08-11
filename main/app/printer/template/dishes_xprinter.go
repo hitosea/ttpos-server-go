@@ -147,7 +147,7 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 				}
 				// 打包商品
 				wrapText := ""
-				if product.IsWrap {
+				if product.IsWrap && !isSubProduct {
 					wrapText = "(" + t.base.Translate("打包") + ") "
 				}
 				// 产品名称
@@ -290,7 +290,7 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 				}
 				// 打包商品
 				wrapText := ""
-				if product.IsWrap {
+				if product.IsWrap && !isSubProduct {
 					wrapText = "(" + t.base.Translate("打包") + ") "
 				}
 				// 产品名称

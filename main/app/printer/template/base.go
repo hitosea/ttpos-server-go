@@ -618,12 +618,7 @@ func (p *printerTemplate) PrintCompleteOrderImgProducts(
 		}
 
 		if tmp == 2 || tmp == 3 {
-			if p.Lang == "my" {
-				img.SetTextLineHeight(75)
-			} else {
-				img.SetTextLineHeight(60)
-			}
-			img.SetTextLineHeight(60)
+			img.SetTextLineHeight(utils.IfInt(p.Lang == "my", 75, 60))
 		} else {
 			img.SetTextLineHeight(50)
 		}
@@ -631,7 +626,7 @@ func (p *printerTemplate) PrintCompleteOrderImgProducts(
 
 		// 打包商品
 		wrapText := ""
-		if product.IsWrap {
+		if product.IsWrap && len(opts) == 0 {
 			wrapText = "(" + p.Translate("打包") + ") "
 		}
 
