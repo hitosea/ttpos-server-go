@@ -7046,7 +7046,6 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		newSaleOrderProduct.SetNum(req.Num)
 		newSaleOrderProduct.SetCancelInfo(req.Reason, returnFoodReasonList)
 		sameSignSaleOrderProduct := saleOrder.GetSaleOrderProductBySign(newSaleOrderProduct.Sign)
-		//sameSignSaleOrderProduct := saleOrder.GetSaleOrderProductBySign(saleOrderProduct.Sign)
 		if sameSignSaleOrderProduct != nil {
 			// 有相同签名的商品。将两个商品合并，数量相加
 			sameSignSaleOrderProduct.SetNum(sameSignSaleOrderProduct.Num + req.Num)
@@ -7127,6 +7126,16 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 				}
 			}
 		}
+
+		// 更新旧的子商品的数量
+		if saleOrderProduct.IsPackageProduct() {
+			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+			for _, subProduct := range subProducts {
+				unitNum := decimal.NewFromFloat(subProduct.UnitNum)
+				num := decimal.NewFromFloat(keepNum).Mul(unitNum).Round(3).InexactFloat64()
+				subProduct.SetNum(num)
+			}
+		}
 	}
 
 	// 如果退菜商品是下单减库存的商品，则需要创建入库单
@@ -7179,6 +7188,19 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 				return errors.WithMessage(err)
 			}
 		}
+
+		// 修改送厨子商品的数量
+		if saleOrderProduct.IsPackageProduct() {
+			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+			for _, subProduct := range subProducts {
+				num := utils.IfFloat64(subProduct.IsDelete(), 0, subProduct.Num)
+				if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereSaleOrderProductUuid(subProduct.Uuid)},
+					map[string]any{"num": num}); err != nil {
+					return errors.WithMessage(err)
+				}
+			}
+		}
+
 		return nil
 	}); errUpdateDB != nil {
 		return nil, errors.WithMessage(errUpdateDB, "更新数据失败")
