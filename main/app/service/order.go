@@ -5541,8 +5541,9 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		}
 		for _, productAttribute := range productAttributeSlice {
 			attribute := model.Attribute{
-				Name:                 productAttribute.Attribute.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
-				ProductAttributeUuid: productAttribute.Attribute.Uuid,
+				Name:                        productAttribute.Attribute.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
+				ProductAttributeUuid:        productAttribute.Attribute.Uuid,
+				ProductPackageAttributeUuid: productAttribute.Uuid,
 			}
 			attributes = append(attributes, attribute)
 		}
@@ -5870,8 +5871,9 @@ func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, 
 	}
 	for _, productAttribute := range productAttributeSlice {
 		attribute := model.Attribute{
-			Name:                 productAttribute.Attribute.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
-			ProductAttributeUuid: productAttribute.Attribute.Uuid,
+			Name:                        productAttribute.Attribute.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
+			ProductAttributeUuid:        productAttribute.Attribute.Uuid,
+			ProductPackageAttributeUuid: productAttribute.Uuid,
 		}
 		attributes = append(attributes, attribute)
 	}

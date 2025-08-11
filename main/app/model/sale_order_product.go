@@ -1408,10 +1408,11 @@ func NewSaleOrderProductSauce(saleOrderProductUuid uint64, saleOrderUuid uint64,
 // 构建“销售订单商品”的属性
 func NewSaleOrderProductAttribute(saleOrderProductUuid uint64, saleOrderUuid uint64, attribute Attribute) *SaleOrderProductAttribute {
 	return &SaleOrderProductAttribute{
-		Name:                 attribute.Name,
-		SaleOrderUuid:        saleOrderUuid,
-		SaleOrderProductUuid: saleOrderProductUuid,
-		ProductAttributeUuid: attribute.ProductAttributeUuid,
+		Name:                        attribute.Name,
+		SaleOrderUuid:               saleOrderUuid,
+		SaleOrderProductUuid:        saleOrderProductUuid,
+		ProductAttributeUuid:        attribute.ProductAttributeUuid,
+		ProductPackageAttributeUuid: attribute.ProductPackageAttributeUuid,
 	}
 }
 
@@ -1583,7 +1584,7 @@ func (model *SaleOrderProduct) GetAttributeNames() string {
 func (model *SaleOrderProduct) GetAttributeUuidList() []uint64 {
 	attributeUuidList := make([]uint64, 0)
 	for _, attribute := range model.SaleOrderProductAttributes {
-		attributeUuidList = append(attributeUuidList, attribute.ProductAttributeUuid)
+		attributeUuidList = append(attributeUuidList, attribute.ProductPackageAttributeUuid)
 	}
 	sort.Slice(attributeUuidList, func(i, j int) bool {
 		return attributeUuidList[i] < attributeUuidList[j]

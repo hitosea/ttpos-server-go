@@ -59,10 +59,11 @@ type SaleBillCalc struct {
 // SaleOrderProductAttribute 销售订单产品属性 `ttpos_sale_order_product_attribute`
 type SaleOrderProductAttribute struct {
 	BaseModel
-	Name                 string `gorm:"column:name;type:varchar(255);not null;default:'';comment:'商品属性名称,不随后台更新'"`
-	SaleOrderUuid        uint64 `gorm:"column:sale_order_uuid;not null;default:0;comment:'销售订单ID'"`
-	SaleOrderProductUuid uint64 `gorm:"column:sale_order_product_uuid;not null;default:0;comment:'销售订单商品ID'"`
-	ProductAttributeUuid uint64 `gorm:"column:product_attribute_uuid;not null;default:0;comment:'商品属性ID'"`
+	Name                        string `gorm:"column:name;type:varchar(255);not null;default:'';comment:'商品属性名称,不随后台更新'"`
+	SaleOrderUuid               uint64 `gorm:"column:sale_order_uuid;not null;default:0;comment:'销售订单ID'"`
+	SaleOrderProductUuid        uint64 `gorm:"column:sale_order_product_uuid;not null;default:0;comment:'销售订单商品ID'"`
+	ProductAttributeUuid        uint64 `gorm:"column:product_attribute_uuid;not null;default:0;comment:'商品属性ID'"`
+	ProductPackageAttributeUuid uint64 `gorm:"column:product_package_attribute_uuid;not null;default:0;comment:'商品包属性ID'"`
 
 	ProductAttribute ProductAttribute `gorm:"foreignKey:ProductAttributeUuid;references:uuid"`
 }
@@ -389,6 +390,7 @@ type Flavor struct {
 	ProductBomUuid uint64
 }
 type Attribute struct {
-	Name                 string
-	ProductAttributeUuid uint64
+	Name                        string
+	ProductAttributeUuid        uint64
+	ProductPackageAttributeUuid uint64
 }
