@@ -18675,6 +18675,244 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/product/flavor": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取商品规格详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品规格"
+                ],
+                "summary": "获取商品规格详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "商品规格UUID",
+                        "name": "uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.ProductFlavorDetailResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除商品规格",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品规格"
+                ],
+                "summary": "删除商品规格",
+                "parameters": [
+                    {
+                        "description": "商品规格删除请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductFlavorDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/flavor/add": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "添加商品规格",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品规格"
+                ],
+                "summary": "添加商品规格",
+                "parameters": [
+                    {
+                        "description": "商品规格添加请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductFlavorAddReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/flavor/edit": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "编辑商品规格",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品规格"
+                ],
+                "summary": "编辑商品规格",
+                "parameters": [
+                    {
+                        "description": "商品规格编辑请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProdudctFlavorEditReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/flavor/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取商品规格列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品规格"
+                ],
+                "summary": "获取商品规格列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.ProductFlavorListResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/flavor/sort": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "排序商品规格",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品规格"
+                ],
+                "summary": "排序商品规格",
+                "parameters": [
+                    {
+                        "description": "商品规格排序请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductFlavorSortReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/product/sauce": {
             "get": {
                 "security": [
@@ -23602,6 +23840,60 @@ const docTemplate = `{
                 }
             }
         },
+        "product_resp.ProductFlavorDetailResp": {
+            "type": "object",
+            "properties": {
+                "locale_name": {
+                    "description": "商品规格名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "product_package_count": {
+                    "description": "关联商品包数量",
+                    "type": "integer"
+                },
+                "product_package_list": {
+                    "description": "关联商品包列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/product_resp.ProductFlavorProductPackageListResp"
+                        }
+                    ]
+                },
+                "uuid": {
+                    "description": "商品规格UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "product_resp.ProductFlavorItemResp": {
+            "type": "object",
+            "properties": {
+                "locale_name": {
+                    "description": "商品规格名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "product_package_count": {
+                    "description": "关联商品包数量",
+                    "type": "integer"
+                },
+                "sort": {
+                    "description": "商品规格排序",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "商品规格UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "product_resp.ProductFlavorList": {
             "type": "object",
             "properties": {
@@ -23610,6 +23902,52 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/product_resp.ProductFlavor"
                     }
+                }
+            }
+        },
+        "product_resp.ProductFlavorListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product_resp.ProductFlavorItemResp"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "product_resp.ProductFlavorProductPackageListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product_resp.ProductFlavorProductPackageResp"
+                    }
+                }
+            }
+        },
+        "product_resp.ProductFlavorProductPackageResp": {
+            "type": "object",
+            "properties": {
+                "bom_uuid": {
+                    "description": "商品BOM UUID",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "商品包名称",
+                    "type": "string"
+                },
+                "price": {
+                    "description": "商品包价格",
+                    "type": "number"
+                },
+                "uuid": {
+                    "description": "商品包UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -25856,6 +26194,115 @@ const docTemplate = `{
                 }
             }
         },
+        "req.ProductFlavorAddProductPackage": {
+            "type": "object",
+            "required": [
+                "price",
+                "uuid"
+            ],
+            "properties": {
+                "price": {
+                    "description": "商品包价格",
+                    "type": "number"
+                },
+                "uuid": {
+                    "description": "商品包UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.ProductFlavorAddReq": {
+            "type": "object",
+            "required": [
+                "locale_name"
+            ],
+            "properties": {
+                "list": {
+                    "description": "关联商品包列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.ProductFlavorAddProductPackage"
+                    }
+                },
+                "locale_name": {
+                    "description": "商品规格名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                }
+            }
+        },
+        "req.ProductFlavorDeleteReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "商品规格UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.ProductFlavorEditProductPackageReq": {
+            "type": "object",
+            "required": [
+                "price",
+                "uuid"
+            ],
+            "properties": {
+                "bom_uuid": {
+                    "description": "商品BOM UUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID",
+                    "type": "integer"
+                },
+                "is_delete": {
+                    "description": "是否删除, 如果是新增/编辑，则传false，删除时传true",
+                    "type": "boolean"
+                },
+                "price": {
+                    "description": "商品价格",
+                    "type": "number"
+                },
+                "uuid": {
+                    "description": "商品UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.ProductFlavorSortItemReq": {
+            "type": "object",
+            "required": [
+                "sort",
+                "uuid"
+            ],
+            "properties": {
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "商品规格UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.ProductFlavorSortReq": {
+            "type": "object",
+            "required": [
+                "list"
+            ],
+            "properties": {
+                "list": {
+                    "description": "商品规格排序列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.ProductFlavorSortItemReq"
+                    }
+                }
+            }
+        },
         "req.ProductParams": {
             "type": "object",
             "required": [
@@ -26231,6 +26678,34 @@ const docTemplate = `{
             "properties": {
                 "product_uuid": {
                     "description": "送厨商品ID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.ProdudctFlavorEditReq": {
+            "type": "object",
+            "required": [
+                "locale_name",
+                "uuid"
+            ],
+            "properties": {
+                "list": {
+                    "description": "关联商品包列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.ProductFlavorEditProductPackageReq"
+                    }
+                },
+                "locale_name": {
+                    "description": "商品规格名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "uuid": {
+                    "description": "商品规格UUID",
                     "type": "integer"
                 }
             }

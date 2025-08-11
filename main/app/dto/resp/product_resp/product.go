@@ -274,3 +274,38 @@ type ProductAttributeProductPackage struct {
 type ProductAttributeProductPackageList struct {
 	List []ProductAttributeProductPackage `json:"list"`
 }
+
+// ProductFlavorListResp 商品规格列表响应
+type ProductFlavorListResp struct {
+	List []ProductFlavorItemResp `json:"list"`
+	Meta dto.PageResponse        `json:"meta"`
+}
+
+// ProductFlavorItemResp 商品规格列表项
+type ProductFlavorItemResp struct {
+	Uuid                uint64             `json:"uuid"`                  // 商品规格UUID
+	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品规格名称
+	Sort                int                `json:"sort"`                  // 商品规格排序
+	ProductPackageCount int                `json:"product_package_count"` // 关联商品包数量
+}
+
+// ProductFlavorDetailResp 商品规格详情
+type ProductFlavorDetailResp struct {
+	Uuid                uint64                              `json:"uuid"`                  // 商品规格UUID
+	LocaleName          dto.LocaleResponse                  `json:"locale_name"`           // 商品规格名称
+	ProductPackageCount int                                 `json:"product_package_count"` // 关联商品包数量
+	ProductPackageList  ProductFlavorProductPackageListResp `json:"product_package_list"`  // 关联商品包列表
+}
+
+// ProductFlavorProductPackage 商品规格关联商品包
+type ProductFlavorProductPackageResp struct {
+	Uuid    uint64  `json:"uuid"`     // 商品包UUID
+	BomUuid uint64  `json:"bom_uuid"` // 商品BOM UUID
+	Name    string  `json:"name"`     // 商品包名称
+	Price   float64 `json:"price"`    // 商品包价格
+}
+
+// ProductFlavorProductPackageList 商品规格关联商品包列表
+type ProductFlavorProductPackageListResp struct {
+	List []ProductFlavorProductPackageResp `json:"list"`
+}

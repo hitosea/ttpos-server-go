@@ -1482,12 +1482,76 @@ definitions:
         description: 商品规格UUID
         type: integer
     type: object
+  product_resp.ProductFlavorDetailResp:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品规格名称
+      product_package_count:
+        description: 关联商品包数量
+        type: integer
+      product_package_list:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductFlavorProductPackageListResp'
+        description: 关联商品包列表
+      uuid:
+        description: 商品规格UUID
+        type: integer
+    type: object
+  product_resp.ProductFlavorItemResp:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品规格名称
+      product_package_count:
+        description: 关联商品包数量
+        type: integer
+      sort:
+        description: 商品规格排序
+        type: integer
+      uuid:
+        description: 商品规格UUID
+        type: integer
+    type: object
   product_resp.ProductFlavorList:
     properties:
       list:
         items:
           $ref: '#/definitions/product_resp.ProductFlavor'
         type: array
+    type: object
+  product_resp.ProductFlavorListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductFlavorItemResp'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
+  product_resp.ProductFlavorProductPackageListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductFlavorProductPackageResp'
+        type: array
+    type: object
+  product_resp.ProductFlavorProductPackageResp:
+    properties:
+      bom_uuid:
+        description: 商品BOM UUID
+        type: integer
+      name:
+        description: 商品包名称
+        type: string
+      price:
+        description: 商品包价格
+        type: number
+      uuid:
+        description: 商品包UUID
+        type: integer
     type: object
   product_resp.ProductList:
     properties:
@@ -3047,6 +3111,80 @@ definitions:
     - list
     - product_attribute_group_uuid
     type: object
+  req.ProductFlavorAddProductPackage:
+    properties:
+      price:
+        description: 商品包价格
+        type: number
+      uuid:
+        description: 商品包UUID
+        type: integer
+    required:
+    - price
+    - uuid
+    type: object
+  req.ProductFlavorAddReq:
+    properties:
+      list:
+        description: 关联商品包列表
+        items:
+          $ref: '#/definitions/req.ProductFlavorAddProductPackage'
+        type: array
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品规格名称
+    required:
+    - locale_name
+    type: object
+  req.ProductFlavorDeleteReq:
+    properties:
+      uuid:
+        description: 商品规格UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.ProductFlavorEditProductPackageReq:
+    properties:
+      bom_uuid:
+        description: 商品BOM UUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID
+        type: integer
+      is_delete:
+        description: 是否删除, 如果是新增/编辑，则传false，删除时传true
+        type: boolean
+      price:
+        description: 商品价格
+        type: number
+      uuid:
+        description: 商品UUID
+        type: integer
+    required:
+    - price
+    - uuid
+    type: object
+  req.ProductFlavorSortItemReq:
+    properties:
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 商品规格UUID
+        type: integer
+    required:
+    - sort
+    - uuid
+    type: object
+  req.ProductFlavorSortReq:
+    properties:
+      list:
+        description: 商品规格排序列表
+        items:
+          $ref: '#/definitions/req.ProductFlavorSortItemReq'
+        type: array
+    required:
+    - list
+    type: object
   req.ProductParams:
     properties:
       flavor_product_bom_uuid:
@@ -3300,6 +3438,24 @@ definitions:
       product_uuid:
         description: 送厨商品ID
         type: integer
+    type: object
+  req.ProdudctFlavorEditReq:
+    properties:
+      list:
+        description: 关联商品包列表
+        items:
+          $ref: '#/definitions/req.ProductFlavorEditProductPackageReq'
+        type: array
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品规格名称
+      uuid:
+        description: 商品规格UUID
+        type: integer
+    required:
+    - locale_name
+    - uuid
     type: object
   req.RechargeOrderAddPaymentMethodReq:
     properties:
@@ -20109,6 +20265,153 @@ paths:
       summary: 排序商品分类
       tags:
       - 商家端.商品分类
+  /shop/product/flavor:
+    delete:
+      consumes:
+      - application/json
+      description: 删除商品规格
+      parameters:
+      - description: 商品规格删除请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductFlavorDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 删除商品规格
+      tags:
+      - 商家端.商品规格
+    get:
+      consumes:
+      - application/json
+      description: 获取商品规格详情
+      parameters:
+      - description: 商品规格UUID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductFlavorDetailResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品规格详情
+      tags:
+      - 商家端.商品规格
+  /shop/product/flavor/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加商品规格
+      parameters:
+      - description: 商品规格添加请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductFlavorAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 添加商品规格
+      tags:
+      - 商家端.商品规格
+  /shop/product/flavor/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑商品规格
+      parameters:
+      - description: 商品规格编辑请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProdudctFlavorEditReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 编辑商品规格
+      tags:
+      - 商家端.商品规格
+  /shop/product/flavor/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取商品规格列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductFlavorListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品规格列表
+      tags:
+      - 商家端.商品规格
+  /shop/product/flavor/sort:
+    post:
+      consumes:
+      - application/json
+      description: 排序商品规格
+      parameters:
+      - description: 商品规格排序请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductFlavorSortReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 排序商品规格
+      tags:
+      - 商家端.商品规格
   /shop/product/sauce:
     delete:
       consumes:

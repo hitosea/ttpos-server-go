@@ -41,11 +41,13 @@ type IProductRepo interface {
 	WhereBomIsSoldOut() DBOption                                                                            // 沽清 产品是否售罄
 	UpdateProductBomSoldOut(opts []DBOption, vars map[string]any) error                                     // 沽清 更新产品售罄状态
 
-	WhereUuid(uuid uint64) DBOption             // 查询条件 产品单位 uuid
-	WhereUuidIn(uuids []uint64) DBOption        // 查询条件 产品单位 uuid 列表
-	WhereCategoryKey(key string) DBOption       // 查询条件 产品分类key
-	WhereByIsSpecial(isSpecial uint) DBOption   // 查询条件 产品分类是否特殊
-	WhereParentUuid(parentUuid uint64) DBOption // 查询条件 产品分类父级uuid
+	WhereUuid(uuid uint64) DBOption              // 查询条件 产品单位 uuid
+	WhereUuidIn(uuids []uint64) DBOption         // 查询条件 产品单位 uuid 列表
+	WhereCategoryKey(key string) DBOption        // 查询条件 产品分类key
+	WhereByIsSpecial(isSpecial uint) DBOption    // 查询条件 产品分类是否特殊
+	WhereParentUuid(parentUuid uint64) DBOption  // 查询条件 产品分类父级uuid
+	WhereProductSauceUuid(uuid uint64) DBOption  // 查询条件 产品加料uuid
+	WhereProductType(productType uint8) DBOption // 查询条件 产品类型
 
 	WhereCategoryUuid(categoryUuid uint64) DBOption               // 查询条件 产品分类uuid
 	WhereSpecialCategoryUuid(specialCategoryUuid uint64) DBOption // 查询条件 特色分类uuid
@@ -53,7 +55,7 @@ type IProductRepo interface {
 	WithProductPackages() DBOption                  // 预加载产品单位关联的商品
 	WithProductPackagesMultiLanguageName() DBOption // 预加载产品单位关联的商品多语言名称
 
-	WithActiveProductBoms() DBOption                                 // 预加载商品BOM
+	WithActiveProductBoms(opts ...DBOption) DBOption                 // 预加载商品BOM
 	WithActiveProductBomsProductPackages() DBOption                  // 预加载商品BOM关联的商品包
 	WithActiveProductBomsProductPackagesMultiLanguageName() DBOption // 预加载商品BOM关联的商品包多语言名称
 
@@ -79,7 +81,10 @@ type IProductQueryRepo interface {
 	GetProduct(opts ...DBOption) (model.ProductPackage, error)                                                      // 获取商品详情
 	GetProductCount(opts ...DBOption) (int64, error)                                                                // 获取商品数量
 	GetProductFlavor(opts ...DBOption) (model.ProductFlavor, error)                                                 // 获取商品口味详情
+	GetProductFlavorCount(opts ...DBOption) (int64, error)                                                          // 获取商品规格数量
+	GetProductFlavorMaxSort(opts ...DBOption) (int64, error)                                                        // 获取商品规格最大排序
 	GetProductBom(opts ...DBOption) (model.ProductBom, error)                                                       // 获取商品BOM详情
+	GetProductBomCount(opts ...DBOption) (int64, error)                                                             // 获取商品BOM数量
 	PaginateGetProductUnitList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductUnit, int64, error)      // 分页获取产品单位列表
 	GetProductUnit(opts ...DBOption) (model.ProductUnit, error)                                                     // 获取产品单位详情
 	GetProductUnitCount(opts ...DBOption) (int64, error)                                                            // 获取产品单位数量
@@ -93,6 +98,8 @@ type IProductQueryRepo interface {
 	GetProductAttributeGroup(opts ...DBOption) (model.ProductAttributeGroup, error)                                                // 获取商品属性分组详情
 	GetProductAttribute(opts ...DBOption) ([]model.ProductAttribute, error)                                                        // 获取商品属性列表
 	GetProductPackageAttributeGroups(opts ...DBOption) ([]model.ProductPackageAttributeGroup, error)                               // 获取商品包属性组列表
+
+	PaginateGetProductFlavorList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductFlavor, int64, error) // 分页获取商品规格列表
 }
 
 // productRepo 商品仓库
@@ -352,6 +359,28 @@ func (r *productRepo) GetProductFlavor(opts ...DBOption) (model.ProductFlavor, e
 	return productFlavor, errors.WithMessage(err)
 }
 
+// GetProductFlavorCount 获取商品规格数量
+func (r *productRepo) GetProductFlavorCount(opts ...DBOption) (int64, error) {
+	var total int64
+	db := r.db.Model(&model.ProductFlavor{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Count(&total).Error
+	return total, errors.WithMessage(err)
+}
+
+// GetProductFlavorMaxSort 获取商品规格最大排序
+func (r *productRepo) GetProductFlavorMaxSort(opts ...DBOption) (int64, error) {
+	var sort sql.NullInt64
+	db := r.db.Model(&model.ProductFlavor{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Select("MAX(sort) as sort").Find(&sort).Error
+	return sort.Int64, errors.WithMessage(err)
+}
+
 // GetProductBom 获取商品BOM
 func (r *productRepo) GetProductBom(opts ...DBOption) (model.ProductBom, error) {
 	var productBom model.ProductBom
@@ -365,6 +394,17 @@ func (r *productRepo) GetProductBom(opts ...DBOption) (model.ProductBom, error) 
 	err := db.First(&productBom).Error
 
 	return productBom, errors.WithMessage(err)
+}
+
+// GetProductBomCount 获取商品BOM数量
+func (r *productRepo) GetProductBomCount(opts ...DBOption) (int64, error) {
+	var total int64
+	db := r.db.Model(&model.ProductBom{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Count(&total).Error
+	return total, errors.WithMessage(err)
 }
 
 // WithMultiLanguageName 预加载多语言名称
@@ -657,6 +697,20 @@ func (r *productRepo) WhereSpecialCategoryUuid(specialCategoryUuid uint64) DBOpt
 	}
 }
 
+// WhereProductSauceUuid 根据加料uuid查询
+func (r *productRepo) WhereProductSauceUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("product_sauce_uuid = ?", uuid)
+	}
+}
+
+// WhereProductType 根据产品类型查询
+func (r *productRepo) WhereProductType(productType uint8) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("product_type = ?", productType)
+	}
+}
+
 // GetProductUnitCount 获取产品单位数量
 func (r *productRepo) GetProductUnitCount(opts ...DBOption) (int64, error) {
 	var total int64
@@ -709,10 +763,14 @@ func (r *productRepo) GetProductSauceCount(opts ...DBOption) (int64, error) {
 	return total, errors.WithMessage(err)
 }
 
-func (r *productRepo) WithActiveProductBoms() DBOption {
+func (r *productRepo) WithActiveProductBoms(opts ...DBOption) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("ProductBoms", func(db *gorm.DB) *gorm.DB {
-			return db.Scopes(NotDeleted)
+			db = db.Scopes(NotDeleted)
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
 		})
 	}
 }
@@ -848,4 +906,23 @@ func (r *productRepo) GetProductAttributeGroups(opts ...DBOption) ([]model.Produ
 	}
 	err := db.Find(&attributeGroups).Error
 	return attributeGroups, errors.WithMessage(err)
+}
+
+// PaginateGetProductFlavorList 分页获取商品规格列表
+func (r *productRepo) PaginateGetProductFlavorList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductFlavor, int64, error) {
+	var flavors []model.ProductFlavor
+	var total int64
+	db := r.db.Model(&model.ProductFlavor{}).Where("ttpos_product_flavor.delete_time = ?", constant.NotDeleted)
+	db = db.Joins("LEFT JOIN ttpos_product_bom ON ttpos_product_bom.product_flavor_uuid = ttpos_product_flavor.uuid AND ttpos_product_bom.product_sauce_uuid = 0 AND ttpos_product_bom.delete_time = ?", constant.NotDeleted)
+	db = db.Select("ttpos_product_flavor.*, COUNT(ttpos_product_bom.uuid) as product_package_count")
+	db = db.Group("ttpos_product_flavor.uuid") // 分组统计关联商品数量
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Count(&total).Error
+	if err != nil {
+		return nil, 0, errors.WithMessage(err)
+	}
+	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Order("ttpos_product_flavor.sort asc, ttpos_product_flavor.id desc").Find(&flavors).Error
+	return flavors, total, errors.WithMessage(err)
 }
