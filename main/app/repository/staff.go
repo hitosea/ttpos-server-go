@@ -50,7 +50,7 @@ func (r *StaffRepo) GetStaff(opts ...DBOption) (model.Staff, error) {
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	err := db.First(&staff).Error
+	err := db.Take(&staff).Error
 	return staff, err
 }
 

@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"strings"
+
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -20,6 +22,7 @@ func NewProductCategoryRepo(db *gorm.DB) IProductCategoryRepo {
 // ICategoryRepositorySrv 分类仓库接口
 type ICategoryRepositorySrv interface {
 	CreateCategory(params req.CreateCategoryRequest) (uint64, error)
+	GetCategoryUuidByNameOptimized(name string) (uint64, error) // 根据分类名称获取分类UUID（支持多语言）
 }
 
 func NewCategoryRepositoryService(db *gorm.DB) ICategoryRepositorySrv {
@@ -77,4 +80,54 @@ func (s *CategoryRepositoryService) CreateCategory(params req.CreateCategoryRequ
 	}
 
 	return id, nil
+}
+
+// GetCategoryUuidByNameOptimized 支持分级分类路径查询 (例如: "主分类/子分类")
+func (s *CategoryRepositoryService) GetCategoryUuidByNameOptimized(name string) (uint64, error) {
+	var categories []model.ProductCategory
+
+	// 预加载多语言名称，然后在内存中过滤
+	err := s.db.Model(&model.ProductCategory{}).
+		Preload("MultiLanguageName").
+		Where("delete_time = ?", 0).
+		Order("status desc").
+		Find(&categories).Error
+	if err != nil {
+		return 0, errors.WithMessage(err)
+	}
+
+	// 使用 "/" 分割分类路径，类似 PHP 的 explode('/', $value)
+	categoryPath := strings.Split(name, "/")
+	categoryId, err := s.findCategoryByName(categories, categoryPath[0], 0)
+	if err != nil {
+		return 0, err
+	}
+	// 如果只有一级分类
+	if len(categoryPath) == 1 {
+		return categoryId, nil
+	}
+
+	return s.findCategoryByName(categories, categoryPath[1], categoryId)
+}
+
+// findCategoryByName 在指定父分类下查找分类名称（支持多语言）
+func (s *CategoryRepositoryService) findCategoryByName(categories []model.ProductCategory, name string, parentUuid uint64) (uint64, error) {
+	// 在内存中查找匹配的分类
+	for _, category := range categories {
+		// 检查父分类是否匹配
+		if category.ParentUuid != parentUuid {
+			continue
+		}
+		// 然后检查多语言字段
+		if category.MultiLanguageName.Uuid != 0 {
+			names := category.MultiLanguageName.GetNames()
+			if names.ZH == name || names.ZHTW == name || names.EN == name ||
+				names.TH == name || names.MY == name || names.JA == name ||
+				names.KO == name || names.TR == name || names.SV == name {
+				return category.Uuid, nil
+			}
+		}
+	}
+
+	return 0, nil
 }

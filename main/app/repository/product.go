@@ -4,8 +4,10 @@ import (
 	"database/sql"
 	"strings"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/config"
 
 	"gorm.io/gorm"
 )
@@ -101,11 +103,18 @@ type IProductQueryRepo interface {
 	GetProductPackageAttributeGroups(opts ...DBOption) ([]model.ProductPackageAttributeGroup, error)                               // 获取商品包属性组列表
 
 	PaginateGetProductFlavorList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductFlavor, int64, error) // 分页获取商品规格列表
+	CheckNameExist(name string) bool                                                                               // 检查名称是否存在
+	CheckMultiLanguageNameExist(localeResponse dto.LocaleResponse) dto.LocaleResponse                              // 检查多语言名称是否存在
 }
 
 // productRepo 商品仓库
 type productRepo struct {
 	db *gorm.DB
+}
+
+// getTableName 获取带前缀的表名
+func (r *productRepo) getTableName(tableName string) string {
+	return config.Database.TablePrefix + tableName
 }
 
 // NewProductRepo 创建新的商品仓库
@@ -596,10 +605,12 @@ func (r *productRepo) PaginateGetProductUnitList(pageNo int, pageSize int, opts 
 	var total int64
 
 	// 关联了商品，要连表join获取关联商品数量
-	db := r.db.Model(&model.ProductUnit{}).Where("ttpos_product_unit.delete_time = ?", constant.NotDeleted)
-	db = db.Joins("LEFT JOIN ttpos_product_package ON ttpos_product_package.unit_uuid = ttpos_product_unit.uuid AND ttpos_product_package.delete_time = ?", constant.NotDeleted)
-	db = db.Select("ttpos_product_unit.*, COUNT(ttpos_product_package.uuid) as product_package_count")
-	db = db.Group("ttpos_product_unit.uuid") // 分组统计关联商品数量
+	productUnitTable := r.getTableName("product_unit")
+	productPackageTable := r.getTableName("product_package")
+	db := r.db.Model(&model.ProductUnit{}).Where(productUnitTable+".delete_time = ?", constant.NotDeleted)
+	db = db.Joins("LEFT JOIN "+productPackageTable+" ON "+productPackageTable+".unit_uuid = "+productUnitTable+".uuid AND "+productPackageTable+".delete_time = ?", constant.NotDeleted)
+	db = db.Select(productUnitTable + ".*, COUNT(" + productPackageTable + ".uuid) as product_package_count")
+	db = db.Group(productUnitTable + ".uuid") // 分组统计关联商品数量
 
 	for _, opt := range opts {
 		db = opt(db)
@@ -727,10 +738,12 @@ func (r *productRepo) GetProductUnitCount(opts ...DBOption) (int64, error) {
 func (r *productRepo) PaginateGetProductSauceList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductSauce, int64, error) {
 	var sauces []model.ProductSauce
 	var total int64
-	db := r.db.Model(&model.ProductSauce{}).Where("ttpos_product_sauce.delete_time = ?", constant.NotDeleted)
-	db = db.Joins("LEFT JOIN ttpos_product_bom ON ttpos_product_bom.product_sauce_uuid = ttpos_product_sauce.uuid AND ttpos_product_bom.delete_time = ?", constant.NotDeleted)
-	db = db.Select("ttpos_product_sauce.*, COUNT(ttpos_product_bom.uuid) as product_package_count")
-	db = db.Group("ttpos_product_sauce.uuid") // 分组统计关联商品数量
+	productSauceTable := r.getTableName("product_sauce")
+	productBomTable := r.getTableName("product_bom")
+	db := r.db.Model(&model.ProductSauce{}).Where(productSauceTable+".delete_time = ?", constant.NotDeleted)
+	db = db.Joins("LEFT JOIN "+productBomTable+" ON "+productBomTable+".product_sauce_uuid = "+productSauceTable+".uuid AND "+productBomTable+".delete_time = ?", constant.NotDeleted)
+	db = db.Select(productSauceTable + ".*, COUNT(" + productBomTable + ".uuid) as product_package_count")
+	db = db.Group(productSauceTable + ".uuid") // 分组统计关联商品数量
 	for _, opt := range opts {
 		db = opt(db)
 	}
@@ -738,7 +751,7 @@ func (r *productRepo) PaginateGetProductSauceList(pageNo int, pageSize int, opts
 	if err != nil {
 		return nil, 0, errors.WithMessage(err)
 	}
-	err = db.Offset((pageNo - 1) * pageSize).Order("ttpos_product_sauce.sort asc, ttpos_product_sauce.create_time desc").Limit(pageSize).Find(&sauces).Error
+	err = db.Offset((pageNo - 1) * pageSize).Order(productSauceTable + ".sort asc, " + productSauceTable + ".create_time desc").Limit(pageSize).Find(&sauces).Error
 	return sauces, total, errors.WithMessage(err)
 }
 
@@ -913,10 +926,12 @@ func (r *productRepo) GetProductAttributeGroups(opts ...DBOption) ([]model.Produ
 func (r *productRepo) PaginateGetProductFlavorList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductFlavor, int64, error) {
 	var flavors []model.ProductFlavor
 	var total int64
-	db := r.db.Model(&model.ProductFlavor{}).Where("ttpos_product_flavor.delete_time = ?", constant.NotDeleted)
-	db = db.Joins("LEFT JOIN ttpos_product_bom ON ttpos_product_bom.product_flavor_uuid = ttpos_product_flavor.uuid AND ttpos_product_bom.product_sauce_uuid = 0 AND ttpos_product_bom.delete_time = ?", constant.NotDeleted)
-	db = db.Select("ttpos_product_flavor.*, COUNT(ttpos_product_bom.uuid) as product_package_count")
-	db = db.Group("ttpos_product_flavor.uuid") // 分组统计关联商品数量
+	productFlavorTable := r.getTableName("product_flavor")
+	productBomTable := r.getTableName("product_bom")
+	db := r.db.Model(&model.ProductFlavor{}).Where(productFlavorTable+".delete_time = ?", constant.NotDeleted)
+	db = db.Joins("LEFT JOIN "+productBomTable+" ON "+productBomTable+".product_flavor_uuid = "+productFlavorTable+".uuid AND "+productBomTable+".product_sauce_uuid = 0 AND "+productBomTable+".delete_time = ?", constant.NotDeleted)
+	db = db.Select(productFlavorTable + ".*, COUNT(" + productBomTable + ".uuid) as product_package_count")
+	db = db.Group(productFlavorTable + ".uuid") // 分组统计关联商品数量
 	for _, opt := range opts {
 		db = opt(db)
 	}
@@ -924,6 +939,79 @@ func (r *productRepo) PaginateGetProductFlavorList(pageNo int, pageSize int, opt
 	if err != nil {
 		return nil, 0, errors.WithMessage(err)
 	}
-	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Order("ttpos_product_flavor.sort asc, ttpos_product_flavor.id desc").Find(&flavors).Error
+	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Order(productFlavorTable + ".sort asc, " + productFlavorTable + ".id desc").Find(&flavors).Error
 	return flavors, total, errors.WithMessage(err)
+}
+
+// CheckNameExist 检查名称是否存在
+func (r *productRepo) CheckNameExist(name string) bool {
+	db := r.db.Model(&model.Product{}).
+		Where("delete_time = ?", constant.NotDeleted)
+	db = db.Where("name = ?", name)
+	return db.First(&model.Product{}).Error != nil
+}
+
+// CheckMultiLanguageNameExist 检查多语言名称是否存在，返回存在的语言名称
+func (r *productRepo) CheckMultiLanguageNameExist(localeResponse dto.LocaleResponse) dto.LocaleResponse {
+	var result dto.LocaleResponse
+	productPackageTable := r.getTableName("product_package")
+	multiLanguageNameTable := r.getTableName("multi_language_name")
+
+	// 定义语言字段映射
+	languageFields := map[string]string{
+		"zh":   "zh_name",
+		"th":   "th_name",
+		"en":   "en_name",
+		"zhtw": "zh_tw_name",
+		"ja":   "ja_name",
+		"ko":   "ko_name",
+		"my":   "my_name",
+		"tr":   "tr_name",
+		"sv":   "sv_name",
+	}
+
+	// 构建动态查询条件
+	var conditions []string
+	var args []interface{}
+
+	for langKey, columnName := range languageFields {
+		value := localeResponse.GetLocale(langKey)
+		if value != "" {
+			conditions = append(conditions, multiLanguageNameTable+"."+columnName+" = ?")
+			args = append(args, value)
+		}
+	}
+
+	// 如果没有任何条件，直接返回空结果
+	if len(conditions) == 0 {
+		return result
+	}
+
+	// 查询匹配的多语言名称记录
+	var matchedRecords []model.MultiLanguageName
+	err := r.db.Model(&model.ProductPackage{}).
+		Select(multiLanguageNameTable+".*").
+		Joins("JOIN "+multiLanguageNameTable+" ON "+productPackageTable+".multi_language_name_uuid = "+multiLanguageNameTable+".uuid").
+		Where(productPackageTable+".delete_time = ?", constant.NotDeleted).
+		Where("("+strings.Join(conditions, " OR ")+")", args...).
+		Find(&matchedRecords).Error
+
+	if err != nil {
+		return result
+	}
+
+	// 检查每个匹配的记录，设置存在的语言名称
+	for _, record := range matchedRecords {
+		for langKey := range languageFields {
+			inputValue := localeResponse.GetLocale(langKey)
+			recordValue := record.GetNameByLang(langKey)
+
+			// 如果输入的名称与数据库中的名称匹配，则标记为存在
+			if inputValue != "" && inputValue == recordValue {
+				result.SetLocale(langKey, inputValue)
+			}
+		}
+	}
+
+	return result
 }

@@ -834,6 +834,58 @@ func (h *ProductHandler) EditProductFlavor(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// ImportProductList 导入商品-获取导入商品列表
+// @Summary 导入商品-获取导入商品列表
+// @Description 导入商品-获取导入商品列表
+// @Tags 商家端.商品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductImportListReq true "导入商品列表请求"
+// @Success 200 {object} product_resp.ProductImportResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/import/list [post]
+func (h *ProductHandler) ImportProductList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	importReq := req.ProductImportListReq{}
+	if err := c.ShouldBindJSON(&importReq); err != nil {
+		helper.HandleValidationError(c, err, importReq, dto.PageReqMessage)
+		return
+	}
+	res, err := h.productSrv.ImportProductList(ctx, importReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
+// ImportProduct 导入商品
+// @Summary 导入商品
+// @Description 导入商品
+// @Tags 商家端.商品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductImportReq true "导入商品请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/import [post]
+func (h *ProductHandler) ImportProduct(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	importReq := req.ProductImportReq{}
+	if err := c.ShouldBindJSON(&importReq); err != nil {
+		helper.HandleValidationError(c, err, importReq, dto.PageReqMessage)
+		return
+	}
+	err := h.productSrv.ImportProduct(ctx, importReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
 func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -891,5 +943,8 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/product/flavor/edit", wrapper.EditProductFlavor)   // 编辑商品规格
 		privateApi.DELETE("/product/flavor", wrapper.DeleteProductFlavor)    // 删除商品规格
 		privateApi.POST("/product/flavor/sort", wrapper.SortProductFlavor)   // 排序商品规格
+
+		privateApi.POST("/product/import/list", wrapper.ImportProductList) // 获取导入商品列表
+		privateApi.POST("/product/import", wrapper.ImportProduct)          // 导入商品
 	}
 }
