@@ -8,12 +8,12 @@ option go_package = "ttpos-bmp/app/ttpos-erp/api/item";
 message GetItemListReq {
   string item_name = 1; // 商品名称模糊查询，可选，如: %商品名称%
   string branch = 2; // 分支名称，可选
-  string company_name = 3; // 公司名称，可选
+  string company_abbr = 3; // 公司简称，可选
 }
 
-message AddItemReq {
+message SaveItemReq {
   string branch = 1; // 分支名称，可选
-  string company_name = 2; // 公司名称，可选
+  string company_abbr = 2; // 公司简称，可选
   string item_name = 3; // 物品名称，必填
   string item_code = 4; // 物品编码，必填
   string item_group = 5; // 物品分组，必填
@@ -38,49 +38,48 @@ message GetItemGroupListResp {
 
 message GetUomListReq {
   string branch = 1; // 分支名称，可选
-  string company_name = 2; // 公司名称，可选
+  string company_abbr = 2; // 公司简称，可选
   string uom_name = 3; // 单位名称，可选
+  string alias_name = 4; // 单位别名，可选
 }
 
 
 message GetUomListResp {
+  repeated UomInfo uom_list = 1; //单位列表
+}
+
+message UomInfo {
   string branch = 1; // 分支名称，可选
-  string company_name = 2; // 公司名称，可选
+  string company_abbr = 2; // 公司简称，可选
   string uom_name = 3; // 单位名称，可选
-  bool enabled = 4; // 是否启用
+  string alias_name = 4; // 单位别名，可选
   bool must_be_whole_number = 5; // 是否必须为整数
 }
 
 
 message GetAttributeListReq {
   string branch = 1; // 分支名称，可选
-  string company_name = 2; // 公司名称，可选
+  string company_abbr = 2; // 公司简称，可选
   string attribute_name = 3; // 属性名称，可选
 }
 
 message GetAttributeListResp {
   string branch = 1; // 分支名称，可选
-  string company_name = 2; // 公司名称，可选
+  string company_abbr = 2; // 公司简称，可选
   string attribute_name = 3; // 属性名称，可选
 }
 
 message GetSpecificationListReq {
   string branch = 1; // 分支名称，可选
-  string company_name = 2; // 公司名称，可选
+  string company_abbr = 2; // 公司简称，可选
   string specification_name = 3; // 规格名称，可选
 }
 
 
-message AddUomReq {
-  string branch = 1; // 分支名称，可选
-  string company_name = 2; // 公司名称，可选
-  string uom_name = 3; // 单位名称，必填
-  bool must_be_whole_number = 4; // 是否必须为整数
-}
 
-message AddAttributeReq {
+message AttributeInfo {
   string branch = 1; // 分支名称，可选
-  string company_name = 2; // 公司名称，可选
+  string company_abbr = 2; // 公司简称，可选
   string attribute_name = 3; // 属性名称，必填
 }
 
@@ -98,7 +97,7 @@ service ItemService {
   // 添加单位
   // 参数：单位信息
   // 返回：添加结果
-  rpc AddUom(item.AddUomReq) returns (erp.ResponseInfo);
+  rpc SaveUom(item.UomInfo) returns (erp.ResponseInfo);
 
   // 获取属性列表
   // 参数：查询条件
@@ -108,6 +107,6 @@ service ItemService {
   // 添加属性
   // 参数：属性信息
   // 返回：添加结果
-  rpc AddAttribute(item.AddAttributeReq) returns (erp.ResponseInfo);
+  rpc SaveAttribute(item.AttributeInfo) returns (erp.ResponseInfo);
 
 }

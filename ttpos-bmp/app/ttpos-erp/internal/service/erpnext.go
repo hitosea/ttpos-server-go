@@ -15,7 +15,7 @@ import (
 type (
 	IDoctype interface {
 		Meta(ctx context.Context, req *dto.ErpReq) (rst *g.Var, err error)
-		Count(ctx context.Context, req *dto.ErpReq) (int, error)
+		Count(ctx context.Context, req *dto.ErpReq, params *dto.RequestParams) (int, error)
 	}
 	IDocument interface {
 		List(ctx context.Context, req *dto.ErpReq, params *dto.RequestParams) (rst *g.Var, err error)
@@ -26,8 +26,8 @@ type (
 		Copy(ctx context.Context, req *dto.ErpReq) (rst *g.Var, err error)
 		Execute(ctx context.Context, req *dto.ErpReq, params interface{}) (rst *g.Var, err error)
 	}
-	IItem interface {
-		SyncDelay()
+	IRpc interface {
+		Execute(ctx context.Context, req *dto.ErpReq, params interface{}) (rst *g.Var, err error)
 	}
 	IResource interface {
 		List(ctx context.Context, docType string, params *dto.RequestParams) (rst *g.Var, err error)
@@ -36,17 +36,13 @@ type (
 		Put(ctx context.Context, docType string, params *dto.RequestParams) (rst *g.Var, err error)
 		Delete(ctx context.Context, docType string, params *dto.RequestParams) (rst *g.Var, err error)
 	}
-	IRpc interface {
-		Execute(ctx context.Context, req *dto.ErpReq, params interface{}) (rst *g.Var, err error)
-	}
 )
 
 var (
 	localDoctype  IDoctype
 	localDocument IDocument
-	localItem     IItem
-	localResource IResource
 	localRpc      IRpc
+	localResource IResource
 )
 
 func Doctype() IDoctype {
@@ -71,15 +67,15 @@ func RegisterDocument(i IDocument) {
 	localDocument = i
 }
 
-func Item() IItem {
-	if localItem == nil {
-		panic("implement not found for interface IItem, forgot register?")
+func Rpc() IRpc {
+	if localRpc == nil {
+		panic("implement not found for interface IRpc, forgot register?")
 	}
-	return localItem
+	return localRpc
 }
 
-func RegisterItem(i IItem) {
-	localItem = i
+func RegisterRpc(i IRpc) {
+	localRpc = i
 }
 
 func Resource() IResource {
@@ -91,15 +87,4 @@ func Resource() IResource {
 
 func RegisterResource(i IResource) {
 	localResource = i
-}
-
-func Rpc() IRpc {
-	if localRpc == nil {
-		panic("implement not found for interface IRpc, forgot register?")
-	}
-	return localRpc
-}
-
-func RegisterRpc(i IRpc) {
-	localRpc = i
 }

@@ -28,8 +28,8 @@ func (s *sDoctype) Meta(ctx context.Context, req *dto.ErpReq) (rst *g.Var, err e
 	return
 }
 
-func (s *sDoctype) Count(ctx context.Context, req *dto.ErpReq) (int, error) {
-	rst := GetClient(ctx).GetVar(ctx, fmt.Sprintf("%s/%s/count", docTypeApiUrl, req.DocType))
+func (s *sDoctype) Count(ctx context.Context, req *dto.ErpReq, params *dto.RequestParams) (int, error) {
+	rst := GetClient(ctx).GetVar(ctx, fmt.Sprintf("%s/%s/count", docTypeApiUrl, req.DocType), params)
 	err := detectError(rst)
 	if err == nil {
 		return gconv.Int(rst.Map()["data"]), nil
