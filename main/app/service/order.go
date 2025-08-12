@@ -5730,6 +5730,15 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			if saleOrderProduct.Num > constant.ProductNumMax {
 				return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "商品数量不能超过999个")))
 			}
+			// 如果该商品是套餐，则新建套餐子商品
+			if saleOrderProduct.ProductType == constant.ProductTypePackage {
+				subProducts, err := s.newPackageSubProducts(ctx, product.GetSubProducts(), innerParams, params, saleOrderProduct.Uuid)
+				if err != nil {
+					return nil, errors.WithMessage(err)
+				}
+				params.SaleOrder.SaleOrderProducts = append(params.SaleOrder.SaleOrderProducts, subProducts...)
+				saleOrderProducts = append(saleOrderProducts, subProducts...)
+			}
 		} else {
 			// 查询是否存在签名相同的订单商品
 			orderProduct := params.SaleOrder.GetSaleOrderProductBySign(saleOrderProduct.Sign)

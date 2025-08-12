@@ -446,6 +446,9 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 	productInfos := make([]*product_resp.Product, 0)
 	for _, product := range request.Products {
 		if product.Price != nil {
+			if product.ProductType == constant.ProductTypePackage {
+				continue
+			}
 			productInfo, err := s.getInfo(ctx, product, db)
 			if err != nil {
 				return nil, errors.WithMessage(err)
@@ -560,6 +563,33 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 	for index, _ := range request.Products {
 		request.Products[index].Price = nil
 		request.Products[index].IsBuffet = nil
+	}
+
+	for index, _ := range request.Products {
+		if request.Products[index].ProductType == constant.ProductTypePackage {
+			request.Products[index].FlavorProductBomUuid = request.Products[index].ProductPackageUuid // 套餐商品规格uuid改为套餐商品uuid
+		}
+	}
+
+	// 记录相关的子商品。
+	for index, _ := range request.Products {
+		productReq := request.Products[index]
+		// 如果该商品是套餐的话,添加子商品的属性
+		if productReq.ProductType == 1 {
+			subProductParams := make([]req.ProductParams, 0)
+			for _, subProductParam := range productReq.Products {
+				params := req.ProductParams{
+					FlavorProductBomUuid:            subProductParam.EditProductReq.FlavorUuid,
+					Num:                             subProductParam.Num,
+					ProductPackageAttributeUuidList: subProductParam.EditProductReq.AttributeUuidList,
+					ProductPackageGroupUuid:         subProductParam.ProductPackageGroupUuid,
+					Operation:                       "add",
+				}
+				subProductParams = append(subProductParams, params)
+			}
+			productReq.SetIsPackageProduct(subProductParams) // 设置为套餐商品
+		}
+		request.Products[index] = productReq
 	}
 
 	checkServiceRes, err := s.ActionAddAndCooking(ctx, req.ProductAddReq{
