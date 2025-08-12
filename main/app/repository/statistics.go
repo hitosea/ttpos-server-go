@@ -393,7 +393,8 @@ func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model
 			"SUM(sp.product_final_price * sp.product_num) AS sale_amount",
 			"IF(pc.parent_uuid = 0, pc.sort, ppc.sort) AS ppc_sort",
 			"IF(pc.parent_uuid = 0, pc.uuid, ppc.uuid) AS ppc_uuid",
-			"iF(pc.parent_uuid = 0, 0, pc.sort) AS pc_sort",
+			"IF(pc.parent_uuid = 0, 0, pc.sort) AS pc_sort",
+			"pp.product_type",
 		).
 		Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
 		Joins("LEFT JOIN " + productBomTable + " ON sp.product_bom_uuid = pb.uuid").

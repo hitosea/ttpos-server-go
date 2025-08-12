@@ -675,8 +675,12 @@ func (s *statisticsSrv) CountProduct(ctx context.Context, req CountReq) []CountP
 
 	var list []CountProductResp
 	for _, product := range productData {
+		productName := product.ProductName.String
+		if product.ProductType.Int64 != constant.ProductTypePackage {
+			productName = product.ProductName.String + "（" + product.FlavorName.String + "）"
+		}
 		list = append(list, CountProductResp{
-			ProductName: product.ProductName.String + "（" + product.FlavorName.String + "）",
+			ProductName: productName,
 			SalePrice:   product.SalePrice.Float64,
 			SaleNum:     product.SaleNum.Float64,
 			SaleAmount:  product.SaleAmount.Float64,
@@ -1007,8 +1011,8 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 
 		// 销售商品
 		for _, saleProduct := range saleOrder.SaleOrderProducts {
-			// 如果商品已删除、已取消、未接单，则不统计
-			if saleProduct.IsDelete() || saleProduct.IsCancelProduct() || !saleProduct.IsAcceptOrderProduct() {
+			// 如果商品已删除、已取消、未接单、是套餐子商品, 则不统计
+			if saleProduct.IsDelete() || saleProduct.IsCancelProduct() || !saleProduct.IsAcceptOrderProduct() || saleProduct.IsPackageSubProduct() {
 				continue
 			}
 			// 统计商品数量
