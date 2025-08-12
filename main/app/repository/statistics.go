@@ -32,6 +32,7 @@ type IStatisticsRepo interface {
 	CountProductSale(req CountProductSaleRepoReq, opts ...DBOption) ([]model.StatisticsProductSaleData, int64)                 // 统计商品销售
 	CountFreePayment(opts ...DBOption) model.StatisticsFreePaymentData                                                         // 统计免单支付
 	CountFreePaymentDays(opts ...DBOption) []model.StatisticsFreePaymentDaysData                                               // 统计免单支付天数
+	CountCancelOrder(opts ...DBOption) model.StatisticsCancelOrderData                                                         // 统计取消订单
 	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData                                 // 统计商品排行
 	SaveSale(sales []model.StatisticsSale) error                                                                               // 保存销售
 	SavePayment(payments []model.StatisticsPayment) error                                                                      // 保存支付
@@ -905,6 +906,23 @@ func (r *StatisticsRepo) CountFreePaymentDays(opts ...DBOption) []model.Statisti
 		).
 		Group("day").
 		Order("day ASC").
+		Find(&result)
+
+	return result
+}
+
+// CountCancelOrder 统计取消订单
+func (r *StatisticsRepo) CountCancelOrder(opts ...DBOption) model.StatisticsCancelOrderData {
+	var result model.StatisticsCancelOrderData
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	db.Model(&model.SaleBill{}).
+		Select("COUNT(uuid) AS total_cancel_order_num", "SUM(origin_amount) AS total_cancel_order_amount").
+		Where("status = ?", constant.SaleOrderStatusCanceled).
+		Where("bill_type IN (?)", []uint{constant.SaleBillTypeDesk, constant.SaleBillTypeInstant}).
 		Find(&result)
 
 	return result
