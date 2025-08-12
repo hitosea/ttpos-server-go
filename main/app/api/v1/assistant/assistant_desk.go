@@ -525,6 +525,48 @@ func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderCartProductPackageAdd 向购物车添加套餐
+// @Summary 向购物车添加套餐
+// @Description 向购物车添加套餐
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderCartProductPackageAddReq true "套餐参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/cart/product_package/add [post]
+func (h *DeskHandler) OrderCartProductPackageAdd(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartProductPackageAddReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	// 向购物车添加套餐
+	shopCart, err := h.orderSrv.OrderCartProductPackageAdd(ctx, params)
+	if err != nil {
+		if strings.Contains(err.Error(), errors.ErrProductPriceChanged.Error()) {
+			res := &resp.DeskPing{
+				Product: shopCart.Product,
+			}
+			helper.ErrorWithData(c, constant.CodeOrderCheckProductPriceChanged, res, fmt.Errorf("%s", i18n.Translate(ctx.GetLanguage(), err.Error())))
+			return
+		}
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // OrderCartProductNum 修改购物车商品数量
 // @Summary 修改购物车某个商品的数量
 // @Description 修改购物车商品数量
@@ -1641,6 +1683,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/ping", wrapper.GetDeskPing)                                                     // 定时获取桌台信息
 		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                                                // 创建桌台订单(开桌)
 		privateApi.POST("/desk/order/cart/product/add", wrapper.OrderCartProductAdd)                          // 向购物车添加商品
+		privateApi.POST("/desk/order/cart/product_package/add", wrapper.OrderCartProductPackageAdd)           // 向购物车添加套餐
 		privateApi.DELETE("/desk/order/product/delete", wrapper.OrderProductDelete)                           // 删除桌台订单商品
 		privateApi.POST("/desk/order/cart/product/num", wrapper.OrderCartProductNum)                          // 修改购物车商品数量
 		privateApi.POST("/desk/order/cart/cooking", wrapper.OrderCartProductCooking)                          // 送厨购物车商品
