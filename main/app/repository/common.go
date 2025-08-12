@@ -75,6 +75,7 @@ type ICommonRepo interface {
 	WhereByIsShowH5(isShow uint) DBOption                               // 根据是否显示H5端查询
 	WhereByIsShowMember(isShow uint) DBOption                           // 根据是否显示会员端查询
 	WhereBySoftDelete() DBOption                                        // 根据软删除查询
+	WhereByNotPackageSubProduct() DBOption                              // 根据不是套餐子商品查询
 	WhereByNoSelectingTimeout() DBOption                                // 根据选购超时查询
 	WhereByIsDefault(isDefault uint) DBOption                           // 根据是否默认查询
 	WhereByCooking() DBOption                                           // 根据账单已经送厨房查询
@@ -288,6 +289,13 @@ func (r *commonRepo) WhereByIsShowMember(isShow uint) DBOption {
 func (r *commonRepo) WhereBySoftDelete() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where(fmt.Sprintf("delete_time = %d", constant.NotDeleted))
+	}
+}
+
+// WhereByNotPackageSubProduct 根据不是套餐子商品查询
+func (r *commonRepo) WhereByNotPackageSubProduct() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("product_type != ?", constant.ProductTypePackageSubProduct)
 	}
 }
 

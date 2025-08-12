@@ -12269,9 +12269,18 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 	}
 	// 获取未下单的h5订单商品
 	h5OrderProducts := saleBill.GetUnOrderH5OrderProduct()
+	subProductList := make([]*model.SaleOrderProduct, 0)
 	// 将未下单的h5订单商品变为已下单的h5订单商品
 	for _, h5OrderProduct := range h5OrderProducts {
 		h5OrderProduct.SetH5OrderProduct(h5Order.Uuid)
+		// 如果商品是套餐商品，则设置套餐子商品变为已下单的h5订单商品
+		if h5OrderProduct.IsPackageProduct() {
+			subProducts := saleBill.GetSubProducts(h5OrderProduct.Uuid)
+			for _, subProduct := range subProducts {
+				subProduct.SetH5OrderProduct(h5Order.Uuid)
+			}
+			subProductList = append(subProductList, subProducts...)
+		}
 	}
 
 	// 检查超时不能加购
@@ -12314,6 +12323,12 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 		}
 		// 更新销售订单商品，将未下单商品改为已下单商品。记录上saleOrderProduct的h5OrderUuid
 		for _, saleOrderProduct := range h5OrderProducts {
+			if err := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProductRecord(*saleOrderProduct); err != nil {
+				return errors.WithMessage(err, "更新销售订单商品失败")
+			}
+		}
+		// 更新销售订单商品，将套餐子商品改为已下单商品。记录上saleOrderProduct的h5OrderUuid
+		for _, saleOrderProduct := range subProductList {
 			if err := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProductRecord(*saleOrderProduct); err != nil {
 				return errors.WithMessage(err, "更新销售订单商品失败")
 			}
