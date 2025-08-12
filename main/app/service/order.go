@@ -5173,70 +5173,39 @@ func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context,
 		if !saleOrderProduct.IsCanEdit() {
 			return nil, errors.WithMessage(errors.New("商品不可编辑"), "商品不可编辑")
 		}
-		// 删除所有规格、加料和属性
-		saleOrderProduct.DeleteAllSaleOrderProductBomsAndAttributes()
-		// 添加新的规格、加料和属性
-		{
-			// 添加新规格
-			flavorProductBom, errFlavorProductBom := repository.NewProductBomRepo(db).GetFlavorProductBomByUuid(request.FlavorUuid)
-			if errFlavorProductBom != nil {
-				return nil, errors.WithMessage(errFlavorProductBom)
-			}
-			flavor := model.NewSaleOrderProductFlavor(saleOrderProduct.Uuid, saleOrder.Uuid, model.Flavor{
-				Name:           flavorProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-				Price:          flavorProductBom.Price,
-				ProductBomUuid: request.FlavorUuid,
-			})
-			flavor.SetUpdate()
-			saleOrderProduct.SaleOrderProductBoms = append(saleOrderProduct.SaleOrderProductBoms, flavor)
-			saleOrderProduct.ChangeFlavor(flavor)
 
-			// 添加新加料
-			sauceProductBoms, errSauceProductBoms := GetSauceInfo(ctx, db, request.SauceUuidList, saleOrderProduct.Num)
-			if errSauceProductBoms != nil {
-				return nil, errors.WithMessage(errSauceProductBoms)
-			}
-			sauces := make([]model.Sauce, 0)
-			for sauceProductBomUuid, sauceProductBom := range sauceProductBoms {
-				sauce := model.Sauce{
-					Name:           sauceProductBom.ProductSauce.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
-					Price:          sauceProductBom.Price,
-					ProductBomUuid: sauceProductBomUuid,
-				}
-				sauces = append(sauces, sauce)
-			}
-			for _, sauce := range sauces {
-				sauce := model.NewSaleOrderProductSauce(saleOrderProduct.Uuid, saleOrder.Uuid, sauce)
-				sauce.SetUpdate()
-				saleOrderProduct.SaleOrderProductBoms = append(saleOrderProduct.SaleOrderProductBoms, sauce)
-			}
-			// 添加新属性
-			productAttributes, errProductAttributes := GetAttributeInfo(ctx, db, request.AttributeUuidList)
-			if errProductAttributes != nil {
-				return nil, errors.WithMessage(errProductAttributes)
-			}
-			attributes := sortProductAttributes(ctx, productAttributes)
-			for _, attribute := range attributes {
-				attr := model.NewSaleOrderProductAttribute(saleOrderProduct.Uuid, saleOrder.Uuid, attribute)
-				attr.SetUpdate()
-				saleOrderProduct.SaleOrderProductAttributes = append(saleOrderProduct.SaleOrderProductAttributes, attr)
-			}
-		}
-
-		// 重新计算商品的签名
-		saleOrderProduct.Sign = saleOrderProduct.GenerateProductSign()
-
-		// 从新计算订单并保存
-		if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
-			if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
-				return errors.WithMessage(err)
-			}
-			return nil
-		}); err != nil {
+		saleOrderProduct, err := EditProduct(ctx, db, saleOrder, saleOrderProduct, request.EditProductReq)
+		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
 	} else {
+		// 套餐商品
+		saleOrderProduct, _, errProduct := saleOrder.GetSaleOrderProduct(request.SaleOrderProductUuid)
+		if errProduct != nil {
+			return nil, errors.WithMessage(errProduct)
+		}
+		if !saleOrderProduct.IsCanEdit() {
+			return nil, errors.WithMessage(errors.New("商品不可编辑"), "商品不可编辑")
+		}
+		// 获取套餐子商品
+		subProducts := saleOrder.GetPackageSubProductList(request.SaleOrderProductUuid)
+		for i, subProduct := range subProducts {
+			params := request.Products[i]
+			_, err := EditProduct(ctx, db, saleOrder, subProduct, params.EditProductReq)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
+		}
+	}
 
+	// 从新计算订单并保存
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+			return errors.WithMessage(err)
+		}
+		return nil
+	}); err != nil {
+		return nil, errors.WithMessage(err)
 	}
 
 	// 获取新的购物车商品数据
@@ -5246,6 +5215,62 @@ func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context,
 	}
 
 	return info, nil
+}
+
+func EditProduct(ctx context.Context, db *gorm.DB, saleOrder *model.SaleOrder, saleOrderProduct *model.SaleOrderProduct, request req.EditProductReq) (*model.SaleOrderProduct, error) {
+	// 删除所有规格、加料和属性
+	saleOrderProduct.DeleteAllSaleOrderProductBomsAndAttributes()
+	// 添加新的规格、加料和属性
+	{
+		// 添加新规格
+		flavorProductBom, errFlavorProductBom := repository.NewProductBomRepo(db).GetFlavorProductBomByUuid(request.FlavorUuid)
+		if errFlavorProductBom != nil {
+			return nil, errors.WithMessage(errFlavorProductBom)
+		}
+		flavor := model.NewSaleOrderProductFlavor(saleOrderProduct.Uuid, saleOrder.Uuid, model.Flavor{
+			Name:           flavorProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			Price:          flavorProductBom.Price,
+			ProductBomUuid: request.FlavorUuid,
+		})
+		flavor.SetUpdate()
+		saleOrderProduct.SaleOrderProductBoms = append(saleOrderProduct.SaleOrderProductBoms, flavor)
+		saleOrderProduct.ChangeFlavor(flavor)
+
+		// 添加新加料
+		sauceProductBoms, errSauceProductBoms := GetSauceInfo(ctx, db, request.SauceUuidList, saleOrderProduct.Num)
+		if errSauceProductBoms != nil {
+			return nil, errors.WithMessage(errSauceProductBoms)
+		}
+		sauces := make([]model.Sauce, 0)
+		for sauceProductBomUuid, sauceProductBom := range sauceProductBoms {
+			sauce := model.Sauce{
+				Name:           sauceProductBom.ProductSauce.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
+				Price:          sauceProductBom.Price,
+				ProductBomUuid: sauceProductBomUuid,
+			}
+			sauces = append(sauces, sauce)
+		}
+		for _, sauce := range sauces {
+			sauce := model.NewSaleOrderProductSauce(saleOrderProduct.Uuid, saleOrder.Uuid, sauce)
+			sauce.SetUpdate()
+			saleOrderProduct.SaleOrderProductBoms = append(saleOrderProduct.SaleOrderProductBoms, sauce)
+		}
+		// 添加新属性
+		productAttributes, errProductAttributes := GetAttributeInfo(ctx, db, request.AttributeUuidList)
+		if errProductAttributes != nil {
+			return nil, errors.WithMessage(errProductAttributes)
+		}
+		attributes := sortProductAttributes(ctx, productAttributes)
+		for _, attribute := range attributes {
+			attr := model.NewSaleOrderProductAttribute(saleOrderProduct.Uuid, saleOrder.Uuid, attribute)
+			attr.SetUpdate()
+			saleOrderProduct.SaleOrderProductAttributes = append(saleOrderProduct.SaleOrderProductAttributes, attr)
+		}
+	}
+
+	// 重新计算商品的签名
+	saleOrderProduct.Sign = saleOrderProduct.GenerateProductSign()
+	return saleOrderProduct, nil
 }
 
 // 获取商品规格信息。用于加购商品时作为订单商品数据的数据来源
