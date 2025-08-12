@@ -1218,6 +1218,127 @@
                 }
             }
         },
+        "/assistant/desk/order/cart/product/flavor_and_attribute": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "查询购物车商品“规格/属性”",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "查询购物车商品“规格/属性”",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "商品类型 0-商品 1-套餐",
+                        "name": "productType",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售账单ID",
+                        "name": "saleBillUuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售订单商品ID",
+                        "name": "saleOrderProductUuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售订单ID",
+                        "name": "saleOrderUuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ProductFlavorAndAttributeRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "修改购物车商品“规格/属性”",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "修改购物车商品“规格/属性”",
+                "parameters": [
+                    {
+                        "description": "商品参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderCartProductFlavorAndAttributeChangeReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/assistant/desk/order/cart/product/giving": {
             "post": {
                 "security": [
@@ -1368,6 +1489,60 @@
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/resp.DeskPing"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/assistant/desk/order/cart/product_package/add": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "向购物车添加套餐",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "向购物车添加套餐",
+                "parameters": [
+                    {
+                        "description": "套餐参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderCartProductPackageAddReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
                                         }
                                     }
                                 }
@@ -14294,6 +14469,60 @@
                 }
             }
         },
+        "/h5/order/cart/product_package/add": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "向购物车添加套餐",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "扫码点餐"
+                ],
+                "summary": "向购物车添加套餐",
+                "parameters": [
+                    {
+                        "description": "套餐参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderCartProductPackageAddReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/h5/product/category/list": {
             "get": {
                 "security": [
@@ -20322,6 +20551,43 @@
                 }
             }
         },
+        "/shop/setting/upload_logo": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "上传logo",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.业务设置"
+                ],
+                "summary": "上传logo",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "上传logo",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/shift": {
             "post": {
                 "security": [
@@ -24238,13 +24504,9 @@
         "product_resp.ProductFlavorItemResp": {
             "type": "object",
             "properties": {
-                "locale_name": {
+                "name": {
                     "description": "商品规格名称",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.LocaleResponse"
-                        }
-                    ]
+                    "type": "string"
                 },
                 "product_package_count": {
                     "description": "关联商品包数量",
@@ -25781,7 +26043,7 @@
                     }
                 },
                 "flavor_uuid": {
-                    "description": "普通商品的参数",
+                    "description": "某个规格商品ID",
                     "type": "integer"
                 },
                 "product_package_uuid": {
@@ -25789,7 +26051,7 @@
                     "type": "integer"
                 },
                 "product_type": {
-                    "description": "商品类型 0-商品 1-套餐",
+                    "description": "商品类型 0-商品 1-套餐 2-套餐子商品",
                     "type": "integer"
                 },
                 "products": {
@@ -26809,6 +27071,13 @@
                 "product_package_group_uuid": {
                     "description": "套餐分组UUID",
                     "type": "integer"
+                },
+                "sauce_uuid": {
+                    "description": "小料ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 }
             }
         },
@@ -32920,6 +33189,14 @@
                     "description": "数量",
                     "type": "number"
                 },
+                "sub_products": {
+                    "description": "套餐子商品列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.SubProductList"
+                        }
+                    ]
+                },
                 "total_price": {
                     "description": "总价",
                     "type": "number"
@@ -34484,6 +34761,34 @@
                 "uuid": {
                     "description": "角色UUID",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.SubProductItem": {
+            "type": "object",
+            "properties": {
+                "locale_name": {
+                    "description": "商品名称多语言",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "num": {
+                    "description": "数量",
+                    "type": "number"
+                }
+            }
+        },
+        "resp.SubProductList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.SubProductItem"
+                    }
                 }
             }
         },
