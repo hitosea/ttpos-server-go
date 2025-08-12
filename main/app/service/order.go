@@ -5082,6 +5082,7 @@ func (s *orderSrv) OrderCartProductPackageAdd(ctx context.Context, request req.O
 		Products: []req.ProductParams{
 			productParam,
 		},
+		IsH5Product: request.IsH5Product(),
 	})
 	if err != nil {
 		return nil, errors.WithMessage(err)
