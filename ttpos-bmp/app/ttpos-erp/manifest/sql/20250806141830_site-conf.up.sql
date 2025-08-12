@@ -16,4 +16,4 @@ CREATE TABLE if not exists `erp_site` (
 
 INSERT INTO erp.erp_site
 (id, uuid, site_name, site_url, remark, site_code, api_key, api_secret)
-VALUES(1, '666666', '开发通用', 'http://192.168.100.206:15080/', NULL, 'wallace', '1cd4278df0189a3', 'c93d1d1bb4c76a7');
+VALUES(1, '666666', '开发通用', 'http://192.168.100.206:15080/', NULL, '1', '1cd4278df0189a3', 'c93d1d1bb4c76a7');
