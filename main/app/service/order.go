@@ -2808,6 +2808,9 @@ func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnIn
 		if saleOrderProduct.IsCancelProduct() || saleOrderProduct.IsGiftProduct() || saleOrderProduct.Status == constant.OrderProductStatusUnSending {
 			continue
 		}
+		if saleOrderProduct.IsPackageSubProduct() {
+			continue
+		}
 		products = append(products, resp.OrderReturnProduct{
 			SaleOrderProductUuid: saleOrderProduct.Uuid,
 			LocaleName:           saleOrderProduct.MultiLanguageName.GetNames(),
