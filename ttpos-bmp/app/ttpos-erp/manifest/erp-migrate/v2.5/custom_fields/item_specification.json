@@ -1,0 +1,8 @@
+{
+  "doctype": "DocType",
+  "label": "规格",
+  "fieldname": "custom_specification",
+  "fieldtype": "Data",
+  "insert_after": "item_name",
+  "dt": "Item"
+}

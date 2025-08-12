@@ -1,8 +1,0 @@
-{
-  "doctype": "DocType",
-  "label": "Specification",
-  "fieldtype": "Link",
-  "options": "Item Specification",
-  "insert_after": "item_name",
-  "dt": "Item"
-}

@@ -61,26 +61,24 @@ message GetAttributeListReq {
   string branch = 1; // 分支名称，可选
   string company_abbr = 2; // 公司简称，可选
   string attribute_name = 3; // 属性名称，可选
+  string alias_name = 4; // 属性别名，可选
 }
-
-message GetAttributeListResp {
-  string branch = 1; // 分支名称，可选
-  string company_abbr = 2; // 公司简称，可选
-  string attribute_name = 3; // 属性名称，可选
-}
-
-message GetSpecificationListReq {
-  string branch = 1; // 分支名称，可选
-  string company_abbr = 2; // 公司简称，可选
-  string specification_name = 3; // 规格名称，可选
-}
-
-
 
 message AttributeInfo {
   string branch = 1; // 分支名称，可选
-  string company_abbr = 2; // 公司简称，可选
+  string company = 2; // 公司简称，可选
   string attribute_name = 3; // 属性名称，必填
+  string alias_name = 4; // 属性别名，可选
+  repeated AttributeValueInfo attribute_value_list = 5; // 属性值列表
+}
+
+message AttributeValueInfo {
+  string attribute_value = 1; // 属性值，必填
+  string abbr = 2; // 属性缩写，必填
+}
+
+message GetAttributeListResp {
+  repeated AttributeInfo attribute_list = 1; // 属性列表
 }
 
 service ItemService {

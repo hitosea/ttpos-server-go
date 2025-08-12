@@ -524,6 +524,7 @@ type GetAttributeListReq struct {
 	Branch        string                 `protobuf:"bytes,1,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                    // 分支名称，可选
 	CompanyAbbr   string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`       // 公司简称，可选
 	AttributeName string                 `protobuf:"bytes,3,opt,name=attribute_name,json=attributeName,proto3" json:"attribute_name,omitempty" dc:"属性名称，可选"` // 属性名称，可选
+	AliasName     string                 `protobuf:"bytes,4,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"属性别名，可选"`             // 属性别名，可选
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -579,138 +580,27 @@ func (x *GetAttributeListReq) GetAttributeName() string {
 	return ""
 }
 
-type GetAttributeListResp struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Branch        string                 `protobuf:"bytes,1,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                    // 分支名称，可选
-	CompanyAbbr   string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`       // 公司简称，可选
-	AttributeName string                 `protobuf:"bytes,3,opt,name=attribute_name,json=attributeName,proto3" json:"attribute_name,omitempty" dc:"属性名称，可选"` // 属性名称，可选
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetAttributeListResp) Reset() {
-	*x = GetAttributeListResp{}
-	mi := &file_item_item_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetAttributeListResp) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetAttributeListResp) ProtoMessage() {}
-
-func (x *GetAttributeListResp) ProtoReflect() protoreflect.Message {
-	mi := &file_item_item_proto_msgTypes[9]
+func (x *GetAttributeListReq) GetAliasName() string {
 	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetAttributeListResp.ProtoReflect.Descriptor instead.
-func (*GetAttributeListResp) Descriptor() ([]byte, []int) {
-	return file_item_item_proto_rawDescGZIP(), []int{9}
-}
-
-func (x *GetAttributeListResp) GetBranch() string {
-	if x != nil {
-		return x.Branch
-	}
-	return ""
-}
-
-func (x *GetAttributeListResp) GetCompanyAbbr() string {
-	if x != nil {
-		return x.CompanyAbbr
-	}
-	return ""
-}
-
-func (x *GetAttributeListResp) GetAttributeName() string {
-	if x != nil {
-		return x.AttributeName
-	}
-	return ""
-}
-
-type GetSpecificationListReq struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	Branch            string                 `protobuf:"bytes,1,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                // 分支名称，可选
-	CompanyAbbr       string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                   // 公司简称，可选
-	SpecificationName string                 `protobuf:"bytes,3,opt,name=specification_name,json=specificationName,proto3" json:"specification_name,omitempty" dc:"规格名称，可选"` // 规格名称，可选
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
-}
-
-func (x *GetSpecificationListReq) Reset() {
-	*x = GetSpecificationListReq{}
-	mi := &file_item_item_proto_msgTypes[10]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetSpecificationListReq) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetSpecificationListReq) ProtoMessage() {}
-
-func (x *GetSpecificationListReq) ProtoReflect() protoreflect.Message {
-	mi := &file_item_item_proto_msgTypes[10]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetSpecificationListReq.ProtoReflect.Descriptor instead.
-func (*GetSpecificationListReq) Descriptor() ([]byte, []int) {
-	return file_item_item_proto_rawDescGZIP(), []int{10}
-}
-
-func (x *GetSpecificationListReq) GetBranch() string {
-	if x != nil {
-		return x.Branch
-	}
-	return ""
-}
-
-func (x *GetSpecificationListReq) GetCompanyAbbr() string {
-	if x != nil {
-		return x.CompanyAbbr
-	}
-	return ""
-}
-
-func (x *GetSpecificationListReq) GetSpecificationName() string {
-	if x != nil {
-		return x.SpecificationName
+		return x.AliasName
 	}
 	return ""
 }
 
 type AttributeInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Branch        string                 `protobuf:"bytes,1,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                    // 分支名称，可选
-	CompanyAbbr   string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`       // 公司简称，可选
-	AttributeName string                 `protobuf:"bytes,3,opt,name=attribute_name,json=attributeName,proto3" json:"attribute_name,omitempty" dc:"属性名称，必填"` // 属性名称，必填
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Branch             string                 `protobuf:"bytes,1,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                   // 分支名称，可选
+	Company            string                 `protobuf:"bytes,2,opt,name=company,proto3" json:"company,omitempty" dc:"公司简称，可选"`                                                 // 公司简称，可选
+	AttributeName      string                 `protobuf:"bytes,3,opt,name=attribute_name,json=attributeName,proto3" json:"attribute_name,omitempty" dc:"属性名称，必填"`                // 属性名称，必填
+	AliasName          string                 `protobuf:"bytes,4,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"属性别名，可选"`                            // 属性别名，可选
+	AttributeValueList []*AttributeValueInfo  `protobuf:"bytes,5,rep,name=attribute_value_list,json=attributeValueList,proto3" json:"attribute_value_list,omitempty" dc:"属性值列表"` // 属性值列表
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *AttributeInfo) Reset() {
 	*x = AttributeInfo{}
-	mi := &file_item_item_proto_msgTypes[11]
+	mi := &file_item_item_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -722,7 +612,7 @@ func (x *AttributeInfo) String() string {
 func (*AttributeInfo) ProtoMessage() {}
 
 func (x *AttributeInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_item_item_proto_msgTypes[11]
+	mi := &file_item_item_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -735,7 +625,7 @@ func (x *AttributeInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AttributeInfo.ProtoReflect.Descriptor instead.
 func (*AttributeInfo) Descriptor() ([]byte, []int) {
-	return file_item_item_proto_rawDescGZIP(), []int{11}
+	return file_item_item_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *AttributeInfo) GetBranch() string {
@@ -745,9 +635,9 @@ func (x *AttributeInfo) GetBranch() string {
 	return ""
 }
 
-func (x *AttributeInfo) GetCompanyAbbr() string {
+func (x *AttributeInfo) GetCompany() string {
 	if x != nil {
-		return x.CompanyAbbr
+		return x.Company
 	}
 	return ""
 }
@@ -757,6 +647,116 @@ func (x *AttributeInfo) GetAttributeName() string {
 		return x.AttributeName
 	}
 	return ""
+}
+
+func (x *AttributeInfo) GetAliasName() string {
+	if x != nil {
+		return x.AliasName
+	}
+	return ""
+}
+
+func (x *AttributeInfo) GetAttributeValueList() []*AttributeValueInfo {
+	if x != nil {
+		return x.AttributeValueList
+	}
+	return nil
+}
+
+type AttributeValueInfo struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	AttributeValue string                 `protobuf:"bytes,1,opt,name=attribute_value,json=attributeValue,proto3" json:"attribute_value,omitempty" dc:"属性值，必填"` // 属性值，必填
+	Abbr           string                 `protobuf:"bytes,2,opt,name=abbr,proto3" json:"abbr,omitempty" dc:"属性缩写，必填"`                                          // 属性缩写，必填
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *AttributeValueInfo) Reset() {
+	*x = AttributeValueInfo{}
+	mi := &file_item_item_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AttributeValueInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AttributeValueInfo) ProtoMessage() {}
+
+func (x *AttributeValueInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_item_item_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AttributeValueInfo.ProtoReflect.Descriptor instead.
+func (*AttributeValueInfo) Descriptor() ([]byte, []int) {
+	return file_item_item_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *AttributeValueInfo) GetAttributeValue() string {
+	if x != nil {
+		return x.AttributeValue
+	}
+	return ""
+}
+
+func (x *AttributeValueInfo) GetAbbr() string {
+	if x != nil {
+		return x.Abbr
+	}
+	return ""
+}
+
+type GetAttributeListResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AttributeList []*AttributeInfo       `protobuf:"bytes,1,rep,name=attribute_list,json=attributeList,proto3" json:"attribute_list,omitempty" dc:"属性列表"` // 属性列表
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAttributeListResp) Reset() {
+	*x = GetAttributeListResp{}
+	mi := &file_item_item_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAttributeListResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAttributeListResp) ProtoMessage() {}
+
+func (x *GetAttributeListResp) ProtoReflect() protoreflect.Message {
+	mi := &file_item_item_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAttributeListResp.ProtoReflect.Descriptor instead.
+func (*GetAttributeListResp) Descriptor() ([]byte, []int) {
+	return file_item_item_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *GetAttributeListResp) GetAttributeList() []*AttributeInfo {
+	if x != nil {
+		return x.AttributeList
+	}
+	return nil
 }
 
 var File_item_item_proto protoreflect.FileDescriptor
@@ -800,23 +800,25 @@ const file_item_item_proto_rawDesc = "" +
 	"\buom_name\x18\x03 \x01(\tR\auomName\x12\x1d\n" +
 	"\n" +
 	"alias_name\x18\x04 \x01(\tR\taliasName\x12/\n" +
-	"\x14must_be_whole_number\x18\x05 \x01(\bR\x11mustBeWholeNumber\"w\n" +
+	"\x14must_be_whole_number\x18\x05 \x01(\bR\x11mustBeWholeNumber\"\x96\x01\n" +
 	"\x13GetAttributeListReq\x12\x16\n" +
 	"\x06branch\x18\x01 \x01(\tR\x06branch\x12!\n" +
 	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12%\n" +
-	"\x0eattribute_name\x18\x03 \x01(\tR\rattributeName\"x\n" +
-	"\x14GetAttributeListResp\x12\x16\n" +
-	"\x06branch\x18\x01 \x01(\tR\x06branch\x12!\n" +
-	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12%\n" +
-	"\x0eattribute_name\x18\x03 \x01(\tR\rattributeName\"\x83\x01\n" +
-	"\x17GetSpecificationListReq\x12\x16\n" +
-	"\x06branch\x18\x01 \x01(\tR\x06branch\x12!\n" +
-	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12-\n" +
-	"\x12specification_name\x18\x03 \x01(\tR\x11specificationName\"q\n" +
+	"\x0eattribute_name\x18\x03 \x01(\tR\rattributeName\x12\x1d\n" +
+	"\n" +
+	"alias_name\x18\x04 \x01(\tR\taliasName\"\xd3\x01\n" +
 	"\rAttributeInfo\x12\x16\n" +
-	"\x06branch\x18\x01 \x01(\tR\x06branch\x12!\n" +
-	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12%\n" +
-	"\x0eattribute_name\x18\x03 \x01(\tR\rattributeName2\xa3\x02\n" +
+	"\x06branch\x18\x01 \x01(\tR\x06branch\x12\x18\n" +
+	"\acompany\x18\x02 \x01(\tR\acompany\x12%\n" +
+	"\x0eattribute_name\x18\x03 \x01(\tR\rattributeName\x12\x1d\n" +
+	"\n" +
+	"alias_name\x18\x04 \x01(\tR\taliasName\x12J\n" +
+	"\x14attribute_value_list\x18\x05 \x03(\v2\x18.item.AttributeValueInfoR\x12attributeValueList\"Q\n" +
+	"\x12AttributeValueInfo\x12'\n" +
+	"\x0fattribute_value\x18\x01 \x01(\tR\x0eattributeValue\x12\x12\n" +
+	"\x04abbr\x18\x02 \x01(\tR\x04abbr\"R\n" +
+	"\x14GetAttributeListResp\x12:\n" +
+	"\x0eattribute_list\x18\x01 \x03(\v2\x13.item.AttributeInfoR\rattributeList2\xa3\x02\n" +
 	"\vItemService\x126\n" +
 	"\vGetItemList\x12\x14.item.GetItemListReq\x1a\x11.erp.ResponseInfo\x124\n" +
 	"\n" +
@@ -839,37 +841,39 @@ func file_item_item_proto_rawDescGZIP() []byte {
 
 var file_item_item_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_item_item_proto_goTypes = []any{
-	(*GetItemListReq)(nil),          // 0: item.GetItemListReq
-	(*SaveItemReq)(nil),             // 1: item.SaveItemReq
-	(*AddItemGroupReq)(nil),         // 2: item.AddItemGroupReq
-	(*GetItemGroupListReq)(nil),     // 3: item.GetItemGroupListReq
-	(*GetItemGroupListResp)(nil),    // 4: item.GetItemGroupListResp
-	(*GetUomListReq)(nil),           // 5: item.GetUomListReq
-	(*GetUomListResp)(nil),          // 6: item.GetUomListResp
-	(*UomInfo)(nil),                 // 7: item.UomInfo
-	(*GetAttributeListReq)(nil),     // 8: item.GetAttributeListReq
-	(*GetAttributeListResp)(nil),    // 9: item.GetAttributeListResp
-	(*GetSpecificationListReq)(nil), // 10: item.GetSpecificationListReq
-	(*AttributeInfo)(nil),           // 11: item.AttributeInfo
-	(*api.ResponseInfo)(nil),        // 12: erp.ResponseInfo
+	(*GetItemListReq)(nil),       // 0: item.GetItemListReq
+	(*SaveItemReq)(nil),          // 1: item.SaveItemReq
+	(*AddItemGroupReq)(nil),      // 2: item.AddItemGroupReq
+	(*GetItemGroupListReq)(nil),  // 3: item.GetItemGroupListReq
+	(*GetItemGroupListResp)(nil), // 4: item.GetItemGroupListResp
+	(*GetUomListReq)(nil),        // 5: item.GetUomListReq
+	(*GetUomListResp)(nil),       // 6: item.GetUomListResp
+	(*UomInfo)(nil),              // 7: item.UomInfo
+	(*GetAttributeListReq)(nil),  // 8: item.GetAttributeListReq
+	(*AttributeInfo)(nil),        // 9: item.AttributeInfo
+	(*AttributeValueInfo)(nil),   // 10: item.AttributeValueInfo
+	(*GetAttributeListResp)(nil), // 11: item.GetAttributeListResp
+	(*api.ResponseInfo)(nil),     // 12: erp.ResponseInfo
 }
 var file_item_item_proto_depIdxs = []int32{
 	7,  // 0: item.GetUomListResp.uom_list:type_name -> item.UomInfo
-	0,  // 1: item.ItemService.GetItemList:input_type -> item.GetItemListReq
-	5,  // 2: item.ItemService.GetUomList:input_type -> item.GetUomListReq
-	7,  // 3: item.ItemService.SaveUom:input_type -> item.UomInfo
-	8,  // 4: item.ItemService.GetAttributeList:input_type -> item.GetAttributeListReq
-	11, // 5: item.ItemService.SaveAttribute:input_type -> item.AttributeInfo
-	12, // 6: item.ItemService.GetItemList:output_type -> erp.ResponseInfo
-	12, // 7: item.ItemService.GetUomList:output_type -> erp.ResponseInfo
-	12, // 8: item.ItemService.SaveUom:output_type -> erp.ResponseInfo
-	12, // 9: item.ItemService.GetAttributeList:output_type -> erp.ResponseInfo
-	12, // 10: item.ItemService.SaveAttribute:output_type -> erp.ResponseInfo
-	6,  // [6:11] is the sub-list for method output_type
-	1,  // [1:6] is the sub-list for method input_type
-	1,  // [1:1] is the sub-list for extension type_name
-	1,  // [1:1] is the sub-list for extension extendee
-	0,  // [0:1] is the sub-list for field type_name
+	10, // 1: item.AttributeInfo.attribute_value_list:type_name -> item.AttributeValueInfo
+	9,  // 2: item.GetAttributeListResp.attribute_list:type_name -> item.AttributeInfo
+	0,  // 3: item.ItemService.GetItemList:input_type -> item.GetItemListReq
+	5,  // 4: item.ItemService.GetUomList:input_type -> item.GetUomListReq
+	7,  // 5: item.ItemService.SaveUom:input_type -> item.UomInfo
+	8,  // 6: item.ItemService.GetAttributeList:input_type -> item.GetAttributeListReq
+	9,  // 7: item.ItemService.SaveAttribute:input_type -> item.AttributeInfo
+	12, // 8: item.ItemService.GetItemList:output_type -> erp.ResponseInfo
+	12, // 9: item.ItemService.GetUomList:output_type -> erp.ResponseInfo
+	12, // 10: item.ItemService.SaveUom:output_type -> erp.ResponseInfo
+	12, // 11: item.ItemService.GetAttributeList:output_type -> erp.ResponseInfo
+	12, // 12: item.ItemService.SaveAttribute:output_type -> erp.ResponseInfo
+	8,  // [8:13] is the sub-list for method output_type
+	3,  // [3:8] is the sub-list for method input_type
+	3,  // [3:3] is the sub-list for extension type_name
+	3,  // [3:3] is the sub-list for extension extendee
+	0,  // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_item_item_proto_init() }
