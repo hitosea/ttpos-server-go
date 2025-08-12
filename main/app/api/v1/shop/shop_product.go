@@ -883,11 +883,6 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.DELETE("/product/attribute/group", wrapper.DeleteProductAttributeGroup)    // 删除商品属性组
 		privateApi.POST("/product/attribute/group/sort", wrapper.SortProductAttributeGroup)   // 排序商品属性组
 		privateApi.GET("/product/attribute/sort", wrapper.SortProductAttribute)               // 排序商品属性
-		// privateApi.GET("/product/attribute/group", wrapper.GetProductAttributeGroup)          // 获取商品属性分组详情
-		// privateApi.POST("/product/attribute/add", wrapper.AddProductAttribute)     // 添加商品属性
-		// privateApi.POST("/product/attribute/edit", wrapper.EditProductAttribute)   // 编辑商品属性
-		// privateApi.DELETE("/product/attribute", wrapper.DeleteProductAttribute)    // 删除商品属性
-		// privateApi.POST("/product/attribute/sort", wrapper.SortProductAttribute)   // 排序商品属性
 
 		privateApi.GET("/product/flavor/list", wrapper.GetProductFlavorList) // 获取商品规格列表
 		privateApi.GET("/product/flavor", wrapper.GetProductFlavor)          // 获取商品规格详情
