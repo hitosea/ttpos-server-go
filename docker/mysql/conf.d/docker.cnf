@@ -9,7 +9,7 @@ skip-external-locking
 binlog_cache_size = 256K
 thread_stack = 512K
 join_buffer_size = 8192K
-query_cache_type = 1
+query_cache_type = 0
 max_heap_table_size = 2048M
 default_storage_engine = InnoDB
 performance_schema_max_table_instances = 400
@@ -23,7 +23,7 @@ read_buffer_size = 4096K
 read_rnd_buffer_size = 2048K
 myisam_sort_buffer_size = 8M
 thread_cache_size = 256
-query_cache_size = 384M
+query_cache_size = 0
 tmp_table_size = 2048M
 sql-mode=NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES
 group_concat_max_len = 1048576
