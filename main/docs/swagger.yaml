@@ -6876,6 +6876,9 @@ definitions:
       num:
         description: 数量
         type: number
+      unit_num:
+        description: 单位数量
+        type: number
       uuid:
         description: 商品uuid. sale_order_product_uuid
         type: integer
@@ -7226,6 +7229,9 @@ definitions:
       can_change_num:
         description: 顾客可修改必点数量
         type: boolean
+      can_edit:
+        description: 是否可以编辑
+        type: boolean
       discount_price:
         description: 折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。单价(折后)*数量
         type: number
@@ -7360,7 +7366,7 @@ definitions:
       product:
         allOf:
         - $ref: '#/definitions/product_resp.Product'
-        description: 商品信息
+        description: 商品/套餐信息
       selected_product:
         allOf:
         - $ref: '#/definitions/resp.ProductPackageDetail'
@@ -13793,6 +13799,77 @@ paths:
       security:
       - JwtToken: []
       summary: 取消退菜购物车商品
+      tags:
+      - 收银端.点餐
+  /cashier/instant/order/cart/product/flavor_and_attribute:
+    get:
+      consumes:
+      - application/json
+      description: 查询购物车商品“规格/属性”
+      parameters:
+      - description: 商品类型 0-商品 1-套餐
+        in: query
+        name: productType
+        type: integer
+      - description: 销售账单ID
+        in: query
+        name: saleBillUuid
+        type: integer
+      - description: 销售订单商品ID
+        in: query
+        name: saleOrderProductUuid
+        type: integer
+      - description: 销售订单ID
+        in: query
+        name: saleOrderUuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ProductFlavorAndAttributeRes'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 查询购物车商品“规格/属性”
+      tags:
+      - 收银端.点餐
+    post:
+      consumes:
+      - application/json
+      description: 修改购物车商品“规格/属性”
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductFlavorAndAttributeChangeReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 修改购物车商品“规格/属性”
       tags:
       - 收银端.点餐
   /cashier/instant/order/cart/product/giving:

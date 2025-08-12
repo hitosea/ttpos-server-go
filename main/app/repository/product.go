@@ -85,9 +85,10 @@ type IProductQueryRepo interface {
 	GetProductFlavorMaxSort(opts ...DBOption) (int64, error)                                                        // 获取商品规格最大排序
 	GetProductBom(opts ...DBOption) (model.ProductBom, error)                                                       // 获取商品BOM详情
 	GetProductBomCount(opts ...DBOption) (int64, error)                                                             // 获取商品BOM数量
-	PaginateGetProductUnitList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductUnit, int64, error)      // 分页获取产品单位列表
-	GetProductUnit(opts ...DBOption) (model.ProductUnit, error)                                                     // 获取产品单位详情
-	GetProductUnitCount(opts ...DBOption) (int64, error)                                                            // 获取产品单位数量
+
+	PaginateGetProductUnitList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductUnit, int64, error) // 分页获取产品单位列表
+	GetProductUnit(opts ...DBOption) (model.ProductUnit, error)                                                // 获取产品单位详情
+	GetProductUnitCount(opts ...DBOption) (int64, error)                                                       // 获取产品单位数量
 
 	PaginateGetProductSauceList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductSauce, int64, error) // 分页获取商品加料列表
 	GetProductSauce(opts ...DBOption) (model.ProductSauce, error)                                                // 获取商品加料详情
@@ -96,7 +97,7 @@ type IProductQueryRepo interface {
 	PaginateGetProductAttributeGroupList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductAttributeGroup, int64, error) // 分页获取商品属性分组列表
 	GetProductAttributeGroups(opts ...DBOption) ([]model.ProductAttributeGroup, error)                                             // 获取商品属性分组列表
 	GetProductAttributeGroup(opts ...DBOption) (model.ProductAttributeGroup, error)                                                // 获取商品属性分组详情
-	GetProductAttribute(opts ...DBOption) ([]model.ProductAttribute, error)                                                        // 获取商品属性列表
+	GetProductAttributes(opts ...DBOption) ([]model.ProductAttribute, error)                                                       // 获取商品属性列表
 	GetProductPackageAttributeGroups(opts ...DBOption) ([]model.ProductPackageAttributeGroup, error)                               // 获取商品包属性组列表
 
 	PaginateGetProductFlavorList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductFlavor, int64, error) // 分页获取商品规格列表
@@ -737,7 +738,7 @@ func (r *productRepo) PaginateGetProductSauceList(pageNo int, pageSize int, opts
 	if err != nil {
 		return nil, 0, errors.WithMessage(err)
 	}
-	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&sauces).Error
+	err = db.Offset((pageNo - 1) * pageSize).Order("ttpos_product_sauce.sort asc, ttpos_product_sauce.create_time desc").Limit(pageSize).Find(&sauces).Error
 	return sauces, total, errors.WithMessage(err)
 }
 
@@ -802,7 +803,7 @@ func (r *productRepo) PaginateGetProductAttributeGroupList(pageNo int, pageSize 
 	if err != nil {
 		return nil, 0, errors.WithMessage(err)
 	}
-	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&attributeGroups).Error
+	err = db.Offset((pageNo - 1) * pageSize).Order("sort asc, create_time asc").Limit(pageSize).Find(&attributeGroups).Error
 	return attributeGroups, total, errors.WithMessage(err)
 }
 
@@ -864,13 +865,13 @@ func (r *productRepo) WithProductAttributesProductPackageAttributesProductPackag
 	}
 }
 
-func (r *productRepo) GetProductAttribute(opts ...DBOption) ([]model.ProductAttribute, error) {
+func (r *productRepo) GetProductAttributes(opts ...DBOption) ([]model.ProductAttribute, error) {
 	var attributes []model.ProductAttribute
 	db := r.db.Model(&model.ProductAttribute{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	err := db.Find(&attributes).Error
+	err := db.Order("sort asc, create_time asc").Find(&attributes).Error
 	return attributes, errors.WithMessage(err)
 }
 
@@ -904,7 +905,7 @@ func (r *productRepo) GetProductAttributeGroups(opts ...DBOption) ([]model.Produ
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	err := db.Find(&attributeGroups).Error
+	err := db.Order("sort asc, create_time asc").Find(&attributeGroups).Error
 	return attributeGroups, errors.WithMessage(err)
 }
 

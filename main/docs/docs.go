@@ -7456,6 +7456,127 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/instant/order/cart/product/flavor_and_attribute": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "查询购物车商品“规格/属性”",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "查询购物车商品“规格/属性”",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "商品类型 0-商品 1-套餐",
+                        "name": "productType",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售账单ID",
+                        "name": "saleBillUuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售订单商品ID",
+                        "name": "saleOrderProductUuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售订单ID",
+                        "name": "saleOrderUuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ProductFlavorAndAttributeRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "修改购物车商品“规格/属性”",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "修改购物车商品“规格/属性”",
+                "parameters": [
+                    {
+                        "description": "商品参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderCartProductFlavorAndAttributeChangeReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/cashier/instant/order/cart/product/giving": {
             "post": {
                 "security": [
@@ -32060,6 +32181,10 @@ const docTemplate = `{
                     "description": "数量",
                     "type": "number"
                 },
+                "unit_num": {
+                    "description": "单位数量",
+                    "type": "number"
+                },
                 "uuid": {
                     "description": "商品uuid. sale_order_product_uuid",
                     "type": "integer"
@@ -32557,6 +32682,10 @@ const docTemplate = `{
                     "description": "顾客可修改必点数量",
                     "type": "boolean"
                 },
+                "can_edit": {
+                    "description": "是否可以编辑",
+                    "type": "boolean"
+                },
                 "discount_price": {
                     "description": "折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。单价(折后)*数量",
                     "type": "number"
@@ -32757,7 +32886,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "product": {
-                    "description": "商品信息",
+                    "description": "商品/套餐信息",
                     "allOf": [
                         {
                             "$ref": "#/definitions/product_resp.Product"
