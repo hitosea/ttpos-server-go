@@ -25,9 +25,11 @@ const (
 
 type GetItemListReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ItemName      string                 `protobuf:"bytes,1,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"商品名称模糊查询，可选，如: %商品名称%"` // 商品名称模糊查询，可选，如: %商品名称%
-	Branch        string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                   // 分支名称，可选
-	CompanyAbbr   string                 `protobuf:"bytes,3,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`      // 公司简称，可选
+	ItemGroup     string                 `protobuf:"bytes,1,opt,name=item_group,json=itemGroup,proto3" json:"item_group,omitempty" dc:"物品分组，可选  Products 商品/Raw Material 原材料"` // 物品分组，可选  Products 商品/Raw Material 原材料
+	ItemName      string                 `protobuf:"bytes,2,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"商品名称模糊查询，可选，如: %商品名称%"`                    // 商品名称模糊查询，可选，如: %商品名称%
+	Branch        string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                      // 分支名称，可选
+	CompanyAbbr   string                 `protobuf:"bytes,4,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                         // 公司简称，可选
+	ItemCode      string                 `protobuf:"bytes,5,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，可选"`                                  // 物品编码，可选
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -62,6 +64,13 @@ func (*GetItemListReq) Descriptor() ([]byte, []int) {
 	return file_item_item_proto_rawDescGZIP(), []int{0}
 }
 
+func (x *GetItemListReq) GetItemGroup() string {
+	if x != nil {
+		return x.ItemGroup
+	}
+	return ""
+}
+
 func (x *GetItemListReq) GetItemName() string {
 	if x != nil {
 		return x.ItemName
@@ -83,120 +92,86 @@ func (x *GetItemListReq) GetCompanyAbbr() string {
 	return ""
 }
 
-type SaveItemReq struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Branch        string                 `protobuf:"bytes,1,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                // 分支名称，可选
-	CompanyAbbr   string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`   // 公司简称，可选
-	ItemName      string                 `protobuf:"bytes,3,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称，必填"`            // 物品名称，必填
-	ItemCode      string                 `protobuf:"bytes,4,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，必填"`            // 物品编码，必填
-	ItemGroup     string                 `protobuf:"bytes,5,opt,name=item_group,json=itemGroup,proto3" json:"item_group,omitempty" dc:"物品分组，必填"`         // 物品分组，必填
-	StockUom      string                 `protobuf:"bytes,6,opt,name=stock_uom,json=stockUom,proto3" json:"stock_uom,omitempty" dc:"单位名称，必填"`            // 单位名称，必填
-	IsStockItem   bool                   `protobuf:"varint,7,opt,name=is_stock_item,json=isStockItem,proto3" json:"is_stock_item,omitempty" dc:"是否库存物品"` // 是否库存物品
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *SaveItemReq) Reset() {
-	*x = SaveItemReq{}
-	mi := &file_item_item_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SaveItemReq) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SaveItemReq) ProtoMessage() {}
-
-func (x *SaveItemReq) ProtoReflect() protoreflect.Message {
-	mi := &file_item_item_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SaveItemReq.ProtoReflect.Descriptor instead.
-func (*SaveItemReq) Descriptor() ([]byte, []int) {
-	return file_item_item_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *SaveItemReq) GetBranch() string {
-	if x != nil {
-		return x.Branch
-	}
-	return ""
-}
-
-func (x *SaveItemReq) GetCompanyAbbr() string {
-	if x != nil {
-		return x.CompanyAbbr
-	}
-	return ""
-}
-
-func (x *SaveItemReq) GetItemName() string {
-	if x != nil {
-		return x.ItemName
-	}
-	return ""
-}
-
-func (x *SaveItemReq) GetItemCode() string {
+func (x *GetItemListReq) GetItemCode() string {
 	if x != nil {
 		return x.ItemCode
 	}
 	return ""
 }
 
-func (x *SaveItemReq) GetItemGroup() string {
-	if x != nil {
-		return x.ItemGroup
-	}
-	return ""
-}
-
-func (x *SaveItemReq) GetStockUom() string {
-	if x != nil {
-		return x.StockUom
-	}
-	return ""
-}
-
-func (x *SaveItemReq) GetIsStockItem() bool {
-	if x != nil {
-		return x.IsStockItem
-	}
-	return false
-}
-
-type AddItemGroupReq struct {
+type GetItemListResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Branch        string                 `protobuf:"bytes,1,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                      // 分支名称，可选
-	ItemGroupName string                 `protobuf:"bytes,2,opt,name=item_group_name,json=itemGroupName,proto3" json:"item_group_name,omitempty" dc:"物品分组，必填"` // 物品分组，必填
+	ItemList      []*ItemInfo            `protobuf:"bytes,1,rep,name=item_list,json=itemList,proto3" json:"item_list,omitempty" dc:"物品列表"` // 物品列表
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *AddItemGroupReq) Reset() {
-	*x = AddItemGroupReq{}
+func (x *GetItemListResp) Reset() {
+	*x = GetItemListResp{}
+	mi := &file_item_item_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetItemListResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetItemListResp) ProtoMessage() {}
+
+func (x *GetItemListResp) ProtoReflect() protoreflect.Message {
+	mi := &file_item_item_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetItemListResp.ProtoReflect.Descriptor instead.
+func (*GetItemListResp) Descriptor() ([]byte, []int) {
+	return file_item_item_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *GetItemListResp) GetItemList() []*ItemInfo {
+	if x != nil {
+		return x.ItemList
+	}
+	return nil
+}
+
+type ItemInfo struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	ItemName          string                 `protobuf:"bytes,1,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称，必填"`                                        // 物品名称，必填
+	ItemGroup         string                 `protobuf:"bytes,2,opt,name=item_group,json=itemGroup,proto3" json:"item_group,omitempty" dc:"物品分组，必填"`                                     // 物品分组，必填
+	StockUom          string                 `protobuf:"bytes,3,opt,name=stock_uom,json=stockUom,proto3" json:"stock_uom,omitempty" dc:"库存单位，必填"`                                        // 库存单位，必填
+	ItemCode          string                 `protobuf:"bytes,4,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，可选"`                                        // 物品编码，可选
+	Branch            string                 `protobuf:"bytes,5,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                            // 分支名称，可选
+	CompanyAbbr       string                 `protobuf:"bytes,6,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                               // 公司简称，可选
+	Company           string                 `protobuf:"bytes,7,opt,name=company,proto3" json:"company,omitempty" dc:"公司名称，可选"`                                                          // 公司名称，可选
+	ItemSpecification string                 `protobuf:"bytes,8,opt,name=item_specification,json=itemSpecification,proto3" json:"item_specification,omitempty" dc:"物品规格，可选 ttpos 传英文过来"` // 物品规格，可选 ttpos 传英文过来
+	IsStockItem       bool                   `protobuf:"varint,9,opt,name=is_stock_item,json=isStockItem,proto3" json:"is_stock_item,omitempty" dc:"是否库存物品，可选"`                          // 是否库存物品，可选
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *ItemInfo) Reset() {
+	*x = ItemInfo{}
 	mi := &file_item_item_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *AddItemGroupReq) String() string {
+func (x *ItemInfo) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*AddItemGroupReq) ProtoMessage() {}
+func (*ItemInfo) ProtoMessage() {}
 
-func (x *AddItemGroupReq) ProtoReflect() protoreflect.Message {
+func (x *ItemInfo) ProtoReflect() protoreflect.Message {
 	mi := &file_item_item_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -208,23 +183,72 @@ func (x *AddItemGroupReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use AddItemGroupReq.ProtoReflect.Descriptor instead.
-func (*AddItemGroupReq) Descriptor() ([]byte, []int) {
+// Deprecated: Use ItemInfo.ProtoReflect.Descriptor instead.
+func (*ItemInfo) Descriptor() ([]byte, []int) {
 	return file_item_item_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *AddItemGroupReq) GetBranch() string {
+func (x *ItemInfo) GetItemName() string {
+	if x != nil {
+		return x.ItemName
+	}
+	return ""
+}
+
+func (x *ItemInfo) GetItemGroup() string {
+	if x != nil {
+		return x.ItemGroup
+	}
+	return ""
+}
+
+func (x *ItemInfo) GetStockUom() string {
+	if x != nil {
+		return x.StockUom
+	}
+	return ""
+}
+
+func (x *ItemInfo) GetItemCode() string {
+	if x != nil {
+		return x.ItemCode
+	}
+	return ""
+}
+
+func (x *ItemInfo) GetBranch() string {
 	if x != nil {
 		return x.Branch
 	}
 	return ""
 }
 
-func (x *AddItemGroupReq) GetItemGroupName() string {
+func (x *ItemInfo) GetCompanyAbbr() string {
 	if x != nil {
-		return x.ItemGroupName
+		return x.CompanyAbbr
 	}
 	return ""
+}
+
+func (x *ItemInfo) GetCompany() string {
+	if x != nil {
+		return x.Company
+	}
+	return ""
+}
+
+func (x *ItemInfo) GetItemSpecification() string {
+	if x != nil {
+		return x.ItemSpecification
+	}
+	return ""
+}
+
+func (x *ItemInfo) GetIsStockItem() bool {
+	if x != nil {
+		return x.IsStockItem
+	}
+	return false
 }
 
 type GetItemGroupListReq struct {
@@ -445,10 +469,10 @@ func (x *GetUomListResp) GetUomList() []*UomInfo {
 
 type UomInfo struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
-	Branch            string                 `protobuf:"bytes,1,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                     // 分支名称，可选
-	CompanyAbbr       string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                        // 公司简称，可选
-	Company           string                 `protobuf:"bytes,3,opt,name=company,proto3" json:"company,omitempty" dc:"公司名称，可选"`                                                   // 公司名称，可选
-	UomName           string                 `protobuf:"bytes,4,opt,name=uom_name,json=uomName,proto3" json:"uom_name,omitempty" dc:"单位名称，可选"`                                    // 单位名称，可选
+	UomName           string                 `protobuf:"bytes,1,opt,name=uom_name,json=uomName,proto3" json:"uom_name,omitempty" dc:"单位名称，必填"`                                    // 单位名称，必填
+	Branch            string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                     // 分支名称，可选
+	CompanyAbbr       string                 `protobuf:"bytes,3,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                        // 公司简称，可选
+	Company           string                 `protobuf:"bytes,4,opt,name=company,proto3" json:"company,omitempty" dc:"公司名称，可选"`                                                   // 公司名称，可选
 	AliasName         string                 `protobuf:"bytes,5,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"单位别名，可选"`                              // 单位别名，可选
 	MustBeWholeNumber bool                   `protobuf:"varint,6,opt,name=must_be_whole_number,json=mustBeWholeNumber,proto3" json:"must_be_whole_number,omitempty" dc:"是否必须为整数"` // 是否必须为整数
 	unknownFields     protoimpl.UnknownFields
@@ -485,6 +509,13 @@ func (*UomInfo) Descriptor() ([]byte, []int) {
 	return file_item_item_proto_rawDescGZIP(), []int{7}
 }
 
+func (x *UomInfo) GetUomName() string {
+	if x != nil {
+		return x.UomName
+	}
+	return ""
+}
+
 func (x *UomInfo) GetBranch() string {
 	if x != nil {
 		return x.Branch
@@ -502,13 +533,6 @@ func (x *UomInfo) GetCompanyAbbr() string {
 func (x *UomInfo) GetCompany() string {
 	if x != nil {
 		return x.Company
-	}
-	return ""
-}
-
-func (x *UomInfo) GetUomName() string {
-	if x != nil {
-		return x.UomName
 	}
 	return ""
 }
@@ -597,10 +621,10 @@ func (x *GetAttributeListReq) GetAliasName() string {
 
 type AttributeInfo struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
-	Branch             string                 `protobuf:"bytes,1,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                   // 分支名称，可选
-	Company            string                 `protobuf:"bytes,2,opt,name=company,proto3" json:"company,omitempty" dc:"公司名称，可选"`                                                 // 公司名称，可选
-	CompanyAbbr        string                 `protobuf:"bytes,3,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                      // 公司简称，可选
-	AttributeName      string                 `protobuf:"bytes,4,opt,name=attribute_name,json=attributeName,proto3" json:"attribute_name,omitempty" dc:"属性名称，必填"`                // 属性名称，必填
+	AttributeName      string                 `protobuf:"bytes,1,opt,name=attribute_name,json=attributeName,proto3" json:"attribute_name,omitempty" dc:"属性名称，必填"`                // 属性名称，必填
+	Branch             string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                   // 分支名称，可选
+	Company            string                 `protobuf:"bytes,3,opt,name=company,proto3" json:"company,omitempty" dc:"公司名称，可选"`                                                 // 公司名称，可选
+	CompanyAbbr        string                 `protobuf:"bytes,4,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                      // 公司简称，可选
 	AliasName          string                 `protobuf:"bytes,5,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"属性别名，可选"`                            // 属性别名，可选
 	AttributeValueList []*AttributeValueInfo  `protobuf:"bytes,6,rep,name=attribute_value_list,json=attributeValueList,proto3" json:"attribute_value_list,omitempty" dc:"属性值列表"` // 属性值列表
 	unknownFields      protoimpl.UnknownFields
@@ -637,6 +661,13 @@ func (*AttributeInfo) Descriptor() ([]byte, []int) {
 	return file_item_item_proto_rawDescGZIP(), []int{9}
 }
 
+func (x *AttributeInfo) GetAttributeName() string {
+	if x != nil {
+		return x.AttributeName
+	}
+	return ""
+}
+
 func (x *AttributeInfo) GetBranch() string {
 	if x != nil {
 		return x.Branch
@@ -654,13 +685,6 @@ func (x *AttributeInfo) GetCompany() string {
 func (x *AttributeInfo) GetCompanyAbbr() string {
 	if x != nil {
 		return x.CompanyAbbr
-	}
-	return ""
-}
-
-func (x *AttributeInfo) GetAttributeName() string {
-	if x != nil {
-		return x.AttributeName
 	}
 	return ""
 }
@@ -779,23 +803,27 @@ var File_item_item_proto protoreflect.FileDescriptor
 
 const file_item_item_proto_rawDesc = "" +
 	"\n" +
-	"\x0fitem/item.proto\x12\x04item\x1a\terp.proto\"h\n" +
-	"\x0eGetItemListReq\x12\x1b\n" +
-	"\titem_name\x18\x01 \x01(\tR\bitemName\x12\x16\n" +
-	"\x06branch\x18\x02 \x01(\tR\x06branch\x12!\n" +
-	"\fcompany_abbr\x18\x03 \x01(\tR\vcompanyAbbr\"\xe2\x01\n" +
-	"\vSaveItemReq\x12\x16\n" +
-	"\x06branch\x18\x01 \x01(\tR\x06branch\x12!\n" +
-	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12\x1b\n" +
-	"\titem_name\x18\x03 \x01(\tR\bitemName\x12\x1b\n" +
-	"\titem_code\x18\x04 \x01(\tR\bitemCode\x12\x1d\n" +
+	"\x0fitem/item.proto\x12\x04item\x1a\terp.proto\"\xa4\x01\n" +
+	"\x0eGetItemListReq\x12\x1d\n" +
 	"\n" +
-	"item_group\x18\x05 \x01(\tR\titemGroup\x12\x1b\n" +
-	"\tstock_uom\x18\x06 \x01(\tR\bstockUom\x12\"\n" +
-	"\ris_stock_item\x18\a \x01(\bR\visStockItem\"Q\n" +
-	"\x0fAddItemGroupReq\x12\x16\n" +
-	"\x06branch\x18\x01 \x01(\tR\x06branch\x12&\n" +
-	"\x0fitem_group_name\x18\x02 \x01(\tR\ritemGroupName\"U\n" +
+	"item_group\x18\x01 \x01(\tR\titemGroup\x12\x1b\n" +
+	"\titem_name\x18\x02 \x01(\tR\bitemName\x12\x16\n" +
+	"\x06branch\x18\x03 \x01(\tR\x06branch\x12!\n" +
+	"\fcompany_abbr\x18\x04 \x01(\tR\vcompanyAbbr\x12\x1b\n" +
+	"\titem_code\x18\x05 \x01(\tR\bitemCode\">\n" +
+	"\x0fGetItemListResp\x12+\n" +
+	"\titem_list\x18\x01 \x03(\v2\x0e.item.ItemInfoR\bitemList\"\xa8\x02\n" +
+	"\bItemInfo\x12\x1b\n" +
+	"\titem_name\x18\x01 \x01(\tR\bitemName\x12\x1d\n" +
+	"\n" +
+	"item_group\x18\x02 \x01(\tR\titemGroup\x12\x1b\n" +
+	"\tstock_uom\x18\x03 \x01(\tR\bstockUom\x12\x1b\n" +
+	"\titem_code\x18\x04 \x01(\tR\bitemCode\x12\x16\n" +
+	"\x06branch\x18\x05 \x01(\tR\x06branch\x12!\n" +
+	"\fcompany_abbr\x18\x06 \x01(\tR\vcompanyAbbr\x12\x18\n" +
+	"\acompany\x18\a \x01(\tR\acompany\x12-\n" +
+	"\x12item_specification\x18\b \x01(\tR\x11itemSpecification\x12\"\n" +
+	"\ris_stock_item\x18\t \x01(\bR\visStockItem\"U\n" +
 	"\x13GetItemGroupListReq\x12\x16\n" +
 	"\x06branch\x18\x01 \x01(\tR\x06branch\x12&\n" +
 	"\x0fitem_group_name\x18\x02 \x01(\tR\ritemGroupName\"V\n" +
@@ -810,11 +838,11 @@ const file_item_item_proto_rawDesc = "" +
 	"alias_name\x18\x04 \x01(\tR\taliasName\":\n" +
 	"\x0eGetUomListResp\x12(\n" +
 	"\buom_list\x18\x01 \x03(\v2\r.item.UomInfoR\auomList\"\xc9\x01\n" +
-	"\aUomInfo\x12\x16\n" +
-	"\x06branch\x18\x01 \x01(\tR\x06branch\x12!\n" +
-	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12\x18\n" +
-	"\acompany\x18\x03 \x01(\tR\acompany\x12\x19\n" +
-	"\buom_name\x18\x04 \x01(\tR\auomName\x12\x1d\n" +
+	"\aUomInfo\x12\x19\n" +
+	"\buom_name\x18\x01 \x01(\tR\auomName\x12\x16\n" +
+	"\x06branch\x18\x02 \x01(\tR\x06branch\x12!\n" +
+	"\fcompany_abbr\x18\x03 \x01(\tR\vcompanyAbbr\x12\x18\n" +
+	"\acompany\x18\x04 \x01(\tR\acompany\x12\x1d\n" +
 	"\n" +
 	"alias_name\x18\x05 \x01(\tR\taliasName\x12/\n" +
 	"\x14must_be_whole_number\x18\x06 \x01(\bR\x11mustBeWholeNumber\"\x96\x01\n" +
@@ -824,11 +852,11 @@ const file_item_item_proto_rawDesc = "" +
 	"\x0eattribute_name\x18\x03 \x01(\tR\rattributeName\x12\x1d\n" +
 	"\n" +
 	"alias_name\x18\x04 \x01(\tR\taliasName\"\xf6\x01\n" +
-	"\rAttributeInfo\x12\x16\n" +
-	"\x06branch\x18\x01 \x01(\tR\x06branch\x12\x18\n" +
-	"\acompany\x18\x02 \x01(\tR\acompany\x12!\n" +
-	"\fcompany_abbr\x18\x03 \x01(\tR\vcompanyAbbr\x12%\n" +
-	"\x0eattribute_name\x18\x04 \x01(\tR\rattributeName\x12\x1d\n" +
+	"\rAttributeInfo\x12%\n" +
+	"\x0eattribute_name\x18\x01 \x01(\tR\rattributeName\x12\x16\n" +
+	"\x06branch\x18\x02 \x01(\tR\x06branch\x12\x18\n" +
+	"\acompany\x18\x03 \x01(\tR\acompany\x12!\n" +
+	"\fcompany_abbr\x18\x04 \x01(\tR\vcompanyAbbr\x12\x1d\n" +
 	"\n" +
 	"alias_name\x18\x05 \x01(\tR\taliasName\x12J\n" +
 	"\x14attribute_value_list\x18\x06 \x03(\v2\x18.item.AttributeValueInfoR\x12attributeValueList\"Q\n" +
@@ -836,14 +864,15 @@ const file_item_item_proto_rawDesc = "" +
 	"\x0fattribute_value\x18\x01 \x01(\tR\x0eattributeValue\x12\x12\n" +
 	"\x04abbr\x18\x02 \x01(\tR\x04abbr\"R\n" +
 	"\x14GetAttributeListResp\x12:\n" +
-	"\x0eattribute_list\x18\x01 \x03(\v2\x13.item.AttributeInfoR\rattributeList2\xa3\x02\n" +
+	"\x0eattribute_list\x18\x01 \x03(\v2\x13.item.AttributeInfoR\rattributeList2\xd2\x02\n" +
 	"\vItemService\x126\n" +
 	"\vGetItemList\x12\x14.item.GetItemListReq\x1a\x11.erp.ResponseInfo\x124\n" +
 	"\n" +
 	"GetUomList\x12\x13.item.GetUomListReq\x1a\x11.erp.ResponseInfo\x12+\n" +
 	"\aSaveUom\x12\r.item.UomInfo\x1a\x11.erp.ResponseInfo\x12@\n" +
 	"\x10GetAttributeList\x12\x19.item.GetAttributeListReq\x1a\x11.erp.ResponseInfo\x127\n" +
-	"\rSaveAttribute\x12\x13.item.AttributeInfo\x1a\x11.erp.ResponseInfoB\"Z ttpos-bmp/app/ttpos-erp/api/itemb\x06proto3"
+	"\rSaveAttribute\x12\x13.item.AttributeInfo\x1a\x11.erp.ResponseInfo\x12-\n" +
+	"\bSaveItem\x12\x0e.item.ItemInfo\x1a\x11.erp.ResponseInfoB\"Z ttpos-bmp/app/ttpos-erp/api/itemb\x06proto3"
 
 var (
 	file_item_item_proto_rawDescOnce sync.Once
@@ -860,8 +889,8 @@ func file_item_item_proto_rawDescGZIP() []byte {
 var file_item_item_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_item_item_proto_goTypes = []any{
 	(*GetItemListReq)(nil),       // 0: item.GetItemListReq
-	(*SaveItemReq)(nil),          // 1: item.SaveItemReq
-	(*AddItemGroupReq)(nil),      // 2: item.AddItemGroupReq
+	(*GetItemListResp)(nil),      // 1: item.GetItemListResp
+	(*ItemInfo)(nil),             // 2: item.ItemInfo
 	(*GetItemGroupListReq)(nil),  // 3: item.GetItemGroupListReq
 	(*GetItemGroupListResp)(nil), // 4: item.GetItemGroupListResp
 	(*GetUomListReq)(nil),        // 5: item.GetUomListReq
@@ -874,24 +903,27 @@ var file_item_item_proto_goTypes = []any{
 	(*api.ResponseInfo)(nil),     // 12: erp.ResponseInfo
 }
 var file_item_item_proto_depIdxs = []int32{
-	7,  // 0: item.GetUomListResp.uom_list:type_name -> item.UomInfo
-	10, // 1: item.AttributeInfo.attribute_value_list:type_name -> item.AttributeValueInfo
-	9,  // 2: item.GetAttributeListResp.attribute_list:type_name -> item.AttributeInfo
-	0,  // 3: item.ItemService.GetItemList:input_type -> item.GetItemListReq
-	5,  // 4: item.ItemService.GetUomList:input_type -> item.GetUomListReq
-	7,  // 5: item.ItemService.SaveUom:input_type -> item.UomInfo
-	8,  // 6: item.ItemService.GetAttributeList:input_type -> item.GetAttributeListReq
-	9,  // 7: item.ItemService.SaveAttribute:input_type -> item.AttributeInfo
-	12, // 8: item.ItemService.GetItemList:output_type -> erp.ResponseInfo
-	12, // 9: item.ItemService.GetUomList:output_type -> erp.ResponseInfo
-	12, // 10: item.ItemService.SaveUom:output_type -> erp.ResponseInfo
-	12, // 11: item.ItemService.GetAttributeList:output_type -> erp.ResponseInfo
-	12, // 12: item.ItemService.SaveAttribute:output_type -> erp.ResponseInfo
-	8,  // [8:13] is the sub-list for method output_type
-	3,  // [3:8] is the sub-list for method input_type
-	3,  // [3:3] is the sub-list for extension type_name
-	3,  // [3:3] is the sub-list for extension extendee
-	0,  // [0:3] is the sub-list for field type_name
+	2,  // 0: item.GetItemListResp.item_list:type_name -> item.ItemInfo
+	7,  // 1: item.GetUomListResp.uom_list:type_name -> item.UomInfo
+	10, // 2: item.AttributeInfo.attribute_value_list:type_name -> item.AttributeValueInfo
+	9,  // 3: item.GetAttributeListResp.attribute_list:type_name -> item.AttributeInfo
+	0,  // 4: item.ItemService.GetItemList:input_type -> item.GetItemListReq
+	5,  // 5: item.ItemService.GetUomList:input_type -> item.GetUomListReq
+	7,  // 6: item.ItemService.SaveUom:input_type -> item.UomInfo
+	8,  // 7: item.ItemService.GetAttributeList:input_type -> item.GetAttributeListReq
+	9,  // 8: item.ItemService.SaveAttribute:input_type -> item.AttributeInfo
+	2,  // 9: item.ItemService.SaveItem:input_type -> item.ItemInfo
+	12, // 10: item.ItemService.GetItemList:output_type -> erp.ResponseInfo
+	12, // 11: item.ItemService.GetUomList:output_type -> erp.ResponseInfo
+	12, // 12: item.ItemService.SaveUom:output_type -> erp.ResponseInfo
+	12, // 13: item.ItemService.GetAttributeList:output_type -> erp.ResponseInfo
+	12, // 14: item.ItemService.SaveAttribute:output_type -> erp.ResponseInfo
+	12, // 15: item.ItemService.SaveItem:output_type -> erp.ResponseInfo
+	10, // [10:16] is the sub-list for method output_type
+	4,  // [4:10] is the sub-list for method input_type
+	4,  // [4:4] is the sub-list for extension type_name
+	4,  // [4:4] is the sub-list for extension extendee
+	0,  // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_item_item_proto_init() }

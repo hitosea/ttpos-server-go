@@ -26,6 +26,7 @@ const (
 	ItemService_SaveUom_FullMethodName          = "/item.ItemService/SaveUom"
 	ItemService_GetAttributeList_FullMethodName = "/item.ItemService/GetAttributeList"
 	ItemService_SaveAttribute_FullMethodName    = "/item.ItemService/SaveAttribute"
+	ItemService_SaveItem_FullMethodName         = "/item.ItemService/SaveItem"
 )
 
 // ItemServiceClient is the client API for ItemService service.
@@ -52,6 +53,10 @@ type ItemServiceClient interface {
 	// 参数：属性信息
 	// 返回：添加结果
 	SaveAttribute(ctx context.Context, in *AttributeInfo, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 添加商品
+	// 参数：商品信息
+	// 返回：添加结果
+	SaveItem(ctx context.Context, in *ItemInfo, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 }
 
 type itemServiceClient struct {
@@ -112,6 +117,16 @@ func (c *itemServiceClient) SaveAttribute(ctx context.Context, in *AttributeInfo
 	return out, nil
 }
 
+func (c *itemServiceClient) SaveItem(ctx context.Context, in *ItemInfo, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, ItemService_SaveItem_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ItemServiceServer is the server API for ItemService service.
 // All implementations must embed UnimplementedItemServiceServer
 // for forward compatibility.
@@ -136,6 +151,10 @@ type ItemServiceServer interface {
 	// 参数：属性信息
 	// 返回：添加结果
 	SaveAttribute(context.Context, *AttributeInfo) (*api.ResponseInfo, error)
+	// 添加商品
+	// 参数：商品信息
+	// 返回：添加结果
+	SaveItem(context.Context, *ItemInfo) (*api.ResponseInfo, error)
 	mustEmbedUnimplementedItemServiceServer()
 }
 
@@ -160,6 +179,9 @@ func (UnimplementedItemServiceServer) GetAttributeList(context.Context, *GetAttr
 }
 func (UnimplementedItemServiceServer) SaveAttribute(context.Context, *AttributeInfo) (*api.ResponseInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SaveAttribute not implemented")
+}
+func (UnimplementedItemServiceServer) SaveItem(context.Context, *ItemInfo) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SaveItem not implemented")
 }
 func (UnimplementedItemServiceServer) mustEmbedUnimplementedItemServiceServer() {}
 func (UnimplementedItemServiceServer) testEmbeddedByValue()                     {}
@@ -272,6 +294,24 @@ func _ItemService_SaveAttribute_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ItemService_SaveItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ItemInfo)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemServiceServer).SaveItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ItemService_SaveItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemServiceServer).SaveItem(ctx, req.(*ItemInfo))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ItemService_ServiceDesc is the grpc.ServiceDesc for ItemService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -298,6 +338,10 @@ var ItemService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SaveAttribute",
 			Handler:    _ItemService_SaveAttribute_Handler,
+		},
+		{
+			MethodName: "SaveItem",
+			Handler:    _ItemService_SaveItem_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
