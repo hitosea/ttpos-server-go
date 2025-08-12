@@ -183,6 +183,8 @@ type StaffShiftSnapshotOrder struct {
 	TotalOrderNum           int                            `json:"total_order_num"`
 	TotalTableNum           int                            `json:"total_table_num"`
 	TotalPeopleNum          int                            `json:"total_people_num"`
+	TotalCancelOrderNum     int                            `json:"total_cancel_order_num"`
+	TotalCancelOrderAmount  float64                        `json:"total_cancel_order_amount"`
 	MinOrderPrice           float64                        `json:"min_order_price"`
 	MaxOrderPrice           float64                        `json:"max_order_price"`
 	AvgOrderPrice           float64                        `json:"avg_order_price"`

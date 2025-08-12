@@ -320,3 +320,9 @@ type CountMemberNumDaysResp struct {
 	Day       sql.NullString `gorm:"column:day;comment:日期"`
 	MemberNum sql.NullInt64  `gorm:"column:member_num;comment:会员数量"`
 }
+
+// StatisticsCancelOrderData 取消订单统计数据
+type StatisticsCancelOrderData struct {
+	TotalCancelOrderNum    sql.NullInt64   `gorm:"column:total_cancel_order_num;comment:总取消订单数"`
+	TotalCancelOrderAmount sql.NullFloat64 `gorm:"column:total_cancel_order_amount;comment:总取消订单金额"`
+}

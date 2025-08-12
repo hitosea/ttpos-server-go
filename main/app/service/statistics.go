@@ -39,6 +39,7 @@ type IStatisticsSrv interface {
 	CountFreePaymentDays(ctx context.Context, req CountReq, days []string) []CountFreePaymentDaysResp // 统计免单支付天数
 	CountExport(ctx context.Context, req CountReq) (CountExportResp, error)                           // 统计导出
 	CountShiftRefundAmount(ctx context.Context, req CountReq) float64                                 // 统计班次退款金额
+	CountCancelOrder(ctx context.Context, req CountReq) CountCancelOrderResp                          // 统计取消订单
 	RankProduct(ctx context.Context, req CountReq) []CountProductRankResp                             // 统计商品排行
 	SaveSale(ctx context.Context, req SaveSaleReq) error                                              // 保存销售
 	SaveMember(ctx context.Context, req SaveMemberReq) error                                          // 保存会员
@@ -84,6 +85,8 @@ type CountSaleResp struct {
 	TotalTakeoutDeliveryFee    float64 `json:"total_takeout_delivery_fee"`    // 总外送配送费
 	TotalDeskNum               int64   `json:"total_desk_num"`                // 总桌台数量
 	TotalMealNum               int64   `json:"total_meal_num"`                // 总用餐人数
+	TotalCancelOrderNum        int64   `json:"total_cancel_order_num"`        // 总取消订单数
+	TotalCancelOrderAmount     float64 `json:"total_cancel_order_amount"`     // 总取消订单金额
 	TotalInstantOrderNum       int64   `json:"total_instant_order_num"`       // 总即时订单数量
 	TotalInstantOrderAmount    float64 `json:"total_instant_order_amount"`    // 总即时订单金额
 	TotalTakeoutOrderNum       int64   `json:"total_takeout_order_num"`       // 总外送订单数
@@ -109,6 +112,7 @@ func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleRe
 	opts := s.buildCountOpts(ctx, req)
 	saleData := repository.NewStatisticsRepo(db).CountSale(opts...)
 	memberData := s.CountMember(ctx, req)
+	cancelOrderData := s.CountCancelOrder(ctx, req)
 
 	// 总优惠折扣率 = 总优惠折扣 / 总销售额
 	var discountRatio decimal.Decimal
@@ -153,6 +157,8 @@ func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleRe
 		TotalTakeoutDeliveryFee:    saleData.TotalTakeoutDeliveryFee.Float64,
 		TotalDeskNum:               saleData.TotalDeskNum.Int64,
 		TotalMealNum:               saleData.TotalMealNum.Int64,
+		TotalCancelOrderNum:        cancelOrderData.TotalCancelOrderNum,
+		TotalCancelOrderAmount:     cancelOrderData.TotalCancelOrderAmount,
 		TotalInstantOrderNum:       saleData.TotalInstantOrderNum.Int64,
 		TotalInstantOrderAmount:    saleData.TotalInstantOrderAmount.Float64,
 		TotalTakeoutOrderNum:       saleData.TotalTakeoutOrderNum.Int64,
@@ -1899,4 +1905,23 @@ func (s *statisticsSrv) CountShiftRefundAmount(ctx context.Context, req CountReq
 		commonRepo.WhereByDutyNo(req.DutyNo),
 		commonRepo.WhereBySoftDelete(),
 	)
+}
+
+// CountCancelOrderResp 统计取消订单响应
+type CountCancelOrderResp struct {
+	TotalCancelOrderNum    int64   `json:"total_cancel_order_num"`    // 总取消订单数
+	TotalCancelOrderAmount float64 `json:"total_cancel_order_amount"` // 总取消订单金额
+}
+
+// CountCancelOrder 统计取消订单
+func (s *statisticsSrv) CountCancelOrder(ctx context.Context, req CountReq) CountCancelOrderResp {
+	db := database.GetDBManager(config.DatabaseConf{}).GetDB(ctx.GetCompanyUuid())
+	statisticsRepo := repository.NewStatisticsRepo(db)
+	req.IsCreateTime = true
+	cancelOrderData := statisticsRepo.CountCancelOrder(s.buildCountOpts(ctx, req)...)
+
+	return CountCancelOrderResp{
+		TotalCancelOrderNum:    cancelOrderData.TotalCancelOrderNum.Int64,
+		TotalCancelOrderAmount: cancelOrderData.TotalCancelOrderAmount.Float64,
+	}
 }

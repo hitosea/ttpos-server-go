@@ -101,6 +101,7 @@ services:
       - ./main/i18n:/var/www/i18n
       - .env:/var/.env
       - ./docker/certificate:/var/certificate
+      - ./admin/public:/var/www/public
     restart: always
     networks:
       saas-network:

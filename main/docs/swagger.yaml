@@ -1501,10 +1501,9 @@ definitions:
     type: object
   product_resp.ProductFlavorItemResp:
     properties:
-      locale_name:
-        allOf:
-        - $ref: '#/definitions/dto.LocaleResponse'
+      name:
         description: 商品规格名称
+        type: string
       product_package_count:
         description: 关联商品包数量
         type: integer
@@ -2563,13 +2562,13 @@ definitions:
           type: integer
         type: array
       flavor_uuid:
-        description: 普通商品的参数
+        description: 某个规格商品ID
         type: integer
       product_package_uuid:
         description: 套餐UUID
         type: integer
       product_type:
-        description: 商品类型 0-商品 1-套餐
+        description: 商品类型 0-商品 1-套餐 2-套餐子商品
         type: integer
       products:
         description: 套餐商品请求列表
@@ -3281,6 +3280,11 @@ definitions:
       product_package_group_uuid:
         description: 套餐分组UUID
         type: integer
+      sauce_uuid:
+        description: 小料ID列表
+        items:
+          type: integer
+        type: array
     type: object
   req.ProductSauceAddReq:
     properties:
@@ -7385,6 +7389,10 @@ definitions:
       num:
         description: 数量
         type: number
+      sub_products:
+        allOf:
+        - $ref: '#/definitions/resp.SubProductList'
+        description: 套餐子商品列表
       total_price:
         description: 总价
         type: number
@@ -8432,6 +8440,23 @@ definitions:
       uuid:
         description: 角色UUID
         type: integer
+    type: object
+  resp.SubProductItem:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称多语言
+      num:
+        description: 数量
+        type: number
+    type: object
+  resp.SubProductList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.SubProductItem'
+        type: array
     type: object
   resp.SystemSetting:
     properties:
@@ -10173,6 +10198,77 @@ paths:
       summary: 转菜购物车商品
       tags:
       - 点餐助手端.桌台
+  /assistant/desk/order/cart/product/flavor_and_attribute:
+    get:
+      consumes:
+      - application/json
+      description: 查询购物车商品“规格/属性”
+      parameters:
+      - description: 商品类型 0-商品 1-套餐
+        in: query
+        name: productType
+        type: integer
+      - description: 销售账单ID
+        in: query
+        name: saleBillUuid
+        type: integer
+      - description: 销售订单商品ID
+        in: query
+        name: saleOrderProductUuid
+        type: integer
+      - description: 销售订单ID
+        in: query
+        name: saleOrderUuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ProductFlavorAndAttributeRes'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 查询购物车商品“规格/属性”
+      tags:
+      - 点餐助手端.桌台
+    post:
+      consumes:
+      - application/json
+      description: 修改购物车商品“规格/属性”
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductFlavorAndAttributeChangeReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 修改购物车商品“规格/属性”
+      tags:
+      - 点餐助手端.桌台
   /assistant/desk/order/cart/product/giving:
     post:
       consumes:
@@ -10264,6 +10360,37 @@ paths:
       security:
       - JwtToken: []
       summary: 退菜购物车商品
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/cart/product_package/add:
+    post:
+      consumes:
+      - application/json
+      description: 向购物车添加套餐
+      parameters:
+      - description: 套餐参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductPackageAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 向购物车添加套餐
       tags:
       - 点餐助手端.桌台
   /assistant/desk/order/check:
@@ -17826,6 +17953,37 @@ paths:
       summary: 查询未下单商品
       tags:
       - 扫码点餐
+  /h5/order/cart/product_package/add:
+    post:
+      consumes:
+      - application/json
+      description: 向购物车添加套餐
+      parameters:
+      - description: 套餐参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductPackageAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 向购物车添加套餐
+      tags:
+      - 扫码点餐
   /h5/product/category/list:
     get:
       consumes:
@@ -21472,6 +21630,29 @@ paths:
       summary: 保存门店设置
       tags:
       - 商家端.门店设置
+  /shop/setting/upload_logo:
+    post:
+      consumes:
+      - application/json
+      description: 上传logo
+      parameters:
+      - description: 上传logo
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 上传logo
+      tags:
+      - 商家端.业务设置
   /shop/shift:
     post:
       consumes:

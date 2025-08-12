@@ -11,15 +11,18 @@ import (
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 // AuthHandler 认证鉴权控制器
 type SettingHandler struct {
-	settingSrv setting.ISrv
-	otherSrv   service.IOtherSrv
+	settingSrv    setting.ISrv
+	otherSrv      service.IOtherSrv
+	uploadFileSrv service.IUploadFileSrv
 }
 
 // SaveStoreSetting 保存门店设置
@@ -241,6 +244,38 @@ func (h *SettingHandler) GetMemberQrcode(c *gin.Context) {
 	})
 }
 
+// UploadLogo 上传logo
+// @Summary 上传logo
+// @Description 上传logo
+// @Tags 商家端.业务设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param file formData file true "上传logo"
+// @Success 200 {object} dto.Response
+// @Router /shop/setting/upload_logo [post]
+func (h *SettingHandler) UploadLogo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	file, err := c.FormFile("file")
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	fileReader, err := file.Open()
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	uploadFileResp, err := h.uploadFileSrv.UploadImage(ctx, fileReader, file.Filename, file.Size, 0, "logoUrl")
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	logger.Logger.Info("uploadFileResp", zap.Any("uploadFileResp", uploadFileResp))
+	helper.Success(c, uploadFileResp)
+}
+
 func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -254,8 +289,9 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	otherSrv := service.NewOtherSrv(dbm, cache)
 
 	wrapper := &SettingHandler{
-		settingSrv: settingSrv,
-		otherSrv:   otherSrv,
+		settingSrv:    settingSrv,
+		otherSrv:      otherSrv,
+		uploadFileSrv: service.NewUploadFileSrv(dbm),
 	}
 
 	// 需要认证
@@ -274,5 +310,7 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/setting/menu_qrcode", wrapper.EditMenuQrcode) // 更新电子菜单二维码
 		// 会员端二维码
 		privateApi.GET("/setting/member_qrcode", wrapper.GetMemberQrcode) // 获取会员端二维码
+
+		privateApi.POST("/setting/upload_logo", wrapper.UploadLogo) // 上传logo
 	}
 }

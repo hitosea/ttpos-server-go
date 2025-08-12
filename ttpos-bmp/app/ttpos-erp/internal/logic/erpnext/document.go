@@ -69,5 +69,5 @@ func getDocumentUrl(ctx context.Context, docType string) string {
 }
 
 func getDocumentUrlWithName(ctx context.Context, req *dto.ErpReq) string {
-	return fmt.Sprintf("%s/%s/", getDocumentUrl(ctx, req.DocType), req.Name)
+	return fmt.Sprintf("%s/%s", getDocumentUrl(ctx, req.DocType), req.Name)
 }

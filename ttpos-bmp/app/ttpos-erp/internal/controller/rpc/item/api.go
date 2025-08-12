@@ -45,10 +45,22 @@ func (*Controller) SaveUom(ctx context.Context, req *item.UomInfo) (res *api.Res
 	return
 }
 
-func (*Controller) GetAttributeList(context.Context, *item.GetAttributeListReq) (*api.ResponseInfo, error) {
-	return nil, gerror.NewCode(gcode.CodeNotImplemented)
+func (*Controller) GetAttributeList(ctx context.Context, req *item.GetAttributeListReq) (res *api.ResponseInfo, err error) {
+	if dataList, err := service.Stock().GetAttributeList(ctx, req); err == nil {
+		res = rpc.ApiSuccess("获取属性列表成功")
+		res.Data, _ = anypb.New(dataList)
+	} else {
+		res = rpc.ApiError(err.Error())
+	}
+	return
 }
 
-func (*Controller) SaveAttribute(context.Context, *item.AttributeInfo) (*api.ResponseInfo, error) {
-	return nil, gerror.NewCode(gcode.CodeNotImplemented)
+func (*Controller) SaveAttribute(ctx context.Context, req *item.AttributeInfo) (res *api.ResponseInfo, err error) {
+	err = service.Stock().SaveAttribute(ctx, req)
+	if err != nil {
+		res = rpc.ApiError(err.Error())
+		return
+	}
+	res = rpc.ApiSuccess("保存单位成功")
+	return
 }

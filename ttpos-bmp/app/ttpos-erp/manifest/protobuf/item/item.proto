@@ -51,9 +51,10 @@ message GetUomListResp {
 message UomInfo {
   string branch = 1; // 分支名称，可选
   string company_abbr = 2; // 公司简称，可选
-  string uom_name = 3; // 单位名称，可选
-  string alias_name = 4; // 单位别名，可选
-  bool must_be_whole_number = 5; // 是否必须为整数
+  string company = 3; // 公司名称，可选
+  string uom_name = 4; // 单位名称，可选
+  string alias_name = 5; // 单位别名，可选
+  bool must_be_whole_number = 6; // 是否必须为整数
 }
 
 
@@ -61,26 +62,25 @@ message GetAttributeListReq {
   string branch = 1; // 分支名称，可选
   string company_abbr = 2; // 公司简称，可选
   string attribute_name = 3; // 属性名称，可选
+  string alias_name = 4; // 属性别名，可选
 }
-
-message GetAttributeListResp {
-  string branch = 1; // 分支名称，可选
-  string company_abbr = 2; // 公司简称，可选
-  string attribute_name = 3; // 属性名称，可选
-}
-
-message GetSpecificationListReq {
-  string branch = 1; // 分支名称，可选
-  string company_abbr = 2; // 公司简称，可选
-  string specification_name = 3; // 规格名称，可选
-}
-
-
 
 message AttributeInfo {
   string branch = 1; // 分支名称，可选
-  string company_abbr = 2; // 公司简称，可选
-  string attribute_name = 3; // 属性名称，必填
+  string company = 2; // 公司名称，可选
+  string company_abbr = 3; // 公司简称，可选
+  string attribute_name = 4; // 属性名称，必填
+  string alias_name = 5; // 属性别名，可选
+  repeated AttributeValueInfo attribute_value_list = 6; // 属性值列表
+}
+
+message AttributeValueInfo {
+  string attribute_value = 1; // 属性值，必填
+  string abbr = 2; // 属性缩写，必填
+}
+
+message GetAttributeListResp {
+  repeated AttributeInfo attribute_list = 1; // 属性列表
 }
 
 service ItemService {
