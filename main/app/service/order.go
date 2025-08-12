@@ -6324,10 +6324,11 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 		request.Num = saleOrderProduct.Num
 		ctx.Log().Debug("修改商品数量", zap.Any("num", saleOrderProduct.Num))
 
-		status, message := saleOrderProduct.CheckCookingProduct(ctx.GetLanguage())
-		if status != constant.CodeSuccess {
-			return nil, errors.WithMessage(errors.New(message))
-		}
+		// FIXME 暂时废弃，只在送厨和结账时检查
+		// status, message := saleOrderProduct.CheckCookingProduct(ctx.GetLanguage())
+		// if status != constant.CodeSuccess {
+		// 	return nil, errors.WithMessage(errors.New(message))
+		// }
 	} else if operation == "sub" {
 		num := saleOrderProduct.Num - 1
 		// 数量为0删除商品
@@ -6348,8 +6349,17 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 	}
 	// 计算商品数据。折扣、税费、服务
 	saleOrderProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
-	ctx.Log().Debug("重新计算了商品金额", zap.Any("saleOrderProduct salePrice", saleOrderProduct.SalePrice))
-	// saleOrder.SaleOrderProducts[index] = saleOrderProduct
+
+	// 如果是套餐商品，则更新套餐子商品数量
+	subProducts := make([]*model.SaleOrderProduct, 0)
+	if saleOrderProduct.IsPackageProduct() {
+		subProducts = saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+		for _, subProduct := range subProducts {
+			unitNum := decimal.NewFromFloat(subProduct.UnitNum)
+			subProduct.Num = decimal.NewFromFloat(saleOrderProduct.Num).Mul(unitNum).Round(3).InexactFloat64()
+			subProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
+		}
+	}
 
 	// 计算订单金额
 	calc := saleOrder.CalcSaleOrder(*saleBill.SaleBillSetting)
@@ -6357,20 +6367,21 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 	// 计算账单金额
 	saleBill.CalcSaleBill()
 
+	// FIXME 暂时废弃，只在送厨和结账时检查
 	// 检查限购
-	{
-		// 如果是减数量，则不检查限购. 只有加数量时，才检查限购
-		if request.Num > beforeNum {
-			limitProducts, err := s.getBuffetProductLimitList(ctx, request.SaleBillUuid)
-			if err != nil {
-				return nil, errors.WithMessage(err)
-			}
-			overLimitProducts := saleBill.GetSaleOrderProductOverLimit(limitProducts, model.WithSaleOrderProductUuid(request.SaleOrderProductUuid))
-			if len(overLimitProducts) > 0 {
-				return nil, errors.WithMessage(errors.New("商品超过限购"))
-			}
-		}
-	}
+	// {
+	// 	// 如果是减数量，则不检查限购. 只有加数量时，才检查限购
+	// 	if request.Num > beforeNum {
+	// 		limitProducts, err := s.getBuffetProductLimitList(ctx, request.SaleBillUuid)
+	// 		if err != nil {
+	// 			return nil, errors.WithMessage(err)
+	// 		}
+	// 		overLimitProducts := saleBill.GetSaleOrderProductOverLimit(limitProducts, model.WithSaleOrderProductUuid(request.SaleOrderProductUuid))
+	// 		if len(overLimitProducts) > 0 {
+	// 			return nil, errors.WithMessage(errors.New("商品超过限购"))
+	// 		}
+	// 	}
+	// }
 
 	// 商品数量不能超过999个
 	// 如果是减数量，则不检查限购. 只有加数量时，才检查限购999个
@@ -6386,6 +6397,14 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 			return errors.WithMessage(errUpdate)
 		}
 		ctx.Log().Debug("更新销售订单商品成功")
+		if len(subProducts) > 0 {
+			for _, subProduct := range subProducts {
+				if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(subProduct); errUpdate != nil {
+					return errors.WithMessage(errUpdate)
+				}
+			}
+			ctx.Log().Debug("更新销售订单套餐子商品成功")
+		}
 
 		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
 			return errors.WithMessage(errUpdate)
