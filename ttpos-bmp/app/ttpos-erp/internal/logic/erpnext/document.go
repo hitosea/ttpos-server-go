@@ -35,13 +35,13 @@ func (s *sDocument) Get(ctx context.Context, req *dto.ErpReq, params *dto.Reques
 }
 
 func (s *sDocument) Create(ctx context.Context, docType string, data interface{}) (rst *g.Var, err error) {
-	rst = GetClient(ctx).ContentJson().PostVar(ctx, getDocumentUrl(ctx, docType), data)
+	rst = GetClient(ctx).PostVar(ctx, getDocumentUrl(ctx, docType), data)
 	err = detectError(rst)
 	return
 }
 
 func (s *sDocument) Update(ctx context.Context, req *dto.ErpReq, data interface{}) (rst *g.Var, err error) {
-	rst = GetClient(ctx).ContentJson().PutVar(ctx, getDocumentUrlWithName(ctx, req), data)
+	rst = GetClient(ctx).PutVar(ctx, getDocumentUrlWithName(ctx, req), data)
 	err = detectError(rst)
 	return
 }
