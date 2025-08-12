@@ -137,7 +137,7 @@ class Supplier extends BaseModel
      */
     public function app()
     {
-        return $this->belongsTo('app\\common\\model\\app\\App', 'id', 'company_uuid');
+        return $this->belongsTo('app\\common\\model\\app\\App', 'company_uuid', 'uuid');
     }
 
     /**

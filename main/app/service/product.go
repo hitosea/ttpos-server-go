@@ -1628,6 +1628,7 @@ func (s *productSrv) GetProductAttributeGroupList(ctx context.Context, req req.P
 			Uuid:          productAttributeGroup.Uuid,
 			Name:          productAttributeGroup.MultiLanguageName.GetNameByLang(language),
 			AttributeName: strings.Join(attributeNames, "、"),
+			Sort:          productAttributeGroup.Sort,
 		})
 	}
 	return product_resp.ProductAttributeGroupListResp{
@@ -1679,6 +1680,7 @@ func (s *productSrv) GetProductAttributeGroup(ctx context.Context, req req.Produ
 			ProductPackages: product_resp.ProductAttributeProductPackageList{
 				List: productPackageList,
 			},
+			Sort: productAttribute.Sort,
 		})
 	}
 

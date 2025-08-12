@@ -242,6 +242,7 @@ type ProductShopCategoryListResp struct {
 type ProductAttributeGroupItem struct {
 	Uuid          uint64 `json:"uuid"`           // 商品属性分组UUID
 	Name          string `json:"name"`           // 商品属性分组名称
+	Sort          int    `json:"sort"`           // 商品属性分组排序
 	AttributeName string `json:"attribute_name"` // 商品属性名称
 }
 
@@ -264,6 +265,7 @@ type ProductAttribute struct {
 	Uuid            uint64                             `json:"uuid"`             // 商品属性UUID
 	LocaleName      dto.LocaleResponse                 `json:"locale_name"`      // 商品属性名称
 	ProductPackages ProductAttributeProductPackageList `json:"product_packages"` // 关联商品包列表
+	Sort            int                                `json:"sort"`             // 商品属性排序
 }
 
 type ProductAttributeProductPackage struct {

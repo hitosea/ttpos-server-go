@@ -8,6 +8,7 @@ use app\admin\model\app\App as AppModel;
 use app\common\model\supplier\Supplier;
 use app\admin\model\Setting;
 use help\HttpHelp;
+use app\common\model\shop\User;
 
 
 /**
@@ -62,13 +63,26 @@ class ERPNext extends Controller
         if (empty($param['uuid']) || empty($param['erpnext_site_code']) || empty($param['erpnext_company_abbr'])) {
             return $this->renderError('参数错误');
         }
-        $companySetting = Supplier::where("uuid", $param['uuid'])->find();
+        $companySetting = Supplier::where("uuid", $param['uuid'])->with('app')->find();
         if (empty($companySetting)) {
             return $this->renderError('商家不存在');
         }
-        if (!empty($companySetting->erpnext_site_code) && !empty($companySetting->erpnext_company_name) && !empty($companySetting->erpnext_company_abbr)) {
+
+        request()->appId = $param['uuid'];
+        // 根据company_uuid 获取 is_super  = 1 的 第一个 User
+        $admin = (new User([], $param['uuid']))->where("is_super", 1)->order("id", "asc")->find();
+
+        $params = [
+            'shop_name' => $companySetting->app->name,
+            'shop_uuid' => $param['uuid'],
+            'admin_uuid' => $admin->uuid,
+            'site_code' => $param['erpnext_site_code'],
+            'company_abbr' => $param['erpnext_company_abbr'],
+        ];
+        if (!empty($companySetting->erpnext_site_code) && !empty($companySetting->erpnext_company_name) && !empty($companySetting->erpnext_company_abbr) && !empty($companySetting->erpnext_branch_name)) {
             return $this->renderError('商家已授权');
         }
+        request()->appId = 0;
         // 读取setting表的erpnext_site
         $erpnextSite = Setting::where("key", "erpnext_site")->find();
         if (empty($erpnextSite)) {
@@ -81,13 +95,22 @@ class ERPNext extends Controller
             return $this->renderError('ERPNext站点不存在');
         }
 
-        // TODO 同步信息到erpnext站点，获得branch_name，进行保存
-        $branchName = '';
+        $res = HttpHelp::postRequest('http://nginx/api/v1/admin/erpnext/shop/init', json_encode($params), [
+            'X-API-KEY: ' . env('JWT_SECRET'),
+            'Accept-Language: ' . request()->header('language'),
+        ]);
+        if (!$res) {
+            return $this->renderError('请求失败');
+        }
+        $res = json_decode($res, true);
+        if ($res['code'] != 0) {
+            return $this->renderError($res['message']);
+        }
 
-        if (!$companySetting->allowField(['erpnext_site_code', 'erpnext_company_abbr'])->save([
+        if (!$companySetting->allowField(['erpnext_site_code', 'erpnext_company_abbr', 'erpnext_branch_name'])->save([
             'erpnext_site_code' => $param["erpnext_site_code"],
             'erpnext_company_abbr' => $param["erpnext_company_abbr"],
-            'erpnext_branch_name' => $branchName,
+            'erpnext_branch_name' => $res['data']['branch_name'],
         ])) {
             return $this->renderError('保存失败');
         }

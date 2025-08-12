@@ -333,6 +333,7 @@ func (h *ProductHandler) SortProductUnit(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+	helper.Success(c, nil)
 }
 
 // GetProductSauceList 获取商品加料列表
