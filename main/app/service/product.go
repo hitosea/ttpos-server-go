@@ -1694,6 +1694,7 @@ func (s *productSrv) GetProductFlavorList(ctx context.Context, req req.ProductFl
 	db := s.dbm.GetDB(ctx.GetDbId())
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(db)
+	language := ctx.GetLanguage()
 
 	opts := []repository.DBOption{
 		productRepo.WithMultiLanguageName(),
@@ -1713,7 +1714,7 @@ func (s *productSrv) GetProductFlavorList(ctx context.Context, req req.ProductFl
 	for _, productFlavor := range productFlavorList {
 		productFlavorListResp = append(productFlavorListResp, product_resp.ProductFlavorItemResp{
 			Uuid:                productFlavor.Uuid,
-			LocaleName:          productFlavor.MultiLanguageName.GetNames(),
+			Name:                productFlavor.MultiLanguageName.GetNameByLang(language),
 			Sort:                productFlavor.Sort,
 			ProductPackageCount: productFlavor.ProductPackageCount,
 		})

@@ -283,10 +283,10 @@ type ProductFlavorListResp struct {
 
 // ProductFlavorItemResp 商品规格列表项
 type ProductFlavorItemResp struct {
-	Uuid                uint64             `json:"uuid"`                  // 商品规格UUID
-	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品规格名称
-	Sort                int                `json:"sort"`                  // 商品规格排序
-	ProductPackageCount int                `json:"product_package_count"` // 关联商品包数量
+	Uuid                uint64 `json:"uuid"`                  // 商品规格UUID
+	Name                string `json:"name"`                  // 商品规格名称
+	Sort                int    `json:"sort"`                  // 商品规格排序
+	ProductPackageCount int    `json:"product_package_count"` // 关联商品包数量
 }
 
 // ProductFlavorDetailResp 商品规格详情
