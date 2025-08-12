@@ -25,7 +25,7 @@ type ProductRequest struct {
 
 type OrderCartProductFlavorAndAttributeChangeReq struct {
 	OrderCartProductPackageAddReq        // 套餐商品请求参数
-	ProductType                   uint   `json:"product_type"` // 商品类型 0-商品 1-套餐
+	ProductType                   uint   `json:"product_type"`            // 商品类型 0-商品 1-套餐 2-套餐子商品
 	SaleOrderProductUuid          uint64 `json:"sale_order_product_uuid"` // 销售订单商品ID
 
 	// 普通商品的参数
@@ -136,8 +136,8 @@ func (req *ProductParams) GetIsPackageProduct() bool {
 }
 
 type SubProduct struct {
-	Uuid                    uint64   `json:"uuid"`
-	AttributeUuids          []uint64 `json:"attribute_uuids"`
+	FlavorUuid              uint64   `json:"flavor_uuid"`
+	AttributeUuid           []uint64 `json:"attribute_uuid"`
 	ProductPackageGroupUuid uint64   `json:"product_package_group_uuid"`
 }
 
@@ -145,8 +145,8 @@ func (req *ProductParams) GetSubProductList() []SubProduct {
 	subProductList := make([]SubProduct, 0)
 	for _, subProduct := range req.subProducts {
 		subProductList = append(subProductList, SubProduct{
-			Uuid:                    subProduct.FlavorProductBomUuid,
-			AttributeUuids:          subProduct.ProductPackageAttributeUuidList,
+			FlavorUuid:              subProduct.FlavorProductBomUuid,
+			AttributeUuid:           subProduct.ProductPackageAttributeUuidList,
 			ProductPackageGroupUuid: subProduct.ProductPackageGroupUuid,
 		})
 	}

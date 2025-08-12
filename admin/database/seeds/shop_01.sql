@@ -423,6 +423,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `is_accept_order` INT(10) NOT NULL DEFAULT 1 COMMENT '是否已接单, 0-否 1-是。订单商品默认已接单，h5订单商品只有下单并接单后才改为已接单',
 
     `package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '套餐uuid',
+    `package_group_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '套餐分组UUID',
     `product_type` INT(10) NOT NULL DEFAULT 0 COMMENT '商品类型, 0-商品 1-套餐',
     `package_sub_product_params` TEXT NOT NULL COMMENT '套餐子商品参数',
 
@@ -435,6 +436,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     INDEX `idx_tsop_order_qry` (`delete_time`, `sale_order_uuid`),
     INDEX `idx_sale_bill_uuid` (`sale_bill_uuid`),
     INDEX `idx_product_package_uuid` (`product_package_uuid`),
+    INDEX `idx_package_group_uuid` (`package_group_uuid`),
     INDEX `idx_status_delete_time` (`status`, `delete_time`),
     INDEX `idx_is_accept_order` (`is_accept_order`),
     INDEX `idx_deletetime_saleorderuuid` (`delete_time`, `sale_order_uuid`),

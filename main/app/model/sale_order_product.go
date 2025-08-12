@@ -95,8 +95,9 @@ type SaleOrderProduct struct {
 	H5OrderUuid        uint64 `gorm:"column:h5_order_uuid;type:bigint(20) unsigned;default:0;comment:扫码订单ID，用于关联扫码订单，用于判断是否为扫码订单商品;NOT NULL" json:"h5_order_uuid"`
 
 	// 套餐相关
-	PackageUuid             uint64 `gorm:"column:package_uuid;type:bigint(20);not null;default:0;comment:'套餐uuid'" json:"package_uuid"` // 只有套餐子商品才会有这个字段
-	ProductType             uint8  `gorm:"column:product_type;type:tinyint(1);not null;default:0;comment:'商品类型, 0-商品 1-套餐'" json:"product_type"`
+	PackageUuid             uint64 `gorm:"column:package_uuid;type:bigint(20);not null;default:0;comment:'套餐uuid'" json:"package_uuid"`                                            // 只有套餐子商品才会有这个字段
+	PackageGroupUuid        uint64 `gorm:"column:package_group_uuid;type:bigint(20);not null;default:0;comment:'套餐分组uuid';index:idx_package_group_uuid" json:"package_group_uuid"` // 只有套餐子商品才会有这个字段
+	ProductType             uint8  `gorm:"column:product_type;type:tinyint(1);not null;default:0;comment:'商品类型, 0-商品 1-套餐 2-套餐子商品'" json:"product_type"`
 	PackageSubProductParams string `gorm:"column:package_sub_product_params;type:text;not null;default:'';comment:'套餐子商品参数'" json:"package_sub_product_params"`
 
 	// 送厨时间
@@ -1323,6 +1324,7 @@ type DefaultSaleOrderProduct struct {
 	NumType                 uint    // 数量类型
 	Remark                  string  // 备注
 	PackageUuid             uint64  // 套餐uuid
+	PackageGroupUuid        uint64  // 套餐分组uuid
 	ProductType             uint8   // 商品类型
 	PackageSubProductParams string  // 套餐子商品参数
 }
@@ -1368,6 +1370,7 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 		SaleOrderProductBoms:       saleOrderProductBoms,
 		SaleOrderProductAttributes: saleOrderProductAttributes,
 		PackageUuid:                def.PackageUuid,
+		PackageGroupUuid:           def.PackageGroupUuid,
 		ProductType:                def.ProductType,
 		PackageSubProductParams:    def.PackageSubProductParams,
 	}
@@ -1648,9 +1651,9 @@ func (model *SaleOrderProduct) GetPackageDetail() []resp.PackageSelectedInfo {
 	packageSelectedInfoList := make([]resp.PackageSelectedInfo, 0)
 
 	type SubProduct struct {
-		Uuid                    uint64   `json:"uuid"`
-		AttributeUuids          []uint64 `json:"attribute_uuids"`
-		ProductPackageGroupUuid uint64   `json:"product_package_group_uuid"`
+		FlavorUuid              uint64   `json:"flavor_uuid"`                // 商品规格uuid
+		AttributeUuid           []uint64 `json:"attribute_uuid"`             // 属性uuid列表
+		ProductPackageGroupUuid uint64   `json:"product_package_group_uuid"` // 套餐分组uuid
 	}
 
 	subProductList := make([]SubProduct, 0)
@@ -1658,8 +1661,8 @@ func (model *SaleOrderProduct) GetPackageDetail() []resp.PackageSelectedInfo {
 	for _, subProduct := range subProductList {
 		packageSelectedInfoList = append(packageSelectedInfoList, resp.PackageSelectedInfo{
 			ProductPackageGroupUuid: subProduct.ProductPackageGroupUuid,
-			FlavorUuid:              subProduct.Uuid,
-			AttributeUuidList:       subProduct.AttributeUuids,
+			FlavorUuid:              subProduct.FlavorUuid,
+			AttributeUuidList:       subProduct.AttributeUuid,
 		})
 	}
 	return packageSelectedInfoList

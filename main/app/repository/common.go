@@ -93,6 +93,7 @@ type ICommonRepo interface {
 	WhereByBuffetPackageUuid(buffetPackageUuid uint64) DBOption         // 根据自助餐套餐UUID查询
 	WhereByCustomerTypeUuid(customerTypeUuid uint64) DBOption           // 根据顾客类型UUID查询
 	WhereByProductPackageUuid(productPackUuid uint64) DBOption          // 根据产品套餐UUID查询
+	WhereByPackageGroupUuid(packageGroupUuid uint64) DBOption           // 根据套餐分组UUID查询
 	WhereByProductFlavorUuid(productFlavorUuid uint64) DBOption         // 根据产品口味UUID查询
 	WhereBySign(sign string) DBOption                                   // 根据签名查询
 	WhereByStaffUuid(staffUuid uint64) DBOption                         // 根据员工UUID查询
@@ -417,6 +418,13 @@ func (r *commonRepo) WhereByCustomerTypeUuid(customerTypeUuid uint64) DBOption {
 func (r *commonRepo) WhereByProductPackageUuid(productPackUuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("product_package_uuid = ?", productPackUuid)
+	}
+}
+
+// WhereByPackageGroupUuid 根据套餐分组UUID查询
+func (r *commonRepo) WhereByPackageGroupUuid(packageGroupUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("package_group_uuid = ?", packageGroupUuid)
 	}
 }
 

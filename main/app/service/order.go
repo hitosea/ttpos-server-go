@@ -5189,13 +5189,40 @@ func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context,
 		}
 		// 获取套餐子商品
 		subProducts := saleOrder.GetPackageSubProductList(request.SaleOrderProductUuid)
-		for i, subProduct := range subProducts {
+		subProductParamMap := make(map[string]req.ProductRequest) // 套餐子商品参数. key为商品规格uuid+套餐分组uuid
+		for i, _ := range request.Products {
 			params := request.Products[i]
+			subProductParamMap[fmt.Sprintf("%d-%d", params.FlavorUuid, params.ProductPackageGroupUuid)] = params
+		}
+		if len(subProducts) != len(subProductParamMap) {
+			return nil, errors.WithMessage(errors.New("修改前后套餐子商品数量不一致"), "修改前后套餐子商品数量不一致")
+		}
+		for _, subProduct := range subProducts {
+			key := fmt.Sprintf("%d-%d", subProduct.GetFlarvorSaleOrderProductBom().ProductBomUuid, subProduct.PackageGroupUuid)
+			params, ok := subProductParamMap[key]
+			if !ok {
+				return nil, errors.WithMessage(errors.New("套餐子商品不存在"), "套餐子商品不存在")
+			}
 			_, err := EditProduct(ctx, db, saleOrder, subProduct, params.EditProductReq)
 			if err != nil {
 				return nil, errors.WithMessage(err)
 			}
 		}
+		// 重新记录套餐商品的子商品参数
+		saleOrderProduct.PackageSubProductParams = func() string {
+			subProductList := make([]req.SubProduct, 0)
+			for i := range subProducts {
+				params := request.Products[i]
+				subProductList = append(subProductList, req.SubProduct{
+					FlavorUuid:              params.FlavorUuid,
+					AttributeUuid:           params.AttributeUuidList,
+					ProductPackageGroupUuid: params.ProductPackageGroupUuid,
+				})
+			}
+			return utils.ToJson(subProductList)
+		}()
+		// 重新计算套餐商品的签名
+		saleOrderProduct.Sign = saleOrderProduct.GeneratePackageSign()
 	}
 
 	// 从新计算订单并保存
@@ -5986,8 +6013,9 @@ func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, 
 			}
 			return ""
 		}(),
-		ProductType: 2, // 套餐子商品
-		PackageUuid: packageUuid,
+		ProductType:      constant.ProductTypePackageSubProduct, // 套餐子商品
+		PackageUuid:      packageUuid,
+		PackageGroupUuid: product.ProductPackageGroupUuid,
 		Flavor: model.Flavor{
 			Name:           flavorProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 填顾客下单时规格的名字 todo preload
 			Price:          flavorProductBom.Price,
