@@ -28,6 +28,12 @@ type Business struct {
 	StartSerialNo             string                      `json:"start_serial_no"`              // 开始序列号
 }
 
+type ShopBusiness struct {
+	Business
+	FreeReasonCount       int `json:"free_reason_count"`        // 免单原因数量
+	ReturnFoodReasonCount int `json:"return_food_reason_count"` // 退菜原因数量
+}
+
 func (resp *Business) IsAutoClearDesk() bool {
 	return resp.NoClearTable == constant.AutoClearTable
 }

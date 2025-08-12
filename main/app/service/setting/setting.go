@@ -1,6 +1,8 @@
 package setting
 
 import (
+	"crypto/md5"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -71,6 +73,10 @@ type ISrv interface {
 	GetAcceptOrderSetting(ctx context.Context) (*resp.AcceptOrderSetting, error)                                                          // 获取接单设置
 	SymbolPosition(ctx context.Context, price float64) string                                                                             // 根据货币符号位置返回字符串
 	EditStoreSetting(ctx context.Context, storeSetting req.UpdateStoreSetting) error                                                      // 修改店铺设置
+	EditBusinessSetting(ctx context.Context, businessSetting req.UpdateBusinessSetting) error                                             // 修改业务设置
+	GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness, error)                                                             // 获取商家业务设置
+	GetMenuQrcode(ctx context.Context) (string, error)                                                                                    // 获取电子菜单二维码
+	UpdateMenuQrcode(ctx context.Context) (string, error)                                                                                 // 更新电子菜单二维码
 }
 
 func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
@@ -1789,4 +1795,130 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 	})
 
 	return nil
+}
+
+func (s *Srv) EditBusinessSetting(ctx context.Context, businessSettingReq req.UpdateBusinessSetting) error {
+	companyUuid := ctx.GetCompanyUuid()
+	companyDB := s.dbm.GetDB(companyUuid)
+
+	companySetting, err := s.GetCompanySetting(ctx)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	businessSetting, err := s.GetBusinessSetting(ctx)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 备份旧的businessSetting
+	oldBusinessSetting := businessSetting
+
+	// 判断菜品卡片样式是否更新，如果更新，则更新菜品卡片样式最后更新时间
+	oldDishCardStyle := businessSetting.DishCardStyle
+	if oldDishCardStyle != businessSetting.DishCardStyle {
+		businessSetting.DishCardStyleTime = strconv.Itoa(int(time.Now().Unix()))
+	}
+
+	// 判断是否开启外送功能
+	if businessSetting.DeliveryPriceRatio != businessSettingReq.DeliveryPriceRatio && companySetting.DeliveryStatus != 1 {
+		return errors.New("当前没有权限使用此功能")
+	}
+
+	// 删除不需要的列表字段
+	businessSetting.ZeroingMethodList = []setting.ZeroingMethodItem{}
+	businessSetting.CheckoutZeroingMethodList = []setting.CheckoutZeroingMethodItem{}
+	businessSetting.GiftMethodList = []setting.GiftMethodItem{}
+	businessSetting.FreeMethodList = []setting.FreeMethodItem{}
+
+	// 保存设置到 business_setting 表
+	settingRepo := repository.NewSettingRepo(companyDB)
+	copier.CopyWithOption(&oldBusinessSetting, businessSetting, copier.Option{IgnoreEmpty: true})
+
+	err = settingRepo.Updates(constant.SettingBusiness, utils.ToJson(businessSetting))
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 删除系统设置缓存
+	s.cache.Del(fmt.Sprintf(s.cacheKey, companyUuid))
+	// 删除全局缓存
+	tc := cache.NewTaggedCache(s.cache)
+	tc.TagClear("common_get_settingLanguages")
+	s.cache.Del(fmt.Sprintf("{common_get_settingLanguages}_common_setting_languages%d", companyUuid))
+	tc.TagClear("cashier")
+
+	// 推送配置更新
+	go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_CONFIG, map[string]any{
+		"update_time": time.Now().Unix(),
+	})
+
+	return nil
+}
+
+func (s *Srv) GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness, error) {
+	companyUuid := ctx.GetCompanyUuid()
+	db := s.dbm.GetDB(companyUuid)
+
+	businessSetting, err := s.GetBusinessSetting(ctx)
+	if err != nil {
+		return setting.ShopBusiness{}, errors.WithMessage(err)
+	}
+
+	var freeReasonCount, returnFoodReasonCount int64
+	err = db.Model(&model.FreeReason{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&freeReasonCount).Error
+	if err != nil {
+		return setting.ShopBusiness{}, errors.WithMessage(err)
+	}
+	err = db.Model(&model.ReturnFoodReason{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&returnFoodReasonCount).Error
+	if err != nil {
+		return setting.ShopBusiness{}, errors.WithMessage(err)
+	}
+
+	return setting.ShopBusiness{
+		Business:              businessSetting,
+		FreeReasonCount:       int(freeReasonCount),
+		ReturnFoodReasonCount: int(returnFoodReasonCount),
+	}, nil
+}
+
+func (s *Srv) GetMenuQrcode(ctx context.Context) (string, error) {
+	businessSetting, err := s.GetBusinessSetting(ctx)
+	if err != nil {
+		return "", errors.WithMessage(err)
+	}
+	return viper.GetString("MENU_BASE_URL") + "/home?token=" + s.getMenuQrcodeToken(ctx, businessSetting), nil
+}
+
+func (s *Srv) getMenuQrcodeToken(ctx context.Context, businessSetting setting.Business) string {
+	type Qrcode struct {
+		CompanyUuid uint64 `json:"a"`
+		Qrcode      string `json:"q"`
+	}
+	qrcode := Qrcode{
+		CompanyUuid: ctx.GetCompanyUuid(),
+		Qrcode:      businessSetting.QrCode,
+	}
+	qrcodeString := utils.ToJson(qrcode)
+	hash := md5.Sum([]byte(qrcodeString))
+	token := fmt.Sprintf("%x.%s", hash, base64.StdEncoding.EncodeToString([]byte(qrcodeString)))
+
+	return base64.StdEncoding.EncodeToString([]byte(token))
+}
+
+func (s *Srv) UpdateMenuQrcode(ctx context.Context) (string, error) {
+	companyUuid := ctx.GetCompanyUuid()
+	db := s.dbm.GetDB(companyUuid)
+	businessSetting, err := s.GetBusinessSetting(ctx)
+	if err != nil {
+		return "", errors.WithMessage(err)
+	}
+	// 随机生成6位数字字符串
+	qrcode := utils.RandomString(6, utils.Numbers)
+	businessSetting.QrCode = qrcode
+	settingRepo := repository.NewSettingRepo(db)
+	err = settingRepo.Updates(constant.SettingBusiness, utils.ToJson(businessSetting))
+	if err != nil {
+		return "", errors.WithMessage(err)
+	}
+	return viper.GetString("MENU_BASE_URL") + "/home?token=" + s.getMenuQrcodeToken(ctx, businessSetting), nil
 }

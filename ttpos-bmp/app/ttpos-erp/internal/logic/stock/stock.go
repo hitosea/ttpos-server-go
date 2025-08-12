@@ -100,8 +100,8 @@ func (s *sStock) SaveUom(ctx context.Context, req *item.UomInfo) (err error) {
 		if count > 0 {
 			_, err = service.Document().Update(ctx, &dto.ErpReq{
 				DocType: "UOM",
+				Name:    req.UomName,
 			}, &g.Map{
-				"uom_name":             req.UomName,
 				"custom_alias":         req.AliasName,
 				"custom_company":       companyName,
 				"custom_branch":        req.Branch,

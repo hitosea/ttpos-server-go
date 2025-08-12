@@ -2003,7 +2003,7 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, req req.Prod
 			attributeUuids = append(attributeUuids, productAttribute.Uuid)
 		}
 	}
-	productAttributes, err := productRepo.GetProductAttribute(
+	productAttributes, err := productRepo.GetProductAttributes(
 		productRepo.WhereUuidIn(attributeUuids),
 	)
 	if err != nil {
@@ -2438,7 +2438,7 @@ func (s *productSrv) SortProductAttribute(ctx context.Context, req req.ProductAt
 	for _, productAttribute := range req.List {
 		productAttributeUuids = append(productAttributeUuids, productAttribute.Uuid)
 	}
-	productAttributes, err := productRepo.GetProductAttribute(
+	productAttributes, err := productRepo.GetProductAttributes(
 		productRepo.WhereProductAttributeGroupUuid(req.ProductAttributeGroupUuid),
 		productRepo.WhereUuidIn(productAttributeUuids),
 	)
