@@ -19,6 +19,7 @@ type (
 		SaveUom(ctx context.Context, req *item.UomInfo) (err error)
 		GetAttributeList(ctx context.Context, req *item.GetAttributeListReq) (res *item.GetAttributeListResp, err error)
 		GetAttributeValuesList(ctx context.Context, attributeName string) (res []*item.AttributeValueInfo, err error)
+		SaveAttribute(ctx context.Context, req *item.AttributeInfo) (err error)
 	}
 )
 

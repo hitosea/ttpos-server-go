@@ -56,5 +56,11 @@ func (*Controller) GetAttributeList(ctx context.Context, req *item.GetAttributeL
 }
 
 func (*Controller) SaveAttribute(ctx context.Context, req *item.AttributeInfo) (res *api.ResponseInfo, err error) {
-	return nil, gerror.NewCode(gcode.CodeNotImplemented)
+	err = service.Stock().SaveAttribute(ctx, req)
+	if err != nil {
+		res = rpc.ApiError(err.Error())
+		return
+	}
+	res = rpc.ApiSuccess("保存单位成功")
+	return
 }

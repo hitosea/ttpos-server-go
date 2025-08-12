@@ -447,9 +447,10 @@ type UomInfo struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	Branch            string                 `protobuf:"bytes,1,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                     // 分支名称，可选
 	CompanyAbbr       string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                        // 公司简称，可选
-	UomName           string                 `protobuf:"bytes,3,opt,name=uom_name,json=uomName,proto3" json:"uom_name,omitempty" dc:"单位名称，可选"`                                    // 单位名称，可选
-	AliasName         string                 `protobuf:"bytes,4,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"单位别名，可选"`                              // 单位别名，可选
-	MustBeWholeNumber bool                   `protobuf:"varint,5,opt,name=must_be_whole_number,json=mustBeWholeNumber,proto3" json:"must_be_whole_number,omitempty" dc:"是否必须为整数"` // 是否必须为整数
+	Company           string                 `protobuf:"bytes,3,opt,name=company,proto3" json:"company,omitempty" dc:"公司名称，可选"`                                                   // 公司名称，可选
+	UomName           string                 `protobuf:"bytes,4,opt,name=uom_name,json=uomName,proto3" json:"uom_name,omitempty" dc:"单位名称，可选"`                                    // 单位名称，可选
+	AliasName         string                 `protobuf:"bytes,5,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"单位别名，可选"`                              // 单位别名，可选
+	MustBeWholeNumber bool                   `protobuf:"varint,6,opt,name=must_be_whole_number,json=mustBeWholeNumber,proto3" json:"must_be_whole_number,omitempty" dc:"是否必须为整数"` // 是否必须为整数
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -494,6 +495,13 @@ func (x *UomInfo) GetBranch() string {
 func (x *UomInfo) GetCompanyAbbr() string {
 	if x != nil {
 		return x.CompanyAbbr
+	}
+	return ""
+}
+
+func (x *UomInfo) GetCompany() string {
+	if x != nil {
+		return x.Company
 	}
 	return ""
 }
@@ -590,10 +598,11 @@ func (x *GetAttributeListReq) GetAliasName() string {
 type AttributeInfo struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	Branch             string                 `protobuf:"bytes,1,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                   // 分支名称，可选
-	Company            string                 `protobuf:"bytes,2,opt,name=company,proto3" json:"company,omitempty" dc:"公司简称，可选"`                                                 // 公司简称，可选
-	AttributeName      string                 `protobuf:"bytes,3,opt,name=attribute_name,json=attributeName,proto3" json:"attribute_name,omitempty" dc:"属性名称，必填"`                // 属性名称，必填
-	AliasName          string                 `protobuf:"bytes,4,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"属性别名，可选"`                            // 属性别名，可选
-	AttributeValueList []*AttributeValueInfo  `protobuf:"bytes,5,rep,name=attribute_value_list,json=attributeValueList,proto3" json:"attribute_value_list,omitempty" dc:"属性值列表"` // 属性值列表
+	Company            string                 `protobuf:"bytes,2,opt,name=company,proto3" json:"company,omitempty" dc:"公司名称，可选"`                                                 // 公司名称，可选
+	CompanyAbbr        string                 `protobuf:"bytes,3,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                      // 公司简称，可选
+	AttributeName      string                 `protobuf:"bytes,4,opt,name=attribute_name,json=attributeName,proto3" json:"attribute_name,omitempty" dc:"属性名称，必填"`                // 属性名称，必填
+	AliasName          string                 `protobuf:"bytes,5,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"属性别名，可选"`                            // 属性别名，可选
+	AttributeValueList []*AttributeValueInfo  `protobuf:"bytes,6,rep,name=attribute_value_list,json=attributeValueList,proto3" json:"attribute_value_list,omitempty" dc:"属性值列表"` // 属性值列表
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -638,6 +647,13 @@ func (x *AttributeInfo) GetBranch() string {
 func (x *AttributeInfo) GetCompany() string {
 	if x != nil {
 		return x.Company
+	}
+	return ""
+}
+
+func (x *AttributeInfo) GetCompanyAbbr() string {
+	if x != nil {
+		return x.CompanyAbbr
 	}
 	return ""
 }
@@ -793,27 +809,29 @@ const file_item_item_proto_rawDesc = "" +
 	"\n" +
 	"alias_name\x18\x04 \x01(\tR\taliasName\":\n" +
 	"\x0eGetUomListResp\x12(\n" +
-	"\buom_list\x18\x01 \x03(\v2\r.item.UomInfoR\auomList\"\xaf\x01\n" +
+	"\buom_list\x18\x01 \x03(\v2\r.item.UomInfoR\auomList\"\xc9\x01\n" +
 	"\aUomInfo\x12\x16\n" +
 	"\x06branch\x18\x01 \x01(\tR\x06branch\x12!\n" +
-	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12\x19\n" +
-	"\buom_name\x18\x03 \x01(\tR\auomName\x12\x1d\n" +
+	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12\x18\n" +
+	"\acompany\x18\x03 \x01(\tR\acompany\x12\x19\n" +
+	"\buom_name\x18\x04 \x01(\tR\auomName\x12\x1d\n" +
 	"\n" +
-	"alias_name\x18\x04 \x01(\tR\taliasName\x12/\n" +
-	"\x14must_be_whole_number\x18\x05 \x01(\bR\x11mustBeWholeNumber\"\x96\x01\n" +
+	"alias_name\x18\x05 \x01(\tR\taliasName\x12/\n" +
+	"\x14must_be_whole_number\x18\x06 \x01(\bR\x11mustBeWholeNumber\"\x96\x01\n" +
 	"\x13GetAttributeListReq\x12\x16\n" +
 	"\x06branch\x18\x01 \x01(\tR\x06branch\x12!\n" +
 	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12%\n" +
 	"\x0eattribute_name\x18\x03 \x01(\tR\rattributeName\x12\x1d\n" +
 	"\n" +
-	"alias_name\x18\x04 \x01(\tR\taliasName\"\xd3\x01\n" +
+	"alias_name\x18\x04 \x01(\tR\taliasName\"\xf6\x01\n" +
 	"\rAttributeInfo\x12\x16\n" +
 	"\x06branch\x18\x01 \x01(\tR\x06branch\x12\x18\n" +
-	"\acompany\x18\x02 \x01(\tR\acompany\x12%\n" +
-	"\x0eattribute_name\x18\x03 \x01(\tR\rattributeName\x12\x1d\n" +
+	"\acompany\x18\x02 \x01(\tR\acompany\x12!\n" +
+	"\fcompany_abbr\x18\x03 \x01(\tR\vcompanyAbbr\x12%\n" +
+	"\x0eattribute_name\x18\x04 \x01(\tR\rattributeName\x12\x1d\n" +
 	"\n" +
-	"alias_name\x18\x04 \x01(\tR\taliasName\x12J\n" +
-	"\x14attribute_value_list\x18\x05 \x03(\v2\x18.item.AttributeValueInfoR\x12attributeValueList\"Q\n" +
+	"alias_name\x18\x05 \x01(\tR\taliasName\x12J\n" +
+	"\x14attribute_value_list\x18\x06 \x03(\v2\x18.item.AttributeValueInfoR\x12attributeValueList\"Q\n" +
 	"\x12AttributeValueInfo\x12'\n" +
 	"\x0fattribute_value\x18\x01 \x01(\tR\x0eattributeValue\x12\x12\n" +
 	"\x04abbr\x18\x02 \x01(\tR\x04abbr\"R\n" +

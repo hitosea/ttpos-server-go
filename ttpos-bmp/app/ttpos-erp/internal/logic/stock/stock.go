@@ -60,7 +60,7 @@ func (s *sStock) GetUomList(ctx context.Context, req *item.GetUomListReq) (res *
 				uomInfo := &item.UomInfo{
 					UomName:           uom.Get("name").String(),
 					AliasName:         uom.Get("custom_alias").String(),
-					CompanyAbbr:       uom.Get("custom_company").String(),
+					Company:           uom.Get("custom_company").String(),
 					Branch:            uom.Get("custom_branch").String(),
 					MustBeWholeNumber: uom.Get("must_be_whole_number").Bool(),
 				}
@@ -190,5 +190,48 @@ func (s *sStock) GetAttributeValuesList(ctx context.Context, attributeName strin
 
 		}
 	}
+	return
+}
+
+func (s *sStock) SaveAttribute(ctx context.Context, req *item.AttributeInfo) (err error) {
+	var (
+		companyName = ""
+		filters     = make([][]string, 0)
+	)
+	if len(req.CompanyAbbr) > 0 {
+		company, err := service.Company().GetCompanyWithAbbr(ctx, req.CompanyAbbr)
+		if err != nil {
+			g.Log().Error(ctx, "根据公司缩写查询公司失败", err)
+			return gerror.Wrapf(err, "根据公司缩写查询公司失败")
+		}
+		companyName = company.CompanyName
+	}
+	filters = append(filters, g.ArrayStr{"attribute_name", "=", req.AttributeName})
+	if count, err := service.Doctype().Count(ctx, &dto.ErpReq{
+		DocType: "Item Attribute",
+	}, &dto.RequestParams{
+		Filters: filters,
+	}); err != nil {
+		return gerror.Wrapf(err, "查询现有属性失败")
+	} else {
+		if count > 0 {
+			_, err = service.Document().Update(ctx, &dto.ErpReq{
+				DocType: "Item Attribute",
+				Name:    req.AttributeName,
+			}, &g.Map{
+				"custom_alias":   req.AliasName,
+				"custom_company": companyName,
+				"custom_branch":  req.Branch,
+			})
+		} else {
+			_, err = service.Document().Create(ctx, "UOM", &g.Map{
+				"attribute_name": req.AttributeName,
+				"custom_alias":   req.AliasName,
+				"custom_company": companyName,
+				"custom_branch":  req.Branch,
+			})
+		}
+	}
+
 	return
 }
