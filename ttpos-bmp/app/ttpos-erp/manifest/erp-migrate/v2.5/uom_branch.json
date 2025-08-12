@@ -1,8 +1,8 @@
 {
   "doctype": "DocType",
-  "label": "Branch",
-  "fieldtype": "Link",
-  "options": "Branch",
+  "label": "别名",
+  "fieldname": "custom_alias",
+  "fieldtype": "Data",
   "insert_after": "uom_name",
   "dt": "UOM"
 }

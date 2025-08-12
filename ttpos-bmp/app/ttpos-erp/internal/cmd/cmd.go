@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"ttpos-bmp/app/ttpos-erp/internal/controller/item"
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -22,7 +21,6 @@ var (
 				group.Middleware(ghttp.MiddlewareHandlerResponse)
 				group.Bind(
 					hello.NewV1(),
-					item.NewV1(),
 				)
 			})
 			s.Run()

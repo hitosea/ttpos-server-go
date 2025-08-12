@@ -65,3 +65,27 @@ func strongPassword(fl validator.FieldLevel) bool {
 	// 至少包含2种类型
 	return typeCount >= 2
 }
+
+// openingHours 营业时间格式验证
+// 规则：必须符合 HH:MM-HH:MM 格式，其中 HH 为 00-23，MM 为 00-59
+// 支持跨天营业，如：09:00-22:00, 23:00-02:00
+func openingHours(fl validator.FieldLevel) bool {
+	hours, ok := fl.Field().Interface().(string)
+	if !ok {
+		return false
+	}
+
+	// 如果营业时间为空，则跳过验证（通过 omitempty 处理）
+	if hours == "" {
+		return true
+	}
+
+	// 使用正则表达式验证格式：HH:MM-HH:MM
+	// HH: 00-23
+	// MM: 00-59
+	// 中间用连字符分隔
+	pattern := `^([01]?[0-9]|2[0-3]):([0-5][0-9])-([01]?[0-9]|2[0-3]):([0-5][0-9])$`
+
+	matched, err := regexp.MatchString(pattern, hours)
+	return err != nil || !matched
+}

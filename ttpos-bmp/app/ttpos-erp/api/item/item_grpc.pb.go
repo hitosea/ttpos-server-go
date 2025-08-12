@@ -23,9 +23,9 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	ItemService_GetItemList_FullMethodName      = "/item.ItemService/GetItemList"
 	ItemService_GetUomList_FullMethodName       = "/item.ItemService/GetUomList"
-	ItemService_AddUom_FullMethodName           = "/item.ItemService/AddUom"
+	ItemService_SaveUom_FullMethodName          = "/item.ItemService/SaveUom"
 	ItemService_GetAttributeList_FullMethodName = "/item.ItemService/GetAttributeList"
-	ItemService_AddAttribute_FullMethodName     = "/item.ItemService/AddAttribute"
+	ItemService_SaveAttribute_FullMethodName    = "/item.ItemService/SaveAttribute"
 )
 
 // ItemServiceClient is the client API for ItemService service.
@@ -43,7 +43,7 @@ type ItemServiceClient interface {
 	// 添加单位
 	// 参数：单位信息
 	// 返回：添加结果
-	AddUom(ctx context.Context, in *AddUomReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	SaveUom(ctx context.Context, in *UomInfo, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 	// 获取属性列表
 	// 参数：查询条件
 	// 返回：属性列表和分页信息
@@ -51,7 +51,7 @@ type ItemServiceClient interface {
 	// 添加属性
 	// 参数：属性信息
 	// 返回：添加结果
-	AddAttribute(ctx context.Context, in *AddAttributeReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	SaveAttribute(ctx context.Context, in *AttributeInfo, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 }
 
 type itemServiceClient struct {
@@ -82,10 +82,10 @@ func (c *itemServiceClient) GetUomList(ctx context.Context, in *GetUomListReq, o
 	return out, nil
 }
 
-func (c *itemServiceClient) AddUom(ctx context.Context, in *AddUomReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+func (c *itemServiceClient) SaveUom(ctx context.Context, in *UomInfo, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(api.ResponseInfo)
-	err := c.cc.Invoke(ctx, ItemService_AddUom_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, ItemService_SaveUom_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -102,10 +102,10 @@ func (c *itemServiceClient) GetAttributeList(ctx context.Context, in *GetAttribu
 	return out, nil
 }
 
-func (c *itemServiceClient) AddAttribute(ctx context.Context, in *AddAttributeReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+func (c *itemServiceClient) SaveAttribute(ctx context.Context, in *AttributeInfo, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(api.ResponseInfo)
-	err := c.cc.Invoke(ctx, ItemService_AddAttribute_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, ItemService_SaveAttribute_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +127,7 @@ type ItemServiceServer interface {
 	// 添加单位
 	// 参数：单位信息
 	// 返回：添加结果
-	AddUom(context.Context, *AddUomReq) (*api.ResponseInfo, error)
+	SaveUom(context.Context, *UomInfo) (*api.ResponseInfo, error)
 	// 获取属性列表
 	// 参数：查询条件
 	// 返回：属性列表和分页信息
@@ -135,7 +135,7 @@ type ItemServiceServer interface {
 	// 添加属性
 	// 参数：属性信息
 	// 返回：添加结果
-	AddAttribute(context.Context, *AddAttributeReq) (*api.ResponseInfo, error)
+	SaveAttribute(context.Context, *AttributeInfo) (*api.ResponseInfo, error)
 	mustEmbedUnimplementedItemServiceServer()
 }
 
@@ -152,14 +152,14 @@ func (UnimplementedItemServiceServer) GetItemList(context.Context, *GetItemListR
 func (UnimplementedItemServiceServer) GetUomList(context.Context, *GetUomListReq) (*api.ResponseInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUomList not implemented")
 }
-func (UnimplementedItemServiceServer) AddUom(context.Context, *AddUomReq) (*api.ResponseInfo, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AddUom not implemented")
+func (UnimplementedItemServiceServer) SaveUom(context.Context, *UomInfo) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SaveUom not implemented")
 }
 func (UnimplementedItemServiceServer) GetAttributeList(context.Context, *GetAttributeListReq) (*api.ResponseInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetAttributeList not implemented")
 }
-func (UnimplementedItemServiceServer) AddAttribute(context.Context, *AddAttributeReq) (*api.ResponseInfo, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AddAttribute not implemented")
+func (UnimplementedItemServiceServer) SaveAttribute(context.Context, *AttributeInfo) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SaveAttribute not implemented")
 }
 func (UnimplementedItemServiceServer) mustEmbedUnimplementedItemServiceServer() {}
 func (UnimplementedItemServiceServer) testEmbeddedByValue()                     {}
@@ -218,20 +218,20 @@ func _ItemService_GetUomList_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ItemService_AddUom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AddUomReq)
+func _ItemService_SaveUom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UomInfo)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ItemServiceServer).AddUom(ctx, in)
+		return srv.(ItemServiceServer).SaveUom(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ItemService_AddUom_FullMethodName,
+		FullMethod: ItemService_SaveUom_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ItemServiceServer).AddUom(ctx, req.(*AddUomReq))
+		return srv.(ItemServiceServer).SaveUom(ctx, req.(*UomInfo))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -254,20 +254,20 @@ func _ItemService_GetAttributeList_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ItemService_AddAttribute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AddAttributeReq)
+func _ItemService_SaveAttribute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AttributeInfo)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ItemServiceServer).AddAttribute(ctx, in)
+		return srv.(ItemServiceServer).SaveAttribute(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ItemService_AddAttribute_FullMethodName,
+		FullMethod: ItemService_SaveAttribute_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ItemServiceServer).AddAttribute(ctx, req.(*AddAttributeReq))
+		return srv.(ItemServiceServer).SaveAttribute(ctx, req.(*AttributeInfo))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -288,16 +288,16 @@ var ItemService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ItemService_GetUomList_Handler,
 		},
 		{
-			MethodName: "AddUom",
-			Handler:    _ItemService_AddUom_Handler,
+			MethodName: "SaveUom",
+			Handler:    _ItemService_SaveUom_Handler,
 		},
 		{
 			MethodName: "GetAttributeList",
 			Handler:    _ItemService_GetAttributeList_Handler,
 		},
 		{
-			MethodName: "AddAttribute",
-			Handler:    _ItemService_AddAttribute_Handler,
+			MethodName: "SaveAttribute",
+			Handler:    _ItemService_SaveAttribute_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

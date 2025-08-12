@@ -243,6 +243,7 @@ type StatisticsProductData struct {
 	SalePrice          sql.NullFloat64 `gorm:"column:sale_price;comment:销售单价"`
 	SaleNum            sql.NullFloat64 `gorm:"column:sale_num;comment:销售数量"`
 	SaleAmount         sql.NullFloat64 `gorm:"column:sale_amount;comment:销售金额"`
+	ProductType        sql.NullInt64   `gorm:"column:product_type;comment:商品类型"`
 }
 
 // StatisticsAreaData 区域统计数据

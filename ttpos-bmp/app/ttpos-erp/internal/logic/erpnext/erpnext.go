@@ -8,6 +8,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/model/do"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto"
 	"ttpos-bmp/app/ttpos-erp/internal/model/entity"
+	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/container/gvar"
@@ -18,8 +19,26 @@ import (
 	"github.com/gogf/gf/v2/os/gctx"
 )
 
-func getRpcUrlWithName(req *dto.ErpReq) string {
-	return fmt.Sprintf("%s/%s", rpcApiUrl, req.DocType)
+const rpcApiUrl = "/api/v2/method"
+
+type sRpc struct {
+}
+
+var Rpc = new(sRpc)
+
+func init() {
+	service.RegisterRpc(Rpc)
+}
+
+func (s *sRpc) Execute(ctx context.Context, req *dto.ErpReq, params interface{}) (rst *g.Var, err error) {
+	rst = GetClient(ctx).PostVar(ctx, fmt.Sprintf("%s%s", getRpcUrlWithName(req), req.Method), params)
+	err = detectError(rst)
+	return
+}
+
+func getRpcUrlWithName(req *dto.ErpReq) (url string) {
+	url = fmt.Sprintf("%s/%s", rpcApiUrl, req.DocType)
+	return
 }
 
 func GetClient(ctx context.Context) *gclient.Client {
@@ -37,8 +56,7 @@ func GetClient(ctx context.Context) *gclient.Client {
 	}
 	c.Use(func(c *gclient.Client, r *http.Request) (resp *gclient.Response, err error) {
 		resp, err = c.Next(r)
-		if resp != nil {
-			//TODO 增加开关
+		if resp != nil && g.Cfg().MustGet(gctx.GetInitCtx(), "app.erpnext.dump").Bool() {
 			resp.RawDump()
 		}
 		return resp, err

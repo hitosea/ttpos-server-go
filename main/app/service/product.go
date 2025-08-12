@@ -1694,6 +1694,7 @@ func (s *productSrv) GetProductFlavorList(ctx context.Context, req req.ProductFl
 	db := s.dbm.GetDB(ctx.GetDbId())
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(db)
+	language := ctx.GetLanguage()
 
 	opts := []repository.DBOption{
 		productRepo.WithMultiLanguageName(),
@@ -1713,7 +1714,7 @@ func (s *productSrv) GetProductFlavorList(ctx context.Context, req req.ProductFl
 	for _, productFlavor := range productFlavorList {
 		productFlavorListResp = append(productFlavorListResp, product_resp.ProductFlavorItemResp{
 			Uuid:                productFlavor.Uuid,
-			LocaleName:          productFlavor.MultiLanguageName.GetNames(),
+			Name:                productFlavor.MultiLanguageName.GetNameByLang(language),
 			Sort:                productFlavor.Sort,
 			ProductPackageCount: productFlavor.ProductPackageCount,
 		})
@@ -2002,7 +2003,7 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, req req.Prod
 			attributeUuids = append(attributeUuids, productAttribute.Uuid)
 		}
 	}
-	productAttributes, err := productRepo.GetProductAttribute(
+	productAttributes, err := productRepo.GetProductAttributes(
 		productRepo.WhereUuidIn(attributeUuids),
 	)
 	if err != nil {
@@ -2437,7 +2438,7 @@ func (s *productSrv) SortProductAttribute(ctx context.Context, req req.ProductAt
 	for _, productAttribute := range req.List {
 		productAttributeUuids = append(productAttributeUuids, productAttribute.Uuid)
 	}
-	productAttributes, err := productRepo.GetProductAttribute(
+	productAttributes, err := productRepo.GetProductAttributes(
 		productRepo.WhereProductAttributeGroupUuid(req.ProductAttributeGroupUuid),
 		productRepo.WhereUuidIn(productAttributeUuids),
 	)

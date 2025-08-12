@@ -39,6 +39,7 @@ app:
   serviceUrl: $ERP_SERVICE_URL
   erpnext:
     serviceUrl: $NEXTERP_SERVICE_URL
+    dump: true
 
 # 消息队列
 queue:

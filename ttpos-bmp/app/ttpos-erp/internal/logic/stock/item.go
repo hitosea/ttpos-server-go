@@ -1,4 +1,4 @@
-package erpnext
+package stock
 
 import (
 	"time"
@@ -15,7 +15,7 @@ type sItem struct{}
 func init() {
 	service.RegisterItem(Item)
 }
-func (s sItem) SyncDelay() {
+func (s *sItem) SyncDelay() {
 	queue.Push(string(consts.TopicItemSync), &erp.Item{})
 	queue.DelayPush(string(consts.TopicItemSyncDelay), &erp.Item{}, 10*time.Second)
 }
