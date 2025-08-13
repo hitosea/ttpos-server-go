@@ -269,10 +269,18 @@ func (t *handoverImg58mmTemplate) GetPrintContent58mm(
 			pkg.ColumnConfig{Text: fmt.Sprintf("%.0f", float64(businessData.TotalOrderNum)), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		img.PrintInColumns(
+			pkg.ColumnConfig{Text: t.base.Translate("取消订单数"), Width: 216, Align: pkg.AlignLeft, FontWeight: 1},
+			pkg.ColumnConfig{Text: fmt.Sprintf("%.0f", float64(businessData.TotalCancelOrderNum)), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+		)
+		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("人数"), Width: 216, Align: pkg.AlignLeft, FontWeight: 1},
 			pkg.ColumnConfig{Text: fmt.Sprintf("%.0f", float64(businessData.TotalPeopleNum)), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		img.SetTextLineHeight(36)
+		img.PrintInColumns(
+			pkg.ColumnConfig{Text: t.base.Translate("取消订单金额"), Width: 216, Align: pkg.AlignLeft, FontWeight: 1},
+			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.TotalCancelOrderAmount), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+		)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("平均订单金额"), Width: 216, Align: pkg.AlignLeft, FontWeight: 1},
 			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.AvgOrderPrice), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
@@ -460,6 +468,10 @@ func (t *handoverImg58mmTemplate) GetPrintContent58mm(
 			pkg.ColumnConfig{Text: fmt.Sprintf("%.0f", float64(businessData.TotalOrderNum)), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		img.PrintInColumns(
+			pkg.ColumnConfig{Text: t.base.Translate("取消订单数"), Width: 230, Align: pkg.AlignLeft, FontWeight: 1},
+			pkg.ColumnConfig{Text: fmt.Sprintf("%.0f", float64(businessData.TotalCancelOrderNum)), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+		)
+		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("桌数"), Width: 230, Align: pkg.AlignLeft, FontWeight: 1},
 			pkg.ColumnConfig{Text: fmt.Sprintf("%.0f", float64(businessData.TotalTableNum)), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
@@ -470,6 +482,10 @@ func (t *handoverImg58mmTemplate) GetPrintContent58mm(
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("最小/大订单金额"), Width: 230, Align: pkg.AlignLeft, FontWeight: 1},
 			pkg.ColumnConfig{Text: fmt.Sprintf("%s/%s", t.base.GetPriceAndUnit(businessData.MinOrderPrice), t.base.GetPriceAndUnit(businessData.MaxOrderPrice)), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+		)
+		img.PrintInColumns(
+			pkg.ColumnConfig{Text: t.base.Translate("取消订单金额"), Width: 230, Align: pkg.AlignLeft, FontWeight: 1},
+			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.TotalCancelOrderAmount), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("平均订单金额"), Width: 230, Align: pkg.AlignLeft, FontWeight: 1},
