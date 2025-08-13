@@ -44,6 +44,7 @@ type GetSettingReq struct {
 type ISrv interface {
 	GetStoreSetting(ctx context.Context) (setting.Store, error)                                                                           // 获取商家设置
 	GetStoreLanguageList(ctx context.Context) ([]dto.LanguageItem, error)                                                                 // 获取商家语言
+	GetStoreLanguage(ctx context.Context) ([]string, error)                                                                               // 获取商家语言
 	GetPrinterSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Printer, error)                                      // 获取打印机设置
 	GetPrinterInfo(ctx context.Context, printerSetting setting.Printer, deviceId string) (setting.PrinterInfo, error)                     // 获取打印机信息
 	GetCashierSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Cashier, error)                                      // 获取收银机设置
@@ -134,6 +135,15 @@ func (s *Srv) GetStoreLanguageList(ctx context.Context) ([]dto.LanguageItem, err
 		return nil, errors.WithMessage(err)
 	}
 	return set.Language, nil
+}
+
+func (s *Srv) GetStoreLanguage(ctx context.Context) ([]string, error) {
+	storeSetting, _ := s.GetStoreSetting(ctx)
+	languages := make([]string, 0)
+	for _, language := range storeSetting.Language {
+		languages = append(languages, language.Name)
+	}
+	return languages, nil
 }
 
 func (s *Srv) getSettingByKey(ctx context.Context, key string) model.Setting {
@@ -1824,6 +1834,9 @@ func (s *Srv) EditBusinessSetting(ctx context.Context, businessSettingReq req.Up
 		return errors.New("当前没有权限使用此功能")
 	}
 
+	// 更新businessSetting
+	copier.CopyWithOption(&businessSetting, businessSettingReq, copier.Option{IgnoreEmpty: true})
+
 	// 删除不需要的列表字段
 	businessSetting.ZeroingMethodList = []setting.ZeroingMethodItem{}
 	businessSetting.CheckoutZeroingMethodList = []setting.CheckoutZeroingMethodItem{}
@@ -1832,9 +1845,10 @@ func (s *Srv) EditBusinessSetting(ctx context.Context, businessSettingReq req.Up
 
 	// 保存设置到 business_setting 表
 	settingRepo := repository.NewSettingRepo(companyDB)
+	// 覆盖oldBusinessSetting
 	copier.CopyWithOption(&oldBusinessSetting, businessSetting, copier.Option{IgnoreEmpty: true})
 
-	err = settingRepo.Updates(constant.SettingBusiness, utils.ToJson(businessSetting))
+	err = settingRepo.Updates(constant.SettingBusiness, utils.ToJson(oldBusinessSetting))
 	if err != nil {
 		return errors.WithMessage(err)
 	}

@@ -201,7 +201,7 @@ class App extends AppModel
             ->where('su.delete_time', '=', 0)
             ->where('app.delete_time', '=', 0)
             ->when($configured, function ($q) {
-                return $q->where('su.erpnext_site_code', '<>', "");
+                return $q->where('su.erpnext_site_code', '<>', "")->where('su.erpnext_company_abbr', '<>', "")->where('su.erpnext_branch_name', '<>', "");
             })
             ->when($keyword, function ($q) use ($keyword) { // 商家名称关键字
                 $q->where(function ($qq) use ($keyword) {

@@ -1,6 +1,8 @@
 package dto
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 type Response struct {
 	Code    int    `json:"code"`
@@ -98,4 +100,14 @@ func (l *LocaleResponse) SetLocale(locale string, value string) {
 func (l *LocaleResponse) ToJson() string {
 	str, _ := json.Marshal(l)
 	return string(str)
+}
+
+// CheckRequiredLocale 检查是否包含所有语言
+func (l *LocaleResponse) CheckRequiredLocale(locales []string) bool {
+	for _, locale := range locales {
+		if l.GetLocale(locale) == "" {
+			return false
+		}
+	}
+	return true
 }

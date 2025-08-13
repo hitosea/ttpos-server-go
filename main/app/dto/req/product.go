@@ -47,14 +47,14 @@ type ProductUnitReq struct {
 }
 
 type ProductUnitAddReq struct {
-	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品单位名称
-	ProductPackageUuids []uint64           `json:"product_package_uuids"` // 关联商品包UUID列表
+	LocaleName          dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品单位名称
+	ProductPackageUuids []uint64           `json:"product_package_uuids"`          // 关联商品包UUID列表
 }
 
 type ProductUnitEditReq struct {
-	Uuid                uint64             `json:"uuid" binding:"required"` // 商品单位UUID
-	LocaleName          dto.LocaleResponse `json:"locale_name"`             // 商品单位名称
-	ProductPackageUuids []uint64           `json:"product_package_uuids"`   // 关联商品包UUID列表
+	Uuid                uint64             `json:"uuid" binding:"required"`        // 商品单位UUID
+	LocaleName          dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品单位名称
+	ProductPackageUuids []uint64           `json:"product_package_uuids"`          // 关联商品包UUID列表
 }
 
 type ProductUnitSortItem struct {
@@ -67,16 +67,16 @@ type ProductUnitSortReq struct {
 }
 
 type ProductSauceAddReq struct {
-	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品加料名称
-	Price               float64            `json:"price"`                 // 商品加料价格
-	ProductPackageUuids []uint64           `json:"product_package_uuids"` // 关联商品包UUID列表
+	LocaleName          dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品加料名称
+	Price               float64            `json:"price" binding:"required"`       // 商品加料价格
+	ProductPackageUuids []uint64           `json:"product_package_uuids"`          // 关联商品包UUID列表
 }
 
 type ProductSauceEditReq struct {
-	Uuid                uint64             `json:"uuid" binding:"required"` // 商品加料UUID
-	LocaleName          dto.LocaleResponse `json:"locale_name"`             // 商品加料名称
-	Price               float64            `json:"price"`                   // 商品加料价格
-	ProductPackageUuids []uint64           `json:"product_package_uuids"`   // 关联商品包UUID列表
+	Uuid                uint64             `json:"uuid" binding:"required"`        // 商品加料UUID
+	LocaleName          dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品加料名称
+	Price               float64            `json:"price" binding:"required"`       // 商品加料价格
+	ProductPackageUuids []uint64           `json:"product_package_uuids"`          // 关联商品包UUID列表
 }
 
 type ProductSauceSortItem struct {
@@ -215,8 +215,8 @@ type ProductFlavorSortReq struct {
 	List []ProductFlavorSortItemReq `json:"list" binding:"required,dive"` // 商品规格排序列表
 }
 
-// ProdudctFlavorEditReq 商品规格编辑请求
-type ProdudctFlavorEditReq struct {
+// ProductFlavorEditReq 商品规格编辑请求
+type ProductFlavorEditReq struct {
 	Uuid       uint64                               `json:"uuid" binding:"required"`        // 商品规格UUID
 	LocaleName dto.LocaleResponse                   `json:"locale_name" binding:"required"` // 商品规格名称
 	List       []ProductFlavorEditProductPackageReq `json:"list"`                           // 关联商品包列表

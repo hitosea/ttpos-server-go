@@ -67,7 +67,7 @@ type IProductSrv interface {
 	GetProductFlavorList(ctx context.Context, req req.ProductFlavorListReq) (product_resp.ProductFlavorListResp, error) // 获取商品规格列表
 	GetProductFlavor(ctx context.Context, req req.ProductFlavorReq) (product_resp.ProductFlavorDetailResp, error)       // 获取商品规格详情
 	AddProductFlavor(ctx context.Context, req req.ProductFlavorAddReq) error                                            // 添加商品规格
-	EditProductFlavor(ctx context.Context, req req.ProdudctFlavorEditReq) error                                         // 编辑商品规格
+	EditProductFlavor(ctx context.Context, req req.ProductFlavorEditReq) error                                          // 编辑商品规格
 	DeleteProductFlavor(ctx context.Context, req req.ProductFlavorDeleteReq) error                                      // 删除商品规格
 	SortProductFlavor(ctx context.Context, req req.ProductFlavorSortReq) error                                          // 排序商品规格
 
@@ -1086,6 +1086,7 @@ func (s *productSrv) GetProductUnitList(ctx context.Context, req req.ProductUnit
 	}, nil
 }
 
+// GetProductUnit 获取产品单位详情
 func (s *productSrv) GetProductUnit(ctx context.Context, getUnitReq req.ProductUnitReq) (product_resp.ProductUnitDetail, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	language := ctx.GetLanguage()
@@ -1120,7 +1121,12 @@ func (s *productSrv) GetProductUnit(ctx context.Context, getUnitReq req.ProductU
 	return productUnit, nil
 }
 
+// AddProductUnit 添加产品单位
 func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitAddReq) error {
+	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+	if !addReq.LocaleName.CheckRequiredLocale(storeLanguages) {
+		return errors.New("名称不能为空")
+	}
 	db := s.dbm.GetDB(ctx.GetDbId())
 	checkService := NewCheckNameSrv(s.dbm)
 	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
@@ -1177,7 +1183,12 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 	return err
 }
 
+// EditProductUnit 编辑产品单位
 func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.ProductUnitEditReq) error {
+	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+	if !editUnitReq.LocaleName.CheckRequiredLocale(storeLanguages) {
+		return errors.New("名称不能为空")
+	}
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
 
@@ -1248,6 +1259,7 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 	return err
 }
 
+// DeleteProductUnit 删除产品单位
 func (s *productSrv) DeleteProductUnit(ctx context.Context, deleteUnitReq req.ProductUnitReq) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
@@ -1283,6 +1295,7 @@ func (s *productSrv) DeleteProductUnit(ctx context.Context, deleteUnitReq req.Pr
 	return err
 }
 
+// SortProductUnit 排序产品单位
 func (s *productSrv) SortProductUnit(ctx context.Context, sortReq req.ProductUnitSortReq) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
@@ -1309,6 +1322,7 @@ func (s *productSrv) SortProductUnit(ctx context.Context, sortReq req.ProductUni
 	return err
 }
 
+// GetProductSauceList 获取商品加料列表
 func (s *productSrv) GetProductSauceList(ctx context.Context, sauceListReq req.ProductSauceListReq) (product_resp.ProductSauceListResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
@@ -1337,6 +1351,7 @@ func (s *productSrv) GetProductSauceList(ctx context.Context, sauceListReq req.P
 	}, nil
 }
 
+// GetProductSauce 获取商品加料详情
 func (s *productSrv) GetProductSauce(ctx context.Context, sauceReq req.ProductSauceReq) (product_resp.ProductSauceDetail, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
@@ -1370,7 +1385,12 @@ func (s *productSrv) GetProductSauce(ctx context.Context, sauceReq req.ProductSa
 	}, nil
 }
 
+// AddProductSauce 添加商品加料
 func (s *productSrv) AddProductSauce(ctx context.Context, addReq req.ProductSauceAddReq) error {
+	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+	if !addReq.LocaleName.CheckRequiredLocale(storeLanguages) {
+		return errors.New("名称不能为空")
+	}
 	db := s.dbm.GetDB(ctx.GetDbId())
 	checkService := NewCheckNameSrv(s.dbm)
 	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
@@ -1447,7 +1467,12 @@ func (s *productSrv) AddProductSauce(ctx context.Context, addReq req.ProductSauc
 	return err
 }
 
+// EditProductSauce 编辑商品加料
 func (s *productSrv) EditProductSauce(ctx context.Context, editReq req.ProductSauceEditReq) error {
+	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+	if !editReq.LocaleName.CheckRequiredLocale(storeLanguages) {
+		return errors.New("名称不能为空")
+	}
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
 
@@ -1549,6 +1574,7 @@ func (s *productSrv) EditProductSauce(ctx context.Context, editReq req.ProductSa
 	return err
 }
 
+// DeleteProductSauce 删除商品加料
 func (s *productSrv) DeleteProductSauce(ctx context.Context, deleteReq req.ProductSauceReq) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
@@ -1585,6 +1611,7 @@ func (s *productSrv) DeleteProductSauce(ctx context.Context, deleteReq req.Produ
 	return err
 }
 
+// SortProductSauce 排序商品加料
 func (s *productSrv) SortProductSauce(ctx context.Context, sortReq req.ProductSauceSortReq) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
@@ -1611,6 +1638,7 @@ func (s *productSrv) SortProductSauce(ctx context.Context, sortReq req.ProductSa
 	return err
 }
 
+// GetProductAttributeGroupList 获取商品属性分组列表
 func (s *productSrv) GetProductAttributeGroupList(ctx context.Context, req req.ProductAttributeGroupListReq) (product_resp.ProductAttributeGroupListResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
@@ -1648,6 +1676,7 @@ func (s *productSrv) GetProductAttributeGroupList(ctx context.Context, req req.P
 	}, nil
 }
 
+// GetProductAttributeGroup 获取商品属性分组详情
 func (s *productSrv) GetProductAttributeGroup(ctx context.Context, req req.ProductAttributeGroupReq) (product_resp.ProductAttributeGroupDetail, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
@@ -1775,7 +1804,17 @@ func (s *productSrv) GetProductFlavor(ctx context.Context, flavorReq req.Product
 	}, nil
 }
 
+// AddProductAttributeGroup 添加商品属性组
 func (s *productSrv) AddProductAttributeGroup(ctx context.Context, req req.ProductAttributeGroupAddReq) error {
+	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+	if !req.LocaleName.CheckRequiredLocale(storeLanguages) {
+		return errors.New("名称不能为空")
+	}
+	for _, productAttribute := range req.ProductAttributes {
+		if !productAttribute.LocaleName.CheckRequiredLocale(storeLanguages) {
+			return errors.New("名称不能为空")
+		}
+	}
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
 	// 遍历req.ProductAttributes，判断商品是否存在
@@ -1895,6 +1934,10 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, req req.Produ
 
 // AddProductFlavor 添加商品规格
 func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFlavorAddReq) error {
+	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+	if !addReq.LocaleName.CheckRequiredLocale(storeLanguages) {
+		return errors.New("名称不能为空")
+	}
 	db := s.dbm.GetDB(ctx.GetDbId())
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(db)
@@ -1995,7 +2038,17 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 	return nil
 }
 
+// EditProductAttributeGroup 编辑商品属性组
 func (s *productSrv) EditProductAttributeGroup(ctx context.Context, req req.ProductAttributeGroupEditReq) error {
+	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+	if !req.LocaleName.CheckRequiredLocale(storeLanguages) {
+		return errors.New("名称不能为空")
+	}
+	for _, productAttribute := range req.ProductAttributes {
+		if !productAttribute.LocaleName.CheckRequiredLocale(storeLanguages) {
+			return errors.New("名称不能为空")
+		}
+	}
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
 
@@ -2218,7 +2271,11 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, req req.Prod
 }
 
 // EditProductFlavor 编辑商品规格
-func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProdudctFlavorEditReq) error {
+func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductFlavorEditReq) error {
+	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+	if !editReq.LocaleName.CheckRequiredLocale(storeLanguages) {
+		return errors.New("名称不能为空")
+	}
 	db := s.dbm.GetDB(ctx.GetDbId())
 	checkService := NewCheckNameSrv(s.dbm)
 	names := checkService.MakeCheckNameList(ctx, editReq.LocaleName)
@@ -2322,13 +2379,14 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.Produdct
 	return nil
 }
 
+// DeleteProductAttributeGroup 删除商品属性组
 func (s *productSrv) DeleteProductAttributeGroup(ctx context.Context, req req.ProductAttributeGroupReq) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
 
 	productAttributeGroup, err := productRepo.GetProductAttributeGroup(
 		productRepo.WhereUuid(req.Uuid),
-		productRepo.WithProductPackageAttributes(),
+		productRepo.WithProductAttributes(),
 	)
 	if err != nil {
 		return errors.WithMessage(err, "属性组不存在")
@@ -2408,6 +2466,7 @@ func (s *productSrv) DeleteProductFlavor(ctx context.Context, deleteReq req.Prod
 	return nil
 }
 
+// SortProductAttributeGroup 排序商品属性组
 func (s *productSrv) SortProductAttributeGroup(ctx context.Context, req req.ProductAttributeGroupSortReq) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
@@ -2440,6 +2499,7 @@ func (s *productSrv) SortProductAttributeGroup(ctx context.Context, req req.Prod
 	return nil
 }
 
+// SortProductAttribute 排序商品属性
 func (s *productSrv) SortProductAttribute(ctx context.Context, req req.ProductAttributeSortReq) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
