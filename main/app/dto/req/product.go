@@ -318,7 +318,8 @@ type ProductImportItemReq struct {
 // ProductShopListReq 商品列表查询
 type ProductShopListReq struct {
 	dto.PageReq         // 分页参数
-	Type        *int    `form:"type"`   // 商品类型: 0-商品 1-套餐（可选）
-	Tag         *string `form:"tag"`    // 商品标签: 0-多规格 1-属性 2-加料（可选）, 多个标签用逗号分隔: 0,1,2
-	Status      *int    `form:"status"` // 商品状态: 0-下架 1-上架（可选）
+	Keyword     *string `form:"keyword"` // 搜索商品名称（可选）
+	Type        *int    `form:"type"`    // 商品类型: 0-商品 1-套餐（可选）
+	Tag         *string `form:"tag"`     // 商品标签: 0-多规格 1-属性 2-加料（可选）, 多个标签用逗号分隔: 0,1,2
+	Status      *int    `form:"status"`  // 商品状态: 0-下架 1-上架（可选）
 }

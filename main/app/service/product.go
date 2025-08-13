@@ -2774,6 +2774,10 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 		commonRepo.SortWithID("DESC"),
 	}
 
+	// 搜索商品名称
+	if req.Keyword != nil {
+		opts = append(opts, commonRepo.WhereLike("name", *req.Keyword))
+	}
 	// 商品类型
 	if req.Type != nil {
 		opts = append(opts, productRepo.WhereProductType(uint8(*req.Type)))
