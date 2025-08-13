@@ -75,3 +75,4 @@ alwaysApply: true
  9. 其他
  - 业务开发优先参考 README.MD、MIGRATION_QUICK_START.md、DATABASE_MIGRATION_RULES.md
  - 如有疑问请先查阅项目文档或联系维护者
+ - 分析处理ttpos-bmp 代码时，不要参考 main目录下的代码
