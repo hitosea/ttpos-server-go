@@ -25,6 +25,8 @@ type Material struct {
 	Unit              MaterialUnit      `gorm:"foreignKey:unit_uuid;references:uuid"`                // 单位
 	PurchaseUnit      MaterialUnit      `gorm:"foreignKey:purchase_unit_uuid;references:uuid"`       // 采购单位
 	CostUnit          MaterialUnit      `gorm:"foreignKey:cost_unit_uuid;references:uuid"`           // 成本单位
+	Category          MaterialCategory  `gorm:"foreignKey:category_uuid;references:uuid"`            // 分类
+	ImageFile         *File             `gorm:"foreignKey:image_file_uuid;references:uuid"`          // 图片
 }
 
 func (model *Material) SetNil() {
@@ -32,6 +34,13 @@ func (model *Material) SetNil() {
 	model.Unit = MaterialUnit{}
 	model.PurchaseUnit = MaterialUnit{}
 	model.CostUnit = MaterialUnit{}
+}
+
+func (model *Material) GetImage(baseUrl string) string {
+	if model.ImageFile != nil {
+		return model.ImageFile.GetUrl(baseUrl)
+	}
+	return ""
 }
 
 // MaterialUnit 原料单位表 ttpos_material_unit
@@ -42,4 +51,15 @@ type MaterialUnit struct {
 	ConversionRate float64 `gorm:"type:decimal(12,4);default:1;column:conversion_rate;comment:'转换率'"`
 	FromUnitUuid   uint64  `gorm:"default:0;column:from_unit_uuid;comment:'来源单位ID. 来源单位为克，则转换率为1000，该原料单位为千克'"`
 	IsDefault      int     `gorm:"default:0;column:is_default;comment:'是否为基准单位, 0-否 1-是'"`
+
+	Unit *ProductUnit `gorm:"foreignKey:unit_uuid;references:uuid"`
+}
+
+// MaterialCategory 原料分类表 ttpos_material_category
+type MaterialCategory struct {
+	BaseModel
+	Name                  string `gorm:"default:'';column:name;comment:'原料分类名称'"`
+	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称ID'"`
+
+	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 }
