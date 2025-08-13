@@ -15,6 +15,8 @@ type (
 		SyncDelay()
 	}
 	IStock interface {
+		GetItemList(ctx context.Context, req *item.GetItemListReq) (res *item.GetItemListResp, err error)
+		SaveItem(ctx context.Context, req *item.ItemInfo) (res *item.ItemInfo, err error)
 		GetUomList(ctx context.Context, req *item.GetUomListReq) (res *item.GetUomListResp, err error)
 		SaveUom(ctx context.Context, req *item.UomInfo) (err error)
 		GetAttributeList(ctx context.Context, req *item.GetAttributeListReq) (res *item.GetAttributeListResp, err error)

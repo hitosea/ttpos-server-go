@@ -71,6 +71,29 @@ func (l *LocaleResponse) GetLocale(locale string) string {
 	return l.ZH
 }
 
+func (l *LocaleResponse) SetLocale(locale string, value string) {
+	switch locale {
+	case "zh":
+		l.ZH = value
+	case "th":
+		l.TH = value
+	case "en":
+		l.EN = value
+	case "zhtw":
+		l.ZHTW = value
+	case "ja":
+		l.JA = value
+	case "ko":
+		l.KO = value
+	case "my":
+		l.MY = value
+	case "tr":
+		l.TR = value
+	case "sv":
+		l.SV = value
+	}
+}
+
 // ToJson 获取语言json
 func (l *LocaleResponse) ToJson() string {
 	str, _ := json.Marshal(l)

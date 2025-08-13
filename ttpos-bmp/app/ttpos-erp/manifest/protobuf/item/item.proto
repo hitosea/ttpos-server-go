@@ -6,25 +6,29 @@ package item;
 option go_package = "ttpos-bmp/app/ttpos-erp/api/item";
 
 message GetItemListReq {
-  string item_name = 1; // 商品名称模糊查询，可选，如: %商品名称%
-  string branch = 2; // 分支名称，可选
-  string company_abbr = 3; // 公司简称，可选
+  string item_group = 1; // 物品分组，可选  Products 商品/Raw Material 原材料
+  string item_name = 2; // 商品名称模糊查询，可选，如: %商品名称%
+  string branch = 3; // 分支名称，可选
+  string company_abbr = 4; // 公司简称，可选
+  string item_code = 5; // 物品编码，可选
 }
 
-message SaveItemReq {
-  string branch = 1; // 分支名称，可选
-  string company_abbr = 2; // 公司简称，可选
-  string item_name = 3; // 物品名称，必填
-  string item_code = 4; // 物品编码，必填
-  string item_group = 5; // 物品分组，必填
-  string stock_uom = 6; // 单位名称，必填
-  bool is_stock_item = 7; // 是否库存物品
+message GetItemListResp {
+  repeated ItemInfo item_list = 1; // 物品列表
 }
 
-message AddItemGroupReq {
-  string branch = 1; // 分支名称，可选
-  string item_group_name = 2; // 物品分组，必填
+message ItemInfo {
+  string item_name = 1; // 物品名称，必填
+  string item_group = 2; // 物品分组，必填 Products 商品/Raw Material 原材料
+  string stock_uom = 3; // 库存单位，必填 ttpos 传英文过来
+  string item_code = 4; // 物品编码，可选
+  string branch = 5; // 分支名称，可选
+  string company_abbr = 6; // 公司简称，可选
+  string company = 7; // 公司名称，可选
+  string item_specification = 8; // 物品规格，可选 ttpos 传英文过来
+  bool is_stock_item = 9; // 是否库存物品，可选
 }
+
 
 message GetItemGroupListReq {
   string branch = 1; // 分支名称，可选
@@ -49,10 +53,10 @@ message GetUomListResp {
 }
 
 message UomInfo {
-  string branch = 1; // 分支名称，可选
-  string company_abbr = 2; // 公司简称，可选
-  string company = 3; // 公司名称，可选
-  string uom_name = 4; // 单位名称，可选
+  string uom_name = 1; // 单位名称，必填
+  string branch = 2; // 分支名称，可选
+  string company_abbr = 3; // 公司简称，可选
+  string company = 4; // 公司名称，可选
   string alias_name = 5; // 单位别名，可选
   bool must_be_whole_number = 6; // 是否必须为整数
 }
@@ -66,10 +70,10 @@ message GetAttributeListReq {
 }
 
 message AttributeInfo {
-  string branch = 1; // 分支名称，可选
-  string company = 2; // 公司名称，可选
-  string company_abbr = 3; // 公司简称，可选
-  string attribute_name = 4; // 属性名称，必填
+  string attribute_name = 1; // 属性名称，必填
+  string branch = 2; // 分支名称，可选
+  string company = 3; // 公司名称，可选
+  string company_abbr = 4; // 公司简称，可选
   string alias_name = 5; // 属性别名，可选
   repeated AttributeValueInfo attribute_value_list = 6; // 属性值列表
 }
@@ -109,4 +113,8 @@ service ItemService {
   // 返回：添加结果
   rpc SaveAttribute(item.AttributeInfo) returns (erp.ResponseInfo);
 
+  // 添加商品
+  // 参数：商品信息
+  // 返回：添加结果 TTPOS 端调用成功后后更新 item_code 到商品/物品信息中
+  rpc SaveItem(item.ItemInfo) returns (erp.ResponseInfo);
 }

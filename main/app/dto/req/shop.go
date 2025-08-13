@@ -14,7 +14,7 @@ type CheckingName struct {
 
 type CheckNameRequest struct {
 	Uuid   uint64         `json:"uuid"`                          // 排除的UUID
-	Source string         `json:"source" binding:"required"`     // 来源：unit-单位 product-商品 category-分类 sauce-加料 attribute-属性 attribute_group-属性组
+	Source string         `json:"source" binding:"required"`     // 来源：unit-单位 product-商品 category-分类 sauce-加料 attribute-属性 attribute_group-属性组 flavor-规格
 	Names  []CheckingName `json:"names" binding:"required,dive"` // 名称列表
 }
 

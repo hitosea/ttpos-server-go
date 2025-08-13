@@ -5,12 +5,26 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Make Run",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/main",
+            "preLaunchTask": "运行Go项目-run",
+            "env": {
+                "GOOS": "linux",
+                "GOARCH": "amd64"
+            },
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen"
+        },
+        {
             "name": "Make Dev",
             "type": "go",
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/main",
-            "preLaunchTask": "运行Go项目",
+            "preLaunchTask": "运行Go项目-dev",
             "env": {
                 "GOOS": "linux",
                 "GOARCH": "amd64"

@@ -15,6 +15,40 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/admin/erpnext/shop/init": {
+            "post": {
+                "description": "初始化店铺",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "初始化店铺",
+                "parameters": [
+                    {
+                        "description": "初始化店铺请求",
+                        "name": "init_shop_req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InitShopReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/admin/erpnext/site/company": {
             "get": {
                 "description": "获取ERPNext站点公司名称",
@@ -22502,6 +22536,14 @@ const docTemplate = `{
                         "$ref": "#/definitions/business_data_resp.Percentage"
                     }
                 },
+                "total_cancel_order_amount": {
+                    "description": "总取消订单金额",
+                    "type": "number"
+                },
+                "total_cancel_order_num": {
+                    "description": "总取消订单数",
+                    "type": "integer"
+                },
                 "total_discount_money": {
                     "description": "总优惠折扣",
                     "type": "number"
@@ -24228,6 +24270,10 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "sort": {
+                    "description": "商品属性排序",
+                    "type": "integer"
+                },
                 "uuid": {
                     "description": "商品属性UUID",
                     "type": "integer"
@@ -24302,6 +24348,10 @@ const docTemplate = `{
                 "name": {
                     "description": "商品属性分组名称",
                     "type": "string"
+                },
+                "sort": {
+                    "description": "商品属性分组排序",
+                    "type": "integer"
                 },
                 "uuid": {
                     "description": "商品属性分组UUID",
@@ -25365,7 +25415,7 @@ const docTemplate = `{
                     }
                 },
                 "source": {
-                    "description": "来源：unit-单位 product-商品 category-分类 sauce-加料 attribute-属性 attribute_group-属性组",
+                    "description": "来源：unit-单位 product-商品 category-分类 sauce-加料 attribute-属性 attribute_group-属性组 flavor-规格",
                     "type": "string"
                 },
                 "uuid": {
@@ -25604,6 +25654,38 @@ const docTemplate = `{
                 },
                 "remark": {
                     "description": "机器备注",
+                    "type": "string"
+                }
+            }
+        },
+        "req.InitShopReq": {
+            "type": "object",
+            "required": [
+                "admin_uuid",
+                "company_abbr",
+                "shop_name",
+                "shop_uuid",
+                "site_code"
+            ],
+            "properties": {
+                "admin_uuid": {
+                    "description": "管理员UUID",
+                    "type": "integer"
+                },
+                "company_abbr": {
+                    "description": "公司缩写编码",
+                    "type": "string"
+                },
+                "shop_name": {
+                    "description": "店铺名称",
+                    "type": "string"
+                },
+                "shop_uuid": {
+                    "description": "店铺UUID",
+                    "type": "integer"
+                },
+                "site_code": {
+                    "description": "站点编码",
                     "type": "string"
                 }
             }
@@ -27004,7 +27086,6 @@ const docTemplate = `{
         "req.ProductParams": {
             "type": "object",
             "required": [
-                "flavor_product_bom_uuid",
                 "num"
             ],
             "properties": {
@@ -27042,6 +27123,21 @@ const docTemplate = `{
                 "product_package_group_uuid": {
                     "description": "套餐分组uuid。可选，当商品是套餐商品时，该字段有值",
                     "type": "integer"
+                },
+                "product_package_uuid": {
+                    "description": "套餐商品uuid。当商品是套餐商品时，该字段有值",
+                    "type": "integer"
+                },
+                "product_type": {
+                    "description": "商品类型 0-商品 1-套餐",
+                    "type": "integer"
+                },
+                "products": {
+                    "description": "套餐商品请求列表。当商品是套餐商品时，该字段有值",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.ProductRequest"
+                    }
                 },
                 "remark": {
                     "description": "备注，平板端离线购物车提交",

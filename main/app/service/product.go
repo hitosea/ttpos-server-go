@@ -14,13 +14,16 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/duke-git/lancet/v2/slice"
+	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -67,6 +70,10 @@ type IProductSrv interface {
 	EditProductFlavor(ctx context.Context, req req.ProdudctFlavorEditReq) error                                         // 编辑商品规格
 	DeleteProductFlavor(ctx context.Context, req req.ProductFlavorDeleteReq) error                                      // 删除商品规格
 	SortProductFlavor(ctx context.Context, req req.ProductFlavorSortReq) error                                          // 排序商品规格
+
+	// 导入商品
+	ImportProductList(ctx context.Context, req req.ProductImportListReq) (product_resp.ProductImportResp, error) // 导入商品列表
+	ImportProduct(ctx context.Context, req req.ProductImportReq) error                                           // 导入商品
 }
 
 type productSrv struct {
@@ -1628,6 +1635,7 @@ func (s *productSrv) GetProductAttributeGroupList(ctx context.Context, req req.P
 			Uuid:          productAttributeGroup.Uuid,
 			Name:          productAttributeGroup.MultiLanguageName.GetNameByLang(language),
 			AttributeName: strings.Join(attributeNames, "、"),
+			Sort:          productAttributeGroup.Sort,
 		})
 	}
 	return product_resp.ProductAttributeGroupListResp{
@@ -1679,6 +1687,7 @@ func (s *productSrv) GetProductAttributeGroup(ctx context.Context, req req.Produ
 			ProductPackages: product_resp.ProductAttributeProductPackageList{
 				List: productPackageList,
 			},
+			Sort: productAttribute.Sort,
 		})
 	}
 
@@ -2489,4 +2498,143 @@ func (s *productSrv) SortProductFlavor(ctx context.Context, req req.ProductFlavo
 		return nil
 	})
 	return err
+}
+
+// ImportProductList 导入商品列表
+func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImportListReq) (product_resp.ProductImportResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 获取公司设置
+	companySetting, err := s.settingSrv.GetCompanySetting(ctx)
+	if err != nil {
+		return product_resp.ProductImportResp{}, err
+	}
+	// 获取语言
+	language := ctx.GetLanguage()
+	langKeys := map[string]string{
+		"English":    "en",
+		"ภาษาไทย":    "th",
+		"简体中文":       "zh",
+		"繁體中文":       "zhtw",
+		"Türkçe":     "tr",
+		"မြန်မာဘာသာ": "my",
+		"日本語":        "ja",
+		"한국어":        "ko",
+		"Svenska":    "sv",
+	}
+
+	// 初始化返回
+	var productImportResp product_resp.ProductImportResp
+	productImportResp.List = make([]product_resp.ProductImportListItem, 0, len(req.List))
+	productImportResp.UnitList = make([]product_resp.ProductImportUnitListItem, 0, len(req.List))
+	productImportResp.SkuList = make([]product_resp.ProductImportSkuListItem, 0, len(req.List))
+	productImportResp.TaxList = make([]product_resp.ProductImportTaxListItem, 0, len(req.List))
+	for _, item := range req.List {
+		categoryUuid, err := repository.NewCategoryRepositoryService(db).GetCategoryUuidByNameOptimized(item.CategoryName)
+		if err != nil {
+			return product_resp.ProductImportResp{}, err
+		}
+		//
+		unitUuid, err := base.NewProductUnitRepo(db).GetProductUnitUuidByNameOptimized(item.ProductUnit)
+		if err != nil {
+			return product_resp.ProductImportResp{}, err
+		}
+		//
+		skuUuid, err := base.NewProductFlavorRepo(db).GetProductFlavorUuidByNameOptimized(item.SkuName)
+		if err != nil {
+			return product_resp.ProductImportResp{}, err
+		}
+		//
+		taxUuid, err := repository.NewTaxRepo(db).GetTaxCategoryUuidByNameOptimized(item.ProductRatingTaxType)
+		if err != nil {
+			return product_resp.ProductImportResp{}, err
+		}
+		//
+		takeoutTaxUuid, err := repository.NewTaxRepo(db).GetTaxCategoryUuidByNameOptimized(item.ProductTakeoutTaxType)
+		if err != nil {
+			return product_resp.ProductImportResp{}, err
+		}
+		// 复制商品信息
+		products := product_resp.ProductImportListItem{}
+		copier.Copy(&products, item)
+		// 设置ID
+		products.CategoryId = categoryUuid
+		products.UnitId = unitUuid
+		products.SkuId = skuUuid
+		products.RatingTaxId = taxUuid
+		products.TakeoutTaxId = takeoutTaxUuid
+		// 处理显示
+		products.IsShowCashier = strings.Contains(item.Shows, "1")
+		products.IsShowTablet = strings.Contains(item.Shows, "2")
+		products.IsShowKitchen = strings.Contains(item.Shows, "3")
+		products.IsShowAssistant = strings.Contains(item.Shows, "4")
+		products.IsShowH5 = strings.Contains(item.Shows, "5")
+		products.IsShowDelivery = strings.Contains(item.Shows, "6")
+		// 处理数量计算方法
+		// 按小数计价，不在助手、平板、扫码端显示
+		if item.NumType == 2 && (products.IsShowTablet || products.IsShowAssistant || products.IsShowH5 || products.IsShowDelivery) {
+			return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "按小数计价只能显示到收银机和厨显"))
+		}
+		// 未配置外送渠道，无法选择在外送显示
+		if companySetting.DeliveryStatus != 1 && products.IsShowDelivery {
+			return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "未配置外送渠道，无法选择在外送显示"))
+		}
+
+		// 处理商品名称
+		productName := dto.LocaleResponse{}
+		for _, name := range strings.Split(item.ProductName, "\n") {
+			name := strings.Split(name, ":")
+			if len(name) < 2 || name[0] == "" {
+				return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "商品名称格式错误"))
+			}
+			if _, exists := langKeys[name[0]]; !exists {
+				return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "商品名称对应语言不存在") + "[" + name[0] + "]")
+			}
+			// 根据语言代码设置对应的字段
+			switch langKeys[name[0]] {
+			case "zh":
+				productName.ZH = name[1]
+			case "th":
+				productName.TH = name[1]
+			case "en":
+				productName.EN = name[1]
+			case "zhtw":
+				productName.ZHTW = name[1]
+			case "ja":
+				productName.JA = name[1]
+			case "ko":
+				productName.KO = name[1]
+			case "my":
+				productName.MY = name[1]
+			case "tr":
+				productName.TR = name[1]
+			case "sv":
+				productName.SV = name[1]
+			}
+		}
+		products.LocaleName = productName
+
+		// 验证是否已经存在
+		products.ProductNameIsExist = repository.NewProductRepo(db).CheckMultiLanguageNameExist(productName)
+		// TODO: 添	加条形码存在性检查
+		// products.BarcodeIsExist = repository.NewProductRepo(db).CheckBarcodeExist(item .Barcode, ctx.GetCompanyUuid())
+
+		// 添加列表
+		productImportResp.List = append(productImportResp.List, products)
+	}
+
+	res, err := s.GetProductCategoryList(ctx.GetDbId())
+	if err != nil {
+		return product_resp.ProductImportResp{}, errors.WithMessage(err, "获取分类列表失败")
+	}
+	productImportResp.CategoryList = res.List
+
+	return productImportResp, nil
+}
+
+// ImportProduct 导入商品
+func (s *productSrv) ImportProduct(ctx context.Context, req req.ProductImportReq) error {
+	// db := s.dbm.GetDB(ctx.GetDbId())
+	// productRepo := repository.NewProductRepo(db)
+
+	return nil
 }

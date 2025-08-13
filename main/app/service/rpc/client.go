@@ -9,6 +9,8 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/app/service/rpc/takeout"
+	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
 
 	"github.com/gin-gonic/gin"
@@ -151,7 +153,8 @@ func TestCancelOrder() error {
 
 func TestCompanyList() error {
 	ctx := erp.WithSiteCode(context.Background(), "1")
-	companyResp, err := erp.NewIErpSrv().GetCompanyList(ctx, req.ErpnextSiteCompanyReq{
+	dbm := database.GetDBManager(config.Database)
+	companyResp, err := erp.NewIErpSrv(dbm).GetCompanyList(ctx, req.ErpnextSiteCompanyReq{
 		SiteCode: "1",
 	})
 	if err != nil {

@@ -8,8 +8,6 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
-	"github.com/gogf/gf/v2/errors/gcode"
-	"github.com/gogf/gf/v2/errors/gerror"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
@@ -21,8 +19,37 @@ func Register(s *grpcx.GrpcServer) {
 	item.RegisterItemServiceServer(s.Server, &Controller{})
 }
 
-func (*Controller) GetItemList(context.Context, *item.GetItemListReq) (*api.ResponseInfo, error) {
-	return nil, gerror.NewCode(gcode.CodeNotImplemented)
+func (*Controller) GetItemList(ctx context.Context, req *item.GetItemListReq) (res *api.ResponseInfo, err error) {
+	if dataList, err := service.Stock().GetItemList(ctx, req); err == nil {
+		res = rpc.ApiSuccess("获取商品列表成功")
+		res.Data, _ = anypb.New(dataList)
+	} else {
+		res = rpc.ApiError(err.Error())
+	}
+	return
+}
+
+func (*Controller) SaveItem(ctx context.Context, req *item.ItemInfo) (res *api.ResponseInfo, err error) {
+	if req.ItemName == "" {
+		res = rpc.ApiError("商品名称不能为空")
+		return
+	}
+	if req.ItemGroup == "" {
+		res = rpc.ApiError("商品分组不能为空")
+		return
+	}
+	if req.StockUom == "" {
+		res = rpc.ApiError("库存单位不能为空")
+		return
+	}
+	item, err := service.Stock().SaveItem(ctx, req)
+	if err == nil {
+		res = rpc.ApiSuccess("获取商品列表成功")
+		res.Data, _ = anypb.New(item)
+	} else {
+		res = rpc.ApiError(err.Error())
+	}
+	return
 }
 
 func (*Controller) GetUomList(ctx context.Context, req *item.GetUomListReq) (res *api.ResponseInfo, err error) {
@@ -36,6 +63,10 @@ func (*Controller) GetUomList(ctx context.Context, req *item.GetUomListReq) (res
 }
 
 func (*Controller) SaveUom(ctx context.Context, req *item.UomInfo) (res *api.ResponseInfo, err error) {
+	if req.UomName == "" {
+		res = rpc.ApiError("单位名称不能为空")
+		return
+	}
 	err = service.Stock().SaveUom(ctx, req)
 	if err != nil {
 		res = rpc.ApiError(err.Error())
@@ -56,6 +87,10 @@ func (*Controller) GetAttributeList(ctx context.Context, req *item.GetAttributeL
 }
 
 func (*Controller) SaveAttribute(ctx context.Context, req *item.AttributeInfo) (res *api.ResponseInfo, err error) {
+	if req.AttributeName == "" {
+		res = rpc.ApiError("属性名称不能为空")
+		return
+	}
 	err = service.Stock().SaveAttribute(ctx, req)
 	if err != nil {
 		res = rpc.ApiError(err.Error())

@@ -14,6 +14,7 @@ type IProductFlavorRepo interface {
 	UpdateProductFlavor(id uint, productFlavor model.ProductFlavor) error
 	CreateProductFlavor(productFlavor model.ProductFlavor) (uint64, error)
 	DeleteProductFlavor(id uint) error
+	GetProductFlavorUuidByNameOptimized(name string) (uint64, error)
 }
 
 func NewProductFlavorRepo(db *gorm.DB) IProductFlavorRepo {
@@ -85,4 +86,25 @@ func (r *ProductFlavorRepoImpl) CreateProductFlavor(productFlavor model.ProductF
 // DeleteProductFlavor 软删除商品规格
 func (r *ProductFlavorRepoImpl) DeleteProductFlavor(id uint) error {
 	return r.db.Model(&model.ProductFlavor{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
+}
+
+// GetProductFlavorUuidByNameOptimized 获取商品规格UUID
+func (r *ProductFlavorRepoImpl) GetProductFlavorUuidByNameOptimized(name string) (uint64, error) {
+	var productFlavors []model.ProductFlavor
+	err := r.db.Model(&model.ProductFlavor{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Find(&productFlavors).Error
+	if err != nil {
+		return 0, errors.WithMessage(err)
+	}
+	// 在内存中查找匹配的商品规格
+	for _, productFlavor := range productFlavors {
+		if productFlavor.MultiLanguageName.Uuid != 0 {
+			names := productFlavor.MultiLanguageName.GetNames()
+			if names.ZH == name || names.ZHTW == name || names.EN == name ||
+				names.TH == name || names.MY == name || names.JA == name ||
+				names.KO == name || names.TR == name || names.SV == name {
+				return productFlavor.Uuid, nil
+			}
+		}
+	}
+	return 0, nil
 }
