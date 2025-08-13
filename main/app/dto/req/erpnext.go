@@ -1,9 +1,10 @@
 package req
 
 type ErpnextSiteCompanyReq struct {
-	SiteCode    string `form:"site_code" json:"site_code" binding:"required"`
-	CompanyName string `form:"company_name" json:"company_name" binding:"omitempty"`
-	CompanyAbbr string `form:"company_abbr" json:"company_abbr" binding:"omitempty"`
+	SiteCode      string `form:"site_code" json:"site_code" binding:"required"`
+	CompanyName   string `form:"company_name" json:"company_name" binding:"omitempty"`
+	CompanyAbbr   string `form:"company_abbr" json:"company_abbr" binding:"omitempty"`
+	ParentCompany string `form:"parent_company" json:"parent_company" binding:"omitempty"`
 }
 
 type InitShopReq struct {
@@ -32,5 +33,4 @@ type GetAttributeListReq struct {
 
 type SyncUomAndAttributeReq struct {
 	SiteCode string `form:"site_code" json:"site_code" binding:"required"` // 站点编码
-	Branch   string `form:"branch" json:"branch" binding:"required"`       // 分支名称
 }

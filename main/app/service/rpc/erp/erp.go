@@ -13,7 +13,7 @@ import (
 
 type IErpSrv interface {
 	GetCompanyList(ctx context.Context, erpnextSiteCompanyReq req.ErpnextSiteCompanyReq) (resp.ErpnextSiteCompanyResp, error)
-	InitShop(ctx context.Context, initShopReq req.InitShopReq) (resp.InitShopResp, error)
+	InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.InitShopResp, error)
 	GetUomList(ctx context.Context, getUomListReq req.GetUomListReq) (resp.GetUomListResp, error)
 	GetAttributeList(ctx context.Context, getAttributeListReq req.GetAttributeListReq) (resp.GetAttributeListResp, error)
 	SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.SyncUomAndAttributeReq) error

@@ -48,11 +48,11 @@ func (model *ProductSauce) SetNil() {
 // ProductUnit 商品单位表,定义商品的单位信息 ttpos_product_unit
 type ProductUnit struct {
 	BaseModel
-	Name                  string `gorm:"default:'';column:name;comment:'单位名称'"`
-	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
-	Sort                  int    `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
-
-	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
+	Name                  string            `gorm:"default:'';column:name;comment:'单位名称'"`
+	MultiLanguageNameUuid uint64            `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
+	Sort                  int               `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
+	ErpnextUom            string            `gorm:"default:'';column:erpnext_uom;comment:'ERPNext UOM'"`
+	MultiLanguageName     MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 
 	// ProductPackage里面关联的单位
 	ProductPackages []ProductPackage `gorm:"foreignKey:unit_uuid;references:uuid"`
@@ -70,12 +70,12 @@ type PrinterTag struct {
 // ProductAttributeGroup 产品属性组表,定义产品的属性分组信息 ttpos_product_attribute_group
 type ProductAttributeGroup struct {
 	BaseModel
-	Name                  string `gorm:"default:'';column:name;comment:'名称'"`
-	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
-	Sort                  int    `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
-
-	MultiLanguageName MultiLanguageName  `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
-	ProductAttributes []ProductAttribute `gorm:"foreignKey:attribute_group_uuid;references:uuid"`     // 商品属性
+	Name                      string             `gorm:"default:'';column:name;comment:'名称'"`
+	MultiLanguageNameUuid     uint64             `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
+	Sort                      int                `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
+	ErpnextAttributeGroupName string             `gorm:"default:'';column:erpnext_attribute_group_name;comment:'ERPNext Attribute Group Name'"`
+	MultiLanguageName         MultiLanguageName  `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
+	ProductAttributes         []ProductAttribute `gorm:"foreignKey:attribute_group_uuid;references:uuid"`     // 商品属性
 }
 
 // ProductAttribute 商品属性表,定义商品的属性信息 ttpos_product_attribute
@@ -85,7 +85,7 @@ type ProductAttribute struct {
 	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	AttributeGroupUuid    uint64 `gorm:"default:0;column:attribute_group_uuid;comment:'属性组UUID'"`
 	Sort                  int    `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
-
+	ErpnextAttributeValue string `gorm:"default:'';column:erpnext_attribute_value;comment:'ERPNext Attribute Value'"`
 	// 关联ttpos_product_package_attribute，ttpos_product_package_attribute的attribute_uuid等于当前商品属性的uuid
 	ProductPackageAttributes []ProductPackageAttribute `gorm:"foreignKey:attribute_uuid;references:uuid"` // 产品包属性
 
