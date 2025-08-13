@@ -14,7 +14,7 @@ type (
 	ICompany interface {
 		GetCompanyList(ctx context.Context, req *company.GetCompanyListReq) (res *company.GetCompanyListResp, err error)
 		GetCompanyWithAbbr(ctx context.Context, abbr string) (res *company.CompanyInfo, err error)
-		// GetCompanyName 根据公司简称获取公司名称
+		// GetCompanyNameWithAbbr  根据公司简称获取公司名称
 		GetCompanyNameWithAbbr(ctx context.Context, companyAbbr string) (string, error)
 	}
 )

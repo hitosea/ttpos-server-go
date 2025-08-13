@@ -52,6 +52,11 @@ func (s *sCompany) GetCompanyList(ctx context.Context, req *company.GetCompanyLi
 				CompanyName: item.Get("name").String(),
 				CompanyAbbr: item.Get("abbr").String(),
 			}
+			companyInfo.HasChild, err = s.HasSubCompany(ctx, companyInfo.CompanyName)
+			if err != nil {
+				g.Log().Error(ctx, "查询子公司信息失败", err)
+			}
+
 			companyList = append(companyList, companyInfo)
 		}
 		res = &company.GetCompanyListResp{
@@ -91,4 +96,33 @@ func (s *sCompany) GetCompanyNameWithAbbr(ctx context.Context, companyAbbr strin
 	}
 
 	return company.CompanyName, nil
+}
+
+// HasSubCompany 判断公司是否有子公司
+// 通过 parent_company 字段关联查询，判断是否存在子公司
+// 参数：ctx 上下文，companyName 公司名称
+// 返回：是否有子公司，错误信息
+func (s *sCompany) HasSubCompany(ctx context.Context, companyName string) (bool, error) {
+	if len(companyName) == 0 {
+		return false, gerror.New("公司名称不能为空")
+	}
+
+	// 构建查询过滤器，查找 parent_company 等于当前公司的记录
+	filters := [][]string{
+		{"parent_company", "=", companyName},
+	}
+
+	// 使用 service.Doctype().Count 查询子公司数量
+	count, err := service.Doctype().Count(ctx, &dto.ErpReq{
+		DocType: "Company",
+	}, &dto.RequestParams{
+		Filters: filters,
+	})
+
+	if err != nil {
+		return false, gerror.Wrapf(err, "查询子公司信息失败")
+	}
+
+	// 如果数量大于0，说明有子公司
+	return count > 0, nil
 }

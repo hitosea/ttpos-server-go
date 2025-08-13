@@ -27,7 +27,7 @@ message GetCompanyListResp {
 message CompanyInfo {
   string company_abbr = 1;                    // 公司缩写编码
   string company_name = 2;                  // 公司名称
-
+  bool has_child = 3; // 是否有子公司
 }
 
 
