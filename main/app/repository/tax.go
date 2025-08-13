@@ -12,6 +12,7 @@ import (
 // ITaxRepo 税种
 type ITaxRepo interface {
 	CreateTax(tax model.Tax) error
+	GetTaxCategoryList() ([]model.Tax, error)
 	GetTaxCategoryUuidByNameOptimized(name string) (uint64, error)
 }
 
@@ -34,6 +35,13 @@ func (r *TaxRepoImpl) CreateTax(tax model.Tax) error {
 		return apperrors.WithMessage(err, "创建税种失败")
 	}
 	return nil
+}
+
+// GetTaxCategoryList 获取税种列表
+func (r *TaxRepoImpl) GetTaxCategoryList() ([]model.Tax, error) {
+	var taxCategories []model.Tax
+	err := r.db.Model(&model.Tax{}).Where("delete_time = ?", 0).Find(&taxCategories).Error
+	return taxCategories, apperrors.WithMessage(err)
 }
 
 // GetTaxCategoryUuidByNameOptimized 获取税种UUID（找不到时返回0，不报错）

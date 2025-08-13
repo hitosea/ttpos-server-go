@@ -235,6 +235,19 @@ type ProductImportListReq struct {
 	List []ProductImportListItemReq `json:"list" binding:"required,dive"` // 商品列表
 }
 
+// GetBarcodeDuplicateRows 获取条形码重复的行号
+func (p *ProductImportListReq) GetBarcodeDuplicateRows() []int {
+	barcodeMap := make(map[string]bool)
+	duplicateRows := []int{}
+	for _, item := range p.List {
+		if _, ok := barcodeMap[item.Barcode]; ok {
+			duplicateRows = append(duplicateRows, item.Row)
+		}
+		barcodeMap[item.Barcode] = true
+	}
+	return duplicateRows
+}
+
 // ProductImportItemReq 导入商品项请求
 type ProductImportListItemReq struct {
 	ProductName           string  `json:"product_name" binding:"required"`             // 商品名称
@@ -259,32 +272,45 @@ type ProductImportReq struct {
 	List []ProductImportItemReq `json:"list" binding:"required,dive"` // 商品列表
 }
 
+// GetBarcodeDuplicateRows 获取条形码重复的行号
+func (p *ProductImportReq) GetBarcodeDuplicateRows() []int {
+	barcodeMap := make(map[string]bool)
+	duplicateRows := []int{}
+	for _, item := range p.List {
+		if _, ok := barcodeMap[item.Barcode]; ok {
+			duplicateRows = append(duplicateRows, item.Row)
+		}
+		barcodeMap[item.Barcode] = true
+	}
+	return duplicateRows
+}
+
 // ProductImportItemReq 导入商品项请求
 type ProductImportItemReq struct {
-	ProductName           string  `json:"product_name" binding:"required"`             // 商品名称
-	CategoryName          string  `json:"category_name" binding:"required"`            // 分类名称
-	ProductUnit           string  `json:"product_unit" binding:"required"`             // 商品单位
-	SkuName               string  `json:"sku_name" binding:"required"`                 // 规格名称
-	ProductPrice          float64 `json:"product_price" binding:"required"`            // 商品价格
-	NumType               int     `json:"num_type" binding:"required"`                 // 数量计算方法, 1-整数 2-小数
-	Barcode               string  `json:"barcode" binding:"required"`                  // 商品条码
-	ProductStatus         int     `json:"product_status" binding:"required"`           // 商品状态, 1-上架 0-下架
-	ProductRatingTaxType  string  `json:"product_rating_tax_type" binding:"required"`  // 堂食税类
-	ProductTakeoutTaxType string  `json:"product_takeout_tax_type" binding:"required"` // 外带税类
-	DeductStockType       int     `json:"deduct_stock_type" binding:"required"`        // 库存计算方式, 2-付款减库存 1-下单减库存
-	Shows                 string  `json:"shows" binding:"required"`                    // 显示：123456
-	IsEnableGrade         int     `json:"is_enable_grade" binding:"required"`          // 是否开启会员折扣(1开启 0关闭)
-	OpenOverallDiscount   int     `json:"open_overall_discount" binding:"required"`    // 整单折扣(1开启 0关闭)
-	Row                   int     `json:"row" binding:"required"`                      // excel表的行编号
-	IsShowCashier         bool    `json:"is_show_cashier"`                             // 是否显示在收银端 1-显示 2-不显示
-	IsShowTablet          bool    `json:"is_show_tablet"`                              // 是否显示在平板端 1-显示 2-不显示
-	IsShowKitchen         bool    `json:"is_show_kitchen"`                             // 是否显示在送厨端 1-显示 2-不显示
-	IsShowAssistant       bool    `json:"is_show_assistant"`                           // 是否显示在点餐助手 1-显示 2-不显示
-	IsShowH5              bool    `json:"is_show_h5"`                                  // 是否显示在h5 1-显示 2-不显示
-	IsShowDelivery        bool    `json:"is_show_delivery"`                            // 是否显示在外送 1-显示 2-不显示
-	UnitId                uint64  `json:"unit_id"`                                     // 单位ID
-	CategoryId            uint64  `json:"category_id"`                                 // 分类ID
-	SkuId                 uint64  `json:"sku_id"`                                      // 规格ID
-	RatingTaxId           uint64  `json:"ratin_tax_id"`                                // 堂食税类ID
-	TakeoutTaxId          uint64  `json:"takeout_tax_id"`                              // 外带税类ID
+	LocaleName            dto.LocaleResponse `json:"locale_name" binding:"required"`              // 商品名称
+	CategoryName          string             `json:"category_name" binding:"required"`            // 分类名称
+	ProductUnit           string             `json:"product_unit" binding:"required"`             // 商品单位
+	SkuName               string             `json:"sku_name" binding:"required"`                 // 规格名称
+	ProductPrice          float64            `json:"product_price" binding:"required"`            // 商品价格
+	NumType               int                `json:"num_type" binding:"required"`                 // 数量计算方法, 1-整数 2-小数
+	Barcode               string             `json:"barcode" binding:"required"`                  // 商品条码
+	ProductStatus         int                `json:"product_status" binding:"required"`           // 商品状态, 1-上架 0-下架
+	ProductRatingTaxType  string             `json:"product_rating_tax_type" binding:"required"`  // 堂食税类
+	ProductTakeoutTaxType string             `json:"product_takeout_tax_type" binding:"required"` // 外带税类
+	DeductStockType       int                `json:"deduct_stock_type" binding:"required"`        // 库存计算方式, 2-付款减库存 1-下单减库存
+	Shows                 string             `json:"shows" binding:"required"`                    // 显示：123456
+	IsEnableGrade         int                `json:"is_enable_grade" binding:"required"`          // 是否开启会员折扣(1开启 0关闭)
+	OpenOverallDiscount   int                `json:"open_overall_discount" binding:"required"`    // 整单折扣(1开启 0关闭)
+	Row                   int                `json:"row" binding:"required"`                      // excel表的行编号
+	IsShowCashier         bool               `json:"is_show_cashier"`                             // 是否显示在收银端 1-显示 2-不显示
+	IsShowTablet          bool               `json:"is_show_tablet"`                              // 是否显示在平板端 1-显示 2-不显示
+	IsShowKitchen         bool               `json:"is_show_kitchen"`                             // 是否显示在送厨端 1-显示 2-不显示
+	IsShowAssistant       bool               `json:"is_show_assistant"`                           // 是否显示在点餐助手 1-显示 2-不显示
+	IsShowH5              bool               `json:"is_show_h5"`                                  // 是否显示在h5 1-显示 2-不显示
+	IsShowDelivery        bool               `json:"is_show_delivery"`                            // 是否显示在外送 1-显示 2-不显示
+	UnitId                uint64             `json:"unit_id"`                                     // 单位ID
+	CategoryId            uint64             `json:"category_id"`                                 // 分类ID
+	SkuId                 uint64             `json:"sku_id"`                                      // 规格ID
+	RatingTaxId           uint64             `json:"ratin_tax_id"`                                // 堂食税类ID
+	TakeoutTaxId          uint64             `json:"takeout_tax_id"`                              // 外带税类ID
 }

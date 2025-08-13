@@ -2525,50 +2525,42 @@ func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImpor
 	// 初始化返回
 	var productImportResp product_resp.ProductImportResp
 	productImportResp.List = make([]product_resp.ProductImportListItem, 0, len(req.List))
-	productImportResp.UnitList = make([]product_resp.ProductImportUnitListItem, 0, len(req.List))
-	productImportResp.SkuList = make([]product_resp.ProductImportSkuListItem, 0, len(req.List))
-	productImportResp.TaxList = make([]product_resp.ProductImportTaxListItem, 0, len(req.List))
 	for _, item := range req.List {
+		// 复制商品信息
+		products := product_resp.ProductImportListItem{}
+		copier.Copy(&products, item)
+
+		// 获取分类ID
 		categoryUuid, err := repository.NewCategoryRepositoryService(db).GetCategoryUuidByNameOptimized(item.CategoryName)
 		if err != nil {
 			return product_resp.ProductImportResp{}, err
 		}
-		//
+		// 获取单位ID
 		unitUuid, err := base.NewProductUnitRepo(db).GetProductUnitUuidByNameOptimized(item.ProductUnit)
 		if err != nil {
 			return product_resp.ProductImportResp{}, err
 		}
-		//
+		// 获取规格ID
 		skuUuid, err := base.NewProductFlavorRepo(db).GetProductFlavorUuidByNameOptimized(item.SkuName)
 		if err != nil {
 			return product_resp.ProductImportResp{}, err
 		}
-		//
+		// 获取堂食税类ID
 		taxUuid, err := repository.NewTaxRepo(db).GetTaxCategoryUuidByNameOptimized(item.ProductRatingTaxType)
 		if err != nil {
 			return product_resp.ProductImportResp{}, err
 		}
-		//
+		// 获取外带税类ID
 		takeoutTaxUuid, err := repository.NewTaxRepo(db).GetTaxCategoryUuidByNameOptimized(item.ProductTakeoutTaxType)
 		if err != nil {
 			return product_resp.ProductImportResp{}, err
 		}
-		// 复制商品信息
-		products := product_resp.ProductImportListItem{}
-		copier.Copy(&products, item)
-		// 设置ID
+		// 设置分类ID、单位ID、规格ID、堂食税类ID、外带税类ID
 		products.CategoryId = categoryUuid
 		products.UnitId = unitUuid
 		products.SkuId = skuUuid
 		products.RatingTaxId = taxUuid
 		products.TakeoutTaxId = takeoutTaxUuid
-		// 处理显示
-		products.IsShowCashier = strings.Contains(item.Shows, "1")
-		products.IsShowTablet = strings.Contains(item.Shows, "2")
-		products.IsShowKitchen = strings.Contains(item.Shows, "3")
-		products.IsShowAssistant = strings.Contains(item.Shows, "4")
-		products.IsShowH5 = strings.Contains(item.Shows, "5")
-		products.IsShowDelivery = strings.Contains(item.Shows, "6")
 		// 处理数量计算方法
 		// 按小数计价，不在助手、平板、扫码端显示
 		if item.NumType == 2 && (products.IsShowTablet || products.IsShowAssistant || products.IsShowH5 || products.IsShowDelivery) {
@@ -2578,7 +2570,6 @@ func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImpor
 		if companySetting.DeliveryStatus != 1 && products.IsShowDelivery {
 			return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "未配置外送渠道，无法选择在外送显示"))
 		}
-
 		// 处理商品名称
 		productName := dto.LocaleResponse{}
 		for _, name := range strings.Split(item.ProductName, "\n") {
@@ -2612,29 +2603,92 @@ func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImpor
 			}
 		}
 		products.LocaleName = productName
-
+		products.IsShowCashier = strings.Contains(item.Shows, "1")
+		products.IsShowTablet = strings.Contains(item.Shows, "2")
+		products.IsShowKitchen = strings.Contains(item.Shows, "3")
+		products.IsShowAssistant = strings.Contains(item.Shows, "4")
+		products.IsShowH5 = strings.Contains(item.Shows, "5")
+		products.IsShowDelivery = strings.Contains(item.Shows, "6")
 		// 验证是否已经存在
 		products.ProductNameIsExist = repository.NewProductRepo(db).CheckMultiLanguageNameExist(productName)
-		// TODO: 添	加条形码存在性检查
-		// products.BarcodeIsExist = repository.NewProductRepo(db).CheckBarcodeExist(item .Barcode, ctx.GetCompanyUuid())
-
-		// 添加列表
+		// 验证条形码存在性检查
+		products.BarcodeIsExist = repository.NewProductRepo(db).CheckBarcodeExist(item.Barcode)
+		// 添加到列表
 		productImportResp.List = append(productImportResp.List, products)
 	}
 
+	// 获取分类列表
 	res, err := s.GetProductCategoryList(ctx.GetDbId())
 	if err != nil {
 		return product_resp.ProductImportResp{}, errors.WithMessage(err, "获取分类列表失败")
 	}
 	productImportResp.CategoryList = res.List
 
+	// 获取单位列表
+	unitList, err := base.NewProductUnitRepo(db).GetProductUnitList()
+	if err != nil {
+		return product_resp.ProductImportResp{}, errors.WithMessage(err, "获取单位列表失败")
+	}
+	for _, unit := range unitList {
+		productImportResp.UnitList = append(productImportResp.UnitList, product_resp.ProductImportUnitListItem{
+			Uuid:       unit.Uuid,
+			LocaleName: unit.MultiLanguageName.GetNames(),
+		})
+	}
+
+	// 获取规格列表
+	skuList, err := base.NewProductFlavorRepo(db).GetProductFlavorList()
+	if err != nil {
+		return product_resp.ProductImportResp{}, errors.WithMessage(err, "获取规格列表失败")
+	}
+	for _, sku := range skuList {
+		productImportResp.SkuList = append(productImportResp.SkuList, product_resp.ProductImportSkuListItem{
+			Uuid:       sku.Uuid,
+			LocaleName: sku.MultiLanguageName.GetNames(),
+		})
+	}
+
+	// 获取税类列表
+	taxList, err := repository.NewTaxRepo(db).GetTaxCategoryList()
+	if err != nil {
+		return product_resp.ProductImportResp{}, errors.WithMessage(err, "获取税类列表失败")
+	}
+	for _, tax := range taxList {
+		productImportResp.TaxList = append(productImportResp.TaxList, product_resp.ProductImportTaxListItem{
+			Uuid: tax.Uuid,
+			Name: tax.Name,
+		})
+	}
+
 	return productImportResp, nil
 }
 
 // ImportProduct 导入商品
 func (s *productSrv) ImportProduct(ctx context.Context, req req.ProductImportReq) error {
-	// db := s.dbm.GetDB(ctx.GetDbId())
-	// productRepo := repository.NewProductRepo(db)
+	db := s.dbm.GetDB(ctx.GetDbId())
+	language := ctx.GetLanguage()
+
+	// 验证条形码是否重复
+	duplicateRows := req.GetBarcodeDuplicateRows()
+	if len(duplicateRows) > 0 {
+		return errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(duplicateRows[0]) + "]: " + i18n.Translate(language, "商品条码不能重复"))
+	}
+
+	for _, item := range req.List {
+		// 验证是否已经存在
+		productNameIsExist := repository.NewProductRepo(db).CheckMultiLanguageNameExist(item.LocaleName)
+		if !productNameIsExist.IsNull() {
+			return errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "商品名称已存在"))
+		}
+		// 验证条形码存在性检查
+		if repository.NewProductRepo(db).CheckBarcodeExist(item.Barcode) {
+			return errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "商品条码已存在"))
+		}
+		// 处理显示
+		item.NumType = utils.IfInt(item.NumType == 1, 0, 1)
+	}
+
+	// TODO: 处理插入商品
 
 	return nil
 }

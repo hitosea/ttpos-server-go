@@ -337,7 +337,7 @@ type ProductImportListItem struct {
 	Shows                 string             `json:"shows" binding:"required"`                    // 显示：123456
 	IsEnableGrade         int                `json:"is_enable_grade" binding:"required"`          // 是否开启会员折扣(1开启 0关闭)
 	OpenOverallDiscount   int                `json:"open_overall_discount" binding:"required"`    // 整单折扣(1开启 0关闭)
-	Row                   string             `json:"row" binding:"required"`                      // excel表的行编号
+	Row                   int                `json:"row" binding:"required"`                      // excel表的行编号
 	IsShowCashier         bool               `json:"is_show_cashier"`                             // 是否显示在收银端 1-显示 2-不显示
 	IsShowTablet          bool               `json:"is_show_tablet"`                              // 是否显示在平板端 1-显示 2-不显示
 	IsShowKitchen         bool               `json:"is_show_kitchen"`                             // 是否显示在送厨端 1-显示 2-不显示
@@ -367,6 +367,6 @@ type ProductImportSkuListItem struct {
 
 // ProductImportTaxListItem 导入商品税类列表项
 type ProductImportTaxListItem struct {
-	LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 税类名称
-	Uuid       uint64             `json:"uuid" binding:"required"`        // 税类UUID
+	Name string `json:"name" binding:"required"` // 税类名称
+	Uuid uint64 `json:"uuid" binding:"required"` // 税类UUID
 }
