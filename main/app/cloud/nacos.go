@@ -27,13 +27,18 @@ func Init() {
 	once := sync.Once{}
 	once.Do(func() {
 		var err error
-		if nacosClient, err = nacos.NewNacosClient(config.Nacos); err != nil {
-			logger.Logger.Error("初始化nacos客户端服务失败:", zap.Error(err))
-		}
+		go func() {
+			if nacosClient, err = nacos.NewNacosClient(config.Nacos); err != nil {
+				logger.Logger.Error("初始化nacos客户端服务失败:", zap.Error(err))
+			}
+		}()
 	})
 }
 
 func GetServiceGrpcAddr(serviceName string) (string, error) {
+	if nacosClient == nil {
+		return "", errors.WithMessage(errors.New("服务中心未启动，请稍等"))
+	}
 	return nacosClient.GetServiceGrpcAddr(serviceName)
 }
 
