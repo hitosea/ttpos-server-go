@@ -551,13 +551,10 @@ func (s *productSrv) GetProductShopCategoryList(ctx context.Context, req req.Pro
 	dbId := s.dbm.GetDB(ctx.GetDbId())
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(dbId)
+	language := ctx.GetLanguage()
 	// 查询/关联
 	opts := []repository.DBOption{
-		commonRepo.Preload(
-			repository.WithPreload{
-				Query: "MultiLanguageName",
-			},
-		),
+		productRepo.WithMultiLanguageName(),
 		productRepo.WhereCategoryKey(""),
 		commonRepo.WhereBySoftDelete(),
 		commonRepo.SortWithIsSpecial("DESC"),
@@ -595,7 +592,7 @@ func (s *productSrv) GetProductShopCategoryList(ctx context.Context, req req.Pro
 				if child.ParentUuid != 0 && child.ParentUuid == category.Uuid {
 					children = append(children, product_resp.ProductShopCategory{
 						Uuid:       child.Uuid,
-						LocaleName: s.localeSrv.GetLocaleNames(child.MultiLanguageName),
+						Name:       child.MultiLanguageName.GetNameByLang(language),
 						ParentUuid: child.ParentUuid,
 						IsSpecial:  child.IsSpecial == 1,
 						Sort:       child.Sort,
@@ -608,7 +605,7 @@ func (s *productSrv) GetProductShopCategoryList(ctx context.Context, req req.Pro
 			}
 			list = append(list, product_resp.ProductShopCategory{
 				Uuid:       category.Uuid,
-				LocaleName: s.localeSrv.GetLocaleNames(category.MultiLanguageName),
+				Name:       category.MultiLanguageName.GetNameByLang(language),
 				ParentUuid: category.ParentUuid,
 				IsSpecial:  category.IsSpecial == 1,
 				Sort:       category.Sort,
