@@ -27,11 +27,17 @@ func Init() {
 	once := sync.Once{}
 	once.Do(func() {
 		var err error
-		go func() {
+		if config.Server.Mode == "debug" {
+			go func() {
+				if nacosClient, err = nacos.NewNacosClient(config.Nacos); err != nil {
+					logger.Logger.Error("初始化nacos客户端服务失败:", zap.Error(err))
+				}
+			}()
+		} else {
 			if nacosClient, err = nacos.NewNacosClient(config.Nacos); err != nil {
 				logger.Logger.Error("初始化nacos客户端服务失败:", zap.Error(err))
 			}
-		}()
+		}
 	})
 }
 
