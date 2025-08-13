@@ -815,13 +815,13 @@ func (h *ProductHandler) SortProductAttribute(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param data body req.ProdudctFlavorEditReq true "商品规格编辑请求"
+// @Param data body req.ProductFlavorEditReq true "商品规格编辑请求"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /shop/product/flavor/edit [post]
 func (h *ProductHandler) EditProductFlavor(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	editReq := req.ProdudctFlavorEditReq{}
+	editReq := req.ProductFlavorEditReq{}
 	if err := c.ShouldBindJSON(&editReq); err != nil {
 		helper.HandleValidationError(c, err, editReq, dto.PageReqMessage)
 		return

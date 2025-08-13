@@ -86,6 +86,6 @@ func openingHours(fl validator.FieldLevel) bool {
 	// 中间用连字符分隔
 	pattern := `^([01]?[0-9]|2[0-3]):([0-5][0-9])-([01]?[0-9]|2[0-3]):([0-5][0-9])$`
 
-	matched, err := regexp.MatchString(pattern, hours)
-	return err != nil || !matched
+	matched, _ := regexp.MatchString(pattern, hours)
+	return matched
 }

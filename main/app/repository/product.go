@@ -103,8 +103,8 @@ type IProductQueryRepo interface {
 	GetProductPackageAttributeGroups(opts ...DBOption) ([]model.ProductPackageAttributeGroup, error)                               // 获取商品包属性组列表
 
 	PaginateGetProductFlavorList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductFlavor, int64, error) // 分页获取商品规格列表
-	CheckNameExist(name string) bool                                                                               // 检查名称是否存在
 	CheckMultiLanguageNameExist(localeResponse dto.LocaleResponse) dto.LocaleResponse                              // 检查多语言名称是否存在
+	CheckBarcodeExist(barcode string) bool                                                                         // 检查条形码是否存在
 }
 
 // productRepo 商品仓库
@@ -943,14 +943,6 @@ func (r *productRepo) PaginateGetProductFlavorList(pageNo int, pageSize int, opt
 	return flavors, total, errors.WithMessage(err)
 }
 
-// CheckNameExist 检查名称是否存在
-func (r *productRepo) CheckNameExist(name string) bool {
-	db := r.db.Model(&model.Product{}).
-		Where("delete_time = ?", constant.NotDeleted)
-	db = db.Where("name = ?", name)
-	return db.First(&model.Product{}).Error != nil
-}
-
 // CheckMultiLanguageNameExist 检查多语言名称是否存在，返回存在的语言名称
 func (r *productRepo) CheckMultiLanguageNameExist(localeResponse dto.LocaleResponse) dto.LocaleResponse {
 	var result dto.LocaleResponse
@@ -1014,4 +1006,13 @@ func (r *productRepo) CheckMultiLanguageNameExist(localeResponse dto.LocaleRespo
 	}
 
 	return result
+}
+
+// CheckBarcodeExist 检查条形码是否存在
+func (r *productRepo) CheckBarcodeExist(barcode string) bool {
+	db := r.db.Model(&model.ProductBom{}).
+		Where("delete_time = ?", constant.NotDeleted).
+		Where("barcode_value = ?", barcode).
+		Where("barcode_value <> ?", "")
+	return db.First(&model.ProductBom{}).Error == nil
 }

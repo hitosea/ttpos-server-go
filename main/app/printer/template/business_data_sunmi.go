@@ -256,6 +256,8 @@ func (t *businessDataSunmiTemplate) GetPrintContent(
 		printer.SetAlignment(pkg.AlignLeft)
 		printer.PrintInColumns(t.base.Translate("所有订单数"), fmt.Sprintf("%.0f", float64(businessData.All.TotalOrderNum)))
 		printer.LineFeed(1)
+		printer.PrintInColumns(t.base.Translate("取消订单数"), fmt.Sprintf("%.0f", float64(businessData.All.TotalCancelOrderNum)))
+		printer.LineFeed(1)
 		printer.PrintInColumns(t.base.Translate("桌数"), fmt.Sprintf("%.0f", float64(businessData.All.TotalTableNum)))
 		printer.LineFeed(1)
 		printer.PrintInColumns(t.base.Translate("人数"), fmt.Sprintf("%.0f", float64(businessData.All.TotalPeopleNum)))
@@ -267,6 +269,8 @@ func (t *businessDataSunmiTemplate) GetPrintContent(
 		if t.base.Lang == "my" {
 			printer.SetLineSpacing(utils.IfInt(isOneself, 25, 20))
 		}
+		printer.LineFeed(1)
+		printer.PrintInColumns(t.base.Translate("取消订单金额"), t.base.GetPriceAndUnit(businessData.All.TotalCancelOrderAmount))
 		printer.LineFeed(1)
 		printer.PrintInColumns(t.base.Translate("平均订单金额"), t.base.GetPriceAndUnit(businessData.All.AvgOrderPrice))
 		printer.LineFeed(2)
