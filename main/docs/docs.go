@@ -20070,6 +20070,12 @@ const docTemplate = `{
                 "summary": "获取商品列表",
                 "parameters": [
                     {
+                        "type": "integer",
+                        "description": "商品分类UUID（可选）",
+                        "name": "category_uuid",
+                        "in": "query"
+                    },
+                    {
                         "type": "string",
                         "description": "搜索商品名称（可选）",
                         "name": "keyword",
@@ -20347,6 +20353,45 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/req.ProductSauceSortReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/sort": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "排序商品列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品"
+                ],
+                "summary": "排序商品列表",
+                "parameters": [
+                    {
+                        "description": "商品排序请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.SortProductShopListReq"
                         }
                     }
                 ],
@@ -29597,6 +29642,41 @@ const docTemplate = `{
                 "product_bom_uuid": {
                     "description": "商品规格Uuid",
                     "type": "integer"
+                }
+            }
+        },
+        "req.SortProductShopItemReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "商品UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.SortProductShopListReq": {
+            "type": "object",
+            "required": [
+                "list"
+            ],
+            "properties": {
+                "category_uuid": {
+                    "description": "商品分类UUID",
+                    "type": "integer"
+                },
+                "list": {
+                    "description": "商品排序列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.SortProductShopItemReq"
+                    }
                 }
             }
         },

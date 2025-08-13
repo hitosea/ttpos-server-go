@@ -111,6 +111,7 @@ type IProductQueryRepo interface {
 	CheckBarcodeExist(barcode string) bool                                                                         // 检查条形码是否存在
 
 	PaginateGetProductShopList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductPackage, int64, error) // 分页获取商品列表（商家端）
+	GetProductShopList(opts ...DBOption) ([]model.ProductPackage, error)                                          // 获取商品列表（商家端）
 }
 
 // productRepo 商品仓库
@@ -1079,4 +1080,15 @@ func (r *productRepo) WithProductCategoryMultiLanguageName() DBOption {
 			return db.Scopes(NotDeleted)
 		})
 	}
+}
+
+// GetProductShopList 获取商品列表（商家端）
+func (r *productRepo) GetProductShopList(opts ...DBOption) ([]model.ProductPackage, error) {
+	var products []model.ProductPackage
+	db := r.db.Model(&model.ProductPackage{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Find(&products).Error
+	return products, errors.WithMessage(err)
 }

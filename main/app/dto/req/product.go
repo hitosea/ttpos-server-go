@@ -317,9 +317,22 @@ type ProductImportItemReq struct {
 
 // ProductShopListReq 商品列表查询
 type ProductShopListReq struct {
-	dto.PageReq         // 分页参数
-	Keyword     *string `form:"keyword"` // 搜索商品名称（可选）
-	Type        *int    `form:"type"`    // 商品类型: 0-商品 1-套餐（可选）
-	Tag         *string `form:"tag"`     // 商品标签: 0-多规格 1-属性 2-加料（可选）, 多个标签用逗号分隔: 0,1,2
-	Status      *int    `form:"status"`  // 商品状态: 0-下架 1-上架（可选）
+	dto.PageReq          // 分页参数
+	Keyword      *string `form:"keyword"`       // 搜索商品名称（可选）
+	Type         *int    `form:"type"`          // 商品类型: 0-商品 1-套餐（可选）
+	Tag          *string `form:"tag"`           // 商品标签: 0-多规格 1-属性 2-加料（可选）, 多个标签用逗号分隔: 0,1,2
+	Status       *int    `form:"status"`        // 商品状态: 0-下架 1-上架（可选）
+	CategoryUuid *uint64 `form:"category_uuid"` // 商品分类UUID（可选）
+}
+
+// SortProductShopListReq 商品排序请求
+type SortProductShopListReq struct {
+	CategoryUuid uint64                   `json:"category_uuid"`                // 商品分类UUID
+	List         []SortProductShopItemReq `json:"list" binding:"required,dive"` // 商品排序列表
+}
+
+// SortProductShopItemReq 商品排序项请求
+type SortProductShopItemReq struct {
+	Uuid uint64 `json:"uuid" binding:"required"` // 商品UUID
+	Sort int    `json:"sort"`                    // 排序
 }

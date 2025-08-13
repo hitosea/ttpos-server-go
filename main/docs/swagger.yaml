@@ -4407,6 +4407,30 @@ definitions:
     - is_sold_out
     - product_bom_uuid
     type: object
+  req.SortProductShopItemReq:
+    properties:
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 商品UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.SortProductShopListReq:
+    properties:
+      category_uuid:
+        description: 商品分类UUID
+        type: integer
+      list:
+        description: 商品排序列表
+        items:
+          $ref: '#/definitions/req.SortProductShopItemReq'
+        type: array
+    required:
+    - list
+    type: object
   req.SubmitShiftReq:
     properties:
       is_background:
@@ -22664,6 +22688,10 @@ paths:
       - application/json
       description: 获取商品列表
       parameters:
+      - description: 商品分类UUID（可选）
+        in: query
+        name: category_uuid
+        type: integer
       - description: 搜索商品名称（可选）
         in: query
         name: keyword
@@ -22852,6 +22880,30 @@ paths:
       summary: 排序商品加料
       tags:
       - 商家端.商品加料
+  /shop/product/sort:
+    post:
+      consumes:
+      - application/json
+      description: 排序商品列表
+      parameters:
+      - description: 商品排序请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.SortProductShopListReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 排序商品列表
+      tags:
+      - 商家端.商品
   /shop/product/unit:
     delete:
       consumes:

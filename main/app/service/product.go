@@ -76,6 +76,7 @@ type IProductSrv interface {
 	ImportProduct(ctx context.Context, req req.ProductImportReq) error                                           // 导入商品
 
 	GetProductShopList(ctx context.Context, req req.ProductShopListReq) (*product_resp.ProductShopListResp, error) // 获取商品列表（商家端）
+	SortProductShopList(ctx context.Context, req req.SortProductShopListReq) error                                 // 排序商品列表
 }
 
 type productSrv struct {
@@ -2807,6 +2808,10 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 			}
 		}
 	}
+	// 商品分类
+	if req.CategoryUuid != nil {
+		opts = append(opts, productRepo.WhereCategoryUuid(*req.CategoryUuid))
+	}
 
 	// 获取商品列表
 	productPackages, total, err := productRepo.PaginateGetProductShopList(
@@ -2876,15 +2881,6 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 			ProductType:         int(productPackage.ProductType),
 			Sort:                int(productPackage.Sort),
 		}
-		// if targetMultipleSpec && !IsMultipleSpec {
-		// 	continue
-		// }
-		// if targetAttribute && !IsAttribute {
-		// 	continue
-		// }
-		// if targetSauce && !IsSauce {
-		// 	continue
-		// }
 
 		productList = append(productList, productItem)
 	}
@@ -2899,4 +2895,54 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 	}
 
 	return &productResp, nil
+}
+
+// SortProductShopList 排序商品列表
+func (s *productSrv) SortProductShopList(ctx context.Context, req req.SortProductShopListReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	commonRepo := repository.NewCommonRepo()
+	productRepo := repository.NewProductRepo(db)
+
+	// 获取分类
+	productCategory, err := productRepo.GetProductCategory(
+		commonRepo.WhereBySoftDelete(),
+		productRepo.WhereUuid(req.CategoryUuid),
+	)
+	if err != nil {
+		return errors.WithMessage(err, "获取分类失败")
+	}
+
+	// 查询分类下的商品
+	productPackages, err := productRepo.GetProductShopList(
+		commonRepo.WhereBySoftDelete(),
+		productRepo.WhereCategoryUuid(productCategory.Uuid),
+	)
+	if err != nil {
+		return errors.WithMessage(err, "获取商品列表失败")
+	}
+
+	// 排序商品
+	err = db.Transaction(func(tx *gorm.DB) error {
+		for _, item := range req.List {
+			productPackage, ok := slice.FindBy(productPackages, func(index int, productPackage model.ProductPackage) bool {
+				return productPackage.Uuid == item.Uuid
+			})
+			if !ok {
+				return errors.New("商品不存在")
+			}
+			if item.Sort == 0 {
+				return errors.New("排序不能为0")
+			}
+			err := tx.Model(&model.ProductPackage{}).Where("uuid = ?", productPackage.Uuid).Updates(map[string]any{
+				"sort": item.Sort,
+			}).Error
+			if err != nil {
+				return errors.WithMessage(err)
+			}
+		}
+
+		return nil
+	})
+
+	return err
 }
