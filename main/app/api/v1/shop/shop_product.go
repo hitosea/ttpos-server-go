@@ -886,6 +886,32 @@ func (h *ProductHandler) ImportProduct(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// GetProductShopList 获取商品列表
+// @Summary 获取商品列表
+// @Description 获取商品列表
+// @Tags 商家端.商品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data query req.ProductShopListReq true "商品列表请求"
+// @Success 200 {object} product_resp.ProductShopListResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/list [get]
+func (h *ProductHandler) GetProductShopList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	productShopListReq := req.ProductShopListReq{}
+	if err := c.ShouldBindQuery(&productShopListReq); err != nil {
+		helper.HandleValidationError(c, err, productShopListReq, dto.PageReqMessage)
+		return
+	}
+	res, err := h.productSrv.GetProductShopList(ctx, productShopListReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
 func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -946,5 +972,7 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 
 		privateApi.POST("/product/import/list", wrapper.ImportProductList) // 获取导入商品列表
 		privateApi.POST("/product/import", wrapper.ImportProduct)          // 导入商品
+
+		privateApi.GET("/product/list", wrapper.GetProductShopList) // 获取商品列表
 	}
 }

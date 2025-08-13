@@ -31,7 +31,7 @@ import (
 
 // IProductSrv 定义产品服务接口
 type IProductSrv interface {
-	GetProductList(ctx context.Context, req req.ProductListReq) (product_resp.ProductListWithPaginationResp, error)               // 获取产品列表
+	GetProductList(ctx context.Context, req req.ProductListReq) (product_resp.ProductListWithPaginationResp, error)               // 获取产品列表（销售端）
 	GetProductCategoryList(dbId uint64) (product_resp.ProductCategoryListResp, error)                                             // 获取产品类别列表（销售端）
 	GetProductUnitList(ctx context.Context, req req.ProductUnitListReq) (product_resp.ProductUnitListResp, error)                 // 获取产品单位列表
 	GetProductUnit(ctx context.Context, req req.ProductUnitReq) (product_resp.ProductUnitDetail, error)                           // 获取产品单位详情
@@ -74,6 +74,8 @@ type IProductSrv interface {
 	// 导入商品
 	ImportProductList(ctx context.Context, req req.ProductImportListReq) (product_resp.ProductImportResp, error) // 导入商品列表
 	ImportProduct(ctx context.Context, req req.ProductImportReq) error                                           // 导入商品
+
+	GetProductShopList(ctx context.Context, req req.ProductShopListReq) (*product_resp.ProductShopListResp, error) // 获取商品列表（商家端）
 }
 
 type productSrv struct {
@@ -2748,4 +2750,143 @@ func (s *productSrv) ImportProduct(ctx context.Context, req req.ProductImportReq
 	// TODO: 处理插入商品
 
 	return nil
+}
+
+// GetProductShopList 获取商品列表（商家端）
+func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShopListReq) (*product_resp.ProductShopListResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	commonRepo := repository.NewCommonRepo()
+	productRepo := repository.NewProductRepo(db)
+
+	opts := []repository.DBOption{
+		productRepo.WithMultiLanguageName(),
+		productRepo.WithProductCategory(),
+		productRepo.WithProductCategoryMultiLanguageName(),
+		productRepo.WithProductPackageImageFile(),
+		productRepo.WithProductBoms(
+			commonRepo.WhereBySoftDelete(),
+		),
+		productRepo.WithProductPackageAttributeGroup(),
+		productRepo.WithProductUnit(),
+		productRepo.WithProductUnitMultiLanguageName(),
+		commonRepo.WhereBySoftDelete(),
+		commonRepo.SortWithSort("ASC"),
+		commonRepo.SortWithID("DESC"),
+	}
+
+	// 商品类型
+	if req.Type != nil {
+		opts = append(opts, productRepo.WhereProductType(uint8(*req.Type)))
+	}
+	// 商品状态
+	if req.Status != nil {
+		opts = append(opts, commonRepo.WhereByStatus(uint(*req.Status)))
+	}
+
+	// 商品标签
+	if req.Tag != nil {
+		tagList := strings.Split(*req.Tag, ",")
+		for _, tag := range tagList {
+			switch tag {
+			case "0":
+				opts = append(opts, productRepo.WhereHasMultipleSpec())
+			case "1":
+				opts = append(opts, productRepo.WhereHasAttribute())
+			case "2":
+				opts = append(opts, productRepo.WhereHasSauce())
+			}
+		}
+	}
+
+	// 获取商品列表
+	productPackages, total, err := productRepo.PaginateGetProductShopList(
+		req.PageNo, req.PageSize, opts...,
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取商品列表失败")
+	}
+
+	productList := make([]product_resp.ProductShopListItemResp, 0, len(productPackages))
+	for _, productPackage := range productPackages {
+		// 格式化商品信息
+		minPrice := 0.0
+		maxPrice := 0.0
+		specCount := 0
+		specStockNum := 0.0
+		IsMultipleSpec := false
+		IsAttribute := len(productPackage.ProductPackageAttributeGroups) > 0
+		IsSauce := false
+		for _, productBom := range productPackage.ProductBoms {
+			if productPackage.ProductType == constant.ProductTypeProduct {
+				// 规格
+				if productBom.ProductFlavorUuid > 0 {
+					if minPrice == 0 {
+						minPrice = productBom.Price
+					} else {
+						minPrice = utils.IfFloat64(productBom.Price <= minPrice, productBom.Price, minPrice)
+					}
+					if maxPrice == 0 {
+						maxPrice = productBom.Price
+					} else {
+						maxPrice = utils.IfFloat64(productBom.Price >= maxPrice, productBom.Price, maxPrice)
+					}
+					specCount++
+					if productBom.StockNum > 0 {
+						specStockNum = productBom.StockNum
+					}
+				}
+				if productBom.ProductSauceUuid > 0 {
+					IsSauce = true
+				}
+			} else {
+				minPrice = productBom.Price
+				maxPrice = productBom.Price
+				specStockNum = productBom.StockNum
+			}
+		}
+		if specCount > 1 {
+			IsMultipleSpec = true
+		}
+		productItem := product_resp.ProductShopListItemResp{
+			Uuid:       productPackage.Uuid,
+			LocaleName: productPackage.MultiLanguageName.GetNames(),
+			Image:      productPackage.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request)),
+			Tag: product_resp.ProductShopListItemTagResp{
+				IsMultipleSpec: IsMultipleSpec,
+				IsAttribute:    IsAttribute,
+				IsSauce:        IsSauce,
+			},
+			MinPrice:            minPrice,
+			MaxPrice:            maxPrice,
+			Unit:                product_resp.ProductShopListItemUnitResp{LocaleName: productPackage.ProductUnit.MultiLanguageName.GetNames()},
+			CategoryUuid:        productPackage.CategoryUuid,
+			SpecialCategoryUuid: productPackage.SpecialCategoryUuid,
+			Status:              int(productPackage.Status),
+			IsSoldOut:           specStockNum <= 0,
+			ProductType:         int(productPackage.ProductType),
+			Sort:                int(productPackage.Sort),
+		}
+		// if targetMultipleSpec && !IsMultipleSpec {
+		// 	continue
+		// }
+		// if targetAttribute && !IsAttribute {
+		// 	continue
+		// }
+		// if targetSauce && !IsSauce {
+		// 	continue
+		// }
+
+		productList = append(productList, productItem)
+	}
+
+	productResp := product_resp.ProductShopListResp{
+		List: productList,
+		Meta: dto.PageResponse{
+			Total:    total,
+			PageNo:   req.PageNo,
+			PageSize: req.PageSize,
+		},
+	}
+
+	return &productResp, nil
 }
