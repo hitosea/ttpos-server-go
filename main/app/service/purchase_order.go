@@ -58,8 +58,8 @@ func NewPurchaseOrderSrvImpl(dbm *database.DBManager) IPurchaseOrderSrv {
 // GetPurchaseOrderList 获取采购申请列表
 func (s *purchaseOrderSrv) GetPurchaseOrderList(ctx context.Context, req req.PurchaseOrderListReq) (resp.PurchaseOrderListResp, error) {
 	// 设置默认分页参数
-	if req.Page <= 0 {
-		req.Page = 1
+	if req.PageNo <= 0 {
+		req.PageNo = 1
 	}
 	if req.PageSize <= 0 {
 		req.PageSize = 20
@@ -82,7 +82,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderList(ctx context.Context, req req.Pur
 	opts = append(opts, purchaseOrderRepo.OrderByCreateTime(true))
 
 	// 查询数据
-	purchaseOrders, total, err := purchaseOrderRepo.GetListWithPagination(req.Page, req.PageSize, opts...)
+	purchaseOrders, total, err := purchaseOrderRepo.GetListWithPagination(req.PageNo, req.PageSize, opts...)
 	if err != nil {
 		return resp.PurchaseOrderListResp{}, errors.WithMessage(err, "查询采购申请列表失败")
 	}
@@ -110,7 +110,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderList(ctx context.Context, req req.Pur
 	return resp.PurchaseOrderListResp{
 		List: listResp,
 		Meta: resp.PageResponse{
-			PageNo:   req.Page,
+			PageNo:   req.PageNo,
 			PageSize: req.PageSize,
 			Total:    total,
 		},
@@ -211,7 +211,13 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 		for _, itemReq := range req.Items {
 			materialUuids = append(materialUuids, itemReq.MaterialUuid)
 		}
-		materials, err := base.NewMaterialRepo(db).GetMaterialByUuids(materialUuids)
+
+		materialRepo := base.NewMaterialRepo(db)
+		materials, err := materialRepo.GetMaterialByUuids(
+			materialUuids,
+			materialRepo.WithPreload("Unit"),
+			materialRepo.WithPreload("PurchaseUnit"),
+		)
 		if err != nil {
 			return errors.WithMessage(err, "查询物品失败")
 		}
@@ -591,8 +597,8 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 // GetReceiptOrderList 获取收货单列表
 func (s *purchaseOrderSrv) GetPurchaseReceiptOrderList(ctx context.Context, req req.PurchaseReceiptOrderListReq) (resp.PurchaseReceiptOrderListResp, error) {
 	// 设置默认分页参数
-	if req.Page <= 0 {
-		req.Page = 1
+	if req.PageNo <= 0 {
+		req.PageNo = 1
 	}
 	if req.PageSize <= 0 {
 		req.PageSize = 20
@@ -617,7 +623,7 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderList(ctx context.Context, req 
 	opts = append(opts, receiptOrderRepo.OrderByReceiptTime(true))
 
 	// 查询数据
-	receipts, total, err := receiptOrderRepo.GetListWithPagination(req.Page, req.PageSize, opts...)
+	receipts, total, err := receiptOrderRepo.GetListWithPagination(req.PageNo, req.PageSize, opts...)
 	if err != nil {
 		return resp.PurchaseReceiptOrderListResp{}, errors.WithMessage(err, "查询收货单列表失败")
 	}
@@ -638,7 +644,7 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderList(ctx context.Context, req 
 	return resp.PurchaseReceiptOrderListResp{
 		List: listResp,
 		Meta: resp.PageResponse{
-			PageNo:   req.Page,
+			PageNo:   req.PageNo,
 			PageSize: req.PageSize,
 			Total:    total,
 		},

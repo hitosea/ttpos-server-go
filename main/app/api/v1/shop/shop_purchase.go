@@ -35,8 +35,7 @@ type PurchaseHandler struct {
 // @Param priority query int false "优先级"
 // @Param supplier_uuid query int false "供应商ID"
 // @Param applicant_uuid query int false "申请人ID"
-// @Success 200 {object} helper.Response{data=resp.PurchaseOrderListResp} "成功"
-// @Failure 400 {object} helper.Response "请求参数错误"
+// @Success 200 {object} dto.Response{data=resp.PurchaseOrderListResp} "成功"
 // @Router /api/v1/shop/purchase/order/list [get]
 func (h *PurchaseHandler) GetPurchaseOrderList(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -63,8 +62,7 @@ func (h *PurchaseHandler) GetPurchaseOrderList(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param uuid query int true "采购订单UUID"
-// @Success 200 {object} helper.Response{data=resp.PurchaseOrderDetailResp} "成功"
-// @Failure 400 {object} helper.Response "请求参数错误"
+// @Success 200 {object} dto.Response{data=resp.PurchaseOrderDetailResp} "成功"
 // @Router /api/v1/shop/purchase/order/detail [get]
 func (h *PurchaseHandler) GetPurchaseOrderDetail(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -91,8 +89,8 @@ func (h *PurchaseHandler) GetPurchaseOrderDetail(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param data body req.PurchaseOrderCreateReq true "创建采购订单请求参数"
-// @Success 200 {object} helper.Response{data=resp.PurchaseOrderCreateResp} "成功"
-// @Failure 400 {object} helper.Response "请求参数错误"
+// @Success 200 {object} dto.Response{data=resp.PurchaseOrderCreateResp} "成功"
+// @Failure 400 {object} dto.Response "请求参数错误"
 // @Router /api/v1/shop/purchase/order/create [post]
 func (h *PurchaseHandler) CreatePurchaseOrder(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -119,8 +117,8 @@ func (h *PurchaseHandler) CreatePurchaseOrder(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param data body req.PurchaseOrderUpdateReq true "更新采购订单请求参数"
-// @Success 200 {object} helper.Response{data=resp.PurchaseOrderUpdateResp} "成功"
-// @Failure 400 {object} helper.Response "请求参数错误"
+// @Success 200 {object} dto.Response{data=resp.PurchaseOrderUpdateResp} "成功"
+// @Failure 400 {object} dto.Response "请求参数错误"
 // @Router /api/v1/shop/purchase/order/update [put]
 func (h *PurchaseHandler) UpdatePurchaseOrder(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -147,8 +145,8 @@ func (h *PurchaseHandler) UpdatePurchaseOrder(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param data body req.PurchaseOrderDeleteReq true "删除采购订单请求参数"
-// @Success 200 {object} helper.Response{data=resp.PurchaseOrderDeleteResp} "成功"
-// @Failure 400 {object} helper.Response "请求参数错误"
+// @Success 200 {object} dto.Response{data=resp.PurchaseOrderDeleteResp} "成功"
+// @Failure 400 {object} dto.Response "请求参数错误"
 // @Router /api/v1/shop/purchase/order/delete [delete]
 func (h *PurchaseHandler) DeletePurchaseOrder(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -175,8 +173,8 @@ func (h *PurchaseHandler) DeletePurchaseOrder(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param data body req.PurchaseOrderApproveReq true "审核采购订单请求参数"
-// @Success 200 {object} helper.Response{data=resp.PurchaseOrderApproveResp} "成功"
-// @Failure 400 {object} helper.Response "请求参数错误"
+// @Success 200 {object} dto.Response{data=resp.PurchaseOrderApproveResp} "成功"
+// @Failure 400 {object} dto.Response "请求参数错误"
 // @Router /api/v1/shop/purchase/order/approve [post]
 func (h *PurchaseHandler) ApprovePurchaseOrder(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -203,8 +201,8 @@ func (h *PurchaseHandler) ApprovePurchaseOrder(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param data body req.PurchaseOrderStatusUpdateReq true "更新状态请求参数"
-// @Success 200 {object} helper.Response "成功"
-// @Failure 400 {object} helper.Response "请求参数错误"
+// @Success 200 {object} dto.Response "成功"
+// @Failure 400 {object} dto.Response "请求参数错误"
 // @Router /api/v1/shop/purchase/order/status [put]
 func (h *PurchaseHandler) UpdatePurchaseOrderStatus(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -231,8 +229,8 @@ func (h *PurchaseHandler) UpdatePurchaseOrderStatus(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param data body req.PurchaseReceiptCreateReq true "创建收货记录请求参数"
-// @Success 200 {object} helper.Response{data=resp.PurchaseReceiptCreateResp} "成功"
-// @Failure 400 {object} helper.Response "请求参数错误"
+// @Success 200 {object} dto.Response{data=resp.PurchaseReceiptCreateResp} "成功"
+// @Failure 400 {object} dto.Response "请求参数错误"
 // @Router /api/v1/shop/purchase/receipt/create [post]
 func (h *PurchaseHandler) CreatePurchaseReceipt(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -263,8 +261,8 @@ func (h *PurchaseHandler) CreatePurchaseReceipt(c *gin.Context) {
 // @Param purchase_order_uuid query int false "采购订单ID"
 // @Param receipt_no query string false "收货单号"
 // @Param quality_status query int false "质检状态"
-// @Success 200 {object} helper.Response{data=resp.PurchaseReceiptListResp} "成功"
-// @Failure 400 {object} helper.Response "请求参数错误"
+// @Success 200 {object} dto.Response{data=resp.PurchaseReceiptListResp} "成功"
+// @Failure 400 {object} dto.Response "请求参数错误"
 // @Router /api/v1/shop/purchase/receipt/list [get]
 func (h *PurchaseHandler) GetPurchaseReceiptList(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -291,8 +289,8 @@ func (h *PurchaseHandler) GetPurchaseReceiptList(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param uuid query int true "收货记录UUID"
-// @Success 200 {object} helper.Response{data=resp.PurchaseReceiptDetailResp} "成功"
-// @Failure 400 {object} helper.Response "请求参数错误"
+// @Success 200 {object} dto.Response{data=resp.PurchaseReceiptDetailResp} "成功"
+// @Failure 400 {object} dto.Response "请求参数错误"
 // @Router /api/v1/shop/purchase/receipt/detail [get]
 func (h *PurchaseHandler) GetPurchaseReceiptDetail(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -321,8 +319,8 @@ func (h *PurchaseHandler) GetPurchaseReceiptDetail(c *gin.Context) {
 // @Param time_start query int false "统计开始时间"
 // @Param time_end query int false "统计结束时间"
 // @Param type query string false "统计类型"
-// @Success 200 {object} helper.Response{data=resp.PurchaseOrderStatisticsResp} "成功"
-// @Failure 400 {object} helper.Response "请求参数错误"
+// @Success 200 {object} dto.Response{data=resp.PurchaseOrderStatisticsResp} "成功"
+// @Failure 400 {object} dto.Response "请求参数错误"
 // @Router /api/v1/shop/purchase/statistics [get]
 func (h *PurchaseHandler) GetPurchaseOrderStatistics(c *gin.Context) {
 	ctx := helper.GetContext(c)
