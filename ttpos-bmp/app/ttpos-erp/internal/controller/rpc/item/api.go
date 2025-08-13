@@ -20,7 +20,7 @@ func Register(s *grpcx.GrpcServer) {
 }
 
 func (*Controller) GetItemList(ctx context.Context, req *item.GetItemListReq) (res *api.ResponseInfo, err error) {
-	if dataList, err := service.Stock().GetItemList(ctx, req); err == nil {
+	if dataList, err := service.Item().GetItemList(ctx, req); err == nil {
 		res = rpc.ApiSuccess("获取商品列表成功")
 		res.Data, _ = anypb.New(dataList)
 	} else {
@@ -34,17 +34,17 @@ func (*Controller) SaveItem(ctx context.Context, req *item.ItemInfo) (res *api.R
 		res = rpc.ApiError("商品名称不能为空")
 		return
 	}
-	if req.ItemGroup == "" {
-		res = rpc.ApiError("商品分组不能为空")
-		return
-	}
 	if req.StockUom == "" {
 		res = rpc.ApiError("库存单位不能为空")
 		return
 	}
-	item, err := service.Stock().SaveItem(ctx, req)
+	if len(req.TemplateItemCode) > 0 && req.ItemSpecification == "" {
+		res = rpc.ApiError("多规格商品时，物品规格不能为空")
+		return
+	}
+	item, err := service.Item().SaveItem(ctx, req)
 	if err == nil {
-		res = rpc.ApiSuccess("获取商品列表成功")
+		res = rpc.ApiSuccess("保存物品成功")
 		res.Data, _ = anypb.New(item)
 	} else {
 		res = rpc.ApiError(err.Error())

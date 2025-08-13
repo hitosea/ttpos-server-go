@@ -2,14 +2,9 @@ package utility
 
 import (
 	"fmt"
-
-	gonanoid "github.com/matoous/go-nanoid/v2"
-)
-
-const (
-	alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	"ttpos-bmp/utility/uuid"
 )
 
 func GenItemCode(prefix string) string {
-	return fmt.Sprintf("%s%d", prefix, gonanoid.MustGenerate(alphabet, 18))
+	return fmt.Sprintf("%s%d", prefix, uuid.MustGetID())
 }

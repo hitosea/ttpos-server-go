@@ -78,3 +78,17 @@ func (s *sCompany) GetCompanyWithAbbr(ctx context.Context, abbr string) (res *co
 	}
 	return nil, gerror.New("公司不存在")
 }
+
+// GetCompanyNameWithAbbr  根据公司简称获取公司名称
+func (s *sCompany) GetCompanyNameWithAbbr(ctx context.Context, companyAbbr string) (string, error) {
+	if len(companyAbbr) == 0 {
+		return "", nil
+	}
+
+	company, err := service.Company().GetCompanyWithAbbr(ctx, companyAbbr)
+	if err != nil {
+		return "", gerror.Wrapf(err, "查询公司信息失败")
+	}
+
+	return company.CompanyName, nil
+}

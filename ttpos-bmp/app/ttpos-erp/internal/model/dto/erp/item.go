@@ -2,7 +2,7 @@ package erp
 
 import "ttpos-bmp/app/ttpos-erp/internal/model/dto"
 
-// Item结构体，表示商品信息
+// Item 结构体，表示商品信息
 type Item struct {
 	Name                             string                    `json:"name"`                                // 名称
 	Owner                            string                    `json:"owner"`                               // 拥有者
@@ -64,7 +64,7 @@ type Item struct {
 	CustomerCode                     string                    `json:"customer_code"`                       // 客户编码
 	TotalProjectedQty                float64                   `json:"total_projected_qty"`                 // 预计总库存
 	Doctype                          string                    `json:"doctype"`                             // 单据类型
-	Barcodes                         []interface{}             `json:"barcodes"`                            // 条码
+	Barcodes                         []BarCode                 `json:"barcodes"`                            // 条码
 	ReorderLevels                    []interface{}             `json:"reorder_levels"`                      // 补货水平
 	Taxes                            []interface{}             `json:"taxes"`                               // 税费
 	Uoms                             []dto.UomConversionDetail `json:"uoms"`                                // 计量单位换算明细
@@ -72,9 +72,17 @@ type Item struct {
 	Attributes                       []interface{}             `json:"attributes"`                          // 属性
 	SupplierItems                    []interface{}             `json:"supplier_items"`                      // 供应商商品
 	CustomerItems                    []interface{}             `json:"customer_items"`                      // 客户商品
+	//自定义字段
+	CustomCompany       string `json:"custom_company"`       // 自定义公司
+	CustomBranch        string `json:"custom_branch"`        // 自定义分公司
+	CustomSpecification string `json:"custom_specification"` // 自定义规格
 }
 
-// ItemDefault结构体，表示商品默认配置
+type BarCode struct {
+	Barcode string `json:"barcode"` // 条码
+}
+
+// ItemDefault 结构体，表示商品默认配置
 type ItemDefault struct {
 	Name             string `json:"name"`              // 名称
 	Owner            string `json:"owner"`             // 拥有者

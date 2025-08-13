@@ -7,12 +7,12 @@ toolchain go1.23.5
 require github.com/gogf/gf/v2 v2.9.0
 
 require (
+	github.com/ace-zhaoy/go-id v1.0.6
 	github.com/apache/rocketmq-client-go/v2 v2.1.3-0.20250427084711-67ec50b93040
 	github.com/gogf/gf/contrib/drivers/mysql/v2 v2.9.0
 	github.com/gogf/gf/contrib/nosql/redis/v2 v2.9.0
 	github.com/gogf/gf/contrib/registry/nacos/v2 v2.9.0
 	github.com/gogf/gf/contrib/rpc/grpcx/v2 v2.9.0
-	github.com/matoous/go-nanoid/v2 v2.1.0
 	google.golang.org/grpc v1.73.0
 	google.golang.org/protobuf v1.36.6
 )
@@ -25,6 +25,7 @@ require (
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1800 // indirect
 	github.com/aliyun/alibabacloud-dkms-gcs-go-sdk v0.2.2 // indirect
 	github.com/aliyun/alibabacloud-dkms-transfer-go-sdk v0.1.7 // indirect
+	github.com/beevik/ntp v1.3.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

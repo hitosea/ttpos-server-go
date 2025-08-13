@@ -55,7 +55,7 @@ type ItemServiceClient interface {
 	SaveAttribute(ctx context.Context, in *AttributeInfo, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 	// 添加商品
 	// 参数：商品信息
-	// 返回：添加结果
+	// 返回：添加结果 TTPOS 端调用成功后后更新 item_code 到商品/物品信息中
 	SaveItem(ctx context.Context, in *ItemInfo, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 }
 
@@ -153,7 +153,7 @@ type ItemServiceServer interface {
 	SaveAttribute(context.Context, *AttributeInfo) (*api.ResponseInfo, error)
 	// 添加商品
 	// 参数：商品信息
-	// 返回：添加结果
+	// 返回：添加结果 TTPOS 端调用成功后后更新 item_code 到商品/物品信息中
 	SaveItem(context.Context, *ItemInfo) (*api.ResponseInfo, error)
 	mustEmbedUnimplementedItemServiceServer()
 }

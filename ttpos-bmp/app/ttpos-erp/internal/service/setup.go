@@ -18,10 +18,6 @@ type (
 		// 返回：ERP用户名和创建结果
 		CreateBranch(ctx context.Context, req *setup.InitShopReq) (branchName string, err error)
 		CreateUser(ctx context.Context, req *erp.CreateUserInp) (userEmail string, err error)
-		// CreateWarehouse 创建仓库
-		// 参数：ctx 上下文，req 包含 shop_name、company_abbr
-		// 返回：仓库名称，错误信息
-		CreateWarehouse(ctx context.Context, req *erp.CreateWarehouseInp) (warehouseName string, err error)
 		// CreatePosProfile CreatePosFile 创建 默认 pos profile  配置默认 posprofile
 		CreatePosProfile(ctx context.Context, req *erp.CreatePosProfileInp) (posFileId string, err error)
 		// InitShop 初始化店铺

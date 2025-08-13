@@ -14,8 +14,7 @@ import (
 )
 
 var (
-	Setup          = new(sSetup)
-	companyService = service.Company()
+	Setup = new(sSetup)
 )
 
 type sSetup struct {
@@ -42,7 +41,7 @@ func (s *sSetup) CreateBranch(ctx context.Context, req *setup.InitShopReq) (bran
 		return "", gerror.New("公司缩写编码不能为空")
 	}
 
-	company, err := companyService.GetCompanyWithAbbr(ctx, req.CompanyAbbr)
+	company, err := service.Company().GetCompanyWithAbbr(ctx, req.CompanyAbbr)
 	if err != nil {
 		g.Log().Error(ctx, "获取公司信息失败", err)
 		return "", gerror.Wrap(err, "获取公司信息失败")
@@ -77,47 +76,11 @@ func (s *sSetup) CreateUser(ctx context.Context, req *erp.CreateUserInp) (userEm
 	return
 }
 
-// CreateWarehouse 创建仓库
-// 参数：ctx 上下文，req 包含 shop_name、company_abbr
-// 返回：仓库名称，错误信息
-func (s *sSetup) CreateWarehouse(ctx context.Context, req *erp.CreateWarehouseInp) (warehouseName string, err error) {
-	// 校验参数
-
-	// 获取公司信息
-	company, err := companyService.GetCompanyWithAbbr(ctx, req.CompanyAbbr)
-	if err != nil {
-		g.Log().Error(ctx, "获取公司信息失败", err)
-		return "", gerror.Wrapf(err, "获取公司信息失败")
-	}
-
-	// 仓库名称规则：[分支名]-[仓库类型]-[仓库名称]
-	//分支名：取简称，若是英文，则取前三个字母大写，若是中文，则取前三个中文汉字的拼音字母
-	//warehouseName = gstr.SubStrRune(req.Branch, 0, 3) + "-" + req.WhType + "-" + req.AliasName
-	warehouseName = strings.Join([]string{req.Branch, req.WhType, req.AliasName}, "-")
-
-	// 创建仓库 Warehouse
-	warehousePayload := g.Map{
-		"warehouse_name":   warehouseName,
-		"custom_branch":    req.Branch,
-		"custom_aliasname": req.AliasName,
-		"company":          company.CompanyName,
-	}
-	if req.WhType == "Transit" {
-		warehousePayload["warehouse_type"] = "Transit"
-	}
-	if _, err := service.Document().Create(ctx, "Warehouse", warehousePayload); err != nil {
-		g.Log().Error(ctx, "创建仓库失败", err)
-		return "", gerror.Wrapf(err, "创建仓库失败")
-	}
-
-	return warehouseName, nil
-}
-
 // CreatePosProfile CreatePosFile 创建 默认 pos profile  配置默认 posprofile
 func (s *sSetup) CreatePosProfile(ctx context.Context, req *erp.CreatePosProfileInp) (posFileId string, err error) {
 
 	// 获取公司信息
-	company, err := companyService.GetCompanyWithAbbr(ctx, req.CompanyAbbr)
+	company, err := service.Company().GetCompanyWithAbbr(ctx, req.CompanyAbbr)
 	if err != nil {
 		g.Log().Error(ctx, "获取公司信息失败", err)
 		return "", gerror.Wrapf(err, "获取公司信息失败")
@@ -156,7 +119,7 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (branchNa
 		return "", gerror.Wrapf(err, "创建用户失败")
 	}
 	//创建默认仓库
-	_, err = s.CreateWarehouse(ctx, &erp.CreateWarehouseInp{
+	_, err = service.Warehouse().CreateWarehouse(ctx, &erp.CreateWarehouseInp{
 		Branch:      branchName,
 		WhType:      "Normal",
 		AliasName:   "Default",
@@ -166,7 +129,7 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (branchNa
 		return "", gerror.New("创建默认仓库失败")
 	}
 	//创建在途仓
-	_, err = s.CreateWarehouse(ctx, &erp.CreateWarehouseInp{
+	_, err = service.Warehouse().CreateWarehouse(ctx, &erp.CreateWarehouseInp{
 		Branch:      branchName,
 		WhType:      "Transit",
 		AliasName:   "Transit",
