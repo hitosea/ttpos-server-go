@@ -3,14 +3,13 @@ package rpc
 import (
 	"fmt"
 	"time"
+	"ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-takeout/api/echo"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/app/service/rpc/takeout"
-	"ttpos-server-go/config"
-	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
 
 	"github.com/gin-gonic/gin"
@@ -152,16 +151,29 @@ func TestCancelOrder() error {
 }
 
 func TestCompanyList() error {
-	ctx := erp.WithSiteCode(context.Background(), "1")
-	dbm := database.GetDBManager(config.Database)
-	companyResp, err := erp.NewIErpSrv(dbm).GetCompanyList(ctx, req.ErpnextSiteCompanyReq{
-		SiteCode: "1",
-	})
+	client, conn, err := erp.NewErpItemClient()
 	if err != nil {
-		logger.Logger.Error("调用erp服务gRPC客户端失败: %v", zap.Error(err))
-		return err
+		panic(err)
 	}
-	fmt.Println(companyResp)
-	logger.Logger.Info("ERP服务gRPC客户端测试成功")
+	defer conn.Close()
+
+	result, err := client.GetUomList(erp.WithSiteCode(context.Background(), "1"), &item.GetUomListReq{})
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(result)
+
+	// ctx := erp.WithSiteCode(context.Background(), "1")
+	// dbm := database.GetDBManager(config.Database)
+	// companyResp, err := erp.NewIErpSrv(dbm).GetCompanyList(ctx, req.ErpnextSiteCompanyReq{
+	// 	SiteCode: "1",
+	// })
+	// if err != nil {
+	// 	logger.Logger.Error("调用erp服务gRPC客户端失败: %v", zap.Error(err))
+	// 	return err
+	// }
+	// fmt.Println(companyResp)
+	// logger.Logger.Info("ERP服务gRPC客户端测试成功")
 	return nil
 }

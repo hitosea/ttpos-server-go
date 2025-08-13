@@ -100,12 +100,11 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 
 	uomList, err := s.GetUomList(context.Background(), req.GetUomListReq{
 		SiteCode: syncUomAndAttributeReq.SiteCode,
-		Branch:   syncUomAndAttributeReq.Branch,
 	})
 	if err != nil {
 		return err
 	}
-	unitSort := 1
+
 	var translateItems []utils.TranslateItem
 	for _, uom := range uomList.List {
 		translateItems = append(translateItems, utils.TranslateItem{
@@ -113,24 +112,61 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 			Content: uom.UomName,
 		})
 	}
-	res, err := translateClient.Translate(context.Background(), translateItems)
+	attributeGroupList, err := s.GetAttributeList(context.Background(), req.GetAttributeListReq{
+		SiteCode: syncUomAndAttributeReq.SiteCode,
+	})
 	if err != nil {
 		return err
 	}
-	multiLanguageMap := make(map[string]dto.LocaleResponse)
-	for _, item := range res.Data {
-		multiLanguageMap[item.Key] = dto.LocaleResponse{
-			ZH:   item.Zh,
-			TH:   item.Th,
-			EN:   item.En,
-			ZHTW: item.ZhTw,
-			JA:   item.Ja,
-			KO:   item.Ko,
-			MY:   item.My,
-			TR:   item.Tr,
-			SV:   item.Sv,
+	for _, attributeGroup := range attributeGroupList.List {
+		translateItems = append(translateItems, utils.TranslateItem{
+			Lang:    "en",
+			Content: attributeGroup.AttributeName,
+		})
+		for _, attributeValue := range attributeGroup.AttributeValueList {
+
+			translateItems = append(translateItems, utils.TranslateItem{
+				Lang:    "en",
+				Content: attributeValue.AttributeValue,
+			})
 		}
 	}
+
+	// 获取两个数字中较小的那个
+	min := func(a, b int) int {
+		if a < b {
+			return a
+		}
+		return b
+	}
+
+	multiLanguageMap := make(map[string]dto.LocaleResponse)
+	// 分组翻译，每次10个，翻译后保存到 multiLanguageMap
+	for i := 0; i < len(translateItems); i += 10 {
+		translateItems := translateItems[i:min(i+10, len(translateItems))]
+		res, err := translateClient.Translate(context.Background(), translateItems)
+		if err != nil {
+			continue
+		}
+		for _, item := range res.Data {
+			multiLanguageMap[item.Key] = dto.LocaleResponse{
+				ZH:   item.Zh,
+				TH:   item.Th,
+				EN:   item.En,
+				ZHTW: item.ZhTw,
+				JA:   item.Ja,
+				KO:   item.Ko,
+				MY:   item.My,
+				TR:   item.Tr,
+				SV:   item.Sv,
+			}
+		}
+	}
+
+	// 获取单位最大的排序
+	var unitSort int
+	db.Model(&model.ProductUnit{}).Select("MAX(sort)").Scan(&unitSort)
+	unitSort++
 
 	for _, uom := range uomList.List {
 		localeName := multiLanguageMap[uom.UomName]
@@ -149,18 +185,67 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 			Name:                  localeName.ToJson(),
 			MultiLanguageNameUuid: multiLanguageName.Uuid,
 			Sort:                  unitSort,
+			ErpnextUom:            uom.UomName,
 		})
 		unitSort++
 	}
 
-	// // TODO 属性组和属性是否有区分
-	// attributeList, err := s.GetAttributeList(ctx, req.GetAttributeListReq{
-	// 	SiteCode: syncUomAndAttributeReq.SiteCode,
-	// 	Branch:   syncUomAndAttributeReq.Branch,
-	// })
-	// if err != nil {
-	// 	return err
-	// }
+	// 获取属性组最大的排序
+	var attributeGroupSort int
+	db.Model(&model.ProductAttributeGroup{}).Select("MAX(sort)").Scan(&attributeGroupSort)
+	attributeGroupSort++
+
+	// 获取属性最大的排序
+	var attributeSort int
+	db.Model(&model.ProductAttribute{}).Select("MAX(sort)").Scan(&attributeSort)
+	attributeSort++
+
+	for _, erpnextAttributeGroup := range attributeGroupList.List {
+		localeName := multiLanguageMap[erpnextAttributeGroup.AttributeName]
+		multiLanguageName := model.MultiLanguageName{
+			EnName: localeName.EN,
+			ZhName: localeName.ZH,
+			ThName: localeName.TH,
+			MyName: localeName.MY,
+			JaName: localeName.JA,
+			KoName: localeName.KO,
+			TrName: localeName.TR,
+			SvName: localeName.SV,
+		}
+		db.Model(&model.MultiLanguageName{}).Create(&multiLanguageName)
+
+		attributeGroup := model.ProductAttributeGroup{
+			Name:                      localeName.ToJson(),
+			MultiLanguageNameUuid:     multiLanguageName.Uuid,
+			Sort:                      attributeGroupSort,
+			ErpnextAttributeGroupName: erpnextAttributeGroup.AttributeName,
+		}
+		db.Model(&model.ProductAttributeGroup{}).Create(&attributeGroup)
+		attributeGroupSort++
+
+		for _, erpnextAttributeValue := range erpnextAttributeGroup.AttributeValueList {
+			localeName := multiLanguageMap[erpnextAttributeValue.AttributeValue]
+			multiLanguageName := model.MultiLanguageName{
+				EnName: localeName.EN,
+				ZhName: localeName.ZH,
+				ThName: localeName.TH,
+				MyName: localeName.MY,
+				JaName: localeName.JA,
+				KoName: localeName.KO,
+				TrName: localeName.TR,
+				SvName: localeName.SV,
+			}
+			db.Model(&model.MultiLanguageName{}).Create(&multiLanguageName)
+			db.Model(&model.ProductAttribute{}).Create(&model.ProductAttribute{
+				Name:                  localeName.ToJson(),
+				MultiLanguageNameUuid: multiLanguageName.Uuid,
+				AttributeGroupUuid:    attributeGroup.Uuid,
+				Sort:                  attributeSort,
+				ErpnextAttributeValue: erpnextAttributeValue.AttributeValue,
+			})
+			attributeSort++
+		}
+	}
 
 	return nil
 }

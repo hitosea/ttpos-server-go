@@ -18,20 +18,20 @@ type CheckNameRequest struct {
 	Names  []CheckingName `json:"names" binding:"required,dive"` // 名称列表
 }
 
-type EditFreeOrGiftReasonItem struct {
-	Uuid       uint64             `json:"uuid"`        // 如果有Uuid，则编辑，否则新增
-	LocaleName dto.LocaleResponse `json:"locale_name"` // 名称列表
+type AddFreeOrGiftReasonReq struct {
+	LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 名称列表
 }
 
 type EditFreeOrGiftReasonReq struct {
-	List []EditFreeOrGiftReasonItem `json:"list" binding:"required,dive"` // 名称列表
+	Uuid       uint64             `json:"uuid" binding:"required"` // 如果有Uuid，则编辑，否则新增
+	LocaleName dto.LocaleResponse `json:"locale_name"`             // 名称列表
 }
 
-type EditReturnFoodReasonItem struct {
-	Uuid       uint64             `json:"uuid"`        // 如果有Uuid，则编辑，否则新增
-	LocaleName dto.LocaleResponse `json:"locale_name"` // 名称列表
+type AddReturnFoodReasonReq struct {
+	LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 名称列表
 }
 
 type EditReturnFoodReasonReq struct {
-	List []EditReturnFoodReasonItem `json:"list" binding:"required,dive"` // 名称列表
+	Uuid       uint64             `json:"uuid" binding:"required"` // 如果有Uuid，则编辑，否则新增
+	LocaleName dto.LocaleResponse `json:"locale_name"`             // 名称列表
 }
