@@ -18,7 +18,7 @@ type IProductRepo interface {
 	WithMultiLanguageName() DBOption                                                              // 预加载多语言名称
 	WithProductUnit() DBOption                                                                    // 预加载产品单位
 	WithProductUnitMultiLanguageName() DBOption                                                   // 预加载产品单位多语言名称
-	WithProductBoms() DBOption                                                                    // 预加载产品Boms
+	WithProductBoms(opts ...DBOption) DBOption                                                    // 预加载产品Boms
 	WithProductBomsProductFlavor() DBOption                                                       // 预加载产品Boms产品口味
 	WithProductBomsProductFlavorMultiLanguageName() DBOption                                      // 预加载产品Boms产品口味多语言名称
 	WithProductBomsProductSauce() DBOption                                                        // 预加载产品Boms产品酱料
@@ -31,6 +31,7 @@ type IProductRepo interface {
 	WithProductPackageAttributeGroupProductPackageAttributesAttributeMultiLanguageName() DBOption // 预加载产品包装属性组产品包装属性属性多语言名称
 	WithProductPackageImageFile() DBOption                                                        // 预加载产品包的图片信息
 	WithProductCategory() DBOption                                                                // 预加载分类
+	WithProductCategoryMultiLanguageName() DBOption                                               // 预加载分类多语言名称
 	WithDineTax() DBOption                                                                        // 预加载堂食税
 	WithTakeoutTax() DBOption                                                                     // 预加载外卖税
 
@@ -53,6 +54,9 @@ type IProductRepo interface {
 
 	WhereCategoryUuid(categoryUuid uint64) DBOption               // 查询条件 产品分类uuid
 	WhereSpecialCategoryUuid(specialCategoryUuid uint64) DBOption // 查询条件 特色分类uuid
+	WhereHasMultipleSpec() DBOption                               // 查询条件 是否多规格
+	WhereHasAttribute() DBOption                                  // 查询条件 是否属性
+	WhereHasSauce() DBOption                                      // 查询条件 是否加料
 
 	WithProductPackages() DBOption                  // 预加载产品单位关联的商品
 	WithProductPackagesMultiLanguageName() DBOption // 预加载产品单位关联的商品多语言名称
@@ -105,6 +109,9 @@ type IProductQueryRepo interface {
 	PaginateGetProductFlavorList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductFlavor, int64, error) // 分页获取商品规格列表
 	CheckMultiLanguageNameExist(localeResponse dto.LocaleResponse) dto.LocaleResponse                              // 检查多语言名称是否存在
 	CheckBarcodeExist(barcode string) bool                                                                         // 检查条形码是否存在
+
+	PaginateGetProductShopList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductPackage, int64, error) // 分页获取商品列表（商家端）
+	GetProductShopList(opts ...DBOption) ([]model.ProductPackage, error)                                          // 获取商品列表（商家端）
 }
 
 // productRepo 商品仓库
@@ -439,9 +446,14 @@ func (r *productRepo) WithProductUnitMultiLanguageName() DBOption {
 }
 
 // WithProductBoms 预加载产品Boms
-func (r *productRepo) WithProductBoms() DBOption {
+func (r *productRepo) WithProductBoms(opts ...DBOption) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("ProductBoms")
+		return db.Preload("ProductBoms", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
 	}
 }
 
@@ -720,6 +732,30 @@ func (r *productRepo) WhereProductSauceUuid(uuid uint64) DBOption {
 func (r *productRepo) WhereProductType(productType uint8) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("product_type = ?", productType)
+	}
+}
+
+// WhereIsMultipleSpec 根据是否多规格查询
+func (r *productRepo) WhereHasMultipleSpec() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		subQuery := r.db.Select("COUNT(*)").Model(&model.ProductBom{}).Where("product_package_uuid = ttpos_product_package.uuid AND product_flavor_uuid > 0 AND delete_time = ?", constant.NotDeleted)
+		return db.Where("(?) > 1", subQuery)
+	}
+}
+
+// WhereIsAttribute 根据是否属性查询
+func (r *productRepo) WhereHasAttribute() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		subQuery := r.db.Select("COUNT(*)").Model(&model.ProductPackageAttributeGroup{}).Where("product_package_uuid = ttpos_product_package.uuid AND delete_time = ?", constant.NotDeleted)
+		return db.Where("(?) > 0", subQuery)
+	}
+}
+
+// WhereIsSauce 根据是否加料查询
+func (r *productRepo) WhereHasSauce() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		subQuery := r.db.Select("COUNT(*)").Model(&model.ProductBom{}).Where("product_package_uuid = ttpos_product_package.uuid AND product_sauce_uuid > 0 AND delete_time = ?", constant.NotDeleted)
+		return db.Where("(?) > 0", subQuery)
 	}
 }
 
@@ -1015,4 +1051,44 @@ func (r *productRepo) CheckBarcodeExist(barcode string) bool {
 		Where("barcode_value = ?", barcode).
 		Where("barcode_value <> ?", "")
 	return db.First(&model.ProductBom{}).Error == nil
+}
+
+// PaginateGetProductShopList 分页获取商品列表（商家端）
+func (r *productRepo) PaginateGetProductShopList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductPackage, int64, error) {
+	var products []model.ProductPackage
+	var total int64
+
+	db := r.db.Model(&model.ProductPackage{}).Session(&gorm.Session{})
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	err := db.Count(&total).Error
+	if err != nil {
+		return nil, 0, errors.WithMessage(err)
+	}
+
+	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&products).Error
+	return products, total, errors.WithMessage(err)
+}
+
+// WithProductCategoryMultiLanguageName 预加载分类多语言名称
+func (r *productRepo) WithProductCategoryMultiLanguageName() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductCategory.MultiLanguageName", func(db *gorm.DB) *gorm.DB {
+			return db.Scopes(NotDeleted)
+		})
+	}
+}
+
+// GetProductShopList 获取商品列表（商家端）
+func (r *productRepo) GetProductShopList(opts ...DBOption) ([]model.ProductPackage, error) {
+	var products []model.ProductPackage
+	db := r.db.Model(&model.ProductPackage{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Find(&products).Error
+	return products, errors.WithMessage(err)
 }

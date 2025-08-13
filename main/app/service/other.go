@@ -8,31 +8,32 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
+	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/captcha"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
-
-	"github.com/duke-git/lancet/v2/slice"
-	"gorm.io/gorm"
 )
 
 type IOtherSrv interface {
 	Generate() (*resp.Captcha, error)
 	GetReturnFoodReasonList(ctx context.Context) (*resp.ReturnFoodReasonResp, error)
 	GetGiftOrFreeReasonList(ctx context.Context) (*resp.GiftOrFreeOrderReasonResp, error)
+	AddFreeOrGiftReason(ctx context.Context, addFreeOrGiftReasonReq req.AddFreeOrGiftReasonReq) error
 	EditFreeOrGiftReason(ctx context.Context, editFreeReason req.EditFreeOrGiftReasonReq) error
+	AddReturnFoodReason(ctx context.Context, addReturnFoodReason req.AddReturnFoodReasonReq) error
 	EditReturnFoodReason(ctx context.Context, editReturnFoodReason req.EditReturnFoodReasonReq) error
 }
 
-func NewOtherSrv(dbm *database.DBManager, cache cache.Cache) IOtherSrv {
-	return NewOtherSrvImpl(dbm, cache)
+func NewOtherSrv(dbm *database.DBManager, cache cache.Cache, settingSrv setting.ISrv) IOtherSrv {
+	return NewOtherSrvImpl(dbm, cache, settingSrv)
 }
 
 type otherSrv struct {
 	captcha     *captcha.Captcha
 	cachePrefix string
 	dbm         *database.DBManager
+	settingSrv  setting.ISrv
 }
 
 // Generate implements IOtherSrv.
@@ -40,10 +41,11 @@ func (s *otherSrv) Generate() (*resp.Captcha, error) {
 	panic("unimplemented")
 }
 
-func NewOtherSrvImpl(dbm *database.DBManager, cache cache.Cache) IOtherSrv {
+func NewOtherSrvImpl(dbm *database.DBManager, cache cache.Cache, settingSrv setting.ISrv) IOtherSrv {
 	srv := &otherSrv{
 		cachePrefix: "captcha:",
 		dbm:         dbm,
+		settingSrv:  settingSrv,
 	}
 	captchaTool, err := captcha.New(cache, srv.cachePrefix, 5*time.Minute)
 	if err != nil {
@@ -97,176 +99,127 @@ func (s *otherSrv) GetGiftOrFreeReasonList(ctx context.Context) (*resp.GiftOrFre
 	}, nil
 }
 
-func (s *otherSrv) EditFreeOrGiftReason(ctx context.Context, editFreeOrGiftReason req.EditFreeOrGiftReasonReq) error {
-	db := s.dbm.GetDB(ctx.GetDbId())
+func (s *otherSrv) AddFreeOrGiftReason(ctx context.Context, addFreeOrGiftReasonReq req.AddFreeOrGiftReasonReq) error {
+	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+	if !addFreeOrGiftReasonReq.LocaleName.CheckRequiredLocale(storeLanguages) {
+		return errors.New("名称不能为空")
+	}
+	companySetting := ctx.GetCompanySetting()
+	defaultLang := companySetting.GetDefaultLanguage()
+	_, err := base.NewGiftOrFreeOrderReasonRepo(s.dbm.GetDB(ctx.GetCompanyUuid())).CreateGiftOrFreeOrderReason(model.FreeReason{
+		Name: addFreeOrGiftReasonReq.LocaleName.GetLocale(defaultLang),
+		MultiLanguageName: model.MultiLanguageName{
+			ZhName:   addFreeOrGiftReasonReq.LocaleName.ZH,
+			ThName:   addFreeOrGiftReasonReq.LocaleName.TH,
+			EnName:   addFreeOrGiftReasonReq.LocaleName.EN,
+			ZhTwName: addFreeOrGiftReasonReq.LocaleName.ZHTW,
+			JaName:   addFreeOrGiftReasonReq.LocaleName.JA,
+			KoName:   addFreeOrGiftReasonReq.LocaleName.KO,
+			MyName:   addFreeOrGiftReasonReq.LocaleName.MY,
+			TrName:   addFreeOrGiftReasonReq.LocaleName.TR,
+			SvName:   addFreeOrGiftReasonReq.LocaleName.SV,
+		},
+	})
+	if err != nil {
+		return errors.WithMessage(err, "新增免单原因失败")
+	}
+	return nil
+}
+
+func (s *otherSrv) EditFreeOrGiftReason(ctx context.Context, editFreeOrGiftReasonReq req.EditFreeOrGiftReasonReq) error {
+	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+	if !editFreeOrGiftReasonReq.LocaleName.CheckRequiredLocale(storeLanguages) {
+		return errors.New("名称不能为空")
+	}
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 
 	companySetting := ctx.GetCompanySetting()
 	defaultLang := companySetting.GetDefaultLanguage()
 
 	productRepo := base.NewGiftOrFreeOrderReasonRepo(db)
-	oldList, err := productRepo.GetGiftOrFreeOrderReasonList()
+
+	reason, err := productRepo.GetFreeOrderReasonByUuid(editFreeOrGiftReasonReq.Uuid)
 	if err != nil {
-		return errors.WithMessage(err, "获取免单原因列表失败")
+		return errors.WithMessage(err, "免单/赠菜原因不存在")
 	}
 
-	oldUuids := make([]uint64, 0, len(oldList))
-	for _, oldItem := range oldList {
-		oldUuids = append(oldUuids, oldItem.Uuid)
+	reason.Name = editFreeOrGiftReasonReq.LocaleName.GetLocale(defaultLang)
+	reason.MultiLanguageName.ZhName = editFreeOrGiftReasonReq.LocaleName.ZH
+	reason.MultiLanguageName.ThName = editFreeOrGiftReasonReq.LocaleName.TH
+	reason.MultiLanguageName.EnName = editFreeOrGiftReasonReq.LocaleName.EN
+	reason.MultiLanguageName.ZhTwName = editFreeOrGiftReasonReq.LocaleName.ZHTW
+	reason.MultiLanguageName.JaName = editFreeOrGiftReasonReq.LocaleName.JA
+	reason.MultiLanguageName.KoName = editFreeOrGiftReasonReq.LocaleName.KO
+	reason.MultiLanguageName.MyName = editFreeOrGiftReasonReq.LocaleName.MY
+	reason.MultiLanguageName.TrName = editFreeOrGiftReasonReq.LocaleName.TR
+	reason.MultiLanguageName.SvName = editFreeOrGiftReasonReq.LocaleName.SV
+
+	err = base.NewGiftOrFreeOrderReasonRepo(db).UpdateGiftOrFreeOrderReason(editFreeOrGiftReasonReq.Uuid, *reason)
+	if err != nil {
+		return errors.WithMessage(err, "保存免单/赠菜原因失败")
+	}
+	return nil
+}
+
+func (s *otherSrv) AddReturnFoodReason(ctx context.Context, addReturnFoodReason req.AddReturnFoodReasonReq) error {
+	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+	if !addReturnFoodReason.LocaleName.CheckRequiredLocale(storeLanguages) {
+		return errors.New("名称不能为空")
 	}
 
-	newUuids := make([]uint64, 0, len(editFreeOrGiftReason.List))
-	for _, item := range editFreeOrGiftReason.List {
-		if item.Uuid != 0 {
-			newUuids = append(newUuids, item.Uuid)
-		}
-	}
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	companySetting := ctx.GetCompanySetting()
+	defaultLang := companySetting.GetDefaultLanguage()
 
-	diffUuids := slice.Difference(newUuids, oldUuids)
-
-	err = db.Transaction(func(tx *gorm.DB) error {
-		if len(diffUuids) > 0 {
-			err := base.NewGiftOrFreeOrderReasonRepo(tx).DeleteGiftOrFreeOrderReasons(diffUuids)
-			if err != nil {
-				return errors.WithMessage(err, "删除免单原因失败")
-			}
-		}
-		for _, item := range editFreeOrGiftReason.List {
-			name := item.LocaleName.GetLocale(defaultLang)
-			if item.Uuid != 0 { // 新增
-				// 保存多语言名称
-				multiLanguageName := model.MultiLanguageName{
-					ZhName:   name,
-					ThName:   name,
-					EnName:   name,
-					ZhTwName: name,
-					JaName:   name,
-					KoName:   name,
-					MyName:   name,
-					TrName:   name,
-					SvName:   name,
-				}
-				err := tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
-				if err != nil {
-					return errors.WithMessage(err, "保存多语言名称失败")
-				}
-				base.NewGiftOrFreeOrderReasonRepo(tx).UpdateGiftOrFreeOrderReason(item.Uuid, model.FreeReason{
-					Name:                  name,
-					MultiLanguageNameUuid: multiLanguageName.Uuid,
-				})
-			} else { // 编辑
-				err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", item.Uuid).Updates(map[string]any{
-					"zh_name":    item.LocaleName.ZH,
-					"th_name":    item.LocaleName.TH,
-					"en_name":    item.LocaleName.EN,
-					"zh_tw_name": item.LocaleName.ZHTW,
-					"ja_name":    item.LocaleName.JA,
-					"ko_name":    item.LocaleName.KO,
-					"my_name":    item.LocaleName.MY,
-					"tr_name":    item.LocaleName.TR,
-					"sv_name":    item.LocaleName.SV,
-				}).Error
-				if err != nil {
-					return errors.WithMessage(err, "修改多语言名称失败")
-				}
-				base.NewGiftOrFreeOrderReasonRepo(tx).UpdateGiftOrFreeOrderReason(item.Uuid, model.FreeReason{
-					Name: name,
-				})
-			}
-		}
-
-		return nil
+	_, err := base.NewReturnFoodReasonRepo(db).CreateReturnFoodReason(model.ReturnFoodReason{
+		Name: addReturnFoodReason.LocaleName.GetLocale(defaultLang),
+		MultiLanguageName: model.MultiLanguageName{
+			ZhName:   addReturnFoodReason.LocaleName.ZH,
+			ThName:   addReturnFoodReason.LocaleName.TH,
+			EnName:   addReturnFoodReason.LocaleName.EN,
+			ZhTwName: addReturnFoodReason.LocaleName.ZHTW,
+			JaName:   addReturnFoodReason.LocaleName.JA,
+			KoName:   addReturnFoodReason.LocaleName.KO,
+			MyName:   addReturnFoodReason.LocaleName.MY,
+			TrName:   addReturnFoodReason.LocaleName.TR,
+			SvName:   addReturnFoodReason.LocaleName.SV,
+		},
 	})
 	if err != nil {
-		return errors.WithMessage(err, "保存免单原因失败")
+		return errors.WithMessage(err, "新增退菜原因失败")
 	}
 	return nil
 }
 
 func (s *otherSrv) EditReturnFoodReason(ctx context.Context, editReturnFoodReason req.EditReturnFoodReasonReq) error {
+	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+	if !editReturnFoodReason.LocaleName.CheckRequiredLocale(storeLanguages) {
+		return errors.New("名称不能为空")
+	}
+
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	companySetting := ctx.GetCompanySetting()
 	defaultLang := companySetting.GetDefaultLanguage()
 
 	productRepo := base.NewReturnFoodReasonRepo(db)
-	oldList, err := productRepo.GetReturnFoodReasonList()
+	reason, err := productRepo.GetReturnFoodReasonByUuid(editReturnFoodReason.Uuid)
 	if err != nil {
-		return errors.WithMessage(err, "获取退菜原因列表失败")
+		return errors.WithMessage(err, "退菜原因不存在")
 	}
 
-	oldUuids := make([]uint64, 0, len(oldList))
-	for _, oldItem := range oldList {
-		oldUuids = append(oldUuids, oldItem.Uuid)
-	}
+	reason.Name = editReturnFoodReason.LocaleName.GetLocale(defaultLang)
+	reason.MultiLanguageName.ZhName = editReturnFoodReason.LocaleName.ZH
+	reason.MultiLanguageName.ThName = editReturnFoodReason.LocaleName.TH
+	reason.MultiLanguageName.EnName = editReturnFoodReason.LocaleName.EN
+	reason.MultiLanguageName.ZhTwName = editReturnFoodReason.LocaleName.ZHTW
+	reason.MultiLanguageName.JaName = editReturnFoodReason.LocaleName.JA
+	reason.MultiLanguageName.KoName = editReturnFoodReason.LocaleName.KO
+	reason.MultiLanguageName.MyName = editReturnFoodReason.LocaleName.MY
+	reason.MultiLanguageName.TrName = editReturnFoodReason.LocaleName.TR
+	reason.MultiLanguageName.SvName = editReturnFoodReason.LocaleName.SV
 
-	newUuids := make([]uint64, 0, len(editReturnFoodReason.List))
-	for _, item := range editReturnFoodReason.List {
-		if item.Uuid != 0 {
-			newUuids = append(newUuids, item.Uuid)
-		}
-	}
-
-	diffUuids := slice.Difference(newUuids, oldUuids)
-
-	err = db.Transaction(func(tx *gorm.DB) error {
-		if len(diffUuids) > 0 {
-			err := base.NewReturnFoodReasonRepo(tx).DeleteReturnFoodReasons(diffUuids)
-			if err != nil {
-				return errors.WithMessage(err, "删除退菜原因失败")
-			}
-		}
-		for _, item := range editReturnFoodReason.List {
-			name := item.LocaleName.GetLocale(defaultLang)
-			if item.Uuid != 0 { // 新增
-				// 保存多语言名称
-				multiLanguageName := model.MultiLanguageName{
-					ZhName:   name,
-					ThName:   name,
-					EnName:   name,
-					ZhTwName: name,
-					JaName:   name,
-					KoName:   name,
-					MyName:   name,
-					TrName:   name,
-					SvName:   name,
-				}
-				err := tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
-				if err != nil {
-					return errors.WithMessage(err, "保存多语言名称失败")
-				}
-				_, err = base.NewReturnFoodReasonRepo(tx).CreateReturnFoodReason(model.ReturnFoodReason{
-					Name:                  name,
-					MultiLanguageNameUuid: multiLanguageName.Uuid,
-				})
-				if err != nil {
-					return errors.WithMessage(err, "保存退菜原因失败")
-				}
-			} else { // 编辑
-				err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", item.Uuid).Updates(map[string]any{
-					"zh_name":    item.LocaleName.ZH,
-					"th_name":    item.LocaleName.TH,
-					"en_name":    item.LocaleName.EN,
-					"zh_tw_name": item.LocaleName.ZHTW,
-					"ja_name":    item.LocaleName.JA,
-					"ko_name":    item.LocaleName.KO,
-					"my_name":    item.LocaleName.MY,
-					"tr_name":    item.LocaleName.TR,
-					"sv_name":    item.LocaleName.SV,
-				}).Error
-				if err != nil {
-					return errors.WithMessage(err, "修改多语言名称失败")
-				}
-				err = base.NewReturnFoodReasonRepo(tx).UpdateReturnFoodReason(item.Uuid, model.ReturnFoodReason{
-					Name: name,
-				})
-				if err != nil {
-					return errors.WithMessage(err, "修改退菜原因失败")
-				}
-			}
-		}
-
-		return nil
-	})
+	err = base.NewReturnFoodReasonRepo(db).UpdateReturnFoodReason(editReturnFoodReason.Uuid, *reason)
 	if err != nil {
 		return errors.WithMessage(err, "保存退菜原因失败")
 	}

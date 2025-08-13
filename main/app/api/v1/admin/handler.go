@@ -2,8 +2,8 @@ package admin
 
 import (
 	"context"
-	"net/http"
 	"ttpos-server-go/app/api/helper"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/middleware"
@@ -42,7 +42,7 @@ func (h *Handler) GetErpnextSiteCompany(c *gin.Context) {
 	// 调用erpnext服务，获取公司名称
 	companyResp, err := erp.NewIErpSrv(h.dbm).GetCompanyList(context.Background(), erpnextSiteCompanyReq)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		helper.ErrorWithMessage(c, constant.CodeFail, err)
 		return
 	}
 	helper.Success(c, companyResp)
@@ -58,21 +58,23 @@ func (h *Handler) GetErpnextSiteCompany(c *gin.Context) {
 // @Success 200 {object} dto.Response
 // @Router /admin/erpnext/shop/init [post]
 func (h *Handler) InitShop(c *gin.Context) {
+	ctx := helper.GetContext(c)
 	var initShopReq req.InitShopReq
 	if err := c.ShouldBindJSON(&initShopReq); err != nil {
 		helper.HandleValidationError(c, err, initShopReq, nil)
 		return
 	}
-	initShopResp, err := erp.NewIErpSrv(h.dbm).InitShop(context.Background(), initShopReq)
+	initShopResp, err := erp.NewIErpSrv(h.dbm).InitShop(ctx, initShopReq)
+
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		helper.ErrorWithMessage(c, constant.CodeFail, err)
 		return
 	}
 
 	go func() {
-		erp.NewIErpSrv(h.dbm).SyncUomAndAttribute(helper.GetContext(c), req.SyncUomAndAttributeReq{
+		// NOTE 后续如果有其他的site，需要做区分
+		erp.NewIErpSrv(h.dbm).SyncUomAndAttribute(helper.GetContext(c.Copy()), req.SyncUomAndAttributeReq{
 			SiteCode: initShopReq.SiteCode,
-			Branch:   initShopResp.BranchName,
 		})
 	}()
 	helper.Success(c, initShopResp)

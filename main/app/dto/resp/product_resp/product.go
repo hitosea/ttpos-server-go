@@ -370,3 +370,37 @@ type ProductImportTaxListItem struct {
 	Name string `json:"name" binding:"required"` // 税类名称
 	Uuid uint64 `json:"uuid" binding:"required"` // 税类UUID
 }
+
+// ProductListResp 商品列表响应
+type ProductShopListResp struct {
+	List []ProductShopListItemResp `json:"list"`
+	Meta dto.PageResponse          `json:"meta"`
+}
+
+// ProductShopListItemResp 商品列表项响应
+type ProductShopListItemResp struct {
+	Uuid                uint64                      `json:"uuid"`                  // 商品UUID
+	LocaleName          dto.LocaleResponse          `json:"locale_name"`           // 商品名称
+	Image               string                      `json:"image"`                 // 商品图片
+	Tag                 ProductShopListItemTagResp  `json:"tag"`                   // 商品标签列表
+	MinPrice            float64                     `json:"min_price"`             // 最低价格
+	MaxPrice            float64                     `json:"max_price"`             // 最高价格
+	Unit                ProductShopListItemUnitResp `json:"unit"`                  // 商品单位
+	CategoryUuid        uint64                      `json:"category_uuid"`         // 商品分类UUID
+	SpecialCategoryUuid uint64                      `json:"special_category_uuid"` // 商品特殊分类UUID
+	Status              int                         `json:"status"`                // 商品状态 0-下架 1-上架
+	IsSoldOut           bool                        `json:"is_sold_out"`           // 是否售罄 false-否 true-是
+	ProductType         int                         `json:"product_type"`          // 商品类型 0-商品 1-套餐
+	Sort                int                         `json:"sort"`                  // 商品排序
+}
+
+// ProductShopListItemTagResp 商品标签列表
+type ProductShopListItemTagResp struct {
+	IsMultipleSpec bool `json:"is_multiple_spec"` // 是否多规格
+	IsAttribute    bool `json:"is_attribute"`     // 是否属性
+	IsSauce        bool `json:"is_sauce"`         // 是否加料
+}
+
+type ProductShopListItemUnitResp struct {
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品单位名称
+}

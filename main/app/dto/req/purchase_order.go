@@ -1,9 +1,10 @@
 package req
 
+import "ttpos-server-go/app/dto"
+
 // PurchaseOrderListReq 采购订单列表请求
 type PurchaseOrderListReq struct {
-	Page              int    `json:"page" form:"page" binding:"omitempty,min=1"`                               // 页码
-	PageSize          int    `json:"page_size" form:"page_size" binding:"omitempty,min=1,max=100"`             // 每页数量
+	dto.PageReq              // 分页参数
 	OrderNo           string `json:"order_no" form:"order_no" binding:"omitempty,max=50"`                      // 订单编号
 	Title             string `json:"title" form:"title" binding:"omitempty,max=255"`                           // 采购单标题
 	Status            *int   `json:"status" form:"status" binding:"omitempty,min=0,max=7"`                     // 状态筛选
@@ -100,8 +101,7 @@ type PurchaseReceiptItemCreateReq struct {
 
 // PurchaseReceiptListReq 收货记录列表请求
 type PurchaseReceiptListReq struct {
-	Page              int    `json:"page" form:"page" binding:"omitempty,min=1"`                               // 页码
-	PageSize          int    `json:"page_size" form:"page_size" binding:"omitempty,min=1,max=100"`             // 每页数量
+	dto.PageReq              // 分页参数
 	PurchaseOrderUuid uint64 `json:"purchase_order_uuid" form:"purchase_order_uuid" binding:"omitempty,min=1"` // 采购订单ID
 	ReceiptNo         string `json:"receipt_no" form:"receipt_no" binding:"omitempty,max=50"`                  // 收货单号
 	QualityStatus     *int   `json:"quality_status" form:"quality_status" binding:"omitempty,min=1,max=3"`     // 质检状态筛选
@@ -123,11 +123,9 @@ type PurchaseOrderStatisticsReq struct {
 
 // PurchaseReceiptOrderListReq 收货单列表请求
 type PurchaseReceiptOrderListReq struct {
-	Page              int    `json:"page" form:"page" binding:"omitempty,min=1"`                               // 页码
-	PageSize          int    `json:"page_size" form:"page_size" binding:"omitempty,min=1,max=100"`             // 每页数量
+	dto.PageReq              // 分页参数
 	PurchaseOrderUuid uint64 `json:"purchase_order_uuid" form:"purchase_order_uuid" binding:"omitempty,min=1"` // 采购订单ID
 	ReceiptNo         string `json:"receipt_no" form:"receipt_no" binding:"omitempty,max=50"`                  // 收货单号
-	QualityStatus     *int   `json:"quality_status" form:"quality_status" binding:"omitempty,min=1,max=3"`     // 质检状态筛选
 	ReceiptTimeStart  int    `json:"receipt_time_start" form:"receipt_time_start" binding:"omitempty,min=0"`   // 收货时间开始
 	ReceiptTimeEnd    int    `json:"receipt_time_end" form:"receipt_time_end" binding:"omitempty,min=0"`       // 收货时间结束
 }

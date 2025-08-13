@@ -98,7 +98,7 @@ type ProductShopCategoryListReq struct {
 // ProductShopCategorySortItem 商品分类排序项
 type ProductShopCategorySortItem struct {
 	Uuid uint64 `json:"uuid" binding:"required"` // 商品分类UUID
-	Sort int    `json:"sort" binding:"required"` // 排序
+	Sort int    `json:"sort"`                    // 排序
 }
 
 // ProductShopCategorySortReq 商品分类排序请求
@@ -207,7 +207,7 @@ type ProductFlavorDeleteReq struct {
 // ProductFlavorSortItem 商品规格排序项
 type ProductFlavorSortItemReq struct {
 	Uuid uint64 `json:"uuid" binding:"required"` // 商品规格UUID
-	Sort int    `json:"sort" binding:"required"` // 排序
+	Sort int    `json:"sort"`                    // 排序
 }
 
 // ProductFlavorSortReq 商品规格排序请求
@@ -313,4 +313,26 @@ type ProductImportItemReq struct {
 	SkuId                 uint64             `json:"sku_id"`                                      // 规格ID
 	RatingTaxId           uint64             `json:"ratin_tax_id"`                                // 堂食税类ID
 	TakeoutTaxId          uint64             `json:"takeout_tax_id"`                              // 外带税类ID
+}
+
+// ProductShopListReq 商品列表查询
+type ProductShopListReq struct {
+	dto.PageReq          // 分页参数
+	Keyword      *string `form:"keyword"`       // 搜索商品名称（可选）
+	Type         *int    `form:"type"`          // 商品类型: 0-商品 1-套餐（可选）
+	Tag          *string `form:"tag"`           // 商品标签: 0-多规格 1-属性 2-加料（可选）, 多个标签用逗号分隔: 0,1,2
+	Status       *int    `form:"status"`        // 商品状态: 0-下架 1-上架（可选）
+	CategoryUuid *uint64 `form:"category_uuid"` // 商品分类UUID（可选）
+}
+
+// SortProductShopListReq 商品排序请求
+type SortProductShopListReq struct {
+	CategoryUuid uint64                   `json:"category_uuid"`                // 商品分类UUID
+	List         []SortProductShopItemReq `json:"list" binding:"required,dive"` // 商品排序列表
+}
+
+// SortProductShopItemReq 商品排序项请求
+type SortProductShopItemReq struct {
+	Uuid uint64 `json:"uuid" binding:"required"` // 商品UUID
+	Sort int    `json:"sort"`                    // 排序
 }

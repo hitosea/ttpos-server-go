@@ -590,7 +590,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
 	settingSrv := setting.NewSrv(dbm, cache)
-	otherSrv := service.NewOtherSrv(dbm, cache)
+	otherSrv := service.NewOtherSrv(dbm, cache, settingSrv)
 	roleAccessSrv := service.NewRoleAccessSrv(dbm)
 	deviceSrv := service.NewDeviceSrv(settingSrv, dbm)
 	printerLogSrv := printerService.NewPrinterLogSrv(dbm, settingSrv)

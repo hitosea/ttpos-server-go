@@ -273,7 +273,8 @@ type ShopBase struct {
 	Business   setting.Business   `json:"business"` // 门店业务设置
 	Profile    ShopProfile        `json:"profile"`  // 门店信息
 
-	UpdateTime int64 `json:"update_time"` // 更新时间
+	ServerVersion string `json:"server_version"` // 服务端版本
+	UpdateTime    int64  `json:"update_time"`    // 更新时间
 }
 
 type ShopProfile struct {
@@ -285,5 +286,5 @@ type ShopProfile struct {
 	TimeZoneList    []setting.TimeZoneItem `json:"time_zone_list"`   // 时区列表
 	DefaultLanguage string                 `json:"default_language"` // 默认语言
 	LanguageList    []dto.LanguageItem     `json:"language_list"`    // 语言列表，当前勾选了的语言列表
-	Language        []string               `json:"language"`         // 可用语言
+	Language        []string               `json:"language"`         // 云平台限制商家的可用语言列表
 }

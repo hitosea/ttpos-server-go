@@ -28,8 +28,9 @@ func (s *erpSrv) GetCompanyList(ctx context.Context, erpnextSiteCompanyReq req.E
 	defer conn.Close()
 
 	req := &companyApi.GetCompanyListReq{
-		CompanyName: erpnextSiteCompanyReq.CompanyName,
-		CompanyAbbr: erpnextSiteCompanyReq.CompanyAbbr,
+		CompanyName:   erpnextSiteCompanyReq.CompanyName,
+		CompanyAbbr:   erpnextSiteCompanyReq.CompanyAbbr,
+		ParentCompany: erpnextSiteCompanyReq.ParentCompany,
 	}
 	result, err := client.GetCompanyList(WithSiteCode(ctx, erpnextSiteCompanyReq.SiteCode), req)
 	if err != nil {
