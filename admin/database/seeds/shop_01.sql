@@ -859,12 +859,17 @@ CREATE TABLE IF NOT EXISTS `ttpos_material` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '原料ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '原料名称',
+    `code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '原料编码',
+    `valuation` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '估值率',
+    `init_stock` DECIMAL(14, 4) NOT NULL DEFAULT 0.0000 COMMENT '期初库存',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `category_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '类别ID',
     `supplier_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '供应商ID',
     `image_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '图片ID',
     `image_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '图片名称',
     `unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '单位ID',
+    `purchase_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购单位ID',
+    `cost_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '成本单位ID',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '采购单价',
     `stock_num` DECIMAL(14, 4) UNSIGNED NOT NULL DEFAULT 0.0000 COMMENT '库存数量',
     `barcode_value` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '条形码值',
@@ -875,6 +880,109 @@ CREATE TABLE IF NOT EXISTS `ttpos_material` (
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '原料信息表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_material_unit` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '原料单位ID',
+    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '原料单位名称',
+    `unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '单位ID',
+    `conversion_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '转换率',
+    `from_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '来源单位ID. 来源单位为克，则转换率为1000，该原料单位为千克',
+    `is_default` INT(10) NOT NULL DEFAULT 0 COMMENT '是否为基准单位, 0-否 1-是',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '原料单位表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_purchase_order` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购申请ID',
+    `order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '单号',
+    `order_type` INT(10) NOT NULL DEFAULT 0 COMMENT '申请类型, 0-仓库调拨',
+    `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态, 0-待提交 1-待审核 2-已通过 3-已驳回 4-部分收货 5-全部收货',
+    `num` DECIMAL(14, 4) NOT NULL DEFAULT 0.0000 COMMENT '物资数量，每种物品算一个',
+    `order_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '单据日期，采购单提交的时间（时间戳）',
+    `expect_arrival_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '期望到货日期（时间戳）',
+    `pass_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '通过时间（时间戳）',
+    `reject_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '驳回时间（时间戳）',
+    `first_receive_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '第一次收货时间（时间戳），从“已通过”状态变成“部分收货”状态的时间',
+    `final_receive_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '最终收货时间（时间戳），从“部分收货”状态变成“全部收货”状态的时间',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '采购申请表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_purchase_order_item` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购申请物品ID',
+    `purchase_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购申请ID',
+    `material_code` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物品编码, 提交采购时记录后不再修改',
+    `material_name` TEXT NOT NULL DEFAULT '' COMMENT '物品名称JSON, 提交采购时记录后不再修改',
+    `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物品ID',
+    `num` DECIMAL(14, 4) NOT NULL DEFAULT 0.0000 COMMENT '申请数量',
+    `arrival_num` DECIMAL(14, 4) NOT NULL DEFAULT 0.0000 COMMENT '到货数量',
+    `unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '单位ID',
+    `unit_name` TEXT NOT NULL DEFAULT '' COMMENT '单位名称JSON, 提交采购时记录后不再修改',
+    `base_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '基准单位ID',
+    `base_unit_name` TEXT NOT NULL DEFAULT '' COMMENT '基准单位名称JSON, 提交采购时记录后不再修改',
+    `base_unit_conversion_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '基准单位转换率。申请数量*转换率=基准单位申请数量',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '采购申请物品表';
+
+-- 收货单
+CREATE TABLE IF NOT EXISTS `ttpos_receipt_order` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '收货单ID',
+    `order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '单号',
+    `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态, 0-待收货 1-已收货 2-已取消',
+    `purchase_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购申请ID',
+    `purchase_order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '采购申请单号',
+    `num` DECIMAL(14, 4) NOT NULL DEFAULT 0.0000 COMMENT '物资数量，每种物品算一个',
+    `expect_arrival_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '期望到货日期（时间戳），与采购申请单的期望到货日期一致',
+    `receive_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '收货时间（时间戳）',
+    `cancel_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '取消时间（时间戳）',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '收货单表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_receipt_order_item` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '收货单物品ID',
+    `receipt_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '收货单ID',
+    `purchase_order_item_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购申请物品ID',
+    `material_code` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物品编码, 提交采购时记录后不再修改',
+    `material_name` TEXT NOT NULL DEFAULT '' COMMENT '物品名称JSON, 提交采购时记录后不再修改',
+    `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物品ID',
+    `num` DECIMAL(14, 4) NOT NULL DEFAULT 0.0000 COMMENT '收货数量',
+    `unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '单位ID',
+    `unit_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '单位名称, 提交采购时记录后不再修改',
+    `base_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '基准单位ID',
+    `base_unit_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '基准单位名称, 确认收货时记录后不再修改',
+    `base_unit_conversion_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '基准单位转换率。收货数量*转换率=基准单位收货数量',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '收货单物品表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_product_bom_card` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '成本卡ID',
+    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
+    `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
+    `num` DECIMAL(14, 4) NOT NULL DEFAULT 0.0000 COMMENT '加工份数',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '成本卡表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_file` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -1134,10 +1242,15 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_bom` (
 
 CREATE TABLE IF NOT EXISTS `ttpos_related_material` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联材料ID',
-    `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物料清单BOM的ID',
-    `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '原料ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联材料ID、成本卡物品ID',
+    `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物料清单BOM的ID、成本卡ID',
+    `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '原料ID、物品ID',
     `num` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '材料用量,可小数',
+    `unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '单位ID,物品单位',
+    `unit_name` TEXT NOT NULL DEFAULT '' COMMENT '单位名称JSON,物品单位名称',
+    `base_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '基准单位ID,物品基准单位',
+    `base_unit_name` TEXT NOT NULL DEFAULT '' COMMENT '基准单位名称JSON,物品基准单位名称',
+    `base_unit_conversion_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '基准单位转换率。用量*转换率=基准单位用量',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
