@@ -1905,6 +1905,79 @@ definitions:
           $ref: '#/definitions/product_resp.ProductShopCategory'
         type: array
     type: object
+  product_resp.ProductShopListItemResp:
+    properties:
+      category_uuid:
+        description: 商品分类UUID
+        type: integer
+      image:
+        description: 商品图片
+        type: string
+      is_sold_out:
+        description: 是否售罄 false-否 true-是
+        type: boolean
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称
+      max_price:
+        description: 最高价格
+        type: number
+      min_price:
+        description: 最低价格
+        type: number
+      product_type:
+        description: 商品类型 0-商品 1-套餐
+        type: integer
+      sort:
+        description: 商品排序
+        type: integer
+      special_category_uuid:
+        description: 商品特殊分类UUID
+        type: integer
+      status:
+        description: 商品状态 0-下架 1-上架
+        type: integer
+      tag:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductShopListItemTagResp'
+        description: 商品标签列表
+      unit:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductShopListItemUnitResp'
+        description: 商品单位
+      uuid:
+        description: 商品UUID
+        type: integer
+    type: object
+  product_resp.ProductShopListItemTagResp:
+    properties:
+      is_attribute:
+        description: 是否属性
+        type: boolean
+      is_multiple_spec:
+        description: 是否多规格
+        type: boolean
+      is_sauce:
+        description: 是否加料
+        type: boolean
+    type: object
+  product_resp.ProductShopListItemUnitResp:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品单位名称
+    type: object
+  product_resp.ProductShopListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductShopListItemResp'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
   product_resp.ProductUnitDetail:
     properties:
       locale_name:
@@ -1971,6 +2044,15 @@ definitions:
         description: 会员端销售订单UUID
         type: integer
     type: object
+  req.AddFreeOrGiftReasonReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 名称列表
+    required:
+    - locale_name
+    type: object
   req.AddMemberReq:
     properties:
       activity_uuid:
@@ -2005,6 +2087,15 @@ definitions:
     required:
     - level_uuid
     - phone
+    type: object
+  req.AddReturnFoodReasonReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 名称列表
+    required:
+    - locale_name
     type: object
   req.AddRoleReq:
     properties:
@@ -2387,28 +2478,8 @@ definitions:
         description: 机器备注
         type: string
     type: object
-  req.EditFreeOrGiftReasonItem:
-    properties:
-      locale_name:
-        allOf:
-        - $ref: '#/definitions/dto.LocaleResponse'
-        description: 名称列表
-      uuid:
-        description: 如果有Uuid，则编辑，否则新增
-        type: integer
-    type: object
   req.EditFreeOrGiftReasonReq:
     properties:
-      list:
-        description: 名称列表
-        items:
-          $ref: '#/definitions/req.EditFreeOrGiftReasonItem'
-        type: array
-    required:
-    - list
-    type: object
-  req.EditReturnFoodReasonItem:
-    properties:
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -2416,16 +2487,20 @@ definitions:
       uuid:
         description: 如果有Uuid，则编辑，否则新增
         type: integer
+    required:
+    - uuid
     type: object
   req.EditReturnFoodReasonReq:
     properties:
-      list:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
         description: 名称列表
-        items:
-          $ref: '#/definitions/req.EditReturnFoodReasonItem'
-        type: array
+      uuid:
+        description: 如果有Uuid，则编辑，否则新增
+        type: integer
     required:
-    - list
+    - uuid
     type: object
   req.EditSettingReq:
     properties:
@@ -3442,7 +3517,6 @@ definitions:
         description: 商品规格UUID
         type: integer
     required:
-    - sort
     - uuid
     type: object
   req.ProductFlavorSortReq:
@@ -3833,7 +3907,6 @@ definitions:
         description: 商品分类UUID
         type: integer
     required:
-    - sort
     - uuid
     type: object
   req.ProductShopCategorySortReq:
@@ -9479,6 +9552,9 @@ definitions:
       profile_uuid:
         description: 收银员UUID
         type: integer
+      server_version:
+        description: 服务端版本
+        type: string
       update_time:
         description: 更新时间
         type: integer
@@ -9543,7 +9619,7 @@ definitions:
         description: ip白名单
         type: string
       language:
-        description: 可用语言
+        description: 云平台限制商家的可用语言列表
         items:
           type: string
         type: array
@@ -10830,7 +10906,7 @@ paths:
       - JwtToken: []
       summary: 审核采购订单
       tags:
-      - 采购管理
+      - 商家端.采购管理
   /api/v1/shop/purchase/order/create:
     post:
       consumes:
@@ -10863,7 +10939,7 @@ paths:
       - JwtToken: []
       summary: 创建采购订单
       tags:
-      - 采购管理
+      - 商家端.采购管理
   /api/v1/shop/purchase/order/delete:
     delete:
       consumes:
@@ -10896,7 +10972,7 @@ paths:
       - JwtToken: []
       summary: 删除采购订单
       tags:
-      - 采购管理
+      - 商家端.采购管理
   /api/v1/shop/purchase/order/detail:
     get:
       consumes:
@@ -10924,7 +11000,7 @@ paths:
       - JwtToken: []
       summary: 获取采购订单详情
       tags:
-      - 采购管理
+      - 商家端.采购管理
   /api/v1/shop/purchase/order/list:
     get:
       consumes:
@@ -10981,7 +11057,7 @@ paths:
       - JwtToken: []
       summary: 获取采购订单列表
       tags:
-      - 采购管理
+      - 商家端.采购管理
   /api/v1/shop/purchase/order/status:
     put:
       consumes:
@@ -11009,7 +11085,7 @@ paths:
       - JwtToken: []
       summary: 更新采购订单状态
       tags:
-      - 采购管理
+      - 商家端.采购管理
   /api/v1/shop/purchase/order/update:
     put:
       consumes:
@@ -11042,7 +11118,7 @@ paths:
       - JwtToken: []
       summary: 更新采购订单
       tags:
-      - 采购管理
+      - 商家端.采购管理
   /api/v1/shop/purchase/receipt/create:
     post:
       consumes:
@@ -11075,7 +11151,7 @@ paths:
       - JwtToken: []
       summary: 创建收货记录
       tags:
-      - 采购管理
+      - 商家端.采购管理
   /api/v1/shop/purchase/receipt/detail:
     get:
       consumes:
@@ -11107,7 +11183,7 @@ paths:
       - JwtToken: []
       summary: 获取收货记录详情
       tags:
-      - 采购管理
+      - 商家端.采购管理
   /api/v1/shop/purchase/receipt/list:
     get:
       consumes:
@@ -11156,7 +11232,7 @@ paths:
       - JwtToken: []
       summary: 获取收货记录列表
       tags:
-      - 采购管理
+      - 商家端.采购管理
   /api/v1/shop/purchase/statistics:
     get:
       consumes:
@@ -11195,7 +11271,7 @@ paths:
       - JwtToken: []
       summary: 获取采购订单统计
       tags:
-      - 采购管理
+      - 商家端.采购管理
   /assistant/base:
     get:
       consumes:
@@ -22582,6 +22658,53 @@ paths:
       summary: 导入商品-获取导入商品列表
       tags:
       - 商家端.商品
+  /shop/product/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取商品列表
+      parameters:
+      - description: 搜索商品名称（可选）
+        in: query
+        name: keyword
+        type: string
+      - description: 页码
+        in: query
+        minimum: 1
+        name: page_no
+        type: integer
+      - description: 每页大小
+        in: query
+        maximum: 1100
+        minimum: 1
+        name: page_size
+        type: integer
+      - description: '商品状态: 0-下架 1-上架（可选）'
+        in: query
+        name: status
+        type: integer
+      - description: '商品标签: 0-多规格 1-属性 2-加料（可选）, 多个标签用逗号分隔: 0,1,2'
+        in: query
+        name: tag
+        type: string
+      - description: '商品类型: 0-商品 1-套餐（可选）'
+        in: query
+        name: type
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductShopListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品列表
+      tags:
+      - 商家端.商品
   /shop/product/sauce:
     delete:
       consumes:
@@ -23247,6 +23370,31 @@ paths:
       summary: 获取免单原因
       tags:
       - 商家端.业务设置
+  /shop/setting/free_reason/add:
+    post:
+      consumes:
+      - application/json
+      description: 新增免单原因
+      parameters:
+      - description: 新增免单原因
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.AddFreeOrGiftReasonReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 新增免单原因
+      tags:
+      - 商家端.业务设置
+  /shop/setting/free_reason/edit:
     post:
       consumes:
       - application/json
@@ -23321,6 +23469,31 @@ paths:
       summary: 获取退菜原因
       tags:
       - 商家端.业务设置
+  /shop/setting/return_food_reason/add:
+    post:
+      consumes:
+      - application/json
+      description: 新增退菜原因
+      parameters:
+      - description: 新增退菜原因
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.AddReturnFoodReasonReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 新增退菜原因
+      tags:
+      - 商家端.业务设置
+  /shop/setting/return_food_reason/edit:
     post:
       consumes:
       - application/json

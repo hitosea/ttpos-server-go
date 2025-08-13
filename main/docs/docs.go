@@ -108,7 +108,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "采购管理"
+                    "商家端.采购管理"
                 ],
                 "summary": "审核采购订单",
                 "parameters": [
@@ -165,7 +165,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "采购管理"
+                    "商家端.采购管理"
                 ],
                 "summary": "创建采购订单",
                 "parameters": [
@@ -222,7 +222,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "采购管理"
+                    "商家端.采购管理"
                 ],
                 "summary": "删除采购订单",
                 "parameters": [
@@ -279,7 +279,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "采购管理"
+                    "商家端.采购管理"
                 ],
                 "summary": "获取采购订单详情",
                 "parameters": [
@@ -328,7 +328,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "采购管理"
+                    "商家端.采购管理"
                 ],
                 "summary": "获取采购订单列表",
                 "parameters": [
@@ -420,7 +420,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "采购管理"
+                    "商家端.采购管理"
                 ],
                 "summary": "更新采购订单状态",
                 "parameters": [
@@ -465,7 +465,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "采购管理"
+                    "商家端.采购管理"
                 ],
                 "summary": "更新采购订单",
                 "parameters": [
@@ -522,7 +522,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "采购管理"
+                    "商家端.采购管理"
                 ],
                 "summary": "创建收货记录",
                 "parameters": [
@@ -579,7 +579,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "采购管理"
+                    "商家端.采购管理"
                 ],
                 "summary": "获取收货记录详情",
                 "parameters": [
@@ -634,7 +634,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "采购管理"
+                    "商家端.采购管理"
                 ],
                 "summary": "获取收货记录列表",
                 "parameters": [
@@ -714,7 +714,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "采购管理"
+                    "商家端.采购管理"
                 ],
                 "summary": "获取采购订单统计",
                 "parameters": [
@@ -20050,6 +20050,78 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/product/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取商品列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品"
+                ],
+                "summary": "获取商品列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "搜索商品名称（可选）",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 1100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "每页大小",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "商品状态: 0-下架 1-上架（可选）",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "商品标签: 0-多规格 1-属性 2-加料（可选）, 多个标签用逗号分隔: 0,1,2",
+                        "name": "tag",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "商品类型: 0-商品 1-套餐（可选）",
+                        "name": "type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.ProductShopListResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/product/sauce": {
             "get": {
                 "security": [
@@ -21145,7 +21217,48 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
+            }
+        },
+        "/shop/setting/free_reason/add": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "新增免单原因",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.业务设置"
+                ],
+                "summary": "新增免单原因",
+                "parameters": [
+                    {
+                        "description": "新增免单原因",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.AddFreeOrGiftReasonReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/setting/free_reason/edit": {
             "post": {
                 "security": [
                     {
@@ -21266,7 +21379,48 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
+            }
+        },
+        "/shop/setting/return_food_reason/add": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "新增退菜原因",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.业务设置"
+                ],
+                "summary": "新增退菜原因",
+                "parameters": [
+                    {
+                        "description": "新增退菜原因",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.AddReturnFoodReasonReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/setting/return_food_reason/edit": {
             "post": {
                 "security": [
                     {
@@ -25889,6 +26043,119 @@ const docTemplate = `{
                 }
             }
         },
+        "product_resp.ProductShopListItemResp": {
+            "type": "object",
+            "properties": {
+                "category_uuid": {
+                    "description": "商品分类UUID",
+                    "type": "integer"
+                },
+                "image": {
+                    "description": "商品图片",
+                    "type": "string"
+                },
+                "is_sold_out": {
+                    "description": "是否售罄 false-否 true-是",
+                    "type": "boolean"
+                },
+                "locale_name": {
+                    "description": "商品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "max_price": {
+                    "description": "最高价格",
+                    "type": "number"
+                },
+                "min_price": {
+                    "description": "最低价格",
+                    "type": "number"
+                },
+                "product_type": {
+                    "description": "商品类型 0-商品 1-套餐",
+                    "type": "integer"
+                },
+                "sort": {
+                    "description": "商品排序",
+                    "type": "integer"
+                },
+                "special_category_uuid": {
+                    "description": "商品特殊分类UUID",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "商品状态 0-下架 1-上架",
+                    "type": "integer"
+                },
+                "tag": {
+                    "description": "商品标签列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/product_resp.ProductShopListItemTagResp"
+                        }
+                    ]
+                },
+                "unit": {
+                    "description": "商品单位",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/product_resp.ProductShopListItemUnitResp"
+                        }
+                    ]
+                },
+                "uuid": {
+                    "description": "商品UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "product_resp.ProductShopListItemTagResp": {
+            "type": "object",
+            "properties": {
+                "is_attribute": {
+                    "description": "是否属性",
+                    "type": "boolean"
+                },
+                "is_multiple_spec": {
+                    "description": "是否多规格",
+                    "type": "boolean"
+                },
+                "is_sauce": {
+                    "description": "是否加料",
+                    "type": "boolean"
+                }
+            }
+        },
+        "product_resp.ProductShopListItemUnitResp": {
+            "type": "object",
+            "properties": {
+                "locale_name": {
+                    "description": "商品单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                }
+            }
+        },
+        "product_resp.ProductShopListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product_resp.ProductShopListItemResp"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
         "product_resp.ProductUnitDetail": {
             "type": "object",
             "properties": {
@@ -25991,6 +26258,22 @@ const docTemplate = `{
                 }
             }
         },
+        "req.AddFreeOrGiftReasonReq": {
+            "type": "object",
+            "required": [
+                "locale_name"
+            ],
+            "properties": {
+                "locale_name": {
+                    "description": "名称列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                }
+            }
+        },
         "req.AddMemberReq": {
             "type": "object",
             "required": [
@@ -26034,6 +26317,22 @@ const docTemplate = `{
                 "referrer_uuid": {
                     "description": "推荐人Uuid",
                     "type": "integer"
+                }
+            }
+        },
+        "req.AddReturnFoodReasonReq": {
+            "type": "object",
+            "required": [
+                "locale_name"
+            ],
+            "properties": {
+                "locale_name": {
+                    "description": "名称列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
                 }
             }
         },
@@ -26575,40 +26874,11 @@ const docTemplate = `{
                 }
             }
         },
-        "req.EditFreeOrGiftReasonItem": {
-            "type": "object",
-            "properties": {
-                "locale_name": {
-                    "description": "名称列表",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.LocaleResponse"
-                        }
-                    ]
-                },
-                "uuid": {
-                    "description": "如果有Uuid，则编辑，否则新增",
-                    "type": "integer"
-                }
-            }
-        },
         "req.EditFreeOrGiftReasonReq": {
             "type": "object",
             "required": [
-                "list"
+                "uuid"
             ],
-            "properties": {
-                "list": {
-                    "description": "名称列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/req.EditFreeOrGiftReasonItem"
-                    }
-                }
-            }
-        },
-        "req.EditReturnFoodReasonItem": {
-            "type": "object",
             "properties": {
                 "locale_name": {
                     "description": "名称列表",
@@ -26627,15 +26897,20 @@ const docTemplate = `{
         "req.EditReturnFoodReasonReq": {
             "type": "object",
             "required": [
-                "list"
+                "uuid"
             ],
             "properties": {
-                "list": {
+                "locale_name": {
                     "description": "名称列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/req.EditReturnFoodReasonItem"
-                    }
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "uuid": {
+                    "description": "如果有Uuid，则编辑，否则新增",
+                    "type": "integer"
                 }
             }
         },
@@ -28079,7 +28354,6 @@ const docTemplate = `{
         "req.ProductFlavorSortItemReq": {
             "type": "object",
             "required": [
-                "sort",
                 "uuid"
             ],
             "properties": {
@@ -28627,7 +28901,6 @@ const docTemplate = `{
         "req.ProductShopCategorySortItem": {
             "type": "object",
             "required": [
-                "sort",
                 "uuid"
             ],
             "properties": {
@@ -36941,6 +37214,10 @@ const docTemplate = `{
                     "description": "收银员UUID",
                     "type": "integer"
                 },
+                "server_version": {
+                    "description": "服务端版本",
+                    "type": "string"
+                },
                 "update_time": {
                     "description": "更新时间",
                     "type": "integer"
@@ -37039,7 +37316,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "language": {
-                    "description": "可用语言",
+                    "description": "云平台限制商家的可用语言列表",
                     "type": "array",
                     "items": {
                         "type": "string"

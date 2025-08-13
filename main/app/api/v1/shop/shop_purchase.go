@@ -23,7 +23,7 @@ type PurchaseHandler struct {
 // GetPurchaseOrderList 获取采购订单列表
 // @Summary 获取采购订单列表
 // @Description 分页获取采购订单列表
-// @Tags 采购管理
+// @Tags 商家端.采购管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -57,7 +57,7 @@ func (h *PurchaseHandler) GetPurchaseOrderList(c *gin.Context) {
 // GetPurchaseOrderDetail 获取采购订单详情
 // @Summary 获取采购订单详情
 // @Description 根据UUID获取采购订单详情
-// @Tags 采购管理
+// @Tags 商家端.采购管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -84,7 +84,7 @@ func (h *PurchaseHandler) GetPurchaseOrderDetail(c *gin.Context) {
 // CreatePurchaseOrder 创建采购订单
 // @Summary 创建采购订单
 // @Description 创建新的采购订单
-// @Tags 采购管理
+// @Tags 商家端.采购管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -112,7 +112,7 @@ func (h *PurchaseHandler) CreatePurchaseOrder(c *gin.Context) {
 // UpdatePurchaseOrder 更新采购订单
 // @Summary 更新采购订单
 // @Description 更新采购订单信息
-// @Tags 采购管理
+// @Tags 商家端.采购管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -140,7 +140,7 @@ func (h *PurchaseHandler) UpdatePurchaseOrder(c *gin.Context) {
 // DeletePurchaseOrder 删除采购订单
 // @Summary 删除采购订单
 // @Description 删除采购订单
-// @Tags 采购管理
+// @Tags 商家端.采购管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -168,7 +168,7 @@ func (h *PurchaseHandler) DeletePurchaseOrder(c *gin.Context) {
 // ApprovePurchaseOrder 审核采购订单
 // @Summary 审核采购订单
 // @Description 审核采购订单（通过或驳回）
-// @Tags 采购管理
+// @Tags 商家端.采购管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -196,7 +196,7 @@ func (h *PurchaseHandler) ApprovePurchaseOrder(c *gin.Context) {
 // UpdatePurchaseOrderStatus 更新采购订单状态
 // @Summary 更新采购订单状态
 // @Description 更新采购订单状态
-// @Tags 采购管理
+// @Tags 商家端.采购管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -224,7 +224,7 @@ func (h *PurchaseHandler) UpdatePurchaseOrderStatus(c *gin.Context) {
 // CreatePurchaseReceipt 创建收货记录
 // @Summary 创建收货记录
 // @Description 创建采购收货记录
-// @Tags 采购管理
+// @Tags 商家端.采购管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -252,7 +252,7 @@ func (h *PurchaseHandler) CreatePurchaseReceipt(c *gin.Context) {
 // GetPurchaseReceiptList 获取收货记录列表
 // @Summary 获取收货记录列表
 // @Description 分页获取收货记录列表
-// @Tags 采购管理
+// @Tags 商家端.采购管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -284,7 +284,7 @@ func (h *PurchaseHandler) GetPurchaseReceiptList(c *gin.Context) {
 // GetPurchaseReceiptDetail 获取收货记录详情
 // @Summary 获取收货记录详情
 // @Description 根据UUID获取收货记录详情
-// @Tags 采购管理
+// @Tags 商家端.采购管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -312,7 +312,7 @@ func (h *PurchaseHandler) GetPurchaseReceiptDetail(c *gin.Context) {
 // GetPurchaseOrderStatistics 获取采购订单统计
 // @Summary 获取采购订单统计
 // @Description 获取采购订单统计数据
-// @Tags 采购管理
+// @Tags 商家端.采购管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
