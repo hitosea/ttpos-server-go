@@ -49,6 +49,11 @@ func RandomLetter(length int) string {
 	return RandomString(length, LowerLetters, UpperLetters)
 }
 
+// GenerateRandomNumber 生成指定长度的随机数字
+func GenerateRandomNumber(length int) string {
+	return RandomString(length, Numbers)
+}
+
 // RandomLowerLetter 生成指定长度的随机小写字母字符串
 func RandomLowerLetter(length int) string {
 	return RandomString(length, LowerLetters)

@@ -895,6 +895,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_material_unit` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '原料单位表';
 
+-- 采购单
 CREATE TABLE IF NOT EXISTS `ttpos_purchase_order` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购申请ID',
@@ -918,16 +919,16 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_order_item` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购申请物品ID',
     `purchase_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购申请ID',
-    `material_code` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物品编码, 提交采购时记录后不再修改',
+    `material_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '物品编码, 提交采购时记录后不再修改',
     `material_name` TEXT NOT NULL DEFAULT '' COMMENT '物品名称JSON, 提交采购时记录后不再修改',
     `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物品ID',
     `num` DECIMAL(14, 4) NOT NULL DEFAULT 0.0000 COMMENT '申请数量',
     `arrival_num` DECIMAL(14, 4) NOT NULL DEFAULT 0.0000 COMMENT '到货数量',
     `unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '单位ID',
     `unit_name` TEXT NOT NULL DEFAULT '' COMMENT '单位名称JSON, 提交采购时记录后不再修改',
+    `unit_conversion_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '单位转换率。申请数量*转换率=基准单位申请数量',
     `base_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '基准单位ID',
     `base_unit_name` TEXT NOT NULL DEFAULT '' COMMENT '基准单位名称JSON, 提交采购时记录后不再修改',
-    `base_unit_conversion_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '基准单位转换率。申请数量*转换率=基准单位申请数量',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -935,7 +936,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_order_item` (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '采购申请物品表';
 
 -- 收货单
-CREATE TABLE IF NOT EXISTS `ttpos_receipt_order` (
+CREATE TABLE IF NOT EXISTS `ttpos_purchase_receipt_order` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '收货单ID',
     `order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '单号',
@@ -952,20 +953,20 @@ CREATE TABLE IF NOT EXISTS `ttpos_receipt_order` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '收货单表';
 
-CREATE TABLE IF NOT EXISTS `ttpos_receipt_order_item` (
+CREATE TABLE IF NOT EXISTS `ttpos_purchase_receipt_order_item` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '收货单物品ID',
     `receipt_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '收货单ID',
     `purchase_order_item_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购申请物品ID',
-    `material_code` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物品编码, 提交采购时记录后不再修改',
+    `material_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '物品编码, 提交采购时记录后不再修改',
     `material_name` TEXT NOT NULL DEFAULT '' COMMENT '物品名称JSON, 提交采购时记录后不再修改',
     `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物品ID',
     `num` DECIMAL(14, 4) NOT NULL DEFAULT 0.0000 COMMENT '收货数量',
     `unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '单位ID',
     `unit_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '单位名称, 提交采购时记录后不再修改',
+    `unit_conversion_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '基准单位转换率。收货数量*转换率=基准单位收货数量',
     `base_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '基准单位ID',
     `base_unit_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '基准单位名称, 确认收货时记录后不再修改',
-    `base_unit_conversion_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '基准单位转换率。收货数量*转换率=基准单位收货数量',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

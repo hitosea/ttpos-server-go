@@ -367,9 +367,14 @@ func (model *ProductBom) GetStockNum() float64 {
 // RelatedMaterial 关联材料表,定义关联材料的相关信息 ttpos_related_material
 type RelatedMaterial struct {
 	BaseModel
-	RelatedUuid  uint64  `gorm:"column:related_uuid;type:bigint(20) unsigned;default:0;comment:'物料清单BOM的ID'"`
-	MaterialUuid uint64  `gorm:"column:material_uuid;type:bigint(20) unsigned;default:0;comment:'原料ID'"`
-	Num          float64 `gorm:"column:num;type:decimal(12,4);default:0;comment:'材料用量,可小数'"`
+	RelatedUuid            uint64  `gorm:"column:related_uuid;type:bigint(20) unsigned;default:0;comment:'物料清单BOM的ID、成本卡ID'"`
+	MaterialUuid           uint64  `gorm:"column:material_uuid;type:bigint(20) unsigned;default:0;comment:'原料ID、物品ID'"`
+	Num                    float64 `gorm:"column:num;type:decimal(12,4);default:0;comment:'材料用量,可小数'"`
+	UnitUuid               uint64  `gorm:"column:unit_uuid;type:bigint(20) unsigned;default:0;comment:'单位ID,物品单位'"`
+	UnitName               string  `gorm:"column:unit_name;type:text;default:'';comment:'单位名称JSON,物品单位名称'"`
+	BaseUnitUuid           uint64  `gorm:"column:base_unit_uuid;type:bigint(20) unsigned;default:0;comment:'基准单位ID,物品基准单位'"`
+	BaseUnitName           string  `gorm:"column:base_unit_name;type:text;default:'';comment:'基准单位名称JSON,物品基准单位名称'"`
+	BaseUnitConversionRate float64 `gorm:"column:base_unit_conversion_rate;type:decimal(12,4);default:1;comment:'基准单位转换率。用量*转换率=基准单位用量'"`
 
 	Material *Material `gorm:"foreignKey:material_uuid;references:uuid" json:"material"`
 }
@@ -535,4 +540,26 @@ func (model *ProductBom) IsFlavor() bool {
 // IsSauceProduct 判断是否为商品小料
 func (model *ProductBom) IsSauce() bool {
 	return model.ProductSauceUuid != 0
+}
+
+// ProductBomCard 成本卡表 ttpos_product_bom_card
+type ProductBomCard struct {
+	BaseModel
+	Name                  string  `gorm:"column:name;type:varchar(255);not null;default:'';comment:名称" json:"name"`
+	MultiLanguageNameUuid uint64  `gorm:"column:multi_language_name_uuid;type:bigint(20) unsigned;not null;default:0;comment:多语言名称ID" json:"multi_language_name_uuid"`
+	Num                   float64 `gorm:"column:num;type:decimal(14,4);not null;default:0.0000;comment:加工份数" json:"num"`
+
+	// 关联关系
+	MultiLanguageName MultiLanguageName `gorm:"foreignKey:MultiLanguageNameUuid;references:Uuid" json:"multi_language_name,omitempty"`
+	RelatedMaterials  []RelatedMaterial `gorm:"foreignKey:RelatedUuid;references:Uuid" json:"related_materials,omitempty"`
+}
+
+// TableName 指定表名
+func (ProductBomCard) TableName() string {
+	return "ttpos_product_bom_card"
+}
+
+func (model *ProductBomCard) SetNil() {
+	model.MultiLanguageName = MultiLanguageName{}
+	model.RelatedMaterials = nil
 }

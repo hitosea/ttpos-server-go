@@ -15,6 +15,7 @@ type IMaterialRepo interface {
 	CreateMaterial(material model.Material) (uint64, error)
 	DeleteMaterial(id uint) error
 	UpdateMaterials(materials []*model.Material) error
+	GetMaterialByUuids(uuid []uint64) ([]*model.Material, error)
 }
 
 // NewMaterialRepo 创建新的原料仓库
@@ -71,6 +72,7 @@ func (r *MaterialRepoImpl) DeleteMaterial(id uint) error {
 	return r.db.Model(&model.Material{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
 }
 
+// UpdateMaterials 更新原料
 func (r *MaterialRepoImpl) UpdateMaterials(materials []*model.Material) error {
 	if len(materials) == 0 {
 		return nil
@@ -86,3 +88,16 @@ func (r *MaterialRepoImpl) UpdateMaterials(materials []*model.Material) error {
 	}
 	return nil
 }
+
+// GetMaterialByUuid 根据uuid获取原料
+func (r *MaterialRepoImpl) GetMaterialByUuids(uuids []uint64) ([]*model.Material, error) {
+	var materials []*model.Material
+	err := r.db.Model(&model.Material{}).Where("uuid in (?)", uuids).Find(&materials).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return materials, nil
+}
+
+// GetMaterialByUuidsWithUnit 根据uuids获取原料，并预加载单位信息
+// .Preload("Unit").Preload("PurchaseUnit")
