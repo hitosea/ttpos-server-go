@@ -644,6 +644,9 @@ func (s *productSrv) SortProductShopCategory(ctx context.Context, req req.Produc
 	}
 	err := db.Transaction(func(tx *gorm.DB) error {
 		for _, item := range req.List {
+			if item.Sort == 0 {
+				return errors.New("排序不能为0")
+			}
 			tx.Model(&model.ProductCategory{}).Where("uuid = ?", item.Uuid).Updates(map[string]any{
 				"sort": item.Sort,
 			})
@@ -2550,6 +2553,9 @@ func (s *productSrv) SortProductFlavor(ctx context.Context, req req.ProductFlavo
 	}
 	err := db.Transaction(func(tx *gorm.DB) error {
 		for _, item := range req.List {
+			if item.Sort == 0 {
+				return errors.New("排序不能为0")
+			}
 			tx.Model(&model.ProductFlavor{}).Where("uuid = ?", item.Uuid).Updates(map[string]any{
 				"sort": item.Sort,
 			})

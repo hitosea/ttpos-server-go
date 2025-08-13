@@ -98,7 +98,7 @@ type ProductShopCategoryListReq struct {
 // ProductShopCategorySortItem 商品分类排序项
 type ProductShopCategorySortItem struct {
 	Uuid uint64 `json:"uuid" binding:"required"` // 商品分类UUID
-	Sort int    `json:"sort" binding:"required"` // 排序
+	Sort int    `json:"sort"`                    // 排序
 }
 
 // ProductShopCategorySortReq 商品分类排序请求
@@ -207,7 +207,7 @@ type ProductFlavorDeleteReq struct {
 // ProductFlavorSortItem 商品规格排序项
 type ProductFlavorSortItemReq struct {
 	Uuid uint64 `json:"uuid" binding:"required"` // 商品规格UUID
-	Sort int    `json:"sort" binding:"required"` // 排序
+	Sort int    `json:"sort"`                    // 排序
 }
 
 // ProductFlavorSortReq 商品规格排序请求
