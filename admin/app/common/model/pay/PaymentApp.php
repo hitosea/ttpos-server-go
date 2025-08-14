@@ -7,6 +7,7 @@ use think\facade\Log;
 use help\RSAEncryptorHelp;
 use app\common\model\BaseModel;
 use app\common\model\store\PayType;
+use app\common\model\app\App;
 
 /**
  * 支付应用模型
@@ -157,20 +158,24 @@ class PaymentApp extends BaseModel
             }
 
             // 调用erpnext支付方式添加接口
-            $res = HttpHelp::postRequest('http://nginx/api/v1/admin/erpnext/lianlian/payment/add', json_encode($param), [
-                'X-API-KEY: ' . env('JWT_SECRET'),
-                'Accept-Language: ' . request()->header('language'),
-            ]);
-            if (!$res) {
-                Log::error('调用erpnext支付方式添加接口失败', $res);
-                $this->error = '调用erpnext支付方式添加接口失败';
-                return false;
+            $company = (new App())->where('uuid', $param['company_uuid'])->find();
+            if ($company->is_enable_erp) {
+                $res = HttpHelp::postRequest('http://nginx/api/v1/admin/erpnext/lianlian/payment/add', json_encode($param), [
+                    'X-API-KEY: ' . env('JWT_SECRET'),
+                    'Accept-Language: ' . request()->header('language'),
+                ]);
+                if (!$res) {
+                    Log::error('调用erpnext支付方式添加接口失败', $res);
+                    $this->error = '调用erpnext支付方式添加接口失败';
+                    return false;
+                }
+                $res = json_decode($res, true);
+                if ($res['code'] != 0) {
+                    $this->error = $res['message'];
+                    return false;
+                }
             }
-            $res = json_decode($res, true);
-            if ($res['code'] != 0) {
-                $this->error = $res['message'];
-                return false;
-            }
+            
 
             // 提交事务
             $model->commit();

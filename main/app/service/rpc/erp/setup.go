@@ -67,6 +67,9 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 	}
 
 	// 更新saas库
+	s.dbm.GetDB(0).Model(&model.Company{}).Where("uuid = ?", company.Uuid).Updates(map[string]any{
+		"is_enable_erp": 1,
+	})
 	s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("company_uuid = ?", company.Uuid).Updates(map[string]any{
 		"erpnext_site_code":        initShopReq.SiteCode,
 		"erpnext_company_abbr":     initShopReq.CompanyAbbr,
@@ -75,6 +78,9 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 	})
 
 	// 更新商家库
+	s.dbm.GetDB(company.Uuid).Model(&model.Company{}).Where("uuid = ?", company.Uuid).Updates(map[string]any{
+		"is_enable_erp": 1,
+	})
 	s.dbm.GetDB(company.Uuid).Model(&model.CompanySetting{}).Where("company_uuid = ?", company.Uuid).Updates(map[string]any{
 		"erpnext_site_code":        initShopReq.SiteCode,
 		"erpnext_company_abbr":     initShopReq.CompanyAbbr,
