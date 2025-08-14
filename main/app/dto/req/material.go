@@ -97,3 +97,8 @@ type ProductBomCardMaterialReq struct {
 type ProductBomCardDetailReq struct {
 	ProductBomUuid uint64 `form:"product_bom_uuid" binding:"required"` // ProductBomUuid
 }
+
+// ProductBomCardUnlinkReq 解除成本卡关联请求
+type ProductBomCardUnlinkReq struct {
+	ProductBomUuid uint64 `json:"product_bom_uuid" binding:"required"` // ProductBomUuid
+}

@@ -28,6 +28,7 @@ type IMaterialSrv interface {
 	GetMaterialUnitList(ctx context.Context, req req.MaterialUnitListReq) (material_resp.MaterialUnitListResp, error)
 	AddProductBomCard(ctx context.Context, req req.ProductBomCardAddReq) error
 	GetProductBomCardDetail(ctx context.Context, req req.ProductBomCardDetailReq) (*material_resp.ProductBomCardDetailResp, error)
+	UnlinkProductBomCard(ctx context.Context, req req.ProductBomCardUnlinkReq) error
 }
 
 type materialSrv struct {
@@ -610,4 +611,21 @@ func (s *materialSrv) GetProductBomCardDetail(ctx context.Context, req req.Produ
 		Num:       productBomCard.Num,
 		Materials: materialList,
 	}, nil
+}
+
+func (s *materialSrv) UnlinkProductBomCard(ctx context.Context, req req.ProductBomCardUnlinkReq) error {
+	dbId := ctx.GetDbId()
+	db := s.dbm.GetDB(dbId)
+
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		productBomCardRepo := repository.NewProductBomRepo(tx)
+		if err := productBomCardRepo.UpdateProductBomCard(req.ProductBomUuid, 0); err != nil {
+			return errors.WithMessage(err, "更新成本卡失败")
+		}
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err)
+	}
+
+	return nil
 }
