@@ -2,6 +2,7 @@ package dto
 
 import (
 	"encoding/json"
+	"unicode/utf8"
 )
 
 type Response struct {
@@ -106,6 +107,17 @@ func (l *LocaleResponse) ToJson() string {
 func (l *LocaleResponse) CheckRequiredLocale(locales []string) bool {
 	for _, locale := range locales {
 		if l.GetLocale(locale) == "" {
+			return false
+		}
+	}
+	return true
+}
+
+// CheckLenLocal 检查语言长度
+func (l *LocaleResponse) CheckLenLocal(locales []string, length int) bool {
+	for _, locale := range locales {
+		localeValue := l.GetLocale(locale)
+		if localeValue != "" && utf8.RuneCountInString(localeValue) > length {
 			return false
 		}
 	}

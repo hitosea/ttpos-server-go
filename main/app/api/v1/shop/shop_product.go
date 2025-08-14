@@ -990,6 +990,32 @@ func (h *ProductHandler) ProductShopStatus(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// ProductShopAdd 添加商品
+// @Summary 添加商品
+// @Description 添加商品
+// @Tags 商家端.商品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductShopAddReq true "商品添加请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/add [post]
+func (h *ProductHandler) ProductShopAdd(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	addReq := req.ProductShopAddReq{}
+	if err := c.ShouldBindJSON(&addReq); err != nil {
+		helper.HandleValidationError(c, err, addReq, nil)
+		return
+	}
+	err := h.productSrv.ProductShopAdd(ctx, addReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
 func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -1057,5 +1083,6 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/product/list", wrapper.GetProductShopList)   // 获取商品列表
 		privateApi.POST("/product/sort", wrapper.SortProductShopList) // 排序商品列表
 		privateApi.POST("/product/status", wrapper.ProductShopStatus) // 修改商品状态
+		privateApi.POST("/product/add", wrapper.ProductShopAdd)       // 添加商品
 	}
 }

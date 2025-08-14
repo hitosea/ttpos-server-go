@@ -2,6 +2,8 @@ package repository
 
 import (
 	"database/sql"
+	"fmt"
+	"regexp"
 	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -110,6 +112,8 @@ type IProductQueryRepo interface {
 	PaginateGetProductFlavorList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductFlavor, int64, error) // 分页获取商品规格列表
 	CheckMultiLanguageNameExist(localeResponse dto.LocaleResponse) dto.LocaleResponse                              // 检查多语言名称是否存在
 	CheckBarcodeExist(barcode string) bool                                                                         // 检查条形码是否存在
+	CheckBarcodeFormat(barcode string) bool                                                                        // 检查条形码格式
+	CheckPrice(price, minPrice, maxPrice float64, places int) bool                                                 // 检查价格范围
 
 	PaginateGetProductShopList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductPackage, int64, error) // 分页获取商品列表（商家端）
 	GetProductShopList(opts ...DBOption) ([]model.ProductPackage, error)                                          // 获取商品列表（商家端）
@@ -1068,6 +1072,27 @@ func (r *productRepo) CheckBarcodeExist(barcode string) bool {
 		Where("barcode_value = ?", barcode).
 		Where("barcode_value <> ?", "")
 	return db.First(&model.ProductBom{}).Error == nil
+}
+
+// CheckBarcodeFormat 检查条形码格式
+func (r *productRepo) CheckBarcodeFormat(barcode string) bool {
+	return regexp.MustCompile(`^[0-9]{12,13}$`).MatchString(barcode)
+}
+
+// CheckPrice 检查价格范围
+func (r *productRepo) CheckPrice(price, minPrice, maxPrice float64, places int) bool {
+	if price < minPrice || price > maxPrice {
+		return false
+	}
+	if places > 0 {
+		priceStr := fmt.Sprintf("%.2f", price)
+		parts := strings.Split(priceStr, ".")
+		if len(parts) == 2 && len(parts[1]) > places {
+			return false
+		}
+	}
+
+	return true
 }
 
 // PaginateGetProductShopList 分页获取商品列表（商家端）
