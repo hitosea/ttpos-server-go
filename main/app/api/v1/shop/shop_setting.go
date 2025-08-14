@@ -165,6 +165,31 @@ func (h *SettingHandler) EditFreeReason(c *gin.Context) {
 	helper.Success(c, "保存成功")
 }
 
+// DeleteFreeReason 删除免单原因
+// @Summary 删除免单原因
+// @Description 删除免单原因
+// @Tags 商家端.业务设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.DeleteFreeOrGiftReasonReq true "删除免单原因"
+// @Success 200 {object} dto.Response
+// @Router /shop/setting/free_reason [delete]
+func (h *SettingHandler) DeleteFreeReason(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var deleteFreeReason req.DeleteFreeOrGiftReasonReq
+	if err := c.ShouldBindJSON(&deleteFreeReason); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	err := h.otherSrv.DeleteFreeOrGiftReason(ctx, deleteFreeReason)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "删除成功")
+}
+
 // GetReturnFoodReason 获取退菜原因
 // @Summary 获取退菜原因
 // @Description 获取退菜原因
@@ -234,6 +259,31 @@ func (h *SettingHandler) EditReturnFoodReason(c *gin.Context) {
 		return
 	}
 	helper.Success(c, "保存成功")
+}
+
+// DeleteReturnFoodReason 删除退菜原因
+// @Summary 删除退菜原因
+// @Description 删除退菜原因
+// @Tags 商家端.业务设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.DeleteReturnFoodReasonReq true "删除退菜原因"
+// @Success 200 {object} dto.Response
+// @Router /shop/setting/return_food_reason [delete]
+func (h *SettingHandler) DeleteReturnFoodReason(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var deleteReturnFoodReason req.DeleteReturnFoodReasonReq
+	if err := c.ShouldBindJSON(&deleteReturnFoodReason); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	err := h.otherSrv.DeleteReturnFoodReason(ctx, deleteReturnFoodReason)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "删除成功")
 }
 
 // GetMenuQrcode 获取电子菜单二维码
@@ -354,9 +404,11 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/setting/free_reason", wrapper.GetFreeReason)                     // 获取免单原因
 		privateApi.POST("/setting/free_reason/add", wrapper.AddFreeReason)                // 新增免单原因
 		privateApi.POST("/setting/free_reason/edit", wrapper.EditFreeReason)              // 编辑免单原因
+		privateApi.DELETE("/setting/free_reason", wrapper.DeleteFreeReason)               // 删除免单原因
 		privateApi.GET("/setting/return_food_reason", wrapper.GetReturnFoodReason)        // 获取退菜原因
 		privateApi.POST("/setting/return_food_reason/add", wrapper.AddReturnFoodReason)   // 新增退菜原因
 		privateApi.POST("/setting/return_food_reason/edit", wrapper.EditReturnFoodReason) // 编辑退菜原因
+		privateApi.DELETE("/setting/return_food_reason", wrapper.DeleteReturnFoodReason)  // 删除退菜原因
 		// 电子菜单二维码
 		privateApi.GET("/setting/menu_qrcode", wrapper.GetMenuQrcode)   // 获取电子菜单二维码
 		privateApi.POST("/setting/menu_qrcode", wrapper.EditMenuQrcode) // 更新电子菜单二维码

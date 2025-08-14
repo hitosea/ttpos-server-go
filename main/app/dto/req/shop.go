@@ -23,8 +23,12 @@ type AddFreeOrGiftReasonReq struct {
 }
 
 type EditFreeOrGiftReasonReq struct {
-	Uuid       uint64             `json:"uuid" binding:"required"` // 如果有Uuid，则编辑，否则新增
-	LocaleName dto.LocaleResponse `json:"locale_name"`             // 名称列表
+	Uuid       uint64             `json:"uuid" binding:"required"`
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 名称列表
+}
+
+type DeleteFreeOrGiftReasonReq struct {
+	Uuid uint64 `json:"uuid" binding:"required"`
 }
 
 type AddReturnFoodReasonReq struct {
@@ -32,6 +36,10 @@ type AddReturnFoodReasonReq struct {
 }
 
 type EditReturnFoodReasonReq struct {
-	Uuid       uint64             `json:"uuid" binding:"required"` // 如果有Uuid，则编辑，否则新增
-	LocaleName dto.LocaleResponse `json:"locale_name"`             // 名称列表
+	Uuid       uint64             `json:"uuid" binding:"required"`
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 名称列表
+}
+
+type DeleteReturnFoodReasonReq struct {
+	Uuid uint64 `json:"uuid" binding:"required"`
 }
