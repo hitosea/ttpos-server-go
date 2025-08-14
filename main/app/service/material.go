@@ -71,6 +71,12 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		repository.WithPreload{
 			Query: "Unit.Unit.MultiLanguageName",
 		},
+		repository.WithPreload{
+			Query: "PurchaseUnit.Unit.MultiLanguageName",
+		},
+		repository.WithPreload{
+			Query: "CostUnit.Unit.MultiLanguageName",
+		},
 	))
 
 	// 获取物品列表
@@ -101,7 +107,9 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				}
 				return 2
 			}(),
-			UnitName: material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			UnitName:         material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			PurchaseUnitName: material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			CostUnitName:     material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 		}
 		materialList = append(materialList, respMaterial)
 	}
