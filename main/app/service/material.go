@@ -22,7 +22,7 @@ type IMaterialSrv interface {
 	AddMaterial(ctx context.Context, req req.MaterialAddReq) error
 	EditMaterial(ctx context.Context, req req.MaterialEditReq) error
 	DeleteMaterial(ctx context.Context, req req.MaterialDeleteReq) error
-	UpdateMaterialStatus(ctx context.Context, req req.MaterialStatusReq) error
+	UpdateMaterialStatusBatch(ctx context.Context, req req.MaterialStatusReq) error
 	AddMaterialCategory(ctx context.Context, req req.MaterialCategoryAddReq) error
 	GetMaterialCategoryList(ctx context.Context, req req.MaterialCategoryListReq) (material_resp.MaterialCategoryListResp, error)
 }
@@ -407,21 +407,16 @@ func (s *materialSrv) DeleteMaterial(ctx context.Context, req req.MaterialDelete
 	return nil
 }
 
-// UpdateMaterialStatus 更新物品状态
-func (s *materialSrv) UpdateMaterialStatus(ctx context.Context, req req.MaterialStatusReq) error {
+// UpdateMaterialStatusBatch 批量修改物品状态
+func (s *materialSrv) UpdateMaterialStatusBatch(ctx context.Context, req req.MaterialStatusReq) error {
 	dbId := ctx.GetDbId()
-	materialRepo := repository.NewMaterialRepo(s.dbm.GetDB(dbId))
+	db := s.dbm.GetDB(dbId)
 
-	// 检查物品是否存在
-	_, err := materialRepo.GetMaterialDetailByUuid(req.Uuid)
-	if err != nil {
-		return errors.WithMessage(err, "物品不存在")
-	}
-
-	// 更新物品状态
-	err = materialRepo.UpdateMaterialStatus(req.Uuid, req.Status)
-	if err != nil {
-		return errors.WithMessage(err, "更新物品状态失败")
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		materialRepo := repository.NewMaterialRepo(tx)
+		return materialRepo.UpdateMaterialStatusBatch(req.Uuids, req.Status)
+	}); err != nil {
+		return errors.WithMessage(err)
 	}
 
 	return nil

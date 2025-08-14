@@ -66,8 +66,8 @@ type MaterialDeleteReq struct {
 
 // MaterialStatusReq 修改物品状态请求
 type MaterialStatusReq struct {
-	Uuid   uint64 `json:"uuid" binding:"required"`   // 物品UUID
-	Status bool   `json:"status" binding:"required"` // 状态，true-上架 false-下架
+	Uuids  []uint64 `json:"uuids" binding:"required"` // 物品UUID
+	Status int      `json:"status"`                   // 状态，1-启用 0-停用
 }
 
 // MaterialSearchReq 物品搜索查询

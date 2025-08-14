@@ -189,6 +189,34 @@ func (h *MaterialHandler) EditMaterial(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// UpdateMaterialStatusBatch 批量修改物品状态
+
+// @Summary 批量修改物品状态
+// @Description 批量修改物品状态
+// @Tags 商家端.物品管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.MaterialStatusReq true "物品状态修改请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/material/status/batch [post]
+func (h *MaterialHandler) UpdateMaterialStatusBatch(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	statusReq := req.MaterialStatusReq{}
+
+	if err := c.ShouldBindJSON(&statusReq); err != nil {
+		helper.HandleValidationError(c, err, statusReq, dto.PageReqMessage)
+		return
+	}
+	err := h.materialSrv.UpdateMaterialStatusBatch(ctx, statusReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
 // RegisterMaterialHandlers 注册物品管理路由
 func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -213,11 +241,12 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/material/list", wrapper.GetMaterialList)                  // 获取物品列表
-		privateApi.GET("/material/detail", wrapper.GetMaterialDetail)              // 获取物品详情
-		privateApi.POST("/material/category/add", wrapper.AddMaterialCategory)     // 创建物品类别
-		privateApi.GET("/material/category/list", wrapper.GetMaterialCategoryList) // 获取物品类别列表
-		privateApi.POST("/material/add", wrapper.AddMaterial)                      // 添加物品
-		privateApi.POST("/material/edit", wrapper.EditMaterial)                    // 编辑物品
+		privateApi.GET("/material/list", wrapper.GetMaterialList)                    // 获取物品列表
+		privateApi.GET("/material/detail", wrapper.GetMaterialDetail)                // 获取物品详情
+		privateApi.POST("/material/category/add", wrapper.AddMaterialCategory)       // 创建物品类别
+		privateApi.GET("/material/category/list", wrapper.GetMaterialCategoryList)   // 获取物品类别列表
+		privateApi.POST("/material/add", wrapper.AddMaterial)                        // 添加物品
+		privateApi.POST("/material/edit", wrapper.EditMaterial)                      // 编辑物品
+		privateApi.POST("/material/status/batch", wrapper.UpdateMaterialStatusBatch) // 批量修改物品状态
 	}
 }
