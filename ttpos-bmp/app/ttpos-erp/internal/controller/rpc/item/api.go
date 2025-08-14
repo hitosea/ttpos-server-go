@@ -8,6 +8,8 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
+	"github.com/gogf/gf/v2/errors/gcode"
+	"github.com/gogf/gf/v2/errors/gerror"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
@@ -98,4 +100,9 @@ func (*Controller) SaveAttribute(ctx context.Context, req *item.AttributeInfo) (
 	}
 	res = rpc.ApiSuccess("保存单位成功")
 	return
+}
+
+func (*Controller) GetItemStock(ctx context.Context, req *item.GetItemStockReq) (res *api.ResponseInfo, err error) {
+
+	return nil, gerror.NewCode(gcode.CodeNotImplemented)
 }
