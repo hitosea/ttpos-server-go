@@ -19,12 +19,9 @@ class AddCriticalPerformanceIndexes extends Migrator
         $this->checkAndAddIndex('sale_bill', 'idx_desk_uuid_status', ['desk_uuid', 'status', 'delete_time']);
         $this->checkAndAddIndex('sale_bill', 'idx_status_delete_time', ['status', 'delete_time']);
         $this->checkAndAddIndex('sale_bill', 'idx_create_time', ['create_time']);
-        $this->checkAndAddIndex('sale_bill', 'idx_pay_time', ['pay_time']);
         
         // 销售订单表 - 订单查询优化
         $this->checkAndAddIndex('sale_order', 'idx_sale_bill_uuid_status', ['sale_bill_uuid', 'status', 'delete_time']);
-        $this->checkAndAddIndex('sale_order', 'idx_desk_uuid', ['desk_uuid']);
-        $this->checkAndAddIndex('sale_order', 'idx_member_uuid', ['member_uuid']);
         $this->checkAndAddIndex('sale_order', 'idx_create_time', ['create_time']);
         $this->checkAndAddIndex('sale_order', 'idx_status_delete_time', ['status', 'delete_time']);
         
@@ -36,7 +33,6 @@ class AddCriticalPerformanceIndexes extends Migrator
         
         // H5订单表 - 线上订单查询优化
         $this->checkAndAddIndex('h5_order', 'idx_desk_uuid_status', ['desk_uuid', 'status', 'delete_time']);
-        $this->checkAndAddIndex('h5_order', 'idx_member_uuid', ['member_uuid']);
         $this->checkAndAddIndex('h5_order', 'idx_create_time', ['create_time']);
         $this->checkAndAddIndex('h5_order', 'idx_status_auto_accept', ['status', 'is_auto_accept']);
         
@@ -50,7 +46,6 @@ class AddCriticalPerformanceIndexes extends Migrator
         $this->checkAndAddIndex('member', 'idx_phone', ['phone']);
         $this->checkAndAddIndex('member', 'idx_device_id', ['device_id']); // 游客设备ID查询
         $this->checkAndAddIndex('member', 'idx_is_visitor', ['is_visitor']);
-        $this->checkAndAddIndex('member', 'idx_level_uuid', ['level_uuid']);
         $this->checkAndAddIndex('member', 'idx_create_time', ['create_time']);
         
         // 会员地址表
@@ -136,7 +131,6 @@ class AddCriticalPerformanceIndexes extends Migrator
         
         // 商品相关表
         $this->checkAndAddIndex('product_package', 'idx_category_uuid', ['category_uuid']);
-        $this->checkAndAddIndex('product_package', 'idx_is_sold_out', ['is_sold_out']);
         $this->checkAndAddIndex('product_category', 'idx_parent_uuid', ['parent_uuid']);
         
         // 订单商品属性和配方表
@@ -160,11 +154,11 @@ class AddCriticalPerformanceIndexes extends Migrator
             // 销售账单表索引
             'sale_bill' => [
                 'idx_device_uuid_status', 'idx_desk_uuid_status', 'idx_status_delete_time',
-                'idx_create_time', 'idx_pay_time'
+                'idx_create_time'
             ],
             // 销售订单表索引
             'sale_order' => [
-                'idx_sale_bill_uuid_status', 'idx_desk_uuid', 'idx_member_uuid',
+                'idx_sale_bill_uuid_status',
                 'idx_create_time', 'idx_status_delete_time'
             ],
             // 销售订单商品表索引
@@ -174,7 +168,7 @@ class AddCriticalPerformanceIndexes extends Migrator
             ],
             // H5订单表索引
             'h5_order' => [
-                'idx_desk_uuid_status', 'idx_member_uuid', 'idx_create_time',
+                'idx_desk_uuid_status', 'idx_create_time',
                 'idx_status_auto_accept'
             ],
             // H5订单商品表索引
@@ -184,7 +178,7 @@ class AddCriticalPerformanceIndexes extends Migrator
             // 会员表索引
             'member' => [
                 'idx_phone', 'idx_device_id', 'idx_is_visitor',
-                'idx_level_uuid', 'idx_create_time'
+                'idx_create_time'
             ],
             // 会员地址表索引
             'member_address' => [
@@ -256,7 +250,7 @@ class AddCriticalPerformanceIndexes extends Migrator
             'statistics_member_payment' => ['idx_member_recharge_order_uuid'],
             // 商品相关表索引
             'product_package' => [
-                'idx_category_uuid', 'idx_is_sold_out'
+                'idx_category_uuid'
             ],
             'product_category' => [
                 'idx_parent_uuid'
