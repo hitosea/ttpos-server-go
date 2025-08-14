@@ -278,6 +278,7 @@ type ShopBase struct {
 }
 
 type ShopProfile struct {
+	CompanyName     string                 `json:"company_name"`     // 公司名称，区别于店铺名称
 	Address         string                 `json:"address"`          // 地址
 	Coordinates     string                 `json:"coordinates"`      // 经纬度
 	IpWhiteList     string                 `json:"ip_white_list"`    // ip白名单

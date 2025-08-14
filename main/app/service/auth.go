@@ -994,6 +994,7 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 			DefaultLanguage: companySetting.GetDefaultLanguage(),
 			LanguageList:    storeSetting.Language,
 			Language:        companySetting.GetLanguages(),
+			CompanyName:     storeSetting.Company,
 		},
 		UpdateTime:    time.Now().Unix(),
 		ServerVersion: utils.GetVersion(),

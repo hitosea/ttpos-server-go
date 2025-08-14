@@ -196,12 +196,15 @@ class App extends AppModel
         $configured = $param['configured'] ?? false;
 
         return $this->alias('app')
-            ->field("su.uuid, app.name, su.link_phone, su.real_name, su.erpnext_site_code, su.erpnext_company_abbr, su.erpnext_branch_name")
+            ->field("su.uuid, app.name, su.link_phone, su.real_name, su.erpnext_site_code, su.erpnext_company_abbr, su.erpnext_branch_name, su.erpnext_pos_profile_name")
             ->leftJoin('company_setting su', "su.company_uuid = app.uuid")
             ->where('su.delete_time', '=', 0)
             ->where('app.delete_time', '=', 0)
             ->when($configured, function ($q) {
-                return $q->where('su.erpnext_site_code', '<>', "")->where('su.erpnext_company_abbr', '<>', "")->where('su.erpnext_branch_name', '<>', "");
+                return $q->where('su.erpnext_site_code', '<>', "")
+                    ->where('su.erpnext_company_abbr', '<>', "")
+                    ->where('su.erpnext_branch_name', '<>', "")
+                    ->where('su.erpnext_pos_profile_name', '<>', "");
             })
             ->when($keyword, function ($q) use ($keyword) { // 商家名称关键字
                 $q->where(function ($qq) use ($keyword) {

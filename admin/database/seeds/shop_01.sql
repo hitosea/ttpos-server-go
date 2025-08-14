@@ -70,7 +70,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     INDEX `idx_desk_uuid_status` (`desk_uuid`, `status`, `delete_time`),
     INDEX `idx_status_delete_time` (`status`, `delete_time`),
     INDEX `idx_create_time` (`create_time`),
-    INDEX `idx_pay_time` (`pay_time`),
     INDEX `idx_deletetime_uuid_id` (`delete_time`, `uuid`, `id`),
     INDEX `idx_uuid_hidebilltime_id` (`uuid`, `hide_bill_time`, `id`),
     UNIQUE KEY `unique_uuid` (`uuid`)
@@ -133,8 +132,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     INDEX `idx_tso_bill_qry` (`delete_time`, `sale_bill_uuid`),
     INDEX `idx_sale_bill_uuid_status` (`sale_bill_uuid`, `status`, `delete_time`),
-    INDEX `idx_desk_uuid` (`desk_uuid`),
-    INDEX `idx_member_uuid` (`member_uuid`),
     INDEX `idx_create_time` (`create_time`),
     INDEX `idx_status_delete_time` (`status`, `delete_time`),
     INDEX `idx_deletetime_salebilluuid` (`delete_time`, `sale_bill_uuid`),
@@ -525,7 +522,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_h5_order` (
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     INDEX `idx_desk_uuid_status` (`desk_uuid`, `status`, `delete_time`),
-    INDEX `idx_member_uuid` (`member_uuid`),
     INDEX `idx_create_time` (`create_time`),
     INDEX `idx_status_auto_accept` (`status`, `is_auto_accept`),
     UNIQUE KEY `unique_uuid` (`uuid`)
@@ -1175,7 +1171,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package` (
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     INDEX `idx_category_uuid` (`category_uuid`),
-    INDEX `idx_is_sold_out` (`is_sold_out`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品包和套餐表';
 
@@ -1298,6 +1293,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_member` (
     `nickname` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '昵称',
     `gender` INT(10) NOT NULL DEFAULT 2 COMMENT '性别,0-女 1-男 2-未知',
     `phone` VARCHAR(20) NOT NULL DEFAULT '' COMMENT '电话号码',
+    `is_visitor` int NOT NULL DEFAULT '0' COMMENT '是否游客,0-否 1-是',
+    `device_id` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '设备ID,用于标识游客',
     `password` VARCHAR(200) NOT NULL DEFAULT '' COMMENT '密码',
     `birthday` INT(10) NOT NULL DEFAULT 0 COMMENT '生日,时间戳',
     `point` DECIMAL(14, 2) NOT NULL DEFAULT 0 COMMENT '积分',
@@ -1320,7 +1317,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_member` (
     INDEX `idx_phone` (`phone`),
     INDEX `idx_device_id` (`device_id`),
     INDEX `idx_is_visitor` (`is_visitor`),
-    INDEX `idx_level_uuid` (`level_uuid`),
     INDEX `idx_create_time` (`create_time`),
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会员信息表';
