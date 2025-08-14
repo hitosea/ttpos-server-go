@@ -10,19 +10,40 @@
   >
     <el-form :model="formData" :rules="formRules" ref="formRef" label-position="top" label-width="auto">
       <el-form-item :label="$t('选择商家')" prop="uuid">
-        <el-select v-model="formData.uuid" :placeholder="$t('请选择商家')" clearable filterable :disabled="props.hasEdit">
+        <el-select v-model="formData.uuid" :placeholder="$t('请选择商家')" clearable filterable :disabled="props.hasEdit || confirmPassword">
           <el-option v-for="item in companyList" :key="item.uuid" :value="item.uuid" :label="item.name" :disabled="item.erpnext_site_code !== ''" />
         </el-select>
       </el-form-item>
       <el-form-item :label="$t('所属erpnext的site')" prop="erpnext_site_code">
-        <el-radio-group v-model="formData.erpnext_site_code" @change="getErpnextCompanyList(formData.erpnext_site_code)" :disabled="props.hasEdit">
+        <el-radio-group v-model="formData.erpnext_site_code" @change="handleSiteChange(formData.erpnext_site_code)" :disabled="props.hasEdit || confirmPassword">
           <el-radio v-for="item in erpnextSiteList" :key="item.code" :value="item.code" size="large">{{ item.name }}</el-radio>
         </el-radio-group>
       </el-form-item>
       <el-form-item :label="$t('所属erpnext公司')" prop="erpnext_company_abbr">
-        <el-select v-model="formData.erpnext_company_abbr" :placeholder="$t('请选择所属erpnext公司')" filterable clearable :disabled="props.hasEdit">
-          <el-option v-for="item in erpnextCompanyList" :key="item.company_abbr" :value="item.company_abbr" :label="item.company_name" />
+        <el-cascader
+          class="w-full"
+          v-model="formData.erpnext_company_abbr"
+          :options="erpnextCompanyList"
+          :props="{
+            label: 'company_name',
+            value: 'company_abbr',
+            checkStrictly: true,
+          }"
+          clearable
+          :disabled="props.hasEdit || confirmPassword"
+          @change="handleCompanyChange"
+        />
+      </el-form-item>
+      <el-form-item v-if="formData.erpnext_company_abbr" :label="$t('Pos Profile')" prop="erpnext_pos_profile_name">
+        <el-select v-model="formData.erpnext_pos_profile_name" :placeholder="$t('请选择Pos Profile')" clearable filterable :disabled="props.hasEdit || confirmPassword">
+          <el-option v-for="item in filteredErpnextPosProfileList" :key="item.name" :value="item.name" :label="item.name" />
         </el-select>
+      </el-form-item>
+      <el-form-item v-if="confirmPassword && !props.hasEdit" :label="$t('密码验证')" prop="password">
+        <el-input v-model="formData.password" :placeholder="$t('请输入密码')" clearable :disabled="props.hasEdit" />
+        <div class="text-center text-sm text-red-500 mt-2">
+          {{ $t('请确定授权信息，该操作不可逆，请仔细确认！') }}
+        </div>
       </el-form-item>
     </el-form>
     <template #footer>
@@ -42,6 +63,7 @@
     getErpnextSiteCode,
     getErpnextSiteCompany,
     erpnextAdd,
+    erpnextPosProfileItem,
   } from '@/api/authorization';
   import { ElMessage, FormInstance } from 'element-plus';
   const emit = defineEmits(['update:show', 'refresh']);
@@ -64,6 +86,11 @@
   const companyList = ref<authorizationListTypeItem[]>([]);
   const erpnextSiteList = ref<erpnextSiteCodeItem[]>([]);
   const erpnextCompanyList = ref<erpnextSiteCompanyItem[]>([]);
+  const erpnextPosProfileList = ref<erpnextPosProfileItem[]>([]);
+  // 筛选后的erpnextPosProfileList
+  const filteredErpnextPosProfileList = ref<erpnextPosProfileItem[]>([]);
+  // 确认密码输入
+  const confirmPassword = ref(false);
   const isLoading = ref(false);
   const getCompanyList = async () => {
     try {
@@ -85,38 +112,85 @@
       erpnextSiteList.value = res.data.list;
       if (res.data.list.length > 0 && !props.hasEdit) {
         formData.value.erpnext_site_code = res.data.list[0].code;
+        formData.value.erpnext_default_company_abbr = res.data.list[0].default_company;
         getErpnextCompanyList(res.data.list[0].code);
       } else if (props.hasEdit) {
+        // 保存编辑模式下的原始值
+        const originalCompanyAbbr = props.editRow.erpnext_company_abbr || '';
+        const originalPosProfile = props.editRow.erpnext_pos_profile_name || '';
+
         formData.value.erpnext_site_code = props.editRow.erpnext_site_code;
-        getErpnextCompanyList(props.editRow.erpnext_site_code);
+        formData.value.erpnext_default_company_abbr = props.editRow.erpnext_default_company_abbr || '';
+
+        await getErpnextCompanyList(props.editRow.erpnext_site_code);
+
+        // 恢复原始值
+        formData.value.erpnext_company_abbr = originalCompanyAbbr;
+        formData.value.erpnext_pos_profile_name = originalPosProfile;
+
+        // 触发公司选择变化，更新pos profile列表
+        if (originalCompanyAbbr) {
+          handleCompanyChange(originalCompanyAbbr);
+        }
       }
     } catch (error) {
       console.log(error);
     }
   };
 
+  const handleSiteChange = (site_code: string) => {
+    // 清空erpnext_company_abbr和erpnext_pos_profile_name
+    formData.value.erpnext_company_abbr = '';
+    formData.value.erpnext_pos_profile_name = '';
+    getErpnextCompanyList(site_code);
+  };
   const getErpnextCompanyList = async (site_code: string) => {
+    // 循环erpnextSiteList获取erpnext_default_company_abbr
+    for (const item of erpnextSiteList.value) {
+      if (item.code === site_code) {
+        formData.value.erpnext_default_company_abbr = item.default_company;
+        break;
+      }
+    }
     try {
       const res = await getErpnextSiteCompany({
         site_code: site_code,
         company_abbr: '',
       });
-      erpnextCompanyList.value = res.data.list;
+      erpnextCompanyList.value = res.data.company_list;
+      erpnextPosProfileList.value = res.data.pos_profile_list;
     } catch (error) {
       console.log(error);
     }
   };
 
+  const handleCompanyChange = (value: any) => {
+    // 确保转换为字符串
+    if (Array.isArray(value)) {
+      // 如果是数组，取最后一个值（通常是选中的叶子节点）
+      formData.value.erpnext_company_abbr = value[value.length - 1] || '';
+    } else {
+      // 如果已经是字符串，直接使用
+      formData.value.erpnext_company_abbr = value || '';
+    }
+    let selectedCompany = erpnextCompanyList.value.find((item) => item.company_abbr === formData.value.erpnext_company_abbr);
+    filteredErpnextPosProfileList.value = erpnextPosProfileList.value.filter((item) => item.company === selectedCompany?.company_name);
+  };
+
   const formData = ref({
-    uuid: '',
+    uuid: 0,
     erpnext_site_code: '',
+    erpnext_default_company_abbr: '',
     erpnext_company_abbr: '',
+    erpnext_pos_profile_name: '',
+    password: '',
   });
 
   const formRules = ref({
     uuid: [{ required: true, message: $t('请选择商家') }],
     erpnext_site_code: [{ required: true, message: $t('请选择所属erpnext的site') }],
     erpnext_company_abbr: [{ required: true, message: $t('请选择所属erpnext公司') }],
+    erpnext_pos_profile_name: [{ required: true, message: $t('请选择Pos Profile') }],
   });
 
   const handleClose = () => {
@@ -129,6 +203,10 @@
   };
 
   const handleSubmit = async () => {
+    if (!confirmPassword.value) {
+      confirmPassword.value = true;
+      return;
+    }
     try {
       isLoading.value = true;
       const res = await erpnextAdd(formData.value);
@@ -144,17 +222,21 @@
 
   watch(
     () => props.show,
-    (newVal: boolean) => {
+    async (newVal: boolean) => {
       if (newVal) {
         if (props.hasEdit) {
           formData.value = {
-            uuid: props.editRow.uuid.toString(),
+            uuid: props.editRow.uuid,
             erpnext_site_code: props.editRow.erpnext_site_code,
-            erpnext_company_abbr: props.editRow.erpnext_company_abbr,
+            erpnext_default_company_abbr: props.editRow.erpnext_default_company_abbr || '',
+            erpnext_company_abbr: props.editRow.erpnext_company_abbr || '',
+            erpnext_pos_profile_name: props.editRow.erpnext_pos_profile_name,
+            password: '',
           };
         }
-        getCompanyList();
-        getErpnextSiteCodeList();
+
+        await getCompanyList();
+        await getErpnextSiteCodeList();
       }
     },
     { immediate: true, deep: true },

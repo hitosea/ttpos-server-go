@@ -22,8 +22,13 @@ type Company struct {
 	Status        int    `gorm:"column:status;type:tinyint(1);default:0;comment:状态 1-启用 0-禁用;not null;NOT NULL" json:"status"`
 	AuthStartTime int64  `gorm:"column:auth_start_time;type:int(10);default:0;comment:授权开始时间（时间戳）;NOT NULL" json:"auth_start_time"`
 	OldCompanyId  int    `gorm:"column:old_company_id;type:int(11);default:0;comment:原商家ID;NOT NULL" json:"old_company_id"`
+	IsEnableErp   int    `gorm:"column:is_enable_erp;type:int(10);default:0;comment:是否启用ERP: 0不启用, 1启用;NOT NULL" json:"is_enable_erp"`
 
 	CompanySetting *CompanySetting `gorm:"foreignKey:CompanyUuid;references:Uuid" json:"company_setting"`
+}
+
+func (company *Company) IsOpenErp() bool {
+	return company.IsEnableErp == 1
 }
 
 func (company *Company) GetLogo(baseURL string) string {

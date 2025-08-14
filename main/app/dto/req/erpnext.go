@@ -42,3 +42,7 @@ type GetPosProfileListReq struct {
 	CompanyAbbr    string `form:"company_abbr" json:"company_abbr" binding:"required"`         // 公司缩写编码
 	PosProfileName string `form:"pos_profile_name" json:"pos_profile_name" binding:"required"` // Pos Profile名称
 }
+
+type ErpnextSiteAddLianLianPaymentReq struct {
+	CompanyUuid uint64 `json:"company_uuid" binding:"required"` // 公司UUID
+}

@@ -2,7 +2,7 @@ package erpnext
 
 import (
 	"context"
-	"ttpos-bmp/app/ttpos-erp/internal/model/dto"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/v2/frame/g"
@@ -20,7 +20,7 @@ func init() {
 	service.RegisterReport(Report)
 }
 
-func (s *sReport) Run(ctx context.Context, params *dto.ReportParams) (rst *g.Var, err error) {
+func (s *sReport) Run(ctx context.Context, params *erp.ReportParams) (rst *g.Var, err error) {
 	rst = GetClient(ctx).GetVar(ctx, reportApiUrl, params)
 	err = detectError(rst)
 	return

@@ -349,3 +349,82 @@ type ProductShopStatusReq struct {
 	Uuid   uint64 `json:"uuid" binding:"required"`             // 商品UUID
 	Status *int   `json:"status" binding:"required,oneof=0 1"` // 商品状态 0-下架 1-上架
 }
+
+// ProductShopAddReq 商品添加请求
+type ProductShopAddReq struct {
+	Type            int                               `json:"type"`              // 商品类型 0-商品 1-套餐
+	LocaleName      dto.LocaleResponse                `json:"locale_name"`       // 商品名称
+	CategoryUuid    uint64                            `json:"category_uuid"`     // 商品分类UUID
+	UnitUuid        uint64                            `json:"unit_uuid"`         // 商品单位UUID
+	Flavors         []ProductShopAddFlavorReq         `json:"flavors"`           // 商品规格列表
+	Tax             ProductShopAddTaxReq              `json:"tax"`               // 商品税类
+	Status          int                               `json:"status"`            // 商品状态 0-下架 1-上架
+	ImageFileUuid   uint64                            `json:"image_file_uuid"`   // 商品图片文件UUID
+	NumType         int                               `json:"num_type"`          // 数量计算方法 0-整数 1-小数
+	DeductStockType int                               `json:"deduct_stock_type"` // 库存计算方式 0-付款减库存 1-下单减库存
+	Sauces          []ProductShopAddSauceReq          `json:"sauces"`            // 商品加料列表
+	Attributes      []ProductShopAddAttributeGroupReq `json:"attributes"`        // 商品属性列表
+	Show            ProductShopAddShowReq             `json:"show"`              // 商品显示设置
+	Discount        ProductShopAddDiscountReq         `json:"discount"`          // 商品折扣设置
+	Packages        []ProductShopAddPackageGroupReq   `json:"packages"`          // 商品套餐分组列表
+}
+
+// ProductShopAddFlavorReq 商品规格添加请求
+type ProductShopAddFlavorReq struct {
+	Uuid         uint64  `json:"uuid"`          // 商品规格UUID
+	Price        float64 `json:"price"`         // 商品规格价格
+	BarcodeValue string  `json:"barcode_value"` // 商品加料条码值, 可选
+}
+
+// ProductShopAddTaxReq 商品税类添加请求
+type ProductShopAddTaxReq struct {
+	DineUuid    uint64 `json:"dine_uuid" binding:"required"`    // 堂食税类UUID
+	TakeoutUuid uint64 `json:"takeout_uuid" binding:"required"` // 外带税类UUID
+}
+
+// ProductShopAddSauceReq 商品加料添加请求
+type ProductShopAddSauceReq struct {
+	Uuid  uint64  `json:"uuid" binding:"required"`  // 商品加料UUID
+	Price float64 `json:"price" binding:"required"` // 商品加料价格
+}
+
+// ProductShopAddAttributeGroupReq 商品属性组添加请求
+type ProductShopAddAttributeGroupReq struct {
+	Uuid       uint64                            `json:"uuid" binding:"required"`            // 商品属性组UUID
+	Attributes []ProductShopAddGroupAttributeReq `json:"attributes" binding:"required,dive"` // 商品属性列表
+}
+
+// ProductShopAddGroupAttributeReq 商品属性组-属性值添加请求
+type ProductShopAddGroupAttributeReq struct {
+	Uuid uint64 `json:"uuid" binding:"required"` // 商品属性组-属性值UUID
+}
+
+// ProductShopAddShowReq 商品显示设置添加请求
+type ProductShopAddShowReq struct {
+	IsShowCashier   bool `json:"is_show_cashier"`   // 是否显示在收银端 1-显示 2-不显示
+	IsShowTablet    bool `json:"is_show_tablet"`    // 是否显示在平板端 1-显示 2-不显示
+	IsShowKitchen   bool `json:"is_show_kitchen"`   // 是否显示在厨显端 1-显示 2-不显示
+	IsShowAssistant bool `json:"is_show_assistant"` // 是否显示在点餐助手 1-显示 2-不显示
+	IsShowH5        bool `json:"is_show_h5"`        // 是否显示在h5 1-显示 2-不显示
+	IsShowDelivery  bool `json:"is_show_delivery"`  // 是否显示在外送 1-显示 2-不显示
+}
+
+// ProductShopAddDiscountReq 商品折扣设置添加请求
+type ProductShopAddDiscountReq struct {
+	IsEnableMemberDiscount  bool `json:"is_enable_member_discount"`  // 是否开启会员折扣 1-开启 0-关闭
+	IsEnableOverallDiscount bool `json:"is_enable_overall_discount"` // 是否开启整单折扣 1-开启 0-关闭
+}
+
+// ProductShopAddPackageGroupReq 套餐分组添加请求
+type ProductShopAddPackageGroupReq struct {
+	LocaleName dto.LocaleResponse                     `json:"locale_name" binding:"required"`   // 套餐分组名称
+	Products   []ProductShopAddPackageGroupProductReq `json:"products" binding:"required,dive"` // 套餐分组商品列表
+}
+
+// ProductShopAddPackageGroupProductReq 套餐分组商品添加请求
+type ProductShopAddPackageGroupProductReq struct {
+	Uuid    uint64 `json:"uuid" binding:"required"`     // 商品UUID
+	BomUuid uint64 `json:"bom_uuid" binding:"required"` // 商品BOM UUID
+	Num     int    `json:"num" binding:"required"`      // 商品数量
+	Sort    int    `json:"sort" binding:"required"`     // 商品排序
+}

@@ -22,6 +22,9 @@ func Register(s *grpcx.GrpcServer) {
 }
 
 func (*Controller) GetPosProfileList(ctx context.Context, req *selling.PosProfileReq) (res *api.ResponseInfo, err error) {
+	if len(req.CompanyAbbr) == 0 {
+		return rpc.ApiError("公司简称不能为空"), nil
+	}
 	if dataList, err := service.Selling().GetPosProfileList(ctx, req); err == nil {
 		res = rpc.ApiSuccess("获取成功")
 		res.Data, _ = anypb.New(dataList)
@@ -32,11 +35,18 @@ func (*Controller) GetPosProfileList(ctx context.Context, req *selling.PosProfil
 }
 
 func (*Controller) CreatePaymentAccount(ctx context.Context, req *selling.CreatePaymentAccountReq) (res *api.ResponseInfo, err error) {
+	if len(req.CompanyAbbr) == 0 {
+		return rpc.ApiError("公司简称不能为空"), nil
+	}
+	if len(req.PaymentType) == 0 {
+		return rpc.ApiError("支付类型不能为空"), nil
+	}
 	//LianlianPay 时增加前缀
 	paymentType := req.PaymentType
 	if req.PaymentSource == "2" {
 		paymentType = consts.LianlianPayPrefix + paymentType
 	}
+
 	if err = service.Selling().CreateDefaultModePaymentAccount(ctx, &erp.CreateModePaymentAccountInp{
 		CompanyAbbr: req.CompanyAbbr,
 		PaymentType: paymentType,

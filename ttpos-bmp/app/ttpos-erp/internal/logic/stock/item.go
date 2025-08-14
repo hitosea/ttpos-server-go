@@ -7,7 +7,6 @@ import (
 	"ttpos-bmp/app/ttpos-erp/api/company"
 	"ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
-	"ttpos-bmp/app/ttpos-erp/internal/model/dto"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 	"ttpos-bmp/app/ttpos-erp/utility"
@@ -104,9 +103,9 @@ func (s *sItem) buildItemListFilters(ctx context.Context, req *item.GetItemListR
 
 // queryItemList 执行物品列表查询
 func (s *sItem) queryItemList(ctx context.Context, filters [][]string) ([]*item.ItemInfo, error) {
-	resp, err := service.Document().List(ctx, &dto.ErpReq{
+	resp, err := service.Document().List(ctx, &erp.ErpReq{
 		DocType: "Item",
-	}, &dto.RequestParams{
+	}, &erp.RequestParams{
 		Fields:  g.ArrayStr{"name", "item_code", "item_group", "custom_branch", "custom_company", "custom_specification", "stock_uom"},
 		Filters: filters,
 		Limit:   consts.Limit999,
@@ -172,9 +171,9 @@ func (s *sItem) checkItemExists(ctx context.Context, itemCode string) (bool, err
 
 	filters := [][]string{{"item_code", "=", itemCode}}
 
-	count, err := service.Doctype().Count(ctx, &dto.ErpReq{
+	count, err := service.Doctype().Count(ctx, &erp.ErpReq{
 		DocType: "Item",
-	}, &dto.RequestParams{
+	}, &erp.RequestParams{
 		Filters: filters,
 	})
 
@@ -191,7 +190,7 @@ func (s *sItem) updateExistingItem(ctx context.Context, req *item.ItemInfo) (*it
 	itemForUpdate := s.buildUpdateItemData(req)
 
 	// 执行更新操作
-	_, err := service.Document().Update(ctx, &dto.ErpReq{
+	_, err := service.Document().Update(ctx, &erp.ErpReq{
 		DocType: "Item",
 		Name:    req.ItemCode,
 	}, &itemForUpdate)
@@ -352,7 +351,7 @@ func (s *sItem) setDefaultWarehouse(ctx context.Context, req *item.ItemInfo, com
 		newItem["item_defaults"] = g.Array{
 			g.Map{
 				"company":           company.CompanyName,
-				"default_warehouse": warehouse.WarehouseName,
+				"default_warehouse": warehouse.Name,
 			},
 		}
 	}
@@ -481,7 +480,7 @@ func (s *sItem) GetItemStock(ctx context.Context, req *item.GetItemStockReq) (re
 	if err != nil {
 		return nil, gerror.Wrapf(err, "获取默认仓库失败")
 	}
-	filters.Set("warehouse", warehouse.WarehouseName)
+	filters.Set("warehouse", warehouse.Name)
 
 	// 按物品编码过滤
 	if len(req.ItemCode) > 0 {
@@ -489,7 +488,7 @@ func (s *sItem) GetItemStock(ctx context.Context, req *item.GetItemStockReq) (re
 	}
 
 	// 执行库存报表查询
-	resp, err := service.Report().Run(ctx, &dto.ReportParams{
+	resp, err := service.Report().Run(ctx, &erp.ReportParams{
 		ReportName:           "Stock Projected Qty",
 		Filters:              filters.String(),
 		IgnorePreparedReport: true,

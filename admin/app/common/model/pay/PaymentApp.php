@@ -3,9 +3,11 @@
 namespace app\common\model\pay;
 
 use help\HttpHelp;
+use think\facade\Log;
 use help\RSAEncryptorHelp;
 use app\common\model\BaseModel;
 use app\common\model\store\PayType;
+use app\common\model\app\App;
 
 /**
  * 支付应用模型
@@ -120,28 +122,70 @@ class PaymentApp extends BaseModel
         $param['ll_white_ip'] = $ip;
         $param['company_uuid'] = $param['shop_supplier_id'] ?? 0;
 
-        $existingRecord = $model->where('company_uuid', $param['shop_supplier_id'])->find();
-        // 确保 create_time 是时间戳
-        $create_time = $existingRecord['create_time'] ?? time();
-        if (!is_numeric($create_time)) {
-            $create_time = strtotime($create_time);
-        }
-        if ($existingRecord) {
-            if (!$existingRecord->save($param)) {
-                $this->error = '更新失败';
-                return false;
+        // 开启事务
+        $model->startTrans();
+        try {
+            $existingRecord = $model->where('company_uuid', $param['company_uuid'])->find();
+            // 确保 create_time 是时间戳
+            $create_time = $existingRecord['create_time'] ?? time();
+            if (!is_numeric($create_time)) {
+                $create_time = strtotime($create_time);
             }
-        } else {
-            if (!$model->save($param)) {
-                $this->error = '新增失败';
-                return false;
+            
+            if ($existingRecord) {
+                if (!$existingRecord->save($param)) {
+                    $model->rollback();
+                    $this->error = '更新失败';
+                    return false;
+                }
+            } else {
+                if (!$model->save($param)) {
+                    $model->rollback();
+                    $this->error = '新增失败';
+                    return false;
+                }
             }
+            
+            // 更新lianlianpay支付方式时间
+            $app_id = $param['app_id'] ?? 0;
+            if ($app_id) {
+                $result = (new PayType([], $app_id))->where('source', 2)->update(['create_time' => $create_time, 'update_time' => $create_time]);
+                if ($result === false) {
+                    $model->rollback();
+                    $this->error = '更新支付方式时间失败';
+                    return false;
+                }
+            }
+
+            // 调用erpnext支付方式添加接口
+            $company = (new App())->where('uuid', $param['company_uuid'])->find();
+            if ($company->is_enable_erp) {
+                $res = HttpHelp::postRequest('http://nginx/api/v1/admin/erpnext/lianlian/payment/add', json_encode($param), [
+                    'X-API-KEY: ' . env('JWT_SECRET'),
+                    'Accept-Language: ' . request()->header('language'),
+                ]);
+                if (!$res) {
+                    Log::error('调用erpnext支付方式添加接口失败', $res);
+                    $this->error = '调用erpnext支付方式添加接口失败';
+                    return false;
+                }
+                $res = json_decode($res, true);
+                if ($res['code'] != 0) {
+                    $this->error = $res['message'];
+                    return false;
+                }
+            }
+            
+
+            // 提交事务
+            $model->commit();
+        } catch (\Exception $e) {
+            // 回滚事务
+            $model->rollback();
+            $this->error = '操作失败：' . $e->getMessage();
+            return false;
         }
-        // 更新lianlianpay支付方式时间
-        $app_id = $param['app_id'] ?? 0;
-        if ($app_id) {
-            (new PayType([], $app_id))->where('source', 2)->update(['create_time' => $create_time, 'update_time' => $create_time]);
-        }
+
         return true;
     }
 }

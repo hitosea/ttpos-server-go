@@ -81,6 +81,7 @@ type IProductSrv interface {
 	GetProductShopList(ctx context.Context, req req.ProductShopListReq) (*product_resp.ProductShopListResp, error) // 获取商品列表（商家端）
 	SortProductShopList(ctx context.Context, req req.SortProductShopListReq) error                                 // 排序商品列表
 	ProductShopStatus(ctx context.Context, req req.ProductShopStatusReq) error                                     // 修改商品状态
+	ProductShopAdd(ctx context.Context, req req.ProductShopAddReq) error                                           // 添加商品
 }
 
 type productSrv struct {
@@ -3052,5 +3053,12 @@ func (s *productSrv) ProductShopStatus(ctx context.Context, req req.ProductShopS
 	if err != nil {
 		return errors.WithMessage(err, "修改商品状态失败")
 	}
+
+	return nil
+}
+
+// ProductShopAdd 添加商品
+func (s *productSrv) ProductShopAdd(ctx context.Context, req req.ProductShopAddReq) error {
+
 	return nil
 }

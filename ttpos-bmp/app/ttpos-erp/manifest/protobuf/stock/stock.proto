@@ -1,0 +1,55 @@
+syntax = "proto3";
+import "erp.proto" ;
+package stock;
+
+// Go 包路径配置，指定生成的 Go 代码存放位置
+option go_package = "ttpos-bmp/app/ttpos-erp/api/stock";
+
+
+message  MaterialRequest {
+  string material_request_name = 1;      // 物品申请单名称
+  int64 transaction_date = 2;      // 交易日期
+  int64 required_by = 3;      // 需求时间
+  string material_request_type = 4;      // 申请类型
+  string company = 5;      // 公司
+  repeated MaterialRequestItem items = 6;      // 物品列表，
+  string status = 7 ;  //状态 Draft/Pending/Cancelled/Received
+}
+
+
+message MaterialRequestItem {
+  string item_code = 1;      // 物品编码，
+  int64 schedule_date = 2;      // 到货时间，
+  float qty = 3;      // 物品数量，
+  string warehouse = 4;      // 仓库名称，可选
+  string uom = 5;      // 物品单位，
+}
+
+message SaveMaterialRequestReq {
+  int64 transaction_date = 1;      // 单据日期,必填
+  string company_abbr = 2;      // 公司缩写,必填
+  string branch = 3;      // 分支名称 必填
+  int64 required_by = 4;      // 需求时间,必填
+  repeated MaterialRequestItem items = 5;      // 物品列表，
+}
+
+message GetMaterialRequestListReq {
+  string company_abbr = 1;      // 公司缩写,必填
+  string branch = 2;      // 分支名称,可选
+}
+
+message GetMaterialRequestListResp {
+  repeated MaterialRequest material_request_list = 1; // 物品申请单列表
+}
+
+service StockService {
+  // 保存物品申请单
+  // 参数：物品申请单信息
+  // 返回：操作结果
+  rpc SaveMaterialRequest(SaveMaterialRequestReq) returns (erp.ResponseInfo);
+
+  // 获取物品申请单列表
+  // 参数：查询条件
+  // 返回：物品申请单列表和分页信息
+  rpc GetMaterialRequestList(GetMaterialRequestListReq) returns (erp.ResponseInfo);
+}

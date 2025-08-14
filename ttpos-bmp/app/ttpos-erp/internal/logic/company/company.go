@@ -3,7 +3,7 @@ package company
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/company"
-	"ttpos-bmp/app/ttpos-erp/internal/model/dto"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/v2/encoding/gjson"
@@ -33,9 +33,9 @@ func (s *sCompany) GetCompanyList(ctx context.Context, req *company.GetCompanyLi
 		filters = append(filters, g.ArrayStr{"parent_company", "like", "%" + req.ParentCompany + "%"})
 	}
 	// 1. 调用 erpnext document 服务获取公司信息
-	erpCompanyList, err := service.Document().List(ctx, &dto.ErpReq{
+	erpCompanyList, err := service.Document().List(ctx, &erp.ErpReq{
 		DocType: "Company",
-	}, &dto.RequestParams{
+	}, &erp.RequestParams{
 		Fields:  g.ArrayStr{"name", "abbr", "parent_company"},
 		Filters: filters,
 	})
@@ -114,9 +114,9 @@ func (s *sCompany) HasSubCompany(ctx context.Context, companyName string) (bool,
 	}
 
 	// 使用 service.Doctype().Count 查询子公司数量
-	count, err := service.Doctype().Count(ctx, &dto.ErpReq{
+	count, err := service.Doctype().Count(ctx, &erp.ErpReq{
 		DocType: "Company",
-	}, &dto.RequestParams{
+	}, &erp.RequestParams{
 		Filters: filters,
 	})
 

@@ -3,13 +3,15 @@ package stock
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/item"
+	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
-	"ttpos-bmp/app/ttpos-erp/internal/model/dto"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/gtime"
 )
 
 var (
@@ -74,9 +76,9 @@ func (s *sStock) buildUomListFilters(ctx context.Context, req *item.GetUomListRe
 
 // queryUomList 执行单位列表查询
 func (s *sStock) queryUomList(ctx context.Context, filters [][]string) ([]*item.UomInfo, error) {
-	resp, err := service.Document().List(ctx, &dto.ErpReq{
+	resp, err := service.Document().List(ctx, &erp.ErpReq{
 		DocType: "UOM",
-	}, &dto.RequestParams{
+	}, &erp.RequestParams{
 		Fields:  g.ArrayStr{"name", "must_be_whole_number", "custom_alias", "custom_company", "custom_branch"},
 		Filters: filters,
 		Limit:   consts.Limit999,
@@ -114,7 +116,7 @@ func (s *sStock) queryUomList(ctx context.Context, filters [][]string) ([]*item.
 // 如果单位已存在则更新，否则创建新单位
 func (s *sStock) SaveUom(ctx context.Context, req *item.UomInfo) error {
 	// 获取公司名称
-	companyName, err := s.getCompanyName(ctx, req.CompanyAbbr)
+	companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
 	if err != nil {
 		return err
 	}
@@ -134,21 +136,6 @@ func (s *sStock) SaveUom(ctx context.Context, req *item.UomInfo) error {
 	}
 }
 
-// getCompanyName 根据公司简称获取公司名称
-func (s *sStock) getCompanyName(ctx context.Context, companyAbbr string) (string, error) {
-	if len(companyAbbr) == 0 {
-		return "", nil
-	}
-
-	company, err := service.Company().GetCompanyWithAbbr(ctx, companyAbbr)
-	if err != nil {
-		g.Log().Error(ctx, "根据公司缩写查询公司失败", err)
-		return "", gerror.Wrapf(err, "根据公司缩写查询公司失败")
-	}
-
-	return company.CompanyName, nil
-}
-
 // checkUomExists 检查单位是否已存在
 func (s *sStock) checkUomExists(ctx context.Context, uomName string) (bool, error) {
 	if len(uomName) == 0 {
@@ -157,9 +144,9 @@ func (s *sStock) checkUomExists(ctx context.Context, uomName string) (bool, erro
 
 	filters := [][]string{{"uom_name", "=", uomName}}
 
-	count, err := service.Doctype().Count(ctx, &dto.ErpReq{
+	count, err := service.Doctype().Count(ctx, &erp.ErpReq{
 		DocType: "UOM",
-	}, &dto.RequestParams{
+	}, &erp.RequestParams{
 		Filters: filters,
 	})
 
@@ -172,7 +159,7 @@ func (s *sStock) checkUomExists(ctx context.Context, uomName string) (bool, erro
 
 // updateExistingUom 更新现有单位
 func (s *sStock) updateExistingUom(ctx context.Context, req *item.UomInfo, companyName string) error {
-	_, err := service.Document().Update(ctx, &dto.ErpReq{
+	_, err := service.Document().Update(ctx, &erp.ErpReq{
 		DocType: "UOM",
 		Name:    req.UomName,
 	}, &g.Map{
@@ -255,9 +242,9 @@ func (s *sStock) buildAttributeListFilters(ctx context.Context, req *item.GetAtt
 
 // queryAttributeList 执行属性列表查询
 func (s *sStock) queryAttributeList(ctx context.Context, filters [][]string) ([]*item.AttributeInfo, error) {
-	resp, err := service.Document().List(ctx, &dto.ErpReq{
+	resp, err := service.Document().List(ctx, &erp.ErpReq{
 		DocType: "Item Attribute",
-	}, &dto.RequestParams{
+	}, &erp.RequestParams{
 		Fields:  g.ArrayStr{"name", "attribute_name", "custom_alias", "custom_company", "custom_branch"},
 		Filters: filters,
 		Limit:   consts.Limit999,
@@ -303,7 +290,7 @@ func (s *sStock) GetAttributeValuesList(ctx context.Context, attributeName strin
 		return make([]*item.AttributeValueInfo, 0), nil
 	}
 
-	resp, err := service.Document().Get(ctx, &dto.ErpReq{
+	resp, err := service.Document().Get(ctx, &erp.ErpReq{
 		DocType: "Item Attribute",
 		Name:    attributeName,
 	}, nil)
@@ -337,7 +324,7 @@ func (s *sStock) GetAttributeValuesList(ctx context.Context, attributeName strin
 // 如果属性已存在则更新，否则创建新属性
 func (s *sStock) SaveAttribute(ctx context.Context, req *item.AttributeInfo) error {
 	// 获取公司名称
-	companyName, err := s.getCompanyName(ctx, req.CompanyAbbr)
+	companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
 	if err != nil {
 		return err
 	}
@@ -365,9 +352,9 @@ func (s *sStock) checkAttributeExists(ctx context.Context, attributeName string)
 
 	filters := [][]string{{"attribute_name", "=", attributeName}}
 
-	count, err := service.Doctype().Count(ctx, &dto.ErpReq{
+	count, err := service.Doctype().Count(ctx, &erp.ErpReq{
 		DocType: "Item Attribute",
-	}, &dto.RequestParams{
+	}, &erp.RequestParams{
 		Filters: filters,
 	})
 
@@ -380,7 +367,7 @@ func (s *sStock) checkAttributeExists(ctx context.Context, attributeName string)
 
 // updateExistingAttribute 更新现有属性
 func (s *sStock) updateExistingAttribute(ctx context.Context, req *item.AttributeInfo, companyName string) error {
-	_, err := service.Document().Update(ctx, &dto.ErpReq{
+	_, err := service.Document().Update(ctx, &erp.ErpReq{
 		DocType: "Item Attribute",
 		Name:    req.AttributeName,
 	}, &g.Map{
@@ -410,4 +397,95 @@ func (s *sStock) createNewAttribute(ctx context.Context, req *item.AttributeInfo
 	}
 
 	return nil
+}
+
+func (s *sStock) CreateMaterialRequest(ctx context.Context, req *stock.SaveMaterialRequestReq) (res *stock.MaterialRequest, err error) {
+	// 获取公司名称
+	companyName, err := service.Company().GetCompanyWithAbbr(ctx, req.CompanyAbbr)
+	if err != nil {
+		return nil, err
+	}
+	warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, companyName.CompanyName, req.Branch)
+	if err != nil {
+		return nil, err
+	}
+	data := g.MapStrAny{
+		"naming_series":         erp.DefaultMaterialRequestSeries,
+		"transaction_date":      gtime.New(req.TransactionDate).Format("Y-m-d"),
+		"company":               companyName.CompanyName,
+		"material_request_type": erp.StockEntryTypeMaterialTransfer,
+	}
+	itemList := make([]g.MapStrAny, 0)
+	for _, item := range req.Items {
+		//scheduleDate := req.RequiredBy.AsTime()
+		//if item.ScheduleDate == nil {
+		//	scheduleDate = req.TransactionDate.AsTime()
+		//}
+		itemList = append(itemList, g.MapStrAny{
+			"item_code":     item.ItemCode,
+			"qty":           item.Qty,
+			"uom":           item.Uom,
+			"schedule_date": gtime.New(req.RequiredBy).Format("Y-m-d"),
+			"warehouse":     warehouse.Name,
+		})
+	}
+	data["items"] = itemList
+	resp, err := service.Document().Create(ctx, "Material Request", &data)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建物料请求失败")
+	}
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, err
+	}
+	if j.Contains("data") {
+		res = &stock.MaterialRequest{
+			MaterialRequestName: j.Get("data.name").String(),
+		}
+	}
+	return
+}
+
+// GetMaterialRequestList 获取物料请求列表
+func (s *sStock) GetMaterialRequestList(ctx context.Context, req *stock.GetMaterialRequestListReq) (res *stock.GetMaterialRequestListResp, err error) {
+	// 获取公司名称
+	companyName, err := service.Company().GetCompanyWithAbbr(ctx, req.CompanyAbbr)
+	if err != nil {
+		return nil, err
+	}
+
+	filters := make([][]string, 0)
+	if len(req.Branch) > 0 {
+		filters = append(filters, []string{"branch", "=", req.Branch})
+	}
+	filters = append(filters, []string{"company", "=", companyName.CompanyName})
+	filters = append(filters, []string{"material_request_type", "=", erp.StockEntryTypeMaterialTransfer})
+
+	resp, err := service.Document().List(ctx, &erp.ErpReq{
+		DocType: "Material Request",
+	}, &erp.RequestParams{
+		Fields:  []string{"name", "transaction_date", "schedule_date", "material_request_type", "status", "company"},
+		Filters: filters,
+		Limit:   consts.Limit999,
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询物料请求列表失败")
+	}
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, err
+	}
+	res = &stock.GetMaterialRequestListResp{
+		MaterialRequestList: make([]*stock.MaterialRequest, 0),
+	}
+	for _, item := range j.GetJsons("data") {
+		res.MaterialRequestList = append(res.MaterialRequestList, &stock.MaterialRequest{
+			MaterialRequestName: item.Get("name").String(),
+			Status:              item.Get("status").String(),
+			TransactionDate:     gtime.New(item.Get("transaction_date").String()).Unix(),
+			RequiredBy:          gtime.New(item.Get("schedule_date").String()).Unix(),
+			Company:             item.Get("company").String(),
+		})
+	}
+	return
 }

@@ -38,7 +38,7 @@ type Context interface {
 	SetSource(source string)                 // 设置请求来源
 	GetScene() string                        // 获取业务场景。用于区分不同的业务场景。如外送场景
 	SetScene(scene string)                   // 设置业务场景。用于区分不同的业务场景。如外送场景
-	GetCompany() model.Company               // 获取商家信息
+	GetCompany() *model.Company              // 获取商家信息
 	GetCompanySetting() model.CompanySetting // 获取商家设置
 
 	// 员工相关
@@ -296,8 +296,8 @@ func (c *ContextImpl) GetContext() context.Context {
 	return c.Context
 }
 
-func (c *ContextImpl) GetCompany() model.Company {
-	return c.company
+func (c *ContextImpl) GetCompany() *model.Company {
+	return &c.company
 }
 
 func (c *ContextImpl) GetCompanySetting() model.CompanySetting {

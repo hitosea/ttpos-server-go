@@ -95,10 +95,35 @@ func (h *Handler) InitShop(c *gin.Context) {
 	helper.Success(c, initShopResp)
 }
 
+// 支付方式列表
+// @Summary 支付方式列表
+// @Description 支付方式列表
+// @Tags 商家管理端.支付管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.Response
+// @Router /admin/erpnext/lianlian/payment/add [post]
+func (h *Handler) AddLianLianPayment(c *gin.Context) {
+	var addLianPaymentReq req.ErpnextSiteAddLianLianPaymentReq
+	if err := c.ShouldBindJSON(&addLianPaymentReq); err != nil {
+		helper.HandleValidationError(c, err, addLianPaymentReq, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	ctx.SetCompanyUuid(addLianPaymentReq.CompanyUuid)
+	err := erp.NewIErpSrv(h.dbm).AddLianPayment(ctx, addLianPaymentReq)
+	if err != nil {
+		helper.ErrorWithMessage(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	wrapper := &Handler{
 		dbm: dbm,
 	}
 	router.GET("/erpnext/site/company", middleware.Internal(), wrapper.GetErpnextSiteCompany)
 	router.POST("/erpnext/shop/init", middleware.Internal(), wrapper.InitShop)
+	router.POST("/erpnext/lianlian/payment/add", middleware.Internal(), wrapper.AddLianLianPayment)
 }

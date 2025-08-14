@@ -157,11 +157,12 @@ func (x *GetWarehouseListResp) GetWarehouseList() []*WarehouseInfo {
 type WarehouseInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	WarehouseName string                 `protobuf:"bytes,1,opt,name=warehouse_name,json=warehouseName,proto3" json:"warehouse_name,omitempty" dc:"仓库名称"` // 仓库名称
-	Company       string                 `protobuf:"bytes,2,opt,name=company,proto3" json:"company,omitempty" dc:"公司名称"`                                  // 公司名称
-	CompanyAbbr   string                 `protobuf:"bytes,3,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称"`       // 公司简称
-	Branch        string                 `protobuf:"bytes,4,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称"`                                    // 分支名称
-	AliasName     string                 `protobuf:"bytes,5,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"仓库别名"`             // 仓库别名
-	WarehouseType string                 `protobuf:"bytes,6,opt,name=warehouse_type,json=warehouseType,proto3" json:"warehouse_type,omitempty" dc:"仓库类型"` // 仓库类型
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty" dc:"仓库名称 全称"`                                     // 仓库名称 全称
+	Company       string                 `protobuf:"bytes,3,opt,name=company,proto3" json:"company,omitempty" dc:"公司名称"`                                  // 公司名称
+	CompanyAbbr   string                 `protobuf:"bytes,4,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称"`       // 公司简称
+	Branch        string                 `protobuf:"bytes,5,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称"`                                    // 分支名称
+	AliasName     string                 `protobuf:"bytes,6,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"仓库别名"`             // 仓库别名
+	WarehouseType string                 `protobuf:"bytes,7,opt,name=warehouse_type,json=warehouseType,proto3" json:"warehouse_type,omitempty" dc:"仓库类型"` // 仓库类型
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -199,6 +200,13 @@ func (*WarehouseInfo) Descriptor() ([]byte, []int) {
 func (x *WarehouseInfo) GetWarehouseName() string {
 	if x != nil {
 		return x.WarehouseName
+	}
+	return ""
+}
+
+func (x *WarehouseInfo) GetName() string {
+	if x != nil {
+		return x.Name
 	}
 	return ""
 }
@@ -252,15 +260,16 @@ const file_warehouse_warehouse_proto_rawDesc = "" +
 	"alias_name\x18\x05 \x01(\tR\taliasName\x12%\n" +
 	"\x0ewarehouse_type\x18\x06 \x01(\tR\rwarehouseType\"W\n" +
 	"\x14GetWarehouseListResp\x12?\n" +
-	"\x0ewarehouse_list\x18\x01 \x03(\v2\x18.warehouse.WarehouseInfoR\rwarehouseList\"\xd1\x01\n" +
+	"\x0ewarehouse_list\x18\x01 \x03(\v2\x18.warehouse.WarehouseInfoR\rwarehouseList\"\xe5\x01\n" +
 	"\rWarehouseInfo\x12%\n" +
-	"\x0ewarehouse_name\x18\x01 \x01(\tR\rwarehouseName\x12\x18\n" +
-	"\acompany\x18\x02 \x01(\tR\acompany\x12!\n" +
-	"\fcompany_abbr\x18\x03 \x01(\tR\vcompanyAbbr\x12\x16\n" +
-	"\x06branch\x18\x04 \x01(\tR\x06branch\x12\x1d\n" +
+	"\x0ewarehouse_name\x18\x01 \x01(\tR\rwarehouseName\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
+	"\acompany\x18\x03 \x01(\tR\acompany\x12!\n" +
+	"\fcompany_abbr\x18\x04 \x01(\tR\vcompanyAbbr\x12\x16\n" +
+	"\x06branch\x18\x05 \x01(\tR\x06branch\x12\x1d\n" +
 	"\n" +
-	"alias_name\x18\x05 \x01(\tR\taliasName\x12%\n" +
-	"\x0ewarehouse_type\x18\x06 \x01(\tR\rwarehouseType2\x99\x01\n" +
+	"alias_name\x18\x06 \x01(\tR\taliasName\x12%\n" +
+	"\x0ewarehouse_type\x18\a \x01(\tR\rwarehouseType2\x99\x01\n" +
 	"\x10WarehouseService\x12>\n" +
 	"\x0fCreateWarehouse\x12\x18.warehouse.WarehouseInfo\x1a\x11.erp.ResponseInfo\x12E\n" +
 	"\x10GetWarehouseList\x12\x1e.warehouse.GetWarehouseListReq\x1a\x11.erp.ResponseInfoB'Z%ttpos-bmp/app/ttpos-erp/api/warehouseb\x06proto3"

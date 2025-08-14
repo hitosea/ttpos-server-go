@@ -1,4 +1,4 @@
-package dto
+package erp
 
 import "github.com/gogf/gf/v2/container/gmap"
 
@@ -68,19 +68,14 @@ type ApiError struct {
 	Indicator string `json:"indicator,omitempty"`
 }
 
-// UomConversionDetail结构体，表示计量单位换算明细
-type UomConversionDetail struct {
-	Name             string  `json:"name"`              // 名称
-	Owner            string  `json:"owner"`             // 拥有者
-	Creation         string  `json:"creation"`          // 创建时间
-	Modified         string  `json:"modified"`          // 修改时间
-	ModifiedBy       string  `json:"modified_by"`       // 修改人
-	Docstatus        int     `json:"docstatus"`         // 单据状态
-	Idx              int     `json:"idx"`               // 索引
-	Uom              string  `json:"uom"`               // 计量单位
-	ConversionFactor float64 `json:"conversion_factor"` // 换算系数
-	Parent           string  `json:"parent"`            // 父级
-	Parentfield      string  `json:"parentfield"`       // 父级字段
-	Parenttype       string  `json:"parenttype"`        // 父级类型
-	Doctype          string  `json:"doctype"`           // 单据类型
+type ErpReq struct {
+	DocType string `json:"docType"`
+	Name    string `json:"name"`
+	Method  string `json:"method"`
+}
+
+type ReportParams struct {
+	ReportName           string `json:"report_name"`                           // 报表名称
+	Filters              string `json:"filters"`                               //json 格式的筛选条件
+	IgnorePreparedReport bool   `default:"true" json:"ignore_prepared_report"` // 是否忽略已准备好的报表
 }

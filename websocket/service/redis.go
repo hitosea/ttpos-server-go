@@ -29,7 +29,7 @@ func RedisSubscribe() {
 	for {
 		msg, err := pubsub.ReceiveMessage(ctx)
 		if err != nil {
-			fmt.Println("Redis Error receiving message:", err)
+			fmt.Printf("[%s] Redis Error receiving message: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
 			time.Sleep(100 * time.Microsecond) // 重试间隔
 			continue
 		}
@@ -38,7 +38,7 @@ func RedisSubscribe() {
 		var message MessageData
 		err = json.Unmarshal([]byte(msg.Payload), &message)
 		if err != nil {
-			fmt.Println("Redis Error parsing message:", msg.Payload)
+			fmt.Printf("[%s] Redis Error parsing message: %s\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), msg.Payload)
 			continue
 		}
 

@@ -323,7 +323,7 @@
             <el-table-column prop="product_sort" width="120" :label="$t('商品排序')">
               <template #default="scope">
                 <el-form-item>
-                  <el-input-number v-model.number="scope.row.product_sort" :controls="false" :min="0" :max="1000000" :precision="0" :placeholder="$t('商品排序')"></el-input-number>
+                  <el-input-number v-model.number="scope.row.product_sort" :controls="false" :min="0" :max="999" :precision="0" :placeholder="$t('商品排序')"></el-input-number>
                 </el-form-item>
               </template>
             </el-table-column>
