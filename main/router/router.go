@@ -14,6 +14,7 @@ import (
 	"ttpos-server-go/app/api/v1/tablet"
 	_ "ttpos-server-go/app/event" // 注册事件
 	"ttpos-server-go/app/service/rpc"
+	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 
@@ -25,32 +26,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 	r.GET("api/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "healthy")
 	})
-	r.GET("api/testrpc", func(c *gin.Context) {
-
-		//var setting model.CompanySetting
-		//dbm.GetDB(7633004138496000).Model(&model.CompanySetting{}).Find(&setting)
-		//lat, lng := setting.GetCoordinates()
-		//c.String(http.StatusOK, fmt.Sprintf("lat: %s, lng: %s", lat, lng))
-		//测试外送服务
-		// rpc.TestEcho(c)
-		// rpc.TestEstimatePrice()
-
-		// res, err := rpc.TestCreateOrder()
-		// if err != nil {
-		// 	c.String(http.StatusInternalServerError, err.Error())
-		// 	return
-		// }
-		// json, _ := json.Marshal(res)
-		// c.String(http.StatusOK, string(json))
-
-		// // rpc.TestConfirmOrder()
-		//rpc.TestGetDriverInfo()
-
-		// if err := rpc.TestCancelOrder(); err != nil {
-		// 	c.String(http.StatusInternalServerError, err.Error())
-		// 	return
-		// }
-		// rpc.TestCancelOrderDelay()
+	r.GET("api/v1/testrpc", middleware.Internal(), func(c *gin.Context) {
 		rpc.TestCompanyList()
 		c.String(http.StatusOK, "Success")
 	})

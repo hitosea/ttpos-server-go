@@ -5,8 +5,10 @@ type ErpnextSiteCompanyResp struct {
 }
 
 type ErpnextSiteCompany struct {
-	CompanyName string `json:"company_name"`
-	CompanyAbbr string `json:"company_abbr"`
+	CompanyName   string               `json:"company_name"`
+	CompanyAbbr   string               `json:"company_abbr"`
+	ParentCompany string               `json:"parent_company"`
+	Children      []ErpnextSiteCompany `json:"children"` // 子公司列表，用于树形结构
 }
 
 type InitShopResp struct {
@@ -40,4 +42,15 @@ type AttributeInfo struct {
 type AttributeValueInfo struct {
 	AttributeValue string `json:"attribute_value"` // 属性值
 	Abbr           string `json:"abbr"`            // 属性值缩写
+}
+
+type GetPosProfileListResp struct {
+	ProfileList []PosProfileInfo `json:"profile_list"`
+}
+
+type PosProfileInfo struct {
+	Name      string `json:"name"`
+	Company   string `json:"company"`
+	Branch    string `json:"branch"`
+	Warehouse string `json:"warehouse"`
 }

@@ -12,7 +12,7 @@ func Internal() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 检查X-API-KEY
 		apiKey := c.GetHeader("X-API-KEY")
-		if apiKey != config.JWT.Secret {
+		if apiKey != config.JWT.Secret && config.Server.Mode != "debug" {
 			helper.Fail(c, constant.CodeAccessDenied, "Unauthorized")
 			c.Abort()
 			return

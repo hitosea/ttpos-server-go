@@ -246,6 +246,7 @@ CREATE TABLE `ttpos_company_setting` (
     `erpnext_site_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext站点编码',
     `erpnext_company_abbr` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext公司缩写',
     `erpnext_branch_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext分支名称',
+    `erpnext_pos_profile_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext Pos Profile名称',
     `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
     `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
     `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',

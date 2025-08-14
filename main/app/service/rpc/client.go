@@ -1,9 +1,10 @@
 package rpc
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
-	"ttpos-bmp/app/ttpos-erp/api/item"
+	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-bmp/app/ttpos-takeout/api/echo"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/dto/req"
@@ -151,29 +152,22 @@ func TestCancelOrder() error {
 }
 
 func TestCompanyList() error {
-	client, conn, err := erp.NewErpItemClient()
+	client, conn, err := erp.NewErpSellingClient()
 	if err != nil {
 		panic(err)
 	}
 	defer conn.Close()
-
-	result, err := client.GetUomList(erp.WithSiteCode(context.Background(), "1"), &item.GetUomListReq{})
+	result, err := client.GetPosProfileList(erp.WithSiteCode(context.Background(), "1"), &selling.PosProfileReq{})
 	if err != nil {
 		panic(err)
 	}
+	var posProfileListResp selling.PosProfileListResp
+	if err := result.Data.UnmarshalTo(&posProfileListResp); err != nil {
+		logger.Logger.Error("GetPosProfileList-UnmarshalTo", zap.Any("err", err))
+		return err
+	}
+	ccccc, _ := json.Marshal(posProfileListResp.ProfileList)
+	fmt.Println(string(ccccc))
 
-	fmt.Println(result)
-
-	// ctx := erp.WithSiteCode(context.Background(), "1")
-	// dbm := database.GetDBManager(config.Database)
-	// companyResp, err := erp.NewIErpSrv(dbm).GetCompanyList(ctx, req.ErpnextSiteCompanyReq{
-	// 	SiteCode: "1",
-	// })
-	// if err != nil {
-	// 	logger.Logger.Error("调用erp服务gRPC客户端失败: %v", zap.Error(err))
-	// 	return err
-	// }
-	// fmt.Println(companyResp)
-	// logger.Logger.Info("ERP服务gRPC客户端测试成功")
 	return nil
 }

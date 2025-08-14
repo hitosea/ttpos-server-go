@@ -9,8 +9,10 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/model"
 	cc "ttpos-server-go/pkg/context"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
 
@@ -97,14 +99,14 @@ func (s *erpSrv) GetAttributeList(ctx context.Context, getAttributeListReq req.G
 func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.SyncUomAndAttributeReq) error {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	translateClient := utils.NewTranslateClient()
-
 	uomList, err := s.GetUomList(context.Background(), req.GetUomListReq{
-		SiteCode: syncUomAndAttributeReq.SiteCode,
+		SiteCode:    syncUomAndAttributeReq.SiteCode,
+		CompanyAbbr: syncUomAndAttributeReq.CompanyAbbr,
 	})
 	if err != nil {
+		logger.Logger.Error("SyncUomAndAttribute-GetUomList", zap.Any("err", err))
 		return err
 	}
-
 	var translateItems []utils.TranslateItem
 	for _, uom := range uomList.List {
 		translateItems = append(translateItems, utils.TranslateItem{
@@ -113,9 +115,11 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 		})
 	}
 	attributeGroupList, err := s.GetAttributeList(context.Background(), req.GetAttributeListReq{
-		SiteCode: syncUomAndAttributeReq.SiteCode,
+		SiteCode:    syncUomAndAttributeReq.SiteCode,
+		CompanyAbbr: syncUomAndAttributeReq.CompanyAbbr,
 	})
 	if err != nil {
+		logger.Logger.Error("SyncUomAndAttribute-GetAttributeList", zap.Any("err", err))
 		return err
 	}
 	for _, attributeGroup := range attributeGroupList.List {
@@ -124,7 +128,6 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 			Content: attributeGroup.AttributeName,
 		})
 		for _, attributeValue := range attributeGroup.AttributeValueList {
-
 			translateItems = append(translateItems, utils.TranslateItem{
 				Lang:    "en",
 				Content: attributeValue.AttributeValue,
@@ -146,6 +149,7 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 		translateItems := translateItems[i:min(i+10, len(translateItems))]
 		res, err := translateClient.Translate(context.Background(), translateItems)
 		if err != nil {
+			logger.Logger.Error("SyncUomAndAttribute-Translate", zap.Any("translateItems", translateItems), zap.Any("err", err))
 			continue
 		}
 		for _, item := range res.Data {
@@ -169,6 +173,10 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 	unitSort++
 
 	for _, uom := range uomList.List {
+		if _, ok := multiLanguageMap[uom.UomName]; !ok {
+			logger.Logger.Error("SyncUomAndAttribute-multiLanguageMap-not-found", zap.Any("uomName", uom.UomName))
+			continue
+		}
 		localeName := multiLanguageMap[uom.UomName]
 		multiLanguageName := model.MultiLanguageName{
 			EnName: localeName.EN,
@@ -180,13 +188,22 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 			TrName: localeName.TR,
 			SvName: localeName.SV,
 		}
-		db.Model(&model.MultiLanguageName{}).Create(&multiLanguageName)
-		db.Model(&model.ProductUnit{}).Create(&model.ProductUnit{
+		err := db.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
+		if err != nil {
+			logger.Logger.Error("SyncUomAndAttribute-CreateMultiLanguageName-uom", zap.Any("multiLanguageName", multiLanguageName), zap.Any("err", err))
+			continue
+		}
+		productUnit := model.ProductUnit{
 			Name:                  localeName.ToJson(),
 			MultiLanguageNameUuid: multiLanguageName.Uuid,
 			Sort:                  unitSort,
 			ErpnextUom:            uom.UomName,
-		})
+		}
+		err = db.Model(&model.ProductUnit{}).Create(&productUnit).Error
+		if err != nil {
+			logger.Logger.Error("SyncUomAndAttribute-CreateProductUnit", zap.Any("productUnit", productUnit), zap.Any("err", err))
+			continue
+		}
 		unitSort++
 	}
 
@@ -201,6 +218,10 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 	attributeSort++
 
 	for _, erpnextAttributeGroup := range attributeGroupList.List {
+		if _, ok := multiLanguageMap[erpnextAttributeGroup.AttributeName]; !ok {
+			logger.Logger.Error("SyncUomAndAttribute-multiLanguageMap-not-found", zap.Any("attributeGroupName", erpnextAttributeGroup.AttributeName))
+			continue
+		}
 		localeName := multiLanguageMap[erpnextAttributeGroup.AttributeName]
 		multiLanguageName := model.MultiLanguageName{
 			EnName: localeName.EN,
@@ -212,7 +233,11 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 			TrName: localeName.TR,
 			SvName: localeName.SV,
 		}
-		db.Model(&model.MultiLanguageName{}).Create(&multiLanguageName)
+		err := db.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
+		if err != nil {
+			logger.Logger.Error("SyncUomAndAttribute-CreateMultiLanguageName-attributeGroup", zap.Any("multiLanguageName", multiLanguageName), zap.Any("err", err))
+			continue
+		}
 
 		attributeGroup := model.ProductAttributeGroup{
 			Name:                      localeName.ToJson(),
@@ -220,10 +245,18 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 			Sort:                      attributeGroupSort,
 			ErpnextAttributeGroupName: erpnextAttributeGroup.AttributeName,
 		}
-		db.Model(&model.ProductAttributeGroup{}).Create(&attributeGroup)
+		err = db.Model(&model.ProductAttributeGroup{}).Create(&attributeGroup).Error
+		if err != nil {
+			logger.Logger.Error("SyncUomAndAttribute-CreateProductAttributeGroup-attributeGroup", zap.Any("attributeGroup", attributeGroup), zap.Any("err", err))
+			continue
+		}
 		attributeGroupSort++
 
 		for _, erpnextAttributeValue := range erpnextAttributeGroup.AttributeValueList {
+			if _, ok := multiLanguageMap[erpnextAttributeValue.AttributeValue]; !ok {
+				logger.Logger.Error("SyncUomAndAttribute-multiLanguageMap-not-found", zap.Any("attributeValue", erpnextAttributeValue.AttributeValue))
+				continue
+			}
 			localeName := multiLanguageMap[erpnextAttributeValue.AttributeValue]
 			multiLanguageName := model.MultiLanguageName{
 				EnName: localeName.EN,
@@ -235,14 +268,23 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 				TrName: localeName.TR,
 				SvName: localeName.SV,
 			}
-			db.Model(&model.MultiLanguageName{}).Create(&multiLanguageName)
-			db.Model(&model.ProductAttribute{}).Create(&model.ProductAttribute{
+			err := db.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
+			if err != nil {
+				logger.Logger.Error("SyncUomAndAttribute-CreateMultiLanguageName-attribute", zap.Any("multiLanguageName", multiLanguageName), zap.Any("err", err))
+				continue
+			}
+			productAttribute := model.ProductAttribute{
 				Name:                  localeName.ToJson(),
 				MultiLanguageNameUuid: multiLanguageName.Uuid,
 				AttributeGroupUuid:    attributeGroup.Uuid,
 				Sort:                  attributeSort,
 				ErpnextAttributeValue: erpnextAttributeValue.AttributeValue,
-			})
+			}
+			err = db.Model(&model.ProductAttribute{}).Create(&productAttribute).Error
+			if err != nil {
+				logger.Logger.Error("SyncUomAndAttribute-CreateProductAttribute-attribute", zap.Any("productAttribute", productAttribute), zap.Any("err", err))
+				continue
+			}
 			attributeSort++
 		}
 	}

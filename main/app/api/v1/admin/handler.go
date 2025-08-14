@@ -10,6 +10,8 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 
+	cc "ttpos-server-go/pkg/context"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -20,12 +22,13 @@ type Handler struct {
 // 获取ERPNext站点公司名称
 // @Summary 获取ERPNext站点公司名称
 // @Description 获取ERPNext站点公司名称
-// @Tags admin
+// @Tags 商家管理端.商家授权
 // @Accept json
 // @Produce json
-// @Param erpnext_code query string true "ERPNext站点编码"
+// @Param site_code query string true "ERPNext站点编码"
 // @Param company_name query string false "公司名称"
 // @Param company_abbr query string false "公司缩写"
+// @Param parent_company query string false "父公司名称"
 // @Success 200 {object} dto.Response
 // @Router /admin/erpnext/site/company [get]
 func (h *Handler) GetErpnextSiteCompany(c *gin.Context) {
@@ -35,9 +38,10 @@ func (h *Handler) GetErpnextSiteCompany(c *gin.Context) {
 		return
 	}
 	erpnextSiteCompanyReq := req.ErpnextSiteCompanyReq{
-		SiteCode:    siteCompanyReq.SiteCode,
-		CompanyName: siteCompanyReq.CompanyName,
-		CompanyAbbr: siteCompanyReq.CompanyAbbr,
+		SiteCode:      siteCompanyReq.SiteCode,
+		CompanyName:   siteCompanyReq.CompanyName,
+		CompanyAbbr:   siteCompanyReq.CompanyAbbr,
+		ParentCompany: siteCompanyReq.ParentCompany,
 	}
 	// 调用erpnext服务，获取公司名称
 	companyResp, err := erp.NewIErpSrv(h.dbm).GetCompanyList(context.Background(), erpnextSiteCompanyReq)
@@ -45,38 +49,49 @@ func (h *Handler) GetErpnextSiteCompany(c *gin.Context) {
 		helper.ErrorWithMessage(c, constant.CodeFail, err)
 		return
 	}
-	helper.Success(c, companyResp)
+
+	posProfileResp, err := erp.NewIErpSrv(h.dbm).GetPosProfileList(context.Background(), req.GetPosProfileListReq{
+		SiteCode: siteCompanyReq.SiteCode,
+	})
+	if err != nil {
+		helper.ErrorWithMessage(c, constant.CodeFail, err)
+		return
+	}
+
+	helper.Success(c, gin.H{
+		"company_list":     companyResp.List,
+		"pos_profile_list": posProfileResp.ProfileList,
+	})
 }
 
 // 初始化店铺
 // @Summary 初始化店铺
 // @Description 初始化店铺
-// @Tags admin
+// @Tags 商家管理端.商家授权
 // @Accept json
 // @Produce json
 // @Param init_shop_req body req.InitShopReq true "初始化店铺请求"
 // @Success 200 {object} dto.Response
 // @Router /admin/erpnext/shop/init [post]
 func (h *Handler) InitShop(c *gin.Context) {
-	ctx := helper.GetContext(c)
 	var initShopReq req.InitShopReq
 	if err := c.ShouldBindJSON(&initShopReq); err != nil {
 		helper.HandleValidationError(c, err, initShopReq, nil)
 		return
 	}
+	ctx := helper.GetContext(c)
+	ctx.SetCompanyUuid(initShopReq.CompanyUuid)
 	initShopResp, err := erp.NewIErpSrv(h.dbm).InitShop(ctx, initShopReq)
-
 	if err != nil {
 		helper.ErrorWithMessage(c, constant.CodeFail, err)
 		return
 	}
-
-	go func() {
-		// NOTE 后续如果有其他的site，需要做区分
-		erp.NewIErpSrv(h.dbm).SyncUomAndAttribute(helper.GetContext(c.Copy()), req.SyncUomAndAttributeReq{
-			SiteCode: initShopReq.SiteCode,
+	go func(ctx cc.Context) {
+		erp.NewIErpSrv(h.dbm).SyncUomAndAttribute(ctx, req.SyncUomAndAttributeReq{
+			SiteCode:    initShopReq.SiteCode,
+			CompanyAbbr: initShopReq.DefaultCompanyAbbr,
 		})
-	}()
+	}(ctx)
 	helper.Success(c, initShopResp)
 }
 

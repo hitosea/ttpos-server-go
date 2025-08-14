@@ -55,34 +55,38 @@ class ERPNext extends Controller
      * @Apidoc\Url("/api/admin/erpnext/add")
      * @Apidoc\Param("uuid", type="biginteger", require=true, desc="商家ID")
      * @Apidoc\Param("erpnext_site_code", type="string", require=true, desc="ERPNext编码")
-     * @Apidoc\Param("erpnext_company_abbr", type="string", require=true, desc="ERPNext缩写")
+     * @Apidoc\Param("erpnext_company_abbr", type="string", require=true, desc="ERPNext公司缩写")
+     * @Apidoc\Param("erpnext_default_company_abbr", type="string", require=true, desc="ERPNext默认公司缩写，用于同步单位和属性")
+     * @Apidoc\Param("erpnext_pos_profile_name", type="string", require=true, desc="ERPNextPos Profile名称")
+     * @Apidoc\Param("password", type="string", require=true, desc="密码验证")
      */
     public function add()
     {
         $param = $this->postData();
-        if (empty($param['uuid']) || empty($param['erpnext_site_code']) || empty($param['erpnext_company_abbr'])) {
+        if (
+            empty($param['uuid']) ||
+            empty($param['erpnext_site_code']) ||
+            empty($param['erpnext_company_abbr']) ||
+            empty($param['erpnext_default_company_abbr']) ||
+            empty($param['erpnext_pos_profile_name']) ||
+            empty($param['password'])
+        ) {
             return $this->renderError('参数错误');
         }
+        // 验证用户名密码是否正确
+        $user = User::withTrashed()->whereRaw('BINARY username = :username', ['username' => $data['username'] ?? ''])->order('admin_user_id', 'desc')->order('delete_time')->find();
+        if (!$user || $user->password != salt_hash($data['password'] ?? '')) {
+            return $this->renderError('密码错误');
+        }
+
         $companySetting = Supplier::where("uuid", $param['uuid'])->with('app')->find();
         if (empty($companySetting)) {
             return $this->renderError('商家不存在');
         }
 
-        request()->appId = $param['uuid'];
-        // 根据company_uuid 获取 is_super  = 1 的 第一个 User
-        $admin = (new User([], $param['uuid']))->where("is_super", 1)->order("id", "asc")->find();
-
-        $params = [
-            'shop_name' => $companySetting->app->name,
-            'shop_uuid' => $param['uuid'],
-            'admin_uuid' => $admin->uuid,
-            'site_code' => $param['erpnext_site_code'],
-            'company_abbr' => $param['erpnext_company_abbr'],
-        ];
         if (!empty($companySetting->erpnext_site_code) && !empty($companySetting->erpnext_company_name) && !empty($companySetting->erpnext_company_abbr) && !empty($companySetting->erpnext_branch_name)) {
             return $this->renderError('商家已授权');
         }
-        request()->appId = 0;
         // 读取setting表的erpnext_site
         $erpnextSite = Setting::where("key", "erpnext_site")->find();
         if (empty($erpnextSite)) {
@@ -95,6 +99,13 @@ class ERPNext extends Controller
             return $this->renderError('ERPNext站点不存在');
         }
 
+        $params = [
+            'company_uuid' => $param['uuid'],
+            'site_code' => $param['erpnext_site_code'],
+            'company_abbr' => $param['erpnext_company_abbr'],
+            'default_company_abbr' => $param['erpnext_default_company_abbr'],
+            'pos_profile_name' => $param['erpnext_pos_profile_name'],
+        ];
         $res = HttpHelp::postRequest('http://nginx/api/v1/admin/erpnext/shop/init', json_encode($params), [
             'X-API-KEY: ' . env('JWT_SECRET'),
             'Accept-Language: ' . request()->header('language'),
@@ -105,14 +116,6 @@ class ERPNext extends Controller
         $res = json_decode($res, true);
         if ($res['code'] != 0) {
             return $this->renderError($res['message']);
-        }
-
-        if (!$companySetting->allowField(['erpnext_site_code', 'erpnext_company_abbr', 'erpnext_branch_name'])->save([
-            'erpnext_site_code' => $param["erpnext_site_code"],
-            'erpnext_company_abbr' => $param["erpnext_company_abbr"],
-            'erpnext_branch_name' => $res['data']['branch_name'],
-        ])) {
-            return $this->renderError('保存失败');
         }
 
         return $this->renderSuccess('操作成功');
@@ -140,10 +143,19 @@ class ERPNext extends Controller
      * @Apidoc\Method("GET")
      * @Apidoc\Url("/api/admin/erpnext/siteCompany")
      * @Apidoc\Param("site_code", type="string", require=true, desc="ERPNext编码")
-     * @Apidoc\Param("company_abbr", type="string", require=false, desc="公司缩写")
-     * @Apidoc\Returned("list", type="array", desc="公司列表", children={
+     * @Apidoc\Param("company_name", type="string", require=false, desc="根据公司名称筛选")
+     * @Apidoc\Param("company_abbr", type="string", require=false, desc="根据公司缩写编码筛选")
+     * @Apidoc\Param("parent_company", type="string", require=false, desc="根据父公司名称筛选")
+     * @Apidoc\Returned("company_list", type="array", desc="公司列表、树形结构", children={
      *      @Apidoc\Returned("company_name", type="string", desc="公司名称"),
      *      @Apidoc\Returned("company_abbr", type="string", desc="公司缩写"),
+     *      @Apidoc\Returned("has_child", type="boolean", desc="是否有子公司"),
+     * })
+     * @Apidoc\Returned("pos_profile_list", type="array", desc="Pos Profile列表", children={
+     *      @Apidoc\Returned("name", type="string", desc="Pos Profile名称"),
+     *      @Apidoc\Returned("company", type="string", desc="公司名称"),
+     *      @Apidoc\Returned("branch", type="string", desc="分支名称"),
+     *      @Apidoc\Returned("warehouse", type="string", desc="仓库名称"),
      * })
      */
     function siteCompany()

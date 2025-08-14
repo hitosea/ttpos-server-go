@@ -17,6 +17,7 @@ type IStaffRepo interface {
 	WhereCashierOnline() DBOption           // 收银机在线条件
 	WhereDeviceId(bindKey string) DBOption  // 设备ID条件
 	WhereRoleUuid(roleUuid uint64) DBOption // 角色ID条件
+	WhereIsSuper(isSuper int) DBOption      // 是否超级管理员条件
 
 	GetStaff(opts ...DBOption) (model.Staff, error) // 查询员工
 	GetStaffs(opts ...DBOption) []model.Staff       // 查询员工
@@ -151,5 +152,11 @@ func (r *StaffRepo) UpdateStaffRoles(staffUuid uint64, roleUuids []uint64) error
 func (r *StaffRepo) WhereRoleUuid(roleUuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("role_uuid = ?", roleUuid)
+	}
+}
+
+func (r *StaffRepo) WhereIsSuper(isSuper int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_super = ?", isSuper)
 	}
 }
