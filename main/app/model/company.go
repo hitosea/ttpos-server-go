@@ -27,6 +27,10 @@ type Company struct {
 	CompanySetting *CompanySetting `gorm:"foreignKey:CompanyUuid;references:Uuid" json:"company_setting"`
 }
 
+func (company *Company) IsOpenErp() bool {
+	return company.IsEnableErp == 1
+}
+
 func (company *Company) GetLogo(baseURL string) string {
 	logoBase64, err := utils.AddImageDomainAndConvertToBase64(company.Logo, baseURL, true)
 	if err != nil {

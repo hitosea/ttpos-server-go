@@ -208,6 +208,12 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 			return err
 		}
 
+		// 调用erp接口
+		if ctx.GetCompany().IsOpenErp() {
+			// erpSrv := rpc.NewErpSrv(s.dbm)
+			// erpSrv.CreatePurchaseOrder(ctx, req)
+		}
+
 		result.Uuid = purchaseOrder.Uuid
 		result.OrderNo = purchaseOrder.OrderNo
 
