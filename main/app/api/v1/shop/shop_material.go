@@ -217,6 +217,33 @@ func (h *MaterialHandler) UpdateMaterialStatusBatch(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// GetMaterialUnitList 获取物品的单位列表
+// @Summary 获取物品的单位列表
+// @Description 获取物品的单位列表
+// @Tags 商家端.物品管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param uuid query string true "物品UUID"
+// @Success 200 {object} material_resp.MaterialUnitListResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/material/unit/list [get]
+func (h *MaterialHandler) GetMaterialUnitList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	unitListReq := req.MaterialUnitListReq{}
+
+	if err := c.ShouldBindQuery(&unitListReq); err != nil {
+		helper.HandleValidationError(c, err, unitListReq, dto.PageReqMessage)
+		return
+	}
+	res, err := h.materialSrv.GetMaterialUnitList(ctx, unitListReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
 // AddProductBomCard 添加成本卡
 // @Summary 添加成本卡
 // @Description 添加成本卡
@@ -275,6 +302,7 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		privateApi.POST("/material/add", wrapper.AddMaterial)                        // 添加物品
 		privateApi.POST("/material/edit", wrapper.EditMaterial)                      // 编辑物品
 		privateApi.POST("/material/status/batch", wrapper.UpdateMaterialStatusBatch) // 批量修改物品状态
+		privateApi.GET("/material/unit/list", wrapper.GetMaterialUnitList)           // 获取物品的单位列表
 
 		privateApi.POST("/product_bom/card/add", wrapper.AddProductBomCard) // 添加成本卡
 	}

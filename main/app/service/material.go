@@ -25,6 +25,7 @@ type IMaterialSrv interface {
 	UpdateMaterialStatusBatch(ctx context.Context, req req.MaterialStatusReq) error
 	AddMaterialCategory(ctx context.Context, req req.MaterialCategoryAddReq) error
 	GetMaterialCategoryList(ctx context.Context, req req.MaterialCategoryListReq) (material_resp.MaterialCategoryListResp, error)
+	GetMaterialUnitList(ctx context.Context, req req.MaterialUnitListReq) (material_resp.MaterialUnitListResp, error)
 	AddProductBomCard(ctx context.Context, req req.ProductBomCardAddReq) error
 }
 
@@ -453,6 +454,28 @@ func (s *materialSrv) GetMaterialCategoryList(ctx context.Context, req req.Mater
 
 	return material_resp.MaterialCategoryListResp{
 		List: materialCategoryList,
+	}, nil
+}
+
+func (s *materialSrv) GetMaterialUnitList(ctx context.Context, req req.MaterialUnitListReq) (material_resp.MaterialUnitListResp, error) {
+	dbId := ctx.GetDbId()
+	materialRepo := repository.NewMaterialRepo(s.dbm.GetDB(dbId))
+	material, err := materialRepo.GetMaterialDetailByUuid(req.Uuid)
+	if err != nil {
+		return material_resp.MaterialUnitListResp{}, errors.WithMessage(err, "获取物品失败")
+	}
+
+	var materialUnitListResp []material_resp.MaterialUnit
+	for _, materialUnit := range material.NotBaseUnitList {
+		materialUnitListResp = append(materialUnitListResp, material_resp.MaterialUnit{
+			Uuid:           materialUnit.Uuid,
+			Name:           materialUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			ConversionRate: materialUnit.ConversionRate,
+		})
+	}
+
+	return material_resp.MaterialUnitListResp{
+		List: materialUnitListResp,
 	}, nil
 }
 

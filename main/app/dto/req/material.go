@@ -70,6 +70,11 @@ type MaterialStatusReq struct {
 	Status int      `json:"status"`                   // 状态，1-启用 0-停用
 }
 
+// MaterialUnitListReq 获取物品单位列表请求
+type MaterialUnitListReq struct {
+	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 物品UUID
+}
+
 // ProductBomCardAddReq 添加成本卡请求
 type ProductBomCardAddReq struct {
 	ProductBomCardName dto.LocaleResponse            `json:"product_bom_card_name" binding:"required"` // 成本卡名称
