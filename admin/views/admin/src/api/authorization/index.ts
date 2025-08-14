@@ -15,11 +15,14 @@ export interface authorizationListTypeItem {
   erpnext_site_code: string;
   erpnext_company_abbr: string;
   erpnext_branch_name: string;
+  erpnext_pos_profile_name: string;
+  erpnext_default_company_abbr?: string;
 }
 
 export interface erpnextSiteCodeItem {
   name: string;
   code: string;
+  default_company: string;
 }
 
 // 商家授权列表
@@ -42,15 +45,25 @@ export interface erpnextSiteCompanyItem {
   company_abbr: string;
 }
 
+export interface erpnextPosProfileItem {
+  branch: string;
+  company: string;
+  name: string;
+  warehouse: string;
+}
+
 // 获取ERPNext站点公司名称
 export function getErpnextSiteCompany(params: erpnextSiteCompanyParams) {
   return $get('/erpnext/siteCompany', { params });
 }
 
 export interface erpnextAddParams {
-  uuid: string;
+  uuid: number;
   erpnext_site_code: string;
+  erpnext_default_company_abbr?: string;
   erpnext_company_abbr: string;
+  erpnext_pos_profile_name: string;
+  password: string;
 }
 
 export function erpnextAdd(data: erpnextAddParams) {

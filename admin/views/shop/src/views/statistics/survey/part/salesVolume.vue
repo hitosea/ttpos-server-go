@@ -71,4 +71,41 @@
     gap: 16px;
     margin-bottom: 16px;
   }
+
+
+  .product-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .key-box {
+    flex-shrink: 0;
+    display: block;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    line-height: 20px;
+    border-radius: 50%;
+    font-weight: bold;
+    text-align: center;
+    color: var(--el-color-black);
+    background: var(--el-color-primary);
+    font-weight: 700;
+  }
+
+  .key-box2 {
+    flex-shrink: 0;
+    display: block;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    line-height: 20px;
+    border-radius: 50%;
+    font-weight: bold;
+    text-align: center;
+    color: var(--el-color-primary);
+    background: #fff6de;
+    font-weight: 700;
+  }
 </style>
