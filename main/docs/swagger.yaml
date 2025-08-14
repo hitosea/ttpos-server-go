@@ -4180,6 +4180,21 @@ definitions:
     required:
     - list
     type: object
+  req.ProductShopStatusReq:
+    properties:
+      status:
+        description: 商品状态 0-下架 1-上架
+        enum:
+        - 0
+        - 1
+        type: integer
+      uuid:
+        description: 商品UUID
+        type: integer
+    required:
+    - status
+    - uuid
+    type: object
   req.ProductUnitAddReq:
     properties:
       locale_name:
@@ -22270,7 +22285,7 @@ paths:
       - description: 商品分类UUID（可选）
         in: query
         name: category_uuid
-        type: integer
+        type: string
       - description: 搜索商品名称（可选）
         in: query
         name: keyword
@@ -22289,7 +22304,7 @@ paths:
       - description: '商品状态: 0-下架 1-上架（可选）'
         in: query
         name: status
-        type: integer
+        type: string
       - description: '商品标签: 0-多规格 1-属性 2-加料（可选）, 多个标签用逗号分隔: 0,1,2'
         in: query
         name: tag
@@ -22297,7 +22312,7 @@ paths:
       - description: '商品类型: 0-商品 1-套餐（可选）'
         in: query
         name: type
-        type: integer
+        type: string
       produces:
       - application/json
       responses:
@@ -22481,6 +22496,30 @@ paths:
       security:
       - JwtToken: []
       summary: 排序商品列表
+      tags:
+      - 商家端.商品
+  /shop/product/status:
+    post:
+      consumes:
+      - application/json
+      description: 修改商品状态
+      parameters:
+      - description: 商品状态请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductShopStatusReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 修改商品状态
       tags:
       - 商家端.商品
   /shop/product/unit:

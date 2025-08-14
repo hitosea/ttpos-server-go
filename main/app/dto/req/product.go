@@ -326,10 +326,10 @@ type ProductSingleListReq struct {
 type ProductShopListReq struct {
 	dto.PageReq          // 分页参数
 	Keyword      *string `form:"keyword"`       // 搜索商品名称（可选）
-	Type         *int    `form:"type"`          // 商品类型: 0-商品 1-套餐（可选）
+	Type         *string `form:"type"`          // 商品类型: 0-商品 1-套餐（可选）
 	Tag          *string `form:"tag"`           // 商品标签: 0-多规格 1-属性 2-加料（可选）, 多个标签用逗号分隔: 0,1,2
-	Status       *int    `form:"status"`        // 商品状态: 0-下架 1-上架（可选）
-	CategoryUuid *uint64 `form:"category_uuid"` // 商品分类UUID（可选）
+	Status       *string `form:"status"`        // 商品状态: 0-下架 1-上架（可选）
+	CategoryUuid *string `form:"category_uuid"` // 商品分类UUID（可选）
 }
 
 // SortProductShopListReq 商品排序请求
@@ -342,4 +342,10 @@ type SortProductShopListReq struct {
 type SortProductShopItemReq struct {
 	Uuid uint64 `json:"uuid" binding:"required"` // 商品UUID
 	Sort int    `json:"sort"`                    // 排序
+}
+
+// ProductShopStatusReq 商品状态请求
+type ProductShopStatusReq struct {
+	Uuid   uint64 `json:"uuid" binding:"required"`             // 商品UUID
+	Status *int   `json:"status" binding:"required,oneof=0 1"` // 商品状态 0-下架 1-上架
 }

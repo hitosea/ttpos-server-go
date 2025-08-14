@@ -19694,7 +19694,7 @@ const docTemplate = `{
                 "summary": "获取商品列表",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "商品分类UUID（可选）",
                         "name": "category_uuid",
                         "in": "query"
@@ -19721,7 +19721,7 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "商品状态: 0-下架 1-上架（可选）",
                         "name": "status",
                         "in": "query"
@@ -19733,7 +19733,7 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "商品类型: 0-商品 1-套餐（可选）",
                         "name": "type",
                         "in": "query"
@@ -20016,6 +20016,45 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/req.SortProductShopListReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/status": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "修改商品状态",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品"
+                ],
+                "summary": "修改商品状态",
+                "parameters": [
+                    {
+                        "description": "商品状态请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductShopStatusReq"
                         }
                     }
                 ],
@@ -29670,6 +29709,27 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/req.ProductShopCategorySortItem"
                     }
+                }
+            }
+        },
+        "req.ProductShopStatusReq": {
+            "type": "object",
+            "required": [
+                "status",
+                "uuid"
+            ],
+            "properties": {
+                "status": {
+                    "description": "商品状态 0-下架 1-上架",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                },
+                "uuid": {
+                    "description": "商品UUID",
+                    "type": "integer"
                 }
             }
         },

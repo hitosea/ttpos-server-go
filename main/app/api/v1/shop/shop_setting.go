@@ -11,11 +11,9 @@ import (
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
-	"ttpos-server-go/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
 // AuthHandler 认证鉴权控制器
@@ -372,7 +370,7 @@ func (h *SettingHandler) UploadLogo(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	logger.Logger.Info("uploadFileResp", zap.Any("uploadFileResp", uploadFileResp))
+
 	helper.Success(c, uploadFileResp)
 }
 

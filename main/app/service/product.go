@@ -22,6 +22,7 @@ import (
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/duke-git/lancet/v2/convertor"
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
@@ -79,6 +80,7 @@ type IProductSrv interface {
 
 	GetProductShopList(ctx context.Context, req req.ProductShopListReq) (*product_resp.ProductShopListResp, error) // 获取商品列表（商家端）
 	SortProductShopList(ctx context.Context, req req.SortProductShopListReq) error                                 // 排序商品列表
+	ProductShopStatus(ctx context.Context, req req.ProductShopStatusReq) error                                     // 修改商品状态
 }
 
 type productSrv struct {
@@ -2849,20 +2851,22 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 	}
 
 	// 搜索商品名称
-	if req.Keyword != nil {
+	if req.Keyword != nil && *req.Keyword != "" {
 		opts = append(opts, commonRepo.WhereLike("name", *req.Keyword))
 	}
 	// 商品类型
-	if req.Type != nil {
-		opts = append(opts, productRepo.WhereProductType(uint8(*req.Type)))
+	if req.Type != nil && *req.Type != "" {
+		typ, _ := convertor.ToInt(*req.Type)
+		opts = append(opts, productRepo.WhereProductType(uint8(typ)))
 	}
 	// 商品状态
-	if req.Status != nil {
-		opts = append(opts, commonRepo.WhereByStatus(uint(*req.Status)))
+	if req.Status != nil && *req.Status != "" {
+		status, _ := convertor.ToInt(*req.Status)
+		opts = append(opts, commonRepo.WhereByStatus(uint(status)))
 	}
 
 	// 商品标签
-	if req.Tag != nil {
+	if req.Tag != nil && *req.Tag != "" {
 		tagList := strings.Split(*req.Tag, ",")
 		for _, tag := range tagList {
 			switch tag {
@@ -2876,8 +2880,9 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 		}
 	}
 	// 商品分类
-	if req.CategoryUuid != nil {
-		opts = append(opts, productRepo.WhereCategoryUuid(*req.CategoryUuid))
+	if req.CategoryUuid != nil && *req.CategoryUuid != "" {
+		categoryUuid, _ := convertor.ToInt(*req.CategoryUuid)
+		opts = append(opts, productRepo.WhereCategoryUuid(uint64(categoryUuid)))
 	}
 
 	// 获取商品列表
@@ -3012,4 +3017,34 @@ func (s *productSrv) SortProductShopList(ctx context.Context, req req.SortProduc
 	})
 
 	return err
+}
+
+// ProductShopStatus 修改商品状态
+func (s *productSrv) ProductShopStatus(ctx context.Context, req req.ProductShopStatusReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	commonRepo := repository.NewCommonRepo()
+	productRepo := repository.NewProductRepo(db)
+
+	productPackage, err := productRepo.GetProduct(
+		commonRepo.WhereBySoftDelete(),
+		productRepo.WhereUuid(req.Uuid),
+	)
+	if err != nil {
+		return errors.WithMessage(err, "获取商品失败")
+	}
+	if productPackage.ID == 0 {
+		return errors.New("商品不存在")
+	}
+
+	if req.Status == nil {
+		return errors.New("商品状态不能为空")
+	}
+
+	err = db.Model(&model.ProductPackage{}).Select("status").Where("uuid = ?", req.Uuid).Updates(map[string]any{
+		"status": req.Status,
+	}).Error
+	if err != nil {
+		return errors.WithMessage(err, "修改商品状态失败")
+	}
+	return nil
 }
