@@ -26,7 +26,7 @@ type Material struct {
 	PurchaseUnit      MaterialUnit      `gorm:"foreignKey:purchase_unit_uuid;references:uuid"`       // 采购单位
 	CostUnit          MaterialUnit      `gorm:"foreignKey:cost_unit_uuid;references:uuid"`           // 成本单位
 	Category          MaterialCategory  `gorm:"foreignKey:category_uuid;references:uuid"`            // 分类
-	ImageFile         *File             `gorm:"foreignKey:image_file_uuid;references:uuid"`          // 图片
+	ImageFile         *File             `gorm:"foreignKey:image_uuid;references:uuid"`               // 图片
 }
 
 func (model *Material) SetNil() {

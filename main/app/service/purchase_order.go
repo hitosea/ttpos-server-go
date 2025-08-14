@@ -1,9 +1,9 @@
 package service
 
 import (
-	"fmt"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
@@ -21,13 +21,13 @@ import (
 // IPurchaseOrderSrv 采购申请服务接口
 type IPurchaseOrderSrv interface {
 	// 采购申请管理
-	GetPurchaseOrderList(ctx context.Context, req req.PurchaseOrderListReq) (resp.PurchaseOrderListResp, error)
-	GetPurchaseOrderDetail(ctx context.Context, req req.PurchaseOrderDetailReq) (resp.PurchaseOrderDetailResp, error)
-	CreatePurchaseOrder(ctx context.Context, req req.PurchaseOrderCreateReq) (resp.PurchaseOrderCreateResp, error)
-	UpdatePurchaseOrder(ctx context.Context, req req.PurchaseOrderUpdateReq) (resp.PurchaseOrderUpdateResp, error)
-	DeletePurchaseOrder(ctx context.Context, req req.PurchaseOrderDeleteReq) (resp.PurchaseOrderDeleteResp, error)
-	ApprovePurchaseOrder(ctx context.Context, req req.PurchaseOrderApproveReq) (resp.PurchaseOrderApproveResp, error)
-	UpdatePurchaseOrderStatus(ctx context.Context, req req.PurchaseOrderStatusUpdateReq) error
+	GetPurchaseOrderList(ctx context.Context, req req.PurchaseOrderListReq) (resp.PurchaseOrderListResp, error)       // 获取采购申请列表
+	GetPurchaseOrderDetail(ctx context.Context, req req.PurchaseOrderDetailReq) (resp.PurchaseOrderDetailResp, error) // 获取采购申请详情
+	CreatePurchaseOrder(ctx context.Context, req req.PurchaseOrderCreateReq) (resp.PurchaseOrderCreateResp, error)    // 创建采购申请
+	UpdatePurchaseOrder(ctx context.Context, req req.PurchaseOrderUpdateReq) (resp.PurchaseOrderUpdateResp, error)    // 更新采购申请
+	DeletePurchaseOrder(ctx context.Context, req req.PurchaseOrderDeleteReq) (resp.PurchaseOrderDeleteResp, error)    // 删除采购申请
+	SubmitPurchaseOrder(ctx context.Context, req req.PurchaseOrderSubmitReq) error                                    // 提交采购申请
+	ApprovePurchaseOrder(ctx context.Context, req req.PurchaseOrderApproveReq) (resp.PurchaseOrderApproveResp, error) // 审核采购申请
 
 	// 收货管理
 	CreatePurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptCreateReq) (resp.PurchaseReceiptOrderCreateResp, error)
@@ -57,24 +57,15 @@ func NewPurchaseOrderSrvImpl(dbm *database.DBManager) IPurchaseOrderSrv {
 
 // GetPurchaseOrderList 获取采购申请列表
 func (s *purchaseOrderSrv) GetPurchaseOrderList(ctx context.Context, req req.PurchaseOrderListReq) (resp.PurchaseOrderListResp, error) {
-	// 设置默认分页参数
-	if req.PageNo <= 0 {
-		req.PageNo = 1
-	}
-	if req.PageSize <= 0 {
-		req.PageSize = 20
-	}
-
 	db := s.dbm.GetDB(ctx.GetDbId())
 	purchaseOrderRepo := repository.NewPurchaseOrderRepo(db)
-	purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(db)
 
 	// 构建查询选项
 	var opts []repository.DBOption
 	if req.OrderNo != "" {
 		opts = append(opts, purchaseOrderRepo.WhereOrderNo(req.OrderNo))
 	}
-	if req.Status != nil {
+	if req.Status != nil && *req.Status != -1 {
 		opts = append(opts, purchaseOrderRepo.WhereStatus(*req.Status))
 	}
 
@@ -88,28 +79,20 @@ func (s *purchaseOrderSrv) GetPurchaseOrderList(ctx context.Context, req req.Pur
 	}
 
 	// 转换响应数据
-	var listResp []resp.PurchaseOrderInfo
+	listResp := make([]*resp.PurchaseOrderInfo, 0)
 	for _, po := range purchaseOrders {
 		poInfo := resp.PurchaseOrderInfo{}
 		err := copier.Copy(&poInfo, &po)
 		if err != nil {
 			continue
 		}
-
-		// 设置扩展字段
-		poInfo.StatusText = po.GetStatusText()
-		poInfo.IsEditable = po.IsEditable()
-		poInfo.CanApprove = po.CanApprove()
-
 		// 计算明细统计信息
-		itemCount, _ := purchaseOrderItemRepo.Count(purchaseOrderItemRepo.WherePurchaseOrderUuid(po.Uuid))
-		poInfo.ItemCount = int(itemCount)
-		listResp = append(listResp, poInfo)
+		listResp = append(listResp, &poInfo)
 	}
 
 	return resp.PurchaseOrderListResp{
 		List: listResp,
-		Meta: resp.PageResponse{
+		Meta: dto.PageResponse{
 			PageNo:   req.PageNo,
 			PageSize: req.PageSize,
 			Total:    total,
@@ -123,11 +106,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(ctx context.Context, req req.P
 	purchaseOrderRepo := repository.NewPurchaseOrderRepo(db)
 
 	// 查询采购申请详情
-	purchaseOrder, err := purchaseOrderRepo.GetByUuid(req.Uuid,
-		purchaseOrderRepo.WithItems(),
-		purchaseOrderRepo.WithLogs(),
-		purchaseOrderRepo.WithReceipts(),
-	)
+	purchaseOrder, err := purchaseOrderRepo.GetByUuid(req.Uuid, purchaseOrderRepo.WithItems())
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return resp.PurchaseOrderDetailResp{}, errors.New("采购申请不存在")
@@ -142,33 +121,14 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(ctx context.Context, req req.P
 		return resp.PurchaseOrderDetailResp{}, errors.WithMessage(err, "数据转换失败")
 	}
 
-	// 设置扩展字段
-	detailResp.StatusText = purchaseOrder.GetStatusText()
-	detailResp.IsEditable = purchaseOrder.IsEditable()
-	detailResp.CanApprove = purchaseOrder.CanApprove()
+	// 初始化数组字段，确保返回空数组而不是null
+	detailResp.Items = make([]resp.PurchaseOrderItemInfo, 0)
 
 	// 转换明细数据
 	for _, item := range purchaseOrder.Items {
 		itemInfo := resp.PurchaseOrderItemInfo{}
 		copier.Copy(&itemInfo, &item)
-		itemInfo.CompletionRate = item.GetCompletionRate()
-		itemInfo.RemainingQuantity = item.GetRemainingQuantity()
-		itemInfo.IsCompleted = item.IsCompleted()
 		detailResp.Items = append(detailResp.Items, itemInfo)
-	}
-
-	// 转换日志数据
-	for _, log := range purchaseOrder.Logs {
-		logInfo := resp.PurchaseOrderLogInfo{}
-		copier.Copy(&logInfo, &log)
-		detailResp.Logs = append(detailResp.Logs, logInfo)
-	}
-
-	// 转换收货记录数据
-	for _, receipt := range purchaseOrder.Receipts {
-		receiptInfo := resp.PurchaseReceiptInfo{}
-		copier.Copy(&receiptInfo, &receipt)
-		detailResp.Receipts = append(detailResp.Receipts, receiptInfo)
 	}
 
 	return detailResp, nil
@@ -183,24 +143,16 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 	err := db.Transaction(func(tx *gorm.DB) error {
 		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
 		purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(tx)
-
-		// 生成订单编号
-		orderNo := s.generateOrderNo()
-
-		// 计算总数量
-		var totalQuantity float64
-		for _, item := range req.Items {
-			totalQuantity += item.Num
-		}
-
 		// 创建采购申请
 		purchaseOrder := &model.PurchaseOrder{
-			OrderNo:           orderNo,
+			OrderNo:           s.generateOrderNo(db),
 			OrderType:         req.OrderType,
-			Status:            constant.PurchaseOrderStatusPending, // 待提交状态
-			Num:               totalQuantity,
+			Status:            constant.PurchaseOrderStatusDraft, // 待提交状态
+			Num:               float64(len(req.Items)),
 			OrderTime:         time.Now().Unix(),
 			ExpectArrivalTime: req.ExpectedDeliveryTime,
+			ApplicantUuid:     ctx.GetStaffUuid(),
+			ApplicantName:     ctx.GetStaff().RealName,
 		}
 		err := purchaseOrderRepo.Create(purchaseOrder)
 		if err != nil {
@@ -290,63 +242,58 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(ctx context.Context, req req.Purc
 			return errors.New("当前状态不允许编辑")
 		}
 
-		// 计算总数量
-		var totalQuantity float64
-		for _, item := range req.Items {
-			if !item.IsDeleted {
-				totalQuantity += item.Num
-			}
-		}
-
 		// 更新采购申请基本信息
-		purchaseOrder.Num = totalQuantity
-
+		purchaseOrder.Num = float64(len(req.Items))
 		err = purchaseOrderRepo.Update(purchaseOrder)
 		if err != nil {
 			return errors.WithMessage(err, "更新采购申请失败")
 		}
 
-		// 处理明细更新
+		// 先删除所有现有明细项
+		err = purchaseOrderItemRepo.DeleteByPurchaseOrderUuid(req.Uuid)
+		if err != nil {
+			return errors.WithMessage(err, "删除采购申请明细失败")
+		}
+
+		materialUuids := make([]uint64, 0)
 		for _, itemReq := range req.Items {
-			if itemReq.IsDeleted && itemReq.Uuid > 0 {
-				// 删除明细
-				err = purchaseOrderItemRepo.Delete(itemReq.Uuid)
-				if err != nil {
-					return errors.WithMessage(err, "删除采购申请明细失败")
-				}
-			} else if itemReq.Uuid > 0 {
-				// 更新现有明细
-				existingItem, err := purchaseOrderItemRepo.GetByUuid(itemReq.Uuid)
-				if err != nil {
-					return errors.WithMessage(err, "查询采购申请明细失败")
-				}
+			materialUuids = append(materialUuids, itemReq.MaterialUuid)
+		}
+		materialRepo := base.NewMaterialRepo(db)
+		materials, err := materialRepo.GetMaterialByUuids(
+			materialUuids,
+			materialRepo.WithPreload("Unit"),
+			materialRepo.WithPreload("PurchaseUnit"),
+		)
+		if err != nil {
+			return errors.WithMessage(err, "查询物品失败")
+		}
+		if len(materials) != len(req.Items) {
+			return errors.New("查询物品失败-数量不一致")
+		}
 
-				existingItem.Num = itemReq.Num
-
-				err = purchaseOrderItemRepo.Update(existingItem)
-				if err != nil {
-					return errors.WithMessage(err, "更新采购申请明细失败")
-				}
-			} else {
-				// 新增明细
-				newItem := &model.PurchaseOrderItem{
-					PurchaseOrderUuid: req.Uuid,
-					// MaterialUuid:           itemReq.MaterialUuid,
-					// Num:                    itemReq.Num,
-					// MaterialCode:           itemReq.MaterialCode,
-					// MaterialName:           itemReq.MaterialName,
-					// UnitUuid:               itemReq.UnitUuid,
-					// UnitName:               itemReq.UnitName,
-					// BaseUnitUuid:           itemReq.BaseUnitUuid,
-					// BaseUnitName:           itemReq.BaseUnitName,
-					// BaseUnitConversionRate: itemReq.BaseUnitConversionRate,
-				}
-
-				err = purchaseOrderItemRepo.Create(newItem)
-				if err != nil {
-					return errors.WithMessage(err, "创建采购申请明细失败")
-				}
+		// 创建采购申请明细
+		var items []model.PurchaseOrderItem
+		for _, itemReq := range req.Items {
+			material := materials[itemReq.MaterialUuid]
+			item := model.PurchaseOrderItem{
+				PurchaseOrderUuid:  purchaseOrder.Uuid,
+				MaterialUuid:       itemReq.MaterialUuid,
+				Num:                itemReq.Num,
+				MaterialCode:       material.Code,
+				MaterialName:       material.Name,
+				UnitUuid:           material.PurchaseUnitUuid,
+				UnitName:           material.PurchaseUnit.Name,
+				UnitConversionRate: material.PurchaseUnit.ConversionRate,
+				BaseUnitUuid:       material.Unit.UnitUuid,
+				BaseUnitName:       material.Unit.Name,
 			}
+			items = append(items, item)
+		}
+
+		err = purchaseOrderItemRepo.CreateBatch(items)
+		if err != nil {
+			return errors.WithMessage(err, "创建采购申请明细失败")
 		}
 
 		// 记录操作日志
@@ -391,6 +338,42 @@ func (s *purchaseOrderSrv) DeletePurchaseOrder(ctx context.Context, req req.Purc
 	}
 
 	return resp.PurchaseOrderDeleteResp{Success: true}, nil
+}
+
+// SubmitPurchaseOrder 提交采购申请
+func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.PurchaseOrderSubmitReq) error {
+	return s.dbm.GetDB(ctx.GetDbId()).Transaction(func(tx *gorm.DB) error {
+		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
+
+		// 查询采购申请
+		purchaseOrder, err := purchaseOrderRepo.GetByUuid(req.Uuid)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return errors.New("采购申请不存在")
+			}
+			return errors.WithMessage(err, "查询采购申请失败")
+		}
+
+		oldStatus := purchaseOrder.Status
+		purchaseOrder.Status = constant.PurchaseOrderStatusPending
+		purchaseOrder.OrderTime = time.Now().Unix()
+		purchaseOrder.ApplicantUuid = ctx.GetStaffUuid()
+		purchaseOrder.ApplicantName = ctx.GetStaff().RealName
+
+		err = purchaseOrderRepo.Update(purchaseOrder)
+		if err != nil {
+			return errors.WithMessage(err, "更新采购申请状态失败")
+		}
+
+		// 记录操作日志
+		statusText := purchaseOrder.GetStatusText()
+		err = s.createPurchaseOrderLog(tx, req.Uuid, ctx, "status_update", "更新状态为"+statusText, oldStatus, purchaseOrder.Status, "")
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 
 // ApprovePurchaseOrder 审核采购申请
@@ -438,7 +421,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 		}
 
 		// 记录操作日志
-		err = s.createPurchaseOrderLog(tx, req.Uuid, ctx, req.Action, actionDesc, oldStatus, newStatus, req.Remark)
+		err = s.createPurchaseOrderLog(tx, req.Uuid, ctx, req.Action, actionDesc, oldStatus, newStatus, "")
 		if err != nil {
 			return err
 		}
@@ -451,50 +434,6 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 	}
 
 	return resp.PurchaseOrderApproveResp{Success: true}, nil
-}
-
-// UpdatePurchaseOrderStatus 更新采购申请状态
-func (s *purchaseOrderSrv) UpdatePurchaseOrderStatus(ctx context.Context, req req.PurchaseOrderStatusUpdateReq) error {
-	db := s.dbm.GetDB(ctx.GetDbId())
-
-	return db.Transaction(func(tx *gorm.DB) error {
-		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
-
-		// 查询采购申请
-		purchaseOrder, err := purchaseOrderRepo.GetByUuid(req.Uuid)
-		if err != nil {
-			if err == gorm.ErrRecordNotFound {
-				return errors.New("采购申请不存在")
-			}
-			return errors.WithMessage(err, "查询采购申请失败")
-		}
-
-		oldStatus := purchaseOrder.Status
-		purchaseOrder.Status = req.Status
-
-		// 根据状态设置相应字段
-		if req.Status == constant.PurchaseOrderStatusPartialReceived {
-			if purchaseOrder.FirstReceiveTime == 0 {
-				purchaseOrder.FirstReceiveTime = time.Now().Unix()
-			}
-		} else if req.Status == constant.PurchaseOrderStatusCompleted {
-			purchaseOrder.FinalReceiveTime = time.Now().Unix()
-		}
-
-		err = purchaseOrderRepo.Update(purchaseOrder)
-		if err != nil {
-			return errors.WithMessage(err, "更新采购申请状态失败")
-		}
-
-		// 记录操作日志
-		statusText := purchaseOrder.GetStatusText()
-		err = s.createPurchaseOrderLog(tx, req.Uuid, ctx, "status_update", "更新状态为"+statusText, oldStatus, req.Status, req.Remark)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
 }
 
 // CreateReceiptOrder 创建收货单
@@ -515,9 +454,6 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 			return errors.WithMessage(err, "查询采购申请失败")
 		}
 
-		// 生成收货单号
-		receiptNo := s.generateReceiptNo()
-
 		// 计算收货总数量
 		var totalQuantity float64
 		for _, item := range req.Items {
@@ -526,7 +462,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 
 		// 创建收货单
 		receiptOrder := &model.PurchaseReceiptOrder{
-			OrderNo:           receiptNo,
+			OrderNo:           s.generateReceiptNo(tx),
 			Status:            constant.ReceiptOrderStatusPending, // 待收货状态
 			PurchaseOrderUuid: req.PurchaseOrderUuid,
 			PurchaseOrderNo:   purchaseOrder.OrderNo,
@@ -643,7 +579,7 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderList(ctx context.Context, req 
 
 	return resp.PurchaseReceiptOrderListResp{
 		List: listResp,
-		Meta: resp.PageResponse{
+		Meta: dto.PageResponse{
 			PageNo:   req.PageNo,
 			PageSize: req.PageSize,
 			Total:    total,
@@ -731,16 +667,66 @@ func (s *purchaseOrderSrv) GetPurchaseOrderStatistics(ctx context.Context, req r
 	return statsResp, nil
 }
 
-// 辅助方法
-
-// generateOrderNo 生成采购订单编号
-func (s *purchaseOrderSrv) generateOrderNo() string {
-	return fmt.Sprintf("PO%s%04d", time.Now().Format("20060102"), utils.GenerateRandomNumber(4))
+// generateOrderNo 生成订单编号
+func (s *purchaseOrderSrv) generateOrderNo(db *gorm.DB) string {
+	var orderNo string
+	// 前八位是年月日
+	datePart := time.Now().Format("20060102")
+	// 第九位是订单来源
+	// 如果订单编号存在, 则重新生成, 重试10次, 否则退出
+	for i := 0; i < 10; i++ {
+		// 后九位是随机生成
+		n := utils.RandomNumber(9)
+		// 订单编号
+		orderNo = datePart + n
+		// 检查订单编号是否存在
+		noExist, err := repository.NewPurchaseOrderRepo(db).IsOrderNoExists(orderNo)
+		if err != nil {
+			return ""
+		}
+		// 如果订单编号存在，则重新生成
+		if !noExist {
+			orderNo = ""
+			continue
+		}
+		// 如果订单编号不存在，则退出，本次生成的订单编号可用
+		break
+	}
+	if orderNo == "" {
+		return ""
+	}
+	return orderNo
 }
 
 // generateReceiptNo 生成收货单号
-func (s *purchaseOrderSrv) generateReceiptNo() string {
-	return fmt.Sprintf("PR%s%04d", time.Now().Format("20060102"), utils.GenerateRandomNumber(4))
+func (s *purchaseOrderSrv) generateReceiptNo(db *gorm.DB) string {
+	var receiptNo string
+	// 前八位是年月日
+	datePart := time.Now().Format("20060102")
+	// 第九位是订单来源
+	// 如果订单编号存在, 则重新生成, 重试10次, 否则退出
+	for i := 0; i < 10; i++ {
+		// 后九位是随机生成
+		n := utils.RandomNumber(9)
+		// 订单编号
+		receiptNo = datePart + n
+		// 检查订单编号是否存在
+		noExist, err := repository.NewPurchaseReceiptOrderRepo(db).IsOrderNoExists(receiptNo)
+		if err != nil {
+			return ""
+		}
+		// 如果订单编号存在，则重新生成
+		if !noExist {
+			receiptNo = ""
+			continue
+		}
+		// 如果订单编号不存在，则退出，本次生成的订单编号可用
+		break
+	}
+	if receiptNo == "" {
+		return ""
+	}
+	return receiptNo
 }
 
 // createPurchaseOrderLog 创建采购订单操作日志

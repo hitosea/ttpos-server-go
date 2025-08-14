@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"time"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -43,6 +45,7 @@ type IPurchaseOrderRepo interface {
 	GetPriorityStats(opts ...DBOption) (map[int]int64, error)
 	GetSupplierStats(limit int, opts ...DBOption) ([]map[string]interface{}, error)
 	GetAmountStats(opts ...DBOption) (float64, error)
+	IsOrderNoExists(orderNo string) (bool, error)
 }
 
 // PurchaseOrderRepoImpl 采购订单Repository实现
@@ -62,19 +65,19 @@ func (r *PurchaseOrderRepoImpl) Create(purchaseOrder *model.PurchaseOrder) error
 
 // Update 更新采购订单
 func (r *PurchaseOrderRepoImpl) Update(purchaseOrder *model.PurchaseOrder) error {
-	return r.db.Save(purchaseOrder).Error
+	return r.db.Model(&model.PurchaseOrder{}).Where("uuid = ?", purchaseOrder.Uuid).Updates(purchaseOrder).Error
 }
 
 // Delete 删除采购订单
 func (r *PurchaseOrderRepoImpl) Delete(uuid uint64) error {
-	return r.db.Where("uuid = ?", uuid).Delete(&model.PurchaseOrder{}).Error
+	return r.db.Model(&model.PurchaseOrder{}).Where("uuid = ?", uuid).Update("delete_time", time.Now().Unix()).Error
 }
 
 // GetByUuid 根据UUID获取采购订单
 func (r *PurchaseOrderRepoImpl) GetByUuid(uuid uint64, opts ...DBOption) (*model.PurchaseOrder, error) {
 	var purchaseOrder model.PurchaseOrder
 	db := r.applyOptions(r.db, opts...)
-	err := db.Where("uuid = ?", uuid).First(&purchaseOrder).Error
+	err := db.Model(&model.PurchaseOrder{}).Where("uuid = ?", uuid).Where("delete_time = ?", constant.NotDeleted).First(&purchaseOrder).Error
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +88,7 @@ func (r *PurchaseOrderRepoImpl) GetByUuid(uuid uint64, opts ...DBOption) (*model
 func (r *PurchaseOrderRepoImpl) GetByOrderNo(orderNo string, opts ...DBOption) (*model.PurchaseOrder, error) {
 	var purchaseOrder model.PurchaseOrder
 	db := r.applyOptions(r.db, opts...)
-	err := db.Where("order_no = ?", orderNo).First(&purchaseOrder).Error
+	err := db.Model(&model.PurchaseOrder{}).Where("order_no = ?", orderNo).Where("delete_time = ?", constant.NotDeleted).First(&purchaseOrder).Error
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +99,7 @@ func (r *PurchaseOrderRepoImpl) GetByOrderNo(orderNo string, opts ...DBOption) (
 func (r *PurchaseOrderRepoImpl) GetList(opts ...DBOption) ([]model.PurchaseOrder, error) {
 	var purchaseOrders []model.PurchaseOrder
 	db := r.applyOptions(r.db, opts...)
-	err := db.Find(&purchaseOrders).Error
+	err := db.Model(&model.PurchaseOrder{}).Where("delete_time = ?", constant.NotDeleted).Find(&purchaseOrders).Error
 	return purchaseOrders, err
 }
 
@@ -104,18 +107,15 @@ func (r *PurchaseOrderRepoImpl) GetList(opts ...DBOption) ([]model.PurchaseOrder
 func (r *PurchaseOrderRepoImpl) GetListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.PurchaseOrder, int64, error) {
 	var purchaseOrders []model.PurchaseOrder
 	var total int64
-
 	db := r.applyOptions(r.db, opts...)
-
-	// 计算总数
-	err := db.Model(&model.PurchaseOrder{}).Count(&total).Error
-	if err != nil {
-		return nil, 0, err
-	}
-
 	// 分页查询
 	offset := (pageNo - 1) * pageSize
-	err = db.Offset(offset).Limit(pageSize).Find(&purchaseOrders).Error
+	err := db.Model(&model.PurchaseOrder{}).
+		Where("delete_time = ?", constant.NotDeleted).
+		Count(&total).
+		Offset(offset).
+		Limit(pageSize).
+		Find(&purchaseOrders).Error
 	return purchaseOrders, total, err
 }
 
@@ -123,7 +123,7 @@ func (r *PurchaseOrderRepoImpl) GetListWithPagination(pageNo, pageSize int, opts
 func (r *PurchaseOrderRepoImpl) Count(opts ...DBOption) (int64, error) {
 	var count int64
 	db := r.applyOptions(r.db, opts...)
-	err := db.Model(&model.PurchaseOrder{}).Count(&count).Error
+	err := db.Model(&model.PurchaseOrder{}).Where("delete_time = ?", constant.NotDeleted).Count(&count).Error
 	return count, err
 }
 
@@ -221,7 +221,7 @@ func (r *PurchaseOrderRepoImpl) WhereDeliveryTimeRange(start, end int) DBOption 
 func (r *PurchaseOrderRepoImpl) WithItems() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("Items", func(db *gorm.DB) *gorm.DB {
-			return db.Order("sort ASC, create_time ASC")
+			return db.Order("create_time ASC")
 		})
 	}
 }
@@ -365,6 +365,17 @@ func (r *PurchaseOrderRepoImpl) GetAmountStats(opts ...DBOption) (float64, error
 		Select("COALESCE(SUM(total_amount), 0)").
 		Scan(&totalAmount).Error
 	return totalAmount, err
+}
+
+// IsOrderNoExists 检查订单编号是否存在
+func (r *PurchaseOrderRepoImpl) IsOrderNoExists(orderNo string) (bool, error) {
+	var count int64
+	return count > 0, nil
+	err := r.db.Model(&model.PurchaseOrder{}).Where("order_no = ?", orderNo).Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 // applyOptions 应用查询选项
