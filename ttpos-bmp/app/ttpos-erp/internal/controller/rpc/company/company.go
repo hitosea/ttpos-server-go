@@ -8,24 +8,29 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
+// Controller 公司服务控制器
 type Controller struct {
 	company.UnimplementedCompanyServiceServer
 }
 
+// Register 注册公司服务到gRPC服务器
 func Register(s *grpcx.GrpcServer) {
 	company.RegisterCompanyServiceServer(s.Server, &Controller{})
 }
 
-func (*Controller) GetCompanyList(ctx context.Context, req *company.GetCompanyListReq) (res *api.ResponseInfo, err error) {
-	// 调用服务层, 这里不转换, 直接返回服务层的结果
-	if resp, err := service.Company().GetCompanyList(ctx, req); err != nil {
-		res = rpc.ApiError(err.Error())
-	} else {
-		res = rpc.ApiSuccess("获取成功")
-		res.Data, _ = anypb.New(resp)
+// GetCompanyList 获取公司列表
+// 参数：ctx 上下文，req 获取公司列表请求
+// 返回：响应信息和错误
+func (c *Controller) GetCompanyList(ctx context.Context, req *company.GetCompanyListReq) (*api.ResponseInfo, error) {
+
+	// 调用服务层获取数据
+	resp, err := service.Company().GetCompanyList(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
 	}
-	return
+
+	// 返回成功响应
+	return rpc.ApiSuccessWithData("获取公司列表成功", resp), nil
 }

@@ -9,35 +9,54 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
-	"github.com/gogf/gf/v2/errors/gcode"
-	"github.com/gogf/gf/v2/errors/gerror"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
+// Controller 仓库服务控制器
 type Controller struct {
 	warehouse.UnimplementedWarehouseServiceServer
 }
 
+// Register 注册仓库服务到gRPC服务器
 func Register(s *grpcx.GrpcServer) {
 	warehouse.RegisterWarehouseServiceServer(s.Server, &Controller{})
 }
-func (*Controller) CreateWarehouse(ctx context.Context, req *warehouse.WarehouseInfo) (*api.ResponseInfo, error) {
-	service.Warehouse().CreateWarehouse(ctx, &erp.CreateWarehouseInp{
+
+// CreateWarehouse 创建仓库
+// 参数：ctx 上下文，req 仓库信息
+// 返回：响应信息和错误
+func (c *Controller) CreateWarehouse(ctx context.Context, req *warehouse.WarehouseInfo) (*api.ResponseInfo, error) {
+	// 调用服务层创建仓库
+	warehouseName, err := service.Warehouse().CreateWarehouse(ctx, &erp.CreateWarehouseInp{
 		Company:     req.Company,
 		CompanyAbbr: req.CompanyAbbr,
 		Branch:      req.Branch,
 		AliasName:   req.AliasName,
 		WhType:      req.WarehouseType,
 	})
-	return nil, gerror.NewCode(gcode.CodeNotImplemented)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	// 返回成功响应
+	return rpc.ApiSuccessWithData("创建仓库成功", &warehouse.WarehouseInfo{
+		Company:       req.Company,
+		CompanyAbbr:   req.CompanyAbbr,
+		Branch:        req.Branch,
+		AliasName:     warehouseName,
+		WarehouseType: req.WarehouseType,
+	}), nil
 }
 
-func (*Controller) GetWarehouseList(ctx context.Context, req *warehouse.GetWarehouseListReq) (res *api.ResponseInfo, err error) {
-	if dataList, err := service.Warehouse().GetWarehouseList(ctx, req); err != nil {
-		res = rpc.ApiSuccess("获取属性列表成功")
-		res.Data, _ = anypb.New(dataList)
-	} else {
-		res = rpc.ApiError(err.Error())
+// GetWarehouseList 获取仓库列表
+// 参数：ctx 上下文，req 获取仓库列表请求
+// 返回：响应信息和错误
+func (c *Controller) GetWarehouseList(ctx context.Context, req *warehouse.GetWarehouseListReq) (*api.ResponseInfo, error) {
+	// 调用服务层获取数据
+	dataList, err := service.Warehouse().GetWarehouseList(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
 	}
-	return
+
+	// 返回成功响应
+	return rpc.ApiSuccessWithData("获取仓库列表成功", dataList), nil
 }
