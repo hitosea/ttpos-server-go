@@ -78,7 +78,6 @@ func (s *sWarehouse) createWarehouseDocument(ctx context.Context, warehouseName 
 	// 构建仓库创建参数
 	warehousePayload := g.Map{
 		"warehouse_name":   warehouseName, // 仓库名称
-		"warehouse_type":   req.WhType,    // 仓库类型
 		"custom_branch":    req.Branch,    // 分支机构
 		"custom_aliasname": req.AliasName, // 仓库别名
 		"company":          companyName,   // 公司名称
