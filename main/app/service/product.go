@@ -75,6 +75,8 @@ type IProductSrv interface {
 	ImportProductList(ctx context.Context, req req.ProductImportListReq) (product_resp.ProductImportResp, error) // 导入商品列表
 	ImportProduct(ctx context.Context, req req.ProductImportReq) error                                           // 导入商品
 
+	GetProductSingleList(ctx context.Context, req req.ProductSingleListReq) (*product_resp.ProductSingleListResp, error) // 获取单规格商品列表
+
 	GetProductShopList(ctx context.Context, req req.ProductShopListReq) (*product_resp.ProductShopListResp, error) // 获取商品列表（商家端）
 	SortProductShopList(ctx context.Context, req req.SortProductShopListReq) error                                 // 排序商品列表
 }
@@ -2757,6 +2759,71 @@ func (s *productSrv) ImportProduct(ctx context.Context, req req.ProductImportReq
 	// TODO: 处理插入商品
 
 	return nil
+}
+
+// GetProductSingleList 获取单规格商品列表
+func (s *productSrv) GetProductSingleList(ctx context.Context, req req.ProductSingleListReq) (*product_resp.ProductSingleListResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	commonRepo := repository.NewCommonRepo()
+	productRepo := repository.NewProductRepo(db)
+
+	opts := []repository.DBOption{
+		productRepo.WithMultiLanguageName(),
+		productRepo.WithProductCategory(),
+		productRepo.WithProductCategoryMultiLanguageName(),
+		productRepo.WithProductPackageImageFile(),
+		productRepo.WithProductBoms(
+			commonRepo.WhereBySoftDelete(),
+		),
+		productRepo.WithProductBomsProductFlavorMultiLanguageName(),
+	}
+
+	// 搜索商品名称
+	if req.Keyword != nil {
+		opts = append(opts, commonRepo.WhereLike("name", *req.Keyword))
+	}
+	// 商品分类
+	if req.CategoryUuid != nil {
+		opts = append(opts, productRepo.WhereCategoryUuid(*req.CategoryUuid))
+	}
+
+	// 获取商品列表
+	productPackages, total, err := productRepo.PaginateGetProductShopList(
+		req.PageNo, req.PageSize, opts...,
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取商品列表失败")
+	}
+
+	productList := make([]product_resp.ProductSingleListItemResp, 0, len(productPackages))
+	for _, productPackage := range productPackages {
+		for _, productBom := range productPackage.ProductBoms {
+			if productBom.IsFlavor() {
+				productItem := product_resp.ProductSingleListItemResp{
+					Uuid:       productBom.Uuid,
+					Name:       productPackage.MultiLanguageName.GetNames(),
+					FlavorName: productBom.ProductFlavor.MultiLanguageName.GetNames(),
+					HasBomCard: func() bool {
+						return productBom.ProductBomCardUuid > 0
+					}(),
+				}
+				productList = append(productList, productItem)
+			}
+
+		}
+
+	}
+
+	productResp := product_resp.ProductSingleListResp{
+		List: productList,
+		Meta: dto.PageResponse{
+			Total:    total,
+			PageNo:   req.PageNo,
+			PageSize: req.PageSize,
+		},
+	}
+
+	return &productResp, nil
 }
 
 // GetProductShopList 获取商品列表（商家端）

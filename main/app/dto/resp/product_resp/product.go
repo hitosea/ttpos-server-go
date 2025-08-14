@@ -371,6 +371,20 @@ type ProductImportTaxListItem struct {
 	Uuid uint64 `json:"uuid" binding:"required"` // 税类UUID
 }
 
+// ProductSingleListResp 单规格商品列表响应
+type ProductSingleListResp struct {
+	List []ProductSingleListItemResp `json:"list"`
+	Meta dto.PageResponse            `json:"meta"`
+}
+
+// ProductSingleListItemResp 单规格商品列表项响应
+type ProductSingleListItemResp struct {
+	Uuid       uint64             `json:"uuid"`         // 商品规格UUID
+	Name       dto.LocaleResponse `json:"locale_name"`  // 商品名称
+	FlavorName dto.LocaleResponse `json:"flavor_name"`  // 商品规格名称
+	HasBomCard bool               `json:"has_bom_card"` // 是否有成本卡
+}
+
 // ProductListResp 商品列表响应
 type ProductShopListResp struct {
 	List []ProductShopListItemResp `json:"list"`

@@ -315,6 +315,13 @@ type ProductImportItemReq struct {
 	TakeoutTaxId          uint64             `json:"takeout_tax_id"`                              // 外带税类ID
 }
 
+// ProductSingleListReq 单规格商品列表查询
+type ProductSingleListReq struct {
+	dto.PageReq          // 分页参数
+	Keyword      *string `form:"keyword"`       // 搜索关键词, 可选
+	CategoryUuid *uint64 `form:"category_uuid"` // 商品分类UUID, 可选
+}
+
 // ProductShopListReq 商品列表查询
 type ProductShopListReq struct {
 	dto.PageReq          // 分页参数

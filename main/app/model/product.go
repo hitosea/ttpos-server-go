@@ -338,6 +338,7 @@ type ProductBom struct {
 	ProductFlavorUuid  uint64 `gorm:"column:product_flavor_uuid;type:bigint(20) unsigned;default:0;comment:商品规格ID(仅商品使用);NOT NULL" json:"product_flavor_uuid"`
 	ProductSauceUuid   uint64 `gorm:"column:product_sauce_uuid;type:bigint(20) unsigned;default:0;comment:商品小料ID(仅小料使用);NOT NULL" json:"product_sauce_uuid"`
 	ProductPackageUuid uint64 `gorm:"column:product_package_uuid;type:bigint(20) unsigned;default:0;comment:商品包ID;NOT NULL" json:"product_package_uuid"`
+	ProductBomCardUuid uint64 `gorm:"column:product_bom_card_uuid;type:bigint(20) unsigned;default:0;comment:成本卡ID;NOT NULL" json:"product_bom_card_uuid"`
 
 	ProductPackage  ProductPackage     `gorm:"foreignKey:ProductPackageUuid;references:uuid" json:"-"`  // 商品
 	ProductFlavor   ProductFlavor      `gorm:"foreignKey:product_flavor_uuid;references:uuid" json:"-"` // 商品规格

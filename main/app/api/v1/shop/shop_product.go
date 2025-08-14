@@ -886,6 +886,32 @@ func (h *ProductHandler) ImportProduct(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// GetProductSingleList 获取单规格商品列表
+// @Summary 获取单规格商品列表
+// @Description 获取单规格商品列表
+// @Tags 商家端.商品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data query req.ProductSingleListReq true "单规格商品列表请求"
+// @Success 200 {object} product_resp.ProductSingleListResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/single/list [get]
+func (h *ProductHandler) GetProductSingleList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	singleListReq := req.ProductSingleListReq{}
+	if err := c.ShouldBindQuery(&singleListReq); err != nil {
+		helper.HandleValidationError(c, err, singleListReq, dto.PageReqMessage)
+		return
+	}
+	res, err := h.productSrv.GetProductSingleList(ctx, singleListReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
 // GetProductShopList 获取商品列表
 // @Summary 获取商品列表
 // @Description 获取商品列表
@@ -998,6 +1024,9 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 
 		privateApi.POST("/product/import/list", wrapper.ImportProductList) // 获取导入商品列表
 		privateApi.POST("/product/import", wrapper.ImportProduct)          // 导入商品
+
+		// 获取单规格商品列表
+		privateApi.GET("/product/single/list", wrapper.GetProductSingleList) // 获取单规格商品列表
 
 		privateApi.GET("/product/list", wrapper.GetProductShopList)   // 获取商品列表
 		privateApi.POST("/product/sort", wrapper.SortProductShopList) // 排序商品列表
