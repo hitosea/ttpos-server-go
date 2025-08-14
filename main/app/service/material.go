@@ -101,7 +101,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				}
 				return 2
 			}(),
-			//UnitName: material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			UnitName: material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 		}
 		materialList = append(materialList, respMaterial)
 	}

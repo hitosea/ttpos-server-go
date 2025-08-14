@@ -22,7 +22,7 @@ type Material struct {
 	Status                bool    `gorm:"default:false;column:status;comment:'状态,true上架 false下架'"`
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
-	Unit              *MaterialUnit     `gorm:"foreignKey:unit_uuid;references:uuid"`                // 基准单位
+	Unit              *MaterialUnit     `gorm:"foreignKey:uuid;references:unit_uuid"`                // 基准单位
 	PurchaseUnit      *MaterialUnit     `gorm:"foreignKey:purchase_unit_uuid;references:uuid"`       // 采购单位
 	CostUnit          *MaterialUnit     `gorm:"foreignKey:cost_unit_uuid;references:uuid"`           // 成本单位
 	Category          MaterialCategory  `gorm:"foreignKey:category_uuid;references:uuid"`            // 分类
