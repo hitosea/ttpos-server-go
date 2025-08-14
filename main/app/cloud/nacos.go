@@ -1,6 +1,7 @@
 package cloud
 
 import (
+	"fmt"
 	"ttpos-server-go/app/errors"
 
 	"go.uber.org/zap"
@@ -30,13 +31,17 @@ func Init() {
 		if config.Server.Mode == "debug" {
 			go func() {
 				if nacosClient, err = nacos.NewNacosClient(config.Nacos); err != nil {
+					fmt.Println("初始化nacos客户端服务失败:", zap.Error(err))
 					logger.Logger.Error("初始化nacos客户端服务失败:", zap.Error(err))
 				}
+				fmt.Println("初始化nacos客户端服务成功")
 			}()
 		} else {
 			if nacosClient, err = nacos.NewNacosClient(config.Nacos); err != nil {
+				fmt.Println("初始化nacos客户端服务失败:", zap.Error(err))
 				logger.Logger.Error("初始化nacos客户端服务失败:", zap.Error(err))
 			}
+			fmt.Println("初始化nacos客户端服务成功")
 		}
 	})
 }
