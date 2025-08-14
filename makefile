@@ -73,6 +73,8 @@ restart:
 up:
 	@make redis-clear-data-node-conf > /dev/null 2>&1
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d
+	@echo "🔍 启动HTTP调试代理..."
+	@make start-http-debug-proxy
 
 # docker-compose ps
 ps:
@@ -80,6 +82,7 @@ ps:
 
 # docker-compose down
 down:
+	@make stop-http-debug-proxy
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh down $(filter-out $@,$(MAKECMDGOALS))
 	
 # 翻译

@@ -18,6 +18,7 @@ define update_env_and_run
 	fi;
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh mysql open
+	@make start-http-debug-proxy
 endef
 
 # 默认目标 - 显示帮助信息
@@ -46,9 +47,11 @@ help:
 	@printf "\033[0m"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "debug" "切换到调试模式"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "run" "运行项目（调试模式）"
-	@printf "\033[1;33m  %-25s\033[0m - %s\n" "dev" "启动开发模式（热重启）"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "dev" "启动开发模式（热重启 + HTTP调试代理）"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "build-web" "构建前端项目"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "build-doc" "生成API文档"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "start-http-debug-proxy" "启动HTTP调试代理"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "stop-http-debug-proxy" "停止HTTP调试代理"
 	@echo ""
 	@printf "\033[1;32m"
 	@echo "🗄️  数据库命令"
@@ -174,6 +177,47 @@ check-db-host-open-mysql:
 	else \
 		echo "⚠️  .env文件不存在，跳过MySQL端口检查"; \
 	fi
+
+# HTTP调试代理管理
+start-http-debug-proxy:
+	@echo "🔍 启动HTTP调试代理容器..."
+	@echo "📦 检查HTTP调试代理镜像..."
+	@if ! docker images | grep -q "602666178/http-proxy-debug-view"; then \
+		echo "📥 镜像不存在，正在拉取..." && \
+		docker pull 602666178/http-proxy-debug-view:latest && \
+		echo "✅ 镜像拉取成功" || echo "⚠️ 镜像拉取失败"; \
+	else \
+		echo "✅ 镜像已存在，跳过拉取"; \
+	fi
+	@SERVER_PORT=$$(grep '^SERVER_PORT=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' ' || echo "8080"); \
+	PROXY_PORT=$$((SERVER_PORT + 1)); \
+	TARGET_URL="http://$(LOCAL_IP):$$SERVER_PORT"; \
+	echo "🎯 目标URL: $$TARGET_URL, 代理端口: $$PROXY_PORT"; \
+	docker run -d \
+		--name http-debug-proxy \
+		-p $$PROXY_PORT:8080 \
+		-p 8091:8091 \
+		-e TARGET_URL="$$TARGET_URL" \
+		-e PROXY_PORT=8080 \
+		-e WEB_PORT=8091 \
+		--restart unless-stopped \
+		602666178/http-proxy-debug-view:latest > /dev/null 2>&1 || \
+		(echo "⚠️  HTTP调试代理容器已存在，正在重启..." && \
+		docker rm -f http-debug-proxy > /dev/null 2>&1 && \
+		docker run -d \
+			--name http-debug-proxy \
+			-p $$PROXY_PORT:8080 \
+			-p 8091:8091 \
+			-e TARGET_URL="$$TARGET_URL" \
+			-e PROXY_PORT=8080 \
+			-e WEB_PORT=8091 \
+			--restart unless-stopped \
+			602666178/http-proxy-debug-view:latest > /dev/null 2>&1); \
+	echo "✅ HTTP调试代理已启动 - 代理端口: $$PROXY_PORT, 调试界面: http://localhost:8091"
+
+stop-http-debug-proxy:
+	@echo "🛑 停止HTTP调试代理容器..."
+	@docker rm -f http-debug-proxy > /dev/null 2>&1 || echo "✅ HTTP调试代理已停止"
 
 # 处理额外参数（不包含第一个目标）
 ifneq ($(words $(MAKECMDGOALS)),1)
