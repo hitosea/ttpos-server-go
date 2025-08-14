@@ -38,6 +38,7 @@ class ERPNext extends Controller
      *          @Apidoc\Returned("erpnext_site_code", type="string", desc="ERPNext站点编码"),
      *          @Apidoc\Returned("erpnext_company_abbr", type="string", desc="ERPNext公司缩写"),
      *          @Apidoc\Returned("erpnext_branch_name", type="string", desc="ERPNext分支名称"),
+     *          @Apidoc\Returned("erpnext_pos_profile_name", type="string", desc="ERPNextPos Profile名称"),
      *      })
      * })
      */
