@@ -124,18 +124,17 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string) ([]*item.
 
 	// 转换为物品信息列表
 	dataArray := j.GetJsons("data")
-	itemList := make([]*item.ItemInfo, 0, len(dataArray)) // 预分配容量
+	itemList := make([]*item.ItemInfo, 0, len(dataArray))
 
 	for _, data := range dataArray {
-		itemInfo := &item.ItemInfo{
+		itemList = append(itemList, &item.ItemInfo{
 			Branch:    data.Get("custom_branch").String(),
 			Company:   data.Get("custom_company").String(),
 			ItemName:  data.Get("name").String(),
 			ItemCode:  data.Get("item_code").String(),
 			ItemGroup: utility.ParseItemGroupFromString(data.Get("item_group").String()),
 			StockUom:  data.Get("stock_uom").String(),
-		}
-		itemList = append(itemList, itemInfo)
+		})
 	}
 
 	return itemList, nil
@@ -231,7 +230,7 @@ func (s *sItem) buildUpdateItemData(req *item.ItemInfo) g.Map {
 
 	// 转换单位更新
 	if len(req.Uoms) > 0 {
-		uoms := make([]g.Map, 0, len(req.Uoms)) // 预分配容量
+		uoms := make([]g.Map, 0, len(req.Uoms))
 		for _, uom := range req.Uoms {
 			uoms = append(uoms, g.Map{
 				"uom":               uom.Uom,
@@ -335,7 +334,7 @@ func (s *sItem) addRawMaterialFields(req *item.ItemInfo, newItem g.Map) {
 
 	// 转换单位设置
 	if len(req.Uoms) > 0 {
-		uoms := make([]g.Map, 0, len(req.Uoms)) // 预分配容量
+		uoms := make([]g.Map, 0, len(req.Uoms))
 		for _, uom := range req.Uoms {
 			uoms = append(uoms, g.Map{
 				"uom":               uom.Uom,
@@ -507,7 +506,7 @@ func (s *sItem) GetItemStock(ctx context.Context, req *item.GetItemStockReq) (re
 
 	// 转换为物品库存列表
 	dataArray := j.GetJsons("message.result")
-	stockList := make([]*item.ItemStock, 0, len(dataArray)) // 预分配容量
+	stockList := make([]*item.ItemStock, 0, len(dataArray))
 
 	for _, data := range dataArray {
 		if data.Contains("item_code") {
@@ -515,6 +514,9 @@ func (s *sItem) GetItemStock(ctx context.Context, req *item.GetItemStockReq) (re
 				ItemCode:  data.Get("item_code").String(),
 				ItemName:  data.Get("item_name").String(),
 				ItemGroup: utility.ParseItemGroupFromString(data.Get("item_group").String()),
+				Warehouse: data.Get("warehouse").String(),
+				StockUom:  data.Get("stock_uom").String(),
+				ActualQty: data.Get("actual_qty").Float32(),
 			})
 		}
 	}

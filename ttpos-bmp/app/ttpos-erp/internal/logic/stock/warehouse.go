@@ -119,7 +119,8 @@ func (s *sWarehouse) GetDefaultWarehouse(ctx context.Context, company string, br
 	warehouseList, err := s.GetWarehouseList(ctx, &warehouse.GetWarehouseListReq{
 		Company:       company,
 		Branch:        branch,
-		WarehouseType: "Default",
+		WarehouseType: "",
+		AliasName:     "Default",
 	})
 	if err != nil {
 		return nil, err
