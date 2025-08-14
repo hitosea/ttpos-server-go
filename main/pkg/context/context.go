@@ -28,44 +28,56 @@ const (
 )
 
 type Context interface {
-	GetLanguage() string                                   // 获取语言
-	SetLanguage(language string)                           // 设置语言
-	GetCompanyUuid() uint64                                // 获取商家ID
-	GetDbId() uint64                                       // 获取商家ID
-	GetGin() *gin.Context                                  // 获取gin上下文
-	GetContext() context.Context                           // 获取上下文
-	GetSource() string                                     // 获取请求来源
-	SetSource(source string)                               // 设置请求来源
-	GetScene() string                                      // 获取业务场景。用于区分不同的业务场景。如外送场景
-	SetScene(scene string)                                 // 设置业务场景。用于区分不同的业务场景。如外送场景
-	GetCompany() model.Company                             // 获取商家信息
-	GetCompanySetting() model.CompanySetting               // 获取商家设置
-	GetStaff() model.Staff                                 // 获取员工信息
-	GetStaffUuid() uint64                                  // 获取员工uuid
-	GetAssistantUuid() uint64                              // 获取员工uuid(助手端)
-	GetDeviceSn() string                                   // 获取设备SN
-	GetDeviceUuid() uint64                                 // 获取设备uuid
-	GetDeskUuid() uint64                                   // 获取桌台ID
-	GetH5OrderUuid() string                                // 获取H5订单ID
-	NoLock() bool                                          // 判断上文中是否已经加锁
-	AddLock()                                              // 在上下文中标记是否已经加锁 todo 改名为SetLock
-	Log() *zap.Logger                                      // 获取日志实例
+	GetLanguage() string                     // 获取语言
+	SetLanguage(language string)             // 设置语言
+	GetCompanyUuid() uint64                  // 获取商家ID
+	GetDbId() uint64                         // 获取商家ID
+	GetGin() *gin.Context                    // 获取gin上下文
+	GetContext() context.Context             // 获取上下文
+	GetSource() string                       // 获取请求来源
+	SetSource(source string)                 // 设置请求来源
+	GetScene() string                        // 获取业务场景。用于区分不同的业务场景。如外送场景
+	SetScene(scene string)                   // 设置业务场景。用于区分不同的业务场景。如外送场景
+	GetCompany() model.Company               // 获取商家信息
+	GetCompanySetting() model.CompanySetting // 获取商家设置
+
+	// 员工相关
+	GetStaff() model.Staff    // 获取员工信息
+	GetStaffUuid() uint64     // 获取员工uuid
+	GetAssistantUuid() uint64 // 获取员工uuid(助手端)
+
+	// 设备相关
+	GetDeviceSn() string    // 获取设备SN
+	GetDeviceUuid() uint64  // 获取设备uuid
+	GetDeskUuid() uint64    // 获取桌台ID
+	GetH5OrderUuid() string // 获取H5订单ID
+
+	// 会员相关
+	GetMember() model.Member       // 获取会员信息
+	SetMember(member model.Member) // 设置会员信息
+	GetMemberUuid() uint64         // 获取会员uuid
+
+	// 数据库相关
 	SetDB(tx *gorm.DB)                                     // 设置gorm.DB
 	SetCompanyUuid(uuid uint64)                            // 设置商家ID
 	SetCompanySetting(companySetting model.CompanySetting) // 设置商家设置
 	SetCompany(company model.Company)                      // 设置商家
 	GetDB() *gorm.DB                                       // 获取gorm.DB
-	GetRequestUuid() string                                // 获取请求ID
-	GetToken() string                                      // 获取请求ID
-	Copy() Context                                         // 复制一个ctx实例。避免在协程中修改上下文导致主进程的ctx被修改
-	GetCfIPCountry() string                                // 获取CF-IPCountry
-	GetMember() model.Member                               // 获取会员信息
-	SetMember(member model.Member)                         // 设置会员信息
-	GetMemberUuid() uint64                                 // 获取会员uuid
-	Version(op Operator, version string) bool              // 比较版本
-	GetRemoteIp() string                                   // 获取客户端IP
-	IsMobile() bool                                        // 判断是否是移动端
-	GetCache() cache.Cache                                 // 获取缓存
+
+	// 锁相关
+	NoLock() bool // 判断上文中是否已经加锁
+	AddLock()     // 在上下文中标记是否已经加锁 todo 改名为SetLock
+
+	// 其他
+	GetRequestUuid() string                   // 获取请求ID
+	GetToken() string                         // 获取请求Token
+	Copy() Context                            // 复制一个ctx实例。避免在协程中修改上下文导致主进程的ctx被修改
+	GetCfIPCountry() string                   // 获取CF-IPCountry
+	IsMobile() bool                           // 判断是否是移动端
+	GetRemoteIp() string                      // 获取客户端IP
+	GetCache() cache.Cache                    // 获取缓存
+	Version(op Operator, version string) bool // 比较版本
+	Log() *zap.Logger                         // 获取日志实例
 }
 
 type ContextImpl struct {

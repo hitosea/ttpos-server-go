@@ -21,8 +21,10 @@ type IOtherSrv interface {
 	GetGiftOrFreeReasonList(ctx context.Context) (*resp.GiftOrFreeOrderReasonResp, error)
 	AddFreeOrGiftReason(ctx context.Context, addFreeOrGiftReasonReq req.AddFreeOrGiftReasonReq) error
 	EditFreeOrGiftReason(ctx context.Context, editFreeReason req.EditFreeOrGiftReasonReq) error
+	DeleteFreeOrGiftReason(ctx context.Context, deleteFreeReason req.DeleteFreeOrGiftReasonReq) error
 	AddReturnFoodReason(ctx context.Context, addReturnFoodReason req.AddReturnFoodReasonReq) error
 	EditReturnFoodReason(ctx context.Context, editReturnFoodReason req.EditReturnFoodReasonReq) error
+	DeleteReturnFoodReason(ctx context.Context, deleteReturnFoodReason req.DeleteReturnFoodReasonReq) error
 }
 
 func NewOtherSrv(dbm *database.DBManager, cache cache.Cache, settingSrv setting.ISrv) IOtherSrv {
@@ -222,6 +224,24 @@ func (s *otherSrv) EditReturnFoodReason(ctx context.Context, editReturnFoodReaso
 	err = base.NewReturnFoodReasonRepo(db).UpdateReturnFoodReason(editReturnFoodReason.Uuid, *reason)
 	if err != nil {
 		return errors.WithMessage(err, "保存退菜原因失败")
+	}
+	return nil
+}
+
+func (s *otherSrv) DeleteFreeOrGiftReason(ctx context.Context, deleteFreeReason req.DeleteFreeOrGiftReasonReq) error {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	err := base.NewGiftOrFreeOrderReasonRepo(db).DeleteGiftOrFreeOrderReason(deleteFreeReason.Uuid)
+	if err != nil {
+		return errors.WithMessage(err, "删除免单原因失败")
+	}
+	return nil
+}
+
+func (s *otherSrv) DeleteReturnFoodReason(ctx context.Context, deleteReturnFoodReason req.DeleteReturnFoodReasonReq) error {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	err := base.NewReturnFoodReasonRepo(db).DeleteReturnFoodReason(deleteReturnFoodReason.Uuid)
+	if err != nil {
+		return errors.WithMessage(err, "删除退菜原因失败")
 	}
 	return nil
 }

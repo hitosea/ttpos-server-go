@@ -46,16 +46,6 @@ message UomDetail {
   float conversion_factor = 2; // 转换比率，相对于基准单位
 }
 
-message GetItemGroupListReq {
-  string branch = 1; // 分支名称，可选
-  string ItemGroup = 2; // 物品分组，可选
-}
-
-message GetItemGroupListResp {
-  string branch = 1; // 分支名称，可选
-  string ItemGroup = 2; // 物品分组，可选
-}
-
 message GetUomListReq {
   string branch = 1; // 分支名称，可选
   string company_abbr = 2; // 公司简称，可选
@@ -103,6 +93,29 @@ message GetAttributeListResp {
   repeated AttributeInfo attribute_list = 1; // 属性列表
 }
 
+message ItemStock {
+  string item_code = 1;      // 商品编码，
+  string item_name = 2;      // 商品名称，
+  ItemGroup item_group = 3;     // 商品分组，
+  string warehouse = 4;      // 仓库名称，
+  string stock_uom = 5;      // 库存单位，
+  float actual_qty = 6;      // 实际库存数量
+}
+
+
+message GetItemStockReq {
+  string company_abbr = 1;      // 公司简称，必填
+  string branch = 2;      // 分支名称，必填
+  string item_code = 3;      // 商品编码，可选
+  string item_name = 4;      // 商品名称，可选，模糊查询
+  ItemGroup item_group = 5;     // 商品分组，可选
+  string warehouse = 6;      // 仓库名称，可选
+}
+
+message GetItemStockResp {
+  repeated ItemStock item_stock_list = 1; // 商品库存列表
+}
+
 service ItemService {
   // 获取商品列表
   // 参数：查询条件
@@ -133,4 +146,10 @@ service ItemService {
   // 参数：商品信息
   // 返回：添加结果 TTPOS 端调用成功后后更新 item_code 到商品/物品信息中
   rpc SaveItem(item.ItemInfo) returns (erp.ResponseInfo);
+
+  // 获取商品库存
+  // 参数：查询条件
+  // 返回：商品库存列表
+  rpc GetItemStock(item.GetItemStockReq) returns (erp.ResponseInfo);
+
 }

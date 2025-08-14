@@ -50,6 +50,7 @@ alwaysApply: true
  - 文件名建议小写，单词间用下划线分隔
  - 数据库操作使用 dao层服务
  - controller,dao,service,entity,do 目录不要自己生成,框架会生成
+ - 优化代码时，service，entity,do 目录下的文件，包含有 "Code generated and maintained by GoFrame CLI tool. DO NOT EDIT." 的不要优化
 
  4. 注释规范
  - 所有导出函数、结构体、接口必须添加中文注释
@@ -76,3 +77,4 @@ alwaysApply: true
  - 业务开发优先参考 README.MD、MIGRATION_QUICK_START.md、DATABASE_MIGRATION_RULES.md
  - 如有疑问请先查阅项目文档或联系维护者
  - 分析处理ttpos-bmp 代码时，不要参考 main目录下的代码
+ 

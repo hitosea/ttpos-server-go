@@ -138,9 +138,9 @@ func (x *GetCompanyListResp) GetCompanyList() []*CompanyInfo {
 // 用于在列表中展示的公司基本信息
 type CompanyInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CompanyAbbr   string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写编码"` // 公司缩写编码
-	CompanyName   string                 `protobuf:"bytes,2,opt,name=company_name,json=companyName,proto3" json:"company_name,omitempty" dc:"公司名称"`   // 公司名称
-	HasChild      bool                   `protobuf:"varint,3,opt,name=has_child,json=hasChild,proto3" json:"has_child,omitempty" dc:"是否有子公司"`         // 是否有子公司
+	CompanyAbbr   string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写编码"`    // 公司缩写编码
+	CompanyName   string                 `protobuf:"bytes,2,opt,name=company_name,json=companyName,proto3" json:"company_name,omitempty" dc:"公司名称"`      // 公司名称
+	ParentCompany string                 `protobuf:"bytes,3,opt,name=parent_company,json=parentCompany,proto3" json:"parent_company,omitempty" dc:"父公司"` // 父公司
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -189,11 +189,11 @@ func (x *CompanyInfo) GetCompanyName() string {
 	return ""
 }
 
-func (x *CompanyInfo) GetHasChild() bool {
+func (x *CompanyInfo) GetParentCompany() string {
 	if x != nil {
-		return x.HasChild
+		return x.ParentCompany
 	}
-	return false
+	return ""
 }
 
 var File_company_company_proto protoreflect.FileDescriptor
@@ -206,11 +206,11 @@ const file_company_company_proto_rawDesc = "" +
 	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12%\n" +
 	"\x0eparent_company\x18\x03 \x01(\tR\rparentCompany\"M\n" +
 	"\x12GetCompanyListResp\x127\n" +
-	"\fcompany_list\x18\x01 \x03(\v2\x14.company.CompanyInfoR\vcompanyList\"p\n" +
+	"\fcompany_list\x18\x01 \x03(\v2\x14.company.CompanyInfoR\vcompanyList\"z\n" +
 	"\vCompanyInfo\x12!\n" +
 	"\fcompany_abbr\x18\x01 \x01(\tR\vcompanyAbbr\x12!\n" +
-	"\fcompany_name\x18\x02 \x01(\tR\vcompanyName\x12\x1b\n" +
-	"\thas_child\x18\x03 \x01(\bR\bhasChild2Q\n" +
+	"\fcompany_name\x18\x02 \x01(\tR\vcompanyName\x12%\n" +
+	"\x0eparent_company\x18\x03 \x01(\tR\rparentCompany2Q\n" +
 	"\x0eCompanyService\x12?\n" +
 	"\x0eGetCompanyList\x12\x1a.company.GetCompanyListReq\x1a\x11.erp.ResponseInfoB%Z#ttpos-bmp/app/ttpos-erp/api/companyb\x06proto3"
 

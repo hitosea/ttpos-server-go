@@ -2,7 +2,7 @@ package constant
 
 // 采购订单状态常量
 const (
-	PurchaseOrderStatusDraft           = 0 // 草稿
+	PurchaseOrderStatusDraft           = 0 // 草稿 - 待提交
 	PurchaseOrderStatusPending         = 1 // 待审核
 	PurchaseOrderStatusApproved        = 2 // 已审核
 	PurchaseOrderStatusRejected        = 3 // 已驳回

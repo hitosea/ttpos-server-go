@@ -1,6 +1,9 @@
 package model
 
-import "time"
+import (
+	"time"
+	"ttpos-server-go/app/constant"
+)
 
 // PurchaseOrder 采购申请表 ttpos_purchase_order
 type PurchaseOrder struct {
@@ -10,6 +13,10 @@ type PurchaseOrder struct {
 	Status            int     `gorm:"column:status;type:int(10);not null;default:0;comment:状态, 0-待提交 1-待审核 2-已通过 3-已驳回 4-部分收货 5-全部收货" json:"status"`
 	Num               float64 `gorm:"column:num;type:decimal(14,4);not null;default:0.0000;comment:物资数量，每种物品算一个" json:"num"`
 	OrderTime         int64   `gorm:"column:order_time;type:int(10) unsigned;not null;default:0;comment:单据日期，采购单提交的时间（时间戳）" json:"order_time"`
+	ApplicantUuid     uint64  `gorm:"column:applicant_uuid;type:bigint(20) unsigned;not null;default:0;comment:申请人ID" json:"applicant_uuid"`
+	ApplicantName     string  `gorm:"column:applicant_name;type:varchar(255);not null;default:'';comment:申请人姓名" json:"applicant_name"`
+	ApproverUuid      uint64  `gorm:"column:approver_uuid;type:bigint(20) unsigned;not null;default:0;comment:审批人ID" json:"approver_uuid"`
+	ApproverName      string  `gorm:"column:approver_name;type:varchar(255);not null;default:'';comment:审批人姓名" json:"approver_name"`
 	ExpectArrivalTime int64   `gorm:"column:expect_arrival_time;type:int(10) unsigned;not null;default:0;comment:期望到货日期（时间戳）" json:"expect_arrival_time"`
 	PassTime          int64   `gorm:"column:pass_time;type:int(10) unsigned;not null;default:0;comment:通过时间（时间戳）" json:"pass_time"`
 	RejectTime        int64   `gorm:"column:reject_time;type:int(10) unsigned;not null;default:0;comment:驳回时间（时间戳）" json:"reject_time"`
@@ -45,19 +52,18 @@ func (po *PurchaseOrder) GetStatusText() string {
 
 // IsEditable 判断是否可编辑
 func (po *PurchaseOrder) IsEditable() bool {
-	// 待提交和已驳回状态可以编辑
-	return po.Status == 0 || po.Status == 3
+	return po.Status == constant.PurchaseOrderStatusDraft
 }
 
 // CanApprove 判断是否可审核
 func (po *PurchaseOrder) CanApprove() bool {
-	return po.Status == 1
+	return po.Status == constant.PurchaseOrderStatusPending
 }
 
 // CanReceive 判断是否可收货
 func (po *PurchaseOrder) CanReceive() bool {
 	// 已通过和部分收货状态可以收货
-	return po.Status == 2 || po.Status == 4
+	return po.Status == constant.PurchaseOrderStatusApproved
 }
 
 // GetOrderDate 获取订单日期
@@ -204,7 +210,7 @@ type PurchaseReceiptOrderItem struct {
 	BaseUnitName          string  `gorm:"column:base_unit_name;type:varchar(255);not null;default:'';comment:基准单位名称, 确认收货时记录后不再修改" json:"base_unit_name"`
 
 	// 关联关系
-	PurchaseReceiptOrder PurchaseReceiptOrder `gorm:"foreignKey:PurchaseReceiptOrderUuid;references:Uuid" json:"purchase_receipt_order,omitempty"`
+	PurchaseReceiptOrder PurchaseReceiptOrder `gorm:"foreignKey:ReceiptOrderUuid;references:Uuid" json:"purchase_receipt_order,omitempty"`
 	PurchaseOrderItem    PurchaseOrderItem    `gorm:"foreignKey:PurchaseOrderItemUuid;references:Uuid" json:"purchase_order_item,omitempty"`
 	Material             *Material            `gorm:"foreignKey:MaterialUuid;references:Uuid" json:"material,omitempty"`
 }

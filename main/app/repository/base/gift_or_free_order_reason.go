@@ -11,14 +11,14 @@ import (
 
 // IGiftOrFreeOrderReasonRepo 赠品或免费订单原因仓库接口
 type IGiftOrFreeOrderReasonRepo interface {
-	GetGiftOrFreeOrderReasonList() ([]model.FreeReason, error)                           // 获取赠品或免费订单原因列表
-	UpdateGiftOrFreeOrderReason(id uint64, giftOrFreeOrderReason model.FreeReason) error // 更新赠品或免费订单原因
-	CreateGiftOrFreeOrderReason(giftOrFreeOrderReason model.FreeReason) (uint64, error)  // 创建赠品或免费订单原因
-	DeleteGiftOrFreeOrderReason(id uint64) error                                         // 删除赠品或免费订单原因
-	DeleteGiftOrFreeOrderReasons(uuids []uint64) error                                   // 批量删除赠品或免费订单原因
-	ExistsByUuids(uuids []uint64) ([][2]uint64, []uint64, error)                         // 根据uuid数组验证赠品或免费订单原因是否存在，返回[uuid, 多语言名称UUID]数组和不存在的UUID列表
-	GetFreeOrderReasons(opts ...repository.DBOption) ([]*model.FreeReason, error)        // 获取赠品或免单原因列表
-	GetFreeOrderReasonByUuid(uuid uint64) (*model.FreeReason, error)                     // 根据uuid获取赠品或免单原因
+	GetGiftOrFreeOrderReasonList() ([]model.FreeReason, error)                             // 获取赠品或免费订单原因列表
+	UpdateGiftOrFreeOrderReason(uuid uint64, giftOrFreeOrderReason model.FreeReason) error // 更新赠品或免费订单原因
+	CreateGiftOrFreeOrderReason(giftOrFreeOrderReason model.FreeReason) (uint64, error)    // 创建赠品或免费订单原因
+	DeleteGiftOrFreeOrderReason(uuid uint64) error                                         // 删除赠品或免费订单原因
+	DeleteGiftOrFreeOrderReasons(uuids []uint64) error                                     // 批量删除赠品或免费订单原因
+	ExistsByUuids(uuids []uint64) ([][2]uint64, []uint64, error)                           // 根据uuid数组验证赠品或免费订单原因是否存在，返回[uuid, 多语言名称UUID]数组和不存在的UUID列表
+	GetFreeOrderReasons(opts ...repository.DBOption) ([]*model.FreeReason, error)          // 获取赠品或免单原因列表
+	GetFreeOrderReasonByUuid(uuid uint64) (*model.FreeReason, error)                       // 根据uuid获取赠品或免单原因
 	GetFreeOrderReasonListByUuids(uuids []uint64) ([]*model.FreeReason, error)
 }
 
@@ -90,8 +90,20 @@ func (r *GiftOrFreeOrderReasonRepoImpl) CreateGiftOrFreeOrderReason(giftOrFreeOr
 }
 
 // DeleteGiftOrFreeOrderReason 软删除赠品或免费订单原因
-func (r *GiftOrFreeOrderReasonRepoImpl) DeleteGiftOrFreeOrderReason(id uint64) error {
-	return r.db.Model(&model.FreeReason{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
+func (r *GiftOrFreeOrderReasonRepoImpl) DeleteGiftOrFreeOrderReason(uuid uint64) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		reason := model.FreeReason{}
+		tx.Model(&model.FreeReason{}).Where("uuid = ?", uuid).First(&reason)
+		if err := tx.Model(&model.FreeReason{}).Where("uuid = ?", uuid).Update("delete_time", uint(time.Now().Unix())).Error; err != nil {
+			return errors.WithMessage(err)
+		}
+		if reason.MultiLanguageNameUuid != 0 {
+			if err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", reason.MultiLanguageNameUuid).Update("delete_time", uint(time.Now().Unix())).Error; err != nil {
+				return errors.WithMessage(err)
+			}
+		}
+		return nil
+	})
 }
 
 // ExistsByUuids 根据uuid数组验证赠品或免费订单原因是否存在，返回[uuid, 多语言名称UUID]数组和不存在的UUID列表

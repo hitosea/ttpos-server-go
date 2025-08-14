@@ -36,7 +36,7 @@ func (s *sCompany) GetCompanyList(ctx context.Context, req *company.GetCompanyLi
 	erpCompanyList, err := service.Document().List(ctx, &dto.ErpReq{
 		DocType: "Company",
 	}, &dto.RequestParams{
-		Fields:  g.ArrayStr{"name", "abbr"},
+		Fields:  g.ArrayStr{"name", "abbr", "parent_company"},
 		Filters: filters,
 	})
 	if err != nil {
@@ -49,13 +49,14 @@ func (s *sCompany) GetCompanyList(ctx context.Context, req *company.GetCompanyLi
 		dataArray := j.GetJsons("data")
 		for _, item := range dataArray {
 			companyInfo := &company.CompanyInfo{
-				CompanyName: item.Get("name").String(),
-				CompanyAbbr: item.Get("abbr").String(),
+				CompanyName:   item.Get("name").String(),
+				CompanyAbbr:   item.Get("abbr").String(),
+				ParentCompany: item.Get("parent_company").String(),
 			}
-			companyInfo.HasChild, err = s.HasSubCompany(ctx, companyInfo.CompanyName)
-			if err != nil {
-				g.Log().Error(ctx, "查询子公司信息失败", err)
-			}
+			//companyInfo.HasChild, err = s.HasSubCompany(ctx, companyInfo.CompanyName)
+			//if err != nil {
+			//	g.Log().Error(ctx, "查询子公司信息失败", err)
+			//}
 
 			companyList = append(companyList, companyInfo)
 		}

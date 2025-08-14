@@ -19,6 +19,7 @@ type IPurchaseReceiptOrderRepo interface {
 	GetList(opts ...DBOption) ([]model.PurchaseReceiptOrder, error)
 	GetListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.PurchaseReceiptOrder, int64, error)
 	Count(opts ...DBOption) (int64, error)
+	IsOrderNoExists(orderNo string) (bool, error)
 
 	// 条件查询选项
 	WhereUuid(uuid uint64) DBOption
@@ -112,6 +113,16 @@ func (r *PurchaseReceiptOrderRepoImpl) Count(opts ...DBOption) (int64, error) {
 	db := r.applyOptions(r.db, opts...)
 	err := db.Model(&model.PurchaseReceiptOrder{}).Count(&count).Error
 	return count, err
+}
+
+// IsOrderNoExists 检查订单编号是否存在
+func (r *PurchaseReceiptOrderRepoImpl) IsOrderNoExists(orderNo string) (bool, error) {
+	var count int64
+	err := r.db.Model(&model.PurchaseReceiptOrder{}).Where("receipt_no = ?", orderNo).Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 // 条件查询选项实现

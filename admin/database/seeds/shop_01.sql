@@ -915,6 +915,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_order` (
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态, 0-待提交 1-待审核 2-已通过 3-已驳回 4-部分收货 5-全部收货',
     `num` DECIMAL(14, 4) NOT NULL DEFAULT 0.0000 COMMENT '物资数量，每种物品算一个',
     `order_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '单据日期，采购单提交的时间（时间戳）',
+    `applicant_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '申请人ID',
+    `applicant_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '申请人姓名',
+    `approver_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '审批人ID',
+    `approver_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '审批人姓名',
     `expect_arrival_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '期望到货日期（时间戳）',
     `pass_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '通过时间（时间戳）',
     `reject_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '驳回时间（时间戳）',
@@ -2744,5 +2748,31 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_address` (
   INDEX `idx_is_default` (`is_default`),
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会员地址表';
+
+-- ----------------------------
+-- Table structure for ttpos_purchase_order_log
+-- ----------------------------
+DROP TABLE IF EXISTS `ttpos_purchase_order_log`;
+CREATE TABLE `ttpos_purchase_order_log` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint(20) unsigned DEFAULT 0 COMMENT '操作日志ID',
+  `purchase_order_uuid` bigint(20) unsigned DEFAULT 0 COMMENT '采购订单ID',
+  `operator_uuid` bigint(20) unsigned DEFAULT 0 COMMENT '操作人ID',
+  `operator_name` varchar(100) DEFAULT '' COMMENT '操作人姓名',
+  `action` varchar(50) DEFAULT '' COMMENT '操作动作',
+  `action_desc` varchar(255) DEFAULT '' COMMENT '操作描述',
+  `old_status` int(10) DEFAULT 0 COMMENT '操作前状态',
+  `new_status` int(10) DEFAULT 0 COMMENT '操作后状态',
+  `content` text COMMENT '操作内容详情',
+  `remark` text COMMENT '备注',
+  `create_time` int(10) unsigned DEFAULT 0 COMMENT '创建时间(时间戳)',
+  `update_time` int(10) unsigned DEFAULT 0 COMMENT '更新时间(时间戳)',
+  `delete_time` int(10) unsigned DEFAULT 0 COMMENT '删除时间(时间戳)',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_purchase_order_uuid` (`purchase_order_uuid`),
+  KEY `idx_operator_uuid` (`operator_uuid`),
+  KEY `idx_action` (`action`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='采购订单操作日志表';
 
 SET FOREIGN_KEY_CHECKS = 1;

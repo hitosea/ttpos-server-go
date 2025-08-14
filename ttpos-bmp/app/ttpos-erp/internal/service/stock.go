@@ -23,6 +23,9 @@ type (
 		// SaveItem 保存物品信息
 		// 如果物品已存在则更新，否则创建新物品
 		SaveItem(ctx context.Context, reqInfo *item.ItemInfo) (res *item.ItemInfo, err error)
+		// GetItemStock 获取物品库存信息
+		// 根据公司简称、分支机构和物品编码查询库存信息
+		GetItemStock(ctx context.Context, req *item.GetItemStockReq) (res *item.GetItemStockResp, err error)
 	}
 	IStock interface {
 		// GetUomList 获取单位列表
@@ -49,6 +52,7 @@ type (
 		// GetWarehouseList 获取仓库列表
 		// 根据查询条件过滤并返回仓库信息列表
 		GetWarehouseList(ctx context.Context, req *warehouse.GetWarehouseListReq) (res *warehouse.GetWarehouseListResp, err error)
+		GetDefaultWarehouse(ctx context.Context, company string, branch string) (res *warehouse.WarehouseInfo, err error)
 	}
 )
 

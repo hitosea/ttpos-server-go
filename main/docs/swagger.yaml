@@ -2531,6 +2531,20 @@ definitions:
     required:
     - sign
     type: object
+  req.DeleteFreeOrGiftReasonReq:
+    properties:
+      uuid:
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.DeleteReturnFoodReasonReq:
+    properties:
+      uuid:
+        type: integer
+    required:
+    - uuid
+    type: object
   req.DeleteRoleReq:
     properties:
       uuid:
@@ -2599,7 +2613,6 @@ definitions:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 名称列表
       uuid:
-        description: 如果有Uuid，则编辑，否则新增
         type: integer
     required:
     - uuid
@@ -2611,7 +2624,6 @@ definitions:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 名称列表
       uuid:
-        description: 如果有Uuid，则编辑，否则新增
         type: integer
     required:
     - uuid
@@ -4242,7 +4254,7 @@ definitions:
         description: 单据日期
         type: string
       expected_delivery_time:
-        description: 预期交付时间(时间戳)
+        description: 期望到货时间(时间戳)
         minimum: 0
         type: integer
       items:
@@ -4253,9 +4265,9 @@ definitions:
         minItems: 1
         type: array
       order_type:
-        description: 申请类型 1-仓库调拨
+        description: 申请类型 0-仓库调拨
         enum:
-        - 1
+        - 0
         type: integer
     required:
     - bill_date
@@ -4287,75 +4299,31 @@ definitions:
     type: object
   req.PurchaseOrderItemUpdateReq:
     properties:
-      is_deleted:
-        description: 是否删除
-        type: boolean
-      num:
-        description: 采购数量
-        maximum: 99999
-        type: number
-      product_name:
-        description: 商品名称
-        maxLength: 255
-        type: string
-      product_sku:
-        description: 商品SKU
-        maxLength: 100
-        type: string
-      product_unit:
-        description: 商品单位
-        maxLength: 50
-        type: string
-      product_uuid:
-        description: 商品ID
+      material_uuid:
+        description: 物品ID
         minimum: 1
         type: integer
-      remark:
-        description: 商品备注
-        maxLength: 500
-        type: string
-      specification:
-        description: 规格型号
-        maxLength: 255
-        type: string
-      unit_price:
-        description: 单价
-        minimum: 0
+      num:
+        description: 数量
+        maximum: 99999
         type: number
-      uuid:
-        description: 明细ID，0表示新增
-        minimum: 0
-        type: integer
     required:
+    - material_uuid
     - num
-    - product_name
-    - product_unit
-    - product_uuid
-    - unit_price
     type: object
-  req.PurchaseOrderStatusUpdateReq:
+  req.PurchaseOrderSubmitReq:
     properties:
-      remark:
-        description: 备注
-        maxLength: 500
-        type: string
-      status:
-        description: 新状态
-        maximum: 7
-        minimum: 0
-        type: integer
       uuid:
         description: 采购订单ID
         minimum: 1
         type: integer
     required:
-    - status
     - uuid
     type: object
   req.PurchaseOrderUpdateReq:
     properties:
       expected_delivery_time:
-        description: 预期交付时间(时间戳)
+        description: 期望到货时间(时间戳)
         minimum: 0
         type: integer
       items:
@@ -4365,36 +4333,17 @@ definitions:
         maxItems: 200
         minItems: 1
         type: array
-      priority:
-        description: 优先级 1-低 2-中 3-高 4-紧急
-        maximum: 4
-        minimum: 1
+      order_type:
+        description: 申请类型 0-仓库调拨
+        enum:
+        - 0
         type: integer
-      remark:
-        description: 备注
-        maxLength: 1000
-        type: string
-      supplier_name:
-        description: 供应商名称
-        maxLength: 255
-        type: string
-      supplier_uuid:
-        description: 供应商ID
-        minimum: 1
-        type: integer
-      title:
-        description: 采购单标题
-        maxLength: 255
-        type: string
       uuid:
         description: 采购订单ID
         minimum: 1
         type: integer
     required:
-    - items
-    - supplier_name
-    - supplier_uuid
-    - title
+    - order_type
     - uuid
     type: object
   req.PurchaseReceiptCreateReq:
@@ -7889,18 +7838,6 @@ definitions:
         description: 套餐分组UUID
         type: integer
     type: object
-  resp.PageResponse:
-    properties:
-      page_no:
-        description: 当前页码
-        type: integer
-      page_size:
-        description: 每页大小
-        type: integer
-      total:
-        description: 总数
-        type: integer
-    type: object
   resp.PayAmountInfo:
     properties:
       change_amount:
@@ -8628,101 +8565,28 @@ definitions:
     type: object
   resp.PurchaseOrderDetailResp:
     properties:
-      actual_delivery_time:
-        description: 实际交付时间
-        type: integer
-      applicant_name:
-        description: 申请人姓名
-        type: string
-      applicant_uuid:
-        description: 申请人ID
-        type: integer
-      approve_time:
-        description: 审核时间
-        type: integer
-      approver_name:
-        description: 审批人姓名
-        type: string
-      approver_uuid:
-        description: 审批人ID
-        type: integer
-      can_approve:
-        description: 是否可审核
-        type: boolean
-      can_cancel:
-        description: 是否可取消
-        type: boolean
-      completion_rate:
-        description: 完成率
-        type: number
-      create_time:
-        description: 创建时间
-        type: integer
-      expected_delivery_time:
-        description: 预期交付时间
-        type: integer
-      is_editable:
-        description: 是否可编辑
-        type: boolean
-      item_count:
-        description: 扩展字段
+      expect_arrival_time:
+        description: 期望到货日期
         type: integer
       items:
         description: 采购明细
         items:
           $ref: '#/definitions/resp.PurchaseOrderItemInfo'
         type: array
-      logs:
-        description: 操作日志
-        items:
-          $ref: '#/definitions/resp.PurchaseOrderLogInfo'
-        type: array
+      num:
+        description: 物品数量
+        type: integer
       order_no:
         description: 采购订单编号
         type: string
-      priority:
-        description: 优先级
+      order_time:
+        description: 单据日期
         type: integer
-      priority_text:
-        description: 优先级文本
-        type: string
-      receipts:
-        description: 收货记录
-        items:
-          $ref: '#/definitions/resp.PurchaseReceiptInfo'
-        type: array
-      received_quantity:
-        description: 已收货数量
-        type: number
-      remaining_quantity:
-        description: 剩余数量
-        type: number
-      remark:
-        description: 备注
-        type: string
+      order_type:
+        description: 申请类型
+        type: integer
       status:
         description: 状态
-        type: integer
-      status_text:
-        description: 状态文本
-        type: string
-      supplier_name:
-        description: 供应商名称
-        type: string
-      supplier_uuid:
-        description: 供应商ID
-        type: integer
-      title:
-        description: 采购单标题
-        type: string
-      total_amount:
-        description: 总金额
-        type: number
-      total_quantity:
-        description: 总数量
-        type: number
-      update_time:
-        description: 更新时间
         type: integer
       uuid:
         description: 采购订单ID
@@ -8730,86 +8594,23 @@ definitions:
     type: object
   resp.PurchaseOrderInfo:
     properties:
-      actual_delivery_time:
-        description: 实际交付时间
+      expect_arrival_time:
+        description: 期望到货日期
         type: integer
-      applicant_name:
-        description: 申请人姓名
-        type: string
-      applicant_uuid:
-        description: 申请人ID
-        type: integer
-      approve_time:
-        description: 审核时间
-        type: integer
-      approver_name:
-        description: 审批人姓名
-        type: string
-      approver_uuid:
-        description: 审批人ID
-        type: integer
-      can_approve:
-        description: 是否可审核
-        type: boolean
-      can_cancel:
-        description: 是否可取消
-        type: boolean
-      completion_rate:
-        description: 完成率
-        type: number
-      create_time:
-        description: 创建时间
-        type: integer
-      expected_delivery_time:
-        description: 预期交付时间
-        type: integer
-      is_editable:
-        description: 是否可编辑
-        type: boolean
-      item_count:
-        description: 扩展字段
+      num:
+        description: 物品数量
         type: integer
       order_no:
         description: 采购订单编号
         type: string
-      priority:
-        description: 优先级
+      order_time:
+        description: 单据日期
         type: integer
-      priority_text:
-        description: 优先级文本
-        type: string
-      received_quantity:
-        description: 已收货数量
-        type: number
-      remaining_quantity:
-        description: 剩余数量
-        type: number
-      remark:
-        description: 备注
-        type: string
+      order_type:
+        description: 申请类型
+        type: integer
       status:
         description: 状态
-        type: integer
-      status_text:
-        description: 状态文本
-        type: string
-      supplier_name:
-        description: 供应商名称
-        type: string
-      supplier_uuid:
-        description: 供应商ID
-        type: integer
-      title:
-        description: 采购单标题
-        type: string
-      total_amount:
-        description: 总金额
-        type: number
-      total_quantity:
-        description: 总数量
-        type: number
-      update_time:
-        description: 更新时间
         type: integer
       uuid:
         description: 采购订单ID
@@ -8817,57 +8618,27 @@ definitions:
     type: object
   resp.PurchaseOrderItemInfo:
     properties:
-      completion_rate:
-        description: 扩展字段
+      arrival_num:
+        description: 到货数量
         type: number
-      create_time:
-        description: 创建时间
-        type: integer
-      is_completed:
-        description: 是否完成
-        type: boolean
-      product_name:
-        description: 商品名称
+      base_unit_name:
+        description: 基准单位名称
         type: string
-      product_sku:
-        description: 商品SKU
+      material_code:
+        description: 物品编码
         type: string
-      product_unit:
-        description: 商品单位
+      material_name:
+        description: 物品名称
         type: string
-      product_uuid:
-        description: 商品ID
-        type: integer
-      purchase_order_uuid:
-        description: 采购订单ID
-        type: integer
-      quantity:
-        description: 采购数量
+      num:
+        description: 申请数量
         type: number
-      received_quantity:
-        description: 已收货数量
+      unit_conversion_rate:
+        description: 基准单位转换率
         type: number
-      remaining_quantity:
-        description: 剩余数量
-        type: number
-      remark:
-        description: 商品备注
+      unit_name:
+        description: 采购单位名称
         type: string
-      sort:
-        description: 排序
-        type: integer
-      specification:
-        description: 规格型号
-        type: string
-      total_price:
-        description: 小计金额
-        type: number
-      unit_price:
-        description: 单价
-        type: number
-      update_time:
-        description: 更新时间
-        type: integer
       uuid:
         description: 明细ID
         type: integer
@@ -8881,44 +8652,8 @@ definitions:
         type: array
       meta:
         allOf:
-        - $ref: '#/definitions/resp.PageResponse'
+        - $ref: '#/definitions/dto.PageResponse'
         description: 分页信息
-    type: object
-  resp.PurchaseOrderLogInfo:
-    properties:
-      action:
-        description: 操作动作
-        type: string
-      action_desc:
-        description: 操作描述
-        type: string
-      content:
-        description: 操作内容详情
-        type: string
-      create_time:
-        description: 创建时间
-        type: integer
-      new_status:
-        description: 操作后状态
-        type: integer
-      old_status:
-        description: 操作前状态
-        type: integer
-      operator_name:
-        description: 操作人姓名
-        type: string
-      operator_uuid:
-        description: 操作人ID
-        type: integer
-      purchase_order_uuid:
-        description: 采购订单ID
-        type: integer
-      remark:
-        description: 备注
-        type: string
-      uuid:
-        description: 日志ID
-        type: integer
     type: object
   resp.PurchaseOrderStatisticsResp:
     properties:
@@ -9119,7 +8854,7 @@ definitions:
         type: array
       meta:
         allOf:
-        - $ref: '#/definitions/resp.PageResponse'
+        - $ref: '#/definitions/dto.PageResponse'
         description: 分页信息
     type: object
   resp.RechargeMember:
@@ -11127,404 +10862,6 @@ paths:
       summary: 获取ERPNext站点公司名称
       tags:
       - admin
-  /api/v1/shop/purchase/order/approve:
-    post:
-      consumes:
-      - application/json
-      description: 审核采购订单（通过或驳回）
-      parameters:
-      - description: 审核采购订单请求参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.PurchaseOrderApproveReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.PurchaseOrderApproveResp'
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 审核采购订单
-      tags:
-      - 商家端.采购管理
-  /api/v1/shop/purchase/order/create:
-    post:
-      consumes:
-      - application/json
-      description: 创建新的采购订单
-      parameters:
-      - description: 创建采购订单请求参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.PurchaseOrderCreateReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.PurchaseOrderCreateResp'
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 创建采购订单
-      tags:
-      - 商家端.采购管理
-  /api/v1/shop/purchase/order/delete:
-    delete:
-      consumes:
-      - application/json
-      description: 删除采购订单
-      parameters:
-      - description: 删除采购订单请求参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.PurchaseOrderDeleteReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.PurchaseOrderDeleteResp'
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 删除采购订单
-      tags:
-      - 商家端.采购管理
-  /api/v1/shop/purchase/order/detail:
-    get:
-      consumes:
-      - application/json
-      description: 根据UUID获取采购订单详情
-      parameters:
-      - description: 采购订单UUID
-        in: query
-        name: uuid
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.PurchaseOrderDetailResp'
-              type: object
-      security:
-      - JwtToken: []
-      summary: 获取采购订单详情
-      tags:
-      - 商家端.采购管理
-  /api/v1/shop/purchase/order/list:
-    get:
-      consumes:
-      - application/json
-      description: 分页获取采购订单列表
-      parameters:
-      - default: 1
-        description: 页码
-        in: query
-        name: page
-        type: integer
-      - default: 20
-        description: 每页数量
-        in: query
-        name: page_size
-        type: integer
-      - description: 订单编号
-        in: query
-        name: order_no
-        type: string
-      - description: 采购单标题
-        in: query
-        name: title
-        type: string
-      - description: 状态
-        in: query
-        name: status
-        type: integer
-      - description: 优先级
-        in: query
-        name: priority
-        type: integer
-      - description: 供应商ID
-        in: query
-        name: supplier_uuid
-        type: integer
-      - description: 申请人ID
-        in: query
-        name: applicant_uuid
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.PurchaseOrderListResp'
-              type: object
-      security:
-      - JwtToken: []
-      summary: 获取采购订单列表
-      tags:
-      - 商家端.采购管理
-  /api/v1/shop/purchase/order/status:
-    put:
-      consumes:
-      - application/json
-      description: 更新采购订单状态
-      parameters:
-      - description: 更新状态请求参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.PurchaseOrderStatusUpdateReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            $ref: '#/definitions/dto.Response'
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 更新采购订单状态
-      tags:
-      - 商家端.采购管理
-  /api/v1/shop/purchase/order/update:
-    put:
-      consumes:
-      - application/json
-      description: 更新采购订单信息
-      parameters:
-      - description: 更新采购订单请求参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.PurchaseOrderUpdateReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.PurchaseOrderUpdateResp'
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 更新采购订单
-      tags:
-      - 商家端.采购管理
-  /api/v1/shop/purchase/receipt/create:
-    post:
-      consumes:
-      - application/json
-      description: 创建采购收货记录
-      parameters:
-      - description: 创建收货记录请求参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.PurchaseReceiptCreateReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.PurchaseReceiptCreateResp'
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 创建收货记录
-      tags:
-      - 商家端.采购管理
-  /api/v1/shop/purchase/receipt/detail:
-    get:
-      consumes:
-      - application/json
-      description: 根据UUID获取收货记录详情
-      parameters:
-      - description: 收货记录UUID
-        in: query
-        name: uuid
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.PurchaseReceiptDetailResp'
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 获取收货记录详情
-      tags:
-      - 商家端.采购管理
-  /api/v1/shop/purchase/receipt/list:
-    get:
-      consumes:
-      - application/json
-      description: 分页获取收货记录列表
-      parameters:
-      - default: 1
-        description: 页码
-        in: query
-        name: page
-        type: integer
-      - default: 20
-        description: 每页数量
-        in: query
-        name: page_size
-        type: integer
-      - description: 采购订单ID
-        in: query
-        name: purchase_order_uuid
-        type: integer
-      - description: 收货单号
-        in: query
-        name: receipt_no
-        type: string
-      - description: 质检状态
-        in: query
-        name: quality_status
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.PurchaseReceiptListResp'
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 获取收货记录列表
-      tags:
-      - 商家端.采购管理
-  /api/v1/shop/purchase/statistics:
-    get:
-      consumes:
-      - application/json
-      description: 获取采购订单统计数据
-      parameters:
-      - description: 统计开始时间
-        in: query
-        name: time_start
-        type: integer
-      - description: 统计结束时间
-        in: query
-        name: time_end
-        type: integer
-      - description: 统计类型
-        in: query
-        name: type
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.PurchaseOrderStatisticsResp'
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 获取采购订单统计
-      tags:
-      - 商家端.采购管理
   /assistant/base:
     get:
       consumes:
@@ -23436,6 +22773,388 @@ paths:
       summary: 排序商品单位
       tags:
       - 商家端.商品单位
+  /shop/purchase/order/approve:
+    post:
+      consumes:
+      - application/json
+      description: 审核采购订单（通过或驳回）
+      parameters:
+      - description: 审核采购订单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PurchaseOrderApproveReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PurchaseOrderApproveResp'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 审核采购订单
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/order/create:
+    post:
+      consumes:
+      - application/json
+      description: 创建新的采购订单
+      parameters:
+      - description: 创建采购订单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PurchaseOrderCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PurchaseOrderCreateResp'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 创建采购订单
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/order/delete:
+    delete:
+      consumes:
+      - application/json
+      description: 删除采购订单
+      parameters:
+      - description: 删除采购订单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PurchaseOrderDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PurchaseOrderDeleteResp'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除采购订单
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/order/detail:
+    get:
+      consumes:
+      - application/json
+      description: 根据UUID获取采购订单详情
+      parameters:
+      - description: 采购订单UUID
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PurchaseOrderDetailResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取采购订单详情
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/order/list:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取采购订单列表
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      - description: 订单号
+        in: query
+        name: order_no
+        type: string
+      - description: 状态
+        in: query
+        name: status
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PurchaseOrderListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取采购订单列表
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/order/submit:
+    post:
+      consumes:
+      - application/json
+      description: 提交采购订单
+      parameters:
+      - description: 提交采购订单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PurchaseOrderSubmitReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 提交采购订单
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/order/update:
+    post:
+      consumes:
+      - application/json
+      description: 更新采购订单信息
+      parameters:
+      - description: 更新采购订单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PurchaseOrderUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PurchaseOrderUpdateResp'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 更新采购订单
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/receipt/create:
+    post:
+      consumes:
+      - application/json
+      description: 创建采购收货记录
+      parameters:
+      - description: 创建收货记录请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PurchaseReceiptCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PurchaseReceiptCreateResp'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 创建收货记录
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/receipt/detail:
+    get:
+      consumes:
+      - application/json
+      description: 根据UUID获取收货记录详情
+      parameters:
+      - description: 收货记录UUID
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PurchaseReceiptDetailResp'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取收货记录详情
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/receipt/list:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取收货记录列表
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      - description: 采购订单ID
+        in: query
+        name: purchase_order_uuid
+        type: integer
+      - description: 收货单号
+        in: query
+        name: receipt_no
+        type: string
+      - description: 质检状态
+        in: query
+        name: quality_status
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PurchaseReceiptListResp'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取收货记录列表
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/statistics:
+    get:
+      consumes:
+      - application/json
+      description: 获取采购订单统计数据
+      parameters:
+      - description: 统计开始时间
+        in: query
+        name: time_start
+        type: integer
+      - description: 统计结束时间
+        in: query
+        name: time_end
+        type: integer
+      - description: 统计类型
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PurchaseOrderStatisticsResp'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取采购订单统计
+      tags:
+      - 商家端.采购管理
   /shop/recharge_order/cancel:
     post:
       consumes:
@@ -23791,6 +23510,29 @@ paths:
       tags:
       - 商家端.业务设置
   /shop/setting/free_reason:
+    delete:
+      consumes:
+      - application/json
+      description: 删除免单原因
+      parameters:
+      - description: 删除免单原因
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeleteFreeOrGiftReasonReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除免单原因
+      tags:
+      - 商家端.业务设置
     get:
       consumes:
       - application/json
@@ -23890,6 +23632,29 @@ paths:
       tags:
       - 商家端.业务设置
   /shop/setting/return_food_reason:
+    delete:
+      consumes:
+      - application/json
+      description: 删除退菜原因
+      parameters:
+      - description: 删除退菜原因
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeleteReturnFoodReasonReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除退菜原因
+      tags:
+      - 商家端.业务设置
     get:
       consumes:
       - application/json

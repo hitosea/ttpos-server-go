@@ -78,7 +78,6 @@ func (s *sWarehouse) createWarehouseDocument(ctx context.Context, warehouseName 
 	// 构建仓库创建参数
 	warehousePayload := g.Map{
 		"warehouse_name":   warehouseName, // 仓库名称
-		"warehouse_type":   req.WhType,    // 仓库类型
 		"custom_branch":    req.Branch,    // 分支机构
 		"custom_aliasname": req.AliasName, // 仓库别名
 		"company":          companyName,   // 公司名称
@@ -113,6 +112,22 @@ func (s *sWarehouse) GetWarehouseList(ctx context.Context, req *warehouse.GetWar
 	return &warehouse.GetWarehouseListResp{
 		WarehouseList: warehouseList,
 	}, nil
+}
+
+func (s *sWarehouse) GetDefaultWarehouse(ctx context.Context, company string, branch string) (res *warehouse.WarehouseInfo, err error) {
+	warehouseList, err := s.GetWarehouseList(ctx, &warehouse.GetWarehouseListReq{
+		Company:       company,
+		Branch:        branch,
+		WarehouseType: "",
+		AliasName:     "Default",
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(warehouseList.WarehouseList) == 0 {
+		return nil, gerror.New("默认仓库不存在")
+	}
+	return warehouseList.WarehouseList[0], nil
 }
 
 // buildWarehouseListFilters 构建仓库列表查询过滤器

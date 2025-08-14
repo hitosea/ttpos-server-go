@@ -6,7 +6,6 @@ import (
 	"time"
 	"ttpos-bmp/app/ttpos-erp/api/company"
 	"ttpos-bmp/app/ttpos-erp/api/item"
-	"ttpos-bmp/app/ttpos-erp/api/warehouse"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
@@ -59,7 +58,7 @@ func (s *sItem) GetItemList(ctx context.Context, req *item.GetItemListReq) (res 
 
 // buildItemListFilters 构建物品列表查询过滤器
 func (s *sItem) buildItemListFilters(ctx context.Context, req *item.GetItemListReq) [][]string {
-	filters := make([][]string, 0)
+	filters := make([][]string, 0, 8) // 预分配容量，提高性能
 
 	// 按分支机构过滤
 	if len(req.Branch) > 0 {
@@ -73,7 +72,7 @@ func (s *sItem) buildItemListFilters(ctx context.Context, req *item.GetItemListR
 
 	// 按物品分组过滤
 	if req.ItemGroup != item.ItemGroup_Others {
-		itemGroupStr := s.convertItemGroupToString(req.ItemGroup)
+		itemGroupStr := utility.ItemGroupToString(req.ItemGroup)
 		if len(itemGroupStr) > 0 {
 			filters = append(filters, g.ArrayStr{"item_group", "=", itemGroupStr})
 		}
@@ -91,8 +90,8 @@ func (s *sItem) buildItemListFilters(ctx context.Context, req *item.GetItemListR
 
 	// 按公司简称过滤
 	if len(req.CompanyAbbr) > 0 {
-		companyName, _ := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
-		if len(companyName) > 0 {
+		companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
+		if err == nil && len(companyName) > 0 {
 			filters = append(filters, []string{"custom_company", "like", companyName})
 		}
 	}
@@ -101,18 +100,6 @@ func (s *sItem) buildItemListFilters(ctx context.Context, req *item.GetItemListR
 	filters = append(filters, []string{"disabled", "!=", "1"})
 
 	return filters
-}
-
-// convertItemGroupToString 将物品分组枚举转换为字符串
-func (s *sItem) convertItemGroupToString(itemGroup item.ItemGroup) string {
-	switch itemGroup {
-	case item.ItemGroup_Products:
-		return string(consts.ItemGroupProducts)
-	case item.ItemGroup_RawMaterial:
-		return string(consts.ItemGroupRawMaterial)
-	default:
-		return ""
-	}
 }
 
 // queryItemList 执行物品列表查询
@@ -136,41 +123,28 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string) ([]*item.
 	}
 
 	// 转换为物品信息列表
-	itemList := make([]*item.ItemInfo, 0)
 	dataArray := j.GetJsons("data")
+	itemList := make([]*item.ItemInfo, 0, len(dataArray))
 
 	for _, data := range dataArray {
-		itemInfo := &item.ItemInfo{
+		itemList = append(itemList, &item.ItemInfo{
 			Branch:    data.Get("custom_branch").String(),
 			Company:   data.Get("custom_company").String(),
 			ItemName:  data.Get("name").String(),
 			ItemCode:  data.Get("item_code").String(),
-			ItemGroup: s.parseItemGroupFromString(data.Get("item_group").String()),
+			ItemGroup: utility.ParseItemGroupFromString(data.Get("item_group").String()),
 			StockUom:  data.Get("stock_uom").String(),
-		}
-		itemList = append(itemList, itemInfo)
+		})
 	}
 
 	return itemList, nil
-}
-
-// parseItemGroupFromString 从字符串解析物品分组枚举
-func (s *sItem) parseItemGroupFromString(itemGroupStr string) item.ItemGroup {
-	switch itemGroupStr {
-	case string(consts.ItemGroupProducts):
-		return item.ItemGroup_Products
-	case string(consts.ItemGroupRawMaterial):
-		return item.ItemGroup_RawMaterial
-	default:
-		return item.ItemGroup_Others
-	}
 }
 
 // SaveItem 保存物品信息
 // 如果物品已存在则更新，否则创建新物品
 func (s *sItem) SaveItem(ctx context.Context, reqInfo *item.ItemInfo) (res *item.ItemInfo, err error) {
 	// 复制请求参数，避免修改原始数据
-	var req = &item.ItemInfo{}
+	req := &item.ItemInfo{}
 	if err := gconv.Struct(reqInfo, req); err != nil {
 		return nil, gerror.Wrapf(err, "复制请求参数失败")
 	}
@@ -256,7 +230,7 @@ func (s *sItem) buildUpdateItemData(req *item.ItemInfo) g.Map {
 
 	// 转换单位更新
 	if len(req.Uoms) > 0 {
-		uoms := make([]g.Map, 0)
+		uoms := make([]g.Map, 0, len(req.Uoms))
 		for _, uom := range req.Uoms {
 			uoms = append(uoms, g.Map{
 				"uom":               uom.Uom,
@@ -315,7 +289,7 @@ func (s *sItem) buildNewItemData(ctx context.Context, req *item.ItemInfo, compan
 		"item_code":      itemCode,
 		"item_name":      req.ItemName,
 		"stock_uom":      req.StockUom,
-		"item_group":     s.convertItemGroupToString(req.ItemGroup),
+		"item_group":     utility.ItemGroupToString(req.ItemGroup),
 		"custom_branch":  req.Branch,
 		"custom_company": company.CompanyName,
 	}
@@ -360,7 +334,7 @@ func (s *sItem) addRawMaterialFields(req *item.ItemInfo, newItem g.Map) {
 
 	// 转换单位设置
 	if len(req.Uoms) > 0 {
-		uoms := make([]g.Map, 0)
+		uoms := make([]g.Map, 0, len(req.Uoms))
 		for _, uom := range req.Uoms {
 			uoms = append(uoms, g.Map{
 				"uom":               uom.Uom,
@@ -373,17 +347,12 @@ func (s *sItem) addRawMaterialFields(req *item.ItemInfo, newItem g.Map) {
 
 // setDefaultWarehouse 设置默认仓库
 func (s *sItem) setDefaultWarehouse(ctx context.Context, req *item.ItemInfo, company *company.CompanyInfo, newItem g.Map) {
-	warehouseList, err := service.Warehouse().GetWarehouseList(ctx, &warehouse.GetWarehouseListReq{
-		Company:   company.CompanyName,
-		AliasName: "Default",
-		Branch:    req.Branch,
-	})
-
-	if err == nil && len(warehouseList.WarehouseList) > 0 {
+	warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, company.CompanyName, req.Branch)
+	if err == nil {
 		newItem["item_defaults"] = g.Array{
 			g.Map{
 				"company":           company.CompanyName,
-				"default_warehouse": warehouseList.WarehouseList[0].WarehouseName + " - " + req.CompanyAbbr,
+				"default_warehouse": warehouse.WarehouseName,
 			},
 		}
 	}
@@ -402,9 +371,15 @@ func (s *sItem) buildCreateItemResponse(req *item.ItemInfo, company *company.Com
 	// 尝试扫描新物品数据到响应结构
 	if err := gconv.Scan(newItem, res); err != nil {
 		// 如果扫描失败，至少返回基本信息
-		res.ItemCode = newItem["item_code"].(string)
-		res.ItemName = newItem["item_name"].(string)
-		res.StockUom = newItem["stock_uom"].(string)
+		if itemCode, ok := newItem["item_code"].(string); ok {
+			res.ItemCode = itemCode
+		}
+		if itemName, ok := newItem["item_name"].(string); ok {
+			res.ItemName = itemName
+		}
+		if stockUom, ok := newItem["stock_uom"].(string); ok {
+			res.StockUom = stockUom
+		}
 	}
 
 	return res
@@ -485,4 +460,69 @@ func (s *sItem) calculateMaxSuffix(itemList []*item.ItemInfo) int {
 	}
 
 	return maxSuffix
+}
+
+// GetItemStock 获取物品库存信息
+// 根据公司简称、分支机构和物品编码查询库存信息
+func (s *sItem) GetItemStock(ctx context.Context, req *item.GetItemStockReq) (res *item.GetItemStockResp, err error) {
+	// 获取公司信息
+	company, err := s.getCompanyInfo(ctx, req.CompanyAbbr)
+	if err != nil {
+		return nil, err
+	}
+
+	// 构建查询过滤器
+	filters := gjson.New(g.Map{
+		"company": company.CompanyName,
+	})
+
+	// 从默认仓库查询
+	warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, company.CompanyName, req.Branch)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "获取默认仓库失败")
+	}
+	filters.Set("warehouse", warehouse.WarehouseName)
+
+	// 按物品编码过滤
+	if len(req.ItemCode) > 0 {
+		filters.Set("item_code", req.ItemCode)
+	}
+
+	// 执行库存报表查询
+	resp, err := service.Report().Run(ctx, &dto.ReportParams{
+		ReportName:           "Stock Projected Qty",
+		Filters:              filters.String(),
+		IgnorePreparedReport: true,
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询库存报表失败")
+	}
+
+	// 解析响应数据
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析物品库存响应失败")
+	}
+
+	// 转换为物品库存列表
+	dataArray := j.GetJsons("message.result")
+	stockList := make([]*item.ItemStock, 0, len(dataArray))
+
+	for _, data := range dataArray {
+		if data.Contains("item_code") {
+			stockList = append(stockList, &item.ItemStock{
+				ItemCode:  data.Get("item_code").String(),
+				ItemName:  data.Get("item_name").String(),
+				ItemGroup: utility.ParseItemGroupFromString(data.Get("item_group").String()),
+				Warehouse: data.Get("warehouse").String(),
+				StockUom:  data.Get("stock_uom").String(),
+				ActualQty: data.Get("actual_qty").Float32(),
+			})
+		}
+	}
+
+	// 构建响应结果
+	return &item.GetItemStockResp{
+		ItemStockList: stockList,
+	}, nil
 }
