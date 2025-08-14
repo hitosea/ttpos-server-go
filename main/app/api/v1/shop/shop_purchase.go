@@ -251,13 +251,13 @@ func (h *PurchaseHandler) CreatePurchaseReceipt(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param data body req.PurchaseReceiptUpdateReq true "更新收货记录请求参数"
+// @Param data body req.PurchaseReceiptOrderUpdateReq true "更新收货记录请求参数"
 // @Success 200 {object} dto.Response{} "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
 // @Router /shop/purchase/receipt/update [post]
 func (h *PurchaseHandler) UpdatePurchaseReceipt(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	var updateReq req.PurchaseReceiptUpdateReq
+	var updateReq req.PurchaseReceiptOrderUpdateReq
 	if err := c.ShouldBindJSON(&updateReq); err != nil {
 		helper.HandleValidationError(c, err, updateReq, nil)
 		return
@@ -329,6 +329,34 @@ func (h *PurchaseHandler) GetPurchaseReceiptDetail(c *gin.Context) {
 	}
 
 	helper.Success(c, resp)
+}
+
+// CancelPurchaseReceipt 取消收货单
+// @Summary 取消收货单
+// @Description 取消收货单
+// @Tags 商家端.采购管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.PurchaseReceiptOrderCancelReq true "取消收货单请求参数"
+// @Success 200 {object} dto.Response{} "成功"
+// @Failure 400 {object} dto.Response "请求参数错误"
+// @Router /shop/purchase/receipt/cancel [post]
+func (h *PurchaseHandler) CancelPurchaseReceipt(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var cancelReq req.PurchaseReceiptOrderCancelReq
+	if err := c.ShouldBindJSON(&cancelReq); err != nil {
+		helper.HandleValidationError(c, err, cancelReq, nil)
+		return
+	}
+
+	err := h.purchaseOrderSrv.CancelPurchaseReceiptOrder(ctx, cancelReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, gin.H{})
 }
 
 func RegisterPurchaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {

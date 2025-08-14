@@ -20576,6 +20576,51 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/purchase/receipt/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "取消收货单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.采购管理"
+                ],
+                "summary": "取消收货单",
+                "parameters": [
+                    {
+                        "description": "取消收货单请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.PurchaseReceiptOrderCancelReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/purchase/receipt/create": {
             "post": {
                 "security": [
@@ -20787,7 +20832,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/req.PurchaseReceiptUpdateReq"
+                            "$ref": "#/definitions/req.PurchaseReceiptOrderUpdateReq"
                         }
                     }
                 ],
@@ -29876,7 +29921,20 @@ const docTemplate = `{
                 }
             }
         },
-        "req.PurchaseReceiptUpdateReq": {
+        "req.PurchaseReceiptOrderCancelReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "收货单ID",
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "req.PurchaseReceiptOrderUpdateReq": {
             "type": "object",
             "required": [
                 "items",

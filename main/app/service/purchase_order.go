@@ -33,9 +33,10 @@ type IPurchaseOrderSrv interface {
 
 	// 收货管理
 	CreatePurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptCreateReq) (resp.PurchaseReceiptOrderCreateResp, error)
-	UpdatePurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptUpdateReq) error
 	GetPurchaseReceiptOrderList(ctx context.Context, req req.PurchaseReceiptOrderListReq) (resp.PurchaseReceiptOrderListResp, error)
 	GetPurchaseReceiptOrderDetail(ctx context.Context, req req.PurchaseReceiptOrderDetailReq) (resp.PurchaseReceiptOrderDetailResp, error)
+	UpdatePurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptOrderUpdateReq) error
+	CancelPurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptOrderCancelReq) error
 }
 
 // purchaseOrderSrv 采购申请服务实现
@@ -520,7 +521,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 
 		// 检查采购申请是否完成
 		if purchaseOrder.Status == constant.ReceiptOrderStatusReceived {
-			err = s.checkAndUpdatePurchaseOrderStatus(tx, req.PurchaseOrderUuid)
+			err = s.checkAndUpdatePurchaseOrderStatus(ctx, tx, req.PurchaseOrderUuid)
 			if err != nil {
 				return err
 			}
@@ -539,7 +540,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 }
 
 // UpdatePurchaseReceiptOrder 更新收货单
-func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptUpdateReq) error {
+func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptOrderUpdateReq) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	err := db.Transaction(func(tx *gorm.DB) error {
@@ -631,7 +632,7 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 
 		// 检查采购申请是否完成
 		if receiptOrder.Status == constant.ReceiptOrderStatusReceived {
-			err = s.checkAndUpdatePurchaseOrderStatus(tx, receiptOrder.PurchaseOrderUuid)
+			err = s.checkAndUpdatePurchaseOrderStatus(ctx, tx, receiptOrder.PurchaseOrderUuid)
 			if err != nil {
 				return err
 			}
@@ -804,8 +805,34 @@ func (s *purchaseOrderSrv) createPurchaseOrderLog(db *gorm.DB, purchaseOrderUuid
 	return logRepo.Create(log)
 }
 
+// CancelPurchaseReceiptOrder 取消收货单
+func (s *purchaseOrderSrv) CancelPurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptOrderCancelReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(db)
+
+	// 查询收货单
+	receiptOrder, err := receiptOrderRepo.GetByUuid(req.Uuid)
+	if err != nil {
+		return errors.WithMessage(err, "收货单不存在")
+	}
+
+	// 检查收货单状态
+	if receiptOrder.Status != constant.ReceiptOrderStatusPending {
+		return errors.New("收货单状态不允许取消")
+	}
+
+	// 取消收货单
+	receiptOrder.Status = constant.ReceiptOrderStatusRejected
+	err = receiptOrderRepo.Update(receiptOrder)
+	if err != nil {
+		return errors.WithMessage(err, "取消收货单失败")
+	}
+
+	return nil
+}
+
 // checkAndUpdatePurchaseOrderStatus 检查并更新采购申请状态
-func (s *purchaseOrderSrv) checkAndUpdatePurchaseOrderStatus(db *gorm.DB, purchaseOrderUuid uint64) error {
+func (s *purchaseOrderSrv) checkAndUpdatePurchaseOrderStatus(ctx context.Context, db *gorm.DB, purchaseOrderUuid uint64) error {
 	purchaseOrderRepo := repository.NewPurchaseOrderRepo(db)
 	purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(db)
 
@@ -852,6 +879,18 @@ func (s *purchaseOrderSrv) checkAndUpdatePurchaseOrderStatus(db *gorm.DB, purcha
 			return err
 		}
 	}
+
+	// 创建收货单操作日志
+	err = s.createPurchaseOrderLog(db, purchaseOrderUuid, ctx, "update_status", "更新采购申请状态", oldStatus, purchaseOrder.Status, "")
+	if err != nil {
+		return err
+	}
+
+	// TODO 调用入库接口
+	// err = s.warehouseSrv.Inbound(ctx, purchaseOrderUuid)
+	// if err != nil {
+	// 	return err
+	// }
 
 	return nil
 }

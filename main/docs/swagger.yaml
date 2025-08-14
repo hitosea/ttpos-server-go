@@ -4384,7 +4384,16 @@ definitions:
     - num
     - uuid
     type: object
-  req.PurchaseReceiptUpdateReq:
+  req.PurchaseReceiptOrderCancelReq:
+    properties:
+      uuid:
+        description: 收货单ID
+        minimum: 1
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.PurchaseReceiptOrderUpdateReq:
     properties:
       is_confirm:
         description: 是否确认收货
@@ -22786,6 +22795,34 @@ paths:
       summary: 更新采购订单
       tags:
       - 商家端.采购管理
+  /shop/purchase/receipt/cancel:
+    post:
+      consumes:
+      - application/json
+      description: 取消收货单
+      parameters:
+      - description: 取消收货单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PurchaseReceiptOrderCancelReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 取消收货单
+      tags:
+      - 商家端.采购管理
   /shop/purchase/receipt/create:
     post:
       consumes:
@@ -22907,7 +22944,7 @@ paths:
         name: data
         required: true
         schema:
-          $ref: '#/definitions/req.PurchaseReceiptUpdateReq'
+          $ref: '#/definitions/req.PurchaseReceiptOrderUpdateReq'
       produces:
       - application/json
       responses:
