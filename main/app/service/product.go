@@ -22,6 +22,7 @@ import (
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/duke-git/lancet/v2/convertor"
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
@@ -2782,20 +2783,22 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 	}
 
 	// 搜索商品名称
-	if req.Keyword != nil {
+	if req.Keyword != nil && *req.Keyword != "" {
 		opts = append(opts, commonRepo.WhereLike("name", *req.Keyword))
 	}
 	// 商品类型
-	if req.Type != nil {
-		opts = append(opts, productRepo.WhereProductType(uint8(*req.Type)))
+	if req.Type != nil && *req.Type != "" {
+		typ, _ := convertor.ToInt(*req.Type)
+		opts = append(opts, productRepo.WhereProductType(uint8(typ)))
 	}
 	// 商品状态
-	if req.Status != nil {
-		opts = append(opts, commonRepo.WhereByStatus(uint(*req.Status)))
+	if req.Status != nil && *req.Status != "" {
+		status, _ := convertor.ToInt(*req.Status)
+		opts = append(opts, commonRepo.WhereByStatus(uint(status)))
 	}
 
 	// 商品标签
-	if req.Tag != nil {
+	if req.Tag != nil && *req.Tag != "" {
 		tagList := strings.Split(*req.Tag, ",")
 		for _, tag := range tagList {
 			switch tag {
@@ -2809,8 +2812,9 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 		}
 	}
 	// 商品分类
-	if req.CategoryUuid != nil {
-		opts = append(opts, productRepo.WhereCategoryUuid(*req.CategoryUuid))
+	if req.CategoryUuid != nil && *req.CategoryUuid != "" {
+		categoryUuid, _ := convertor.ToInt(*req.CategoryUuid)
+		opts = append(opts, productRepo.WhereCategoryUuid(uint64(categoryUuid)))
 	}
 
 	// 获取商品列表
