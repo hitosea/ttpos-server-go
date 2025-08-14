@@ -80,6 +80,9 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		repository.WithPreload{
 			Query: "CostUnit.Unit.MultiLanguageName",
 		},
+		repository.WithPreload{
+			Query: "NotBaseUnitList.Unit.MultiLanguageName",
+		},
 	))
 
 	// 获取物品列表
@@ -99,6 +102,14 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		if material.InitStock == 0 {
 			continue // 过滤掉非移动管理端添加的物品
 		}
+		unitList := []material_resp.MaterialUnit{}
+		for _, unit := range material.NotBaseUnitList {
+			unitList = append(unitList, material_resp.MaterialUnit{
+				Uuid:           unit.Uuid,
+				Name:           unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+				ConversionRate: unit.ConversionRate,
+			})
+		}
 		respMaterial := material_resp.Material{
 			Uuid:         material.Uuid,
 			Name:         material.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
@@ -113,6 +124,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			UnitName:         material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 			PurchaseUnitName: material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 			CostUnitName:     material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			UnitList:         unitList,
 		}
 		materialList = append(materialList, respMaterial)
 	}
