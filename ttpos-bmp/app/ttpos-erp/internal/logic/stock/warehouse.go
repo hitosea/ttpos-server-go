@@ -5,7 +5,6 @@ import (
 	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/warehouse"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
-	"ttpos-bmp/app/ttpos-erp/internal/model/dto"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
@@ -170,10 +169,10 @@ func (s *sWarehouse) buildWarehouseListFilters(ctx context.Context, req *warehou
 // queryWarehouseList 执行仓库列表查询
 func (s *sWarehouse) queryWarehouseList(ctx context.Context, filters [][]string) ([]*warehouse.WarehouseInfo, error) {
 	// 查询仓库列表
-	resp, err := service.Document().List(ctx, &dto.ErpReq{
+	resp, err := service.Document().List(ctx, &erp.ErpReq{
 		DocType: "Warehouse",
-	}, &dto.RequestParams{
-		Fields:  g.ArrayStr{"warehouse_name", "warehouse_type", "custom_branch", "custom_aliasname", "company"},
+	}, &erp.RequestParams{
+		Fields:  g.ArrayStr{"name", "warehouse_name", "warehouse_type", "custom_branch", "custom_aliasname", "company"},
 		Filters: filters,
 		Limit:   consts.Limit999,
 	})
@@ -194,6 +193,7 @@ func (s *sWarehouse) queryWarehouseList(ctx context.Context, filters [][]string)
 
 	for _, data := range dataArray {
 		warehouseInfo := &warehouse.WarehouseInfo{
+			Name:          data.Get("name").String(),
 			Branch:        data.Get("custom_branch").String(),
 			Company:       data.Get("company").String(),
 			WarehouseName: data.Get("warehouse_name").String(),

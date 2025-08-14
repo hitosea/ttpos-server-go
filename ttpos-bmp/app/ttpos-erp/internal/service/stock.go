@@ -8,6 +8,7 @@ package service
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/item"
+	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-bmp/app/ttpos-erp/api/warehouse"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 )
@@ -43,6 +44,9 @@ type (
 		// SaveAttribute 保存属性信息
 		// 如果属性已存在则更新，否则创建新属性
 		SaveAttribute(ctx context.Context, req *item.AttributeInfo) error
+		CreateMaterialRequest(ctx context.Context, req *stock.SaveMaterialRequestReq) (res *stock.MaterialRequest, err error)
+		// GetMaterialRequestList 获取物料请求列表
+		GetMaterialRequestList(ctx context.Context, req *stock.GetMaterialRequestListReq) (res *stock.GetMaterialRequestListResp, err error)
 	}
 	IWarehouse interface {
 		// CreateWarehouse 创建仓库

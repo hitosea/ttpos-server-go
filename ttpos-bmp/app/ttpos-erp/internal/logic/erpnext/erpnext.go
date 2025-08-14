@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"ttpos-bmp/app/ttpos-erp/internal/dao"
 	"ttpos-bmp/app/ttpos-erp/internal/model/do"
-	"ttpos-bmp/app/ttpos-erp/internal/model/dto"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/model/entity"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
@@ -30,13 +30,13 @@ func init() {
 	service.RegisterRpc(Rpc)
 }
 
-func (s *sRpc) Execute(ctx context.Context, req *dto.ErpReq, params interface{}) (rst *g.Var, err error) {
+func (s *sRpc) Execute(ctx context.Context, req *erp.ErpReq, params interface{}) (rst *g.Var, err error) {
 	rst = GetClient(ctx).PostVar(ctx, fmt.Sprintf("%s%s", getRpcUrlWithName(req), req.Method), params)
 	err = detectError(rst)
 	return
 }
 
-func getRpcUrlWithName(req *dto.ErpReq) (url string) {
+func getRpcUrlWithName(req *erp.ErpReq) (url string) {
 	url = fmt.Sprintf("%s/%s", rpcApiUrl, req.DocType)
 	return
 }
@@ -65,7 +65,7 @@ func GetClient(ctx context.Context) *gclient.Client {
 }
 
 func detectError(resp *gvar.Var) error {
-	if resp == nil {
+	if resp == nil || resp.IsEmpty() {
 		return gerror.New("调用erpnext接口返回空")
 	} else {
 		if j, err := gjson.DecodeToJson(resp); err == nil {
@@ -78,8 +78,8 @@ func detectError(resp *gvar.Var) error {
 				return gerror.Newf("调用erpnext接口返回异常,error:%s", j.Get("errors").String())
 			}
 		} else {
-			g.Log().Error(gctx.GetInitCtx(), "调用erpnext接口返回解析异常: %v", err)
-			return gerror.Newf("调用erpnext接口返回解析异常:%s", err.Error())
+			g.Log().Errorf(gctx.GetInitCtx(), "调用erpnext接口返回解析异常: %v", err)
+			return gerror.Wrapf(err, "调用erpnext接口返回解析异常")
 		}
 	}
 

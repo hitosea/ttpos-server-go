@@ -7,37 +7,37 @@ package service
 
 import (
 	"context"
-	"ttpos-bmp/app/ttpos-erp/internal/model/dto"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 
 	"github.com/gogf/gf/v2/frame/g"
 )
 
 type (
 	IDoctype interface {
-		Meta(ctx context.Context, req *dto.ErpReq) (rst *g.Var, err error)
-		Count(ctx context.Context, req *dto.ErpReq, params *dto.RequestParams) (int, error)
+		Meta(ctx context.Context, req *erp.ErpReq) (rst *g.Var, err error)
+		Count(ctx context.Context, req *erp.ErpReq, params *erp.RequestParams) (int, error)
 	}
 	IDocument interface {
-		List(ctx context.Context, req *dto.ErpReq, params *dto.RequestParams) (rst *g.Var, err error)
-		Get(ctx context.Context, req *dto.ErpReq, params *dto.RequestParams) (rst *g.Var, err error)
+		List(ctx context.Context, req *erp.ErpReq, params *erp.RequestParams) (rst *g.Var, err error)
+		Get(ctx context.Context, req *erp.ErpReq, params *erp.RequestParams) (rst *g.Var, err error)
 		Create(ctx context.Context, docType string, data interface{}) (rst *g.Var, err error)
-		Update(ctx context.Context, req *dto.ErpReq, data interface{}) (rst *g.Var, err error)
-		Delete(ctx context.Context, req *dto.ErpReq) (rst *g.Var, err error)
-		Copy(ctx context.Context, req *dto.ErpReq) (rst *g.Var, err error)
-		Execute(ctx context.Context, req *dto.ErpReq, params interface{}) (rst *g.Var, err error)
+		Update(ctx context.Context, req *erp.ErpReq, data interface{}) (rst *g.Var, err error)
+		Delete(ctx context.Context, req *erp.ErpReq) (rst *g.Var, err error)
+		Copy(ctx context.Context, req *erp.ErpReq) (rst *g.Var, err error)
+		Execute(ctx context.Context, req *erp.ErpReq, params interface{}) (rst *g.Var, err error)
 	}
 	IRpc interface {
-		Execute(ctx context.Context, req *dto.ErpReq, params interface{}) (rst *g.Var, err error)
+		Execute(ctx context.Context, req *erp.ErpReq, params interface{}) (rst *g.Var, err error)
 	}
 	IReport interface {
-		Run(ctx context.Context, params *dto.ReportParams) (rst *g.Var, err error)
+		Run(ctx context.Context, params *erp.ReportParams) (rst *g.Var, err error)
 	}
 	IResource interface {
-		List(ctx context.Context, docType string, params *dto.RequestParams) (rst *g.Var, err error)
-		Get(ctx context.Context, docType string, name string, params *dto.RequestParams) (rst *g.Var, err error)
-		Post(ctx context.Context, docType string, params *dto.RequestParams) (rst *g.Var, err error)
-		Put(ctx context.Context, docType string, params *dto.RequestParams) (rst *g.Var, err error)
-		Delete(ctx context.Context, docType string, params *dto.RequestParams) (rst *g.Var, err error)
+		List(ctx context.Context, docType string, params *erp.RequestParams) (rst *g.Var, err error)
+		Get(ctx context.Context, docType string, name string, params *erp.RequestParams) (rst *g.Var, err error)
+		Post(ctx context.Context, docType string, params *erp.RequestParams) (rst *g.Var, err error)
+		Put(ctx context.Context, docType string, params *erp.RequestParams) (rst *g.Var, err error)
+		Delete(ctx context.Context, docType string, params *erp.RequestParams) (rst *g.Var, err error)
 	}
 )
 

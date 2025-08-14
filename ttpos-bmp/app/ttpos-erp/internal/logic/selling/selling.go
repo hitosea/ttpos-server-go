@@ -3,7 +3,6 @@ package selling
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
-	"ttpos-bmp/app/ttpos-erp/internal/model/dto"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
@@ -45,9 +44,9 @@ func (s *sSelling) GetPosProfileList(ctx context.Context, req *selling.PosProfil
 	}
 
 	// 查询Pos Profile列表
-	list, err := service.Document().List(ctx, &dto.ErpReq{
+	list, err := service.Document().List(ctx, &erp.ErpReq{
 		DocType: "POS Profile",
-	}, &dto.RequestParams{
+	}, &erp.RequestParams{
 		Fields:  []string{"name", "company", "warehouse", "branch"},
 		Filters: filters,
 	})
@@ -77,8 +76,11 @@ func (s *sSelling) GetPosProfileList(ctx context.Context, req *selling.PosProfil
 }
 
 func (s *sSelling) CreateDefaultModePaymentAccount(ctx context.Context, req *erp.CreateModePaymentAccountInp) (err error) {
-	_, err = service.Rpc().Execute(ctx, &dto.ErpReq{
+	_, err = service.Rpc().Execute(ctx, &erp.ErpReq{
 		Method: "init_shop_cash_account",
 	}, req)
+	if err != nil {
+		return gerror.Wrapf(err, "创建默认支付账户失败")
+	}
 	return nil
 }

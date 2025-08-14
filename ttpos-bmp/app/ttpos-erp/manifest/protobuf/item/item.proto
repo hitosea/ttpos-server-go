@@ -94,9 +94,9 @@ message GetAttributeListResp {
 }
 
 message ItemStock {
-  string item_code = 1;      // 商品编码，
-  string item_name = 2;      // 商品名称，
-  ItemGroup item_group = 3;     // 商品分组，
+  string item_code = 1;      // 物品编码，
+  string item_name = 2;      // 物品名称，
+  ItemGroup item_group = 3;     // 物品分组，
   string warehouse = 4;      // 仓库名称，
   string stock_uom = 5;      // 库存单位，
   float actual_qty = 6;      // 实际库存数量
@@ -106,14 +106,44 @@ message ItemStock {
 message GetItemStockReq {
   string company_abbr = 1;      // 公司简称，必填
   string branch = 2;      // 分支名称，必填
-  string item_code = 3;      // 商品编码，可选
-  string item_name = 4;      // 商品名称，可选，模糊查询
-  ItemGroup item_group = 5;     // 商品分组，可选
+  string item_code = 3;      // 物品编码，可选
+  string item_name = 4;      // 物品名称，可选，模糊查询
+  ItemGroup item_group = 5;     // 物品分组，可选
   string warehouse = 6;      // 仓库名称，可选
 }
 
 message GetItemStockResp {
-  repeated ItemStock item_stock_list = 1; // 商品库存列表
+  repeated ItemStock item_stock_list = 1; // 物品库存列表
+}
+
+message BomInfo {
+  string item_code = 1;      // 商品编码，
+  string bom_name = 2;      // 商品名称，
+  string stock_uom = 4;      // 库存单位，
+  float quantity = 5;      // 数量，必填
+  bool is_active = 6;      // 是否激活，
+  bool is_default = 7;      // 是否默认，
+  repeated BomItem items = 8;      // 物品列表，
+}
+
+message BomItem {
+  string item_code = 1;      // 物品编码，
+  string item_name = 2;      // 物品名称，
+  float qty = 3;      // 物品数量，
+  string uom = 4;      // 物品单位，
+}
+
+
+message GetBomListReq {
+  string company_abbr = 1;      // 公司简称，必填
+  string branch = 2;      // 分支名称，必填
+  string item_code = 3;      // 物品编码，可选
+  string item_name = 4;      // 物品名称，可选，模糊查询
+  ItemGroup item_group = 5;     // 物品分组，可选
+}
+
+message GetBomListResp {
+  repeated BomInfo bom_list = 1; // 物品列表
 }
 
 service ItemService {
