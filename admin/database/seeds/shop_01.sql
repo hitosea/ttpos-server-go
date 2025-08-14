@@ -1280,6 +1280,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_sauce` (
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格',
     `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序(数字越小越靠前)',
+    `product_bom_card_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '成本卡ID',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

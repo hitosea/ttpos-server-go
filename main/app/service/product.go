@@ -1346,6 +1346,12 @@ func (s *productSrv) GetProductSauceList(ctx context.Context, sauceListReq req.P
 			Name:                productSauce.MultiLanguageName.GetNameByLang(language),
 			Sort:                productSauce.Sort,
 			ProductPackageCount: productSauce.ProductPackageCount,
+			HasBomCard: func() bool {
+				if productSauce.ProductBomCardUuid == 0 {
+					return false
+				}
+				return true
+			}(),
 		})
 	}
 	return product_resp.ProductSauceListResp{

@@ -30,6 +30,7 @@ type ProductSauce struct {
 	Price                 float64 `gorm:"default:0;column:price;comment:'价格'"`
 	MultiLanguageNameUuid uint64  `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	Sort                  int     `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
+	ProductBomCardUuid    uint64  `gorm:"default:0;column:product_bom_card_uuid;comment:'成本卡ID'"`
 
 	MultiLanguageName MultiLanguageName  `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 	SauceMaterials    []*RelatedMaterial `gorm:"foreignKey:related_uuid;references:uuid"`             // 小料的组成材料

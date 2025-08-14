@@ -205,6 +205,7 @@ type ProductSauceItem struct {
 	Name                string `json:"name"`                  // 商品加料名称
 	Sort                int    `json:"sort"`                  // 商品加料排序
 	ProductPackageCount int    `json:"product_package_count"` // 关联商品包数量
+	HasBomCard          bool   `json:"has_bom_card"`          // 是否有成本卡. 用于成本卡管理页面
 }
 
 type ProductSauceProductPackage struct {
