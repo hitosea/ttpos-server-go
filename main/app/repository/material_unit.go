@@ -11,7 +11,9 @@ import (
 type IMaterialUnitRepo interface {
 	// 基础CRUD操作
 	GetMaterialUnitByUuid(uuid uint64, opts ...DBOption) (model.MaterialUnit, error)
+	GetMaterialUnitList(opts ...DBOption) ([]*model.MaterialUnit, error)
 	CreateMaterialUnit(materialUnit model.MaterialUnit) (uint64, error)
+	GetMaterialUnitListByBaseUnitUuid(baseUnitUuid uint64) ([]*model.MaterialUnit, error)
 }
 
 // NewMaterialUnitRepo 创建新的原料单位仓库
@@ -52,4 +54,31 @@ func (r *MaterialUnitRepoImpl) CreateMaterialUnit(materialUnit model.MaterialUni
 		return 0, errors.WithMessage(err, "创建原料单位失败")
 	}
 	return materialUnit.Uuid, nil
+}
+
+func (r *MaterialUnitRepoImpl) GetMaterialUnitList(opts ...DBOption) ([]*model.MaterialUnit, error) {
+	var materialUnits []*model.MaterialUnit
+	query := r.db.Model(&model.MaterialUnit{}).Where("delete_time = ?", 0)
+
+	// 应用查询选项
+	for _, opt := range opts {
+		query = opt(query)
+	}
+
+	if err := query.Find(&materialUnits).Error; err != nil {
+		return nil, errors.WithMessage(err, "查询原料单位列表失败")
+	}
+	return materialUnits, nil
+}
+
+func (r *MaterialUnitRepoImpl) GetMaterialUnitListByBaseUnitUuid(baseUnitUuid uint64) ([]*model.MaterialUnit, error) {
+	return r.GetMaterialUnitList(
+		CommonRepo.WhereByFromUnitUuid(baseUnitUuid),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "Unit.MultiLanguageName",
+			},
+		),
+	)
 }

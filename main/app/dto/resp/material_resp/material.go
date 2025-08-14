@@ -32,7 +32,7 @@ type MaterialDetailResp struct {
 	Code             string               `json:"code"`               // 物品编码
 	CategoryUuid     uint64               `json:"category_uuid"`      // 分类UUID
 	CategoryName     string               `json:"category_name"`      // 分类名称
-	Status           int                  `json:"status"`             // 状态 1-启用 2-停用
+	Status           int                  `json:"status"`             // 状态 1-启用 0-停用
 	Valuation        float64              `json:"valuation"`          // 估值率
 	BarcodeValue     string               `json:"barcode_value"`      // 条形码值
 	UnitName         string               `json:"unit_name"`          // 单位名称
