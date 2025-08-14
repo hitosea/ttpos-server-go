@@ -715,6 +715,11 @@ definitions:
       status:
         description: 状态 1-启用 2-停用
         type: integer
+      unit_list:
+        description: 单位列表
+        items:
+          $ref: '#/definitions/material_resp.MaterialUnit'
+        type: array
       unit_name:
         description: 基准单位名称
         type: string
@@ -785,6 +790,18 @@ definitions:
         description: 估值率
         type: number
     type: object
+  material_resp.MaterialInfo:
+    properties:
+      code:
+        description: 材料编码
+        type: string
+      name:
+        description: 材料名称
+        type: string
+      uuid:
+        description: 材料UUID
+        type: integer
+    type: object
   material_resp.MaterialListResp:
     properties:
       list:
@@ -814,6 +831,42 @@ definitions:
   material_resp.MaterialUnitListResp:
     properties:
       list:
+        items:
+          $ref: '#/definitions/material_resp.MaterialUnit'
+        type: array
+    type: object
+  material_resp.ProductBomCardDetailResp:
+    properties:
+      materials:
+        description: 材料列表
+        items:
+          $ref: '#/definitions/material_resp.ProductBomCardMaterial'
+        type: array
+      name:
+        description: 成本卡名称
+        type: string
+      num:
+        description: 加工份数
+        type: number
+      uuid:
+        description: 成本卡UUID
+        type: integer
+    type: object
+  material_resp.ProductBomCardMaterial:
+    properties:
+      material:
+        allOf:
+        - $ref: '#/definitions/material_resp.MaterialInfo'
+        description: 材料信息
+      num:
+        description: 净耗量
+        type: number
+      unit:
+        allOf:
+        - $ref: '#/definitions/material_resp.MaterialUnit'
+        description: 成本单位
+      unit_list:
+        description: 单位列表, 用于成本卡编辑选择单位
         items:
           $ref: '#/definitions/material_resp.MaterialUnit'
         type: array
@@ -1945,6 +1998,9 @@ definitions:
     type: object
   product_resp.ProductSauceItem:
     properties:
+      has_bom_card:
+        description: 是否有成本卡. 用于成本卡管理页面
+        type: boolean
       name:
         description: 商品加料名称
         type: string
@@ -3773,6 +3829,14 @@ definitions:
     - num
     - unit_uuid
     type: object
+  req.ProductBomCardUnlinkReq:
+    properties:
+      product_bom_uuid:
+        description: ProductBomUuid
+        type: integer
+    required:
+    - product_bom_uuid
+    type: object
   req.ProductFlavorAddProductPackage:
     properties:
       price:
@@ -4538,9 +4602,6 @@ definitions:
     type: object
   req.PurchaseOrderCreateReq:
     properties:
-      bill_date:
-        description: 单据日期
-        type: string
       expected_delivery_time:
         description: 期望到货时间(时间戳)
         minimum: 0
@@ -4552,14 +4613,18 @@ definitions:
         maxItems: 200
         minItems: 1
         type: array
+      order_time:
+        description: 单据日期
+        minimum: 0
+        type: integer
       order_type:
         description: 申请类型 0-仓库调拨
         enum:
         - 0
         type: integer
     required:
-    - bill_date
     - items
+    - order_time
     - order_type
     type: object
   req.PurchaseOrderDeleteReq:
@@ -23055,6 +23120,55 @@ paths:
       security:
       - JwtToken: []
       summary: 添加成本卡
+      tags:
+      - 商家端.物品管理
+  /shop/product_bom/card/detail:
+    get:
+      consumes:
+      - application/json
+      description: 规格商品成本卡详情
+      parameters:
+      - description: 成本卡UUID
+        in: query
+        name: uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/material_resp.ProductBomCardDetailResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 规格商品成本卡详情
+      tags:
+      - 商家端.物品管理
+  /shop/product_bom/card/unlink:
+    post:
+      consumes:
+      - application/json
+      description: 解除成本卡关联
+      parameters:
+      - description: 成本卡解除关联请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductBomCardUnlinkReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 解除成本卡关联
       tags:
       - 商家端.物品管理
   /shop/purchase/order/approve:

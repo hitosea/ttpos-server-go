@@ -279,7 +279,7 @@ func (h *MaterialHandler) AddProductBomCard(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param uuid query string true "成本卡UUID"
-// @Success 200 {object} product_resp.ProductBomCardDetailResp "成功"
+// @Success 200 {object} material_resp.ProductBomCardDetailResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /shop/product_bom/card/detail [get]
 func (h *MaterialHandler) GetProductBomCardDetail(c *gin.Context) {

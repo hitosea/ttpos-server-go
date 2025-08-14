@@ -20507,6 +20507,85 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/product_bom/card/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "规格商品成本卡详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "规格商品成本卡详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "成本卡UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/material_resp.ProductBomCardDetailResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product_bom/card/unlink": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "解除成本卡关联",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "解除成本卡关联",
+                "parameters": [
+                    {
+                        "description": "成本卡解除关联请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductBomCardUnlinkReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/purchase/order/approve": {
             "post": {
                 "security": [
@@ -24865,6 +24944,13 @@ const docTemplate = `{
                     "description": "状态 1-启用 2-停用",
                     "type": "integer"
                 },
+                "unit_list": {
+                    "description": "单位列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/material_resp.MaterialUnit"
+                    }
+                },
                 "unit_name": {
                     "description": "基准单位名称",
                     "type": "string"
@@ -24968,6 +25054,23 @@ const docTemplate = `{
                 }
             }
         },
+        "material_resp.MaterialInfo": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "材料编码",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "材料名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "材料UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "material_resp.MaterialListResp": {
             "type": "object",
             "properties": {
@@ -25011,6 +25114,62 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/material_resp.MaterialUnit"
+                    }
+                }
+            }
+        },
+        "material_resp.ProductBomCardDetailResp": {
+            "type": "object",
+            "properties": {
+                "materials": {
+                    "description": "材料列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/material_resp.ProductBomCardMaterial"
+                    }
+                },
+                "name": {
+                    "description": "成本卡名称",
+                    "type": "string"
+                },
+                "num": {
+                    "description": "加工份数",
+                    "type": "number"
+                },
+                "uuid": {
+                    "description": "成本卡UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "material_resp.ProductBomCardMaterial": {
+            "type": "object",
+            "properties": {
+                "material": {
+                    "description": "材料信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/material_resp.MaterialInfo"
+                        }
+                    ]
+                },
+                "num": {
+                    "description": "净耗量",
+                    "type": "number"
+                },
+                "unit": {
+                    "description": "成本单位",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/material_resp.MaterialUnit"
+                        }
+                    ]
+                },
+                "unit_list": {
+                    "description": "单位列表, 用于成本卡编辑选择单位",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/material_resp.MaterialUnit"
@@ -26707,6 +26866,10 @@ const docTemplate = `{
         "product_resp.ProductSauceItem": {
             "type": "object",
             "properties": {
+                "has_bom_card": {
+                    "description": "是否有成本卡. 用于成本卡管理页面",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "商品加料名称",
                     "type": "string"
@@ -29345,6 +29508,18 @@ const docTemplate = `{
                 }
             }
         },
+        "req.ProductBomCardUnlinkReq": {
+            "type": "object",
+            "required": [
+                "product_bom_uuid"
+            ],
+            "properties": {
+                "product_bom_uuid": {
+                    "description": "ProductBomUuid",
+                    "type": "integer"
+                }
+            }
+        },
         "req.ProductFlavorAddProductPackage": {
             "type": "object",
             "required": [
@@ -30447,15 +30622,11 @@ const docTemplate = `{
         "req.PurchaseOrderCreateReq": {
             "type": "object",
             "required": [
-                "bill_date",
                 "items",
+                "order_time",
                 "order_type"
             ],
             "properties": {
-                "bill_date": {
-                    "description": "单据日期",
-                    "type": "string"
-                },
                 "expected_delivery_time": {
                     "description": "期望到货时间(时间戳)",
                     "type": "integer",
@@ -30469,6 +30640,11 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/req.PurchaseOrderItemCreateReq"
                     }
+                },
+                "order_time": {
+                    "description": "单据日期",
+                    "type": "integer",
+                    "minimum": 0
                 },
                 "order_type": {
                     "description": "申请类型 0-仓库调拨",

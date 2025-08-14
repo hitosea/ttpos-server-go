@@ -11,7 +11,7 @@ type PurchaseOrderListReq struct {
 
 // PurchaseOrderCreateReq 创建采购订单请求
 type PurchaseOrderCreateReq struct {
-	BillDate             string                       `json:"bill_date" binding:"required,date"`                // 单据日期
+	OrderTime            int64                        `json:"order_time" binding:"required,min=0"`              // 单据日期
 	OrderType            int                          `json:"order_type" binding:"required,oneof=0"`            // 申请类型 0-仓库调拨
 	ExpectedDeliveryTime int64                        `json:"expected_delivery_time" binding:"omitempty,min=0"` // 期望到货时间(时间戳)
 	Items                []PurchaseOrderItemCreateReq `json:"items" binding:"required,min=1,max=200,dive"`      // 物品明细
