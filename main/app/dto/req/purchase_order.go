@@ -5,8 +5,8 @@ import "ttpos-server-go/app/dto"
 // PurchaseOrderListReq 采购订单列表请求
 type PurchaseOrderListReq struct {
 	dto.PageReq        // 分页参数
-	OrderNo     string `json:"order_no" form:"order_no" binding:"omitempty,max=50"`   // 订单编号
-	Status      *int   `json:"status" form:"status" binding:"omitempty,min=-1,max=5"` // 状态筛选, -1-全部 0-待提交 1-待审核 2-已通过 3-已驳回 4-部分收货 5-全部收货
+	OrderNo     string `json:"order_no" form:"order_no" binding:"omitempty,max=50"`        // 订单编号
+	StatusIn    []int  `json:"status_in" form:"status_in" binding:"omitempty,min=0,max=5"` // 状态筛选: [0,1,2,3,4,5], 0-待提交 1-待审核 2-已通过 3-已驳回 4-部分收货 5-全部收货
 }
 
 // PurchaseOrderCreateReq 创建采购订单请求
@@ -60,20 +60,24 @@ type PurchaseOrderSubmitReq struct {
 
 // PurchaseReceiptCreateReq 创建收货记录请求
 type PurchaseReceiptCreateReq struct {
-	PurchaseOrderUuid uint64                         `json:"purchase_order_uuid" binding:"required,min=1"`   // 采购订单ID
-	ReceiptTime       int                            `json:"receipt_time" binding:"required,min=0"`          // 收货时间(时间戳)
-	QualityStatus     int                            `json:"quality_status" binding:"omitempty,min=1,max=3"` // 质检状态 1-合格 2-不合格 3-部分合格
-	Remark            string                         `json:"remark" binding:"omitempty,max=1000"`            // 收货备注
-	Items             []PurchaseReceiptItemCreateReq `json:"items" binding:"required,min=1,max=200,dive"`    // 收货明细
+	PurchaseOrderUuid uint64                         `json:"purchase_order_uuid" binding:"required,min=1"`    // 采购订单ID
+	ReceiptTime       int64                          `json:"receipt_time" binding:"required,min=0"`           // 收货时间(时间戳)
+	Items             []PurchaseReceiptItemCreateReq `json:"items" binding:"required,min=1,max=200,dive"`     // 收货明细
+	IsConfirm         bool                           `json:"is_confirm" binding:"omitempty,oneof=true false"` // 是否确认收货
+}
+
+// PurchaseReceiptUpdateReq 更新收货记录请求
+type PurchaseReceiptOrderUpdateReq struct {
+	Uuid        uint64                         `json:"uuid" binding:"required,min=1"`                   // 收货记录ID
+	ReceiptTime int                            `json:"receipt_time" binding:"required,min=0"`           // 收货时间(时间戳)
+	Items       []PurchaseReceiptItemCreateReq `json:"items" binding:"required,min=1,max=200,dive"`     // 收货明细
+	IsConfirm   bool                           `json:"is_confirm" binding:"omitempty,oneof=true false"` // 是否确认收货
 }
 
 // PurchaseReceiptItemCreateReq 收货明细创建请求
 type PurchaseReceiptItemCreateReq struct {
-	PurchaseOrderItemUuid uint64  `json:"purchase_order_item_uuid" binding:"required,min=1"` // 采购订单商品明细ID
-	ReceivedNum           float64 `json:"received_num" binding:"required,gte=0,lte=99999"`   // 实收数量
-	QualifiedNum          float64 `json:"qualified_num" binding:"required,gte=0,lte=99999"`  // 合格数量
-	QualityStatus         int     `json:"quality_status" binding:"omitempty,min=1,max=3"`    // 质检状态 1-合格 2-不合格 3-部分合格
-	QualityRemark         string  `json:"quality_remark" binding:"omitempty,max=500"`        // 质检备注
+	Uuid uint64  `json:"uuid" binding:"required,min=1"`          // 商品明细ID
+	Num  float64 `json:"num" binding:"required,gte=0,lte=99999"` // 实收数量
 }
 
 // PurchaseReceiptListReq 收货记录列表请求
@@ -100,11 +104,9 @@ type PurchaseOrderStatisticsReq struct {
 
 // PurchaseReceiptOrderListReq 收货单列表请求
 type PurchaseReceiptOrderListReq struct {
-	dto.PageReq              // 分页参数
-	PurchaseOrderUuid uint64 `json:"purchase_order_uuid" form:"purchase_order_uuid" binding:"omitempty,min=1"` // 采购订单ID
-	ReceiptNo         string `json:"receipt_no" form:"receipt_no" binding:"omitempty,max=50"`                  // 收货单号
-	ReceiptTimeStart  int    `json:"receipt_time_start" form:"receipt_time_start" binding:"omitempty,min=0"`   // 收货时间开始
-	ReceiptTimeEnd    int    `json:"receipt_time_end" form:"receipt_time_end" binding:"omitempty,min=0"`       // 收货时间结束
+	dto.PageReq        // 分页参数
+	OrderNo     string `json:"order_no" form:"order_no" binding:"omitempty,max=50"`        // 订单编号
+	StatusIn    []int  `json:"status_in" form:"status_in" binding:"omitempty,min=0,max=5"` // 状态筛选: [0,1,2], 0-待收货 1-已收货 2-已取消
 }
 
 // PurchaseReceiptOrderDetailReq 收货单详情请求
@@ -112,7 +114,7 @@ type PurchaseReceiptOrderDetailReq struct {
 	Uuid uint64 `json:"uuid" form:"uuid" binding:"required,min=1"` // 收货单ID
 }
 
-// PurchaseReceiptOrderDeleteReq 删除收货单请求
-type PurchaseReceiptOrderDeleteReq struct {
+// PurchaseReceiptOrderCancelReq 取消收货单请求
+type PurchaseReceiptOrderCancelReq struct {
 	Uuid uint64 `json:"uuid" binding:"required,min=1"` // 收货单ID
 }

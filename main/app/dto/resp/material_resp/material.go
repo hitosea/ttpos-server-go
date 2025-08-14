@@ -6,12 +6,14 @@ import (
 
 // Material 物品信息
 type Material struct {
-	Uuid         uint64 `json:"uuid"`          // 物品UUID
-	Name         string `json:"name"`          // 物品名称
-	CategoryUuid uint64 `json:"category_uuid"` // 分类UUID
-	Image        string `json:"image"`         // 图片
-	Status       int    `json:"status"`        // 状态 1-启用 2-停用
-	UnitName     string `json:"unit_name"`     // 单位名称
+	Uuid             uint64 `json:"uuid"`               // 物品UUID
+	Name             string `json:"name"`               // 物品名称
+	CategoryUuid     uint64 `json:"category_uuid"`      // 分类UUID
+	Image            string `json:"image"`              // 图片
+	Status           int    `json:"status"`             // 状态 1-启用 2-停用
+	UnitName         string `json:"unit_name"`          // 基准单位名称
+	PurchaseUnitName string `json:"purchase_unit_name"` // 采购单位名称
+	CostUnitName     string `json:"cost_unit_name"`     // 成本单位名称
 }
 
 // MaterialListResp 物品列表响应
@@ -32,7 +34,7 @@ type MaterialDetailResp struct {
 	Code             string               `json:"code"`               // 物品编码
 	CategoryUuid     uint64               `json:"category_uuid"`      // 分类UUID
 	CategoryName     string               `json:"category_name"`      // 分类名称
-	Status           int                  `json:"status"`             // 状态 1-启用 2-停用
+	Status           int                  `json:"status"`             // 状态 1-启用 0-停用
 	Valuation        float64              `json:"valuation"`          // 估值率
 	BarcodeValue     string               `json:"barcode_value"`      // 条形码值
 	UnitName         string               `json:"unit_name"`          // 单位名称
@@ -50,6 +52,7 @@ type MaterialUnitListResp struct {
 
 // MaterialUnit 物品单位
 type MaterialUnit struct {
+	Uuid           uint64  `json:"uuid"`            // 单位UUID
 	Name           string  `json:"name"`            // 单位名称
 	ConversionRate float64 `json:"conversion_rate"` // 转换率
 }

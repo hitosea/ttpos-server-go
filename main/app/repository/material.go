@@ -12,6 +12,7 @@ import (
 type IMaterialRepo interface {
 	GetMaterialListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.Material, int64, error)
 	GetMaterialByUuid(uuid uint64, opts ...DBOption) (model.Material, error)
+	GetMaterialDetailByUuid(uuid uint64) (*model.Material, error)
 	CreateMaterial(material model.Material) (uint64, error)
 	UpdateMaterial(material model.Material) error
 	DeleteMaterial(uuid uint64) error
@@ -22,6 +23,7 @@ type IMaterialRepo interface {
 	GetMaterialCategoryByName(name string) (*model.MaterialCategory, error)
 	CreateMaterialCategory(materialCategory model.MaterialCategory) (uint64, error)
 	GetMaterialCategoryList() ([]model.MaterialCategory, error)
+	UpdateMaterialStatusBatch(uuids []uint64, status int) error // 批量修改物品状态
 }
 
 // NewMaterialRepo 创建新的物品仓库
@@ -81,6 +83,35 @@ func (r *MaterialRepoImpl) GetMaterialByUuid(uuid uint64, opts ...DBOption) (mod
 	}
 
 	return material, nil
+}
+
+func (r *MaterialRepoImpl) GetMaterialDetailByUuid(uuid uint64) (*model.Material, error) {
+	material, err := r.GetMaterialByUuid(uuid,
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "MultiLanguageName",
+			},
+			WithPreload{
+				Query: "Category.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "Unit.Unit.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "PurchaseUnit.Unit.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "CostUnit.Unit.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "NotBaseUnitList.Unit.MultiLanguageName",
+			},
+		),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询物品详情失败")
+	}
+	return &material, nil
 }
 
 // CreateMaterial 创建物品
@@ -196,4 +227,11 @@ func (r *MaterialRepoImpl) GetMaterialCategoryList() ([]model.MaterialCategory, 
 	}
 
 	return materialCategories, nil
+}
+
+func (r *MaterialRepoImpl) UpdateMaterialStatusBatch(uuids []uint64, status int) error {
+	if err := r.db.Model(&model.Material{}).Where("uuid IN (?)", uuids).Update("status", status).Error; err != nil {
+		return errors.WithMessage(err, "批量修改物品状态失败")
+	}
+	return nil
 }

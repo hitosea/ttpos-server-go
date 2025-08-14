@@ -113,8 +113,7 @@ func (h *PurchaseHandler) CreatePurchaseOrder(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param data body req.PurchaseOrderUpdateReq true "更新采购订单请求参数"
-// @Success 200 {object} dto.Response{data=resp.PurchaseOrderUpdateResp} "成功"
-// @Failure 400 {object} dto.Response "请求参数错误"
+// @Success 200 {object} dto.Response{} "成功"
 // @Router /shop/purchase/order/update [post]
 func (h *PurchaseHandler) UpdatePurchaseOrder(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -124,13 +123,13 @@ func (h *PurchaseHandler) UpdatePurchaseOrder(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.purchaseOrderSrv.UpdatePurchaseOrder(ctx, updateReq)
+	err := h.purchaseOrderSrv.UpdatePurchaseOrder(ctx, updateReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 
-	helper.Success(c, resp)
+	helper.Success(c, gin.H{})
 }
 
 // DeletePurchaseOrder 删除采购订单
@@ -141,7 +140,7 @@ func (h *PurchaseHandler) UpdatePurchaseOrder(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param data body req.PurchaseOrderDeleteReq true "删除采购订单请求参数"
-// @Success 200 {object} dto.Response{data=resp.PurchaseOrderDeleteResp} "成功"
+// @Success 200 {object} dto.Response{} "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
 // @Router /shop/purchase/order/delete [delete]
 func (h *PurchaseHandler) DeletePurchaseOrder(c *gin.Context) {
@@ -152,13 +151,13 @@ func (h *PurchaseHandler) DeletePurchaseOrder(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.purchaseOrderSrv.DeletePurchaseOrder(ctx, deleteReq)
+	err := h.purchaseOrderSrv.DeletePurchaseOrder(ctx, deleteReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 
-	helper.Success(c, resp)
+	helper.Success(c, gin.H{})
 }
 
 // SubmitPurchaseOrder 提交采购订单
@@ -197,7 +196,7 @@ func (h *PurchaseHandler) SubmitPurchaseOrder(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param data body req.PurchaseOrderApproveReq true "审核采购订单请求参数"
-// @Success 200 {object} dto.Response{data=resp.PurchaseOrderApproveResp} "成功"
+// @Success 200 {object} dto.Response{} "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
 // @Router /shop/purchase/order/approve [post]
 func (h *PurchaseHandler) ApprovePurchaseOrder(c *gin.Context) {
@@ -208,13 +207,13 @@ func (h *PurchaseHandler) ApprovePurchaseOrder(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.purchaseOrderSrv.ApprovePurchaseOrder(ctx, approveReq)
+	err := h.purchaseOrderSrv.ApprovePurchaseOrder(ctx, approveReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 
-	helper.Success(c, resp)
+	helper.Success(c, gin.H{})
 }
 
 // CreatePurchaseReceipt 创建收货记录
@@ -245,6 +244,34 @@ func (h *PurchaseHandler) CreatePurchaseReceipt(c *gin.Context) {
 	helper.Success(c, resp)
 }
 
+// UpdatePurchaseReceipt 更新收货记录
+// @Summary 更新收货记录
+// @Description 更新收货记录
+// @Tags 商家端.采购管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.PurchaseReceiptOrderUpdateReq true "更新收货记录请求参数"
+// @Success 200 {object} dto.Response{} "成功"
+// @Failure 400 {object} dto.Response "请求参数错误"
+// @Router /shop/purchase/receipt/update [post]
+func (h *PurchaseHandler) UpdatePurchaseReceipt(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var updateReq req.PurchaseReceiptOrderUpdateReq
+	if err := c.ShouldBindJSON(&updateReq); err != nil {
+		helper.HandleValidationError(c, err, updateReq, nil)
+		return
+	}
+
+	err := h.purchaseOrderSrv.UpdatePurchaseReceiptOrder(ctx, updateReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, gin.H{})
+}
+
 // GetPurchaseReceiptList 获取收货记录列表
 // @Summary 获取收货记录列表
 // @Description 分页获取收货记录列表
@@ -252,12 +279,11 @@ func (h *PurchaseHandler) CreatePurchaseReceipt(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param page query int false "页码" default(1)
-// @Param page_size query int false "每页数量" default(20)
-// @Param purchase_order_uuid query int false "采购订单ID"
-// @Param receipt_no query string false "收货单号"
-// @Param quality_status query int false "质检状态"
-// @Success 200 {object} dto.Response{data=resp.PurchaseReceiptListResp} "成功"
+// @Param page_no query int false "页码" default(1)
+// @Param page_size query int false "每页条数" default(20)
+// @Param order_no query string false "订单号"
+// @Param status query int false "状态"
+// @Success 200 {object} dto.Response{data=resp.PurchaseReceiptOrderListResp} "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
 // @Router /shop/purchase/receipt/list [get]
 func (h *PurchaseHandler) GetPurchaseReceiptList(c *gin.Context) {
@@ -285,7 +311,7 @@ func (h *PurchaseHandler) GetPurchaseReceiptList(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param uuid query int true "收货记录UUID"
-// @Success 200 {object} dto.Response{data=resp.PurchaseReceiptDetailResp} "成功"
+// @Success 200 {object} dto.Response{data=resp.PurchaseReceiptOrderDetailResp} "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
 // @Router /shop/purchase/receipt/detail [get]
 func (h *PurchaseHandler) GetPurchaseReceiptDetail(c *gin.Context) {
@@ -305,34 +331,32 @@ func (h *PurchaseHandler) GetPurchaseReceiptDetail(c *gin.Context) {
 	helper.Success(c, resp)
 }
 
-// GetPurchaseOrderStatistics 获取采购订单统计
-// @Summary 获取采购订单统计
-// @Description 获取采购订单统计数据
+// CancelPurchaseReceipt 取消收货单
+// @Summary 取消收货单
+// @Description 取消收货单
 // @Tags 商家端.采购管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param time_start query int false "统计开始时间"
-// @Param time_end query int false "统计结束时间"
-// @Param type query string false "统计类型"
-// @Success 200 {object} dto.Response{data=resp.PurchaseOrderStatisticsResp} "成功"
+// @Param data body req.PurchaseReceiptOrderCancelReq true "取消收货单请求参数"
+// @Success 200 {object} dto.Response{} "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
-// @Router /shop/purchase/statistics [get]
-func (h *PurchaseHandler) GetPurchaseOrderStatistics(c *gin.Context) {
+// @Router /shop/purchase/receipt/cancel [post]
+func (h *PurchaseHandler) CancelPurchaseReceipt(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	var statsReq req.PurchaseOrderStatisticsReq
-	if err := c.ShouldBindQuery(&statsReq); err != nil {
-		helper.HandleValidationError(c, err, statsReq, nil)
+	var cancelReq req.PurchaseReceiptOrderCancelReq
+	if err := c.ShouldBindJSON(&cancelReq); err != nil {
+		helper.HandleValidationError(c, err, cancelReq, nil)
 		return
 	}
 
-	resp, err := h.purchaseOrderSrv.GetPurchaseOrderStatistics(ctx, statsReq)
+	err := h.purchaseOrderSrv.CancelPurchaseReceiptOrder(ctx, cancelReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 
-	helper.Success(c, resp)
+	helper.Success(c, gin.H{})
 }
 
 func RegisterPurchaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
@@ -368,10 +392,8 @@ func RegisterPurchaseHandlers(router gin.IRouter, dbm *database.DBManager, cache
 
 		// 收货管理
 		privateApi.POST("/purchase/receipt/create", wrapper.CreatePurchaseReceipt)
+		privateApi.POST("/purchase/receipt/update", wrapper.UpdatePurchaseReceipt)
 		privateApi.GET("/purchase/receipt/list", wrapper.GetPurchaseReceiptList)
 		privateApi.GET("/purchase/receipt/detail", wrapper.GetPurchaseReceiptDetail)
-
-		// 统计
-		privateApi.GET("/purchase/statistics", wrapper.GetPurchaseOrderStatistics)
 	}
 }

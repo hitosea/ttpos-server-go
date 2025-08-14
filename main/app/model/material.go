@@ -22,18 +22,19 @@ type Material struct {
 	Status                bool    `gorm:"default:false;column:status;comment:'状态,true上架 false下架'"`
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
-	Unit              MaterialUnit      `gorm:"foreignKey:unit_uuid;references:uuid"`                // 单位
-	PurchaseUnit      MaterialUnit      `gorm:"foreignKey:purchase_unit_uuid;references:uuid"`       // 采购单位
-	CostUnit          MaterialUnit      `gorm:"foreignKey:cost_unit_uuid;references:uuid"`           // 成本单位
+	Unit              *MaterialUnit     `gorm:"foreignKey:uuid;references:unit_uuid"`                // 基准单位
+	PurchaseUnit      *MaterialUnit     `gorm:"foreignKey:purchase_unit_uuid;references:uuid"`       // 采购单位
+	CostUnit          *MaterialUnit     `gorm:"foreignKey:cost_unit_uuid;references:uuid"`           // 成本单位
 	Category          MaterialCategory  `gorm:"foreignKey:category_uuid;references:uuid"`            // 分类
+	NotBaseUnitList   []*MaterialUnit   `gorm:"foreignKey:material_uuid;references:uuid"`            // 非基准单位列表
 	ImageFile         *File             `gorm:"foreignKey:image_uuid;references:uuid"`               // 图片
 }
 
 func (model *Material) SetNil() {
 	model.MultiLanguageName = MultiLanguageName{}
-	model.Unit = MaterialUnit{}
-	model.PurchaseUnit = MaterialUnit{}
-	model.CostUnit = MaterialUnit{}
+	model.Unit = nil
+	model.PurchaseUnit = nil
+	model.CostUnit = nil
 }
 
 func (model *Material) GetImage(baseUrl string) string {
@@ -51,6 +52,7 @@ type MaterialUnit struct {
 	ConversionRate float64 `gorm:"type:decimal(12,4);default:1;column:conversion_rate;comment:'转换率'"`
 	FromUnitUuid   uint64  `gorm:"default:0;column:from_unit_uuid;comment:'来源单位ID. 来源单位为克，则转换率为1000，该原料单位为千克'"`
 	IsDefault      int     `gorm:"default:0;column:is_default;comment:'是否为基准单位, 0-否 1-是'"`
+	MaterialUuid   uint64  `gorm:"default:0;column:material_uuid;comment:'原料ID'"`
 
 	Unit *ProductUnit `gorm:"foreignKey:unit_uuid;references:uuid"`
 }

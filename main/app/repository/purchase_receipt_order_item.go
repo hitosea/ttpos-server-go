@@ -13,6 +13,7 @@ type IPurchaseReceiptOrderItemRepo interface {
 	CreateBatch(items []model.PurchaseReceiptOrderItem) error
 	Update(item *model.PurchaseReceiptOrderItem) error
 	Delete(uuid uint64) error
+	DeleteByReceiptOrderUuid(receiptOrderUuid uint64) error
 	GetByUuid(uuid uint64) (*model.PurchaseReceiptOrderItem, error)
 
 	// 查询操作
@@ -59,6 +60,11 @@ func (r *PurchaseReceiptOrderItemRepoImpl) Update(item *model.PurchaseReceiptOrd
 // Delete 删除收货明细
 func (r *PurchaseReceiptOrderItemRepoImpl) Delete(uuid uint64) error {
 	return r.db.Where("uuid = ?", uuid).Delete(&model.PurchaseReceiptOrderItem{}).Error
+}
+
+// DeleteByReceiptOrderUuid 根据收货单UUID删除明细
+func (r *PurchaseReceiptOrderItemRepoImpl) DeleteByReceiptOrderUuid(receiptOrderUuid uint64) error {
+	return r.db.Where("receipt_order_uuid = ?", receiptOrderUuid).Delete(&model.PurchaseReceiptOrderItem{}).Error
 }
 
 // GetByUuid 根据UUID获取收货明细

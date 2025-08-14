@@ -95,6 +95,7 @@ type IProductQueryRepo interface {
 	PaginateGetProductUnitList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductUnit, int64, error) // 分页获取产品单位列表
 	GetProductUnit(opts ...DBOption) (model.ProductUnit, error)                                                // 获取产品单位详情
 	GetProductUnitCount(opts ...DBOption) (int64, error)                                                       // 获取产品单位数量
+	GetProductUnitByUnitUuid(unitUuid uint64) (*model.ProductUnit, error)                                      // 获取产品单位详情
 
 	PaginateGetProductSauceList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductSauce, int64, error) // 分页获取商品加料列表
 	GetProductSauce(opts ...DBOption) (model.ProductSauce, error)                                                // 获取商品加料详情
@@ -768,6 +769,22 @@ func (r *productRepo) GetProductUnitCount(opts ...DBOption) (int64, error) {
 	}
 	err := db.Count(&total).Error
 	return total, errors.WithMessage(err)
+}
+
+// GetProductUnitByUnitUuid 根据单位uuid获取产品单位详情
+func (r *productRepo) GetProductUnitByUnitUuid(unitUuid uint64) (*model.ProductUnit, error) {
+	unit, err := r.GetProductUnit(
+		CommonRepo.WhereByUuid(unitUuid),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "MultiLanguageName",
+			},
+		),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return &unit, nil
 }
 
 // PaginateGetProductSauceList 分页获取商品加料列表

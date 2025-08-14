@@ -3435,5 +3435,6 @@
   "骑手配送完成": "Budleverans slutförd",
   "高峰时间": "Rusningstid",
   "默认存储引擎 %s 没有相应的配置": "Standardlagringsmotor %s har ingen motsvarande konfiguration",
-  "默认语言不能为空": "Standardspråket får inte vara tomt"
+  "默认语言不能为空": "Standardspråket får inte vara tomt",
+  "物品 %s 的收货数量不能超过申请数量（申请数量：%.4f，已到货：%.4f，本次收货：%.4f）": "Artikel %s mottagningskvantitet kan inte överstiga begärd kvantitet (Begärd: %.4f, Mottagen: %.4f, Denna mottagning: %.4f)"
 }

@@ -900,6 +900,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_material_unit` (
     `conversion_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '转换率',
     `from_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '来源单位ID. 来源单位为克，则转换率为1000，该原料单位为千克',
     `is_default` INT(10) NOT NULL DEFAULT 0 COMMENT '是否为基准单位, 0-否 1-是',
+    `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '原料ID',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

@@ -51,10 +51,10 @@ type MaterialEditReq struct {
 	Uuid             uint64             `json:"uuid" binding:"required"`               // 物品UUID
 	LocaleName       dto.LocaleResponse `json:"locale_name" binding:"required"`        // 物品名称
 	CategoryUuid     uint64             `json:"category_uuid" binding:"required"`      // 分类UUID
-	Status           int                `json:"status" binding:"required"`             // 状态，1-启用 2-停用
+	Status           int                `json:"status"`                                // 状态，1-启用 0-停用
 	Valuation        float64            `json:"valuation" binding:"required,min=0"`    // 估值率
 	BarcodeValue     string             `json:"barcode_value" binding:"required"`      // 条形码值
-	UnitList         []MaterialUnitReq  `json:"unit_list" binding:"required,dive"`     // 单位列表
+	UnitList         []MaterialUnitReq  `json:"unit_list" binding:"required,dive"`     // 单位列表,新增的非基准单位
 	PurchaseUnitUuid uint64             `json:"purchase_unit_uuid" binding:"required"` // 采购单位UUID
 	CostUnitUuid     uint64             `json:"cost_unit_uuid" binding:"required"`     // 成本单位UUID
 }
@@ -66,8 +66,8 @@ type MaterialDeleteReq struct {
 
 // MaterialStatusReq 修改物品状态请求
 type MaterialStatusReq struct {
-	Uuid   uint64 `json:"uuid" binding:"required"`   // 物品UUID
-	Status bool   `json:"status" binding:"required"` // 状态，true-上架 false-下架
+	Uuids  []uint64 `json:"uuids" binding:"required"` // 物品UUID
+	Status int      `json:"status"`                   // 状态，1-启用 0-停用
 }
 
 // MaterialSearchReq 物品搜索查询

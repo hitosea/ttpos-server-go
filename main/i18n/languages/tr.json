@@ -3435,5 +3435,6 @@
   "骑手配送完成": "Kurye teslimatı tamamlandı",
   "高峰时间": "Peak zamanı",
   "默认存储引擎 %s 没有相应的配置": "Varsayılan depolama motoru %s için uygun yapılandırma yok",
-  "默认语言不能为空": "Varsayılan dil boş olamaz"
+  "默认语言不能为空": "Varsayılan dil boş olamaz",
+  "物品 %s 的收货数量不能超过申请数量（申请数量：%.4f，已到货：%.4f，本次收货：%.4f）": "Ürün %s teslim alma miktarı talep edilen miktarı aşamaz (Talep edilen: %.4f, Alınan: %.4f, Bu sefer alınan: %.4f)"
 }
