@@ -336,3 +336,9 @@ type SortProductShopItemReq struct {
 	Uuid uint64 `json:"uuid" binding:"required"` // 商品UUID
 	Sort int    `json:"sort"`                    // 排序
 }
+
+// ProductShopStatusReq 商品状态请求
+type ProductShopStatusReq struct {
+	Uuid   uint64 `json:"uuid" binding:"required"`             // 商品UUID
+	Status *int   `json:"status" binding:"required,oneof=0 1"` // 商品状态 0-下架 1-上架
+}

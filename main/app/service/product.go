@@ -78,6 +78,7 @@ type IProductSrv interface {
 
 	GetProductShopList(ctx context.Context, req req.ProductShopListReq) (*product_resp.ProductShopListResp, error) // 获取商品列表（商家端）
 	SortProductShopList(ctx context.Context, req req.SortProductShopListReq) error                                 // 排序商品列表
+	ProductShopStatus(ctx context.Context, req req.ProductShopStatusReq) error                                     // 修改商品状态
 }
 
 type productSrv struct {
@@ -2949,4 +2950,34 @@ func (s *productSrv) SortProductShopList(ctx context.Context, req req.SortProduc
 	})
 
 	return err
+}
+
+// ProductShopStatus 修改商品状态
+func (s *productSrv) ProductShopStatus(ctx context.Context, req req.ProductShopStatusReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	commonRepo := repository.NewCommonRepo()
+	productRepo := repository.NewProductRepo(db)
+
+	productPackage, err := productRepo.GetProduct(
+		commonRepo.WhereBySoftDelete(),
+		productRepo.WhereUuid(req.Uuid),
+	)
+	if err != nil {
+		return errors.WithMessage(err, "获取商品失败")
+	}
+	if productPackage.ID == 0 {
+		return errors.New("商品不存在")
+	}
+
+	if req.Status == nil {
+		return errors.New("商品状态不能为空")
+	}
+
+	err = db.Model(&model.ProductPackage{}).Select("status").Where("uuid = ?", req.Uuid).Updates(map[string]any{
+		"status": req.Status,
+	}).Error
+	if err != nil {
+		return errors.WithMessage(err, "修改商品状态失败")
+	}
+	return nil
 }
