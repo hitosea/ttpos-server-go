@@ -52,77 +52,10 @@ type PurchaseOrderLogInfo struct {
 	CreateTime        int    `json:"create_time"`         // 创建时间
 }
 
-// PurchaseReceiptInfo 收货记录信息
-type PurchaseReceiptInfo struct {
-	Uuid              uint64                    `json:"uuid"`                // 收货记录ID
-	ReceiptNo         string                    `json:"receipt_no"`          // 收货单号
-	PurchaseOrderUuid uint64                    `json:"purchase_order_uuid"` // 采购订单ID
-	ReceiverUuid      uint64                    `json:"receiver_uuid"`       // 收货人ID
-	ReceiverName      string                    `json:"receiver_name"`       // 收货人姓名
-	ReceiptTime       int                       `json:"receipt_time"`        // 收货时间
-	TotalQuantity     float64                   `json:"total_quantity"`      // 收货总数量
-	TotalAmount       float64                   `json:"total_amount"`        // 收货总金额
-	Status            int                       `json:"status"`              // 状态
-	StatusText        string                    `json:"status_text"`         // 状态文本
-	Remark            string                    `json:"remark"`              // 收货备注
-	CreateTime        int                       `json:"create_time"`         // 创建时间
-	UpdateTime        int                       `json:"update_time"`         // 更新时间
-	Items             []PurchaseReceiptItemInfo `json:"items,omitempty"`     // 收货明细
-}
-
-// PurchaseReceiptItemInfo 收货明细信息
-type PurchaseReceiptItemInfo struct {
-	Uuid                  uint64  `json:"uuid"`                     // 收货明细ID
-	PurchaseReceiptUuid   uint64  `json:"purchase_receipt_uuid"`    // 收货记录ID
-	PurchaseOrderItemUuid uint64  `json:"purchase_order_item_uuid"` // 采购订单商品明细ID
-	ProductUuid           uint64  `json:"product_uuid"`             // 商品ID
-	ProductName           string  `json:"product_name"`             // 商品名称
-	OrderedQuantity       float64 `json:"ordered_quantity"`         // 订购数量
-	ReceivedQuantity      float64 `json:"received_quantity"`        // 实收数量
-	QualifiedQuantity     float64 `json:"qualified_quantity"`       // 合格数量
-	UnitPrice             float64 `json:"unit_price"`               // 单价
-	TotalPrice            float64 `json:"total_price"`              // 小计金额
-	QualityStatus         int     `json:"quality_status"`           // 质检状态
-	QualityStatusText     string  `json:"quality_status_text"`      // 质检状态文本
-	QualityRemark         string  `json:"quality_remark"`           // 质检备注
-	CreateTime            int     `json:"create_time"`              // 创建时间
-	UpdateTime            int     `json:"update_time"`              // 更新时间
-
-	// 扩展字段
-	QualityRate       float64 `json:"quality_rate"`       // 质量合格率
-	DefectiveQuantity float64 `json:"defective_quantity"` // 不合格数量
-}
-
-// PurchaseReceiptListResp 收货记录列表响应
-type PurchaseReceiptListResp struct {
-	List []PurchaseReceiptInfo `json:"list"` // 收货记录列表
-	Meta dto.PageResponse      `json:"meta"` // 分页信息
-}
-
-// PurchaseReceiptDetailResp 收货记录详情响应
-type PurchaseReceiptDetailResp struct {
-	PurchaseReceiptInfo
-}
-
 // PurchaseOrderCreateResp 创建采购订单响应
 type PurchaseOrderCreateResp struct {
 	Uuid    uint64 `json:"uuid"`     // 采购订单ID
 	OrderNo string `json:"order_no"` // 采购订单编号
-}
-
-// PurchaseOrderUpdateResp 更新采购订单响应
-type PurchaseOrderUpdateResp struct {
-	Success bool `json:"success"` // 是否成功
-}
-
-// PurchaseOrderDeleteResp 删除采购订单响应
-type PurchaseOrderDeleteResp struct {
-	Success bool `json:"success"` // 是否成功
-}
-
-// PurchaseOrderApproveResp 审核采购订单响应
-type PurchaseOrderApproveResp struct {
-	Success bool `json:"success"` // 是否成功
 }
 
 // PurchaseReceiptCreateResp 创建收货记录响应
@@ -191,11 +124,33 @@ type PurchaseReceiptOrderCreateResp struct {
 
 // PurchaseReceiptOrderListResp 收货单列表响应
 type PurchaseReceiptOrderListResp struct {
-	List []PurchaseReceiptInfo `json:"list"` // 收货单列表
-	Meta dto.PageResponse      `json:"meta"` // 分页信息
+	List []PurchaseReceiptOrderInfo `json:"list"` // 收货单列表
+	Meta dto.PageResponse           `json:"meta"` // 分页信息
+}
+
+// PurchaseReceiptOrderInfo 收货单信息
+type PurchaseReceiptOrderInfo struct {
+	Uuid              uint64 `json:"uuid"`                // 收货单ID
+	Status            int    `json:"status"`              // 状态
+	OrderNo           string `json:"order_no"`            // 订单编号
+	Num               int    `json:"num"`                 // 物品数量
+	ExpectArrivalTime int    `json:"expect_arrival_time"` // 期望到货日期
+	ReceiveTime       int    `json:"receive_time"`        // 收货日期
+}
+
+// PurchaseReceiptItemInfo 收货明细信息
+type PurchaseReceiptItemInfo struct {
+	Uuid               uint64  `json:"uuid"`                 // 明细ID
+	MaterialCode       string  `json:"material_code"`        // 物品编码
+	MaterialName       string  `json:"material_name"`        // 物品名称
+	Num                float64 `json:"num"`                  // 数量
+	UnitName           string  `json:"unit_name"`            // 采购单位名称
+	UnitConversionRate float64 `json:"unit_conversion_rate"` // 基准单位转换率
+	BaseUnitName       string  `json:"base_unit_name"`       // 基准单位名称
 }
 
 // PurchaseReceiptOrderDetailResp 收货单详情响应
 type PurchaseReceiptOrderDetailResp struct {
-	PurchaseReceiptInfo
+	PurchaseReceiptOrderInfo
+	Items []PurchaseReceiptItemInfo `json:"items"` // 收货明细
 }

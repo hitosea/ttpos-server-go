@@ -3435,5 +3435,6 @@
   "骑手配送完成": "Rider delivery completed",
   "高峰时间": "Peak hour",
   "默认存储引擎 %s 没有相应的配置": "Default storage engine %s has no corresponding configuration",
-  "默认语言不能为空": "Default language cannot be empty"
+  "默认语言不能为空": "Default language cannot be empty",
+  "物品 %s 的收货数量不能超过申请数量（申请数量：%.4f，已到货：%.4f，本次收货：%.4f）": "Item %s receipt quantity cannot exceed requested quantity (Requested: %.4f, Received: %.4f, Current receipt: %.4f)"
 }

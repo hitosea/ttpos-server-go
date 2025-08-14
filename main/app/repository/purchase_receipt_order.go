@@ -28,6 +28,7 @@ type IPurchaseReceiptOrderRepo interface {
 	WhereReceiverUuid(receiverUuid uint64) DBOption
 	WhereQualityStatus(qualityStatus int) DBOption
 	WhereReceiptTimeRange(start, end int) DBOption
+	WhereStatusIn(statusIn []int) DBOption
 	WithItems() DBOption
 	OrderByReceiptTime(desc bool) DBOption
 	OrderByCreateTime(desc bool) DBOption
@@ -138,7 +139,7 @@ func (r *PurchaseReceiptOrderRepoImpl) WhereUuid(uuid uint64) DBOption {
 func (r *PurchaseReceiptOrderRepoImpl) WhereReceiptNo(receiptNo string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		if receiptNo != "" {
-			return db.Where("receipt_no LIKE ?", "%"+receiptNo+"%")
+			return db.Where("order_no LIKE ?", "%"+receiptNo+"%")
 		}
 		return db
 	}
@@ -175,6 +176,13 @@ func (r *PurchaseReceiptOrderRepoImpl) WhereReceiptTimeRange(start, end int) DBO
 			db = db.Where("receipt_time <= ?", end)
 		}
 		return db
+	}
+}
+
+// WhereStatusIn 状态条件
+func (r *PurchaseReceiptOrderRepoImpl) WhereStatusIn(statusIn []int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("status IN (?)", statusIn)
 	}
 }
 

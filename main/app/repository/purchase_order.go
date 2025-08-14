@@ -27,6 +27,7 @@ type IPurchaseOrderRepo interface {
 	WhereOrderNo(orderNo string) DBOption
 	WhereTitle(title string) DBOption
 	WhereStatus(status int) DBOption
+	WhereStatusIn(statusIn []int) DBOption
 	WherePriority(priority int) DBOption
 	WhereSupplierUuid(supplierUuid uint64) DBOption
 	WhereApplicantUuid(applicantUuid uint64) DBOption
@@ -153,6 +154,13 @@ func (r *PurchaseOrderRepoImpl) WhereTitle(title string) DBOption {
 			return db.Where("title LIKE ?", "%"+title+"%")
 		}
 		return db
+	}
+}
+
+// WhereStatusIn 状态条件
+func (r *PurchaseOrderRepoImpl) WhereStatusIn(statusIn []int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("status IN (?)", statusIn)
 	}
 }
 
