@@ -92,3 +92,8 @@ type ProductBomCardMaterialReq struct {
 	Num          float64 `json:"num" binding:"required"`           // 数量
 	UnitUuid     uint64  `json:"unit_uuid" binding:"required"`     // 成本单位UUID
 }
+
+// ProductBomCardDetailReq 规格商品成本卡详情请求
+type ProductBomCardDetailReq struct {
+	ProductBomUuid uint64 `form:"product_bom_uuid" binding:"required"` // ProductBomUuid
+}

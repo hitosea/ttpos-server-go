@@ -3,7 +3,9 @@ package model
 import (
 	"slices"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
 )
@@ -341,10 +343,11 @@ type ProductBom struct {
 	ProductPackageUuid uint64 `gorm:"column:product_package_uuid;type:bigint(20) unsigned;default:0;comment:商品包ID;NOT NULL" json:"product_package_uuid"`
 	ProductBomCardUuid uint64 `gorm:"column:product_bom_card_uuid;type:bigint(20) unsigned;default:0;comment:成本卡ID;NOT NULL" json:"product_bom_card_uuid"`
 
-	ProductPackage  ProductPackage     `gorm:"foreignKey:ProductPackageUuid;references:uuid" json:"-"`  // 商品
-	ProductFlavor   ProductFlavor      `gorm:"foreignKey:product_flavor_uuid;references:uuid" json:"-"` // 商品规格
-	ProductSauce    ProductSauce       `gorm:"foreignKey:product_sauce_uuid;references:uuid" json:"-"`  // 商品小料
-	FlavorMaterials []*RelatedMaterial `gorm:"foreignKey:related_uuid;references:uuid"`                 // 规格商品的组成材料
+	ProductPackage  ProductPackage     `gorm:"foreignKey:ProductPackageUuid;references:uuid" json:"-"`    // 商品
+	ProductFlavor   ProductFlavor      `gorm:"foreignKey:product_flavor_uuid;references:uuid" json:"-"`   // 商品规格
+	ProductSauce    ProductSauce       `gorm:"foreignKey:product_sauce_uuid;references:uuid" json:"-"`    // 商品小料
+	FlavorMaterials []*RelatedMaterial `gorm:"foreignKey:related_uuid;references:uuid"`                   // 规格商品的组成材料
+	ProductBomCard  *ProductBomCard    `gorm:"foreignKey:product_bom_card_uuid;references:uuid" json:"-"` // 成本卡
 }
 
 func (model *ProductBom) SetNil() {
@@ -383,6 +386,15 @@ type RelatedMaterial struct {
 
 func (model *RelatedMaterial) SetNil() {
 	model.Material = nil
+}
+
+func (model *RelatedMaterial) GetUnitName(lang string) string {
+	name := dto.LocaleResponse{}
+	err := utils.FromJson(model.UnitName, &name)
+	if err != nil {
+		return ""
+	}
+	return name.GetLocale(lang)
 }
 
 // GetDecreaseNum 获取减少的库存数量. 减少的库存数量 = 材料用量 * 商品数量

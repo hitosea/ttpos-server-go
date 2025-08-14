@@ -27,6 +27,7 @@ type IMaterialSrv interface {
 	GetMaterialCategoryList(ctx context.Context, req req.MaterialCategoryListReq) (material_resp.MaterialCategoryListResp, error)
 	GetMaterialUnitList(ctx context.Context, req req.MaterialUnitListReq) (material_resp.MaterialUnitListResp, error)
 	AddProductBomCard(ctx context.Context, req req.ProductBomCardAddReq) error
+	GetProductBomCardDetail(ctx context.Context, req req.ProductBomCardDetailReq) (*material_resp.ProductBomCardDetailResp, error)
 }
 
 type materialSrv struct {
@@ -552,4 +553,49 @@ func (s *materialSrv) AddProductBomCard(ctx context.Context, req req.ProductBomC
 	}
 
 	return nil
+}
+
+func (s *materialSrv) GetProductBomCardDetail(ctx context.Context, req req.ProductBomCardDetailReq) (*material_resp.ProductBomCardDetailResp, error) {
+	dbId := ctx.GetDbId()
+	db := s.dbm.GetDB(dbId)
+
+	productBomCardRepo := repository.NewProductBomRepo(db)
+	productBomCard, err := productBomCardRepo.GetProductBomCardByUuid(req.ProductBomUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取成本卡失败")
+	}
+
+	materialList := []material_resp.ProductBomCardMaterial{}
+	for _, material := range productBomCard.RelatedMaterials {
+
+		unitList := []material_resp.MaterialUnit{}
+		for _, unit := range material.Material.NotBaseUnitList {
+			unitList = append(unitList, material_resp.MaterialUnit{
+				Uuid:           unit.Uuid,
+				Name:           unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+				ConversionRate: unit.ConversionRate,
+			})
+		}
+		materialList = append(materialList, material_resp.ProductBomCardMaterial{
+			Material: material_resp.MaterialInfo{
+				Uuid: material.MaterialUuid,
+				Name: material.Material.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+				Code: material.Material.Code,
+			},
+			Num: material.Num,
+			Unit: material_resp.MaterialUnit{
+				Uuid:           material.UnitUuid,
+				Name:           material.GetUnitName(ctx.GetLanguage()),
+				ConversionRate: material.BaseUnitConversionRate,
+			},
+			UnitList: unitList,
+		})
+	}
+
+	return &material_resp.ProductBomCardDetailResp{
+		Uuid:      productBomCard.Uuid,
+		Name:      productBomCard.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+		Num:       productBomCard.Num,
+		Materials: materialList,
+	}, nil
 }

@@ -14,6 +14,7 @@ type IProductBomRepo interface {
 	UpdateProductBoms(productBoms []*model.ProductBom) error                            // 更新ProductBom
 	CreateProductBoms(productBoms []model.ProductBom) error                             // 创建ProductBom
 	UpdateProductBomCard(productBomUuid uint64, productBomCardUuid uint64) error        // 更新规格商品的成本卡
+	GetProductBomCardByUuid(productBomUuid uint64) (*model.ProductBomCard, error)       // 获取成本卡
 }
 
 // IProductBomQueryRepo 定义仓库查询接口
@@ -207,4 +208,25 @@ func (r *productBomRepoImpl) UpdateProductBomCard(productBomUuid uint64, product
 		return errors.WithMessage(err)
 	}
 	return nil
+}
+
+func (r *productBomRepoImpl) GetProductBomCardByUuid(productBomUuid uint64) (*model.ProductBomCard, error) {
+	productBom, err := r.GetProductBom(
+		CommonRepo.WhereByUuid(productBomUuid),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "ProductBomCard.RelatedMaterials.Material.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductBomCard.RelatedMaterials.Material.NotBaseUnitList.Unit.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductBomCard.MultiLanguageName",
+			},
+		),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productBom.ProductBomCard, nil
 }
