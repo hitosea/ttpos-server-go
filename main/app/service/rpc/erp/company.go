@@ -50,6 +50,7 @@ func (s *erpSrv) GetCompanyList(ctx context.Context, erpnextSiteCompanyReq req.E
 			Children:      []resp.ErpnextSiteCompany{},
 		})
 	}
+
 	// 将companyList 转换成树形结构，parent_company 为空的是根节点
 	treeList := buildCompanyTree(companyList)
 
@@ -64,8 +65,6 @@ func buildCompanyTree(companies []resp.ErpnextSiteCompany) []resp.ErpnextSiteCom
 		return []resp.ErpnextSiteCompany{}
 	}
 
-	// 创建公司名称到公司对象的映射，方便查找
-	companyMap := make(map[string]*resp.ErpnextSiteCompany)
 	// 创建一个新的公司切片，避免修改原始数据
 	companySlice := make([]resp.ErpnextSiteCompany, len(companies))
 
@@ -74,32 +73,30 @@ func buildCompanyTree(companies []resp.ErpnextSiteCompany) []resp.ErpnextSiteCom
 		companySlice[i] = companies[i]
 		// 初始化子公司列表
 		companySlice[i].Children = []resp.ErpnextSiteCompany{}
-		// 建立映射关系
-		companyMap[companySlice[i].CompanyName] = &companySlice[i]
 	}
 
-	// 先构建父子关系
-	for i := range companySlice {
-		company := &companySlice[i]
+	// 使用递归方法构建树形结构，确保多级嵌套正确处理
+	return buildTreeRecursively(companySlice, "")
+}
 
-		// 如果有父公司，则添加到父公司的子公司列表中
-		if company.ParentCompany != "" {
-			if parentCompany, exists := companyMap[company.ParentCompany]; exists {
-				// 将当前公司添加到父公司的子公司列表中
-				parentCompany.Children = append(parentCompany.Children, *company)
+// buildTreeRecursively 递归构建树形结构
+func buildTreeRecursively(companies []resp.ErpnextSiteCompany, parentName string) []resp.ErpnextSiteCompany {
+	var result []resp.ErpnextSiteCompany
+
+	for i := range companies {
+		if companies[i].ParentCompany == parentName {
+			// 复制当前公司
+			company := companies[i]
+			// 递归查找当前公司的子公司
+			children := buildTreeRecursively(companies, company.CompanyName)
+			if children == nil {
+				company.Children = []resp.ErpnextSiteCompany{}
+			} else {
+				company.Children = children
 			}
+			result = append(result, company)
 		}
 	}
 
-	// 再收集根节点（包括已经构建好子树的根节点）
-	var rootCompanies []resp.ErpnextSiteCompany
-	for i := range companySlice {
-		company := &companySlice[i]
-		// 如果没有父公司或找不到父公司，则为根节点
-		if company.ParentCompany == "" || companyMap[company.ParentCompany] == nil {
-			rootCompanies = append(rootCompanies, *company)
-		}
-	}
-
-	return rootCompanies
+	return result
 }

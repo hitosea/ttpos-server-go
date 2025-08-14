@@ -149,7 +149,10 @@ class ERPNext extends Controller
      * @Apidoc\Returned("company_list", type="array", desc="公司列表、树形结构", children={
      *      @Apidoc\Returned("company_name", type="string", desc="公司名称"),
      *      @Apidoc\Returned("company_abbr", type="string", desc="公司缩写"),
-     *      @Apidoc\Returned("has_child", type="boolean", desc="是否有子公司"),
+     *      @Apidoc\Returned("children", type="array", desc="子公司列表", children={
+     *          @Apidoc\Returned("company_name", type="string", desc="公司名称"),
+     *          @Apidoc\Returned("company_abbr", type="string", desc="公司缩写"),
+     *      }),
      * })
      * @Apidoc\Returned("pos_profile_list", type="array", desc="Pos Profile列表", children={
      *      @Apidoc\Returned("name", type="string", desc="Pos Profile名称"),
