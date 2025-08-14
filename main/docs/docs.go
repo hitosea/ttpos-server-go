@@ -17947,6 +17947,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/material/status/batch": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "批量修改物品状态",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "批量修改物品状态",
+                "parameters": [
+                    {
+                        "description": "物品状态修改请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.MaterialStatusReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/member_order/cancel": {
             "post": {
                 "security": [
@@ -24584,6 +24623,10 @@ const docTemplate = `{
                     "description": "分类UUID",
                     "type": "integer"
                 },
+                "cost_unit_name": {
+                    "description": "成本单位名称",
+                    "type": "string"
+                },
                 "image": {
                     "description": "图片",
                     "type": "string"
@@ -24592,12 +24635,16 @@ const docTemplate = `{
                     "description": "物品名称",
                     "type": "string"
                 },
+                "purchase_unit_name": {
+                    "description": "采购单位名称",
+                    "type": "string"
+                },
                 "status": {
                     "description": "状态 1-启用 2-停用",
                     "type": "integer"
                 },
                 "unit_name": {
-                    "description": "单位名称",
+                    "description": "基准单位名称",
                     "type": "string"
                 },
                 "uuid": {
@@ -24674,7 +24721,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "status": {
-                    "description": "状态 1-启用 2-停用",
+                    "description": "状态 1-启用 0-停用",
                     "type": "integer"
                 },
                 "unit_list": {
@@ -24731,6 +24778,10 @@ const docTemplate = `{
                 "name": {
                     "description": "单位名称",
                     "type": "string"
+                },
+                "uuid": {
+                    "description": "单位UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -27836,7 +27887,6 @@ const docTemplate = `{
                 "cost_unit_uuid",
                 "locale_name",
                 "purchase_unit_uuid",
-                "status",
                 "unit_list",
                 "uuid",
                 "valuation"
@@ -27867,11 +27917,11 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "status": {
-                    "description": "状态，1-启用 2-停用",
+                    "description": "状态，1-启用 0-停用",
                     "type": "integer"
                 },
                 "unit_list": {
-                    "description": "单位列表",
+                    "description": "单位列表,新增的非基准单位",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/req.MaterialUnitReq"
@@ -27885,6 +27935,25 @@ const docTemplate = `{
                     "description": "估值率",
                     "type": "number",
                     "minimum": 0
+                }
+            }
+        },
+        "req.MaterialStatusReq": {
+            "type": "object",
+            "required": [
+                "uuids"
+            ],
+            "properties": {
+                "status": {
+                    "description": "状态，1-启用 0-停用",
+                    "type": "integer"
+                },
+                "uuids": {
+                    "description": "物品UUID",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 }
             }
         },
@@ -29741,11 +29810,6 @@ const docTemplate = `{
                         "approve",
                         "reject"
                     ]
-                },
-                "remark": {
-                    "description": "审核备注",
-                    "type": "string",
-                    "maxLength": 500
                 },
                 "uuid": {
                     "description": "采购订单ID",

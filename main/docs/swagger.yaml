@@ -700,17 +700,23 @@ definitions:
       category_uuid:
         description: 分类UUID
         type: integer
+      cost_unit_name:
+        description: 成本单位名称
+        type: string
       image:
         description: 图片
         type: string
       name:
         description: 物品名称
         type: string
+      purchase_unit_name:
+        description: 采购单位名称
+        type: string
       status:
         description: 状态 1-启用 2-停用
         type: integer
       unit_name:
-        description: 单位名称
+        description: 基准单位名称
         type: string
       uuid:
         description: 物品UUID
@@ -763,7 +769,7 @@ definitions:
         description: 采购单位UUID
         type: integer
       status:
-        description: 状态 1-启用 2-停用
+        description: 状态 1-启用 0-停用
         type: integer
       unit_list:
         allOf:
@@ -801,6 +807,9 @@ definitions:
       name:
         description: 单位名称
         type: string
+      uuid:
+        description: 单位UUID
+        type: integer
     type: object
   material_resp.MaterialUnitListResp:
     properties:
@@ -2917,10 +2926,10 @@ definitions:
         description: 采购单位UUID
         type: integer
       status:
-        description: 状态，1-启用 2-停用
+        description: 状态，1-启用 0-停用
         type: integer
       unit_list:
-        description: 单位列表
+        description: 单位列表,新增的非基准单位
         items:
           $ref: '#/definitions/req.MaterialUnitReq'
         type: array
@@ -2937,10 +2946,22 @@ definitions:
     - cost_unit_uuid
     - locale_name
     - purchase_unit_uuid
-    - status
     - unit_list
     - uuid
     - valuation
+    type: object
+  req.MaterialStatusReq:
+    properties:
+      status:
+        description: 状态，1-启用 0-停用
+        type: integer
+      uuids:
+        description: 物品UUID
+        items:
+          type: integer
+        type: array
+    required:
+    - uuids
     type: object
   req.MaterialUnitReq:
     properties:
@@ -4235,10 +4256,6 @@ definitions:
         enum:
         - approve
         - reject
-        type: string
-      remark:
-        description: 审核备注
-        maxLength: 500
         type: string
       uuid:
         description: 采购订单ID
@@ -21362,6 +21379,30 @@ paths:
       security:
       - JwtToken: []
       summary: 获取物品列表
+      tags:
+      - 商家端.物品管理
+  /shop/material/status/batch:
+    post:
+      consumes:
+      - application/json
+      description: 批量修改物品状态
+      parameters:
+      - description: 物品状态修改请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.MaterialStatusReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 批量修改物品状态
       tags:
       - 商家端.物品管理
   /shop/member_order/cancel:
