@@ -29,6 +29,9 @@ type (
 	IRpc interface {
 		Execute(ctx context.Context, req *dto.ErpReq, params interface{}) (rst *g.Var, err error)
 	}
+	IReport interface {
+		Run(ctx context.Context, params *dto.ReportParams) (rst *g.Var, err error)
+	}
 	IResource interface {
 		List(ctx context.Context, docType string, params *dto.RequestParams) (rst *g.Var, err error)
 		Get(ctx context.Context, docType string, name string, params *dto.RequestParams) (rst *g.Var, err error)
@@ -42,6 +45,7 @@ var (
 	localDoctype  IDoctype
 	localDocument IDocument
 	localRpc      IRpc
+	localReport   IReport
 	localResource IResource
 )
 
@@ -76,6 +80,17 @@ func Rpc() IRpc {
 
 func RegisterRpc(i IRpc) {
 	localRpc = i
+}
+
+func Report() IReport {
+	if localReport == nil {
+		panic("implement not found for interface IReport, forgot register?")
+	}
+	return localReport
+}
+
+func RegisterReport(i IReport) {
+	localReport = i
 }
 
 func Resource() IResource {

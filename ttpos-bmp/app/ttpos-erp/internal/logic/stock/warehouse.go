@@ -115,6 +115,21 @@ func (s *sWarehouse) GetWarehouseList(ctx context.Context, req *warehouse.GetWar
 	}, nil
 }
 
+func (s *sWarehouse) GetDefaultWarehouse(ctx context.Context, company string, branch string) (res *warehouse.WarehouseInfo, err error) {
+	warehouseList, err := s.GetWarehouseList(ctx, &warehouse.GetWarehouseListReq{
+		Company:       company,
+		Branch:        branch,
+		WarehouseType: "Default",
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(warehouseList.WarehouseList) == 0 {
+		return nil, gerror.New("默认仓库不存在")
+	}
+	return warehouseList.WarehouseList[0], nil
+}
+
 // buildWarehouseListFilters 构建仓库列表查询过滤器
 func (s *sWarehouse) buildWarehouseListFilters(ctx context.Context, req *warehouse.GetWarehouseListReq) [][]string {
 	filters := make([][]string, 0)
