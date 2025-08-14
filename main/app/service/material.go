@@ -123,30 +123,8 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 	dbId := ctx.GetDbId()
 	materialRepo := repository.NewMaterialRepo(s.dbm.GetDB(dbId))
 
-	// 构建查询选项
-	commonRepo := repository.NewCommonRepo()
-	dbOptions := []repository.DBOption{
-		commonRepo.Preload(
-			repository.WithPreload{
-				Query: "MultiLanguageName",
-			},
-			repository.WithPreload{
-				Query: "Category.MultiLanguageName",
-			},
-			repository.WithPreload{
-				Query: "Unit.Unit.MultiLanguageName",
-			},
-			repository.WithPreload{
-				Query: "PurchaseUnit.Unit.MultiLanguageName",
-			},
-			repository.WithPreload{
-				Query: "CostUnit.Unit.MultiLanguageName",
-			},
-		),
-	}
-
 	// 获取物品详情
-	material, err := materialRepo.GetMaterialByUuid(req.Uuid, dbOptions...)
+	material, err := materialRepo.GetMaterialDetailByUuid(req.Uuid)
 	if err != nil {
 		return material_resp.MaterialDetailResp{}, errors.WithMessage(err, "获取物品详情失败")
 	}
@@ -158,6 +136,7 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 	}
 	for _, materialUnit := range materialUnitList {
 		unitList = append(unitList, material_resp.MaterialUnit{
+			Uuid:           materialUnit.Uuid,
 			Name:           materialUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 			ConversionRate: materialUnit.ConversionRate,
 		})
@@ -225,6 +204,8 @@ func (s *materialSrv) AddMaterial(ctx context.Context, req req.MaterialAddReq) e
 	dbId := ctx.GetDbId()
 	db := s.dbm.GetDB(dbId)
 
+	materialUuid, _ := utils.GetID()
+
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		materialRepo := repository.NewMaterialRepo(tx)
 
@@ -245,6 +226,7 @@ func (s *materialSrv) AddMaterial(ctx context.Context, req req.MaterialAddReq) e
 			ConversionRate: 1,
 			IsDefault:      1,
 			FromUnitUuid:   0,
+			MaterialUuid:   materialUuid,
 		})
 		if err != nil {
 			return errors.WithMessage(err, "创建原料单位失败")
@@ -264,6 +246,7 @@ func (s *materialSrv) AddMaterial(ctx context.Context, req req.MaterialAddReq) e
 				UnitUuid:       productUnit.Uuid,
 				ConversionRate: unit.ConversionRate,
 				FromUnitUuid:   unitUuid,
+				MaterialUuid:   materialUuid,
 			})
 			if err != nil {
 				return errors.WithMessage(err, "创建原料单位失败")
@@ -273,6 +256,9 @@ func (s *materialSrv) AddMaterial(ctx context.Context, req req.MaterialAddReq) e
 
 		// 创建物品
 		material := model.Material{
+			BaseModel: model.BaseModel{
+				Uuid: materialUuid,
+			},
 			Name:                  req.LocaleName.ToJson(),
 			Code:                  "", // TODO: 从ERP获取编码
 			Valuation:             req.Valuation,
@@ -307,32 +293,95 @@ func (s *materialSrv) AddMaterial(ctx context.Context, req req.MaterialAddReq) e
 // EditMaterial 编辑物品
 func (s *materialSrv) EditMaterial(ctx context.Context, req req.MaterialEditReq) error {
 	dbId := ctx.GetDbId()
-	materialRepo := repository.NewMaterialRepo(s.dbm.GetDB(dbId))
+	db := s.dbm.GetDB(dbId)
 
-	// 检查物品是否存在
-	existingMaterial, err := materialRepo.GetMaterialByUuid(req.Uuid)
-	if err != nil {
-		return errors.WithMessage(err, "物品不存在")
-	}
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		materialRepo := repository.NewMaterialRepo(tx)
 
-	// 更新物品
-	material := model.Material{
-		MultiLanguageNameUuid: existingMaterial.MultiLanguageNameUuid,
-		CategoryUuid:          req.CategoryUuid,
-		BarcodeValue:          req.BarcodeValue,
-		PurchaseUnitUuid:      req.PurchaseUnitUuid,
-		CostUnitUuid:          req.CostUnitUuid,
-		Status: func() bool {
-			if req.Status == 1 {
-				return true
+		// 检查物品是否存在
+		existingMaterial, err := materialRepo.GetMaterialDetailByUuid(req.Uuid)
+		if err != nil {
+			return errors.WithMessage(err, "物品不存在")
+		}
+
+		// 判断名称是否修改
+		if existingMaterial.MultiLanguageName.IsNameChanged(req.LocaleName) {
+			// 更新多语言名称
+			multiLanguageName := model.MultiLanguageName{}
+			multiLanguageName.InitByLocaleResponse(req.LocaleName)
+			multiLanguageNameRepo := repository.NewMultiLanguageNameRepoImpl(tx)
+			err = multiLanguageNameRepo.UpdateMultiLanguageName(existingMaterial.MultiLanguageNameUuid, multiLanguageName)
+			if err != nil {
+				return errors.WithMessage(err, "创建多语言名称失败")
 			}
-			return false
-		}(),
-	}
+			existingMaterial.Name = multiLanguageName.ToJson()
+		}
 
-	err = materialRepo.UpdateMaterial(material)
-	if err != nil {
-		return errors.WithMessage(err, "更新物品失败")
+		// 判断非基准单位是否有新增
+		unitMap := make(map[uint64]uint64)   // 单位ID -> 原料单位ID
+		exitUnitMap := make(map[uint64]bool) //  单位ID 是否存在
+		for _, unit := range existingMaterial.NotBaseUnitList {
+			unitMap[unit.Unit.Uuid] = unit.Uuid
+			exitUnitMap[unit.UnitUuid] = true // 单位ID 是否存在
+		}
+		for _, unit := range req.UnitList {
+			if _, ok := exitUnitMap[unit.UnitUuid]; !ok {
+				productUnit, err := repository.NewProductRepo(tx).GetProductUnitByUnitUuid(unit.UnitUuid)
+				if err != nil {
+					return errors.WithMessage(err, "获取产品单位失败")
+				}
+				// 新增非基准单位
+				materialUnitUuid, err := repository.NewMaterialUnitRepo(tx).CreateMaterialUnit(model.MaterialUnit{
+					Name:           productUnit.MultiLanguageName.ToJson(),
+					UnitUuid:       productUnit.Uuid,
+					ConversionRate: unit.ConversionRate,
+					FromUnitUuid:   existingMaterial.UnitUuid,
+				})
+				if err != nil {
+					return errors.WithMessage(err, "创建原料单位失败")
+				}
+				unitMap[unit.UnitUuid] = materialUnitUuid
+			} else {
+				return errors.New("非基准单位已存在")
+			}
+		}
+
+		// 更新物品
+		material := model.Material{
+			Name:         existingMaterial.Name,
+			CategoryUuid: req.CategoryUuid,
+			Status: func() bool {
+				if req.Status == 1 {
+					return true
+				}
+				return false
+			}(),
+			Valuation:    req.Valuation,
+			BarcodeValue: req.BarcodeValue,
+			PurchaseUnitUuid: func() uint64 {
+				// 如果选择了已经存在的单位，则使用已存在的单位
+				if _, ok := exitUnitMap[req.PurchaseUnitUuid]; ok {
+					return req.PurchaseUnitUuid
+				}
+				// 如果选择了新的单位，则创建新的单位
+				return unitMap[req.PurchaseUnitUuid]
+			}(),
+			CostUnitUuid: func() uint64 {
+				if _, ok := exitUnitMap[req.CostUnitUuid]; ok {
+					return req.CostUnitUuid
+				}
+				return unitMap[req.CostUnitUuid]
+			}(),
+		}
+
+		err = materialRepo.UpdateMaterial(material)
+		if err != nil {
+			return errors.WithMessage(err, "更新物品失败")
+		}
+
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err)
 	}
 
 	return nil
@@ -344,7 +393,7 @@ func (s *materialSrv) DeleteMaterial(ctx context.Context, req req.MaterialDelete
 	materialRepo := repository.NewMaterialRepo(s.dbm.GetDB(dbId))
 
 	// 检查物品是否存在
-	_, err := materialRepo.GetMaterialByUuid(req.Uuid)
+	_, err := materialRepo.GetMaterialDetailByUuid(req.Uuid)
 	if err != nil {
 		return errors.WithMessage(err, "物品不存在")
 	}
@@ -364,7 +413,7 @@ func (s *materialSrv) UpdateMaterialStatus(ctx context.Context, req req.Material
 	materialRepo := repository.NewMaterialRepo(s.dbm.GetDB(dbId))
 
 	// 检查物品是否存在
-	_, err := materialRepo.GetMaterialByUuid(req.Uuid)
+	_, err := materialRepo.GetMaterialDetailByUuid(req.Uuid)
 	if err != nil {
 		return errors.WithMessage(err, "物品不存在")
 	}

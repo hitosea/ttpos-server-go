@@ -50,6 +50,7 @@ type MaterialUnitListResp struct {
 
 // MaterialUnit 物品单位
 type MaterialUnit struct {
+	Uuid           uint64  `json:"uuid"`            // 单位UUID
 	Name           string  `json:"name"`            // 单位名称
 	ConversionRate float64 `json:"conversion_rate"` // 转换率
 }

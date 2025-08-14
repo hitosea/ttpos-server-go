@@ -12,6 +12,7 @@ import (
 type IMaterialRepo interface {
 	GetMaterialListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.Material, int64, error)
 	GetMaterialByUuid(uuid uint64, opts ...DBOption) (model.Material, error)
+	GetMaterialDetailByUuid(uuid uint64) (*model.Material, error)
 	CreateMaterial(material model.Material) (uint64, error)
 	UpdateMaterial(material model.Material) error
 	DeleteMaterial(uuid uint64) error
@@ -81,6 +82,35 @@ func (r *MaterialRepoImpl) GetMaterialByUuid(uuid uint64, opts ...DBOption) (mod
 	}
 
 	return material, nil
+}
+
+func (r *MaterialRepoImpl) GetMaterialDetailByUuid(uuid uint64) (*model.Material, error) {
+	material, err := r.GetMaterialByUuid(uuid,
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "MultiLanguageName",
+			},
+			WithPreload{
+				Query: "Category.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "Unit.Unit.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "PurchaseUnit.Unit.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "CostUnit.Unit.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "NotBaseUnitList.Unit.MultiLanguageName",
+			},
+		),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询物品详情失败")
+	}
+	return &material, nil
 }
 
 // CreateMaterial 创建物品
