@@ -217,6 +217,33 @@ func (h *MaterialHandler) UpdateMaterialStatusBatch(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// AddProductBomCard 添加成本卡
+// @Summary 添加成本卡
+// @Description 添加成本卡
+// @Tags 商家端.物品管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductBomCardAddReq true "成本卡添加请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product_bom/card/add [post]
+func (h *MaterialHandler) AddProductBomCard(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	addReq := req.ProductBomCardAddReq{}
+
+	if err := c.ShouldBindJSON(&addReq); err != nil {
+		helper.HandleValidationError(c, err, addReq, dto.PageReqMessage)
+		return
+	}
+	err := h.materialSrv.AddProductBomCard(ctx, addReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
 // RegisterMaterialHandlers 注册物品管理路由
 func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -248,5 +275,7 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		privateApi.POST("/material/add", wrapper.AddMaterial)                        // 添加物品
 		privateApi.POST("/material/edit", wrapper.EditMaterial)                      // 编辑物品
 		privateApi.POST("/material/status/batch", wrapper.UpdateMaterialStatusBatch) // 批量修改物品状态
+
+		privateApi.POST("/product_bom/card/add", wrapper.AddProductBomCard) // 添加成本卡
 	}
 }

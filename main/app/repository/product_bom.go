@@ -13,6 +13,7 @@ type IProductBomRepo interface {
 	UpdateProductBomStockNum(warehouseOutFormItems []*model.WarehouseOutFormItem) error // 更新规格商品或小料的库存数量
 	UpdateProductBoms(productBoms []*model.ProductBom) error                            // 更新ProductBom
 	CreateProductBoms(productBoms []model.ProductBom) error                             // 创建ProductBom
+	UpdateProductBomCard(productBomUuid uint64, productBomCardUuid uint64) error        // 更新规格商品的成本卡
 }
 
 // IProductBomQueryRepo 定义仓库查询接口
@@ -197,4 +198,13 @@ func (r *productBomRepoImpl) WhereProductSauceUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("product_sauce_uuid = ?", uuid)
 	}
+}
+
+func (r *productBomRepoImpl) UpdateProductBomCard(productBomUuid uint64, productBomCardUuid uint64) error {
+	if err := r.db.Model(&model.ProductBom{}).Where("uuid = ?", productBomUuid).Updates(map[string]interface{}{
+		"product_bom_card_uuid": productBomCardUuid,
+	}).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
 }

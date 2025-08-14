@@ -551,8 +551,8 @@ type ProductBomCard struct {
 	Num                   float64 `gorm:"column:num;type:decimal(14,4);not null;default:0.0000;comment:加工份数" json:"num"`
 
 	// 关联关系
-	MultiLanguageName MultiLanguageName `gorm:"foreignKey:MultiLanguageNameUuid;references:Uuid" json:"multi_language_name,omitempty"`
-	RelatedMaterials  []RelatedMaterial `gorm:"foreignKey:RelatedUuid;references:Uuid" json:"related_materials,omitempty"`
+	MultiLanguageName *MultiLanguageName `gorm:"foreignKey:MultiLanguageNameUuid;references:Uuid" json:"multi_language_name,omitempty"`
+	RelatedMaterials  []*RelatedMaterial `gorm:"foreignKey:RelatedUuid;references:Uuid" json:"related_materials,omitempty"`
 }
 
 // TableName 指定表名
@@ -561,6 +561,6 @@ func (ProductBomCard) TableName() string {
 }
 
 func (model *ProductBomCard) SetNil() {
-	model.MultiLanguageName = MultiLanguageName{}
+	model.MultiLanguageName = nil
 	model.RelatedMaterials = nil
 }

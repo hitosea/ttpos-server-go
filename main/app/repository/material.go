@@ -16,10 +16,6 @@ type IMaterialRepo interface {
 	CreateMaterial(material model.Material) (uint64, error)
 	UpdateMaterial(material model.Material) error
 	DeleteMaterial(uuid uint64) error
-	UpdateMaterialStatus(uuid uint64, status bool) error
-	SearchMaterials(keyword string, opts ...DBOption) ([]model.Material, error)
-	GetMaterialByBarcode(barcode string, opts ...DBOption) (model.Material, error)
-	GetMaterialByName(name string, opts ...DBOption) (model.Material, error)
 	GetMaterialCategoryByName(name string) (*model.MaterialCategory, error)
 	CreateMaterialCategory(materialCategory model.MaterialCategory) (uint64, error)
 	GetMaterialCategoryList() ([]model.MaterialCategory, error)
@@ -136,68 +132,6 @@ func (r *MaterialRepoImpl) DeleteMaterial(uuid uint64) error {
 		return errors.WithMessage(err, "删除物品失败")
 	}
 	return nil
-}
-
-// UpdateMaterialStatus 更新物品状态
-func (r *MaterialRepoImpl) UpdateMaterialStatus(uuid uint64, status bool) error {
-	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("status", status).Error; err != nil {
-		return errors.WithMessage(err, "更新物品状态失败")
-	}
-	return nil
-}
-
-// SearchMaterials 搜索物品
-func (r *MaterialRepoImpl) SearchMaterials(keyword string, opts ...DBOption) ([]model.Material, error) {
-	var materials []model.Material
-
-	query := r.db.Model(&model.Material{}).Where("delete_time = ? AND (name LIKE ? OR barcode_value LIKE ?)", 0, "%"+keyword+"%", "%"+keyword+"%")
-
-	// 应用查询选项
-	for _, opt := range opts {
-		query = opt(query)
-	}
-
-	if err := query.Order("create_time DESC").Find(&materials).Error; err != nil {
-		return nil, errors.WithMessage(err, "搜索物品失败")
-	}
-
-	return materials, nil
-}
-
-// GetMaterialByBarcode 根据条形码获取物品
-func (r *MaterialRepoImpl) GetMaterialByBarcode(barcode string, opts ...DBOption) (model.Material, error) {
-	var material model.Material
-
-	query := r.db.Model(&model.Material{}).Where("barcode_value = ? AND delete_time = ?", barcode, 0)
-
-	// 应用查询选项
-	for _, opt := range opts {
-		query = opt(query)
-	}
-
-	if err := query.First(&material).Error; err != nil {
-		return model.Material{}, errors.WithMessage(err, "根据条形码查询物品失败")
-	}
-
-	return material, nil
-}
-
-// GetMaterialByName 根据名称获取物品
-func (r *MaterialRepoImpl) GetMaterialByName(name string, opts ...DBOption) (model.Material, error) {
-	var material model.Material
-
-	query := r.db.Model(&model.Material{}).Where("name = ? AND delete_time = ?", name, 0)
-
-	// 应用查询选项
-	for _, opt := range opts {
-		query = opt(query)
-	}
-
-	if err := query.First(&material).Error; err != nil {
-		return model.Material{}, errors.WithMessage(err, "根据名称查询物品失败")
-	}
-
-	return material, nil
 }
 
 func (r *MaterialRepoImpl) GetMaterialCategoryByName(name string) (*model.MaterialCategory, error) {

@@ -70,24 +70,20 @@ type MaterialStatusReq struct {
 	Status int      `json:"status"`                   // 状态，1-启用 0-停用
 }
 
-// MaterialSearchReq 物品搜索查询
-type MaterialSearchReq struct {
-	Keyword string `form:"keyword" json:"keyword" binding:"required"` // 搜索关键词
+// ProductBomCardAddReq 添加成本卡请求
+type ProductBomCardAddReq struct {
+	ProductBomCardName dto.LocaleResponse            `json:"product_bom_card_name" binding:"required"` // 成本卡名称
+	ProductBomUuid     uint64                        `json:"product_bom_uuid" binding:"required"`      // 商品规格UUID,给该规格绑定成本卡
+	Num                int                           `json:"num" binding:"required"`                   // 加工份数
+	Materials          ProductBomCardMaterialListReq `json:"materials" binding:"required,dive"`        // 材料列表
 }
 
-// MaterialImportReq 导入物品请求
-type MaterialImportReq struct {
-	List []MaterialImportItemReq `json:"list" binding:"required,dive"` // 物品列表
+type ProductBomCardMaterialListReq struct {
+	List []ProductBomCardMaterialReq `json:"list" binding:"required,dive"` // 材料列表
 }
 
-// MaterialImportItemReq 导入物品项请求
-type MaterialImportItemReq struct {
-	MaterialName string  `json:"material_name" binding:"required"` // 物品名称
-	CategoryName string  `json:"category_name" binding:"required"` // 分类名称
-	UnitName     string  `json:"unit_name" binding:"required"`     // 单位名称
-	Price        float64 `json:"price" binding:"required,min=0"`   // 采购单价
-	StockNum     float64 `json:"stock_num" binding:"min=0"`        // 库存数量
-	BarcodeValue string  `json:"barcode_value"`                    // 条形码值
-	Status       bool    `json:"status"`                           // 状态，true-上架 false-下架
-	Row          int     `json:"row" binding:"required"`           // excel表的行编号
+type ProductBomCardMaterialReq struct {
+	MaterialUuid uint64  `json:"material_uuid" binding:"required"` // 材料UUID
+	Num          float64 `json:"num" binding:"required"`           // 数量
+	UnitUuid     uint64  `json:"unit_uuid" binding:"required"`     // 成本单位UUID
 }

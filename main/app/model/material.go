@@ -37,6 +37,36 @@ func (model *Material) SetNil() {
 	model.CostUnit = nil
 }
 
+// 判断该单位是不是该物品的基准单位或非基准单位
+func (model *Material) IsUnit(unitUuid uint64) bool {
+	for _, unit := range model.NotBaseUnitList {
+		if unit.Uuid == unitUuid {
+			return true
+		}
+	}
+	return false
+}
+
+// 获取物品的某个单位信息
+func (model *Material) GetUnit(unitUuid uint64) *MaterialUnit {
+	for _, unit := range model.NotBaseUnitList {
+		if unit.Uuid == unitUuid {
+			return unit
+		}
+	}
+	return nil
+}
+
+// 获取物品的基准单位信息
+func (model *Material) GetBaseUnit() *MaterialUnit {
+	for _, unit := range model.NotBaseUnitList {
+		if unit.IsDefault == 1 {
+			return unit
+		}
+	}
+	return nil
+}
+
 func (model *Material) GetImage(baseUrl string) string {
 	if model.ImageFile != nil {
 		return model.ImageFile.GetUrl(baseUrl)
