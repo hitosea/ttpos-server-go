@@ -11,6 +11,8 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
+
+	"gorm.io/gorm"
 )
 
 // IMaterialSrv 物品服务接口
@@ -173,40 +175,38 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 // AddMaterialCategory 创建物品类别
 func (s *materialSrv) AddMaterialCategory(ctx context.Context, req req.MaterialCategoryAddReq) error {
 	dbId := ctx.GetDbId()
-	materialCategoryRepo := repository.NewMaterialRepo(s.dbm.GetDB(dbId))
+	db := s.dbm.GetDB(dbId)
 
-	// 检查物品类别名称是否已存在
-	_, err := materialCategoryRepo.GetMaterialCategoryByName(req.LocaleName.ZH)
-	if err == nil {
-		return errors.New("物品类别名称已存在")
-	}
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		materialCategoryRepo := repository.NewMaterialRepo(tx)
 
-	// 创建多语言名称
-	multiLanguageName := model.MultiLanguageName{
-		EnName:   req.LocaleName.EN,
-		ZhName:   req.LocaleName.ZH,
-		ZhTwName: req.LocaleName.ZHTW,
-		ThName:   req.LocaleName.TH,
-		MyName:   req.LocaleName.MY,
-		JaName:   req.LocaleName.JA,
-		KoName:   req.LocaleName.KO,
-		TrName:   req.LocaleName.TR,
-		SvName:   req.LocaleName.SV,
-	}
-	nameId, err := repository.NewMultiLanguageNameRepoImpl(s.dbm.GetDB(dbId)).CreateMultiLanguageName(multiLanguageName)
-	if err != nil {
-		return errors.WithMessage(err, "创建多语言名称失败")
-	}
+		// 检查物品类别名称是否已存在
+		_, err := materialCategoryRepo.GetMaterialCategoryByName(req.LocaleName.ZH)
+		if err == nil {
+			return errors.New("物品类别名称已存在")
+		}
 
-	// 创建物品类别
-	materialCategory := model.MaterialCategory{
-		MultiLanguageNameUuid: nameId,
-		Name:                  req.LocaleName.ZH,
-	}
+		// 创建多语言名称
+		multiLanguageName := model.MultiLanguageName{}
+		multiLanguageName.InitByLocaleResponse(req.LocaleName)
+		nameId, err := repository.NewMultiLanguageNameRepoImpl(tx).CreateMultiLanguageName(multiLanguageName)
+		if err != nil {
+			return errors.WithMessage(err, "创建多语言名称失败")
+		}
 
-	_, err = materialCategoryRepo.CreateMaterialCategory(materialCategory)
-	if err != nil {
-		return errors.WithMessage(err, "创建物品类别失败")
+		// 创建物品类别
+		materialCategory := model.MaterialCategory{
+			MultiLanguageNameUuid: nameId,
+			Name:                  req.LocaleName.ZH,
+		}
+
+		_, err = materialCategoryRepo.CreateMaterialCategory(materialCategory)
+		if err != nil {
+			return errors.WithMessage(err, "创建物品类别失败")
+		}
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err)
 	}
 
 	return nil

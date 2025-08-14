@@ -695,6 +695,120 @@ definitions:
       message:
         type: string
     type: object
+  material_resp.Material:
+    properties:
+      category_uuid:
+        description: 分类UUID
+        type: integer
+      image:
+        description: 图片
+        type: string
+      name:
+        description: 物品名称
+        type: string
+      status:
+        description: 状态 1-启用 2-停用
+        type: integer
+      unit_name:
+        description: 单位名称
+        type: string
+      uuid:
+        description: 物品UUID
+        type: integer
+    type: object
+  material_resp.MaterialCategory:
+    properties:
+      name:
+        description: 分类名称
+        type: string
+      uuid:
+        description: 分类UUID
+        type: integer
+    type: object
+  material_resp.MaterialCategoryListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/material_resp.MaterialCategory'
+        type: array
+    type: object
+  material_resp.MaterialDetailResp:
+    properties:
+      barcode_value:
+        description: 条形码值
+        type: string
+      category_name:
+        description: 分类名称
+        type: string
+      category_uuid:
+        description: 分类UUID
+        type: integer
+      code:
+        description: 物品编码
+        type: string
+      cost_unit_name:
+        description: 成本单位名称
+        type: string
+      cost_unit_uuid:
+        description: 成本单位UUID
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物品名称
+      purchase_unit_name:
+        description: 采购单位名称
+        type: string
+      purchase_unit_uuid:
+        description: 采购单位UUID
+        type: integer
+      status:
+        description: 状态 1-启用 2-停用
+        type: integer
+      unit_list:
+        allOf:
+        - $ref: '#/definitions/material_resp.MaterialUnitListResp'
+        description: 单位列表
+      unit_name:
+        description: 单位名称
+        type: string
+      uuid:
+        description: 物品UUID
+        type: integer
+      valuation:
+        description: 估值率
+        type: number
+    type: object
+  material_resp.MaterialListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/material_resp.Material'
+        type: array
+    type: object
+  material_resp.MaterialListWithPaginationResp:
+    properties:
+      list:
+        $ref: '#/definitions/material_resp.MaterialListResp'
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
+  material_resp.MaterialUnit:
+    properties:
+      conversion_rate:
+        description: 转换率
+        type: number
+      name:
+        description: 单位名称
+        type: string
+    type: object
+  material_resp.MaterialUnitListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/material_resp.MaterialUnit'
+        type: array
+    type: object
   member_req.CallbackReq:
     properties:
       jobStatusAfter:
@@ -2713,6 +2827,121 @@ definitions:
     - device_id
     - password
     - username
+    type: object
+  req.MaterialAddReq:
+    properties:
+      barcode_value:
+        description: 条形码值
+        type: string
+      category_uuid:
+        description: 分类UUID
+        type: integer
+      cost_unit_uuid:
+        description: 成本单位UUID
+        type: integer
+      init_stock:
+        description: 期初库存
+        minimum: 0
+        type: number
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物品名称
+      purchase_unit_uuid:
+        description: 采购单位UUID
+        type: integer
+      status:
+        description: 状态，1-启用 2-停用
+        type: integer
+      unit_list:
+        description: 单位列表
+        items:
+          $ref: '#/definitions/req.MaterialUnitReq'
+        type: array
+      unit_uuid:
+        description: 基准单位UUID
+        type: integer
+      valuation:
+        description: 估值率
+        minimum: 0
+        type: number
+    required:
+    - barcode_value
+    - category_uuid
+    - cost_unit_uuid
+    - init_stock
+    - locale_name
+    - purchase_unit_uuid
+    - status
+    - unit_list
+    - unit_uuid
+    - valuation
+    type: object
+  req.MaterialCategoryAddReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物品类别名称
+    required:
+    - locale_name
+    type: object
+  req.MaterialEditReq:
+    properties:
+      barcode_value:
+        description: 条形码值
+        type: string
+      category_uuid:
+        description: 分类UUID
+        type: integer
+      cost_unit_uuid:
+        description: 成本单位UUID
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物品名称
+      purchase_unit_uuid:
+        description: 采购单位UUID
+        type: integer
+      status:
+        description: 状态，1-启用 2-停用
+        type: integer
+      unit_list:
+        description: 单位列表
+        items:
+          $ref: '#/definitions/req.MaterialUnitReq'
+        type: array
+      uuid:
+        description: 物品UUID
+        type: integer
+      valuation:
+        description: 估值率
+        minimum: 0
+        type: number
+    required:
+    - barcode_value
+    - category_uuid
+    - cost_unit_uuid
+    - locale_name
+    - purchase_unit_uuid
+    - status
+    - unit_list
+    - uuid
+    - valuation
+    type: object
+  req.MaterialUnitReq:
+    properties:
+      conversion_rate:
+        description: 转换率
+        minimum: 0
+        type: number
+      unit_uuid:
+        description: 单位UUID
+        type: integer
+    required:
+    - conversion_rate
+    - unit_uuid
     type: object
   req.MemberOrderSendAuthCodeReq:
     properties:
@@ -21642,6 +21871,162 @@ paths:
       summary: 退出登录
       tags:
       - 商家端.认证
+  /shop/material/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加物品
+      parameters:
+      - description: 物品添加请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.MaterialAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 添加物品
+      tags:
+      - 商家端.物品管理
+  /shop/material/category/add:
+    post:
+      consumes:
+      - application/json
+      description: 创建物品类别
+      parameters:
+      - description: 物品类别添加请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.MaterialCategoryAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 创建物品类别
+      tags:
+      - 商家端.物品管理
+  /shop/material/category/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取物品类别列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/material_resp.MaterialCategoryListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取物品类别列表
+      tags:
+      - 商家端.物品管理
+  /shop/material/detail:
+    get:
+      consumes:
+      - application/json
+      description: 获取物品详情
+      parameters:
+      - description: 物品UUID
+        in: query
+        name: uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/material_resp.MaterialDetailResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取物品详情
+      tags:
+      - 商家端.物品管理
+  /shop/material/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑物品
+      parameters:
+      - description: 物品编辑请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.MaterialEditReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 编辑物品
+      tags:
+      - 商家端.物品管理
+  /shop/material/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取物品列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      - description: 关键字
+        in: query
+        name: keyword
+        type: string
+      - description: 分类UUID
+        in: query
+        name: category_uuid
+        type: integer
+      - description: 状态 0-全部 1-启用 2-停用
+        in: query
+        name: status
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/material_resp.MaterialListWithPaginationResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取物品列表
+      tags:
+      - 商家端.物品管理
   /shop/member_order/cancel:
     post:
       consumes:

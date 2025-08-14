@@ -34,13 +34,13 @@ class AddErpnextUomToProductUnit extends Migrator
             $table->addColumn('erpnext_uom', 'string', ['limit' => 255, 'null' => true, 'default' => null, 'comment' => 'ERPNext UOM'])->update();
         }
 
-        $table = $this->table('attribute_group');
+        $table = $this->table('product_attribute_group');
         $hasColumn = $table->hasColumn('erpnext_attribute_group_name');
         if (!$hasColumn) {
             $table->addColumn('erpnext_attribute_group_name', 'string', ['limit' => 255, 'null' => true, 'default' => null, 'comment' => 'ERPNext Attribute Group Name'])->update();
         }
 
-        $table = $this->table('attribute');
+        $table = $this->table('product_attribute');
         $hasColumn = $table->hasColumn('erpnext_attribute_value');
         if (!$hasColumn) {
             $table->addColumn('erpnext_attribute_value', 'string', ['limit' => 255, 'null' => true, 'default' => null, 'comment' => 'ERPNext Attribute Name'])->update();
