@@ -3435,5 +3435,6 @@
   "骑手配送完成": "Fahrerauslieferung abgeschlossen",
   "高峰时间": "Stoßzeit",
   "默认存储引擎 %s 没有相应的配置": "Standard-Speicher-Engine %s hat keine entsprechende Konfiguration",
-  "默认语言不能为空": "Standardsprache darf nicht leer sein"
+  "默认语言不能为空": "Standardsprache darf nicht leer sein",
+  "物品 %s 的收货数量不能超过申请数量（申请数量：%.4f，已到货：%.4f，本次收货：%.4f）": "Die Wareneingangsmenge für Artikel %s darf die beantragte Menge nicht überschreiten (Beantragt: %.4f, Erhalten: %.4f, Aktueller Wareneingang: %.4f)"
 }
