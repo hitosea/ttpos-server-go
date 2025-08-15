@@ -11,11 +11,14 @@ type IProductBomCardRepo interface {
 	IProductBomCardQueryRepo
 	CreateProductBomCard(productBomCard model.ProductBomCard) error
 	CreateProductBomCardMaterial(productBomCardMaterial model.RelatedMaterial) error
+	UpdateProductBomCardMaterial(productBomCardMaterial model.RelatedMaterial) error
+	CreateOrUpdateProductBomCardMaterial(productBomCardMaterial model.RelatedMaterial) error
 }
 
 type IProductBomCardQueryRepo interface {
 	GetProductBomCard(opts ...DBOption) (*model.ProductBomCard, error)
 	GetProductBomCardList(opts ...DBOption) ([]*model.ProductBomCard, error)
+	GetProductBomCardMaterialByUuid(uuid uint64) (*model.RelatedMaterial, error)
 }
 
 type productBomCardRepoImpl struct {
@@ -70,6 +73,14 @@ func (r *productBomCardRepoImpl) CreateProductBomCard(productBomCard model.Produ
 	return nil
 }
 
+func (r *productBomCardRepoImpl) CreateOrUpdateProductBomCardMaterial(productBomCardMaterial model.RelatedMaterial) error {
+	if productBomCardMaterial.Uuid == 0 {
+		return r.CreateProductBomCardMaterial(productBomCardMaterial)
+	} else {
+		return r.UpdateProductBomCardMaterial(productBomCardMaterial)
+	}
+}
+
 func (r *productBomCardRepoImpl) CreateProductBomCardMaterial(productBomCardMaterial model.RelatedMaterial) error {
 	productBomCardMaterial.SetNil()
 	result := r.db.Create(&productBomCardMaterial)
@@ -78,4 +89,21 @@ func (r *productBomCardRepoImpl) CreateProductBomCardMaterial(productBomCardMate
 	}
 
 	return nil
+}
+
+func (r *productBomCardRepoImpl) UpdateProductBomCardMaterial(productBomCardMaterial model.RelatedMaterial) error {
+	result := r.db.Model(&model.RelatedMaterial{}).Where("uuid = ?", productBomCardMaterial.Uuid).Updates(productBomCardMaterial)
+	if result.Error != nil {
+		return errors.WithMessage(result.Error)
+	}
+	return nil
+}
+
+func (r *productBomCardRepoImpl) GetProductBomCardMaterialByUuid(uuid uint64) (*model.RelatedMaterial, error) {
+	var productBomCardMaterial model.RelatedMaterial
+	result := r.db.Where("uuid = ?", uuid).First(&productBomCardMaterial)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &productBomCardMaterial, nil
 }
