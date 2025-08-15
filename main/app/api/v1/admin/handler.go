@@ -22,7 +22,7 @@ type Handler struct {
 // 获取ERPNext站点公司名称
 // @Summary 获取ERPNext站点公司名称
 // @Description 获取ERPNext站点公司名称
-// @Tags 商家管理端.商家授权
+// @Tags 平台端.商家授权
 // @Accept json
 // @Produce json
 // @Param site_code query string true "ERPNext站点编码"
@@ -67,7 +67,7 @@ func (h *Handler) GetErpnextSiteCompany(c *gin.Context) {
 // 初始化店铺
 // @Summary 初始化店铺
 // @Description 初始化店铺
-// @Tags 商家管理端.商家授权
+// @Tags 平台端.商家授权
 // @Accept json
 // @Produce json
 // @Param init_shop_req body req.InitShopReq true "初始化店铺请求"
@@ -98,7 +98,7 @@ func (h *Handler) InitShop(c *gin.Context) {
 // 支付方式列表
 // @Summary 支付方式列表
 // @Description 支付方式列表
-// @Tags 商家管理端.支付管理
+// @Tags 平台端.支付管理
 // @Accept json
 // @Produce json
 // @Success 200 {object} dto.Response
