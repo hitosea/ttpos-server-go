@@ -399,7 +399,7 @@ func (s *sStock) createNewAttribute(ctx context.Context, req *item.AttributeInfo
 	return nil
 }
 
-func (s *sStock) CreateMaterialRequest(ctx context.Context, req *stock.SaveMaterialRequestReq) (res *stock.MaterialRequest, err error) {
+func (s *sStock) CreateMaterialRequest(ctx context.Context, req *stock.SaveMaterialRequestReq) (res *stock.SaveMaterialRequestResp, err error) {
 	// 获取公司名称
 	companyName, err := service.Company().GetCompanyWithAbbr(ctx, req.CompanyAbbr)
 	if err != nil {
@@ -439,7 +439,7 @@ func (s *sStock) CreateMaterialRequest(ctx context.Context, req *stock.SaveMater
 		return nil, err
 	}
 	if j.Contains("data") {
-		res = &stock.MaterialRequest{
+		res = &stock.SaveMaterialRequestResp{
 			MaterialRequestName: j.Get("data.name").String(),
 		}
 	}

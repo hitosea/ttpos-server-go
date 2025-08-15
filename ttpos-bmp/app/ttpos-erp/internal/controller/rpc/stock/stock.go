@@ -8,13 +8,14 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
+// Controller 库存服务控制器
 type Controller struct {
 	stock.UnimplementedStockServiceServer
 }
 
+// Register 注册库存服务到gRPC服务器
 func Register(s *grpcx.GrpcServer) {
 	stock.RegisterStockServiceServer(s.Server, &Controller{})
 }
@@ -36,24 +37,27 @@ func (*Controller) SaveMaterialRequest(ctx context.Context, req *stock.SaveMater
 		return rpc.ApiError("单据日期不能为空"), nil
 	}
 
+	// 调用服务层处理业务逻辑
 	resp, err := service.Stock().CreateMaterialRequest(ctx, req)
 	if err != nil {
 		return rpc.ApiError(err.Error()), nil
 	}
-	res = rpc.ApiSuccess("保存物品申请单成功")
-	res.Data, _ = anypb.New(resp)
-	return
+
+	// 返回成功响应
+	return rpc.ApiSuccessWithData("保存物品申请单成功", resp), nil
 }
 
 func (*Controller) GetMaterialRequestList(ctx context.Context, req *stock.GetMaterialRequestListReq) (*api.ResponseInfo, error) {
 	if len(req.CompanyAbbr) == 0 {
 		return rpc.ApiError("公司简称不能为空"), nil
 	}
+
+	// 调用服务层获取数据
 	resp, err := service.Stock().GetMaterialRequestList(ctx, req)
 	if err != nil {
 		return rpc.ApiError(err.Error()), nil
 	}
-	res := rpc.ApiSuccess("获取物品申请单列表成功")
-	res.Data, _ = anypb.New(resp)
-	return res, nil
+
+	// 返回成功响应
+	return rpc.ApiSuccessWithData("获取物品申请单列表成功", resp), nil
 }

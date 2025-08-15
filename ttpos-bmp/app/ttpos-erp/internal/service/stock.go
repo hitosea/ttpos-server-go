@@ -44,7 +44,7 @@ type (
 		// SaveAttribute 保存属性信息
 		// 如果属性已存在则更新，否则创建新属性
 		SaveAttribute(ctx context.Context, req *item.AttributeInfo) error
-		CreateMaterialRequest(ctx context.Context, req *stock.SaveMaterialRequestReq) (res *stock.MaterialRequest, err error)
+		CreateMaterialRequest(ctx context.Context, req *stock.SaveMaterialRequestReq) (res *stock.SaveMaterialRequestResp, err error)
 		// GetMaterialRequestList 获取物料请求列表
 		GetMaterialRequestList(ctx context.Context, req *stock.GetMaterialRequestListReq) (res *stock.GetMaterialRequestListResp, err error)
 	}
