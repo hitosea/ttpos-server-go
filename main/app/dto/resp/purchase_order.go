@@ -11,7 +11,8 @@ type PurchaseOrderListResp struct {
 // PurchaseOrderInfo 采购订单信息
 type PurchaseOrderInfo struct {
 	Uuid              uint64 `json:"uuid"`                // 采购订单ID
-	OrderNo           string `json:"order_no"`            // 采购订单编号
+	OrderNo           string `json:"order_no"`            // 申请单编号
+	ErpOrderNo        string `json:"erp_order_no"`        // ERP申请单编号（采购单号）
 	Status            int    `json:"status"`              // 状态
 	OrderTime         int64  `json:"order_time"`          // 单据日期
 	Num               int    `json:"num"`                 // 物品数量

@@ -64,6 +64,16 @@ func (s *sDocument) Execute(ctx context.Context, req *erp.ErpReq, params interfa
 	return
 }
 
+func (s *sDocument) ChangeDocStatus(ctx context.Context, doctype string, name string, docstatus int) (rst *g.Var, err error) {
+	rst, err = s.Update(ctx, &erp.ErpReq{
+		DocType: doctype,
+		Name:    name,
+	}, map[string]interface{}{
+		"docstatus": docstatus,
+	})
+	return
+}
+
 func getDocumentUrl(ctx context.Context, docType string) string {
 	return fmt.Sprintf("%s/%s", documentApiUrl, docType)
 }

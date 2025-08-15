@@ -23,7 +23,9 @@ func NewErpSellingClient() (selling.SellingServiceClient, *grpc.ClientConn, erro
 }
 
 func (s *erpSrv) GetPosProfileList(ctx context.Context, getPosProfileListReq req.GetPosProfileListReq) (resp.GetPosProfileListResp, error) {
-	var getPosProfileListResp resp.GetPosProfileListResp
+	getPosProfileListResp := resp.GetPosProfileListResp{
+		List: make([]resp.PosProfileInfo, 0),
+	}
 	client, conn, err := NewErpSellingClient()
 	if err != nil {
 		return getPosProfileListResp, err
@@ -45,7 +47,7 @@ func (s *erpSrv) GetPosProfileList(ctx context.Context, getPosProfileListReq req
 			return getPosProfileListResp, err
 		}
 		for _, profile := range posProfileListResp.ProfileList {
-			getPosProfileListResp.ProfileList = append(getPosProfileListResp.ProfileList, resp.PosProfileInfo{
+			getPosProfileListResp.List = append(getPosProfileListResp.List, resp.PosProfileInfo{
 				Name:      profile.Name,
 				Company:   profile.Company,
 				Branch:    profile.Branch,

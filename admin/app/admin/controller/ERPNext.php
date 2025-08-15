@@ -8,7 +8,7 @@ use app\admin\model\app\App as AppModel;
 use app\common\model\supplier\Supplier;
 use app\admin\model\Setting;
 use help\HttpHelp;
-use app\common\model\shop\User;
+use app\admin\model\admin\User;
 
 
 /**
@@ -68,15 +68,14 @@ class ERPNext extends Controller
             empty($param['uuid']) ||
             empty($param['erpnext_site_code']) ||
             empty($param['erpnext_company_abbr']) ||
-            empty($param['erpnext_default_company_abbr']) ||
             empty($param['erpnext_pos_profile_name']) ||
             empty($param['password'])
         ) {
             return $this->renderError('参数错误');
         }
         // 验证用户名密码是否正确
-        $user = User::withTrashed()->whereRaw('BINARY username = :username', ['username' => $data['username'] ?? ''])->order('admin_user_id', 'desc')->order('delete_time')->find();
-        if (!$user || $user->password != salt_hash($data['password'] ?? '')) {
+        $user = User::withTrashed()->whereRaw('BINARY username = :username', ['username' => $this->admin['user']['user_name']])->order('admin_user_id', 'desc')->order('delete_time')->find();
+        if (!$user || $user->password != salt_hash($param['password'] ?? '')) { 
             return $this->renderError('密码错误');
         }
 
@@ -147,7 +146,7 @@ class ERPNext extends Controller
      * @Apidoc\Param("company_name", type="string", require=false, desc="根据公司名称筛选")
      * @Apidoc\Param("company_abbr", type="string", require=false, desc="根据公司缩写编码筛选")
      * @Apidoc\Param("parent_company", type="string", require=false, desc="根据父公司名称筛选")
-     * @Apidoc\Returned("company_list", type="array", desc="公司列表、树形结构", children={
+     * @Apidoc\Returned("list", type="array", desc="公司列表、树形结构", children={
      *      @Apidoc\Returned("company_name", type="string", desc="公司名称"),
      *      @Apidoc\Returned("company_abbr", type="string", desc="公司缩写"),
      *      @Apidoc\Returned("children", type="array", desc="子公司列表", children={
@@ -155,16 +154,40 @@ class ERPNext extends Controller
      *          @Apidoc\Returned("company_abbr", type="string", desc="公司缩写"),
      *      }),
      * })
-     * @Apidoc\Returned("pos_profile_list", type="array", desc="Pos Profile列表", children={
+     */
+    function siteCompany()
+    {
+        $res = HttpHelp::getRequest('http://nginx/api/v1/admin/erpnext/site/company', $this->getData(), [
+            'X-API-KEY: ' . env('JWT_SECRET'),
+            'Accept-Language: ' . request()->header('language'),
+        ]);
+        if (!$res) {
+            return $this->renderError('请求失败');
+        }
+        $res = json_decode($res, true);
+        if ($res['code'] != 0) {
+            return $this->renderError($res['message']);
+        }
+        return $this->renderSuccess('', $res['data']);
+    }
+
+    /**
+     * @Apidoc\Title("获取ERPNext站点Pos Profile列表")
+     * @Apidoc\Desc("获取ERPNext站点Pos Profile列表")
+     * @Apidoc\Method("GET")
+     * @Apidoc\Url("/api/admin/erpnext/posProfile")
+     * @Apidoc\Param("site_code", type="string", require=true, desc="ERPNext编码")
+     * @Apidoc\Param("company_abbr", type="string", require=true, desc="公司缩写编码")
+     * @Apidoc\Returned("list", type="array", desc="Pos Profile列表", children={
      *      @Apidoc\Returned("name", type="string", desc="Pos Profile名称"),
      *      @Apidoc\Returned("company", type="string", desc="公司名称"),
      *      @Apidoc\Returned("branch", type="string", desc="分支名称"),
      *      @Apidoc\Returned("warehouse", type="string", desc="仓库名称"),
      * })
      */
-    function siteCompany()
+    function posProfile()
     {
-        $res = HttpHelp::getRequest('http://nginx/api/v1/admin/erpnext/site/company', $this->getData(), [
+        $res = HttpHelp::getRequest('http://nginx/api/v1/admin/erpnext/site/pos_profile', $this->getData(), [
             'X-API-KEY: ' . env('JWT_SECRET'),
             'Accept-Language: ' . request()->header('language'),
         ]);

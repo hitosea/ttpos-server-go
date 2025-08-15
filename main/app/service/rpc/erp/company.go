@@ -20,7 +20,9 @@ func NewErpCompanyClient() (companyApi.CompanyServiceClient, *grpc.ClientConn, e
 
 // GetCompanyList 获取公司列表
 func (s *erpSrv) GetCompanyList(ctx context.Context, erpnextSiteCompanyReq req.ErpnextSiteCompanyReq) (resp.ErpnextSiteCompanyResp, error) {
-	var companyResp resp.ErpnextSiteCompanyResp
+	companyResp := resp.ErpnextSiteCompanyResp{
+		List: make([]resp.ErpnextSiteCompany, 0),
+	}
 	client, conn, err := NewErpCompanyClient()
 	if err != nil {
 		return companyResp, err

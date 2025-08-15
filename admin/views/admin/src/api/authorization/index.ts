@@ -58,7 +58,7 @@ export function getErpnextSiteCompany(params: erpnextSiteCompanyParams) {
 }
 
 export interface erpnextAddParams {
-  uuid: number;
+  uuid: number | undefined;
   erpnext_site_code: string;
   erpnext_default_company_abbr?: string;
   erpnext_company_abbr: string;
@@ -68,4 +68,13 @@ export interface erpnextAddParams {
 
 export function erpnextAdd(data: erpnextAddParams) {
   return $post('/erpnext/add', data);
+}
+
+export interface erpnextPosProfileParams {
+  site_code: string;
+  company_abbr: string;
+}
+
+export function getErpnextPosProfile(params: erpnextPosProfileParams) {
+  return $get('/erpnext/posProfile', { params });
 }

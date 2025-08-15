@@ -104,27 +104,3 @@ const (
 	// DefaultMaterialRequestSeries 默认申请单命名序列
 	DefaultMaterialRequestSeries = "MAT-MR-.YYYY.-"
 )
-
-// GetTotalItems 获取明细项目总数
-func (se *StockEntry) GetTotalItems() int {
-	return len(se.Items)
-}
-
-// GetTotalQty 获取总数量
-func (se *StockEntry) GetTotalQty() float64 {
-	total := 0.0
-	for _, item := range se.Items {
-		total += item.Qty
-	}
-	return total
-}
-
-// IsCompleted 检查单据是否已完成
-func (se *StockEntry) IsCompleted() bool {
-	return se.DocStatus == 1
-}
-
-// IsDraft 检查单据是否为草稿
-func (se *StockEntry) IsDraft() bool {
-	return se.DocStatus == 0
-}
