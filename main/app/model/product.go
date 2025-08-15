@@ -586,6 +586,8 @@ type ProductBomCardLog struct {
 	RelatedUuid        uint64 `gorm:"column:related_uuid;type:bigint(20) unsigned;not null;default:0;comment:关联ID" json:"related_uuid"`
 	RelatedName        string `gorm:"column:related_name;type:text;not null;default:'';comment:关联名称JSON,商品名称、加料名称" json:"related_name"`
 	Data               string `gorm:"column:data;type:text;not null;default:'';comment:成本卡数据JSON" json:"data"`
+	StaffUuid          uint64 `gorm:"column:staff_uuid;type:bigint(20) unsigned;not null;default:0;comment:操作员工UUID" json:"staff_uuid"`
+	OperationType      uint8  `gorm:"column:operation_type;type:int(10);not null;default:1;comment:操作类型, 1-创建 2-修改 3-删除" json:"operation_type"`
 }
 
 // ProductBomCardLogData 成本卡日志数据

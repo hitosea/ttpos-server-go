@@ -1,6 +1,7 @@
 package service
 
 import (
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp/material_resp"
@@ -563,7 +564,7 @@ func (s *materialSrv) AddProductBomCard(ctx context.Context, req req.ProductBomC
 	}
 
 	productBomCardLog, err := newProductBomCardLog(ctx, float64(req.Num), cardUuid, multiLanguageName.ToJson(),
-		req.ProductBomUuid, productBom.ProductPackage.MultiLanguageName.ToJson(), materialList)
+		req.ProductBomUuid, productBom.ProductPackage.MultiLanguageName.ToJson(), materialList, constant.ProductBomCardLogOperationTypeCreate)
 	if err != nil {
 		return errors.WithMessage(err, "创建成本卡日志失败")
 	}
@@ -592,7 +593,7 @@ func (s *materialSrv) AddProductBomCard(ctx context.Context, req req.ProductBomC
 	return nil
 }
 
-func newProductBomCardLog(ctx context.Context, num float64, cardUuid uint64, cardName string, relatedUuid uint64, relatedName string, materialList []*model.RelatedMaterial) (*model.ProductBomCardLog, error) {
+func newProductBomCardLog(ctx context.Context, num float64, cardUuid uint64, cardName string, relatedUuid uint64, relatedName string, materialList []*model.RelatedMaterial, operationType uint8) (*model.ProductBomCardLog, error) {
 	var data string
 
 	// 新增成本卡
@@ -626,6 +627,8 @@ func newProductBomCardLog(ctx context.Context, num float64, cardUuid uint64, car
 		RelatedUuid:        relatedUuid,
 		RelatedName:        relatedName,
 		Data:               data,
+		StaffUuid:          ctx.GetStaffUuid(),
+		OperationType:      operationType,
 	}
 
 	return &productBomCardLog, nil
@@ -686,7 +689,7 @@ func (s *materialSrv) UnlinkProductBomCard(ctx context.Context, req req.ProductB
 		return errors.WithMessage(err, "获取商品规格失败")
 	}
 
-	productBomCardLog, err := newProductBomCardLog(ctx, 0, 0, "", req.ProductBomUuid, productBom.ProductPackage.MultiLanguageName.ToJson(), nil)
+	productBomCardLog, err := newProductBomCardLog(ctx, 0, 0, "", req.ProductBomUuid, productBom.ProductPackage.MultiLanguageName.ToJson(), nil, constant.ProductBomCardLogOperationTypeDelete)
 	if err != nil {
 		return errors.WithMessage(err, "创建成本卡日志失败")
 	}

@@ -1005,6 +1005,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_bom_card_log` (
     `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联ID',
     `related_name` TEXT NOT NULL DEFAULT '' COMMENT '关联名称JSON,商品名称、加料名称',
     `data` TEXT NOT NULL DEFAULT '' COMMENT '成本卡数据JSON',
+    `staff_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '操作员工UUID',
+    `operation_type` INT(10) NOT NULL DEFAULT 1 COMMENT '操作类型, 1-创建 2-删除',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

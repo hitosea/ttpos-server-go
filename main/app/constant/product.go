@@ -99,6 +99,12 @@ const (
 
 )
 
+// 成本卡日志操作类型
+const (
+	ProductBomCardLogOperationTypeCreate = 1 // 创建
+	ProductBomCardLogOperationTypeDelete = 2 // 删除
+)
+
 // 小料是否必选
 const (
 	ProductPackageSauceRequiredOn  = Yes // 是, 小料已必选
