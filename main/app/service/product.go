@@ -1393,12 +1393,7 @@ func (s *productSrv) GetProductSauceList(ctx context.Context, sauceListReq req.P
 			Name:                productSauce.MultiLanguageName.GetNameByLang(language),
 			Sort:                productSauce.Sort,
 			ProductPackageCount: productSauce.ProductPackageCount,
-			HasBomCard: func() bool {
-				if productSauce.ProductBomCardUuid == 0 {
-					return false
-				}
-				return true
-			}(),
+			ProductBomCardUuid:  productSauce.ProductBomCardUuid,
 		})
 	}
 	return product_resp.ProductSauceListResp{
@@ -2855,12 +2850,10 @@ func (s *productSrv) GetProductSingleList(ctx context.Context, req req.ProductSi
 		for _, productBom := range productPackage.ProductBoms {
 			if productBom.IsFlavor() {
 				productItem := product_resp.ProductSingleListItemResp{
-					Uuid:       productBom.Uuid,
-					Name:       productPackage.MultiLanguageName.GetNames(),
-					FlavorName: productBom.ProductFlavor.MultiLanguageName.GetNames(),
-					HasBomCard: func() bool {
-						return productBom.ProductBomCardUuid > 0
-					}(),
+					Uuid:               productBom.Uuid,
+					Name:               productPackage.MultiLanguageName.GetNames(),
+					FlavorName:         productBom.ProductFlavor.MultiLanguageName.GetNames(),
+					ProductBomCardUuid: productBom.ProductBomCardUuid,
 				}
 				productList = append(productList, productItem)
 			}
