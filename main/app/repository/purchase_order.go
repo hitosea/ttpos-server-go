@@ -47,6 +47,9 @@ type IPurchaseOrderRepo interface {
 	GetSupplierStats(limit int, opts ...DBOption) ([]map[string]interface{}, error)
 	GetAmountStats(opts ...DBOption) (float64, error)
 	IsOrderNoExists(orderNo string) (bool, error)
+
+	// 获取今天最新的采购申请
+	GetLatestOrderToday() (*model.PurchaseOrder, error)
 }
 
 // PurchaseOrderRepoImpl 采购订单Repository实现
@@ -378,12 +381,34 @@ func (r *PurchaseOrderRepoImpl) GetAmountStats(opts ...DBOption) (float64, error
 // IsOrderNoExists 检查订单编号是否存在
 func (r *PurchaseOrderRepoImpl) IsOrderNoExists(orderNo string) (bool, error) {
 	var count int64
-	return count > 0, nil
 	err := r.db.Model(&model.PurchaseOrder{}).Where("order_no = ?", orderNo).Count(&count).Error
 	if err != nil {
 		return false, err
 	}
 	return count > 0, nil
+}
+
+// GetLatestOrderToday 获取今天最新的采购申请
+func (r *PurchaseOrderRepoImpl) GetLatestOrderToday() (*model.PurchaseOrder, error) {
+	var purchaseOrder model.PurchaseOrder
+
+	// 获取今天的开始和结束时间戳
+	now := time.Now()
+	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).Unix()
+	endOfDay := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 999999999, now.Location()).Unix()
+
+	err := r.db.Where("create_time >= ? AND create_time <= ?", startOfDay, endOfDay).
+		Order("create_time DESC").
+		First(&purchaseOrder).Error
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &purchaseOrder, nil
 }
 
 // applyOptions 应用查询选项

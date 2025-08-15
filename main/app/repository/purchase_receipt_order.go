@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"time"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -20,6 +21,9 @@ type IPurchaseReceiptOrderRepo interface {
 	GetListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.PurchaseReceiptOrder, int64, error)
 	Count(opts ...DBOption) (int64, error)
 	IsOrderNoExists(orderNo string) (bool, error)
+
+	// 获取今天最新的收货单
+	GetLatestReceiptToday() (*model.PurchaseReceiptOrder, error)
 
 	// 条件查询选项
 	WhereUuid(uuid uint64) DBOption
@@ -124,6 +128,29 @@ func (r *PurchaseReceiptOrderRepoImpl) IsOrderNoExists(orderNo string) (bool, er
 		return false, err
 	}
 	return count > 0, nil
+}
+
+// GetLatestReceiptToday 获取今天最新的收货单
+func (r *PurchaseReceiptOrderRepoImpl) GetLatestReceiptToday() (*model.PurchaseReceiptOrder, error) {
+	var receiptOrder model.PurchaseReceiptOrder
+
+	// 获取今天的开始和结束时间戳
+	now := time.Now()
+	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).Unix()
+	endOfDay := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 999999999, now.Location()).Unix()
+
+	err := r.db.Where("create_time >= ? AND create_time <= ?", startOfDay, endOfDay).
+		Order("create_time DESC").
+		First(&receiptOrder).Error
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &receiptOrder, nil
 }
 
 // 条件查询选项实现

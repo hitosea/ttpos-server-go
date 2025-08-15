@@ -27,10 +27,7 @@ type PurchaseHandler struct {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param page_no query int false "页码" default(1)
-// @Param page_size query int false "每页条数" default(20)
-// @Param order_no query string false "订单号"
-// @Param status query int false "状态"
+// @Param data body req.PurchaseOrderListReq true "采购订单列表请求参数"
 // @Success 200 {object} dto.Response{data=resp.PurchaseOrderListResp} "成功"
 // @Router /shop/purchase/order/list [get]
 func (h *PurchaseHandler) GetPurchaseOrderList(c *gin.Context) {

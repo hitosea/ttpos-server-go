@@ -13,11 +13,12 @@ type PurchaseOrderInfo struct {
 	Uuid              uint64 `json:"uuid"`                // 采购订单ID
 	OrderNo           string `json:"order_no"`            // 申请单编号
 	ErpOrderNo        string `json:"erp_order_no"`        // ERP申请单编号（采购单号）
-	Status            int    `json:"status"`              // 状态
+	Status            int    `json:"status"`              // 状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)
 	OrderTime         int64  `json:"order_time"`          // 单据日期
 	Num               int    `json:"num"`                 // 物品数量
 	OrderType         int    `json:"order_type"`          // 申请类型
 	ExpectArrivalTime int64  `json:"expect_arrival_time"` // 期望到货日期
+	ReceiptProgress   string `json:"receipt_progress"`    // 收货进度（百分比0.00%）前端直接显示
 }
 
 // PurchaseOrderDetailResp 采购订单详情响应
