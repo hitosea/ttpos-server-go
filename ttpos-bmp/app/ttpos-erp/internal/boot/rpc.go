@@ -2,6 +2,7 @@ package boot
 
 import (
 	"context"
+	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc/buying"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc/company"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc/item"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc/manufacturing"
@@ -32,6 +33,7 @@ func initRpcServer() {
 	warehouse.Register(service.RpcServer.GRpc)
 	stock.Register(service.RpcServer.GRpc)
 	manufacturing.Register(service.RpcServer.GRpc)
+	buying.Register(service.RpcServer.GRpc)
 	go service.RpcServer.GRpc.Run()
 }
 

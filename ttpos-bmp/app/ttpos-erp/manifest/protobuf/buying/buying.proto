@@ -1,0 +1,30 @@
+syntax = "proto3";
+import "erp.proto";
+
+package buying;
+
+// 采购服务 Protobuf 定义文件
+// 用于定义采购相关的 gRPC 服务接口和消息结构
+option go_package = "ttpos-bmp/app/ttpos-erp/api/buying";
+
+message GetSupplierListReq {
+  string company_abbr = 1; // 公司缩写编码,必填
+}
+
+
+message GetSupplierListResp {
+  repeated SupplierInfo supplier_list = 1; // 供应商列表
+}
+
+message SupplierInfo {
+  string supplier_name = 1; // 供应商名称
+  string represents_company = 2; // 供应商代表公司
+}
+
+
+service BuyingService {
+  // 获取供应商列表
+  // 参数：公司缩写编码
+  // 返回：供应商列表
+  rpc GetSupplierList(GetSupplierListReq) returns (erp.ResponseInfo);
+}

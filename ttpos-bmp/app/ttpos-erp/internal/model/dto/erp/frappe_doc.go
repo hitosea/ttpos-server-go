@@ -5,17 +5,17 @@ import "github.com/gogf/gf/v2/container/gmap"
 // FrappeDoc 定义泛型结构体，类似 TypeScript 的 FrappeDoc<T>
 type FrappeDoc struct {
 	// Owner 创建文档的用户
-	Owner string `json:"owner"`
+	Owner string `json:"owner,omitempty"`
 	// Creation 文档创建的日期和时间，ISO 格式
-	Creation string `json:"creation"`
+	Creation string `json:"creation,omitempty"`
 	// Modified 文档最后修改的日期和时间，ISO 格式
-	Modified string `json:"modified"`
+	Modified string `json:"modified,omitempty"`
 	// ModifiedBy 最后修改文档的用户
-	ModifiedBy string `json:"modified_by"`
+	ModifiedBy string `json:"modified_by,omitempty"`
 	// Idx 文档的索引位置
-	Idx int `json:"idx"`
+	Idx int `json:"idx,omitempty"`
 	// Docstatus 0 - 已保存, 1 - 已提交, 2 - 已取消
-	Docstatus int `json:"docstatus"`
+	Docstatus int `json:"docstatus,omitempty"`
 	// Parent 文档的父文档
 	Parent any `json:"parent,omitempty"`
 	// Parentfield 父文档字段
@@ -23,9 +23,9 @@ type FrappeDoc struct {
 	// Parenttype 父文档类型
 	Parenttype any `json:"parenttype,omitempty"`
 	// DocType 表的主键
-	Name string `json:"name"`
+	Name string `json:"name,omitempty"`
 	// DocType 文档类型
-	Doctype string `json:"doctype"`
+	Doctype string `json:"doctype,omitempty"`
 }
 
 // RequestParams 定义请求参数结构体
@@ -69,13 +69,13 @@ type ApiError struct {
 }
 
 type ErpReq struct {
-	DocType string `json:"docType"`
-	Name    string `json:"name"`
-	Method  string `json:"method"`
+	DocType string `json:"docType,omitempty"`
+	Name    string `json:"name,omitempty"`
+	Method  string `json:"method,omitempty"`
 }
 
 type ReportParams struct {
-	ReportName           string `json:"report_name"`                           // 报表名称
-	Filters              string `json:"filters"`                               //json 格式的筛选条件
-	IgnorePreparedReport bool   `default:"true" json:"ignore_prepared_report"` // 是否忽略已准备好的报表
+	ReportName           string `json:"report_name,omitempty"`                           // 报表名称
+	Filters              string `json:"filters,omitempty"`                               //json 格式的筛选条件
+	IgnorePreparedReport bool   `default:"true" json:"ignore_prepared_report,omitempty"` // 是否忽略已准备好的报表
 }
