@@ -49,6 +49,32 @@ func (h *ProductHandler) GetProductCategoryList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetProductCategory 获取商品分类详情
+// @Summary 获取商品分类详情
+// @Description 获取商品分类详情
+// @Tags 商家端.商品分类
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param uuid query string false "商品分类UUID"
+// @Success 200 {object} product_resp.ProductShopCategoryDetailResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/category [get]
+func (h *ProductHandler) GetProductCategory(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	detailReq := req.ProductShopCategoryReq{}
+	if err := c.ShouldBindQuery(&detailReq); err != nil {
+		helper.HandleValidationError(c, err, detailReq, dto.PageReqMessage)
+		return
+	}
+	res, err := h.productSrv.GetProductShopCategory(ctx, detailReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
 // SortProductCategory 排序商品分类
 // @Summary 排序商品分类
 // @Description 排序商品分类
@@ -137,13 +163,13 @@ func (h *ProductHandler) EditProductCategory(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param data body req.ProductShopCategoryReq true "商品分类删除请求"
+// @Param data body req.ProductShopCategoryDeleteReq true "商品分类删除请求"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /shop/product/category [delete]
 func (h *ProductHandler) DeleteProductCategory(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	deleteReq := req.ProductShopCategoryReq{}
+	deleteReq := req.ProductShopCategoryDeleteReq{}
 	if err := c.ShouldBindJSON(&deleteReq); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1040,6 +1066,7 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/product/category/list", wrapper.GetProductCategoryList) // 获取商品分类列表
+		privateApi.GET("/product/category", wrapper.GetProductCategory)          // 获取商品分类详情
 		privateApi.POST("/product/category/sort", wrapper.SortProductCategory)   // 排序商品分类
 		privateApi.POST("/product/category/add", wrapper.AddProductCategory)     // 添加商品分类
 		privateApi.POST("/product/category/edit", wrapper.EditProductCategory)   // 编辑商品分类

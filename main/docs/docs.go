@@ -19271,6 +19271,43 @@ const docTemplate = `{
             }
         },
         "/shop/product/category": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取商品分类详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品分类"
+                ],
+                "summary": "获取商品分类详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "商品分类UUID",
+                        "name": "uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.ProductShopCategoryDetailResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            },
             "delete": {
                 "security": [
                     {
@@ -19295,7 +19332,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/req.ProductShopCategoryReq"
+                            "$ref": "#/definitions/req.ProductShopCategoryDeleteReq"
                         }
                     }
                 ],
@@ -26982,6 +27019,39 @@ const docTemplate = `{
                 }
             }
         },
+        "product_resp.ProductShopCategoryDetailResp": {
+            "type": "object",
+            "properties": {
+                "locale_name": {
+                    "description": "商品类别名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "parent_name": {
+                    "description": "父级类别名称",
+                    "type": "string"
+                },
+                "parent_uuid": {
+                    "description": "父级类别UUID",
+                    "type": "integer"
+                },
+                "sort": {
+                    "description": "商品类别排序",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "商品类别状态 0-关闭 1-开启",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "商品类别UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "product_resp.ProductShopCategoryListResp": {
             "type": "object",
             "properties": {
@@ -30400,6 +30470,18 @@ const docTemplate = `{
                 }
             }
         },
+        "req.ProductShopCategoryDeleteReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "商品分类UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.ProductShopCategoryEditReq": {
             "type": "object",
             "required": [
@@ -30423,18 +30505,6 @@ const docTemplate = `{
                     "description": "商品分类状态 0-关闭 1-开启",
                     "type": "integer"
                 },
-                "uuid": {
-                    "description": "商品分类UUID",
-                    "type": "integer"
-                }
-            }
-        },
-        "req.ProductShopCategoryReq": {
-            "type": "object",
-            "required": [
-                "uuid"
-            ],
-            "properties": {
                 "uuid": {
                     "description": "商品分类UUID",
                     "type": "integer"

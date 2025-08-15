@@ -95,6 +95,11 @@ type ProductShopCategoryListReq struct {
 	IsSpecial  *bool   `form:"is_special"`  // 是否特色分类, false-否 true-是, 可选
 }
 
+// ProductShopCategoryReq 商品分类请求
+type ProductShopCategoryReq struct {
+	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 商品分类UUID
+}
+
 // ProductShopCategorySortItem 商品分类排序项
 type ProductShopCategorySortItem struct {
 	Uuid uint64 `json:"uuid" binding:"required"` // 商品分类UUID
@@ -122,8 +127,8 @@ type ProductShopCategoryEditReq struct {
 	Status     int                `json:"status"`                         // 商品分类状态 0-关闭 1-开启
 }
 
-// ProductShopCategoryReq 商品分类请求
-type ProductShopCategoryReq struct {
+// ProductShopCategoryDeleteReq 商品分类请求
+type ProductShopCategoryDeleteReq struct {
 	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 商品分类UUID
 }
 

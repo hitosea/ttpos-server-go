@@ -240,6 +240,16 @@ type ProductShopCategoryListResp struct {
 	List []ProductShopCategory `json:"list"`
 }
 
+// ProductShopCategoryDetailResp 商品分类详情响应（商家端）
+type ProductShopCategoryDetailResp struct {
+	Uuid       uint64             `json:"uuid"`        // 商品类别UUID
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品类别名称
+	ParentUuid uint64             `json:"parent_uuid"` // 父级类别UUID
+	ParentName string             `json:"parent_name"` // 父级类别名称
+	Sort       uint               `json:"sort"`        // 商品类别排序
+	Status     int                `json:"status"`      // 商品类别状态 0-关闭 1-开启
+}
+
 type ProductAttributeGroupItem struct {
 	Uuid          uint64 `json:"uuid"`           // 商品属性分组UUID
 	Name          string `json:"name"`           // 商品属性分组名称
