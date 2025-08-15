@@ -325,6 +325,33 @@ func (h *MaterialHandler) UnlinkProductBomCard(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// EditProductBomCard 编辑成本卡
+// @Summary 编辑成本卡
+// @Description 编辑成本卡
+// @Tags 商家端.物品管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductBomCardEditReq true "成本卡编辑请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product_bom/card/edit [post]
+func (h *MaterialHandler) EditProductBomCard(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	editReq := req.ProductBomCardAddReq{}
+
+	if err := c.ShouldBindJSON(&editReq); err != nil {
+		helper.HandleValidationError(c, err, editReq, dto.PageReqMessage)
+		return
+	}
+	err := h.materialSrv.AddProductBomCard(ctx, editReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
 // RegisterMaterialHandlers 注册物品管理路由
 func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -361,5 +388,6 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		privateApi.POST("/product_bom/card/add", wrapper.AddProductBomCard)         // 添加成本卡
 		privateApi.GET("/product_bom/card/detail", wrapper.GetProductBomCardDetail) // 规格商品成本卡详情
 		privateApi.POST("/product_bom/card/unlink", wrapper.UnlinkProductBomCard)   // 解除成本卡关联
+		privateApi.POST("/product_bom/card/edit", wrapper.EditProductBomCard)       // 编辑成本卡
 	}
 }
