@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     width="960"
-    :title="hasEdit ? $t('編輯商家') : $t('选择商家')"
+    :title="hasEdit ? $t('查看商家') : $t('选择商家')"
     :modelValue="props.show"
     :close-on-click-modal="false"
     :close-on-press-escape="false"
@@ -36,7 +36,7 @@
       </el-form-item>
       <el-form-item v-if="formData.erpnext_company_abbr" :label="$t('Pos Profile')" prop="erpnext_pos_profile_name">
         <el-select v-model="formData.erpnext_pos_profile_name" :placeholder="$t('请选择Pos Profile')" clearable filterable :disabled="props.hasEdit || confirmPassword">
-          <el-option v-for="item in filteredErpnextPosProfileList" :key="item.name" :value="item.name" :label="item.name" />
+          <el-option v-for="item in erpnextPosProfileList" :key="item.name" :value="item.name" :label="item.name" />
         </el-select>
       </el-form-item>
       <el-form-item v-if="confirmPassword && !props.hasEdit" :label="$t('密码验证')" prop="password">
@@ -48,7 +48,7 @@
     </el-form>
     <template #footer>
       <el-button @click="handleClose">{{ $t('取消') }}</el-button>
-      <el-button type="primary" @click="handleSubmit" :loading="isLoading">{{ $t('确定') }}</el-button>
+      <el-button v-if="!props.hasEdit" type="primary" @click="handleSubmit" :loading="isLoading">{{ $t('确定') }}</el-button>
     </template>
   </el-dialog>
 </template>
@@ -62,8 +62,10 @@
     getAuthorizationList,
     getErpnextSiteCode,
     getErpnextSiteCompany,
+    getErpnextPosProfile,
     erpnextAdd,
     erpnextPosProfileItem,
+    erpnextAddParams,
   } from '@/api/authorization';
   import { ElMessage, FormInstance } from 'element-plus';
   const emit = defineEmits(['update:show', 'refresh']);
@@ -87,8 +89,6 @@
   const erpnextSiteList = ref<erpnextSiteCodeItem[]>([]);
   const erpnextCompanyList = ref<erpnextSiteCompanyItem[]>([]);
   const erpnextPosProfileList = ref<erpnextPosProfileItem[]>([]);
-  // 筛选后的erpnextPosProfileList
-  const filteredErpnextPosProfileList = ref<erpnextPosProfileItem[]>([]);
   // 确认密码输入
   const confirmPassword = ref(false);
   const isLoading = ref(false);
@@ -157,8 +157,19 @@
         site_code: site_code,
         company_abbr: '',
       });
-      erpnextCompanyList.value = res.data.company_list;
-      erpnextPosProfileList.value = res.data.pos_profile_list;
+      erpnextCompanyList.value = res.data.list;
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const getErpnextPosProfileList = async (site_code: string, company_abbr: string) => {
+    try {
+      const res = await getErpnextPosProfile({
+        site_code: site_code,
+        company_abbr: company_abbr,
+      });
+      erpnextPosProfileList.value = res.data.list;
     } catch (error) {
       console.log(error);
     }
@@ -173,12 +184,11 @@
       // 如果已经是字符串，直接使用
       formData.value.erpnext_company_abbr = value || '';
     }
-    let selectedCompany = erpnextCompanyList.value.find((item) => item.company_abbr === formData.value.erpnext_company_abbr);
-    filteredErpnextPosProfileList.value = erpnextPosProfileList.value.filter((item) => item.company === selectedCompany?.company_name);
+    getErpnextPosProfileList(formData.value.erpnext_site_code, formData.value.erpnext_company_abbr);
   };
 
-  const formData = ref({
-    uuid: 0,
+  const formData = ref<erpnextAddParams>({
+    uuid: undefined,
     erpnext_site_code: '',
     erpnext_default_company_abbr: '',
     erpnext_company_abbr: '',
@@ -191,6 +201,7 @@
     erpnext_site_code: [{ required: true, message: $t('请选择所属erpnext的site') }],
     erpnext_company_abbr: [{ required: true, message: $t('请选择所属erpnext公司') }],
     erpnext_pos_profile_name: [{ required: true, message: $t('请选择Pos Profile') }],
+    password: [{ required: true, message: $t('请输入密码') }],
   });
 
   const handleClose = () => {
@@ -199,25 +210,37 @@
   };
 
   const handleReset = () => {
-    formRef.value?.resetFields();
+    formData.value = {
+      uuid: undefined,
+      erpnext_site_code: '',
+      erpnext_default_company_abbr: '',
+      erpnext_company_abbr: '',
+      erpnext_pos_profile_name: '',
+      password: '',
+    };
+    confirmPassword.value = false;
   };
 
   const handleSubmit = async () => {
-    if (!confirmPassword.value) {
-      confirmPassword.value = true;
-      return;
-    }
-    try {
-      isLoading.value = true;
-      const res = await erpnextAdd(formData.value);
-      ElMessage.success(res.msg);
-      handleClose();
-      emit('refresh');
-    } catch (error) {
-      console.log(error);
-    } finally {
-      isLoading.value = false;
-    }
+    formRef.value?.validate(async (valid) => {
+      if (valid) {
+        if (!confirmPassword.value) {
+          confirmPassword.value = true;
+          return;
+        }
+        try {
+          isLoading.value = true;
+          const res = await erpnextAdd(formData.value);
+          ElMessage.success(res.msg);
+          handleClose();
+          emit('refresh');
+        } catch (error) {
+          console.log(error);
+        } finally {
+          isLoading.value = false;
+        }
+      }
+    });
   };
 
   watch(
@@ -237,6 +260,8 @@
 
         await getCompanyList();
         await getErpnextSiteCodeList();
+        // 表单验证取消
+        formRef.value?.clearValidate();
       }
     },
     { immediate: true, deep: true },
