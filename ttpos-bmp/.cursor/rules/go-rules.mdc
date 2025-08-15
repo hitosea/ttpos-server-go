@@ -1,80 +1,345 @@
 ---
 alwaysApply: true
 ---
- Go 代码开发规范（ttpos-bmp 项目专用）
-    代码使用goframe(https://github.com/gogf/gf) 框架开发
 
- 1. 目录结构
- - 业务代码统一放在 app/ 目录下，按模块（如 ttpos-manager, ttpos-erp, ttpos-shop）划分
- - 每个模块下 manifest/sql 目录用于存放数据库迁移脚本
- - 目录结构样例
+# Go 代码开发规范（ttpos-bmp 项目专用）
 
-    app/ttpos-erp/
-    ├── api/                // API 接口定义
-    ├── cmd/                // 命令行入口
-    ├── internal/           // 内部实现
-    │   ├── consts/         // 常量定义
-    |   |── controller/     // web控制器
-    │   ├── dao/            // 数据访问层
-    │   ├── logic/          // 业务逻辑层
-    │   │   ├── erp/        // erp 相关业务逻辑
-    │   │   │   ├── document.go
-    │   │   │   └── item/
-    │   │   │       └── item.go
-    │   ├── model/          // 数据模型
-    │   │   ├── dto/        // 数据传输对象
-    │   │   │   └── 
-    │   │   └── entity/     // 实体对象
-    │   ├── service/        // 服务接口定义与实现
-    │   └── utility/        // 工具类
-    ├── manifest/
-    │   └── sql/            // 数据库迁移脚本
-    ├── router/             // 路由定义
-    └── main.go             // 启动入口
+## 框架说明
+本项目使用 [GoFrame](https://github.com/gogf/gf) v2.x 框架开发，这是一个功能强大、易于使用的Go应用开发框架。
 
-说明：
-- 业务代码全部放在 internal/logic/erp 及其子目录下
-- 数据库迁移脚本统一放在 manifest/sql 目录
-- model/dto 用于定义接口数据结构
-- model/entity 用于定义数据库实体结构
-- 其他目录根据业务需要可适当扩展
+## 参考资料
+- GoFrame 官方文档：https://goframe.org
+- GoFrame 官方文档（中文）：https://goframe.org.cn
+- GoFrame API 文档：https://pkg.go.dev/github.com/gogf/gf/v2
+
+## 1. 目录结构规范
+
+### 1.1 基本结构
+业务代码统一放在 `app/` 目录下，按模块（如 ttpos-manager, ttpos-erp, ttpos-shop）划分。每个模块严格遵循 GoFrame 推荐的目录结构：
+
+```
+app/ttpos-erp/
+├── api/                // 接口定义层 (API输入输出数据结构定义)
+│   ├── buying/         // 业务模块API定义
+│   ├── item/           // 物品模块API定义
+│   └── company/        // 公司模块API定义
+├── cmd/                // 命令行工具入口
+├── internal/           // 内部实现代码
+│   ├── boot/           // 启动加载逻辑
+│   ├── consts/         // 常量定义
+│   ├── controller/     // 控制器层
+│   │   ├── http/       // HTTP控制器
+│   │   └── rpc/        // gRPC控制器
+│   ├── dao/            // 数据访问层 (框架自动生成，不要手动修改)
+│   ├── logic/          // 业务逻辑层
+│   │   ├── erp/        // ERP相关业务逻辑
+│   │   ├── buying/     // 采购相关业务逻辑
+│   │   └── company/    // 公司相关业务逻辑
+│   ├── model/          // 数据模型层
+│   │   ├── do/         // 数据对象 (框架自动生成，不要手动修改)
+│   │   ├── dto/        // 数据传输对象
+│   │   │   └── erp/    // ERP相关数据传输对象
+│   │   └── entity/     // 数据实体 (框架自动生成，不要手动修改)
+│   ├── service/        // 服务接口定义 (框架自动生成，不要手动修改)
+│   └── utility/        // 工具类
+├── manifest/           // 配置清单
+│   ├── config/         // 配置文件模板
+│   ├── protobuf/       // protobuf定义文件
+│   └── sql/            // 数据库迁移脚本
+├── router/             // 路由定义
+└── main.go             // 启动入口
+```
+
+### 1.2 目录说明
+- **api/**: API接口定义，包含输入输出数据结构
+- **dao/**: 数据访问层，**由框架自动生成，禁止手动修改**
+- **logic/**: 业务逻辑实现，所有业务代码都在这里
+- **model/do/**: 数据对象，**由框架自动生成，禁止手动修改**
+- **model/entity/**: 数据实体，**由框架自动生成，禁止手动修改**
+- **model/dto/**: 数据传输对象，手动定义的数据结构
+- **service/**: 服务接口，**由框架自动生成，禁止手动修改**
+- **manifest/sql/**: 数据库迁移脚本
+- **manifest/config/**: 配置文件模板
 
 
- 2. 依赖管理
- - 统一使用 go mod 管理依赖，禁止手动修改 go.sum
- - 新增依赖请先 go get，再 go mod tidy
+## 2. 依赖管理规范
 
- 3. 代码风格
- - 变量、函数、结构体命名统一使用驼峰命名法
- - 包名一律小写，禁止使用下划线
- - 文件名建议小写，单词间用下划线分隔
- - 数据库操作使用 dao层服务
- - controller,dao,service,entity,do 目录不要自己生成,框架会生成
- - 优化代码时，service，entity,do 目录下的文件，包含有 "Code generated and maintained by GoFrame CLI tool. DO NOT EDIT." 的不要优化
+### 2.1 Go Modules
+- 统一使用 `go mod` 管理依赖，**禁止手动修改** `go.sum` 文件
+- 新增依赖：`go get <package>@<version>`，然后执行 `go mod tidy`
+- 定期执行 `go mod tidy` 清理未使用的依赖
 
- 4. 注释规范
- - 所有导出函数、结构体、接口必须添加中文注释
- - 重要业务逻辑、复杂算法处需补充详细中文注释
+### 2.2 GoFrame 版本
+- 统一使用 GoFrame v2.x 最新稳定版本
+- 核心依赖包：
+  ```go
+  github.com/gogf/gf/v2                    // 核心框架
+  github.com/gogf/gf/contrib/rpc/grpcx/v2  // gRPC扩展
+  ```
 
- 5. 接口规范
- - Go接口建议补充详细中文注释说明参数和返回值
+## 3. 代码风格规范
 
- 6. 数据库迁移
- - 迁移脚本仅允许写在 manifest/sql 目录下
- - 迁移脚本通过 make db_add NAME=[备注] 的方式新增脚本，脚本内容写在新增的 xxx_up.sql内 
- - 新增表/字段时，时间字段用 int 类型并以 _time 结尾，金额字段用 decimal(14,2)
- - 必须包含 uuid（string, 默认guuid.S()）、create_time、update_time、delete_time 字段（int, 默认0）
- - 新增表/字段前需判断是否已存在，避免重复
+### 3.1 命名规范
+- **变量、函数、方法**：使用小驼峰命名法（camelCase）
+- **结构体、接口**：使用大驼峰命名法（PascalCase）
+- **包名**：一律小写，禁止使用下划线，使用简短有意义的名称
+- **文件名**：小写，单词间用下划线分隔（snake_case）
+- **常量**：全大写，单词间用下划线分隔
 
- 7. 配置管理
- - 配置文件统一放在 config/ 目录，禁止将敏感信息提交到 git
+### 3.2 GoFrame 特有规范
+- **数据库操作**：必须使用 DAO 层服务，通过 `dao.TableName.Ctx(ctx)` 调用
+- **自动生成文件**：`dao/`、`service/`、`entity/`、`do/` 目录下的文件由框架自动生成，**严禁手动修改**
+- **框架生成标识**：包含 `"Code generated and maintained by GoFrame CLI tool. DO NOT EDIT."` 注释的文件不要优化或修改
 
- 8. 代码提交
- - 禁止提交 .idea、.vscode、output、bin、temp 等本地或临时文件
- - 提交前请确保 go mod tidy、go fmt、go vet 均无异常
+### 3.3 服务层设计
+```go
+// 正确的服务实现模式
+type sUser struct{}
 
- 9. 其他
- - 业务开发优先参考 README.MD、MIGRATION_QUICK_START.md、DATABASE_MIGRATION_RULES.md
- - 如有疑问请先查阅项目文档或联系维护者
- - 分析处理ttpos-bmp 代码时，不要参考 main目录下的代码
+var User = new(sUser)
+
+func init() {
+    service.RegisterUser(User)  // 注册到服务容器
+}
+
+// 实现业务逻辑
+func (s *sUser) GetUser(ctx context.Context, req *user.GetUserReq) (*user.GetUserResp, error) {
+    // 业务逻辑实现
+}
+```
+
+## 4. 注释规范
+
+### 4.1 基本要求
+- **所有导出函数、结构体、接口必须添加中文注释**
+- 重要业务逻辑、复杂算法需补充详细中文注释
+- 注释应描述功能、参数、返回值和可能的错误
+
+### 4.2 注释格式
+```go
+// GetUser 获取用户信息
+// 参数：
+//   - ctx: 上下文对象，用于传递请求范围的元数据
+//   - req: 获取用户请求参数，包含用户ID
+// 返回：
+//   - res: 用户信息响应，包含用户详细信息
+//   - err: 操作过程中产生的错误（若有）
+func (s *sUser) GetUser(ctx context.Context, req *user.GetUserReq) (res *user.GetUserResp, err error) {
+    // 实现逻辑
+}
+```
+
+## 5. 错误处理规范
+
+### 5.1 GoFrame 错误处理
+```go
+import "github.com/gogf/gf/v2/errors/gerror"
+
+// 创建新错误
+err := gerror.New("用户不存在")
+
+// 包装已有错误
+err = gerror.Wrap(originalErr, "获取用户失败")
+
+// 格式化错误信息
+err = gerror.Newf("用户ID %d 不存在", userID)
+
+// 包装并格式化
+err = gerror.Wrapf(originalErr, "更新用户 %d 失败", userID)
+```
+
+### 5.2 错误处理最佳实践
+- 使用 `gerror` 包进行错误处理，不要使用标准库的 `errors`
+- 错误信息使用中文，便于运维和调试
+- 在业务逻辑层包装错误，添加业务含义
+- 避免使用 `panic`，通过返回错误的方式处理异常情况
+
+## 6. 参数验证规范
+
+### 6.1 控制器层验证
+```go
+// 在控制器中进行基础参数验证
+func (c *Controller) GetUser(ctx context.Context, req *user.GetUserReq) (*api.ResponseInfo, error) {
+    // 参数验证
+    if err := c.validateGetUserReq(req); err != nil {
+        return rpc.ApiError(err.Error()), nil
+    }
+    
+    // 调用服务层
+    resp, err := service.User().GetUser(ctx, req)
+    if err != nil {
+        return rpc.ApiError(err.Error()), nil
+    }
+    return rpc.ApiSuccessWithData("获取用户成功", resp), nil
+}
+
+// 独立的验证方法
+func (c *Controller) validateGetUserReq(req *user.GetUserReq) error {
+    if req == nil {
+        return gerror.New("请求参数不能为空")
+    }
+    if req.UserId <= 0 {
+        return gerror.New("用户ID必须大于0")
+    }
+    return nil
+}
+```
+
+### 6.2 使用 GoFrame 验证器
+```go
+import "github.com/gogf/gf/v2/util/gvalid"
+
+// 结构体验证标签
+type CreateUserReq struct {
+    Username string `v:"required|length:2,20#用户名不能为空|用户名长度为2-20个字符"`
+    Email    string `v:"required|email#邮箱不能为空|邮箱格式不正确"`
+    Age      int    `v:"required|between:1,150#年龄不能为空|年龄必须在1-150之间"`
+}
+```
+
+## 7. 数据库操作规范
+
+### 7.1 ORM 使用
+```go
+// 正确的数据库操作方式
+import "ttpos-bmp/app/ttpos-erp/internal/dao"
+
+// 查询操作
+var user *entity.User
+err := dao.User.Ctx(ctx).Where(dao.User.Columns().Id, userId).Scan(&user)
+
+// 插入操作
+userId, err := dao.User.Ctx(ctx).Data(do.User{
+    Username: "test",
+    Email:    "test@example.com",
+}).InsertAndGetId()
+
+// 更新操作
+_, err := dao.User.Ctx(ctx).Where(dao.User.Columns().Id, userId).Update(do.User{
+    Username: "updated",
+})
+
+// 删除操作（软删除）
+_, err := dao.User.Ctx(ctx).Where(dao.User.Columns().Id, userId).Delete()
+```
+
+### 7.2 事务处理
+```go
+// 使用事务
+err := g.DB().Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
+    // 在事务中执行多个操作
+    _, err := dao.User.Ctx(ctx).TX(tx).Data(userData).Insert()
+    if err != nil {
+        return err
+    }
+    
+    _, err = dao.UserProfile.Ctx(ctx).TX(tx).Data(profileData).Insert()
+    if err != nil {
+        return err
+    }
+    return nil
+})
+```
+
+## 8. 配置管理规范
+
+### 8.1 配置文件结构
+- 配置文件模板：`manifest/config/config.tpl.yaml`
+- 运行时配置：由部署系统基于模板生成
+- 敏感信息：使用环境变量，格式为 `$VARIABLE_NAME`
+
+### 8.2 配置读取
+```go
+import "github.com/gogf/gf/v2/frame/g"
+
+// 读取配置
+serverAddr := g.Cfg().MustGet(ctx, "server.address").String()
+dbConfig := g.Cfg().MustGet(ctx, "database.default").Map()
+```
+
+### 8.3 配置示例
+```yaml
+# manifest/config/config.tpl.yaml
+server:
+  address: ":8080"
+  logPath: "./log"
+  
+database:
+  default:
+    link: "mysql:$DB_USERNAME:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT)/$DB_NAME"
+    
+logger:
+  level: "all"
+  stdout: true
+```
+
+## 9. 日志规范
+
+### 9.1 日志使用
+```go
+import "github.com/gogf/gf/v2/frame/g"
+
+// 不同级别的日志
+g.Log().Debug(ctx, "调试信息")
+g.Log().Info(ctx, "普通信息")
+g.Log().Warning(ctx, "警告信息") 
+g.Log().Error(ctx, "错误信息", err)
+g.Log().Fatal(ctx, "致命错误", err)
+
+// 格式化日志
+g.Log().Infof(ctx, "用户 %d 执行了 %s 操作", userId, action)
+```
+
+### 9.2 日志最佳实践
+- 必须传递 `context` 参数，便于链路追踪
+- 错误日志包含完整的错误信息
+- 使用结构化日志记录关键业务操作
+- 敏感信息不要记录到日志中
+
+## 10. 数据库迁移规范
+
+### 10.1 迁移脚本管理
+- 迁移脚本仅允许写在 `manifest/sql/` 目录下
+- 通过 `make db_add NAME=[备注]` 生成迁移脚本
+- 脚本内容写在生成的 `xxx_up.sql` 文件内
+
+### 10.2 字段规范
+- **时间字段**：使用 `int` 类型，以 `_time` 结尾，默认值 0
+- **金额字段**：使用 `decimal(14,2)` 类型
+- **必需字段**：`uuid`（string，默认 `guuid.S()`）、`create_time`、`update_time`、`delete_time`（int，默认 0）
+- **检查存在性**：新增表/字段前需判断是否已存在，避免重复
+
+## 11. 代码提交规范
+
+### 11.1 提交前检查
+- 执行 `go mod tidy` 整理依赖
+- 执行 `go fmt` 格式化代码
+- 执行 `go vet` 检查代码问题
+- 确保所有测试通过
+
+### 11.2 忽略文件
+禁止提交以下文件和目录：
+- `.idea/`、`.vscode/` - IDE配置文件
+- `output/`、`bin/`、`temp/` - 构建产物和临时文件
+- `*.log` - 日志文件
+- 包含敏感信息的配置文件
+
+## 12. 其他规范
+
+### 12.1 开发参考
+- 优先参考项目文档：`README.MD`、`MIGRATION_QUICK_START.md`、`DATABASE_MIGRATION_RULES.md`
+- 有疑问时查阅 GoFrame 官方文档或联系项目维护者
+- 分析处理 ttpos-bmp 代码时，不要参考 `main/` 目录下的代码
+
+### 12.2 性能优化
+- 数据库查询使用合适的索引
+- 避免 N+1 查询问题，使用预加载
+- 大数据量查询使用分页
+- 合理使用缓存减少数据库访问
+
+### 12.3 安全规范
+- 输入参数必须进行验证和过滤
+- 数据库查询使用参数化查询，避免 SQL 注入
+- 敏感数据传输和存储要加密
+- API 接口添加适当的权限控制
  
