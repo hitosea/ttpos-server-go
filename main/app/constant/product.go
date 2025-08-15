@@ -105,6 +105,12 @@ const (
 	ProductBomCardLogOperationTypeDelete = 2 // 删除
 )
 
+// 成本卡关联类型
+const (
+	ProductBomCardRelatedTypeFlavor = 1 // 规格商品
+	ProductBomCardRelatedTypeSauce  = 2 // 小料
+)
+
 // 小料是否必选
 const (
 	ProductPackageSauceRequiredOn  = Yes // 是, 小料已必选

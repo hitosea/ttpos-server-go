@@ -18,7 +18,7 @@ type IProductBomCardRepo interface {
 type IProductBomCardQueryRepo interface {
 	GetProductBomCard(opts ...DBOption) (*model.ProductBomCard, error)
 	GetProductBomCardList(opts ...DBOption) ([]*model.ProductBomCard, error)
-	GetProductBomCardMaterialByUuid(uuid uint64) (*model.RelatedMaterial, error)
+	GetProductBomCardDetail(uuid uint64) (*model.ProductBomCard, error)
 }
 
 type productBomCardRepoImpl struct {
@@ -99,11 +99,27 @@ func (r *productBomCardRepoImpl) UpdateProductBomCardMaterial(productBomCardMate
 	return nil
 }
 
-func (r *productBomCardRepoImpl) GetProductBomCardMaterialByUuid(uuid uint64) (*model.RelatedMaterial, error) {
-	var productBomCardMaterial model.RelatedMaterial
-	result := r.db.Where("uuid = ?", uuid).First(&productBomCardMaterial)
-	if result.Error != nil {
-		return nil, result.Error
+func (r *productBomCardRepoImpl) GetProductBomCardDetail(uuid uint64) (*model.ProductBomCard, error) {
+	card, err := r.GetProductBomCard(
+		CommonRepo.WhereByUuid(uuid),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "MultiLanguageName",
+			},
+		),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "RelatedMaterials.Material.MultiLanguageName",
+			},
+		),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "RelatedMaterials.Material.NotBaseUnitList.Unit.MultiLanguageName",
+			},
+		),
+	)
+	if err != nil {
+		return nil, err
 	}
-	return &productBomCardMaterial, nil
+	return card, nil
 }

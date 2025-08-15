@@ -10,6 +10,8 @@ import (
 type IProductSauceRepo interface {
 	GetProductSauce(opts ...DBOption) (*model.ProductSauce, error)
 	CreateProductSauce(productSauce *model.ProductSauce) error
+	GetSauceByUuid(uuid uint64) (*model.ProductSauce, error)
+	UpdateProductBomCard(uuid uint64, productBomCardUuid uint64) error
 }
 
 type productSauceRepoImpl struct {
@@ -57,4 +59,25 @@ func (r *productSauceRepoImpl) CreateProductSauce(productSauce *model.ProductSau
 		return errors.WithMessage(err)
 	}
 	return nil
+}
+
+func (r *productSauceRepoImpl) GetSauceByUuid(uuid uint64) (*model.ProductSauce, error) {
+	sauce, err := r.GetProductSauce(
+		CommonRepo.WhereByUuid(uuid),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "MultiLanguageName",
+			},
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return sauce, nil
+}
+
+func (r *productSauceRepoImpl) UpdateProductBomCard(uuid uint64, productBomCardUuid uint64) error {
+	return r.db.Model(&model.ProductSauce{}).Where("uuid = ?", uuid).Updates(map[string]interface{}{
+		"product_bom_card_uuid": productBomCardUuid,
+	}).Error
 }
