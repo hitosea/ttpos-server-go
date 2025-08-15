@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-server-go/app/constant"
@@ -76,6 +77,9 @@ func (s *purchaseOrderSrv) GetPurchaseOrderList(ctx context.Context, req req.Pur
 	// 排序
 	opts = append(opts, purchaseOrderRepo.OrderByCreateTime(true))
 
+	// WithItems()
+	opts = append(opts, purchaseOrderRepo.WithItems())
+
 	// 查询数据
 	purchaseOrders, total, err := purchaseOrderRepo.GetListWithPagination(req.PageNo, req.PageSize, opts...)
 	if err != nil {
@@ -90,7 +94,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderList(ctx context.Context, req req.Pur
 		if err != nil {
 			continue
 		}
-		// 计算明细统计信息
+		poInfo.ReceiptProgress = fmt.Sprintf("%.v%%", po.GetReceiptProgress())
 		listResp = append(listResp, &poInfo)
 	}
 
@@ -149,7 +153,7 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 		purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(tx)
 		// 创建采购申请
 		purchaseOrder := &model.PurchaseOrder{
-			OrderNo:           "PU" + s.generateOrderNo(db),
+			OrderNo:           s.generateOrderNo(ctx, db),
 			OrderType:         req.OrderType,
 			Status:            constant.PurchaseOrderStatusDraft, // 待提交状态
 			Num:               float64(len(req.Items)),
@@ -491,7 +495,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 
 		// 创建收货单
 		receiptOrder := &model.PurchaseReceiptOrder{
-			OrderNo:           "CSSH" + s.generateReceiptNo(tx),
+			OrderNo:           s.generateReceiptNo(ctx, tx),
 			Status:            utils.IfInt(req.IsConfirm, constant.ReceiptOrderStatusReceived, constant.ReceiptOrderStatusPending), // 待收货状态
 			PurchaseOrderUuid: req.PurchaseOrderUuid,
 			PurchaseOrderNo:   purchaseOrder.OrderNo,
@@ -797,66 +801,118 @@ func (s *purchaseOrderSrv) CancelPurchaseReceiptOrder(ctx context.Context, req r
 	return nil
 }
 
-// generateOrderNo 生成订单编号
-func (s *purchaseOrderSrv) generateOrderNo(db *gorm.DB) string {
-	var orderNo string
-	// 前八位是年月日
+// generateOrderNo 生成采购申请订单编号
+// 格式：CSSH+年月日+0000自增序列号
+func (s *purchaseOrderSrv) generateOrderNo(ctx context.Context, db *gorm.DB) string {
+	// 固定前缀
+	prefix := "CSSH"
+	// 年月日部分
 	datePart := time.Now().Format("20060102")
-	// 第九位是订单来源
-	// 如果订单编号存在, 则重新生成, 重试10次, 否则退出
-	for i := 0; i < 10; i++ {
-		// 后九位是随机生成
-		n := utils.RandomNumber(9)
-		// 订单编号
-		orderNo = datePart + n
-		// 检查订单编号是否存在
-		noExist, err := repository.NewPurchaseOrderRepo(db).IsOrderNoExists(orderNo)
-		if err != nil {
-			return ""
-		}
-		// 如果订单编号存在，则重新生成
-		if !noExist {
-			orderNo = ""
-			continue
-		}
-		// 如果订单编号不存在，则退出，本次生成的订单编号可用
-		break
-	}
-	if orderNo == "" {
+
+	// 生成自增序列号
+	serialNo, err := s.generatePurchaseOrderSerialNo(ctx, db)
+	if err != nil {
 		return ""
 	}
+
+	// 组装订单编号：CSSH+年月日+0000自增序列号
+	orderNo := prefix + datePart + serialNo
+
 	return orderNo
 }
 
-// generateReceiptNo 生成收货单号
-func (s *purchaseOrderSrv) generateReceiptNo(db *gorm.DB) string {
-	var receiptNo string
-	// 前八位是年月日
-	datePart := time.Now().Format("20060102")
-	// 第九位是订单来源
-	// 如果订单编号存在, 则重新生成, 重试10次, 否则退出
-	for i := 0; i < 10; i++ {
-		// 后九位是随机生成
-		n := utils.RandomNumber(9)
-		// 订单编号
-		receiptNo = datePart + n
-		// 检查订单编号是否存在
-		noExist, err := repository.NewPurchaseReceiptOrderRepo(db).IsOrderNoExists(receiptNo)
-		if err != nil {
-			return ""
-		}
-		// 如果订单编号存在，则重新生成
-		if !noExist {
-			receiptNo = ""
-			continue
-		}
-		// 如果订单编号不存在，则退出，本次生成的订单编号可用
-		break
+// generatePurchaseOrderSerialNo 生成采购申请自增序列号
+func (s *purchaseOrderSrv) generatePurchaseOrderSerialNo(ctx context.Context, db *gorm.DB) (string, error) {
+	var serialNo string
+	purchaseOrderRepo := repository.NewPurchaseOrderRepo(db)
+
+	// 获取今天最新的采购申请
+	latestOrder, err := purchaseOrderRepo.GetLatestOrderToday()
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return "", errors.WithMessage(err, "获取最新采购申请失败")
 	}
-	if receiptNo == "" {
+
+	// 如果没有查询到今天的采购申请，则设置为0001
+	if latestOrder == nil {
+		serialNo = "0001"
+		return serialNo, nil
+	}
+
+	// 从订单编号中提取序列号部分（最后4位）
+	if len(latestOrder.OrderNo) >= 4 {
+		lastSerialNo := latestOrder.OrderNo[len(latestOrder.OrderNo)-4:]
+		serialNoNum, err := strconv.Atoi(lastSerialNo)
+		if err != nil {
+			// 如果解析失败，重新从0001开始
+			serialNo = "0001"
+		} else {
+			// 序列号加1
+			newSerialNoNum := serialNoNum + 1
+			serialNo = fmt.Sprintf("%04d", newSerialNoNum)
+		}
+	} else {
+		// 如果订单编号格式不正确，重新从0001开始
+		serialNo = "0001"
+	}
+
+	return serialNo, nil
+}
+
+// generateReceiptNo 生成收货单号
+// 格式：CSSH+年月日+0000自增序列号
+func (s *purchaseOrderSrv) generateReceiptNo(ctx context.Context, db *gorm.DB) string {
+	// 固定前缀
+	prefix := "CGSH"
+	// 年月日部分
+	datePart := time.Now().Format("20060102")
+
+	// 生成自增序列号
+	serialNo, err := s.generateReceiptOrderSerialNo(ctx, db)
+	if err != nil {
 		return ""
 	}
+
+	// 组装收货单号：CSSH+年月日+0000自增序列号
+	receiptNo := prefix + datePart + serialNo
+
 	return receiptNo
+}
+
+// generateReceiptOrderSerialNo 生成收货单自增序列号
+func (s *purchaseOrderSrv) generateReceiptOrderSerialNo(ctx context.Context, db *gorm.DB) (string, error) {
+	var serialNo string
+	receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(db)
+
+	// 获取今天最新的收货单
+	latestReceipt, err := receiptOrderRepo.GetLatestReceiptToday()
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return "", errors.WithMessage(err, "获取最新收货单失败")
+	}
+
+	// 如果没有查询到今天的收货单，则设置为0001
+	if latestReceipt == nil {
+		serialNo = "0001"
+		return serialNo, nil
+	}
+
+	// 从收货单号中提取序列号部分（最后4位）
+	if len(latestReceipt.OrderNo) >= 4 {
+		lastSerialNo := latestReceipt.OrderNo[len(latestReceipt.OrderNo)-4:]
+		serialNoNum, err := strconv.Atoi(lastSerialNo)
+		if err != nil {
+			// 如果解析失败，重新从0001开始
+			serialNo = "0001"
+		} else {
+			// 序列号加1
+			newSerialNoNum := serialNoNum + 1
+			serialNo = fmt.Sprintf("%04d", newSerialNoNum)
+		}
+	} else {
+		// 如果收货单号格式不正确，重新从0001开始
+		serialNo = "0001"
+	}
+
+	return serialNo, nil
 }
 
 // createPurchaseOrderLog 创建采购订单操作日志
@@ -912,8 +968,7 @@ func (s *purchaseOrderSrv) checkAndUpdatePurchaseOrderStatus(ctx context.Context
 	if allCompleted {
 		purchaseOrder.Status = constant.PurchaseOrderStatusCompleted
 		purchaseOrder.FinalReceiveTime = time.Now().Unix()
-	} else if partialReceived && purchaseOrder.Status != constant.PurchaseOrderStatusPartialReceived {
-		purchaseOrder.Status = constant.PurchaseOrderStatusPartialReceived
+	} else if partialReceived && purchaseOrder.Status != constant.PurchaseOrderStatusCompleted {
 		if purchaseOrder.FirstReceiveTime == 0 {
 			purchaseOrder.FirstReceiveTime = time.Now().Unix()
 		}

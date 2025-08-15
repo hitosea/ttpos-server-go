@@ -3848,6 +3848,63 @@ definitions:
     - related_type
     - related_uuid
     type: object
+  req.ProductBomCardImportReq:
+    properties:
+      barcode_value:
+        description: 条形码值
+        type: string
+      category_uuid:
+        description: 分类UUID
+        type: integer
+      cost_unit_uuid:
+        description: 成本单位UUID
+        type: integer
+      init_stock:
+        description: 期初库存
+        minimum: 0
+        type: number
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物品名称
+      num:
+        description: 创建成本卡
+        type: number
+      purchase_unit_uuid:
+        description: 采购单位UUID
+        type: integer
+      related_uuid:
+        description: 关联UUID,给规格商品绑定成本卡。规格商品时，关联UUID为规格商品UUID；
+        type: integer
+      status:
+        description: 状态，1-启用 2-停用
+        type: integer
+      unit_list:
+        description: 单位列表
+        items:
+          $ref: '#/definitions/req.MaterialUnitReq'
+        type: array
+      unit_uuid:
+        description: 基准单位UUID
+        type: integer
+      valuation:
+        description: 估值率
+        minimum: 0
+        type: number
+    required:
+    - barcode_value
+    - category_uuid
+    - cost_unit_uuid
+    - init_stock
+    - locale_name
+    - num
+    - purchase_unit_uuid
+    - related_uuid
+    - status
+    - unit_list
+    - unit_uuid
+    - valuation
+    type: object
   req.ProductBomCardMaterialListReq:
     properties:
       list:
@@ -4712,6 +4769,29 @@ definitions:
     required:
     - material_uuid
     - num
+    type: object
+  req.PurchaseOrderListReq:
+    properties:
+      order_no:
+        description: 订单编号
+        maxLength: 50
+        type: string
+      page_no:
+        description: 页码
+        minimum: 1
+        type: integer
+      page_size:
+        description: 每页大小
+        maximum: 1100
+        minimum: 1
+        type: integer
+      status_in:
+        description: '状态筛选: [0,1,2,3,4], 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)'
+        items:
+          type: integer
+        maxItems: 5
+        minItems: 0
+        type: array
     type: object
   req.PurchaseOrderSubmitReq:
     properties:
@@ -8983,8 +9063,11 @@ definitions:
       order_type:
         description: 申请类型
         type: integer
+      receipt_progress:
+        description: 收货进度（百分比0.00%）前端直接显示
+        type: string
       status:
-        description: 状态
+        description: 状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)
         type: integer
       uuid:
         description: 采购订单ID
@@ -9010,8 +9093,11 @@ definitions:
       order_type:
         description: 申请类型
         type: integer
+      receipt_progress:
+        description: 收货进度（百分比0.00%）前端直接显示
+        type: string
       status:
-        description: 状态
+        description: 状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)
         type: integer
       uuid:
         description: 采购订单ID
@@ -9820,13 +9906,16 @@ definitions:
         description: 设备备注
         type: string
       is_ttpos_site:
-        description: 是否散户site，0否，1是
+        description: 是否散户site
         type: boolean
       permissions:
         description: 页面权限
         items:
           $ref: '#/definitions/resp.Permission'
         type: array
+      phone:
+        description: 登录账号手机号
+        type: string
       profile:
         allOf:
         - $ref: '#/definitions/resp.ShopProfile'
@@ -23323,6 +23412,30 @@ paths:
       summary: 规格商品成本卡详情
       tags:
       - 商家端.物品管理
+  /shop/product_bom/card/import:
+    post:
+      consumes:
+      - application/json
+      description: 从菜品导入成本卡
+      parameters:
+      - description: 成本卡导入请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductBomCardImportReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 从菜品导入成本卡
+      tags:
+      - 商家端.物品管理
   /shop/product_bom/card/unlink:
     post:
       consumes:
@@ -23470,24 +23583,12 @@ paths:
       - application/json
       description: 分页获取采购订单列表
       parameters:
-      - default: 1
-        description: 页码
-        in: query
-        name: page_no
-        type: integer
-      - default: 20
-        description: 每页条数
-        in: query
-        name: page_size
-        type: integer
-      - description: 订单号
-        in: query
-        name: order_no
-        type: string
-      - description: 状态
-        in: query
-        name: status
-        type: integer
+      - description: 采购订单列表请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PurchaseOrderListReq'
       produces:
       - application/json
       responses:

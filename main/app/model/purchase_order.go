@@ -3,6 +3,8 @@ package model
 import (
 	"time"
 	"ttpos-server-go/app/constant"
+
+	"github.com/shopspring/decimal"
 )
 
 // PurchaseOrder 采购申请表 ttpos_purchase_order
@@ -35,6 +37,20 @@ func (PurchaseOrder) TableName() string {
 	return "ttpos_purchase_order"
 }
 
+func (po *PurchaseOrder) GetReceiptProgress() float64 {
+	totalNum := 0
+	receivedNum := 0
+	for _, item := range po.Items {
+		totalNum += int(item.Num)
+		receivedNum += int(item.ArrivalNum)
+	}
+	// 防止除零错误
+	if totalNum == 0 {
+		return 0.0
+	}
+	return decimal.NewFromFloat(float64(receivedNum) / float64(totalNum) * 100).Round(2).InexactFloat64()
+}
+
 // GetStatusText 获取状态文本
 func (po *PurchaseOrder) GetStatusText() string {
 	statusMap := map[int]string{
@@ -63,8 +79,7 @@ func (po *PurchaseOrder) CanApprove() bool {
 
 // CanReceive 判断是否可收货
 func (po *PurchaseOrder) CanReceive() bool {
-	// 已通过和部分收货状态可以收货
-	return po.Status == constant.PurchaseOrderStatusApproved || po.Status == constant.PurchaseOrderStatusPartialReceived
+	return po.Status == constant.PurchaseOrderStatusApproved
 }
 
 // GetOrderDate 获取订单日期

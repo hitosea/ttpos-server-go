@@ -20662,6 +20662,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/product_bom/card/import": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "从菜品导入成本卡",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "从菜品导入成本卡",
+                "parameters": [
+                    {
+                        "description": "成本卡导入请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductBomCardImportReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/product_bom/card/unlink": {
             "post": {
                 "security": [
@@ -20917,30 +20956,13 @@ const docTemplate = `{
                 "summary": "获取采购订单列表",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "default": 1,
-                        "description": "页码",
-                        "name": "page_no",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 20,
-                        "description": "每页条数",
-                        "name": "page_size",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "订单号",
-                        "name": "order_no",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "状态",
-                        "name": "status",
-                        "in": "query"
+                        "description": "采购订单列表请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.PurchaseOrderListReq"
+                        }
                     }
                 ],
                 "responses": {
@@ -29653,6 +29675,82 @@ const docTemplate = `{
                 }
             }
         },
+        "req.ProductBomCardImportReq": {
+            "type": "object",
+            "required": [
+                "barcode_value",
+                "category_uuid",
+                "cost_unit_uuid",
+                "init_stock",
+                "locale_name",
+                "num",
+                "purchase_unit_uuid",
+                "related_uuid",
+                "status",
+                "unit_list",
+                "unit_uuid",
+                "valuation"
+            ],
+            "properties": {
+                "barcode_value": {
+                    "description": "条形码值",
+                    "type": "string"
+                },
+                "category_uuid": {
+                    "description": "分类UUID",
+                    "type": "integer"
+                },
+                "cost_unit_uuid": {
+                    "description": "成本单位UUID",
+                    "type": "integer"
+                },
+                "init_stock": {
+                    "description": "期初库存",
+                    "type": "number",
+                    "minimum": 0
+                },
+                "locale_name": {
+                    "description": "物品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "num": {
+                    "description": "创建成本卡",
+                    "type": "number"
+                },
+                "purchase_unit_uuid": {
+                    "description": "采购单位UUID",
+                    "type": "integer"
+                },
+                "related_uuid": {
+                    "description": "关联UUID,给规格商品绑定成本卡。规格商品时，关联UUID为规格商品UUID；",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "状态，1-启用 2-停用",
+                    "type": "integer"
+                },
+                "unit_list": {
+                    "description": "单位列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.MaterialUnitReq"
+                    }
+                },
+                "unit_uuid": {
+                    "description": "基准单位UUID",
+                    "type": "integer"
+                },
+                "valuation": {
+                    "description": "估值率",
+                    "type": "number",
+                    "minimum": 0
+                }
+            }
+        },
         "req.ProductBomCardMaterialListReq": {
             "type": "object",
             "required": [
@@ -30890,6 +30988,36 @@ const docTemplate = `{
                     "description": "数量",
                     "type": "number",
                     "maximum": 99999
+                }
+            }
+        },
+        "req.PurchaseOrderListReq": {
+            "type": "object",
+            "properties": {
+                "order_no": {
+                    "description": "订单编号",
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "page_no": {
+                    "description": "页码",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "page_size": {
+                    "description": "每页大小",
+                    "type": "integer",
+                    "maximum": 1100,
+                    "minimum": 1
+                },
+                "status_in": {
+                    "description": "状态筛选: [0,1,2,3,4], 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)",
+                    "type": "array",
+                    "maxItems": 5,
+                    "minItems": 0,
+                    "items": {
+                        "type": "integer"
+                    }
                 }
             }
         },
@@ -37231,8 +37359,12 @@ const docTemplate = `{
                     "description": "申请类型",
                     "type": "integer"
                 },
+                "receipt_progress": {
+                    "description": "收货进度（百分比0.00%）前端直接显示",
+                    "type": "string"
+                },
                 "status": {
-                    "description": "状态",
+                    "description": "状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)",
                     "type": "integer"
                 },
                 "uuid": {
@@ -37268,8 +37400,12 @@ const docTemplate = `{
                     "description": "申请类型",
                     "type": "integer"
                 },
+                "receipt_progress": {
+                    "description": "收货进度（百分比0.00%）前端直接显示",
+                    "type": "string"
+                },
                 "status": {
-                    "description": "状态",
+                    "description": "状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)",
                     "type": "integer"
                 },
                 "uuid": {
@@ -38460,7 +38596,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "is_ttpos_site": {
-                    "description": "是否散户site，0否，1是",
+                    "description": "是否散户site",
                     "type": "boolean"
                 },
                 "permissions": {
@@ -38469,6 +38605,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/resp.Permission"
                     }
+                },
+                "phone": {
+                    "description": "登录账号手机号",
+                    "type": "string"
                 },
                 "profile": {
                     "description": "门店信息",

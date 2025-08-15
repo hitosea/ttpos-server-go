@@ -179,14 +179,15 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 		}
 		localeName := multiLanguageMap[uom.UomName]
 		multiLanguageName := model.MultiLanguageName{
-			EnName: localeName.EN,
-			ZhName: localeName.ZH,
-			ThName: localeName.TH,
-			MyName: localeName.MY,
-			JaName: localeName.JA,
-			KoName: localeName.KO,
-			TrName: localeName.TR,
-			SvName: localeName.SV,
+			EnName:   localeName.EN,
+			ZhName:   localeName.ZH,
+			ThName:   localeName.TH,
+			MyName:   localeName.MY,
+			JaName:   localeName.JA,
+			KoName:   localeName.KO,
+			TrName:   localeName.TR,
+			SvName:   localeName.SV,
+			ZhTwName: localeName.ZHTW,
 		}
 		err := db.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
 		if err != nil {
@@ -224,14 +225,15 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 		}
 		localeName := multiLanguageMap[erpnextAttributeGroup.AttributeName]
 		multiLanguageName := model.MultiLanguageName{
-			EnName: localeName.EN,
-			ZhName: localeName.ZH,
-			ThName: localeName.TH,
-			MyName: localeName.MY,
-			JaName: localeName.JA,
-			KoName: localeName.KO,
-			TrName: localeName.TR,
-			SvName: localeName.SV,
+			EnName:   localeName.EN,
+			ZhName:   localeName.ZH,
+			ThName:   localeName.TH,
+			MyName:   localeName.MY,
+			JaName:   localeName.JA,
+			KoName:   localeName.KO,
+			TrName:   localeName.TR,
+			SvName:   localeName.SV,
+			ZhTwName: localeName.ZHTW,
 		}
 		err := db.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
 		if err != nil {
@@ -259,14 +261,15 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 			}
 			localeName := multiLanguageMap[erpnextAttributeValue.AttributeValue]
 			multiLanguageName := model.MultiLanguageName{
-				EnName: localeName.EN,
-				ZhName: localeName.ZH,
-				ThName: localeName.TH,
-				MyName: localeName.MY,
-				JaName: localeName.JA,
-				KoName: localeName.KO,
-				TrName: localeName.TR,
-				SvName: localeName.SV,
+				EnName:   localeName.EN,
+				ZhName:   localeName.ZH,
+				ThName:   localeName.TH,
+				MyName:   localeName.MY,
+				JaName:   localeName.JA,
+				KoName:   localeName.KO,
+				TrName:   localeName.TR,
+				SvName:   localeName.SV,
+				ZhTwName: localeName.ZHTW,
 			}
 			err := db.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
 			if err != nil {

@@ -6,7 +6,7 @@ import "ttpos-server-go/app/dto"
 type PurchaseOrderListReq struct {
 	dto.PageReq        // 分页参数
 	OrderNo     string `json:"order_no" form:"order_no" binding:"omitempty,max=50"`        // 订单编号
-	StatusIn    []int  `json:"status_in" form:"status_in" binding:"omitempty,min=0,max=5"` // 状态筛选: [0,1,2,3,4,5], 0-待提交 1-待审核 2-已通过 3-已驳回 4-部分收货 5-全部收货
+	StatusIn    []int  `json:"status_in" form:"status_in" binding:"omitempty,min=0,max=5"` // 状态筛选: [0,1,2,3,4], 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)
 }
 
 // PurchaseOrderCreateReq 创建采购订单请求
