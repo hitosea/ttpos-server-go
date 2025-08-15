@@ -211,33 +211,6 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 			return err
 		}
 
-		// 调用erp接口
-		if ctx.GetCompany().IsOpenErp() {
-			stockItems := make([]*stock.MaterialRequestItem, 0)
-			for _, item := range items {
-				stockItems = append(stockItems, &stock.MaterialRequestItem{
-					ItemCode:     item.MaterialCode,
-					Qty:          float32(item.Num),
-					ScheduleDate: req.ExpectedDeliveryTime,
-					Uom:          item.UnitName,
-				})
-			}
-			resp, err := erp.NewIErpSrv(s.dbm).CreatePurchaseOrder(ctx, &stock.SaveMaterialRequestReq{
-				TransactionDate: req.OrderTime,
-				RequiredBy:      req.ExpectedDeliveryTime,
-				Items:           stockItems,
-			})
-			if err != nil {
-				return err
-			}
-			// 更新采购申请单号
-			purchaseOrder.OrderNo = resp.MaterialRequestName
-			err = purchaseOrderRepo.Update(purchaseOrder)
-			if err != nil {
-				return errors.WithMessage(err, "更新采购申请单号失败")
-			}
-		}
-
 		result.Uuid = purchaseOrder.Uuid
 		result.OrderNo = purchaseOrder.OrderNo
 
@@ -416,7 +389,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
 
 		// 查询采购申请
-		purchaseOrder, err := purchaseOrderRepo.GetByUuid(req.Uuid)
+		purchaseOrder, err := purchaseOrderRepo.GetByUuid(req.Uuid, purchaseOrderRepo.WithItems())
 		if err != nil {
 			if err == gorm.ErrRecordNotFound {
 				return errors.New("采购申请不存在")
@@ -456,6 +429,33 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 		err = s.createPurchaseOrderLog(tx, req.Uuid, ctx, req.Action, actionDesc, oldStatus, newStatus, "")
 		if err != nil {
 			return err
+		}
+
+		// 调用erp接口
+		if ctx.GetCompany().IsOpenErp() {
+			stockItems := make([]*stock.MaterialRequestItem, 0)
+			for _, item := range purchaseOrder.Items {
+				stockItems = append(stockItems, &stock.MaterialRequestItem{
+					ItemCode:     item.MaterialCode,
+					Qty:          float32(item.Num),
+					ScheduleDate: purchaseOrder.ExpectArrivalTime,
+					Uom:          item.UnitName,
+				})
+			}
+			resp, err := erp.NewIErpSrv(s.dbm).CreatePurchaseOrder(ctx, &stock.SaveMaterialRequestReq{
+				TransactionDate: purchaseOrder.OrderTime,
+				RequiredBy:      purchaseOrder.ExpectArrivalTime,
+				Items:           stockItems,
+			})
+			if err != nil {
+				return err
+			}
+			// 更新采购申请单号
+			purchaseOrder.ErpOrderNo = resp.MaterialRequestName
+			err = purchaseOrderRepo.Update(purchaseOrder)
+			if err != nil {
+				return errors.WithMessage(err, "更新采购申请单号失败")
+			}
 		}
 
 		return nil
