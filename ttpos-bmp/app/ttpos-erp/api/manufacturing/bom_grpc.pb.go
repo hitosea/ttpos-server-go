@@ -22,6 +22,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	BomService_GetBomList_FullMethodName = "/manufacturing.BomService/GetBomList"
+	BomService_SaveBom_FullMethodName    = "/manufacturing.BomService/SaveBom"
 )
 
 // BomServiceClient is the client API for BomService service.
@@ -32,6 +33,10 @@ type BomServiceClient interface {
 	// 参数：查询条件
 	// 返回：BOM列表
 	GetBomList(ctx context.Context, in *GetBomListReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 保存BOM
+	// 参数：BOM信息
+	// 返回：操作结果
+	SaveBom(ctx context.Context, in *SaveBomReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 }
 
 type bomServiceClient struct {
@@ -52,6 +57,16 @@ func (c *bomServiceClient) GetBomList(ctx context.Context, in *GetBomListReq, op
 	return out, nil
 }
 
+func (c *bomServiceClient) SaveBom(ctx context.Context, in *SaveBomReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, BomService_SaveBom_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BomServiceServer is the server API for BomService service.
 // All implementations must embed UnimplementedBomServiceServer
 // for forward compatibility.
@@ -60,6 +75,10 @@ type BomServiceServer interface {
 	// 参数：查询条件
 	// 返回：BOM列表
 	GetBomList(context.Context, *GetBomListReq) (*api.ResponseInfo, error)
+	// 保存BOM
+	// 参数：BOM信息
+	// 返回：操作结果
+	SaveBom(context.Context, *SaveBomReq) (*api.ResponseInfo, error)
 	mustEmbedUnimplementedBomServiceServer()
 }
 
@@ -72,6 +91,9 @@ type UnimplementedBomServiceServer struct{}
 
 func (UnimplementedBomServiceServer) GetBomList(context.Context, *GetBomListReq) (*api.ResponseInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBomList not implemented")
+}
+func (UnimplementedBomServiceServer) SaveBom(context.Context, *SaveBomReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SaveBom not implemented")
 }
 func (UnimplementedBomServiceServer) mustEmbedUnimplementedBomServiceServer() {}
 func (UnimplementedBomServiceServer) testEmbeddedByValue()                    {}
@@ -112,6 +134,24 @@ func _BomService_GetBomList_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BomService_SaveBom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveBomReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BomServiceServer).SaveBom(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BomService_SaveBom_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BomServiceServer).SaveBom(ctx, req.(*SaveBomReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // BomService_ServiceDesc is the grpc.ServiceDesc for BomService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -122,6 +162,10 @@ var BomService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetBomList",
 			Handler:    _BomService_GetBomList_Handler,
+		},
+		{
+			MethodName: "SaveBom",
+			Handler:    _BomService_SaveBom_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
