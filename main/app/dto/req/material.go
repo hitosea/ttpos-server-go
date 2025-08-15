@@ -110,3 +110,12 @@ type ProductBomCardCopyReq struct {
 	RelatedType        uint8  `json:"related_type" binding:"required"`          // 关联类型,1-规格商品 2-加料
 	ProductBomCardUuid uint64 `json:"product_bom_card_uuid" binding:"required"` // 成本卡UUID
 }
+
+// ProductBomCardImportReq 从菜品导入成本卡请求
+type ProductBomCardImportReq struct {
+	RelatedUuid uint64 `json:"related_uuid" binding:"required"` // 关联UUID,给规格商品绑定成本卡。规格商品时，关联UUID为规格商品UUID；
+	// 创建物品
+	MaterialAddReq
+	// 创建成本卡
+	Num float64 `json:"num" binding:"required"` // 净耗量
+}
