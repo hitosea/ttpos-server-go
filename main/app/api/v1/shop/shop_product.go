@@ -990,6 +990,32 @@ func (h *ProductHandler) SortProductShopList(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// GetProductDetail 获取商品详情
+// @Summary 获取商品详情
+// @Description 获取商品详情
+// @Tags 商家端.商品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data query req.ProductDetailReq true "商品详情请求"
+// @Success 200 {object} product_resp.ProductDetailResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/detail [get]
+func (h *ProductHandler) GetProductDetail(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	detailReq := req.ProductDetailReq{}
+	if err := c.ShouldBindQuery(&detailReq); err != nil {
+		helper.HandleValidationError(c, err, detailReq, dto.PageReqMessage)
+		return
+	}
+	res, err := h.productSrv.GetProductDetail(ctx, detailReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
 // ProductShopStatus 修改商品状态
 // @Summary 修改商品状态
 // @Description 修改商品状态
@@ -1109,6 +1135,7 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 
 		privateApi.GET("/product/list", wrapper.GetProductShopList)   // 获取商品列表
 		privateApi.POST("/product/sort", wrapper.SortProductShopList) // 排序商品列表
+		privateApi.GET("/product/detail", wrapper.GetProductDetail)   // 获取商品详情
 		privateApi.POST("/product/status", wrapper.ProductShopStatus) // 修改商品状态
 		privateApi.POST("/product/add", wrapper.ProductShopAdd)       // 添加商品
 	}

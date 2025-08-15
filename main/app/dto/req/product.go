@@ -349,6 +349,11 @@ type SortProductShopItemReq struct {
 	Sort int    `json:"sort"`                    // 排序
 }
 
+// ProductDetailReq 商品详情请求
+type ProductDetailReq struct {
+	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 商品UUID
+}
+
 // ProductShopStatusReq 商品状态请求
 type ProductShopStatusReq struct {
 	Uuid   uint64 `json:"uuid" binding:"required"`             // 商品UUID

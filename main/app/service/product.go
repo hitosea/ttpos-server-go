@@ -81,6 +81,7 @@ type IProductSrv interface {
 
 	GetProductShopList(ctx context.Context, req req.ProductShopListReq) (*product_resp.ProductShopListResp, error) // 获取商品列表（商家端）
 	SortProductShopList(ctx context.Context, req req.SortProductShopListReq) error                                 // 排序商品列表
+	GetProductDetail(ctx context.Context, req req.ProductDetailReq) (*product_resp.ProductDetailResp, error)       // 获取商品详情
 	ProductShopStatus(ctx context.Context, req req.ProductShopStatusReq) error                                     // 修改商品状态
 	ProductShopAdd(ctx context.Context, req req.ProductShopAddReq) error                                           // 添加商品
 }
@@ -271,7 +272,7 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 					Uuid:       productBom.Uuid,
 					LocaleName: product.MultiLanguageName.GetNames(),
 					Price:      productBom.Price,
-					StockNum:   int(productBom.GetStockNum()),
+					StockNum:   productBom.GetStockNum(),
 					Barcode:    productBom.BarcodeValue,
 				})
 			}
@@ -321,7 +322,7 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 							Uuid:       productBom.Uuid,
 							LocaleName: productBom.ProductFlavor.MultiLanguageName.GetNames(),
 							Price:      productBom.Price,
-							StockNum:   int(productBom.GetStockNum()),
+							StockNum:   productBom.GetStockNum(),
 							Barcode:    productBom.BarcodeValue,
 						}
 						// 如果是会员端查询商品列表，需要获取在会员端的该商品规格价格
@@ -345,7 +346,7 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 							LocaleName:        productBom.ProductSauce.MultiLanguageName.GetNames(),
 							Price:             productBom.Price,
 							IsDefaultSelected: productBom.IsDefaultSelect == 1,
-							StockNum:          int(productBom.GetStockNum()),
+							StockNum:          productBom.GetStockNum(),
 						}
 						// 如果是会员端查询商品列表，需要获取在会员端的该商品小料价格
 						// 会员端商品小料价格=原商品小料价*外送商品折扣率 + 税费。 税费=原商品小料价*外送商品折扣率*外送的税率
@@ -428,7 +429,7 @@ func getFlavor(productBom *model.ProductBom) product_resp.ProductFlavor {
 			Uuid:       productBom.Uuid,
 			LocaleName: productBom.ProductFlavor.MultiLanguageName.GetNames(),
 			Price:      productBom.Price,
-			StockNum:   int(productBom.GetStockNum()),
+			StockNum:   productBom.GetStockNum(),
 			Barcode:    productBom.BarcodeValue,
 		}
 		return flavor
@@ -3079,6 +3080,61 @@ func (s *productSrv) SortProductShopList(ctx context.Context, req req.SortProduc
 	})
 
 	return err
+}
+
+// GetProductDetail 获取商品详情
+func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetailReq) (*product_resp.ProductDetailResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	productPackage, err := repository.NewProductRepo(db).GetProductDetail(req.Uuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取商品失败")
+	}
+
+	productDetailResp := product_resp.ProductDetailResp{
+		ProductType:  productPackage.ProductType,
+		Uuid:         productPackage.Uuid,
+		LocaleName:   productPackage.MultiLanguageName.GetNames(),
+		CategoryUuid: productPackage.CategoryUuid,
+		CategoryName: productPackage.ProductCategory.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+		UnitUuid:     productPackage.ProductUnit.Uuid,
+		UnitName:     productPackage.ProductUnit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+
+		TakeoutTaxUuid: productPackage.TakeoutTax.Uuid,
+		TakeoutTaxName: productPackage.TakeoutTax.Name,
+		DineTaxUuid:    productPackage.DineTax.Uuid,
+		DineTaxName:    productPackage.DineTax.Name,
+
+		Status:          productPackage.Status,
+		Image:           productPackage.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request)),
+		NumType:         &productPackage.NumType,
+		DeductStockType: productPackage.DeductStockType,
+
+		IsShowCashier:   productPackage.GetIsShowCashier(),
+		IsShowTablet:    productPackage.GetIsShowTablet(),
+		IsShowKitchen:   productPackage.GetIsShowKitchen(),
+		IsShowAssistant: productPackage.GetIsShowAssistant(),
+		IsShowH5:        productPackage.GetIsShowH5(),
+		IsShowDelivery:  productPackage.GetIsShowDelivery(),
+
+		OpenDiscount:        productPackage.GetOpenDiscount(),
+		OpenOverallDiscount: productPackage.GetOpenOverallDiscount(),
+
+		Flavors: product_resp.ProductFlavorList{
+			List: productPackage.GetRespFlavorList(),
+		},
+		Sauces: product_resp.ProductSauceList{
+			List: productPackage.GetRespSaucesList(),
+		},
+		AttributeGroups: product_resp.ProductAttributeGroupList{
+			List: productPackage.GetRespAttributeGroupList(),
+		},
+		PackageSubProductGroups: product_resp.ProductPackageSubProductGroupList{
+			List: productPackage.GetRespPackageSubProductGroupList(),
+		},
+	}
+
+	return &productDetailResp, nil
 }
 
 // ProductShopStatus 修改商品状态

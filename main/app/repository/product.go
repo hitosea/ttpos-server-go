@@ -88,6 +88,7 @@ type IProductQueryRepo interface {
 	GetProductCategoryCount(opts ...DBOption) (int64, error)                                                        // 获取产品分类数量
 	GetProductCategoryMaxSort(opts ...DBOption) (int64, error)                                                      // 获取产品分类最大排序
 	GetProduct(opts ...DBOption) (model.ProductPackage, error)                                                      // 获取商品详情
+	GetProductDetail(uuid uint64) (*model.ProductPackage, error)                                                    // 获取商品详情
 	GetProductCount(opts ...DBOption) (int64, error)                                                                // 获取商品数量
 	GetProductFlavor(opts ...DBOption) (model.ProductFlavor, error)                                                 // 获取商品口味详情
 	GetProductFlavorCount(opts ...DBOption) (int64, error)                                                          // 获取商品规格数量
@@ -353,6 +354,57 @@ func (r *productRepo) GetProduct(opts ...DBOption) (model.ProductPackage, error)
 	err := db.First(&product).Error
 
 	return product, errors.WithMessage(err)
+}
+
+// GetProductDetail 获取商品详情
+func (r *productRepo) GetProductDetail(uuid uint64) (*model.ProductPackage, error) {
+	product, err := r.GetProduct(
+		CommonRepo.WhereByUuid(uuid),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductCategory.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductUnit.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "DineTax",
+			},
+			WithPreload{
+				Query: "TakeoutTax",
+			},
+			WithPreload{
+				Query: "ImageFile",
+			},
+			WithPreload{
+				Query: "ProductBoms.ProductFlavor.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductBoms.ProductSauce.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductPackageAttributeGroups.ProductPackageAttributes.Attribute.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductPackageGroups.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductPackageGroups.ProductPackageGroupItems.ProductBom.ProductFlavor.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.MultiLanguageName",
+			},
+		),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取商品失败")
+	}
+
+	return &product, nil
 }
 
 // GetProductCount 获取商品数量

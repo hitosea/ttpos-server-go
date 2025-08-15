@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/dto/resp/product_resp"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
@@ -197,6 +198,118 @@ func (model *ProductPackage) SetNil() {
 	model.TakeoutTax = Tax{}
 	model.ProductCategory = ProductCategory{}
 	model.ImageFile = File{}
+}
+
+func (model *ProductPackage) GetIsShowCashier() bool {
+	return model.IsShowCashier == 1
+}
+
+func (model *ProductPackage) GetIsShowTablet() bool {
+	return model.IsShowTablet == 1
+}
+
+func (model *ProductPackage) GetIsShowKitchen() bool {
+	return model.IsShowKitchen == 1
+}
+
+func (model *ProductPackage) GetIsShowAssistant() bool {
+	return model.IsShowAssistant == 1
+}
+
+func (model *ProductPackage) GetIsShowH5() bool {
+	return model.IsShowH5 == 1
+}
+
+func (model *ProductPackage) GetIsShowDelivery() bool {
+	return model.IsShowDelivery == 1
+}
+
+func (model *ProductPackage) GetOpenDiscount() bool {
+	return model.OpenDiscount == 1
+}
+
+func (model *ProductPackage) GetOpenOverallDiscount() bool {
+	return model.OpenOverallDiscount == 1
+}
+
+func (model *ProductPackage) GetRespFlavorList() []product_resp.ProductFlavor {
+	flavorList := make([]product_resp.ProductFlavor, 0)
+	for _, bom := range model.ProductBoms {
+		if bom.IsFlavor() {
+			flavorList = append(flavorList, product_resp.ProductFlavor{
+				Uuid:       bom.Uuid,
+				LocaleName: bom.ProductFlavor.MultiLanguageName.GetNames(),
+				Price:      bom.Price,
+				StockNum:   bom.GetStockNum(),
+				Barcode:    bom.BarcodeValue,
+			})
+		}
+	}
+	return flavorList
+}
+
+func (model *ProductPackage) GetRespSaucesList() []product_resp.ProductSauce {
+	sauceList := make([]product_resp.ProductSauce, 0)
+	for _, bom := range model.ProductBoms {
+		if bom.IsSauce() {
+			sauceList = append(sauceList, product_resp.ProductSauce{
+				Uuid:              bom.Uuid,
+				LocaleName:        bom.ProductSauce.MultiLanguageName.GetNames(),
+				Price:             bom.Price,
+				StockNum:          bom.GetStockNum(),
+				IsDefaultSelected: bom.IsDefaultSelect == 1,
+			})
+		}
+	}
+	return sauceList
+}
+
+func (model *ProductPackage) GetRespAttributeGroupList() []product_resp.ProductAttributeGroup {
+	attributeGroupList := make([]product_resp.ProductAttributeGroup, 0)
+	for _, attributeGroup := range model.ProductPackageAttributeGroups {
+		attributes := make([]product_resp.ProductAttributeValue, 0)
+		for _, attribute := range attributeGroup.ProductPackageAttributes {
+			attributes = append(attributes, product_resp.ProductAttributeValue{
+				Uuid:              attribute.AttributeUuid,
+				LocaleName:        attribute.Attribute.MultiLanguageName.GetNames(),
+				IsDefaultSelected: attribute.IsDefaultSelected == 1,
+			})
+		}
+		attributeGroupList = append(attributeGroupList, product_resp.ProductAttributeGroup{
+			Uuid:       attributeGroup.ProductAttributeGroup.Uuid,
+			LocaleName: attributeGroup.ProductAttributeGroup.MultiLanguageName.GetNames(),
+			IsMust:     attributeGroup.IsMust == 1,
+			MaxSelect:  attributeGroup.MaxSelection,
+			Attributes: product_resp.ProductAttributeValueList{
+				List: attributes,
+			},
+		})
+	}
+	return attributeGroupList
+}
+
+func (model *ProductPackage) GetRespPackageSubProductGroupList() []product_resp.ProductPackageSubProductGroup {
+	packageSubProductGroupList := make([]product_resp.ProductPackageSubProductGroup, 0)
+	for _, packageSubProductGroup := range model.ProductPackageGroups {
+		products := make([]product_resp.ProductPackageSubProduct, 0)
+		for _, product := range packageSubProductGroup.ProductPackageGroupItems {
+			products = append(products, product_resp.ProductPackageSubProduct{
+				Uuid:             product.ProductBomUuid,
+				LocaleName:       product.ProductPackage.MultiLanguageName.GetNames(),
+				FlavorLocaleName: product.ProductBom.ProductFlavor.MultiLanguageName.GetNames(),
+				Num:              product.Num,
+				Price:            product.ProductBom.Price,
+			})
+		}
+		packageSubProductGroupList = append(packageSubProductGroupList, product_resp.ProductPackageSubProductGroup{
+			Uuid:       packageSubProductGroup.Uuid,
+			LocaleName: packageSubProductGroup.MultiLanguageName.GetNames(),
+			Products: product_resp.ProductPackageSubProductList{
+				List: products,
+			},
+		})
+	}
+	return packageSubProductGroupList
 }
 
 // 判断商品包是否是单规格商品且没有属性的商品

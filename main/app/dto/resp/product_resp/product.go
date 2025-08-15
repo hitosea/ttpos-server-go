@@ -87,7 +87,7 @@ type ProductFlavor struct {
 	Uuid       uint64             `json:"uuid"`        // 商品规格UUID
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品规格名称
 	Price      float64            `json:"price"`       // 商品规格价格
-	StockNum   int                `json:"stock_num"`   // 商品库存数量
+	StockNum   float64            `json:"stock_num"`   // 商品库存数量
 	Barcode    string             `json:"barcode"`     // 商品码。用于根据扫码枪扫码商品得到商品码在商品列表中搜索到商品
 }
 
@@ -97,7 +97,7 @@ type ProductSauce struct {
 	LocaleName        dto.LocaleResponse `json:"locale_name"`         // 商品小料名称
 	Price             float64            `json:"price"`               // 商品小料价格
 	IsDefaultSelected bool               `json:"is_default_selected"` // 是否默认选中
-	StockNum          int                `json:"stock_num"`           // 小料库存数量
+	StockNum          float64            `json:"stock_num"`           // 小料库存数量
 }
 
 // ProductAttributeGroup 商品属性组
@@ -396,6 +396,65 @@ type ProductSingleListItemResp struct {
 	FlavorName         dto.LocaleResponse `json:"flavor_name"`           // 商品规格名称
 	ProductBomCardUuid uint64             `json:"product_bom_card_uuid"` // 成本卡UUID，0表示没有成本卡
 	ProductBomCardName dto.LocaleResponse `json:"product_bom_card_name"` // 成本卡名称
+}
+
+type ProductPackageSubProduct struct {
+	Uuid             uint64             `json:"uuid"`               // 套餐子商品UUID
+	LocaleName       dto.LocaleResponse `json:"locale_name"`        // 套餐子商品名称
+	FlavorLocaleName dto.LocaleResponse `json:"flavor_locale_name"` // 商品规格名称
+	Num              float64            `json:"num"`                // 套餐子商品数量
+	Price            float64            `json:"price"`              // 套餐子商品价格
+}
+
+type ProductPackageSubProductList struct {
+	List []ProductPackageSubProduct `json:"list"`
+}
+
+type ProductPackageSubProductGroup struct {
+	Uuid       uint64                       `json:"uuid"`        // 套餐子商品分组UUID
+	LocaleName dto.LocaleResponse           `json:"locale_name"` // 套餐子商品分组名称
+	Products   ProductPackageSubProductList `json:"products"`    // 套餐子商品列表
+}
+
+type ProductPackageSubProductGroupList struct {
+	List []ProductPackageSubProductGroup `json:"list"`
+}
+
+// ProductDetailResp 商品详情响应
+type ProductDetailResp struct {
+	ProductType  uint               `json:"product_type"`  // 商品类型 0-商品 1-套餐
+	Uuid         uint64             `json:"uuid"`          // 商品UUID
+	LocaleName   dto.LocaleResponse `json:"locale_name"`   // 商品名称
+	CategoryUuid uint64             `json:"category_uuid"` // 商品分类UUID
+	CategoryName string             `json:"category_name"` // 商品分类名称
+	UnitUuid     uint64             `json:"unit_uuid"`     // 商品单位UUID
+	UnitName     string             `json:"unit_name"`     // 商品单位名称
+	Price        *float64           `json:"price"`         // 商品价格,套餐的价格
+
+	Flavors                 ProductFlavorList                 `json:"flavors"`                    // 商品规格列表
+	Sauces                  ProductSauceList                  `json:"sauces"`                     // 商品小料列表
+	AttributeGroups         ProductAttributeGroupList         `json:"attribute_groups"`           // 商品属性组列表
+	PackageSubProductGroups ProductPackageSubProductGroupList `json:"package_sub_product_groups"` // 套餐子商品分组列表
+
+	TakeoutTaxUuid uint64 `json:"takeout_tax_uuid"` // 外带税类UUID
+	TakeoutTaxName string `json:"takeout_tax_name"` // 外带税类名称
+	DineTaxUuid    uint64 `json:"rating_tax_uuid"`  // 堂食税类UUID
+	DineTaxName    string `json:"rating_tax_name"`  // 堂食税类名称
+
+	Status          uint   `json:"status"`            // 商品状态 0-下架 1-上架
+	Image           string `json:"image"`             // 商品图片。
+	NumType         *uint  `json:"num_type"`          // 数量计算方法 0-整数 1-小数
+	DeductStockType uint   `json:"deduct_stock_type"` // 库存计算方式,0-结账减库存 1-下单减库存
+
+	IsShowCashier   bool `json:"is_show_cashier"`   // 是否显示在收银端 1-显示 0-不显示
+	IsShowTablet    bool `json:"is_show_tablet"`    // 是否显示在平板端 1-显示 0-不显示
+	IsShowKitchen   bool `json:"is_show_kitchen"`   // 是否显示在厨显端显示：1-显示；0-不显示
+	IsShowAssistant bool `json:"is_show_assistant"` // 是否显示在点餐助手 1-显示 0-不显示
+	IsShowH5        bool `json:"is_show_h5"`        // 是否显示在h5 1-显示 0-不显示
+	IsShowDelivery  bool `json:"is_show_delivery"`  // 是否显示在外送 1-显示 0-不显示
+
+	OpenDiscount        bool `json:"open_discount"`         // 是否开启会员折扣 1-开启 0-关闭
+	OpenOverallDiscount bool `json:"open_overall_discount"` // 整单折扣 1-开启 0-关闭
 }
 
 // ProductListResp 商品列表响应
