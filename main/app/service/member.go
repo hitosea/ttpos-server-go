@@ -195,7 +195,7 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 		}
 		var expire int64
 		if cardType.Expire > 0 { // 单位是月
-			expire = time.Now().Add(time.Duration(expire*30*24) * time.Hour).Unix()
+			expire = time.Now().Add(time.Duration(cardType.Expire*30*86400) * time.Second).Unix()
 		}
 		// 会员卡记录
 		_, err := base.NewMemberCardLogRepo(tx).CreateMemberCardLog(model.MemberCardLog{
