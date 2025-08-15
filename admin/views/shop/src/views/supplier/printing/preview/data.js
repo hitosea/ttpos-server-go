@@ -109,6 +109,10 @@ export const previewData = {
                 label: '52',
             },
             {
+                name: $t('取消订单数'),
+                label: '52',
+            },
+            {
                 name: $t('桌数'),
                 label: '52',
             },
@@ -119,6 +123,10 @@ export const previewData = {
             {
                 name: $t('最小/大订单金额'),
                 label: '￥28.15 / ￥5246.12',
+            },
+            {
+                name: $t('取消订单金额'),
+                label: '￥28.15',
             },
             {
                 name: $t('平均订单金额'),
@@ -856,6 +864,10 @@ export const previewData = {
                 label: '52',
             },
             {
+                name: $t('取消订单数'),
+                label: '52',
+            },
+            {
                 name: $t('桌数'),
                 label: '52',
             },
@@ -866,6 +878,10 @@ export const previewData = {
             {
                 name: $t('最小/大订单金额'),
                 label: '￥28.15 / ￥5246.12',
+            },
+            {
+                name: $t('取消订单金额'),
+                label: '￥28.15',
             },
             {
                 name: $t('平均订单金额'),
@@ -1478,12 +1494,18 @@ export const previewData = {
                 name: $t('所有订单数'),
                 label: '52',
             },
-
+            {
+                name: $t('取消订单数'),
+                label: '52',
+            },
             {
                 name: $t('人数'),
                 label: '52',
             },
-
+            {
+                name: $t('取消订单金额'),
+                label: '￥28.15',
+            },
             {
                 name: $t('平均订单金额'),
                 label: '￥689.12',
@@ -1846,12 +1868,18 @@ export const previewData = {
                 name: $t('所有订单数'),
                 label: '52',
             },
-
+            {
+                name: $t('取消订单数'),
+                label: '52',
+            },
             {
                 name: $t('人数'),
                 label: '52',
             },
-
+            {
+                name: $t('取消订单金额'),
+                label: '￥28.15',
+            },
             {
                 name: $t('平均订单金额'),
                 label: '￥689.12',
