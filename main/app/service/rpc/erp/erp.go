@@ -23,6 +23,7 @@ type IErpSrv interface {
 
 	// 采购单
 	CreatePurchaseOrder(ctx cc.Context, createPurchaseOrderReq *stock.SaveMaterialRequestReq) (*stock.SaveMaterialRequestResp, error)
+	GetMaterialRequestList(ctx cc.Context, getMaterialRequestListReq *stock.GetMaterialRequestListReq) (*stock.GetMaterialRequestListResp, error)
 }
 type erpSrv struct {
 	dbm *database.DBManager
