@@ -201,11 +201,12 @@ type ProductSauceListResp struct {
 }
 
 type ProductSauceItem struct {
-	Uuid                uint64 `json:"uuid"`                  // 商品加料UUID
-	Name                string `json:"name"`                  // 商品加料名称
-	Sort                int    `json:"sort"`                  // 商品加料排序
-	ProductPackageCount int    `json:"product_package_count"` // 关联商品包数量
-	ProductBomCardUuid  uint64 `json:"product_bom_card_uuid"` // 成本卡UUID，0表示没有成本卡
+	Uuid                uint64             `json:"uuid"`                  // 商品加料UUID
+	Name                string             `json:"name"`                  // 商品加料名称
+	Sort                int                `json:"sort"`                  // 商品加料排序
+	ProductPackageCount int                `json:"product_package_count"` // 关联商品包数量
+	ProductBomCardUuid  uint64             `json:"product_bom_card_uuid"` // 成本卡UUID，0表示没有成本卡
+	ProductBomCardName  dto.LocaleResponse `json:"product_bom_card_name"` // 成本卡名称
 }
 
 type ProductSauceProductPackage struct {
@@ -394,6 +395,7 @@ type ProductSingleListItemResp struct {
 	Name               dto.LocaleResponse `json:"locale_name"`           // 商品名称
 	FlavorName         dto.LocaleResponse `json:"flavor_name"`           // 商品规格名称
 	ProductBomCardUuid uint64             `json:"product_bom_card_uuid"` // 成本卡UUID，0表示没有成本卡
+	ProductBomCardName dto.LocaleResponse `json:"product_bom_card_name"` // 成本卡名称
 }
 
 // ProductListResp 商品列表响应

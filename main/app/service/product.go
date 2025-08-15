@@ -1388,12 +1388,20 @@ func (s *productSrv) GetProductSauceList(ctx context.Context, sauceListReq req.P
 	}
 	productSauceListResp := make([]product_resp.ProductSauceItem, 0, len(productSauceList))
 	for _, productSauce := range productSauceList {
+		var productBomCardName dto.LocaleResponse
+		if productSauce.ProductBomCardUuid > 0 {
+			productBomCardName, err = repository.NewProductBomCardRepo(db).GetProductBomCardName(productSauce.ProductBomCardUuid)
+			if err != nil {
+				return product_resp.ProductSauceListResp{}, errors.WithMessage(err, "获取成本卡名称失败")
+			}
+		}
 		productSauceListResp = append(productSauceListResp, product_resp.ProductSauceItem{
 			Uuid:                productSauce.Uuid,
 			Name:                productSauce.MultiLanguageName.GetNameByLang(language),
 			Sort:                productSauce.Sort,
 			ProductPackageCount: productSauce.ProductPackageCount,
 			ProductBomCardUuid:  productSauce.ProductBomCardUuid,
+			ProductBomCardName:  productBomCardName,
 		})
 	}
 	return product_resp.ProductSauceListResp{
@@ -2849,11 +2857,19 @@ func (s *productSrv) GetProductSingleList(ctx context.Context, req req.ProductSi
 	for _, productPackage := range productPackages {
 		for _, productBom := range productPackage.ProductBoms {
 			if productBom.IsFlavor() {
+				var productBomCardName dto.LocaleResponse
+				if productBom.ProductBomCardUuid > 0 {
+					productBomCardName, err = repository.NewProductBomCardRepo(db).GetProductBomCardName(productBom.ProductBomCardUuid)
+					if err != nil {
+						return nil, errors.WithMessage(err, "获取成本卡失败")
+					}
+				}
 				productItem := product_resp.ProductSingleListItemResp{
 					Uuid:               productBom.Uuid,
 					Name:               productPackage.MultiLanguageName.GetNames(),
 					FlavorName:         productBom.ProductFlavor.MultiLanguageName.GetNames(),
 					ProductBomCardUuid: productBom.ProductBomCardUuid,
+					ProductBomCardName: productBomCardName,
 				}
 				productList = append(productList, productItem)
 			}

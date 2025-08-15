@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
@@ -19,6 +20,7 @@ type IProductBomCardQueryRepo interface {
 	GetProductBomCard(opts ...DBOption) (*model.ProductBomCard, error)
 	GetProductBomCardList(opts ...DBOption) ([]*model.ProductBomCard, error)
 	GetProductBomCardDetail(uuid uint64) (*model.ProductBomCard, error)
+	GetProductBomCardName(uuid uint64) (dto.LocaleResponse, error)
 }
 
 type productBomCardRepoImpl struct {
@@ -122,4 +124,12 @@ func (r *productBomCardRepoImpl) GetProductBomCardDetail(uuid uint64) (*model.Pr
 		return nil, err
 	}
 	return card, nil
+}
+
+func (r *productBomCardRepoImpl) GetProductBomCardName(uuid uint64) (dto.LocaleResponse, error) {
+	card, err := r.GetProductBomCard(CommonRepo.WhereByUuid(uuid))
+	if err != nil {
+		return dto.LocaleResponse{}, err
+	}
+	return card.MultiLanguageName.GetNames(), nil
 }
