@@ -115,7 +115,7 @@ func (r *productPackageRepoImpl) CreateProductPackage(productPackage *model.Prod
 	}
 
 	// 创建multi_language_name表数据
-	multiLanguageNameRepo := NewMultiLanguageNameRepoImpl(r.db)
+	multiLanguageNameRepo := NewMultiLanguageNameRepo(r.db)
 	if _, err := multiLanguageNameRepo.CreateMultiLanguageName(productPackage.MultiLanguageName); err != nil {
 		return errors.WithMessage(err)
 	}

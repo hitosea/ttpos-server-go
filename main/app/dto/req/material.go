@@ -103,3 +103,10 @@ type ProductBomCardUnlinkReq struct {
 	RelatedUuid uint64 `json:"related_uuid" binding:"required"` // 关联UUID,给规格商品或加料绑定成本卡。规格商品时，关联UUID为规格商品UUID；加料时，关联UUID为加料UUID
 	RelatedType uint8  `json:"related_type" binding:"required"` // 关联类型,1-规格商品 2-加料
 }
+
+// ProductBomCardCopyReq 复制成本卡请求
+type ProductBomCardCopyReq struct {
+	RelatedUuid        uint64 `json:"related_uuid" binding:"required"`          // 关联UUID,给规格商品或加料绑定成本卡。规格商品时，关联UUID为规格商品UUID；加料时，关联UUID为加料UUID
+	RelatedType        uint8  `json:"related_type" binding:"required"`          // 关联类型,1-规格商品 2-加料
+	ProductBomCardUuid uint64 `json:"product_bom_card_uuid" binding:"required"` // 成本卡UUID
+}

@@ -30,6 +30,7 @@ type IMaterialSrv interface {
 	AddProductBomCard(ctx context.Context, req req.ProductBomCardAddReq) error
 	GetProductBomCardDetail(ctx context.Context, req req.ProductBomCardDetailReq) (*material_resp.ProductBomCardDetailResp, error)
 	UnlinkProductBomCard(ctx context.Context, req req.ProductBomCardUnlinkReq) error
+	CopyProductBomCard(ctx context.Context, req req.ProductBomCardCopyReq) error
 }
 
 type materialSrv struct {
@@ -201,7 +202,7 @@ func (s *materialSrv) AddMaterialCategory(ctx context.Context, req req.MaterialC
 		// 创建多语言名称
 		multiLanguageName := model.MultiLanguageName{}
 		multiLanguageName.InitByLocaleResponse(req.LocaleName)
-		nameId, err := repository.NewMultiLanguageNameRepoImpl(tx).CreateMultiLanguageName(multiLanguageName)
+		nameId, err := repository.NewMultiLanguageNameRepo(tx).CreateMultiLanguageName(multiLanguageName)
 		if err != nil {
 			return errors.WithMessage(err, "创建多语言名称失败")
 		}
@@ -237,7 +238,7 @@ func (s *materialSrv) AddMaterial(ctx context.Context, req req.MaterialAddReq) e
 		// 创建多语言名称
 		multiLanguageName := model.MultiLanguageName{}
 		multiLanguageName.InitByLocaleResponse(req.LocaleName)
-		nameId, err := repository.NewMultiLanguageNameRepoImpl(tx).CreateMultiLanguageName(multiLanguageName)
+		nameId, err := repository.NewMultiLanguageNameRepo(tx).CreateMultiLanguageName(multiLanguageName)
 		if err != nil {
 			return errors.WithMessage(err, "创建多语言名称失败")
 		}
@@ -334,7 +335,7 @@ func (s *materialSrv) EditMaterial(ctx context.Context, req req.MaterialEditReq)
 			// 更新多语言名称
 			multiLanguageName := model.MultiLanguageName{}
 			multiLanguageName.InitByLocaleResponse(req.LocaleName)
-			multiLanguageNameRepo := repository.NewMultiLanguageNameRepoImpl(tx)
+			multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
 			err = multiLanguageNameRepo.UpdateMultiLanguageName(existingMaterial.MultiLanguageNameUuid, multiLanguageName)
 			if err != nil {
 				return errors.WithMessage(err, "创建多语言名称失败")
@@ -526,7 +527,7 @@ func (s *materialSrv) addSauceBomCard(ctx context.Context, req req.ProductBomCar
 	multiLanguageName := model.MultiLanguageName{}
 	multiLanguageName.InitByLocaleResponse(productBomCardName)
 	multiLanguageName.Uuid = nameUuid
-	_, errName := repository.NewMultiLanguageNameRepoImpl(db).CreateMultiLanguageName(multiLanguageName)
+	_, errName := repository.NewMultiLanguageNameRepo(db).CreateMultiLanguageName(multiLanguageName)
 	if errName != nil {
 		return errors.WithMessage(err, "创建多语言名称失败")
 	}
@@ -619,7 +620,7 @@ func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomC
 	multiLanguageName := model.MultiLanguageName{}
 	multiLanguageName.InitByLocaleResponse(productBomCardName)
 	multiLanguageName.Uuid = nameUuid
-	_, errName := repository.NewMultiLanguageNameRepoImpl(db).CreateMultiLanguageName(multiLanguageName)
+	_, errName := repository.NewMultiLanguageNameRepo(db).CreateMultiLanguageName(multiLanguageName)
 	if errName != nil {
 		return errors.WithMessage(err, "创建多语言名称失败")
 	}
@@ -834,6 +835,77 @@ func (s *materialSrv) unlinkProductBomCard(ctx context.Context, req req.ProductB
 		productBomCardRepo := repository.NewProductBomRepo(tx)
 		if err := productBomCardRepo.UpdateProductBomCard(req.RelatedUuid, 0); err != nil {
 			return errors.WithMessage(err, "更新成本卡失败")
+		}
+		if err := repository.NewProductBomCardLogRepo(tx).CreateProductBomCardLog(*productBomCardLog); err != nil {
+			return errors.WithMessage(err, "创建成本卡日志失败")
+		}
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err)
+	}
+
+	return nil
+}
+
+func (s *materialSrv) CopyProductBomCard(ctx context.Context, req req.ProductBomCardCopyReq) error {
+	dbId := ctx.GetDbId()
+	db := s.dbm.GetDB(dbId)
+	ctx.SetDB(db)
+
+	productBomCardRepo := repository.NewProductBomCardRepo(db)
+	productBomCard, err := productBomCardRepo.GetProductBomCardDetail(req.ProductBomCardUuid)
+	if err != nil {
+		return errors.WithMessage(err, "获取成本卡失败")
+	}
+
+	copyProductBomCard := productBomCard.Copy()
+
+	relatedName := ""
+	if req.RelatedType == constant.ProductBomCardRelatedTypeFlavor {
+		productBomRepo := repository.NewProductBomRepo(db)
+		productBom, err := productBomRepo.GetFlavorProductBomByUuid(req.RelatedUuid)
+		if err != nil {
+			return errors.WithMessage(err, "获取商品规格失败")
+		}
+		relatedName = productBom.ProductPackage.MultiLanguageName.ToJson()
+	} else if req.RelatedType == constant.ProductBomCardRelatedTypeSauce {
+		productSauceRepo := repository.NewProductSauceRepo(db)
+		productSauce, err := productSauceRepo.GetSauceByUuid(req.RelatedUuid)
+		if err != nil {
+			return errors.WithMessage(err, "获取小料失败")
+		}
+		relatedName = productSauce.MultiLanguageName.ToJson()
+	} else {
+		return errors.New("关联类型错误")
+	}
+
+	productBomCardLog, err := newProductBomCardLog(ctx, copyProductBomCard.Num, copyProductBomCard.Uuid, copyProductBomCard.MultiLanguageName.ToJson(), req.RelatedUuid, relatedName, copyProductBomCard.RelatedMaterials, constant.ProductBomCardLogOperationTypeCreate)
+	if err != nil {
+		return errors.WithMessage(err, "创建成本卡日志失败")
+	}
+
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		productBomCardRepo := repository.NewProductBomCardRepo(tx)
+		if err := productBomCardRepo.CreateProductBomCard(*copyProductBomCard); err != nil {
+			return errors.WithMessage(err, "创建成本卡失败")
+		}
+		for _, material := range copyProductBomCard.RelatedMaterials {
+			if err := productBomCardRepo.CreateProductBomCardMaterial(*material); err != nil {
+				return errors.WithMessage(err, "创建成本卡材料失败")
+			}
+		}
+		if _, err := repository.NewMultiLanguageNameRepo(tx).CreateMultiLanguageName(*copyProductBomCard.MultiLanguageName); err != nil {
+			return errors.WithMessage(err, "创建多语言名称失败")
+		}
+		// 更新成本卡关联
+		if req.RelatedType == constant.ProductBomCardRelatedTypeFlavor {
+			if err := repository.NewProductBomRepo(tx).UpdateProductBomCard(req.RelatedUuid, copyProductBomCard.Uuid); err != nil {
+				return errors.WithMessage(err, "更新成本卡失败")
+			}
+		} else if req.RelatedType == constant.ProductBomCardRelatedTypeSauce {
+			if err := repository.NewProductSauceRepo(tx).UpdateProductBomCard(req.RelatedUuid, copyProductBomCard.Uuid); err != nil {
+				return errors.WithMessage(err, "更新成本卡失败")
+			}
 		}
 		if err := repository.NewProductBomCardLogRepo(tx).CreateProductBomCardLog(*productBomCardLog); err != nil {
 			return errors.WithMessage(err, "创建成本卡日志失败")

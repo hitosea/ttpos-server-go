@@ -55,7 +55,7 @@ func (s *CategoryRepositoryService) CreateCategory(params req.CreateCategoryRequ
 		ZhName:   params.Name.ZH,
 		EnName:   params.Name.EN,
 	}
-	nameId, err := NewMultiLanguageNameRepoImpl(tx).CreateMultiLanguageName(multiLanguageName)
+	nameId, err := NewMultiLanguageNameRepo(tx).CreateMultiLanguageName(multiLanguageName)
 	if err != nil {
 		tx.Rollback() // 发生错误，回滚事务
 		return 0, errors.WithMessage(err)

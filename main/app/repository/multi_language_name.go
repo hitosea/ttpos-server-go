@@ -21,8 +21,8 @@ type IMultiLanguageNameQueryRepo interface {
 	GetMultiLanguageNameByUuid(uuid uint64) (model.MultiLanguageName, error) // 获取多语言名称
 }
 
-// NewMultiLanguageNameRepoImpl 创建新的多语言名称仓库
-func NewMultiLanguageNameRepoImpl(db *gorm.DB) IMultiLanguageNameRepo {
+// NewMultiLanguageNameRepo 创建新的多语言名称仓库
+func NewMultiLanguageNameRepo(db *gorm.DB) IMultiLanguageNameRepo {
 	return NewMultiLanguageNameRepositoryImpl(db)
 }
 

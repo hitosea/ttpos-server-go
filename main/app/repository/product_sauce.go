@@ -46,7 +46,7 @@ func (r *productSauceRepoImpl) CreateProductSauce(productSauce *model.ProductSau
 		return errors.WithMessage(err)
 	}
 	// 创建multi_language_name表数据
-	if _, err := NewMultiLanguageNameRepoImpl(r.db).CreateMultiLanguageName(productSauce.MultiLanguageName); err != nil {
+	if _, err := NewMultiLanguageNameRepo(r.db).CreateMultiLanguageName(productSauce.MultiLanguageName); err != nil {
 		return errors.WithMessage(err)
 	}
 

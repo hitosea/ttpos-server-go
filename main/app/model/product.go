@@ -579,6 +579,42 @@ func (model *ProductBomCard) SetNil() {
 	model.RelatedMaterials = nil
 }
 
+func (model *ProductBomCard) Copy() *ProductBomCard {
+	nameUuid, _ := utils.GetID()
+	cardUuid, _ := utils.GetID()
+	multiLanguageName := MultiLanguageName{}
+	multiLanguageName.InitByLocaleResponse(model.MultiLanguageName.GetNames())
+	multiLanguageName.Uuid = nameUuid
+
+	materialList := []*RelatedMaterial{}
+
+	for _, material := range model.RelatedMaterials {
+		materialList = append(materialList, &RelatedMaterial{
+			RelatedUuid:            cardUuid,
+			MaterialUuid:           material.MaterialUuid,
+			Num:                    material.Num,
+			UnitUuid:               material.UnitUuid,
+			UnitName:               material.UnitName,
+			BaseUnitUuid:           material.BaseUnitUuid,
+			BaseUnitName:           material.BaseUnitName,
+			BaseUnitConversionRate: material.BaseUnitConversionRate,
+		})
+	}
+
+	productBomCard := &ProductBomCard{
+		BaseModel: BaseModel{
+			Uuid: cardUuid,
+		},
+		Name:                  multiLanguageName.ToJson(),
+		MultiLanguageNameUuid: nameUuid,
+		Num:                   model.Num,
+		RelatedMaterials:      materialList,
+		MultiLanguageName:     &multiLanguageName,
+	}
+
+	return productBomCard
+}
+
 // ProductBomCardLog 成本卡日志表 ttpos_product_bom_card_log
 type ProductBomCardLog struct {
 	BaseModel

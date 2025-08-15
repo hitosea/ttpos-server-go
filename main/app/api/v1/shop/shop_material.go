@@ -325,7 +325,33 @@ func (h *MaterialHandler) UnlinkProductBomCard(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
-// RegisterMaterialHandlers 注册物品管理路由
+// CopyProductBomCard 复制成本卡
+// @Summary 复制成本卡
+// @Description 复制成本卡
+// @Tags 商家端.物品管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductBomCardCopyReq true "成本卡复制请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product_bom/card/copy [post]
+func (h *MaterialHandler) CopyProductBomCard(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	copyReq := req.ProductBomCardCopyReq{}
+
+	if err := c.ShouldBindJSON(&copyReq); err != nil {
+		helper.HandleValidationError(c, err, copyReq, dto.PageReqMessage)
+		return
+	}
+	err := h.materialSrv.CopyProductBomCard(ctx, copyReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
 func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -361,5 +387,6 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		privateApi.POST("/product_bom/card/add", wrapper.AddProductBomCard)         // 添加成本卡
 		privateApi.GET("/product_bom/card/detail", wrapper.GetProductBomCardDetail) // 规格商品成本卡详情
 		privateApi.POST("/product_bom/card/unlink", wrapper.UnlinkProductBomCard)   // 解除成本卡关联
+		privateApi.POST("/product_bom/card/copy", wrapper.CopyProductBomCard)       // 复制成本卡
 	}
 }
