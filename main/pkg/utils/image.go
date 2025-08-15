@@ -325,21 +325,5 @@ func GetWhiteBackgroundWithBlackTextLogoPath(appId uint64, logoUrl, uploadsDir s
 	logoBasename := filepath.Base(logoUrl)
 	savePath := filepath.Join(uploadsDir, shopDir, "white_background_text_"+logoBasename)
 
-	// 判断处理后的图片是否已存在
-	if _, err := os.Stat(savePath); os.IsNotExist(err) && logoUrl != "" {
-		// 文件不存在，需要进行处理
-		err := WhiteBackgroundWithBlackText(logoUrl, savePath)
-		if err != nil {
-			return "", fmt.Errorf("处理logo图片失败: %v", err)
-		}
-	}
-
 	return savePath, nil
-}
-
-// GetWhiteBackgroundWithBlackTextLogoPathWithPublic 获得白色背景和黑色文本徽标路径（使用public目录）
-// 这是一个便捷方法，自动使用public/uploads作为基础路径
-func GetWhiteBackgroundWithBlackTextLogoPathWithPublic(appId uint64, logoUrl, publicDir string) (string, error) {
-	uploadsDir := filepath.Join(publicDir, "uploads")
-	return GetWhiteBackgroundWithBlackTextLogoPath(appId, logoUrl, uploadsDir)
 }
