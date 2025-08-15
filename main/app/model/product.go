@@ -577,3 +577,31 @@ func (model *ProductBomCard) SetNil() {
 	model.MultiLanguageName = nil
 	model.RelatedMaterials = nil
 }
+
+// ProductBomCardLog 成本卡日志表 ttpos_product_bom_card_log
+type ProductBomCardLog struct {
+	BaseModel
+	ProductBomCardUuid uint64 `gorm:"column:product_bom_card_uuid;type:bigint(20) unsigned;not null;default:0;comment:成本卡ID" json:"product_bom_card_uuid"`
+	ProductBomCardName string `gorm:"column:product_bom_card_name;type:text;not null;default:'';comment:成本卡名称JSON" json:"product_bom_card_name"`
+	RelatedUuid        uint64 `gorm:"column:related_uuid;type:bigint(20) unsigned;not null;default:0;comment:关联ID" json:"related_uuid"`
+	RelatedName        string `gorm:"column:related_name;type:text;not null;default:'';comment:关联名称JSON,商品名称、加料名称" json:"related_name"`
+	Data               string `gorm:"column:data;type:text;not null;default:'';comment:成本卡数据JSON" json:"data"`
+}
+
+// ProductBomCardLogData 成本卡日志数据
+type ProductBomCardLogData struct {
+	Num              float64         `json:"num"`               // 加工份数
+	RelatedMaterials []*MaterialItem `json:"related_materials"` // 关联材料
+}
+
+// MaterialItem 原料项
+type MaterialItem struct {
+	MaterialName       string  `json:"material_name"`        // 原料名称JSON
+	MaterialCode       string  `json:"material_code"`        // 原料编码
+	Num                float64 `json:"num"`                  // 用量
+	UnitUuid           uint64  `json:"unit_uuid"`            // 单位ID
+	UnitName           string  `json:"unit_name"`            // 单位名称JSON
+	UnitConversionRate float64 `json:"unit_conversion_rate"` // 单位转换率
+	BaseUnitUuid       uint64  `json:"base_unit_uuid"`       // 基准单位ID
+	BaseUnitName       string  `json:"base_unit_name"`       // 基准单位名称JSON
+}

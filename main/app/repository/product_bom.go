@@ -93,6 +93,9 @@ func (r *productBomRepoImpl) GetFlavorProductBomByUuid(uuid uint64) (*model.Prod
 			WithPreload{
 				Query: "FlavorMaterials.Material",
 			},
+			WithPreload{
+				Query: "ProductPackage.MultiLanguageName",
+			},
 		),
 	)
 	if err != nil {

@@ -77,10 +77,9 @@ type MaterialUnitListReq struct {
 
 // ProductBomCardAddReq 添加成本卡请求
 type ProductBomCardAddReq struct {
-	ProductBomUuid     uint64                        `json:"product_bom_uuid" binding:"required"`      // 商品规格UUID,给该规格绑定成本卡
-	ProductBomCardUuid uint64                        `json:"product_bom_card_uuid" binding:"required"` // 成本卡UUID,新建成本卡时为0，编辑时为成本卡UUID
-	Num                int                           `json:"num" binding:"required"`                   // 加工份数
-	Materials          ProductBomCardMaterialListReq `json:"materials" binding:"required,dive"`        // 材料列表
+	ProductBomUuid uint64                        `json:"product_bom_uuid" binding:"required"` // 商品规格UUID,给该规格绑定成本卡
+	Num            int                           `json:"num" binding:"required"`              // 加工份数
+	Materials      ProductBomCardMaterialListReq `json:"materials" binding:"required,dive"`   // 材料列表
 }
 
 type ProductBomCardMaterialListReq struct {
@@ -88,7 +87,6 @@ type ProductBomCardMaterialListReq struct {
 }
 
 type ProductBomCardMaterialReq struct {
-	Uuid         uint64  `json:"uuid"`                             // 成本卡材料UUID, 新增时为0, 编辑时为成本卡材料UUID
 	MaterialUuid uint64  `json:"material_uuid" binding:"required"` // 材料UUID
 	Num          float64 `json:"num" binding:"required"`           // 数量
 	UnitUuid     uint64  `json:"unit_uuid" binding:"required"`     // 成本单位UUID

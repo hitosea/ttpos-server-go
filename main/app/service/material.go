@@ -501,15 +501,6 @@ func (s *materialSrv) AddProductBomCard(ctx context.Context, req req.ProductBomC
 		return errors.New("物品列表不能为空")
 	}
 
-	if req.ProductBomCardUuid == 0 {
-		return s.addProductBomCard(ctx, req)
-	} else {
-		return s.updateProductBomCard(ctx, req)
-	}
-}
-
-func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomCardAddReq) error {
-	db := ctx.GetDB()
 	// 获取商品名称
 	productBomRepo := repository.NewProductBomRepo(db)
 	productBom, err := productBomRepo.GetProductBom(
@@ -571,6 +562,12 @@ func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomC
 		RelatedMaterials:      materialList,
 	}
 
+	productBomCardLog, err := newProductBomCardLog(ctx, float64(req.Num), cardUuid, multiLanguageName.ToJson(),
+		req.ProductBomUuid, productBom.ProductPackage.MultiLanguageName.ToJson(), materialList)
+	if err != nil {
+		return errors.WithMessage(err, "创建成本卡日志失败")
+	}
+
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		productBomCardRepo := repository.NewProductBomCardRepo(tx)
 		if err := productBomCardRepo.CreateProductBomCard(productBomCard); err != nil {
@@ -584,6 +581,9 @@ func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomC
 		if err := repository.NewProductBomRepo(tx).UpdateProductBomCard(req.ProductBomUuid, cardUuid); err != nil {
 			return errors.WithMessage(err, "更新成本卡失败")
 		}
+		if err := repository.NewProductBomCardLogRepo(tx).CreateProductBomCardLog(*productBomCardLog); err != nil {
+			return errors.WithMessage(err, "创建成本卡日志失败")
+		}
 		return nil
 	}); err != nil {
 		return errors.WithMessage(err)
@@ -592,77 +592,43 @@ func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomC
 	return nil
 }
 
-func (s *materialSrv) updateProductBomCard(ctx context.Context, req req.ProductBomCardAddReq) error {
-	db := ctx.GetDB()
+func newProductBomCardLog(ctx context.Context, num float64, cardUuid uint64, cardName string, relatedUuid uint64, relatedName string, materialList []*model.RelatedMaterial) (*model.ProductBomCardLog, error) {
+	var data string
 
-	materialList := []*model.RelatedMaterial{}
-	for _, materialParam := range req.Materials.List {
-		// 如果成本卡材料UUID为0，则创建成本卡材料
-		if materialParam.Uuid == 0 {
-			// 查询物品信息
-			material, err := repository.NewMaterialRepo(db).GetMaterialDetailByUuid(materialParam.MaterialUuid)
-			if err != nil {
-				return errors.WithMessage(err, "获取物品信息失败")
-			}
-			if !material.IsUnit(materialParam.UnitUuid) {
-				return errors.New("物品没有该单位")
-			}
-			// 获取成本单位信息
-			materialUnit := material.GetUnit(materialParam.UnitUuid)
-			baseUnit := material.GetBaseUnit()
-
-			materialList = append(materialList, &model.RelatedMaterial{
-				RelatedUuid:            req.ProductBomCardUuid,
-				MaterialUuid:           materialParam.MaterialUuid,
-				Num:                    materialParam.Num,
-				UnitUuid:               materialParam.UnitUuid,
-				UnitName:               materialUnit.Unit.MultiLanguageName.ToJson(),
-				BaseUnitUuid:           baseUnit.Uuid,
-				BaseUnitName:           baseUnit.Unit.MultiLanguageName.ToJson(),
-				BaseUnitConversionRate: materialUnit.ConversionRate,
-			})
-		} else {
-			// 如果成本卡材料UUID不为0，则更新成本卡材料
-			productBomCardMaterial, err := repository.NewProductBomCardRepo(db).GetProductBomCardMaterialByUuid(materialParam.Uuid)
-			if err != nil {
-				return errors.WithMessage(err, "获取成本卡材料失败")
-			}
-			// 查询物品信息
-			material, err := repository.NewMaterialRepo(db).GetMaterialDetailByUuid(materialParam.MaterialUuid)
-			if err != nil {
-				return errors.WithMessage(err, "获取物品信息失败")
-			}
-			if !material.IsUnit(materialParam.UnitUuid) {
-				return errors.New("物品没有该单位")
-			}
-			// 获取成本单位信息
-			materialUnit := material.GetUnit(materialParam.UnitUuid)
-			baseUnit := material.GetBaseUnit()
-
-			productBomCardMaterial.Num = materialParam.Num
-			productBomCardMaterial.UnitUuid = materialParam.UnitUuid
-			productBomCardMaterial.UnitName = materialUnit.Unit.MultiLanguageName.ToJson()
-			productBomCardMaterial.BaseUnitUuid = baseUnit.Uuid
-			productBomCardMaterial.BaseUnitName = baseUnit.Unit.MultiLanguageName.ToJson()
-			productBomCardMaterial.BaseUnitConversionRate = materialUnit.ConversionRate
-
-			materialList = append(materialList, productBomCardMaterial)
-		}
-	}
-
-	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-		productBomCardRepo := repository.NewProductBomCardRepo(tx)
+	// 新增成本卡
+	if cardUuid == 0 {
+		productBomCardLogDataItemList := []*model.MaterialItem{}
 		for _, material := range materialList {
-			if err := productBomCardRepo.CreateOrUpdateProductBomCardMaterial(*material); err != nil {
-				return errors.WithMessage(err, "创建成本卡材料失败")
-			}
+			productBomCardLogDataItemList = append(productBomCardLogDataItemList, &model.MaterialItem{
+				MaterialName:       material.Material.MultiLanguageName.ToJson(),
+				MaterialCode:       material.Material.Code,
+				Num:                material.Num,
+				UnitUuid:           material.UnitUuid,
+				UnitName:           material.UnitName,
+				BaseUnitUuid:       material.BaseUnitUuid,
+				BaseUnitName:       material.BaseUnitName,
+				UnitConversionRate: material.BaseUnitConversionRate,
+			})
 		}
-		return nil
-	}); err != nil {
-		return errors.WithMessage(err)
+		productBomCardLogData := model.ProductBomCardLogData{
+			Num:              num,
+			RelatedMaterials: productBomCardLogDataItemList,
+		}
+		data = utils.ToJson(productBomCardLogData)
+	} else {
+		// 删除成本卡关联时，data为空
+		data = ""
 	}
 
-	return nil
+	productBomCardLog := model.ProductBomCardLog{
+		ProductBomCardUuid: cardUuid,
+		ProductBomCardName: cardName,
+		RelatedUuid:        relatedUuid,
+		RelatedName:        relatedName,
+		Data:               data,
+	}
+
+	return &productBomCardLog, nil
 }
 
 func (s *materialSrv) GetProductBomCardDetail(ctx context.Context, req req.ProductBomCardDetailReq) (*material_resp.ProductBomCardDetailResp, error) {
@@ -714,10 +680,24 @@ func (s *materialSrv) UnlinkProductBomCard(ctx context.Context, req req.ProductB
 	dbId := ctx.GetDbId()
 	db := s.dbm.GetDB(dbId)
 
+	productBomRepo := repository.NewProductBomRepo(db)
+	productBom, err := productBomRepo.GetFlavorProductBomByUuid(req.ProductBomUuid)
+	if err != nil {
+		return errors.WithMessage(err, "获取商品规格失败")
+	}
+
+	productBomCardLog, err := newProductBomCardLog(ctx, 0, 0, "", req.ProductBomUuid, productBom.ProductPackage.MultiLanguageName.ToJson(), nil)
+	if err != nil {
+		return errors.WithMessage(err, "创建成本卡日志失败")
+	}
+
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		productBomCardRepo := repository.NewProductBomRepo(tx)
 		if err := productBomCardRepo.UpdateProductBomCard(req.ProductBomUuid, 0); err != nil {
 			return errors.WithMessage(err, "更新成本卡失败")
+		}
+		if err := repository.NewProductBomCardLogRepo(tx).CreateProductBomCardLog(*productBomCardLog); err != nil {
+			return errors.WithMessage(err, "创建成本卡日志失败")
 		}
 		return nil
 	}); err != nil {

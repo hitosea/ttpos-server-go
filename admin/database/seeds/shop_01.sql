@@ -997,6 +997,20 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_bom_card` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '成本卡表';
 
+CREATE TABLE IF NOT EXISTS `ttpos_product_bom_card_log` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '成本卡日志ID',
+    `product_bom_card_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '成本卡ID',
+    `product_bom_card_name` TEXT NOT NULL DEFAULT '' COMMENT '成本卡名称JSON',
+    `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联ID',
+    `related_name` TEXT NOT NULL DEFAULT '' COMMENT '关联名称JSON,商品名称、加料名称',
+    `data` TEXT NOT NULL DEFAULT '' COMMENT '成本卡数据JSON',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '成本卡日志表';
+
 CREATE TABLE IF NOT EXISTS `ttpos_file` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '文件ID',
