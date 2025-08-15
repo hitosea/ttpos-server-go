@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"time"
+	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -11,12 +12,14 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
+	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -150,7 +153,7 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 			OrderType:         req.OrderType,
 			Status:            constant.PurchaseOrderStatusDraft, // 待提交状态
 			Num:               float64(len(req.Items)),
-			OrderTime:         time.Now().Unix(),
+			OrderTime:         req.OrderTime,
 			ExpectArrivalTime: req.ExpectedDeliveryTime,
 			ApplicantUuid:     ctx.GetStaffUuid(),
 			ApplicantName:     ctx.GetStaff().RealName,
@@ -210,8 +213,29 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 
 		// 调用erp接口
 		if ctx.GetCompany().IsOpenErp() {
-			// erpSrv := rpc.NewErpSrv(s.dbm)
-			// erpSrv.CreatePurchaseOrder(ctx, req)
+			stockItems := make([]*stock.MaterialRequestItem, 0)
+			for _, item := range items {
+				stockItems = append(stockItems, &stock.MaterialRequestItem{
+					ItemCode:     item.MaterialCode,
+					Qty:          float32(item.Num),
+					ScheduleDate: req.ExpectedDeliveryTime,
+					Uom:          item.UnitName,
+				})
+			}
+			resp, err := erp.NewIErpSrv(s.dbm).CreatePurchaseOrder(ctx, &stock.SaveMaterialRequestReq{
+				TransactionDate: req.OrderTime,
+				RequiredBy:      req.ExpectedDeliveryTime,
+				Items:           stockItems,
+			})
+			if err != nil {
+				return err
+			}
+			// 更新采购申请单号
+			purchaseOrder.OrderNo = resp.MaterialRequestName
+			err = purchaseOrderRepo.Update(purchaseOrder)
+			if err != nil {
+				return errors.WithMessage(err, "更新采购申请单号失败")
+			}
 		}
 
 		result.Uuid = purchaseOrder.Uuid
@@ -482,6 +506,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 		}
 
 		// 创建收货明细并更新采购申请明细的到货数量
+		var receiptItems []model.PurchaseReceiptOrderItem
 		for _, itemReq := range req.Items {
 			// 查询采购申请明细
 			orderItem, err := purchaseOrderItemRepo.GetByUuid(itemReq.Uuid)
@@ -496,7 +521,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 			}
 
 			// 创建收货明细
-			receiptItem := &model.PurchaseReceiptOrderItem{
+			receiptItems = append(receiptItems, model.PurchaseReceiptOrderItem{
 				ReceiptOrderUuid:      receiptOrder.Uuid,
 				PurchaseOrderItemUuid: itemReq.Uuid,
 				MaterialCode:          orderItem.MaterialCode,
@@ -508,12 +533,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 				BaseUnitUuid:          orderItem.BaseUnitUuid,
 				BaseUnitName:          orderItem.BaseUnitName,
 				UnitConversionRate:    orderItem.UnitConversionRate,
-			}
-
-			err = receiptOrderItemRepo.Create(receiptItem)
-			if err != nil {
-				return errors.WithMessage(err, "创建收货明细失败")
-			}
+			})
 
 			// 确认收货时，更新采购申请明细的到货数量
 			if req.IsConfirm {
@@ -525,9 +545,23 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 			}
 		}
 
-		// 检查采购申请是否完成
-		if purchaseOrder.Status == constant.ReceiptOrderStatusReceived {
+		// 批量创建收货明细
+		err = receiptOrderItemRepo.CreateBatch(receiptItems)
+		if err != nil {
+			return errors.WithMessage(err, "创建收货明细失败")
+		}
+
+		// 更新收货单明细
+		receiptOrder.Items = receiptItems
+
+		// 检查收货单是否完成
+		if receiptOrder.Status == constant.ReceiptOrderStatusReceived {
 			err = s.checkAndUpdatePurchaseOrderStatus(ctx, tx, req.PurchaseOrderUuid)
+			if err != nil {
+				return err
+			}
+			// 添加物料库存
+			err = s.addMaterialStock(ctx, tx, receiptOrder)
 			if err != nil {
 				return err
 			}
@@ -635,10 +669,16 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 		if err != nil {
 			return errors.WithMessage(err, "更新收货单状态失败")
 		}
+		receiptOrder.Items = receiptItems
 
-		// 检查采购申请是否完成
+		// 检查收货单是否完成
 		if receiptOrder.Status == constant.ReceiptOrderStatusReceived {
 			err = s.checkAndUpdatePurchaseOrderStatus(ctx, tx, receiptOrder.PurchaseOrderUuid)
+			if err != nil {
+				return err
+			}
+			// 添加物料库存
+			err = s.addMaterialStock(ctx, tx, receiptOrder)
 			if err != nil {
 				return err
 			}
@@ -731,6 +771,32 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderDetail(ctx context.Context, re
 	return detailResp, nil
 }
 
+// CancelPurchaseReceiptOrder 取消收货单
+func (s *purchaseOrderSrv) CancelPurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptOrderCancelReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(db)
+
+	// 查询收货单
+	receiptOrder, err := receiptOrderRepo.GetByUuid(req.Uuid)
+	if err != nil {
+		return errors.WithMessage(err, "收货单不存在")
+	}
+
+	// 检查收货单状态
+	if receiptOrder.Status != constant.ReceiptOrderStatusPending {
+		return errors.New("收货单状态不允许取消")
+	}
+
+	// 取消收货单
+	receiptOrder.Status = constant.ReceiptOrderStatusRejected
+	err = receiptOrderRepo.Update(receiptOrder)
+	if err != nil {
+		return errors.WithMessage(err, "取消收货单失败")
+	}
+
+	return nil
+}
+
 // generateOrderNo 生成订单编号
 func (s *purchaseOrderSrv) generateOrderNo(db *gorm.DB) string {
 	var orderNo string
@@ -811,33 +877,7 @@ func (s *purchaseOrderSrv) createPurchaseOrderLog(db *gorm.DB, purchaseOrderUuid
 	return logRepo.Create(log)
 }
 
-// CancelPurchaseReceiptOrder 取消收货单
-func (s *purchaseOrderSrv) CancelPurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptOrderCancelReq) error {
-	db := s.dbm.GetDB(ctx.GetDbId())
-	receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(db)
-
-	// 查询收货单
-	receiptOrder, err := receiptOrderRepo.GetByUuid(req.Uuid)
-	if err != nil {
-		return errors.WithMessage(err, "收货单不存在")
-	}
-
-	// 检查收货单状态
-	if receiptOrder.Status != constant.ReceiptOrderStatusPending {
-		return errors.New("收货单状态不允许取消")
-	}
-
-	// 取消收货单
-	receiptOrder.Status = constant.ReceiptOrderStatusRejected
-	err = receiptOrderRepo.Update(receiptOrder)
-	if err != nil {
-		return errors.WithMessage(err, "取消收货单失败")
-	}
-
-	return nil
-}
-
-// checkAndUpdatePurchaseOrderStatus 检查并更新采购申请状态
+// checkAndUpdatePurchaseOrderStatus 检查并更新采购单状态
 func (s *purchaseOrderSrv) checkAndUpdatePurchaseOrderStatus(ctx context.Context, db *gorm.DB, purchaseOrderUuid uint64) error {
 	purchaseOrderRepo := repository.NewPurchaseOrderRepo(db)
 	purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(db)
@@ -886,17 +926,38 @@ func (s *purchaseOrderSrv) checkAndUpdatePurchaseOrderStatus(ctx context.Context
 		}
 	}
 
-	// 创建收货单操作日志
+	// 创建采购单操作日志
 	err = s.createPurchaseOrderLog(db, purchaseOrderUuid, ctx, "update_status", "更新采购申请状态", oldStatus, purchaseOrder.Status, "")
 	if err != nil {
 		return err
 	}
 
-	// TODO 调用入库接口
-	// err = s.warehouseSrv.Inbound(ctx, purchaseOrderUuid)
-	// if err != nil {
-	// 	return err
-	// }
+	return nil
+}
 
+// addMaterialStock 添加物料库存
+func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, receiptOrder *model.PurchaseReceiptOrder) error {
+	if receiptOrder.Status != constant.ReceiptOrderStatusReceived {
+		return nil
+	}
+	// 获取收货单明细
+	items := receiptOrder.Items
+	// 添加物料库存
+	materialRepo := repository.NewMaterialRepo(db)
+	for _, item := range items {
+		// 获取物料信息
+		material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid)
+		if err != nil {
+			return errors.WithMessage(err, "获取物料信息失败")
+		}
+		// 更新库存数量
+		material.StockNum = decimal.NewFromFloat(material.StockNum).Add(
+			decimal.NewFromFloat(item.Num).Mul(decimal.NewFromFloat(item.UnitConversionRate).Round(4)),
+		).InexactFloat64()
+		err = materialRepo.UpdateMaterial(material)
+		if err != nil {
+			return errors.WithMessage(err, "更新物料库存失败")
+		}
+	}
 	return nil
 }

@@ -51,7 +51,7 @@ func (r *PurchaseReceiptOrderRepoImpl) Create(receipt *model.PurchaseReceiptOrde
 
 // Update 更新收货记录
 func (r *PurchaseReceiptOrderRepoImpl) Update(receipt *model.PurchaseReceiptOrder) error {
-	return r.db.Save(receipt).Error
+	return r.db.Model(&model.PurchaseReceiptOrder{}).Where("uuid = ?", receipt.Uuid).Updates(receipt).Error
 }
 
 // Delete 删除收货记录
