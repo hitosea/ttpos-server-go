@@ -159,9 +159,9 @@ add-version:
 
 # 清空redis的cluster的data-*目录
 redis-clear-data-node-conf:
-	make down redis-node-1
-	make down redis-node-2
-	make down redis-node-3
+	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh down redis-node-1 > /dev/null 2>&1
+	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh down redis-node-2 > /dev/null 2>&1
+	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh down redis-node-3 > /dev/null 2>&1
 	rm -rf ./docker/redis/cluster/data-*
 
 # 检查env的DB_HOST是否等于 LOCAL_IP。等于的话 就执行 make mysql-open;

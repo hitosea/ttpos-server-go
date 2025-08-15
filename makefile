@@ -24,6 +24,7 @@ build:
 	@make build-web
 	@make redis-clear-data-node-conf
 	@echo "🐳 构建 Docker 容器..."
+	@cd ./main && GOOS=linux GOARCH=amd64 go build -o main main.go
 	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
 	@echo "✅ Docker 构建完成"
 	@echo "🗄️  运行数据库迁移..."

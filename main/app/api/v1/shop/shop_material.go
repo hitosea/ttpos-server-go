@@ -332,7 +332,7 @@ func (h *MaterialHandler) UnlinkProductBomCard(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param data body req.ProductBomCardEditReq true "成本卡编辑请求"
+// @Param data body req.ProductBomCardAddReq true "成本卡编辑请求"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /shop/product_bom/card/edit [post]
