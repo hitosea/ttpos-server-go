@@ -267,6 +267,50 @@ func (x *SaveMaterialRequestReq) GetItems() []*MaterialRequestItem {
 	return nil
 }
 
+type SaveMaterialRequestResp struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	MaterialRequestName string                 `protobuf:"bytes,1,opt,name=material_request_name,json=materialRequestName,proto3" json:"material_request_name,omitempty" dc:"物品申请单名称"` // 物品申请单名称
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *SaveMaterialRequestResp) Reset() {
+	*x = SaveMaterialRequestResp{}
+	mi := &file_stock_stock_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveMaterialRequestResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveMaterialRequestResp) ProtoMessage() {}
+
+func (x *SaveMaterialRequestResp) ProtoReflect() protoreflect.Message {
+	mi := &file_stock_stock_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveMaterialRequestResp.ProtoReflect.Descriptor instead.
+func (*SaveMaterialRequestResp) Descriptor() ([]byte, []int) {
+	return file_stock_stock_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *SaveMaterialRequestResp) GetMaterialRequestName() string {
+	if x != nil {
+		return x.MaterialRequestName
+	}
+	return ""
+}
+
 type GetMaterialRequestListReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	CompanyAbbr   string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写,必填"` // 公司缩写,必填
@@ -277,7 +321,7 @@ type GetMaterialRequestListReq struct {
 
 func (x *GetMaterialRequestListReq) Reset() {
 	*x = GetMaterialRequestListReq{}
-	mi := &file_stock_stock_proto_msgTypes[3]
+	mi := &file_stock_stock_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -289,7 +333,7 @@ func (x *GetMaterialRequestListReq) String() string {
 func (*GetMaterialRequestListReq) ProtoMessage() {}
 
 func (x *GetMaterialRequestListReq) ProtoReflect() protoreflect.Message {
-	mi := &file_stock_stock_proto_msgTypes[3]
+	mi := &file_stock_stock_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -302,7 +346,7 @@ func (x *GetMaterialRequestListReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMaterialRequestListReq.ProtoReflect.Descriptor instead.
 func (*GetMaterialRequestListReq) Descriptor() ([]byte, []int) {
-	return file_stock_stock_proto_rawDescGZIP(), []int{3}
+	return file_stock_stock_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *GetMaterialRequestListReq) GetCompanyAbbr() string {
@@ -328,7 +372,7 @@ type GetMaterialRequestListResp struct {
 
 func (x *GetMaterialRequestListResp) Reset() {
 	*x = GetMaterialRequestListResp{}
-	mi := &file_stock_stock_proto_msgTypes[4]
+	mi := &file_stock_stock_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -340,7 +384,7 @@ func (x *GetMaterialRequestListResp) String() string {
 func (*GetMaterialRequestListResp) ProtoMessage() {}
 
 func (x *GetMaterialRequestListResp) ProtoReflect() protoreflect.Message {
-	mi := &file_stock_stock_proto_msgTypes[4]
+	mi := &file_stock_stock_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -353,7 +397,7 @@ func (x *GetMaterialRequestListResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMaterialRequestListResp.ProtoReflect.Descriptor instead.
 func (*GetMaterialRequestListResp) Descriptor() ([]byte, []int) {
-	return file_stock_stock_proto_rawDescGZIP(), []int{4}
+	return file_stock_stock_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetMaterialRequestListResp) GetMaterialRequestList() []*MaterialRequest {
@@ -389,7 +433,9 @@ const file_stock_stock_proto_rawDesc = "" +
 	"\x06branch\x18\x03 \x01(\tR\x06branch\x12\x1f\n" +
 	"\vrequired_by\x18\x04 \x01(\x03R\n" +
 	"requiredBy\x120\n" +
-	"\x05items\x18\x05 \x03(\v2\x1a.stock.MaterialRequestItemR\x05items\"V\n" +
+	"\x05items\x18\x05 \x03(\v2\x1a.stock.MaterialRequestItemR\x05items\"M\n" +
+	"\x17SaveMaterialRequestResp\x122\n" +
+	"\x15material_request_name\x18\x01 \x01(\tR\x13materialRequestName\"V\n" +
 	"\x19GetMaterialRequestListReq\x12!\n" +
 	"\fcompany_abbr\x18\x01 \x01(\tR\vcompanyAbbr\x12\x16\n" +
 	"\x06branch\x18\x02 \x01(\tR\x06branch\"h\n" +
@@ -411,23 +457,24 @@ func file_stock_stock_proto_rawDescGZIP() []byte {
 	return file_stock_stock_proto_rawDescData
 }
 
-var file_stock_stock_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_stock_stock_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_stock_stock_proto_goTypes = []any{
 	(*MaterialRequest)(nil),            // 0: stock.MaterialRequest
 	(*MaterialRequestItem)(nil),        // 1: stock.MaterialRequestItem
 	(*SaveMaterialRequestReq)(nil),     // 2: stock.SaveMaterialRequestReq
-	(*GetMaterialRequestListReq)(nil),  // 3: stock.GetMaterialRequestListReq
-	(*GetMaterialRequestListResp)(nil), // 4: stock.GetMaterialRequestListResp
-	(*api.ResponseInfo)(nil),           // 5: erp.ResponseInfo
+	(*SaveMaterialRequestResp)(nil),    // 3: stock.SaveMaterialRequestResp
+	(*GetMaterialRequestListReq)(nil),  // 4: stock.GetMaterialRequestListReq
+	(*GetMaterialRequestListResp)(nil), // 5: stock.GetMaterialRequestListResp
+	(*api.ResponseInfo)(nil),           // 6: erp.ResponseInfo
 }
 var file_stock_stock_proto_depIdxs = []int32{
 	1, // 0: stock.MaterialRequest.items:type_name -> stock.MaterialRequestItem
 	1, // 1: stock.SaveMaterialRequestReq.items:type_name -> stock.MaterialRequestItem
 	0, // 2: stock.GetMaterialRequestListResp.material_request_list:type_name -> stock.MaterialRequest
 	2, // 3: stock.StockService.SaveMaterialRequest:input_type -> stock.SaveMaterialRequestReq
-	3, // 4: stock.StockService.GetMaterialRequestList:input_type -> stock.GetMaterialRequestListReq
-	5, // 5: stock.StockService.SaveMaterialRequest:output_type -> erp.ResponseInfo
-	5, // 6: stock.StockService.GetMaterialRequestList:output_type -> erp.ResponseInfo
+	4, // 4: stock.StockService.GetMaterialRequestList:input_type -> stock.GetMaterialRequestListReq
+	6, // 5: stock.StockService.SaveMaterialRequest:output_type -> erp.ResponseInfo
+	6, // 6: stock.StockService.GetMaterialRequestList:output_type -> erp.ResponseInfo
 	5, // [5:7] is the sub-list for method output_type
 	3, // [3:5] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name
@@ -446,7 +493,7 @@ func file_stock_stock_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_stock_stock_proto_rawDesc), len(file_stock_stock_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

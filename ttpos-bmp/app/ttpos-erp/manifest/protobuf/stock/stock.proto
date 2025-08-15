@@ -33,6 +33,10 @@ message SaveMaterialRequestReq {
   repeated MaterialRequestItem items = 5;      // 物品列表，
 }
 
+message SaveMaterialRequestResp {
+  string material_request_name = 1;      // 物品申请单名称
+}
+
 message GetMaterialRequestListReq {
   string company_abbr = 1;      // 公司缩写,必填
   string branch = 2;      // 分支名称,可选
