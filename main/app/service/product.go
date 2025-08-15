@@ -2571,7 +2571,7 @@ func (s *productSrv) SortProductAttribute(ctx context.Context, req req.ProductAt
 		productAttributeUuids = append(productAttributeUuids, productAttribute.Uuid)
 	}
 	productAttributes, err := productRepo.GetProductAttributes(
-		productRepo.WhereProductAttributeGroupUuid(req.ProductAttributeGroupUuid),
+		productRepo.WhereAttributeGroupUuid(req.ProductAttributeGroupUuid),
 		productRepo.WhereUuidIn(productAttributeUuids),
 	)
 	if err != nil {

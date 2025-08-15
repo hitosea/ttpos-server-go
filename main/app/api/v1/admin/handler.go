@@ -50,17 +50,37 @@ func (h *Handler) GetErpnextSiteCompany(c *gin.Context) {
 		return
 	}
 
+	helper.Success(c, gin.H{
+		"list": companyResp.List,
+	})
+}
+
+// 获取ERPNext站点Pos Profile列表
+// @Summary 获取ERPNext站点Pos Profile列表
+// @Description 获取ERPNext站点Pos Profile列表
+// @Tags 平台端.商家授权
+// @Accept json
+// @Produce json
+// @Param site_code query string true "ERPNext站点编码"
+// @Param company_abbr query string true "公司缩写编码"
+// @Success 200 {object} dto.Response
+// @Router /admin/erpnext/site/pos_profile [get]
+func (h *Handler) GetErpnextSitePosProfile(c *gin.Context) {
+	var sitePosProfileReq req.ErpnextSitePosProfileReq
+	if err := c.ShouldBindQuery(&sitePosProfileReq); err != nil {
+		helper.HandleValidationError(c, err, sitePosProfileReq, nil)
+		return
+	}
 	posProfileResp, err := erp.NewIErpSrv(h.dbm).GetPosProfileList(context.Background(), req.GetPosProfileListReq{
-		SiteCode: siteCompanyReq.SiteCode,
+		SiteCode:    sitePosProfileReq.SiteCode,
+		CompanyAbbr: sitePosProfileReq.CompanyAbbr,
 	})
 	if err != nil {
 		helper.ErrorWithMessage(c, constant.CodeFail, err)
 		return
 	}
-
 	helper.Success(c, gin.H{
-		"company_list":     companyResp.List,
-		"pos_profile_list": posProfileResp.ProfileList,
+		"list": posProfileResp.List,
 	})
 }
 
@@ -124,6 +144,7 @@ func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.C
 		dbm: dbm,
 	}
 	router.GET("/erpnext/site/company", middleware.Internal(), wrapper.GetErpnextSiteCompany)
+	router.GET("/erpnext/site/pos_profile", middleware.Internal(), wrapper.GetErpnextSitePosProfile)
 	router.POST("/erpnext/shop/init", middleware.Internal(), wrapper.InitShop)
 	router.POST("/erpnext/lianlian/payment/add", middleware.Internal(), wrapper.AddLianLianPayment)
 }

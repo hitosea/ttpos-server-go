@@ -262,6 +262,7 @@ func (ss ShiftSubmit) MarshalBinary() ([]byte, error) {
 type ShopBase struct {
 	Username     string        `json:"username"`      // 登录账号
 	ProfileUuid  uint64        `json:"profile_uuid"`  // 收银员UUID
+	Phone        string        `json:"phone"`         // 登录账号手机号
 	DeviceId     string        `json:"device_id"`     // 设备ID
 	DeviceRemark string        `json:"device_remark"` // 设备备注
 	Permissions  []*Permission `json:"permissions"`   // 页面权限
@@ -273,6 +274,8 @@ type ShopBase struct {
 	Business   setting.Business   `json:"business"` // 门店业务设置
 	Profile    ShopProfile        `json:"profile"`  // 门店信息
 
+	// 是否散户site
+	IsTtposSite   bool   `json:"is_ttpos_site"`  // 是否是TTPOS站点(散户site)，能登录新商家后台的必须授权erpnext，除了site_code="1"，其他都是连锁店模式，连锁店模式不能修改 单位和属性
 	ServerVersion string `json:"server_version"` // 服务端版本
 	UpdateTime    int64  `json:"update_time"`    // 更新时间
 }

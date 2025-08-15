@@ -350,6 +350,7 @@ func (h *SettingHandler) GetMemberQrcode(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param file formData file true "上传logo"
+// @Success 200 {object} dto.Response{data=resp.UploadFileResp}
 // @Success 200 {object} dto.Response
 // @Router /shop/setting/upload_logo [post]
 func (h *SettingHandler) UploadLogo(c *gin.Context) {

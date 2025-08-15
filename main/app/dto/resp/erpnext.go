@@ -45,7 +45,7 @@ type AttributeValueInfo struct {
 }
 
 type GetPosProfileListResp struct {
-	ProfileList []PosProfileInfo `json:"profile_list"`
+	List []PosProfileInfo `json:"list"`
 }
 
 type PosProfileInfo struct {

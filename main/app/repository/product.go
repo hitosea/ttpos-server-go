@@ -74,6 +74,7 @@ type IProductRepo interface {
 	WithProductAttributesProductPackageAttributesProductPackageAttributeGroupProductPackage() DBOption                  // 预加载商品属性关联的产品包属性组关联的产品包
 	WithProductAttributesProductPackageAttributesProductPackageAttributeGroupProductPackageMultiLanguageName() DBOption // 预加载商品属性关联的产品包属性组关联的产品包多语言名称
 
+	WhereAttributeGroupUuid(uuid uint64) DBOption        // 查询条件 商品属性分组uuid
 	WhereProductAttributeGroupUuid(uuid uint64) DBOption // 查询条件 商品属性分组uuid
 	WithProductPackageAttributes() DBOption              // 预加载商品属性关联的产品包属性
 }
@@ -1133,4 +1134,10 @@ func (r *productRepo) GetProductShopList(opts ...DBOption) ([]model.ProductPacka
 	}
 	err := db.Find(&products).Error
 	return products, errors.WithMessage(err)
+}
+
+func (r *productRepo) WhereAttributeGroupUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("attribute_group_uuid = ?", uuid)
+	}
 }

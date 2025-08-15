@@ -7,6 +7,11 @@ type ErpnextSiteCompanyReq struct {
 	ParentCompany string `form:"parent_company" json:"parent_company" binding:"omitempty"` // 筛选父公司名称
 }
 
+type ErpnextSitePosProfileReq struct {
+	SiteCode    string `form:"site_code" json:"site_code" binding:"required"`
+	CompanyAbbr string `form:"company_abbr" json:"company_abbr" binding:"required"` // 公司缩写编码
+}
+
 type InitShopReq struct {
 	SiteCode           string `form:"site_code" json:"site_code" binding:"required"`               // 站点编码
 	CompanyAbbr        string `form:"company_abbr" json:"company_abbr" binding:"required"`         // 公司缩写编码
