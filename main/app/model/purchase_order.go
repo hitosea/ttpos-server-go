@@ -13,6 +13,7 @@ type PurchaseOrder struct {
 	OrderNo           string  `gorm:"column:order_no;type:varchar(255);not null;default:'';comment:单号" json:"order_no"`
 	ErpOrderNo        string  `gorm:"column:erp_order_no;type:varchar(255);not null;default:'';comment:ERP采购单号" json:"erp_order_no"`
 	OrderType         int     `gorm:"column:order_type;type:int(10);not null;default:0;comment:申请类型, 0-仓库调拨" json:"order_type"`
+	SupplierName      string  `gorm:"column:supplier_name;type:varchar(100);not null;default:'';comment:供应商名称" json:"supplier_name"`
 	Status            int     `gorm:"column:status;type:int(10);not null;default:0;comment:状态, 0-待提交 1-待审核 2-已通过 3-已驳回 4-部分收货 5-全部收货" json:"status"`
 	Num               float64 `gorm:"column:num;type:decimal(14,4);not null;default:0.0000;comment:物资数量，每种物品算一个" json:"num"`
 	OrderTime         int64   `gorm:"column:order_time;type:int(10) unsigned;not null;default:0;comment:单据日期，采购单提交的时间（时间戳）" json:"order_time"`

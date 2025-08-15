@@ -2,6 +2,7 @@ package erp
 
 import (
 	"context"
+	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -24,6 +25,9 @@ type IErpSrv interface {
 	// 采购单
 	CreatePurchaseOrder(ctx cc.Context, createPurchaseOrderReq *stock.SaveMaterialRequestReq) (*stock.SaveMaterialRequestResp, error)
 	GetMaterialRequestList(ctx cc.Context, getMaterialRequestListReq *stock.GetMaterialRequestListReq) (*stock.GetMaterialRequestListResp, error)
+
+	// 供应商
+	GetSupplierList(ctx cc.Context) (*buying.GetSupplierListResp, error)
 }
 type erpSrv struct {
 	dbm *database.DBManager

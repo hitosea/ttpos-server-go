@@ -1,6 +1,9 @@
 package req
 
-import "ttpos-server-go/app/dto"
+import (
+	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/errors"
+)
 
 // PurchaseOrderListReq 采购订单列表请求
 type PurchaseOrderListReq struct {
@@ -12,9 +15,27 @@ type PurchaseOrderListReq struct {
 // PurchaseOrderCreateReq 创建采购订单请求
 type PurchaseOrderCreateReq struct {
 	OrderTime            int64                        `json:"order_time" binding:"required,min=0"`              // 单据日期
-	OrderType            int                          `json:"order_type" binding:"required,oneof=0"`            // 申请类型 0-仓库调拨
+	SupplierName         string                       `json:"supplier_name" binding:"required,min=1"`           // 供应商名称
 	ExpectedDeliveryTime int64                        `json:"expected_delivery_time" binding:"omitempty,min=0"` // 期望到货时间(时间戳)
 	Items                []PurchaseOrderItemCreateReq `json:"items" binding:"required,min=1,max=200,dive"`      // 物品明细
+}
+
+func (r *PurchaseOrderCreateReq) Validate() error {
+	if r.SupplierName == "" {
+		return errors.New("供应商名称不能为空")
+	}
+	if len(r.Items) == 0 {
+		return errors.New("物品明细不能为空")
+	}
+	for _, item := range r.Items {
+		if item.MaterialUuid == 0 {
+			return errors.New("物品ID不能为空")
+		}
+		if item.Num <= 0 {
+			return errors.New("物品数量不能为0")
+		}
+	}
+	return nil
 }
 
 // PurchaseOrderItemCreateReq 采购订单物品明细创建请求
@@ -27,8 +48,29 @@ type PurchaseOrderItemCreateReq struct {
 type PurchaseOrderUpdateReq struct {
 	Uuid                 uint64                       `json:"uuid" binding:"required,min=1"`                    // 采购订单ID
 	ExpectedDeliveryTime int64                        `json:"expected_delivery_time" binding:"omitempty,min=0"` // 期望到货时间(时间戳)
-	OrderType            int                          `json:"order_type" binding:"required,oneof=0"`            // 申请类型 0-仓库调拨
+	SupplierName         string                       `json:"supplier_name" binding:"omitempty,min=1"`          // 供应商名称
 	Items                []PurchaseOrderItemUpdateReq `json:"items" binding:"omitempty,min=1,max=200,dive"`     // 采购商品明细
+}
+
+func (r *PurchaseOrderUpdateReq) Validate() error {
+	if r.Uuid == 0 {
+		return errors.New("采购订单ID不能为空")
+	}
+	if r.SupplierName == "" {
+		return errors.New("供应商名称不能为空")
+	}
+	if len(r.Items) == 0 {
+		return errors.New("物品明细不能为空")
+	}
+	for _, item := range r.Items {
+		if item.MaterialUuid == 0 {
+			return errors.New("物品ID不能为空")
+		}
+		if item.Num <= 0 {
+			return errors.New("物品数量不能为0")
+		}
+	}
+	return nil
 }
 
 // PurchaseOrderItemUpdateReq 采购订单商品明细更新请求

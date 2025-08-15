@@ -144,17 +144,20 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(ctx context.Context, req req.P
 
 // CreatePurchaseOrder 创建采购申请
 func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.PurchaseOrderCreateReq) (resp.PurchaseOrderCreateResp, error) {
+	if err := req.Validate(); err != nil {
+		return resp.PurchaseOrderCreateResp{}, err
+	}
+
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	var result resp.PurchaseOrderCreateResp
-
 	err := db.Transaction(func(tx *gorm.DB) error {
 		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
 		purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(tx)
 		// 创建采购申请
 		purchaseOrder := &model.PurchaseOrder{
 			OrderNo:           s.generateOrderNo(ctx, db),
-			OrderType:         req.OrderType,
+			SupplierName:      req.SupplierName,
 			Status:            constant.PurchaseOrderStatusDraft, // 待提交状态
 			Num:               float64(len(req.Items)),
 			OrderTime:         req.OrderTime,
@@ -230,6 +233,10 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 
 // UpdatePurchaseOrder 更新采购申请
 func (s *purchaseOrderSrv) UpdatePurchaseOrder(ctx context.Context, req req.PurchaseOrderUpdateReq) error {
+	if err := req.Validate(); err != nil {
+		return err
+	}
+
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	err := db.Transaction(func(tx *gorm.DB) error {
@@ -252,6 +259,8 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(ctx context.Context, req req.Purc
 
 		// 更新采购申请基本信息
 		purchaseOrder.Num = float64(len(req.Items))
+		purchaseOrder.SupplierName = req.SupplierName
+		purchaseOrder.ExpectArrivalTime = req.ExpectedDeliveryTime
 		err = purchaseOrderRepo.Update(purchaseOrder)
 		if err != nil {
 			return errors.WithMessage(err, "更新采购申请失败")

@@ -910,6 +910,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_order` (
     `order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '单号',
     `erp_order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERP采购单号',
     `order_type` INT(10) NOT NULL DEFAULT 0 COMMENT '申请类型, 0-仓库调拨',
+    `supplier_name` VARCHAR(100) NOT NULL DEFAULT '' COMMENT '供应商名称',
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态, 0-待提交 1-待审核 2-已通过 3-已驳回 4-部分收货 5-全部收货',
     `num` DECIMAL(14, 4) NOT NULL DEFAULT 0.0000 COMMENT '物资数量，每种物品算一个',
     `order_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '单据日期，采购单提交的时间（时间戳）',
