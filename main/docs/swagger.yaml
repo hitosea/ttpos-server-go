@@ -2077,6 +2077,28 @@ definitions:
         description: 商品类别UUID
         type: integer
     type: object
+  product_resp.ProductShopCategoryDetailResp:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品类别名称
+      parent_name:
+        description: 父级类别名称
+        type: string
+      parent_uuid:
+        description: 父级类别UUID
+        type: integer
+      sort:
+        description: 商品类别排序
+        type: integer
+      status:
+        description: 商品类别状态 0-关闭 1-开启
+        type: integer
+      uuid:
+        description: 商品类别UUID
+        type: integer
+    type: object
   product_resp.ProductShopCategoryListResp:
     properties:
       list:
@@ -3790,17 +3812,16 @@ definitions:
       num:
         description: 加工份数
         type: integer
-      product_bom_card_name:
-        allOf:
-        - $ref: '#/definitions/dto.LocaleResponse'
-        description: 成本卡名称
+      product_bom_card_uuid:
+        description: 成本卡UUID,新建成本卡时为0，编辑时为成本卡UUID
+        type: integer
       product_bom_uuid:
         description: 商品规格UUID,给该规格绑定成本卡
         type: integer
     required:
     - materials
     - num
-    - product_bom_card_name
+    - product_bom_card_uuid
     - product_bom_uuid
     type: object
   req.ProductBomCardMaterialListReq:
@@ -3823,6 +3844,9 @@ definitions:
         type: number
       unit_uuid:
         description: 成本单位UUID
+        type: integer
+      uuid:
+        description: 成本卡材料UUID, 新增时为0, 编辑时为成本卡材料UUID
         type: integer
     required:
     - material_uuid
@@ -4453,6 +4477,14 @@ definitions:
     required:
     - locale_name
     type: object
+  req.ProductShopCategoryDeleteReq:
+    properties:
+      uuid:
+        description: 商品分类UUID
+        type: integer
+    required:
+    - uuid
+    type: object
   req.ProductShopCategoryEditReq:
     properties:
       locale_name:
@@ -4470,14 +4502,6 @@ definitions:
         type: integer
     required:
     - locale_name
-    - uuid
-    type: object
-  req.ProductShopCategoryReq:
-    properties:
-      uuid:
-        description: 商品分类UUID
-        type: integer
-    required:
     - uuid
     type: object
   req.ProductShopCategorySortItem:
@@ -22365,7 +22389,7 @@ paths:
         name: data
         required: true
         schema:
-          $ref: '#/definitions/req.ProductShopCategoryReq'
+          $ref: '#/definitions/req.ProductShopCategoryDeleteReq'
       produces:
       - application/json
       responses:
@@ -22376,6 +22400,29 @@ paths:
       security:
       - JwtToken: []
       summary: 删除商品分类
+      tags:
+      - 商家端.商品分类
+    get:
+      consumes:
+      - application/json
+      description: 获取商品分类详情
+      parameters:
+      - description: 商品分类UUID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductShopCategoryDetailResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品分类详情
       tags:
       - 商家端.商品分类
   /shop/product/category/add:
@@ -23145,6 +23192,30 @@ paths:
       security:
       - JwtToken: []
       summary: 规格商品成本卡详情
+      tags:
+      - 商家端.物品管理
+  /shop/product_bom/card/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑成本卡
+      parameters:
+      - description: 成本卡编辑请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductBomCardAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 编辑成本卡
       tags:
       - 商家端.物品管理
   /shop/product_bom/card/unlink:

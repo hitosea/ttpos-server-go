@@ -19271,6 +19271,43 @@ const docTemplate = `{
             }
         },
         "/shop/product/category": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取商品分类详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品分类"
+                ],
+                "summary": "获取商品分类详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "商品分类UUID",
+                        "name": "uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.ProductShopCategoryDetailResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            },
             "delete": {
                 "security": [
                     {
@@ -19295,7 +19332,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/req.ProductShopCategoryReq"
+                            "$ref": "#/definitions/req.ProductShopCategoryDeleteReq"
                         }
                     }
                 ],
@@ -20540,6 +20577,45 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/material_resp.ProductBomCardDetailResp"
                         }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product_bom/card/edit": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "编辑成本卡",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "编辑成本卡",
+                "parameters": [
+                    {
+                        "description": "成本卡编辑请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductBomCardAddReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
                     },
                     "400": {
                         "description": "错误请求"
@@ -26982,6 +27058,39 @@ const docTemplate = `{
                 }
             }
         },
+        "product_resp.ProductShopCategoryDetailResp": {
+            "type": "object",
+            "properties": {
+                "locale_name": {
+                    "description": "商品类别名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "parent_name": {
+                    "description": "父级类别名称",
+                    "type": "string"
+                },
+                "parent_uuid": {
+                    "description": "父级类别UUID",
+                    "type": "integer"
+                },
+                "sort": {
+                    "description": "商品类别排序",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "商品类别状态 0-关闭 1-开启",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "商品类别UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "product_resp.ProductShopCategoryListResp": {
             "type": "object",
             "properties": {
@@ -29441,7 +29550,7 @@ const docTemplate = `{
             "required": [
                 "materials",
                 "num",
-                "product_bom_card_name",
+                "product_bom_card_uuid",
                 "product_bom_uuid"
             ],
             "properties": {
@@ -29457,13 +29566,9 @@ const docTemplate = `{
                     "description": "加工份数",
                     "type": "integer"
                 },
-                "product_bom_card_name": {
-                    "description": "成本卡名称",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.LocaleResponse"
-                        }
-                    ]
+                "product_bom_card_uuid": {
+                    "description": "成本卡UUID,新建成本卡时为0，编辑时为成本卡UUID",
+                    "type": "integer"
                 },
                 "product_bom_uuid": {
                     "description": "商品规格UUID,给该规格绑定成本卡",
@@ -29504,6 +29609,10 @@ const docTemplate = `{
                 },
                 "unit_uuid": {
                     "description": "成本单位UUID",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "成本卡材料UUID, 新增时为0, 编辑时为成本卡材料UUID",
                     "type": "integer"
                 }
             }
@@ -30400,6 +30509,18 @@ const docTemplate = `{
                 }
             }
         },
+        "req.ProductShopCategoryDeleteReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "商品分类UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.ProductShopCategoryEditReq": {
             "type": "object",
             "required": [
@@ -30423,18 +30544,6 @@ const docTemplate = `{
                     "description": "商品分类状态 0-关闭 1-开启",
                     "type": "integer"
                 },
-                "uuid": {
-                    "description": "商品分类UUID",
-                    "type": "integer"
-                }
-            }
-        },
-        "req.ProductShopCategoryReq": {
-            "type": "object",
-            "required": [
-                "uuid"
-            ],
-            "properties": {
                 "uuid": {
                     "description": "商品分类UUID",
                     "type": "integer"

@@ -22,7 +22,6 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
-	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
 
@@ -1555,27 +1554,31 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 		return errors.New("时区不存在")
 	}
 
-	// 传递过来的语言，必须是companySetting.GetLanguages()中的语言
+	// 传递过来的语言，必须是companySetting.GetLanguages() 且 Name和Value都在constant.Languages中的语言
 	for _, language := range storeSettingReq.Language {
-		if !slices.Contains(companySetting.GetLanguages(), language.Name) {
+		if !slices.Contains(companySetting.GetLanguages(), language.Name) || !slices.ContainsFunc(constant.Languages, func(item constant.LanguageItem) bool {
+			return item.Name == language.Name && item.Value == language.Value
+		}) {
 			return errors.New("语言不存在")
 		}
 	}
 
 	// 去掉logoUrl的域名
-	storeSettingReq.LogoUrl = strings.TrimLeft(utils.RemoveDomain(storeSettingReq.LogoUrl), "/")
-	storeSetting.AvatarURL = strings.TrimLeft(utils.RemoveDomain(storeSetting.AvatarURL), "/")
+	storeSettingReq.LogoUrl = utils.RemoveDomain(storeSettingReq.LogoUrl)
+	storeSetting.AvatarURL = utils.RemoveDomain(storeSetting.AvatarURL)
 
 	// 保存设置到store_setting表
 	settingRepo := repository.NewSettingRepo(companyDB)
 	copier.CopyWithOption(&storeSetting, storeSettingReq, copier.Option{IgnoreEmpty: true})
 
-	// TODO logo_url和 avatar_url这两个要特别处理，商家后台读取的是logoUrl，而不是logo_url
 	storeSetting.LogoURL = storeSettingReq.LogoUrl
+	storeSetting.Company = storeSettingReq.CompanyName
 
-	logger.Logger.Info("storeSetting", zap.Any("storeSetting", storeSetting))
+	value := utils.ToJson(storeSetting)
+	value = strings.ReplaceAll(value, "\"logo_url\"", "\"logoUrl\"")
+	value = strings.ReplaceAll(value, "\"avatar_url\"", "\"avatarUrl\"")
 
-	err = settingRepo.Updates(constant.SettingStore, utils.ToJson(storeSetting))
+	err = settingRepo.Updates(constant.SettingStore, value)
 	if err != nil {
 		return errors.WithMessage(err)
 	}
@@ -1604,9 +1607,8 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 		"tax_number":  storeSettingReq.TaxNumber,
 	})
 
-	// TODO 如果2.5.0版本需要保存设置，需要挂载uploads目录
 	// 保存白底黑字图片
-	whiteBackgroundWithBlackTextLogoPath, err := utils.GetWhiteBackgroundWithBlackTextLogoPath(companyUuid, "", "uploads")
+	whiteBackgroundWithBlackTextLogoPath, err := utils.GetWhiteBackgroundWithBlackTextLogoPath(companyUuid, storeSettingReq.LogoUrl, "public/uploads")
 	if err != nil {
 		return errors.WithMessage(err)
 	}

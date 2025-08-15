@@ -219,7 +219,7 @@ class Supplier extends BaseModel
         $savePath = public_path("uploads/shop$appId") . 'white_background_text_' . basename($logoUrl);
         // 判断图片是否存在
         if (!file_exists($savePath) && $logoUrl) {
-            ImageHelp::whiteBackgroundWithBlackText($logoUrl, $savePath);
+            ImageHelp::whiteBackgroundWithBlackText('http://nginx/' . $logoUrl, $savePath);
         }
         //
         return $savePath;

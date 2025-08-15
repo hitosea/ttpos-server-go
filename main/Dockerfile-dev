@@ -11,7 +11,6 @@ COPY  ttpos-bmp/app/ttpos-erp/api  app/ttpos-erp/api
 COPY  ttpos-bmp/app/ttpos-shop/api  app/ttpos-shop/api
 COPY  ttpos-bmp/app/ttpos-manager/api  app/ttpos-manager/api
 
-
 # 设置工作目录
 WORKDIR /app
 
@@ -20,13 +19,24 @@ COPY main/go.mod main/go.sum ./
 # 设置代理
 ENV GOPROXY=https://goproxy.cn,direct
 
-# 下载依赖，这一步会生成缓存，在依赖有变化时才会重新下载
-RUN go mod download
+# 检查依赖是否已下载，如果没有则下载
+RUN if [ ! -f main ] || [ ! -x main ]; then \
+        echo "下载Go依赖..."; \
+        go mod download; \
+    else \
+        echo "发现已存在的Go依赖，跳过下载"; \
+    fi
+
 # 复制源代码
 COPY main .
 
-# 编译Go程序
-RUN go build -o main ./main.go
+# 检查是否已经存在编译好的main文件，如果不存在则编译
+RUN if [ ! -f main ] || [ ! -x main ]; then \
+        echo "编译Go程序..."; \
+        go build -o main ./main.go; \
+    else \
+        echo "发现已存在的main可执行文件，跳过编译"; \
+    fi
 
 # 添加执行权限
 RUN chmod +x main

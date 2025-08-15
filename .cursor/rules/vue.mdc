@@ -1,6 +1,4 @@
 ---
-description: 
-globs: 
 alwaysApply: true
 ---
 1.前端文件的文件目录是 /admin/views/admin和/admin/views/shop
