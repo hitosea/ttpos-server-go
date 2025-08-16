@@ -135,6 +135,7 @@ type CheckProductFlavorParam struct {
 type CheckProductFlavorResult struct {
 	MinPrice float64                        `json:"min_price"` // 最小价格
 	MaxPrice float64                        `json:"max_price"` // 最大价格
+	Status   int                            `json:"status"`    // 商品状态 0-下架 1-上架
 	Flavors  []CheckProductFlavorItemResult `json:"flavors"`   // 商品规格列表
 }
 
@@ -154,13 +155,12 @@ func (s *productCheckSrv) CheckProductFlavor(db *gorm.DB, flavors []CheckProduct
 	if len(flavors) == 0 {
 		return nil, errors.New("规格不能为空")
 	}
-	if len(flavors) > 20 {
-		return nil, errors.New("规格不能超过20个")
-	}
+	flavorCount := 0
 	minPrice := 0.0
 	maxPrice := 0.0
 	flavorResults := make([]CheckProductFlavorItemResult, 0)
 	for _, flavorReq := range flavors {
+		isDelete := flavorReq.IsDelete
 		// 商品规格UUID
 		if flavorReq.Uuid == 0 {
 			return nil, errors.New("规格不能为空")
@@ -172,11 +172,11 @@ func (s *productCheckSrv) CheckProductFlavor(db *gorm.DB, flavors []CheckProduct
 		if err != nil || flavor.ID == 0 {
 			return nil, errors.New("规格不存在")
 		}
-		if !productRepo.CheckPrice(flavorReq.Price, 0, 999999, 2) {
+		if !isDelete && !productRepo.CheckPrice(flavorReq.Price, 0, 999999, 2) {
 			return nil, errors.New("规格价格范围错误")
 		}
 		// 商品规格条码值
-		if flavorReq.BarcodeValue != "" {
+		if !isDelete && flavorReq.BarcodeValue != "" {
 			// 纯数字，最大13位
 			if !productRepo.CheckBarcodeFormat(flavorReq.BarcodeValue) {
 				return nil, errors.New("规格条码值格式不正确")
@@ -188,14 +188,22 @@ func (s *productCheckSrv) CheckProductFlavor(db *gorm.DB, flavors []CheckProduct
 			}
 		}
 		if minPrice == 0 {
-			minPrice = flavorReq.Price
+			if !isDelete {
+				minPrice = flavorReq.Price
+			}
 		} else {
-			minPrice = utils.IfFloat64(flavorReq.Price <= minPrice, flavorReq.Price, minPrice)
+			if !isDelete {
+				minPrice = utils.IfFloat64(flavorReq.Price <= minPrice, flavorReq.Price, minPrice)
+			}
 		}
 		if maxPrice == 0 {
-			maxPrice = flavorReq.Price
+			if !isDelete {
+				maxPrice = flavorReq.Price
+			}
 		} else {
-			maxPrice = utils.IfFloat64(flavorReq.Price >= maxPrice, flavorReq.Price, maxPrice)
+			if !isDelete {
+				maxPrice = utils.IfFloat64(flavorReq.Price >= maxPrice, flavorReq.Price, maxPrice)
+			}
 		}
 		flavorResults = append(flavorResults, CheckProductFlavorItemResult{
 			Uuid:         flavorReq.Uuid,
@@ -205,6 +213,12 @@ func (s *productCheckSrv) CheckProductFlavor(db *gorm.DB, flavors []CheckProduct
 			BomUuid:      flavorReq.BomUuid,
 			IsDelete:     flavorReq.IsDelete,
 		})
+		if !isDelete {
+			flavorCount++
+		}
+	}
+	if flavorCount > 20 {
+		return nil, errors.New("规格不能超过20个")
 	}
 	return &CheckProductFlavorResult{
 		MinPrice: minPrice,
@@ -230,10 +244,10 @@ type CheckProductAttributeParam struct {
 func (s *productCheckSrv) CheckProductAttribute(db *gorm.DB, attributes []CheckProductAttributeGroupParam) ([]CheckProductAttributeGroupParam, error) {
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(db)
-	if len(attributes) > 10 {
-		return nil, errors.New("属性组不能超过10个")
-	}
+
+	attributeGroupCount := 0
 	for _, attributeGroupReq := range attributes {
+		isDelete := attributeGroupReq.IsDelete
 		if attributeGroupReq.Uuid == 0 {
 			return nil, errors.New("属性组不能为空")
 		}
@@ -247,12 +261,10 @@ func (s *productCheckSrv) CheckProductAttribute(db *gorm.DB, attributes []CheckP
 		if !slices.Contains([]int{0, 1}, attributeGroupReq.IsMust) {
 			return nil, errors.New("属性组是否必选不正确")
 		}
-		if attributeGroupReq.MaxSelection > len(attributeGroupReq.Attributes) {
-			return nil, errors.New("属性值数量不能大于最大选择数量")
-		}
 		if len(attributeGroupReq.Attributes) == 0 {
 			return nil, errors.New("属性值不能为空")
 		}
+		attributeCount := 0
 		for _, attributeReq := range attributeGroupReq.Attributes {
 			if attributeReq.Uuid == 0 {
 				return nil, errors.New("属性值不能为空")
@@ -267,7 +279,19 @@ func (s *productCheckSrv) CheckProductAttribute(db *gorm.DB, attributes []CheckP
 			if !slices.Contains([]int{0, 1}, attributeReq.IsDefaultSelected) {
 				return nil, errors.New("属性是否默认选中不正确")
 			}
+			if !attributeReq.IsDelete {
+				attributeCount++
+			}
 		}
+		if !isDelete && attributeGroupReq.MaxSelection > attributeCount {
+			return nil, errors.New("属性值数量不能大于最大选择数量")
+		}
+		if !isDelete {
+			attributeGroupCount++
+		}
+	}
+	if attributeGroupCount > 10 {
+		return nil, errors.New("属性组不能超过10个")
 	}
 	return attributes, nil
 }
@@ -288,6 +312,7 @@ type CheckProductSauceItemParam struct {
 type CheckProductSauceResult struct {
 	IsMust       int                           `json:"is_must"`       // 商品加料是否必选 0-否 1-是
 	MaxSelection int                           `json:"max_selection"` // 商品加料最大选择数量
+	Status       int                           `json:"status"`        // 商品状态 0-下架 1-上架
 	Sauces       []CheckProductSauceItemResult `json:"sauces"`        // 商品加料列表
 }
 
@@ -307,13 +332,7 @@ func (s *productCheckSrv) CheckProductSauce(db *gorm.DB, param CheckProductSauce
 	if !slices.Contains([]int{0, 1}, param.IsMust) {
 		return nil, errors.New("是否必选不正确")
 	}
-	if param.MaxSelection > len(param.Sauces) {
-		return nil, errors.New("加料项数量不能大于最大选择数量")
-	}
-
-	if len(param.Sauces) > 10 {
-		return nil, errors.New("加料不能超过10个")
-	}
+	sauceCount := 0
 	sauceResults := make([]CheckProductSauceItemResult, 0)
 	for _, sauceReq := range param.Sauces {
 		if sauceReq.Uuid == 0 {
@@ -334,6 +353,15 @@ func (s *productCheckSrv) CheckProductSauce(db *gorm.DB, param CheckProductSauce
 			BomUuid:           sauceReq.BomUuid,
 			IsDelete:          sauceReq.IsDelete,
 		})
+		if !sauceReq.IsDelete {
+			sauceCount++
+		}
+	}
+	if param.MaxSelection > sauceCount {
+		return nil, errors.New("加料项数量不能大于最大选择数量")
+	}
+	if sauceCount > 10 {
+		return nil, errors.New("加料不能超过10个")
 	}
 	return &CheckProductSauceResult{
 		IsMust:       param.IsMust,

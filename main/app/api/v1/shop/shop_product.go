@@ -1069,6 +1069,32 @@ func (h *ProductHandler) ProductShopAdd(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// ProductShopEdit 编辑商品
+// @Summary 编辑商品
+// @Description 编辑商品
+// @Tags 商家端.商品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductShopEditReq true "商品编辑请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/edit [post]
+func (h *ProductHandler) ProductShopEdit(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	editReq := req.ProductShopEditReq{}
+	if err := c.ShouldBindJSON(&editReq); err != nil {
+		helper.HandleValidationError(c, err, editReq, nil)
+		return
+	}
+	err := h.productSrv.EditProductShop(ctx, editReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
 // ProductTaxList 获取商品税类列表
 // @Summary 获取商品税类列表
 // @Description 获取商品税类列表
@@ -1188,6 +1214,7 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/product/detail", wrapper.GetProductDetail)          // 获取商品详情
 		privateApi.POST("/product/status", wrapper.ProductShopStatus)        // 修改商品状态
 		privateApi.POST("/product/add", wrapper.ProductShopAdd)              // 添加商品
+		privateApi.POST("/product/edit", wrapper.ProductShopEdit)            // 编辑商品
 		privateApi.GET("/product/tax/list", wrapper.ProductTaxList)          // 获取商品税类列表
 		privateApi.POST("/product/upload_image", wrapper.UploadProductImage) // 上传商品图片
 	}

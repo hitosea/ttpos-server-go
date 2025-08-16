@@ -79,15 +79,17 @@ type IProductSrv interface {
 
 	GetProductSingleList(ctx context.Context, req req.ProductSingleListReq) (*product_resp.ProductSingleListResp, error) // 获取单规格商品列表
 
-	GetProductShopList(ctx context.Context, req req.ProductShopListReq) (*product_resp.ProductShopListResp, error)                                                                 // 获取商品列表（商家端）
-	SortProductShopList(ctx context.Context, req req.SortProductShopListReq) error                                                                                                 // 排序商品列表
-	GetProductDetail(ctx context.Context, req req.ProductDetailReq) (*product_resp.ProductDetailResp, error)                                                                       // 获取商品详情
-	ProductShopStatus(ctx context.Context, req req.ProductShopStatusReq) error                                                                                                     // 修改商品状态
-	ProductTaxList(ctx context.Context) product_resp.ProductTaxListResp                                                                                                            // 获取商品税类列表
-	AddProductShop(ctx context.Context, req req.ProductShopAddReq) error                                                                                                           // 添加商品
-	SaveProductPackage(tx *gorm.DB, req req.ProductShopAddReq, price float64) (uint64, error)                                                                                      // 添加商品包
-	SaveProductPackageBom(tx *gorm.DB, req req.ProductShopAddReq, productPackageUuid uint64, flavorListResult CheckProductFlavorResult, sauceResult CheckProductSauceResult) error // 添加商品bom
-	SaveProductPackageAttribute(tx *gorm.DB, param []CheckProductAttributeGroupParam, productPackageUuid uint64) error                                                             // 添加商品属性
+	GetProductShopList(ctx context.Context, req req.ProductShopListReq) (*product_resp.ProductShopListResp, error) // 获取商品列表（商家端）
+	SortProductShopList(ctx context.Context, req req.SortProductShopListReq) error                                 // 排序商品列表
+	GetProductDetail(ctx context.Context, req req.ProductDetailReq) (*product_resp.ProductDetailResp, error)       // 获取商品详情
+	ProductShopStatus(ctx context.Context, req req.ProductShopStatusReq) error                                     // 修改商品状态
+	ProductTaxList(ctx context.Context) product_resp.ProductTaxListResp                                            // 获取商品税类列表
+	AddProductShop(ctx context.Context, req req.ProductShopAddReq) error                                           // 添加商品
+	EditProductShop(ctx context.Context, req req.ProductShopEditReq) error
+	AddProductPackage(tx *gorm.DB, req req.ProductShopAddReq, price float64) (uint64, error)                                                            // 添加商品包
+	EditProductPackage(tx *gorm.DB, req req.ProductShopEditReq, price float64) (uint64, error)                                                          // 编辑商品包
+	SaveProductPackageBom(tx *gorm.DB, productPackageUuid uint64, flavorListResult CheckProductFlavorResult, sauceResult CheckProductSauceResult) error // 保存商品bom
+	SaveProductPackageAttribute(tx *gorm.DB, param []CheckProductAttributeGroupParam, productPackageUuid uint64) error                                  // 保存商品属性
 }
 
 type productSrv struct {
@@ -3216,6 +3218,7 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 				return err
 			}
 			flavorListResult = *result
+			flavorListResult.Status = req.Status
 		}
 		// 商品属性
 		if len(req.Attributes) > 0 {
@@ -3259,6 +3262,7 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 				return err
 			}
 			sauceListResult = *result
+			sauceListResult.Status = req.Status
 		}
 	}
 	// 商品税类
@@ -3310,12 +3314,12 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 	err := db.Transaction(func(tx *gorm.DB) error {
 
 		// 添加商品包
-		productPackageUuid, err := s.SaveProductPackage(tx, req, flavorListResult.MinPrice)
+		productPackageUuid, err := s.AddProductPackage(tx, req, flavorListResult.MinPrice)
 		if err != nil {
 			return err
 		}
 		// 保存商品bom
-		err = s.SaveProductPackageBom(tx, req, productPackageUuid, flavorListResult, sauceListResult)
+		err = s.SaveProductPackageBom(tx, productPackageUuid, flavorListResult, sauceListResult)
 		if err != nil {
 			return err
 		}
@@ -3336,8 +3340,232 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 	return nil
 }
 
-// SaveProductPackage 添加商品包
-func (s *productSrv) SaveProductPackage(tx *gorm.DB, req req.ProductShopAddReq, price float64) (uint64, error) {
+// EditProductShop 编辑商品
+func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEditReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	productCheckSrv := NewProductCheckSrv(s.dbm, s.localeSrv, s.settingSrv)
+
+	// 检查商品类型
+	if err := productCheckSrv.CheckProductType(req.Type); err != nil {
+		return err
+	}
+	// 检查商品名称
+	if err := productCheckSrv.CheckProductName(ctx, req.LocaleName); err != nil {
+		return err
+	}
+	// 检查商品分类
+	if err := productCheckSrv.CheckProductCategory(db, req.CategoryUuid); err != nil {
+		return err
+	}
+	// 检查商品单位
+	if err := productCheckSrv.CheckProductUnique(db, req.UnitUuid); err != nil {
+		return err
+	}
+	// 商品专用检查
+	flavorListResult := CheckProductFlavorResult{}
+	sauceListResult := CheckProductSauceResult{}
+	attributeListResult := []CheckProductAttributeGroupParam{}
+	if req.Type == constant.ProductTypeProduct {
+		// 商品规格
+		if len(req.Flavors) > 0 {
+			var flavors []CheckProductFlavorParam
+			for _, flavor := range req.Flavors {
+				flavors = append(flavors, CheckProductFlavorParam{
+					Uuid:         flavor.Uuid,
+					Price:        flavor.Price,
+					BarcodeValue: flavor.BarcodeValue,
+					BomUuid:      flavor.BomUuid,
+					IsDelete:     flavor.IsDelete,
+				})
+			}
+			result, err := productCheckSrv.CheckProductFlavor(db, flavors)
+			if err != nil {
+				return err
+			}
+			flavorListResult = *result
+			flavorListResult.Status = req.Status
+		}
+		// 商品属性
+		if len(req.Attributes) > 0 {
+			var attributes []CheckProductAttributeGroupParam
+			for _, attribute := range req.Attributes {
+				var attributeParams []CheckProductAttributeParam
+				for _, attribute := range attribute.Attributes {
+					attributeParams = append(attributeParams, CheckProductAttributeParam{
+						Uuid:              attribute.Uuid,
+						IsDefaultSelected: attribute.IsDefaultSelected,
+						IsDelete:          attribute.IsDelete,
+					})
+				}
+				attributes = append(attributes, CheckProductAttributeGroupParam{
+					Uuid:         attribute.Uuid,
+					IsMust:       attribute.IsMust,
+					MaxSelection: attribute.MaxSelection,
+					Attributes:   attributeParams,
+					IsDelete:     attribute.IsDelete,
+				})
+			}
+			result, err := productCheckSrv.CheckProductAttribute(db, attributes)
+			if err != nil {
+				return err
+			}
+			attributeListResult = result
+		}
+		// 商品加料
+		if len(req.Sauce.Sauces) > 0 {
+			var sauceListParam []CheckProductSauceItemParam
+			for _, sauceReq := range req.Sauce.Sauces {
+				sauceListParam = append(sauceListParam, CheckProductSauceItemParam{
+					Uuid:              sauceReq.Uuid,
+					IsDefaultSelected: sauceReq.IsDefaultSelected,
+					BomUuid:           sauceReq.BomUuid,
+					IsDelete:          sauceReq.IsDelete,
+				})
+			}
+			result, err := productCheckSrv.CheckProductSauce(db, CheckProductSauceParam{
+				IsMust:       req.Sauce.IsMust,
+				MaxSelection: req.Sauce.MaxSelection,
+				Sauces:       sauceListParam,
+			})
+			if err != nil {
+				return err
+			}
+			sauceListResult = *result
+			sauceListResult.Status = req.Status
+		}
+	}
+	// 商品税类
+	if err := productCheckSrv.CheckProductTax(ctx, db, CheckProductTaxParam{
+		DineUuid:    req.Tax.DineUuid,
+		TakeoutUuid: req.Tax.TakeoutUuid,
+	}); err != nil {
+		return err
+	}
+	// 商品状态
+	if err := productCheckSrv.CheckProductStatus(req.Status); err != nil {
+		return err
+	}
+	// 商品图片
+	if req.ImageFileUuid != 0 {
+		if err := productCheckSrv.CheckProductImage(ctx, db, req.ImageFileUuid); err != nil {
+			return err
+		}
+	}
+	// 商品计价方式
+	if err := productCheckSrv.CheckProductNumType(req.NumType); err != nil {
+		return err
+	}
+	// 商品库存计算方式
+	if err := productCheckSrv.CheckProductDeductStockType(req.DeductStockType); err != nil {
+		return err
+	}
+	// 商品显示设置
+	if err := productCheckSrv.CheckProductShow(CheckProductShowParam{
+		IsShowCashier:   req.Show.IsShowCashier,
+		IsShowTablet:    req.Show.IsShowTablet,
+		IsShowKitchen:   req.Show.IsShowKitchen,
+		IsShowAssistant: req.Show.IsShowAssistant,
+		IsShowH5:        req.Show.IsShowH5,
+		IsShowDelivery:  req.Show.IsShowDelivery,
+	}); err != nil {
+		return err
+	}
+	// 商品会员折扣
+	if err := productCheckSrv.CheckProductMemberDiscount(req.Discount.IsEnableMemberDiscount); err != nil {
+		return err
+	}
+	// 商品整单折扣
+	if err := productCheckSrv.CheckProductOverallDiscount(req.Discount.IsEnableOverallDiscount); err != nil {
+		return err
+	}
+
+	// 添加商品
+	err := db.Transaction(func(tx *gorm.DB) error {
+
+		// 添加商品包
+		productPackageUuid, err := s.EditProductPackage(tx, req, flavorListResult.MinPrice)
+		if err != nil {
+			return err
+		}
+		// 保存商品bom
+		err = s.SaveProductPackageBom(tx, productPackageUuid, flavorListResult, sauceListResult)
+		if err != nil {
+			return err
+		}
+		// 商品属性
+		err = s.SaveProductPackageAttribute(tx, attributeListResult, productPackageUuid)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		logger.Logger.Error("添加商品失败", zap.Any("func", "AddProductShop"), zap.Any("params", req), zap.Error(err))
+		return errors.WithMessage(err, "添加商品失败")
+	}
+
+	return nil
+}
+
+// EditProductPackage 编辑商品包
+func (s *productSrv) EditProductPackage(tx *gorm.DB, req req.ProductShopEditReq, price float64) (uint64, error) {
+	commonRepo := repository.NewCommonRepo()
+	multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
+	productPackageRepo := repository.NewProductPackageRepo(tx)
+
+	productPackage, err := productPackageRepo.GetProductPackage(
+		commonRepo.WhereByUuid(req.Uuid),
+		commonRepo.WhereBySoftDelete(),
+	)
+	if err != nil {
+		return 0, errors.WithMessage(err, "商品不存在")
+	}
+	// 保存多语言名称
+	err = multiLanguageNameRepo.UpdateMultiLanguageName(productPackage.MultiLanguageNameUuid, model.MultiLanguageName{
+		ZhName:   req.LocaleName.ZH,
+		ThName:   req.LocaleName.TH,
+		EnName:   req.LocaleName.EN,
+		ZhTwName: req.LocaleName.ZHTW,
+		JaName:   req.LocaleName.JA,
+		KoName:   req.LocaleName.KO,
+		MyName:   req.LocaleName.MY,
+		TrName:   req.LocaleName.TR,
+		SvName:   req.LocaleName.SV,
+	})
+	if err != nil {
+		return 0, errors.WithMessage(err, "保存多语言名称失败")
+	}
+	productPackageRepo.UpdateProductPackage(map[string]any{
+		"name":                  req.LocaleName.ToJson(),
+		"image_file_uuid":       req.ImageFileUuid,
+		"deduct_stock_type":     req.DeductStockType,
+		"num_type":              req.NumType,
+		"unit_uuid":             req.UnitUuid,
+		"dine_tax_uuid":         req.Tax.DineUuid,
+		"category_uuid":         req.CategoryUuid,
+		"takeout_tax_uuid":      req.Tax.TakeoutUuid,
+		"status":                req.Status,
+		"is_show_cashier":       req.Show.IsShowCashier,
+		"is_show_tablet":        req.Show.IsShowTablet,
+		"is_show_kitchen":       req.Show.IsShowKitchen,
+		"is_show_assistant":     req.Show.IsShowAssistant,
+		"is_show_h5":            req.Show.IsShowH5,
+		"is_show_delivery":      req.Show.IsShowDelivery,
+		"price":                 price,
+		"open_discount":         req.Discount.IsEnableMemberDiscount,
+		"open_overall_discount": req.Discount.IsEnableOverallDiscount,
+	}, commonRepo.WhereByUuid(productPackage.Uuid))
+	if err != nil {
+		return 0, errors.WithMessage(err, "保存商品包失败")
+	}
+
+	return req.Uuid, nil
+}
+
+// AddProductPackage 添加商品包
+func (s *productSrv) AddProductPackage(tx *gorm.DB, req req.ProductShopAddReq, price float64) (uint64, error) {
 	commonRepo := repository.NewCommonRepo()
 	multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
 	productRepo := repository.NewProductRepo(tx)
@@ -3405,7 +3633,7 @@ func (s *productSrv) SaveProductPackage(tx *gorm.DB, req req.ProductShopAddReq, 
 }
 
 // SaveProductPackageBom 添加商品bom
-func (s *productSrv) SaveProductPackageBom(tx *gorm.DB, req req.ProductShopAddReq, productPackageUuid uint64, flavorListResult CheckProductFlavorResult, sauceResult CheckProductSauceResult) error {
+func (s *productSrv) SaveProductPackageBom(tx *gorm.DB, productPackageUuid uint64, flavorListResult CheckProductFlavorResult, sauceResult CheckProductSauceResult) error {
 	commonRepo := repository.NewCommonRepo()
 	productPackageRepo := repository.NewProductPackageRepo(tx)
 	productBomRepo := repository.NewProductBomRepo(tx)
@@ -3428,7 +3656,7 @@ func (s *productSrv) SaveProductPackageBom(tx *gorm.DB, req req.ProductShopAddRe
 					ProductPackageUuid: productPackageUuid,
 					StockNum:           99999999,
 					BarcodeValue:       flavor.BarcodeValue,
-					Status:             req.Status,
+					Status:             flavorListResult.Status,
 					IsOpenStock:        1,
 				})
 				if err != nil {
@@ -3442,7 +3670,7 @@ func (s *productSrv) SaveProductPackageBom(tx *gorm.DB, req req.ProductShopAddRe
 					"product_package_uuid": productPackageUuid,
 					"stock_num":            99999999,
 					"barcode_value":        flavor.BarcodeValue,
-					"status":               req.Status,
+					"status":               sauceResult.Status,
 					"is_open_stock":        1,
 				}, commonRepo.WhereByUuid(flavor.BomUuid))
 				if err != nil {
@@ -3468,7 +3696,7 @@ func (s *productSrv) SaveProductPackageBom(tx *gorm.DB, req req.ProductShopAddRe
 					ProductSauceUuid:   sauce.Uuid,
 					ProductPackageUuid: productPackageUuid,
 					StockNum:           99999999,
-					Status:             req.Status,
+					Status:             flavorListResult.Status,
 					IsOpenStock:        1,
 					IsDefaultSelect:    sauce.IsDefaultSelected,
 				})
@@ -3482,7 +3710,7 @@ func (s *productSrv) SaveProductPackageBom(tx *gorm.DB, req req.ProductShopAddRe
 					"product_sauce_uuid":   sauce.Uuid,
 					"product_package_uuid": productPackageUuid,
 					"stock_num":            99999999,
-					"status":               req.Status,
+					"status":               flavorListResult.Status,
 					"is_open_stock":        1,
 					"is_default_select":    sauce.IsDefaultSelected,
 				}, commonRepo.WhereByUuid(sauce.BomUuid))

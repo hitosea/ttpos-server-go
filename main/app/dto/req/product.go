@@ -449,3 +449,100 @@ type ProductShopAddPackageGroupProductReq struct {
 	Num     int    `json:"num"`      // 商品数量
 	Sort    int    `json:"sort"`     // 商品排序
 }
+
+// ProductShopEditReq 商品编辑请求
+type ProductShopEditReq struct {
+	Uuid            uint64                             `json:"uuid"`              // 商品UUID
+	Type            int                                `json:"type"`              // 商品类型 0-商品 1-套餐
+	LocaleName      dto.LocaleResponse                 `json:"locale_name"`       // 商品名称
+	CategoryUuid    uint64                             `json:"category_uuid"`     // 商品分类UUID
+	UnitUuid        uint64                             `json:"unit_uuid"`         // 商品单位UUID
+	Flavors         []ProductShopEditFlavorReq         `json:"flavors"`           // 商品规格列表
+	Tax             ProductShopEditTaxReq              `json:"tax"`               // 商品税类
+	Status          int                                `json:"status"`            // 商品状态 0-下架 1-上架
+	ImageFileUuid   uint64                             `json:"image_file_uuid"`   // 商品图片文件UUID
+	NumType         int                                `json:"num_type"`          // 数量计算方法 0-整数 1-小数
+	Attributes      []ProductShopEditAttributeGroupReq `json:"attributes"`        // 商品属性列表
+	Sauce           ProductShopEditSauceReq            `json:"sauce"`             // 商品加料列表
+	DeductStockType int                                `json:"deduct_stock_type"` // 库存计算方式 0-付款减库存 1-下单减库存
+	Show            ProductShopEditShowReq             `json:"show"`              // 商品显示设置
+	Discount        ProductShopEditDiscountReq         `json:"discount"`          // 商品折扣设置
+	Packages        []ProductShopEditPackageGroupReq   `json:"packages"`          // 商品套餐分组列表
+}
+
+// ProductShopAddFlavorReq 商品规格添加请求
+type ProductShopEditFlavorReq struct {
+	Uuid         uint64  `json:"uuid"`          // 商品规格UUID
+	Price        float64 `json:"price"`         // 商品规格价格
+	BarcodeValue string  `json:"barcode_value"` // 商品加料条码值, 可选
+	BomUuid      uint64  `json:"bom_uuid"`      // 商品BOM UUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID
+	IsDelete     bool    `json:"is_delete"`     // 是否删除, 如果是新增/编辑，则传false，删除时传true
+}
+
+// ProductShopAddTaxReq 商品税类添加请求
+type ProductShopEditTaxReq struct {
+	DineUuid    uint64 `json:"dine_uuid"`    // 堂食税类UUID
+	TakeoutUuid uint64 `json:"takeout_uuid"` // 外带税类UUID
+}
+
+// ProductShopAddSauceReq 商品加料添加请求
+type ProductShopEditSauceReq struct {
+	Sauces       []ProductShopEditSauceItemReq `json:"sauces"`        // 商品加料列表
+	IsMust       int                           `json:"is_must"`       // 是否必选 0-否 1-是
+	MaxSelection int                           `json:"max_selection"` // 最大选择数量
+}
+
+// ProductShopAddSauceItemReq 商品加料项添加请求
+type ProductShopEditSauceItemReq struct {
+	Uuid              uint64 `json:"uuid"`                // 商品加料UUID
+	IsDefaultSelected int    `json:"is_default_selected"` // 是否默认选中 0-否 1-是
+	BomUuid           uint64 `json:"bom_uuid"`            // 商品BOM UUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID
+	IsDelete          bool   `json:"is_delete"`           // 是否删除, 如果是新增/编辑，则传false，删除时传true
+}
+
+// ProductShopAddAttributeGroupReq 商品属性组添加请求
+type ProductShopEditAttributeGroupReq struct {
+	Uuid         uint64                             `json:"uuid"`          // 商品属性组UUID
+	IsMust       int                                `json:"is_must"`       // 商品属性组是否必选 0-否 1-是
+	MaxSelection int                                `json:"max_selection"` // 商品属性组最大选择数量
+	Attributes   []ProductShopEditGroupAttributeReq `json:"attributes"`    // 商品属性列表
+	IsDelete     bool                               `json:"is_delete"`     // 是否删除, 如果是新增/编辑，则传false，删除时传true
+}
+
+// ProductShopAddGroupAttributeReq 商品属性组-属性值添加请求
+type ProductShopEditGroupAttributeReq struct {
+	Uuid              uint64 `json:"uuid"`                // 商品属性组-属性值UUID
+	IsDefaultSelected int    `json:"is_default_selected"` // 商品属性是否默认选中 0-否 1-是
+	IsDelete          bool   `json:"is_delete"`           // 是否删除, 如果是新增/编辑，则传false，删除时传true
+}
+
+// ProductShopAddShowReq 商品显示设置添加请求
+type ProductShopEditShowReq struct {
+	IsShowCashier   int `json:"is_show_cashier"`   // 是否显示在收银端 0-不显示 1-显示
+	IsShowTablet    int `json:"is_show_tablet"`    // 是否显示在平板端 0-不显示 1-显示
+	IsShowKitchen   int `json:"is_show_kitchen"`   // 是否显示在厨显端 0-不显示 1-显示
+	IsShowAssistant int `json:"is_show_assistant"` // 是否显示在点餐助手 0-不显示 1-显示
+	IsShowH5        int `json:"is_show_h5"`        // 是否显示在h5 0-不显示 1-显示
+	IsShowDelivery  int `json:"is_show_delivery"`  // 是否显示在外送 0-不显示 1-显示
+}
+
+// ProductShopAddDiscountReq 商品折扣设置添加请求
+type ProductShopEditDiscountReq struct {
+	IsEnableMemberDiscount  int `json:"is_enable_member_discount"`  // 是否开启会员折扣 0-关闭 1-开启
+	IsEnableOverallDiscount int `json:"is_enable_overall_discount"` // 是否开启整单折扣 0-关闭 1-开启
+}
+
+// ProductShopAddPackageGroupReq 套餐分组添加请求
+type ProductShopEditPackageGroupReq struct {
+	LocaleName dto.LocaleResponse                     `json:"locale_name"` // 套餐分组名称
+	Price      float64                                `json:"price"`       // 套餐分组价格
+	Products   []ProductShopAddPackageGroupProductReq `json:"products"`    // 套餐分组商品列表
+}
+
+// ProductShopAddPackageGroupProductReq 套餐分组商品添加请求
+type ProductShopEditPackageGroupProductReq struct {
+	Uuid    uint64 `json:"uuid"`     // 商品UUID
+	BomUuid uint64 `json:"bom_uuid"` // 商品BOM UUID
+	Num     int    `json:"num"`      // 商品数量
+	Sort    int    `json:"sort"`     // 商品排序
+}
