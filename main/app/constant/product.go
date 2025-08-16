@@ -187,3 +187,9 @@ const (
 	SaleBillSettingServiceFeeBasePrice  = 0 // 商品惠后价
 	SaleBillSettingServiceFeeBaseAmount = 1 // 商品价格合计
 )
+
+// 数量计算方法
+const (
+	ProductNumTypeInteger = 0 // 整数
+	ProductNumTypeDecimal = 1 // 小数
+)

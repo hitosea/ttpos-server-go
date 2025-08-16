@@ -14,6 +14,7 @@ type ITaxRepo interface {
 	CreateTax(tax model.Tax) error
 	GetTaxCategoryList() ([]model.Tax, error)
 	GetTaxCategoryUuidByNameOptimized(name string) (uint64, error)
+	GetTaxCategory(opts ...DBOption) (model.Tax, error)
 }
 
 func NewTaxRepo(db *gorm.DB) ITaxRepo {
@@ -57,4 +58,20 @@ func (r *TaxRepoImpl) GetTaxCategoryUuidByNameOptimized(name string) (uint64, er
 		return 0, apperrors.WithMessage(err)
 	}
 	return taxCategories.Uuid, nil
+}
+
+// GetTaxCategory 获取税种
+func (r *TaxRepoImpl) GetTaxCategory(opts ...DBOption) (model.Tax, error) {
+	var tax model.Tax
+	db := r.db.Model(&model.Tax{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.First(&tax).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return model.Tax{}, nil
+		}
+	}
+	return tax, apperrors.WithMessage(err)
 }

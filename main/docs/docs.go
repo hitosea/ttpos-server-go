@@ -20346,6 +20346,37 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/product/tax/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取商品税类列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品"
+                ],
+                "summary": "获取商品税类列表",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.ProductTaxListResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/product/unit": {
             "get": {
                 "security": [
@@ -20580,6 +20611,43 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/upload_image": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "上传商品图片",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品"
+                ],
+                "summary": "上传商品图片",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "上传商品图片",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
                     }
                 }
             }
@@ -27632,6 +27700,30 @@ const docTemplate = `{
                 }
             }
         },
+        "product_resp.ProductTaxItemResp": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "税类名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "税类UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "product_resp.ProductTaxListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product_resp.ProductTaxItemResp"
+                    }
+                }
+            }
+        },
         "product_resp.ProductUnitDetail": {
             "type": "object",
             "properties": {
@@ -30687,10 +30779,6 @@ const docTemplate = `{
         },
         "req.ProductShopAddAttributeGroupReq": {
             "type": "object",
-            "required": [
-                "attributes",
-                "uuid"
-            ],
             "properties": {
                 "attributes": {
                     "description": "商品属性列表",
@@ -30698,6 +30786,14 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/req.ProductShopAddGroupAttributeReq"
                     }
+                },
+                "is_must": {
+                    "description": "商品属性组是否必选 0-否 1-是",
+                    "type": "integer"
+                },
+                "max_selection": {
+                    "description": "商品属性组最大选择数量",
+                    "type": "integer"
                 },
                 "uuid": {
                     "description": "商品属性组UUID",
@@ -30709,12 +30805,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "is_enable_member_discount": {
-                    "description": "是否开启会员折扣 1-开启 0-关闭",
-                    "type": "boolean"
+                    "description": "是否开启会员折扣 0-关闭 1-开启",
+                    "type": "integer"
                 },
                 "is_enable_overall_discount": {
-                    "description": "是否开启整单折扣 1-开启 0-关闭",
-                    "type": "boolean"
+                    "description": "是否开启整单折扣 0-关闭 1-开启",
+                    "type": "integer"
                 }
             }
         },
@@ -30737,10 +30833,11 @@ const docTemplate = `{
         },
         "req.ProductShopAddGroupAttributeReq": {
             "type": "object",
-            "required": [
-                "uuid"
-            ],
             "properties": {
+                "is_default_selected": {
+                    "description": "商品属性是否默认选中 0-否 1-是",
+                    "type": "integer"
+                },
                 "uuid": {
                     "description": "商品属性组-属性值UUID",
                     "type": "integer"
@@ -30749,12 +30846,6 @@ const docTemplate = `{
         },
         "req.ProductShopAddPackageGroupProductReq": {
             "type": "object",
-            "required": [
-                "bom_uuid",
-                "num",
-                "sort",
-                "uuid"
-            ],
             "properties": {
                 "bom_uuid": {
                     "description": "商品BOM UUID",
@@ -30776,10 +30867,6 @@ const docTemplate = `{
         },
         "req.ProductShopAddPackageGroupReq": {
             "type": "object",
-            "required": [
-                "locale_name",
-                "products"
-            ],
             "properties": {
                 "locale_name": {
                     "description": "套餐分组名称",
@@ -30788,6 +30875,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.LocaleResponse"
                         }
                     ]
+                },
+                "price": {
+                    "description": "套餐分组价格",
+                    "type": "number"
                 },
                 "products": {
                     "description": "套餐分组商品列表",
@@ -30854,12 +30945,13 @@ const docTemplate = `{
                         "$ref": "#/definitions/req.ProductShopAddPackageGroupReq"
                     }
                 },
-                "sauces": {
+                "sauce": {
                     "description": "商品加料列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/req.ProductShopAddSauceReq"
-                    }
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/req.ProductShopAddSauceReq"
+                        }
+                    ]
                 },
                 "show": {
                     "description": "商品显示设置",
@@ -30891,16 +30983,12 @@ const docTemplate = `{
                 }
             }
         },
-        "req.ProductShopAddSauceReq": {
+        "req.ProductShopAddSauceItemReq": {
             "type": "object",
-            "required": [
-                "price",
-                "uuid"
-            ],
             "properties": {
-                "price": {
-                    "description": "商品加料价格",
-                    "type": "number"
+                "is_default_selected": {
+                    "description": "是否默认选中 0-否 1-是",
+                    "type": "integer"
                 },
                 "uuid": {
                     "description": "商品加料UUID",
@@ -30908,41 +30996,57 @@ const docTemplate = `{
                 }
             }
         },
+        "req.ProductShopAddSauceReq": {
+            "type": "object",
+            "properties": {
+                "is_must": {
+                    "description": "是否必选 0-否 1-是",
+                    "type": "integer"
+                },
+                "max_selection": {
+                    "description": "最大选择数量",
+                    "type": "integer"
+                },
+                "sauces": {
+                    "description": "商品加料列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.ProductShopAddSauceItemReq"
+                    }
+                }
+            }
+        },
         "req.ProductShopAddShowReq": {
             "type": "object",
             "properties": {
                 "is_show_assistant": {
-                    "description": "是否显示在点餐助手 1-显示 2-不显示",
-                    "type": "boolean"
+                    "description": "是否显示在点餐助手 0-不显示 1-显示",
+                    "type": "integer"
                 },
                 "is_show_cashier": {
-                    "description": "是否显示在收银端 1-显示 2-不显示",
-                    "type": "boolean"
+                    "description": "是否显示在收银端 0-不显示 1-显示",
+                    "type": "integer"
                 },
                 "is_show_delivery": {
-                    "description": "是否显示在外送 1-显示 2-不显示",
-                    "type": "boolean"
+                    "description": "是否显示在外送 0-不显示 1-显示",
+                    "type": "integer"
                 },
                 "is_show_h5": {
-                    "description": "是否显示在h5 1-显示 2-不显示",
-                    "type": "boolean"
+                    "description": "是否显示在h5 0-不显示 1-显示",
+                    "type": "integer"
                 },
                 "is_show_kitchen": {
-                    "description": "是否显示在厨显端 1-显示 2-不显示",
-                    "type": "boolean"
+                    "description": "是否显示在厨显端 0-不显示 1-显示",
+                    "type": "integer"
                 },
                 "is_show_tablet": {
-                    "description": "是否显示在平板端 1-显示 2-不显示",
-                    "type": "boolean"
+                    "description": "是否显示在平板端 0-不显示 1-显示",
+                    "type": "integer"
                 }
             }
         },
         "req.ProductShopAddTaxReq": {
             "type": "object",
-            "required": [
-                "dine_uuid",
-                "takeout_uuid"
-            ],
             "properties": {
                 "dine_uuid": {
                     "description": "堂食税类UUID",

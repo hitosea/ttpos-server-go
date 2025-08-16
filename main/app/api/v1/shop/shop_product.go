@@ -17,7 +17,8 @@ import (
 
 // ProductHandler 商品处理程序
 type ProductHandler struct {
-	productSrv service.IProductSrv // 商品服务
+	productSrv    service.IProductSrv    // 商品服务
+	uploadFileSrv service.IUploadFileSrv // 文件上传服务
 }
 
 // GetProductCategoryList 获取商品分类列表
@@ -1060,7 +1061,7 @@ func (h *ProductHandler) ProductShopAdd(c *gin.Context) {
 		helper.HandleValidationError(c, err, addReq, nil)
 		return
 	}
-	err := h.productSrv.ProductShopAdd(ctx, addReq)
+	err := h.productSrv.AddProductShop(ctx, addReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1084,6 +1085,38 @@ func (h *ProductHandler) ProductTaxList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// UploadProductImage 上传商品图片
+// @Summary 上传商品图片
+// @Description 上传商品图片
+// @Tags 商家端.商品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param file formData file true "上传商品图片"
+// @Success 200 {object} dto.Response
+// @Router /shop/product/upload_image [post]
+func (h *ProductHandler) UploadProductImage(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	file, err := c.FormFile("file")
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	fileReader, err := file.Open()
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	uploadFileResp, err := h.uploadFileSrv.UploadImage(ctx, fileReader, file.Filename, file.Size, 0, "productImage")
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	helper.Success(c, uploadFileResp)
+}
+
 func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -1100,8 +1133,9 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		productSrv: service.NewProductSrv(
 			dbm,                    // 数据库管理器
 			service.NewLocaleSrv(), // 多语言服务
-			settingSrv,
+			settingSrv,             // 设置服务
 		),
+		uploadFileSrv: service.NewUploadFileSrv(dbm),
 	}
 
 	// 需要认证
@@ -1149,11 +1183,12 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		// 获取单规格商品列表
 		privateApi.GET("/product/single/list", wrapper.GetProductSingleList) // 获取单规格商品列表
 
-		privateApi.GET("/product/list", wrapper.GetProductShopList)   // 获取商品列表
-		privateApi.POST("/product/sort", wrapper.SortProductShopList) // 排序商品列表
-		privateApi.GET("/product/detail", wrapper.GetProductDetail)   // 获取商品详情
-		privateApi.POST("/product/status", wrapper.ProductShopStatus) // 修改商品状态
-		privateApi.POST("/product/add", wrapper.ProductShopAdd)       // 添加商品
-		privateApi.GET("/product/tax/list", wrapper.ProductTaxList)   // 获取商品税类列表
+		privateApi.GET("/product/list", wrapper.GetProductShopList)          // 获取商品列表
+		privateApi.POST("/product/sort", wrapper.SortProductShopList)        // 排序商品列表
+		privateApi.GET("/product/detail", wrapper.GetProductDetail)          // 获取商品详情
+		privateApi.POST("/product/status", wrapper.ProductShopStatus)        // 修改商品状态
+		privateApi.POST("/product/add", wrapper.ProductShopAdd)              // 添加商品
+		privateApi.GET("/product/tax/list", wrapper.ProductTaxList)          // 获取商品税类列表
+		privateApi.POST("/product/upload_image", wrapper.UploadProductImage) // 上传商品图片
 	}
 }

@@ -10,6 +10,7 @@ import (
 type IProductBomRepo interface {
 	IProductBomQueryRepo
 	CreateProductBom(productBom model.ProductBom) (*model.ProductBom, error)
+	UpdateProductBom(data map[string]any, opts ...DBOption) error
 	UpdateProductBomStockNum(warehouseOutFormItems []*model.WarehouseOutFormItem) error // 更新规格商品或小料的库存数量
 	UpdateProductBoms(productBoms []*model.ProductBom) error                            // 更新ProductBom
 	CreateProductBoms(productBoms []model.ProductBom) error                             // 创建ProductBom
@@ -43,6 +44,18 @@ func (r *productBomRepoImpl) CreateProductBom(productBom model.ProductBom) (*mod
 		return nil, errors.WithMessage(err)
 	}
 	return &productBom, nil
+}
+
+func (r *productBomRepoImpl) UpdateProductBom(data map[string]any, opts ...DBOption) error {
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Model(&model.ProductBom{}).Where("uuid = ?", data["uuid"]).Updates(data).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
 }
 
 func (r *productBomRepoImpl) GetProductBom(opts ...DBOption) (*model.ProductBom, error) {

@@ -2353,6 +2353,22 @@ definitions:
       meta:
         $ref: '#/definitions/dto.PageResponse'
     type: object
+  product_resp.ProductTaxItemResp:
+    properties:
+      name:
+        description: 税类名称
+        type: string
+      uuid:
+        description: 税类UUID
+        type: integer
+    type: object
+  product_resp.ProductTaxListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductTaxItemResp'
+        type: array
+    type: object
   product_resp.ProductUnitDetail:
     properties:
       locale_name:
@@ -4505,21 +4521,24 @@ definitions:
         items:
           $ref: '#/definitions/req.ProductShopAddGroupAttributeReq'
         type: array
+      is_must:
+        description: 商品属性组是否必选 0-否 1-是
+        type: integer
+      max_selection:
+        description: 商品属性组最大选择数量
+        type: integer
       uuid:
         description: 商品属性组UUID
         type: integer
-    required:
-    - attributes
-    - uuid
     type: object
   req.ProductShopAddDiscountReq:
     properties:
       is_enable_member_discount:
-        description: 是否开启会员折扣 1-开启 0-关闭
-        type: boolean
+        description: 是否开启会员折扣 0-关闭 1-开启
+        type: integer
       is_enable_overall_discount:
-        description: 是否开启整单折扣 1-开启 0-关闭
-        type: boolean
+        description: 是否开启整单折扣 0-关闭 1-开启
+        type: integer
     type: object
   req.ProductShopAddFlavorReq:
     properties:
@@ -4535,11 +4554,12 @@ definitions:
     type: object
   req.ProductShopAddGroupAttributeReq:
     properties:
+      is_default_selected:
+        description: 商品属性是否默认选中 0-否 1-是
+        type: integer
       uuid:
         description: 商品属性组-属性值UUID
         type: integer
-    required:
-    - uuid
     type: object
   req.ProductShopAddPackageGroupProductReq:
     properties:
@@ -4555,11 +4575,6 @@ definitions:
       uuid:
         description: 商品UUID
         type: integer
-    required:
-    - bom_uuid
-    - num
-    - sort
-    - uuid
     type: object
   req.ProductShopAddPackageGroupReq:
     properties:
@@ -4567,14 +4582,14 @@ definitions:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 套餐分组名称
+      price:
+        description: 套餐分组价格
+        type: number
       products:
         description: 套餐分组商品列表
         items:
           $ref: '#/definitions/req.ProductShopAddPackageGroupProductReq'
         type: array
-    required:
-    - locale_name
-    - products
     type: object
   req.ProductShopAddReq:
     properties:
@@ -4613,11 +4628,10 @@ definitions:
         items:
           $ref: '#/definitions/req.ProductShopAddPackageGroupReq'
         type: array
-      sauces:
+      sauce:
+        allOf:
+        - $ref: '#/definitions/req.ProductShopAddSauceReq'
         description: 商品加料列表
-        items:
-          $ref: '#/definitions/req.ProductShopAddSauceReq'
-        type: array
       show:
         allOf:
         - $ref: '#/definitions/req.ProductShopAddShowReq'
@@ -4636,38 +4650,49 @@ definitions:
         description: 商品单位UUID
         type: integer
     type: object
-  req.ProductShopAddSauceReq:
+  req.ProductShopAddSauceItemReq:
     properties:
-      price:
-        description: 商品加料价格
-        type: number
+      is_default_selected:
+        description: 是否默认选中 0-否 1-是
+        type: integer
       uuid:
         description: 商品加料UUID
         type: integer
-    required:
-    - price
-    - uuid
+    type: object
+  req.ProductShopAddSauceReq:
+    properties:
+      is_must:
+        description: 是否必选 0-否 1-是
+        type: integer
+      max_selection:
+        description: 最大选择数量
+        type: integer
+      sauces:
+        description: 商品加料列表
+        items:
+          $ref: '#/definitions/req.ProductShopAddSauceItemReq'
+        type: array
     type: object
   req.ProductShopAddShowReq:
     properties:
       is_show_assistant:
-        description: 是否显示在点餐助手 1-显示 2-不显示
-        type: boolean
+        description: 是否显示在点餐助手 0-不显示 1-显示
+        type: integer
       is_show_cashier:
-        description: 是否显示在收银端 1-显示 2-不显示
-        type: boolean
+        description: 是否显示在收银端 0-不显示 1-显示
+        type: integer
       is_show_delivery:
-        description: 是否显示在外送 1-显示 2-不显示
-        type: boolean
+        description: 是否显示在外送 0-不显示 1-显示
+        type: integer
       is_show_h5:
-        description: 是否显示在h5 1-显示 2-不显示
-        type: boolean
+        description: 是否显示在h5 0-不显示 1-显示
+        type: integer
       is_show_kitchen:
-        description: 是否显示在厨显端 1-显示 2-不显示
-        type: boolean
+        description: 是否显示在厨显端 0-不显示 1-显示
+        type: integer
       is_show_tablet:
-        description: 是否显示在平板端 1-显示 2-不显示
-        type: boolean
+        description: 是否显示在平板端 0-不显示 1-显示
+        type: integer
     type: object
   req.ProductShopAddTaxReq:
     properties:
@@ -4677,9 +4702,6 @@ definitions:
       takeout_uuid:
         description: 外带税类UUID
         type: integer
-    required:
-    - dine_uuid
-    - takeout_uuid
     type: object
   req.ProductShopCategoryAddReq:
     properties:
@@ -23367,6 +23389,25 @@ paths:
       summary: 修改商品状态
       tags:
       - 商家端.商品
+  /shop/product/tax/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取商品税类列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductTaxListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品税类列表
+      tags:
+      - 商家端.商品
   /shop/product/unit:
     delete:
       consumes:
@@ -23514,6 +23555,29 @@ paths:
       summary: 排序商品单位
       tags:
       - 商家端.商品单位
+  /shop/product/upload_image:
+    post:
+      consumes:
+      - application/json
+      description: 上传商品图片
+      parameters:
+      - description: 上传商品图片
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 上传商品图片
+      tags:
+      - 商家端.商品
   /shop/product_bom/card/add:
     post:
       consumes:

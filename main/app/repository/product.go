@@ -109,6 +109,7 @@ type IProductQueryRepo interface {
 	GetProductAttributeGroups(opts ...DBOption) ([]model.ProductAttributeGroup, error)                                             // 获取商品属性分组列表
 	GetProductAttributeGroup(opts ...DBOption) (model.ProductAttributeGroup, error)                                                // 获取商品属性分组详情
 	GetProductAttributes(opts ...DBOption) ([]model.ProductAttribute, error)                                                       // 获取商品属性列表
+	GetProductAttribute(opts ...DBOption) (model.ProductAttribute, error)                                                          // 获取商品属性详情
 	GetProductPackageAttributeGroups(opts ...DBOption) ([]model.ProductPackageAttributeGroup, error)                               // 获取商品包属性组列表
 
 	PaginateGetProductFlavorList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductFlavor, int64, error) // 分页获取商品规格列表
@@ -119,6 +120,7 @@ type IProductQueryRepo interface {
 
 	PaginateGetProductShopList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductPackage, int64, error) // 分页获取商品列表（商家端）
 	GetProductShopList(opts ...DBOption) ([]model.ProductPackage, error)                                          // 获取商品列表（商家端）
+	GetProductShopMaxSort(opts ...DBOption) (int64, error)                                                        // 获取商品最大排序
 }
 
 // productRepo 商品仓库
@@ -988,6 +990,7 @@ func (r *productRepo) WithProductAttributesProductPackageAttributesProductPackag
 	}
 }
 
+// GetProductAttributes 获取商品属性列表
 func (r *productRepo) GetProductAttributes(opts ...DBOption) ([]model.ProductAttribute, error) {
 	var attributes []model.ProductAttribute
 	db := r.db.Model(&model.ProductAttribute{}).Scopes(NotDeleted)
@@ -998,6 +1001,18 @@ func (r *productRepo) GetProductAttributes(opts ...DBOption) ([]model.ProductAtt
 	return attributes, errors.WithMessage(err)
 }
 
+// GetProductAttribute 获取商品属性详情
+func (r *productRepo) GetProductAttribute(opts ...DBOption) (model.ProductAttribute, error) {
+	var attribute model.ProductAttribute
+	db := r.db.Model(&model.ProductAttribute{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.First(&attribute).Error
+	return attribute, errors.WithMessage(err)
+}
+
+// GetProductPackageAttributeGroups 获取产品包属性组列表
 func (r *productRepo) GetProductPackageAttributeGroups(opts ...DBOption) ([]model.ProductPackageAttributeGroup, error) {
 	var attributeGroups []model.ProductPackageAttributeGroup
 	db := r.db.Model(&model.ProductPackageAttributeGroup{}).Scopes(NotDeleted)
@@ -1129,7 +1144,7 @@ func (r *productRepo) CheckBarcodeExist(barcode string) bool {
 
 // CheckBarcodeFormat 检查条形码格式
 func (r *productRepo) CheckBarcodeFormat(barcode string) bool {
-	return regexp.MustCompile(`^[0-9]{12,13}$`).MatchString(barcode)
+	return regexp.MustCompile(`^[0-9]{1,13}$`).MatchString(barcode)
 }
 
 // CheckPrice 检查价格范围
@@ -1192,4 +1207,15 @@ func (r *productRepo) WhereAttributeGroupUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("attribute_group_uuid = ?", uuid)
 	}
+}
+
+// GetProductShopMaxSort 获取商品最大排序
+func (r *productRepo) GetProductShopMaxSort(opts ...DBOption) (int64, error) {
+	var sort sql.NullInt64
+	db := r.db.Model(&model.ProductPackage{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Select("MAX(sort) as sort").Find(&sort).Error
+	return sort.Int64, errors.WithMessage(err)
 }

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -16,6 +17,7 @@ import (
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/spf13/viper"
+	"gorm.io/gorm"
 )
 
 // IUploadFileSrv 上传文件服务接口
@@ -24,6 +26,8 @@ type IUploadFileSrv interface {
 	UploadImage(ctx context.Context, fileReader io.Reader, fileName string, fileSize int64, groupId uint64, source string) (*resp.UploadFileResp, error)
 	// UploadVideo 上传视频
 	UploadVideo(ctx context.Context, fileReader io.Reader, fileName string, fileSize int64, groupId uint64, maxSize int) (*resp.UploadFileResp, error)
+	// GetUploadFile 获取文件
+	GetUploadFile(ctx context.Context, uuid uint64) (*resp.UploadFileResp, error)
 }
 
 // UploadFileSrvImpl 上传文件服务实现
@@ -103,6 +107,35 @@ func (s *UploadFileSrvImpl) UploadVideo(ctx context.Context, fileReader io.Reade
 	}
 
 	return s.uploadFile(ctx, fileReader, fileName, fileSize, groupId, "video", 0)
+}
+
+// GetUploadFile 获取文件
+func (s *UploadFileSrvImpl) GetUploadFile(ctx context.Context, uuid uint64) (*resp.UploadFileResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	var uploadFile model.File
+	err := db.Model(&model.File{}).Where("uuid = ? AND delete_time = 0", uuid).First(&uploadFile).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("文件不存在")
+		}
+		return nil, fmt.Errorf("获取文件失败: %v", err)
+	}
+	return &resp.UploadFileResp{
+		Uuid:          uploadFile.Uuid,
+		GroupUuid:     uploadFile.GroupUuid,
+		Storage:       uploadFile.Storage,
+		FileUrl:       uploadFile.FileUrl,
+		FileName:      uploadFile.FileName,
+		SaveName:      uploadFile.SaveName,
+		FileSize:      int64(uploadFile.FileSize),
+		FileType:      uploadFile.FileType,
+		Extension:     uploadFile.Extension,
+		RealName:      uploadFile.RealName,
+		IndexFileName: uploadFile.IndexFileName,
+		UrlParam:      uploadFile.UrlParam,
+		FilePath:      uploadFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request)),
+		CreateTime:    int(uploadFile.CreateTime),
+	}, nil
 }
 
 // uploadFile 通用上传文件方法
