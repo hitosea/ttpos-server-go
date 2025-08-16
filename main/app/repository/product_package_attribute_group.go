@@ -10,6 +10,7 @@ import (
 
 type IProductPackageAttributeGroupRepo interface {
 	GetProductPackageAttributeGroup(opts ...DBOption) (*model.ProductPackageAttributeGroup, error)
+	GetProductPackageAttributeGroups(opts ...DBOption) ([]model.ProductPackageAttributeGroup, error)
 	CreateProductPackageAttributeGroups(productPackageAttributeGroups []model.ProductPackageAttributeGroup) error
 	DeleteProductPackageAttributeGroup(opts ...DBOption) error
 	UpdateProductPackageAttributeGroup(data map[string]any, opts ...DBOption) error
@@ -37,6 +38,22 @@ func (r *productPackageAttributeGroupRepoImpl) GetProductPackageAttributeGroup(o
 	}
 
 	return &productPackageAttributeGroup, nil
+}
+
+func (r *productPackageAttributeGroupRepoImpl) GetProductPackageAttributeGroups(opts ...DBOption) ([]model.ProductPackageAttributeGroup, error) {
+	var productPackageAttributeGroups []model.ProductPackageAttributeGroup
+	db := r.db
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	result := db.Find(&productPackageAttributeGroups)
+	if result.Error != nil {
+		return nil, errors.WithMessage(result.Error)
+	}
+
+	return productPackageAttributeGroups, nil
 }
 
 func (r *productPackageAttributeGroupRepoImpl) CreateProductPackageAttributeGroups(productPackageAttributeGroups []model.ProductPackageAttributeGroup) error {

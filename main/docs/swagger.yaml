@@ -4775,6 +4775,14 @@ definitions:
     required:
     - list
     type: object
+  req.ProductShopDeleteReq:
+    properties:
+      uuid:
+        description: 商品UUID
+        type: integer
+    required:
+    - uuid
+    type: object
   req.ProductShopEditAttributeGroupReq:
     properties:
       attributes:
@@ -23083,6 +23091,30 @@ paths:
       summary: 排序商品分类
       tags:
       - 商家端.商品分类
+  /shop/product/delete:
+    delete:
+      consumes:
+      - application/json
+      description: 删除商品
+      parameters:
+      - description: 商品删除请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductShopDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 删除商品
+      tags:
+      - 商家端.商品
   /shop/product/detail:
     get:
       consumes:

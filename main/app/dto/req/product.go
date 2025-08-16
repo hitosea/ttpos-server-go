@@ -546,3 +546,8 @@ type ProductShopEditPackageGroupProductReq struct {
 	Num     int    `json:"num"`      // 商品数量
 	Sort    int    `json:"sort"`     // 商品排序
 }
+
+// ProductShopDeleteReq 商品删除请求
+type ProductShopDeleteReq struct {
+	Uuid uint64 `json:"uuid" binding:"required"` // 商品UUID
+}

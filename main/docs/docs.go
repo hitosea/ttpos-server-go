@@ -19533,6 +19533,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/product/delete": {
+            "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除商品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品"
+                ],
+                "summary": "删除商品",
+                "parameters": [
+                    {
+                        "description": "商品删除请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductShopDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/product/detail": {
             "get": {
                 "security": [
@@ -31202,6 +31241,18 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/req.ProductShopCategorySortItem"
                     }
+                }
+            }
+        },
+        "req.ProductShopDeleteReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "商品UUID",
+                    "type": "integer"
                 }
             }
         },

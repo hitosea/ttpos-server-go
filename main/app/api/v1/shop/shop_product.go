@@ -1095,6 +1095,32 @@ func (h *ProductHandler) ProductShopEdit(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// ProductShopDelete 删除商品
+// @Summary 删除商品
+// @Description 删除商品
+// @Tags 商家端.商品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductShopDeleteReq true "商品删除请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/delete [delete]
+func (h *ProductHandler) ProductShopDelete(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	deleteReq := req.ProductShopDeleteReq{}
+	if err := c.ShouldBindJSON(&deleteReq); err != nil {
+		helper.HandleValidationError(c, err, deleteReq, nil)
+		return
+	}
+	err := h.productSrv.DeleteProductShop(ctx, deleteReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
 // ProductTaxList 获取商品税类列表
 // @Summary 获取商品税类列表
 // @Description 获取商品税类列表
@@ -1215,6 +1241,7 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/product/status", wrapper.ProductShopStatus)        // 修改商品状态
 		privateApi.POST("/product/add", wrapper.ProductShopAdd)              // 添加商品
 		privateApi.POST("/product/edit", wrapper.ProductShopEdit)            // 编辑商品
+		privateApi.DELETE("/product/delete", wrapper.ProductShopDelete)      // 删除商品
 		privateApi.GET("/product/tax/list", wrapper.ProductTaxList)          // 获取商品税类列表
 		privateApi.POST("/product/upload_image", wrapper.UploadProductImage) // 上传商品图片
 	}
