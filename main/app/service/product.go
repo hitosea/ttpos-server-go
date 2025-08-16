@@ -84,6 +84,7 @@ type IProductSrv interface {
 	GetProductDetail(ctx context.Context, req req.ProductDetailReq) (*product_resp.ProductDetailResp, error)       // 获取商品详情
 	ProductShopStatus(ctx context.Context, req req.ProductShopStatusReq) error                                     // 修改商品状态
 	ProductShopAdd(ctx context.Context, req req.ProductShopAddReq) error                                           // 添加商品
+	ProductTaxList(ctx context.Context) product_resp.ProductTaxListResp
 }
 
 type productSrv struct {
@@ -3172,4 +3173,28 @@ func (s *productSrv) ProductShopStatus(ctx context.Context, req req.ProductShopS
 func (s *productSrv) ProductShopAdd(ctx context.Context, req req.ProductShopAddReq) error {
 
 	return nil
+}
+
+// ProductTaxList 获取商品税类列表
+func (s *productSrv) ProductTaxList(ctx context.Context) product_resp.ProductTaxListResp {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	taxRepo := repository.NewTaxRepo(db)
+
+	list := make([]product_resp.ProductTaxItemResp, 0)
+	taxes, err := taxRepo.GetTaxCategoryList()
+	if err != nil {
+		return product_resp.ProductTaxListResp{
+			List: list,
+		}
+	}
+	for _, tax := range taxes {
+		list = append(list, product_resp.ProductTaxItemResp{
+			Uuid: tax.Uuid,
+			Name: tax.Name,
+		})
+	}
+
+	return product_resp.ProductTaxListResp{
+		List: list,
+	}
 }

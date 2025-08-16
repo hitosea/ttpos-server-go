@@ -1068,6 +1068,22 @@ func (h *ProductHandler) ProductShopAdd(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// ProductTaxList 获取商品税类列表
+// @Summary 获取商品税类列表
+// @Description 获取商品税类列表
+// @Tags 商家端.商品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} product_resp.ProductTaxListResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/tax/list [get]
+func (h *ProductHandler) ProductTaxList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	res := h.productSrv.ProductTaxList(ctx)
+	helper.Success(c, res)
+}
+
 func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -1138,5 +1154,6 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/product/detail", wrapper.GetProductDetail)   // 获取商品详情
 		privateApi.POST("/product/status", wrapper.ProductShopStatus) // 修改商品状态
 		privateApi.POST("/product/add", wrapper.ProductShopAdd)       // 添加商品
+		privateApi.GET("/product/tax/list", wrapper.ProductTaxList)   // 获取商品税类列表
 	}
 }

@@ -490,3 +490,14 @@ type ProductShopListItemTagResp struct {
 type ProductShopListItemUnitResp struct {
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品单位名称
 }
+
+// ProductTaxListResp 商品税类列表响应
+type ProductTaxListResp struct {
+	List []ProductTaxItemResp `json:"list"`
+}
+
+// ProductTaxItemResp 商品税类列表项响应
+type ProductTaxItemResp struct {
+	Uuid uint64 `json:"uuid"` // 税类UUID
+	Name string `json:"name"` // 税类名称
+}
