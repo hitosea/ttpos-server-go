@@ -455,6 +455,9 @@ type ProductDetailResp struct {
 
 	OpenDiscount        bool `json:"open_discount"`         // 是否开启会员折扣 1-开启 0-关闭
 	OpenOverallDiscount bool `json:"open_overall_discount"` // 整单折扣 1-开启 0-关闭
+
+	SauceRequired     bool `json:"sauce_required"`      // 是否必选小料 1-是 0-否
+	SauceMaxSelection uint `json:"sauce_max_selection"` // 小料最大选择数量
 }
 
 // ProductListResp 商品列表响应

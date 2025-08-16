@@ -3124,6 +3124,9 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 		OpenDiscount:        productPackage.GetOpenDiscount(),
 		OpenOverallDiscount: productPackage.GetOpenOverallDiscount(),
 
+		SauceRequired:     productPackage.SauceRequired == 1,
+		SauceMaxSelection: productPackage.SauceMaxSelection,
+
 		Flavors: product_resp.ProductFlavorList{
 			List: productPackage.GetRespFlavorList(),
 		},
