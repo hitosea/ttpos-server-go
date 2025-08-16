@@ -3187,7 +3187,7 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 		return err
 	}
 	// 检查商品名称
-	if err := productCheckSrv.CheckProductName(ctx, req.LocaleName); err != nil {
+	if err := productCheckSrv.CheckProductName(ctx, 0, req.LocaleName); err != nil {
 		return err
 	}
 	// 检查商品分类
@@ -3350,7 +3350,7 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 		return err
 	}
 	// 检查商品名称
-	if err := productCheckSrv.CheckProductName(ctx, req.LocaleName); err != nil {
+	if err := productCheckSrv.CheckProductName(ctx, req.Uuid, req.LocaleName); err != nil {
 		return err
 	}
 	// 检查商品分类
@@ -3811,7 +3811,7 @@ func (s *productSrv) SaveProductPackageAttribute(tx *gorm.DB, attributeGroupList
 					if attribute.IsDelete {
 						err := productPackageAttributeRepo.DeleteProductPackageAttribute(
 							commonRepo.WhereByProductPackageAttributeGroupUuid(productPackageAttributeGroup.Uuid),
-							commonRepo.WhereByUuid(attribute.Uuid))
+							commonRepo.WhereByAttributeUuid(attribute.Uuid))
 						if err != nil {
 							return errors.WithMessage(err, "删除商品包关联属性值失败")
 						}

@@ -96,7 +96,9 @@ func (r *productPackageAttributeRepoImpl) DeleteProductPackageAttribute(opts ...
 		db = opt(db)
 	}
 
-	return db.Model(&model.ProductPackageAttribute{}).Update("delete_time", time.Now().Unix()).Error
+	return db.Model(&model.ProductPackageAttribute{}).Updates(map[string]any{
+		"delete_time": time.Now().Unix(),
+	}).Error
 }
 
 func (r *productPackageAttributeRepoImpl) UpdateProductPackageAttribute(data map[string]any, opts ...DBOption) error {

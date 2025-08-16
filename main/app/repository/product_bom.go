@@ -51,7 +51,7 @@ func (r *productBomRepoImpl) UpdateProductBom(data map[string]any, opts ...DBOpt
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	err := db.Model(&model.ProductBom{}).Where("uuid = ?", data["uuid"]).Updates(data).Error
+	err := db.Model(&model.ProductBom{}).Updates(data).Error
 	if err != nil {
 		return errors.WithMessage(err)
 	}

@@ -18,7 +18,7 @@ import (
 // IProductCheckSrv 定义产品检查服务接口
 type IProductCheckSrv interface {
 	CheckProductType(typ int) error                                                                                             // 检查商品类型
-	CheckProductName(ctx context.Context, localeName dto.LocaleResponse) error                                                  // 检查商品名称
+	CheckProductName(ctx context.Context, uuid uint64, localeName dto.LocaleResponse) error                                     // 检查商品名称
 	CheckProductCategory(db *gorm.DB, categoryUuid uint64) error                                                                // 检查商品分类
 	CheckProductUnique(db *gorm.DB, uuid uint64) error                                                                          // 检查商品唯一性
 	CheckProductFlavor(db *gorm.DB, flavors []CheckProductFlavorParam) (*CheckProductFlavorResult, error)                       // 检查商品规格
@@ -63,7 +63,7 @@ func (s *productCheckSrv) CheckProductType(typ int) error {
 	return nil
 }
 
-func (s *productCheckSrv) CheckProductName(ctx context.Context, localeName dto.LocaleResponse) error {
+func (s *productCheckSrv) CheckProductName(ctx context.Context, uuid uint64, localeName dto.LocaleResponse) error {
 	// 商品名称
 	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
 	if !localeName.CheckRequiredLocale(storeLanguages) {
@@ -74,6 +74,7 @@ func (s *productCheckSrv) CheckProductName(ctx context.Context, localeName dto.L
 	}
 	checkService := NewCheckNameSrv(s.dbm)
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
+		Uuid:   uuid,
 		Source: "product",
 		Names:  checkService.MakeCheckNameList(ctx, localeName),
 	})
