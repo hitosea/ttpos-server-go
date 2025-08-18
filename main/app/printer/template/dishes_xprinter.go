@@ -997,6 +997,13 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 	if mdPrinter.PrinterType != nil {
 		printerType = mdPrinter.PrinterType.Key
 	}
+
+	// 是否是商米打印机
+	isSunmi := false
+	if printerType == PrinterTypeSunmiLan || printerType == PrinterTypeSunmiCloud || printerType == PrinterTypeCashierSunmi || printerType == PrinterTypeCodesoftWifi {
+		isSunmi = true
+	}
+
 	// 是否有打印内容
 	isPrinter := false
 
@@ -1102,12 +1109,20 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 		printer.SetCharacterSize(2, 2)
 		productNum := "x" + t.base.FloatToString(product.TotalNum)
 		if len(productNum) >= 3 {
-			w := 20 - (len(productNum) - 4)
-			printer.AppendText(t.base.PrintText(
-				productName, "", productNum,
-				w, w, 0, 0, 2,
-			))
-			printer.LineFeed()
+			if isSunmi {
+				printer.SetupColumns(
+					[]int{490 - (len(productNum)-3)*30, pkg.AlignLeft, 0},
+					[]int{0, pkg.AlignRight, 0},
+				)
+				printer.PrintInColumns(productName, productNum)
+			} else {
+				w := 20 - (len(productNum) - 3)
+				printer.AppendText(t.base.PrintText(
+					productName, "", productNum,
+					w, w, 0, 0, 2,
+				))
+				printer.LineFeed()
+			}
 		} else {
 			printer.PrintInColumns(productName, productNum)
 		}
