@@ -25,7 +25,7 @@ const (
 
 type GetSupplierListReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CompanyAbbr   string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写编码"` // 公司缩写编码
+	CompanyAbbr   string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写编码,必填"` // 公司缩写编码,必填
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

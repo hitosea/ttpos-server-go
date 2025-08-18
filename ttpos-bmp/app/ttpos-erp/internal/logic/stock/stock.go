@@ -409,18 +409,21 @@ func (s *sStock) CreateMaterialRequest(ctx context.Context, req *stock.SaveMater
 	if err != nil {
 		return nil, err
 	}
+
 	data := g.MapStrAny{
-		"naming_series":         erp.DefaultMaterialRequestSeries,
-		"transaction_date":      gtime.New(req.TransactionDate).Format("Y-m-d"),
-		"company":               companyName.CompanyName,
-		"material_request_type": erp.StockEntryTypeMaterialTransfer,
+		"naming_series":    erp.DefaultMaterialRequestSeries,
+		"transaction_date": gtime.New(req.TransactionDate).Format("Y-m-d"),
+		"company":          companyName.CompanyName,
 	}
+
+	if len(req.Purpose) > 0 {
+		data["material_request_type"] = req.Purpose
+	} else {
+		data["material_request_type"] = erp.StockEntryTypePurchase
+	}
+
 	itemList := make([]g.MapStrAny, 0)
 	for _, item := range req.Items {
-		//scheduleDate := req.RequiredBy.AsTime()
-		//if item.ScheduleDate == nil {
-		//	scheduleDate = req.TransactionDate.AsTime()
-		//}
 		itemList = append(itemList, g.MapStrAny{
 			"item_code":     item.ItemCode,
 			"qty":           item.Qty,
@@ -439,6 +442,13 @@ func (s *sStock) CreateMaterialRequest(ctx context.Context, req *stock.SaveMater
 		return nil, err
 	}
 	if j.Contains("data") {
+		//创建后提交
+		//提交采购订单
+		_, err = service.Document().ChangeDocStatus(ctx, "Material Request", j.Get("data.name").String(), 1)
+		if err != nil {
+			return nil, gerror.Wrapf(err, "提交物料请求失败")
+		}
+
 		res = &stock.SaveMaterialRequestResp{
 			MaterialRequestName: j.Get("data.name").String(),
 		}

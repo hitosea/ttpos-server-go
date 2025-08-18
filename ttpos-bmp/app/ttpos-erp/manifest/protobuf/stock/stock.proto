@@ -30,11 +30,14 @@ message SaveMaterialRequestReq {
   string company_abbr = 2;      // 公司缩写,必填
   string branch = 3;      // 分支名称 必填
   int64 required_by = 4;      // 需求时间,必填
-  repeated MaterialRequestItem items = 5;      // 物品列表，
+  string purpose = 5;      // 申请目的,可选 默认 Purchase
+  string supplier = 6;      // 供应商名称, purpose 为 Purchases时 必填
+  repeated MaterialRequestItem items = 7;      // 物品列表，
 }
 
 message SaveMaterialRequestResp {
   string material_request_name = 1;      // 物品申请单名称
+  string purchase_order = 2;      // 采购订单号
 }
 
 message GetMaterialRequestListReq {

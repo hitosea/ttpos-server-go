@@ -3,12 +3,14 @@ package buying
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
+	dto "ttpos-bmp/app/ttpos-erp/internal/model/dto/buying"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/util/gconv"
 )
 
 type sBuying struct {
@@ -69,4 +71,49 @@ func (s *sBuying) parseSupplierListResponse(bytes []byte) ([]*buying.SupplierInf
 		})
 	}
 	return supplierList, nil
+}
+
+func (s *sBuying) CreatePurchaseFromMq(ctx context.Context, req *dto.CreatePurchaseFromMqReq) (res *erp.PurchaseOrder, err error) {
+
+	resp, err := service.Rpc().Execute(ctx, &erp.ErpReq{
+		Method: "frappe.model.mapper.make_mapped_doc",
+	}, g.MapStrStr{
+		"method":      "erpnext.stock.doctype.material_request.material_request.make_purchase_order",
+		"source_name": req.SourceName,
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建采购订单失败")
+	}
+
+	// 解析响应数据
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析采购订单响应失败")
+	}
+	purchaseOrder := &erp.PurchaseOrder{}
+	j.Get("data").Scan(purchaseOrder)
+
+	purchaseOrder.Supplier = req.Supplier
+
+	//创建采购订单
+	resp, err = service.Document().Create(ctx, "Purchase Order", purchaseOrder)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建采购订单失败")
+	}
+
+	// 解析响应数据
+	j, err = gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析采购订单响应失败")
+	}
+	res = &erp.PurchaseOrder{}
+	gconv.Scan(purchaseOrder, res)
+	res.Name = j.Get("data.name").String()
+
+	//提交采购订单
+	_, err = service.Document().ChangeDocStatus(ctx, "Purchase Order", res.Name, 1)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "提交采购订单失败")
+	}
+	return
 }

@@ -8,11 +8,14 @@ package service
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
+	dto "ttpos-bmp/app/ttpos-erp/internal/model/dto/buying"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 )
 
 type (
 	IBuying interface {
 		GetSupplierList(ctx context.Context, req *buying.GetSupplierListReq) (*buying.GetSupplierListResp, error)
+		CreatePurchaseFromMq(ctx context.Context, req *dto.CreatePurchaseFromMqReq) (res *erp.PurchaseOrder, err error)
 	}
 )
 

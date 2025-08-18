@@ -85,6 +85,9 @@ type StockEntryDetail struct {
 
 // StockEntryConstants 库存变动常量
 const (
+	// StockEntryTypePurchase 采购
+	StockEntryTypePurchase = "Purchase"
+
 	// StockEntryTypeMaterialReceipt 物料入库
 	StockEntryTypeMaterialReceipt = "Material Receipt"
 	// StockEntryTypeMaterialIssue 物料出库
