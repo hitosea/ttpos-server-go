@@ -62,7 +62,7 @@ func (t *dishesImgTemplate) CompleteOrder(
 		img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("桌号"), order.SerialNo, mealNumStr))
 		img.SetTextLineHeight(45)
 		img.LineFeed(1, 20)
-	} else if order.IsTakeout() {
+	} else if order.IsTakeoutBill() {
 		img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
 	} else {
 		img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
@@ -128,7 +128,7 @@ func (t *dishesImgTemplate) CompleteOrder(
 		productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 		// 打印产品名称和数量
 		totalNum := "x" + t.base.FloatToString(product.TotalNum)
-		productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*7), 480)
+		productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*utils.IfInt(len(totalNum) > 5, 10, 7)), 480)
 		if tmp == 2 || tmp == 3 {
 			img.PrintInColumns(
 				pkg.ColumnConfig{Text: productName, Width: productNameWidth, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
@@ -222,7 +222,7 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 			img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("桌号"), order.SerialNo, mealNumStr))
 			img.SetTextLineHeight(45)
 			img.LineFeed(1, 20)
-		} else if order.IsTakeout() {
+		} else if order.IsTakeoutBill() {
 			img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo)
 		} else {
 			img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo)
@@ -262,7 +262,7 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 				}
 				img.LineFeed(1, 12)
 				totalNum := "x" + t.base.FloatToString(num)
-				productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*7), 480)
+				productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*utils.IfInt(len(totalNum) > 5, 10, 7)), 480)
 				img.PrintInColumns(
 					pkg.ColumnConfig{Text: productName, Width: productNameWidth, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
 					pkg.ColumnConfig{Text: totalNum, Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},
@@ -337,7 +337,7 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 			img.SetTextLineHeight(spacing)
 			img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("桌号"), order.SerialNo, mealNumStr))
 			img.SetTextLineHeight(45)
-		} else if order.IsTakeout() {
+		} else if order.IsTakeoutBill() {
 			img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo)
 		} else {
 			img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo)
@@ -375,7 +375,7 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 				}
 				img.LineFeed(1, 12)
 				totalNum := "x" + t.base.FloatToString(num)
-				productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*7), 470)
+				productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*utils.IfInt(len(totalNum) > 5, 10, 7)), 480)
 				img.PrintInColumns(
 					pkg.ColumnConfig{Text: productName, Width: productNameWidth, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
 					pkg.ColumnConfig{Text: totalNum, Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},
@@ -486,7 +486,7 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 		img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("桌号"), order.SerialNo, mealNumStr))
 		img.SetTextLineHeight(45)
 		img.LineFeed(1)
-	} else if order.IsTakeout() {
+	} else if order.IsTakeoutBill() {
 		img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
 	} else {
 		img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
@@ -538,7 +538,7 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 
 		// 打印产品名称和数量
 		totalNum := utils.IfString(tmp == 2, "-", "x") + t.base.FloatToString(product.TotalNum)
-		productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*7), 480)
+		productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*utils.IfInt(len(totalNum) > 5, 10, 7)), 480)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: productName, Width: productNameWidth, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
 			pkg.ColumnConfig{Text: totalNum, Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},
@@ -659,8 +659,6 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 		img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("桌号"), order.SerialNo, mealNumStr))
 		img.SetTextLineHeight(45)
 		img.LineFeed(1)
-	} else if order.IsTakeout() {
-		img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
 	} else {
 		img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
 	}
@@ -717,7 +715,7 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 
 		// 打印产品名称和数量
 		totalNum := "X" + t.base.FloatToString(product.TotalNum)
-		productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*7), 480)
+		productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*utils.IfInt(len(totalNum) > 5, 10, 7)), 480)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: productName, Width: productNameWidth, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
 			pkg.ColumnConfig{Text: totalNum, Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},

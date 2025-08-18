@@ -85,7 +85,7 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 			printer.AppendText(t.base.Translate("桌号") + ": " + order.SerialNo + mealNumStr)
 			printer.RestoreDefaultLineSpacing()
 			printer.LineFeed()
-		} else if order.IsTakeout() {
+		} else if order.IsTakeoutBill() {
 			printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
 		} else {
 			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
@@ -218,7 +218,7 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 			printer.AppendText(t.base.Translate("桌号") + ": " + order.SerialNo + mealNumStr)
 			printer.RestoreDefaultLineSpacing()
 			printer.LineFeed()
-		} else if order.IsTakeout() {
+		} else if order.IsTakeoutBill() {
 			printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
 		} else if order.SerialNo != "" {
 			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
@@ -444,7 +444,7 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 			printer.SetLineSpacing(spacing)
 			printer.AppendText(t.base.Translate("桌号") + ": " + order.SerialNo + mealNumStr)
 			printer.RestoreDefaultLineSpacing()
-		} else if order.IsTakeout() {
+		} else if order.IsTakeoutBill() {
 			printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo)
 		} else {
 			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + mealNumStr)
@@ -589,7 +589,7 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 			printer.SetLineSpacing(spacing)
 			printer.AppendText(t.base.Translate("桌号") + ": " + order.SerialNo + mealNumStr)
 			printer.RestoreDefaultLineSpacing()
-		} else if order.IsTakeout() {
+		} else if order.IsTakeoutBill() {
 			printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo)
 		} else {
 			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + mealNumStr)
@@ -795,7 +795,7 @@ func (t *dishesXprinterTemplate) ReturnMenuTemplate(
 		printer.AppendText(t.base.Translate("桌号") + ": " + order.SerialNo + mealNumStr)
 		printer.SetLineSpacing(30)
 		printer.LineFeed()
-	} else if order.IsTakeout() {
+	} else if order.IsTakeoutBill() {
 		printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo)
 	} else {
 		printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo)
@@ -1037,8 +1037,6 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 		printer.AppendText(t.base.Translate("桌号") + ": " + order.SerialNo + mealNumStr)
 		printer.SetLineSpacing(30)
 		printer.LineFeed()
-	} else if order.IsTakeout() {
-		printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo)
 	} else {
 		printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo)
 	}
