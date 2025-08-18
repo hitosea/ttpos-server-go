@@ -988,7 +988,7 @@ func (h *ProductHandler) SortProductShopList(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{}, "保存成功")
+	helper.Success(c, nil, "保存成功")
 }
 
 // GetProductDetail 获取商品详情
@@ -1040,7 +1040,7 @@ func (h *ProductHandler) ProductShopStatus(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{}, "设置成功")
+	helper.Success(c, nil, "设置成功")
 }
 
 // ProductShopAdd 添加商品
@@ -1066,7 +1066,7 @@ func (h *ProductHandler) ProductShopAdd(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{}, "添加成功")
+	helper.Success(c, nil, "添加成功")
 }
 
 // ProductShopEdit 编辑商品
@@ -1092,7 +1092,7 @@ func (h *ProductHandler) ProductShopEdit(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{}, "保存成功")
+	helper.Success(c, nil, "保存成功")
 }
 
 // ProductShopDelete 删除商品
@@ -1118,7 +1118,7 @@ func (h *ProductHandler) ProductShopDelete(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{}, "删除成功")
+	helper.Success(c, nil, "删除成功")
 }
 
 // ProductTaxList 获取商品税类列表
@@ -1167,6 +1167,33 @@ func (h *ProductHandler) UploadProductImage(c *gin.Context) {
 	}
 
 	helper.Success(c, uploadFileResp)
+}
+
+// ProductShopChangePrice 商品改价
+
+// @Summary 商品改价
+// @Description 商品改价
+// @Tags 商家端.商品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductShopChangePriceReq true "商品改价请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/change_price [post]
+func (h *ProductHandler) ProductShopChangePrice(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	changePriceReq := req.ProductShopChangePriceReq{}
+	if err := c.ShouldBindJSON(&changePriceReq); err != nil {
+		helper.HandleValidationError(c, err, changePriceReq, nil)
+		return
+	}
+	err := h.productSrv.ProductShopChangePrice(ctx, changePriceReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil, "改价成功")
 }
 
 func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
@@ -1235,14 +1262,15 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		// 获取单规格商品列表
 		privateApi.GET("/product/single/list", wrapper.GetProductSingleList) // 获取单规格商品列表
 
-		privateApi.GET("/product/list", wrapper.GetProductShopList)          // 获取商品列表
-		privateApi.POST("/product/sort", wrapper.SortProductShopList)        // 排序商品列表
-		privateApi.GET("/product/detail", wrapper.GetProductDetail)          // 获取商品详情
-		privateApi.POST("/product/status", wrapper.ProductShopStatus)        // 修改商品状态
-		privateApi.POST("/product/add", wrapper.ProductShopAdd)              // 添加商品
-		privateApi.POST("/product/edit", wrapper.ProductShopEdit)            // 编辑商品
-		privateApi.DELETE("/product/delete", wrapper.ProductShopDelete)      // 删除商品
-		privateApi.GET("/product/tax/list", wrapper.ProductTaxList)          // 获取商品税类列表
-		privateApi.POST("/product/upload_image", wrapper.UploadProductImage) // 上传商品图片
+		privateApi.GET("/product/list", wrapper.GetProductShopList)              // 获取商品列表
+		privateApi.POST("/product/sort", wrapper.SortProductShopList)            // 排序商品列表
+		privateApi.GET("/product/detail", wrapper.GetProductDetail)              // 获取商品详情
+		privateApi.POST("/product/status", wrapper.ProductShopStatus)            // 修改商品状态
+		privateApi.POST("/product/add", wrapper.ProductShopAdd)                  // 添加商品
+		privateApi.POST("/product/edit", wrapper.ProductShopEdit)                // 编辑商品
+		privateApi.DELETE("/product/delete", wrapper.ProductShopDelete)          // 删除商品
+		privateApi.POST("/product/change_price", wrapper.ProductShopChangePrice) // 商品改价
+		privateApi.GET("/product/tax/list", wrapper.ProductTaxList)              // 获取商品税类列表
+		privateApi.POST("/product/upload_image", wrapper.UploadProductImage)     // 上传商品图片
 	}
 }

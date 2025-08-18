@@ -79,14 +79,15 @@ type IProductSrv interface {
 
 	GetProductSingleList(ctx context.Context, req req.ProductSingleListReq) (*product_resp.ProductSingleListResp, error) // 获取单规格商品列表
 
-	GetProductShopList(ctx context.Context, req req.ProductShopListReq) (*product_resp.ProductShopListResp, error) // 获取商品列表（商家端）
-	SortProductShopList(ctx context.Context, req req.SortProductShopListReq) error                                 // 排序商品列表
-	GetProductDetail(ctx context.Context, req req.ProductDetailReq) (*product_resp.ProductDetailResp, error)       // 获取商品详情
-	ProductShopStatus(ctx context.Context, req req.ProductShopStatusReq) error                                     // 修改商品状态
-	ProductTaxList(ctx context.Context) product_resp.ProductTaxListResp                                            // 获取商品税类列表
-	AddProductShop(ctx context.Context, req req.ProductShopAddReq) error                                           // 添加商品
-	EditProductShop(ctx context.Context, req req.ProductShopEditReq) error
+	GetProductShopList(ctx context.Context, req req.ProductShopListReq) (*product_resp.ProductShopListResp, error)                                      // 获取商品列表（商家端）
+	SortProductShopList(ctx context.Context, req req.SortProductShopListReq) error                                                                      // 排序商品列表
+	GetProductDetail(ctx context.Context, req req.ProductDetailReq) (*product_resp.ProductDetailResp, error)                                            // 获取商品详情
+	ProductShopStatus(ctx context.Context, req req.ProductShopStatusReq) error                                                                          // 修改商品状态
+	ProductTaxList(ctx context.Context) product_resp.ProductTaxListResp                                                                                 // 获取商品税类列表
+	AddProductShop(ctx context.Context, req req.ProductShopAddReq) error                                                                                // 添加商品
+	EditProductShop(ctx context.Context, req req.ProductShopEditReq) error                                                                              // 编辑商品
 	DeleteProductShop(ctx context.Context, req req.ProductShopDeleteReq) error                                                                          // 删除商品
+	ProductShopChangePrice(ctx context.Context, req req.ProductShopChangePriceReq) error                                                                // 商品改价
 	AddProductPackage(tx *gorm.DB, req req.ProductShopAddReq, price float64) (uint64, error)                                                            // 添加商品包
 	EditProductPackage(tx *gorm.DB, req req.ProductShopEditReq, price float64) (uint64, error)                                                          // 编辑商品包
 	SaveProductPackageBom(tx *gorm.DB, productPackageUuid uint64, flavorListResult CheckProductFlavorResult, sauceResult CheckProductSauceResult) error // 保存商品bom
@@ -3179,7 +3180,7 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 		flavors := make([]product_resp.ProductShopListItemFlavorItemResp, 0)
 		for _, productBom := range productPackage.ProductBoms {
 			if productPackage.ProductType == constant.ProductTypeProduct {
-				// 规格
+				// 商品-规格
 				if productBom.ProductFlavorUuid > 0 {
 					if minPrice == 0 {
 						minPrice = productBom.Price
@@ -3201,6 +3202,7 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 						Price:      productBom.Price,
 					})
 				}
+				// 商品-加料
 				if productBom.ProductSauceUuid > 0 {
 					IsSauce = true
 				}
@@ -3208,6 +3210,14 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 				minPrice = productBom.Price
 				maxPrice = productBom.Price
 				specStockNum = productBom.StockNum
+				// 套餐
+				if productBom.ProductFlavorUuid == 0 && productBom.ProductSauceUuid == 0 {
+					flavors = append(flavors, product_resp.ProductShopListItemFlavorItemResp{
+						Uuid:       productBom.Uuid,
+						LocaleName: productPackage.MultiLanguageName.GetNames(),
+						Price:      productBom.Price,
+					})
+				}
 			}
 		}
 		if specCount > 1 {
@@ -4337,4 +4347,60 @@ func (s *productSrv) ProductTaxList(ctx context.Context) product_resp.ProductTax
 	return product_resp.ProductTaxListResp{
 		List: list,
 	}
+}
+
+// ProductShopChangePrice 商品改价
+func (s *productSrv) ProductShopChangePrice(ctx context.Context, req req.ProductShopChangePriceReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	err := db.Transaction(func(tx *gorm.DB) error {
+		commonRepo := repository.NewCommonRepo()
+		productRepo := repository.NewProductRepo(tx)
+		productPackageRepo := repository.NewProductPackageRepo(tx)
+		productBomRepo := repository.NewProductBomRepo(tx)
+
+		productPackage, err := productRepo.GetProduct(
+			commonRepo.WhereByUuid(req.Uuid),
+			commonRepo.WhereBySoftDelete(),
+		)
+		if err != nil || productPackage.ID == 0 {
+			return errors.WithMessage(err, "商品不存在")
+		}
+
+		price := 0.0
+		for _, item := range req.Prices {
+			productBom, err := productBomRepo.GetProductBom(
+				commonRepo.WhereByUuid(item.Uuid),
+				commonRepo.WhereBySoftDelete(),
+			)
+			if err != nil || productBom.ID == 0 {
+				return errors.WithMessage(err, "商品Bom不存在")
+			}
+
+			err = productBomRepo.UpdateProductBom(map[string]any{
+				"price": item.Price,
+			}, commonRepo.WhereByUuid(item.Uuid))
+			if err != nil {
+				return errors.WithMessage(err, "商品BOM改价失败")
+			}
+			if price == 0 {
+				price = item.Price
+			} else {
+				price = utils.IfFloat64(item.Price <= price, item.Price, price)
+			}
+		}
+
+		err = productPackageRepo.UpdateProductPackage(map[string]any{
+			"price": price,
+		}, commonRepo.WhereByUuid(req.Uuid))
+		if err != nil {
+			return errors.WithMessage(err, "商品改价失败")
+		}
+
+		return nil
+	})
+	if err != nil {
+		return errors.WithMessage(err, "商品改价失败")
+	}
+
+	return nil
 }

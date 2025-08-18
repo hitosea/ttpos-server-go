@@ -563,3 +563,15 @@ type ProductShopEditPackageGroupProductReq struct {
 type ProductShopDeleteReq struct {
 	Uuid uint64 `json:"uuid" binding:"required"` // 商品UUID
 }
+
+// ProductShopChangePriceReq 商品改价请求
+type ProductShopChangePriceReq struct {
+	Uuid   uint64                          `json:"uuid"`   // 商品UUID
+	Prices []ProductShopChangePriceItemReq `json:"prices"` // 商品价格列表
+}
+
+// ProductShopChangePriceItemReq 商品改价项请求
+type ProductShopChangePriceItemReq struct {
+	Uuid  uint64  `json:"uuid"`  // 商品BOM UUID
+	Price float64 `json:"price"` // 商品价格
+}
