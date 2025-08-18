@@ -1007,6 +1007,26 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 		return nil
 	}
 
+	// 获取收货单明细
+	items := receiptOrder.Items
+	// 添加物料库存
+	materialRepo := repository.NewMaterialRepo(db)
+	for _, item := range items {
+		// 获取物料信息
+		material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid)
+		if err != nil {
+			return errors.WithMessage(err, "获取物料信息失败")
+		}
+		// 更新库存数量
+		material.StockNum = decimal.NewFromFloat(material.StockNum).Add(
+			decimal.NewFromFloat(item.Num).Mul(decimal.NewFromFloat(item.UnitConversionRate).Round(4)),
+		).InexactFloat64()
+		err = materialRepo.UpdateMaterial(material)
+		if err != nil {
+			return errors.WithMessage(err, "更新物料库存失败")
+		}
+	}
+
 	// 调用erp接口
 	if ctx.GetCompany().IsOpenErp() {
 		erpReq := buying.SavePurchaseReceiptReq{
@@ -1033,24 +1053,5 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 		}
 	}
 
-	// 获取收货单明细
-	items := receiptOrder.Items
-	// 添加物料库存
-	materialRepo := repository.NewMaterialRepo(db)
-	for _, item := range items {
-		// 获取物料信息
-		material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid)
-		if err != nil {
-			return errors.WithMessage(err, "获取物料信息失败")
-		}
-		// 更新库存数量
-		material.StockNum = decimal.NewFromFloat(material.StockNum).Add(
-			decimal.NewFromFloat(item.Num).Mul(decimal.NewFromFloat(item.UnitConversionRate).Round(4)),
-		).InexactFloat64()
-		err = materialRepo.UpdateMaterial(material)
-		if err != nil {
-			return errors.WithMessage(err, "更新物料库存失败")
-		}
-	}
 	return nil
 }
