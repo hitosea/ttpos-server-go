@@ -161,8 +161,8 @@ class Product extends ProductModel
                 $existGroupNames[] = $groupName;
                 // 分组商品
                 $groupProductList = $item['product_list'] ?? [];
-                if (count($groupProductList) <= 0 || count($groupProductList) > 20) {
-                    $this->error = '商品不能为空或超过20个';
+                if (count($groupProductList) <= 0) {
+                    $this->error = '商品不能为空';
                     return false;
                 }
                 $productIds = array_column($groupProductList, 'product_id');
@@ -514,8 +514,8 @@ class Product extends ProductModel
                 $existGroupNames[] = $groupName;
                 // 分组商品
                 $groupProductList = $item['product_list'] ?? [];
-                if (count($groupProductList) <= 0 || count($groupProductList) > 20) {
-                    $this->error = '商品不能为空或超过20个';
+                if (count($groupProductList) <= 0) {
+                    $this->error = '商品不能为空';
                     return false;
                 }
                 $productIds = array_column($groupProductList, 'product_id');
