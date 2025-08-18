@@ -3325,6 +3325,7 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 		DineTaxName:    productPackage.DineTax.Name,
 
 		Status:          productPackage.Status,
+		ImageFileUuid:   productPackage.ImageFileUuid,
 		Image:           productPackage.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request)),
 		NumType:         &productPackage.NumType,
 		DeductStockType: productPackage.DeductStockType,

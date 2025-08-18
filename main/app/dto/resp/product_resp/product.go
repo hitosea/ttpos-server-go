@@ -449,6 +449,7 @@ type ProductDetailResp struct {
 	DineTaxName    string `json:"rating_tax_name"`  // 堂食税类名称
 
 	Status          uint   `json:"status"`            // 商品状态 0-下架 1-上架
+	ImageFileUuid   uint64 `json:"image_file_uuid"`   // 商品图片UUID
 	Image           string `json:"image"`             // 商品图片。
 	NumType         *uint  `json:"num_type"`          // 数量计算方法 0-整数 1-小数
 	DeductStockType uint   `json:"deduct_stock_type"` // 库存计算方式,0-结账减库存 1-下单减库存
