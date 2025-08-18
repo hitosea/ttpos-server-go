@@ -20,7 +20,7 @@ message  MaterialRequest {
 message MaterialRequestItem {
   string item_code = 1;      // 物品编码，
   int64 schedule_date = 2;      // 到货时间，
-  float qty = 3;      // 物品数量，
+  double qty = 3;      // 物品数量，
   string warehouse = 4;      // 仓库名称，可选
   string uom = 5;      // 物品单位，
 }

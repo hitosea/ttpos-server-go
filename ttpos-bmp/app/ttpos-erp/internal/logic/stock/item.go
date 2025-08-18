@@ -515,7 +515,7 @@ func (s *sItem) GetItemStock(ctx context.Context, req *item.GetItemStockReq) (re
 				ItemGroup: utility.ParseItemGroupFromString(data.Get("item_group").String()),
 				Warehouse: data.Get("warehouse").String(),
 				StockUom:  data.Get("stock_uom").String(),
-				ActualQty: data.Get("actual_qty").Float32(),
+				ActualQty: data.Get("actual_qty").Float64(),
 			})
 		}
 	}

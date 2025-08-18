@@ -70,7 +70,7 @@ func (c *Controller) GetPurchaseOrder(ctx context.Context, req *buying.GetPurcha
 			ItemName: item.ItemName,
 			ItemCode: item.ItemCode,
 			StockUom: item.StockUom,
-			Qty:      float32(item.Qty),
+			Qty:      item.Qty,
 		})
 	}
 
@@ -78,7 +78,7 @@ func (c *Controller) GetPurchaseOrder(ctx context.Context, req *buying.GetPurcha
 		PurchaseOrder: &buying.PurchaseOrderInfo{
 			PurchaseOrderName: resp.Name,
 			SupplierName:      resp.Supplier,
-			PerReceived:       float32(resp.PerReceived),
+			PerReceived:       resp.PerReceived,
 			ScheduleDate:      resp.ScheduleDate,
 			Items:             purchaseOrderItems,
 		},

@@ -452,7 +452,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 			for _, item := range purchaseOrder.Items {
 				stockItems = append(stockItems, &stock.MaterialRequestItem{
 					ItemCode:     item.MaterialCode,
-					Qty:          float32(item.Num),
+					Qty:          item.Num,
 					ScheduleDate: purchaseOrder.ExpectArrivalTime,
 					Uom:          item.UnitName,
 				})
@@ -1039,7 +1039,7 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 				ItemCode: item.MaterialCode,
 				ItemName: item.MaterialName,
 				StockUom: item.UnitName,
-				Qty:      float32(item.Num),
+				Qty:      item.Num,
 			})
 		}
 		resp, err := erp.NewIErpSrv(s.dbm).SavePurchaseReceipt(ctx, &erpReq)
