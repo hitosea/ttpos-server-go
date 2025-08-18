@@ -978,6 +978,7 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 		DeviceId:     deviceId,
 		DeviceRemark: deviceRemark,
 		Permissions:  permissions,
+		Phone:        staff.Phone,
 
 		Business: businessSetting,
 		Buffet:   buffetSetting,

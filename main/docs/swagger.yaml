@@ -1533,6 +1533,16 @@ definitions:
         description: 商品属性组UUID
         type: integer
     type: object
+  product_resp.ProductAttributeGroupAttributeItem:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性名称
+      uuid:
+        description: 商品属性UUID
+        type: integer
+    type: object
   product_resp.ProductAttributeGroupDetail:
     properties:
       attributes:
@@ -1552,6 +1562,11 @@ definitions:
       attribute_name:
         description: 商品属性名称
         type: string
+      attributes:
+        description: 属性值
+        items:
+          $ref: '#/definitions/product_resp.ProductAttributeGroupAttributeItem'
+        type: array
       name:
         description: 商品属性分组名称
         type: string

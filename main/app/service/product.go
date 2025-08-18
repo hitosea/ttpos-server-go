@@ -1796,13 +1796,20 @@ func (s *productSrv) GetProductAttributeGroupList(ctx context.Context, req req.P
 	productAttributeGroupListResp := make([]product_resp.ProductAttributeGroupItem, 0, len(productAttributeGroupList))
 	for _, productAttributeGroup := range productAttributeGroupList {
 		attributeNames := make([]string, 0, len(productAttributeGroup.ProductAttributes))
+
+		attributeList := make([]product_resp.ProductAttributeGroupAttributeItem, 0, len(productAttributeGroup.ProductAttributes))
 		for _, productAttribute := range productAttributeGroup.ProductAttributes {
 			attributeNames = append(attributeNames, productAttribute.MultiLanguageName.GetNameByLang(language))
+			attributeList = append(attributeList, product_resp.ProductAttributeGroupAttributeItem{
+				Uuid:       productAttribute.Uuid,
+				LocaleName: productAttribute.MultiLanguageName.GetNames(),
+			})
 		}
 		productAttributeGroupListResp = append(productAttributeGroupListResp, product_resp.ProductAttributeGroupItem{
 			Uuid:          productAttributeGroup.Uuid,
 			Name:          productAttributeGroup.MultiLanguageName.GetNameByLang(language),
 			AttributeName: strings.Join(attributeNames, "、"),
+			Attributes:    attributeList,
 			Sort:          productAttributeGroup.Sort,
 		})
 	}

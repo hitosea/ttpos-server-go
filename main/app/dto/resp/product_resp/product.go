@@ -256,6 +256,12 @@ type ProductAttributeGroupItem struct {
 	Name          string `json:"name"`           // 商品属性分组名称
 	Sort          int    `json:"sort"`           // 商品属性分组排序
 	AttributeName string `json:"attribute_name"` // 商品属性名称
+	Attributes []ProductAttributeGroupAttributeItem `json:"attributes"` // 属性值
+}
+
+type ProductAttributeGroupAttributeItem struct {
+	Uuid       uint64             `json:"uuid"`        // 商品属性UUID
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品属性名称
 }
 
 type ProductAttributeGroupListResp struct {

@@ -26531,6 +26531,23 @@ const docTemplate = `{
                 }
             }
         },
+        "product_resp.ProductAttributeGroupAttributeItem": {
+            "type": "object",
+            "properties": {
+                "locale_name": {
+                    "description": "商品属性名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "uuid": {
+                    "description": "商品属性UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "product_resp.ProductAttributeGroupDetail": {
             "type": "object",
             "properties": {
@@ -26562,6 +26579,13 @@ const docTemplate = `{
                 "attribute_name": {
                     "description": "商品属性名称",
                     "type": "string"
+                },
+                "attributes": {
+                    "description": "属性值",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product_resp.ProductAttributeGroupAttributeItem"
+                    }
                 },
                 "name": {
                     "description": "商品属性分组名称",
