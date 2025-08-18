@@ -1310,6 +1310,14 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 		}
 		return nil
 	})
+
+	company := ctx.GetCompany()
+	companySetting := ctx.GetCompanySetting()
+
+	// 开启了ERP，并且是TTPOS站点，同步到ERPNext
+	if company.IsOpenErp() && companySetting.IsTtposSite() {
+		// TODO 产品未确认好需求
+	}
 	return err
 }
 
@@ -1386,6 +1394,15 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 		}
 		return nil
 	})
+
+	company := ctx.GetCompany()
+	companySetting := ctx.GetCompanySetting()
+
+	// 开启了ERP，并且是TTPOS站点，同步到ERPNext
+	if company.IsOpenErp() && companySetting.IsTtposSite() {
+		// TODO 产品未确认好需求
+	}
+
 	return err
 }
 
@@ -2076,6 +2093,14 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, req req.Produ
 	if err != nil {
 		return errors.WithMessage(err, "添加属性失败")
 	}
+
+	company := ctx.GetCompany()
+	companySetting := ctx.GetCompanySetting()
+	// 开启了ERP，并且是TTPOS站点，同步到ERPNext
+	if company.IsOpenErp() && companySetting.IsTtposSite() {
+		// TODO 产品未确认好需求
+	}
+
 	return nil
 }
 
@@ -2414,6 +2439,14 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, req req.Prod
 		}
 		return nil
 	})
+
+	company := ctx.GetCompany()
+	companySetting := ctx.GetCompanySetting()
+	// 开启了ERP，并且是TTPOS站点，同步到ERPNext
+	if company.IsOpenErp() && companySetting.IsTtposSite() {
+		// TODO 产品未确认好需求
+	}
+
 	return err
 }
 
