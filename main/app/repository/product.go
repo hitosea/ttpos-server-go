@@ -97,11 +97,13 @@ type IProductQueryRepo interface {
 	GetProductBomCount(opts ...DBOption) (int64, error)                                                             // 获取商品BOM数量
 
 	PaginateGetProductUnitList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductUnit, int64, error) // 分页获取产品单位列表
+	GetProductUnitList(opts ...DBOption) ([]model.ProductUnit, error)                                          // 获取产品单位列表
 	GetProductUnit(opts ...DBOption) (model.ProductUnit, error)                                                // 获取产品单位详情
 	GetProductUnitCount(opts ...DBOption) (int64, error)                                                       // 获取产品单位数量
 	GetProductUnitByUnitUuid(unitUuid uint64) (*model.ProductUnit, error)                                      // 获取产品单位详情
 
 	PaginateGetProductSauceList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductSauce, int64, error) // 分页获取商品加料列表
+	GetProductSauceList(opts ...DBOption) ([]model.ProductSauce, error)                                          // 获取商品加料列表
 	GetProductSauce(opts ...DBOption) (model.ProductSauce, error)                                                // 获取商品加料详情
 	GetProductSauceCount(opts ...DBOption) (int64, error)                                                        // 获取商品加料数量
 
@@ -121,6 +123,8 @@ type IProductQueryRepo interface {
 	PaginateGetProductShopList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductPackage, int64, error) // 分页获取商品列表（商家端）
 	GetProductShopList(opts ...DBOption) ([]model.ProductPackage, error)                                          // 获取商品列表（商家端）
 	GetProductShopMaxSort(opts ...DBOption) (int64, error)                                                        // 获取商品最大排序
+
+	BatchUpdateSort(table any, sorts map[uint64]int) error // 批量更新排序
 }
 
 // productRepo 商品仓库
@@ -701,6 +705,20 @@ func (r *productRepo) PaginateGetProductUnitList(pageNo int, pageSize int, opts 
 	return units, total, nil
 }
 
+// GetProductUnitList 获取产品单位列表
+func (r *productRepo) GetProductUnitList(opts ...DBOption) ([]model.ProductUnit, error) {
+	var units []model.ProductUnit
+	db := r.db.Model(&model.ProductUnit{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Order("sort asc, create_time asc").Find(&units).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return units, nil
+}
+
 // WithProductPackages 预加载产品单位关联的商品
 func (r *productRepo) WithProductPackages() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
@@ -865,6 +883,19 @@ func (r *productRepo) PaginateGetProductSauceList(pageNo int, pageSize int, opts
 	}
 	err = db.Offset((pageNo - 1) * pageSize).Order(productSauceTable + ".sort asc, " + productSauceTable + ".create_time desc").Limit(pageSize).Find(&sauces).Error
 	return sauces, total, errors.WithMessage(err)
+}
+
+func (r *productRepo) GetProductSauceList(opts ...DBOption) ([]model.ProductSauce, error) {
+	var sauces []model.ProductSauce
+	db := r.db.Model(&model.ProductSauce{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Order("sort asc, create_time asc").Find(&sauces).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return sauces, nil
 }
 
 // GetProductSauce 获取商品加料详情
@@ -1218,4 +1249,40 @@ func (r *productRepo) GetProductShopMaxSort(opts ...DBOption) (int64, error) {
 	}
 	err := db.Select("MAX(sort) as sort").Find(&sort).Error
 	return sort.Int64, errors.WithMessage(err)
+}
+
+func (r *productRepo) BatchUpdateSort(table any, sorts map[uint64]int) error {
+	// 检查是否有数据需要更新
+	if len(sorts) == 0 {
+		return nil
+	}
+	// 构建 CASE WHEN 语句
+	caseWhenSQL := "CASE uuid"
+	var args []any
+	var uuids []uint64
+
+	for uuid, sort := range sorts {
+		caseWhenSQL += " WHEN ? THEN ?"
+		args = append(args, uuid, sort)
+		uuids = append(uuids, uuid)
+	}
+	caseWhenSQL += " END"
+
+	// 根据传入的模型类型确定错误消息
+	var errorMessage string
+	switch table.(type) {
+	case *model.ProductUnit, *model.ProductAttributeGroup, *model.ProductAttribute, *model.ProductSauce:
+		// 无需处理
+	default:
+		return errors.New("更新排序失败")
+	}
+	// 一条SQL语句批量更新排序
+	err := r.db.Model(table).
+		Where("uuid IN ?", uuids).Debug().
+		Update("sort", gorm.Expr(caseWhenSQL, args...)).Error
+
+	if err != nil {
+		return errors.WithMessage(errors.New("更新排序失败"), errorMessage)
+	}
+	return nil
 }

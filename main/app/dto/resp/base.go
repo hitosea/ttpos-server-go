@@ -115,6 +115,7 @@ type Company struct {
 	IsOpenBuffet   int    `json:"is_open_buffet"`    // 是否开启自助餐功能: 0不开启, 1开启
 	IsOpenH5Order  int    `json:"is_open_h5_order"`  // 是否开启扫码接单功能: 0不开启, 1开启
 	IsOpenOldOrder int    `json:"is_open_old_order"` // 是否开启旧订单功能: 0不开启, 1开启
+	IsOpenRider    bool   `json:"is_open_rider"`     // 是否开启外送
 }
 
 type Permission struct {

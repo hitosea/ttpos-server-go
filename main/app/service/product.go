@@ -1439,6 +1439,18 @@ func (s *productSrv) DeleteProductUnit(ctx context.Context, deleteUnitReq req.Pr
 		}
 		return nil
 	})
+
+	// 重新排序
+	productUnits, _ := productRepo.GetProductUnitList()
+	sorts := make(map[uint64]int)
+	for i, productUnit := range productUnits {
+		sorts[productUnit.Uuid] = i + 1
+	}
+	err = productRepo.BatchUpdateSort(&model.ProductUnit{}, sorts)
+	if err != nil {
+		return errors.WithMessage(err, "重新排序产品单位失败")
+	}
+
 	return err
 }
 
@@ -1765,6 +1777,18 @@ func (s *productSrv) DeleteProductSauce(ctx context.Context, deleteReq req.Produ
 		}
 		return nil
 	})
+
+	// 重新排序
+	productSauceList, _ := productRepo.GetProductSauceList()
+	sorts := make(map[uint64]int)
+	for i, productSauce := range productSauceList {
+		sorts[productSauce.Uuid] = i + 1
+	}
+	err = productRepo.BatchUpdateSort(&model.ProductSauce{}, sorts)
+	if err != nil {
+		return errors.WithMessage(err, "重新排序商品加料失败")
+	}
+
 	return err
 }
 
@@ -1969,21 +1993,42 @@ func (s *productSrv) GetProductFlavor(ctx context.Context, flavorReq req.Product
 }
 
 // AddProductAttributeGroup 添加商品属性组
-func (s *productSrv) AddProductAttributeGroup(ctx context.Context, req req.ProductAttributeGroupAddReq) error {
+func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.ProductAttributeGroupAddReq) error {
 	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
-	if !req.LocaleName.CheckRequiredLocale(storeLanguages) {
+	if !addReq.LocaleName.CheckRequiredLocale(storeLanguages) {
 		return errors.New("名称不能为空")
 	}
-	for _, productAttribute := range req.ProductAttributes {
+	for _, productAttribute := range addReq.ProductAttributes {
 		if !productAttribute.LocaleName.CheckRequiredLocale(storeLanguages) {
 			return errors.New("名称不能为空")
 		}
 	}
+	// 检查名称是否存在
+	checkService := NewCheckNameSrv(s.dbm)
+	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
+	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
+		Source: "attribute_group",
+		Names:  names,
+	})
+	if exists {
+		return errors.New("属性组名称已存在")
+	}
+	for _, productAttribute := range addReq.ProductAttributes {
+		names := checkService.MakeCheckNameList(ctx, productAttribute.LocaleName)
+		exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
+			Source: "attribute",
+			Names:  names,
+		})
+		if exists {
+			return errors.New("属性名称已存在")
+		}
+	}
+
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
 	// 遍历req.ProductAttributes，判断商品是否存在
 	productPackageUuids := []uint64{}
-	for _, productAttribute := range req.ProductAttributes {
+	for _, productAttribute := range addReq.ProductAttributes {
 		productPackageUuids = append(productPackageUuids, productAttribute.ProductPackageUuids...)
 	}
 	// 去重
@@ -2002,15 +2047,15 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, req req.Produ
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// 保存多语言
 		multiLanguageName := model.MultiLanguageName{
-			ZhName:   req.LocaleName.ZH,
-			ThName:   req.LocaleName.TH,
-			EnName:   req.LocaleName.EN,
-			ZhTwName: req.LocaleName.ZHTW,
-			JaName:   req.LocaleName.JA,
-			KoName:   req.LocaleName.KO,
-			MyName:   req.LocaleName.MY,
-			TrName:   req.LocaleName.TR,
-			SvName:   req.LocaleName.SV,
+			ZhName:   addReq.LocaleName.ZH,
+			ThName:   addReq.LocaleName.TH,
+			EnName:   addReq.LocaleName.EN,
+			ZhTwName: addReq.LocaleName.ZHTW,
+			JaName:   addReq.LocaleName.JA,
+			KoName:   addReq.LocaleName.KO,
+			MyName:   addReq.LocaleName.MY,
+			TrName:   addReq.LocaleName.TR,
+			SvName:   addReq.LocaleName.SV,
 		}
 		err := tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
 		if err != nil {
@@ -2018,7 +2063,7 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, req req.Produ
 		}
 		// 添加商品属性分组
 		productAttributeGroup := model.ProductAttributeGroup{
-			Name:                  req.LocaleName.ToJson(),
+			Name:                  addReq.LocaleName.ToJson(),
 			MultiLanguageNameUuid: multiLanguageName.Uuid,
 		}
 		err = tx.Model(&model.ProductAttributeGroup{}).Create(&productAttributeGroup).Error
@@ -2030,7 +2075,7 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, req req.Produ
 		productPackageMapAttributeUuids := make(map[uint64][]uint64)
 
 		// 遍历req.ProductAttributes，添加商品属性
-		for _, productAttribute := range req.ProductAttributes {
+		for _, productAttribute := range addReq.ProductAttributes {
 			// 保存多语言
 			multiLanguageName := model.MultiLanguageName{
 				ZhName:   productAttribute.LocaleName.ZH,
@@ -2211,28 +2256,52 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 }
 
 // EditProductAttributeGroup 编辑商品属性组
-func (s *productSrv) EditProductAttributeGroup(ctx context.Context, req req.ProductAttributeGroupEditReq) error {
+func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.ProductAttributeGroupEditReq) error {
 	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
-	if !req.LocaleName.CheckRequiredLocale(storeLanguages) {
+	if !editReq.LocaleName.CheckRequiredLocale(storeLanguages) {
 		return errors.New("名称不能为空")
 	}
-	for _, productAttribute := range req.ProductAttributes {
+	for _, productAttribute := range editReq.ProductAttributes {
 		if !productAttribute.LocaleName.CheckRequiredLocale(storeLanguages) {
 			return errors.New("名称不能为空")
 		}
 	}
+
+	// 检查名称是否存在
+	checkService := NewCheckNameSrv(s.dbm)
+	names := checkService.MakeCheckNameList(ctx, editReq.LocaleName)
+	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
+		Uuid:   editReq.Uuid,
+		Source: "attribute_group",
+		Names:  names,
+	})
+	if exists {
+		return errors.New("属性组名称已存在")
+	}
+	for _, productAttribute := range editReq.ProductAttributes {
+		names := checkService.MakeCheckNameList(ctx, productAttribute.LocaleName)
+		exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
+			Uuid:   productAttribute.Uuid,
+			Source: "attribute",
+			Names:  names,
+		})
+		if exists {
+			return errors.New("属性名称已存在")
+		}
+	}
+
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
 
 	productAttributeGroup, err := productRepo.GetProductAttributeGroup(
-		productRepo.WhereUuid(req.Uuid),
+		productRepo.WhereUuid(editReq.Uuid),
 	)
 	if err != nil {
 		return errors.WithMessage(err, "属性组不存在")
 	}
 
 	var attributeUuids []uint64
-	for _, productAttribute := range req.ProductAttributes {
+	for _, productAttribute := range editReq.ProductAttributes {
 		if productAttribute.Uuid != 0 {
 			attributeUuids = append(attributeUuids, productAttribute.Uuid)
 		}
@@ -2249,7 +2318,7 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, req req.Prod
 
 	// 遍历req.ProductAttributes，判断商品是否存在
 	newProductPackageUuids := []uint64{}
-	for _, productAttribute := range req.ProductAttributes {
+	for _, productAttribute := range editReq.ProductAttributes {
 		newProductPackageUuids = append(newProductPackageUuids, productAttribute.ProductPackageUuids...)
 	}
 	// 去重
@@ -2302,20 +2371,20 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, req req.Prod
 
 		// 更新属性组语言
 		err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productAttributeGroup.MultiLanguageNameUuid).Updates(map[string]any{
-			"zh_name":    req.LocaleName.ZH,
-			"th_name":    req.LocaleName.TH,
-			"en_name":    req.LocaleName.EN,
-			"zh_tw_name": req.LocaleName.ZHTW,
-			"ja_name":    req.LocaleName.JA,
-			"ko_name":    req.LocaleName.KO,
-			"my_name":    req.LocaleName.MY,
-			"tr_name":    req.LocaleName.TR,
-			"sv_name":    req.LocaleName.SV,
+			"zh_name":    editReq.LocaleName.ZH,
+			"th_name":    editReq.LocaleName.TH,
+			"en_name":    editReq.LocaleName.EN,
+			"zh_tw_name": editReq.LocaleName.ZHTW,
+			"ja_name":    editReq.LocaleName.JA,
+			"ko_name":    editReq.LocaleName.KO,
+			"my_name":    editReq.LocaleName.MY,
+			"tr_name":    editReq.LocaleName.TR,
+			"sv_name":    editReq.LocaleName.SV,
 		}).Error
 		if err != nil {
 			return errors.WithMessage(err, "更新语言失败")
 		}
-		for k, productAttribute := range req.ProductAttributes {
+		for k, productAttribute := range editReq.ProductAttributes {
 			if productAttribute.Uuid != 0 {
 				err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productAttribute.Uuid).Updates(map[string]any{
 					"zh_name":    productAttribute.LocaleName.ZH,
@@ -2357,13 +2426,13 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, req req.Prod
 				if err != nil {
 					return errors.WithMessage(err, "添加商品属性失败")
 				}
-				req.ProductAttributes[k].Uuid = productAttributeModel.Uuid
+				editReq.ProductAttributes[k].Uuid = productAttributeModel.Uuid
 			}
 		}
 
 		// 传递的参数中，商品包和商品属性关联关系
 		productPackageAttributeMaps := make(map[uint64][]uint64)
-		for _, productAttribute := range req.ProductAttributes {
+		for _, productAttribute := range editReq.ProductAttributes {
 			for _, productPackageUuid := range productAttribute.ProductPackageUuids {
 				if _, ok := productPackageAttributeMaps[productPackageUuid]; !ok {
 					productPackageAttributeMaps[productPackageUuid] = []uint64{productAttribute.Uuid}
@@ -2439,6 +2508,17 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, req req.Prod
 		}
 		return nil
 	})
+
+	// 根据属性组获取属性，重新排序
+	productAttributes, _ = productRepo.GetProductAttributes(productRepo.WhereAttributeGroupUuid(productAttributeGroup.Uuid))
+	sorts := make(map[uint64]int)
+	for i, productAttribute := range productAttributes {
+		sorts[productAttribute.Uuid] = i + 1
+	}
+	err = productRepo.BatchUpdateSort(&model.ProductAttribute{}, sorts)
+	if err != nil {
+		return errors.WithMessage(err, "重新排序商品属性失败")
+	}
 
 	company := ctx.GetCompany()
 	companySetting := ctx.GetCompanySetting()
@@ -2607,6 +2687,17 @@ func (s *productSrv) DeleteProductAttributeGroup(ctx context.Context, req req.Pr
 	})
 	if err != nil {
 		return errors.WithMessage(err, "删除属性组失败")
+	}
+
+	// 重新排序
+	productAttributeGroupList, _ := productRepo.GetProductAttributeGroups()
+	sorts := make(map[uint64]int)
+	for i, productAttributeGroup := range productAttributeGroupList {
+		sorts[productAttributeGroup.Uuid] = i + 1
+	}
+	err = productRepo.BatchUpdateSort(&model.ProductAttributeGroup{}, sorts)
+	if err != nil {
+		return errors.WithMessage(err, "重新排序商品属性组失败")
 	}
 	return nil
 }
