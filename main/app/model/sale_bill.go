@@ -98,6 +98,17 @@ type SaleBill struct {
 	BuffetPackage2  *BuffetPackage    `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
 }
 
+// 是否是“已取消”状态
+func (model *SaleBill) IsCanceled() bool {
+	return model.Status == constant.SaleBillStatusCanceled
+}
+
+// 设置为“已取消”状态
+func (model *SaleBill) SetCanceled() {
+	model.Status = constant.SaleBillStatusCanceled
+	// 未完整逻辑。部分逻辑还在service中处理。
+}
+
 // 结束SaleBill和SaleOrder的生命周期。相当于用餐订单结账完成。
 func (model *SaleBill) EndSaleBillAndSaleOrder(dutyNo string, cashierUuid uint64, cashierName string) {
 	model.SetFinishSaleBill(dutyNo, cashierUuid, cashierName)

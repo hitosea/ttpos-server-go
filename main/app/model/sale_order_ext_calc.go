@@ -15,9 +15,9 @@ func (model *SaleOrder) CalcSaleOrder(setting SaleBillSetting, options ...func(o
 	taxFeeType := setting.GetTaxFeeType()
 	serviceFeeType := setting.GetServiceFeeType()
 	if option.H5OrderUuid == 0 {
-		return model.calcSaleOrder(serviceFeeType, setting.ServiceFeeValue, taxFeeType, 0)
+		return model.calcSaleOrder(serviceFeeType, setting.ServiceFeeValue, taxFeeType, 0, option.IsCanceled)
 	} else {
-		return model.calcSaleOrder(serviceFeeType, setting.ServiceFeeValue, taxFeeType, option.H5OrderUuid)
+		return model.calcSaleOrder(serviceFeeType, setting.ServiceFeeValue, taxFeeType, option.H5OrderUuid, option.IsCanceled)
 	}
 }
 
@@ -116,9 +116,9 @@ func (model *SaleOrder) CalcCheckOutZeroFee() float64 {
 }
 
 // 重新计算销售订单的金额
-func (model *SaleOrder) calcSaleOrder(serviceFeeType int, serviceFeeValue float64, taxFeeType int, h5OrderUuid uint64) *Calc {
+func (model *SaleOrder) calcSaleOrder(serviceFeeType int, serviceFeeValue float64, taxFeeType int, h5OrderUuid uint64, isCanceled bool) *Calc {
 	calc := Calc{}
-	products := model.GetUnCookingAndCookingOrderProductList(h5OrderUuid)
+	products := model.GetUnCookingAndCookingOrderProductList(h5OrderUuid, isCanceled)
 	calc.ProductOriginalAmount = model.calcProductAmount(products, WithOriginPrice())
 	model.ProductOriginalAmount = calc.ProductOriginalAmount
 	calc.ProductAmount = model.calcProductAmount(products)

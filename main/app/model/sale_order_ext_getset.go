@@ -247,7 +247,7 @@ func (model *SaleOrder) GetUnCookingOrderProductList() []*SaleOrderProduct {
 }
 
 // 获取全部商品，包括已送厨和未送厨
-func (model *SaleOrder) GetUnCookingAndCookingOrderProductList(h5OrderUuid uint64) []*SaleOrderProduct {
+func (model *SaleOrder) GetUnCookingAndCookingOrderProductList(h5OrderUuid uint64, isCanceled bool) []*SaleOrderProduct {
 	var products []*SaleOrderProduct
 	if h5OrderUuid == 0 {
 		products = model.GetAllOrderProductList(WithAll())
@@ -255,7 +255,22 @@ func (model *SaleOrder) GetUnCookingAndCookingOrderProductList(h5OrderUuid uint6
 		products = model.GetAllOrderProductList(WithAllAndOneH5Order(h5OrderUuid))
 	}
 	products = FilterPackageSubProduct(products)
+	if isCanceled {
+		products = FilterUnCookingOrderProduct(products)
+	}
 	return FilterUnAcceptOrderProduct(products, h5OrderUuid)
+}
+
+// 过滤未送厨的商品
+func FilterUnCookingOrderProduct(products []*SaleOrderProduct) []*SaleOrderProduct {
+	list := make([]*SaleOrderProduct, 0)
+	for _, product := range products {
+		if product.IsUnCookingProduct() {
+			continue
+		}
+		list = append(list, product)
+	}
+	return list
 }
 
 // 过滤套餐子商品
