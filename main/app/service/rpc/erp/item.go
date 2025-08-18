@@ -2,6 +2,7 @@ package erp
 
 import (
 	"context"
+	"errors"
 	"ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/dto"
@@ -24,6 +25,7 @@ func NewErpItemClient() (item.ItemServiceClient, *grpc.ClientConn, error) {
 	return item.NewItemServiceClient(conn), conn, nil
 }
 
+// GetUomList 获取单位列表
 func (s *erpSrv) GetUomList(ctx context.Context, getUomListReq req.GetUomListReq) (resp.GetUomListResp, error) {
 	var getUomListResp resp.GetUomListResp
 	client, conn, err := NewErpItemClient()
@@ -57,6 +59,7 @@ func (s *erpSrv) GetUomList(ctx context.Context, getUomListReq req.GetUomListReq
 	return getUomListResp, nil
 }
 
+// GetAttributeList 获取属性组列表
 func (s *erpSrv) GetAttributeList(ctx context.Context, getAttributeListReq req.GetAttributeListReq) (resp.GetAttributeListResp, error) {
 	var getAttributeListResp resp.GetAttributeListResp
 	client, conn, err := NewErpItemClient()
@@ -96,6 +99,7 @@ func (s *erpSrv) GetAttributeList(ctx context.Context, getAttributeListReq req.G
 	return getAttributeListResp, nil
 }
 
+// SyncUomAndAttribute 同步单位和属性组
 func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.SyncUomAndAttributeReq) error {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	translateClient := utils.NewTranslateClient()
@@ -290,6 +294,65 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 			}
 			attributeSort++
 		}
+	}
+
+	return nil
+}
+
+// SaveUom 保存单位
+func (s *erpSrv) SaveUom(ctx context.Context, saveUomReq req.SaveUomReq) error {
+	client, conn, err := NewErpItemClient()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	req := &item.UomInfo{
+		UomName:           saveUomReq.UomName,
+		AliasName:         saveUomReq.AliasName,
+		MustBeWholeNumber: saveUomReq.MustBeWholeNumber,
+		CompanyAbbr:       saveUomReq.CompanyAbbr,
+		Branch:            saveUomReq.Branch,
+	}
+	result, err := client.SaveUom(WithSiteCode(context.TODO(), saveUomReq.SiteCode), req)
+	if err != nil {
+		return err
+	}
+	if result.Code != "0" {
+		return errors.New("保存失败")
+	}
+	return nil
+}
+
+// SaveAttribute 保存属性组
+func (s *erpSrv) SaveAttribute(ctx context.Context, saveAttributeReq req.SaveAttributeReq) error {
+	client, conn, err := NewErpItemClient()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	attributeValueList := make([]*item.AttributeValueInfo, 0)
+	for _, attributeValue := range saveAttributeReq.AttributeValueList {
+		attributeValueList = append(attributeValueList, &item.AttributeValueInfo{
+			AttributeValue: attributeValue.AttributeValue,
+			Abbr:           attributeValue.Abbr,
+		})
+	}
+
+	req := &item.AttributeInfo{
+		AttributeName:      saveAttributeReq.AttributeName,
+		AliasName:          saveAttributeReq.AliasName,
+		CompanyAbbr:        saveAttributeReq.CompanyAbbr,
+		Branch:             saveAttributeReq.Branch,
+		AttributeValueList: attributeValueList,
+	}
+	result, err := client.SaveAttribute(WithSiteCode(context.TODO(), saveAttributeReq.SiteCode), req)
+	if err != nil {
+		return err
+	}
+	if result.Code != "0" {
+		return errors.New("保存失败")
 	}
 
 	return nil

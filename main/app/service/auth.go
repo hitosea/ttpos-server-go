@@ -1007,7 +1007,7 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 			Language:        companySetting.GetLanguages(),
 			CompanyName:     storeSetting.Company,
 		},
-		IsTtposSite:   companySetting.ErpnextSiteCode == "1",
+		IsTtposSite:   companySetting.IsTtposSite(),
 		UpdateTime:    time.Now().Unix(),
 		ServerVersion: utils.GetVersion(),
 	}, nil
