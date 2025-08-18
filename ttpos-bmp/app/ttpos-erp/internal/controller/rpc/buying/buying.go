@@ -47,3 +47,96 @@ func (c *Controller) validateGetSupplierListReq(req *buying.GetSupplierListReq) 
 	}
 	return nil
 }
+
+// GetPurchaseOrder 获取采购订单
+// 参数：ctx 上下文，req 获取采购订单请求
+// 返回：响应信息和错误
+func (c *Controller) GetPurchaseOrder(ctx context.Context, req *buying.GetPurchaseOrderReq) (*api.ResponseInfo, error) {
+	// 参数验证
+	if err := c.validateGetPurchaseOrderReq(req); err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	// 调用服务层获取数据
+	resp, err := service.Buying().GetPurchaseOrder(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	// 转换响应数据格式
+	purchaseOrderItems := make([]*buying.PurchaseOrderItem, 0)
+	for _, item := range resp.Items {
+		purchaseOrderItems = append(purchaseOrderItems, &buying.PurchaseOrderItem{
+			ItemName: item.ItemName,
+			ItemCode: item.ItemCode,
+			StockUom: item.StockUom,
+			Qty:      float32(item.Qty),
+		})
+	}
+
+	return rpc.ApiSuccessWithData("查询采购订单成功", &buying.GetPurchaseOrderResp{
+		PurchaseOrder: &buying.PurchaseOrderInfo{
+			PurchaseOrderName: resp.Name,
+			SupplierName:      resp.Supplier,
+			PerReceived:       float32(resp.PerReceived),
+			ScheduleDate:      resp.ScheduleDate,
+			Items:             purchaseOrderItems,
+		},
+	}), nil
+}
+
+// validateGetPurchaseOrderReq 验证获取采购订单请求参数
+func (c *Controller) validateGetPurchaseOrderReq(req *buying.GetPurchaseOrderReq) error {
+	if req == nil {
+		return gerror.New("请求参数不能为空")
+	}
+	if strings.TrimSpace(req.PurchaseOrderName) == "" {
+		return gerror.New("采购订单名称不能为空")
+	}
+	return nil
+}
+
+// SavePurchaseReceipt 保存采购收货单
+// 参数：ctx 上下文，req 保存采购收货单请求
+// 返回：响应信息和错误
+func (c *Controller) SavePurchaseReceipt(ctx context.Context, req *buying.SavePurchaseReceiptReq) (*api.ResponseInfo, error) {
+	// 参数验证
+	if err := c.validateSavePurchaseReceiptReq(req); err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	// 调用服务层保存数据
+	_, err := service.Buying().CreatePurchaseReceiptFromOrder(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccess("保存采购收货成功"), nil
+}
+
+// validateSavePurchaseReceiptReq 验证保存采购收货单请求参数
+func (c *Controller) validateSavePurchaseReceiptReq(req *buying.SavePurchaseReceiptReq) error {
+	if req == nil {
+		return gerror.New("请求参数不能为空")
+	}
+	if strings.TrimSpace(req.PurchaseOrderName) == "" {
+		return gerror.New("采购订单名称不能为空")
+	}
+	if req.Items == nil || len(req.Items) == 0 {
+		return gerror.New("采购订单物品列表不能为空")
+	}
+
+	// 验证每个物品项的参数
+	for i, item := range req.Items {
+		if item == nil {
+			return gerror.Newf("第%d个物品项不能为空", i+1)
+		}
+		if strings.TrimSpace(item.ItemCode) == "" {
+			return gerror.Newf("第%d个物品项的物品编码不能为空", i+1)
+		}
+		if item.Qty <= 0 {
+			return gerror.Newf("第%d个物品项的数量必须大于0", i+1)
+		}
+	}
+
+	return nil
+}

@@ -1,3 +1,5 @@
+// Package erp 提供ERP系统相关的数据传输对象
+// 包含供应商、采购订单、销售订单、付款计划等业务实体
 package erp
 
 // Supplier 结构体，表示供应商信息
@@ -385,20 +387,16 @@ type SaleOrderItem struct {
 	// 父级关联
 	Parentfield string `json:"parentfield,omitempty"` // 父级字段
 	Parenttype  string `json:"parenttype,omitempty"`  // 父级类型
-
-	// 本地状态
-	Islocal int `json:"__islocal,omitempty"` // 是否本地
-	Unsaved int `json:"__unsaved,omitempty"` // 是否未保存
 }
 
 // SaleOrder 结构体，表示销售订单
 type SaleOrder struct {
 	// 基础字段
-	Owner     string `json:"owner,omitempty"`                    // 拥有者
-	Docstatus int    `json:"docstatus,omitempty"`                // 单据状态
-	Idx       int    `json:"idx,omitempty"`                      // 索引
-	Doctype   string `json:"doctype,omitempty"`                  // 单据类型
-	Name      string `json:"name,omitempty" validate:"required"` // 名称
+	Owner     string `json:"owner,omitempty"`     // 拥有者
+	Docstatus int    `json:"docstatus,omitempty"` // 单据状态
+	Idx       int    `json:"idx,omitempty"`       // 索引
+	Doctype   string `json:"doctype,omitempty"`   // 单据类型
+	Name      string `json:"name,omitempty"`      // 名称
 
 	// 基本信息
 	Title        string `json:"title,omitempty"`         // 标题
@@ -489,11 +487,196 @@ type SaleOrder struct {
 	Items           []SaleOrderItem   `json:"items,omitempty"`            // 项目
 	Taxes           []interface{}     `json:"taxes,omitempty"`            // 税费
 	PackedItems     []interface{}     `json:"packed_items,omitempty"`     // 包装项目
+}
 
-	// 本地状态
-	Islocal int `json:"__islocal,omitempty"` // 是否本地
-	Unsaved int `json:"__unsaved,omitempty"` // 是否未保存
+// PurchaseReceiptItem 结构体，表示采购收货单项目
+type PurchaseReceiptItem struct {
+	// 基础字段
+	Owner     string `json:"owner,omitempty"`     // 拥有者
+	Docstatus int    `json:"docstatus,omitempty"` // 单据状态
+	Idx       int    `json:"idx,omitempty"`       // 索引
+	Doctype   string `json:"doctype,omitempty"`   // 单据类型
 
-	// 加载状态
-	Onload map[string]interface{} `json:"__onload,omitempty"` // 加载状态
+	// 项目基本信息
+	ItemCode    string `json:"item_code,omitempty"`   // 项目编码
+	ItemName    string `json:"item_name,omitempty"`   // 项目名称
+	ItemGroup   string `json:"item_group,omitempty"`  // 项目组
+	Description string `json:"description,omitempty"` // 描述
+	Image       string `json:"image,omitempty"`       // 图片
+
+	// 数量和单位
+	Qty              float64 `json:"qty,omitempty"`                // 数量
+	StockUom         string  `json:"stock_uom,omitempty"`          // 库存单位
+	Uom              string  `json:"uom,omitempty"`                // 单位
+	ConversionFactor float64 `json:"conversion_factor,omitempty"`  // 转换因子
+	StockQty         float64 `json:"stock_qty,omitempty"`          // 库存数量
+	ReceivedQty      float64 `json:"received_qty,omitempty"`       // 已收数量
+	RejectedQty      float64 `json:"rejected_qty,omitempty"`       // 拒绝数量
+	ReturnedQty      float64 `json:"returned_qty,omitempty"`       // 退回数量
+	ReceivedStockQty float64 `json:"received_stock_qty,omitempty"` // 已收库存数量
+
+	// 样本相关
+	RetainSample   bool    `json:"retain_sample,omitempty"`   // 保留样本
+	SampleQuantity float64 `json:"sample_quantity,omitempty"` // 样本数量
+
+	// 价格相关
+	PriceListRate     float64 `json:"price_list_rate,omitempty"`      // 价目表价格
+	BasePriceListRate float64 `json:"base_price_list_rate,omitempty"` // 基础价目表价格
+	Rate              float64 `json:"rate,omitempty"`                 // 价格
+	BaseRate          float64 `json:"base_rate,omitempty"`            // 基础价格
+	StockUomRate      float64 `json:"stock_uom_rate,omitempty"`       // 库存单位价格
+	NetRate           float64 `json:"net_rate,omitempty"`             // 净价格
+	BaseNetRate       float64 `json:"base_net_rate,omitempty"`        // 基础净价格
+	ValuationRate     float64 `json:"valuation_rate,omitempty"`       // 评估价格
+	SalesIncomingRate float64 `json:"sales_incoming_rate,omitempty"`  // 销售收入价格
+
+	// 金额相关
+	Amount        float64 `json:"amount,omitempty"`          // 金额
+	BaseAmount    float64 `json:"base_amount,omitempty"`     // 基础金额
+	NetAmount     float64 `json:"net_amount,omitempty"`      // 净金额
+	BaseNetAmount float64 `json:"base_net_amount,omitempty"` // 基础净金额
+	BilledAmt     float64 `json:"billed_amt,omitempty"`      // 已开票金额
+
+	// 折扣相关
+	DiscountPercentage        float64 `json:"discount_percentage,omitempty"`         // 折扣百分比
+	DiscountAmount            float64 `json:"discount_amount,omitempty"`             // 折扣金额
+	DistributedDiscountAmount float64 `json:"distributed_discount_amount,omitempty"` // 分配折扣金额
+
+	// 利润率相关
+	MarginType         string  `json:"margin_type,omitempty"`           // 利润率类型
+	MarginRateOrAmount float64 `json:"margin_rate_or_amount,omitempty"` // 利润率或金额
+	RateWithMargin     float64 `json:"rate_with_margin,omitempty"`      // 含利润率价格
+	BaseRateWithMargin float64 `json:"base_rate_with_margin,omitempty"` // 基础含利润率价格
+
+	// 税费相关
+	ItemTaxAmount float64 `json:"item_tax_amount,omitempty"` // 项目税费金额
+
+	// 成本相关
+	RmSuppCost                          float64 `json:"rm_supp_cost,omitempty"`                            // 原材料供应成本
+	LandedCostVoucherAmount             float64 `json:"landed_cost_voucher_amount,omitempty"`              // 到岸成本凭证金额
+	AmountDifferenceWithPurchaseInvoice float64 `json:"amount_difference_with_purchase_invoice,omitempty"` // 与采购发票的金额差异
+
+	// 状态标识
+	HasItemScanned                 bool `json:"has_item_scanned,omitempty"`                   // 是否有项目扫描
+	IsFreeItem                     bool `json:"is_free_item,omitempty"`                       // 是否免费项目
+	ApplyTds                       bool `json:"apply_tds,omitempty"`                          // 应用TDS
+	AllowZeroValuationRate         bool `json:"allow_zero_valuation_rate,omitempty"`          // 允许零评估价格
+	ReturnQtyFromRejectedWarehouse bool `json:"return_qty_from_rejected_warehouse,omitempty"` // 从拒绝仓库退回数量
+	IsFixedAsset                   bool `json:"is_fixed_asset,omitempty"`                     // 是否固定资产
+	UseSerialBatchFields           bool `json:"use_serial_batch_fields,omitempty"`            // 使用序列批次字段
+	IncludeExplodedItems           bool `json:"include_exploded_items,omitempty"`             // 包含分解项目
+	PageBreak                      bool `json:"page_break,omitempty"`                         // 分页符
+
+	// 日期相关
+	ScheduleDate string `json:"schedule_date,omitempty"` // 计划日期
+
+	// 仓库和库存
+	Warehouse string `json:"warehouse,omitempty"` // 仓库
+
+	// 关联信息
+	MaterialRequest     string `json:"material_request,omitempty"`      // 物料请求
+	PurchaseOrder       string `json:"purchase_order,omitempty"`        // 采购订单
+	MaterialRequestItem string `json:"material_request_item,omitempty"` // 物料请求项目
+	PurchaseOrderItem   string `json:"purchase_order_item,omitempty"`   // 采购订单项目
+
+	// 其他信息
+	WeightPerUnit  float64 `json:"weight_per_unit,omitempty"` // 单位重量
+	TotalWeight    float64 `json:"total_weight,omitempty"`    // 总重量
+	ExpenseAccount string  `json:"expense_account,omitempty"` // 费用账户
+	ItemTaxRate    string  `json:"item_tax_rate,omitempty"`   // 项目税率
+	CostCenter     string  `json:"cost_center,omitempty"`     // 成本中心
+
+	// 父级关联
+	Parentfield string `json:"parentfield,omitempty"` // 父级字段
+	Parenttype  string `json:"parenttype,omitempty"`  // 父级类型
+}
+
+// PurchaseReceipt 结构体，表示采购收货单
+type PurchaseReceipt struct {
+	// 基础字段
+	Owner     string `json:"owner,omitempty"`     // 拥有者
+	Docstatus int    `json:"docstatus,omitempty"` // 单据状态
+	Idx       int    `json:"idx,omitempty"`       // 索引
+	Doctype   string `json:"doctype,omitempty"`   // 单据类型
+	Name      string `json:"name,omitempty"`      // 名称
+
+	// 基本信息
+	NamingSeries string `json:"naming_series,omitempty"` // 编码规则
+	Supplier     string `json:"supplier,omitempty"`      // 供应商
+	SupplierName string `json:"supplier_name,omitempty"` // 供应商名称
+	Company      string `json:"company,omitempty"`       // 公司
+
+	// 日期和时间
+	PostingDate    string `json:"posting_date,omitempty"`     // 过账日期
+	PostingTime    string `json:"posting_time,omitempty"`     // 过账时间
+	SetPostingTime bool   `json:"set_posting_time,omitempty"` // 设置过账时间
+
+	// 状态标识
+	ApplyPutawayRule        bool `json:"apply_putaway_rule,omitempty"`         // 应用上架规则
+	IsReturn                bool `json:"is_return,omitempty"`                  // 是否退货
+	IgnorePricingRule       bool `json:"ignore_pricing_rule,omitempty"`        // 忽略定价规则
+	IsSubcontracted         bool `json:"is_subcontracted,omitempty"`           // 是否分包
+	GroupSameItems          bool `json:"group_same_items,omitempty"`           // 分组相同项目
+	IsInternalSupplier      bool `json:"is_internal_supplier,omitempty"`       // 是否内部供应商
+	IsOldSubcontractingFlow bool `json:"is_old_subcontracting_flow,omitempty"` // 是否旧分包流程
+	DisableRoundedTotal     bool `json:"disable_rounded_total,omitempty"`      // 禁用舍入总额
+
+	// 货币和汇率
+	Currency          string  `json:"currency,omitempty"`            // 货币
+	ConversionRate    float64 `json:"conversion_rate,omitempty"`     // 转换汇率
+	BuyingPriceList   string  `json:"buying_price_list,omitempty"`   // 采购价目表
+	PriceListCurrency string  `json:"price_list_currency,omitempty"` // 价目表货币
+	PlcConversionRate float64 `json:"plc_conversion_rate,omitempty"` // PLC转换汇率
+
+	// 数量和重量
+	TotalQty       float64 `json:"total_qty,omitempty"`        // 总数量
+	TotalNetWeight float64 `json:"total_net_weight,omitempty"` // 总净重
+
+	// 金额信息
+	BaseTotal                   float64 `json:"base_total,omitempty"`                      // 基础总额
+	BaseNetTotal                float64 `json:"base_net_total,omitempty"`                  // 基础净总额
+	Total                       float64 `json:"total,omitempty"`                           // 总额
+	NetTotal                    float64 `json:"net_total,omitempty"`                       // 净总额
+	TaxWithholdingNetTotal      float64 `json:"tax_withholding_net_total,omitempty"`       // 代扣税净总额
+	BaseTaxWithholdingNetTotal  float64 `json:"base_tax_withholding_net_total,omitempty"`  // 基础代扣税净总额
+	TaxCategory                 string  `json:"tax_category,omitempty"`                    // 税类别
+	BaseTaxesAndChargesAdded    float64 `json:"base_taxes_and_charges_added,omitempty"`    // 基础税费和费用增加
+	BaseTaxesAndChargesDeducted float64 `json:"base_taxes_and_charges_deducted,omitempty"` // 基础税费和费用扣除
+	BaseTotalTaxesAndCharges    float64 `json:"base_total_taxes_and_charges,omitempty"`    // 基础税费和费用总额
+	TaxesAndChargesAdded        float64 `json:"taxes_and_charges_added,omitempty"`         // 税费和费用增加
+	TaxesAndChargesDeducted     float64 `json:"taxes_and_charges_deducted,omitempty"`      // 税费和费用扣除
+	TotalTaxesAndCharges        float64 `json:"total_taxes_and_charges,omitempty"`         // 税费和费用总额
+	BaseGrandTotal              float64 `json:"base_grand_total,omitempty"`                // 基础总金额
+	BaseRoundingAdjustment      float64 `json:"base_rounding_adjustment,omitempty"`        // 基础舍入调整
+	BaseRoundedTotal            float64 `json:"base_rounded_total,omitempty"`              // 基础舍入总额
+	GrandTotal                  float64 `json:"grand_total,omitempty"`                     // 总金额
+	RoundingAdjustment          float64 `json:"rounding_adjustment,omitempty"`             // 舍入调整
+	RoundedTotal                float64 `json:"rounded_total,omitempty"`                   // 舍入总额
+
+	// 折扣相关
+	ApplyDiscountOn              string  `json:"apply_discount_on,omitempty"`              // 应用折扣于
+	BaseDiscountAmount           float64 `json:"base_discount_amount,omitempty"`           // 基础折扣金额
+	AdditionalDiscountPercentage float64 `json:"additional_discount_percentage,omitempty"` // 额外折扣百分比
+	DiscountAmount               float64 `json:"discount_amount,omitempty"`                // 折扣金额
+
+	// 状态信息
+	Status string `json:"status,omitempty"` // 状态
+
+	// 百分比信息
+	PerBilled   float64 `json:"per_billed,omitempty"`   // 已开票百分比
+	PerReturned float64 `json:"per_returned,omitempty"` // 已退货百分比
+
+	// 其他信息
+	Language          string `json:"language,omitempty"`           // 语言
+	RepresentsCompany string `json:"represents_company,omitempty"` // 代表公司
+
+	// 金额大写
+	BaseInWords string `json:"base_in_words,omitempty"` // 基础金额大写
+	InWords     string `json:"in_words,omitempty"`      // 金额大写
+
+	// 关联数据
+	PricingRules  []interface{}         `json:"pricing_rules,omitempty"`  // 定价规则
+	SuppliedItems []interface{}         `json:"supplied_items,omitempty"` // 供应项目
+	Items         []PurchaseReceiptItem `json:"items,omitempty"`          // 项目
+	Taxes         []interface{}         `json:"taxes,omitempty"`          // 税费
 }
