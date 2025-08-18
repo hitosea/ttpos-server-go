@@ -468,19 +468,20 @@ type ProductShopListResp struct {
 
 // ProductShopListItemResp 商品列表项响应
 type ProductShopListItemResp struct {
-	Uuid                uint64                      `json:"uuid"`                  // 商品UUID
-	LocaleName          dto.LocaleResponse          `json:"locale_name"`           // 商品名称
-	Image               string                      `json:"image"`                 // 商品图片
-	Tag                 ProductShopListItemTagResp  `json:"tag"`                   // 商品标签列表
-	MinPrice            float64                     `json:"min_price"`             // 最低价格
-	MaxPrice            float64                     `json:"max_price"`             // 最高价格
-	Unit                ProductShopListItemUnitResp `json:"unit"`                  // 商品单位
-	CategoryUuid        uint64                      `json:"category_uuid"`         // 商品分类UUID
-	SpecialCategoryUuid uint64                      `json:"special_category_uuid"` // 商品特殊分类UUID
-	Status              int                         `json:"status"`                // 商品状态 0-下架 1-上架
-	IsSoldOut           bool                        `json:"is_sold_out"`           // 是否售罄 false-否 true-是
-	ProductType         int                         `json:"product_type"`          // 商品类型 0-商品 1-套餐
-	Sort                int                         `json:"sort"`                  // 商品排序
+	Uuid                uint64                            `json:"uuid"`                  // 商品UUID
+	LocaleName          dto.LocaleResponse                `json:"locale_name"`           // 商品名称
+	Image               string                            `json:"image"`                 // 商品图片
+	Tag                 ProductShopListItemTagResp        `json:"tag"`                   // 商品标签列表
+	MinPrice            float64                           `json:"min_price"`             // 最低价格
+	MaxPrice            float64                           `json:"max_price"`             // 最高价格
+	Unit                ProductShopListItemUnitResp       `json:"unit"`                  // 商品单位
+	CategoryUuid        uint64                            `json:"category_uuid"`         // 商品分类UUID
+	SpecialCategoryUuid uint64                            `json:"special_category_uuid"` // 商品特殊分类UUID
+	Status              int                               `json:"status"`                // 商品状态 0-下架 1-上架
+	IsSoldOut           bool                              `json:"is_sold_out"`           // 是否售罄 false-否 true-是
+	ProductType         int                               `json:"product_type"`          // 商品类型 0-商品 1-套餐
+	Sort                int                               `json:"sort"`                  // 商品排序
+	Flavors             ProductShopListItemFlavorListResp `json:"flavors"`               // 商品规格列表
 }
 
 // ProductShopListItemTagResp 商品标签列表
@@ -492,6 +493,16 @@ type ProductShopListItemTagResp struct {
 
 type ProductShopListItemUnitResp struct {
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品单位名称
+}
+
+type ProductShopListItemFlavorListResp struct {
+	List []ProductShopListItemFlavorItemResp `json:"list"`
+}
+
+type ProductShopListItemFlavorItemResp struct {
+	Uuid       uint64             `json:"uuid"`        // 商品Bom uuid
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品Bom名称
+	Price      float64            `json:"price"`       // 商品Bom价格
 }
 
 // ProductTaxListResp 商品税类列表响应

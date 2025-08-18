@@ -1564,8 +1564,8 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 	}
 
 	// 去掉logoUrl的域名
-	storeSettingReq.LogoUrl = utils.RemoveDomain(storeSettingReq.LogoUrl)
-	storeSetting.AvatarURL = utils.RemoveDomain(storeSetting.AvatarURL)
+	storeSettingReq.LogoUrl = "/" + strings.TrimLeft(utils.RemoveDomain(storeSettingReq.LogoUrl), "/")
+	storeSetting.AvatarURL = "/" + strings.TrimLeft(utils.RemoveDomain(storeSetting.AvatarURL), "/")
 
 	// 保存设置到store_setting表
 	settingRepo := repository.NewSettingRepo(companyDB)

@@ -106,6 +106,11 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 			QueryStartTime: int64(printerParam.QueryStartTime),
 			QueryEndTime:   int64(printerParam.QueryEndTime),
 		})
+		// 未结订单
+		unpaidOrderData := s.statisticsSrv.CountUnpaidOrder(ctx, CountReq{
+			QueryStartTime: int64(printerParam.QueryStartTime),
+			QueryEndTime:   int64(printerParam.QueryEndTime),
+		})
 
 		reqPrinterData.All = &business_data_resp.BusinessDataAll{
 			TotalSales:              saleData.TotalSaleAmount,
@@ -141,6 +146,8 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 			AllCashierMinOrderPrice: saleData.MinInstantOrderAmount,
 			AllCashierMaxOrderPrice: saleData.MaxInstantOrderAmount,
 			AllCashierAvgOrderPrice: saleData.AvgInstantOrderAmount,
+			UnclosedTotalOrderNum:   int(unpaidOrderData.TotalOrderNum),
+			UnclosedTotalPrice:      unpaidOrderData.TotalAmount,
 			PaymentMethodIncomes:    paymentMethodIncomes,
 			AbnormalData: func() business_data_resp.AbnormalData {
 				AbnormalData, err := repository.NewOrderAbnormalRecordRepo(ctx.GetDB()).GetRecordInfo(

@@ -39,7 +39,7 @@ type GiftOrFreeOrderReasonRepoImpl struct {
 // GetGiftOrFreeOrderReasonList 获取赠品或免费订单原因列表，排除逻辑删除的原因
 func (r *GiftOrFreeOrderReasonRepoImpl) GetGiftOrFreeOrderReasonList() ([]model.FreeReason, error) {
 	var giftOrFreeOrderReasons []model.FreeReason
-	err := r.db.Model(&model.FreeReason{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Find(&giftOrFreeOrderReasons).Error
+	err := r.db.Model(&model.FreeReason{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Order("create_time desc").Find(&giftOrFreeOrderReasons).Error
 	return giftOrFreeOrderReasons, errors.WithMessage(err)
 }
 
@@ -52,12 +52,12 @@ func (r *GiftOrFreeOrderReasonRepoImpl) UpdateGiftOrFreeOrderReason(id uint64, g
 		}
 	}()
 
-	if err := tx.Model(&model.FreeReason{}).Where("uuid = ?", id).Debug().Updates(giftOrFreeOrderReason).Error; err != nil {
+	if err := tx.Model(&model.FreeReason{}).Where("uuid = ?", id).Updates(giftOrFreeOrderReason).Error; err != nil {
 		tx.Rollback() // 更新失败，回滚事务
 		return errors.WithMessage(err)
 	}
 
-	if err := tx.Model(&giftOrFreeOrderReason.MultiLanguageName).Debug().Where("uuid = ?", giftOrFreeOrderReason.MultiLanguageNameUuid).Updates(giftOrFreeOrderReason.MultiLanguageName).Error; err != nil {
+	if err := tx.Model(&giftOrFreeOrderReason.MultiLanguageName).Where("uuid = ?", giftOrFreeOrderReason.MultiLanguageNameUuid).Updates(giftOrFreeOrderReason.MultiLanguageName).Error; err != nil {
 		tx.Rollback() // 更新多语言名称失败，回滚事务
 		return errors.WithMessage(err)
 	}

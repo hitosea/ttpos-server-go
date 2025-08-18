@@ -2980,7 +2980,10 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 		productRepo.WithProductPackageImageFile(),
 		productRepo.WithProductBoms(
 			commonRepo.WhereBySoftDelete(),
+			commonRepo.SortWithID("DESC"),
 		),
+		productRepo.WithProductBomsProductFlavor(),
+		productRepo.WithProductBomsProductFlavorMultiLanguageName(),
 		productRepo.WithProductPackageAttributeGroup(),
 		productRepo.WithProductUnit(),
 		productRepo.WithProductUnitMultiLanguageName(),
@@ -3042,6 +3045,7 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 		IsMultipleSpec := false
 		IsAttribute := len(productPackage.ProductPackageAttributeGroups) > 0
 		IsSauce := false
+		flavors := make([]product_resp.ProductShopListItemFlavorItemResp, 0)
 		for _, productBom := range productPackage.ProductBoms {
 			if productPackage.ProductType == constant.ProductTypeProduct {
 				// 规格
@@ -3060,6 +3064,11 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 					if productBom.StockNum > 0 {
 						specStockNum = productBom.StockNum
 					}
+					flavors = append(flavors, product_resp.ProductShopListItemFlavorItemResp{
+						Uuid:       productBom.Uuid,
+						LocaleName: productBom.ProductFlavor.MultiLanguageName.GetNames(),
+						Price:      productBom.Price,
+					})
 				}
 				if productBom.ProductSauceUuid > 0 {
 					IsSauce = true
@@ -3091,6 +3100,9 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 			IsSoldOut:           specStockNum <= 0,
 			ProductType:         int(productPackage.ProductType),
 			Sort:                int(productPackage.Sort),
+			Flavors: product_resp.ProductShopListItemFlavorListResp{
+				List: flavors,
+			},
 		}
 
 		productList = append(productList, productItem)

@@ -73,7 +73,7 @@ func (r *ReturnFoodReasonRepoImpl) GetReturnFoodReasonList() ([]model.ReturnFood
 	err := r.db.Model(&model.ReturnFoodReason{}).
 		Preload("MultiLanguageName").
 		Where("delete_time = ?", 0).
-		Order("id ASC").
+		Order("create_time desc").
 		Find(&returnFoodReasons).Error
 	return returnFoodReasons, errors.WithMessage(err)
 }

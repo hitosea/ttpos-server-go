@@ -271,7 +271,7 @@ func (h *ProductHandler) AddProductUnit(c *gin.Context) {
 		return
 	}
 	// 返回结果
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "添加成功")
 }
 
 // EditProductUnit 编辑商品单位
@@ -301,7 +301,7 @@ func (h *ProductHandler) EditProductUnit(c *gin.Context) {
 		return
 	}
 	// 返回结果
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "保存成功")
 }
 
 // DeleteProductUnit 删除商品单位
@@ -331,7 +331,7 @@ func (h *ProductHandler) DeleteProductUnit(c *gin.Context) {
 		return
 	}
 	// 返回结果
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "删除成功")
 }
 
 // SortProductUnit 排序商品单位
@@ -360,7 +360,7 @@ func (h *ProductHandler) SortProductUnit(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "保存成功")
 }
 
 // GetProductSauceList 获取商品加料列表
@@ -440,7 +440,7 @@ func (h *ProductHandler) AddProductSauce(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "添加成功")
 }
 
 // EditProductSauce 编辑商品加料
@@ -466,7 +466,7 @@ func (h *ProductHandler) EditProductSauce(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "保存成功")
 }
 
 // DeleteProductSauce 删除商品加料
@@ -492,7 +492,7 @@ func (h *ProductHandler) DeleteProductSauce(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "删除成功")
 }
 
 // SortProductSauce 排序商品加料
@@ -518,7 +518,7 @@ func (h *ProductHandler) SortProductSauce(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "保存成功")
 }
 
 // GetProductAttributeGroupList 获取商品属性分组列表
@@ -597,7 +597,7 @@ func (h *ProductHandler) AddProductAttributeGroup(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "添加成功")
 }
 
 // GetProductFlavor 获取商品规格详情
@@ -649,7 +649,7 @@ func (h *ProductHandler) AddProductFlavor(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "添加成功")
 }
 
 // GetProductFlavorList 获取商品规格列表
@@ -702,7 +702,7 @@ func (h *ProductHandler) EditProductAttributeGroup(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "保存成功")
 }
 
 // DeleteProductAttributeGroup 删除商品属性分组
@@ -728,7 +728,7 @@ func (h *ProductHandler) DeleteProductAttributeGroup(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "删除成功")
 }
 
 // DeleteProductFlavor 删除商品规格
@@ -754,7 +754,7 @@ func (h *ProductHandler) DeleteProductFlavor(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "删除成功")
 }
 
 // SortProductAttributeGroup 排序商品属性分组
@@ -780,7 +780,7 @@ func (h *ProductHandler) SortProductAttributeGroup(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "保存成功")
 }
 
 // SortProductFlavor 排序商品规格
@@ -806,7 +806,7 @@ func (h *ProductHandler) SortProductFlavor(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "保存成功")
 }
 
 // SortProductAttribute 排序商品属性
@@ -832,7 +832,7 @@ func (h *ProductHandler) SortProductAttribute(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "保存成功")
 }
 
 // EditProductFlavor 编辑商品规格
@@ -858,7 +858,7 @@ func (h *ProductHandler) EditProductFlavor(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "保存成功")
 }
 
 // ImportProductList 导入商品-获取导入商品列表
@@ -910,7 +910,7 @@ func (h *ProductHandler) ImportProduct(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "导入成功")
 }
 
 // GetProductSingleList 获取单规格商品列表
@@ -988,7 +988,7 @@ func (h *ProductHandler) SortProductShopList(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "保存成功")
 }
 
 // GetProductDetail 获取商品详情
@@ -1040,7 +1040,7 @@ func (h *ProductHandler) ProductShopStatus(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "设置成功")
 }
 
 // ProductShopAdd 添加商品
@@ -1066,7 +1066,7 @@ func (h *ProductHandler) ProductShopAdd(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "添加成功")
 }
 
 // ProductShopEdit 编辑商品
@@ -1092,7 +1092,7 @@ func (h *ProductHandler) ProductShopEdit(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "保存成功")
 }
 
 // ProductShopDelete 删除商品
@@ -1118,7 +1118,7 @@ func (h *ProductHandler) ProductShopDelete(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "删除成功")
 }
 
 // ProductTaxList 获取商品税类列表
