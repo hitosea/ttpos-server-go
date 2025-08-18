@@ -125,7 +125,7 @@ func (r *StaffRepo) PaginateGetStaffs(pageNo, pageSize int, opts ...DBOption) ([
 		db = opt(db)
 	}
 	db.Count(&total)
-	db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&staffs)
+	db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Order("create_time desc").Find(&staffs)
 	return staffs, total, nil
 }
 

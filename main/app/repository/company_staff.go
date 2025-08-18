@@ -8,6 +8,8 @@ import (
 
 type ICompanyStaffRepo interface {
 	WhereUsername(username string) DBOption
+	WhereUsernameOrPhone(username, phone string) DBOption
+	WhereNotUuid(uuid uint64) DBOption
 	GetCompanyStaff(opts ...DBOption) model.CompanyStaff
 	CreateCompanyStaff(companyStaff *model.CompanyStaff) *model.CompanyStaff
 	UpdateCompanyStaff(uuid uint64, vars map[string]any) error
@@ -48,4 +50,16 @@ func (r *companyStaffRepo) CreateCompanyStaff(companyStaff *model.CompanyStaff) 
 
 func (r *companyStaffRepo) UpdateCompanyStaff(uuid uint64, vars map[string]any) error {
 	return r.db.Model(&model.CompanyStaff{}).Where("uuid = ?", uuid).Updates(vars).Error
+}
+
+func (r *companyStaffRepo) WhereNotUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid <> ?", uuid)
+	}
+}
+
+func (r *companyStaffRepo) WhereUsernameOrPhone(username, phone string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("BINARY username = ? OR phone = ?", username, phone)
+	}
 }

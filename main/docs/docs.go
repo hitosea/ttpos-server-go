@@ -22635,65 +22635,13 @@ const docTemplate = `{
             }
         },
         "/shop/staff": {
-            "get": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "管理员列表",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.管理员管理"
-                ],
-                "summary": "管理员列表",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "页码",
-                        "name": "page_no",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "每页条数",
-                        "name": "page_size",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.StaffListPaginationResp"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            },
             "delete": {
                 "security": [
                     {
                         "JwtToken": []
                     }
                 ],
-                "description": "删除员工",
+                "description": "删除管理员",
                 "consumes": [
                     "application/json"
                 ],
@@ -22703,10 +22651,10 @@ const docTemplate = `{
                 "tags": [
                     "商家端.管理员管理"
                 ],
-                "summary": "删除员工",
+                "summary": "删除管理员",
                 "parameters": [
                     {
-                        "description": "删除员工请求",
+                        "description": "删除管理员请求",
                         "name": "delete_staff_req",
                         "in": "body",
                         "required": true,
@@ -22764,14 +22712,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/shop/staff/status": {
-            "post": {
+        "/shop/staff/list": {
+            "get": {
                 "security": [
                     {
                         "JwtToken": []
                     }
                 ],
-                "description": "设置启用禁用员工",
+                "description": "管理员列表",
                 "consumes": [
                     "application/json"
                 ],
@@ -22781,10 +22729,64 @@ const docTemplate = `{
                 "tags": [
                     "商家端.管理员管理"
                 ],
-                "summary": "设置启用禁用员工",
+                "summary": "管理员列表",
                 "parameters": [
                     {
-                        "description": "设置启用禁用员工请求",
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.StaffListPaginationResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/staff/status": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "设置启用禁用管理员",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.管理员管理"
+                ],
+                "summary": "设置启用禁用管理员",
+                "parameters": [
+                    {
+                        "description": "设置启用禁用管理员请求",
                         "name": "update_staff_status_req",
                         "in": "body",
                         "required": true,
@@ -32530,8 +32532,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "phone": {
-                    "description": "手机号",
-                    "type": "string"
+                    "description": "手机号，最多20位",
+                    "type": "string",
+                    "maxLength": 20
                 },
                 "real_name": {
                     "description": "姓名",
@@ -39647,6 +39650,10 @@ const docTemplate = `{
                     "description": "是否超级管理员",
                     "type": "integer"
                 },
+                "phone": {
+                    "description": "手机号",
+                    "type": "string"
+                },
                 "real_name": {
                     "description": "真实姓名",
                     "type": "string"
@@ -39663,7 +39670,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "uuid": {
-                    "description": "自助餐UUID",
+                    "description": "管理员UUID",
                     "type": "integer"
                 }
             }

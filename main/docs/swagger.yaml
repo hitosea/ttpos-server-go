@@ -5680,7 +5680,8 @@ definitions:
         description: 密码，如果不为空，则不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种
         type: string
       phone:
-        description: 手机号
+        description: 手机号，最多20位
+        maxLength: 20
         type: string
       real_name:
         description: 姓名
@@ -10449,6 +10450,9 @@ definitions:
       is_super:
         description: 是否超级管理员
         type: integer
+      phone:
+        description: 手机号
+        type: string
       real_name:
         description: 真实姓名
         type: string
@@ -10461,7 +10465,7 @@ definitions:
         description: 用户名
         type: string
       uuid:
-        description: 自助餐UUID
+        description: 管理员UUID
         type: integer
     type: object
   resp.StaffListPaginationResp:
@@ -25012,9 +25016,9 @@ paths:
     delete:
       consumes:
       - application/json
-      description: 删除员工
+      description: 删除管理员
       parameters:
-      - description: 删除员工请求
+      - description: 删除管理员请求
         in: body
         name: delete_staff_req
         required: true
@@ -25029,9 +25033,34 @@ paths:
             $ref: '#/definitions/dto.Response'
       security:
       - JwtToken: []
-      summary: 删除员工
+      summary: 删除管理员
       tags:
       - 商家端.管理员管理
+  /shop/staff/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加管理员
+      parameters:
+      - description: 添加管理员请求
+        in: body
+        name: add_staff_req
+        required: true
+        schema:
+          $ref: '#/definitions/req.AddStaffReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 添加管理员
+      tags:
+      - 商家端.管理员管理
+  /shop/staff/list:
     get:
       consumes:
       - application/json
@@ -25062,37 +25091,13 @@ paths:
       summary: 管理员列表
       tags:
       - 商家端.管理员管理
-  /shop/staff/add:
-    post:
-      consumes:
-      - application/json
-      description: 添加管理员
-      parameters:
-      - description: 添加管理员请求
-        in: body
-        name: add_staff_req
-        required: true
-        schema:
-          $ref: '#/definitions/req.AddStaffReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 添加管理员
-      tags:
-      - 商家端.管理员管理
   /shop/staff/status:
     post:
       consumes:
       - application/json
-      description: 设置启用禁用员工
+      description: 设置启用禁用管理员
       parameters:
-      - description: 设置启用禁用员工请求
+      - description: 设置启用禁用管理员请求
         in: body
         name: update_staff_status_req
         required: true
@@ -25107,7 +25112,7 @@ paths:
             $ref: '#/definitions/dto.Response'
       security:
       - JwtToken: []
-      summary: 设置启用禁用员工
+      summary: 设置启用禁用管理员
       tags:
       - 商家端.管理员管理
   /shop/staff/update:
