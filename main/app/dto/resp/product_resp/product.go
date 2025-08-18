@@ -203,6 +203,7 @@ type ProductSauceListResp struct {
 type ProductSauceItem struct {
 	Uuid                uint64             `json:"uuid"`                  // 商品加料UUID
 	Name                string             `json:"name"`                  // 商品加料名称
+	Price               float64            `json:"price"`                 // 商品加料价格
 	Sort                int                `json:"sort"`                  // 商品加料排序
 	ProductPackageCount int                `json:"product_package_count"` // 关联商品包数量
 	ProductBomCardUuid  uint64             `json:"product_bom_card_uuid"` // 成本卡UUID，0表示没有成本卡
@@ -252,11 +253,11 @@ type ProductShopCategoryDetailResp struct {
 }
 
 type ProductAttributeGroupItem struct {
-	Uuid          uint64 `json:"uuid"`           // 商品属性分组UUID
-	Name          string `json:"name"`           // 商品属性分组名称
-	Sort          int    `json:"sort"`           // 商品属性分组排序
-	AttributeName string `json:"attribute_name"` // 商品属性名称
-	Attributes []ProductAttributeGroupAttributeItem `json:"attributes"` // 属性值
+	Uuid          uint64                               `json:"uuid"`           // 商品属性分组UUID
+	Name          string                               `json:"name"`           // 商品属性分组名称
+	Sort          int                                  `json:"sort"`           // 商品属性分组排序
+	AttributeName string                               `json:"attribute_name"` // 商品属性名称
+	Attributes    []ProductAttributeGroupAttributeItem `json:"attributes"`     // 属性值
 }
 
 type ProductAttributeGroupAttributeItem struct {

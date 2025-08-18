@@ -2162,6 +2162,9 @@ definitions:
       name:
         description: 商品加料名称
         type: string
+      price:
+        description: 商品加料价格
+        type: number
       product_bom_card_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'

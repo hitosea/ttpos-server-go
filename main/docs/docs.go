@@ -27484,6 +27484,10 @@ const docTemplate = `{
                     "description": "商品加料名称",
                     "type": "string"
                 },
+                "price": {
+                    "description": "商品加料价格",
+                    "type": "number"
+                },
                 "product_bom_card_name": {
                     "description": "成本卡名称",
                     "allOf": [

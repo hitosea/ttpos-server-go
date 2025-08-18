@@ -1475,6 +1475,7 @@ func (s *productSrv) GetProductSauceList(ctx context.Context, sauceListReq req.P
 		productSauceListResp = append(productSauceListResp, product_resp.ProductSauceItem{
 			Uuid:                productSauce.Uuid,
 			Name:                productSauce.MultiLanguageName.GetNameByLang(language),
+			Price:               productSauce.Price,
 			Sort:                productSauce.Sort,
 			ProductPackageCount: productSauce.ProductPackageCount,
 			ProductBomCardUuid:  productSauce.ProductBomCardUuid,
