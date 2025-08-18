@@ -952,8 +952,6 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, req req.ProductShopD
 		return errors.WithMessage(err, "删除商品失败")
 	}
 
-	logger.Logger.Info("删除商品成功", zap.Any("func", "DeleteProductShop"), zap.Any("params", req))
-
 	return nil
 }
 
@@ -3458,7 +3456,6 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 
 		if req.Type == constant.ProductTypePackage {
 			// 套餐商品组
-			logger.Logger.Info("packageResult", zap.Any("packageResult", packageResult))
 			err = s.SaveProductPackageGroup(tx, packageResult.Groups, productPackageUuid)
 			if err != nil {
 				return err
@@ -3608,7 +3605,6 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 			return errors.New("商品不存在")
 		}
 		packageResult = *result
-		logger.Logger.Info("EditProductShop", zap.Any("packageResult", packageResult))
 		flavorListResult = CheckProductFlavorResult{
 			MinPrice: packageResult.Price,
 			MaxPrice: packageResult.Price,
@@ -4098,7 +4094,6 @@ func (s *productSrv) SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProdu
 				if err != nil {
 					return errors.WithMessage(err, "保存套餐组失败")
 				}
-				logger.Logger.Info("保存套餐组", zap.Any("group", group))
 				for _, item := range group.Products {
 					bom, err := productBomRepo.GetProductBom(
 						commonRepo.WhereByUuid(item.BomUuid),
