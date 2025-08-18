@@ -28,6 +28,7 @@ type IErpSrv interface {
 	// 采购单
 	CreatePurchaseOrder(ctx cc.Context, createPurchaseOrderReq *stock.SaveMaterialRequestReq) (*stock.SaveMaterialRequestResp, error)
 	GetMaterialRequestList(ctx cc.Context, getMaterialRequestListReq *stock.GetMaterialRequestListReq) (*stock.GetMaterialRequestListResp, error)
+	SavePurchaseReceipt(ctx cc.Context, savePurchaseReceiptReq *buying.SavePurchaseReceiptReq) (*buying.SavePurchaseReceiptResp, error)
 
 	// 供应商
 	GetSupplierList(ctx cc.Context) (*buying.GetSupplierListResp, error)

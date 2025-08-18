@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -458,13 +459,14 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 			resp, err := erp.NewIErpSrv(s.dbm).CreatePurchaseOrder(ctx, &stock.SaveMaterialRequestReq{
 				TransactionDate: purchaseOrder.OrderTime,
 				RequiredBy:      purchaseOrder.ExpectArrivalTime,
+				Supplier:        purchaseOrder.SupplierName,
 				Items:           stockItems,
 			})
 			if err != nil {
 				return err
 			}
 			// 更新采购申请单号
-			purchaseOrder.ErpOrderNo = resp.MaterialRequestName
+			purchaseOrder.ErpOrderNo = resp.PurchaseOrder
 			err = purchaseOrderRepo.Update(purchaseOrder)
 			if err != nil {
 				return errors.WithMessage(err, "更新采购申请单号失败")
@@ -1004,6 +1006,33 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 	if receiptOrder.Status != constant.ReceiptOrderStatusReceived {
 		return nil
 	}
+
+	// 调用erp接口
+	if ctx.GetCompany().IsOpenErp() {
+		erpReq := buying.SavePurchaseReceiptReq{
+			PurchaseOrderName: receiptOrder.OrderNo,
+			Items:             make([]*buying.PurchaseOrderItem, 0),
+		}
+		for _, item := range receiptOrder.Items {
+			erpReq.Items = append(erpReq.Items, &buying.PurchaseOrderItem{
+				ItemCode: item.MaterialCode,
+				ItemName: item.MaterialName,
+				StockUom: item.UnitName,
+				Qty:      float32(item.Num),
+			})
+		}
+		resp, err := erp.NewIErpSrv(s.dbm).SavePurchaseReceipt(ctx, &erpReq)
+		if err != nil {
+			return err
+		}
+		// TODO: 6哥没有返回收货单号
+		receiptOrder.ErpOrderNo = resp.PurchaseOrder.PurchaseOrderName
+		err = repository.NewPurchaseReceiptOrderRepo(db).Update(receiptOrder)
+		if err != nil {
+			return errors.WithMessage(err, "更新收货单号失败")
+		}
+	}
+
 	// 获取收货单明细
 	items := receiptOrder.Items
 	// 添加物料库存

@@ -19,7 +19,7 @@ func NewErpBuyingClient() (buying.BuyingServiceClient, *grpc.ClientConn, error) 
 	return buying.NewBuyingServiceClient(conn), conn, nil
 }
 
-// GetMaterialRequestList 获取物品申请单列表
+// GetSupplierList 获取供应商列表
 func (s *erpSrv) GetSupplierList(ctx cc.Context) (*buying.GetSupplierListResp, error) {
 	client, conn, err := NewErpBuyingClient()
 	if err != nil {
@@ -43,4 +43,30 @@ func (s *erpSrv) GetSupplierList(ctx cc.Context) (*buying.GetSupplierListResp, e
 		return &resp, nil
 	}
 	return &buying.GetSupplierListResp{}, nil
+}
+
+// SavePurchaseReceipt 保存收货单
+func (s *erpSrv) SavePurchaseReceipt(ctx cc.Context, savePurchaseReceiptReq *buying.SavePurchaseReceiptReq) (*buying.SavePurchaseReceiptResp, error) {
+	client, conn, err := NewErpBuyingClient()
+	if err != nil {
+		return &buying.SavePurchaseReceiptResp{}, err
+	}
+	defer conn.Close()
+
+	companySetting := ctx.GetCompany().CompanySetting
+
+	result, err := client.SavePurchaseReceipt(WithSiteCode(context.Background(), companySetting.ErpnextSiteCode), savePurchaseReceiptReq)
+	if err != nil {
+		return &buying.SavePurchaseReceiptResp{}, err
+	}
+
+	if result.Data != nil {
+		var resp buying.SavePurchaseReceiptResp
+		if err := result.Data.UnmarshalTo(&resp); err != nil {
+			logger.Logger.Error("SavePurchaseReceipt-UnmarshalTo", zap.Any("err", err))
+			return &buying.SavePurchaseReceiptResp{}, err
+		}
+		return &resp, nil
+	}
+	return &buying.SavePurchaseReceiptResp{}, nil
 }
