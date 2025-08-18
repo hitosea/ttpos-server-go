@@ -114,6 +114,7 @@ type ICommonRepo interface {
 	WhereBetweenByCreateTime(startTime int64, endTime int64) DBOption                         // 根据创建时间查询
 	WhereBetweenByPayTime(startTime int64, endTime int64) DBOption                            // 根据支付时间查询
 	WhereBetweenByCompleteTime(startTime int64, endTime int64) DBOption                       // 根据完成时间查询
+	WhereByProductPackageGroupUuid(productPackageGroupUuid uint64) DBOption                   // 根据产品包套餐组UUID查询
 	WhereGtUuid(uuid uint64) DBOption                                                         // 根据UUID大于查询
 	FilterSaleOrderProduct() DBOption                                                         // 只查询常规的购物车商品
 	FilterSaleOrderProductWithH5Order(h5OrderUuid uint64) DBOption                            // 只查询常规的购物车商品、指定某个h5订单的商品
@@ -480,6 +481,13 @@ func (r *commonRepo) WhereBetweenByPayTime(startTime int64, endTime int64) DBOpt
 func (r *commonRepo) WhereBetweenByCompleteTime(startTime int64, endTime int64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("complete_time BETWEEN ? AND ?", startTime, endTime)
+	}
+}
+
+// WhereByProductPackageGroupUuid 根据产品包套餐组UUID查询
+func (r *commonRepo) WhereByProductPackageGroupUuid(productPackageGroupUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("product_package_group_uuid = ?", productPackageGroupUuid)
 	}
 }
 
