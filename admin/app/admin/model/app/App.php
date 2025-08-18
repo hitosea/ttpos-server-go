@@ -212,6 +212,11 @@ class App extends AppModel
                     $qq->orLike('app.uuid', $keyword);
                 });
             })
+            ->when(!$configured, function ($q) {
+                return $q->where(function ($qq) {
+                    $qq->where('app.expire_time', '=', "0")->whereOr('app.expire_time', '>', time()); 
+                });
+            })
             ->order(["su.create_time" => 'asc'])
             ->group('app.uuid')
             ->paginate($param)
