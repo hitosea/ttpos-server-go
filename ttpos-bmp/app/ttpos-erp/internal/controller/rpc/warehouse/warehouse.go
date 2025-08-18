@@ -5,7 +5,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/api"
 	"ttpos-bmp/app/ttpos-erp/api/warehouse"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc"
-	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
@@ -26,7 +26,7 @@ func Register(s *grpcx.GrpcServer) {
 // 返回：响应信息和错误
 func (c *Controller) CreateWarehouse(ctx context.Context, req *warehouse.WarehouseInfo) (*api.ResponseInfo, error) {
 	// 调用服务层创建仓库
-	warehouseName, err := service.Warehouse().CreateWarehouse(ctx, &erp.CreateWarehouseInp{
+	warehouseName, err := service.Warehouse().CreateWarehouse(ctx, &setup.CreateWarehouseInp{
 		Company:     req.Company,
 		CompanyAbbr: req.CompanyAbbr,
 		Branch:      req.Branch,

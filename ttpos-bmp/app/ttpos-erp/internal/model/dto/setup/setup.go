@@ -1,4 +1,4 @@
-package erp
+package setup
 
 type CreateWarehouseInp struct {
 	Branch      string `json:"branch,omitempty"`
@@ -26,7 +26,7 @@ type CreatePosProfileInp struct {
 	//销帐科目
 	WriteOffAccount string `json:"write_off_account,omitempty"`
 	//冲销限额
-	WriteOffLimit string `json:"write_off_limit,omitempty"`
+	WriteOffLimit float64 `json:"write_off_limit,omitempty"`
 	//销帐成本中心
 	WriteOffCostCenter string `json:"write_off_cost_center,omitempty"`
 }

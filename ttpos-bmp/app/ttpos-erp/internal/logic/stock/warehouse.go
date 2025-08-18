@@ -6,6 +6,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/api/warehouse"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/v2/encoding/gjson"
@@ -26,7 +27,7 @@ func init() {
 // CreateWarehouse 创建仓库
 // 参数：ctx 上下文，req 包含 shop_name、company_abbr
 // 返回：仓库名称，错误信息
-func (s *sWarehouse) CreateWarehouse(ctx context.Context, req *erp.CreateWarehouseInp) (warehouseName string, err error) {
+func (s *sWarehouse) CreateWarehouse(ctx context.Context, req *setup.CreateWarehouseInp) (warehouseName string, err error) {
 	// 校验参数
 	if err := s.validateCreateWarehouseReq(req); err != nil {
 		return "", err
@@ -50,7 +51,7 @@ func (s *sWarehouse) CreateWarehouse(ctx context.Context, req *erp.CreateWarehou
 }
 
 // validateCreateWarehouseReq 验证创建仓库请求参数
-func (s *sWarehouse) validateCreateWarehouseReq(req *erp.CreateWarehouseInp) error {
+func (s *sWarehouse) validateCreateWarehouseReq(req *setup.CreateWarehouseInp) error {
 	if len(req.Branch) == 0 {
 		return gerror.New("分支机构不能为空")
 	}
@@ -68,12 +69,12 @@ func (s *sWarehouse) validateCreateWarehouseReq(req *erp.CreateWarehouseInp) err
 
 // generateWarehouseName 生成仓库名称
 // 仓库名称规则：[分支名]-[仓库类型]-[仓库名称]
-func (s *sWarehouse) generateWarehouseName(req *erp.CreateWarehouseInp) string {
+func (s *sWarehouse) generateWarehouseName(req *setup.CreateWarehouseInp) string {
 	return strings.Join([]string{req.Branch, req.WhType, req.AliasName}, "-")
 }
 
 // createWarehouseDocument 创建仓库文档
-func (s *sWarehouse) createWarehouseDocument(ctx context.Context, warehouseName string, req *erp.CreateWarehouseInp, companyName string) error {
+func (s *sWarehouse) createWarehouseDocument(ctx context.Context, warehouseName string, req *setup.CreateWarehouseInp, companyName string) error {
 	// 构建仓库创建参数
 	warehousePayload := g.Map{
 		"warehouse_name":   warehouseName, // 仓库名称

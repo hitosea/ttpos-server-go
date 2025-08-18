@@ -6,7 +6,7 @@ import (
 	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/setup"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
-	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
+	setup2 "ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/v2/errors/gerror"
@@ -59,7 +59,8 @@ func (s *sSetup) CreateBranch(ctx context.Context, req *setup.InitShopReq) (bran
 	return req.ShopName, nil
 }
 
-func (s *sSetup) CreateUser(ctx context.Context, req *erp.CreateUserInp) (userEmail string, err error) {
+// CreateUser 创建网站用户
+func (s *sSetup) CreateUser(ctx context.Context, req *setup2.CreateUserInp) (userEmail string, err error) {
 	userPayload := g.Map{
 		"email":              req.UserEmail,
 		"first_name":         req.FirstName,
@@ -76,27 +77,35 @@ func (s *sSetup) CreateUser(ctx context.Context, req *erp.CreateUserInp) (userEm
 	return
 }
 
-// CreatePosProfile CreatePosFile 创建 默认 pos profile  配置默认 posprofile
-func (s *sSetup) CreatePosProfile(ctx context.Context, req *erp.CreatePosProfileInp) (posFileId string, err error) {
-
-	// 获取公司信息
-	company, err := service.Company().GetCompanyWithAbbr(ctx, req.CompanyAbbr)
+// CreatePosProfile CreatePosFile 创建 默认 pos profile  配置默认
+func (s *sSetup) CreatePosProfile(ctx context.Context, req *setup.CreateDefaultPosProfileReq) (posFileId string, err error) {
+	companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
 	if err != nil {
 		g.Log().Error(ctx, "获取公司信息失败", err)
-		return "", gerror.Wrapf(err, "获取公司信息失败")
+		return "", gerror.Wrap(err, "获取公司信息失败")
 	}
 
-	posProfilePayload := g.Map{
-		"pos_profile_name": req.PosProfileName,
-		"company":          company.CompanyName,
-		"warehouse":        req.Warehouse,
-		"branch":           req.Branch,
-		"currency":         req.Currency,
+	//获取默认仓库
+	warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, companyName, req.Branch)
+	if err != nil {
+		return "", gerror.Wrapf(err, "获取默认仓库失败")
 	}
-	if _, err := service.Document().Create(ctx, "Pos Profile", posProfilePayload); err != nil {
+
+	posProfile, err := service.Selling().CreatePosProfile(ctx, &setup2.CreatePosProfileInp{
+		PosProfileName:     req.Name,
+		CompanyAbbr:        req.CompanyAbbr,
+		Warehouse:          warehouse.Name,
+		Branch:             req.Branch,
+		Payments:           g.ArrayStr{"Cash", "Balance"},
+		Currency:           "THB", //泰铢
+		WriteOffAccount:    "Sales - " + req.CompanyAbbr,
+		WriteOffLimit:      1.00,
+		WriteOffCostCenter: "Main - " + req.CompanyAbbr,
+	})
+	if err != nil {
 		return "", gerror.Wrapf(err, "创建pos profile失败")
 	}
-	return
+	return posProfile.Name, nil
 }
 
 // InitShop 初始化店铺
@@ -111,7 +120,7 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (branchNa
 	}
 
 	//创建默认用户
-	_, err = s.CreateUser(ctx, &erp.CreateUserInp{
+	_, err = s.CreateUser(ctx, &setup2.CreateUserInp{
 		UserEmail: fmt.Sprintf("%s@ttpos-user.com", req.AdminUuid),
 		FirstName: req.ShopName,
 	})
@@ -119,7 +128,7 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (branchNa
 		return "", gerror.Wrapf(err, "创建用户失败")
 	}
 	//创建默认仓库
-	_, err = service.Warehouse().CreateWarehouse(ctx, &erp.CreateWarehouseInp{
+	_, err = service.Warehouse().CreateWarehouse(ctx, &setup2.CreateWarehouseInp{
 		Branch:      branchName,
 		WhType:      "Normal",
 		AliasName:   "Default",
@@ -129,7 +138,7 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (branchNa
 		return "", gerror.New("创建默认仓库失败")
 	}
 	//创建在途仓
-	_, err = service.Warehouse().CreateWarehouse(ctx, &erp.CreateWarehouseInp{
+	_, err = service.Warehouse().CreateWarehouse(ctx, &setup2.CreateWarehouseInp{
 		Branch:      branchName,
 		WhType:      "Transit",
 		AliasName:   "Transit",
@@ -139,12 +148,12 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (branchNa
 		return "", gerror.Wrapf(err, "创建用户失败")
 	}
 	//创建默认的 Cash  Balance 账号关联
-	err = service.Selling().CreateDefaultModePaymentAccount(ctx, &erp.CreateModePaymentAccountInp{
+	err = service.Selling().CreateModePaymentAccount(ctx, &setup2.CreateModePaymentAccountInp{
 		CompanyAbbr: req.CompanyAbbr,
 		PaymentType: string(consts.ModeOfPaymentCash),
 	})
 
-	err = service.Selling().CreateDefaultModePaymentAccount(ctx, &erp.CreateModePaymentAccountInp{
+	err = service.Selling().CreateModePaymentAccount(ctx, &setup2.CreateModePaymentAccountInp{
 		CompanyAbbr: req.CompanyAbbr,
 		PaymentType: string(consts.ModeOfPaymentBalance),
 	})

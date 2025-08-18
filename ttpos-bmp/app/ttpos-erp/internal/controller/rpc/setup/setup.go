@@ -2,13 +2,15 @@ package setup
 
 import (
 	"context"
+	"strings"
 	"ttpos-bmp/app/ttpos-erp/api"
 	"ttpos-bmp/app/ttpos-erp/api/setup"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc"
-	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
+	setup2 "ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
+	"github.com/gogf/gf/v2/errors/gerror"
 )
 
 // Controller 设置服务控制器
@@ -48,7 +50,7 @@ func (c *Controller) CreatePosUser(ctx context.Context, req *setup.CreatePosUser
 		return rpc.ApiError("请求参数不能为空"), nil
 	}
 	// 调用服务层创建用户
-	userEmail, err := service.Setup().CreateUser(ctx, &erp.CreateUserInp{
+	userEmail, err := service.Setup().CreateUser(ctx, &setup2.CreateUserInp{
 		UserEmail: req.UserEmail,
 		FirstName: req.UserName,
 	})
@@ -61,4 +63,42 @@ func (c *Controller) CreatePosUser(ctx context.Context, req *setup.CreatePosUser
 		UserEmail: userEmail,
 		UserName:  req.UserName,
 	}), nil
+}
+
+// CreateDefaultPosProfile 创建默认POS配置文件
+// 参数：ctx 上下文，req 创建默认POS配置文件请求
+// 返回：响应信息和错误
+func (c *Controller) CreateDefaultPosProfile(ctx context.Context, req *setup.CreateDefaultPosProfileReq) (*api.ResponseInfo, error) {
+	// 参数验证
+	if err := c.validateCreateDefaultPosProfileReq(req); err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	// 调用服务层创建POS配置文件
+	resp, err := service.Setup().CreatePosProfile(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	// 返回成功响应
+	return rpc.ApiSuccessWithData("创建默认POS配置文件成功", &setup.CreateDefaultPosProfileResp{
+		Name: resp,
+	}), nil
+}
+
+// validateCreateDefaultPosProfileReq 验证创建默认POS配置文件请求参数
+func (c *Controller) validateCreateDefaultPosProfileReq(req *setup.CreateDefaultPosProfileReq) error {
+	if req == nil {
+		return gerror.New("请求参数不能为空")
+	}
+	if strings.TrimSpace(req.Name) == "" {
+		return gerror.New("POS配置文件名称不能为空")
+	}
+	if strings.TrimSpace(req.CompanyAbbr) == "" {
+		return gerror.New("公司缩写编码不能为空")
+	}
+	if strings.TrimSpace(req.Branch) == "" {
+		return gerror.New("分店名称不能为空")
+	}
+	return nil
 }

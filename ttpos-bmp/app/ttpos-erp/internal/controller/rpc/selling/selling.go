@@ -6,7 +6,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc"
-	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
@@ -56,7 +56,7 @@ func (c *Controller) CreatePaymentAccount(ctx context.Context, req *selling.Crea
 	}
 
 	// 调用服务层创建支付账户
-	err := service.Selling().CreateDefaultModePaymentAccount(ctx, &erp.CreateModePaymentAccountInp{
+	err := service.Selling().CreateModePaymentAccount(ctx, &setup.CreateModePaymentAccountInp{
 		CompanyAbbr: req.CompanyAbbr,
 		PaymentType: paymentType,
 	})

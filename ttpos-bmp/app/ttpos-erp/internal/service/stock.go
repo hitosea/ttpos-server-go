@@ -10,7 +10,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-bmp/app/ttpos-erp/api/warehouse"
-	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
 )
 
 type (
@@ -52,7 +52,7 @@ type (
 		// CreateWarehouse 创建仓库
 		// 参数：ctx 上下文，req 包含 shop_name、company_abbr
 		// 返回：仓库名称，错误信息
-		CreateWarehouse(ctx context.Context, req *erp.CreateWarehouseInp) (warehouseName string, err error)
+		CreateWarehouse(ctx context.Context, req *setup.CreateWarehouseInp) (warehouseName string, err error)
 		// GetWarehouseList 获取仓库列表
 		// 根据查询条件过滤并返回仓库信息列表
 		GetWarehouseList(ctx context.Context, req *warehouse.GetWarehouseListReq) (res *warehouse.GetWarehouseListResp, err error)
