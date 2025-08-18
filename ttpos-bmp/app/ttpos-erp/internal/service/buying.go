@@ -16,6 +16,8 @@ type (
 	IBuying interface {
 		GetSupplierList(ctx context.Context, req *buying.GetSupplierListReq) (*buying.GetSupplierListResp, error)
 		CreatePurchaseFromMq(ctx context.Context, req *dto.CreatePurchaseFromMqReq) (res *erp.PurchaseOrder, err error)
+		// CreateInnerSaleOrderFromPurchaseOrder 创建内部销售订单
+		CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req *dto.CreateInnerSaleOrderFromPurchaseOrderReq) (res *erp.SaleOrder, err error)
 	}
 )
 

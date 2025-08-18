@@ -10,6 +10,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
+	"github.com/gogf/gf/v2/os/gtime"
 )
 
 // Controller 库存服务控制器
@@ -58,6 +59,14 @@ func (*Controller) SaveMaterialRequest(ctx context.Context, req *stock.SaveMater
 			return rpc.ApiError(err.Error()), nil
 		}
 		resp.PurchaseOrder = purchaseOrder.Name
+
+		service.Buying().CreateInnerSaleOrderFromPurchaseOrder(ctx, &dto.CreateInnerSaleOrderFromPurchaseOrderReq{
+			SourceName:   purchaseOrder.Name,
+			DeliveryDate: gtime.New(req.RequiredBy).Format("Y-m-d"),
+		})
+		if err != nil {
+			return rpc.ApiError(err.Error()), nil
+		}
 	}
 	// 返回成功响应
 	return rpc.ApiSuccessWithData("保存物品申请单成功", resp), nil

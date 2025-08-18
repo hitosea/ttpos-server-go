@@ -92,7 +92,8 @@ func (s *sBuying) CreatePurchaseFromMq(ctx context.Context, req *dto.CreatePurch
 	}
 	purchaseOrder := &erp.PurchaseOrder{}
 	j.Get("data").Scan(purchaseOrder)
-
+	//修改货币类型
+	purchaseOrder.Currency = purchaseOrder.PriceListCurrency
 	purchaseOrder.Supplier = req.Supplier
 
 	//创建采购订单
@@ -116,4 +117,57 @@ func (s *sBuying) CreatePurchaseFromMq(ctx context.Context, req *dto.CreatePurch
 		return nil, gerror.Wrapf(err, "提交采购订单失败")
 	}
 	return
+}
+
+// CreateInnerSaleOrderFromPurchaseOrder 创建内部销售订单
+func (*sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req *dto.CreateInnerSaleOrderFromPurchaseOrderReq) (res *erp.SaleOrder, err error) {
+	resp, err := service.Rpc().Execute(ctx, &erp.ErpReq{
+		Method: "frappe.model.mapper.make_mapped_doc",
+	}, g.MapStrStr{
+		"method":      "erpnext.buying.doctype.purchase_order.purchase_order.make_inter_company_sales_order",
+		"source_name": req.SourceName,
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建内部销售订单失败")
+	}
+
+	// 解析响应数据
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析采购订单响应失败")
+	}
+	salesOrder := &erp.SaleOrder{}
+	j.Get("data").Scan(salesOrder)
+	// 发货时间
+	salesOrder.DeliveryDate = req.DeliveryDate
+	for _, item := range salesOrder.Items {
+		item.DeliveryDate = req.DeliveryDate
+	}
+
+	//设置来源仓库
+	warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, salesOrder.Company, "")
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询默认仓库失败")
+	}
+	salesOrder.SetWarehouse = warehouse.Name
+
+	//创建采购订单
+	resp, err = service.Document().Create(ctx, "Sales Order", salesOrder)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建内部销售订单失败")
+	}
+
+	// 解析响应数据
+	j, err = gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析内部销售订单响应失败")
+	}
+	j.Get("data").Scan(salesOrder)
+
+	// 提交订单
+	_, err = service.Document().ChangeDocStatus(ctx, "Sales Order", salesOrder.Name, 1)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "提交内部销售订单失败")
+	}
+	return salesOrder, nil
 }

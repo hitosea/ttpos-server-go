@@ -124,7 +124,14 @@ func (s *sWarehouse) GetDefaultWarehouse(ctx context.Context, company string, br
 		return nil, err
 	}
 	if len(warehouseList.WarehouseList) == 0 {
-		return nil, gerror.New("默认仓库不存在")
+		//获取默认 Stores 仓库
+		warehouseList, err = s.GetWarehouseList(ctx, &warehouse.GetWarehouseListReq{
+			Company:       company,
+			WarehouseName: "Stores",
+		})
+		if len(warehouseList.WarehouseList) == 0 {
+			return nil, gerror.New("默认仓库不存在")
+		}
 	}
 	return warehouseList.WarehouseList[0], nil
 }
@@ -135,17 +142,21 @@ func (s *sWarehouse) buildWarehouseListFilters(ctx context.Context, req *warehou
 
 	// 按分支机构过滤
 	if len(req.Branch) > 0 {
-		filters = append(filters, g.ArrayStr{"custom_branch", "like", "%" + req.Branch + "%"})
+		filters = append(filters, g.ArrayStr{"custom_branch", "=", req.Branch})
+	}
+	// 按仓库名称过滤
+	if len(req.Name) > 0 {
+		filters = append(filters, g.ArrayStr{"name", "=", req.Name})
 	}
 
 	// 按仓库名称过滤
 	if len(req.WarehouseName) > 0 {
-		filters = append(filters, g.ArrayStr{"warehouse_name", "like", "%" + req.WarehouseName + "%"})
+		filters = append(filters, g.ArrayStr{"warehouse_name", "=", req.WarehouseName})
 	}
 
 	// 按公司过滤
 	if len(req.Company) > 0 {
-		filters = append(filters, g.ArrayStr{"company", "like", "%" + req.Company + "%"})
+		filters = append(filters, g.ArrayStr{"company", "=", req.Company})
 	}
 
 	// 按仓库类型过滤
