@@ -3687,6 +3687,7 @@
   "骑手配送中": "Kurye teslimat yapıyor",
   "骑手配送完成": "Kurye teslimatı tamamlandı",
   "高峰时间": "Peak zamanı",
+  "默认勾选数量不能大于最大选择数量": "Varsayılan seçili öğe sayısı, maksimum seçim sayısından fazla olamaz",
   "默认存储引擎 %s 没有相应的配置": "Varsayılan depolama motoru %s için uygun yapılandırma yok",
   "默认语言不能为空": "Varsayılan dil boş olamaz"
 }

@@ -3687,6 +3687,7 @@
   "骑手配送中": "Fahrer liefert aus",
   "骑手配送完成": "Fahrerauslieferung abgeschlossen",
   "高峰时间": "Stoßzeit",
+  "默认勾选数量不能大于最大选择数量": "Die standardmäßig ausgewählte Anzahl darf die maximale Auswahlmenge nicht überschreiten",
   "默认存储引擎 %s 没有相应的配置": "Standard-Speicher-Engine %s hat keine entsprechende Konfiguration",
   "默认语言不能为空": "Standardsprache darf nicht leer sein"
 }

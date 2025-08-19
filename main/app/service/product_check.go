@@ -269,6 +269,7 @@ func (s *productCheckSrv) CheckProductAttribute(db *gorm.DB, attributes []CheckP
 			return nil, errors.New("属性值不能为空")
 		}
 		attributeCount := 0
+		attributeDefaultCount := 0
 		for _, attributeReq := range attributeGroupReq.Attributes {
 			if attributeReq.Uuid == 0 {
 				return nil, errors.New("属性值不能为空")
@@ -284,13 +285,19 @@ func (s *productCheckSrv) CheckProductAttribute(db *gorm.DB, attributes []CheckP
 				return nil, errors.New("属性是否默认选中不正确")
 			}
 			if !attributeReq.IsDelete {
+				if attributeReq.IsDefaultSelected == 1 {
+					attributeDefaultCount++
+				}
 				attributeCount++
 			}
 		}
-		if !isDelete && attributeGroupReq.MaxSelection > attributeCount {
-			return nil, errors.New("属性值数量不能大于最大选择数量")
-		}
 		if !isDelete {
+			if attributeGroupReq.MaxSelection > attributeCount {
+				return nil, errors.New("属性值数量不能大于最大选择数量")
+			}
+			if attributeDefaultCount > attributeGroupReq.MaxSelection {
+				return nil, errors.New("默认勾选数量不能大于最大选择数量")
+			}
 			attributeGroupCount++
 		}
 	}
@@ -337,6 +344,7 @@ func (s *productCheckSrv) CheckProductSauce(db *gorm.DB, param CheckProductSauce
 		return nil, errors.New("是否必选不正确")
 	}
 	sauceCount := 0
+	sauceDefaultCount := 0
 	sauceResults := make([]CheckProductSauceItemResult, 0)
 	for _, sauceReq := range param.Sauces {
 		if sauceReq.Uuid == 0 {
@@ -358,11 +366,17 @@ func (s *productCheckSrv) CheckProductSauce(db *gorm.DB, param CheckProductSauce
 			IsDelete:          sauceReq.IsDelete,
 		})
 		if !sauceReq.IsDelete {
+			if sauceReq.IsDefaultSelected == 1 {
+				sauceDefaultCount++
+			}
 			sauceCount++
 		}
 	}
 	if param.MaxSelection > sauceCount {
 		return nil, errors.New("加料项数量不能大于最大选择数量")
+	}
+	if sauceDefaultCount > param.MaxSelection {
+		return nil, errors.New("默认勾选数量不能大于最大选择数量")
 	}
 	if sauceCount > 10 {
 		return nil, errors.New("加料不能超过10个")

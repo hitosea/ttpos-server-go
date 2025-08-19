@@ -3687,6 +3687,7 @@
   "骑手配送中": "Budet levererar",
   "骑手配送完成": "Budleverans slutförd",
   "高峰时间": "Rusningstid",
+  "默认勾选数量不能大于最大选择数量": "Antalet förvalda val kan inte vara fler än det maximala antalet val",
   "默认存储引擎 %s 没有相应的配置": "Standardlagringsmotor %s har ingen motsvarande konfiguration",
   "默认语言不能为空": "Standardspråket får inte vara tomt"
 }

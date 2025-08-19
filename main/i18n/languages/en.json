@@ -3687,6 +3687,7 @@
   "骑手配送中": "Rider is delivering",
   "骑手配送完成": "Rider delivery completed",
   "高峰时间": "Peak hour",
+  "默认勾选数量不能大于最大选择数量": "The default number of selections cannot exceed the maximum selection limit",
   "默认存储引擎 %s 没有相应的配置": "Default storage engine %s has no corresponding configuration",
   "默认语言不能为空": "Default language cannot be empty"
 }
