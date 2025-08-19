@@ -3077,6 +3077,7 @@ func (s *productSrv) GetProductSingleList(ctx context.Context, req req.ProductSi
 					Uuid:               productBom.Uuid,
 					Name:               productPackage.MultiLanguageName.GetNames(),
 					FlavorName:         productBom.ProductFlavor.MultiLanguageName.GetNames(),
+					CategoryUuid:       productPackage.CategoryUuid,
 					ProductBomCardUuid: productBom.ProductBomCardUuid,
 					ProductBomCardName: productBomCardName,
 				}

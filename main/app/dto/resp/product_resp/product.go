@@ -401,6 +401,7 @@ type ProductSingleListItemResp struct {
 	Uuid               uint64             `json:"uuid"`                  // 商品规格UUID
 	Name               dto.LocaleResponse `json:"locale_name"`           // 商品名称
 	FlavorName         dto.LocaleResponse `json:"flavor_name"`           // 商品规格名称
+	CategoryUuid       uint64             `json:"category_uuid"`         // 商品分类UUID
 	ProductBomCardUuid uint64             `json:"product_bom_card_uuid"` // 成本卡UUID，0表示没有成本卡
 	ProductBomCardName dto.LocaleResponse `json:"product_bom_card_name"` // 成本卡名称
 }
