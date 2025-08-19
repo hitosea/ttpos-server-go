@@ -186,7 +186,7 @@ func (s *productCheckSrv) CheckProductFlavor(db *gorm.DB, flavors []CheckProduct
 				return nil, errors.New("规格条码值格式不正确")
 			}
 			// 判断条码是否存在
-			exists := productRepo.CheckBarcodeExist(flavorReq.BarcodeValue)
+			exists := productRepo.CheckBarcodeExist(flavorReq.BarcodeValue, flavorReq.BomUuid)
 			if exists {
 				return nil, errors.New("规格条码值已存在")
 			}

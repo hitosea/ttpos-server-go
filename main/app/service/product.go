@@ -3034,7 +3034,7 @@ func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImpor
 		// 验证是否已经存在
 		products.ProductNameIsExist = repository.NewProductRepo(db).CheckMultiLanguageNameExist(productName)
 		// 验证条形码存在性检查
-		products.BarcodeIsExist = repository.NewProductRepo(db).CheckBarcodeExist(item.Barcode)
+		products.BarcodeIsExist = repository.NewProductRepo(db).CheckBarcodeExist(item.Barcode, 0)
 		// 添加到列表
 		productImportResp.List = append(productImportResp.List, products)
 	}
@@ -3103,7 +3103,7 @@ func (s *productSrv) ImportProduct(ctx context.Context, req req.ProductImportReq
 			return errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "商品名称已存在"))
 		}
 		// 验证条形码存在性检查
-		if repository.NewProductRepo(db).CheckBarcodeExist(item.Barcode) {
+		if repository.NewProductRepo(db).CheckBarcodeExist(item.Barcode, 0) {
 			return errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "商品条码已存在"))
 		}
 		// 处理显示
@@ -3887,7 +3887,7 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 		return err
 	}
 
-	// 添加商品
+	// 编辑商品
 	err := db.Transaction(func(tx *gorm.DB) error {
 
 		// 添加商品包
