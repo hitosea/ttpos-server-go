@@ -976,6 +976,10 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 	if err != nil {
 		return shopBase, errors.WithMessage(err)
 	}
+	taxSetting, err := s.settingSrv.GetTaxRateSetting(ctx)
+	if err != nil {
+		return shopBase, errors.WithMessage(err)
+	}
 	return resp.ShopBase{
 		Username:     staff.Username,
 		ProfileUuid:  staff.Uuid,
@@ -1015,6 +1019,7 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 		IsTtposSite:   companySetting.IsTtposSite(),
 		UpdateTime:    time.Now().Unix(),
 		ServerVersion: utils.GetVersion(),
+		IsOpenTax:     taxSetting.IsOpen,
 	}, nil
 }
 
