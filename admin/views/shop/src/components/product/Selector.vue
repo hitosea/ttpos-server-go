@@ -286,9 +286,24 @@
     switch (props.selectorType) {
       case 'category':
         return products.value
-          .filter(
-            (item) => categoriesTreeCurrentKey.value === 0 || categoriesTreeCurrentKey.value === item.category_id || categoriesTreeCurrentKey.value === item.parent_category_id
-          )
+          .filter((item) => {
+            // 如果选择的是全部分类，显示所有商品
+            if (categoriesTreeCurrentKey.value === 0) return true;
+            
+            // 直接匹配当前分类ID
+            if (categoriesTreeCurrentKey.value === item.category_id) return true;
+            
+            // 检查是否是选中分类的子分类商品
+            if (categoriesTreeCurrentKey.value === item.parent_category_id) return true;
+            
+            // 查找选中分类的所有子分类ID，判断商品是否属于这些子分类
+            const selectedCategory = categories.value.find(cat => cat.category_id === categoriesTreeCurrentKey.value);
+            if (selectedCategory && selectedCategory.child) {
+              return selectedCategory.child.some(child => child.category_id === item.category_id);
+            }
+            
+            return false;
+          })
           .filter((item) => !searchValue.value || item.product_name_text.includes(searchValue.value));
       case 'label':
         return products.value
@@ -296,9 +311,24 @@
           .filter((item) => !searchValue.value || item.product_name_text.includes(searchValue.value));
       default:
         return products.value
-          .filter(
-            (item) => categoriesTreeCurrentKey.value === 0 || categoriesTreeCurrentKey.value === item.category_id || categoriesTreeCurrentKey.value === item.parent_category_id
-          )
+          .filter((item) => {
+            // 如果选择的是全部分类，显示所有商品
+            if (categoriesTreeCurrentKey.value === 0) return true;
+            
+            // 直接匹配当前分类ID
+            if (categoriesTreeCurrentKey.value === item.category_id) return true;
+            
+            // 检查是否是选中分类的子分类商品
+            if (categoriesTreeCurrentKey.value === item.parent_category_id) return true;
+            
+            // 查找选中分类的所有子分类ID，判断商品是否属于这些子分类
+            const selectedCategory = categories.value.find(cat => cat.category_id === categoriesTreeCurrentKey.value);
+            if (selectedCategory && selectedCategory.child) {
+              return selectedCategory.child.some(child => child.category_id === item.category_id);
+            }
+            
+            return false;
+          })
           .filter((item) => !searchValue.value || item.product_name_text.includes(searchValue.value));
     }
   });
@@ -549,7 +579,7 @@
       // 只选中当前分类下的商品
       const currentProducts = productsTableData.value;
       selectedProductsTmp.value.forEach((item) => {
-        if (currentProducts.some((p) => p.product_id === item.product_id)) {
+        if (currentProducts.some((p) => (p.product_id === item.product_id))) {
           productsTableRef.value.toggleRowSelection(item, true, true);
         }
       });

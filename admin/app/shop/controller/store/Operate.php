@@ -262,6 +262,8 @@ class Operate extends Controller
                 $requeustHeader[0] = 'Authorization: Bearer ' . $token;
             }
         }
+        // 退积分
+        $requeustData['points'] = floatval($data['points'] ?? 0);
 
         $res = HttpHelp::postRequest('http://nginx/api/v1/shop/order/return', json_encode($requeustData), $requeustHeader);
         if (!$res) {

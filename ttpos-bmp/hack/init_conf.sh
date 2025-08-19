@@ -2,7 +2,7 @@
 old_dir=$OLDPWD
 cd `dirname $0`
 set -o allexport
-. ../../.env
+. ../.env
 # 遍历app目录下的所有子目录（假设init_conf.sh位于hack目录，app目录在上级目录）
 for app_dir in ../app/*; do
     # 仅处理目录类型

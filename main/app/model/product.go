@@ -237,7 +237,8 @@ func (model *ProductPackage) GetRespFlavorList() []product_resp.ProductFlavor {
 	for _, bom := range model.ProductBoms {
 		if bom.IsFlavor() {
 			flavorList = append(flavorList, product_resp.ProductFlavor{
-				Uuid:       bom.Uuid,
+				Uuid:       bom.ProductFlavor.Uuid,
+				BomUuid:    bom.Uuid,
 				LocaleName: bom.ProductFlavor.MultiLanguageName.GetNames(),
 				Price:      bom.Price,
 				StockNum:   bom.GetStockNum(),
@@ -253,7 +254,8 @@ func (model *ProductPackage) GetRespSaucesList() []product_resp.ProductSauce {
 	for _, bom := range model.ProductBoms {
 		if bom.IsSauce() {
 			sauceList = append(sauceList, product_resp.ProductSauce{
-				Uuid:              bom.Uuid,
+				Uuid:              bom.ProductSauce.Uuid,
+				BomUuid:           bom.Uuid,
 				LocaleName:        bom.ProductSauce.MultiLanguageName.GetNames(),
 				Price:             bom.Price,
 				StockNum:          bom.GetStockNum(),
@@ -294,7 +296,8 @@ func (model *ProductPackage) GetRespPackageSubProductGroupList() []product_resp.
 		products := make([]product_resp.ProductPackageSubProduct, 0)
 		for _, product := range packageSubProductGroup.ProductPackageGroupItems {
 			products = append(products, product_resp.ProductPackageSubProduct{
-				Uuid:             product.ProductBomUuid,
+				Uuid:             product.Uuid,
+				BomUuid:          product.ProductBomUuid,
 				LocaleName:       product.ProductPackage.MultiLanguageName.GetNames(),
 				FlavorLocaleName: product.ProductBom.ProductFlavor.MultiLanguageName.GetNames(),
 				Num:              product.Num,

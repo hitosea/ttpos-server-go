@@ -425,5 +425,11 @@
     "请选择所属erpnext公司": "Lütfen bağlı olduğunuz erpnext şirketini seçin",
     "请选择所属erpnext的site": "Lütfen bağlı olduğunuz erpnext sitesini seçin",
     "授权商家": "Yetkili Satıcı",
-    "授权": "Yetki Ver"
+    "授权": "Yetki Ver",
+    "查看商家": "Satıcıyı Görüntüle",
+    "请选择Pos Profile": "Lütfen Pos Profili Seçin",
+    "密码验证": "Şifre Doğrulama",
+    "请输入密码": "Lütfen şifre girin",
+    "请确定授权信息，该操作不可逆，请仔细确认！": "Lütfen yetkilendirme bilgilerini onaylayın, bu işlem geri alınamaz, lütfen dikkatlice kontrol edin!",
+    "erpnext公司": "erpnext şirketi"
 }

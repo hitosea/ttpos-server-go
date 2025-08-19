@@ -1772,6 +1772,9 @@ definitions:
       barcode:
         description: 商品码。用于根据扫码枪扫码商品得到商品码在商品列表中搜索到商品
         type: string
+      bom_uuid:
+        description: 商品BOM UUID
+        type: integer
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -2078,6 +2081,9 @@ definitions:
     type: object
   product_resp.ProductPackageSubProduct:
     properties:
+      bom_uuid:
+        description: 商品BOM UUID
+        type: integer
       flavor_locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -2126,6 +2132,9 @@ definitions:
     type: object
   product_resp.ProductSauce:
     properties:
+      bom_uuid:
+        description: 商品BOM UUID
+        type: integer
       is_default_selected:
         description: 是否默认选中
         type: boolean

@@ -93,6 +93,7 @@ services:
       - .env:/var/.env
       - ./docker/certificate:/var/certificate
       - ./docker/golang/logs:/var/www/log
+      - ./admin/public:/var/www/public
     restart: always
     networks:
       saas-network:
