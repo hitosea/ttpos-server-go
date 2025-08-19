@@ -2385,6 +2385,9 @@ definitions:
     type: object
   product_resp.ProductSingleListItemResp:
     properties:
+      category_uuid:
+        description: 商品分类UUID
+        type: integer
       flavor_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'

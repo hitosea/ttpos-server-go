@@ -27863,6 +27863,10 @@ const docTemplate = `{
         "product_resp.ProductSingleListItemResp": {
             "type": "object",
             "properties": {
+                "category_uuid": {
+                    "description": "商品分类UUID",
+                    "type": "integer"
+                },
                 "flavor_name": {
                     "description": "商品规格名称",
                     "allOf": [
