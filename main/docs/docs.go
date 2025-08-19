@@ -26936,6 +26936,10 @@ const docTemplate = `{
                     "description": "商品码。用于根据扫码枪扫码商品得到商品码在商品列表中搜索到商品",
                     "type": "string"
                 },
+                "bom_uuid": {
+                    "description": "商品BOM UUID",
+                    "type": "integer"
+                },
                 "locale_name": {
                     "description": "商品规格名称",
                     "allOf": [
@@ -27465,6 +27469,10 @@ const docTemplate = `{
         "product_resp.ProductSauce": {
             "type": "object",
             "properties": {
+                "bom_uuid": {
+                    "description": "商品BOM UUID",
+                    "type": "integer"
+                },
                 "is_default_selected": {
                     "description": "是否默认选中",
                     "type": "boolean"
