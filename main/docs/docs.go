@@ -39596,8 +39596,8 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "is_open_tax": {
-                    "description": "税率设置: 0-关闭 1-开启",
-                    "type": "string"
+                    "description": "税率设置: false-关闭 true-开启",
+                    "type": "boolean"
                 },
                 "is_ttpos_site": {
                     "description": "是否散户site",

@@ -274,7 +274,7 @@ type ShopBase struct {
 	Currency   setting.Currency   `json:"currency"`    // 货币单位
 	Business   setting.Business   `json:"business"`    // 门店业务设置
 	Profile    ShopProfile        `json:"profile"`     // 门店信息
-	IsOpenTax  string             `json:"is_open_tax"` // 税率设置: 0-关闭 1-开启
+	IsOpenTax  bool               `json:"is_open_tax"` // 税率设置: false-关闭 true-开启
 
 	// 是否散户site
 	IsTtposSite   bool   `json:"is_ttpos_site"`  // 是否是TTPOS站点(散户site)，能登录新商家后台的必须授权erpnext，除了site_code="1"，其他都是连锁店模式，连锁店模式不能修改 单位和属性

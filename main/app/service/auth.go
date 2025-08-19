@@ -1019,7 +1019,7 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 		IsTtposSite:   companySetting.IsTtposSite(),
 		UpdateTime:    time.Now().Unix(),
 		ServerVersion: utils.GetVersion(),
-		IsOpenTax:     taxSetting.IsOpen,
+		IsOpenTax:     taxSetting.IsOpen == "1",
 	}, nil
 }
 
