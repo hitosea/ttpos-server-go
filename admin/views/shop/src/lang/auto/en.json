@@ -2122,5 +2122,8 @@
     "套餐可售总量": "Total saleable quantity of the set",
     "库存为0时套餐自动售罄": "When inventory is zero, the package will be automatically sold out",
     "开始序列号": "Start Serial Number",
-    "请输入开始序列号": "Please enter the start serial number"
+    "请输入开始序列号": "Please enter the start serial number",
+    "请翻译分组名称": "Please translate the group name",
+    "取消订单数": "Number of cancelled orders",
+    "取消订单金额": "Order cancellation amount"
 }

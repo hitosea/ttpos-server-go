@@ -2118,5 +2118,8 @@
     "套餐可售总量": "Total försäljningskvantitet för paketet",
     "库存为0时套餐自动售罄": "När lagret är noll säljs paketet automatiskt slut",
     "开始序列号": "Startserienummer",
-    "请输入开始序列号": "Ange startserienummern"
+    "请输入开始序列号": "Ange startserienummern",
+    "请翻译分组名称": "Vänligen översätt gruppnamnet",
+    "取消订单数": "Antal avbokade beställningar",
+    "取消订单金额": "Belopp för orderavbokning"
 }
