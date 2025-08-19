@@ -178,7 +178,7 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 		}
 
 		materialRepo := base.NewMaterialRepo(db)
-		materials, err := materialRepo.GetMaterialByUuids(
+		materialList, err := materialRepo.GetMaterialByUuids(
 			materialUuids,
 			materialRepo.WithPreload("Unit"),
 			materialRepo.WithPreload("PurchaseUnit"),
@@ -186,8 +186,18 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 		if err != nil {
 			return errors.WithMessage(err, "查询物品失败")
 		}
-		if len(materials) != len(req.Items) {
-			return errors.New("查询物品失败-数量不一致")
+
+		// 将切片转换为map，方便后续查找
+		materials := make(map[uint64]*model.Material)
+		for _, material := range materialList {
+			materials[material.Uuid] = material
+		}
+
+		// 验证所有请求的物品都存在
+		for _, itemReq := range req.Items {
+			if _, exists := materials[itemReq.MaterialUuid]; !exists {
+				return errors.New(fmt.Sprintf("物品UUID%d不存在", itemReq.MaterialUuid))
+			}
 		}
 
 		// 创建采购申请明细
@@ -195,16 +205,36 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 		for _, itemReq := range req.Items {
 			material := materials[itemReq.MaterialUuid]
 			item := model.PurchaseOrderItem{
-				PurchaseOrderUuid:  purchaseOrder.Uuid,
-				MaterialUuid:       itemReq.MaterialUuid,
-				Num:                itemReq.Num,
-				MaterialCode:       material.Code,
-				MaterialName:       material.Name,
-				UnitUuid:           material.PurchaseUnitUuid,
-				UnitName:           material.PurchaseUnit.Name,
-				UnitConversionRate: material.PurchaseUnit.ConversionRate,
-				BaseUnitUuid:       material.Unit.UnitUuid,
-				BaseUnitName:       material.Unit.Name,
+				PurchaseOrderUuid: purchaseOrder.Uuid,
+				MaterialUuid:      itemReq.MaterialUuid,
+				Num:               itemReq.Num,
+				MaterialCode:      material.Code,
+				MaterialName:      material.Name,
+				UnitUuid:          material.PurchaseUnitUuid,
+				UnitName: func() string {
+					if material.PurchaseUnit != nil {
+						return material.PurchaseUnit.Name
+					}
+					return ""
+				}(),
+				UnitConversionRate: func() float64 {
+					if material.PurchaseUnit != nil {
+						return material.PurchaseUnit.ConversionRate
+					}
+					return 0
+				}(),
+				BaseUnitUuid: func() uint64 {
+					if material.Unit != nil {
+						return material.Unit.UnitUuid
+					}
+					return 0
+				}(),
+				BaseUnitName: func() string {
+					if material.Unit != nil {
+						return material.Unit.Name
+					}
+					return ""
+				}(),
 			}
 			items = append(items, item)
 		}
@@ -273,7 +303,7 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(ctx context.Context, req req.Purc
 			materialUuids = append(materialUuids, itemReq.MaterialUuid)
 		}
 		materialRepo := base.NewMaterialRepo(db)
-		materials, err := materialRepo.GetMaterialByUuids(
+		materialList, err := materialRepo.GetMaterialByUuids(
 			materialUuids,
 			materialRepo.WithPreload("Unit"),
 			materialRepo.WithPreload("PurchaseUnit"),
@@ -281,8 +311,21 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(ctx context.Context, req req.Purc
 		if err != nil {
 			return errors.WithMessage(err, "查询物品失败")
 		}
-		if len(materials) != len(req.Items) {
+		if len(materialList) != len(req.Items) {
 			return errors.New("查询物品失败-数量不一致")
+		}
+
+		// 将切片转换为map，方便后续查找
+		materials := make(map[uint64]*model.Material)
+		for _, material := range materialList {
+			materials[material.Uuid] = material
+		}
+
+		// 验证所有请求的物品都存在
+		for _, itemReq := range req.Items {
+			if _, exists := materials[itemReq.MaterialUuid]; !exists {
+				return errors.New(fmt.Sprintf("物品UUID %d 不存在", itemReq.MaterialUuid))
+			}
 		}
 
 		// 创建采购申请明细
@@ -290,16 +333,36 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(ctx context.Context, req req.Purc
 		for _, itemReq := range req.Items {
 			material := materials[itemReq.MaterialUuid]
 			item := model.PurchaseOrderItem{
-				PurchaseOrderUuid:  purchaseOrder.Uuid,
-				MaterialUuid:       itemReq.MaterialUuid,
-				Num:                itemReq.Num,
-				MaterialCode:       material.Code,
-				MaterialName:       material.Name,
-				UnitUuid:           material.PurchaseUnitUuid,
-				UnitName:           material.PurchaseUnit.Name,
-				UnitConversionRate: material.PurchaseUnit.ConversionRate,
-				BaseUnitUuid:       material.Unit.UnitUuid,
-				BaseUnitName:       material.Unit.Name,
+				PurchaseOrderUuid: purchaseOrder.Uuid,
+				MaterialUuid:      itemReq.MaterialUuid,
+				Num:               itemReq.Num,
+				MaterialCode:      material.Code,
+				MaterialName:      material.Name,
+				UnitUuid:          material.PurchaseUnitUuid,
+				UnitName: func() string {
+					if material.PurchaseUnit != nil {
+						return material.PurchaseUnit.Name
+					}
+					return ""
+				}(),
+				UnitConversionRate: func() float64 {
+					if material.PurchaseUnit != nil {
+						return material.PurchaseUnit.ConversionRate
+					}
+					return 0
+				}(),
+				BaseUnitUuid: func() uint64 {
+					if material.Unit != nil {
+						return material.Unit.UnitUuid
+					}
+					return 0
+				}(),
+				BaseUnitName: func() string {
+					if material.Unit != nil {
+						return material.Unit.Name
+					}
+					return ""
+				}(),
 			}
 			items = append(items, item)
 		}
@@ -814,10 +877,10 @@ func (s *purchaseOrderSrv) CancelPurchaseReceiptOrder(ctx context.Context, req r
 }
 
 // generateOrderNo 生成采购申请订单编号
-// 格式：CSSH+年月日+0000自增序列号
+// 格式：CSSQ+年月日+0000自增序列号
 func (s *purchaseOrderSrv) generateOrderNo(ctx context.Context, db *gorm.DB) string {
 	// 固定前缀
-	prefix := "CSSH"
+	prefix := "CSSQ"
 	// 年月日部分
 	datePart := time.Now().Format("20060102")
 

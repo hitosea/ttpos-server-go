@@ -151,15 +151,15 @@ class AddPurchaseOrderAndMaterialRelatedTables extends Migrator
             ->addColumn('uuid', 'biginteger', ['signed' => false,'default' => 0,'comment' => '采购申请物品ID'])
             ->addColumn('purchase_order_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '采购申请ID'])
             ->addColumn('material_code', 'string', ['limit' => 255, 'default' => '', 'comment' => '物品编码, 提交采购时记录后不再修改'])
-            ->addColumn('material_name', 'text', ['comment' => '物品名称JSON, 提交采购时记录后不再修改'])
+            ->addColumn('material_name', 'text', ['default' => '', 'comment' => '物品名称JSON, 提交采购时记录后不再修改'])
             ->addColumn('material_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '物品ID'])
             ->addColumn('num', 'decimal', [ 'precision' => 14,'scale' => 4,'default' => 0.0000,'comment' => '申请数量'])
             ->addColumn('arrival_num', 'decimal', ['precision' => 14, 'scale' => 4, 'default' => 0.0000, 'comment' => '到货数量'])
             ->addColumn('unit_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '采购单位ID'])
-            ->addColumn('unit_name', 'text', ['comment' => '采购单位名称JSON, 提交采购时记录后不再修改'])
+            ->addColumn('unit_name', 'text', ['default' => '', 'comment' => '采购单位名称JSON, 提交采购时记录后不再修改'])
+            ->addColumn('unit_conversion_rate', 'decimal', ['precision' => 12, 'scale' => 4, 'default' => 1, 'comment' => '基准单位转换率。申请数量*转换率=基准单位申请数量'])
             ->addColumn('base_unit_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '基准单位ID'])
-            ->addColumn('base_unit_name', 'text', ['comment' => '基准单位名称JSON, 提交采购时记录后不再修改'])
-            ->addColumn('base_unit_conversion_rate', 'decimal', ['precision' => 12, 'scale' => 4, 'default' => 1, 'comment' => '基准单位转换率。申请数量*转换率=基准单位申请数量'])
+            ->addColumn('base_unit_name', 'text', ['default' => '', 'comment' => '基准单位名称JSON, 提交采购时记录后不再修改'])
             ->addColumn('create_time', 'integer', ['signed' => false, 'limit' => 10, 'default' => 0, 'comment' => '创建时间(时间戳)'])
             ->addColumn('update_time', 'integer', ['signed' => false, 'limit' => 10, 'default' => 0, 'comment' => '更新时间(时间戳)'])
             ->addColumn('delete_time', 'integer', ['signed' => false, 'limit' => 10, 'default' => 0, 'comment' => '删除时间(时间戳)'])
@@ -219,7 +219,7 @@ class AddPurchaseOrderAndMaterialRelatedTables extends Migrator
             ->addColumn('receipt_order_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '收货单ID'])
             ->addColumn('purchase_order_item_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '采购申请物品ID'])
             ->addColumn('material_code', 'string', ['limit' => 255, 'default' => '', 'comment' => '物品编码, 提交采购时记录后不再修改'])
-            ->addColumn('material_name', 'text', ['comment' => '物品名称JSON, 提交采购时记录后不再修改'])
+            ->addColumn('material_name', 'text', ['default' => '', 'comment' => '物品名称JSON, 提交采购时记录后不再修改'])
             ->addColumn('material_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '物品ID'])
             ->addColumn('num', 'decimal', ['precision' => 14,'scale' => 4,'default' => 0.0000,'comment' => '收货数量'])
             ->addColumn('unit_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '单位ID'])
@@ -275,7 +275,7 @@ class AddPurchaseOrderAndMaterialRelatedTables extends Migrator
         }
         
         if (!$table->hasColumn('unit_name')) {
-            $table->addColumn('unit_name', 'text', ['comment' => '单位名称JSON,物品单位名称', 'after' => 'unit_uuid']);
+            $table->addColumn('unit_name', 'text', ['default' => '', 'comment' => '单位名称JSON,物品单位名称', 'after' => 'unit_uuid']);
         }
         
         if (!$table->hasColumn('base_unit_uuid')) {
@@ -283,7 +283,7 @@ class AddPurchaseOrderAndMaterialRelatedTables extends Migrator
         }
         
         if (!$table->hasColumn('base_unit_name')) {
-            $table->addColumn('base_unit_name', 'text', ['comment' => '基准单位名称JSON,物品基准单位名称', 'after' => 'base_unit_uuid']);
+            $table->addColumn('base_unit_name', 'text', ['default' => '', 'comment' => '基准单位名称JSON,物品基准单位名称', 'after' => 'base_unit_uuid']);
         }
         
         if (!$table->hasColumn('base_unit_conversion_rate')) {
