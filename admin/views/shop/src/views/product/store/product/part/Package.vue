@@ -29,7 +29,7 @@
           </el-form-item>
         </template>
         <el-form-item :prop="`model.package_group.${groupIndex}.product_list`" :rules="[{ required: true, validator: validatePackageGroup, message: $t('请添加套餐商品') }]">
-          <el-table :data="form.model.package_group[groupIndex].product_list" style="width: 100%" border>
+          <el-table :data="form.model.package_group[groupIndex].product_list" style="width: 100%" border max-height="250">
             <el-table-column :label="$t('序号')" width="80" type="index" />
             <el-table-column prop="product_name_text" :label="$t('商品名称')" />
             <el-table-column prop="spec_name_text" :label="$t('规格')" width="120" />
