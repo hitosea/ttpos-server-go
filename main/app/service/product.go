@@ -727,7 +727,7 @@ func (s *productSrv) AddProductShopCategory(ctx context.Context, addReq req.Prod
 	checkService := NewCheckNameSrv(s.dbm)
 	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Source: "category",
+		Source: constant.CheckNameSourceCategory,
 		Names:  names,
 	})
 	if exists {
@@ -849,7 +849,7 @@ func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.Pr
 	names := checkService.MakeCheckNameList(ctx, editReq.LocaleName)
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
 		Uuid:   editReq.Uuid,
-		Source: "category",
+		Source: constant.CheckNameSourceCategory,
 		Names:  names,
 	})
 	if exists {
@@ -1304,7 +1304,7 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 	checkService := NewCheckNameSrv(s.dbm)
 	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Source: "unit",
+		Source: constant.CheckNameSourceUnit,
 		Names:  names,
 	})
 	if exists {
@@ -1388,7 +1388,7 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 	names := checkService.MakeCheckNameList(ctx, editUnitReq.LocaleName)
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
 		Uuid:   editUnitReq.Uuid,
-		Source: "unit",
+		Source: constant.CheckNameSourceUnit,
 		Names:  names,
 	})
 	if exists {
@@ -1607,7 +1607,7 @@ func (s *productSrv) AddProductSauce(ctx context.Context, addReq req.ProductSauc
 	checkService := NewCheckNameSrv(s.dbm)
 	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Source: "sauce",
+		Source: constant.CheckNameSourceSauce,
 		Names:  names,
 	})
 	if exists {
@@ -1693,7 +1693,7 @@ func (s *productSrv) EditProductSauce(ctx context.Context, editReq req.ProductSa
 	names := checkService.MakeCheckNameList(ctx, editReq.LocaleName)
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
 		Uuid:   editReq.Uuid,
-		Source: "sauce",
+		Source: constant.CheckNameSourceSauce,
 		Names:  names,
 	})
 	if exists {
@@ -2050,7 +2050,7 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 	checkService := NewCheckNameSrv(s.dbm)
 	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Source: "attribute_group",
+		Source: constant.CheckNameSourceAttributeGroup,
 		Names:  names,
 	})
 	if exists {
@@ -2059,7 +2059,7 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 	for _, productAttribute := range addReq.ProductAttributes {
 		names := checkService.MakeCheckNameList(ctx, productAttribute.LocaleName)
 		exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-			Source: "attribute",
+			Source: constant.CheckNameSourceAttribute,
 			Names:  names,
 		})
 		if exists {
@@ -2204,7 +2204,7 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 	checkService := NewCheckNameSrv(s.dbm)
 	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Source: "flavor",
+		Source: constant.CheckNameSourceFlavor,
 		Names:  names,
 	})
 	if exists {
@@ -2320,7 +2320,7 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 	names := checkService.MakeCheckNameList(ctx, editReq.LocaleName)
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
 		Uuid:   editReq.Uuid,
-		Source: "attribute_group",
+		Source: constant.CheckNameSourceAttributeGroup,
 		Names:  names,
 	})
 	if exists {
@@ -2330,7 +2330,7 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 		names := checkService.MakeCheckNameList(ctx, attribute.LocaleName)
 		exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
 			Uuid:   attribute.Uuid,
-			Source: "attribute",
+			Source: constant.CheckNameSourceAttribute,
 			Names:  names,
 		})
 		if exists {
@@ -2629,7 +2629,7 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 	names := checkService.MakeCheckNameList(ctx, editReq.LocaleName)
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
 		Uuid:   editReq.Uuid,
-		Source: "flavor",
+		Source: constant.CheckNameSourceFlavor,
 		Names:  names,
 	})
 	if exists {

@@ -77,7 +77,7 @@ func (s *productCheckSrv) CheckProductName(ctx context.Context, uuid uint64, loc
 	checkService := NewCheckNameSrv(s.dbm)
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
 		Uuid:   uuid,
-		Source: "product",
+		Source: constant.CheckNameSourceProduct,
 		Names:  checkService.MakeCheckNameList(ctx, localeName),
 	})
 	if exists {

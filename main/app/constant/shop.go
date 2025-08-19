@@ -16,3 +16,13 @@ var Languages = []LanguageItem{
 	{Name: "tr", Value: "Türkçe"},
 	{Name: "sv", Value: "Svenska"},
 }
+
+const (
+	CheckNameSourceUnit           = "unit"
+	CheckNameSourceProduct        = "product"
+	CheckNameSourceCategory       = "category"
+	CheckNameSourceSauce          = "sauce"
+	CheckNameSourceAttribute      = "attribute"
+	CheckNameSourceAttributeGroup = "attribute_group"
+	CheckNameSourceFlavor         = "flavor"
+)
