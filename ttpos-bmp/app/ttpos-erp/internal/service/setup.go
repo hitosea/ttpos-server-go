@@ -8,7 +8,7 @@ package service
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/setup"
-	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
+	setup2 "ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
 )
 
 type (
@@ -17,9 +17,10 @@ type (
 		// 参数：店铺名称和公司缩写编码
 		// 返回：ERP用户名和创建结果
 		CreateBranch(ctx context.Context, req *setup.InitShopReq) (branchName string, err error)
-		CreateUser(ctx context.Context, req *erp.CreateUserInp) (userEmail string, err error)
-		// CreatePosProfile CreatePosFile 创建 默认 pos profile  配置默认 posprofile
-		CreatePosProfile(ctx context.Context, req *erp.CreatePosProfileInp) (posFileId string, err error)
+		// CreateUser 创建网站用户
+		CreateUser(ctx context.Context, req *setup2.CreateUserInp) (userEmail string, err error)
+		// CreatePosProfile CreatePosFile 创建 默认 pos profile  配置默认
+		CreatePosProfile(ctx context.Context, req *setup.CreateDefaultPosProfileReq) (posFileId string, err error)
 		// InitShop 初始化店铺
 		// 参数：ctx 上下文，req 包含 shop_name、company_abbr、shop_uuid
 		// 返回：是否成功，错误信息

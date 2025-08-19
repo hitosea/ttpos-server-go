@@ -34,12 +34,12 @@ func (s *sSkootar) GetDriverInfo(ctx context.Context, req *dto.GetDriverInfoInp)
 		return nil, gerror.Newf("获取司机位置异常:%v", resp.ResponseDesc)
 	}
 	res = &api.GetDriverInfoResp{
-		Lat:    float32(resp.Lat),
-		Lng:    float32(resp.Lng),
+		Lat:    resp.Lat,
+		Lng:    resp.Lng,
 		Name:   req.Name,
 		Phone:  req.Phone,
 		Avatar: req.Avatar,
-		Rating: float32(req.Rating),
+		Rating: req.Rating,
 	}
 	if err = gconv.Struct(resp, res); err != nil {
 		return nil, gerror.Wrap(err, "获取司机位置")

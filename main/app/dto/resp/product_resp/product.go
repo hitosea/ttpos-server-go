@@ -203,6 +203,7 @@ type ProductSauceListResp struct {
 type ProductSauceItem struct {
 	Uuid                uint64             `json:"uuid"`                  // 商品加料UUID
 	Name                string             `json:"name"`                  // 商品加料名称
+	Price               float64            `json:"price"`                 // 商品加料价格
 	Sort                int                `json:"sort"`                  // 商品加料排序
 	ProductPackageCount int                `json:"product_package_count"` // 关联商品包数量
 	ProductBomCardUuid  uint64             `json:"product_bom_card_uuid"` // 成本卡UUID，0表示没有成本卡
@@ -252,10 +253,16 @@ type ProductShopCategoryDetailResp struct {
 }
 
 type ProductAttributeGroupItem struct {
-	Uuid          uint64 `json:"uuid"`           // 商品属性分组UUID
-	Name          string `json:"name"`           // 商品属性分组名称
-	Sort          int    `json:"sort"`           // 商品属性分组排序
-	AttributeName string `json:"attribute_name"` // 商品属性名称
+	Uuid          uint64                               `json:"uuid"`           // 商品属性分组UUID
+	Name          string                               `json:"name"`           // 商品属性分组名称
+	Sort          int                                  `json:"sort"`           // 商品属性分组排序
+	AttributeName string                               `json:"attribute_name"` // 商品属性名称
+	Attributes    []ProductAttributeGroupAttributeItem `json:"attributes"`     // 属性值
+}
+
+type ProductAttributeGroupAttributeItem struct {
+	Uuid       uint64             `json:"uuid"`        // 商品属性UUID
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品属性名称
 }
 
 type ProductAttributeGroupListResp struct {
@@ -442,6 +449,7 @@ type ProductDetailResp struct {
 	DineTaxName    string `json:"rating_tax_name"`  // 堂食税类名称
 
 	Status          uint   `json:"status"`            // 商品状态 0-下架 1-上架
+	ImageFileUuid   uint64 `json:"image_file_uuid"`   // 商品图片UUID
 	Image           string `json:"image"`             // 商品图片。
 	NumType         *uint  `json:"num_type"`          // 数量计算方法 0-整数 1-小数
 	DeductStockType uint   `json:"deduct_stock_type"` // 库存计算方式,0-结账减库存 1-下单减库存

@@ -469,7 +469,7 @@ func (s *sStock) GetMaterialRequestList(ctx context.Context, req *stock.GetMater
 		filters = append(filters, []string{"branch", "=", req.Branch})
 	}
 	filters = append(filters, []string{"company", "=", companyName.CompanyName})
-	filters = append(filters, []string{"material_request_type", "=", erp.StockEntryTypeMaterialTransfer})
+	filters = append(filters, []string{"material_request_type", "=", erp.StockEntryTypePurchase})
 
 	resp, err := service.Document().List(ctx, &erp.ErpReq{
 		DocType: "Material Request",

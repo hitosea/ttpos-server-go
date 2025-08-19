@@ -14,12 +14,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// StaffHandler 员工管理
+// StaffHandler 管理员管理
 type StaffHandler struct {
 	staffSrv service.IStaffSrv
 }
 
-// GetStaff 管理员列表
+// GetStaffList 管理员列表
 // @Summary 管理员列表
 // @Description 管理员列表
 // @Tags 商家端.管理员管理
@@ -29,15 +29,15 @@ type StaffHandler struct {
 // @Param page_no query int false "页码"
 // @Param page_size query int false "每页条数"
 // @Success 200 {object} dto.Response{data=resp.StaffListPaginationResp}
-// @Router /shop/staff [get]
-func (h *StaffHandler) GetStaff(c *gin.Context) {
+// @Router /shop/staff/list [get]
+func (h *StaffHandler) GetStaffList(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var pageReq dto.PageReq
 	if err := c.ShouldBindQuery(&pageReq); err != nil {
 		helper.HandleValidationError(c, err, pageReq, dto.PageReqMessage)
 		return
 	}
-	res, err := h.staffSrv.GetStaffs(ctx, pageReq)
+	res, err := h.staffSrv.PaginateGetStaffs(ctx, pageReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeSystemError, err)
 		return
@@ -70,14 +70,14 @@ func (h *StaffHandler) UpdateStaff(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
-// UpdateStaffStatus 设置启用禁用员工
-// @Summary 设置启用禁用员工
-// @Description 设置启用禁用员工
+// UpdateStaffStatus 设置启用禁用管理员
+// @Summary 设置启用禁用管理员
+// @Description 设置启用禁用管理员
 // @Tags 商家端.管理员管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param update_staff_status_req body req.UpdateStaffStatusReq true "设置启用禁用员工请求"
+// @Param update_staff_status_req body req.UpdateStaffStatusReq true "设置启用禁用管理员请求"
 // @Success 200 {object} dto.Response
 // @Router /shop/staff/status [post]
 func (h *StaffHandler) UpdateStaffStatus(c *gin.Context) {
@@ -95,14 +95,14 @@ func (h *StaffHandler) UpdateStaffStatus(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
-// DeleteStaff 删除员工
-// @Summary 删除员工
-// @Description 删除员工
+// DeleteStaff 删除管理员
+// @Summary 删除管理员
+// @Description 删除管理员
 // @Tags 商家端.管理员管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param delete_staff_req body req.DeleteStaffReq true "删除员工请求"
+// @Param delete_staff_req body req.DeleteStaffReq true "删除管理员请求"
 // @Success 200 {object} dto.Response
 // @Router /shop/staff [delete]
 func (h *StaffHandler) DeleteStaff(c *gin.Context) {
@@ -302,14 +302,14 @@ func RegisterStaffHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 
 	wrapper := &StaffHandler{
-		staffSrv: service.NewStaffSrv(dbm, roleAccessSrv),
+		staffSrv: service.NewStaffSrv(dbm, cache, roleAccessSrv),
 	}
 
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		// 管理员管理
-		privateApi.GET("/staff", wrapper.GetStaff)                  // 获取管理员列表
+		privateApi.GET("/staff/list", wrapper.GetStaffList)         // 获取管理员列表
 		privateApi.POST("/staff/update", wrapper.UpdateStaff)       // 修改管理员
 		privateApi.POST("/staff/status", wrapper.UpdateStaffStatus) // 设置启用禁用管理员
 		privateApi.DELETE("/staff", wrapper.DeleteStaff)            // 删除管理员

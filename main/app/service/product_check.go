@@ -12,6 +12,7 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -32,6 +33,7 @@ type IProductCheckSrv interface {
 	CheckProductShow(show CheckProductShowParam) error                                                                          // 检查商品显示设置
 	CheckProductMemberDiscount(isEnableMemberDiscount int) error                                                                // 检查商品会员折扣
 	CheckProductOverallDiscount(isEnableOverallDiscount int) error                                                              // 检查商品整单折扣
+	CheckProductPackage(ctx context.Context, db *gorm.DB, param CheckProductPackageParam) (*CheckProductPackageResult, error)   // 检查商品套餐
 }
 
 // productCheckSrv 产品检查服务结构
@@ -136,6 +138,7 @@ type CheckProductFlavorParam struct {
 type CheckProductFlavorResult struct {
 	MinPrice float64                        `json:"min_price"` // 最小价格
 	MaxPrice float64                        `json:"max_price"` // 最大价格
+	StockNum float64                        `json:"stock_num"` // 库存数量
 	Status   int                            `json:"status"`    // 商品状态 0-下架 1-上架
 	Flavors  []CheckProductFlavorItemResult `json:"flavors"`   // 商品规格列表
 }
@@ -494,4 +497,120 @@ func (s *productCheckSrv) CheckProductOverallDiscount(isEnableOverallDiscount in
 		return errors.New("是否开启整单折扣不正确")
 	}
 	return nil
+}
+
+type CheckProductPackageParam struct {
+	Price  float64                         `json:"price"`  // 套餐价格
+	Groups []CheckProductPackageGroupParam `json:"groups"` // 套餐分组列表
+}
+
+type CheckProductPackageGroupParam struct {
+	Uuid       uint64                                 `json:"uuid"`        // 套餐组UUID
+	LocaleName dto.LocaleResponse                     `json:"locale_name"` // 套餐组名称
+	IsDelete   bool                                   `json:"is_delete"`   // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Products   []CheckProductPackageGroupProductParam `json:"products"`    // 商品套餐组商品列表
+}
+
+type CheckProductPackageGroupProductParam struct {
+	Uuid     uint64 `json:"uuid"`      // 套餐商品UUID
+	BomUuid  uint64 `json:"bom_uuid"`  // 商品BOM UUID
+	Num      int    `json:"num"`       // 商品数量
+	Sort     int    `json:"sort"`      // 商品排序
+	IsDelete bool   `json:"is_delete"` // 是否删除, 如果是新增/编辑，则传false，删除时传true
+}
+
+type CheckProductPackageResult struct {
+	Price    float64                          `json:"price"`     // 套餐价格
+	StockNum float64                          `json:"stock_num"` // 套餐库存
+	Groups   []CheckProductPackageGroupResult `json:"groups"`    // 套餐分组列表
+}
+
+type CheckProductPackageGroupResult struct {
+	Uuid       uint64                                  `json:"uuid"`        // 套餐组UUID
+	LocaleName dto.LocaleResponse                      `json:"locale_name"` // 套餐组名称
+	IsDelete   bool                                    `json:"is_delete"`   // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Products   []CheckProductPackageGroupProductResult `json:"products"`    // 商品套餐组商品列表
+}
+
+type CheckProductPackageGroupProductResult struct {
+	Uuid     uint64 `json:"uuid"`      // 套餐商品UUID
+	BomUuid  uint64 `json:"bom_uuid"`  // 商品BOM UUID
+	Num      int    `json:"num"`       // 商品数量
+	Sort     int    `json:"sort"`      // 商品排序
+	IsDelete bool   `json:"is_delete"` // 是否删除, 如果是新增/编辑，则传false，删除时传true
+}
+
+func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, param CheckProductPackageParam) (*CheckProductPackageResult, error) {
+	commonRepo := repository.NewCommonRepo()
+	productRepo := repository.NewProductRepo(db)
+	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+	if !productRepo.CheckPrice(param.Price, 0, 999999, 2) {
+		return nil, errors.New("套餐价格范围错误")
+	}
+	if len(param.Groups) == 0 {
+		return nil, errors.New("分组不能为空")
+	}
+	var count int64 = 0
+	var stockNum float64 = 0
+	groups := make([]CheckProductPackageGroupResult, 0)
+	for _, group := range param.Groups {
+		isDelete := group.IsDelete
+		if !isDelete && !group.LocaleName.CheckRequiredLocale(storeLanguages) {
+			return nil, errors.New("分组名称不能为空")
+		}
+		if !isDelete && !group.LocaleName.CheckLenLocal(storeLanguages, 100) {
+			return nil, errors.New("分组名称长度不能超过100")
+		}
+		if !isDelete && len(group.Products) == 0 {
+			return nil, errors.New("商品不能为空")
+		}
+		products := make([]CheckProductPackageGroupProductResult, 0)
+		for _, product := range group.Products {
+			if !isDelete {
+				bom, err := productRepo.GetProductBom(
+					commonRepo.WhereBySoftDelete(),
+					productRepo.WhereUuid(product.BomUuid),
+				)
+				if err != nil || bom.ID == 0 {
+					return nil, errors.WithMessage(err, "商品规格失败")
+				}
+				if bom.StockNum >= float64(product.Num) {
+					currentStockNum := decimal.NewFromFloat(bom.StockNum).Div(decimal.NewFromFloat(float64(product.Num))).Floor()
+					if stockNum == 0 {
+						stockNum = currentStockNum.InexactFloat64()
+					} else {
+						if currentStockNum.LessThan(decimal.NewFromFloat(stockNum)) {
+							stockNum = currentStockNum.InexactFloat64()
+						}
+					}
+				}
+			}
+			products = append(products, CheckProductPackageGroupProductResult{
+				Uuid:     product.Uuid,
+				BomUuid:  product.BomUuid,
+				Num:      product.Num,
+				Sort:     product.Sort,
+				IsDelete: product.IsDelete,
+			})
+		}
+		groups = append(groups, CheckProductPackageGroupResult{
+			Uuid:       group.Uuid,
+			LocaleName: group.LocaleName,
+			IsDelete:   group.IsDelete,
+			Products:   products,
+		})
+		if !isDelete {
+			count++
+		}
+	}
+
+	if count > 5 {
+		return nil, errors.New("分组不能超过5个")
+	}
+
+	return &CheckProductPackageResult{
+		Price:    param.Price,
+		StockNum: stockNum,
+		Groups:   groups,
+	}, nil
 }

@@ -111,7 +111,7 @@ func (s *sBom) parseBomListResponse(ctx context.Context, responseData []byte) ([
 			ItemCode:  item.Get("item").String(),
 			BomName:   item.Get("name").String(),
 			Uom:       item.Get("uom").String(),
-			Quantity:  item.Get("quantity").Float32(),
+			Quantity:  item.Get("quantity").Float64(),
 			IsActive:  item.Get("is_active").Bool(),
 			IsDefault: item.Get("is_default").Bool(),
 		}
@@ -165,7 +165,7 @@ func (s *sBom) buildBomData(req *manufacturing.SaveBomReq, companyName string) *
 		Item:      req.ItemCode,
 		Company:   companyName,
 		Uom:       req.Uom,
-		Quantity:  req.Quantity,
+		Quantity:  float64(req.Quantity),
 		IsActive:  req.IsActive,
 		IsDefault: req.IsDefault,
 		Items:     make([]erp.BomItem, 0, len(req.Items)), // 预分配容量以提高性能

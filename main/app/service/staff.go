@@ -1,63 +1,55 @@
 package service
 
 import (
+	"time"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
-	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
+	"ttpos-server-go/pkg/websocket"
 
-	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 type IStaffSrv interface {
-	// 获取管理员列表
-	GetStaffs(ctx context.Context, pageReq dto.PageReq) (resp.StaffListPaginationResp, error)
-	// 修改管理员
-	UpdateStaff(ctx context.Context, updateReq req.UpdateStaffReq) error
-	// 设置启用禁用员工
-	UpdateStaffStatus(ctx context.Context, updateReq req.UpdateStaffStatusReq) error
-	// 删除员工
-	DeleteStaff(ctx context.Context, deleteReq req.DeleteStaffReq) error
-	// 添加管理员
-	AddStaff(ctx context.Context, addReq req.AddStaffReq) error
-	// 获取角色列表
-	GetRoleList(ctx context.Context, pageReq dto.PageReq) (resp.RoleListResp, error)
-	// 添加角色
-	AddRole(ctx context.Context, addReq req.AddRoleReq) error
-	// 修改角色
-	UpdateRole(ctx context.Context, updateReq req.UpdateRoleReq) error
-	// 删除角色
-	DeleteRole(ctx context.Context, deleteReq req.DeleteRoleReq) error
-	// 获取角色详细
-	GetRoleAccess(ctx context.Context, getReq req.GetRoleReq) (resp.RoleDetailResp, error)
-	// 获取所有角色权限
-	GetPermissionGroup(ctx context.Context) (resp.PermissionGroup, error)
+	PaginateGetStaffs(ctx context.Context, pageReq dto.PageReq) (resp.StaffListPaginationResp, error) // 获取管理员列表
+	UpdateStaff(ctx context.Context, updateReq req.UpdateStaffReq) error                              // 修改管理员
+	UpdateStaffStatus(ctx context.Context, updateReq req.UpdateStaffStatusReq) error                  // 设置启用禁用管理员
+	DeleteStaff(ctx context.Context, deleteReq req.DeleteStaffReq) error                              // 删除管理员
+	AddStaff(ctx context.Context, addReq req.AddStaffReq) error                                       // 添加管理员
+	GetRoleList(ctx context.Context, pageReq dto.PageReq) (resp.RoleListResp, error)                  // 获取角色列表
+	AddRole(ctx context.Context, addReq req.AddRoleReq) error                                         // 添加角色
+	UpdateRole(ctx context.Context, updateReq req.UpdateRoleReq) error                                // 修改角色
+	DeleteRole(ctx context.Context, deleteReq req.DeleteRoleReq) error                                // 删除角色
+	GetRoleAccess(ctx context.Context, getReq req.GetRoleReq) (resp.RoleDetailResp, error)            // 获取角色详细
+	GetPermissionGroup(ctx context.Context) (resp.PermissionGroup, error)                             // 获取所有角色权限
 }
 
 type staffSrv struct {
+	cache         cache.Cache
 	dbm           *database.DBManager
 	roleAccessSrv IRoleAccessSrv
 }
 
-func NewStaffSrvImpl(dbm *database.DBManager, roleAccessSrv IRoleAccessSrv) IStaffSrv {
+func NewStaffSrvImpl(dbm *database.DBManager, cache cache.Cache, roleAccessSrv IRoleAccessSrv) IStaffSrv {
 	return &staffSrv{
+		cache:         cache,
 		dbm:           dbm,
 		roleAccessSrv: roleAccessSrv,
 	}
 }
 
-func NewStaffSrv(dbm *database.DBManager, roleAccessSrv IRoleAccessSrv) IStaffSrv {
-	return NewStaffSrvImpl(dbm, roleAccessSrv)
+func NewStaffSrv(dbm *database.DBManager, cache cache.Cache, roleAccessSrv IRoleAccessSrv) IStaffSrv {
+	return NewStaffSrvImpl(dbm, cache, roleAccessSrv)
 }
 
-func (s *staffSrv) GetStaffs(ctx context.Context, pageReq dto.PageReq) (resp.StaffListPaginationResp, error) {
+func (s *staffSrv) PaginateGetStaffs(ctx context.Context, pageReq dto.PageReq) (resp.StaffListPaginationResp, error) {
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(ctx.GetDbId()))
 
 	staffs, total, err := staffRepo.PaginateGetStaffs(pageReq.PageNo, pageReq.PageSize, staffRepo.WithRoles())
@@ -68,9 +60,6 @@ func (s *staffSrv) GetStaffs(ctx context.Context, pageReq dto.PageReq) (resp.Sta
 	staffList := make([]resp.Staff, 0, len(staffs))
 
 	for _, staff := range staffs {
-
-		logger.Logger.Info("staff", zap.Any("staff", staff))
-
 		roles := make([]resp.StaffRole, 0, len(staff.Roles))
 		for _, role := range staff.Roles {
 			roles = append(roles, resp.StaffRole{
@@ -81,6 +70,7 @@ func (s *staffSrv) GetStaffs(ctx context.Context, pageReq dto.PageReq) (resp.Sta
 		staffList = append(staffList, resp.Staff{
 			Uuid:       staff.Uuid,
 			Username:   staff.Username,
+			Phone:      staff.Phone,
 			RealName:   staff.RealName,
 			Roles:      roles,
 			IsDisable:  staff.IsDisable,
@@ -119,6 +109,26 @@ func (s *staffSrv) UpdateStaff(ctx context.Context, updateReq req.UpdateStaffReq
 	if len(roles) != len(updateReq.Roles) {
 		return errors.New("角色参数错误")
 	}
+
+	saasDB := s.dbm.GetDB(0)
+	companyStaffRepo := repository.NewCompanyStaffRepo(saasDB)
+	// 手机号、邮箱必填，可以这样判断
+	existsCompanyStaff := companyStaffRepo.GetCompanyStaff(companyStaffRepo.WhereUsernameOrPhone(updateReq.Username, updateReq.Phone), companyStaffRepo.WhereNotUuid(updateReq.Uuid))
+	if existsCompanyStaff.Username == updateReq.Username {
+		return errors.New("邮箱已存在")
+	}
+	if existsCompanyStaff.Phone == updateReq.Phone {
+		return errors.New("手机号已存在")
+	}
+
+	err = saasDB.Model(&model.CompanyStaff{}).Where("uuid = ?", updateReq.Uuid).Updates(map[string]any{
+		"username": updateReq.Username,
+		"phone":    updateReq.Phone,
+	}).Error
+	if err != nil {
+		return err
+	}
+
 	update := map[string]any{
 		"username":  updateReq.Username,
 		"real_name": updateReq.RealName,
@@ -144,6 +154,17 @@ func (s *staffSrv) UpdateStaff(ctx context.Context, updateReq req.UpdateStaffReq
 	if err != nil {
 		return errors.WithMessage(err, "更新管理员失败")
 	}
+
+	// 删除收银机缓存
+	tc := cache.NewTaggedCache(s.cache)
+	tc.TagClear("cashier")
+
+	// 推送配置更新
+	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_PERMISSION, map[string]any{
+		"staff_uuid":  updateReq.Uuid,
+		"update_time": time.Now().Unix(),
+	})
+
 	return nil
 }
 
@@ -153,6 +174,9 @@ func (s *staffSrv) UpdateStaffStatus(ctx context.Context, updateReq req.UpdateSt
 	staff, err := staffRepo.GetStaff(staffRepo.WhereUuid(updateReq.Uuid))
 	if err != nil {
 		return err
+	}
+	if staff.CashierOnline == 1 {
+		return errors.New("当前人员未交班，请先交班")
 	}
 	if staff.IsSuper == 1 {
 		return errors.New("超级管理员不能修改")
@@ -172,17 +196,35 @@ func (s *staffSrv) UpdateStaffStatus(ctx context.Context, updateReq req.UpdateSt
 }
 
 func (s *staffSrv) DeleteStaff(ctx context.Context, deleteReq req.DeleteStaffReq) error {
+	if ctx.GetStaffUuid() == deleteReq.Uuid {
+		return errors.New("不能删除当前登录账号")
+	}
 	db := s.dbm.GetDB(ctx.GetDbId())
 	staffRepo := repository.NewStaffRepo(db)
 	staff, err := staffRepo.GetStaff(staffRepo.WhereUuid(deleteReq.Uuid))
 	if err != nil {
 		return err
 	}
+	if staff.CashierOnline == 1 {
+		return errors.New("当前人员未交班，请先交班")
+	}
 	if staff.IsSuper == 1 {
 		return errors.New("超级管理员不能删除")
 	}
+	err = db.Transaction(func(tx *gorm.DB) error {
+		err = tx.Model(&model.Staff{}).Where("uuid = ?", deleteReq.Uuid).Delete(&model.Staff{}).Error
+		if err != nil {
+			return err
+		}
 
-	err = db.Model(&model.Staff{}).Where("uuid = ?", deleteReq.Uuid).Delete(&model.Staff{}).Error
+		err = tx.Model(&model.StaffRole{}).Where("staff_uuid = ?", deleteReq.Uuid).Delete(&model.StaffRole{}).Error
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	s.dbm.GetDB(0).Model(&model.CompanyStaff{}).Where("uuid = ?", deleteReq.Uuid).Delete(&model.CompanyStaff{})
 	if err != nil {
 		return err
 	}
@@ -190,7 +232,7 @@ func (s *staffSrv) DeleteStaff(ctx context.Context, deleteReq req.DeleteStaffReq
 }
 
 func (s *staffSrv) AddStaff(ctx context.Context, addReq req.AddStaffReq) error {
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	staffRepo := repository.NewStaffRepo(db)
 	staff, _ := staffRepo.GetStaff(staffRepo.WhereUsername(addReq.Username))
 	if staff.Uuid != 0 {
@@ -205,14 +247,28 @@ func (s *staffSrv) AddStaff(ctx context.Context, addReq req.AddStaffReq) error {
 	if len(roles) != len(addReq.Roles) {
 		return errors.New("角色参数错误")
 	}
-	staff = model.Staff{
-		Username:  addReq.Username,
-		RealName:  addReq.RealName,
-		Phone:     addReq.Phone,
-		Password:  utils.EncryptPassword(addReq.Password),
-		IsDisable: 0,
-		IsSuper:   0,
+
+	companyStaff := model.CompanyStaff{
+		Username:    addReq.Username,
+		Phone:       addReq.Phone,
+		IsSuper:     0,
+		CompanyUuid: ctx.GetCompanyUuid(),
 	}
+	// 保存saas库
+	s.dbm.GetDB(0).Model(&model.CompanyStaff{}).Create(&companyStaff)
+
+	staff = model.Staff{
+		CompanyUuid: ctx.GetCompanyUuid(),
+		Username:    addReq.Username,
+		RealName:    addReq.RealName,
+		Phone:       addReq.Phone,
+		Password:    utils.EncryptPassword(addReq.Password),
+		IsDisable:   0,
+		IsSuper:     0,
+	}
+	// 确保关联得上
+	staff.Uuid = companyStaff.Uuid
+
 	err = db.Transaction(func(tx *gorm.DB) error {
 		err := tx.Model(&model.Staff{}).Create(&staff).Error
 		if err != nil {

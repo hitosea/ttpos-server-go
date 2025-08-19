@@ -142,7 +142,7 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 			LanguageList:        h5Setting.LanguageList,
 			Language:            h5Setting.Language,
 			DefaultLanguage:     h5Setting.DefaultLanguage,
-			IsOpenRider:         company.CompanySetting.DeliveryStatus == 1,
+			IsOpenRider:         company.CompanySetting.IsOpenRider(),
 			AreaCode:            areaCodes,
 		},
 		Company: member_resp.CompanyResp{

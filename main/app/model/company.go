@@ -138,6 +138,14 @@ func (model *CompanySetting) GetDeliveryConfig(channel string, distance float64)
 	return config, nil
 }
 
+func (model *CompanySetting) IsTtposSite() bool {
+	return model.ErpnextSiteCode == "1"
+}
+
+func (model *CompanySetting) IsOpenRider() bool {
+	return model.DeliveryStatus == 1
+}
+
 // 外送配置
 type DeliveryConfig []DeliveryConfigItem
 

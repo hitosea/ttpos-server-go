@@ -22,9 +22,13 @@ type IErpSrv interface {
 	GetPosProfileList(ctx context.Context, getPosProfileListReq req.GetPosProfileListReq) (resp.GetPosProfileListResp, error)
 	AddLianPayment(ctx cc.Context, addLianPaymentReq req.ErpnextSiteAddLianLianPaymentReq) error
 
+	SaveUom(ctx context.Context, saveUomReq req.SaveUomReq) error
+	SaveAttribute(ctx context.Context, saveAttributeReq req.SaveAttributeReq) error
+
 	// 采购单
 	CreatePurchaseOrder(ctx cc.Context, createPurchaseOrderReq *stock.SaveMaterialRequestReq) (*stock.SaveMaterialRequestResp, error)
 	GetMaterialRequestList(ctx cc.Context, getMaterialRequestListReq *stock.GetMaterialRequestListReq) (*stock.GetMaterialRequestListResp, error)
+	SavePurchaseReceipt(ctx cc.Context, savePurchaseReceiptReq *buying.SavePurchaseReceiptReq) (*buying.SavePurchaseReceiptResp, error)
 
 	// 供应商
 	GetSupplierList(ctx cc.Context) (*buying.GetSupplierListResp, error)

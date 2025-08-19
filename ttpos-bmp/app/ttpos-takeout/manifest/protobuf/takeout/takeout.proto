@@ -30,7 +30,7 @@ message EstimateDistanceReq {
 
 message EstimateDistanceResp {
   ResponseInfo responseInfo = 1;
-  float distance = 2;
+  double distance = 2;
   int32 tripDuration = 3;
 }
 
@@ -69,9 +69,9 @@ message GetDriverInfoResp {
   string name = 2; // 骑手名称
   string phone = 3; // 骑手电话
   string avatar = 4; // 骑手头像
-  float rating = 5; // 骑手评分
-  float lat = 6;      // 纬度
-  float lng = 7;      // 经度
+  double rating = 5; // 骑手评分
+  double lat = 6;      // 纬度
+  double lng = 7;      // 经度
 }
 
 

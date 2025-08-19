@@ -343,3 +343,5 @@ g.Log().Infof(ctx, "用户 %d 执行了 %s 操作", userId, action)
 - 敏感数据传输和存储要加密
 - API 接口添加适当的权限控制
  
+### 12.4 JSON生成Struct规范
+- 通过JSON 生成 internal/model/dto 下的Struct时，忽略 __开头的属性，默认属性可选

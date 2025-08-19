@@ -6,12 +6,13 @@ option go_package = "ttpos-bmp/app/ttpos-erp/api/warehouse";
 
 // 获取仓库列表请求
 message GetWarehouseListReq {
-  string warehouse_name = 1;  //仓库名称
-  string company = 2; // 公司名称，可选
-  string company_abbr = 3; // 公司简称
-  string branch = 4; // 分支名称，可选
-  string alias_name = 5; // 仓库别名，可选
-  string warehouse_type = 6; // 仓库类型，可选
+  string name = 1;  //仓库全称包含 abbr 后缀
+  string warehouse_name = 2;  //仓库名称 不包含 abbr 后缀
+  string company = 3; // 公司名称，可选
+  string company_abbr = 4; // 公司简称
+  string branch = 5; // 分支名称，可选
+  string alias_name = 6; // 仓库别名，可选
+  string warehouse_type = 7; // 仓库类型，可选
 }
 // 获取仓库列表响应
 message GetWarehouseListResp {

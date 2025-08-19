@@ -32,6 +32,17 @@ message InitShopResp {
   string branch_name = 1; // 分支名称
 }
 
+
+message CreateDefaultPosProfileReq {
+  string name = 1;  // Pos Profile名称 ,必填
+  string company_abbr = 2; // 公司名称 ，必填
+  string branch = 3; // 分店名称，必填
+}
+
+message CreateDefaultPosProfileResp {
+  string name = 1;  // Pos Profile名称
+}
+
 service SetupService {
 
   // 初始化店铺
@@ -42,4 +53,7 @@ service SetupService {
   // 参数：用户邮箱
   // 返回：创建结果
   rpc CreatePosUser(CreatePosUserReq) returns (erp.ResponseInfo);
+
+  // 创建默认pos profile
+  rpc CreateDefaultPosProfile(CreateDefaultPosProfileReq) returns (erp.ResponseInfo);
 }

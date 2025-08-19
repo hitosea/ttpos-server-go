@@ -36,9 +36,6 @@ func (s *erpSrv) CreatePurchaseOrder(ctx cc.Context, createPurchaseOrderReq *sto
 	if err != nil {
 		return &stock.SaveMaterialRequestResp{}, err
 	}
-	if result.Code != "0" {
-		return &stock.SaveMaterialRequestResp{}, errors.New(result.Message)
-	}
 	if result.Data != nil {
 		var resp stock.SaveMaterialRequestResp
 		if err := result.Data.UnmarshalTo(&resp); err != nil {

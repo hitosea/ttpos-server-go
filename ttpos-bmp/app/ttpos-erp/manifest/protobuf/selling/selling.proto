@@ -22,7 +22,6 @@ message PosProfile {
   string company = 2; // 公司名称
   string branch = 3; // 分店名称
   string warehouse = 4; // 仓库名称
-
 }
 
 message PosProfileListResp {

@@ -281,7 +281,7 @@ func (x *EstimateDistanceReq) GetAddress() []*Address {
 type EstimateDistanceResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ResponseInfo  *ResponseInfo          `protobuf:"bytes,1,opt,name=responseInfo,proto3" json:"responseInfo,omitempty"`
-	Distance      float32                `protobuf:"fixed32,2,opt,name=distance,proto3" json:"distance,omitempty"`
+	Distance      float64                `protobuf:"fixed64,2,opt,name=distance,proto3" json:"distance,omitempty"`
 	TripDuration  int32                  `protobuf:"varint,3,opt,name=tripDuration,proto3" json:"tripDuration,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -324,7 +324,7 @@ func (x *EstimateDistanceResp) GetResponseInfo() *ResponseInfo {
 	return nil
 }
 
-func (x *EstimateDistanceResp) GetDistance() float32 {
+func (x *EstimateDistanceResp) GetDistance() float64 {
 	if x != nil {
 		return x.Distance
 	}
@@ -644,9 +644,9 @@ type GetDriverInfoResp struct {
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty" dc:"骑手名称"`       // 骑手名称
 	Phone         string                 `protobuf:"bytes,3,opt,name=phone,proto3" json:"phone,omitempty" dc:"骑手电话"`     // 骑手电话
 	Avatar        string                 `protobuf:"bytes,4,opt,name=avatar,proto3" json:"avatar,omitempty" dc:"骑手头像"`   // 骑手头像
-	Rating        float32                `protobuf:"fixed32,5,opt,name=rating,proto3" json:"rating,omitempty" dc:"骑手评分"` // 骑手评分
-	Lat           float32                `protobuf:"fixed32,6,opt,name=lat,proto3" json:"lat,omitempty" dc:"纬度"`         // 纬度
-	Lng           float32                `protobuf:"fixed32,7,opt,name=lng,proto3" json:"lng,omitempty" dc:"经度"`         // 经度
+	Rating        float64                `protobuf:"fixed64,5,opt,name=rating,proto3" json:"rating,omitempty" dc:"骑手评分"` // 骑手评分
+	Lat           float64                `protobuf:"fixed64,6,opt,name=lat,proto3" json:"lat,omitempty" dc:"纬度"`         // 纬度
+	Lng           float64                `protobuf:"fixed64,7,opt,name=lng,proto3" json:"lng,omitempty" dc:"经度"`         // 经度
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -709,21 +709,21 @@ func (x *GetDriverInfoResp) GetAvatar() string {
 	return ""
 }
 
-func (x *GetDriverInfoResp) GetRating() float32 {
+func (x *GetDriverInfoResp) GetRating() float64 {
 	if x != nil {
 		return x.Rating
 	}
 	return 0
 }
 
-func (x *GetDriverInfoResp) GetLat() float32 {
+func (x *GetDriverInfoResp) GetLat() float64 {
 	if x != nil {
 		return x.Lat
 	}
 	return 0
 }
 
-func (x *GetDriverInfoResp) GetLng() float32 {
+func (x *GetDriverInfoResp) GetLng() float64 {
 	if x != nil {
 		return x.Lng
 	}
@@ -851,7 +851,7 @@ const file_takeout_takeout_proto_rawDesc = "" +
 	"\aaddress\x18\x02 \x03(\v2\x10.takeout.AddressR\aaddress\"\x91\x01\n" +
 	"\x14EstimateDistanceResp\x129\n" +
 	"\fresponseInfo\x18\x01 \x01(\v2\x15.takeout.ResponseInfoR\fresponseInfo\x12\x1a\n" +
-	"\bdistance\x18\x02 \x01(\x02R\bdistance\x12\"\n" +
+	"\bdistance\x18\x02 \x01(\x01R\bdistance\x12\"\n" +
 	"\ftripDuration\x18\x03 \x01(\x05R\ftripDuration\"\x97\x02\n" +
 	"\x0eCreateOrderReq\x12\"\n" +
 	"\fproviderName\x18\x01 \x01(\tR\fproviderName\x12>\n" +
@@ -879,9 +879,9 @@ const file_takeout_takeout_proto_rawDesc = "" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
 	"\x05phone\x18\x03 \x01(\tR\x05phone\x12\x16\n" +
 	"\x06avatar\x18\x04 \x01(\tR\x06avatar\x12\x16\n" +
-	"\x06rating\x18\x05 \x01(\x02R\x06rating\x12\x10\n" +
-	"\x03lat\x18\x06 \x01(\x02R\x03lat\x12\x10\n" +
-	"\x03lng\x18\a \x01(\x02R\x03lng\"P\n" +
+	"\x06rating\x18\x05 \x01(\x01R\x06rating\x12\x10\n" +
+	"\x03lat\x18\x06 \x01(\x01R\x03lat\x12\x10\n" +
+	"\x03lng\x18\a \x01(\x01R\x03lng\"P\n" +
 	"\x0eCancelOrderReq\x12&\n" +
 	"\x0fshop_order_uuid\x18\x01 \x01(\tR\rshopOrderUuid\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\"L\n" +

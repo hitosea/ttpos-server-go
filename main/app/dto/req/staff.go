@@ -4,7 +4,7 @@ type UpdateStaffReq struct {
 	Uuid            uint64   `json:"uuid" binding:"required"`                               // 管理员ID
 	Username        string   `json:"username" binding:"required,email"`                     // 账号，邮箱 邮箱格式
 	RealName        string   `json:"real_name" binding:"required"`                          // 姓名
-	Phone           string   `json:"phone" binding:"required"`                              // 手机号
+	Phone           string   `json:"phone" binding:"required,max=20"`                       // 手机号，最多20位
 	Roles           []uint64 `json:"roles" binding:"required"`                              // 角色ID列表
 	Password        string   `json:"password" binding:"omitempty,strong_password"`          // 密码，如果不为空，则不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种
 	ConfirmPassword string   `json:"confirm_password" binding:"omitempty,eqfield=Password"` // 确认密码

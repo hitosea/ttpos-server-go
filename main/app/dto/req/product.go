@@ -376,7 +376,7 @@ type ProductShopAddReq struct {
 	DeductStockType int                               `json:"deduct_stock_type"` // 库存计算方式 0-付款减库存 1-下单减库存
 	Show            ProductShopAddShowReq             `json:"show"`              // 商品显示设置
 	Discount        ProductShopAddDiscountReq         `json:"discount"`          // 商品折扣设置
-	Packages        []ProductShopAddPackageGroupReq   `json:"packages"`          // 商品套餐分组列表
+	Package         ProductShopAddPackageReq          `json:"package"`           // 商品套餐
 }
 
 // ProductShopAddFlavorReq 商品规格添加请求
@@ -435,16 +435,20 @@ type ProductShopAddDiscountReq struct {
 	IsEnableOverallDiscount int `json:"is_enable_overall_discount"` // 是否开启整单折扣 0-关闭 1-开启
 }
 
+// ProductShopAddPackageReq 商品套餐添加请求
+type ProductShopAddPackageReq struct {
+	Price  float64                         `json:"price"`  // 套餐价格
+	Groups []ProductShopAddPackageGroupReq `json:"groups"` // 套餐分组列表
+}
+
 // ProductShopAddPackageGroupReq 套餐分组添加请求
 type ProductShopAddPackageGroupReq struct {
 	LocaleName dto.LocaleResponse                     `json:"locale_name"` // 套餐分组名称
-	Price      float64                                `json:"price"`       // 套餐分组价格
 	Products   []ProductShopAddPackageGroupProductReq `json:"products"`    // 套餐分组商品列表
 }
 
 // ProductShopAddPackageGroupProductReq 套餐分组商品添加请求
 type ProductShopAddPackageGroupProductReq struct {
-	Uuid    uint64 `json:"uuid"`     // 商品UUID
 	BomUuid uint64 `json:"bom_uuid"` // 商品BOM UUID
 	Num     int    `json:"num"`      // 商品数量
 	Sort    int    `json:"sort"`     // 商品排序
@@ -467,7 +471,7 @@ type ProductShopEditReq struct {
 	DeductStockType int                                `json:"deduct_stock_type"` // 库存计算方式 0-付款减库存 1-下单减库存
 	Show            ProductShopEditShowReq             `json:"show"`              // 商品显示设置
 	Discount        ProductShopEditDiscountReq         `json:"discount"`          // 商品折扣设置
-	Packages        []ProductShopEditPackageGroupReq   `json:"packages"`          // 商品套餐分组列表
+	Package         ProductShopEditPackageReq          `json:"package"`           // 商品套餐
 }
 
 // ProductShopAddFlavorReq 商品规格添加请求
@@ -532,22 +536,42 @@ type ProductShopEditDiscountReq struct {
 	IsEnableOverallDiscount int `json:"is_enable_overall_discount"` // 是否开启整单折扣 0-关闭 1-开启
 }
 
+// ProductShopEditPackageReq 商品套餐添加请求
+type ProductShopEditPackageReq struct {
+	Price  float64                          `json:"price"`  // 套餐价格
+	Groups []ProductShopEditPackageGroupReq `json:"groups"` // 套餐分组列表
+}
+
 // ProductShopAddPackageGroupReq 套餐分组添加请求
 type ProductShopEditPackageGroupReq struct {
-	LocaleName dto.LocaleResponse                     `json:"locale_name"` // 套餐分组名称
-	Price      float64                                `json:"price"`       // 套餐分组价格
-	Products   []ProductShopAddPackageGroupProductReq `json:"products"`    // 套餐分组商品列表
+	Uuid       uint64                                  `json:"uuid"`        // 套餐分组UUID
+	LocaleName dto.LocaleResponse                      `json:"locale_name"` // 套餐分组名称
+	Products   []ProductShopEditPackageGroupProductReq `json:"products"`    // 套餐分组商品列表
+	IsDelete   bool                                    `json:"is_delete"`   // 是否删除, 如果是新增/编辑，则传false，删除时传true
 }
 
 // ProductShopAddPackageGroupProductReq 套餐分组商品添加请求
 type ProductShopEditPackageGroupProductReq struct {
-	Uuid    uint64 `json:"uuid"`     // 商品UUID
-	BomUuid uint64 `json:"bom_uuid"` // 商品BOM UUID
-	Num     int    `json:"num"`      // 商品数量
-	Sort    int    `json:"sort"`     // 商品排序
+	Uuid     uint64 `json:"uuid"`      // 套餐商品UUID
+	BomUuid  uint64 `json:"bom_uuid"`  // 商品BOM UUID
+	Num      int    `json:"num"`       // 商品数量
+	Sort     int    `json:"sort"`      // 商品排序
+	IsDelete bool   `json:"is_delete"` // 是否删除, 如果是新增/编辑，则传false，删除时传true
 }
 
 // ProductShopDeleteReq 商品删除请求
 type ProductShopDeleteReq struct {
 	Uuid uint64 `json:"uuid" binding:"required"` // 商品UUID
+}
+
+// ProductShopChangePriceReq 商品改价请求
+type ProductShopChangePriceReq struct {
+	Uuid   uint64                          `json:"uuid"`   // 商品UUID
+	Prices []ProductShopChangePriceItemReq `json:"prices"` // 商品价格列表
+}
+
+// ProductShopChangePriceItemReq 商品改价项请求
+type ProductShopChangePriceItemReq struct {
+	Uuid  uint64  `json:"uuid"`  // 商品BOM UUID
+	Price float64 `json:"price"` // 商品价格
 }
