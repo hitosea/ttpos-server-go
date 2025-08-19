@@ -8,6 +8,9 @@ import (
 )
 
 type ICompanySettingRepo interface {
+	WhereErpnextCompanyAbbr(erpnextCompanyAbbr string) DBOption
+
+	GetOne(opts ...DBOption) (model.CompanySetting, error)
 	Get() model.CompanySetting
 	UpdateSmsQuota(companyUuid uint64, quota int) error // 扣减公司的短信余额
 }
@@ -35,4 +38,20 @@ func (r *companySettingRepo) UpdateSmsQuota(companyUuid uint64, quota int) error
 		return errors.WithMessage(err, "failed to update SMS quota")
 	}
 	return nil
+}
+
+func (r *companySettingRepo) WhereErpnextCompanyAbbr(erpCompanyAbbr string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("erpnext_company_abbr = ?", erpCompanyAbbr)
+	}
+}
+
+func (r *companySettingRepo) GetOne(opts ...DBOption) (model.CompanySetting, error) {
+	var companySetting model.CompanySetting
+	db := r.db.Model(&model.CompanySetting{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Take(&companySetting).Error
+	return companySetting, err
 }

@@ -243,6 +243,7 @@ type StatisticsProductData struct {
 	SalePrice          sql.NullFloat64 `gorm:"column:sale_price;comment:销售单价"`
 	SaleNum            sql.NullFloat64 `gorm:"column:sale_num;comment:销售数量"`
 	SaleAmount         sql.NullFloat64 `gorm:"column:sale_amount;comment:销售金额"`
+	ProductType        sql.NullInt64   `gorm:"column:product_type;comment:商品类型"`
 }
 
 // StatisticsAreaData 区域统计数据
@@ -318,4 +319,10 @@ type StatisticsFreePaymentDaysData struct {
 type CountMemberNumDaysResp struct {
 	Day       sql.NullString `gorm:"column:day;comment:日期"`
 	MemberNum sql.NullInt64  `gorm:"column:member_num;comment:会员数量"`
+}
+
+// StatisticsCancelOrderData 取消订单统计数据
+type StatisticsCancelOrderData struct {
+	TotalCancelOrderNum    sql.NullInt64   `gorm:"column:total_cancel_order_num;comment:总取消订单数"`
+	TotalCancelOrderAmount sql.NullFloat64 `gorm:"column:total_cancel_order_amount;comment:总取消订单金额"`
 }

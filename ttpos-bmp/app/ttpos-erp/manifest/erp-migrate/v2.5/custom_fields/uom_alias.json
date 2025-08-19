@@ -1,0 +1,8 @@
+{
+  "doctype": "DocType",
+  "label": "别名",
+  "fieldname": "custom_alias",
+  "fieldtype": "Data",
+  "insert_after": "uom_name",
+  "dt": "UOM"
+}

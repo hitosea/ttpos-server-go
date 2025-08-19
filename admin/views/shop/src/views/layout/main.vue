@@ -12,41 +12,28 @@
   </div>
 </template>
 
-<script>
+<script setup>
+  // 使用 Vue3 <script setup> 语法改写
+  // 引入依赖组件
+  import { ref } from 'vue';
   import LeftMenu from '@/views/layout/LeftMenu.vue';
   import RightContent from '@/views/layout/RightContent.vue';
   import Head from '@/views/layout/Head.vue';
-  export default {
-    components: {
-      /*左菜单组件*/
-      LeftMenu,
-      /*右边内容容器*/
-      RightContent,
-      Head,
-    },
-    data() {
-      return {
-        /*是否有子菜单*/
-        hasChild: null,
-        /*系统基本数据*/
-        baseInfo: {
-          shop_name: '',
-          supplier_name: '',
-          user: {
-            user_type: null,
-          },
-          version: '',
-        },
-      };
-    },
-    methods: {
-      /*左边子组件传来的参数*/
-      selectMenuFunc(param) {
-        this.hasChild = param;
-      },
-      selectMenu(data) {
-        this.$refs.leftMenuRef.choseMenu(data.type, data.item, data.index, data.query);
-      },
-    },
+
+  // 左侧菜单组件引用
+  const leftMenuRef = ref(null);
+
+  // 是否有子菜单
+  const hasChild = ref(null);
+
+
+  // 左边子组件传来的参数：设置是否存在子菜单
+  const selectMenuFunc = (param) => {
+    hasChild.value = param;
+  };
+
+  // 右侧内容触发菜单选择，转发到左侧菜单组件的方法
+  const selectMenu = (data) => {
+    leftMenuRef.value?.choseMenu(data.type, data.item, data.index, data.query);
   };
 </script>

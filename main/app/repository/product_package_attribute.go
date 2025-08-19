@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"time"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
@@ -12,6 +13,8 @@ type IProductPackageAttributeRepo interface {
 	GetProductPackageAttributes(opts ...DBOption) ([]*model.ProductPackageAttribute, error)
 	GetProductPackageAttributesByUuids(uuids []uint64) ([]*model.ProductPackageAttribute, error)
 	CreateProductPackageAttributes(productPackageAttributes []model.ProductPackageAttribute) error
+	DeleteProductPackageAttribute(opts ...DBOption) error
+	UpdateProductPackageAttribute(data map[string]any, opts ...DBOption) error
 }
 
 type productPackageAttributeRepoImpl struct {
@@ -84,4 +87,26 @@ func (r *productPackageAttributeRepoImpl) CreateProductPackageAttributes(product
 		return errors.WithMessage(err)
 	}
 	return nil
+}
+
+func (r *productPackageAttributeRepoImpl) DeleteProductPackageAttribute(opts ...DBOption) error {
+	db := r.db
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	return db.Model(&model.ProductPackageAttribute{}).Updates(map[string]any{
+		"delete_time": time.Now().Unix(),
+	}).Error
+}
+
+func (r *productPackageAttributeRepoImpl) UpdateProductPackageAttribute(data map[string]any, opts ...DBOption) error {
+	db := r.db
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	return db.Model(&model.ProductPackageAttribute{}).Updates(data).Error
 }

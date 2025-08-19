@@ -1,0 +1,30 @@
+// ==========================================================================
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
+// ==========================================================================
+
+syntax = "proto3";
+
+package manager;
+
+option go_package = "ttpos-bmp/app/ttpos-manager/api/manager";
+
+
+
+message UploadFile {
+    uint32 FileId     = 1;  // 自增ID
+    string Storage    = 2;  // 存储方式
+    uint32 GroupId    = 3;  // 文件分组ID
+    string FileUrl    = 4;  // 存储域名
+    string SaveName   = 5;  // 保存路径
+    string FileName   = 6;  // 文件路径
+    uint32 FileSize   = 7;  // 文件大小(字节)
+    string FileType   = 8;  // 文件类型
+    string RealName   = 9;  // 文件真实名
+    string UrlParam   = 10; // 签名参数
+    string Extension  = 11; // 文件扩展名
+    uint32 IsUser     = 12; // 是否为c端用户上传
+    uint32 IsRecycle  = 13; // 是否已回收
+    int32  CreateTime = 14; // 创建时间（时间戳）
+    int32  UpdateTime = 15; // 更新时间（时间戳）
+    int32  DeleteTime = 16; // 删除时间（时间戳）
+}

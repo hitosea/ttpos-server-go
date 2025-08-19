@@ -490,12 +490,33 @@ func (model *SaleBill) GetUnOrderH5OrderProduct() []*SaleOrderProduct {
 	// 过滤掉已下单的h5订单商品
 	newH5OrderProducts := make([]*SaleOrderProduct, 0)
 	for _, h5OrderProduct := range h5OrderProducts {
+		if h5OrderProduct.IsPackageSubProduct() {
+			continue // 套餐子商品跳过
+		}
 		if !h5OrderProduct.IsH5CartProduct() {
 			continue
 		}
 		newH5OrderProducts = append(newH5OrderProducts, h5OrderProduct)
 	}
 	return newH5OrderProducts
+}
+
+// 获取套餐子商品列表
+func (model *SaleBill) GetSubProducts(saleOrderProductUuid uint64) []*SaleOrderProduct {
+	// 获取第一个销售订单
+	saleOrder := model.SaleOrders[0]
+	// 获取未下单的h5订单商品
+	h5OrderProducts := saleOrder.GetH5CartProductList() // FIXME 为什么会有已下单的h5订单商品？
+	// 过滤掉已下单的h5订单商品
+	subProducts := make([]*SaleOrderProduct, 0)
+	for _, h5OrderProduct := range h5OrderProducts {
+		if h5OrderProduct.IsPackageSubProduct() {
+			if h5OrderProduct.PackageUuid == saleOrderProductUuid {
+				subProducts = append(subProducts, h5OrderProduct)
+			}
+		}
+	}
+	return subProducts
 }
 
 // 获取未下单的h5订单商品数量

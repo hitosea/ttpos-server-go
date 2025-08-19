@@ -58,7 +58,7 @@ class Setting extends SettingModel
             (new App([], 0))->where('uuid', $shopSupplierId)->find()?->save($ayncData);
             (new Supplier([], 0))->where('company_uuid', $shopSupplierId)->find()?->save($ayncData);
             // 保存打印用的白底黑字的图片
-            ImageHelp::whiteBackgroundWithBlackText('http://nginx/' . $values['logoUrl'], Supplier::getWhiteBackgroundWithBlackTextLogoPath($appId));
+            ImageHelp::whiteBackgroundWithBlackText('http://nginx/' . $values['logoUrl'], Supplier::getWhiteBackgroundWithBlackTextLogoPath($appId, $values['logoUrl']));
         }
         // 更新其他语言
         if ($key == SettingEnum::STORE && isset($values['language']) && !empty($values['language'])) {

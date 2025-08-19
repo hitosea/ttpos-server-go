@@ -509,21 +509,25 @@ class Index extends Controller
             'CAST(IFNULL(c.parent_uuid, 0) AS UNSIGNED) as parent_category_id'
         ];
         $buildQuery = function ($table, $additionalFields = []) use ($commonFields) {
-            return $table->alias('p')
+            $builder =  $table->alias('p')
                 ->leftJoin('product_category c', 'c.uuid = p.category_uuid')
                 ->field(array_merge($commonFields, $additionalFields));
+            if (is_a($table, Product::class)) {
+                $builder->where('p.product_type', 0);
+            }
+            return $builder;
         };
         $productQuery = $buildQuery(new Product, [
             'printer_tag_uuid as label_id',
             '"product" as source_type',
-            'open_overall_discount'
+            'open_overall_discount',
         ]);
         $materialQuery = $buildQuery(new Material, [
             '0 as label_id',
             '"material" as source_type',
-            '0 as open_overall_discount'
+            '0 as open_overall_discount',
         ]);
-        $applyConditions = function ($query) use ($categoryIds, $labelIds, $productName, $mode, $numType, $showDeliveryRequired) {
+        $applyConditions = function ($query) use ($categoryIds, $labelIds, $productName, $mode, $numType, $showDeliveryRequired, $type) {
             if ($categoryIds) {
                 $query->whereIn('category_uuid', explode(',', $categoryIds));
             }

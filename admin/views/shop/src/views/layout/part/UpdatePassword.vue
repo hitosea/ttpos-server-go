@@ -1,6 +1,6 @@
 <template>
   <el-dialog :title="$t('修改密码')" v-model="dialogVisible" @close="dialogFormVisible" :close-on-click-modal="false" :close-on-press-escape="false" width="30%">
-    <el-form size="small" :model="form" label-position="top" ref="form" :rules="rules">
+    <el-form size="small" :model="form" label-position="top" ref="formRef" :rules="rules">
       <el-form-item :label="$t('原始密码')" :label-width="formLabelWidth" prop="oldpass">
         <el-input type="password" v-model="form.oldpass" autocomplete="off" :placeholder="$t('请输入登录密码')"></el-input>
       </el-form-item>
@@ -18,114 +18,121 @@
   </el-dialog>
 </template>
 
-<script>
+<script setup>
+  import { ref, reactive } from 'vue';
+  import { useRouter } from 'vue-router';
+  import { ElMessage } from 'element-plus';
   import UserApi from '@/api/user.js';
   import { useUserStore } from '@/store';
-  import { languageStore } from '@/store/model/language.js';
   import { EEUIRELOAD } from '@/utils/platform.js';
 
-  const isCloudDeploy = languageStore().getIsCloudDeploy().isCloudDeploy;
+  const router = useRouter();
   const { afterLogout } = useUserStore();
-  export default {
-    data() {
-      let validatePass1 = function () {};
 
-      validatePass1 = (rule, value, callback) => {
-        if (!value) {
-          callback(new Error($t('请输入登录密码')));
-        } else if (!/^(?:(?=.*\d)(?=.*[a-zA-Z])|(?=.*\d)(?=.*[\W_])|(?=.*[a-zA-Z])(?=.*[\W_]))(?!.*\s).{8,16}$/.test(value)) {
-          callback(new Error($t('不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种')));
-        } else {
-          callback();
-        }
-      };
+  const emit = defineEmits(['close']);
 
-      let validatePass2 = (rule, value, callback) => {
-        if (!value) {
-          callback(new Error($t('请输入确认新密码')));
-        } else if (value !== this.form.password) {
-          callback(new Error($t('两次密码不一致！')));
-        } else {
-          callback();
-        }
-      };
-      return {
-        isCloudDeploy: isCloudDeploy,
-        loading: false,
-        /*左边长度*/
-        formLabelWidth: '100px',
-        /*是否显示*/
-        dialogVisible: true,
-        /*表单*/
-        form: {},
-        rules: {
-          oldpass: [
-            {
-              required: true,
-              message: $t('请输入原始密码'),
-              trigger: ['blur', 'change'],
-            },
-          ],
-          password: [
-            {
-              required: true,
-              validator: validatePass1,
-              trigger: ['blur', 'change'],
-            },
-          ],
-          confirmPass: [{ required: true, validator: validatePass2, trigger: ['blur', 'change'] }],
-        },
-      };
-    },
-    props: [],
-    created() {},
-    methods: {
-      /*确认事件*/
-      submitFunc(e) {
-        let self = this;
-        let form = self.form;
-        self.$refs.form.validate((valid) => {
-          if (valid) {
-            self.loading = true;
-            UserApi.EditPass(form, true)
-              .then((data) => {
-                self.loading = false;
-                if (data.code == 1) {
-                  this.$ElMessage({
-                    message: data.msg,
-                    type: 'success',
-                  });
-                  self.dialogFormVisible(true);
-                  setTimeout(() => {
-                    this.logout();
-                  }, 2000);
-                } else {
-                  self.loading = false;
-                }
-              })
-              .catch((error) => {
-                self.loading = false;
+  // 响应式数据
+  const loading = ref(false);
+  const formLabelWidth = ref('100px');
+  const dialogVisible = ref(true);
+  const formRef = ref(null);
+
+  const form = reactive({
+    oldpass: '',
+    password: '',
+    confirmPass: '',
+  });
+
+  // 密码验证函数
+  const validatePass1 = (rule, value, callback) => {
+    if (!value) {
+      callback(new Error($t('请输入登录密码')));
+    } else if (!/^(?:(?=.*\d)(?=.*[a-zA-Z])|(?=.*\d)(?=.*[\W_])|(?=.*[a-zA-Z])(?=.*[\W_]))(?!.*\s).{8,16}$/.test(value)) {
+      callback(new Error($t('不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种')));
+    } else {
+      callback();
+    }
+  };
+
+  const validatePass2 = (rule, value, callback) => {
+    if (!value) {
+      callback(new Error($t('请输入确认新密码')));
+    } else if (value !== form.password) {
+      callback(new Error($t('两次密码不一致！')));
+    } else {
+      callback();
+    }
+  };
+
+  // 表单验证规则
+  const rules = reactive({
+    oldpass: [
+      {
+        required: true,
+        message: $t('请输入原始密码'),
+        trigger: ['blur', 'change'],
+      },
+    ],
+    password: [
+      {
+        required: true,
+        validator: validatePass1,
+        trigger: ['blur', 'change'],
+      },
+    ],
+    confirmPass: [
+      {
+        required: true,
+        validator: validatePass2,
+        trigger: ['blur', 'change'],
+      },
+    ],
+  });
+
+  // 确认修改密码
+  const submitFunc = (e) => {
+    formRef.value.validate((valid) => {
+      if (valid) {
+        loading.value = true;
+        UserApi.EditPass(form, true)
+          .then((data) => {
+            loading.value = false;
+            if (data.code == 1) {
+              ElMessage({
+                message: data.msg,
+                type: 'success',
               });
-          }
-        });
-      },
+              dialogFormVisible();
+              setTimeout(() => {
+                logout();
+              }, 2000);
+            } else {
+              loading.value = false;
+            }
+          })
+          .catch((error) => {
+            loading.value = false;
+          });
+      }
+    });
+  };
 
-      async logout() {
-        afterLogout();
-        this.$router.push('/login');
-        EEUIRELOAD();
-      },
+  // 登出
+  const logout = async () => {
+    await afterLogout();
+    router.push('/login');
+    EEUIRELOAD();
+  };
 
-      /*关闭弹窗*/
-      dialogFormVisible() {
-        this.$emit('close', false);
-      },
+  // 关闭弹窗
+  const dialogFormVisible = () => {
+    emit('close', false);
+  };
 
-      changePassword() {
-        if (this.form.confirmPass) {
-          this.$refs.form.validateField('confirmPass');
-        }
-      },
-    },
+  // 密码变化时验证确认密码
+  const changePassword = () => {
+    if (form.confirmPass) {
+      formRef.value.validateField('confirmPass');
+    }
   };
 </script>

@@ -32,6 +32,7 @@ type IStatisticsRepo interface {
 	CountProductSale(req CountProductSaleRepoReq, opts ...DBOption) ([]model.StatisticsProductSaleData, int64)                 // 统计商品销售
 	CountFreePayment(opts ...DBOption) model.StatisticsFreePaymentData                                                         // 统计免单支付
 	CountFreePaymentDays(opts ...DBOption) []model.StatisticsFreePaymentDaysData                                               // 统计免单支付天数
+	CountCancelOrder(opts ...DBOption) model.StatisticsCancelOrderData                                                         // 统计取消订单
 	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData                                 // 统计商品排行
 	SaveSale(sales []model.StatisticsSale) error                                                                               // 保存销售
 	SavePayment(payments []model.StatisticsPayment) error                                                                      // 保存支付
@@ -215,6 +216,8 @@ func (r *StatisticsRepo) CountPayment(opts ...DBOption) []model.StatisticsPaymen
 		Select(countPaymentSelect).
 		Joins("LEFT JOIN " + paymentMethodTable + " ON sp.payment_method_uuid = pm.uuid").
 		Group("sp.payment_method_uuid").
+		Order("pm.sort ASC").
+		Order("pm.id DESC").
 		Find(&result)
 
 	return result
@@ -329,12 +332,16 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 				"'' AS category_name",
 				"SUM(sp.product_num) AS sale_num",
 				"SUM(sp.product_final_price * sp.product_num) AS sale_amount",
+				"IF(pc.parent_uuid > 0, ppc.sort, pc.sort) AS sort",
 			).
 			Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
 			Joins("LEFT JOIN " + productBomTable + " ON sp.product_bom_uuid = pb.uuid").
 			Joins("LEFT JOIN " + productCategoryTable + " ON pp.category_uuid = pc.uuid").
 			Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid").
 			Group("IF(pc.parent_uuid = 0, pp.category_uuid, pc.parent_uuid)").
+			Order("sort ASC").
+			Order("category_parent_uuid DESC").
+			Order("pp.uuid DESC").
 			Find(&result)
 	} else {
 		db.Table(statisticsProductTable).
@@ -352,6 +359,11 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 			Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid").
 			Where("pc.parent_uuid > 0").
 			Group("pc.uuid").
+			Order("ppc.sort ASC").
+			Order("ppc.uuid DESC").
+			Order("pc.sort ASC").
+			Order("pc.uuid DESC").
+			Order("pp.uuid DESC").
 			Find(&result)
 	}
 
@@ -370,6 +382,8 @@ func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model
 	statisticsProductTable := prefix + "statistics_product as sp"
 	productPackageTable := prefix + "product_package as pp"
 	productBomTable := prefix + "product_bom as pb"
+	productCategoryTable := prefix + "product_category as pc"
+	productParentCategoryTable := prefix + "product_category as ppc"
 
 	db.Table(statisticsProductTable).
 		Select(
@@ -378,10 +392,21 @@ func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model
 			"pb.price AS sale_price",
 			"SUM(sp.product_num) AS sale_num",
 			"SUM(sp.product_final_price * sp.product_num) AS sale_amount",
+			"IF(pc.parent_uuid = 0, pc.sort, ppc.sort) AS ppc_sort",
+			"IF(pc.parent_uuid = 0, pc.uuid, ppc.uuid) AS ppc_uuid",
+			"IF(pc.parent_uuid = 0, 0, pc.sort) AS pc_sort",
+			"pp.product_type",
 		).
 		Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
 		Joins("LEFT JOIN " + productBomTable + " ON sp.product_bom_uuid = pb.uuid").
+		Joins("LEFT JOIN " + productCategoryTable + " ON pp.category_uuid = pc.uuid").
+		Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid").
 		Group("sp.product_bom_uuid").
+		Order("ppc_sort ASC").
+		Order("ppc_uuid DESC").
+		Order("pc_sort ASC").
+		Order("pc.uuid DESC").
+		Order("pp.uuid DESC").
 		Find(&result)
 
 	return result
@@ -881,6 +906,23 @@ func (r *StatisticsRepo) CountFreePaymentDays(opts ...DBOption) []model.Statisti
 		).
 		Group("day").
 		Order("day ASC").
+		Find(&result)
+
+	return result
+}
+
+// CountCancelOrder 统计取消订单
+func (r *StatisticsRepo) CountCancelOrder(opts ...DBOption) model.StatisticsCancelOrderData {
+	var result model.StatisticsCancelOrderData
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	db.Model(&model.SaleBill{}).
+		Select("COUNT(uuid) AS total_cancel_order_num", "SUM(origin_amount) AS total_cancel_order_amount").
+		Where("status = ?", constant.SaleOrderStatusCanceled).
+		Where("bill_type IN (?)", []uint{constant.SaleBillTypeDesk, constant.SaleBillTypeInstant}).
 		Find(&result)
 
 	return result

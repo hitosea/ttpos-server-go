@@ -9,6 +9,8 @@ use app\common\model\file\UploadFile;
 use app\common\model\store\MultiLanguageName;
 use app\common\model\product\Product as ProductModel;
 use app\common\model\Product\Material as MaterialModel;
+use app\common\model\product\ProductPackageGroup as ProductPackageGroupModel;
+use app\common\model\product\ProductPackageGroupItem as ProductPackageGroupItemModel;
 use app\shop\model\product\ProductBom;
 
 /**
@@ -21,25 +23,29 @@ class Product extends ProductModel
      */
     public function add($data)
     {
-        if (!isset($data['type']) || !in_array($data['type'], [ProductModel::TYPE_PRODUCT, ProductModel::TYPE_MATERIAL])) {
+        if (!isset($data['type']) || !in_array($data['type'], [ProductModel::TYPE_PRODUCT, ProductModel::TYPE_MATERIAL, ProductModel::TYPE_PACKAGE])) {
             $this->error = '商品类型不能为空';
             return false;
         }
+        // 是否套餐
+        $isPackage = $data['type'] == ProductModel::TYPE_PACKAGE;
+        // 
         $product_name = isset($data['product_name']) ? $data['product_name'] : '';
         if (ValidateHelp::hasEmptyValue($product_name)) {
-            $this->error = '商品名称不能为空';
+            $this->error = !$isPackage ? '商品名称不能为空' : '套餐名称不能为空';
             return false;
         }
         //
-        [$status, $msg] = ValidateHelp::hasExceedLength($product_name, 150);
+        $maxLength = $isPackage ? 50 : 150;
+        [$status, $msg] = ValidateHelp::hasExceedLength($product_name, $maxLength);
         if ($status === true) {
-            $this->error = '商品名称长度不能超过150个字符';
+            $this->error = !$isPackage ? '商品名称长度不能超过150个字符' : '套餐名称长度不能超过50个字符';
             $this->errorData = $msg;
             return false;
         }
         // 商品名称唯一性
         if (CheckService::checkNameExist('product', $product_name, 0)) {
-            $this->error = '商品名称已存在';
+            $this->error = !$isPackage ? '商品名称已存在' : '套餐名称已存在';
             return false;
         }
         $data['content'] = isset($data['content']) ? $data['content'] : '';
@@ -121,6 +127,80 @@ class Product extends ProductModel
                 return false;
             }
         }
+        // 套餐商品组
+        if ($isPackage) {
+            // 套餐价格
+            $packagePrice = $data['package_price'] ?: 0;
+            if ($packagePrice <= 0 || $packagePrice > 1000000) {
+                $this->error = '套餐价格不能为0或超过1000000';
+                return false;
+            }
+            $packageGroup = $data['package_group'] ?? [];
+            if (empty($packageGroup)) {
+                $this->error = '套餐分组不能为空';
+                return false;
+            }
+            if (count($packageGroup) > 5) {
+                $this->error = '套餐分组最多只能设置5个';
+                return false;
+            }
+            $existGroupNames = [];
+            foreach ($packageGroup as &$item) {
+                // 分组名称
+                $groupName = $item['group_name'] ?? '';
+                [$status, $msg] = ValidateHelp::hasExceedLength($groupName, 50);
+                if ($status === true) {
+                    $this->error = '分组名称长度不能超过50个字符';
+                    $this->errorData = $msg;
+                    return false;
+                }
+                if (in_array($groupName, $existGroupNames)) {
+                    $this->error = '分组名称不能重复';
+                    return false;
+                }
+                $existGroupNames[] = $groupName;
+                // 分组商品
+                $groupProductList = $item['product_list'] ?? [];
+                if (count($groupProductList) <= 0) {
+                    $this->error = '商品不能为空';
+                    return false;
+                }
+                $productIds = array_column($groupProductList, 'product_id');
+                $productBoms = ProductBom::whereIn('uuid', $productIds)->select();
+                foreach ($productBoms as $productBom) {
+                    if ($productBom->status == 0) {
+                        $this->error = '商品不能为下架商品';
+                        return false;
+                    }
+                    $groupProducts = array_filter($groupProductList, function($product) use ($productBom) {
+                        return $product['product_id'] == $productBom->uuid;
+                    });
+                    $groupProduct = reset($groupProducts); // 取第一个匹配的元素
+                    $groupProductNum = $groupProduct['num'] ?: 0;
+                    if ($groupProductNum <= 0) {
+                        $this->error = '商品数量不能为0';
+                        return false;
+                    }
+                    if ($productBom->stock_num <= 0) {
+                        $this->error = '商品库存不足，请调整';
+                        return false;
+                    }
+                }
+            }
+            $data['product_type'] = 1; // 商品类型 0-商品 1-套餐
+            $data['price'] = $packagePrice; // 套餐价格
+            $data['is_show_delivery'] = 2; // 默认不显示外送 1-显示 2-隐藏
+            $data['sku'] = [
+                [
+                    'product_price' => $packagePrice,
+                    'spec_name' => $product_name,
+                    'stock_num' => $data['package_stock'] ?: 0,
+                    'spec_id' => 0,
+                    'barcode' => '',
+                    'is_open_stock' => $data['is_open_stock'] ?? 0,
+                ]
+            ];
+        }
         $data = $this->sanitizeProductData($data);
         // 加料
         if (isset($data['product_feed']) && is_array($data['product_feed']) && !empty($data['product_feed'])) {
@@ -198,6 +278,7 @@ class Product extends ProductModel
         $data['is_show_kitchen'] = $data['is_show_kitchen'] != 2 ? 1 : 0;
         $data['is_show_assistant'] = $data['is_show_assistant'] != 2 ? 1 : 0;
         $data['is_show_h5'] = $data['is_show_h5'] != 2 ? 1 : 0;
+        $data['is_show_delivery'] = $data['is_show_delivery'] != 2 ? 1 : 0;
         $data['sort'] = $data['product_sort'] ?? 0;
         $data['open_overall_discount'] = $data['open_overall_discount'] ?? 1; // 是否开启整单折扣 0-否 1-是
 
@@ -214,6 +295,10 @@ class Product extends ProductModel
             ProductBom::addFeed($data, $this);
             // 商品属性
             ProductAttribute::addAttribute($data, $this);
+            // 套餐商品组
+            if ($isPackage) {
+                ProductPackageGroupModel::addPackageGroup($data, $this);
+            }
 
             $this->commit();
             return true;
@@ -290,25 +375,29 @@ class Product extends ProductModel
      */
     public function edit($data)
     {
-        if (!isset($data['type']) || !in_array($data['type'], [ProductModel::TYPE_PRODUCT, ProductModel::TYPE_MATERIAL])) {
+        if (!isset($data['type']) || !in_array($data['type'], [ProductModel::TYPE_PRODUCT, ProductModel::TYPE_MATERIAL, ProductModel::TYPE_PACKAGE])) {
             $this->error = '商品类型不能为空';
             return false;
         }
+        // 是否套餐
+        $isPackage = $data['type'] == ProductModel::TYPE_PACKAGE;
+        // 商品名称
         $product_name = isset($data['product_name']) ? $data['product_name'] : '';
-        if (ValidateHelp::hasEmptyValue($data['product_name'] ?? '')) {
-            $this->error = '商品名称不能为空';
+        if (ValidateHelp::hasEmptyValue($product_name)) {
+            $this->error = !$isPackage ? '商品名称不能为空' : '套餐名称不能为空';
             return false;
         }
         //
-        [$status, $msg] = ValidateHelp::hasExceedLength($product_name, 150);
+        $maxLength = $isPackage ? 50 : 150;
+        [$status, $msg] = ValidateHelp::hasExceedLength($product_name, $maxLength);
         if ($status === true) {
-            $this->error = '商品名称长度不能超过150个字符';
+            $this->error = !$isPackage ? '商品名称长度不能超过150个字符' : '套餐名称长度不能超过50个字符';
             $this->errorData = $msg;
             return false;
         }
         // 商品名称唯一性
         if (CheckService::checkNameExist('product', $product_name, $this['shop_supplier_id'] ?? 0, $this['product_id'] ?? 0)) {
-            $this->error = '商品名称已存在';
+            $this->error = !$isPackage ? '商品名称已存在' : '套餐名称已存在';
             return false;
         }
 
@@ -391,6 +480,81 @@ class Product extends ProductModel
                 return false;
             }
         }
+        // 套餐商品组
+        if ($isPackage) {
+            // 套餐价格
+            $packagePrice = $data['package_price'] ?: 0;
+            if ($packagePrice <= 0 || $packagePrice > 1000000) {
+                $this->error = '套餐价格不能为0或超过1000000';
+                return false;
+            }
+            $packageGroup = $data['package_group'] ?? [];
+            if (empty($packageGroup)) {
+                $this->error = '套餐分组不能为空';
+                return false;
+            }
+            if (count($packageGroup) > 5) {
+                $this->error = '套餐分组最多只能设置5个';
+                return false;
+            }
+            $existGroupNames = [];
+            foreach ($packageGroup as &$item) {
+                // 分组名称
+                $groupName = $item['group_name'] ?? '';
+                [$status, $msg] = ValidateHelp::hasExceedLength($groupName, 50);
+                if ($status === true) {
+                    $this->error = '分组名称长度不能超过50个字符';
+                    $this->errorData = $msg;
+                    return false;
+                }
+                if (in_array($groupName, $existGroupNames)) {
+                    $this->error = '分组名称不能重复';
+                    return false;
+                }
+                $existGroupNames[] = $groupName;
+                // 分组商品
+                $groupProductList = $item['product_list'] ?? [];
+                if (count($groupProductList) <= 0) {
+                    $this->error = '商品不能为空';
+                    return false;
+                }
+                $productIds = array_column($groupProductList, 'product_id');
+                $productBoms = ProductBom::whereIn('uuid', $productIds)->select();
+                foreach ($productBoms as $productBom) {
+                    if ($productBom->status == 0) {
+                        $this->error = '商品不能为下架商品';
+                        return false;
+                    }
+                    $groupProducts = array_filter($groupProductList, function($product) use ($productBom) {
+                        return $product['product_id'] == $productBom->uuid;
+                    });
+                    $groupProduct = reset($groupProducts); // 取第一个匹配的元素
+                    $groupProductNum = $groupProduct['num'] ?: 0;
+                    if ($groupProductNum <= 0) {
+                        $this->error = '商品数量不能为0';
+                        return false;
+                    }
+                    if ($productBom->stock_num <= 0) {
+                        $this->error = '商品库存不足，请调整';
+                        return false;
+                    }
+                }
+            }
+            $data['product_type'] = 1; // 商品类型 0-商品 1-套餐
+            $data['price'] = $packagePrice; // 套餐价格
+            $data['is_show_delivery'] = 2; // 默认不显示外送 1-显示 2-隐藏
+            $data['sku'] = [
+                [
+                    'product_price' => $packagePrice,
+                    'spec_name' => $product_name,
+                    'stock_num' => $data['package_stock'] ?: 0,
+                    'spec_id' => 0,
+                    'barcode' => '',
+                    'is_open_stock' => $data['is_open_stock'] ?? 0,
+                    'product_sku_id' => $this['sku'][0]['uuid'],
+                ]
+            ];
+        }
         $data = $this->sanitizeProductData($data);
         // 加料
         if (isset($data['product_feed']) && is_array($data['product_feed']) && !empty($data['product_feed'])) {
@@ -435,7 +599,7 @@ class Product extends ProductModel
             return false;
         }
         //
-        return $this->transaction(function () use ($data) {
+        return $this->transaction(function () use ($data, $isPackage) {
             $data['product_attr'] = isset($data['product_attr']) ? $data['product_attr'] : '';
             $data['product_feed'] = isset($data['product_feed']) ? $data['product_feed'] : '';
             // 更新产品包
@@ -448,7 +612,10 @@ class Product extends ProductModel
             ProductBom::updateFeed($data, $this);
             // 更新产品属性
             ProductAttribute::updateAttribute($data, $this);
-            //
+            // 套餐商品组
+            if ($isPackage) {
+                ProductPackageGroupModel::updatePackageGroup($data, $this);
+            }
             return true;
         });
     }
@@ -520,6 +687,16 @@ class Product extends ProductModel
         $this->startTrans();
         try {
             $value = $state == 10 ? 1 : 0;
+            // 套餐开启时判断套餐内商品库存是否充足
+            if ($this->product_type == 1 && $value == 1) {
+                $items = ProductPackageGroupItemModel::with('productBom')->where('related_uuid', $this->uuid)->select();
+                foreach ($items as $item) {
+                    if ($item->productBom->stock_num <= 0) {
+                        $this->error = '套餐商品库存不足';
+                        return false;
+                    }
+                }
+            }
             // 更新product_package表status
             $res = $this->save(['status' => $value]);
             if ($res === false) {
@@ -603,6 +780,8 @@ class Product extends ProductModel
                 foreach ($product->orderSchemeProduct as $orderSchemeProduct) {
                     $orderSchemeProduct->delete();
                 }
+                // 删除套餐商品组
+                ProductPackageGroupModel::deletePackageGroup($product);
                 // 删除产品
                 if (!$product->delete()) {
                     $this->error = '删除失败';

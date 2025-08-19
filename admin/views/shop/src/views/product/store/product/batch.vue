@@ -3,26 +3,26 @@
   <importProduct v-if="type == '5'"></importProduct>
   <batchDiscount v-if="type == '6'"></batchDiscount>
 </template>
-<script>
+
+<script setup>
+  import { ref, onMounted } from 'vue';
+  import { useRoute } from 'vue-router';
   import batchCompoent from './batchCompoent.vue';
   import importProduct from './importProduct.vue';
   import batchDiscount from './batchDiscount.vue';
-  export default {
-    components: {
-      batchCompoent,
-      importProduct,
-      batchDiscount,
-    },
-    data() {
-      return {
-        type: '',
-        title: '',
-      };
-    },
-    mounted() {
-      this.type = this.$route.query.type;
-      this.title = this.$route.query.title;
-    },
-  };
+
+  // 获取路由实例
+  const route = useRoute();
+
+  // 响应式数据
+  const type = ref('');
+  const title = ref('');
+
+  // 组件挂载时初始化
+  onMounted(() => {
+    type.value = route.query.type;
+    title.value = route.query.title;
+  });
 </script>
+
 <style lang=""></style>

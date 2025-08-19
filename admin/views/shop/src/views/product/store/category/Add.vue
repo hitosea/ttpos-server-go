@@ -63,7 +63,8 @@ import { languageStore } from '@/store/model/language.js'
 import UniqueNameForm from '@/components/product/UniqueNameForm.vue'
 
 // 获取语言数据
-const languageData = JSON.stringify(languageStore().getLanguageData().languageData.value)
+const languageData = JSON.stringify(languageStore().getLanguageKeyForm())
+
 
 // 定义props
 const props = defineProps({

@@ -1,0 +1,26 @@
+// ==========================================================================
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
+// ==========================================================================
+
+syntax = "proto3";
+
+package manager;
+
+option go_package = "ttpos-bmp/app/ttpos-manager/api/manager";
+
+
+
+message PaymentApp {
+    uint32 Id                   = 1;  // 自增ID
+    int64  CompanyUuid          = 2;  // 集团ID
+    string LlWhiteIp            = 3;  // 白名单IP
+    string LlMerchantId         = 4;  // 商户号
+    string LlStoreId            = 5;  // 站点ID
+    string LlPublicKey          = 6;  // LianLianpay公钥
+    string LlMerchantPrivateKey = 7;  // 商户私钥
+    string LlToken              = 8;  // Token
+    string LlSignSalt           = 9;  // 签名盐
+    int32  CreateTime           = 10; // 创建时间（时间戳）
+    int32  UpdateTime           = 11; // 更新时间（时间戳）
+    int32  DeleteTime           = 12; // 删除时间（时间戳）
+}

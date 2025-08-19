@@ -170,12 +170,29 @@ func (s *h5OrderSrv) GetH5OrderDetail(ctx context.Context, h5OrderUuid uint64) (
 			saleBillUuid = h5Order.SaleOrderProducts[0].SaleBillUuid
 		}
 		for _, product := range h5Order.SaleOrderProducts {
+			if product.IsPackageSubProduct() {
+				continue // 套餐子商品跳过
+			}
 			if !product.IsAcceptOrderBool() {
 				totalPrice := product.GetProductFinalSalePrice()
+				subProductList := make([]resp.SubProductItem, 0)
+				if product.IsPackageProduct() {
+					subProducts := h5Order.GetSubProducts(product.Uuid)
+					for _, subProduct := range subProducts {
+						subProductList = append(subProductList, resp.SubProductItem{
+							LocaleName: subProduct.MultiLanguageName.GetNames(),
+							Num:        subProduct.Num,
+						})
+					}
+				}
+
 				newProducts = append(newProducts, resp.ProductItem{
 					LocaleName: product.MultiLanguageName.GetNames(),
 					Num:        product.Num,
 					TotalPrice: totalPrice,
+					SubProducts: resp.SubProductList{
+						List: subProductList,
+					}, // 套餐子商品列表
 				})
 				price = price + totalPrice
 			}

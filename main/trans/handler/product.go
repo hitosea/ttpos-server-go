@@ -99,7 +99,7 @@ func (s *ProductService) ConvertProduct() error {
 					return err
 				}
 				// 创建multi_language_name表数据
-				multiLanguageNameRepo := repository.NewMultiLanguageNameRepoImpl(tx)
+				multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
 				if _, err := multiLanguageNameRepo.CreateMultiLanguageName(*languageName); err != nil {
 					return errors.WithMessage(err)
 				}

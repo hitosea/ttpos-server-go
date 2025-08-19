@@ -26,6 +26,7 @@ type SaleOrderProduct struct {
 	Name       string  `gorm:"column:name;type:varchar(255);not null;default:'';comment:'商品名称'" json:"name"`
 	FlavorName string  `gorm:"column:flavor_name;type:varchar(255);not null;default:'';comment:'规格名称'" json:"flavor_name"`
 	Num        float64 `gorm:"column:num;type:int(11);not null;default:0;comment:'商品数量。不能减为0，当数量为1再减时，标记删除'" json:"num"`
+	UnitNum    float64 `gorm:"column:unit_num;type:decimal(12,4);not null;default:0.00;comment:'单位数量，用于套餐子商品'" json:"unit_num"`
 	NumType    uint    `gorm:"column:num_type;type:tinyint(1);not null;default:0;comment:'数量类型, 0-整数 1-小数'" json:"num_type"`
 	Remark     string  `gorm:"column:remark;type:varchar(255);not null;default:'';comment:'备注，顾客对商品的备注信息'" json:"remark"`
 	IsBuffet   uint    `gorm:"column:is_buffet;type:tinyint(1);not null;default:0;comment:'是否为自助餐商品,0-否 1-是. 如果是自助餐商品，则sale_price为0'" json:"is_buffet"`
@@ -93,6 +94,12 @@ type SaleOrderProduct struct {
 	H5OrderProductUuid uint64 `gorm:"column:h5_order_product_uuid;type:bigint(20) unsigned;default:0;comment:h5订单商品ID，用于关联h5订单商品，用于判断是否为h5订单商品;NOT NULL" json:"h5_order_product_uuid"`
 	H5OrderUuid        uint64 `gorm:"column:h5_order_uuid;type:bigint(20) unsigned;default:0;comment:扫码订单ID，用于关联扫码订单，用于判断是否为扫码订单商品;NOT NULL" json:"h5_order_uuid"`
 
+	// 套餐相关
+	PackageUuid             uint64 `gorm:"column:package_uuid;type:bigint(20);not null;default:0;comment:'套餐uuid'" json:"package_uuid"`                                            // 只有套餐子商品才会有这个字段
+	PackageGroupUuid        uint64 `gorm:"column:package_group_uuid;type:bigint(20);not null;default:0;comment:'套餐分组uuid';index:idx_package_group_uuid" json:"package_group_uuid"` // 只有套餐子商品才会有这个字段
+	ProductType             uint8  `gorm:"column:product_type;type:tinyint(1);not null;default:0;comment:'商品类型, 0-商品 1-套餐 2-套餐子商品'" json:"product_type"`
+	PackageSubProductParams string `gorm:"column:package_sub_product_params;type:text;not null;default:'';comment:'套餐子商品参数'" json:"package_sub_product_params"`
+
 	// 送厨时间
 	SendKitchenTime int64 `gorm:"column:send_kitchen_time;type:int(10);not null;default:0;comment:'送厨时间'" json:"send_kitchen_time"`
 
@@ -108,10 +115,79 @@ type SaleOrderProduct struct {
 	ProductionOrderProduct     *ProductionOrderProduct      `gorm:"foreignKey:SaleOrderProductUuid;references:uuid"`
 	H5Order                    *H5Order                     `gorm:"foreignKey:H5OrderUuid;references:uuid"`
 	ProductMustPlan            *ProductMustPlan             `gorm:"foreignKey:MustPlanUuid;references:uuid"`
+	SaleOrderPackageProducts   []*SaleOrderPackageProduct   `gorm:"foreignKey:RelatedUuid;references:Uuid"`
 
 	// 内部字段
 	operation        string `gorm:"-"` // 操作类型。add: 加购，sub: 减购
 	unOrderH5Product bool   `gorm:"-"` // 是否为未下单的h5订单商品。 特别标记该商品为正在下单的h5订单商品
+}
+
+// 更换规格，重新计算商品的价格
+func (model *SaleOrderProduct) ChangeFlavor(flavor *SaleOrderProductBom) {
+	model.FlavorPrice = flavor.Price
+	model.FlavorName = flavor.Name
+	model.SetUpdate() // 标记该记录要更新
+}
+
+// 删除所有规格、加料和属性
+func (model *SaleOrderProduct) DeleteAllSaleOrderProductBomsAndAttributes() {
+	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
+		saleOrderProductBom.SetDelete()
+		saleOrderProductBom.SetUpdate() // 标记该记录要更新
+	}
+	for _, saleOrderProductAttribute := range model.SaleOrderProductAttributes {
+		saleOrderProductAttribute.SetDelete()
+		saleOrderProductAttribute.SetUpdate() // 标记该记录要更新
+	}
+	model.SetUpdate() // 标记该记录要更新
+}
+
+// 获取商品的简要，如 牛排*1（标准，黑椒汁）
+func (model *SaleOrderProduct) GetProductNameAttributes(language string) string {
+	name := model.MultiLanguageName.GetNameByLang(language)
+	flarvorSaleOrderProductBom := model.GetFlarvorSaleOrderProductBom()
+	flavorName := flarvorSaleOrderProductBom.ProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(language)
+	attributes := make([]string, 0)
+	for _, saleOrderProductAttribute := range model.SaleOrderProductAttributes {
+		attributes = append(attributes, saleOrderProductAttribute.ProductAttribute.MultiLanguageName.GetNameByLang(language))
+	}
+	num := decimal.NewFromFloat(model.Num).Round(3).InexactFloat64() // 去掉末尾的0
+	message := fmt.Sprintf("%s*%v（%s）", name, num, flavorName)
+	if len(attributes) > 0 {
+		message = fmt.Sprintf("%s*%v（%s，%s）", name, num, flavorName, strings.Join(attributes, ","))
+	}
+	return message
+}
+
+func (model *SaleOrderProduct) GetFlarvorSaleOrderProductBom() *SaleOrderProductBom {
+	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
+		if saleOrderProductBom.IsFlavor() {
+			return saleOrderProductBom
+		}
+	}
+	return &SaleOrderProductBom{}
+}
+
+// 设置商品为赠菜
+func (model *SaleOrderProduct) SetGiftProduct(giftReason string) {
+	model.GiftTime = time.Now().Unix()
+	model.SetUpdate()
+	model.GiftReason = giftReason
+	if model.IsPackageProduct() {
+		model.Sign = model.GeneratePackageSign()
+	} else {
+		model.Sign = model.GenerateProductSign()
+	}
+}
+
+// 是否为套餐子商品
+func (model *SaleOrderProduct) IsPackageSubProduct() bool {
+	return model.ProductType == constant.ProductTypePackageSubProduct
+}
+
+// 是否为套餐商品
+func (model *SaleOrderProduct) IsPackageProduct() bool {
+	return model.ProductType == constant.ProductTypePackage
 }
 
 // 获取商品的就餐类型。打包或堂食
@@ -290,10 +366,40 @@ func (model *SaleOrderProduct) IsSubOperation() bool {
 	return model.operation == "sub"
 }
 
+// 判断购物车中的商品是否可以编辑。只有套餐商品和非单规格的商品可以编辑
+func (model *SaleOrderProduct) IsCanEdit() bool {
+	// 已送出的商品不可编辑
+	if model.IsSendKitchen() {
+		return false
+	}
+
+	// 套餐商品可以编辑
+	if model.IsPackageProduct() {
+		return true
+	}
+	// 不是单规格的商品可以编辑
+	if !model.IsSingleFlavorPackageProduct() {
+		return true
+	}
+
+	// 默认不可编辑
+	return false
+}
+
+// 判断套餐商品是否是单规格商品
+func (model *SaleOrderProduct) IsSingleFlavorPackageProduct() bool {
+	return model.ProductPackage.IsSingleFlavor()
+}
+
 // 设置打包时间
 func (model *SaleOrderProduct) SetWrap() {
 	defer model.SetUpdate() // 标记要更新model
 	model.WrapTime = time.Now().Unix()
+	if model.IsPackageProduct() {
+		model.Sign = model.GeneratePackageSign()
+	} else {
+		model.Sign = model.GenerateProductSign()
+	}
 }
 
 // 设置取消打包
@@ -691,8 +797,14 @@ func (model *SaleOrderProduct) SetCancelInfo(reason string, reasons []*SaleOrder
 		reasons[index].SaleOrderProductUuid = model.Uuid // 设置退菜原因的销售订单商品
 	}
 	model.CancelReasons = append(model.CancelReasons, reasons...)
-	model.ProductionOrderUuid = 0            // 取消生产订单关联
-	model.Sign = model.GenerateProductSign() // 更新签名
+
+	model.ProductionOrderUuid = 0 // 取消生产订单关联
+	// 更新签名
+	if model.IsPackageSubProduct() {
+		model.Sign = model.GeneratePackageSign()
+	} else {
+		model.Sign = model.GenerateProductSign()
+	}
 }
 
 // 获取退菜原因
@@ -996,6 +1108,15 @@ func (model *SaleOrderProduct) IsGiftProduct() bool {
 	return model.GiftTime > 0
 }
 
+// 专门处理 IsWrap 逻辑的方法
+func (sop *SaleOrderProduct) CalculateIsWrap(saleBill *SaleBill) bool {
+	// 如果是打包订单且不是会员订单，则强制打包
+	if saleBill.IsTakeout() && saleBill.MemberSaleOrderUuid == 0 {
+		return true
+	}
+	return sop.IsWrapProduct()
+}
+
 // 是否是包装商品
 func (model *SaleOrderProduct) IsWrapProduct() bool {
 	return model.WrapTime > 0
@@ -1093,6 +1214,22 @@ func (model *SaleOrderProduct) GetAttributeNameList() []dto.LocaleResponse {
 	if len(sauceNames) > 0 {
 		nameList = append(nameList, sauceNames...)
 	}
+
+	return nameList
+}
+
+func (model *SaleOrderProduct) GetSauceNamesList() []dto.LocaleResponse {
+	var sauceNames []dto.LocaleResponse
+	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
+		if !saleOrderProductBom.IsFlavor() {
+			sauceName := saleOrderProductBom.ProductBom.ProductSauce.MultiLanguageName.GetNames()
+			sauceNames = append(sauceNames, sauceName)
+		}
+	}
+	nameList := make([]dto.LocaleResponse, 0)
+	if len(sauceNames) > 0 {
+		nameList = append(nameList, sauceNames...)
+	}
 	return nameList
 }
 
@@ -1166,59 +1303,44 @@ func (model *SaleOrderProduct) GetAttributeNamesByLang(lang string, showSku ...b
 
 // 点餐时录入的原始数据
 type DefaultSaleOrderProduct struct {
-	DeviceId               string // 设备ID,用于标识订单来源设备.来源h5时，device_id为h5的device_id
-	Name                   string
-	OpenMemberDiscount     uint
-	TaxRate                float64
-	DeductStockType        uint
-	MultiLanguageNameUuid  uint64
-	ImageFileUuid          uint64
-	ProductPackageUuid     uint64
-	SaleBillUuid           uint64
-	SaleOrderUuid          uint64
-	MemberDiscountRate     float64
-	MemberCardDiscountRate float64
-	CustomDiscountRate     float64
-	Sauces                 []Sauce
-	Flavor                 Flavor
-	Attribute              []Attribute
-	IsAcceptOrder          uint    // 是否接单
-	Num                    float64 // 数量
-	NumType                uint    // 数量类型
-	Remark                 string  // 备注
+	DeviceId                string // 设备ID,用于标识订单来源设备.来源h5时，device_id为h5的device_id
+	Name                    string
+	OpenMemberDiscount      uint
+	TaxRate                 float64
+	DeductStockType         uint
+	MultiLanguageNameUuid   uint64
+	ImageFileUuid           uint64
+	ProductPackageUuid      uint64
+	SaleBillUuid            uint64
+	SaleOrderUuid           uint64
+	MemberDiscountRate      float64
+	MemberCardDiscountRate  float64
+	CustomDiscountRate      float64
+	Sauces                  []Sauce
+	Flavor                  Flavor
+	Attribute               []Attribute
+	IsAcceptOrder           uint    // 是否接单
+	Num                     float64 // 数量
+	NumType                 uint    // 数量类型
+	Remark                  string  // 备注
+	PackageUuid             uint64  // 套餐uuid
+	PackageGroupUuid        uint64  // 套餐分组uuid
+	ProductType             uint8   // 商品类型
+	PackageSubProductParams string  // 套餐子商品参数
 }
 
 func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *ProductPackage, operation string) *SaleOrderProduct {
 	saleOrderProductUuid, _ := utils.GetID()
 	saleOrderProductBoms := make([]*SaleOrderProductBom, 0)
 	for _, bom := range def.Sauces {
-		saleOrderProductBom := &SaleOrderProductBom{
-			Name:                 bom.Name,
-			Price:                bom.Price,
-			IsFlavorBom:          0,
-			SaleOrderProductUuid: saleOrderProductUuid,
-			SaleOrderUuid:        def.SaleOrderUuid,
-			ProductBomUuid:       bom.ProductBomUuid,
-		}
+		saleOrderProductBom := NewSaleOrderProductSauce(saleOrderProductUuid, def.SaleOrderUuid, bom)
 		saleOrderProductBoms = append(saleOrderProductBoms, saleOrderProductBom)
 	}
-	saleOrderProductBoms = append(saleOrderProductBoms, &SaleOrderProductBom{
-		Name:                 def.Flavor.Name,
-		Price:                def.Flavor.Price,
-		IsFlavorBom:          1,
-		SaleOrderUuid:        def.SaleOrderUuid,
-		SaleOrderProductUuid: saleOrderProductUuid,
-		ProductBomUuid:       def.Flavor.ProductBomUuid,
-	})
+	saleOrderProductBoms = append(saleOrderProductBoms, NewSaleOrderProductFlavor(saleOrderProductUuid, def.SaleOrderUuid, def.Flavor))
 
 	saleOrderProductAttributes := []*SaleOrderProductAttribute{}
 	for _, attribute := range def.Attribute {
-		saleOrderProductAttribute := &SaleOrderProductAttribute{
-			Name:                 attribute.Name,
-			SaleOrderUuid:        def.SaleOrderUuid,
-			SaleOrderProductUuid: saleOrderProductUuid,
-			ProductAttributeUuid: attribute.ProductAttributeUuid,
-		}
+		saleOrderProductAttribute := NewSaleOrderProductAttribute(saleOrderProductUuid, def.SaleOrderUuid, attribute)
 		saleOrderProductAttributes = append(saleOrderProductAttributes, saleOrderProductAttribute)
 	}
 	product := SaleOrderProduct{
@@ -1247,6 +1369,14 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 		SaleOrderUuid:              def.SaleOrderUuid,
 		SaleOrderProductBoms:       saleOrderProductBoms,
 		SaleOrderProductAttributes: saleOrderProductAttributes,
+		PackageUuid:                def.PackageUuid,
+		PackageGroupUuid:           def.PackageGroupUuid,
+		ProductType:                def.ProductType,
+		PackageSubProductParams:    def.PackageSubProductParams,
+	}
+	// 套餐子商品，设置单位数量
+	if def.ProductType == constant.ProductTypePackageSubProduct {
+		product.UnitNum = def.Num
 	}
 	product.SetTaxRate(def.TaxRate)
 	// 设置商品包. 加购并送厨时用到，用于计算限购
@@ -1259,6 +1389,41 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 		product.SetSubOperation()
 	}
 	return &product
+}
+
+// 构建“销售订单商品”的规格
+func NewSaleOrderProductFlavor(saleOrderProductUuid uint64, saleOrderUuid uint64, flavor Flavor) *SaleOrderProductBom {
+	return &SaleOrderProductBom{
+		Name:                 flavor.Name,
+		Price:                flavor.Price,
+		IsFlavorBom:          1,
+		SaleOrderUuid:        saleOrderUuid,
+		SaleOrderProductUuid: saleOrderProductUuid,
+		ProductBomUuid:       flavor.ProductBomUuid,
+	}
+}
+
+// 构建“销售订单商品”的加料
+func NewSaleOrderProductSauce(saleOrderProductUuid uint64, saleOrderUuid uint64, sauce Sauce) *SaleOrderProductBom {
+	return &SaleOrderProductBom{
+		Name:                 sauce.Name,
+		Price:                sauce.Price,
+		IsFlavorBom:          0,
+		SaleOrderProductUuid: saleOrderProductUuid,
+		SaleOrderUuid:        saleOrderUuid,
+		ProductBomUuid:       sauce.ProductBomUuid,
+	}
+}
+
+// 构建“销售订单商品”的属性
+func NewSaleOrderProductAttribute(saleOrderProductUuid uint64, saleOrderUuid uint64, attribute Attribute) *SaleOrderProductAttribute {
+	return &SaleOrderProductAttribute{
+		Name:                        attribute.Name,
+		SaleOrderUuid:               saleOrderUuid,
+		SaleOrderProductUuid:        saleOrderProductUuid,
+		ProductAttributeUuid:        attribute.ProductAttributeUuid,
+		ProductPackageAttributeUuid: attribute.ProductPackageAttributeUuid,
+	}
 }
 
 // 判断商品有没有改价
@@ -1306,7 +1471,7 @@ func (model *SaleOrderProduct) ProductKey() string {
 }
 
 // GenerateProductSign 生成商品包签名. 相同的商品，商品签名相同,用于取消拆单时合并商品。
-// 格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单
+// 格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单-套餐uuid
 // 更新签名的场景：
 // 1 改价销售订单商品价格后要重新生成签名
 // 2 修改备注
@@ -1350,9 +1515,50 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 	}
 	reasonStr := utils.ToJson(reason)
 
-	return fmt.Sprintf("%s-%s-%s-%d-%d-%d-%d-%d-%s-%d-%d",
+	return fmt.Sprintf("%s-%s-%s-%d-%d-%d-%d-%d-%s-%d-%d-%d",
 		bomIdListStr,
 		attributeIdListStr,
+		model.Remark,
+		model.MustPlanUuid,
+		model.ProductionOrderUuid,
+		model.ChangePriceTime,
+		model.GiftTime,
+		model.WrapTime,
+		reasonStr,
+		model.H5OrderUuid,
+		model.IsAcceptOrder, // 是否接单. 为了让未下单的h5商品和未送厨的商品不被合并在一起
+		model.PackageUuid,
+	)
+}
+
+// GeneratePackageSign 生成商品套餐签名. 相同的商品套餐，商品套餐签名相同,用于取消拆单时合并商品。
+// 格式：套餐uuid-[子商品规格uuid,属性,属性;子商品规格uuid,属性,属性;]-备注内容-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单
+// 更新签名的场景：
+// 1 改价销售订单商品价格后要重新生成签名
+// 2 修改备注
+// 3 送厨
+// 4 赠菜
+// 5 打包
+// 6 退菜
+// 7 h5下单
+// 8 接单
+func (model *SaleOrderProduct) GeneratePackageSign() string {
+	packageUuid := model.ProductPackageUuid
+
+	// 构建商品的退菜原因
+	type Reason struct {
+		Uuids []uint64 `json:"uuids"`
+		Text  string   `json:"text"`
+	}
+	reason := Reason{Uuids: make([]uint64, 0), Text: model.CancelReason}
+	for _, item := range model.CancelReasons {
+		reason.Uuids = append(reason.Uuids, item.ReturnFoodReasonUuid)
+	}
+	reasonStr := utils.ToJson(reason)
+
+	return fmt.Sprintf("%d-%s-%s-%d-%d-%d-%d-%d-%s-%d-%d",
+		packageUuid,
+		model.PackageSubProductParams,
 		model.Remark,
 		model.MustPlanUuid,
 		model.ProductionOrderUuid,
@@ -1388,7 +1594,7 @@ func (model *SaleOrderProduct) GetAttributeNames() string {
 func (model *SaleOrderProduct) GetAttributeUuidList() []uint64 {
 	attributeUuidList := make([]uint64, 0)
 	for _, attribute := range model.SaleOrderProductAttributes {
-		attributeUuidList = append(attributeUuidList, attribute.ProductAttributeUuid)
+		attributeUuidList = append(attributeUuidList, attribute.ProductPackageAttributeUuid)
 	}
 	sort.Slice(attributeUuidList, func(i, j int) bool {
 		return attributeUuidList[i] < attributeUuidList[j]
@@ -1438,4 +1644,26 @@ func (model *SaleOrderProduct) GetProductPackageDetail() resp.ProductPackageDeta
 		SaucesUuid:     model.GetBomUuidList(),
 		Num:            model.Num, // 数量
 	}
+}
+
+// 获取套餐的选购详情
+func (model *SaleOrderProduct) GetPackageDetail() []resp.PackageSelectedInfo {
+	packageSelectedInfoList := make([]resp.PackageSelectedInfo, 0)
+
+	type SubProduct struct {
+		FlavorUuid              uint64   `json:"flavor_uuid"`                // 商品规格uuid
+		AttributeUuid           []uint64 `json:"attribute_uuid"`             // 属性uuid列表
+		ProductPackageGroupUuid uint64   `json:"product_package_group_uuid"` // 套餐分组uuid
+	}
+
+	subProductList := make([]SubProduct, 0)
+	utils.FromJson(model.PackageSubProductParams, &subProductList)
+	for _, subProduct := range subProductList {
+		packageSelectedInfoList = append(packageSelectedInfoList, resp.PackageSelectedInfo{
+			ProductPackageGroupUuid: subProduct.ProductPackageGroupUuid,
+			FlavorUuid:              subProduct.FlavorUuid,
+			AttributeUuidList:       subProduct.AttributeUuid,
+		})
+	}
+	return packageSelectedInfoList
 }

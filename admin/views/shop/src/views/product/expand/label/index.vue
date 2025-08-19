@@ -66,200 +66,198 @@
     <Edit v-if="open_edit" :open_edit="open_edit" :editform="model" @closeDialog="closeDialogFunc($event, 'edit')"> </Edit>
 
     <!-- 商品选择器 -->
-    <ProductSelector v-if="openProductSelector" :open="openProductSelector" @close="handleProductSelectorClose" selectorType="all" :selectedProductIds="model?.product_ids ?? []">
+    <ProductSelector
+      v-if="openProductSelector"
+      :open="openProductSelector"
+      @close="handleProductSelectorClose"
+      selectorType="all"
+      :isLoading="loading"
+      :selectedProductIds="model?.product_ids ?? []"
+    >
     </ProductSelector>
   </div>
 </template>
 
-<script>
+<script setup>
+  import { ref, reactive, onMounted } from 'vue';
+  import { ElMessage, ElMessageBox } from 'element-plus';
   import ProductApi from '@/api/product.js';
   import ProductSelector from '@/components/product/Selector.vue';
   import Add from './add.vue';
   import Edit from './edit.vue';
 
-  export default {
-    name: 'ProductLabelIndex',
-    components: {
-      Add,
-      Edit,
-      ProductSelector,
-    },
-    data() {
-      return {
-        /*切换菜单*/
-        activeName: 'sell',
-        /*切换选中值*/
-        activeIndex: '0',
-        /*是否正在加载*/
-        loading: true,
-        /*一页多少条*/
-        pageSize: 10,
-        /*一共多少条数据*/
-        totalDataNumber: 0,
-        /*当前是第几页*/
-        curPage: 1,
-        /*当前编辑的对象*/
-        model: {},
-        open_edit: false,
-        open_add: false,
-        /*列表数据*/
-        tableData: [],
-        multipleSelection: [],
-        //
-        searchForm: {
-          name: '',
-        },
-        searchLoading: '',
-        openProductSelector: false,
-      };
-    },
-    created() {
-      /*获取列表*/
-      this.getData();
-    },
-    methods: {
-      /*选择第几页*/
-      handleCurrentChange(val) {
-        let self = this;
-        self.loading = true;
-        self.curPage = val;
-        self.getData();
-      },
+  // 响应式数据
+  const loading = ref(true);
+  const pageSize = ref(10);
+  const totalDataNumber = ref(0);
+  const curPage = ref(1);
+  const model = ref({});
+  const open_edit = ref(false);
+  const open_add = ref(false);
+  const tableData = ref([]);
+  const multipleSelection = ref([]);
+  const searchForm = reactive({
+    name: '',
+  });
+  const searchLoading = ref('');
+  const openProductSelector = ref(false);
 
-      /*每页多少条*/
-      handleSizeChange(val) {
-        this.pageSize = val;
-        this.getData();
-      },
-
-      /*切换菜单*/
-      handleClick(tab, event) {
-        let self = this;
-        self.curPage = 1;
-        self.getData();
-      },
-
-      /*搜索查询*/
-      onSearch() {
-        clearTimeout(this.searchLoading);
-        this.searchLoading = setTimeout(() => {
-          this.curPage = 1;
-          this.getData();
-        }, 200);
-      },
-
-      /*获取列表*/
-      getData() {
-        let self = this;
-        let Params = {};
-        Params.page = self.curPage;
-        Params.list_rows = self.pageSize;
-        Params.label_name = self.searchForm.name;
-        self.loading = true;
-        ProductApi.LabelList(Params, true)
-          .then((data) => {
-            self.loading = false;
-            self.tableData = data.data.list.data;
-            self.totalDataNumber = data.data.list.total;
-          })
-          .catch(() => {
-            self.loading = false;
-          });
-      },
-      /*关闭弹窗*/
-      closeDialogFunc(e, f) {
-        if (f == 'add') {
-          this.open_add = e.openDialog;
-          if (e.type == 'success') {
-            this.getData();
-          }
-        }
-        if (f == 'edit') {
-          this.open_edit = e.openDialog;
-          if (e.type == 'success') {
-            this.getData();
-          }
-        }
-      },
-      /*打开添加*/
-      addClick() {
-        this.open_add = true;
-      },
-      deleteClick(id) {
-        let self = this;
-        ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
-          type: 'warning',
-        }).then(() => {
-          ProductApi.deleteLabel({
-            label_id: id,
-          }).then((data) => {
-            this.$ElMessage({
-              message: $t('删除成功'),
-              type: 'success',
-            });
-            self.getData();
-          });
-        });
-      },
-      deleteBatch() {
-        let self = this;
-        let arr = [];
-        this.multipleSelection.forEach((item, index) => {
-          arr.push(item.label_id);
-        });
-        let label_id = arr.join(',');
-        ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
-          type: 'warning',
-        }).then(() => {
-          ProductApi.deleteLabel({
-            label_id: label_id,
-          }).then((data) => {
-            this.$ElMessage({
-              message: $t('删除成功'),
-              type: 'success',
-            });
-            self.getData();
-          });
-        });
-      },
-      handleSelectionChange(e) {
-        this.multipleSelection = e;
-      },
-      /*打开编辑*/
-      editClick(row) {
-        this.model = row;
-        this.open_edit = true;
-      },
-      relatedProductClick(row) {
-        this.model = row;
-        this.openProductSelector = true;
-      },
-      handleProductSelectorClose(list) {
-        if (Array.isArray(list)) {
-          ProductApi.relateByLabel(
-            {
-              label_id: this.model.label_id,
-              product_ids: list.map((item) => item.product_id),
-            },
-            false
-          )
-            .then((data) => {
-              this.$ElMessage({
-                message: $t('关联成功'),
-                type: 'success',
-              });
-              this.getData();
-            })
-            .catch();
-        }
-        this.model = {};
-        this.openProductSelector = false;
-      },
-      indexMethod(index) {
-        return index + 1 + (this.curPage - 1) * this.pageSize;
-      },
-    },
+  // 方法定义
+  const handleCurrentChange = (val) => {
+    loading.value = true;
+    curPage.value = val;
+    getData();
   };
+
+  const handleSizeChange = (val) => {
+    pageSize.value = val;
+    getData();
+  };
+
+  const handleClick = (tab, event) => {
+    curPage.value = 1;
+    getData();
+  };
+
+  const onSearch = () => {
+    clearTimeout(searchLoading.value);
+    searchLoading.value = setTimeout(() => {
+      curPage.value = 1;
+      getData();
+    }, 200);
+  };
+
+  const getData = async () => {
+    const params = {
+      page: curPage.value,
+      list_rows: pageSize.value,
+      label_name: searchForm.name,
+    };
+    loading.value = true;
+
+    try {
+      const data = await ProductApi.LabelList(params, true);
+      loading.value = false;
+      tableData.value = data.data.list.data;
+      totalDataNumber.value = data.data.list.total;
+    } catch (error) {
+      loading.value = false;
+    }
+  };
+
+  const closeDialogFunc = (e, f) => {
+    if (f === 'add') {
+      open_add.value = e.openDialog;
+      if (e.type === 'success') {
+        getData();
+      }
+    }
+    if (f === 'edit') {
+      open_edit.value = e.openDialog;
+      if (e.type === 'success') {
+        getData();
+      }
+    }
+  };
+
+  const addClick = () => {
+    open_add.value = true;
+  };
+
+  const deleteClick = async (id) => {
+    try {
+      await ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
+        type: 'warning',
+      });
+
+      await ProductApi.deleteLabel({
+        label_id: id,
+      });
+
+      ElMessage({
+        message: $t('删除成功'),
+        type: 'success',
+      });
+      getData();
+    } catch (error) {
+      // 用户取消删除或删除失败
+    }
+  };
+
+  const deleteBatch = async () => {
+    const arr = [];
+    multipleSelection.value.forEach((item) => {
+      arr.push(item.label_id);
+    });
+    const label_id = arr.join(',');
+
+    try {
+      await ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
+        type: 'warning',
+      });
+
+      await ProductApi.deleteLabel({
+        label_id: label_id,
+      });
+
+      ElMessage({
+        message: $t('删除成功'),
+        type: 'success',
+      });
+      getData();
+    } catch (error) {
+      // 用户取消删除或删除失败
+    }
+  };
+
+  const handleSelectionChange = (e) => {
+    multipleSelection.value = e;
+  };
+
+  const editClick = (row) => {
+    model.value = row;
+    open_edit.value = true;
+  };
+
+  const relatedProductClick = (row) => {
+    model.value = row;
+    openProductSelector.value = true;
+  };
+
+  const handleProductSelectorClose = async (list) => {
+    if (Array.isArray(list)) {
+      try {
+        loading.value = true;
+        await ProductApi.relateByLabel(
+          {
+            label_id: model.value.label_id,
+            product_ids: list.map((item) => item.product_id),
+          },
+          false
+        );
+
+        ElMessage({
+          message: $t('关联成功'),
+          type: 'success',
+        });
+        getData();
+        loading.value = false;
+      } catch (error) {
+        // 处理错误
+      }
+    }
+    model.value = {};
+    openProductSelector.value = false;
+  };
+
+  const indexMethod = (index) => {
+    return index + 1 + (curPage.value - 1) * pageSize.value;
+  };
+
+  // 组件挂载时获取数据
+  onMounted(() => {
+    getData();
+  });
 </script>
 
 <style scoped>

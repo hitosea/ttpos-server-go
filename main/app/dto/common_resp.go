@@ -1,6 +1,9 @@
 package dto
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"unicode/utf8"
+)
 
 type Response struct {
 	Code    int    `json:"code"`
@@ -71,8 +74,52 @@ func (l *LocaleResponse) GetLocale(locale string) string {
 	return l.ZH
 }
 
+func (l *LocaleResponse) SetLocale(locale string, value string) {
+	switch locale {
+	case "zh":
+		l.ZH = value
+	case "th":
+		l.TH = value
+	case "en":
+		l.EN = value
+	case "zhtw":
+		l.ZHTW = value
+	case "ja":
+		l.JA = value
+	case "ko":
+		l.KO = value
+	case "my":
+		l.MY = value
+	case "tr":
+		l.TR = value
+	case "sv":
+		l.SV = value
+	}
+}
+
 // ToJson 获取语言json
 func (l *LocaleResponse) ToJson() string {
 	str, _ := json.Marshal(l)
 	return string(str)
+}
+
+// CheckRequiredLocale 检查是否包含所有语言
+func (l *LocaleResponse) CheckRequiredLocale(locales []string) bool {
+	for _, locale := range locales {
+		if l.GetLocale(locale) == "" {
+			return false
+		}
+	}
+	return true
+}
+
+// CheckLenLocal 检查语言长度
+func (l *LocaleResponse) CheckLenLocal(locales []string, length int) bool {
+	for _, locale := range locales {
+		localeValue := l.GetLocale(locale)
+		if localeValue != "" && utf8.RuneCountInString(localeValue) > length {
+			return false
+		}
+	}
+	return true
 }

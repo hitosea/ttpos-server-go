@@ -33,7 +33,7 @@ class Product extends Controller
      * @Apidoc\Param("type", type="string", require=false, desc="是否上架 sell-上架 lower-下架")
      * @Apidoc\Param("stock", type="int", default=0, require=false, desc="库存 0-全部 10-低于10 20-低于20 ....")
      * @Apidoc\Param("product_ids", type="string", require=false, desc="商品ids，逗号分隔")
-     * @Apidoc\Param("material_type", type="int", default=10, require=false, desc="v1.0.2 类型 10-成品 20-材料")
+     * @Apidoc\Param("material_type", type="int", default=10, require=false, desc="v1.0.2 类型 10-成品 20-材料 30-套餐")
      * @Apidoc\Param(ref="pageParam")
      * @Apidoc\Returned("list", type="array", ref="app\shop\model\product\Product\getList")
      */
@@ -130,12 +130,23 @@ class Product extends Controller
      *   @Apidoc\Param("label_id", type="int", require=true, desc="打印标签id"),
      *   @Apidoc\Param("alone_grade_equity", type="string", require=true, desc="单独设置折扣的配置"),
      *   @Apidoc\Param("stock", type="int", default=0, require=false, desc="库存 0-全部 10-低于10 20-低于20 ...."),
-     *   @Apidoc\Param("type", type="int", default=10, require=false, desc="v1.0.2 类型 10-成品 20-材料"),
+     *   @Apidoc\Param("type", type="int", default=10, require=false, desc="v1.0.2 类型 10-成品 20-材料 30-套餐"),
      *   @Apidoc\Param("erp_supplier_id", type="int", default=0, require=false, desc="v1.0.2 erp供应商id"),
      *   @Apidoc\Param("productTaxes", type="array", require=true, desc="产品关联税类", children={
      *      @Apidoc\Param("product_tax_type", type="int", require=true, desc="产品关联税类类型，1-堂食税类，2-外带税类"),
      *      @Apidoc\Param("tax_category_id", type="int", require=true, desc="税类id"),
-     *  }),
+     *   }),
+     *   @Apidoc\Param("package_price", type="decimal", require=false, desc="套餐价格"),
+     *   @Apidoc\Param("is_open_stock", type="int", require=false, desc="是否开启库存"),
+     *   @Apidoc\Param("package_stock", type="decimal", require=false, desc="套餐可售卖库存"),
+     *   @Apidoc\Param("package_group", type="array", require=false, desc="套餐分组", children={
+     *      @Apidoc\Param("group_name", type="string", require=true, desc="套餐分组名称"),
+     *      @Apidoc\Param("product_list", type="array", require=true, desc="套餐分组商品", children => {
+     *          @Apidoc\Param("product_id", type="int", require=true, desc="商品id: product_bom_uuid"),
+     *          @Apidoc\Param("sort", type="int", require=true, desc="商品排序"),
+     *          @Apidoc\Param("num", type="int", require=true, desc="商品数量"),
+     *      }),
+     *   }),
      * })
      */
     public function add($scene = 'add')
@@ -144,7 +155,7 @@ class Product extends Controller
             return $this->getBaseData();
         }
         $data = json_decode($this->postData()['params'], true);
-        $model = ($data['type'] ?? 10) == 10 ? new ProductModel : new MaterialModel;
+        $model = in_array(($data['type'] ?? 10), [10, 30]) ? new ProductModel : new MaterialModel;
         $data['shop_user_id'] = $this->store['user']['shop_user_id'];
         if ($model->add($data)) {
             return $this->renderSuccess('添加成功');
@@ -164,7 +175,7 @@ class Product extends Controller
      * @Apidoc\Title("编辑商品")
      * @Apidoc\Method ("POST")
      * @Apidoc\Url ("/index.php/shop/product.store.product/edit")
-     * @Apidoc\Param("type ", type="int", default=10, require=false, desc="v1.0.2 类型 10-成品 20-材料"),
+     * @Apidoc\Param("type ", type="int", default=10, require=false, desc="v1.0.2 类型 10-成品 20-材料 30-套餐"),
      * @Apidoc\Param("product_id ", type="int", default="", require=false, desc="商品id"),
      * @Apidoc\Param("params", type="object", require=false, desc="商品数据", children={
      *   @Apidoc\Param("erp_supplier_id", type="int", default=0, require=false, desc="v1.0.2 erp供应商id"),
@@ -221,6 +232,19 @@ class Product extends Controller
      *      @Apidoc\Param("product_tax_type", type="int", require=true, desc="产品关联税类类型，1-堂食税类，2-外带税类"),
      *      @Apidoc\Param("tax_category_id", type="int", require=true, desc="税类id"),
      *  }),
+     *  @Apidoc\Param("package_price", type="decimal", require=false, desc="套餐价格"),
+     *  @Apidoc\Param("is_open_stock", type="int", require=false, desc="是否开启库存"),
+     *  @Apidoc\Param("package_stock", type="decimal", require=false, desc="套餐可售卖库存"),
+     *  @Apidoc\Param("package_group", type="array", require=false, desc="套餐分组", children={
+     *     @Apidoc\Param("group_id", type="int", require=true, desc="套餐分组id"),
+     *     @Apidoc\Param("group_name", type="string", require=true, desc="套餐分组名称"),
+     *     @Apidoc\Param("product_list", type="array", require=true, desc="套餐分组商品", children => {
+     *         @Apidoc\Param("item_id", type="int", require=true, desc="套餐分组商品id"),
+     *         @Apidoc\Param("product_id", type="int", require=true, desc="商品id: product_bom_uuid"),
+     *         @Apidoc\Param("sort", type="int", require=true, desc="商品排序"),
+     *         @Apidoc\Param("num", type="int", require=true, desc="商品数量"),
+     *     }),
+     *   }),
      * })
      */
     public function edit($product_id, $scene = 'edit')
@@ -234,7 +258,7 @@ class Product extends Controller
         }
         $data = array_merge(json_decode($this->postData()['params'], true), ['shop_user_id' => $this->store['user']['shop_user_id']]);
         /** @var ProductModel $model */
-        $model = ($data['type'] ?? 10) == 10 ? ProductModel::detail($product_id) : MaterialModel::detail($product_id);
+        $model = in_array(($data['type'] ?? 10), [10, 30]) ? ProductModel::detail($product_id) : MaterialModel::detail($product_id);
         if ($model->edit($data)) {
             return $this->renderSuccess('更新成功');
         }
@@ -255,7 +279,7 @@ class Product extends Controller
         $model = ProductModel::detail($product_id);
         if ($model) {
             if (!$model->setStatus($state)) {
-                return $this->renderError('操作失败');
+                return $this->renderError($model->getError() ?: '操作失败');
             }
             return $this->renderSuccess('操作成功');
         }
@@ -539,7 +563,7 @@ class Product extends Controller
             $val['shop_supplier_id'] = $shop_supplier_id;
             $val['type'] = 10;
             $val['spec_type'] = 20;
-            $val['product_type'] = 1;
+            $val['product_type'] = 0; 
             $val['image'] = [];
             // 分类
             $category = CategoryModel::where('uuid',  $val['category_id'])->find();

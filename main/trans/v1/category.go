@@ -62,7 +62,7 @@ func (n *Names) CreateMultiLanguageName(nameId uint64, targetDB *gorm.DB) error 
 		TrName:   n.Tr,
 	}
 	fmt.Println(fmt.Sprintf("multiLanguageName:%+v", multiLanguageName))
-	_, err := repository.NewMultiLanguageNameRepoImpl(targetDB).CreateMultiLanguageName(multiLanguageName)
+	_, err := repository.NewMultiLanguageNameRepo(targetDB).CreateMultiLanguageName(multiLanguageName)
 	if err != nil {
 		return errors.WithMessage(err)
 	}
@@ -149,7 +149,7 @@ func (s *CategoryService) ConvertCategory() error {
 			KoName:   names.Ko,
 			TrName:   names.Tr,
 		}
-		_, err = repository.NewMultiLanguageNameRepoImpl(s.targetDB).CreateMultiLanguageName(multiLanguageName)
+		_, err = repository.NewMultiLanguageNameRepo(s.targetDB).CreateMultiLanguageName(multiLanguageName)
 		if err != nil {
 			return errors.WithMessage(err)
 		}

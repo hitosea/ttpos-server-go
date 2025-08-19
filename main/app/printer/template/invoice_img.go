@@ -10,6 +10,7 @@ import (
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/app/printer/pkg/images"
 	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/utils"
 )
 
 // invoiceImgTemplate 图片订单打印模板
@@ -29,10 +30,13 @@ func NewInvoiceImgTemplate(
 // ImgPrint 图片打印
 func (t *invoiceImgTemplate) GetPrintContent(
 	settingPrinterInfo respSetting.PrinterInfo,
-	temp int,
+	tmpInfo model.PrinterTemplate,
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
 ) string {
+	temp := tmpInfo.Template
+	isShowSku := tmpInfo.IsShowSku
+
 	/* *
 	 * 模版2
 	 */
@@ -40,7 +44,7 @@ func (t *invoiceImgTemplate) GetPrintContent(
 		return NewStatementOrderImgTemplate(t.base).GetPrintContent(
 			settingPrinterInfo,
 			constant.PrinterTemplateInvoice,
-			3,
+			utils.IfInt(isShowSku == 0, 4, 3),
 			saleBill,
 			saleOrder,
 			0,

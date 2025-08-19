@@ -23,6 +23,26 @@ func (m *MultiLanguageName) IsNullName() bool {
 	return m.ZhName == "" && m.ThName == "" && m.EnName == "" && m.ZhTwName == "" && m.JaName == "" && m.KoName == "" && m.MyName == "" && m.TrName == "" && m.SvName == ""
 }
 
+func (m *MultiLanguageName) InitByLocaleResponse(locale dto.LocaleResponse) {
+	m.ZhName = locale.ZH
+	m.ThName = locale.TH
+	m.EnName = locale.EN
+	m.ZhTwName = locale.ZHTW
+	m.JaName = locale.JA
+	m.KoName = locale.KO
+	m.MyName = locale.MY
+	m.TrName = locale.TR
+	m.SvName = locale.SV
+}
+
+// IsNameChanged 判断多语言名称是否修改
+func (m *MultiLanguageName) IsNameChanged(locale dto.LocaleResponse) bool {
+	names := m.GetNames()
+	namesJson := names.ToJson()
+	localeJson := locale.ToJson()
+	return namesJson != localeJson
+}
+
 // GetNames 获取多语言名称
 func (m *MultiLanguageName) GetNames() dto.LocaleResponse {
 	return dto.LocaleResponse{

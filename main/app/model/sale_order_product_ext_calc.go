@@ -500,6 +500,9 @@ func (model *SaleOrderProduct) calcProductPrice() float64 {
 func (model *SaleOrderProduct) calcLastestProductPrice() float64 {
 	flavorPrice := model.FlavorPrice
 	for _, bom := range model.SaleOrderProductBoms {
+		if bom.IsDelete() {
+			continue
+		}
 		if bom.IsFlavor() {
 			flavorPrice = bom.ProductBom.Price
 			model.SetFlavorPrice(flavorPrice) // 并更新规格价格

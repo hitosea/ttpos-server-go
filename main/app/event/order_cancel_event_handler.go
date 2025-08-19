@@ -47,7 +47,7 @@ func cancelOrderEventHandler() {
 					return ""
 				}(),
 			}
-			if payload.Ctx.GetStaff() != (model.Staff{}) {
+			if payload.Ctx.GetStaff().Uuid != 0 {
 				record.SetDutyNo(payload.Ctx.GetStaff().DutyNo)
 			}
 			uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)

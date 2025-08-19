@@ -355,15 +355,30 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		)
 	}
 	// 商品列表
-	products, num := t.base.MergeSaleOrderProduct(saleBill, saleOrder, temp != 4, true)
+	products, num := t.base.MergeSaleOrderProduct(MergeSaleOrderProductOptions{
+		saleBill:   saleBill,
+		saleOrder:  saleOrder,
+		IsShowSku:  temp != 4,
+		IsShowWrap: true,
+	})
 	productNum = productNum.Add(decimal.NewFromFloat(num).Round(3))
 	for key, product := range products {
-		img.SetTextLineHeight(45)
+		img.SetTextLineHeight(40)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: product.ProductName, Width: 300, RightPadding: 40, Align: pkg.AlignLeft},
 			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%v", t.base.Amount(product.ProductPrice), product.ProductNum), Width: 120, RightPadding: 15, Align: pkg.AlignCenter},
 			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(product.ProductTotalPrice), Width: 0, Align: pkg.AlignRight},
 		)
+		// 套餐子商品
+		for _, subProduct := range product.SubProducts {
+			img.SetTextLineHeight(40)
+			img.PrintInColumns(
+				pkg.ColumnConfig{Text: subProduct.ProductName, Width: 300, RightPadding: 40, Align: pkg.AlignLeft},
+				pkg.ColumnConfig{Text: fmt.Sprintf("%v", subProduct.ProductNum), Width: 120, RightPadding: 15, Align: pkg.AlignCenter},
+				pkg.ColumnConfig{Text: "", Width: 0, Align: pkg.AlignRight},
+			)
+		}
+		// 分割线
 		img.RecoverDefaultTextLineHeight()
 		if key != len(products)-1 {
 			img.LineFeed(1, 10)

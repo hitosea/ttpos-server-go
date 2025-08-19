@@ -102,11 +102,11 @@
       },
 
       handleChange(value) {
-        if (this.disabled) {
+        if (this.disabled || !value) {
           return;
         }
         // 只允许数字和小数点
-        let formattedValue = value
+        let formattedValue = value.toString()
           .replace(/[^0-9.]/g, '')
           .replace(/\.{2,}/g, '.')
           .replace(/(\..*)\./g, '$1');
@@ -145,6 +145,9 @@
 
       // 移除末尾的0
       removeTrailingZeros(value) {
+        if (!value) {
+          return value;
+        }
         if (value.includes('.')) {
           const [integer, decimal] = value.split('.');
           if (decimal) {

@@ -1,0 +1,41 @@
+syntax = "proto3";
+import "erp.proto";
+package warehouse;
+
+option go_package = "ttpos-bmp/app/ttpos-erp/api/warehouse";
+
+// 获取仓库列表请求
+message GetWarehouseListReq {
+  string name = 1;  //仓库全称包含 abbr 后缀
+  string warehouse_name = 2;  //仓库名称 不包含 abbr 后缀
+  string company = 3; // 公司名称，可选
+  string company_abbr = 4; // 公司简称
+  string branch = 5; // 分支名称，可选
+  string alias_name = 6; // 仓库别名，可选
+  string warehouse_type = 7; // 仓库类型，可选
+}
+// 获取仓库列表响应
+message GetWarehouseListResp {
+  repeated WarehouseInfo warehouse_list = 1; // 仓库列表
+}
+
+// 仓库信息
+message WarehouseInfo {
+  string warehouse_name = 1; // 仓库名称
+  string name = 2; // 仓库名称 全称
+  string company = 3; // 公司名称
+  string company_abbr = 4; // 公司简称
+  string branch = 5; // 分支名称
+  string alias_name = 6; // 仓库别名
+  string warehouse_type = 7; // 仓库类型
+}
+
+
+// 仓库服务
+service WarehouseService {
+  // 创建仓库
+  rpc CreateWarehouse(WarehouseInfo) returns (erp.ResponseInfo);
+  //查询仓库列表
+  rpc GetWarehouseList(GetWarehouseListReq) returns (erp.ResponseInfo);
+}
+

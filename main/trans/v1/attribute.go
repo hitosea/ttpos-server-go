@@ -36,7 +36,7 @@ type AttributeRepository struct {
 
 func (r *AttributeRepository) GetAttributeList() ([]Attribute, error) {
 	var attributes []Attribute
-	err := r.db.Find(&attributes).Error
+	err := r.db.Order("create_time asc").Find(&attributes).Error
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -48,6 +48,9 @@ func (r *AttributeRepository) ConvertAttribute() error {
 	if err != nil {
 		return errors.WithMessage(err)
 	}
+
+	groupSort := 1
+	sort := 1
 
 	for _, attribute := range attributes {
 		fmt.Println(fmt.Sprintf("-------迁移attribute: %+v", attribute))
@@ -72,12 +75,14 @@ func (r *AttributeRepository) ConvertAttribute() error {
 				Name:                  attribute.AttributeName,
 				MultiLanguageNameUuid: id,
 				MultiLanguageName:     languageName,
+				Sort:                  groupSort,
 			}
 			fmt.Println(fmt.Sprintf("attribute_group: %+v", attributeGroup))
 			_, err = base.NewProductAttributeGroupRepo(r.targetDB).CreateProductAttributeGroup(attributeGroup)
 			if err != nil {
 				return errors.WithMessage(err)
 			}
+			groupSort++
 		} else {
 			// 创建商品属性
 			productAttribute := model.ProductAttribute{
@@ -85,11 +90,13 @@ func (r *AttributeRepository) ConvertAttribute() error {
 				Name:               attribute.AttributeName,
 				AttributeGroupUuid: attribute.ParentID,
 				MultiLanguageName:  languageName,
+				Sort:               sort,
 			}
 			_, err = base.NewProductAttributeRepo(r.targetDB).CreateProductAttribute(productAttribute)
 			if err != nil {
 				return errors.WithMessage(err)
 			}
+			sort++
 		}
 	}
 	return nil

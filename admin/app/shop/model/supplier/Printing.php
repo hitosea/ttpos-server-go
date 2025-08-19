@@ -69,8 +69,8 @@ class Printing extends PrintingModel
             ]);
             // 添加商品打印详情
             $itemList = [];
-            foreach ($data['printer_id'] as $id) {
-                $itemList[] = [
+            foreach ($data['printer_id'] ?: [] as $id) {
+                $itemList[$id] = [
                     'product_printer_uuid' => intval($this->uuid),
                     'printer_uuid' => intval($id),
                     'create_time' => time(),
@@ -81,8 +81,8 @@ class Printing extends PrintingModel
 
             // 添加打印的商品
             $productList = [];
-            foreach ($data['product_ids'] as $id) {
-                $productList[] = [
+            foreach ($data['product_ids'] ?: [] as $id) {
+                $productList[$id] = [
                     'product_printer_uuid' => $this->uuid,
                     'product_package_uuid' => $id,
                     'create_time' => time(),
@@ -94,7 +94,7 @@ class Printing extends PrintingModel
             // 添加打印区域
             $areaList = [];
             foreach ($data['area_id'] ?: [] as $id) {
-                $areaList[] = [
+                $areaList[$id] = [
                     'product_printer_uuid' => $this->uuid,
                     'desk_region_uuid' => $id,
                     'create_time' => time(),
@@ -172,7 +172,7 @@ class Printing extends PrintingModel
             
             // 添加打印区域
             $areaList = [];
-            foreach ($data['area_id'] as $id) {
+            foreach ($data['area_id'] ?: [] as $id) {
                 $areaList[$id] = [
                     'product_printer_uuid' => $this->uuid,
                     'desk_region_uuid' => $id,

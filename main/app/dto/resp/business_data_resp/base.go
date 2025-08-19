@@ -86,6 +86,8 @@ type BusinessDataAll struct {
 	TotalTakeoutRefundAmount   float64 `json:"total_takeout_refund_amount"`   // 总外送退款金额
 	TotalTakeoutDeliveryFee    float64 `json:"total_takeout_delivery_fee"`    // 总外送配送费
 	TotalTableNum              int     `json:"total_table_num"`               // 总桌数
+	TotalCancelOrderNum        int     `json:"total_cancel_order_num"`        // 总取消订单数
+	TotalCancelOrderAmount     float64 `json:"total_cancel_order_amount"`     // 总取消订单金额
 	AvgOrderPrice              float64 `json:"avg_order_price"`               // 平均订单金额
 	MinOrderPrice              float64 `json:"min_order_price"`               // 最小订单金额
 	MaxOrderPrice              float64 `json:"max_order_price"`               // 最大订单金额

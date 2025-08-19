@@ -1,0 +1,8 @@
+{
+  "doctype": "DocType",
+  "label": "Branch",
+  "fieldtype": "Link",
+  "options": "Branch",
+  "insert_after": "warehouse_name",
+  "dt": "Warehouse"
+}

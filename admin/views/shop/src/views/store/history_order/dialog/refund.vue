@@ -54,13 +54,13 @@
             <div class="flex">
               <p>
                 <main-currency>
-                  {{ this.$formatPrice(Number(scope.row.refund_num_updata) * Number(scope.row.price)) }}
+                  {{ proxy.$formatPrice(Number(scope.row.refund_num_updata) * Number(scope.row.price)) }}
                 </main-currency>
               </p>
               <p class="tips">
                 {{ $t('可退款金额：') }}
                 <main-currency>
-                  {{ this.$formatPrice(Number(scope.row.total_price)) }}
+                  {{ proxy.$formatPrice(Number(scope.row.total_price)) }}
                 </main-currency>
               </p>
             </div>
@@ -124,261 +124,301 @@
   </div>
 </template>
 
-<script>
+<script setup>
+  import { ref, reactive, onMounted, getCurrentInstance, watch } from 'vue';
+  import { ElMessage } from 'element-plus';
   import { useUserStore } from '@/store';
-  const { currency } = useUserStore();
   import { languageStore } from '@/store/model/language';
   import OrderOldApi from '@/api/orderOld.js';
   import draggable from 'vuedraggable';
-  export default {
-    components: {
-      draggable,
+
+  // 获取Vue实例
+  const { proxy } = getCurrentInstance();
+
+  // 获取store数据
+  const { currency } = useUserStore();
+
+  // 定义props
+  const props = defineProps({
+    open_edit: {
+      type: Boolean,
+      default: false,
     },
-    data() {
-      return {
-        loading: false, //加载状态
-        /*左边长度*/
-        formLabelWidth: '120px',
-        /*是否显示*/
-        dialogVisible: false,
-        dialogVisible2: false,
-        form: {
-          refund_type: '1', //退款类型
-          order_id: '', //订单id
-          sub_order_id: '', // 子单id
-          pay_price: '', //支付金额
-        },
-        tableData: [], //表格数据
-        pay_list: [], //支付记录（原路退款会按照以下顺序退回）
-        currency: currency, //货币
-        language: '',
-        bankForm: {
-          bank_code: '',
-          account_no: '',
-          account_name: '',
-        },
-        bankList: [
-          { name: 'BANGKOK BANK (BBL)', value: '002' },
-          { name: 'KASIKORNBANK (KBANK)', value: '004' },
-          { name: 'KRUNG THAI BANK (KTB)', value: '006' },
-          { name: 'TMBTHANACHART BANK (TTB)', value: '011' },
-          { name: 'SIAM COMMERCIAL BANK (SCB)', value: '014' },
-          { name: 'CITIBANK BANGKOK BRANCH (CITI)', value: '017' },
-          { name: 'SUMITOMO MITSUI BANK (SMBC)', value: '018' },
-          { name: 'STANDARD CHARTERED BANK THAI (SCBT)', value: '020' },
-          { name: 'CIMB THAI BANK (CIMBT)', value: '022' },
-          { name: 'UNITED OVERSEAS BANK THAI (UOBT)', value: '024' },
-          { name: 'BANK OF AYUDHYA (BAY)', value: '025' },
-          { name: 'GOVERNMENT SAVINGS BANK (GSB)', value: '030' },
-          { name: 'THE HONGKONG AND SHANGHAI BANKING CORPORATION (HSBC)', value: '031' },
-          { name: 'GOVERNMENT HOUSING BANK (GHB)', value: '033' },
-          { name: 'BANK FOR AGRICULTURE AND AGRICULTURAL COOPERATIVES (BAAC)', value: '034' },
-          { name: 'MIZUHO CORPORATE BANK (MHCB)', value: '039' },
-          { name: 'ISLAMIC BANK OF THAILAND (ISBT)', value: 'ISBT' },
-          { name: 'TISCO BANK (TISCO)', value: 'TISCO' },
-          { name: 'KIATNAKIN BANK (KK)', value: '069' },
-          { name: 'INDUSTRIAL AND COMMERCIAL BANK OF CHINA (ICBC THAI)', value: '070' },
-          { name: 'THAI CREDIT RETAIL BANK (TCRB)', value: '071' },
-          { name: 'LAND AND HOUSES BANK (LH BANK)', value: '073' },
-        ],
-      };
+    order_id: {
+      type: [String, Number],
+      default: '',
     },
-    props: ['open_edit', 'order_id', 'sub_order_id', 'pay_price'], //父组件传递的参数
-    created() {
-      this.dialogVisible = this.open_edit;
-      this.form.order_id = this.order_id;
-      this.form.sub_order_id = this.sub_order_id;
-      this.form.pay_price = this.$priceTwo(this.pay_price);
-      this.language = languageStore()?.getLanguageKey().language.value;
-      this.getStoreRefundInfo();
+    sub_order_id: {
+      type: [String, Number],
+      default: '',
     },
-    methods: {
-      /*处理*/
-      submit() {
-        let self = this;
-        let form = {
-          sale_bill_uuid: this.form.order_id,
-          sale_order_uuid: this.form.sub_order_id,
-          refund_type: this.form.refund_type,
-          refund_product: [],
-          refund_buffet: [],
-          refund_delay: [],
-        };
-        this.tableData.map((item) => {
-          if (item.refund_num_updata > 0 && item.type == 1) {
-            form.refund_buffet.push({
-              id: item.id,
-              refund_num: item.refund_num_updata,
-            });
-          }
-          if (item.refund_num_updata > 0 && item.type == 2) {
-            form.refund_delay.push({
-              id: item.id,
-              refund_num: item.refund_num_updata,
-            });
-          }
-          if (item.refund_num_updata > 0 && item.type == 3) {
-            form.refund_product.push({
-              order_product_id: item.id,
-              refund_num: item.refund_num_updata,
-            });
-          }
+    pay_price: {
+      type: [String, Number],
+      default: '',
+    },
+  });
+
+  // 定义emits
+  const emit = defineEmits(['closeDialog']);
+
+  // 响应式变量
+  const loading = ref(false); // 加载状态
+  const formLabelWidth = ref('120px'); // 左边长度
+  const dialogVisible = ref(false); // 是否显示
+  const dialogVisible2 = ref(false);
+  const language = ref('');
+
+  // 表单数据
+  const form = reactive({
+    refund_type: '1', // 退款类型
+    order_id: '', // 订单id
+    sub_order_id: '', // 子单id
+    pay_price: '', // 支付金额
+  });
+
+  const tableData = ref([]); // 表格数据
+  const pay_list = ref([]); // 支付记录（原路退款会按照以下顺序退回）
+
+  // 银行表单
+  const bankForm = reactive({
+    bank_code: '',
+    account_no: '',
+    account_name: '',
+  });
+
+  // 银行列表
+  const bankList = ref([
+    { name: 'BANGKOK BANK (BBL)', value: '002' },
+    { name: 'KASIKORNBANK (KBANK)', value: '004' },
+    { name: 'KRUNG THAI BANK (KTB)', value: '006' },
+    { name: 'TMBTHANACHART BANK (TTB)', value: '011' },
+    { name: 'SIAM COMMERCIAL BANK (SCB)', value: '014' },
+    { name: 'CITIBANK BANGKOK BRANCH (CITI)', value: '017' },
+    { name: 'SUMITOMO MITSUI BANK (SMBC)', value: '018' },
+    { name: 'STANDARD CHARTERED BANK THAI (SCBT)', value: '020' },
+    { name: 'CIMB THAI BANK (CIMBT)', value: '022' },
+    { name: 'UNITED OVERSEAS BANK THAI (UOBT)', value: '024' },
+    { name: 'BANK OF AYUDHYA (BAY)', value: '025' },
+    { name: 'GOVERNMENT SAVINGS BANK (GSB)', value: '030' },
+    { name: 'THE HONGKONG AND SHANGHAI BANKING CORPORATION (HSBC)', value: '031' },
+    { name: 'GOVERNMENT HOUSING BANK (GHB)', value: '033' },
+    { name: 'BANK FOR AGRICULTURE AND AGRICULTURAL COOPERATIVES (BAAC)', value: '034' },
+    { name: 'MIZUHO CORPORATE BANK (MHCB)', value: '039' },
+    { name: 'ISLAMIC BANK OF THAILAND (ISBT)', value: 'ISBT' },
+    { name: 'TISCO BANK (TISCO)', value: 'TISCO' },
+    { name: 'KIATNAKIN BANK (KK)', value: '069' },
+    { name: 'INDUSTRIAL AND COMMERCIAL BANK OF CHINA (ICBC THAI)', value: '070' },
+    { name: 'THAI CREDIT RETAIL BANK (TCRB)', value: '071' },
+    { name: 'LAND AND HOUSES BANK (LH BANK)', value: '073' },
+  ]);
+
+  // 监听props变化
+  watch(
+    () => props.open_edit,
+    (newVal) => {
+      dialogVisible.value = newVal;
+    }
+  );
+
+  // 方法定义
+
+  // 处理提交
+  const submit = async () => {
+    let submitForm = {
+      sale_bill_uuid: form.order_id,
+      sale_order_uuid: form.sub_order_id,
+      refund_type: form.refund_type,
+      refund_product: [],
+      refund_buffet: [],
+      refund_delay: [],
+    };
+
+    tableData.value.map((item) => {
+      if (item.refund_num_updata > 0 && item.type == 1) {
+        submitForm.refund_buffet.push({
+          id: item.id,
+          refund_num: item.refund_num_updata,
         });
-        if (this.form.refund_type == '2' && form.refund_product.length == 0 && form.refund_buffet.length == 0 && form.refund_delay.length == 0) {
-          this.$ElMessage({
-            type: 'warning',
-            message: $t('请选择退款商品'),
-          });
-          return;
-        }
-        if (this.dialogVisible2) {
-          form.bank_code = this.bankForm.bank_code;
-          form.account_no = this.bankForm.account_no;
-          form.account_name = this.bankForm.account_name;
-        }
-
-        self.$refs.form.validate((valid) => {
-          if (valid) {
-            self.loading = true;
-            OrderOldApi.storeRefund(form, true)
-              .then((data) => {
-                self.loading = false;
-                this.$ElMessage({
-                  message: data.msg,
-                  type: 'success',
-                });
-                self.dialogFormVisible(true);
-                self.dialogFormVisible2(false);
-              })
-              .catch((error) => {
-                self.loading = false;
-                if (error?.data?.code == -901) {
-                  self.dialogVisible2 = true;
-                }
-              });
-          }
+      }
+      if (item.refund_num_updata > 0 && item.type == 2) {
+        submitForm.refund_delay.push({
+          id: item.id,
+          refund_num: item.refund_num_updata,
         });
-      },
-      // 2025年04月29日10:50:36 旧订单只有整单退款
-      //   getData() {
-      //     let self = this;
-      //     self.loading = true;
-      //     OrderOldApi.orderProductList({ order_id: this.form.order_id })
-      //       .then((data) => {
-      //         self.loading = false;
-      //         this.tableData = [];
-
-      //         (data.data.buffetList || []).map((item) => {
-      //           this.tableData.push({
-      //             type: 1,
-      //             product_name_text: item.buffet_name_text + `(${item.customer_type_name_text})`, //名称
-      //             product_attr: '', //规格
-      //             total_num: item.num, //总数量
-      //             total_price: item.consumption_tax_pay_price * Number(item.num), //总价钱
-      //             refund_num: item.refund_num, //已退数量
-      //             refund_money: item.consumption_tax_pay_price * Number(item.refund_num), //已退价钱
-      //             id: item.id, //id
-      //             refund_num_updata: 0, //提交退款的数量
-      //           });
-      //         });
-
-      //         (data.data.delayList || []).map((item) => {
-      //           this.tableData.push({
-      //             type: 2,
-      //             product_name_text: item.name_text, //名称
-      //             product_attr: '', //规格
-      //             total_num: item.num, //总数量
-      //             total_price: item.price * Number(item.num), //总价钱
-      //             refund_num: item.refund_num, //已退数量
-      //             refund_money: item.refund_money, //已退价钱
-      //             id: item.id, //id
-      //             refund_num_updata: 0, //提交退款的数量
-      //           });
-      //         });
-
-      //         (data.data.productList || []).map((item) => {
-      //           this.tableData.push({
-      //             type: 3,
-      //             product_name_text: item.product_name_text, //名称
-      //             product_attr: item.product_attr, //规格
-      //             total_num: item.total_num, //总数量
-      //             total_price: item.consumption_tax_pay_price * Number(item.total_num), //总价钱
-      //             refund_num: item.refund_num, //已退数量
-      //             refund_money: item.consumption_tax_pay_price * Number(item.refund_num), //已退价钱
-      //             id: item.order_product_id, //id
-      //             refund_num_updata: 0, //提交退款的数量
-      //           });
-      //         });
-      //       })
-      //       .catch((error) => {
-      //         self.loading = false;
-      //       });
-      //   },
-
-      getStoreRefundInfo() {
-        let self = this;
-        self.loading = true;
-        OrderOldApi.getStoreRefund(
-          {
-            sale_bill_uuid: this.form.order_id,
-            sale_order_uuid: this.sub_order_id,
-          },
-          true
-        )
-          .then((data) => {
-            self.loading = false;
-            self.form.pay_price = this.$priceTwo(data.data.can_return_amount);
-            self.pay_list = data.data.payment_records;
-            (data.data.products || []).map((item) => {
-              this.tableData.push({
-                type: 3,
-                product_name_text: item.locale_name[self.language], //名称
-                product_attr: item.locale_attribute_name[self.language], //规格
-                total_num: item.num, // 可退数量
-                total_price: item.can_return_amount, // 可退金额
-                price: item.price, // 商品单价
-                id: item.sale_order_product_uuid, //id
-                refund_num_updata: 0, //提交退款的数量
-              });
-            });
-          })
-          .catch((error) => {
-            self.loading = false;
-          });
-      },
-      /*关闭弹窗*/
-      dialogFormVisible(e) {
-        if (e) {
-          this.$emit('closeDialog', {
-            type: 'success',
-            openDialog: false,
-          });
-        } else {
-          this.$emit('closeDialog', {
-            type: 'error',
-            openDialog: false,
-          });
-        }
-      },
-
-      handleClick() {
-        this.$refs.bankForm.validate((valid) => {
-          if (valid) {
-            this.submit();
-          }
+      }
+      if (item.refund_num_updata > 0 && item.type == 3) {
+        submitForm.refund_product.push({
+          order_product_id: item.id,
+          refund_num: item.refund_num_updata,
         });
-      },
+      }
+    });
 
-      dialogFormVisible2() {
-        this.dialogVisible2 = false;
-        this.bankForm = {
-          bank_code: '',
-          account_no: '',
-          account_name: '',
-        };
-      },
-    },
+    if (form.refund_type == '2' && submitForm.refund_product.length == 0 && submitForm.refund_buffet.length == 0 && submitForm.refund_delay.length == 0) {
+      ElMessage({
+        type: 'warning',
+        message: proxy.$t('请选择退款商品'),
+      });
+      return;
+    }
+
+    if (dialogVisible2.value) {
+      submitForm.bank_code = bankForm.bank_code;
+      submitForm.account_no = bankForm.account_no;
+      submitForm.account_name = bankForm.account_name;
+    }
+
+    try {
+      const valid = await proxy.$refs.form.validate();
+      if (valid) {
+        loading.value = true;
+        const data = await OrderOldApi.storeRefund(submitForm, true);
+        loading.value = false;
+        ElMessage({
+          message: data.msg,
+          type: 'success',
+        });
+        dialogFormVisible(true);
+        dialogFormVisible2(false);
+      }
+    } catch (error) {
+      loading.value = false;
+      if (error?.data?.code == -901) {
+        dialogVisible2.value = true;
+      }
+    }
   };
+  // 2025年04月29日10:50:36 旧订单只有整单退款
+  //   getData() {
+  //     let self = this;
+  //     self.loading = true;
+  //     OrderOldApi.orderProductList({ order_id: this.form.order_id })
+  //       .then((data) => {
+  //         self.loading = false;
+  //         this.tableData = [];
+
+  //         (data.data.buffetList || []).map((item) => {
+  //           this.tableData.push({
+  //             type: 1,
+  //             product_name_text: item.buffet_name_text + `(${item.customer_type_name_text})`, //名称
+  //             product_attr: '', //规格
+  //             total_num: item.num, //总数量
+  //             total_price: item.consumption_tax_pay_price * Number(item.num), //总价钱
+  //             refund_num: item.refund_num, //已退数量
+  //             refund_money: item.consumption_tax_pay_price * Number(item.refund_num), //已退价钱
+  //             id: item.id, //id
+  //             refund_num_updata: 0, //提交退款的数量
+  //           });
+  //         });
+
+  //         (data.data.delayList || []).map((item) => {
+  //           this.tableData.push({
+  //             type: 2,
+  //             product_name_text: item.name_text, //名称
+  //             product_attr: '', //规格
+  //             total_num: item.num, //总数量
+  //             total_price: item.price * Number(item.num), //总价钱
+  //             refund_num: item.refund_num, //已退数量
+  //             refund_money: item.refund_money, //已退价钱
+  //             id: item.id, //id
+  //             refund_num_updata: 0, //提交退款的数量
+  //           });
+  //         });
+
+  //         (data.data.productList || []).map((item) => {
+  //           this.tableData.push({
+  //             type: 3,
+  //             product_name_text: item.product_name_text, //名称
+  //             product_attr: item.product_attr, //规格
+  //             total_num: item.total_num, //总数量
+  //             total_price: item.consumption_tax_pay_price * Number(item.total_num), //总价钱
+  //             refund_num: item.refund_num, //已退数量
+  //             refund_money: item.consumption_tax_pay_price * Number(item.refund_num), //已退价钱
+  //             id: item.order_product_id, //id
+  //             refund_num_updata: 0, //提交退款的数量
+  //           });
+  //         });
+  //       })
+  //       .catch((error) => {
+  //         self.loading = false;
+  //       });
+  //   },
+
+  // 获取退款信息
+  const getStoreRefundInfo = async () => {
+    loading.value = true;
+    try {
+      const data = await OrderOldApi.getStoreRefund(
+        {
+          sale_bill_uuid: form.order_id,
+          sale_order_uuid: props.sub_order_id,
+        },
+        true
+      );
+      loading.value = false;
+      form.pay_price = proxy.$priceTwo(data.data.can_return_amount);
+      pay_list.value = data.data.payment_records;
+      (data.data.products || []).map((item) => {
+        tableData.value.push({
+          type: 3,
+          product_name_text: item.locale_name[language.value], // 名称
+          product_attr: item.locale_attribute_name[language.value], // 规格
+          total_num: item.num, // 可退数量
+          total_price: item.can_return_amount, // 可退金额
+          price: item.price, // 商品单价
+          id: item.sale_order_product_uuid, // id
+          refund_num_updata: 0, // 提交退款的数量
+        });
+      });
+    } catch (error) {
+      loading.value = false;
+    }
+  };
+
+  // 关闭弹窗
+  const dialogFormVisible = (e) => {
+    if (e) {
+      emit('closeDialog', {
+        type: 'success',
+        openDialog: false,
+      });
+    } else {
+      emit('closeDialog', {
+        type: 'error',
+        openDialog: false,
+      });
+    }
+  };
+
+  const handleClick = async () => {
+    try {
+      const valid = await proxy.$refs.bankForm.validate();
+      if (valid) {
+        submit();
+      }
+    } catch (error) {
+      // 处理验证失败
+    }
+  };
+
+  const dialogFormVisible2 = () => {
+    dialogVisible2.value = false;
+    Object.assign(bankForm, {
+      bank_code: '',
+      account_no: '',
+      account_name: '',
+    });
+  };
+
+  // 生命周期 - 组件创建时
+  onMounted(() => {
+    dialogVisible.value = props.open_edit;
+    form.order_id = props.order_id;
+    form.sub_order_id = props.sub_order_id;
+    form.pay_price = proxy.$priceTwo(props.pay_price);
+    language.value = languageStore()?.getLanguageKey().language.value;
+    getStoreRefundInfo();
+  });
 </script>
 <style scoped lang="scss">
   .flex {

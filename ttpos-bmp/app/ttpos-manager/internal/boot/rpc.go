@@ -1,0 +1,37 @@
+package boot
+
+import (
+	"context"
+	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
+	"github.com/gogf/gf/v2/frame/g"
+	"google.golang.org/grpc"
+	"ttpos-bmp/app/ttpos-manager/internal/controller/rpc/svc"
+	"ttpos-bmp/internal/pkg/nacos/service"
+)
+
+var (
+	managerConn *grpc.ClientConn
+)
+
+func InitRpcClient(ctx context.Context) {
+	managerConn = grpcx.Client.MustNewGrpcClientConn(g.Cfg().MustGet(ctx, "grpc.name").String())
+}
+
+func initRpcServer() {
+	//在这里注册 rpc server 服务
+	svc.Register(service.RpcServer.GRpc)
+
+	go service.RpcServer.GRpc.Run()
+}
+
+func InitRpc(ctx context.Context) {
+	//加载注册nacos grpc服务
+	service.RpcServer.Init(ctx)
+	//加载nacos grpc客户端
+	service.RpcClient.Init(ctx)
+
+	initRpcServer()
+
+	InitRpcClient(ctx)
+
+}

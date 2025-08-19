@@ -238,6 +238,7 @@
         Params.page = self.curPage;
         Params.list_rows = self.pageSize;
         Params.filter_having_material = 1;
+        Params.filter_having_package = 1;
         if (typeof Params.category_id == 'object' && Params.category_id) {
           Params.category_id = Number(Params.category_id[Params.category_id.length - 1]);
         }

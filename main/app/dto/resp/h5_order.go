@@ -37,9 +37,19 @@ type H5OrderDetail struct {
 }
 
 type ProductItem struct {
+	LocaleName  dto.LocaleResponse `json:"locale_name"`  // 商品名称多语言
+	Num         float64            `json:"num"`          // 数量
+	TotalPrice  float64            `json:"total_price"`  // 总价
+	SubProducts SubProductList     `json:"sub_products"` // 套餐子商品列表
+}
+
+type SubProductList struct {
+	List []SubProductItem `json:"list"`
+}
+
+type SubProductItem struct {
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品名称多语言
 	Num        float64            `json:"num"`         // 数量
-	TotalPrice float64            `json:"total_price"` // 总价
 }
 
 type ProductList struct {

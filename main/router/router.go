@@ -2,6 +2,7 @@ package router
 
 import (
 	"net/http"
+	"ttpos-server-go/app/api/v1/admin"
 	"ttpos-server-go/app/api/v1/assistant"
 	"ttpos-server-go/app/api/v1/cashier"
 	"ttpos-server-go/app/api/v1/h5"
@@ -12,6 +13,8 @@ import (
 	"ttpos-server-go/app/api/v1/shop"
 	"ttpos-server-go/app/api/v1/tablet"
 	_ "ttpos-server-go/app/event" // 注册事件
+	"ttpos-server-go/app/service/rpc"
+	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 
@@ -23,42 +26,23 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 	r.GET("api/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "healthy")
 	})
-	r.GET("api/testrpc", func(c *gin.Context) {
-
-		//var setting model.CompanySetting
-		//dbm.GetDB(7633004138496000).Model(&model.CompanySetting{}).Find(&setting)
-		//lat, lng := setting.GetCoordinates()
-		//c.String(http.StatusOK, fmt.Sprintf("lat: %s, lng: %s", lat, lng))
-		//测试外送服务
-		// rpc.TestEcho(c)
-		// rpc.TestEstimatePrice()
-
-		// res, err := rpc.TestCreateOrder()
-		// if err != nil {
-		// 	c.String(http.StatusInternalServerError, err.Error())
-		// 	return
-		// }
-		// json, _ := json.Marshal(res)
-		// c.String(http.StatusOK, string(json))
-
-		// // rpc.TestConfirmOrder()
-		// // rpc.TestGetDriverInfo()
-
-		// if err := rpc.TestCancelOrder(); err != nil {
-		// 	c.String(http.StatusInternalServerError, err.Error())
-		// 	return
-		// }
-		// rpc.TestCancelOrderDelay()
+	r.GET("api/v1/testrpc", middleware.Internal(), func(c *gin.Context) {
+		rpc.TestCompanyList()
 		c.String(http.StatusOK, "Success")
 	})
 	apiV1 := r.Group("api/v1")
 	{
+		adminGroup := apiV1.Group("/admin")
+		{
+			admin.RegisterHandlers(adminGroup, dbm, cache)
+		}
+
 		// 通用接口
 		passportGroup := apiV1.Group("/passport")
 		{
 			passport.RegisterHandlers(passportGroup, dbm, cache)
 		}
-		// 商家端
+		// 商家端/移动管理端
 		shopGroup := apiV1.Group("/shop")
 		{
 			shop.RegisterBaseHandlers(shopGroup, dbm, cache)
@@ -66,6 +50,14 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterRechargeOrderHandlers(shopGroup, dbm, cache)
 			shop.RegisterStatisticsHandlers(shopGroup, dbm, cache)
 			shop.RegisterMemberOrderHandlers(shopGroup, dbm, cache)
+			shop.RegisterAuthHandlers(shopGroup, dbm, cache)     // 认证
+			shop.RegisterStaffHandlers(shopGroup, dbm, cache)    // 管理员管理
+			shop.RegisterSettingHandlers(shopGroup, dbm, cache)  // 设置
+			shop.RegisterProductHandlers(shopGroup, dbm, cache)  // 商品
+			shop.RegisterMaterialHandlers(shopGroup, dbm, cache) // 物品管理
+			shop.RegisterMiscHandlers(shopGroup, dbm, cache)     // 杂项
+			shop.RegisterPurchaseHandlers(shopGroup, dbm, cache) // 采购
+			shop.RegisterSupplierHandlers(shopGroup, dbm, cache) // 供应商
 		}
 		// 收银端
 		cashierGroup := apiV1.Group("/cashier")

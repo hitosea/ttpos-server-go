@@ -1,0 +1,31 @@
+// ==========================================================================
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
+// ==========================================================================
+
+syntax = "proto3";
+
+package manager;
+
+option go_package = "ttpos-bmp/app/ttpos-manager/api/manager";
+
+
+
+message ClientVersion {
+    uint32 Id             = 1;  // 自增ID
+    int32  Type           = 2;  // 类型： 1收银端,2平板端,3厨显端,4商家后台端,5点餐助手端
+    int32  Brand          = 3;  // 品牌
+    int32  IsPublish      = 4;  // 是否发布 0-否 1-是
+    string Md5Hash        = 5;  // 谷歌云 md5-hash 值
+    int32  DownloadNum    = 6;  // 下载数量
+    string VersionNumber  = 7;  // 版本号
+    string VersionName    = 8;  // 版本名称
+    string ApkVersionCode = 9;  // Apk版本code
+    string ApkData        = 10; // apk数据
+    int32  ForcedUpdate   = 11; // 强制更新 0否 1是
+    string PackageUrl     = 12; // 包地址
+    string OriginalName   = 13; // 文件原名称
+    string UpdateLog      = 14; // 更新日志
+    int32  CreateTime     = 15; // 创建时间（时间戳）
+    int32  UpdateTime     = 16; // 更新时间（时间戳）
+    int32  DeleteTime     = 17; // 删除时间（时间戳）
+}

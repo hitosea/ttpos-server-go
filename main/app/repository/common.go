@@ -52,85 +52,94 @@ func Like(keyword string) string {
 
 // ICommonRepo 公共仓库接口
 type ICommonRepo interface {
-	WhereByID(id uint) DBOption                                         // 根据ID查询
-	WhereByUuid(uuid uint64) DBOption                                   // 根据UUID查询
-	WhereInUuids(uuids []uint64) DBOption                               // 根据UUID列表查询
-	WhereByMemberSaleOrderUuid(uuid uint64) DBOption                    // 根据会员端销售订单UUID查询
-	WhereByDeskUuid(uuid uint64) DBOption                               // 根据桌台UUID查询
-	WhereBySaleBillUuid(uuid uint64) DBOption                           // 根据销售单UUID查询
-	WhereByAssociatedOrderUuid(uuid uint64) DBOption                    // 根据关联订单UUID查询
-	WhereBySaleOrderUuid(uuid uint64) DBOption                          // 根据销售订单UUID查询
-	WhereByH5OrderUuid(uuid uint64) DBOption                            // 根据h5订单UUID查询
-	WhereByMemberUuid(uuid uint64) DBOption                             // 根据会员UUID查询
-	WhereByNotRevoked() DBOption                                        // 未撤销的出库记录
-	WhereByStatus(status uint) DBOption                                 // 根据状态查询
-	WhereBySerialNumber(serialNo string) DBOption                       // 根据外送序号查询
-	WhereByMultipleStatus(statusList []uint) DBOption                   // 根据多个状态查询
-	WhereBySource(source uint) DBOption                                 // 根据来源查询
-	WhereByRequirement(requirement string) DBOption                     // 根据requirement查询
-	WhereByIsShowCashier(isShowCashier uint) DBOption                   // 根据是否显示收银机查询
-	WhereByIsShowAssistant(isShow uint) DBOption                        // 根据是否显示点餐助手端查询
-	WhereByIsShowTablet(isShow uint) DBOption                           // 根据是否显示平板端查询
-	WhereByIsShowKitchen(isShow uint) DBOption                          // 根据是否显示厨显端查询
-	WhereByIsShowH5(isShow uint) DBOption                               // 根据是否显示H5端查询
-	WhereByIsShowMember(isShow uint) DBOption                           // 根据是否显示会员端查询
-	WhereBySoftDelete() DBOption                                        // 根据软删除查询
-	WhereByNoSelectingTimeout() DBOption                                // 根据选购超时查询
-	WhereByIsDefault(isDefault uint) DBOption                           // 根据是否默认查询
-	WhereByCooking() DBOption                                           // 根据账单已经送厨房查询
-	WhereByRelatedUuid(relatedUuid uint64) DBOption                     // 根据关联UUID查询
-	WhereByRelatedType(relatedType uint) DBOption                       // 根据关联类型查询
-	WhereByOrderNo(orderNo string) DBOption                             // 根据订单编号查询
-	WhereByBillType(billType uint) DBOption                             // 根据账单类型查询
-	WhereInBillType(billTypeList []uint) DBOption                       // 根据账单类型查询
-	WhereByNotStatus(status uint) DBOption                              // 根据状态查询
-	WhereByIsHide(isHide bool) DBOption                                 // 根据是否隐藏查询
-	WhereByReduceStock(reduceStock uint) DBOption                       // 根据是否减库存查询
-	WhereByAddStock(addStock uint) DBOption                             // 根据是否加库存查询
-	WhereByDeviceUuid(deviceUuid uint64) DBOption                       // 根据设备uuid查询
-	WhereByDeviceSn(deviceSn string) DBOption                           // 根据设备Sn查询
-	WhereByNoDisable() DBOption                                         // 根据没禁用查询
-	WhereByBuffetPackageUuid(buffetPackageUuid uint64) DBOption         // 根据自助餐套餐UUID查询
-	WhereByCustomerTypeUuid(customerTypeUuid uint64) DBOption           // 根据顾客类型UUID查询
-	WhereByProductPackageUuid(productPackUuid uint64) DBOption          // 根据产品套餐UUID查询
-	WhereByProductFlavorUuid(productFlavorUuid uint64) DBOption         // 根据产品口味UUID查询
-	WhereBySign(sign string) DBOption                                   // 根据签名查询
-	WhereByStaffUuid(staffUuid uint64) DBOption                         // 根据员工UUID查询
-	WhereByShiftNo(shiftNo string) DBOption                             // 根据交班编号查询
-	WhereByProcessedNot() DBOption                                      // 根据未处理查询
-	WhereByRefundTime(refundTime int64) DBOption                        // 根据退款时间查询
-	WhereByDutyNo(dutyNo string) DBOption                               // 根据班次编号查询
-	WhereByShiftLogUuid(shiftLogUuid uint64) DBOption                   // 根据交班记录UUID查询
-	WhereByAction(action string) DBOption                               // 根据操作查询
-	WhereByOperatorUuid(operatorUuid uint64) DBOption                   // 根据操作员UUID查询
-	WhereByIsVisitor(isVisitor uint) DBOption                           // 根据是否访客查询
-	WhereLikeByName(name string) DBOption                               // 根据名称查询
-	WhereBetweenByCreateTime(startTime int64, endTime int64) DBOption   // 根据创建时间查询
-	WhereBetweenByPayTime(startTime int64, endTime int64) DBOption      // 根据支付时间查询
-	WhereBetweenByCompleteTime(startTime int64, endTime int64) DBOption // 根据完成时间查询
-	WhereGtUuid(uuid uint64) DBOption                                   // 根据UUID大于查询
-	FilterSaleOrderProduct() DBOption                                   // 只查询常规的购物车商品
-	FilterSaleOrderProductWithH5Order(h5OrderUuid uint64) DBOption      // 只查询常规的购物车商品、指定某个h5订单的商品
-	FilterSaleOrderProductH5Unordered() DBOption                        // 只查询H5未下单的购物车商品
-	FilterSaleOrderProductH5Ordered() DBOption                          // 只查询H5已下单的购物车商品
-	FilterSaleOrderProductH5OrderedWithReject() DBOption                // 查询H5已下单的购物车商品.包括已送厨商品、已下单未接单的商品和被拒单的商品
-	SortWithID(order string) DBOption                                   // 根据ID排序
-	SortWithCreateTime(order string) DBOption                           // 根据创建时间排序
-	SortWithSubmitPayTime(order string) DBOption                        // 根据提交支付时间排序
-	SortWithPayTime(order string) DBOption                              // 根据支付时间排序
-	SortWithHandleTime(order string) DBOption                           // 根据h5订单处理时间排序
-	WhereCreateTimeGt(createTime int64) DBOption                        // 根据创建时间大于查询
-	SortWithSort(order string) DBOption                                 // 根据Order By排序
-	SortWithIsSpecial(order string) DBOption                            // 根据是否特殊排序
-	Preload(preloads ...WithPreload) DBOption                           // 预加载
-	IncrementNum(num uint) clause.Expr                                  // 增加商品数量
-	DecrementNum(num uint) clause.Expr                                  // 减少商品数量
-	WhereByProductIsAccept() DBOption                                   // 根据商品是否接单查询
-	WhereByCountGtZero() DBOption                                       // 根据count大于零查询
-	WhereByValidTime() DBOption                                         // 是否在有效期内
-	WhereByStartTimeEndTime() DBOption                                  // 是否在有效期内
-	DBOption(opt DBOption) func(*gorm.DB) *gorm.DB                      // 将DBOption转为func(*gorm.DB) *gorm.DB
-	Transaction(db *gorm.DB, fn func(tx *gorm.DB) error) error          // 事务
+	WhereByID(id uint) DBOption                                                               // 根据ID查询
+	WhereByUuid(uuid uint64) DBOption                                                         // 根据UUID查询
+	WhereByFromUnitUuid(fromUnitUuid uint64) DBOption                                         // 根据来源单位UUID查询
+	WhereInUuids(uuids []uint64) DBOption                                                     // 根据UUID列表查询
+	WhereByMemberSaleOrderUuid(uuid uint64) DBOption                                          // 根据会员端销售订单UUID查询
+	WhereByDeskUuid(uuid uint64) DBOption                                                     // 根据桌台UUID查询
+	WhereBySaleBillUuid(uuid uint64) DBOption                                                 // 根据销售单UUID查询
+	WhereByAssociatedOrderUuid(uuid uint64) DBOption                                          // 根据关联订单UUID查询
+	WhereBySaleOrderUuid(uuid uint64) DBOption                                                // 根据销售订单UUID查询
+	WhereByH5OrderUuid(uuid uint64) DBOption                                                  // 根据h5订单UUID查询
+	WhereByMemberUuid(uuid uint64) DBOption                                                   // 根据会员UUID查询
+	WhereByNotRevoked() DBOption                                                              // 未撤销的出库记录
+	WhereByStatus(status uint) DBOption                                                       // 根据状态查询
+	WhereBySerialNumber(serialNo string) DBOption                                             // 根据外送序号查询
+	WhereByMultipleStatus(statusList []uint) DBOption                                         // 根据多个状态查询
+	WhereBySource(source uint) DBOption                                                       // 根据来源查询
+	WhereByRequirement(requirement string) DBOption                                           // 根据requirement查询
+	WhereByIsShowCashier(isShowCashier uint) DBOption                                         // 根据是否显示收银机查询
+	WhereByIsShowAssistant(isShow uint) DBOption                                              // 根据是否显示点餐助手端查询
+	WhereByIsShowTablet(isShow uint) DBOption                                                 // 根据是否显示平板端查询
+	WhereByIsShowKitchen(isShow uint) DBOption                                                // 根据是否显示厨显端查询
+	WhereByIsShowH5(isShow uint) DBOption                                                     // 根据是否显示H5端查询
+	WhereByIsShowMember(isShow uint) DBOption                                                 // 根据是否显示会员端查询
+	WhereBySoftDelete() DBOption                                                              // 根据软删除查询
+	WhereByNotPackageSubProduct() DBOption                                                    // 根据不是套餐子商品查询
+	WhereByNoSelectingTimeout() DBOption                                                      // 根据选购超时查询
+	WhereByIsDefault(isDefault uint) DBOption                                                 // 根据是否默认查询
+	WhereByCooking() DBOption                                                                 // 根据账单已经送厨房查询
+	WhereByRelatedUuid(relatedUuid uint64) DBOption                                           // 根据关联UUID查询
+	WhereByRelatedType(relatedType uint) DBOption                                             // 根据关联类型查询
+	WhereByOrderNo(orderNo string) DBOption                                                   // 根据订单编号查询
+	WhereByBillType(billType uint) DBOption                                                   // 根据账单类型查询
+	WhereInBillType(billTypeList []uint) DBOption                                             // 根据账单类型查询
+	WhereByNotStatus(status uint) DBOption                                                    // 根据状态查询
+	WhereByIsHide(isHide bool) DBOption                                                       // 根据是否隐藏查询
+	WhereByReduceStock(reduceStock uint) DBOption                                             // 根据是否减库存查询
+	WhereByAddStock(addStock uint) DBOption                                                   // 根据是否加库存查询
+	WhereByDeviceUuid(deviceUuid uint64) DBOption                                             // 根据设备uuid查询
+	WhereByDeviceSn(deviceSn string) DBOption                                                 // 根据设备Sn查询
+	WhereByNoDisable() DBOption                                                               // 根据没禁用查询
+	WhereByBuffetPackageUuid(buffetPackageUuid uint64) DBOption                               // 根据自助餐套餐UUID查询
+	WhereByCustomerTypeUuid(customerTypeUuid uint64) DBOption                                 // 根据顾客类型UUID查询
+	WhereByProductPackageUuid(productPackUuid uint64) DBOption                                // 根据产品套餐UUID查询
+	WhereByPackageGroupUuid(packageGroupUuid uint64) DBOption                                 // 根据套餐分组UUID查询
+	WhereByProductFlavorUuid(productFlavorUuid uint64) DBOption                               // 根据产品口味UUID查询
+	WhereBySign(sign string) DBOption                                                         // 根据签名查询
+	WhereByStaffUuid(staffUuid uint64) DBOption                                               // 根据员工UUID查询
+	WhereByShiftNo(shiftNo string) DBOption                                                   // 根据交班编号查询
+	WhereByProcessedNot() DBOption                                                            // 根据未处理查询
+	WhereByRefundTime(refundTime int64) DBOption                                              // 根据退款时间查询
+	WhereByDutyNo(dutyNo string) DBOption                                                     // 根据班次编号查询
+	WhereByShiftLogUuid(shiftLogUuid uint64) DBOption                                         // 根据交班记录UUID查询
+	WhereByAction(action string) DBOption                                                     // 根据操作查询
+	WhereByOperatorUuid(operatorUuid uint64) DBOption                                         // 根据操作员UUID查询
+	WhereByIsVisitor(isVisitor uint) DBOption                                                 // 根据是否访客查询
+	WhereByProductAttributeGroupUuid(productAttributeGroupUuid uint64) DBOption               // 根据产品属性组UUID查询
+	WhereByProductPackageAttributeGroupUuid(productPackageAttributeGroupUuid uint64) DBOption // 根据产品包属性组UUID查询
+	WhereByAttributeUuid(attributeUuid uint64) DBOption                                       // 根据属性UUID查询
+	WhereLikeByName(name string) DBOption                                                     // 根据名称查询
+	WhereBetweenByCreateTime(startTime int64, endTime int64) DBOption                         // 根据创建时间查询
+	WhereBetweenByPayTime(startTime int64, endTime int64) DBOption                            // 根据支付时间查询
+	WhereBetweenByCompleteTime(startTime int64, endTime int64) DBOption                       // 根据完成时间查询
+	WhereByProductPackageGroupUuid(productPackageGroupUuid uint64) DBOption                   // 根据产品包套餐组UUID查询
+	WhereGtUuid(uuid uint64) DBOption                                                         // 根据UUID大于查询
+	FilterSaleOrderProduct() DBOption                                                         // 只查询常规的购物车商品
+	FilterSaleOrderProductWithH5Order(h5OrderUuid uint64) DBOption                            // 只查询常规的购物车商品、指定某个h5订单的商品
+	FilterSaleOrderProductH5Unordered() DBOption                                              // 只查询H5未下单的购物车商品
+	FilterSaleOrderProductH5Ordered() DBOption                                                // 只查询H5已下单的购物车商品
+	FilterSaleOrderProductH5OrderedWithReject() DBOption                                      // 查询H5已下单的购物车商品.包括已送厨商品、已下单未接单的商品和被拒单的商品
+	SortWithID(order string) DBOption                                                         // 根据ID排序
+	SortWithCreateTime(order string) DBOption                                                 // 根据创建时间排序
+	SortWithSubmitPayTime(order string) DBOption                                              // 根据提交支付时间排序
+	SortWithPayTime(order string) DBOption                                                    // 根据支付时间排序
+	SortWithHandleTime(order string) DBOption                                                 // 根据h5订单处理时间排序
+	WhereCreateTimeGt(createTime int64) DBOption                                              // 根据创建时间大于查询
+	SortWithSort(order string) DBOption                                                       // 根据Order By排序
+	SortWithIsSpecial(order string) DBOption                                                  // 根据是否特殊排序
+	Preload(preloads ...WithPreload) DBOption                                                 // 预加载
+	IncrementNum(num uint) clause.Expr                                                        // 增加商品数量
+	DecrementNum(num uint) clause.Expr                                                        // 减少商品数量
+	WhereByProductIsAccept() DBOption                                                         // 根据商品是否接单查询
+	WhereByCountGtZero() DBOption                                                             // 根据count大于零查询
+	WhereByValidTime() DBOption                                                               // 是否在有效期内
+	WhereByStartTimeEndTime() DBOption                                                        // 是否在有效期内
+	WhereLike(field string, keyword string) DBOption                                          // 根据字段模糊查询
+	WhereByCategoryUuid(categoryUuid uint64) DBOption                                         // 根据分类UUID查询
+	DBOption(opt DBOption) func(*gorm.DB) *gorm.DB                                            // 将DBOption转为func(*gorm.DB) *gorm.DB
+	Transaction(db *gorm.DB, fn func(tx *gorm.DB) error) error                                // 事务
 }
 
 // commonRepo 公共仓库实现
@@ -168,6 +177,13 @@ func (r *commonRepo) WhereByID(id uint) DBOption {
 func (r *commonRepo) WhereByUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("uuid = ?", uuid)
+	}
+}
+
+// WhereByFromUnitUuid 根据来源单位UUID查询
+func (r *commonRepo) WhereByFromUnitUuid(fromUnitUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("from_unit_uuid = ?", fromUnitUuid)
 	}
 }
 
@@ -286,6 +302,13 @@ func (r *commonRepo) WhereByIsShowMember(isShow uint) DBOption {
 func (r *commonRepo) WhereBySoftDelete() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where(fmt.Sprintf("delete_time = %d", constant.NotDeleted))
+	}
+}
+
+// WhereByNotPackageSubProduct 根据不是套餐子商品查询
+func (r *commonRepo) WhereByNotPackageSubProduct() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("product_type != ?", constant.ProductTypePackageSubProduct)
 	}
 }
 
@@ -419,6 +442,13 @@ func (r *commonRepo) WhereByProductPackageUuid(productPackUuid uint64) DBOption 
 	}
 }
 
+// WhereByPackageGroupUuid 根据套餐分组UUID查询
+func (r *commonRepo) WhereByPackageGroupUuid(packageGroupUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("package_group_uuid = ?", packageGroupUuid)
+	}
+}
+
 // WhereByProductFlavorUuid 根据产品口味UUID查询
 func (r *commonRepo) WhereByProductFlavorUuid(productFlavorUuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
@@ -451,6 +481,13 @@ func (r *commonRepo) WhereBetweenByPayTime(startTime int64, endTime int64) DBOpt
 func (r *commonRepo) WhereBetweenByCompleteTime(startTime int64, endTime int64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("complete_time BETWEEN ? AND ?", startTime, endTime)
+	}
+}
+
+// WhereByProductPackageGroupUuid 根据产品包套餐组UUID查询
+func (r *commonRepo) WhereByProductPackageGroupUuid(productPackageGroupUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("product_package_group_uuid = ?", productPackageGroupUuid)
 	}
 }
 
@@ -542,6 +579,18 @@ func (r *commonRepo) WhereByStartTimeEndTime() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		nowTimestamp := time.Now().Unix()
 		return db.Where("start_time <= ? AND end_time >= ?", nowTimestamp, nowTimestamp)
+	}
+}
+
+func (r *commonRepo) WhereLike(field string, keyword string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where(field+" LIKE ?", Like(keyword))
+	}
+}
+
+func (r *commonRepo) WhereByCategoryUuid(categoryUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("category_uuid = ?", categoryUuid)
 	}
 }
 
@@ -720,5 +769,26 @@ func (r *commonRepo) WhereByOperatorUuid(operatorUuid uint64) DBOption {
 func (r *commonRepo) WhereByIsVisitor(isVisitor uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("is_visitor = ?", isVisitor)
+	}
+}
+
+// WhereByProductAttributeGroupUuid 根据产品属性组UUID查询
+func (r *commonRepo) WhereByProductAttributeGroupUuid(productAttributeGroupUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("product_attribute_group_uuid = ?", productAttributeGroupUuid)
+	}
+}
+
+// WhereByProductPackageAttributeGroupUuid 根据产品包属性组UUID查询
+func (r *commonRepo) WhereByProductPackageAttributeGroupUuid(productPackageAttributeGroupUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("product_package_attribute_group_uuid = ?", productPackageAttributeGroupUuid)
+	}
+}
+
+// WhereByAttributeUuid 根据属性UUID查询
+func (r *commonRepo) WhereByAttributeUuid(attributeUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("attribute_uuid = ?", attributeUuid)
 	}
 }

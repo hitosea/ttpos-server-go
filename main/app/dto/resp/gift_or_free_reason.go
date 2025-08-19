@@ -2,13 +2,13 @@ package resp
 
 import "ttpos-server-go/app/dto"
 
-// GiftOrFreeOrderReasonResps 免单原因响应
-type GiftOrFreeOrderReasonResps struct {
-	List []GiftOrFreeOrderReasonResp `json:"list"`
+// GiftOrFreeOrderReasonResp 免单原因响应
+type GiftOrFreeOrderReasonResp struct {
+	List []GiftOrFreeOrderReason `json:"list"`
 }
 
 // GiftOrFreeOrderReasonResp 免单原因响应
-type GiftOrFreeOrderReasonResp struct {
+type GiftOrFreeOrderReason struct {
 	Uuid       uint64             `json:"uuid"`
 	LocaleName dto.LocaleResponse `json:"locale_name"`
 }

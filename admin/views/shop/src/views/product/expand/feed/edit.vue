@@ -67,150 +67,163 @@
   </ProductList>
 </template>
 
-<script>
-  import ProductApi from '@/api/product.js';
-  import ProductList from '@/components/productList/productList.vue';
-  import UniqueNameForm from '@/components/product/UniqueNameForm.vue';
-  import { DecimalPointFour } from '@/utils/formatPrice.js';
-  import { useUserStore } from '@/store';
+<script setup>
+import { ref, reactive, onMounted, getCurrentInstance, nextTick } from 'vue';
+import ProductApi from '@/api/product.js';
+import ProductList from '@/components/productList/productList.vue';
+import UniqueNameForm from '@/components/product/UniqueNameForm.vue';
+import { DecimalPointFour } from '@/utils/formatPrice.js';
+import { useUserStore } from '@/store';
 
-  const { computedSupplier } = useUserStore();
-  const supplier = computedSupplier().supplier;
-  const baseSale = supplier.value?.sale_stock || 0;
+// 获取组件实例
+const { proxy } = getCurrentInstance();
 
-  export default {
-    name: 'ProductFeedEditDialog',
-    components: {
-      ProductList,
-      UniqueNameForm,
-    },
-    data() {
-      return {
-        form: {
-          feed_id: undefined,
-          feed_name: {},
-          price: NaN,
-          material: [],
-        },
-        /*是否显示*/
-        dialogVisible: false,
-        loading: false,
+// 获取用户store
+const { computedSupplier } = useUserStore();
+const supplier = computedSupplier().supplier;
+const baseSale = supplier.value?.sale_stock || 0;
 
-        open_product: false,
-        ing_select_list: [],
-        multiple_selection: [],
-        baseSale: baseSale,
-        DecimalPointFour,
-      };
-    },
-    props: ['open_edit', 'editform'],
-    emits: ['closeDialog'],
-    created() {
-      this.dialogVisible = this.open_edit;
+// 定义props
+const props = defineProps({
+  open_edit: {
+    type: Boolean,
+    default: false,
+  },
+  editform: {
+    type: Object,
+    default: () => ({}),
+  },
+});
 
-      this.form.feed_id = this.editform.feed_id;
-      try {
-        const _names = typeof this.editform.feed_name === 'string' ? JSON.parse(this.editform.feed_name) : this.editform.feed_name ?? {};
-        this.form.feed_name = _names;
-      } catch (error) {
-        console.error('parse name faild', error);
+// 定义emits
+const emit = defineEmits(['closeDialog']);
+
+// 响应式数据
+const formRef = ref(null);
+const uniqueNameFormRef = ref(null);
+const dialogVisible = ref(false);
+const loading = ref(false);
+const open_product = ref(false);
+const ing_select_list = ref([]);
+const multiple_selection = ref([]);
+
+const form = reactive({
+  feed_id: undefined,
+  feed_name: {},
+  price: NaN,
+  material: [],
+});
+
+// 初始化数据
+onMounted(() => {
+  dialogVisible.value = props.open_edit;
+
+  form.feed_id = props.editform.feed_id;
+  try {
+    const _names = typeof props.editform.feed_name === 'string' ? JSON.parse(props.editform.feed_name) : props.editform.feed_name ?? {};
+    form.feed_name = _names;
+  } catch (error) {
+    console.error('parse name failed', error);
+  }
+
+  form.price = Number(props.editform.price ?? 0);
+
+  for (const item of props.editform.material) {
+    form.material.push({
+      product_id: item.materialProduct.product_id,
+      material_num: item.material_num,
+    });
+
+    ing_select_list.value.push({
+      product_id: item.materialProduct.product_id,
+      product_name_text: item.materialProduct.product_name_text,
+      product_unit_text: item.materialProduct.product_unit_text,
+    });
+  }
+});
+
+// 提交方法
+const submit = async () => {
+  loading.value = true;
+  try {
+    const validForm = await formRef.value.validate();
+    if (!validForm) return;
+
+    const validUniqueName = await uniqueNameFormRef.value.validate();
+    if (!validUniqueName) return;
+
+    const _name = uniqueNameFormRef.value.data;
+    const params = JSON.parse(JSON.stringify(form));
+    params.feed_name = JSON.stringify(_name);
+
+    const res = await ProductApi.editFeed(params, true);
+    proxy.$ElMessage({
+      message: $t('保存成功'),
+      type: 'success',
+    });
+
+    handleClose(true, res.data);
+  } catch (error) {
+    console.error(error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 关闭弹窗
+const handleClose = (isSuccess = false, data) => {
+  emit('closeDialog', {
+    type: isSuccess ? 'success' : 'error',
+    openDialog: false,
+    data: data,
+  });
+};
+
+// 添加材料
+const addMaterials = () => {
+  multiple_selection.value = ing_select_list.value;
+  open_product.value = true;
+};
+
+// 关闭对话框
+const closeDialogFunc = (e) => {
+  open_product.value = e.openDialog;
+  if (e.type == 'select') {
+    let map = new Map();
+    [ing_select_list.value, e.data].flat().forEach((obj) => map.set(obj.product_id, obj));
+    ing_select_list.value = Array.from(map.values());
+
+    let arr = [];
+    if (form.material.length > 0) {
+      form.material.map((item) => {
+        arr.push(item.product_id);
+      });
+    }
+
+    ing_select_list.value.map((item) => {
+      if (!arr.includes(item.product_id)) {
+        form.material.push({
+          product_id: item.product_id,
+          material_num: null,
+        });
       }
+    });
+  }
+};
 
-      this.form.price = Number(this.editform.price ?? 0);
+// 删除一个材料
+const handleDeleteOne = (index) => {
+  ing_select_list.value.splice(index, 1);
+  form.material.splice(index, 1);
+};
 
-      for (const item of this.editform.material) {
-        this.form.material.push({
-          product_id: item.materialProduct.product_id,
-          material_num: item.material_num,
-        });
-
-        this.ing_select_list.push({
-          product_id: item.materialProduct.product_id,
-          product_name_text: item.materialProduct.product_name_text,
-          product_unit_text: item.materialProduct.product_unit_text,
-        });
-      }
-    },
-    methods: {
-      async submit() {
-        const self = this;
-        self.loading = true;
-        try {
-          const validForm = await self.$refs.formRef.validate();
-          if (!validForm) return;
-
-          const validUniqueName = await self.$refs.uniqueNameFormRef.validate();
-          if (!validUniqueName) return;
-
-          const _name = self.$refs.uniqueNameFormRef.data;
-          const params = JSON.parse(JSON.stringify(self.form));
-          params.feed_name = JSON.stringify(_name);
-
-          const res = await ProductApi.editFeed(params, true);
-          self.$ElMessage({
-            message: self.$t('保存成功'),
-            type: 'success',
-          });
-
-          self.handleClose(true, res.data);
-        } catch (error) {
-          console.error(error);
-        } finally {
-          self.loading = false;
-        }
-      },
-      /*关闭弹窗*/
-      handleClose(isSuccess = false, data) {
-        this.$emit('closeDialog', {
-          type: isSuccess ? 'success' : 'error',
-          openDialog: false,
-          data: data,
-        });
-      },
-
-      addMaterials() {
-        this.multiple_selection = this.ing_select_list;
-        this.open_product = true;
-      },
-
-      closeDialogFunc(e) {
-        this.open_product = e.openDialog;
-        if (e.type == 'select') {
-          let map = new Map();
-          [this.ing_select_list, e.data].flat().forEach((obj) => map.set(obj.product_id, obj));
-          this.ing_select_list = Array.from(map.values());
-
-          let arr = [];
-          if (this.form.material.length > 0) {
-            this.form.material.map((item) => {
-              arr.push(item.product_id);
-            });
-          }
-
-          this.ing_select_list.map((item) => {
-            if (!arr.includes(item.product_id)) {
-              this.form.material.push({
-                product_id: item.product_id,
-                material_num: null,
-              });
-            }
-          });
-        }
-      },
-
-      handleDeleteOne(index) {
-        this.ing_select_list.splice(index, 1);
-        this.form.material.splice(index, 1);
-      },
-
-      handleInput(val, index) {
-        // material_num 只能是数字
-        this.$nextTick(() => {
-          this.form.material[index].material_num = this.DecimalPointFour(val);
-        });
-      },
-    },
-  };
+// 处理输入
+const handleInput = (val, index) => {
+  // material_num 只能是数字
+  nextTick(() => {
+    form.material[index].material_num = DecimalPointFour(val);
+  });
+};
 </script>
 
 <style scoped lang="scss">

@@ -301,7 +301,7 @@ func (h *BaseHandler) GetSetting(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} dto.Response{data=resp.ReturnFoodReasonResps}
+// @Success 200 {object} dto.Response{data=resp.ReturnFoodReasonResp}
 // @Router /cashier/return_reason [get]
 func (h *BaseHandler) GetReturnReason(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -320,7 +320,7 @@ func (h *BaseHandler) GetReturnReason(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} dto.Response{data=resp.GiftOrFreeOrderReasonResps}
+// @Success 200 {object} dto.Response{data=resp.GiftOrFreeOrderReasonResp}
 // @Router /cashier/free_or_gift_reason [get]
 func (h *BaseHandler) GetFreeOrGiftReason(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -590,7 +590,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
 	settingSrv := setting.NewSrv(dbm, cache)
-	otherSrv := service.NewOtherSrv(dbm, cache)
+	otherSrv := service.NewOtherSrv(dbm, cache, settingSrv)
 	roleAccessSrv := service.NewRoleAccessSrv(dbm)
 	deviceSrv := service.NewDeviceSrv(settingSrv, dbm)
 	printerLogSrv := printerService.NewPrinterLogSrv(dbm, settingSrv)

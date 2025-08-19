@@ -400,14 +400,14 @@ func (model *MemberSaleOrder) CookFinish() {
 }
 
 // 骑手正在赶往商家
-func (model *MemberSaleOrder) RiderAccept(riderName string, riderPhone string, location string, riderAvatar string, riderRating float32) {
+func (model *MemberSaleOrder) RiderAccept(riderName string, riderPhone string, location string, riderAvatar string, riderRating float64) {
 	model.Status = constant.MemberSaleOrderStatusPendingRiderDelivery // 骑手正在赶往商家
 	model.RiderAcceptTime = time.Now().Unix()
 	model.RiderName = riderName
 	model.RiderPhone = riderPhone
 	model.Location = location
 	model.RiderAvatar = riderAvatar
-	model.RiderRating = float64(riderRating)
+	model.RiderRating = riderRating
 }
 
 // 骑手配送中

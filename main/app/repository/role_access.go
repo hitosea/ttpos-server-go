@@ -17,20 +17,20 @@ func NewRoleAccessRepo(db *gorm.DB) IRoleAccessRepo {
 	return NewRoleAccessRepoImpl(db)
 }
 
-func NewRoleAccessRepoImpl(db *gorm.DB) *RoleAccessRepoImpl {
-	return &RoleAccessRepoImpl{db: db}
+func NewRoleAccessRepoImpl(db *gorm.DB) IRoleAccessRepo {
+	return &roleAccessRepo{db: db}
 }
 
-type RoleAccessRepoImpl struct {
+type roleAccessRepo struct {
 	db *gorm.DB
 }
 
-func (r *RoleAccessRepoImpl) GetRoleAccessList() ([]model.RoleAccess, error) {
+func (r *roleAccessRepo) GetRoleAccessList() ([]model.RoleAccess, error) {
 	var roleAccesses []model.RoleAccess
 	err := r.db.Model(&model.RoleAccess{}).Find(&roleAccesses).Error
 	return roleAccesses, errors.WithMessage(err)
 }
 
-func (r *RoleAccessRepoImpl) CreateRoleAccess(roleAccess model.RoleAccess) (uint64, error) {
+func (r *roleAccessRepo) CreateRoleAccess(roleAccess model.RoleAccess) (uint64, error) {
 	return roleAccess.RoleUuid, r.db.Create(&roleAccess).Error
 }

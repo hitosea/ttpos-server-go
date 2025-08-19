@@ -2,6 +2,8 @@
 package template
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"net/url"
 	"os"
@@ -13,6 +15,7 @@ import (
 	respSetting "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
+	"ttpos-server-go/app/printer/printer_model"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	image "ttpos-server-go/pkg/Image"
@@ -55,10 +58,11 @@ type MergeSaleOrderBuffetDelayProducts struct {
 
 // MergeSaleOrderProduct 合并销售订单商品数据
 type MergeSaleOrderProduct struct {
-	ProductName       string  `json:"product_name"`
-	ProductPrice      float64 `json:"product_price"`
-	ProductNum        float64 `json:"product_num"`
-	ProductTotalPrice float64 `json:"product_total_price"`
+	ProductName       string                  `json:"product_name"`
+	ProductPrice      float64                 `json:"product_price"`
+	ProductNum        float64                 `json:"product_num"`
+	ProductTotalPrice float64                 `json:"product_total_price"`
+	SubProducts       []MergeSaleOrderProduct `json:"sub_products"`
 }
 
 // printerTemplate 模板基类
@@ -458,19 +462,60 @@ func (p *printerTemplate) MergeSaleOrderBuffetDelayProducts(saleOrder *model.Sal
 	return delays, num.Round(3).InexactFloat64()
 }
 
+// ColumnConfig 列配置结构体
+type MergeSaleOrderProductOptions struct {
+	saleBill             *model.SaleBill
+	saleOrder            *model.SaleOrder
+	saleOrderProductUuid uint64 // 提取套餐子商品
+	IsShowSku            bool   // 是否显示sku
+	IsShowWrap           bool   // 是否显示打包
+}
+
 // 合并销售订单商品数据
-func (p *printerTemplate) MergeSaleOrderProduct(saleBill *model.SaleBill, saleOrder *model.SaleOrder, isShowSku bool, isShowWrap bool) ([]MergeSaleOrderProduct, float64) {
+func (p *printerTemplate) MergeSaleOrderProduct(options MergeSaleOrderProductOptions) ([]MergeSaleOrderProduct, float64) {
+	saleBill := options.saleBill
+	saleOrder := options.saleOrder
 	productNum := decimal.NewFromFloat(0)
 	productMap := make(map[string]*MergeSaleOrderProduct)
 	products := make([]MergeSaleOrderProduct, 0)
 	keyOrder := make([]string, 0)
-	for _, item := range saleOrder.SaleOrderProducts {
+	//
+	saleOrderProducts := saleOrder.SaleOrderProducts
+	if options.saleOrderProductUuid != 0 {
+		saleOrderProducts = saleOrder.GetPackageSubProductList(options.saleOrderProductUuid)
+	}
+	for _, item := range saleOrderProducts {
 		if item.IsDelete() || item.IsUnCookingProduct() || item.IsUnAcceptOrderBool() || item.IsCancelProduct() {
 			continue
 		}
 		if item.IsBuffetProduct() && item.GetTotalSaucePrice() <= 0 {
 			continue
 		}
+
+		// 提取套餐子商品
+		subProducts := make([]MergeSaleOrderProduct, 0)
+		md5SubProductsStr := ""
+		if options.saleOrderProductUuid == 0 {
+			if item.IsPackageSubProduct() {
+				continue
+			}
+			if item.IsPackageProduct() {
+				subProducts, _ = p.MergeSaleOrderProduct(MergeSaleOrderProductOptions{
+					saleBill:             saleBill,
+					saleOrder:            saleOrder,
+					saleOrderProductUuid: item.Uuid,
+					IsShowSku:            options.IsShowSku,
+					IsShowWrap:           options.IsShowWrap,
+				})
+				//
+				for _, subProduct := range subProducts {
+					md5SubProductsStr += subProduct.ProductName + item.GetAttributeNamesByLang(p.Lang, options.IsShowSku)
+				}
+				hexStr := md5.Sum([]byte(md5SubProductsStr))
+				md5SubProductsStr = hex.EncodeToString(hexStr[:])
+			}
+		}
+
 		// 商品数量
 		productNum = productNum.Add(decimal.NewFromFloat(item.Num).Round(3))
 		// 商品价格
@@ -484,7 +529,7 @@ func (p *printerTemplate) MergeSaleOrderProduct(saleBill *model.SaleBill, saleOr
 		}
 		// 打包商品
 		var wrap string
-		if isShowWrap {
+		if options.IsShowWrap {
 			if item.IsWrapProduct() || (saleBill.IsTakeout() && saleBill.MemberSaleOrderUuid == 0) {
 				wrap = "(" + p.Translate("打包") + ") "
 				productTotalPrice = 0
@@ -492,17 +537,22 @@ func (p *printerTemplate) MergeSaleOrderProduct(saleBill *model.SaleBill, saleOr
 		}
 
 		// 商品名称
-		productAttr := item.GetAttributeNamesByLang(p.Lang, isShowSku)
-		productName := wrap + gift + item.MultiLanguageName.GetNameByLang(p.Lang)
+		productAttr := item.GetAttributeNamesByLang(p.Lang, options.IsShowSku)
+		productName := utils.IfString(item.IsPackageSubProduct(), "--", "") + wrap + gift + item.MultiLanguageName.GetNameByLang(p.Lang)
 		if productAttr != "" {
-			productName = productName + "\n(" + productAttr + ")"
+			productName = productName + "\n" + utils.IfString(item.IsPackageSubProduct(), "  ", "") + "(" + productAttr + ")"
 		}
 		// 按产品名称分组累加
-		key := fmt.Sprintf("%s(%v)(%v)", productName, productPrice, item.ProductPackageUuid)
+		key := fmt.Sprintf("%s(%v)(%v)(%v)(%s)", productName, productPrice, item.ProductPackageUuid, item.PackageUuid, md5SubProductsStr)
 		if _, exists := productMap[key]; exists {
 			// 如果产品名称已存在，则累加数量和总价
 			productMap[key].ProductNum = decimal.NewFromFloat(productMap[key].ProductNum).Add(decimal.NewFromFloat(item.Num).Round(3)).InexactFloat64()
 			productMap[key].ProductTotalPrice = decimal.NewFromFloat(productMap[key].ProductTotalPrice).Add(decimal.NewFromFloat(productTotalPrice).Round(2)).InexactFloat64()
+			// 累加套餐子商品
+			for i := 0; i < len(subProducts); i++ {
+				productMap[key].SubProducts[i].ProductNum = decimal.NewFromFloat(productMap[key].SubProducts[i].ProductNum).Add(decimal.NewFromFloat(subProducts[i].ProductNum).Round(3)).InexactFloat64()
+				productMap[key].SubProducts[i].ProductTotalPrice = decimal.NewFromFloat(productMap[key].SubProducts[i].ProductTotalPrice).Add(decimal.NewFromFloat(subProducts[i].ProductTotalPrice).Round(2)).InexactFloat64()
+			}
 		} else {
 			// 如果产品名称不存在，则创建新记录
 			productMap[key] = &MergeSaleOrderProduct{
@@ -510,6 +560,7 @@ func (p *printerTemplate) MergeSaleOrderProduct(saleBill *model.SaleBill, saleOr
 				ProductPrice:      productPrice,
 				ProductNum:        item.Num,
 				ProductTotalPrice: productTotalPrice,
+				SubProducts:       subProducts,
 			}
 			// 记录key首次出现的顺序
 			keyOrder = append(keyOrder, key)
@@ -545,4 +596,94 @@ func (p *printerTemplate) GetCashierSn(printerSn string) string {
 	}
 	//
 	return ""
+}
+
+// 打印图片商品
+func (p *printerTemplate) PrintCompleteOrderImgProducts(
+	img *pkg.ImgFont,
+	tmpInfo model.PrinterTemplate,
+	products printer_model.Products,
+	opts ...interface{},
+) {
+	tmp := tmpInfo.Template
+	isShowSku := tmpInfo.IsShowSku
+	//
+	for _, product := range products {
+		// 处理自助餐文本
+		buffetText := ""
+		if p.PrinterSetting.BuffetSignOpen == "1" {
+			if product.IsBuffet {
+				buffetText = p.Translate("自助餐") + "-"
+			}
+		}
+
+		if tmp == 2 || tmp == 3 {
+			img.SetTextLineHeight(utils.IfInt(p.Lang == "my", 75, 60))
+		} else {
+			img.SetTextLineHeight(50)
+		}
+		img.LineFeed(1, 12)
+
+		// 打包商品
+		wrapText := ""
+		if product.IsWrap && len(opts) == 0 {
+			wrapText = "(" + p.Translate("打包") + ") "
+		}
+
+		// 打印产品名称和数量
+		productName := utils.IfString(len(opts) > 0, "--", "") + wrapText + buffetText + product.ProductName.GetLocale(p.Lang)
+		totalNum := "x" + p.FloatToString(product.TotalNum)
+		productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*7), 480)
+		if tmp == 2 || tmp == 3 {
+			img.PrintInColumns(
+				pkg.ColumnConfig{Text: productName, Width: productNameWidth, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
+				pkg.ColumnConfig{Text: totalNum, Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: utils.IfInt(tmp == 3, 90, 42)},
+			)
+		} else {
+			img.PrintInColumns(
+				pkg.ColumnConfig{Text: productName, Width: productNameWidth, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 20},
+				pkg.ColumnConfig{Text: totalNum, Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 20, LineHeight: 42},
+			)
+		}
+		if p.Lang == "my" {
+			img.LineFeed(1, 12)
+		}
+
+		// 分割处理属性
+		for _, attr := range utils.IfSlice(isShowSku == 0, product.ProductSauceNamesList, product.ProductAttrList) {
+			if attr.GetLocale(p.Lang) == "" {
+				continue
+			}
+			if tmp == 3 {
+				img.SetTextLineHeight(utils.IfInt(p.Lang == "my", 110, 100))
+				img.SetFontSize(28)
+			} else {
+				img.SetTextLineHeight(utils.IfInt(p.Lang == "my", 50, 40))
+			}
+			img.AppendText(utils.IfString(len(opts) > 0, "  ", "") + attr.GetLocale(p.Lang))
+			img.LineFeed(1, utils.IfInt(tmp == 3, 100, 40))
+			img.SetFontSize(20)
+		}
+
+		// 打印备注
+		if product.Remark != "" && len(opts) == 0 {
+			img.SetTextLineHeight(utils.IfInt(p.IsMyText(product.Remark), 68, 50))
+			img.LineFeed(1, 12)
+			img.SetFontSize(28)
+			img.AppendText(product.Remark)
+			img.LineFeed(1, 50)
+			img.SetFontSize(20)
+		}
+
+		// 换行
+		img.LineFeed(1, 12)
+
+		// 打印套餐子商品
+		if len(product.SubProducts) > 0 {
+			p.PrintCompleteOrderImgProducts(img, tmpInfo, product.SubProducts, 1)
+		}
+
+		// 设置文本行高
+		img.SetTextLineHeight(50)
+	}
 }

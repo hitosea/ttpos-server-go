@@ -2,25 +2,22 @@ package takeout
 
 import (
 	"context"
-	"takeout/api"
+	api "ttpos-bmp/app/ttpos-takeout/api/takeout"
+	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
-	"ttpos-server-go/app/errors"
-	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/logger"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 func NewTakeoutClient() (api.TakeoutServiceClient, *grpc.ClientConn, error) {
 	// 1. 建立gRPC连接（开发环境使用Insecure，生产环境建议配置TLS）
-	conn, err := grpc.NewClient(config.TakeOutRpcConf.Endpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := cloud.GetRpcConnWithName(cloud.TakeOutServiceName)
 	if err != nil {
-		return nil, nil, errors.New("连接外送服务gRPC端点失败: %v", config.TakeOutRpcConf.Endpoint)
+		return nil, nil, err
 	}
-
 	return api.NewTakeoutServiceClient(conn), conn, nil
 }
 

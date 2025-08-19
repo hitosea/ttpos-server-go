@@ -1,0 +1,20 @@
+// ==========================================================================
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
+// ==========================================================================
+
+syntax = "proto3";
+
+package manager;
+
+option go_package = "ttpos-bmp/app/ttpos-manager/api/manager";
+
+
+
+message AdminRole {
+    uint32 Id         = 1; // 自增ID
+    string RoleName   = 2; // 角色名称
+    int32  Sort       = 3; // 排序(数字越小越靠前)
+    int32  CreateTime = 4; // 创建时间（时间戳）
+    int32  UpdateTime = 5; // 更新时间（时间戳）
+    int32  DeleteTime = 6; // 删除时间（时间戳）
+}

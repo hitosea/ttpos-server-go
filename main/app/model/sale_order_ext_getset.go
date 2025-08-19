@@ -254,7 +254,20 @@ func (model *SaleOrder) GetUnCookingAndCookingOrderProductList(h5OrderUuid uint6
 	} else {
 		products = model.GetAllOrderProductList(WithAllAndOneH5Order(h5OrderUuid))
 	}
+	products = FilterPackageSubProduct(products)
 	return FilterUnAcceptOrderProduct(products, h5OrderUuid)
+}
+
+// 过滤套餐子商品
+func FilterPackageSubProduct(products []*SaleOrderProduct) []*SaleOrderProduct {
+	list := make([]*SaleOrderProduct, 0)
+	for _, product := range products {
+		if product.IsPackageSubProduct() {
+			continue
+		}
+		list = append(list, product)
+	}
+	return list
 }
 
 // 过滤未接单的商品

@@ -18,6 +18,7 @@ define update_env_and_run
 	fi;
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh mysql open
+	@make start-http-debug-proxy
 endef
 
 # 默认目标 - 显示帮助信息
@@ -33,20 +34,24 @@ help:
 	@echo "🚀 项目管理命令"
 	@printf "\033[0m"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "install" "初始化项目（首次安装）"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "install-bmp" "初始化中台模块"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "build" "重新构建项目"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "restart" "重启容器"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "up" "启动Docker容器"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "down" "停止Docker容器"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "ps" "查看容器状态"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "mod-tidy" "整理依赖"
 	@echo ""
 	@printf "\033[1;32m"
 	@echo "🔧 开发命令"
 	@printf "\033[0m"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "debug" "切换到调试模式"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "run" "运行项目（调试模式）"
-	@printf "\033[1;33m  %-25s\033[0m - %s\n" "dev" "启动开发模式（热重启）"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "dev" "启动开发模式（热重启 + HTTP调试代理）"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "build-web" "构建前端项目"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "build-doc" "生成API文档"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "start-http-debug-proxy" "启动HTTP调试代理"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "stop-http-debug-proxy" "停止HTTP调试代理"
 	@echo ""
 	@printf "\033[1;32m"
 	@echo "🗄️  数据库命令"
@@ -63,6 +68,7 @@ help:
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "translate" "运行翻译命令"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "statistics-re" "重新统计数据"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "skootar-update-status" "更新Skootar状态"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "think" "执行think命令"
 	@echo ""
 	@printf "\033[1;32m"
 	@echo "📦 版本管理"
@@ -86,6 +92,9 @@ init-env:
 		sed -i.bak 's/^APP_ID=.*/APP_ID='$$(openssl rand -hex 3)'/' .env && rm .env.bak; \
 		sed -i.bak 's/^DB_PASSWORD=.*/DB_PASSWORD='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
 		sed -i.bak 's/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
+		sed -i.bak 's/^NACOS_AUTH_TOKEN=.*/NACOS_AUTH_TOKEN='$$(openssl rand -hex 32 | base64)'/' .env && rm .env.bak; \
+		sed -i.bak 's/^NACOS_AUTH_IDENTITY_KEY=.*/NACOS_AUTH_IDENTITY_KEY='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
+		sed -i.bak 's/^NACOS_AUTH_IDENTITY_VALUE=.*/NACOS_AUTH_IDENTITY_VALUE='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
 	fi 
 	@echo "🔍 检查 .env 文件是否存在"
 	if [ -f ".env" ]; then \
@@ -150,9 +159,9 @@ add-version:
 
 # 清空redis的cluster的data-*目录
 redis-clear-data-node-conf:
-	make down redis-node-1
-	make down redis-node-2
-	make down redis-node-3
+	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh down redis-node-1 > /dev/null 2>&1
+	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh down redis-node-2 > /dev/null 2>&1
+	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh down redis-node-3 > /dev/null 2>&1
 	rm -rf ./docker/redis/cluster/data-*
 
 # 检查env的DB_HOST是否等于 LOCAL_IP。等于的话 就执行 make mysql-open;
@@ -168,6 +177,47 @@ check-db-host-open-mysql:
 	else \
 		echo "⚠️  .env文件不存在，跳过MySQL端口检查"; \
 	fi
+
+# HTTP调试代理管理
+start-http-debug-proxy:
+	@echo "🔍 启动HTTP调试代理容器..."
+	@echo "📦 检查HTTP调试代理镜像..."
+	@if ! docker images | grep -q "602666178/http-proxy-debug-view"; then \
+		echo "📥 镜像不存在，正在拉取..." && \
+		docker pull 602666178/http-proxy-debug-view:latest && \
+		echo "✅ 镜像拉取成功" || echo "⚠️ 镜像拉取失败"; \
+	else \
+		echo "✅ 镜像已存在，跳过拉取"; \
+	fi
+	@SERVER_PORT=$$(grep '^SERVER_PORT=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' ' || echo "8080"); \
+	PROXY_PORT=$$((SERVER_PORT + 1)); \
+	TARGET_URL="http://$(LOCAL_IP):$$SERVER_PORT"; \
+	echo "🎯 目标URL: $$TARGET_URL, 代理端口: $$PROXY_PORT"; \
+	docker run -d \
+		--name http-debug-proxy \
+		-p $$PROXY_PORT:8080 \
+		-p 8091:8091 \
+		-e TARGET_URL="$$TARGET_URL" \
+		-e PROXY_PORT=8080 \
+		-e WEB_PORT=8091 \
+		--restart unless-stopped \
+		602666178/http-proxy-debug-view:latest > /dev/null 2>&1 || \
+		(echo "⚠️  HTTP调试代理容器已存在，正在重启..." && \
+		docker rm -f http-debug-proxy > /dev/null 2>&1 && \
+		docker run -d \
+			--name http-debug-proxy \
+			-p $$PROXY_PORT:8080 \
+			-p 8091:8091 \
+			-e TARGET_URL="$$TARGET_URL" \
+			-e PROXY_PORT=8080 \
+			-e WEB_PORT=8091 \
+			--restart unless-stopped \
+			602666178/http-proxy-debug-view:latest > /dev/null 2>&1); \
+	echo "✅ HTTP调试代理已启动 - 代理端口: $$PROXY_PORT, 调试界面: http://localhost:8091"
+
+stop-http-debug-proxy:
+	@echo "🛑 停止HTTP调试代理容器..."
+	@docker rm -f http-debug-proxy > /dev/null 2>&1 || echo "✅ HTTP调试代理已停止"
 
 # 处理额外参数（不包含第一个目标）
 ifneq ($(words $(MAKECMDGOALS)),1)

@@ -40,7 +40,13 @@ func NewDeviceSrvImpl(settingSrv setting.ISrv, dbm *database.DBManager) IDeviceS
 }
 
 func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uint64, error) {
-	if !slices.Contains([]string{constant.SourceCashier, constant.SourceAssistant, constant.SourceTablet, constant.SourceKitchen}, addReq.Source) ||
+	if !slices.Contains([]string{
+		constant.SourceCashier,
+		constant.SourceAssistant,
+		constant.SourceTablet,
+		constant.SourceKitchen,
+		constant.SourceShop,
+	}, addReq.Source) ||
 		addReq.CompanyUuid == 0 || addReq.DeviceId == "" {
 		return 0, errors.New("来源设备错误")
 	}

@@ -366,7 +366,12 @@ func (t *statementOrderCodesoftTemplate) GetPrintContent(
 		printer.SetLineSpacing(70)
 	}
 	// 商品列表
-	products, num := t.base.MergeSaleOrderProduct(saleBill, saleOrder, temp != 4, true)
+	products, num := t.base.MergeSaleOrderProduct(MergeSaleOrderProductOptions{
+		saleBill:   saleBill,
+		saleOrder:  saleOrder,
+		IsShowSku:  temp != 4,
+		IsShowWrap: true,
+	})
 	productNum = productNum.Add(decimal.NewFromFloat(num).Round(3))
 	for _, product := range products {
 		printer.AppendText(t.base.PrintText(
@@ -378,6 +383,23 @@ func (t *statementOrderCodesoftTemplate) GetPrintContent(
 			centerWidth,
 			rightWidth,
 		))
+
+		// 套餐子商品
+		for k, subProduct := range product.SubProducts {
+			printer.AppendText(t.base.PrintText(
+				subProduct.ProductName,
+				fmt.Sprintf("%v", subProduct.ProductNum),
+				"",
+				width,
+				leftWidth,
+				centerWidth,
+				rightWidth,
+			))
+			if k != len(product.SubProducts)-1 {
+				printer.LineFeed()
+			}
+		}
+
 		printer.LineFeed()
 		printer.SetLineSpacing(30)
 		printer.LineFeed()

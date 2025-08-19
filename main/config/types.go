@@ -89,9 +89,15 @@ type GoogleBucketConf struct {
 	GooglePrintBucketName                 string // 谷歌云 - 打印相关的bucket
 }
 
-type GrpcConf struct {
-	Endpoint string
-	Service  string
+// NacosConf Nacos配置结构体
+type NacosConf struct {
+	Host      string // nacos服务地址
+	Port      int    // nacos端口
+	Namespace string // 命名空间
+	Username  string // 用户名
+	Password  string // 密码
+	DataId    string // 配置DataId
+	Group     string // 配置Group
 }
 
 func (c *GoogleBucketConf) Verification() bool {

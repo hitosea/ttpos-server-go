@@ -1,5 +1,7 @@
 package utils
 
+import "ttpos-server-go/app/dto"
+
 // 三元
 func IfBool(is bool, trueVal, falseVal bool) bool {
 	if is {
@@ -42,6 +44,21 @@ func IfString(is bool, trueVal, falseVal string) string {
 
 // 三元
 func IfFloat64(is bool, trueVal, falseVal float64) float64 {
+	if is {
+		return trueVal
+	}
+	return falseVal
+}
+
+func IfSlice(is bool, trueVal, falseVal []dto.LocaleResponse) []dto.LocaleResponse {
+	if is {
+		return trueVal
+	}
+	return falseVal
+}
+
+// 三元
+func IfUint(is bool, trueVal, falseVal uint) uint {
 	if is {
 		return trueVal
 	}

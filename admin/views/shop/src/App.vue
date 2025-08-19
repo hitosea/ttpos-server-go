@@ -297,6 +297,7 @@
           data[item.key] = '';
         });
         languageStore().setLanguageData(data);
+
         //刷新
         let language = JSON.parse(localStorage.getItem('Language'));
         if (!language) {

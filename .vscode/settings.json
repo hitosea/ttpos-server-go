@@ -46,4 +46,9 @@
     "gopls": {
       "ui.diagnostic.staticcheck": false,   // 禁用静态分析检查
     },
+
+    // ===== 保存时自动运行 =====
+    "go.buildOnSave": "workspace",
+    "go.formatOnSave": true,
+    "go.lintOnSave": "workspace"
   }

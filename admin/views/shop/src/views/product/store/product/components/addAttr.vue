@@ -50,174 +50,218 @@
   <!--添加-->
   <Add v-if="open_add" :open_add="open_add" :addform="model" @closeDialog="closeDialogFunc($event, 'add')"></Add>
 </template>
-<script>
+
+<script setup>
+  import { ref, reactive, computed, watch, nextTick, onMounted } from 'vue';
   import ProductApi from '@/api/product.js';
   import Add from '../../../expand/attr/add.vue';
-  export default {
-    name: 'AddFeed',
-    components: { Add },
-    props: {
-      open: {
-        type: Boolean,
-        default: false,
-      },
-      select_arr: {
-        type: Array,
-        default: () => [],
-      },
+
+  // 定义props
+  const props = defineProps({
+    open: {
+      type: Boolean,
+      default: false,
     },
-
-    created() {
-      this.dialogVisible = this.open;
-      /*获取列表*/
-
-      this.getGroupData();
-
-      this.$nextTick(() => {
-        this.$refs.attributeTreeRef.setCheckedKeys(this.checkedGroupIds);
-      });
+    select_arr: {
+      type: Array,
+      default: () => [],
     },
-    data() {
-      return {
-        dialogVisible: false,
-        loading: false,
-        totalDataNumber: 0,
-        curPage: 1,
-        pageSize: 1000,
-        searchForm: {
-          name: '',
+  });
+
+  // 定义emits
+  const emit = defineEmits(['close']);
+
+  // 响应式数据
+  const dialogVisible = ref(false);
+  const loading = ref(false);
+  const totalDataNumber = ref(0);
+  const curPage = ref(1);
+  const pageSize = ref(1000);
+  const searchForm = reactive({
+    name: '',
+  });
+  const selectedProductsTmp = ref([]);
+  const open_add = ref(false);
+  const tableData = ref([]);
+  const checkedGroupIds = ref([0]);
+  const treeData = ref([]);
+  const searchTimer = ref('');
+  const attributeTreeRef = ref(null);
+  const multipleTable = ref(null);
+  const formRef = ref(null);
+  const model = ref({});
+
+  // 计算属性：属性树数据
+  const attributeTreeData = computed(() => {
+    const data = treeData.value ?? [];
+    return [
+      {
+        id: 0,
+        label: $t('全部'),
+        children: data.map((group) => ({
+          id: group.attribute_id,
+          label: group.attribute_name_text,
+        })),
+      },
+    ];
+  });
+
+  // 获取组数据
+  const getGroupData = async () => {
+    try {
+      const data = await ProductApi.AttributeList(
+        {
+          page: 1,
+          list_rows: 10000,
+          type: 1,
         },
-        selectedProductsTmp: [],
-        open_add: false,
-        tableData: [],
-        checkedGroupIds: [0],
-        treeData: [],
-        searchTimer: '',
-      };
-    },
-    computed: {
-      attributeTreeData() {
-        const data = this.treeData ?? [];
-        return [
-          {
-            id: 0,
-            label: this.$t('全部'),
-            children: data
-              // .filter((group) => group.parent_id === 0)
-              .map((group) => ({
-                id: group.attribute_id,
-                label: group.attribute_name_text,
-              })),
-          },
-        ];
-      },
-    },
+        true
+      );
+      treeData.value = data.data.list.data;
+      await getData();
 
-    methods: {
-      /*获取列表*/
-      onDebounceSearch() {
-        clearTimeout(this.searchTimer);
-        this.searchTimer = setTimeout(() => {
-          this.getData();
-        }, 200);
-      },
-      /*获取列表*/
-      getData() {
-        let self = this;
-        let Params = {};
-        Params.page = self.curPage;
-        Params.list_rows = self.pageSize;
-        Params.attribute_name = self.searchForm.name;
-        Params.type = 2;
-        Params.parent_ids = self.checkedGroupIds.includes(0) ? '' : self.checkedGroupIds.join(',');
-        self.loading = true;
-        ProductApi.AttributeList(Params, true)
-          .then((data) => {
-            self.loading = false;
-            self.tableData = data.data.list.data;
-            self.totalDataNumber = data.data.list.total;
-            self.treeData.map((group) => {
-              self.tableData.map((row) => {
-                if (group.attribute_id == row.parent_id) {
-                  row.group_name_text = group.attribute_name_text;
-                }
-              });
-            });
-            if (this.select_arr.length > 0) {
-              // 判断是否存在勾选过的数据
-              this.tableData.map((row, index) => {
-                // 获取数据列表接口请求到的数据
-                if (this.select_arr.includes(row.attribute_id)) {
-                  this.$nextTick(() => {
-                    this.$refs.multipleTable.toggleRowSelection(this.tableData[index], true); // 若有重合，则回显该条数据
-                  });
-                  this.tableData[index].select_open = 1;
-                }
-              });
-            }
-          })
-          .catch((error) => {
-            self.loading = false;
-          });
-      },
-      getGroupData() {
-        ProductApi.AttributeList(
-          {
-            page: 1,
-            list_rows: 10000,
-            type: 1,
-          },
-          true
-        ).then((data) => {
-          this.treeData = data.data.list.data;
-          this.getData();
-        });
-      },
-      handleGroupCheckChange(_, { checkedKeys }) {
-        this.checkedGroupIds = checkedKeys;
-        this.getData();
-      },
-      /*关闭弹窗*/
-      closeDialogFunc(e, f) {
-        if (f == 'add') {
-          this.open_add = e.openDialog;
-          if (e.type == 'success') {
-            this.getData();
-          }
-        }
-      },
-
-      getRowKey(row) {
-        return row.attribute_id;
-      },
-
-      selectable(row) {
-        if (row.select_open != undefined && row.select_open == 1) {
-          return false;
-        } else {
-          return true;
-        }
-      },
-
-      handleSelectionChange(val) {
-        this.selectedProductsTmp = val;
-      },
-
-      dialogFormVisible() {
-        this.$emit('close', false);
-      },
-      handleAdd() {
-        this.open_add = true;
-      },
-      handleClick() {
-        this.$emit('close', this.selectedProductsTmp);
-      },
-      indexMethod(index) {
-        return index + 1 + (this.curPage - 1) * this.pageSize;
-      },
-    },
+      // 设置树形组件的选中状态
+      nextTick(() => {
+        attributeTreeRef.value?.setCheckedKeys(checkedGroupIds.value);
+      });
+    } catch (error) {
+      // 错误处理
+    }
   };
+
+  // 监听open属性变化
+  watch(
+    () => props.open,
+    (val) => {
+      dialogVisible.value = val;
+      if (val) {
+        getGroupData();
+      }
+    },
+    { immediate: true }
+  );
+
+  // 防抖搜索
+  const onDebounceSearch = () => {
+    clearTimeout(searchTimer.value);
+    searchTimer.value = setTimeout(() => {
+      getData();
+    }, 200);
+  };
+
+  // 搜索查询
+  const onSearch = () => {
+    getData();
+  };
+
+  // 获取列表
+  const getData = async () => {
+    loading.value = true;
+    try {
+      const Params = {
+        page: curPage.value,
+        list_rows: pageSize.value,
+        attribute_name: searchForm.name,
+        type: 2,
+        parent_ids: checkedGroupIds.value.includes(0) ? '' : checkedGroupIds.value.join(','),
+      };
+      const data = await ProductApi.AttributeList(Params, true);
+      loading.value = false;
+      tableData.value = data.data.list.data;
+      totalDataNumber.value = data.data.list.total;
+
+      // 补充组名信息
+      await Promise.resolve().then(() => {
+        treeData.value.map((group) => {
+          tableData.value.map((row) => {
+            if (group.attribute_id == row.parent_id) {
+              row.group_name_text = group.attribute_name_text;
+            }
+          });
+        });
+      });
+
+      // 判断是否存在勾选过的数据
+      if (props.select_arr.length > 0) {
+        await Promise.resolve().then(() => {
+          tableData.value.map((row, index) => {
+            if (props.select_arr.includes(row.attribute_id)) {
+              nextTick(() => {
+                multipleTable.value?.toggleRowSelection(tableData.value[index], true);
+              });
+              tableData.value[index].select_open = 1;
+            }
+          });
+        });
+      }
+    } catch (error) {
+      loading.value = false;
+    }
+  };
+
+  // 组选择变化处理
+  const handleGroupCheckChange = (_, { checkedKeys }) => {
+    checkedGroupIds.value = checkedKeys;
+    getData();
+  };
+
+  // 关闭弹窗
+  const closeDialogFunc = async (e, f) => {
+    if (f == 'add') {
+      open_add.value = e.openDialog;
+      if (e.type == 'success') {
+        await getData();
+      }
+    }
+  };
+
+  // 获取行键值
+  const getRowKey = (row) => {
+    return row.attribute_id;
+  };
+
+  // 是否可选
+  const selectable = (row) => {
+    if (row.select_open != undefined && row.select_open == 1) {
+      return false;
+    } else {
+      return true;
+    }
+  };
+
+  // 选择变化处理
+  const handleSelectionChange = (val) => {
+    selectedProductsTmp.value = val;
+  };
+
+  // 关闭对话框
+  const dialogFormVisible = () => {
+    emit('close', false);
+  };
+
+  // 新增属性
+  const handleAdd = () => {
+    open_add.value = true;
+  };
+
+  // 确定选择
+  const handleClick = () => {
+    emit('close', selectedProductsTmp.value);
+  };
+
+  // 序号方法
+  const indexMethod = (index) => {
+    return index + 1 + (curPage.value - 1) * pageSize.value;
+  };
+
+  onMounted(() => {
+    dialogVisible.value = props.open;
+    if (props.open) {
+      getGroupData();
+    }
+  });
 </script>
+
 <style lang="scss" scoped>
   .dialog-add {
     float: left;

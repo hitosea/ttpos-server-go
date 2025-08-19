@@ -44,16 +44,18 @@ func checkoutSaleOrderEventHandler() {
 					continue
 				}
 				products = append(products, printer_model.OrderProduct{
-					OrderProductId:  saleOrderProduct.Uuid,
-					ProductId:       saleOrderProduct.ProductPackageUuid,
-					ProductName:     saleOrderProduct.MultiLanguageName.GetNames(),
-					ProductAttr:     saleOrderProduct.GetAttributeName(),
-					ProductAttrList: saleOrderProduct.GetAttributeNameList(),
-					TotalNum:        saleOrderProduct.Num,
-					NumType:         saleOrderProduct.NumType,
-					IsBuffet:        saleOrderProduct.IsBuffet == 1,
-					IsWrap:          saleOrderProduct.IsWrapProduct(),
-					Remark:          saleOrderProduct.Remark,
+					OrderProductId:        saleOrderProduct.Uuid,
+					ProductId:             saleOrderProduct.ProductPackageUuid,
+					ProductName:           saleOrderProduct.MultiLanguageName.GetNames(),
+					ProductType:           saleOrderProduct.ProductType,
+					ProductAttr:           saleOrderProduct.GetAttributeName(),
+					ProductAttrList:       saleOrderProduct.GetAttributeNameList(),
+					ProductSauceNamesList: saleOrderProduct.GetSauceNamesList(),
+					TotalNum:              saleOrderProduct.Num,
+					NumType:               saleOrderProduct.NumType,
+					IsBuffet:              saleOrderProduct.IsBuffet == 1,
+					IsWrap:                saleOrderProduct.IsWrapProduct(),
+					Remark:                saleOrderProduct.Remark,
 				})
 			}
 			if len(products) > 0 {

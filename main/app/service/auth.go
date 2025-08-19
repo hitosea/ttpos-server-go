@@ -1,33 +1,30 @@
 package service
 
 import (
-	"fmt"
 	"regexp"
 	"slices"
 	"time"
 	"ttpos-server-go/app/api/helper"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
-	setting2 "ttpos-server-go/app/dto/resp/setting"
+	"ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
-	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository"
+	settingSrv "ttpos-server-go/app/service/setting"
+	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/auth"
 	"ttpos-server-go/pkg/context"
+	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
-
-	"go.uber.org/zap"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
 	"github.com/spf13/viper"
-
-	"ttpos-server-go/app/constant"
-	"ttpos-server-go/app/dto/req"
-	"ttpos-server-go/app/model"
-	"ttpos-server-go/app/repository"
-	"ttpos-server-go/config"
-	"ttpos-server-go/pkg/auth"
-	"ttpos-server-go/pkg/database"
-	"ttpos-server-go/pkg/utils"
+	"go.uber.org/zap"
 )
 
 type IAuthSrv interface {
@@ -43,6 +40,8 @@ type IAuthSrv interface {
 	BindCashier(ctx context.Context, bindReq req.BindCashierReq) (string, string, error)                                   // 点餐助手绑定收银机
 	GetOnlineCashiers(companyUuid uint64) resp.OnlineCashierList                                                           // 获取在线收银机
 	RefreshToken(ctx context.Context) (resp.LoginResp, error)                                                              // 刷新token
+	ShopBase(ctx context.Context) (resp.ShopBase, error)                                                                   // 移动管理端基本信息
+	ChangePassword(ctx context.Context, changePasswordReq req.ChangePasswordReq) error                                     // 移动管理端-修改密码
 }
 
 func NewAuthSrv(
@@ -51,7 +50,7 @@ func NewAuthSrv(
 	roleAccessSrv IRoleAccessSrv,
 	deviceSrv IDeviceSrv,
 	staffShiftSrv IStaffShiftSrv,
-	settingSrv setting.ISrv,
+	settingSrv settingSrv.ISrv,
 ) IAuthSrv {
 	return NewAuthSrvImpl(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 }
@@ -62,7 +61,7 @@ type authSrv struct {
 	roleAccessSrv IRoleAccessSrv
 	deviceSrv     IDeviceSrv
 	shiftSrv      IStaffShiftSrv
-	settingSrv    setting.ISrv
+	settingSrv    settingSrv.ISrv
 
 	assistantRoutes             []string
 	tabletRoutes                []string
@@ -76,7 +75,7 @@ func NewAuthSrvImpl(
 	roleAccessSrv IRoleAccessSrv,
 	deviceSrv IDeviceSrv,
 	staffShiftSrv IStaffShiftSrv,
-	settingSrv setting.ISrv,
+	settingSrv settingSrv.ISrv,
 ) IAuthSrv {
 	return &authSrv{
 		dbm:           dbm,
@@ -227,6 +226,12 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 		if companySetting.IsOpenTablet != 1 {
 			return loginResp, errors.New("当前尚未开启平板点餐功能，如有需要，请联系销售代表")
 		}
+	case constant.SourceShop: // 移动管理端
+	// TODO 先关闭是否授权erp判断
+	// companySetting := repository.NewCompanySettingRepo(s.dbm.GetDB(staff.CompanyUuid)).Get()
+	// if companySetting.ErpnextSiteCode == "" {
+	// 	return loginResp, errors.New("暂未授权，请联系销售代表")
+	// }
 	default:
 		return loginResp, errors.New("登录来源错误")
 	}
@@ -299,7 +304,7 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 	var (
 		source             = ctx.GetSource()
 		deviceId           = ctx.GetGin().GetString(jwt.DeviceId)
-		cashierSettingResp setting2.CashierResp
+		cashierSettingResp setting.CashierResp
 	)
 	deviceRemark := s.deviceSrv.GetRemark(company.Uuid, source, deviceId)
 	// 判断权限
@@ -354,6 +359,7 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 			IsOpenMember:   companySetting.IsOpenMember,
 			IsOpenBuffet:   companySetting.IsOpenBuffet,
 			IsOpenH5Order:  companySetting.IsOpenH5Order,
+			IsOpenRider:    companySetting.IsOpenRider(),
 			IsOpenOldOrder: utils.IfInt(company.OldCompanyId > 0, 1, 0),
 		},
 		CloudBasic: cloudBasicSetting,
@@ -402,7 +408,7 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 	if err != nil {
 		return assistantBase, errors.WithMessage(err)
 	}
-	var assistantSettingResp setting2.AssistantResp
+	var assistantSettingResp setting.AssistantResp
 	copier.CopyWithOption(&assistantSettingResp, assistantSetting, copier.Option{IgnoreEmpty: true, DeepCopy: true})
 	cloudBasicSetting, err := s.settingSrv.GetCloudBasicSetting(ctx)
 	if err != nil {
@@ -412,7 +418,7 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 	if err != nil {
 		return assistantBase, errors.WithMessage(err)
 	}
-	var kitchenSettingResp setting2.KitchenResp
+	var kitchenSettingResp setting.KitchenResp
 	kitchenSetting, err := s.settingSrv.GetKitchenSetting(ctx, companySetting, []dto.LanguageItem{})
 	if err != nil {
 		return assistantBase, errors.WithMessage(err)
@@ -448,6 +454,7 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 			IsOpenBuffet:   companySetting.IsOpenBuffet,
 			IsOpenH5Order:  companySetting.IsOpenH5Order,
 			IsOpenOldOrder: utils.IfInt(company.OldCompanyId > 0, 1, 0),
+			IsOpenRider:    companySetting.IsOpenRider(),
 		},
 		Currency:      currencySetting,
 		Business:      businessSetting,
@@ -474,8 +481,8 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 		return tabletBase, errors.WithMessage(err)
 	}
 	var (
-		tabletSettingResp  setting2.TabletResp
-		kitchenSettingResp setting2.KitchenResp
+		tabletSettingResp  setting.TabletResp
+		kitchenSettingResp setting.KitchenResp
 	)
 	tabletSetting, err := s.settingSrv.GetTabletSetting(ctx, nil)
 	if err != nil {
@@ -515,6 +522,7 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 			IsOpenBuffet:   companySetting.IsOpenBuffet,
 			IsOpenH5Order:  companySetting.IsOpenH5Order,
 			IsOpenOldOrder: utils.IfInt(company.OldCompanyId > 0, 1, 0),
+			IsOpenRider:    companySetting.IsOpenRider(),
 		},
 		Currency: currencySetting,
 		Business: businessSetting,
@@ -527,7 +535,7 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 	var (
 		kitchenBase        resp.KitchenBase
-		kitchenSettingResp setting2.KitchenResp
+		kitchenSettingResp setting.KitchenResp
 	)
 	company := helper.GetCompany(ctx.GetGin())
 	companySetting := helper.GetCompanySetting(ctx.GetGin())
@@ -571,6 +579,7 @@ func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 			IsOpenBuffet:   companySetting.IsOpenBuffet,
 			IsOpenH5Order:  companySetting.IsOpenH5Order,
 			IsOpenOldOrder: utils.IfInt(company.OldCompanyId > 0, 1, 0),
+			IsOpenRider:    companySetting.IsOpenRider(),
 		},
 		Currency:      currencySetting,
 		Business:      businessSetting,
@@ -736,6 +745,15 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeFunctionDisabled, "当前尚未开启厨显功能，如有需要，请联系销售代表")
 			}
 		}
+	case constant.SourceShop: // 移动管理端
+		{
+			// TODO 操作日志，如果要记录日志，则需要映射商家后台的api_path
+
+			// TODO 先关闭是否授权erp判断
+			// if companySetting.ErpnextSiteCode == "" {
+			// 	return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeFunctionDisabled, "暂未授权，请联系销售代表")
+			// }
+		}
 	}
 	return company, companySetting, staff, desk, nil
 }
@@ -787,7 +805,7 @@ func (s *authSrv) AuthMenu(ctx context.Context, qrcodeToken string) (*model.Comp
 	return company, nil
 }
 
-func (s *authSrv) GetCashierSetting(ctx context.Context) (*setting2.Cashier, error) {
+func (s *authSrv) GetCashierSetting(ctx context.Context) (*setting.Cashier, error) {
 	cashierSetting, err := s.settingSrv.GetCashierSetting(ctx, []dto.LanguageItem{})
 	if err != nil {
 		return nil, err
@@ -796,7 +814,7 @@ func (s *authSrv) GetCashierSetting(ctx context.Context) (*setting2.Cashier, err
 }
 
 // 检查收银机设置-收银用餐是否开启
-func (s *authSrv) isCashierOpen(cashierSetting *setting2.Cashier, pathUrl string) bool {
+func (s *authSrv) isCashierOpen(cashierSetting *setting.Cashier, pathUrl string) bool {
 	// 检查收银用餐是否开启
 	if cashierSetting.OrderMethod.IsCashierOrder != "1" && regexp.MustCompile(`^/api/v\d+/cashier/instant/`).Match([]byte(pathUrl)) {
 		return false
@@ -805,7 +823,7 @@ func (s *authSrv) isCashierOpen(cashierSetting *setting2.Cashier, pathUrl string
 }
 
 // 检查收银机设置-桌台用餐是否开启
-func (s *authSrv) isTableOpen(ctx context.Context, cashierSetting *setting2.Cashier, pathUrl string) bool {
+func (s *authSrv) isTableOpen(ctx context.Context, cashierSetting *setting.Cashier, pathUrl string) bool {
 	if cashierSetting.OrderMethod.IsTableOrder != "1" &&
 		(slices.Contains([]string{constant.SourceAssistant, constant.SourceTablet}, ctx.GetSource()) ||
 			(ctx.GetSource() == constant.SourceCashier && regexp.MustCompile(`^/api/v\d+/cashier/desk/`).Match([]byte(pathUrl)))) {
@@ -918,11 +936,104 @@ func (s *authSrv) RefreshToken(ctx context.Context) (resp.LoginResp, error) {
 	if err != nil {
 		return loginResp, errors.New("生成refresh_token失败")
 	}
-	fmt.Println("refresh new token:", newToken)
-	fmt.Println("refresh new refresh token:", newRefreshToken)
 	return resp.LoginResp{
 		Token:               newToken,
 		RefreshToken:        newRefreshToken,
 		CashierIsFirstLogin: false,
 	}, nil
+}
+
+func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
+	var shopBase resp.ShopBase
+	company := ctx.GetCompany()
+	companySetting := ctx.GetCompanySetting()
+	staff := ctx.GetStaff()
+	var (
+		source   = ctx.GetSource()
+		deviceId = ctx.GetGin().GetString(jwt.DeviceId)
+	)
+	deviceRemark := s.deviceSrv.GetRemark(company.Uuid, source, deviceId)
+	// 判断权限
+	permissions := []*resp.Permission{}
+
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return shopBase, errors.WithMessage(err)
+	}
+	buffetSetting, err := s.settingSrv.GetBuffetSetting(ctx, companySetting)
+	if err != nil {
+		return shopBase, errors.WithMessage(err)
+	}
+	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
+	if err != nil {
+		return shopBase, errors.WithMessage(err)
+	}
+	cloudBasicSetting, err := s.settingSrv.GetCloudBasicSetting(ctx)
+	if err != nil {
+		return shopBase, errors.WithMessage(err)
+	}
+	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
+	if err != nil {
+		return shopBase, errors.WithMessage(err)
+	}
+	return resp.ShopBase{
+		Username:     staff.Username,
+		ProfileUuid:  staff.Uuid,
+		DeviceId:     deviceId,
+		DeviceRemark: deviceRemark,
+		Permissions:  permissions,
+		Phone:        staff.Phone,
+
+		Business: businessSetting,
+		Buffet:   buffetSetting,
+		Currency: currencySetting,
+		Company: resp.Company{ // shop
+			Uuid:           company.Uuid,
+			Name:           company.Name,
+			Logo:           utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
+			TimeZone:       companySetting.Timezone,
+			ExpireTime:     company.ExpireTime,
+			IsOpenMember:   companySetting.IsOpenMember,
+			IsOpenBuffet:   companySetting.IsOpenBuffet,
+			IsOpenH5Order:  companySetting.IsOpenH5Order,
+			IsOpenOldOrder: utils.IfInt(company.OldCompanyId > 0, 1, 0),
+			IsOpenRider:    companySetting.IsOpenRider(),
+		},
+		CloudBasic: cloudBasicSetting,
+		Profile: resp.ShopProfile{
+			Address:         storeSetting.Address,
+			Coordinates:     storeSetting.Coordinates,
+			IpWhiteList:     storeSetting.IPWhiteList,
+			Phone:           storeSetting.Phone,
+			TaxNumber:       storeSetting.TaxNumber,
+			TimeZoneList:    storeSetting.TimeZoneList,
+			DefaultLanguage: companySetting.GetDefaultLanguage(),
+			LanguageList:    storeSetting.Language,
+			Language:        companySetting.GetLanguages(),
+			CompanyName:     storeSetting.Company,
+		},
+		IsTtposSite:   companySetting.IsTtposSite(),
+		UpdateTime:    time.Now().Unix(),
+		ServerVersion: utils.GetVersion(),
+	}, nil
+}
+
+// 修改密码
+func (s *authSrv) ChangePassword(ctx context.Context, changePasswordReq req.ChangePasswordReq) error {
+	if ctx.GetSource() != constant.SourceShop {
+		return errors.New("当前无权限，请联系管理员")
+	}
+	staff := ctx.GetStaff()
+	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(staff.CompanyUuid))
+	staff, err := staffRepo.GetStaff(staffRepo.WhereUuid(staff.Uuid), staffRepo.WithCompany(), staffRepo.WithCompanySetting())
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	if staff.Password != utils.EncryptPassword(changePasswordReq.OldPassword) {
+		return errors.New("旧密码错误")
+	}
+	staff.Password = utils.EncryptPassword(changePasswordReq.NewPassword)
+	return staffRepo.Update(staff.Uuid, map[string]any{
+		"password": staff.Password,
+	})
 }

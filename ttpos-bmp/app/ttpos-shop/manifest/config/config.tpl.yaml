@@ -1,0 +1,32 @@
+# https://goframe.org/docs/web/server-config-file-template
+server:
+  address:     ":14011"
+  openapiPath: "/api.json"
+  swaggerPath: "/swagger"
+
+# https://goframe.org/docs/core/glog-config
+logger:
+  level : "all"
+  stdout: true
+
+# https://goframe.org/docs/core/gdb-config-file
+database:
+  default:
+  link: "mysql:$DB_USERNAME:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/saas"
+
+grpc:
+  name:            "ttpos-shop"
+  address:            ":14012"
+  logPath:          "./log"
+  logStdout:        true
+  errorLogEnabled:  true
+  accessLogEnabled: true
+  errorStack:       true
+
+nacos:
+  server:
+    ip: $NACOS_SERVER_IP
+    port: $NACOS_SERVER_PORT
+  config:
+    dataId: ttpos-shop.yaml
+    group: DEFAULT_GROUP

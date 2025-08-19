@@ -1,0 +1,8 @@
+{
+  "doctype": "DocType",
+  "label": "Company",
+  "fieldtype": "Link",
+  "options": "Company",
+  "insert_after": "is_group",
+  "dt": "Customer Group"
+}

@@ -36,7 +36,7 @@ type ProductUnitService struct {
 
 func (s *ProductUnitService) GetProductUnitList() ([]*ProductUnit, error) {
 	var productUnits []*ProductUnit
-	if err := s.db.Find(&productUnits).Error; err != nil {
+	if err := s.db.Order("create_time asc").Find(&productUnits).Error; err != nil {
 		return nil, err
 	}
 	return productUnits, nil
@@ -47,6 +47,8 @@ func (s *ProductUnitService) ConvertProductUnit() error {
 	if err != nil {
 		return errors.WithMessage(err)
 	}
+	// v2.5增加排序字段
+	sort := 1
 	for _, productUnit := range productUnits {
 		fmt.Println(fmt.Sprintf("-------迁移product_unit: %+v", productUnit))
 		names := Names{}
@@ -71,6 +73,7 @@ func (s *ProductUnitService) ConvertProductUnit() error {
 				CreateTime: productUnit.CreateTime,
 				UpdateTime: productUnit.UpdateTime,
 			},
+			Sort:                  sort,
 			Name:                  productUnit.UnitName,
 			MultiLanguageNameUuid: uint64(id),
 			MultiLanguageName:     languageName,
@@ -79,6 +82,7 @@ func (s *ProductUnitService) ConvertProductUnit() error {
 		if err != nil {
 			return errors.WithMessage(err)
 		}
+		sort++
 	}
 	return nil
 }

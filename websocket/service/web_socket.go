@@ -134,7 +134,7 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		for range ticker.C {
 			if err := ws.WriteMessage(websocket.PingMessage, nil); err != nil {
-				fmt.Println("Error sending ping message:", err)
+				fmt.Printf("[%s] Error sending ping message: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
 				return
 			}
 		}
@@ -144,7 +144,7 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 	for {
 		_, msg, err := ws.ReadMessage()
 		if err != nil {
-			fmt.Println("Error reading message:", err, " DeviceId:", newConn.DeviceId)
+			fmt.Printf("[%s] Error reading message: %v DeviceId: %s\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err, newConn.DeviceId)
 			break
 		}
 		// 处理消息
@@ -251,7 +251,7 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) *ConnectionInf
 			"device_id":    claims.DeviceId,
 		},
 	})); err != nil {
-		fmt.Println("Error sending ping message:", err)
+		fmt.Printf("[%s] Error sending ping message: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
 		return nil
 	}
 	return &newConn
@@ -263,7 +263,7 @@ func handleMessage(ws *websocket.Conn, msg []byte, newConn *ConnectionInfo) {
 	clientMessage := ClientMessage{}
 	err := json.Unmarshal(fixJSONFormat(msg), &clientMessage)
 	if err != nil {
-		fmt.Printf("WebSocket JSON解析错误 [DeviceId: %s]: %v\n", newConn.DeviceId, err)
+		fmt.Printf("[%s] WebSocket JSON解析错误 [DeviceId: %s]: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), newConn.DeviceId, err)
 		return
 	}
 
@@ -298,10 +298,10 @@ func handleMessage(ws *websocket.Conn, msg []byte, newConn *ConnectionInfo) {
 			}
 		}
 		if !isOnline {
-			fmt.Println("Heartbeat message DeviceId - 离线: ", newConn.DeviceId)
+			fmt.Printf("[%s] Heartbeat message DeviceId - 离线: %s\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), newConn.DeviceId)
 			logger.Logger.Info(fmt.Sprintf("Heartbeat message DeviceId - 离线: %s", newConn.DeviceId))
 		} else {
-			fmt.Println("Heartbeat message DeviceId - 在线: ", newConn.DeviceId)
+			fmt.Printf("[%s] Heartbeat message DeviceId - 在线: %s\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), newConn.DeviceId)
 			logger.Logger.Info(fmt.Sprintf("Heartbeat message DeviceId - 在线: %s", newConn.DeviceId))
 		}
 		return
@@ -312,7 +312,7 @@ func handleMessage(ws *websocket.Conn, msg []byte, newConn *ConnectionInfo) {
 		repo := repository.NewWebSocketMsgRepository(database.Instance)
 		err := repo.DeleteByTypeAndId(msgId)
 		if err != nil {
-			fmt.Printf("Error updating message status: %v\n", err)
+			fmt.Printf("[%s] Error updating message status: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
 		}
 		return
 	}
@@ -348,7 +348,7 @@ func checkHeartbeatTimeout() {
 				}
 				// 检查是否超过2分钟没有心跳
 				if time.Since(lastHeartbeat) > 2*time.Minute {
-					fmt.Printf("断开超时2分钟没有心跳的连接: %s, 最后心跳时间: %s", conn.DeviceId, conn.LastHeartbeat)
+					fmt.Printf("[%s] 断开超时2分钟没有心跳的连接: %s, 最后心跳时间: %s\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), conn.DeviceId, conn.LastHeartbeat)
 					// 关闭连接
 					conn.ws.Close()
 					// 从列表中移除
@@ -386,10 +386,10 @@ func checkPrinterHeartbeatTimeout() {
 					if err := repo.UpdateBySourceDeviceSn(companyUuid, printer.ID, conn.DeviceId, map[string]interface{}{
 						"status": 0,
 					}); err != nil {
-						fmt.Printf("Error updating printer status to offline: %v\n", err)
+						fmt.Printf("[%s] Error updating printer status to offline: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
 					} else {
 						logger.Logger.Info(fmt.Sprintf("更新打印机状态为离线: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒", companyUuid, conn.DeviceId, printer.Uuid, printer.Name, printer.LastHeartbeatTime))
-						fmt.Printf("更新打印机状态为离线: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒\n", companyUuid, conn.DeviceId, printer.Uuid, printer.Name, printer.LastHeartbeatTime)
+						fmt.Printf("[%s] 更新打印机状态为离线: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), companyUuid, conn.DeviceId, printer.Uuid, printer.Name, printer.LastHeartbeatTime)
 					}
 				}
 			}
@@ -402,7 +402,7 @@ func reportUsbPrinter(newConn *ConnectionInfo, clientMessage ClientMessage) {
 	// 根据Data的类型进行不同的处理
 	dataJson, err := json.Marshal(clientMessage.Data)
 	if err != nil {
-		fmt.Println("Error marshaling array data:", err)
+		fmt.Printf("[%s] Error marshaling array data: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
 		return
 	}
 
@@ -410,7 +410,7 @@ func reportUsbPrinter(newConn *ConnectionInfo, clientMessage ClientMessage) {
 	usbPrinters := []UsbPrinter{}
 	err = json.Unmarshal(dataJson, &usbPrinters)
 	if err != nil {
-		fmt.Println("Error unmarshaling array data:", err)
+		fmt.Printf("[%s] Error unmarshaling array data: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
 		return
 	}
 
@@ -432,11 +432,11 @@ func reportUsbPrinter(newConn *ConnectionInfo, clientMessage ClientMessage) {
 				if err := repo.UpdateBySourceDeviceSn(newConn.CompanyUuid, usb.ID, newConn.DeviceId, map[string]interface{}{
 					"status": 0,
 				}); err != nil {
-					fmt.Printf("Error updating usb print: %v\n", err)
+					fmt.Printf("[%s] Error updating usb print: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
 				}
 				// 打印日志
 				logger.Logger.Info(fmt.Sprintf("更新打印机状态为离线: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒", newConn.CompanyUuid, newConn.DeviceId, usb.Uuid, usb.Name, usb.LastHeartbeatTime))
-				fmt.Printf("更新打印机状态为离线: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒\n", newConn.CompanyUuid, newConn.DeviceId, usb.Uuid, usb.Name, usb.LastHeartbeatTime)
+				fmt.Printf("[%s] 更新打印机状态为离线: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), newConn.CompanyUuid, newConn.DeviceId, usb.Uuid, usb.Name, usb.LastHeartbeatTime)
 			}
 		}
 	}
@@ -459,12 +459,12 @@ func reportUsbPrinter(newConn *ConnectionInfo, clientMessage ClientMessage) {
 					"last_heartbeat_time": uint(time.Now().Unix()),
 					"source_device_sn":    newConn.DeviceId,
 				}); err != nil {
-					fmt.Printf("Error updating usb print: %v\n", err)
+					fmt.Printf("[%s] Error updating usb print: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
 				}
 				// 打印日志
 				if dbUsb.Status == 0 {
 					logger.Logger.Info(fmt.Sprintf("更新打印机状态为在线: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒", newConn.CompanyUuid, newConn.DeviceId, dbUsb.Uuid, dbUsb.Name, uint(time.Now().Unix())))
-					fmt.Printf("更新打印机状态为在线: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒\n", newConn.CompanyUuid, newConn.DeviceId, dbUsb.Uuid, dbUsb.Name, uint(time.Now().Unix()))
+					fmt.Printf("[%s] 更新打印机状态为在线: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), newConn.CompanyUuid, newConn.DeviceId, dbUsb.Uuid, dbUsb.Name, uint(time.Now().Unix()))
 				}
 			} else {
 				uuid := utils.GetID()
@@ -481,7 +481,7 @@ func reportUsbPrinter(newConn *ConnectionInfo, clientMessage ClientMessage) {
 				// 获取打印机类型(只查询一次)
 				printerType := repository.NewPrinterTypeRepository(database.Instance).GetRecordByKey(newConn.CompanyUuid, printerTypeKey)
 				if printerType.ID == 0 {
-					fmt.Printf("Error: printer type XPRINTER_LAN not found\n")
+					fmt.Printf("[%s] Error: printer type XPRINTER_LAN not found\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"))
 					logger.Logger.Error(fmt.Sprintf("Error: printer type XPRINTER_LAN not found\n"))
 					return
 				}
@@ -500,11 +500,11 @@ func reportUsbPrinter(newConn *ConnectionInfo, clientMessage ClientMessage) {
 					Status:            1,
 					LastHeartbeatTime: uint(time.Now().Unix()),
 				}); err != nil {
-					fmt.Printf("Error creating usb print: %v\n", err)
+					fmt.Printf("[%s] Error creating usb print: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
 				}
 				// 打印日志
 				logger.Logger.Info(fmt.Sprintf("新增打印机: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒", newConn.CompanyUuid, newConn.DeviceId, uuid, usbPrinter.Name, uint(time.Now().Unix())))
-				fmt.Printf("新增打印机: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒\n", newConn.CompanyUuid, newConn.DeviceId, uuid, usbPrinter.Name, uint(time.Now().Unix()))
+				fmt.Printf("[%s] 新增打印机: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), newConn.CompanyUuid, newConn.DeviceId, uuid, usbPrinter.Name, uint(time.Now().Unix()))
 			}
 		}
 	}
@@ -515,7 +515,7 @@ func reportLanPrinter(newConn *ConnectionInfo, clientMessage ClientMessage) {
 	// 根据Data的类型进行不同的处理
 	dataJson, err := json.Marshal(clientMessage.Data)
 	if err != nil {
-		fmt.Println("Error marshaling array data:", err)
+		fmt.Printf("[%s] Error marshaling array data: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
 		return
 	}
 
@@ -523,7 +523,7 @@ func reportLanPrinter(newConn *ConnectionInfo, clientMessage ClientMessage) {
 	lanPrinters := []LanPrinter{}
 	err = json.Unmarshal(dataJson, &lanPrinters)
 	if err != nil {
-		fmt.Println("Error unmarshaling array data:", err)
+		fmt.Printf("[%s] Error unmarshaling array data: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
 		return
 	}
 
@@ -545,7 +545,7 @@ func reportLanPrinter(newConn *ConnectionInfo, clientMessage ClientMessage) {
 				if err := repo.Update(newConn.CompanyUuid, lanPrinter.ID, map[string]interface{}{
 					"status": 0,
 				}); err != nil {
-					fmt.Printf("Error updating usb print: %v\n", err)
+					fmt.Printf("[%s] Error updating usb print: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
 				}
 			}
 		}
@@ -566,7 +566,7 @@ func reportLanPrinter(newConn *ConnectionInfo, clientMessage ClientMessage) {
 					"status":           1,
 					"source_device_sn": newConn.DeviceId,
 				}); err != nil {
-					fmt.Printf("Error updating usb print: %v\n", err)
+					fmt.Printf("[%s] Error updating usb print: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
 					logger.Logger.Error(fmt.Sprintf("Error updating usb print: %v\n", err))
 				}
 			} else if lanPrinter.Ip != "" && lanPrinter.Port != 0 {
@@ -579,7 +579,7 @@ func reportLanPrinter(newConn *ConnectionInfo, clientMessage ClientMessage) {
 					UpdateTime:     uint(time.Now().Unix()),
 					Status:         1,
 				}); err != nil {
-					fmt.Printf("Error creating usb print: %v\n", err)
+					fmt.Printf("[%s] Error creating usb print: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
 					logger.Logger.Error(fmt.Sprintf("Error creating usb print: %v\n", err))
 				}
 			}
@@ -602,7 +602,7 @@ func PushClient(messageData MessageData) {
 			// 1. 先删后加 - 同一个类型，只保留最新的
 			err := repo.DeleteByTypeAndCompanyId(messageData.MessageType, messageData.CompanyUuid)
 			if err != nil {
-				fmt.Printf("Error deleting old messages: %v\n", err)
+				fmt.Printf("[%s] Error deleting old messages: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
 			}
 
 			// 2. 创建
@@ -618,7 +618,7 @@ func PushClient(messageData MessageData) {
 				UpdateTime:   uint(time.Now().Unix()),
 			})
 			if err != nil {
-				fmt.Printf("Error creating WebSocket message: %v\n", err)
+				fmt.Printf("[%s] Error creating WebSocket message: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
 				logger.Logger.Error(fmt.Sprintf("Error creating WebSocket message: %v\n", err))
 				continue
 			}
@@ -633,10 +633,10 @@ func PushClient(messageData MessageData) {
 
 			err = conn.ws.WriteMessage(websocket.TextMessage, getMsgData(message))
 			if err != nil {
-				fmt.Printf("Error sending message to client: %v\n", err)
+				fmt.Printf("[%s] Error sending message to client: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
 				logger.Logger.Error(fmt.Sprintf("Error sending message to client: %v\n", err))
 			} else {
-				fmt.Println("推送消息:", utils.StructToJson(map[string]interface{}{
+				fmt.Printf("[%s] 推送消息: %s\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), utils.StructToJson(map[string]interface{}{
 					"SourceClient": conn.SourceClient,
 					"CompanyUuid":  messageData.CompanyUuid,
 					"DeviceId":     conn.DeviceId,

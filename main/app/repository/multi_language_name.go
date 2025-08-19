@@ -21,8 +21,8 @@ type IMultiLanguageNameQueryRepo interface {
 	GetMultiLanguageNameByUuid(uuid uint64) (model.MultiLanguageName, error) // 获取多语言名称
 }
 
-// NewMultiLanguageNameRepoImpl 创建新的多语言名称仓库
-func NewMultiLanguageNameRepoImpl(db *gorm.DB) IMultiLanguageNameRepo {
+// NewMultiLanguageNameRepo 创建新的多语言名称仓库
+func NewMultiLanguageNameRepo(db *gorm.DB) IMultiLanguageNameRepo {
 	return NewMultiLanguageNameRepositoryImpl(db)
 }
 
@@ -65,8 +65,18 @@ func (r *MultiLanguageNameRepoImpl) CreateMultiLanguageName(multiLanguageName mo
 }
 
 // UpdateMultiLanguageName 更新多语言名称
-func (r *MultiLanguageNameRepoImpl) UpdateMultiLanguageName(id uint64, multiLanguageName model.MultiLanguageName) error {
-	return r.db.Model(&model.MultiLanguageName{}).Where("id = ?", id).Updates(&multiLanguageName).Error // 更新数据库中的多语言名称
+func (r *MultiLanguageNameRepoImpl) UpdateMultiLanguageName(uuid uint64, multiLanguageName model.MultiLanguageName) error {
+	return r.db.Model(&model.MultiLanguageName{}).Where("uuid = ?", uuid).Updates(map[string]interface{}{
+		"zh_name":    multiLanguageName.ZhName,
+		"th_name":    multiLanguageName.ThName,
+		"en_name":    multiLanguageName.EnName,
+		"zh_tw_name": multiLanguageName.ZhTwName,
+		"ja_name":    multiLanguageName.JaName,
+		"ko_name":    multiLanguageName.KoName,
+		"my_name":    multiLanguageName.MyName,
+		"tr_name":    multiLanguageName.TrName,
+		"sv_name":    multiLanguageName.SvName,
+	}).Error // 更新数据库中的多语言名称
 }
 
 // DeleteMultiLanguageName 删除多语言名称

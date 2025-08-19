@@ -10,6 +10,18 @@ const (
 	ProductPackageDeductStockTypeCooking = 1 // 下单减库存，送厨减库存
 )
 
+// 商品类型
+const (
+	ProductTypeProduct           = 0 // 商品
+	ProductTypePackage           = 1 // 套餐
+	ProductTypePackageSubProduct = 2 // 套餐子商品
+)
+
+// 库存相关常量
+const (
+	ProductBomInfiniteStock = 999999 // 无限库存（关闭库存检查时使用）
+)
+
 const (
 	ProductBomTypeSauce  = 0 // 小料
 	ProductBomTypeFlavor = 1 // 规格商品
@@ -87,6 +99,18 @@ const (
 
 )
 
+// 成本卡日志操作类型
+const (
+	ProductBomCardLogOperationTypeCreate = 1 // 创建
+	ProductBomCardLogOperationTypeDelete = 2 // 删除
+)
+
+// 成本卡关联类型
+const (
+	ProductBomCardRelatedTypeFlavor = 1 // 规格商品
+	ProductBomCardRelatedTypeSauce  = 2 // 小料
+)
+
 // 小料是否必选
 const (
 	ProductPackageSauceRequiredOn  = Yes // 是, 小料已必选
@@ -162,4 +186,10 @@ const (
 const (
 	SaleBillSettingServiceFeeBasePrice  = 0 // 商品惠后价
 	SaleBillSettingServiceFeeBaseAmount = 1 // 商品价格合计
+)
+
+// 数量计算方法
+const (
+	ProductNumTypeInteger = 0 // 整数
+	ProductNumTypeDecimal = 1 // 小数
 )

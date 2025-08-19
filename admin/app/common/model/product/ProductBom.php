@@ -178,11 +178,11 @@ class ProductBom extends BaseModel
     /**
      * 通过规格获取商品SKU列表
      */
-    public static function getProductBomList($params, $filterHavingMaterial = 0)
+    public static function getProductBomList($params, $filterHavingMaterial = 0, $filterHavingPackage = 0)
     {
         // 商品列表获取条件
         $params = array_merge([
-            'material_type' => 0, // 搜索商品类型: 10成品 20材料
+            'material_type' => 0, // 搜索商品类型: 10成品 20材料 30套餐
             'product_status' => 0, // 搜索商品状态: 10开启 20关闭
             'keyword' => '', // 搜索商品名称/条码
             'page' => 1, // 当前页
@@ -194,7 +194,7 @@ class ProductBom extends BaseModel
         // 规格
         $productBomSql = self::alias('bom')
             ->field(implode(',', [
-                '10 as type',
+                'IF(p.product_type = 1, 30, 10) as type',
                 'bom.create_time',
                 'file.file_type',
                 'file.file_url',
@@ -223,8 +223,8 @@ class ProductBom extends BaseModel
             ->leftJoin('file', 'p.image_file_uuid = file.uuid')
             ->leftJoin('product_category c1', 'p.category_uuid = c1.uuid')
             ->leftJoin('product_category c2', 'c1.parent_uuid = c2.uuid')
-            ->leftJoin('related_material rm', 'bom.uuid = rm.related_uuid')
-            ->where('bom.product_flavor_uuid', '>', 0)
+            ->leftJoin('related_material rm', 'bom.uuid = rm.related_uuid AND rm.delete_time = 0')
+            ->where('bom.product_sauce_uuid', '=', 0)
             ->group('bom.uuid')
             ->buildSql();
 
@@ -330,6 +330,16 @@ class ProductBom extends BaseModel
         // 过滤有材料的规格
         if ($filterHavingMaterial) {
             $where = "(material_count = 0)";
+            if (!$whereSql) {
+                $whereSql .= " WHERE {$where}";
+            } else {
+                $whereSql .= " AND {$where}";
+            }
+        }
+
+        // 过滤套餐
+        if ($filterHavingPackage) {
+            $where = "(type != 30)";
             if (!$whereSql) {
                 $whereSql .= " WHERE {$where}";
             } else {
@@ -445,6 +455,9 @@ class ProductBom extends BaseModel
                 'history_purchase_num' => floatval($historyPurchaseNum),
                 'history_loss_num' => floatval($historyLossNum),
                 'barcode' => $row['barcode_value'],
+                'category_id' => $row['category_uuid'],
+                'category_parent_id' => $row['category_parent_uuid'],
+                'product_name_text' => extractLanguage($row['product_name']),
             ];
         }
 

@@ -1,6 +1,4 @@
 ---
-description: 
-globs: 
 alwaysApply: true
 ---
 #关于目录
@@ -41,8 +39,8 @@ main/                   # 主服务
 ### 2. 模块划分
 - **main/**: 主要业务服务（收银、桌台、订单等）
 - **websocket/**: WebSocket服务（实时通信）
-- **takeout/**: 外送服务（gRPC微服务）
 - **redis-proxy/**: Redis代理服务
+- **ttpos-bmp/**: 业务中台模块 通过nacos 做服务发现，提供给 main模块调用
 
 ## 🎯 命名规范
 

@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"github.com/jinzhu/copier"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -14,6 +13,8 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/utils"
+
+	"github.com/jinzhu/copier"
 )
 
 // IH5Srv 定义H5服务接口
@@ -98,6 +99,7 @@ func (s *h5Srv) GetBaseInfo(ctx context.Context, deskUuid uint64) (*resp.H5BaseI
 			IsOpenMember:  companySetting.IsOpenMember,
 			IsOpenBuffet:  companySetting.IsOpenBuffet,
 			IsOpenH5Order: companySetting.IsOpenH5Order,
+			IsOpenRider:   companySetting.IsOpenRider(),
 		},
 		H5:         h5Setting,
 		Buffet:     buffetSetting,

@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/utils"
 )
 
 // invoiceCodesoftTemplate Codesoft发票打印模板
@@ -29,11 +30,13 @@ func NewInvoiceCodesoftTemplate(
 func (t *invoiceCodesoftTemplate) GetPrintContent(
 	settingPrinterInfo settingResp.PrinterInfo,
 	printerType string,
-	temp int,
+	tmpInfo model.PrinterTemplate,
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
 	isCashierPrinter bool,
 ) string {
+	temp := tmpInfo.Template
+	isShowSku := tmpInfo.IsShowSku
 
 	/* *
 	 * 模版2
@@ -42,7 +45,7 @@ func (t *invoiceCodesoftTemplate) GetPrintContent(
 		return NewStatementOrderCodesoftTemplate(t.base).GetPrintContent(
 			settingPrinterInfo,
 			constant.PrinterTemplateInvoice,
-			3,
+			utils.IfInt(isShowSku == 0, 4, 3),
 			saleBill,
 			saleOrder,
 		)

@@ -12,6 +12,8 @@ type BusinessDataPrinterReq struct {
 	QueryEndTime   uint `json:"query_end_time"`   // 查询结束时间戳
 	CategoryType   int  `json:"category_type"`    // 分类类型 (-1 未选择, 1 按一级分类, 2 按二级分类)
 	NotQueryFree   bool `json:"not_query_free"`   // 是否不查询免费使用场景
+	SortType       int  `json:"sort_type"`        // 排序类型 0=默认、 1=按销售数量、 2=按原销售额
+	SortDirection  int  `json:"sort_direction"`   // 排序方向 0=默认、 1=升序、 2=降序
 }
 
 // GetParam 获取参数
@@ -46,18 +48,22 @@ func (r *BusinessDataPrinterReq) GetParam(timezone string, openingHours string) 
 		QueryEndTime:   uint(queryEndTime),
 		CategoryType:   r.CategoryType,
 		NotQueryFree:   r.NotQueryFree,
+		SortType:       r.SortType,
+		SortDirection:  r.SortDirection,
 	}
 }
 
 // BusinessDataCountReq 营业数据统计请求
 type BusinessDataCountReq struct {
-	TimeType       int    `form:"time_type"`        // 时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月, 5 营业时间)
-	QueryStartTime int64  `form:"query_start_time"` // 查询开始时间戳
-	QueryEndTime   int64  `form:"query_end_time"`   // 查询结束时间戳
-	CategoryType   int    `form:"category_type"`    // 分类类型 (-1 未选择, 1 按一级分类, 2 按二级分类)
-	DutyNo         string `form:"duty_no"`          // 班次编号
-	NotQueryFree   bool   `form:"not_query_free"`   // 是否不查询免费使用场景
-	StaffUuid      uint64 `form:"staff_uuid"`       // 操作员UUID
+	TimeType       int    `form:"time_type" json:"time_type"`               // 时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月, 5 营业时间)
+	QueryStartTime int64  `form:"query_start_time" json:"query_start_time"` // 查询开始时间戳
+	QueryEndTime   int64  `form:"query_end_time" json:"query_end_time"`     // 查询结束时间戳
+	CategoryType   int    `form:"category_type" json:"category_type"`       // 分类类型 (-1 未选择, 1 按一级分类, 2 按二级分类)
+	DutyNo         string `form:"duty_no" json:"duty_no"`                   // 班次编号
+	NotQueryFree   bool   `form:"not_query_free" json:"not_query_free"`     // 是否不查询免费使用场景
+	StaffUuid      uint64 `form:"staff_uuid" json:"staff_uuid"`             // 操作员UUID
+	SortType       int    `form:"sort_type" json:"sort_type"`               // 排序类型 0=默认、 1=按销售数量、 2=按原销售额
+	SortDirection  int    `form:"sort_direction" json:"sort_direction"`     // 排序方向 0=默认、 1=升序、 2=降序
 }
 
 // GetParam 获取参数
@@ -92,24 +98,26 @@ func (r *BusinessDataCountReq) GetParam(timezone string, openingHours string) Bu
 		CategoryType:   r.CategoryType,
 		DutyNo:         r.DutyNo,
 		NotQueryFree:   r.NotQueryFree,
+		SortType:       r.SortType,
+		SortDirection:  r.SortDirection,
 	}
 }
 
 // BusinessDataRankProductReq 营业数据排行请求
 type BusinessDataRankProductReq struct {
-	QueryStartTime int64 `form:"query_start_time"` // 查询开始时间戳
-	QueryEndTime   int64 `form:"query_end_time"`   // 查询结束时间戳
-	RankType       int   `form:"rank_type"`        // 排行类型 (1 按销量, 2 按销售额)
+	QueryStartTime int64 `form:"query_start_time" json:"query_start_time"` // 查询开始时间戳
+	QueryEndTime   int64 `form:"query_end_time" json:"query_end_time"`     // 查询结束时间戳
+	RankType       int   `form:"rank_type" json:"rank_type"`               // 排行类型 (1 按销量, 2 按销售额)
 }
 
 // BusinessDataCountProductSalesReq 营业数据商品销售统计列表请求
 type BusinessDataCountProductSalesReq struct {
 	dto.PageReq           // 分页参数
-	ProductName    string `form:"product_name"`     // 商品名称
-	QueryStartTime int64  `form:"query_start_time"` // 查询开始时间戳
-	QueryEndTime   int64  `form:"query_end_time"`   // 查询结束时间戳
-	AreaUuid       uint64 `form:"area_uuid"`        // 区域UUID, -1=全都
-	CategoryUuid   uint64 `form:"category_uuid"`    // 分类UUID, -1=全都
-	SortType       int    `form:"sort_type"`        // 排序类型 0=默认、 1=按销售数量、 2=按原销售额
-	SortDirection  int    `form:"sort_direction"`   // 排序方向 0=默认、 1=升序、 2=降序
+	ProductName    string `form:"product_name" json:"product_name"`         // 商品名称
+	QueryStartTime int64  `form:"query_start_time" json:"query_start_time"` // 查询开始时间戳
+	QueryEndTime   int64  `form:"query_end_time" json:"query_end_time"`     // 查询结束时间戳
+	AreaUuid       uint64 `form:"area_uuid" json:"area_uuid"`               // 区域UUID, -1=全都
+	CategoryUuid   uint64 `form:"category_uuid" json:"category_uuid"`       // 分类UUID, -1=全都
+	SortType       int    `form:"sort_type" json:"sort_type"`               // 排序类型 0=默认、 1=按销售数量、 2=按原销售额
+	SortDirection  int    `form:"sort_direction" json:"sort_direction"`     // 排序方向 0=默认、 1=升序、 2=降序
 }

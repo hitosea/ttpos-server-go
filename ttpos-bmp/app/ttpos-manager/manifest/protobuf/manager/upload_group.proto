@@ -1,0 +1,21 @@
+// ==========================================================================
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
+// ==========================================================================
+
+syntax = "proto3";
+
+package manager;
+
+option go_package = "ttpos-bmp/app/ttpos-manager/api/manager";
+
+
+
+message UploadGroup {
+    uint32 GroupId    = 1; // 自增ID
+    string GroupType  = 2; // 文件类型
+    string GroupName  = 3; // 分类名称
+    uint32 Sort       = 4; // 分类排序(数字越小越靠前)
+    int32  CreateTime = 5; // 创建时间（时间戳）
+    int32  UpdateTime = 6; // 更新时间（时间戳）
+    int32  DeleteTime = 7; // 删除时间（时间戳）
+}

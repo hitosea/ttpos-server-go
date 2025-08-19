@@ -309,6 +309,11 @@
     <div class="common-form">{{ $t('合计') }}</div>
     <el-table size="small" :data="orderData" border style="width: 100%; margin-bottom: 16px" v-loading="loading">
       <el-table-column prop="total_order_num" :label="$t('所有订单数')"></el-table-column>
+      <el-table-column prop="total_cancel_order_num" :label="$t('取消订单数')">
+        <template #default="scope">
+          {{ scope.row.total_cancel_order_num || 0 }}
+        </template>
+      </el-table-column>
       <el-table-column prop="total_table_num" :label="$t('桌数')"></el-table-column>
       <el-table-column prop="total_people_num" :label="$t('人数')"></el-table-column>
       <el-table-column :label="$t('最小/最大订单金额')">
@@ -319,6 +324,13 @@
           /
           <main-currency>
             {{ this.$formatPrice(scope.row.max_order_price) }}
+          </main-currency>
+        </template>
+      </el-table-column>
+      <el-table-column prop="total_cancel_order_amount" :label="$t('取消订单金额')">
+        <template #default="scope">
+          <main-currency>
+            {{ this.$formatPrice(scope.row.total_cancel_order_amount || 0) }}
           </main-currency>
         </template>
       </el-table-column>

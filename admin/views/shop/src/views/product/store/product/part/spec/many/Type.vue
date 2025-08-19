@@ -1,93 +1,35 @@
 <template>
-  <!--
-    	
-    	时间：2019-10-26
-    	描述：商品管理-商品编辑-规格/库存-多规格-类别
-    -->
-
-  <!--规格属性-->
-
   <!--添加规格-->
   <el-button v-if="!form.isSpecLocked" size="small" type="primary" class="el-icon-circle-plus" @click="onToggleAddGroupForm">{{ $t('添加规格') }}+</el-button>
 </template>
 
-<script>
+<script setup>
+  import { inject } from 'vue';
   import { languageStore } from '@/store/model/language.js';
-  const languageData = JSON.stringify(languageStore().getLanguageData().languageData.value);
-  export default {
-    data() {
-      return {
-        /*显示添加规格组按钮*/
-        showAddGroupBtn: true,
-        /*显示添加规格组表单*/
-        showAddGroupForm: false,
-        /*新增规格组值*/
-        addGroupFrom: {
-          specName: '',
-          specValue: '',
-        },
-        groupLoading: false,
-      };
-    },
-    inject: ['form'],
-    created() {
-      /*获取列表*/
-    },
-    methods: {
-      /*显示/隐藏添加规则组 */
-      onToggleAddGroupForm: function () {
-        let self = this;
-        if (!Array.isArray(self.form.model.sku)) {
-          self.form.model.sku = [];
-        }
-        self.form.model.sku.push({
-          spec_name: JSON.parse(languageData),
-          product_price: null,
-          stock_num: null,
-          barcode: '', //条形码
-          purchase_price: null, //单价
-          material: [], //材料
-          spec_id: null, //材料库存
-          barcodeUniqueness:true, //条形码是否唯一
-        });
-        self.form.many_select_list.push([]);
-      },
 
-      /*删除规格组事件*/
-      onDeleteGroup: function (index) {
-        var self = this;
-        ElMessageBox.confirm('删除后不可恢复，确认删除吗?', '提示', {
-          type: 'warning',
-        }).then(() => {
-          // 删除指定规则组
-          self.form.model.spec_many.spec_attr.splice(index, 1);
-          // 构建规格组合列表
-          self.buildSkulist();
-        });
-      },
+  // 获取语言数据
+  const languageData = JSON.stringify(languageStore().getLanguageKeyForm());
 
-      /*删除规格值值事件*/
-      onDeleteValue: function (index, itemIndex) {
-        let self = this;
+  // 注入form
+  const form = inject('form', {});
 
-        if (self.form.isSpecLocked) {
-          this.$ElMessage({
-            message: '本商品正在参加活动，不能删除规格！',
-            type: 'warning',
-          });
-          return;
-        }
-
-        ElMessageBox.confirm('删除后不可恢复，确认删除吗?', '提示', {
-          type: 'warning',
-        }).then(() => {
-          // 删除指定规则组
-          self.form.model.spec_many.spec_attr[index].spec_items.splice(itemIndex, 1);
-          // 构建规格组合列表
-          self.buildSkulist();
-        });
-      },
-    },
+  // 方法定义
+  /*显示/隐藏添加规则组 */
+  const onToggleAddGroupForm = () => {
+    if (!Array.isArray(form.model.sku)) {
+      form.model.sku = [];
+    }
+    form.model.sku.push({
+      spec_name: JSON.parse(languageData),
+      product_price: null,
+      stock_num: null,
+      barcode: '', //条形码
+      purchase_price: null, //单价
+      material: [], //材料
+      spec_id: null, //材料库存
+      barcodeUniqueness: true, //条形码是否唯一
+    });
+    form.many_select_list.push([]);
   };
 </script>
 

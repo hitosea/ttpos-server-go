@@ -18,9 +18,9 @@ type statisticsHandler struct {
 	businessSrv service.IBusinessSrv
 }
 
-// CountBusiness 统计营业数据
-// @Summary 统计营业数据
-// @Description 统计营业数据
+// CountBusiness 统计营业数据，移动管理端首页-店内概况
+// @Summary 统计营业数据，移动管理端首页-店内概况
+// @Description 统计营业数据，移动管理端首页-店内概况
 // @Tags 商家端.营业数据
 // @Accept json
 // @Produce json
@@ -118,9 +118,9 @@ func (h *statisticsHandler) CountProduct(c *gin.Context) {
 	helper.Success(c, productData)
 }
 
-// CountArea 统计区域
-// @Summary 统计区域
-// @Description 统计区域
+// CountArea 统计区域，移动管理端首页-区域数据
+// @Summary 统计区域，移动管理端首页-区域数据
+// @Description 统计区域，移动管理端首页-区域数据
 // @Tags 商家端.营业数据
 // @Accept json
 // @Produce json
@@ -143,9 +143,9 @@ func (h *statisticsHandler) CountArea(c *gin.Context) {
 	helper.Success(c, areaData)
 }
 
-// CountProductRank 统计商品排行
-// @Summary 统计商品排行
-// @Description 统计商品排行
+// CountProductRank 统计商品排行，移动管理端首页-销量、销售额排行
+// @Summary 统计商品排行，移动管理端首页-销量、销售额排行
+// @Description 统计商品排行，移动管理端首页-销量、销售额排行
 // @Tags 商家端.营业数据
 // @Accept json
 // @Produce json
@@ -309,12 +309,12 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/statistics/business", wrapper.CountBusiness)                     // 统计营业数据
+		privateApi.GET("/statistics/business", wrapper.CountBusiness)                     // 统计营业数据，移动管理端首页-店内概况
 		privateApi.GET("/statistics/payment_method", wrapper.CountPaymentMethod)          // 统计支付方式
 		privateApi.GET("/statistics/product_category", wrapper.CountProductCategory)      // 统计商品分类
 		privateApi.GET("/statistics/product", wrapper.CountProduct)                       // 统计商品
-		privateApi.GET("/statistics/area", wrapper.CountArea)                             // 统计区域
-		privateApi.GET("/statistics/product_rank", wrapper.CountProductRank)              // 统计商品排行
+		privateApi.GET("/statistics/area", wrapper.CountArea)                             // 统计区域，移动管理端首页-区域数据
+		privateApi.GET("/statistics/product_rank", wrapper.CountProductRank)              // 统计商品排行，移动管理端首页-销量、销售额排行
 		privateApi.GET("/statistics/product_sales", wrapper.CountProductSales)            // 统计商品销售
 		privateApi.GET("/statistics/7days", wrapper.Count7Days)                           // 统计7天
 		privateApi.GET("/statistics/export", wrapper.CountExport)                         // 统计导出

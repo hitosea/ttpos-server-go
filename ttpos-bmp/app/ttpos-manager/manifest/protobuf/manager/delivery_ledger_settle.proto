@@ -1,0 +1,24 @@
+// ==========================================================================
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
+// ==========================================================================
+
+syntax = "proto3";
+
+package manager;
+
+option go_package = "ttpos-bmp/app/ttpos-manager/api/manager";
+
+
+
+message DeliveryLedgerSettle {
+    uint32 Id                = 1;  //
+    uint64 Uuid              = 2;  // 唯一标识
+    uint64 CompanyUuid       = 3;  // 公司Uuid
+    string Month             = 4;  // 月份
+    int32  OrderCount        = 5;  // 订单数
+    int32  DeliveryFeeAmount = 6;  // 总配送费
+    string ChannelData       = 7;  // 渠道数据
+    int32  CreateTime        = 8;  // 创建时间(时间戳)
+    int32  UpdateTime        = 9;  // 更新时间(时间戳)
+    int32  DeleteTime        = 10; // 删除时间(时间戳)
+}

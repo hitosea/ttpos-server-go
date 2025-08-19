@@ -132,6 +132,12 @@ definitions:
         items:
           $ref: '#/definitions/business_data_resp.Percentage'
         type: array
+      total_cancel_order_amount:
+        description: 总取消订单金额
+        type: number
+      total_cancel_order_num:
+        description: 总取消订单数
+        type: integer
       total_discount_money:
         description: 总优惠折扣
         type: number
@@ -689,6 +695,182 @@ definitions:
       message:
         type: string
     type: object
+  material_resp.Material:
+    properties:
+      category_uuid:
+        description: 分类UUID
+        type: integer
+      cost_unit_name:
+        description: 成本单位名称
+        type: string
+      image:
+        description: 图片
+        type: string
+      name:
+        description: 物品名称
+        type: string
+      purchase_unit_name:
+        description: 采购单位名称
+        type: string
+      status:
+        description: 状态 1-启用 2-停用
+        type: integer
+      unit_list:
+        description: 单位列表
+        items:
+          $ref: '#/definitions/material_resp.MaterialUnit'
+        type: array
+      unit_name:
+        description: 基准单位名称
+        type: string
+      uuid:
+        description: 物品UUID
+        type: integer
+    type: object
+  material_resp.MaterialCategory:
+    properties:
+      name:
+        description: 分类名称
+        type: string
+      uuid:
+        description: 分类UUID
+        type: integer
+    type: object
+  material_resp.MaterialCategoryListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/material_resp.MaterialCategory'
+        type: array
+    type: object
+  material_resp.MaterialDetailResp:
+    properties:
+      barcode_value:
+        description: 条形码值
+        type: string
+      category_name:
+        description: 分类名称
+        type: string
+      category_uuid:
+        description: 分类UUID
+        type: integer
+      code:
+        description: 物品编码
+        type: string
+      cost_unit_name:
+        description: 成本单位名称
+        type: string
+      cost_unit_uuid:
+        description: 成本单位UUID
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物品名称
+      purchase_unit_name:
+        description: 采购单位名称
+        type: string
+      purchase_unit_uuid:
+        description: 采购单位UUID
+        type: integer
+      status:
+        description: 状态 1-启用 0-停用
+        type: integer
+      unit_list:
+        allOf:
+        - $ref: '#/definitions/material_resp.MaterialUnitListResp'
+        description: 单位列表
+      unit_name:
+        description: 单位名称
+        type: string
+      uuid:
+        description: 物品UUID
+        type: integer
+      valuation:
+        description: 估值率
+        type: number
+    type: object
+  material_resp.MaterialInfo:
+    properties:
+      code:
+        description: 材料编码
+        type: string
+      name:
+        description: 材料名称
+        type: string
+      uuid:
+        description: 材料UUID
+        type: integer
+    type: object
+  material_resp.MaterialListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/material_resp.Material'
+        type: array
+    type: object
+  material_resp.MaterialListWithPaginationResp:
+    properties:
+      list:
+        $ref: '#/definitions/material_resp.MaterialListResp'
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
+  material_resp.MaterialUnit:
+    properties:
+      conversion_rate:
+        description: 转换率
+        type: number
+      name:
+        description: 单位名称
+        type: string
+      uuid:
+        description: 单位UUID
+        type: integer
+    type: object
+  material_resp.MaterialUnitListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/material_resp.MaterialUnit'
+        type: array
+    type: object
+  material_resp.ProductBomCardDetailResp:
+    properties:
+      materials:
+        description: 材料列表
+        items:
+          $ref: '#/definitions/material_resp.ProductBomCardMaterial'
+        type: array
+      name:
+        description: 成本卡名称
+        type: string
+      num:
+        description: 加工份数
+        type: number
+      uuid:
+        description: 成本卡UUID
+        type: integer
+    type: object
+  material_resp.ProductBomCardMaterial:
+    properties:
+      material:
+        allOf:
+        - $ref: '#/definitions/material_resp.MaterialInfo'
+        description: 材料信息
+      num:
+        description: 净耗量
+        type: number
+      unit:
+        allOf:
+        - $ref: '#/definitions/material_resp.MaterialUnit'
+        description: 成本单位
+      unit_list:
+        description: 单位列表, 用于成本卡编辑选择单位
+        items:
+          $ref: '#/definitions/material_resp.MaterialUnit'
+        type: array
+    type: object
   member_req.CallbackReq:
     properties:
       jobStatusAfter:
@@ -1241,6 +1423,19 @@ definitions:
         description: 会员UUID
         type: integer
     type: object
+  product_resp.PackageProductDetail:
+    properties:
+      can_edit:
+        description: 是否可以编辑
+        type: boolean
+      detail:
+        allOf:
+        - $ref: '#/definitions/product_resp.Product'
+        description: 商品详情
+      num:
+        description: 商品数量，分组中item的数量
+        type: number
+    type: object
   product_resp.Product:
     properties:
       attribute_groups:
@@ -1276,9 +1471,16 @@ definitions:
       num_type:
         description: 商品数量计算方法 0-整数 1-小数
         type: integer
+      package_group_list:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductPackageGroupList'
+        description: 套餐分组
       price:
         description: 商品价格
         type: number
+      product_type:
+        description: 商品类型 0-商品 1-套餐
+        type: integer
       sauces:
         allOf:
         - $ref: '#/definitions/product_resp.ProductSauceList'
@@ -1292,6 +1494,23 @@ definitions:
         description: 商品单位
       uuid:
         description: 商品UUID
+        type: integer
+    type: object
+  product_resp.ProductAttribute:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性名称
+      product_packages:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductAttributeProductPackageList'
+        description: 关联商品包列表
+      sort:
+        description: 商品属性排序
+        type: integer
+      uuid:
+        description: 商品属性UUID
         type: integer
     type: object
   product_resp.ProductAttributeGroup:
@@ -1314,11 +1533,80 @@ definitions:
         description: 商品属性组UUID
         type: integer
     type: object
+  product_resp.ProductAttributeGroupAttributeItem:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性名称
+      uuid:
+        description: 商品属性UUID
+        type: integer
+    type: object
+  product_resp.ProductAttributeGroupDetail:
+    properties:
+      attributes:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductAttributes'
+        description: 商品属性值列表
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性分组名称
+      uuid:
+        description: 商品属性分组UUID
+        type: integer
+    type: object
+  product_resp.ProductAttributeGroupItem:
+    properties:
+      attribute_name:
+        description: 商品属性名称
+        type: string
+      attributes:
+        description: 属性值
+        items:
+          $ref: '#/definitions/product_resp.ProductAttributeGroupAttributeItem'
+        type: array
+      name:
+        description: 商品属性分组名称
+        type: string
+      sort:
+        description: 商品属性分组排序
+        type: integer
+      uuid:
+        description: 商品属性分组UUID
+        type: integer
+    type: object
   product_resp.ProductAttributeGroupList:
     properties:
       list:
         items:
           $ref: '#/definitions/product_resp.ProductAttributeGroup'
+        type: array
+    type: object
+  product_resp.ProductAttributeGroupListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductAttributeGroupItem'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
+  product_resp.ProductAttributeProductPackage:
+    properties:
+      name:
+        description: 商品包名称
+        type: string
+      uuid:
+        description: 商品包UUID
+        type: integer
+    type: object
+  product_resp.ProductAttributeProductPackageList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductAttributeProductPackage'
         type: array
     type: object
   product_resp.ProductAttributeValue:
@@ -1339,6 +1627,13 @@ definitions:
       list:
         items:
           $ref: '#/definitions/product_resp.ProductAttributeValue'
+        type: array
+    type: object
+  product_resp.ProductAttributes:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductAttribute'
         type: array
     type: object
   product_resp.ProductCategory:
@@ -1371,6 +1666,107 @@ definitions:
           $ref: '#/definitions/product_resp.ProductCategory'
         type: array
     type: object
+  product_resp.ProductDetailResp:
+    properties:
+      attribute_groups:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductAttributeGroupList'
+        description: 商品属性组列表
+      category_name:
+        description: 商品分类名称
+        type: string
+      category_uuid:
+        description: 商品分类UUID
+        type: integer
+      deduct_stock_type:
+        description: 库存计算方式,0-结账减库存 1-下单减库存
+        type: integer
+      flavors:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductFlavorList'
+        description: 商品规格列表
+      image:
+        description: 商品图片。
+        type: string
+      image_file_uuid:
+        description: 商品图片UUID
+        type: integer
+      is_show_assistant:
+        description: 是否显示在点餐助手 1-显示 0-不显示
+        type: boolean
+      is_show_cashier:
+        description: 是否显示在收银端 1-显示 0-不显示
+        type: boolean
+      is_show_delivery:
+        description: 是否显示在外送 1-显示 0-不显示
+        type: boolean
+      is_show_h5:
+        description: 是否显示在h5 1-显示 0-不显示
+        type: boolean
+      is_show_kitchen:
+        description: 是否显示在厨显端显示：1-显示；0-不显示
+        type: boolean
+      is_show_tablet:
+        description: 是否显示在平板端 1-显示 0-不显示
+        type: boolean
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称
+      num_type:
+        description: 数量计算方法 0-整数 1-小数
+        type: integer
+      open_discount:
+        description: 是否开启会员折扣 1-开启 0-关闭
+        type: boolean
+      open_overall_discount:
+        description: 整单折扣 1-开启 0-关闭
+        type: boolean
+      package_sub_product_groups:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductPackageSubProductGroupList'
+        description: 套餐子商品分组列表
+      price:
+        description: 商品价格,套餐的价格
+        type: number
+      product_type:
+        description: 商品类型 0-商品 1-套餐
+        type: integer
+      rating_tax_name:
+        description: 堂食税类名称
+        type: string
+      rating_tax_uuid:
+        description: 堂食税类UUID
+        type: integer
+      sauce_max_selection:
+        description: 小料最大选择数量
+        type: integer
+      sauce_required:
+        description: 是否必选小料 1-是 0-否
+        type: boolean
+      sauces:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductSauceList'
+        description: 商品小料列表
+      status:
+        description: 商品状态 0-下架 1-上架
+        type: integer
+      takeout_tax_name:
+        description: 外带税类名称
+        type: string
+      takeout_tax_uuid:
+        description: 外带税类UUID
+        type: integer
+      unit_name:
+        description: 商品单位名称
+        type: string
+      unit_uuid:
+        description: 商品单位UUID
+        type: integer
+      uuid:
+        description: 商品UUID
+        type: integer
+    type: object
   product_resp.ProductFlavor:
     properties:
       barcode:
@@ -1385,6 +1781,38 @@ definitions:
         type: number
       stock_num:
         description: 商品库存数量
+        type: number
+      uuid:
+        description: 商品规格UUID
+        type: integer
+    type: object
+  product_resp.ProductFlavorDetailResp:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品规格名称
+      product_package_count:
+        description: 关联商品包数量
+        type: integer
+      product_package_list:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductFlavorProductPackageListResp'
+        description: 关联商品包列表
+      uuid:
+        description: 商品规格UUID
+        type: integer
+    type: object
+  product_resp.ProductFlavorItemResp:
+    properties:
+      name:
+        description: 商品规格名称
+        type: string
+      product_package_count:
+        description: 关联商品包数量
+        type: integer
+      sort:
+        description: 商品规格排序
         type: integer
       uuid:
         description: 商品规格UUID
@@ -1397,6 +1825,221 @@ definitions:
           $ref: '#/definitions/product_resp.ProductFlavor'
         type: array
     type: object
+  product_resp.ProductFlavorListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductFlavorItemResp'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
+  product_resp.ProductFlavorProductPackageListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductFlavorProductPackageResp'
+        type: array
+    type: object
+  product_resp.ProductFlavorProductPackageResp:
+    properties:
+      bom_uuid:
+        description: 商品BOM UUID
+        type: integer
+      name:
+        description: 商品包名称
+        type: string
+      price:
+        description: 商品包价格
+        type: number
+      uuid:
+        description: 商品包UUID
+        type: integer
+    type: object
+  product_resp.ProductImportListItem:
+    properties:
+      barcode:
+        description: 商品条码
+        type: string
+      barcode_is_exist:
+        description: 条形码是否存在，存在则不保存
+        type: boolean
+      category_id:
+        description: 分类ID
+        type: integer
+      category_name:
+        description: 分类名称
+        type: string
+      deduct_stock_type:
+        description: 库存计算方式, 2-付款减库存 1-下单减库存
+        type: integer
+      is_enable_grade:
+        description: 是否开启会员折扣(1开启 0关闭)
+        type: integer
+      is_show_assistant:
+        description: 是否显示在点餐助手 1-显示 2-不显示
+        type: boolean
+      is_show_cashier:
+        description: 是否显示在收银端 1-显示 2-不显示
+        type: boolean
+      is_show_delivery:
+        description: 是否显示在外送 1-显示 2-不显示
+        type: boolean
+      is_show_h5:
+        description: 是否显示在h5 1-显示 2-不显示
+        type: boolean
+      is_show_kitchen:
+        description: 是否显示在送厨端 1-显示 2-不显示
+        type: boolean
+      is_show_tablet:
+        description: 是否显示在平板端 1-显示 2-不显示
+        type: boolean
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称
+      num_type:
+        description: 数量计算方法, 1-整数 2-小数
+        type: integer
+      open_overall_discount:
+        description: 整单折扣(1开启 0关闭)
+        type: integer
+      product_name_is_exist:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称是否存在，对应的key不为空则表示存在
+      product_price:
+        description: 商品价格
+        type: string
+      product_rating_tax_type:
+        description: 堂食税类
+        type: string
+      product_status:
+        description: 商品状态, 1-上架 0-下架
+        type: integer
+      product_takeout_tax_type:
+        description: 外带税类
+        type: string
+      product_unit:
+        description: 商品单位
+        type: string
+      ratin_tax_id:
+        description: 堂食税类ID
+        type: integer
+      row:
+        description: excel表的行编号
+        type: integer
+      shows:
+        description: 显示：123456
+        type: string
+      sku_id:
+        description: 规格ID
+        type: integer
+      spec_name:
+        description: 规格名称
+        type: string
+      takeout_tax_id:
+        description: 外带税类ID
+        type: integer
+      unit_id:
+        description: 单位ID
+        type: integer
+    required:
+    - barcode
+    - category_name
+    - deduct_stock_type
+    - is_enable_grade
+    - locale_name
+    - num_type
+    - open_overall_discount
+    - product_price
+    - product_rating_tax_type
+    - product_status
+    - product_takeout_tax_type
+    - product_unit
+    - row
+    - shows
+    - spec_name
+    type: object
+  product_resp.ProductImportResp:
+    properties:
+      category_list:
+        description: 分类列表
+        items:
+          $ref: '#/definitions/product_resp.ProductCategory'
+        type: array
+      list:
+        description: 商品列表
+        items:
+          $ref: '#/definitions/product_resp.ProductImportListItem'
+        type: array
+      sku_list:
+        description: 规格列表
+        items:
+          $ref: '#/definitions/product_resp.ProductImportSkuListItem'
+        type: array
+      tax_list:
+        description: 税类列表
+        items:
+          $ref: '#/definitions/product_resp.ProductImportTaxListItem'
+        type: array
+      unit_list:
+        description: 单位列表
+        items:
+          $ref: '#/definitions/product_resp.ProductImportUnitListItem'
+        type: array
+    required:
+    - category_list
+    - list
+    - sku_list
+    - tax_list
+    - unit_list
+    type: object
+  product_resp.ProductImportSkuListItem:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 规格名称
+      uuid:
+        description: 规格UUID
+        type: integer
+    required:
+    - locale_name
+    - uuid
+    type: object
+  product_resp.ProductImportTaxListItem:
+    properties:
+      name:
+        description: 税类名称
+        type: string
+      uuid:
+        description: 税类UUID
+        type: integer
+    required:
+    - name
+    - uuid
+    type: object
+  product_resp.ProductImportUnitListItem:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 单位名称
+      uuid:
+        description: 单位UUID
+        type: integer
+    required:
+    - locale_name
+    - uuid
+    type: object
+  product_resp.ProductList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.PackageProductDetail'
+        type: array
+    type: object
   product_resp.ProductListWithPaginationResp:
     properties:
       list:
@@ -1405,6 +2048,81 @@ definitions:
         type: array
       meta:
         $ref: '#/definitions/dto.PageResponse'
+    type: object
+  product_resp.ProductPackageGroup:
+    properties:
+      is_full:
+        description: 是否选满
+        type: boolean
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 套餐分组名称
+      num:
+        description: 套餐商品数量
+        type: integer
+      products:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductList'
+        description: 套餐商品列表
+      uuid:
+        description: 套餐分组UUID
+        type: integer
+    type: object
+  product_resp.ProductPackageGroupList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductPackageGroup'
+        type: array
+    type: object
+  product_resp.ProductPackageSubProduct:
+    properties:
+      flavor_locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品规格名称
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 套餐子商品名称
+      num:
+        description: 套餐子商品数量
+        type: number
+      price:
+        description: 套餐子商品价格
+        type: number
+      uuid:
+        description: 套餐子商品UUID
+        type: integer
+    type: object
+  product_resp.ProductPackageSubProductGroup:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 套餐子商品分组名称
+      products:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductPackageSubProductList'
+        description: 套餐子商品列表
+      uuid:
+        description: 套餐子商品分组UUID
+        type: integer
+    type: object
+  product_resp.ProductPackageSubProductGroupList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductPackageSubProductGroup'
+        type: array
+    type: object
+  product_resp.ProductPackageSubProductList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductPackageSubProduct'
+        type: array
     type: object
   product_resp.ProductSauce:
     properties:
@@ -1420,9 +2138,51 @@ definitions:
         type: number
       stock_num:
         description: 小料库存数量
-        type: integer
+        type: number
       uuid:
         description: 商品小料UUID
+        type: integer
+    type: object
+  product_resp.ProductSauceDetail:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品单位名称
+      price:
+        description: 商品加料价格
+        type: number
+      product_packages:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductSauceProductPackageList'
+        description: 商品包列表
+      uuid:
+        description: 商品单位UUID
+        type: integer
+    type: object
+  product_resp.ProductSauceItem:
+    properties:
+      name:
+        description: 商品加料名称
+        type: string
+      price:
+        description: 商品加料价格
+        type: number
+      product_bom_card_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 成本卡名称
+      product_bom_card_uuid:
+        description: 成本卡UUID，0表示没有成本卡
+        type: integer
+      product_package_count:
+        description: 关联商品包数量
+        type: integer
+      sort:
+        description: 商品加料排序
+        type: integer
+      uuid:
+        description: 商品加料UUID
         type: integer
     type: object
   product_resp.ProductSauceList:
@@ -1438,6 +2198,282 @@ definitions:
         description: 小料最大可选数量
         type: integer
     type: object
+  product_resp.ProductSauceListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductSauceItem'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
+  product_resp.ProductSauceProductPackage:
+    properties:
+      name:
+        description: 商品包名称
+        type: string
+      uuid:
+        description: 商品包UUID
+        type: integer
+    type: object
+  product_resp.ProductSauceProductPackageList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductSauceProductPackage'
+        type: array
+    type: object
+  product_resp.ProductShopCategory:
+    properties:
+      children:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductShopCategoryListResp'
+        description: 子级类别
+      is_special:
+        description: 是否特色类别
+        type: boolean
+      name:
+        description: 商品类别名称
+        type: string
+      parent_uuid:
+        description: 父级类别UUID
+        type: integer
+      sort:
+        description: 商品类别排序
+        type: integer
+      status:
+        description: 商品类别状态 0-关闭 1-开启
+        type: integer
+      uuid:
+        description: 商品类别UUID
+        type: integer
+    type: object
+  product_resp.ProductShopCategoryDetailResp:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品类别名称
+      parent_name:
+        description: 父级类别名称
+        type: string
+      parent_uuid:
+        description: 父级类别UUID
+        type: integer
+      sort:
+        description: 商品类别排序
+        type: integer
+      status:
+        description: 商品类别状态 0-关闭 1-开启
+        type: integer
+      uuid:
+        description: 商品类别UUID
+        type: integer
+    type: object
+  product_resp.ProductShopCategoryListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductShopCategory'
+        type: array
+    type: object
+  product_resp.ProductShopListItemFlavorItemResp:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品Bom名称
+      price:
+        description: 商品Bom价格
+        type: number
+      uuid:
+        description: 商品Bom uuid
+        type: integer
+    type: object
+  product_resp.ProductShopListItemFlavorListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductShopListItemFlavorItemResp'
+        type: array
+    type: object
+  product_resp.ProductShopListItemResp:
+    properties:
+      category_uuid:
+        description: 商品分类UUID
+        type: integer
+      flavors:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductShopListItemFlavorListResp'
+        description: 商品规格列表
+      image:
+        description: 商品图片
+        type: string
+      is_sold_out:
+        description: 是否售罄 false-否 true-是
+        type: boolean
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称
+      max_price:
+        description: 最高价格
+        type: number
+      min_price:
+        description: 最低价格
+        type: number
+      product_type:
+        description: 商品类型 0-商品 1-套餐
+        type: integer
+      sort:
+        description: 商品排序
+        type: integer
+      special_category_uuid:
+        description: 商品特殊分类UUID
+        type: integer
+      status:
+        description: 商品状态 0-下架 1-上架
+        type: integer
+      tag:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductShopListItemTagResp'
+        description: 商品标签列表
+      unit:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductShopListItemUnitResp'
+        description: 商品单位
+      uuid:
+        description: 商品UUID
+        type: integer
+    type: object
+  product_resp.ProductShopListItemTagResp:
+    properties:
+      is_attribute:
+        description: 是否属性
+        type: boolean
+      is_multiple_spec:
+        description: 是否多规格
+        type: boolean
+      is_sauce:
+        description: 是否加料
+        type: boolean
+    type: object
+  product_resp.ProductShopListItemUnitResp:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品单位名称
+    type: object
+  product_resp.ProductShopListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductShopListItemResp'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
+  product_resp.ProductSingleListItemResp:
+    properties:
+      flavor_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品规格名称
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称
+      product_bom_card_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 成本卡名称
+      product_bom_card_uuid:
+        description: 成本卡UUID，0表示没有成本卡
+        type: integer
+      uuid:
+        description: 商品规格UUID
+        type: integer
+    type: object
+  product_resp.ProductSingleListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductSingleListItemResp'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
+  product_resp.ProductTaxItemResp:
+    properties:
+      name:
+        description: 税类名称
+        type: string
+      uuid:
+        description: 税类UUID
+        type: integer
+    type: object
+  product_resp.ProductTaxListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductTaxItemResp'
+        type: array
+    type: object
+  product_resp.ProductUnitDetail:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品单位名称
+      product_packages:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductUnitProductPackageList'
+        description: 商品包列表
+      uuid:
+        description: 商品单位UUID
+        type: integer
+    type: object
+  product_resp.ProductUnitItem:
+    properties:
+      name:
+        description: 商品单位名称
+        type: string
+      product_package_count:
+        description: 关联商品包数量
+        type: integer
+      sort:
+        description: 商品单位排序
+        type: integer
+      uuid:
+        description: 商品单位UUID
+        type: integer
+    type: object
+  product_resp.ProductUnitListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductUnitItem'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
+  product_resp.ProductUnitProductPackage:
+    properties:
+      name:
+        description: 商品包名称
+        type: string
+      uuid:
+        description: 商品包UUID
+        type: integer
+    type: object
+  product_resp.ProductUnitProductPackageList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductUnitProductPackage'
+        type: array
+    type: object
   req.AcceptH5OrderReq:
     properties:
       h5_order_uuid:
@@ -1449,6 +2485,15 @@ definitions:
       member_sale_order_uuid:
         description: 会员端销售订单UUID
         type: integer
+    type: object
+  req.AddFreeOrGiftReasonReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 名称列表
+    required:
+    - locale_name
     type: object
   req.AddMemberReq:
     properties:
@@ -1485,6 +2530,29 @@ definitions:
     - level_uuid
     - phone
     type: object
+  req.AddReturnFoodReasonReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 名称列表
+    required:
+    - locale_name
+    type: object
+  req.AddRoleReq:
+    properties:
+      access_uuids:
+        description: 权限ID列表
+        items:
+          type: integer
+        type: array
+      name:
+        description: 角色名称
+        type: string
+    required:
+    - access_uuids
+    - name
+    type: object
   req.AddSoldOutReq:
     properties:
       sold_out_data:
@@ -1494,6 +2562,43 @@ definitions:
         type: array
     required:
     - sold_out_data
+    type: object
+  req.AddStaffReq:
+    properties:
+      confirm_password:
+        description: 确认密码
+        type: string
+      password:
+        description: 密码，如果不为空，则不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种
+        type: string
+      phone:
+        description: 手机号
+        type: string
+      real_name:
+        description: 姓名
+        type: string
+      roles:
+        description: 角色ID列表
+        items:
+          type: integer
+        type: array
+      username:
+        description: 账号，邮箱 邮箱格式
+        type: string
+    required:
+    - confirm_password
+    - password
+    - phone
+    - real_name
+    - roles
+    - username
+    type: object
+  req.AiTranslateRequest:
+    properties:
+      language:
+        type: string
+      text:
+        type: string
     type: object
   req.BindCashierReq:
     properties:
@@ -1516,10 +2621,10 @@ definitions:
     type: object
   req.BusinessDataCountProductSalesReq:
     properties:
-      areaUuid:
+      area_uuid:
         description: 区域UUID, -1=全都
         type: integer
-      categoryUuid:
+      category_uuid:
         description: 分类UUID, -1=全都
         type: integer
       page_no:
@@ -1531,43 +2636,49 @@ definitions:
         maximum: 1100
         minimum: 1
         type: integer
-      productName:
+      product_name:
         description: 商品名称
         type: string
-      queryEndTime:
+      query_end_time:
         description: 查询结束时间戳
         type: integer
-      queryStartTime:
+      query_start_time:
         description: 查询开始时间戳
         type: integer
-      sortDirection:
+      sort_direction:
         description: 排序方向 0=默认、 1=升序、 2=降序
         type: integer
-      sortType:
+      sort_type:
         description: 排序类型 0=默认、 1=按销售数量、 2=按原销售额
         type: integer
     type: object
   req.BusinessDataCountReq:
     properties:
-      categoryType:
+      category_type:
         description: 分类类型 (-1 未选择, 1 按一级分类, 2 按二级分类)
         type: integer
-      dutyNo:
+      duty_no:
         description: 班次编号
         type: string
-      notQueryFree:
+      not_query_free:
         description: 是否不查询免费使用场景
         type: boolean
-      queryEndTime:
+      query_end_time:
         description: 查询结束时间戳
         type: integer
-      queryStartTime:
+      query_start_time:
         description: 查询开始时间戳
         type: integer
-      staffUuid:
+      sort_direction:
+        description: 排序方向 0=默认、 1=升序、 2=降序
+        type: integer
+      sort_type:
+        description: 排序类型 0=默认、 1=按销售数量、 2=按原销售额
+        type: integer
+      staff_uuid:
         description: 操作员UUID
         type: integer
-      timeType:
+      time_type:
         description: 时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月, 5 营业时间)
         type: integer
     type: object
@@ -1585,6 +2696,12 @@ definitions:
       query_start_time:
         description: 查询开始时间戳
         type: integer
+      sort_direction:
+        description: 排序方向 0=默认、 1=升序、 2=降序
+        type: integer
+      sort_type:
+        description: 排序类型 0=默认、 1=按销售数量、 2=按原销售额
+        type: integer
       statistics_type:
         description: 统计类型 (0 全部, 1 按支付方式, 2 按商品分类, 3 按商品)
         type: integer
@@ -1594,13 +2711,13 @@ definitions:
     type: object
   req.BusinessDataRankProductReq:
     properties:
-      queryEndTime:
+      query_end_time:
         description: 查询结束时间戳
         type: integer
-      queryStartTime:
+      query_start_time:
         description: 查询开始时间戳
         type: integer
-      rankType:
+      rank_type:
         description: 排行类型 (1 按销量, 2 按销售额)
         type: integer
     type: object
@@ -1645,6 +2762,22 @@ definitions:
     - sale_bill_uuid
     - sale_order_uuid
     type: object
+  req.ChangePasswordReq:
+    properties:
+      confirm_password:
+        description: 确认密码
+        type: string
+      new_password:
+        description: 新密码，不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种
+        type: string
+      old_password:
+        description: 旧密码
+        type: string
+    required:
+    - confirm_password
+    - new_password
+    - old_password
+    type: object
   req.CheckMemberPasswordReq:
     properties:
       member_uuid:
@@ -1663,6 +2796,34 @@ definitions:
         type: integer
     required:
     - member_uuid
+    type: object
+  req.CheckNameRequest:
+    properties:
+      names:
+        description: 名称列表
+        items:
+          $ref: '#/definitions/req.CheckingName'
+        type: array
+      source:
+        description: 来源：unit-单位 product-商品 category-分类 sauce-加料 attribute-属性 attribute_group-属性组
+          flavor-规格
+        type: string
+      uuid:
+        description: 排除的UUID
+        type: integer
+    required:
+    - names
+    - source
+    type: object
+  req.CheckingName:
+    properties:
+      lang:
+        type: string
+      text:
+        type: string
+    required:
+    - lang
+    - text
     type: object
   req.ConfirmRechargeOrder:
     properties:
@@ -1697,6 +2858,36 @@ definitions:
         type: string
     required:
     - sign
+    type: object
+  req.DeleteFreeOrGiftReasonReq:
+    properties:
+      uuid:
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.DeleteReturnFoodReasonReq:
+    properties:
+      uuid:
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.DeleteRoleReq:
+    properties:
+      uuid:
+        description: 角色ID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.DeleteStaffReq:
+    properties:
+      uuid:
+        description: 员工ID
+        type: integer
+    required:
+    - uuid
     type: object
   req.DeskBuffetCustomerType:
     properties:
@@ -1743,6 +2934,28 @@ definitions:
         description: 机器备注
         type: string
     type: object
+  req.EditFreeOrGiftReasonReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 名称列表
+      uuid:
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.EditReturnFoodReasonReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 名称列表
+      uuid:
+        type: integer
+    required:
+    - uuid
+    type: object
   req.EditSettingReq:
     properties:
       desk_uuid:
@@ -1753,6 +2966,29 @@ definitions:
         type: string
     required:
     - desk_uuid
+    type: object
+  req.InitShopReq:
+    properties:
+      company_abbr:
+        description: 公司缩写编码
+        type: string
+      company_uuid:
+        description: 公司UUID
+        type: integer
+      default_company_abbr:
+        description: 默认公司缩写编码，用于同步单位和属性
+        type: string
+      pos_profile_name:
+        description: Pos Profile名称
+        type: string
+      site_code:
+        description: 站点编码
+        type: string
+    required:
+    - company_abbr
+    - company_uuid
+    - pos_profile_name
+    - site_code
     type: object
   req.InstantOrderFreeReq:
     properties:
@@ -1931,6 +3167,133 @@ definitions:
     - password
     - username
     type: object
+  req.MaterialAddReq:
+    properties:
+      barcode_value:
+        description: 条形码值
+        type: string
+      category_uuid:
+        description: 分类UUID
+        type: integer
+      cost_unit_uuid:
+        description: 成本单位UUID
+        type: integer
+      init_stock:
+        description: 期初库存
+        minimum: 0
+        type: number
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物品名称
+      purchase_unit_uuid:
+        description: 采购单位UUID
+        type: integer
+      status:
+        description: 状态，1-启用 2-停用
+        type: integer
+      unit_list:
+        description: 单位列表
+        items:
+          $ref: '#/definitions/req.MaterialUnitReq'
+        type: array
+      unit_uuid:
+        description: 基准单位UUID
+        type: integer
+      valuation:
+        description: 估值率
+        minimum: 0
+        type: number
+    required:
+    - barcode_value
+    - category_uuid
+    - cost_unit_uuid
+    - init_stock
+    - locale_name
+    - purchase_unit_uuid
+    - status
+    - unit_list
+    - unit_uuid
+    - valuation
+    type: object
+  req.MaterialCategoryAddReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物品类别名称
+    required:
+    - locale_name
+    type: object
+  req.MaterialEditReq:
+    properties:
+      barcode_value:
+        description: 条形码值
+        type: string
+      category_uuid:
+        description: 分类UUID
+        type: integer
+      cost_unit_uuid:
+        description: 成本单位UUID
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物品名称
+      purchase_unit_uuid:
+        description: 采购单位UUID
+        type: integer
+      status:
+        description: 状态，1-启用 0-停用
+        type: integer
+      unit_list:
+        description: 单位列表,新增的非基准单位
+        items:
+          $ref: '#/definitions/req.MaterialUnitReq'
+        type: array
+      uuid:
+        description: 物品UUID
+        type: integer
+      valuation:
+        description: 估值率
+        minimum: 0
+        type: number
+    required:
+    - barcode_value
+    - category_uuid
+    - cost_unit_uuid
+    - locale_name
+    - purchase_unit_uuid
+    - unit_list
+    - uuid
+    - valuation
+    type: object
+  req.MaterialStatusReq:
+    properties:
+      status:
+        description: 状态，1-启用 0-停用
+        type: integer
+      uuids:
+        description: 物品UUID
+        items:
+          type: integer
+        type: array
+    required:
+    - uuids
+    type: object
+  req.MaterialUnitReq:
+    properties:
+      conversion_rate:
+        description: 转换率
+        minimum: 0
+        type: number
+      unit_uuid:
+        description: 单位UUID
+        type: integer
+    required:
+    - conversion_rate
+    - unit_uuid
+    type: object
   req.MemberOrderSendAuthCodeReq:
     properties:
       member_sale_order_uuid:
@@ -2059,6 +3422,42 @@ definitions:
         description: 销售账单ID
         type: integer
     type: object
+  req.OrderCartProductFlavorAndAttributeChangeReq:
+    properties:
+      attribute_uuid:
+        description: 属性ID列表
+        items:
+          type: integer
+        type: array
+      flavor_uuid:
+        description: 某个规格商品ID
+        type: integer
+      product_package_uuid:
+        description: 套餐UUID
+        type: integer
+      product_type:
+        description: 商品类型 0-商品 1-套餐 2-套餐子商品
+        type: integer
+      products:
+        description: 套餐商品请求列表
+        items:
+          $ref: '#/definitions/req.ProductRequest'
+        type: array
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
+      sale_order_product_uuid:
+        description: 销售订单商品ID
+        type: integer
+      sale_order_uuid:
+        description: 销售订单UUID
+        type: integer
+      sauce_uuid:
+        description: 小料ID列表
+        items:
+          type: integer
+        type: array
+    type: object
   req.OrderCartProductGivingReq:
     properties:
       gift_ids:
@@ -2092,6 +3491,23 @@ definitions:
         type: integer
       sale_order_uuid:
         description: 销售订单ID
+        type: integer
+    type: object
+  req.OrderCartProductPackageAddReq:
+    properties:
+      product_package_uuid:
+        description: 套餐UUID
+        type: integer
+      products:
+        description: 套餐商品请求列表
+        items:
+          $ref: '#/definitions/req.ProductRequest'
+        type: array
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
+      sale_order_uuid:
+        description: 销售订单UUID
         type: integer
     type: object
   req.OrderCartProductReturningReq:
@@ -2481,6 +3897,532 @@ definitions:
     required:
     - uuid
     type: object
+  req.ProductAttributeGroupAddProductAttributeReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性名称, 多语言
+      product_package_uuids:
+        description: 关联商品包UUID列表
+        items:
+          type: integer
+        type: array
+    required:
+    - locale_name
+    type: object
+  req.ProductAttributeGroupAddReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性分组名称, 多语言
+      product_attributes:
+        description: 商品属性
+        items:
+          $ref: '#/definitions/req.ProductAttributeGroupAddProductAttributeReq'
+        type: array
+    required:
+    - locale_name
+    - product_attributes
+    type: object
+  req.ProductAttributeGroupEditProductAttributeReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性名称, 多语言
+      product_package_uuids:
+        description: 关联商品包UUID列表
+        items:
+          type: integer
+        type: array
+      uuid:
+        description: 商品属性UUID, 可选，如果有，是编辑，没有是添加
+        type: integer
+    required:
+    - locale_name
+    type: object
+  req.ProductAttributeGroupEditReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性分组名称, 多语言
+      product_attributes:
+        description: 商品属性
+        items:
+          $ref: '#/definitions/req.ProductAttributeGroupEditProductAttributeReq'
+        type: array
+      uuid:
+        description: 商品属性分组UUID
+        type: integer
+    required:
+    - locale_name
+    - product_attributes
+    - uuid
+    type: object
+  req.ProductAttributeGroupReq:
+    properties:
+      uuid:
+        description: 商品属性分组UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.ProductAttributeGroupSortItem:
+    properties:
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 商品属性分组UUID
+        type: integer
+    required:
+    - sort
+    - uuid
+    type: object
+  req.ProductAttributeGroupSortReq:
+    properties:
+      list:
+        description: 商品属性分组排序列表
+        items:
+          $ref: '#/definitions/req.ProductAttributeGroupSortItem'
+        type: array
+    required:
+    - list
+    type: object
+  req.ProductAttributeSortItem:
+    properties:
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 商品属性UUID
+        type: integer
+    required:
+    - sort
+    - uuid
+    type: object
+  req.ProductAttributeSortReq:
+    properties:
+      list:
+        description: 商品属性排序列表
+        items:
+          $ref: '#/definitions/req.ProductAttributeSortItem'
+        type: array
+      product_attribute_group_uuid:
+        description: 商品属性分组UUID
+        type: integer
+    required:
+    - list
+    - product_attribute_group_uuid
+    type: object
+  req.ProductBomCardAddReq:
+    properties:
+      materials:
+        allOf:
+        - $ref: '#/definitions/req.ProductBomCardMaterialListReq'
+        description: 材料列表
+      num:
+        description: 加工份数
+        type: integer
+      related_type:
+        description: 关联类型,1-规格商品 2-加料
+        type: integer
+      related_uuid:
+        description: 关联UUID,给规格商品或加料绑定成本卡。规格商品时，关联UUID为规格商品UUID；加料时，关联UUID为加料UUID
+        type: integer
+    required:
+    - materials
+    - num
+    - related_type
+    - related_uuid
+    type: object
+  req.ProductBomCardCopyReq:
+    properties:
+      product_bom_card_uuid:
+        description: 成本卡UUID
+        type: integer
+      related_type:
+        description: 关联类型,1-规格商品 2-加料
+        type: integer
+      related_uuid:
+        description: 关联UUID,给规格商品或加料绑定成本卡。规格商品时，关联UUID为规格商品UUID；加料时，关联UUID为加料UUID
+        type: integer
+    required:
+    - product_bom_card_uuid
+    - related_type
+    - related_uuid
+    type: object
+  req.ProductBomCardImportReq:
+    properties:
+      barcode_value:
+        description: 条形码值
+        type: string
+      category_uuid:
+        description: 分类UUID
+        type: integer
+      cost_unit_uuid:
+        description: 成本单位UUID
+        type: integer
+      init_stock:
+        description: 期初库存
+        minimum: 0
+        type: number
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物品名称
+      num:
+        description: 创建成本卡
+        type: number
+      purchase_unit_uuid:
+        description: 采购单位UUID
+        type: integer
+      related_uuid:
+        description: 关联UUID,给规格商品绑定成本卡。规格商品时，关联UUID为规格商品UUID；
+        type: integer
+      status:
+        description: 状态，1-启用 2-停用
+        type: integer
+      unit_list:
+        description: 单位列表
+        items:
+          $ref: '#/definitions/req.MaterialUnitReq'
+        type: array
+      unit_uuid:
+        description: 基准单位UUID
+        type: integer
+      valuation:
+        description: 估值率
+        minimum: 0
+        type: number
+    required:
+    - barcode_value
+    - category_uuid
+    - cost_unit_uuid
+    - init_stock
+    - locale_name
+    - num
+    - purchase_unit_uuid
+    - related_uuid
+    - status
+    - unit_list
+    - unit_uuid
+    - valuation
+    type: object
+  req.ProductBomCardMaterialListReq:
+    properties:
+      list:
+        description: 材料列表
+        items:
+          $ref: '#/definitions/req.ProductBomCardMaterialReq'
+        type: array
+    required:
+    - list
+    type: object
+  req.ProductBomCardMaterialReq:
+    properties:
+      material_uuid:
+        description: 材料UUID
+        type: integer
+      num:
+        description: 数量
+        type: number
+      unit_uuid:
+        description: 成本单位UUID
+        type: integer
+    required:
+    - material_uuid
+    - num
+    - unit_uuid
+    type: object
+  req.ProductBomCardUnlinkReq:
+    properties:
+      related_type:
+        description: 关联类型,1-规格商品 2-加料
+        type: integer
+      related_uuid:
+        description: 关联UUID,给规格商品或加料绑定成本卡。规格商品时，关联UUID为规格商品UUID；加料时，关联UUID为加料UUID
+        type: integer
+    required:
+    - related_type
+    - related_uuid
+    type: object
+  req.ProductFlavorAddProductPackage:
+    properties:
+      price:
+        description: 商品包价格
+        type: number
+      uuid:
+        description: 商品包UUID
+        type: integer
+    required:
+    - price
+    - uuid
+    type: object
+  req.ProductFlavorAddReq:
+    properties:
+      list:
+        description: 关联商品包列表
+        items:
+          $ref: '#/definitions/req.ProductFlavorAddProductPackage'
+        type: array
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品规格名称
+    required:
+    - locale_name
+    type: object
+  req.ProductFlavorDeleteReq:
+    properties:
+      uuid:
+        description: 商品规格UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.ProductFlavorEditProductPackageReq:
+    properties:
+      bom_uuid:
+        description: 商品BOM UUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID
+        type: integer
+      is_delete:
+        description: 是否删除, 如果是新增/编辑，则传false，删除时传true
+        type: boolean
+      price:
+        description: 商品价格
+        type: number
+      uuid:
+        description: 商品UUID
+        type: integer
+    required:
+    - price
+    - uuid
+    type: object
+  req.ProductFlavorEditReq:
+    properties:
+      list:
+        description: 关联商品包列表
+        items:
+          $ref: '#/definitions/req.ProductFlavorEditProductPackageReq'
+        type: array
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品规格名称
+      uuid:
+        description: 商品规格UUID
+        type: integer
+    required:
+    - locale_name
+    - uuid
+    type: object
+  req.ProductFlavorSortItemReq:
+    properties:
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 商品规格UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.ProductFlavorSortReq:
+    properties:
+      list:
+        description: 商品规格排序列表
+        items:
+          $ref: '#/definitions/req.ProductFlavorSortItemReq'
+        type: array
+    required:
+    - list
+    type: object
+  req.ProductImportItemReq:
+    properties:
+      barcode:
+        description: 商品条码
+        type: string
+      category_id:
+        description: 分类ID
+        type: integer
+      category_name:
+        description: 分类名称
+        type: string
+      deduct_stock_type:
+        description: 库存计算方式, 2-付款减库存 1-下单减库存
+        type: integer
+      is_enable_grade:
+        description: 是否开启会员折扣(1开启 0关闭)
+        type: integer
+      is_show_assistant:
+        description: 是否显示在点餐助手 1-显示 2-不显示
+        type: boolean
+      is_show_cashier:
+        description: 是否显示在收银端 1-显示 2-不显示
+        type: boolean
+      is_show_delivery:
+        description: 是否显示在外送 1-显示 2-不显示
+        type: boolean
+      is_show_h5:
+        description: 是否显示在h5 1-显示 2-不显示
+        type: boolean
+      is_show_kitchen:
+        description: 是否显示在送厨端 1-显示 2-不显示
+        type: boolean
+      is_show_tablet:
+        description: 是否显示在平板端 1-显示 2-不显示
+        type: boolean
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称
+      num_type:
+        description: 数量计算方法, 1-整数 2-小数
+        type: integer
+      open_overall_discount:
+        description: 整单折扣(1开启 0关闭)
+        type: integer
+      product_price:
+        description: 商品价格
+        type: number
+      product_rating_tax_type:
+        description: 堂食税类
+        type: string
+      product_status:
+        description: 商品状态, 1-上架 0-下架
+        type: integer
+      product_takeout_tax_type:
+        description: 外带税类
+        type: string
+      product_unit:
+        description: 商品单位
+        type: string
+      ratin_tax_id:
+        description: 堂食税类ID
+        type: integer
+      row:
+        description: excel表的行编号
+        type: integer
+      shows:
+        description: 显示：123456
+        type: string
+      sku_id:
+        description: 规格ID
+        type: integer
+      sku_name:
+        description: 规格名称
+        type: string
+      takeout_tax_id:
+        description: 外带税类ID
+        type: integer
+      unit_id:
+        description: 单位ID
+        type: integer
+    required:
+    - barcode
+    - category_name
+    - deduct_stock_type
+    - is_enable_grade
+    - locale_name
+    - num_type
+    - open_overall_discount
+    - product_price
+    - product_rating_tax_type
+    - product_status
+    - product_takeout_tax_type
+    - product_unit
+    - row
+    - shows
+    - sku_name
+    type: object
+  req.ProductImportListItemReq:
+    properties:
+      barcode:
+        description: 商品条码
+        type: string
+      category_name:
+        description: 分类名称
+        type: string
+      deduct_stock_type:
+        description: 库存计算方式, 2-付款减库存 1-下单减库存
+        type: integer
+      is_enable_grade:
+        description: 是否开启会员折扣(1开启 0关闭)
+        type: integer
+      num_type:
+        description: 数量计算方法, 1-整数 2-小数
+        type: integer
+      open_overall_discount:
+        description: 整单折扣(1开启 0关闭)
+        type: integer
+      product_name:
+        description: 商品名称
+        type: string
+      product_price:
+        description: 商品价格
+        type: number
+      product_rating_tax_type:
+        description: 堂食税类
+        type: string
+      product_status:
+        description: 商品状态, 1-上架 0-下架
+        type: integer
+      product_takeout_tax_type:
+        description: 外带税类
+        type: string
+      product_unit:
+        description: 商品单位
+        type: string
+      row:
+        description: excel表的行编号
+        type: integer
+      shows:
+        description: 显示：123456
+        type: string
+      sku_name:
+        description: 规格名称
+        type: string
+    required:
+    - barcode
+    - category_name
+    - deduct_stock_type
+    - is_enable_grade
+    - num_type
+    - open_overall_discount
+    - product_name
+    - product_price
+    - product_rating_tax_type
+    - product_status
+    - product_takeout_tax_type
+    - product_unit
+    - row
+    - shows
+    - sku_name
+    type: object
+  req.ProductImportListReq:
+    properties:
+      list:
+        description: 商品列表
+        items:
+          $ref: '#/definitions/req.ProductImportListItemReq'
+        type: array
+    required:
+    - list
+    type: object
+  req.ProductImportReq:
+    properties:
+      list:
+        description: 商品列表
+        items:
+          $ref: '#/definitions/req.ProductImportItemReq'
+        type: array
+    required:
+    - list
+    type: object
   req.ProductParams:
     properties:
       flavor_product_bom_uuid:
@@ -2506,6 +4448,20 @@ definitions:
         items:
           type: integer
         type: array
+      product_package_group_uuid:
+        description: 套餐分组uuid。可选，当商品是套餐商品时，该字段有值
+        type: integer
+      product_package_uuid:
+        description: 套餐商品uuid。当商品是套餐商品时，该字段有值
+        type: integer
+      product_type:
+        description: 商品类型 0-商品 1-套餐
+        type: integer
+      products:
+        description: 套餐商品请求列表。当商品是套餐商品时，该字段有值
+        items:
+          $ref: '#/definitions/req.ProductRequest'
+        type: array
       remark:
         description: 备注，平板端离线购物车提交
         type: string
@@ -2515,14 +4471,910 @@ definitions:
           type: integer
         type: array
     required:
-    - flavor_product_bom_uuid
     - num
+    type: object
+  req.ProductRequest:
+    properties:
+      attribute_uuid:
+        description: 属性ID列表
+        items:
+          type: integer
+        type: array
+      flavor_uuid:
+        description: 某个规格商品ID
+        type: integer
+      num:
+        description: 商品数量
+        type: number
+      product_package_group_uuid:
+        description: 套餐分组UUID
+        type: integer
+      sauce_uuid:
+        description: 小料ID列表
+        items:
+          type: integer
+        type: array
+    type: object
+  req.ProductSauceAddReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品加料名称
+      price:
+        description: 商品加料价格
+        type: number
+      product_package_uuids:
+        description: 关联商品包UUID列表
+        items:
+          type: integer
+        type: array
+    required:
+    - locale_name
+    - price
+    type: object
+  req.ProductSauceEditReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品加料名称
+      price:
+        description: 商品加料价格
+        type: number
+      product_package_uuids:
+        description: 关联商品包UUID列表
+        items:
+          type: integer
+        type: array
+      uuid:
+        description: 商品加料UUID
+        type: integer
+    required:
+    - locale_name
+    - price
+    - uuid
+    type: object
+  req.ProductSauceReq:
+    properties:
+      uuid:
+        description: 商品加料UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.ProductSauceSortItem:
+    properties:
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 商品加料UUID
+        type: integer
+    required:
+    - sort
+    - uuid
+    type: object
+  req.ProductSauceSortReq:
+    properties:
+      list:
+        description: 商品加料排序列表
+        items:
+          $ref: '#/definitions/req.ProductSauceSortItem'
+        type: array
+    required:
+    - list
+    type: object
+  req.ProductShopAddAttributeGroupReq:
+    properties:
+      attributes:
+        description: 商品属性列表
+        items:
+          $ref: '#/definitions/req.ProductShopAddGroupAttributeReq'
+        type: array
+      is_must:
+        description: 商品属性组是否必选 0-否 1-是
+        type: integer
+      max_selection:
+        description: 商品属性组最大选择数量
+        type: integer
+      uuid:
+        description: 商品属性组UUID
+        type: integer
+    type: object
+  req.ProductShopAddDiscountReq:
+    properties:
+      is_enable_member_discount:
+        description: 是否开启会员折扣 0-关闭 1-开启
+        type: integer
+      is_enable_overall_discount:
+        description: 是否开启整单折扣 0-关闭 1-开启
+        type: integer
+    type: object
+  req.ProductShopAddFlavorReq:
+    properties:
+      barcode_value:
+        description: 商品加料条码值, 可选
+        type: string
+      price:
+        description: 商品规格价格
+        type: number
+      uuid:
+        description: 商品规格UUID
+        type: integer
+    type: object
+  req.ProductShopAddGroupAttributeReq:
+    properties:
+      is_default_selected:
+        description: 商品属性是否默认选中 0-否 1-是
+        type: integer
+      uuid:
+        description: 商品属性组-属性值UUID
+        type: integer
+    type: object
+  req.ProductShopAddPackageGroupProductReq:
+    properties:
+      bom_uuid:
+        description: 商品BOM UUID
+        type: integer
+      num:
+        description: 商品数量
+        type: integer
+      sort:
+        description: 商品排序
+        type: integer
+    type: object
+  req.ProductShopAddPackageGroupReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 套餐分组名称
+      products:
+        description: 套餐分组商品列表
+        items:
+          $ref: '#/definitions/req.ProductShopAddPackageGroupProductReq'
+        type: array
+    type: object
+  req.ProductShopAddPackageReq:
+    properties:
+      groups:
+        description: 套餐分组列表
+        items:
+          $ref: '#/definitions/req.ProductShopAddPackageGroupReq'
+        type: array
+      price:
+        description: 套餐价格
+        type: number
+    type: object
+  req.ProductShopAddReq:
+    properties:
+      attributes:
+        description: 商品属性列表
+        items:
+          $ref: '#/definitions/req.ProductShopAddAttributeGroupReq'
+        type: array
+      category_uuid:
+        description: 商品分类UUID
+        type: integer
+      deduct_stock_type:
+        description: 库存计算方式 0-付款减库存 1-下单减库存
+        type: integer
+      discount:
+        allOf:
+        - $ref: '#/definitions/req.ProductShopAddDiscountReq'
+        description: 商品折扣设置
+      flavors:
+        description: 商品规格列表
+        items:
+          $ref: '#/definitions/req.ProductShopAddFlavorReq'
+        type: array
+      image_file_uuid:
+        description: 商品图片文件UUID
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称
+      num_type:
+        description: 数量计算方法 0-整数 1-小数
+        type: integer
+      package:
+        allOf:
+        - $ref: '#/definitions/req.ProductShopAddPackageReq'
+        description: 商品套餐
+      sauce:
+        allOf:
+        - $ref: '#/definitions/req.ProductShopAddSauceReq'
+        description: 商品加料列表
+      show:
+        allOf:
+        - $ref: '#/definitions/req.ProductShopAddShowReq'
+        description: 商品显示设置
+      status:
+        description: 商品状态 0-下架 1-上架
+        type: integer
+      tax:
+        allOf:
+        - $ref: '#/definitions/req.ProductShopAddTaxReq'
+        description: 商品税类
+      type:
+        description: 商品类型 0-商品 1-套餐
+        type: integer
+      unit_uuid:
+        description: 商品单位UUID
+        type: integer
+    type: object
+  req.ProductShopAddSauceItemReq:
+    properties:
+      is_default_selected:
+        description: 是否默认选中 0-否 1-是
+        type: integer
+      uuid:
+        description: 商品加料UUID
+        type: integer
+    type: object
+  req.ProductShopAddSauceReq:
+    properties:
+      is_must:
+        description: 是否必选 0-否 1-是
+        type: integer
+      max_selection:
+        description: 最大选择数量
+        type: integer
+      sauces:
+        description: 商品加料列表
+        items:
+          $ref: '#/definitions/req.ProductShopAddSauceItemReq'
+        type: array
+    type: object
+  req.ProductShopAddShowReq:
+    properties:
+      is_show_assistant:
+        description: 是否显示在点餐助手 0-不显示 1-显示
+        type: integer
+      is_show_cashier:
+        description: 是否显示在收银端 0-不显示 1-显示
+        type: integer
+      is_show_delivery:
+        description: 是否显示在外送 0-不显示 1-显示
+        type: integer
+      is_show_h5:
+        description: 是否显示在h5 0-不显示 1-显示
+        type: integer
+      is_show_kitchen:
+        description: 是否显示在厨显端 0-不显示 1-显示
+        type: integer
+      is_show_tablet:
+        description: 是否显示在平板端 0-不显示 1-显示
+        type: integer
+    type: object
+  req.ProductShopAddTaxReq:
+    properties:
+      dine_uuid:
+        description: 堂食税类UUID
+        type: integer
+      takeout_uuid:
+        description: 外带税类UUID
+        type: integer
+    type: object
+  req.ProductShopCategoryAddReq:
+    properties:
+      is_special:
+        description: 是否特殊分类, false-否 true-是
+        type: boolean
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品分类名称, 多语言
+      parent_uuid:
+        description: 父级分类UUID, 一级分类为0, 二级分类为一级分类的uuid
+        type: integer
+      status:
+        description: 商品分类状态 0-关闭 1-开启
+        type: integer
+    required:
+    - locale_name
+    type: object
+  req.ProductShopCategoryDeleteReq:
+    properties:
+      uuid:
+        description: 商品分类UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.ProductShopCategoryEditReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品分类名称, 多语言
+      parent_uuid:
+        description: 父级分类UUID, 一级分类为0, 二级分类为一级分类的uuid
+        type: integer
+      status:
+        description: 商品分类状态 0-关闭 1-开启
+        type: integer
+      uuid:
+        description: 商品分类UUID
+        type: integer
+    required:
+    - locale_name
+    - uuid
+    type: object
+  req.ProductShopCategorySortItem:
+    properties:
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 商品分类UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.ProductShopCategorySortReq:
+    properties:
+      list:
+        description: 商品分类排序列表
+        items:
+          $ref: '#/definitions/req.ProductShopCategorySortItem'
+        type: array
+    required:
+    - list
+    type: object
+  req.ProductShopChangePriceItemReq:
+    properties:
+      price:
+        description: 商品价格
+        type: number
+      uuid:
+        description: 商品BOM UUID
+        type: integer
+    type: object
+  req.ProductShopChangePriceReq:
+    properties:
+      prices:
+        description: 商品价格列表
+        items:
+          $ref: '#/definitions/req.ProductShopChangePriceItemReq'
+        type: array
+      uuid:
+        description: 商品UUID
+        type: integer
+    type: object
+  req.ProductShopDeleteReq:
+    properties:
+      uuid:
+        description: 商品UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.ProductShopEditAttributeGroupReq:
+    properties:
+      attributes:
+        description: 商品属性列表
+        items:
+          $ref: '#/definitions/req.ProductShopEditGroupAttributeReq'
+        type: array
+      is_delete:
+        description: 是否删除, 如果是新增/编辑，则传false，删除时传true
+        type: boolean
+      is_must:
+        description: 商品属性组是否必选 0-否 1-是
+        type: integer
+      max_selection:
+        description: 商品属性组最大选择数量
+        type: integer
+      uuid:
+        description: 商品属性组UUID
+        type: integer
+    type: object
+  req.ProductShopEditDiscountReq:
+    properties:
+      is_enable_member_discount:
+        description: 是否开启会员折扣 0-关闭 1-开启
+        type: integer
+      is_enable_overall_discount:
+        description: 是否开启整单折扣 0-关闭 1-开启
+        type: integer
+    type: object
+  req.ProductShopEditFlavorReq:
+    properties:
+      barcode_value:
+        description: 商品加料条码值, 可选
+        type: string
+      bom_uuid:
+        description: 商品BOM UUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID
+        type: integer
+      is_delete:
+        description: 是否删除, 如果是新增/编辑，则传false，删除时传true
+        type: boolean
+      price:
+        description: 商品规格价格
+        type: number
+      uuid:
+        description: 商品规格UUID
+        type: integer
+    type: object
+  req.ProductShopEditGroupAttributeReq:
+    properties:
+      is_default_selected:
+        description: 商品属性是否默认选中 0-否 1-是
+        type: integer
+      is_delete:
+        description: 是否删除, 如果是新增/编辑，则传false，删除时传true
+        type: boolean
+      uuid:
+        description: 商品属性组-属性值UUID
+        type: integer
+    type: object
+  req.ProductShopEditPackageGroupProductReq:
+    properties:
+      bom_uuid:
+        description: 商品BOM UUID
+        type: integer
+      is_delete:
+        description: 是否删除, 如果是新增/编辑，则传false，删除时传true
+        type: boolean
+      num:
+        description: 商品数量
+        type: integer
+      sort:
+        description: 商品排序
+        type: integer
+      uuid:
+        description: 套餐商品UUID
+        type: integer
+    type: object
+  req.ProductShopEditPackageGroupReq:
+    properties:
+      is_delete:
+        description: 是否删除, 如果是新增/编辑，则传false，删除时传true
+        type: boolean
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 套餐分组名称
+      products:
+        description: 套餐分组商品列表
+        items:
+          $ref: '#/definitions/req.ProductShopEditPackageGroupProductReq'
+        type: array
+      uuid:
+        description: 套餐分组UUID
+        type: integer
+    type: object
+  req.ProductShopEditPackageReq:
+    properties:
+      groups:
+        description: 套餐分组列表
+        items:
+          $ref: '#/definitions/req.ProductShopEditPackageGroupReq'
+        type: array
+      price:
+        description: 套餐价格
+        type: number
+    type: object
+  req.ProductShopEditReq:
+    properties:
+      attributes:
+        description: 商品属性列表
+        items:
+          $ref: '#/definitions/req.ProductShopEditAttributeGroupReq'
+        type: array
+      category_uuid:
+        description: 商品分类UUID
+        type: integer
+      deduct_stock_type:
+        description: 库存计算方式 0-付款减库存 1-下单减库存
+        type: integer
+      discount:
+        allOf:
+        - $ref: '#/definitions/req.ProductShopEditDiscountReq'
+        description: 商品折扣设置
+      flavors:
+        description: 商品规格列表
+        items:
+          $ref: '#/definitions/req.ProductShopEditFlavorReq'
+        type: array
+      image_file_uuid:
+        description: 商品图片文件UUID
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称
+      num_type:
+        description: 数量计算方法 0-整数 1-小数
+        type: integer
+      package:
+        allOf:
+        - $ref: '#/definitions/req.ProductShopEditPackageReq'
+        description: 商品套餐
+      sauce:
+        allOf:
+        - $ref: '#/definitions/req.ProductShopEditSauceReq'
+        description: 商品加料列表
+      show:
+        allOf:
+        - $ref: '#/definitions/req.ProductShopEditShowReq'
+        description: 商品显示设置
+      status:
+        description: 商品状态 0-下架 1-上架
+        type: integer
+      tax:
+        allOf:
+        - $ref: '#/definitions/req.ProductShopEditTaxReq'
+        description: 商品税类
+      type:
+        description: 商品类型 0-商品 1-套餐
+        type: integer
+      unit_uuid:
+        description: 商品单位UUID
+        type: integer
+      uuid:
+        description: 商品UUID
+        type: integer
+    type: object
+  req.ProductShopEditSauceItemReq:
+    properties:
+      bom_uuid:
+        description: 商品BOM UUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID
+        type: integer
+      is_default_selected:
+        description: 是否默认选中 0-否 1-是
+        type: integer
+      is_delete:
+        description: 是否删除, 如果是新增/编辑，则传false，删除时传true
+        type: boolean
+      uuid:
+        description: 商品加料UUID
+        type: integer
+    type: object
+  req.ProductShopEditSauceReq:
+    properties:
+      is_must:
+        description: 是否必选 0-否 1-是
+        type: integer
+      max_selection:
+        description: 最大选择数量
+        type: integer
+      sauces:
+        description: 商品加料列表
+        items:
+          $ref: '#/definitions/req.ProductShopEditSauceItemReq'
+        type: array
+    type: object
+  req.ProductShopEditShowReq:
+    properties:
+      is_show_assistant:
+        description: 是否显示在点餐助手 0-不显示 1-显示
+        type: integer
+      is_show_cashier:
+        description: 是否显示在收银端 0-不显示 1-显示
+        type: integer
+      is_show_delivery:
+        description: 是否显示在外送 0-不显示 1-显示
+        type: integer
+      is_show_h5:
+        description: 是否显示在h5 0-不显示 1-显示
+        type: integer
+      is_show_kitchen:
+        description: 是否显示在厨显端 0-不显示 1-显示
+        type: integer
+      is_show_tablet:
+        description: 是否显示在平板端 0-不显示 1-显示
+        type: integer
+    type: object
+  req.ProductShopEditTaxReq:
+    properties:
+      dine_uuid:
+        description: 堂食税类UUID
+        type: integer
+      takeout_uuid:
+        description: 外带税类UUID
+        type: integer
+    type: object
+  req.ProductShopStatusReq:
+    properties:
+      status:
+        description: 商品状态 0-下架 1-上架
+        enum:
+        - 0
+        - 1
+        type: integer
+      uuid:
+        description: 商品UUID
+        type: integer
+    required:
+    - status
+    - uuid
+    type: object
+  req.ProductUnitAddReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品单位名称
+      product_package_uuids:
+        description: 关联商品包UUID列表
+        items:
+          type: integer
+        type: array
+    required:
+    - locale_name
+    type: object
+  req.ProductUnitEditReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品单位名称
+      product_package_uuids:
+        description: 关联商品包UUID列表
+        items:
+          type: integer
+        type: array
+      uuid:
+        description: 商品单位UUID
+        type: integer
+    required:
+    - locale_name
+    - uuid
+    type: object
+  req.ProductUnitReq:
+    properties:
+      uuid:
+        description: 商品单位UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.ProductUnitSortItem:
+    properties:
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 商品单位UUID
+        type: integer
+    required:
+    - sort
+    - uuid
+    type: object
+  req.ProductUnitSortReq:
+    properties:
+      list:
+        description: 商品单位排序列表
+        items:
+          $ref: '#/definitions/req.ProductUnitSortItem'
+        type: array
+    required:
+    - list
     type: object
   req.ProductUuid:
     properties:
       product_uuid:
         description: 送厨商品ID
         type: integer
+    type: object
+  req.PurchaseOrderApproveReq:
+    properties:
+      action:
+        description: 审核动作：approve-通过，reject-驳回
+        enum:
+        - approve
+        - reject
+        type: string
+      uuid:
+        description: 采购订单ID
+        minimum: 1
+        type: integer
+    required:
+    - action
+    - uuid
+    type: object
+  req.PurchaseOrderCreateReq:
+    properties:
+      expected_delivery_time:
+        description: 期望到货时间(时间戳)
+        minimum: 0
+        type: integer
+      items:
+        description: 物品明细
+        items:
+          $ref: '#/definitions/req.PurchaseOrderItemCreateReq'
+        maxItems: 200
+        minItems: 1
+        type: array
+      order_time:
+        description: 单据日期
+        minimum: 0
+        type: integer
+      supplier_name:
+        description: 供应商名称
+        minLength: 1
+        type: string
+    required:
+    - items
+    - order_time
+    - supplier_name
+    type: object
+  req.PurchaseOrderDeleteReq:
+    properties:
+      uuid:
+        description: 采购订单ID
+        minimum: 1
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.PurchaseOrderItemCreateReq:
+    properties:
+      material_uuid:
+        description: 物品ID
+        minimum: 1
+        type: integer
+      num:
+        description: 数量
+        maximum: 99999
+        type: number
+    required:
+    - material_uuid
+    - num
+    type: object
+  req.PurchaseOrderItemUpdateReq:
+    properties:
+      material_uuid:
+        description: 物品ID
+        minimum: 1
+        type: integer
+      num:
+        description: 数量
+        maximum: 99999
+        type: number
+    required:
+    - material_uuid
+    - num
+    type: object
+  req.PurchaseOrderListReq:
+    properties:
+      order_no:
+        description: 订单编号
+        maxLength: 50
+        type: string
+      page_no:
+        description: 页码
+        minimum: 1
+        type: integer
+      page_size:
+        description: 每页大小
+        maximum: 1100
+        minimum: 1
+        type: integer
+      status_in:
+        description: '状态筛选: [0,1,2,3,4], 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)'
+        items:
+          type: integer
+        maxItems: 5
+        minItems: 0
+        type: array
+    type: object
+  req.PurchaseOrderSubmitReq:
+    properties:
+      uuid:
+        description: 采购订单ID
+        minimum: 1
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.PurchaseOrderUpdateReq:
+    properties:
+      expected_delivery_time:
+        description: 期望到货时间(时间戳)
+        minimum: 0
+        type: integer
+      items:
+        description: 采购商品明细
+        items:
+          $ref: '#/definitions/req.PurchaseOrderItemUpdateReq'
+        maxItems: 200
+        minItems: 1
+        type: array
+      supplier_name:
+        description: 供应商名称
+        minLength: 1
+        type: string
+      uuid:
+        description: 采购订单ID
+        minimum: 1
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.PurchaseReceiptCreateReq:
+    properties:
+      is_confirm:
+        description: 是否确认收货
+        enum:
+        - true
+        - false
+        type: boolean
+      items:
+        description: 收货明细
+        items:
+          $ref: '#/definitions/req.PurchaseReceiptItemCreateReq'
+        maxItems: 200
+        minItems: 1
+        type: array
+      purchase_order_uuid:
+        description: 采购订单ID
+        minimum: 1
+        type: integer
+      receipt_time:
+        description: 收货时间(时间戳)
+        minimum: 0
+        type: integer
+    required:
+    - items
+    - purchase_order_uuid
+    - receipt_time
+    type: object
+  req.PurchaseReceiptItemCreateReq:
+    properties:
+      num:
+        description: 实收数量
+        maximum: 99999
+        minimum: 0
+        type: number
+      uuid:
+        description: 商品明细ID
+        minimum: 1
+        type: integer
+    required:
+    - num
+    - uuid
+    type: object
+  req.PurchaseReceiptOrderCancelReq:
+    properties:
+      uuid:
+        description: 收货单ID
+        minimum: 1
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.PurchaseReceiptOrderUpdateReq:
+    properties:
+      is_confirm:
+        description: 是否确认收货
+        enum:
+        - true
+        - false
+        type: boolean
+      items:
+        description: 收货明细
+        items:
+          $ref: '#/definitions/req.PurchaseReceiptItemCreateReq'
+        maxItems: 200
+        minItems: 1
+        type: array
+      receipt_time:
+        description: 收货时间(时间戳)
+        minimum: 0
+        type: integer
+      uuid:
+        description: 收货记录ID
+        minimum: 1
+        type: integer
+    required:
+    - items
+    - receipt_time
+    - uuid
     type: object
   req.RechargeOrderAddPaymentMethodReq:
     properties:
@@ -2702,6 +5554,30 @@ definitions:
     - is_sold_out
     - product_bom_uuid
     type: object
+  req.SortProductShopItemReq:
+    properties:
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 商品UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.SortProductShopListReq:
+    properties:
+      category_uuid:
+        description: 商品分类UUID
+        type: integer
+      list:
+        description: 商品排序列表
+        items:
+          $ref: '#/definitions/req.SortProductShopItemReq'
+        type: array
+    required:
+    - list
+    type: object
   req.SubmitShiftReq:
     properties:
       is_background:
@@ -2766,6 +5642,201 @@ definitions:
         type: string
     required:
     - is_auto_order
+    type: object
+  req.UpdateBusinessSetting:
+    properties:
+      checkout_zeroing_method:
+        description: '结账自动抹零方式: 0-实款实收 1-抹分 2-抹角 5-抹元. // 5-抹元为5是为了全局唯一，各个数字有不重复的抹零定义'
+        enum:
+        - "0"
+        - "1"
+        - "2"
+        - "5"
+        type: string
+      delivery_price_ratio:
+        description: 外送商品价格和商品原价比例. 取值范围1-300， 表示原价的1%到300%
+        maximum: 300
+        minimum: 1
+        type: integer
+      discount_method:
+        description: '折扣计算方式: 10-按百分比 20-直接减免'
+        enum:
+        - "10"
+        - "20"
+        type: string
+      dish_card_style:
+        description: 菜品卡片样式 0-无图模式 1-图片模式
+        enum:
+        - "0"
+        - "1"
+        type: string
+      free_method:
+        description: '免单计算方式: 10-计入总销售额、优惠折扣、服务费、税费 20-不计入总销售额、优惠折扣、服务费、税费'
+        enum:
+        - "10"
+        - "20"
+        type: string
+      gift_method:
+        description: '赠菜计算方式: 10-计入总销售额、优惠折扣 20-不计入总销售额、优惠折扣'
+        enum:
+        - "10"
+        - "20"
+        type: string
+      is_invoice:
+        description: '开票信息: 0-不需要填写 1-需要填写'
+        enum:
+        - "0"
+        - "1"
+        type: string
+      is_need_password:
+        description: 取消订单/退菜 0-无需密码 1-需要密码
+        enum:
+        - "0"
+        - "1"
+        type: string
+      no_clear_table:
+        description: '结账后不清台: 0-清台 1-不清台'
+        enum:
+        - "0"
+        - "1"
+        type: string
+      opening_hours:
+        description: 营业时间格式正则验证：HH:MM-HH:MM
+        type: string
+      start_serial_no:
+        description: 开始序列号
+        type: string
+      zeroing_method:
+        description: '优惠折扣自动抹零方式: 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入到整数'
+        enum:
+        - "0"
+        - "1"
+        - "2"
+        - "3"
+        - "4"
+        type: string
+    required:
+    - checkout_zeroing_method
+    - delivery_price_ratio
+    - discount_method
+    - dish_card_style
+    - free_method
+    - gift_method
+    - is_invoice
+    - is_need_password
+    - no_clear_table
+    - opening_hours
+    - start_serial_no
+    - zeroing_method
+    type: object
+  req.UpdateRoleReq:
+    properties:
+      access_uuids:
+        description: 权限ID列表
+        items:
+          type: integer
+        type: array
+      name:
+        description: 角色名称
+        type: string
+      uuid:
+        description: 角色ID
+        type: integer
+    required:
+    - access_uuids
+    - name
+    - uuid
+    type: object
+  req.UpdateStaffReq:
+    properties:
+      confirm_password:
+        description: 确认密码
+        type: string
+      password:
+        description: 密码，如果不为空，则不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种
+        type: string
+      phone:
+        description: 手机号，最多20位
+        maxLength: 20
+        type: string
+      real_name:
+        description: 姓名
+        type: string
+      roles:
+        description: 角色ID列表
+        items:
+          type: integer
+        type: array
+      username:
+        description: 账号，邮箱 邮箱格式
+        type: string
+      uuid:
+        description: 管理员ID
+        type: integer
+    required:
+    - phone
+    - real_name
+    - roles
+    - username
+    - uuid
+    type: object
+  req.UpdateStaffStatusReq:
+    properties:
+      status:
+        description: 状态 1:启用 0:禁用
+        enum:
+        - 1
+        - 0
+        type: integer
+      uuid:
+        description: 员工ID
+        type: integer
+    required:
+    - status
+    - uuid
+    type: object
+  req.UpdateStoreSetting:
+    properties:
+      address:
+        description: 地址，必填，最大500个字符
+        maxLength: 500
+        type: string
+      company_name:
+        description: 公司名称，区别于店铺名称，最大500个字符
+        maxLength: 500
+        type: string
+      coordinates:
+        description: 经纬度
+        type: string
+      language:
+        description: 系统语言，必填，至少一个
+        items:
+          $ref: '#/definitions/dto.LanguageItem'
+        minItems: 1
+        type: array
+      logo_url:
+        description: 店铺logo，上传后保存url，必填
+        type: string
+      name:
+        description: 店铺名称
+        maxLength: 100
+        type: string
+      phone:
+        description: 联系电话，必填，最大20个字符
+        maxLength: 20
+        type: string
+      tax_number:
+        description: 税号
+        type: string
+      time_zone:
+        description: 时区，必填
+        type: string
+    required:
+    - language
+    - logo_url
+    - name
+    - phone
+    - time_zone
     type: object
   req.UpdateSystemSetting:
     properties:
@@ -3430,6 +6501,20 @@ definitions:
         description: 收银员账号
         type: string
     type: object
+  resp.CheckNameItem:
+    properties:
+      lang:
+        type: string
+      text_exist:
+        type: boolean
+    type: object
+  resp.CheckNameResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.CheckNameItem'
+        type: array
+    type: object
   resp.Company:
     properties:
       expire_time:
@@ -3447,6 +6532,9 @@ definitions:
       is_open_old_order:
         description: '是否开启旧订单功能: 0不开启, 1开启'
         type: integer
+      is_open_rider:
+        description: 是否开启外送
+        type: boolean
       logo:
         description: 商家logo
         type: string
@@ -4063,18 +7151,18 @@ definitions:
         description: 剩余支付时间(单位秒)
         type: integer
     type: object
-  resp.GiftOrFreeOrderReasonResp:
+  resp.GiftOrFreeOrderReason:
     properties:
       locale_name:
         $ref: '#/definitions/dto.LocaleResponse'
       uuid:
         type: integer
     type: object
-  resp.GiftOrFreeOrderReasonResps:
+  resp.GiftOrFreeOrderReasonResp:
     properties:
       list:
         items:
-          $ref: '#/definitions/resp.GiftOrFreeOrderReasonResp'
+          $ref: '#/definitions/resp.GiftOrFreeOrderReason'
         type: array
     type: object
   resp.GroupList:
@@ -5683,6 +8771,47 @@ definitions:
         description: 销售账单UUID
         type: integer
     type: object
+  resp.PackageProduct:
+    properties:
+      locale_attribute_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称
+      num:
+        description: 数量
+        type: number
+      unit_num:
+        description: 单位数量
+        type: number
+      uuid:
+        description: 商品uuid. sale_order_product_uuid
+        type: integer
+    type: object
+  resp.PackageProductList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.PackageProduct'
+        type: array
+    type: object
+  resp.PackageSelectedInfo:
+    properties:
+      attribute_uuid:
+        description: 属性ID列表
+        items:
+          type: integer
+        type: array
+      flavor_uuid:
+        description: 某个规格商品ID
+        type: integer
+      product_package_group_uuid:
+        description: 套餐分组UUID
+        type: integer
+    type: object
   resp.PayAmountInfo:
     properties:
       change_amount:
@@ -6008,6 +9137,9 @@ definitions:
       can_change_num:
         description: 顾客可修改必点数量
         type: boolean
+      can_edit:
+        description: 是否可以编辑
+        type: boolean
       discount_price:
         description: 折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。单价(折后)*数量
         type: number
@@ -6049,11 +9181,18 @@ definitions:
       num_type:
         description: 数量计算方法 0-整数 1-小数
         type: integer
+      package_product_list:
+        allOf:
+        - $ref: '#/definitions/resp.PackageProductList'
+        description: 套餐商品列表
       price:
         description: 原价. 原价=单价*数量
         type: number
       product_package_uuid:
         description: 商品包uuid
+        type: integer
+      product_type:
+        description: 商品类型 0-商品 1-套餐
         type: integer
       remark:
         description: 备注
@@ -6120,6 +9259,31 @@ definitions:
         description: 商品规格UUID
         type: integer
     type: object
+  resp.ProductFlavorAndAttributeRes:
+    properties:
+      product_info:
+        allOf:
+        - $ref: '#/definitions/resp.ProductInfo'
+        description: 商品/套餐信息
+      product_type:
+        description: 商品类型 0-商品 1-套餐
+        type: integer
+    type: object
+  resp.ProductInfo:
+    properties:
+      product:
+        allOf:
+        - $ref: '#/definitions/product_resp.Product'
+        description: 商品/套餐信息
+      selected_product:
+        allOf:
+        - $ref: '#/definitions/resp.ProductPackageDetail'
+        description: 已选购的商品信息
+      selected_product_package:
+        allOf:
+        - $ref: '#/definitions/resp.ProductSelectedInfoList'
+        description: 已选购的商品套餐信息
+    type: object
   resp.ProductItem:
     properties:
       locale_name:
@@ -6129,6 +9293,10 @@ definitions:
       num:
         description: 数量
         type: number
+      sub_products:
+        allOf:
+        - $ref: '#/definitions/resp.SubProductList'
+        description: 套餐子商品列表
       total_price:
         description: 总价
         type: number
@@ -6231,6 +9399,13 @@ definitions:
         description: 小料最大可选数量
         type: integer
     type: object
+  resp.ProductSelectedInfoList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.PackageSelectedInfo'
+        type: array
+    type: object
   resp.ProductionGroup:
     properties:
       dining_method:
@@ -6325,6 +9500,211 @@ definitions:
       send_kitchen_num:
         description: 送厨商品数量，用于厨显来菜提醒
         type: number
+    type: object
+  resp.PurchaseOrderCreateResp:
+    properties:
+      order_no:
+        description: 采购订单编号
+        type: string
+      uuid:
+        description: 采购订单ID
+        type: integer
+    type: object
+  resp.PurchaseOrderDetailResp:
+    properties:
+      erp_order_no:
+        description: ERP申请单编号（采购单号）
+        type: string
+      expect_arrival_time:
+        description: 期望到货日期
+        type: integer
+      items:
+        description: 采购明细
+        items:
+          $ref: '#/definitions/resp.PurchaseOrderItemInfo'
+        type: array
+      num:
+        description: 物品数量
+        type: integer
+      order_no:
+        description: 申请单编号（单据编号）
+        type: string
+      order_time:
+        description: 单据日期
+        type: integer
+      order_type:
+        description: 申请类型
+        type: integer
+      receipt_progress:
+        description: 收货进度（百分比0.00%）前端直接显示
+        type: string
+      status:
+        description: 状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)
+        type: integer
+      uuid:
+        description: 采购订单ID
+        type: integer
+    type: object
+  resp.PurchaseOrderInfo:
+    properties:
+      erp_order_no:
+        description: ERP申请单编号（采购单号）
+        type: string
+      expect_arrival_time:
+        description: 期望到货日期
+        type: integer
+      num:
+        description: 物品数量
+        type: integer
+      order_no:
+        description: 申请单编号（单据编号）
+        type: string
+      order_time:
+        description: 单据日期
+        type: integer
+      order_type:
+        description: 申请类型
+        type: integer
+      receipt_progress:
+        description: 收货进度（百分比0.00%）前端直接显示
+        type: string
+      status:
+        description: 状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)
+        type: integer
+      uuid:
+        description: 采购订单ID
+        type: integer
+    type: object
+  resp.PurchaseOrderItemInfo:
+    properties:
+      arrival_num:
+        description: 到货数量
+        type: number
+      base_unit_name:
+        description: 基准单位名称
+        type: string
+      material_code:
+        description: 物品编码
+        type: string
+      material_name:
+        description: 物品名称
+        type: string
+      num:
+        description: 申请数量
+        type: number
+      unit_conversion_rate:
+        description: 基准单位转换率
+        type: number
+      unit_name:
+        description: 采购单位名称
+        type: string
+      uuid:
+        description: 明细ID
+        type: integer
+    type: object
+  resp.PurchaseOrderListResp:
+    properties:
+      list:
+        description: 采购订单列表
+        items:
+          $ref: '#/definitions/resp.PurchaseOrderInfo'
+        type: array
+      meta:
+        allOf:
+        - $ref: '#/definitions/dto.PageResponse'
+        description: 分页信息
+    type: object
+  resp.PurchaseReceiptCreateResp:
+    properties:
+      receipt_no:
+        description: 收货单号
+        type: string
+      uuid:
+        description: 收货记录ID
+        type: integer
+    type: object
+  resp.PurchaseReceiptItemInfo:
+    properties:
+      base_unit_name:
+        description: 基准单位名称
+        type: string
+      material_code:
+        description: 物品编码
+        type: string
+      material_name:
+        description: 物品名称
+        type: string
+      num:
+        description: 数量
+        type: number
+      unit_conversion_rate:
+        description: 基准单位转换率
+        type: number
+      unit_name:
+        description: 采购单位名称
+        type: string
+      uuid:
+        description: 明细ID
+        type: integer
+    type: object
+  resp.PurchaseReceiptOrderDetailResp:
+    properties:
+      expect_arrival_time:
+        description: 期望到货日期
+        type: integer
+      items:
+        description: 收货明细
+        items:
+          $ref: '#/definitions/resp.PurchaseReceiptItemInfo'
+        type: array
+      num:
+        description: 物品数量
+        type: integer
+      order_no:
+        description: 订单编号
+        type: string
+      receive_time:
+        description: 收货日期
+        type: integer
+      status:
+        description: 状态
+        type: integer
+      uuid:
+        description: 收货单ID
+        type: integer
+    type: object
+  resp.PurchaseReceiptOrderInfo:
+    properties:
+      expect_arrival_time:
+        description: 期望到货日期
+        type: integer
+      num:
+        description: 物品数量
+        type: integer
+      order_no:
+        description: 订单编号
+        type: string
+      receive_time:
+        description: 收货日期
+        type: integer
+      status:
+        description: 状态
+        type: integer
+      uuid:
+        description: 收货单ID
+        type: integer
+    type: object
+  resp.PurchaseReceiptOrderListResp:
+    properties:
+      list:
+        description: 收货单列表
+        items:
+          $ref: '#/definitions/resp.PurchaseReceiptOrderInfo'
+        type: array
+      meta:
+        allOf:
+        - $ref: '#/definitions/dto.PageResponse'
+        description: 分页信息
     type: object
   resp.RechargeMember:
     properties:
@@ -6715,18 +10095,18 @@ definitions:
         description: 剩余可退款金额
         type: number
     type: object
-  resp.ReturnFoodReasonResp:
+  resp.ReturnFoodReason:
     properties:
       locale_name:
         $ref: '#/definitions/dto.LocaleResponse'
       uuid:
         type: integer
     type: object
-  resp.ReturnFoodReasonResps:
+  resp.ReturnFoodReasonResp:
     properties:
       list:
         items:
-          $ref: '#/definitions/resp.ReturnFoodReasonResp'
+          $ref: '#/definitions/resp.ReturnFoodReason'
         type: array
     type: object
   resp.ReverseSettleRechargeOrderMemberInfo:
@@ -6764,6 +10144,42 @@ definitions:
       remaining_distance:
         description: 剩余距离
         type: number
+    type: object
+  resp.Role:
+    properties:
+      create_time:
+        description: 创建时间
+        type: integer
+      name:
+        description: 角色名称
+        type: string
+      uuid:
+        description: 角色UUID
+        type: integer
+    type: object
+  resp.RoleDetailResp:
+    properties:
+      access_uuids:
+        description: 权限ID列表
+        items:
+          type: integer
+        type: array
+      name:
+        description: 角色名称
+        type: string
+      uuid:
+        description: 角色UUID
+        type: integer
+    type: object
+  resp.RoleListResp:
+    properties:
+      list:
+        description: 角色列表
+        items:
+          $ref: '#/definitions/resp.Role'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
     type: object
   resp.SaleOrder:
     properties:
@@ -6933,6 +10349,62 @@ definitions:
         - $ref: '#/definitions/resp.PrinterData'
         description: 打印数据
     type: object
+  resp.ShopBase:
+    properties:
+      buffet:
+        allOf:
+        - $ref: '#/definitions/setting.BuffetResp'
+        description: 自助餐设置
+      business:
+        allOf:
+        - $ref: '#/definitions/setting.Business'
+        description: 门店业务设置
+      cloud:
+        allOf:
+        - $ref: '#/definitions/setting.CloudBasic'
+        description: 云端基础信息
+      company:
+        allOf:
+        - $ref: '#/definitions/resp.Company'
+        description: 商家信息
+      currency:
+        allOf:
+        - $ref: '#/definitions/setting.Currency'
+        description: 货币单位
+      device_id:
+        description: 设备ID
+        type: string
+      device_remark:
+        description: 设备备注
+        type: string
+      is_ttpos_site:
+        description: 是否散户site
+        type: boolean
+      permissions:
+        description: 页面权限
+        items:
+          $ref: '#/definitions/resp.Permission'
+        type: array
+      phone:
+        description: 登录账号手机号
+        type: string
+      profile:
+        allOf:
+        - $ref: '#/definitions/resp.ShopProfile'
+        description: 门店信息
+      profile_uuid:
+        description: 收银员UUID
+        type: integer
+      server_version:
+        description: 服务端版本
+        type: string
+      update_time:
+        description: 更新时间
+        type: integer
+      username:
+        description: 登录账号
+        type: string
+    type: object
   resp.ShopCart:
     properties:
       buffet:
@@ -6975,6 +10447,45 @@ definitions:
         description: 更新时间
         type: integer
     type: object
+  resp.ShopProfile:
+    properties:
+      address:
+        description: 地址
+        type: string
+      company_name:
+        description: 公司名称，区别于店铺名称
+        type: string
+      coordinates:
+        description: 经纬度
+        type: string
+      default_language:
+        description: 默认语言
+        type: string
+      ip_white_list:
+        description: ip白名单
+        type: string
+      language:
+        description: 云平台限制商家的可用语言列表
+        items:
+          type: string
+        type: array
+      language_list:
+        description: 语言列表，当前勾选了的语言列表
+        items:
+          $ref: '#/definitions/dto.LanguageItem'
+        type: array
+      phone:
+        description: 联系电话
+        type: string
+      tax_number:
+        description: 税号
+        type: string
+      time_zone_list:
+        description: 时区列表
+        items:
+          $ref: '#/definitions/setting.TimeZoneItem'
+        type: array
+    type: object
   resp.SimpleAmountInfo:
     properties:
       product_amount:
@@ -7006,6 +10517,83 @@ definitions:
         type: array
       meta:
         $ref: '#/definitions/dto.PageResponse'
+    type: object
+  resp.Staff:
+    properties:
+      create_time:
+        description: 创建时间
+        type: integer
+      is_disable:
+        description: 是否禁用
+        type: integer
+      is_super:
+        description: 是否超级管理员
+        type: integer
+      phone:
+        description: 手机号
+        type: string
+      real_name:
+        description: 真实姓名
+        type: string
+      roles:
+        description: 角色
+        items:
+          $ref: '#/definitions/resp.StaffRole'
+        type: array
+      username:
+        description: 用户名
+        type: string
+      uuid:
+        description: 管理员UUID
+        type: integer
+    type: object
+  resp.StaffListPaginationResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.Staff'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
+  resp.StaffRole:
+    properties:
+      name:
+        description: 角色名称
+        type: string
+      uuid:
+        description: 角色UUID
+        type: integer
+    type: object
+  resp.SubProductItem:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称多语言
+      num:
+        description: 数量
+        type: number
+    type: object
+  resp.SubProductList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.SubProductItem'
+        type: array
+    type: object
+  resp.SupplierSelectResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.SupplierSimpleInfo'
+        type: array
+    type: object
+  resp.SupplierSimpleInfo:
+    properties:
+      name:
+        description: 供应商名称
+        type: string
     type: object
   resp.SystemSetting:
     properties:
@@ -7250,6 +10838,51 @@ definitions:
         description: 未下单商品数量
         type: integer
     type: object
+  resp.UploadFileResp:
+    properties:
+      create_time:
+        description: 创建时间
+        type: integer
+      extension:
+        description: 文件扩展名
+        type: string
+      file_name:
+        description: 文件名称
+        type: string
+      file_path:
+        description: 文件路径
+        type: string
+      file_size:
+        description: 文件大小(字节)
+        type: integer
+      file_type:
+        description: 文件类型
+        type: string
+      file_url:
+        description: 文件访问域名
+        type: string
+      group_uuid:
+        description: 分组UUID
+        type: integer
+      index_file_name:
+        description: 索引文件名
+        type: string
+      real_name:
+        description: 原始文件名
+        type: string
+      save_name:
+        description: 保存路径
+        type: string
+      storage:
+        description: 存储引擎
+        type: string
+      url_param:
+        description: URL参数
+        type: string
+      uuid:
+        description: 文件UUID
+        type: integer
+    type: object
   resp.UsbPrinter:
     properties:
       m_name:
@@ -7437,6 +11070,9 @@ definitions:
         type: string
       qr_code:
         description: 电子菜单二维码校验失效值，6位数数字
+        type: string
+      start_serial_no:
+        description: 开始序列号
         type: string
       zeroing_method:
         description: '优惠折扣自动抹零方式: 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入到整数'
@@ -7844,6 +11480,77 @@ definitions:
         description: 端口号
         type: string
     type: object
+  setting.ShopBusiness:
+    properties:
+      checkout_zeroing_method:
+        description: '结账自动抹零方式: 0-实款实收 1-抹分 2-抹角 5-抹元. // 5-抹元为5是为了全局唯一，各个数字有不重复的抹零定义'
+        type: string
+      checkout_zeroing_method_list:
+        description: 结账自动抹零方式列表
+        items:
+          $ref: '#/definitions/setting.CheckoutZeroingMethodItem'
+        type: array
+      delivery_price_ratio:
+        description: 外送商品价格和商品原价比例. 取值范围1-300， 表示原价的1%到300%
+        type: integer
+      discount_method:
+        description: 折扣计算方式 10-按百分比 20-直接减免
+        type: string
+      dish_card_style:
+        description: 菜品卡片样式 0-无图模式 1-图片模式
+        type: string
+      dish_card_style_time:
+        description: 菜品卡片样式最后更新时间
+        type: string
+      free_method:
+        description: 免单计算方式
+        type: string
+      free_method_list:
+        description: 免单计算方式列表
+        items:
+          $ref: '#/definitions/setting.FreeMethodItem'
+        type: array
+      free_reason_count:
+        description: 免单原因数量
+        type: integer
+      gift_method:
+        description: 赠菜计算方式
+        type: string
+      gift_method_list:
+        description: 赠菜计算方式列表
+        items:
+          $ref: '#/definitions/setting.GiftMethodItem'
+        type: array
+      is_invoice:
+        description: 开票信息 0-不需要填写 1-需要填写
+        type: string
+      is_need_password:
+        description: 取消订单/退菜 0-无需密码 1-需要密码
+        type: string
+      no_clear_table:
+        description: 结账后不清台 0-清台 1-不清台
+        type: string
+      opening_hours:
+        description: 营业时间 18:00-02:00
+        type: string
+      qr_code:
+        description: 电子菜单二维码校验失效值，6位数数字
+        type: string
+      return_food_reason_count:
+        description: 退菜原因数量
+        type: integer
+      start_serial_no:
+        description: 开始序列号
+        type: string
+      zeroing_method:
+        description: '优惠折扣自动抹零方式: 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入到整数'
+        type: string
+      zeroing_method_list:
+        description: 优惠折扣自动抹零方式列表
+        items:
+          $ref: '#/definitions/setting.ZeroingMethodItem'
+        type: array
+    type: object
   setting.TabletResp:
     properties:
       buffet_order_limit:
@@ -7895,11 +11602,56 @@ definitions:
         - $ref: '#/definitions/setting.Server'
         description: 平板服务器连接
     type: object
+  setting.TimeZoneItem:
+    properties:
+      key:
+        type: string
+      name:
+        type: string
+      value:
+        type: string
+    type: object
   setting.ZeroingMethodItem:
     properties:
       key:
         type: string
       name:
+        type: string
+    type: object
+  utils.TranslateResponseItem:
+    properties:
+      de:
+        description: 翻译后的德语
+        type: string
+      en:
+        description: 翻译后的英语
+        type: string
+      ja:
+        description: 翻译后的日语
+        type: string
+      key:
+        description: 原始内容
+        type: string
+      ko:
+        description: 翻译后的韩语
+        type: string
+      my:
+        description: 翻译后的缅甸语
+        type: string
+      sv:
+        description: 翻译后的瑞典语
+        type: string
+      th:
+        description: 翻译后的泰语
+        type: string
+      tr:
+        description: 翻译后的土耳其语
+        type: string
+      zh:
+        description: 翻译后的中文
+        type: string
+      zh-TW:
+        description: 翻译后的中文繁体
         type: string
     type: object
 host: 127.0.0.1:8080
@@ -7909,6 +11661,102 @@ info:
   title: ttpos-server-go API
   version: "1.0"
 paths:
+  /admin/erpnext/lianlian/payment/add:
+    post:
+      consumes:
+      - application/json
+      description: 支付方式列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 支付方式列表
+      tags:
+      - 平台端.支付管理
+  /admin/erpnext/shop/init:
+    post:
+      consumes:
+      - application/json
+      description: 初始化店铺
+      parameters:
+      - description: 初始化店铺请求
+        in: body
+        name: init_shop_req
+        required: true
+        schema:
+          $ref: '#/definitions/req.InitShopReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 初始化店铺
+      tags:
+      - 平台端.商家授权
+  /admin/erpnext/site/company:
+    get:
+      consumes:
+      - application/json
+      description: 获取ERPNext站点公司名称
+      parameters:
+      - description: ERPNext站点编码
+        in: query
+        name: site_code
+        required: true
+        type: string
+      - description: 公司名称
+        in: query
+        name: company_name
+        type: string
+      - description: 公司缩写
+        in: query
+        name: company_abbr
+        type: string
+      - description: 父公司名称
+        in: query
+        name: parent_company
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 获取ERPNext站点公司名称
+      tags:
+      - 平台端.商家授权
+  /admin/erpnext/site/pos_profile:
+    get:
+      consumes:
+      - application/json
+      description: 获取ERPNext站点Pos Profile列表
+      parameters:
+      - description: ERPNext站点编码
+        in: query
+        name: site_code
+        required: true
+        type: string
+      - description: 公司缩写编码
+        in: query
+        name: company_abbr
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 获取ERPNext站点Pos Profile列表
+      tags:
+      - 平台端.商家授权
   /assistant/base:
     get:
       consumes:
@@ -8209,7 +12057,7 @@ paths:
       parameters:
       - description: '是否是自助餐: -1=全都、0=否、1=是'
         in: query
-        name: isBuffet
+        name: is_buffet
         type: integer
       - description: 页码
         in: query
@@ -8363,7 +12211,7 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -8599,6 +12447,77 @@ paths:
       summary: 转菜购物车商品
       tags:
       - 点餐助手端.桌台
+  /assistant/desk/order/cart/product/flavor_and_attribute:
+    get:
+      consumes:
+      - application/json
+      description: 查询购物车商品“规格/属性”
+      parameters:
+      - description: 商品类型 0-商品 1-套餐
+        in: query
+        name: product_type
+        type: integer
+      - description: 销售账单ID
+        in: query
+        name: sale_bill_uuid
+        type: integer
+      - description: 销售订单商品ID
+        in: query
+        name: sale_order_product_uuid
+        type: integer
+      - description: 销售订单ID
+        in: query
+        name: sale_order_uuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ProductFlavorAndAttributeRes'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 查询购物车商品“规格/属性”
+      tags:
+      - 点餐助手端.桌台
+    post:
+      consumes:
+      - application/json
+      description: 修改购物车商品“规格/属性”
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductFlavorAndAttributeChangeReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 修改购物车商品“规格/属性”
+      tags:
+      - 点餐助手端.桌台
   /assistant/desk/order/cart/product/giving:
     post:
       consumes:
@@ -8690,6 +12609,37 @@ paths:
       security:
       - JwtToken: []
       summary: 退菜购物车商品
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/cart/product_package/add:
+    post:
+      consumes:
+      - application/json
+      description: 向购物车添加套餐
+      parameters:
+      - description: 套餐参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductPackageAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 向购物车添加套餐
       tags:
       - 点餐助手端.桌台
   /assistant/desk/order/check:
@@ -9490,7 +13440,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.GiftOrFreeOrderReasonResps'
+                  $ref: '#/definitions/resp.GiftOrFreeOrderReasonResp'
               type: object
       security:
       - JwtToken: []
@@ -9778,11 +13728,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: deskUuid
+        name: desk_uuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -9907,7 +13857,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.ReturnFoodReasonResps'
+                  $ref: '#/definitions/resp.ReturnFoodReasonResp'
               type: object
       security:
       - JwtToken: []
@@ -10402,7 +14352,7 @@ paths:
       parameters:
       - description: '是否是自助餐: -1=全都、0=否、1=是'
         in: query
-        name: isBuffet
+        name: is_buffet
         type: integer
       - description: 页码
         in: query
@@ -10553,7 +14503,7 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -10796,6 +14746,77 @@ paths:
       summary: 转菜购物车商品
       tags:
       - 收银端.桌台
+  /cashier/desk/order/cart/product/flavor_and_attribute:
+    get:
+      consumes:
+      - application/json
+      description: 查询购物车商品“规格/属性”
+      parameters:
+      - description: 商品类型 0-商品 1-套餐
+        in: query
+        name: product_type
+        type: integer
+      - description: 销售账单ID
+        in: query
+        name: sale_bill_uuid
+        type: integer
+      - description: 销售订单商品ID
+        in: query
+        name: sale_order_product_uuid
+        type: integer
+      - description: 销售订单ID
+        in: query
+        name: sale_order_uuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ProductFlavorAndAttributeRes'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 查询购物车商品“规格/属性”
+      tags:
+      - 收银端.桌台
+    post:
+      consumes:
+      - application/json
+      description: 修改购物车商品“规格/属性”
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductFlavorAndAttributeChangeReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 修改购物车商品“规格/属性”
+      tags:
+      - 收银端.桌台
   /cashier/desk/order/cart/product/giving:
     post:
       consumes:
@@ -10949,6 +14970,37 @@ paths:
       security:
       - JwtToken: []
       summary: 打包单商品
+      tags:
+      - 收银端.桌台
+  /cashier/desk/order/cart/product_package/add:
+    post:
+      consumes:
+      - application/json
+      description: 向购物车添加套餐
+      parameters:
+      - description: 套餐参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductPackageAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 向购物车添加套餐
       tags:
       - 收银端.桌台
   /cashier/desk/order/check:
@@ -11825,7 +15877,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.GiftOrFreeOrderReasonResps'
+                  $ref: '#/definitions/resp.GiftOrFreeOrderReasonResp'
               type: object
       security:
       - JwtToken: []
@@ -12125,6 +16177,77 @@ paths:
       summary: 取消退菜购物车商品
       tags:
       - 收银端.点餐
+  /cashier/instant/order/cart/product/flavor_and_attribute:
+    get:
+      consumes:
+      - application/json
+      description: 查询购物车商品“规格/属性”
+      parameters:
+      - description: 商品类型 0-商品 1-套餐
+        in: query
+        name: product_type
+        type: integer
+      - description: 销售账单ID
+        in: query
+        name: sale_bill_uuid
+        type: integer
+      - description: 销售订单商品ID
+        in: query
+        name: sale_order_product_uuid
+        type: integer
+      - description: 销售订单ID
+        in: query
+        name: sale_order_uuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ProductFlavorAndAttributeRes'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 查询购物车商品“规格/属性”
+      tags:
+      - 收银端.点餐
+    post:
+      consumes:
+      - application/json
+      description: 修改购物车商品“规格/属性”
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductFlavorAndAttributeChangeReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 修改购物车商品“规格/属性”
+      tags:
+      - 收银端.点餐
   /cashier/instant/order/cart/product/giving:
     post:
       consumes:
@@ -12216,6 +16339,37 @@ paths:
       security:
       - JwtToken: []
       summary: 退菜购物车商品
+      tags:
+      - 收银端.点餐
+  /cashier/instant/order/cart/product_package/add:
+    post:
+      consumes:
+      - application/json
+      description: 向购物车添加套餐
+      parameters:
+      - description: 套餐参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductPackageAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 向购物车添加套餐
       tags:
       - 收银端.点餐
   /cashier/instant/order/check:
@@ -13432,15 +17586,15 @@ paths:
       parameters:
       - description: 支付金额, 必填
         in: query
-        name: paymentAmount
+        name: payment_amount
         type: number
       - description: 支付方式UUID, 必填
         in: query
-        name: paymentMethodUuid
+        name: payment_method_uuid
         type: integer
       - description: 充值订单UUID, 必填
         in: query
-        name: rechargeOrderUuid
+        name: recharge_order_uuid
         type: integer
       produces:
       - application/json
@@ -14271,11 +18425,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: deskUuid
+        name: desk_uuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -14295,27 +18449,27 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: billType
+        name: bill_type
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: dateType
+        name: date_type
         type: integer
       - description: 用餐方式, -1=全都、 0-堂食 1-打包
         in: query
-        name: diningMethod
+        name: dining_method
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enableCreateTime
+        name: enable_create_time
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enablePayTime
+        name: enable_pay_time
         type: boolean
       - description: 订单编号
         in: query
-        name: orderNo
+        name: order_no
         type: string
       - description: 页码
         in: query
@@ -14330,11 +18484,11 @@ paths:
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: queryEndTime
+        name: query_end_time
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: queryStartTime
+        name: query_start_time
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -14362,27 +18516,27 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: billType
+        name: bill_type
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: dateType
+        name: date_type
         type: integer
       - description: 用餐方式, -1=全都、 0-堂食 1-打包
         in: query
-        name: diningMethod
+        name: dining_method
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enableCreateTime
+        name: enable_create_time
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enablePayTime
+        name: enable_pay_time
         type: boolean
       - description: 订单编号
         in: query
-        name: orderNo
+        name: order_no
         type: string
       - description: 页码
         in: query
@@ -14397,11 +18551,11 @@ paths:
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: queryEndTime
+        name: query_end_time
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: queryStartTime
+        name: query_start_time
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -14511,11 +18665,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       - description: 销售订单UUID。退款都是针对子单进行退款
         in: query
-        name: saleOrderUuid
+        name: sale_order_uuid
         type: integer
       produces:
       - application/json
@@ -14567,7 +18721,7 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -14687,7 +18841,7 @@ paths:
       parameters:
       - description: 数据类型 (打印类型), -1=全都、.....
         in: query
-        name: dataType
+        name: data_type
         type: integer
       - description: 页码
         in: query
@@ -14702,15 +18856,15 @@ paths:
         type: integer
       - description: 打印机UUID
         in: query
-        name: printerUuid
+        name: printer_uuid
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: queryEndTime
+        name: query_end_time
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: queryStartTime
+        name: query_start_time
         type: integer
       - description: 状态, -1=全都、0=失败, 1=成功, 2=补打成功, 3=补打失败
         in: query
@@ -15185,7 +19339,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.ReturnFoodReasonResps'
+                  $ref: '#/definitions/resp.ReturnFoodReasonResp'
               type: object
       security:
       - JwtToken: []
@@ -15847,7 +20001,7 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -16048,6 +20202,37 @@ paths:
       summary: 查询未下单商品
       tags:
       - 扫码点餐
+  /h5/order/cart/product_package/add:
+    post:
+      consumes:
+      - application/json
+      description: 向购物车添加套餐
+      parameters:
+      - description: 套餐参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductPackageAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 向购物车添加套餐
+      tags:
+      - 扫码点餐
   /h5/product/category/list:
     get:
       consumes:
@@ -16105,15 +20290,15 @@ paths:
       parameters:
       - description: 商品包uuid
         in: query
-        name: productPackageUuid
+        name: product_package_uuid
         type: integer
       - description: 销售账单ID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       - description: 销售订单ID
         in: query
-        name: saleOrderUuid
+        name: sale_order_uuid
         type: integer
       produces:
       - application/json
@@ -17195,7 +21380,7 @@ paths:
       parameters:
       - description: 会员端销售订单UUID
         in: query
-        name: memberSaleOrderUuid
+        name: member_sale_order_uuid
         required: true
         type: integer
       produces:
@@ -17284,12 +21469,12 @@ paths:
       parameters:
       - description: 会员端销售订单UUID
         in: query
-        name: memberSaleOrderUuid
+        name: member_sale_order_uuid
         required: true
         type: integer
       - description: 支付方式UUID - 如果为0，则使用订单的支付方式, 否则使用指定的支付方式
         in: query
-        name: paymentMethodUuid
+        name: payment_method_uuid
         type: integer
       produces:
       - application/json
@@ -17410,7 +21595,7 @@ paths:
       parameters:
       - description: 会员ID
         in: query
-        name: memberUuid
+        name: member_uuid
         type: integer
       - description: 页码
         in: query
@@ -17752,6 +21937,377 @@ paths:
       summary: 获取服务端公钥
       tags:
       - 通用
+  /shop/access_groups:
+    get:
+      consumes:
+      - application/json
+      description: 获取权限组
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取权限组
+      tags:
+      - 商家端.管理员管理
+  /shop/ai/translate:
+    post:
+      parameters:
+      - description: 翻译数据
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.AiTranslateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/utils.TranslateResponseItem'
+                  type: array
+              type: object
+      security:
+      - JwtToken: []
+      summary: 翻译
+      tags:
+      - 通用
+  /shop/base:
+    get:
+      consumes:
+      - application/json
+      description: 基本信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopBase'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 基本信息
+      tags:
+      - 商家端.基础信息
+  /shop/change_password:
+    post:
+      consumes:
+      - application/json
+      description: 修改密码
+      parameters:
+      - description: 修改密码参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ChangePasswordReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 修改密码
+      tags:
+      - 商家端.认证
+  /shop/check/name/exists:
+    post:
+      parameters:
+      - description: 检查名称是否存在
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.CheckNameRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CheckNameResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 检查名称是否存在
+      tags:
+      - 通用
+  /shop/login:
+    post:
+      consumes:
+      - application/json
+      description: 登录
+      parameters:
+      - description: 验证码sign
+        in: header
+        name: X-SIGN
+        required: true
+        type: string
+      - description: 登录参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.LoginReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LoginResp'
+              type: object
+      summary: 登录
+      tags:
+      - 商家端.认证
+  /shop/logout:
+    post:
+      consumes:
+      - application/json
+      description: 退出登录
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 退出登录
+      tags:
+      - 商家端.认证
+  /shop/material/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加物品
+      parameters:
+      - description: 物品添加请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.MaterialAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 添加物品
+      tags:
+      - 商家端.物品管理
+  /shop/material/category/add:
+    post:
+      consumes:
+      - application/json
+      description: 创建物品类别
+      parameters:
+      - description: 物品类别添加请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.MaterialCategoryAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 创建物品类别
+      tags:
+      - 商家端.物品管理
+  /shop/material/category/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取物品类别列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/material_resp.MaterialCategoryListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取物品类别列表
+      tags:
+      - 商家端.物品管理
+  /shop/material/detail:
+    get:
+      consumes:
+      - application/json
+      description: 获取物品详情
+      parameters:
+      - description: 物品UUID
+        in: query
+        name: uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/material_resp.MaterialDetailResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取物品详情
+      tags:
+      - 商家端.物品管理
+  /shop/material/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑物品
+      parameters:
+      - description: 物品编辑请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.MaterialEditReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 编辑物品
+      tags:
+      - 商家端.物品管理
+  /shop/material/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取物品列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      - description: 关键字
+        in: query
+        name: keyword
+        type: string
+      - description: 分类UUID
+        in: query
+        name: category_uuid
+        type: integer
+      - description: 状态 0-全部 1-启用 2-停用
+        in: query
+        name: status
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/material_resp.MaterialListWithPaginationResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取物品列表
+      tags:
+      - 商家端.物品管理
+  /shop/material/status/batch:
+    post:
+      consumes:
+      - application/json
+      description: 批量修改物品状态
+      parameters:
+      - description: 物品状态修改请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.MaterialStatusReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 批量修改物品状态
+      tags:
+      - 商家端.物品管理
+  /shop/material/unit/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取物品的单位列表
+      parameters:
+      - description: 物品UUID
+        in: query
+        name: uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/material_resp.MaterialUnitListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取物品的单位列表
+      tags:
+      - 商家端.物品管理
   /shop/member_order/cancel:
     post:
       consumes:
@@ -18032,27 +22588,27 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: billType
+        name: bill_type
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: dateType
+        name: date_type
         type: integer
       - description: 用餐方式, -1=全都、 0-堂食 1-打包
         in: query
-        name: diningMethod
+        name: dining_method
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enableCreateTime
+        name: enable_create_time
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enablePayTime
+        name: enable_pay_time
         type: boolean
       - description: 订单编号
         in: query
-        name: orderNo
+        name: order_no
         type: string
       - description: 页码
         in: query
@@ -18067,11 +22623,11 @@ paths:
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: queryEndTime
+        name: query_end_time
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: queryStartTime
+        name: query_start_time
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -18127,11 +22683,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: deskUuid
+        name: desk_uuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -18151,27 +22707,27 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: billType
+        name: bill_type
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: dateType
+        name: date_type
         type: integer
       - description: 用餐方式, -1=全都、 0-堂食 1-打包
         in: query
-        name: diningMethod
+        name: dining_method
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enableCreateTime
+        name: enable_create_time
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enablePayTime
+        name: enable_pay_time
         type: boolean
       - description: 订单编号
         in: query
-        name: orderNo
+        name: order_no
         type: string
       - description: 页码
         in: query
@@ -18186,11 +22742,11 @@ paths:
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: queryEndTime
+        name: query_end_time
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: queryStartTime
+        name: query_start_time
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -18261,11 +22817,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       - description: 销售订单UUID。退款都是针对子单进行退款
         in: query
-        name: saleOrderUuid
+        name: sale_order_uuid
         type: integer
       produces:
       - application/json
@@ -18309,6 +22865,1592 @@ paths:
       summary: 退款订单
       tags:
       - 商家端.订单
+  /shop/product/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加商品
+      parameters:
+      - description: 商品添加请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductShopAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 添加商品
+      tags:
+      - 商家端.商品
+  /shop/product/attribute/group:
+    delete:
+      consumes:
+      - application/json
+      description: 删除商品属性分组
+      parameters:
+      - description: 商品属性分组删除请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductAttributeGroupReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 删除商品属性分组
+      tags:
+      - 商家端.商品属性分组
+    get:
+      consumes:
+      - application/json
+      description: 获取商品属性分组详情
+      parameters:
+      - description: 商品属性分组UUID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductAttributeGroupDetail'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品属性分组详情
+      tags:
+      - 商家端.商品属性分组
+  /shop/product/attribute/group/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加商品属性分组，商品属性一起添加
+      parameters:
+      - description: 商品属性分组添加请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductAttributeGroupAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 添加商品属性分组，商品属性一起添加
+      tags:
+      - 商家端.商品属性分组
+  /shop/product/attribute/group/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑商品属性分组，商品属性一起编辑
+      parameters:
+      - description: 商品属性分组编辑请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductAttributeGroupEditReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 编辑商品属性分组，商品属性一起编辑
+      tags:
+      - 商家端.商品属性分组
+  /shop/product/attribute/group/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取商品属性分组列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductAttributeGroupListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品属性分组列表
+      tags:
+      - 商家端.商品属性分组
+  /shop/product/attribute/group/sort:
+    post:
+      consumes:
+      - application/json
+      description: 排序商品属性分组
+      parameters:
+      - description: 商品属性分组排序请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductAttributeGroupSortReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 排序商品属性分组
+      tags:
+      - 商家端.商品属性分组
+  /shop/product/attribute/sort:
+    post:
+      consumes:
+      - application/json
+      description: 排序商品属性
+      parameters:
+      - description: 商品属性排序请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductAttributeSortReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 排序商品属性
+      tags:
+      - 商家端.商品属性
+  /shop/product/category:
+    delete:
+      consumes:
+      - application/json
+      description: 删除商品分类
+      parameters:
+      - description: 商品分类删除请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductShopCategoryDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 删除商品分类
+      tags:
+      - 商家端.商品分类
+    get:
+      consumes:
+      - application/json
+      description: 获取商品分类详情
+      parameters:
+      - description: 商品分类UUID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductShopCategoryDetailResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品分类详情
+      tags:
+      - 商家端.商品分类
+  /shop/product/category/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加商品分类
+      parameters:
+      - description: 商品分类添加请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductShopCategoryAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 添加商品分类
+      tags:
+      - 商家端.商品分类
+  /shop/product/category/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑商品分类
+      parameters:
+      - description: 商品分类编辑请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductShopCategoryEditReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 编辑商品分类
+      tags:
+      - 商家端.商品分类
+  /shop/product/category/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取商品分类列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductShopCategoryListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品分类列表
+      tags:
+      - 商家端.商品分类
+  /shop/product/category/sort:
+    post:
+      consumes:
+      - application/json
+      description: 排序商品分类
+      parameters:
+      - description: 商品分类排序请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductShopCategorySortReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 排序商品分类
+      tags:
+      - 商家端.商品分类
+  /shop/product/change_price:
+    post:
+      consumes:
+      - application/json
+      description: 商品改价
+      parameters:
+      - description: 商品改价请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductShopChangePriceReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 商品改价
+      tags:
+      - 商家端.商品
+  /shop/product/delete:
+    delete:
+      consumes:
+      - application/json
+      description: 删除商品
+      parameters:
+      - description: 商品删除请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductShopDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 删除商品
+      tags:
+      - 商家端.商品
+  /shop/product/detail:
+    get:
+      consumes:
+      - application/json
+      description: 获取商品详情
+      parameters:
+      - description: 商品UUID
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductDetailResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品详情
+      tags:
+      - 商家端.商品
+  /shop/product/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑商品
+      parameters:
+      - description: 商品编辑请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductShopEditReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 编辑商品
+      tags:
+      - 商家端.商品
+  /shop/product/flavor:
+    delete:
+      consumes:
+      - application/json
+      description: 删除商品规格
+      parameters:
+      - description: 商品规格删除请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductFlavorDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 删除商品规格
+      tags:
+      - 商家端.商品规格
+    get:
+      consumes:
+      - application/json
+      description: 获取商品规格详情
+      parameters:
+      - description: 商品规格UUID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductFlavorDetailResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品规格详情
+      tags:
+      - 商家端.商品规格
+  /shop/product/flavor/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加商品规格
+      parameters:
+      - description: 商品规格添加请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductFlavorAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 添加商品规格
+      tags:
+      - 商家端.商品规格
+  /shop/product/flavor/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑商品规格
+      parameters:
+      - description: 商品规格编辑请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductFlavorEditReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 编辑商品规格
+      tags:
+      - 商家端.商品规格
+  /shop/product/flavor/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取商品规格列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductFlavorListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品规格列表
+      tags:
+      - 商家端.商品规格
+  /shop/product/flavor/sort:
+    post:
+      consumes:
+      - application/json
+      description: 排序商品规格
+      parameters:
+      - description: 商品规格排序请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductFlavorSortReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 排序商品规格
+      tags:
+      - 商家端.商品规格
+  /shop/product/import:
+    post:
+      consumes:
+      - application/json
+      description: 导入商品
+      parameters:
+      - description: 导入商品请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductImportReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 导入商品
+      tags:
+      - 商家端.商品
+  /shop/product/import/list:
+    post:
+      consumes:
+      - application/json
+      description: 导入商品-获取导入商品列表
+      parameters:
+      - description: 导入商品列表请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductImportListReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductImportResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 导入商品-获取导入商品列表
+      tags:
+      - 商家端.商品
+  /shop/product/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取商品列表
+      parameters:
+      - description: 商品分类UUID（可选）
+        in: query
+        name: category_uuid
+        type: string
+      - description: 搜索商品名称（可选）
+        in: query
+        name: keyword
+        type: string
+      - description: 页码
+        in: query
+        minimum: 1
+        name: page_no
+        type: integer
+      - description: 每页大小
+        in: query
+        maximum: 1100
+        minimum: 1
+        name: page_size
+        type: integer
+      - description: '商品状态: 0-下架 1-上架（可选）'
+        in: query
+        name: status
+        type: string
+      - description: '商品标签: 0-多规格 1-属性 2-加料（可选）, 多个标签用逗号分隔: 0,1,2'
+        in: query
+        name: tag
+        type: string
+      - description: '商品类型: 0-商品 1-套餐（可选）'
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductShopListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品列表
+      tags:
+      - 商家端.商品
+  /shop/product/sauce:
+    delete:
+      consumes:
+      - application/json
+      description: 删除商品加料
+      parameters:
+      - description: 商品加料删除请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductSauceReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 删除商品加料
+      tags:
+      - 商家端.商品加料
+    get:
+      consumes:
+      - application/json
+      description: 获取商品加料详情
+      parameters:
+      - description: 商品加料UUID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductSauceDetail'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品加料详情
+      tags:
+      - 商家端.商品加料
+  /shop/product/sauce/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加商品加料
+      parameters:
+      - description: 商品加料添加请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductSauceAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 添加商品加料
+      tags:
+      - 商家端.商品加料
+  /shop/product/sauce/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑商品加料
+      parameters:
+      - description: 商品加料编辑请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductSauceEditReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 编辑商品加料
+      tags:
+      - 商家端.商品加料
+  /shop/product/sauce/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取商品加料列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductSauceListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品加料列表
+      tags:
+      - 商家端.商品加料
+  /shop/product/sauce/sort:
+    post:
+      consumes:
+      - application/json
+      description: 排序商品加料
+      parameters:
+      - description: 商品加料排序请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductSauceSortReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 排序商品加料
+      tags:
+      - 商家端.商品加料
+  /shop/product/single/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取单规格商品列表
+      parameters:
+      - description: 商品分类UUID, 可选
+        in: query
+        name: category_uuid
+        type: integer
+      - description: 搜索关键词, 可选
+        in: query
+        name: keyword
+        type: string
+      - description: 页码
+        in: query
+        minimum: 1
+        name: page_no
+        type: integer
+      - description: 每页大小
+        in: query
+        maximum: 1100
+        minimum: 1
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductSingleListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取单规格商品列表
+      tags:
+      - 商家端.商品
+  /shop/product/sort:
+    post:
+      consumes:
+      - application/json
+      description: 排序商品列表
+      parameters:
+      - description: 商品排序请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.SortProductShopListReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 排序商品列表
+      tags:
+      - 商家端.商品
+  /shop/product/status:
+    post:
+      consumes:
+      - application/json
+      description: 修改商品状态
+      parameters:
+      - description: 商品状态请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductShopStatusReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 修改商品状态
+      tags:
+      - 商家端.商品
+  /shop/product/tax/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取商品税类列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductTaxListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品税类列表
+      tags:
+      - 商家端.商品
+  /shop/product/unit:
+    delete:
+      consumes:
+      - application/json
+      description: 删除商品单位
+      parameters:
+      - description: 商品单位删除请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductUnitReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 删除商品单位
+      tags:
+      - 商家端.商品单位
+    get:
+      consumes:
+      - application/json
+      description: 获取商品单位详情
+      parameters:
+      - description: 商品单位UUID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductUnitDetail'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品单位详情
+      tags:
+      - 商家端.商品单位
+  /shop/product/unit/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加商品单位
+      parameters:
+      - description: 商品单位添加请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductUnitAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 添加商品单位
+      tags:
+      - 商家端.商品单位
+  /shop/product/unit/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑商品单位
+      parameters:
+      - description: 商品单位编辑请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductUnitEditReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 编辑商品单位
+      tags:
+      - 商家端.商品单位
+  /shop/product/unit/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取商品单位列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductUnitListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品单位列表
+      tags:
+      - 商家端.商品单位
+  /shop/product/unit/sort:
+    post:
+      consumes:
+      - application/json
+      description: 排序商品单位
+      parameters:
+      - description: 商品单位排序请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductUnitSortReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 排序商品单位
+      tags:
+      - 商家端.商品单位
+  /shop/product/upload_image:
+    post:
+      consumes:
+      - application/json
+      description: 上传商品图片
+      parameters:
+      - description: 上传商品图片
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 上传商品图片
+      tags:
+      - 商家端.商品
+  /shop/product_bom/card/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加成本卡
+      parameters:
+      - description: 成本卡添加请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductBomCardAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 添加成本卡
+      tags:
+      - 商家端.物品管理
+  /shop/product_bom/card/copy:
+    post:
+      consumes:
+      - application/json
+      description: 复制成本卡
+      parameters:
+      - description: 成本卡复制请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductBomCardCopyReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 复制成本卡
+      tags:
+      - 商家端.物品管理
+  /shop/product_bom/card/detail:
+    get:
+      consumes:
+      - application/json
+      description: 规格商品成本卡详情
+      parameters:
+      - description: 成本卡UUID
+        in: query
+        name: uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/material_resp.ProductBomCardDetailResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 规格商品成本卡详情
+      tags:
+      - 商家端.物品管理
+  /shop/product_bom/card/import:
+    post:
+      consumes:
+      - application/json
+      description: 从菜品导入成本卡
+      parameters:
+      - description: 成本卡导入请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductBomCardImportReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 从菜品导入成本卡
+      tags:
+      - 商家端.物品管理
+  /shop/product_bom/card/unlink:
+    post:
+      consumes:
+      - application/json
+      description: 解除成本卡关联
+      parameters:
+      - description: 成本卡解除关联请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductBomCardUnlinkReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 解除成本卡关联
+      tags:
+      - 商家端.物品管理
+  /shop/purchase/order/approve:
+    post:
+      consumes:
+      - application/json
+      description: 审核采购订单（通过或驳回）
+      parameters:
+      - description: 审核采购订单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PurchaseOrderApproveReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 审核采购订单
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/order/create:
+    post:
+      consumes:
+      - application/json
+      description: 创建新的采购订单
+      parameters:
+      - description: 创建采购订单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PurchaseOrderCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PurchaseOrderCreateResp'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 创建采购订单
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/order/delete:
+    delete:
+      consumes:
+      - application/json
+      description: 删除采购订单
+      parameters:
+      - description: 删除采购订单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PurchaseOrderDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除采购订单
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/order/detail:
+    get:
+      consumes:
+      - application/json
+      description: 根据UUID获取采购订单详情
+      parameters:
+      - description: 采购订单UUID
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PurchaseOrderDetailResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取采购订单详情
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/order/list:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取采购订单列表
+      parameters:
+      - description: 采购订单列表请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PurchaseOrderListReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PurchaseOrderListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取采购订单列表
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/order/submit:
+    post:
+      consumes:
+      - application/json
+      description: 提交采购订单
+      parameters:
+      - description: 提交采购订单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PurchaseOrderSubmitReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 提交采购订单
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/order/update:
+    post:
+      consumes:
+      - application/json
+      description: 更新采购订单信息
+      parameters:
+      - description: 更新采购订单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PurchaseOrderUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 更新采购订单
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/receipt/cancel:
+    post:
+      consumes:
+      - application/json
+      description: 取消收货单
+      parameters:
+      - description: 取消收货单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PurchaseReceiptOrderCancelReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 取消收货单
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/receipt/create:
+    post:
+      consumes:
+      - application/json
+      description: 创建采购收货记录
+      parameters:
+      - description: 创建收货记录请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PurchaseReceiptCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PurchaseReceiptCreateResp'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 创建收货记录
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/receipt/detail:
+    get:
+      consumes:
+      - application/json
+      description: 根据UUID获取收货记录详情
+      parameters:
+      - description: 收货记录UUID
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PurchaseReceiptOrderDetailResp'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取收货记录详情
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/receipt/list:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取收货记录列表
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      - description: 订单号
+        in: query
+        name: order_no
+        type: string
+      - description: 状态
+        in: query
+        name: status
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PurchaseReceiptOrderListResp'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取收货记录列表
+      tags:
+      - 商家端.采购管理
+  /shop/purchase/receipt/update:
+    post:
+      consumes:
+      - application/json
+      description: 更新收货记录
+      parameters:
+      - description: 更新收货记录请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PurchaseReceiptOrderUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 更新收货记录
+      tags:
+      - 商家端.采购管理
   /shop/recharge_order/cancel:
     post:
       consumes:
@@ -18471,6 +24613,455 @@ paths:
       summary: 充值订单退款
       tags:
       - 商家端.充值订单
+  /shop/refresh_token:
+    get:
+      consumes:
+      - application/json
+      description: 刷新token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LoginResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 刷新token
+      tags:
+      - 商家端.认证
+  /shop/role:
+    delete:
+      consumes:
+      - application/json
+      description: 删除角色
+      parameters:
+      - description: 删除角色请求
+        in: body
+        name: delete_role_req
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeleteRoleReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除角色
+      tags:
+      - 商家端.管理员管理
+    get:
+      consumes:
+      - application/json
+      description: 获取角色列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.RoleListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取角色列表
+      tags:
+      - 商家端.管理员管理
+  /shop/role/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加角色
+      parameters:
+      - description: 添加角色请求
+        in: body
+        name: add_role_req
+        required: true
+        schema:
+          $ref: '#/definitions/req.AddRoleReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 添加角色
+      tags:
+      - 商家端.管理员管理
+  /shop/role/update:
+    post:
+      consumes:
+      - application/json
+      description: 修改角色
+      parameters:
+      - description: 修改角色请求
+        in: body
+        name: update_role_req
+        required: true
+        schema:
+          $ref: '#/definitions/req.UpdateRoleReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 修改角色
+      tags:
+      - 商家端.管理员管理
+  /shop/role_access:
+    get:
+      consumes:
+      - application/json
+      description: 获取角色权限
+      parameters:
+      - description: 角色ID
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.RoleDetailResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取角色权限
+      tags:
+      - 商家端.管理员管理
+  /shop/setting/business:
+    get:
+      consumes:
+      - application/json
+      description: 获取业务设置
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/setting.ShopBusiness'
+      security:
+      - JwtToken: []
+      summary: 获取业务设置
+      tags:
+      - 商家端.业务设置
+    post:
+      consumes:
+      - application/json
+      description: 保存业务设置
+      parameters:
+      - description: 更新业务设置
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.UpdateBusinessSetting'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 保存业务设置
+      tags:
+      - 商家端.业务设置
+  /shop/setting/free_reason:
+    delete:
+      consumes:
+      - application/json
+      description: 删除免单原因
+      parameters:
+      - description: 删除免单原因
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeleteFreeOrGiftReasonReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除免单原因
+      tags:
+      - 商家端.业务设置
+    get:
+      consumes:
+      - application/json
+      description: 获取免单原因
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.GiftOrFreeOrderReasonResp'
+      security:
+      - JwtToken: []
+      summary: 获取免单原因
+      tags:
+      - 商家端.业务设置
+  /shop/setting/free_reason/add:
+    post:
+      consumes:
+      - application/json
+      description: 新增免单原因
+      parameters:
+      - description: 新增免单原因
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.AddFreeOrGiftReasonReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 新增免单原因
+      tags:
+      - 商家端.业务设置
+  /shop/setting/free_reason/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑免单原因
+      parameters:
+      - description: 编辑免单原因
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.EditFreeOrGiftReasonReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 编辑免单原因
+      tags:
+      - 商家端.业务设置
+  /shop/setting/member_qrcode:
+    get:
+      consumes:
+      - application/json
+      description: 获取会员端二维码
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取会员端二维码
+      tags:
+      - 商家端.业务设置
+  /shop/setting/menu_qrcode:
+    post:
+      consumes:
+      - application/json
+      description: 更新电子菜单二维码
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 更新电子菜单二维码
+      tags:
+      - 商家端.业务设置
+  /shop/setting/return_food_reason:
+    delete:
+      consumes:
+      - application/json
+      description: 删除退菜原因
+      parameters:
+      - description: 删除退菜原因
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeleteReturnFoodReasonReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除退菜原因
+      tags:
+      - 商家端.业务设置
+    get:
+      consumes:
+      - application/json
+      description: 获取退菜原因
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/resp.ReturnFoodReasonResp'
+      security:
+      - JwtToken: []
+      summary: 获取退菜原因
+      tags:
+      - 商家端.业务设置
+  /shop/setting/return_food_reason/add:
+    post:
+      consumes:
+      - application/json
+      description: 新增退菜原因
+      parameters:
+      - description: 新增退菜原因
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.AddReturnFoodReasonReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 新增退菜原因
+      tags:
+      - 商家端.业务设置
+  /shop/setting/return_food_reason/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑退菜原因
+      parameters:
+      - description: 编辑退菜原因
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.EditReturnFoodReasonReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 编辑退菜原因
+      tags:
+      - 商家端.业务设置
+  /shop/setting/store:
+    post:
+      consumes:
+      - application/json
+      description: 保存门店设置
+      parameters:
+      - description: 更新门店设置
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.UpdateStoreSetting'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 保存门店设置
+      tags:
+      - 商家端.门店设置
+  /shop/setting/upload_logo:
+    post:
+      consumes:
+      - application/json
+      description: 上传logo
+      parameters:
+      - description: 上传logo
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 上传logo
+      tags:
+      - 商家端.业务设置
   /shop/shift:
     post:
       consumes:
@@ -18524,6 +25115,133 @@ paths:
       summary: 发送会员充值短信
       tags:
       - 商家端.发送会员充值短信
+  /shop/staff:
+    delete:
+      consumes:
+      - application/json
+      description: 删除管理员
+      parameters:
+      - description: 删除管理员请求
+        in: body
+        name: delete_staff_req
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeleteStaffReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除管理员
+      tags:
+      - 商家端.管理员管理
+  /shop/staff/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加管理员
+      parameters:
+      - description: 添加管理员请求
+        in: body
+        name: add_staff_req
+        required: true
+        schema:
+          $ref: '#/definitions/req.AddStaffReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 添加管理员
+      tags:
+      - 商家端.管理员管理
+  /shop/staff/list:
+    get:
+      consumes:
+      - application/json
+      description: 管理员列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.StaffListPaginationResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 管理员列表
+      tags:
+      - 商家端.管理员管理
+  /shop/staff/status:
+    post:
+      consumes:
+      - application/json
+      description: 设置启用禁用管理员
+      parameters:
+      - description: 设置启用禁用管理员请求
+        in: body
+        name: update_staff_status_req
+        required: true
+        schema:
+          $ref: '#/definitions/req.UpdateStaffStatusReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 设置启用禁用管理员
+      tags:
+      - 商家端.管理员管理
+  /shop/staff/update:
+    post:
+      consumes:
+      - application/json
+      description: 修改管理员
+      parameters:
+      - description: 修改管理员请求
+        in: body
+        name: update_staff_req
+        required: true
+        schema:
+          $ref: '#/definitions/req.UpdateStaffReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 修改管理员
+      tags:
+      - 商家端.管理员管理
   /shop/statistics/7days:
     get:
       consumes:
@@ -18557,7 +25275,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 统计区域
+      description: 统计区域，移动管理端首页-区域数据
       parameters:
       - description: 统计参数
         in: body
@@ -18579,14 +25297,14 @@ paths:
               type: object
       security:
       - JwtToken: []
-      summary: 统计区域
+      summary: 统计区域，移动管理端首页-区域数据
       tags:
       - 商家端.营业数据
   /shop/statistics/business:
     get:
       consumes:
       - application/json
-      description: 统计营业数据
+      description: 统计营业数据，移动管理端首页-店内概况
       parameters:
       - description: 统计参数
         in: body
@@ -18608,7 +25326,7 @@ paths:
               type: object
       security:
       - JwtToken: []
-      summary: 统计营业数据
+      summary: 统计营业数据，移动管理端首页-店内概况
       tags:
       - 商家端.营业数据
   /shop/statistics/export:
@@ -18760,7 +25478,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 统计商品排行
+      description: 统计商品排行，移动管理端首页-销量、销售额排行
       parameters:
       - description: 统计参数
         in: body
@@ -18782,7 +25500,7 @@ paths:
               type: object
       security:
       - JwtToken: []
-      summary: 统计商品排行
+      summary: 统计商品排行，移动管理端首页-销量、销售额排行
       tags:
       - 商家端.营业数据
   /shop/statistics/product_sales:
@@ -18843,6 +25561,28 @@ paths:
       summary: 统计班次退款金额
       tags:
       - 商家端.营业数据
+  /shop/supplier/select:
+    get:
+      consumes:
+      - application/json
+      description: 获取供应商列表选择器
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.SupplierSelectResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取供应商列表选择器
+      tags:
+      - 商家端.供应商管理
   /tablet/base:
     get:
       consumes:
@@ -18982,7 +25722,7 @@ paths:
       parameters:
       - description: '是否是自助餐: -1=全都、0=否、1=是'
         in: query
-        name: isBuffet
+        name: is_buffet
         type: integer
       - description: 页码
         in: query
@@ -19049,7 +25789,7 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json

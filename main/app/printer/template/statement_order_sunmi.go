@@ -352,7 +352,12 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 		printer.SetLineSpacing(40)
 	}
 	// 商品列表
-	products, num := t.base.MergeSaleOrderProduct(saleBill, saleOrder, temp != 4, true)
+	products, num := t.base.MergeSaleOrderProduct(MergeSaleOrderProductOptions{
+		saleBill:   saleBill,
+		saleOrder:  saleOrder,
+		IsShowSku:  temp != 4,
+		IsShowWrap: true,
+	})
 	productNum = productNum.Add(decimal.NewFromFloat(num).Round(3))
 	for _, product := range products {
 		printer.PrintInColumns(
@@ -360,6 +365,16 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 			fmt.Sprintf("%s*%v", t.base.Amount(product.ProductPrice), product.ProductNum),
 			t.base.GetPriceAndUnit(product.ProductTotalPrice),
 		)
+
+		// 套餐子商品
+		for _, subProduct := range product.SubProducts {
+			printer.PrintInColumns(
+				subProduct.ProductName,
+				fmt.Sprintf("%v", subProduct.ProductNum),
+				"",
+			)
+		}
+
 		printer.SetLineSpacing(20)
 		printer.LineFeed()
 		printer.SetLineSpacing(40)

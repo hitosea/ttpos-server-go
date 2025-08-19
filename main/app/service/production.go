@@ -375,6 +375,7 @@ func (s *productionSrv) Finish(ctx context.Context, productUuid uint64) error {
 					OrderProductId:  product.Uuid,
 					ProductId:       product.ProductPackageUuid,
 					ProductName:     product.SaleOrderProduct.MultiLanguageName.GetNames(),
+					ProductType:     product.SaleOrderProduct.ProductType,
 					ProductAttr:     product.SaleOrderProduct.GetAttributeName(),
 					ProductAttrList: product.SaleOrderProduct.GetAttributeNameList(),
 					TotalNum:        product.SaleOrderProduct.Num,

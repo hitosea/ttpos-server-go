@@ -4,6 +4,7 @@ package template
 import (
 	"fmt"
 
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/app/printer/printer_model"
@@ -26,11 +27,19 @@ func NewDishesXprinterTemplate(
 
 // CompleteOrder 整单模版
 func (t *dishesXprinterTemplate) CompleteOrder(
-	temp int,
+	tmpInfo model.PrinterTemplate,
 	printerItem *model.ProductPrinterItem,
 	order model.SaleBill,
 	products printer_model.Products,
 ) string {
+	// 检查是否有打印内容
+	if len(products) == 0 {
+		return ""
+	}
+
+	temp := tmpInfo.Template
+	isShowSku := tmpInfo.IsShowSku
+
 	// 人的翻译
 	name := t.base.Translate("人")
 	// 自助餐标记开关
@@ -47,8 +56,12 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 	if printerItem.Printer != nil && printerItem.Printer.PrinterType != nil {
 		printerType = printerItem.Printer.PrinterType.Key
 	}
-	// 是否有打印内容
-	isPrinter := false
+
+	// 是否是商米打印机
+	isSunmi := false
+	if printerType == PrinterTypeSunmiLan || printerType == PrinterTypeSunmiCloud || printerType == PrinterTypeCashierSunmi || printerType == PrinterTypeCodesoftWifi {
+		isSunmi = true
+	}
 
 	// 创建打印机实例
 	printer := pkg.NewPrinter(567, "", "")
@@ -78,7 +91,7 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 			printer.AppendText(t.base.Translate("桌号") + ": " + order.SerialNo + mealNumStr)
 			printer.RestoreDefaultLineSpacing()
 			printer.LineFeed()
-		} else if order.IsTakeout() {
+		} else if order.IsTakeoutBill() {
 			printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
 		} else {
 			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
@@ -126,70 +139,87 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 		)
 
 		// 处理产品
-		for _, product := range products {
-			// 设置行间距
-			printer.SetLineSpacing(45)
-			// 处理自助餐文本
-			buffetText := ""
-			if buffetSignOpen == "1" {
-				if product.IsBuffet {
-					buffetText = t.base.Translate("自助餐") + "-"
-				}
-			}
-			// 打包商品
-			wrapText := ""
-			if product.IsWrap {
-				wrapText = "(" + t.base.Translate("打包") + ") "
-			}
-			// 产品名称
-			productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
-			// 打印产品名称和数量
-			productNum := "x" + t.base.FloatToString(product.TotalNum)
-			if len(productNum) >= 3 {
-				printer.AppendText(t.base.PrintText(productName, "", productNum, 47))
-				printer.LineFeed()
-			} else {
-				printer.PrintInColumns(productName, productNum)
-			}
-			// 设置字符大小和行间距
-			printer.SetCharacterSize(1, 1)
-			if printerType == PrinterTypeXPrinterLan {
-				printer.SetLineSpacing(90)
-			} else if printerType == PrinterTypeXPrinterWifi {
-				printer.SetLineSpacing(10)
-				printer.LineFeed()
-				printer.SetLineSpacing(90)
-			} else {
-				printer.SetLineSpacing(45)
-			}
-			// 分割处理属性
-			for _, attr := range product.ProductAttrList {
-				printer.AppendText(attr.GetLocale(t.base.Lang))
-				printer.LineFeed()
-			}
-
-			// 处理备注
-			if product.Remark != "" {
+		var processProducts func(products printer_model.Products, isSubProduct bool)
+		processProducts = func(products printer_model.Products, isSubProduct bool) {
+			for _, product := range products {
 				// 设置行间距
-				if t.base.IsMyText(product.Remark) {
-					printer.SetLineSpacing(85)
-				} else {
-					printer.SetLineSpacing(55)
+				printer.SetLineSpacing(45)
+				// 处理自助餐文本
+				buffetText := ""
+				if buffetSignOpen == "1" {
+					if product.IsBuffet {
+						buffetText = t.base.Translate("自助餐") + "-"
+					}
 				}
-				printer.SetCharacterSize(2, 2)
-				printer.PrintInColumns(product.Remark)
+				// 打包商品
+				wrapText := ""
+				if product.IsWrap && !isSubProduct {
+					wrapText = "(" + t.base.Translate("打包") + ") "
+				}
+				// 产品名称
+				productName := utils.IfString(isSubProduct, "-", "") + wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
+				// 打印产品名称和数量
+				productNum := "x" + t.base.FloatToString(product.TotalNum)
+				if len(productNum) >= 3 {
+					printer.AppendText(t.base.PrintText(productName, "", productNum, 47))
+					printer.LineFeed()
+				} else {
+					printer.PrintInColumns(productName, productNum)
+				}
+
+				// 设置字符大小和行间距
 				printer.SetCharacterSize(1, 1)
-				printer.SetLineSpacing(20)
+				// 打印行间距和换行
+				if isSubProduct {
+					printer.LineFeed()
+				}
+				if printerType == PrinterTypeXPrinterLan {
+					printer.SetLineSpacing(90)
+				} else if printerType == PrinterTypeXPrinterWifi {
+					printer.SetLineSpacing(10)
+					printer.LineFeed()
+					printer.SetLineSpacing(90)
+				} else {
+					printer.SetLineSpacing(45)
+				}
+				// 分割处理属性
+				for _, attr := range utils.IfSlice(isShowSku == 0, product.ProductSauceNamesList, product.ProductAttrList) {
+					if attr.GetLocale(t.base.Lang) == "" {
+						continue
+					}
+					printer.AppendText(utils.IfString(isSubProduct, " ", "") + attr.GetLocale(t.base.Lang))
+					printer.LineFeed()
+				}
+
+				// 处理备注
+				if product.Remark != "" {
+					// 设置行间距
+					if t.base.IsMyText(product.Remark) {
+						printer.SetLineSpacing(85)
+					} else {
+						printer.SetLineSpacing(55)
+					}
+					printer.SetCharacterSize(2, 2)
+					printer.PrintInColumns(product.Remark)
+					printer.SetCharacterSize(1, 1)
+					printer.SetLineSpacing(20)
+					printer.LineFeed()
+				}
+
+				// 打印行间距和换行
+				printer.SetLineSpacing(12)
 				printer.LineFeed()
+
+				// 打印套餐子商品
+				if len(product.SubProducts) > 0 {
+					printer.LineFeed()
+					printer.LineFeed()
+					processProducts(product.SubProducts, true)
+				}
 			}
-
-			// 打印行间距和换行
-			printer.SetLineSpacing(12)
-			printer.LineFeed()
-
-			// 标记已有打印内容
-			isPrinter = true
 		}
+		processProducts(products, false)
+
 	} else {
 		/**
 		 * 模版二
@@ -211,7 +241,7 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 			printer.AppendText(t.base.Translate("桌号") + ": " + order.SerialNo + mealNumStr)
 			printer.RestoreDefaultLineSpacing()
 			printer.LineFeed()
-		} else if order.IsTakeout() {
+		} else if order.IsTakeoutBill() {
 			printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
 		} else if order.SerialNo != "" {
 			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
@@ -254,108 +284,122 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 		printer.AppendText("\n------------------------------------------------\n")
 
 		// 处理产品
-		for _, product := range products {
-			// 处理自助餐文本
-			buffetText := ""
-			if buffetSignOpen == "1" {
-				if product.IsBuffet {
-					buffetText = t.base.Translate("自助餐") + "-"
+		var processProducts func(products printer_model.Products, isSubProduct bool)
+		processProducts = func(products printer_model.Products, isSubProduct bool) {
+			for _, product := range products {
+				// 处理自助餐文本
+				buffetText := ""
+				if buffetSignOpen == "1" {
+					if product.IsBuffet {
+						buffetText = t.base.Translate("自助餐") + "-"
+					}
 				}
-			}
-			// 打包商品
-			wrapText := ""
-			if product.IsWrap {
-				wrapText = "(" + t.base.Translate("打包") + ") "
-			}
-			// 产品名称
-			productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
+				// 打包商品
+				wrapText := ""
+				if product.IsWrap && !isSubProduct {
+					wrapText = "(" + t.base.Translate("打包") + ") "
+				}
+				// 产品名称
+				productName := utils.IfString(isSubProduct, "-", "") + wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 
-			// 设置列
-			if t.base.IsThText(productName) {
-				printer.SetupColumns(
-					[]int{450, pkg.AlignLeft, 0},
-					[]int{0, pkg.AlignRight, 0},
-				)
-			} else {
-				printer.SetupColumns(
-					[]int{480, pkg.AlignLeft, 0},
-					[]int{0, pkg.AlignRight, 0},
-				)
-			}
-
-			// 设置行间距
-			if printerType == PrinterTypeXPrinterLan {
-				printer.SetLineSpacing(20)
-			} else if printerType == PrinterTypeXPrinterWifi {
-				printer.SetLineSpacing(125)
-			} else if t.base.IsMyText(productName) {
-				printer.SetLineSpacing(80)
-			} else {
-				printer.SetLineSpacing(68)
-			}
-			// 设置字符大小
-			printer.SetCharacterSize(2, 2)
-			// 打印产品名称和数量
-			productNum := "x" + t.base.FloatToString(product.TotalNum)
-			if len(productNum) >= 3 {
-				w := 20 - (len(productNum) - 4)
-				printer.AppendText(t.base.PrintText(
-					productName, "", productNum,
-					w, w, 0, 0, 2,
-				))
-				printer.LineFeed()
-			} else {
-				printer.PrintInColumns(productName, productNum)
-			}
-			// 设置字符大小和行间距
-			printer.SetCharacterSize(1, 1)
-			if printerType == PrinterTypeXPrinterLan {
-				printer.SetLineSpacing(90)
-			} else if printerType == PrinterTypeXPrinterWifi {
-				printer.SetLineSpacing(20)
-				printer.LineFeed()
-				printer.SetLineSpacing(90)
-			} else {
-				printer.SetLineSpacing(50)
-			}
-			// 分割处理属性
-			for _, attr := range product.ProductAttrList {
-				printer.AppendText(attr.GetLocale(t.base.Lang))
-				printer.SetLineSpacing(45)
-				printer.LineFeed()
-			}
-
-			// 处理备注
-			if product.Remark != "" {
-				// 设置行间距
-				if t.base.IsMyText(product.Remark) {
-					printer.SetLineSpacing(85)
+				// 设置列
+				if t.base.IsThText(productName) {
+					printer.SetupColumns(
+						[]int{450, pkg.AlignLeft, 0},
+						[]int{0, pkg.AlignRight, 0},
+					)
 				} else {
-					printer.SetLineSpacing(55)
+					printer.SetupColumns(
+						[]int{480, pkg.AlignLeft, 0},
+						[]int{0, pkg.AlignRight, 0},
+					)
 				}
+
+				// 设置行间距
+				if printerType == PrinterTypeXPrinterLan {
+					printer.SetLineSpacing(20)
+				} else if printerType == PrinterTypeXPrinterWifi {
+					printer.SetLineSpacing(125)
+				} else if t.base.IsMyText(productName) {
+					printer.SetLineSpacing(80)
+				} else {
+					printer.SetLineSpacing(68)
+				}
+				// 设置字符大小
 				printer.SetCharacterSize(2, 2)
-				printer.PrintInColumns(product.Remark)
+				// 打印产品名称和数量
+				productNum := "x" + t.base.FloatToString(product.TotalNum)
+				if len(productNum) >= 3 {
+					if isSunmi {
+						printer.SetupColumns(
+							[]int{490 - (len(productNum)-3)*30, pkg.AlignLeft, 0},
+							[]int{0, pkg.AlignRight, 0},
+						)
+						printer.PrintInColumns(productName, productNum)
+					} else {
+						w := 20 - (len(productNum) - 3)
+						printer.AppendText(t.base.PrintText(
+							productName, "", productNum,
+							w, w, 0, 0, 2,
+						))
+						printer.LineFeed()
+					}
+				} else {
+					printer.PrintInColumns(productName, productNum)
+				}
+				// 设置字符大小和行间距
 				printer.SetCharacterSize(1, 1)
-				printer.SetLineSpacing(20)
+				if printerType == PrinterTypeXPrinterLan {
+					printer.SetLineSpacing(90)
+				} else if printerType == PrinterTypeXPrinterWifi {
+					printer.SetLineSpacing(20)
+					printer.LineFeed()
+					printer.SetLineSpacing(90)
+				} else {
+					printer.SetLineSpacing(50)
+				}
+				// 分割处理属性
+				for _, attr := range utils.IfSlice(isShowSku == 0, product.ProductSauceNamesList, product.ProductAttrList) {
+					if attr.GetLocale(t.base.Lang) == "" {
+						continue
+					}
+					printer.AppendText(utils.IfString(isSubProduct, "  ", "") + attr.GetLocale(t.base.Lang))
+					printer.SetLineSpacing(45)
+					printer.LineFeed()
+					if isSubProduct {
+						printer.LineFeed()
+					}
+				}
+				// 处理备注
+				if product.Remark != "" {
+					// 设置行间距
+					if t.base.IsMyText(product.Remark) {
+						printer.SetLineSpacing(85)
+					} else {
+						printer.SetLineSpacing(55)
+					}
+					printer.SetCharacterSize(2, 2)
+					printer.PrintInColumns(product.Remark)
+					printer.SetCharacterSize(1, 1)
+					printer.SetLineSpacing(20)
+					printer.LineFeed()
+				}
+
+				// 打印行间距和换行
+				printer.SetLineSpacing(12)
 				printer.LineFeed()
+
+				// 打印套餐子商品
+				if len(product.SubProducts) > 0 {
+					processProducts(product.SubProducts, true)
+				}
 			}
-
-			// 打印行间距和换行
-			printer.SetLineSpacing(12)
-			printer.LineFeed()
-
-			// 标记已有打印内容
-			isPrinter = true
 		}
+		processProducts(products, false)
 	}
 
 	// 恢复默认行间距
 	printer.RestoreDefaultLineSpacing()
-
-	// 检查是否有打印内容
-	if !isPrinter {
-		return ""
-	}
 
 	// 打印额外行
 	printer.LineFeed()
@@ -372,12 +416,15 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 
 // OneDishOneOrder 一菜一单
 func (t *dishesXprinterTemplate) OneDishOneOrder(
-	tmp int,
+	tmpInfo model.PrinterTemplate,
 	productPrinter model.ProductPrinter,
 	printerItem *model.ProductPrinterItem,
 	order model.SaleBill,
 	products printer_model.Products,
 ) string {
+	tmp := tmpInfo.Template
+	isShowSku := tmpInfo.IsShowSku
+
 	// 人的翻译
 	name := t.base.Translate("人")
 	// 自助餐标记开关
@@ -394,6 +441,13 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 	if printerItem.Printer != nil && printerItem.Printer.PrinterType != nil {
 		printerType = printerItem.Printer.PrinterType.Key
 	}
+
+	// 是否是商米打印机
+	isSunmi := false
+	if printerType == PrinterTypeSunmiLan || printerType == PrinterTypeSunmiCloud || printerType == PrinterTypeCashierSunmi || printerType == PrinterTypeCodesoftWifi {
+		isSunmi = true
+	}
+
 	// 是否有打印内容
 	isPrinter := false
 
@@ -422,7 +476,7 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 			printer.SetLineSpacing(spacing)
 			printer.AppendText(t.base.Translate("桌号") + ": " + order.SerialNo + mealNumStr)
 			printer.RestoreDefaultLineSpacing()
-		} else if order.IsTakeout() {
+		} else if order.IsTakeoutBill() {
 			printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo)
 		} else {
 			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + mealNumStr)
@@ -467,12 +521,20 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 				//
 				productNum := "x" + t.base.FloatToString(num)
 				if len(productNum) >= 3 {
-					w := 20 - (len(productNum) - 4)
-					printer.AppendText(t.base.PrintText(
-						productName, "", productNum,
-						w, w, 0, 0, 2,
-					))
-					printer.LineFeed()
+					if isSunmi {
+						printer.SetupColumns(
+							[]int{490 - (len(productNum)-3)*30, pkg.AlignLeft, 0},
+							[]int{0, pkg.AlignRight, 0},
+						)
+						printer.PrintInColumns(productName, productNum)
+					} else {
+						w := 20 - (len(productNum) - 3)
+						printer.AppendText(t.base.PrintText(
+							productName, "", productNum,
+							w, w, 0, 0, 2,
+						))
+						printer.LineFeed()
+					}
 				} else {
 					printer.PrintInColumns(productName, productNum)
 				}
@@ -486,7 +548,7 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 				}
 
 				// 处理产品属性
-				for _, attr := range product.ProductAttrList {
+				for _, attr := range utils.IfSlice(isShowSku == 0, product.ProductSauceNamesList, product.ProductAttrList) {
 					printer.AppendText(attr.GetLocale(t.base.Lang))
 					if printerType == PrinterTypeXPrinterWifi {
 						printer.SetLineSpacing(40)
@@ -559,7 +621,7 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 			printer.SetLineSpacing(spacing)
 			printer.AppendText(t.base.Translate("桌号") + ": " + order.SerialNo + mealNumStr)
 			printer.RestoreDefaultLineSpacing()
-		} else if order.IsTakeout() {
+		} else if order.IsTakeoutBill() {
 			printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo)
 		} else {
 			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + mealNumStr)
@@ -614,12 +676,20 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 				//
 				productNum := "x" + t.base.FloatToString(num)
 				if len(productNum) >= 3 {
-					w := 20 - (len(productNum) - 4)
-					printer.AppendText(t.base.PrintText(
-						productName, "", productNum,
-						w, w, 0, 0, 2,
-					))
-					printer.LineFeed()
+					if isSunmi {
+						printer.SetupColumns(
+							[]int{490 - (len(productNum)-3)*30, pkg.AlignLeft, 0},
+							[]int{0, pkg.AlignRight, 0},
+						)
+						printer.PrintInColumns(productName, productNum)
+					} else {
+						w := 20 - (len(productNum) - 3)
+						printer.AppendText(t.base.PrintText(
+							productName, "", productNum,
+							w, w, 0, 0, 2,
+						))
+						printer.LineFeed()
+					}
 				} else {
 					printer.PrintInColumns(productName, productNum)
 				}
@@ -633,7 +703,7 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 				}
 
 				// 处理产品属性
-				for _, attr := range product.ProductAttrList {
+				for _, attr := range utils.IfSlice(isShowSku == 0, product.ProductSauceNamesList, product.ProductAttrList) {
 					printer.AppendText(attr.GetLocale(t.base.Lang))
 					if printerType == PrinterTypeXPrinterWifi {
 						printer.SetLineSpacing(40)
@@ -695,6 +765,11 @@ func (t *dishesXprinterTemplate) ReturnMenuTemplate(
 	order model.SaleBill,
 	products printer_model.Products,
 ) string {
+
+	if len(products) == 0 {
+		return ""
+	}
+
 	// 人的翻译
 	name := t.base.Translate("人")
 	// 自助餐标记开关
@@ -711,8 +786,12 @@ func (t *dishesXprinterTemplate) ReturnMenuTemplate(
 	if printerItem.Printer != nil && printerItem.Printer.PrinterType != nil {
 		printerType = printerItem.Printer.PrinterType.Key
 	}
-	// 是否有打印内容
-	isPrinter := false
+
+	// 是否是商米打印机
+	isSunmi := false
+	if printerType == PrinterTypeSunmiLan || printerType == PrinterTypeSunmiCloud || printerType == PrinterTypeCashierSunmi || printerType == PrinterTypeCodesoftWifi {
+		isSunmi = true
+	}
 
 	// 创建打印机实例
 	printer := pkg.NewPrinter(567, "", "")
@@ -750,7 +829,7 @@ func (t *dishesXprinterTemplate) ReturnMenuTemplate(
 		printer.AppendText(t.base.Translate("桌号") + ": " + order.SerialNo + mealNumStr)
 		printer.SetLineSpacing(30)
 		printer.LineFeed()
-	} else if order.IsTakeout() {
+	} else if order.IsTakeoutBill() {
 		printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo)
 	} else {
 		printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo)
@@ -794,101 +873,119 @@ func (t *dishesXprinterTemplate) ReturnMenuTemplate(
 
 	// 处理产品
 	refundText := utils.IfString(t.base.Lang == "tr", "iptal", t.base.Translate("退"))
-	for _, product := range products {
-		// 设置行间距
-		printer.SetLineSpacing(45)
-		// 处理自助餐文本
-		buffetText := ""
-		if buffetSignOpen == "1" {
-			if product.IsBuffet {
-				buffetText = t.base.Translate("自助餐") + "-"
+	var processProducts func(products printer_model.Products, isSubProduct bool)
+	processProducts = func(products printer_model.Products, isSubProduct bool) {
+		for _, product := range products {
+			// 设置行间距
+			printer.SetLineSpacing(45)
+			// 处理自助餐文本
+			buffetText := ""
+			if buffetSignOpen == "1" {
+				if product.IsBuffet {
+					buffetText = t.base.Translate("自助餐") + "-"
+				}
 			}
-		}
-		// 产品名称
-		productName := utils.IfString(tmp == 2, "!!!", "") + "(" + refundText + ") " + buffetText + product.ProductName.GetLocale(t.base.Lang)
+			// 产品名称
+			productName := utils.IfString(tmp == 2, "!!!", "") + "(" + refundText + ") " + buffetText + product.ProductName.GetLocale(t.base.Lang)
+			if isSubProduct {
+				productName = "-" + buffetText + product.ProductName.GetLocale(t.base.Lang)
+			}
 
-		// 设置字符大小和行间距
-		if printerType == PrinterTypeXPrinterWifi {
-			printer.SetLineSpacing(120)
-		} else {
-			printer.SetLineSpacing(60)
-		}
-
-		// 打印产品名称和数量
-		printer.SetCharacterSize(2, 2)
-		productNum := utils.IfString(tmp == 2, "-", "x") + t.base.FloatToString(product.TotalNum)
-		if len(productNum) >= 3 {
-			w := 20 - (len(productNum) - 3)
-			printer.AppendText(t.base.PrintText(
-				productName, "", productNum,
-				w, w, 0, 0, 2,
-			))
-			printer.LineFeed()
-		} else {
-			printer.PrintInColumns(productName, productNum)
-		}
-		printer.SetCharacterSize(1, 1)
-
-		// 恢复默认行间距
-		printer.RestoreDefaultLineSpacing()
-
-		// 换行
-		if printerType != PrinterTypeXPrinterLan {
-			printer.LineFeed()
-		}
-
-		// 分割处理属性
-		for _, attr := range product.ProductAttrList {
-			printer.AppendText(attr.GetLocale(t.base.Lang))
+			// 设置字符大小和行间距
 			if printerType == PrinterTypeXPrinterWifi {
-				printer.SetLineSpacing(40)
+				printer.SetLineSpacing(120)
 			} else {
-				printer.SetLineSpacing(22)
+				printer.SetLineSpacing(60)
 			}
-			printer.LineFeed(2)
-			// 恢复默认行间距
-			printer.RestoreDefaultLineSpacing()
-		}
 
-		// 处理备注
-		if product.Remark != "" {
-			printer.AppendText(product.Remark)
+			// 打印产品名称和数量
+			printer.SetCharacterSize(2, 2)
+			productNum := utils.IfString(tmp == 2, "-", "x") + t.base.FloatToString(product.TotalNum)
+			if len(productNum) >= 3 {
+				if isSunmi {
+					printer.SetupColumns(
+						[]int{490 - (len(productNum)-3)*30, pkg.AlignLeft, 0},
+						[]int{0, pkg.AlignRight, 0},
+					)
+					printer.PrintInColumns(productName, productNum)
+				} else {
+					w := 20 - (len(productNum) - 3)
+					printer.AppendText(t.base.PrintText(
+						productName, "", productNum,
+						w, w, 0, 0, 2,
+					))
+					printer.LineFeed()
+				}
+			} else {
+				printer.PrintInColumns(productName, productNum)
+			}
 			printer.SetCharacterSize(1, 1)
-			if printerType == PrinterTypeXPrinterWifi {
-				printer.SetLineSpacing(40)
-			} else {
-				printer.SetLineSpacing(22)
-			}
-			printer.LineFeed(2)
+
 			// 恢复默认行间距
 			printer.RestoreDefaultLineSpacing()
-		}
 
-		// 打印行间距和换行
-		printer.LineFeed()
-
-		// 退菜原因
-		printer.AppendText("------------------------------------------------")
-		printer.LineFeed(1, 34)
-		// 获取退菜原因文本
-		reasonText := product.Reason.GetLocale(t.base.Lang)
-		// 如果有自定义原因，则添加
-		if product.CustomReason != "" {
-			if reasonText != "" {
-				reasonText += "、"
+			// 换行
+			if printerType != PrinterTypeXPrinterLan {
+				printer.LineFeed()
 			}
-			reasonText += product.CustomReason
-		}
-		printer.SetAlignment(pkg.AlignLeft)
-		printer.AppendText(fmt.Sprintf("%s： %s", t.base.Translate("退菜原因"), reasonText))
-		// 标记已有打印内容
-		isPrinter = true
-	}
 
-	// 检查是否有打印内容
-	if !isPrinter {
-		return ""
+			// 分割处理属性
+			for _, attr := range product.ProductAttrList {
+				if attr.GetLocale(t.base.Lang) == "" {
+					continue
+				}
+				printer.AppendText(utils.IfString(isSubProduct, "  ", "") + attr.GetLocale(t.base.Lang))
+				if printerType == PrinterTypeXPrinterWifi {
+					printer.SetLineSpacing(40)
+				} else {
+					printer.SetLineSpacing(22)
+				}
+				printer.LineFeed(2)
+				// 恢复默认行间距
+				printer.RestoreDefaultLineSpacing()
+			}
+
+			// 处理备注
+			if product.Remark != "" {
+				printer.AppendText(product.Remark)
+				printer.SetCharacterSize(1, 1)
+				if printerType == PrinterTypeXPrinterWifi {
+					printer.SetLineSpacing(40)
+				} else {
+					printer.SetLineSpacing(22)
+				}
+				printer.LineFeed(2)
+				// 恢复默认行间距
+				printer.RestoreDefaultLineSpacing()
+			}
+
+			// 打印行间距和换行
+			printer.LineFeed()
+
+			// 打印套餐子商品
+			if len(product.SubProducts) > 0 {
+				processProducts(product.SubProducts, true)
+			}
+
+			// 退菜原因
+			if !isSubProduct {
+				printer.AppendText("------------------------------------------------")
+				printer.LineFeed(1, 34)
+				// 获取退菜原因文本
+				reasonText := product.Reason.GetLocale(t.base.Lang)
+				// 如果有自定义原因，则添加
+				if product.CustomReason != "" {
+					if reasonText != "" {
+						reasonText += "、"
+					}
+					reasonText += product.CustomReason
+				}
+				printer.SetAlignment(pkg.AlignLeft)
+				printer.AppendText(fmt.Sprintf("%s： %s", t.base.Translate("退菜原因"), reasonText))
+			}
+		}
 	}
+	processProducts(products, false)
 
 	// 换行
 	if tmp == 2 {
@@ -928,6 +1025,11 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 	products printer_model.Products,
 	finishedTime int64,
 ) string {
+
+	if len(products) == 0 {
+		return ""
+	}
+
 	// 人的翻译
 	name := t.base.Translate("人")
 	// 自助餐标记开关
@@ -944,8 +1046,11 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 	if mdPrinter.PrinterType != nil {
 		printerType = mdPrinter.PrinterType.Key
 	}
-	// 是否有打印内容
-	isPrinter := false
+	// 是否是商米打印机
+	isSunmi := false
+	if printerType == PrinterTypeSunmiLan || printerType == PrinterTypeSunmiCloud || printerType == PrinterTypeCashierSunmi || printerType == PrinterTypeCodesoftWifi {
+		isSunmi = true
+	}
 
 	// 创建打印机实例
 	printer := pkg.NewPrinter(567, "", "")
@@ -977,8 +1082,6 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 		printer.AppendText(t.base.Translate("桌号") + ": " + order.SerialNo + mealNumStr)
 		printer.SetLineSpacing(30)
 		printer.LineFeed()
-	} else if order.IsTakeout() {
-		printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo)
 	} else {
 		printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo)
 	}
@@ -1035,8 +1138,13 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 		if product.IsWrap {
 			wrapText = "(" + t.base.Translate("打包") + ") "
 		}
+		// 套餐
+		packageText := ""
+		if product.ProductType > constant.ProductTypeProduct {
+			packageText = t.base.Translate("套餐") + "-"
+		}
 		// 产品名称
-		productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
+		productName := packageText + wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 
 		// 设置字符大小和行间距
 		if printerType == PrinterTypeXPrinterWifi {
@@ -1049,12 +1157,20 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 		printer.SetCharacterSize(2, 2)
 		productNum := "x" + t.base.FloatToString(product.TotalNum)
 		if len(productNum) >= 3 {
-			w := 20 - (len(productNum) - 4)
-			printer.AppendText(t.base.PrintText(
-				productName, "", productNum,
-				w, w, 0, 0, 2,
-			))
-			printer.LineFeed()
+			if isSunmi {
+				printer.SetupColumns(
+					[]int{490 - (len(productNum)-3)*30, pkg.AlignLeft, 0},
+					[]int{0, pkg.AlignRight, 0},
+				)
+				printer.PrintInColumns(productName, productNum)
+			} else {
+				w := 20 - (len(productNum) - 3)
+				printer.AppendText(t.base.PrintText(
+					productName, "", productNum,
+					w, w, 0, 0, 2,
+				))
+				printer.LineFeed()
+			}
 		} else {
 			printer.PrintInColumns(productName, productNum)
 		}
@@ -1094,14 +1210,6 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 			// 恢复默认行间距
 			printer.RestoreDefaultLineSpacing()
 		}
-
-		// 标记已有打印内容
-		isPrinter = true
-	}
-
-	// 检查是否有打印内容
-	if !isPrinter {
-		return ""
 	}
 
 	// 打印额外行

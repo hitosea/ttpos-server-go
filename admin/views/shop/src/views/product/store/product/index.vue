@@ -4,36 +4,37 @@
     <div class="common-search-wrap">
       <el-form size="small" :inline="true" :model="searchForm" class="demo-form-inline">
         <el-form-item :label="$t('商品类型')">
-          <a-select size="small" v-model:value="material_type" clearable :placeholder="$t('全部类型')" @change="onSearch">
+          <Aselect size="small" v-model:value="material_type" clearable :placeholder="$t('全部类型')" @change="onSearch">
             <el-option :label="$t('全部类型')" value=" "></el-option>
             <el-option :label="$t('材料')" value="20"></el-option>
+            <el-option :label="$t('套餐')" value="30"></el-option>
             <el-option :label="$t('成品')" value="10"></el-option>
-          </a-select>
+          </Aselect>
         </el-form-item>
         <el-form-item :label="$t('商品分类')">
-          <a-cascader
+          <Acascader
             :options="categoryList"
             :props="{ checkStrictly: true, expandTrigger: 'hover' }"
             v-model:value="searchForm.category_id"
             :placeholder="$t('请选择分类')"
             @change="onSearch('1')"
           >
-          </a-cascader>
+          </Acascader>
         </el-form-item>
         <el-form-item :label="$t('商品库存')">
-          <a-select size="small" v-model:value="stock" :placeholder="$t('全部库存')" @change="onSearch">
+          <Aselect size="small" v-model:value="stock" :placeholder="$t('全部库存')" @change="onSearch">
             <el-option :label="$t('全部')" value=" "></el-option>
             <el-option :label="$t('库存低于10')" value="10"></el-option>
             <el-option :label="$t('库存低于20')" value="20"></el-option>
             <el-option :label="$t('库存低于50')" value="50"></el-option>
-          </a-select>
+          </Aselect>
         </el-form-item>
         <el-form-item :label="$t('商品状态')">
-          <a-select size="small" v-model:value="activeName" :placeholder="$t('商品状态')" @change="onSearch">
+          <Aselect size="small" v-model:value="activeName" :placeholder="$t('商品状态')" @change="onSearch">
             <el-option :label="$t('全部')" value="all"></el-option>
             <el-option :label="$t('上架中')" value="sell"></el-option>
             <el-option :label="$t('下架中')" value="lower"></el-option>
-          </a-select>
+          </Aselect>
         </el-form-item>
         <el-form-item :label="$t('商品名称')">
           <el-input size="small" v-model="searchForm.product_name" :placeholder="$t('请输入商品名称')" @input="onSearch"></el-input>
@@ -82,7 +83,7 @@
         <el-table size="small" :data="tableData" border style="width: 100%" v-loading="loading">
           <el-table-column prop="category.path_name_text" :label="$t('类型')">
             <template #default="scope">
-              {{ scope.row.type == 10 ? $t('成品') : $t('材料') }}
+              {{ typeText(scope.row.type) }}
             </template>
           </el-table-column>
           <el-table-column prop="product_name" :label="$t('商品名称')" width="400px">
@@ -112,7 +113,12 @@
           <el-table-column prop="sales_actual" :label="$t('实际销量')"></el-table-column>
           <el-table-column prop="product_stock" :label="$t('库存')">
             <template #default="scope">
-              {{ scope.row.type == 10 ? scope.row.product_stock : scope.row.product_material_stock }}
+              <template v-if="scope.row.type == 10 || scope.row.type == 30">
+                {{ scope.row.is_open_stock == 1 ? scope.row.product_stock : '-' }}
+              </template>
+              <template v-else>
+                {{ scope.row.product_material_stock }}
+              </template>
             </template>
           </el-table-column>
           <el-table-column prop="product_status.text" :label="$t('状态')" width="100">
@@ -156,11 +162,13 @@
 </template>
 
 <script setup>
-  import { ref, reactive, onMounted, getCurrentInstance } from 'vue';
+  import { ref, reactive, onMounted, getCurrentInstance, nextTick } from 'vue';
   import { useRouter, useRoute } from 'vue-router';
   import { ElMessageBox, ElMessage } from 'element-plus';
   import PorductApi from '@/api/product.js';
   import ProductSelector from '@/components/product/Selector.vue';
+  import Aselect from '@/components/a-select/index.vue';
+  import Acascader from '@/components/a-cascader/index.vue';
   import { useUserStore } from '@/store/index';
   import { languageStore } from '@/store/model/language';
   import defaultImg from '@/assets/img/default.png';
@@ -192,7 +200,7 @@
   const openProductSelector = ref(false);
 
   // 初始化参数
-  onMounted(() => {
+  onMounted(async () => {
     let params = languageStore().getPageParams().pageParams;
     if (params.value && params.value.page) {
       searchForm.category_id = params.value.category_id;
@@ -204,10 +212,13 @@
       material_type.value = params.value.material_type;
       languageStore().setPageParams({});
     }
+
     if (route.query.inventory) {
       stock.value = '10';
       material_type.value = '10';
-      route.query = {};
+      // 清除查询参数
+      router.replace({ query: {} });
+        
     }
     getData();
   });
@@ -420,6 +431,17 @@
         });
       }
       getData();
+    }
+  };
+
+  const typeText = (type) => {
+    switch (type) {
+      case 10:
+        return $t('成品');
+      case 20:
+        return $t('材料');
+      case 30:
+        return $t('套餐');
     }
   };
 </script>

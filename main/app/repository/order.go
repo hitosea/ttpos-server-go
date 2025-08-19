@@ -30,7 +30,7 @@ type IOrderRepo interface {
 	HideOrder(saleBillUuid uint64) error                                                                                       // 隐藏订单
 	DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) error                           // 删除订单产品
 	ChangePopulation(saleBillUuid uint64, population int) error                                                                // 修改订单人数
-	ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string) error               // 修改订单商品备注
+	ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string, sign string) error  // 修改订单商品备注
 	SetLock(saleBillUuid uint64, isLock bool) error                                                                            // 设置订单锁定状态
 	SaveOrUpdateInvoiceInfo(saleOrderUuid uint64, invoiceInfo model.SaleOrderInvoiceInfo) (*model.SaleOrderInvoiceInfo, error) // 设置订单发票信息
 }
@@ -748,6 +748,12 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts.ProductPackage",
 						},
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductBoms",
+						},
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductPackageAttributeGroups",
+						},
 					),
 					CommonRepo.Preload(
 						WithPreload{
@@ -767,8 +773,9 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 							Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
 							Args: []any{
 								CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
-									return db.Order("product_attribute_uuid asc")
+									return db.Order("id asc")
 								}),
+								CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 							},
 						},
 					),
@@ -784,6 +791,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 								CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
 									return db.Order("product_bom_uuid asc")
 								}),
+								CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 							},
 						},
 					),
@@ -813,6 +821,12 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 					CommonRepo.Preload(
 						WithPreload{
 							Query: "SaleOrders.SaleOrderBuffetDelayProducts",
+						},
+					),
+					// 加载套餐商品
+					CommonRepo.Preload(
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.SaleOrderPackageProducts.SaleOrderProduct",
 						},
 					),
 				)
@@ -867,6 +881,12 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts.ProductPackage",
 						},
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductBoms",
+						},
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductPackageAttributeGroups",
+						},
 					),
 					CommonRepo.Preload(
 						WithPreload{
@@ -878,8 +898,9 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 							Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
 							Args: []any{
 								CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
-									return db.Order("product_attribute_uuid asc")
+									return db.Order("id asc")
 								}),
+								CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 							},
 						},
 					),
@@ -895,6 +916,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 								CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
 									return db.Order("product_bom_uuid asc")
 								}),
+								CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 							},
 						},
 					),
@@ -970,6 +992,12 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 					WithPreload{
 						Query: "SaleOrders.SaleOrderProducts.ProductPackage",
 					},
+					WithPreload{
+						Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductBoms",
+					},
+					WithPreload{
+						Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductPackageAttributeGroups",
+					},
 				),
 				CommonRepo.Preload(
 					WithPreload{
@@ -986,8 +1014,9 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 						Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
 						Args: []any{
 							CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
-								return db.Order("product_attribute_uuid asc")
+								return db.Order("id asc")
 							}),
+							CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 						},
 					},
 				),
@@ -1003,6 +1032,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 							CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
 								return db.Order("product_bom_uuid asc")
 							}),
+							CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 						},
 					},
 				),
@@ -1434,7 +1464,7 @@ func (r *orderRepo) GetCacheSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBil
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
 				Args: []any{
 					CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
-						return db.Order("product_attribute_uuid asc")
+						return db.Order("id asc")
 					}),
 				},
 			},
@@ -1825,8 +1855,9 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64, opts ...GetSaleBillA
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
 				Args: []any{
 					CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
-						return db.Order("product_attribute_uuid asc")
+						return db.Order("id asc")
 					}),
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 				},
 			},
 			WithPreload{
@@ -1839,6 +1870,7 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64, opts ...GetSaleBillA
 					CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
 						return db.Order("product_bom_uuid asc")
 					}),
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 				},
 			},
 			WithPreload{
@@ -2006,12 +2038,13 @@ func (r *orderRepo) ChangePopulation(saleBillUuid uint64, population int) error 
 }
 
 // ChangeProductRemark 修改订单商品备注
-func (r *orderRepo) ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string) error {
+func (r *orderRepo) ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string, sign string) error {
 	err := r.db.Model(&model.SaleOrderProduct{}).
 		Where("delete_time = ?", constant.NotDeleted).
 		Where("sale_bill_uuid = ? AND sale_order_uuid = ? AND uuid = ?", saleBillUuid, saleOrderUuid, orderProductUuid).
 		Updates(map[string]interface{}{
 			"remark": remark,
+			"sign":   sign,
 		}).Error
 	if err != nil {
 		return fmt.Errorf("ChangeProductRemark: %v", err)

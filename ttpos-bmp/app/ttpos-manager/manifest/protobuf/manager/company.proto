@@ -1,0 +1,26 @@
+// ==========================================================================
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
+// ==========================================================================
+
+syntax = "proto3";
+
+package manager;
+
+option go_package = "ttpos-bmp/app/ttpos-manager/api/manager";
+
+
+
+message Company {
+    int32  Id            = 1;  // 自增ID
+    int64  Uuid          = 2;  // 集团ID
+    string Name          = 3;  // 集团名称
+    string Logo          = 4;  // logo
+    int32  ExpireTime    = 5;  // 过期时间;not null
+    int32  AuthDay       = 6;  // 授权时间(天) 0为永不过期
+    int32  Status        = 7;  // 状态 1-启用 0-禁用;not null
+    int32  AuthStartTime = 8;  // 授权开始时间（时间戳）
+    int32  OldCompanyId  = 9;  // 原商家ID
+    int32  CreateTime    = 10; // 创建时间（时间戳）
+    int32  UpdateTime    = 11; // 更新时间（时间戳）
+    int32  DeleteTime    = 12; // 删除时间（时间戳）
+}

@@ -15,6 +15,10 @@ func ToJsonString(data any) string {
 	return string(jsonBytes)
 }
 
+func FromJson(data string, v any) error {
+	return json.Unmarshal([]byte(data), v)
+}
+
 func ToJson(data any) string {
 	jsonBytes, err := json.Marshal(data)
 	if err != nil {

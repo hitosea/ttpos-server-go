@@ -20,6 +20,7 @@ import (
 )
 
 type BaseHandler struct {
+	authSrv       service.IAuthSrv
 	staffShiftSrv service.IStaffShiftSrv
 	smsSrv        service.ISmsSrv
 	settingSrv    setting.ISrv
@@ -107,6 +108,25 @@ func (h *BaseHandler) SendMemberRechargeSMS(c *gin.Context) {
 	helper.Success(c, nil, "发送成功")
 }
 
+// GetBase 基本信息
+// @Summary 基本信息
+// @Description 基本信息
+// @Tags 商家端.基础信息
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.ShopBase}
+// @Router /shop/base [get]
+func (h *BaseHandler) GetBase(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	info, err := h.authSrv.ShopBase(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, info)
+}
+
 // RegisterOrderHandlers 注册商家订单路由
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -122,6 +142,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 
 	// 初始化处理器
 	wrapper := BaseHandler{
+		authSrv:       authSrv,
 		staffShiftSrv: staffShiftSrv,
 		smsSrv:        smsSrv,
 		settingSrv:    settingSrv,
@@ -138,5 +159,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	{
 		privateApi.POST("/shift", wrapper.SubmitShift)
 		privateApi.POST("/sms/member-recharge", wrapper.SendMemberRechargeSMS)
+
+		privateApi.GET("/base", wrapper.GetBase) // 获取基础信息
 	}
 }

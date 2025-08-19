@@ -1,0 +1,135 @@
+package repository
+
+import (
+	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/model"
+
+	"gorm.io/gorm"
+)
+
+type IProductBomCardRepo interface {
+	IProductBomCardQueryRepo
+	CreateProductBomCard(productBomCard model.ProductBomCard) error
+	CreateProductBomCardMaterial(productBomCardMaterial model.RelatedMaterial) error
+	UpdateProductBomCardMaterial(productBomCardMaterial model.RelatedMaterial) error
+	CreateOrUpdateProductBomCardMaterial(productBomCardMaterial model.RelatedMaterial) error
+}
+
+type IProductBomCardQueryRepo interface {
+	GetProductBomCard(opts ...DBOption) (*model.ProductBomCard, error)
+	GetProductBomCardList(opts ...DBOption) ([]*model.ProductBomCard, error)
+	GetProductBomCardDetail(uuid uint64) (*model.ProductBomCard, error)
+	GetProductBomCardName(uuid uint64) (dto.LocaleResponse, error)
+}
+
+type productBomCardRepoImpl struct {
+	db *gorm.DB
+}
+
+func NewProductBomCardRepo(db *gorm.DB) IProductBomCardRepo {
+	return &productBomCardRepoImpl{db: db}
+}
+
+func (r *productBomCardRepoImpl) GetProductBomCardList(opts ...DBOption) ([]*model.ProductBomCard, error) {
+	var productBomCards []*model.ProductBomCard
+	db := r.db
+
+	db = db.Model(&model.ProductBomCard{})
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	result := db.Find(&productBomCards)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return productBomCards, nil
+}
+
+func (r *productBomCardRepoImpl) GetProductBomCard(opts ...DBOption) (*model.ProductBomCard, error) {
+	var productBomCard model.ProductBomCard
+	db := r.db
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	result := db.First(&productBomCard)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &productBomCard, nil
+}
+
+func (r *productBomCardRepoImpl) CreateProductBomCard(productBomCard model.ProductBomCard) error {
+	productBomCard.SetNil()
+	result := r.db.Create(&productBomCard)
+	if result.Error != nil {
+		return errors.WithMessage(result.Error)
+	}
+
+	return nil
+}
+
+func (r *productBomCardRepoImpl) CreateOrUpdateProductBomCardMaterial(productBomCardMaterial model.RelatedMaterial) error {
+	if productBomCardMaterial.Uuid == 0 {
+		return r.CreateProductBomCardMaterial(productBomCardMaterial)
+	} else {
+		return r.UpdateProductBomCardMaterial(productBomCardMaterial)
+	}
+}
+
+func (r *productBomCardRepoImpl) CreateProductBomCardMaterial(productBomCardMaterial model.RelatedMaterial) error {
+	productBomCardMaterial.SetNil()
+	result := r.db.Create(&productBomCardMaterial)
+	if result.Error != nil {
+		return errors.WithMessage(result.Error)
+	}
+
+	return nil
+}
+
+func (r *productBomCardRepoImpl) UpdateProductBomCardMaterial(productBomCardMaterial model.RelatedMaterial) error {
+	result := r.db.Model(&model.RelatedMaterial{}).Where("uuid = ?", productBomCardMaterial.Uuid).Updates(productBomCardMaterial)
+	if result.Error != nil {
+		return errors.WithMessage(result.Error)
+	}
+	return nil
+}
+
+func (r *productBomCardRepoImpl) GetProductBomCardDetail(uuid uint64) (*model.ProductBomCard, error) {
+	card, err := r.GetProductBomCard(
+		CommonRepo.WhereByUuid(uuid),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "MultiLanguageName",
+			},
+		),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "RelatedMaterials.Material.MultiLanguageName",
+			},
+		),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "RelatedMaterials.Material.NotBaseUnitList.Unit.MultiLanguageName",
+			},
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return card, nil
+}
+
+func (r *productBomCardRepoImpl) GetProductBomCardName(uuid uint64) (dto.LocaleResponse, error) {
+	card, err := r.GetProductBomCard(CommonRepo.WhereByUuid(uuid))
+	if err != nil {
+		return dto.LocaleResponse{}, err
+	}
+	return card.MultiLanguageName.GetNames(), nil
+}

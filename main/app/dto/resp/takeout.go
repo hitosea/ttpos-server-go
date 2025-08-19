@@ -17,7 +17,7 @@ type GetDriverInfoResp struct {
 	Name   string  // 骑手姓名
 	Phone  string  // 骑手电话
 	Avatar string  // 骑手头像
-	Rating float32 // 骑手评分
-	Lat    float32 // 骑手纬度
-	Lng    float32 // 骑手经度
+	Rating float64 // 骑手评分
+	Lat    float64 // 骑手纬度
+	Lng    float64 // 骑手经度
 }

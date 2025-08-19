@@ -22,7 +22,7 @@ class Unit extends UnitModel
         if (isset($data['unit_name']) && $data['unit_name'] != '') {
             $model = $model->jsonLike('name', $data['unit_name']);
         }
-        $list = $model->order(['create_time' => 'desc'])->paginate($data)?->append(['product_ids'], true);
+        $list = $model->order(['sort' => 'asc', 'create_time' => 'asc'])->paginate($data)?->append(['product_ids'], true);
 
         // 是否关联产品
         foreach ($list as &$item) {
@@ -45,9 +45,12 @@ class Unit extends UnitModel
             $this->error = '名称已存在';
             return false;
         }
-        //
+        // 获取当前最大的排序值
+        $maxSort = $this->where('uuid', '<>', $this['uuid'])->max('sort');
+        $data['sort'] = $maxSort + 1;
         $data['name'] = $data['unit_name'] ?? '';
         $data['multi_language_name_uuid'] = (new MultiLanguageName)->saveNames($data['unit_name']);
+        // 保存单位
         $this->save($data);
         return array_merge($data, ['unit_id' => $this->uuid]);
     }

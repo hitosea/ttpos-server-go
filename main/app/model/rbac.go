@@ -23,6 +23,8 @@ type Role struct {
 	BaseModel
 	Name string `gorm:"column:name;type:varchar(255);comment:角色名称;NOT NULL" json:"name"`
 	Sort int    `gorm:"column:sort;type:int(11);default:0;comment:排序(数字越小越靠前);NOT NULL" json:"sort"`
+
+	Accesses []RoleAccess `gorm:"foreignKey:RoleUuid;references:Uuid" json:"accesses"`
 }
 
 // RoleAccess 角色权限关系表 ttpos_role_access

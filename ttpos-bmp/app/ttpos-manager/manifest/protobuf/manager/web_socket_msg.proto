@@ -1,0 +1,25 @@
+// ==========================================================================
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
+// ==========================================================================
+
+syntax = "proto3";
+
+package manager;
+
+option go_package = "ttpos-bmp/app/ttpos-manager/api/manager";
+
+
+
+message WebSocketMsg {
+    uint32 Id           = 1;  //
+    string Uid          = 2;  // 设备uid
+    string Type         = 3;  // 消息类型
+    string Msg          = 4;  // 详细消息
+    int32  Status       = 5;  // 状态 0-未读 1-已读
+    int32  IsOffline    = 6;  // 是否离线消息 0-否 1-是
+    string Remark       = 7;  // 备注
+    string SourceClient = 8;  // 来源客户端
+    int64  CompanyUuid  = 9;  // 集团ID
+    int32  CreateTime   = 10; // 创建时间
+    int32  UpdateTime   = 11; // 更新时间
+}

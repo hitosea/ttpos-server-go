@@ -43,90 +43,103 @@
   </el-dialog>
 </template>
 
-<script>
+<script setup>
+  import { ref, reactive, onMounted, getCurrentInstance } from 'vue';
   import ProductApi from '@/api/product.js';
   import UniqueNameForm from '@/components/product/UniqueNameForm.vue';
 
-  export default {
-    name: 'ProductAttributeAddDialog',
-    components: {
-      UniqueNameForm,
+  // 获取组件实例
+  const { proxy } = getCurrentInstance();
+
+  // 定义props
+  const props = defineProps({
+    open_add: {
+      type: Boolean,
+      default: false,
     },
-    data() {
-      return {
-        form: {
-          attribute_name: {},
-          parent_id: null,
+    addform: {
+      type: Object,
+      default: () => ({}),
+    },
+  });
+
+  // 定义emits
+  const emit = defineEmits(['closeDialog']);
+
+  // 响应式数据
+  const formRef = ref(null);
+  const uniqueNameFormRef = ref(null);
+  const dialogVisible = ref(false);
+  const loading = ref(false);
+  const type = ref(2); // 1: 属性组，2：属性值
+  const groupData = ref([]);
+
+  const form = reactive({
+    attribute_name: {},
+    parent_id: null,
+  });
+
+  // 初始化数据
+  onMounted(() => {
+    dialogVisible.value = props.open_add;
+    getGroupData();
+  });
+
+  // 提交方法
+  const submit = async () => {
+    loading.value = true;
+    try {
+      const validForm = await formRef.value.validate();
+      if (!validForm) return;
+
+      const validUniqueName = await uniqueNameFormRef.value.validate();
+      if (!validUniqueName) return;
+
+      const _name = uniqueNameFormRef.value.data;
+      const params = JSON.parse(JSON.stringify(form));
+      params.attribute_name = JSON.stringify(_name);
+
+      if (type.value === 1) {
+        params.parent_id = '';
+      }
+
+      const res = await ProductApi.addAttribute(params, true);
+      proxy.$ElMessage({
+        message: $t('保存成功'),
+        type: 'success',
+      });
+
+      handleClose(true, res.data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  // 关闭弹窗
+  const handleClose = (isSuccess = false, data) => {
+    emit('closeDialog', {
+      type: isSuccess ? 'success' : 'error',
+      openDialog: false,
+      data: data,
+    });
+  };
+
+  // 获取属性组数据
+  const getGroupData = async () => {
+    try {
+      const { data } = await ProductApi.AttributeList(
+        {
+          page: 1,
+          list_rows: 10000,
+          type: 1,
         },
-        /*是否显示*/
-        dialogVisible: false,
-        loading: false,
-        // 1: 属性组，2：属性值
-        type: 2,
-        groupData: [],
-      };
-    },
-    props: ['open_add', 'addform'],
-    created() {
-      this.dialogVisible = this.open_add;
-      this.getGroupData();
-    },
-    methods: {
-      async submit() {
-        const self = this;
-        self.loading = true;
-        try {
-          const validForm = await self.$refs.formRef.validate();
-          if (!validForm) return;
-
-          const validUniqueName = await self.$refs.uniqueNameFormRef.validate();
-          if (!validUniqueName) return;
-
-          const _name = self.$refs.uniqueNameFormRef.data;
-          const params = JSON.parse(JSON.stringify(self.form));
-          params.attribute_name = JSON.stringify(_name);
-
-          if (self.type === 1) {
-            params.parent_id = '';
-          }
-
-          const res = await ProductApi.addAttribute(params, true);
-          self.$ElMessage({
-            message: self.$t('保存成功'),
-            type: 'success',
-          });
-
-          self.handleClose(true, res.data);
-        } catch (error) {
-          console.error(error);
-        } finally {
-          self.loading = false;
-        }
-      },
-      /*关闭弹窗*/
-      handleClose(isSuccess = false, data) {
-        this.$emit('closeDialog', {
-          type: isSuccess ? 'success' : 'error',
-          openDialog: false,
-          data: data,
-        });
-      },
-
-      async getGroupData() {
-        try {
-          const { data } = await ProductApi.AttributeList(
-            {
-              page: 1,
-              list_rows: 10000,
-              type: 1,
-            },
-            true
-          );
-          this.groupData = data.list.data;
-        } catch (err) {
-          //
-        }
-      },
-    },
+        true
+      );
+      groupData.value = data.list.data;
+    } catch (err) {
+      // 错误处理
+    }
   };
 </script>

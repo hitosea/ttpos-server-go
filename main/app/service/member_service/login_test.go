@@ -11,9 +11,9 @@ import (
 func TestLogin(t *testing.T) {
 	// 生成token
 	claims := auth.Claims{
-		Source:      constant.SourceMember,
-		CompanyUuid: 2290362617856000,
-		MemberUuid:  3676004191174657,
+		Source:      constant.SourceShop,
+		CompanyUuid: 6593110384640000,
+		StaffUuid:   6593571758080000,
 	}
 	token, err := auth.GenerateToken(claims, "dkjhd00a08", 360000000, false)
 	if err != nil {

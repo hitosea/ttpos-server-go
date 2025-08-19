@@ -4,6 +4,7 @@ import (
 	"time"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository"
 
 	"gorm.io/gorm"
 )
@@ -15,6 +16,9 @@ type IMaterialRepo interface {
 	CreateMaterial(material model.Material) (uint64, error)
 	DeleteMaterial(id uint) error
 	UpdateMaterials(materials []*model.Material) error
+	GetMaterialByUuids(uuid []uint64, opts ...repository.DBOption) ([]*model.Material, error)
+
+	WithPreload(query string) repository.DBOption
 }
 
 // NewMaterialRepo 创建新的原料仓库
@@ -29,6 +33,12 @@ func NewMaterialRepoImpl(db *gorm.DB) *MaterialRepoImpl {
 
 type MaterialRepoImpl struct {
 	db *gorm.DB // 数据库连接
+}
+
+func (r *MaterialRepoImpl) WithPreload(query string) repository.DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload(query)
+	}
 }
 
 // GetMaterialList 获取原料列表
@@ -71,6 +81,7 @@ func (r *MaterialRepoImpl) DeleteMaterial(id uint) error {
 	return r.db.Model(&model.Material{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
 }
 
+// UpdateMaterials 更新原料
 func (r *MaterialRepoImpl) UpdateMaterials(materials []*model.Material) error {
 	if len(materials) == 0 {
 		return nil
@@ -85,4 +96,18 @@ func (r *MaterialRepoImpl) UpdateMaterials(materials []*model.Material) error {
 		return errors.WithMessage(err)
 	}
 	return nil
+}
+
+// GetMaterialByUuid 根据uuid获取原料
+func (r *MaterialRepoImpl) GetMaterialByUuids(uuids []uint64, opts ...repository.DBOption) ([]*model.Material, error) {
+	var materials []*model.Material
+	db := r.db.Model(&model.Material{}).Where("uuid in (?)", uuids)
+	for _, opt := range opts {
+		opt(db)
+	}
+	err := db.Find(&materials).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return materials, nil
 }

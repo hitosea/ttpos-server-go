@@ -96,6 +96,7 @@ func (h *Handler) BaseInfo(c *gin.Context) {
 		IsOpenMember:  companySetting.IsOpenMember,
 		IsOpenBuffet:  companySetting.IsOpenBuffet,
 		IsOpenH5Order: companySetting.IsOpenH5Order,
+		IsOpenRider:   companySetting.IsOpenRider(),
 	}
 	helper.Success(c, resp.MenuBaseInfo{
 		Currency:      currencySetting,

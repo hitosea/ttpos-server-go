@@ -45,6 +45,33 @@ func WithOnlyCheckCooking() func(option *ActionCookingOption) {
 	}
 }
 
+// 转换器
+func (s *orderSrv) convertToEventOrderProduct(saleOrderProduct *model.SaleOrderProduct, saleBill *model.SaleBill, saleOrder *model.SaleOrder) event.OrderProduct {
+	orderProduct := event.OrderProduct{
+		OrderProductId:  saleOrderProduct.Uuid,
+		ProductId:       saleOrderProduct.ProductPackageUuid,
+		ProductName:     saleOrderProduct.MultiLanguageName.GetNames(),
+		ProductAttr:     saleOrderProduct.GetAttributeName(),
+		ProductAttrList: saleOrderProduct.GetAttributeNameList(),
+		TotalNum:        saleOrderProduct.Num,
+		NumType:         saleOrderProduct.NumType,
+		IsBuffet:        saleOrderProduct.IsBuffet == 1,
+		IsWrap:          saleOrderProduct.CalculateIsWrap(saleBill),
+		Remark:          saleOrderProduct.Remark,
+	}
+
+	// 如果是套餐主商品，添加子商品
+	if saleOrderProduct.IsPackageProduct() && saleOrder != nil {
+		subProducts := make([]event.OrderProduct, 0)
+		for _, subProduct := range saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid) {
+			subProducts = append(subProducts, s.convertToEventOrderProduct(subProduct, saleBill, nil))
+		}
+		orderProduct.SubProducts = subProducts
+	}
+
+	return orderProduct
+}
+
 // ActionCooking 送厨
 func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill *model.SaleBill, unCookingSaleOrderProducts []*model.SaleOrderProduct, h5OrderUuid uint64, isAutoOrder bool, options ...func(option *ActionCookingOption)) (*resp.OrderCheckServiceRes, error) {
 	option := &ActionCookingOption{}
@@ -120,8 +147,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		productionOrder = newProductionOrder(ctx, saleOrderUuid, saleBill.Uuid, saleBill.DeskUuid, unCookingSaleOrderProducts)
 
 		// 修改商品状态为已送厨
-		for index, _ := range unCookingSaleOrderProducts {
-			product := unCookingSaleOrderProducts[index]
+		for _, product := range unCookingSaleOrderProducts {
 			product.SetCooking(productionOrder.Uuid)
 		}
 
@@ -228,26 +254,6 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		}
 
 		// 发起“送厨”操作的事件
-		products := make(event.Products, 0)
-		for _, unCookingSaleOrderProduct := range unCookingSaleOrderProducts {
-			products = append(products, event.OrderProduct{
-				OrderProductId:  unCookingSaleOrderProduct.Uuid,
-				ProductId:       unCookingSaleOrderProduct.ProductPackageUuid,
-				ProductName:     unCookingSaleOrderProduct.MultiLanguageName.GetNames(),
-				ProductAttr:     unCookingSaleOrderProduct.GetAttributeName(),
-				ProductAttrList: unCookingSaleOrderProduct.GetAttributeNameList(),
-				TotalNum:        unCookingSaleOrderProduct.Num,
-				NumType:         unCookingSaleOrderProduct.NumType,
-				IsBuffet:        unCookingSaleOrderProduct.IsBuffet == 1,
-				IsWrap: func() bool {
-					if saleBill.IsTakeout() && saleBill.MemberSaleOrderUuid == 0 {
-						return true
-					}
-					return unCookingSaleOrderProduct.IsWrapProduct()
-				}(),
-				Remark: unCookingSaleOrderProduct.Remark,
-			})
-		}
 		go s.bus.PublishSentCookingEvent(event.SentCookingPayload{
 			BasePayload: event.BasePayload{ // 送厨
 				Ctx:           ctx,
@@ -258,7 +264,21 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 				H5OrderUuid:   h5OrderUuid,
 				OperatorUuid:  int64(ctx.GetStaffUuid()),
 			},
-			Products: products,
+			Products: func() event.Products {
+				products := make(event.Products, 0)
+				for _, unCookingSaleOrderProduct := range unCookingSaleOrderProducts {
+					// 套餐子商品不显示送厨记录
+					if unCookingSaleOrderProduct.IsPackageSubProduct() {
+						continue
+					}
+					products = append(products, s.convertToEventOrderProduct(
+						unCookingSaleOrderProduct,
+						saleBill,
+						saleBill.GetSaleOrder(saleOrderUuid),
+					))
+				}
+				return products
+			}(),
 		})
 		// 送厨成功后，推送更新订单
 		go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
@@ -426,6 +446,9 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 	productInfos := make([]*product_resp.Product, 0)
 	for _, product := range request.Products {
 		if product.Price != nil {
+			if product.ProductType == constant.ProductTypePackage {
+				continue
+			}
 			productInfo, err := s.getInfo(ctx, product, db)
 			if err != nil {
 				return nil, errors.WithMessage(err)
@@ -540,6 +563,33 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 	for index, _ := range request.Products {
 		request.Products[index].Price = nil
 		request.Products[index].IsBuffet = nil
+	}
+
+	for index, _ := range request.Products {
+		if request.Products[index].ProductType == constant.ProductTypePackage {
+			request.Products[index].FlavorProductBomUuid = request.Products[index].ProductPackageUuid // 套餐商品规格uuid改为套餐商品uuid
+		}
+	}
+
+	// 记录相关的子商品。
+	for index, _ := range request.Products {
+		productReq := request.Products[index]
+		// 如果该商品是套餐的话,添加子商品的属性
+		if productReq.ProductType == 1 {
+			subProductParams := make([]req.ProductParams, 0)
+			for _, subProductParam := range productReq.Products {
+				params := req.ProductParams{
+					FlavorProductBomUuid:            subProductParam.EditProductReq.FlavorUuid,
+					Num:                             subProductParam.Num,
+					ProductPackageAttributeUuidList: subProductParam.EditProductReq.AttributeUuidList,
+					ProductPackageGroupUuid:         subProductParam.ProductPackageGroupUuid,
+					Operation:                       "add",
+				}
+				subProductParams = append(subProductParams, params)
+			}
+			productReq.SetIsPackageProduct(subProductParams) // 设置为套餐商品
+		}
+		request.Products[index] = productReq
 	}
 
 	checkServiceRes, err := s.ActionAddAndCooking(ctx, req.ProductAddReq{

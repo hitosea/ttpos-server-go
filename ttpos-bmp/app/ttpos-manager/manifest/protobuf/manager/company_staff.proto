@@ -1,0 +1,23 @@
+// ==========================================================================
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
+// ==========================================================================
+
+syntax = "proto3";
+
+package manager;
+
+option go_package = "ttpos-bmp/app/ttpos-manager/api/manager";
+
+
+
+message CompanyStaff {
+    int32  Id          = 1; // 自增ID
+    uint64 Uuid        = 2; // 员工ID
+    uint64 CompanyUuid = 3; // 集团ID
+    string Username    = 4; // 员工账号
+    string Phone       = 5; // 员工手机号
+    int32  IsSuper     = 6; // 是否超级管理员
+    int32  CreateTime  = 7; // 创建时间（时间戳）
+    int32  UpdateTime  = 8; // 更新时间（时间戳）
+    int32  DeleteTime  = 9; // 删除时间（时间戳）
+}

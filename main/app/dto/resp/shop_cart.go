@@ -7,6 +7,31 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// 购物车商品的“规格/属性”
+type ProductFlavorAndAttributeRes struct {
+	ProductType uint         `json:"product_type"` // 商品类型 0-商品 1-套餐
+	ProductInfo *ProductInfo `json:"product_info"` // 商品/套餐信息
+}
+
+// 商品信息
+type ProductInfo struct {
+	Product                product_resp.Product     `json:"product"`                  // 商品/套餐信息
+	SelectedProduct        *ProductPackageDetail    `json:"selected_product"`         // 已选购的商品信息
+	SelectedProductPackage *ProductSelectedInfoList `json:"selected_product_package"` // 已选购的商品套餐信息
+}
+
+// 商品选择信息
+type ProductSelectedInfoList struct {
+	List []PackageSelectedInfo `json:"list"`
+}
+
+// 套餐选择信息
+type PackageSelectedInfo struct {
+	ProductPackageGroupUuid uint64   `json:"product_package_group_uuid"` // 套餐分组UUID
+	FlavorUuid              uint64   `json:"flavor_uuid"`                // 某个规格商品ID
+	AttributeUuidList       []uint64 `json:"attribute_uuid"`             // 属性ID列表
+}
+
 // 桌台购物车
 type ShopCart struct {
 	SaleBillUuid  uint64               `json:"sale_bill_uuid"`       // 销售账单ID
@@ -169,6 +194,9 @@ type Product struct {
 	CanChangeNum        bool               `json:"can_change_num"`        // 顾客可修改必点数量
 	AboutBuffet         AboutBuffet        `json:"about_buffet"`          // 自助餐信息
 	IsShowKitchen       uint               `json:"is_show_kitchen"`       // 是否在厨显端显示
+	ProductType         uint               `json:"product_type"`          // 商品类型 0-商品 1-套餐
+	PackageProductList  PackageProductList `json:"package_product_list"`  // 套餐商品列表
+	CanEdit             bool               `json:"can_edit"`              // 是否可以编辑
 	// 后端使用，前端不返回
 	CreateTime         int64   `json:"-"` // 创建时间（点餐助手未送厨）
 	SendKitchenTime    int64   `json:"-"` // 送厨时间
@@ -180,6 +208,18 @@ type Product struct {
 	CanReturnNum       uint    `json:"-"` // 可退货数量
 	CanReturnAmount    float64 `json:"-"` // 可退款金额
 	TotalPrice         float64 `json:"-"` // 总价（单个商品、折后）
+}
+
+type PackageProductList struct {
+	List []PackageProduct `json:"list"`
+}
+
+type PackageProduct struct {
+	Uuid                uint64             `json:"uuid"`                  // 商品uuid. sale_order_product_uuid
+	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品名称
+	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
+	Num                 float64            `json:"num"`                   // 数量
+	UnitNum             float64            `json:"unit_num"`              // 单位数量
 }
 
 // GetPrice 获取商品价格(折后价)

@@ -7,6 +7,55 @@ type OrderCartProduct struct {
 	SaleOrderProductUuid uint64 `json:"sale_order_product_uuid"` // 销售订单商品ID
 }
 
+// OrderCartProductPackageAddReq 向购物车添加套餐请求参数
+type OrderCartProductPackageAddReq struct {
+	SaleBillUuid       uint64           `json:"sale_bill_uuid"`       // 销售账单UUID
+	SaleOrderUuid      uint64           `json:"sale_order_uuid"`      // 销售订单UUID
+	ProductPackageUuid uint64           `json:"product_package_uuid"` // 套餐UUID
+	Products           []ProductRequest `json:"products"`             // 套餐商品请求列表
+
+	isH5Product bool `json:"-"` // 是否是H5端下单的商品
+}
+
+func (req *OrderCartProductPackageAddReq) SetIsH5Product() {
+	req.isH5Product = true
+}
+
+func (req *OrderCartProductPackageAddReq) IsH5Product() bool {
+	return req.isH5Product
+}
+
+// ProductRequest 套餐商品请求参数
+type ProductRequest struct {
+	ProductPackageGroupUuid uint64 `json:"product_package_group_uuid"` // 套餐分组UUID
+	// 普通商品的参数
+	EditProductReq
+	Num float64 `json:"num"` // 商品数量
+}
+
+type OrderCartProductFlavorAndAttributeChangeReq struct {
+	OrderCartProductPackageAddReq        // 套餐商品请求参数
+	ProductType                   uint   `json:"product_type"`            // 商品类型 0-商品 1-套餐 2-套餐子商品
+	SaleOrderProductUuid          uint64 `json:"sale_order_product_uuid"` // 销售订单商品ID
+
+	// 普通商品的参数
+	EditProductReq
+}
+
+type EditProductReq struct {
+	FlavorUuid        uint64   `json:"flavor_uuid"`    // 某个规格商品ID
+	SauceUuidList     []uint64 `json:"sauce_uuid"`     // 小料ID列表
+	AttributeUuidList []uint64 `json:"attribute_uuid"` // 属性ID列表
+}
+
+// OrderCartProductFlavorAndAttributeReq 查询购物车商品“规格/属性”请求参数
+type OrderCartProductFlavorAndAttributeReq struct {
+	SaleBillUuid         uint64 `form:"sale_bill_uuid"`          // 销售账单ID
+	SaleOrderUuid        uint64 `form:"sale_order_uuid"`         // 销售订单ID
+	SaleOrderProductUuid uint64 `form:"sale_order_product_uuid"` // 销售订单商品ID
+	ProductType          uint   `form:"product_type"`            // 商品类型 0-商品 1-套餐
+}
+
 // OrderCartProductAddReq 向购物车添加商品请求参数
 type OrderCartProductAddReq struct {
 	SaleBillUuid      uint64   `json:"sale_bill_uuid"`  // 销售账单ID。可选，参数不填时表示要新建销售账单，添加商品后创建点餐销售账单。
@@ -55,15 +104,71 @@ type TabletOrderCartProductAddReq struct {
 
 // ProductParams 商品参数
 type ProductParams struct {
-	FlavorProductBomUuid            uint64   `json:"flavor_product_bom_uuid" binding:"required"` // 商品规格uuid
-	Num                             float64  `json:"num"  binding:"required"`                    // 数量数量
-	Price                           *float64 `json:"price"`                                      // 商品价格，商品单价。当商品价格与后台设置的最新价格不一致时，加购失败并返回最新价格。可选，不传时，不进行价格校验
-	IsBuffet                        *bool    `json:"is_buffet"`                                  // 是否是自助餐商品。可选，不填时，表示不判断是不是最新价格。该参数仅在判断价格时使用
-	SauceProductBomUuidList         []uint64 `json:"sauce_product_bom_uuid_list"`                // 加料信息
-	ProductPackageAttributeUuidList []uint64 `json:"product_package_attribute_uuid_list"`        // 属性信息
-	Operation                       string   `json:"operation"`                                  // 操作类型。add: 加购，sub: 减购
-	MustPlanUuid                    uint64   `json:"must_plan_uuid"`                             // 必点方案uuid. 可选，在必点方案弹窗中加购时填写
-	Remark                          string   `json:"remark"`                                     // 备注，平板端离线购物车提交
+	FlavorProductBomUuid            uint64           `json:"flavor_product_bom_uuid"`             // 商品规格uuid
+	Num                             float64          `json:"num"  binding:"required"`             // 数量数量
+	Price                           *float64         `json:"price"`                               // 商品价格，商品单价。当商品价格与后台设置的最新价格不一致时，加购失败并返回最新价格。可选，不传时，不进行价格校验
+	IsBuffet                        *bool            `json:"is_buffet"`                           // 是否是自助餐商品。可选，不填时，表示不判断是不是最新价格。该参数仅在判断价格时使用
+	SauceProductBomUuidList         []uint64         `json:"sauce_product_bom_uuid_list"`         // 加料信息
+	ProductPackageAttributeUuidList []uint64         `json:"product_package_attribute_uuid_list"` // 属性信息
+	Operation                       string           `json:"operation"`                           // 操作类型。add: 加购，sub: 减购
+	MustPlanUuid                    uint64           `json:"must_plan_uuid"`                      // 必点方案uuid. 可选，在必点方案弹窗中加购时填写
+	Remark                          string           `json:"remark"`                              // 备注，平板端离线购物车提交
+	ProductPackageGroupUuid         uint64           `json:"product_package_group_uuid"`          // 套餐分组uuid。可选，当商品是套餐商品时，该字段有值
+	ProductType                     uint             `json:"product_type"`                        // 商品类型 0-商品 1-套餐
+	Products                        []ProductRequest `json:"products"`                            // 套餐商品请求列表。当商品是套餐商品时，该字段有值
+	ProductPackageUuid              uint64           `json:"product_package_uuid"`                // 套餐商品uuid。当商品是套餐商品时，该字段有值
+
+	isPackageProduct        bool   `json:"is_package_product"`         // 是否是套餐商品
+	packageSubProductParams string `json:"package_sub_product_params"` // 套餐子商品参数（JSON格式）
+
+	subProducts         []ProductParams `json:"sub_products"`           // 套餐子商品列表。当商品是套餐商品时，该字段有值
+	isPackageSubProduct bool            `json:"is_package_sub_product"` // 是否是套餐子商品
+	packageUuid         uint64          `json:"package_uuid"`           // 套餐uuid,用于标注套餐子商品的套餐商品（sale_order_product）的uuid
+}
+
+func (req *ProductParams) SetIsPackageProduct(subProducts []ProductParams) {
+	req.subProducts = subProducts
+	req.isPackageProduct = true
+}
+
+func (req *ProductParams) SetIsPackageSubProduct(packageUuid uint64) {
+	req.isPackageSubProduct = true
+	req.packageUuid = packageUuid
+}
+
+func (req *ProductParams) SetPackageSubProductParams(params string) {
+	req.packageSubProductParams = params
+}
+
+func (req *ProductParams) GetPackageSubProductParams() string {
+	return req.packageSubProductParams
+}
+
+func (req *ProductParams) GetIsPackageProduct() bool {
+	return req.isPackageProduct
+}
+
+type SubProduct struct {
+	FlavorUuid              uint64   `json:"flavor_uuid"`
+	AttributeUuid           []uint64 `json:"attribute_uuid"`
+	ProductPackageGroupUuid uint64   `json:"product_package_group_uuid"`
+}
+
+func (req *ProductParams) GetSubProductList() []SubProduct {
+	subProductList := make([]SubProduct, 0)
+	for _, subProduct := range req.subProducts {
+		subProductList = append(subProductList, SubProduct{
+			FlavorUuid:              subProduct.FlavorProductBomUuid,
+			AttributeUuid:           subProduct.ProductPackageAttributeUuidList,
+			ProductPackageGroupUuid: subProduct.ProductPackageGroupUuid,
+		})
+	}
+	return subProductList
+}
+
+// 获取套餐子商品参数
+func (req *ProductParams) GetSubProducts() []ProductParams {
+	return req.subProducts
 }
 
 // OrderCartProductNumReq 修改购物车商品数量请求参数

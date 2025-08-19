@@ -45,7 +45,7 @@ func riderAcceptMemberSaleOrderEventHandler() {
 			var riderPhone string    // 骑手手机号
 			var riderLocation string // 骑手经纬度
 			var riderAvatar string   // 骑手头像
-			var riderRating float32  // 骑手评分
+			var riderRating float64  // 骑手评分
 			if driverInfoResp != nil {
 				riderName = driverInfoResp.Name
 				riderPhone = driverInfoResp.Phone

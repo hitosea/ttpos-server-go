@@ -1,0 +1,30 @@
+// ==========================================================================
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
+// ==========================================================================
+
+syntax = "proto3";
+
+package manager;
+
+option go_package = "ttpos-bmp/app/ttpos-manager/api/manager";
+
+
+
+message AdminAccess {
+    uint32 Id           = 1;  // 自增ID
+    string Name         = 2;  // 权限名称
+    string Path         = 3;  // 路由地址
+    string ApiPath      = 4;  // 后端路由地址
+    int32  ParentId     = 5;  // 父级ID
+    int32  Sort         = 6;  // 排序(数字越小越靠前)
+    string Icon         = 7;  // 菜单图标
+    string RedirectName = 8;  // 重定向名称
+    int32  IsRoute      = 9;  // 是否路由 0=不是1=是
+    int32  IsMenu       = 10; // 是否菜单 0=不是1=是
+    int32  IsShow       = 11; // 是否显示 0=不是1=是
+    string Remark       = 12; // 描述
+    int32  IsSupplier   = 13; // 是否门店菜单 0=不是1=是
+    int32  CreateTime   = 14; // 创建时间（时间戳）
+    int32  UpdateTime   = 15; // 更新时间（时间戳）
+    int32  DeleteTime   = 16; // 删除时间（时间戳）
+}

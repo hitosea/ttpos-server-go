@@ -14,6 +14,7 @@ type IProductUnitRepo interface {
 	UpdateProductUnit(id uint, productUnit model.ProductUnit) error
 	CreateProductUnit(productUnit model.ProductUnit) (uint64, error)
 	DeleteProductUnit(id uint) error
+	GetProductUnitUuidByNameOptimized(name string) (uint64, error)
 }
 
 func NewProductUnitRepo(db *gorm.DB) IProductUnitRepo {
@@ -85,4 +86,26 @@ func (r *ProductUnitRepoImpl) CreateProductUnit(productUnit model.ProductUnit) (
 // DeleteProductUnit 软删除商品规格
 func (r *ProductUnitRepoImpl) DeleteProductUnit(id uint) error {
 	return r.db.Model(&model.ProductUnit{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
+}
+
+// GetProductUnitUuidByNameOptimized 获取商品规格UUID
+func (r *ProductUnitRepoImpl) GetProductUnitUuidByNameOptimized(name string) (uint64, error) {
+	var productUnits []model.ProductUnit
+	err := r.db.Model(&model.ProductUnit{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Find(&productUnits).Error
+	if err != nil {
+		return 0, errors.WithMessage(err)
+	}
+	// 在内存中查找匹配的商品规格
+	for _, productUnit := range productUnits {
+		// 然后检查多语言字段
+		if productUnit.MultiLanguageName.Uuid != 0 {
+			names := productUnit.MultiLanguageName.GetNames()
+			if names.ZH == name || names.ZHTW == name || names.EN == name ||
+				names.TH == name || names.MY == name || names.JA == name ||
+				names.KO == name || names.TR == name || names.SV == name {
+				return productUnit.Uuid, nil
+			}
+		}
+	}
+	return 0, nil
 }

@@ -1,9 +1,4 @@
 <template>
-  <!--
-      
-      时间：2019-10-25
-      描述：会员-用户列表-会员充值
-  -->
   <div>
     <el-dialog :title="$t('取消订单')" v-model="dialogVisible" @close="dialogFormVisible" :close-on-click-modal="false" :close-on-press-escape="false">
       <el-form size="small" ref="form" :model="form" label-position="top">
@@ -24,70 +19,94 @@
   </div>
 </template>
 
-<script>
+<script setup>
+  import { ref, reactive, onMounted, getCurrentInstance, watch } from 'vue';
+  import { ElMessage } from 'element-plus';
   import OrderOldApi from '@/api/orderOld.js';
-  import draggable from 'vuedraggable';
-  export default {
-    components: {
-      draggable,
+
+
+  // 获取Vue实例
+  const { proxy } = getCurrentInstance();
+
+  // 定义props
+  const props = defineProps({
+    open_edit: {
+      type: Boolean,
+      default: false,
     },
-    data() {
-      return {
-        loading: false,
-        /*左边长度*/
-        formLabelWidth: '120px',
-        /*是否显示*/
-        dialogVisible: false,
-        form: {
-          order_id: '',
-          cancel_remark: '',
-          order_no: '',
-        },
-      };
+    order_no: {
+      type: [String, Number],
+      default: '',
     },
-    props: ['open_edit', 'order_no', 'order_id'],
-    created() {
-      this.dialogVisible = this.open_edit;
-      this.form.order_no = this.order_no;
-      this.form.order_id = this.order_id;
+    order_id: {
+      type: [String, Number],
+      default: '',
     },
-    methods: {
-      /*处理*/
-      submit() {
-        let self = this;
-        let form = self.form;
-        self.$refs.form.validate((valid) => {
-          if (valid) {
-            self.loading = true;
-            OrderOldApi.storeConfirm(form, true)
-              .then((data) => {
-                self.loading = false;
-                this.$ElMessage({
-                  message: data.msg,
-                  type: 'success',
-                });
-                self.dialogFormVisible(true);
-              })
-              .catch((error) => {
-                self.loading = false;
-              });
-          }
+  });
+
+  // 定义emits
+  const emit = defineEmits(['closeDialog']);
+
+  // 响应式变量
+  const loading = ref(false);
+  const formLabelWidth = ref('120px'); // 左边长度
+  const dialogVisible = ref(false); // 是否显示
+  
+  // 表单数据
+  const form = reactive({
+    order_id: '',
+    cancel_remark: '',
+    order_no: '',
+  });
+
+  // 监听props变化
+  watch(
+    () => props.open_edit,
+    (newVal) => {
+      dialogVisible.value = newVal;
+    }
+  );
+
+  // 生命周期 - 组件创建时
+  onMounted(() => {
+    dialogVisible.value = props.open_edit;
+    form.order_no = props.order_no;
+    form.order_id = props.order_id;
+  });
+
+  // 方法定义
+  
+  // 处理提交
+  const submit = async () => {
+    try {
+      const valid = await proxy.$refs.form.validate();
+      if (valid) {
+        loading.value = true;
+        const data = await OrderOldApi.storeConfirm(form, true);
+        loading.value = false;
+        ElMessage({
+          message: data.msg,
+          type: 'success',
         });
-      },
-      /*关闭弹窗*/
-      dialogFormVisible(e) {
-        if (e) {
-          this.$emit('closeDialog', {
-            type: 'success',
-            openDialog: false,
-          });
-        } else {
-          this.$emit('closeDialog', {
-            type: 'error',
-            openDialog: false,
-          });
-        }
-      },
-    },
+        dialogFormVisible(true);
+      }
+    } catch (error) {
+      loading.value = false;
+    }
+  };
+
+  // 关闭弹窗
+  const dialogFormVisible = (e) => {
+    if (e) {
+      emit('closeDialog', {
+        type: 'success',
+        openDialog: false,
+      });
+    } else {
+      emit('closeDialog', {
+        type: 'error',
+        openDialog: false,
+      });
+    }
   };
 </script>

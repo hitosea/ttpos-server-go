@@ -17,6 +17,7 @@ type OrderProduct struct {
 	OrderProductId  uint64               `json:"order_product_id"` // 订单商品ID
 	ProductId       uint64               `json:"product_id"`       // 商品ID
 	ProductName     dto.LocaleResponse   `json:"product_name"`     // 商品名称
+	ProductType     uint8                `json:"product_type"`     // 商品类型
 	ProductAttr     dto.LocaleResponse   `json:"product_attr"`     // 商品属性, 包含规格、属性、小料
 	ProductAttrList []dto.LocaleResponse `json:"product_attrs"`    // 商品属性, 包含规格、属性、小料
 	TotalNum        float64              `json:"total_num"`        // 总数量
@@ -24,6 +25,7 @@ type OrderProduct struct {
 	IsBuffet        bool                 `json:"is_buffet"`        // 是否自助餐
 	IsWrap          bool                 `json:"is_wrap"`          // 是否打包
 	Remark          string               `json:"remark"`           // 备注
+	SubProducts     []OrderProduct       `json:"sub_products"`     // 套餐子商品
 }
 
 // Products 送厨商品列表

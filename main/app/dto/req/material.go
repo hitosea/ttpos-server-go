@@ -1,0 +1,121 @@
+package req
+
+import (
+	"ttpos-server-go/app/dto"
+)
+
+// MaterialCategoryAddReq 创建物品类别请求
+type MaterialCategoryAddReq struct {
+	LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 物品类别名称
+}
+
+// MaterialCategoryListReq 获取物品类别列表请求
+type MaterialCategoryListReq struct {
+}
+
+// MaterialListReq 物品列表查询
+type MaterialListReq struct {
+	dto.PageReq         // 分页参数
+	Keyword      string `form:"keyword" json:"keyword"`             // 关键字
+	Status       int    `form:"status" json:"status"`               // 状态，0-全部 1-启用 2-停用
+	CategoryUuid uint64 `form:"category_uuid" json:"category_uuid"` // 分类UUID
+}
+
+// MaterialDetailReq 物品详情查询
+type MaterialDetailReq struct {
+	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 物品UUID
+}
+
+// MaterialAddReq 添加物品请求
+type MaterialAddReq struct {
+	LocaleName       dto.LocaleResponse `json:"locale_name" binding:"required"`        // 物品名称
+	CategoryUuid     uint64             `json:"category_uuid" binding:"required"`      // 分类UUID
+	Status           int                `json:"status" binding:"required"`             // 状态，1-启用 2-停用
+	Valuation        float64            `json:"valuation" binding:"required,min=0"`    // 估值率
+	InitStock        float64            `json:"init_stock" binding:"required,min=0"`   // 期初库存
+	BarcodeValue     string             `json:"barcode_value" binding:"required"`      // 条形码值
+	UnitUuid         uint64             `json:"unit_uuid" binding:"required"`          // 基准单位UUID
+	UnitList         []MaterialUnitReq  `json:"unit_list" binding:"required,dive"`     // 单位列表
+	PurchaseUnitUuid uint64             `json:"purchase_unit_uuid" binding:"required"` // 采购单位UUID
+	CostUnitUuid     uint64             `json:"cost_unit_uuid" binding:"required"`     // 成本单位UUID
+}
+
+// MaterialUnitReq 物品单位请求
+type MaterialUnitReq struct {
+	UnitUuid       uint64  `json:"unit_uuid" binding:"required"`             // 单位UUID
+	ConversionRate float64 `json:"conversion_rate" binding:"required,min=0"` // 转换率
+}
+
+// MaterialEditReq 编辑物品请求
+type MaterialEditReq struct {
+	Uuid             uint64             `json:"uuid" binding:"required"`               // 物品UUID
+	LocaleName       dto.LocaleResponse `json:"locale_name" binding:"required"`        // 物品名称
+	CategoryUuid     uint64             `json:"category_uuid" binding:"required"`      // 分类UUID
+	Status           int                `json:"status"`                                // 状态，1-启用 0-停用
+	Valuation        float64            `json:"valuation" binding:"required,min=0"`    // 估值率
+	BarcodeValue     string             `json:"barcode_value" binding:"required"`      // 条形码值
+	UnitList         []MaterialUnitReq  `json:"unit_list" binding:"required,dive"`     // 单位列表,新增的非基准单位
+	PurchaseUnitUuid uint64             `json:"purchase_unit_uuid" binding:"required"` // 采购单位UUID
+	CostUnitUuid     uint64             `json:"cost_unit_uuid" binding:"required"`     // 成本单位UUID
+}
+
+// MaterialDeleteReq 删除物品请求
+type MaterialDeleteReq struct {
+	Uuid uint64 `json:"uuid" binding:"required"` // 物品UUID
+}
+
+// MaterialStatusReq 修改物品状态请求
+type MaterialStatusReq struct {
+	Uuids  []uint64 `json:"uuids" binding:"required"` // 物品UUID
+	Status int      `json:"status"`                   // 状态，1-启用 0-停用
+}
+
+// MaterialUnitListReq 获取物品单位列表请求
+type MaterialUnitListReq struct {
+	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 物品UUID
+}
+
+// ProductBomCardAddReq 添加成本卡请求
+type ProductBomCardAddReq struct {
+	RelatedUuid uint64                        `json:"related_uuid" binding:"required"`   // 关联UUID,给规格商品或加料绑定成本卡。规格商品时，关联UUID为规格商品UUID；加料时，关联UUID为加料UUID
+	RelatedType uint8                         `json:"related_type" binding:"required"`   // 关联类型,1-规格商品 2-加料
+	Num         int                           `json:"num" binding:"required"`            // 加工份数
+	Materials   ProductBomCardMaterialListReq `json:"materials" binding:"required,dive"` // 材料列表
+}
+
+type ProductBomCardMaterialListReq struct {
+	List []ProductBomCardMaterialReq `json:"list" binding:"required,dive"` // 材料列表
+}
+
+type ProductBomCardMaterialReq struct {
+	MaterialUuid uint64  `json:"material_uuid" binding:"required"` // 材料UUID
+	Num          float64 `json:"num" binding:"required"`           // 数量
+	UnitUuid     uint64  `json:"unit_uuid" binding:"required"`     // 成本单位UUID
+}
+
+// ProductBomCardDetailReq 规格商品成本卡详情请求
+type ProductBomCardDetailReq struct {
+	ProductBomCardUuid uint64 `form:"product_bom_card_uuid" binding:"required"` // 成本卡UUID
+}
+
+// ProductBomCardUnlinkReq 解除成本卡关联请求
+type ProductBomCardUnlinkReq struct {
+	RelatedUuid uint64 `json:"related_uuid" binding:"required"` // 关联UUID,给规格商品或加料绑定成本卡。规格商品时，关联UUID为规格商品UUID；加料时，关联UUID为加料UUID
+	RelatedType uint8  `json:"related_type" binding:"required"` // 关联类型,1-规格商品 2-加料
+}
+
+// ProductBomCardCopyReq 复制成本卡请求
+type ProductBomCardCopyReq struct {
+	RelatedUuid        uint64 `json:"related_uuid" binding:"required"`          // 关联UUID,给规格商品或加料绑定成本卡。规格商品时，关联UUID为规格商品UUID；加料时，关联UUID为加料UUID
+	RelatedType        uint8  `json:"related_type" binding:"required"`          // 关联类型,1-规格商品 2-加料
+	ProductBomCardUuid uint64 `json:"product_bom_card_uuid" binding:"required"` // 成本卡UUID
+}
+
+// ProductBomCardImportReq 从菜品导入成本卡请求
+type ProductBomCardImportReq struct {
+	RelatedUuid uint64 `json:"related_uuid" binding:"required"` // 关联UUID,给规格商品绑定成本卡。规格商品时，关联UUID为规格商品UUID；
+	// 创建物品
+	MaterialAddReq
+	// 创建成本卡
+	Num float64 `json:"num" binding:"required"` // 净耗量
+}

@@ -10,9 +10,12 @@ import (
 type IProductBomRepo interface {
 	IProductBomQueryRepo
 	CreateProductBom(productBom model.ProductBom) (*model.ProductBom, error)
+	UpdateProductBom(data map[string]any, opts ...DBOption) error
 	UpdateProductBomStockNum(warehouseOutFormItems []*model.WarehouseOutFormItem) error // 更新规格商品或小料的库存数量
 	UpdateProductBoms(productBoms []*model.ProductBom) error                            // 更新ProductBom
 	CreateProductBoms(productBoms []model.ProductBom) error                             // 创建ProductBom
+	UpdateProductBomCard(productBomUuid uint64, productBomCardUuid uint64) error        // 更新规格商品的成本卡
+	GetProductBomCardByUuid(productBomUuid uint64) (*model.ProductBomCard, error)       // 获取成本卡
 }
 
 // IProductBomQueryRepo 定义仓库查询接口
@@ -23,6 +26,8 @@ type IProductBomQueryRepo interface {
 	GetSauceProductBomByUuid(uuid uint64) (*model.ProductBom, error) // 获取小料商品信息
 	GetSauceProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error)
 	GetProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error)
+
+	WhereProductSauceUuid(uuid uint64) DBOption // 查询条件 商品加料UUID
 }
 
 type productBomRepoImpl struct {
@@ -39,6 +44,18 @@ func (r *productBomRepoImpl) CreateProductBom(productBom model.ProductBom) (*mod
 		return nil, errors.WithMessage(err)
 	}
 	return &productBom, nil
+}
+
+func (r *productBomRepoImpl) UpdateProductBom(data map[string]any, opts ...DBOption) error {
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Model(&model.ProductBom{}).Updates(data).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
 }
 
 func (r *productBomRepoImpl) GetProductBom(opts ...DBOption) (*model.ProductBom, error) {
@@ -88,6 +105,9 @@ func (r *productBomRepoImpl) GetFlavorProductBomByUuid(uuid uint64) (*model.Prod
 			},
 			WithPreload{
 				Query: "FlavorMaterials.Material",
+			},
+			WithPreload{
+				Query: "ProductPackage.MultiLanguageName",
 			},
 		),
 	)
@@ -189,4 +209,40 @@ func (r *productBomRepoImpl) CreateProductBoms(productBoms []model.ProductBom) e
 		return errors.WithMessage(err)
 	}
 	return nil
+}
+
+func (r *productBomRepoImpl) WhereProductSauceUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("product_sauce_uuid = ?", uuid)
+	}
+}
+
+func (r *productBomRepoImpl) UpdateProductBomCard(productBomUuid uint64, productBomCardUuid uint64) error {
+	if err := r.db.Model(&model.ProductBom{}).Where("uuid = ?", productBomUuid).Updates(map[string]interface{}{
+		"product_bom_card_uuid": productBomCardUuid,
+	}).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+func (r *productBomRepoImpl) GetProductBomCardByUuid(productBomUuid uint64) (*model.ProductBomCard, error) {
+	productBom, err := r.GetProductBom(
+		CommonRepo.WhereByUuid(productBomUuid),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "ProductBomCard.RelatedMaterials.Material.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductBomCard.RelatedMaterials.Material.NotBaseUnitList.Unit.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductBomCard.MultiLanguageName",
+			},
+		),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productBom.ProductBomCard, nil
 }

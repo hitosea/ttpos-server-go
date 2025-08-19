@@ -115,29 +115,27 @@ type Company struct {
 	IsOpenBuffet   int    `json:"is_open_buffet"`    // 是否开启自助餐功能: 0不开启, 1开启
 	IsOpenH5Order  int    `json:"is_open_h5_order"`  // 是否开启扫码接单功能: 0不开启, 1开启
 	IsOpenOldOrder int    `json:"is_open_old_order"` // 是否开启旧订单功能: 0不开启, 1开启
+	IsOpenRider    bool   `json:"is_open_rider"`     // 是否开启外送
 }
 
 type Permission struct {
-	ID               int           `json:"id"`
-	Uuid             uint64        `json:"uuid"`
-	Name             string        `json:"name"`
-	Path             string        `json:"path"`
-	APIPath          string        `json:"-"`
-	ParentUuid       uint64        `json:"parent_id"`
-	Sort             int           `json:"-"`
-	Icon             string        `json:"-"`
-	RedirectName     string        `json:"redirect_name"`
-	IsRoute          int           `json:"is_route"`
-	IsMenu           int           `json:"is_menu"`
-	Alias            string        `json:"alias"`
-	IsShow           int           `json:"is_show"`
-	PlusCategoryUuid uint64        `json:"-"`
-	Remark           string        `json:"-"`
-	IsSupplier       int           `json:"-"`
-	AppId            int           `json:"-"`
-	CreateTime       string        `json:"-"`
-	UpdateTime       string        `json:"-"`
-	Children         []*Permission `json:"children"`
+	ID           int           `json:"id"`
+	Uuid         uint64        `json:"uuid"`
+	Name         string        `json:"name"`
+	Path         string        `json:"path"`
+	ParentUuid   uint64        `json:"parent_id"`
+	Sort         int           `json:"-"`
+	RedirectName string        `json:"redirect_name"`
+	IsRoute      int           `json:"is_route"`
+	IsMenu       int           `json:"is_menu"`
+	Alias        string        `json:"alias"`
+	IsShow       int           `json:"is_show"`
+	CreateTime   string        `json:"-"`
+	UpdateTime   string        `json:"-"`
+	Children     []*Permission `json:"children"`
+}
+type PermissionGroup struct {
+	List []*Permission `json:"list"`
 }
 
 type LanguageResp struct {
@@ -260,4 +258,38 @@ type ShiftSubmit struct {
 // 实现 BinaryMarshaler
 func (ss ShiftSubmit) MarshalBinary() ([]byte, error) {
 	return json.Marshal(ss)
+}
+
+type ShopBase struct {
+	Username     string        `json:"username"`      // 登录账号
+	ProfileUuid  uint64        `json:"profile_uuid"`  // 收银员UUID
+	Phone        string        `json:"phone"`         // 登录账号手机号
+	DeviceId     string        `json:"device_id"`     // 设备ID
+	DeviceRemark string        `json:"device_remark"` // 设备备注
+	Permissions  []*Permission `json:"permissions"`   // 页面权限
+
+	Buffet     setting.BuffetResp `json:"buffet"`   // 自助餐设置
+	CloudBasic setting.CloudBasic `json:"cloud"`    // 云端基础信息
+	Company    Company            `json:"company"`  // 商家信息
+	Currency   setting.Currency   `json:"currency"` // 货币单位
+	Business   setting.Business   `json:"business"` // 门店业务设置
+	Profile    ShopProfile        `json:"profile"`  // 门店信息
+
+	// 是否散户site
+	IsTtposSite   bool   `json:"is_ttpos_site"`  // 是否是TTPOS站点(散户site)，能登录新商家后台的必须授权erpnext，除了site_code="1"，其他都是连锁店模式，连锁店模式不能修改 单位和属性
+	ServerVersion string `json:"server_version"` // 服务端版本
+	UpdateTime    int64  `json:"update_time"`    // 更新时间
+}
+
+type ShopProfile struct {
+	CompanyName     string                 `json:"company_name"`     // 公司名称，区别于店铺名称
+	Address         string                 `json:"address"`          // 地址
+	Coordinates     string                 `json:"coordinates"`      // 经纬度
+	IpWhiteList     string                 `json:"ip_white_list"`    // ip白名单
+	Phone           string                 `json:"phone"`            // 联系电话
+	TaxNumber       string                 `json:"tax_number"`       // 税号
+	TimeZoneList    []setting.TimeZoneItem `json:"time_zone_list"`   // 时区列表
+	DefaultLanguage string                 `json:"default_language"` // 默认语言
+	LanguageList    []dto.LanguageItem     `json:"language_list"`    // 语言列表，当前勾选了的语言列表
+	Language        []string               `json:"language"`         // 云平台限制商家的可用语言列表
 }

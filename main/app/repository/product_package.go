@@ -10,6 +10,7 @@ import (
 type IProductPackageRepo interface {
 	IProductPackageQueryRepo
 	CreateProductPackage(productPackage *model.ProductPackage) error
+	UpdateProductPackage(data map[string]any, opts ...DBOption) error
 }
 
 type IProductPackageQueryRepo interface {
@@ -115,7 +116,7 @@ func (r *productPackageRepoImpl) CreateProductPackage(productPackage *model.Prod
 	}
 
 	// 创建multi_language_name表数据
-	multiLanguageNameRepo := NewMultiLanguageNameRepoImpl(r.db)
+	multiLanguageNameRepo := NewMultiLanguageNameRepo(r.db)
 	if _, err := multiLanguageNameRepo.CreateMultiLanguageName(productPackage.MultiLanguageName); err != nil {
 		return errors.WithMessage(err)
 	}
@@ -150,6 +151,19 @@ func (r *productPackageRepoImpl) CreateProductPackage(productPackage *model.Prod
 				return errors.WithMessage(err)
 			}
 		}
+	}
+	return nil
+}
+
+// UpdateProductPackage 更新产品包
+func (r *productPackageRepoImpl) UpdateProductPackage(data map[string]any, opts ...DBOption) error {
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Model(&model.ProductPackage{}).Updates(data).Error
+	if err != nil {
+		return errors.WithMessage(err)
 	}
 	return nil
 }

@@ -49,116 +49,143 @@
   <!--添加-->
   <Add v-if="open_add" :open_add="open_add" :addform="model" @closeDialog="closeDialogFunc($event, 'add')"></Add>
 </template>
-<script>
+
+<script setup>
+  import { ref, reactive, watch, nextTick, onMounted } from 'vue';
   import ProductApi from '@/api/product.js';
   import Add from '../../../expand/feed/add.vue';
   import { languageStore } from '@/store/model/language.js';
+
+  // 获取语言配置
   const languageKey = languageStore().getLanguageKey().language.value;
-  export default {
-    name: 'AddFeed',
-    components: { Add },
-    props: {
-      open: {
-        type: Boolean,
-        default: false,
-      },
-      feed_ids: {
-        type: Array,
-        default: () => [],
-      },
-    },
 
-    created() {
-      this.dialogVisible = this.open;
-      this.getData();
+  // 定义props
+  const props = defineProps({
+    open: {
+      type: Boolean,
+      default: false,
     },
-    data() {
-      return {
-        languageKey: languageKey,
-        dialogVisible: false,
-        loading: false,
-        tableData: [],
-        totalDataNumber: 0,
-        curPage: 1,
-        pageSize: 1000,
-        searchForm: {
-          name: '',
-        },
-        selectedProductsTmp: [],
-        open_add: false,
-        searchLoading: '',
+    feed_ids: {
+      type: Array,
+      default: () => [],
+    },
+  });
+
+  // 定义emits
+  const emit = defineEmits(['close']);
+
+  // 响应式数据
+  const dialogVisible = ref(false);
+  const loading = ref(false);
+  const tableData = ref([]);
+  const totalDataNumber = ref(0);
+  const curPage = ref(1);
+  const pageSize = ref(1000);
+  const searchForm = reactive({
+    name: '',
+  });
+  const selectedProductsTmp = ref([]);
+  const open_add = ref(false);
+  const searchLoading = ref('');
+  const multipleTable = ref(null);
+  const model = ref({});
+
+  // 获取列表
+  const getData = async () => {
+    loading.value = true;
+    try {
+      const Params = {
+        page: curPage.value,
+        list_rows: pageSize.value,
+        feed_name: searchForm.name,
       };
-    },
-    methods: {
-      /*搜索查询*/
-      onSearch() {
-        clearTimeout(this.searchLoading);
-        this.searchLoading = setTimeout(() => {
-          this.curPage = 1;
-          this.getData();
-        }, 200);
-      },
-      /*获取列表*/
-      getData() {
-        let self = this;
-        let Params = {};
-        Params.page = self.curPage;
-        Params.list_rows = self.pageSize;
-        Params.feed_name = self.searchForm.name;
-        self.loading = true;
-        ProductApi.FeedList(Params, true)
-          .then((data) => {
-            self.loading = false;
-            self.tableData = data.data.list.data;
-            self.totalDataNumber = data.data.list.total;
-            if (this.feed_ids.length > 0) {
-              // 判断是否存在勾选过的数据
-              this.tableData.map((row, index) => {
-                // 获取数据列表接口请求到的数据
-                if (this.feed_ids.includes(row.feed_id)) {
-                  this.$nextTick(() => {
-                    this.$refs.multipleTable.toggleRowSelection(this.tableData[index], true); // 若有重合，则回显该条数据
-                  });
-                  this.tableData[index].select_open = 1;
-                }
+      const data = await ProductApi.FeedList(Params, true);
+      loading.value = false;
+      tableData.value = data.data.list.data;
+      totalDataNumber.value = data.data.list.total;
+
+      // 判断是否存在勾选过的数据
+      if (props.feed_ids.length > 0) {
+        await Promise.resolve().then(() => {
+          tableData.value.map((row, index) => {
+            if (props.feed_ids.includes(row.feed_id)) {
+              nextTick(() => {
+                multipleTable.value?.toggleRowSelection(tableData.value[index], true);
               });
+              tableData.value[index].select_open = 1;
             }
-          })
-          .catch((error) => {
-            self.loading = false;
           });
-      },
-
-      /*关闭弹窗*/
-      closeDialogFunc(e, f) {
-        if (f == 'add') {
-          this.open_add = e.openDialog;
-          if (e.type == 'success') {
-            this.getData();
-          }
-        }
-      },
-
-      getRowKey(row) {
-        return row.feed_id;
-      },
-
-      handleSelectionChange(val) {
-        this.selectedProductsTmp = val;
-      },
-
-      dialogFormVisible() {
-        this.$emit('close', false);
-      },
-      handleAdd() {
-        this.open_add = true;
-      },
-      handleClick() {
-        this.$emit('close', this.selectedProductsTmp);
-      },
-    },
+        });
+      }
+    } catch (error) {
+      loading.value = false;
+    }
   };
+
+  // 监听open属性变化
+  watch(
+    () => props.open,
+    (val) => {
+      dialogVisible.value = val;
+      if (val) {
+        getData();
+      }
+    },
+    { immediate: true }
+  );
+
+  // 搜索查询
+  const onSearch = () => {
+    clearTimeout(searchLoading.value);
+    searchLoading.value = setTimeout(() => {
+      curPage.value = 1;
+      getData();
+    }, 200);
+  };
+
+  // 关闭弹窗
+  const closeDialogFunc = async (e, f) => {
+    if (f == 'add') {
+      open_add.value = e.openDialog;
+      if (e.type == 'success') {
+        await getData();
+      }
+    }
+  };
+
+  // 获取行键值
+  const getRowKey = (row) => {
+    return row.feed_id;
+  };
+
+  // 选择变化处理
+  const handleSelectionChange = (val) => {
+    selectedProductsTmp.value = val;
+  };
+
+  // 关闭对话框
+  const dialogFormVisible = () => {
+    emit('close', false);
+  };
+
+  // 新增加料
+  const handleAdd = () => {
+    open_add.value = true;
+  };
+
+  // 确定选择
+  const handleClick = () => {
+    emit('close', selectedProductsTmp.value);
+  };
+
+  onMounted(() => {
+    dialogVisible.value = props.open;
+    if (props.open) {
+      getData();
+    }
+  });
 </script>
+
 <style lang="scss" scoped>
   .dialog-add {
     float: left;

@@ -606,6 +606,9 @@ func (model *SaleOrder) CalcGiftAmount(products []*SaleOrderProduct) float64 {
 		if saleOrderProduct.IsCancelProduct() {
 			continue
 		}
+		if saleOrderProduct.IsPackageSubProduct() {
+			continue
+		}
 		if saleOrderProduct.IsGiftProduct() {
 			// 商品的最终金额
 			giftFee := saleOrderProduct.GetSalePrice()

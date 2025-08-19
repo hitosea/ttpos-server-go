@@ -1,0 +1,6 @@
+{
+  "doctype": "DocType",
+  "label": "ShopUUID",
+  "fieldtype": "Data",
+  "dt": "Branch"
+}

@@ -40,6 +40,7 @@
       :editId="editId"
       :template="template"
       :print_method="print_method"
+      :isShowSku="is_show_sku"
       @close="
         (e) => {
           open = false;
@@ -120,6 +121,7 @@
         template: 1,
         editId: 1,
         print_method: 1,
+        is_show_sku: 0,
       };
     },
     mounted() {
@@ -149,6 +151,7 @@
         this.template = e.template;
         this.editId = e.id;
         this.print_method = e.print_method;
+        this.is_show_sku = e.is_show_sku;
         this.title = $t(e.name);
         this.open = true;
       },

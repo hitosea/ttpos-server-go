@@ -11,11 +11,13 @@ import (
 
 // IReturnFoodReasonRepo 退菜原因仓库接口
 type IReturnFoodReasonRepo interface {
-	GetReturnFoodReasonList() ([]model.ReturnFoodReason, error)                     // 获取退菜原因列表
-	UpdateReturnFoodReason(id uint, returnFoodReason model.ReturnFoodReason) error  // 更新退菜原因
-	CreateReturnFoodReason(returnFoodReason model.ReturnFoodReason) (uint64, error) // 创建退菜原因
-	DeleteReturnFoodReason(id uint) error                                           // 删除退菜原因
-	ExistsByUuids(uuids []uint64) ([][2]uint64, []uint64, error)                    // 根据uuid数组验证退菜原因是否存在，返回[uuid, 多语言名称UUID]数组和不存在的UUID列表
+	GetReturnFoodReasonList() ([]model.ReturnFoodReason, error)                        // 获取退菜原因列表
+	UpdateReturnFoodReason(uuid uint64, returnFoodReason model.ReturnFoodReason) error // 更新退菜原因
+	CreateReturnFoodReason(returnFoodReason model.ReturnFoodReason) (uint64, error)    // 创建退菜原因
+	DeleteReturnFoodReason(uuid uint64) error                                          // 删除退菜原因
+	DeleteReturnFoodReasons(uuids []uint64) error                                      // 批量删除退菜原因
+	ExistsByUuids(uuids []uint64) ([][2]uint64, []uint64, error)                       // 根据uuid数组验证退菜原因是否存在，返回[uuid, 多语言名称UUID]数组和不存在的UUID列表
+	GetReturnFoodReasonByUuid(uuid uint64) (*model.ReturnFoodReason, error)            // 根据uuid获取退菜原因
 	GetReturnFoodReasons(opts ...repository.DBOption) ([]*model.ReturnFoodReason, error)
 	GetReturnFoodReasonListByUuids(uuids []uint64) ([]*model.ReturnFoodReason, error)
 }
@@ -71,13 +73,13 @@ func (r *ReturnFoodReasonRepoImpl) GetReturnFoodReasonList() ([]model.ReturnFood
 	err := r.db.Model(&model.ReturnFoodReason{}).
 		Preload("MultiLanguageName").
 		Where("delete_time = ?", 0).
-		Order("id ASC").
+		Order("create_time desc").
 		Find(&returnFoodReasons).Error
 	return returnFoodReasons, errors.WithMessage(err)
 }
 
 // UpdateReturnFoodReason 更新退菜原因
-func (r *ReturnFoodReasonRepoImpl) UpdateReturnFoodReason(id uint, returnFoodReason model.ReturnFoodReason) error {
+func (r *ReturnFoodReasonRepoImpl) UpdateReturnFoodReason(id uint64, returnFoodReason model.ReturnFoodReason) error {
 	tx := r.db.Begin() // 开始事务
 	defer func() {
 		if r := recover(); r != nil {
@@ -85,12 +87,12 @@ func (r *ReturnFoodReasonRepoImpl) UpdateReturnFoodReason(id uint, returnFoodRea
 		}
 	}()
 
-	if err := tx.Model(&model.ReturnFoodReason{}).Where("id = ?", id).Updates(returnFoodReason).Error; err != nil {
+	if err := tx.Model(&model.ReturnFoodReason{}).Where("uuid = ?", id).Updates(returnFoodReason).Error; err != nil {
 		tx.Rollback() // 更新失败，回滚事务
 		return errors.WithMessage(err)
 	}
 
-	if err := tx.Model(&returnFoodReason.MultiLanguageName).Where("id = ?", returnFoodReason.MultiLanguageNameUuid).Updates(returnFoodReason.MultiLanguageName).Error; err != nil {
+	if err := tx.Model(&returnFoodReason.MultiLanguageName).Where("uuid = ?", returnFoodReason.MultiLanguageNameUuid).Updates(returnFoodReason.MultiLanguageName).Error; err != nil {
 		tx.Rollback() // 更新多语言名称失败，回滚事务
 		return errors.WithMessage(err)
 	}
@@ -123,8 +125,20 @@ func (r *ReturnFoodReasonRepoImpl) CreateReturnFoodReason(returnFoodReason model
 }
 
 // DeleteReturnFoodReason 软删除退菜原因
-func (r *ReturnFoodReasonRepoImpl) DeleteReturnFoodReason(id uint) error {
-	return r.db.Model(&model.ReturnFoodReason{}).Where("id = ?", id).Update("delete_time", uint(time.Now().Unix())).Error
+func (r *ReturnFoodReasonRepoImpl) DeleteReturnFoodReason(uuid uint64) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		reason := model.ReturnFoodReason{}
+		tx.Model(&model.ReturnFoodReason{}).Where("uuid = ?", uuid).First(&reason)
+		if err := tx.Model(&model.ReturnFoodReason{}).Where("uuid = ?", uuid).Update("delete_time", uint(time.Now().Unix())).Error; err != nil {
+			return errors.WithMessage(err)
+		}
+		if reason.MultiLanguageNameUuid != 0 {
+			if err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", reason.MultiLanguageNameUuid).Update("delete_time", uint(time.Now().Unix())).Error; err != nil {
+				return errors.WithMessage(err)
+			}
+		}
+		return nil
+	})
 }
 
 // ExistsByUuids 根据uuid数组验证退菜原因是否存在，返回[uuid, 多语言名称UUID]数组和不存在的UUID列表
@@ -160,4 +174,17 @@ func (r *ReturnFoodReasonRepoImpl) ExistsByUuids(uuids []uint64) ([][2]uint64, [
 	}
 
 	return result, notFound, nil
+}
+
+func (r *ReturnFoodReasonRepoImpl) DeleteReturnFoodReasons(uuids []uint64) error {
+	return r.db.Model(&model.ReturnFoodReason{}).Where("uuid IN (?)", uuids).Update("delete_time", uint(time.Now().Unix())).Error
+}
+
+func (r *ReturnFoodReasonRepoImpl) GetReturnFoodReasonByUuid(uuid uint64) (*model.ReturnFoodReason, error) {
+	var reason model.ReturnFoodReason
+	err := r.db.Where("uuid = ?", uuid).Scopes(repository.NotDeleted).First(&reason).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return &reason, nil
 }

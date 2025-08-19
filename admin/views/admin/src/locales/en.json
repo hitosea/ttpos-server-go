@@ -418,5 +418,12 @@
     "外送台账": "Delivery Ledger",
     "渠道": "Channel",
     "经纬度": "Latitude and Longitude",
-    "请输入经纬度": "Please enter the latitude and longitude"
+    "请输入经纬度": "Please enter the latitude and longitude",
+    "商家授权管理": "Merchant Authorization Management",
+    "所属erpnext的site": "Associated erpnext site",
+    "所属erpnext公司": "Associated erpnext company",
+    "请选择所属erpnext公司": "Please select the associated erpnext company",
+    "请选择所属erpnext的site": "Please select the associated erpnext site",
+    "授权商家": "Authorized Merchant",
+    "授权": "Authorize"
 }

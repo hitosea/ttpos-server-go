@@ -1,0 +1,16 @@
+syntax = "proto3";
+package erp;
+
+import "google/protobuf/any.proto";
+
+
+// Go 包路径配置，指定生成的 Go 代码存放位置
+option go_package = "ttpos-bmp/app/ttpos-erp/api";
+
+
+message ResponseInfo {
+  string code = 1;
+  string message = 2;
+  google.protobuf.Any data = 3 ; // 响应数据，根据实际情况定义
+}
+

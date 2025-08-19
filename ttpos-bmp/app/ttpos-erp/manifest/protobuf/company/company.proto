@@ -1,0 +1,42 @@
+// 公司服务 Protobuf 定义文件
+// 用于定义公司相关的 gRPC 服务接口和消息结构
+syntax = "proto3";
+import "erp.proto";
+package company;
+
+// Go 包路径配置，指定生成的 Go 代码存放位置
+option go_package = "ttpos-bmp/app/ttpos-erp/api/company";
+
+
+// 获取公司列表请求消息
+// 用于向服务端发送获取公司列表的请求
+message GetCompanyListReq {
+  string company_name = 1; // 公司名称模糊查询，可选，如: %公司名称%
+  string company_abbr = 2; // 公司缩写编码模糊查询，可选，如: %公司缩写%
+  string parent_company = 3; // 父公司，可选，如: %父公司%
+}
+
+// 获取公司列表响应消息
+// 服务端返回的公司列表和分页信息
+message GetCompanyListResp {
+  repeated CompanyInfo company_list = 1; // 公司信息列表
+}
+
+// 公司信息消息
+// 用于在列表中展示的公司基本信息
+message CompanyInfo {
+  string company_abbr = 1;                    // 公司缩写编码
+  string company_name = 2;                  // 公司名称
+  string parent_company = 3; // 父公司
+}
+
+
+// 公司服务接口定义
+// 提供公司信息查询相关的 gRPC 服务方法
+service CompanyService {
+  // 获取公司列表
+  // 参数：查询条件
+  // 返回：公司列表和分页信息
+  rpc GetCompanyList(GetCompanyListReq) returns (erp.ResponseInfo);
+
+}

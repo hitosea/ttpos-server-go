@@ -1,0 +1,19 @@
+// ==========================================================================
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
+// ==========================================================================
+
+syntax = "proto3";
+
+package manager;
+
+option go_package = "ttpos-bmp/app/ttpos-manager/api/manager";
+
+import "google/protobuf/timestamp.proto";
+
+message Migrations {
+    int64                     Version       = 1; //
+    string                    MigrationName = 2; //
+    google.protobuf.Timestamp StartTime     = 3; //
+    google.protobuf.Timestamp EndTime       = 4; //
+    int32                     Breakpoint    = 5; //
+}

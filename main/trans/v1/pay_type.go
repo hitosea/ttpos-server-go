@@ -89,7 +89,7 @@ func (s *PayTypeService) GetUploadFileId(filePath string) uint64 {
 		return 0
 	}
 	var uploadFile UploadFile
-	s.db.Where("save_name like ?", "%"+keyword+"%").Debug().Find(&uploadFile)
+	s.db.Where("save_name like ?", "%"+keyword+"%").Find(&uploadFile)
 	return uploadFile.FileID
 }
 

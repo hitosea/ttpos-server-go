@@ -93,7 +93,12 @@ func (t *takeoutOrderCodesoftTemplate) GetPrintContent(
 	printer.AppendText("\n------------------------------------------------\n")
 	// 商品列表
 	productNum := decimal.NewFromFloat(0)
-	products, num := t.base.MergeSaleOrderProduct(saleBill, saleOrder, temp != 4, false)
+	products, num := t.base.MergeSaleOrderProduct(MergeSaleOrderProductOptions{
+		saleBill:   saleBill,
+		saleOrder:  saleOrder,
+		IsShowSku:  temp != 4,
+		IsShowWrap: false,
+	})
 	productNum = productNum.Add(decimal.NewFromFloat(num).Round(3))
 	for _, product := range products {
 		printer.AppendText(t.base.PrintText(
@@ -105,6 +110,23 @@ func (t *takeoutOrderCodesoftTemplate) GetPrintContent(
 			centerWidth,
 			rightWidth,
 		))
+
+		// 套餐子商品
+		for k, subProduct := range product.SubProducts {
+			printer.AppendText(t.base.PrintText(
+				subProduct.ProductName,
+				fmt.Sprintf("%v", subProduct.ProductNum),
+				"",
+				width,
+				leftWidth,
+				centerWidth,
+				rightWidth,
+			))
+			if k != len(product.SubProducts)-1 {
+				printer.LineFeed()
+			}
+		}
+
 		printer.LineFeed()
 		printer.SetLineSpacing(50)
 		printer.LineFeed()

@@ -108,6 +108,8 @@
                 <!-- 添加 selectable 属性控制是否可选 -->
                 <el-table-column type="selection" width="40" :selectable="selectable" />
                 <el-table-column prop="product_name_text" :label="$t('商品名称')" />
+                <el-table-column v-if="props.haveSku" prop="spec_name_text" :label="$t('规格')" />
+                <el-table-column v-if="props.haveSku" prop="stock_num" :label="$t('库存')" />
               </el-table>
             </template>
           </el-auto-resizer>
@@ -117,7 +119,7 @@
     <template #footer>
       <span class="dialog-footer">
         <el-button @click="handleClose">{{ $t('取消') }}</el-button>
-        <el-button type="primary" @click="onSubmit" :loading="loading">{{ $t('确定') }}</el-button>
+        <el-button type="primary" @click="onSubmit" :loading="loading || props.isLoading">{{ $t('确定') }}</el-button>
       </span>
     </template>
   </el-dialog>
@@ -126,6 +128,7 @@
 <script setup>
   import { ref, reactive, computed, nextTick, getCurrentInstance } from 'vue';
   import IndexApi from '@/api/index.js';
+  import InventoryApi from '@/api/inventory.js';
 
   defineOptions({
     name: 'ProductSelector',
@@ -167,6 +170,14 @@
     maxCount: {
       type: Number,
       default: Infinity,
+    },
+    haveSku: {
+      type: Boolean,
+      default: false,
+    },
+    isLoading: {
+      type: Boolean,
+      default: false,
     },
   });
 
@@ -373,20 +384,32 @@
       const product_name = form?.product_name;
       const category_ids = categoriesTreeCurrentKey.value === 0 ? '' : categoriesTreeCurrentKey.value;
       const label_ids = printTagsTreeCurrentKey.value === 0 ? '' : printTagsTreeCurrentKey.value;
-      const res = await IndexApi.getProductList(
-        {
-          page: pagination.value.page,
-          list_rows: pagination.value.pageSize,
-          mode: props.selectorType,
-          product_name,
-          category_ids,
-          label_ids,
-          type: props.type,
-          num_type: props.numType,
-          show_delivery_required: props.showDeliveryRequired,
-        },
-        true
-      );
+      const res = props.haveSku
+        // 有sku
+        ? await InventoryApi.getErpInventory(
+            {
+              material_type: 10,
+              product_status: 10,
+              filter_having_material: 0,
+              list_rows: 1000,
+            },
+            true
+          )
+        // 无sku
+        : await IndexApi.getProductList(
+            {
+              page: pagination.value.page,
+              list_rows: pagination.value.pageSize,
+              mode: props.selectorType,
+              product_name,
+              category_ids,
+              label_ids,
+              type: props.type,
+              num_type: props.numType,
+              show_delivery_required: props.showDeliveryRequired,
+            },
+            true
+          );
 
       products.value = res.data.list.data;
       if (isFirst) {

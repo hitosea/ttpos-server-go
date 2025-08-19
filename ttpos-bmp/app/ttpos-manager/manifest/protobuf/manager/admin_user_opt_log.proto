@@ -1,0 +1,26 @@
+// ==========================================================================
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
+// ==========================================================================
+
+syntax = "proto3";
+
+package manager;
+
+option go_package = "ttpos-bmp/app/ttpos-manager/api/manager";
+
+
+
+message AdminUserOptLog {
+    uint32 Id          = 1;  // 自增ID
+    int32  AdminUserId = 2;  // 用户ID
+    string Title       = 3;  // 标题
+    string Url         = 4;  // 访问url
+    string RequestType = 5;  // 请求类型
+    string Browser     = 6;  // 浏览器
+    string Agent       = 7;  // 浏览器信息
+    string Content     = 8;  // 操作内容
+    string Ip          = 9;  // 登录ip
+    int32  CreateTime  = 10; // 创建时间（时间戳）
+    int32  UpdateTime  = 11; // 更新时间（时间戳）
+    int32  DeleteTime  = 12; // 删除时间（时间戳）
+}

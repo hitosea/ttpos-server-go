@@ -48,6 +48,17 @@ func (o *H5Order) SetNil() {
 	o.Staff = nil
 }
 
+// 获取套餐子商品列表
+func (model *H5Order) GetSubProducts(saleOrderProductUuid uint64) []*SaleOrderProduct {
+	subProducts := make([]*SaleOrderProduct, 0)
+	for _, saleOrderProduct := range model.SaleOrderProducts {
+		if saleOrderProduct.PackageUuid == saleOrderProductUuid {
+			subProducts = append(subProducts, saleOrderProduct)
+		}
+	}
+	return subProducts
+}
+
 // 拒单
 func (model *H5Order) Reject(staffUuid uint64, lang string) {
 	model.Handle(staffUuid, lang, constant.H5OrderStatusRejected)

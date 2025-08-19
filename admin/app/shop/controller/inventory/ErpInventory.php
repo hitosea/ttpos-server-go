@@ -26,6 +26,7 @@ class ErpInventory extends Controller
      * @Apidoc\Param("stock_num", type="int", require=false, desc="库存数量")
      * @Apidoc\Param("sort", type="string", require=false, desc="库存排序 asc-升序 desc-降序")
      * @Apidoc\Param("filter_having_material", type="int", default=0, require=false, desc="是否过滤有材料的商品 1-是 0-否")
+     * @Apidoc\Param("filter_having_package", type="int", default=0, require=false, desc="是否过滤套餐商品 1-是 0-否")
      * @Apidoc\Param(ref="pageParam")
      * @Apidoc\Returned("list", type="array", ref="app\shop\model\product\ProductSku\getSkuProductList", desc="库存列表",  children={
      *     @Apidoc\Returned("history_purchase_num", type="int", desc="历史进货数"),
@@ -38,7 +39,8 @@ class ErpInventory extends Controller
     {
         $data = $this->postData();
         $filterHavingMaterial = isset($data['filter_having_material']) ? $data['filter_having_material'] : 0;
-        $list = (new ProductBomModel)->getProductBomList($data, $filterHavingMaterial);
+        $filterHavingPackage = isset($data['filter_having_package']) ? $data['filter_having_package'] : 0;
+        $list = (new ProductBomModel)->getProductBomList($data, $filterHavingMaterial, $filterHavingPackage);
         $category = CategoryModel::getCacheTree(1, 0, $this->store);
         return $this->renderSuccess('', compact('list', 'category'));
     }

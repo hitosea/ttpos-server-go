@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/utils"
 )
 
 // invoiceCompaxTemplate Compax发票打印模板
@@ -28,11 +29,13 @@ func NewInvoiceCompaxTemplate(
 // invoiceCompaxTemplate 获取打印内容
 func (t *invoiceCompaxTemplate) GetPrintContent(
 	settingPrinterInfo settingResp.PrinterInfo,
-	temp int,
+	tmpInfo model.PrinterTemplate,
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
 	isCashierPrinter bool,
 ) string {
+	temp := tmpInfo.Template
+	isShowSku := tmpInfo.IsShowSku
 
 	/* *
 	 * 模版2
@@ -41,7 +44,7 @@ func (t *invoiceCompaxTemplate) GetPrintContent(
 		return NewStatementOrderCompaxTemplate(t.base).GetPrintContent(
 			settingPrinterInfo,
 			constant.PrinterTemplateInvoice,
-			3,
+			utils.IfInt(isShowSku == 0, 4, 3),
 			saleBill,
 			saleOrder,
 		)

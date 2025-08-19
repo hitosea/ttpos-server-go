@@ -18,8 +18,8 @@ var Encrypt EncryptConf
 var Log LogConf
 var SMS SMSConf
 var GoogleBucket GoogleBucketConf
-var TakeOutRpcConf GrpcConf
 var Google GoogleConf
+var Nacos NacosConf
 
 func Init() error {
 	// 加载 .env 文件
@@ -39,9 +39,9 @@ func Init() error {
 	logConf(opt)             // 日志
 	smsConf(opt)             // 短信
 	googleBucketConf(opt)    // 谷歌云
-	takeoutConf(opt)         // 外送grpc
 	googleConf(opt)          // 谷歌
 	migrateDatabaseConf(opt) // 迁移数据库
+	nacosConf(opt)           // nacos配置
 
 	// 验证码
 	Captcha = CaptchaConf{CachePrefix: "captcha:"}
@@ -55,6 +55,27 @@ func Init() error {
 	}
 
 	return nil
+}
+
+func nacosConf(opt copier.Option) {
+	Nacos = NacosConf{
+		Host:      "localhost",
+		Port:      8848,
+		Namespace: "",
+		Username:  "",
+		Password:  "",
+		DataId:    "",
+		Group:     "",
+	}
+	copier.CopyWithOption(&Nacos, NacosConf{
+		Host:      viper.GetString("NACOS_SERVER_IP"),
+		Port:      viper.GetInt("NACOS_SERVER_PORT"),
+		Namespace: viper.GetString("NACOS_NAMESPACE"),
+		Username:  viper.GetString("NACOS_USERNAME"),
+		Password:  viper.GetString("NACOS_PASSWORD"),
+		DataId:    viper.GetString("NACOS_DATAID"),
+		Group:     viper.GetString("NACOS_GROUP"),
+	}, opt)
 }
 
 func logConf(opt copier.Option) {
@@ -113,9 +134,9 @@ func databaseConf(opt copier.Option) {
 		Database:        "db",
 		TablePrefix:     "ttpos_",
 		SlowQueryTime:   2,
-		MaxIdleConns:    10,
-		MaxOpenConns:    100,
-		ConnMaxLifetime: 20,
+		MaxIdleConns:    20,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 300,
 	}
 	copier.CopyWithOption(&Database, DatabaseConf{
 		DBType:          viper.GetString("DB_TYPE"),
@@ -201,15 +222,6 @@ func googleBucketConf(opt copier.Option) {
 		GoogleApplicationUploadsBucketName:    viper.GetString("GOOGLE_APPLICATION_UPLOADS_BUCKET_NAME"),
 		GoogleApplicationUploadsCatalogueName: viper.GetString("GOOGLE_APPLICATION_UPLOADS_CATALOGUE_NAME"),
 		GooglePrintBucketName:                 viper.GetString("GOOGLE_PRINT_BUCKET_NAME"),
-	}, opt)
-}
-
-func takeoutConf(opt copier.Option) {
-	TakeOutRpcConf = GrpcConf{
-		Endpoint: "127.0.0.1:14032",
-	}
-	copier.CopyWithOption(&TakeOutRpcConf, GrpcConf{
-		Endpoint: viper.GetString("TAKEOUT_ENDPOINT"),
 	}, opt)
 }
 

@@ -25,6 +25,9 @@ type Staff struct {
 
 	Company *Company `gorm:"foreignKey:CompanyUuid;references:Uuid"`
 	Device  *Device  `gorm:"foreignKey:BindKey;references:DeviceId"`
+
+	// 多对多关联：员工拥有多个角色
+	Roles []*Role `gorm:"many2many:staff_role;foreignKey:Uuid;joinForeignKey:StaffUuid;references:Uuid;joinReferences:RoleUuid"`
 }
 
 // GetUserName 获取用户名
@@ -35,8 +38,8 @@ func (model *Staff) GetUserName() string {
 // StaffRole 员工角色关系表 ttpos_staff_role
 type StaffRole struct {
 	BaseModel
-	StaffUuid int64 `gorm:"column:staff_uuid;type:bigint(20);default:0;comment:超管用户ID;NOT NULL" json:"staff_uuid"`
-	RoleUuid  int64 `gorm:"column:role_uuid;type:bigint(20);default:0;comment:角色ID;NOT NULL" json:"role_uuid"`
+	StaffUuid int64 `gorm:"column:staff_uuid;type:bigint(20);default:0;comment:员工UUID;NOT NULL" json:"staff_uuid"`
+	RoleUuid  int64 `gorm:"column:role_uuid;type:bigint(20);default:0;comment:角色UUID;NOT NULL" json:"role_uuid"`
 }
 
 // StaffShiftLog 员工交班记录表 ttpos_staff_shift_log
@@ -79,7 +82,6 @@ type StaffLoginLog struct {
 	Username  string `gorm:"column:username;type:varchar(50);comment:用户名;NOT NULL" json:"username"`
 	Ip        string `gorm:"column:ip;type:varchar(128);comment:登录ip;NOT NULL" json:"ip"`
 	Result    string `gorm:"column:result;type:varchar(128);comment:登录结果;NOT NULL" json:"result"`
-	// CreateTime 签到时间
 }
 
 // StaffOperationLog 员工操作日志表 ttpos_staff_operation_log
@@ -181,6 +183,8 @@ type StaffShiftSnapshotOrder struct {
 	TotalOrderNum           int                            `json:"total_order_num"`
 	TotalTableNum           int                            `json:"total_table_num"`
 	TotalPeopleNum          int                            `json:"total_people_num"`
+	TotalCancelOrderNum     int                            `json:"total_cancel_order_num"`
+	TotalCancelOrderAmount  float64                        `json:"total_cancel_order_amount"`
 	MinOrderPrice           float64                        `json:"min_order_price"`
 	MaxOrderPrice           float64                        `json:"max_order_price"`
 	AvgOrderPrice           float64                        `json:"avg_order_price"`

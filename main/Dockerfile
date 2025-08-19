@@ -1,17 +1,24 @@
 # 使用官方Go语言镜像作为基础镜像
 FROM apache/skywalking-go:0.5.0-go1.23 AS builder
-#注意 context 要设置为上级目录,因为要拷贝别的模块的文件
-#复制takeout 模块 api
-WORKDIR /takeout
-COPY  takeout/go.mod  .
-COPY  takeout/api ./api
 
 # 设置工作目录
 WORKDIR /app
 
 # 设置代理
-ENV GOPROXY=https://goproxy.cn,direct
+# ENV GOPROXY=https://goproxy.cn,direct
 RUN wget http://cmdb.keli.vip/static/assets/script/apache-skywalking-go-0.6.0-bin.tar.gz && tar xvf apache-skywalking-go-0.6.0-bin.tar.gz
+
+#注意 context 要设置为上级目录,因为要拷贝别的模块的文件
+#复制ttpos-bmp 模块 api
+WORKDIR /ttpos-bmp
+COPY  ttpos-bmp/go.mod ttpos-bmp/go.sum  ./
+COPY  ttpos-bmp/app/ttpos-takeout/api  app/ttpos-takeout/api
+COPY  ttpos-bmp/app/ttpos-erp/api  app/ttpos-erp/api
+COPY  ttpos-bmp/app/ttpos-shop/api  app/ttpos-shop/api
+COPY  ttpos-bmp/app/ttpos-manager/api  app/ttpos-manager/api
+
+WORKDIR /app
+
 # 复制go.mod和go.sum文件
 COPY main/go.mod main/go.sum ./
 
@@ -20,8 +27,8 @@ RUN go mod download
 # 复制源代码
 COPY main .
 
-RUN GOPROXY=https://goproxy.cn,direct /app/apache-skywalking-go-0.6.0-bin/bin/skywalking-go-agent-0.6.0-linux-amd64   -inject ./main.go
-RUN GOPROXY=https://goproxy.cn,direct go build -toolexec=/app/apache-skywalking-go-0.6.0-bin/bin/skywalking-go-agent-0.6.0-linux-amd64  -a -ldflags="-s -w"  -o main ./main.go
+RUN  /app/apache-skywalking-go-0.6.0-bin/bin/skywalking-go-agent-0.6.0-linux-amd64   -inject ./main.go
+RUN  go build -toolexec=/app/apache-skywalking-go-0.6.0-bin/bin/skywalking-go-agent-0.6.0-linux-amd64  -a -ldflags="-s -w"  -o main ./main.go
 
 
 # 添加执行权限

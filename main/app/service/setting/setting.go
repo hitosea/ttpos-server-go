@@ -1,12 +1,15 @@
 package setting
 
 import (
+	"crypto/md5"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -20,6 +23,7 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
+	"ttpos-server-go/pkg/websocket"
 
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/gin-gonic/gin"
@@ -39,6 +43,7 @@ type GetSettingReq struct {
 type ISrv interface {
 	GetStoreSetting(ctx context.Context) (setting.Store, error)                                                                           // 获取商家设置
 	GetStoreLanguageList(ctx context.Context) ([]dto.LanguageItem, error)                                                                 // 获取商家语言
+	GetStoreLanguage(ctx context.Context) ([]string, error)                                                                               // 获取商家语言
 	GetPrinterSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Printer, error)                                      // 获取打印机设置
 	GetPrinterInfo(ctx context.Context, printerSetting setting.Printer, deviceId string) (setting.PrinterInfo, error)                     // 获取打印机信息
 	GetCashierSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Cashier, error)                                      // 获取收银机设置
@@ -67,6 +72,11 @@ type ISrv interface {
 	GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSetting, error)                                                           // 获取收银端设置
 	GetAcceptOrderSetting(ctx context.Context) (*resp.AcceptOrderSetting, error)                                                          // 获取接单设置
 	SymbolPosition(ctx context.Context, price float64) string                                                                             // 根据货币符号位置返回字符串
+	EditStoreSetting(ctx context.Context, storeSetting req.UpdateStoreSetting) error                                                      // 修改店铺设置
+	EditBusinessSetting(ctx context.Context, businessSetting req.UpdateBusinessSetting) error                                             // 修改业务设置
+	GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness, error)                                                             // 获取商家业务设置
+	GetMenuQrcode(ctx context.Context) (string, error)                                                                                    // 获取电子菜单二维码
+	UpdateMenuQrcode(ctx context.Context) (string, error)                                                                                 // 更新电子菜单二维码
 }
 
 func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
@@ -124,6 +134,15 @@ func (s *Srv) GetStoreLanguageList(ctx context.Context) ([]dto.LanguageItem, err
 		return nil, errors.WithMessage(err)
 	}
 	return set.Language, nil
+}
+
+func (s *Srv) GetStoreLanguage(ctx context.Context) ([]string, error) {
+	storeSetting, _ := s.GetStoreSetting(ctx)
+	languages := make([]string, 0)
+	for _, language := range storeSetting.Language {
+		languages = append(languages, language.Name)
+	}
+	return languages, nil
 }
 
 func (s *Srv) getSettingByKey(ctx context.Context, key string) model.Setting {
@@ -393,6 +412,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		isUsbPrinter           bool // 是否usb打印机
 		printMethod            int  // 打印方式 1文本打印, 2图片打印
 		printerSn              string
+		printerWidth           int = 80 // 默认80mm打印机
 	)
 
 	// 收银机开启
@@ -435,6 +455,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 			// 由当前点击的设备进行打印
 			printerCashierDeviceSn = deviceSn
 			printMethod = int(printer.PrintMethod)
+			printerWidth = printer.Width
 		} else if printerId != "0" && printerId != "" {
 			// 收银机内置的打印机
 			printerCashierDeviceSn = printerId
@@ -465,6 +486,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		IsUsbPrinter:           isUsbPrinter,
 		PrintMethod:            printMethod,
 		PrinterSn:              printerSn,
+		PrinterWidth:           printerWidth,
 	}, nil
 }
 
@@ -487,6 +509,14 @@ func (s *Srv) GetBusinessSetting(ctx context.Context) (setting.Business, error) 
 		re := regexp.MustCompile(`"dish_card_style":(\s*)(\d+)`)
 		// 替换为带引号的字符串数字
 		st.Values = re.ReplaceAllString(st.Values, `"dish_card_style":"$2"`)
+	}
+
+	// 兼容v1.0版本start_serial_no字段为数字的情况
+	{
+		// 正则表达式用于匹配 start_serial_no 后面的任意数字
+		re := regexp.MustCompile(`"start_serial_no":(\s*)(\d+)`)
+		// 替换为带引号的字符串数字
+		st.Values = re.ReplaceAllString(st.Values, `"start_serial_no":"$2"`)
 	}
 
 	err := json.Unmarshal([]byte(st.Values), &business)
@@ -1489,4 +1519,422 @@ func (s *Srv) UpdateSetting(ctx context.Context, settingKey string, values any) 
 	// 删除缓存
 	s.cache.Del(fmt.Sprintf(s.cacheKey, ctx.GetCompanyUuid()))
 	return nil
+}
+
+func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateStoreSetting) error {
+	saasDB := s.dbm.GetDB(0)
+	companyUuid := ctx.GetCompanyUuid()
+	companyDB := s.dbm.GetDB(companyUuid)
+
+	// 门店设置
+	storeSetting, err := s.GetStoreSetting(ctx)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 公司设置
+	companySetting, err := s.GetCompanySetting(ctx)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 判断saas库中商家名称是否已存在
+	saasCompanyRepo := repository.NewCompanyRepo(saasDB)
+	saasCompany, _ := saasCompanyRepo.GetCompany(saasCompanyRepo.WhereName(storeSettingReq.Name), saasCompanyRepo.WhereNotUuid(companyUuid))
+
+	if saasCompany.Uuid != 0 {
+		return errors.New("商家名称已存在")
+	}
+
+	// 时区在时区列表中
+	timeZoneList := storeSetting.TimeZoneList
+	if !slices.ContainsFunc(timeZoneList, func(item setting.TimeZoneItem) bool {
+		return item.Key == storeSettingReq.TimeZone
+	}) {
+		return errors.New("时区不存在")
+	}
+
+	// 传递过来的语言，必须是companySetting.GetLanguages() 且 Name和Value都在constant.Languages中的语言
+	for _, language := range storeSettingReq.Language {
+		if !slices.Contains(companySetting.GetLanguages(), language.Name) || !slices.ContainsFunc(constant.Languages, func(item constant.LanguageItem) bool {
+			return item.Name == language.Name && item.Value == language.Value
+		}) {
+			return errors.New("语言不存在")
+		}
+	}
+
+	// 去掉logoUrl的域名
+	storeSettingReq.LogoUrl = "/" + strings.TrimLeft(utils.RemoveDomain(storeSettingReq.LogoUrl), "/")
+	storeSetting.AvatarURL = "/" + strings.TrimLeft(utils.RemoveDomain(storeSetting.AvatarURL), "/")
+
+	// 保存设置到store_setting表
+	settingRepo := repository.NewSettingRepo(companyDB)
+	copier.CopyWithOption(&storeSetting, storeSettingReq, copier.Option{IgnoreEmpty: true})
+
+	storeSetting.LogoURL = storeSettingReq.LogoUrl
+	storeSetting.Company = storeSettingReq.CompanyName
+
+	value := utils.ToJson(storeSetting)
+	value = strings.ReplaceAll(value, "\"logo_url\"", "\"logoUrl\"")
+	value = strings.ReplaceAll(value, "\"avatar_url\"", "\"avatarUrl\"")
+
+	err = settingRepo.Updates(constant.SettingStore, value)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 保存到saas.company_setting\saas.company\商家company_setting\商家company表
+	saasDB.Model(&model.Company{}).Where("uuid = ?", companyUuid).Updates(map[string]any{
+		"name": storeSettingReq.Name,
+		"logo": storeSettingReq.LogoUrl,
+	})
+	saasDB.Model(&model.CompanySetting{}).Where("company_uuid = ?", companyUuid).Updates(map[string]any{
+		"timezone":    storeSettingReq.TimeZone,
+		"link_phone":  storeSettingReq.Phone,
+		"address":     storeSettingReq.Address,
+		"coordinates": storeSettingReq.Coordinates,
+		"tax_number":  storeSettingReq.TaxNumber,
+	})
+	companyDB.Model(&model.Company{}).Where("uuid = ?", companyUuid).Updates(map[string]any{
+		"name": storeSettingReq.Name,
+		"logo": storeSettingReq.LogoUrl,
+	})
+	companyDB.Model(&model.CompanySetting{}).Where("company_uuid = ?", companyUuid).Updates(map[string]any{
+		"timezone":    storeSettingReq.TimeZone,
+		"link_phone":  storeSettingReq.Phone,
+		"address":     storeSettingReq.Address,
+		"coordinates": storeSettingReq.Coordinates,
+		"tax_number":  storeSettingReq.TaxNumber,
+	})
+
+	// 保存白底黑字图片
+	whiteBackgroundWithBlackTextLogoPath, err := utils.GetWhiteBackgroundWithBlackTextLogoPath(companyUuid, storeSettingReq.LogoUrl, "public/uploads")
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	err = utils.WhiteBackgroundWithBlackText("http://nginx/"+storeSettingReq.LogoUrl, whiteBackgroundWithBlackTextLogoPath)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// ##### 处理 cashier tablet h5 kitchen assistant printer 各端的语言设置 #####
+	{
+		// 1、处理 cashier 设置
+		cashierSetting, err := s.GetCashierSetting(ctx, storeSettingReq.Language)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+		// 去掉cashierSetting.Language中不在storeSettingReq.Language中的语言
+		for _, language := range cashierSetting.Language {
+			if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
+				return item.Name == language
+			}) {
+				cashierSetting.Language = slices.DeleteFunc(cashierSetting.Language, func(item string) bool {
+					return item == language
+				})
+			}
+		}
+		// 如果cashierSetting.DefaultLanguage 不在 storeSettingReq.Language 中，则设置为 storeSettingReq.Language 中的第一个语言
+		if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
+			return item.Name == cashierSetting.DefaultLanguage
+		}) {
+			cashierSetting.DefaultLanguage = storeSettingReq.Language[0].Name
+		}
+		// 清除 cashierSetting.LanguageList 中的数据
+		if len(cashierSetting.LanguageList) != 0 {
+			cashierSetting.Language = []string{}
+		}
+		settingRepo.Updates(constant.SettingCashier, utils.ToJson(cashierSetting))
+
+		// 2、处理 tablet 设置
+		tabletSetting, err := s.GetTabletSetting(ctx, storeSettingReq.Language)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+		// 去掉tabletSetting.Language中不在storeSettingReq.Language中的语言
+		for _, language := range tabletSetting.Language {
+			if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
+				return item.Name == language
+			}) {
+				tabletSetting.Language = slices.DeleteFunc(tabletSetting.Language, func(item string) bool {
+					return item == language
+				})
+			}
+		}
+		// 如果tabletSetting.DefaultLanguage 不在 storeSettingReq.Language 中，则设置为 storeSettingReq.Language 中的第一个语言
+		if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
+			return item.Name == tabletSetting.DefaultLanguage
+		}) {
+			tabletSetting.DefaultLanguage = storeSettingReq.Language[0].Name
+		}
+		// 清除 tabletSetting.LanguageList 中的数据
+		if len(tabletSetting.LanguageList) != 0 {
+			tabletSetting.Language = []string{}
+		}
+		settingRepo.Updates(constant.SettingTablet, utils.ToJson(tabletSetting))
+
+		// 3、处理 h5 设置
+		h5Setting, err := s.GetH5Setting(ctx, storeSettingReq.Language)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+
+		// 去掉h5Setting.Language中不在storeSettingReq.Language中的语言
+		for _, language := range h5Setting.Language {
+			if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
+				return item.Name == language
+			}) {
+				h5Setting.Language = slices.DeleteFunc(h5Setting.Language, func(item string) bool {
+					return item == language
+				})
+			}
+		}
+		// 如果tabletSetting.DefaultLanguage 不在 storeSettingReq.Language 中，则设置为 storeSettingReq.Language 中的第一个语言
+		if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
+			return item.Name == h5Setting.DefaultLanguage
+		}) {
+			h5Setting.DefaultLanguage = storeSettingReq.Language[0].Name
+		}
+		// 清除 h5Setting.LanguageList 中的数据
+		if len(h5Setting.LanguageList) != 0 {
+			h5Setting.Language = []string{}
+		}
+		settingRepo.Updates(constant.SettingH5, utils.ToJson(h5Setting))
+
+		// 4、处理 kitchen 设置
+		kitchenSetting, err := s.GetKitchenSetting(ctx, companySetting, storeSettingReq.Language)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+		// 去掉kitchenSetting.Language中不在storeSettingReq.Language中的语言
+		for _, language := range kitchenSetting.Language {
+			if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
+				return item.Name == language
+			}) {
+				kitchenSetting.Language = slices.DeleteFunc(kitchenSetting.Language, func(item string) bool {
+					return item == language
+				})
+			}
+		}
+		// 如果tabletSetting.DefaultLanguage 不在 storeSettingReq.Language 中，则设置为 storeSettingReq.Language 中的第一个语言
+		if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
+			return item.Name == kitchenSetting.DefaultLanguage
+		}) {
+			kitchenSetting.DefaultLanguage = storeSettingReq.Language[0].Name
+		}
+		// 清除 kitchenSetting.LanguageList 中的数据
+		if len(kitchenSetting.LanguageList) != 0 {
+			kitchenSetting.Language = []string{}
+		}
+		settingRepo.Updates(constant.SettingKitchen, utils.ToJson(kitchenSetting))
+
+		// 5、处理 assistant 设置
+		assistantSetting, err := s.GetAssistantSetting(ctx, storeSettingReq.Language)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+
+		// 去掉assistantSetting.Language中不在storeSettingReq.Language中的语言
+		for _, language := range assistantSetting.Language {
+			if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
+				return item.Name == language
+			}) {
+				assistantSetting.Language = slices.DeleteFunc(assistantSetting.Language, func(item string) bool {
+					return item == language
+				})
+			}
+		}
+		// 如果tabletSetting.DefaultLanguage 不在 storeSettingReq.Language 中，则设置为 storeSettingReq.Language 中的第一个语言
+		if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
+			return item.Name == assistantSetting.DefaultLanguage
+		}) {
+			assistantSetting.DefaultLanguage = storeSettingReq.Language[0].Name
+		}
+		// 清除 assistantSetting.LanguageList 中的数据
+		if len(assistantSetting.LanguageList) != 0 {
+			assistantSetting.Language = []string{}
+		}
+		settingRepo.Updates(constant.SettingAssistant, utils.ToJson(assistantSetting))
+
+		// 6、处理 printer 设置
+		printerSetting, err := s.GetPrinterSetting(ctx, storeSettingReq.Language)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+
+		// 去掉printerSetting.Language中不在storeSettingReq.Language中的语言
+		for _, language := range printerSetting.Language {
+			if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
+				return item.Name == language
+			}) {
+				printerSetting.Language = slices.DeleteFunc(printerSetting.Language, func(item string) bool {
+					return item == language
+				})
+			}
+		}
+		// 如果 printerSetting.DefaultLanguage 不在 storeSettingReq.Language 中，则设置为 storeSettingReq.Language 中的第一个语言
+		if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
+			return item.Name == printerSetting.DefaultLanguage
+		}) {
+			printerSetting.DefaultLanguage = storeSettingReq.Language[0].Name
+		}
+		// 如果 printerSetting.KitchenLanguage 不在 storeSettingReq.Language 中，则设置为 storeSettingReq.Language 中的第一个语言
+		if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
+			return item.Name == printerSetting.KitchenLanguage
+		}) {
+			printerSetting.KitchenLanguage = storeSettingReq.Language[0].Name
+		}
+
+		// 清除 printerSetting.LanguageList 中的数据
+		if len(printerSetting.LanguageList) != 0 {
+			printerSetting.Language = []string{}
+		}
+		settingRepo.Updates(constant.SettingPrinter, utils.ToJson(printerSetting))
+	}
+
+	// 删除系统设置缓存
+	s.cache.Del(fmt.Sprintf(s.cacheKey, companyUuid))
+	// 删除全局缓存
+	tc := cache.NewTaggedCache(s.cache)
+	tc.TagClear("common_get_settingLanguages")
+	s.cache.Del(fmt.Sprintf("{common_get_settingLanguages}_common_setting_languages%d", companyUuid))
+	tc.TagClear("cashier")
+
+	// 推送配置更新
+	go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_CONFIG, map[string]any{
+		"update_time": time.Now().Unix(),
+	})
+
+	return nil
+}
+
+func (s *Srv) EditBusinessSetting(ctx context.Context, businessSettingReq req.UpdateBusinessSetting) error {
+	companyUuid := ctx.GetCompanyUuid()
+	companyDB := s.dbm.GetDB(companyUuid)
+
+	companySetting, err := s.GetCompanySetting(ctx)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	businessSetting, err := s.GetBusinessSetting(ctx)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 备份旧的businessSetting
+	oldBusinessSetting := businessSetting
+
+	// 判断菜品卡片样式是否更新，如果更新，则更新菜品卡片样式最后更新时间
+	oldDishCardStyle := businessSetting.DishCardStyle
+	if oldDishCardStyle != businessSetting.DishCardStyle {
+		businessSetting.DishCardStyleTime = strconv.Itoa(int(time.Now().Unix()))
+	}
+
+	// 判断是否开启外送功能
+	if businessSetting.DeliveryPriceRatio != businessSettingReq.DeliveryPriceRatio && companySetting.DeliveryStatus != 1 {
+		return errors.New("当前没有权限使用此功能")
+	}
+
+	// 更新businessSetting
+	copier.CopyWithOption(&businessSetting, businessSettingReq, copier.Option{IgnoreEmpty: true})
+
+	// 删除不需要的列表字段
+	businessSetting.ZeroingMethodList = []setting.ZeroingMethodItem{}
+	businessSetting.CheckoutZeroingMethodList = []setting.CheckoutZeroingMethodItem{}
+	businessSetting.GiftMethodList = []setting.GiftMethodItem{}
+	businessSetting.FreeMethodList = []setting.FreeMethodItem{}
+
+	// 保存设置到 business_setting 表
+	settingRepo := repository.NewSettingRepo(companyDB)
+	// 覆盖oldBusinessSetting
+	copier.CopyWithOption(&oldBusinessSetting, businessSetting, copier.Option{IgnoreEmpty: true})
+
+	err = settingRepo.Updates(constant.SettingBusiness, utils.ToJson(oldBusinessSetting))
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 删除系统设置缓存
+	s.cache.Del(fmt.Sprintf(s.cacheKey, companyUuid))
+	// 删除全局缓存
+	tc := cache.NewTaggedCache(s.cache)
+	tc.TagClear("common_get_settingLanguages")
+	s.cache.Del(fmt.Sprintf("{common_get_settingLanguages}_common_setting_languages%d", companyUuid))
+	tc.TagClear("cashier")
+
+	// 推送配置更新
+	go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_CONFIG, map[string]any{
+		"update_time": time.Now().Unix(),
+	})
+
+	return nil
+}
+
+func (s *Srv) GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness, error) {
+	companyUuid := ctx.GetCompanyUuid()
+	db := s.dbm.GetDB(companyUuid)
+
+	businessSetting, err := s.GetBusinessSetting(ctx)
+	if err != nil {
+		return setting.ShopBusiness{}, errors.WithMessage(err)
+	}
+
+	var freeReasonCount, returnFoodReasonCount int64
+	err = db.Model(&model.FreeReason{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&freeReasonCount).Error
+	if err != nil {
+		return setting.ShopBusiness{}, errors.WithMessage(err)
+	}
+	err = db.Model(&model.ReturnFoodReason{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&returnFoodReasonCount).Error
+	if err != nil {
+		return setting.ShopBusiness{}, errors.WithMessage(err)
+	}
+
+	return setting.ShopBusiness{
+		Business:              businessSetting,
+		FreeReasonCount:       int(freeReasonCount),
+		ReturnFoodReasonCount: int(returnFoodReasonCount),
+	}, nil
+}
+
+func (s *Srv) GetMenuQrcode(ctx context.Context) (string, error) {
+	businessSetting, err := s.GetBusinessSetting(ctx)
+	if err != nil {
+		return "", errors.WithMessage(err)
+	}
+	return viper.GetString("MENU_BASE_URL") + "/home?token=" + s.getMenuQrcodeToken(ctx, businessSetting), nil
+}
+
+func (s *Srv) getMenuQrcodeToken(ctx context.Context, businessSetting setting.Business) string {
+	type Qrcode struct {
+		CompanyUuid uint64 `json:"a"`
+		Qrcode      string `json:"q"`
+	}
+	qrcode := Qrcode{
+		CompanyUuid: ctx.GetCompanyUuid(),
+		Qrcode:      businessSetting.QrCode,
+	}
+	qrcodeString := utils.ToJson(qrcode)
+	hash := md5.Sum([]byte(qrcodeString))
+	token := fmt.Sprintf("%x.%s", hash, base64.StdEncoding.EncodeToString([]byte(qrcodeString)))
+
+	return base64.StdEncoding.EncodeToString([]byte(token))
+}
+
+func (s *Srv) UpdateMenuQrcode(ctx context.Context) (string, error) {
+	companyUuid := ctx.GetCompanyUuid()
+	db := s.dbm.GetDB(companyUuid)
+	businessSetting, err := s.GetBusinessSetting(ctx)
+	if err != nil {
+		return "", errors.WithMessage(err)
+	}
+	// 随机生成6位数字字符串
+	qrcode := utils.RandomString(6, utils.Numbers)
+	businessSetting.QrCode = qrcode
+	settingRepo := repository.NewSettingRepo(db)
+	err = settingRepo.Updates(constant.SettingBusiness, utils.ToJson(businessSetting))
+	if err != nil {
+		return "", errors.WithMessage(err)
+	}
+	return viper.GetString("MENU_BASE_URL") + "/home?token=" + s.getMenuQrcodeToken(ctx, businessSetting), nil
 }

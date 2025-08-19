@@ -35,3 +35,17 @@ type Authenticate struct {
 
 	TokenIssuedAt int64
 }
+
+type ChangePasswordReq struct {
+	OldPassword     string `json:"old_password" binding:"required"`                         // 旧密码
+	NewPassword     string `json:"new_password" binding:"required,strong_password"`         // 新密码，不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种
+	ConfirmPassword string `json:"confirm_password" binding:"required,eqfield=NewPassword"` // 确认密码
+}
+
+var ChangePasswordRequestMessage = map[string]string{
+	"old_password.required":        "旧密码不能为空",
+	"new_password.required":        "新密码不能为空",
+	"new_password.strong_password": "新密码不符合要求：不能包含空格，长度为8-16个字符，必须包含字母、数字、符号中至少2种",
+	"confirm_password.required":    "确认密码不能为空",
+	"confirm_password.eqfield":     "两次密码输入不一致",
+}

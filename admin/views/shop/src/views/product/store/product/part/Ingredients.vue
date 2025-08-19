@@ -1,9 +1,4 @@
 <template>
-  <!--
-
-    	时间：2019-10-26
-    	描述：商品管理-商品编辑-规格/库存
-    -->
   <div>
     <!--商品加料-->
     <div class="common-form mt50">{{ $t('商品加料') }}</div>
@@ -129,201 +124,212 @@
   </div>
 </template>
 
-<script>
+<script setup>
+  import { ref, inject, watch, nextTick, getCurrentInstance } from 'vue';
   import { useUserStore } from '@/store';
   import addFeed from '../components/addFeed.vue';
   import { languageStore } from '@/store/model/language.js';
+
+  // 获取当前实例
+  const { proxy } = getCurrentInstance();
+
+  // 获取用户信息和语言数据
   const { computedSupplier } = useUserStore();
   const supplier = computedSupplier().supplier;
-  const baseSale = supplier.value?.sale_stock || 0;
   const languageKey = languageStore().getLanguageKey().language.value;
-  export default {
-    components: { addFeed },
-    data() {
-      return {
-        restaurants: [],
-        formData: {
-          feed: [],
-        },
-        //材料
-        open_add_feed: false,
-        multiple_selection: [],
-        index: 0,
-        baseSale: baseSale,
-        languageKey: languageKey,
-        feed_ids: [],
-      };
-    },
-    inject: {
-      form: {
-        default: () => {},
-      },
-    },
-    watch: {
-      form: {
-        // 监听form的变化
-        handler(val) {
-          // 遍历val.model.product_feed
-          (val.model.product_feed || []).map((item, index) => {
-            //已有的加料
-            this.feed_ids = [];
-            this.feed_ids.push(item.feed_id);
 
-            // 定义一个空数组arr
-            let arr = [];
-            // 遍历item.material
-            (item.material || []).map((items, indexs) => {
-              // 在下次DOM更新循环结束之后执行延迟回调
-              this.$nextTick(() => {
-                // 将items.material_num转换为数字，并赋值给this.form.model.product_feed[index].material[indexs].material_num
-                this.form.model.product_feed[index].material[indexs].material_num = Number(String(items.material_num).replace(/(\.\d{1,4})\d*/, '$1'));
-              });
-              // 定义一个变量num，初始值为0
-              let num = 0;
-              // 将this.form.ing_select_list[index][indexs].sku[0].material_stock除以items.material_num，并向下取整，赋值给num
-              if (this.form.ing_select_list[index][indexs]?.sku) {
-                num = Number(this.form.ing_select_list[index][indexs]?.sku[0]?.material_stock) / Number(items.material_num);
-              }
-              num = Math.floor(num);
-              // 将num添加到arr中
-              arr.push(num);
-            });
-            // 如果item.material的长度大于0
-            if ((item.material || []).length > 0) {
-              // 将arr排序，取最小值，赋值给this.form.model.product_feed[index].stock_num
-              this.form.model.product_feed[index].stock_num =
-                arr.sort((a, b) => a - b)[0] == Infinity ? null : arr.sort((a, b) => a - b)[0] > 99999999 ? 99999999 : arr.sort((a, b) => a - b)[0];
-            }
+  // 注入form
+  const form = inject('form', {});
+
+  // 响应式数据
+  const open_add_feed = ref(false);
+  const feed_ids = ref([]);
+
+  // 定义emit
+  const emit = defineEmits(['validateField']);
+
+  // 监听form变化
+  watch(
+    () => form,
+    (val) => {
+      // 遍历val.model.product_feed
+      (val.model.product_feed || []).map((item, index) => {
+        //已有的加料
+        feed_ids.value = [];
+        feed_ids.value.push(item.feed_id);
+
+        // 定义一个空数组arr
+        let arr = [];
+        // 遍历item.material
+        (item.material || []).map((items, indexs) => {
+          // 在下次DOM更新循环结束之后执行延迟回调
+          nextTick(() => {
+            // 将items.material_num转换为数字，并赋值给this.form.model.product_feed[index].material[indexs].material_num
+            form.model.product_feed[index].material[indexs].material_num = Number(String(items.material_num).replace(/(\.\d{1,4})\d*/, '$1'));
           });
-          if (val.model.product_feed.length == 0) {
-            this.form.model.feed_required = 0;
-            this.form.model.feed_open_max_select = 0;
-            this.form.model.feed_max_select = 0;
+          // 定义一个变量num，初始值为0
+          let num = 0;
+          // 将this.form.ing_select_list[index][indexs].sku[0].material_stock除以items.material_num，并向下取整，赋值给num
+          if (form.ing_select_list[index][indexs]?.sku) {
+            num = Number(form.ing_select_list[index][indexs]?.sku[0]?.material_stock) / Number(items.material_num);
           }
-        },
-        // 深度监听
-        deep: true,
-        // 立即执行
-        immediate: true,
-      },
-    },
-    methods: {
-      addIngredients() {
-        this.feed_ids = [];
-        this.form.model.product_feed.map((item) => {
-          this.feed_ids.push(item.feed_id);
+          num = Math.floor(num);
+          // 将num添加到arr中
+          arr.push(num);
         });
-        this.open_add_feed = true;
-      },
-      handleDelete() {
-        this.form.model.product_feed = [];
-      },
-      async handleClose(val) {
-        if (val === false) {
-          this.open_add_feed = false;
-          return;
+        // 如果item.material的长度大于0
+        if ((item.material || []).length > 0) {
+          // 将arr排序，取最小值，赋值给this.form.model.product_feed[index].stock_num
+          form.model.product_feed[index].stock_num =
+            arr.sort((a, b) => a - b)[0] == Infinity ? null : arr.sort((a, b) => a - b)[0] > 99999999 ? 99999999 : arr.sort((a, b) => a - b)[0];
         }
-        // 新的加料id
-        const newIds = [];
-        (val || []).map((item) => {
-          newIds.push(item.feed_id);
-        });
-
-        // 需要新增的id
-        const _pushIds = await newIds.filter((item) => {
-          return this.form.model.product_feed.findIndex((items) => items.feed_id == item) == -1;
-        });
-
-        //需要删除的id
-        const _needToDeleteIds = await this.form.model.product_feed.filter((item) => {
-          return newIds.findIndex((items) => items == item.feed_id) == -1;
-        });
-
-        //需要删除的id
-        await _needToDeleteIds.map((item) => {
-          this.form.model.product_feed.map((items, indexs) => {
-            if (item.feed_id == items.feed_id) {
-              this.form.model.product_feed.splice(indexs, 1);
-              this.form.ing_select_list.splice(indexs, 1);
-            }
-          });
-        });
-
-        await (val || []).map((item, index) => {
-          if (_pushIds.indexOf(item.feed_id) != -1) {
-            this.form.ing_select_list.push([]);
-            this.form.model.product_feed.push({
-              feed_id: item.feed_id,
-              feed_name: item.feed_name,
-              material: item.material,
-              stock_num: null,
-              price: Number(item.price) || null,
-              default_select: '0',
-            });
-            this.form.ing_select_list[index] = item.material;
-          }
-        });
-        //处理this.form.ing_select_list
-        await (this.form.model.product_feed || []).map((item, index) => {
-          if (this.form.ing_select_list[index].length > 0) {
-            this.form.ing_select_list[index].map((items, indexs) => {
-              this.form.ing_select_list[index][indexs].sku = [];
-              this.form.ing_select_list[index][indexs].sku[0] = {
-                product_id: '',
-                material_stock: '',
-              };
-              this.form.ing_select_list[index][indexs].sku[0].product_id = items.material_id;
-              this.form.ing_select_list[index][indexs].sku[0].material_stock = items.materialProduct.product_material_stock;
-              this.form.ing_select_list[index][indexs].product_unit_text = items.materialProduct.product_unit_text;
-              this.form.ing_select_list[index][indexs].product_name_text = items.materialProduct.product_name_text;
-            });
-          }
-        });
-
-        this.open_add_feed = false;
-      },
-
-      defaultSelect(feed_open_max_select, feed_max_select, product_feed) {
-        let count = 0;
-        product_feed.map((item) => {
-          if (item.default_select === 1) {
-            count++;
-          }
-        });
-        if (count > feed_max_select && feed_open_max_select == '1' && feed_max_select != null) {
-          return false;
-        } else {
-          return true;
-        }
-      },
-
-      checkDefaultSelect() {
-        this.$nextTick(() => {
-          this.form.model.product_feed.map((item, index) => {
-            this.$emit('validateField', `model.product_feed[${index}].default_select`);
-          });
-        });
-      },
-
-      onBlur() {
-        this.form.model.feed_max_select = this.form.model.feed_max_select == null ? 1 : this.form.model.feed_max_select;
-        this.$nextTick(() => {
-          this.form.model.product_feed.map((item, index) => {
-            this.$emit('validateField', `model.product_feed[${index}].default_select`);
-          });
-        });
-      },
-
-      deleteClick(index) {
-        this.form.model.product_feed.splice(index, 1);
-        this.form.ing_select_list.splice(index, 1);
-        this.$nextTick(() => {
-          this.form.model.product_feed.map((item, indexs) => {
-            this.$emit('validateField', `model.product_feed[${indexs}].default_select`);
-          });
-        });
-      },
+      });
+      if (val.model.product_feed.length == 0) {
+        form.model.feed_required = 0;
+        form.model.feed_open_max_select = 0;
+        form.model.feed_max_select = 0;
+      }
     },
+    // 深度监听
+    { deep: true, immediate: true }
+  );
+
+  // 方法定义
+  const addIngredients = () => {
+    feed_ids.value = [];
+    form.model.product_feed.map((item) => {
+      feed_ids.value.push(item.feed_id);
+    });
+    open_add_feed.value = true;
+  };
+
+  const handleDelete = () => {
+    form.model.product_feed = [];
+  };
+
+  const handleClose = async (val) => {
+    if (val === false) {
+      open_add_feed.value = false;
+      return;
+    }
+
+    // 第一步：构建新的加料id数组
+    const newIds = await Promise.resolve().then(() => {
+      const ids = [];
+      (val || []).map((item) => {
+        ids.push(item.feed_id);
+      });
+      return ids;
+    });
+
+    // 第二步：等上一步完成，计算需要新增的id
+    const _pushIds = await Promise.resolve().then(() => {
+      return newIds.filter((item) => {
+        return form.model.product_feed.findIndex((items) => items.feed_id == item) == -1;
+      });
+    });
+
+    // 第三步：等上一步完成，计算需要删除的id
+    const _needToDeleteIds = await Promise.resolve().then(() => {
+      return form.model.product_feed.filter((item) => {
+        return newIds.findIndex((items) => items == item.feed_id) == -1;
+      });
+    });
+
+    // 第四步：等上一步完成，执行删除操作
+    await Promise.resolve().then(() => {
+      _needToDeleteIds.map((item) => {
+        form.model.product_feed.map((items, indexs) => {
+          if (item.feed_id == items.feed_id) {
+            form.model.product_feed.splice(indexs, 1);
+            form.ing_select_list.splice(indexs, 1);
+          }
+        });
+      });
+    });
+
+    // 第五步：等上一步完成，添加新的加料数据
+    await Promise.resolve().then(() => {
+      (val || []).map((item, index) => {
+        if (_pushIds.indexOf(item.feed_id) != -1) {
+          form.ing_select_list.push([]);
+          form.model.product_feed.push({
+            feed_id: item.feed_id,
+            feed_name: item.feed_name,
+            material: item.material,
+            stock_num: null,
+            price: Number(item.price) || null,
+            default_select: '0',
+          });
+          form.ing_select_list[index] = item.material;
+        }
+      });
+    });
+
+    // 第六步：等上一步完成，处理材料选择列表
+    await Promise.resolve().then(() => {
+      (form.model.product_feed || []).map((item, index) => {
+        if (form.ing_select_list[index].length > 0) {
+          form.ing_select_list[index].map((items, indexs) => {
+            form.ing_select_list[index][indexs].sku = [];
+            form.ing_select_list[index][indexs].sku[0] = {
+              product_id: '',
+              material_stock: '',
+            };
+            form.ing_select_list[index][indexs].sku[0].product_id = items.material_id;
+            form.ing_select_list[index][indexs].sku[0].material_stock = items.materialProduct.product_material_stock;
+            form.ing_select_list[index][indexs].product_unit_text = items.materialProduct.product_unit_text;
+            form.ing_select_list[index][indexs].product_name_text = items.materialProduct.product_name_text;
+          });
+        }
+      });
+    });
+
+    // 第七步：等上一步完成，关闭弹窗
+    await Promise.resolve().then(() => {
+      open_add_feed.value = false;
+    });
+  };
+
+  const defaultSelect = (feed_open_max_select, feed_max_select, product_feed) => {
+    let count = 0;
+    product_feed.map((item) => {
+      if (item.default_select === 1) {
+        count++;
+      }
+    });
+    if (count > feed_max_select && feed_open_max_select == '1' && feed_max_select != null) {
+      return false;
+    } else {
+      return true;
+    }
+  };
+
+  const checkDefaultSelect = () => {
+    nextTick(() => {
+      form.model.product_feed.map((item, index) => {
+        emit('validateField', `model.product_feed[${index}].default_select`);
+      });
+    });
+  };
+
+  const onBlur = () => {
+    form.model.feed_max_select = form.model.feed_max_select == null ? 1 : form.model.feed_max_select;
+    nextTick(() => {
+      form.model.product_feed.map((item, index) => {
+        emit('validateField', `model.product_feed[${index}].default_select`);
+      });
+    });
+  };
+
+  const deleteClick = (index) => {
+    form.model.product_feed.splice(index, 1);
+    form.ing_select_list.splice(index, 1);
+    nextTick(() => {
+      form.model.product_feed.map((item, indexs) => {
+        emit('validateField', `model.product_feed[${indexs}].default_select`);
+      });
+    });
   };
 </script>
 

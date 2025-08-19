@@ -42,9 +42,12 @@ class PrinterTemplate extends BaseModel
     /**
      * 设置模板
      */
-    public function setTemplate($template)
+    public function setTemplate($data)
     {
-        return $this->save(['template' => $template ? $template : 1]);
+        return $this->save([
+            'template' => $data['template'] ?? 1,
+            'is_show_sku' => $data['is_show_sku'] ?? 1,
+        ]);
     }
 
     /**

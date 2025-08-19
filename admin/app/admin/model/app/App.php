@@ -162,10 +162,10 @@ class App extends AppModel
 
         return $this->alias('app')
             ->field("su.uuid, app.name, su.delivery_status, su.delivery_config")
-            ->leftJoin('company_setting su', "su.company_uuid = app.uuid") 
+            ->leftJoin('company_setting su', "su.company_uuid = app.uuid")
             ->where('su.delete_time', '=', 0)
             ->where('app.delete_time', '=', 0)
-            ->when($configured, function($q){
+            ->when($configured, function ($q) {
                 return $q->where('su.delivery_config', '<>', "");
             })
             ->where("app.uuid", "in", function ($q) {
@@ -178,7 +178,44 @@ class App extends AppModel
                 });
             })
             ->when($channel && $configured, function ($q) use ($channel) { // 外送渠道
-                $q->whereRaw('JSON_CONTAINS(su.delivery_config, ?)', [json_encode(['channel' => $channel])]); 
+                $q->whereRaw('JSON_CONTAINS(su.delivery_config, ?)', [json_encode(['channel' => $channel])]);
+            })
+            ->order(["su.create_time" => 'asc'])
+            ->group('app.uuid')
+            ->paginate($param)
+            ->append([]);
+    }
+
+
+    /**
+     * ERPNext商家列表
+     */
+    public function getErpnextCompanyList($param)
+    {
+        $keyword = $param['keyword'] ?? '';
+        $configured = $param['configured'] ?? false;
+
+        return $this->alias('app')
+            ->field("su.uuid, app.name, su.link_phone, su.real_name, su.erpnext_site_code, su.erpnext_company_abbr, su.erpnext_branch_name, su.erpnext_pos_profile_name")
+            ->leftJoin('company_setting su', "su.company_uuid = app.uuid")
+            ->where('su.delete_time', '=', 0)
+            ->where('app.delete_time', '=', 0)
+            ->when($configured, function ($q) {
+                return $q->where('su.erpnext_site_code', '<>', "")
+                    ->where('su.erpnext_company_abbr', '<>', "")
+                    ->where('su.erpnext_branch_name', '<>', "")
+                    ->where('su.erpnext_pos_profile_name', '<>', "");
+            })
+            ->when($keyword, function ($q) use ($keyword) { // 商家名称关键字
+                $q->where(function ($qq) use ($keyword) {
+                    $qq->like('app.name', $keyword);
+                    $qq->orLike('app.uuid', $keyword);
+                });
+            })
+            ->when(!$configured, function ($q) {
+                return $q->where(function ($qq) {
+                    $qq->where('app.expire_time', '=', "0")->whereOr('app.expire_time', '>', time()); 
+                });
             })
             ->order(["su.create_time" => 'asc'])
             ->group('app.uuid')

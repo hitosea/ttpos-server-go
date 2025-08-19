@@ -1,8 +1,4 @@
 <template>
-  <!--
-    时间：2019-10-26
-    描述：商品管理-商品编辑-规格/库存
-  -->
   <div>
     <!--规格设置-->
     <div class="common-form mt50">{{ $t('规格/库存') }}</div>
@@ -50,98 +46,93 @@
       <Many></Many>
     </template>
     <!--添加-->
-    <Add v-if="open_add" :open_add="open_add" @closeDialog="closeDialogFunc($event, 'add')"></Add>
+    <Add v-if="open_add_feed" :open_add="open_add_feed" @closeDialog="closeDialogFunc($event, 'add')"></Add>
   </div>
 </template>
 
-<script>
+<script setup>
+  import { ref, reactive, inject, watch } from 'vue';
   import Single from './spec/Single.vue';
   import Many from './spec/Many.vue';
   import { languageStore } from '@/store/model/language.js';
   import Add from '../../../expand/unit/add.vue';
+
+  // 获取语言数据
   const languageList = languageStore().getLanguageList().languageList.value;
   const languageKey = languageStore().getLanguageKey().language.value;
-  export default {
-    name: 'ProductStoreProductSpec',
-    components: {
-      /*单规格*/
-      Single,
-      /*多规格*/
-      Many,
-      Add,
-    },
-    data() {
+
+  // 注入form
+  const form = inject('form');
+
+  // 响应式数据
+  const restaurants = ref([]);
+  const open_add_feed = ref(false);
+
+  // 初始化语言对象
+  let languageObj = {};
+  languageList.forEach((item) => {
+    languageObj[item.key] = [];
+  });
+
+  const restaurantsObj = reactive(languageObj);
+
+  // 工具函数定义
+  const isValidJSON = (str) => {
+    try {
+      JSON.parse(str);
+      return true; // 如果解析成功，返回 true
+    } catch (e) {
+      return false; // 如果解析失败，返回 false
+    }
+  };
+
+  // 监听form变化
+  watch(
+    () => form,
+    (val) => {
       let languageObj = {};
       languageList.forEach((item) => {
         languageObj[item.key] = [];
       });
-      return {
-        restaurants: [],
-        restaurantsObj: languageObj,
-        languageList: languageList,
-        languageKey: languageKey,
-        open_add: false,
-      };
-    },
-    inject: ['form'],
-    watch: {
-      form: {
-        handler(val) {
-          let languageObj = {};
-          languageList.forEach((item) => {
-            languageObj[item.key] = [];
-          });
-          this.restaurantsObj = languageObj;
-          val.unit.map((item, index) => {
-            let unit_name = this.isValidJSON(item.unit_name) ? JSON.parse(item.unit_name) : {};
-            languageList.forEach((items) => {
-              if (unit_name[items.key] != null) {
-                this.restaurantsObj[items.key].push({
-                  value: unit_name[items.key] == '' ? '-' : unit_name[items.key],
-                  index: index,
-                  unit_id: item.unit_id,
-                });
-              }
+      Object.assign(restaurantsObj, languageObj);
+
+      val.unit.map((item, index) => {
+        let unit_name = isValidJSON(item.unit_name) ? JSON.parse(item.unit_name) : {};
+        languageList.forEach((items) => {
+          if (unit_name[items.key] != null) {
+            restaurantsObj[items.key].push({
+              value: unit_name[items.key] == '' ? '-' : unit_name[items.key],
+              index: index,
+              unit_id: item.unit_id,
             });
-          });
-        },
-        deep: true,
-        immediate: true,
-      },
-    },
-
-    methods: {
-      selectChange(e) {
-        languageList.forEach((item) => {
-          this.form.model.product_unit[item.key] = this.restaurantsObj[item.key][e]?.value || '';
-          this.form.model.unit_id = this.restaurantsObj[item.key][e]?.unit_id || '';
-        });
-      },
-
-      addUnit() {
-        this.open_add = true;
-      },
-
-      isValidJSON(str) {
-        try {
-          JSON.parse(str);
-          return true; // 如果解析成功，返回 true
-        } catch (e) {
-          return false; // 如果解析失败，返回 false
-        }
-      },
-
-      /*关闭弹窗*/
-      closeDialogFunc(e, f) {
-        if (f == 'add') {
-          this.open_add = e.openDialog;
-          if (e.type == 'success' && e.data) {
-            //
-            this.form.unit.unshift(e.data);
           }
-        }
-      },
+        });
+      });
     },
+    { deep: true, immediate: true }
+  );
+
+  // 方法定义
+  const selectChange = (e) => {
+    languageList.forEach((item) => {
+      form.model.product_unit[item.key] = restaurantsObj[item.key][e]?.value || '';
+      form.model.unit_id = restaurantsObj[item.key][e]?.unit_id || '';
+    });
+  };
+
+  const addUnit = () => {
+    open_add_feed.value = true;
+  };
+
+  /*关闭弹窗*/
+  const closeDialogFunc = (e, f) => {
+    if (f == 'add') {
+      open_add_feed.value = e.openDialog;
+      if (e.type == 'success' && e.data) {
+        //
+        form.unit.unshift(e.data);
+      }
+    }
   };
 </script>
 

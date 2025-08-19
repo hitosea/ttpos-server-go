@@ -1,0 +1,72 @@
+syntax = "proto3";
+import "erp.proto";
+
+package buying;
+
+// 采购服务 Protobuf 定义文件
+// 用于定义采购相关的 gRPC 服务接口和消息结构
+option go_package = "ttpos-bmp/app/ttpos-erp/api/buying";
+
+message GetSupplierListReq {
+  string company_abbr = 1; // 公司缩写编码,必填
+}
+
+
+message GetSupplierListResp {
+  repeated SupplierInfo supplier_list = 1; // 供应商列表
+}
+
+message SupplierInfo {
+  string supplier_name = 1; // 供应商名称
+  string represents_company = 2; // 供应商代表公司
+}
+
+
+message GetPurchaseOrderReq {
+  string purchase_order_name = 1; // 采购订单名称
+}
+
+message GetPurchaseOrderResp {
+  PurchaseOrderInfo purchase_order = 1; // 采购订单信息
+}
+
+message PurchaseOrderInfo {
+  string purchase_order_name = 1; // 采购订单名称
+  string supplier_name = 2; // 供应商名称
+  double per_received = 3; // 已接收比例
+  string schedule_date = 4; // 计划到货日期
+  repeated PurchaseOrderItem items = 5; // 采购订单物品列表
+}
+
+message PurchaseOrderItem {
+  string item_code = 1; // 物品编码,必填
+  string item_name = 2; // 物品名称
+  string stock_uom = 3; // 物品单位
+  double qty = 4; // 物品数量,必填
+}
+
+message SavePurchaseReceiptReq {
+  string purchase_order_name = 1; // 采购订单名称,必填
+  repeated PurchaseOrderItem items = 2; // 采购订单物品列表,必填
+}
+
+message SavePurchaseReceiptResp {
+  PurchaseOrderInfo purchase_order = 1; // 采购订单信息
+}
+
+service BuyingService {
+  // 获取供应商列表
+  // 参数：公司缩写编码
+  // 返回：供应商列表
+  rpc GetSupplierList(GetSupplierListReq) returns (erp.ResponseInfo);
+
+  // 获取采购订单
+  // 参数：采购订单名称
+  // 返回：采购订单信息
+  rpc GetPurchaseOrder(GetPurchaseOrderReq) returns (erp.ResponseInfo);
+
+  // 保存采购收货单
+  // 参数：采购收货单信息
+  // 返回：操作结果
+  rpc SavePurchaseReceipt(SavePurchaseReceiptReq) returns (erp.ResponseInfo);
+}

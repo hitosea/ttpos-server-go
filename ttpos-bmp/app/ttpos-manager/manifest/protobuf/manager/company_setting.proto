@@ -1,0 +1,49 @@
+// ==========================================================================
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
+// ==========================================================================
+
+syntax = "proto3";
+
+package manager;
+
+option go_package = "ttpos-bmp/app/ttpos-manager/api/manager";
+
+
+
+message CompanySetting {
+    int32  Id               = 1;  // 自增ID
+    uint64 Uuid             = 2;  // 集团设置ID
+    int64  CompanyUuid      = 3;  // 集团ID
+    string RealName         = 4;  // 真实姓名
+    string LinkName         = 5;  // 联系人
+    string LinkPhone        = 6;  // 联系电话
+    int32  SaleStock        = 7;  // 进销存: 0不开启, 1开启
+    int32  IsOpenMember     = 8;  // 是否开启会员: 0不开启, 1开启
+    int32  IsOpenTablet     = 9;  // 是否开启平板: 0不开启, 1开启
+    int32  IsOpenH5         = 10; // 是否开启扫码H5: 0不开启, 1开启
+    int32  IsOpenAssistant  = 11; // 是否开启点餐助手: 0不开启, 1开启
+    int32  IsOpenKitchenKds = 12; // 是否开启后厨KDS: 0不开启, 1开启
+    int32  IsOpenBuffet     = 13; // 是否开启自助餐: 0不开启, 1开启
+    int32  IsOpenH5Order    = 14; // 是否开启扫码点餐接单 0不开启, 1开启
+    int32  IsOpenLocalPrint = 15; // 是否开启本地打印服务 0不开启, 1开启
+    int32  IsOpenTax        = 16; // 是否开启税务对接: 0不开启, 1奥地利 2-其他
+    int32  IsOpenCoupon     = 17; // 是否开启优惠券: 0不开启, 1开启
+    int32  IsOpenMarketing  = 18; // 是否开启营销活动: 0不开启, 1开启
+    int32  EnableSms        = 19; // 是否启用短信功能：0-否；1-是
+    int32  SmsQuota         = 20; // 短信配额
+    int32  CashLimit        = 21; // 收银机上限
+    int32  KitchenLimit     = 22; // 厨显上限
+    int32  TabletLimit      = 23; // 平板上限
+    int32  AssistantLimit   = 24; // 点餐助手上限
+    int32  TableLimit       = 25; // 桌台上限
+    int32  PrinterLimit     = 26; // 打印机上限
+    string Timezone         = 27; // 时区
+    string Languages        = 28; // 支持语言
+    string Address          = 29; // 联系地址
+    string DeliveryConfig   = 30; // 外送配置
+    string Coordinates      = 31; // 经纬度，如：13.721899,100.52900
+    int32  DeliveryStatus   = 32; // 外送配置状态：0-关,1-开
+    int32  CreateTime       = 33; // 创建时间（时间戳）
+    int32  UpdateTime       = 34; // 更新时间（时间戳）
+    int32  DeleteTime       = 35; // 删除时间（时间戳）
+}

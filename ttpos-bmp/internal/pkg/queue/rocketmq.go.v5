@@ -1,0 +1,353 @@
+package queue
+
+import (
+	"context"
+	"github.com/apache/rocketmq-clients/golang/v5/credentials"
+	"github.com/gogf/gf/v2/os/gctx"
+	"github.com/gogf/gf/v2/os/genv"
+	"github.com/gogf/gf/v2/util/gconv"
+	"sync"
+	"time"
+	"ttpos-bmp/internal/consts"
+	"ttpos-bmp/utility/simple"
+
+	rmqclient "github.com/apache/rocketmq-clients/golang/v5"
+	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/grpool"
+)
+
+type RocketMq struct {
+	producerIns rmqclient.Producer
+	consumerIns map[string]rmqclient.SimpleConsumer
+}
+
+type RocketManager struct {
+	Producer *RocketMq
+	Consumer *RocketMq
+	pMutex   sync.Mutex
+	cMutex   sync.Mutex
+	goPool   *grpool.Pool
+}
+
+var (
+	rocketManager     = &RocketManager{}
+	invisibleDuration = time.Second * time.Duration(g.Cfg().MustGet(gctx.GetInitCtx(), "queue.rocketmq.invisibleDuration", "20").Int())
+	awaitDuration     = time.Second * time.Duration(g.Cfg().MustGet(gctx.GetInitCtx(), "queue.rocketmq.awaitDuration", "5").Int())
+)
+
+func init() {
+	setRocketCloseEvent()
+}
+
+func setRocketCloseEvent() {
+	simple.Event().Register(consts.EventServerClose, func(ctx context.Context, args ...interface{}) {
+		if rocketManager == nil {
+			return
+		}
+
+		if rocketManager.Producer != nil {
+			err := rocketManager.Producer.producerIns.GracefulStop()
+			if err != nil {
+				Logger().Warningf(ctx, "rmq_client producer close err:%v", err)
+				//return
+			}
+			Logger().Debug(ctx, "rmq_client producer close...")
+		}
+
+		if rocketManager.Consumer != nil {
+			for _, c := range rocketManager.Consumer.consumerIns {
+				if err := c.GracefulStop(); err != nil {
+					Logger().Warningf(ctx, "rmq_client consumer close err:%v", err)
+				}
+			}
+			Logger().Debug(ctx, "rmq_client consumer close...")
+		}
+		for rocketManager.goPool != nil && rocketManager.goPool.Size() != 0 {
+			Logger().Debugf(ctx, "waiting for eocketmq consumer to complete execution[%v][%v]...", rocketManager.goPool.Size(), rocketManager.goPool.Jobs())
+			time.Sleep(time.Second)
+		}
+	})
+}
+
+func GetRocketManager() *RocketManager {
+	return rocketManager
+}
+
+// RegisterRocketProducer 注册并启动生产者接口实现
+func RegisterRocketProducer() (client MqProducer, err error) {
+	return RegisterRocketMqProducer()
+}
+
+// RegisterRocketConsumer 注册消费者
+func RegisterRocketConsumer() (client MqConsumer, err error) {
+	return RegisterRocketMqConsumer()
+}
+
+// createSimpleConsumer 创建简单消费者
+func (r *RocketMq) createSimpleConsumer(topic string) (c rmqclient.SimpleConsumer, err error) {
+	if c, ok := r.consumerIns[topic]; ok {
+		return c, nil
+	}
+	// 加锁，确保线程安全
+	rocketManager.cMutex.Lock()
+	// 函数结束时解锁
+	defer rocketManager.cMutex.Unlock()
+
+	c, err = rmqclient.NewSimpleConsumer(&rmqclient.Config{
+		Endpoint: config.Rocketmq.Endpoint,
+		Credentials: &credentials.SessionCredentials{
+			AccessKey:    config.Rocketmq.AccessKey,
+			AccessSecret: config.Rocketmq.SecretKey,
+		},
+		ConsumerGroup: config.GroupName,
+	},
+		rmqclient.WithSimpleAwaitDuration(awaitDuration),
+		rmqclient.WithSimpleSubscriptionExpressions(map[string]*rmqclient.FilterExpression{
+			topic: rmqclient.SUB_ALL,
+		}))
+
+	if err != nil {
+		return c, gerror.Wrapf(err, "rmq_client create topic consumer error: %v", topic)
+	}
+	r.consumerIns[topic] = c
+	// start simpleConsumer
+	err = c.Start()
+	if err != nil {
+		return c, gerror.Wrapf(err, "rmq_client start consumer error:%v", topic)
+	}
+	return
+}
+
+func (r *RocketMq) createPushConsumer(topic string) (c rmqclient.PushConsumer, err error) {
+	if c, ok := r.consumerIns[topic]; ok {
+		return c, nil
+	}
+	// 加锁，确保线程安全
+	rocketManager.cMutex.Lock()
+	// 函数结束时解锁
+	defer rocketManager.cMutex.Unlock()
+	c, err = rmqclient.NewPushConsumer(&rmqclient.Config{
+		Endpoint: config.Rocketmq.Endpoint,
+		Credentials: &credentials.SessionCredentials{
+			AccessKey:    config.Rocketmq.AccessKey,
+			AccessSecret: config.Rocketmq.SecretKey,
+		},
+		ConsumerGroup: config.GroupName,
+	},
+		rmqclient.WithPushAwaitDuration(awaitDuration),
+		rmqclient.WithPushSubscriptionExpressions(map[string]*rmqclient.FilterExpression{
+			topic: rmqclient.SUB_ALL,
+		}))
+	return
+}
+
+// SendMsg 按字符串类型生产数据
+func (r *RocketMq) SendMsg(topic string, body string) (mqMsg MqMsg, err error) {
+	return r.SendByteMsg(topic, []byte(body))
+}
+
+// SendByteMsg 生产数据
+func (r *RocketMq) SendByteMsg(topic string, body []byte) (mqMsg MqMsg, err error) {
+	return r.SendDelayMsg(topic, string(body), 0)
+}
+
+func (r *RocketMq) SendDelayMsg(topic string, body string, delay time.Duration) (mqMsg MqMsg, err error) {
+	if r.producerIns == nil {
+		return mqMsg, gerror.New("rocketMq producer not register")
+	}
+
+	msg := &rmqclient.Message{
+		Topic: topic,
+		Body:  gconv.Bytes(body),
+	}
+	if delay > 0 {
+		msg.SetDelayTimestamp(time.Now().Add(delay))
+	}
+	result, err := r.producerIns.Send(ctx, msg)
+	if err != nil {
+		return mqMsg, gerror.Wrapf(err, "rocketMq producer send msg error status")
+	}
+	if len(result) > 0 {
+		mqMsg = MqMsg{
+			RunType: SendMsg,
+			Topic:   topic,
+			MsgId:   result[0].MessageID,
+			Body:    msg.Body,
+		}
+	}
+	return mqMsg, nil
+}
+
+func (r *RocketMq) ListenReceiveMsgDo(topic string, receiveDo func(mqMsg MqMsg) error) (err error) {
+	return r.ListenReceiveMsgDoSimple(topic, receiveDo)
+}
+func (r *RocketMq) ListenReceiveMsgDoPush(topic string, receiveDo func(mqMsg MqMsg) error) (err error) {
+	// 加锁，确保线程安全
+	rocketManager.cMutex.Lock()
+	// 函数结束时解锁
+	defer rocketManager.cMutex.Unlock()
+	var consumer rmqclient.PushConsumer
+	if consumer, err = rmqclient.NewPushConsumer(&rmqclient.Config{
+		Endpoint: config.Rocketmq.Endpoint,
+		Credentials: &credentials.SessionCredentials{
+			AccessKey:    config.Rocketmq.AccessKey,
+			AccessSecret: config.Rocketmq.SecretKey,
+		},
+		ConsumerGroup: config.GroupName,
+	},
+		rmqclient.WithPushAwaitDuration(awaitDuration),
+		rmqclient.WithPushSubscriptionExpressions(map[string]*rmqclient.FilterExpression{
+			topic: rmqclient.SUB_ALL,
+		}),
+		rmqclient.WithPushConsumptionThreadCount(20),
+		rmqclient.WithPushMaxCacheMessageCount(1024),
+		rmqclient.WithPushMessageListener(&rmqclient.FuncMessageListener{
+			Consume: func(mv *rmqclient.MessageView) rmqclient.ConsumerResult {
+				if err := receiveDo(MqMsg{
+					RunType: ReceiveMsg,
+					Topic:   mv.GetTopic(),
+					MsgId:   mv.GetMessageId(),
+					Body:    mv.GetBody(),
+				}); err == nil {
+					// 若消息处理成功，则确认消息
+					return rmqclient.SUCCESS
+				}
+				// ack message
+				return rmqclient.FAILURE
+			},
+		})); err != nil {
+		Logger().Errorf(ctx, "rocketMq listen receive msg do error: %v", err)
+		return err
+	}
+	if err := consumer.Start(); err != nil {
+		Logger().Errorf(ctx, "rocketMq listen receive msg do error: %v", err)
+		return err
+	}
+	defer consumer.GracefulStop()
+	return
+}
+
+// ListenReceiveMsgDoSimple 监听指定主题的消息，并对收到的消息执行指定的处理函数
+func (r *RocketMq) ListenReceiveMsgDoSimple(topic string, receiveDo func(mqMsg MqMsg) error) (err error) {
+	// 检查消费者实例是否已注册
+	if r.consumerIns == nil {
+		return gerror.New("rocketMq consumer not register")
+	}
+
+	// 定义一个 RocketMQ 简单消费者实例
+	var consumer rmqclient.SimpleConsumer
+	// 如果主题不存在则创建，并获取对应的消费者实例
+	if consumer, err = r.createSimpleConsumer(topic); err != nil {
+		return err
+	}
+	go func() {
+		for {
+			// 从消费者处接收消息，指定接收消息的最大数量和消息不可见时长
+			// TODO 后续调整为 PushConsumer
+			mvs, err := consumer.Receive(ctx, 10, invisibleDuration)
+			if err != nil {
+				// 记录获取消息异常的日志
+				//Logger().Error(ctx, "获取消息异常", err)
+			}
+			// 对收到的每条消息进行处理
+			for _, mv := range mvs {
+				msg := mv
+				// 将消息处理任务添加到 goroutine 池中
+				_ = rocketManager.goPool.Add(ctx, func(ctx context.Context) {
+					// 将 RocketMQ 消息转换为自定义的 MqMsg 结构，并调用处理函数
+					if err := receiveDo(MqMsg{
+						RunType: ReceiveMsg,
+						Topic:   msg.GetTopic(),
+						MsgId:   msg.GetMessageId(),
+						Body:    msg.GetBody(),
+					}); err == nil {
+						// 若消息处理成功，则确认消息
+						consumer.Ack(ctx, msg)
+					}
+				})
+			}
+			time.Sleep(1 * time.Second)
+		}
+	}()
+	return nil
+}
+
+// RegisterRocketMqProducer 注册rocketmq生产者
+func RegisterRocketMqProducer() (mqIns *RocketMq, err error) {
+	if rocketManager.Producer != nil {
+		return rocketManager.Producer, nil
+	}
+	rocketManager.pMutex.Lock()
+	defer rocketManager.pMutex.Unlock()
+
+	SetRLogLevel()
+
+	mqIns = new(RocketMq)
+	retry := config.Rocketmq.Retry
+	if retry <= 0 {
+		retry = 0
+	}
+
+	mqIns.producerIns, err = rmqclient.NewProducer(&rmqclient.Config{
+		Endpoint: config.Rocketmq.Endpoint,
+		Credentials: &credentials.SessionCredentials{
+			AccessKey:    config.Rocketmq.AccessKey,
+			AccessSecret: config.Rocketmq.SecretKey,
+		},
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if err = mqIns.producerIns.Start(); err != nil {
+		return nil, err
+	}
+
+	_, err = mqIns.producerIns.Send(ctx, &rmqclient.Message{
+		Topic: "ttpos-ping",
+		Body:  gconv.Bytes("ping"),
+	})
+	if err != nil {
+		err = gerror.Newf("连通性测试不通过，请检查`queue.rmq_client.endpoint`或权限配置是否有误。err:%+v", err.Error())
+		return nil, err
+	}
+
+	rocketManager.Producer = mqIns
+	return rocketManager.Producer, nil
+}
+
+// RegisterRocketMqConsumer 注册rocketmq消费者
+func RegisterRocketMqConsumer() (mqIns *RocketMq, err error) {
+	if rocketManager.Consumer != nil {
+		return rocketManager.Consumer, nil
+	}
+
+	rocketManager.cMutex.Lock()
+	defer rocketManager.cMutex.Unlock()
+
+	SetRLogLevel()
+
+	// 利用生产者检查一下连通性
+	if _, err = RegisterRocketMqProducer(); err != nil {
+		return nil, err
+	}
+
+	mqIns = new(RocketMq)
+	mqIns.consumerIns = make(map[string]rmqclient.SimpleConsumer)
+
+	// 开多携程处理消费任务，可以根据业务实际情况调整该配置
+	rocketManager.goPool = grpool.New(config.PoolSize)
+
+	rocketManager.Consumer = mqIns
+	return rocketManager.Consumer, nil
+}
+
+// SetRLogLevel 设置rocketmq日志输出等级
+func SetRLogLevel() {
+	level := g.Cfg().MustGet(ctx, rmqclient.CLIENT_LOG_LEVEL, "all").String()
+	genv.Set(rmqclient.CLIENT_LOG_LEVEL, level)
+	genv.Set(rmqclient.ENABLE_CONSOLE_APPENDER, "true")
+	rmqclient.ResetLogger()
+}

@@ -18,6 +18,7 @@ import (
 
 type IRoleAccessSrv interface {
 	GetPermission(routerName constant.RouteName, staffUuid, companyUuid uint64) ([]*resp.Permission, error)
+	GetPermissionGroup(staffUuid, companyUuid uint64) (resp.PermissionGroup, error)
 	GetApiPermission(staffUuid, companyUuid uint64) ([]string, error)
 }
 
@@ -99,10 +100,51 @@ func (s *roleAccessSrv) GetPermission(routerName constant.RouteName, staffUuid, 
 	return s.buildPermissionTree(permissions, routerName), nil
 }
 
+// GetPermissionGroup 获取权限
+func (s *roleAccessSrv) GetPermissionGroup(staffUuid, companyUuid uint64) (resp.PermissionGroup, error) {
+
+	var permissions []resp.Permission
+	groupPermission := resp.PermissionGroup{
+		List: []*resp.Permission{},
+	}
+	dbPermissions, companySetting, err := s.getDbPermissions(staffUuid, companyUuid)
+	if err != nil {
+		return groupPermission, errors.WithMessage(err)
+	}
+
+	for _, dbPermission := range dbPermissions {
+		var permission resp.Permission
+		copier.Copy(&permission, dbPermission)
+		// 手动设置ParentUuid字段，因为json标签不匹配导致copier无法正确复制
+		permission.ParentUuid = dbPermission.ParentUuid
+		permission.CreateTime = time.Unix(dbPermission.CreateTime, 0).Format(time.DateTime)
+		permission.UpdateTime = time.Unix(dbPermission.UpdateTime, 0).Format(time.DateTime)
+		permission.Children = []*resp.Permission{}
+		permissions = append(permissions, permission)
+	}
+
+	// 筛选权限
+	permissions = s.filterPermission(permissions, companySetting)
+
+	// 构建权限树形结构
+	roots := s.buildPermissionTreeWithoutFilter(permissions)
+	for _, root := range roots {
+		groupPermission.List = append(groupPermission.List, root)
+	}
+
+	// 返回权限组
+	return groupPermission, nil
+}
+
 // 筛选权限
 func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companySetting model.CompanySetting) []resp.Permission {
 	var filteredPermissions []resp.Permission
 	for _, permission := range permissions {
+		// 删除无效数据
+		if slices.Contains([]uint64{58, 124, 125, 128, 129, 160, 162, 1724320603, 1724320604, 1724320605}, permission.Uuid) {
+			continue
+		}
+
 		// 暂时去掉外卖管理
 		if permission.ID == 1626688443 {
 			continue
@@ -150,6 +192,18 @@ func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 
 // 构建权限树
 func (s *roleAccessSrv) buildPermissionTree(permissions []resp.Permission, routerName constant.RouteName) []*resp.Permission {
+	roots := s.buildPermissionTreeWithoutFilter(permissions)
+	var filteredRoots []*resp.Permission
+	for _, root := range roots {
+		if root.Name == string(routerName) {
+			filteredRoots = append(filteredRoots, root.Children...)
+		}
+	}
+	return filteredRoots
+}
+
+// buildPermissionTreeWithoutFilter 构建权限树（不进行路由过滤）
+func (s *roleAccessSrv) buildPermissionTreeWithoutFilter(permissions []resp.Permission) []*resp.Permission {
 	permissionMap := make(map[uint64]*resp.Permission)
 	var roots []*resp.Permission
 	var accessIds []string
@@ -178,14 +232,7 @@ func (s *roleAccessSrv) buildPermissionTree(permissions []resp.Permission, route
 		}
 	}
 
-	var filteredRoots []*resp.Permission
-	for _, root := range roots {
-		if root.Name == string(routerName) {
-			filteredRoots = append(filteredRoots, root.Children...)
-		}
-	}
-
-	return filteredRoots
+	return roots
 }
 
 func (s *roleAccessSrv) GetApiPermission(staffUuid, companyUuid uint64) ([]string, error) {

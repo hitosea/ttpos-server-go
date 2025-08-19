@@ -1,11 +1,15 @@
 package rpc
 
 import (
-	"takeout/api/echo"
+	"encoding/json"
+	"fmt"
 	"time"
+	"ttpos-bmp/app/ttpos-erp/api/selling"
+	"ttpos-bmp/app/ttpos-takeout/api/echo"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/app/service/rpc/takeout"
 	"ttpos-server-go/pkg/logger"
 
@@ -144,5 +148,26 @@ func TestCancelOrder() error {
 		return err
 	}
 	logger.Logger.Info("外送服务gRPC客户端测试成功")
+	return nil
+}
+
+func TestCompanyList() error {
+	client, conn, err := erp.NewErpSellingClient()
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+	result, err := client.GetPosProfileList(erp.WithSiteCode(context.Background(), "1"), &selling.PosProfileReq{})
+	if err != nil {
+		panic(err)
+	}
+	var posProfileListResp selling.PosProfileListResp
+	if err := result.Data.UnmarshalTo(&posProfileListResp); err != nil {
+		logger.Logger.Error("GetPosProfileList-UnmarshalTo", zap.Any("err", err))
+		return err
+	}
+	ccccc, _ := json.Marshal(posProfileListResp.ProfileList)
+	fmt.Println(string(ccccc))
+
 	return nil
 }
