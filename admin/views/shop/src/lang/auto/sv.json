@@ -1284,7 +1284,7 @@
     "公司名称：": "Företagsnamn:",
     "公司名称公司名称公司名称": "Företagsnamn Företagsnamn Företagsnamn",
     "首次登录需修改密码": "Första inloggningen kräver lösenordsändring",
-    "并台": "Sammanslå bord",
+    "并台": "Sammanslagningsstation",
     "整单退款": "Refundera hel beställning",
     "部分退款": "Delvis refund",
     "注：确定后则为整单操作退款": "OBS: Efter bekräftelse kommer det att vara en hel beställningsåtgärd",
@@ -2121,5 +2121,6 @@
     "请输入开始序列号": "Ange startserienummern",
     "请翻译分组名称": "Vänligen översätt gruppnamnet",
     "取消订单数": "Antal avbokade beställningar",
-    "取消订单金额": "Belopp för orderavbokning"
+    "取消订单金额": "Belopp för orderavbokning",
+    "规格/属性": "Specifikationer/Egenskaper"
 }

@@ -1879,5 +1879,7 @@
     "请输入开始序列号": "Lütfen başlangıç seri numarasını girin",
     "请翻译分组名称": "Lütfen grup adını çevirin",
     "取消订单数": "İptal edilen sipariş sayısı",
-    "取消订单金额": "Sipariş iptal tutarı"
+    "取消订单金额": "Sipariş iptal tutarı",
+    "规格/属性": "Şartname/Özellikler",
+    "并台": "Birleştirme istasyonu"
 }
