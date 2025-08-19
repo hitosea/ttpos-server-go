@@ -393,6 +393,15 @@ func (r *productRepo) GetProductDetail(uuid uint64) (*model.ProductPackage, erro
 				Query: "ProductBoms.ProductSauce.MultiLanguageName",
 			},
 			WithPreload{
+				Query: "ProductPackageAttributeGroups",
+			},
+			WithPreload{
+				Query: "ProductPackageAttributeGroups.ProductAttributeGroup",
+			},
+			WithPreload{
+				Query: "ProductPackageAttributeGroups.ProductAttributeGroup.MultiLanguageName",
+			},
+			WithPreload{
 				Query: "ProductPackageAttributeGroups.ProductPackageAttributes.Attribute.MultiLanguageName",
 			},
 			WithPreload{
