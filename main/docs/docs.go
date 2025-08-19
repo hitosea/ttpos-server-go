@@ -27389,6 +27389,10 @@ const docTemplate = `{
         "product_resp.ProductPackageSubProduct": {
             "type": "object",
             "properties": {
+                "bom_uuid": {
+                    "description": "商品BOM UUID",
+                    "type": "integer"
+                },
                 "flavor_locale_name": {
                     "description": "商品规格名称",
                     "allOf": [

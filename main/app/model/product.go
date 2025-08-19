@@ -296,7 +296,8 @@ func (model *ProductPackage) GetRespPackageSubProductGroupList() []product_resp.
 		products := make([]product_resp.ProductPackageSubProduct, 0)
 		for _, product := range packageSubProductGroup.ProductPackageGroupItems {
 			products = append(products, product_resp.ProductPackageSubProduct{
-				Uuid:             product.ProductBomUuid,
+				Uuid:             product.Uuid,
+				BomUuid:          product.ProductBomUuid,
 				LocaleName:       product.ProductPackage.MultiLanguageName.GetNames(),
 				FlavorLocaleName: product.ProductBom.ProductFlavor.MultiLanguageName.GetNames(),
 				Num:              product.Num,

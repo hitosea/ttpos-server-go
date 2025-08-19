@@ -2081,6 +2081,9 @@ definitions:
     type: object
   product_resp.ProductPackageSubProduct:
     properties:
+      bom_uuid:
+        description: 商品BOM UUID
+        type: integer
       flavor_locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
