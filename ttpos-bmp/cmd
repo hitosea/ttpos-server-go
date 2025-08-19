@@ -12,7 +12,7 @@ OK="${Green}[OK]${Font}"
 Error="${Red}[错误]${Font}"
 
 cur_path="$(pwd)"
-COMPOSE="docker-compose -p ttpos-server-go -f docker-compose.dev.yml"
+COMPOSE="docker-compose -p ttpos-server-bmp -f docker-compose.dev.yml"
 
 judge() {
     if [[ 0 -eq $? ]]; then
@@ -144,6 +144,7 @@ if [ $# -gt 0 ]; then
     if [[ "$1" == "init" ]] || [[ "$1" == "install" ]]; then
         shift 1
         env_init
+        make conf
         $COMPOSE up -d 
         echo -e "${OK} ${GreenBG} 安装完成 ${Font}"
     elif [[ "$1" == "update" ]]; then
@@ -191,4 +192,5 @@ if [ $# -gt 0 ]; then
     fi
 else
     $COMPOSE ps
+fi
 fi
