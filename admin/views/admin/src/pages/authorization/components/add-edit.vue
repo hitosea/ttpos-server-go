@@ -40,7 +40,7 @@
         </el-select>
       </el-form-item>
       <el-form-item v-if="confirmPassword && !props.hasEdit" :label="$t('密码验证')" prop="password">
-        <el-input v-model="formData.password" :placeholder="$t('请输入密码')" clearable :disabled="props.hasEdit" />
+        <el-input v-model="formData.password" type="password" :placeholder="$t('请输入密码')" clearable :disabled="props.hasEdit" />
         <div class="text-center text-sm text-red-500 mt-2">
           {{ $t('请确定授权信息，该操作不可逆，请仔细确认！') }}
         </div>
