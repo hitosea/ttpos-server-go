@@ -17,14 +17,9 @@ type Material struct {
 	UnitList         []MaterialUnit `json:"unit_list"`          // 单位列表
 }
 
-// MaterialListResp 物品列表响应
-type MaterialListResp struct {
-	List []Material `json:"list"`
-}
-
 // MaterialListWithPaginationResp 物品列表响应
 type MaterialListWithPaginationResp struct {
-	List MaterialListResp `json:"list"`
+	List []Material       `json:"list"`
 	Meta dto.PageResponse `json:"meta"`
 }
 

@@ -136,9 +136,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 	}
 
 	return material_resp.MaterialListWithPaginationResp{
-		List: material_resp.MaterialListResp{
-			List: materialList,
-		},
+		List: materialList,
 		Meta: dto.PageResponse{
 			PageNo:   req.PageNo,
 			PageSize: req.PageSize,
@@ -1043,6 +1041,16 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 		if err != nil {
 			return errors.WithMessage(err, "创建成本卡日志失败")
 		}
+
+		// if ctx.GetCompany().IsOpenErp() {
+		// 	erpSrv := erp.NewIErpSrv(s.dbm)
+		// 	erpSrv.AddPorductBomCard(ctx, erp.ProductBomCardAddErpReq{
+		// 		ItemCode: code,
+		// 		Quantity: 1,
+		// 		Uom:      material.GetBaseUnit().ErpnextUom,
+		// 		Items:    materialList,
+		// 	})
+		// }
 
 		productBomCardRepo := repository.NewProductBomCardRepo(db)
 		if err := productBomCardRepo.CreateProductBomCard(productBomCard); err != nil {
