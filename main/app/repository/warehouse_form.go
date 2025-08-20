@@ -1,9 +1,12 @@
 package repository
 
 import (
+	"math/rand"
+	"strconv"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -20,6 +23,8 @@ type IWarehouseFormRepo interface {
 	UpdateWarehouseFormItemRecordsAddStock(saleBillUuid uint64) error           // 更新该销售账单的所有入库单记录为已加库存
 	UpdateWarehouseOutFormRecord(obj model.WarehouseOutForm) error              // 更新出库单记录
 	UpdateWarehouseOutFormItemRecord(obj model.WarehouseOutFormItem) error      // 更新出库单明细记录
+	GenerateWarehouseFormNo(timezone string) string                             // 生成入库单编号
+	GenerateWarehouseOutFormNo(timezone string) string                          // 生成出库单编号
 }
 
 type IWarehouseFormQueryRepo interface {
@@ -261,4 +266,20 @@ func (r *warehouseFormRepoImpl) UpdateWarehouseOutFormItemRecord(obj model.Wareh
 		return errors.WithMessage(err)
 	}
 	return nil
+}
+
+// GenerateFormNo 生成入库单编号。入库编号：18位纯数字（前2位WR，2-10位是年月日，中间位是0000，后4位随机生成）
+func (r *warehouseFormRepoImpl) GenerateWarehouseFormNo(timezone string) string {
+	date := utils.SetTimezone(timezone).Now().Format("20060102")
+	rand := rand.Intn(9000) + 1000
+	code := "WR" + date + "0000" + strconv.Itoa(rand)
+	return code
+}
+
+// GenerateWarehouseOutFormNo 生成出库单编号。出库编号：18位纯数字（前2位OO，2-10位是年月日，中间位是0000，后4位随机生成）
+func (r *warehouseFormRepoImpl) GenerateWarehouseOutFormNo(timezone string) string {
+	date := utils.SetTimezone(timezone).Now().Format("20060102")
+	rand := rand.Intn(9000) + 1000
+	code := "OO" + date + "0000" + strconv.Itoa(rand)
+	return code
 }

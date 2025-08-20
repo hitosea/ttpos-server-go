@@ -197,6 +197,11 @@ func (p *PrinterRepoImpl) getProductPrinterList(widthPrintMode int) ([]model.Pro
 
 	// 查询成功，将结果存入缓存
 	if len(printers) > 0 {
+		// 对每个ProductPrinter的ProductPrinterItems进行去重
+		for i := range printers {
+			printers[i].ProductPrinterItems = removeDuplicateProductPrinterItems(printers[i].ProductPrinterItems)
+		}
+		// 序列化
 		printersBytes, err := json.Marshal(printers)
 		if err == nil {
 			// 缓存1天
@@ -309,4 +314,26 @@ func (p *PrinterRepoImpl) SetPrinterWidth(printerWidth int) {
 // 获取打印机宽度
 func (p *PrinterRepoImpl) GetPrinterWidth() int {
 	return p.printerWidth
+}
+
+// removeDuplicateProductPrinterItems 去除重复的ProductPrinterItems
+// 根据PrinterUuid进行去重，保留第一个出现的记录
+func removeDuplicateProductPrinterItems(items []*model.ProductPrinterItem) []*model.ProductPrinterItem {
+	if len(items) <= 1 {
+		return items
+	}
+	// 使用map记录已经出现过的PrinterUuid
+	seen := make(map[uint64]bool)
+	result := make([]*model.ProductPrinterItem, 0, len(items))
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		// 如果这个PrinterUuid还没有出现过，则添加到结果中
+		if !seen[item.PrinterUuid] {
+			seen[item.PrinterUuid] = true
+			result = append(result, item)
+		}
+	}
+	return result
 }

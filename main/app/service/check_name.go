@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -52,7 +53,7 @@ func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.Che
 		db := s.dbm.GetDB(ctx.GetCompanyUuid())
 
 		switch checkNameReq.Source {
-		case "unit":
+		case constant.CheckNameSourceUnit:
 			{
 				var count int64
 				query := db.Model(&model.ProductUnit{}).
@@ -69,7 +70,7 @@ func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.Che
 				})
 			}
 
-		case "product":
+		case constant.CheckNameSourceProduct:
 			{
 				var count int64
 				query := db.Model(&model.ProductPackage{}).
@@ -86,7 +87,7 @@ func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.Che
 				})
 			}
 
-		case "category":
+		case constant.CheckNameSourceCategory:
 			{
 				var count int64
 				query := db.Model(&model.ProductCategory{}).
@@ -103,7 +104,7 @@ func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.Che
 				})
 			}
 
-		case "sauce":
+		case constant.CheckNameSourceSauce:
 			{
 				var count int64
 				query := db.Model(&model.ProductSauce{}).
@@ -120,7 +121,7 @@ func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.Che
 				})
 			}
 
-		case "attribute":
+		case constant.CheckNameSourceAttribute:
 			{
 				var count int64
 				query := db.Model(&model.ProductAttribute{}).
@@ -137,7 +138,7 @@ func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.Che
 				})
 			}
 
-		case "attribute_group":
+		case constant.CheckNameSourceAttributeGroup:
 			{
 				var count int64
 				query := db.Model(&model.ProductAttributeGroup{}).
@@ -154,7 +155,7 @@ func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.Che
 				})
 			}
 
-		case "flavor":
+		case constant.CheckNameSourceFlavor:
 			{
 				var count int64
 				query := db.Model(&model.ProductFlavor{}).

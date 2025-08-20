@@ -13,6 +13,7 @@ type ErpnextSiteCompany struct {
 
 type InitShopResp struct {
 	BranchName string `json:"branch_name"`
+	AdminEmail string `json:"admin_email"`
 }
 
 type GetUomListResp struct {

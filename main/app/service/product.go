@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"math"
 	"slices"
 	"sort"
 	"strconv"
@@ -79,20 +80,20 @@ type IProductSrv interface {
 
 	GetProductSingleList(ctx context.Context, req req.ProductSingleListReq) (*product_resp.ProductSingleListResp, error) // 获取单规格商品列表
 
-	GetProductShopList(ctx context.Context, req req.ProductShopListReq) (*product_resp.ProductShopListResp, error)                                      // 获取商品列表（商家端）
-	SortProductShopList(ctx context.Context, req req.SortProductShopListReq) error                                                                      // 排序商品列表
-	GetProductDetail(ctx context.Context, req req.ProductDetailReq) (*product_resp.ProductDetailResp, error)                                            // 获取商品详情
-	ProductShopStatus(ctx context.Context, req req.ProductShopStatusReq) error                                                                          // 修改商品状态
-	ProductTaxList(ctx context.Context) product_resp.ProductTaxListResp                                                                                 // 获取商品税类列表
-	AddProductShop(ctx context.Context, req req.ProductShopAddReq) error                                                                                // 添加商品
-	EditProductShop(ctx context.Context, req req.ProductShopEditReq) error                                                                              // 编辑商品
-	DeleteProductShop(ctx context.Context, req req.ProductShopDeleteReq) error                                                                          // 删除商品
-	ProductShopChangePrice(ctx context.Context, req req.ProductShopChangePriceReq) error                                                                // 商品改价
-	AddProductPackage(tx *gorm.DB, req req.ProductShopAddReq, price float64) (uint64, error)                                                            // 添加商品包
-	EditProductPackage(tx *gorm.DB, req req.ProductShopEditReq, price float64) (uint64, error)                                                          // 编辑商品包
-	SaveProductPackageBom(tx *gorm.DB, productPackageUuid uint64, flavorListResult CheckProductFlavorResult, sauceResult CheckProductSauceResult) error // 保存商品bom
-	SaveProductPackageAttribute(tx *gorm.DB, param []CheckProductAttributeGroupParam, productPackageUuid uint64) error                                  // 保存商品属性
-	SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProductPackageGroupResult, productPackageUuid uint64) error                                   // 保存商品套餐组
+	GetProductShopList(ctx context.Context, req req.ProductShopListReq) (*product_resp.ProductShopListResp, error)                                                           // 获取商品列表（商家端）
+	SortProductShopList(ctx context.Context, req req.SortProductShopListReq) error                                                                                           // 排序商品列表
+	GetProductDetail(ctx context.Context, req req.ProductDetailReq) (*product_resp.ProductDetailResp, error)                                                                 // 获取商品详情
+	ProductShopStatus(ctx context.Context, req req.ProductShopStatusReq) error                                                                                               // 修改商品状态
+	ProductTaxList(ctx context.Context) product_resp.ProductTaxListResp                                                                                                      // 获取商品税类列表
+	AddProductShop(ctx context.Context, req req.ProductShopAddReq) error                                                                                                     // 添加商品
+	EditProductShop(ctx context.Context, req req.ProductShopEditReq) error                                                                                                   // 编辑商品
+	DeleteProductShop(ctx context.Context, req req.ProductShopDeleteReq) error                                                                                               // 删除商品
+	ProductShopChangePrice(ctx context.Context, req req.ProductShopChangePriceReq) error                                                                                     // 商品改价
+	AddProductPackage(tx *gorm.DB, req req.ProductShopAddReq, price float64) (uint64, error)                                                                                 // 添加商品包
+	EditProductPackage(tx *gorm.DB, req req.ProductShopEditReq, price float64) (uint64, error)                                                                               // 编辑商品包
+	SaveProductPackageBom(ctx context.Context, tx *gorm.DB, productPackageUuid uint64, flavorListResult CheckProductFlavorResult, sauceResult CheckProductSauceResult) error // 保存商品bom
+	SaveProductPackageAttribute(tx *gorm.DB, param []CheckProductAttributeGroupParam, productPackageUuid uint64) error                                                       // 保存商品属性
+	SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProductPackageGroupResult, productPackageUuid uint64) error                                                        // 保存商品套餐组
 }
 
 type productSrv struct {
@@ -726,7 +727,7 @@ func (s *productSrv) AddProductShopCategory(ctx context.Context, addReq req.Prod
 	checkService := NewCheckNameSrv(s.dbm)
 	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Source: "category",
+		Source: constant.CheckNameSourceCategory,
 		Names:  names,
 	})
 	if exists {
@@ -848,7 +849,7 @@ func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.Pr
 	names := checkService.MakeCheckNameList(ctx, editReq.LocaleName)
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
 		Uuid:   editReq.Uuid,
-		Source: "category",
+		Source: constant.CheckNameSourceCategory,
 		Names:  names,
 	})
 	if exists {
@@ -894,10 +895,18 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, req req.ProductShopD
 	db := s.dbm.GetDB(ctx.GetDbId())
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(db)
+	productBomRepo := repository.NewProductBomRepo(db)
+	setting, err := s.settingSrv.GetCompanySetting(ctx)
+	if err != nil {
+		return errors.WithMessage(err, "获取公司设置失败")
+	}
 
 	product, err := productRepo.GetProduct(
 		commonRepo.WhereBySoftDelete(),
 		productRepo.WhereUuid(req.Uuid),
+		productRepo.WithProductBoms(
+			commonRepo.WhereBySoftDelete(),
+		),
 	)
 	if product.Uuid == 0 || err != nil {
 		return errors.New("商品不存在")
@@ -906,6 +915,7 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, req req.ProductShopD
 	err = db.Transaction(func(tx *gorm.DB) error {
 		productPackageAttributeGroupRepo := repository.NewProductPackageAttributeGroupRepo(tx)
 		productPackageAttributeRepo := repository.NewProductPackageAttributeRepo(tx)
+		warehouseFormRepo := repository.NewWarehouseFormRepo(tx)
 		// 删除商品包
 		err := tx.Model(&model.ProductPackage{}).Where("uuid = ?", req.Uuid).Updates(map[string]any{
 			"delete_time": time.Now().Unix(),
@@ -913,12 +923,44 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, req req.ProductShopD
 		if err != nil {
 			return err
 		}
-		// 删除商品包关联的商品BOM
-		err = tx.Model(&model.ProductBom{}).Where("product_package_uuid = ?", req.Uuid).Updates(map[string]any{
-			"delete_time": time.Now().Unix(),
-		}).Error
-		if err != nil {
-			return err
+		for _, productBom := range product.ProductBoms {
+			// 删除商品包关联的商品BOM
+			err = productBomRepo.UpdateProductBom(map[string]any{"delete_time": time.Now().Unix()}, commonRepo.WhereByUuid(productBom.Uuid))
+			if err != nil {
+				return err
+			}
+			if setting.SaleStock == 1 {
+				// 如果是规格或者套餐，则删除出库
+				if productBom.IsFlavor() || product.ProductType == constant.ProductTypePackage {
+					// 删除出库
+					outFormUuid, _ := utils.GetID()
+					warehouseForm := model.WarehouseOutForm{
+						BaseModel: model.BaseModel{
+							Uuid: outFormUuid,
+						},
+						FormNo:       warehouseFormRepo.GenerateWarehouseOutFormNo(setting.Timezone),
+						Scene:        constant.WarehouseOutFormSceneDelete,
+						Status:       constant.WarehouseOutFormStatusSuccess,
+						OperatorUuid: ctx.GetStaffUuid(),
+					}
+					err = warehouseFormRepo.CreateWarehouseOutFormRecord(warehouseForm)
+					if err != nil {
+						return errors.WithMessage(err, "保存出库单失败")
+					}
+					warehouseOutFormItem := model.WarehouseOutFormItem{
+						Num:                  productBom.StockNum,
+						Scene:                constant.WarehouseOutFormSceneDelete,
+						Status:               1,
+						ReduceStock:          constant.WarehouseOutFormItemReduceStockSuccess,
+						WarehouseOutFormUuid: outFormUuid,
+						ProductBomUuid:       productBom.Uuid,
+					}
+					err = warehouseFormRepo.CreateWarehouseOutFormItemRecord(warehouseOutFormItem)
+					if err != nil {
+						return errors.WithMessage(err, "保存出库单明细失败")
+					}
+				}
+			}
 		}
 
 		groups, err := productPackageAttributeGroupRepo.GetProductPackageAttributeGroups(
@@ -1262,7 +1304,7 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 	checkService := NewCheckNameSrv(s.dbm)
 	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Source: "unit",
+		Source: constant.CheckNameSourceUnit,
 		Names:  names,
 	})
 	if exists {
@@ -1346,7 +1388,7 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 	names := checkService.MakeCheckNameList(ctx, editUnitReq.LocaleName)
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
 		Uuid:   editUnitReq.Uuid,
-		Source: "unit",
+		Source: constant.CheckNameSourceUnit,
 		Names:  names,
 	})
 	if exists {
@@ -1565,7 +1607,7 @@ func (s *productSrv) AddProductSauce(ctx context.Context, addReq req.ProductSauc
 	checkService := NewCheckNameSrv(s.dbm)
 	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Source: "sauce",
+		Source: constant.CheckNameSourceSauce,
 		Names:  names,
 	})
 	if exists {
@@ -1651,7 +1693,7 @@ func (s *productSrv) EditProductSauce(ctx context.Context, editReq req.ProductSa
 	names := checkService.MakeCheckNameList(ctx, editReq.LocaleName)
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
 		Uuid:   editReq.Uuid,
-		Source: "sauce",
+		Source: constant.CheckNameSourceSauce,
 		Names:  names,
 	})
 	if exists {
@@ -2008,7 +2050,7 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 	checkService := NewCheckNameSrv(s.dbm)
 	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Source: "attribute_group",
+		Source: constant.CheckNameSourceAttributeGroup,
 		Names:  names,
 	})
 	if exists {
@@ -2017,7 +2059,7 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 	for _, productAttribute := range addReq.ProductAttributes {
 		names := checkService.MakeCheckNameList(ctx, productAttribute.LocaleName)
 		exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-			Source: "attribute",
+			Source: constant.CheckNameSourceAttribute,
 			Names:  names,
 		})
 		if exists {
@@ -2162,7 +2204,7 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 	checkService := NewCheckNameSrv(s.dbm)
 	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Source: "flavor",
+		Source: constant.CheckNameSourceFlavor,
 		Names:  names,
 	})
 	if exists {
@@ -2258,120 +2300,172 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 
 // EditProductAttributeGroup 编辑商品属性组
 func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.ProductAttributeGroupEditReq) error {
+	var relatedProductUuid bool
+	// 检查多语言
 	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
 	if !editReq.LocaleName.CheckRequiredLocale(storeLanguages) {
-		return errors.New("名称不能为空")
+		return errors.New("属性组名称不能为空")
 	}
 	for _, productAttribute := range editReq.ProductAttributes {
+		if !relatedProductUuid && len(productAttribute.ProductPackageUuids) > 0 {
+			relatedProductUuid = true
+		}
 		if !productAttribute.LocaleName.CheckRequiredLocale(storeLanguages) {
-			return errors.New("名称不能为空")
+			return errors.New("属性值名称不能为空")
 		}
 	}
 
-	// 检查名称是否存在
+	// 检查名称是否已存在
 	checkService := NewCheckNameSrv(s.dbm)
 	names := checkService.MakeCheckNameList(ctx, editReq.LocaleName)
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
 		Uuid:   editReq.Uuid,
-		Source: "attribute_group",
+		Source: constant.CheckNameSourceAttributeGroup,
 		Names:  names,
 	})
 	if exists {
 		return errors.New("属性组名称已存在")
 	}
-	for _, productAttribute := range editReq.ProductAttributes {
-		names := checkService.MakeCheckNameList(ctx, productAttribute.LocaleName)
+	for _, attribute := range editReq.ProductAttributes {
+		names := checkService.MakeCheckNameList(ctx, attribute.LocaleName)
 		exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-			Uuid:   productAttribute.Uuid,
-			Source: "attribute",
+			Uuid:   attribute.Uuid,
+			Source: constant.CheckNameSourceAttribute,
 			Names:  names,
 		})
 		if exists {
-			return errors.New("属性名称已存在")
+			return errors.New("属性值名称已存在")
 		}
 	}
 
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
 
-	productAttributeGroup, err := productRepo.GetProductAttributeGroup(
+	// 检查属性组是否存在
+	attributeGroup, err := productRepo.GetProductAttributeGroup(
 		productRepo.WhereUuid(editReq.Uuid),
+		productRepo.WithProductAttributes(),
 	)
 	if err != nil {
 		return errors.WithMessage(err, "属性组不存在")
 	}
 
+	// 检查传递的属性值是否存在
 	var attributeUuids []uint64
-	for _, productAttribute := range editReq.ProductAttributes {
-		if productAttribute.Uuid != 0 {
-			attributeUuids = append(attributeUuids, productAttribute.Uuid)
+	for _, attribute := range editReq.ProductAttributes {
+		if attribute.Uuid != 0 {
+			attributeUuids = append(attributeUuids, attribute.Uuid)
 		}
 	}
-	productAttributes, err := productRepo.GetProductAttributes(
+	attributes, err := productRepo.GetProductAttributes(
+		productRepo.WhereAttributeGroupUuid(attributeGroup.Uuid),
 		productRepo.WhereUuidIn(attributeUuids),
 	)
 	if err != nil {
-		return errors.WithMessage(err, "属性不存在")
+		return errors.WithMessage(err, "属性值不存在")
 	}
-	if len(productAttributes) != len(attributeUuids) {
-		return errors.New("属性不存在")
+	if len(attributes) != len(attributeUuids) {
+		return errors.New("属性值参数错误")
 	}
 
-	// 遍历req.ProductAttributes，判断商品是否存在
-	newProductPackageUuids := []uint64{}
-	for _, productAttribute := range editReq.ProductAttributes {
-		newProductPackageUuids = append(newProductPackageUuids, productAttribute.ProductPackageUuids...)
+	// 要删掉的属性值
+	var deletingAttributeUuids []uint64
+	for _, attribute := range attributeGroup.ProductAttributes {
+		if !slices.Contains(attributeUuids, attribute.Uuid) {
+			deletingAttributeUuids = append(deletingAttributeUuids, attribute.Uuid)
+		}
 	}
-	// 去重
-	newProductPackageUuids = slice.Unique(newProductPackageUuids)
-	if len(newProductPackageUuids) > 0 {
-		// 判断商品是否存在
-		productPackageList, err := productRepo.GetProductPackageListByUuids(newProductPackageUuids)
+
+	// 检查所有属性关联的商品包是否存在
+	productPackageUuids := []uint64{}
+	for _, productAttribute := range editReq.ProductAttributes {
+		productPackageUuids = append(productPackageUuids, productAttribute.ProductPackageUuids...)
+	}
+	// 去重，判断商品是否存在
+	productPackageUuids = slice.Unique(productPackageUuids)
+	if len(productPackageUuids) > 0 {
+		productPackageList, err := productRepo.GetProductPackageListByUuids(productPackageUuids)
 		if err != nil {
 			return errors.WithMessage(err, "商品不存在")
 		}
-		if len(productPackageList) != len(newProductPackageUuids) {
-			return errors.New("商品不存在")
+		if len(productPackageList) != len(productPackageUuids) {
+			return errors.New("关联商品参数错误")
 		}
 	}
 
 	// 原商品包属性组、商品包属性
 	productPackageAttributeGroups, err := productRepo.GetProductPackageAttributeGroups(
-		productRepo.WhereProductAttributeGroupUuid(productAttributeGroup.Uuid),
+		productRepo.WhereProductAttributeGroupUuid(attributeGroup.Uuid),
 		productRepo.WithProductPackageAttributes(),
 	)
-	if err != nil {
-		return errors.WithMessage(err, "商品包属性组不存在")
-	}
 
-	type Attribute struct {
+	type ProductPackageInfo struct {
 		ProductPackageAttributeGroupUuid uint64
 		AttributeUuids                   []uint64
 	}
-	// 原商品包属性组
-	oldProductPackageUuids := []uint64{}
 
-	// 原商品包属性组map
-	productPackageAttributeGroupMap := make(map[uint64]Attribute)
+	// 整理关系，每个商品包和属性组的关系
+	productPackageInfoMap := make(map[uint64]ProductPackageInfo)
 	for _, productPackageAttributeGroup := range productPackageAttributeGroups {
-		oldProductPackageUuids = append(oldProductPackageUuids, productPackageAttributeGroup.ProductPackageUuid)
-
-		productAttributeUuids := make([]uint64, 0)
+		oldAttributeUuids := make([]uint64, 0)
 		for _, productPackageAttribute := range productPackageAttributeGroup.ProductPackageAttributes {
-			productAttributeUuids = append(productAttributeUuids, productPackageAttribute.AttributeUuid)
+			oldAttributeUuids = append(oldAttributeUuids, productPackageAttribute.AttributeUuid)
 		}
-
-		productPackageAttributeGroupMap[productPackageAttributeGroup.ProductPackageUuid] = Attribute{
+		productPackageInfoMap[productPackageAttributeGroup.ProductPackageUuid] = ProductPackageInfo{
 			ProductPackageAttributeGroupUuid: productPackageAttributeGroup.Uuid,
-			AttributeUuids:                   productAttributeUuids,
+			AttributeUuids:                   oldAttributeUuids,
 		}
 	}
 
-	deletingProductPackageUuids := slice.Difference(oldProductPackageUuids, newProductPackageUuids)
+	// 属性值uuid和多语言uuid映射
+	attributeMultiLanguageNameUuidMap := make(map[uint64]uint64)
+	for _, attribute := range attributes {
+		attributeMultiLanguageNameUuidMap[attribute.Uuid] = attribute.MultiLanguageNameUuid
+	}
+
 	err = db.Transaction(func(tx *gorm.DB) error {
 
-		// 更新属性组语言
-		err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productAttributeGroup.MultiLanguageNameUuid).Updates(map[string]any{
+		// 删除属性值 product_attribute.Uuid in deletingAttributeUuids
+		// 删除商品包属性 product_package_attribute.attribute_uuid in deletingAttributeUuids
+		if len(deletingAttributeUuids) > 0 {
+			err := tx.Model(&model.ProductAttribute{}).Where("uuid IN (?)", deletingAttributeUuids).Update("delete_time", time.Now().Unix()).Error
+			if err != nil {
+				return errors.WithMessage(err, "删除属性值失败")
+			}
+			err = tx.Model(&model.ProductPackageAttribute{}).Where("attribute_uuid IN (?)", deletingAttributeUuids).Update("delete_time", time.Now().Unix()).Error
+			if err != nil {
+				return errors.WithMessage(err, "删除商品包属性失败")
+			}
+		}
+
+		// 删除 product_package_attribute_group 和 product_package_attribute 的数据
+		if len(productPackageAttributeGroups) > 0 {
+			var deletingProductPackageAttributeGroupUuids []uint64
+			if len(productPackageUuids) == 0 { // 取消了所有商品和属性组的关系
+				for _, productPackageAttributeGroup := range productPackageAttributeGroups {
+					deletingProductPackageAttributeGroupUuids = append(deletingProductPackageAttributeGroupUuids, productPackageAttributeGroup.Uuid)
+				}
+			} else { // 可能取消了部分商品和属性组的关系
+				for _, productPackageAttributeGroup := range productPackageAttributeGroups {
+					if !slices.Contains(productPackageUuids, productPackageAttributeGroup.ProductPackageUuid) {
+						deletingProductPackageAttributeGroupUuids = append(deletingProductPackageAttributeGroupUuids, productPackageAttributeGroup.Uuid)
+					}
+				}
+			}
+			if len(deletingProductPackageAttributeGroupUuids) > 0 {
+				err := tx.Model(&model.ProductPackageAttributeGroup{}).Where("uuid IN (?)", deletingProductPackageAttributeGroupUuids).Update("delete_time", time.Now().Unix()).Error
+				if err != nil {
+					return errors.WithMessage(err, "删除商品包属性组失败")
+				}
+				err = tx.Model(&model.ProductPackageAttribute{}).Where("product_package_attribute_group_uuid IN (?)", deletingProductPackageAttributeGroupUuids).Update("delete_time", time.Now().Unix()).Error
+				if err != nil {
+					return errors.WithMessage(err, "删除商品包属性失败")
+				}
+			}
+		}
+
+		// 更新属性组多语言
+		err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", attributeGroup.MultiLanguageNameUuid).Updates(map[string]any{
 			"zh_name":    editReq.LocaleName.ZH,
 			"th_name":    editReq.LocaleName.TH,
 			"en_name":    editReq.LocaleName.EN,
@@ -2383,11 +2477,11 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 			"sv_name":    editReq.LocaleName.SV,
 		}).Error
 		if err != nil {
-			return errors.WithMessage(err, "更新语言失败")
+			return errors.WithMessage(err, "更新属性组语言失败")
 		}
 		for k, productAttribute := range editReq.ProductAttributes {
-			if productAttribute.Uuid != 0 {
-				err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productAttribute.Uuid).Updates(map[string]any{
+			if productAttribute.Uuid != 0 { // 更新属性值多语言
+				err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", attributeMultiLanguageNameUuidMap[productAttribute.Uuid]).Updates(map[string]any{
 					"zh_name":    productAttribute.LocaleName.ZH,
 					"th_name":    productAttribute.LocaleName.TH,
 					"en_name":    productAttribute.LocaleName.EN,
@@ -2401,8 +2495,7 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 				if err != nil {
 					return errors.WithMessage(err, "更新语言失败")
 				}
-			} else {
-				// 添加语言
+			} else { // 新增属性值多语言
 				multiLanguageName := model.MultiLanguageName{
 					ZhName:   productAttribute.LocaleName.ZH,
 					ThName:   productAttribute.LocaleName.TH,
@@ -2416,94 +2509,56 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 				}
 				err = tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
 				if err != nil {
-					return errors.WithMessage(err, "添加语言失败")
+					return errors.WithMessage(err, "添加属性值语言失败")
 				}
 				productAttributeModel := model.ProductAttribute{
 					Name:                  productAttribute.LocaleName.ToJson(),
 					MultiLanguageNameUuid: multiLanguageName.Uuid,
-					AttributeGroupUuid:    productAttributeGroup.Uuid,
+					AttributeGroupUuid:    attributeGroup.Uuid,
 				}
 				err = tx.Model(&model.ProductAttribute{}).Create(&productAttributeModel).Error
 				if err != nil {
-					return errors.WithMessage(err, "添加商品属性失败")
+					return errors.WithMessage(err, "添加属性值失败")
 				}
 				editReq.ProductAttributes[k].Uuid = productAttributeModel.Uuid
 			}
 		}
 
-		// 传递的参数中，商品包和商品属性关联关系
-		productPackageAttributeMaps := make(map[uint64][]uint64)
-		for _, productAttribute := range editReq.ProductAttributes {
-			for _, productPackageUuid := range productAttribute.ProductPackageUuids {
-				if _, ok := productPackageAttributeMaps[productPackageUuid]; !ok {
-					productPackageAttributeMaps[productPackageUuid] = []uint64{productAttribute.Uuid}
-				} else {
-					productPackageAttributeMaps[productPackageUuid] = append(productPackageAttributeMaps[productPackageUuid], productAttribute.Uuid)
-				}
-			}
-		}
-
-		if len(deletingProductPackageUuids) > 0 {
-			// 删除商品包属性组
-			err := tx.Model(&model.ProductPackageAttributeGroup{}).Where("product_package_uuid IN (?)", deletingProductPackageUuids).Update("delete_time", time.Now().Unix()).Error
-			if err != nil {
-				return errors.WithMessage(err, "删除商品包属性组失败")
-			}
-		}
-
-		// 遍历传递的参数，对比原商品包属性组和新的商品包属性组
-		for productPackageUuid, attributeUuids := range productPackageAttributeMaps {
-			if _, ok := productPackageAttributeGroupMap[productPackageUuid]; !ok { // 新增的商品包属性组
-				// 添加商品包属性组
-				productPackageAttributeGroup := model.ProductPackageAttributeGroup{
-					ProductPackageUuid:        productPackageUuid,
-					ProductAttributeGroupUuid: productAttributeGroup.Uuid,
-				}
-				err = tx.Model(&model.ProductPackageAttributeGroup{}).Create(&productPackageAttributeGroup).Error
-				if err != nil {
-					return errors.WithMessage(err, "添加商品包属性组失败")
-				}
-
-				productPackageAttributeList := make([]model.ProductPackageAttribute, 0, len(attributeUuids))
-				for _, attributeUuid := range attributeUuids {
-					productPackageAttributeList = append(productPackageAttributeList, model.ProductPackageAttribute{
-						ProductPackageAttributeGroupUuid: productPackageAttributeGroup.Uuid,
-						AttributeUuid:                    attributeUuid,
-					})
-				}
-				err = tx.Model(&model.ProductPackageAttribute{}).Create(productPackageAttributeList).Error
-				if err != nil {
-					return errors.WithMessage(err, "添加商品包属性失败")
-				}
-			} else { // 已有的商品包属性组
-
-				deletingAttributeUuids := slice.Difference(productPackageAttributeGroupMap[productPackageUuid].AttributeUuids, attributeUuids)
-				if len(deletingAttributeUuids) > 0 { // 删除的商品包属性
-					err = tx.Model(&model.ProductPackageAttribute{}).Where("product_package_attribute_group_uuid = ? AND attribute_uuid IN (?)", productPackageAttributeGroupMap[productPackageUuid].ProductPackageAttributeGroupUuid, deletingAttributeUuids).Update("delete_time", time.Now().Unix()).Error
-					if err != nil {
-						return errors.WithMessage(err, "删除商品包属性失败")
+		if relatedProductUuid {
+			productPackageUuidToAttributeUuids := s.getAttributeUuidListByProductPackageUuid(editReq.ProductAttributes)
+			var newProductPackageAttributes []model.ProductPackageAttribute
+			for productPackageUuid, attributeUuids := range productPackageUuidToAttributeUuids {
+				if productPackageInfo, ok := productPackageInfoMap[productPackageUuid]; !ok { // 新增的关联商品包
+					newProductPackageAttributeGroup := model.ProductPackageAttributeGroup{
+						ProductPackageUuid:        productPackageUuid,
+						ProductAttributeGroupUuid: attributeGroup.Uuid,
 					}
-
-					// 删除商品属性
-					err = tx.Model(&model.ProductAttribute{}).Where("uuid IN (?)", deletingAttributeUuids).Update("delete_time", time.Now().Unix()).Error
+					err := tx.Model(&model.ProductPackageAttributeGroup{}).Create(&newProductPackageAttributeGroup).Error
 					if err != nil {
-						return errors.WithMessage(err, "删除商品属性失败")
+						return errors.WithMessage(err, "添加商品包属性组失败")
 					}
-				}
-
-				addingAttributeUuids := slice.Difference(attributeUuids, productPackageAttributeGroupMap[productPackageUuid].AttributeUuids)
-				if len(addingAttributeUuids) > 0 { // 新增的商品包属性
-					productPackageAttributeList := make([]model.ProductPackageAttribute, 0, len(addingAttributeUuids))
-					for _, attributeUuid := range addingAttributeUuids {
-						productPackageAttributeList = append(productPackageAttributeList, model.ProductPackageAttribute{
-							ProductPackageAttributeGroupUuid: productPackageAttributeGroupMap[productPackageUuid].ProductPackageAttributeGroupUuid,
+					for _, attributeUuid := range attributeUuids {
+						newProductPackageAttributes = append(newProductPackageAttributes, model.ProductPackageAttribute{
+							ProductPackageAttributeGroupUuid: newProductPackageAttributeGroup.Uuid,
 							AttributeUuid:                    attributeUuid,
 						})
 					}
-					err = tx.Model(&model.ProductPackageAttribute{}).Create(productPackageAttributeList).Error
-					if err != nil {
-						return errors.WithMessage(err, "添加商品包属性失败")
+				} else { // 已有的关联商品包，可能关联了新的属性
+					addingAttributeUuids := slice.Difference(attributeUuids, productPackageInfo.AttributeUuids)
+					if len(addingAttributeUuids) > 0 {
+						for _, attributeUuid := range addingAttributeUuids {
+							newProductPackageAttributes = append(newProductPackageAttributes, model.ProductPackageAttribute{
+								ProductPackageAttributeGroupUuid: productPackageInfo.ProductPackageAttributeGroupUuid,
+								AttributeUuid:                    attributeUuid,
+							})
+						}
 					}
+				}
+			}
+			if len(newProductPackageAttributes) > 0 {
+				err := tx.Model(&model.ProductPackageAttribute{}).Create(newProductPackageAttributes).Error
+				if err != nil {
+					return errors.WithMessage(err, "添加商品包属性失败")
 				}
 			}
 		}
@@ -2511,14 +2566,16 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 	})
 
 	// 根据属性组获取属性，重新排序
-	productAttributes, _ = productRepo.GetProductAttributes(productRepo.WhereAttributeGroupUuid(productAttributeGroup.Uuid))
-	sorts := make(map[uint64]int)
-	for i, productAttribute := range productAttributes {
-		sorts[productAttribute.Uuid] = i + 1
-	}
-	err = productRepo.BatchUpdateSort(&model.ProductAttribute{}, sorts)
-	if err != nil {
-		return errors.WithMessage(err, "重新排序商品属性失败")
+	{
+		productAttributes, _ := productRepo.GetProductAttributes(productRepo.WhereAttributeGroupUuid(attributeGroup.Uuid))
+		sorts := make(map[uint64]int)
+		for i, productAttribute := range productAttributes {
+			sorts[productAttribute.Uuid] = i + 1
+		}
+		err = productRepo.BatchUpdateSort(&model.ProductAttribute{}, sorts)
+		if err != nil {
+			return errors.WithMessage(err, "重新排序商品属性失败")
+		}
 	}
 
 	company := ctx.GetCompany()
@@ -2529,6 +2586,36 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 	}
 
 	return err
+}
+
+func (s *productSrv) getAttributeUuidListByProductPackageUuid(productAttributes []req.ProductAttributeGroupEditProductAttributeReq) map[uint64][]uint64 {
+	// 使用map存储每个ProductPackageUuid对应的AttributeUuid集合（用于去重）
+	productPackageUuidToAttributeUuids := make(map[uint64]map[uint64]bool)
+
+	// 遍历所有productAttributes
+	for _, productAttribute := range productAttributes {
+		// 遍历每个productAttribute的ProductPackageUuids
+		for _, productPackageUuid := range productAttribute.ProductPackageUuids {
+			// 如果该ProductPackageUuid还没有记录，则初始化
+			if productPackageUuidToAttributeUuids[productPackageUuid] == nil {
+				productPackageUuidToAttributeUuids[productPackageUuid] = make(map[uint64]bool)
+			}
+			// 将AttributeUuid添加到对应ProductPackageUuid的集合中（使用map去重）
+			productPackageUuidToAttributeUuids[productPackageUuid][productAttribute.Uuid] = true
+		}
+	}
+
+	// 将map转换为切片，得到每个ProductPackageUuid关联的AttributeUuid列表
+	result := make(map[uint64][]uint64)
+	for productPackageUuid, attributeUuids := range productPackageUuidToAttributeUuids {
+		uuidList := make([]uint64, 0, len(attributeUuids))
+		for uuid := range attributeUuids {
+			uuidList = append(uuidList, uuid)
+		}
+		result[productPackageUuid] = uuidList
+	}
+
+	return result
 }
 
 // EditProductFlavor 编辑商品规格
@@ -2542,7 +2629,7 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 	names := checkService.MakeCheckNameList(ctx, editReq.LocaleName)
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
 		Uuid:   editReq.Uuid,
-		Source: "flavor",
+		Source: constant.CheckNameSourceFlavor,
 		Names:  names,
 	})
 	if exists {
@@ -2947,7 +3034,7 @@ func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImpor
 		// 验证是否已经存在
 		products.ProductNameIsExist = repository.NewProductRepo(db).CheckMultiLanguageNameExist(productName)
 		// 验证条形码存在性检查
-		products.BarcodeIsExist = repository.NewProductRepo(db).CheckBarcodeExist(item.Barcode)
+		products.BarcodeIsExist = repository.NewProductRepo(db).CheckBarcodeExist(item.Barcode, 0)
 		// 添加到列表
 		productImportResp.List = append(productImportResp.List, products)
 	}
@@ -3016,7 +3103,7 @@ func (s *productSrv) ImportProduct(ctx context.Context, req req.ProductImportReq
 			return errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "商品名称已存在"))
 		}
 		// 验证条形码存在性检查
-		if repository.NewProductRepo(db).CheckBarcodeExist(item.Barcode) {
+		if repository.NewProductRepo(db).CheckBarcodeExist(item.Barcode, 0) {
 			return errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "商品条码已存在"))
 		}
 		// 处理显示
@@ -3580,7 +3667,7 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 			return err
 		}
 		// 保存商品bom
-		err = s.SaveProductPackageBom(tx, productPackageUuid, flavorListResult, sauceListResult)
+		err = s.SaveProductPackageBom(ctx, tx, productPackageUuid, flavorListResult, sauceListResult)
 		if err != nil {
 			return err
 		}
@@ -3590,8 +3677,8 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 			return err
 		}
 
+		// 套餐商品组
 		if req.Type == constant.ProductTypePackage {
-			// 套餐商品组
 			err = s.SaveProductPackageGroup(tx, packageResult.Groups, productPackageUuid)
 			if err != nil {
 				return err
@@ -3800,7 +3887,7 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 		return err
 	}
 
-	// 添加商品
+	// 编辑商品
 	err := db.Transaction(func(tx *gorm.DB) error {
 
 		// 添加商品包
@@ -3809,7 +3896,7 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 			return err
 		}
 		// 保存商品bom
-		err = s.SaveProductPackageBom(tx, productPackageUuid, flavorListResult, sauceListResult)
+		err = s.SaveProductPackageBom(ctx, tx, productPackageUuid, flavorListResult, sauceListResult)
 		if err != nil {
 			return err
 		}
@@ -3962,10 +4049,13 @@ func (s *productSrv) AddProductPackage(tx *gorm.DB, req req.ProductShopAddReq, p
 }
 
 // SaveProductPackageBom 添加商品bom
-func (s *productSrv) SaveProductPackageBom(tx *gorm.DB, productPackageUuid uint64, flavorListResult CheckProductFlavorResult, sauceResult CheckProductSauceResult) error {
+func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, productPackageUuid uint64, flavorListResult CheckProductFlavorResult, sauceResult CheckProductSauceResult) error {
 	commonRepo := repository.NewCommonRepo()
 	productPackageRepo := repository.NewProductPackageRepo(tx)
 	productBomRepo := repository.NewProductBomRepo(tx)
+	warehouseFormRepo := repository.NewWarehouseFormRepo(tx)
+	warehouseMonthlyFormRepo := repository.NewWarehouseMonthlyFormRepo(tx)
+	setting, err := s.settingSrv.GetCompanySetting(ctx)
 
 	// 商品规格
 	for _, flavor := range flavorListResult.Flavors {
@@ -3976,9 +4066,42 @@ func (s *productSrv) SaveProductPackageBom(tx *gorm.DB, productPackageUuid uint6
 			if err != nil {
 				return errors.WithMessage(err, "删除商品bom失败")
 			}
+			if setting.SaleStock == 1 {
+				// 删除出库
+				outFormUuid, _ := utils.GetID()
+				warehouseOutForm := model.WarehouseOutForm{
+					BaseModel: model.BaseModel{
+						Uuid: outFormUuid,
+					},
+					FormNo:       warehouseFormRepo.GenerateWarehouseOutFormNo(setting.Timezone),
+					Scene:        constant.WarehouseOutFormSceneDelete,
+					Status:       constant.WarehouseOutFormStatusSuccess,
+					OperatorUuid: ctx.GetStaffUuid(),
+				}
+				err = warehouseFormRepo.CreateWarehouseOutFormRecord(warehouseOutForm)
+				if err != nil {
+					return errors.WithMessage(err, "保存出库单失败")
+				}
+				warehouseOutFormItem := model.WarehouseOutFormItem{
+					Num:                  flavorListResult.StockNum,
+					Scene:                constant.WarehouseOutFormSceneDelete,
+					Status:               1,
+					ReduceStock:          constant.WarehouseOutFormItemReduceStockSuccess,
+					WarehouseOutFormUuid: outFormUuid,
+					ProductBomUuid:       flavor.BomUuid,
+				}
+				err = warehouseFormRepo.CreateWarehouseOutFormItemRecord(warehouseOutFormItem)
+				if err != nil {
+					return errors.WithMessage(err, "保存出库单明细失败")
+				}
+			}
 		} else {
 			if flavor.BomUuid == 0 {
+				flavorUuid, _ := utils.GetID()
 				_, err := productBomRepo.CreateProductBom(model.ProductBom{
+					BaseModel: model.BaseModel{
+						Uuid: flavorUuid,
+					},
 					Price:              flavor.Price,
 					Name:               flavor.Name,
 					ProductFlavorUuid:  flavor.Uuid,
@@ -3991,19 +4114,98 @@ func (s *productSrv) SaveProductPackageBom(tx *gorm.DB, productPackageUuid uint6
 				if err != nil {
 					return errors.WithMessage(err, "保存商品bom失败")
 				}
+				// 开启库存管理
+				if setting.SaleStock == 1 {
+					// 添加入库
+					warehouseForm := model.WarehouseForm{
+						FormNo:         warehouseFormRepo.GenerateWarehouseFormNo(setting.Timezone),
+						Scene:          constant.WarehouseFormSceneAddStock,
+						Num:            int(flavorListResult.StockNum),
+						ProductBomUuid: flavorUuid,
+						OperatorUuid:   ctx.GetStaffUuid(),
+					}
+					err = warehouseFormRepo.CreateWarehouseFormRecord(warehouseForm)
+					if err != nil {
+						return errors.WithMessage(err, "保存入库单失败")
+					}
+					// 添加月初库存记录
+					warehouseMonthlyProductBomForm := model.WarehouseMonthlyProductBomForm{
+						Year:           utils.SetTimezone(setting.Timezone).Now().Year(),
+						Month:          int(utils.SetTimezone(setting.Timezone).Now().Month()),
+						Scene:          constant.WarehouseMonthlyFormSceneStart,
+						ProductBomUuid: flavorUuid,
+						Stock:          float64(flavorListResult.StockNum),
+					}
+					err = warehouseMonthlyFormRepo.CreateWarehouseMonthlyProductBomForm(warehouseMonthlyProductBomForm)
+					if err != nil {
+						return errors.WithMessage(err, "保存月初库存记录失败")
+					}
+				}
 			} else {
-				err := productBomRepo.UpdateProductBom(map[string]any{
+				err = productBomRepo.UpdateProductBom(map[string]any{
 					"price":                flavor.Price,
 					"name":                 flavor.Name,
 					"product_flavor_uuid":  flavor.Uuid,
 					"product_package_uuid": productPackageUuid,
 					"stock_num":            flavorListResult.StockNum,
 					"barcode_value":        flavor.BarcodeValue,
-					"status":               sauceResult.Status,
+					"status":               flavorListResult.Status,
 					"is_open_stock":        1,
 				}, commonRepo.WhereByUuid(flavor.BomUuid))
 				if err != nil {
 					return errors.WithMessage(err, "更新商品bom失败")
+				}
+				if setting.SaleStock == 1 {
+					bom, err := productBomRepo.GetProductBom(commonRepo.WhereByUuid(flavor.BomUuid))
+					if err != nil {
+						return errors.WithMessage(err, "获取商品bom失败")
+					}
+					diffStockNum := math.Abs(decimal.NewFromFloat(flavorListResult.StockNum).Sub(decimal.NewFromFloat(bom.StockNum)).InexactFloat64())
+					if diffStockNum > 0 {
+						// 调整入库
+						if flavorListResult.StockNum > bom.StockNum {
+							warehouseForm := model.WarehouseForm{
+								FormNo:         warehouseFormRepo.GenerateWarehouseFormNo(setting.Timezone),
+								Scene:          constant.WarehouseFormSceneAddStock,
+								Num:            int(diffStockNum),
+								ProductBomUuid: flavor.BomUuid,
+								OperatorUuid:   ctx.GetStaffUuid(),
+							}
+							err = warehouseFormRepo.CreateWarehouseFormRecord(warehouseForm)
+							if err != nil {
+								return errors.WithMessage(err, "保存入库单失败")
+							}
+						}
+						// 调整出库
+						if flavorListResult.StockNum < bom.StockNum {
+							outFormUuid, _ := utils.GetID()
+							warehouseOutForm := model.WarehouseOutForm{
+								BaseModel: model.BaseModel{
+									Uuid: outFormUuid,
+								},
+								FormNo:       warehouseFormRepo.GenerateWarehouseOutFormNo(setting.Timezone),
+								Scene:        constant.WarehouseOutFormSceneAdjust,
+								Status:       constant.WarehouseOutFormStatusSuccess,
+								OperatorUuid: ctx.GetStaffUuid(),
+							}
+							err = warehouseFormRepo.CreateWarehouseOutFormRecord(warehouseOutForm)
+							if err != nil {
+								return errors.WithMessage(err, "保存出库单失败")
+							}
+							warehouseOutFormItem := model.WarehouseOutFormItem{
+								Num:                  diffStockNum,
+								Scene:                constant.WarehouseOutFormSceneAdjust,
+								Status:               1,
+								ReduceStock:          constant.WarehouseOutFormItemReduceStockSuccess,
+								WarehouseOutFormUuid: outFormUuid,
+								ProductBomUuid:       flavor.BomUuid,
+							}
+							err = warehouseFormRepo.CreateWarehouseOutFormItemRecord(warehouseOutFormItem)
+							if err != nil {
+								return errors.WithMessage(err, "保存出库单明细失败")
+							}
+						}
+					}
 				}
 			}
 		}
@@ -4050,7 +4252,7 @@ func (s *productSrv) SaveProductPackageBom(tx *gorm.DB, productPackageUuid uint6
 		}
 	}
 	// 更新商品包
-	err := productPackageRepo.UpdateProductPackage(map[string]any{
+	err = productPackageRepo.UpdateProductPackage(map[string]any{
 		"sauce_required":      sauceResult.IsMust,
 		"sauce_max_selection": sauceResult.MaxSelection,
 	}, commonRepo.WhereByUuid(productPackageUuid))

@@ -372,15 +372,16 @@ func (s *productionSrv) Finish(ctx context.Context, productUuid uint64) error {
 			FinishedTime: finishedTime,
 			Products: event.Products{
 				{
-					OrderProductId:  product.Uuid,
-					ProductId:       product.ProductPackageUuid,
-					ProductName:     product.SaleOrderProduct.MultiLanguageName.GetNames(),
-					ProductType:     product.SaleOrderProduct.ProductType,
-					ProductAttr:     product.SaleOrderProduct.GetAttributeName(),
-					ProductAttrList: product.SaleOrderProduct.GetAttributeNameList(),
-					TotalNum:        product.SaleOrderProduct.Num,
-					NumType:         product.SaleOrderProduct.NumType,
-					IsBuffet:        product.SaleOrderProduct.IsBuffet == 1,
+					OrderProductId:        product.Uuid,
+					ProductId:             product.ProductPackageUuid,
+					ProductName:           product.SaleOrderProduct.MultiLanguageName.GetNames(),
+					ProductType:           product.SaleOrderProduct.ProductType,
+					ProductAttr:           product.SaleOrderProduct.GetAttributeName(),
+					ProductAttrList:       product.SaleOrderProduct.GetAttributeNameList(),
+					ProductSauceNamesList: product.SaleOrderProduct.GetSauceNamesList(),
+					TotalNum:              product.SaleOrderProduct.Num,
+					NumType:               product.SaleOrderProduct.NumType,
+					IsBuffet:              product.SaleOrderProduct.IsBuffet == 1,
 					IsWrap: func() bool {
 						if product.SaleBill.IsTakeout() && product.SaleBill.MemberSaleOrderUuid == 0 {
 							return true

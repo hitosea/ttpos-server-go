@@ -2,7 +2,14 @@
 old_dir=$OLDPWD
 cd `dirname $0`
 set -o allexport
-. ../.env
+ENV_FILE=../.env
+
+if [ ! -f "$ENV_FILE"] ;then
+  echo "环境变量文件不存在，试用上级目录"
+  ENV_FILE=../../.env
+fi
+
+. "$ENV_FILE"
 # 遍历app目录下的所有子目录（假设init_conf.sh位于hack目录，app目录在上级目录）
 for app_dir in ../app/*; do
     # 仅处理目录类型

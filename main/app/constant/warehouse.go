@@ -40,3 +40,9 @@ const (
 	WarehouseOutFormStatusSuccess  = iota // 已出库 0
 	WarehouseOutFormStatusCanceled        // 撤销 1
 )
+
+// WarehouseMonthlyFormScene 月度报表场景
+const (
+	WarehouseMonthlyFormSceneStart = iota // 月初 0
+	WarehouseMonthlyFormSceneEnd          // 月末 1
+)

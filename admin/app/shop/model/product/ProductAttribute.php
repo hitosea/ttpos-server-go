@@ -60,9 +60,14 @@ class ProductAttribute
                     'product_attribute_group_uuid' => $item['parent_id']
                 ]);
             } else {
+                $attributeOpenMaxSelect = $item['attribute_open_max_select'] ?? 0;
+                $attributeMaxSelect = $item['attribute_max_select'] ?? 0;
+                if ($attributeOpenMaxSelect == 0) {
+                    $attributeMaxSelect = 0;
+                }
                 $group->save([
                     'is_must' => $item['attribute_required'] ?? 0,
-                    'max_selection' => $item['attribute_max_select'] ?? 0,
+                    'max_selection' => $attributeMaxSelect,
                 ]);
             }
             $groupUuidList[] = $group['uuid'];

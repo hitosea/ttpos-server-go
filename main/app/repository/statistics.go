@@ -393,7 +393,7 @@ func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model
 			"SUM(sp.product_num) AS sale_num",
 			"SUM(sp.product_final_price * sp.product_num) AS sale_amount",
 			"IF(pc.parent_uuid = 0, pc.sort, ppc.sort) AS ppc_sort",
-			"IF(pc.parent_uuid = 0, pc.uuid, ppc.uuid) AS ppc_uuid",
+			"IF(pc.parent_uuid = 0, pc.create_time, ppc.create_time) AS ppc_create_time",
 			"IF(pc.parent_uuid = 0, 0, pc.sort) AS pc_sort",
 			"pp.product_type",
 		).
@@ -403,10 +403,10 @@ func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model
 		Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid").
 		Group("sp.product_bom_uuid").
 		Order("ppc_sort ASC").
-		Order("ppc_uuid DESC").
+		Order("ppc_create_time DESC").
 		Order("pc_sort ASC").
-		Order("pc.uuid DESC").
-		Order("pp.uuid DESC").
+		Order("pc.create_time DESC").
+		Order("pp.create_time DESC").
 		Find(&result)
 
 	return result
@@ -922,6 +922,7 @@ func (r *StatisticsRepo) CountCancelOrder(opts ...DBOption) model.StatisticsCanc
 	db.Model(&model.SaleBill{}).
 		Select("COUNT(uuid) AS total_cancel_order_num", "SUM(origin_amount) AS total_cancel_order_amount").
 		Where("status = ?", constant.SaleOrderStatusCanceled).
+		Where("production_time > 0").
 		Where("bill_type IN (?)", []uint{constant.SaleBillTypeDesk, constant.SaleBillTypeInstant}).
 		Find(&result)
 
