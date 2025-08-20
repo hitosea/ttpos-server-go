@@ -45,10 +45,9 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		return resp.InitShopResp{}, errors.New("商家超管不存在")
 	}
 
-	var initShopResp resp.InitShopResp
 	client, conn, err := NewErpSetupClient()
 	if err != nil {
-		return initShopResp, err
+		return resp.InitShopResp{}, err
 	}
 	defer conn.Close()
 	req := &setup.InitShopReq{
@@ -59,7 +58,7 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 	}
 	result, err := client.InitShop(WithSiteCode(context.Background(), initShopReq.SiteCode), req)
 	if err != nil {
-		return initShopResp, err
+		return resp.InitShopResp{}, err
 	}
 	response := &setup.InitShopResp{}
 	if err := result.Data.UnmarshalTo(response); err != nil {
@@ -75,6 +74,7 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		"erpnext_company_abbr":     initShopReq.CompanyAbbr,
 		"erpnext_branch_name":      response.BranchName,
 		"erpnext_pos_profile_name": initShopReq.PosProfileName,
+		"erpnext_admin_email":      response.AdminEmail,
 	})
 
 	// 更新商家库
@@ -86,7 +86,11 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		"erpnext_company_abbr":     initShopReq.CompanyAbbr,
 		"erpnext_branch_name":      response.BranchName,
 		"erpnext_pos_profile_name": initShopReq.PosProfileName,
+		"erpnext_admin_email":      response.AdminEmail,
 	})
 
-	return initShopResp, nil
+	return resp.InitShopResp{
+		BranchName: response.BranchName,
+		AdminEmail: response.AdminEmail,
+	}, nil
 }

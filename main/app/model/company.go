@@ -87,6 +87,7 @@ type CompanySetting struct {
 	ErpnextCompanyAbbr    string `gorm:"column:erpnext_company_abbr;type:varchar(255);default:'';comment:ERPNext公司缩写;NOT NULL" json:"erpnext_company_abbr"`
 	ErpnextBranchName     string `gorm:"column:erpnext_branch_name;type:varchar(255);default:'';comment:ERPNext分支名称;NOT NULL" json:"erpnext_branch_name"`
 	ErpnextPosProfileName string `gorm:"column:erpnext_pos_profile_name;type:varchar(255);default:'';comment:ERPNext Pos Profile名称;NOT NULL" json:"erpnext_pos_profile_name"`
+	ErpnextAdminEmail     string `gorm:"column:erpnext_admin_email;type:varchar(255);default:'';comment:ERPNext 管理员邮箱;NOT NULL" json:"erpnext_admin_email"`
 }
 
 func (model *CompanySetting) GetTimezone() string {
