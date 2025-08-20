@@ -506,7 +506,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 		// 记录操作日志
 		err = s.createPurchaseOrderLog(tx, req.Uuid, ctx, req.Action, actionDesc, oldStatus, newStatus, "")
 		if err != nil {
-			return err
+			return errors.WithMessage(err, "记录操作日志失败")
 		}
 
 		// 调用erp接口
@@ -527,7 +527,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 				Items:           stockItems,
 			})
 			if err != nil {
-				return err
+				return errors.WithMessage(err, "调用erp接口失败")
 			}
 			// 更新采购申请单号
 			purchaseOrder.ErpOrderNo = resp.PurchaseOrder

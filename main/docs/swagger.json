@@ -38361,6 +38361,10 @@
                     "description": "状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)",
                     "type": "integer"
                 },
+                "supplier_name": {
+                    "description": "供应商名称",
+                    "type": "string"
+                },
                 "uuid": {
                     "description": "采购订单ID",
                     "type": "integer"
@@ -38401,6 +38405,10 @@
                 "status": {
                     "description": "状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)",
                     "type": "integer"
+                },
+                "supplier_name": {
+                    "description": "供应商名称",
+                    "type": "string"
                 },
                 "uuid": {
                     "description": "采购订单ID",
