@@ -27884,12 +27884,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "phone": {
-                    "description": "手机号",
-                    "type": "string"
+                    "description": "手机号，限制20个字符",
+                    "type": "string",
+                    "maxLength": 20
                 },
                 "real_name": {
-                    "description": "姓名",
-                    "type": "string"
+                    "description": "姓名，限制100个字符",
+                    "type": "string",
+                    "maxLength": 100
                 },
                 "roles": {
                     "description": "角色ID列表",
@@ -27899,8 +27901,9 @@ const docTemplate = `{
                     }
                 },
                 "username": {
-                    "description": "邮箱",
-                    "type": "string"
+                    "description": "邮箱，限制64个字符",
+                    "type": "string",
+                    "maxLength": 64
                 }
             }
         },
@@ -32364,13 +32367,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "phone": {
-                    "description": "手机号，最多20位",
+                    "description": "手机号，限制20个字符",
                     "type": "string",
                     "maxLength": 20
                 },
                 "real_name": {
-                    "description": "姓名",
-                    "type": "string"
+                    "description": "姓名，限制100个字符",
+                    "type": "string",
+                    "maxLength": 100
                 },
                 "roles": {
                     "description": "角色ID列表",
@@ -32380,8 +32384,9 @@ const docTemplate = `{
                     }
                 },
                 "username": {
-                    "description": "邮箱 邮箱格式",
-                    "type": "string"
+                    "description": "邮箱，限制64个字符",
+                    "type": "string",
+                    "maxLength": 64
                 },
                 "uuid": {
                     "description": "员工ID",

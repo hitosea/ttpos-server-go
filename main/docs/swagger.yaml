@@ -2570,10 +2570,12 @@ definitions:
         description: 密码，如果不为空，则不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种
         type: string
       phone:
-        description: 手机号
+        description: 手机号，限制20个字符
+        maxLength: 20
         type: string
       real_name:
-        description: 姓名
+        description: 姓名，限制100个字符
+        maxLength: 100
         type: string
       roles:
         description: 角色ID列表
@@ -2581,7 +2583,8 @@ definitions:
           type: integer
         type: array
       username:
-        description: 邮箱
+        description: 邮箱，限制64个字符
+        maxLength: 64
         type: string
     required:
     - confirm_password
@@ -5720,11 +5723,12 @@ definitions:
         description: 密码，如果不为空，则不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种
         type: string
       phone:
-        description: 手机号，最多20位
+        description: 手机号，限制20个字符
         maxLength: 20
         type: string
       real_name:
-        description: 姓名
+        description: 姓名，限制100个字符
+        maxLength: 100
         type: string
       roles:
         description: 角色ID列表
@@ -5732,7 +5736,8 @@ definitions:
           type: integer
         type: array
       username:
-        description: 邮箱 邮箱格式
+        description: 邮箱，限制64个字符
+        maxLength: 64
         type: string
       uuid:
         description: 员工ID
