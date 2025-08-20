@@ -158,7 +158,11 @@ func (model *SaleBill) CalcAll(options ...func(option *CalcOption)) {
 			_ = buffetCustomer.CalcSaleOrderBuffetCustomerType(*setting, options...)
 		}
 		if option.H5OrderUuid == 0 {
-			saleOrder.CalcSaleOrder(*setting)
+			if option.IsCanceled {
+				saleOrder.CalcSaleOrder(*setting, WithCanceled())
+			} else {
+				saleOrder.CalcSaleOrder(*setting)
+			}
 		} else {
 			saleOrder.CalcSaleOrder(*setting, options...)
 		}

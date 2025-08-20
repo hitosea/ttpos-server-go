@@ -85,6 +85,7 @@ func (p *PackageProductDetail) GetCanEdit() bool {
 // ProductFlavor 商品规格
 type ProductFlavor struct {
 	Uuid       uint64             `json:"uuid"`        // 商品规格UUID
+	BomUuid    uint64             `json:"bom_uuid"`    // 商品BOM UUID
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品规格名称
 	Price      float64            `json:"price"`       // 商品规格价格
 	StockNum   float64            `json:"stock_num"`   // 商品库存数量
@@ -94,6 +95,7 @@ type ProductFlavor struct {
 // ProductSauce 商品小料
 type ProductSauce struct {
 	Uuid              uint64             `json:"uuid"`                // 商品小料UUID
+	BomUuid           uint64             `json:"bom_uuid"`            // 商品BOM UUID
 	LocaleName        dto.LocaleResponse `json:"locale_name"`         // 商品小料名称
 	Price             float64            `json:"price"`               // 商品小料价格
 	IsDefaultSelected bool               `json:"is_default_selected"` // 是否默认选中
@@ -401,12 +403,14 @@ type ProductSingleListItemResp struct {
 	Uuid               uint64             `json:"uuid"`                  // 商品规格UUID
 	Name               dto.LocaleResponse `json:"locale_name"`           // 商品名称
 	FlavorName         dto.LocaleResponse `json:"flavor_name"`           // 商品规格名称
+	CategoryUuid       uint64             `json:"category_uuid"`         // 商品分类UUID
 	ProductBomCardUuid uint64             `json:"product_bom_card_uuid"` // 成本卡UUID，0表示没有成本卡
 	ProductBomCardName dto.LocaleResponse `json:"product_bom_card_name"` // 成本卡名称
 }
 
 type ProductPackageSubProduct struct {
 	Uuid             uint64             `json:"uuid"`               // 套餐子商品UUID
+	BomUuid          uint64             `json:"bom_uuid"`           // 商品BOM UUID
 	LocaleName       dto.LocaleResponse `json:"locale_name"`        // 套餐子商品名称
 	FlavorLocaleName dto.LocaleResponse `json:"flavor_locale_name"` // 商品规格名称
 	Num              float64            `json:"num"`                // 套餐子商品数量

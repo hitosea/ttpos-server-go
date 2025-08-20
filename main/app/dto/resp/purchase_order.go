@@ -17,6 +17,7 @@ type PurchaseOrderInfo struct {
 	OrderTime         int64  `json:"order_time"`          // 单据日期
 	Num               int    `json:"num"`                 // 物品数量
 	OrderType         int    `json:"order_type"`          // 申请类型
+	SupplierName      string `json:"supplier_name"`       // 供应商名称
 	ExpectArrivalTime int64  `json:"expect_arrival_time"` // 期望到货日期
 	ReceiptProgress   string `json:"receipt_progress"`    // 收货进度（百分比0.00%）前端直接显示
 }

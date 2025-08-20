@@ -1666,6 +1666,12 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 				if saleOrderProduct.IsDelete() {
 					continue
 				}
+				// 取消订单时，过滤掉未送厨的商品
+				if saleBill.IsCanceled() {
+					if saleOrderProduct.IsUnCookingProduct() {
+						continue
+					}
+				}
 				// 过滤掉套餐子商品
 				if saleOrderProduct.IsPackageSubProduct() {
 					continue
@@ -2068,6 +2074,17 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 	if err != nil {
 		tx.Rollback()
 		return errors.WithMessage(builtinerrors.New("删除送厨单商品失败"), err.Error())
+	}
+
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err, "销售账单不存在")
+	}
+	saleBill.SetCanceled()
+	// 计算订单商品、订单、账单金额并更新或创建
+	if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill, model.WithCanceled()); err != nil {
+		tx.Rollback()
+		return errors.WithMessage(err)
 	}
 
 	// 提交事务

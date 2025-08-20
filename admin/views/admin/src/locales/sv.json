@@ -425,5 +425,11 @@
     "请选择所属erpnext公司": "Vänligen välj tillhörande erpnext-företag",
     "请选择所属erpnext的site": "Vänligen välj tillhörande erpnext-webbplats",
     "授权商家": "Auktoriserad återförsäljare",
-    "授权": "Auktorisera"
+    "授权": "Auktorisera",
+    "查看商家": "Visa handlare",
+    "请选择Pos Profile": "Vänligen välj Pos-profil",
+    "密码验证": "Lösenordsverifiering",
+    "请输入密码": "Ange lösenord",
+    "请确定授权信息，该操作不可逆，请仔细确认！": "Vänligen bekräfta auktoriseringsinformationen. Denna åtgärd kan inte ångras, vänligen kontrollera noggrant!",
+    "erpnext公司": "erpnext-företaget"
 }

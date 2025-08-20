@@ -1293,7 +1293,7 @@
     "首次登录需修改密码": "First login requires password change",
     "厨显功能：": "Kitchen Display Function:",
     "调整自助餐": "Adjust buffet",
-    "并台": "Joint operation",
+    "并台": "Merging station",
     "整单退款": "Full order refund",
     "部分退款": "Partial refund",
     "注：确定后则为整单操作退款": "Note: Once confirmed, it will be processed as a full order refund",
@@ -2122,5 +2122,9 @@
     "套餐可售总量": "Total saleable quantity of the set",
     "库存为0时套餐自动售罄": "When inventory is zero, the package will be automatically sold out",
     "开始序列号": "Start Serial Number",
-    "请输入开始序列号": "Please enter the start serial number"
+    "请输入开始序列号": "Please enter the start serial number",
+    "请翻译分组名称": "Please translate the group name",
+    "取消订单数": "Number of cancelled orders",
+    "取消订单金额": "Order cancellation amount",
+    "规格/属性": "Specifications/Attributes"
 }

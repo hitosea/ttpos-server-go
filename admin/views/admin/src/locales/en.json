@@ -425,5 +425,11 @@
     "请选择所属erpnext公司": "Please select the associated erpnext company",
     "请选择所属erpnext的site": "Please select the associated erpnext site",
     "授权商家": "Authorized Merchant",
-    "授权": "Authorize"
+    "授权": "Authorize",
+    "查看商家": "View Merchant",
+    "请选择Pos Profile": "Please select Pos Profile",
+    "密码验证": "Password Verification",
+    "请输入密码": "Please enter password",
+    "请确定授权信息，该操作不可逆，请仔细确认！": "Please confirm the authorization information. This operation is irreversible, please check carefully!",
+    "erpnext公司": "erpnext company"
 }

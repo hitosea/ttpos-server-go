@@ -106,11 +106,25 @@ func (c *Controller) SavePurchaseReceipt(ctx context.Context, req *buying.SavePu
 	}
 
 	// 调用服务层保存数据
-	_, err := service.Buying().CreatePurchaseReceiptFromOrder(ctx, req)
+	res, err := service.Buying().CreatePurchaseReceiptFromOrder(ctx, req)
 	if err != nil {
 		return rpc.ApiError(err.Error()), nil
 	}
-	return rpc.ApiSuccess("保存采购收货成功"), nil
+	purchaseReceiptItems := make([]*buying.PurchaseReceiptItem, 0)
+	for _, item := range res.Items {
+		purchaseReceiptItems = append(purchaseReceiptItems, &buying.PurchaseReceiptItem{
+			ItemName: item.ItemName,
+			ItemCode: item.ItemCode,
+			StockUom: item.StockUom,
+			Qty:      item.Qty,
+		})
+	}
+	return rpc.ApiSuccessWithData("保存采购收货成功", &buying.SavePurchaseReceiptResp{
+		PurchaseReceipt: &buying.PurchaseReceiptInfo{
+			PurchaseReceiptName: res.Name,
+			Items:               purchaseReceiptItems,
+		},
+	}), nil
 }
 
 // validateSavePurchaseReceiptReq 验证保存采购收货单请求参数

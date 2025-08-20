@@ -217,11 +217,6 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 	db.Model(&model.ProductAttributeGroup{}).Select("MAX(sort)").Scan(&attributeGroupSort)
 	attributeGroupSort++
 
-	// 获取属性最大的排序
-	var attributeSort int
-	db.Model(&model.ProductAttribute{}).Select("MAX(sort)").Scan(&attributeSort)
-	attributeSort++
-
 	for _, erpnextAttributeGroup := range attributeGroupList.List {
 		if _, ok := multiLanguageMap[erpnextAttributeGroup.AttributeName]; !ok {
 			logger.Logger.Error("SyncUomAndAttribute-multiLanguageMap-not-found", zap.Any("attributeGroupName", erpnextAttributeGroup.AttributeName))
@@ -258,7 +253,7 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 		}
 		attributeGroupSort++
 
-		for _, erpnextAttributeValue := range erpnextAttributeGroup.AttributeValueList {
+		for i, erpnextAttributeValue := range erpnextAttributeGroup.AttributeValueList {
 			if _, ok := multiLanguageMap[erpnextAttributeValue.AttributeValue]; !ok {
 				logger.Logger.Error("SyncUomAndAttribute-multiLanguageMap-not-found", zap.Any("attributeValue", erpnextAttributeValue.AttributeValue))
 				continue
@@ -284,7 +279,7 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 				Name:                  localeName.ToJson(),
 				MultiLanguageNameUuid: multiLanguageName.Uuid,
 				AttributeGroupUuid:    attributeGroup.Uuid,
-				Sort:                  attributeSort,
+				Sort:                  i + 1, // 每个属性组的属性值排序，从1开始
 				ErpnextAttributeValue: erpnextAttributeValue.AttributeValue,
 			}
 			err = db.Model(&model.ProductAttribute{}).Create(&productAttribute).Error
@@ -292,7 +287,6 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 				logger.Logger.Error("SyncUomAndAttribute-CreateProductAttribute-attribute", zap.Any("productAttribute", productAttribute), zap.Any("err", err))
 				continue
 			}
-			attributeSort++
 		}
 	}
 
