@@ -32,13 +32,13 @@ func (c *Controller) InitShop(ctx context.Context, req *setup.InitShopReq) (*api
 		return rpc.ApiError("请求参数不能为空"), nil
 	}
 	// 调用服务层初始化商店
-	branchName, err := service.Setup().InitShop(ctx, req)
+	resp, err := service.Setup().InitShop(ctx, req)
 	if err != nil {
 		return rpc.ApiError(err.Error()), nil
 	}
 
 	// 返回成功响应
-	return rpc.ApiSuccessWithData("初始化商店成功", &setup.InitShopResp{BranchName: branchName}), nil
+	return rpc.ApiSuccessWithData("初始化商店成功", resp), nil
 }
 
 // CreatePosUser 创建POS用户
