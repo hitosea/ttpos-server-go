@@ -48,16 +48,17 @@ func WithOnlyCheckCooking() func(option *ActionCookingOption) {
 // 转换器
 func (s *orderSrv) convertToEventOrderProduct(saleOrderProduct *model.SaleOrderProduct, saleBill *model.SaleBill, saleOrder *model.SaleOrder) event.OrderProduct {
 	orderProduct := event.OrderProduct{
-		OrderProductId:  saleOrderProduct.Uuid,
-		ProductId:       saleOrderProduct.ProductPackageUuid,
-		ProductName:     saleOrderProduct.MultiLanguageName.GetNames(),
-		ProductAttr:     saleOrderProduct.GetAttributeName(),
-		ProductAttrList: saleOrderProduct.GetAttributeNameList(),
-		TotalNum:        saleOrderProduct.Num,
-		NumType:         saleOrderProduct.NumType,
-		IsBuffet:        saleOrderProduct.IsBuffet == 1,
-		IsWrap:          saleOrderProduct.CalculateIsWrap(saleBill),
-		Remark:          saleOrderProduct.Remark,
+		OrderProductId:        saleOrderProduct.Uuid,
+		ProductId:             saleOrderProduct.ProductPackageUuid,
+		ProductName:           saleOrderProduct.MultiLanguageName.GetNames(),
+		ProductAttr:           saleOrderProduct.GetAttributeName(),
+		ProductAttrList:       saleOrderProduct.GetAttributeNameList(),
+		ProductSauceNamesList: saleOrderProduct.GetSauceNamesList(),
+		TotalNum:              saleOrderProduct.Num,
+		NumType:               saleOrderProduct.NumType,
+		IsBuffet:              saleOrderProduct.IsBuffet == 1,
+		IsWrap:                saleOrderProduct.CalculateIsWrap(saleBill),
+		Remark:                saleOrderProduct.Remark,
 	}
 
 	// 如果是套餐主商品，添加子商品

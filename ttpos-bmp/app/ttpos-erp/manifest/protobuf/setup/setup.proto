@@ -30,6 +30,7 @@ message CreatePosUserResp {
 // 服务端返回的创建分店结果
 message InitShopResp {
   string branch_name = 1; // 分支名称
+  string admin_email = 2; // 管理员邮箱
 }
 
 

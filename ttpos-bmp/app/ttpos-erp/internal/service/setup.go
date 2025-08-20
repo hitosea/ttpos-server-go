@@ -24,7 +24,7 @@ type (
 		// InitShop 初始化店铺
 		// 参数：ctx 上下文，req 包含 shop_name、company_abbr、shop_uuid
 		// 返回：是否成功，错误信息
-		InitShop(ctx context.Context, req *setup.InitShopReq) (branchName string, err error)
+		InitShop(ctx context.Context, req *setup.InitShopReq) (resp *setup.InitShopResp, err error)
 	}
 )
 

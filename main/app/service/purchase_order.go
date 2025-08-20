@@ -1109,8 +1109,7 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 		if err != nil {
 			return err
 		}
-		// TODO: 6哥没有返回收货单号
-		receiptOrder.ErpOrderNo = resp.PurchaseOrder.PurchaseOrderName
+		receiptOrder.ErpOrderNo = resp.PurchaseReceipt.PurchaseReceiptName
 		err = repository.NewPurchaseReceiptOrderRepo(db).Update(receiptOrder)
 		if err != nil {
 			return errors.WithMessage(err, "更新收货单号失败")
