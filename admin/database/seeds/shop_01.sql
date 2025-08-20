@@ -1998,6 +1998,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     `erpnext_company_abbr` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext公司缩写',
     `erpnext_branch_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext分支名称',
     `erpnext_pos_profile_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext Pos Profile名称',
+    `erpnext_admin_email` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext 管理员邮箱',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
