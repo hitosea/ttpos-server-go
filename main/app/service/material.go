@@ -239,13 +239,20 @@ func (s *materialSrv) AddMaterial(ctx context.Context, req req.MaterialAddReq) e
 			return errors.WithMessage(err)
 		}
 
-		erpSrv := erp.NewIErpSrv(s.dbm)
-		itemInfo, errErp := erpSrv.AddMaterial(ctx, *materialAddErpReq)
-		if errErp != nil {
-			return errors.WithMessage(err)
+		code := ""
+		if ctx.GetCompany().IsOpenErp() {
+			erpSrv := erp.NewIErpSrv(s.dbm)
+			itemInfo, errErp := erpSrv.AddMaterial(ctx, *materialAddErpReq)
+			if errErp != nil {
+				return errors.WithMessage(err)
+			}
+			code = itemInfo.ItemCode
+		} else {
+			uuid, _ := utils.GetID()
+			code = fmt.Sprintf("WPR%d", uuid)
 		}
 		materialRepo := repository.NewMaterialRepo(tx)
-		err = materialRepo.UpdateMaterialCode(material.Uuid, itemInfo.ItemCode)
+		err = materialRepo.UpdateMaterialCode(material.Uuid, code)
 		if err != nil {
 			return errors.WithMessage(err, "更新物品编码失败")
 		}
@@ -980,8 +987,24 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 		if err != nil {
 			return errors.WithMessage(err)
 		}
+		code := ""
+		if ctx.GetCompany().IsOpenErp() {
+			erpSrv := erp.NewIErpSrv(s.dbm)
+			itemInfo, errErp := erpSrv.AddMaterial(ctx, *materialAddErpReq)
+			if errErp != nil {
+				return errors.WithMessage(err)
+			}
+			code = itemInfo.ItemCode
+		} else {
+			uuid, _ := utils.GetID()
+			code = fmt.Sprintf("WPR%d", uuid)
+		}
+		materialRepo := repository.NewMaterialRepo(db)
+		err = materialRepo.UpdateMaterialCode(material.Uuid, code)
+		if err != nil {
+			return errors.WithMessage(err, "更新物品编码失败")
+		}
 
-		fmt.Println(materialAddErpReq)
 		// 创建成本卡
 		nameUuid, _ := utils.GetID()
 		multiLanguageName := model.MultiLanguageName{}
