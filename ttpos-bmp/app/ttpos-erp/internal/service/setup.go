@@ -18,7 +18,7 @@ type (
 		// 返回：ERP用户名和创建结果
 		CreateBranch(ctx context.Context, req *setup.InitShopReq) (branchName string, err error)
 		// CreateUser 创建网站用户
-		CreateUser(ctx context.Context, req *setup2.CreateUserInp) (userEmail string, err error)
+		CreateUser(ctx context.Context, req *setup2.CreateUserInp) (err error)
 		// CreatePosProfile CreatePosFile 创建 默认 pos profile  配置默认
 		CreatePosProfile(ctx context.Context, req *setup.CreateDefaultPosProfileReq) (posFileId string, err error)
 		// InitShop 初始化店铺

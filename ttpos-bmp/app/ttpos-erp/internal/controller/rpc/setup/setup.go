@@ -50,7 +50,7 @@ func (c *Controller) CreatePosUser(ctx context.Context, req *setup.CreatePosUser
 		return rpc.ApiError("请求参数不能为空"), nil
 	}
 	// 调用服务层创建用户
-	userEmail, err := service.Setup().CreateUser(ctx, &setup2.CreateUserInp{
+	err := service.Setup().CreateUser(ctx, &setup2.CreateUserInp{
 		UserEmail: req.UserEmail,
 		FirstName: req.UserName,
 	})
@@ -60,7 +60,7 @@ func (c *Controller) CreatePosUser(ctx context.Context, req *setup.CreatePosUser
 
 	// 返回成功响应
 	return rpc.ApiSuccessWithData("创建POS用户成功", &setup.CreatePosUserResp{
-		UserEmail: userEmail,
+		UserEmail: req.UserEmail,
 		UserName:  req.UserName,
 	}), nil
 }
