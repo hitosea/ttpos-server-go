@@ -922,6 +922,7 @@ func (r *StatisticsRepo) CountCancelOrder(opts ...DBOption) model.StatisticsCanc
 	db.Model(&model.SaleBill{}).
 		Select("COUNT(uuid) AS total_cancel_order_num", "SUM(origin_amount) AS total_cancel_order_amount").
 		Where("status = ?", constant.SaleOrderStatusCanceled).
+		Where("production_time > 0").
 		Where("bill_type IN (?)", []uint{constant.SaleBillTypeDesk, constant.SaleBillTypeInstant}).
 		Find(&result)
 
