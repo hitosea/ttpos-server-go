@@ -3,7 +3,7 @@ set -o allexport
 
 ENV_FILE=.env
 
-if [ ! -f "$ENV_FILE"] ;then
+if [ ! -f "$ENV_FILE" ] ;then
   echo "环境变量文件不存在，试用上级目录"
   ENV_FILE=../.env
 fi
