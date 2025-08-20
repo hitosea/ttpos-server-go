@@ -35,7 +35,9 @@ type IErpSrv interface {
 	GetSupplierList(ctx cc.Context) (*buying.GetSupplierListResp, error)
 
 	// 物品
-	AddMaterial(ctx cc.Context, params req.MaterialAddErpReq) (*item.ItemInfo, error)
+	AddMaterial(ctx cc.Context, params req.MaterialAddErpReq) (*item.ItemInfo, error)         // 添加物品
+	AddPorductBomCard(ctx cc.Context, params ProductBomCardAddErpReq) (*item.ItemInfo, error) // 添加成本卡
+	AddProduct(ctx cc.Context, params req.ProductAddErpReq) (*item.ItemInfo, error)           // 添加商品
 }
 type erpSrv struct {
 	dbm *database.DBManager

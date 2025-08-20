@@ -126,7 +126,7 @@ func (x *BomInfo) GetItems() []*BomItem {
 type BomItem struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码"` // 物品编码
-	Rate          float64                `protobuf:"fixed64,2,opt,name=rate,proto3" json:"rate,omitempty" dc:"物品名称"`                       // 物品名称
+	Rate          float64                `protobuf:"fixed64,2,opt,name=rate,proto3" json:"rate,omitempty" dc:"物品估值率"`                      // 物品估值率
 	Qty           float64                `protobuf:"fixed64,3,opt,name=qty,proto3" json:"qty,omitempty" dc:"物品数量"`                         // 物品数量
 	Uom           string                 `protobuf:"bytes,4,opt,name=uom,proto3" json:"uom,omitempty" dc:"物品单位"`                           // 物品单位
 	unknownFields protoimpl.UnknownFields

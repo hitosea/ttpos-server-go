@@ -2,10 +2,22 @@ package erp
 
 import (
 	"ttpos-bmp/app/ttpos-erp/api/item"
+	"ttpos-bmp/app/ttpos-erp/api/manufacturing"
+	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/pkg/context"
+
+	"google.golang.org/grpc"
 )
+
+func NewErpBomClient() (manufacturing.BomServiceClient, *grpc.ClientConn, error) {
+	conn, err := cloud.GetRpcConnWithName(cloud.ErpServiceName)
+	if err != nil {
+		return nil, nil, err
+	}
+	return manufacturing.NewBomServiceClient(conn), conn, nil
+}
 
 type AddMaterialParams struct {
 	LocaleName   dto.LocaleResponse `json:"locale_name" binding:"required"`      // 物品名称
@@ -52,4 +64,41 @@ func (s *erpSrv) AddMaterial(ctx context.Context, params req.MaterialAddErpReq) 
 	}
 
 	return response, nil
+}
+
+type ProductBomCardAddErpReq struct {
+	ItemCode string                   `json:"item_code" binding:"required"` // 商品编码
+	Quantity float64                  `json:"quantity" binding:"required"`
+	Uom      string                   `json:"uom" binding:"required"`
+	Items    []*manufacturing.BomItem `json:"items" binding:"required"`
+}
+
+func (s *erpSrv) AddPorductBomCard(ctx context.Context, params ProductBomCardAddErpReq) (*item.ItemInfo, error) {
+	company := ctx.GetCompany()
+	companySetting := company.CompanySetting
+
+	client, conn, err := NewErpBomClient()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	result, err := client.SaveBom(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &manufacturing.SaveBomReq{
+		ItemCode:    params.ItemCode,
+		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+		Quantity:    params.Quantity,
+		Uom:         params.Uom,
+		IsActive:    true,
+		IsDefault:   true,
+		Items:       params.Items,
+	})
+	if err != nil {
+		return nil, err
+	}
+	response := &manufacturing.SaveBomResp{}
+	if err := result.Data.UnmarshalTo(response); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }

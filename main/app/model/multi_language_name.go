@@ -23,6 +23,12 @@ func (m *MultiLanguageName) IsNullName() bool {
 	return m.ZhName == "" && m.ThName == "" && m.EnName == "" && m.ZhTwName == "" && m.JaName == "" && m.KoName == "" && m.MyName == "" && m.TrName == "" && m.SvName == ""
 }
 
+func NewMultiLanguageName(jsonStr string) *MultiLanguageName {
+	multiLanguageName := MultiLanguageName{}
+	multiLanguageName.InitByLocaleResponseJson(jsonStr)
+	return &multiLanguageName
+}
+
 func (m *MultiLanguageName) InitByLocaleResponse(locale dto.LocaleResponse) {
 	m.ZhName = locale.ZH
 	m.ThName = locale.TH

@@ -48,6 +48,12 @@ type MaterialAddErpReq struct {
 	Uoms          []MaterialUomReq `json:"uoms" binding:"required,dive"`      // 单位列表
 }
 
+type ProductAddErpReq struct {
+	ItemName string `json:"item_name" binding:"required"` // 商品名称, 英文
+	StockUom string `json:"stock_uom" binding:"required"` // 商品单位, 英文
+	ItemCode string `json:"item_code" binding:"required"` // 商品编码
+}
+
 type MaterialUomReq struct {
 	Uom            string  `json:"uom" binding:"required"`                   // 单位, 英文
 	ConversionRate float64 `json:"conversion_rate" binding:"required,min=0"` // 转换率

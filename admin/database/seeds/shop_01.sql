@@ -1256,6 +1256,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_bom` (
     `purchase_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '采购单价',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格',
     `name` TEXT COMMENT '商品名称或小料名称(不用于业务显示)',
+    `erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品编码',
     `product_flavor_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品规格ID(仅商品使用)',
     `product_sauce_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品小料ID(仅小料使用)',
     `product_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包ID',
