@@ -37,6 +37,14 @@ message CreatePaymentAccountReq {
   string payment_source = 4; // 支付来源,可选 2= lianlianpay
 }
 
+
+message OpenPosProfileReq {
+  string pos_profile_name = 1; // Pos Profile名称,必填
+  string cashier_email = 2; // 收银员邮箱,必填
+  string company_abbr = 3; // 公司缩写,必填
+  string branch = 4; // 分店名称,可选
+
+}
 // SellingService 服务定义
 service SellingService {
   // 查询Pos Profile
