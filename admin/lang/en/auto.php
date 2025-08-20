@@ -2185,4 +2185,5 @@ return [
     "套餐商品库存不足" => "Insufficient bundle product stock",
     "商家已授权" => "Merchant authorized",
     "ERPNext站点不存在" => "ERPNext site does not exist",
+    "数据处理中，请稍后重试" => "Data is being processed, please try again later",
 ];
