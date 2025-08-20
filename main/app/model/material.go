@@ -35,6 +35,9 @@ func (model *Material) SetNil() {
 	model.Unit = nil
 	model.PurchaseUnit = nil
 	model.CostUnit = nil
+	model.Category = MaterialCategory{}
+	model.NotBaseUnitList = nil
+	model.ImageFile = nil
 }
 
 // 判断该单位是不是该物品的基准单位或非基准单位
@@ -85,6 +88,10 @@ type MaterialUnit struct {
 	MaterialUuid   uint64  `gorm:"default:0;column:material_uuid;comment:'原料ID'"`
 
 	Unit *ProductUnit `gorm:"foreignKey:unit_uuid;references:uuid"`
+}
+
+func (model *MaterialUnit) SetNil() {
+	model.Unit = nil
 }
 
 // MaterialCategory 原料分类表 ttpos_material_category

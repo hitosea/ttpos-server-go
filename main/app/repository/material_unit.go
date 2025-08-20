@@ -50,6 +50,7 @@ func (r *MaterialUnitRepoImpl) GetMaterialUnitByUuid(uuid uint64, opts ...DBOpti
 
 // CreateMaterialUnit 创建原料单位
 func (r *MaterialUnitRepoImpl) CreateMaterialUnit(materialUnit model.MaterialUnit) (uint64, error) {
+	materialUnit.SetNil()
 	if err := r.db.Create(&materialUnit).Error; err != nil {
 		return 0, errors.WithMessage(err, "创建原料单位失败")
 	}
