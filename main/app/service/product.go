@@ -16,6 +16,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
+	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
@@ -1315,6 +1316,11 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 	var maxSort int
 	db.Model(&model.ProductUnit{}).Select("MAX(sort)").Scan(&maxSort)
 
+	// 保存产品单位
+	productUnit := model.ProductUnit{
+		Sort: maxSort + 1,
+		Name: addReq.LocaleName.ToJson(),
+	}
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// 保存多语言名称
 		multiLanguageName := model.MultiLanguageName{
@@ -1332,12 +1338,7 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 		if err != nil {
 			return errors.WithMessage(errors.New("保存名称多语言失败"), err.Error())
 		}
-		// 保存产品单位
-		productUnit := model.ProductUnit{
-			Sort:                  maxSort + 1,
-			MultiLanguageNameUuid: multiLanguageName.Uuid,
-			Name:                  addReq.LocaleName.ToJson(),
-		}
+		productUnit.MultiLanguageNameUuid = multiLanguageName.Uuid
 		err = tx.Model(&model.ProductUnit{}).Create(&productUnit).Error
 		if err != nil {
 			return errors.WithMessage(errors.New("保存单位失败"), err.Error())
@@ -1360,9 +1361,47 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 
 	// 开启了ERP，并且是TTPOS站点，同步到ERPNext
 	if company.IsOpenErp() && companySetting.IsTtposSite() {
-		// TODO 产品未确认好需求
+		err, enName := s.getEnName(ctx, addReq.LocaleName)
+		if err != nil {
+			return errors.WithMessage(errors.New("翻译失败"), err.Error())
+		}
+		erpUom := company.Name + "-" + enName
+		err = erp.NewIErpSrv(s.dbm).SaveUom(ctx.GetContext(), req.SaveUomReq{
+			SiteCode:          companySetting.ErpnextSiteCode,
+			CompanyAbbr:       companySetting.ErpnextCompanyAbbr,
+			Branch:            companySetting.ErpnextBranchName,
+			UomName:           erpUom,
+			AliasName:         enName,
+			MustBeWholeNumber: true,
+		})
+		if err != nil {
+			return errors.WithMessage(errors.New("同步单位到erp失败"), err.Error())
+		}
+		err = db.Model(&model.ProductUnit{}).Where("uuid = ?", productUnit.Uuid).Update("erpnext_uom", erpUom).Error
+		if err != nil {
+			return errors.WithMessage(errors.New("保存erp单位失败"), err.Error())
+		}
 	}
 	return err
+}
+
+func (s *productSrv) getEnName(ctx context.Context, locale dto.LocaleResponse) (error, string) {
+	enName := locale.EN
+	if enName != "" {
+		return nil, enName
+	}
+	companySetting := ctx.GetCompanySetting()
+	defaultLanguage := companySetting.GetDefaultLanguage()
+	res, err := utils.NewTranslateClient().Translate(ctx.GetContext(), []utils.TranslateItem{
+		{
+			Lang:    defaultLanguage,
+			Content: locale.GetLocale(defaultLanguage),
+		},
+	})
+	if err != nil {
+		return err, ""
+	}
+	return nil, res.Data[0].En
 }
 
 // EditProductUnit 编辑产品单位
@@ -1441,10 +1480,23 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 
 	company := ctx.GetCompany()
 	companySetting := ctx.GetCompanySetting()
-
 	// 开启了ERP，并且是TTPOS站点，同步到ERPNext
 	if company.IsOpenErp() && companySetting.IsTtposSite() {
-		// TODO 产品未确认好需求
+		err, enName := s.getEnName(ctx, editUnitReq.LocaleName)
+		if err != nil {
+			return errors.WithMessage(errors.New("翻译失败"), err.Error())
+		}
+		err = erp.NewIErpSrv(s.dbm).SaveUom(ctx.GetContext(), req.SaveUomReq{
+			SiteCode:          companySetting.ErpnextSiteCode,
+			CompanyAbbr:       companySetting.ErpnextCompanyAbbr,
+			Branch:            companySetting.ErpnextBranchName,
+			UomName:           productUnit.ErpnextUom,
+			AliasName:         enName,
+			MustBeWholeNumber: true,
+		})
+		if err != nil {
+			return errors.WithMessage(errors.New("同步单位到erp失败"), err.Error())
+		}
 	}
 
 	return err
@@ -2089,6 +2141,16 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 		}
 	}
 
+	uuidLocaleMap := make(map[uint64]dto.LocaleResponse)
+
+	// 获取当前最大的排序值
+	var maxSort int
+	db.Model(&model.ProductAttributeGroup{}).Select("MAX(sort)").Scan(&maxSort)
+
+	productAttributeGroup := model.ProductAttributeGroup{
+		Name: addReq.LocaleName.ToJson(),
+		Sort: maxSort + 1,
+	}
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// 保存多语言
 		multiLanguageName := model.MultiLanguageName{
@@ -2107,10 +2169,7 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 			return errors.WithMessage(errors.New("保存属性组名称多语言失败"), err.Error())
 		}
 		// 添加商品属性分组
-		productAttributeGroup := model.ProductAttributeGroup{
-			Name:                  addReq.LocaleName.ToJson(),
-			MultiLanguageNameUuid: multiLanguageName.Uuid,
-		}
+		productAttributeGroup.MultiLanguageNameUuid = multiLanguageName.Uuid
 		err = tx.Model(&model.ProductAttributeGroup{}).Create(&productAttributeGroup).Error
 		if err != nil {
 			return errors.WithMessage(errors.New("保存属性组失败"), err.Error())
@@ -2120,7 +2179,7 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 		productPackageMapAttributeUuids := make(map[uint64][]uint64)
 
 		// 遍历req.ProductAttributes，添加商品属性
-		for _, productAttribute := range addReq.ProductAttributes {
+		for i, productAttribute := range addReq.ProductAttributes {
 			// 保存多语言
 			multiLanguageName := model.MultiLanguageName{
 				ZhName:   productAttribute.LocaleName.ZH,
@@ -2142,12 +2201,13 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 				Name:                  productAttribute.LocaleName.ToJson(),
 				MultiLanguageNameUuid: multiLanguageName.Uuid,
 				AttributeGroupUuid:    productAttributeGroup.Uuid,
+				Sort:                  i + 1,
 			}
 			err = tx.Model(&model.ProductAttribute{}).Create(&productAttributeModel).Error
 			if err != nil {
 				return errors.WithMessage(errors.New("保存属性失败"), err.Error())
 			}
-
+			uuidLocaleMap[productAttributeModel.Uuid] = productAttribute.LocaleName
 			// 按照product_package_uuid分组，将product_attribute_uuid保存到productPackageMapAttributeUuids中
 			for _, productPackageUuid := range productAttribute.ProductPackageUuids {
 				productPackageMapAttributeUuids[productPackageUuid] = append(productPackageMapAttributeUuids[productPackageUuid], productAttributeModel.Uuid)
@@ -2188,7 +2248,48 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 	companySetting := ctx.GetCompanySetting()
 	// 开启了ERP，并且是TTPOS站点，同步到ERPNext
 	if company.IsOpenErp() && companySetting.IsTtposSite() {
-		// TODO 产品未确认好需求
+		attributeValueList := []req.SaveAttributeValueReq{}
+		uuidErpValueNameMap := make(map[uint64]string)
+		for attributeUuid, locale := range uuidLocaleMap {
+			err, enValueName := s.getEnName(ctx, locale)
+			if err != nil {
+				return errors.WithMessage(errors.New("翻译失败"), err.Error())
+			}
+			erpValueName := company.Name + "-" + enValueName
+			uuidErpValueNameMap[attributeUuid] = erpValueName
+			attributeValueList = append(attributeValueList, req.SaveAttributeValueReq{
+				AttributeValue: erpValueName,
+				Abbr:           enValueName,
+			})
+		}
+		err, enGroupName := s.getEnName(ctx, addReq.LocaleName)
+		if err != nil {
+			return errors.WithMessage(errors.New("翻译失败"), err.Error())
+		}
+		erpGroupName := company.Name + "-" + enGroupName
+		err = erp.NewIErpSrv(s.dbm).SaveAttribute(ctx.GetContext(), req.SaveAttributeReq{
+			SiteCode:           companySetting.ErpnextSiteCode,
+			CompanyAbbr:        companySetting.ErpnextCompanyAbbr,
+			Branch:             companySetting.ErpnextBranchName,
+			AttributeName:      erpGroupName,
+			AliasName:          enGroupName,
+			AttributeValueList: attributeValueList,
+		})
+		if err != nil {
+			return errors.WithMessage(errors.New("同步属性组到erp失败"), err.Error())
+		}
+		// 保存属性组 erpnext_attribute_group_name
+		err = db.Model(&model.ProductAttributeGroup{}).Where("uuid = ?", productAttributeGroup.Uuid).Update("erpnext_attribute_group_name", erpGroupName).Error
+		if err != nil {
+			return errors.WithMessage(errors.New("保存erp属性组失败"), err.Error())
+		}
+		// 保存属性值 erpnext_attribute_value
+		for attributeUuid, erpValueName := range uuidErpValueNameMap {
+			err = db.Model(&model.ProductAttribute{}).Where("uuid = ?", attributeUuid).Update("erpnext_attribute_value", erpValueName).Error
+			if err != nil {
+				return errors.WithMessage(errors.New("保存erp属性值失败"), err.Error())
+			}
+		}
 	}
 
 	return nil
@@ -2420,10 +2521,12 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 	}
 
 	// 属性值uuid和多语言uuid映射
-	attributeMultiLanguageNameUuidMap := make(map[uint64]uint64)
+	uuidAttributeMap := make(map[uint64]model.ProductAttribute)
 	for _, attribute := range attributes {
-		attributeMultiLanguageNameUuidMap[attribute.Uuid] = attribute.MultiLanguageNameUuid
+		uuidAttributeMap[attribute.Uuid] = attribute
 	}
+
+	uuidLocaleMap := make(map[uint64]dto.LocaleResponse)
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 
@@ -2483,7 +2586,8 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 		}
 		for k, productAttribute := range editReq.ProductAttributes {
 			if productAttribute.Uuid != 0 { // 更新属性值多语言
-				err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", attributeMultiLanguageNameUuidMap[productAttribute.Uuid]).Updates(map[string]any{
+				uuidLocaleMap[productAttribute.Uuid] = productAttribute.LocaleName
+				err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", uuidAttributeMap[productAttribute.Uuid].MultiLanguageNameUuid).Updates(map[string]any{
 					"zh_name":    productAttribute.LocaleName.ZH,
 					"th_name":    productAttribute.LocaleName.TH,
 					"en_name":    productAttribute.LocaleName.EN,
@@ -2523,6 +2627,7 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 					return errors.WithMessage(errors.New("保存属性值失败"), err.Error())
 				}
 				editReq.ProductAttributes[k].Uuid = productAttributeModel.Uuid
+				uuidLocaleMap[productAttributeModel.Uuid] = productAttribute.LocaleName
 			}
 		}
 
@@ -2585,7 +2690,48 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 	companySetting := ctx.GetCompanySetting()
 	// 开启了ERP，并且是TTPOS站点，同步到ERPNext
 	if company.IsOpenErp() && companySetting.IsTtposSite() {
-		// TODO 产品未确认好需求
+		var valueList []req.SaveAttributeValueReq
+		uuidErpValueNameMap := make(map[uint64]string)
+		// 构建 valueList
+		for uuid, locale := range uuidLocaleMap {
+			err, enValueName := s.getEnName(ctx, locale)
+			if err != nil {
+				return errors.WithMessage(errors.New("翻译失败"), err.Error())
+			}
+			var erpValueName string
+			if v, ok := uuidAttributeMap[uuid]; !ok { // 新增属性值
+				erpValueName := company.Name + "-" + enValueName
+				uuidErpValueNameMap[uuid] = erpValueName
+			} else { // 已存在属性值，使用erpnext_attribute_value
+				erpValueName = v.ErpnextAttributeValue
+			}
+			valueList = append(valueList, req.SaveAttributeValueReq{
+				AttributeValue: erpValueName,
+				Abbr:           enValueName, // 总是获取最新别名
+			})
+		}
+		// 新属性组别名
+		err, enGroupName := s.getEnName(ctx, editReq.LocaleName)
+		if err != nil {
+			return errors.WithMessage(errors.New("翻译失败"), err.Error())
+		}
+		err = erp.NewIErpSrv(s.dbm).SaveAttribute(ctx.GetContext(), req.SaveAttributeReq{
+			SiteCode:           companySetting.ErpnextSiteCode,
+			CompanyAbbr:        companySetting.ErpnextCompanyAbbr,
+			Branch:             companySetting.ErpnextBranchName,
+			AttributeName:      attributeGroup.ErpnextAttributeGroupName,
+			AliasName:          enGroupName,
+			AttributeValueList: valueList,
+		})
+		if err != nil {
+			return errors.WithMessage(errors.New("同步属性值到erp失败"), err.Error())
+		}
+		for uuid, erpValueName := range uuidErpValueNameMap {
+			err = db.Model(&model.ProductAttribute{}).Where("uuid = ?", uuid).Update("erpnext_attribute_value", erpValueName).Error
+			if err != nil {
+				return errors.WithMessage(errors.New("保存erp属性值失败"), err.Error())
+			}
+		}
 	}
 
 	return err
