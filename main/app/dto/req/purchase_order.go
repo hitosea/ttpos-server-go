@@ -31,9 +31,6 @@ func (r *PurchaseOrderCreateReq) Validate() error {
 		if item.MaterialUuid == 0 {
 			return errors.New("物品ID不能为空")
 		}
-		if item.Num <= 0 {
-			return errors.New("物品数量不能为0")
-		}
 	}
 	return nil
 }
@@ -41,7 +38,7 @@ func (r *PurchaseOrderCreateReq) Validate() error {
 // PurchaseOrderItemCreateReq 采购订单物品明细创建请求
 type PurchaseOrderItemCreateReq struct {
 	MaterialUuid uint64  `json:"material_uuid" binding:"required,min=1"` // 物品ID
-	Num          float64 `json:"num" binding:"required,gt=0,lte=99999"`  // 数量
+	Num          float64 `json:"num"`                                    // 数量
 }
 
 // PurchaseOrderUpdateReq 更新采购订单请求
@@ -66,9 +63,6 @@ func (r *PurchaseOrderUpdateReq) Validate() error {
 		if item.MaterialUuid == 0 {
 			return errors.New("物品ID不能为空")
 		}
-		if item.Num <= 0 {
-			return errors.New("物品数量不能为0")
-		}
 	}
 	return nil
 }
@@ -76,7 +70,7 @@ func (r *PurchaseOrderUpdateReq) Validate() error {
 // PurchaseOrderItemUpdateReq 采购订单商品明细更新请求
 type PurchaseOrderItemUpdateReq struct {
 	MaterialUuid uint64  `json:"material_uuid" binding:"required,min=1"` // 物品ID
-	Num          float64 `json:"num" binding:"required,gt=0,lte=99999"`  // 数量
+	Num          float64 `json:"num"`                                    // 数量
 }
 
 // PurchaseOrderDetailReq 采购订单详情请求
