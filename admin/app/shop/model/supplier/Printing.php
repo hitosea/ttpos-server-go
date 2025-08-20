@@ -3,6 +3,7 @@
 namespace app\shop\model\supplier;
 
 use app\common\model\supplier\Printing as PrintingModel;
+use think\facade\Cache;
 
 /**
  * 菜品打印模型
@@ -115,16 +116,29 @@ class Printing extends PrintingModel
      * 修改
      */
     public function edit($data, $index = 0)
-    {
-        $detail = $this->where('name', '=', $data['name'])->where('id', '<>', $this['id'])->find();
-        if ($detail) {
-            $this->error = '名称已存在';
-            return false;
-        }
-  
+    {  
+        $lockKey = sprintf("PRINTING_EDIT_LOCK_%s_%d", self::$app_id, $this['id']);
+        $lockValue = uniqid('lock_', true);
+
         // 开启事务
         $this->startTrans();
         try {
+            // 检查锁是否已存在
+            if (Cache::has($lockKey)) {
+                $this->error = '数据处理中，请稍后重试';
+                return false;
+            }
+
+            // 设置锁，120秒过期
+            Cache::set($lockKey, $lockValue, 120);
+
+            // 名称已存在
+            $detail = $this->where('name', '=', $data['name'])->where('id', '<>', $this['id'])->find();
+            if ($detail) {
+                Cache::delete($lockKey);
+                $this->error = '名称已存在';
+                return false;
+            }
             // 物理删除打印机
             $this->printingItem()->withTrashed()->chunk(500, function ($items) {
                 foreach ($items as $item) {
@@ -192,9 +206,11 @@ class Printing extends PrintingModel
                 'print_mode_scene' => self::PRINT_MODE_SCENE_MAP[intval($data['print_select'])], // 打印场景
             ]);
             $this->commit();
+            Cache::delete($lockKey);
             return true;
         } catch (\Exception $th) {
             $this->rollback();
+            Cache::delete($lockKey);
             trace($th->getMessage());
             trace($th->getTraceAsString()); 
             // 

@@ -2185,4 +2185,5 @@ return [
     "套餐商品库存不足" => "Paket ürün stoğu yetersiz",
     "商家已授权" => "Satıcı yetkilendirildi",
     "ERPNext站点不存在" => "ERPNext sitesi mevcut değil",
+    "数据处理中，请稍后重试" => "Veri işleniyor, lütfen daha sonra tekrar deneyin",
 ];
