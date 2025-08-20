@@ -169,8 +169,9 @@ if [ $# -gt 0 ]; then
             echo -e "${OK} ${GreenBG} 执行数据库迁移文件 ${Font}"
             make migrate
             judge "数据库迁移文件执行"
-            cd ..
+            echo -e "${OK} ${GreenBG} 停止服务 ${Font}"
             $COMPOSE down
+            echo -e "${OK} ${GreenBG} 启动服务 ${Font}"
             $COMPOSE up -d --pull always
             judge "启动服务"
         else
