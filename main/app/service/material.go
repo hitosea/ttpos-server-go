@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"ttpos-bmp/app/ttpos-erp/api/manufacturing"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -663,6 +664,9 @@ func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomC
 			repository.WithPreload{
 				Query: "ProductPackage.MultiLanguageName",
 			},
+			repository.WithPreload{
+				Query: "ProductPackage.ProductUnit.MultiLanguageName",
+			},
 		),
 	)
 	if err != nil {
@@ -703,6 +707,7 @@ func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomC
 			BaseUnitUuid:           baseUnit.Uuid,
 			BaseUnitName:           baseUnit.Unit.MultiLanguageName.ToJson(),
 			BaseUnitConversionRate: materialUnit.ConversionRate,
+			Material:               material,
 		})
 	}
 
@@ -723,6 +728,31 @@ func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomC
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		if ctx.GetCompany().IsOpenErp() {
+			// 同步成本卡到erp
+			erpBomItemList := []*manufacturing.BomItem{}
+			for _, material := range materialList {
+				unitName := model.NewMultiLanguageName(material.UnitName)
+				erpBomItemList = append(erpBomItemList, &manufacturing.BomItem{
+					ItemCode: material.Material.Code,
+					Rate:     material.Material.Valuation,
+					Qty:      material.Num,
+					Uom:      unitName.EnName,
+				})
+			}
+			erpSrv := erp.NewIErpSrv(s.dbm)
+			erpBomResp, errErp := erpSrv.AddPorductBomCard(ctx, erp.ProductBomCardAddErpReq{
+				ItemCode: productBom.ErpCode,                                             // 商品编码
+				Quantity: float64(req.Num),                                               // 数量
+				Uom:      productBom.ProductPackage.ProductUnit.MultiLanguageName.EnName, // 单位
+				Items:    erpBomItemList,
+			})
+			if errErp != nil {
+				return errors.WithMessage(errErp)
+			}
+			productBomCard.ErpCode = erpBomResp.BomName // 记录erp成本卡编码
+		}
+
 		productBomCardRepo := repository.NewProductBomCardRepo(tx)
 		if err := productBomCardRepo.CreateProductBomCard(productBomCard); err != nil {
 			return errors.WithMessage(err, "创建成本卡失败")

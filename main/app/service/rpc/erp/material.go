@@ -68,12 +68,12 @@ func (s *erpSrv) AddMaterial(ctx context.Context, params req.MaterialAddErpReq) 
 
 type ProductBomCardAddErpReq struct {
 	ItemCode string                   `json:"item_code" binding:"required"` // 商品编码
-	Quantity float64                  `json:"quantity" binding:"required"`
-	Uom      string                   `json:"uom" binding:"required"`
-	Items    []*manufacturing.BomItem `json:"items" binding:"required"`
+	Quantity float64                  `json:"quantity" binding:"required"`  // 数量
+	Uom      string                   `json:"uom" binding:"required"`       // 单位
+	Items    []*manufacturing.BomItem `json:"items" binding:"required"`     // 物品列表
 }
 
-func (s *erpSrv) AddPorductBomCard(ctx context.Context, params ProductBomCardAddErpReq) (*item.ItemInfo, error) {
+func (s *erpSrv) AddPorductBomCard(ctx context.Context, params ProductBomCardAddErpReq) (*manufacturing.SaveBomResp, error) {
 	company := ctx.GetCompany()
 	companySetting := company.CompanySetting
 
@@ -100,5 +100,5 @@ func (s *erpSrv) AddPorductBomCard(ctx context.Context, params ProductBomCardAdd
 		return nil, err
 	}
 
-	return nil, nil
+	return response, nil
 }

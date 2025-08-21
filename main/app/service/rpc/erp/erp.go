@@ -4,6 +4,7 @@ import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-bmp/app/ttpos-erp/api/item"
+	"ttpos-bmp/app/ttpos-erp/api/manufacturing"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -35,9 +36,9 @@ type IErpSrv interface {
 	GetSupplierList(ctx cc.Context) (*buying.GetSupplierListResp, error)
 
 	// 物品
-	AddMaterial(ctx cc.Context, params req.MaterialAddErpReq) (*item.ItemInfo, error)         // 添加物品
-	AddPorductBomCard(ctx cc.Context, params ProductBomCardAddErpReq) (*item.ItemInfo, error) // 添加成本卡
-	AddProduct(ctx cc.Context, params req.ProductAddErpReq) (*item.ItemInfo, error)           // 添加商品
+	AddMaterial(ctx cc.Context, params req.MaterialAddErpReq) (*item.ItemInfo, error)                     // 添加物品
+	AddPorductBomCard(ctx cc.Context, params ProductBomCardAddErpReq) (*manufacturing.SaveBomResp, error) // 添加成本卡
+	AddProduct(ctx cc.Context, params req.ProductAddErpReq) (*item.ItemInfo, error)                       // 添加商品
 }
 type erpSrv struct {
 	dbm *database.DBManager
