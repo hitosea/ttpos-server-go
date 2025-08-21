@@ -316,6 +316,7 @@ func (s *sItem) addItemGroupSpecificFields(ctx context.Context, req *item.ItemIn
 	} else if req.ItemGroup == item.ItemGroup_Products {
 		// 商品特定字段
 		newItem["custom_specification"] = req.ItemSpecification
+		newItem["is_stock_item"] = 0
 	}
 
 	// 设置默认仓库
@@ -327,7 +328,7 @@ func (s *sItem) addRawMaterialFields(req *item.ItemInfo, newItem g.Map) {
 	// 期初库存设置
 	if req.OpeningStock > 0 {
 		newItem["is_stock_item"] = 1
-		newItem["opening_stock"] = float64(req.OpeningStock)
+		newItem["opening_stock"] = req.OpeningStock
 		newItem["valuation_rate"] = req.ValuationRate
 	}
 

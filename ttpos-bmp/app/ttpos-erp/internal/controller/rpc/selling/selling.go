@@ -67,3 +67,21 @@ func (c *Controller) CreatePaymentAccount(ctx context.Context, req *selling.Crea
 	// 返回成功响应
 	return rpc.ApiSuccess("创建支付账户成功"), nil
 }
+
+func (*Controller) OpenPosEntry(ctx context.Context, req *selling.OpenPosEntryReq) (*api.ResponseInfo, error) {
+	// 调用服务层创建开帐
+	resp, err := service.Selling().OpenPosEntry(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccessWithData("创建开帐成功", resp), nil
+}
+
+func (*Controller) ClosePosEntry(ctx context.Context, req *selling.ClosePosEntryReq) (*api.ResponseInfo, error) {
+	// 调用服务层创建关帐
+	resp, err := service.Selling().ClosePosEntry(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccessWithData("创建关帐成功", resp), nil
+}
