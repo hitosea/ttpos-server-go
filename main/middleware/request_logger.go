@@ -44,7 +44,7 @@ func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 		fmt.Println("客户端IP: ", clientIP)
 		fmt.Println("User-Agent: ", userAgent)
 		// 打印请求头
-		fmt.Println("=== 请求头 ===")
+		fmt.Println("------ 请求头 ------")
 		for name, values := range c.Request.Header {
 			for _, value := range values {
 				fmt.Printf("%s: %s\n", name, value)
@@ -52,7 +52,7 @@ func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 		}
 		// 打印URL查询参数
 		if len(c.Request.URL.RawQuery) > 0 {
-			fmt.Println("=== URL查询参数 ===")
+			fmt.Println("------ URL查询参数 ------")
 			queryParams, _ := url.ParseQuery(c.Request.URL.RawQuery)
 			for key, values := range queryParams {
 				for _, value := range values {
@@ -62,7 +62,7 @@ func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 		}
 		// 打印路径参数
 		if len(c.Params) > 0 {
-			fmt.Printf("=== 路径参数 ===\n")
+			fmt.Printf("------ 路径参数 ------\n")
 			for _, param := range c.Params {
 				fmt.Printf("%s: %s\n", param.Key, param.Value)
 			}
@@ -75,7 +75,7 @@ func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 				c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
 				contentType := c.GetHeader("Content-Type")
-				fmt.Println("=== 请求体 (Content-Type: ", contentType, ") ===")
+				fmt.Println("------ 请求体 (Content-Type: ", contentType, ") ------")
 
 				switch {
 				case strings.Contains(contentType, "application/json"):
@@ -166,13 +166,13 @@ func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 		endTime := time.Now()
 		duration := endTime.Sub(startTime)
 
-		fmt.Println("\n================================= 响应结果 =================================")
+		fmt.Println("\n------ 响应结果 ------")
 		fmt.Println("响应时间: ", endTime.Format("2006-01-02 15:04:05"))
 		fmt.Println("处理耗时: ", duration)
 		fmt.Println("状态码: ", c.Writer.Status())
 
 		// 打印响应头
-		fmt.Println("=== 响应头 ===")
+		fmt.Println("------ 响应头 ------")
 		for name, values := range c.Writer.Header() {
 			for _, value := range values {
 				fmt.Printf("%s: %s\n", name, value)
@@ -181,7 +181,7 @@ func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 
 		// 打印响应体
 		if responseBody.Len() > 0 {
-			fmt.Println("=== 响应体 ===")
+			fmt.Println("------ 响应体 ------")
 			responseData := responseBody.Bytes()
 
 			// 检查Content-Type来决定如何格式化输出
@@ -223,7 +223,7 @@ func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 				}
 			}
 		} else {
-			fmt.Println("=== 响应体为空 ===")
+			fmt.Println("------ 响应体为空 ------")
 		}
 
 		fmt.Println("================================= 请求结束 =================================")
