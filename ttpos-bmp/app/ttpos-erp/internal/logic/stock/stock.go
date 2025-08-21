@@ -367,14 +367,23 @@ func (s *sStock) checkAttributeExists(ctx context.Context, attributeName string)
 
 // updateExistingAttribute 更新现有属性
 func (s *sStock) updateExistingAttribute(ctx context.Context, req *item.AttributeInfo, companyName string) error {
+
+	itemAttribute := &erp.ItemAttribute{
+		CustomAlias:         req.AliasName,
+		CustomCompany:       companyName,
+		CustomBranch:        req.Branch,
+		ItemAttributeValues: make([]erp.ItemAttributeValue, 0),
+	}
+	for _, value := range req.AttributeValueList {
+		itemAttribute.ItemAttributeValues = append(itemAttribute.ItemAttributeValues, erp.ItemAttributeValue{
+			AttributeValue: value.AttributeValue,
+			Abbr:           value.Abbr,
+		})
+	}
 	_, err := service.Document().Update(ctx, &erp.ErpReq{
 		DocType: "Item Attribute",
 		Name:    req.AttributeName,
-	}, &g.Map{
-		"custom_alias":   req.AliasName,
-		"custom_company": companyName,
-		"custom_branch":  req.Branch,
-	})
+	}, itemAttribute)
 
 	if err != nil {
 		return gerror.Wrapf(err, "更新属性信息失败")
@@ -385,12 +394,20 @@ func (s *sStock) updateExistingAttribute(ctx context.Context, req *item.Attribut
 
 // createNewAttribute 创建新属性
 func (s *sStock) createNewAttribute(ctx context.Context, req *item.AttributeInfo, companyName string) error {
-	_, err := service.Document().Create(ctx, "Item Attribute", &g.Map{
-		"attribute_name": req.AttributeName,
-		"custom_alias":   req.AliasName,
-		"custom_company": companyName,
-		"custom_branch":  req.Branch,
-	})
+	itemAttribute := &erp.ItemAttribute{
+		AttributeName:       req.AttributeName,
+		CustomAlias:         req.AliasName,
+		CustomCompany:       companyName,
+		CustomBranch:        req.Branch,
+		ItemAttributeValues: make([]erp.ItemAttributeValue, 0),
+	}
+	for _, value := range req.AttributeValueList {
+		itemAttribute.ItemAttributeValues = append(itemAttribute.ItemAttributeValues, erp.ItemAttributeValue{
+			AttributeValue: value.AttributeValue,
+			Abbr:           value.Abbr,
+		})
+	}
+	_, err := service.Document().Create(ctx, "Item Attribute", itemAttribute)
 
 	if err != nil {
 		return gerror.Wrapf(err, "创建属性失败")

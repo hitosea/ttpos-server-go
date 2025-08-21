@@ -114,3 +114,45 @@ type UomConversionDetail struct {
 	Parenttype       string  `json:"parenttype,omitempty"`        // 父级类型
 	Doctype          string  `json:"doctype,omitempty"`           // 单据类型
 }
+
+// ItemAttribute 结构体定义
+// 用于表示商品属性的完整信息
+type ItemAttribute struct {
+	Name                string               `json:"name,omitempty"`                  // 商品属性名称
+	Owner               string               `json:"owner,omitempty"`                 // 所有者
+	Creation            string               `json:"creation,omitempty"`              // 创建时间
+	Modified            string               `json:"modified,omitempty"`              // 修改时间
+	ModifiedBy          string               `json:"modified_by,omitempty"`           // 修改者
+	Docstatus           int                  `json:"docstatus,omitempty"`             // 文档状态
+	Idx                 int                  `json:"idx,omitempty"`                   // 索引
+	AttributeName       string               `json:"attribute_name,omitempty"`        // 属性名称
+	NumericValues       int                  `json:"numeric_values,omitempty"`        // 是否为数值型属性
+	Disabled            int                  `json:"disabled,omitempty"`              // 是否禁用
+	FromRange           float64              `json:"from_range,omitempty"`            // 范围起始值
+	Increment           float64              `json:"increment,omitempty"`             // 增量值
+	ToRange             float64              `json:"to_range,omitempty"`              // 范围结束值
+	Doctype             string               `json:"doctype,omitempty"`               // 文档类型
+	ItemAttributeValues []ItemAttributeValue `json:"item_attribute_values,omitempty"` // 商品属性值列表
+	//自定义字段
+	CustomCompany string `json:"custom_company,omitempty"` // 自定义公司
+	CustomBranch  string `json:"custom_branch,omitempty"`  // 自定义分公司
+	CustomAlias   string `json:"custom_alias,omitempty"`   // 自定义别名
+}
+
+// ItemAttributeValue 结构体定义
+// 用于表示商品属性中的属性值信息
+type ItemAttributeValue struct {
+	Name           string `json:"name,omitempty"`            // 名称
+	Owner          string `json:"owner,omitempty"`           // 所有者
+	Creation       string `json:"creation,omitempty"`        // 创建时间
+	Modified       string `json:"modified,omitempty"`        // 修改时间
+	ModifiedBy     string `json:"modified_by,omitempty"`     // 修改者
+	Docstatus      int    `json:"docstatus,omitempty"`       // 文档状态
+	Idx            int    `json:"idx,omitempty"`             // 索引
+	AttributeValue string `json:"attribute_value,omitempty"` // 属性值
+	Abbr           string `json:"abbr,omitempty"`            // 缩写
+	Parent         string `json:"parent,omitempty"`          // 父级
+	Parentfield    string `json:"parentfield,omitempty"`     // 父级字段
+	Parenttype     string `json:"parenttype,omitempty"`      // 父级类型
+	Doctype        string `json:"doctype,omitempty"`         // 文档类型
+}

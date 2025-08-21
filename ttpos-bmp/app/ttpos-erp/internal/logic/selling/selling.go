@@ -5,11 +5,14 @@ import (
 	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
+
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/gtime"
+	"github.com/gogf/gf/v2/util/gconv"
 )
 
 var (
@@ -74,17 +77,6 @@ func (s *sSelling) GetPosProfileList(ctx context.Context, req *selling.PosProfil
 
 	}
 	return
-}
-
-// 过时的
-func (s *sSelling) CreateDefaultModePaymentAccount(ctx context.Context, req *setup.CreateModePaymentAccountInp) (err error) {
-	_, err = service.Rpc().Execute(ctx, &erp.ErpReq{
-		Method: "init_shop_cash_account",
-	}, req)
-	if err != nil {
-		return gerror.Wrapf(err, "创建默认支付账户失败")
-	}
-	return nil
 }
 
 func (s *sSelling) CreateModePaymentAccount(ctx context.Context, req *setup.CreateModePaymentAccountInp) (err error) {
@@ -164,4 +156,121 @@ func (s *sSelling) CreatePosProfile(ctx context.Context, req *setup.CreatePosPro
 	}
 	j.Get("data").Scan(posProfile)
 	return posProfile, nil
+}
+
+// OpenPosEntry 开帐
+func (s *sSelling) OpenPosEntry(ctx context.Context, req *selling.OpenPosEntryReq) (*selling.OpenPosEntryResp, error) {
+	// 检查pos profile是否开帐
+	opening, err := s.IsProfileOpening(ctx, req.PosProfileName)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询pos profile是否开帐失败")
+	}
+	if opening {
+		return nil, gerror.New("pos profile已开帐")
+	}
+	companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "根据公司缩写查询公司名称失败")
+	}
+	openDetails := make([]erp.POSOpeningEntryDetail, 0)
+	for _, detail := range req.OpenPosEntryDetail {
+		openDetails = append(openDetails, erp.POSOpeningEntryDetail{
+			ModeOfPayment: detail.ModeOfPayment,
+			OpeningAmount: detail.OpeningAmount,
+		})
+	}
+	reqInfo := &erp.POSOpeningEntry{
+		PosProfile:      req.PosProfileName,
+		Company:         companyName,
+		PeriodStartDate: gtime.New(req.PeriodStartDate).Format("Y-m-d H:m:s"), //我在这里先挖坑，后面再改
+		//PostingDate:     gtime.New(req.PeriodStartDate).Format("Y-m-d"),       //我在这里先挖坑，后面再改
+		User:           req.CashierEmail,
+		BalanceDetails: openDetails,
+	}
+	resp, err := service.Document().Create(ctx, "POS Opening Entry", reqInfo)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建OpenPosEntry失败")
+	}
+	// 解析响应数据
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析OpenPosEntry响应失败")
+	}
+	res := &erp.POSOpeningEntry{}
+	gconv.Scan(j.Get("data"), res)
+	//res.Name = j.Get("data.name").String()
+
+	//提交POS Opening Entry
+	_, err = service.Document().ChangeDocStatus(ctx, "POS Opening Entry", res.Name, 1)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "提交POS Opening Entry失败")
+	}
+
+	return &selling.OpenPosEntryResp{
+		OpenPosEntryInfo: &selling.OpenPosEntryInfo{
+			OpenPosEntryName:   res.Name,
+			PosProfileName:     res.PosProfile,
+			CashierEmail:       res.User,
+			CompanyAbbr:        req.CompanyAbbr,
+			OpenPosEntryDetail: req.OpenPosEntryDetail,
+		},
+	}, nil
+}
+
+// ClosePosEntry 关帐
+func (*sSelling) ClosePosEntry(ctx context.Context, req *selling.ClosePosEntryReq) (*selling.ClosePosEntryResp, error) {
+
+	closeDetails := make([]erp.POSPaymentReconciliation, 0)
+	for _, detail := range req.ClosePosEntryDetail {
+		closeDetails = append(closeDetails, erp.POSPaymentReconciliation{
+			ModeOfPayment: detail.ModeOfPayment,
+			ClosingAmount: detail.ClosingAmount,
+			OpeningAmount: detail.OpeningAmount,
+		})
+	}
+	reqInfo := &erp.POSCloseEntry{
+		PosOpeningEntry:       req.PosOpenEntryName,
+		PosProfile:            req.PosProfileName,
+		PeriodEndDate:         gtime.New(req.PeriodEndDate).Format("Y-m-d H:m:s"), //我在这里先挖坑，后面再改
+		PaymentReconciliation: closeDetails,
+	}
+	resp, err := service.Document().Create(ctx, "POS Closing Entry", reqInfo)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建ClosePosEntry失败")
+	}
+	// 解析响应数据
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析ClosePosEntry响应失败")
+	}
+	res := &erp.POSCloseEntry{}
+	gconv.Scan(j.Get("data"), res)
+	//res.Name = j.Get("data.name").String()
+
+	//提交POS Close Entry
+	_, err = service.Document().ChangeDocStatus(ctx, "POS Closing Entry", res.Name, 1)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "提交POS Close Entry失败")
+	}
+
+	return &selling.ClosePosEntryResp{
+		ClosePosEntryInfo: &selling.ClosePosEntryInfo{
+			ClosePosEntryName:   res.Name,
+			PosProfileName:      res.PosProfile,
+			ClosePosEntryDetail: req.ClosePosEntryDetail,
+		},
+	}, nil
+}
+
+// IsProfileOpening 查询pos profile是否开帐
+func (s *sSelling) IsProfileOpening(ctx context.Context, posProfile string) (bool, error) {
+	count, err := service.Doctype().Count(ctx, &erp.ErpReq{
+		DocType: "POS Opening Entry",
+	}, &erp.RequestParams{
+		Filters: [][]string{{"pos_profile", "=", posProfile}, {"status", "=", "Open"}},
+	})
+	if err != nil {
+		return false, gerror.Wrapf(err, "查询pos profile是否开帐失败")
+	}
+	return count > 0, nil
 }
