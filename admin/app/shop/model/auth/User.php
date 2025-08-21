@@ -205,6 +205,8 @@ class User extends UserModel
             ];
             if (empty($data['password'])) {
                 unset($arr['password']);
+            } else {
+                $arr['password_change_time'] = time();
             }
 
             $where['uuid'] = $data['shop_user_id'];

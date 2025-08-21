@@ -135,6 +135,7 @@ func (s *staffSrv) UpdateStaff(ctx context.Context, updateReq req.UpdateStaffReq
 	}
 	if updateReq.Password != "" {
 		update["password"] = utils.EncryptPassword(updateReq.Password)
+		update["password_change_time"] = time.Now().Unix()
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
