@@ -2186,4 +2186,8 @@ return [
     "商家已授权" => "Satıcı yetkilendirildi",
     "ERPNext站点不存在" => "ERPNext sitesi mevcut değil",
     "数据处理中，请稍后重试" => "Veri işleniyor, lütfen daha sonra tekrar deneyin",
+    "套餐%s已使用此规格，不可删除" => "Paket %s bu özelliği kullanıyor, silinemez",
+    "更新支付方式时间失败" => "Ödeme yöntemi güncelleme zamanı başarısız oldu",
+    "调用erpnext支付方式添加接口失败" => "erpnext ödeme yöntemi ekleme arayüzü çağrısı başarısız oldu",
+    "操作失败：" => "İşlem başarısız:",
 ];

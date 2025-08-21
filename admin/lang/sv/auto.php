@@ -2186,4 +2186,8 @@ return [
     "商家已授权" => "Handlare auktoriserad",
     "ERPNext站点不存在" => "ERPNext-sidan finns inte",
     "数据处理中，请稍后重试" => "Data bearbetas, försök igen senare",
+    "套餐%s已使用此规格，不可删除" => "Paketet %s använder denna specifikation och kan inte tas bort",
+    "更新支付方式时间失败" => "Misslyckades med att uppdatera betalningsmetodens tid",
+    "调用erpnext支付方式添加接口失败" => "Misslyckades med att anropa erpnexts gränssnitt för att lägga till betalningsmetod",
+    "操作失败：" => "Åtgärden misslyckades:",
 ];

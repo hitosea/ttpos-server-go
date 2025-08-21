@@ -4,6 +4,7 @@ namespace app\shop\model\product;
 
 use help\ValidateHelp;
 use app\common\model\product\ProductBom;
+use app\common\model\product\ProductPackageGroupItem;
 use app\common\service\websocket\Websocket;
 use app\common\model\store\MultiLanguageName;
 use app\common\model\product\Spec as SpecModel;
@@ -172,9 +173,27 @@ class Spec extends SpecModel
             $min_stock_num = $stock['min_stock_num'] ?: Feed::MAX_MATERIAL_NUM;
             // 删除变动的关系
             if (!empty($delete_product_ids)) {
-                $list = ProductBom::where('product_flavor_uuid', $spec_id)->whereIn('product_package_uuid', $delete_product_ids)->select();
-                foreach ($list as $item) {
-                    $item->delete(); // 强制删除
+                $packageNames = [];
+                $bomIds = ProductBom::where('product_flavor_uuid', $spec_id)->whereIn('product_package_uuid', $delete_product_ids)->column('uuid');
+                $packageGroupItems = ProductPackageGroupItem::with([
+                    'productPackageGroup' => [
+                        'product'
+                    ]
+                ])->whereIn('product_bom_uuid', $bomIds)->select();
+                foreach ($packageGroupItems as $packageGroupItem) {
+                    $name = $packageGroupItem['productPackageGroup']['product']['product_name_text'];
+                    if (!in_array($name, $packageNames)) {
+                        $packageNames[] = "【{$name}】";
+                    }
+                }
+                if (!empty($packageNames)) {
+                    $this->error = sprintf(__('套餐%s已使用此规格，不可删除'), implode('', $packageNames));
+                    return false;
+                }
+                if (!ProductBom::destroy(function ($query) use ($spec_id, $delete_product_ids) {
+                    $query->where('product_flavor_uuid', $spec_id)->whereIn('product_package_uuid', $delete_product_ids);
+                })) {
+                    return false;
                 }
             }
             // 添加新关系

@@ -2194,4 +2194,8 @@ return [
     "商家已授权" => "Händler autorisiert",
     "ERPNext站点不存在" => "ERPNext-Seite existiert nicht",
     "数据处理中，请稍后重试" => "Daten werden verarbeitet, bitte versuchen Sie es später erneut",
+    "套餐%s已使用此规格，不可删除" => "Paket %s verwendet diese Spezifikation und kann nicht gelöscht werden",
+    "更新支付方式时间失败" => "Aktualisierung der Zahlungsart-Zeit fehlgeschlagen",
+    "调用erpnext支付方式添加接口失败" => "Aufruf der erpnext-Schnittstelle zum Hinzufügen der Zahlungsmethode fehlgeschlagen",
+    "操作失败：" => "Vorgang fehlgeschlagen:",
 ];
