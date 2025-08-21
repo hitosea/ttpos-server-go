@@ -114,7 +114,7 @@
         >
           <numInput
             :min="0"
-            :max="9999999"
+            :max="100000000"
             :precision="2"
             class="max-w460"
             :placeholder="$t('请输入金额')"
@@ -176,7 +176,7 @@
               },
             ]"
           >
-            <numInput :min="0" :max="9999999" :precision="2" class="max-w460" :placeholder="$t('请输入积分赠送')" v-model="form.shopping_gift_rules[1].value"></numInput>
+            <numInput :min="0" :max="100000000" :precision="2" class="max-w460" :placeholder="$t('请输入积分赠送')" v-model="form.shopping_gift_rules[1].value"></numInput>
             <span> {{ $t('积分/人') }}</span>
           </el-form-item>
         </template>
@@ -199,7 +199,7 @@
               },
             ]"
           >
-            <numInput :min="0" :max="9999999" :precision="2" class="max-w460" :placeholder="$t('请输入积分赠送')" v-model="item.value"></numInput>
+            <numInput :min="0" :max="100000000" :precision="2" class="max-w460" :placeholder="$t('请输入积分赠送')" v-model="item.value"></numInput>
             <span> {{ $t('积分/人') }}</span>
             <div class="lh18 mt10 gray9">
               <p> {{ $t('注：请输入大于0的数字') }}</p>
@@ -243,7 +243,7 @@
 
       <template v-if="form.exchange.open_points_exchange == 1">
         <el-form-item :label="$t('每积分抵扣应付金额')">
-          <numInput :min="0" :max="9999999" :precision="2" class="max-w460" :placeholder="$t('请输入')" v-model="form.exchange.points_exchange_rate"></numInput>
+          <numInput :min="0" :max="100000000" :precision="2" class="max-w460" :placeholder="$t('请输入')" v-model="form.exchange.points_exchange_rate"></numInput>
         </el-form-item>
 
         <el-form-item :label="$t('是否自动抵扣')">
