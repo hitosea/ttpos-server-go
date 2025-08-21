@@ -117,7 +117,7 @@
       </div>
     </el-form-item>
     <el-form-item v-if="form.reward_type == 1" for="no_click" :label="$t('每次赠送积分')">
-      <numInput :min="0.01" :max="9999999" :precision="2" :disabled="status == 1" v-model="form.reward_value" :placeholder="$t('请输入赠送积分数量')"></numInput>
+      <numInput :min="0.01" :max="100000000" :precision="2" :disabled="status == 1" v-model="form.reward_value" :placeholder="$t('请输入赠送积分数量')"></numInput>
       <div class="gray9">{{ $t('注：满足设置条件规则后，每次所赠送的积分数量') }}</div>
     </el-form-item>
     <el-form-item for="no_click" :label="$t('发送短信通知')" prop="is_send_sms" :rules="[{ required: true, message: $t('请选择是否发送短信通知') }]">

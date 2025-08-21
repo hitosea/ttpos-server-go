@@ -168,7 +168,7 @@
                 <el-input-number
                   :controls="false"
                   :min="0"
-                  :max="1000000"
+                  :max="100000000"
                   @change="numChange(index)"
                   style="width: 200px !important"
                   :placeholder="$t('请输入价格')"
