@@ -299,7 +299,7 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 	unitList := []req.MaterialUomReq{}
 	// 创建非基准单位 material_unit
 	for _, unit := range request.UnitList {
-		productUnit, err := repository.NewProductRepo(tx).GetProductUnitByUnitUuid(unit.UnitUuid)
+		productUnit, err := repository.NewProductRepo(tx).GetProductUnitByUnitUuid(unit.Uuid)
 		if err != nil {
 			return nil, nil, errors.WithMessage(err, "获取产品单位失败")
 		}
@@ -316,7 +316,7 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 			MaterialUuid:   materialUuid,
 			Unit:           productUnit,
 		})
-		unitMap[unit.UnitUuid] = materialUnitUuid
+		unitMap[unit.Uuid] = materialUnitUuid
 
 		unitList = append(unitList, req.MaterialUomReq{
 			Uom:            productUnit.ErpnextUom,
@@ -406,8 +406,8 @@ func (s *materialSrv) EditMaterial(ctx context.Context, req req.MaterialEditReq)
 			exitUnitMap[unit.UnitUuid] = true // 单位ID 是否存在
 		}
 		for _, unit := range req.UnitList {
-			if _, ok := exitUnitMap[unit.UnitUuid]; !ok {
-				productUnit, err := repository.NewProductRepo(tx).GetProductUnitByUnitUuid(unit.UnitUuid)
+			if _, ok := exitUnitMap[unit.Uuid]; !ok {
+				productUnit, err := repository.NewProductRepo(tx).GetProductUnitByUnitUuid(unit.Uuid)
 				if err != nil {
 					return errors.WithMessage(err, "获取产品单位失败")
 				}
@@ -421,7 +421,7 @@ func (s *materialSrv) EditMaterial(ctx context.Context, req req.MaterialEditReq)
 				if err != nil {
 					return errors.WithMessage(err, "创建原料单位失败")
 				}
-				unitMap[unit.UnitUuid] = materialUnitUuid
+				unitMap[unit.Uuid] = materialUnitUuid
 			} else {
 				return errors.New("非基准单位已存在")
 			}

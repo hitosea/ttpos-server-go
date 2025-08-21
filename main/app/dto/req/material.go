@@ -61,7 +61,7 @@ type MaterialUomReq struct {
 
 // MaterialUnitReq 物品单位请求
 type MaterialUnitReq struct {
-	UnitUuid       uint64  `json:"unit_uuid" binding:"required"`             // 单位UUID
+	Uuid           uint64  `json:"uuid" binding:"required"`                  // 单位UUID
 	ConversionRate float64 `json:"conversion_rate" binding:"required,min=0"` // 转换率
 }
 
