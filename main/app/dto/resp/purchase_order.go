@@ -135,11 +135,14 @@ type PurchaseReceiptOrderListResp struct {
 // PurchaseReceiptOrderInfo 收货单信息
 type PurchaseReceiptOrderInfo struct {
 	Uuid              uint64 `json:"uuid"`                // 收货单ID
-	Status            int    `json:"status"`              // 状态
+	Status            int    `json:"status"`              // 状态 0-待收货 1-已收货 2-已取消
 	OrderNo           string `json:"order_no"`            // 订单编号
+	ErpOrderNo        string `json:"erp_order_no"`        // ERP收货单号
 	Num               int    `json:"num"`                 // 物品数量
 	ExpectArrivalTime int    `json:"expect_arrival_time"` // 期望到货日期
 	ReceiveTime       int    `json:"receive_time"`        // 收货日期
+	CancelTime        int    `json:"cancel_time"`         // 取消时间
+	CreateTime        int    `json:"create_time"`         // 创建时间
 }
 
 // PurchaseReceiptItemInfo 收货明细信息

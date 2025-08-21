@@ -146,36 +146,60 @@
   const otherGroupNames = ref([]);
 
   const nowStock = computed(() => {
-    // 如果有商品组的时候，列出所有商品库存除以数量的值选最小的值，如果是小数向下取整，如果没有商品组的时候返回0，如果商品数量为null则返回0
+    // 计算规则：相同商品在不同分组中的数量先合并相加，然后用该商品库存除以合并后的需求数量，最后取所有商品中的最小值，向下取整
 
     // 如果没有商品组或者商品组为空，返回0
     if (!form.model.package_group || form.model.package_group.length === 0) {
       return 0;
     }
 
+    // 汇总相同商品的需求数量与库存
+    const productDemandMap = new Map(); // key: product_id, value: { needTotal, stock }
+
+    form.model.package_group.forEach((group) => {
+      if (!group.product_list || group.product_list.length === 0) return;
+      group.product_list.forEach((product) => {
+        // 忽略数量为0或空的商品
+        if (!product.num || product.num <= 0) return;
+
+        const productId = product.product_id;
+        if (productId === null || productId === undefined) return;
+
+        const prev = productDemandMap.get(productId) || { needTotal: 0, stock: undefined };
+        const needTotal = prev.needTotal + Number(product.num || 0);
+
+        // 记录库存（取最小库存以更为保守，避免不同条目库存不一致导致的高估）
+        let stock = prev.stock;
+        if (product.stock_num !== null && product.stock_num !== undefined && product.stock_num >= 0) {
+          stock = stock === undefined ? Number(product.stock_num) : Math.min(Number(stock), Number(product.stock_num));
+        }
+
+        productDemandMap.set(productId, { needTotal, stock });
+      });
+    });
+
+    // 如果没有有效的合并数据，返回0
+    if (productDemandMap.size === 0) {
+      return 0;
+    }
+
+    // 计算每个商品的可售套餐数，取最小值
     let minStock = Infinity;
     let hasValidProduct = false;
 
-    // 遍历所有商品组
-    form.model.package_group.forEach((group) => {
-      if (group.product_list && group.product_list.length > 0) {
-        group.product_list.forEach((product) => {
-          // 如果商品数量为null、0或者不存在，跳过此商品
-          if (!product.num || product.num <= 0) {
-            return;
-          }
+    for (const [, info] of productDemandMap.entries()) {
+      const need = Number(info.needTotal || 0);
+      // 需求必须大于0
+      if (need <= 0) continue;
+      // 库存必须为有效数字
+      if (info.stock === undefined || info.stock === null || isNaN(Number(info.stock)) || Number(info.stock) < 0) continue;
 
-          // 如果库存数量存在且有效
-          if (product.stock_num !== null && product.stock_num !== undefined && product.stock_num >= 0) {
-            const stockRatio = product.stock_num / product.num;
-            minStock = Math.min(minStock, stockRatio);
-            hasValidProduct = true;
-          }
-        });
-      }
-    });
+      const stockRatio = Number(info.stock) / need;
+      minStock = Math.min(minStock, stockRatio);
+      hasValidProduct = true;
+    }
 
-    // 如果没有有效商品，返回0
+    // 如果没有任何有效商品可参与计算，返回0
     if (!hasValidProduct || minStock === Infinity) {
       return 0;
     }

@@ -526,11 +526,11 @@ type CheckProductPackageGroupParam struct {
 }
 
 type CheckProductPackageGroupProductParam struct {
-	Uuid     uint64 `json:"uuid"`      // 套餐商品UUID
-	BomUuid  uint64 `json:"bom_uuid"`  // 商品BOM UUID
-	Num      int    `json:"num"`       // 商品数量
-	Sort     int    `json:"sort"`      // 商品排序
-	IsDelete bool   `json:"is_delete"` // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Uuid     uint64  `json:"uuid"`      // 套餐商品UUID
+	BomUuid  uint64  `json:"bom_uuid"`  // 商品BOM UUID
+	Num      float64 `json:"num"`       // 商品数量
+	Sort     int     `json:"sort"`      // 商品排序
+	IsDelete bool    `json:"is_delete"` // 是否删除, 如果是新增/编辑，则传false，删除时传true
 }
 
 type CheckProductPackageResult struct {
@@ -547,11 +547,11 @@ type CheckProductPackageGroupResult struct {
 }
 
 type CheckProductPackageGroupProductResult struct {
-	Uuid     uint64 `json:"uuid"`      // 套餐商品UUID
-	BomUuid  uint64 `json:"bom_uuid"`  // 商品BOM UUID
-	Num      int    `json:"num"`       // 商品数量
-	Sort     int    `json:"sort"`      // 商品排序
-	IsDelete bool   `json:"is_delete"` // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Uuid     uint64  `json:"uuid"`      // 套餐商品UUID
+	BomUuid  uint64  `json:"bom_uuid"`  // 商品BOM UUID
+	Num      float64 `json:"num"`       // 商品数量
+	Sort     int     `json:"sort"`      // 商品排序
+	IsDelete bool    `json:"is_delete"` // 是否删除, 如果是新增/编辑，则传false，删除时传true
 }
 
 func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, param CheckProductPackageParam) (*CheckProductPackageResult, error) {
