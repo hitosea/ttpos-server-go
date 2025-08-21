@@ -145,7 +145,7 @@
                   <el-input-number
                     :controls="false"
                     :min="0"
-                    :max="1000000"
+                    :max="100000000"
                     style="width: 160px !important; margin-top: 16px"
                     :placeholder="$t('请输入价格')"
                     v-model.number="item.price"
