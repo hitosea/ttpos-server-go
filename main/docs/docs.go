@@ -31643,8 +31643,7 @@ const docTemplate = `{
         "req.PurchaseOrderItemCreateReq": {
             "type": "object",
             "required": [
-                "material_uuid",
-                "num"
+                "material_uuid"
             ],
             "properties": {
                 "material_uuid": {
@@ -31654,16 +31653,14 @@ const docTemplate = `{
                 },
                 "num": {
                     "description": "数量",
-                    "type": "number",
-                    "maximum": 99999
+                    "type": "number"
                 }
             }
         },
         "req.PurchaseOrderItemUpdateReq": {
             "type": "object",
             "required": [
-                "material_uuid",
-                "num"
+                "material_uuid"
             ],
             "properties": {
                 "material_uuid": {
@@ -31673,8 +31670,7 @@ const docTemplate = `{
                 },
                 "num": {
                     "description": "数量",
-                    "type": "number",
-                    "maximum": 99999
+                    "type": "number"
                 }
             }
         },
@@ -38078,13 +38074,21 @@ const docTemplate = `{
                     "description": "基准单位名称",
                     "type": "string"
                 },
+                "locale_name": {
+                    "description": "物品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
                 "material_code": {
                     "description": "物品编码",
                     "type": "string"
                 },
-                "material_name": {
-                    "description": "物品名称",
-                    "type": "string"
+                "material_uuid": {
+                    "description": "物品ID",
+                    "type": "integer"
                 },
                 "num": {
                     "description": "申请数量",
