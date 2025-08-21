@@ -188,13 +188,6 @@
           });
         }
 
-        // 材料库存4位小数
-        if (form.single_select_list.length == 0 && form.model.type == 20) {
-          nextTick(() => {
-            form.model.sku[0].material_stock = Number(String(form.model.sku[0].material_stock).replace(/(\.\d{1,4})\d*/, '$1'));
-          });
-        }
-
         // 单规格材料数4位小数
         if (form.single_select_list.length > 0 && form.model.type == 10) {
           nextTick(() => {
