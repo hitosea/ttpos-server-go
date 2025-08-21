@@ -64,7 +64,16 @@ func (tc *TaggedCache) TagClear(tag string) error {
 		return nil
 	}
 
-	// 2. 删除所有相关的键
-	allKeys := append(keys, tagKey) // 包括标签键本身
-	return client.Del(tc.ctx, allKeys...).Err()
+	// 2. 移除该标签下的所有键
+	if err := client.SRem(tc.ctx, tagKey, keys).Err(); err != nil {
+		return err
+	}
+
+	// 3. 删除所有相关的键
+	if err := client.Del(tc.ctx, keys...).Err(); err != nil {
+		return err
+	}
+
+	// 4. 删除标签
+	return client.Del(tc.ctx, tagKey).Err()
 }

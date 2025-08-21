@@ -1213,6 +1213,7 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 			dbm,                    // 数据库管理器
 			service.NewLocaleSrv(), // 多语言服务
 			settingSrv,             // 设置服务
+			cache,
 		),
 		uploadFileSrv: service.NewUploadFileSrv(dbm),
 	}

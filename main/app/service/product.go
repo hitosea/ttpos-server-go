@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 	"slices"
 	"sort"
@@ -19,12 +20,14 @@ import (
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/duke-git/lancet/v2/convertor"
+	"github.com/duke-git/lancet/v2/cryptor"
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
@@ -101,17 +104,19 @@ type productSrv struct {
 	dbm        *database.DBManager // 数据库管理器
 	localeSrv  ILocaleSrv          // 多语言名称服务
 	settingSrv setting.ISrv        // 设置服务
+	cache      cache.Cache         // 缓存
 }
 
-func NewProductSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv) IProductSrv {
-	return NewProductSrvImpl(dbm, localeSrv, settingSrv)
+func NewProductSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, cache cache.Cache) IProductSrv {
+	return NewProductSrvImpl(dbm, localeSrv, settingSrv, cache)
 }
 
-func NewProductSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv) IProductSrv {
+func NewProductSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, cache cache.Cache) IProductSrv {
 	return &productSrv{
 		dbm:        dbm,
 		localeSrv:  localeSrv,
 		settingSrv: settingSrv,
+		cache:      cache,
 	}
 }
 
@@ -795,6 +800,12 @@ func (s *productSrv) AddProductShopCategory(ctx context.Context, addReq req.Prod
 		if err != nil {
 			return err
 		}
+		// 删除缓存
+		tag := cryptor.Md5String(fmt.Sprintf("category%d%d%d", ctx.GetCompanyUuid(), utils.IfInt(!addReq.IsSpecial, 1, 0), 1))
+		err = cache.NewTaggedCache(s.cache).TagClear(tag)
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 
@@ -877,6 +888,12 @@ func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.Pr
 			"name":        editReq.LocaleName.ToJson(),
 			"status":      editReq.Status,
 		}).Error
+		if err != nil {
+			return err
+		}
+		// 删除缓存
+		tag := cryptor.Md5String(fmt.Sprintf("category%d%d%d", ctx.GetCompanyUuid(), utils.IfInt(productCategory.IsSpecial == 0, 1, 0), 1))
+		err = cache.NewTaggedCache(s.cache).TagClear(tag)
 		if err != nil {
 			return err
 		}
@@ -1045,6 +1062,12 @@ func (s *productSrv) DeleteProductShopCategory(ctx context.Context, deleteReq re
 		err := tx.Model(&model.ProductCategory{}).Where("uuid = ?", deleteReq.Uuid).Updates(map[string]any{
 			"delete_time": time.Now().Unix(),
 		}).Error
+		if err != nil {
+			return err
+		}
+		// 删除缓存
+		tag := cryptor.Md5String(fmt.Sprintf("category%d%d%d", ctx.GetCompanyUuid(), utils.IfInt(productCategory.IsSpecial == 0, 1, 0), 1))
+		err = cache.NewTaggedCache(s.cache).TagClear(tag)
 		if err != nil {
 			return err
 		}

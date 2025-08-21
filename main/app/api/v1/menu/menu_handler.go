@@ -124,7 +124,7 @@ func RegisterMenuHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 	localeSrv := service.NewLocaleSrv()
 
-	productService := service.NewProductSrv(dbm, localeSrv, settingSrv)
+	productService := service.NewProductSrv(dbm, localeSrv, settingSrv, cache)
 	// 初始化处理器
 	wrapper := Handler{
 		productSrv: productService,
