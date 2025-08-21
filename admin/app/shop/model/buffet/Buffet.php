@@ -483,10 +483,10 @@ class Buffet extends BuffetModel
     private function alertFormData($data)
     {
         $limits = [
-            'price' => ['range' => [0, 1000000], 'message' => '价格必须在0到1000000之间'],
+            'price' => ['range' => [0, 100000000], 'message' => '价格必须在0到100000000之间'],
             'time_limit' => ['range' => [0, 999], 'message' => '用餐时间必须在0到999之间'],
             'sort' => ['range' => [0, 999], 'message' => '排序必须在0到999之间'],
-            'limit_num' => ['range' => [1, 999], 'message' => '限购数量必须在1到999之间'],
+            'limit_num' => ['range' => [1, 1000], 'message' => '限购数量必须在1到1000之间'],
         ];
         foreach ($limits as $key => $value) {
             if (array_key_exists($key, $data) && ($data[$key] < $value['range'][0] || $data[$key] > $value['range'][1])) {
