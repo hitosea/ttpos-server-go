@@ -25199,7 +25199,7 @@
                 }
             }
         },
-        "material_resp.MaterialListResp": {
+        "material_resp.MaterialListWithPaginationResp": {
             "type": "object",
             "properties": {
                 "list": {
@@ -25207,14 +25207,6 @@
                     "items": {
                         "$ref": "#/definitions/material_resp.Material"
                     }
-                }
-            }
-        },
-        "material_resp.MaterialListWithPaginationResp": {
-            "type": "object",
-            "properties": {
-                "list": {
-                    "$ref": "#/definitions/material_resp.MaterialListResp"
                 },
                 "meta": {
                     "$ref": "#/definitions/dto.PageResponse"
@@ -28861,7 +28853,7 @@
             "type": "object",
             "required": [
                 "conversion_rate",
-                "unit_uuid"
+                "uuid"
             ],
             "properties": {
                 "conversion_rate": {
@@ -28869,7 +28861,7 @@
                     "type": "number",
                     "minimum": 0
                 },
-                "unit_uuid": {
+                "uuid": {
                     "description": "单位UUID",
                     "type": "integer"
                 }
@@ -30751,7 +30743,7 @@
                 },
                 "num": {
                     "description": "商品数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "sort": {
                     "description": "商品排序",
@@ -31202,7 +31194,7 @@
                 },
                 "num": {
                     "description": "商品数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "sort": {
                     "description": "商品排序",
@@ -38171,6 +38163,18 @@
         "resp.PurchaseReceiptOrderDetailResp": {
             "type": "object",
             "properties": {
+                "cancel_time": {
+                    "description": "取消时间",
+                    "type": "integer"
+                },
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "erp_order_no": {
+                    "description": "ERP收货单号",
+                    "type": "string"
+                },
                 "expect_arrival_time": {
                     "description": "期望到货日期",
                     "type": "integer"
@@ -38195,7 +38199,7 @@
                     "type": "integer"
                 },
                 "status": {
-                    "description": "状态",
+                    "description": "状态 0-待收货 1-已收货 2-已取消",
                     "type": "integer"
                 },
                 "uuid": {
@@ -38207,6 +38211,18 @@
         "resp.PurchaseReceiptOrderInfo": {
             "type": "object",
             "properties": {
+                "cancel_time": {
+                    "description": "取消时间",
+                    "type": "integer"
+                },
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "erp_order_no": {
+                    "description": "ERP收货单号",
+                    "type": "string"
+                },
                 "expect_arrival_time": {
                     "description": "期望到货日期",
                     "type": "integer"
@@ -38224,7 +38240,7 @@
                     "type": "integer"
                 },
                 "status": {
-                    "description": "状态",
+                    "description": "状态 0-待收货 1-已收货 2-已取消",
                     "type": "integer"
                 },
                 "uuid": {

@@ -802,17 +802,12 @@ definitions:
         description: 材料UUID
         type: integer
     type: object
-  material_resp.MaterialListResp:
+  material_resp.MaterialListWithPaginationResp:
     properties:
       list:
         items:
           $ref: '#/definitions/material_resp.Material'
         type: array
-    type: object
-  material_resp.MaterialListWithPaginationResp:
-    properties:
-      list:
-        $ref: '#/definitions/material_resp.MaterialListResp'
       meta:
         $ref: '#/definitions/dto.PageResponse'
     type: object
@@ -3272,12 +3267,12 @@ definitions:
         description: 转换率
         minimum: 0
         type: number
-      unit_uuid:
+      uuid:
         description: 单位UUID
         type: integer
     required:
     - conversion_rate
-    - unit_uuid
+    - uuid
     type: object
   req.MemberOrderSendAuthCodeReq:
     properties:
@@ -4604,7 +4599,7 @@ definitions:
         type: integer
       num:
         description: 商品数量
-        type: integer
+        type: number
       sort:
         description: 商品排序
         type: integer
@@ -4906,7 +4901,7 @@ definitions:
         type: boolean
       num:
         description: 商品数量
-        type: integer
+        type: number
       sort:
         description: 商品排序
         type: integer
@@ -9609,6 +9604,15 @@ definitions:
     type: object
   resp.PurchaseReceiptOrderDetailResp:
     properties:
+      cancel_time:
+        description: 取消时间
+        type: integer
+      create_time:
+        description: 创建时间
+        type: integer
+      erp_order_no:
+        description: ERP收货单号
+        type: string
       expect_arrival_time:
         description: 期望到货日期
         type: integer
@@ -9627,7 +9631,7 @@ definitions:
         description: 收货日期
         type: integer
       status:
-        description: 状态
+        description: 状态 0-待收货 1-已收货 2-已取消
         type: integer
       uuid:
         description: 收货单ID
@@ -9635,6 +9639,15 @@ definitions:
     type: object
   resp.PurchaseReceiptOrderInfo:
     properties:
+      cancel_time:
+        description: 取消时间
+        type: integer
+      create_time:
+        description: 创建时间
+        type: integer
+      erp_order_no:
+        description: ERP收货单号
+        type: string
       expect_arrival_time:
         description: 期望到货日期
         type: integer
@@ -9648,7 +9661,7 @@ definitions:
         description: 收货日期
         type: integer
       status:
-        description: 状态
+        description: 状态 0-待收货 1-已收货 2-已取消
         type: integer
       uuid:
         description: 收货单ID
