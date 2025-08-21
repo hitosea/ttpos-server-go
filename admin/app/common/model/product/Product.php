@@ -1409,25 +1409,16 @@ class Product extends BaseModel
     {
         $productAttr = [];
         foreach ($product->productAttributeGroup as $group) {
-            $defaultSelectList = [];
-            $attributeList = [];
             $attributeValue = [];
             $defaultSelect = [];
             $attributeIds = [];
             $attributeValueText = [];
             foreach ($group->productAttribute as $attribute) {
-                $defaultSelectList[$attribute->attribute_uuid] = $attribute->is_default_selected;
-                $attributeList[] = $attribute->attribute;
-            }
-            // 根据attributeList中sort排序
-            usort($attributeList, function($a, $b) {
-                return $a['sort'] - $b['sort'];
-            });
-            foreach ($attributeList as $attribute) {
-                $attributeValue[] = $attribute['attribute_name'];
-                $attributeIds[] = $attribute['uuid'];
-                $attributeValueText[] = $attribute['attribute_name_text'];
-                $defaultSelect[] = $defaultSelectList[$attribute['uuid']];
+                $attributeValue[] = $attribute->attribute->attribute_name;
+                $defaultSelect[] = $attribute->is_default_selected;
+                $attributeIds[] = $attribute->attribute_uuid;
+                $attributeValueText[] = $attribute->attribute->attribute_name_text;
+
             }
             $attr = [
                 'parent_id' => $group['product_attribute_group_uuid'],

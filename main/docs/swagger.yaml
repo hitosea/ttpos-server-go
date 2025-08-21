@@ -2551,20 +2551,6 @@ definitions:
     required:
     - locale_name
     type: object
-  req.AddRoleReq:
-    properties:
-      access_uuids:
-        description: 权限ID列表
-        items:
-          type: integer
-        type: array
-      name:
-        description: 角色名称
-        type: string
-    required:
-    - access_uuids
-    - name
-    type: object
   req.AddSoldOutReq:
     properties:
       sold_out_data:
@@ -2584,10 +2570,12 @@ definitions:
         description: 密码，如果不为空，则不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种
         type: string
       phone:
-        description: 手机号
+        description: 手机号，限制20个字符
+        maxLength: 20
         type: string
       real_name:
-        description: 姓名
+        description: 姓名，限制100个字符
+        maxLength: 100
         type: string
       roles:
         description: 角色ID列表
@@ -2595,7 +2583,8 @@ definitions:
           type: integer
         type: array
       username:
-        description: 账号，邮箱 邮箱格式
+        description: 邮箱，限制64个字符
+        maxLength: 64
         type: string
     required:
     - confirm_password
@@ -2881,22 +2870,6 @@ definitions:
   req.DeleteReturnFoodReasonReq:
     properties:
       uuid:
-        type: integer
-    required:
-    - uuid
-    type: object
-  req.DeleteRoleReq:
-    properties:
-      uuid:
-        description: 角色ID
-        type: integer
-    required:
-    - uuid
-    type: object
-  req.DeleteStaffReq:
-    properties:
-      uuid:
-        description: 员工ID
         type: integer
     required:
     - uuid
@@ -5232,11 +5205,9 @@ definitions:
         type: integer
       num:
         description: 数量
-        maximum: 99999
         type: number
     required:
     - material_uuid
-    - num
     type: object
   req.PurchaseOrderItemUpdateReq:
     properties:
@@ -5246,11 +5217,9 @@ definitions:
         type: integer
       num:
         description: 数量
-        maximum: 99999
         type: number
     required:
     - material_uuid
-    - num
     type: object
   req.PurchaseOrderListReq:
     properties:
@@ -5741,24 +5710,6 @@ definitions:
     - start_serial_no
     - zeroing_method
     type: object
-  req.UpdateRoleReq:
-    properties:
-      access_uuids:
-        description: 权限ID列表
-        items:
-          type: integer
-        type: array
-      name:
-        description: 角色名称
-        type: string
-      uuid:
-        description: 角色ID
-        type: integer
-    required:
-    - access_uuids
-    - name
-    - uuid
-    type: object
   req.UpdateStaffReq:
     properties:
       confirm_password:
@@ -5768,11 +5719,12 @@ definitions:
         description: 密码，如果不为空，则不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种
         type: string
       phone:
-        description: 手机号，最多20位
+        description: 手机号，限制20个字符
         maxLength: 20
         type: string
       real_name:
-        description: 姓名
+        description: 姓名，限制100个字符
+        maxLength: 100
         type: string
       roles:
         description: 角色ID列表
@@ -5780,31 +5732,17 @@ definitions:
           type: integer
         type: array
       username:
-        description: 账号，邮箱 邮箱格式
+        description: 邮箱，限制64个字符
+        maxLength: 64
         type: string
       uuid:
-        description: 管理员ID
+        description: 员工ID
         type: integer
     required:
     - phone
     - real_name
     - roles
     - username
-    - uuid
-    type: object
-  req.UpdateStaffStatusReq:
-    properties:
-      status:
-        description: 状态 1:启用 0:禁用
-        enum:
-        - 1
-        - 0
-        type: integer
-      uuid:
-        description: 员工ID
-        type: integer
-    required:
-    - status
     - uuid
     type: object
   req.UpdateStoreSetting:
@@ -9601,12 +9539,16 @@ definitions:
       base_unit_name:
         description: 基准单位名称
         type: string
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物品名称
       material_code:
         description: 物品编码
         type: string
-      material_name:
-        description: 物品名称
-        type: string
+      material_uuid:
+        description: 物品ID
+        type: integer
       num:
         description: 申请数量
         type: number
@@ -10168,20 +10110,6 @@ definitions:
       create_time:
         description: 创建时间
         type: integer
-      name:
-        description: 角色名称
-        type: string
-      uuid:
-        description: 角色UUID
-        type: integer
-    type: object
-  resp.RoleDetailResp:
-    properties:
-      access_uuids:
-        description: 权限ID列表
-        items:
-          type: integer
-        type: array
       name:
         description: 角色名称
         type: string
@@ -21958,23 +21886,6 @@ paths:
       summary: 获取服务端公钥
       tags:
       - 通用
-  /shop/access_groups:
-    get:
-      consumes:
-      - application/json
-      description: 获取权限组
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 获取权限组
-      tags:
-      - 商家端.管理员管理
   /shop/ai/translate:
     post:
       parameters:
@@ -24657,29 +24568,6 @@ paths:
       tags:
       - 商家端.认证
   /shop/role:
-    delete:
-      consumes:
-      - application/json
-      description: 删除角色
-      parameters:
-      - description: 删除角色请求
-        in: body
-        name: delete_role_req
-        required: true
-        schema:
-          $ref: '#/definitions/req.DeleteRoleReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 删除角色
-      tags:
-      - 商家端.管理员管理
     get:
       consumes:
       - application/json
@@ -24709,83 +24597,7 @@ paths:
       - JwtToken: []
       summary: 获取角色列表
       tags:
-      - 商家端.管理员管理
-  /shop/role/add:
-    post:
-      consumes:
-      - application/json
-      description: 添加角色
-      parameters:
-      - description: 添加角色请求
-        in: body
-        name: add_role_req
-        required: true
-        schema:
-          $ref: '#/definitions/req.AddRoleReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 添加角色
-      tags:
-      - 商家端.管理员管理
-  /shop/role/update:
-    post:
-      consumes:
-      - application/json
-      description: 修改角色
-      parameters:
-      - description: 修改角色请求
-        in: body
-        name: update_role_req
-        required: true
-        schema:
-          $ref: '#/definitions/req.UpdateRoleReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 修改角色
-      tags:
-      - 商家端.管理员管理
-  /shop/role_access:
-    get:
-      consumes:
-      - application/json
-      description: 获取角色权限
-      parameters:
-      - description: 角色ID
-        in: query
-        name: uuid
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.RoleDetailResp'
-              type: object
-      security:
-      - JwtToken: []
-      summary: 获取角色权限
-      tags:
-      - 商家端.管理员管理
+      - 商家端.员工账号
   /shop/setting/business:
     get:
       consumes:
@@ -25136,37 +24948,13 @@ paths:
       summary: 发送会员充值短信
       tags:
       - 商家端.发送会员充值短信
-  /shop/staff:
-    delete:
-      consumes:
-      - application/json
-      description: 删除管理员
-      parameters:
-      - description: 删除管理员请求
-        in: body
-        name: delete_staff_req
-        required: true
-        schema:
-          $ref: '#/definitions/req.DeleteStaffReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 删除管理员
-      tags:
-      - 商家端.管理员管理
   /shop/staff/add:
     post:
       consumes:
       - application/json
-      description: 添加管理员
+      description: 添加员工
       parameters:
-      - description: 添加管理员请求
+      - description: 添加员工请求
         in: body
         name: add_staff_req
         required: true
@@ -25181,14 +24969,14 @@ paths:
             $ref: '#/definitions/dto.Response'
       security:
       - JwtToken: []
-      summary: 添加管理员
+      summary: 添加员工
       tags:
-      - 商家端.管理员管理
+      - 商家端.员工账号
   /shop/staff/list:
     get:
       consumes:
       - application/json
-      description: 管理员列表
+      description: 员工列表
       parameters:
       - description: 页码
         in: query
@@ -25212,40 +25000,16 @@ paths:
               type: object
       security:
       - JwtToken: []
-      summary: 管理员列表
+      summary: 员工列表
       tags:
-      - 商家端.管理员管理
-  /shop/staff/status:
-    post:
-      consumes:
-      - application/json
-      description: 设置启用禁用管理员
-      parameters:
-      - description: 设置启用禁用管理员请求
-        in: body
-        name: update_staff_status_req
-        required: true
-        schema:
-          $ref: '#/definitions/req.UpdateStaffStatusReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 设置启用禁用管理员
-      tags:
-      - 商家端.管理员管理
+      - 商家端.员工账号
   /shop/staff/update:
     post:
       consumes:
       - application/json
-      description: 修改管理员
+      description: 编辑员工
       parameters:
-      - description: 修改管理员请求
+      - description: 编辑员工请求
         in: body
         name: update_staff_req
         required: true
@@ -25260,9 +25024,9 @@ paths:
             $ref: '#/definitions/dto.Response'
       security:
       - JwtToken: []
-      summary: 修改管理员
+      summary: 编辑员工
       tags:
-      - 商家端.管理员管理
+      - 商家端.员工账号
   /shop/statistics/7days:
     get:
       consumes:

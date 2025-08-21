@@ -12,7 +12,7 @@ OK="${Green}[OK]${Font}"
 Error="${Red}[错误]${Font}"
 
 cur_path="$(pwd)"
-COMPOSE="docker-compose -p ttpos-server-bmp -f docker-compose.dev.yml"
+COMPOSE="docker-compose -p ttpos-server-bmp -f docker-compose.production.yml"
 
 judge() {
     if [[ 0 -eq $? ]]; then
@@ -144,8 +144,15 @@ if [ $# -gt 0 ]; then
     if [[ "$1" == "init" ]] || [[ "$1" == "install" ]]; then
         shift 1
         env_init
+        echo "初始化数据库"
+        make migrate
+        judge "初始化数据库"
+        echo "生成配置文件"
         make conf
+        judge "生成配置文件"
+        echo "启动容器"
         $COMPOSE up -d 
+        judge "启动容器"
         echo -e "${OK} ${GreenBG} 安装完成 ${Font}"
     elif [[ "$1" == "update" ]]; then
         shift 1
@@ -158,19 +165,10 @@ if [ $# -gt 0 ]; then
             compare_env_vars_only_check
             echo -e "${OK} ${GreenBG} 更新配置文件 ${Font}"
             make conf 
-            echo -e "${OK} ${GreenBG} 更新erp服务 ${Font}"
-            cd app/ttpos-erp && make db_up.docker
-            judge "更新erp服务"
-            echo -e "${OK} ${GreenBG} 更新shop服务 ${Font}"
-            cd ../ttpos-shop && make db_up.docker
-            judge "更新shop服务"
-            echo -e "${OK} ${GreenBG} 更新takeout服务 ${Font}"
-            cd ../ttpos-takeout && make db_up.docker
-            judge "更新takeout服务"
-            echo -e "${OK} ${GreenBG} 更新manager服务 ${Font}"
-            cd ../ttpos-manager && make db_up.docker
-            judge "更新manager服务"
-            cd ..
+            judge "配置文件更新"
+            echo -e "${OK} ${GreenBG} 执行数据库迁移文件 ${Font}"
+            make migrate
+            judge "数据库迁移文件执行"
             $COMPOSE down
             $COMPOSE up -d --pull always
             judge "启动服务"

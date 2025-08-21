@@ -91,6 +91,7 @@ type IProductQueryRepo interface {
 	GetProductDetail(uuid uint64) (*model.ProductPackage, error)                                                    // 获取商品详情
 	GetProductCount(opts ...DBOption) (int64, error)                                                                // 获取商品数量
 	GetProductFlavor(opts ...DBOption) (model.ProductFlavor, error)                                                 // 获取商品口味详情
+	GetProductFlavorList(opts ...DBOption) ([]model.ProductFlavor, error)                                           // 获取商品口味列表
 	GetProductFlavorCount(opts ...DBOption) (int64, error)                                                          // 获取商品规格数量
 	GetProductFlavorMaxSort(opts ...DBOption) (int64, error)                                                        // 获取商品规格最大排序
 	GetProductBom(opts ...DBOption) (model.ProductBom, error)                                                       // 获取商品BOM详情
@@ -1283,7 +1284,7 @@ func (r *productRepo) BatchUpdateSort(table any, sorts map[uint64]int) error {
 	// 根据传入的模型类型确定错误消息
 	var errorMessage string
 	switch table.(type) {
-	case *model.ProductUnit, *model.ProductAttributeGroup, *model.ProductAttribute, *model.ProductSauce:
+	case *model.ProductUnit, *model.ProductAttributeGroup, *model.ProductAttribute, *model.ProductSauce, *model.ProductFlavor, *model.ProductCategory:
 		// 无需处理
 	default:
 		return errors.New("更新排序失败")
@@ -1297,4 +1298,14 @@ func (r *productRepo) BatchUpdateSort(table any, sorts map[uint64]int) error {
 		return errors.WithMessage(errors.New("更新排序失败"), errorMessage)
 	}
 	return nil
+}
+
+func (r *productRepo) GetProductFlavorList(opts ...DBOption) ([]model.ProductFlavor, error) {
+	var flavors []model.ProductFlavor
+	db := r.db.Model(&model.ProductFlavor{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Order("sort asc, create_time asc").Find(&flavors).Error
+	return flavors, errors.WithMessage(err)
 }

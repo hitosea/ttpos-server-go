@@ -216,6 +216,8 @@ class Supplier extends BaseModel
      */
     public static function getWhiteBackgroundWithBlackTextLogoPath($appId, $logoUrl = '')
     {
+        // 可能是带query的url，需要去掉query
+        $logoUrl = parse_url($logoUrl, PHP_URL_PATH);
         $savePath = public_path("uploads/shop$appId") . 'white_background_text_' . basename($logoUrl);
         // 判断图片是否存在
         if (!file_exists($savePath) && $logoUrl) {

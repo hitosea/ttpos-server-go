@@ -138,6 +138,9 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(ctx context.Context, req req.P
 	for _, item := range purchaseOrder.Items {
 		itemInfo := resp.PurchaseOrderItemInfo{}
 		copier.Copy(&itemInfo, &item)
+		multiLanguageName := model.MultiLanguageName{}
+		multiLanguageName.InitByLocaleResponseJson(item.MaterialName)
+		itemInfo.LocaleName = multiLanguageName.GetNames()
 		detailResp.Items = append(detailResp.Items, itemInfo)
 	}
 
@@ -310,9 +313,6 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(ctx context.Context, req req.Purc
 		)
 		if err != nil {
 			return errors.WithMessage(err, "查询物品失败")
-		}
-		if len(materialList) != len(req.Items) {
-			return errors.New("查询物品失败-数量不一致")
 		}
 
 		// 将切片转换为map，方便后续查找

@@ -2193,4 +2193,5 @@ return [
     "套餐商品库存不足" => "Unzureichender Paketwarenbestand",
     "商家已授权" => "Händler autorisiert",
     "ERPNext站点不存在" => "ERPNext-Seite existiert nicht",
+    "数据处理中，请稍后重试" => "Daten werden verarbeitet, bitte versuchen Sie es später erneut",
 ];

@@ -317,13 +317,16 @@ func thresholdImage(img image.Image, threshold uint8) *image.Gray {
 }
 
 // GetWhiteBackgroundWithBlackTextLogoPath 获得白色背景和黑色文本徽标路径
-// 如果处理后的文件不存在，则自动处理原始logo并保存
 // appId: 应用ID，logoUrl: 原始logo文件路径，uploadsDir: 上传目录基础路径
-func GetWhiteBackgroundWithBlackTextLogoPath(appId uint64, logoUrl, uploadsDir string) (string, error) {
+func GetWhiteBackgroundWithBlackTextLogoPath(appId uint64, logoUrl, uploadsDir string) string {
 	// 构建保存路径
 	shopDir := fmt.Sprintf("shop%d", appId)
+	// 去掉query
+	if strings.Contains(logoUrl, "?") {
+		logoUrl = strings.Split(logoUrl, "?")[0]
+	}
 	logoBasename := filepath.Base(logoUrl)
 	savePath := filepath.Join(uploadsDir, shopDir, "white_background_text_"+logoBasename)
 
-	return savePath, nil
+	return savePath
 }

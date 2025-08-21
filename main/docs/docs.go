@@ -17479,34 +17479,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/shop/access_groups": {
-            "get": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "获取权限组",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.管理员管理"
-                ],
-                "summary": "获取权限组",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
         "/shop/ai/translate": {
             "post": {
                 "security": [
@@ -21897,7 +21869,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.管理员管理"
+                    "商家端.员工账号"
                 ],
                 "summary": "获取角色列表",
                 "parameters": [
@@ -21927,170 +21899,6 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/resp.RoleListResp"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "删除角色",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.管理员管理"
-                ],
-                "summary": "删除角色",
-                "parameters": [
-                    {
-                        "description": "删除角色请求",
-                        "name": "delete_role_req",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.DeleteRoleReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/shop/role/add": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "添加角色",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.管理员管理"
-                ],
-                "summary": "添加角色",
-                "parameters": [
-                    {
-                        "description": "添加角色请求",
-                        "name": "add_role_req",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.AddRoleReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/shop/role/update": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "修改角色",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.管理员管理"
-                ],
-                "summary": "修改角色",
-                "parameters": [
-                    {
-                        "description": "修改角色请求",
-                        "name": "update_role_req",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.UpdateRoleReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/shop/role_access": {
-            "get": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "获取角色权限",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.管理员管理"
-                ],
-                "summary": "获取角色权限",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "角色ID",
-                        "name": "uuid",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.RoleDetailResp"
                                         }
                                     }
                                 }
@@ -22673,45 +22481,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/shop/staff": {
-            "delete": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "删除管理员",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.管理员管理"
-                ],
-                "summary": "删除管理员",
-                "parameters": [
-                    {
-                        "description": "删除管理员请求",
-                        "name": "delete_staff_req",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.DeleteStaffReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
         "/shop/staff/add": {
             "post": {
                 "security": [
@@ -22719,7 +22488,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "添加管理员",
+                "description": "添加员工",
                 "consumes": [
                     "application/json"
                 ],
@@ -22727,12 +22496,12 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.管理员管理"
+                    "商家端.员工账号"
                 ],
-                "summary": "添加管理员",
+                "summary": "添加员工",
                 "parameters": [
                     {
-                        "description": "添加管理员请求",
+                        "description": "添加员工请求",
                         "name": "add_staff_req",
                         "in": "body",
                         "required": true,
@@ -22758,7 +22527,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "管理员列表",
+                "description": "员工列表",
                 "consumes": [
                     "application/json"
                 ],
@@ -22766,9 +22535,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.管理员管理"
+                    "商家端.员工账号"
                 ],
-                "summary": "管理员列表",
+                "summary": "员工列表",
                 "parameters": [
                     {
                         "type": "integer",
@@ -22805,45 +22574,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/shop/staff/status": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "设置启用禁用管理员",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.管理员管理"
-                ],
-                "summary": "设置启用禁用管理员",
-                "parameters": [
-                    {
-                        "description": "设置启用禁用管理员请求",
-                        "name": "update_staff_status_req",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.UpdateStaffStatusReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
         "/shop/staff/update": {
             "post": {
                 "security": [
@@ -22851,7 +22581,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "修改管理员",
+                "description": "编辑员工",
                 "consumes": [
                     "application/json"
                 ],
@@ -22859,12 +22589,12 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.管理员管理"
+                    "商家端.员工账号"
                 ],
-                "summary": "修改管理员",
+                "summary": "编辑员工",
                 "parameters": [
                     {
-                        "description": "修改管理员请求",
+                        "description": "编辑员工请求",
                         "name": "update_staff_req",
                         "in": "body",
                         "required": true,
@@ -28119,26 +27849,6 @@ const docTemplate = `{
                 }
             }
         },
-        "req.AddRoleReq": {
-            "type": "object",
-            "required": [
-                "access_uuids",
-                "name"
-            ],
-            "properties": {
-                "access_uuids": {
-                    "description": "权限ID列表",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "name": {
-                    "description": "角色名称",
-                    "type": "string"
-                }
-            }
-        },
         "req.AddSoldOutReq": {
             "type": "object",
             "required": [
@@ -28174,12 +27884,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "phone": {
-                    "description": "手机号",
-                    "type": "string"
+                    "description": "手机号，限制20个字符",
+                    "type": "string",
+                    "maxLength": 20
                 },
                 "real_name": {
-                    "description": "姓名",
-                    "type": "string"
+                    "description": "姓名，限制100个字符",
+                    "type": "string",
+                    "maxLength": 100
                 },
                 "roles": {
                     "description": "角色ID列表",
@@ -28189,8 +27901,9 @@ const docTemplate = `{
                     }
                 },
                 "username": {
-                    "description": "账号，邮箱 邮箱格式",
-                    "type": "string"
+                    "description": "邮箱，限制64个字符",
+                    "type": "string",
+                    "maxLength": 64
                 }
             }
         },
@@ -28586,30 +28299,6 @@ const docTemplate = `{
             ],
             "properties": {
                 "uuid": {
-                    "type": "integer"
-                }
-            }
-        },
-        "req.DeleteRoleReq": {
-            "type": "object",
-            "required": [
-                "uuid"
-            ],
-            "properties": {
-                "uuid": {
-                    "description": "角色ID",
-                    "type": "integer"
-                }
-            }
-        },
-        "req.DeleteStaffReq": {
-            "type": "object",
-            "required": [
-                "uuid"
-            ],
-            "properties": {
-                "uuid": {
-                    "description": "员工ID",
                     "type": "integer"
                 }
             }
@@ -31954,8 +31643,7 @@ const docTemplate = `{
         "req.PurchaseOrderItemCreateReq": {
             "type": "object",
             "required": [
-                "material_uuid",
-                "num"
+                "material_uuid"
             ],
             "properties": {
                 "material_uuid": {
@@ -31965,16 +31653,14 @@ const docTemplate = `{
                 },
                 "num": {
                     "description": "数量",
-                    "type": "number",
-                    "maximum": 99999
+                    "type": "number"
                 }
             }
         },
         "req.PurchaseOrderItemUpdateReq": {
             "type": "object",
             "required": [
-                "material_uuid",
-                "num"
+                "material_uuid"
             ],
             "properties": {
                 "material_uuid": {
@@ -31984,8 +31670,7 @@ const docTemplate = `{
                 },
                 "num": {
                     "description": "数量",
-                    "type": "number",
-                    "maximum": 99999
+                    "type": "number"
                 }
             }
         },
@@ -32659,31 +32344,6 @@ const docTemplate = `{
                 }
             }
         },
-        "req.UpdateRoleReq": {
-            "type": "object",
-            "required": [
-                "access_uuids",
-                "name",
-                "uuid"
-            ],
-            "properties": {
-                "access_uuids": {
-                    "description": "权限ID列表",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "name": {
-                    "description": "角色名称",
-                    "type": "string"
-                },
-                "uuid": {
-                    "description": "角色ID",
-                    "type": "integer"
-                }
-            }
-        },
         "req.UpdateStaffReq": {
             "type": "object",
             "required": [
@@ -32703,13 +32363,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "phone": {
-                    "description": "手机号，最多20位",
+                    "description": "手机号，限制20个字符",
                     "type": "string",
                     "maxLength": 20
                 },
                 "real_name": {
-                    "description": "姓名",
-                    "type": "string"
+                    "description": "姓名，限制100个字符",
+                    "type": "string",
+                    "maxLength": 100
                 },
                 "roles": {
                     "description": "角色ID列表",
@@ -32719,29 +32380,9 @@ const docTemplate = `{
                     }
                 },
                 "username": {
-                    "description": "账号，邮箱 邮箱格式",
-                    "type": "string"
-                },
-                "uuid": {
-                    "description": "管理员ID",
-                    "type": "integer"
-                }
-            }
-        },
-        "req.UpdateStaffStatusReq": {
-            "type": "object",
-            "required": [
-                "status",
-                "uuid"
-            ],
-            "properties": {
-                "status": {
-                    "description": "状态 1:启用 0:禁用",
-                    "type": "integer",
-                    "enum": [
-                        1,
-                        0
-                    ]
+                    "description": "邮箱，限制64个字符",
+                    "type": "string",
+                    "maxLength": 64
                 },
                 "uuid": {
                     "description": "员工ID",
@@ -38433,13 +38074,21 @@ const docTemplate = `{
                     "description": "基准单位名称",
                     "type": "string"
                 },
+                "locale_name": {
+                    "description": "物品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
                 "material_code": {
                     "description": "物品编码",
                     "type": "string"
                 },
-                "material_name": {
-                    "description": "物品名称",
-                    "type": "string"
+                "material_uuid": {
+                    "description": "物品ID",
+                    "type": "integer"
                 },
                 "num": {
                     "description": "申请数量",
@@ -39259,26 +38908,6 @@ const docTemplate = `{
                 "create_time": {
                     "description": "创建时间",
                     "type": "integer"
-                },
-                "name": {
-                    "description": "角色名称",
-                    "type": "string"
-                },
-                "uuid": {
-                    "description": "角色UUID",
-                    "type": "integer"
-                }
-            }
-        },
-        "resp.RoleDetailResp": {
-            "type": "object",
-            "properties": {
-                "access_uuids": {
-                    "description": "权限ID列表",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
                 },
                 "name": {
                     "description": "角色名称",
