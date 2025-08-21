@@ -591,6 +591,12 @@ func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, sal
 	for _, optionFunc := range options {
 		optionFunc(option)
 	}
+
+	// 检查销售订单商品数量是否超过1000项
+	if err := saleBill.CheckSaleOrderProductNum(); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
 	// 获取当前销售订单信息
 	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
 	if saleOrder == nil {
