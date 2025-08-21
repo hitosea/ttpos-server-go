@@ -6,9 +6,13 @@ import (
 	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/setup"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
+	"ttpos-bmp/app/ttpos-erp/internal/dao"
+	"ttpos-bmp/app/ttpos-erp/internal/model/do"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	setup2 "ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
+	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 )
@@ -59,7 +63,7 @@ func (s *sSetup) CreateBranch(ctx context.Context, req *setup.InitShopReq) (bran
 	return req.ShopName, nil
 }
 
-// CreateUser 创建网站用户
+// CreateUser 创建网站用户，门店收银账户
 func (s *sSetup) CreateUser(ctx context.Context, req *setup2.CreateUserInp) (err error) {
 	userPayload := g.Map{
 		"email":              req.UserEmail,
@@ -67,13 +71,12 @@ func (s *sSetup) CreateUser(ctx context.Context, req *setup2.CreateUserInp) (err
 		"user_type":          "Website User",
 		"enabled":            1,
 		"send_welcome_email": false,
+		"role_profile_name":  "ShopCashier",
 	}
 	if _, err := service.Document().Create(ctx, "User", userPayload); err != nil {
 		g.Log().Error(ctx, "创建网站用户失败", err)
 		return gerror.Wrapf(err, "创建网站用户失败")
 	}
-	//限制用户数据权限 如果用户需要登录erp系统就约束
-
 	return
 }
 
@@ -126,10 +129,30 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *se
 	err = s.CreateUser(ctx, &setup2.CreateUserInp{
 		UserEmail: adminEmail,
 		FirstName: req.ShopName,
+		AdminUuid: req.AdminUuid,
+		ShopUuid:  req.ShopUuid,
 	})
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建用户失败")
 	}
+	//取用户的API_KEY/API_SECRET
+	apiKey, apiSecret, err := s.GetUserApiKeySecret(ctx, adminEmail)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "获取用户API_KEY/API_SECRET失败")
+	}
+
+	//记录门店， 管理员关联关系，记录 api_key/api_secret
+	_, err = dao.ShopCashier.Ctx(ctx).Insert(&do.ShopCashier{
+		ShopUuid:     req.ShopUuid,
+		AdminUuid:    req.AdminUuid,
+		CashierEmail: adminEmail,
+		ApiKey:       apiKey,
+		ApiSecret:    apiSecret,
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建门店管理员关联关系失败")
+	}
+
 	//创建默认仓库
 	_, err = service.Warehouse().CreateWarehouse(ctx, &setup2.CreateWarehouseInp{
 		Branch:      branchName,
@@ -166,4 +189,35 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *se
 		BranchName: branchName,
 		AdminEmail: adminEmail,
 	}, nil
+}
+
+func (*sSetup) GetUserApiKeySecret(ctx context.Context, userEmail string) (apiKey, apiSecret string, err error) {
+	resp, err := service.Rpc().Execute(ctx, &erp.ErpReq{
+		Method: "frappe.core.doctype.user.user.generate_keys",
+	}, g.Map{
+		"user": userEmail,
+	})
+	if err != nil {
+		return "", "", gerror.Wrapf(err, "获取用户API_KEY/API_SECRET失败")
+	}
+	// 解析响应数据
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return "", "", gerror.Wrapf(err, "解析生成API_SECRET响应失败")
+	}
+	apiSecret = j.Get("data.api_secret").String()
+	resp, err = service.Document().Get(ctx, &erp.ErpReq{
+		DocType: "User",
+		Name:    userEmail,
+	}, nil)
+	if err != nil {
+		return "", "", gerror.Wrapf(err, "获取用户信息失败")
+	}
+	// 解析响应数据
+	j, err = gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return "", "", gerror.Wrapf(err, "解析用户信息响应失败")
+	}
+	apiKey = j.Get("data.api_key").String()
+	return
 }

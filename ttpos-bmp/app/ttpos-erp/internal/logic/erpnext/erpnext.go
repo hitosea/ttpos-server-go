@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/dao"
 	"ttpos-bmp/app/ttpos-erp/internal/model/do"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
@@ -44,9 +45,9 @@ func getRpcUrlWithName(req *erp.ErpReq) (url string) {
 func GetClient(ctx context.Context) *gclient.Client {
 	var c = g.Client()
 	m := grpcx.Ctx.IncomingMap(ctx)
-	if m.Contains("erp_site_code") {
+	if m.Contains(consts.ContextSiteCode) {
 		var site *entity.Site
-		dao.Site.Ctx(ctx).Limit(1).Where(do.Site{}.SiteCode, m.GetVar("erp_site_code")).Scan(&site)
+		dao.Site.Ctx(ctx).Limit(1).Where(do.Site{}.SiteCode, m.GetVar(consts.ContextSiteCode)).Scan(&site)
 		if site != nil {
 			c.SetPrefix(site.SiteUrl)
 			c.SetHeader("Authorization", fmt.Sprintf("token %s:%s", site.ApiKey, site.ApiSecret))
@@ -54,6 +55,17 @@ func GetClient(ctx context.Context) *gclient.Client {
 	} else {
 		c.SetPrefix(g.Cfg().MustGet(gctx.GetInitCtx(), "app.erpnext.serviceUrl").String())
 	}
+	//替代指定用户调用服务
+	if ctx.Value(consts.ContextFakeUser) != nil {
+		// 从上下文获取用户信息
+		var cashier entity.ShopCashier
+		err := dao.ShopCashier.Ctx(ctx).Limit(1).Where(do.ShopCashier{}.CashierEmail, ctx.Value(consts.ContextFakeUser).(string)).Scan(&cashier)
+		if err != nil {
+			g.Log().Errorf(ctx, "查询门店收银员关联关系失败: %v", err)
+		}
+		c.SetHeader("Authorization", fmt.Sprintf("token %s:%s", cashier.ApiKey, cashier.ApiSecret))
+	}
+
 	c.Use(func(c *gclient.Client, r *http.Request) (resp *gclient.Response, err error) {
 		resp, err = c.Next(r)
 		if resp != nil && g.Cfg().MustGet(gctx.GetInitCtx(), "app.erpnext.dump").Bool() {
@@ -84,4 +96,9 @@ func detectError(resp *gvar.Var) error {
 	}
 
 	return nil
+}
+
+func SetFakeUser(ctx context.Context, userEmail string) context.Context {
+	ctx = context.WithValue(ctx, consts.ContextFakeUser, userEmail)
+	return ctx
 }

@@ -30,3 +30,8 @@ const (
 	DefaultCustomerName = "Default" // 默认客户
 	MemberCustomerName  = "Member"  // 会员
 )
+
+const (
+	ContextFakeUser = "ctx_fake_user"
+	ContextSiteCode = "erp_site_code"
+)

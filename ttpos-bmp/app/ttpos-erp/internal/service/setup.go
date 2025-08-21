@@ -17,7 +17,7 @@ type (
 		// 参数：店铺名称和公司缩写编码
 		// 返回：ERP用户名和创建结果
 		CreateBranch(ctx context.Context, req *setup.InitShopReq) (branchName string, err error)
-		// CreateUser 创建网站用户
+		// CreateUser 创建网站用户，门店收银账户
 		CreateUser(ctx context.Context, req *setup2.CreateUserInp) (err error)
 		// CreatePosProfile CreatePosFile 创建 默认 pos profile  配置默认
 		CreatePosProfile(ctx context.Context, req *setup.CreateDefaultPosProfileReq) (posFileId string, err error)
@@ -25,6 +25,7 @@ type (
 		// 参数：ctx 上下文，req 包含 shop_name、company_abbr、shop_uuid
 		// 返回：是否成功，错误信息
 		InitShop(ctx context.Context, req *setup.InitShopReq) (resp *setup.InitShopResp, err error)
+		GetUserApiKeySecret(ctx context.Context, userEmail string) (apiKey string, apiSecret string, err error)
 	}
 )
 

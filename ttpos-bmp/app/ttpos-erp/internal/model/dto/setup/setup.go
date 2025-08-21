@@ -34,6 +34,8 @@ type CreatePosProfileInp struct {
 type CreateUserInp struct {
 	UserEmail string `json:"user_email,omitempty"`
 	FirstName string `json:"first_name,omitempty"`
+	AdminUuid string `json:"admin_uuid,omitempty"`
+	ShopUuid  string `json:"shop_uuid,omitempty"`
 }
 
 type CreateModePaymentAccountInp struct {
