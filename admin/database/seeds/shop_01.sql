@@ -1157,6 +1157,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包ID',
     `name` TEXT COMMENT '商品包名称',
+    `erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext 商品编码，每个商品都有一个模版物品编码',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `image_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '图片名称',
     `image_file_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '图片ID',

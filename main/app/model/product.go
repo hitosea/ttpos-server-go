@@ -145,6 +145,7 @@ func (model *ProductPackageAttribute) IsDefaultSelectedBool() bool {
 type ProductPackage struct {
 	BaseModel
 	Name                  string `gorm:"default:'';column:name;comment:'产品包名称'"`
+	ErpCode               string `gorm:"default:'';column:erp_code;comment:'ERPNext 商品编码，每个商品都有一个模版物品编码'"`
 	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	ImageName             string `gorm:"default:'';column:image_name;comment:'图片名称'"`
 	ImageFileUuid         uint64 `gorm:"default:0;column:image_file_uuid;comment:'图片UUID'"`

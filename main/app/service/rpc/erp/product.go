@@ -17,12 +17,14 @@ func (s *erpSrv) AddProduct(ctx context.Context, params req.ProductAddErpReq) (*
 	defer conn.Close()
 
 	result, err := client.SaveItem(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.ItemInfo{
-		ItemName:    params.ItemName,
-		ItemGroup:   item.ItemGroup_Products,
-		StockUom:    params.StockUom,
-		ItemCode:    params.ItemCode,
-		Branch:      companySetting.ErpnextBranchName,
-		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+		ItemName:          params.ItemName,
+		ItemGroup:         item.ItemGroup_Products,
+		StockUom:          params.StockUom,
+		ItemCode:          params.ItemCode,
+		Branch:            companySetting.ErpnextBranchName,
+		CompanyAbbr:       companySetting.ErpnextCompanyAbbr,
+		TemplateItemCode:  params.TemplateItemCode,
+		ItemSpecification: params.ItemSpecification,
 	})
 	if err != nil {
 		return nil, err
