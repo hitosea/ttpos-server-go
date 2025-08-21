@@ -2185,4 +2185,5 @@ return [
     "套餐商品库存不足" => "Otillräckligt paketvarulager",
     "商家已授权" => "Handlare auktoriserad",
     "ERPNext站点不存在" => "ERPNext-sidan finns inte",
+    "数据处理中，请稍后重试" => "Data bearbetas, försök igen senare",
 ];

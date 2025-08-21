@@ -40,6 +40,19 @@ type MaterialAddReq struct {
 	CostUnitUuid     uint64             `json:"cost_unit_uuid" binding:"required"`     // 成本单位UUID
 }
 
+type MaterialAddErpReq struct {
+	ItemName      string           `json:"item_name" binding:"required"`      // 物品名称, 英文
+	StockUom      string           `json:"stock_uom" binding:"required"`      // 基准库存单位, 英文
+	ValuationRate float64          `json:"valuation_rate" binding:"required"` // 估值率
+	OpeningStock  float64          `json:"opening_stock" binding:"required"`  // 期初库存
+	Uoms          []MaterialUomReq `json:"uoms" binding:"required,dive"`      // 单位列表
+}
+
+type MaterialUomReq struct {
+	Uom            string  `json:"uom" binding:"required"`                   // 单位, 英文
+	ConversionRate float64 `json:"conversion_rate" binding:"required,min=0"` // 转换率
+}
+
 // MaterialUnitReq 物品单位请求
 type MaterialUnitReq struct {
 	UnitUuid       uint64  `json:"unit_uuid" binding:"required"`             // 单位UUID

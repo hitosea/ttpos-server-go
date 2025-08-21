@@ -14,6 +14,7 @@ type IMaterialRepo interface {
 	GetMaterialByUuid(uuid uint64, opts ...DBOption) (model.Material, error)
 	GetMaterialDetailByUuid(uuid uint64) (*model.Material, error)
 	CreateMaterial(material model.Material) (uint64, error)
+	UpdateMaterialCode(uuid uint64, code string) error
 	UpdateMaterial(material model.Material) error
 	DeleteMaterial(uuid uint64) error
 	GetMaterialCategoryByName(name string) (*model.MaterialCategory, error)
@@ -112,10 +113,18 @@ func (r *MaterialRepoImpl) GetMaterialDetailByUuid(uuid uint64) (*model.Material
 
 // CreateMaterial 创建物品
 func (r *MaterialRepoImpl) CreateMaterial(material model.Material) (uint64, error) {
+	material.SetNil()
 	if err := r.db.Create(&material).Error; err != nil {
 		return 0, errors.WithMessage(err, "创建物品失败")
 	}
 	return material.Uuid, nil
+}
+
+func (r *MaterialRepoImpl) UpdateMaterialCode(uuid uint64, code string) error {
+	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("code", code).Error; err != nil {
+		return errors.WithMessage(err, "更新物品编码失败")
+	}
+	return nil
 }
 
 // UpdateMaterial 更新物品

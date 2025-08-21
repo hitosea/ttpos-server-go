@@ -35,6 +35,12 @@ func (m *MultiLanguageName) InitByLocaleResponse(locale dto.LocaleResponse) {
 	m.SvName = locale.SV
 }
 
+func (m *MultiLanguageName) InitByLocaleResponseJson(jsonStr string) {
+	names := dto.LocaleResponse{}
+	json.Unmarshal([]byte(jsonStr), &names)
+	m.InitByLocaleResponse(names)
+}
+
 // IsNameChanged 判断多语言名称是否修改
 func (m *MultiLanguageName) IsNameChanged(locale dto.LocaleResponse) bool {
 	names := m.GetNames()

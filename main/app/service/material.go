@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -8,6 +9,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -232,8 +234,20 @@ func (s *materialSrv) AddMaterial(ctx context.Context, req req.MaterialAddReq) e
 	db := s.dbm.GetDB(dbId)
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-		if _, err := addMaterial(ctx, tx, req); err != nil {
+		material, materialAddErpReq, err := addMaterial(ctx, tx, req)
+		if err != nil {
 			return errors.WithMessage(err)
+		}
+
+		erpSrv := erp.NewIErpSrv(s.dbm)
+		itemInfo, errErp := erpSrv.AddMaterial(ctx, *materialAddErpReq)
+		if errErp != nil {
+			return errors.WithMessage(err)
+		}
+		materialRepo := repository.NewMaterialRepo(tx)
+		err = materialRepo.UpdateMaterialCode(material.Uuid, itemInfo.ItemCode)
+		if err != nil {
+			return errors.WithMessage(err, "更新物品编码失败")
 		}
 
 		return nil
@@ -244,44 +258,45 @@ func (s *materialSrv) AddMaterial(ctx context.Context, req req.MaterialAddReq) e
 	return nil
 }
 
-func addMaterial(ctx context.Context, tx *gorm.DB, req req.MaterialAddReq) (*model.Material, error) {
+func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (*model.Material, *req.MaterialAddErpReq, error) {
 	materialUuid, _ := utils.GetID()
 	materialRepo := repository.NewMaterialRepo(tx)
 	// 创建多语言名称
 	multiLanguageName := model.MultiLanguageName{}
-	multiLanguageName.InitByLocaleResponse(req.LocaleName)
+	multiLanguageName.InitByLocaleResponse(request.LocaleName)
 	nameId, err := repository.NewMultiLanguageNameRepo(tx).CreateMultiLanguageName(multiLanguageName)
 	if err != nil {
-		return nil, errors.WithMessage(err, "创建多语言名称失败")
+		return nil, nil, errors.WithMessage(err, "创建多语言名称失败")
 	}
 
 	unitMap := make(map[uint64]uint64) // 单位ID -> 原料单位ID
 
 	// 创建material_unit
-	productUnit, err := repository.NewProductRepo(tx).GetProductUnitByUnitUuid(req.UnitUuid)
+	productUnit, err := repository.NewProductRepo(tx).GetProductUnitByUnitUuid(request.UnitUuid)
 	if err != nil {
-		return nil, errors.WithMessage(err, "获取产品单位失败")
+		return nil, nil, errors.WithMessage(err, "获取产品单位失败")
 	}
 	unitUuid, err := repository.NewMaterialUnitRepo(tx).CreateMaterialUnit(model.MaterialUnit{
 		Name:           productUnit.MultiLanguageName.ToJson(),
-		UnitUuid:       req.UnitUuid,
+		UnitUuid:       request.UnitUuid,
 		ConversionRate: 1,
 		IsDefault:      1,
 		FromUnitUuid:   0,
 		MaterialUuid:   materialUuid,
 	})
 	if err != nil {
-		return nil, errors.WithMessage(err, "创建原料单位失败")
+		return nil, nil, errors.WithMessage(err, "创建原料单位失败")
 	}
 
-	unitMap[req.UnitUuid] = unitUuid
+	unitMap[request.UnitUuid] = unitUuid
 
 	notBaseUnitList := []*model.MaterialUnit{}
+	unitList := []req.MaterialUomReq{}
 	// 创建非基准单位 material_unit
-	for _, unit := range req.UnitList {
+	for _, unit := range request.UnitList {
 		productUnit, err := repository.NewProductRepo(tx).GetProductUnitByUnitUuid(unit.UnitUuid)
 		if err != nil {
-			return nil, errors.WithMessage(err, "获取产品单位失败")
+			return nil, nil, errors.WithMessage(err, "获取产品单位失败")
 		}
 
 		materialUnitUuid, _ := utils.GetID()
@@ -294,8 +309,14 @@ func addMaterial(ctx context.Context, tx *gorm.DB, req req.MaterialAddReq) (*mod
 			ConversionRate: unit.ConversionRate,
 			FromUnitUuid:   unitUuid,
 			MaterialUuid:   materialUuid,
+			Unit:           productUnit,
 		})
 		unitMap[unit.UnitUuid] = materialUnitUuid
+
+		unitList = append(unitList, req.MaterialUomReq{
+			Uom:            productUnit.ErpnextUom,
+			ConversionRate: unit.ConversionRate,
+		})
 	}
 
 	// 创建物品
@@ -303,18 +324,18 @@ func addMaterial(ctx context.Context, tx *gorm.DB, req req.MaterialAddReq) (*mod
 		BaseModel: model.BaseModel{
 			Uuid: materialUuid,
 		},
-		Name:                  req.LocaleName.ToJson(),
+		Name:                  request.LocaleName.ToJson(),
 		Code:                  "", // TODO: 从ERP获取编码
-		Valuation:             req.Valuation,
-		InitStock:             req.InitStock,
+		Valuation:             request.Valuation,
+		InitStock:             request.InitStock,
 		MultiLanguageNameUuid: nameId,
-		CategoryUuid:          req.CategoryUuid,
-		UnitUuid:              unitMap[req.UnitUuid],
-		BarcodeValue:          req.BarcodeValue,
-		PurchaseUnitUuid:      unitMap[req.PurchaseUnitUuid],
-		CostUnitUuid:          unitMap[req.CostUnitUuid],
+		CategoryUuid:          request.CategoryUuid,
+		UnitUuid:              unitMap[request.UnitUuid],
+		BarcodeValue:          request.BarcodeValue,
+		PurchaseUnitUuid:      unitMap[request.PurchaseUnitUuid],
+		CostUnitUuid:          unitMap[request.CostUnitUuid],
 		Status: func() bool {
-			if req.Status == 1 {
+			if request.Status == 1 {
 				return true
 			}
 			return false
@@ -324,16 +345,25 @@ func addMaterial(ctx context.Context, tx *gorm.DB, req req.MaterialAddReq) (*mod
 
 	_, err = materialRepo.CreateMaterial(material)
 	if err != nil {
-		return nil, errors.WithMessage(err, "创建物品失败")
+		return nil, nil, errors.WithMessage(err, "创建物品失败")
 	}
 
 	for _, unit := range notBaseUnitList {
 		_, err = repository.NewMaterialUnitRepo(tx).CreateMaterialUnit(*unit)
 		if err != nil {
-			return nil, errors.WithMessage(err, "创建原料单位失败")
+			return nil, nil, errors.WithMessage(err, "创建原料单位失败")
 		}
 	}
-	return &material, nil
+
+	materialAddErpReq := &req.MaterialAddErpReq{
+		ItemName:      request.LocaleName.GetLocale(string(dto.LocaleEN)),
+		StockUom:      productUnit.ErpnextUom,
+		ValuationRate: request.Valuation,
+		OpeningStock:  request.InitStock,
+		Uoms:          unitList,
+	}
+
+	return &material, materialAddErpReq, nil
 }
 
 // EditMaterial 编辑物品
@@ -946,11 +976,12 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		// 创建物品
-		material, err := addMaterial(ctx, db, req.MaterialAddReq)
+		material, materialAddErpReq, err := addMaterial(ctx, db, req.MaterialAddReq)
 		if err != nil {
 			return errors.WithMessage(err)
 		}
 
+		fmt.Println(materialAddErpReq)
 		// 创建成本卡
 		nameUuid, _ := utils.GetID()
 		multiLanguageName := model.MultiLanguageName{}

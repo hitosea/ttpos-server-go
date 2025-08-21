@@ -18,6 +18,8 @@ type IStaffRepo interface {
 	WhereDeviceId(bindKey string) DBOption  // 设备ID条件
 	WhereRoleUuid(roleUuid uint64) DBOption // 角色ID条件
 	WhereIsSuper(isSuper int) DBOption      // 是否超级管理员条件
+	WhereRealName(realName string) DBOption // 姓名条件
+	WhereNotUuid(uuid uint64) DBOption      // 排除UUID条件
 
 	GetStaff(opts ...DBOption) (model.Staff, error) // 查询员工
 	GetStaffs(opts ...DBOption) []model.Staff       // 查询员工
@@ -47,7 +49,7 @@ func (r *StaffRepo) CreateStaff(staff model.Staff) error {
 
 func (r *StaffRepo) GetStaff(opts ...DBOption) (model.Staff, error) {
 	var staff model.Staff
-	db := r.db.Model(&model.Staff{}).Scopes(NotDeleted)
+	db := r.db.Model(&model.Staff{}).Scopes(NotDeleted).Debug()
 	for _, opt := range opts {
 		db = opt(db)
 	}
@@ -158,5 +160,17 @@ func (r *StaffRepo) WhereRoleUuid(roleUuid uint64) DBOption {
 func (r *StaffRepo) WhereIsSuper(isSuper int) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("is_super = ?", isSuper)
+	}
+}
+
+func (r *StaffRepo) WhereRealName(realName string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("real_name = ?", realName)
+	}
+}
+
+func (r *StaffRepo) WhereNotUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid <> ?", uuid)
 	}
 }

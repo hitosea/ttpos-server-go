@@ -60,7 +60,7 @@ func (s *sSetup) CreateBranch(ctx context.Context, req *setup.InitShopReq) (bran
 }
 
 // CreateUser 创建网站用户
-func (s *sSetup) CreateUser(ctx context.Context, req *setup2.CreateUserInp) (userEmail string, err error) {
+func (s *sSetup) CreateUser(ctx context.Context, req *setup2.CreateUserInp) (err error) {
 	userPayload := g.Map{
 		"email":              req.UserEmail,
 		"first_name":         req.FirstName,
@@ -70,7 +70,7 @@ func (s *sSetup) CreateUser(ctx context.Context, req *setup2.CreateUserInp) (use
 	}
 	if _, err := service.Document().Create(ctx, "User", userPayload); err != nil {
 		g.Log().Error(ctx, "创建网站用户失败", err)
-		return userEmail, gerror.Wrapf(err, "创建网站用户失败")
+		return gerror.Wrapf(err, "创建网站用户失败")
 	}
 	//限制用户数据权限 如果用户需要登录erp系统就约束
 
@@ -114,7 +114,7 @@ func (s *sSetup) CreatePosProfile(ctx context.Context, req *setup.CreateDefaultP
 func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *setup.InitShopResp, err error) {
 	var (
 		branchName string
-		adminEmail string
+		adminEmail = fmt.Sprintf("%s@ttpos-user.com", req.AdminUuid)
 	)
 	//创建分支
 	branchName, err = s.CreateBranch(ctx, req)
@@ -123,8 +123,8 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *se
 	}
 
 	//创建默认用户
-	adminEmail, err = s.CreateUser(ctx, &setup2.CreateUserInp{
-		UserEmail: fmt.Sprintf("%s@ttpos-user.com", req.AdminUuid),
+	err = s.CreateUser(ctx, &setup2.CreateUserInp{
+		UserEmail: adminEmail,
 		FirstName: req.ShopName,
 	})
 	if err != nil {

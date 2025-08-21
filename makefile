@@ -11,6 +11,7 @@ install:
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
 	@echo "🗄️  初始化php项目..."
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh init
+	$(call update_env_and_run)
 	@make install-bmp
 	@echo "✅ 初始化完成"
 
