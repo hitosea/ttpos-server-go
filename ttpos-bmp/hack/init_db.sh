@@ -1,11 +1,14 @@
 #!/bin/bash
+old_dir=$OLDPWD
+cd `dirname $0`
+
 set -o allexport
 
-ENV_FILE=.env
+ENV_FILE=../.env
 
 if [ ! -f "$ENV_FILE" ] ;then
   echo "环境变量文件不存在，试用上级目录"
-  ENV_FILE=../.env
+  ENV_FILE=../../.env
 fi
 
 . "$ENV_FILE"
@@ -17,3 +20,4 @@ docker run --rm mariadb:10.11.6 $EXEC -e "GRANT ALL PRIVILEGES ON erp.* TO '$DB_
 docker run --rm mariadb:10.11.6 $EXEC -e "GRANT ALL PRIVILEGES ON takeout.* TO '$DB_USERNAME'@'%'  WITH GRANT OPTION;"
 
 set +o allexport
+cd $old_dir
