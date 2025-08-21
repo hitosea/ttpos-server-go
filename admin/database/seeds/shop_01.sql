@@ -390,6 +390,11 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `h5_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'h5订单商品ID，用于关联h5订单商品，用于判断是否为h5订单商品',
     `is_accept_order` INT(10) NOT NULL DEFAULT 1 COMMENT '是否已接单, 0-否 1-是。订单商品默认已接单，h5订单商品只有下单并接单后才改为已接单',
 
+    `package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '套餐uuid',
+    `package_group_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '套餐分组UUID',
+    `product_type` INT(10) NOT NULL DEFAULT 0 COMMENT '商品类型, 0-商品 1-套餐',
+    `package_sub_product_params` TEXT COMMENT '套餐子商品参数',
+
     `send_kitchen_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '送厨时间(时间戳)',
 
     -- 时间信息
