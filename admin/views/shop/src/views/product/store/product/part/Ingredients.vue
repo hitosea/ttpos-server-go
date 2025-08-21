@@ -59,7 +59,7 @@
                     },
                   ]"
                 >
-                  <numInput :controls="false" :min="0" :max="1000000" :precision="2" :placeholder="$t('请输入价格')" v-model="scope.row.price"></numInput>
+                  <numInput :controls="false" :min="0" :max="100000000" :precision="2" :placeholder="$t('请输入价格')" v-model="scope.row.price"></numInput>
                 </el-form-item>
               </template>
             </el-table-column>
