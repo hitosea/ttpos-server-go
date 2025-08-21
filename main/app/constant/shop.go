@@ -18,11 +18,13 @@ var Languages = []LanguageItem{
 }
 
 const (
-	CheckNameSourceUnit           = "unit"
-	CheckNameSourceProduct        = "product"
-	CheckNameSourceCategory       = "category"
-	CheckNameSourceSauce          = "sauce"
-	CheckNameSourceAttribute      = "attribute"
-	CheckNameSourceAttributeGroup = "attribute_group"
-	CheckNameSourceFlavor         = "flavor"
+	CheckNameSourceUnit             = "unit"
+	CheckNameSourceProduct          = "product"
+	CheckNameSourceCategory         = "category"
+	CheckNameSourceSauce            = "sauce"
+	CheckNameSourceAttribute        = "attribute"
+	CheckNameSourceAttributeGroup   = "attribute_group"
+	CheckNameSourceFlavor           = "flavor"
+	CheckNameSourceMaterial         = "material"
+	CheckNameSourceMaterialCategory = "material_category"
 )
