@@ -206,6 +206,23 @@ func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.Che
 				})
 			}
 
+		case constant.CheckNameSourceMaterialUnit:
+			{
+				var count int64
+				query := db.Model(&model.MaterialUnit{}).
+					Joins("JOIN ttpos_multi_language_name ON ttpos_material_unit.multi_language_name_uuid = ttpos_multi_language_name.uuid").
+					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text)
+				if checkNameReq.Uuid != 0 {
+					query = query.Where("ttpos_material_unit.uuid != ?", checkNameReq.Uuid)
+				}
+				query.Count(&count)
+
+				result = append(result, resp.CheckNameItem{
+					Lang:      name.Lang,
+					TextExist: count > 0,
+				})
+			}
+
 		default:
 			return resp.CheckNameResp{}, errors.New("类型不支持")
 		}

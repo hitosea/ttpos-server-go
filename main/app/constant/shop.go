@@ -27,4 +27,5 @@ const (
 	CheckNameSourceFlavor           = "flavor"
 	CheckNameSourceMaterial         = "material"
 	CheckNameSourceMaterialCategory = "material_category"
+	CheckNameSourceMaterialUnit     = "material_unit"
 )
