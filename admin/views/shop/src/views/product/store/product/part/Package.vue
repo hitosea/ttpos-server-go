@@ -116,6 +116,7 @@
       selectorType="all"
       :selectedProductIds="selectedProductIds"
       :haveSku="true"
+      :stockZero="true"
     >
     </ProductSelector>
   </div>
@@ -325,7 +326,7 @@
       const newProduct = {
         ...item, // 复制所有原有属性
         sort: maxSort + index + 1, // 递增排序
-        num: item.num || null, // 保持原有num值，如果没有则为null
+        num: 1, // 保持原有num值，如果没有则为null
       };
       form.model.package_group[selectIndex.value].product_list.push(newProduct);
     });

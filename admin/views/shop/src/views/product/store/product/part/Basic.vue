@@ -63,7 +63,7 @@
     </el-form-item>
 
     <el-form-item for="no_click" :label="$t('套餐价格：')" prop="model.package_price" v-if="form.model.type == 30" :rules="[{ required: true, message: $t('请输入套餐价格') }]">
-      <numInput type="text" :placeholder="$t('请输入套餐价格')" v-model="form.model.package_price" :maxlength="50" class="max-w460"></numInput>
+      <numInput type="text" :placeholder="$t('请输入套餐价格')" v-model="form.model.package_price" :min="0" :max="100000000" :precision="2" class="max-w460"></numInput>
     </el-form-item>
 
     <!--商品图片组件-->
