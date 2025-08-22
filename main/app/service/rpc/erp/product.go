@@ -3,6 +3,7 @@ package erp
 import (
 	"ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/context"
 )
 
@@ -28,6 +29,9 @@ func (s *erpSrv) AddProduct(ctx context.Context, params req.ProductAddErpReq) (*
 	})
 	if err != nil {
 		return nil, err
+	}
+	if result.GetCode() != "0" {
+		return nil, errors.WithMessage(errors.New(result.GetMessage()), "同步商品到erp失败")
 	}
 	response := &item.ItemInfo{}
 	if err := result.Data.UnmarshalTo(response); err != nil {

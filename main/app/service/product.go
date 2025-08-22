@@ -2390,6 +2390,29 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 				if productPackage.ID == 0 || err != nil {
 					return errors.WithMessage(err, "商品不存在")
 				}
+
+				// 同步新增商品到erp
+				erpCode := ""
+				if ctx.GetCompany().IsOpenErp() {
+					multiLanguageName := model.NewMultiLanguageName(addReq.LocaleName.ToJson())
+					productUnit, errGetUnit := repository.NewProductUnitRepo(tx).GetProductUnit(commonRepo.WhereByUuid(productPackage.UnitUuid))
+					if errGetUnit != nil {
+						return errors.WithMessage(errGetUnit, "获取商品单位失败")
+					}
+
+					erpSrv := erp.NewIErpSrv(s.dbm)
+					itemInfo, errErp := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
+						ItemName:          multiLanguageName.EnName,
+						StockUom:          productUnit.ErpnextUom,
+						TemplateItemCode:  productPackage.ErpCode,
+						ItemSpecification: multiLanguageName.EnName,
+					})
+					if errErp != nil {
+						return errors.WithMessage(errErp, "同步商品到erp失败")
+					}
+					erpCode = itemInfo.ItemCode
+				}
+
 				uuid, _ := utils.GetID()
 				productBoms = append(productBoms, model.ProductBom{
 					BaseModel: model.BaseModel{
@@ -2399,6 +2422,7 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 					},
 					Price:              item.Price,
 					Name:               addReq.LocaleName.ToJson(),
+					ErpCode:            erpCode,
 					Status:             int(productPackage.Status),
 					ProductFlavorUuid:  productFlavor.Uuid,
 					ProductPackageUuid: productPackage.Uuid,
@@ -2862,10 +2886,32 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 					return errors.WithMessage(err, "商品不存在")
 				}
 				if item.BomUuid == 0 {
+					// 同步新增商品到erp
+					erpCode := ""
+					if ctx.GetCompany().IsOpenErp() {
+						multiLanguageName := model.NewMultiLanguageName(editReq.LocaleName.ToJson())
+						productUnit, errGetUnit := repository.NewProductUnitRepo(tx).GetProductUnit(commonRepo.WhereByUuid(productPackage.UnitUuid))
+						if errGetUnit != nil {
+							return errors.WithMessage(errGetUnit, "获取商品单位失败")
+						}
+
+						erpSrv := erp.NewIErpSrv(s.dbm)
+						itemInfo, errErp := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
+							ItemName:          multiLanguageName.EnName,
+							StockUom:          productUnit.ErpnextUom,
+							TemplateItemCode:  productPackage.ErpCode,
+							ItemSpecification: multiLanguageName.EnName,
+						})
+						if errErp != nil {
+							return errors.WithMessage(errErp, "同步商品到erp失败")
+						}
+						erpCode = itemInfo.ItemCode
+					}
 					// 新增商品BOM
 					err := tx.Create(&model.ProductBom{
 						Price:              item.Price,
 						Name:               editReq.LocaleName.ToJson(),
+						ErpCode:            erpCode,
 						Status:             int(productPackage.Status),
 						ProductFlavorUuid:  flavor.Uuid,
 						ProductPackageUuid: item.Uuid,
@@ -2874,6 +2920,31 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 						return err
 					}
 				} else {
+					// 同步更新商品到erp
+					if ctx.GetCompany().IsOpenErp() {
+						multiLanguageName := model.NewMultiLanguageName(editReq.LocaleName.ToJson())
+						productUnit, errGetUnit := repository.NewProductUnitRepo(tx).GetProductUnit(commonRepo.WhereByUuid(productPackage.UnitUuid))
+						if errGetUnit != nil {
+							return errors.WithMessage(errGetUnit, "获取商品单位失败")
+						}
+						productBomRepo := repository.NewProductBomRepo(tx)
+						productBom, errGetBom := productBomRepo.GetProductBom(commonRepo.WhereByUuid(item.BomUuid))
+						if errGetBom != nil {
+							return errors.WithMessage(errGetBom, "获取商品bom失败")
+						}
+
+						erpSrv := erp.NewIErpSrv(s.dbm)
+						_, errErp := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
+							ItemName:          multiLanguageName.EnName,
+							StockUom:          productUnit.ErpnextUom,
+							ItemCode:          productBom.ErpCode,
+							TemplateItemCode:  productPackage.ErpCode,
+							ItemSpecification: multiLanguageName.EnName,
+						})
+						if errErp != nil {
+							return errors.WithMessage(errErp, "同步商品到erp失败")
+						}
+					}
 					// 编辑商品BOM
 					err := tx.Model(&model.ProductBom{}).Where("uuid = ?", item.BomUuid).Updates(map[string]any{
 						"price":                item.Price,
@@ -3121,11 +3192,11 @@ func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImpor
 	langKeys := map[string]string{
 		"English":    "en",
 		"ภาษาไทย":    "th",
-		"简体中文":   "zh",
-		"繁體中文":   "zhtw",
+		"简体中文":       "zh",
+		"繁體中文":       "zhtw",
 		"Türkçe":     "tr",
 		"မြန်မာဘာသာ": "my",
-		"日本語":     "ja",
+		"日本語":        "ja",
 		"한국어":        "ko",
 		"Svenska":    "sv",
 	}

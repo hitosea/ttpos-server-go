@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/context"
 
 	"google.golang.org/grpc"
@@ -58,6 +59,9 @@ func (s *erpSrv) AddMaterial(ctx context.Context, params req.MaterialAddErpReq) 
 	if err != nil {
 		return nil, err
 	}
+	if result.GetCode() != "0" {
+		return nil, errors.WithMessage(errors.New(result.GetMessage()), "同步物品到erp失败")
+	}
 	response := &item.ItemInfo{}
 	if err := result.Data.UnmarshalTo(response); err != nil {
 		return nil, err
@@ -94,6 +98,9 @@ func (s *erpSrv) AddPorductBomCard(ctx context.Context, params ProductBomCardAdd
 	})
 	if err != nil {
 		return nil, err
+	}
+	if result.GetCode() != "0" {
+		return nil, errors.WithMessage(errors.New(result.GetMessage()), "同步成本卡到erp失败")
 	}
 	response := &manufacturing.SaveBomResp{}
 	if err := result.Data.UnmarshalTo(response); err != nil {
