@@ -427,6 +427,7 @@ func (s *purchaseOrderSrv) DeletePurchaseOrder(ctx context.Context, req req.Purc
 func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.PurchaseOrderSubmitReq) error {
 	return s.dbm.GetDB(ctx.GetDbId()).Transaction(func(tx *gorm.DB) error {
 		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
+		purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(tx)
 
 		// 查询采购申请
 		purchaseOrder, err := purchaseOrderRepo.GetByUuid(req.Uuid)
@@ -446,6 +447,12 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 		err = purchaseOrderRepo.Update(purchaseOrder)
 		if err != nil {
 			return errors.WithMessage(err, "更新采购申请状态失败")
+		}
+
+		// 删除物品为0的数据
+		err = purchaseOrderItemRepo.DeleteByPurchaseOrderUuidAndNumIsZero(req.Uuid)
+		if err != nil {
+			return errors.WithMessage(err, "删除采购申请明细失败")
 		}
 
 		// 记录操作日志
@@ -745,6 +752,7 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 
 		// 更新收货单状态
 		receiptOrder.Status = utils.IfInt(req.IsConfirm, constant.ReceiptOrderStatusReceived, constant.ReceiptOrderStatusPending)
+		receiptOrder.ReceiveTime = req.ReceiveTime
 		err = receiptOrderRepo.Update(receiptOrder)
 		if err != nil {
 			return errors.WithMessage(err, "更新收货单状态失败")

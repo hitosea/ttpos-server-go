@@ -2190,4 +2190,5 @@ return [
     "更新支付方式时间失败" => "Ödeme yöntemi güncelleme zamanı başarısız oldu",
     "调用erpnext支付方式添加接口失败" => "erpnext ödeme yöntemi ekleme arayüzü çağrısı başarısız oldu",
     "操作失败：" => "İşlem başarısız:",
+    "商品排序不能大于999" => "Ürün sıralaması 999'dan büyük olamaz",
 ];
