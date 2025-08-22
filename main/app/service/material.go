@@ -861,7 +861,7 @@ func (s *materialSrv) GetProductBomCardDetail(ctx context.Context, req req.Produ
 	db := s.dbm.GetDB(dbId)
 
 	productBomCardRepo := repository.NewProductBomCardRepo(db)
-	productBomCard, err := productBomCardRepo.GetProductBomCardDetail(req.ProductBomCardUuid)
+	productBomCard, err := productBomCardRepo.GetProductBomCardDetail(req.Uuid)
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取成本卡失败")
 	}
