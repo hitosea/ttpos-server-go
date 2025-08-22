@@ -179,11 +179,6 @@
       type: Boolean,
       default: false,
     },
-    // 库存为0的商品不可选
-    stockZero: {
-      type: Boolean,
-      default: false,
-    },
   });
 
   const dialogVisible = ref(props.open);
@@ -489,12 +484,6 @@
     if (selectedProductsTmp.value.some((item) => item.product_id === row.product_id)) {
       return true;
     }
-    
-    // 如果 stockZero 为 true，库存为0的商品不可选
-    if (props.stockZero && row.stock_num !== undefined && row.stock_num <= 0) {
-      return false;
-    }
-    
     // 未选中时检查是否达到最大数量
     return selectedProductsTmp.value.length < props.maxCount;
   };
@@ -504,7 +493,6 @@
 
     if (isChecked) {
       // 检查是否超过最大数量
-
       if (selectedProductsTmp.value.length >= props.maxCount) {
         // 超过则取消选中并提示
         productsTableRef.value.toggleRowSelection(node, false);
@@ -535,6 +523,7 @@
     // 计算可添加的数量
     const currentSelectedCount = selectedProductsTmp.value.length;
     const canSelectCount = props.maxCount - currentSelectedCount;
+
     if (canSelectCount <= 0) {
       // 已满则提示
       proxy.$ElMessage({
@@ -549,13 +538,8 @@
     // 获取当前页未选中的商品
     const currentPageUnselected = productsTableData.value.filter((item) => !selectedProductsTmp.value.some((p) => p.product_id === item.product_id));
 
-    // 如果 stockZero 为 true，过滤掉库存为0的商品
-    const availableProducts = props.stockZero 
-      ? currentPageUnselected.filter(item => item.stock_num === undefined || item.stock_num > 0)
-      : currentPageUnselected;
-
     // 实际可添加的商品
-    const toSelect = availableProducts.slice(0, canSelectCount);
+    const toSelect = currentPageUnselected.slice(0, canSelectCount);
 
     // 添加选中的商品
     toSelect.forEach((item) => {
@@ -576,7 +560,6 @@
           }
         });
       });
-      console.log( toSelect.length, currentPageUnselected.length);
       proxy.$ElMessage({
         message: $t('最多只能选择' + props.maxCount + $t('个商品')),
         type: 'warning',
@@ -586,12 +569,7 @@
 
   const toggleRowSelection = async (isFirst = false) => {
     if (isFirst) {
-      // 如果 stockZero 为 true，过滤掉库存为0的商品
-      const availableProducts = props.stockZero 
-        ? productsTableData.value.filter(item => item.stock_num === undefined || item.stock_num > 0)
-        : productsTableData.value;
-        
-      selectedProductsTmp.value = availableProducts.filter((item) => props.selectedProductIds.includes(item.product_id));
+      selectedProductsTmp.value = productsTableData.value.filter((item) => props.selectedProductIds.includes(item.product_id));
     }
 
     nextTick(() => {
@@ -648,12 +626,7 @@
     }
 
     if (checked) {
-      // 如果 stockZero 为 true，过滤掉库存为0的商品
-      const availableProducts = props.stockZero 
-        ? _products.filter(item => item.stock_num === undefined || item.stock_num > 0)
-        : _products;
-        
-      availableProducts.forEach((item) => {
+      _products.forEach((item) => {
         if (selectedProductsTmp.value.some((product) => product.product_id === item.product_id)) return;
         selectedProductsTmp.value.push(item);
       });
@@ -737,12 +710,7 @@
     }
 
     if (checked) {
-      // 如果 stockZero 为 true，过滤掉库存为0的商品
-      const availableProducts = props.stockZero 
-        ? _products.filter(item => item.stock_num === undefined || item.stock_num > 0)
-        : _products;
-        
-      availableProducts.forEach((item) => {
+      _products.forEach((item) => {
         if (selectedProductsTmp.value.some((product) => product.product_id === item.product_id)) return;
         selectedProductsTmp.value.push(item);
       });
