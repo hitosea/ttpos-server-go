@@ -204,7 +204,7 @@ class Index extends Controller
         $supplier = $this->store['supplier'];
         //
         $erp = [
-            'is_open' => isset($this->store['app']['supplier']['erpnext_site_code']) && $this->store['app']['supplier']['erpnext_site_code'] !== '' ? 1 : 0,
+            'is_open' => isset($this->store['app']['is_enable_erp']) ? $this->store['app']['is_enable_erp'] : 0,
             'site_code' => $this->store['app']['supplier']['erpnext_site_code'] ?? '',
             'company_abbr' => $this->store['app']['supplier']['erpnext_company_abbr'] ?? '',
             'branch_name' => $this->store['app']['supplier']['erpnext_branch_name'] ?? '',
