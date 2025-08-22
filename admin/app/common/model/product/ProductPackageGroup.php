@@ -32,7 +32,7 @@ class ProductPackageGroup extends BaseModel
      */
     public function productPackageGropItem()
     {
-        return $this->hasMany(ProductPackageGroupItemModel::class, 'uuid', 'product_package_group_uuid');
+        return $this->hasMany(ProductPackageGroupItemModel::class, 'product_package_group_uuid', 'uuid');
     }
 
     /**
