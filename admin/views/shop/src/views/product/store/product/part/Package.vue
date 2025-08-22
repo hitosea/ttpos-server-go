@@ -116,6 +116,7 @@
       selectorType="all"
       :selectedProductIds="selectedProductIds"
       :haveSku="true"
+      :stockZero="true"
     >
     </ProductSelector>
   </div>
