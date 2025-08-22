@@ -2009,6 +2009,11 @@ func (r *orderRepo) DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64
 		if err != nil {
 			return errors.WithMessage(err)
 		}
+		// 套餐子商品送厨单商品标记删除
+		err = tx.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid in (?)", tx.Model(&model.SaleOrderProduct{}).Where("package_uuid = ?", saleOrderProductUuid).Select("uuid")).Update("delete_time", timeNow).Error
+		if err != nil {
+			return errors.WithMessage(err)
+		}
 		return tx.Model(&model.SaleOrderProduct{}).
 			Where("(status != ? or cancel_time != 0)", constant.OrderProductStatusSentKitchen).
 			Where("delete_time = ?", 0).

@@ -1291,7 +1291,7 @@ func (r *productRepo) BatchUpdateSort(table any, sorts map[uint64]int) error {
 	}
 	// 一条SQL语句批量更新排序
 	err := r.db.Model(table).
-		Where("uuid IN ?", uuids).Debug().
+		Where("uuid IN ?", uuids).
 		Update("sort", gorm.Expr(caseWhenSQL, args...)).Error
 
 	if err != nil {

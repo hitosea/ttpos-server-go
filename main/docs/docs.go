@@ -38200,6 +38200,14 @@ const docTemplate = `{
                     "description": "订单编号",
                     "type": "string"
                 },
+                "purchase_order_no": {
+                    "description": "采购单号",
+                    "type": "string"
+                },
+                "purchase_order_uuid": {
+                    "description": "采购单ID",
+                    "type": "integer"
+                },
                 "receive_time": {
                     "description": "收货日期",
                     "type": "integer"
@@ -38240,6 +38248,14 @@ const docTemplate = `{
                 "order_no": {
                     "description": "订单编号",
                     "type": "string"
+                },
+                "purchase_order_no": {
+                    "description": "采购单号",
+                    "type": "string"
+                },
+                "purchase_order_uuid": {
+                    "description": "采购单ID",
+                    "type": "integer"
                 },
                 "receive_time": {
                     "description": "收货日期",
