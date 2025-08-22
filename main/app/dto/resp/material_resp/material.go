@@ -10,7 +10,7 @@ type Material struct {
 	Name             string         `json:"name"`               // 物品名称
 	CategoryUuid     uint64         `json:"category_uuid"`      // 分类UUID
 	Image            string         `json:"image"`              // 图片
-	Status           int            `json:"status"`             // 状态 1-启用 2-停用
+	Status           int            `json:"status"`             // 状态 1-启用 0-停用
 	UnitName         string         `json:"unit_name"`          // 基准单位名称
 	PurchaseUnitName string         `json:"purchase_unit_name"` // 采购单位名称
 	CostUnitName     string         `json:"cost_unit_name"`     // 成本单位名称
