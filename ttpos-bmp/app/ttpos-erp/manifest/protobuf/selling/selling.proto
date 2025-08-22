@@ -90,7 +90,7 @@ message SavePosInvoiceReq {
   string order_no = 1; // 订单号,必填 传ttpos的订单号
   string open_pos_entry_name = 2;                    // POS开帐名称,必填
   string company_abbr = 3;                        // 公司缩写,必填
-  int64 posting_datetime = 4;                        // 过账日期时间 格式为 YYYY-MM-DD HH:MM:SS 必填
+  int64 posting_datetime = 4;                        // 过账日期时间 格式为时间戳，必填， 传交易时间过来
   int32 update_stock = 5;                         // 是否更新库存 必填，默认选1 0=不更新 1=更新
   string currency = 6;                            // 货币 标准缩写例如 CNY/THB/USD 必填
   string price_list_currency = 7;                 // 价格表货币 标准缩写例如 CNY/THB/USD 必填

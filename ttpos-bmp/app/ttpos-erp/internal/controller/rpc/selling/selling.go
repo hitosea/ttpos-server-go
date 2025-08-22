@@ -230,6 +230,9 @@ func (c *Controller) SavePosInvoice(ctx context.Context, req *selling.SavePosInv
 
 // validateSavePosInvoiceReq 验证保存发票请求参数
 func (c *Controller) validateSavePosInvoiceReq(req *selling.SavePosInvoiceReq) error {
+	if strings.TrimSpace(req.OrderNo) == "" {
+		return gerror.New("订单号不能为空")
+	}
 	if strings.TrimSpace(req.OpenPosEntryName) == "" {
 		return gerror.New("POS开帐名称不能为空")
 	}
@@ -250,6 +253,9 @@ func (c *Controller) validateSavePosInvoiceReq(req *selling.SavePosInvoiceReq) e
 	}
 	if len(req.Items) == 0 {
 		return gerror.New("商品项目列表不能为空")
+	}
+	if len(req.MaterialItems) == 0 {
+		return gerror.New("原材料项目列表不能为空")
 	}
 	if len(req.Taxes) == 0 {
 		return gerror.New("税费列表不能为空")

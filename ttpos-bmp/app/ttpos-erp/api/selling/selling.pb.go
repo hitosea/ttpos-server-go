@@ -778,7 +778,7 @@ type SavePosInvoiceReq struct {
 	OrderNo           string                 `protobuf:"bytes,1,opt,name=order_no,json=orderNo,proto3" json:"order_no,omitempty" dc:"订单号,必填 传ttpos的订单号"`                                           // 订单号,必填 传ttpos的订单号
 	OpenPosEntryName  string                 `protobuf:"bytes,2,opt,name=open_pos_entry_name,json=openPosEntryName,proto3" json:"open_pos_entry_name,omitempty" dc:"POS开帐名称,必填"`                   // POS开帐名称,必填
 	CompanyAbbr       string                 `protobuf:"bytes,3,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写,必填"`                                         // 公司缩写,必填
-	PostingDatetime   int64                  `protobuf:"varint,4,opt,name=posting_datetime,json=postingDatetime,proto3" json:"posting_datetime,omitempty" dc:"过账日期时间 格式为 YYYY-MM-DD HH:MM:SS 必填"`  // 过账日期时间 格式为 YYYY-MM-DD HH:MM:SS 必填
+	PostingDatetime   int64                  `protobuf:"varint,4,opt,name=posting_datetime,json=postingDatetime,proto3" json:"posting_datetime,omitempty" dc:"过账日期时间 格式为时间戳，必填， 传交易时间过来"`          // 过账日期时间 格式为时间戳，必填， 传交易时间过来
 	UpdateStock       int32                  `protobuf:"varint,5,opt,name=update_stock,json=updateStock,proto3" json:"update_stock,omitempty" dc:"是否更新库存 必填，默认选1 0=不更新 1=更新"`                      // 是否更新库存 必填，默认选1 0=不更新 1=更新
 	Currency          string                 `protobuf:"bytes,6,opt,name=currency,proto3" json:"currency,omitempty" dc:"货币 标准缩写例如 CNY/THB/USD 必填"`                                                 // 货币 标准缩写例如 CNY/THB/USD 必填
 	PriceListCurrency string                 `protobuf:"bytes,7,opt,name=price_list_currency,json=priceListCurrency,proto3" json:"price_list_currency,omitempty" dc:"价格表货币 标准缩写例如 CNY/THB/USD 必填"` // 价格表货币 标准缩写例如 CNY/THB/USD 必填
