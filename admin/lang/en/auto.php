@@ -2186,4 +2186,8 @@ return [
     "商家已授权" => "Merchant authorized",
     "ERPNext站点不存在" => "ERPNext site does not exist",
     "数据处理中，请稍后重试" => "Data is being processed, please try again later",
+    "套餐%s已使用此规格，不可删除" => "Package %s is already using this specification and cannot be deleted",
+    "更新支付方式时间失败" => "Failed to update payment method time",
+    "调用erpnext支付方式添加接口失败" => "Failed to call erpnext payment method addition interface",
+    "操作失败：" => "Operation failed:",
 ];

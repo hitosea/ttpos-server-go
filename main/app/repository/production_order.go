@@ -95,7 +95,7 @@ func (r *productionRepo) GetProducts(limit int, orderBy string, statusOpt DBOpti
 	db = statusOpt(db).Session(&gorm.Session{})
 	var total float64
 	// 统计商品数量总和
-	db.Select("SUM(num) as total").Scan(&total)
+	db.Select("IFNULL(SUM(num), 0) as total").Scan(&total)
 
 	for _, opt := range opts {
 		db = opt(db)

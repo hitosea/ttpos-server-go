@@ -823,12 +823,6 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 							Query: "SaleOrders.SaleOrderBuffetDelayProducts",
 						},
 					),
-					// 加载套餐商品
-					CommonRepo.Preload(
-						WithPreload{
-							Query: "SaleOrders.SaleOrderProducts.SaleOrderPackageProducts.SaleOrderProduct",
-						},
-					),
 				)
 				if errDesk != nil {
 					return nil, errors.WithMessage(errDesk)
@@ -2006,6 +2000,11 @@ func (r *orderRepo) DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64
 			return errors.WithMessage(err)
 		}
 		err = tx.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid = ?", saleOrderProductUuid).Update("delete_time", timeNow).Error
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+		// 套餐子商品送厨单商品标记删除
+		err = tx.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid in (?)", tx.Model(&model.SaleOrderProduct{}).Where("package_uuid = ?", saleOrderProductUuid).Select("uuid")).Update("delete_time", timeNow).Error
 		if err != nil {
 			return errors.WithMessage(err)
 		}

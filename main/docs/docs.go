@@ -25205,7 +25205,7 @@ const docTemplate = `{
                 }
             }
         },
-        "material_resp.MaterialListResp": {
+        "material_resp.MaterialListWithPaginationResp": {
             "type": "object",
             "properties": {
                 "list": {
@@ -25213,14 +25213,6 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/material_resp.Material"
                     }
-                }
-            }
-        },
-        "material_resp.MaterialListWithPaginationResp": {
-            "type": "object",
-            "properties": {
-                "list": {
-                    "$ref": "#/definitions/material_resp.MaterialListResp"
                 },
                 "meta": {
                     "$ref": "#/definitions/dto.PageResponse"
@@ -28867,7 +28859,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "conversion_rate",
-                "unit_uuid"
+                "uuid"
             ],
             "properties": {
                 "conversion_rate": {
@@ -28875,7 +28867,7 @@ const docTemplate = `{
                     "type": "number",
                     "minimum": 0
                 },
-                "unit_uuid": {
+                "uuid": {
                     "description": "单位UUID",
                     "type": "integer"
                 }
@@ -30757,7 +30749,7 @@ const docTemplate = `{
                 },
                 "num": {
                     "description": "商品数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "sort": {
                     "description": "商品排序",
@@ -31208,7 +31200,7 @@ const docTemplate = `{
                 },
                 "num": {
                     "description": "商品数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "sort": {
                     "description": "商品排序",
@@ -38177,6 +38169,18 @@ const docTemplate = `{
         "resp.PurchaseReceiptOrderDetailResp": {
             "type": "object",
             "properties": {
+                "cancel_time": {
+                    "description": "取消时间",
+                    "type": "integer"
+                },
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "erp_order_no": {
+                    "description": "ERP收货单号",
+                    "type": "string"
+                },
                 "expect_arrival_time": {
                     "description": "期望到货日期",
                     "type": "integer"
@@ -38196,12 +38200,20 @@ const docTemplate = `{
                     "description": "订单编号",
                     "type": "string"
                 },
+                "purchase_order_no": {
+                    "description": "采购单号",
+                    "type": "string"
+                },
+                "purchase_order_uuid": {
+                    "description": "采购单ID",
+                    "type": "integer"
+                },
                 "receive_time": {
                     "description": "收货日期",
                     "type": "integer"
                 },
                 "status": {
-                    "description": "状态",
+                    "description": "状态 0-待收货 1-已收货 2-已取消",
                     "type": "integer"
                 },
                 "uuid": {
@@ -38213,6 +38225,18 @@ const docTemplate = `{
         "resp.PurchaseReceiptOrderInfo": {
             "type": "object",
             "properties": {
+                "cancel_time": {
+                    "description": "取消时间",
+                    "type": "integer"
+                },
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "erp_order_no": {
+                    "description": "ERP收货单号",
+                    "type": "string"
+                },
                 "expect_arrival_time": {
                     "description": "期望到货日期",
                     "type": "integer"
@@ -38225,12 +38249,20 @@ const docTemplate = `{
                     "description": "订单编号",
                     "type": "string"
                 },
+                "purchase_order_no": {
+                    "description": "采购单号",
+                    "type": "string"
+                },
+                "purchase_order_uuid": {
+                    "description": "采购单ID",
+                    "type": "integer"
+                },
                 "receive_time": {
                     "description": "收货日期",
                     "type": "integer"
                 },
                 "status": {
-                    "description": "状态",
+                    "description": "状态 0-待收货 1-已收货 2-已取消",
                     "type": "integer"
                 },
                 "uuid": {

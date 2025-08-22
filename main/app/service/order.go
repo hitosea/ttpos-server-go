@@ -7391,15 +7391,14 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 				}
 			}
 		}
-
-		// 更新旧的子商品的数量
-		if saleOrderProduct.IsPackageProduct() {
-			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
-			for _, subProduct := range subProducts {
-				unitNum := decimal.NewFromFloat(subProduct.UnitNum)
-				num := decimal.NewFromFloat(keepNum).Mul(unitNum).Round(3).InexactFloat64()
-				subProduct.SetNum(num)
-			}
+	}
+	// 更新旧的子商品的数量
+	if saleOrderProduct.IsPackageProduct() {
+		subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+		for _, subProduct := range subProducts {
+			unitNum := decimal.NewFromFloat(subProduct.UnitNum)
+			num := decimal.NewFromFloat(keepNum).Mul(unitNum).Round(3).InexactFloat64()
+			subProduct.SetNum(num)
 		}
 	}
 

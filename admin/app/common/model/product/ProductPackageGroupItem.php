@@ -25,4 +25,12 @@ class ProductPackageGroupItem extends BaseModel
     {
         return $this->hasOne(ProductBom::class, 'uuid', 'product_bom_uuid');
     }
+
+    /**
+     * 关联套餐组
+     */
+    public function productPackageGroup()
+    {
+        return $this->hasOne(ProductPackageGroup::class, 'uuid', 'product_package_group_uuid');
+    }
 }
