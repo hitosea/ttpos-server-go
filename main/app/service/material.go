@@ -16,6 +16,7 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
 
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -108,20 +109,23 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		erpSrv := erp.NewIErpSrv(s.dbm)
 		erpStockNum, err := erpSrv.GetMaterialStockNum(ctx)
 		if err != nil {
-			return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(err, "获取物品库存数量失败")
-		}
-		updateMaterial := []*model.Material{}
-		for i, material := range materials {
-			for _, itemStock := range erpStockNum.ItemStockList {
-				if itemStock.ItemCode == material.Code {
-					materials[i].StockNum = itemStock.ActualQty
-					updateMaterial = append(updateMaterial, &materials[i])
+			// TODO 考虑是否告警给运维
+			ctx.Log().Warn("获取erp物品库存数量失败", zap.Error(err))
+		} else {
+			updateMaterial := []*model.Material{}
+			for i, material := range materials {
+				for _, itemStock := range erpStockNum.ItemStockList {
+					if itemStock.ItemCode == material.Code {
+						materials[i].StockNum = itemStock.ActualQty
+						updateMaterial = append(updateMaterial, &materials[i])
+					}
 				}
 			}
-		}
-		if len(updateMaterial) > 0 {
-			if err := materialRepo.UpdateMaterialStockNum(updateMaterial); err != nil {
-				return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(err, "更新物品库存数量失败")
+			if len(updateMaterial) > 0 {
+				if err := materialRepo.UpdateMaterialStockNum(updateMaterial); err != nil {
+					// TODO 考虑是否告警给运维
+					ctx.Log().Warn("同步erp物品库存数量到本地失败", zap.Error(err))
+				}
 			}
 		}
 	}
