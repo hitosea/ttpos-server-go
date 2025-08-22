@@ -96,10 +96,10 @@ type PurchaseOrderSubmitReq struct {
 
 // PurchaseReceiptCreateReq 创建收货记录请求
 type PurchaseReceiptCreateReq struct {
-	PurchaseOrderUuid uint64                         `json:"purchase_order_uuid" binding:"required,min=1"`    // 采购订单ID
-	ReceiveTime       int64                          `json:"receive_time" binding:"required,min=0"`           // 收货时间(时间戳)
-	Items             []PurchaseReceiptItemCreateReq `json:"items" binding:"required,min=1,max=200,dive"`     // 收货明细
-	IsConfirm         bool                           `json:"is_confirm" binding:"omitempty,oneof=true false"` // 是否确认收货
+	PurchaseOrderUuid uint64                         `json:"purchase_order_uuid" binding:"required,min=1"` // 采购订单ID
+	ReceiveTime       int64                          `json:"receive_time" binding:"required,min=0"`        // 收货时间(时间戳)
+	Items             []PurchaseReceiptItemCreateReq `json:"items" binding:"required,min=1,max=200,dive"`  // 收货明细
+	IsConfirm         bool                           `json:"is_confirm"`                                   // 是否确认收货
 }
 
 // PurchaseReceiptUpdateReq 更新收货记录请求
