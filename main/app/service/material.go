@@ -141,12 +141,14 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			unitList = append(unitList, material_resp.MaterialUnit{
 				Uuid:           unit.Uuid,
 				Name:           unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+				LocaleName:     unit.Unit.MultiLanguageName.GetNames(),
 				ConversionRate: unit.ConversionRate,
 			})
 		}
 		respMaterial := material_resp.Material{
 			Uuid:         material.Uuid,
 			Name:         material.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			LocaleName:   material.MultiLanguageName.GetNames(),
 			ErpCode:      material.Code,
 			Num:          material.StockNum,
 			CategoryUuid: material.CategoryUuid,
@@ -198,6 +200,7 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		unitList = append(unitList, material_resp.MaterialUnit{
 			Uuid:           materialUnit.Uuid,
 			Name:           materialUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			LocaleName:     materialUnit.Unit.MultiLanguageName.GetNames(),
 			ConversionRate: materialUnit.ConversionRate,
 		})
 	}
@@ -553,8 +556,9 @@ func (s *materialSrv) GetMaterialCategoryList(ctx context.Context, req req.Mater
 	var materialCategoryList []material_resp.MaterialCategory
 	for _, materialCategory := range materialCategories {
 		materialCategoryList = append(materialCategoryList, material_resp.MaterialCategory{
-			Uuid: materialCategory.Uuid,
-			Name: materialCategory.Name,
+			Uuid:       materialCategory.Uuid,
+			Name:       materialCategory.Name,
+			LocaleName: materialCategory.MultiLanguageName.GetNames(),
 		})
 	}
 
@@ -576,6 +580,7 @@ func (s *materialSrv) GetMaterialUnitList(ctx context.Context, req req.MaterialU
 		materialUnitListResp = append(materialUnitListResp, material_resp.MaterialUnit{
 			Uuid:           materialUnit.Uuid,
 			Name:           materialUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			LocaleName:     materialUnit.Unit.MultiLanguageName.GetNames(),
 			ConversionRate: materialUnit.ConversionRate,
 		})
 	}
@@ -868,6 +873,7 @@ func (s *materialSrv) GetProductBomCardDetail(ctx context.Context, req req.Produ
 			unitList = append(unitList, material_resp.MaterialUnit{
 				Uuid:           unit.Uuid,
 				Name:           unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+				LocaleName:     unit.Unit.MultiLanguageName.GetNames(),
 				ConversionRate: unit.ConversionRate,
 			})
 		}
@@ -881,6 +887,7 @@ func (s *materialSrv) GetProductBomCardDetail(ctx context.Context, req req.Produ
 			Unit: material_resp.MaterialUnit{
 				Uuid:           material.UnitUuid,
 				Name:           material.GetUnitName(ctx.GetLanguage()),
+				LocaleName:     material.GetUnitLocaleName(),
 				ConversionRate: material.BaseUnitConversionRate,
 			},
 			UnitList: unitList,
@@ -888,10 +895,11 @@ func (s *materialSrv) GetProductBomCardDetail(ctx context.Context, req req.Produ
 	}
 
 	return &material_resp.ProductBomCardDetailResp{
-		Uuid:      productBomCard.Uuid,
-		Name:      productBomCard.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-		Num:       productBomCard.Num,
-		Materials: materialList,
+		Uuid:       productBomCard.Uuid,
+		Name:       productBomCard.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+		LocaleName: productBomCard.MultiLanguageName.GetNames(),
+		Num:        productBomCard.Num,
+		Materials:  materialList,
 	}, nil
 }
 

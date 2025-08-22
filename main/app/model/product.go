@@ -517,6 +517,15 @@ func (model *RelatedMaterial) GetUnitName(lang string) string {
 	return name.GetLocale(lang)
 }
 
+func (model *RelatedMaterial) GetUnitLocaleName() dto.LocaleResponse {
+	name := dto.LocaleResponse{}
+	err := utils.FromJson(model.UnitName, &name)
+	if err != nil {
+		return dto.LocaleResponse{}
+	}
+	return name
+}
+
 // GetDecreaseNum 获取减少的库存数量. 减少的库存数量 = 材料用量 * 商品数量
 func (model *RelatedMaterial) GetDecreaseNum(productNum float64) float64 {
 	return decimal.NewFromFloat(model.Num).Mul(decimal.NewFromFloat(productNum)).Round(2).InexactFloat64()

@@ -166,7 +166,7 @@ func (r *MaterialRepoImpl) CreateMaterialCategory(materialCategory model.Materia
 func (r *MaterialRepoImpl) GetMaterialCategoryList() ([]model.MaterialCategory, error) {
 	var materialCategories []model.MaterialCategory
 
-	if err := r.db.Model(&model.MaterialCategory{}).Where("delete_time = ?", 0).Order("create_time DESC").Find(&materialCategories).Error; err != nil {
+	if err := r.db.Model(&model.MaterialCategory{}).Where("delete_time = ?", 0).Preload("MultiLanguageName").Order("create_time DESC").Find(&materialCategories).Error; err != nil {
 		return nil, errors.WithMessage(err, "获取物品类别列表失败")
 	}
 
