@@ -116,7 +116,7 @@ type ProductBomCardMaterialReq struct {
 
 // ProductBomCardDetailReq 规格商品成本卡详情请求
 type ProductBomCardDetailReq struct {
-	ProductBomCardUuid uint64 `form:"product_bom_card_uuid" binding:"required"` // 成本卡UUID
+	uuid uint64 `form:"uuid" binding:"required"` // 成本卡UUID product_bom_card_uuid
 }
 
 // ProductBomCardUnlinkReq 解除成本卡关联请求
