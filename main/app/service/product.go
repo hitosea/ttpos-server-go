@@ -1720,12 +1720,29 @@ func (s *productSrv) AddProductSauce(ctx context.Context, addReq req.ProductSauc
 		if err != nil {
 			return errors.WithMessage(errors.New("保存名称多语言失败"), err.Error())
 		}
+
+		// 同步新增加料到erp
+		erpCode := ""
+		if ctx.GetCompany().IsOpenErp() {
+			multiLanguageName := model.NewMultiLanguageName(addReq.LocaleName.ToJson())
+			erpSrv := erp.NewIErpSrv(s.dbm)
+			itemInfo, errErp := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
+				ItemName: multiLanguageName.EnName,
+				StockUom: "Nos",
+			})
+			if errErp != nil {
+				return errors.WithMessage(errErp, "同步新增加料到erp失败")
+			}
+			erpCode = itemInfo.ItemCode
+		}
+
 		// 保存商品加料
 		productSauce := model.ProductSauce{
 			Sort:                  maxSort + 1,
 			Price:                 addReq.Price,
 			MultiLanguageNameUuid: multiLanguageName.Uuid,
 			Name:                  addReq.LocaleName.ToJson(),
+			ErpCode:               erpCode,
 		}
 		err = tx.Model(&model.ProductSauce{}).Create(&productSauce).Error
 		if err != nil {
