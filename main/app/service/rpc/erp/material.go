@@ -72,8 +72,8 @@ func (s *erpSrv) AddMaterial(ctx context.Context, params req.MaterialAddErpReq) 
 
 type ProductBomCardAddErpReq struct {
 	ItemCode string                   `json:"item_code" binding:"required"` // 商品编码
-	Quantity float64                  `json:"quantity" binding:"required"`  // 数量
-	Uom      string                   `json:"uom" binding:"required"`       // 单位
+	Quantity float64                  `json:"quantity" binding:"required"`  // 数量，加工份数
+	Uom      string                   `json:"uom" binding:"required"`       // 单位,商品的单位
 	Items    []*manufacturing.BomItem `json:"items" binding:"required"`     // 物品列表
 }
 

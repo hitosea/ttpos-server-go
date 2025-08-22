@@ -33,7 +33,7 @@ type MaterialAddReq struct {
 	Status           int                `json:"status" binding:"required"`             // 状态，1-启用 2-停用
 	Valuation        float64            `json:"valuation" binding:"required,min=0"`    // 估值率
 	InitStock        float64            `json:"init_stock" binding:"required,min=0"`   // 期初库存
-	BarcodeValue     string             `json:"barcode_value" binding:"required"`      // 条形码值
+	BarcodeValue     string             `json:"barcode_value"`                         // 条形码值
 	UnitUuid         uint64             `json:"unit_uuid" binding:"required"`          // 基准单位UUID
 	UnitList         []MaterialUnitReq  `json:"unit_list" binding:"required,dive"`     // 单位列表
 	PurchaseUnitUuid uint64             `json:"purchase_unit_uuid" binding:"required"` // 采购单位UUID
