@@ -712,6 +712,10 @@ definitions:
       image:
         description: 图片
         type: string
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物品名称
       name:
         description: 物品名称
         type: string
@@ -744,6 +748,10 @@ definitions:
     type: object
   material_resp.MaterialCategory:
     properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 分类名称
       name:
         description: 分类名称
         type: string
@@ -831,6 +839,10 @@ definitions:
       conversion_rate:
         description: 转换率
         type: number
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 单位名称
       name:
         description: 单位名称
         type: string
@@ -847,6 +859,10 @@ definitions:
     type: object
   material_resp.ProductBomCardDetailResp:
     properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 成本卡名称
       materials:
         description: 材料列表
         items:

@@ -25074,6 +25074,14 @@ const docTemplate = `{
                     "description": "图片",
                     "type": "string"
                 },
+                "locale_name": {
+                    "description": "物品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
                 "name": {
                     "description": "物品名称",
                     "type": "string"
@@ -25118,6 +25126,14 @@ const docTemplate = `{
         "material_resp.MaterialCategory": {
             "type": "object",
             "properties": {
+                "locale_name": {
+                    "description": "分类名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
                 "name": {
                     "description": "分类名称",
                     "type": "string"
@@ -25246,6 +25262,14 @@ const docTemplate = `{
                     "description": "转换率",
                     "type": "number"
                 },
+                "locale_name": {
+                    "description": "单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
                 "name": {
                     "description": "单位名称",
                     "type": "string"
@@ -25270,6 +25294,14 @@ const docTemplate = `{
         "material_resp.ProductBomCardDetailResp": {
             "type": "object",
             "properties": {
+                "locale_name": {
+                    "description": "成本卡名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
                 "materials": {
                     "description": "材料列表",
                     "type": "array",

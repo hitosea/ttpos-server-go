@@ -7391,14 +7391,14 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 				}
 			}
 		}
-	}
-	// 更新旧的子商品的数量
-	if saleOrderProduct.IsPackageProduct() {
-		subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
-		for _, subProduct := range subProducts {
-			unitNum := decimal.NewFromFloat(subProduct.UnitNum)
-			num := decimal.NewFromFloat(keepNum).Mul(unitNum).Round(3).InexactFloat64()
-			subProduct.SetNum(num)
+		// 更新旧的子商品的数量
+		if saleOrderProduct.IsPackageProduct() {
+			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+			for _, subProduct := range subProducts {
+				unitNum := decimal.NewFromFloat(subProduct.UnitNum)
+				num := decimal.NewFromFloat(keepNum).Mul(unitNum).Round(3).InexactFloat64()
+				subProduct.SetNum(num)
+			}
 		}
 	}
 
@@ -7457,7 +7457,8 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		if saleOrderProduct.IsPackageProduct() {
 			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
 			for _, subProduct := range subProducts {
-				num := utils.IfFloat64(subProduct.IsDelete(), 0, subProduct.Num)
+				unitNum := decimal.NewFromFloat(subProduct.UnitNum)
+				num := decimal.NewFromFloat(keepNum).Mul(unitNum).Round(3).InexactFloat64()
 				if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereSaleOrderProductUuid(subProduct.Uuid)},
 					map[string]any{"num": num}); err != nil {
 					return errors.WithMessage(err)
