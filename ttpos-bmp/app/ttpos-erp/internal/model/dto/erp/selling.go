@@ -504,6 +504,7 @@ type POSInvoice struct {
 	Timesheets                             []interface{}       `json:"timesheets,omitempty"`                                 // 工时表
 	Payments                               []POSInvoicePayment `json:"payments,omitempty"`                                   // 付款
 	PackedItems                            []interface{}       `json:"packed_items,omitempty"`                               // 包装商品
+	ReturnAgainst                          string              `json:"return_against,omitempty"`                             // 退款销售订单
 	CustomerUUID                           string              `json:"custom_customer_uuid,omitempty"`                       // 客户UUID 自定义字段
 	CustomerOrder                          string              `json:"po_no,omitempty"`                                      // 客户订单号, ttpos 订单
 }

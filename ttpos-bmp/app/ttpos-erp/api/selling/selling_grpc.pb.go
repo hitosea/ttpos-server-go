@@ -26,6 +26,7 @@ const (
 	SellingService_OpenPosEntry_FullMethodName         = "/selling.SellingService/OpenPosEntry"
 	SellingService_ClosePosEntry_FullMethodName        = "/selling.SellingService/ClosePosEntry"
 	SellingService_SavePosInvoice_FullMethodName       = "/selling.SellingService/SavePosInvoice"
+	SellingService_ReturnPosInvoice_FullMethodName     = "/selling.SellingService/ReturnPosInvoice"
 )
 
 // SellingServiceClient is the client API for SellingService service.
@@ -44,6 +45,8 @@ type SellingServiceClient interface {
 	ClosePosEntry(ctx context.Context, in *ClosePosEntryReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 	// 保存 Pos Invoice
 	SavePosInvoice(ctx context.Context, in *SavePosInvoiceReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 退款 Pos Invoice
+	ReturnPosInvoice(ctx context.Context, in *ReturnPosInvoiceReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 }
 
 type sellingServiceClient struct {
@@ -104,6 +107,16 @@ func (c *sellingServiceClient) SavePosInvoice(ctx context.Context, in *SavePosIn
 	return out, nil
 }
 
+func (c *sellingServiceClient) ReturnPosInvoice(ctx context.Context, in *ReturnPosInvoiceReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, SellingService_ReturnPosInvoice_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SellingServiceServer is the server API for SellingService service.
 // All implementations must embed UnimplementedSellingServiceServer
 // for forward compatibility.
@@ -120,6 +133,8 @@ type SellingServiceServer interface {
 	ClosePosEntry(context.Context, *ClosePosEntryReq) (*api.ResponseInfo, error)
 	// 保存 Pos Invoice
 	SavePosInvoice(context.Context, *SavePosInvoiceReq) (*api.ResponseInfo, error)
+	// 退款 Pos Invoice
+	ReturnPosInvoice(context.Context, *ReturnPosInvoiceReq) (*api.ResponseInfo, error)
 	mustEmbedUnimplementedSellingServiceServer()
 }
 
@@ -144,6 +159,9 @@ func (UnimplementedSellingServiceServer) ClosePosEntry(context.Context, *ClosePo
 }
 func (UnimplementedSellingServiceServer) SavePosInvoice(context.Context, *SavePosInvoiceReq) (*api.ResponseInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SavePosInvoice not implemented")
+}
+func (UnimplementedSellingServiceServer) ReturnPosInvoice(context.Context, *ReturnPosInvoiceReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReturnPosInvoice not implemented")
 }
 func (UnimplementedSellingServiceServer) mustEmbedUnimplementedSellingServiceServer() {}
 func (UnimplementedSellingServiceServer) testEmbeddedByValue()                        {}
@@ -256,6 +274,24 @@ func _SellingService_SavePosInvoice_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SellingService_ReturnPosInvoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReturnPosInvoiceReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SellingServiceServer).ReturnPosInvoice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SellingService_ReturnPosInvoice_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SellingServiceServer).ReturnPosInvoice(ctx, req.(*ReturnPosInvoiceReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SellingService_ServiceDesc is the grpc.ServiceDesc for SellingService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -282,6 +318,10 @@ var SellingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SavePosInvoice",
 			Handler:    _SellingService_SavePosInvoice_Handler,
+		},
+		{
+			MethodName: "ReturnPosInvoice",
+			Handler:    _SellingService_ReturnPosInvoice_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

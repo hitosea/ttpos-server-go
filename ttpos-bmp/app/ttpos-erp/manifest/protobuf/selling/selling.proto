@@ -129,6 +129,24 @@ message PosInvoicePayment {
   double amount = 2;          // 金额，必填
 }
 
+// ReturnPosInvoiceReq 退款POS发票请求消息
+message ReturnPosInvoiceReq {
+  string order_no = 1; // 退款订单号,必填 传ttpos的退款订单号
+  string open_pos_entry_name = 2;                    // POS开帐名称,必填
+  int64 posting_datetime = 3;                        // 过账日期时间 格式为时间戳，必填， 传交易时间过来
+  string company_abbr = 4;                        // 公司缩写,必填
+  string invoice_name = 5;                         // 销售发票
+  repeated PosInvoiceItem items = 6;             // 商品项目列表 必填
+  repeated PosInvoiceTax taxes = 7;              // 税费列表 必填
+  repeated PosInvoicePayment payments = 8;       // 付款列表 必填
+}
+
+// ReturnPosInvoiceResp 退款POS发票响应消息
+message ReturnPosInvoiceResp {
+  string invoice_name = 1; // 商品发票名称
+}
+
+
 // SellingService 服务定义
 service SellingService {
   // 查询Pos Profile
@@ -143,4 +161,7 @@ service SellingService {
 
   //保存 Pos Invoice
   rpc SavePosInvoice (SavePosInvoiceReq) returns (erp.ResponseInfo);
+
+  // 退款 Pos Invoice
+  rpc ReturnPosInvoice (ReturnPosInvoiceReq) returns (erp.ResponseInfo);
 }

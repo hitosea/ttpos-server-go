@@ -305,3 +305,13 @@ func (c *Controller) validateSavePosInvoiceReq(req *selling.SavePosInvoiceReq) e
 
 	return nil
 }
+
+func (c *Controller) ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosInvoiceReq) (*api.ResponseInfo, error) {
+
+	// 调用服务层退款发票
+	resp, err := service.Selling().ReturnPosInvoice(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccessWithData("退款发票成功", resp), nil
+}
