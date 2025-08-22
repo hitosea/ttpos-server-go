@@ -576,7 +576,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 			PurchaseOrderNo:   purchaseOrder.OrderNo,
 			Num:               float64(len(req.Items)),
 			ExpectArrivalTime: purchaseOrder.ExpectArrivalTime,
-			ReceiveTime:       req.ReceiptTime,
+			ReceiveTime:       req.ReceiveTime,
 		}
 
 		err = receiptOrderRepo.Create(receiptOrder)
