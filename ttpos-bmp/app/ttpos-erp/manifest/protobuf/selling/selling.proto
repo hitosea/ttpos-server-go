@@ -5,14 +5,12 @@ package selling;
 
 option go_package = "ttpos-bmp/app/ttpos-erp/api/selling";
 
-
 // PosProfileReq 查询Pos Profile请求消息
 message PosProfileReq {
   // Pos Profile名称
   string name = 1;
   string company = 2; // 公司名称
   string company_abbr = 3; // 公司缩写, 必填
-
 }
 
 // PosProfile 查询Pos Profile响应消息
@@ -22,12 +20,12 @@ message PosProfile {
   string company = 2; // 公司名称
   string branch = 3; // 分店名称
   string warehouse = 4; // 仓库名称
+  string cashier = 5; // 收银员
 }
 
 message PosProfileListResp {
   // Pos Profile名称
   repeated PosProfile profile_list = 1;
-
 }
 
 message CreatePaymentAccountReq {
@@ -36,7 +34,6 @@ message CreatePaymentAccountReq {
   string branch = 3; // 分店名称,可选
   string payment_source = 4; // 支付来源,可选 2= lianlianpay
 }
-
 
 message OpenPosEntryReq {
   string pos_profile_name = 1; // Pos Profile名称,必填
@@ -66,17 +63,15 @@ message OpenPosEntryResp {
 }
 
 message ClosePosEntryReq {
-  string pos_profile_name = 1; // Pos Profile名称,必填
-  string pos_open_entry_name = 2; // 开帐名称,必填
-  int64 period_end_date = 3; // 结账时间,必填
-  repeated ClosePosEntryDetail close_pos_entry_detail = 4; // 关帐详情,必填
+  string pos_open_entry_name = 1; // 开帐名称,必填
+  int64 period_end_date = 2; // 结账时间,必填
+  repeated ClosePosEntryDetail close_pos_entry_detail = 3; // 关帐详情,必填
 }
 
-
 message ClosePosEntryDetail {
-  string mode_of_payment = 1; // 支付方式
-  double opening_amount = 2; // 开帐金额
-  double closing_amount = 3; // 关帐金额
+  string mode_of_payment = 1; // 支付方式,必填
+  double opening_amount = 2; // 开帐金额,必填
+  double closing_amount = 3; // 关帐金额,必填
 }
 
 message ClosePosEntryInfo {
@@ -90,6 +85,50 @@ message ClosePosEntryResp {
   ClosePosEntryInfo close_pos_entry_info = 1;
 }
 
+// SavePosInvoiceReq 保存POS发票请求消息
+message SavePosInvoiceReq {
+  string order_no = 1; // 订单号,必填 传ttpos的订单号
+  string open_pos_entry_name = 2;                    // POS开帐名称,必填
+  string company_abbr = 3;                        // 公司缩写,必填
+  int64 posting_datetime = 4;                        // 过账日期时间 格式为 YYYY-MM-DD HH:MM:SS 必填
+  int32 update_stock = 5;                         // 是否更新库存 必填，默认选1 0=不更新 1=更新
+  string currency = 6;                            // 货币 标准缩写例如 CNY/THB/USD 必填
+  string price_list_currency = 7;                 // 价格表货币 标准缩写例如 CNY/THB/USD 必填
+  string branch = 8;                              // 分店 可选
+  string customer_uuid = 9;                       // 客户,可选
+  repeated PosInvoiceItem items = 10;             // 商品项目列表 必填
+  repeated PosInvoiceItem material_items = 11;             // 原材料项目列表 必填
+  repeated PosInvoiceTax taxes = 12;              // 税费列表 必填
+  repeated PosInvoicePayment payments = 13;       // 付款列表 必填
+}
+
+// SavePosInvoiceResp 保存POS发票响应消息
+message SavePosInvoiceResp {
+  string products_invoice_name = 1; // 商品发票名称
+  string material_invoice_name = 2; // 原材料发票名称
+}
+
+// PosInvoiceItem POS发票商品项目
+message PosInvoiceItem {
+  string item_code = 1;  // 商品编码，必填
+  double qty = 2;         // 数量，必填
+  double rate = 3;       // 单价，必填
+  double amount = 4;     // 金额，必填
+}
+
+// PosInvoiceTax POS发票税费
+message PosInvoiceTax {
+  double rate = 1;            // 税率，必填 费用填0
+  double tax_amount = 2;      // 税费金额，必填
+  string description = 3;     // 描述, 必填.例如 Tax/Service Fee/Payment Processing Fee/Delivery Fee
+}
+
+// PosInvoicePayment POS发票付款
+message PosInvoicePayment {
+  string mode_of_payment = 1; // 支付方式，必填
+  double amount = 2;          // 金额，必填
+}
+
 // SellingService 服务定义
 service SellingService {
   // 查询Pos Profile
@@ -101,4 +140,7 @@ service SellingService {
 
   //Pos 关帐
   rpc ClosePosEntry (ClosePosEntryReq) returns (erp.ResponseInfo);
+
+  //保存 Pos Invoice
+  rpc SavePosInvoice (SavePosInvoiceReq) returns (erp.ResponseInfo);
 }

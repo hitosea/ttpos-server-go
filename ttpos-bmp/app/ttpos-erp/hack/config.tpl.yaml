@@ -16,6 +16,7 @@ gfcli:
       - link: "mysql:$DB_USERNAME:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/erp"
         descriptionTag: true
         removePrefix: "erp_"
+        tablesEx: "schema_migrations"
 
   run:
     path: "./bin"

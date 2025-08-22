@@ -12,4 +12,6 @@ type ShopCashier struct {
 	CashierEmail string `json:"cashierEmail" orm:"cashier_email" description:"收银员邮箱"`     // 收银员邮箱
 	ApiKey       string `json:"apiKey"       orm:"api_key"       description:""`          //
 	ApiSecret    string `json:"apiSecret"    orm:"api_secret"    description:""`          //
+	CompanyAbbr  string `json:"companyAbbr"  orm:"company_abbr"  description:"公司缩写"`      // 公司缩写
+	Branch       string `json:"branch"       orm:"branch"        description:"分支"`        // 分支
 }

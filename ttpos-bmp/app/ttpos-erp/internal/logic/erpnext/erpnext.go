@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/dao"
-	"ttpos-bmp/app/ttpos-erp/internal/model/do"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/model/entity"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
@@ -47,7 +46,7 @@ func GetClient(ctx context.Context) *gclient.Client {
 	m := grpcx.Ctx.IncomingMap(ctx)
 	if m.Contains(consts.ContextSiteCode) {
 		var site *entity.Site
-		dao.Site.Ctx(ctx).Limit(1).Where(do.Site{}.SiteCode, m.GetVar(consts.ContextSiteCode)).Scan(&site)
+		dao.Site.Ctx(ctx).Where(dao.Site.Columns().SiteCode, m.GetVar(consts.ContextSiteCode)).Limit(1).Scan(&site)
 		if site != nil {
 			c.SetPrefix(site.SiteUrl)
 			c.SetHeader("Authorization", fmt.Sprintf("token %s:%s", site.ApiKey, site.ApiSecret))
@@ -58,11 +57,12 @@ func GetClient(ctx context.Context) *gclient.Client {
 	//替代指定用户调用服务
 	if ctx.Value(consts.ContextFakeUser) != nil {
 		// 从上下文获取用户信息
-		var cashier entity.ShopCashier
-		err := dao.ShopCashier.Ctx(ctx).Limit(1).Where(do.ShopCashier{}.CashierEmail, ctx.Value(consts.ContextFakeUser).(string)).Scan(&cashier)
-		if err != nil {
+		cashier := &entity.ShopCashier{}
+		err := dao.ShopCashier.Ctx(ctx).Where(dao.ShopCashier.Columns().CashierEmail, ctx.Value(consts.ContextFakeUser)).Limit(1).Scan(&cashier)
+		if err != nil || cashier == nil {
 			g.Log().Errorf(ctx, "查询门店收银员关联关系失败: %v", err)
 		}
+		//取不到收银员apikey的话会写空，请求会异常(算特性）
 		c.SetHeader("Authorization", fmt.Sprintf("token %s:%s", cashier.ApiKey, cashier.ApiSecret))
 	}
 

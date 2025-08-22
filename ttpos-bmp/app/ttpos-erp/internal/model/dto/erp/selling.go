@@ -443,7 +443,7 @@ type POSInvoice struct {
 	PlcConversionRate                      float64             `json:"plc_conversion_rate,omitempty"`                        // 价格表汇率
 	IgnorePricingRule                      int                 `json:"ignore_pricing_rule,omitempty"`                        // 是否忽略定价规则
 	SetWarehouse                           string              `json:"set_warehouse,omitempty"`                              // 设置仓库
-	UpdateStock                            int                 `json:"update_stock,omitempty"`                               // 是否更新库存
+	UpdateStock                            int32               `json:"update_stock,omitempty"`                               // 是否更新库存
 	TotalBillingAmount                     float64             `json:"total_billing_amount,omitempty"`                       // 总开票金额
 	TotalQty                               int                 `json:"total_qty,omitempty"`                                  // 总数量
 	BaseTotal                              float64             `json:"base_total,omitempty"`                                 // 基础总计
@@ -500,10 +500,12 @@ type POSInvoice struct {
 	SalesTeam                              []interface{}       `json:"sales_team,omitempty"`                                 // 销售团队
 	PaymentSchedule                        []interface{}       `json:"payment_schedule,omitempty"`                           // 付款计划
 	Items                                  []POSInvoiceItem    `json:"items,omitempty"`                                      // 商品项目
-	Taxes                                  []interface{}       `json:"taxes,omitempty"`                                      // 税费
+	Taxes                                  []POSInvoiceTax     `json:"taxes,omitempty"`                                      // 税费
 	Timesheets                             []interface{}       `json:"timesheets,omitempty"`                                 // 工时表
 	Payments                               []POSInvoicePayment `json:"payments,omitempty"`                                   // 付款
 	PackedItems                            []interface{}       `json:"packed_items,omitempty"`                               // 包装商品
+	CustomerUUID                           string              `json:"custom_customer_uuid,omitempty"`                       // 客户UUID 自定义字段
+	CustomerOrder                          string              `json:"po_no,omitempty"`                                      // 客户订单号, ttpos 订单
 }
 
 // POSInvoiceItem 结构体定义
@@ -522,7 +524,7 @@ type POSInvoiceItem struct {
 	Description               string  `json:"description,omitempty"`                 // 描述
 	ItemGroup                 string  `json:"item_group,omitempty"`                  // 商品组
 	Image                     string  `json:"image,omitempty"`                       // 图片
-	Qty                       int     `json:"qty,omitempty"`                         // 数量
+	Qty                       float64 `json:"qty,omitempty"`                         // 数量
 	StockUom                  string  `json:"stock_uom,omitempty"`                   // 库存单位
 	Uom                       string  `json:"uom,omitempty"`                         // 单位
 	ConversionFactor          float64 `json:"conversion_factor,omitempty"`           // 转换因子
@@ -589,4 +591,14 @@ type POSInvoicePayment struct {
 	Parentfield   string  `json:"parentfield,omitempty"`     // 父级字段
 	Parenttype    string  `json:"parenttype,omitempty"`      // 父级类型
 	Doctype       string  `json:"doctype,omitempty"`         // 文档类型
+}
+
+// POSInvoiceTax 结构体定义
+// 用于表示POS发票中的税金信息，及其他费用
+type POSInvoiceTax struct {
+	ChargeType  string  `json:"charge_type,omitempty"`  // 计费类型
+	AccountHead string  `json:"account_head,omitempty"` // 会计科目
+	Rate        float64 `json:"rate,omitempty"`         // 税率
+	TaxAmount   float64 `json:"tax_amount,omitempty"`   // 税费金额
+	Description string  `json:"description,omitempty"`  // 描述
 }

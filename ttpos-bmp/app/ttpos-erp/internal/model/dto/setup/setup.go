@@ -29,6 +29,12 @@ type CreatePosProfileInp struct {
 	WriteOffLimit float64 `json:"write_off_limit,omitempty"`
 	//销帐成本中心
 	WriteOffCostCenter string `json:"write_off_cost_center,omitempty"`
+	//适用用户
+	ApplicableForUsers []Cashier `json:"applicable_for_users,omitempty"`
+}
+
+type Cashier struct {
+	User string `json:"user,omitempty"`
 }
 
 type CreateUserInp struct {

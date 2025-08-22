@@ -1,12 +1,14 @@
 package selling
 
-import "time"
+import (
+	"github.com/gogf/gf/v2/os/gtime"
+)
 
 type GetPosInvoiceListReq struct {
-	StartDate  time.Time `json:"start"`
-	EndDate    time.Time `json:"end"`
-	PosProfile string    `json:"pos_profile"`
-	User       string    `json:"user,omitempty"`
+	StartDate  *gtime.Time `json:"start"`
+	EndDate    *gtime.Time `json:"end"`
+	PosProfile string      `json:"pos_profile"`
+	User       string      `json:"user,omitempty"`
 }
 
 // SimplePosInvoice 结构体定义

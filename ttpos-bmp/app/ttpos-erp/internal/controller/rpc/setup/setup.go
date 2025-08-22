@@ -75,7 +75,7 @@ func (c *Controller) CreateDefaultPosProfile(ctx context.Context, req *setup.Cre
 	}
 
 	// 调用服务层创建POS配置文件
-	resp, err := service.Setup().CreatePosProfile(ctx, req)
+	resp, err := service.Setup().CreateDefaultPosProfile(ctx, req)
 	if err != nil {
 		return rpc.ApiError(err.Error()), nil
 	}
