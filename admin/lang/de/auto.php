@@ -2198,4 +2198,5 @@ return [
     "更新支付方式时间失败" => "Aktualisierung der Zahlungsart-Zeit fehlgeschlagen",
     "调用erpnext支付方式添加接口失败" => "Aufruf der erpnext-Schnittstelle zum Hinzufügen der Zahlungsmethode fehlgeschlagen",
     "操作失败：" => "Vorgang fehlgeschlagen:",
+    "商品排序不能大于999" => "Die Produktreihenfolge darf 999 nicht überschreiten",
 ];

@@ -2190,4 +2190,5 @@ return [
     "更新支付方式时间失败" => "Misslyckades med att uppdatera betalningsmetodens tid",
     "调用erpnext支付方式添加接口失败" => "Misslyckades med att anropa erpnexts gränssnitt för att lägga till betalningsmetod",
     "操作失败：" => "Åtgärden misslyckades:",
+    "商品排序不能大于999" => "Produktsorteringen får inte vara större än 999",
 ];

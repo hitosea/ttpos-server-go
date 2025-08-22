@@ -2190,4 +2190,5 @@ return [
     "更新支付方式时间失败" => "Failed to update payment method time",
     "调用erpnext支付方式添加接口失败" => "Failed to call erpnext payment method addition interface",
     "操作失败：" => "Operation failed:",
+    "商品排序不能大于999" => "Product sorting cannot be greater than 999",
 ];
