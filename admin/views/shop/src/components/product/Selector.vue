@@ -102,6 +102,7 @@
                 size="small"
                 border
                 v-loading="loading"
+                :row-class-name="rowClassName"
                 @select="handleSelect"
                 @select-all="handleSelectAll"
               >
@@ -176,6 +177,11 @@
       default: false,
     },
     isLoading: {
+      type: Boolean,
+      default: false,
+    },
+    // 库存为0的商品不可选
+    stockZero: {
       type: Boolean,
       default: false,
     },
@@ -463,6 +469,20 @@
   getData(true);
 
   const onSubmit = () => {
+    // 二次校验：当开启库存为0不可选时，确认前剔除库存不足的商品并提示
+    if (props.stockZero) {
+      const outOfStocks = selectedProductsTmp.value.filter((item) => Number(item?.stock_num ?? 0) <= 0);
+      if (outOfStocks.length > 0) {
+        // 取消这些行的选中并从已选中列表移除
+        nextTick(() => {
+          outOfStocks.forEach((row) => productsTableRef.value?.toggleRowSelection(row, false));
+        });
+        selectedProductsTmp.value = selectedProductsTmp.value.filter((item) => Number(item?.stock_num ?? 0) > 0);
+        proxy.$ElMessage({ message: $t('商品库存不足，请调整。'), type: 'warning' });
+        return; // 中断提交，等待用户调整
+      }
+    }
+
     emit('close', selectedProductsTmp.value, categories.value);
     reset();
   };
@@ -480,12 +500,18 @@
 
   // 添加选择控制函数
   const selectable = (row) => {
-    // 如果当前行已选中，始终可操作（允许取消）
-    if (selectedProductsTmp.value.some((item) => item.product_id === row.product_id)) {
-      return true;
-    }
+    // 当开启库存为0不可选时，库存为0的商品禁止选择
+    if (props.stockZero && Number(row?.stock_num ?? 0) <= 0) return false;
+    // 如果当前行已选中，允许操作（保持行为与表格一致）
+    if (selectedProductsTmp.value.some((item) => item.product_id === row.product_id)) return true;
     // 未选中时检查是否达到最大数量
     return selectedProductsTmp.value.length < props.maxCount;
+  };
+
+  // 行样式：库存为0置灰
+  const rowClassName = ({ row }) => {
+    if (props.stockZero && Number(row?.stock_num ?? 0) <= 0) return 'is-out-of-stock';
+    return '';
   };
 
   const handleSelect = (data, node) => {
@@ -536,7 +562,9 @@
     }
 
     // 获取当前页未选中的商品
-    const currentPageUnselected = productsTableData.value.filter((item) => !selectedProductsTmp.value.some((p) => p.product_id === item.product_id));
+    const currentPageUnselected = productsTableData.value
+      .filter((item) => !selectedProductsTmp.value.some((p) => p.product_id === item.product_id))
+      .filter((item) => !(props.stockZero && Number(item?.stock_num ?? 0) <= 0));
 
     // 实际可添加的商品
     const toSelect = currentPageUnselected.slice(0, canSelectCount);
@@ -569,7 +597,9 @@
 
   const toggleRowSelection = async (isFirst = false) => {
     if (isFirst) {
-      selectedProductsTmp.value = productsTableData.value.filter((item) => props.selectedProductIds.includes(item.product_id));
+      selectedProductsTmp.value = productsTableData.value
+        .filter((item) => props.selectedProductIds.includes(item.product_id))
+        .filter((item) => !(props.stockZero && Number(item?.stock_num ?? 0) <= 0));
     }
 
     nextTick(() => {
@@ -627,6 +657,8 @@
 
     if (checked) {
       _products.forEach((item) => {
+        // 库存为0不可加入已选
+        if (props.stockZero && Number(item?.stock_num ?? 0) <= 0) return;
         if (selectedProductsTmp.value.some((product) => product.product_id === item.product_id)) return;
         selectedProductsTmp.value.push(item);
       });
@@ -711,6 +743,8 @@
 
     if (checked) {
       _products.forEach((item) => {
+        // 库存为0不可加入已选
+        if (props.stockZero && Number(item?.stock_num ?? 0) <= 0) return;
         if (selectedProductsTmp.value.some((product) => product.product_id === item.product_id)) return;
         selectedProductsTmp.value.push(item);
       });
@@ -802,5 +836,10 @@
         flex-grow: 1;
       }
     }
+  }
+  // 库存为0置灰样式
+  :deep(.el-table__row.is-out-of-stock) {
+    color: #c0c4cc;
+    pointer-events: none;
   }
 </style>

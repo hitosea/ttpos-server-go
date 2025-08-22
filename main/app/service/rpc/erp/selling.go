@@ -132,3 +132,43 @@ func (s *erpSrv) OpenPosEntry(ctx context.Context, openEntryReq req.OpenPosEntry
 	}
 	return "", nil
 }
+
+func (s *erpSrv) ClosePosEntry(ctx context.Context, closeEntryReq req.ClosePosEntryReq) (string, error) {
+	client, conn, err := NewErpSellingClient()
+	if err != nil {
+		return "", err
+	}
+	defer conn.Close()
+
+	closePosEntryDetail := make([]*selling.ClosePosEntryDetail, 0)
+	if len(closeEntryReq.ClosePosEntryDetail) != 0 {
+		for _, detail := range closeEntryReq.ClosePosEntryDetail {
+			closePosEntryDetail = append(closePosEntryDetail, &selling.ClosePosEntryDetail{
+				ModeOfPayment: detail.ModeOfPayment,
+				OpeningAmount: detail.OpeningAmount,
+				ClosingAmount: detail.ClosingAmount,
+			})
+		}
+	}
+	closePosEntryReq := &selling.ClosePosEntryReq{
+		PosProfileName:      closeEntryReq.PosProfileName,
+		PosOpenEntryName:    closeEntryReq.PosOpenEntryName,
+		PeriodEndDate:       closeEntryReq.PeriodEndDate,
+		ClosePosEntryDetail: closePosEntryDetail,
+	}
+	res, err := client.ClosePosEntry(WithSiteCode(ctx, closeEntryReq.SiteCode), closePosEntryReq)
+	if err != nil {
+		return "", err
+	}
+	if res.Data != nil {
+		var closePosEntryResp selling.ClosePosEntryResp
+		if err := res.Data.UnmarshalTo(&closePosEntryResp); err != nil {
+			logger.Logger.Error("ClosePosEntry-UnmarshalTo", zap.Any("err", err))
+			return "", err
+		}
+		if closePosEntryResp.ClosePosEntryInfo != nil {
+			return closePosEntryResp.ClosePosEntryInfo.ClosePosEntryName, nil
+		}
+	}
+	return "", nil
+}
