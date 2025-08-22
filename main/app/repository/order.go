@@ -823,12 +823,6 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 							Query: "SaleOrders.SaleOrderBuffetDelayProducts",
 						},
 					),
-					// 加载套餐商品
-					CommonRepo.Preload(
-						WithPreload{
-							Query: "SaleOrders.SaleOrderProducts.SaleOrderPackageProducts.SaleOrderProduct",
-						},
-					),
 				)
 				if errDesk != nil {
 					return nil, errors.WithMessage(errDesk)
