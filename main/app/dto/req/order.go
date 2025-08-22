@@ -151,8 +151,8 @@ type OrderAmountChangeReq struct {
 
 // Validate 验证参数
 func (req OrderAmountChangeReq) Validate() error {
-	if req.Price < 0 || req.Price > 100000000 {
-		return errors.New("请输入0-100000000间的价格")
+	if req.Price < 0 || req.Price > 1000000000000000 {
+		return errors.New("请输入0-1000000000000000间的价格")
 	}
 	if req.SaleBillUuid == 0 || req.SaleOrderUuid == 0 {
 		return errors.New("销售账单UUID或销售订单UUID不能为空")
