@@ -1404,7 +1404,39 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 		if err != nil {
 			return errors.WithMessage(errors.New("保存erp单位失败"), err.Error())
 		}
+
+		// 修改商品的单位UUID
+		for _, productPackageUuid := range addReq.ProductPackageUuids {
+			// 同步更新商品到erp
+			if ctx.GetCompany().IsOpenErp() {
+				productPackageRepo := repository.NewProductPackageRepo(db)
+				productPackage, errGetProductPackage := productPackageRepo.GetProductPackage(
+					repository.CommonRepo.WhereByUuid(productPackageUuid),
+					repository.CommonRepo.Preload(
+						repository.WithPreload{
+							Query: "ProductBoms",
+						},
+					),
+				)
+				if errGetProductPackage != nil {
+					return errors.WithMessage(errGetProductPackage, "获取商品包失败")
+				}
+				for _, productBom := range productPackage.ProductBoms {
+					multiLanguageName := model.NewMultiLanguageName(productBom.Name)
+					erpSrv := erp.NewIErpSrv(s.dbm)
+					_, errErp := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
+						ItemName: multiLanguageName.EnName,
+						StockUom: erpUom,
+						ItemCode: productBom.ErpCode,
+					})
+					if errErp != nil {
+						return errors.WithMessage(errErp, "同步商品到erp失败")
+					}
+				}
+			}
+		}
 	}
+
 	return err
 }
 
@@ -1481,6 +1513,7 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 		if err != nil {
 			return errors.WithMessage(errors.New("保存单位失败"), err.Error())
 		}
+
 		// 修改商品的单位UUID, 如果商品的单位UUID是当前单位，则修改为0
 		err = tx.Model(&model.ProductPackage{}).Where("unit_uuid = ?", editUnitReq.Uuid).Updates(map[string]any{
 			"unit_uuid": 0,
@@ -1490,6 +1523,36 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 		}
 		// 修改商品的单位UUID
 		if len(editUnitReq.ProductPackageUuids) > 0 {
+			// 同步更新商品到erp
+			if ctx.GetCompany().IsOpenErp() {
+				productPackageRepo := repository.NewProductPackageRepo(tx)
+				productPackages, errGetProductPackage := productPackageRepo.GetProductPackageList(
+					repository.CommonRepo.WhereInUuids(editUnitReq.ProductPackageUuids),
+					repository.CommonRepo.Preload(
+						repository.WithPreload{
+							Query: "ProductBoms",
+						},
+					),
+				)
+				if errGetProductPackage != nil {
+					return errors.WithMessage(errGetProductPackage, "获取商品包失败")
+				}
+				for i := range productPackages {
+					productPackage := productPackages[i]
+					for _, productBom := range productPackage.ProductBoms {
+						multiLanguageName := model.NewMultiLanguageName(productBom.Name)
+						erpSrv := erp.NewIErpSrv(s.dbm)
+						_, errErp := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
+							ItemName: multiLanguageName.EnName,
+							StockUom: productUnit.ErpnextUom,
+							ItemCode: productBom.ErpCode,
+						})
+						if errErp != nil {
+							return errors.WithMessage(errErp, "同步商品到erp失败")
+						}
+					}
+				}
+			}
 			// 修改商品的单位UUID
 			err = tx.Model(&model.ProductPackage{}).Where("uuid in (?)", editUnitReq.ProductPackageUuids).Updates(map[string]any{
 				"unit_uuid": productUnit.Uuid,

@@ -745,6 +745,7 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 
 		// 更新收货单状态
 		receiptOrder.Status = utils.IfInt(req.IsConfirm, constant.ReceiptOrderStatusReceived, constant.ReceiptOrderStatusPending)
+		receiptOrder.ReceiveTime = req.ReceiveTime
 		err = receiptOrderRepo.Update(receiptOrder)
 		if err != nil {
 			return errors.WithMessage(err, "更新收货单状态失败")
