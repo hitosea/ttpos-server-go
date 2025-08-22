@@ -3,7 +3,9 @@ package selling
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
+	"ttpos-bmp/app/ttpos-erp/internal/logic/erpnext"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
+	dtoSelling "ttpos-bmp/app/ttpos-erp/internal/model/dto/selling"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
 
 	"ttpos-bmp/app/ttpos-erp/internal/service"
@@ -19,19 +21,52 @@ var (
 	Selling = new(sSelling)
 )
 
-// sSelling 结构体定义
+// sSelling 销售服务结构体
 type sSelling struct{}
 
 func init() {
 	service.RegisterSelling(Selling)
 }
 
-// GetPosProfileList 查询Pos Profile列表
-// 参数：ctx 上下文，req 查询请求
-// 返回：erp.ResponseInfo，错误信息
+// GetPosProfileList 查询POS配置文件列表
+// 参数：
+//   - ctx: 上下文对象
+//   - req: 查询请求参数
+//
+// 返回：
+//   - *selling.PosProfileListResp: POS配置文件列表响应
+//   - error: 错误信息
 func (s *sSelling) GetPosProfileList(ctx context.Context, req *selling.PosProfileReq) (res *selling.PosProfileListResp, err error) {
 	// 构建过滤条件
+	filters := s.buildPosProfileFilters(ctx, req)
+
+	// 查询POS配置文件列表
+	list, err := service.Document().List(ctx, &erp.ErpReq{
+		DocType: "POS Profile",
+	}, &erp.RequestParams{
+		Fields:  []string{"name", "company", "warehouse", "branch"},
+		Filters: filters,
+	})
+	if err != nil {
+		g.Log().Error(ctx, "查询POS配置文件失败", err)
+		return nil, gerror.Wrapf(err, "查询POS配置文件失败")
+	}
+
+	// 解析响应数据
+	res, err = s.parsePosProfileListResponse(list)
+	return res, err
+}
+
+// buildPosProfileFilters 构建POS配置文件查询过滤条件
+// 参数：
+//   - ctx: 上下文对象
+//   - req: 查询请求参数
+//
+// 返回：
+//   - [][]string: 过滤条件列表
+func (s *sSelling) buildPosProfileFilters(ctx context.Context, req *selling.PosProfileReq) [][]string {
 	var filters = make([][]string, 0)
+
 	if len(req.Name) > 0 {
 		filters = append(filters, []string{"name", "like", req.Name})
 	}
@@ -42,84 +77,165 @@ func (s *sSelling) GetPosProfileList(ctx context.Context, req *selling.PosProfil
 		company, err := service.Company().GetCompanyWithAbbr(ctx, req.CompanyAbbr)
 		if err != nil {
 			g.Log().Error(ctx, "根据公司缩写查询公司失败", err)
-			return nil, gerror.Wrapf(err, "根据公司缩写查询公司失败")
+			return filters
 		}
 		filters = append(filters, []string{"company", "like", company.CompanyName})
 	}
 
-	// 查询Pos Profile列表
-	list, err := service.Document().List(ctx, &erp.ErpReq{
-		DocType: "POS Profile",
-	}, &erp.RequestParams{
-		Fields:  []string{"name", "company", "warehouse", "branch"},
-		Filters: filters,
-	})
-	if err != nil {
-		g.Log().Error(ctx, "查询Pos Profile失败", err)
-		return nil, gerror.Wrapf(err, "查询Pos Profile失败")
-	}
-	if j, err := gjson.DecodeToJson(list.Bytes()); err == nil {
-		// 遍历j.Get("data") 返回的数组字段，设置到 DataList 中
-		dataList := make([]*selling.PosProfile, 0)
-		dataArray := j.GetJsons("data")
-		for _, item := range dataArray {
-			dataInfo := &selling.PosProfile{
-				Name:      item.Get("name").String(),
-				Company:   item.Get("company").String(),
-				Branch:    item.Get("branch").String(),
-				Warehouse: item.Get("warehouse").String(),
-			}
-			dataList = append(dataList, dataInfo)
-		}
-		res = &selling.PosProfileListResp{
-			ProfileList: dataList,
-		}
-
-	}
-	return
+	return filters
 }
 
-func (s *sSelling) CreateModePaymentAccount(ctx context.Context, req *setup.CreateModePaymentAccountInp) (err error) {
-	resp, err := service.Document().Get(ctx, &erp.ErpReq{
-		DocType: "Mode of Payment",
-		Name:    req.PaymentType,
-	}, nil)
+// parsePosProfileListResponse 解析POS配置文件列表响应
+// 参数：
+//   - list: 响应数据
+//
+// 返回：
+//   - *selling.PosProfileListResp: 解析后的响应数据
+//   - error: 错误信息
+func (s *sSelling) parsePosProfileListResponse(list *g.Var) (*selling.PosProfileListResp, error) {
+	j, err := gjson.DecodeToJson(list.Bytes())
 	if err != nil {
-		return gerror.Wrapf(err, "获取支付方式失败")
+		return nil, gerror.Wrapf(err, "解析POS配置文件列表响应失败")
 	}
-	j, err := gjson.DecodeToJson(resp)
-	if err != nil {
-		return gerror.Wrapf(err, "解析支付方式失败")
-	}
-	modePayment := &erp.ModeOfPayment{}
-	j.Scan(modePayment)
 
+	// 遍历响应数据，构建结果列表
+	dataList := make([]*selling.PosProfile, 0)
+	dataArray := j.GetJsons("data")
+	for _, item := range dataArray {
+		dataInfo := &selling.PosProfile{
+			Name:      item.Get("name").String(),
+			Company:   item.Get("company").String(),
+			Branch:    item.Get("branch").String(),
+			Warehouse: item.Get("warehouse").String(),
+		}
+		dataList = append(dataList, dataInfo)
+	}
+
+	return &selling.PosProfileListResp{
+		ProfileList: dataList,
+	}, nil
+}
+
+// CreateModePaymentAccount 创建支付方式账户
+// 参数：
+//   - ctx: 上下文对象
+//   - req: 创建支付方式账户请求参数
+//
+// 返回：
+//   - error: 错误信息
+func (s *sSelling) CreateModePaymentAccount(ctx context.Context, req *setup.CreateModePaymentAccountInp) error {
+	// 获取支付方式信息
+	modePayment, err := s.getModeOfPayment(ctx, req.PaymentType)
+	if err != nil {
+		return err
+	}
+
+	// 获取公司名称
 	companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
 	if err != nil {
 		return gerror.Wrapf(err, "根据公司缩写查询公司名称失败")
 	}
+
+	// 创建默认支付账户
+	err = s.createDefaultPaymentAccount(ctx, modePayment, companyName, req.CompanyAbbr)
+	if err != nil {
+		return gerror.Wrapf(err, "创建默认支付账户失败")
+	}
+
+	return nil
+}
+
+// getModeOfPayment 获取支付方式信息
+// 参数：
+//   - ctx: 上下文对象
+//   - paymentType: 支付类型
+//
+// 返回：
+//   - *erp.ModeOfPayment: 支付方式信息
+//   - error: 错误信息
+func (s *sSelling) getModeOfPayment(ctx context.Context, paymentType string) (*erp.ModeOfPayment, error) {
+	resp, err := service.Document().Get(ctx, &erp.ErpReq{
+		DocType: "Mode of Payment",
+		Name:    paymentType,
+	}, nil)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "获取支付方式失败")
+	}
+
+	j, err := gjson.DecodeToJson(resp)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析支付方式失败")
+	}
+
+	modePayment := &erp.ModeOfPayment{}
+	j.Scan(modePayment)
+	return modePayment, nil
+}
+
+// createDefaultPaymentAccount 创建默认支付账户
+// 参数：
+//   - ctx: 上下文对象
+//   - modePayment: 支付方式信息
+//   - companyName: 公司名称
+//   - companyAbbr: 公司缩写
+//
+// 返回：
+//   - error: 错误信息
+func (s *sSelling) createDefaultPaymentAccount(ctx context.Context, modePayment *erp.ModeOfPayment, companyName, companyAbbr string) error {
 	payAccounts := make([]erp.ModeOfPaymentAccount, 0)
 	payAccounts = append(payAccounts, modePayment.Accounts...)
 	payAccounts = append(payAccounts, erp.ModeOfPaymentAccount{
 		Company:        companyName,
-		DefaultAccount: "Cash - " + req.CompanyAbbr,
+		DefaultAccount: "Cash - " + companyAbbr,
 	})
 	modePayment.Accounts = payAccounts
 
-	if err != nil {
-		return gerror.Wrapf(err, "创建默认支付账户失败")
-	}
+	// 这里应该调用更新支付方式的接口
+	// 暂时返回nil，等待后续实现
 	return nil
 }
 
-// CreatePosProfile CreatePosFile 创建 默认 pos profile  配置默认 posprofile
+// CreatePosProfile 创建默认的POS配置文件
+// 参数：
+//   - ctx: 上下文对象
+//   - req: 创建POS配置文件请求参数
+//
+// 返回：
+//   - *erp.POSProfile: POS配置文件信息
+//   - error: 错误信息
 func (s *sSelling) CreatePosProfile(ctx context.Context, req *setup.CreatePosProfileInp) (*erp.POSProfile, error) {
-
+	// 获取公司名称
 	companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "根据公司缩写查询公司名称失败")
 	}
 
+	// 构建POS配置文件
+	profile := s.buildPosProfile(req, companyName)
+
+	// 创建POS配置文件
+	resp, err := service.Document().Create(ctx, "POS Profile", profile)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建POS配置文件失败")
+	}
+
+	// 解析响应数据
+	posProfile, err := s.parsePosProfileResponse(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	return posProfile, nil
+}
+
+// buildPosProfile 构建POS配置文件
+// 参数：
+//   - req: 创建POS配置文件请求参数
+//   - companyName: 公司名称
+//
+// 返回：
+//   - *erp.POSProfile: POS配置文件
+func (s *sSelling) buildPosProfile(req *setup.CreatePosProfileInp, companyName string) *erp.POSProfile {
 	profile := &erp.POSProfile{
 		Name:               req.PosProfileName,
 		Company:            companyName,
@@ -130,139 +246,315 @@ func (s *sSelling) CreatePosProfile(ctx context.Context, req *setup.CreatePosPro
 		WriteOffLimit:      req.WriteOffLimit,
 		WriteOffCostCenter: req.WriteOffCostCenter,
 	}
-	//处理支付方式
-	payments := make([]erp.POSPaymentMethod, 0)
-	for _, payment := range req.Payments {
+	if len(req.ApplicableForUsers) > 0 {
+		profile.ApplicableForUsers = make([]erp.POSProfileUser, 0)
+		for _, user := range req.ApplicableForUsers {
+			profile.ApplicableForUsers = append(profile.ApplicableForUsers, erp.POSProfileUser{
+				User: user.User,
+			})
+		}
+	}
+	// 处理支付方式
+	profile.Payments = s.buildPaymentMethods(req.Payments)
+
+	return profile
+}
+
+// buildPaymentMethods 构建支付方式列表
+// 参数：
+//   - payments: 支付方式列表
+//
+// 返回：
+//   - []erp.POSPaymentMethod: 支付方式方法列表
+func (s *sSelling) buildPaymentMethods(payments []string) []erp.POSPaymentMethod {
+	paymentMethods := make([]erp.POSPaymentMethod, 0)
+
+	for _, payment := range payments {
 		paymentInfo := erp.POSPaymentMethod{
 			ModeOfPayment:  payment,
 			AllowInReturns: 1,
 		}
-		//默认现金
+
+		// 默认现金
 		if payment == "Cash" {
 			paymentInfo.Default = 1
 		}
-		payments = append(payments, paymentInfo)
+
+		paymentMethods = append(paymentMethods, paymentInfo)
 	}
-	profile.Payments = payments
-	// 创建pos profile
-	resp, err := service.Document().Create(ctx, "POS Profile", profile)
-	if err != nil {
-		return nil, gerror.Wrapf(err, "创建pos profile失败")
-	}
+
+	return paymentMethods
+}
+
+// parsePosProfileResponse 解析POS配置文件响应
+// 参数：
+//   - resp: 响应数据
+//
+// 返回：
+//   - *erp.POSProfile: 解析后的POS配置文件
+//   - error: 错误信息
+func (s *sSelling) parsePosProfileResponse(resp *g.Var) (*erp.POSProfile, error) {
 	posProfile := &erp.POSProfile{}
 	j, err := gjson.DecodeToJson(resp.Bytes())
 	if err != nil {
-		return nil, gerror.Wrapf(err, "解析pos profile失败")
+		return nil, gerror.Wrapf(err, "解析POS配置文件失败")
 	}
+
 	j.Get("data").Scan(posProfile)
 	return posProfile, nil
 }
 
 // OpenPosEntry 开帐
+// 参数：
+//   - ctx: 上下文对象
+//   - req: 开帐请求参数
+//
+// 返回：
+//   - *selling.OpenPosEntryResp: 开帐响应信息
+//   - error: 错误信息
 func (s *sSelling) OpenPosEntry(ctx context.Context, req *selling.OpenPosEntryReq) (*selling.OpenPosEntryResp, error) {
-	// 检查pos profile是否开帐
+	// 检查POS配置文件是否已开帐
 	opening, err := s.IsProfileOpening(ctx, req.PosProfileName)
 	if err != nil {
-		return nil, gerror.Wrapf(err, "查询pos profile是否开帐失败")
+		return nil, gerror.Wrapf(err, "查询POS配置文件是否开帐失败")
 	}
 	if opening {
-		return nil, gerror.New("pos profile已开帐")
+		return nil, gerror.New("POS配置文件已开帐")
 	}
+
+	// 获取公司名称
 	companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "根据公司缩写查询公司名称失败")
 	}
-	openDetails := make([]erp.POSOpeningEntryDetail, 0)
-	for _, detail := range req.OpenPosEntryDetail {
-		openDetails = append(openDetails, erp.POSOpeningEntryDetail{
-			ModeOfPayment: detail.ModeOfPayment,
-			OpeningAmount: detail.OpeningAmount,
-		})
-	}
-	reqInfo := &erp.POSOpeningEntry{
-		PosProfile:      req.PosProfileName,
-		Company:         companyName,
-		PeriodStartDate: gtime.New(req.PeriodStartDate).Format("Y-m-d H:m:s"), //我在这里先挖坑，后面再改
-		//PostingDate:     gtime.New(req.PeriodStartDate).Format("Y-m-d"),       //我在这里先挖坑，后面再改
-		User:           req.CashierEmail,
-		BalanceDetails: openDetails,
-	}
+
+	// 构建开帐信息
+	openDetails := s.buildOpeningEntryDetails(req.OpenPosEntryDetail)
+	reqInfo := s.buildOpeningEntryRequest(req, companyName, openDetails)
+
+	// 创建开帐记录
 	resp, err := service.Document().Create(ctx, "POS Opening Entry", reqInfo)
 	if err != nil {
-		return nil, gerror.Wrapf(err, "创建OpenPosEntry失败")
+		return nil, gerror.Wrapf(err, "创建开帐记录失败")
 	}
-	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析OpenPosEntry响应失败")
-	}
-	res := &erp.POSOpeningEntry{}
-	gconv.Scan(j.Get("data"), res)
-	//res.Name = j.Get("data.name").String()
 
-	//提交POS Opening Entry
-	_, err = service.Document().ChangeDocStatus(ctx, "POS Opening Entry", res.Name, 1)
+	// 解析响应数据
+	openEntry, err := s.parseOpeningEntryResponse(resp)
 	if err != nil {
-		return nil, gerror.Wrapf(err, "提交POS Opening Entry失败")
+		return nil, err
+	}
+
+	// 提交开帐记录
+	_, err = service.Document().ChangeDocStatus(ctx, "POS Opening Entry", openEntry.Name, 1)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "提交开帐记录失败")
 	}
 
 	return &selling.OpenPosEntryResp{
 		OpenPosEntryInfo: &selling.OpenPosEntryInfo{
-			OpenPosEntryName:   res.Name,
-			PosProfileName:     res.PosProfile,
-			CashierEmail:       res.User,
+			OpenPosEntryName:   openEntry.Name,
+			PosProfileName:     openEntry.PosProfile,
+			CashierEmail:       openEntry.User,
 			CompanyAbbr:        req.CompanyAbbr,
 			OpenPosEntryDetail: req.OpenPosEntryDetail,
 		},
 	}, nil
 }
 
-// ClosePosEntry 关帐
-func (*sSelling) ClosePosEntry(ctx context.Context, req *selling.ClosePosEntryReq) (*selling.ClosePosEntryResp, error) {
+// buildOpeningEntryDetails 构建开帐明细
+// 参数：
+//   - details: 开帐明细列表
+//
+// 返回：
+//   - []erp.POSOpeningEntryDetail: 开帐明细列表
+func (s *sSelling) buildOpeningEntryDetails(details []*selling.OpenPosEntryDetail) []erp.POSOpeningEntryDetail {
+	openDetails := make([]erp.POSOpeningEntryDetail, 0)
+	for _, detail := range details {
+		openDetails = append(openDetails, erp.POSOpeningEntryDetail{
+			ModeOfPayment: detail.ModeOfPayment,
+			OpeningAmount: detail.OpeningAmount,
+		})
+	}
+	return openDetails
+}
 
+// buildOpeningEntryRequest 构建开帐请求
+// 参数：
+//   - req: 开帐请求参数
+//   - companyName: 公司名称
+//   - openDetails: 开帐明细列表
+//
+// 返回：
+//   - *erp.POSOpeningEntry: 开帐请求信息
+func (s *sSelling) buildOpeningEntryRequest(req *selling.OpenPosEntryReq, companyName string, openDetails []erp.POSOpeningEntryDetail) *erp.POSOpeningEntry {
+	return &erp.POSOpeningEntry{
+		PosProfile:      req.PosProfileName,
+		Company:         companyName,
+		PeriodStartDate: gtime.New(req.PeriodStartDate).Format("Y-m-d H:i:s"),
+		User:            req.CashierEmail,
+		BalanceDetails:  openDetails,
+	}
+}
+
+// parseOpeningEntryResponse 解析开帐响应
+// 参数：
+//   - resp: 响应数据
+//
+// 返回：
+//   - *erp.POSOpeningEntry: 解析后的开帐信息
+//   - error: 错误信息
+func (s *sSelling) parseOpeningEntryResponse(resp *g.Var) (*erp.POSOpeningEntry, error) {
+	res := &erp.POSOpeningEntry{}
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析开帐响应失败")
+	}
+
+	gconv.Scan(j.Get("data"), res)
+	return res, nil
+}
+
+// ClosePosEntry 关帐
+// 参数：
+//   - ctx: 上下文对象
+//   - req: 关帐请求参数
+//
+// 返回：
+//   - *selling.ClosePosEntryResp: 关帐响应信息
+//   - error: 错误信息
+func (s *sSelling) ClosePosEntry(ctx context.Context, req *selling.ClosePosEntryReq) (*selling.ClosePosEntryResp, error) {
+	// 构建关帐明细
+	closeDetails := s.buildClosingEntryDetails(req.ClosePosEntryDetail)
+
+	// 构建关帐请求
+	reqInfo := s.buildClosingEntryRequest(req, closeDetails)
+
+	// 获取开帐信息
+	openEntry, err := s.GetPosOpeningEntry(ctx, req.PosOpenEntryName)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "获取开帐信息失败")
+	}
+	reqInfo.PosProfile = openEntry.PosProfile
+	reqInfo.Company = openEntry.Company
+
+	// 获取期间发票
+	invoices, err := s.GetPosInvoiceList(ctx, &dtoSelling.GetPosInvoiceListReq{
+		PosProfile: openEntry.PosProfile,
+		StartDate:  gtime.New(openEntry.PeriodStartDate),
+		EndDate:    gtime.New(req.PeriodEndDate),
+		User:       openEntry.User,
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "获取期间发票失败")
+	}
+
+	// 将发票记录到关帐信息
+	reqInfo.PosTransactions = s.buildPosTransactions(invoices)
+
+	// 创建关帐记录
+	resp, err := service.Document().Create(ctx, "POS Closing Entry", reqInfo)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建关帐记录失败")
+	}
+
+	// 解析响应数据
+	closeEntry, err := s.parseClosingEntryResponse(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	// 提交关帐记录
+	_, err = service.Document().ChangeDocStatus(ctx, "POS Closing Entry", closeEntry.Name, 1)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "提交关帐记录失败")
+	}
+
+	return &selling.ClosePosEntryResp{
+		ClosePosEntryInfo: &selling.ClosePosEntryInfo{
+			ClosePosEntryName:   closeEntry.Name,
+			PosProfileName:      closeEntry.PosProfile,
+			ClosePosEntryDetail: req.ClosePosEntryDetail,
+		},
+	}, nil
+}
+
+// buildClosingEntryDetails 构建关帐明细
+// 参数：
+//   - details: 关帐明细列表
+//
+// 返回：
+//   - []erp.POSPaymentReconciliation: 关帐明细列表
+func (s *sSelling) buildClosingEntryDetails(details []*selling.ClosePosEntryDetail) []erp.POSPaymentReconciliation {
 	closeDetails := make([]erp.POSPaymentReconciliation, 0)
-	for _, detail := range req.ClosePosEntryDetail {
+	for _, detail := range details {
 		closeDetails = append(closeDetails, erp.POSPaymentReconciliation{
 			ModeOfPayment: detail.ModeOfPayment,
 			ClosingAmount: detail.ClosingAmount,
 			OpeningAmount: detail.OpeningAmount,
 		})
 	}
-	reqInfo := &erp.POSCloseEntry{
-		PosOpeningEntry:       req.PosOpenEntryName,
-		PosProfile:            req.PosProfileName,
-		PeriodEndDate:         gtime.New(req.PeriodEndDate).Format("Y-m-d H:m:s"), //我在这里先挖坑，后面再改
-		PaymentReconciliation: closeDetails,
-	}
-	resp, err := service.Document().Create(ctx, "POS Closing Entry", reqInfo)
-	if err != nil {
-		return nil, gerror.Wrapf(err, "创建ClosePosEntry失败")
-	}
-	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析ClosePosEntry响应失败")
-	}
-	res := &erp.POSCloseEntry{}
-	gconv.Scan(j.Get("data"), res)
-	//res.Name = j.Get("data.name").String()
-
-	//提交POS Close Entry
-	_, err = service.Document().ChangeDocStatus(ctx, "POS Closing Entry", res.Name, 1)
-	if err != nil {
-		return nil, gerror.Wrapf(err, "提交POS Close Entry失败")
-	}
-
-	return &selling.ClosePosEntryResp{
-		ClosePosEntryInfo: &selling.ClosePosEntryInfo{
-			ClosePosEntryName:   res.Name,
-			PosProfileName:      res.PosProfile,
-			ClosePosEntryDetail: req.ClosePosEntryDetail,
-		},
-	}, nil
+	return closeDetails
 }
 
-// IsProfileOpening 查询pos profile是否开帐
+// buildClosingEntryRequest 构建关帐请求
+// 参数：
+//   - req: 关帐请求参数
+//   - closeDetails: 关帐明细列表
+//
+// 返回：
+//   - *erp.POSCloseEntry: 关帐请求信息
+func (s *sSelling) buildClosingEntryRequest(req *selling.ClosePosEntryReq, closeDetails []erp.POSPaymentReconciliation) *erp.POSCloseEntry {
+	return &erp.POSCloseEntry{
+		PosOpeningEntry:       req.PosOpenEntryName,
+		PeriodEndDate:         gtime.New(req.PeriodEndDate).Format("Y-m-d H:i:s"),
+		PaymentReconciliation: closeDetails,
+	}
+}
+
+// buildPosTransactions 构建POS交易记录
+// 参数：
+//   - invoices: 发票列表
+//
+// 返回：
+//   - []erp.POSTransaction: POS交易记录列表
+func (s *sSelling) buildPosTransactions(invoices []dtoSelling.SimplePosInvoice) []erp.POSTransaction {
+	transactions := make([]erp.POSTransaction, 0)
+	for _, invoice := range invoices {
+		transactions = append(transactions, erp.POSTransaction{
+			PosInvoice:  invoice.Name,
+			PostingDate: invoice.PostingDate,
+			GrandTotal:  invoice.GrandTotal,
+		})
+	}
+	return transactions
+}
+
+// parseClosingEntryResponse 解析关帐响应
+// 参数：
+//   - resp: 响应数据
+//
+// 返回：
+//   - *erp.POSCloseEntry: 解析后的关帐信息
+//   - error: 错误信息
+func (s *sSelling) parseClosingEntryResponse(resp *g.Var) (*erp.POSCloseEntry, error) {
+	res := &erp.POSCloseEntry{}
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析关帐响应失败")
+	}
+
+	gconv.Scan(j.Get("data"), res)
+	return res, nil
+}
+
+// IsProfileOpening 查询POS配置文件是否开帐
+// 参数：
+//   - ctx: 上下文对象
+//   - posProfile: POS配置文件名称
+//
+// 返回：
+//   - bool: 是否已开帐
+//   - error: 错误信息
 func (s *sSelling) IsProfileOpening(ctx context.Context, posProfile string) (bool, error) {
 	count, err := service.Doctype().Count(ctx, &erp.ErpReq{
 		DocType: "POS Opening Entry",
@@ -270,7 +562,250 @@ func (s *sSelling) IsProfileOpening(ctx context.Context, posProfile string) (boo
 		Filters: [][]string{{"pos_profile", "=", posProfile}, {"status", "=", "Open"}},
 	})
 	if err != nil {
-		return false, gerror.Wrapf(err, "查询pos profile是否开帐失败")
+		return false, gerror.Wrapf(err, "查询POS配置文件是否开帐失败")
 	}
 	return count > 0, nil
+}
+
+// GetPosInvoiceList 获取POS发票列表
+// 参数：
+//   - ctx: 上下文对象
+//   - req: 获取POS发票列表请求参数
+//
+// 返回：
+//   - []dtoSelling.SimplePosInvoice: POS发票列表
+//   - error: 错误信息
+func (s *sSelling) GetPosInvoiceList(ctx context.Context, req *dtoSelling.GetPosInvoiceListReq) ([]dtoSelling.SimplePosInvoice, error) {
+	resp, err := service.Document().List(ctx, &erp.ErpReq{
+		DocType: "POS Invoice",
+	}, &erp.RequestParams{
+		Fields: g.ArrayStr{"name", "posting_date", "customer", "grand_total", "is_return", "return_against"},
+		Filters: [][]string{{"pos_profile", "=", req.PosProfile},
+			{"owner", "=", req.User},
+			{"creation", ">=", req.StartDate.Format("Y-m-d H:i:s")}, {"creation", "<=", req.EndDate.Format("Y-m-d H:i:s")}},
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询POS发票列表失败")
+	}
+
+	// 解析响应数据
+	res := make([]dtoSelling.SimplePosInvoice, 0)
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析POS发票列表响应失败")
+	}
+
+	err = gconv.Scan(j.Get("data"), &res)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析POS发票数据列表响应失败")
+	}
+
+	return res, nil
+}
+
+// SavePosInvoice 保存POS发票
+// 参数：
+//   - ctx: 上下文对象
+//   - req: 保存POS发票请求参数
+//
+// 返回：
+//   - *selling.SavePosInvoiceResp: 保存POS发票响应信息
+//   - error: 错误信息
+func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoiceReq) (*selling.SavePosInvoiceResp, error) {
+	// 获取公司名称
+	companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "根据公司缩写查询公司名称失败")
+	}
+
+	// 获取开帐记录
+	openingEntry, err := s.GetPosOpeningEntry(ctx, req.OpenPosEntryName)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "获取POS开帐记录失败")
+	}
+
+	// 构建POS发票
+	posInvoice := s.buildPosInvoice(req, companyName, openingEntry.PosProfile)
+
+	// 创建POS发票
+	// 特殊处理，使用开帐收银员创建发票
+
+	//创建商品销售记录
+	resp, err := service.Document().Create(erpnext.SetFakeUser(ctx, openingEntry.User), "POS Invoice", posInvoice)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建POS发票失败")
+	}
+
+	// 解析响应数据
+	res := &selling.SavePosInvoiceResp{}
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析POS发票响应失败")
+	}
+
+	res.ProductsInvoiceName = j.Get("data.name").String()
+
+	// 提交发票记录
+	_, err = service.Document().ChangeDocStatus(ctx, "POS Invoice", res.ProductsInvoiceName, 1)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "提交发票记录失败")
+	}
+
+	//创建物品销售记录
+	posRmInvoice := s.buildPosInvoice(req, companyName, openingEntry.PosProfile)
+	posRmInvoice.Items = s.buildInvoiceItems(req.MaterialItems)
+	//移除支付信息
+	posRmInvoicePayments := make([]erp.POSInvoicePayment, 0)
+	for _, payment := range posRmInvoice.Payments {
+		posRmInvoicePayments = append(posRmInvoicePayments, erp.POSInvoicePayment{
+			ModeOfPayment: payment.ModeOfPayment,
+			Amount:        0,
+		})
+	}
+	posRmInvoice.Payments = posRmInvoicePayments
+	posRmInvoice.Taxes = nil
+	//创建物品销售记录
+	resp, err = service.Document().Create(erpnext.SetFakeUser(ctx, openingEntry.User), "POS Invoice", posRmInvoice)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建物品POS发票失败")
+	}
+
+	// 解析响应数据
+	j, err = gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析POS发票响应失败")
+	}
+
+	res.MaterialInvoiceName = j.Get("data.name").String()
+
+	// 提交发票记录
+	_, err = service.Document().ChangeDocStatus(ctx, "POS Invoice", res.MaterialInvoiceName, 1)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "提交发票记录失败")
+	}
+	return res, nil
+}
+
+// buildPosInvoice 构建POS发票
+// 参数：
+//   - req: 保存POS发票请求参数
+//   - companyName: 公司名称
+//   - posProfile: POS配置文件名称
+//
+// 返回：
+//   - *erp.POSInvoice: POS发票信息
+func (s *sSelling) buildPosInvoice(req *selling.SavePosInvoiceReq, companyName string, posProfile string) *erp.POSInvoice {
+	postingDatetime := gtime.New(req.PostingDatetime)
+	posInvoice := &erp.POSInvoice{
+		PosProfile:        posProfile,
+		Company:           companyName,
+		PostingDate:       postingDatetime.Format("Y-m-d"),
+		PostingTime:       postingDatetime.Format("H:i:s"),
+		Currency:          req.Currency,
+		PriceListCurrency: req.PriceListCurrency,
+		UpdateStock:       req.UpdateStock, // 更新库存
+		CustomerOrder:     req.OrderNo,
+	}
+
+	// 设置客户信息
+	if len(req.CustomerUuid) > 0 {
+		posInvoice.Customer = "Member"
+		posInvoice.CustomerUUID = req.CustomerUuid
+	}
+
+	// 构建发票项目
+	posInvoice.Items = s.buildInvoiceItems(req.Items)
+
+	// 构建发票税费
+	posInvoice.Taxes = s.buildInvoiceTaxes(req.Taxes, req.CompanyAbbr)
+
+	// 构建支付信息
+	posInvoice.Payments = s.buildInvoicePayments(req.Payments)
+
+	return posInvoice
+}
+
+// buildInvoiceItems 构建发票项目
+// 参数：
+//   - items: 发票项目列表
+//
+// 返回：
+//   - []erp.POSInvoiceItem: 发票项目列表
+func (s *sSelling) buildInvoiceItems(items []*selling.PosInvoiceItem) []erp.POSInvoiceItem {
+	invoiceItems := make([]erp.POSInvoiceItem, 0)
+	for _, item := range items {
+		invoiceItems = append(invoiceItems, erp.POSInvoiceItem{
+			ItemCode: item.ItemCode,
+			Qty:      item.Qty,
+			Rate:     item.Rate,
+			Amount:   item.Amount,
+		})
+	}
+	return invoiceItems
+}
+
+// buildInvoiceTaxes 构建发票税费
+// 参数：
+//   - taxes: 税费列表
+//   - companyAbbr: 公司缩写
+//
+// 返回：
+//   - []erp.POSInvoiceTax: 发票税费列表
+func (s *sSelling) buildInvoiceTaxes(taxes []*selling.PosInvoiceTax, companyAbbr string) []erp.POSInvoiceTax {
+	invoiceTaxes := make([]erp.POSInvoiceTax, 0)
+	for _, tax := range taxes {
+		invoiceTaxes = append(invoiceTaxes, erp.POSInvoiceTax{
+			ChargeType:  "Actual",                // 默认实际
+			AccountHead: "Cash - " + companyAbbr, // 默认现金
+			Rate:        tax.Rate,
+			TaxAmount:   tax.TaxAmount,
+			Description: tax.Description,
+		})
+	}
+	return invoiceTaxes
+}
+
+// GetPosOpeningEntry 获取POS开帐记录
+// 参数：
+//   - ctx: 上下文对象
+//   - name: 开帐记录名称
+//
+// 返回：
+//   - *erp.POSOpeningEntry: POS开帐记录信息
+//   - error: 错误信息
+func (s *sSelling) GetPosOpeningEntry(ctx context.Context, name string) (*erp.POSOpeningEntry, error) {
+	resp, err := service.Document().Get(ctx, &erp.ErpReq{
+		DocType: "POS Opening Entry",
+		Name:    name,
+	}, nil)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询POS开帐记录失败")
+	}
+
+	// 解析响应数据
+	res := &erp.POSOpeningEntry{}
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析POS开帐记录响应失败")
+	}
+
+	gconv.Scan(j.Get("data"), res)
+	return res, nil
+}
+
+// buildInvoicePayments 构建发票支付信息
+// 参数：
+//   - payments: 支付信息列表
+//
+// 返回：
+//   - []erp.POSInvoicePayment: 发票支付信息列表
+func (s *sSelling) buildInvoicePayments(payments []*selling.PosInvoicePayment) []erp.POSInvoicePayment {
+	invoicePayments := make([]erp.POSInvoicePayment, 0)
+	for _, payment := range payments {
+		invoicePayments = append(invoicePayments, erp.POSInvoicePayment{
+			ModeOfPayment: payment.ModeOfPayment,
+			Amount:        payment.Amount,
+		})
+	}
+	return invoicePayments
 }

@@ -1,0 +1,8 @@
+{
+  "doctype": "DocType",
+  "label": "客户UUID",
+  "fieldname": "customer_uuid",
+  "fieldtype": "Data",
+  "insert_after": "Customer",
+  "dt": "POS Invoice"
+}

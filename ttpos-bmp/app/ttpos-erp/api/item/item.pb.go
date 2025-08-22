@@ -1216,126 +1216,6 @@ func (x *BomItem) GetUom() string {
 	return ""
 }
 
-type GetBomListReq struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	CompanyAbbr   string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，必填"`                // 公司简称，必填
-	Branch        string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，必填"`                                             // 分支名称，必填
-	ItemCode      string                 `protobuf:"bytes,3,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，可选"`                         // 物品编码，可选
-	ItemName      string                 `protobuf:"bytes,4,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称，可选，模糊查询"`                    // 物品名称，可选，模糊查询
-	ItemGroup     ItemGroup              `protobuf:"varint,5,opt,name=item_group,json=itemGroup,proto3,enum=item.ItemGroup" json:"item_group,omitempty" dc:"物品分组，可选"` // 物品分组，可选
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetBomListReq) Reset() {
-	*x = GetBomListReq{}
-	mi := &file_item_item_proto_msgTypes[16]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetBomListReq) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetBomListReq) ProtoMessage() {}
-
-func (x *GetBomListReq) ProtoReflect() protoreflect.Message {
-	mi := &file_item_item_proto_msgTypes[16]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetBomListReq.ProtoReflect.Descriptor instead.
-func (*GetBomListReq) Descriptor() ([]byte, []int) {
-	return file_item_item_proto_rawDescGZIP(), []int{16}
-}
-
-func (x *GetBomListReq) GetCompanyAbbr() string {
-	if x != nil {
-		return x.CompanyAbbr
-	}
-	return ""
-}
-
-func (x *GetBomListReq) GetBranch() string {
-	if x != nil {
-		return x.Branch
-	}
-	return ""
-}
-
-func (x *GetBomListReq) GetItemCode() string {
-	if x != nil {
-		return x.ItemCode
-	}
-	return ""
-}
-
-func (x *GetBomListReq) GetItemName() string {
-	if x != nil {
-		return x.ItemName
-	}
-	return ""
-}
-
-func (x *GetBomListReq) GetItemGroup() ItemGroup {
-	if x != nil {
-		return x.ItemGroup
-	}
-	return ItemGroup_Others
-}
-
-type GetBomListResp struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	BomList       []*BomInfo             `protobuf:"bytes,1,rep,name=bom_list,json=bomList,proto3" json:"bom_list,omitempty" dc:"物品列表"` // 物品列表
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetBomListResp) Reset() {
-	*x = GetBomListResp{}
-	mi := &file_item_item_proto_msgTypes[17]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetBomListResp) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetBomListResp) ProtoMessage() {}
-
-func (x *GetBomListResp) ProtoReflect() protoreflect.Message {
-	mi := &file_item_item_proto_msgTypes[17]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetBomListResp.ProtoReflect.Descriptor instead.
-func (*GetBomListResp) Descriptor() ([]byte, []int) {
-	return file_item_item_proto_rawDescGZIP(), []int{17}
-}
-
-func (x *GetBomListResp) GetBomList() []*BomInfo {
-	if x != nil {
-		return x.BomList
-	}
-	return nil
-}
-
 var File_item_item_proto protoreflect.FileDescriptor
 
 const file_item_item_proto_rawDesc = "" +
@@ -1438,16 +1318,7 @@ const file_item_item_proto_rawDesc = "" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x1b\n" +
 	"\titem_name\x18\x02 \x01(\tR\bitemName\x12\x10\n" +
 	"\x03qty\x18\x03 \x01(\x01R\x03qty\x12\x10\n" +
-	"\x03uom\x18\x04 \x01(\tR\x03uom\"\xb4\x01\n" +
-	"\rGetBomListReq\x12!\n" +
-	"\fcompany_abbr\x18\x01 \x01(\tR\vcompanyAbbr\x12\x16\n" +
-	"\x06branch\x18\x02 \x01(\tR\x06branch\x12\x1b\n" +
-	"\titem_code\x18\x03 \x01(\tR\bitemCode\x12\x1b\n" +
-	"\titem_name\x18\x04 \x01(\tR\bitemName\x12.\n" +
-	"\n" +
-	"item_group\x18\x05 \x01(\x0e2\x0f.item.ItemGroupR\titemGroup\":\n" +
-	"\x0eGetBomListResp\x12(\n" +
-	"\bbom_list\x18\x01 \x03(\v2\r.item.BomInfoR\abomList*6\n" +
+	"\x03uom\x18\x04 \x01(\tR\x03uom*6\n" +
 	"\tItemGroup\x12\n" +
 	"\n" +
 	"\x06Others\x10\x00\x12\x0f\n" +
@@ -1476,7 +1347,7 @@ func file_item_item_proto_rawDescGZIP() []byte {
 }
 
 var file_item_item_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_item_item_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_item_item_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_item_item_proto_goTypes = []any{
 	(ItemGroup)(0),               // 0: item.ItemGroup
 	(*GetItemListReq)(nil),       // 1: item.GetItemListReq
@@ -1495,9 +1366,7 @@ var file_item_item_proto_goTypes = []any{
 	(*GetItemStockResp)(nil),     // 14: item.GetItemStockResp
 	(*BomInfo)(nil),              // 15: item.BomInfo
 	(*BomItem)(nil),              // 16: item.BomItem
-	(*GetBomListReq)(nil),        // 17: item.GetBomListReq
-	(*GetBomListResp)(nil),       // 18: item.GetBomListResp
-	(*api.ResponseInfo)(nil),     // 19: erp.ResponseInfo
+	(*api.ResponseInfo)(nil),     // 17: erp.ResponseInfo
 }
 var file_item_item_proto_depIdxs = []int32{
 	0,  // 0: item.GetItemListReq.item_group:type_name -> item.ItemGroup
@@ -1511,27 +1380,25 @@ var file_item_item_proto_depIdxs = []int32{
 	0,  // 8: item.GetItemStockReq.item_group:type_name -> item.ItemGroup
 	12, // 9: item.GetItemStockResp.item_stock_list:type_name -> item.ItemStock
 	16, // 10: item.BomInfo.items:type_name -> item.BomItem
-	0,  // 11: item.GetBomListReq.item_group:type_name -> item.ItemGroup
-	15, // 12: item.GetBomListResp.bom_list:type_name -> item.BomInfo
-	1,  // 13: item.ItemService.GetItemList:input_type -> item.GetItemListReq
-	5,  // 14: item.ItemService.GetUomList:input_type -> item.GetUomListReq
-	7,  // 15: item.ItemService.SaveUom:input_type -> item.UomInfo
-	8,  // 16: item.ItemService.GetAttributeList:input_type -> item.GetAttributeListReq
-	9,  // 17: item.ItemService.SaveAttribute:input_type -> item.AttributeInfo
-	3,  // 18: item.ItemService.SaveItem:input_type -> item.ItemInfo
-	13, // 19: item.ItemService.GetItemStock:input_type -> item.GetItemStockReq
-	19, // 20: item.ItemService.GetItemList:output_type -> erp.ResponseInfo
-	19, // 21: item.ItemService.GetUomList:output_type -> erp.ResponseInfo
-	19, // 22: item.ItemService.SaveUom:output_type -> erp.ResponseInfo
-	19, // 23: item.ItemService.GetAttributeList:output_type -> erp.ResponseInfo
-	19, // 24: item.ItemService.SaveAttribute:output_type -> erp.ResponseInfo
-	19, // 25: item.ItemService.SaveItem:output_type -> erp.ResponseInfo
-	19, // 26: item.ItemService.GetItemStock:output_type -> erp.ResponseInfo
-	20, // [20:27] is the sub-list for method output_type
-	13, // [13:20] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	1,  // 11: item.ItemService.GetItemList:input_type -> item.GetItemListReq
+	5,  // 12: item.ItemService.GetUomList:input_type -> item.GetUomListReq
+	7,  // 13: item.ItemService.SaveUom:input_type -> item.UomInfo
+	8,  // 14: item.ItemService.GetAttributeList:input_type -> item.GetAttributeListReq
+	9,  // 15: item.ItemService.SaveAttribute:input_type -> item.AttributeInfo
+	3,  // 16: item.ItemService.SaveItem:input_type -> item.ItemInfo
+	13, // 17: item.ItemService.GetItemStock:input_type -> item.GetItemStockReq
+	17, // 18: item.ItemService.GetItemList:output_type -> erp.ResponseInfo
+	17, // 19: item.ItemService.GetUomList:output_type -> erp.ResponseInfo
+	17, // 20: item.ItemService.SaveUom:output_type -> erp.ResponseInfo
+	17, // 21: item.ItemService.GetAttributeList:output_type -> erp.ResponseInfo
+	17, // 22: item.ItemService.SaveAttribute:output_type -> erp.ResponseInfo
+	17, // 23: item.ItemService.SaveItem:output_type -> erp.ResponseInfo
+	17, // 24: item.ItemService.GetItemStock:output_type -> erp.ResponseInfo
+	18, // [18:25] is the sub-list for method output_type
+	11, // [11:18] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_item_item_proto_init() }
@@ -1545,7 +1412,7 @@ func file_item_item_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_item_item_proto_rawDesc), len(file_item_item_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   18,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

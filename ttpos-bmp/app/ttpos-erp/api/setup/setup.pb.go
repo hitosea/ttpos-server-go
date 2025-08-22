@@ -256,6 +256,7 @@ type CreateDefaultPosProfileReq struct {
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty" dc:"Pos Profile名称 ,必填"`                         // Pos Profile名称 ,必填
 	CompanyAbbr   string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司名称 ，必填"` // 公司名称 ，必填
 	Branch        string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty" dc:"分店名称，必填"`                               // 分店名称，必填
+	Cashiers      []*PosProfileCashier   `protobuf:"bytes,4,rep,name=cashiers,proto3" json:"cashiers,omitempty" dc:"适用收银员,可选"`                          // 适用收银员,可选
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -311,6 +312,57 @@ func (x *CreateDefaultPosProfileReq) GetBranch() string {
 	return ""
 }
 
+func (x *CreateDefaultPosProfileReq) GetCashiers() []*PosProfileCashier {
+	if x != nil {
+		return x.Cashiers
+	}
+	return nil
+}
+
+type PosProfileCashier struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	User          string                 `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty" dc:"收银员账号，邮箱必填"` // 收银员账号，邮箱必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PosProfileCashier) Reset() {
+	*x = PosProfileCashier{}
+	mi := &file_setup_setup_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PosProfileCashier) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PosProfileCashier) ProtoMessage() {}
+
+func (x *PosProfileCashier) ProtoReflect() protoreflect.Message {
+	mi := &file_setup_setup_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PosProfileCashier.ProtoReflect.Descriptor instead.
+func (*PosProfileCashier) Descriptor() ([]byte, []int) {
+	return file_setup_setup_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *PosProfileCashier) GetUser() string {
+	if x != nil {
+		return x.User
+	}
+	return ""
+}
+
 type CreateDefaultPosProfileResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty" dc:"Pos Profile名称"` // Pos Profile名称
@@ -320,7 +372,7 @@ type CreateDefaultPosProfileResp struct {
 
 func (x *CreateDefaultPosProfileResp) Reset() {
 	*x = CreateDefaultPosProfileResp{}
-	mi := &file_setup_setup_proto_msgTypes[5]
+	mi := &file_setup_setup_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -332,7 +384,7 @@ func (x *CreateDefaultPosProfileResp) String() string {
 func (*CreateDefaultPosProfileResp) ProtoMessage() {}
 
 func (x *CreateDefaultPosProfileResp) ProtoReflect() protoreflect.Message {
-	mi := &file_setup_setup_proto_msgTypes[5]
+	mi := &file_setup_setup_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -345,7 +397,7 @@ func (x *CreateDefaultPosProfileResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateDefaultPosProfileResp.ProtoReflect.Descriptor instead.
 func (*CreateDefaultPosProfileResp) Descriptor() ([]byte, []int) {
-	return file_setup_setup_proto_rawDescGZIP(), []int{5}
+	return file_setup_setup_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CreateDefaultPosProfileResp) GetName() string {
@@ -378,11 +430,14 @@ const file_setup_setup_proto_rawDesc = "" +
 	"\vbranch_name\x18\x01 \x01(\tR\n" +
 	"branchName\x12\x1f\n" +
 	"\vadmin_email\x18\x02 \x01(\tR\n" +
-	"adminEmail\"k\n" +
+	"adminEmail\"\xa1\x01\n" +
 	"\x1aCreateDefaultPosProfileReq\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12!\n" +
 	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12\x16\n" +
-	"\x06branch\x18\x03 \x01(\tR\x06branch\"1\n" +
+	"\x06branch\x18\x03 \x01(\tR\x06branch\x124\n" +
+	"\bcashiers\x18\x04 \x03(\v2\x18.setup.PosProfileCashierR\bcashiers\"'\n" +
+	"\x11PosProfileCashier\x12\x12\n" +
+	"\x04user\x18\x01 \x01(\tR\x04user\"1\n" +
 	"\x1bCreateDefaultPosProfileResp\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name2\xcf\x01\n" +
 	"\fSetupService\x121\n" +
@@ -402,28 +457,30 @@ func file_setup_setup_proto_rawDescGZIP() []byte {
 	return file_setup_setup_proto_rawDescData
 }
 
-var file_setup_setup_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_setup_setup_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_setup_setup_proto_goTypes = []any{
 	(*InitShopReq)(nil),                 // 0: setup.InitShopReq
 	(*CreatePosUserReq)(nil),            // 1: setup.CreatePosUserReq
 	(*CreatePosUserResp)(nil),           // 2: setup.CreatePosUserResp
 	(*InitShopResp)(nil),                // 3: setup.InitShopResp
 	(*CreateDefaultPosProfileReq)(nil),  // 4: setup.CreateDefaultPosProfileReq
-	(*CreateDefaultPosProfileResp)(nil), // 5: setup.CreateDefaultPosProfileResp
-	(*api.ResponseInfo)(nil),            // 6: erp.ResponseInfo
+	(*PosProfileCashier)(nil),           // 5: setup.PosProfileCashier
+	(*CreateDefaultPosProfileResp)(nil), // 6: setup.CreateDefaultPosProfileResp
+	(*api.ResponseInfo)(nil),            // 7: erp.ResponseInfo
 }
 var file_setup_setup_proto_depIdxs = []int32{
-	0, // 0: setup.SetupService.InitShop:input_type -> setup.InitShopReq
-	1, // 1: setup.SetupService.CreatePosUser:input_type -> setup.CreatePosUserReq
-	4, // 2: setup.SetupService.CreateDefaultPosProfile:input_type -> setup.CreateDefaultPosProfileReq
-	6, // 3: setup.SetupService.InitShop:output_type -> erp.ResponseInfo
-	6, // 4: setup.SetupService.CreatePosUser:output_type -> erp.ResponseInfo
-	6, // 5: setup.SetupService.CreateDefaultPosProfile:output_type -> erp.ResponseInfo
-	3, // [3:6] is the sub-list for method output_type
-	0, // [0:3] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	5, // 0: setup.CreateDefaultPosProfileReq.cashiers:type_name -> setup.PosProfileCashier
+	0, // 1: setup.SetupService.InitShop:input_type -> setup.InitShopReq
+	1, // 2: setup.SetupService.CreatePosUser:input_type -> setup.CreatePosUserReq
+	4, // 3: setup.SetupService.CreateDefaultPosProfile:input_type -> setup.CreateDefaultPosProfileReq
+	7, // 4: setup.SetupService.InitShop:output_type -> erp.ResponseInfo
+	7, // 5: setup.SetupService.CreatePosUser:output_type -> erp.ResponseInfo
+	7, // 6: setup.SetupService.CreateDefaultPosProfile:output_type -> erp.ResponseInfo
+	4, // [4:7] is the sub-list for method output_type
+	1, // [1:4] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_setup_setup_proto_init() }
@@ -437,7 +494,7 @@ func file_setup_setup_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_setup_setup_proto_rawDesc), len(file_setup_setup_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

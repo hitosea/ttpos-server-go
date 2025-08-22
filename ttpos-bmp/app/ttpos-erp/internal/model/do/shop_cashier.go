@@ -17,4 +17,6 @@ type ShopCashier struct {
 	CashierEmail interface{} // 收银员邮箱
 	ApiKey       interface{} //
 	ApiSecret    interface{} //
+	CompanyAbbr  interface{} // 公司缩写
+	Branch       interface{} // 分支
 }

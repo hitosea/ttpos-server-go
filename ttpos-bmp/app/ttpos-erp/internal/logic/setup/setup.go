@@ -91,6 +91,7 @@ func (s *sSetup) CreateUser(ctx context.Context, req *setup2.CreateUserInp) erro
 		"enabled":            1,
 		"send_welcome_email": false,
 		"role_profile_name":  "ShopCashier",
+		"time_zone":          "Asia/Bangkok",
 	}
 
 	if _, err := service.Document().Create(ctx, "User", userPayload); err != nil {
@@ -101,7 +102,7 @@ func (s *sSetup) CreateUser(ctx context.Context, req *setup2.CreateUserInp) erro
 	return nil
 }
 
-// CreatePosProfile 创建默认的POS配置文件
+// CreateDefaultPosProfile 创建默认的POS配置文件
 // 参数：
 //   - ctx: 上下文对象
 //   - req: 创建默认POS配置文件请求参数
@@ -109,7 +110,7 @@ func (s *sSetup) CreateUser(ctx context.Context, req *setup2.CreateUserInp) erro
 // 返回：
 //   - posFileId: POS配置文件名称
 //   - err: 错误信息
-func (s *sSetup) CreatePosProfile(ctx context.Context, req *setup.CreateDefaultPosProfileReq) (posFileId string, err error) {
+func (s *sSetup) CreateDefaultPosProfile(ctx context.Context, req *setup.CreateDefaultPosProfileReq) (posFileId string, err error) {
 	// 获取公司名称
 	companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
 	if err != nil {
@@ -123,8 +124,7 @@ func (s *sSetup) CreatePosProfile(ctx context.Context, req *setup.CreateDefaultP
 		return "", gerror.Wrapf(err, "获取默认仓库失败")
 	}
 
-	// 创建POS配置文件
-	posProfile, err := service.Selling().CreatePosProfile(ctx, &setup2.CreatePosProfileInp{
+	reqInfo := &setup2.CreatePosProfileInp{
 		PosProfileName:     req.Name,
 		CompanyAbbr:        req.CompanyAbbr,
 		Warehouse:          warehouse.Name,
@@ -134,7 +134,17 @@ func (s *sSetup) CreatePosProfile(ctx context.Context, req *setup.CreateDefaultP
 		WriteOffAccount:    "Sales - " + req.CompanyAbbr,
 		WriteOffLimit:      1.00,
 		WriteOffCostCenter: "Main - " + req.CompanyAbbr,
-	})
+	}
+	if len(req.Cashiers) > 0 {
+		reqInfo.ApplicableForUsers = make([]setup2.Cashier, 0)
+		for _, user := range req.Cashiers {
+			reqInfo.ApplicableForUsers = append(reqInfo.ApplicableForUsers, setup2.Cashier{
+				User: user.User,
+			})
+		}
+	}
+	// 创建POS配置文件
+	posProfile, err := service.Selling().CreatePosProfile(ctx, reqInfo)
 	if err != nil {
 		return "", gerror.Wrapf(err, "创建POS配置文件失败")
 	}
@@ -186,6 +196,8 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *se
 		CashierEmail: adminEmail,
 		ApiKey:       apiKey,
 		ApiSecret:    apiSecret,
+		CompanyAbbr:  req.CompanyAbbr,
+		Branch:       branchName,
 	})
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建门店管理员关联关系失败")
@@ -217,6 +229,21 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *se
 	if err := s.createPaymentAccounts(ctx, req.CompanyAbbr); err != nil {
 		g.Log().Warning(ctx, "创建支付账号关联失败", err)
 		// 不返回错误，因为这不是关键步骤
+	}
+
+	//创建默认pos profile
+	_, err = s.CreateDefaultPosProfile(ctx, &setup.CreateDefaultPosProfileReq{
+		Name:        fmt.Sprintf("%s - POS", branchName),
+		CompanyAbbr: req.CompanyAbbr,
+		Branch:      branchName,
+		Cashiers: []*setup.PosProfileCashier{
+			{
+				User: adminEmail,
+			},
+		},
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建默认pos profile失败")
 	}
 
 	return &setup.InitShopResp{
