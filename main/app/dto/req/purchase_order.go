@@ -96,24 +96,25 @@ type PurchaseOrderSubmitReq struct {
 
 // PurchaseReceiptCreateReq 创建收货记录请求
 type PurchaseReceiptCreateReq struct {
-	PurchaseOrderUuid uint64                         `json:"purchase_order_uuid" binding:"required,min=1"`    // 采购订单ID
-	ReceiveTime       int64                          `json:"receive_time" binding:"required,min=0"`           // 收货时间(时间戳)
-	Items             []PurchaseReceiptItemCreateReq `json:"items" binding:"required,min=1,max=200,dive"`     // 收货明细
-	IsConfirm         bool                           `json:"is_confirm" binding:"omitempty,oneof=true false"` // 是否确认收货
+	PurchaseOrderUuid uint64                         `json:"purchase_order_uuid" binding:"required,min=1"` // 采购订单ID
+	ReceiveTime       int64                          `json:"receive_time" binding:"required,min=0"`        // 收货时间(时间戳)
+	Items             []PurchaseReceiptItemCreateReq `json:"items" binding:"required,min=1,max=200,dive"`  // 收货明细
+	IsConfirm         bool                           `json:"is_confirm"`                                   // 是否确认收货
 }
 
 // PurchaseReceiptUpdateReq 更新收货记录请求
 type PurchaseReceiptOrderUpdateReq struct {
-	Uuid        uint64                         `json:"uuid" binding:"required,min=1"`                   // 收货记录ID
-	ReceiveTime int                            `json:"receive_time" binding:"required,min=0"`           // 收货时间(时间戳)
-	Items       []PurchaseReceiptItemCreateReq `json:"items" binding:"required,min=1,max=200,dive"`     // 收货明细
-	IsConfirm   bool                           `json:"is_confirm" binding:"omitempty,oneof=true false"` // 是否确认收货
+	Uuid        uint64                         `json:"uuid" binding:"required,min=1"`               // 收货记录ID
+	ReceiveTime int                            `json:"receive_time" binding:"required,min=0"`       // 收货时间(时间戳)
+	Items       []PurchaseReceiptItemCreateReq `json:"items" binding:"required,min=1,max=200,dive"` // 收货明细
+	IsConfirm   bool                           `json:"is_confirm"`                                  // 是否确认收货
 }
 
 // PurchaseReceiptItemCreateReq 收货明细创建请求
 type PurchaseReceiptItemCreateReq struct {
-	Uuid uint64  `json:"uuid" binding:"required,min=1"`          // 商品明细ID
-	Num  float64 `json:"num" binding:"required,gte=0,lte=99999"` // 实收数量
+	Uuid                  uint64  `json:"uuid"`                                        // 收货明细ID
+	PurchaseOrderItemUuid uint64  `json:"purchase_order_item_uuid" binding:"required"` // 采购订单明细ID
+	Num                   float64 `json:"this_arrival_num"`                            // 本次收货数量
 }
 
 // PurchaseReceiptListReq 收货记录列表请求
@@ -122,8 +123,8 @@ type PurchaseReceiptListReq struct {
 	PurchaseOrderUuid uint64 `json:"purchase_order_uuid" form:"purchase_order_uuid" binding:"omitempty,min=1"` // 采购订单ID
 	ReceiptNo         string `json:"receipt_no" form:"receipt_no" binding:"omitempty,max=50"`                  // 收货单号
 	QualityStatus     *int   `json:"quality_status" form:"quality_status" binding:"omitempty,min=1,max=3"`     // 质检状态筛选
-	ReceiptTimeStart  int    `json:"receipt_time_start" form:"receipt_time_start" binding:"omitempty,min=0"`   // 收货时间开始
-	ReceiptTimeEnd    int    `json:"receipt_time_end" form:"receipt_time_end" binding:"omitempty,min=0"`       // 收货时间结束
+	ReceiveTimeStart  int    `json:"receive_time_start" form:"receive_time_start" binding:"omitempty,min=0"`   // 收货时间开始
+	ReceiveTimeEnd    int    `json:"receive_time_end" form:"receive_time_end" binding:"omitempty,min=0"`       // 收货时间结束
 }
 
 // PurchaseReceiptDetailReq 收货记录详情请求

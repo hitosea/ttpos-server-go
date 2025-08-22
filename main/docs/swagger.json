@@ -31740,7 +31740,7 @@
             "required": [
                 "items",
                 "purchase_order_uuid",
-                "receipt_time"
+                "receive_time"
             ],
             "properties": {
                 "is_confirm": {
@@ -31765,7 +31765,7 @@
                     "type": "integer",
                     "minimum": 1
                 },
-                "receipt_time": {
+                "receive_time": {
                     "description": "收货时间(时间戳)",
                     "type": "integer",
                     "minimum": 0
@@ -31809,7 +31809,7 @@
             "type": "object",
             "required": [
                 "items",
-                "receipt_time",
+                "receive_time",
                 "uuid"
             ],
             "properties": {
@@ -31830,7 +31830,7 @@
                         "$ref": "#/definitions/req.PurchaseReceiptItemCreateReq"
                     }
                 },
-                "receipt_time": {
+                "receive_time": {
                     "description": "收货时间(时间戳)",
                     "type": "integer",
                     "minimum": 0

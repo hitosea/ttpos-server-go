@@ -90,3 +90,45 @@ func (s *erpSrv) AddLianPayment(ctx cc.Context, req req.ErpnextSiteAddLianLianPa
 
 	return nil
 }
+
+// OpenPosEntry 开账
+func (s *erpSrv) OpenPosEntry(ctx context.Context, openEntryReq req.OpenPosEntryReq) (string, error) {
+	client, conn, err := NewErpSellingClient()
+	if err != nil {
+		return "", err
+	}
+	defer conn.Close()
+
+	openPosEntryDetail := make([]*selling.OpenPosEntryDetail, 0)
+	if len(openEntryReq.OpenPosEntryDetail) != 0 {
+		for _, detail := range openEntryReq.OpenPosEntryDetail {
+			openPosEntryDetail = append(openPosEntryDetail, &selling.OpenPosEntryDetail{
+				ModeOfPayment: detail.ModeOfPayment,
+				OpeningAmount: detail.OpeningAmount,
+			})
+		}
+	}
+	openPosEntryReq := &selling.OpenPosEntryReq{
+		PosProfileName:     openEntryReq.PosProfileName,
+		CashierEmail:       openEntryReq.CashierEmail,
+		CompanyAbbr:        openEntryReq.CompanyAbbr,
+		PeriodStartDate:    openEntryReq.PeriodStartDate,
+		OpenPosEntryDetail: openPosEntryDetail,
+		Branch:             openEntryReq.Branch,
+	}
+	res, err := client.OpenPosEntry(WithSiteCode(ctx, openEntryReq.SiteCode), openPosEntryReq)
+	if err != nil {
+		return "", err
+	}
+	if res.Data != nil {
+		var openPosEntryResp selling.OpenPosEntryResp
+		if err := res.Data.UnmarshalTo(&openPosEntryResp); err != nil {
+			logger.Logger.Error("OpenPosEntry-UnmarshalTo", zap.Any("err", err))
+			return "", err
+		}
+		if openPosEntryResp.OpenPosEntryInfo != nil {
+			return openPosEntryResp.OpenPosEntryInfo.OpenPosEntryName, nil
+		}
+	}
+	return "", nil
+}

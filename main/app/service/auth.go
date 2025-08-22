@@ -199,7 +199,10 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 		}
 		// 创建当班日志
 		if staff.CashierLoginTime == 0 || staff.CashierOnline == 0 {
-			shiftLog, err := s.shiftSrv.CreateWorkingLog(staff)
+			companySetting := repository.NewCompanySettingRepo(s.dbm.GetDB(staff.CompanyUuid)).Get()
+			ctx.SetCompany(*staff.Company)
+			ctx.SetCompanySetting(companySetting)
+			shiftLog, err := s.shiftSrv.CreateWorkingLog(ctx, staff)
 			if err != nil {
 				return loginResp, errors.ErrInternal
 			}

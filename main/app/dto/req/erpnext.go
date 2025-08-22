@@ -74,3 +74,18 @@ type SaveAttributeReq struct {
 	AliasName          string                  `form:"alias_name" json:"alias_name" binding:"required"`                     // 属性别名
 	AttributeValueList []SaveAttributeValueReq `form:"attribute_value_list" json:"attribute_value_list" binding:"required"` // 属性值列表
 }
+
+type OpenPosEntryReq struct {
+	SiteCode           string               `form:"site_code" json:"site_code" binding:"required"`                         // 站点编码
+	PosProfileName     string               `form:"pos_profile_name" json:"pos_profile_name" binding:"required"`           // Pos Profile名称
+	CashierEmail       string               `form:"cashier_email" json:"cashier_email" binding:"required"`                 // 收银员邮箱
+	CompanyAbbr        string               `form:"company_abbr" json:"company_abbr" binding:"required"`                   // 公司缩写编码
+	PeriodStartDate    int64                `form:"period_start_date" json:"period_start_date" binding:"required"`         // 开始日期
+	OpenPosEntryDetail []OpenPosEntryDetail `form:"open_pos_entry_detail" json:"open_pos_entry_detail" binding:"required"` // 开账详情
+	Branch             string               `form:"branch" json:"branch" binding:"required"`                               // 分支名称
+}
+
+type OpenPosEntryDetail struct {
+	ModeOfPayment string  `form:"mode_of_payment" json:"mode_of_payment" binding:"required"` // 支付方式
+	OpeningAmount float64 `form:"opening_amount" json:"opening_amount" binding:"required"`   // 开账金额
+}
