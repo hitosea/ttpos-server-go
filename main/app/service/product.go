@@ -1059,11 +1059,41 @@ func (s *productSrv) DeleteProductShopCategory(ctx context.Context, deleteReq re
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
+		// 删除分类
 		err := tx.Model(&model.ProductCategory{}).Where("uuid = ?", deleteReq.Uuid).Updates(map[string]any{
 			"delete_time": time.Now().Unix(),
 		}).Error
 		if err != nil {
 			return err
+		}
+		// 删除多语言名称
+		err = tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productCategory.MultiLanguageNameUuid).Updates(map[string]any{
+			"delete_time": time.Now().Unix(),
+		}).Error
+		if err != nil {
+			return err
+		}
+		// 重新排序
+		productRepo := repository.NewProductRepo(tx)
+		productCategories := make([]model.ProductCategory, 0)
+		if productCategory.IsSpecial == 1 {
+			productCategories, _ = productRepo.GetProductCategoryList(
+				commonRepo.WhereBySoftDelete(),
+				productRepo.WhereByIsSpecial(1),
+			)
+		} else {
+			productCategories, _ = productRepo.GetProductCategoryList(
+				commonRepo.WhereBySoftDelete(),
+				productRepo.WhereParentUuid(productCategory.ParentUuid),
+			)
+		}
+		sorts := make(map[uint64]int)
+		for i, productCategory := range productCategories {
+			sorts[productCategory.Uuid] = i + 1
+		}
+		err = productRepo.BatchUpdateSort(&model.ProductCategory{}, sorts)
+		if err != nil {
+			return errors.WithMessage(errors.New("重新排序分类失败"), err.Error())
 		}
 		// 删除缓存
 		tag := cryptor.Md5String(fmt.Sprintf("category%d%d%d", ctx.GetCompanyUuid(), utils.IfInt(productCategory.IsSpecial == 0, 1, 0), 1))
