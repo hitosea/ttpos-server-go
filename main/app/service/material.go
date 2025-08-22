@@ -282,14 +282,15 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "获取产品单位失败")
 	}
-	unitUuid, err := repository.NewMaterialUnitRepo(tx).CreateMaterialUnit(model.MaterialUnit{
+	unit := model.MaterialUnit{
 		Name:           productUnit.MultiLanguageName.ToJson(),
 		UnitUuid:       request.UnitUuid,
 		ConversionRate: 1,
 		IsDefault:      1,
 		FromUnitUuid:   0,
 		MaterialUuid:   materialUuid,
-	})
+	}
+	unitUuid, err := repository.NewMaterialUnitRepo(tx).CreateMaterialUnit(unit)
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "创建原料单位失败")
 	}
@@ -347,6 +348,7 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 			return false
 		}(),
 		NotBaseUnitList: notBaseUnitList,
+		Unit:            &unit,
 	}
 
 	_, err = materialRepo.CreateMaterial(material)
@@ -1047,11 +1049,11 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 			RelatedUuid:            req.RelatedUuid,
 			MaterialUuid:           material.Uuid,
 			Num:                    req.Num,
-			UnitUuid:               material.GetBaseUnit().Uuid,
-			UnitName:               material.GetBaseUnit().Name,
-			BaseUnitUuid:           material.GetBaseUnit().Uuid,
-			BaseUnitName:           material.GetBaseUnit().Name,
-			BaseUnitConversionRate: material.GetBaseUnit().ConversionRate,
+			UnitUuid:               material.UnitUuid,
+			UnitName:               material.Unit.Name,
+			BaseUnitUuid:           material.UnitUuid,
+			BaseUnitName:           material.Unit.Name,
+			BaseUnitConversionRate: 1,
 			Material:               material,
 		})
 
