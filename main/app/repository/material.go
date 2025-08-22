@@ -21,6 +21,7 @@ type IMaterialRepo interface {
 	CreateMaterialCategory(materialCategory model.MaterialCategory) (uint64, error)
 	GetMaterialCategoryList() ([]model.MaterialCategory, error)
 	UpdateMaterialStatusBatch(uuids []uint64, status int) error // 批量修改物品状态
+	UpdateMaterialStockNum(materials []*model.Material) error   // 更新物品库存数量
 }
 
 // NewMaterialRepo 创建新的物品仓库
@@ -175,6 +176,18 @@ func (r *MaterialRepoImpl) GetMaterialCategoryList() ([]model.MaterialCategory, 
 func (r *MaterialRepoImpl) UpdateMaterialStatusBatch(uuids []uint64, status int) error {
 	if err := r.db.Model(&model.Material{}).Where("uuid IN (?)", uuids).Update("status", status).Error; err != nil {
 		return errors.WithMessage(err, "批量修改物品状态失败")
+	}
+	return nil
+}
+
+func (r *MaterialRepoImpl) UpdateMaterialStockNum(materials []*model.Material) error {
+	if len(materials) == 0 {
+		return nil
+	}
+	for _, material := range materials {
+		if err := r.db.Model(&model.Material{}).Where("uuid = ?", material.Uuid).Update("stock_num", material.StockNum).Error; err != nil {
+			return errors.WithMessage(err, "更新物品库存数量失败")
+		}
 	}
 	return nil
 }

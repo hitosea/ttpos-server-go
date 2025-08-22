@@ -109,3 +109,31 @@ func (s *erpSrv) AddProductBomCard(ctx context.Context, params ProductBomCardAdd
 
 	return response, nil
 }
+
+func (s *erpSrv) GetMaterialStockNum(ctx context.Context) (*item.GetItemStockResp, error) {
+	company := ctx.GetCompany()
+	companySetting := company.CompanySetting
+
+	client, conn, err := NewErpItemClient()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	result, err := client.GetItemStock(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.GetItemStockReq{
+		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+		Branch:      companySetting.ErpnextBranchName,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if result.GetCode() != "0" {
+		return nil, errors.WithMessage(errors.New(result.GetMessage()), "获取物品库存数量失败")
+	}
+	response := &item.GetItemStockResp{}
+	if err := result.Data.UnmarshalTo(response); err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}

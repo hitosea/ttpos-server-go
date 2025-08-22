@@ -103,6 +103,29 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(err, "获取物品列表失败")
 	}
 
+	// 如果开启了ERP，则获取库存数量
+	if ctx.GetCompany().IsOpenErp() {
+		erpSrv := erp.NewIErpSrv(s.dbm)
+		erpStockNum, err := erpSrv.GetMaterialStockNum(ctx)
+		if err != nil {
+			return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(err, "获取物品库存数量失败")
+		}
+		updateMaterial := []*model.Material{}
+		for i, material := range materials {
+			for _, itemStock := range erpStockNum.ItemStockList {
+				if itemStock.ItemCode == material.Code {
+					materials[i].StockNum = itemStock.ActualQty
+					updateMaterial = append(updateMaterial, &materials[i])
+				}
+			}
+		}
+		if len(updateMaterial) > 0 {
+			if err := materialRepo.UpdateMaterialStockNum(updateMaterial); err != nil {
+				return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(err, "更新物品库存数量失败")
+			}
+		}
+	}
+
 	// 转换为响应格式
 	var materialList []material_resp.Material
 	for _, material := range materials {
@@ -121,6 +144,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			Uuid:         material.Uuid,
 			Name:         material.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 			ErpCode:      material.Code,
+			Num:          material.StockNum,
 			CategoryUuid: material.CategoryUuid,
 			Image:        material.GetImage(utils.GetBaseURL(ctx.GetGin().Request)),
 			Status: func() int {
