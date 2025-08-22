@@ -2199,4 +2199,5 @@ return [
     "调用erpnext支付方式添加接口失败" => "Aufruf der erpnext-Schnittstelle zum Hinzufügen der Zahlungsmethode fehlgeschlagen",
     "操作失败：" => "Vorgang fehlgeschlagen:",
     "商品排序不能大于999" => "Die Produktreihenfolge darf 999 nicht überschreiten",
+    "最多可添加10个加料" => "Es können maximal 10 Zutaten hinzugefügt werden",
 ];

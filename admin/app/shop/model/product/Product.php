@@ -212,6 +212,10 @@ class Product extends ProductModel
         $data = $this->sanitizeProductData($data);
         // 加料
         if (isset($data['product_feed']) && is_array($data['product_feed']) && !empty($data['product_feed'])) {
+            if (count($data['product_feed']) > 10) {
+                $this->error = '最多可添加10个加料';
+                return false;
+            }
             // 最多默认勾选数量
             $defaultSelectCount = count(array_filter($data['product_feed'], function ($item) {
                 return $item == 1;
@@ -574,6 +578,10 @@ class Product extends ProductModel
         $data = $this->sanitizeProductData($data);
         // 加料
         if (isset($data['product_feed']) && is_array($data['product_feed']) && !empty($data['product_feed'])) {
+            if (count($data['product_feed']) > 10) {
+                $this->error = '最多可添加10个加料';
+                return false;
+            }
             // 最多默认勾选数量
             $defaultSelectCount = count(array_filter($data['product_feed'], function ($item) {
                 return $item == 1;

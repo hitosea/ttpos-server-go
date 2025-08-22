@@ -2191,4 +2191,5 @@ return [
     "调用erpnext支付方式添加接口失败" => "Failed to call erpnext payment method addition interface",
     "操作失败：" => "Operation failed:",
     "商品排序不能大于999" => "Product sorting cannot be greater than 999",
+    "最多可添加10个加料" => "You can add up to 10 toppings",
 ];
