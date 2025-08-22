@@ -3669,6 +3669,7 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 			Flavors: product_resp.ProductShopListItemFlavorListResp{
 				List: flavors,
 			},
+			NumType: productPackage.NumType,
 		}
 
 		productList = append(productList, productItem)
