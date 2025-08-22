@@ -31746,7 +31746,7 @@ const docTemplate = `{
             "required": [
                 "items",
                 "purchase_order_uuid",
-                "receipt_time"
+                "receive_time"
             ],
             "properties": {
                 "is_confirm": {
@@ -31771,7 +31771,7 @@ const docTemplate = `{
                     "type": "integer",
                     "minimum": 1
                 },
-                "receipt_time": {
+                "receive_time": {
                     "description": "收货时间(时间戳)",
                     "type": "integer",
                     "minimum": 0
@@ -31815,7 +31815,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "items",
-                "receipt_time",
+                "receive_time",
                 "uuid"
             ],
             "properties": {
@@ -31836,7 +31836,7 @@ const docTemplate = `{
                         "$ref": "#/definitions/req.PurchaseReceiptItemCreateReq"
                     }
                 },
-                "receipt_time": {
+                "receive_time": {
                     "description": "收货时间(时间戳)",
                     "type": "integer",
                     "minimum": 0

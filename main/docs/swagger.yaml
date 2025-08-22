@@ -5291,14 +5291,14 @@ definitions:
         description: 采购订单ID
         minimum: 1
         type: integer
-      receipt_time:
+      receive_time:
         description: 收货时间(时间戳)
         minimum: 0
         type: integer
     required:
     - items
     - purchase_order_uuid
-    - receipt_time
+    - receive_time
     type: object
   req.PurchaseReceiptItemCreateReq:
     properties:
@@ -5339,7 +5339,7 @@ definitions:
         maxItems: 200
         minItems: 1
         type: array
-      receipt_time:
+      receive_time:
         description: 收货时间(时间戳)
         minimum: 0
         type: integer
@@ -5349,7 +5349,7 @@ definitions:
         type: integer
     required:
     - items
-    - receipt_time
+    - receive_time
     - uuid
     type: object
   req.RechargeOrderAddPaymentMethodReq:
