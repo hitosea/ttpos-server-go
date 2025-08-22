@@ -517,7 +517,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 		}
 
 		// 调用erp接口
-		if ctx.GetCompany().IsOpenErp() {
+		if ctx.GetCompany().IsOpenErp() && newStatus == constant.PurchaseOrderStatusApproved {
 			stockItems := make([]*stock.MaterialRequestItem, 0)
 			for _, item := range purchaseOrder.Items {
 				stockItems = append(stockItems, &stock.MaterialRequestItem{
