@@ -122,14 +122,18 @@ class ErpWarehouseOutForm extends BaseModel
             $formItem = $item['erpWarehouseOutFormItem'];
             // 商品规格
             if ($formItem->productBom) {
-                $product['product_name_text'] = $formItem->productBom->product->product_name_text;
+                if ($formItem->productBom->product) {
+                    $product['product_name_text'] = $formItem->productBom->product->product_name_text;
+                }
                 $product['product_unit_text'] = $formItem->productBom->spec_name_text;
             }
 
             // 材料
             if ($formItem->material) {
                 $product['product_name_text'] = $formItem->material->product_name_text;
-                $product['product_unit_text'] = $formItem->material->unit->unit_name_text;
+                if ($formItem->material->unit) {
+                    $product['product_unit_text'] = $formItem->material->unit->unit_name_text;
+                }
             }
             // 是否显示撤销按钮
             $isShowOutCancel = 1;
