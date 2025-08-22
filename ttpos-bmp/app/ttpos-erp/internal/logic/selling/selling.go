@@ -17,6 +17,25 @@ import (
 	"github.com/gogf/gf/v2/util/gconv"
 )
 
+// 常量定义
+const (
+	// 文档类型
+	DocTypePosProfile      = "POS Profile"
+	DocTypePosInvoice      = "POS Invoice"
+	DocTypePosOpeningEntry = "POS Opening Entry"
+	DocTypePosClosingEntry = "POS Closing Entry"
+
+	// 默认值
+	DefaultPaymentAllowInReturns = 1
+	DefaultCashPaymentDefault    = 1
+	DefaultTaxChargeType         = "Actual"
+	DefaultTaxAccountHeadPrefix  = "Cash - "
+
+	// 时间格式
+	DateFormat = "Y-m-d"
+	TimeFormat = "H:i:s"
+)
+
 var (
 	Selling = new(sSelling)
 )
@@ -42,18 +61,23 @@ func (s *sSelling) GetPosProfileList(ctx context.Context, req *selling.PosProfil
 
 	// 查询POS配置文件列表
 	list, err := service.Document().List(ctx, &erp.ErpReq{
-		DocType: "POS Profile",
+		DocType: DocTypePosProfile,
 	}, &erp.RequestParams{
 		Fields:  []string{"name", "company", "warehouse", "branch"},
 		Filters: filters,
 	})
 	if err != nil {
-		g.Log().Error(ctx, "查询POS配置文件失败", err)
-		return nil, gerror.Wrapf(err, "查询POS配置文件失败")
+		g.Log().Error(ctx, "查询POS配置文件失败", "filters", filters, "error", err)
+		return nil, gerror.Wrapf(err, "查询POS配置文件失败，过滤条件: %v", filters)
 	}
 
 	// 解析响应数据
 	res, err = s.parsePosProfileListResponse(list)
+	if err != nil {
+		g.Log().Error(ctx, "解析POS配置文件列表响应失败", "error", err)
+		return nil, gerror.Wrapf(err, "解析POS配置文件列表响应失败")
+	}
+
 	return res, err
 }
 
@@ -71,15 +95,17 @@ func (s *sSelling) buildPosProfileFilters(ctx context.Context, req *selling.PosP
 		filters = append(filters, []string{"name", "like", req.Name})
 	}
 	if len(req.Company) > 0 {
-		filters = append(filters, []string{"company", "like", req.Company})
+		filters = append(filters, []string{"company", "=", req.Company})
 	}
 	if len(req.CompanyAbbr) > 0 {
 		company, err := service.Company().GetCompanyWithAbbr(ctx, req.CompanyAbbr)
 		if err != nil {
-			g.Log().Error(ctx, "根据公司缩写查询公司失败", err)
+			g.Log().Error(ctx, "根据公司缩写查询公司失败", "company_abbr", req.CompanyAbbr, "error", err)
 			return filters
 		}
-		filters = append(filters, []string{"company", "like", company.CompanyName})
+		if company.CompanyName != "" {
+			filters = append(filters, []string{"company", "=", company.CompanyName})
+		}
 	}
 
 	return filters
@@ -214,7 +240,7 @@ func (s *sSelling) CreatePosProfile(ctx context.Context, req *setup.CreatePosPro
 	profile := s.buildPosProfile(req, companyName)
 
 	// 创建POS配置文件
-	resp, err := service.Document().Create(ctx, "POS Profile", profile)
+	resp, err := service.Document().Create(ctx, DocTypePosProfile, profile)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建POS配置文件失败")
 	}
@@ -267,17 +293,17 @@ func (s *sSelling) buildPosProfile(req *setup.CreatePosProfileInp, companyName s
 // 返回：
 //   - []erp.POSPaymentMethod: 支付方式方法列表
 func (s *sSelling) buildPaymentMethods(payments []string) []erp.POSPaymentMethod {
-	paymentMethods := make([]erp.POSPaymentMethod, 0)
+	paymentMethods := make([]erp.POSPaymentMethod, 0, len(payments))
 
 	for _, payment := range payments {
 		paymentInfo := erp.POSPaymentMethod{
 			ModeOfPayment:  payment,
-			AllowInReturns: 1,
+			AllowInReturns: DefaultPaymentAllowInReturns,
 		}
 
 		// 默认现金
 		if payment == "Cash" {
-			paymentInfo.Default = 1
+			paymentInfo.Default = DefaultCashPaymentDefault
 		}
 
 		paymentMethods = append(paymentMethods, paymentInfo)
@@ -333,7 +359,7 @@ func (s *sSelling) OpenPosEntry(ctx context.Context, req *selling.OpenPosEntryRe
 	reqInfo := s.buildOpeningEntryRequest(req, companyName, openDetails)
 
 	// 创建开帐记录
-	resp, err := service.Document().Create(ctx, "POS Opening Entry", reqInfo)
+	resp, err := service.Document().Create(ctx, DocTypePosOpeningEntry, reqInfo)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建开帐记录失败")
 	}
@@ -345,7 +371,7 @@ func (s *sSelling) OpenPosEntry(ctx context.Context, req *selling.OpenPosEntryRe
 	}
 
 	// 提交开帐记录
-	_, err = service.Document().ChangeDocStatus(ctx, "POS Opening Entry", openEntry.Name, 1)
+	_, err = service.Document().ChangeDocStatus(ctx, DocTypePosOpeningEntry, openEntry.Name, 1)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "提交开帐记录失败")
 	}
@@ -452,7 +478,7 @@ func (s *sSelling) ClosePosEntry(ctx context.Context, req *selling.ClosePosEntry
 	reqInfo.PosTransactions = s.buildPosTransactions(invoices)
 
 	// 创建关帐记录
-	resp, err := service.Document().Create(ctx, "POS Closing Entry", reqInfo)
+	resp, err := service.Document().Create(ctx, DocTypePosClosingEntry, reqInfo)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建关帐记录失败")
 	}
@@ -464,7 +490,7 @@ func (s *sSelling) ClosePosEntry(ctx context.Context, req *selling.ClosePosEntry
 	}
 
 	// 提交关帐记录
-	_, err = service.Document().ChangeDocStatus(ctx, "POS Closing Entry", closeEntry.Name, 1)
+	_, err = service.Document().ChangeDocStatus(ctx, DocTypePosClosingEntry, closeEntry.Name, 1)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "提交关帐记录失败")
 	}
@@ -631,7 +657,7 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
 	// 特殊处理，使用开帐收银员创建发票
 
 	//创建商品销售记录
-	resp, err := service.Document().Create(erpnext.SetFakeUser(ctx, openingEntry.User), "POS Invoice", posInvoice)
+	resp, err := service.Document().Create(erpnext.SetFakeUser(ctx, openingEntry.User), DocTypePosInvoice, posInvoice)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建POS发票失败")
 	}
@@ -646,7 +672,7 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
 	res.ProductsInvoiceName = j.Get("data.name").String()
 
 	// 提交发票记录
-	_, err = service.Document().ChangeDocStatus(ctx, "POS Invoice", res.ProductsInvoiceName, 1)
+	_, err = service.Document().ChangeDocStatus(ctx, DocTypePosInvoice, res.ProductsInvoiceName, 1)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "提交发票记录失败")
 	}
@@ -665,7 +691,7 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
 	posRmInvoice.Payments = posRmInvoicePayments
 	posRmInvoice.Taxes = nil
 	//创建物品销售记录
-	resp, err = service.Document().Create(erpnext.SetFakeUser(ctx, openingEntry.User), "POS Invoice", posRmInvoice)
+	resp, err = service.Document().Create(erpnext.SetFakeUser(ctx, openingEntry.User), DocTypePosInvoice, posRmInvoice)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建物品POS发票失败")
 	}
@@ -679,7 +705,7 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
 	res.MaterialInvoiceName = j.Get("data.name").String()
 
 	// 提交发票记录
-	_, err = service.Document().ChangeDocStatus(ctx, "POS Invoice", res.MaterialInvoiceName, 1)
+	_, err = service.Document().ChangeDocStatus(ctx, DocTypePosInvoice, res.MaterialInvoiceName, 1)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "提交发票记录失败")
 	}
@@ -699,8 +725,8 @@ func (s *sSelling) buildPosInvoice(req *selling.SavePosInvoiceReq, companyName s
 	posInvoice := &erp.POSInvoice{
 		PosProfile:        posProfile,
 		Company:           companyName,
-		PostingDate:       postingDatetime.Format("Y-m-d"),
-		PostingTime:       postingDatetime.Format("H:i:s"),
+		PostingDate:       postingDatetime.Format(DateFormat),
+		PostingTime:       postingDatetime.Format(TimeFormat),
 		Currency:          req.Currency,
 		PriceListCurrency: req.PriceListCurrency,
 		UpdateStock:       req.UpdateStock, // 更新库存
@@ -732,7 +758,7 @@ func (s *sSelling) buildPosInvoice(req *selling.SavePosInvoiceReq, companyName s
 // 返回：
 //   - []erp.POSInvoiceItem: 发票项目列表
 func (s *sSelling) buildInvoiceItems(items []*selling.PosInvoiceItem) []erp.POSInvoiceItem {
-	invoiceItems := make([]erp.POSInvoiceItem, 0)
+	invoiceItems := make([]erp.POSInvoiceItem, 0, len(items))
 	for _, item := range items {
 		invoiceItems = append(invoiceItems, erp.POSInvoiceItem{
 			ItemCode: item.ItemCode,
@@ -752,11 +778,11 @@ func (s *sSelling) buildInvoiceItems(items []*selling.PosInvoiceItem) []erp.POSI
 // 返回：
 //   - []erp.POSInvoiceTax: 发票税费列表
 func (s *sSelling) buildInvoiceTaxes(taxes []*selling.PosInvoiceTax, companyAbbr string) []erp.POSInvoiceTax {
-	invoiceTaxes := make([]erp.POSInvoiceTax, 0)
+	invoiceTaxes := make([]erp.POSInvoiceTax, 0, len(taxes))
 	for _, tax := range taxes {
 		invoiceTaxes = append(invoiceTaxes, erp.POSInvoiceTax{
-			ChargeType:  "Actual",                // 默认实际
-			AccountHead: "Cash - " + companyAbbr, // 默认现金
+			ChargeType:  DefaultTaxChargeType,                      // 默认实际
+			AccountHead: DefaultTaxAccountHeadPrefix + companyAbbr, // 默认现金
 			Rate:        tax.Rate,
 			TaxAmount:   tax.TaxAmount,
 			Description: tax.Description,
@@ -775,7 +801,7 @@ func (s *sSelling) buildInvoiceTaxes(taxes []*selling.PosInvoiceTax, companyAbbr
 //   - error: 错误信息
 func (s *sSelling) GetPosOpeningEntry(ctx context.Context, name string) (*erp.POSOpeningEntry, error) {
 	resp, err := service.Document().Get(ctx, &erp.ErpReq{
-		DocType: "POS Opening Entry",
+		DocType: DocTypePosOpeningEntry,
 		Name:    name,
 	}, nil)
 	if err != nil {
@@ -800,7 +826,7 @@ func (s *sSelling) GetPosOpeningEntry(ctx context.Context, name string) (*erp.PO
 // 返回：
 //   - []erp.POSInvoicePayment: 发票支付信息列表
 func (s *sSelling) buildInvoicePayments(payments []*selling.PosInvoicePayment) []erp.POSInvoicePayment {
-	invoicePayments := make([]erp.POSInvoicePayment, 0)
+	invoicePayments := make([]erp.POSInvoicePayment, 0, len(payments))
 	for _, payment := range payments {
 		invoicePayments = append(invoicePayments, erp.POSInvoicePayment{
 			ModeOfPayment: payment.ModeOfPayment,
