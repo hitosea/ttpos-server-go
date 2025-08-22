@@ -8,6 +8,7 @@ use app\common\model\user\MemberCard;
 use app\common\model\user\Card as CardModel;
 use app\shop\model\user\CardRecord as CardRecordModel;
 use app\common\enum\user\balanceLog\BalanceLogSceneEnum;
+use app\common\enum\user\pointsLog\PointsLogSceneEnum;
 use app\common\model\user\BalanceLog as BalanceLogModel;
 
 /**
@@ -142,11 +143,11 @@ class Card extends CardModel
                     // 赠送积分
                     if ($detail['open_point'] && $detail['open_point_num']) {
                         /** @var User $user */
-                        $user->setIncPoints($detail['open_point_num'], '发会员卡获取积分');
+                        $user->setIncPoints($detail['open_point_num'], '发会员卡获取积分', PointsLogSceneEnum::ADMIN_CARD_GIVE);
                     }
                     // 赠送余额
                     if ($detail['open_money'] && $detail['open_money_num']) {
-                        BalanceLogModel::add(BalanceLogSceneEnum::ADMIN, [
+                        BalanceLogModel::add(BalanceLogSceneEnum::ADMIN_CARD_GIVE, [
                             'member_uuid' => $user['user_id'],
                             'money' => helper::bcadd($detail['open_money_num'], 0), // v1.0.8显示余额明细
                             'gift_money' => $detail['open_money_num'], // v1.0.8影响到赠送余额，而且不是主账户
