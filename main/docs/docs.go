@@ -25062,6 +25062,14 @@ const docTemplate = `{
                     "description": "成本单位名称",
                     "type": "string"
                 },
+                "cost_unit_uuid": {
+                    "description": "成本单位UUID",
+                    "type": "integer"
+                },
+                "erp_code": {
+                    "description": "erp编码",
+                    "type": "string"
+                },
                 "image": {
                     "description": "图片",
                     "type": "string"
@@ -25070,12 +25078,20 @@ const docTemplate = `{
                     "description": "物品名称",
                     "type": "string"
                 },
+                "num": {
+                    "description": "库存数量",
+                    "type": "number"
+                },
                 "purchase_unit_name": {
                     "description": "采购单位名称",
                     "type": "string"
                 },
+                "purchase_unit_uuid": {
+                    "description": "采购单位UUID",
+                    "type": "integer"
+                },
                 "status": {
-                    "description": "状态 1-启用 2-停用",
+                    "description": "状态 1-启用 0-停用",
                     "type": "integer"
                 },
                 "unit_list": {
@@ -25088,6 +25104,10 @@ const docTemplate = `{
                 "unit_name": {
                     "description": "基准单位名称",
                     "type": "string"
+                },
+                "unit_uuid": {
+                    "description": "基准单位UUID",
+                    "type": "integer"
                 },
                 "uuid": {
                     "description": "物品UUID",
@@ -27500,6 +27520,10 @@ const docTemplate = `{
                     "description": "最低价格",
                     "type": "number"
                 },
+                "num_type": {
+                    "description": "商品数量计算方法 0-整数 1-小数",
+                    "type": "integer"
+                },
                 "product_type": {
                     "description": "商品类型 0-商品 1-套餐",
                     "type": "integer"
@@ -28698,7 +28722,6 @@ const docTemplate = `{
         "req.MaterialAddReq": {
             "type": "object",
             "required": [
-                "barcode_value",
                 "category_uuid",
                 "cost_unit_uuid",
                 "init_stock",
@@ -29963,7 +29986,6 @@ const docTemplate = `{
         "req.ProductBomCardImportReq": {
             "type": "object",
             "required": [
-                "barcode_value",
                 "category_uuid",
                 "cost_unit_uuid",
                 "init_stock",
@@ -31751,11 +31773,7 @@ const docTemplate = `{
             "properties": {
                 "is_confirm": {
                     "description": "是否确认收货",
-                    "type": "boolean",
-                    "enum": [
-                        true,
-                        false
-                    ]
+                    "type": "boolean"
                 },
                 "items": {
                     "description": "收货明细",
@@ -31781,20 +31799,20 @@ const docTemplate = `{
         "req.PurchaseReceiptItemCreateReq": {
             "type": "object",
             "required": [
-                "num",
-                "uuid"
+                "purchase_order_item_uuid"
             ],
             "properties": {
-                "num": {
-                    "description": "实收数量",
-                    "type": "number",
-                    "maximum": 99999,
-                    "minimum": 0
+                "purchase_order_item_uuid": {
+                    "description": "采购订单明细ID",
+                    "type": "integer"
+                },
+                "this_arrival_num": {
+                    "description": "本次收货数量",
+                    "type": "number"
                 },
                 "uuid": {
-                    "description": "商品明细ID",
-                    "type": "integer",
-                    "minimum": 1
+                    "description": "收货明细ID",
+                    "type": "integer"
                 }
             }
         },
@@ -31821,11 +31839,7 @@ const docTemplate = `{
             "properties": {
                 "is_confirm": {
                     "description": "是否确认收货",
-                    "type": "boolean",
-                    "enum": [
-                        true,
-                        false
-                    ]
+                    "type": "boolean"
                 },
                 "items": {
                     "description": "收货明细",
@@ -38136,9 +38150,21 @@ const docTemplate = `{
         "resp.PurchaseReceiptItemInfo": {
             "type": "object",
             "properties": {
+                "arrival_num": {
+                    "description": "到货数量",
+                    "type": "number"
+                },
                 "base_unit_name": {
                     "description": "基准单位名称",
                     "type": "string"
+                },
+                "locale_name": {
+                    "description": "物品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
                 },
                 "material_code": {
                     "description": "物品编码",
@@ -38148,9 +38174,17 @@ const docTemplate = `{
                     "description": "物品名称",
                     "type": "string"
                 },
-                "num": {
-                    "description": "数量",
+                "material_uuid": {
+                    "description": "物品ID",
+                    "type": "integer"
+                },
+                "purchase_num": {
+                    "description": "采购数量",
                     "type": "number"
+                },
+                "purchase_order_item_uuid": {
+                    "description": "采购订单明细ID",
+                    "type": "integer"
                 },
                 "unit_conversion_rate": {
                     "description": "基准单位转换率",

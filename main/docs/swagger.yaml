@@ -703,17 +703,29 @@ definitions:
       cost_unit_name:
         description: 成本单位名称
         type: string
+      cost_unit_uuid:
+        description: 成本单位UUID
+        type: integer
+      erp_code:
+        description: erp编码
+        type: string
       image:
         description: 图片
         type: string
       name:
         description: 物品名称
         type: string
+      num:
+        description: 库存数量
+        type: number
       purchase_unit_name:
         description: 采购单位名称
         type: string
+      purchase_unit_uuid:
+        description: 采购单位UUID
+        type: integer
       status:
-        description: 状态 1-启用 2-停用
+        description: 状态 1-启用 0-停用
         type: integer
       unit_list:
         description: 单位列表
@@ -723,6 +735,9 @@ definitions:
       unit_name:
         description: 基准单位名称
         type: string
+      unit_uuid:
+        description: 基准单位UUID
+        type: integer
       uuid:
         description: 物品UUID
         type: integer
@@ -2326,6 +2341,9 @@ definitions:
       min_price:
         description: 最低价格
         type: number
+      num_type:
+        description: 商品数量计算方法 0-整数 1-小数
+        type: integer
       product_type:
         description: 商品类型 0-商品 1-套餐
         type: integer
@@ -3185,7 +3203,6 @@ definitions:
         minimum: 0
         type: number
     required:
-    - barcode_value
     - category_uuid
     - cost_unit_uuid
     - init_stock
@@ -4079,7 +4096,6 @@ definitions:
         minimum: 0
         type: number
     required:
-    - barcode_value
     - category_uuid
     - cost_unit_uuid
     - init_stock
@@ -5276,9 +5292,6 @@ definitions:
     properties:
       is_confirm:
         description: 是否确认收货
-        enum:
-        - true
-        - false
         type: boolean
       items:
         description: 收货明细
@@ -5302,18 +5315,17 @@ definitions:
     type: object
   req.PurchaseReceiptItemCreateReq:
     properties:
-      num:
-        description: 实收数量
-        maximum: 99999
-        minimum: 0
+      purchase_order_item_uuid:
+        description: 采购订单明细ID
+        type: integer
+      this_arrival_num:
+        description: 本次收货数量
         type: number
       uuid:
-        description: 商品明细ID
-        minimum: 1
+        description: 收货明细ID
         type: integer
     required:
-    - num
-    - uuid
+    - purchase_order_item_uuid
     type: object
   req.PurchaseReceiptOrderCancelReq:
     properties:
@@ -5328,9 +5340,6 @@ definitions:
     properties:
       is_confirm:
         description: 是否确认收货
-        enum:
-        - true
-        - false
         type: boolean
       items:
         description: 收货明细
@@ -9580,18 +9589,31 @@ definitions:
     type: object
   resp.PurchaseReceiptItemInfo:
     properties:
+      arrival_num:
+        description: 到货数量
+        type: number
       base_unit_name:
         description: 基准单位名称
         type: string
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物品名称
       material_code:
         description: 物品编码
         type: string
       material_name:
         description: 物品名称
         type: string
-      num:
-        description: 数量
+      material_uuid:
+        description: 物品ID
+        type: integer
+      purchase_num:
+        description: 采购数量
         type: number
+      purchase_order_item_uuid:
+        description: 采购订单明细ID
+        type: integer
       unit_conversion_rate:
         description: 基准单位转换率
         type: number

@@ -151,7 +151,6 @@ func (s *erpSrv) ClosePosEntry(ctx context.Context, closeEntryReq req.ClosePosEn
 		}
 	}
 	closePosEntryReq := &selling.ClosePosEntryReq{
-		PosProfileName:      closeEntryReq.PosProfileName,
 		PosOpenEntryName:    closeEntryReq.PosOpenEntryName,
 		PeriodEndDate:       closeEntryReq.PeriodEndDate,
 		ClosePosEntryDetail: closePosEntryDetail,
