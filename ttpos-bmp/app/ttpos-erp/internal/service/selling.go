@@ -67,7 +67,7 @@ type (
 		// 返回：
 		//   - bool: 是否已开帐
 		//   - error: 错误信息
-		IsProfileOpening(ctx context.Context, posProfile string) (bool, error)
+		IsProfileOpening(ctx context.Context, posProfile string, user string) (bool, error)
 		// GetPosInvoiceList 获取POS发票列表
 		// 参数：
 		//   - ctx: 上下文对象
