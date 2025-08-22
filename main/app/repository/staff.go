@@ -49,7 +49,7 @@ func (r *StaffRepo) CreateStaff(staff model.Staff) error {
 
 func (r *StaffRepo) GetStaff(opts ...DBOption) (model.Staff, error) {
 	var staff model.Staff
-	db := r.db.Model(&model.Staff{}).Scopes(NotDeleted).Debug()
+	db := r.db.Model(&model.Staff{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}
