@@ -1099,8 +1099,8 @@ func (x *PosInvoiceTax) GetDescription() string {
 // PosInvoicePayment POS发票付款
 type PosInvoicePayment struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ModeOfPayment string                 `protobuf:"bytes,1,opt,name=mode_of_payment,json=modeOfPayment,proto3" json:"mode_of_payment,omitempty" dc:"支付方式，必填"` // 支付方式，必填
-	Amount        float64                `protobuf:"fixed64,2,opt,name=amount,proto3" json:"amount,omitempty" dc:"金额，必填"`                                      // 金额，必填
+	ModeOfPayment string                 `protobuf:"bytes,1,opt,name=mode_of_payment,json=modeOfPayment,proto3" json:"mode_of_payment,omitempty" dc:"支付方式，必填 仅支持Cash/Balance/LianlianPay-WeChat Pay/LianlianPay-Alipay/LianlianPay-QR PromptPay"` // 支付方式，必填 仅支持Cash/Balance/LianlianPay-WeChat Pay/LianlianPay-Alipay/LianlianPay-QR PromptPay
+	Amount        float64                `protobuf:"fixed64,2,opt,name=amount,proto3" json:"amount,omitempty" dc:"金额，必填"`                                                                                                                         // 金额，必填
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

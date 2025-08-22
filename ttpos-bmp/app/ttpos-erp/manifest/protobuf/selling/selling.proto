@@ -125,7 +125,7 @@ message PosInvoiceTax {
 
 // PosInvoicePayment POS发票付款
 message PosInvoicePayment {
-  string mode_of_payment = 1; // 支付方式，必填
+  string mode_of_payment = 1; // 支付方式，必填 仅支持Cash/Balance/LianlianPay-WeChat Pay/LianlianPay-Alipay/LianlianPay-QR PromptPay
   double amount = 2;          // 金额，必填
 }
 
