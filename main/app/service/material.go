@@ -120,6 +120,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		respMaterial := material_resp.Material{
 			Uuid:         material.Uuid,
 			Name:         material.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			ErpCode:      material.Code,
 			CategoryUuid: material.CategoryUuid,
 			Image:        material.GetImage(utils.GetBaseURL(ctx.GetGin().Request)),
 			Status: func() int {
@@ -129,8 +130,11 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				return 0
 			}(),
 			UnitName:         material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			UnitUuid:         material.UnitUuid,
 			PurchaseUnitName: material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			PurchaseUnitUuid: material.PurchaseUnitUuid,
 			CostUnitName:     material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			CostUnitUuid:     material.CostUnitUuid,
 			UnitList:         unitList,
 		}
 		materialList = append(materialList, respMaterial)
