@@ -494,6 +494,7 @@ type ProductShopListItemResp struct {
 	ProductType         int                               `json:"product_type"`          // 商品类型 0-商品 1-套餐
 	Sort                int                               `json:"sort"`                  // 商品排序
 	Flavors             ProductShopListItemFlavorListResp `json:"flavors"`               // 商品规格列表
+	NumType             uint                              `json:"num_type"`              // 商品数量计算方法 0-整数 1-小数
 }
 
 // ProductShopListItemTagResp 商品标签列表

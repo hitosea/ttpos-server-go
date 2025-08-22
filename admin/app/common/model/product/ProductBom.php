@@ -178,7 +178,7 @@ class ProductBom extends BaseModel
     /**
      * 通过规格获取商品SKU列表
      */
-    public static function getProductBomList($params, $filterHavingMaterial = 0, $filterHavingPackage = 0)
+    public static function getProductBomList($params, $filterHavingMaterial = 0, $filterHavingPackage = 0, $filterHavingDecimal = 0)
     {
         // 商品列表获取条件
         $params = array_merge([
@@ -217,6 +217,7 @@ class ProductBom extends BaseModel
                 'count(rm.uuid) as material_count',
                 's.name as supplier_name',
                 'bom.update_time as update_time',
+                'p.num_type',
             ]))
             ->leftJoin('product_package p', 'bom.product_package_uuid = p.uuid')
             ->leftJoin('supplier s', 'p.supplier_uuid = s.uuid')
@@ -254,6 +255,7 @@ class ProductBom extends BaseModel
                 '0 as material_count',
                 's.name as supplier_name',
                 'm.update_time as update_time',
+                '0 as num_type',
             ]))
             ->leftJoin('product_category c1', 'm.category_uuid = c1.uuid')
             ->leftJoin('product_category c2', 'c1.parent_uuid = c2.uuid')
@@ -340,6 +342,16 @@ class ProductBom extends BaseModel
         // 过滤套餐
         if ($filterHavingPackage) {
             $where = "(type != 30)";
+            if (!$whereSql) {
+                $whereSql .= " WHERE {$where}";
+            } else {
+                $whereSql .= " AND {$where}";
+            }
+        }
+
+        // 过滤小数
+        if ($filterHavingDecimal) {
+            $where = "(num_type = 0)";
             if (!$whereSql) {
                 $whereSql .= " WHERE {$where}";
             } else {
