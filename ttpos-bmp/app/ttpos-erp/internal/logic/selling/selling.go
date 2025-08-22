@@ -314,7 +314,7 @@ func (s *sSelling) parsePosProfileResponse(resp *g.Var) (*erp.POSProfile, error)
 //   - error: 错误信息
 func (s *sSelling) OpenPosEntry(ctx context.Context, req *selling.OpenPosEntryReq) (*selling.OpenPosEntryResp, error) {
 	// 检查POS配置文件是否已开帐
-	opening, err := s.IsProfileOpening(ctx, req.PosProfileName)
+	opening, err := s.IsProfileOpening(ctx, req.PosProfileName, req.CashierEmail)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "查询POS配置文件是否开帐失败")
 	}
@@ -555,11 +555,11 @@ func (s *sSelling) parseClosingEntryResponse(resp *g.Var) (*erp.POSCloseEntry, e
 // 返回：
 //   - bool: 是否已开帐
 //   - error: 错误信息
-func (s *sSelling) IsProfileOpening(ctx context.Context, posProfile string) (bool, error) {
+func (s *sSelling) IsProfileOpening(ctx context.Context, posProfile, user string) (bool, error) {
 	count, err := service.Doctype().Count(ctx, &erp.ErpReq{
 		DocType: "POS Opening Entry",
 	}, &erp.RequestParams{
-		Filters: [][]string{{"pos_profile", "=", posProfile}, {"status", "=", "Open"}},
+		Filters: [][]string{{"pos_profile", "=", posProfile}, {"status", "=", "Open"}, {"user", "=", user}},
 	})
 	if err != nil {
 		return false, gerror.Wrapf(err, "查询POS配置文件是否开帐失败")
