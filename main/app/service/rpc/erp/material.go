@@ -77,7 +77,7 @@ type ProductBomCardAddErpReq struct {
 	Items    []*manufacturing.BomItem `json:"items" binding:"required"`     // 物品列表
 }
 
-func (s *erpSrv) AddPorductBomCard(ctx context.Context, params ProductBomCardAddErpReq) (*manufacturing.SaveBomResp, error) {
+func (s *erpSrv) AddProductBomCard(ctx context.Context, params ProductBomCardAddErpReq) (*manufacturing.SaveBomResp, error) {
 	company := ctx.GetCompany()
 	companySetting := company.CompanySetting
 

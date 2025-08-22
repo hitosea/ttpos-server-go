@@ -743,7 +743,7 @@ func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomC
 				})
 			}
 			erpSrv := erp.NewIErpSrv(s.dbm)
-			erpBomResp, errErp := erpSrv.AddPorductBomCard(ctx, erp.ProductBomCardAddErpReq{
+			erpBomResp, errErp := erpSrv.AddProductBomCard(ctx, erp.ProductBomCardAddErpReq{
 				ItemCode: productBom.ErpCode,                                             // 商品编码
 				Quantity: float64(req.Num),                                               // 数量
 				Uom:      productBom.ProductPackage.ProductUnit.MultiLanguageName.EnName, // 单位
@@ -1076,7 +1076,7 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 
 		// if ctx.GetCompany().IsOpenErp() {
 		// 	erpSrv := erp.NewIErpSrv(s.dbm)
-		// 	erpSrv.AddPorductBomCard(ctx, erp.ProductBomCardAddErpReq{
+		// 	erpSrv.AddProductBomCard(ctx, erp.ProductBomCardAddErpReq{
 		// 		ItemCode: code,
 		// 		Quantity: 1,
 		// 		Uom:      material.GetBaseUnit().ErpnextUom,

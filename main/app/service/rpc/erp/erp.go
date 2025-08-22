@@ -37,7 +37,7 @@ type IErpSrv interface {
 
 	// 物品
 	AddMaterial(ctx cc.Context, params req.MaterialAddErpReq) (*item.ItemInfo, error)                     // 添加物品
-	AddPorductBomCard(ctx cc.Context, params ProductBomCardAddErpReq) (*manufacturing.SaveBomResp, error) // 添加成本卡
+	AddProductBomCard(ctx cc.Context, params ProductBomCardAddErpReq) (*manufacturing.SaveBomResp, error) // 添加成本卡
 	AddProduct(ctx cc.Context, params req.ProductAddErpReq) (*item.ItemInfo, error)                       // 添加商品
 }
 type erpSrv struct {
