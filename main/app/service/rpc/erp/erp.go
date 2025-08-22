@@ -40,6 +40,7 @@ type IErpSrv interface {
 	AddMaterial(ctx cc.Context, params req.MaterialAddErpReq) (*item.ItemInfo, error)                     // 添加物品
 	AddProductBomCard(ctx cc.Context, params ProductBomCardAddErpReq) (*manufacturing.SaveBomResp, error) // 添加成本卡
 	AddProduct(ctx cc.Context, params req.ProductAddErpReq) (*item.ItemInfo, error)                       // 添加商品
+	GetMaterialStockNum(ctx cc.Context) (*item.GetItemStockResp, error)                                   // 获取物品库存数量
 }
 type erpSrv struct {
 	dbm *database.DBManager

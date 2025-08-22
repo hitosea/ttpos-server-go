@@ -14,6 +14,7 @@ type IPurchaseOrderItemRepo interface {
 	Update(item *model.PurchaseOrderItem) error
 	Delete(uuid uint64) error
 	DeleteByPurchaseOrderUuid(purchaseOrderUuid uint64) error
+	DeleteByPurchaseOrderUuidAndNumIsZero(purchaseOrderUuid uint64) error
 	GetByUuid(uuid uint64) (*model.PurchaseOrderItem, error)
 
 	// 查询操作
@@ -70,6 +71,11 @@ func (r *PurchaseOrderItemRepoImpl) Delete(uuid uint64) error {
 // DeleteByPurchaseOrderUuid 根据采购订单UUID删除明细
 func (r *PurchaseOrderItemRepoImpl) DeleteByPurchaseOrderUuid(purchaseOrderUuid uint64) error {
 	return r.db.Where("purchase_order_uuid = ?", purchaseOrderUuid).Delete(&model.PurchaseOrderItem{}).Error
+}
+
+// DeleteByPurchaseOrderUuidAndNumIsZero 根据采购订单UUID删除明细
+func (r *PurchaseOrderItemRepoImpl) DeleteByPurchaseOrderUuidAndNumIsZero(purchaseOrderUuid uint64) error {
+	return r.db.Where("purchase_order_uuid = ?", purchaseOrderUuid).Where("num = 0").Delete(&model.PurchaseOrderItem{}).Error
 }
 
 // GetByUuid 根据UUID获取采购订单明细
