@@ -6717,7 +6717,7 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 						return nil, errors.WithMessage(err)
 					}
 					saleBill := shopCartInfo.SaleBill
-					s.CalcAndSaveSaleBill(ctx, db, saleBill, model.WithLastestPrice())
+					s.CalcAndSaveSaleBill(ctx, db, saleBill, model.WithLatestPrice())
 				}
 			}
 		}
@@ -11445,7 +11445,7 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 				return nil, errors.WithMessage(err)
 			}
 			saleBill := shopCartInfo.SaleBill
-			s.CalcAndSaveSaleBill(ctx, db, saleBill, model.WithLastestPrice())
+			s.CalcAndSaveSaleBill(ctx, db, saleBill, model.WithLatestPrice())
 		}
 		return res, nil
 	}
@@ -11468,7 +11468,7 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 				return nil, errors.WithMessage(err)
 			}
 			saleBill := shopCartInfo.SaleBill
-			s.CalcAndSaveSaleBill(ctx, db, saleBill, model.WithLastestPrice(), model.WithSaleBillSetting(newSetting))
+			s.CalcAndSaveSaleBill(ctx, db, saleBill, model.WithLatestPrice(), model.WithSaleBillSetting(newSetting))
 		}
 		return res, nil
 	}
