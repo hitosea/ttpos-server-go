@@ -139,8 +139,16 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(ctx context.Context, req req.P
 		itemInfo := resp.PurchaseOrderItemInfo{}
 		copier.Copy(&itemInfo, &item)
 		multiLanguageName := model.MultiLanguageName{}
+		//
 		multiLanguageName.InitByLocaleResponseJson(item.MaterialName)
 		itemInfo.LocaleName = multiLanguageName.GetNames()
+		//
+		multiLanguageName.InitByLocaleResponseJson(item.UnitName)
+		itemInfo.LocaleUnitName = multiLanguageName.GetNames()
+		//
+		multiLanguageName.InitByLocaleResponseJson(item.BaseUnitName)
+		itemInfo.LocaleBaseUnitName = multiLanguageName.GetNames()
+		//
 		detailResp.Items = append(detailResp.Items, itemInfo)
 	}
 
