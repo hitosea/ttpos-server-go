@@ -175,6 +175,9 @@ type RefundOrder struct {
 	Amount           float64 `gorm:"column:amount;type:decimal(12,2);default:0.00;comment:退款金额;NOT NULL" json:"amount"`
 	Reason           string  `gorm:"column:reason;type:varchar(255);default:'';comment:退款原因;NOT NULL" json:"reason"`
 	Status           uint    `gorm:"column:status;type:int(11);default:0;comment:退款状态;NOT NULL" json:"status"`
+
+	// erp相关
+	ErpInvoiceName string `gorm:"column:erp_invoice_name;type:varchar(255);comment:发票名称;NOT NULL" json:"erp_invoice_name"`
 }
 
 // GetCanReturnAmount 获取支付单的可退款金额. 可退款金额=支付金额-已退款金额

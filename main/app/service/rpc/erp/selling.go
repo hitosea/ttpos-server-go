@@ -6,6 +6,9 @@ import (
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	pkgCtx "ttpos-server-go/pkg/context"
+
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository"
 	cc "ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/logger"
@@ -133,6 +136,7 @@ func (s *erpSrv) OpenPosEntry(ctx context.Context, openEntryReq req.OpenPosEntry
 	return "", nil
 }
 
+// ClosePosEntry 关账
 func (s *erpSrv) ClosePosEntry(ctx context.Context, closeEntryReq req.ClosePosEntryReq) (string, error) {
 	client, conn, err := NewErpSellingClient()
 	if err != nil {
@@ -170,4 +174,84 @@ func (s *erpSrv) ClosePosEntry(ctx context.Context, closeEntryReq req.ClosePosEn
 		}
 	}
 	return "", nil
+}
+
+// SavePosInvoice 保存 Pos Invoice
+func (s *erpSrv) SavePosInvoice(ctx pkgCtx.Context, savePosInvoiceReq req.SavePosInvoiceReq) (*selling.SavePosInvoiceResp, error) {
+	companySetting := ctx.GetCompanySetting()
+
+	client, conn, err := NewErpSellingClient()
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	defer conn.Close()
+
+	params := &selling.SavePosInvoiceReq{
+		OrderNo:           savePosInvoiceReq.OrderNo,
+		OpenPosEntryName:  savePosInvoiceReq.OpenPosEntryName,
+		CompanyAbbr:       companySetting.ErpnextCompanyAbbr,
+		PostingDatetime:   savePosInvoiceReq.PostingDatetime,
+		UpdateStock:       1,
+		Currency:          "THB",
+		PriceListCurrency: "THB",
+		Branch:            companySetting.ErpnextBranchName,
+		CustomerUuid:      savePosInvoiceReq.CustomerUuid,
+		Items:             savePosInvoiceReq.Items,
+		MaterialItems:     savePosInvoiceReq.MaterialItems,
+		Taxes:             savePosInvoiceReq.Taxes,
+		Payments:          savePosInvoiceReq.Payments,
+	}
+	res, err := client.SavePosInvoice(WithSiteCode(ctx.GetContext(), savePosInvoiceReq.SiteCode), params)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if res.GetCode() != "0" {
+		return nil, errors.WithMessage(errors.New(res.Message))
+	}
+	if res.Data != nil {
+		var savePosInvoiceResp selling.SavePosInvoiceResp
+		if err := res.Data.UnmarshalTo(&savePosInvoiceResp); err != nil {
+			logger.Logger.Error("SavePosInvoice-UnmarshalTo", zap.Any("err", err))
+			return nil, errors.WithMessage(err)
+		}
+		return &savePosInvoiceResp, nil
+	}
+	return nil, errors.WithMessage(errors.New("保存POS发票异常, data为空"))
+}
+
+func (s *erpSrv) ReturnPosInvoice(ctx pkgCtx.Context, returnPosInvoiceReq req.ReturnPosInvoiceReq) (*selling.ReturnPosInvoiceResp, error) {
+	companySetting := ctx.GetCompanySetting()
+
+	client, conn, err := NewErpSellingClient()
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	defer conn.Close()
+
+	params := &selling.ReturnPosInvoiceReq{
+		OrderNo:          returnPosInvoiceReq.OrderNo,
+		OpenPosEntryName: returnPosInvoiceReq.OpenPosEntryName,
+		PostingDatetime:  returnPosInvoiceReq.PostingDatetime,
+		CompanyAbbr:      companySetting.ErpnextCompanyAbbr,
+		InvoiceName:      returnPosInvoiceReq.InvoiceName,
+		Items:            returnPosInvoiceReq.Items,
+		Taxes:            returnPosInvoiceReq.Taxes,
+		Payments:         returnPosInvoiceReq.Payments,
+	}
+	res, err := client.ReturnPosInvoice(WithSiteCode(ctx.GetContext(), returnPosInvoiceReq.SiteCode), params)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if res.GetCode() != "0" {
+		return nil, errors.WithMessage(errors.New(res.Message))
+	}
+	if res.Data != nil {
+		var returnPosInvoiceResp selling.ReturnPosInvoiceResp
+		if err := res.Data.UnmarshalTo(&returnPosInvoiceResp); err != nil {
+			logger.Logger.Error("ReturnPosInvoice-UnmarshalTo", zap.Any("err", err))
+			return nil, errors.WithMessage(err)
+		}
+		return &returnPosInvoiceResp, nil
+	}
+	return nil, errors.WithMessage(errors.New("退款POS发票异常, data为空"))
 }
