@@ -5,8 +5,12 @@ var Limit999 = 999
 type ModeOfPayment string
 
 const (
-	ModeOfPaymentCash    ModeOfPayment = "Cash"
+	// ModeOfPaymentCash 现金
+	ModeOfPaymentCash ModeOfPayment = "Cash"
+	// ModeOfPaymentBalance 余额
 	ModeOfPaymentBalance ModeOfPayment = "Balance"
+	// ModeOfPaymentFreeMeal 免单
+	ModeOfPaymentFreeMeal ModeOfPayment = "Free Meal"
 )
 
 type ItemGroup string
@@ -23,6 +27,7 @@ const (
 const (
 	ItemCodePrefixProduct     = "SP"  //商品前缀
 	ItemCodePrefixRawMaterial = "WPR" //原材料前缀
+	ItemCodePrefixPackage     = "TC"  //套餐前缀
 )
 
 // CustomerName 客户名称

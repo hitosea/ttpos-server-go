@@ -29,6 +29,7 @@ const (
 	ItemGroup_Others      ItemGroup = 0 // 其他
 	ItemGroup_RawMaterial ItemGroup = 1 // 原材料
 	ItemGroup_Products    ItemGroup = 2 // 商品
+	ItemGroup_Package     ItemGroup = 3 // 套餐
 )
 
 // Enum value maps for ItemGroup.
@@ -37,11 +38,13 @@ var (
 		0: "Others",
 		1: "RawMaterial",
 		2: "Products",
+		3: "Package",
 	}
 	ItemGroup_value = map[string]int32{
 		"Others":      0,
 		"RawMaterial": 1,
 		"Products":    2,
+		"Package":     3,
 	}
 )
 
@@ -202,20 +205,20 @@ func (x *GetItemListResp) GetItemList() []*ItemInfo {
 
 type ItemInfo struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
-	ItemName          string                 `protobuf:"bytes,1,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称，必填"`                                                      // 物品名称，必填
-	ItemGroup         ItemGroup              `protobuf:"varint,2,opt,name=item_group,json=itemGroup,proto3,enum=item.ItemGroup" json:"item_group,omitempty" dc:"物品分组，必填 Products 商品/Raw Material 原材料"` // 物品分组，必填 Products 商品/Raw Material 原材料
-	StockUom          string                 `protobuf:"bytes,3,opt,name=stock_uom,json=stockUom,proto3" json:"stock_uom,omitempty" dc:"库存单位，必填 ttpos 传英文过来"`                                          // 库存单位，必填 ttpos 传英文过来
-	ItemCode          string                 `protobuf:"bytes,4,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，可选"`                                                      // 物品编码，可选
-	ValuationRate     float64                `protobuf:"fixed64,5,opt,name=valuation_rate,json=valuationRate,proto3" json:"valuation_rate,omitempty" dc:"估值率，可选, 原材料必填"`                               // 估值率，可选, 原材料必填
-	Barcode           string                 `protobuf:"bytes,6,opt,name=barcode,proto3" json:"barcode,omitempty" dc:"条码，可选"`                                                                          // 条码，可选
-	OpeningStock      float64                `protobuf:"fixed64,7,opt,name=opening_stock,json=openingStock,proto3" json:"opening_stock,omitempty" dc:"期初库存，可选"`                                        // 期初库存，可选
-	IsStockItem       bool                   `protobuf:"varint,8,opt,name=is_stock_item,json=isStockItem,proto3" json:"is_stock_item,omitempty" dc:"是否库存物品，可选"`                                        // 是否库存物品，可选
-	TemplateItemCode  string                 `protobuf:"bytes,9,opt,name=template_item_code,json=templateItemCode,proto3" json:"template_item_code,omitempty" dc:"模版物品编码，可选， 多规格商品时必填，传原始物品编码"`        // 模版物品编码，可选， 多规格商品时必填，传原始物品编码
-	Branch            string                 `protobuf:"bytes,10,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                                         // 分支名称，可选
-	CompanyAbbr       string                 `protobuf:"bytes,11,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                                            // 公司简称，可选
-	Company           string                 `protobuf:"bytes,12,opt,name=company,proto3" json:"company,omitempty" dc:"公司名称，可选"`                                                                       // 公司名称，可选
-	ItemSpecification string                 `protobuf:"bytes,13,opt,name=item_specification,json=itemSpecification,proto3" json:"item_specification,omitempty" dc:"物品规格，可选 ttpos 传英文过来 多规格商品时必填"`     // 物品规格，可选 ttpos 传英文过来 多规格商品时必填
-	Uoms              []*UomDetail           `protobuf:"bytes,14,rep,name=uoms,proto3" json:"uoms,omitempty" dc:"单位列表，可选"`                                                                             // 单位列表，可选
+	ItemName          string                 `protobuf:"bytes,1,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称，必填"`                                                                 // 物品名称，必填
+	ItemGroup         ItemGroup              `protobuf:"varint,2,opt,name=item_group,json=itemGroup,proto3,enum=item.ItemGroup" json:"item_group,omitempty" dc:"物品分组，必填 Products 商品/Raw Material 原材料/Package 套餐"` // 物品分组，必填 Products 商品/Raw Material 原材料/Package 套餐
+	StockUom          string                 `protobuf:"bytes,3,opt,name=stock_uom,json=stockUom,proto3" json:"stock_uom,omitempty" dc:"库存单位，必填 ttpos 传英文过来"`                                                     // 库存单位，必填 ttpos 传英文过来
+	ItemCode          string                 `protobuf:"bytes,4,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，可选"`                                                                 // 物品编码，可选
+	ValuationRate     float64                `protobuf:"fixed64,5,opt,name=valuation_rate,json=valuationRate,proto3" json:"valuation_rate,omitempty" dc:"估值率，可选, 原材料必填"`                                          // 估值率，可选, 原材料必填
+	Barcode           string                 `protobuf:"bytes,6,opt,name=barcode,proto3" json:"barcode,omitempty" dc:"条码，可选"`                                                                                     // 条码，可选
+	OpeningStock      float64                `protobuf:"fixed64,7,opt,name=opening_stock,json=openingStock,proto3" json:"opening_stock,omitempty" dc:"期初库存，可选"`                                                   // 期初库存，可选
+	IsStockItem       bool                   `protobuf:"varint,8,opt,name=is_stock_item,json=isStockItem,proto3" json:"is_stock_item,omitempty" dc:"是否库存物品，可选"`                                                   // 是否库存物品，可选
+	TemplateItemCode  string                 `protobuf:"bytes,9,opt,name=template_item_code,json=templateItemCode,proto3" json:"template_item_code,omitempty" dc:"模版物品编码，可选， 多规格商品时必填，传原始物品编码"`                   // 模版物品编码，可选， 多规格商品时必填，传原始物品编码
+	Branch            string                 `protobuf:"bytes,10,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                                                    // 分支名称，可选
+	CompanyAbbr       string                 `protobuf:"bytes,11,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                                                       // 公司简称，可选
+	Company           string                 `protobuf:"bytes,12,opt,name=company,proto3" json:"company,omitempty" dc:"公司名称，可选"`                                                                                  // 公司名称，可选
+	ItemSpecification string                 `protobuf:"bytes,13,opt,name=item_specification,json=itemSpecification,proto3" json:"item_specification,omitempty" dc:"物品规格，可选 ttpos 传英文过来 多规格商品时必填"`                // 物品规格，可选 ttpos 传英文过来 多规格商品时必填
+	Uoms              []*UomDetail           `protobuf:"bytes,14,rep,name=uoms,proto3" json:"uoms,omitempty" dc:"单位列表，可选"`                                                                                        // 单位列表，可选
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -1318,12 +1321,13 @@ const file_item_item_proto_rawDesc = "" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x1b\n" +
 	"\titem_name\x18\x02 \x01(\tR\bitemName\x12\x10\n" +
 	"\x03qty\x18\x03 \x01(\x01R\x03qty\x12\x10\n" +
-	"\x03uom\x18\x04 \x01(\tR\x03uom*6\n" +
+	"\x03uom\x18\x04 \x01(\tR\x03uom*C\n" +
 	"\tItemGroup\x12\n" +
 	"\n" +
 	"\x06Others\x10\x00\x12\x0f\n" +
 	"\vRawMaterial\x10\x01\x12\f\n" +
-	"\bProducts\x10\x022\x8c\x03\n" +
+	"\bProducts\x10\x02\x12\v\n" +
+	"\aPackage\x10\x032\x8c\x03\n" +
 	"\vItemService\x126\n" +
 	"\vGetItemList\x12\x14.item.GetItemListReq\x1a\x11.erp.ResponseInfo\x124\n" +
 	"\n" +

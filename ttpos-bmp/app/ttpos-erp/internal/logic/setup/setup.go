@@ -129,7 +129,7 @@ func (s *sSetup) CreateDefaultPosProfile(ctx context.Context, req *setup.CreateD
 		CompanyAbbr:        req.CompanyAbbr,
 		Warehouse:          warehouse.Name,
 		Branch:             req.Branch,
-		Payments:           g.ArrayStr{"Cash", "Balance"},
+		Payments:           g.ArrayStr{"Cash", "Balance", "Free Meal"},
 		Currency:           "THB", // 泰铢
 		WriteOffAccount:    "Sales - " + req.CompanyAbbr,
 		WriteOffLimit:      1.00,
@@ -225,10 +225,9 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *se
 		return nil, gerror.Wrapf(err, "创建在途仓失败")
 	}
 
-	// 创建默认的Cash和Balance账号关联
-	if err := s.createPaymentAccounts(ctx, req.CompanyAbbr); err != nil {
-		g.Log().Warning(ctx, "创建支付账号关联失败", err)
-		// 不返回错误，因为这不是关键步骤
+	// 创建默认的Cash，Balance，Free Meal账号关联
+	if err = s.createPaymentAccounts(ctx, req.CompanyAbbr); err != nil {
+		return nil, gerror.Wrapf(err, "创建支付方式账号关联失败")
 	}
 
 	//创建默认pos profile
@@ -268,6 +267,14 @@ func (s *sSetup) createPaymentAccounts(ctx context.Context, companyAbbr string) 
 		PaymentType: string(consts.ModeOfPaymentBalance),
 	}); err != nil {
 		return gerror.Wrapf(err, "创建Balance支付方式账号关联失败")
+	}
+
+	// 创建Free Meal支付方式账号关联
+	if err := service.Selling().CreateModePaymentAccount(ctx, &setup2.CreateModePaymentAccountInp{
+		CompanyAbbr: companyAbbr,
+		PaymentType: string(consts.ModeOfPaymentFreeMeal),
+	}); err != nil {
+		return gerror.Wrapf(err, "创建Free Meal支付方式账号关联失败")
 	}
 
 	return nil

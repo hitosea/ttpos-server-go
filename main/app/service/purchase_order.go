@@ -133,7 +133,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(ctx context.Context, req req.P
 
 	// 初始化数组字段，确保返回空数组而不是null
 	detailResp.Items = make([]resp.PurchaseOrderItemInfo, 0)
-	detailResp.ReceiptProgress = fmt.Sprintf("%.v%%", purchaseOrder.GetReceiptProgress())
+	detailResp.ReceiptProgress = fmt.Sprintf("%.0f%%", purchaseOrder.GetReceiptProgress())
 
 	// 转换明细数据
 	for _, item := range purchaseOrder.Items {
@@ -588,6 +588,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 			Num:               float64(len(req.Items)),
 			ExpectArrivalTime: purchaseOrder.ExpectArrivalTime,
 			ReceiveTime:       req.ReceiveTime,
+			PurchaseOrder:     *purchaseOrder,
 		}
 
 		err = receiptOrderRepo.Create(receiptOrder)
@@ -675,8 +676,8 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	err := db.Transaction(func(tx *gorm.DB) error {
-		receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(tx)
 		purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(tx)
+		receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(tx)
 		receiptOrderItemRepo := repository.NewPurchaseReceiptOrderItemRepo(tx)
 
 		// 查询收货单
@@ -686,8 +687,9 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 		}
 
 		// 查询采购申请
+		var purchaseOrder *model.PurchaseOrder
 		if req.IsConfirm {
-			purchaseOrder, err := repository.NewPurchaseOrderRepo(tx).GetByUuid(receiptOrder.PurchaseOrderUuid)
+			purchaseOrder, err = repository.NewPurchaseOrderRepo(tx).GetByUuid(receiptOrder.PurchaseOrderUuid)
 			if err != nil {
 				return errors.WithMessage(err, "采购申请不存在")
 			}
@@ -762,6 +764,7 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 			return errors.WithMessage(err, "更新收货单状态失败")
 		}
 		receiptOrder.Items = receiptItems
+		receiptOrder.PurchaseOrder = *purchaseOrder
 
 		// 检查收货单是否完成
 		if receiptOrder.Status == constant.ReceiptOrderStatusReceived {
@@ -862,6 +865,8 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderDetail(ctx context.Context, re
 		// 查询采购申请明细
 		itemInfo.PurchaseNum = item.PurchaseOrderItem.Num
 		itemInfo.ArrivalNum = item.Num
+		itemInfo.LocaleUnitName = language.JsonToLocaleResponse(item.UnitName)
+		itemInfo.LocaleBaseUnitName = language.JsonToLocaleResponse(item.BaseUnitName)
 		//
 		detailResp.Items = append(detailResp.Items, itemInfo)
 	}
@@ -1114,14 +1119,14 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 	// 调用erp接口
 	if ctx.GetCompany().IsOpenErp() {
 		erpReq := buying.SavePurchaseReceiptReq{
-			PurchaseOrderName: receiptOrder.OrderNo,
+			PurchaseOrderName: receiptOrder.PurchaseOrder.ErpOrderNo,
 			Items:             make([]*buying.PurchaseOrderItem, 0),
 		}
 		for _, item := range receiptOrder.Items {
 			erpReq.Items = append(erpReq.Items, &buying.PurchaseOrderItem{
 				ItemCode: item.MaterialCode,
-				ItemName: item.MaterialName,
-				StockUom: item.UnitName,
+				ItemName: language.JsonToLocaleResponse(item.MaterialName).EN,
+				StockUom: language.JsonToLocaleResponse(item.UnitName).EN,
 				Qty:      item.Num,
 			})
 		}
