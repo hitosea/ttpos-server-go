@@ -3857,9 +3857,50 @@ func (s *productSrv) ProductShopStatus(ctx context.Context, req req.ProductShopS
 		return errors.New("商品状态不能为空")
 	}
 
-	err = db.Model(&model.ProductPackage{}).Select("status").Where("uuid = ?", req.Uuid).Updates(map[string]any{
-		"status": req.Status,
-	}).Error
+	err = db.Transaction(func(tx *gorm.DB) error {
+		productPackageGroupRepo := repository.NewProductPackageGroupRepo(tx)
+		err = tx.Model(&model.ProductPackage{}).Select("status").Where("uuid = ?", req.Uuid).Updates(map[string]any{
+			"status": req.Status,
+		}).Error
+		if err != nil {
+			return errors.WithMessage(err, "修改商品状态失败")
+		}
+		if productPackage.ProductType == constant.ProductTypeProduct && *req.Status == 0 {
+			productPackageGroupItems, err := productPackageGroupRepo.GetProductPackageGroupItems(
+				commonRepo.WhereBySoftDelete(),
+				commonRepo.WhereByRelatedUuid(productPackage.Uuid),
+				productPackageGroupRepo.WithProductPackageGroup(
+					commonRepo.WhereBySoftDelete(),
+				),
+				productPackageGroupRepo.WithProductPackageGroupProduct(
+					commonRepo.WhereBySoftDelete(),
+				),
+			)
+			if err != nil {
+				return errors.WithMessage(err, "获取商品套餐组商品失败")
+			}
+			for _, item := range productPackageGroupItems {
+				if item.ProductPackageGroup != nil && item.ProductPackageGroup.ProductPackage != nil {
+					err = tx.Model(&model.ProductPackage{}).Select("status").Where("uuid = ?", item.ProductPackageGroup.ProductPackage.Uuid).Updates(map[string]any{
+						"status": 0,
+					}).Error
+					if err != nil {
+						return errors.WithMessage(err, "修改商品套餐状态失败")
+					}
+					err = tx.Model(&model.ProductBom{}).Select("status").Where("product_package_uuid = ?", item.ProductPackageGroup.ProductPackage.Uuid).Updates(map[string]any{
+						"status": 0,
+					}).Error
+					if err != nil {
+						return errors.WithMessage(err, "修改商品套餐组商品状态失败")
+					}
+				}
+			}
+
+		}
+
+		return nil
+	})
+
 	if err != nil {
 		return errors.WithMessage(err, "修改商品状态失败")
 	}
@@ -4270,7 +4311,7 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 	// 编辑商品
 	err := db.Transaction(func(tx *gorm.DB) error {
 
-		// 添加商品包
+		// 编辑商品包
 		productPackageRes, err := s.EditProductPackage(ctx, tx, req, flavorListResult.MinPrice)
 		if err != nil {
 			return err
@@ -4293,6 +4334,40 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 			err = s.SaveProductPackageGroup(tx, packageResult.Groups, productPackageUuid)
 			if err != nil {
 				return err
+			}
+		} else {
+			if req.Status == 0 {
+				// 套餐商品组
+				productPackageGroupRepo := repository.NewProductPackageGroupRepo(tx)
+				productPackageGroupItems, err := productPackageGroupRepo.GetProductPackageGroupItems(
+					commonRepo.WhereBySoftDelete(),
+					commonRepo.WhereByProductPackageUuid(productPackageUuid),
+					productPackageGroupRepo.WithProductPackageGroup(
+						commonRepo.WhereBySoftDelete(),
+					),
+					productPackageGroupRepo.WithProductPackageGroupProduct(
+						commonRepo.WhereBySoftDelete(),
+					),
+				)
+				if err != nil {
+					return errors.WithMessage(err, "获取商品套餐组商品失败")
+				}
+				for _, item := range productPackageGroupItems {
+					if item.ProductPackageGroup != nil && item.ProductPackageGroup.ProductPackage != nil {
+						err = tx.Model(&model.ProductPackage{}).Select("status").Where("uuid = ?", item.ProductPackageGroup.ProductPackage.Uuid).Updates(map[string]any{
+							"status": 0,
+						}).Error
+						if err != nil {
+							return errors.WithMessage(err, "修改商品套餐状态失败")
+						}
+						err = tx.Model(&model.ProductBom{}).Select("status").Where("product_package_uuid = ?", item.ProductPackageGroup.ProductPackage.Uuid).Updates(map[string]any{
+							"status": 0,
+						}).Error
+						if err != nil {
+							return errors.WithMessage(err, "修改商品套餐组商品状态失败")
+						}
+					}
+				}
 			}
 		}
 

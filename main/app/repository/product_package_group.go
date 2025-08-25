@@ -11,6 +11,7 @@ import (
 // IProductPackageGroupRepo 商品套餐组仓库接口
 type IProductPackageGroupRepo interface {
 	IProductPackageGroupQueryRepo
+	IProductPackageGroupPreloadRepo
 	CreateProductPackageGroup(productPackageGroup *model.ProductPackageGroup) error // 创建商品套餐组
 	UpdateProductPackageGroup(data map[string]any, opts ...DBOption) error          // 更新商品套餐组
 	DeleteProductPackageGroup(opts ...DBOption) error                               // 删除商品套餐组
@@ -22,8 +23,15 @@ type IProductPackageGroupRepo interface {
 
 // IProductPackageGroupQueryRepo 商品套餐组查询仓库接口
 type IProductPackageGroupQueryRepo interface {
-	GetProductPackageGroup(opts ...DBOption) (*model.ProductPackageGroup, error)         // 获取商品套餐组
-	GetProductPackageGroupItem(opts ...DBOption) (*model.ProductPackageGroupItem, error) // 获取商品套餐组商品
+	GetProductPackageGroup(opts ...DBOption) (*model.ProductPackageGroup, error)           // 获取商品套餐组
+	GetProductPackageGroupItem(opts ...DBOption) (*model.ProductPackageGroupItem, error)   // 获取商品套餐组商品
+	GetProductPackageGroupItems(opts ...DBOption) ([]model.ProductPackageGroupItem, error) // 获取商品套餐组商品列表
+}
+
+// IProductPackageGroupPreloadRepo 商品套餐组预加载仓库接口
+type IProductPackageGroupPreloadRepo interface {
+	WithProductPackageGroup(opts ...DBOption) DBOption        // 预加载商品套餐组
+	WithProductPackageGroupProduct(opts ...DBOption) DBOption // 预加载商品套餐组商品
 }
 
 // productPackageGroupRepoImpl 商品套餐组仓库
@@ -122,4 +130,45 @@ func (r *productPackageGroupRepoImpl) GetProductPackageGroupItem(opts ...DBOptio
 	}
 
 	return &productPackageGroupItem, nil
+}
+
+// GetProductPackageGroupItems 获取商品套餐组商品列表
+func (r *productPackageGroupRepoImpl) GetProductPackageGroupItems(opts ...DBOption) ([]model.ProductPackageGroupItem, error) {
+	var productPackageGroupItems []model.ProductPackageGroupItem
+	db := r.db
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	err := db.Find(&productPackageGroupItems).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return productPackageGroupItems, nil
+}
+
+// WithProductPackageGroup 预加载商品套餐组
+func (r *productPackageGroupRepoImpl) WithProductPackageGroup(opts ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductPackageGroup", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
+	}
+}
+
+// WithProductPackageGroupProduct 预加载商品套餐组商品
+func (r *productPackageGroupRepoImpl) WithProductPackageGroupProduct(opts ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductPackageGroup.ProductPackage", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
+	}
 }
