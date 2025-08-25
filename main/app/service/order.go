@@ -9946,6 +9946,20 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+
+		// company := ctx.GetCompany()
+		// companySetting := ctx.GetCompanySetting()
+		// if company.IsOpenErp() && companySetting.ErpnextSiteCode != "" {
+		// 	erpSrv := erp.NewIErpSrv(s.dbm)
+		// 	erpSrv.SavePosInvoice(ctx, req.SavePosInvoiceReq{
+		// 		SiteCode:    companySetting.ErpnextSiteCode,
+		// 		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+		// 		Branch:      companySetting.ErpnextBranchName,
+		// 		InvoiceName: saleOrder.ErpProductsInvoiceName,
+		// 	})
+		// }
+
+		// 更新发票信息
 		ctx.SetDB(db)
 		if cashPaymentOrder != nil {
 			// 更新现金支付单

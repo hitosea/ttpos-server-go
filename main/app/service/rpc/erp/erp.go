@@ -5,6 +5,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-erp/api/manufacturing"
+	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -12,6 +13,7 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	cc "ttpos-server-go/pkg/context"
+	pkgCtx "ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 )
 
@@ -27,6 +29,8 @@ type IErpSrv interface {
 	ClosePosEntry(ctx context.Context, closeEntryReq req.ClosePosEntryReq) (string, error)
 	SaveUom(ctx context.Context, saveUomReq req.SaveUomReq) error
 	SaveAttribute(ctx context.Context, saveAttributeReq req.SaveAttributeReq) error
+	SavePosInvoice(ctx pkgCtx.Context, savePosInvoiceReq req.SavePosInvoiceReq) (*selling.SavePosInvoiceResp, error)
+	ReturnPosInvoice(ctx pkgCtx.Context, returnPosInvoiceReq req.ReturnPosInvoiceReq) (*selling.ReturnPosInvoiceResp, error)
 
 	// 采购单
 	CreatePurchaseOrder(ctx cc.Context, createPurchaseOrderReq *stock.SaveMaterialRequestReq) (*stock.SaveMaterialRequestResp, error)
