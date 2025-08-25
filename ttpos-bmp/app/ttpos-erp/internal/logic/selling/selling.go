@@ -798,10 +798,11 @@ func (s *sSelling) buildInvoiceItems(items []*selling.PosInvoiceItem) []erp.POSI
 	invoiceItems := make([]erp.POSInvoiceItem, 0, len(items))
 	for _, item := range items {
 		invoiceItems = append(invoiceItems, erp.POSInvoiceItem{
-			ItemCode: item.ItemCode,
-			Qty:      item.Qty,
-			Rate:     item.Rate,
-			Amount:   item.Amount,
+			ItemCode:    item.ItemCode,
+			Qty:         item.Qty,
+			Rate:        item.Rate,
+			Amount:      item.Amount,
+			Description: item.Description,
 		})
 	}
 	return invoiceItems

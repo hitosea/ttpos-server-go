@@ -114,7 +114,7 @@ message PosInvoiceItem {
   double qty = 2;         // 数量，必填
   double rate = 3;       // 单价，必填
   double amount = 4;     // 金额，必填
-  string description = 5;     // 描述, 可选
+  string description = 5;     // 描述, 可选。 如果是套餐内的商品，填写内容 “Sales in package:{套餐名称}”
 }
 
 // PosInvoiceTax POS发票税费

@@ -210,10 +210,10 @@ func (x *PosProfileListResp) GetProfileList() []*PosProfile {
 
 type CreatePaymentAccountReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CompanyAbbr   string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写, 必填"`                               // 公司缩写, 必填
-	PaymentType   string                 `protobuf:"bytes,2,opt,name=payment_type,json=paymentType,proto3" json:"payment_type,omitempty" dc:"支付类型，必填 Cash/Balance/Wechat Pay/Alipay"` // 支付类型，必填 Cash/Balance/Wechat Pay/Alipay
-	Branch        string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty" dc:"分店名称,可选"`                                                             // 分店名称,可选
-	PaymentSource string                 `protobuf:"bytes,4,opt,name=payment_source,json=paymentSource,proto3" json:"payment_source,omitempty" dc:"支付来源,可选 2= lianlianpay"`           // 支付来源,可选 2= lianlianpay
+	CompanyAbbr   string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写, 必填"`                                         // 公司缩写, 必填
+	PaymentType   string                 `protobuf:"bytes,2,opt,name=payment_type,json=paymentType,proto3" json:"payment_type,omitempty" dc:"支付类型，必填 Cash/Balance/Wechat Pay/Alipay/Free Meal"` // 支付类型，必填 Cash/Balance/Wechat Pay/Alipay/Free Meal
+	Branch        string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty" dc:"分店名称,可选"`                                                                       // 分店名称,可选
+	PaymentSource string                 `protobuf:"bytes,4,opt,name=payment_source,json=paymentSource,proto3" json:"payment_source,omitempty" dc:"支付来源,可选 2= lianlianpay"`                     // 支付来源,可选 2= lianlianpay
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -973,6 +973,7 @@ type PosInvoiceItem struct {
 	Qty           float64                `protobuf:"fixed64,2,opt,name=qty,proto3" json:"qty,omitempty" dc:"数量，必填"`                           // 数量，必填
 	Rate          float64                `protobuf:"fixed64,3,opt,name=rate,proto3" json:"rate,omitempty" dc:"单价，必填"`                         // 单价，必填
 	Amount        float64                `protobuf:"fixed64,4,opt,name=amount,proto3" json:"amount,omitempty" dc:"金额，必填"`                     // 金额，必填
+	Description   string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty" dc:"描述, 可选"`            // 描述, 可选
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1033,6 +1034,13 @@ func (x *PosInvoiceItem) GetAmount() float64 {
 		return x.Amount
 	}
 	return 0
+}
+
+func (x *PosInvoiceItem) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
 }
 
 // PosInvoiceTax POS发票税费
@@ -1369,12 +1377,13 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\bpayments\x18\r \x03(\v2\x1a.selling.PosInvoicePaymentR\bpayments\"|\n" +
 	"\x12SavePosInvoiceResp\x122\n" +
 	"\x15products_invoice_name\x18\x01 \x01(\tR\x13productsInvoiceName\x122\n" +
-	"\x15material_invoice_name\x18\x02 \x01(\tR\x13materialInvoiceName\"k\n" +
+	"\x15material_invoice_name\x18\x02 \x01(\tR\x13materialInvoiceName\"\x8d\x01\n" +
 	"\x0ePosInvoiceItem\x12\x1b\n" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x10\n" +
 	"\x03qty\x18\x02 \x01(\x01R\x03qty\x12\x12\n" +
 	"\x04rate\x18\x03 \x01(\x01R\x04rate\x12\x16\n" +
-	"\x06amount\x18\x04 \x01(\x01R\x06amount\"d\n" +
+	"\x06amount\x18\x04 \x01(\x01R\x06amount\x12 \n" +
+	"\vdescription\x18\x05 \x01(\tR\vdescription\"d\n" +
 	"\rPosInvoiceTax\x12\x12\n" +
 	"\x04rate\x18\x01 \x01(\x01R\x04rate\x12\x1d\n" +
 	"\n" +
