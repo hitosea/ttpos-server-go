@@ -287,6 +287,7 @@
   const getBaes = (event) => {
     IndexApi.base(true)
       .then((res) => {
+        if (res.code == -102) return;
         languageStore().setLanguageList(res.data.language);
         //获取是否在云端
         languageStore().setIsCloudDeploy(res.data.isCloudDeploy);
@@ -352,27 +353,31 @@
   };
 
   const refreshRouter = async () => {
-    const result = await AuthApi.getRoleList({ token: userInfo.token });
-    let renderMenusList = handMenuData(JSON.parse(JSON.stringify(result.data.menus)));
-    let menusList = handRouterTable(JSON.parse(JSON.stringify(result.data.menus)));
-    let appId = userInfo.AppID;
-    renderMenusList.forEach((item) => {
-      item.path = appId + item.path;
-      item.redirect_name && (item.redirect_name = '/' + appId + item.redirect_name);
-      item.children?.forEach((child) => {
-        child.path = '/' + appId + child.path;
-        child.redirect_name && (child.redirect_name = '/' + appId + child.redirect_name);
-        child.children?.forEach((childItem) => {
-          childItem.path = '/' + appId + childItem.path;
-          childItem.redirect_name && (childItem.redirect_name = '/' + appId + childItem.redirect_name);
+    try {
+      const result = await AuthApi.getRoleList({ token: userInfo.token });
+      let renderMenusList = handMenuData(JSON.parse(JSON.stringify(result.data.menus)));
+      let menusList = handRouterTable(JSON.parse(JSON.stringify(result.data.menus)));
+      let appId = userInfo.AppID;
+      renderMenusList.forEach((item) => {
+        item.path = appId + item.path;
+        item.redirect_name && (item.redirect_name = '/' + appId + item.redirect_name);
+        item.children?.forEach((child) => {
+          child.path = '/' + appId + child.path;
+          child.redirect_name && (child.redirect_name = '/' + appId + child.redirect_name);
+          child.children?.forEach((childItem) => {
+            childItem.path = '/' + appId + childItem.path;
+            childItem.redirect_name && (childItem.redirect_name = '/' + appId + childItem.redirect_name);
+          });
         });
       });
-    });
-    //
-    setMenus(menusList);
-    setRenderMenus(renderMenusList);
-    if (menus.length && menus.length != menusList.length) {
-      EEUIRELOAD();
+      //
+      setMenus(menusList);
+      setRenderMenus(renderMenusList);
+      if (menus.length && menus.length != menusList.length) {
+        EEUIRELOAD();
+      }
+    } catch (error) {
+      console.log(error);
     }
   };
 

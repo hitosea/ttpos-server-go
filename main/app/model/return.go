@@ -17,6 +17,9 @@ type ReturnOrder struct {
 	AccountName         string  `gorm:"column:account_name;type:varchar(255);comment:账户名称 - 当存在QR PromptPay的时候需要传;NOT NULL" json:"account_name"`
 	DutyNo              string  `gorm:"column:duty_no;type:varchar(255);comment:当班编号;NOT NULL" json:"duty_no"`
 
+	// erp相关
+	ErpInvoiceName string `gorm:"column:erp_invoice_name;type:varchar(255);comment:发票名称;NOT NULL" json:"erp_invoice_name"`
+
 	ReturnOrderAmounts  []ReturnOrderAmount   `gorm:"foreignKey:ReturnOrderUuid;references:uuid"`
 	ReturnOrderProducts []*ReturnOrderProduct `gorm:"foreignKey:ReturnOrderUuid;references:uuid"`
 }

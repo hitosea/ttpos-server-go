@@ -9740,11 +9740,11 @@ func (s *orderSrv) VerifyCoupon(ctx context.Context, saleOrder *model.SaleOrder,
 }
 
 // InstantOrderPaymentFinish 完成销售订单的付款结账
-func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.InstantOrderPaymentFinishReq) (*resp.OrderFinishResp, error) {
+func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.InstantOrderPaymentFinishReq) (*resp.OrderFinishResp, error) {
 	// 加锁
 	if ctx.NoLock() {
-		s.lock.LockUuid(req.SaleBillUuid)
-		defer s.lock.UnlockUuid(req.SaleBillUuid)
+		s.lock.LockUuid(request.SaleBillUuid)
+		defer s.lock.UnlockUuid(request.SaleBillUuid)
 		ctx.AddLock()
 	}
 
@@ -9752,7 +9752,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	ctx.SetDB(db)
 
 	// 获取销售账单信息
-	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
 	if errSaleBill != nil {
 		ctx.Log().Error("GetSaleBillAllInfo", zap.Error(fmt.Errorf("%s %s", ctx.GetRequestUuid(), errSaleBill)))
 		return nil, errSaleBill
@@ -9764,12 +9764,12 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	}
 
 	// 获取销售订单信息
-	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
 	if saleOrder == nil {
 		return nil, errors.New("无法查询到销售订单")
 	}
 
-	infoResp, err := s.InstantOrderPaymentInfo(ctx, nil, req.SaleBillUuid, req.SaleOrderUuid)
+	infoResp, err := s.InstantOrderPaymentInfo(ctx, nil, request.SaleBillUuid, request.SaleOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -9946,6 +9946,25 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+
+		// company := ctx.GetCompany()
+		// companySetting := ctx.GetCompanySetting()
+		// if company.IsOpenErp() && companySetting.ErpnextSiteCode != "" {
+		// 	erpSrv := erp.NewIErpSrv(s.dbm)
+		// 	erpSrv.SavePosInvoice(ctx, req.SavePosInvoiceReq{
+		// 		SiteCode:         companySetting.ErpnextSiteCode,
+		// 		OrderNo:          saleOrder.OrderNo,
+		// 		OpenPosEntryName: saleOrder.ErpProductsInvoiceName,
+		// 		PostingDatetime:  saleOrder.FinishTime,
+		// 		CustomerUuid:     fmt.Sprintf("%d", saleOrder.ConsumerUuid),
+		// 		Items:            saleOrder.SaleOrderProducts,
+		// 		MaterialItems:    saleOrder.SaleOrderMaterialProducts,
+		// 		Taxes:            saleOrder.SaleOrderTaxes,
+		// 		Payments:         saleOrder.PaymentOrders,
+		// 	})
+		// }
+
+		// 更新发票信息
 		ctx.SetDB(db)
 		if cashPaymentOrder != nil {
 			// 更新现金支付单
@@ -10048,7 +10067,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 			return
 		}
 		// 构建出库单
-		warehouseOutForms := model.NewWarehouseOutForm(decreaseStockList, true, req.SaleBillUuid, ctx.GetStaffUuid())
+		warehouseOutForms := model.NewWarehouseOutForm(decreaseStockList, true, request.SaleBillUuid, ctx.GetStaffUuid())
 		if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 			for _, warehouseOutForm := range warehouseOutForms {
 				if len(warehouseOutForm.WarehouseOutFormItems) > 0 {
@@ -10124,8 +10143,8 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 					Ctx:           ctx,
 					CompanyUuid:   ctx.GetCompanyUuid(),
 					Source:        ctx.GetSource(),
-					SaleBillUuid:  req.SaleBillUuid,
-					SaleOrderUuid: req.SaleOrderUuid,
+					SaleBillUuid:  request.SaleBillUuid,
+					SaleOrderUuid: request.SaleOrderUuid,
 					OperatorUuid:  int64(ctx.GetStaffUuid()),
 				},
 				DiscountType:    constant.DiscountOperationLogTypeZeroSaleOrder,
@@ -10142,8 +10161,8 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 					Ctx:           ctx,
 					CompanyUuid:   ctx.GetCompanyUuid(),
 					Source:        ctx.GetSource(),
-					SaleBillUuid:  req.SaleBillUuid,
-					SaleOrderUuid: req.SaleOrderUuid,
+					SaleBillUuid:  request.SaleBillUuid,
+					SaleOrderUuid: request.SaleOrderUuid,
 					OperatorUuid:  int64(ctx.GetStaffUuid()),
 				},
 				Operation:       constant.OrderCheckoutDiscountAdd,
@@ -10168,8 +10187,8 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 				Ctx:           ctx,
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),
-				SaleBillUuid:  req.SaleBillUuid,
-				SaleOrderUuid: req.SaleOrderUuid,
+				SaleBillUuid:  request.SaleBillUuid,
+				SaleOrderUuid: request.SaleOrderUuid,
 				OperatorUuid:  int64(ctx.GetStaffUuid()),
 			},
 			SaleBill:    saleBill,
@@ -10203,8 +10222,8 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		payMethods = append(payMethods, method)
 	}
 	return &resp.OrderFinishResp{
-		SaleBillUuid:  req.SaleBillUuid,
-		SaleOrderUuid: req.SaleOrderUuid,
+		SaleBillUuid:  request.SaleBillUuid,
+		SaleOrderUuid: request.SaleOrderUuid,
 		AmountInfo: resp.PayAmountInfo{
 			OrderAmount:  saleOrder.FinalPrice, // 最终应收
 			PayAmount:    originTotalPay,       // 原总付款=总付款-找零金额

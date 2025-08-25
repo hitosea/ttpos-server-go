@@ -206,6 +206,11 @@ func (h *OrderHandler) ReturnOrderInfo(c *gin.Context) {
 		return
 	}
 	//
+	if ctx.GetCompany().IsOpenErp() && ctx.GetStaff().CashierOnline == 0 {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("当前不可进行退款"))
+		return
+	}
+	//
 	res, err := h.service.GetReturnOrderInfo(ctx, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -232,6 +237,11 @@ func (h *OrderHandler) ReturnOrder(c *gin.Context) {
 	req := req.OrderReturnReq{}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	//
+	if ctx.GetCompany().IsOpenErp() && ctx.GetStaff().CashierOnline == 0 {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("当前不可进行退款"))
 		return
 	}
 	//

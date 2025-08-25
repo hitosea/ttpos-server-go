@@ -48,7 +48,13 @@
                 </el-form-item>
               </template>
             </el-table-column>
-            <el-table-column prop="stock_num" :label="$t('商品库存')" width="160" />
+            <el-table-column prop="stock_num" :label="$t('商品库存')" width="160">
+              <template #default="scope">
+                <el-form-item class="mt16" :prop="`model.package_group.${groupIndex}.product_list.${scope.$index}.stock_num`" :rules="[{ required: true,validator: validateStockNum, message: $t('商品库存不足') }]">
+                  {{ scope.row.stock_num }}
+                </el-form-item>
+              </template>
+            </el-table-column>
             <el-table-column prop="action" :label="$t('操作')" width="100" fixed="right">
               <template #default="scope">
                 <el-button type="primary" @click="handleDeleteGoods(groupIndex, scope.$index)">{{ $t('删除') }}</el-button>
@@ -130,7 +136,7 @@
   const languageList = languageStore().getLanguageList().languageList.value;
   const languageKey = languageStore().getLanguageKey().language.value;
   const languageData = JSON.stringify(languageStore().getLanguageKeyForm());
-  
+
   const form = inject('form');
 
   const dialogVisible = ref(false);
@@ -342,6 +348,15 @@
   const validatePackageGroup = (rule, value, callback) => {
     if (value.length === 0) {
       callback(new Error($t('请添加套餐商品')));
+    } else {
+      callback();
+    }
+  };
+
+  // 校验商品库存
+  const validateStockNum = (rule, value, callback) => {
+    if (value <= 0) {
+      callback(new Error($t('商品库存不足')));
     } else {
       callback();
     }

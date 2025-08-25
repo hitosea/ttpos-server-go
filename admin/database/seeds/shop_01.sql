@@ -122,6 +122,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `unit` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '积分抵扣金额的单位,$-美元 ￥-人民币,用于显示订单当时积分抵扣的金额价值',
     -- 收银员名称
     `cashier_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '收银员名称',
+    -- erp相关
+    `erp_products_invoice_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品发票名称',
+    `erp_material_invoice_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '原材料发票名称',
     -- 关联ID
     `consumer_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '消费者ID',
     `cashier_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '收银员ID',
@@ -2252,6 +2255,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_return_order` (
     `account_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '账号 - 当存在QR PromptPay的时候需要传',
     `account_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '账户名称 - 当存在QR PromptPay的时候需要传',
     `duty_no` varchar(255) NOT NULL DEFAULT '' COMMENT '当班编号',
+    -- erp相关
+    `erp_invoice_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '发票名称',
+
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -2304,6 +2310,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_refund_order` (
     `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '退款金额',
     `reason` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '退款原因',
     `status` INT(11) NOT NULL DEFAULT 0 COMMENT '退款状态',
+    -- erp相关
+    `erp_invoice_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '发票名称',
+
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

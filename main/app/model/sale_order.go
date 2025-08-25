@@ -79,6 +79,10 @@ type SaleOrder struct {
 	MemberBalance        float64 `gorm:"column:member_balance;type:decimal(12,2);default:0;comment:会员余额,会员消费本单后剩余的余额" json:"member_balance"`
 	Unit                 string  `gorm:"column:unit;type:varchar(255);default:0;comment:金额的单位,$-美元 ￥-人民币,用于显示订单金额价值" json:"unit"`
 
+	// erp相关
+	ErpProductsInvoiceName string `gorm:"column:erp_products_invoice_name;type:varchar(255);comment:商品发票名称;NOT NULL" json:"erp_products_invoice_name"`
+	ErpMaterialInvoiceName string `gorm:"column:erp_material_invoice_name;type:varchar(255);comment:原材料发票名称;NOT NULL" json:"erp_material_invoice_name"`
+
 	// 关联对象
 	PaymentOrders                []*PaymentOrder                `gorm:"foreignKey:RelatedUuid;references:uuid"` // 支付订单，也叫付款单
 	Member                       *Member                        `gorm:"foreignKey:ConsumerUuid;references:uuid"`
