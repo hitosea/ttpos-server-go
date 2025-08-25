@@ -139,6 +139,11 @@ type ProductPackageAttribute struct {
 	Attribute                    ProductAttribute             `gorm:"foreignKey:attribute_uuid;references:uuid" json:"-"`                       // 产品属性
 }
 
+type ProductPackageAttributeGroupCount struct {
+	ProductPackageAttributeGroupUuid uint64 `gorm:"column:product_package_attribute_group_uuid"`
+	RelatedAttributeUuidCount        int64  `gorm:"column:related_attribute_uuid_count"`
+}
+
 func (model *ProductPackageAttribute) SetNil() {
 	model.Attribute = ProductAttribute{}
 }

@@ -731,6 +731,32 @@ func (h *ProductHandler) DeleteProductAttributeGroup(c *gin.Context) {
 	helper.Success(c, gin.H{}, "删除成功")
 }
 
+// DeleteProductAttribute 删除商品属性值
+// @Summary 删除商品属性值
+// @Description 删除商品属性值
+// @Tags 商家端.商品属性值
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductAttributeDeleteReq true "商品属性值删除请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/attribute [delete]
+func (h *ProductHandler) DeleteProductAttribute(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	deleteReq := req.ProductAttributeDeleteReq{}
+	if err := c.ShouldBindJSON(&deleteReq); err != nil {
+		helper.HandleValidationError(c, err, deleteReq, dto.PageReqMessage)
+		return
+	}
+	err := h.productSrv.DeleteProductAttribute(ctx, deleteReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{}, "删除成功")
+}
+
 // DeleteProductFlavor 删除商品规格
 // @Summary 删除商品规格
 // @Description 删除商品规格
@@ -809,31 +835,31 @@ func (h *ProductHandler) SortProductFlavor(c *gin.Context) {
 	helper.Success(c, gin.H{}, "保存成功")
 }
 
-// SortProductAttribute 排序商品属性
-// @Summary 排序商品属性
-// @Description 排序商品属性
-// @Tags 商家端.商品属性
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Param data body req.ProductAttributeSortReq true "商品属性排序请求"
-// @Success 200 {object} nil "成功"
-// @Failure 400 {object} nil "错误请求"
-// @Router /shop/product/attribute/sort [post]
-func (h *ProductHandler) SortProductAttribute(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	sortReq := req.ProductAttributeSortReq{}
-	if err := c.ShouldBindJSON(&sortReq); err != nil {
-		helper.HandleValidationError(c, err, sortReq, dto.PageReqMessage)
-		return
-	}
-	err := h.productSrv.SortProductAttribute(ctx, sortReq)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	helper.Success(c, gin.H{}, "保存成功")
-}
+// // SortProductAttribute 排序商品属性
+// // @Summary 排序商品属性
+// // @Description 排序商品属性
+// // @Tags 商家端.商品属性
+// // @Accept json
+// // @Produce json
+// // @Security JwtToken
+// // @Param data body req.ProductAttributeSortReq true "商品属性排序请求"
+// // @Success 200 {object} nil "成功"
+// // @Failure 400 {object} nil "错误请求"
+// // @Router /shop/product/attribute/sort [post]
+// func (h *ProductHandler) SortProductAttribute(c *gin.Context) {
+// 	ctx := helper.GetContext(c)
+// 	sortReq := req.ProductAttributeSortReq{}
+// 	if err := c.ShouldBindJSON(&sortReq); err != nil {
+// 		helper.HandleValidationError(c, err, sortReq, dto.PageReqMessage)
+// 		return
+// 	}
+// 	err := h.productSrv.SortProductAttribute(ctx, sortReq)
+// 	if err != nil {
+// 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+// 		return
+// 	}
+// 	helper.Success(c, gin.H{}, "保存成功")
+// }
 
 // EditProductFlavor 编辑商品规格
 // @Summary 编辑商品规格
@@ -1242,13 +1268,13 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.DELETE("/product/sauce", wrapper.DeleteProductSauce)    // 删除商品加料
 		privateApi.POST("/product/sauce/sort", wrapper.SortProductSauce)   // 排序商品加料
 
-		privateApi.GET("/product/attribute/group/list", wrapper.GetProductAttributeGroupList) // 获取商品属性分组列表
-		privateApi.GET("/product/attribute/group", wrapper.GetProductAttributeGroup)          // 获取商品属性分组详情
-		privateApi.POST("/product/attribute/group/add", wrapper.AddProductAttributeGroup)     // 添加商品属性分组，商品属性一起添加
-		privateApi.POST("/product/attribute/group/edit", wrapper.EditProductAttributeGroup)   // 编辑商品属性分组，商品属性一起编辑
-		privateApi.DELETE("/product/attribute/group", wrapper.DeleteProductAttributeGroup)    // 删除商品属性组
-		privateApi.POST("/product/attribute/group/sort", wrapper.SortProductAttributeGroup)   // 排序商品属性组
-		privateApi.POST("/product/attribute/sort", wrapper.SortProductAttribute)              // 排序商品属性
+		privateApi.GET("/product/attribute/group/list", wrapper.GetProductAttributeGroupList) // 获取属性组列表
+		privateApi.GET("/product/attribute/group", wrapper.GetProductAttributeGroup)          // 获取属性组详情
+		privateApi.POST("/product/attribute/group/add", wrapper.AddProductAttributeGroup)     // 添加属性组，属性值一起添加
+		privateApi.POST("/product/attribute/group/edit", wrapper.EditProductAttributeGroup)   // 编辑属性组，属性值一起编辑
+		privateApi.DELETE("/product/attribute/group", wrapper.DeleteProductAttributeGroup)    // 删除属性组
+		privateApi.POST("/product/attribute/group/sort", wrapper.SortProductAttributeGroup)   // 排序属性组
+		privateApi.DELETE("/product/attribute", wrapper.DeleteProductAttribute)               // 删除属性值
 
 		privateApi.GET("/product/flavor/list", wrapper.GetProductFlavorList) // 获取商品规格列表
 		privateApi.GET("/product/flavor", wrapper.GetProductFlavor)          // 获取商品规格详情

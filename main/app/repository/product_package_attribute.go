@@ -15,6 +15,8 @@ type IProductPackageAttributeRepo interface {
 	CreateProductPackageAttributes(productPackageAttributes []model.ProductPackageAttribute) error
 	DeleteProductPackageAttribute(opts ...DBOption) error
 	UpdateProductPackageAttribute(data map[string]any, opts ...DBOption) error
+
+	GetProductPackageAttributeGroupCount(attributeUuid uint64) ([]model.ProductPackageAttributeGroupCount, error)
 }
 
 type productPackageAttributeRepoImpl struct {
@@ -109,4 +111,15 @@ func (r *productPackageAttributeRepoImpl) UpdateProductPackageAttribute(data map
 	}
 
 	return db.Model(&model.ProductPackageAttribute{}).Updates(data).Error
+}
+
+func (r *productPackageAttributeRepoImpl) GetProductPackageAttributeGroupCount(attributeUuid uint64) ([]model.ProductPackageAttributeGroupCount, error) {
+	var productPackageAttributeGroupCountList []model.ProductPackageAttributeGroupCount
+	err := r.db.Model(&model.ProductPackageAttribute{}).Select("product_package_attribute_group_uuid, count(1) as related_attribute_uuid_count").
+		Scopes(NotDeleted).Where("attribute_uuid = ?", attributeUuid).
+		Group("product_package_attribute_group_uuid").Scan(&productPackageAttributeGroupCountList).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productPackageAttributeGroupCountList, nil
 }
