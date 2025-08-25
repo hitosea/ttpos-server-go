@@ -371,7 +371,7 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 			Uuid: materialUuid,
 		},
 		Name:                  request.LocaleName.ToJson(),
-		Code:                  "", // TODO: 从ERP获取编码
+		Code:                  "", // 先添加物品，之后调用erp接口后再更新编码
 		Valuation:             request.Valuation,
 		InitStock:             request.InitStock,
 		MultiLanguageNameUuid: nameId,
