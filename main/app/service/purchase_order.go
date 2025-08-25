@@ -133,7 +133,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(ctx context.Context, req req.P
 
 	// 初始化数组字段，确保返回空数组而不是null
 	detailResp.Items = make([]resp.PurchaseOrderItemInfo, 0)
-	detailResp.ReceiptProgress = fmt.Sprintf("%.v%%", purchaseOrder.GetReceiptProgress())
+	detailResp.ReceiptProgress = fmt.Sprintf("%.0f%%", purchaseOrder.GetReceiptProgress())
 
 	// 转换明细数据
 	for _, item := range purchaseOrder.Items {

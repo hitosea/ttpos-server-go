@@ -75,6 +75,10 @@ func (s *sItem) buildItemListFilters(ctx context.Context, req *item.GetItemListR
 		if len(itemGroupStr) > 0 {
 			filters = append(filters, g.ArrayStr{"item_group", "=", itemGroupStr})
 		}
+		//特殊处理套餐包
+		if req.ItemGroup == item.ItemGroup_Package {
+			filters = append(filters, []string{"item_code", "like", consts.ItemCodePrefixPackage + "%"})
+		}
 	}
 
 	// 按物品编码过滤
@@ -106,7 +110,7 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string) ([]*item.
 	resp, err := service.Document().List(ctx, &erp.ErpReq{
 		DocType: "Item",
 	}, &erp.RequestParams{
-		Fields:  g.ArrayStr{"name", "item_code", "item_group", "custom_branch", "custom_company", "custom_specification", "stock_uom"},
+		Fields:  g.ArrayStr{"item_name", "item_code", "item_group", "custom_branch", "custom_company", "custom_specification", "stock_uom"},
 		Filters: filters,
 		Limit:   consts.Limit999,
 	})
@@ -129,7 +133,7 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string) ([]*item.
 		itemList = append(itemList, &item.ItemInfo{
 			Branch:    data.Get("custom_branch").String(),
 			Company:   data.Get("custom_company").String(),
-			ItemName:  data.Get("name").String(),
+			ItemName:  data.Get("item_name").String(),
 			ItemCode:  data.Get("item_code").String(),
 			ItemGroup: utility.ParseItemGroupFromString(data.Get("item_group").String()),
 			StockUom:  data.Get("stock_uom").String(),

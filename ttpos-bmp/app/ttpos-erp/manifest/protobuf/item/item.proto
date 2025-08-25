@@ -13,7 +13,7 @@ enum ItemGroup {
 }
 
 message GetItemListReq {
-  ItemGroup item_group = 1; // 物品分组，可选  Products 商品/Raw Material 原材料
+  ItemGroup item_group = 1; // 物品分组，可选  Products 商品/Raw Material 原材料/Package 套餐
   string item_name = 2; // 商品名称模糊查询，可选，如: %商品名称%
   string branch = 3; // 分支名称，可选
   string company_abbr = 4; // 公司简称，可选
