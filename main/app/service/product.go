@@ -733,6 +733,11 @@ func (s *productSrv) AddProductShopCategory(ctx context.Context, addReq req.Prod
 	productRepo := repository.NewProductRepo(db)
 	checkService := NewCheckNameSrv(s.dbm)
 	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
+	for _, name := range names {
+		if !checkService.CheckNameLength(ctx, name.Text, 50) {
+			return errors.New("名称长度不能超过50")
+		}
+	}
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
 		Source: constant.CheckNameSourceCategory,
 		Names:  names,
@@ -860,6 +865,11 @@ func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.Pr
 	}
 	checkService := NewCheckNameSrv(s.dbm)
 	names := checkService.MakeCheckNameList(ctx, editReq.LocaleName)
+	for _, name := range names {
+		if !checkService.CheckNameLength(ctx, name.Text, 50) {
+			return errors.New("名称长度不能超过50")
+		}
+	}
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
 		Uuid:   editReq.Uuid,
 		Source: constant.CheckNameSourceCategory,
@@ -1043,7 +1053,7 @@ func (s *productSrv) DeleteProductShopCategory(ctx context.Context, deleteReq re
 		return errors.WithMessage(err, "获取商品数量失败")
 	}
 	if productCount > 0 {
-		return errors.New("分类下有商品，不能删除")
+		return errors.New("该分类已经关联了商品，不可删除")
 	}
 	if productCategory.ParentUuid == 0 && productCategory.IsSpecial == 0 {
 		categoryCount, err := productRepo.GetProductCategoryCount(
@@ -1054,7 +1064,7 @@ func (s *productSrv) DeleteProductShopCategory(ctx context.Context, deleteReq re
 			return errors.WithMessage(err, "获取子分类数量失败")
 		}
 		if categoryCount > 0 {
-			return errors.New("分类下有子分类，不能删除")
+			return errors.New("该分类存在二级分类，不可删除")
 		}
 	}
 

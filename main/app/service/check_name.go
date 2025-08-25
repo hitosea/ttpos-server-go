@@ -10,12 +10,14 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"unicode/utf8"
 )
 
 type ICheckNameSrv interface {
 	CheckNameExists(ctx context.Context, param req.CheckNameRequest) (resp.CheckNameResp, error) // 检查名称是否存在
 	MakeCheckNameList(ctx context.Context, param dto.LocaleResponse) []req.CheckingName          // 生成检查名称列表
 	InnerCheckNameExists(ctx context.Context, param req.CheckNameRequest) bool                   // 内部检查名称是否存在
+	CheckNameLength(ctx context.Context, name string, maxLength int) bool                        // 检查名称长度
 }
 
 func NewCheckNameSrv(dbm *database.DBManager) ICheckNameSrv {
@@ -315,4 +317,12 @@ func (s *checkNameSrv) InnerCheckNameExists(ctx context.Context, param req.Check
 		}
 	}
 	return false
+}
+
+// CheckNameLength 检查名称长度
+func (s *checkNameSrv) CheckNameLength(ctx context.Context, name string, maxLength int) bool {
+	if utf8.RuneCountInString(name) > maxLength {
+		return false
+	}
+	return true
 }
