@@ -146,6 +146,19 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				ConversionRate: unit.ConversionRate,
 			})
 		}
+		purchaseUnit := material.GetUnit(material.PurchaseUnitUuid)
+		costUnit := material.GetUnit(material.CostUnitUuid)
+		baseUnit := material.GetBaseUnit()
+		var purchaseUnitLocaleName, costUnitLocaleName, baseUnitLocaleName dto.LocaleResponse
+		if costUnit != nil {
+			costUnitLocaleName = language.JsonToLocaleResponse(costUnit.Name)
+		}
+		if purchaseUnit != nil {
+			purchaseUnitLocaleName = language.JsonToLocaleResponse(purchaseUnit.Name)
+		}
+		if baseUnit != nil {
+			baseUnitLocaleName = language.JsonToLocaleResponse(baseUnit.Name)
+		}
 		respMaterial := material_resp.Material{
 			Uuid:         material.Uuid,
 			Name:         material.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
@@ -166,8 +179,9 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			PurchaseUnitUuid:       material.PurchaseUnitUuid,
 			CostUnitName:           material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 			CostUnitUuid:           material.CostUnitUuid,
-			PurchaseUnitLocaleName: language.JsonToLocaleResponse(material.GetUnit(material.PurchaseUnitUuid).Name),
-			CostUnitLocaleName:     language.JsonToLocaleResponse(material.GetUnit(material.CostUnitUuid).Name),
+			PurchaseUnitLocaleName: purchaseUnitLocaleName,
+			CostUnitLocaleName:     costUnitLocaleName,
+			UnitLocaleName:         baseUnitLocaleName,
 			UnitList:               unitList,
 		}
 		materialList = append(materialList, respMaterial)
@@ -207,6 +221,20 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 			ConversionRate: materialUnit.ConversionRate,
 		})
 	}
+
+	purchaseUnit := material.GetUnit(material.PurchaseUnitUuid)
+	costUnit := material.GetUnit(material.CostUnitUuid)
+	baseUnit := material.GetBaseUnit()
+	var purchaseUnitLocaleName, costUnitLocaleName, baseUnitLocaleName dto.LocaleResponse
+	if purchaseUnit != nil {
+		purchaseUnitLocaleName = language.JsonToLocaleResponse(purchaseUnit.Name)
+	}
+	if costUnit != nil {
+		costUnitLocaleName = language.JsonToLocaleResponse(costUnit.Name)
+	}
+	if baseUnit != nil {
+		baseUnitLocaleName = language.JsonToLocaleResponse(baseUnit.Name)
+	}
 	return material_resp.MaterialDetailResp{
 		Uuid:             material.Uuid,
 		LocaleName:       material.MultiLanguageName.GetNames(),
@@ -223,8 +251,9 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		CostUnitName:     material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 		CostUnitUuid:     material.CostUnitUuid,
 
-		PurchaseUnitLocaleName: language.JsonToLocaleResponse(material.GetUnit(material.PurchaseUnitUuid).Name),
-		CostUnitLocaleName:     language.JsonToLocaleResponse(material.GetUnit(material.CostUnitUuid).Name),
+		PurchaseUnitLocaleName: purchaseUnitLocaleName,
+		CostUnitLocaleName:     costUnitLocaleName,
+		UnitLocaleName:         baseUnitLocaleName,
 	}, nil
 }
 
