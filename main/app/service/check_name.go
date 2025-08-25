@@ -60,7 +60,8 @@ func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.Che
 				var count int64
 				query := db.Model(&model.ProductUnit{}).
 					Joins("JOIN ttpos_multi_language_name ON ttpos_product_unit.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text)
+					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
+					Where("ttpos_multi_language_name.delete_time = 0")
 				if checkNameReq.Uuid != 0 {
 					query = query.Where("ttpos_product_unit.uuid != ?", checkNameReq.Uuid)
 				}
@@ -77,7 +78,8 @@ func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.Che
 				var count int64
 				query := db.Model(&model.ProductPackage{}).
 					Joins("JOIN ttpos_multi_language_name ON ttpos_product_package.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text)
+					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
+					Where("ttpos_multi_language_name.delete_time = 0")
 				if checkNameReq.Uuid != 0 {
 					query = query.Where("ttpos_product_package.uuid != ?", checkNameReq.Uuid)
 				}
@@ -94,7 +96,8 @@ func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.Che
 				var count int64
 				query := db.Model(&model.ProductCategory{}).
 					Joins("JOIN ttpos_multi_language_name ON ttpos_product_category.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text)
+					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
+					Where("ttpos_multi_language_name.delete_time = 0")
 				if checkNameReq.Uuid != 0 {
 					query = query.Where("ttpos_product_category.uuid != ?", checkNameReq.Uuid)
 				}
@@ -111,7 +114,8 @@ func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.Che
 				var count int64
 				query := db.Model(&model.ProductSauce{}).
 					Joins("JOIN ttpos_multi_language_name ON ttpos_product_sauce.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text)
+					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
+					Where("ttpos_multi_language_name.delete_time = 0")
 				if checkNameReq.Uuid != 0 {
 					query = query.Where("ttpos_product_sauce.uuid != ?", checkNameReq.Uuid)
 				}
@@ -128,7 +132,8 @@ func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.Che
 				var count int64
 				query := db.Model(&model.ProductAttribute{}).
 					Joins("JOIN ttpos_multi_language_name ON ttpos_product_attribute.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text)
+					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
+					Where("ttpos_multi_language_name.delete_time = 0")
 				if checkNameReq.Uuid != 0 {
 					query = query.Where("ttpos_product_attribute.uuid != ?", checkNameReq.Uuid)
 				}
@@ -145,7 +150,8 @@ func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.Che
 				var count int64
 				query := db.Model(&model.ProductAttributeGroup{}).
 					Joins("JOIN ttpos_multi_language_name ON ttpos_product_attribute_group.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text)
+					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
+					Where("ttpos_multi_language_name.delete_time = 0")
 				if checkNameReq.Uuid != 0 {
 					query = query.Where("ttpos_product_attribute_group.uuid != ?", checkNameReq.Uuid)
 				}
@@ -162,7 +168,8 @@ func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.Che
 				var count int64
 				query := db.Model(&model.ProductFlavor{}).
 					Joins("JOIN ttpos_multi_language_name ON ttpos_product_flavor.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text)
+					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
+					Where("ttpos_multi_language_name.delete_time = 0")
 				if checkNameReq.Uuid != 0 {
 					query = query.Where("ttpos_product_flavor.uuid != ?", checkNameReq.Uuid)
 				}
@@ -179,7 +186,8 @@ func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.Che
 				var count int64
 				query := db.Model(&model.Material{}).
 					Joins("JOIN ttpos_multi_language_name ON ttpos_material.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text)
+					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
+					Where("ttpos_multi_language_name.delete_time = 0")
 				if checkNameReq.Uuid != 0 {
 					query = query.Where("ttpos_material.uuid != ?", checkNameReq.Uuid)
 				}
@@ -196,7 +204,8 @@ func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.Che
 				var count int64
 				query := db.Model(&model.MaterialCategory{}).
 					Joins("JOIN ttpos_multi_language_name ON ttpos_material_category.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text)
+					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
+					Where("ttpos_multi_language_name.delete_time = 0")
 				if checkNameReq.Uuid != 0 {
 					query = query.Where("ttpos_material_category.uuid != ?", checkNameReq.Uuid)
 				}
@@ -213,7 +222,8 @@ func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.Che
 				var count int64
 				query := db.Model(&model.MaterialUnit{}).
 					Joins("JOIN ttpos_multi_language_name ON ttpos_material_unit.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text)
+					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
+					Where("ttpos_multi_language_name.delete_time = 0")
 				if checkNameReq.Uuid != 0 {
 					query = query.Where("ttpos_material_unit.uuid != ?", checkNameReq.Uuid)
 				}
