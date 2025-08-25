@@ -210,10 +210,10 @@ func (x *PosProfileListResp) GetProfileList() []*PosProfile {
 
 type CreatePaymentAccountReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CompanyAbbr   string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写, 必填"`                                         // 公司缩写, 必填
-	PaymentType   string                 `protobuf:"bytes,2,opt,name=payment_type,json=paymentType,proto3" json:"payment_type,omitempty" dc:"支付类型，必填 Cash/Balance/Wechat Pay/Alipay/Free Meal"` // 支付类型，必填 Cash/Balance/Wechat Pay/Alipay/Free Meal
-	Branch        string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty" dc:"分店名称,可选"`                                                                       // 分店名称,可选
-	PaymentSource string                 `protobuf:"bytes,4,opt,name=payment_source,json=paymentSource,proto3" json:"payment_source,omitempty" dc:"支付来源,可选 2= lianlianpay"`                     // 支付来源,可选 2= lianlianpay
+	CompanyAbbr   string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写, 必填"`                                                      // 公司缩写, 必填
+	PaymentType   string                 `protobuf:"bytes,2,opt,name=payment_type,json=paymentType,proto3" json:"payment_type,omitempty" dc:"支付类型，必填 Cash/Balance/Free Meal/Wechat Pay/Alipay/QR PromptPay"` // 支付类型，必填 Cash/Balance/Free Meal/Wechat Pay/Alipay/QR PromptPay
+	Branch        string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty" dc:"分店名称,可选"`                                                                                    // 分店名称,可选
+	PaymentSource string                 `protobuf:"bytes,4,opt,name=payment_source,json=paymentSource,proto3" json:"payment_source,omitempty" dc:"支付来源,可选 2= lianlianpay"`                                  // 支付来源,可选 2= lianlianpay
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1107,8 +1107,8 @@ func (x *PosInvoiceTax) GetDescription() string {
 // PosInvoicePayment POS发票付款
 type PosInvoicePayment struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ModeOfPayment string                 `protobuf:"bytes,1,opt,name=mode_of_payment,json=modeOfPayment,proto3" json:"mode_of_payment,omitempty" dc:"支付方式，必填 仅支持Cash/Balance/LianlianPay-WeChat Pay/LianlianPay-Alipay/LianlianPay-QR PromptPay"` // 支付方式，必填 仅支持Cash/Balance/LianlianPay-WeChat Pay/LianlianPay-Alipay/LianlianPay-QR PromptPay
-	Amount        float64                `protobuf:"fixed64,2,opt,name=amount,proto3" json:"amount,omitempty" dc:"金额，必填"`                                                                                                                         // 金额，必填
+	ModeOfPayment string                 `protobuf:"bytes,1,opt,name=mode_of_payment,json=modeOfPayment,proto3" json:"mode_of_payment,omitempty" dc:"支付方式，必填 仅支持  Cash/Balance/Free Meal/LianlianPay-WeChat Pay/LianlianPay-Alipay/LianlianPay-QR PromptPay， 使用lianlianpay时，请加上前缀"` // 支付方式，必填 仅支持  Cash/Balance/Free Meal/LianlianPay-WeChat Pay/LianlianPay-Alipay/LianlianPay-QR PromptPay， 使用lianlianpay时，请加上前缀
+	Amount        float64                `protobuf:"fixed64,2,opt,name=amount,proto3" json:"amount,omitempty" dc:"金额，必填"`                                                                                                                                                           // 金额，必填
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

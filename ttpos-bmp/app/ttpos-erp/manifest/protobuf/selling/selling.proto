@@ -30,7 +30,7 @@ message PosProfileListResp {
 
 message CreatePaymentAccountReq {
   string company_abbr = 1; // 公司缩写, 必填
-  string payment_type = 2; // 支付类型，必填 Cash/Balance/Wechat Pay/Alipay/Free Meal
+  string payment_type = 2; // 支付类型，必填 Cash/Balance/Free Meal/Wechat Pay/Alipay/QR PromptPay
   string branch = 3; // 分店名称,可选
   string payment_source = 4; // 支付来源,可选 2= lianlianpay
 }
@@ -126,7 +126,7 @@ message PosInvoiceTax {
 
 // PosInvoicePayment POS发票付款
 message PosInvoicePayment {
-  string mode_of_payment = 1; // 支付方式，必填 仅支持Cash/Balance/LianlianPay-WeChat Pay/LianlianPay-Alipay/LianlianPay-QR PromptPay
+  string mode_of_payment = 1; // 支付方式，必填 仅支持  Cash/Balance/Free Meal/LianlianPay-WeChat Pay/LianlianPay-Alipay/LianlianPay-QR PromptPay， 使用lianlianpay时，请加上前缀
   double amount = 2;          // 金额，必填
 }
 

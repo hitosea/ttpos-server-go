@@ -77,12 +77,12 @@ func (ItemGroup) EnumDescriptor() ([]byte, []int) {
 
 type GetItemListReq struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
-	ItemGroup      ItemGroup              `protobuf:"varint,1,opt,name=item_group,json=itemGroup,proto3,enum=item.ItemGroup" json:"item_group,omitempty" dc:"物品分组，可选  Products 商品/Raw Material 原材料"` // 物品分组，可选  Products 商品/Raw Material 原材料
-	ItemName       string                 `protobuf:"bytes,2,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"商品名称模糊查询，可选，如: %商品名称%"`                                         // 商品名称模糊查询，可选，如: %商品名称%
-	Branch         string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                                           // 分支名称，可选
-	CompanyAbbr    string                 `protobuf:"bytes,4,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                                              // 公司简称，可选
-	ItemCode       string                 `protobuf:"bytes,5,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，可选"`                                                       // 物品编码，可选
-	ItemCodePrefix string                 `protobuf:"bytes,6,opt,name=item_code_prefix,json=itemCodePrefix,proto3" json:"item_code_prefix,omitempty" dc:"物品编码前缀，可选"`                                 // 物品编码前缀，可选
+	ItemGroup      ItemGroup              `protobuf:"varint,1,opt,name=item_group,json=itemGroup,proto3,enum=item.ItemGroup" json:"item_group,omitempty" dc:"物品分组，可选  Products 商品/Raw Material 原材料/Package 套餐"` // 物品分组，可选  Products 商品/Raw Material 原材料/Package 套餐
+	ItemName       string                 `protobuf:"bytes,2,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"商品名称模糊查询，可选，如: %商品名称%"`                                                    // 商品名称模糊查询，可选，如: %商品名称%
+	Branch         string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                                                      // 分支名称，可选
+	CompanyAbbr    string                 `protobuf:"bytes,4,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                                                         // 公司简称，可选
+	ItemCode       string                 `protobuf:"bytes,5,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，可选"`                                                                  // 物品编码，可选
+	ItemCodePrefix string                 `protobuf:"bytes,6,opt,name=item_code_prefix,json=itemCodePrefix,proto3" json:"item_code_prefix,omitempty" dc:"物品编码前缀，可选"`                                            // 物品编码前缀，可选
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
