@@ -3,7 +3,9 @@
     <!--内容-->
     <div class="supplier-content">
       <div class="common-level-rail">
-        <el-button size="small" type="primary" @click="addClick" v-auth="'/supplier/pay/add'">{{ $t('添加') }}</el-button>
+        <el-button size="small" type="primary" @click="addClick" v-auth="'/supplier/pay/add'" :disabled="erp_is_open == 1 && erp_site_code == '2'">
+          {{ $t('添加') }}
+        </el-button>
       </div>
       <div class="table-wrap" v-if="payment.is_other == '1'">
         <el-table size="small" :data="tableData" border style="width: 100%" v-loading="loading">
@@ -52,7 +54,7 @@
                 link
                 size="small"
                 v-auth="'/supplier/pay/delete'"
-                :disabled="scope.row.status == 2"
+                :disabled="scope.row.status == 2 || erp_is_open == 1"
               >
                 {{ $t('删除') }}
               </el-button>
@@ -75,16 +77,18 @@
         </el-pagination>
       </div>
     </div>
-    <addEdit v-if="open" :title="title" :open="open" :editItem="editItem" @close="handleClose" :list="tableData"> </addEdit>
+    <addEdit v-if="open" :title="title" :open="open" :editItem="editItem" @close="handleClose" :list="tableData" :erp_is_open="erp_is_open" :erp_site_code="erp_site_code">
+    </addEdit>
   </div>
 </template>
 <script>
   import SettingApi from '@/api/setting.js';
   import addEdit from './addEdit.vue';
   import { useUserStore } from '@/store';
-  const { computedSupplier } = useUserStore();
+  const { computedSupplier, erp_is_open, erp_site_code } = useUserStore();
   const supplier = computedSupplier().supplier;
   const is_open_member = supplier.value?.is_open_member || 0;
+
   export default {
     components: { addEdit },
     data() {
@@ -111,6 +115,8 @@
         },
         editItem: '',
         is_open_member: is_open_member,
+        erp_is_open: erp_is_open,
+        erp_site_code: erp_site_code,
       };
     },
     created() {
