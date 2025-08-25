@@ -1138,12 +1138,14 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 			Items:             make([]*buying.PurchaseOrderItem, 0),
 		}
 		for _, item := range receiptOrder.Items {
-			erpReq.Items = append(erpReq.Items, &buying.PurchaseOrderItem{
-				ItemCode: item.MaterialCode,
-				ItemName: language.JsonToLocaleResponse(item.MaterialName).EN,
-				StockUom: language.JsonToLocaleResponse(item.UnitName).EN,
-				Qty:      item.Num,
-			})
+			if item.Num > 0 {
+				erpReq.Items = append(erpReq.Items, &buying.PurchaseOrderItem{
+					ItemCode: item.MaterialCode,
+					ItemName: language.JsonToLocaleResponse(item.MaterialName).EN,
+					StockUom: language.JsonToLocaleResponse(item.UnitName).EN,
+					Qty:      item.Num,
+				})
+			}
 		}
 		resp, err := erp.NewIErpSrv(s.dbm).SavePurchaseReceipt(ctx, &erpReq)
 		if err != nil {
