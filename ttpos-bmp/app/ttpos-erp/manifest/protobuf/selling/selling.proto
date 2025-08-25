@@ -100,6 +100,8 @@ message SavePosInvoiceReq {
   repeated PosInvoiceItem material_items = 11;             // 原材料项目列表 必填
   repeated PosInvoiceTax taxes = 12;              // 税费列表 必填
   repeated PosInvoicePayment payments = 13;       // 付款列表 必填
+  string amended_products_invoice_name = 14; // 反结账后，重新结账时填写原商品发票名称
+  string amended_material_invoice_name = 15; // 反结账后，重新结账时填写原材料发票名称
 }
 
 // SavePosInvoiceResp 保存POS发票响应消息
@@ -147,6 +149,17 @@ message ReturnPosInvoiceResp {
   string invoice_name = 1; // 商品发票名称
 }
 
+// CancelPosInvoiceReq 取消POS发票请求消息，反结账时调用
+message CancelPosInvoiceReq {
+  string products_invoice_name = 1;                         // 商品销售发票，必填
+  string material_invoice_name = 2;                         // 材料销售发票，必填
+}
+
+message CancelPosInvoiceResp {
+  string products_invoice_name = 1; // 商品发票名称
+  string material_invoice_name = 2; // 材料发票名称
+}
+
 
 // SellingService 服务定义
 service SellingService {
@@ -165,4 +178,7 @@ service SellingService {
 
   // 退款 Pos Invoice
   rpc ReturnPosInvoice (ReturnPosInvoiceReq) returns (erp.ResponseInfo);
+
+  // 取消 Pos Invoice
+  rpc CancelPosInvoice (CancelPosInvoiceReq) returns (erp.ResponseInfo);
 }

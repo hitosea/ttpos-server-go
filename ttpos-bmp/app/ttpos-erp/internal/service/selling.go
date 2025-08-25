@@ -95,7 +95,29 @@ type (
 		//   - *erp.POSOpeningEntry: POS开帐记录信息
 		//   - error: 错误信息
 		GetPosOpeningEntry(ctx context.Context, name string) (*erp.POSOpeningEntry, error)
+		// ReturnPosInvoice 退货POS发票
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 退货POS发票请求参数
+		//
+		// 返回：
+		//   - *selling.ReturnPosInvoiceResp: 退货POS发票响应参数
+		//   - error: 错误信息
+		//
+		// 功能：
+		//   - 退货指定名称的POS发票
 		ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosInvoiceReq) (*selling.ReturnPosInvoiceResp, error)
+		// CancelPosInvoice 取消POS发票
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - invoiceName: 发票名称
+		//
+		// 返回：
+		//   - error: 错误信息
+		//
+		// 功能：
+		//   - 取消指定名称的POS发票
+		CancelPosInvoice(ctx context.Context, invoiceName string) error
 	}
 )
 

@@ -689,10 +689,12 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
 
 	// 构建POS发票
 	posInvoice := s.buildPosInvoice(req, companyName, openingEntry.PosProfile)
-
+	//反结账后重新结账
+	if len(req.AmendedProductsInvoiceName) > 0 {
+		posInvoice.AmendedFrom = req.AmendedProductsInvoiceName
+	}
 	// 创建POS发票
 	// 特殊处理，使用开帐收银员创建发票
-
 	//创建商品销售记录
 	resp, err := service.Document().Create(erpnext.SetFakeUser(ctx, openingEntry.User), erp.DocTypePosInvoice, posInvoice)
 	if err != nil {
@@ -727,6 +729,11 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
 	}
 	posRmInvoice.Payments = posRmInvoicePayments
 	posRmInvoice.Taxes = nil
+	//反结账后重新结账
+	if len(req.AmendedMaterialInvoiceName) > 0 {
+		posRmInvoice.AmendedFrom = req.AmendedMaterialInvoiceName
+	}
+
 	//创建物品销售记录
 	resp, err = service.Document().Create(erpnext.SetFakeUser(ctx, openingEntry.User), erp.DocTypePosInvoice, posRmInvoice)
 	if err != nil {
@@ -874,6 +881,17 @@ func (s *sSelling) buildInvoicePayments(payments []*selling.PosInvoicePayment) [
 	return invoicePayments
 }
 
+// ReturnPosInvoice 退货POS发票
+// 参数：
+//   - ctx: 上下文对象
+//   - req: 退货POS发票请求参数
+//
+// 返回：
+//   - *selling.ReturnPosInvoiceResp: 退货POS发票响应参数
+//   - error: 错误信息
+//
+// 功能：
+//   - 退货指定名称的POS发票
 func (s *sSelling) ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosInvoiceReq) (*selling.ReturnPosInvoiceResp, error) {
 
 	// 获取开帐记录
@@ -952,3 +970,39 @@ func (s *sSelling) ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosI
 	}
 	return res, nil
 }
+
+// CancelPosInvoice 取消POS发票
+// 参数：
+//   - ctx: 上下文对象
+//   - invoiceName: 发票名称
+//
+// 返回：
+//   - error: 错误信息
+//
+// 功能：
+//   - 取消指定名称的POS发票
+func (*sSelling) CancelPosInvoice(ctx context.Context, invoiceName string) error {
+	_, err := service.Rpc().Execute(ctx, &erp.ErpReq{
+		Method: erp.ApiSaveCancel,
+	}, g.MapStrStr{
+		"doctype": erp.DocTypePosInvoice,
+		"name":    invoiceName,
+	})
+	if err != nil {
+		return gerror.Wrapf(err, "取消发票[%s]失败", invoiceName)
+	}
+	return nil
+}
+
+//func (*sSelling) AmendPosInvoice(ctx context.Context, invoiceName string) error {
+//	_, err := service.Rpc().Execute(ctx, &erp.ErpReq{
+//		Method: erp.ApiIsDocumentAmend,
+//	}, g.MapStrStr{
+//		"doctype": erp.DocTypePosInvoice,
+//		"name":    invoiceName,
+//	})
+//	if err != nil {
+//		return gerror.Wrapf(err, "取消发票[%s]失败", invoiceName)
+//	}
+//	return nil
+//}
