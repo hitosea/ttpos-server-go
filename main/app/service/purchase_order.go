@@ -865,6 +865,8 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderDetail(ctx context.Context, re
 		// 查询采购申请明细
 		itemInfo.PurchaseNum = item.PurchaseOrderItem.Num
 		itemInfo.ArrivalNum = item.Num
+		itemInfo.LocaleUnitName = language.JsonToLocaleResponse(item.UnitName)
+		itemInfo.LocaleBaseUnitName = language.JsonToLocaleResponse(item.BaseUnitName)
 		//
 		detailResp.Items = append(detailResp.Items, itemInfo)
 	}
