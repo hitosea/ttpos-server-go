@@ -93,6 +93,12 @@ type SaleOrderProduct struct {
 	H5OrderProductUuid uint64 `gorm:"column:h5_order_product_uuid;type:bigint(20) unsigned;default:0;comment:h5订单商品ID，用于关联h5订单商品，用于判断是否为h5订单商品;NOT NULL" json:"h5_order_product_uuid"`
 	H5OrderUuid        uint64 `gorm:"column:h5_order_uuid;type:bigint(20) unsigned;default:0;comment:扫码订单ID，用于关联扫码订单，用于判断是否为扫码订单商品;NOT NULL" json:"h5_order_uuid"`
 
+	// 套餐相关
+	PackageUuid             uint64 `gorm:"column:package_uuid;type:bigint(20);not null;default:0;comment:'套餐uuid'" json:"package_uuid"`                                            // 只有套餐子商品才会有这个字段
+	PackageGroupUuid        uint64 `gorm:"column:package_group_uuid;type:bigint(20);not null;default:0;comment:'套餐分组uuid';index:idx_package_group_uuid" json:"package_group_uuid"` // 只有套餐子商品才会有这个字段
+	ProductType             uint8  `gorm:"column:product_type;type:tinyint(1);not null;default:0;comment:'商品类型, 0-商品 1-套餐 2-套餐子商品'" json:"product_type"`
+	PackageSubProductParams string `gorm:"column:package_sub_product_params;type:text;comment:'套餐子商品参数'" json:"package_sub_product_params"`
+
 	// 送厨时间
 	SendKitchenTime int64 `gorm:"column:send_kitchen_time;type:int(10);not null;default:0;comment:'送厨时间'" json:"send_kitchen_time"`
 

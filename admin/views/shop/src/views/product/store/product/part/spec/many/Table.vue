@@ -53,7 +53,7 @@
           <el-table-column v-if="baseSale == '1'" :label="$t('采购单价')" minWidth="160">
             <template #default="scope">
               <el-form-item for="no_click" label="" style="margin-bottom: 0">
-                <numInput :min="0" :max="1000000" :precision="2" :placeholder="$t('请输入采购单价')" v-model="scope.row.purchase_price"></numInput>
+                <numInput :min="0" :max="100000000" :precision="2" :placeholder="$t('请输入采购单价')" v-model="scope.row.purchase_price"></numInput>
               </el-form-item>
             </template>
           </el-table-column>
@@ -150,7 +150,7 @@
                   },
                 ]"
               >
-                <numInput :min="0" :max="1000000" :precision="2" :placeholder="$t('请输入商品价格')" v-model="scope.row.product_price"></numInput>
+                <numInput :min="0" :max="100000000" :precision="2" :placeholder="$t('请输入商品价格')" v-model="scope.row.product_price"></numInput>
               </el-form-item>
             </template>
           </el-table-column>

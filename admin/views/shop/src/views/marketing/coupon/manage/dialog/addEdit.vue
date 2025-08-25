@@ -310,8 +310,8 @@
       form.count = 0;
       return;
     }
-    if (val > 9999999) {
-      form.count = 9999999;
+    if (val > 100000000) {
+      form.count = 100000000;
       return;
     }
     form.count = val;
