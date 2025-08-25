@@ -392,5 +392,6 @@ func RegisterPurchaseHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		privateApi.POST("/purchase/receipt/update", wrapper.UpdatePurchaseReceipt)
 		privateApi.GET("/purchase/receipt/list", wrapper.GetPurchaseReceiptList)
 		privateApi.GET("/purchase/receipt/detail", wrapper.GetPurchaseReceiptDetail)
+		privateApi.DELETE("/purchase/receipt/cancel", wrapper.CancelPurchaseReceipt)
 	}
 }

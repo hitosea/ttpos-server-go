@@ -1,149 +1,118 @@
 <template>
-  <el-tooltip :content="tipText" :placement="placement" :effect="tooltipTheme" :delay="delay" :disabled="!showTooltip || showTooltips" :max-width="tooltipMaxWidth" transfer>
-    <span>
-      <span ref="content" @mouseenter="handleTooltipIn" class="common-auto-tip" :class="textRight ? 'textRight' : ''" @click="onClick">
-        <template v-if="existSlot && getTexts(1)">
-          <div style="visibility: hidden; position: absolute"><slot /></div>
-          <div class="omitText">
-            <span class="text-front">{{ getTexts(2) }}</span>
-            <span class="text-after">{{ getTexts(3) }}</span>
-          </div>
-        </template>
-        <template v-else-if="existSlot"><slot /></template>
-        <template v-else>{{ content }}</template>
-      </span>
+  <el-tooltip 
+    :content="content" 
+    :placement="placement" 
+    :effect="tooltipTheme" 
+    :delay="delay" 
+    :disabled="!shouldShowTooltip" 
+    :max-width="tooltipMaxWidth" 
+    transfer
+  >
+    <span 
+      ref="contentRef" 
+      class="common-auto-tip" 
+      @click="onClick"
+    >
+      <slot>{{ content }}</slot>
     </span>
   </el-tooltip>
 </template>
 
-<script>
-  export default {
-    name: 'AutoTip',
-    props: {
-      content: {
-        type: [String, Number],
-        default: '',
-      },
-      placement: {
-        default: 'top',
-      },
-      tooltipTheme: {
-        default: 'dark',
-      },
-      tooltipMaxWidth: {
-        type: [String, Number],
-        default: 350,
-      },
-      delay: {
-        type: Number,
-        default: 100,
-      },
-      textRight: {
-        type: Boolean,
-        default: false,
-      },
-      showTooltips: false,
-      forcedShow: true,
-    },
+<script setup>
+import { ref, computed, nextTick, onMounted, watch } from 'vue';
 
-    data() {
-      return {
-        showTooltip: false, // 鼠标滑过overflow文本时，再检查是否需要显示
-        tooltipContent: '',
-      };
-    },
+// 定义props
+const props = defineProps({
+  content: {
+    type: [String, Number],
+    default: '',
+  },
+  placement: {
+    type: String,
+    default: 'top',
+  },
+  tooltipTheme: {
+    type: String,
+    default: 'dark',
+  },
+  tooltipMaxWidth: {
+    type: [String, Number],
+    default: 350,
+  },
+  delay: {
+    type: Number,
+    default: 100,
+  },
+  forcedShow: {
+    type: Boolean,
+    default: false,
+  },
+});
 
-    computed: {
-      tipText() {
-        const { content, tooltipContent } = this;
-        return content || tooltipContent || '';
-      },
-      existSlot() {
-        return !(typeof this.$slots.default === 'undefined' || this.$slots.default.length < 1);
-      },
-    },
+// 定义emits
+const emit = defineEmits(['on-click']);
 
-    methods: {
-      getTexts(type = 1) {
-        let text = this.$slots.default[0].text;
-        let finallyText = '';
-        let texts = '';
-        if (text) {
-          let finallyNum = 3;
-          if (text.length < 6) {
-            finallyNum = 2;
-          }
-          if (text.length > 12) {
-            finallyNum = 6;
-          }
-          texts = text.substring(0, text.length - finallyNum);
-          finallyText = text.substring(text.length - finallyNum);
-        }
-        if (type == 1) {
-          return text;
-        }
-        if (type == 2) {
-          return texts;
-        }
-        if (type == 3) {
-          return finallyText;
-        }
-      },
-      handleTooltipIn() {
-        const $content = this.$refs.content;
-        let range = document.createRange();
-        range.setStart($content, 0);
-        range.setEnd($content, $content.childNodes.length);
-        const rangeWidth = range.getBoundingClientRect().width;
-        this.showTooltip = this.forcedShow || Math.floor(rangeWidth) > Math.floor($content.offsetWidth);
-        if (this.showTooltip && this.existSlot) {
-          const tmpArray = this.$slots.default.map((e) => {
-            if (e.text) return e.text;
-            if (e.elm.innerText) return e.elm.innerText;
-            return '';
-          });
-          this.tooltipContent = tmpArray.join('');
-        }
-        range = null;
-      },
-      onClick(e) {
-        this.$emit('on-click', e);
-      },
-    },
-  };
+// 响应式数据
+const shouldShowTooltip = ref(false);
+const contentRef = ref(null);
+
+// 检测文本是否超出
+const checkTextOverflow = async () => {
+  if (!contentRef.value) return;
+  
+  await nextTick();
+  
+  try {
+    const element = contentRef.value;
+    const isOverflow = element.scrollWidth > element.offsetWidth;
+    
+    shouldShowTooltip.value = props.forcedShow || isOverflow;
+    
+    // 调试信息
+    console.log('文本溢出检测:', {
+      scrollWidth: element.scrollWidth,
+      offsetWidth: element.offsetWidth,
+      isOverflow,
+      shouldShow: shouldShowTooltip.value
+    });
+    
+  } catch (error) {
+    console.error('检测文本溢出时出错:', error);
+    shouldShowTooltip.value = true;
+  }
+};
+
+// 点击事件
+const onClick = (e) => {
+  emit('on-click', e);
+};
+
+// 组件挂载后初始化
+onMounted(() => {
+  // 延迟检查，确保DOM完全渲染
+  setTimeout(() => {
+    checkTextOverflow();
+  }, 100);
+});
+
+// 监听内容变化
+watch(() => props.content, () => {
+  nextTick(() => {
+    checkTextOverflow();
+  });
+});
 </script>
 
 <style lang="scss" scoped>
-  .el-tooltip__trigger {
-    display: block;
-  }
-  .common-auto-tip {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .textRight {
-    text-align: right;
-  }
-  .omitText {
-    width: 100%;
-    display: flex;
-    line-height: 1.5;
-    .text-front {
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-    }
-    .text-after {
-      white-space: nowrap;
-      text-overflow: initial;
-      // direction: rtl;
-    }
-  }
-</style>
-<style>
-  .el-popper.is-dark {
-    max-width: 460px;
-  }
+.common-auto-tip {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 310px; // 与你的CSS保持一致
+}
+
+:deep(.el-popper) {
+  max-width: 450px !important;
+}
 </style>

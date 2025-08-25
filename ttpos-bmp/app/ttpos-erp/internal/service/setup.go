@@ -14,17 +14,50 @@ import (
 type (
 	ISetup interface {
 		// CreateBranch 创建分店
-		// 参数：店铺名称和公司缩写编码
-		// 返回：ERP用户名和创建结果
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 初始化店铺请求参数
+		//
+		// 返回：
+		//   - branchName: 分店名称
+		//   - err: 错误信息
 		CreateBranch(ctx context.Context, req *setup.InitShopReq) (branchName string, err error)
-		// CreateUser 创建网站用户
-		CreateUser(ctx context.Context, req *setup2.CreateUserInp) (err error)
-		// CreatePosProfile CreatePosFile 创建 默认 pos profile  配置默认
-		CreatePosProfile(ctx context.Context, req *setup.CreateDefaultPosProfileReq) (posFileId string, err error)
+		// CreateUser 创建网站用户，门店收银账户
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 创建用户请求参数
+		//
+		// 返回：
+		//   - err: 错误信息
+		CreateUser(ctx context.Context, req *setup2.CreateUserInp) error
+		// CreateDefaultPosProfile 创建默认的POS配置文件
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 创建默认POS配置文件请求参数
+		//
+		// 返回：
+		//   - posFileId: POS配置文件名称
+		//   - err: 错误信息
+		CreateDefaultPosProfile(ctx context.Context, req *setup.CreateDefaultPosProfileReq) (posFileId string, err error)
 		// InitShop 初始化店铺
-		// 参数：ctx 上下文，req 包含 shop_name、company_abbr、shop_uuid
-		// 返回：是否成功，错误信息
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 初始化店铺请求参数
+		//
+		// 返回：
+		//   - resp: 初始化店铺响应结果
+		//   - err: 错误信息
 		InitShop(ctx context.Context, req *setup.InitShopReq) (resp *setup.InitShopResp, err error)
+		// GetUserApiKeySecret 获取用户的API密钥和密钥
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - userEmail: 用户邮箱
+		//
+		// 返回：
+		//   - apiKey: API密钥
+		//   - apiSecret: API密钥
+		//   - err: 错误信息
+		GetUserApiKeySecret(ctx context.Context, userEmail string) (apiKey string, apiSecret string, err error)
 	}
 )
 

@@ -27,11 +27,11 @@
       :rules="[{ required: true, message: $t('请填写商品价格') }]"
       prop="model.sku[0].product_price"
     >
-      <numInput :min="0" :max="1000000" v-model="form.model.sku[0].product_price" :placeholder="$t('请填写商品价格')" class="max-w460"></numInput>
+      <numInput :min="0" :max="100000000" v-model="form.model.sku[0].product_price" :placeholder="$t('请填写商品价格')" class="max-w460"></numInput>
     </el-form-item>
 
     <el-form-item for="no_click" v-if="baseSale == '1'" :label="$t('采购单价：')" width="80">
-      <numInput :min="0" :max="1000000" v-model="form.model.sku[0].purchase_price" :placeholder="$t('请填写采购单价')" class="max-w460"></numInput>
+      <numInput :min="0" :max="100000000" v-model="form.model.sku[0].purchase_price" :placeholder="$t('请填写采购单价')" class="max-w460"></numInput>
     </el-form-item>
 
     <el-form-item for="no_click" :label="$t('库存数量：')" v-if="form.model.type == 10" :rules="[{ required: true, message: $t('请填写库存数量') }]" prop="model.sku[0].stock_num">
@@ -185,13 +185,6 @@
         if (form.single_select_list.length == 0 && form.model.type == 10) {
           nextTick(() => {
             form.model.sku[0].stock_num = Number(String(form.model.sku[0].stock_num).replace(/(\.\d{0,0})\d*/, '$1'));
-          });
-        }
-
-        // 材料库存4位小数
-        if (form.single_select_list.length == 0 && form.model.type == 20) {
-          nextTick(() => {
-            form.model.sku[0].material_stock = Number(String(form.model.sku[0].material_stock).replace(/(\.\d{1,4})\d*/, '$1'));
           });
         }
 

@@ -6717,7 +6717,7 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 						return nil, errors.WithMessage(err)
 					}
 					saleBill := shopCartInfo.SaleBill
-					s.CalcAndSaveSaleBill(ctx, db, saleBill, model.WithLastestPrice())
+					s.CalcAndSaveSaleBill(ctx, db, saleBill, model.WithLatestPrice())
 				}
 			}
 		}
@@ -7391,7 +7391,6 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 				}
 			}
 		}
-
 		// 更新旧的子商品的数量
 		if saleOrderProduct.IsPackageProduct() {
 			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
@@ -7458,7 +7457,8 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		if saleOrderProduct.IsPackageProduct() {
 			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
 			for _, subProduct := range subProducts {
-				num := utils.IfFloat64(subProduct.IsDelete(), 0, subProduct.Num)
+				unitNum := decimal.NewFromFloat(subProduct.UnitNum)
+				num := decimal.NewFromFloat(keepNum).Mul(unitNum).Round(3).InexactFloat64()
 				if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereSaleOrderProductUuid(subProduct.Uuid)},
 					map[string]any{"num": num}); err != nil {
 					return errors.WithMessage(err)
@@ -11446,7 +11446,7 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 				return nil, errors.WithMessage(err)
 			}
 			saleBill := shopCartInfo.SaleBill
-			s.CalcAndSaveSaleBill(ctx, db, saleBill, model.WithLastestPrice())
+			s.CalcAndSaveSaleBill(ctx, db, saleBill, model.WithLatestPrice())
 		}
 		return res, nil
 	}
@@ -11469,7 +11469,7 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 				return nil, errors.WithMessage(err)
 			}
 			saleBill := shopCartInfo.SaleBill
-			s.CalcAndSaveSaleBill(ctx, db, saleBill, model.WithLastestPrice(), model.WithSaleBillSetting(newSetting))
+			s.CalcAndSaveSaleBill(ctx, db, saleBill, model.WithLatestPrice(), model.WithSaleBillSetting(newSetting))
 		}
 		return res, nil
 	}

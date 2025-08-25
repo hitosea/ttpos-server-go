@@ -149,7 +149,7 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 	// 初始化处理器
-	productSrv := service.NewProductSrv(dbm, service.NewLocaleSrv(), settingSrv)
+	productSrv := service.NewProductSrv(dbm, service.NewLocaleSrv(), settingSrv, cache)
 	wrapper := &ProductHandler{
 		productSrv: productSrv,
 	}

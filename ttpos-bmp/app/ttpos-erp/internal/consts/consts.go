@@ -24,3 +24,14 @@ const (
 	ItemCodePrefixProduct     = "SP"  //商品前缀
 	ItemCodePrefixRawMaterial = "WPR" //原材料前缀
 )
+
+// CustomerName 客户名称
+const (
+	DefaultCustomerName = "Default" // 默认客户
+	MemberCustomerName  = "Member"  // 会员
+)
+
+const (
+	ContextFakeUser = "ctx_fake_user"
+	ContextSiteCode = "erp_site_code"
+)

@@ -36,6 +36,14 @@ class ProductPackageGroup extends BaseModel
     }
 
     /**
+     * 关联套餐
+     */
+    public function product()
+    {
+        return $this->belongsTo(Product::class, 'product_package_uuid', 'uuid');
+    }
+
+    /**
      * 添加套餐商品组
      */
     public static function addPackageGroup($data, $product)

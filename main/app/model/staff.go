@@ -65,7 +65,8 @@ type StaffShiftLog struct {
 	ShiftStartTime    int64   `gorm:"column:shift_start_time;type:int(10);default:0;comment:当班开始时间;NOT NULL" json:"shift_start_time"`
 	ShiftEndTime      int64   `gorm:"column:shift_end_time;type:int(10);default:0;comment:当班结束时间;NOT NULL" json:"shift_end_time"`
 
-	Staff *Staff `gorm:"foreignKey:StaffUuid;references:Uuid"`
+	ErpnextOpenPosEntryName string `gorm:"column:erpnext_open_pos_entry_name;type:varchar(255);comment:erpnext开账名称" json:"erpnext_open_pos_entry_name"`
+	Staff                   *Staff `gorm:"foreignKey:StaffUuid;references:Uuid"`
 }
 
 // StaffShiftSnapshot 员工交班快照表

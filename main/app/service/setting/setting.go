@@ -1580,7 +1580,7 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 
 	err = settingRepo.Updates(constant.SettingStore, value)
 	if err != nil {
-		return errors.WithMessage(err)
+		return errors.WithMessage(errors.New("保存失败"), err.Error())
 	}
 
 	// 保存到saas.company_setting\saas.company\商家company_setting\商家company表
@@ -1608,14 +1608,10 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 	})
 
 	// 保存白底黑字图片
-	whiteBackgroundWithBlackTextLogoPath, err := utils.GetWhiteBackgroundWithBlackTextLogoPath(companyUuid, storeSettingReq.LogoUrl, "public/uploads")
-	if err != nil {
-		return errors.WithMessage(err)
-	}
-
+	whiteBackgroundWithBlackTextLogoPath := utils.GetWhiteBackgroundWithBlackTextLogoPath(companyUuid, storeSettingReq.LogoUrl, "public/uploads")
 	err = utils.WhiteBackgroundWithBlackText("http://nginx/"+storeSettingReq.LogoUrl, whiteBackgroundWithBlackTextLogoPath)
 	if err != nil {
-		return errors.WithMessage(err)
+		return errors.WithMessage(errors.New("生成打印LOGO失败"), err.Error())
 	}
 
 	// ##### 处理 cashier tablet h5 kitchen assistant printer 各端的语言设置 #####

@@ -109,6 +109,9 @@ func (r *productBomRepoImpl) GetFlavorProductBomByUuid(uuid uint64) (*model.Prod
 			WithPreload{
 				Query: "ProductPackage.MultiLanguageName",
 			},
+			WithPreload{
+				Query: "ProductPackage.ProductUnit",
+			},
 		),
 	)
 	if err != nil {

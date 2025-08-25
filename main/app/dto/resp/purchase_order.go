@@ -30,15 +30,17 @@ type PurchaseOrderDetailResp struct {
 
 // PurchaseOrderItemInfo 采购订单商品明细信息
 type PurchaseOrderItemInfo struct {
-	Uuid               uint64             `json:"uuid"`                 // 明细ID
-	MaterialUuid       uint64             `json:"material_uuid"`        // 物品ID
-	MaterialCode       string             `json:"material_code"`        // 物品编码
-	LocaleName         dto.LocaleResponse `json:"locale_name"`          // 物品名称
-	Num                float64            `json:"num"`                  // 申请数量
-	ArrivalNum         float64            `json:"arrival_num"`          // 到货数量
-	UnitName           string             `json:"unit_name"`            // 采购单位名称
-	UnitConversionRate float64            `json:"unit_conversion_rate"` // 基准单位转换率
-	BaseUnitName       string             `json:"base_unit_name"`       // 基准单位名称
+	Uuid               uint64             `json:"uuid"`                  // 明细ID
+	MaterialUuid       uint64             `json:"material_uuid"`         // 物品ID
+	MaterialCode       string             `json:"material_code"`         // 物品编码
+	LocaleName         dto.LocaleResponse `json:"locale_name"`           // 物品名称
+	Num                float64            `json:"num"`                   // 申请数量
+	ArrivalNum         float64            `json:"arrival_num"`           // 到货数量
+	UnitName           string             `json:"unit_name"`             // 采购单位名称
+	LocaleUnitName     dto.LocaleResponse `json:"locale_unit_name"`      // 采购单位名称
+	UnitConversionRate float64            `json:"unit_conversion_rate"`  // 基准单位转换率
+	BaseUnitName       string             `json:"base_unit_name"`        // 基准单位名称
+	LocaleBaseUnitName dto.LocaleResponse `json:"locale_base_unit_name"` // 基准单位名称
 }
 
 // PurchaseOrderLogInfo 采购订单操作日志信息
@@ -122,8 +124,8 @@ type SummaryStatItem struct {
 
 // PurchaseReceiptOrderCreateResp 创建收货单响应
 type PurchaseReceiptOrderCreateResp struct {
-	Uuid      uint64 `json:"uuid"`       // 收货单ID
-	ReceiptNo string `json:"receipt_no"` // 收货单号
+	Uuid    uint64 `json:"uuid"`     // 收货单ID
+	OrderNo string `json:"order_no"` // 收货单号
 }
 
 // PurchaseReceiptOrderListResp 收货单列表响应
@@ -135,22 +137,31 @@ type PurchaseReceiptOrderListResp struct {
 // PurchaseReceiptOrderInfo 收货单信息
 type PurchaseReceiptOrderInfo struct {
 	Uuid              uint64 `json:"uuid"`                // 收货单ID
-	Status            int    `json:"status"`              // 状态
+	Status            int    `json:"status"`              // 状态 0-待收货 1-已收货 2-已取消
 	OrderNo           string `json:"order_no"`            // 订单编号
+	ErpOrderNo        string `json:"erp_order_no"`        // ERP收货单号
+	PurchaseOrderNo   string `json:"purchase_order_no"`   // 采购单号
+	PurchaseOrderUuid uint64 `json:"purchase_order_uuid"` // 采购单ID
 	Num               int    `json:"num"`                 // 物品数量
 	ExpectArrivalTime int    `json:"expect_arrival_time"` // 期望到货日期
 	ReceiveTime       int    `json:"receive_time"`        // 收货日期
+	CancelTime        int    `json:"cancel_time"`         // 取消时间
+	CreateTime        int    `json:"create_time"`         // 创建时间
 }
 
 // PurchaseReceiptItemInfo 收货明细信息
 type PurchaseReceiptItemInfo struct {
-	Uuid               uint64  `json:"uuid"`                 // 明细ID
-	MaterialCode       string  `json:"material_code"`        // 物品编码
-	MaterialName       string  `json:"material_name"`        // 物品名称
-	Num                float64 `json:"num"`                  // 数量
-	UnitName           string  `json:"unit_name"`            // 采购单位名称
-	UnitConversionRate float64 `json:"unit_conversion_rate"` // 基准单位转换率
-	BaseUnitName       string  `json:"base_unit_name"`       // 基准单位名称
+	Uuid                  uint64             `json:"uuid"`                     // 明细ID
+	PurchaseOrderItemUuid uint64             `json:"purchase_order_item_uuid"` // 采购订单明细ID
+	MaterialCode          string             `json:"material_code"`            // 物品编码
+	MaterialUuid          uint64             `json:"material_uuid"`            // 物品ID
+	LocaleName            dto.LocaleResponse `json:"locale_name"`              // 物品名称
+	MaterialName          string             `json:"material_name"`            // 物品名称
+	PurchaseNum           float64            `json:"purchase_num"`             // 采购数量
+	ArrivalNum            float64            `json:"arrival_num"`              // 到货数量
+	UnitName              string             `json:"unit_name"`                // 采购单位名称
+	UnitConversionRate    float64            `json:"unit_conversion_rate"`     // 基准单位转换率
+	BaseUnitName          string             `json:"base_unit_name"`           // 基准单位名称
 }
 
 // PurchaseReceiptOrderDetailResp 收货单详情响应

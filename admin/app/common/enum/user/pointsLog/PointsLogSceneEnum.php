@@ -45,6 +45,9 @@ class PointsLogSceneEnum extends Enum
     // 营销活动赠送
     const MARKETING_ACTIVITY = 130;
 
+    // 后台发卡赠送
+    const ADMIN_CARD_GIVE = 140;
+
     /**
      * 获取订单类型值
      */
@@ -105,6 +108,11 @@ class PointsLogSceneEnum extends Enum
                 'name' => __('营销活动'),
                 'value' => self::MARKETING_ACTIVITY,
                 'describe' => __('邀请消费有礼'),
+            ],
+            self::ADMIN_CARD_GIVE => [
+                'name' => __('添加会员发卡'),
+                'value' => self::ADMIN_CARD_GIVE,
+                'describe' => '后台管理员 [%s] 操作',
             ],
         ];
     }

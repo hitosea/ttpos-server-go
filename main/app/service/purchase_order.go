@@ -139,8 +139,16 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(ctx context.Context, req req.P
 		itemInfo := resp.PurchaseOrderItemInfo{}
 		copier.Copy(&itemInfo, &item)
 		multiLanguageName := model.MultiLanguageName{}
+		//
 		multiLanguageName.InitByLocaleResponseJson(item.MaterialName)
 		itemInfo.LocaleName = multiLanguageName.GetNames()
+		//
+		multiLanguageName.InitByLocaleResponseJson(item.UnitName)
+		itemInfo.LocaleUnitName = multiLanguageName.GetNames()
+		//
+		multiLanguageName.InitByLocaleResponseJson(item.BaseUnitName)
+		itemInfo.LocaleBaseUnitName = multiLanguageName.GetNames()
+		//
 		detailResp.Items = append(detailResp.Items, itemInfo)
 	}
 
@@ -427,6 +435,7 @@ func (s *purchaseOrderSrv) DeletePurchaseOrder(ctx context.Context, req req.Purc
 func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.PurchaseOrderSubmitReq) error {
 	return s.dbm.GetDB(ctx.GetDbId()).Transaction(func(tx *gorm.DB) error {
 		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
+		purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(tx)
 
 		// 查询采购申请
 		purchaseOrder, err := purchaseOrderRepo.GetByUuid(req.Uuid)
@@ -446,6 +455,12 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 		err = purchaseOrderRepo.Update(purchaseOrder)
 		if err != nil {
 			return errors.WithMessage(err, "更新采购申请状态失败")
+		}
+
+		// 删除物品为0的数据
+		err = purchaseOrderItemRepo.DeleteByPurchaseOrderUuidAndNumIsZero(req.Uuid)
+		if err != nil {
+			return errors.WithMessage(err, "删除采购申请明细失败")
 		}
 
 		// 记录操作日志
@@ -510,7 +525,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 		}
 
 		// 调用erp接口
-		if ctx.GetCompany().IsOpenErp() {
+		if ctx.GetCompany().IsOpenErp() && newStatus == constant.PurchaseOrderStatusApproved {
 			stockItems := make([]*stock.MaterialRequestItem, 0)
 			for _, item := range purchaseOrder.Items {
 				stockItems = append(stockItems, &stock.MaterialRequestItem{
@@ -576,7 +591,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 			PurchaseOrderNo:   purchaseOrder.OrderNo,
 			Num:               float64(len(req.Items)),
 			ExpectArrivalTime: purchaseOrder.ExpectArrivalTime,
-			ReceiveTime:       req.ReceiptTime,
+			ReceiveTime:       req.ReceiveTime,
 		}
 
 		err = receiptOrderRepo.Create(receiptOrder)
@@ -588,7 +603,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 		var receiptItems []model.PurchaseReceiptOrderItem
 		for _, itemReq := range req.Items {
 			// 查询采购申请明细
-			orderItem, err := purchaseOrderItemRepo.GetByUuid(itemReq.Uuid)
+			orderItem, err := purchaseOrderItemRepo.GetByUuid(itemReq.PurchaseOrderItemUuid)
 			if err != nil {
 				return errors.WithMessage(err, "查询采购申请明细失败")
 			}
@@ -602,7 +617,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 			// 创建收货明细
 			receiptItems = append(receiptItems, model.PurchaseReceiptOrderItem{
 				ReceiptOrderUuid:      receiptOrder.Uuid,
-				PurchaseOrderItemUuid: itemReq.Uuid,
+				PurchaseOrderItemUuid: orderItem.Uuid,
 				MaterialCode:          orderItem.MaterialCode,
 				MaterialName:          orderItem.MaterialName,
 				MaterialUuid:          orderItem.MaterialUuid,
@@ -647,6 +662,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 		}
 
 		result.Uuid = receiptOrder.Uuid
+		result.OrderNo = receiptOrder.OrderNo
 
 		return nil
 	})
@@ -708,7 +724,7 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 			// 创建收货明细
 			receiptItems = append(receiptItems, model.PurchaseReceiptOrderItem{
 				ReceiptOrderUuid:      receiptOrder.Uuid,
-				PurchaseOrderItemUuid: itemReq.Uuid,
+				PurchaseOrderItemUuid: purchaseOrderItem.Uuid,
 				MaterialCode:          purchaseOrderItem.MaterialCode,
 				MaterialName:          purchaseOrderItem.MaterialName,
 				MaterialUuid:          purchaseOrderItem.MaterialUuid,
@@ -744,6 +760,7 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 
 		// 更新收货单状态
 		receiptOrder.Status = utils.IfInt(req.IsConfirm, constant.ReceiptOrderStatusReceived, constant.ReceiptOrderStatusPending)
+		receiptOrder.ReceiveTime = req.ReceiveTime
 		err = receiptOrderRepo.Update(receiptOrder)
 		if err != nil {
 			return errors.WithMessage(err, "更新收货单状态失败")
@@ -838,12 +855,20 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderDetail(ctx context.Context, re
 	}
 
 	// 转换收货明细数据
+	detailResp.Items = make([]resp.PurchaseReceiptItemInfo, 0)
 	for _, item := range receipt.Items {
 		itemInfo := resp.PurchaseReceiptItemInfo{}
 		err = copier.Copy(&itemInfo, &item)
 		if err != nil {
 			return resp.PurchaseReceiptOrderDetailResp{}, errors.WithMessage(err, "数据转换失败")
 		}
+		multiLanguageName := model.MultiLanguageName{}
+		multiLanguageName.InitByLocaleResponseJson(item.MaterialName)
+		itemInfo.LocaleName = multiLanguageName.GetNames()
+		// 查询采购申请明细
+		itemInfo.PurchaseNum = item.PurchaseOrderItem.Num
+		itemInfo.ArrivalNum = item.Num
+		//
 		detailResp.Items = append(detailResp.Items, itemInfo)
 	}
 
@@ -868,6 +893,7 @@ func (s *purchaseOrderSrv) CancelPurchaseReceiptOrder(ctx context.Context, req r
 
 	// 取消收货单
 	receiptOrder.Status = constant.ReceiptOrderStatusRejected
+	receiptOrder.CancelTime = time.Now().Unix()
 	err = receiptOrderRepo.Update(receiptOrder)
 	if err != nil {
 		return errors.WithMessage(err, "取消收货单失败")

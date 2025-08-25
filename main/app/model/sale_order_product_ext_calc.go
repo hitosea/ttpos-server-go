@@ -37,8 +37,8 @@ func WithCanceled() func(option *CalcOption) {
 	}
 }
 
-// WithLastestPrice 用最新的价格信息计算订单金额
-func WithLastestPrice() func(option *CalcOption) {
+// WithLatestPrice 用最新的价格信息计算订单金额
+func WithLatestPrice() func(option *CalcOption) {
 	return func(option *CalcOption) {
 		option.IsLatestPrice = true
 	}

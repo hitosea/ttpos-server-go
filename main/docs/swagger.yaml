@@ -703,17 +703,33 @@ definitions:
       cost_unit_name:
         description: 成本单位名称
         type: string
+      cost_unit_uuid:
+        description: 成本单位UUID
+        type: integer
+      erp_code:
+        description: erp编码
+        type: string
       image:
         description: 图片
         type: string
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物品名称
       name:
         description: 物品名称
         type: string
+      num:
+        description: 库存数量
+        type: number
       purchase_unit_name:
         description: 采购单位名称
         type: string
+      purchase_unit_uuid:
+        description: 采购单位UUID
+        type: integer
       status:
-        description: 状态 1-启用 2-停用
+        description: 状态 1-启用 0-停用
         type: integer
       unit_list:
         description: 单位列表
@@ -723,12 +739,19 @@ definitions:
       unit_name:
         description: 基准单位名称
         type: string
+      unit_uuid:
+        description: 基准单位UUID
+        type: integer
       uuid:
         description: 物品UUID
         type: integer
     type: object
   material_resp.MaterialCategory:
     properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 分类名称
       name:
         description: 分类名称
         type: string
@@ -802,17 +825,12 @@ definitions:
         description: 材料UUID
         type: integer
     type: object
-  material_resp.MaterialListResp:
+  material_resp.MaterialListWithPaginationResp:
     properties:
       list:
         items:
           $ref: '#/definitions/material_resp.Material'
         type: array
-    type: object
-  material_resp.MaterialListWithPaginationResp:
-    properties:
-      list:
-        $ref: '#/definitions/material_resp.MaterialListResp'
       meta:
         $ref: '#/definitions/dto.PageResponse'
     type: object
@@ -821,6 +839,10 @@ definitions:
       conversion_rate:
         description: 转换率
         type: number
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 单位名称
       name:
         description: 单位名称
         type: string
@@ -837,6 +859,10 @@ definitions:
     type: object
   material_resp.ProductBomCardDetailResp:
     properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 成本卡名称
       materials:
         description: 材料列表
         items:
@@ -2331,6 +2357,9 @@ definitions:
       min_price:
         description: 最低价格
         type: number
+      num_type:
+        description: 商品数量计算方法 0-整数 1-小数
+        type: integer
       product_type:
         description: 商品类型 0-商品 1-套餐
         type: integer
@@ -3190,7 +3219,6 @@ definitions:
         minimum: 0
         type: number
     required:
-    - barcode_value
     - category_uuid
     - cost_unit_uuid
     - init_stock
@@ -3272,12 +3300,12 @@ definitions:
         description: 转换率
         minimum: 0
         type: number
-      unit_uuid:
+      uuid:
         description: 单位UUID
         type: integer
     required:
     - conversion_rate
-    - unit_uuid
+    - uuid
     type: object
   req.MemberOrderSendAuthCodeReq:
     properties:
@@ -4084,7 +4112,6 @@ definitions:
         minimum: 0
         type: number
     required:
-    - barcode_value
     - category_uuid
     - cost_unit_uuid
     - init_stock
@@ -4604,7 +4631,7 @@ definitions:
         type: integer
       num:
         description: 商品数量
-        type: integer
+        type: number
       sort:
         description: 商品排序
         type: integer
@@ -4906,7 +4933,7 @@ definitions:
         type: boolean
       num:
         description: 商品数量
-        type: integer
+        type: number
       sort:
         description: 商品排序
         type: integer
@@ -5205,11 +5232,9 @@ definitions:
         type: integer
       num:
         description: 数量
-        maximum: 99999
         type: number
     required:
     - material_uuid
-    - num
     type: object
   req.PurchaseOrderItemUpdateReq:
     properties:
@@ -5219,11 +5244,9 @@ definitions:
         type: integer
       num:
         description: 数量
-        maximum: 99999
         type: number
     required:
     - material_uuid
-    - num
     type: object
   req.PurchaseOrderListReq:
     properties:
@@ -5285,9 +5308,6 @@ definitions:
     properties:
       is_confirm:
         description: 是否确认收货
-        enum:
-        - true
-        - false
         type: boolean
       items:
         description: 收货明细
@@ -5300,29 +5320,28 @@ definitions:
         description: 采购订单ID
         minimum: 1
         type: integer
-      receipt_time:
+      receive_time:
         description: 收货时间(时间戳)
         minimum: 0
         type: integer
     required:
     - items
     - purchase_order_uuid
-    - receipt_time
+    - receive_time
     type: object
   req.PurchaseReceiptItemCreateReq:
     properties:
-      num:
-        description: 实收数量
-        maximum: 99999
-        minimum: 0
+      purchase_order_item_uuid:
+        description: 采购订单明细ID
+        type: integer
+      this_arrival_num:
+        description: 本次收货数量
         type: number
       uuid:
-        description: 商品明细ID
-        minimum: 1
+        description: 收货明细ID
         type: integer
     required:
-    - num
-    - uuid
+    - purchase_order_item_uuid
     type: object
   req.PurchaseReceiptOrderCancelReq:
     properties:
@@ -5337,9 +5356,6 @@ definitions:
     properties:
       is_confirm:
         description: 是否确认收货
-        enum:
-        - true
-        - false
         type: boolean
       items:
         description: 收货明细
@@ -5348,7 +5364,7 @@ definitions:
         maxItems: 200
         minItems: 1
         type: array
-      receipt_time:
+      receive_time:
         description: 收货时间(时间戳)
         minimum: 0
         type: integer
@@ -5358,7 +5374,7 @@ definitions:
         type: integer
     required:
     - items
-    - receipt_time
+    - receive_time
     - uuid
     type: object
   req.RechargeOrderAddPaymentMethodReq:
@@ -9543,12 +9559,24 @@ definitions:
       base_unit_name:
         description: 基准单位名称
         type: string
+      locale_base_unit_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 基准单位名称
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物品名称
+      locale_unit_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 采购单位名称
       material_code:
         description: 物品编码
         type: string
-      material_name:
-        description: 物品名称
-        type: string
+      material_uuid:
+        description: 物品ID
+        type: integer
       num:
         description: 申请数量
         type: number
@@ -9585,18 +9613,31 @@ definitions:
     type: object
   resp.PurchaseReceiptItemInfo:
     properties:
+      arrival_num:
+        description: 到货数量
+        type: number
       base_unit_name:
         description: 基准单位名称
         type: string
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物品名称
       material_code:
         description: 物品编码
         type: string
       material_name:
         description: 物品名称
         type: string
-      num:
-        description: 数量
+      material_uuid:
+        description: 物品ID
+        type: integer
+      purchase_num:
+        description: 采购数量
         type: number
+      purchase_order_item_uuid:
+        description: 采购订单明细ID
+        type: integer
       unit_conversion_rate:
         description: 基准单位转换率
         type: number
@@ -9609,6 +9650,15 @@ definitions:
     type: object
   resp.PurchaseReceiptOrderDetailResp:
     properties:
+      cancel_time:
+        description: 取消时间
+        type: integer
+      create_time:
+        description: 创建时间
+        type: integer
+      erp_order_no:
+        description: ERP收货单号
+        type: string
       expect_arrival_time:
         description: 期望到货日期
         type: integer
@@ -9623,11 +9673,17 @@ definitions:
       order_no:
         description: 订单编号
         type: string
+      purchase_order_no:
+        description: 采购单号
+        type: string
+      purchase_order_uuid:
+        description: 采购单ID
+        type: integer
       receive_time:
         description: 收货日期
         type: integer
       status:
-        description: 状态
+        description: 状态 0-待收货 1-已收货 2-已取消
         type: integer
       uuid:
         description: 收货单ID
@@ -9635,6 +9691,15 @@ definitions:
     type: object
   resp.PurchaseReceiptOrderInfo:
     properties:
+      cancel_time:
+        description: 取消时间
+        type: integer
+      create_time:
+        description: 创建时间
+        type: integer
+      erp_order_no:
+        description: ERP收货单号
+        type: string
       expect_arrival_time:
         description: 期望到货日期
         type: integer
@@ -9644,11 +9709,17 @@ definitions:
       order_no:
         description: 订单编号
         type: string
+      purchase_order_no:
+        description: 采购单号
+        type: string
+      purchase_order_uuid:
+        description: 采购单ID
+        type: integer
       receive_time:
         description: 收货日期
         type: integer
       status:
-        description: 状态
+        description: 状态 0-待收货 1-已收货 2-已取消
         type: integer
       uuid:
         description: 收货单ID
@@ -12006,7 +12077,7 @@ paths:
       parameters:
       - description: '是否是自助餐: -1=全都、0=否、1=是'
         in: query
-        name: isBuffet
+        name: is_buffet
         type: integer
       - description: 页码
         in: query
@@ -12160,7 +12231,7 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -12404,19 +12475,19 @@ paths:
       parameters:
       - description: 商品类型 0-商品 1-套餐
         in: query
-        name: productType
+        name: product_type
         type: integer
       - description: 销售账单ID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       - description: 销售订单商品ID
         in: query
-        name: saleOrderProductUuid
+        name: sale_order_product_uuid
         type: integer
       - description: 销售订单ID
         in: query
-        name: saleOrderUuid
+        name: sale_order_uuid
         type: integer
       produces:
       - application/json
@@ -13677,11 +13748,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: deskUuid
+        name: desk_uuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -14301,7 +14372,7 @@ paths:
       parameters:
       - description: '是否是自助餐: -1=全都、0=否、1=是'
         in: query
-        name: isBuffet
+        name: is_buffet
         type: integer
       - description: 页码
         in: query
@@ -14452,7 +14523,7 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -14703,19 +14774,19 @@ paths:
       parameters:
       - description: 商品类型 0-商品 1-套餐
         in: query
-        name: productType
+        name: product_type
         type: integer
       - description: 销售账单ID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       - description: 销售订单商品ID
         in: query
-        name: saleOrderProductUuid
+        name: sale_order_product_uuid
         type: integer
       - description: 销售订单ID
         in: query
-        name: saleOrderUuid
+        name: sale_order_uuid
         type: integer
       produces:
       - application/json
@@ -16134,19 +16205,19 @@ paths:
       parameters:
       - description: 商品类型 0-商品 1-套餐
         in: query
-        name: productType
+        name: product_type
         type: integer
       - description: 销售账单ID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       - description: 销售订单商品ID
         in: query
-        name: saleOrderProductUuid
+        name: sale_order_product_uuid
         type: integer
       - description: 销售订单ID
         in: query
-        name: saleOrderUuid
+        name: sale_order_uuid
         type: integer
       produces:
       - application/json
@@ -17535,15 +17606,15 @@ paths:
       parameters:
       - description: 支付金额, 必填
         in: query
-        name: paymentAmount
+        name: payment_amount
         type: number
       - description: 支付方式UUID, 必填
         in: query
-        name: paymentMethodUuid
+        name: payment_method_uuid
         type: integer
       - description: 充值订单UUID, 必填
         in: query
-        name: rechargeOrderUuid
+        name: recharge_order_uuid
         type: integer
       produces:
       - application/json
@@ -18374,11 +18445,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: deskUuid
+        name: desk_uuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -18398,27 +18469,27 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: billType
+        name: bill_type
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: dateType
+        name: date_type
         type: integer
       - description: 用餐方式, -1=全都、 0-堂食 1-打包
         in: query
-        name: diningMethod
+        name: dining_method
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enableCreateTime
+        name: enable_create_time
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enablePayTime
+        name: enable_pay_time
         type: boolean
       - description: 订单编号
         in: query
-        name: orderNo
+        name: order_no
         type: string
       - description: 页码
         in: query
@@ -18433,11 +18504,11 @@ paths:
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: queryEndTime
+        name: query_end_time
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: queryStartTime
+        name: query_start_time
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -18465,27 +18536,27 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: billType
+        name: bill_type
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: dateType
+        name: date_type
         type: integer
       - description: 用餐方式, -1=全都、 0-堂食 1-打包
         in: query
-        name: diningMethod
+        name: dining_method
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enableCreateTime
+        name: enable_create_time
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enablePayTime
+        name: enable_pay_time
         type: boolean
       - description: 订单编号
         in: query
-        name: orderNo
+        name: order_no
         type: string
       - description: 页码
         in: query
@@ -18500,11 +18571,11 @@ paths:
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: queryEndTime
+        name: query_end_time
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: queryStartTime
+        name: query_start_time
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -18614,11 +18685,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       - description: 销售订单UUID。退款都是针对子单进行退款
         in: query
-        name: saleOrderUuid
+        name: sale_order_uuid
         type: integer
       produces:
       - application/json
@@ -18670,7 +18741,7 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -18790,7 +18861,7 @@ paths:
       parameters:
       - description: 数据类型 (打印类型), -1=全都、.....
         in: query
-        name: dataType
+        name: data_type
         type: integer
       - description: 页码
         in: query
@@ -18805,15 +18876,15 @@ paths:
         type: integer
       - description: 打印机UUID
         in: query
-        name: printerUuid
+        name: printer_uuid
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: queryEndTime
+        name: query_end_time
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: queryStartTime
+        name: query_start_time
         type: integer
       - description: 状态, -1=全都、0=失败, 1=成功, 2=补打成功, 3=补打失败
         in: query
@@ -19950,7 +20021,7 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -20239,15 +20310,15 @@ paths:
       parameters:
       - description: 商品包uuid
         in: query
-        name: productPackageUuid
+        name: product_package_uuid
         type: integer
       - description: 销售账单ID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       - description: 销售订单ID
         in: query
-        name: saleOrderUuid
+        name: sale_order_uuid
         type: integer
       produces:
       - application/json
@@ -21329,7 +21400,7 @@ paths:
       parameters:
       - description: 会员端销售订单UUID
         in: query
-        name: memberSaleOrderUuid
+        name: member_sale_order_uuid
         required: true
         type: integer
       produces:
@@ -21418,12 +21489,12 @@ paths:
       parameters:
       - description: 会员端销售订单UUID
         in: query
-        name: memberSaleOrderUuid
+        name: member_sale_order_uuid
         required: true
         type: integer
       - description: 支付方式UUID - 如果为0，则使用订单的支付方式, 否则使用指定的支付方式
         in: query
-        name: paymentMethodUuid
+        name: payment_method_uuid
         type: integer
       produces:
       - application/json
@@ -21544,7 +21615,7 @@ paths:
       parameters:
       - description: 会员ID
         in: query
-        name: memberUuid
+        name: member_uuid
         type: integer
       - description: 页码
         in: query
@@ -22520,27 +22591,27 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: billType
+        name: bill_type
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: dateType
+        name: date_type
         type: integer
       - description: 用餐方式, -1=全都、 0-堂食 1-打包
         in: query
-        name: diningMethod
+        name: dining_method
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enableCreateTime
+        name: enable_create_time
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enablePayTime
+        name: enable_pay_time
         type: boolean
       - description: 订单编号
         in: query
-        name: orderNo
+        name: order_no
         type: string
       - description: 页码
         in: query
@@ -22555,11 +22626,11 @@ paths:
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: queryEndTime
+        name: query_end_time
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: queryStartTime
+        name: query_start_time
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -22615,11 +22686,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: deskUuid
+        name: desk_uuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -22639,27 +22710,27 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: billType
+        name: bill_type
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: dateType
+        name: date_type
         type: integer
       - description: 用餐方式, -1=全都、 0-堂食 1-打包
         in: query
-        name: diningMethod
+        name: dining_method
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enableCreateTime
+        name: enable_create_time
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enablePayTime
+        name: enable_pay_time
         type: boolean
       - description: 订单编号
         in: query
-        name: orderNo
+        name: order_no
         type: string
       - description: 页码
         in: query
@@ -22674,11 +22745,11 @@ paths:
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: queryEndTime
+        name: query_end_time
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: queryStartTime
+        name: query_start_time
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -22749,11 +22820,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       - description: 销售订单UUID。退款都是针对子单进行退款
         in: query
-        name: saleOrderUuid
+        name: sale_order_uuid
         type: integer
       produces:
       - application/json
@@ -23432,7 +23503,7 @@ paths:
       parameters:
       - description: 商品分类UUID（可选）
         in: query
-        name: categoryUuid
+        name: category_uuid
         type: string
       - description: 搜索商品名称（可选）
         in: query
@@ -23630,7 +23701,7 @@ paths:
       parameters:
       - description: 商品分类UUID, 可选
         in: query
-        name: categoryUuid
+        name: category_uuid
         type: integer
       - description: 搜索关键词, 可选
         in: query
@@ -24744,6 +24815,22 @@ paths:
       tags:
       - 商家端.业务设置
   /shop/setting/menu_qrcode:
+    get:
+      consumes:
+      - application/json
+      description: 获取电子菜单二维码
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取电子菜单二维码
+      tags:
+      - 商家端.业务设置
     post:
       consumes:
       - application/json
@@ -25507,7 +25594,7 @@ paths:
       parameters:
       - description: '是否是自助餐: -1=全都、0=否、1=是'
         in: query
-        name: isBuffet
+        name: is_buffet
         type: integer
       - description: 页码
         in: query
@@ -25574,7 +25661,7 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json

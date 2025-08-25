@@ -77,7 +77,7 @@
                   <el-input-number
                     :controls="false"
                     :min="0"
-                    :max="10000000"
+                    :max="100000000"
                     :disabled="readOnly || change"
                     :placeholder="$t('预计采购单价')"
                     v-model.number="scope.row.estimate_purchase_price"

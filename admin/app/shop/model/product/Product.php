@@ -145,7 +145,8 @@ class Product extends ProductModel
                 return false;
             }
             $existGroupNames = [];
-            foreach ($packageGroup as &$item) {
+            $errorGroupData = [];
+            foreach ($packageGroup as $groupIndex => &$item) {
                 // 分组名称
                 $groupName = $item['group_name'] ?? '';
                 [$status, $msg] = ValidateHelp::hasExceedLength($groupName, 50);
@@ -182,10 +183,17 @@ class Product extends ProductModel
                         return false;
                     }
                     if ($productBom->stock_num <= 0) {
-                        $this->error = '商品库存不足，请调整';
-                        return false;
+                        $errorGroupData[$groupIndex+1][] = [
+                            'product_id' => $productBom->uuid,
+                            'stock_num' => -1,
+                        ];
                     }
                 }
+            }
+            if (!empty($errorGroupData)) {
+                $this->error = '商品库存不足，请调整';
+                $this->errorData = $errorGroupData;
+                return false;
             }
             $data['product_type'] = 1; // 商品类型 0-商品 1-套餐
             $data['price'] = $packagePrice; // 套餐价格
@@ -204,6 +212,10 @@ class Product extends ProductModel
         $data = $this->sanitizeProductData($data);
         // 加料
         if (isset($data['product_feed']) && is_array($data['product_feed']) && !empty($data['product_feed'])) {
+            if (count($data['product_feed']) > 10) {
+                $this->error = '最多可添加10个加料';
+                return false;
+            }
             // 最多默认勾选数量
             $defaultSelectCount = count(array_filter($data['product_feed'], function ($item) {
                 return $item == 1;
@@ -498,7 +510,8 @@ class Product extends ProductModel
                 return false;
             }
             $existGroupNames = [];
-            foreach ($packageGroup as &$item) {
+            $errorGroupData = [];
+            foreach ($packageGroup as $groupIndex => &$item) {
                 // 分组名称
                 $groupName = $item['group_name'] ?? '';
                 [$status, $msg] = ValidateHelp::hasExceedLength($groupName, 50);
@@ -535,10 +548,17 @@ class Product extends ProductModel
                         return false;
                     }
                     if ($productBom->stock_num <= 0) {
-                        $this->error = '商品库存不足，请调整';
-                        return false;
+                        $errorGroupData[$groupIndex+1][] = [
+                            'product_id' => $productBom->uuid,
+                            'stock_num' => -1,
+                        ];
                     }
                 }
+            }
+            if (!empty($errorGroupData)) {
+                $this->error = '商品库存不足，请调整';
+                $this->errorData = $errorGroupData;
+                return false;
             }
             $data['product_type'] = 1; // 商品类型 0-商品 1-套餐
             $data['price'] = $packagePrice; // 套餐价格
@@ -558,6 +578,10 @@ class Product extends ProductModel
         $data = $this->sanitizeProductData($data);
         // 加料
         if (isset($data['product_feed']) && is_array($data['product_feed']) && !empty($data['product_feed'])) {
+            if (count($data['product_feed']) > 10) {
+                $this->error = '最多可添加10个加料';
+                return false;
+            }
             // 最多默认勾选数量
             $defaultSelectCount = count(array_filter($data['product_feed'], function ($item) {
                 return $item == 1;

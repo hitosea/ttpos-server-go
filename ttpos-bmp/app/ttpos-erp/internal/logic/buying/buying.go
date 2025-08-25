@@ -78,7 +78,7 @@ func (s *sBuying) parseSupplierListResponse(bytes []byte) ([]*buying.SupplierInf
 func (s *sBuying) CreatePurchaseFromMq(ctx context.Context, req *dto.CreatePurchaseFromMqReq) (res *erp.PurchaseOrder, err error) {
 
 	resp, err := service.Rpc().Execute(ctx, &erp.ErpReq{
-		Method: "frappe.model.mapper.make_mapped_doc",
+		Method: erp.ApiMethodMakeMappedDoc,
 	}, g.MapStrStr{
 		"method":      "erpnext.stock.doctype.material_request.material_request.make_purchase_order",
 		"source_name": req.SourceName,
@@ -124,7 +124,7 @@ func (s *sBuying) CreatePurchaseFromMq(ctx context.Context, req *dto.CreatePurch
 // CreateInnerSaleOrderFromPurchaseOrder 创建内部销售订单
 func (*sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req *dto.CreateInnerSaleOrderFromPurchaseOrderReq) (res *erp.SaleOrder, err error) {
 	resp, err := service.Rpc().Execute(ctx, &erp.ErpReq{
-		Method: "frappe.model.mapper.make_mapped_doc",
+		Method: erp.ApiMethodMakeMappedDoc,
 	}, g.MapStrStr{
 		"method":      "erpnext.buying.doctype.purchase_order.purchase_order.make_inter_company_sales_order",
 		"source_name": req.SourceName,
@@ -197,7 +197,7 @@ func (*sBuying) GetPurchaseOrder(ctx context.Context, req *buying.GetPurchaseOrd
 // CreatePurchaseReceiptFromOrder 创建采购收货订单
 func (*sBuying) CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.SavePurchaseReceiptReq) (*erp.PurchaseReceipt, error) {
 	resp, err := service.Rpc().Execute(ctx, &erp.ErpReq{
-		Method: "frappe.model.mapper.make_mapped_doc",
+		Method: erp.ApiMethodMakeMappedDoc,
 	}, g.MapStrStr{
 		"method":      "erpnext.buying.doctype.purchase_order.purchase_order.make_purchase_receipt",
 		"source_name": req.PurchaseOrderName,

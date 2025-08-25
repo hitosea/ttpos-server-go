@@ -40,7 +40,8 @@ class ErpInventory extends Controller
         $data = $this->postData();
         $filterHavingMaterial = isset($data['filter_having_material']) ? $data['filter_having_material'] : 0;
         $filterHavingPackage = isset($data['filter_having_package']) ? $data['filter_having_package'] : 0;
-        $list = (new ProductBomModel)->getProductBomList($data, $filterHavingMaterial, $filterHavingPackage);
+        $filterHavingDecimal = isset($data['filter_having_decimal']) ? $data['filter_having_decimal'] : 0;
+        $list = (new ProductBomModel)->getProductBomList($data, $filterHavingMaterial, $filterHavingPackage, $filterHavingDecimal);
         $category = CategoryModel::getCacheTree(1, 0, $this->store);
         return $this->renderSuccess('', compact('list', 'category'));
     }

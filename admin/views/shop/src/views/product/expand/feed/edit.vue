@@ -13,7 +13,7 @@
           { type: 'number', message: $t('请输入数字') },
         ]"
       >
-        <el-input-number :controls="false" :precision="2" :min="0" :max="1000000" :placeholder="$t('请输入价格')" v-model.number="form.price" autocomplete="off"></el-input-number>
+        <el-input-number :controls="false" :precision="2" :min="0" :max="100000000" :placeholder="$t('请输入价格')" v-model.number="form.price" autocomplete="off"></el-input-number>
       </el-form-item>
       <template v-if="baseSale == '1'">
         <el-form-item for="no_click" :label="$t('材料：')">

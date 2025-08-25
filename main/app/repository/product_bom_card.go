@@ -127,7 +127,14 @@ func (r *productBomCardRepoImpl) GetProductBomCardDetail(uuid uint64) (*model.Pr
 }
 
 func (r *productBomCardRepoImpl) GetProductBomCardName(uuid uint64) (dto.LocaleResponse, error) {
-	card, err := r.GetProductBomCard(CommonRepo.WhereByUuid(uuid))
+	card, err := r.GetProductBomCard(
+		CommonRepo.WhereByUuid(uuid),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "MultiLanguageName",
+			},
+		),
+	)
 	if err != nil {
 		return dto.LocaleResponse{}, err
 	}

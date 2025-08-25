@@ -225,7 +225,7 @@
                     v-model.number="scope.row.product_price"
                     :controls="false"
                     :min="0"
-                    :max="1000000"
+                    :max="100000000"
                     :precision="2"
                     :placeholder="$t('请输入价格')"
                   ></el-input-number>

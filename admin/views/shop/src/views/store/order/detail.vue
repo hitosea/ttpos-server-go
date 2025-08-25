@@ -1,9 +1,4 @@
 <template>
-  <!--
-      
-      时间：2019-10-25
-      描述：订单详情
-  -->
   <div class="pb50" v-loading="loading">
     <div class="product-content">
       <!--基本信息-->
@@ -173,7 +168,7 @@
                     {{ scope.row.locale_name[language] || '-' }}
                   </div>
                   <div class="gray9" v-if="scope.row.locale_attribute_name[language]">
-                    {{ scope.row.locale_attribute_name[language] }}
+                  <autoTips :content="scope.row.locale_attribute_name[language]">{{ scope.row.locale_attribute_name[language] }}</autoTips>
                   </div>
                   <div class="price">
                     <span>
@@ -307,7 +302,7 @@ import refundAgain from './dialog/refundAgain.vue';
 // 引入store
 import { useUserStore } from '@/store';
 import { languageStore } from '@/store/model/language';
-
+import autoTips from '@/components/autoTips/autoTips.vue';
 // 获取路由实例
 const route = useRoute();
 const router = useRouter();

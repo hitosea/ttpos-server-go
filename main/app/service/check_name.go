@@ -35,15 +35,15 @@ func NewCheckNameSrvImpl(dbm *database.DBManager) ICheckNameSrv {
 // CheckNameExists 检查名称是否存在
 func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.CheckNameRequest) (resp.CheckNameResp, error) {
 	keyMap := map[string]string{
-		"zh":    "zh_name",
-		"zh-TW": "zh_tw_name",
-		"en":    "en_name",
-		"ja":    "ja_name",
-		"ko":    "ko_name",
-		"my":    "my_name",
-		"sv":    "sv_name",
-		"th":    "th_name",
-		"tr":    "tr_name",
+		"zh":   "zh_name",
+		"zhtw": "zh_tw_name",
+		"en":   "en_name",
+		"ja":   "ja_name",
+		"ko":   "ko_name",
+		"my":   "my_name",
+		"sv":   "sv_name",
+		"th":   "th_name",
+		"tr":   "tr_name",
 	}
 
 	var result []resp.CheckNameItem
@@ -163,6 +163,57 @@ func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.Che
 					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text)
 				if checkNameReq.Uuid != 0 {
 					query = query.Where("ttpos_product_flavor.uuid != ?", checkNameReq.Uuid)
+				}
+				query.Count(&count)
+
+				result = append(result, resp.CheckNameItem{
+					Lang:      name.Lang,
+					TextExist: count > 0,
+				})
+			}
+
+		case constant.CheckNameSourceMaterial:
+			{
+				var count int64
+				query := db.Model(&model.Material{}).
+					Joins("JOIN ttpos_multi_language_name ON ttpos_material.multi_language_name_uuid = ttpos_multi_language_name.uuid").
+					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text)
+				if checkNameReq.Uuid != 0 {
+					query = query.Where("ttpos_material.uuid != ?", checkNameReq.Uuid)
+				}
+				query.Count(&count)
+
+				result = append(result, resp.CheckNameItem{
+					Lang:      name.Lang,
+					TextExist: count > 0,
+				})
+			}
+
+		case constant.CheckNameSourceMaterialCategory:
+			{
+				var count int64
+				query := db.Model(&model.MaterialCategory{}).
+					Joins("JOIN ttpos_multi_language_name ON ttpos_material_category.multi_language_name_uuid = ttpos_multi_language_name.uuid").
+					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text)
+				if checkNameReq.Uuid != 0 {
+					query = query.Where("ttpos_material_category.uuid != ?", checkNameReq.Uuid)
+				}
+				query.Count(&count)
+
+				result = append(result, resp.CheckNameItem{
+					Lang:      name.Lang,
+					TextExist: count > 0,
+				})
+			}
+
+		case constant.CheckNameSourceMaterialUnit:
+			{
+				var count int64
+				query := db.Model(&model.MaterialUnit{}).
+					Joins("JOIN ttpos_multi_language_name ON ttpos_material_unit.multi_language_name_uuid = ttpos_multi_language_name.uuid").
+					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text)
+				if checkNameReq.Uuid != 0 {
+					query = query.Where("ttpos_material_unit.uuid != ?", checkNameReq.Uuid)
 				}
 				query.Count(&count)
 

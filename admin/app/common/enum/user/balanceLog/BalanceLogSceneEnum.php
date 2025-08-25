@@ -39,6 +39,9 @@ class BalanceLogSceneEnum extends Enum
     // 收银机、点餐助手发卡赠送
     const CashierOrAssistant = 100;
 
+    // 后台发卡赠送
+    const ADMIN_CARD_GIVE = 110;
+
     /**
      * 获取订单类型值
      */
@@ -89,6 +92,11 @@ class BalanceLogSceneEnum extends Enum
                 'name' => __('添加会员发卡'),
                 'value' => self::CashierOrAssistant,
                 'describe' => '%s管理员添加会员发卡赠送操作 [%s]',
+            ],
+            self::ADMIN_CARD_GIVE => [
+                'name' => __('添加会员发卡'),
+                'value' => self::ADMIN_CARD_GIVE,
+                'describe' => '后台管理员 [%s] 操作',
             ],
         ];
     }

@@ -2,6 +2,7 @@ package warehouse
 
 import (
 	"context"
+	"strings"
 	"ttpos-bmp/app/ttpos-erp/api"
 	"ttpos-bmp/app/ttpos-erp/api/warehouse"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc"
@@ -9,6 +10,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
+	"github.com/gogf/gf/v2/errors/gerror"
 )
 
 // Controller 仓库服务控制器
@@ -22,9 +24,19 @@ func Register(s *grpcx.GrpcServer) {
 }
 
 // CreateWarehouse 创建仓库
-// 参数：ctx 上下文，req 仓库信息
-// 返回：响应信息和错误
+// 参数：
+//   - ctx: 上下文对象
+//   - req: 仓库信息请求参数
+//
+// 返回：
+//   - *api.ResponseInfo: 响应信息
+//   - error: 错误信息
 func (c *Controller) CreateWarehouse(ctx context.Context, req *warehouse.WarehouseInfo) (*api.ResponseInfo, error) {
+	// 参数验证
+	if err := c.validateCreateWarehouseReq(req); err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
 	// 调用服务层创建仓库
 	warehouseName, err := service.Warehouse().CreateWarehouse(ctx, &setup.CreateWarehouseInp{
 		Company:     req.Company,
@@ -47,10 +59,40 @@ func (c *Controller) CreateWarehouse(ctx context.Context, req *warehouse.Warehou
 	}), nil
 }
 
+// validateCreateWarehouseReq 验证创建仓库请求参数
+func (c *Controller) validateCreateWarehouseReq(req *warehouse.WarehouseInfo) error {
+	if req == nil {
+		return gerror.New("请求参数不能为空")
+	}
+	if strings.TrimSpace(req.CompanyAbbr) == "" {
+		return gerror.New("公司简称不能为空")
+	}
+	if strings.TrimSpace(req.Branch) == "" {
+		return gerror.New("分店名称不能为空")
+	}
+	if strings.TrimSpace(req.AliasName) == "" {
+		return gerror.New("仓库别名不能为空")
+	}
+	if strings.TrimSpace(req.WarehouseType) == "" {
+		return gerror.New("仓库类型不能为空")
+	}
+	return nil
+}
+
 // GetWarehouseList 获取仓库列表
-// 参数：ctx 上下文，req 获取仓库列表请求
-// 返回：响应信息和错误
+// 参数：
+//   - ctx: 上下文对象
+//   - req: 获取仓库列表请求参数
+//
+// 返回：
+//   - *api.ResponseInfo: 响应信息
+//   - error: 错误信息
 func (c *Controller) GetWarehouseList(ctx context.Context, req *warehouse.GetWarehouseListReq) (*api.ResponseInfo, error) {
+	// 参数验证
+	if err := c.validateGetWarehouseListReq(req); err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
 	// 调用服务层获取数据
 	dataList, err := service.Warehouse().GetWarehouseList(ctx, req)
 	if err != nil {
@@ -59,4 +101,15 @@ func (c *Controller) GetWarehouseList(ctx context.Context, req *warehouse.GetWar
 
 	// 返回成功响应
 	return rpc.ApiSuccessWithData("获取仓库列表成功", dataList), nil
+}
+
+// validateGetWarehouseListReq 验证获取仓库列表请求参数
+func (c *Controller) validateGetWarehouseListReq(req *warehouse.GetWarehouseListReq) error {
+	if req == nil {
+		return gerror.New("请求参数不能为空")
+	}
+	if strings.TrimSpace(req.CompanyAbbr) == "" {
+		return gerror.New("公司简称不能为空")
+	}
+	return nil
 }

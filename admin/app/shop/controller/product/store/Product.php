@@ -446,6 +446,10 @@ class Product extends Controller
                     $val['is_show_assistant'] = strstr($val['shows'], '4') ? 1 : 2;
                     $val['is_show_h5'] = strstr($val['shows'], '5') ? 1 : 2;
                     $val['is_show_delivery'] = strstr($val['shows'], '6') ? 1 : 2;
+                    //
+                    if ($val['product_sort'] > 999) {
+                        return $this->renderError(__('行') . '[' . ($val['row'] ?? 1) . ']: ' . __('商品排序不能大于999'), $val);
+                    }
                     // 按小数计价，不在助手、平板、扫码端显示
                     if ($val['num_type'] == 2 && ($val['is_show_tablet'] != 2 ||  $val['is_show_assistant'] != 2 ||  $val['is_show_h5'] != 2 ||  $val['is_show_delivery'] != 2)) {
                         return $this->renderError(__('行') . '[' . ($val['row'] ?? 1) . ']: ' . __('按小数计价只能显示到收银机和厨显'), $val);

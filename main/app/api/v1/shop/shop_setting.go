@@ -292,7 +292,7 @@ func (h *SettingHandler) DeleteReturnFoodReason(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Success 200 {object} dto.Response
-// @Router /shop/setting/member_qrcode [get]
+// @Router /shop/setting/menu_qrcode [get]
 func (h *SettingHandler) GetMenuQrcode(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	menuQrcode, err := h.settingSrv.GetMenuQrcode(ctx)

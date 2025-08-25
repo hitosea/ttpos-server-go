@@ -4,6 +4,7 @@ import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-bmp/app/ttpos-erp/api/item"
+	"ttpos-bmp/app/ttpos-erp/api/manufacturing"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -22,7 +23,8 @@ type IErpSrv interface {
 	SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.SyncUomAndAttributeReq) error
 	GetPosProfileList(ctx context.Context, getPosProfileListReq req.GetPosProfileListReq) (resp.GetPosProfileListResp, error)
 	AddLianPayment(ctx cc.Context, addLianPaymentReq req.ErpnextSiteAddLianLianPaymentReq) error
-
+	OpenPosEntry(ctx context.Context, openEntryReq req.OpenPosEntryReq) (string, error)
+	ClosePosEntry(ctx context.Context, closeEntryReq req.ClosePosEntryReq) (string, error)
 	SaveUom(ctx context.Context, saveUomReq req.SaveUomReq) error
 	SaveAttribute(ctx context.Context, saveAttributeReq req.SaveAttributeReq) error
 
@@ -35,7 +37,10 @@ type IErpSrv interface {
 	GetSupplierList(ctx cc.Context) (*buying.GetSupplierListResp, error)
 
 	// 物品
-	AddMaterial(ctx cc.Context, params req.MaterialAddErpReq) (*item.ItemInfo, error)
+	AddMaterial(ctx cc.Context, params req.MaterialAddErpReq) (*item.ItemInfo, error)                     // 添加物品
+	AddProductBomCard(ctx cc.Context, params ProductBomCardAddErpReq) (*manufacturing.SaveBomResp, error) // 添加成本卡
+	AddProduct(ctx cc.Context, params req.ProductAddErpReq) (*item.ItemInfo, error)                       // 添加商品
+	GetMaterialStockNum(ctx cc.Context) (*item.GetItemStockResp, error)                                   // 获取物品库存数量
 }
 type erpSrv struct {
 	dbm *database.DBManager

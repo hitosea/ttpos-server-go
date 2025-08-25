@@ -33,7 +33,7 @@ type MaterialAddReq struct {
 	Status           int                `json:"status" binding:"required"`             // 状态，1-启用 2-停用
 	Valuation        float64            `json:"valuation" binding:"required,min=0"`    // 估值率
 	InitStock        float64            `json:"init_stock" binding:"required,min=0"`   // 期初库存
-	BarcodeValue     string             `json:"barcode_value" binding:"required"`      // 条形码值
+	BarcodeValue     string             `json:"barcode_value"`                         // 条形码值
 	UnitUuid         uint64             `json:"unit_uuid" binding:"required"`          // 基准单位UUID
 	UnitList         []MaterialUnitReq  `json:"unit_list" binding:"required,dive"`     // 单位列表
 	PurchaseUnitUuid uint64             `json:"purchase_unit_uuid" binding:"required"` // 采购单位UUID
@@ -48,6 +48,14 @@ type MaterialAddErpReq struct {
 	Uoms          []MaterialUomReq `json:"uoms" binding:"required,dive"`      // 单位列表
 }
 
+type ProductAddErpReq struct {
+	ItemName          string `json:"item_name" binding:"required"`          // 商品名称, 英文
+	StockUom          string `json:"stock_uom" binding:"required"`          // 商品单位, 英文
+	ItemCode          string `json:"item_code" binding:"required"`          // 商品编码，如果为空，则为新增；如果非空，则为编辑
+	TemplateItemCode  string `json:"template_item_code" binding:"required"` // 模版商品编码
+	ItemSpecification string `json:"item_specification" binding:"required"` // 商品规格
+}
+
 type MaterialUomReq struct {
 	Uom            string  `json:"uom" binding:"required"`                   // 单位, 英文
 	ConversionRate float64 `json:"conversion_rate" binding:"required,min=0"` // 转换率
@@ -55,7 +63,7 @@ type MaterialUomReq struct {
 
 // MaterialUnitReq 物品单位请求
 type MaterialUnitReq struct {
-	UnitUuid       uint64  `json:"unit_uuid" binding:"required"`             // 单位UUID
+	Uuid           uint64  `json:"uuid" binding:"required"`                  // 单位UUID
 	ConversionRate float64 `json:"conversion_rate" binding:"required,min=0"` // 转换率
 }
 
@@ -108,7 +116,7 @@ type ProductBomCardMaterialReq struct {
 
 // ProductBomCardDetailReq 规格商品成本卡详情请求
 type ProductBomCardDetailReq struct {
-	ProductBomCardUuid uint64 `form:"product_bom_card_uuid" binding:"required"` // 成本卡UUID
+	Uuid uint64 `form:"uuid" binding:"required"` // 成本卡UUID product_bom_card_uuid
 }
 
 // ProductBomCardUnlinkReq 解除成本卡关联请求

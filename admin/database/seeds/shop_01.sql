@@ -138,19 +138,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单表';
 
-CREATE TABLE IF NOT EXISTS `ttpos_sale_order_package_product` (
-    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单套餐商品ID',
-    `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
-    `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单ID',
-    `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联订单套餐UUID, sale_order_product_uuid',
-    `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID,套餐子商品的订单商品',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
-    UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单套餐商品表';
-
 CREATE TABLE IF NOT EXISTS `ttpos_sale_order_coupon` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单优惠券ID',
@@ -422,7 +409,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '套餐uuid',
     `package_group_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '套餐分组UUID',
     `product_type` INT(10) NOT NULL DEFAULT 0 COMMENT '商品类型, 0-商品 1-套餐',
-    `package_sub_product_params` TEXT NOT NULL COMMENT '套餐子商品参数',
+    `package_sub_product_params` TEXT COMMENT '套餐子商品参数',
 
     `send_kitchen_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '送厨时间(时间戳)',
 
@@ -992,6 +979,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_bom_card` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '成本卡ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
+    `erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext 成本卡编码',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `num` DECIMAL(14, 4) NOT NULL DEFAULT 0.0000 COMMENT '加工份数',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
@@ -1157,6 +1145,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包ID',
     `name` TEXT COMMENT '商品包名称',
+    `erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext 商品编码，每个商品都有一个模版物品编码',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `image_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '图片名称',
     `image_file_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '图片ID',
@@ -1256,6 +1245,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_bom` (
     `purchase_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '采购单价',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格',
     `name` TEXT COMMENT '商品名称或小料名称(不用于业务显示)',
+    `erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品编码',
     `product_flavor_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品规格ID(仅商品使用)',
     `product_sauce_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品小料ID(仅小料使用)',
     `product_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包ID',
@@ -1300,6 +1290,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_sauce` (
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格',
     `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序(数字越小越靠前)',
     `product_bom_card_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '成本卡ID',
+    `erp_code` VARCHAR(100) NOT NULL DEFAULT '' COMMENT 'ERP编码',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -2168,6 +2159,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_staff_shift_log` (
     `exception_remark` VARCHAR(500) NOT NULL DEFAULT '' COMMENT '异常报备',
     `abnormal` TEXT COMMENT '异常信息-json字符串',
     `shift_start_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '当班开始时间',
+    `erpnext_open_pos_entry_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'erpnext开账名称',
     `shift_end_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '当班结束时间',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',

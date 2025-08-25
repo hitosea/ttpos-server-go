@@ -15,6 +15,7 @@ import (
 	"ttpos-server-go/app/printer"
 	printerService "ttpos-server-go/app/printer/service"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/config"
 	"ttpos-server-go/i18n"
@@ -35,7 +36,7 @@ import (
 type IStaffShiftSrv interface {
 	GetCashierReport(ctx context.Context) (*resp.CashierReportResp, error)
 	SubmitCashierReport(ctx context.Context, req req.CashierReportReq) error
-	CreateWorkingLog(staff model.Staff) (model.StaffShiftLog, error)
+	CreateWorkingLog(ctx context.Context, staff model.Staff) (model.StaffShiftLog, error)
 	GetShiftInfo(ctx context.Context) (*resp.ShiftInfo, error)                          // 获取交班信息
 	SubmitShift(ctx context.Context, req req.SubmitShiftReq) (*resp.ShiftSubmit, error) // 提交交班
 	GetCachedSubmitShift(ctx context.Context) (*resp.ShiftSubmit, error)                // 提交交班
@@ -68,13 +69,37 @@ func NewShiftSrvImpl(cache cache.Cache, dbm *database.DBManager, cashBoxSrv ICas
 }
 
 // CreateWorkingLog 创建当班记录
-func (s *staffShiftSrv) CreateWorkingLog(staff model.Staff) (model.StaffShiftLog, error) {
+func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff) (model.StaffShiftLog, error) {
 	shiftLogRepo := repository.NewShiftLogRepo(s.dbm.GetDB(staff.CompanyUuid))
 	cashBox := repository.NewCashBoxRepo(s.dbm.GetDB(staff.CompanyUuid)).Get()
 	previousShiftCash := cashBox.GetBalance()
 	startTime := staff.CashierLoginTime
 	if startTime == 0 {
 		startTime = time.Now().Unix()
+	}
+
+	var erpnextOpenPosEntryName string
+	// 调用rpc接口生成PosEntry
+	companySetting := ctx.GetCompanySetting()
+	company := ctx.GetCompany()
+	if company.IsOpenErp() && companySetting.ErpnextSiteCode != "" {
+		erpSrv := erp.NewIErpSrv(s.dbm)
+		openPosEntryName, err := erpSrv.OpenPosEntry(ctx.GetContext(), req.OpenPosEntryReq{
+			SiteCode:        companySetting.ErpnextSiteCode,
+			PosProfileName:  companySetting.ErpnextPosProfileName,
+			CashierEmail:    companySetting.ErpnextAdminEmail,
+			CompanyAbbr:     companySetting.ErpnextCompanyAbbr,
+			PeriodStartDate: time.Now().Unix(),
+			OpenPosEntryDetail: []req.OpenPosEntryDetail{{
+				ModeOfPayment: "Cash",
+				OpeningAmount: previousShiftCash,
+			}},
+			Branch: companySetting.ErpnextBranchName,
+		})
+		if err != nil {
+			return model.StaffShiftLog{}, errors.WithMessage(err)
+		}
+		erpnextOpenPosEntryName = openPosEntryName
 	}
 
 	shiftLog, _ := shiftLogRepo.Create(model.StaffShiftLog{
@@ -85,6 +110,8 @@ func (s *staffShiftSrv) CreateWorkingLog(staff model.Staff) (model.StaffShiftLog
 		CashLeft:          previousShiftCash,
 		ShiftStartTime:    startTime,
 		ShiftEndTime:      0,
+
+		ErpnextOpenPosEntryName: erpnextOpenPosEntryName,
 	})
 	return shiftLog, nil
 }

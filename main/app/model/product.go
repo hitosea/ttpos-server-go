@@ -34,6 +34,7 @@ type ProductSauce struct {
 	MultiLanguageNameUuid uint64  `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	Sort                  int     `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
 	ProductBomCardUuid    uint64  `gorm:"default:0;column:product_bom_card_uuid;comment:'成本卡ID'"`
+	ErpCode               string  `gorm:"default:'';column:erp_code;comment:'ERP编码'"`
 
 	MultiLanguageName MultiLanguageName  `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 	SauceMaterials    []*RelatedMaterial `gorm:"foreignKey:related_uuid;references:uuid"`             // 小料的组成材料
@@ -145,6 +146,7 @@ func (model *ProductPackageAttribute) IsDefaultSelectedBool() bool {
 type ProductPackage struct {
 	BaseModel
 	Name                  string `gorm:"default:'';column:name;comment:'产品包名称'"`
+	ErpCode               string `gorm:"default:'';column:erp_code;comment:'ERPNext 商品编码，每个商品都有一个模版物品编码'"`
 	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	ImageName             string `gorm:"default:'';column:image_name;comment:'图片名称'"`
 	ImageFileUuid         uint64 `gorm:"default:0;column:image_file_uuid;comment:'图片UUID'"`
@@ -446,6 +448,7 @@ type ProductBom struct {
 	PurchasePrice   float64 `gorm:"column:purchase_price;type:decimal(12,2);default:0;comment:采购单价;NOT NULL" json:"purchase_price"`
 	Price           float64 `gorm:"column:price;type:decimal(12,2);default:0;comment:价格;NOT NULL" json:"price"`
 	Name            string  `gorm:"column:name;type:text;comment:商品名称或小料名称(不用于业务显示)" json:"name"`
+	ErpCode         string  `gorm:"column:erp_code;type:varchar(255);default:'';comment:商品编码;NOT NULL" json:"erp_code"`
 	StockNum        float64 `gorm:"column:stock_num;type:decimal(12,4);default:0.0000;comment:库存数量;NOT NULL" json:"stock_num"`
 	IsOpenStock     int     `gorm:"column:is_open_stock;type:tinyint(1);default:1;comment:是否开启库存, 0-否 1-是;NOT NULL" json:"is_open_stock"`
 	BarcodeValue    string  `gorm:"column:barcode_value;type:varchar(255);comment:条形码值;NOT NULL" json:"barcode_value"`
@@ -512,6 +515,15 @@ func (model *RelatedMaterial) GetUnitName(lang string) string {
 		return ""
 	}
 	return name.GetLocale(lang)
+}
+
+func (model *RelatedMaterial) GetUnitLocaleName() dto.LocaleResponse {
+	name := dto.LocaleResponse{}
+	err := utils.FromJson(model.UnitName, &name)
+	if err != nil {
+		return dto.LocaleResponse{}
+	}
+	return name
 }
 
 // GetDecreaseNum 获取减少的库存数量. 减少的库存数量 = 材料用量 * 商品数量
@@ -677,6 +689,7 @@ func (model *ProductBom) IsSauce() bool {
 type ProductBomCard struct {
 	BaseModel
 	Name                  string  `gorm:"column:name;type:varchar(255);not null;default:'';comment:名称" json:"name"`
+	ErpCode               string  `gorm:"column:erp_code;type:varchar(255);not null;default:'';comment:ERPNext 成本卡编码" json:"erp_code"`
 	MultiLanguageNameUuid uint64  `gorm:"column:multi_language_name_uuid;type:bigint(20) unsigned;not null;default:0;comment:多语言名称ID" json:"multi_language_name_uuid"`
 	Num                   float64 `gorm:"column:num;type:decimal(14,4);not null;default:0.0000;comment:加工份数" json:"num"`
 

@@ -38,6 +38,12 @@ message CreateDefaultPosProfileReq {
   string name = 1;  // Pos Profile名称 ,必填
   string company_abbr = 2; // 公司名称 ，必填
   string branch = 3; // 分店名称，必填
+  repeated PosProfileCashier cashiers = 4; // 适用收银员,可选
+
+}
+
+message PosProfileCashier {
+  string user = 1;  // 收银员账号，邮箱必填
 }
 
 message CreateDefaultPosProfileResp {

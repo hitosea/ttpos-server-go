@@ -449,9 +449,9 @@ type ProductShopAddPackageGroupReq struct {
 
 // ProductShopAddPackageGroupProductReq 套餐分组商品添加请求
 type ProductShopAddPackageGroupProductReq struct {
-	BomUuid uint64 `json:"bom_uuid"` // 商品BOM UUID
-	Num     int    `json:"num"`      // 商品数量
-	Sort    int    `json:"sort"`     // 商品排序
+	BomUuid uint64  `json:"bom_uuid"` // 商品BOM UUID
+	Num     float64 `json:"num"`      // 商品数量
+	Sort    int     `json:"sort"`     // 商品排序
 }
 
 // ProductShopEditReq 商品编辑请求
@@ -552,11 +552,11 @@ type ProductShopEditPackageGroupReq struct {
 
 // ProductShopAddPackageGroupProductReq 套餐分组商品添加请求
 type ProductShopEditPackageGroupProductReq struct {
-	Uuid     uint64 `json:"uuid"`      // 套餐商品UUID
-	BomUuid  uint64 `json:"bom_uuid"`  // 商品BOM UUID
-	Num      int    `json:"num"`       // 商品数量
-	Sort     int    `json:"sort"`      // 商品排序
-	IsDelete bool   `json:"is_delete"` // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Uuid     uint64  `json:"uuid"`      // 套餐商品UUID
+	BomUuid  uint64  `json:"bom_uuid"`  // 商品BOM UUID
+	Num      float64 `json:"num"`       // 商品数量
+	Sort     int     `json:"sort"`      // 商品排序
+	IsDelete bool    `json:"is_delete"` // 是否删除, 如果是新增/编辑，则传false，删除时传true
 }
 
 // ProductShopDeleteReq 商品删除请求
