@@ -704,6 +704,7 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 			if !purchaseOrder.CanReceive() {
 				return errors.New("采购单状态不允许收货")
 			}
+			receiptOrder.PurchaseOrder = *purchaseOrder
 		}
 
 		// 重新创建收货明细并更新采购申请明细的到货数量
@@ -780,7 +781,6 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 			return errors.WithMessage(err, "更新收货单状态失败")
 		}
 		receiptOrder.Items = receiptItems
-		receiptOrder.PurchaseOrder = *purchaseOrder
 
 		// 检查收货单是否完成
 		if receiptOrder.Status == constant.ReceiptOrderStatusReceived {
