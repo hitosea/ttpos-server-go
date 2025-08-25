@@ -14,6 +14,7 @@ import (
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
@@ -219,6 +220,9 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		PurchaseUnitUuid: material.PurchaseUnitUuid,
 		CostUnitName:     material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 		CostUnitUuid:     material.CostUnitUuid,
+
+		PurchaseUnitLocaleName: language.JsonToLocaleResponse(material.GetUnit(material.PurchaseUnitUuid).Name),
+		CostUnitLocaleName:     language.JsonToLocaleResponse(material.GetUnit(material.CostUnitUuid).Name),
 	}, nil
 }
 
