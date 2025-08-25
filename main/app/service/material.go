@@ -160,13 +160,15 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				}
 				return 0
 			}(),
-			UnitName:         material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-			UnitUuid:         material.UnitUuid,
-			PurchaseUnitName: material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-			PurchaseUnitUuid: material.PurchaseUnitUuid,
-			CostUnitName:     material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-			CostUnitUuid:     material.CostUnitUuid,
-			UnitList:         unitList,
+			UnitName:               material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			UnitUuid:               material.UnitUuid,
+			PurchaseUnitName:       material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			PurchaseUnitUuid:       material.PurchaseUnitUuid,
+			CostUnitName:           material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			CostUnitUuid:           material.CostUnitUuid,
+			PurchaseUnitLocaleName: language.JsonToLocaleResponse(material.GetUnit(material.PurchaseUnitUuid).Name),
+			CostUnitLocaleName:     language.JsonToLocaleResponse(material.GetUnit(material.CostUnitUuid).Name),
+			UnitList:               unitList,
 		}
 		materialList = append(materialList, respMaterial)
 	}

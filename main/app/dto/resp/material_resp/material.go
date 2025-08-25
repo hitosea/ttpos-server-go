@@ -21,6 +21,9 @@ type Material struct {
 	CostUnitName     string             `json:"cost_unit_name"`     // 成本单位名称
 	CostUnitUuid     uint64             `json:"cost_unit_uuid"`     // 成本单位UUID
 	UnitList         []MaterialUnit     `json:"unit_list"`          // 单位列表
+
+	CostUnitLocaleName     dto.LocaleResponse `json:"cost_unit_locale_name"`     // 成本单位名称
+	PurchaseUnitLocaleName dto.LocaleResponse `json:"purchase_unit_locale_name"` // 采购单位名称
 }
 
 // MaterialListWithPaginationResp 物品列表响应
