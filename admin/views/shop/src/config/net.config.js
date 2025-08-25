@@ -14,4 +14,5 @@ export default {
     responseType: 'json',
     currency: 'currency',
     supplier: 'supplier',
+    erp: 'erp',
 };

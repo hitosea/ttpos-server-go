@@ -3,7 +3,7 @@ import { setStorage, getStorage } from '@/utils/storageData';
 import { computed } from 'vue';
 import AuthApi from '@/api/auth.js';
 import configObj from '@/config';
-let { strongToken, renderMenu, menu, currency, supplier } = configObj;
+let { strongToken, renderMenu, menu, currency, supplier, erp } = configObj;
 import { handRouterTable, handMenuData } from '@/utils/router';
 import { EEUIRELOAD } from '@/utils/platform.js';
 
@@ -17,9 +17,13 @@ export const useUserStore = defineStore('main', {
       renderMenus: getStorage(renderMenu),
       currency: getStorage(currency),
       supplier: getStorage(supplier),
+      erp: getStorage(erp),
     };
   },
-  getters: {},
+  getters: {
+    erp_is_open: (state) => state.erp.is_open,
+    erp_site_code: (state) => state.erp.site_code,
+  },
   actions: {
     setMenus(data) {
       this.menus = data;
