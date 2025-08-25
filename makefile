@@ -48,10 +48,10 @@ run: debug
 # 启动开发模式 - 热重启
 dev: debug
 	$(call update_env_and_run)
-	if [ ! -f "${HOME}/go/bin/fresh" ]; then \
+	if [ ! -f "$(GO_PATH)/bin/fresh" ]; then \
 		go install github.com/pilu/fresh@latest; \
 	fi
-	cd main && ${HOME}/go/bin/fresh -c ./fresh.conf
+	cd main && $(GO_PATH)/bin/fresh -c ./fresh.conf
 
 # 开启mysql端口
 mysql-open:
