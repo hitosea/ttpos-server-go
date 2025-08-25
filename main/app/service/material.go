@@ -221,8 +221,8 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		CostUnitName:     material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 		CostUnitUuid:     material.CostUnitUuid,
 
-		PurchaseUnitLocaleName: language.JsonToLocaleResponse(material.GetUnit(material.PurchaseUnitUuid).Name),
-		CostUnitLocaleName:     language.JsonToLocaleResponse(material.GetUnit(material.CostUnitUuid).Name),
+		PurchaseUnitLocaleName: *language.JsonToLocaleResponse(material.GetUnit(material.PurchaseUnitUuid).Name),
+		CostUnitLocaleName:     *language.JsonToLocaleResponse(material.GetUnit(material.CostUnitUuid).Name),
 	}, nil
 }
 
