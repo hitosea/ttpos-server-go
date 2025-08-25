@@ -95,6 +95,7 @@ type (
 		//   - *erp.POSOpeningEntry: POS开帐记录信息
 		//   - error: 错误信息
 		GetPosOpeningEntry(ctx context.Context, name string) (*erp.POSOpeningEntry, error)
+		ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosInvoiceReq) (*selling.ReturnPosInvoiceResp, error)
 	}
 )
 

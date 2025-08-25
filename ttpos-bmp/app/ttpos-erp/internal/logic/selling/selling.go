@@ -19,12 +19,6 @@ import (
 
 // 常量定义
 const (
-	// 文档类型
-	DocTypePosProfile      = "POS Profile"
-	DocTypePosInvoice      = "POS Invoice"
-	DocTypePosOpeningEntry = "POS Opening Entry"
-	DocTypePosClosingEntry = "POS Closing Entry"
-
 	// 默认值
 	DefaultPaymentAllowInReturns = 1
 	DefaultCashPaymentDefault    = 1
@@ -61,7 +55,7 @@ func (s *sSelling) GetPosProfileList(ctx context.Context, req *selling.PosProfil
 
 	// 查询POS配置文件列表
 	list, err := service.Document().List(ctx, &erp.ErpReq{
-		DocType: DocTypePosProfile,
+		DocType: erp.DocTypePosProfile,
 	}, &erp.RequestParams{
 		Fields:  []string{"name", "company", "warehouse", "branch"},
 		Filters: filters,
@@ -240,7 +234,7 @@ func (s *sSelling) CreatePosProfile(ctx context.Context, req *setup.CreatePosPro
 	profile := s.buildPosProfile(req, companyName)
 
 	// 创建POS配置文件
-	resp, err := service.Document().Create(ctx, DocTypePosProfile, profile)
+	resp, err := service.Document().Create(ctx, erp.DocTypePosProfile, profile)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建POS配置文件失败")
 	}
@@ -359,7 +353,7 @@ func (s *sSelling) OpenPosEntry(ctx context.Context, req *selling.OpenPosEntryRe
 	reqInfo := s.buildOpeningEntryRequest(req, companyName, openDetails)
 
 	// 创建开帐记录
-	resp, err := service.Document().Create(ctx, DocTypePosOpeningEntry, reqInfo)
+	resp, err := service.Document().Create(ctx, erp.DocTypePosOpeningEntry, reqInfo)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建开帐记录失败")
 	}
@@ -371,7 +365,7 @@ func (s *sSelling) OpenPosEntry(ctx context.Context, req *selling.OpenPosEntryRe
 	}
 
 	// 提交开帐记录
-	_, err = service.Document().ChangeDocStatus(ctx, DocTypePosOpeningEntry, openEntry.Name, 1)
+	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePosOpeningEntry, openEntry.Name, 1)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "提交开帐记录失败")
 	}
@@ -478,7 +472,7 @@ func (s *sSelling) ClosePosEntry(ctx context.Context, req *selling.ClosePosEntry
 	reqInfo.PosTransactions = s.buildPosTransactions(invoices)
 
 	// 创建关帐记录
-	resp, err := service.Document().Create(ctx, DocTypePosClosingEntry, reqInfo)
+	resp, err := service.Document().Create(ctx, erp.DocTypePosClosingEntry, reqInfo)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建关帐记录失败")
 	}
@@ -490,7 +484,7 @@ func (s *sSelling) ClosePosEntry(ctx context.Context, req *selling.ClosePosEntry
 	}
 
 	// 提交关帐记录
-	_, err = service.Document().ChangeDocStatus(ctx, DocTypePosClosingEntry, closeEntry.Name, 1)
+	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePosClosingEntry, closeEntry.Name, 1)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "提交关帐记录失败")
 	}
@@ -603,7 +597,7 @@ func (s *sSelling) IsProfileOpening(ctx context.Context, posProfile, user string
 //   - error: 错误信息
 func (s *sSelling) GetPosInvoiceList(ctx context.Context, req *dtoSelling.GetPosInvoiceListReq) ([]dtoSelling.SimplePosInvoice, error) {
 	resp, err := service.Document().List(ctx, &erp.ErpReq{
-		DocType: "POS Invoice",
+		DocType: erp.DocTypePosInvoice,
 	}, &erp.RequestParams{
 		Fields: g.ArrayStr{"name", "posting_date", "customer", "grand_total", "is_return", "return_against"},
 		Filters: [][]string{{"pos_profile", "=", req.PosProfile},
@@ -657,7 +651,7 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
 	// 特殊处理，使用开帐收银员创建发票
 
 	//创建商品销售记录
-	resp, err := service.Document().Create(erpnext.SetFakeUser(ctx, openingEntry.User), DocTypePosInvoice, posInvoice)
+	resp, err := service.Document().Create(erpnext.SetFakeUser(ctx, openingEntry.User), erp.DocTypePosInvoice, posInvoice)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建POS发票失败")
 	}
@@ -672,7 +666,7 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
 	res.ProductsInvoiceName = j.Get("data.name").String()
 
 	// 提交发票记录
-	_, err = service.Document().ChangeDocStatus(ctx, DocTypePosInvoice, res.ProductsInvoiceName, 1)
+	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePosInvoice, res.ProductsInvoiceName, 1)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "提交发票记录失败")
 	}
@@ -691,7 +685,7 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
 	posRmInvoice.Payments = posRmInvoicePayments
 	posRmInvoice.Taxes = nil
 	//创建物品销售记录
-	resp, err = service.Document().Create(erpnext.SetFakeUser(ctx, openingEntry.User), DocTypePosInvoice, posRmInvoice)
+	resp, err = service.Document().Create(erpnext.SetFakeUser(ctx, openingEntry.User), erp.DocTypePosInvoice, posRmInvoice)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建物品POS发票失败")
 	}
@@ -705,7 +699,7 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
 	res.MaterialInvoiceName = j.Get("data.name").String()
 
 	// 提交发票记录
-	_, err = service.Document().ChangeDocStatus(ctx, DocTypePosInvoice, res.MaterialInvoiceName, 1)
+	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePosInvoice, res.MaterialInvoiceName, 1)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "提交发票记录失败")
 	}
@@ -801,7 +795,7 @@ func (s *sSelling) buildInvoiceTaxes(taxes []*selling.PosInvoiceTax, companyAbbr
 //   - error: 错误信息
 func (s *sSelling) GetPosOpeningEntry(ctx context.Context, name string) (*erp.POSOpeningEntry, error) {
 	resp, err := service.Document().Get(ctx, &erp.ErpReq{
-		DocType: DocTypePosOpeningEntry,
+		DocType: erp.DocTypePosOpeningEntry,
 		Name:    name,
 	}, nil)
 	if err != nil {
@@ -834,4 +828,83 @@ func (s *sSelling) buildInvoicePayments(payments []*selling.PosInvoicePayment) [
 		})
 	}
 	return invoicePayments
+}
+
+func (s *sSelling) ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosInvoiceReq) (*selling.ReturnPosInvoiceResp, error) {
+
+	// 获取开帐记录
+	openingEntry, err := s.GetPosOpeningEntry(ctx, req.OpenPosEntryName)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "获取POS开帐记录失败")
+	}
+
+	//
+	resp, err := service.Rpc().Execute(ctx, &erp.ErpReq{
+		Method: erp.ApiMethodMakeMappedDoc,
+	}, g.MapStrStr{
+		"method":      "erpnext.accounts.doctype.pos_invoice.pos_invoice.make_sales_return",
+		"source_name": req.InvoiceName,
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建销售退款订单失败")
+	}
+	// 解析响应数据
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析销售退款订单响应失败")
+	}
+	saleInvoice := &erp.POSInvoice{}
+	// 解析响应数据
+	err = j.Get("data").Scan(saleInvoice)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析原销售订单响应失败")
+	}
+
+	postingDatetime := gtime.New(req.PostingDatetime) //这里挖坑，没处理时区
+
+	grandTotal := 0.0
+	for _, payment := range req.Payments {
+		grandTotal += payment.Amount
+	}
+
+	returnInvoice := &erp.POSInvoice{
+		CustomerOrder:     req.OrderNo,
+		Items:             s.buildInvoiceItems(req.Items),
+		Payments:          s.buildInvoicePayments(req.Payments),
+		Taxes:             s.buildInvoiceTaxes(req.Taxes, req.CompanyAbbr),
+		PosProfile:        saleInvoice.PosProfile,
+		Company:           saleInvoice.Company,
+		Currency:          saleInvoice.Currency,
+		PriceListCurrency: saleInvoice.PriceListCurrency,
+		PostingDate:       postingDatetime.Format(DateFormat),
+		PostingTime:       postingDatetime.Format(TimeFormat),
+		UpdateStock:       0,
+		ReturnAgainst:     req.InvoiceName,
+		IsReturn:          1,
+		IsPos:             1,
+		GrandTotal:        grandTotal,
+		PaidAmount:        grandTotal,
+	}
+
+	//创建物品销售记录
+	resp, err = service.Document().Create(erpnext.SetFakeUser(ctx, openingEntry.User), erp.DocTypePosInvoice, returnInvoice)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建销售退款订单发票失败")
+	}
+	// 解析响应数据
+	j, err = gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析销售退款订单发票响应失败")
+	}
+
+	res := &selling.ReturnPosInvoiceResp{
+		InvoiceName: j.Get("data.name").String(),
+	}
+
+	// 提交发票记录
+	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePosInvoice, res.InvoiceName, 1)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "提交销售退款订单发票记录失败")
+	}
+	return res, nil
 }

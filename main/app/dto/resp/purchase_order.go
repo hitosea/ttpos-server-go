@@ -30,15 +30,17 @@ type PurchaseOrderDetailResp struct {
 
 // PurchaseOrderItemInfo 采购订单商品明细信息
 type PurchaseOrderItemInfo struct {
-	Uuid               uint64             `json:"uuid"`                 // 明细ID
-	MaterialUuid       uint64             `json:"material_uuid"`        // 物品ID
-	MaterialCode       string             `json:"material_code"`        // 物品编码
-	LocaleName         dto.LocaleResponse `json:"locale_name"`          // 物品名称
-	Num                float64            `json:"num"`                  // 申请数量
-	ArrivalNum         float64            `json:"arrival_num"`          // 到货数量
-	UnitName           string             `json:"unit_name"`            // 采购单位名称
-	UnitConversionRate float64            `json:"unit_conversion_rate"` // 基准单位转换率
-	BaseUnitName       string             `json:"base_unit_name"`       // 基准单位名称
+	Uuid               uint64             `json:"uuid"`                  // 明细ID
+	MaterialUuid       uint64             `json:"material_uuid"`         // 物品ID
+	MaterialCode       string             `json:"material_code"`         // 物品编码
+	LocaleName         dto.LocaleResponse `json:"locale_name"`           // 物品名称
+	Num                float64            `json:"num"`                   // 申请数量
+	ArrivalNum         float64            `json:"arrival_num"`           // 到货数量
+	UnitName           string             `json:"unit_name"`             // 采购单位名称
+	LocaleUnitName     dto.LocaleResponse `json:"locale_unit_name"`      // 采购单位名称
+	UnitConversionRate float64            `json:"unit_conversion_rate"`  // 基准单位转换率
+	BaseUnitName       string             `json:"base_unit_name"`        // 基准单位名称
+	LocaleBaseUnitName dto.LocaleResponse `json:"locale_base_unit_name"` // 基准单位名称
 }
 
 // PurchaseOrderLogInfo 采购订单操作日志信息
