@@ -27,6 +27,7 @@ const (
 const (
 	ItemCodePrefixProduct     = "SP"  //商品前缀
 	ItemCodePrefixRawMaterial = "WPR" //原材料前缀
+	ItemCodePrefixPackage     = "TC"  //套餐前缀
 )
 
 // CustomerName 客户名称

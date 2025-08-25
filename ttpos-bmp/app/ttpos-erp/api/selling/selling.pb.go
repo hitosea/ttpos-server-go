@@ -969,11 +969,11 @@ func (x *SavePosInvoiceResp) GetMaterialInvoiceName() string {
 // PosInvoiceItem POS发票商品项目
 type PosInvoiceItem struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"商品编码，必填"` // 商品编码，必填
-	Qty           float64                `protobuf:"fixed64,2,opt,name=qty,proto3" json:"qty,omitempty" dc:"数量，必填"`                           // 数量，必填
-	Rate          float64                `protobuf:"fixed64,3,opt,name=rate,proto3" json:"rate,omitempty" dc:"单价，必填"`                         // 单价，必填
-	Amount        float64                `protobuf:"fixed64,4,opt,name=amount,proto3" json:"amount,omitempty" dc:"金额，必填"`                     // 金额，必填
-	Description   string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty" dc:"描述, 可选"`            // 描述, 可选
+	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"商品编码，必填"`                              // 商品编码，必填
+	Qty           float64                `protobuf:"fixed64,2,opt,name=qty,proto3" json:"qty,omitempty" dc:"数量，必填"`                                                        // 数量，必填
+	Rate          float64                `protobuf:"fixed64,3,opt,name=rate,proto3" json:"rate,omitempty" dc:"单价，必填"`                                                      // 单价，必填
+	Amount        float64                `protobuf:"fixed64,4,opt,name=amount,proto3" json:"amount,omitempty" dc:"金额，必填"`                                                  // 金额，必填
+	Description   string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty" dc:"描述, 可选。 如果是套餐内的商品，填写内容 “Sales in package:{套餐名称"` // 描述, 可选。 如果是套餐内的商品，填写内容 “Sales in package:{套餐名称}”
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

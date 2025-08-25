@@ -317,6 +317,9 @@ func (s *sItem) addItemGroupSpecificFields(ctx context.Context, req *item.ItemIn
 		// 商品特定字段
 		newItem["custom_specification"] = req.ItemSpecification
 		newItem["is_stock_item"] = 0
+	} else if req.ItemGroup == item.ItemGroup_Package {
+		// 套餐特定字段
+		newItem["is_stock_item"] = 0
 	}
 
 	// 设置默认仓库
@@ -390,6 +393,11 @@ func (s *sItem) generateItemCode(ctx context.Context, req *item.ItemInfo) (strin
 	// 根据物品分组生成编码前缀
 	if req.ItemGroup == item.ItemGroup_RawMaterial {
 		return utility.GenItemCode(consts.ItemCodePrefixRawMaterial), nil
+	}
+
+	// 套餐编码
+	if req.ItemGroup == item.ItemGroup_Package {
+		return utility.GenItemCode(consts.ItemCodePrefixPackage), nil
 	}
 
 	// 商品编码

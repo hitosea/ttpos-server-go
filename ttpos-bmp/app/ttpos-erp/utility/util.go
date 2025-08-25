@@ -28,6 +28,8 @@ func ItemGroupToString(itemGroup item.ItemGroup) string {
 	switch itemGroup {
 	case item.ItemGroup_Products:
 		return string(consts.ItemGroupProducts)
+	case item.ItemGroup_Package:
+		return string(consts.ItemGroupProducts)
 	case item.ItemGroup_RawMaterial:
 		return string(consts.ItemGroupRawMaterial)
 	default:
