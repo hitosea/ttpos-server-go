@@ -25,6 +25,7 @@ import (
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/repository/ro"
 	"ttpos-server-go/app/repository/saas"
+	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/app/service/rpc/takeout"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
@@ -9740,11 +9741,11 @@ func (s *orderSrv) VerifyCoupon(ctx context.Context, saleOrder *model.SaleOrder,
 }
 
 // InstantOrderPaymentFinish 完成销售订单的付款结账
-func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.InstantOrderPaymentFinishReq) (*resp.OrderFinishResp, error) {
+func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.InstantOrderPaymentFinishReq) (*resp.OrderFinishResp, error) {
 	// 加锁
 	if ctx.NoLock() {
-		s.lock.LockUuid(req.SaleBillUuid)
-		defer s.lock.UnlockUuid(req.SaleBillUuid)
+		s.lock.LockUuid(request.SaleBillUuid)
+		defer s.lock.UnlockUuid(request.SaleBillUuid)
 		ctx.AddLock()
 	}
 
@@ -9752,7 +9753,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	ctx.SetDB(db)
 
 	// 获取销售账单信息
-	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
 	if errSaleBill != nil {
 		ctx.Log().Error("GetSaleBillAllInfo", zap.Error(fmt.Errorf("%s %s", ctx.GetRequestUuid(), errSaleBill)))
 		return nil, errSaleBill
@@ -9764,12 +9765,12 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	}
 
 	// 获取销售订单信息
-	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
 	if saleOrder == nil {
 		return nil, errors.New("无法查询到销售订单")
 	}
 
-	infoResp, err := s.InstantOrderPaymentInfo(ctx, nil, req.SaleBillUuid, req.SaleOrderUuid)
+	infoResp, err := s.InstantOrderPaymentInfo(ctx, nil, request.SaleBillUuid, request.SaleOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -9947,17 +9948,22 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 
-		// company := ctx.GetCompany()
-		// companySetting := ctx.GetCompanySetting()
-		// if company.IsOpenErp() && companySetting.ErpnextSiteCode != "" {
-		// 	erpSrv := erp.NewIErpSrv(s.dbm)
-		// 	erpSrv.SavePosInvoice(ctx, req.SavePosInvoiceReq{
-		// 		SiteCode:    companySetting.ErpnextSiteCode,
-		// 		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
-		// 		Branch:      companySetting.ErpnextBranchName,
-		// 		InvoiceName: saleOrder.ErpProductsInvoiceName,
-		// 	})
-		// }
+		company := ctx.GetCompany()
+		companySetting := ctx.GetCompanySetting()
+		if company.IsOpenErp() && companySetting.ErpnextSiteCode != "" {
+			erpSrv := erp.NewIErpSrv(s.dbm)
+			erpSrv.SavePosInvoice(ctx, req.SavePosInvoiceReq{
+				SiteCode:         companySetting.ErpnextSiteCode,
+				OrderNo:          saleOrder.OrderNo,
+				OpenPosEntryName: saleOrder.ErpProductsInvoiceName,
+				PostingDatetime:  saleOrder.FinishTime,
+				CustomerUuid:     fmt.Sprintf("%d", saleOrder.ConsumerUuid),
+				Items:            saleOrder.SaleOrderProducts,
+				MaterialItems:    saleOrder.SaleOrderMaterialProducts,
+				Taxes:            saleOrder.SaleOrderTaxes,
+				Payments:         saleOrder.PaymentOrders,
+			})
+		}
 
 		// 更新发票信息
 		ctx.SetDB(db)

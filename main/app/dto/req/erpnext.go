@@ -107,19 +107,15 @@ type ClosePosEntryDetail struct {
 }
 
 type SavePosInvoiceReq struct {
-	SiteCode          string                       `form:"site_code" json:"site_code" binding:"required"`                     // 站点编码
-	OrderNo           string                       `form:"order_no" json:"order_no" binding:"required"`                       // 订单号
-	OpenPosEntryName  string                       `form:"open_pos_entry_name" json:"open_pos_entry_name" binding:"required"` // 开账名称
-	PostingDatetime   int64                        `form:"posting_datetime" json:"posting_datetime" binding:"required"`       // 过账日期时间.订单结账时间
-	UpdateStock       int32                        `form:"update_stock" json:"update_stock" binding:"required"`               // 是否更新库存
-	Currency          string                       `form:"currency" json:"currency" binding:"required"`                       // 货币
-	PriceListCurrency string                       `form:"price_list_currency" json:"price_list_currency" binding:"required"` // 价格表货币
-	Branch            string                       `form:"branch" json:"branch" binding:"required"`                           // 分支名称
-	CustomerUuid      string                       `form:"customer_uuid" json:"customer_uuid" binding:"required"`             // 会员uuid
-	Items             []*selling.PosInvoiceItem    `form:"items" json:"items" binding:"required"`                             // 商品项目列表 必填
-	MaterialItems     []*selling.PosInvoiceItem    `form:"material_items" json:"material_items" binding:"required"`           // 原材料项目列表 必填
-	Taxes             []*selling.PosInvoiceTax     `form:"taxes" json:"taxes" binding:"required"`                             // 税费列表 必填
-	Payments          []*selling.PosInvoicePayment `form:"payments" json:"payments" binding:"required"`                       // 付款列表 必填
+	SiteCode         string                       `form:"site_code" json:"site_code" binding:"required"`                     // 站点编码
+	OrderNo          string                       `form:"order_no" json:"order_no" binding:"required"`                       // 订单号
+	OpenPosEntryName string                       `form:"open_pos_entry_name" json:"open_pos_entry_name" binding:"required"` // 开账名称
+	PostingDatetime  int64                        `form:"posting_datetime" json:"posting_datetime" binding:"required"`       // 过账日期时间.订单结账时间
+	CustomerUuid     string                       `form:"customer_uuid" json:"customer_uuid" binding:"required"`             // 会员uuid
+	Items            []*selling.PosInvoiceItem    `form:"items" json:"items" binding:"required"`                             // 商品项目列表 必填
+	MaterialItems    []*selling.PosInvoiceItem    `form:"material_items" json:"material_items" binding:"required"`           // 原材料项目列表 必填
+	Taxes            []*selling.PosInvoiceTax     `form:"taxes" json:"taxes" binding:"required"`                             // 税费列表 必填
+	Payments         []*selling.PosInvoicePayment `form:"payments" json:"payments" binding:"required"`                       // 付款列表 必填
 }
 
 type ReturnPosInvoiceReq struct {
