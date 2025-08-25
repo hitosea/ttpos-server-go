@@ -487,7 +487,6 @@ func (p *printerTemplate) MergeSaleOrderProduct(saleBill *model.SaleBill, saleOr
 		if isShowWrap {
 			if item.IsWrapProduct() || (saleBill.IsTakeout() && saleBill.MemberSaleOrderUuid == 0) {
 				wrap = "(" + p.Translate("打包") + ") "
-				productTotalPrice = 0
 			}
 		}
 
