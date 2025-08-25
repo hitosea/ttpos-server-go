@@ -427,6 +427,7 @@
               material_type: 10,
               product_status: 10,
               filter_having_material: 0,
+              filter_having_decimal:1,
               list_rows: 1000,
             },
             true
