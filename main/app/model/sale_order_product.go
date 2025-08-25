@@ -121,6 +121,36 @@ type SaleOrderProduct struct {
 	unOrderH5Product bool   `gorm:"-"` // 是否为未下单的h5订单商品。 特别标记该商品为正在下单的h5订单商品
 }
 
+// 获取商品的原材料
+func (model *SaleOrderProduct) GetErpProductBomMaterials() []*ErpProductBomMaterials {
+	materials := make([]*ErpProductBomMaterials, 0)
+	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
+		if saleOrderProductBom.IsFlavor() {
+			if saleOrderProductBom.ProductBom.HasProductBomCard() {
+				card := saleOrderProductBom.ProductBom.ProductBomCard
+				for _, relatedMaterial := range card.RelatedMaterials {
+					materials = append(materials, &ErpProductBomMaterials{
+						ErpCode: relatedMaterial.Material.Code,
+						Num:     relatedMaterial.Num,
+					})
+				}
+			}
+		} else if saleOrderProductBom.IsSauce() {
+			saleOrderProductBom.ProductBom.ProductSauce.HasProductBomCard()
+			if saleOrderProductBom.ProductBom.ProductSauce.HasProductBomCard() {
+				card := saleOrderProductBom.ProductBom.ProductSauce.ProductBomCard
+				for _, relatedMaterial := range card.RelatedMaterials {
+					materials = append(materials, &ErpProductBomMaterials{
+						ErpCode: relatedMaterial.Material.Code,
+						Num:     relatedMaterial.Num,
+					})
+				}
+			}
+		}
+	}
+	return materials
+}
+
 // 更换规格，重新计算商品的价格
 func (model *SaleOrderProduct) ChangeFlavor(flavor *SaleOrderProductBom) {
 	model.FlavorPrice = flavor.Price

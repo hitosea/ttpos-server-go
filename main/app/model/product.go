@@ -51,6 +51,11 @@ func (model *ProductSauce) SetNil() {
 	model.SauceMaterials = nil
 }
 
+// 是否有成本卡
+func (model *ProductSauce) HasProductBomCard() bool {
+	return model.ProductBomCardUuid != 0
+}
+
 // ProductUnit 商品单位表,定义商品的单位信息 ttpos_product_unit
 type ProductUnit struct {
 	BaseModel
@@ -475,6 +480,11 @@ func (model *ProductBom) SetNil() {
 	model.ProductFlavor = ProductFlavor{}
 	model.ProductSauce = ProductSauce{}
 	model.FlavorMaterials = nil
+}
+
+// 是否有成本卡
+func (model *ProductBom) HasProductBomCard() bool {
+	return model.ProductBomCardUuid != 0
 }
 
 func (model *ProductBom) GetStockNum() float64 {

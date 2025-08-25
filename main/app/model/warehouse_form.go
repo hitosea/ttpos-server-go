@@ -141,6 +141,11 @@ type ProductBomMaterials struct {
 	SaleOrderUuid uint64  `json:"sale_order_uuid"` // 销售订单uuid
 }
 
+type ErpProductBomMaterials struct {
+	ErpCode string  `json:"erp_code"`
+	Num     float64 `json:"num"`
+}
+
 type ProductList []*Product
 
 func (p ProductList) GetProductBomMaterials() []*ProductBomMaterials {
