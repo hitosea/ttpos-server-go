@@ -30,7 +30,7 @@ message PosProfileListResp {
 
 message CreatePaymentAccountReq {
   string company_abbr = 1; // 公司缩写, 必填
-  string payment_type = 2; // 支付类型，必填 Cash/Balance/Wechat Pay/Alipay
+  string payment_type = 2; // 支付类型，必填 Cash/Balance/Wechat Pay/Alipay/Free Meal
   string branch = 3; // 分店名称,可选
   string payment_source = 4; // 支付来源,可选 2= lianlianpay
 }
@@ -114,6 +114,7 @@ message PosInvoiceItem {
   double qty = 2;         // 数量，必填
   double rate = 3;       // 单价，必填
   double amount = 4;     // 金额，必填
+  string description = 5;     // 描述, 可选
 }
 
 // PosInvoiceTax POS发票税费

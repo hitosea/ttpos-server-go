@@ -144,10 +144,31 @@ func (s *sSelling) parsePosProfileListResponse(list *g.Var) (*selling.PosProfile
 // 返回：
 //   - error: 错误信息
 func (s *sSelling) CreateModePaymentAccount(ctx context.Context, req *setup.CreateModePaymentAccountInp) error {
-	// 获取支付方式信息
-	modePayment, err := s.getModeOfPayment(ctx, req.PaymentType)
+
+	var modePayment *erp.ModeOfPayment
+	// 检查支付方式是否已存在
+	count, err := service.Doctype().Count(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeModeOfPayment,
+	}, &erp.RequestParams{
+		Filters: [][]string{
+			{"name", "=", req.PaymentType},
+		},
+	})
 	if err != nil {
-		return err
+		return gerror.Wrapf(err, "查询支付方式失败")
+	}
+	if count == 0 {
+		modePayment = &erp.ModeOfPayment{
+			ModeOfPayment: req.PaymentType,
+			Accounts:      make([]erp.ModeOfPaymentAccount, 0),
+			Type:          "Cash",
+		}
+	} else {
+		// 获取已有支付方式信息
+		modePayment, err = s.getModeOfPayment(ctx, req.PaymentType)
+		if err != nil {
+			return err
+		}
 	}
 
 	// 获取公司名称
@@ -157,9 +178,18 @@ func (s *sSelling) CreateModePaymentAccount(ctx context.Context, req *setup.Crea
 	}
 
 	// 创建默认支付账户
-	err = s.createDefaultPaymentAccount(ctx, modePayment, companyName, req.CompanyAbbr)
-	if err != nil {
-		return gerror.Wrapf(err, "创建默认支付账户失败")
+	accountExists := false
+	for _, account := range modePayment.Accounts {
+		if account.Company == companyName {
+			accountExists = true
+			break
+		}
+	}
+	if !accountExists {
+		err = s.createDefaultPaymentAccount(ctx, modePayment, companyName, req.CompanyAbbr)
+		if err != nil {
+			return gerror.Wrapf(err, "创建默认支付账户失败")
+		}
 	}
 
 	return nil
@@ -175,7 +205,7 @@ func (s *sSelling) CreateModePaymentAccount(ctx context.Context, req *setup.Crea
 //   - error: 错误信息
 func (s *sSelling) getModeOfPayment(ctx context.Context, paymentType string) (*erp.ModeOfPayment, error) {
 	resp, err := service.Document().Get(ctx, &erp.ErpReq{
-		DocType: "Mode of Payment",
+		DocType: erp.DocTypeModeOfPayment,
 		Name:    paymentType,
 	}, nil)
 	if err != nil {
@@ -188,7 +218,7 @@ func (s *sSelling) getModeOfPayment(ctx context.Context, paymentType string) (*e
 	}
 
 	modePayment := &erp.ModeOfPayment{}
-	j.Scan(modePayment)
+	j.Get("data").Scan(&modePayment)
 	return modePayment, nil
 }
 
@@ -210,8 +240,21 @@ func (s *sSelling) createDefaultPaymentAccount(ctx context.Context, modePayment 
 	})
 	modePayment.Accounts = payAccounts
 
-	// 这里应该调用更新支付方式的接口
-	// 暂时返回nil，等待后续实现
+	if len(modePayment.Creation) > 0 {
+		_, err := service.Document().Update(ctx, &erp.ErpReq{
+			DocType: erp.DocTypeModeOfPayment,
+			Name:    modePayment.Name,
+		}, modePayment)
+		if err != nil {
+			return gerror.Wrapf(err, "更新支付方式失败")
+		}
+	} else {
+		_, err := service.Document().Create(ctx, erp.DocTypeModeOfPayment, modePayment)
+		if err != nil {
+			return gerror.Wrapf(err, "创建支付方式失败")
+		}
+	}
+
 	return nil
 }
 
@@ -275,18 +318,18 @@ func (s *sSelling) buildPosProfile(req *setup.CreatePosProfileInp, companyName s
 		}
 	}
 	// 处理支付方式
-	profile.Payments = s.buildPaymentMethods(req.Payments)
+	profile.Payments = s.buildPosProfilePaymentMethods(req.Payments)
 
 	return profile
 }
 
-// buildPaymentMethods 构建支付方式列表
+// buildPosProfilePaymentMethods 构建支付方式列表
 // 参数：
 //   - payments: 支付方式列表
 //
 // 返回：
 //   - []erp.POSPaymentMethod: 支付方式方法列表
-func (s *sSelling) buildPaymentMethods(payments []string) []erp.POSPaymentMethod {
+func (s *sSelling) buildPosProfilePaymentMethods(payments []string) []erp.POSPaymentMethod {
 	paymentMethods := make([]erp.POSPaymentMethod, 0, len(payments))
 
 	for _, payment := range payments {
