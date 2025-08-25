@@ -36,6 +36,10 @@ func (s *erpSrv) CreatePurchaseOrder(ctx cc.Context, createPurchaseOrderReq *sto
 	if err != nil {
 		return &stock.SaveMaterialRequestResp{}, err
 	}
+	if result.Code != "0" {
+		logger.Logger.Error("CreatePurchaseOrder-SaveMaterialRequest", zap.Any("err", err))
+		return &stock.SaveMaterialRequestResp{}, errors.New("调用erp接口失败 - 001")
+	}
 	if result.Data != nil {
 		var resp stock.SaveMaterialRequestResp
 		if err := result.Data.UnmarshalTo(&resp); err != nil {
