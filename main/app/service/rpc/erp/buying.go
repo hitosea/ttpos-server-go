@@ -2,6 +2,7 @@ package erp
 
 import (
 	"context"
+	"errors"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-server-go/app/cloud"
 	cc "ttpos-server-go/pkg/context"
@@ -34,6 +35,10 @@ func (s *erpSrv) GetSupplierList(ctx cc.Context) (*buying.GetSupplierListResp, e
 	if err != nil {
 		return &buying.GetSupplierListResp{}, err
 	}
+	if result.Code != "0" {
+		logger.Logger.Error("GetSupplierList-GetSupplierList", zap.Any("err", err))
+		return &buying.GetSupplierListResp{}, errors.New("调用erp接口失败 - 002")
+	}
 	if result.Data != nil {
 		var resp buying.GetSupplierListResp
 		if err := result.Data.UnmarshalTo(&resp); err != nil {
@@ -59,7 +64,10 @@ func (s *erpSrv) SavePurchaseReceipt(ctx cc.Context, savePurchaseReceiptReq *buy
 	if err != nil {
 		return &buying.SavePurchaseReceiptResp{}, err
 	}
-
+	if result.Code != "0" {
+		logger.Logger.Error("SavePurchaseReceipt-SavePurchaseReceipt", zap.Any("err", err))
+		return &buying.SavePurchaseReceiptResp{}, errors.New("调用erp接口失败 - 003")
+	}
 	if result.Data != nil {
 		var resp buying.SavePurchaseReceiptResp
 		if err := result.Data.UnmarshalTo(&resp); err != nil {

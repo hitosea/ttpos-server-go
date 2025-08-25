@@ -140,6 +140,7 @@
     loading.value = true;
     try {
       const data = await IndexApi.getCount(true);
+      if (data.code == -102) return;    
       Object.assign(product_data.value, data.data.data.product_data);
       top_data.value = data.data.data.top_data;
       wait_data.value = data.data.data.wait_data;

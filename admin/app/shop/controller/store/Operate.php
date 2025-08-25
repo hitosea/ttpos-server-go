@@ -227,6 +227,14 @@ class Operate extends Controller
             'Content-Type: application/json; charset=utf-8',
         ];
 
+        $saleBill = OrderModel::where('uuid', $data['sale_bill_uuid'])->find();
+        if ($saleBill) {
+            $token = ShopUser::getUserTokenByDutyNo($saleBill['duty_no']);
+            if ($token) {
+                $requeustHeader[0] = 'Authorization: Bearer ' . $token;
+            }
+        }
+
         if ($this->request->isGet()) {
             $res = HttpHelp::getRequest('http://nginx/api/v1/shop/order/return', $requeustData, $requeustHeader);
             if (!$res) {
@@ -255,13 +263,6 @@ class Operate extends Controller
         $requeustData['account_no'] = $data['account_no'] ?? '';
         $requeustData['account_name'] = $data['account_name'] ?? '';
 
-        $saleBill = OrderModel::where('uuid', $data['sale_bill_uuid'])->find();
-        if ($saleBill) {
-            $token = ShopUser::getUserTokenByDutyNo($saleBill['duty_no']);
-            if ($token) {
-                $requeustHeader[0] = 'Authorization: Bearer ' . $token;
-            }
-        }
         // 退积分
         $requeustData['points'] = floatval($data['points'] ?? 0);
 

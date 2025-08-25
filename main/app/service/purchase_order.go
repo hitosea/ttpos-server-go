@@ -18,6 +18,7 @@ import (
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
@@ -138,17 +139,9 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(ctx context.Context, req req.P
 	for _, item := range purchaseOrder.Items {
 		itemInfo := resp.PurchaseOrderItemInfo{}
 		copier.Copy(&itemInfo, &item)
-		multiLanguageName := model.MultiLanguageName{}
-		//
-		multiLanguageName.InitByLocaleResponseJson(item.MaterialName)
-		itemInfo.LocaleName = multiLanguageName.GetNames()
-		//
-		multiLanguageName.InitByLocaleResponseJson(item.UnitName)
-		itemInfo.LocaleUnitName = multiLanguageName.GetNames()
-		//
-		multiLanguageName.InitByLocaleResponseJson(item.BaseUnitName)
-		itemInfo.LocaleBaseUnitName = multiLanguageName.GetNames()
-		//
+		itemInfo.LocaleName = language.JsonToLocaleResponse(item.MaterialName)
+		itemInfo.LocaleUnitName = language.JsonToLocaleResponse(item.UnitName)
+		itemInfo.LocaleBaseUnitName = language.JsonToLocaleResponse(item.BaseUnitName)
 		detailResp.Items = append(detailResp.Items, itemInfo)
 	}
 
@@ -532,7 +525,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 					ItemCode:     item.MaterialCode,
 					Qty:          item.Num,
 					ScheduleDate: purchaseOrder.ExpectArrivalTime,
-					Uom:          item.UnitName,
+					Uom:          language.JsonToLocaleResponse(item.UnitName).EN,
 				})
 			}
 			resp, err := erp.NewIErpSrv(s.dbm).CreatePurchaseOrder(ctx, &stock.SaveMaterialRequestReq{
@@ -544,6 +537,9 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 			if err != nil {
 				return errors.WithMessage(err, "调用erp接口失败")
 			}
+
+			fmt.Println("resp", utils.ToJsonString(resp))
+
 			// 更新采购申请单号
 			purchaseOrder.ErpOrderNo = resp.PurchaseOrder
 			err = purchaseOrderRepo.Update(purchaseOrder)
@@ -862,9 +858,7 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderDetail(ctx context.Context, re
 		if err != nil {
 			return resp.PurchaseReceiptOrderDetailResp{}, errors.WithMessage(err, "数据转换失败")
 		}
-		multiLanguageName := model.MultiLanguageName{}
-		multiLanguageName.InitByLocaleResponseJson(item.MaterialName)
-		itemInfo.LocaleName = multiLanguageName.GetNames()
+		itemInfo.LocaleName = language.JsonToLocaleResponse(item.MaterialName)
 		// 查询采购申请明细
 		itemInfo.PurchaseNum = item.PurchaseOrderItem.Num
 		itemInfo.ArrivalNum = item.Num
