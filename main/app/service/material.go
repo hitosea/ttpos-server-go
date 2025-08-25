@@ -146,6 +146,19 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				ConversionRate: unit.ConversionRate,
 			})
 		}
+		purchaseUnit := material.GetUnit(material.PurchaseUnitUuid)
+		costUnit := material.GetUnit(material.CostUnitUuid)
+		baseUnit := material.GetBaseUnit()
+		var purchaseUnitLocaleName, costUnitLocaleName, baseUnitLocaleName dto.LocaleResponse
+		if costUnit != nil {
+			costUnitLocaleName = *language.JsonToLocaleResponse(costUnit.Name)
+		}
+		if purchaseUnit != nil {
+			purchaseUnitLocaleName = *language.JsonToLocaleResponse(purchaseUnit.Name)
+		}
+		if baseUnit != nil {
+			baseUnitLocaleName = *language.JsonToLocaleResponse(baseUnit.Name)
+		}
 		respMaterial := material_resp.Material{
 			Uuid:         material.Uuid,
 			Name:         material.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
@@ -160,13 +173,16 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				}
 				return 0
 			}(),
-			UnitName:         material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-			UnitUuid:         material.UnitUuid,
-			PurchaseUnitName: material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-			PurchaseUnitUuid: material.PurchaseUnitUuid,
-			CostUnitName:     material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-			CostUnitUuid:     material.CostUnitUuid,
-			UnitList:         unitList,
+			UnitName:               material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			UnitUuid:               material.UnitUuid,
+			PurchaseUnitName:       material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			PurchaseUnitUuid:       material.PurchaseUnitUuid,
+			CostUnitName:           material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			CostUnitUuid:           material.CostUnitUuid,
+			PurchaseUnitLocaleName: purchaseUnitLocaleName,
+			CostUnitLocaleName:     costUnitLocaleName,
+			UnitLocaleName:         baseUnitLocaleName,
+			UnitList:               unitList,
 		}
 		materialList = append(materialList, respMaterial)
 	}
@@ -205,24 +221,38 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 			ConversionRate: materialUnit.ConversionRate,
 		})
 	}
-	return material_resp.MaterialDetailResp{
-		Uuid:             material.Uuid,
-		LocaleName:       material.MultiLanguageName.GetNames(),
-		Code:             material.Code,
-		CategoryUuid:     material.CategoryUuid,
-		CategoryName:     material.Category.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-		Status:           int(utils.BoolToUint(material.Status)),
-		Valuation:        material.Valuation,
-		BarcodeValue:     material.BarcodeValue,
-		UnitName:         material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-		UnitList:         material_resp.MaterialUnitListResp{List: unitList},
-		PurchaseUnitName: material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-		PurchaseUnitUuid: material.PurchaseUnitUuid,
-		CostUnitName:     material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-		CostUnitUuid:     material.CostUnitUuid,
 
-		PurchaseUnitLocaleName: *language.JsonToLocaleResponse(material.GetUnit(material.PurchaseUnitUuid).Name),
-		CostUnitLocaleName:     *language.JsonToLocaleResponse(material.GetUnit(material.CostUnitUuid).Name),
+	purchaseUnit := material.GetUnit(material.PurchaseUnitUuid)
+	costUnit := material.GetUnit(material.CostUnitUuid)
+	baseUnit := material.GetBaseUnit()
+	var purchaseUnitLocaleName, costUnitLocaleName, baseUnitLocaleName dto.LocaleResponse
+	if purchaseUnit != nil {
+		purchaseUnitLocaleName = *language.JsonToLocaleResponse(purchaseUnit.Name)
+	}
+	if costUnit != nil {
+		costUnitLocaleName = *language.JsonToLocaleResponse(costUnit.Name)
+	}
+	if baseUnit != nil {
+		baseUnitLocaleName = *language.JsonToLocaleResponse(baseUnit.Name)
+	}
+	return material_resp.MaterialDetailResp{
+		Uuid:                   material.Uuid,
+		LocaleName:             material.MultiLanguageName.GetNames(),
+		Code:                   material.Code,
+		CategoryUuid:           material.CategoryUuid,
+		CategoryName:           material.Category.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+		Status:                 int(utils.BoolToUint(material.Status)),
+		Valuation:              material.Valuation,
+		BarcodeValue:           material.BarcodeValue,
+		UnitName:               material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+		UnitList:               material_resp.MaterialUnitListResp{List: unitList},
+		PurchaseUnitName:       material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+		PurchaseUnitUuid:       material.PurchaseUnitUuid,
+		CostUnitName:           material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+		CostUnitUuid:           material.CostUnitUuid,
+		PurchaseUnitLocaleName: purchaseUnitLocaleName,
+		CostUnitLocaleName:     costUnitLocaleName,
+		UnitLocaleName:         baseUnitLocaleName,
 	}, nil
 }
 
@@ -371,7 +401,7 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 			Uuid: materialUuid,
 		},
 		Name:                  request.LocaleName.ToJson(),
-		Code:                  "", // TODO: 从ERP获取编码
+		Code:                  "", // 先添加物品，之后调用erp接口后再更新编码
 		Valuation:             request.Valuation,
 		InitStock:             request.InitStock,
 		MultiLanguageNameUuid: nameId,

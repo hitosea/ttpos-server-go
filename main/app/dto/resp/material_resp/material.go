@@ -21,6 +21,10 @@ type Material struct {
 	CostUnitName     string             `json:"cost_unit_name"`     // 成本单位名称
 	CostUnitUuid     uint64             `json:"cost_unit_uuid"`     // 成本单位UUID
 	UnitList         []MaterialUnit     `json:"unit_list"`          // 单位列表
+
+	UnitLocaleName         dto.LocaleResponse `json:"unit_locale_name"`          // 基准单位名称
+	CostUnitLocaleName     dto.LocaleResponse `json:"cost_unit_locale_name"`     // 成本单位名称
+	PurchaseUnitLocaleName dto.LocaleResponse `json:"purchase_unit_locale_name"` // 采购单位名称
 }
 
 // MaterialListWithPaginationResp 物品列表响应
@@ -40,6 +44,7 @@ type MaterialDetailResp struct {
 	Valuation              float64              `json:"valuation"`                 // 估值率
 	BarcodeValue           string               `json:"barcode_value"`             // 条形码值
 	UnitName               string               `json:"unit_name"`                 // 单位名称
+	UnitLocaleName         dto.LocaleResponse   `json:"unit_locale_name"`          // 单位名称
 	UnitList               MaterialUnitListResp `json:"unit_list"`                 // 单位列表
 	PurchaseUnitName       string               `json:"purchase_unit_name"`        // 采购单位名称
 	PurchaseUnitLocaleName dto.LocaleResponse   `json:"purchase_unit_locale_name"` // 采购单位名称
