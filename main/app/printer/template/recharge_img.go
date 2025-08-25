@@ -53,7 +53,7 @@ func (t *rechargeImgTemplate) GetPrintContent(
 		pkg.ColumnConfig{Text: cashierName, Width: 0, Align: pkg.AlignRight},
 	)
 	img.PrintInColumns(
-		pkg.ColumnConfig{Text: t.base.Translate("时间"), Width: 350, Align: pkg.AlignLeft},
+		pkg.ColumnConfig{Text: t.base.Translate("时间"), Width: 300, Align: pkg.AlignLeft},
 		pkg.ColumnConfig{Text: payTime, Width: 0, Align: pkg.AlignRight},
 	)
 	img.PrintInColumns(
