@@ -9968,10 +9968,15 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 			// 订单商品列表
 			items := make([]*selling.PosInvoiceItem, 0)
 			for _, product := range saleOrder.SaleOrderProducts {
-				if product.IsPackageSubProduct() { // TODO ERP接口暂不支持套餐子商品
-					continue
-				}
-				if product.IsPackageProduct() { // TODO ERP接口暂不支持套餐商品
+				if product.IsPackageSubProduct() {
+					productBom := product.GetFlarvorSaleOrderProductBom()
+					erpCode := productBom.ProductBom.ErpCode
+					items = append(items, &selling.PosInvoiceItem{
+						ItemCode: erpCode,
+						Qty:      product.Num,
+						Rate:     0, // 套餐子商品没有单价
+						Amount:   0, // 套餐子商品没有金额
+					})
 					continue
 				}
 				productBom := product.GetFlarvorSaleOrderProductBom()
@@ -10050,7 +10055,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 				}
 
 				erpSrv := erp.NewIErpSrv(s.dbm)
-				erpSrv.SavePosInvoice(ctx, req.SavePosInvoiceReq{
+				param := req.SavePosInvoiceReq{
 					SiteCode:         companySetting.ErpnextSiteCode,
 					OrderNo:          saleOrder.OrderNo,
 					OpenPosEntryName: shiftLog.ErpnextOpenPosEntryName,
@@ -10060,7 +10065,12 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 					MaterialItems:    materialItems, // 订单原材料列表
 					Taxes:            taxes,         // 订单税费列表
 					Payments:         payments,      // 订单付款列表
-				})
+				}
+				response, err := erpSrv.SavePosInvoice(ctx, param)
+				if err != nil {
+					return errors.WithMessage(err)
+				}
+				fmt.Println(response)
 			}
 		}
 
