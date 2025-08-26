@@ -139,6 +139,7 @@ type ICommonRepo interface {
 	WhereByStartTimeEndTime() DBOption                                                        // 是否在有效期内
 	WhereLike(field string, keyword string) DBOption                                          // 根据字段模糊查询
 	WhereByCategoryUuid(categoryUuid uint64) DBOption                                         // 根据分类UUID查询
+	WhereByCategoryUuids(categoryUuids []uint64) DBOption                                     // 根据分类UUID列表查询
 	DBOption(opt DBOption) func(*gorm.DB) *gorm.DB                                            // 将DBOption转为func(*gorm.DB) *gorm.DB
 	Transaction(db *gorm.DB, fn func(tx *gorm.DB) error) error                                // 事务
 }
@@ -599,6 +600,12 @@ func (r *commonRepo) WhereLike(field string, keyword string) DBOption {
 func (r *commonRepo) WhereByCategoryUuid(categoryUuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("category_uuid = ?", categoryUuid)
+	}
+}
+
+func (r *commonRepo) WhereByCategoryUuids(categoryUuids []uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("category_uuid IN (?)", categoryUuids)
 	}
 }
 

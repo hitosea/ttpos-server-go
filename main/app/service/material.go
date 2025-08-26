@@ -74,6 +74,8 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 	}
 	if req.CategoryUuid != 0 {
 		dbOptions = append(dbOptions, commonRepo.WhereByCategoryUuid(req.CategoryUuid))
+	} else if len(req.CategoryUuids) > 0 {
+		dbOptions = append(dbOptions, commonRepo.WhereByCategoryUuids(req.CategoryUuids))
 	}
 	if req.Status != 0 {
 		dbOptions = append(dbOptions, commonRepo.WhereByStatus(uint(req.Status)))
