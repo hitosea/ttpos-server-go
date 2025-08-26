@@ -4333,6 +4333,7 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 					Price:   packageResult.Price,
 				},
 			},
+			IsPackage: true,
 		}
 	}
 	// 商品税类
@@ -4759,25 +4760,48 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 
 				// 同步商品到erp
 				if ctx.GetCompany().IsOpenErp() {
-					multiLanguageName := model.NewMultiLanguageName(flavor.Name)
-					productUnit, errGetUnit := repository.NewProductUnitRepo(tx).GetProductUnit(commonRepo.WhereByUuid(uintUuid))
-					if errGetUnit != nil {
-						return errors.WithMessage(errGetUnit, "获取商品单位失败")
-					}
-					productBom, errGetBom := productBomRepo.GetProductBom(commonRepo.WhereByUuid(flavor.BomUuid))
-					if errGetBom != nil {
-						return errors.WithMessage(errGetBom, "获取商品bom失败")
-					}
-					erpSrv := erp.NewIErpSrv(s.dbm)
-					_, errErp := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
-						ItemName:          multiLanguageName.EnName,
-						StockUom:          productUnit.ErpnextUom,
-						ItemCode:          productBom.ErpCode,
-						TemplateItemCode:  templateItemCode,
-						ItemSpecification: multiLanguageName.EnName,
-					})
-					if errErp != nil {
-						return errors.WithMessage(errErp)
+					if flavorListResult.IsPackage {
+						// 同步套餐到erp
+						multiLanguageName := model.NewMultiLanguageName(flavor.Name)
+						productUnit, errGetUnit := repository.NewProductUnitRepo(tx).GetProductUnit(commonRepo.WhereByUuid(uintUuid))
+						if errGetUnit != nil {
+							return errors.WithMessage(errGetUnit, "获取商品单位失败")
+						}
+						productBom, errGetBom := productBomRepo.GetProductBom(commonRepo.WhereByUuid(flavor.BomUuid))
+						if errGetBom != nil {
+							return errors.WithMessage(errGetBom, "获取商品bom失败")
+						}
+						erpSrv := erp.NewIErpSrv(s.dbm)
+						_, errErp := erpSrv.AddPackage(ctx, req.PackageAddErpReq{
+							ItemName: multiLanguageName.EnName,
+							StockUom: productUnit.ErpnextUom,
+							ItemCode: productBom.ErpCode,
+						})
+						if errErp != nil {
+							return errors.WithMessage(errErp, "同步套餐到erp失败")
+						}
+					} else {
+						// 同步商品到erp
+						multiLanguageName := model.NewMultiLanguageName(flavor.Name)
+						productUnit, errGetUnit := repository.NewProductUnitRepo(tx).GetProductUnit(commonRepo.WhereByUuid(uintUuid))
+						if errGetUnit != nil {
+							return errors.WithMessage(errGetUnit, "获取商品单位失败")
+						}
+						productBom, errGetBom := productBomRepo.GetProductBom(commonRepo.WhereByUuid(flavor.BomUuid))
+						if errGetBom != nil {
+							return errors.WithMessage(errGetBom, "获取商品bom失败")
+						}
+						erpSrv := erp.NewIErpSrv(s.dbm)
+						_, errErp := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
+							ItemName:          multiLanguageName.EnName,
+							StockUom:          productUnit.ErpnextUom,
+							ItemCode:          productBom.ErpCode,
+							TemplateItemCode:  templateItemCode,
+							ItemSpecification: multiLanguageName.EnName,
+						})
+						if errErp != nil {
+							return errors.WithMessage(errErp)
+						}
 					}
 				}
 
