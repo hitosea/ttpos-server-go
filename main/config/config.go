@@ -163,8 +163,14 @@ func serverConf(opt copier.Option) {
 		Domain:         "http://127.0.0.1:8080",
 		PaymentTimeout: 24 * 60 * 60, // 24小时
 	}
+	//
+	serverPort := viper.GetString("SERVER_PORT")
+	if debugServerPort := viper.GetString("DEBUG_SERVER_PORT"); debugServerPort != "" {
+		serverPort = debugServerPort
+	}
+	//
 	copier.CopyWithOption(&Server, ServerConf{
-		Port:           viper.GetString("SERVER_PORT"),
+		Port:           serverPort,
 		Mode:           viper.GetString("SERVER_MODE"),
 		DeployMode:     viper.GetString("DEPLOY_MODE"),
 		BrandName:      viper.GetString("BRAND_NAME"),
