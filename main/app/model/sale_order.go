@@ -99,6 +99,25 @@ type SaleOrder struct {
 	index int `gorm:"-"`
 }
 
+// 获取订单的erp原材料列表
+func (model *SaleOrder) GetErpProductBomMaterials() []*ErpProductBomMaterials {
+	materials := make([]*ErpProductBomMaterials, 0)
+	for _, saleOrderProduct := range model.SaleOrderProducts {
+		materials = append(materials, saleOrderProduct.GetErpProductBomMaterials()...)
+	}
+	// 去重
+	materialMap := make(map[string]float64)
+	for _, material := range materials {
+		materialMap[material.ErpCode] += material.Num
+	}
+	// 转换为列表
+	materials = make([]*ErpProductBomMaterials, 0)
+	for erpCode, num := range materialMap {
+		materials = append(materials, &ErpProductBomMaterials{ErpCode: erpCode, Num: num})
+	}
+	return materials
+}
+
 // 获取套餐商品的子商品列表
 func (model *SaleOrder) GetPackageSubProductList(saleOrderProductUuid uint64) []*SaleOrderProduct {
 	subProducts := make([]*SaleOrderProduct, 0)

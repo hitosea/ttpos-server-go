@@ -13,6 +13,7 @@ type ProductPackageGroupItem struct {
 	UpdateTime              int     `json:"update_time" gorm:"not null;default:0;comment:更新时间(时间戳)"`
 	DeleteTime              int     `json:"delete_time" gorm:"not null;default:0;comment:删除时间(时间戳)"`
 
-	ProductBom     *ProductBom     `gorm:"foreignKey:product_bom_uuid;references:uuid"` // 商品BOM规格
-	ProductPackage *ProductPackage `gorm:"foreignKey:related_uuid;references:uuid"`     // 商品套餐
+	ProductBom          *ProductBom          `gorm:"foreignKey:product_bom_uuid;references:uuid"`           // 商品BOM规格
+	ProductPackage      *ProductPackage      `gorm:"foreignKey:related_uuid;references:uuid"`               // 商品套餐
+	ProductPackageGroup *ProductPackageGroup `gorm:"foreignKey:product_package_group_uuid;references:uuid"` // 商品套餐组
 }

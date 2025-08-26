@@ -140,6 +140,10 @@ type ProductAttributeGroupReq struct {
 	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 商品属性分组UUID
 }
 
+type ProductAttributeDeleteReq struct {
+	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 商品属性UUID
+}
+
 type ProductAttributeGroupAddReq struct {
 	LocaleName        dto.LocaleResponse                            `json:"locale_name" binding:"required"`             // 商品属性分组名称, 多语言
 	ProductAttributes []ProductAttributeGroupAddProductAttributeReq `json:"product_attributes" binding:"required,dive"` // 商品属性
@@ -159,6 +163,7 @@ type ProductAttributeGroupEditReq struct {
 type ProductAttributeGroupEditProductAttributeReq struct {
 	Uuid                uint64             `json:"uuid"`                           // 商品属性UUID, 可选，如果有，是编辑，没有是添加
 	LocaleName          dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品属性名称, 多语言
+	Sort                int                `json:"sort" binding:"required"`        // 排序
 	ProductPackageUuids []uint64           `json:"product_package_uuids"`          // 关联商品包UUID列表
 }
 

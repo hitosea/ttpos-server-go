@@ -96,7 +96,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderList(ctx context.Context, req req.Pur
 		if err != nil {
 			continue
 		}
-		poInfo.ReceiptProgress = fmt.Sprintf("%.v%%", po.GetReceiptProgress())
+		poInfo.ReceiptProgress = fmt.Sprintf("%.0f%%", po.GetReceiptProgress())
 		listResp = append(listResp, &poInfo)
 	}
 
@@ -133,15 +133,15 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(ctx context.Context, req req.P
 
 	// 初始化数组字段，确保返回空数组而不是null
 	detailResp.Items = make([]resp.PurchaseOrderItemInfo, 0)
-	detailResp.ReceiptProgress = fmt.Sprintf("%.v%%", purchaseOrder.GetReceiptProgress())
+	detailResp.ReceiptProgress = fmt.Sprintf("%.0f%%", purchaseOrder.GetReceiptProgress())
 
 	// 转换明细数据
 	for _, item := range purchaseOrder.Items {
 		itemInfo := resp.PurchaseOrderItemInfo{}
 		copier.Copy(&itemInfo, &item)
-		itemInfo.LocaleName = language.JsonToLocaleResponse(item.MaterialName)
-		itemInfo.LocaleUnitName = language.JsonToLocaleResponse(item.UnitName)
-		itemInfo.LocaleBaseUnitName = language.JsonToLocaleResponse(item.BaseUnitName)
+		itemInfo.LocaleName = *language.JsonToLocaleResponse(item.MaterialName)
+		itemInfo.LocaleUnitName = *language.JsonToLocaleResponse(item.UnitName)
+		itemInfo.LocaleBaseUnitName = *language.JsonToLocaleResponse(item.BaseUnitName)
 		detailResp.Items = append(detailResp.Items, itemInfo)
 	}
 
@@ -588,6 +588,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 			Num:               float64(len(req.Items)),
 			ExpectArrivalTime: purchaseOrder.ExpectArrivalTime,
 			ReceiveTime:       req.ReceiveTime,
+			PurchaseOrder:     *purchaseOrder,
 		}
 
 		err = receiptOrderRepo.Create(receiptOrder)
@@ -607,7 +608,15 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 			// 更新采购申请明细的到货数量
 			newArrivalNum := orderItem.ArrivalNum + itemReq.Num
 			if newArrivalNum > orderItem.Num {
-				return errors.New(fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 的收货数量不能超过申请数量（申请数量：%.4f，已到货：%.4f，本次收货：%.4f）"), orderItem.MaterialName, orderItem.Num, orderItem.ArrivalNum, itemReq.Num))
+				return errors.New(
+					fmt.Sprintf(
+						i18n.Translate(ctx.GetLanguage(), "物品 %s 的收货数量不能超过申请数量（申请数量：%.0f，已到货：%.0f，本次收货：%.0f）"),
+						language.JsonToLocaleResponse(orderItem.MaterialName).GetLocale(ctx.GetLanguage()),
+						orderItem.Num,
+						orderItem.ArrivalNum,
+						itemReq.Num,
+					),
+				)
 			}
 
 			// 创建收货明细
@@ -675,8 +684,8 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	err := db.Transaction(func(tx *gorm.DB) error {
-		receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(tx)
 		purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(tx)
+		receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(tx)
 		receiptOrderItemRepo := repository.NewPurchaseReceiptOrderItemRepo(tx)
 
 		// 查询收货单
@@ -686,14 +695,16 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 		}
 
 		// 查询采购申请
+		var purchaseOrder *model.PurchaseOrder
 		if req.IsConfirm {
-			purchaseOrder, err := repository.NewPurchaseOrderRepo(tx).GetByUuid(receiptOrder.PurchaseOrderUuid)
+			purchaseOrder, err = repository.NewPurchaseOrderRepo(tx).GetByUuid(receiptOrder.PurchaseOrderUuid)
 			if err != nil {
 				return errors.WithMessage(err, "采购申请不存在")
 			}
 			if !purchaseOrder.CanReceive() {
 				return errors.New("采购单状态不允许收货")
 			}
+			receiptOrder.PurchaseOrder = *purchaseOrder
 		}
 
 		// 重新创建收货明细并更新采购申请明细的到货数量
@@ -714,7 +725,15 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 			// 计算新的到货数量
 			newArrivalNum := purchaseOrderItem.ArrivalNum + itemReq.Num
 			if newArrivalNum > purchaseOrderItem.Num {
-				return errors.New(fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 的收货数量不能超过申请数量（申请数量：%.4f，已到货：%.4f，本次收货：%.4f）"), purchaseOrderItem.MaterialName, purchaseOrderItem.Num, purchaseOrderItem.ArrivalNum, itemReq.Num))
+				return errors.New(
+					fmt.Sprintf(
+						i18n.Translate(ctx.GetLanguage(), "物品 %s 的收货数量不能超过申请数量（申请数量：%.0f，已到货：%.0f，本次收货：%.0f）"),
+						language.JsonToLocaleResponse(purchaseOrderItem.MaterialName).GetLocale(ctx.GetLanguage()),
+						purchaseOrderItem.Num,
+						purchaseOrderItem.ArrivalNum,
+						itemReq.Num,
+					),
+				)
 			}
 
 			// 创建收货明细
@@ -858,10 +877,11 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderDetail(ctx context.Context, re
 		if err != nil {
 			return resp.PurchaseReceiptOrderDetailResp{}, errors.WithMessage(err, "数据转换失败")
 		}
-		itemInfo.LocaleName = language.JsonToLocaleResponse(item.MaterialName)
-		// 查询采购申请明细
+		itemInfo.LocaleName = *language.JsonToLocaleResponse(item.MaterialName)
 		itemInfo.PurchaseNum = item.PurchaseOrderItem.Num
 		itemInfo.ArrivalNum = item.Num
+		itemInfo.LocaleUnitName = *language.JsonToLocaleResponse(item.UnitName)
+		itemInfo.LocaleBaseUnitName = *language.JsonToLocaleResponse(item.BaseUnitName)
 		//
 		detailResp.Items = append(detailResp.Items, itemInfo)
 	}
@@ -1114,16 +1134,18 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 	// 调用erp接口
 	if ctx.GetCompany().IsOpenErp() {
 		erpReq := buying.SavePurchaseReceiptReq{
-			PurchaseOrderName: receiptOrder.OrderNo,
+			PurchaseOrderName: receiptOrder.PurchaseOrder.ErpOrderNo,
 			Items:             make([]*buying.PurchaseOrderItem, 0),
 		}
 		for _, item := range receiptOrder.Items {
-			erpReq.Items = append(erpReq.Items, &buying.PurchaseOrderItem{
-				ItemCode: item.MaterialCode,
-				ItemName: item.MaterialName,
-				StockUom: item.UnitName,
-				Qty:      item.Num,
-			})
+			if item.Num > 0 {
+				erpReq.Items = append(erpReq.Items, &buying.PurchaseOrderItem{
+					ItemCode: item.MaterialCode,
+					ItemName: language.JsonToLocaleResponse(item.MaterialName).EN,
+					StockUom: language.JsonToLocaleResponse(item.UnitName).EN,
+					Qty:      item.Num,
+				})
+			}
 		}
 		resp, err := erp.NewIErpSrv(s.dbm).SavePurchaseReceipt(ctx, &erpReq)
 		if err != nil {

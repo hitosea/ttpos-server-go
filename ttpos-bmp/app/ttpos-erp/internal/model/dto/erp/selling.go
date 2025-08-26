@@ -415,6 +415,7 @@ type SalesInvoicePayment struct {
 // POSInvoice 结构体定义
 // 用于表示POS发票的完整信息
 type POSInvoice struct {
+	AmendedFrom                            string              `json:"amended_from,omitempty"`                               //  修订发票
 	Name                                   string              `json:"name,omitempty"`                                       // 发票名称
 	Owner                                  string              `json:"owner,omitempty"`                                      // 所有者
 	Creation                               string              `json:"creation,omitempty"`                                   // 创建时间

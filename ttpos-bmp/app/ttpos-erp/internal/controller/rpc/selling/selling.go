@@ -315,3 +315,24 @@ func (c *Controller) ReturnPosInvoice(ctx context.Context, req *selling.ReturnPo
 	}
 	return rpc.ApiSuccessWithData("退款发票成功", resp), nil
 }
+
+func (*Controller) CancelPosInvoice(ctx context.Context, req *selling.CancelPosInvoiceReq) (*api.ResponseInfo, error) {
+	// 调用服务层取消商品发票
+	if len(req.ProductsInvoiceName) > 0 {
+		err := service.Selling().CancelPosInvoice(ctx, req.ProductsInvoiceName)
+		if err != nil {
+			return rpc.ApiError(err.Error()), nil
+		}
+	}
+	// 调用服务层取消材料发票
+	if len(req.MaterialInvoiceName) > 0 {
+		err := service.Selling().CancelPosInvoice(ctx, req.MaterialInvoiceName)
+		if err != nil {
+			return rpc.ApiError(err.Error()), nil
+		}
+	}
+	return rpc.ApiSuccessWithData("取消发票成功", &selling.CancelPosInvoiceResp{
+		ProductsInvoiceName: req.ProductsInvoiceName,
+		MaterialInvoiceName: req.MaterialInvoiceName,
+	}), nil
+}

@@ -30,7 +30,7 @@ message PosProfileListResp {
 
 message CreatePaymentAccountReq {
   string company_abbr = 1; // 公司缩写, 必填
-  string payment_type = 2; // 支付类型，必填 Cash/Balance/Wechat Pay/Alipay
+  string payment_type = 2; // 支付类型，必填 Cash/Balance/Free Meal/Wechat Pay/Alipay/QR PromptPay
   string branch = 3; // 分店名称,可选
   string payment_source = 4; // 支付来源,可选 2= lianlianpay
 }
@@ -100,6 +100,8 @@ message SavePosInvoiceReq {
   repeated PosInvoiceItem material_items = 11;             // 原材料项目列表 必填
   repeated PosInvoiceTax taxes = 12;              // 税费列表 必填
   repeated PosInvoicePayment payments = 13;       // 付款列表 必填
+  string amended_products_invoice_name = 14; // 反结账后，重新结账时填写原商品发票名称
+  string amended_material_invoice_name = 15; // 反结账后，重新结账时填写原材料发票名称
 }
 
 // SavePosInvoiceResp 保存POS发票响应消息
@@ -114,6 +116,7 @@ message PosInvoiceItem {
   double qty = 2;         // 数量，必填
   double rate = 3;       // 单价，必填
   double amount = 4;     // 金额，必填
+  string description = 5;     // 描述, 可选。 如果是套餐内的商品，填写内容 “Sales in package:{套餐名称}”
 }
 
 // PosInvoiceTax POS发票税费
@@ -125,7 +128,7 @@ message PosInvoiceTax {
 
 // PosInvoicePayment POS发票付款
 message PosInvoicePayment {
-  string mode_of_payment = 1; // 支付方式，必填 仅支持Cash/Balance/LianlianPay-WeChat Pay/LianlianPay-Alipay/LianlianPay-QR PromptPay
+  string mode_of_payment = 1; // 支付方式，必填 仅支持  Cash/Balance/Free Meal/LianlianPay-WeChat Pay/LianlianPay-Alipay/LianlianPay-QR PromptPay， 使用lianlianpay时，请加上前缀
   double amount = 2;          // 金额，必填
 }
 
@@ -146,6 +149,17 @@ message ReturnPosInvoiceResp {
   string invoice_name = 1; // 商品发票名称
 }
 
+// CancelPosInvoiceReq 取消POS发票请求消息，反结账时调用
+message CancelPosInvoiceReq {
+  string products_invoice_name = 1;                         // 商品销售发票，必填
+  string material_invoice_name = 2;                         // 材料销售发票，必填
+}
+
+message CancelPosInvoiceResp {
+  string products_invoice_name = 1; // 商品发票名称
+  string material_invoice_name = 2; // 材料发票名称
+}
+
 
 // SellingService 服务定义
 service SellingService {
@@ -164,4 +178,7 @@ service SellingService {
 
   // 退款 Pos Invoice
   rpc ReturnPosInvoice (ReturnPosInvoiceReq) returns (erp.ResponseInfo);
+
+  // 取消 Pos Invoice
+  rpc CancelPosInvoice (CancelPosInvoiceReq) returns (erp.ResponseInfo);
 }

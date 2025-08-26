@@ -639,6 +639,22 @@ class Product extends ProductModel
             // 套餐商品组
             if ($isPackage) {
                 ProductPackageGroupModel::updatePackageGroup($data, $this);
+            } else {
+                // 下架非商品时，同时下架关联的套餐
+                if ($data['product_status'] == 20) {
+                    $items = ProductPackageGroupItemModel::with([
+                        'productPackageGroup' => [
+                            'product'
+                        ]
+                    ])->where('related_uuid', $this['product_id'])->select();
+                    foreach ($items as $item) {
+                        $package = $item?->productPackageGroup?->product;
+                        if ($package) {
+                            $package->save(['status' => 0]);
+                            ProductBom::where('product_package_uuid', $package->uuid)->update(['status' => 0]);
+                        }
+                    }
+                }
             }
             return true;
         });
@@ -732,6 +748,21 @@ class Product extends ProductModel
                 $bomRes = $bom->save(['status' => $value]);
                 if ($bomRes === false) {
                     return false;
+                }
+            }
+            // 更新套餐状态
+            if ($this->product_type == 0 && $value == 0) {
+                $items = ProductPackageGroupItemModel::with([
+                    'productPackageGroup' => [
+                        'product'
+                    ]
+                ])->where('related_uuid', $this->uuid)->select();
+                foreach ($items as $item) {
+                    $package = $item?->productPackageGroup?->product;
+                    if ($package) {
+                        $package->save(['status' => 0]);
+                        ProductBom::where('product_package_uuid', $package->uuid)->update(['status' => 0]);
+                    }
                 }
             }
             $this->commit();

@@ -328,6 +328,8 @@
         }
         //设置授权数据
         setSessionStorage('supplier', res.data.supplier);
+        // 设置erp数据
+        setSessionStorage('erp', res.data.erp);
         /*获取基础配置*/
         const dataInfo = {
           data: {

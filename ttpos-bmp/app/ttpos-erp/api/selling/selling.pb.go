@@ -210,10 +210,10 @@ func (x *PosProfileListResp) GetProfileList() []*PosProfile {
 
 type CreatePaymentAccountReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CompanyAbbr   string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写, 必填"`                               // 公司缩写, 必填
-	PaymentType   string                 `protobuf:"bytes,2,opt,name=payment_type,json=paymentType,proto3" json:"payment_type,omitempty" dc:"支付类型，必填 Cash/Balance/Wechat Pay/Alipay"` // 支付类型，必填 Cash/Balance/Wechat Pay/Alipay
-	Branch        string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty" dc:"分店名称,可选"`                                                             // 分店名称,可选
-	PaymentSource string                 `protobuf:"bytes,4,opt,name=payment_source,json=paymentSource,proto3" json:"payment_source,omitempty" dc:"支付来源,可选 2= lianlianpay"`           // 支付来源,可选 2= lianlianpay
+	CompanyAbbr   string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写, 必填"`                                                      // 公司缩写, 必填
+	PaymentType   string                 `protobuf:"bytes,2,opt,name=payment_type,json=paymentType,proto3" json:"payment_type,omitempty" dc:"支付类型，必填 Cash/Balance/Free Meal/Wechat Pay/Alipay/QR PromptPay"` // 支付类型，必填 Cash/Balance/Free Meal/Wechat Pay/Alipay/QR PromptPay
+	Branch        string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty" dc:"分店名称,可选"`                                                                                    // 分店名称,可选
+	PaymentSource string                 `protobuf:"bytes,4,opt,name=payment_source,json=paymentSource,proto3" json:"payment_source,omitempty" dc:"支付来源,可选 2= lianlianpay"`                                  // 支付来源,可选 2= lianlianpay
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -774,22 +774,24 @@ func (x *ClosePosEntryResp) GetClosePosEntryInfo() *ClosePosEntryInfo {
 
 // SavePosInvoiceReq 保存POS发票请求消息
 type SavePosInvoiceReq struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	OrderNo           string                 `protobuf:"bytes,1,opt,name=order_no,json=orderNo,proto3" json:"order_no,omitempty" dc:"订单号,必填 传ttpos的订单号"`                                           // 订单号,必填 传ttpos的订单号
-	OpenPosEntryName  string                 `protobuf:"bytes,2,opt,name=open_pos_entry_name,json=openPosEntryName,proto3" json:"open_pos_entry_name,omitempty" dc:"POS开帐名称,必填"`                   // POS开帐名称,必填
-	CompanyAbbr       string                 `protobuf:"bytes,3,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写,必填"`                                         // 公司缩写,必填
-	PostingDatetime   int64                  `protobuf:"varint,4,opt,name=posting_datetime,json=postingDatetime,proto3" json:"posting_datetime,omitempty" dc:"过账日期时间 格式为时间戳，必填， 传交易时间过来"`          // 过账日期时间 格式为时间戳，必填， 传交易时间过来
-	UpdateStock       int32                  `protobuf:"varint,5,opt,name=update_stock,json=updateStock,proto3" json:"update_stock,omitempty" dc:"是否更新库存 必填，默认选1 0=不更新 1=更新"`                      // 是否更新库存 必填，默认选1 0=不更新 1=更新
-	Currency          string                 `protobuf:"bytes,6,opt,name=currency,proto3" json:"currency,omitempty" dc:"货币 标准缩写例如 CNY/THB/USD 必填"`                                                 // 货币 标准缩写例如 CNY/THB/USD 必填
-	PriceListCurrency string                 `protobuf:"bytes,7,opt,name=price_list_currency,json=priceListCurrency,proto3" json:"price_list_currency,omitempty" dc:"价格表货币 标准缩写例如 CNY/THB/USD 必填"` // 价格表货币 标准缩写例如 CNY/THB/USD 必填
-	Branch            string                 `protobuf:"bytes,8,opt,name=branch,proto3" json:"branch,omitempty" dc:"分店 可选"`                                                                        // 分店 可选
-	CustomerUuid      string                 `protobuf:"bytes,9,opt,name=customer_uuid,json=customerUuid,proto3" json:"customer_uuid,omitempty" dc:"客户,可选"`                                        // 客户,可选
-	Items             []*PosInvoiceItem      `protobuf:"bytes,10,rep,name=items,proto3" json:"items,omitempty" dc:"商品项目列表 必填"`                                                                     // 商品项目列表 必填
-	MaterialItems     []*PosInvoiceItem      `protobuf:"bytes,11,rep,name=material_items,json=materialItems,proto3" json:"material_items,omitempty" dc:"原材料项目列表 必填"`                               // 原材料项目列表 必填
-	Taxes             []*PosInvoiceTax       `protobuf:"bytes,12,rep,name=taxes,proto3" json:"taxes,omitempty" dc:"税费列表 必填"`                                                                       // 税费列表 必填
-	Payments          []*PosInvoicePayment   `protobuf:"bytes,13,rep,name=payments,proto3" json:"payments,omitempty" dc:"付款列表 必填"`                                                                 // 付款列表 必填
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state                      protoimpl.MessageState `protogen:"open.v1"`
+	OrderNo                    string                 `protobuf:"bytes,1,opt,name=order_no,json=orderNo,proto3" json:"order_no,omitempty" dc:"订单号,必填 传ttpos的订单号"`                                                                 // 订单号,必填 传ttpos的订单号
+	OpenPosEntryName           string                 `protobuf:"bytes,2,opt,name=open_pos_entry_name,json=openPosEntryName,proto3" json:"open_pos_entry_name,omitempty" dc:"POS开帐名称,必填"`                                         // POS开帐名称,必填
+	CompanyAbbr                string                 `protobuf:"bytes,3,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写,必填"`                                                               // 公司缩写,必填
+	PostingDatetime            int64                  `protobuf:"varint,4,opt,name=posting_datetime,json=postingDatetime,proto3" json:"posting_datetime,omitempty" dc:"过账日期时间 格式为时间戳，必填， 传交易时间过来"`                                // 过账日期时间 格式为时间戳，必填， 传交易时间过来
+	UpdateStock                int32                  `protobuf:"varint,5,opt,name=update_stock,json=updateStock,proto3" json:"update_stock,omitempty" dc:"是否更新库存 必填，默认选1 0=不更新 1=更新"`                                            // 是否更新库存 必填，默认选1 0=不更新 1=更新
+	Currency                   string                 `protobuf:"bytes,6,opt,name=currency,proto3" json:"currency,omitempty" dc:"货币 标准缩写例如 CNY/THB/USD 必填"`                                                                       // 货币 标准缩写例如 CNY/THB/USD 必填
+	PriceListCurrency          string                 `protobuf:"bytes,7,opt,name=price_list_currency,json=priceListCurrency,proto3" json:"price_list_currency,omitempty" dc:"价格表货币 标准缩写例如 CNY/THB/USD 必填"`                       // 价格表货币 标准缩写例如 CNY/THB/USD 必填
+	Branch                     string                 `protobuf:"bytes,8,opt,name=branch,proto3" json:"branch,omitempty" dc:"分店 可选"`                                                                                              // 分店 可选
+	CustomerUuid               string                 `protobuf:"bytes,9,opt,name=customer_uuid,json=customerUuid,proto3" json:"customer_uuid,omitempty" dc:"客户,可选"`                                                              // 客户,可选
+	Items                      []*PosInvoiceItem      `protobuf:"bytes,10,rep,name=items,proto3" json:"items,omitempty" dc:"商品项目列表 必填"`                                                                                           // 商品项目列表 必填
+	MaterialItems              []*PosInvoiceItem      `protobuf:"bytes,11,rep,name=material_items,json=materialItems,proto3" json:"material_items,omitempty" dc:"原材料项目列表 必填"`                                                     // 原材料项目列表 必填
+	Taxes                      []*PosInvoiceTax       `protobuf:"bytes,12,rep,name=taxes,proto3" json:"taxes,omitempty" dc:"税费列表 必填"`                                                                                             // 税费列表 必填
+	Payments                   []*PosInvoicePayment   `protobuf:"bytes,13,rep,name=payments,proto3" json:"payments,omitempty" dc:"付款列表 必填"`                                                                                       // 付款列表 必填
+	AmendedProductsInvoiceName string                 `protobuf:"bytes,14,opt,name=amended_products_invoice_name,json=amendedProductsInvoiceName,proto3" json:"amended_products_invoice_name,omitempty" dc:"反结账后，重新结账时填写原商品发票名称"` // 反结账后，重新结账时填写原商品发票名称
+	AmendedMaterialInvoiceName string                 `protobuf:"bytes,15,opt,name=amended_material_invoice_name,json=amendedMaterialInvoiceName,proto3" json:"amended_material_invoice_name,omitempty" dc:"反结账后，重新结账时填写原材料发票名称"` // 反结账后，重新结账时填写原材料发票名称
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
 }
 
 func (x *SavePosInvoiceReq) Reset() {
@@ -913,6 +915,20 @@ func (x *SavePosInvoiceReq) GetPayments() []*PosInvoicePayment {
 	return nil
 }
 
+func (x *SavePosInvoiceReq) GetAmendedProductsInvoiceName() string {
+	if x != nil {
+		return x.AmendedProductsInvoiceName
+	}
+	return ""
+}
+
+func (x *SavePosInvoiceReq) GetAmendedMaterialInvoiceName() string {
+	if x != nil {
+		return x.AmendedMaterialInvoiceName
+	}
+	return ""
+}
+
 // SavePosInvoiceResp 保存POS发票响应消息
 type SavePosInvoiceResp struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
@@ -969,10 +985,11 @@ func (x *SavePosInvoiceResp) GetMaterialInvoiceName() string {
 // PosInvoiceItem POS发票商品项目
 type PosInvoiceItem struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"商品编码，必填"` // 商品编码，必填
-	Qty           float64                `protobuf:"fixed64,2,opt,name=qty,proto3" json:"qty,omitempty" dc:"数量，必填"`                           // 数量，必填
-	Rate          float64                `protobuf:"fixed64,3,opt,name=rate,proto3" json:"rate,omitempty" dc:"单价，必填"`                         // 单价，必填
-	Amount        float64                `protobuf:"fixed64,4,opt,name=amount,proto3" json:"amount,omitempty" dc:"金额，必填"`                     // 金额，必填
+	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"商品编码，必填"`                              // 商品编码，必填
+	Qty           float64                `protobuf:"fixed64,2,opt,name=qty,proto3" json:"qty,omitempty" dc:"数量，必填"`                                                        // 数量，必填
+	Rate          float64                `protobuf:"fixed64,3,opt,name=rate,proto3" json:"rate,omitempty" dc:"单价，必填"`                                                      // 单价，必填
+	Amount        float64                `protobuf:"fixed64,4,opt,name=amount,proto3" json:"amount,omitempty" dc:"金额，必填"`                                                  // 金额，必填
+	Description   string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty" dc:"描述, 可选。 如果是套餐内的商品，填写内容 “Sales in package:{套餐名称"` // 描述, 可选。 如果是套餐内的商品，填写内容 “Sales in package:{套餐名称}”
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1033,6 +1050,13 @@ func (x *PosInvoiceItem) GetAmount() float64 {
 		return x.Amount
 	}
 	return 0
+}
+
+func (x *PosInvoiceItem) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
 }
 
 // PosInvoiceTax POS发票税费
@@ -1099,8 +1123,8 @@ func (x *PosInvoiceTax) GetDescription() string {
 // PosInvoicePayment POS发票付款
 type PosInvoicePayment struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ModeOfPayment string                 `protobuf:"bytes,1,opt,name=mode_of_payment,json=modeOfPayment,proto3" json:"mode_of_payment,omitempty" dc:"支付方式，必填 仅支持Cash/Balance/LianlianPay-WeChat Pay/LianlianPay-Alipay/LianlianPay-QR PromptPay"` // 支付方式，必填 仅支持Cash/Balance/LianlianPay-WeChat Pay/LianlianPay-Alipay/LianlianPay-QR PromptPay
-	Amount        float64                `protobuf:"fixed64,2,opt,name=amount,proto3" json:"amount,omitempty" dc:"金额，必填"`                                                                                                                         // 金额，必填
+	ModeOfPayment string                 `protobuf:"bytes,1,opt,name=mode_of_payment,json=modeOfPayment,proto3" json:"mode_of_payment,omitempty" dc:"支付方式，必填 仅支持  Cash/Balance/Free Meal/LianlianPay-WeChat Pay/LianlianPay-Alipay/LianlianPay-QR PromptPay， 使用lianlianpay时，请加上前缀"` // 支付方式，必填 仅支持  Cash/Balance/Free Meal/LianlianPay-WeChat Pay/LianlianPay-Alipay/LianlianPay-QR PromptPay， 使用lianlianpay时，请加上前缀
+	Amount        float64                `protobuf:"fixed64,2,opt,name=amount,proto3" json:"amount,omitempty" dc:"金额，必填"`                                                                                                                                                           // 金额，必填
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1295,6 +1319,111 @@ func (x *ReturnPosInvoiceResp) GetInvoiceName() string {
 	return ""
 }
 
+// CancelPosInvoiceReq 取消POS发票请求消息，反结账时调用
+type CancelPosInvoiceReq struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	ProductsInvoiceName string                 `protobuf:"bytes,1,opt,name=products_invoice_name,json=productsInvoiceName,proto3" json:"products_invoice_name,omitempty" dc:"商品销售发票，必填"` // 商品销售发票，必填
+	MaterialInvoiceName string                 `protobuf:"bytes,2,opt,name=material_invoice_name,json=materialInvoiceName,proto3" json:"material_invoice_name,omitempty" dc:"材料销售发票，必填"` // 材料销售发票，必填
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *CancelPosInvoiceReq) Reset() {
+	*x = CancelPosInvoiceReq{}
+	mi := &file_selling_selling_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelPosInvoiceReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelPosInvoiceReq) ProtoMessage() {}
+
+func (x *CancelPosInvoiceReq) ProtoReflect() protoreflect.Message {
+	mi := &file_selling_selling_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelPosInvoiceReq.ProtoReflect.Descriptor instead.
+func (*CancelPosInvoiceReq) Descriptor() ([]byte, []int) {
+	return file_selling_selling_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *CancelPosInvoiceReq) GetProductsInvoiceName() string {
+	if x != nil {
+		return x.ProductsInvoiceName
+	}
+	return ""
+}
+
+func (x *CancelPosInvoiceReq) GetMaterialInvoiceName() string {
+	if x != nil {
+		return x.MaterialInvoiceName
+	}
+	return ""
+}
+
+type CancelPosInvoiceResp struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	ProductsInvoiceName string                 `protobuf:"bytes,1,opt,name=products_invoice_name,json=productsInvoiceName,proto3" json:"products_invoice_name,omitempty" dc:"商品发票名称"` // 商品发票名称
+	MaterialInvoiceName string                 `protobuf:"bytes,2,opt,name=material_invoice_name,json=materialInvoiceName,proto3" json:"material_invoice_name,omitempty" dc:"材料发票名称"` // 材料发票名称
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *CancelPosInvoiceResp) Reset() {
+	*x = CancelPosInvoiceResp{}
+	mi := &file_selling_selling_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelPosInvoiceResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelPosInvoiceResp) ProtoMessage() {}
+
+func (x *CancelPosInvoiceResp) ProtoReflect() protoreflect.Message {
+	mi := &file_selling_selling_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelPosInvoiceResp.ProtoReflect.Descriptor instead.
+func (*CancelPosInvoiceResp) Descriptor() ([]byte, []int) {
+	return file_selling_selling_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *CancelPosInvoiceResp) GetProductsInvoiceName() string {
+	if x != nil {
+		return x.ProductsInvoiceName
+	}
+	return ""
+}
+
+func (x *CancelPosInvoiceResp) GetMaterialInvoiceName() string {
+	if x != nil {
+		return x.MaterialInvoiceName
+	}
+	return ""
+}
+
 var File_selling_selling_proto protoreflect.FileDescriptor
 
 const file_selling_selling_proto_rawDesc = "" +
@@ -1351,7 +1480,7 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x0fperiod_end_date\x18\x03 \x01(\x03R\rperiodEndDate\x12Q\n" +
 	"\x16close_pos_entry_detail\x18\x04 \x03(\v2\x1c.selling.ClosePosEntryDetailR\x13closePosEntryDetail\"`\n" +
 	"\x11ClosePosEntryResp\x12K\n" +
-	"\x14close_pos_entry_info\x18\x01 \x01(\v2\x1a.selling.ClosePosEntryInfoR\x11closePosEntryInfo\"\xac\x04\n" +
+	"\x14close_pos_entry_info\x18\x01 \x01(\v2\x1a.selling.ClosePosEntryInfoR\x11closePosEntryInfo\"\xb2\x05\n" +
 	"\x11SavePosInvoiceReq\x12\x19\n" +
 	"\border_no\x18\x01 \x01(\tR\aorderNo\x12-\n" +
 	"\x13open_pos_entry_name\x18\x02 \x01(\tR\x10openPosEntryName\x12!\n" +
@@ -1366,15 +1495,18 @@ const file_selling_selling_proto_rawDesc = "" +
 	" \x03(\v2\x17.selling.PosInvoiceItemR\x05items\x12>\n" +
 	"\x0ematerial_items\x18\v \x03(\v2\x17.selling.PosInvoiceItemR\rmaterialItems\x12,\n" +
 	"\x05taxes\x18\f \x03(\v2\x16.selling.PosInvoiceTaxR\x05taxes\x126\n" +
-	"\bpayments\x18\r \x03(\v2\x1a.selling.PosInvoicePaymentR\bpayments\"|\n" +
+	"\bpayments\x18\r \x03(\v2\x1a.selling.PosInvoicePaymentR\bpayments\x12A\n" +
+	"\x1damended_products_invoice_name\x18\x0e \x01(\tR\x1aamendedProductsInvoiceName\x12A\n" +
+	"\x1damended_material_invoice_name\x18\x0f \x01(\tR\x1aamendedMaterialInvoiceName\"|\n" +
 	"\x12SavePosInvoiceResp\x122\n" +
 	"\x15products_invoice_name\x18\x01 \x01(\tR\x13productsInvoiceName\x122\n" +
-	"\x15material_invoice_name\x18\x02 \x01(\tR\x13materialInvoiceName\"k\n" +
+	"\x15material_invoice_name\x18\x02 \x01(\tR\x13materialInvoiceName\"\x8d\x01\n" +
 	"\x0ePosInvoiceItem\x12\x1b\n" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x10\n" +
 	"\x03qty\x18\x02 \x01(\x01R\x03qty\x12\x12\n" +
 	"\x04rate\x18\x03 \x01(\x01R\x04rate\x12\x16\n" +
-	"\x06amount\x18\x04 \x01(\x01R\x06amount\"d\n" +
+	"\x06amount\x18\x04 \x01(\x01R\x06amount\x12 \n" +
+	"\vdescription\x18\x05 \x01(\tR\vdescription\"d\n" +
 	"\rPosInvoiceTax\x12\x12\n" +
 	"\x04rate\x18\x01 \x01(\x01R\x04rate\x12\x1d\n" +
 	"\n" +
@@ -1393,14 +1525,21 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x05taxes\x18\a \x03(\v2\x16.selling.PosInvoiceTaxR\x05taxes\x126\n" +
 	"\bpayments\x18\b \x03(\v2\x1a.selling.PosInvoicePaymentR\bpayments\"9\n" +
 	"\x14ReturnPosInvoiceResp\x12!\n" +
-	"\finvoice_name\x18\x01 \x01(\tR\vinvoiceName2\x9f\x03\n" +
+	"\finvoice_name\x18\x01 \x01(\tR\vinvoiceName\"}\n" +
+	"\x13CancelPosInvoiceReq\x122\n" +
+	"\x15products_invoice_name\x18\x01 \x01(\tR\x13productsInvoiceName\x122\n" +
+	"\x15material_invoice_name\x18\x02 \x01(\tR\x13materialInvoiceName\"~\n" +
+	"\x14CancelPosInvoiceResp\x122\n" +
+	"\x15products_invoice_name\x18\x01 \x01(\tR\x13productsInvoiceName\x122\n" +
+	"\x15material_invoice_name\x18\x02 \x01(\tR\x13materialInvoiceName2\xe4\x03\n" +
 	"\x0eSellingService\x12>\n" +
 	"\x11GetPosProfileList\x12\x16.selling.PosProfileReq\x1a\x11.erp.ResponseInfo\x12K\n" +
 	"\x14CreatePaymentAccount\x12 .selling.CreatePaymentAccountReq\x1a\x11.erp.ResponseInfo\x12;\n" +
 	"\fOpenPosEntry\x12\x18.selling.OpenPosEntryReq\x1a\x11.erp.ResponseInfo\x12=\n" +
 	"\rClosePosEntry\x12\x19.selling.ClosePosEntryReq\x1a\x11.erp.ResponseInfo\x12?\n" +
 	"\x0eSavePosInvoice\x12\x1a.selling.SavePosInvoiceReq\x1a\x11.erp.ResponseInfo\x12C\n" +
-	"\x10ReturnPosInvoice\x12\x1c.selling.ReturnPosInvoiceReq\x1a\x11.erp.ResponseInfoB%Z#ttpos-bmp/app/ttpos-erp/api/sellingb\x06proto3"
+	"\x10ReturnPosInvoice\x12\x1c.selling.ReturnPosInvoiceReq\x1a\x11.erp.ResponseInfo\x12C\n" +
+	"\x10CancelPosInvoice\x12\x1c.selling.CancelPosInvoiceReq\x1a\x11.erp.ResponseInfoB%Z#ttpos-bmp/app/ttpos-erp/api/sellingb\x06proto3"
 
 var (
 	file_selling_selling_proto_rawDescOnce sync.Once
@@ -1414,7 +1553,7 @@ func file_selling_selling_proto_rawDescGZIP() []byte {
 	return file_selling_selling_proto_rawDescData
 }
 
-var file_selling_selling_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_selling_selling_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_selling_selling_proto_goTypes = []any{
 	(*PosProfileReq)(nil),           // 0: selling.PosProfileReq
 	(*PosProfile)(nil),              // 1: selling.PosProfile
@@ -1435,7 +1574,9 @@ var file_selling_selling_proto_goTypes = []any{
 	(*PosInvoicePayment)(nil),       // 16: selling.PosInvoicePayment
 	(*ReturnPosInvoiceReq)(nil),     // 17: selling.ReturnPosInvoiceReq
 	(*ReturnPosInvoiceResp)(nil),    // 18: selling.ReturnPosInvoiceResp
-	(*api.ResponseInfo)(nil),        // 19: erp.ResponseInfo
+	(*CancelPosInvoiceReq)(nil),     // 19: selling.CancelPosInvoiceReq
+	(*CancelPosInvoiceResp)(nil),    // 20: selling.CancelPosInvoiceResp
+	(*api.ResponseInfo)(nil),        // 21: erp.ResponseInfo
 }
 var file_selling_selling_proto_depIdxs = []int32{
 	1,  // 0: selling.PosProfileListResp.profile_list:type_name -> selling.PosProfile
@@ -1458,14 +1599,16 @@ var file_selling_selling_proto_depIdxs = []int32{
 	8,  // 17: selling.SellingService.ClosePosEntry:input_type -> selling.ClosePosEntryReq
 	12, // 18: selling.SellingService.SavePosInvoice:input_type -> selling.SavePosInvoiceReq
 	17, // 19: selling.SellingService.ReturnPosInvoice:input_type -> selling.ReturnPosInvoiceReq
-	19, // 20: selling.SellingService.GetPosProfileList:output_type -> erp.ResponseInfo
-	19, // 21: selling.SellingService.CreatePaymentAccount:output_type -> erp.ResponseInfo
-	19, // 22: selling.SellingService.OpenPosEntry:output_type -> erp.ResponseInfo
-	19, // 23: selling.SellingService.ClosePosEntry:output_type -> erp.ResponseInfo
-	19, // 24: selling.SellingService.SavePosInvoice:output_type -> erp.ResponseInfo
-	19, // 25: selling.SellingService.ReturnPosInvoice:output_type -> erp.ResponseInfo
-	20, // [20:26] is the sub-list for method output_type
-	14, // [14:20] is the sub-list for method input_type
+	19, // 20: selling.SellingService.CancelPosInvoice:input_type -> selling.CancelPosInvoiceReq
+	21, // 21: selling.SellingService.GetPosProfileList:output_type -> erp.ResponseInfo
+	21, // 22: selling.SellingService.CreatePaymentAccount:output_type -> erp.ResponseInfo
+	21, // 23: selling.SellingService.OpenPosEntry:output_type -> erp.ResponseInfo
+	21, // 24: selling.SellingService.ClosePosEntry:output_type -> erp.ResponseInfo
+	21, // 25: selling.SellingService.SavePosInvoice:output_type -> erp.ResponseInfo
+	21, // 26: selling.SellingService.ReturnPosInvoice:output_type -> erp.ResponseInfo
+	21, // 27: selling.SellingService.CancelPosInvoice:output_type -> erp.ResponseInfo
+	21, // [21:28] is the sub-list for method output_type
+	14, // [14:21] is the sub-list for method input_type
 	14, // [14:14] is the sub-list for extension type_name
 	14, // [14:14] is the sub-list for extension extendee
 	0,  // [0:14] is the sub-list for field type_name
@@ -1482,7 +1625,7 @@ func file_selling_selling_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_selling_selling_proto_rawDesc), len(file_selling_selling_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

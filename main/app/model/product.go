@@ -51,6 +51,11 @@ func (model *ProductSauce) SetNil() {
 	model.SauceMaterials = nil
 }
 
+// 是否有成本卡
+func (model *ProductSauce) HasProductBomCard() bool {
+	return model.ProductBomCardUuid != 0
+}
+
 // ProductUnit 商品单位表,定义商品的单位信息 ttpos_product_unit
 type ProductUnit struct {
 	BaseModel
@@ -132,6 +137,11 @@ type ProductPackageAttribute struct {
 	// 关联ttpos_product_package_attribute_group
 	ProductPackageAttributeGroup ProductPackageAttributeGroup `gorm:"foreignKey:product_package_attribute_group_uuid;references:uuid" json:"-"` // 产品包属性组
 	Attribute                    ProductAttribute             `gorm:"foreignKey:attribute_uuid;references:uuid" json:"-"`                       // 产品属性
+}
+
+type ProductPackageAttributeGroupCount struct {
+	ProductPackageAttributeGroupUuid uint64 `gorm:"column:product_package_attribute_group_uuid"`
+	RelatedAttributeUuidCount        int64  `gorm:"column:related_attribute_uuid_count"`
 }
 
 func (model *ProductPackageAttribute) SetNil() {
@@ -475,6 +485,11 @@ func (model *ProductBom) SetNil() {
 	model.ProductFlavor = ProductFlavor{}
 	model.ProductSauce = ProductSauce{}
 	model.FlavorMaterials = nil
+}
+
+// 是否有成本卡
+func (model *ProductBom) HasProductBomCard() bool {
+	return model.ProductBomCardUuid != 0
 }
 
 func (model *ProductBom) GetStockNum() float64 {

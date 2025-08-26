@@ -160,8 +160,10 @@ type PurchaseReceiptItemInfo struct {
 	PurchaseNum           float64            `json:"purchase_num"`             // 采购数量
 	ArrivalNum            float64            `json:"arrival_num"`              // 到货数量
 	UnitName              string             `json:"unit_name"`                // 采购单位名称
+	LocaleUnitName        dto.LocaleResponse `json:"locale_unit_name"`         // 采购单位名称
 	UnitConversionRate    float64            `json:"unit_conversion_rate"`     // 基准单位转换率
 	BaseUnitName          string             `json:"base_unit_name"`           // 基准单位名称
+	LocaleBaseUnitName    dto.LocaleResponse `json:"locale_base_unit_name"`    // 基准单位名称
 }
 
 // PurchaseReceiptOrderDetailResp 收货单详情响应
