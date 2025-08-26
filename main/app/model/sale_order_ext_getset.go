@@ -655,6 +655,9 @@ func (model *SaleOrder) GetPercentageList() []map[string]string {
 		if item.IsDelete() || item.IsUnCookingProduct() || item.IsUnAcceptOrderBool() || item.IsCancelProduct() {
 			continue
 		}
+		if item.IsPackageSubProduct() {
+			continue
+		}
 		// 获取税率
 		taxRate := fmt.Sprintf("%.0f", item.TaxRate*100)
 		// 累加相同税率的税费和总价
