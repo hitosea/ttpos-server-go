@@ -13,8 +13,10 @@
         </el-form-item>
       </el-form>
       <div>
-        <el-button size="small" type="primary" icon="Plus" v-auth="'/product/expand/spec/add'" @click="addClick"> {{ $t('添加规格') }}</el-button>
-        <el-button size="small" v-auth="'/product/expand/spec/batch_delete'" :disabled="multipleSelection.length == 0" @click="deleteBatch">{{ $t('批量删除') }}</el-button>
+        <el-button size="small" type="primary" icon="Plus" v-auth="'/product/expand/spec/add'" @click="addClick" :disabled="erp_is_open == 1"> {{ $t('添加规格') }}</el-button>
+        <el-button size="small" v-auth="'/product/expand/spec/batch_delete'" :disabled="multipleSelection.length == 0 || erp_is_open == 1" @click="deleteBatch">{{
+          $t('批量删除')
+        }}</el-button>
       </div>
     </div>
     <!--内容-->
@@ -31,16 +33,22 @@
           </el-table-column>
           <el-table-column fixed="right" :label="$t('操作')" width="240">
             <template #default="scope">
-              <el-button @click="editClick(scope.row)" type="primary" link size="small" v-auth="'/product/expand/spec/edit'">{{ $t('编辑') }} </el-button>
-              <el-button @click="relatedProductClick(scope.row)" v-auth="'/product/expand/spec/relatedProduct'" type="primary" link size="small">{{ $t('关联商品') }} </el-button>
-              <el-button @click="editPriceClick(scope.row)" v-auth="'/product/expand/spec/batchPrice'" type="primary" link size="small">{{ $t('修改价格') }} </el-button>
+              <el-button @click="editClick(scope.row)" type="primary" link size="small" v-auth="'/product/expand/spec/edit'" :disabled="erp_is_open == 1"
+                >{{ $t('编辑') }}
+              </el-button>
+              <el-button @click="relatedProductClick(scope.row)" v-auth="'/product/expand/spec/relatedProduct'" type="primary" link size="small" :disabled="erp_is_open == 1"
+                >{{ $t('关联商品') }}
+              </el-button>
+              <el-button @click="editPriceClick(scope.row)" v-auth="'/product/expand/spec/batchPrice'" type="primary" link size="small" :disabled="erp_is_open == 1"
+                >{{ $t('修改价格') }}
+              </el-button>
               <el-button
                 @click="deleteClick(scope.row.spec_id)"
                 type="primary"
                 link
                 size="small"
                 v-auth="'/product/expand/spec/delete'"
-                :disabled="scope.row.product_ids?.length > 0"
+                :disabled="scope.row.product_ids?.length > 0 || erp_is_open == 1"
                 >{{ $t('删除') }}</el-button
               >
             </template>
@@ -95,6 +103,8 @@
   import Edit from './edit.vue';
   import ProductSelector from '@/components/product/Selector.vue';
   import ProductSpecPrice from '@/components/product/SpecPrice.vue';
+  import { useUserStore } from '@/store';
+  const { erp_is_open } = useUserStore();
 
   // 获取当前实例
   const { proxy } = getCurrentInstance();

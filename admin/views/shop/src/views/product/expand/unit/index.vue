@@ -16,8 +16,8 @@
         </el-form-item>
       </el-form>
       <div>
-        <el-button size="small" type="primary" icon="Plus" v-auth="'/product/expand/unit/add'" @click="addClick">{{ $t('添加单位') }}</el-button>
-        <el-button size="small" v-auth="'/product/expand/unit/batch_delete'" :disabled="multipleSelection.length == 0" @click="deleteBatch">{{ $t('批量删除') }}</el-button>
+        <el-button size="small" type="primary" icon="Plus" :disabled="erp_is_open == 1" v-auth="'/product/expand/unit/add'" @click="addClick">{{ $t('添加单位') }}</el-button>
+        <el-button size="small" v-auth="'/product/expand/unit/batch_delete'" :disabled="multipleSelection.length == 0 || erp_is_open == 1" @click="deleteBatch">{{ $t('批量删除') }}</el-button>
       </div>
     </div>
     <!--内容-->
@@ -35,8 +35,8 @@
           </el-table-column>
           <el-table-column fixed="right" :label="$t('操作')" width="240">
             <template #default="scope">
-              <el-button @click="editClick(scope.row)" type="primary" link size="small" v-auth="'/product/expand/unit/edit'">{{ $t('编辑') }} </el-button>
-              <el-button @click="relatedProductClick(scope.row)" type="primary" v-auth="'/product/expand/unit/relatedProduct'" link size="small"
+              <el-button @click="editClick(scope.row)" type="primary" link size="small" v-auth="'/product/expand/unit/edit'" :disabled="erp_is_open == 1">{{ $t('编辑') }} </el-button>
+              <el-button @click="relatedProductClick(scope.row)" type="primary" v-auth="'/product/expand/unit/relatedProduct'" link size="small" :disabled="erp_is_open == 1"
                 >{{ $t('关联商品/材料') }}
               </el-button>
               <el-button
@@ -45,7 +45,7 @@
                 link
                 size="small"
                 v-auth="'/product/expand/unit/delete'"
-                :disabled="scope.row.product_ids?.length > 0"
+                :disabled="scope.row.product_ids?.length > 0 || erp_is_open == 1"
                 >{{ $t('删除') }}</el-button
               >
             </template>
@@ -91,6 +91,8 @@ import ProductApi from '@/api/product.js'
 import Add from './add.vue'
 import Edit from './edit.vue'
 import ProductSelector from '@/components/product/Selector.vue'
+import { useUserStore } from '@/store';
+  const { erp_is_open } = useUserStore();
 
 // 获取当前实例
 const { proxy } = getCurrentInstance()
