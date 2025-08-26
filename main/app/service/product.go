@@ -3985,19 +3985,19 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 
 	// 检查商品类型
 	if err := productCheckSrv.CheckProductType(req.Type); err != nil {
-		return err
+		return errors.WithMessage(err, "检查商品类型失败")
 	}
 	// 检查商品名称
 	if err := productCheckSrv.CheckProductName(ctx, 0, req.LocaleName); err != nil {
-		return err
+		return errors.WithMessage(err, "检查商品名称失败")
 	}
 	// 检查商品分类
 	if err := productCheckSrv.CheckProductCategory(db, req.CategoryUuid); err != nil {
-		return err
+		return errors.WithMessage(err, "检查商品分类失败")
 	}
 	// 检查商品单位
 	if err := productCheckSrv.CheckProductUnique(db, req.UnitUuid); err != nil {
-		return err
+		return errors.WithMessage(err, "检查商品单位失败")
 	}
 	// 商品专用检查
 	flavorListResult := CheckProductFlavorResult{}
@@ -4041,7 +4041,7 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 			}
 			result, err := productCheckSrv.CheckProductAttribute(db, attributes)
 			if err != nil {
-				return err
+				return errors.WithMessage(err, "检查商品属性失败")
 			}
 			attributeListResult = result
 		}
