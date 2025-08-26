@@ -488,6 +488,8 @@
               min_order_price: res.data.detail.order.min_order_price,
               max_order_price: res.data.detail.order.max_order_price,
               avg_order_price: res.data.detail.order.avg_order_price,
+              total_cancel_order_num: res.data.detail.order.total_cancel_order_num,
+              total_cancel_order_amount: res.data.detail.order.total_cancel_order_amount,          
             });
 
             self.zhuoData.push({

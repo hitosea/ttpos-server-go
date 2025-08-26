@@ -68,14 +68,14 @@ type ProductUnitSortReq struct {
 
 type ProductSauceAddReq struct {
 	LocaleName          dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品加料名称
-	Price               float64            `json:"price" binding:"required"`       // 商品加料价格
+	Price               *float64           `json:"price" binding:"required"`       // 商品加料价格
 	ProductPackageUuids []uint64           `json:"product_package_uuids"`          // 关联商品包UUID列表
 }
 
 type ProductSauceEditReq struct {
 	Uuid                uint64             `json:"uuid" binding:"required"`        // 商品加料UUID
 	LocaleName          dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品加料名称
-	Price               float64            `json:"price" binding:"required"`       // 商品加料价格
+	Price               *float64           `json:"price" binding:"required"`       // 商品加料价格
 	ProductPackageUuids []uint64           `json:"product_package_uuids"`          // 关联商品包UUID列表
 }
 

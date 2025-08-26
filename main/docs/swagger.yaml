@@ -24849,22 +24849,6 @@ paths:
       summary: 获取电子菜单二维码
       tags:
       - 商家端.业务设置
-    post:
-      consumes:
-      - application/json
-      description: 更新电子菜单二维码
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 更新电子菜单二维码
-      tags:
-      - 商家端.业务设置
   /shop/setting/return_food_reason:
     delete:
       consumes:

@@ -989,7 +989,8 @@ type PosInvoiceItem struct {
 	Qty           float64                `protobuf:"fixed64,2,opt,name=qty,proto3" json:"qty,omitempty" dc:"数量，必填"`                                                        // 数量，必填
 	Rate          float64                `protobuf:"fixed64,3,opt,name=rate,proto3" json:"rate,omitempty" dc:"单价，必填"`                                                      // 单价，必填
 	Amount        float64                `protobuf:"fixed64,4,opt,name=amount,proto3" json:"amount,omitempty" dc:"金额，必填"`                                                  // 金额，必填
-	Description   string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty" dc:"描述, 可选。 如果是套餐内的商品，填写内容 “Sales in package:{套餐名称"` // 描述, 可选。 如果是套餐内的商品，填写内容 “Sales in package:{套餐名称}”
+	Uom           string                 `protobuf:"bytes,5,opt,name=uom,proto3" json:"uom,omitempty" dc:"单位, 可选"`                                                         // 单位, 可选
+	Description   string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty" dc:"描述, 可选。 如果是套餐内的商品，填写内容 “Sales in package:{套餐名称"` // 描述, 可选。 如果是套餐内的商品，填写内容 “Sales in package:{套餐名称}”
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1050,6 +1051,13 @@ func (x *PosInvoiceItem) GetAmount() float64 {
 		return x.Amount
 	}
 	return 0
+}
+
+func (x *PosInvoiceItem) GetUom() string {
+	if x != nil {
+		return x.Uom
+	}
+	return ""
 }
 
 func (x *PosInvoiceItem) GetDescription() string {
@@ -1640,13 +1648,14 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x1damended_material_invoice_name\x18\x0f \x01(\tR\x1aamendedMaterialInvoiceName\"|\n" +
 	"\x12SavePosInvoiceResp\x122\n" +
 	"\x15products_invoice_name\x18\x01 \x01(\tR\x13productsInvoiceName\x122\n" +
-	"\x15material_invoice_name\x18\x02 \x01(\tR\x13materialInvoiceName\"\x8d\x01\n" +
+	"\x15material_invoice_name\x18\x02 \x01(\tR\x13materialInvoiceName\"\x9f\x01\n" +
 	"\x0ePosInvoiceItem\x12\x1b\n" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x10\n" +
 	"\x03qty\x18\x02 \x01(\x01R\x03qty\x12\x12\n" +
 	"\x04rate\x18\x03 \x01(\x01R\x04rate\x12\x16\n" +
-	"\x06amount\x18\x04 \x01(\x01R\x06amount\x12 \n" +
-	"\vdescription\x18\x05 \x01(\tR\vdescription\"d\n" +
+	"\x06amount\x18\x04 \x01(\x01R\x06amount\x12\x10\n" +
+	"\x03uom\x18\x05 \x01(\tR\x03uom\x12 \n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescription\"d\n" +
 	"\rPosInvoiceTax\x12\x12\n" +
 	"\x04rate\x18\x01 \x01(\x01R\x04rate\x12\x1d\n" +
 	"\n" +
