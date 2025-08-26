@@ -305,27 +305,6 @@ func (h *SettingHandler) GetMenuQrcode(c *gin.Context) {
 	})
 }
 
-// EditMenuQrcode 更新电子菜单二维码
-// @Summary 更新电子菜单二维码
-// @Description 更新电子菜单二维码
-// @Tags 商家端.业务设置
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Success 200 {object} dto.Response
-// @Router /shop/setting/menu_qrcode [post]
-func (h *SettingHandler) EditMenuQrcode(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	qrcode, err := h.settingSrv.UpdateMenuQrcode(ctx)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
-		return
-	}
-	helper.Success(c, gin.H{
-		"url": qrcode,
-	})
-}
-
 // GetMemberQrcode 获取会员端二维码
 // @Summary 获取会员端二维码
 // @Description 获取会员端二维码
@@ -409,8 +388,7 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/setting/return_food_reason/edit", wrapper.EditReturnFoodReason) // 编辑退菜原因
 		privateApi.DELETE("/setting/return_food_reason", wrapper.DeleteReturnFoodReason)  // 删除退菜原因
 		// 电子菜单二维码
-		privateApi.GET("/setting/menu_qrcode", wrapper.GetMenuQrcode)   // 获取电子菜单二维码
-		privateApi.POST("/setting/menu_qrcode", wrapper.EditMenuQrcode) // 更新电子菜单二维码
+		privateApi.GET("/setting/menu_qrcode", wrapper.GetMenuQrcode) // 获取电子菜单二维码
 		// 会员端二维码
 		privateApi.GET("/setting/member_qrcode", wrapper.GetMemberQrcode) // 获取会员端二维码
 
