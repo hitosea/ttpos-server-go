@@ -212,6 +212,16 @@ func (model *ProductPackage) SetNil() {
 	model.ImageFile = File{}
 }
 
+// 是否套餐
+func (model *ProductPackage) IsPackage() bool {
+	return model.ProductType == constant.ProductTypePackage
+}
+
+// 是否商品
+func (model *ProductPackage) IsProduct() bool {
+	return model.ProductType == constant.ProductTypeProduct
+}
+
 func (model *ProductPackage) GetIsShowCashier() bool {
 	return model.IsShowCashier == 1
 }

@@ -118,6 +118,18 @@ type (
 		// 功能：
 		//   - 取消指定名称的POS发票
 		CancelPosInvoice(ctx context.Context, invoiceName string) error
+		// GetModeOfPaymentList 获取支付方式列表
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 获取支付方式列表请求参数
+		//
+		// 返回：
+		//   - *selling.GetModeOfPaymentListResp: 获取支付方式列表响应参数
+		//   - error: 错误信息
+		//
+		// 功能：
+		//   - 获取支付方式列表
+		GetModeOfPaymentList(ctx context.Context, req *selling.GetModeOfPaymentListReq) (*selling.GetModeOfPaymentListResp, error)
 	}
 )
 

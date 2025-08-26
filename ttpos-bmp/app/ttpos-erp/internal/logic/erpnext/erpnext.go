@@ -50,6 +50,8 @@ func GetClient(ctx context.Context) *gclient.Client {
 		if site != nil {
 			c.SetPrefix(site.SiteUrl)
 			c.SetHeader("Authorization", fmt.Sprintf("token %s:%s", site.ApiKey, site.ApiSecret))
+		} else {
+			g.Log().Errorf(ctx, "根据站点编码[%s]查询站点信息失败", m.GetVar(consts.ContextSiteCode))
 		}
 	} else {
 		c.SetPrefix(g.Cfg().MustGet(gctx.GetInitCtx(), "app.erpnext.serviceUrl").String())
@@ -60,10 +62,11 @@ func GetClient(ctx context.Context) *gclient.Client {
 		cashier := &entity.ShopCashier{}
 		err := dao.ShopCashier.Ctx(ctx).Where(dao.ShopCashier.Columns().CashierEmail, ctx.Value(consts.ContextFakeUser)).Limit(1).Scan(&cashier)
 		if err != nil || cashier == nil {
-			g.Log().Errorf(ctx, "查询门店收银员关联关系失败: %v", err)
+			g.Log().Errorf(ctx, "根据收银员邮箱[%s]查询收银员信息失败", ctx.Value(consts.ContextFakeUser))
+		} else {
+			//取不到收银员apikey的话会写空，请求会异常(算特性）
+			c.SetHeader("Authorization", fmt.Sprintf("token %s:%s", cashier.ApiKey, cashier.ApiSecret))
 		}
-		//取不到收银员apikey的话会写空，请求会异常(算特性）
-		c.SetHeader("Authorization", fmt.Sprintf("token %s:%s", cashier.ApiKey, cashier.ApiSecret))
 	}
 
 	c.Use(func(c *gclient.Client, r *http.Request) (resp *gclient.Response, err error) {

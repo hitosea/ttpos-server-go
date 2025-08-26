@@ -307,6 +307,10 @@ func (c *Controller) validateSavePosInvoiceReq(req *selling.SavePosInvoiceReq) e
 }
 
 func (c *Controller) ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosInvoiceReq) (*api.ResponseInfo, error) {
+	// 参数验证
+	if err := c.validateReturnPosInvoiceReq(req); err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
 
 	// 调用服务层退款发票
 	resp, err := service.Selling().ReturnPosInvoice(ctx, req)
@@ -316,7 +320,12 @@ func (c *Controller) ReturnPosInvoice(ctx context.Context, req *selling.ReturnPo
 	return rpc.ApiSuccessWithData("退款发票成功", resp), nil
 }
 
-func (*Controller) CancelPosInvoice(ctx context.Context, req *selling.CancelPosInvoiceReq) (*api.ResponseInfo, error) {
+func (c *Controller) CancelPosInvoice(ctx context.Context, req *selling.CancelPosInvoiceReq) (*api.ResponseInfo, error) {
+	// 参数验证
+	if err := c.validateCancelPosInvoiceReq(req); err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
 	// 调用服务层取消商品发票
 	if len(req.ProductsInvoiceName) > 0 {
 		err := service.Selling().CancelPosInvoice(ctx, req.ProductsInvoiceName)
@@ -335,4 +344,119 @@ func (*Controller) CancelPosInvoice(ctx context.Context, req *selling.CancelPosI
 		ProductsInvoiceName: req.ProductsInvoiceName,
 		MaterialInvoiceName: req.MaterialInvoiceName,
 	}), nil
+}
+
+// validateReturnPosInvoiceReq 验证退款POS发票请求参数
+func (c *Controller) validateReturnPosInvoiceReq(req *selling.ReturnPosInvoiceReq) error {
+	if req == nil {
+		return gerror.New("请求参数不能为空")
+	}
+
+	// 验证必填字段
+	if strings.TrimSpace(req.OrderNo) == "" {
+		return gerror.New("退款订单号不能为空")
+	}
+	if strings.TrimSpace(req.OpenPosEntryName) == "" {
+		return gerror.New("POS开帐名称不能为空")
+	}
+	if req.PostingDatetime <= 0 {
+		return gerror.New("过账日期时间不能为空")
+	}
+	if strings.TrimSpace(req.CompanyAbbr) == "" {
+		return gerror.New("公司缩写不能为空")
+	}
+
+	// 验证商品项目列表
+	if len(req.Items) == 0 {
+		return gerror.New("商品项目列表不能为空")
+	}
+
+	// 验证税费列表
+	if len(req.Taxes) == 0 {
+		return gerror.New("税费列表不能为空")
+	}
+
+	// 验证付款列表
+	if len(req.Payments) == 0 {
+		return gerror.New("付款列表不能为空")
+	}
+
+	// 验证商品项目
+	for i, item := range req.Items {
+		if strings.TrimSpace(item.ItemCode) == "" {
+			return gerror.Newf("第%d项商品编码不能为空", i+1)
+		}
+		if item.Qty <= 0 {
+			return gerror.Newf("第%d项商品数量必须大于0", i+1)
+		}
+		if item.Rate < 0 {
+			return gerror.Newf("第%d项商品单价不能为负数", i+1)
+		}
+		if item.Amount > 0 {
+			return gerror.Newf("第%d项商品退款金额不能为正数", i+1)
+		}
+	}
+
+	// 验证税费
+	for i, tax := range req.Taxes {
+		if tax.Rate < 0 {
+			return gerror.Newf("第%d项费率不能为负数", i+1)
+		}
+		if tax.TaxAmount > 0 {
+			return gerror.Newf("第%d项税费金额不能为正数", i+1)
+		}
+		if strings.TrimSpace(tax.Description) == "" {
+			return gerror.Newf("第%d项税费描述不能为空", i+1)
+		}
+	}
+
+	// 验证退款
+	for i, payment := range req.Payments {
+		if strings.TrimSpace(payment.ModeOfPayment) == "" {
+			return gerror.Newf("第%d项支付方式不能为空", i+1)
+		}
+		if payment.Amount > 0 {
+			return gerror.Newf("第%d项退款金额必须小于等于0", i+1)
+		}
+	}
+
+	return nil
+}
+
+// validateCancelPosInvoiceReq 验证取消POS发票请求参数
+func (c *Controller) validateCancelPosInvoiceReq(req *selling.CancelPosInvoiceReq) error {
+	if req == nil {
+		return gerror.New("请求参数不能为空")
+	}
+
+	// 验证至少有一个发票名称不为空
+	if strings.TrimSpace(req.ProductsInvoiceName) == "" && strings.TrimSpace(req.MaterialInvoiceName) == "" {
+		return gerror.New("商品销售发票名称和材料销售发票名称不能同时为空")
+	}
+
+	// 验证商品销售发票名称格式（如果提供）
+	if strings.TrimSpace(req.ProductsInvoiceName) != "" {
+		if len(req.ProductsInvoiceName) > 255 {
+			return gerror.New("商品销售发票名称长度不能超过255个字符")
+		}
+		// 可以添加更多格式验证，比如发票名称的格式规则
+	}
+
+	// 验证材料销售发票名称格式（如果提供）
+	if strings.TrimSpace(req.MaterialInvoiceName) != "" {
+		if len(req.MaterialInvoiceName) > 255 {
+			return gerror.New("材料销售发票名称长度不能超过255个字符")
+		}
+		// 可以添加更多格式验证，比如发票名称的格式规则
+	}
+
+	return nil
+}
+
+func (*Controller) GetModeOfPaymentList(ctx context.Context, req *selling.GetModeOfPaymentListReq) (*api.ResponseInfo, error) {
+	resp, err := service.Selling().GetModeOfPaymentList(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccessWithData("获取支付方式成功", resp), nil
 }

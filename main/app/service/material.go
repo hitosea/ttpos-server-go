@@ -66,8 +66,11 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 	var dbOptions []repository.DBOption
 	commonRepo := repository.NewCommonRepo()
 
+	// 根据名称、编码、条码模糊查询
 	if req.Keyword != "" {
-		dbOptions = append(dbOptions, commonRepo.WhereLike("name", "%"+req.Keyword+"%"))
+		dbOptions = append(dbOptions, commonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+			return db.Where("name LIKE ? OR code LIKE ? OR barcode_value LIKE ?", "%"+req.Keyword+"%", "%"+req.Keyword+"%", "%"+req.Keyword+"%")
+		}))
 	}
 	if req.CategoryUuid != 0 {
 		dbOptions = append(dbOptions, commonRepo.WhereByCategoryUuid(req.CategoryUuid))

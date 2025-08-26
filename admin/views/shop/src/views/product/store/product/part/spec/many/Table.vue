@@ -48,7 +48,7 @@
           <el-table-column v-if="baseSale == '1'" :label="$t('采购单价')" minWidth="160">
             <template #default="scope">
               <el-form-item for="no_click" label="" style="margin-bottom: 0">
-                <numInput :min="0" :max="100000000" :precision="2" :placeholder="$t('请输入采购单价')" v-model="scope.row.purchase_price"></numInput>
+                <numInput :min="0" :max="100000000" :precision="2" :placeholder="$t('请输入采购单价')" v-model="scope.row.purchase_price" :disabled="erp_is_open == 1"></numInput>
               </el-form-item>
             </template>
           </el-table-column>
@@ -125,6 +125,7 @@
                     }
                   "
                   :placeholder="$t('请输入商品条码')"
+                  :disabled="erp_is_open == 1"
                 ></el-input>
               </el-form-item>
             </template>
@@ -146,7 +147,7 @@
                   },
                 ]"
               >
-                <numInput :min="0" :max="100000000" :precision="2" :placeholder="$t('请输入商品价格')" v-model="scope.row.product_price"></numInput>
+                <numInput :min="0" :max="100000000" :precision="2" :placeholder="$t('请输入商品价格')" v-model="scope.row.product_price" :disabled="erp_is_open == 1"></numInput>
               </el-form-item>
             </template>
           </el-table-column>
@@ -175,7 +176,7 @@
                     },
                   ]"
                 >
-                  <el-input-number :min="0" :max="999" :controls="false" v-model="form.model.sku[scope.$index].material[index].material_num" :placeholder="$t('请输入数量')">
+                  <el-input-number :min="0" :max="999" :controls="false" v-model="form.model.sku[scope.$index].material[index].material_num" :placeholder="$t('请输入数量')" :disabled="erp_is_open == 1">
                   </el-input-number>
                 </el-form-item>
                 <span class="mt--16">{{ item.product_unit_text }}</span>
@@ -218,7 +219,7 @@
   import Add from '../../../../../expand/spec/add.vue';
 
   // 获取用户信息和语言数据
-  const { computedSupplier } = useUserStore();
+  const { computedSupplier, erp_is_open } = useUserStore();
   const supplier = computedSupplier().supplier;
   const baseSale = supplier.value?.sale_stock || 0;
   const languageList = languageStore().getLanguageList().languageList.value;
@@ -295,6 +296,9 @@
 
   // 方法定义
   const deleteAttr = (i) => {
+    if (erp_is_open == 1) {
+      return;
+    }
     if (form.model.sku.length > 1) {
       form.model.sku.splice(i, 1);
       form.many_select_list.splice(i, 1);
@@ -320,12 +324,18 @@
   };
 
   const addMaterials = (index) => {
+    if (erp_is_open == 1) {
+      return;
+    }
     multiple_selection.value = form.many_select_list[index];
     selectIndex.value = index;
     open_product.value = true;
   };
 
   const handleDelete = ($index, index) => {
+    if (erp_is_open == 1) {
+      return;
+    }
     form.many_select_list[$index].splice(index, 1);
     form.model.sku[$index].material.splice(index, 1);
     if ($index == 0) {

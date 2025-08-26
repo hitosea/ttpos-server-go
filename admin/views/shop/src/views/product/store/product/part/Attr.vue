@@ -7,7 +7,7 @@
       <div class="mt16">
         <!-- <el-form-item for="no_click"  label="属性明细："> -->
         <el-form-item for="no_click" :label="$t('商品属性：')">
-          <el-button type="primary" @click="addAttr">{{ $t('添加属性') }}+</el-button>
+          <el-button type="primary" @click="addAttr" :disabled="erp_is_open == 1">{{ $t('添加属性') }}+</el-button>
         </el-form-item>
 
         <!--商品属性-->
@@ -19,17 +19,19 @@
                   typeof item.attribute_name === 'string' ? JSON.parse(item.attribute_name || '{}')[languageKey] : item.attribute_name ? item.attribute_name[languageKey] : '-'
                 }}
               </div>
-              <div> <el-checkbox v-model="item.attribute_required" size="large" :true-value="1" :false-value="0" :label="$t('必选')" /></div>
+              <div> <el-checkbox v-model="item.attribute_required" size="large" :disabled="erp_is_open == 1" :true-value="1" :false-value="0" :label="$t('必选')" /></div>
               <div class="table-c-item">
                 <el-checkbox
                   v-model="item.attribute_open_max_select"
                   size="large"
+                  :disabled="erp_is_open == 1"
                   :true-value="1"
                   :false-value="0"
                   :label="$t('最多可选')"
                   @change="checkDefaultSelect(index, item.attribute_value)"
                 />
                 <el-input-number
+                  :disabled="erp_is_open == 1"
                   v-if="item.attribute_open_max_select == '1'"
                   @input="checkDefaultSelect(index, item.attribute_value)"
                   @blur="onBlur"
@@ -75,13 +77,14 @@
                       size="large"
                       :true-value="1"
                       :false-value="0"
+                      :disabled="erp_is_open == 1"
                     />
                   </el-form-item>
                 </template>
               </el-table-column>
               <el-table-column prop="name" :label="$t('操作')" width="120">
                 <template #default="scope">
-                  <el-button @click="deleteClick(index, scope.$index, item.attribute_value)" type="primary" link size="small"> {{ $t('删除') }}</el-button>
+                  <el-button @click="deleteClick(index, scope.$index, item.attribute_value)" type="primary" :disabled="erp_is_open == 1" link size="small"> {{ $t('删除') }}</el-button>
                 </template>
               </el-table-column>
             </el-table>
@@ -98,7 +101,8 @@
   import { ref, inject, watch, nextTick } from 'vue';
   import { languageStore } from '@/store/model/language.js';
   import AttributeSelector from '@/components/product/AttributeSelector.vue';
-
+  import { useUserStore } from '@/store';
+  const { erp_is_open } = useUserStore();
   // 获取语言配置
   const languageKey = languageStore().getLanguageKey().language.value;
 
@@ -138,6 +142,9 @@
   };
 
   const handleDelete = (index) => {
+    if (erp_is_open == 1) {
+      return;
+    }
     // 删除属性
     form.model.product_attr.splice(index, 1);
   };

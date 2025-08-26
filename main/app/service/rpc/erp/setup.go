@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"ttpos-bmp/app/ttpos-erp/api/setup"
 	"ttpos-server-go/app/cloud"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/model"
@@ -87,6 +88,15 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		"erpnext_branch_name":      response.BranchName,
 		"erpnext_pos_profile_name": initShopReq.PosProfileName,
 		"erpnext_admin_email":      response.AdminEmail,
+	})
+
+	// 自动同步了支付方式，cash, balance, lianlian(wechat, alipay, qr_promptpay)
+	repository.NewPaymentMethodRepo(s.dbm.GetDB(company.Uuid)).InitErpnextPayment(map[int]string{
+		constant.PaymentMethodCodeBalance:             "Balance",
+		constant.PaymentMethodCodeCash:                "Cash",
+		constant.PaymentMethodCodeLianLianWechatPay:   "LianlianPay-WeChat Pay",
+		constant.PaymentMethodCodeLianLianAliPay:      "LianlianPay-AliPay",
+		constant.PaymentMethodCodeLianLianQRPromptPay: "LianlianPay-QR PromptPay",
 	})
 
 	return resp.InitShopResp{

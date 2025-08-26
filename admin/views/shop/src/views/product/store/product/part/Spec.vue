@@ -5,7 +5,7 @@
 
     <!--减库存方式-->
     <el-form-item for="no_click" :label="$t('库存计算方式：')" v-if="form.model.type == 10">
-      <el-radio-group v-model="form.model.deduct_stock_type">
+      <el-radio-group v-model="form.model.deduct_stock_type" :disabled="erp_is_open == 1">
         <el-radio :value="10">{{ $t('下单减库存') }}</el-radio>
         <el-radio :value="20">{{ $t('付款减库存') }}</el-radio>
       </el-radio-group>
@@ -27,6 +27,7 @@
           class="max-w460 mr8"
           size="default"
           :placeholder="$t('请选择') + `(${item.value})`"
+          :disabled="erp_is_open == 1"
         >
           <template v-for="items in restaurantsObj[item.key]" :key="items.index">
             <el-option :value="items.index" :label="items.value"></el-option>
@@ -56,7 +57,8 @@
   import Many from './spec/Many.vue';
   import { languageStore } from '@/store/model/language.js';
   import Add from '../../../expand/unit/add.vue';
-
+  import { useUserStore } from '@/store';
+  const { erp_is_open } = useUserStore();
   // 获取语言数据
   const languageList = languageStore().getLanguageList().languageList.value;
   const languageKey = languageStore().getLanguageKey().language.value;
