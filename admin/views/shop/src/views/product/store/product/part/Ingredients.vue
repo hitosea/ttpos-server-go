@@ -6,18 +6,27 @@
     <div>
       <div class="mt16">
         <el-form-item for="no_click" :label="$t('商品加料：')">
-          <el-button type="primary" :disabled="form.model.product_feed.length >= 10" @click="addIngredients">{{ $t('添加加料') }}+</el-button>
+          <el-button type="primary" :disabled="form.model.product_feed.length >= 10 || erp_is_open == 1" @click="addIngredients">{{ $t('添加加料') }}+</el-button>
         </el-form-item>
         <!--加料-->
         <template v-if="form.model.product_feed.length > 0">
           <div class="table-checkbox">
-            <div> <el-checkbox v-model="form.model.feed_required" size="large" :true-value="1" :false-value="0" :label="$t('必选')" /></div>
+            <div> <el-checkbox v-model="form.model.feed_required" size="large" :disabled="erp_is_open == 1" :true-value="1" :false-value="0" :label="$t('必选')" /></div>
             <div class="table-c-item">
-              <el-checkbox v-model="form.model.feed_open_max_select" size="large" :true-value="1" :false-value="0" :label="$t('最多可选')" @change="checkDefaultSelect" />
+              <el-checkbox
+                v-model="form.model.feed_open_max_select"
+                size="large"
+                :disabled="erp_is_open == 1"
+                :true-value="1"
+                :false-value="0"
+                :label="$t('最多可选')"
+                @change="checkDefaultSelect"
+              />
               <el-input-number
                 v-if="form.model.feed_open_max_select == '1'"
                 @input="checkDefaultSelect()"
                 @blur="onBlur"
+                :disabled="erp_is_open == 1"
                 :controls="false"
                 :min="1"
                 :max="form.model.product_feed.length"
@@ -25,7 +34,7 @@
                 class="max-w460"
               ></el-input-number>
             </div>
-            <el-icon class="delete-icon" @click="handleDelete()">
+            <el-icon class="delete-icon" @click="handleDelete()" :disabled="erp_is_open == 1">
               <Delete />
             </el-icon>
           </div>
@@ -54,7 +63,15 @@
                     },
                   ]"
                 >
-                  <numInput :controls="false" :min="0" :max="100000000" :precision="2" :placeholder="$t('请输入价格')" v-model="scope.row.price"></numInput>
+                  <numInput
+                    :controls="false"
+                    :min="0"
+                    :max="100000000"
+                    :precision="2"
+                    :placeholder="$t('请输入价格')"
+                    v-model="scope.row.price"
+                    :disabled="erp_is_open == 1"
+                  ></numInput>
                 </el-form-item>
               </template>
             </el-table-column>
@@ -76,12 +93,13 @@
                 >
                   <numInput
                     :controls="false"
-                    :disabled="scope.row.material.length > 0"
+                    :disabled="scope.row.material.length > 0 || erp_is_open == 1"
                     :min="0"
                     :max="99999999"
                     :precision="0"
                     :placeholder="$t('请填写库存数量')"
                     v-model="scope.row.stock_num"
+
                   ></numInput>
                 </el-form-item>
               </template>
@@ -101,7 +119,7 @@
                     },
                   ]"
                 >
-                  <el-checkbox @change="checkDefaultSelect" v-model="scope.row.default_select" size="large" :true-value="1" :false-value="0" />
+                  <el-checkbox :disabled="erp_is_open == 1" @change="checkDefaultSelect" v-model="scope.row.default_select" size="large" :true-value="1" :false-value="0" />
                 </el-form-item>
               </template>
             </el-table-column>
@@ -112,7 +130,7 @@
             </el-table-column>
             <el-table-column prop="name" :label="$t('操作')" width="120">
               <template #default="scope">
-                <el-button @click="deleteClick(scope.$index)" type="primary" link size="small"> {{ $t('删除') }}</el-button>
+                <el-button @click="deleteClick(scope.$index)" :disabled="erp_is_open == 1" type="primary" link size="small"> {{ $t('删除') }}</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -129,12 +147,11 @@
   import { useUserStore } from '@/store';
   import addFeed from '../components/addFeed.vue';
   import { languageStore } from '@/store/model/language.js';
-
   // 获取当前实例
   const { proxy } = getCurrentInstance();
 
   // 获取用户信息和语言数据
-  const { computedSupplier } = useUserStore();
+  const { computedSupplier, erp_is_open } = useUserStore();
   const supplier = computedSupplier().supplier;
   const languageKey = languageStore().getLanguageKey().language.value;
 
@@ -204,6 +221,9 @@
   };
 
   const handleDelete = () => {
+    if (erp_is_open == 1) {
+      return;
+    }
     form.model.product_feed = [];
   };
 

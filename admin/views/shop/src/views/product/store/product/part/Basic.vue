@@ -9,7 +9,6 @@
         <el-radio :value="20">{{ $t('材料') }}</el-radio>
       </el-radio-group>
     </el-form-item>
-
     <UniqueNameForm
       ref="uniqueNameFormRef"
       :labelPrefix="form.model.type == 30 ? $t('套餐名称') : $t('商品名称')"
@@ -18,14 +17,23 @@
       :maxlength="150"
       :apiId="form.model.product_id ? form.model.product_id : undefined"
       :overrideLanguages="form.model.product_id ? form.model.product_name : undefined"
+      :disabled="erp_is_open == 1"
     />
 
     <el-form-item for="no_click" :label="$t('所属分类：')" :rules="[{ required: true, message: $t('请选择所属分类') }]" prop="model.category_id">
-      <el-cascader class="max-w460 mr8" :options="options" v-model="form.model.category_id" clearable style="width: 100%" :placeholder="$t('请选择分类')"></el-cascader>
+      <el-cascader
+        class="max-w460 mr8"
+        :disabled="erp_is_open == 1"
+        :options="options"
+        v-model="form.model.category_id"
+        clearable
+        style="width: 100%"
+        :placeholder="$t('请选择分类')"
+      ></el-cascader>
       <el-button size="small" type="primary" class="el-icon-circle-plus" @click="addCategory">{{ $t('添加分类') }}+</el-button>
     </el-form-item>
     <el-form-item for="no_click" :label="$t('供应商：')" v-if="baseSale == '1' && form.model.type == 20">
-      <el-select v-model="form.model.erp_supplier_id" filterable clearable class="max-w460" size="default" :placeholder="$t('请选择供应商')">
+      <el-select v-model="form.model.erp_supplier_id" filterable clearable class="max-w460" size="default" :placeholder="$t('请选择供应商')" :disabled="erp_is_open == 1">
         <template v-for="item in supplierList" :key="item.id">
           <el-option :value="item.id" :label="item.name"></el-option>
         </template>
@@ -59,11 +67,20 @@
       prop="model.img_name"
       :rules="[{ validator: uniqueNameValidator('product_img', form.model.product_id, 'SINGLE', undefined, false), trigger: 'blur' }]"
     >
-      <el-input type="text" :placeholder="$t('请输入图片名称')" v-model="form.model.img_name" :maxlength="50" class="max-w460"></el-input>
+      <el-input type="text" :placeholder="$t('请输入图片名称')" v-model="form.model.img_name" :disabled="erp_is_open == 1" :maxlength="50" class="max-w460"></el-input>
     </el-form-item>
 
     <el-form-item for="no_click" :label="$t('套餐价格：')" prop="model.package_price" v-if="form.model.type == 30" :rules="[{ required: true, message: $t('请输入套餐价格') }]">
-      <numInput type="text" :placeholder="$t('请输入套餐价格')" v-model="form.model.package_price" :min="0" :max="100000000" :precision="2" class="max-w460"></numInput>
+      <numInput
+        type="text"
+        :placeholder="$t('请输入套餐价格')"
+        v-model="form.model.package_price"
+        :disabled="erp_is_open == 1"
+        :min="0"
+        :max="100000000"
+        :precision="2"
+        class="max-w460"
+      ></numInput>
     </el-form-item>
 
     <!--商品图片组件-->
@@ -84,7 +101,7 @@
   import { uniqueNameValidator } from '@/utils/form.js';
 
   // 获取用户信息
-  const { computedSupplier } = useUserStore();
+  const { computedSupplier, erp_is_open } = useUserStore();
   const supplier = computedSupplier().supplier;
   const baseSale = supplier.value?.sale_stock || 0;
 
@@ -195,6 +212,9 @@
 
   /*打开上传图片*/
   const openProductUpload = () => {
+    if (erp_is_open == 1) {
+      return;
+    }
     isProductUpload.value = true;
   };
 
@@ -210,6 +230,9 @@
 
   /*删除商品图片*/
   const deleteImg = (index) => {
+    if (erp_is_open == 1) {
+      return;
+    }
     form.model.image.splice(index, 1);
   };
 </script>

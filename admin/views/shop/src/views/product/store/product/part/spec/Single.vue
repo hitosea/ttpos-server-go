@@ -15,6 +15,7 @@
           :restaurantsObj="restaurantsObj"
           :placeholder="$t('请输入') + `(${item.value})`"
           @translate="(e) => translate(e)"
+          :disabled="erp_is_open == 1"
         ></mAutocomplete>
       </el-form-item>
     </template>
@@ -27,11 +28,11 @@
       :rules="[{ required: true, message: $t('请填写商品价格') }]"
       prop="model.sku[0].product_price"
     >
-      <numInput :min="0" :max="100000000" v-model="form.model.sku[0].product_price" :placeholder="$t('请填写商品价格')" class="max-w460"></numInput>
+      <numInput :min="0" :max="100000000" v-model="form.model.sku[0].product_price" :placeholder="$t('请填写商品价格')" :disabled="erp_is_open == 1" class="max-w460"></numInput>
     </el-form-item>
 
     <el-form-item for="no_click" v-if="baseSale == '1'" :label="$t('采购单价：')" width="80">
-      <numInput :min="0" :max="100000000" v-model="form.model.sku[0].purchase_price" :placeholder="$t('请填写采购单价')" class="max-w460"></numInput>
+      <numInput :min="0" :max="100000000" v-model="form.model.sku[0].purchase_price" :placeholder="$t('请填写采购单价')" :disabled="erp_is_open == 1" class="max-w460"></numInput>
     </el-form-item>
 
     <el-form-item for="no_click" :label="$t('库存数量：')" v-if="form.model.type == 10" :rules="[{ required: true, message: $t('请填写库存数量') }]" prop="model.sku[0].stock_num">
@@ -78,6 +79,7 @@
     >
       <el-input
         :placeholder="$t('请输入商品条码')"
+        :disabled="erp_is_open == 1"
         @input="
           () => {
             form.model.sku[0].barcodeUniqueness = true;
@@ -88,7 +90,7 @@
       ></el-input>
     </el-form-item>
     <el-form-item for="no_click" class="materials" :label="$t('商品材料：')" v-if="form.model.type == 10 && baseSale == '1'">
-      <el-button style="margin-bottom: 16px" type="primary" @click="addMaterials">{{ $t('添加材料') }}+</el-button>
+      <el-button style="margin-bottom: 16px" type="primary" @click="addMaterials" :disabled="erp_is_open == 1">{{ $t('添加材料') }}+</el-button>
 
       <div class="materials-one" label="" v-for="(item, index) in form.single_select_list">
         <el-form-item label="" class="max-w230">
@@ -107,7 +109,7 @@
           ]"
           :prop="`form.model.sku[0].material[${index}].material_num`"
         >
-          <numInput :min="0" :max="999" v-model="form.model.sku[0].material[index].material_num" :placeholder="$t('请输入数量')"> </numInput>
+          <numInput :min="0" :max="999" v-model="form.model.sku[0].material[index].material_num" :placeholder="$t('请输入数量')" :disabled="erp_is_open == 1"> </numInput>
         </el-form-item>
         <span class="mt--16">{{ item.product_unit_text }}</span>
         <el-icon class="delete-icon" @click="handleDelete(index)">
@@ -135,7 +137,7 @@
   import mAutocomplete from '@/components/m-autocomplete/index.vue';
 
   // 获取用户信息和语言数据
-  const { computedSupplier } = useUserStore();
+  const { computedSupplier, erp_is_open } = useUserStore();
   const supplier = computedSupplier().supplier;
   const baseSale = supplier.value?.sale_stock || 0;
   const languageList = languageStore().getLanguageList().languageList.value;
@@ -239,6 +241,9 @@
   };
 
   const handleDelete = (index) => {
+    if (erp_is_open == 1) {
+      return;
+    }
     form.single_select_list.splice(index, 1);
     form.many_select_list[0].splice(index, 1);
     form.model.sku[0].material.splice(index, 1);

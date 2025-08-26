@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/jinzhu/copier"
 	"github.com/joho/godotenv"
@@ -163,8 +164,17 @@ func serverConf(opt copier.Option) {
 		Domain:         "http://127.0.0.1:8080",
 		PaymentTimeout: 24 * 60 * 60, // 24小时
 	}
+	//
+	serverPort := viper.GetString("SERVER_PORT ")
+	if debugServerPort := viper.GetString("DEBUG_SERVER_PORT"); debugServerPort != "" &&
+		viper.GetString("SERVER_MODE") == "debug" {
+		if _, err := os.Stat("/.dockerenv"); err != nil {
+			serverPort = viper.GetString("DEBUG_SERVER_PORT")
+		}
+	}
+	//
 	copier.CopyWithOption(&Server, ServerConf{
-		Port:           viper.GetString("SERVER_PORT"),
+		Port:           serverPort,
 		Mode:           viper.GetString("SERVER_MODE"),
 		DeployMode:     viper.GetString("DEPLOY_MODE"),
 		BrandName:      viper.GetString("BRAND_NAME"),

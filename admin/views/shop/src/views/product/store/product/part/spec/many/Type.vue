@@ -6,7 +6,8 @@
 <script setup>
   import { inject } from 'vue';
   import { languageStore } from '@/store/model/language.js';
-
+  import { useUserStore } from '@/store';
+  const { erp_is_open } = useUserStore();
   // 获取语言数据
   const languageData = JSON.stringify(languageStore().getLanguageKeyForm());
 
@@ -16,6 +17,9 @@
   // 方法定义
   /*显示/隐藏添加规则组 */
   const onToggleAddGroupForm = () => {
+    if (erp_is_open == 1) {
+      return;
+    }
     if (!Array.isArray(form.model.sku)) {
       form.model.sku = [];
     }

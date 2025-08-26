@@ -161,6 +161,19 @@ message CancelPosInvoiceResp {
 }
 
 
+message ModeOfPayment {
+  string name = 1; // 支付方式名称
+}
+
+message GetModeOfPaymentListReq {
+  string company_abbr = 1; // 公司缩写,可选
+  string branch = 2; // 分支名称,可选
+}
+
+message GetModeOfPaymentListResp {
+  repeated ModeOfPayment mode_of_payment_list = 1; // 支付方式列表
+}
+
 // SellingService 服务定义
 service SellingService {
   // 查询Pos Profile
@@ -181,4 +194,7 @@ service SellingService {
 
   // 取消 Pos Invoice
   rpc CancelPosInvoice (CancelPosInvoiceReq) returns (erp.ResponseInfo);
+
+  //获取支付方式
+  rpc GetModeOfPaymentList (GetModeOfPaymentListReq) returns (erp.ResponseInfo);
 }
