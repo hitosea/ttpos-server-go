@@ -32,6 +32,8 @@ type IPaymentMethodQueryRepo interface {
 	GetPaymentMethodList(opts ...DBOption) []*model.PaymentMethod
 	GetPaymentMethodsByCtx(ctx context.Context) []*model.PaymentMethod // 获取收银机支付页面的支付方式列表
 	GetLianLianPayPaymentMethodList() ([]*model.PaymentMethod, error)  // 查询连连支付的支付方式列表
+
+	InitErpnextPayment(payments map[int]string) error
 }
 
 // paymentMethodRepo 仓库
@@ -190,4 +192,30 @@ func (r *paymentMethodRepo) GetLianLianPayPaymentMethodList() ([]*model.PaymentM
 		}
 	}
 	return result, nil
+}
+
+func (r *paymentMethodRepo) InitErpnextPayment(payments map[int]string) error {
+	// 检查是否有数据需要更新
+	if len(payments) == 0 {
+		return nil
+	}
+	var codes []int
+	// 构建 CASE WHEN 语句
+	caseWhenSQL := "CASE code"
+	var args []any
+	for code, erpPaymentName := range payments {
+		caseWhenSQL += " WHEN ? THEN ?"
+		args = append(args, code, erpPaymentName)
+		codes = append(codes, code)
+	}
+	caseWhenSQL += " END"
+	// 一条SQL语句批量更新排序
+	err := r.db.Model(&model.PaymentMethod{}).
+		Where("code IN ?", codes).
+		Update("erpnext_payment", gorm.Expr(caseWhenSQL, args...)).Error
+
+	if err != nil {
+		return errors.WithMessage(errors.New("更新支付方式失败"), err.Error())
+	}
+	return nil
 }
