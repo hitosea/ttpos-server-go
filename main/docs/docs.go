@@ -19004,6 +19004,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/product/attribute": {
+            "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除商品属性值",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品属性值"
+                ],
+                "summary": "删除商品属性值",
+                "parameters": [
+                    {
+                        "description": "商品属性值删除请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductAttributeDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/product/attribute/group": {
             "get": {
                 "security": [
@@ -19229,45 +19268,6 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/req.ProductAttributeGroupSortReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/shop/product/attribute/sort": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "排序商品属性",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.商品属性"
-                ],
-                "summary": "排序商品属性",
-                "parameters": [
-                    {
-                        "description": "商品属性排序请求",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.ProductAttributeSortReq"
                         }
                     }
                 ],
@@ -25084,6 +25084,14 @@ const docTemplate = `{
                     "description": "分类UUID",
                     "type": "integer"
                 },
+                "cost_unit_locale_name": {
+                    "description": "成本单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
                 "cost_unit_name": {
                     "description": "成本单位名称",
                     "type": "string"
@@ -25116,6 +25124,14 @@ const docTemplate = `{
                     "description": "库存数量",
                     "type": "number"
                 },
+                "purchase_unit_locale_name": {
+                    "description": "采购单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
                 "purchase_unit_name": {
                     "description": "采购单位名称",
                     "type": "string"
@@ -25134,6 +25150,14 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/material_resp.MaterialUnit"
                     }
+                },
+                "unit_locale_name": {
+                    "description": "基准单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
                 },
                 "unit_name": {
                     "description": "基准单位名称",
@@ -25200,6 +25224,14 @@ const docTemplate = `{
                     "description": "物品编码",
                     "type": "string"
                 },
+                "cost_unit_locale_name": {
+                    "description": "成本单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
                 "cost_unit_name": {
                     "description": "成本单位名称",
                     "type": "string"
@@ -25210,6 +25242,14 @@ const docTemplate = `{
                 },
                 "locale_name": {
                     "description": "物品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "purchase_unit_locale_name": {
+                    "description": "采购单位名称",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.LocaleResponse"
@@ -25233,6 +25273,14 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/material_resp.MaterialUnitListResp"
+                        }
+                    ]
+                },
+                "unit_locale_name": {
+                    "description": "单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
                         }
                     ]
                 },
@@ -29804,6 +29852,18 @@ const docTemplate = `{
                 }
             }
         },
+        "req.ProductAttributeDeleteReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "商品属性UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.ProductAttributeGroupAddProductAttributeReq": {
             "type": "object",
             "required": [
@@ -29854,7 +29914,8 @@ const docTemplate = `{
         "req.ProductAttributeGroupEditProductAttributeReq": {
             "type": "object",
             "required": [
-                "locale_name"
+                "locale_name",
+                "sort"
             ],
             "properties": {
                 "locale_name": {
@@ -29871,6 +29932,10 @@ const docTemplate = `{
                     "items": {
                         "type": "integer"
                     }
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
                 },
                 "uuid": {
                     "description": "商品属性UUID, 可选，如果有，是编辑，没有是添加",
@@ -29948,43 +30013,6 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/req.ProductAttributeGroupSortItem"
                     }
-                }
-            }
-        },
-        "req.ProductAttributeSortItem": {
-            "type": "object",
-            "required": [
-                "sort",
-                "uuid"
-            ],
-            "properties": {
-                "sort": {
-                    "description": "排序",
-                    "type": "integer"
-                },
-                "uuid": {
-                    "description": "商品属性UUID",
-                    "type": "integer"
-                }
-            }
-        },
-        "req.ProductAttributeSortReq": {
-            "type": "object",
-            "required": [
-                "list",
-                "product_attribute_group_uuid"
-            ],
-            "properties": {
-                "list": {
-                    "description": "商品属性排序列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/req.ProductAttributeSortItem"
-                    }
-                },
-                "product_attribute_group_uuid": {
-                    "description": "商品属性分组UUID",
-                    "type": "integer"
                 }
             }
         },
@@ -38232,8 +38260,24 @@ const docTemplate = `{
                     "description": "基准单位名称",
                     "type": "string"
                 },
+                "locale_base_unit_name": {
+                    "description": "基准单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
                 "locale_name": {
                     "description": "物品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "locale_unit_name": {
+                    "description": "采购单位名称",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.LocaleResponse"

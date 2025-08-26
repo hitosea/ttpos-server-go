@@ -700,6 +700,10 @@ definitions:
       category_uuid:
         description: 分类UUID
         type: integer
+      cost_unit_locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 成本单位名称
       cost_unit_name:
         description: 成本单位名称
         type: string
@@ -722,6 +726,10 @@ definitions:
       num:
         description: 库存数量
         type: number
+      purchase_unit_locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 采购单位名称
       purchase_unit_name:
         description: 采购单位名称
         type: string
@@ -736,6 +744,10 @@ definitions:
         items:
           $ref: '#/definitions/material_resp.MaterialUnit'
         type: array
+      unit_locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 基准单位名称
       unit_name:
         description: 基准单位名称
         type: string
@@ -780,6 +792,10 @@ definitions:
       code:
         description: 物品编码
         type: string
+      cost_unit_locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 成本单位名称
       cost_unit_name:
         description: 成本单位名称
         type: string
@@ -790,6 +806,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 物品名称
+      purchase_unit_locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 采购单位名称
       purchase_unit_name:
         description: 采购单位名称
         type: string
@@ -803,6 +823,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/material_resp.MaterialUnitListResp'
         description: 单位列表
+      unit_locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 单位名称
       unit_name:
         description: 单位名称
         type: string
@@ -3910,6 +3934,14 @@ definitions:
     required:
     - uuid
     type: object
+  req.ProductAttributeDeleteReq:
+    properties:
+      uuid:
+        description: 商品属性UUID
+        type: integer
+    required:
+    - uuid
+    type: object
   req.ProductAttributeGroupAddProductAttributeReq:
     properties:
       locale_name:
@@ -3950,11 +3982,15 @@ definitions:
         items:
           type: integer
         type: array
+      sort:
+        description: 排序
+        type: integer
       uuid:
         description: 商品属性UUID, 可选，如果有，是编辑，没有是添加
         type: integer
     required:
     - locale_name
+    - sort
     type: object
   req.ProductAttributeGroupEditReq:
     properties:
@@ -4004,32 +4040,6 @@ definitions:
         type: array
     required:
     - list
-    type: object
-  req.ProductAttributeSortItem:
-    properties:
-      sort:
-        description: 排序
-        type: integer
-      uuid:
-        description: 商品属性UUID
-        type: integer
-    required:
-    - sort
-    - uuid
-    type: object
-  req.ProductAttributeSortReq:
-    properties:
-      list:
-        description: 商品属性排序列表
-        items:
-          $ref: '#/definitions/req.ProductAttributeSortItem'
-        type: array
-      product_attribute_group_uuid:
-        description: 商品属性分组UUID
-        type: integer
-    required:
-    - list
-    - product_attribute_group_uuid
     type: object
   req.ProductBomCardAddReq:
     properties:
@@ -9619,10 +9629,18 @@ definitions:
       base_unit_name:
         description: 基准单位名称
         type: string
+      locale_base_unit_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 基准单位名称
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 物品名称
+      locale_unit_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 采购单位名称
       material_code:
         description: 物品编码
         type: string
@@ -22892,6 +22910,30 @@ paths:
       summary: 添加商品
       tags:
       - 商家端.商品
+  /shop/product/attribute:
+    delete:
+      consumes:
+      - application/json
+      description: 删除商品属性值
+      parameters:
+      - description: 商品属性值删除请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductAttributeDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 删除商品属性值
+      tags:
+      - 商家端.商品属性值
   /shop/product/attribute/group:
     delete:
       consumes:
@@ -23039,30 +23081,6 @@ paths:
       summary: 排序商品属性分组
       tags:
       - 商家端.商品属性分组
-  /shop/product/attribute/sort:
-    post:
-      consumes:
-      - application/json
-      description: 排序商品属性
-      parameters:
-      - description: 商品属性排序请求
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.ProductAttributeSortReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-        "400":
-          description: 错误请求
-      security:
-      - JwtToken: []
-      summary: 排序商品属性
-      tags:
-      - 商家端.商品属性
   /shop/product/category:
     delete:
       consumes:
