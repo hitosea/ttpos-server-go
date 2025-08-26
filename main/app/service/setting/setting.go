@@ -76,7 +76,6 @@ type ISrv interface {
 	EditBusinessSetting(ctx context.Context, businessSetting req.UpdateBusinessSetting) error                                             // 修改业务设置
 	GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness, error)                                                             // 获取商家业务设置
 	GetMenuQrcode(ctx context.Context) (string, error)                                                                                    // 获取电子菜单二维码
-	UpdateMenuQrcode(ctx context.Context) (string, error)                                                                                 // 更新电子菜单二维码
 }
 
 func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
@@ -1497,21 +1496,22 @@ func (s *Srv) SymbolPosition(ctx context.Context, amount float64) string {
 
 // UpdateSetting 更新设置
 func (s *Srv) UpdateSetting(ctx context.Context, settingKey string, values any) error {
-	value, err := json.Marshal(values)
-	if err != nil {
-		return errors.New("更新设置失败")
+	value := utils.ToJson(values)
+	if settingKey == constant.SettingStore {
+		value = strings.ReplaceAll(value, "\"logo_url\"", "\"logoUrl\"")
+		value = strings.ReplaceAll(value, "\"avatar_url\"", "\"avatarUrl\"")
 	}
 	settingRepo := repository.NewSettingRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 	set := settingRepo.GetByKey(settingKey)
 	if set.Key == "" {
-		if _, err = settingRepo.Create(model.Setting{
+		if _, err := settingRepo.Create(model.Setting{
 			Key:    settingKey,
-			Values: string(value),
+			Values: value,
 		}); err != nil {
 			return errors.New("更新设置失败")
 		}
 	} else {
-		if err = settingRepo.Updates(settingKey, string(value)); err != nil {
+		if err := settingRepo.Updates(settingKey, value); err != nil {
 			return errors.New("更新设置失败")
 		}
 	}
@@ -1567,18 +1567,12 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 	storeSettingReq.LogoUrl = "/" + strings.TrimLeft(utils.RemoveDomain(storeSettingReq.LogoUrl), "/")
 	storeSetting.AvatarURL = "/" + strings.TrimLeft(utils.RemoveDomain(storeSetting.AvatarURL), "/")
 
-	// 保存设置到store_setting表
-	settingRepo := repository.NewSettingRepo(companyDB)
 	copier.CopyWithOption(&storeSetting, storeSettingReq, copier.Option{IgnoreEmpty: true})
 
 	storeSetting.LogoURL = storeSettingReq.LogoUrl
 	storeSetting.Company = storeSettingReq.CompanyName
-
-	value := utils.ToJson(storeSetting)
-	value = strings.ReplaceAll(value, "\"logo_url\"", "\"logoUrl\"")
-	value = strings.ReplaceAll(value, "\"avatar_url\"", "\"avatarUrl\"")
-
-	err = settingRepo.Updates(constant.SettingStore, value)
+	// 保存设置到store_setting表
+	err = s.UpdateSetting(ctx, constant.SettingStore, storeSetting)
 	if err != nil {
 		return errors.WithMessage(errors.New("保存失败"), err.Error())
 	}
@@ -1641,7 +1635,7 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 		if len(cashierSetting.LanguageList) != 0 {
 			cashierSetting.Language = []string{}
 		}
-		settingRepo.Updates(constant.SettingCashier, utils.ToJson(cashierSetting))
+		s.UpdateSetting(ctx, constant.SettingCashier, cashierSetting)
 
 		// 2、处理 tablet 设置
 		tabletSetting, err := s.GetTabletSetting(ctx, storeSettingReq.Language)
@@ -1668,7 +1662,7 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 		if len(tabletSetting.LanguageList) != 0 {
 			tabletSetting.Language = []string{}
 		}
-		settingRepo.Updates(constant.SettingTablet, utils.ToJson(tabletSetting))
+		s.UpdateSetting(ctx, constant.SettingTablet, tabletSetting)
 
 		// 3、处理 h5 设置
 		h5Setting, err := s.GetH5Setting(ctx, storeSettingReq.Language)
@@ -1696,7 +1690,7 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 		if len(h5Setting.LanguageList) != 0 {
 			h5Setting.Language = []string{}
 		}
-		settingRepo.Updates(constant.SettingH5, utils.ToJson(h5Setting))
+		s.UpdateSetting(ctx, constant.SettingH5, h5Setting)
 
 		// 4、处理 kitchen 设置
 		kitchenSetting, err := s.GetKitchenSetting(ctx, companySetting, storeSettingReq.Language)
@@ -1723,7 +1717,7 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 		if len(kitchenSetting.LanguageList) != 0 {
 			kitchenSetting.Language = []string{}
 		}
-		settingRepo.Updates(constant.SettingKitchen, utils.ToJson(kitchenSetting))
+		s.UpdateSetting(ctx, constant.SettingKitchen, kitchenSetting)
 
 		// 5、处理 assistant 设置
 		assistantSetting, err := s.GetAssistantSetting(ctx, storeSettingReq.Language)
@@ -1751,7 +1745,7 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 		if len(assistantSetting.LanguageList) != 0 {
 			assistantSetting.Language = []string{}
 		}
-		settingRepo.Updates(constant.SettingAssistant, utils.ToJson(assistantSetting))
+		s.UpdateSetting(ctx, constant.SettingAssistant, assistantSetting)
 
 		// 6、处理 printer 设置
 		printerSetting, err := s.GetPrinterSetting(ctx, storeSettingReq.Language)
@@ -1786,7 +1780,7 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 		if len(printerSetting.LanguageList) != 0 {
 			printerSetting.Language = []string{}
 		}
-		settingRepo.Updates(constant.SettingPrinter, utils.ToJson(printerSetting))
+		s.UpdateSetting(ctx, constant.SettingPrinter, printerSetting)
 	}
 
 	// 删除系统设置缓存
@@ -1807,8 +1801,6 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 
 func (s *Srv) EditBusinessSetting(ctx context.Context, businessSettingReq req.UpdateBusinessSetting) error {
 	companyUuid := ctx.GetCompanyUuid()
-	companyDB := s.dbm.GetDB(companyUuid)
-
 	companySetting, err := s.GetCompanySetting(ctx)
 	if err != nil {
 		return errors.WithMessage(err)
@@ -1841,12 +1833,10 @@ func (s *Srv) EditBusinessSetting(ctx context.Context, businessSettingReq req.Up
 	businessSetting.GiftMethodList = []setting.GiftMethodItem{}
 	businessSetting.FreeMethodList = []setting.FreeMethodItem{}
 
-	// 保存设置到 business_setting 表
-	settingRepo := repository.NewSettingRepo(companyDB)
 	// 覆盖oldBusinessSetting
 	copier.CopyWithOption(&oldBusinessSetting, businessSetting, copier.Option{IgnoreEmpty: true})
-
-	err = settingRepo.Updates(constant.SettingBusiness, utils.ToJson(oldBusinessSetting))
+	// 保存设置到 business_setting 表
+	err = s.UpdateSetting(ctx, constant.SettingBusiness, oldBusinessSetting)
 	if err != nil {
 		return errors.WithMessage(err)
 	}
@@ -1915,22 +1905,4 @@ func (s *Srv) getMenuQrcodeToken(ctx context.Context, businessSetting setting.Bu
 	token := fmt.Sprintf("%x.%s", hash, base64.StdEncoding.EncodeToString([]byte(qrcodeString)))
 
 	return base64.StdEncoding.EncodeToString([]byte(token))
-}
-
-func (s *Srv) UpdateMenuQrcode(ctx context.Context) (string, error) {
-	companyUuid := ctx.GetCompanyUuid()
-	db := s.dbm.GetDB(companyUuid)
-	businessSetting, err := s.GetBusinessSetting(ctx)
-	if err != nil {
-		return "", errors.WithMessage(err)
-	}
-	// 随机生成6位数字字符串
-	qrcode := utils.RandomString(6, utils.Numbers)
-	businessSetting.QrCode = qrcode
-	settingRepo := repository.NewSettingRepo(db)
-	err = settingRepo.Updates(constant.SettingBusiness, utils.ToJson(businessSetting))
-	if err != nil {
-		return "", errors.WithMessage(err)
-	}
-	return viper.GetString("MENU_BASE_URL") + "/home?token=" + s.getMenuQrcodeToken(ctx, businessSetting), nil
 }
