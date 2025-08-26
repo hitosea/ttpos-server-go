@@ -2595,6 +2595,44 @@ definitions:
     - level_uuid
     - phone
     type: object
+  req.AddPaymentMethodReq:
+    properties:
+      checkout_show:
+        description: 结账显示
+        items:
+          type: string
+        type: array
+      company_uuid:
+        description: 公司UUID
+        type: integer
+      erpnext_payment:
+        description: 商家支付方式
+        type: string
+      fee:
+        description: 手续费
+        type: number
+      member_recharge_show:
+        description: 会员充值显示
+        items:
+          type: string
+        type: array
+      name:
+        description: 支付方式名称
+        type: string
+      sort:
+        description: 排序
+        type: integer
+      status:
+        description: '状态: 0-禁用 1-启用'
+        type: integer
+    required:
+    - company_uuid
+    - erpnext_payment
+    - fee
+    - name
+    - sort
+    - status
+    type: object
   req.AddReturnFoodReasonReq:
     properties:
       locale_name:
@@ -11712,6 +11750,55 @@ paths:
           schema:
             $ref: '#/definitions/dto.Response'
       summary: 支付方式列表
+      tags:
+      - 平台端.支付管理
+  /admin/erpnext/payment_method/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加支付方式
+      parameters:
+      - description: 支付方式请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.AddPaymentMethodReq'
+      - description: 支付方式请求
+        in: body
+        name: payment_method_req
+        required: true
+        schema:
+          $ref: '#/definitions/req.AddPaymentMethodReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 添加支付方式
+      tags:
+      - 平台端.支付管理
+  /admin/erpnext/payment_method/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取支付方式列表
+      parameters:
+      - description: 公司UUID
+        in: query
+        name: company_uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 获取支付方式列表
       tags:
       - 平台端.支付管理
   /admin/erpnext/shop/init:

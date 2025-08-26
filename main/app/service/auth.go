@@ -204,7 +204,7 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 			ctx.SetCompanySetting(companySetting)
 			shiftLog, err := s.shiftSrv.CreateWorkingLog(ctx, staff)
 			if err != nil {
-				return loginResp, errors.ErrInternal
+				return loginResp, errors.WithMessage(err, "创建当班日志失败")
 			}
 			updates["cashier_login_time"] = shiftLog.ShiftStartTime
 			updates["duty_no"] = shiftLog.ShiftNo

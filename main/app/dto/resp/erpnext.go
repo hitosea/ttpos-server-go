@@ -55,3 +55,12 @@ type PosProfileInfo struct {
 	Branch    string `json:"branch"`
 	Warehouse string `json:"warehouse"`
 }
+
+type GetPaymentMethodListResp struct {
+	List []PaymentMethodInfo `json:"list"`
+}
+
+type PaymentMethodInfo struct {
+	Name   string `json:"name"`    // 支付名称
+	IsUsed bool   `json:"is_used"` // 是否已被使用
+}
