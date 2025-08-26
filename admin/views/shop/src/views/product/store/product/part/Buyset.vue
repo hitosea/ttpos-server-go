@@ -9,7 +9,7 @@
       :rules="[{ required: true, message: $t('选择商品状态') }]"
       prop="model.product_status"
     >
-      <el-radio-group v-model="form.model.product_status">
+      <el-radio-group v-model="form.model.product_status" :disabled="erp_is_open == 1">
         <el-radio :value="10">{{ $t('上架') }}</el-radio>
         <el-radio :value="20">{{ $t('下架') }}</el-radio>
       </el-radio-group>
@@ -30,7 +30,7 @@
           },
         ]"
       >
-        <el-select v-model="item.tax_category_id" clearable class="max-w460" size="default" :placeholder="$t('请选择')">
+        <el-select v-model="item.tax_category_id" clearable class="max-w460" size="default" :placeholder="$t('请选择')" :disabled="erp_is_open == 1">
           <template v-for="cat in taxList" :key="cat.id">
             <el-option :value="cat.id" :label="cat.name"></el-option>
           </template>
@@ -40,7 +40,7 @@
 
     <!--数量计算方法-->
     <el-form-item for="no_click" :label="$t('计价方式：')" v-if="form.model.type == 10" :rules="[{ required: true, message: $t('选择计价方式') }]">
-      <el-radio-group v-model="form.model.num_type">
+      <el-radio-group v-model="form.model.num_type" :disabled="erp_is_open == 1">
         <el-radio :value="0">{{ $t('整数') }}</el-radio>
         <el-radio :value="1">{{ $t('小数') }}</el-radio>
       </el-radio-group>
@@ -62,7 +62,7 @@
       ]"
       prop="model"
     >
-      <el-checkbox v-model="form.model.is_show_cashier" :true-value="1" :false-value="2" :label="$t('收银机')" size="large" />
+      <el-checkbox v-model="form.model.is_show_cashier" :true-value="1" :false-value="2" :label="$t('收银机')" size="large" :disabled="erp_is_open == 1" />
       <el-checkbox
         v-if="is_open_tablet"
         v-model="form.model.is_show_tablet"
@@ -70,9 +70,9 @@
         :false-value="2"
         :label="$t('平板')"
         size="large"
-        :disabled="form.model.num_type == 1"
+        :disabled="form.model.num_type == 1 || erp_is_open == 1"
       />
-      <el-checkbox v-if="is_open_kitchen_kds" v-model="form.model.is_show_kitchen" :true-value="1" :false-value="2" :label="$t('厨显')" size="large" />
+      <el-checkbox v-if="is_open_kitchen_kds" v-model="form.model.is_show_kitchen" :true-value="1" :false-value="2" :label="$t('厨显')" size="large" :disabled="erp_is_open == 1" />
       <el-checkbox
         v-if="is_open_assistant"
         v-model="form.model.is_show_assistant"
@@ -80,7 +80,7 @@
         :false-value="2"
         :label="$t('点餐助手')"
         size="large"
-        :disabled="form.model.num_type == 1"
+        :disabled="form.model.num_type == 1 || erp_is_open == 1"
       />
       <el-checkbox
         v-if="is_open_assistant"
@@ -89,7 +89,7 @@
         :false-value="2"
         :label="$t('扫码点餐')"
         size="large"
-        :disabled="form.model.num_type == 1"
+        :disabled="form.model.num_type == 1 || erp_is_open == 1"
       />
       <el-checkbox
         v-if="is_open_delivery && form.model.type != 30"
@@ -98,12 +98,12 @@
         :false-value="2"
         :label="$t('外送')"
         size="large"
-        :disabled="form.model.num_type == 1"
+        :disabled="form.model.num_type == 1 || erp_is_open == 1"
       />
     </el-form-item>
 
     <el-form-item v-if="form.model.type == 10 || form.model.type == 30" for="no_click" :label="$t('商品排序：')">
-      <el-input-number :controls="false" :min="0" :max="999" :placeholder="$t('接近0，排序等级越高')" v-model="form.model.product_sort" class="max-w460"></el-input-number>
+      <el-input-number :controls="false" :min="0" :max="999" :disabled="erp_is_open == 1" :placeholder="$t('接近0，排序等级越高')" v-model="form.model.product_sort" class="max-w460"></el-input-number>
     </el-form-item>
 
     <el-form-item for="no_click" :label="$t('限购数量：')" v-if="form.model.type == 10 || form.model.type == 30">
@@ -127,7 +127,7 @@
       </el-form-item>
 
       <el-form-item for="no_click" :label="$t('供应商：')" v-if="baseSale == '1' && form.model.type != 30">
-        <el-select v-model="form.model.erp_supplier_id" filterable clearable class="max-w460" size="default" :placeholder="$t('请选择供应商')">
+        <el-select v-model="form.model.erp_supplier_id" filterable clearable class="max-w460" size="default" :disabled="erp_is_open == 1" :placeholder="$t('请选择供应商')">
           <template v-for="item in supplierList" :key="item.id">
             <el-option :value="item.id" :label="item.name"></el-option>
           </template>
@@ -158,13 +158,13 @@
     <template v-if="(form.model.type == 10 || form.model.type == 30) && is_open_member == '1'">
       <div class="common-form mt50">{{ $t('会员折扣设置') }}</div>
       <el-form-item for="no_click" :label="$t('是否开启会员折扣：')">
-        <el-radio-group v-model="form.model.is_enable_grade">
+        <el-radio-group v-model="form.model.is_enable_grade" :disabled="erp_is_open == 1">
           <el-radio :value="1">{{ $t('开启') }}</el-radio>
           <el-radio :value="0">{{ $t('关闭') }}</el-radio>
         </el-radio-group>
       </el-form-item>
       <el-form-item for="no_click" :label="$t('会员折扣设置：')" v-if="form.model.is_enable_grade == 1">
-        <el-radio-group v-model="form.model.is_alone_grade">
+        <el-radio-group v-model="form.model.is_alone_grade" :disabled="erp_is_open == 1">
           <el-radio :value="0">{{ $t('默认折扣') }}</el-radio>
           <!-- <el-radio :label="1">{{ $t('仅需支付') }}</el-radio> -->
         </el-radio-group>
@@ -172,7 +172,7 @@
         <div class="gray9" v-if="form.model.is_alone_grade == 1">{{ $t('仅需支付：用户购买此商品仅需支付的金额或比例') }}</div>
       </el-form-item>
       <el-form-item for="no_click" :label="$t('折扣佣金类型：')" v-if="form.model.is_alone_grade == 1 && form.model.is_enable_grade == 1">
-        <el-radio-group v-model="form.model.alone_grade_type" @change="changeGradeType">
+        <el-radio-group v-model="form.model.alone_grade_type" @change="changeGradeType" :disabled="erp_is_open == 1">
           <el-radio :value="10">{{ $t('百分比') }}</el-radio>
           <el-radio :value="20">{{ $t('固定金额') }}</el-radio>
         </el-radio-group>
@@ -204,6 +204,7 @@
                       :max="form.model.alone_grade_type == 10 ? 100 : minPrice"
                       :controls="false"
                       :placeholder="$t('请输入折扣')"
+                      :disabled="erp_is_open == 1"
                     ></el-input-number>
                     <span class="ml10">{{ form.model.alone_grade_type == 10 ? grade_unit : currency.unit }}</span>
                   </el-form-item>
@@ -219,7 +220,7 @@
       <!--整单折扣-->
       <div class="common-form mt50">{{ $t('整单折扣') }}</div>
       <el-form-item for="no_click" :label="$t('开启整单折扣：')" prop="model.open_overall_discount" :rules="[{ required: true, message: $t('请选择是否开启整单折扣') }]">
-        <el-radio-group v-model="form.model.open_overall_discount">
+        <el-radio-group v-model="form.model.open_overall_discount" :disabled="erp_is_open == 1">
           <el-radio :value="1">{{ $t('开启') }}</el-radio>
           <el-radio :value="0">{{ $t('关闭') }}</el-radio>
         </el-radio-group>
@@ -236,8 +237,7 @@
   import PurchaseApi from '@/api/purchase.js';
 
   // 获取用户信息和配置
-  const { currency, userInfo } = useUserStore();
-  const { computedSupplier } = useUserStore();
+  const { currency, userInfo, erp_is_open, computedSupplier } = useUserStore();
   const supplier = computedSupplier().supplier;
   const baseSale = supplier.value?.sale_stock || 0;
   const is_open_tablet = supplier.value?.is_open_tablet || 0;

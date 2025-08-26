@@ -20,6 +20,7 @@
               :placeholder="$t('请输入分组名称')"
               :maxlength="50"
               class="max-w460"
+              :disabled="erp_is_open == 1"
               v-model="form.model.package_group[groupIndex].group_name[item.key]"
             ></el-input>
             <el-button class="ml8" type="primary" @click="translate(groupIndex)">{{ $t('翻译') }}</el-button>
@@ -37,14 +38,14 @@
             <el-table-column prop="num" :label="$t('数量')" width="120">
               <template #default="scope">
                 <el-form-item class="mt16" :prop="`model.package_group.${groupIndex}.product_list.${scope.$index}.num`" :rules="[{ required: true, message: $t('请输入数量') }]">
-                  <numInput v-model="scope.row.num" :min="0" :max="999" :precision="0" />
+                  <numInput v-model="scope.row.num" :min="0" :max="999" :precision="0" :disabled="erp_is_open == 1" />
                 </el-form-item>
               </template>
             </el-table-column>
             <el-table-column prop="sort" :label="$t('排序')" width="120">
               <template #default="scope">
                 <el-form-item class="mt16" :prop="`model.package_group.${groupIndex}.product_list.${scope.$index}.sort`" :rules="[{ required: true, message: $t('请输入排序') }]">
-                  <numInput v-model="scope.row.sort" :min="0" :max="999" :precision="0" @change="handleSortChange(groupIndex)" />
+                  <numInput v-model="scope.row.sort" :min="0" :max="999" :precision="0" @change="handleSortChange(groupIndex)" :disabled="erp_is_open == 1" />
                 </el-form-item>
               </template>
             </el-table-column>
@@ -57,13 +58,13 @@
             </el-table-column>
             <el-table-column prop="action" :label="$t('操作')" width="100" fixed="right">
               <template #default="scope">
-                <el-button type="primary" @click="handleDeleteGoods(groupIndex, scope.$index)">{{ $t('删除') }}</el-button>
+                <el-button type="primary" @click="handleDeleteGoods(groupIndex, scope.$index)" :disabled="erp_is_open == 1">{{ $t('删除') }}</el-button>
               </template>
             </el-table-column>
           </el-table>
         </el-form-item>
         <div class="mt16">
-          <el-button class="w-full" type="default" @click="addGoods(groupIndex)">{{ $t('添加商品') }}</el-button>
+          <el-button class="w-full" type="default" @click="addGoods(groupIndex)" :disabled="erp_is_open == 1">{{ $t('添加商品') }}</el-button>
         </div>
       </el-card>
     </div>
@@ -85,12 +86,12 @@
     </el-form-item> -->
 
     <el-form-item v-if="form.model.is_open_stock" for="no_click" :prop="`model.package_stock`" :label="$t('套餐可售总量')" :rules="[{ required: true, message: $t('请输入库存') }]">
-      <numInput type="text" :placeholder="$t('请输入库存')" :precision="0" v-model="form.model.package_stock" :maxlength="50" class="max-w460"></numInput>
+      <numInput type="text" :placeholder="$t('请输入库存')" :precision="0" v-model="form.model.package_stock" :maxlength="50" class="max-w460" ></numInput>
       <div class="gray9">{{ $t('库存为0时套餐自动售罄') }}</div>
     </el-form-item>
 
     <el-form-item for="no_click" :label="$t('库存计算方式：')">
-      <el-radio-group v-model="form.model.deduct_stock_type">
+      <el-radio-group v-model="form.model.deduct_stock_type" :disabled="erp_is_open == 1">
         <el-radio :value="10">{{ $t('下单减库存') }}</el-radio>
         <el-radio :value="20">{{ $t('付款减库存') }}</el-radio>
       </el-radio-group>
@@ -123,6 +124,7 @@
       :selectedProductIds="selectedProductIds"
       :haveSku="true"
       :stockZero="true"
+      :haveStatusZero="true"
     >
     </ProductSelector>
   </div>
@@ -132,6 +134,8 @@
   import { languageStore } from '@/store/model/language.js';
   import UniqueNameForm from '@/components/product/UniqueNameForm.vue';
   import ProductSelector from '@/components/product/Selector.vue';
+  import { useUserStore } from '@/store';
+  const { erp_is_open } = useUserStore();
   const emit = defineEmits(['validateField']);
   const languageList = languageStore().getLanguageList().languageList.value;
   const languageKey = languageStore().getLanguageKey().language.value;
@@ -218,6 +222,9 @@
 
   // 翻译
   const translate = async (groupIndex) => {
+    if (erp_is_open == 1) {
+      return;
+    }
     // 设置当前分组名称
     overrideLanguages.value = form.model.package_group[groupIndex].group_name;
     // 保存当前选中的分组索引
@@ -272,6 +279,9 @@
 
   // 删除分组
   const handleDelete = (index) => {
+    if (erp_is_open == 1) {
+      return;
+    }
     if (form.model.package_group.length === 1) {
       return;
     }

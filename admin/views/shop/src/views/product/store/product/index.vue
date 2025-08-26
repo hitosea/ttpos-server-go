@@ -52,28 +52,30 @@
           </el-button>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item @click="openBatch(5)">
+              <el-dropdown-item @click="openBatch(5)" v-if="erp_is_open == 0">
                 {{ $t('导入商品') }}
               </el-dropdown-item>
-              <el-dropdown-item @click="openBatch(1)">
+              <el-dropdown-item @click="openBatch(1)" v-if="erp_is_open == 0">
                 {{ $t('上传图片') }}
               </el-dropdown-item>
               <el-dropdown-item @click="openBatch(2)">
                 {{ $t('修改分类') }}
               </el-dropdown-item>
-              <el-dropdown-item @click="openBatch(3)" v-if="userInfo.isOpenTax == '1'">
+              <el-dropdown-item @click="openBatch(3)" v-if="userInfo.isOpenTax == '1' && erp_is_open == 0">
                 {{ $t('修改税类') }}
               </el-dropdown-item>
               <el-dropdown-item @click="openBatch(6)">
                 {{ $t('批量修改整单折扣商品') }}
               </el-dropdown-item>
-              <el-dropdown-item @click="openBatch(4)">
+              <el-dropdown-item @click="openBatch(4)" v-if="erp_is_open == 0">
                 {{ $t('删除') }}
               </el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
-        <el-button class="flex-r-b" size="small" type="primary" icon="Plus" v-auth="'/product/store/product/add'" @click="addClick">{{ $t('添加商品') }} </el-button>
+        <el-button class="flex-r-b" size="small" :disabled="erp_is_open == 1" type="primary" icon="Plus" v-auth="'/product/store/product/add'" @click="addClick"
+          >{{ $t('添加商品') }}
+        </el-button>
       </div>
     </div>
     <!--添加产品-->
@@ -124,7 +126,7 @@
           <el-table-column prop="product_status.text" :label="$t('状态')" width="100">
             <template #default="scope">
               <el-switch
-                :disabled="!proxy.$filter.isAuth('/product/store/product/state')"
+                :disabled="!proxy.$filter.isAuth('/product/store/product/state') || erp_is_open == 1"
                 :model-value="scope.row.product_status.value == 10 ? true : false"
                 @click="undercarriage(scope.row, scope.row.product_status.value == 10 ? 20 : 10)"
               ></el-switch>
@@ -135,7 +137,7 @@
           <el-table-column fixed="right" :label="$t('操作')" width="120">
             <template #default="scope">
               <el-button @click="editClick(scope.row)" link type="primary" size="small" v-auth="'/product/store/product/edit'">{{ $t('编辑') }}</el-button>
-              <el-button @click="deleteClick(scope.row)" :disabled="scope.row.is_material_used == 1" link type="primary" size="small" v-auth="'/product/store/product/delete'">{{
+              <el-button @click="deleteClick(scope.row)" :disabled="scope.row.is_material_used == 1 || erp_is_open == 1" link type="primary" size="small" v-auth="'/product/store/product/delete'">{{
                 $t('删除')
               }}</el-button>
             </template>
@@ -175,7 +177,7 @@
 
   const router = useRouter();
   const route = useRoute();
-  const { computedSupplier, userInfo } = useUserStore();
+  const { computedSupplier, userInfo, erp_is_open } = useUserStore();
   const supplier = computedSupplier().supplier;
   const app_id = supplier.value?.app_id || 0;
   const { proxy } = getCurrentInstance();
@@ -218,7 +220,6 @@
       material_type.value = '10';
       // 清除查询参数
       router.replace({ query: {} });
-        
     }
     getData();
   });
