@@ -86,7 +86,6 @@ class UpdateDecimal204 extends Migrator
             "ALTER TABLE `ttpos_material` MODIFY COLUMN `price` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '采购单价';",
             "ALTER TABLE `ttpos_material` MODIFY COLUMN `stock_num` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '库存数量';",
             "ALTER TABLE `ttpos_material` MODIFY COLUMN `actual_sale_num` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '实际销量。每次卖出时,实际销量增加';",
-            "ALTER TABLE `ttpos_material_unit` MODIFY COLUMN `conversion_rate` decimal(20,4) NULL DEFAULT 1.0000 COMMENT '转换率';",
             "ALTER TABLE `ttpos_member` MODIFY COLUMN `point` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '积分';",
             "ALTER TABLE `ttpos_member` MODIFY COLUMN `frozen_point` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '冻结积分。冻结积分不能使用，在前端显示为已扣除或已增加。冻结积分可为负数。积分余额=积分+冻结积分';",
             "ALTER TABLE `ttpos_member` MODIFY COLUMN `accumulated_get_point` decimal(20,4) NOT NULL DEFAULT 0.0000 COMMENT '累计获取积分';",

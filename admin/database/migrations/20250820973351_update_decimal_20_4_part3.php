@@ -14,11 +14,6 @@ class UpdateDecimal204Part3 extends Migrator
     {
         // 继续执行剩余的SQL语句
         $allSqls = [
-            "ALTER TABLE `ttpos_purchase_order` MODIFY COLUMN `num` decimal(20,4) NULL DEFAULT 0.0000 COMMENT '物资数量，每种物品算一个';",
-            "ALTER TABLE `ttpos_purchase_order_item` MODIFY COLUMN `num` decimal(20,4) NULL DEFAULT 0.0000 COMMENT '申请数量';",
-            "ALTER TABLE `ttpos_purchase_order_item` MODIFY COLUMN `arrival_num` decimal(20,4) NULL DEFAULT 0.0000 COMMENT '到货数量';",
-            "ALTER TABLE `ttpos_purchase_order_item` MODIFY COLUMN `unit_conversion_rate` decimal(20,4) NULL DEFAULT 1.0000 COMMENT '单位转换率。申请数量*转换率=基准单位申请数量';",
-            "ALTER TABLE `ttpos_purchase_order_item` MODIFY COLUMN `base_unit_conversion_rate` decimal(20,4) NULL DEFAULT 1.0000 COMMENT '基准单位转换率。申请数量*转换率=基准单位申请数量';",
             "ALTER TABLE `ttpos_purchase_receipt_order` MODIFY COLUMN `num` decimal(20,4) NULL DEFAULT 0.0000 COMMENT '物资数量，每种物品算一个';",
             "ALTER TABLE `ttpos_purchase_receipt_order_item` MODIFY COLUMN `num` decimal(20,4) NULL DEFAULT 0.0000 COMMENT '收货数量';",
             "ALTER TABLE `ttpos_purchase_receipt_order_item` MODIFY COLUMN `unit_conversion_rate` decimal(20,4) NULL DEFAULT 1.0000 COMMENT '单位转换率。收货数量*转换率=基准单位收货数量';",
