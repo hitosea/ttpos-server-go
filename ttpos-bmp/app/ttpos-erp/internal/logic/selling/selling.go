@@ -1006,3 +1006,49 @@ func (*sSelling) CancelPosInvoice(ctx context.Context, invoiceName string) error
 //	}
 //	return nil
 //}
+
+// GetModeOfPaymentList 获取支付方式列表
+// 参数：
+//   - ctx: 上下文对象
+//   - req: 获取支付方式列表请求参数
+//
+// 返回：
+//   - *selling.GetModeOfPaymentListResp: 获取支付方式列表响应参数
+//   - error: 错误信息
+//
+// 功能：
+//   - 获取支付方式列表
+func (*sSelling) GetModeOfPaymentList(ctx context.Context, req *selling.GetModeOfPaymentListReq) (*selling.GetModeOfPaymentListResp, error) {
+	filters := make([][]string, 0)
+	if len(req.CompanyAbbr) > 0 {
+		companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
+		if err != nil {
+			return nil, gerror.Wrapf(err, "获取公司[%s]失败", req.CompanyAbbr)
+		}
+		filters = append(filters, []string{"company", "=", companyName})
+	}
+	if len(req.Branch) > 0 {
+		filters = append(filters, []string{"branch", "=", req.Branch})
+	}
+	//只返回启用的
+	filters = append(filters, []string{"enabled", "=", "1"})
+	resp, err := service.Document().List(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeModeOfPayment,
+	}, &erp.RequestParams{
+		Fields:  []string{"name"},
+		Filters: filters,
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "获取支付方式列表失败")
+	}
+	// 解析响应数据
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析支付方式列表响应失败")
+	}
+	var modeOfPaymentList []*selling.ModeOfPayment
+	j.Get("data").Scan(&modeOfPaymentList)
+	return &selling.GetModeOfPaymentListResp{
+		ModeOfPaymentList: modeOfPaymentList,
+	}, nil
+}
