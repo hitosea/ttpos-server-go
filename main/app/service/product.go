@@ -1581,15 +1581,32 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 				for i := range productPackages {
 					productPackage := productPackages[i]
 					for _, productBom := range productPackage.ProductBoms {
-						multiLanguageName := model.NewMultiLanguageName(productBom.Name)
-						erpSrv := erp.NewIErpSrv(s.dbm)
-						_, errErp := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
-							ItemName: multiLanguageName.EnName,
-							StockUom: productUnit.ErpnextUom,
-							ItemCode: productBom.ErpCode,
-						})
-						if errErp != nil {
-							return errors.WithMessage(errErp, "同步商品到erp失败")
+						if productBom.IsFlavor() {
+							if productPackage.IsPackage() {
+								// 同步套餐到erp
+								multiLanguageName := model.NewMultiLanguageName(productBom.Name)
+								erpSrv := erp.NewIErpSrv(s.dbm)
+								_, errErp := erpSrv.AddPackage(ctx, req.PackageAddErpReq{
+									ItemName: multiLanguageName.EnName,
+									StockUom: productUnit.ErpnextUom,
+									ItemCode: productBom.ErpCode,
+								})
+								if errErp != nil {
+									return errors.WithMessage(errErp, "同步商品到erp失败")
+								}
+							} else if productPackage.IsProduct() {
+								// 同步商品到erp
+								multiLanguageName := model.NewMultiLanguageName(productBom.Name)
+								erpSrv := erp.NewIErpSrv(s.dbm)
+								_, errErp := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
+									ItemName: multiLanguageName.EnName,
+									StockUom: productUnit.ErpnextUom,
+									ItemCode: productBom.ErpCode,
+								})
+								if errErp != nil {
+									return errors.WithMessage(errErp, "同步商品到erp失败")
+								}
+							}
 						}
 					}
 				}
