@@ -1860,7 +1860,7 @@ func (s *productSrv) AddProductSauce(ctx context.Context, addReq req.ProductSauc
 		// 保存商品加料
 		productSauce := model.ProductSauce{
 			Sort:                  maxSort + 1,
-			Price:                 addReq.Price,
+			Price:                 *addReq.Price,
 			MultiLanguageNameUuid: multiLanguageName.Uuid,
 			Name:                  addReq.LocaleName.ToJson(),
 			ErpCode:               erpCode,
@@ -1875,7 +1875,7 @@ func (s *productSrv) AddProductSauce(ctx context.Context, addReq req.ProductSauc
 			// 创建商品BOM
 			boms = append(boms, model.ProductBom{
 				Name:               addReq.LocaleName.ToJson(),
-				Price:              addReq.Price,
+				Price:              *addReq.Price,
 				StockNum:           99999999,
 				IsOpenStock:        1,
 				Status:             1,
@@ -1977,7 +1977,7 @@ func (s *productSrv) EditProductSauce(ctx context.Context, editReq req.ProductSa
 				if !slices.Contains(bomProductPackageUuids, productPackageUuid) {
 					newBoms = append(newBoms, model.ProductBom{
 						Name:               name,
-						Price:              editReq.Price,
+						Price:              *editReq.Price,
 						StockNum:           99999999,
 						IsOpenStock:        1,
 						Status:             1,
