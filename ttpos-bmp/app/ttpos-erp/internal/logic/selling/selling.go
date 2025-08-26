@@ -810,6 +810,7 @@ func (s *sSelling) buildInvoiceItems(items []*selling.PosInvoiceItem) []erp.POSI
 			Rate:        item.Rate,
 			Amount:      item.Amount,
 			Description: item.Description,
+			Uom:         item.Uom,
 		})
 	}
 	return invoiceItems
