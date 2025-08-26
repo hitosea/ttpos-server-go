@@ -165,7 +165,7 @@ func serverConf(opt copier.Option) {
 		PaymentTimeout: 24 * 60 * 60, // 24小时
 	}
 	//
-	serverPort := viper.GetString("SERVER_PORT ")
+	serverPort := viper.GetString("SERVER_PORT")
 	if debugServerPort := viper.GetString("DEBUG_SERVER_PORT"); debugServerPort != "" &&
 		viper.GetString("SERVER_MODE") == "debug" {
 		if _, err := os.Stat("/.dockerenv"); err != nil {

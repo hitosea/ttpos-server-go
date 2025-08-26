@@ -136,11 +136,12 @@ type CheckProductFlavorParam struct {
 }
 
 type CheckProductFlavorResult struct {
-	MinPrice float64                        `json:"min_price"` // 最小价格
-	MaxPrice float64                        `json:"max_price"` // 最大价格
-	StockNum float64                        `json:"stock_num"` // 库存数量
-	Status   int                            `json:"status"`    // 商品状态 0-下架 1-上架
-	Flavors  []CheckProductFlavorItemResult `json:"flavors"`   // 商品规格列表
+	MinPrice  float64                        `json:"min_price"`  // 最小价格
+	MaxPrice  float64                        `json:"max_price"`  // 最大价格
+	StockNum  float64                        `json:"stock_num"`  // 库存数量
+	Status    int                            `json:"status"`     // 商品状态 0-下架 1-上架
+	Flavors   []CheckProductFlavorItemResult `json:"flavors"`    // 商品规格列表
+	IsPackage bool                           `json:"is_package"` // 是否套餐
 }
 
 type CheckProductFlavorItemResult struct {

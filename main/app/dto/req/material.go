@@ -56,6 +56,12 @@ type ProductAddErpReq struct {
 	ItemSpecification string `json:"item_specification" binding:"required"` // 商品规格
 }
 
+type PackageAddErpReq struct {
+	ItemName string `json:"item_name" binding:"required"` // 套餐名称, 英文
+	StockUom string `json:"stock_uom" binding:"required"` // 套餐单位, 英文
+	ItemCode string `json:"item_code" binding:"required"` // 套餐编码，如果为空，则为新增；如果非空，则为编辑
+}
+
 type MaterialUomReq struct {
 	Uom            string  `json:"uom" binding:"required"`                   // 单位, 英文
 	ConversionRate float64 `json:"conversion_rate" binding:"required,min=0"` // 转换率
