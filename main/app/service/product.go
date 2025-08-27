@@ -3449,11 +3449,11 @@ func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImpor
 			return product_resp.ProductImportResp{}, err
 		}
 		// 设置分类ID、单位ID、规格ID、堂食税类ID、外带税类ID
-		products.CategoryId = categoryUuid
-		products.UnitId = unitUuid
-		products.SkuId = skuUuid
-		products.RatingTaxId = taxUuid
-		products.TakeoutTaxId = takeoutTaxUuid
+		products.CategoryUuid = categoryUuid
+		products.UnitUuid = unitUuid
+		products.SkuUuid = skuUuid
+		products.DineTaxUuid = taxUuid
+		products.TakeoutTaxUuid = takeoutTaxUuid
 		// 处理数量计算方法
 		// 按小数计价，不在助手、平板、扫码端显示
 		if item.NumType == 2 && (products.IsShowTablet || products.IsShowAssistant || products.IsShowH5 || products.IsShowDelivery) {
@@ -3557,17 +3557,17 @@ func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImpor
 }
 
 // ImportProduct 导入商品
-func (s *productSrv) ImportProduct(ctx context.Context, req req.ProductImportReq) error {
+func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportReq) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	language := ctx.GetLanguage()
 
 	// 验证条形码是否重复
-	duplicateRows := req.GetBarcodeDuplicateRows()
+	duplicateRows := reqs.GetBarcodeDuplicateRows()
 	if len(duplicateRows) > 0 {
 		return errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(duplicateRows[0]) + "]: " + i18n.Translate(language, "商品条码不能重复"))
 	}
 
-	for _, item := range req.List {
+	for _, item := range reqs.List {
 		// 验证是否已经存在
 		productNameIsExist := repository.NewProductRepo(db).CheckMultiLanguageNameExist(item.LocaleName)
 		if !productNameIsExist.IsNull() {
@@ -3581,7 +3581,65 @@ func (s *productSrv) ImportProduct(ctx context.Context, req req.ProductImportReq
 		item.NumType = utils.IfInt(item.NumType == 1, 0, 1)
 	}
 
-	// TODO: 处理插入商品
+	// 多规格合并
+	lists := make(map[string]req.ProductShopAddReq)
+	for _, item := range reqs.List {
+		md5Key := item.LocaleName.GetMd5()
+		sku := []req.ProductShopAddFlavorReq{}
+		if _, exists := lists[md5Key]; exists {
+			sku = lists[md5Key].Flavors
+		}
+		sku = append(sku, req.ProductShopAddFlavorReq{
+			Uuid:         item.SkuUuid,
+			Price:        item.ProductPrice,
+			BarcodeValue: item.Barcode,
+		})
+		if _, exists := lists[md5Key]; !exists {
+			lists[md5Key] = req.ProductShopAddReq{
+				Type:         constant.ProductTypeProduct,
+				LocaleName:   item.LocaleName,
+				CategoryUuid: item.CategoryUuid,
+				UnitUuid:     item.UnitUuid,
+				Tax: req.ProductShopAddTaxReq{
+					DineUuid:    item.DineTaxUuid,
+					TakeoutUuid: item.TakeoutTaxUuid,
+				},
+				Status:          item.ProductStatus,
+				NumType:         item.NumType,
+				DeductStockType: item.DeductStockType,
+				Show: req.ProductShopAddShowReq{
+					IsShowCashier:   item.IsShowCashier,
+					IsShowTablet:    item.IsShowTablet,
+					IsShowKitchen:   item.IsShowKitchen,
+					IsShowAssistant: item.IsShowAssistant,
+					IsShowH5:        item.IsShowH5,
+					IsShowDelivery:  item.IsShowDelivery,
+				},
+				Discount: req.ProductShopAddDiscountReq{
+					IsEnableMemberDiscount:  item.IsEnableGrade,
+					IsEnableOverallDiscount: item.OpenOverallDiscount,
+				},
+				Row: item.Row,
+			}
+		}
+
+		// 更新规格列表
+		temp := lists[md5Key]
+		temp.Flavors = append(temp.Flavors, sku...)
+		lists[md5Key] = temp
+	}
+
+	// 错误提示
+	errorMessages := make([]string, 0)
+	for _, item := range lists {
+		err := s.AddProductShop(ctx, item)
+		if err != nil {
+			errorMessages = append(errorMessages, fmt.Sprintf("行[%d]: %s", item.Row, err.Error()))
+		}
+	}
+	if len(errorMessages) > 0 {
+		return errors.New(i18n.Translate(language, "商品导入失败") + ": " + strings.Join(errorMessages, "; "))
+	}
 
 	return nil
 }
