@@ -716,37 +716,39 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
 		return nil, gerror.Wrapf(err, "提交发票记录失败")
 	}
 
-	//创建物品销售记录
-	posRmInvoice := s.buildPosInvoice(req, companyName, openingEntry.PosProfile)
-	posRmInvoice.Items = s.buildInvoiceItems(req.MaterialItems)
-	//移除支付信息
-	posRmInvoicePayments := make([]erp.POSInvoicePayment, 0)
-	for _, payment := range posRmInvoice.Payments {
-		posRmInvoicePayments = append(posRmInvoicePayments, erp.POSInvoicePayment{
-			ModeOfPayment: payment.ModeOfPayment,
-			Amount:        0,
-		})
-	}
-	posRmInvoice.Payments = posRmInvoicePayments
-	posRmInvoice.Taxes = nil
-	//反结账后重新结账
-	if len(req.AmendedMaterialInvoiceName) > 0 {
-		posRmInvoice.AmendedFrom = req.AmendedMaterialInvoiceName
-	}
+	if len(req.MaterialItems) > 0 {
+		//创建物品销售记录
+		posRmInvoice := s.buildPosInvoice(req, companyName, openingEntry.PosProfile)
+		posRmInvoice.Items = s.buildInvoiceItems(req.MaterialItems)
+		//移除支付信息
+		posRmInvoicePayments := make([]erp.POSInvoicePayment, 0)
+		for _, payment := range posRmInvoice.Payments {
+			posRmInvoicePayments = append(posRmInvoicePayments, erp.POSInvoicePayment{
+				ModeOfPayment: payment.ModeOfPayment,
+				Amount:        0,
+			})
+		}
+		posRmInvoice.Payments = posRmInvoicePayments
+		posRmInvoice.Taxes = nil
+		//反结账后重新结账
+		if len(req.AmendedMaterialInvoiceName) > 0 {
+			posRmInvoice.AmendedFrom = req.AmendedMaterialInvoiceName
+		}
 
-	//创建物品销售记录
-	resp, err = service.Document().Create(erpnext.SetFakeUser(ctx, openingEntry.User), erp.DocTypePosInvoice, posRmInvoice)
-	if err != nil {
-		return nil, gerror.Wrapf(err, "创建物品POS发票失败")
-	}
+		//创建物品销售记录
+		resp, err = service.Document().Create(erpnext.SetFakeUser(ctx, openingEntry.User), erp.DocTypePosInvoice, posRmInvoice)
+		if err != nil {
+			return nil, gerror.Wrapf(err, "创建物品POS发票失败")
+		}
 
-	// 解析响应数据
-	j, err = gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析POS发票响应失败")
-	}
+		// 解析响应数据
+		j, err = gjson.DecodeToJson(resp.Bytes())
+		if err != nil {
+			return nil, gerror.Wrapf(err, "解析POS发票响应失败")
+		}
 
-	res.MaterialInvoiceName = j.Get("data.name").String()
+		res.MaterialInvoiceName = j.Get("data.name").String()
+	}
 
 	// 提交发票记录
 	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePosInvoice, res.MaterialInvoiceName, 1)

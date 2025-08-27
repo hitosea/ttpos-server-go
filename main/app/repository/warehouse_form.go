@@ -202,7 +202,7 @@ func (r *warehouseFormRepoImpl) CreateWarehouseFormRecord(obj model.WarehouseFor
 
 func (r *warehouseFormRepoImpl) CreateWarehouseOutFormItemRecord(obj model.WarehouseOutFormItem) error {
 	obj.SetNil()
-	return r.db.Model(&model.WarehouseOutFormItem{}).Create(obj).Error
+	return r.db.Model(&model.WarehouseOutFormItem{}).Create(&obj).Error
 }
 
 func (r *warehouseFormRepoImpl) CreateWarehouseOutFormItemRecords(list []*model.WarehouseOutFormItem) error {

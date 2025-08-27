@@ -110,9 +110,9 @@ init-bmp-env:
 		sed -i.bak 's/^NACOS_AUTH_TOKEN=.*/NACOS_AUTH_TOKEN='$$(openssl rand -hex 32 | base64)'/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
 		sed -i.bak 's/^NACOS_AUTH_IDENTITY_KEY=.*/NACOS_AUTH_IDENTITY_KEY='$$(openssl rand -hex 8)'/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
 		sed -i.bak 's/^NACOS_AUTH_IDENTITY_VALUE=.*/NACOS_AUTH_IDENTITY_VALUE='$$(openssl rand -hex 8)'/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
-		sed -i.bak 's/^NACOS_SERVER_IP=.*/NACOS_SERVER_IP=10.0.11.40/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
-		sed -i.bak 's/^ROCKETMQ_NAME_SRV_ADDR=.*/ROCKETMQ_NAME_SRV_ADDR=10.0.11.40/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
-		sed -i.bak 's/^ROCKETMQ_BROKER_ADDR=.*/ROCKETMQ_BROKER_ADDR=10.0.11.40/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
+		sed -i.bak 's/^NACOS_SERVER_IP=.*/NACOS_SERVER_IP=10.0.11.10/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
+		sed -i.bak 's/^ROCKETMQ_NAME_SRV_ADDR=.*/ROCKETMQ_NAME_SRV_ADDR=10.0.11.40:9876/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
+		sed -i.bak 's/^ROCKETMQ_BROKER_ADDR=.*/ROCKETMQ_BROKER_ADDR=10.0.11.41:10911/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
 	fi
 	@echo "🔍 检查 ttpos-bmp/.env 文件是否存在"
 	if [ -f "ttpos-bmp/.env" ]; then \
