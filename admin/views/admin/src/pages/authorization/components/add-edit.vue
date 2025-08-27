@@ -34,11 +34,6 @@
           @change="handleCompanyChange"
         />
       </el-form-item>
-      <el-form-item v-if="formData.erpnext_company_abbr" :label="$t('Pos Profile')" prop="erpnext_pos_profile_name">
-        <el-select v-model="formData.erpnext_pos_profile_name" :placeholder="$t('请选择Pos Profile')" clearable filterable :disabled="props.hasEdit || confirmPassword">
-          <el-option v-for="item in erpnextPosProfileList" :key="item.name" :value="item.name" :label="item.name" />
-        </el-select>
-      </el-form-item>
       <el-form-item v-if="confirmPassword && !props.hasEdit" :label="$t('密码验证')" prop="password">
         <el-input v-model="formData.password" type="password" :placeholder="$t('请输入密码')" clearable :disabled="props.hasEdit" />
         <div class="text-center text-sm text-red-500 mt-2">
@@ -117,7 +112,6 @@
       } else if (props.hasEdit) {
         // 保存编辑模式下的原始值
         const originalCompanyAbbr = props.editRow.erpnext_company_abbr || '';
-        const originalPosProfile = props.editRow.erpnext_pos_profile_name || '';
 
         formData.value.erpnext_site_code = props.editRow.erpnext_site_code;
         formData.value.erpnext_default_company_abbr = props.editRow.erpnext_default_company_abbr || '';
@@ -126,7 +120,6 @@
 
         // 恢复原始值
         formData.value.erpnext_company_abbr = originalCompanyAbbr;
-        formData.value.erpnext_pos_profile_name = originalPosProfile;
 
         // 触发公司选择变化，更新pos profile列表
         if (originalCompanyAbbr) {
@@ -139,9 +132,8 @@
   };
 
   const handleSiteChange = (site_code: string) => {
-    // 清空erpnext_company_abbr和erpnext_pos_profile_name
+    // 清空erpnext_company_abbr
     formData.value.erpnext_company_abbr = '';
-    formData.value.erpnext_pos_profile_name = '';
     getErpnextCompanyList(site_code);
   };
   const getErpnextCompanyList = async (site_code: string) => {
@@ -192,7 +184,6 @@
     erpnext_site_code: '',
     erpnext_default_company_abbr: '',
     erpnext_company_abbr: '',
-    erpnext_pos_profile_name: '',
     password: '',
   });
 
@@ -200,7 +191,6 @@
     uuid: [{ required: true, message: $t('请选择商家') }],
     erpnext_site_code: [{ required: true, message: $t('请选择所属erpnext的site') }],
     erpnext_company_abbr: [{ required: true, message: $t('请选择所属erpnext公司') }],
-    erpnext_pos_profile_name: [{ required: true, message: $t('请选择Pos Profile') }],
     password: [{ required: true, message: $t('请输入密码') }],
   });
 
@@ -215,7 +205,6 @@
       erpnext_site_code: '',
       erpnext_default_company_abbr: '',
       erpnext_company_abbr: '',
-      erpnext_pos_profile_name: '',
       password: '',
     };
     confirmPassword.value = false;
@@ -253,7 +242,6 @@
             erpnext_site_code: props.editRow.erpnext_site_code,
             erpnext_default_company_abbr: props.editRow.erpnext_default_company_abbr || '',
             erpnext_company_abbr: props.editRow.erpnext_company_abbr || '',
-            erpnext_pos_profile_name: props.editRow.erpnext_pos_profile_name,
             password: '',
           };
         }

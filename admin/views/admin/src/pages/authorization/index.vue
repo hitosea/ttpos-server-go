@@ -28,6 +28,7 @@
       <el-table-column fixed="right" :label="$t('操作')" width="150">
         <template #default="scope">
           <el-button v-permission="['admin_erpnext_add']" type="primary" link @click="handleEdit(scope.row)">{{ $t('查看') }}</el-button>
+          <el-button type="primary" link @click="handlePay(scope.row)">{{ $t('支付管理') }}</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -35,12 +36,14 @@
     <ti-pagination :total="total" :currentPage="currentPage" :pageSize="pageSize" @change="handlePageChange"></ti-pagination>
 
     <add-edit v-model:show="addEditShow" :has-edit="hasEdit" :editRow="editRow" ref="addEditRef" @refresh="getList" />
+    <pay-manage v-model:show="payManageShow" :editRow="editRow" ref="payManageRef" @refresh="getList" />
   </div>
 </template>
 <script setup lang="ts">
   import { ref, onMounted } from 'vue';
   import { getAuthorizationList, authorizationListTypeItem } from '@/api/authorization';
   import AddEdit from './components/add-edit.vue';
+  import PayManage from './components/pay-manage.vue';
   const addEditRef = ref<InstanceType<typeof AddEdit>>();
   const searchParams = ref({
     keyword: '',
@@ -56,6 +59,8 @@
   const addEditShow = ref(false);
   const hasEdit = ref(false);
   const editRow = ref<authorizationListTypeItem>();
+  const payManageShow = ref(false);
+  const payManageRef = ref<InstanceType<typeof PayManage>>();
   const getList = async () => {
     try {
       const params = {
@@ -91,6 +96,11 @@
     addEditShow.value = true;
     hasEdit.value = true;
     editRow.value = row;
+  };
+
+  const handlePay = (row: authorizationListTypeItem) => {
+    editRow.value = row;
+    payManageShow.value = true;
   };
 
   onMounted(() => {

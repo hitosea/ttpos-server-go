@@ -70,6 +70,11 @@ axios.interceptors.response.use(
       const clientSecretKey = await secretKeyStore().getClientSecretKey();
       res.data = await decrypt(res.data.encrypted, clientSecretKey.privateKey, clientSecretKey.id);
     }
+    
+    // 自动格式化返回数据中的数字，去掉多余的0
+    if (res.data) {
+      res.data = formatNumbers(res.data);
+    }
     // 错误状态码并且不用弹窗的状态码
     let noErrorArr = [-901];
     //未登陆
@@ -208,6 +213,47 @@ function sendMessage(e, type) {
 function hasEmoji(input) {
   const emojiRegex = /[\uD800-\uDBFF][\uDC00-\uDFFF]|\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDE4F\uDE80-\uDEFF]/g;
   return emojiRegex.test(input);
+}
+
+// 递归格式化数字，去掉多余的0
+function formatNumbers(data) {
+  if (data === null || data === undefined) {
+    return data;
+  }
+
+  // 如果是数组，递归处理每个元素
+  if (Array.isArray(data)) {
+    return data.map(item => formatNumbers(item));
+  }
+
+  // 如果是对象，递归处理每个属性
+  if (typeof data === 'object') {
+    const result = {};
+    for (const key in data) {
+      if (data.hasOwnProperty(key)) {
+        result[key] = formatNumbers(data[key]);
+      }
+    }
+    return result;
+  }
+
+  // 如果是数字类型，进行格式化
+  if (typeof data === 'number') {
+    // 将数字转换为字符串后再转回数字，自动去掉多余的0
+    return parseFloat(data.toString());
+  }
+
+  // 如果是字符串且看起来像数字，也进行格式化
+  if (typeof data === 'string' && /^\d+\.?\d*$/.test(data.trim())) {
+    const num = parseFloat(data);
+    // 如果转换成功且不是NaN，返回格式化后的数字
+    if (!isNaN(num)) {
+      return parseFloat(num.toString());
+    }
+  }
+
+  // 其他类型保持不变
+  return data;
 }
 
 export default {
