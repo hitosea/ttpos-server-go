@@ -75,7 +75,7 @@ class ERPNext extends Controller
         }
         // 验证用户名密码是否正确
         $user = User::withTrashed()->whereRaw('BINARY username = :username', ['username' => $this->admin['user']['user_name']])->order('admin_user_id', 'desc')->order('delete_time')->find();
-        if (!$user || $user->password != salt_hash($param['password'] ?? '')) { 
+        if (!$user || $user->password != salt_hash($param['password'] ?? '')) {
             return $this->renderError('密码错误');
         }
 
@@ -188,6 +188,64 @@ class ERPNext extends Controller
     function posProfile()
     {
         $res = HttpHelp::getRequest('http://nginx/api/v1/admin/erpnext/site/pos_profile', $this->getData(), [
+            'X-API-KEY: ' . env('JWT_SECRET'),
+            'Accept-Language: ' . request()->header('language'),
+        ]);
+        if (!$res) {
+            return $this->renderError('请求失败');
+        }
+        $res = json_decode($res, true);
+        if ($res['code'] != 0) {
+            return $this->renderError($res['message']);
+        }
+        return $this->renderSuccess('', $res['data']);
+    }
+
+
+    /**
+     * @Apidoc\Title("获取ERPNext支付方式列表")
+     * @Apidoc\Desc("获取ERPNext支付方式列表")
+     * @Apidoc\Method("GET")
+     * @Apidoc\Url("/api/admin/erpnext/paymentMethodList")
+     * @Apidoc\Param("company_uuid", type="biginteger", require=true, desc="公司ID")
+     * @Apidoc\Returned("list", type="array", desc="公司支付方式", children={
+     *      @Apidoc\Returned("name", type="string", desc="支付方式名称"),
+     *      @Apidoc\Returned("is_used", type="boolean", desc="是否已使用"),
+     * })
+     */
+    function paymentMethodList()
+    {
+        $res = HttpHelp::getRequest('http://nginx/api/v1/admin/erpnext/payment_method/list', $this->getData(), [
+            'X-API-KEY: ' . env('JWT_SECRET'),
+            'Accept-Language: ' . request()->header('language'),
+        ]);
+        if (!$res) {
+            return $this->renderError('请求失败');
+        }
+        $res = json_decode($res, true);
+        if ($res['code'] != 0) {
+            return $this->renderError($res['message']);
+        }
+        return $this->renderSuccess('', $res['data']);
+    }
+
+    /**
+     * @Apidoc\Title("给授权erpnext的商家添加支付方式")
+     * @Apidoc\Desc("给授权erpnext的商家添加支付方式")
+     * @Apidoc\Method("POST")
+     * @Apidoc\Url("/api/admin/erpnext/addPaymentMethod")
+     * @Apidoc\Param("company_uuid", type="biginteger", require=true, desc="公司UUID")
+     * @Apidoc\Param("erpnext_payment", type="string", require=true, desc="ERPNext支付方式")
+     * @Apidoc\Param("name", type="string", require=true, desc="支付方式名称")
+     * @Apidoc\Param("fee", type="float", require=true, desc="手续费")
+     * @Apidoc\Param("sort", type="int", require=true, desc="排序")
+     * @Apidoc\Param("status", type="int", require=true, desc="状态: 0-禁用 1-启用")
+     * @Apidoc\Param("checkout_show", type="array", require=false, desc="结账显示")
+     * @Apidoc\Param("member_recharge_show", type="array", require=false, desc="会员充值显示")
+     */
+    function addPaymentMethod()
+    {
+        $res = HttpHelp::postRequest('http://nginx/api/v1/admin/erpnext/payment_method/add', $this->postData(), [
             'X-API-KEY: ' . env('JWT_SECRET'),
             'Accept-Language: ' . request()->header('language'),
         ]);

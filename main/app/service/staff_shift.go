@@ -97,7 +97,7 @@ func (s *staffShiftSrv) CreateWorkingLog(ctx context.Context, staff model.Staff)
 			Branch: companySetting.ErpnextBranchName,
 		})
 		if err != nil {
-			return model.StaffShiftLog{}, errors.WithMessage(err)
+			return model.StaffShiftLog{}, errors.WithMessage(err, "开账失败")
 		}
 		erpnextOpenPosEntryName = openPosEntryName
 	}

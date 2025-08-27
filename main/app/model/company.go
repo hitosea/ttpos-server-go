@@ -27,8 +27,17 @@ type Company struct {
 	CompanySetting *CompanySetting `gorm:"foreignKey:CompanyUuid;references:Uuid" json:"company_setting"`
 }
 
-func (company *Company) IsOpenErp() bool {
-	return company.IsEnableErp == 1
+func (company *Company) IsOpenErp(phase ...int) bool {
+	if company.IsEnableErp == 0 {
+		return false
+	}
+	if len(phase) == 0 {
+		return true
+	}
+	if phase[0] == 3 {
+		return false
+	}
+	return true
 }
 
 func (company *Company) GetLogo(baseURL string) string {
