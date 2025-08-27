@@ -33622,10 +33622,6 @@ const docTemplate = `{
                     "description": "店铺到期时间，0表示没有过期时间",
                     "type": "integer"
                 },
-                "is_enable_erp": {
-                    "description": "是否开启erp",
-                    "type": "boolean"
-                },
                 "is_open_buffet": {
                     "description": "是否开启自助餐功能: 0不开启, 1开启",
                     "type": "integer"
@@ -33644,6 +33640,10 @@ const docTemplate = `{
                 },
                 "is_open_rider": {
                     "description": "是否开启外送",
+                    "type": "boolean"
+                },
+                "is_show_inventory": {
+                    "description": "是否显示移动管理端进销存功能",
                     "type": "boolean"
                 },
                 "logo": {

@@ -79,6 +79,7 @@
       type="all"
       :selectedProductIds="model?.product_ids ?? []"
       :isLoading="loading"  
+      :hasPackage="true"
     >
     </ProductSelector>
   </div>

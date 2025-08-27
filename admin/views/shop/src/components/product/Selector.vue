@@ -189,6 +189,11 @@
       type: Boolean,
       default: false,
     },
+    // 含有套餐
+    hasPackage: {
+      type: Boolean,
+      default: false,
+    },
   });
 
   const dialogVisible = ref(props.open);
@@ -448,7 +453,7 @@
               type: props.type,
               num_type: props.numType,
               show_delivery_required: props.showDeliveryRequired,
-              show_package: 1,
+              show_package: props.hasPackage ? 1 : 0,
             },
             true
           );
