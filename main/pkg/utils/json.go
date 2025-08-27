@@ -97,7 +97,7 @@ func NumToStr(num any) string {
 // StructToMap 结构体转map
 func StructToMap(data any) (map[string]any, error) {
 	var result map[string]any
-	result, err := StrToMap(ToJsonString(data))
+	result, err := StrToMap(ToJson(data))
 	return result, err
 }
 

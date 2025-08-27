@@ -19,6 +19,7 @@ import (
 	errors2 "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -1603,7 +1604,10 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 
 	// 保存白底黑字图片
 	whiteBackgroundWithBlackTextLogoPath := utils.GetWhiteBackgroundWithBlackTextLogoPath(companyUuid, storeSettingReq.LogoUrl, "public/uploads")
-	err = utils.WhiteBackgroundWithBlackText("http://nginx/"+storeSettingReq.LogoUrl, whiteBackgroundWithBlackTextLogoPath)
+	err = utils.WhiteBackgroundWithBlackText(
+		utils.IfString(config.Server.Mode == "debug", config.Server.Domain+"/"+storeSettingReq.LogoUrl, "http://nginx/"+storeSettingReq.LogoUrl),
+		whiteBackgroundWithBlackTextLogoPath,
+	)
 	if err != nil {
 		return errors.WithMessage(errors.New("生成打印LOGO失败"), err.Error())
 	}
