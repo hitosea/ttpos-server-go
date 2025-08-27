@@ -66,8 +66,8 @@
 <script setup lang="ts">
   import { ref, defineProps, defineEmits, watch } from 'vue';
   import { ElMessage, FormInstance } from 'element-plus';
-  import { getErpnextPaymentMethodList, erpnextPaymentMethodListType } from '@/api/authorization';
-
+  import { getErpnextPaymentMethodList, erpnextPaymentMethodListType, erpnextAddPaymentMethod, erpnextAddPaymentMethodParams } from '@/api/authorization';
+  import { $t } from '@/i18n';
   // 定义组件属性
   const props = defineProps({
     show: {
@@ -96,12 +96,12 @@
   const erpPayMethodList = ref<erpnextPaymentMethodListType[]>([]);
 
   // 表单数据
-  const formData = ref({
-    company_uuid: '', // ERP支付方式
+  const formData = ref<erpnextAddPaymentMethodParams>({
+    company_uuid: 0, // ERP支付方式
     name: '', // 名称
     erpnext_payment: '', // 支付方式
-    fee: null, // 手续费
-    sort: '', // 排序
+    fee: undefined, // 手续费
+    sort: 0, // 排序
     checkout_show: ['cashier', 'assistant'], // 结账显示（复选框）
     member_recharge_show: ['cashier'], // 会员充值（复选框）
     status: 1, // 状态
@@ -109,19 +109,23 @@
 
   // 表单验证规则
   const formRules = ref({
-    company_uuid: [{ required: true, message: '请选择ERP支付方式' }],
+    company_uuid: [{ required: true, message: $t('请选择ERP支付方式') }],
     name: [
-      { required: true, message: '请输入名称' },
-      { max: 100, message: '名称不能超过100个字符' },
+      { required: true, message: $t('请输入名称') },
+      { max: 100, message: $t('名称不能超过100个字符') },
     ],
-    erpnext_payment: [{ required: true, message: '请选择支付方式' }],
+    erpnext_payment: [{ required: true, message: $t('请选择支付方式') }],
     fee: [
+      {
+        required: true,
+        message: $t('请输入手续费'),
+      },
       {
         validator: (_rule: any, value: string, callback: any) => {
           if (value !== '' && value !== null && value !== undefined) {
             const num = parseFloat(value);
             if (isNaN(num) || num < 0 || num > 100) {
-              callback(new Error('手续费必须在0-100之间'));
+              callback(new Error($t('手续费必须在0-100之间')));
             } else {
               callback();
             }
@@ -134,11 +138,15 @@
     ],
     sort: [
       {
+        required: true,
+        message: $t('请输入排序'),
+      },
+      {
         validator: (_rule: any, value: string, callback: any) => {
           if (value !== '' && value !== null && value !== undefined) {
             const num = parseInt(value);
             if (isNaN(num) || num < 0 || num > 999) {
-              callback(new Error('排序值必须在0-999之间'));
+              callback(new Error($t('排序值必须在0-999之间')));
             } else {
               callback();
             }
@@ -160,11 +168,11 @@
   // 重置表单
   const handleReset = () => {
     formData.value = {
-      company_uuid: '', // ERP支付方式
+      company_uuid: 0, // ERP支付方式
       name: '', // 名称
       erpnext_payment: '', // 支付方式
-      fee: null, // 手续费
-      sort: '', // 排序
+      fee: undefined, // 手续费
+      sort: 0, // 排序
       checkout_show: ['cashier'], // 结账显示（复选框）
       member_recharge_show: ['cashier'], // 会员充值（复选框）
       status: 1, // 状态
@@ -179,19 +187,12 @@
       if (valid) {
         try {
           isLoading.value = true;
-
-          // 模拟API调用
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-
-          // 这里应该调用实际的API
-          // const res = await syncPayMethod(formData.value);
-
-          ElMessage.success('同步支付方式成功');
+          const res = await erpnextAddPaymentMethod(formData.value);
+          ElMessage.success(res.msg);
           handleClose();
           emit('refresh');
         } catch (error) {
           console.log(error);
-          ElMessage.error('同步失败，请重试');
         } finally {
           isLoading.value = false;
         }

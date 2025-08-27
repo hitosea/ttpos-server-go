@@ -93,3 +93,18 @@ export interface erpnextPaymentMethodListType {
 export function getErpnextPaymentMethodList(params: erpnextPaymentMethodListParams) {
   return $get('/erpnext/paymentMethodList', { params });
 }
+
+export interface erpnextAddPaymentMethodParams {
+  company_uuid: number;
+  name: string;
+  erpnext_payment: string;
+  fee?: number;
+  sort?: number;
+  checkout_show: string[];
+  member_recharge_show: string[];
+  status: number;
+}
+
+export function erpnextAddPaymentMethod(data: erpnextAddPaymentMethodParams) {
+  return $post('/erpnext/addPaymentMethod', data);
+}
