@@ -3948,8 +3948,8 @@ func getSaleOrderFromDB(ctx context.Context, db *gorm.DB, saleBillUuid, saleOrde
 
 // OrderProductChangePrice  修改订单商品价格
 func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error) {
-	if req.Price < 0 || req.Price > 1000000 {
-		return nil, errors.New("请输入0-1000000间的价格")
+	if req.Price < 0 || req.Price > 100000000 {
+		return nil, errors.New("请输入0-100000000间的价格")
 	}
 
 	// 禁止并发操作
@@ -9912,18 +9912,34 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 
 	// 订单商品列表
 	items := make([]*selling.PosInvoiceItem, 0)
+	totalTaxFee := decimal.NewFromFloat(0)
 	for _, product := range returnOrder.ReturnOrderProducts {
 		// TODO 如果退款套餐怎么处理
+		saleOrderProduct, _, _ := saleOrder.GetSaleOrderProduct(product.SaleOrderProductUuid)
+		taxFee := saleOrderProduct.TaxFee // 商品税费
+		if !saleOrderProduct.HasTax() {
+			taxFee = 0
+		} else {
+			// 累计本次退款操作中退款商品的税费
+			tax := decimal.NewFromFloat(taxFee).Mul(decimal.NewFromFloat(product.Num)).Round(2).InexactFloat64()
+			totalTaxFee = totalTaxFee.Add(decimal.NewFromFloat(tax))
+		}
 		items = append(items, &selling.PosInvoiceItem{
 			ItemCode: product.ErpCode,
 			Qty:      product.Num,
-			Rate:     product.ProductPrice,       // 商品未含税价格（折后）
-			Amount:   product.ProductTotalAmount, // 商品未含税价格（折后）* 数量
+			Rate:     product.GetProductPriceNoneTax(taxFee),        // 商品未含税价格（折后）
+			Amount:   -product.GetProductTotalAmountNoneTax(taxFee), // 商品未含税价格（折后）* 数量
 		})
 	}
 
 	taxes := make([]*selling.PosInvoiceTax, 0)
 	// Tax 消费税、Service Fee 服务费、Payment Processing Fee 支付手续费、Delivery Fee 配送费
+	if totalTaxFee.GreaterThan(decimal.NewFromFloat(0)) {
+		taxes = append(taxes, &selling.PosInvoiceTax{
+			TaxAmount:   -totalTaxFee.InexactFloat64(),
+			Description: "Tax", // 消费税
+		})
+	}
 
 	payments := make([]*selling.PosInvoicePayment, 0)
 	for _, payment := range returnOrder.ReturnOrderAmounts {
@@ -9944,7 +9960,7 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 		}
 		payments = append(payments, &selling.PosInvoicePayment{
 			ModeOfPayment: modeOfPayment,
-			Amount:        payment.Amount,
+			Amount:        -payment.Amount,
 		})
 	}
 

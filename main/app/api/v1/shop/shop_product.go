@@ -102,7 +102,7 @@ func (h *ProductHandler) SortProductCategory(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, nil, "保存成功")
 }
 
 // AddProductCategory 添加商品分类
@@ -128,7 +128,7 @@ func (h *ProductHandler) AddProductCategory(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, nil, "添加成功")
 }
 
 // EditProductCategory 编辑商品分类
@@ -154,7 +154,7 @@ func (h *ProductHandler) EditProductCategory(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, nil, "保存成功")
 }
 
 // DeleteProductCategory 删除商品分类
@@ -180,7 +180,7 @@ func (h *ProductHandler) DeleteProductCategory(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, nil, "删除成功")
 }
 
 // GetProductUnitList 获取商品单位列表
@@ -271,7 +271,7 @@ func (h *ProductHandler) AddProductUnit(c *gin.Context) {
 		return
 	}
 	// 返回结果
-	helper.Success(c, gin.H{}, "添加成功")
+	helper.Success(c, gin.H{}, "保存成功")
 }
 
 // EditProductUnit 编辑商品单位
@@ -440,7 +440,7 @@ func (h *ProductHandler) AddProductSauce(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{}, "添加成功")
+	helper.Success(c, gin.H{}, "保存成功")
 }
 
 // EditProductSauce 编辑商品加料
@@ -597,7 +597,7 @@ func (h *ProductHandler) AddProductAttributeGroup(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{}, "添加成功")
+	helper.Success(c, gin.H{}, "保存成功")
 }
 
 // GetProductFlavor 获取商品规格详情
@@ -649,7 +649,7 @@ func (h *ProductHandler) AddProductFlavor(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{}, "添加成功")
+	helper.Success(c, gin.H{}, "保存成功")
 }
 
 // GetProductFlavorList 获取商品规格列表
@@ -1092,7 +1092,7 @@ func (h *ProductHandler) ProductShopAdd(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil, "添加成功")
+	helper.Success(c, nil, "保存成功")
 }
 
 // ProductShopEdit 编辑商品

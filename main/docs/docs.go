@@ -14299,6 +14299,127 @@ const docTemplate = `{
                 }
             }
         },
+        "/h5/desk/order/cart/product/flavor_and_attribute": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "查询购物车商品“规格/属性”",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "扫码点餐"
+                ],
+                "summary": "查询购物车商品“规格/属性”",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "商品类型 0-商品 1-套餐",
+                        "name": "productType",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售账单ID",
+                        "name": "saleBillUuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售订单商品ID",
+                        "name": "saleOrderProductUuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售订单ID",
+                        "name": "saleOrderUuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ProductFlavorAndAttributeRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "修改购物车商品“规格/属性”",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "扫码点餐"
+                ],
+                "summary": "修改购物车商品“规格/属性”",
+                "parameters": [
+                    {
+                        "description": "商品参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderCartProductFlavorAndAttributeChangeReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/h5/desk/order/must_plan/confirm": {
             "post": {
                 "security": [
@@ -17947,6 +18068,45 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/req.MaterialEditReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/material/import/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "导入物品列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "导入物品列表",
+                "parameters": [
+                    {
+                        "description": "物品导入请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.MaterialImportListReq"
                         }
                     }
                 ],
@@ -26955,16 +27115,20 @@ const docTemplate = `{
                     "description": "条形码是否存在，存在则不保存",
                     "type": "boolean"
                 },
-                "category_id": {
-                    "description": "分类ID",
-                    "type": "integer"
-                },
                 "category_name": {
                     "description": "分类名称",
                     "type": "string"
                 },
+                "category_uuid": {
+                    "description": "分类UUID",
+                    "type": "integer"
+                },
                 "deduct_stock_type": {
                     "description": "库存计算方式, 2-付款减库存 1-下单减库存",
+                    "type": "integer"
+                },
+                "dine_tax_uuid": {
+                    "description": "堂食税类UUID",
                     "type": "integer"
                 },
                 "is_enable_grade": {
@@ -27003,6 +27167,14 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "locale_name_is_exist": {
+                    "description": "商品名称是否存在，对应的key不为空则表示存在",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
                 "num_type": {
                     "description": "数量计算方法, 1-整数 2-小数",
                     "type": "integer"
@@ -27010,14 +27182,6 @@ const docTemplate = `{
                 "open_overall_discount": {
                     "description": "整单折扣(1开启 0关闭)",
                     "type": "integer"
-                },
-                "product_name_is_exist": {
-                    "description": "商品名称是否存在，对应的key不为空则表示存在",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.LocaleResponse"
-                        }
-                    ]
                 },
                 "product_price": {
                     "description": "商品价格",
@@ -27039,10 +27203,6 @@ const docTemplate = `{
                     "description": "商品单位",
                     "type": "string"
                 },
-                "ratin_tax_id": {
-                    "description": "堂食税类ID",
-                    "type": "integer"
-                },
                 "row": {
                     "description": "excel表的行编号",
                     "type": "integer"
@@ -27051,20 +27211,20 @@ const docTemplate = `{
                     "description": "显示：123456",
                     "type": "string"
                 },
-                "sku_id": {
-                    "description": "规格ID",
+                "sku_uuid": {
+                    "description": "规格UUID",
                     "type": "integer"
                 },
                 "spec_name": {
                     "description": "规格名称",
                     "type": "string"
                 },
-                "takeout_tax_id": {
-                    "description": "外带税类ID",
+                "takeout_tax_uuid": {
+                    "description": "外带税类UUID",
                     "type": "integer"
                 },
-                "unit_id": {
-                    "description": "单位ID",
+                "unit_uuid": {
+                    "description": "单位UUID",
                     "type": "integer"
                 }
             }
@@ -27783,6 +27943,10 @@ const docTemplate = `{
                 "name": {
                     "description": "税类名称",
                     "type": "string"
+                },
+                "rate": {
+                    "description": "税率",
+                    "type": "number"
                 },
                 "uuid": {
                     "description": "税类UUID",
@@ -29014,6 +29178,72 @@ const docTemplate = `{
                     "description": "估值率",
                     "type": "number",
                     "minimum": 0
+                }
+            }
+        },
+        "req.MaterialImportListItemReq": {
+            "type": "object",
+            "required": [
+                "category_name",
+                "init_stock",
+                "locale_name",
+                "row",
+                "unit_name",
+                "valuation"
+            ],
+            "properties": {
+                "barcode_value": {
+                    "description": "条形码值",
+                    "type": "string"
+                },
+                "category_name": {
+                    "description": "分类名称",
+                    "type": "string"
+                },
+                "init_stock": {
+                    "description": "期初库存",
+                    "type": "number",
+                    "minimum": 0
+                },
+                "locale_name": {
+                    "description": "名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "row": {
+                    "description": "行号",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "状态，1-启用 0-停用",
+                    "type": "integer"
+                },
+                "unit_name": {
+                    "description": "基准单位名称",
+                    "type": "string"
+                },
+                "valuation": {
+                    "description": "估值率",
+                    "type": "number",
+                    "minimum": 0
+                }
+            }
+        },
+        "req.MaterialImportListReq": {
+            "type": "object",
+            "required": [
+                "list"
+            ],
+            "properties": {
+                "list": {
+                    "description": "物品列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.MaterialImportListItemReq"
+                    }
                 }
             }
         },
@@ -30410,16 +30640,20 @@ const docTemplate = `{
                     "description": "商品条码",
                     "type": "string"
                 },
-                "category_id": {
-                    "description": "分类ID",
-                    "type": "integer"
-                },
                 "category_name": {
                     "description": "分类名称",
                     "type": "string"
                 },
+                "category_uuid": {
+                    "description": "分类UUID",
+                    "type": "integer"
+                },
                 "deduct_stock_type": {
                     "description": "库存计算方式, 2-付款减库存 1-下单减库存",
+                    "type": "integer"
+                },
+                "dine_tax_uuid": {
+                    "description": "堂食税类UUID",
                     "type": "integer"
                 },
                 "is_enable_grade": {
@@ -30427,28 +30661,28 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "is_show_assistant": {
-                    "description": "是否显示在点餐助手 1-显示 2-不显示",
-                    "type": "boolean"
+                    "description": "是否显示在点餐助手 1-显示 0-不显示",
+                    "type": "integer"
                 },
                 "is_show_cashier": {
-                    "description": "是否显示在收银端 1-显示 2-不显示",
-                    "type": "boolean"
+                    "description": "是否显示在收银端 1-显示 0-不显示",
+                    "type": "integer"
                 },
                 "is_show_delivery": {
-                    "description": "是否显示在外送 1-显示 2-不显示",
-                    "type": "boolean"
+                    "description": "是否显示在外送 1-显示 0-不显示",
+                    "type": "integer"
                 },
                 "is_show_h5": {
-                    "description": "是否显示在h5 1-显示 2-不显示",
-                    "type": "boolean"
+                    "description": "是否显示在h5 1-显示 0-不显示",
+                    "type": "integer"
                 },
                 "is_show_kitchen": {
-                    "description": "是否显示在送厨端 1-显示 2-不显示",
-                    "type": "boolean"
+                    "description": "是否显示在送厨端 1-显示 0-不显示",
+                    "type": "integer"
                 },
                 "is_show_tablet": {
-                    "description": "是否显示在平板端 1-显示 2-不显示",
-                    "type": "boolean"
+                    "description": "是否显示在平板端 1-显示 0-不显示",
+                    "type": "integer"
                 },
                 "locale_name": {
                     "description": "商品名称",
@@ -30486,10 +30720,6 @@ const docTemplate = `{
                     "description": "商品单位",
                     "type": "string"
                 },
-                "ratin_tax_id": {
-                    "description": "堂食税类ID",
-                    "type": "integer"
-                },
                 "row": {
                     "description": "excel表的行编号",
                     "type": "integer"
@@ -30498,20 +30728,20 @@ const docTemplate = `{
                     "description": "显示：123456",
                     "type": "string"
                 },
-                "sku_id": {
-                    "description": "规格ID",
-                    "type": "integer"
-                },
                 "sku_name": {
                     "description": "规格名称",
                     "type": "string"
                 },
-                "takeout_tax_id": {
-                    "description": "外带税类ID",
+                "sku_uuid": {
+                    "description": "规格UUID",
                     "type": "integer"
                 },
-                "unit_id": {
-                    "description": "单位ID",
+                "takeout_tax_uuid": {
+                    "description": "外带税类UUID",
+                    "type": "integer"
+                },
+                "unit_uuid": {
+                    "description": "单位UUID",
                     "type": "integer"
                 }
             }
@@ -30523,9 +30753,9 @@ const docTemplate = `{
                 "category_name",
                 "deduct_stock_type",
                 "is_enable_grade",
+                "locale_name",
                 "num_type",
                 "open_overall_discount",
-                "product_name",
                 "product_price",
                 "product_rating_tax_type",
                 "product_status",
@@ -30552,6 +30782,14 @@ const docTemplate = `{
                     "description": "是否开启会员折扣(1开启 0关闭)",
                     "type": "integer"
                 },
+                "locale_name": {
+                    "description": "商品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
                 "num_type": {
                     "description": "数量计算方法, 1-整数 2-小数",
                     "type": "integer"
@@ -30559,10 +30797,6 @@ const docTemplate = `{
                 "open_overall_discount": {
                     "description": "整单折扣(1开启 0关闭)",
                     "type": "integer"
-                },
-                "product_name": {
-                    "description": "商品名称",
-                    "type": "string"
                 },
                 "product_price": {
                     "description": "商品价格",
@@ -31009,6 +31243,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/req.ProductShopAddPackageReq"
                         }
                     ]
+                },
+                "row": {
+                    "description": "行号",
+                    "type": "integer"
                 },
                 "sauce": {
                     "description": "商品加料列表",

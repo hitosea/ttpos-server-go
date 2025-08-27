@@ -21,14 +21,14 @@ var OrderReqMessage = map[string]string{
 // OrderListReq 订单列表查询
 type OrderListReq struct {
 	dto.PageReq             // 分页参数
-	OrderNo          string `form:"order_no"` // 订单编号
-	DateType         int    `form:"date_type,default=-1"` // 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
-	EnableCreateTime bool   `form:"enable_create_time"` // 启用开台时间 false-不启用，true-启用
-	EnablePayTime    bool   `form:"enable_pay_time"` // 启用支付时间 false-不启用，true-启用
-	QueryStartTime   uint   `form:"query_start_time"` // 查询开始时间戳
-	QueryEndTime     uint   `form:"query_end_time"` // 查询结束时间戳
-	Status           int    `form:"status,default=-1"` // 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
-	BillType         int    `form:"bill_type,default=-1"` // 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
+	OrderNo          string `form:"order_no"`                 // 订单编号
+	DateType         int    `form:"date_type,default=-1"`     // 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
+	EnableCreateTime bool   `form:"enable_create_time"`       // 启用开台时间 false-不启用，true-启用
+	EnablePayTime    bool   `form:"enable_pay_time"`          // 启用支付时间 false-不启用，true-启用
+	QueryStartTime   uint   `form:"query_start_time"`         // 查询开始时间戳
+	QueryEndTime     uint   `form:"query_end_time"`           // 查询结束时间戳
+	Status           int    `form:"status,default=-1"`        // 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
+	BillType         int    `form:"bill_type,default=-1"`     // 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
 	DiningMethod     int    `form:"dining_method,default=-1"` // 用餐方式, -1=全都、 0-堂食 1-打包
 }
 
@@ -151,8 +151,8 @@ type OrderAmountChangeReq struct {
 
 // Validate 验证参数
 func (req OrderAmountChangeReq) Validate() error {
-	if req.Price < 0 || req.Price > 1000000 {
-		return errors.New("请输入0-1000000间的价格")
+	if req.Price < 0 || req.Price > 1000000000000000 {
+		return errors.New("请输入0-1000000000000000间的价格")
 	}
 	if req.SaleBillUuid == 0 || req.SaleOrderUuid == 0 {
 		return errors.New("销售账单UUID或销售订单UUID不能为空")

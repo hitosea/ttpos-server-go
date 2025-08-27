@@ -765,6 +765,7 @@ func (model *SaleOrder) NewReturnOrder(scene string, deliveryFee float64, dutyNo
 			TaxRate:              saleOrderProduct.TaxRate,
 			Num:                  num,
 			ProductTotalAmount:   productTotalAmount.Round(2).InexactFloat64(), // 商品总金额=退货商品数量*商品最终单价
+			ErpCode:              saleOrderProduct.ErpCode,
 		})
 		returnAmount = returnAmount.Add(productTotalAmount)
 	}

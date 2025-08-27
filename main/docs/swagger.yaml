@@ -1917,14 +1917,17 @@ definitions:
       barcode_is_exist:
         description: 条形码是否存在，存在则不保存
         type: boolean
-      category_id:
-        description: 分类ID
-        type: integer
       category_name:
         description: 分类名称
         type: string
+      category_uuid:
+        description: 分类UUID
+        type: integer
       deduct_stock_type:
         description: 库存计算方式, 2-付款减库存 1-下单减库存
+        type: integer
+      dine_tax_uuid:
+        description: 堂食税类UUID
         type: integer
       is_enable_grade:
         description: 是否开启会员折扣(1开启 0关闭)
@@ -1951,16 +1954,16 @@ definitions:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 商品名称
+      locale_name_is_exist:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称是否存在，对应的key不为空则表示存在
       num_type:
         description: 数量计算方法, 1-整数 2-小数
         type: integer
       open_overall_discount:
         description: 整单折扣(1开启 0关闭)
         type: integer
-      product_name_is_exist:
-        allOf:
-        - $ref: '#/definitions/dto.LocaleResponse'
-        description: 商品名称是否存在，对应的key不为空则表示存在
       product_price:
         description: 商品价格
         type: string
@@ -1976,26 +1979,23 @@ definitions:
       product_unit:
         description: 商品单位
         type: string
-      ratin_tax_id:
-        description: 堂食税类ID
-        type: integer
       row:
         description: excel表的行编号
         type: integer
       shows:
         description: 显示：123456
         type: string
-      sku_id:
-        description: 规格ID
+      sku_uuid:
+        description: 规格UUID
         type: integer
       spec_name:
         description: 规格名称
         type: string
-      takeout_tax_id:
-        description: 外带税类ID
+      takeout_tax_uuid:
+        description: 外带税类UUID
         type: integer
-      unit_id:
-        description: 单位ID
+      unit_uuid:
+        description: 单位UUID
         type: integer
     required:
     - barcode
@@ -2474,6 +2474,9 @@ definitions:
       name:
         description: 税类名称
         type: string
+      rate:
+        description: 税率
+        type: number
       uuid:
         description: 税类UUID
         type: integer
@@ -3335,6 +3338,53 @@ definitions:
     - unit_list
     - uuid
     - valuation
+    type: object
+  req.MaterialImportListItemReq:
+    properties:
+      barcode_value:
+        description: 条形码值
+        type: string
+      category_name:
+        description: 分类名称
+        type: string
+      init_stock:
+        description: 期初库存
+        minimum: 0
+        type: number
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 名称
+      row:
+        description: 行号
+        type: integer
+      status:
+        description: 状态，1-启用 0-停用
+        type: integer
+      unit_name:
+        description: 基准单位名称
+        type: string
+      valuation:
+        description: 估值率
+        minimum: 0
+        type: number
+    required:
+    - category_name
+    - init_stock
+    - locale_name
+    - row
+    - unit_name
+    - valuation
+    type: object
+  req.MaterialImportListReq:
+    properties:
+      list:
+        description: 物品列表
+        items:
+          $ref: '#/definitions/req.MaterialImportListItemReq'
+        type: array
+    required:
+    - list
     type: object
   req.MaterialStatusReq:
     properties:
@@ -4299,36 +4349,39 @@ definitions:
       barcode:
         description: 商品条码
         type: string
-      category_id:
-        description: 分类ID
-        type: integer
       category_name:
         description: 分类名称
         type: string
+      category_uuid:
+        description: 分类UUID
+        type: integer
       deduct_stock_type:
         description: 库存计算方式, 2-付款减库存 1-下单减库存
+        type: integer
+      dine_tax_uuid:
+        description: 堂食税类UUID
         type: integer
       is_enable_grade:
         description: 是否开启会员折扣(1开启 0关闭)
         type: integer
       is_show_assistant:
-        description: 是否显示在点餐助手 1-显示 2-不显示
-        type: boolean
+        description: 是否显示在点餐助手 1-显示 0-不显示
+        type: integer
       is_show_cashier:
-        description: 是否显示在收银端 1-显示 2-不显示
-        type: boolean
+        description: 是否显示在收银端 1-显示 0-不显示
+        type: integer
       is_show_delivery:
-        description: 是否显示在外送 1-显示 2-不显示
-        type: boolean
+        description: 是否显示在外送 1-显示 0-不显示
+        type: integer
       is_show_h5:
-        description: 是否显示在h5 1-显示 2-不显示
-        type: boolean
+        description: 是否显示在h5 1-显示 0-不显示
+        type: integer
       is_show_kitchen:
-        description: 是否显示在送厨端 1-显示 2-不显示
-        type: boolean
+        description: 是否显示在送厨端 1-显示 0-不显示
+        type: integer
       is_show_tablet:
-        description: 是否显示在平板端 1-显示 2-不显示
-        type: boolean
+        description: 是否显示在平板端 1-显示 0-不显示
+        type: integer
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -4354,26 +4407,23 @@ definitions:
       product_unit:
         description: 商品单位
         type: string
-      ratin_tax_id:
-        description: 堂食税类ID
-        type: integer
       row:
         description: excel表的行编号
         type: integer
       shows:
         description: 显示：123456
         type: string
-      sku_id:
-        description: 规格ID
-        type: integer
       sku_name:
         description: 规格名称
         type: string
-      takeout_tax_id:
-        description: 外带税类ID
+      sku_uuid:
+        description: 规格UUID
         type: integer
-      unit_id:
-        description: 单位ID
+      takeout_tax_uuid:
+        description: 外带税类UUID
+        type: integer
+      unit_uuid:
+        description: 单位UUID
         type: integer
     required:
     - barcode
@@ -4406,15 +4456,16 @@ definitions:
       is_enable_grade:
         description: 是否开启会员折扣(1开启 0关闭)
         type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称
       num_type:
         description: 数量计算方法, 1-整数 2-小数
         type: integer
       open_overall_discount:
         description: 整单折扣(1开启 0关闭)
         type: integer
-      product_name:
-        description: 商品名称
-        type: string
       product_price:
         description: 商品价格
         type: number
@@ -4444,9 +4495,9 @@ definitions:
     - category_name
     - deduct_stock_type
     - is_enable_grade
+    - locale_name
     - num_type
     - open_overall_discount
-    - product_name
     - product_price
     - product_rating_tax_type
     - product_status
@@ -4736,6 +4787,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/req.ProductShopAddPackageReq'
         description: 商品套餐
+      row:
+        description: 行号
+        type: integer
       sauce:
         allOf:
         - $ref: '#/definitions/req.ProductShopAddSauceReq'
@@ -20117,6 +20171,77 @@ paths:
       summary: 获取自助餐商品列表
       tags:
       - 扫码点餐
+  /h5/desk/order/cart/product/flavor_and_attribute:
+    get:
+      consumes:
+      - application/json
+      description: 查询购物车商品“规格/属性”
+      parameters:
+      - description: 商品类型 0-商品 1-套餐
+        in: query
+        name: productType
+        type: integer
+      - description: 销售账单ID
+        in: query
+        name: saleBillUuid
+        type: integer
+      - description: 销售订单商品ID
+        in: query
+        name: saleOrderProductUuid
+        type: integer
+      - description: 销售订单ID
+        in: query
+        name: saleOrderUuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ProductFlavorAndAttributeRes'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 查询购物车商品“规格/属性”
+      tags:
+      - 扫码点餐
+    post:
+      consumes:
+      - application/json
+      description: 修改购物车商品“规格/属性”
+      parameters:
+      - description: 商品参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductFlavorAndAttributeChangeReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 修改购物车商品“规格/属性”
+      tags:
+      - 扫码点餐
   /h5/desk/order/must_plan/confirm:
     post:
       consumes:
@@ -22295,6 +22420,30 @@ paths:
       security:
       - JwtToken: []
       summary: 编辑物品
+      tags:
+      - 商家端.物品管理
+  /shop/material/import/list:
+    get:
+      consumes:
+      - application/json
+      description: 导入物品列表
+      parameters:
+      - description: 物品导入请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.MaterialImportListReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 导入物品列表
       tags:
       - 商家端.物品管理
   /shop/material/list:

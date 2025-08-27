@@ -1,7 +1,10 @@
 package repository
 
 import (
+	"strings"
 	"time"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
@@ -22,6 +25,10 @@ type IMaterialRepo interface {
 	GetMaterialCategoryList() ([]model.MaterialCategory, error)
 	UpdateMaterialStatusBatch(uuids []uint64, status int) error // 批量修改物品状态
 	UpdateMaterialStockNum(materials []*model.Material) error   // 更新物品库存数量
+
+	CheckMultiLanguageNameExist(localeResponse dto.LocaleResponse) dto.LocaleResponse // 检查多语言名称是否存在
+	GetCategoryUuidByNameOptimized(name string) (uint64, error)
+	CheckBarcodeExist(barcode string, uuid uint64) bool // 检查条形码是否存在
 }
 
 // NewMaterialRepo 创建新的物品仓库
@@ -190,4 +197,87 @@ func (r *MaterialRepoImpl) UpdateMaterialStockNum(materials []*model.Material) e
 		}
 	}
 	return nil
+}
+
+func (r *MaterialRepoImpl) CheckMultiLanguageNameExist(localeResponse dto.LocaleResponse) dto.LocaleResponse {
+	var result dto.LocaleResponse
+	materialTable := r.db.Table("material").Name()
+	multiLanguageNameTable := r.db.Table("multi_language_name").Name()
+
+	// 定义语言字段映射
+	languageFields := map[string]string{
+		"zh":   "zh_name",
+		"th":   "th_name",
+		"en":   "en_name",
+		"zhtw": "zh_tw_name",
+		"ja":   "ja_name",
+		"ko":   "ko_name",
+		"my":   "my_name",
+		"tr":   "tr_name",
+		"sv":   "sv_name",
+	}
+
+	// 构建动态查询条件
+	var conditions []string
+	var args []interface{}
+
+	for langKey, columnName := range languageFields {
+		value := localeResponse.GetLocale(langKey)
+		if value != "" {
+			conditions = append(conditions, multiLanguageNameTable+"."+columnName+" = ?")
+			args = append(args, value)
+		}
+	}
+
+	// 如果没有任何条件，直接返回空结果
+	if len(conditions) == 0 {
+		return result
+	}
+
+	// 查询匹配的多语言名称记录
+	var matchedRecords []model.MultiLanguageName
+	err := r.db.Model(&model.Material{}).
+		Select(multiLanguageNameTable+".*").
+		Joins("JOIN "+multiLanguageNameTable+" ON "+materialTable+".multi_language_name_uuid = "+multiLanguageNameTable+".uuid").
+		Where(materialTable+".delete_time = ?", constant.NotDeleted).
+		Where("("+strings.Join(conditions, " OR ")+")", args...).
+		Find(&matchedRecords).Error
+
+	if err != nil {
+		return result
+	}
+
+	// 检查每个匹配的记录，设置存在的语言名称
+	for _, record := range matchedRecords {
+		for langKey := range languageFields {
+			inputValue := localeResponse.GetLocale(langKey)
+			recordValue := record.GetNameByLang(langKey)
+
+			// 如果输入的名称与数据库中的名称匹配，则标记为存在
+			if inputValue != "" && inputValue == recordValue {
+				result.SetLocale(langKey, inputValue)
+			}
+		}
+	}
+
+	return result
+}
+
+func (r *MaterialRepoImpl) GetCategoryUuidByNameOptimized(name string) (uint64, error) {
+	var category model.MaterialCategory
+	if err := r.db.Model(&model.MaterialCategory{}).Where("name = ?", name).First(&category).Error; err != nil {
+		return 0, errors.WithMessage(err, "根据名称查询物品类别失败")
+	}
+	return category.Uuid, nil
+}
+
+func (r *MaterialRepoImpl) CheckBarcodeExist(barcode string, uuid uint64) bool {
+	db := r.db.Model(&model.Material{}).
+		Where("delete_time = ?", constant.NotDeleted).
+		Where("barcode_value = ?", barcode).
+		Where("barcode_value <> ?", "")
+	if uuid != 0 {
+		db = db.Where("uuid <> ?", uuid)
+	}
+	return db.First(&model.Material{}).Error == nil
 }

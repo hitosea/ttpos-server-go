@@ -311,9 +311,9 @@ class ErpPurchaseOrder extends BaseModel
             $dataList = [];
             $time = time();
             foreach ($params['purchase_detail'] as $value) {
-                // 判断价格格式为 小数点后2位，范围：0-1000000
-                if (!preg_match('/^(0|[1-9]\d{0,6})(\.\d{1,2})?$/', $value['estimate_purchase_price']) || floatval($value['estimate_purchase_price']) > 1000000) {
-                    $this->error = '价格格式错误，请输入小数点后2位，范围：0-1000000';
+                // 判断价格格式为 小数点后2位，范围：0-100000000
+                if (!preg_match('/^(0|[1-9]\d{0,8})(\.\d{1,2})?$/', $value['estimate_purchase_price']) || floatval($value['estimate_purchase_price']) > 100000000) {
+                    $this->error = '价格格式错误，请输入小数点后2位，范围：0-100000000';
                     return false;
                 }
                 // 判断数量格式为 小数点后4位，范围：0-99999999
@@ -393,9 +393,9 @@ class ErpPurchaseOrder extends BaseModel
             $total_num = 0;
             $total_amount = 0;
             foreach ($params['purchase_detail'] as $value) {
-                // 判断价格格式为 小数点后2位，范围：0-1000000
-                if (!preg_match('/^(0|[1-9]\d{0,6})(\.\d{1,2})?$/', $value['estimate_purchase_price']) || floatval($value['estimate_purchase_price']) > 1000000) {
-                    $this->error = '价格格式错误，请输入小数点后2位，范围：0-1000000';
+                // 判断价格格式为 小数点后2位，范围：0-100000000
+                if (!preg_match('/^(0|[1-9]\d{0,8})(\.\d{1,2})?$/', $value['estimate_purchase_price']) || floatval($value['estimate_purchase_price']) > 100000000) {
+                    $this->error = '价格格式错误，请输入小数点后2位，范围：0-100000000';
                     return false;
                 }
                 // 判断数量格式为 小数点后4位，范围：0-99999999
@@ -421,9 +421,9 @@ class ErpPurchaseOrder extends BaseModel
             $dataList = [];
             $time = time();
             foreach ($params['purchase_detail'] as $value) {
-                // 判断价格格式为 小数点后2位，范围：0-1000000
-                if (!preg_match('/^(0|[1-9]\d{0,6})(\.\d{1,2})?$/', $value['estimate_purchase_price']) || floatval($value['estimate_purchase_price']) > 1000000) {
-                    $this->error = '价格格式错误，请输入小数点后2位，范围：0-1000000';
+                // 判断价格格式为 小数点后2位，范围：0-100000000
+                if (!preg_match('/^(0|[1-9]\d{0,8})(\.\d{1,2})?$/', $value['estimate_purchase_price']) || floatval($value['estimate_purchase_price']) > 100000000) {
+                    $this->error = '价格格式错误，请输入小数点后2位，范围：0-100000000';
                     return false;
                 }
                 // 判断数量格式为 小数点后4位，范围：0-99999999
@@ -508,9 +508,9 @@ class ErpPurchaseOrder extends BaseModel
         $this->startTrans();
         try {
             foreach ($params['purchase_detail'] as &$value) {
-                // 判断价格格式为 小数点后2位，范围：0-1000000
-                if (!preg_match('/^(0|[1-9]\d{0,6})(\.\d{1,2})?$/', $value['actual_purchase_price']) || floatval($value['actual_purchase_price']) > 1000000) {
-                    $this->error = '价格格式错误，请输入小数点后2位，范围：0-1000000';
+                // 判断价格格式为 小数点后2位，范围：0-100000000
+                if (!preg_match('/^(0|[1-9]\d{0,8})(\.\d{1,2})?$/', $value['actual_purchase_price']) || floatval($value['actual_purchase_price']) > 100000000) {
+                    $this->error = '价格格式错误，请输入小数点后2位，范围：0-100000000';
                     return false;
                 }
                 // 判断数量格式为 小数点后4位，范围：0-99999999

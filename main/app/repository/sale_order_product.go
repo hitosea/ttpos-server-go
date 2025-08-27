@@ -31,6 +31,8 @@ type ISaleOrderProductQueryRepo interface {
 	GetSaleOrderProductByUuid(uuid uint64) (*model.SaleOrderProduct, error)
 	GetProductPackageDetail(saleBillUuid uint64, saleOrderUuid uint64, productPackageUuid uint64) ([]*model.SaleOrderProduct, error) // 获取商品选购详情
 	GetSaleOrderProducts(opts ...DBOption) ([]*model.SaleOrderProduct, error)                                                        // 根据销售订单uuid获取销售订单商品
+
+	GetSaleOrderProductsByPackageUuid(packageUuid uint64) ([]*model.SaleOrderProduct, error) // 根据套餐uuid获取套餐下所有子商品
 }
 
 type saleOrderProductRepo struct {
@@ -270,5 +272,14 @@ func (r *saleOrderProductRepo) GetProductPackageDetail(saleBillUuid uint64, sale
 		return nil, err
 	}
 
+	return models, nil
+}
+
+func (r *saleOrderProductRepo) GetSaleOrderProductsByPackageUuid(packageUuid uint64) ([]*model.SaleOrderProduct, error) {
+	db := r.db
+	var models []*model.SaleOrderProduct
+	if err := db.Where("package_uuid = ?", packageUuid).Scopes(NotDeleted).Find(&models).Error; err != nil {
+		return nil, errors.WithMessage(err)
+	}
 	return models, nil
 }

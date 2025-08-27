@@ -676,10 +676,10 @@ func (s *sSelling) GetPosInvoiceList(ctx context.Context, req *dtoSelling.GetPos
 //   - error: 错误信息
 func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoiceReq) (*selling.SavePosInvoiceResp, error) {
 	// 获取公司名称
-	companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
-	if err != nil {
-		return nil, gerror.Wrapf(err, "根据公司缩写查询公司名称失败")
-	}
+	//companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
+	//if err != nil {
+	//	return nil, gerror.Wrapf(err, "根据公司缩写查询公司名称失败")
+	//}
 
 	// 获取开帐记录
 	openingEntry, err := s.GetPosOpeningEntry(ctx, req.OpenPosEntryName)
@@ -688,7 +688,7 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
 	}
 
 	// 构建POS发票
-	posInvoice := s.buildPosInvoice(req, companyName, openingEntry.PosProfile)
+	posInvoice := s.buildPosInvoice(ctx, req, openingEntry)
 	//反结账后重新结账
 	if len(req.AmendedProductsInvoiceName) > 0 {
 		posInvoice.AmendedFrom = req.AmendedProductsInvoiceName
@@ -718,7 +718,7 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
 
 	if len(req.MaterialItems) > 0 {
 		//创建物品销售记录
-		posRmInvoice := s.buildPosInvoice(req, companyName, openingEntry.PosProfile)
+		posRmInvoice := s.buildPosInvoice(ctx, req, openingEntry)
 		posRmInvoice.Items = s.buildInvoiceItems(req.MaterialItems)
 		//移除支付信息
 		posRmInvoicePayments := make([]erp.POSInvoicePayment, 0)
@@ -766,17 +766,22 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
 //
 // 返回：
 //   - *erp.POSInvoice: POS发票信息
-func (s *sSelling) buildPosInvoice(req *selling.SavePosInvoiceReq, companyName string, posProfile string) *erp.POSInvoice {
-	postingDatetime := gtime.New(req.PostingDatetime)
+func (s *sSelling) buildPosInvoice(ctx context.Context, req *selling.SavePosInvoiceReq, openingEntry *erp.POSOpeningEntry) *erp.POSInvoice {
+	postingDatetime, err := gtime.New(req.PostingDatetime).ToZone(service.User().MustGetUserTimeZone(ctx, openingEntry.User))
+	if err != nil {
+		g.Log().Error(ctx, "转换时间失败", err, g.Map{"postingDatetime": req.PostingDatetime})
+		postingDatetime = gtime.New(req.PostingDatetime)
+	}
 	posInvoice := &erp.POSInvoice{
-		PosProfile:        posProfile,
-		Company:           companyName,
+		PosProfile:        openingEntry.PosProfile,
+		Company:           openingEntry.Company,
 		PostingDate:       postingDatetime.Format(DateFormat),
 		PostingTime:       postingDatetime.Format(TimeFormat),
 		Currency:          req.Currency,
 		PriceListCurrency: req.PriceListCurrency,
 		UpdateStock:       req.UpdateStock, // 更新库存
 		CustomerOrder:     req.OrderNo,
+		SetPostingTime:    1,
 	}
 
 	// 设置客户信息
@@ -937,8 +942,10 @@ func (s *sSelling) ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosI
 		return nil, gerror.Wrapf(err, "解析原销售订单响应失败")
 	}
 
-	postingDatetime := gtime.New(req.PostingDatetime) //这里挖坑，没处理时区
-
+	postingDatetime, err := gtime.New(req.PostingDatetime).ToZone(service.User().MustGetUserTimeZone(ctx, openingEntry.User))
+	if err != nil {
+		return nil, gerror.Wrapf(err, "转换时间失败")
+	}
 	grandTotal := 0.0
 	for _, payment := range req.Payments {
 		grandTotal += payment.Amount
@@ -961,6 +968,7 @@ func (s *sSelling) ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosI
 		IsPos:             1,
 		GrandTotal:        grandTotal,
 		PaidAmount:        grandTotal,
+		SetPostingTime:    1,
 	}
 
 	//创建物品销售记录

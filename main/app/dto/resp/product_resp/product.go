@@ -365,12 +365,12 @@ type ProductImportListItem struct {
 	IsShowAssistant       bool               `json:"is_show_assistant"`                           // 是否显示在点餐助手 1-显示 2-不显示
 	IsShowH5              bool               `json:"is_show_h5"`                                  // 是否显示在h5 1-显示 2-不显示
 	IsShowDelivery        bool               `json:"is_show_delivery"`                            // 是否显示在外送 1-显示 2-不显示
-	UnitId                uint64             `json:"unit_id"`                                     // 单位ID
-	CategoryId            uint64             `json:"category_id"`                                 // 分类ID
-	SkuId                 uint64             `json:"sku_id"`                                      // 规格ID
-	RatingTaxId           uint64             `json:"ratin_tax_id"`                                // 堂食税类ID
-	TakeoutTaxId          uint64             `json:"takeout_tax_id"`                              // 外带税类ID
-	ProductNameIsExist    dto.LocaleResponse `json:"product_name_is_exist"`                       // 商品名称是否存在，对应的key不为空则表示存在
+	UnitUuid              uint64             `json:"unit_uuid"`                                   // 单位UUID
+	CategoryUuid          uint64             `json:"category_uuid"`                               // 分类UUID
+	SkuUuid               uint64             `json:"sku_uuid"`                                    // 规格UUID
+	DineTaxUuid           uint64             `json:"dine_tax_uuid"`                               // 堂食税类UUID
+	TakeoutTaxUuid        uint64             `json:"takeout_tax_uuid"`                            // 外带税类UUID
+	LocaleNameIsExist     dto.LocaleResponse `json:"locale_name_is_exist"`                        // 商品名称是否存在，对应的key不为空则表示存在
 	BarcodeIsExist        bool               `json:"barcode_is_exist"`                            // 条形码是否存在，存在则不保存
 }
 

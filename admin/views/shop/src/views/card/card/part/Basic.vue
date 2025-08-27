@@ -47,7 +47,7 @@
     </el-form-item>
 
     <el-form-item for="no_click" :label="$t('积分：')" :rules="[{ required: true, message: $t('请输入积分数量') }]" prop="model.open_points_num" v-if="form.model.open_points">
-      <numInput v-model="form.model.open_points_num" class="max-w460" :min="0" :max="100000000"></numInput>
+      <numInput v-model="form.model.open_points_num" class="max-w460" :min="0" :max="100000000" ></numInput>
     </el-form-item>
     <el-form-item for="no_click" :label="$t('余额：')" :rules="[{ required: true, message: $t('请输入余额数量') }]" prop="model.open_money_num" v-if="form.model.open_money">
       <numInput v-model="form.model.open_money_num" class="max-w460" :min="0" :max="100000000"></numInput>

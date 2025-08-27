@@ -1,5 +1,7 @@
 package model
 
+import "github.com/shopspring/decimal"
+
 // ReturnOrder 退货单表 `ttpos_return_order`
 type ReturnOrder struct {
 	BaseModel
@@ -112,6 +114,19 @@ type ReturnOrderProduct struct {
 	ProductDiscount      float64 `gorm:"column:product_discount;comment:商品折扣" json:"product_discount"`
 	ProductTotalAmount   float64 `gorm:"column:product_total_amount;comment:商品总金额" json:"product_total_amount"`
 	ErpCode              string  `gorm:"column:erp_code;type:varchar(255);default:'';comment:ERP系统商品编码;NOT NULL" json:"erp_code"`
+}
+
+// 退款商品的未含税价格. 当商品已含税时，需要减去税费。当商品未含税时，直接返回商品单价， taxFee 为 0。
+func (r *ReturnOrderProduct) GetProductPriceNoneTax(taxFee float64) float64 {
+	price := decimal.NewFromFloat(r.ProductPrice)
+	tax := decimal.NewFromFloat(taxFee)
+	price = price.Sub(tax)
+	return price.Round(2).InexactFloat64()
+}
+
+// 不含税费的商品总金额
+func (r *ReturnOrderProduct) GetProductTotalAmountNoneTax(taxFee float64) float64 {
+	return decimal.NewFromFloat(r.GetProductPriceNoneTax(taxFee)).Mul(decimal.NewFromFloat(r.Num)).Round(2).InexactFloat64()
 }
 
 // SetNil 设置关联对象为nil，避免gorm创建时将关联对象也创建

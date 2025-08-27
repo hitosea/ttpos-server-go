@@ -156,3 +156,20 @@ type ProductBomCardImportReq struct {
 	// 创建成本卡
 	Num float64 `json:"num" binding:"required"` // 净耗量
 }
+
+// MaterialImportListItemReq 导入物品项请求
+type MaterialImportListItemReq struct {
+	LocaleName   dto.LocaleResponse `json:"locale_name" binding:"required"`      // 名称
+	CategoryName string             `json:"category_name" binding:"required"`    // 分类名称
+	BarcodeValue string             `json:"barcode_value"`                       // 条形码值
+	Status       int                `json:"status"`                              // 状态，1-启用 0-停用
+	UnitName     string             `json:"unit_name" binding:"required"`        // 基准单位名称
+	Valuation    float64            `json:"valuation" binding:"required,min=0"`  // 估值率
+	InitStock    float64            `json:"init_stock" binding:"required,min=0"` // 期初库存
+	Row          int                `json:"row" binding:"required"`              // 行号
+}
+
+// MaterialImportListReq 导入物品列表请求
+type MaterialImportListReq struct {
+	List []MaterialImportListItemReq `json:"list" binding:"required,dive"` // 物品列表
+}

@@ -218,7 +218,17 @@ func (model *SaleOrder) GetSaleOrderProductBySign(sign string) *SaleOrderProduct
 
 // 获取未送厨的订单商品金额（折后价）
 func (model *SaleOrder) GetUnCookingProductAmount() float64 {
-	return model.calcSumOrderProductPrice(model.GetUnCookingOrderProductList())
+	list := make([]*SaleOrderProduct, 0)
+	for _, product := range model.GetUnCookingOrderProductList() {
+		if product.IsDelete() {
+			continue
+		}
+		if product.IsPackageSubProduct() {
+			continue
+		}
+		list = append(list, product)
+	}
+	return model.calcSumOrderProductPrice(list)
 }
 
 // 获取已送厨的订单商品金额（折后价）
