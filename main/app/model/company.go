@@ -35,9 +35,13 @@ func (company *Company) IsOpenErp(phase ...int) bool {
 		return true
 	}
 	if phase[0] == 3 {
-		return false
+		return true
 	}
 	return true
+}
+
+func (company *Company) IsOpenErpPhase3() bool {
+	return company.IsOpenErp(3)
 }
 
 func (company *Company) GetLogo(baseURL string) string {
