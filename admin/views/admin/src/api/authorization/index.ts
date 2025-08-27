@@ -15,7 +15,6 @@ export interface authorizationListTypeItem {
   erpnext_site_code: string;
   erpnext_company_abbr: string;
   erpnext_branch_name: string;
-  erpnext_pos_profile_name: string;
   erpnext_default_company_abbr?: string;
 }
 
@@ -62,7 +61,6 @@ export interface erpnextAddParams {
   erpnext_site_code: string;
   erpnext_default_company_abbr?: string;
   erpnext_company_abbr: string;
-  erpnext_pos_profile_name: string;
   password: string;
 }
 
@@ -77,4 +75,21 @@ export interface erpnextPosProfileParams {
 
 export function getErpnextPosProfile(params: erpnextPosProfileParams) {
   return $get('/erpnext/posProfile', { params });
+}
+
+export interface erpnextPaymentMethodListParams {
+  company_uuid: number;
+}
+
+export interface erpnextPaymentMethodListResponse {
+  list: erpnextPaymentMethodListType[];
+}
+
+export interface erpnextPaymentMethodListType {
+  name: string;
+  is_addable: boolean;
+}
+
+export function getErpnextPaymentMethodList(params: erpnextPaymentMethodListParams) {
+  return $get('/erpnext/paymentMethodList', { params });
 }
