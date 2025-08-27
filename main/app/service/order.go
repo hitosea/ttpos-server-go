@@ -9825,7 +9825,7 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 	payments := make([]*selling.PosInvoicePayment, 0)
 	if saleOrder.IsFreeSaleOrder() {
 		payments = append(payments, &selling.PosInvoicePayment{
-			ModeOfPayment: "Cash",
+			ModeOfPayment: "Free Meal", // 免单
 			Amount:        0,
 		})
 	} else {
@@ -10435,6 +10435,18 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 			if err := repository.NewSaleOrderProductReasonRepo(db).CreateSaleOrderProductReasons(freeOrderReasons); err != nil {
 				return errors.WithMessage(err)
 			}
+		}
+
+		// 保存发票到erp
+		company := ctx.GetCompany()
+		companySetting := ctx.GetCompanySetting()
+		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
+			res, err := s.SavePosInvoice(ctx, saleOrder, db)
+			if err != nil {
+				return errors.WithMessage(err)
+			}
+			saleOrder.ErpProductsInvoiceName = res.ProductsInvoiceName
+			saleOrder.ErpMaterialInvoiceName = res.MaterialInvoiceName
 		}
 
 		// 更新销售订单
