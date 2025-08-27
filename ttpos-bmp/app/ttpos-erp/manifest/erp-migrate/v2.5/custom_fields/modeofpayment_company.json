@@ -1,0 +1,9 @@
+{
+  "doctype": "DocType",
+  "label": "公司",
+  "fieldname": "custom_company",
+  "fieldtype": "Link",
+  "options": "Company",
+  "insert_after": "type",
+  "dt": "Mode of Payment"
+}

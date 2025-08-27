@@ -229,6 +229,7 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 		if companySetting.IsOpenTablet != 1 {
 			return loginResp, errors.New("当前尚未开启平板点餐功能，如有需要，请联系销售代表")
 		}
+	case constant.SourceShop: // 移动管理端
 	default:
 		return loginResp, errors.New("登录来源错误")
 	}

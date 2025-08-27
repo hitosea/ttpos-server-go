@@ -197,45 +197,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/admin/erpnext/site/pos_profile": {
-            "get": {
-                "description": "获取ERPNext站点Pos Profile列表",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "平台端.商家授权"
-                ],
-                "summary": "获取ERPNext站点Pos Profile列表",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ERPNext站点编码",
-                        "name": "site_code",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "公司缩写编码",
-                        "name": "company_abbr",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
         "/assistant/base": {
             "get": {
                 "security": [
@@ -28649,7 +28610,6 @@ const docTemplate = `{
             "required": [
                 "company_abbr",
                 "company_uuid",
-                "pos_profile_name",
                 "site_code"
             ],
             "properties": {
@@ -28663,10 +28623,6 @@ const docTemplate = `{
                 },
                 "default_company_abbr": {
                     "description": "默认公司缩写编码，用于同步单位和属性",
-                    "type": "string"
-                },
-                "pos_profile_name": {
-                    "description": "Pos Profile名称",
                     "type": "string"
                 },
                 "site_code": {

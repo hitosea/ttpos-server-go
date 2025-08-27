@@ -16,7 +16,7 @@ use app\admin\model\admin\User;
  * @Apidoc\Group("base")
  * @Apidoc\Sort(7)
  */
-class ERPNext extends Controller
+class Erpnext extends Controller
 {
     /**
      * @Apidoc\Title("授权商家列表")
@@ -58,7 +58,6 @@ class ERPNext extends Controller
      * @Apidoc\Param("erpnext_site_code", type="string", require=true, desc="ERPNext编码")
      * @Apidoc\Param("erpnext_company_abbr", type="string", require=true, desc="ERPNext公司缩写")
      * @Apidoc\Param("erpnext_default_company_abbr", type="string", require=true, desc="ERPNext默认公司缩写，用于同步单位和属性")
-     * @Apidoc\Param("erpnext_pos_profile_name", type="string", require=true, desc="ERPNextPos Profile名称")
      * @Apidoc\Param("password", type="string", require=true, desc="密码验证")
      */
     public function add()
@@ -104,7 +103,6 @@ class ERPNext extends Controller
             'site_code' => $param['erpnext_site_code'],
             'company_abbr' => $param['erpnext_company_abbr'],
             'default_company_abbr' => $param['erpnext_default_company_abbr'],
-            'pos_profile_name' => $param['erpnext_pos_profile_name'],
         ];
         $res = HttpHelp::postRequest('http://nginx/api/v1/admin/erpnext/shop/init', json_encode($params), [
             'X-API-KEY: ' . env('JWT_SECRET'),
@@ -158,36 +156,6 @@ class ERPNext extends Controller
     function siteCompany()
     {
         $res = HttpHelp::getRequest('http://nginx/api/v1/admin/erpnext/site/company', $this->getData(), [
-            'X-API-KEY: ' . env('JWT_SECRET'),
-            'Accept-Language: ' . request()->header('language'),
-        ]);
-        if (!$res) {
-            return $this->renderError('请求失败');
-        }
-        $res = json_decode($res, true);
-        if ($res['code'] != 0) {
-            return $this->renderError($res['message']);
-        }
-        return $this->renderSuccess('', $res['data']);
-    }
-
-    /**
-     * @Apidoc\Title("获取ERPNext站点Pos Profile列表")
-     * @Apidoc\Desc("获取ERPNext站点Pos Profile列表")
-     * @Apidoc\Method("GET")
-     * @Apidoc\Url("/api/admin/erpnext/posProfile")
-     * @Apidoc\Param("site_code", type="string", require=true, desc="ERPNext编码")
-     * @Apidoc\Param("company_abbr", type="string", require=true, desc="公司缩写编码")
-     * @Apidoc\Returned("list", type="array", desc="Pos Profile列表", children={
-     *      @Apidoc\Returned("name", type="string", desc="Pos Profile名称"),
-     *      @Apidoc\Returned("company", type="string", desc="公司名称"),
-     *      @Apidoc\Returned("branch", type="string", desc="分支名称"),
-     *      @Apidoc\Returned("warehouse", type="string", desc="仓库名称"),
-     * })
-     */
-    function posProfile()
-    {
-        $res = HttpHelp::getRequest('http://nginx/api/v1/admin/erpnext/site/pos_profile', $this->getData(), [
             'X-API-KEY: ' . env('JWT_SECRET'),
             'Accept-Language: ' . request()->header('language'),
         ]);

@@ -108,9 +108,9 @@ func (s *sSetup) CreateUser(ctx context.Context, req *setup2.CreateUserInp) erro
 //   - req: 创建默认POS配置文件请求参数
 //
 // 返回：
-//   - posFileId: POS配置文件名称
+//   - posProfileName: POS配置文件名称
 //   - err: 错误信息
-func (s *sSetup) CreateDefaultPosProfile(ctx context.Context, req *setup.CreateDefaultPosProfileReq) (posFileId string, err error) {
+func (s *sSetup) CreateDefaultPosProfile(ctx context.Context, req *setup.CreateDefaultPosProfileReq) (posProfileName string, err error) {
 	// 获取公司名称
 	companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
 	if err != nil {
@@ -231,7 +231,7 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *se
 	}
 
 	//创建默认pos profile
-	_, err = s.CreateDefaultPosProfile(ctx, &setup.CreateDefaultPosProfileReq{
+	posProfileName, err := s.CreateDefaultPosProfile(ctx, &setup.CreateDefaultPosProfileReq{
 		Name:        fmt.Sprintf("%s - POS", branchName),
 		CompanyAbbr: req.CompanyAbbr,
 		Branch:      branchName,
@@ -248,6 +248,7 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *se
 	return &setup.InitShopResp{
 		BranchName: branchName,
 		AdminEmail: adminEmail,
+		PosProfile: posProfileName,
 	}, nil
 }
 

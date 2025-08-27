@@ -201,8 +201,9 @@ func (x *CreatePosUserResp) GetUserName() string {
 // 服务端返回的创建分店结果
 type InitShopResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	BranchName    string                 `protobuf:"bytes,1,opt,name=branch_name,json=branchName,proto3" json:"branch_name,omitempty" dc:"分支名称"`  // 分支名称
-	AdminEmail    string                 `protobuf:"bytes,2,opt,name=admin_email,json=adminEmail,proto3" json:"admin_email,omitempty" dc:"管理员邮箱"` // 管理员邮箱
+	BranchName    string                 `protobuf:"bytes,1,opt,name=branch_name,json=branchName,proto3" json:"branch_name,omitempty" dc:"分支名称"`          // 分支名称
+	AdminEmail    string                 `protobuf:"bytes,2,opt,name=admin_email,json=adminEmail,proto3" json:"admin_email,omitempty" dc:"管理员邮箱"`         // 管理员邮箱
+	PosProfile    string                 `protobuf:"bytes,3,opt,name=pos_profile,json=posProfile,proto3" json:"pos_profile,omitempty" dc:"pos profile名称"` // pos profile名称
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -247,6 +248,13 @@ func (x *InitShopResp) GetBranchName() string {
 func (x *InitShopResp) GetAdminEmail() string {
 	if x != nil {
 		return x.AdminEmail
+	}
+	return ""
+}
+
+func (x *InitShopResp) GetPosProfile() string {
+	if x != nil {
+		return x.PosProfile
 	}
 	return ""
 }
@@ -425,12 +433,14 @@ const file_setup_setup_proto_rawDesc = "" +
 	"\x11CreatePosUserResp\x12\x1d\n" +
 	"\n" +
 	"user_email\x18\x01 \x01(\tR\tuserEmail\x12\x1b\n" +
-	"\tuser_name\x18\x02 \x01(\tR\buserName\"P\n" +
+	"\tuser_name\x18\x02 \x01(\tR\buserName\"q\n" +
 	"\fInitShopResp\x12\x1f\n" +
 	"\vbranch_name\x18\x01 \x01(\tR\n" +
 	"branchName\x12\x1f\n" +
 	"\vadmin_email\x18\x02 \x01(\tR\n" +
-	"adminEmail\"\xa1\x01\n" +
+	"adminEmail\x12\x1f\n" +
+	"\vpos_profile\x18\x03 \x01(\tR\n" +
+	"posProfile\"\xa1\x01\n" +
 	"\x1aCreateDefaultPosProfileReq\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12!\n" +
 	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12\x16\n" +

@@ -1,0 +1,9 @@
+{
+  "doctype": "DocType",
+  "label": "分支",
+  "fieldname": "custom_branch",
+  "fieldtype": "Link",
+  "options": "Branch",
+  "insert_after": "type",
+  "dt": "Mode of Payment"
+}

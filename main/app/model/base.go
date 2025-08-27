@@ -267,3 +267,29 @@ func (model *MemberSaleOrder) AfterUpdate(tx *gorm.DB) (err error) {
 
 	return nil
 }
+
+// ProductPackage - AfterUpdate 更新商品包后的逻辑 - 推送商品包更新
+func (model *ProductPackage) AfterUpdate(tx *gorm.DB) (err error) {
+	if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
+		data := map[string]interface{}{
+			"product_uuid": model.BaseModel.Uuid,
+			"type":         "update",
+			"update_time":  model.BaseModel.UpdateTime,
+		}
+		go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_PRODUCT, data)
+	}
+	return nil
+}
+
+// ProductCategory - AfterUpdate 更新商品分类后的逻辑 - 推送商品分类更新
+func (model *ProductCategory) AfterUpdate(tx *gorm.DB) (err error) {
+	if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
+		data := map[string]interface{}{
+			"category_uuid": model.BaseModel.Uuid,
+			"type":          "update",
+			"update_time":   model.BaseModel.UpdateTime,
+		}
+		go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_CATEGORY, data)
+	}
+	return nil
+}

@@ -61,6 +61,6 @@ type GetPaymentMethodListResp struct {
 }
 
 type PaymentMethodInfo struct {
-	Name   string `json:"name"`    // 支付名称
-	IsUsed bool   `json:"is_used"` // 是否已被使用
+	Name      string `json:"name"`       // 支付名称
+	IsAddable bool   `json:"is_addable"` // 是否可添加
 }
