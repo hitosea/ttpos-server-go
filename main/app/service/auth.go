@@ -229,11 +229,6 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 		if companySetting.IsOpenTablet != 1 {
 			return loginResp, errors.New("当前尚未开启平板点餐功能，如有需要，请联系销售代表")
 		}
-	case constant.SourceShop: // 移动管理端
-		companySetting := repository.NewCompanySettingRepo(s.dbm.GetDB(staff.CompanyUuid)).Get()
-		if companySetting.ErpnextSiteCode == "" {
-			return loginResp, errors.New("暂未授权，请联系销售代表")
-		}
 	default:
 		return loginResp, errors.New("登录来源错误")
 	}
@@ -745,14 +740,6 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 			kitchenSetting, _ := s.settingSrv.GetKitchenSetting(ctx, companySetting, []dto.LanguageItem{})
 			if kitchenSetting.IsOpen != "1" || companySetting.IsOpenKitchenKds != 1 {
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeFunctionDisabled, "当前尚未开启厨显功能，如有需要，请联系销售代表")
-			}
-		}
-	case constant.SourceShop: // 移动管理端
-		{
-			// TODO 操作日志，如果要记录日志，则需要映射商家后台的api_path
-
-			if companySetting.ErpnextSiteCode == "" {
-				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeFunctionDisabled, "暂未授权，请联系销售代表")
 			}
 		}
 	}
