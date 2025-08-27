@@ -396,8 +396,6 @@
 
   /*提交*/
   const onSubmit = async (e) => {
-    save_loading.value = true;
-
     // 调用表单验证方法，valid为验证结果
     let valid = false;
     await formRef.value.validate((res) => {
@@ -551,6 +549,7 @@
       // 设置保存按钮的loading状态为true
       // 调用storeEditProduct方法，传入参数product_id和params
       try {
+        save_loading.value = true;
         await ProductApi.storeEditProduct(
           {
             product_id: product_id.value,
