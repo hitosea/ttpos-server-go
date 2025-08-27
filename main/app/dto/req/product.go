@@ -312,17 +312,17 @@ type ProductImportItemReq struct {
 	IsEnableGrade         int                `json:"is_enable_grade" binding:"required"`          // 是否开启会员折扣(1开启 0关闭)
 	OpenOverallDiscount   int                `json:"open_overall_discount" binding:"required"`    // 整单折扣(1开启 0关闭)
 	Row                   int                `json:"row" binding:"required"`                      // excel表的行编号
-	IsShowCashier         bool               `json:"is_show_cashier"`                             // 是否显示在收银端 1-显示 2-不显示
-	IsShowTablet          bool               `json:"is_show_tablet"`                              // 是否显示在平板端 1-显示 2-不显示
-	IsShowKitchen         bool               `json:"is_show_kitchen"`                             // 是否显示在送厨端 1-显示 2-不显示
-	IsShowAssistant       bool               `json:"is_show_assistant"`                           // 是否显示在点餐助手 1-显示 2-不显示
-	IsShowH5              bool               `json:"is_show_h5"`                                  // 是否显示在h5 1-显示 2-不显示
-	IsShowDelivery        bool               `json:"is_show_delivery"`                            // 是否显示在外送 1-显示 2-不显示
-	UnitId                uint64             `json:"unit_id"`                                     // 单位ID
-	CategoryId            uint64             `json:"category_id"`                                 // 分类ID
-	SkuId                 uint64             `json:"sku_id"`                                      // 规格ID
-	RatingTaxId           uint64             `json:"ratin_tax_id"`                                // 堂食税类ID
-	TakeoutTaxId          uint64             `json:"takeout_tax_id"`                              // 外带税类ID
+	IsShowCashier         int                `json:"is_show_cashier"`                             // 是否显示在收银端 1-显示 0-不显示
+	IsShowTablet          int                `json:"is_show_tablet"`                              // 是否显示在平板端 1-显示 0-不显示
+	IsShowKitchen         int                `json:"is_show_kitchen"`                             // 是否显示在送厨端 1-显示 0-不显示
+	IsShowAssistant       int                `json:"is_show_assistant"`                           // 是否显示在点餐助手 1-显示 0-不显示
+	IsShowH5              int                `json:"is_show_h5"`                                  // 是否显示在h5 1-显示 0-不显示
+	IsShowDelivery        int                `json:"is_show_delivery"`                            // 是否显示在外送 1-显示 0-不显示
+	UnitUuid              uint64             `json:"unit_uuid"`                                   // 单位UUID
+	CategoryUuid          uint64             `json:"category_uuid"`                               // 分类UUID
+	SkuUuid               uint64             `json:"sku_uuid"`                                    // 规格UUID
+	DineTaxUuid           uint64             `json:"dine_tax_uuid"`                               // 堂食税类UUID
+	TakeoutTaxUuid        uint64             `json:"takeout_tax_uuid"`                            // 外带税类UUID
 }
 
 // ProductSingleListReq 单规格商品列表查询
@@ -382,6 +382,7 @@ type ProductShopAddReq struct {
 	Show            ProductShopAddShowReq             `json:"show"`              // 商品显示设置
 	Discount        ProductShopAddDiscountReq         `json:"discount"`          // 商品折扣设置
 	Package         ProductShopAddPackageReq          `json:"package"`           // 商品套餐
+	Row             int                               `json:"row"`               // 行号
 }
 
 // ProductShopAddFlavorReq 商品规格添加请求

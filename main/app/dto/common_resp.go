@@ -1,7 +1,9 @@
 package dto
 
 import (
+	"crypto/md5"
 	"encoding/json"
+	"fmt"
 	"unicode/utf8"
 )
 
@@ -122,4 +124,8 @@ func (l *LocaleResponse) CheckLenLocal(locales []string, length int) bool {
 		}
 	}
 	return true
+}
+
+func (l *LocaleResponse) GetMd5() string {
+	return fmt.Sprintf("%x", md5.Sum([]byte(l.ToJson())))
 }
