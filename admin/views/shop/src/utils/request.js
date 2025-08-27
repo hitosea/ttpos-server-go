@@ -243,15 +243,6 @@ function formatNumbers(data) {
     return parseFloat(data.toString());
   }
 
-  // 如果是字符串且看起来像数字，也进行格式化
-  if (typeof data === 'string' && /^\d+\.?\d*$/.test(data.trim())) {
-    const num = parseFloat(data);
-    // 如果转换成功且不是NaN，返回格式化后的数字
-    if (!isNaN(num)) {
-      return parseFloat(num.toString());
-    }
-  }
-
   // 其他类型保持不变
   return data;
 }
