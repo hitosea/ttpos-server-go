@@ -359,7 +359,7 @@ func (s *erpSrv) AddPaymentMethod(ctx pkgCtx.Context, addPaymentMethodReq req.Ad
 	if slices.Contains(addPaymentMethodReq.CheckoutShow, "assistant") {
 		isShowAssistant = 1
 	}
-	if slices.Contains(addPaymentMethodReq.CheckoutShow, "member_recharge") {
+	if slices.Contains(addPaymentMethodReq.MemberRechargeShow, "cashier") {
 		isShowMemberRecharge = 1
 	}
 	paymentMethod := model.PaymentMethod{

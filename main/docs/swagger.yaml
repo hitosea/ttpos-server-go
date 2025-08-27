@@ -2598,7 +2598,7 @@ definitions:
   req.AddPaymentMethodReq:
     properties:
       checkout_show:
-        description: 结账显示
+        description: 结账显示，可选cashier、assistant
         items:
           type: string
         type: array
@@ -2612,7 +2612,7 @@ definitions:
         description: 手续费
         type: number
       member_recharge_show:
-        description: 会员充值显示
+        description: 会员充值显示，可选cashier
         items:
           type: string
         type: array

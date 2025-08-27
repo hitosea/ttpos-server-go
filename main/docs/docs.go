@@ -27977,7 +27977,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "checkout_show": {
-                    "description": "结账显示",
+                    "description": "结账显示，可选cashier、assistant",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -27996,7 +27996,7 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "member_recharge_show": {
-                    "description": "会员充值显示",
+                    "description": "会员充值显示，可选cashier",
                     "type": "array",
                     "items": {
                         "type": "string"
