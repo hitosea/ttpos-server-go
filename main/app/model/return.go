@@ -111,6 +111,7 @@ type ReturnOrderProduct struct {
 	Num                  float64 `gorm:"column:num;comment:商品数量" json:"num"`
 	ProductDiscount      float64 `gorm:"column:product_discount;comment:商品折扣" json:"product_discount"`
 	ProductTotalAmount   float64 `gorm:"column:product_total_amount;comment:商品总金额" json:"product_total_amount"`
+	ErpCode              string  `gorm:"column:erp_code;type:varchar(255);default:'';comment:ERP系统商品编码;NOT NULL" json:"erp_code"`
 }
 
 // SetNil 设置关联对象为nil，避免gorm创建时将关联对象也创建

@@ -2192,4 +2192,6 @@ return [
     "操作失败：" => "Operation failed:",
     "商品排序不能大于999" => "Product sorting cannot be greater than 999",
     "最多可添加10个加料" => "You can add up to 10 toppings",
+    "套餐名称长度不能超过150个字符" => "The package name cannot exceed 150 characters",
+    "分组名称长度不能超过150个字符" => "The group name cannot exceed 150 characters in length",
 ];

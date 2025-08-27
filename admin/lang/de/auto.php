@@ -2200,4 +2200,6 @@ return [
     "操作失败：" => "Vorgang fehlgeschlagen:",
     "商品排序不能大于999" => "Die Produktreihenfolge darf 999 nicht überschreiten",
     "最多可添加10个加料" => "Es können maximal 10 Zutaten hinzugefügt werden",
+    "套餐名称长度不能超过150个字符" => "Der Paketname darf maximal 150 Zeichen lang sein",
+    "分组名称长度不能超过150个字符" => "Der Gruppenname darf maximal 150 Zeichen lang sein",
 ];

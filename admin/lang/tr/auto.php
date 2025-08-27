@@ -2192,4 +2192,6 @@ return [
     "操作失败：" => "İşlem başarısız:",
     "商品排序不能大于999" => "Ürün sıralaması 999'dan büyük olamaz",
     "最多可添加10个加料" => "En fazla 10 malzeme ekleyebilirsiniz",
+    "套餐名称长度不能超过150个字符" => "Paket adı uzunluğu 150 karakteri geçemez",
+    "分组名称长度不能超过150个字符" => "Grup adı uzunluğu 150 karakteri geçemez",
 ];

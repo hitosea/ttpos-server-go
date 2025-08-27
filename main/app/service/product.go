@@ -953,6 +953,13 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, req req.ProductShopD
 		if err != nil {
 			return err
 		}
+		// 删除商品包关联语言包
+		err = tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", product.MultiLanguageNameUuid).Updates(map[string]any{
+			"delete_time": time.Now().Unix(),
+		}).Error
+		if err != nil {
+			return err
+		}
 		for _, productBom := range product.ProductBoms {
 			// 删除商品包关联的商品BOM
 			err = productBomRepo.UpdateProductBom(map[string]any{"delete_time": time.Now().Unix()}, commonRepo.WhereByUuid(productBom.Uuid))
@@ -3881,6 +3888,7 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 		CategoryName: productPackage.ProductCategory.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 		UnitUuid:     productPackage.ProductUnit.Uuid,
 		UnitName:     productPackage.ProductUnit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+		Price:        &productPackage.Price,
 
 		TakeoutTaxUuid: productPackage.TakeoutTax.Uuid,
 		TakeoutTaxName: productPackage.TakeoutTax.Name,
@@ -4252,6 +4260,7 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 		}
 		flavorListResult = *result
 		flavorListResult.Status = req.Status
+		flavorListResult.StockNum = 99999999
 		// 商品属性, 可选
 		if len(req.Attributes) > 0 {
 			var attributes []CheckProductAttributeGroupParam
@@ -4500,7 +4509,7 @@ func (s *productSrv) EditProductPackage(ctx context.Context, tx *gorm.DB, req re
 	if err != nil {
 		return nil, errors.WithMessage(err, "保存多语言名称失败")
 	}
-	productPackageRepo.UpdateProductPackage(map[string]any{
+	err = productPackageRepo.UpdateProductPackage(map[string]any{
 		"name":                  req.LocaleName.ToJson(),
 		"image_file_uuid":       req.ImageFileUuid,
 		"deduct_stock_type":     req.DeductStockType,
@@ -4766,7 +4775,6 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 					"name":                 flavor.Name,
 					"product_flavor_uuid":  flavor.Uuid,
 					"product_package_uuid": productPackageUuid,
-					"stock_num":            flavorListResult.StockNum,
 					"barcode_value":        flavor.BarcodeValue,
 					"status":               flavorListResult.Status,
 					"is_open_stock":        1,
@@ -5211,6 +5219,7 @@ func (s *productSrv) ProductTaxList(ctx context.Context) product_resp.ProductTax
 		list = append(list, product_resp.ProductTaxItemResp{
 			Uuid: tax.Uuid,
 			Name: tax.Name,
+			Rate: tax.TaxRate,
 		})
 	}
 

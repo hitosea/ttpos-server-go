@@ -100,6 +100,7 @@ func (s *h5Srv) GetBaseInfo(ctx context.Context, deskUuid uint64) (*resp.H5BaseI
 			IsOpenBuffet:  companySetting.IsOpenBuffet,
 			IsOpenH5Order: companySetting.IsOpenH5Order,
 			IsOpenRider:   companySetting.IsOpenRider(),
+			IsEnableErp:   company.IsOpenErp(),
 		},
 		H5:         h5Setting,
 		Buffet:     buffetSetting,

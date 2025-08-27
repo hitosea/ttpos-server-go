@@ -274,6 +274,7 @@
           type: props.type,
           num_type: props.numType,
           show_delivery_required: props.showDeliveryRequired,
+          show_package: 1,
         },
         true
       );

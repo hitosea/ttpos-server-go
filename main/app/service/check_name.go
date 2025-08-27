@@ -51,6 +51,11 @@ func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.Che
 	var result []resp.CheckNameItem
 
 	for _, name := range checkNameReq.Names {
+		// 如果语言不在keyMap中，则跳过
+		if _, ok := keyMap[name.Lang]; !ok {
+			continue
+		}
+
 		// 为每个查询创建新的数据库连接实例
 		db := s.dbm.GetDB(ctx.GetCompanyUuid())
 

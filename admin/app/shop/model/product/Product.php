@@ -36,10 +36,10 @@ class Product extends ProductModel
             return false;
         }
         //
-        $maxLength = $isPackage ? 50 : 150;
+        $maxLength = 150;
         [$status, $msg] = ValidateHelp::hasExceedLength($product_name, $maxLength);
         if ($status === true) {
-            $this->error = !$isPackage ? '商品名称长度不能超过150个字符' : '套餐名称长度不能超过50个字符';
+            $this->error = !$isPackage ? '商品名称长度不能超过150个字符' : '套餐名称长度不能超过150个字符';
             $this->errorData = $msg;
             return false;
         }
@@ -149,9 +149,9 @@ class Product extends ProductModel
             foreach ($packageGroup as $groupIndex => &$item) {
                 // 分组名称
                 $groupName = $item['group_name'] ?? '';
-                [$status, $msg] = ValidateHelp::hasExceedLength($groupName, 50);
+                [$status, $msg] = ValidateHelp::hasExceedLength($groupName, 150);
                 if ($status === true) {
-                    $this->error = '分组名称长度不能超过50个字符';
+                    $this->error = '分组名称长度不能超过150个字符';
                     $this->errorData = $msg;
                     return false;
                 }
@@ -400,10 +400,10 @@ class Product extends ProductModel
             return false;
         }
         //
-        $maxLength = $isPackage ? 50 : 150;
+        $maxLength = 150;
         [$status, $msg] = ValidateHelp::hasExceedLength($product_name, $maxLength);
         if ($status === true) {
-            $this->error = !$isPackage ? '商品名称长度不能超过150个字符' : '套餐名称长度不能超过50个字符';
+            $this->error = !$isPackage ? '商品名称长度不能超过150个字符' : '套餐名称长度不能超过150个字符';
             $this->errorData = $msg;
             return false;
         }
@@ -514,9 +514,9 @@ class Product extends ProductModel
             foreach ($packageGroup as $groupIndex => &$item) {
                 // 分组名称
                 $groupName = $item['group_name'] ?? '';
-                [$status, $msg] = ValidateHelp::hasExceedLength($groupName, 50);
+                [$status, $msg] = ValidateHelp::hasExceedLength($groupName, 150);
                 if ($status === true) {
-                    $this->error = '分组名称长度不能超过50个字符';
+                    $this->error = '分组名称长度不能超过150个字符';
                     $this->errorData = $msg;
                     return false;
                 }

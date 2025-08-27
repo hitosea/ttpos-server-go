@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
@@ -895,7 +896,8 @@ func (model *SaleOrder) NewReturnOrder(scene string, deliveryFee float64, dutyNo
 	}
 	return &ReturnOrder{
 		BaseModel: BaseModel{
-			Uuid: returnOrderUuid,
+			Uuid:       returnOrderUuid,
+			CreateTime: time.Now().Unix(),
 		},
 		RelatedOrderType:    constant.ReturnOrderRelatedOrderTypeSaleOrder,
 		RelatedOrderUuid:    model.Uuid,

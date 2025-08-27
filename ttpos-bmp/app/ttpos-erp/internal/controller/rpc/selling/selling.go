@@ -258,9 +258,9 @@ func (c *Controller) validateSavePosInvoiceReq(req *selling.SavePosInvoiceReq) e
 	//if len(req.MaterialItems) == 0 {
 	//	return gerror.New("原材料项目列表不能为空")
 	//}
-	if len(req.Taxes) == 0 {
-		return gerror.New("税费列表不能为空")
-	}
+	//if len(req.Taxes) == 0 {
+	//	return gerror.New("税费列表不能为空")
+	//}
 	if len(req.Payments) == 0 {
 		return gerror.New("付款列表不能为空")
 	}
@@ -367,15 +367,15 @@ func (c *Controller) validateReturnPosInvoiceReq(req *selling.ReturnPosInvoiceRe
 		return gerror.New("公司缩写不能为空")
 	}
 
-	// 验证商品项目列表
-	if len(req.Items) == 0 {
-		return gerror.New("商品项目列表不能为空")
-	}
+	// 验证商品项目列表，可以多次退款，退款只退税费
+	//if len(req.Items) == 0 {
+	//	return gerror.New("商品项目列表不能为空")
+	//}
 
-	// 验证税费列表
-	if len(req.Taxes) == 0 {
-		return gerror.New("税费列表不能为空")
-	}
+	// 验证税费列表，可以为空
+	//if len(req.Taxes) == 0 {
+	//	return gerror.New("税费列表不能为空")
+	//}
 
 	// 验证付款列表
 	if len(req.Payments) == 0 {

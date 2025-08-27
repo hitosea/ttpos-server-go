@@ -295,13 +295,16 @@ func (s *erpSrv) GetPaymentMethodList(ctx pkgCtx.Context, getPaymentReq req.GetP
 		// 获取商家支付方式列表
 		paymentMethodList := repository.NewPaymentMethodRepo(s.dbm.GetDB(getPaymentReq.CompanyUuid)).GetPaymentMethodList()
 		// “免单”默认置灰
-		erpnextPayments := []string{"Free Meal"}
+		var erpnextPayments []string
 		for _, paymentMethod := range paymentMethodList {
 			erpnextPayments = append(erpnextPayments, paymentMethod.ErpnextPayment)
 		}
 		// 获取支付方式列表
 		var paymentMethodListResp []resp.PaymentMethodInfo
 		for _, modeOfPayment := range getModeOfPaymentListResp.ModeOfPaymentList {
+			if modeOfPayment.Name == "Free Meal" {
+				continue
+			}
 			paymentMethodListResp = append(paymentMethodListResp, resp.PaymentMethodInfo{
 				Name:      modeOfPayment.Name,
 				IsAddable: !slices.Contains(erpnextPayments, modeOfPayment.Name),

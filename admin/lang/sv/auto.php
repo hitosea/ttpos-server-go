@@ -2192,4 +2192,6 @@ return [
     "操作失败：" => "Åtgärden misslyckades:",
     "商品排序不能大于999" => "Produktsorteringen får inte vara större än 999",
     "最多可添加10个加料" => "Du kan lägga till högst 10 tillbehör",
+    "套餐名称长度不能超过150个字符" => "Paketnamnet får inte överstiga 150 tecken",
+    "分组名称长度不能超过150个字符" => "Gruppnamnet får inte vara längre än 150 tecken",
 ];

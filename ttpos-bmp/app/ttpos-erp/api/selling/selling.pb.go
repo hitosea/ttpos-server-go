@@ -991,6 +991,7 @@ type PosInvoiceItem struct {
 	Amount        float64                `protobuf:"fixed64,4,opt,name=amount,proto3" json:"amount,omitempty" dc:"金额，必填"`                                                  // 金额，必填
 	Uom           string                 `protobuf:"bytes,5,opt,name=uom,proto3" json:"uom,omitempty" dc:"单位, 可选"`                                                         // 单位, 可选
 	Description   string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty" dc:"描述, 可选。 如果是套餐内的商品，填写内容 “Sales in package:{套餐名称"` // 描述, 可选。 如果是套餐内的商品，填写内容 “Sales in package:{套餐名称}”
+	IsFreeItem    bool                   `protobuf:"varint,7,opt,name=is_free_item,json=isFreeItem,proto3" json:"is_free_item,omitempty"`                                  // 是否免单商品, 可选, 默认false
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1065,6 +1066,13 @@ func (x *PosInvoiceItem) GetDescription() string {
 		return x.Description
 	}
 	return ""
+}
+
+func (x *PosInvoiceItem) GetIsFreeItem() bool {
+	if x != nil {
+		return x.IsFreeItem
+	}
+	return false
 }
 
 // PosInvoiceTax POS发票税费
@@ -1648,14 +1656,16 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x1damended_material_invoice_name\x18\x0f \x01(\tR\x1aamendedMaterialInvoiceName\"|\n" +
 	"\x12SavePosInvoiceResp\x122\n" +
 	"\x15products_invoice_name\x18\x01 \x01(\tR\x13productsInvoiceName\x122\n" +
-	"\x15material_invoice_name\x18\x02 \x01(\tR\x13materialInvoiceName\"\x9f\x01\n" +
+	"\x15material_invoice_name\x18\x02 \x01(\tR\x13materialInvoiceName\"\xc1\x01\n" +
 	"\x0ePosInvoiceItem\x12\x1b\n" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x10\n" +
 	"\x03qty\x18\x02 \x01(\x01R\x03qty\x12\x12\n" +
 	"\x04rate\x18\x03 \x01(\x01R\x04rate\x12\x16\n" +
 	"\x06amount\x18\x04 \x01(\x01R\x06amount\x12\x10\n" +
 	"\x03uom\x18\x05 \x01(\tR\x03uom\x12 \n" +
-	"\vdescription\x18\x06 \x01(\tR\vdescription\"d\n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescription\x12 \n" +
+	"\fis_free_item\x18\a \x01(\bR\n" +
+	"isFreeItem\"d\n" +
 	"\rPosInvoiceTax\x12\x12\n" +
 	"\x04rate\x18\x01 \x01(\x01R\x04rate\x12\x1d\n" +
 	"\n" +

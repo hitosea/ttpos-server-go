@@ -118,6 +118,7 @@ message PosInvoiceItem {
   double amount = 4;     // 金额，必填
   string uom = 5; // 单位, 可选
   string description = 6;     // 描述, 可选。 如果是套餐内的商品，填写内容 “Sales in package:{套餐名称}”
+  bool is_free_item = 7; // 是否免单商品, 可选, 默认false
 }
 
 // PosInvoiceTax POS发票税费

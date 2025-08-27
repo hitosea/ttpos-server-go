@@ -416,6 +416,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `package_sub_product_params` TEXT COMMENT '套餐子商品参数',
 
     `send_kitchen_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '送厨时间(时间戳)',
+    `erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERP系统商品编码',
 
     -- 时间信息
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
@@ -2295,6 +2296,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_return_order_product` (
     `num` DECIMAL(12, 8) NOT NULL DEFAULT 0.00000000 COMMENT '商品数量,退货的商品数量',
     `product_discount` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '商品折扣',
     `product_total_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '商品总金额（退款总金额）',
+    `erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERP系统商品编码',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

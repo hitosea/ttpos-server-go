@@ -189,6 +189,11 @@
       type: Boolean,
       default: false,
     },
+    // 含有套餐
+    hasPackage: {
+      type: Boolean,
+      default: false,
+    },
   });
 
   const dialogVisible = ref(props.open);
@@ -299,19 +304,19 @@
           .filter((item) => {
             // 如果选择的是全部分类，显示所有商品
             if (categoriesTreeCurrentKey.value === 0) return true;
-            
+
             // 直接匹配当前分类ID
             if (categoriesTreeCurrentKey.value === item.category_id) return true;
-            
+
             // 检查是否是选中分类的子分类商品
             if (categoriesTreeCurrentKey.value === item.parent_category_id) return true;
-            
+
             // 查找选中分类的所有子分类ID，判断商品是否属于这些子分类
-            const selectedCategory = categories.value.find(cat => cat.category_id === categoriesTreeCurrentKey.value);
+            const selectedCategory = categories.value.find((cat) => cat.category_id === categoriesTreeCurrentKey.value);
             if (selectedCategory && selectedCategory.child) {
-              return selectedCategory.child.some(child => child.category_id === item.category_id);
+              return selectedCategory.child.some((child) => child.category_id === item.category_id);
             }
-            
+
             return false;
           })
           .filter((item) => !searchValue.value || item.product_name_text.includes(searchValue.value));
@@ -324,19 +329,19 @@
           .filter((item) => {
             // 如果选择的是全部分类，显示所有商品
             if (categoriesTreeCurrentKey.value === 0) return true;
-            
+
             // 直接匹配当前分类ID
             if (categoriesTreeCurrentKey.value === item.category_id) return true;
-            
+
             // 检查是否是选中分类的子分类商品
             if (categoriesTreeCurrentKey.value === item.parent_category_id) return true;
-            
+
             // 查找选中分类的所有子分类ID，判断商品是否属于这些子分类
-            const selectedCategory = categories.value.find(cat => cat.category_id === categoriesTreeCurrentKey.value);
+            const selectedCategory = categories.value.find((cat) => cat.category_id === categoriesTreeCurrentKey.value);
             if (selectedCategory && selectedCategory.child) {
-              return selectedCategory.child.some(child => child.category_id === item.category_id);
+              return selectedCategory.child.some((child) => child.category_id === item.category_id);
             }
-            
+
             return false;
           })
           .filter((item) => !searchValue.value || item.product_name_text.includes(searchValue.value));
@@ -425,19 +430,19 @@
       const category_ids = categoriesTreeCurrentKey.value === 0 ? '' : categoriesTreeCurrentKey.value;
       const label_ids = printTagsTreeCurrentKey.value === 0 ? '' : printTagsTreeCurrentKey.value;
       const res = props.haveSku
-        // 有sku
-        ? await InventoryApi.getErpInventory(
+        ? // 有sku
+          await InventoryApi.getErpInventory(
             {
               material_type: 10,
               product_status: props.haveStatusZero ? 0 : 10,
               filter_having_material: 0,
-              filter_having_decimal:1,
+              filter_having_decimal: 1,
               list_rows: 1000,
             },
             true
           )
-        // 无sku
-        : await IndexApi.getProductList(
+        : // 无sku
+          await IndexApi.getProductList(
             {
               page: pagination.value.page,
               list_rows: pagination.value.pageSize,
@@ -448,6 +453,7 @@
               type: props.type,
               num_type: props.numType,
               show_delivery_required: props.showDeliveryRequired,
+              show_package: props.hasPackage ? 1 : 0,
             },
             true
           );
@@ -614,7 +620,7 @@
       // 只选中当前分类下的商品
       const currentProducts = productsTableData.value;
       selectedProductsTmp.value.forEach((item) => {
-        if (currentProducts.some((p) => (p.product_id === item.product_id))) {
+        if (currentProducts.some((p) => p.product_id === item.product_id)) {
           productsTableRef.value.toggleRowSelection(item, true, true);
         }
       });

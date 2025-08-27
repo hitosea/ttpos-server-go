@@ -117,7 +117,7 @@ type SavePosInvoiceReq struct {
 
 type ReturnPosInvoiceReq struct {
 	SiteCode         string                       `form:"site_code" json:"site_code" binding:"required"`                     // 站点编码
-	OrderNo          string                       `form:"order_no" json:"order_no" binding:"required"`                       // 退款订单号
+	OrderNo          string                       `form:"order_no" json:"order_no" binding:"required"`                       // 销售订单号
 	OpenPosEntryName string                       `form:"open_pos_entry_name" json:"open_pos_entry_name" binding:"required"` // 开账名称
 	PostingDatetime  int64                        `form:"posting_datetime" json:"posting_datetime" binding:"required"`       // 过账日期时间
 	CompanyAbbr      string                       `form:"company_abbr" json:"company_abbr" binding:"required"`               // 公司缩写编码

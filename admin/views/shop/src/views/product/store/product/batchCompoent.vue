@@ -97,6 +97,7 @@
       selectorType="all"
       type="all"
       :selectedProductIds="model?.product_ids?.map((item) => item.product_id) ?? []"
+      :hasPackage="true"
     >
     </ProductSelector>
   </div>

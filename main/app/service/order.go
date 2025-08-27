@@ -2325,6 +2325,18 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	// 创建
 	err = repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		ctx.SetDB(db) // 否则 s.memberSrv.HandleMemberBalance会事务失效
+
+		// 保存发票到erp
+		company := ctx.GetCompany()
+		companySetting := ctx.GetCompanySetting()
+		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
+			res, err := s.ReturnPosInvoice(ctx, saleOrder, returnOrder, db)
+			if err != nil {
+				return errors.WithMessage(err)
+			}
+			returnOrder.ErpInvoiceName = res.InvoiceName
+		}
+
 		// 创建退货单
 		if _, err = repository.NewReturnOrderRepo(db).CreateReturnOrderRecord(*returnOrder); err != nil {
 			return errors.WithMessage(err)
@@ -5282,6 +5294,7 @@ func EditProduct(ctx context.Context, db *gorm.DB, saleOrder *model.SaleOrder, s
 			Name:           flavorProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 			Price:          flavorProductBom.Price,
 			ProductBomUuid: request.FlavorUuid,
+			ErpCode:        flavorProductBom.ErpCode,
 		})
 		flavor.SetUpdate()
 		saleOrderProduct.SaleOrderProductBoms = append(saleOrderProduct.SaleOrderProductBoms, flavor)
@@ -5667,6 +5680,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				Name:           flavorProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 填顾客下单时规格的名字 todo preload
 				Price:          flavorPrice,
 				ProductBomUuid: product.FlavorProductBomUuid,
+				ErpCode:        flavorProductBom.ErpCode,
 			},
 			Attribute:     attributes,
 			IsAcceptOrder: uint(isAcceptOrder),
@@ -9761,6 +9775,7 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 
 	// 订单商品列表
 	items := make([]*selling.PosInvoiceItem, 0)
+	isFreeOrder := saleOrder.IsFreeSaleOrder()
 	for _, product := range saleOrder.SaleOrderProducts {
 		if product.IsPackageSubProduct() {
 			continue
@@ -9777,16 +9792,18 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 					Rate:        0,                                                  // 套餐子商品没有单价
 					Amount:      0,                                                  // 套餐子商品没有金额
 					Description: fmt.Sprintf("Sales in package:%s", packageName.EN), // 套餐子商品描述
+					IsFreeItem:  isFreeOrder,
 				})
 			}
 		}
 		productBom := product.GetFlarvorSaleOrderProductBom()
 		erpCode := productBom.ProductBom.ErpCode
 		items = append(items, &selling.PosInvoiceItem{
-			ItemCode: erpCode,
-			Qty:      product.Num,
-			Rate:     product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
-			Amount:   product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
+			ItemCode:   erpCode,
+			Qty:        product.Num,
+			Rate:       product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
+			Amount:     product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
+			IsFreeItem: isFreeOrder,
 		})
 	}
 	materialItems := make([]*selling.PosInvoiceItem, 0)
@@ -9820,6 +9837,11 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 			TaxAmount:   saleOrder.PaymentCommissionFee,
 			Description: "Payment Processing Fee", // 支付手续费
 		})
+	}
+
+	// 免单订单不收税费、服务费、支付手续费
+	if isFreeOrder {
+		taxes = make([]*selling.PosInvoiceTax, 0)
 	}
 
 	payments := make([]*selling.PosInvoicePayment, 0)
@@ -9865,6 +9887,80 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 		Payments:         payments,      // 订单付款列表
 	}
 	response, err := erpSrv.SavePosInvoice(ctx, param)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return response, nil
+}
+
+// 退款发票到erp
+func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOrder, returnOrder *model.ReturnOrder, db *gorm.DB) (*selling.ReturnPosInvoiceResp, error) {
+	companySetting := ctx.GetCompanySetting()
+
+	staff := ctx.GetStaff()
+	shiftLogRepo := repository.NewShiftLogRepo(db)
+	shiftLog, err := shiftLogRepo.GetShiftLog(
+		repository.CommonRepo.WhereByStaffUuid(staff.Uuid),
+		repository.CommonRepo.WhereByShiftNo(staff.DutyNo),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if shiftLog.IsHandedOver() {
+		return nil, errors.New("当前班次已交班，无法保存发票")
+	}
+
+	// 订单商品列表
+	items := make([]*selling.PosInvoiceItem, 0)
+	for _, product := range returnOrder.ReturnOrderProducts {
+		// TODO 如果退款套餐怎么处理
+		items = append(items, &selling.PosInvoiceItem{
+			ItemCode: product.ErpCode,
+			Qty:      product.Num,
+			Rate:     product.ProductPrice,       // 商品未含税价格（折后）
+			Amount:   product.ProductTotalAmount, // 商品未含税价格（折后）* 数量
+		})
+	}
+
+	taxes := make([]*selling.PosInvoiceTax, 0)
+	// Tax 消费税、Service Fee 服务费、Payment Processing Fee 支付手续费、Delivery Fee 配送费
+
+	payments := make([]*selling.PosInvoicePayment, 0)
+	for _, payment := range returnOrder.ReturnOrderAmounts {
+		// Cash 现金、Balance 余额、LianlianPay-WeChat Pay 微信支付、LianlianPay-Alipay 支付宝支付、LianlianPay-QR PromptPay 二维码支付
+		methodMap := map[int]string{
+			constant.PaymentMethodCodeCash:                "Cash",
+			constant.PaymentMethodCodeBalance:             "Balance",
+			constant.PaymentMethodCodeLianLianWechatPay:   "LianlianPay-WeChat Pay",
+			constant.PaymentMethodCodeLianLianAliPay:      "LianlianPay-Alipay",
+			constant.PaymentMethodCodeLianLianQRPromptPay: "LianlianPay-QR PromptPay",
+		}
+		var modeOfPayment string
+		if method, ok := methodMap[payment.PaymentMethod.Code]; ok {
+			modeOfPayment = method
+		} else {
+			// modeOfPayment =  "Cash" // 其他支付方式，默认现金支付
+			return nil, errors.WithMessage(errors.New("不支持的支付方式"))
+		}
+		payments = append(payments, &selling.PosInvoicePayment{
+			ModeOfPayment: modeOfPayment,
+			Amount:        payment.Amount,
+		})
+	}
+
+	erpSrv := erp.NewIErpSrv(s.dbm)
+	param := req.ReturnPosInvoiceReq{
+		SiteCode:         companySetting.ErpnextSiteCode,
+		OrderNo:          saleOrder.OrderNo,
+		OpenPosEntryName: shiftLog.ErpnextOpenPosEntryName,
+		PostingDatetime:  returnOrder.CreateTime, // 退款单时间
+		CompanyAbbr:      companySetting.ErpnextCompanyAbbr,
+		InvoiceName:      saleOrder.ErpProductsInvoiceName, // 发票名称
+		Items:            items,                            // 订单退款商品列表
+		Taxes:            taxes,                            // 订单退税费列表
+		Payments:         payments,                         // 订单退款列表
+	}
+	response, err := erpSrv.ReturnPosInvoice(ctx, param)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}

@@ -152,7 +152,11 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 		res, err := translateClient.Translate(context.Background(), translateItems)
 		if err != nil {
 			logger.Logger.Error("SyncUomAndAttribute-Translate", zap.Any("translateItems", translateItems), zap.Any("err", err))
-			continue
+			res, err = translateClient.Translate(context.Background(), translateItems)
+			if err != nil {
+				logger.Logger.Error("SyncUomAndAttribute-Translate-retry", zap.Any("translateItems", translateItems), zap.Any("err", err))
+				continue
+			}
 		}
 		for _, item := range res.Data {
 			multiLanguageMap[item.Key] = dto.LocaleResponse{
@@ -171,15 +175,26 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 
 	// 获取单位最大的排序
 	var unitSort int
-	db.Model(&model.ProductUnit{}).Select("MAX(sort)").Scan(&unitSort)
+	db.Model(&model.ProductUnit{}).Select("ifnull(MAX(sort), 0)").Scan(&unitSort)
 	unitSort++
 
 	for _, uom := range uomList.List {
+		var localeName dto.LocaleResponse
 		if _, ok := multiLanguageMap[uom.UomName]; !ok {
-			logger.Logger.Error("SyncUomAndAttribute-multiLanguageMap-not-found", zap.Any("uomName", uom.UomName))
-			continue
+			localeName = dto.LocaleResponse{
+				EN:   uom.UomName,
+				ZH:   uom.UomName,
+				TH:   uom.UomName,
+				MY:   uom.UomName,
+				JA:   uom.UomName,
+				KO:   uom.UomName,
+				TR:   uom.UomName,
+				SV:   uom.UomName,
+				ZHTW: uom.UomName,
+			}
+		} else {
+			localeName = multiLanguageMap[uom.UomName]
 		}
-		localeName := multiLanguageMap[uom.UomName]
 		multiLanguageName := model.MultiLanguageName{
 			EnName:   localeName.EN,
 			ZhName:   localeName.ZH,
@@ -212,15 +227,26 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 
 	// 获取属性组最大的排序
 	var attributeGroupSort int
-	db.Model(&model.ProductAttributeGroup{}).Select("MAX(sort)").Scan(&attributeGroupSort)
+	db.Model(&model.ProductAttributeGroup{}).Select("ifnull(MAX(sort), 0)").Scan(&attributeGroupSort)
 	attributeGroupSort++
 
 	for _, erpnextAttributeGroup := range attributeGroupList.List {
+		var localeName dto.LocaleResponse
 		if _, ok := multiLanguageMap[erpnextAttributeGroup.AttributeName]; !ok {
-			logger.Logger.Error("SyncUomAndAttribute-multiLanguageMap-not-found", zap.Any("attributeGroupName", erpnextAttributeGroup.AttributeName))
-			continue
+			localeName = dto.LocaleResponse{
+				EN:   erpnextAttributeGroup.AttributeName,
+				ZH:   erpnextAttributeGroup.AttributeName,
+				TH:   erpnextAttributeGroup.AttributeName,
+				MY:   erpnextAttributeGroup.AttributeName,
+				JA:   erpnextAttributeGroup.AttributeName,
+				KO:   erpnextAttributeGroup.AttributeName,
+				TR:   erpnextAttributeGroup.AttributeName,
+				SV:   erpnextAttributeGroup.AttributeName,
+				ZHTW: erpnextAttributeGroup.AttributeName,
+			}
+		} else {
+			localeName = multiLanguageMap[erpnextAttributeGroup.AttributeName]
 		}
-		localeName := multiLanguageMap[erpnextAttributeGroup.AttributeName]
 		multiLanguageName := model.MultiLanguageName{
 			EnName:   localeName.EN,
 			ZhName:   localeName.ZH,
@@ -234,7 +260,6 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 		}
 		err := db.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
 		if err != nil {
-			logger.Logger.Error("SyncUomAndAttribute-CreateMultiLanguageName-attributeGroup", zap.Any("multiLanguageName", multiLanguageName), zap.Any("err", err))
 			continue
 		}
 
@@ -252,11 +277,22 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 		attributeGroupSort++
 
 		for i, erpnextAttributeValue := range erpnextAttributeGroup.AttributeValueList {
+			var localeName dto.LocaleResponse
 			if _, ok := multiLanguageMap[erpnextAttributeValue.AttributeValue]; !ok {
-				logger.Logger.Error("SyncUomAndAttribute-multiLanguageMap-not-found", zap.Any("attributeValue", erpnextAttributeValue.AttributeValue))
-				continue
+				localeName = dto.LocaleResponse{
+					EN:   erpnextAttributeValue.AttributeValue,
+					ZH:   erpnextAttributeValue.AttributeValue,
+					TH:   erpnextAttributeValue.AttributeValue,
+					MY:   erpnextAttributeValue.AttributeValue,
+					JA:   erpnextAttributeValue.AttributeValue,
+					KO:   erpnextAttributeValue.AttributeValue,
+					TR:   erpnextAttributeValue.AttributeValue,
+					SV:   erpnextAttributeValue.AttributeValue,
+					ZHTW: erpnextAttributeValue.AttributeValue,
+				}
+			} else {
+				localeName = multiLanguageMap[erpnextAttributeValue.AttributeValue]
 			}
-			localeName := multiLanguageMap[erpnextAttributeValue.AttributeValue]
 			multiLanguageName := model.MultiLanguageName{
 				EnName:   localeName.EN,
 				ZhName:   localeName.ZH,

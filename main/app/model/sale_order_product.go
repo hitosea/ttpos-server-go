@@ -104,6 +104,9 @@ type SaleOrderProduct struct {
 	// 送厨时间
 	SendKitchenTime int64 `gorm:"column:send_kitchen_time;type:int(10);not null;default:0;comment:'送厨时间'" json:"send_kitchen_time"`
 
+	// ERP相关
+	ErpCode string `gorm:"column:erp_code;type:varchar(255);default:'';comment:ERP系统商品编码;NOT NULL" json:"erp_code"`
+
 	// 关联对象
 	MultiLanguageName          *MultiLanguageName           `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
 	ImageFile                  *File                        `gorm:"foreignKey:image_file_uuid;references:uuid"`
@@ -1210,37 +1213,16 @@ func (model *SaleOrderProduct) GetNameAndFlavorName() dto.LocaleResponse {
 		}
 	}
 	productPackageName := model.MultiLanguageName.GetNames()
-
-	flavorNameZH := fmt.Sprintf(" (%s)", flavorName.ZH)
-	flavorNameTH := fmt.Sprintf(" (%s)", flavorName.TH)
-	flavorNameEN := fmt.Sprintf(" (%s)", flavorName.EN)
-	flavorNameZHTW := fmt.Sprintf(" (%s)", flavorName.ZHTW)
-	flavorNameJA := fmt.Sprintf(" (%s)", flavorName.JA)
-	flavorNameKO := fmt.Sprintf(" (%s)", flavorName.KO)
-	flavorNameMY := fmt.Sprintf(" (%s)", flavorName.MY)
-	flavorNameTR := fmt.Sprintf(" (%s)", flavorName.TR)
-	flavorNameSV := fmt.Sprintf(" (%s)", flavorName.SV)
-	if model.IsPackageProduct() {
-		flavorNameZH = ""
-		flavorNameTH = ""
-		flavorNameEN = ""
-		flavorNameZHTW = ""
-		flavorNameJA = ""
-		flavorNameKO = ""
-		flavorNameMY = ""
-		flavorNameTR = ""
-		flavorNameSV = ""
-	}
 	return dto.LocaleResponse{
-		ZH:   fmt.Sprintf("%s%s", productPackageName.ZH, flavorNameZH),
-		TH:   fmt.Sprintf("%s%s", productPackageName.TH, flavorNameTH),
-		EN:   fmt.Sprintf("%s%s", productPackageName.EN, flavorNameEN),
-		ZHTW: fmt.Sprintf("%s%s", productPackageName.ZHTW, flavorNameZHTW),
-		JA:   fmt.Sprintf("%s%s", productPackageName.JA, flavorNameJA),
-		KO:   fmt.Sprintf("%s%s", productPackageName.KO, flavorNameKO),
-		MY:   fmt.Sprintf("%s%s", productPackageName.MY, flavorNameMY),
-		TR:   fmt.Sprintf("%s%s", productPackageName.TR, flavorNameTR),
-		SV:   fmt.Sprintf("%s%s", productPackageName.SV, flavorNameSV),
+		ZH:   fmt.Sprintf("%s (%s)", productPackageName.ZH, flavorName.ZH),
+		TH:   fmt.Sprintf("%s (%s)", productPackageName.TH, flavorName.TH),
+		EN:   fmt.Sprintf("%s (%s)", productPackageName.EN, flavorName.EN),
+		ZHTW: fmt.Sprintf("%s (%s)", productPackageName.ZHTW, flavorName.ZHTW),
+		JA:   fmt.Sprintf("%s (%s)", productPackageName.JA, flavorName.JA),
+		KO:   fmt.Sprintf("%s (%s)", productPackageName.KO, flavorName.KO),
+		MY:   fmt.Sprintf("%s (%s)", productPackageName.MY, flavorName.MY),
+		TR:   fmt.Sprintf("%s (%s)", productPackageName.TR, flavorName.TR),
+		SV:   fmt.Sprintf("%s (%s)", productPackageName.SV, flavorName.SV),
 	}
 }
 
@@ -1248,37 +1230,16 @@ func (model *SaleOrderProduct) GetNameAndFlavorName() dto.LocaleResponse {
 func (model *SaleOrderProduct) GetNameAndFlavorNameFrom(ProductBom *ProductBom, productName *MultiLanguageName) dto.LocaleResponse {
 	flavorName := ProductBom.ProductFlavor.MultiLanguageName.GetNames()
 	productPackageName := productName.GetNames()
-
-	flavorNameZH := fmt.Sprintf(" (%s)", flavorName.ZH)
-	flavorNameTH := fmt.Sprintf(" (%s)", flavorName.TH)
-	flavorNameEN := fmt.Sprintf(" (%s)", flavorName.EN)
-	flavorNameZHTW := fmt.Sprintf(" (%s)", flavorName.ZHTW)
-	flavorNameJA := fmt.Sprintf(" (%s)", flavorName.JA)
-	flavorNameKO := fmt.Sprintf(" (%s)", flavorName.KO)
-	flavorNameMY := fmt.Sprintf(" (%s)", flavorName.MY)
-	flavorNameTR := fmt.Sprintf(" (%s)", flavorName.TR)
-	flavorNameSV := fmt.Sprintf(" (%s)", flavorName.SV)
-	if model.IsPackageProduct() {
-		flavorNameZH = ""
-		flavorNameTH = ""
-		flavorNameEN = ""
-		flavorNameZHTW = ""
-		flavorNameJA = ""
-		flavorNameKO = ""
-		flavorNameMY = ""
-		flavorNameTR = ""
-		flavorNameSV = ""
-	}
 	return dto.LocaleResponse{
-		ZH:   fmt.Sprintf("%s%s", productPackageName.ZH, flavorNameZH),
-		TH:   fmt.Sprintf("%s%s", productPackageName.TH, flavorNameTH),
-		EN:   fmt.Sprintf("%s%s", productPackageName.EN, flavorNameEN),
-		ZHTW: fmt.Sprintf("%s%s", productPackageName.ZHTW, flavorNameZHTW),
-		JA:   fmt.Sprintf("%s%s", productPackageName.JA, flavorNameJA),
-		KO:   fmt.Sprintf("%s%s", productPackageName.KO, flavorNameKO),
-		MY:   fmt.Sprintf("%s%s", productPackageName.MY, flavorNameMY),
-		TR:   fmt.Sprintf("%s%s", productPackageName.TR, flavorNameTR),
-		SV:   fmt.Sprintf("%s%s", productPackageName.SV, flavorNameSV),
+		ZH:   fmt.Sprintf("%s (%s)", productPackageName.ZH, flavorName.ZH),
+		TH:   fmt.Sprintf("%s (%s)", productPackageName.TH, flavorName.TH),
+		EN:   fmt.Sprintf("%s (%s)", productPackageName.EN, flavorName.EN),
+		ZHTW: fmt.Sprintf("%s (%s)", productPackageName.ZHTW, flavorName.ZHTW),
+		JA:   fmt.Sprintf("%s (%s)", productPackageName.JA, flavorName.JA),
+		KO:   fmt.Sprintf("%s (%s)", productPackageName.KO, flavorName.KO),
+		MY:   fmt.Sprintf("%s (%s)", productPackageName.MY, flavorName.MY),
+		TR:   fmt.Sprintf("%s (%s)", productPackageName.TR, flavorName.TR),
+		SV:   fmt.Sprintf("%s (%s)", productPackageName.SV, flavorName.SV),
 	}
 }
 
@@ -1455,6 +1416,7 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 		},
 		DeviceId:                   def.DeviceId,
 		Name:                       def.Name,
+		ErpCode:                    def.Flavor.ErpCode,
 		Remark:                     def.Remark,
 		FlavorName:                 def.Flavor.Name,
 		Num:                        def.Num,

@@ -525,6 +525,7 @@ type ProductTaxListResp struct {
 
 // ProductTaxItemResp 商品税类列表项响应
 type ProductTaxItemResp struct {
-	Uuid uint64 `json:"uuid"` // 税类UUID
-	Name string `json:"name"` // 税类名称
+	Uuid uint64  `json:"uuid"` // 税类UUID
+	Name string  `json:"name"` // 税类名称
+	Rate float64 `json:"rate"` // 税率
 }

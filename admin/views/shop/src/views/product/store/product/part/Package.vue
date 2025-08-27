@@ -1,5 +1,31 @@
 <template>
   <div>
+    <template v-for="(item, index) in languageList" :key="index">
+      <el-form-item
+        for="no_click"
+        :label="$t('套餐单位：')"
+        :rules="[{ required: true, message: $t('请填写套餐单位') }]"
+        :prop="`model.product_unit.${item.key}`"
+        v-if="item.name == languageKey"
+      >
+        <el-select
+          v-model="form.model.product_unit[item.key]"
+          @change="(e) => selectChange(e, index)"
+          filterable
+          clearable
+          class="max-w460 mr8"
+          size="default"
+          :placeholder="$t('请选择') + `(${item.value})`"
+          :disabled="erp_is_open == 1"
+        >
+          <template v-for="items in restaurantsObj[item.key]" :key="items.index">
+            <el-option :value="items.index" :label="items.value"></el-option>
+          </template>
+        </el-select>
+        <el-button size="small" type="primary" class="el-icon-circle-plus" @click="addUnit">{{ $t('添加单位') }}+</el-button>
+      </el-form-item>
+    </template>
+
     <div class="common-form mt50">{{ $t('套餐商品') }}</div>
 
     <div class="package-group-list">
@@ -18,7 +44,7 @@
             <el-input
               type="text"
               :placeholder="$t('请输入分组名称')"
-              :maxlength="50"
+              :maxlength="150"
               class="max-w460"
               :disabled="erp_is_open == 1"
               v-model="form.model.package_group[groupIndex].group_name[item.key]"
@@ -51,7 +77,11 @@
             </el-table-column>
             <el-table-column prop="stock_num" :label="$t('商品库存')" width="160">
               <template #default="scope">
-                <el-form-item class="mt16" :prop="`model.package_group.${groupIndex}.product_list.${scope.$index}.stock_num`" :rules="[{ required: true,validator: validateStockNum, message: $t('商品库存不足') }]">
+                <el-form-item
+                  class="mt16"
+                  :prop="`model.package_group.${groupIndex}.product_list.${scope.$index}.stock_num`"
+                  :rules="[{ required: true, validator: validateStockNum, message: $t('商品库存不足') }]"
+                >
                   {{ scope.row.stock_num }}
                 </el-form-item>
               </template>
@@ -86,7 +116,7 @@
     </el-form-item> -->
 
     <el-form-item v-if="form.model.is_open_stock" for="no_click" :prop="`model.package_stock`" :label="$t('套餐可售总量')" :rules="[{ required: true, message: $t('请输入库存') }]">
-      <numInput type="text" :placeholder="$t('请输入库存')" :precision="0" v-model="form.model.package_stock" :maxlength="50" class="max-w460" ></numInput>
+      <numInput type="text" :placeholder="$t('请输入库存')" :precision="0" v-model="form.model.package_stock" :maxlength="50" class="max-w460"></numInput>
       <div class="gray9">{{ $t('库存为0时套餐自动售罄') }}</div>
     </el-form-item>
 
@@ -106,6 +136,7 @@
         apiSource="product"
         :overrideLanguages="overrideLanguages"
         :otherGroupNames="otherGroupNames"
+        :maxlength="150"
       />
       <template #footer>
         <div class="flex justify-end">
@@ -127,19 +158,31 @@
       :haveStatusZero="true"
     >
     </ProductSelector>
+
+    <!--添加-->
+    <Add v-if="open_add_feed" :open_add="open_add_feed" @closeDialog="closeDialogFunc($event, 'add')"></Add>
   </div>
 </template>
 <script setup>
-  import { ref, inject, nextTick, computed, defineEmits } from 'vue';
+  import { ref, inject, nextTick, computed, defineEmits, reactive, onMounted } from 'vue';
   import { languageStore } from '@/store/model/language.js';
   import UniqueNameForm from '@/components/product/UniqueNameForm.vue';
   import ProductSelector from '@/components/product/Selector.vue';
+  import Add from '../../../expand/unit/add.vue';
   import { useUserStore } from '@/store';
   const { erp_is_open } = useUserStore();
   const emit = defineEmits(['validateField']);
   const languageList = languageStore().getLanguageList().languageList.value;
   const languageKey = languageStore().getLanguageKey().language.value;
   const languageData = JSON.stringify(languageStore().getLanguageKeyForm());
+
+  // 初始化语言对象
+  let languageObj = {};
+  languageList.forEach((item) => {
+    languageObj[item.key] = [];
+  });
+
+  const restaurantsObj = reactive(languageObj);
 
   const form = inject('form');
 
@@ -156,6 +199,8 @@
   const overrideLanguages = ref({});
 
   const otherGroupNames = ref([]);
+
+  const open_add_feed = ref(false);
 
   const nowStock = computed(() => {
     // 计算规则：相同商品在不同分组中的数量先合并相加，然后用该商品库存除以合并后的需求数量，最后取所有商品中的最小值，向下取整
@@ -219,6 +264,29 @@
     // 向下取整
     return Math.floor(minStock);
   });
+
+  const addUnit = () => {
+    open_add_feed.value = true;
+  };
+
+  /*关闭弹窗*/
+  const closeDialogFunc = (e, f) => {
+    if (f == 'add') {
+      open_add_feed.value = e.openDialog;
+      if (e.type == 'success' && e.data) {
+        //
+        form.unit.unshift(e.data);
+      }
+    }
+  };
+
+  // 方法定义
+  const selectChange = (e) => {
+    languageList.forEach((item) => {
+      form.model.product_unit[item.key] = restaurantsObj[item.key][e]?.value || '';
+      form.model.unit_id = restaurantsObj[item.key][e]?.unit_id || '';
+    });
+  };
 
   // 翻译
   const translate = async (groupIndex) => {
@@ -392,6 +460,31 @@
       callback();
     }
   };
+
+  // 工具函数定义
+  const isValidJSON = (str) => {
+    try {
+      JSON.parse(str);
+      return true; // 如果解析成功，返回 true
+    } catch (e) {
+      return false; // 如果解析失败，返回 false
+    }
+  };
+
+  onMounted(() => {
+    form.unit.map((item, index) => {
+      let unit_name = isValidJSON(item.unit_name) ? JSON.parse(item.unit_name) : {};
+      languageList.forEach((items) => {
+        if (unit_name[items.key] != null) {
+          restaurantsObj[items.key].push({
+            value: unit_name[items.key] == '' ? '-' : unit_name[items.key],
+            index: index,
+            unit_id: item.unit_id,
+          });
+        }
+      });
+    });
+  });
 </script>
 <style scoped lang="scss">
   .w-full {

@@ -33642,6 +33642,10 @@ const docTemplate = `{
                     "description": "是否开启外送",
                     "type": "boolean"
                 },
+                "is_show_inventory": {
+                    "description": "是否显示移动管理端进销存功能",
+                    "type": "boolean"
+                },
                 "logo": {
                     "description": "商家logo",
                     "type": "string"

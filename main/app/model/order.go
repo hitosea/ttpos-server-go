@@ -388,6 +388,7 @@ type Flavor struct {
 	Name           string
 	Price          float64
 	ProductBomUuid uint64
+	ErpCode        string
 }
 type Attribute struct {
 	Name                        string
