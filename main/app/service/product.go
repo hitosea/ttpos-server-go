@@ -4456,7 +4456,7 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 				productPackageGroupRepo := repository.NewProductPackageGroupRepo(tx)
 				productPackageGroupItems, err := productPackageGroupRepo.GetProductPackageGroupItems(
 					commonRepo.WhereBySoftDelete(),
-					commonRepo.WhereByProductPackageUuid(productPackageUuid),
+					commonRepo.WhereByRelatedUuid(productPackageUuid),
 					productPackageGroupRepo.WithProductPackageGroup(
 						commonRepo.WhereBySoftDelete(),
 					),
