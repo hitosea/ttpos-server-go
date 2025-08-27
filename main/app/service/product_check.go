@@ -177,7 +177,7 @@ func (s *productCheckSrv) CheckProductFlavor(db *gorm.DB, flavors []CheckProduct
 		if err != nil || flavor.ID == 0 {
 			return nil, errors.New("规格不存在")
 		}
-		if !isDelete && !productRepo.CheckPrice(flavorReq.Price, 0, 999999, 2) {
+		if !isDelete && !productRepo.CheckPrice(flavorReq.Price, 0, 100000000, 2) {
 			return nil, errors.New("规格价格范围错误")
 		}
 		// 商品规格条码值
@@ -559,7 +559,7 @@ func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, 
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(db)
 	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
-	if !productRepo.CheckPrice(param.Price, 0, 999999, 2) {
+	if !productRepo.CheckPrice(param.Price, 0, 100000000, 2) {
 		return nil, errors.New("套餐价格范围错误")
 	}
 	if len(param.Groups) == 0 {
