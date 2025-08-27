@@ -496,8 +496,8 @@ class Product extends ProductModel
         if ($isPackage) {
             // 套餐价格
             $packagePrice = $data['package_price'] ?: 0;
-            if ($packagePrice <= 0 || $packagePrice > 1000000) {
-                $this->error = '套餐价格不能为0或超过1000000';
+            if ($packagePrice <= 0 || $packagePrice > 100000000) {
+                $this->error = '套餐价格不能为0或超过100000000';
                 return false;
             }
             $packageGroup = $data['package_group'] ?? [];

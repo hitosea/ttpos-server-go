@@ -10,6 +10,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
@@ -17,6 +18,7 @@ import (
 	"ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/jinzhu/copier"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -37,6 +39,7 @@ type IMaterialSrv interface {
 	UnlinkProductBomCard(ctx context.Context, req req.ProductBomCardUnlinkReq) error
 	CopyProductBomCard(ctx context.Context, req req.ProductBomCardCopyReq) error
 	ImportProductBomCard(ctx context.Context, req req.ProductBomCardImportReq) error
+	ImportMaterialList(ctx context.Context, req req.MaterialImportListReq) (material_resp.MaterialImportResp, error)
 }
 
 type materialSrv struct {
@@ -1202,4 +1205,56 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 		return errors.WithMessage(err)
 	}
 	return nil
+}
+
+// ImportMaterialList 导入物品列表
+func (s *materialSrv) ImportMaterialList(ctx context.Context, reqs req.MaterialImportListReq) (material_resp.MaterialImportResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 初始化返回
+	var materialImportResp material_resp.MaterialImportResp
+	materialImportResp.List = make([]material_resp.MaterialImportListItem, 0, len(reqs.List))
+	for _, item := range reqs.List {
+		// 复制物品信息
+		material := material_resp.MaterialImportListItem{}
+		copier.Copy(&material, item)
+		// 获取分类ID
+		categoryUuid, err := repository.NewMaterialRepo(db).GetCategoryUuidByNameOptimized(item.CategoryName)
+		if err != nil {
+			return material_resp.MaterialImportResp{}, err
+		}
+		// 获取单位ID
+		unitUuid, err := base.NewProductUnitRepo(db).GetProductUnitUuidByNameOptimized(item.UnitName)
+		if err != nil {
+			return material_resp.MaterialImportResp{}, err
+		}
+		// 设置分类ID、单位ID
+		material.CategoryUuid = categoryUuid
+		material.UnitUuid = unitUuid
+		// 验证是否已经存在
+		material.LocaleNameIsExist = repository.NewMaterialRepo(db).CheckMultiLanguageNameExist(item.LocaleName)
+		material.BarcodeIsExist = repository.NewMaterialRepo(db).CheckBarcodeExist(item.BarcodeValue, 0)
+		// 添加到列表
+		materialImportResp.List = append(materialImportResp.List, material)
+	}
+
+	// 获取分类列表
+	materialCategories, err := s.GetMaterialCategoryList(ctx, req.MaterialCategoryListReq{})
+	if err != nil {
+		return material_resp.MaterialImportResp{}, errors.WithMessage(err, "获取分类列表失败")
+	}
+	materialImportResp.CategoryList = materialCategories.List
+
+	// 获取单位列表
+	unitList, err := base.NewProductUnitRepo(db).GetProductUnitList()
+	if err != nil {
+		return material_resp.MaterialImportResp{}, errors.WithMessage(err, "获取单位列表失败")
+	}
+	for _, unit := range unitList {
+		materialImportResp.UnitList = append(materialImportResp.UnitList, material_resp.MaterialImportUnitListItem{
+			Uuid:       unit.Uuid,
+			LocaleName: unit.MultiLanguageName.GetNames(),
+		})
+	}
+
+	return materialImportResp, nil
 }

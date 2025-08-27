@@ -111,3 +111,26 @@ type MaterialInfo struct {
 	Name string `json:"name"` // 材料名称
 	Code string `json:"code"` // 材料编码
 }
+
+// MaterialImportListItem 导入物品列表项
+type MaterialImportListItem struct {
+	LocaleName        dto.LocaleResponse `json:"locale_name" binding:"required"`      // 物品名称
+	LocaleNameIsExist dto.LocaleResponse `json:"locale_name_is_exist"`                // 物品名称是否存在，对应的key不为空则表示存在
+	CategoryName      string             `json:"category_name" binding:"required"`    // 分类名称
+	CategoryUuid      uint64             `json:"category_uuid"`                       // 分类UUID
+	UnitUuid          uint64             `json:"unit_uuid"`                           // 单位UUID
+	UnitName          string             `json:"unit_name"`                           // 单位名称
+	Status            int                `json:"status"`                              // 状态 1-启用 0-停用
+	BarcodeValue      string             `json:"barcode_value"`                       // 条形码值
+	BarcodeIsExist    bool               `json:"barcode_is_exist"`                    // 条形码是否存在，存在则不保存
+	Valuation         float64            `json:"valuation" binding:"required,min=0"`  // 估值率
+	InitStock         float64            `json:"init_stock" binding:"required,min=0"` // 期初库存
+	Row               int                `json:"row" binding:"required"`              // 行号
+}
+
+// MaterialImportResp 导入物品响应
+type MaterialImportResp struct {
+	List         []MaterialImportListItem     `json:"list" binding:"required,dive"`      // 商品列表
+	CategoryList []MaterialCategory           `json:"category_list" binding:"required"`  // 分类列表
+	UnitList     []MaterialImportUnitListItem `json:"unit_list" binding:"required,dive"` // 单位列表
+}
