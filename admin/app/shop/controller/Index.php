@@ -507,6 +507,7 @@ class Index extends Controller
         $labelIds = $params['label_ids'] ?? '';
         $numType = intval($params['num_type'] ?? 0);
         $showDeliveryRequired = intval($params['show_delivery_required'] ?? 0);
+        $showPackage = intval($params['show_package'] ?? 0);
         $commonFields = [
             'p.uuid',
             'p.uuid as product_id',
@@ -516,12 +517,16 @@ class Index extends Controller
             'p.create_time',
             'CAST(IFNULL(c.parent_uuid, 0) AS UNSIGNED) as parent_category_id'
         ];
-        $buildQuery = function ($table, $additionalFields = []) use ($commonFields) {
+        $buildQuery = function ($table, $additionalFields = []) use ($commonFields, $showPackage) {
             $builder =  $table->alias('p')
                 ->leftJoin('product_category c', 'c.uuid = p.category_uuid')
                 ->field(array_merge($commonFields, $additionalFields));
             if (is_a($table, Product::class)) {
-                $builder->where('p.product_type', 0);
+                if ($showPackage == 0) {
+                    $builder->where('p.product_type', 0);
+                } else {
+                    $builder->whereIn('p.product_type', [0, 1]);
+                }
             }
             return $builder;
         };
@@ -535,7 +540,7 @@ class Index extends Controller
             '"material" as source_type',
             '0 as open_overall_discount',
         ]);
-        $applyConditions = function ($query) use ($categoryIds, $labelIds, $productName, $mode, $numType, $showDeliveryRequired, $type) {
+        $applyConditions = function ($query) use ($categoryIds, $labelIds, $productName, $mode, $numType, $showDeliveryRequired) {
             if ($categoryIds) {
                 $query->whereIn('category_uuid', explode(',', $categoryIds));
             }
