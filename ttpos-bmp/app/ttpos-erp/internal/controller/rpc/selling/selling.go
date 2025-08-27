@@ -258,9 +258,9 @@ func (c *Controller) validateSavePosInvoiceReq(req *selling.SavePosInvoiceReq) e
 	//if len(req.MaterialItems) == 0 {
 	//	return gerror.New("原材料项目列表不能为空")
 	//}
-	if len(req.Taxes) == 0 {
-		return gerror.New("税费列表不能为空")
-	}
+	//if len(req.Taxes) == 0 {
+	//	return gerror.New("税费列表不能为空")
+	//}
 	if len(req.Payments) == 0 {
 		return gerror.New("付款列表不能为空")
 	}
