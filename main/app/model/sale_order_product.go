@@ -104,6 +104,9 @@ type SaleOrderProduct struct {
 	// 送厨时间
 	SendKitchenTime int64 `gorm:"column:send_kitchen_time;type:int(10);not null;default:0;comment:'送厨时间'" json:"send_kitchen_time"`
 
+	// ERP相关
+	ErpCode string `gorm:"column:erp_code;type:varchar(255);default:'';comment:ERP系统商品编码;NOT NULL" json:"erp_code"`
+
 	// 关联对象
 	MultiLanguageName          *MultiLanguageName           `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
 	ImageFile                  *File                        `gorm:"foreignKey:image_file_uuid;references:uuid"`
@@ -1455,6 +1458,7 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 		},
 		DeviceId:                   def.DeviceId,
 		Name:                       def.Name,
+		ErpCode:                    def.Flavor.ErpCode,
 		Remark:                     def.Remark,
 		FlavorName:                 def.Flavor.Name,
 		Num:                        def.Num,

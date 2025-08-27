@@ -416,6 +416,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `package_sub_product_params` TEXT COMMENT '套餐子商品参数',
 
     `send_kitchen_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '送厨时间(时间戳)',
+    `erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERP系统商品编码',
 
     -- 时间信息
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
