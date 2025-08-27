@@ -1292,6 +1292,9 @@ func (model *SaleOrderProduct) GetAttributeNameList() []dto.LocaleResponse {
 	var attributeNames []dto.LocaleResponse
 
 	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
+		if saleOrderProductBom.IsDelete() {
+			continue
+		}
 		if saleOrderProductBom.IsFlavor() {
 			flavorName = saleOrderProductBom.ProductBom.ProductFlavor.MultiLanguageName.GetNames()
 		} else {
@@ -1302,6 +1305,9 @@ func (model *SaleOrderProduct) GetAttributeNameList() []dto.LocaleResponse {
 
 	// 获取商品属性
 	for _, saleOrderProductAttribute := range model.SaleOrderProductAttributes {
+		if saleOrderProductAttribute.IsDelete() {
+			continue
+		}
 		attributeName := saleOrderProductAttribute.ProductAttribute.MultiLanguageName.GetNames()
 		attributeNames = append(attributeNames, attributeName)
 	}
