@@ -77,12 +77,14 @@ func (h *Handler) InitShop(c *gin.Context) {
 		helper.ErrorWithMessage(c, constant.CodeFail, err)
 		return
 	}
-	go func(ctx cc.Context) {
-		erp.NewIErpSrv(h.dbm).SyncUomAndAttribute(ctx, req.SyncUomAndAttributeReq{
-			SiteCode:    initShopReq.SiteCode,
-			CompanyAbbr: initShopReq.DefaultCompanyAbbr,
-		})
-	}(ctx)
+	// 连锁店会自动同步整site全部单位和属性，散户不自动同步
+	if initShopReq.SiteCode != "1" {
+		go func(ctx cc.Context) {
+			erp.NewIErpSrv(h.dbm).SyncUomAndAttribute(ctx, req.SyncUomAndAttributeReq{
+				SiteCode: initShopReq.SiteCode,
+			})
+		}(ctx)
+	}
 	helper.Success(c, initShopResp)
 }
 
