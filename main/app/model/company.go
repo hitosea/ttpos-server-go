@@ -35,7 +35,7 @@ func (company *Company) IsOpenErp(phase ...int) bool {
 		return true
 	}
 	if phase[0] == 3 {
-		return true
+		return false
 	}
 	return true
 }
