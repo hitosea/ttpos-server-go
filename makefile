@@ -35,7 +35,7 @@ build:
 
 # 生成文档
 build-doc:
-	cd main && go install github.com/swaggo/swag/cmd/swag@latest && ${HOME}/go/bin/swag init
+	cd main && go install github.com/swaggo/swag/cmd/swag@latest && ${GO_PATH}/bin/swag init
 
 # 变更debug模式
 debug:

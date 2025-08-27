@@ -370,7 +370,7 @@ type ProductImportListItem struct {
 	SkuUuid               uint64             `json:"sku_uuid"`                                    // 规格UUID
 	DineTaxUuid           uint64             `json:"dine_tax_uuid"`                               // 堂食税类UUID
 	TakeoutTaxUuid        uint64             `json:"takeout_tax_uuid"`                            // 外带税类UUID
-	ProductNameIsExist    dto.LocaleResponse `json:"product_name_is_exist"`                       // 商品名称是否存在，对应的key不为空则表示存在
+	LocaleNameIsExist     dto.LocaleResponse `json:"locale_name_is_exist"`                        // 商品名称是否存在，对应的key不为空则表示存在
 	BarcodeIsExist        bool               `json:"barcode_is_exist"`                            // 条形码是否存在，存在则不保存
 }
 

@@ -380,6 +380,33 @@ func (h *MaterialHandler) ImportProductBomCard(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// ImportMaterialList 导入物品列表
+// @Summary 导入物品列表
+// @Description 导入物品列表
+// @Tags 商家端.物品管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.MaterialImportListReq true "物品导入请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/material/import/list [get]
+func (h *MaterialHandler) ImportMaterialList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	importReq := req.MaterialImportListReq{}
+
+	if err := c.ShouldBindJSON(&importReq); err != nil {
+		helper.HandleValidationError(c, err, importReq, dto.PageReqMessage)
+		return
+	}
+	res, err := h.materialSrv.ImportMaterialList(ctx, importReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
 func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -417,5 +444,7 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		privateApi.POST("/product_bom/card/unlink", wrapper.UnlinkProductBomCard)   // 解除成本卡关联
 		privateApi.POST("/product_bom/card/copy", wrapper.CopyProductBomCard)       // 复制成本卡
 		privateApi.POST("/product_bom/card/import", wrapper.ImportProductBomCard)   // 从菜品导入成本卡
+
+		privateApi.GET("/material/import/list", wrapper.ImportMaterialList) // 导入物品列表
 	}
 }

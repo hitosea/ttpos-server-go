@@ -3403,17 +3403,6 @@ func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImpor
 	}
 	// 获取语言
 	language := ctx.GetLanguage()
-	langKeys := map[string]string{
-		"English":    "en",
-		"ภาษาไทย":    "th",
-		"简体中文":       "zh",
-		"繁體中文":       "zhtw",
-		"Türkçe":     "tr",
-		"မြန်မာဘာသာ": "my",
-		"日本語":        "ja",
-		"한국어":        "ko",
-		"Svenska":    "sv",
-	}
 
 	// 初始化返回
 	var productImportResp product_resp.ProductImportResp
@@ -3464,38 +3453,7 @@ func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImpor
 			return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "未配置外送渠道，无法选择在外送显示"))
 		}
 		// 处理商品名称
-		productName := dto.LocaleResponse{}
-		for _, name := range strings.Split(item.ProductName, "\n") {
-			name := strings.Split(name, ":")
-			if len(name) < 2 || name[0] == "" {
-				return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "商品名称格式错误"))
-			}
-			if _, exists := langKeys[name[0]]; !exists {
-				return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "商品名称对应语言不存在") + "[" + name[0] + "]")
-			}
-			// 根据语言代码设置对应的字段
-			switch langKeys[name[0]] {
-			case "zh":
-				productName.ZH = name[1]
-			case "th":
-				productName.TH = name[1]
-			case "en":
-				productName.EN = name[1]
-			case "zhtw":
-				productName.ZHTW = name[1]
-			case "ja":
-				productName.JA = name[1]
-			case "ko":
-				productName.KO = name[1]
-			case "my":
-				productName.MY = name[1]
-			case "tr":
-				productName.TR = name[1]
-			case "sv":
-				productName.SV = name[1]
-			}
-		}
-		products.LocaleName = productName
+		products.LocaleName = item.LocaleName
 		products.IsShowCashier = strings.Contains(item.Shows, "1")
 		products.IsShowTablet = strings.Contains(item.Shows, "2")
 		products.IsShowKitchen = strings.Contains(item.Shows, "3")
@@ -3503,7 +3461,7 @@ func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImpor
 		products.IsShowH5 = strings.Contains(item.Shows, "5")
 		products.IsShowDelivery = strings.Contains(item.Shows, "6")
 		// 验证是否已经存在
-		products.ProductNameIsExist = repository.NewProductRepo(db).CheckMultiLanguageNameExist(productName)
+		products.LocaleNameIsExist = repository.NewProductRepo(db).CheckMultiLanguageNameExist(item.LocaleName)
 		// 验证条形码存在性检查
 		products.BarcodeIsExist = repository.NewProductRepo(db).CheckBarcodeExist(item.Barcode, 0)
 		// 添加到列表

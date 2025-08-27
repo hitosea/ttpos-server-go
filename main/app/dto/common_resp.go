@@ -129,3 +129,7 @@ func (l *LocaleResponse) CheckLenLocal(locales []string, length int) bool {
 func (l *LocaleResponse) GetMd5() string {
 	return fmt.Sprintf("%x", md5.Sum([]byte(l.ToJson())))
 }
+
+func (l *LocaleResponse) GetNames() []string {
+	return []string{l.ZH, l.TH, l.EN, l.ZHTW, l.JA, l.KO, l.MY, l.TR, l.SV}
+}
