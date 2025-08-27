@@ -38,6 +38,8 @@ type IProductionOrderQueryRepo interface {
 	GetLimitedProducts(column string, pageNo, pageSize int, opts ...DBOption) ([]model.ProductionOrderProduct, int64, error)      // 分页获取账单ID、分类ID
 	GetLimitedHistoryProducts(opts ...DBOption) ([]model.ProductionOrderProduct, error)                                           // 历史获取销售账单Uuid
 	GetProducts(limit int, orderBy string, statusOpt DBOption, opts ...DBOption) (float64, []model.ProductionOrderProduct, error) // 获取生产订单商品
+
+	GetProductsByPackageUuid(packageUuid uint64) ([]model.ProductionOrderProduct, error) // 根据套餐uuid获取套餐下所有子商品
 }
 
 type productionRepo struct {
@@ -304,4 +306,17 @@ func (r *productionRepo) UpdateOrder(opts []DBOption, vars map[string]any) error
 		db = opt(db)
 	}
 	return db.Updates(vars).Error
+}
+
+func (r *productionRepo) GetProductsByPackageUuid(packageUuid uint64) ([]model.ProductionOrderProduct, error) {
+	var productionOrderProducts []model.ProductionOrderProduct
+	err := r.db.Model(&model.ProductionOrderProduct{}).Scopes(NotDeleted).
+		Where("sale_order_product_uuid in (?)", r.db.Model(&model.SaleOrderProduct{}).Select("uuid").Where("package_uuid = ?", packageUuid).Scopes(NotDeleted)).
+		Find(&productionOrderProducts).Error
+
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return productionOrderProducts, nil
 }

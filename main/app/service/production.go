@@ -331,9 +331,49 @@ func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduc
 	return groups
 }
 
+// 更新生产单套餐商品状态
+func (s *productionSrv) updatePackageProduct(tx *gorm.DB, saleOrderProductUuid uint64) error {
+	saleOrderProductRepo := repository.NewSaleOrderProductRepo(tx)
+	saleOrderProduct, err := saleOrderProductRepo.GetSaleOrderProductByUuid(saleOrderProductUuid)
+	if err != nil {
+		return err
+	}
+	if !saleOrderProduct.IsPackageSubProduct() {
+		return nil
+	}
+
+	productionRepo := repository.NewProductionRepo(tx)
+	// 根据销售单套餐uuid获取送厨单子商品商品，不存在子商品一半状态是退菜
+	productionProducts, err := productionRepo.GetProductsByPackageUuid(saleOrderProduct.PackageUuid)
+	if err != nil {
+		return err
+	}
+	for _, productionProduct := range productionProducts {
+		if productionProduct.Status == constant.ProductionOrderProductStatusCooking {
+			// 修改生产单套餐商品为制作中
+			if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereSaleOrderProductUuid(saleOrderProduct.PackageUuid)}, map[string]any{
+				"status":        constant.ProductionOrderProductStatusCooking,
+				"finished_time": 0,
+			}); err != nil {
+				return errors.WithMessage(errors.New("更新送厨单套餐商品状态失败"), err.Error())
+			}
+			return nil
+		}
+	}
+	// 修改生产单套餐商品为制作完成
+	if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereSaleOrderProductUuid(saleOrderProduct.PackageUuid)}, map[string]any{
+		"status":        constant.ProductionOrderProductStatusFinished,
+		"finished_time": time.Now().Unix(),
+	}); err != nil {
+		return errors.WithMessage(errors.New("更新送厨单套餐商品状态失败"), err.Error())
+	}
+	return nil
+}
+
 // Finish 完成制作
 func (s *productionSrv) Finish(ctx context.Context, productUuid uint64) error {
-	productionRepo := repository.NewProductionRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	productionRepo := repository.NewProductionRepo(db)
 	product, _ := productionRepo.GetProduct(
 		productionRepo.WhereProductUuid(productUuid),
 		productionRepo.WithSaleOrderProductAll(),
@@ -350,12 +390,23 @@ func (s *productionSrv) Finish(ctx context.Context, productUuid uint64) error {
 
 	finishedTime := time.Now().Unix()
 
-	if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(productUuid)}, map[string]any{
-		"status":        constant.ProductionOrderProductStatusFinished,
-		"finished_time": finishedTime,
-	}); err != nil {
-		return errors.ErrInternal
+	err := db.Transaction(func(tx *gorm.DB) error {
+		productionRepo := repository.NewProductionRepo(tx)
+		if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(productUuid)}, map[string]any{
+			"status":        constant.ProductionOrderProductStatusFinished,
+			"finished_time": finishedTime,
+		}); err != nil {
+			return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
+		}
+		if err := s.updatePackageProduct(tx, product.SaleOrderProductUuid); err != nil {
+			return errors.WithMessage(errors.New("更新送厨单套餐商品状态失败"), err.Error())
+		}
+		return nil
+	})
+	if err != nil {
+		return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
 	}
+
 	// 完成制作事件
 	go func() {
 		if product.SaleOrderProduct.ID == 0 {
@@ -409,7 +460,8 @@ func (s *productionSrv) Finish(ctx context.Context, productUuid uint64) error {
 
 // Recovery 恢复制作
 func (s *productionSrv) Recovery(ctx context.Context, productUuid uint64) error {
-	productionRepo := repository.NewProductionRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	productionRepo := repository.NewProductionRepo(db)
 	product, _ := productionRepo.GetProduct(productionRepo.WhereProductUuid(productUuid))
 	if product.Uuid == 0 {
 		return errors.New("订单商品不存在")
@@ -417,12 +469,24 @@ func (s *productionSrv) Recovery(ctx context.Context, productUuid uint64) error 
 	if product.Status != constant.ProductionOrderProductStatusFinished {
 		return errors.New("订单商品未完成")
 	}
-	if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(productUuid)}, map[string]any{
-		"status":        constant.ProductionOrderProductStatusCooking,
-		"finished_time": 0,
-	}); err != nil {
-		return errors.ErrInternal
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		productionRepo := repository.NewProductionRepo(tx)
+		if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(productUuid)}, map[string]any{
+			"status":        constant.ProductionOrderProductStatusCooking,
+			"finished_time": 0,
+		}); err != nil {
+			return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
+		}
+		if err := s.updatePackageProduct(tx, product.SaleOrderProductUuid); err != nil {
+			return errors.WithMessage(errors.New("更新送厨单套餐商品状态失败"), err.Error())
+		}
+		return nil
+	})
+	if err != nil {
+		return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
 	}
+
 	// 恢复制作后，推送更新厨显
 	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
 		"update_time": time.Now().Unix(),
