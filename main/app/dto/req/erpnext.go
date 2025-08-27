@@ -140,6 +140,6 @@ type AddPaymentMethodReq struct {
 	Fee                *float64 `json:"fee" binding:"required"`             // 手续费
 	Sort               *int     `json:"sort" binding:"required"`            // 排序
 	Status             *int     `json:"status" binding:"required"`          // 状态: 0-禁用 1-启用
-	CheckoutShow       []string `json:"checkout_show"`                      // 结账显示
-	MemberRechargeShow []string `json:"member_recharge_show"`               // 会员充值显示
+	CheckoutShow       []string `json:"checkout_show"`                      // 结账显示，可选cashier、assistant
+	MemberRechargeShow []string `json:"member_recharge_show"`               // 会员充值显示，可选cashier
 }
