@@ -16,6 +16,7 @@ import (
 	cc "ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/logger"
 
+	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
@@ -293,7 +294,8 @@ func (s *erpSrv) GetPaymentMethodList(ctx pkgCtx.Context, getPaymentReq req.GetP
 		}
 		// 获取商家支付方式列表
 		paymentMethodList := repository.NewPaymentMethodRepo(s.dbm.GetDB(getPaymentReq.CompanyUuid)).GetPaymentMethodList()
-		var erpnextPayments []string
+		// “免单”默认置灰
+		erpnextPayments := []string{"Free Meal"}
 		for _, paymentMethod := range paymentMethodList {
 			erpnextPayments = append(erpnextPayments, paymentMethod.ErpnextPayment)
 		}
@@ -362,18 +364,20 @@ func (s *erpSrv) AddPaymentMethod(ctx pkgCtx.Context, addPaymentMethodReq req.Ad
 	if slices.Contains(addPaymentMethodReq.MemberRechargeShow, "cashier") {
 		isShowMemberRecharge = 1
 	}
+	feePercent := decimal.NewFromFloat(*addPaymentMethodReq.Fee).Div(decimal.NewFromInt(100)).Round(4).InexactFloat64()
 	paymentMethod := model.PaymentMethod{
 		Name:                 addPaymentMethodReq.Name,
 		Code:                 maxCode + 100,
 		PaymentName:          addPaymentMethodReq.Name,
 		Source:               constant.PaymentMethodSourceDefault,
-		FeePercent:           *addPaymentMethodReq.Fee,
+		FeePercent:           feePercent,
 		IsShowCashier:        isShowCashier,
 		IsShowAssistant:      isShowAssistant,
 		IsShowMemberRecharge: isShowMemberRecharge,
 		Status:               *addPaymentMethodReq.Status,
 		Sort:                 *addPaymentMethodReq.Sort,
 		DefaultImg:           "/image/pay/ja_pay.png",
+		ErpnextPayment:       addPaymentMethodReq.ErpnextPayment,
 	}
 	// 添加支付方式到商家数据库
 	repository.NewPaymentMethodRepo(s.dbm.GetDB(addPaymentMethodReq.CompanyUuid)).CreatePaymentMethod(paymentMethod)

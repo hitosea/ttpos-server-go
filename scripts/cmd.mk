@@ -93,15 +93,46 @@ init-env:
 		sed -i.bak 's/^APP_ID=.*/APP_ID='$$(openssl rand -hex 3)'/' .env && rm .env.bak; \
 		sed -i.bak 's/^DB_PASSWORD=.*/DB_PASSWORD='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
 		sed -i.bak 's/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
-		sed -i.bak 's/^NACOS_AUTH_TOKEN=.*/NACOS_AUTH_TOKEN='$$(openssl rand -hex 32 | base64)'/' .env && rm .env.bak; \
-		sed -i.bak 's/^NACOS_AUTH_IDENTITY_KEY=.*/NACOS_AUTH_IDENTITY_KEY='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
-		sed -i.bak 's/^NACOS_AUTH_IDENTITY_VALUE=.*/NACOS_AUTH_IDENTITY_VALUE='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
-	fi 
+	fi
 	@echo "🔍 检查 .env 文件是否存在"
 	if [ -f ".env" ]; then \
 		sed -i.bak 's/^DB_HOST=.*/DB_HOST=db/' .env && rm .env.bak; \
 		sed -i.bak 's/^DB_PORT=.*/DB_PORT=3306/' .env && rm .env.bak; \
 		sed -i.bak 's/^REDIS_HOST=.*/REDIS_HOST=redis/' .env && rm .env.bak; \
+	fi
+
+init-bmp-env:
+	@echo "🔍 初始化中台env文件"
+	if [ ! -f "ttpos-bmp/.env" ]; then \
+		cp ttpos-bmp/.env.example ttpos-bmp/.env; \
+		echo "Created ttpos-bmp/.env file from ttpos-bmp/.env.example"; \
+		sed -i.bak 's/^APP_ID=.*/APP_ID='$$(openssl rand -hex 3)'/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
+		sed -i.bak 's/^NACOS_AUTH_TOKEN=.*/NACOS_AUTH_TOKEN='$$(openssl rand -hex 32 | base64)'/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
+		sed -i.bak 's/^NACOS_AUTH_IDENTITY_KEY=.*/NACOS_AUTH_IDENTITY_KEY='$$(openssl rand -hex 8)'/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
+		sed -i.bak 's/^NACOS_AUTH_IDENTITY_VALUE=.*/NACOS_AUTH_IDENTITY_VALUE='$$(openssl rand -hex 8)'/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
+		sed -i.bak 's/^NACOS_SERVER_IP=.*/NACOS_SERVER_IP=10.0.11.40/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
+		sed -i.bak 's/^ROCKETMQ_NAME_SRV_ADDR=.*/ROCKETMQ_NAME_SRV_ADDR=10.0.11.40/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
+		sed -i.bak 's/^ROCKETMQ_BROKER_ADDR=.*/ROCKETMQ_BROKER_ADDR=10.0.11.40/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
+	fi
+	@echo "🔍 检查 ttpos-bmp/.env 文件是否存在"
+	if [ -f "ttpos-bmp/.env" ]; then \
+		sed -i.bak 's/^DB_HOST=.*/DB_HOST=$(LOCAL_IP)/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
+		if [ -f ".env" ]; then \
+			echo "🔄 从上级目录的 .env 文件同步数据库密码..."; \
+			PARENT_DB_PASSWORD=$$(grep '^DB_PASSWORD=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' ' || echo ""); \
+			PARENT_DB_ROOT_PASSWORD=$$(grep '^DB_ROOT_PASSWORD=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' ' || echo ""); \
+			if [ "$$PARENT_DB_PASSWORD" != "" ]; then \
+				sed -i.bak "s/^DB_PASSWORD=.*/DB_PASSWORD=$$PARENT_DB_PASSWORD/" ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
+				echo "✅ 已同步 DB_PASSWORD"; \
+			fi; \
+			if [ "$$PARENT_DB_ROOT_PASSWORD" != "" ]; then \
+				sed -i.bak "s/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD=$$PARENT_DB_ROOT_PASSWORD/" ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
+				echo "✅ 已同步 DB_ROOT_PASSWORD"; \
+			fi; \
+		fi; \
+		sed -i.bak 's/^REDIS_HOST=.*/REDIS_HOST=$(LOCAL_IP),$(LOCAL_IP),$(LOCAL_IP)/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
+		sed -i.bak 's/^REDIS_PORT=.*/REDIS_PORT=7001,7002,7003/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
+		sed -i.bak 's/^GRPC_ENDPOINTS=.*/GRPC_ENDPOINTS=$(LOCAL_IP)/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
 	fi
 
 # 构建前端

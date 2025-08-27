@@ -65,7 +65,7 @@ class Erpnext extends Controller
         $param = $this->postData();
         if (
             empty($param['uuid']) ||
-            empty($param['erpnext_site_code']) ||
+            !isset($param['erpnext_site_code']) ||
             empty($param['erpnext_company_abbr']) ||
             empty($param['password'])
         ) {
@@ -100,8 +100,7 @@ class Erpnext extends Controller
         $params = [
             'company_uuid' => $param['uuid'],
             'site_code' => $param['erpnext_site_code'],
-            'company_abbr' => $param['erpnext_company_abbr'],
-            'default_company_abbr' => $param['erpnext_default_company_abbr'],
+            'company_abbr' => $param['erpnext_company_abbr'], 
         ];
         $res = HttpHelp::postRequest('http://nginx/api/v1/admin/erpnext/shop/init', json_encode($params), [
             'X-API-KEY: ' . env('JWT_SECRET'),
@@ -212,7 +211,7 @@ class Erpnext extends Controller
      */
     function addPaymentMethod()
     {
-        $res = HttpHelp::postRequest('http://nginx/api/v1/admin/erpnext/payment_method/add', $this->postData(), [
+        $res = HttpHelp::postRequest('http://nginx/api/v1/admin/erpnext/payment_method/add', json_encode($this->postData()), [
             'X-API-KEY: ' . env('JWT_SECRET'),
             'Accept-Language: ' . request()->header('language'),
         ]);
@@ -223,6 +222,6 @@ class Erpnext extends Controller
         if ($res['code'] != 0) {
             return $this->renderError($res['message']);
         }
-        return $this->renderSuccess('', $res['data']);
+        return $this->renderSuccess('添加成功');
     }
 }
