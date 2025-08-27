@@ -2595,6 +2595,44 @@ definitions:
     - level_uuid
     - phone
     type: object
+  req.AddPaymentMethodReq:
+    properties:
+      checkout_show:
+        description: 结账显示
+        items:
+          type: string
+        type: array
+      company_uuid:
+        description: 公司UUID
+        type: integer
+      erpnext_payment:
+        description: 商家支付方式
+        type: string
+      fee:
+        description: 手续费
+        type: number
+      member_recharge_show:
+        description: 会员充值显示
+        items:
+          type: string
+        type: array
+      name:
+        description: 支付方式名称
+        type: string
+      sort:
+        description: 排序
+        type: integer
+      status:
+        description: '状态: 0-禁用 1-启用'
+        type: integer
+    required:
+    - company_uuid
+    - erpnext_payment
+    - fee
+    - name
+    - sort
+    - status
+    type: object
   req.AddReturnFoodReasonReq:
     properties:
       locale_name:
@@ -3016,16 +3054,12 @@ definitions:
       default_company_abbr:
         description: 默认公司缩写编码，用于同步单位和属性
         type: string
-      pos_profile_name:
-        description: Pos Profile名称
-        type: string
       site_code:
         description: 站点编码
         type: string
     required:
     - company_abbr
     - company_uuid
-    - pos_profile_name
     - site_code
     type: object
   req.InstantOrderFreeReq:
@@ -11714,6 +11748,55 @@ paths:
       summary: 支付方式列表
       tags:
       - 平台端.支付管理
+  /admin/erpnext/payment_method/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加支付方式
+      parameters:
+      - description: 支付方式请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.AddPaymentMethodReq'
+      - description: 支付方式请求
+        in: body
+        name: payment_method_req
+        required: true
+        schema:
+          $ref: '#/definitions/req.AddPaymentMethodReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 添加支付方式
+      tags:
+      - 平台端.支付管理
+  /admin/erpnext/payment_method/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取支付方式列表
+      parameters:
+      - description: 公司UUID
+        in: query
+        name: company_uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 获取支付方式列表
+      tags:
+      - 平台端.支付管理
   /admin/erpnext/shop/init:
     post:
       consumes:
@@ -11767,32 +11850,6 @@ paths:
           schema:
             $ref: '#/definitions/dto.Response'
       summary: 获取ERPNext站点公司名称
-      tags:
-      - 平台端.商家授权
-  /admin/erpnext/site/pos_profile:
-    get:
-      consumes:
-      - application/json
-      description: 获取ERPNext站点Pos Profile列表
-      parameters:
-      - description: ERPNext站点编码
-        in: query
-        name: site_code
-        required: true
-        type: string
-      - description: 公司缩写编码
-        in: query
-        name: company_abbr
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-      summary: 获取ERPNext站点Pos Profile列表
       tags:
       - 平台端.商家授权
   /assistant/base:

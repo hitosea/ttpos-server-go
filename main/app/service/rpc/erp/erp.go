@@ -12,40 +12,41 @@ import (
 
 	"google.golang.org/grpc/metadata"
 
-	cc "ttpos-server-go/pkg/context"
 	pkgCtx "ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 )
 
 type IErpSrv interface {
 	GetCompanyList(ctx context.Context, erpnextSiteCompanyReq req.ErpnextSiteCompanyReq) (resp.ErpnextSiteCompanyResp, error)
-	InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.InitShopResp, error)
+	InitShop(ctx pkgCtx.Context, initShopReq req.InitShopReq) (resp.InitShopResp, error)
 	GetUomList(ctx context.Context, getUomListReq req.GetUomListReq) (resp.GetUomListResp, error)
 	GetAttributeList(ctx context.Context, getAttributeListReq req.GetAttributeListReq) (resp.GetAttributeListResp, error)
-	SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.SyncUomAndAttributeReq) error
+	SyncUomAndAttribute(ctx pkgCtx.Context, syncUomAndAttributeReq req.SyncUomAndAttributeReq) error
 	GetPosProfileList(ctx context.Context, getPosProfileListReq req.GetPosProfileListReq) (resp.GetPosProfileListResp, error)
-	AddLianPayment(ctx cc.Context, addLianPaymentReq req.ErpnextSiteAddLianLianPaymentReq) error
+	AddLianPayment(ctx pkgCtx.Context, addLianPaymentReq req.ErpnextSiteAddLianLianPaymentReq) error
 	OpenPosEntry(ctx context.Context, openEntryReq req.OpenPosEntryReq) (string, error)
 	ClosePosEntry(ctx context.Context, closeEntryReq req.ClosePosEntryReq) (string, error)
 	SaveUom(ctx context.Context, saveUomReq req.SaveUomReq) error
 	SaveAttribute(ctx context.Context, saveAttributeReq req.SaveAttributeReq) error
 	SavePosInvoice(ctx pkgCtx.Context, savePosInvoiceReq req.SavePosInvoiceReq) (*selling.SavePosInvoiceResp, error)
 	ReturnPosInvoice(ctx pkgCtx.Context, returnPosInvoiceReq req.ReturnPosInvoiceReq) (*selling.ReturnPosInvoiceResp, error)
+	GetPaymentMethodList(ctx pkgCtx.Context, getPaymentReq req.GetPaymentMethodListReq) (*resp.GetPaymentMethodListResp, error)
+	AddPaymentMethod(ctx pkgCtx.Context, addPaymentMethodReq req.AddPaymentMethodReq) error
 
 	// 采购单
-	CreatePurchaseOrder(ctx cc.Context, createPurchaseOrderReq *stock.SaveMaterialRequestReq) (*stock.SaveMaterialRequestResp, error)
-	GetMaterialRequestList(ctx cc.Context, getMaterialRequestListReq *stock.GetMaterialRequestListReq) (*stock.GetMaterialRequestListResp, error)
-	SavePurchaseReceipt(ctx cc.Context, savePurchaseReceiptReq *buying.SavePurchaseReceiptReq) (*buying.SavePurchaseReceiptResp, error)
+	CreatePurchaseOrder(ctx pkgCtx.Context, createPurchaseOrderReq *stock.SaveMaterialRequestReq) (*stock.SaveMaterialRequestResp, error)
+	GetMaterialRequestList(ctx pkgCtx.Context, getMaterialRequestListReq *stock.GetMaterialRequestListReq) (*stock.GetMaterialRequestListResp, error)
+	SavePurchaseReceipt(ctx pkgCtx.Context, savePurchaseReceiptReq *buying.SavePurchaseReceiptReq) (*buying.SavePurchaseReceiptResp, error)
 
 	// 供应商
-	GetSupplierList(ctx cc.Context) (*buying.GetSupplierListResp, error)
+	GetSupplierList(ctx pkgCtx.Context) (*buying.GetSupplierListResp, error)
 
 	// 物品
-	AddMaterial(ctx cc.Context, params req.MaterialAddErpReq) (*item.ItemInfo, error)                     // 添加物品
-	AddProductBomCard(ctx cc.Context, params ProductBomCardAddErpReq) (*manufacturing.SaveBomResp, error) // 添加成本卡
-	AddProduct(ctx cc.Context, params req.ProductAddErpReq) (*item.ItemInfo, error)                       // 添加商品
-	AddPackage(ctx cc.Context, params req.PackageAddErpReq) (*item.ItemInfo, error)                       // 添加套餐
-	GetMaterialStockNum(ctx cc.Context) (*item.GetItemStockResp, error)                                   // 获取物品库存数量
+	AddMaterial(ctx pkgCtx.Context, params req.MaterialAddErpReq) (*item.ItemInfo, error)                     // 添加物品
+	AddProductBomCard(ctx pkgCtx.Context, params ProductBomCardAddErpReq) (*manufacturing.SaveBomResp, error) // 添加成本卡
+	AddProduct(ctx pkgCtx.Context, params req.ProductAddErpReq) (*item.ItemInfo, error)                       // 添加商品
+	AddPackage(ctx pkgCtx.Context, params req.PackageAddErpReq) (*item.ItemInfo, error)                       // 添加套餐
+	GetMaterialStockNum(ctx pkgCtx.Context) (*item.GetItemStockResp, error)                                   // 获取物品库存数量
 }
 type erpSrv struct {
 	dbm *database.DBManager

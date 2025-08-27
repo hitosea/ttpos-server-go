@@ -2,10 +2,13 @@ package erp
 
 import (
 	"context"
+	"slices"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-server-go/app/cloud"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/model"
 	pkgCtx "ttpos-server-go/pkg/context"
 
 	"ttpos-server-go/app/errors"
@@ -123,17 +126,18 @@ func (s *erpSrv) OpenPosEntry(ctx context.Context, openEntryReq req.OpenPosEntry
 	if err != nil {
 		return "", err
 	}
-	if res.Data != nil {
-		var openPosEntryResp selling.OpenPosEntryResp
-		if err := res.Data.UnmarshalTo(&openPosEntryResp); err != nil {
-			logger.Logger.Error("OpenPosEntry-UnmarshalTo", zap.Any("err", err))
-			return "", err
-		}
-		if openPosEntryResp.OpenPosEntryInfo != nil {
-			return openPosEntryResp.OpenPosEntryInfo.OpenPosEntryName, nil
-		}
+	if res.Data == nil {
+		return "", errors.New(res.Message)
 	}
-	return "", nil
+	var openPosEntryResp selling.OpenPosEntryResp
+	if err := res.Data.UnmarshalTo(&openPosEntryResp); err != nil {
+		logger.Logger.Error("OpenPosEntry-UnmarshalTo", zap.Any("err", err))
+		return "", err
+	}
+	if openPosEntryResp.OpenPosEntryInfo != nil {
+		return openPosEntryResp.OpenPosEntryInfo.OpenPosEntryName, nil
+	}
+	return "", errors.New(res.Message)
 }
 
 // ClosePosEntry 关账
@@ -254,4 +258,124 @@ func (s *erpSrv) ReturnPosInvoice(ctx pkgCtx.Context, returnPosInvoiceReq req.Re
 		return &returnPosInvoiceResp, nil
 	}
 	return nil, errors.WithMessage(errors.New("退款POS发票异常, data为空"))
+}
+
+func (s *erpSrv) GetPaymentMethodList(ctx pkgCtx.Context, getPaymentReq req.GetPaymentMethodListReq) (*resp.GetPaymentMethodListResp, error) {
+	company, err := repository.NewCompanyRepo(s.dbm.GetDB(0)).GetCompanyInfoByUuid(getPaymentReq.CompanyUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if company.Uuid == 0 || company.CompanySetting == nil || company.CompanySetting.Uuid == 0 {
+		return nil, errors.WithMessage(errors.New("商家信息异常"))
+	}
+	if !company.IsOpenErp() || company.CompanySetting.ErpnextSiteCode == "" {
+		return nil, errors.WithMessage(errors.New("商家erp未开启"))
+	}
+	client, conn, err := NewErpSellingClient()
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	defer conn.Close()
+
+	params := &selling.GetModeOfPaymentListReq{}
+	res, err := client.GetModeOfPaymentList(WithSiteCode(ctx.GetContext(), company.CompanySetting.ErpnextSiteCode), params)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if res.GetCode() != "0" {
+		return nil, errors.WithMessage(errors.New(res.Message))
+	}
+	if res.Data != nil {
+		var getModeOfPaymentListResp selling.GetModeOfPaymentListResp
+		if err := res.Data.UnmarshalTo(&getModeOfPaymentListResp); err != nil {
+			logger.Logger.Error("GetModeOfPaymentList-UnmarshalTo", zap.Any("err", err))
+			return nil, errors.WithMessage(err)
+		}
+		// 获取商家支付方式列表
+		paymentMethodList := repository.NewPaymentMethodRepo(s.dbm.GetDB(getPaymentReq.CompanyUuid)).GetPaymentMethodList()
+		var erpnextPayments []string
+		for _, paymentMethod := range paymentMethodList {
+			erpnextPayments = append(erpnextPayments, paymentMethod.ErpnextPayment)
+		}
+		// 获取支付方式列表
+		var paymentMethodListResp []resp.PaymentMethodInfo
+		for _, modeOfPayment := range getModeOfPaymentListResp.ModeOfPaymentList {
+			paymentMethodListResp = append(paymentMethodListResp, resp.PaymentMethodInfo{
+				Name:      modeOfPayment.Name,
+				IsAddable: !slices.Contains(erpnextPayments, modeOfPayment.Name),
+			})
+		}
+		return &resp.GetPaymentMethodListResp{List: paymentMethodListResp}, nil
+	}
+	return nil, errors.WithMessage(errors.New(res.Message))
+}
+
+func (s *erpSrv) AddPaymentMethod(ctx pkgCtx.Context, addPaymentMethodReq req.AddPaymentMethodReq) error {
+	db := s.dbm.GetDB(addPaymentMethodReq.CompanyUuid)
+	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(addPaymentMethodReq.CompanyUuid)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	if company.Uuid == 0 || company.CompanySetting == nil || company.CompanySetting.Uuid == 0 {
+		return errors.WithMessage(errors.New("商家信息异常"))
+	}
+	if !company.IsOpenErp() || company.CompanySetting.ErpnextSiteCode == "" {
+		return errors.WithMessage(errors.New("商家erp未开启"))
+	}
+	// 判断支付方式名称是否已经存在
+	var exists int64
+	db.Model(&model.PaymentMethod{}).Where("name = ? or erpnext_payment = ?", addPaymentMethodReq.Name, addPaymentMethodReq.ErpnextPayment).Scopes(repository.NotDeleted).Count(&exists)
+	if exists > 0 {
+		return errors.WithMessage(errors.New("支付方式已存在"))
+	}
+	client, conn, err := NewErpSellingClient()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	defer conn.Close()
+
+	params := &selling.CreatePaymentAccountReq{
+		CompanyAbbr: company.CompanySetting.ErpnextCompanyAbbr,
+		Branch:      company.CompanySetting.ErpnextBranchName,
+		PaymentType: addPaymentMethodReq.ErpnextPayment,
+	}
+	res, err := client.CreatePaymentAccount(WithSiteCode(ctx.GetContext(), company.CompanySetting.ErpnextSiteCode), params)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	if res.GetCode() != "0" {
+		return errors.WithMessage(errors.New(res.Message))
+	}
+	// 获取来源是1的支付方式code最大值
+	var maxCode = 20000
+	db.Model(&model.PaymentMethod{}).Where("source = ?", constant.PaymentMethodSourceDefault).Scopes(repository.NotDeleted).Select("ifnull(max(code), 20000) as code").Scan(&maxCode)
+
+	isShowCashier := 0
+	isShowAssistant := 0
+	isShowMemberRecharge := 0
+	if slices.Contains(addPaymentMethodReq.CheckoutShow, "cashier") {
+		isShowCashier = 1
+	}
+	if slices.Contains(addPaymentMethodReq.CheckoutShow, "assistant") {
+		isShowAssistant = 1
+	}
+	if slices.Contains(addPaymentMethodReq.CheckoutShow, "member_recharge") {
+		isShowMemberRecharge = 1
+	}
+	paymentMethod := model.PaymentMethod{
+		Name:                 addPaymentMethodReq.Name,
+		Code:                 maxCode + 100,
+		PaymentName:          addPaymentMethodReq.Name,
+		Source:               constant.PaymentMethodSourceDefault,
+		FeePercent:           *addPaymentMethodReq.Fee,
+		IsShowCashier:        isShowCashier,
+		IsShowAssistant:      isShowAssistant,
+		IsShowMemberRecharge: isShowMemberRecharge,
+		Status:               *addPaymentMethodReq.Status,
+		Sort:                 *addPaymentMethodReq.Sort,
+		DefaultImg:           "/image/pay/ja_pay.png",
+	}
+	// 添加支付方式到商家数据库
+	repository.NewPaymentMethodRepo(s.dbm.GetDB(addPaymentMethodReq.CompanyUuid)).CreatePaymentMethod(paymentMethod)
+	return nil
 }

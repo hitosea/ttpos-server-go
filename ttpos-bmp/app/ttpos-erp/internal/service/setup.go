@@ -36,9 +36,9 @@ type (
 		//   - req: 创建默认POS配置文件请求参数
 		//
 		// 返回：
-		//   - posFileId: POS配置文件名称
+		//   - posProfileName: POS配置文件名称
 		//   - err: 错误信息
-		CreateDefaultPosProfile(ctx context.Context, req *setup.CreateDefaultPosProfileReq) (posFileId string, err error)
+		CreateDefaultPosProfile(ctx context.Context, req *setup.CreateDefaultPosProfileReq) (posProfileName string, err error)
 		// InitShop 初始化店铺
 		// 参数：
 		//   - ctx: 上下文对象

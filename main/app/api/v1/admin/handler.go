@@ -55,35 +55,6 @@ func (h *Handler) GetErpnextSiteCompany(c *gin.Context) {
 	})
 }
 
-// 获取ERPNext站点Pos Profile列表
-// @Summary 获取ERPNext站点Pos Profile列表
-// @Description 获取ERPNext站点Pos Profile列表
-// @Tags 平台端.商家授权
-// @Accept json
-// @Produce json
-// @Param site_code query string true "ERPNext站点编码"
-// @Param company_abbr query string true "公司缩写编码"
-// @Success 200 {object} dto.Response
-// @Router /admin/erpnext/site/pos_profile [get]
-func (h *Handler) GetErpnextSitePosProfile(c *gin.Context) {
-	var sitePosProfileReq req.ErpnextSitePosProfileReq
-	if err := c.ShouldBindQuery(&sitePosProfileReq); err != nil {
-		helper.HandleValidationError(c, err, sitePosProfileReq, nil)
-		return
-	}
-	posProfileResp, err := erp.NewIErpSrv(h.dbm).GetPosProfileList(context.Background(), req.GetPosProfileListReq{
-		SiteCode:    sitePosProfileReq.SiteCode,
-		CompanyAbbr: sitePosProfileReq.CompanyAbbr,
-	})
-	if err != nil {
-		helper.ErrorWithMessage(c, constant.CodeFail, err)
-		return
-	}
-	helper.Success(c, gin.H{
-		"list": posProfileResp.List,
-	})
-}
-
 // 初始化店铺
 // @Summary 初始化店铺
 // @Description 初始化店铺
@@ -139,12 +110,64 @@ func (h *Handler) AddLianLianPayment(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// 获取支付方式列表
+// @Summary 获取支付方式列表
+// @Description 获取支付方式列表
+// @Tags 平台端.支付管理
+// @Accept json
+// @Produce json
+// @Param company_uuid query string true "公司UUID"
+// @Success 200 {object} dto.Response
+// @Router /admin/erpnext/payment_method/list [get]
+func (h *Handler) GetPaymentMethodList(c *gin.Context) {
+	var getPaymentListReq req.GetPaymentMethodListReq
+	if err := c.ShouldBindQuery(&getPaymentListReq); err != nil {
+		helper.HandleValidationError(c, err, getPaymentListReq, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	ctx.SetCompanyUuid(getPaymentListReq.CompanyUuid)
+	paymentList, err := erp.NewIErpSrv(h.dbm).GetPaymentMethodList(ctx, getPaymentListReq)
+	if err != nil {
+		helper.ErrorWithMessage(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, paymentList)
+}
+
+// 添加支付方式
+// @Summary 添加支付方式
+// @Description 添加支付方式
+// @Tags 平台端.支付管理
+// @Accept json
+// @Produce json
+// @Param data body req.AddPaymentMethodReq true "支付方式请求"
+// @Param payment_method_req body req.AddPaymentMethodReq true "支付方式请求"
+// @Success 200 {object} dto.Response
+// @Router /admin/erpnext/payment_method/add [post]
+func (h *Handler) AddPaymentMethod(c *gin.Context) {
+	var data req.AddPaymentMethodReq
+	if err := c.ShouldBindJSON(&data); err != nil {
+		helper.HandleValidationError(c, err, data, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	ctx.SetCompanyUuid(data.CompanyUuid)
+	err := erp.NewIErpSrv(h.dbm).AddPaymentMethod(ctx, data)
+	if err != nil {
+		helper.ErrorWithMessage(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, gin.H{}, "添加成功")
+}
+
 func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	wrapper := &Handler{
 		dbm: dbm,
 	}
 	router.GET("/erpnext/site/company", middleware.Internal(), wrapper.GetErpnextSiteCompany)
-	router.GET("/erpnext/site/pos_profile", middleware.Internal(), wrapper.GetErpnextSitePosProfile)
 	router.POST("/erpnext/shop/init", middleware.Internal(), wrapper.InitShop)
 	router.POST("/erpnext/lianlian/payment/add", middleware.Internal(), wrapper.AddLianLianPayment)
+	router.GET("/erpnext/payment_method/list", middleware.Internal(), wrapper.GetPaymentMethodList)
+	router.POST("/erpnext/payment_method/add", middleware.Internal(), wrapper.AddPaymentMethod)
 }

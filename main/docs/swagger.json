@@ -32,6 +32,81 @@
                 }
             }
         },
+        "/admin/erpnext/payment_method/add": {
+            "post": {
+                "description": "添加支付方式",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "平台端.支付管理"
+                ],
+                "summary": "添加支付方式",
+                "parameters": [
+                    {
+                        "description": "支付方式请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.AddPaymentMethodReq"
+                        }
+                    },
+                    {
+                        "description": "支付方式请求",
+                        "name": "payment_method_req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.AddPaymentMethodReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/erpnext/payment_method/list": {
+            "get": {
+                "description": "获取支付方式列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "平台端.支付管理"
+                ],
+                "summary": "获取支付方式列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "公司UUID",
+                        "name": "company_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/admin/erpnext/shop/init": {
             "post": {
                 "description": "初始化店铺",
@@ -104,45 +179,6 @@
                         "description": "父公司名称",
                         "name": "parent_company",
                         "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/admin/erpnext/site/pos_profile": {
-            "get": {
-                "description": "获取ERPNext站点Pos Profile列表",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "平台端.商家授权"
-                ],
-                "summary": "获取ERPNext站点Pos Profile列表",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ERPNext站点编码",
-                        "name": "site_code",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "公司缩写编码",
-                        "name": "company_abbr",
-                        "in": "query",
-                        "required": true
                     }
                 ],
                 "responses": {
@@ -27923,6 +27959,57 @@
                 }
             }
         },
+        "req.AddPaymentMethodReq": {
+            "type": "object",
+            "required": [
+                "company_uuid",
+                "erpnext_payment",
+                "fee",
+                "name",
+                "sort",
+                "status"
+            ],
+            "properties": {
+                "checkout_show": {
+                    "description": "结账显示",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "company_uuid": {
+                    "description": "公司UUID",
+                    "type": "integer"
+                },
+                "erpnext_payment": {
+                    "description": "商家支付方式",
+                    "type": "string"
+                },
+                "fee": {
+                    "description": "手续费",
+                    "type": "number"
+                },
+                "member_recharge_show": {
+                    "description": "会员充值显示",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "description": "支付方式名称",
+                    "type": "string"
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "状态: 0-禁用 1-启用",
+                    "type": "integer"
+                }
+            }
+        },
         "req.AddReturnFoodReasonReq": {
             "type": "object",
             "required": [
@@ -28517,7 +28604,6 @@
             "required": [
                 "company_abbr",
                 "company_uuid",
-                "pos_profile_name",
                 "site_code"
             ],
             "properties": {
@@ -28531,10 +28617,6 @@
                 },
                 "default_company_abbr": {
                     "description": "默认公司缩写编码，用于同步单位和属性",
-                    "type": "string"
-                },
-                "pos_profile_name": {
-                    "description": "Pos Profile名称",
                     "type": "string"
                 },
                 "site_code": {

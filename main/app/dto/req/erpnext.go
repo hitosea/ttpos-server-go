@@ -15,11 +15,10 @@ type ErpnextSitePosProfileReq struct {
 }
 
 type InitShopReq struct {
-	SiteCode           string `form:"site_code" json:"site_code" binding:"required"`               // 站点编码
-	CompanyAbbr        string `form:"company_abbr" json:"company_abbr" binding:"required"`         // 公司缩写编码
-	CompanyUuid        uint64 `form:"company_uuid" json:"company_uuid" binding:"required"`         // 公司UUID
-	DefaultCompanyAbbr string `form:"default_company_abbr" json:"default_company_abbr"`            // 默认公司缩写编码，用于同步单位和属性
-	PosProfileName     string `form:"pos_profile_name" json:"pos_profile_name" binding:"required"` // Pos Profile名称
+	SiteCode           string `form:"site_code" json:"site_code" binding:"required"`       // 站点编码
+	CompanyAbbr        string `form:"company_abbr" json:"company_abbr" binding:"required"` // 公司缩写编码
+	CompanyUuid        uint64 `form:"company_uuid" json:"company_uuid" binding:"required"` // 公司UUID
+	DefaultCompanyAbbr string `form:"default_company_abbr" json:"default_company_abbr"`    // 默认公司缩写编码，用于同步单位和属性
 }
 
 type GetUomListReq struct {
@@ -128,4 +127,19 @@ type ReturnPosInvoiceReq struct {
 	Items            []*selling.PosInvoiceItem    `form:"items" json:"items" binding:"required"`                             // 商品项目列表 必填
 	Taxes            []*selling.PosInvoiceTax     `form:"taxes" json:"taxes" binding:"required"`                             // 税费列表 必填
 	Payments         []*selling.PosInvoicePayment `form:"payments" json:"payments" binding:"required"`                       // 付款列表 必填
+}
+
+type GetPaymentMethodListReq struct {
+	CompanyUuid uint64 `form:"company_uuid" json:"company_uuid" binding:"required"` // 公司UUID
+}
+
+type AddPaymentMethodReq struct {
+	CompanyUuid        uint64   `json:"company_uuid" binding:"required"`    // 公司UUID
+	ErpnextPayment     string   `json:"erpnext_payment" binding:"required"` // 商家支付方式
+	Name               string   `json:"name" binding:"required"`            // 支付方式名称
+	Fee                *float64 `json:"fee" binding:"required"`             // 手续费
+	Sort               *int     `json:"sort" binding:"required"`            // 排序
+	Status             *int     `json:"status" binding:"required"`          // 状态: 0-禁用 1-启用
+	CheckoutShow       []string `json:"checkout_show"`                      // 结账显示
+	MemberRechargeShow []string `json:"member_recharge_show"`               // 会员充值显示
 }
