@@ -4,7 +4,7 @@ services:
     container_name: "ttpos-bmp-takeout-${APP_ID}"
     image: hub.hitosea.com/ttpos-server/ttpos-server-takeout:${IMAGE_VERSION}
     environment:
-#      GRPC_ENDPOINTS: "localhost:14032"  #生产环境调成服务IP
+      GRPC_ENDPOINTS: "${GRPC_ENDPOINTS}:14032"  #生产环境调成服务IP
       SW_AGENT_NAME: "ttpos-bmp-takeout"
       SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
       SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
@@ -23,7 +23,7 @@ services:
     container_name: "ttpos-bmp-shop-${APP_ID}"
     image: hub.hitosea.com/ttpos-server/ttpos-server-shop:${IMAGE_VERSION}
     environment:
-#      GRPC_ENDPOINTS: "localhost:14012"  #生产环境调成服务IP
+      GRPC_ENDPOINTS: "${GRPC_ENDPOINTS}:14012"  #生产环境调成服务IP
       SW_AGENT_NAME: "ttpos-bmp-shop"
       SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
       SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
@@ -42,7 +42,7 @@ services:
     container_name: "ttpos-bmp-erp-${APP_ID}"
     image: hub.hitosea.com/ttpos-server/ttpos-server-erp:${IMAGE_VERSION}
     environment:
-#      GRPC_ENDPOINTS: "localhost:14022"  #生产环境调成服务IP
+      GRPC_ENDPOINTS: "${GRPC_ENDPOINTS}:14022"  #生产环境调成服务IP
       SW_AGENT_NAME: "ttpos-bmp-erp"
       SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
       SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
@@ -61,7 +61,7 @@ services:
     container_name: "ttpos-bmp-manager-${APP_ID}"
     image: hub.hitosea.com/ttpos-server/ttpos-server-manager:${IMAGE_VERSION}
     environment:
-#      GRPC_ENDPOINTS: "localhost:14002"  #生产环境调成服务IP
+      GRPC_ENDPOINTS: "${GRPC_ENDPOINTS}:14002"  #生产环境调成服务IP
       SW_AGENT_NAME: "ttpos-bmp-manager"
       SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
       SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
