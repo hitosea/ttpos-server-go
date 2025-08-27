@@ -4259,6 +4259,7 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 		}
 		flavorListResult = *result
 		flavorListResult.Status = req.Status
+		flavorListResult.StockNum = 99999999
 		// 商品属性, 可选
 		if len(req.Attributes) > 0 {
 			var attributes []CheckProductAttributeGroupParam
@@ -4507,7 +4508,7 @@ func (s *productSrv) EditProductPackage(ctx context.Context, tx *gorm.DB, req re
 	if err != nil {
 		return nil, errors.WithMessage(err, "保存多语言名称失败")
 	}
-	productPackageRepo.UpdateProductPackage(map[string]any{
+	err = productPackageRepo.UpdateProductPackage(map[string]any{
 		"name":                  req.LocaleName.ToJson(),
 		"image_file_uuid":       req.ImageFileUuid,
 		"deduct_stock_type":     req.DeductStockType,
@@ -4773,7 +4774,6 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 					"name":                 flavor.Name,
 					"product_flavor_uuid":  flavor.Uuid,
 					"product_package_uuid": productPackageUuid,
-					"stock_num":            flavorListResult.StockNum,
 					"barcode_value":        flavor.BarcodeValue,
 					"status":               flavorListResult.Status,
 					"is_open_stock":        1,
