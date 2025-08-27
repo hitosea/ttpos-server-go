@@ -29,7 +29,7 @@
                 <el-table-column prop="spec.price" :label="$t('规格价格')" width="100">
                   <template #default="scope">
                     <el-form-item :prop="`tableForm.products[${scope.$index}].spec.price`" size="small" class="price-input">
-                      <numInput v-model="scope.row.spec.price" :min="0" :max="999999999" :precision="2" />
+                      <numInput v-model="scope.row.spec.price" :min="0" :max="100000000" :precision="2" />
                     </el-form-item>
                   </template>
                 </el-table-column>

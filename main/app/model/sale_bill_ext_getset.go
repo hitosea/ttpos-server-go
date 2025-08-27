@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/utils"
 
@@ -206,6 +207,18 @@ func (model *SaleBill) GetSaleOrder(saleOrderUuid uint64) *SaleOrder {
 			}
 			return saleOrder
 		}
+	}
+	return nil
+}
+
+// saleBill的商品不能超过1000项。
+func (model *SaleBill) CheckSaleOrderProductNum() error {
+	num := 0
+	for _, saleOrder := range model.SaleOrders {
+		num += len(saleOrder.SaleOrderProducts)
+	}
+	if num > 1000 {
+		return errors.WithMessage(errors.NewWithCode(constant.CodeOrderCheckProductLimitOut, "最多可下单1000种商品"))
 	}
 	return nil
 }

@@ -327,8 +327,8 @@ class Product extends ProductModel
     private function alertProductData($data)
     {
         $limits = [
-            'price' => ['limit' => 1000000, 'message' => '价格不能超过1000000'],
-            'product_price' => ['limit' => 1000000, 'message' => '价格不能超过1000000'],
+            'price' => ['limit' => 100000000, 'message' => '价格不能超过100000000'],
+            'product_price' => ['limit' => 100000000, 'message' => '价格不能超过100000000'],
             'stock_num' => ['limit' => 99999999, 'message' => '库存不能超过99999999']
         ];
 

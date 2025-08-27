@@ -28,11 +28,11 @@
       :rules="[{ required: true, message: $t('请填写商品价格') }]"
       prop="model.sku[0].product_price"
     >
-      <numInput :min="0" :max="100000000" v-model="form.model.sku[0].product_price" :placeholder="$t('请填写商品价格')" :disabled="erp_is_open == 1" class="max-w460"></numInput>
+      <el-input-number :min="0" :max="100000000" :controls="false" v-model="form.model.sku[0].product_price" :placeholder="$t('请填写商品价格')" class="max-w460"></el-input-number>
     </el-form-item>
 
     <el-form-item for="no_click" v-if="baseSale == '1'" :label="$t('采购单价：')" width="80">
-      <numInput :min="0" :max="100000000" v-model="form.model.sku[0].purchase_price" :placeholder="$t('请填写采购单价')" :disabled="erp_is_open == 1" class="max-w460"></numInput>
+      <el-input-number :min="0" :max="100000000" :controls="false" v-model="form.model.sku[0].purchase_price" :placeholder="$t('请填写采购单价')" class="max-w460"></el-input-number>
     </el-form-item>
 
     <el-form-item for="no_click" :label="$t('库存数量：')" v-if="form.model.type == 10" :rules="[{ required: true, message: $t('请填写库存数量') }]" prop="model.sku[0].stock_num">

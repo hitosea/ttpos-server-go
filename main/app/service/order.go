@@ -3948,8 +3948,8 @@ func getSaleOrderFromDB(ctx context.Context, db *gorm.DB, saleBillUuid, saleOrde
 
 // OrderProductChangePrice  修改订单商品价格
 func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error) {
-	if req.Price < 0 || req.Price > 1000000 {
-		return nil, errors.New("请输入0-1000000间的价格")
+	if req.Price < 0 || req.Price > 100000000 {
+		return nil, errors.New("请输入0-100000000间的价格")
 	}
 
 	// 禁止并发操作
