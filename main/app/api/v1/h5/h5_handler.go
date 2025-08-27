@@ -343,6 +343,95 @@ func (h *Handler) OrderCartProductPackageAdd(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderCartProductFlavorAndAttribute 查询购物车商品“规格/属性”
+// @Summary 查询购物车商品“规格/属性”
+// @Description 查询购物车商品“规格/属性”
+// @Tags 扫码点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query req.OrderCartProductFlavorAndAttributeReq true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.ProductFlavorAndAttributeRes}
+// @Failure 404 {object} nil "未找到"
+// @Router /h5/desk/order/cart/product/flavor_and_attribute [get]
+func (h *Handler) OrderCartProductFlavorAndAttribute(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartProductFlavorAndAttributeReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	// 获取桌台的账单uuid和第一子单的uuid
+	saleBillUuid, saleOrderUuid, err := h.orderSrv.GetSaleBillUuidAndSaleOrderUuid(ctx, ctx.GetDeskUuid())
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 都是加购到第一个子单中
+	params.SaleOrderUuid = saleOrderUuid
+	params.SaleBillUuid = saleBillUuid
+	// 查询购物车商品“规格/属性”
+	res, err := h.orderSrv.OrderCartProductFlavorAndAttribute(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderCartProductFlavorAndAttributeChange 修改购物车商品“规格/属性”
+// @Summary 修改购物车商品“规格/属性”
+// @Description 修改购物车商品“规格/属性”
+// @Tags 扫码点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderCartProductFlavorAndAttributeChangeReq true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /h5/desk/order/cart/product/flavor_and_attribute [post]
+func (h *Handler) OrderCartProductFlavorAndAttributeChange(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartProductFlavorAndAttributeChangeReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	// 获取桌台的账单uuid和第一子单的uuid
+	saleBillUuid, saleOrderUuid, err := h.orderSrv.GetSaleBillUuidAndSaleOrderUuid(ctx, ctx.GetDeskUuid())
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 都是加购到第一个子单中
+	params.SaleOrderUuid = saleOrderUuid
+	params.SaleBillUuid = saleBillUuid
+	// 修改购物车商品“规格/属性”
+	shopCart, err := h.orderSrv.OrderCartProductFlavorAndAttributeChange(ctx, params)
+	if err != nil {
+		if strings.Contains(err.Error(), errors.ErrProductPriceChanged.Error()) {
+			res := &resp.DeskPing{
+				Product: shopCart.Product,
+			}
+			helper.ErrorWithData(c, constant.CodeOrderCheckProductPriceChanged, res, fmt.Errorf("%s", i18n.Translate(ctx.GetLanguage(), err.Error())))
+			return
+		}
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // GetOrderCartProductUnordered 查询未下单商品
 // @Summary 查询未下单商品
 // @Description 查询未下单商品
@@ -667,22 +756,24 @@ func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache
 	// 需要认证
 	privateApi := router.Group("", middleware.DeskAuth(authSrv, dbm))
 	{
-		privateApi.GET("/base", wrapper.BaseInfo)                                                   // 获取桌码基础信息
-		privateApi.GET("/buffet/list", wrapper.GetBuffetList)                                       // 获取自助餐套餐列表
-		privateApi.POST("/desk/open", wrapper.OpenDesk)                                             // 开台
-		privateApi.GET("/product/category/list", wrapper.GetProductCategoryList)                    // 获取收银产品类别列表
-		privateApi.GET("/product/list", wrapper.GetProductList)                                     // 获取收银产品列表
-		privateApi.POST("/call", wrapper.Call)                                                      // 发起呼叫
-		privateApi.POST("/remark", wrapper.OrderProductRemark)                                      // 给商品添加备注
-		privateApi.POST("/order/cart/product/add", wrapper.OrderCartProductAdd)                     // 向购物车添加商品
-		privateApi.POST("/desk/order/cart/product_package/add", wrapper.OrderCartProductPackageAdd) // 向购物车添加套餐
-		privateApi.GET("/order/cart/product/unordered/list", wrapper.GetOrderCartProductUnordered)  // 查询购物车未下单商品列表
-		privateApi.GET("/order/cart/product/ordered/list", wrapper.GetOrderCartProductOrdered)      // 查询购物车已下单商品列表
-		privateApi.POST("/order/cart/product/num", wrapper.OrderCartProductNum)                     // 修改购物车商品数量
-		privateApi.POST("/order/cart/confirm", wrapper.ConfirmOrder)                                // 确认下单
-		privateApi.GET("/desk/order/buffet/product/list", wrapper.GetDeskBuffetProductList)         // 获取自助餐商品列表
-		privateApi.POST("/desk/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)              // 确认必点商品
-		privateApi.GET("/desk/ping", wrapper.GetDeskPing)                                           // 定时获取桌台信息
+		privateApi.GET("/base", wrapper.BaseInfo)                                                                          // 获取桌码基础信息
+		privateApi.GET("/buffet/list", wrapper.GetBuffetList)                                                              // 获取自助餐套餐列表
+		privateApi.POST("/desk/open", wrapper.OpenDesk)                                                                    // 开台
+		privateApi.GET("/product/category/list", wrapper.GetProductCategoryList)                                           // 获取收银产品类别列表
+		privateApi.GET("/product/list", wrapper.GetProductList)                                                            // 获取收银产品列表
+		privateApi.POST("/call", wrapper.Call)                                                                             // 发起呼叫
+		privateApi.POST("/remark", wrapper.OrderProductRemark)                                                             // 给商品添加备注
+		privateApi.POST("/order/cart/product/add", wrapper.OrderCartProductAdd)                                            // 向购物车添加商品
+		privateApi.POST("/desk/order/cart/product_package/add", wrapper.OrderCartProductPackageAdd)                        // 向购物车添加套餐
+		privateApi.GET("/desk/order/cart/product/flavor_and_attribute", wrapper.OrderCartProductFlavorAndAttribute)        // 查询购物车商品“规格/属性”
+		privateApi.POST("/desk/order/cart/product/flavor_and_attribute", wrapper.OrderCartProductFlavorAndAttributeChange) // 修改购物车商品“规格/属性”
+		privateApi.GET("/order/cart/product/unordered/list", wrapper.GetOrderCartProductUnordered)                         // 查询购物车未下单商品列表
+		privateApi.GET("/order/cart/product/ordered/list", wrapper.GetOrderCartProductOrdered)                             // 查询购物车已下单商品列表
+		privateApi.POST("/order/cart/product/num", wrapper.OrderCartProductNum)                                            // 修改购物车商品数量
+		privateApi.POST("/order/cart/confirm", wrapper.ConfirmOrder)                                                       // 确认下单
+		privateApi.GET("/desk/order/buffet/product/list", wrapper.GetDeskBuffetProductList)                                // 获取自助餐商品列表
+		privateApi.POST("/desk/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)                                     // 确认必点商品
+		privateApi.GET("/desk/ping", wrapper.GetDeskPing)                                                                  // 定时获取桌台信息
 		// 通过product_package_uuid获取该商品的选购详情，如某个规格属性加料的组合被选购了多少各
 		privateApi.GET("/product/package/detail", wrapper.GetProductPackageDetail) // 获取商品选购详情
 	}
