@@ -540,12 +540,12 @@ type POSInvoiceItem struct {
 	DiscountAmount            float64 `json:"discount_amount,omitempty"`             // 折扣金额
 	DistributedDiscountAmount float64 `json:"distributed_discount_amount,omitempty"` // 分配折扣金额
 	BaseRateWithMargin        float64 `json:"base_rate_with_margin,omitempty"`       // 基础含利润率费率
-	Rate                      float64 `json:"rate,omitempty"`                        // 费率
-	Amount                    float64 `json:"amount,omitempty"`                      // 金额
-	BaseRate                  float64 `json:"base_rate,omitempty"`                   // 基础费率
-	BaseAmount                float64 `json:"base_amount,omitempty"`                 // 基础金额
+	Rate                      float64 `json:"rate"`                                  // 费率, 可以为0
+	Amount                    float64 `json:"amount"`                                // 金额，可以为0
+	BaseRate                  float64 `json:"base_rate"`                             // 基础费率，可以为0
+	BaseAmount                float64 `json:"base_amount"`                           // 基础金额，可以为0
 	PricingRules              string  `json:"pricing_rules,omitempty"`               // 定价规则
-	IsFreeItem                int     `json:"is_free_item,omitempty"`                // 是否为免费商品
+	IsFreeItem                bool    `json:"is_free_item,omitempty"`                // 是否为免费商品
 	GrantCommission           int     `json:"grant_commission,omitempty"`            // 是否授予佣金
 	NetRate                   float64 `json:"net_rate,omitempty"`                    // 净费率
 	NetAmount                 float64 `json:"net_amount,omitempty"`                  // 净金额
@@ -585,7 +585,7 @@ type POSInvoicePayment struct {
 	Idx           int     `json:"idx,omitempty"`             // 索引
 	Default       int     `json:"default,omitempty"`         // 是否默认
 	ModeOfPayment string  `json:"mode_of_payment,omitempty"` // 支付方式
-	Amount        float64 `json:"amount,omitempty"`          // 金额
+	Amount        float64 `json:"amount"`                    // 金额，可以为0
 	Account       string  `json:"account,omitempty"`         // 账户
 	Type          string  `json:"type,omitempty"`            // 类型
 	BaseAmount    float64 `json:"base_amount,omitempty"`     // 基础金额
@@ -600,7 +600,7 @@ type POSInvoicePayment struct {
 type POSInvoiceTax struct {
 	ChargeType  string  `json:"charge_type,omitempty"`  // 计费类型
 	AccountHead string  `json:"account_head,omitempty"` // 会计科目
-	Rate        float64 `json:"rate,omitempty"`         // 税率
-	TaxAmount   float64 `json:"tax_amount,omitempty"`   // 税费金额
+	Rate        float64 `json:"rate"`                   // 税率, 可以为0
+	TaxAmount   float64 `json:"tax_amount"`             // 税费金额, 可以为0
 	Description string  `json:"description,omitempty"`  // 描述
 }

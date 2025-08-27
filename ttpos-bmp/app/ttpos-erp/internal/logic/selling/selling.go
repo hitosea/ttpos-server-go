@@ -806,14 +806,26 @@ func (s *sSelling) buildPosInvoice(req *selling.SavePosInvoiceReq, companyName s
 func (s *sSelling) buildInvoiceItems(items []*selling.PosInvoiceItem) []erp.POSInvoiceItem {
 	invoiceItems := make([]erp.POSInvoiceItem, 0, len(items))
 	for _, item := range items {
-		invoiceItems = append(invoiceItems, erp.POSInvoiceItem{
+		// 构建发票项目
+		invoiceItem := erp.POSInvoiceItem{
 			ItemCode:    item.ItemCode,
 			Qty:         item.Qty,
 			Rate:        item.Rate,
 			Amount:      item.Amount,
 			Description: item.Description,
 			Uom:         item.Uom,
-		})
+			IsFreeItem:  item.IsFreeItem,
+		}
+		//如果是免费物品，金额为0
+		if item.IsFreeItem {
+			invoiceItem.Rate = 0
+			invoiceItem.BaseRate = 0
+			invoiceItem.BaseAmount = 0
+			invoiceItem.Amount = 0
+			invoiceItem.DiscountAmount = item.Amount
+			invoiceItem.DiscountPercentage = 100
+		}
+		invoiceItems = append(invoiceItems, invoiceItem)
 	}
 	return invoiceItems
 }
