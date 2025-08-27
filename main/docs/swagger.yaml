@@ -3054,16 +3054,12 @@ definitions:
       default_company_abbr:
         description: 默认公司缩写编码，用于同步单位和属性
         type: string
-      pos_profile_name:
-        description: Pos Profile名称
-        type: string
       site_code:
         description: 站点编码
         type: string
     required:
     - company_abbr
     - company_uuid
-    - pos_profile_name
     - site_code
     type: object
   req.InstantOrderFreeReq:
@@ -11854,32 +11850,6 @@ paths:
           schema:
             $ref: '#/definitions/dto.Response'
       summary: 获取ERPNext站点公司名称
-      tags:
-      - 平台端.商家授权
-  /admin/erpnext/site/pos_profile:
-    get:
-      consumes:
-      - application/json
-      description: 获取ERPNext站点Pos Profile列表
-      parameters:
-      - description: ERPNext站点编码
-        in: query
-        name: site_code
-        required: true
-        type: string
-      - description: 公司缩写编码
-        in: query
-        name: company_abbr
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-      summary: 获取ERPNext站点Pos Profile列表
       tags:
       - 平台端.商家授权
   /assistant/base:

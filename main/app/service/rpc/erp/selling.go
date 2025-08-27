@@ -277,10 +277,7 @@ func (s *erpSrv) GetPaymentMethodList(ctx pkgCtx.Context, getPaymentReq req.GetP
 	}
 	defer conn.Close()
 
-	params := &selling.GetModeOfPaymentListReq{
-		CompanyAbbr: company.CompanySetting.ErpnextCompanyAbbr,
-		Branch:      company.CompanySetting.ErpnextBranchName,
-	}
+	params := &selling.GetModeOfPaymentListReq{}
 	res, err := client.GetModeOfPaymentList(WithSiteCode(ctx.GetContext(), company.CompanySetting.ErpnextSiteCode), params)
 	if err != nil {
 		return nil, errors.WithMessage(err)
@@ -295,7 +292,7 @@ func (s *erpSrv) GetPaymentMethodList(ctx pkgCtx.Context, getPaymentReq req.GetP
 			return nil, errors.WithMessage(err)
 		}
 		// 获取商家支付方式列表
-		paymentMethodList := repository.NewPaymentMethodRepo(s.dbm.GetDB(0)).GetPaymentMethodList()
+		paymentMethodList := repository.NewPaymentMethodRepo(s.dbm.GetDB(getPaymentReq.CompanyUuid)).GetPaymentMethodList()
 		var erpnextPayments []string
 		for _, paymentMethod := range paymentMethodList {
 			erpnextPayments = append(erpnextPayments, paymentMethod.ErpnextPayment)
@@ -304,8 +301,8 @@ func (s *erpSrv) GetPaymentMethodList(ctx pkgCtx.Context, getPaymentReq req.GetP
 		var paymentMethodListResp []resp.PaymentMethodInfo
 		for _, modeOfPayment := range getModeOfPaymentListResp.ModeOfPaymentList {
 			paymentMethodListResp = append(paymentMethodListResp, resp.PaymentMethodInfo{
-				Name:   modeOfPayment.Name,
-				IsUsed: slices.Contains(erpnextPayments, modeOfPayment.Name),
+				Name:      modeOfPayment.Name,
+				IsAddable: !slices.Contains(erpnextPayments, modeOfPayment.Name),
 			})
 		}
 		return &resp.GetPaymentMethodListResp{List: paymentMethodListResp}, nil
@@ -314,7 +311,8 @@ func (s *erpSrv) GetPaymentMethodList(ctx pkgCtx.Context, getPaymentReq req.GetP
 }
 
 func (s *erpSrv) AddPaymentMethod(ctx pkgCtx.Context, addPaymentMethodReq req.AddPaymentMethodReq) error {
-	company, err := repository.NewCompanyRepo(s.dbm.GetDB(0)).GetCompanyInfoByUuid(addPaymentMethodReq.CompanyUuid)
+	db := s.dbm.GetDB(addPaymentMethodReq.CompanyUuid)
+	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(addPaymentMethodReq.CompanyUuid)
 	if err != nil {
 		return errors.WithMessage(err)
 	}
@@ -323,6 +321,12 @@ func (s *erpSrv) AddPaymentMethod(ctx pkgCtx.Context, addPaymentMethodReq req.Ad
 	}
 	if !company.IsOpenErp() || company.CompanySetting.ErpnextSiteCode == "" {
 		return errors.WithMessage(errors.New("商家erp未开启"))
+	}
+	// 判断支付方式名称是否已经存在
+	var exists int64
+	db.Model(&model.PaymentMethod{}).Where("name = ? or erpnext_payment = ?", addPaymentMethodReq.Name, addPaymentMethodReq.ErpnextPayment).Scopes(repository.NotDeleted).Count(&exists)
+	if exists > 0 {
+		return errors.WithMessage(errors.New("支付方式已存在"))
 	}
 	client, conn, err := NewErpSellingClient()
 	if err != nil {
@@ -343,8 +347,6 @@ func (s *erpSrv) AddPaymentMethod(ctx pkgCtx.Context, addPaymentMethodReq req.Ad
 		return errors.WithMessage(errors.New(res.Message))
 	}
 	// 获取来源是1的支付方式code最大值
-
-	db := s.dbm.GetDB(addPaymentMethodReq.CompanyUuid)
 	var maxCode = 20000
 	db.Model(&model.PaymentMethod{}).Where("source = ?", constant.PaymentMethodSourceDefault).Scopes(repository.NotDeleted).Select("ifnull(max(code), 20000) as code").Scan(&maxCode)
 
