@@ -3888,6 +3888,7 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 		CategoryName: productPackage.ProductCategory.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 		UnitUuid:     productPackage.ProductUnit.Uuid,
 		UnitName:     productPackage.ProductUnit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+		Price:        &productPackage.Price,
 
 		TakeoutTaxUuid: productPackage.TakeoutTax.Uuid,
 		TakeoutTaxName: productPackage.TakeoutTax.Name,
