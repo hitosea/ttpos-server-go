@@ -104,8 +104,7 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	translateClient := utils.NewTranslateClient()
 	uomList, err := s.GetUomList(context.Background(), req.GetUomListReq{
-		SiteCode:    syncUomAndAttributeReq.SiteCode,
-		CompanyAbbr: syncUomAndAttributeReq.CompanyAbbr,
+		SiteCode: syncUomAndAttributeReq.SiteCode,
 	})
 	if err != nil {
 		logger.Logger.Error("SyncUomAndAttribute-GetUomList", zap.Any("err", err))
@@ -119,8 +118,7 @@ func (s *erpSrv) SyncUomAndAttribute(ctx cc.Context, syncUomAndAttributeReq req.
 		})
 	}
 	attributeGroupList, err := s.GetAttributeList(context.Background(), req.GetAttributeListReq{
-		SiteCode:    syncUomAndAttributeReq.SiteCode,
-		CompanyAbbr: syncUomAndAttributeReq.CompanyAbbr,
+		SiteCode: syncUomAndAttributeReq.SiteCode,
 	})
 	if err != nil {
 		logger.Logger.Error("SyncUomAndAttribute-GetAttributeList", zap.Any("err", err))

@@ -15,10 +15,20 @@ type MaterialCategoryListReq struct {
 
 // MaterialListReq 物品列表查询
 type MaterialListReq struct {
-	dto.PageReq         // 分页参数
-	Keyword      string `form:"keyword" json:"keyword"`             // 关键字
-	Status       int    `form:"status" json:"status"`               // 状态，0-全部 1-启用 2-停用
-	CategoryUuid uint64 `form:"category_uuid" json:"category_uuid"` // 分类UUID
+	dto.PageReq            // 分页参数
+	Keyword       string   `form:"keyword" json:"keyword"`               // 关键字
+	Status        int      `form:"status" json:"status"`                 // 状态，0-全部 1-启用 2-停用
+	CategoryUuids []uint64 `form:"category_uuids" json:"category_uuids"` // 分类UUID列表,多选时
+}
+
+func (r *MaterialListReq) GetCategoryUuids() []uint64 {
+	list := make([]uint64, 0)
+	for i := range r.CategoryUuids {
+		if r.CategoryUuids[i] != 0 {
+			list = append(list, r.CategoryUuids[i])
+		}
+	}
+	return list
 }
 
 // MaterialDetailReq 物品详情查询

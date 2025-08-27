@@ -72,8 +72,8 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			return db.Where("name LIKE ? OR code LIKE ? OR barcode_value LIKE ?", "%"+req.Keyword+"%", "%"+req.Keyword+"%", "%"+req.Keyword+"%")
 		}))
 	}
-	if req.CategoryUuid != 0 {
-		dbOptions = append(dbOptions, commonRepo.WhereByCategoryUuid(req.CategoryUuid))
+	if len(req.CategoryUuids) > 0 {
+		dbOptions = append(dbOptions, commonRepo.WhereByCategoryUuids(req.CategoryUuids))
 	}
 	if req.Status != 0 {
 		dbOptions = append(dbOptions, commonRepo.WhereByStatus(uint(req.Status)))
@@ -1113,6 +1113,7 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 		}
 
 		// 创建成本卡
+		productBomCardUuid, _ := utils.GetID()
 		nameUuid, _ := utils.GetID()
 		multiLanguageName := model.MultiLanguageName{}
 		multiLanguageName.InitByLocaleResponse(req.MaterialAddReq.LocaleName)
@@ -1123,7 +1124,7 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 		}
 		materialList := []*model.RelatedMaterial{}
 		materialList = append(materialList, &model.RelatedMaterial{
-			RelatedUuid:            req.RelatedUuid,
+			RelatedUuid:            productBomCardUuid,
 			MaterialUuid:           material.Uuid,
 			Num:                    req.Num,
 			UnitUuid:               material.UnitUuid,
@@ -1134,7 +1135,6 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 			Material:               material,
 		})
 
-		productBomCardUuid, _ := utils.GetID()
 		productBomCard := model.ProductBomCard{
 			BaseModel: model.BaseModel{
 				Uuid: productBomCardUuid,

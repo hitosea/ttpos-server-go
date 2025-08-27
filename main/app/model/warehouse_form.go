@@ -142,8 +142,9 @@ type ProductBomMaterials struct {
 }
 
 type ErpProductBomMaterials struct {
-	ErpCode string  `json:"erp_code"`
-	Num     float64 `json:"num"`
+	ErpCode string  `json:"erp_code"` // 原材料erp编码
+	Num     float64 `json:"num"`      // 原材料数量
+	Uom     string  `json:"uom"`      // 单位
 }
 
 type ProductList []*Product

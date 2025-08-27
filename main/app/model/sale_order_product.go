@@ -11,6 +11,7 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
@@ -129,9 +130,11 @@ func (model *SaleOrderProduct) GetErpProductBomMaterials() []*ErpProductBomMater
 			if saleOrderProductBom.ProductBom.HasProductBomCard() {
 				card := saleOrderProductBom.ProductBom.ProductBomCard
 				for _, relatedMaterial := range card.RelatedMaterials {
+					unitName := language.JsonToLocaleResponse(relatedMaterial.UnitName)
 					materials = append(materials, &ErpProductBomMaterials{
 						ErpCode: relatedMaterial.Material.Code,
 						Num:     relatedMaterial.Num,
+						Uom:     unitName.EN,
 					})
 				}
 			}
@@ -140,9 +143,11 @@ func (model *SaleOrderProduct) GetErpProductBomMaterials() []*ErpProductBomMater
 			if saleOrderProductBom.ProductBom.ProductSauce.HasProductBomCard() {
 				card := saleOrderProductBom.ProductBom.ProductSauce.ProductBomCard
 				for _, relatedMaterial := range card.RelatedMaterials {
+					unitName := language.JsonToLocaleResponse(relatedMaterial.UnitName)
 					materials = append(materials, &ErpProductBomMaterials{
 						ErpCode: relatedMaterial.Material.Code,
 						Num:     relatedMaterial.Num,
+						Uom:     unitName.EN,
 					})
 				}
 			}
@@ -1075,6 +1080,30 @@ func (model *SaleOrderProduct) GetFinalSalePrice() float64 {
 	return model.Price
 }
 
+// 判断商品是否已经含税。true:已含税，false:未含税
+func (model *SaleOrderProduct) HasTax() bool {
+	// 根据sale_price和sale_price_no_tax是否相等来判断，若相等，则商品未含税，否则商品已含税
+	return model.SalePrice != model.SalePriceNoTax
+}
+
+// 获取商品不含税的最终售价（单价、折后价）。
+func (model *SaleOrderProduct) GetFinalSalePriceNoneTax() float64 {
+	price := model.GetFinalSalePrice()
+	// 如果商品未含税，则直接返回折后价
+	if !model.HasTax() {
+		return price
+	}
+	// 如果商品已含税，则需要减去税费
+	priceNoTax := decimal.NewFromFloat(price).Sub(decimal.NewFromFloat(model.TaxFee)).Round(2).InexactFloat64()
+	return priceNoTax
+}
+
+// 获取商品的最终售价（*数量）。商品的最终售价(不含税、折后)*数量
+func (model *SaleOrderProduct) GetProductFinalSalePriceNoneTax() float64 {
+	price := model.GetFinalSalePriceNoneTax()
+	return decimal.NewFromFloat(price).Mul(model.GetNumDecimal()).Round(2).InexactFloat64()
+}
+
 // 获取商品的最终售价（*数量）。商品的最终售价*数量
 func (model *SaleOrderProduct) GetProductFinalSalePrice() float64 {
 	return decimal.NewFromFloat(model.GetFinalSalePrice()).Mul(model.GetNumDecimal()).Truncate(3).Round(2).InexactFloat64()
@@ -1263,6 +1292,9 @@ func (model *SaleOrderProduct) GetAttributeNameList() []dto.LocaleResponse {
 	var attributeNames []dto.LocaleResponse
 
 	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
+		if saleOrderProductBom.IsDelete() {
+			continue
+		}
 		if saleOrderProductBom.IsFlavor() {
 			flavorName = saleOrderProductBom.ProductBom.ProductFlavor.MultiLanguageName.GetNames()
 		} else {
@@ -1273,6 +1305,9 @@ func (model *SaleOrderProduct) GetAttributeNameList() []dto.LocaleResponse {
 
 	// 获取商品属性
 	for _, saleOrderProductAttribute := range model.SaleOrderProductAttributes {
+		if saleOrderProductAttribute.IsDelete() {
+			continue
+		}
 		attributeName := saleOrderProductAttribute.ProductAttribute.MultiLanguageName.GetNames()
 		attributeNames = append(attributeNames, attributeName)
 	}

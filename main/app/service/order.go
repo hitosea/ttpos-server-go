@@ -33,6 +33,7 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
+	"ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/sms"
@@ -9741,6 +9742,135 @@ func (s *orderSrv) VerifyCoupon(ctx context.Context, saleOrder *model.SaleOrder,
 	return nil
 }
 
+// 保存发票到erp
+func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrder, db *gorm.DB) (*selling.SavePosInvoiceResp, error) {
+	companySetting := ctx.GetCompanySetting()
+
+	staff := ctx.GetStaff()
+	shiftLogRepo := repository.NewShiftLogRepo(db)
+	shiftLog, err := shiftLogRepo.GetShiftLog(
+		repository.CommonRepo.WhereByStaffUuid(staff.Uuid),
+		repository.CommonRepo.WhereByShiftNo(staff.DutyNo),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if shiftLog.IsHandedOver() {
+		return nil, errors.New("当前班次已交班，无法保存发票")
+	}
+
+	// 订单商品列表
+	items := make([]*selling.PosInvoiceItem, 0)
+	for _, product := range saleOrder.SaleOrderProducts {
+		if product.IsPackageSubProduct() {
+			continue
+		}
+		if product.IsPackageProduct() {
+			subProducts := saleOrder.GetPackageSubProductList(product.Uuid)
+			for _, subProduct := range subProducts {
+				productBom := subProduct.GetFlarvorSaleOrderProductBom()
+				erpCode := productBom.ProductBom.ErpCode
+				packageName := language.JsonToLocaleResponse(product.Name) // 套餐名称
+				items = append(items, &selling.PosInvoiceItem{
+					ItemCode:    erpCode,
+					Qty:         subProduct.Num,
+					Rate:        0,                                                  // 套餐子商品没有单价
+					Amount:      0,                                                  // 套餐子商品没有金额
+					Description: fmt.Sprintf("Sales in package:%s", packageName.EN), // 套餐子商品描述
+				})
+			}
+		}
+		productBom := product.GetFlarvorSaleOrderProductBom()
+		erpCode := productBom.ProductBom.ErpCode
+		items = append(items, &selling.PosInvoiceItem{
+			ItemCode: erpCode,
+			Qty:      product.Num,
+			Rate:     product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
+			Amount:   product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
+		})
+	}
+	materialItems := make([]*selling.PosInvoiceItem, 0)
+	erpProductBomMaterials := saleOrder.GetErpProductBomMaterials()
+	for _, material := range erpProductBomMaterials {
+		materialItems = append(materialItems, &selling.PosInvoiceItem{
+			ItemCode: material.ErpCode,
+			Qty:      material.Num, // 原材料数量
+			Uom:      material.Uom, // 原材料单位
+			Rate:     0,            // 原材料没有单价
+			Amount:   0,            // 原材料没有金额
+		})
+	}
+
+	taxes := make([]*selling.PosInvoiceTax, 0)
+	// Tax 消费税、Service Fee 服务费、Payment Processing Fee 支付手续费、Delivery Fee 配送费
+	if saleOrder.TaxFee > 0 {
+		taxes = append(taxes, &selling.PosInvoiceTax{
+			TaxAmount:   saleOrder.TaxFee,
+			Description: "Tax", // 消费税
+		})
+	}
+	if saleOrder.ServiceFee > 0 {
+		taxes = append(taxes, &selling.PosInvoiceTax{
+			TaxAmount:   saleOrder.ServiceFee,
+			Description: "Service Fee", // 服务费
+		})
+	}
+	if saleOrder.PaymentCommissionFee > 0 {
+		taxes = append(taxes, &selling.PosInvoiceTax{
+			TaxAmount:   saleOrder.PaymentCommissionFee,
+			Description: "Payment Processing Fee", // 支付手续费
+		})
+	}
+
+	payments := make([]*selling.PosInvoicePayment, 0)
+	if saleOrder.IsFreeSaleOrder() {
+		payments = append(payments, &selling.PosInvoicePayment{
+			ModeOfPayment: "Free Meal", // 免单
+			Amount:        0,
+		})
+	} else {
+		for _, payment := range saleOrder.PaymentOrders {
+			// Cash 现金、Balance 余额、LianlianPay-WeChat Pay 微信支付、LianlianPay-Alipay 支付宝支付、LianlianPay-QR PromptPay 二维码支付
+			methodMap := map[int]string{
+				constant.PaymentMethodCodeCash:                "Cash",
+				constant.PaymentMethodCodeBalance:             "Balance",
+				constant.PaymentMethodCodeLianLianWechatPay:   "LianlianPay-WeChat Pay",
+				constant.PaymentMethodCodeLianLianAliPay:      "LianlianPay-Alipay",
+				constant.PaymentMethodCodeLianLianQRPromptPay: "LianlianPay-QR PromptPay",
+			}
+			var modeOfPayment string
+			if method, ok := methodMap[payment.PaymentMethod.Code]; ok {
+				modeOfPayment = method
+			} else {
+				// modeOfPayment =  "Cash" // 其他支付方式，默认现金支付
+				return nil, errors.WithMessage(errors.New("不支持的支付方式"))
+			}
+			payments = append(payments, &selling.PosInvoicePayment{
+				ModeOfPayment: modeOfPayment,
+				Amount:        payment.Amount,
+			})
+		}
+	}
+
+	erpSrv := erp.NewIErpSrv(s.dbm)
+	param := req.SavePosInvoiceReq{
+		SiteCode:         companySetting.ErpnextSiteCode,
+		OrderNo:          saleOrder.OrderNo,
+		OpenPosEntryName: shiftLog.ErpnextOpenPosEntryName,
+		PostingDatetime:  saleOrder.FinishTime,
+		CustomerUuid:     fmt.Sprintf("%d", saleOrder.ConsumerUuid),
+		Items:            items,         // 订单商品列表
+		MaterialItems:    materialItems, // 订单原材料列表
+		Taxes:            taxes,         // 订单税费列表
+		Payments:         payments,      // 订单付款列表
+	}
+	response, err := erpSrv.SavePosInvoice(ctx, param)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return response, nil
+}
+
 // InstantOrderPaymentFinish 完成销售订单的付款结账
 func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.InstantOrderPaymentFinishReq) (*resp.OrderFinishResp, error) {
 	// 加锁
@@ -9951,119 +10081,14 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 
 		company := ctx.GetCompany()
 		companySetting := ctx.GetCompanySetting()
-		if company.IsOpenErp() && companySetting.ErpnextSiteCode != "" {
-			staff := ctx.GetStaff()
-			shiftLogRepo := repository.NewShiftLogRepo(db)
-			shiftLog, err := shiftLogRepo.GetShiftLog(
-				repository.CommonRepo.WhereByStaffUuid(staff.Uuid),
-				repository.CommonRepo.WhereByShiftNo(staff.DutyNo),
-			)
+		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
+			res, err := s.SavePosInvoice(ctx, saleOrder, db)
 			if err != nil {
 				return errors.WithMessage(err)
 			}
-			if shiftLog.IsHandedOver() {
-				return errors.New("当前班次已交班，无法保存发票")
-			}
-
-			// 订单商品列表
-			items := make([]*selling.PosInvoiceItem, 0)
-			for _, product := range saleOrder.SaleOrderProducts {
-				if product.IsPackageSubProduct() { // TODO ERP接口暂不支持套餐子商品
-					continue
-				}
-				if product.IsPackageProduct() { // TODO ERP接口暂不支持套餐商品
-					continue
-				}
-				productBom := product.GetFlarvorSaleOrderProductBom()
-				erpCode := productBom.ProductBom.ErpCode
-				items = append(items, &selling.PosInvoiceItem{
-					ItemCode: erpCode,
-					Qty:      product.Num,
-					Rate:     product.GetFinalSalePrice(),
-					Amount:   product.GetProductFinalSalePrice(),
-				})
-			}
-
-			materialItems := make([]*selling.PosInvoiceItem, 0)
-			erpProductBomMaterials := saleOrder.GetErpProductBomMaterials()
-			for _, material := range erpProductBomMaterials {
-				items = append(items, &selling.PosInvoiceItem{
-					ItemCode: material.ErpCode,
-					Qty:      material.Num,
-					Rate:     0, // 原材料没有单价
-					Amount:   0, // 原材料没有金额
-				})
-			}
-
-			taxes := make([]*selling.PosInvoiceTax, 0)
-			// Tax 消费税、Service Fee 服务费、Payment Processing Fee 支付手续费、Delivery Fee 配送费
-			if saleOrder.TaxFee > 0 {
-				taxes = append(taxes, &selling.PosInvoiceTax{
-					TaxAmount:   saleOrder.TaxFee,
-					Description: "Tax", // 消费税
-				})
-			}
-			if saleOrder.ServiceFee > 0 {
-				taxes = append(taxes,
-					&selling.PosInvoiceTax{
-						TaxAmount:   saleOrder.TaxFee,
-						Description: "Tax", // 消费税
-					},
-					&selling.PosInvoiceTax{
-						TaxAmount:   saleOrder.ServiceFee,
-						Description: "Service Fee", // 服务费
-					},
-					&selling.PosInvoiceTax{
-						TaxAmount:   saleOrder.PaymentCommissionFee,
-						Description: "Payment Processing Fee", // 支付手续费
-					},
-				)
-
-				payments := make([]*selling.PosInvoicePayment, 0)
-				if saleOrder.IsFreeSaleOrder() {
-					payments = append(payments, &selling.PosInvoicePayment{
-						ModeOfPayment: "Cash",
-						Amount:        0,
-					})
-				} else {
-					for _, payment := range saleOrder.PaymentOrders {
-						// Cash 现金、Balance 余额、LianlianPay-WeChat Pay 微信支付、LianlianPay-Alipay 支付宝支付、LianlianPay-QR PromptPay 二维码支付
-						methodMap := map[int]string{
-							constant.PaymentMethodCodeCash:                "Cash",
-							constant.PaymentMethodCodeBalance:             "Balance",
-							constant.PaymentMethodCodeLianLianWechatPay:   "LianlianPay-WeChat Pay",
-							constant.PaymentMethodCodeLianLianAliPay:      "LianlianPay-Alipay",
-							constant.PaymentMethodCodeLianLianQRPromptPay: "LianlianPay-QR PromptPay",
-						}
-						var modeOfPayment string
-						if method, ok := methodMap[payment.PaymentMethod.Code]; ok {
-							modeOfPayment = method
-						} else {
-							// modeOfPayment =  "Cash" // 其他支付方式，默认现金支付
-							return errors.WithMessage(errors.New("不支持的支付方式"))
-						}
-						payments = append(payments, &selling.PosInvoicePayment{
-							ModeOfPayment: modeOfPayment,
-							Amount:        payment.Amount,
-						})
-					}
-				}
-
-				erpSrv := erp.NewIErpSrv(s.dbm)
-				erpSrv.SavePosInvoice(ctx, req.SavePosInvoiceReq{
-					SiteCode:         companySetting.ErpnextSiteCode,
-					OrderNo:          saleOrder.OrderNo,
-					OpenPosEntryName: shiftLog.ErpnextOpenPosEntryName,
-					PostingDatetime:  saleOrder.FinishTime,
-					CustomerUuid:     fmt.Sprintf("%d", saleOrder.ConsumerUuid),
-					Items:            items,         // 订单商品列表
-					MaterialItems:    materialItems, // 订单原材料列表
-					Taxes:            taxes,         // 订单税费列表
-					Payments:         payments,      // 订单付款列表
-				})
-			}
+			saleOrder.ErpProductsInvoiceName = res.ProductsInvoiceName
+			saleOrder.ErpMaterialInvoiceName = res.MaterialInvoiceName
 		}
-
 		// 更新发票信息
 		ctx.SetDB(db)
 		if cashPaymentOrder != nil {
@@ -10410,6 +10435,18 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 			if err := repository.NewSaleOrderProductReasonRepo(db).CreateSaleOrderProductReasons(freeOrderReasons); err != nil {
 				return errors.WithMessage(err)
 			}
+		}
+
+		// 保存发票到erp
+		company := ctx.GetCompany()
+		companySetting := ctx.GetCompanySetting()
+		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
+			res, err := s.SavePosInvoice(ctx, saleOrder, db)
+			if err != nil {
+				return errors.WithMessage(err)
+			}
+			saleOrder.ErpProductsInvoiceName = res.ProductsInvoiceName
+			saleOrder.ErpMaterialInvoiceName = res.MaterialInvoiceName
 		}
 
 		// 更新销售订单

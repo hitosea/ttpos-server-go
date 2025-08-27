@@ -43,6 +43,7 @@ func (h *MaterialHandler) GetMaterialList(c *gin.Context) {
 		helper.HandleValidationError(c, err, listReq, dto.PageReqMessage)
 		return
 	}
+	listReq.CategoryUuids = listReq.GetCategoryUuids() // 获取有效分类UUID列表。 /api/v1/shop/material/list?category_uuids&keyword&page_no=1&page_size=1000&status 时，CategoryUuids会有一个0值，是无效的
 	res, err := h.materialSrv.GetMaterialList(ctx, listReq)
 	// 处理错误
 	if err != nil {

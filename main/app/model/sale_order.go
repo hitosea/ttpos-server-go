@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"math"
+	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
@@ -106,14 +107,17 @@ func (model *SaleOrder) GetErpProductBomMaterials() []*ErpProductBomMaterials {
 		materials = append(materials, saleOrderProduct.GetErpProductBomMaterials()...)
 	}
 	// 去重
-	materialMap := make(map[string]float64)
+	splitKey := "--@--"
+	materialMap := make(map[string]float64) // key: erp_code和uom, value: 原材料数量
 	for _, material := range materials {
-		materialMap[material.ErpCode] += material.Num
+		key := fmt.Sprintf("%s%s%s", material.ErpCode, splitKey, material.Uom)
+		materialMap[key] += material.Num
 	}
 	// 转换为列表
 	materials = make([]*ErpProductBomMaterials, 0)
-	for erpCode, num := range materialMap {
-		materials = append(materials, &ErpProductBomMaterials{ErpCode: erpCode, Num: num})
+	for key, num := range materialMap {
+		erpCode, uom := strings.Split(key, splitKey)[0], strings.Split(key, splitKey)[1]
+		materials = append(materials, &ErpProductBomMaterials{ErpCode: erpCode, Uom: uom, Num: num})
 	}
 	return materials
 }

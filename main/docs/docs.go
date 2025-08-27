@@ -28621,10 +28621,6 @@ const docTemplate = `{
                     "description": "公司UUID",
                     "type": "integer"
                 },
-                "default_company_abbr": {
-                    "description": "默认公司缩写编码，用于同步单位和属性",
-                    "type": "string"
-                },
                 "site_code": {
                     "description": "站点编码",
                     "type": "string"
