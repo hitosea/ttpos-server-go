@@ -9775,6 +9775,7 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 
 	// 订单商品列表
 	items := make([]*selling.PosInvoiceItem, 0)
+	isFreeOrder := saleOrder.IsFreeSaleOrder()
 	for _, product := range saleOrder.SaleOrderProducts {
 		if product.IsPackageSubProduct() {
 			continue
@@ -9791,16 +9792,18 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 					Rate:        0,                                                  // 套餐子商品没有单价
 					Amount:      0,                                                  // 套餐子商品没有金额
 					Description: fmt.Sprintf("Sales in package:%s", packageName.EN), // 套餐子商品描述
+					IsFreeItem:  isFreeOrder,
 				})
 			}
 		}
 		productBom := product.GetFlarvorSaleOrderProductBom()
 		erpCode := productBom.ProductBom.ErpCode
 		items = append(items, &selling.PosInvoiceItem{
-			ItemCode: erpCode,
-			Qty:      product.Num,
-			Rate:     product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
-			Amount:   product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
+			ItemCode:   erpCode,
+			Qty:        product.Num,
+			Rate:       product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
+			Amount:     product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
+			IsFreeItem: isFreeOrder,
 		})
 	}
 	materialItems := make([]*selling.PosInvoiceItem, 0)
@@ -9834,6 +9837,11 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 			TaxAmount:   saleOrder.PaymentCommissionFee,
 			Description: "Payment Processing Fee", // 支付手续费
 		})
+	}
+
+	// 免单订单不收税费、服务费、支付手续费
+	if isFreeOrder {
+		taxes = make([]*selling.PosInvoiceTax, 0)
 	}
 
 	payments := make([]*selling.PosInvoicePayment, 0)
