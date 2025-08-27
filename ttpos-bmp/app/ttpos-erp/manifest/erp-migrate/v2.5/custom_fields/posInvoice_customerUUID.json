@@ -1,7 +1,7 @@
 {
   "doctype": "DocType",
   "label": "客户UUID",
-  "fieldname": "customer_uuid",
+  "fieldname": "custom_customer_uuid",
   "fieldtype": "Data",
   "insert_after": "Customer",
   "dt": "POS Invoice"

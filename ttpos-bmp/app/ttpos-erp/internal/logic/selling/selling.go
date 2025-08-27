@@ -1026,10 +1026,10 @@ func (*sSelling) GetModeOfPaymentList(ctx context.Context, req *selling.GetModeO
 		if err != nil {
 			return nil, gerror.Wrapf(err, "获取公司[%s]失败", req.CompanyAbbr)
 		}
-		filters = append(filters, []string{"company", "=", companyName})
+		filters = append(filters, []string{"custom_company", "=", companyName})
 	}
 	if len(req.Branch) > 0 {
-		filters = append(filters, []string{"branch", "=", req.Branch})
+		filters = append(filters, []string{"custom_branch", "=", req.Branch})
 	}
 	//只返回启用的
 	filters = append(filters, []string{"enabled", "=", "1"})
