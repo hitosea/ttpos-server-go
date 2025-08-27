@@ -1336,11 +1336,13 @@ class Product extends BaseModel
             'dineTax',
             'takeoutTax',
             'productPackageGroup' => [
-                'productPackageGropItem' => [
-                    'productBom' => [
-                        'product'
-                    ]
-                ]
+                'productPackageGropItem' => function ($q) {
+                    $q->with([
+                        'productBom' => [
+                            'product'
+                        ]
+                    ])->order('sort', 'asc');
+                }
             ],
         ])->where('p.uuid', '=', $product_id)->find();
         if (empty($model)) {
