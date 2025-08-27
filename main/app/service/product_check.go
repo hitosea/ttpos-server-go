@@ -71,8 +71,8 @@ func (s *productCheckSrv) CheckProductName(ctx context.Context, uuid uint64, loc
 	if !localeName.CheckRequiredLocale(storeLanguages) {
 		return errors.New("名称不能为空")
 	}
-	if !localeName.CheckLenLocal(storeLanguages, 100) {
-		return errors.New("名称长度不能超过100")
+	if !localeName.CheckLenLocal(storeLanguages, 150) {
+		return errors.New("名称长度不能超过150")
 	}
 	checkService := NewCheckNameSrv(s.dbm)
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
@@ -573,8 +573,8 @@ func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, 
 		if !isDelete && !group.LocaleName.CheckRequiredLocale(storeLanguages) {
 			return nil, errors.New("分组名称不能为空")
 		}
-		if !isDelete && !group.LocaleName.CheckLenLocal(storeLanguages, 100) {
-			return nil, errors.New("分组名称长度不能超过100")
+		if !isDelete && !group.LocaleName.CheckLenLocal(storeLanguages, 150) {
+			return nil, errors.New("分组名称长度不能超过150")
 		}
 		if !isDelete && len(group.Products) == 0 {
 			return nil, errors.New("商品不能为空")
