@@ -254,9 +254,10 @@ func (c *Controller) validateSavePosInvoiceReq(req *selling.SavePosInvoiceReq) e
 	if len(req.Items) == 0 {
 		return gerror.New("商品项目列表不能为空")
 	}
-	if len(req.MaterialItems) == 0 {
-		return gerror.New("原材料项目列表不能为空")
-	}
+	//商品存在无成本卡的情况
+	//if len(req.MaterialItems) == 0 {
+	//	return gerror.New("原材料项目列表不能为空")
+	//}
 	if len(req.Taxes) == 0 {
 		return gerror.New("税费列表不能为空")
 	}
@@ -298,7 +299,7 @@ func (c *Controller) validateSavePosInvoiceReq(req *selling.SavePosInvoiceReq) e
 		if strings.TrimSpace(payment.ModeOfPayment) == "" {
 			return gerror.Newf("第%d项支付方式不能为空", i+1)
 		}
-		if payment.Amount <= 0 {
+		if payment.Amount < 0 && payment.ModeOfPayment != "Free Meal" {
 			return gerror.Newf("第%d项付款金额必须大于0", i+1)
 		}
 	}
@@ -415,7 +416,7 @@ func (c *Controller) validateReturnPosInvoiceReq(req *selling.ReturnPosInvoiceRe
 		if strings.TrimSpace(payment.ModeOfPayment) == "" {
 			return gerror.Newf("第%d项支付方式不能为空", i+1)
 		}
-		if payment.Amount > 0 {
+		if payment.Amount > 0 && payment.ModeOfPayment != "Free Meal" {
 			return gerror.Newf("第%d项退款金额必须小于等于0", i+1)
 		}
 	}
