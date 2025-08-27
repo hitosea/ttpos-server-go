@@ -197,6 +197,7 @@ func (r *productRepo) defaultPreload(hasPackage bool) []DBOption {
 					Query: "ProductPackageGroups.ProductPackageGroupItems",
 					Args: []any{
 						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+						CommonRepo.DBOption(CommonRepo.SortWithSort("ASC")),
 					},
 				},
 			)),
