@@ -991,7 +991,7 @@ type PosInvoiceItem struct {
 	Amount        float64                `protobuf:"fixed64,4,opt,name=amount,proto3" json:"amount,omitempty" dc:"金额，必填"`                                                  // 金额，必填
 	Uom           string                 `protobuf:"bytes,5,opt,name=uom,proto3" json:"uom,omitempty" dc:"单位, 可选"`                                                         // 单位, 可选
 	Description   string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty" dc:"描述, 可选。 如果是套餐内的商品，填写内容 “Sales in package:{套餐名称"` // 描述, 可选。 如果是套餐内的商品，填写内容 “Sales in package:{套餐名称}”
-	IsFreeItem    bool                   `protobuf:"varint,7,opt,name=is_free_item,json=isFreeItem,proto3" json:"is_free_item,omitempty"`                                  // 是否免费商品, 可选, 默认false
+	IsFreeItem    bool                   `protobuf:"varint,7,opt,name=is_free_item,json=isFreeItem,proto3" json:"is_free_item,omitempty"`                                  // 是否免单商品, 可选, 默认false
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
