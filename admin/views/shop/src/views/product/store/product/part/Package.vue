@@ -18,7 +18,7 @@
             <el-input
               type="text"
               :placeholder="$t('请输入分组名称')"
-              :maxlength="50"
+              :maxlength="150"
               class="max-w460"
               :disabled="erp_is_open == 1"
               v-model="form.model.package_group[groupIndex].group_name[item.key]"
@@ -106,6 +106,7 @@
         apiSource="product"
         :overrideLanguages="overrideLanguages"
         :otherGroupNames="otherGroupNames"
+        :maxlength="150"
       />
       <template #footer>
         <div class="flex justify-end">
