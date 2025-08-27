@@ -23,7 +23,18 @@ func (model *SaleOrder) CalcSaleOrder(setting SaleBillSetting, options ...func(o
 
 // 计算已送厨商品的订单金额
 func (model *SaleOrder) CalcCookingSaleOrder(setting SaleBillSetting) *Calc {
-	return model.CalcSaleOrderByProductList(model.GetCookingOrderProductList(), setting)
+	list := make([]*SaleOrderProduct, 0)
+	products := model.GetCookingOrderProductList()
+	for _, product := range products {
+		if product.IsDelete() {
+			continue
+		}
+		if product.IsPackageSubProduct() {
+			continue
+		}
+		list = append(list, product)
+	}
+	return model.CalcSaleOrderByProductList(list, setting)
 }
 
 // 计算指定商品列表的订单金额
