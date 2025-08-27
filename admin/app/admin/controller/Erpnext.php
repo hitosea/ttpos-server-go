@@ -67,7 +67,6 @@ class Erpnext extends Controller
             empty($param['uuid']) ||
             empty($param['erpnext_site_code']) ||
             empty($param['erpnext_company_abbr']) ||
-            empty($param['erpnext_pos_profile_name']) ||
             empty($param['password'])
         ) {
             return $this->renderError('参数错误');
@@ -178,7 +177,7 @@ class Erpnext extends Controller
      * @Apidoc\Param("company_uuid", type="biginteger", require=true, desc="公司ID")
      * @Apidoc\Returned("list", type="array", desc="公司支付方式", children={
      *      @Apidoc\Returned("name", type="string", desc="支付方式名称"),
-     *      @Apidoc\Returned("is_used", type="boolean", desc="是否已使用"),
+     *      @Apidoc\Returned("is_addable", type="boolean", desc="是否可添加"),
      * })
      */
     function paymentMethodList()
@@ -208,8 +207,8 @@ class Erpnext extends Controller
      * @Apidoc\Param("fee", type="float", require=true, desc="手续费")
      * @Apidoc\Param("sort", type="int", require=true, desc="排序")
      * @Apidoc\Param("status", type="int", require=true, desc="状态: 0-禁用 1-启用")
-     * @Apidoc\Param("checkout_show", type="array", require=false, desc="结账显示")
-     * @Apidoc\Param("member_recharge_show", type="array", require=false, desc="会员充值显示")
+     * @Apidoc\Param("checkout_show", type="array", require=false, desc="结账显示，可选cashier、assistant")
+     * @Apidoc\Param("member_recharge_show", type="array", require=false, desc="会员充值显示，可选cashier")
      */
     function addPaymentMethod()
     {

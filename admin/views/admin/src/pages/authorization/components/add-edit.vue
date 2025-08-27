@@ -57,9 +57,7 @@
     getAuthorizationList,
     getErpnextSiteCode,
     getErpnextSiteCompany,
-    getErpnextPosProfile,
     erpnextAdd,
-    erpnextPosProfileItem,
     erpnextAddParams,
   } from '@/api/authorization';
   import { ElMessage, FormInstance } from 'element-plus';
@@ -83,7 +81,6 @@
   const companyList = ref<authorizationListTypeItem[]>([]);
   const erpnextSiteList = ref<erpnextSiteCodeItem[]>([]);
   const erpnextCompanyList = ref<erpnextSiteCompanyItem[]>([]);
-  const erpnextPosProfileList = ref<erpnextPosProfileItem[]>([]);
   // 确认密码输入
   const confirmPassword = ref(false);
   const isLoading = ref(false);
@@ -155,18 +152,6 @@
     }
   };
 
-  const getErpnextPosProfileList = async (site_code: string, company_abbr: string) => {
-    try {
-      const res = await getErpnextPosProfile({
-        site_code: site_code,
-        company_abbr: company_abbr,
-      });
-      erpnextPosProfileList.value = res.data.list;
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
   const handleCompanyChange = (value: any) => {
     // 确保转换为字符串
     if (Array.isArray(value)) {
@@ -176,7 +161,6 @@
       // 如果已经是字符串，直接使用
       formData.value.erpnext_company_abbr = value || '';
     }
-    getErpnextPosProfileList(formData.value.erpnext_site_code, formData.value.erpnext_company_abbr);
   };
 
   const formData = ref<erpnextAddParams>({
