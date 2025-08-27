@@ -953,6 +953,13 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, req req.ProductShopD
 		if err != nil {
 			return err
 		}
+		// 删除商品包关联语言包
+		err = tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", product.MultiLanguageNameUuid).Updates(map[string]any{
+			"delete_time": time.Now().Unix(),
+		}).Error
+		if err != nil {
+			return err
+		}
 		for _, productBom := range product.ProductBoms {
 			// 删除商品包关联的商品BOM
 			err = productBomRepo.UpdateProductBom(map[string]any{"delete_time": time.Now().Unix()}, commonRepo.WhereByUuid(productBom.Uuid))
