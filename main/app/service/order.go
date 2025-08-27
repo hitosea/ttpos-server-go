@@ -33,6 +33,7 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
+	"ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/sms"
@@ -9969,60 +9970,64 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 			items := make([]*selling.PosInvoiceItem, 0)
 			for _, product := range saleOrder.SaleOrderProducts {
 				if product.IsPackageSubProduct() {
-					productBom := product.GetFlarvorSaleOrderProductBom()
-					erpCode := productBom.ProductBom.ErpCode
-					items = append(items, &selling.PosInvoiceItem{
-						ItemCode: erpCode,
-						Qty:      product.Num,
-						Rate:     0, // 套餐子商品没有单价
-						Amount:   0, // 套餐子商品没有金额
-					})
 					continue
+				}
+				if product.IsPackageProduct() {
+					subProducts := saleOrder.GetPackageSubProductList(product.Uuid)
+					for _, subProduct := range subProducts {
+						productBom := subProduct.GetFlarvorSaleOrderProductBom()
+						erpCode := productBom.ProductBom.ErpCode
+						packageName := language.JsonToLocaleResponse(product.Name) // 套餐名称
+						items = append(items, &selling.PosInvoiceItem{
+							ItemCode:    erpCode,
+							Qty:         subProduct.Num,
+							Rate:        0,                                                  // 套餐子商品没有单价
+							Amount:      0,                                                  // 套餐子商品没有金额
+							Description: fmt.Sprintf("Sales in package:%s", packageName.EN), // 套餐子商品描述
+						})
+					}
 				}
 				productBom := product.GetFlarvorSaleOrderProductBom()
 				erpCode := productBom.ProductBom.ErpCode
 				items = append(items, &selling.PosInvoiceItem{
 					ItemCode: erpCode,
 					Qty:      product.Num,
-					Rate:     product.GetFinalSalePrice(),
-					Amount:   product.GetProductFinalSalePrice(),
+					Rate:     product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
+					Amount:   product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
 				})
-			}
 
-			materialItems := make([]*selling.PosInvoiceItem, 0)
-			erpProductBomMaterials := saleOrder.GetErpProductBomMaterials()
-			for _, material := range erpProductBomMaterials {
-				items = append(items, &selling.PosInvoiceItem{
-					ItemCode: material.ErpCode,
-					Qty:      material.Num,
-					Rate:     0, // 原材料没有单价
-					Amount:   0, // 原材料没有金额
-				})
-			}
+				materialItems := make([]*selling.PosInvoiceItem, 0)
+				erpProductBomMaterials := saleOrder.GetErpProductBomMaterials()
+				for _, material := range erpProductBomMaterials {
+					materialItems = append(materialItems, &selling.PosInvoiceItem{
+						ItemCode: material.ErpCode,
+						Qty:      material.Num, // 原材料数量
+						Uom:      material.Uom, // 原材料单位
+						Rate:     0,            // 原材料没有单价
+						Amount:   0,            // 原材料没有金额
+					})
+				}
 
-			taxes := make([]*selling.PosInvoiceTax, 0)
-			// Tax 消费税、Service Fee 服务费、Payment Processing Fee 支付手续费、Delivery Fee 配送费
-			if saleOrder.TaxFee > 0 {
-				taxes = append(taxes, &selling.PosInvoiceTax{
-					TaxAmount:   saleOrder.TaxFee,
-					Description: "Tax", // 消费税
-				})
-			}
-			if saleOrder.ServiceFee > 0 {
-				taxes = append(taxes,
-					&selling.PosInvoiceTax{
+				taxes := make([]*selling.PosInvoiceTax, 0)
+				// Tax 消费税、Service Fee 服务费、Payment Processing Fee 支付手续费、Delivery Fee 配送费
+				if saleOrder.TaxFee > 0 {
+					taxes = append(taxes, &selling.PosInvoiceTax{
 						TaxAmount:   saleOrder.TaxFee,
 						Description: "Tax", // 消费税
-					},
-					&selling.PosInvoiceTax{
+					})
+				}
+				if saleOrder.ServiceFee > 0 {
+					taxes = append(taxes, &selling.PosInvoiceTax{
 						TaxAmount:   saleOrder.ServiceFee,
 						Description: "Service Fee", // 服务费
-					},
-					&selling.PosInvoiceTax{
+					})
+				}
+				if saleOrder.PaymentCommissionFee > 0 {
+					taxes = append(taxes, &selling.PosInvoiceTax{
 						TaxAmount:   saleOrder.PaymentCommissionFee,
 						Description: "Payment Processing Fee", // 支付手续费
-					},
-				)
+					})
+				}
 
 				payments := make([]*selling.PosInvoicePayment, 0)
 				if saleOrder.IsFreeSaleOrder() {
@@ -10073,7 +10078,6 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 				fmt.Println(response)
 			}
 		}
-
 		// 更新发票信息
 		ctx.SetDB(db)
 		if cashPaymentOrder != nil {
