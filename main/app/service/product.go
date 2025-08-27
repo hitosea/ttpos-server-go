@@ -5219,6 +5219,7 @@ func (s *productSrv) ProductTaxList(ctx context.Context) product_resp.ProductTax
 		list = append(list, product_resp.ProductTaxItemResp{
 			Uuid: tax.Uuid,
 			Name: tax.Name,
+			Rate: tax.TaxRate,
 		})
 	}
 
