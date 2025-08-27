@@ -387,8 +387,8 @@ func (c *Controller) validateReturnPosInvoiceReq(req *selling.ReturnPosInvoiceRe
 		if strings.TrimSpace(item.ItemCode) == "" {
 			return gerror.Newf("第%d项商品编码不能为空", i+1)
 		}
-		if item.Qty <= 0 {
-			return gerror.Newf("第%d项商品数量必须大于0", i+1)
+		if item.Qty > 0 {
+			return gerror.Newf("第%d项商品数量必须小于0", i+1)
 		}
 		if item.Rate < 0 {
 			return gerror.Newf("第%d项商品单价不能为负数", i+1)

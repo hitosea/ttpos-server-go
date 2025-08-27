@@ -968,6 +968,7 @@ func (s *sSelling) ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosI
 		IsPos:             1,
 		GrandTotal:        grandTotal,
 		PaidAmount:        grandTotal,
+		SetPostingTime:    1,
 	}
 
 	//创建物品销售记录
