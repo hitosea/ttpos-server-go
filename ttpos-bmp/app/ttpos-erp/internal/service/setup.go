@@ -58,6 +58,30 @@ type (
 		//   - apiSecret: API密钥
 		//   - err: 错误信息
 		GetUserApiKeySecret(ctx context.Context, userEmail string) (apiKey string, apiSecret string, err error)
+		// InitCustomFields 初始化自定义字段
+		// 遍历manifest/erp-migrate/v2.5/custom_fields目录下所有JSON文件，创建Custom Field文档
+		// 参数：
+		//   - ctx: 上下文对象
+		//
+		// 返回：
+		//   - err: 错误信息
+		InitCustomFields(ctx context.Context) error
+		// InitCustomers 初始化客户
+		// 遍历manifest/erp-migrate/v2.5/new_customer目录下所有JSON文件，创建Customer文档
+		// 参数：
+		//   - ctx: 上下文对象
+		//
+		// 返回：
+		//   - err: 错误信息
+		InitCustomers(ctx context.Context) error
+		// InitModeOfPayment 初始化支付方式
+		// 遍历manifest/erp-migrate/v2.5/mode_of_payment目录下所有JSON文件，创建Mode Of Payment文档
+		// 参数：
+		//   - ctx: 上下文对象
+		//
+		// 返回：
+		//   - err: 错误信息
+		InitModeOfPayment(ctx context.Context) error
 	}
 )
 

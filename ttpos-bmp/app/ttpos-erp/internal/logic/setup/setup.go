@@ -2,7 +2,10 @@ package setup
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/setup"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
@@ -325,4 +328,123 @@ func (s *sSetup) GetUserApiKeySecret(ctx context.Context, userEmail string) (api
 	apiKey = j.Get("data.api_key").String()
 
 	return apiKey, apiSecret, nil
+}
+
+// DocumentInitConfig 文档初始化配置
+type DocumentInitConfig struct {
+	DirName    string // 目录名称，如 "custom_fields"
+	DocType    string // 文档类型，如 "Custom Field"
+	ItemName   string // 项目名称，用于日志，如 "自定义字段"
+	ItemNameEn string // 项目英文名称，用于错误信息，如 "custom field"
+}
+
+// initDocumentsFromDir 通用的文档初始化方法
+// 遍历指定目录下的所有JSON文件，解析并创建对应类型的文档
+// 参数：
+//   - ctx: 上下文对象
+//   - config: 初始化配置
+//
+// 返回：
+//   - err: 错误信息
+func (s *sSetup) initDocumentsFromDir(ctx context.Context, config DocumentInitConfig) error {
+	// 构建目录路径
+	dirPath := fmt.Sprintf("manifest/erp-migrate/v2.5/%s", config.DirName)
+
+	// 检查目录是否存在
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		return gerror.Newf("%s目录不存在: %s", config.ItemName, dirPath)
+	}
+
+	g.Log().Infof(ctx, "开始初始化%s，目录: %s", config.ItemName, dirPath)
+
+	// 遍历目录下的所有文件
+	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// 只处理JSON文件
+		if !info.IsDir() && filepath.Ext(path) == ".json" {
+			g.Log().Infof(ctx, "处理%s文件: %s", config.ItemName, path)
+
+			// 读取JSON文件内容
+			data, err := os.ReadFile(path)
+			if err != nil {
+				g.Log().Error(ctx, fmt.Sprintf("读取%s文件失败", config.ItemName), err, g.Map{"file": path})
+				return gerror.Wrapf(err, "读取文件失败: %s", path)
+			}
+
+			// 解析JSON数据
+			var docData map[string]interface{}
+			if err := json.Unmarshal(data, &docData); err != nil {
+				g.Log().Error(ctx, fmt.Sprintf("解析%sJSON失败", config.ItemName), err, g.Map{"file": path})
+				return gerror.Wrapf(err, "解析JSON失败: %s", path)
+			}
+
+			// 调用service.Document.Create创建文档
+			if _, err := service.Document().Create(ctx, config.DocType, docData); err != nil {
+				g.Log().Error(ctx, fmt.Sprintf("创建%s失败", config.ItemName), err, g.Map{"file": path, "data": docData})
+				return gerror.Wrapf(err, "创建%s失败: %s", config.ItemName, path)
+			}
+
+			g.Log().Infof(ctx, "%s创建成功: %s", config.ItemName, path)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return gerror.Wrapf(err, "初始化%s失败", config.ItemName)
+	}
+
+	g.Log().Infof(ctx, "所有%s初始化完成", config.ItemName)
+	return nil
+}
+
+// InitCustomFields 初始化自定义字段
+// 遍历manifest/erp-migrate/v2.5/custom_fields目录下所有JSON文件，创建Custom Field文档
+// 参数：
+//   - ctx: 上下文对象
+//
+// 返回：
+//   - err: 错误信息
+func (s *sSetup) InitCustomFields(ctx context.Context) error {
+	return s.initDocumentsFromDir(ctx, DocumentInitConfig{
+		DirName:    "custom_fields",
+		DocType:    "Custom Field",
+		ItemName:   "自定义字段",
+		ItemNameEn: "custom field",
+	})
+}
+
+// InitCustomers 初始化客户
+// 遍历manifest/erp-migrate/v2.5/new_customer目录下所有JSON文件，创建Customer文档
+// 参数：
+//   - ctx: 上下文对象
+//
+// 返回：
+//   - err: 错误信息
+func (s *sSetup) InitCustomers(ctx context.Context) error {
+	return s.initDocumentsFromDir(ctx, DocumentInitConfig{
+		DirName:    "customer",
+		DocType:    "Customer",
+		ItemName:   "客户",
+		ItemNameEn: "customer",
+	})
+}
+
+// InitModeOfPayment 初始化支付方式
+// 遍历manifest/erp-migrate/v2.5/mode_of_payment目录下所有JSON文件，创建Mode Of Payment文档
+// 参数：
+//   - ctx: 上下文对象
+//
+// 返回：
+//   - err: 错误信息
+func (s *sSetup) InitModeOfPayment(ctx context.Context) error {
+	return s.initDocumentsFromDir(ctx, DocumentInitConfig{
+		DirName:    "mode_of_payment",
+		DocType:    "Mode Of Payment",
+		ItemName:   "支付方式",
+		ItemNameEn: "mode of payment",
+	})
 }
