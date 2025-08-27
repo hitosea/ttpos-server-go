@@ -4,7 +4,7 @@
       <el-form :model="formData" :rules="formRules" ref="formRef" label-position="top" label-width="auto">
         <!-- 请选择 -->
         <el-form-item :label="$t('请选择')" prop="erpnext_payment">
-          <el-select v-model="formData.erpnext_payment" :placeholder="$t('支付方式')" clearable filterable>
+          <el-select v-model="formData.erpnext_payment" :placeholder="$t('支付方式')" clearable filterable @change="handleErpnextPaymentChange">
             <el-option v-for="item in erpPayMethodList" :key="item.name" :value="item.name" :label="item.name" :disabled="!item.is_addable" />
           </el-select>
         </el-form-item>
@@ -205,6 +205,14 @@
       erpPayMethodList.value = res.data.list;
     } catch (error) {
       console.log(error);
+    }
+  };
+
+  const handleErpnextPaymentChange = (value: string) => {
+    if (value == 'Balance') {
+      formData.value.member_recharge_show = [];
+    } else {
+      formData.value.member_recharge_show = ['cashier'];
     }
   };
 
