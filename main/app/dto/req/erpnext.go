@@ -15,11 +15,10 @@ type ErpnextSitePosProfileReq struct {
 }
 
 type InitShopReq struct {
-	SiteCode           string `form:"site_code" json:"site_code" binding:"required"`               // 站点编码
-	CompanyAbbr        string `form:"company_abbr" json:"company_abbr" binding:"required"`         // 公司缩写编码
-	CompanyUuid        uint64 `form:"company_uuid" json:"company_uuid" binding:"required"`         // 公司UUID
-	DefaultCompanyAbbr string `form:"default_company_abbr" json:"default_company_abbr"`            // 默认公司缩写编码，用于同步单位和属性
-	PosProfileName     string `form:"pos_profile_name" json:"pos_profile_name" binding:"required"` // Pos Profile名称
+	SiteCode           string `form:"site_code" json:"site_code" binding:"required"`       // 站点编码
+	CompanyAbbr        string `form:"company_abbr" json:"company_abbr" binding:"required"` // 公司缩写编码
+	CompanyUuid        uint64 `form:"company_uuid" json:"company_uuid" binding:"required"` // 公司UUID
+	DefaultCompanyAbbr string `form:"default_company_abbr" json:"default_company_abbr"`    // 默认公司缩写编码，用于同步单位和属性
 }
 
 type GetUomListReq struct {

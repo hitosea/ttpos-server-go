@@ -74,7 +74,7 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		"erpnext_site_code":        initShopReq.SiteCode,
 		"erpnext_company_abbr":     initShopReq.CompanyAbbr,
 		"erpnext_branch_name":      response.BranchName,
-		"erpnext_pos_profile_name": initShopReq.PosProfileName,
+		"erpnext_pos_profile_name": response.PosProfile,
 		"erpnext_admin_email":      response.AdminEmail,
 	})
 
@@ -86,7 +86,7 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		"erpnext_site_code":        initShopReq.SiteCode,
 		"erpnext_company_abbr":     initShopReq.CompanyAbbr,
 		"erpnext_branch_name":      response.BranchName,
-		"erpnext_pos_profile_name": initShopReq.PosProfileName,
+		"erpnext_pos_profile_name": response.PosProfile,
 		"erpnext_admin_email":      response.AdminEmail,
 	})
 
