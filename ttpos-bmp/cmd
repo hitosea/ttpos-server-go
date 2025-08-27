@@ -12,7 +12,16 @@ OK="${Green}[OK]${Font}"
 Error="${Red}[错误]${Font}"
 
 cur_path="$(pwd)"
-COMPOSE="docker-compose -p ttpos-server-bmp -f docker-compose.production.yml"
+
+# 检查环境是否支持 docker compose 命令（新版）或需要使用 docker-compose 命令（旧版）
+if command -v docker &> /dev/null && docker compose version &> /dev/null; then
+    COMPOSE="docker compose -p ttpos-server-bmp -f docker-compose.production.yml"
+elif command -v docker-compose &> /dev/null; then
+    COMPOSE="docker-compose -p ttpos-server-bmp -f docker-compose.production.yml"
+else
+    echo -e "${Error} ${RedBG} 未找到 docker compose 或 docker-compose 命令，请先安装 Docker 和 Docker Compose ${Font}"
+    exit 1
+fi
 
 judge() {
     if [[ 0 -eq $? ]]; then
@@ -160,6 +169,7 @@ if [ $# -gt 0 ]; then
         if [[ -z "$(arg_get local)" ]]; then
             git fetch --all
             git reset --hard origin/$(git branch | sed -n -e 's/^\* \(.*\)/\1/p')
+        fi
         if git pull; then
             echo -e "${OK} ${GreenBG} Git pull 成功 ${Font}"
             compare_env_vars_only_check
@@ -176,7 +186,6 @@ if [ $# -gt 0 ]; then
             echo -e "${Error} ${RedBG} Git pull 失败，请检查网络或远程仓库状态 ${Font}"
             exit 1
         fi
-        #
     elif [[ "$1" == "uninstall" ]]; then
         shift 1
         $COMPOSE down
@@ -190,5 +199,4 @@ if [ $# -gt 0 ]; then
     fi
 else
     $COMPOSE ps
-fi
 fi
