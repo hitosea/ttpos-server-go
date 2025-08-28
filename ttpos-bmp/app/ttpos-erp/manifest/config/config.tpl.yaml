@@ -40,6 +40,8 @@ app:
   erpnext:
     serviceUrl: $NEXTERP_SERVICE_URL
     dump: true
+    webhook:
+      secret: $WEBHOOK_SECRET
 
 # 消息队列
 queue:

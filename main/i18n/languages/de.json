@@ -1,4 +1,6 @@
 {
+  "%s只有一个规格，不可删除": "%s hat nur eine Spezifikation und kann nicht gelöscht werden",
+  "%s管理员添加会员发卡赠送操作 [%s]": "%s-Administrator hat eine Mitgliedskartenausgabe als Geschenk hinzugefügt [%s]",
   "10位手机号不能以0开头": "Eine 10-stellige Handynummer darf nicht mit 0 beginnen",
   "11位手机号必须以1开头": "Eine 11-stellige Handynummer muss mit 1 beginnen",
   "1退货数量超过可退货数量": "1 Die Rückgabemenge überschreitet die zulässige Rückgabemenge",
@@ -914,6 +916,7 @@
   "商品价格不能小于0": "Der Produktpreis darf nicht unter 0 liegen",
   "商品价格信息发生变化，请确认后下单": "Die Produktpreisinformationen haben sich geändert, bitte bestätigen Sie vor der Bestellung",
   "商品价格必须是浮点数": "Der Produktpreis muss eine Gleitkommazahl sein",
+  "商品价格范围错误": "Fehlerhafter Produktpreisbereich",
   "商品会员优惠金额": "Mitgliederrabattbetrag für Produkte",
   "商品会员折扣后单价": "Stückpreis nach Mitgliederrabatt",
   "商品会员折扣后单价 * 数量": "Stückpreis nach Mitgliederrabatt * Menge",
@@ -1159,6 +1162,7 @@
   "天": "Tag",
   "失败": "Fehlgeschlagen",
   "套餐": "Menü",
+  "套餐【%s】已使用此规格，不可删除": "Paket【%s】verwendet diese Spezifikation bereits und kann nicht gelöscht werden",
   "套餐价格范围错误": "Fehler im Paketpreisbereich",
   "套餐参数": "Paketparameter",
   "套餐子商品不存在": "Paket-Teilprodukt existiert nicht",

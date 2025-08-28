@@ -881,7 +881,7 @@ func (h *ProductHandler) EditProductFlavor(c *gin.Context) {
 	}
 	err := h.productSrv.EditProductFlavor(ctx, editReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	helper.Success(c, gin.H{}, "保存成功")

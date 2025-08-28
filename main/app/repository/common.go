@@ -117,6 +117,7 @@ type ICommonRepo interface {
 	WhereBetweenByCompleteTime(startTime int64, endTime int64) DBOption                       // 根据完成时间查询
 	WhereByProductPackageGroupUuid(productPackageGroupUuid uint64) DBOption                   // 根据产品包套餐组UUID查询
 	WhereGtUuid(uuid uint64) DBOption                                                         // 根据UUID大于查询
+	WhereGtProductFlavorUuid(productFlavorUuid uint64) DBOption                               // 根据产品规格uuid大于查询
 	FilterSaleOrderProduct() DBOption                                                         // 只查询常规的购物车商品
 	FilterSaleOrderProductWithH5Order(h5OrderUuid uint64) DBOption                            // 只查询常规的购物车商品、指定某个h5订单的商品
 	FilterSaleOrderProductH5Unordered() DBOption                                              // 只查询H5未下单的购物车商品
@@ -504,6 +505,13 @@ func (r *commonRepo) WhereByProductPackageGroupUuid(productPackageGroupUuid uint
 func (r *commonRepo) WhereGtUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("uuid > ?", uuid)
+	}
+}
+
+// WhereGtProductFlavorUuid 根据产品规格uuid大于查询
+func (r *commonRepo) WhereGtProductFlavorUuid(productFlavorUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("product_flavor_uuid > ?", productFlavorUuid)
 	}
 }
 

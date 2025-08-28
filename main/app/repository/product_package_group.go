@@ -30,8 +30,10 @@ type IProductPackageGroupQueryRepo interface {
 
 // IProductPackageGroupPreloadRepo 商品套餐组预加载仓库接口
 type IProductPackageGroupPreloadRepo interface {
-	WithProductPackageGroup(opts ...DBOption) DBOption        // 预加载商品套餐组
-	WithProductPackageGroupProduct(opts ...DBOption) DBOption // 预加载商品套餐组商品
+	WithProductPackageGroup(opts ...DBOption) DBOption                         // 预加载商品套餐组
+	WithProductPackageGroupMultiLanguageName(opts ...DBOption) DBOption        // 预加载商品套餐组多语言名称
+	WithProductPackageGroupProduct(opts ...DBOption) DBOption                  // 预加载商品套餐组商品
+	WithProductPackageGroupProductMultiLanguageName(opts ...DBOption) DBOption // 预加载商品套餐组商品多语言名称
 }
 
 // productPackageGroupRepoImpl 商品套餐组仓库
@@ -161,10 +163,34 @@ func (r *productPackageGroupRepoImpl) WithProductPackageGroup(opts ...DBOption) 
 	}
 }
 
+// WithProductPackageGroupMultiLanguageName 预加载商品套餐组多语言名称
+func (r *productPackageGroupRepoImpl) WithProductPackageGroupMultiLanguageName(opts ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductPackageGroup.MultiLanguageName", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
+	}
+}
+
 // WithProductPackageGroupProduct 预加载商品套餐组商品
 func (r *productPackageGroupRepoImpl) WithProductPackageGroupProduct(opts ...DBOption) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("ProductPackageGroup.ProductPackage", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
+	}
+}
+
+// WithProductPackageGroupProductMultiLanguageName 预加载商品套餐组商品多语言名称
+func (r *productPackageGroupRepoImpl) WithProductPackageGroupProductMultiLanguageName(opts ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductPackageGroup.ProductPackage.MultiLanguageName", func(db *gorm.DB) *gorm.DB {
 			for _, opt := range opts {
 				db = opt(db)
 			}

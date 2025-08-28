@@ -1,4 +1,6 @@
 {
+  "%s只有一个规格，不可删除": "%s har bara en specifikation och kan inte tas bort",
+  "%s管理员添加会员发卡赠送操作 [%s]": "%s administratör lade till ett medlemskortutdelningsåtgärd [%s]",
   "10位手机号不能以0开头": "Ett 10-siffrigt telefonnummer får inte börja med 0",
   "11位手机号必须以1开头": "Ett 11-siffrigt telefonnummer måste börja med 1",
   "1退货数量超过可退货数量": "1 returkvantitet överskrider maximalt tillåten returkvantitet",
@@ -914,6 +916,7 @@
   "商品价格不能小于0": "Produktpriset kan inte vara mindre än 0",
   "商品价格信息发生变化，请确认后下单": "Produktprisuppgifterna har ändrats, vänligen bekräfta innan du beställer.",
   "商品价格必须是浮点数": "Produktpriset måste vara ett flyttal",
+  "商品价格范围错误": "Felaktigt produktprisintervall",
   "商品会员优惠金额": "Medlemsrabattbelopp för produkt",
   "商品会员折扣后单价": "Styckpris efter medlemsrabatt",
   "商品会员折扣后单价 * 数量": "Produktens medlemsrabatterade enhetspris * antal",
@@ -1159,6 +1162,7 @@
   "天": "dag",
   "失败": "Misslyckande",
   "套餐": "Paket",
+  "套餐【%s】已使用此规格，不可删除": "Paketet【%s】använder redan denna specifikation och kan inte tas bort",
   "套餐价格范围错误": "Fel i paketprisintervall",
   "套餐参数": "Paketparametrar",
   "套餐子商品不存在": "Paketets delprodukt finns inte",

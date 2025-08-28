@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
+	"ttpos-bmp/app/ttpos-erp/internal/controller/callback"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/frame/g"
@@ -25,7 +26,9 @@ var (
 				group.Bind(
 					hello.NewV1(),
 				)
+				group.ALL("/callback", callback.NewV1())
 			})
+
 			s.Run()
 			return nil
 		},

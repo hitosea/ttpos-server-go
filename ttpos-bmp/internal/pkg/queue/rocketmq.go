@@ -126,6 +126,10 @@ func (r *RocketMq) SendByteMsg(topic string, body []byte) (mqMsg MqMsg, err erro
 		return mqMsg, gerror.New("rocketMq producer not register")
 	}
 
+	if err = r.createTopicIfNotExists(topic); err != nil {
+		return mqMsg, err
+	}
+
 	result, err := r.producerIns.SendSync(ctx, &primitive.Message{
 		Topic: topic,
 		Body:  body,
@@ -181,10 +185,6 @@ func (r *RocketMq) ListenReceiveMsgDo(topic string, receiveDo func(mqMsg MqMsg) 
 
 	rocketManager.cMutex.Lock()
 	defer rocketManager.cMutex.Unlock()
-
-	if err = r.createTopicIfNotExists(topic); err != nil {
-		return err
-	}
 
 	err = r.consumerIns.Subscribe(topic, consumer.MessageSelector{}, func(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
 		for _, item := range msgs {

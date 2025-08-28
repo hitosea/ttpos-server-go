@@ -153,7 +153,7 @@ func (model *CompanySetting) GetDeliveryConfig(channel string, distance float64)
 }
 
 func (model *CompanySetting) IsTtposSite() bool {
-	return model.ErpnextSiteCode == "1"
+	return model.ErpnextSiteCode == "1" || model.ErpnextSiteCode == ""
 }
 
 func (model *CompanySetting) IsOpenRider() bool {

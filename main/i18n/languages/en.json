@@ -1,4 +1,6 @@
 {
+  "%s只有一个规格，不可删除": "%s has only one specification and cannot be deleted",
+  "%s管理员添加会员发卡赠送操作 [%s]": "%s administrator added a member card issuance gift operation [%s]",
   "10位手机号不能以0开头": "A 10-digit phone number cannot start with 0",
   "11位手机号必须以1开头": "An 11-digit phone number must start with 1",
   "1退货数量超过可退货数量": "Return quantity exceeds allowable return quantity",
@@ -914,6 +916,7 @@
   "商品价格不能小于0": "Product price cannot be less than 0",
   "商品价格信息发生变化，请确认后下单": "The product price information has changed, please confirm before placing an order",
   "商品价格必须是浮点数": "Product price must be a float",
+  "商品价格范围错误": "Product price range error",
   "商品会员优惠金额": "Product member discount amount",
   "商品会员折扣后单价": "Commodity unit price after membership discount",
   "商品会员折扣后单价 * 数量": "Commodity unit price after membership discount * quantity",
@@ -1159,6 +1162,7 @@
   "天": "Days",
   "失败": "Fail",
   "套餐": "Set meal",
+  "套餐【%s】已使用此规格，不可删除": "Package [%s] is already using this specification and cannot be deleted",
   "套餐价格范围错误": "Package price range error",
   "套餐参数": "Package parameters",
   "套餐子商品不存在": "Package sub-product does not exist",
