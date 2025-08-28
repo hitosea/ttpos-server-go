@@ -14,11 +14,11 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	setup2 "ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
+	"ttpos-bmp/utility"
 
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/text/gstr"
 )
 
 var (
@@ -408,27 +408,23 @@ func (s *sSetup) InitErpDocTypeWithDirname(ctx context.Context, dirBase string) 
 	if _, err := os.Stat(dirBase); os.IsNotExist(err) {
 		return gerror.Newf("%s目录不存在", dirBase)
 	}
-
 	g.Log().Infof(ctx, "开始初始化%s", dirBase)
-	//files, err := ioutil.ReadDir(".")
-	// 遍历目录下的所有文件
-	err := filepath.Walk(dirBase, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
+	files, err := os.ReadDir(dirBase)
+	if err != nil {
+		return gerror.Wrapf(err, "读取目录失败")
+	}
+	for _, file := range files {
+		if file.IsDir() {
 			config := DocumentInitConfig{
 				DirBase:  dirBase,
-				DirName:  info.Name(),
-				DocType:  gstr.CaseCamel(info.Name()),
-				ItemName: gstr.CaseCamel(info.Name()),
+				DirName:  file.Name(),
+				DocType:  utility.ConvertToTitleCase(file.Name()),
+				ItemName: utility.ConvertToTitleCase(file.Name()),
 			}
-			g.Log().Infof(ctx, "开始初始化%s，目录: %s", config.ItemName, info.Name())
+			g.Log().Infof(ctx, "开始初始化%s，目录: %s", config.ItemName, file.Name())
 			s.initDocumentsFromDir(ctx, config)
 		}
-
-		return nil
-	})
+	}
 	if err != nil {
 		return gerror.Wrapf(err, "初始化%s失败", dirBase)
 	}
