@@ -4746,7 +4746,7 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
 
 	// 获取订单信息
-	billInfo, err := orderRepo.GetSaleBillInfoAndProduct(req.SaleBillUuid, req.SaleOrderUuid, 0)
+	billInfo, err := orderRepo.GetSaleBillAllInfo(req.SaleBillUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -4779,6 +4779,7 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 
 	// 更新订单商品备注
 	repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		saleOrderProduct.Remark = req.Remark
 		sign := saleOrderProduct.GenerateProductSign()
 		if err := repository.NewOrderRepo(db).ChangeProductRemark(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid, req.Remark, sign); err != nil {
 			return errors.WithMessage(err)
