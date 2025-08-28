@@ -153,15 +153,15 @@ if [ $# -gt 0 ]; then
     if [[ "$1" == "init" ]] || [[ "$1" == "install" ]]; then
         shift 1
         env_init
-        echo "初始化数据库"
-        make migrate
-        judge "初始化数据库"
-        echo "生成配置文件"
+        echo "======== 生成配置文件 ========"
         make conf
-        judge "生成配置文件"
-        echo "启动容器"
+        judge "======== 生成配置文件 ========"
+        echo "======== 初始化数据库 ========"
+        make migrate
+        judge " ======== 初始化数据库 ========"
+        echo "======== 启动容器 ========"
         $COMPOSE up -d 
-        judge "启动容器"
+        judge "======== 启动容器========"
         echo -e "${OK} ${GreenBG} 安装完成 ${Font}"
     elif [[ "$1" == "update" ]]; then
         shift 1
