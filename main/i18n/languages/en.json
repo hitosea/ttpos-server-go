@@ -916,6 +916,7 @@
   "商品价格不能小于0": "Product price cannot be less than 0",
   "商品价格信息发生变化，请确认后下单": "The product price information has changed, please confirm before placing an order",
   "商品价格必须是浮点数": "Product price must be a float",
+  "商品价格范围错误": "Product price range error",
   "商品会员优惠金额": "Product member discount amount",
   "商品会员折扣后单价": "Commodity unit price after membership discount",
   "商品会员折扣后单价 * 数量": "Commodity unit price after membership discount * quantity",

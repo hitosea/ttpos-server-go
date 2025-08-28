@@ -916,6 +916,7 @@
   "商品价格不能小于0": "Ürün fiyatı 0'dan küçük olamaz",
   "商品价格信息发生变化，请确认后下单": "Ürün fiyat bilgileri değişti, lütfen onayladıktan sonra sipariş verin",
   "商品价格必须是浮点数": "Ürün fiyatı bir float olmalıdır",
+  "商品价格范围错误": "Ürün fiyat aralığı hatalı",
   "商品会员优惠金额": "Ürün üye indirim tutarı",
   "商品会员折扣后单价": "Üyelik indirimi sonrası ürün birim fiyatı",
   "商品会员折扣后单价 * 数量": "Üyelik indirimi sonrası ürün birim fiyatı * adet",

@@ -5323,6 +5323,9 @@ func (s *productSrv) ProductShopChangePrice(ctx context.Context, req req.Product
 
 		price := 0.0
 		for _, item := range req.Prices {
+			if !productRepo.CheckPrice(item.Price, 0, 100000000, 2) {
+				return errors.New("商品价格范围错误")
+			}
 			productBom, err := productBomRepo.GetProductBom(
 				commonRepo.WhereByUuid(item.Uuid),
 				commonRepo.WhereBySoftDelete(),
