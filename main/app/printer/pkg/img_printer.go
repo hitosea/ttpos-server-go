@@ -188,6 +188,12 @@ func (i *ImgFont) GetFontPath(char string) string {
 		return fonts.FontTR
 	}
 
+	// 老挝语
+	laoPattern := regexp.MustCompile(`[\x{0E80}-\x{0EFF}]`)
+	if laoPattern.MatchString(char) {
+		return fonts.FontLO
+	}
+
 	// 默认英文
 	return fonts.FontEN
 }
@@ -615,7 +621,7 @@ func (i *ImgFont) drawText(text, fontPath string, fontSize, fontWeight int, x, y
 	// 后绘制原始文本
 	ctx.SetSrc(image.NewUniform(textColor))
 	pt := freetype.Pt(x, y+fontSize)
-	
+
 	// 对于58mm打印纸，减少重复绘制避免重影
 	// 只有在初始ImageWidth为58mm时才应用此逻辑，避免PrintInColumns中临时ImageWidth的误判
 	maxWeight := fontWeight
@@ -626,7 +632,7 @@ func (i *ImgFont) drawText(text, fontPath string, fontSize, fontWeight int, x, y
 			maxWeight = 2 // 限制最大重复次数
 		}
 	}
-	
+
 	for j := 0; j < maxWeight; j++ {
 		_, err := ctx.DrawString(text, pt)
 		if err != nil {
@@ -1542,7 +1548,7 @@ func (i *ImgFont) GetBytesFromBitMap(bitmap image.Image) string {
 	bounds := bitmap.Bounds()
 	width := bounds.Dx()
 	height := bounds.Dy()
-	
+
 	// 计算字节宽度，确保8字节对齐
 	bw := (width + 7) / 8 // 向上取整到8的倍数
 
