@@ -92,6 +92,12 @@ const (
 	CodeOrderPrepareDataError          = -705 // 准备数据发起外送订单创建时失败
 )
 
+// 商家端业务错误码
+const (
+	CodeProductDeleteCanNotDeletePackage = -801 // 商品已关联套餐，无法删除，请先修改套餐
+	CodeProductEditCanNotDeletePackage   = -802 // 商品规格已关联套餐，无法删除，请先修改套餐
+)
+
 type ParseCodeOrderCheckOption struct {
 	IsH5     bool // 是否是h5端的文案
 	IsTablet bool // 是否是平板端的文案

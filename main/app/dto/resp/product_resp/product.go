@@ -529,3 +529,13 @@ type ProductTaxItemResp struct {
 	Name string  `json:"name"` // 税类名称
 	Rate float64 `json:"rate"` // 税率
 }
+
+// ProductDeleteResp 商品删除响应
+type ProductDeleteResp struct {
+	List []string `json:"list"`
+}
+
+// ProductEditResp 商品编辑响应
+type ProductEditResp struct {
+	List []string `json:"list"`
+}

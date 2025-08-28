@@ -1113,9 +1113,18 @@ func (h *ProductHandler) ProductShopEdit(c *gin.Context) {
 		helper.HandleValidationError(c, err, editReq, nil)
 		return
 	}
-	err := h.productSrv.EditProductShop(ctx, editReq)
+	data, err := h.productSrv.EditProductShop(ctx, editReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		if data != nil {
+			appErr := errors.AppError{
+				Code:    constant.CodeProductEditCanNotDeletePackage,
+				Message: err.Error(),
+				Replace: data.List,
+			}
+			helper.ErrorWithData(c, constant.CodeFail, data, appErr)
+		} else {
+			helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		}
 		return
 	}
 	helper.Success(c, nil, "保存成功")
@@ -1139,9 +1148,18 @@ func (h *ProductHandler) ProductShopDelete(c *gin.Context) {
 		helper.HandleValidationError(c, err, deleteReq, nil)
 		return
 	}
-	err := h.productSrv.DeleteProductShop(ctx, deleteReq)
+	data, err := h.productSrv.DeleteProductShop(ctx, deleteReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		if data != nil {
+			appErr := errors.AppError{
+				Code:    constant.CodeProductDeleteCanNotDeletePackage,
+				Message: "商品已关联如下套餐，暂时无法删除，请先修改套餐",
+				Replace: []string{},
+			}
+			helper.ErrorWithData(c, constant.CodeProductDeleteCanNotDeletePackage, data, appErr)
+		} else {
+			helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		}
 		return
 	}
 	helper.Success(c, nil, "删除成功")
