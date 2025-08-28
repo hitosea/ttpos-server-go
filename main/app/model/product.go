@@ -257,7 +257,7 @@ func (model *ProductPackage) GetOpenOverallDiscount() bool {
 func (model *ProductPackage) GetRespFlavorList() []product_resp.ProductFlavor {
 	flavorList := make([]product_resp.ProductFlavor, 0)
 	for _, bom := range model.ProductBoms {
-		if bom.IsFlavor() {
+		if bom.IsFlavor() && !bom.IsDelete() {
 			flavorList = append(flavorList, product_resp.ProductFlavor{
 				Uuid:       bom.ProductFlavor.Uuid,
 				BomUuid:    bom.Uuid,
@@ -274,7 +274,7 @@ func (model *ProductPackage) GetRespFlavorList() []product_resp.ProductFlavor {
 func (model *ProductPackage) GetRespSaucesList() []product_resp.ProductSauce {
 	sauceList := make([]product_resp.ProductSauce, 0)
 	for _, bom := range model.ProductBoms {
-		if bom.IsSauce() {
+		if bom.IsSauce() && !bom.IsDelete() {
 			sauceList = append(sauceList, product_resp.ProductSauce{
 				Uuid:              bom.ProductSauce.Uuid,
 				BomUuid:           bom.Uuid,
@@ -291,8 +291,14 @@ func (model *ProductPackage) GetRespSaucesList() []product_resp.ProductSauce {
 func (model *ProductPackage) GetRespAttributeGroupList() []product_resp.ProductAttributeGroup {
 	attributeGroupList := make([]product_resp.ProductAttributeGroup, 0)
 	for _, attributeGroup := range model.ProductPackageAttributeGroups {
+		if attributeGroup.IsDelete() {
+			continue
+		}
 		attributes := make([]product_resp.ProductAttributeValue, 0)
 		for _, attribute := range attributeGroup.ProductPackageAttributes {
+			if attribute.IsDelete() {
+				continue
+			}
 			attributes = append(attributes, product_resp.ProductAttributeValue{
 				Uuid:              attribute.AttributeUuid,
 				LocaleName:        attribute.Attribute.MultiLanguageName.GetNames(),
@@ -315,8 +321,14 @@ func (model *ProductPackage) GetRespAttributeGroupList() []product_resp.ProductA
 func (model *ProductPackage) GetRespPackageSubProductGroupList() []product_resp.ProductPackageSubProductGroup {
 	packageSubProductGroupList := make([]product_resp.ProductPackageSubProductGroup, 0)
 	for _, packageSubProductGroup := range model.ProductPackageGroups {
+		if packageSubProductGroup.DeleteTime > 0 {
+			continue
+		}
 		products := make([]product_resp.ProductPackageSubProduct, 0)
 		for _, product := range packageSubProductGroup.ProductPackageGroupItems {
+			if product.DeleteTime > 0 {
+				continue
+			}
 			products = append(products, product_resp.ProductPackageSubProduct{
 				Uuid:             product.Uuid,
 				BomUuid:          product.ProductBomUuid,

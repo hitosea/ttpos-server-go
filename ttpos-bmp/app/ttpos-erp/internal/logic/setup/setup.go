@@ -332,6 +332,7 @@ func (s *sSetup) GetUserApiKeySecret(ctx context.Context, userEmail string) (api
 
 // DocumentInitConfig 文档初始化配置
 type DocumentInitConfig struct {
+	DirBase    string // 迁移目录基础路径
 	DirName    string // 目录名称，如 "custom_fields"
 	DocType    string // 文档类型，如 "Custom Field"
 	ItemName   string // 项目名称，用于日志，如 "自定义字段"
@@ -348,7 +349,7 @@ type DocumentInitConfig struct {
 //   - err: 错误信息
 func (s *sSetup) initDocumentsFromDir(ctx context.Context, config DocumentInitConfig) error {
 	// 构建目录路径
-	dirPath := fmt.Sprintf("manifest/erp-migrate/v2.5/%s", config.DirName)
+	dirPath := fmt.Sprintf("%s/%s", config.DirBase, config.DirName)
 
 	// 检查目录是否存在
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
@@ -408,8 +409,9 @@ func (s *sSetup) initDocumentsFromDir(ctx context.Context, config DocumentInitCo
 //
 // 返回：
 //   - err: 错误信息
-func (s *sSetup) InitCustomFields(ctx context.Context) error {
+func (s *sSetup) InitCustomFields(ctx context.Context, dirBase string) error {
 	return s.initDocumentsFromDir(ctx, DocumentInitConfig{
+		DirBase:    dirBase,
 		DirName:    "custom_fields",
 		DocType:    "Custom Field",
 		ItemName:   "自定义字段",
@@ -424,8 +426,9 @@ func (s *sSetup) InitCustomFields(ctx context.Context) error {
 //
 // 返回：
 //   - err: 错误信息
-func (s *sSetup) InitCustomers(ctx context.Context) error {
+func (s *sSetup) InitCustomers(ctx context.Context, dirBase string) error {
 	return s.initDocumentsFromDir(ctx, DocumentInitConfig{
+		DirBase:    dirBase,
 		DirName:    "customer",
 		DocType:    "Customer",
 		ItemName:   "客户",
@@ -440,8 +443,9 @@ func (s *sSetup) InitCustomers(ctx context.Context) error {
 //
 // 返回：
 //   - err: 错误信息
-func (s *sSetup) InitModeOfPayment(ctx context.Context) error {
+func (s *sSetup) InitModeOfPayment(ctx context.Context, dirBase string) error {
 	return s.initDocumentsFromDir(ctx, DocumentInitConfig{
+		DirBase:    dirBase,
 		DirName:    "mode_of_payment",
 		DocType:    "Mode Of Payment",
 		ItemName:   "支付方式",
