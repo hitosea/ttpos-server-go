@@ -113,6 +113,15 @@ type SavePosInvoiceReq struct {
 	MaterialItems    []*selling.PosInvoiceItem    `form:"material_items" json:"material_items" binding:"required"`           // 原材料项目列表 必填
 	Taxes            []*selling.PosInvoiceTax     `form:"taxes" json:"taxes" binding:"required"`                             // 税费列表 必填
 	Payments         []*selling.PosInvoicePayment `form:"payments" json:"payments" binding:"required"`                       // 付款列表 必填
+
+	AmendedProductsInvoiceName string `form:"amended_products_invoice_name" json:"amended_products_invoice_name" binding:"required"` // 反结账后，重新结账时填写原商品发票名称
+	AmendedMaterialInvoiceName string `form:"amended_material_invoice_name" json:"amended_material_invoice_name" binding:"required"` // 反结账后，重新结账时填写原材料发票名称
+
+}
+
+type CancelPosInvoiceReq struct {
+	ProductsInvoiceName string `form:"products_invoice_name" json:"products_invoice_name" binding:"required"` // 商品销售发票
+	MaterialInvoiceName string `form:"material_invoice_name" json:"material_invoice_name" binding:"required"` // 材料销售发票
 }
 
 type ReturnPosInvoiceReq struct {

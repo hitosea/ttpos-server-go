@@ -2956,11 +2956,11 @@ func (s *orderSrv) GetReverseSettleInfo(ctx context.Context, req req.OrderRevers
 }
 
 // ReverseSettle 处理反结账
-func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettleReq) error {
+func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSettleReq) error {
 	// 禁止并发操作
 	if ctx.NoLock() {
-		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
-		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		lock.NewSystemLock().LockUuid(request.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(request.SaleBillUuid)
 		ctx.AddLock()
 	}
 
@@ -2975,12 +2975,12 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 	ctx.SetDB(db)
 	orderRepo := repository.NewOrderRepo(db)
 	// 获取销售账单信息
-	saleBill, err := orderRepo.GetSaleBillAllInfo(req.SaleBillUuid)
+	saleBill, err := orderRepo.GetSaleBillAllInfo(request.SaleBillUuid)
 	if err != nil {
 		return errors.WithMessage(err)
 	}
 	if saleBill.IsDeskSaleBill() {
-		if req.DeskUuid == 0 {
+		if request.DeskUuid == 0 {
 			return errors.WithMessage(errors.New("桌台UUID不能为0"))
 		}
 	}
@@ -2996,7 +2996,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 	var desk *model.Desk
 	if saleBill.IsDeskSaleBill() {
 		deskRepo := repository.NewDeskRepo(db)
-		desk, err = deskRepo.GetDeskRecord(req.DeskUuid)
+		desk, err = deskRepo.GetDeskRecord(request.DeskUuid)
 		if err != nil {
 			return errors.WithMessage(err)
 		}
@@ -3017,7 +3017,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 		}
 		// 如果存在未挂单的点餐订单，则根据参数决定是否挂单
 		if hasInstantOrder {
-			if req.HideOrder {
+			if request.HideOrder {
 				hideSaleBill = saleBill
 				hideSaleBill.SetHideSaleBill()
 			} else {
@@ -3204,7 +3204,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 						Ctx:          ctx,
 						CompanyUuid:  ctx.GetCompanyUuid(),
 						Source:       ctx.GetSource(),
-						SaleBillUuid: req.SaleBillUuid,
+						SaleBillUuid: request.SaleBillUuid,
 						OperatorUuid: int64(ctx.GetStaffUuid()),
 					},
 				})
@@ -3217,7 +3217,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 						Ctx:          ctx,
 						CompanyUuid:  ctx.GetCompanyUuid(),
 						Source:       ctx.GetSource(),
-						SaleBillUuid: req.SaleBillUuid,
+						SaleBillUuid: request.SaleBillUuid,
 						OperatorUuid: int64(ctx.GetStaffUuid()),
 					},
 				})
@@ -3271,7 +3271,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 						Price: order.GetAmount(),
 					})
 				} else {
-					if infoResp, err := s.InstantOrderPaymentInfo(ctx, saleBill, req.SaleBillUuid, order.Uuid); err == nil {
+					if infoResp, err := s.InstantOrderPaymentInfo(ctx, saleBill, request.SaleBillUuid, order.Uuid); err == nil {
 						for _, paymentOrder := range infoResp.PaymentOrders.List {
 							payTypes = append(payTypes, event.PayType{
 								Name:           paymentOrder.PaymentMethodName,
@@ -3330,6 +3330,25 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 				OnlyDelete:   true,
 			})
 		}()
+
+		// 在ERP取消发票
+		company := ctx.GetCompany()
+		companySetting := ctx.GetCompanySetting()
+		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
+			erpSrv := erp.NewIErpSrv(s.dbm)
+			for _, saleOrder := range saleBill.SaleOrders {
+				if saleOrder.IsDelete() {
+					continue
+				}
+				err := erpSrv.CancelPosInvoice(ctx, req.CancelPosInvoiceReq{
+					ProductsInvoiceName: saleOrder.ErpProductsInvoiceName,
+					MaterialInvoiceName: saleOrder.ErpMaterialInvoiceName,
+				})
+				if err != nil {
+					return errors.WithMessage(err)
+				}
+			}
+		}
 
 		return nil
 	}); err != nil {
@@ -9891,6 +9910,10 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 		MaterialItems:    materialItems, // 订单原材料列表
 		Taxes:            taxes,         // 订单税费列表
 		Payments:         payments,      // 订单付款列表
+	}
+	if saleOrder.IsErpReverseSettle() {
+		param.AmendedProductsInvoiceName = saleOrder.ErpProductsInvoiceName
+		param.AmendedMaterialInvoiceName = saleOrder.ErpMaterialInvoiceName
 	}
 	response, err := erpSrv.SavePosInvoice(ctx, param)
 	if err != nil {
