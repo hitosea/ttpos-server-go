@@ -2,9 +2,10 @@ package consumer
 
 import (
 	"context"
-	"github.com/gogf/gf/v2/frame/g"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/internal/pkg/queue"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 type ItemSyncConsumer struct {
@@ -28,4 +29,8 @@ func (c *ItemSyncConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg) (err e
 	// 中文注释：处理商品同步队列消息
 	g.Log().Info(ctx, "收到商品同步消息：", string(mqMsg.Body))
 	return nil
+}
+
+func (c *ItemSyncConsumer) GetConcurrency() int {
+	return 1
 }

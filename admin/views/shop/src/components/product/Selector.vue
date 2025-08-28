@@ -185,7 +185,7 @@
       type: Boolean,
       default: false,
     },
-    haveStatusZero: {
+    haveStatusClose: {
       type: Boolean,
       default: false,
     },
@@ -434,7 +434,7 @@
           await InventoryApi.getErpInventory(
             {
               material_type: 10,
-              product_status: props.haveStatusZero ? 0 : 10,
+              product_status: props.haveStatusClose ? 0 : 10,
               filter_having_material: 0,
               filter_having_decimal: 1,
               list_rows: 1000,

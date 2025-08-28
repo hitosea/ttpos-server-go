@@ -60,7 +60,11 @@
             <el-table-column :label="$t('序号')" width="80" type="index" />
             <el-table-column prop="product_name_text" :label="$t('商品名称')" />
             <el-table-column prop="spec_name_text" :label="$t('规格')" width="120" />
-            <el-table-column prop="product_price" :label="$t('商品价格')" width="120" />
+            <el-table-column prop="product_price" :label="$t('商品价格')" width="120">
+              <template #default="scope">
+                {{ $formatPrice(scope.row.product_price) }}
+              </template>
+            </el-table-column>
             <el-table-column prop="num" :label="$t('数量')" width="120">
               <template #default="scope">
                 <el-form-item class="mt16" :prop="`model.package_group.${groupIndex}.product_list.${scope.$index}.num`" :rules="[{ required: true, message: $t('请输入数量') }]">
@@ -77,13 +81,7 @@
             </el-table-column>
             <el-table-column prop="stock_num" :label="$t('商品库存')" width="160">
               <template #default="scope">
-                <el-form-item
-                  class="mt16"
-                  :prop="`model.package_group.${groupIndex}.product_list.${scope.$index}.stock_num`"
-                  :rules="[{ required: true, validator: validateStockNum, message: $t('商品库存不足') }]"
-                >
-                  {{ scope.row.stock_num }}
-                </el-form-item>
+                {{ scope.row.stock_num }}
               </template>
             </el-table-column>
             <el-table-column prop="action" :label="$t('操作')" width="100" fixed="right">
@@ -154,8 +152,7 @@
       selectorType="all"
       :selectedProductIds="selectedProductIds"
       :haveSku="true"
-      :stockZero="true"
-      :haveStatusZero="true"
+      :haveStatusClose="true"
     >
     </ProductSelector>
 
@@ -431,15 +428,6 @@
     }
   };
 
-  // 校验商品库存
-  const validateStockNum = (rule, value, callback) => {
-    if (value <= 0) {
-      callback(new Error($t('商品库存不足')));
-    } else {
-      callback();
-    }
-  };
-
   // 校验分组名称
   const validateGroupName = (rule, value, callback, groupIndex) => {
     // 检查当前输入框的值是否为空
@@ -447,10 +435,10 @@
       callback(new Error($t('请填写分组名称')));
       return;
     }
-    // 检查该分组下所有语言版本是否都已填写
+    // 以 languageList 中的key值为基准，检查该分组下所有语言版本是否都已填写
     const groupName = form.model.package_group[groupIndex].group_name;
-    const allLanguagesFilled = Object.keys(groupName).every((key) => {
-      const langValue = groupName[key];
+    const allLanguagesFilled = languageList.every((item) => {
+      const langValue = groupName[item.key];
       return langValue && langValue.trim();
     });
 

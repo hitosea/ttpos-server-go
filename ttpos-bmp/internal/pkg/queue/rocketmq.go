@@ -8,7 +8,7 @@ import (
 	"ttpos-bmp/utility/simple"
 	"ttpos-bmp/utility/validate"
 
-	rocketmq "github.com/apache/rocketmq-client-go/v2"
+	"github.com/apache/rocketmq-client-go/v2"
 	"github.com/apache/rocketmq-client-go/v2/admin"
 	"github.com/apache/rocketmq-client-go/v2/consumer"
 	"github.com/apache/rocketmq-client-go/v2/primitive"
@@ -101,7 +101,7 @@ func (r *RocketMq) createTopicIfNotExists(topic string) (err error) {
 	}
 	defer client.Close()
 
-	result, err := client.FetchAllTopicList(ctx)
+	result, err := client.FetchAllTopicList(globalCtx)
 	if err != nil {
 		return err
 	}
@@ -110,105 +110,209 @@ func (r *RocketMq) createTopicIfNotExists(topic string) (err error) {
 		return
 	}
 
-	Logger().Debugf(ctx, "create topic:%v", topic)
-	err = client.CreateTopic(ctx, admin.WithTopicCreate(topic), admin.WithBrokerAddrCreate(config.Rocketmq.BrokerAddr))
+	Logger().Debugf(globalCtx, "create topic:%v", topic)
+	err = client.CreateTopic(globalCtx, admin.WithTopicCreate(topic), admin.WithBrokerAddrCreate(config.Rocketmq.BrokerAddr))
 	return
 }
 
 // SendMsg 按字符串类型生产数据
-func (r *RocketMq) SendMsg(topic string, body string) (mqMsg MqMsg, err error) {
-	return r.SendByteMsg(topic, []byte(body))
+func (r *RocketMq) SendMsg(ctx context.Context, topic string, body string) (mqMsg MqMsg, err error) {
+	return r.SendByteMsg(ctx, topic, []byte(body))
 }
 
 // SendByteMsg 生产数据
-func (r *RocketMq) SendByteMsg(topic string, body []byte) (mqMsg MqMsg, err error) {
+func (r *RocketMq) SendByteMsg(ctx context.Context, topic string, body []byte) (mqMsg MqMsg, err error) {
+	// 参数验证
 	if r.producerIns == nil {
-		return mqMsg, gerror.New("rocketMq producer not register")
+		return mqMsg, gerror.New("RocketMQ生产者未初始化")
+	}
+	if topic == "" {
+		return mqMsg, gerror.New("主题名称不能为空")
+	}
+	if len(body) == 0 {
+		return mqMsg, gerror.New("消息内容不能为空")
 	}
 
+	// 自动创建主题
+	if err = r.createTopicIfNotExists(topic); err != nil {
+		return mqMsg, gerror.Wrapf(err, "创建主题失败 [%s]", topic)
+	}
+
+	// 发送消息
+	startTime := time.Now()
 	result, err := r.producerIns.SendSync(ctx, &primitive.Message{
 		Topic: topic,
 		Body:  body,
 	})
+	duration := time.Since(startTime)
 
 	if err != nil {
-		return
+		return mqMsg, gerror.Wrapf(err, "RocketMQ发送消息失败 [%s]", topic)
 	}
 	if result.Status != primitive.SendOK {
-		return mqMsg, gerror.Newf("rocketMq producer send msg error status:%v", result.Status)
+		return mqMsg, gerror.Newf("RocketMQ发送消息状态异常 [%s]: %v", topic, result.Status)
 	}
 
+	// 构建返回消息
 	mqMsg = MqMsg{
-		RunType: SendMsg,
-		Topic:   topic,
-		MsgId:   result.MsgID,
-		Body:    body,
+		RunType:   MsgTypeSend,
+		Topic:     topic,
+		MsgId:     result.MsgID,
+		Body:      body,
+		Timestamp: time.Now(),
 	}
+
+	// 记录性能监控
+	if duration > 500*time.Millisecond {
+		Logger().Warningf(ctx, "RocketMQ发送消息耗时 [%s] - 消息ID: %s, 耗时: %v",
+			topic, result.MsgID, duration)
+	}
+
 	return mqMsg, nil
 }
 
-func (r *RocketMq) SendDelayMsg(topic string, body string, delay time.Duration) (mqMsg MqMsg, err error) {
+// SendDelayMsg 发送延时消息
+func (r *RocketMq) SendDelayMsg(ctx context.Context, topic string, body string, delay time.Duration) (mqMsg MqMsg, err error) {
+	// 参数验证
 	if r.producerIns == nil {
-		return mqMsg, gerror.New("rocketMq producer not register")
+		return mqMsg, gerror.New("RocketMQ生产者未初始化")
+	}
+	if topic == "" {
+		return mqMsg, gerror.New("主题名称不能为空")
+	}
+	if body == "" {
+		return mqMsg, gerror.New("消息内容不能为空")
+	}
+	if delay < 0 {
+		return mqMsg, gerror.New("延时时间不能为负数")
 	}
 
+	// 创建延时消息
 	msg := primitive.NewMessage(topic, []byte(body))
-	//msg.WithDelayTimeLevel(int(delayTimeLevel))
 	msg.WithDelayTimestamp(time.Now().Add(delay))
 
+	// 发送消息
+	startTime := time.Now()
 	result, err := r.producerIns.SendSync(ctx, msg)
+	duration := time.Since(startTime)
+
 	if err != nil {
-		return
+		return mqMsg, gerror.Wrapf(err, "RocketMQ发送延时消息失败 [%s]", topic)
 	}
 	if result.Status != primitive.SendOK {
-		return mqMsg, gerror.Newf("rocketMq producer send msg error status:%v", result.Status)
+		return mqMsg, gerror.Newf("RocketMQ发送延时消息状态异常 [%s]: %v", topic, result.Status)
 	}
 
+	// 构建返回消息
 	mqMsg = MqMsg{
-		RunType: SendMsg,
-		Topic:   topic,
-		MsgId:   result.MsgID,
-		Body:    []byte(body),
+		RunType:   MsgTypeSend,
+		Topic:     topic,
+		MsgId:     result.MsgID,
+		Body:      []byte(body),
+		Timestamp: time.Now(),
 	}
+
+	// 记录性能监控
+	if duration > 500*time.Millisecond {
+		Logger().Warningf(ctx, "RocketMQ发送延时消息耗时 [%s] - 消息ID: %s, 延时: %v, 耗时: %v",
+			topic, result.MsgID, delay, duration)
+	}
+
 	return mqMsg, nil
 }
 
-// ListenReceiveMsgDo 消费数据
-func (r *RocketMq) ListenReceiveMsgDo(topic string, receiveDo func(mqMsg MqMsg) error) (err error) {
+// Subscribe 订阅主题消息（新接口方法）
+func (r *RocketMq) Subscribe(ctx context.Context, topic string, handler func(ctx context.Context, mqMsg MqMsg) error) error {
+	// 参数验证
 	if r.consumerIns == nil {
-		return gerror.New("rocketMq consumer not register")
+		return gerror.New("RocketMQ消费者未初始化")
+	}
+	if topic == "" {
+		return gerror.New("主题名称不能为空")
+	}
+	if handler == nil {
+		return gerror.New("消息处理函数不能为空")
 	}
 
 	rocketManager.cMutex.Lock()
 	defer rocketManager.cMutex.Unlock()
 
-	if err = r.createTopicIfNotExists(topic); err != nil {
-		return err
-	}
+	// 订阅主题
+	err := r.consumerIns.Subscribe(topic, consumer.MessageSelector{}, func(consumerCtx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
+		for _, msg := range msgs {
+			// 使用协程池处理消息
+			_ = rocketManager.goPool.Add(consumerCtx, func(poolCtx context.Context) {
+				startTime := time.Now()
 
-	err = r.consumerIns.Subscribe(topic, consumer.MessageSelector{}, func(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
-		for _, item := range msgs {
-			_ = rocketManager.goPool.Add(ctx, func(ctx context.Context) {
-				receiveDo(MqMsg{
-					RunType: ReceiveMsg,
-					Topic:   item.Topic,
-					MsgId:   item.MsgId,
-					Body:    item.Body,
-				})
+				// 构建消息对象
+				mqMsg := MqMsg{
+					RunType:   MsgTypeReceive,
+					Topic:     msg.Topic,
+					MsgId:     msg.MsgId,
+					Body:      msg.Body,
+					Timestamp: time.Now(),
+				}
+
+				// 处理消息
+				handleErr := handler(poolCtx, mqMsg)
+				duration := time.Since(startTime)
+
+				// 记录日志
+				ConsumerLogWithDuration(poolCtx, topic, mqMsg, handleErr, duration)
+
+				// 错误处理（未来可以添加重试机制）
+				if handleErr != nil {
+					Logger().Errorf(poolCtx, "RocketMQ消息处理失败 [%s] - 消息ID: %s, 错误: %+v",
+						topic, msg.MsgId, handleErr)
+				}
 			})
 		}
 		return consumer.ConsumeSuccess, nil
 	})
 
 	if err != nil {
-		return
+		return gerror.Wrapf(err, "RocketMQ订阅主题失败 [%s]", topic)
 	}
 
+	// 启动消费者
 	if err = r.consumerIns.Start(); err != nil {
+		// 失败时取消订阅
 		_ = r.consumerIns.Unsubscribe(topic)
-		return
+		return gerror.Wrapf(err, "RocketMQ启动消费者失败 [%s]", topic)
 	}
-	return
+
+	Logger().Infof(ctx, "RocketMQ消费者订阅成功 [%s]", topic)
+	return nil
+}
+
+// Close 关闭RocketMQ连接
+func (r *RocketMq) Close() error {
+	var errors []error
+
+	// 关闭生产者
+	if r.producerIns != nil {
+		if err := r.producerIns.Shutdown(); err != nil {
+			errors = append(errors, gerror.Wrapf(err, "关闭RocketMQ生产者失败"))
+		} else {
+			Logger().Info(globalCtx, "RocketMQ生产者已关闭")
+		}
+	}
+
+	// 关闭消费者
+	if r.consumerIns != nil {
+		if err := r.consumerIns.Shutdown(); err != nil {
+			errors = append(errors, gerror.Wrapf(err, "关闭RocketMQ消费者失败"))
+		} else {
+			Logger().Info(globalCtx, "RocketMQ消费者已关闭")
+		}
+	}
+
+	// 如果有错误，返回第一个错误
+	if len(errors) > 0 {
+		return errors[0]
+	}
+
+	return nil
 }
 
 // RegisterRocketMqProducer 注册rocketmq生产者
@@ -248,7 +352,7 @@ func RegisterRocketMqProducer() (mqIns *RocketMq, err error) {
 		return nil, err
 	}
 
-	_, err = mqIns.producerIns.SendSync(ctx, primitive.NewMessage("ttpos-ping", []byte("1")))
+	_, err = mqIns.producerIns.SendSync(globalCtx, primitive.NewMessage("ttpos-ping", []byte("1")))
 	if err != nil {
 		err = gerror.Newf("连通性测试不通过，请检查`queue.rocketmq.nameSrvAdders`或权限配置是否有误。err:%+v", err.Error())
 		return nil, err
@@ -298,7 +402,7 @@ func RegisterRocketMqConsumer() (mqIns *RocketMq, err error) {
 
 // SetRLogLevel 设置rocketmq日志输出等级
 func SetRLogLevel() {
-	level := g.Cfg().MustGet(ctx, "queue.rocketmq.logLevel", "warn").String()
+	level := g.Cfg().MustGet(globalCtx, "queue.rocketmq.logLevel", "warn").String()
 	rlog.SetLogLevel(level)
 	//rlog.SetOutputPath(g.Cfg().MustGet(ctx, "log.queue.path", "./log/queue.log").String())
 }

@@ -90,8 +90,8 @@ func execute() {
 					return err
 				}
 
-				// 使用正则表达式匹配中文字符和相关内容
-				re := regexp.MustCompile(`('|")((auto\.)?(([a-zA-Z0-9\/-]+)?[\p{Han}]+.*?))('|")`)
+				// 使用正则表达式匹配中文字符和相关内容，包括以%s开头且后面跟汉字的情况
+				re := regexp.MustCompile(`('|")((auto\.)?(([a-zA-Z0-9\/-]+)?[\p{Han}]+.*?|%s[\p{Han}]+.*?))('|")`)
 				matches := re.FindAllStringSubmatch(string(content), -1)
 
 				// 提取中文
