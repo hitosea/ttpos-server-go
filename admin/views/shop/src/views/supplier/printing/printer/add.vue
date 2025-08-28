@@ -77,7 +77,7 @@
             v-model="form.SUNMI_LAN.IP"
             :fetch-suggestions="getIPSuggestions"
             clearable
-            placeholder="请选择或输入IP地址"
+            :placeholder="$t('请选择或输入IP地址')"
             style="width: 100%">
             <template #default="{ item }">
               <div>{{ item.label }}</div>
@@ -111,7 +111,7 @@
             v-model="form.XPRINTER_LAN.IP"
             :fetch-suggestions="getIPSuggestions"
             clearable
-            placeholder="请选择或输入IP地址"
+            :placeholder="$t('请选择或输入IP地址')"
             style="width: 100%">
             <template #default="{ item }">
               <div>{{ item.label }}</div>
@@ -134,7 +134,7 @@
             v-model="form.CODESOFT_LAN.IP"
             :fetch-suggestions="getIPSuggestions"
             clearable
-            placeholder="请选择或输入IP地址"
+            :placeholder="$t('请选择或输入IP地址')"
             style="width: 100%">
             <template #default="{ item }">
               <div>{{ item.label }}</div>
