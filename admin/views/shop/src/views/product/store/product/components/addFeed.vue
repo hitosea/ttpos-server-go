@@ -19,8 +19,25 @@
           </el-button>
         </el-form-item>
       </el-form>
-      <el-table :data="tableData" style="width: 100%" @selection-change="handleSelectionChange" ref="multipleTable" max-height="480" :row-key="getRowKey">
-        <el-table-column type="selection" width="40" :reserve-selection="true" />
+      <el-table :data="tableData" style="width: 100%" ref="multipleTable" max-height="480" :row-key="getRowKey">
+        <el-table-column width="40" :reserve-selection="true">
+          <template #header>
+            <el-checkbox 
+              v-model="selectAll" 
+              :indeterminate="isIndeterminate"
+              @change="handleSelectAll"
+            >
+            </el-checkbox>
+          </template>
+          <template #default="scope">
+            <el-checkbox 
+              :model-value="isRowSelected(scope.row)"
+              @change="(checked) => handleRowSelect(scope.row, checked)"
+              :disabled="!checkSelectable(scope.row)"
+            >
+            </el-checkbox>
+          </template>
+        </el-table-column>
         <el-table-column prop="name" :label="$t('序号')" width="90" align="center">
           <template #default="scope">
             {{ scope.$index + 1 }}
@@ -52,6 +69,7 @@
 
 <script setup>
   import { ref, reactive, watch, nextTick, onMounted } from 'vue';
+  import { ElMessage, ElCheckbox } from 'element-plus';
   import ProductApi from '@/api/product.js';
   import Add from '../../../expand/feed/add.vue';
   import { languageStore } from '@/store/model/language.js';
@@ -68,6 +86,11 @@
     feed_ids: {
       type: Array,
       default: () => [],
+    },
+    // 最大选择数量
+    maxSelect: {
+      type: Number,
+      default: Infinity,
     },
   });
 
@@ -89,6 +112,8 @@
   const searchLoading = ref('');
   const multipleTable = ref(null);
   const model = ref({});
+  const selectAll = ref(false);
+  const isIndeterminate = ref(false);
 
   // 获取列表
   const getData = async () => {
@@ -106,17 +131,15 @@
 
       // 判断是否存在勾选过的数据
       if (props.feed_ids.length > 0) {
-        await Promise.resolve().then(() => {
-          tableData.value.map((row, index) => {
-            if (props.feed_ids.includes(row.feed_id)) {
-              nextTick(() => {
-                multipleTable.value?.toggleRowSelection(tableData.value[index], true);
-              });
-              tableData.value[index].select_open = 1;
-            }
-          });
-        });
+        // 根据传入的feed_ids设置已选中的项目
+        const preSelectedItems = tableData.value.filter(row => props.feed_ids.includes(row.feed_id));
+        selectedProductsTmp.value = preSelectedItems;
       }
+      
+      // 更新全选状态
+      nextTick(() => {
+        updateSelectAllState();
+      });
     } catch (error) {
       loading.value = false;
     }
@@ -158,10 +181,99 @@
     return row.feed_id;
   };
 
-  // 选择变化处理
-  const handleSelectionChange = (val) => {
-    selectedProductsTmp.value = val;
+  // 检查行是否被选中
+  const isRowSelected = (row) => {
+    return selectedProductsTmp.value.some((item) => item.feed_id === row.feed_id);
   };
+
+  // 处理单行选择
+  const handleRowSelect = (row, checked) => {
+    if (checked) {
+      // 检查是否超出最大选择数量
+      if (selectedProductsTmp.value.length >= props.maxSelect) {
+        ElMessage({
+          message: $t('最多只能选择') + props.maxSelect + $t('个'),
+          type: 'warning',
+        });
+        return;
+      }
+      // 添加到选中列表
+      selectedProductsTmp.value.push(row);
+    } else {
+      // 从选中列表移除
+      const index = selectedProductsTmp.value.findIndex((item) => item.feed_id === row.feed_id);
+      if (index > -1) {
+        selectedProductsTmp.value.splice(index, 1);
+      }
+    }
+    updateSelectAllState();
+  };
+
+  // 处理全选
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      // 全选逻辑：选中前 maxSelect 个项目
+      const currentSelected = [...selectedProductsTmp.value];
+      const currentSelectedIds = currentSelected.map((item) => item.feed_id);
+      
+      // 找到未选中的项目
+      const unselectedItems = tableData.value.filter((row) => !currentSelectedIds.includes(row.feed_id));
+      
+      // 计算还能选择多少个
+      const remainingSlots = props.maxSelect - currentSelected.length;
+      
+      if (remainingSlots > 0) {
+        // 从未选中的项目中按顺序选择剩余数量
+        const itemsToAdd = unselectedItems.slice(0, remainingSlots);
+        selectedProductsTmp.value = [...currentSelected, ...itemsToAdd];
+      }
+      
+      if (selectedProductsTmp.value.length === props.maxSelect && unselectedItems.length > remainingSlots) {
+        ElMessage({
+          message: $t('最多只能选择') + props.maxSelect + $t('个'),
+          type: 'info',
+        });
+      }
+    } else {
+      // 取消全选
+      selectedProductsTmp.value = [];
+    }
+    updateSelectAllState();
+  };
+
+  // 更新全选状态
+  const updateSelectAllState = () => {
+    const selectedCount = selectedProductsTmp.value.length;
+    const totalCount = tableData.value.length;
+    
+    if (selectedCount === 0) {
+      selectAll.value = false;
+      isIndeterminate.value = false;
+    } else if (selectedCount === totalCount || selectedCount === props.maxSelect) {
+      selectAll.value = true;
+      isIndeterminate.value = false;
+    } else {
+      selectAll.value = false;
+      isIndeterminate.value = true;
+    }
+  };
+
+  // 检查行是否可选择
+  const checkSelectable = (row) => {
+    // 如果当前行已经被选中，允许取消选择
+    const isCurrentRowSelected = selectedProductsTmp.value.some((item) => item.feed_id === row.feed_id);
+    if (isCurrentRowSelected) {
+      return true;
+    }
+
+    // 如果已选择的数量达到最大限制，禁止选择新的行
+    if (selectedProductsTmp.value.length >= props.maxSelect) {
+      return false;
+    }
+
+    return true;
+  };
+
 
   // 关闭对话框
   const dialogFormVisible = () => {

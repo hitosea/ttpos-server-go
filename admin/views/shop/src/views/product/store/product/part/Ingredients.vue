@@ -99,7 +99,6 @@
                     :precision="0"
                     :placeholder="$t('请填写库存数量')"
                     v-model="scope.row.stock_num"
-
                   ></numInput>
                 </el-form-item>
               </template>
@@ -138,7 +137,7 @@
         <!-- </el-form-item> -->
       </div>
     </div>
-    <addFeed v-if="open_add_feed" :open="open_add_feed" :feed_ids="feed_ids" @close="handleClose" />
+    <addFeed v-if="open_add_feed" :open="open_add_feed" :feed_ids="feed_ids" :maxSelect="10" @close="handleClose" />
   </div>
 </template>
 
