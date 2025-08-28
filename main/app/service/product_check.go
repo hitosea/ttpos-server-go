@@ -581,21 +581,25 @@ func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, 
 		}
 		products := make([]CheckProductPackageGroupProductResult, 0)
 		for _, product := range group.Products {
-			if !isDelete {
-				bom, err := productRepo.GetProductBom(
-					commonRepo.WhereBySoftDelete(),
-					productRepo.WhereUuid(product.BomUuid),
-				)
-				if err != nil || bom.ID == 0 {
-					return nil, errors.WithMessage(err, "商品规格失败")
-				}
-				if bom.StockNum >= float64(product.Num) {
-					currentStockNum := decimal.NewFromFloat(bom.StockNum).Div(decimal.NewFromFloat(float64(product.Num))).Floor()
-					if stockNum == 0 {
-						stockNum = currentStockNum.InexactFloat64()
-					} else {
-						if currentStockNum.LessThan(decimal.NewFromFloat(stockNum)) {
+			if isDelete {
+				product.IsDelete = true
+			} else {
+				if !product.IsDelete {
+					bom, err := productRepo.GetProductBom(
+						commonRepo.WhereBySoftDelete(),
+						productRepo.WhereUuid(product.BomUuid),
+					)
+					if err != nil || bom.ID == 0 {
+						return nil, errors.WithMessage(err, "商品规格失败")
+					}
+					if bom.StockNum >= float64(product.Num) {
+						currentStockNum := decimal.NewFromFloat(bom.StockNum).Div(decimal.NewFromFloat(float64(product.Num))).Floor()
+						if stockNum == 0 {
 							stockNum = currentStockNum.InexactFloat64()
+						} else {
+							if currentStockNum.LessThan(decimal.NewFromFloat(stockNum)) {
+								stockNum = currentStockNum.InexactFloat64()
+							}
 						}
 					}
 				}

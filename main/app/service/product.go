@@ -4017,7 +4017,9 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 			List: productPackage.GetRespFlavorList(),
 		},
 		Sauces: product_resp.ProductSauceList{
-			List: productPackage.GetRespSaucesList(),
+			List:      productPackage.GetRespSaucesList(),
+			IsMust:    productPackage.GetSauceRequired(),
+			MaxSelect: int(productPackage.SauceMaxSelection),
 		},
 		AttributeGroups: product_resp.ProductAttributeGroupList{
 			List: productPackage.GetRespAttributeGroupList(),
