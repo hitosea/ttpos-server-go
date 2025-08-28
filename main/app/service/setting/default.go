@@ -298,6 +298,11 @@ func (s *Srv) getDefaultStore(language string) setting.Store {
 				Key:   "Europe/Istanbul",
 				Value: "（UTC+3:00）" + i18n.Translate(language, "安卡拉"),
 			},
+			{
+				Name:  "（UTC+2:00）" + i18n.Translate(language, "斯德哥尔摩"),
+				Key:   "Europe/Stockholm",
+				Value: "（UTC+2:00）" + i18n.Translate(language, "斯德哥尔摩"),
+			},
 		}, // 时区列表
 		Language: []dto.LanguageItem{}, // 语言列表
 	}

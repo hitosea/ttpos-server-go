@@ -13,6 +13,7 @@ import (
 //go:embed th/NotoSerifThai_ExtraCondensed-Regular.ttf
 //go:embed tr/NotoSans-Regular.ttf
 //go:embed zh/NotoSansSC-Regular.ttf
+//go:embed lo/NotoSerifLao-Regular.ttf
 var FontFS embed.FS
 
 // 获取字体数据
@@ -31,4 +32,5 @@ const (
 	FontTHExt = "th/NotoSerifThai_ExtraCondensed-Regular.ttf"
 	FontTR    = "tr/NotoSans-Regular.ttf"
 	FontZH    = "zh/NotoSansSC-Regular.ttf"
+	FontLO    = "lo/NotoSerifLao-Regular.ttf"
 )
