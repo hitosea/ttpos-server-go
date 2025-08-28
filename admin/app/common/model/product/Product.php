@@ -888,8 +888,8 @@ class Product extends BaseModel
                 'p.sort as product_sort',
                 'c1.name as category_name', 
                 'c2.name as category_parent_name', 
-                ' (SELECT sum(stock_num) FROM ttpos_product_bom WHERE product_package_uuid = p.uuid AND delete_time = 0 AND product_sauce_uuid = 0) AS product_stock',
-                ' (SELECT min(price) FROM ttpos_product_bom WHERE product_package_uuid = p.uuid AND product_sauce_uuid = 0 AND delete_time = 0) AS product_price',
+                '(SELECT sum(stock_num) FROM ttpos_product_bom WHERE product_package_uuid = p.uuid AND delete_time = 0 AND product_sauce_uuid = 0) AS product_stock',
+                '(SELECT min(price) FROM ttpos_product_bom WHERE product_package_uuid = p.uuid AND product_sauce_uuid = 0 AND delete_time = 0) AS product_price',
                 'CASE WHEN product_type = 1 THEN 30 ELSE 10 END as type',
                 'c1.uuid as category_uuid',
                 'c2.uuid as category_parent_uuid',
@@ -897,15 +897,17 @@ class Product extends BaseModel
                 'p.sort as sort',
                 'p.id as id',
                 'pu.name as product_unit',
-                'bom.is_open_stock'
+                'bom.is_open_stock',
+                '(SELECT count(uuid) FROM ttpos_product_package_group_item WHERE related_uuid = p.uuid AND delete_time = 0) as is_package_used',
             ]))
             ->leftJoin('product_category c1', 'p.category_uuid = c1.uuid')
             ->leftJoin('product_category c2', 'c1.parent_uuid = c2.uuid')
             ->leftJoin('product_bom bom', 'p.uuid = bom.product_package_uuid')
             ->leftJoin('file', 'p.image_file_uuid = file.uuid')
             ->leftJoin('product_unit pu', 'p.unit_uuid = pu.uuid')
+            ->leftJoin('product_package_group_item pgItem', 'pgItem.related_uuid = p.uuid')
             ->where('bom.product_sauce_uuid', '=', 0)
-            ->group('p.uuid')
+            ->group('p.uuid')   
             ->order('p.sort', 'asc')
             ->order('p.id', 'desc')
             ->buildSql();
@@ -936,7 +938,8 @@ class Product extends BaseModel
                 '0 as sort',
                 'm.id as id',
                 'pu.name as product_unit',
-                '1 as is_open_stock'
+                '1 as is_open_stock',
+                '0 as is_package_used',
             ]))
             ->leftJoin('product_category c1', 'm.category_uuid = c1.uuid')
             ->leftJoin('product_category c2', 'c1.parent_uuid = c2.uuid')
@@ -1051,7 +1054,8 @@ class Product extends BaseModel
             'sort',
             'id',
             'product_unit',
-            'is_open_stock'
+            'is_open_stock',
+            'is_package_used',
         ]) . " FROM ($productSql UNION ALL $materialSql) AS all_product";
         $orderSql = ' ORDER BY sort ASC, create_time DESC';
         $pageSql = " LIMIT {$offset}, {$limit}";
@@ -1136,6 +1140,7 @@ class Product extends BaseModel
                 'product_unit' => $productUnit,
                 'product_unit_text' => $productUnitText,
                 'is_open_stock' => $row['is_open_stock'],
+                'is_package_used' => $row['is_package_used'] > 0 ? 1 : 0,
             ];
         }
 
@@ -1318,7 +1323,8 @@ class Product extends BaseModel
                     'material' => [
                         'unit'
                     ]
-                ]
+                ],
+                'productPackageGroupItem',
             ],
             'productAttributeGroup' => [
                 'attribute', 
@@ -1369,6 +1375,11 @@ class Product extends BaseModel
         //如果是单规格
         if ($product['spec_type'] == 10) {
             if (!empty($product['sku'][0] ?? '')) {
+                if (count($product['sku'][0]['productPackageGroupItem']) > 0) {
+                    $product['sku'][0]['is_package_used'] = 1;
+                } else {
+                    $product['sku'][0]['is_package_used'] = 0;
+                }
                 $result[] = $product['sku'][0];
             }
         } else {
@@ -1390,6 +1401,10 @@ class Product extends BaseModel
                             'product_material_stock' => $relatedMaterial['material']['stock_num'],
                         ],
                     ];
+                }
+                $sku['is_package_used'] = 0;
+                if (count($sku['productPackageGroupItem']) > 0) {
+                    $sku['is_package_used'] = 1;
                 }
                 $sku['material'] = $material;
                 unset($sku['relatedMaterial']);
