@@ -81,6 +81,18 @@ class Store extends Controller
         if (mb_strlen($data['address']) > 500) {
             return $this->renderError('地址长度不能超过500个字符');
         }
+        // 如果设置了经纬度，判断是否经度取值范围为[-180,180],纬度取值范围为[-90,90] 
+        if (!empty($data['coordinates'])) {
+            $coordinates = explode(',', $data['coordinates']);
+            if (count($coordinates) != 2) {
+                return $this->renderError('经纬度格式不正确');
+            }
+            $lat = floatval($coordinates[0]);
+            $lng = floatval($coordinates[1]);
+            if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
+                return $this->renderError('经纬度格式不正确');
+            }
+        }
         $arr = [
             'name' => $name,
             'sms_open' => $data['sms_open'] ?? 0,

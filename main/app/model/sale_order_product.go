@@ -1212,6 +1212,10 @@ func (model *SaleOrderProduct) GetNameAndFlavorName() dto.LocaleResponse {
 			flavorName = saleOrderProductBom.ProductBom.ProductFlavor.MultiLanguageName.GetNames()
 		}
 	}
+	// 套餐显示单位
+	if model.IsPackageProduct() {
+		flavorName = model.ProductPackage.ProductUnit.MultiLanguageName.GetNames()
+	}
 	productPackageName := model.MultiLanguageName.GetNames()
 	return dto.LocaleResponse{
 		ZH:   fmt.Sprintf("%s (%s)", productPackageName.ZH, flavorName.ZH),
@@ -1230,6 +1234,10 @@ func (model *SaleOrderProduct) GetNameAndFlavorName() dto.LocaleResponse {
 func (model *SaleOrderProduct) GetNameAndFlavorNameFrom(ProductBom *ProductBom, productName *MultiLanguageName) dto.LocaleResponse {
 	flavorName := ProductBom.ProductFlavor.MultiLanguageName.GetNames()
 	productPackageName := productName.GetNames()
+	// 套餐显示单位
+	if model.IsPackageProduct() {
+		flavorName = model.ProductPackage.ProductUnit.MultiLanguageName.GetNames()
+	}
 	return dto.LocaleResponse{
 		ZH:   fmt.Sprintf("%s (%s)", productPackageName.ZH, flavorName.ZH),
 		TH:   fmt.Sprintf("%s (%s)", productPackageName.TH, flavorName.TH),

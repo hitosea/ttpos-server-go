@@ -182,9 +182,12 @@ class AppValidate extends  BaseValidate
     }
 
     protected function isCoordinates($value, $rule, $data = [])
-    { 
+    {
         if (empty($value)) {
             return true;
+        }
+        if (!isset($value[0]) || !isset($value[1])) {
+            return false;
         }
         // 判断经纬度，是否是经度取值范围为[-180,180],纬度取值范围为[-90,90]
         $lat = floatval(explode(',', $value)[0]);
