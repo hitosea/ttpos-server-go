@@ -94,7 +94,9 @@ func (model *SaleBill) GetSaleOrderProductUnCooking() []*SaleOrderProduct {
 				continue
 			}
 			if orderProduct.Status == constant.SaleOrderProductStatusNormal {
-				saleOrder.SaleOrderProducts[i].Remark = packageUuidRemarkMap[saleOrder.SaleOrderProducts[i].PackageUuid]
+				if saleOrder.SaleOrderProducts[i].IsPackageSubProduct() {
+					saleOrder.SaleOrderProducts[i].Remark = packageUuidRemarkMap[saleOrder.SaleOrderProducts[i].PackageUuid]
+				}
 				unCookingSaleOrderProducts = append(unCookingSaleOrderProducts, saleOrder.SaleOrderProducts[i])
 			}
 		}
