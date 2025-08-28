@@ -22,7 +22,7 @@ make conf
 
 ## 部署注意
 1. 新增自定义DocType
-2. 添加自定义字段，参考  manifest/erp-migrate/v2.5/custom_fields 脚本， 调用 /api/v2/document/{docType}
-3. 新增服务端脚本 参考  manifest/erp-migrate/v2.5/server-scripts
-4. 导入lianlianpay 类型数据
+2. 新增Role Profile: ShopCashier, 权限包括 Accounts Manager，Accounts User，Sales Manager，Sales Master Manager，Sales User，Stock Manager
+3. 添加自定义字段，参考  manifest/erp-migrate/v2.5/custom_fields 脚本， 调用 /api/v2/document/{docType}
+4. 新增服务端脚本 参考  manifest/erp-migrate/v2.5/server-scripts
 5. 修改数据库 erp.erp_site 各erpnext site 地址，以及管理员账号的 api_key , api_secret
