@@ -431,5 +431,21 @@
     "密码验证": "Password Verification",
     "请输入密码": "Please enter password",
     "请确定授权信息，该操作不可逆，请仔细确认！": "Please confirm the authorization information. This operation is irreversible, please check carefully!",
-    "erpnext公司": "erpnext company"
+    "erpnext公司": "erpnext company",
+    "同步支付方式": "Synchronize payment method",
+    "支付方式": "Payment Method",
+    "回显erp中的支付方式名称": "Display the payment method name in ERP",
+    "手续费": "Service fee",
+    "默认0": "Default 0",
+    "结账显示": "Checkout Display",
+    "收银机": "Cash Register",
+    "会员充值": "Member Recharge",
+    "请选择ERP支付方式": "Please select an ERP payment method",
+    "名称不能超过100个字符": "Name cannot exceed 100 characters",
+    "请选择支付方式": "Please select a payment method",
+    "请输入手续费": "Please enter the handling fee",
+    "手续费必须在0-100之间": "The handling fee must be between 0 and 100",
+    "排序值必须在0-999之间": "The sorting value must be between 0 and 999",
+    "支付管理": "Payment Management",
+    "如:13.716412789763694, 100.52312952599786": "e.g.: 13.716412789763694, 100.52312952599786"
 }

@@ -431,5 +431,21 @@
     "密码验证": "Lösenordsverifiering",
     "请输入密码": "Ange lösenord",
     "请确定授权信息，该操作不可逆，请仔细确认！": "Vänligen bekräfta auktoriseringsinformationen. Denna åtgärd kan inte ångras, vänligen kontrollera noggrant!",
-    "erpnext公司": "erpnext-företaget"
+    "erpnext公司": "erpnext-företaget",
+    "同步支付方式": "Synkronisera betalningsmetod",
+    "支付方式": "Betalningsmetod",
+    "回显erp中的支付方式名称": "Visa betalningsmetodens namn i ERP",
+    "手续费": "Avgift",
+    "默认0": "Standard 0",
+    "结账显示": "Kassavisning",
+    "收银机": "Kassaapparat",
+    "会员充值": "Medlemsuppladdning",
+    "请选择ERP支付方式": "Vänligen välj ERP-betalningsmetod",
+    "名称不能超过100个字符": "Namnet får inte överstiga 100 tecken",
+    "请选择支付方式": "Vänligen välj betalningsmetod",
+    "请输入手续费": "Vänligen ange avgiften",
+    "手续费必须在0-100之间": "Avgiften måste vara mellan 0 och 100",
+    "排序值必须在0-999之间": "Sorteringsvärdet måste vara mellan 0 och 999",
+    "支付管理": "Betalningshantering",
+    "如:13.716412789763694, 100.52312952599786": "t.ex.: 13.716412789763694, 100.52312952599786"
 }

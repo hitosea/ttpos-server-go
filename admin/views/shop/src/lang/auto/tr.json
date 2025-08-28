@@ -1881,5 +1881,10 @@
     "取消订单数": "İptal edilen sipariş sayısı",
     "取消订单金额": "Sipariş iptal tutarı",
     "规格/属性": "Şartname/Özellikler",
-    "并台": "Merge tables"
+    "并台": "Merge tables",
+    "商品库存不足，请调整。": "Ürün stoğu yetersiz, lütfen düzenleyin.",
+    "套餐单位：": "Paket birimi:",
+    "请填写套餐单位": "Lütfen paket birimini doldurun",
+    "商品库存不足": "Ürün stoğu yetersiz",
+    "如：13.716412789763694, 100.52312952599786": "Örn: 13.716412789763694, 100.52312952599786"
 }

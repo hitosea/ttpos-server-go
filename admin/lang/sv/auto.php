@@ -2194,4 +2194,10 @@ return [
     "最多可添加10个加料" => "Du kan lägga till högst 10 tillbehör",
     "套餐名称长度不能超过150个字符" => "Paketnamnet får inte överstiga 150 tecken",
     "分组名称长度不能超过150个字符" => "Gruppnamnet får inte vara längre än 150 tecken",
+    "价格不能超过100000000" => "Priset får inte överstiga 100000000",
+    "套餐价格不能为0或超过100000000" => "Paketpriset får inte vara 0 eller överstiga 100000000",
+    "价格必须在0到100000000之间" => "Priset måste vara mellan 0 och 100000000",
+    "限购数量必须在1到1000之间" => "Köpgränsen måste vara mellan 1 och 1000",
+    "经纬度格式不正确" => "Felaktigt format för latitud och longitud",
+    "价格格式错误，请输入小数点后2位，范围：0-100000000" => "Felaktigt prisformat, ange 2 decimaler, intervall: 0-100000000",
 ];

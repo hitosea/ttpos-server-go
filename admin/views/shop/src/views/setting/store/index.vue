@@ -56,7 +56,7 @@
         <el-input type="textarea" rows="3" show-word-limit v-model="form.address" :placeholder="$t('请输入')" :maxlength="500" class="max-w460"></el-input>
       </el-form-item>
       <el-form-item for="no_click" class="max-w460" :label="$t('经纬度')">
-        <el-input v-model="form.coordinates" type="textarea" rows="3" :placeholder="$t('请输入')" class="max-w460"></el-input>
+        <el-input v-model="form.coordinates" type="textarea" rows="3" :placeholder="$t('如：13.716412789763694, 100.52312952599786')" class="max-w460"></el-input>
       </el-form-item>
 
       <el-form-item for="no_click" class="max-w460" :label="$t('联系电话')" prop="phone" :rules="[{ required: true, message: $t('请输入联系电话') }]">

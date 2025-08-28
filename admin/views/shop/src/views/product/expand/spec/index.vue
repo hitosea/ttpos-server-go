@@ -277,7 +277,7 @@
             spec_id: model.value.spec_id,
             product_ids: list.map((item) => item.product_id),
           },
-          false
+          true
         );
 
         ElMessage({

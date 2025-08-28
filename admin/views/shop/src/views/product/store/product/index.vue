@@ -137,7 +137,7 @@
           <el-table-column fixed="right" :label="$t('操作')" width="120">
             <template #default="scope">
               <el-button @click="editClick(scope.row)" link type="primary" size="small" v-auth="'/product/store/product/edit'">{{ $t('编辑') }}</el-button>
-              <el-button @click="deleteClick(scope.row)" :disabled="scope.row.is_material_used == 1 || erp_is_open == 1" link type="primary" size="small" v-auth="'/product/store/product/delete'">{{
+              <el-button @click="deleteClick(scope.row)" :disabled="scope.row.is_material_used == 1 || scope.row.is_package_used == 1 || erp_is_open == 1" link type="primary" size="small" v-auth="'/product/store/product/delete'">{{
                 $t('删除')
               }}</el-button>
             </template>

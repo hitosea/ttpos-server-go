@@ -189,7 +189,7 @@
           <el-table-column label="" fixed="right" width="100">
             <template #default="scope">
               <el-form-item label="" style="margin-bottom: 0">
-                <el-button type="primary" :disabled="form.model.sku.length <= 1" link @click="deleteAttr(scope.$index)">{{ $t('删除') }}</el-button>
+                <el-button type="primary" :disabled="form.model.sku.length <= 1 || scope.row.is_package_used == 1" link @click="deleteAttr(scope.$index)">{{ $t('删除') }}</el-button>
               </el-form-item>
             </template>
           </el-table-column>
