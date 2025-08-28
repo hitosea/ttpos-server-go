@@ -145,8 +145,7 @@ class Product extends ProductModel
                 return false;
             }
             $existGroupNames = [];
-            $errorGroupData = [];
-            foreach ($packageGroup as $groupIndex => &$item) {
+            foreach ($packageGroup as &$item) {
                 // 分组名称
                 $groupName = $item['group_name'] ?? '';
                 [$status, $msg] = ValidateHelp::hasExceedLength($groupName, 150);
@@ -169,10 +168,6 @@ class Product extends ProductModel
                 $productIds = array_column($groupProductList, 'product_id');
                 $productBoms = ProductBom::whereIn('uuid', $productIds)->select();
                 foreach ($productBoms as $productBom) {
-                    if ($productBom->status == 0) {
-                        $this->error = '商品不能为下架商品';
-                        return false;
-                    }
                     $groupProducts = array_filter($groupProductList, function($product) use ($productBom) {
                         return $product['product_id'] == $productBom->uuid;
                     });
@@ -182,18 +177,7 @@ class Product extends ProductModel
                         $this->error = '商品数量不能为0';
                         return false;
                     }
-                    if ($productBom->stock_num <= 0) {
-                        $errorGroupData[$groupIndex+1][] = [
-                            'product_id' => $productBom->uuid,
-                            'stock_num' => -1,
-                        ];
-                    }
                 }
-            }
-            if (!empty($errorGroupData)) {
-                $this->error = '商品库存不足，请调整';
-                $this->errorData = $errorGroupData;
-                return false;
             }
             $data['product_type'] = 1; // 商品类型 0-商品 1-套餐
             $data['price'] = $packagePrice; // 套餐价格
@@ -510,7 +494,6 @@ class Product extends ProductModel
                 return false;
             }
             $existGroupNames = [];
-            $errorGroupData = [];
             foreach ($packageGroup as $groupIndex => &$item) {
                 // 分组名称
                 $groupName = $item['group_name'] ?? '';
@@ -547,18 +530,7 @@ class Product extends ProductModel
                         $this->error = '商品数量不能为0';
                         return false;
                     }
-                    if ($productBom->stock_num <= 0) {
-                        $errorGroupData[$groupIndex+1][] = [
-                            'product_id' => $productBom->uuid,
-                            'stock_num' => -1,
-                        ];
-                    }
                 }
-            }
-            if (!empty($errorGroupData)) {
-                $this->error = '商品库存不足，请调整';
-                $this->errorData = $errorGroupData;
-                return false;
             }
             $data['product_type'] = 1; // 商品类型 0-商品 1-套餐
             $data['price'] = $packagePrice; // 套餐价格
