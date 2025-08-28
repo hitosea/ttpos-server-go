@@ -1,4 +1,6 @@
 {
+  "%s只有一个规格，不可删除": "%s yalnızca bir özelliğe sahip, silinemez",
+  "%s管理员添加会员发卡赠送操作 [%s]": "%s yönetici, üye kartı verme işlemi ekledi [%s]",
   "10位手机号不能以0开头": "10 haneli telefon numarası 0 ile başlayamaz",
   "11位手机号必须以1开头": "11 haneli telefon numarası 1 ile başlamalıdır",
   "1退货数量超过可退货数量": "İade miktarı iade edilebilir miktarı aşıyor",
@@ -1159,6 +1161,7 @@
   "天": "gökyüzü",
   "失败": "hata",
   "套餐": "karma",
+  "套餐【%s】已使用此规格，不可删除": "Paket【%s】bu özelliği zaten kullanıyor, silinemez",
   "套餐价格范围错误": "Paket fiyat aralığı hatalı",
   "套餐参数": "Paket parametreleri",
   "套餐子商品不存在": "Paket alt ürünü mevcut değil",

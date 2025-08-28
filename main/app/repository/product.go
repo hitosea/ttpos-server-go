@@ -37,8 +37,9 @@ type IProductRepo interface {
 	WithDineTax() DBOption                                                                        // 预加载堂食税
 	WithTakeoutTax() DBOption                                                                     // 预加载外卖税
 
-	WithProductPackage() DBOption                                                                           // 沽清 预加载产品
-	WithProductPackageMultiLanguageName() DBOption                                                          // 沽清 预加载产品多语言
+	WithProductPackage(opts ...DBOption) DBOption                                                           // 沽清 预加载产品
+	WithProductPackageMultiLanguageName(opts ...DBOption) DBOption                                          // 沽清 预加载产品多语言
+	WithProductPackageProductBom(opts ...DBOption) DBOption                                                 // 沽清 预加载产品包关联的商品规格
 	WithProductFlavor() DBOption                                                                            // 沽清 预加载规格名称
 	WithProductFlavorMultiLanguageName() DBOption                                                           // 沽清 预加载规格名称多语言
 	GetSoldOutWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductBom, int64, error) // 沽清 分页获取沽清商品列表
@@ -618,16 +619,38 @@ func (r *productRepo) WithProductCategory() DBOption {
 }
 
 // WithProductPackage 预加载产品包
-func (r *productRepo) WithProductPackage() DBOption {
+func (r *productRepo) WithProductPackage(opts ...DBOption) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("ProductPackage")
+		return db.Preload("ProductPackage", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
 	}
 }
 
 // WithProductPackageMultiLanguageName 预加载产品包多语言
-func (r *productRepo) WithProductPackageMultiLanguageName() DBOption {
+func (r *productRepo) WithProductPackageMultiLanguageName(opts ...DBOption) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("ProductPackage.MultiLanguageName")
+		return db.Preload("ProductPackage.MultiLanguageName", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
+	}
+}
+
+// WithProductPackageProductBom 预加载产品包关联的商品规格
+func (r *productRepo) WithProductPackageProductBom(opts ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductPackage.ProductBoms", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
 	}
 }
 

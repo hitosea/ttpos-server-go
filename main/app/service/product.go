@@ -2977,6 +2977,65 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 	if exists {
 		return errors.New("名称已存在")
 	}
+
+	language := ctx.GetLanguage()
+	commonRepo := repository.NewCommonRepo()
+	productRepo := repository.NewProductRepo(db)
+	productPackageGroupRepo := repository.NewProductPackageGroupRepo(db)
+
+	productNames := []string{}
+	packageNames := []string{}
+	for _, item := range editReq.List {
+		if item.IsDelete {
+			productBom, _ := productRepo.GetProductBom(
+				commonRepo.WhereBySoftDelete(),
+				commonRepo.WhereByUuid(item.BomUuid),
+				productRepo.WithProductPackage(commonRepo.WhereBySoftDelete()),
+				productRepo.WithProductPackageMultiLanguageName(commonRepo.WhereBySoftDelete()),
+				productRepo.WithProductPackageProductBom(
+					commonRepo.WhereBySoftDelete(),
+					commonRepo.WhereGtProductFlavorUuid(0),
+				),
+			)
+			if productBom.ID != 0 && productBom.ProductPackage.Uuid != 0 {
+				productPackage := productBom.ProductPackage
+				if len(productPackage.ProductBoms) == 1 {
+					if !slices.Contains(productNames, productPackage.MultiLanguageName.GetNameByLang(language)) {
+						productNames = append(productNames, productPackage.MultiLanguageName.GetNameByLang(language))
+					}
+				}
+				packageItems, _ := productPackageGroupRepo.GetProductPackageGroupItems(
+					commonRepo.WhereBySoftDelete(),
+					productRepo.WhereBomUuid(productBom.Uuid),
+					productPackageGroupRepo.WithProductPackageGroup(
+						commonRepo.WhereBySoftDelete(),
+					),
+					productPackageGroupRepo.WithProductPackageGroupProduct(
+						commonRepo.WhereBySoftDelete(),
+					),
+					productPackageGroupRepo.WithProductPackageGroupProductMultiLanguageName(
+						commonRepo.WhereBySoftDelete(),
+					),
+				)
+				for _, packageItem := range packageItems {
+					if packageItem.ProductPackageGroup != nil {
+						if !slices.Contains(packageNames, packageItem.ProductPackageGroup.ProductPackage.MultiLanguageName.GetNameByLang(language)) {
+							packageNames = append(packageNames, packageItem.ProductPackageGroup.ProductPackage.MultiLanguageName.GetNameByLang(language))
+						}
+					}
+				}
+
+			}
+		}
+	}
+
+	if len(productNames) > 0 {
+		return errors.NewWithReplace("%s只有一个规格，不可删除", []string{strings.Join(productNames, "、")})
+	}
+	if len(packageNames) > 0 {
+		return errors.NewWithReplace("套餐【%s】已使用此规格，不可删除", []string{strings.Join(packageNames, "、")})
+	}
+
 	err := db.Transaction(func(tx *gorm.DB) error {
 		commonRepo := repository.NewCommonRepo()
 		productRepo := repository.NewProductRepo(tx)
@@ -3011,6 +3070,7 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 		if err != nil {
 			return err
 		}
+
 		// 更新关联商品包
 		for _, item := range editReq.List {
 			if item.IsDelete {
@@ -3259,11 +3319,11 @@ func (s *productSrv) DeleteProductFlavor(ctx context.Context, deleteReq req.Prod
 	}
 
 	// 判断商品规格是否关联了商品
-	count, _ := productRepo.GetProductBomCount(
+	productBomCount, _ := productRepo.GetProductBomCount(
 		commonRepo.WhereByProductFlavorUuid(productFlavor.Uuid),
 		commonRepo.WhereBySoftDelete(),
 	)
-	if count > 0 {
+	if productBomCount > 0 {
 		return errors.New("该规格已经关联了商品，不可删除")
 	}
 
@@ -5188,7 +5248,7 @@ func (s *productSrv) SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProdu
 						}
 						if item.Uuid == 0 {
 							itemUuid, _ := utils.GetID()
-							productPackageGroupRepo.CreateProductPackageGroupItem(&model.ProductPackageGroupItem{
+							err := productPackageGroupRepo.CreateProductPackageGroupItem(&model.ProductPackageGroupItem{
 								Uuid:                    itemUuid,
 								ProductPackageGroupUuid: curGroup.Uuid,
 								RelatedUuid:             bom.ProductPackageUuid,
