@@ -18,6 +18,7 @@ import (
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/text/gstr"
 )
 
 var (
@@ -399,6 +400,38 @@ func (s *sSetup) initDocumentsFromDir(ctx context.Context, config DocumentInitCo
 	}
 
 	g.Log().Infof(ctx, "所有%s初始化完成", config.ItemName)
+	return nil
+}
+
+func (s *sSetup) InitErpDocTypeWithDirname(ctx context.Context, dirBase string) error {
+	// 检查目录是否存在
+	if _, err := os.Stat(dirBase); os.IsNotExist(err) {
+		return gerror.Newf("%s目录不存在", dirBase)
+	}
+
+	g.Log().Infof(ctx, "开始初始化%s", dirBase)
+	//files, err := ioutil.ReadDir(".")
+	// 遍历目录下的所有文件
+	err := filepath.Walk(dirBase, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			config := DocumentInitConfig{
+				DirBase:  dirBase,
+				DirName:  info.Name(),
+				DocType:  gstr.CaseCamel(info.Name()),
+				ItemName: gstr.CaseCamel(info.Name()),
+			}
+			g.Log().Infof(ctx, "开始初始化%s，目录: %s", config.ItemName, info.Name())
+			s.initDocumentsFromDir(ctx, config)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return gerror.Wrapf(err, "初始化%s失败", dirBase)
+	}
 	return nil
 }
 

@@ -26,3 +26,4 @@ make conf
 3. 添加自定义字段，参考  manifest/erp-migrate/v2.5/custom_fields 脚本， 调用 /api/v2/document/{docType}
 4. 新增服务端脚本 参考  manifest/erp-migrate/v2.5/server-scripts
 5. 修改数据库 erp.erp_site 各erpnext site 地址，以及管理员账号的 api_key , api_secret
+6. 执行 `main  migrate --siteCode 1 --dirBase ./manifest/erp-migrate/v2.5` 在erpnext中迁移脚本
