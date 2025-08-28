@@ -2202,4 +2202,10 @@ return [
     "最多可添加10个加料" => "Es können maximal 10 Zutaten hinzugefügt werden",
     "套餐名称长度不能超过150个字符" => "Der Paketname darf maximal 150 Zeichen lang sein",
     "分组名称长度不能超过150个字符" => "Der Gruppenname darf maximal 150 Zeichen lang sein",
+    "价格不能超过100000000" => "Der Preis darf 100000000 nicht überschreiten",
+    "套餐价格不能为0或超过100000000" => "Der Paketpreis darf nicht 0 sein oder 100000000 überschreiten",
+    "价格必须在0到100000000之间" => "Der Preis muss zwischen 0 und 100000000 liegen",
+    "限购数量必须在1到1000之间" => "Die Kaufbegrenzung muss zwischen 1 und 1000 liegen",
+    "经纬度格式不正确" => "Das Format von Breiten- und Längengrad ist nicht korrekt",
+    "价格格式错误，请输入小数点后2位，范围：0-100000000" => "Preisformatfehler, bitte geben Sie 2 Dezimalstellen ein, Bereich: 0-100000000",
 ];
