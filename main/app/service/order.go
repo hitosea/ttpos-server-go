@@ -9818,7 +9818,7 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 					Rate:        0,                                                  // 套餐子商品没有单价
 					Amount:      0,                                                  // 套餐子商品没有金额
 					Description: fmt.Sprintf("Sales in package:%s", packageName.EN), // 套餐子商品描述
-					IsFreeItem:  isFreeOrder,
+					IsFreeItem:  true,
 				})
 			}
 		}
