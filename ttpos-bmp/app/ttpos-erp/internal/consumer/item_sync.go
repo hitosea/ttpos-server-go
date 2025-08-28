@@ -30,3 +30,7 @@ func (c *ItemSyncConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg) (err e
 	g.Log().Info(ctx, "收到商品同步消息：", string(mqMsg.Body))
 	return nil
 }
+
+func (c *ItemSyncConsumer) GetConcurrency() int {
+	return 1
+}
