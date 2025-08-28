@@ -159,7 +159,7 @@
     </div>
 
     <!-- 商品选择器 -->
-    <ProductSelector v-if="openProductSelector" :open="openProductSelector" @close="deleteArr" selectorType="all" type="all"> </ProductSelector>
+    <ProductSelector v-if="openProductSelector" :open="openProductSelector" :hasPackage="true" @close="deleteArr" selectorType="all" type="all" > </ProductSelector>
   </div>
 </template>
 
