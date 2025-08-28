@@ -5115,7 +5115,7 @@ func (s *productSrv) SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProdu
 				}
 				groupUuid, _ := utils.GetID()
 				err = productPackageGroupRepo.CreateProductPackageGroup(&model.ProductPackageGroup{
-					Uuid:                  groupUuid,
+					BaseModel:             model.BaseModel{Uuid: groupUuid},
 					Name:                  group.LocaleName.ToJson(),
 					MultiLanguageNameUuid: multiLanguageNameUuid,
 					ProductPackageUuid:    productPackageUuid,
@@ -5146,7 +5146,7 @@ func (s *productSrv) SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProdu
 					commonRepo.WhereByUuid(group.Uuid),
 					commonRepo.WhereBySoftDelete(),
 				)
-				if err != nil || curGroup.Id == 0 {
+				if err != nil || curGroup.ID == 0 {
 					return errors.WithMessage(err, "获取套餐组失败")
 				}
 				// 保存多语言名称

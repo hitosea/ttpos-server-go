@@ -321,12 +321,12 @@ func (model *ProductPackage) GetRespAttributeGroupList() []product_resp.ProductA
 func (model *ProductPackage) GetRespPackageSubProductGroupList() []product_resp.ProductPackageSubProductGroup {
 	packageSubProductGroupList := make([]product_resp.ProductPackageSubProductGroup, 0)
 	for _, packageSubProductGroup := range model.ProductPackageGroups {
-		if packageSubProductGroup.DeleteTime == 0 {
+		if packageSubProductGroup.IsDelete() {
 			continue
 		}
 		products := make([]product_resp.ProductPackageSubProduct, 0)
 		for _, product := range packageSubProductGroup.ProductPackageGroupItems {
-			if product.DeleteTime == 0 {
+			if product.IsDelete() {
 				continue
 			}
 			products = append(products, product_resp.ProductPackageSubProduct{
