@@ -17,7 +17,7 @@ import (
 // IProductRepo 定义商品仓库接口
 type IProductRepo interface {
 	IProductQueryRepo
-	WithMultiLanguageName() DBOption                                                              // 预加载多语言名称
+	WithMultiLanguageName(opts ...DBOption) DBOption                                              // 预加载多语言名称
 	WithProductUnit() DBOption                                                                    // 预加载产品单位
 	WithProductUnitMultiLanguageName() DBOption                                                   // 预加载产品单位多语言名称
 	WithProductBoms(opts ...DBOption) DBOption                                                    // 预加载产品Boms
@@ -330,7 +330,7 @@ func (r *productRepo) GetProductCategoryCount(opts ...DBOption) (int64, error) {
 // GetProductCategoryMaxSort 获取产品分类最大排序
 func (r *productRepo) GetProductCategoryMaxSort(opts ...DBOption) (int64, error) {
 	var sort sql.NullInt64
-	db := r.db.Model(&model.ProductCategory{})
+	db := r.db.Model(&model.ProductCategory{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}
@@ -469,7 +469,7 @@ func (r *productRepo) GetProductFlavorCount(opts ...DBOption) (int64, error) {
 // GetProductFlavorMaxSort 获取商品规格最大排序
 func (r *productRepo) GetProductFlavorMaxSort(opts ...DBOption) (int64, error) {
 	var sort sql.NullInt64
-	db := r.db.Model(&model.ProductFlavor{})
+	db := r.db.Model(&model.ProductFlavor{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}
@@ -504,9 +504,14 @@ func (r *productRepo) GetProductBomCount(opts ...DBOption) (int64, error) {
 }
 
 // WithMultiLanguageName 预加载多语言名称
-func (r *productRepo) WithMultiLanguageName() DBOption {
+func (r *productRepo) WithMultiLanguageName(opts ...DBOption) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("MultiLanguageName")
+		return db.Preload("MultiLanguageName", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
 	}
 }
 
@@ -1283,7 +1288,7 @@ func (r *productRepo) WhereAttributeGroupUuid(uuid uint64) DBOption {
 // GetProductShopMaxSort 获取商品最大排序
 func (r *productRepo) GetProductShopMaxSort(opts ...DBOption) (int64, error) {
 	var sort sql.NullInt64
-	db := r.db.Model(&model.ProductPackage{})
+	db := r.db.Model(&model.ProductPackage{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}

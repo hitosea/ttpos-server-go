@@ -82,12 +82,21 @@ func (model *SaleBill) GetSaleOrderProductCooking() []*SaleOrderProduct {
 func (model *SaleBill) GetSaleOrderProductUnCooking() []*SaleOrderProduct {
 	unCookingSaleOrderProducts := make([]*SaleOrderProduct, 0)
 	for _, saleOrder := range model.SaleOrders {
+		packageUuidRemarkMap := make(map[uint64]string)
+		for _, orderProduct := range saleOrder.SaleOrderProducts {
+			if orderProduct.IsPackageProduct() {
+				packageUuidRemarkMap[orderProduct.Uuid] = orderProduct.Remark
+			}
+		}
 		for i, _ := range saleOrder.SaleOrderProducts {
 			orderProduct := saleOrder.SaleOrderProducts[i]
 			if !orderProduct.IsAcceptOrderBool() || orderProduct.IsDelete() {
 				continue
 			}
 			if orderProduct.Status == constant.SaleOrderProductStatusNormal {
+				if saleOrder.SaleOrderProducts[i].IsPackageSubProduct() {
+					saleOrder.SaleOrderProducts[i].Remark = packageUuidRemarkMap[saleOrder.SaleOrderProducts[i].PackageUuid]
+				}
 				unCookingSaleOrderProducts = append(unCookingSaleOrderProducts, saleOrder.SaleOrderProducts[i])
 			}
 		}

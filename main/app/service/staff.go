@@ -88,12 +88,9 @@ func (s *staffSrv) UpdateStaff(ctx context.Context, updateReq req.UpdateStaffReq
 	db := s.dbm.GetDB(ctx.GetDbId())
 	// 获取员工
 	staffRepo := repository.NewStaffRepo(db)
-	staff, err := staffRepo.GetStaff(staffRepo.WhereUuid(updateReq.Uuid))
-	if err != nil {
-		return errors.WithMessage(errors.New("获取员工失败"), err.Error()), exists
-	}
-	if staff.IsSuper == 1 {
-		return errors.New("超级员工不能修改"), exists
+	staff, _ := staffRepo.GetStaff(staffRepo.WhereUuid(updateReq.Uuid))
+	if staff.Uuid == 0 {
+		return errors.New("获取员工失败"), exists
 	}
 	saasDB := s.dbm.GetDB(0)
 	companyStaffRepo := repository.NewCompanyStaffRepo(saasDB)
@@ -113,15 +110,17 @@ func (s *staffSrv) UpdateStaff(ctx context.Context, updateReq req.UpdateStaffReq
 		return errors.New("此内容已被占用"), exists
 	}
 	// 判断角色参数是否正确
-	roleRepo := repository.NewRoleRepo(db)
-	roles, err := roleRepo.GetRoleList([]repository.DBOption{roleRepo.WhereUuids(updateReq.Roles)}...)
-	if err != nil {
-		return errors.WithMessage(errors.New("获取角色失败"), err.Error()), exists
+	if len(updateReq.Roles) > 0 {
+		roleRepo := repository.NewRoleRepo(db)
+		roles, err := roleRepo.GetRoleList([]repository.DBOption{roleRepo.WhereUuids(updateReq.Roles)}...)
+		if err != nil {
+			return errors.WithMessage(errors.New("获取角色失败"), err.Error()), exists
+		}
+		if len(roles) != len(updateReq.Roles) {
+			return errors.New("角色参数错误"), exists
+		}
 	}
-	if len(roles) != len(updateReq.Roles) {
-		return errors.New("角色参数错误"), exists
-	}
-	err = saasDB.Model(&model.CompanyStaff{}).Where("uuid = ?", updateReq.Uuid).Updates(map[string]any{
+	err := saasDB.Model(&model.CompanyStaff{}).Where("uuid = ?", updateReq.Uuid).Updates(map[string]any{
 		"username": updateReq.Username,
 		"phone":    updateReq.Phone,
 	}).Error

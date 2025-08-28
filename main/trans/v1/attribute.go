@@ -50,8 +50,7 @@ func (r *AttributeRepository) ConvertAttribute() error {
 	}
 
 	groupSort := 1
-	sort := 1
-
+	parentIDSortMap := make(map[uint64]int)
 	for _, attribute := range attributes {
 		fmt.Println(fmt.Sprintf("-------迁移attribute: %+v", attribute))
 		names := Names{}
@@ -84,6 +83,11 @@ func (r *AttributeRepository) ConvertAttribute() error {
 			}
 			groupSort++
 		} else {
+			sort, ok := parentIDSortMap[attribute.ParentID]
+			if !ok {
+				sort = 1
+				parentIDSortMap[attribute.ParentID] = sort
+			}
 			// 创建商品属性
 			productAttribute := model.ProductAttribute{
 				BaseModel:          model.BaseModel{Uuid: attribute.AttributeID},
@@ -96,7 +100,7 @@ func (r *AttributeRepository) ConvertAttribute() error {
 			if err != nil {
 				return errors.WithMessage(err)
 			}
-			sort++
+			parentIDSortMap[attribute.ParentID]++
 		}
 	}
 	return nil
