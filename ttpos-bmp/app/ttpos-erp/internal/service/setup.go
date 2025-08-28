@@ -65,7 +65,7 @@ type (
 		//
 		// 返回：
 		//   - err: 错误信息
-		InitCustomFields(ctx context.Context) error
+		InitCustomFields(ctx context.Context, dirBase string) error
 		// InitCustomers 初始化客户
 		// 遍历manifest/erp-migrate/v2.5/new_customer目录下所有JSON文件，创建Customer文档
 		// 参数：
@@ -73,7 +73,7 @@ type (
 		//
 		// 返回：
 		//   - err: 错误信息
-		InitCustomers(ctx context.Context) error
+		InitCustomers(ctx context.Context, dirBase string) error
 		// InitModeOfPayment 初始化支付方式
 		// 遍历manifest/erp-migrate/v2.5/mode_of_payment目录下所有JSON文件，创建Mode Of Payment文档
 		// 参数：
@@ -81,7 +81,7 @@ type (
 		//
 		// 返回：
 		//   - err: 错误信息
-		InitModeOfPayment(ctx context.Context) error
+		InitModeOfPayment(ctx context.Context, dirBase string) error
 	}
 )
 

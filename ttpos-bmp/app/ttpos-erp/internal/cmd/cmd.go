@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"ttpos-bmp/app/ttpos-erp/internal/consts"
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -37,8 +38,11 @@ var (
 			g.Log().Info(ctx, "开始执行ERP数据迁移...")
 
 			// 初始化自定义字段
-			g.Log().Info(ctx, "正在初始化自定义字段...")
-			if err := service.Setup().InitCustomFields(ctx); err != nil {
+			g.Log().Infof(ctx, "正在初始化自定义字段... %v", parser)
+			siteCode := parser.GetOpt("siteCode", "1").String()
+			dirBase := parser.GetOpt("dirBase", "./manifest/erp-migrate/v2.5").String()
+			ctx = context.WithValue(ctx, consts.ContextSiteCode, siteCode)
+			if err := service.Setup().InitCustomFields(ctx, dirBase); err != nil {
 				g.Log().Error(ctx, "初始化自定义字段失败", err)
 				return err
 			}
@@ -46,7 +50,7 @@ var (
 
 			// 初始化客户
 			g.Log().Info(ctx, "正在初始化客户...")
-			if err := service.Setup().InitCustomers(ctx); err != nil {
+			if err := service.Setup().InitCustomers(ctx, dirBase); err != nil {
 				g.Log().Error(ctx, "初始化客户失败", err)
 				return err
 			}
@@ -54,7 +58,7 @@ var (
 
 			// 初始化支付方式
 			g.Log().Info(ctx, "正在初始化支付方式...")
-			if err := service.Setup().InitModeOfPayment(ctx); err != nil {
+			if err := service.Setup().InitModeOfPayment(ctx, dirBase); err != nil {
 				g.Log().Error(ctx, "初始化支付方式失败", err)
 				return err
 			}
