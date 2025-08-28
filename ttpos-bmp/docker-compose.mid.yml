@@ -24,7 +24,7 @@ services:
     image: apache/rocketmq:5.3.2
     container_name: "bmp-rmqnamesrv-${APP_ID}"
     ports:
-      - 9876:9876
+      - "9876:9876"
     networks:
       bmp-mid-network:
         ipv4_address: 10.0.11.40
@@ -34,9 +34,9 @@ services:
     image: apache/rocketmq:5.3.2
     container_name: "bmp-rmqbroker-${APP_ID}"
     ports:
-      - 10909:10909
-      - 10911:10911
-      - 10912:10912
+      - "10909:10909"
+      - "10911:10911"
+      - "10912:10912"
     environment:
       - NAMESRV_ADDR=namesrv:9876
     depends_on:
@@ -46,7 +46,7 @@ services:
         ipv4_address: 10.0.11.41
     command: sh mqbroker
 
-  proxy:
+  mq-proxy:
     image: apache/rocketmq:5.3.2
     container_name: "bmp-rmqproxy-${APP_ID}"
     networks:
@@ -56,12 +56,24 @@ services:
       - broker
       - namesrv
     ports:
-      - 28080:8080
-      - 28081:8081
+      - "28080:8080"
+      - "28081:8081"
     restart: on-failure
     environment:
       - NAMESRV_ADDR=namesrv:9876
     command: sh mqproxy
+  mq-dashboard:
+    image: apacherocketmq/rocketmq-dashboard:latest
+    container_name: "bmp-dashboard-${APP_ID}"
+    networks:
+      bmp-mid-network:
+    depends_on:
+      - namesrv
+    ports:
+      # 修改了映射端口号
+      - "8082:8082"
+    environment:
+      - JAVA_OPTS=-Drocketmq.namesrv.addr=namesrv:9876
 
 networks:
   bmp-mid-network:

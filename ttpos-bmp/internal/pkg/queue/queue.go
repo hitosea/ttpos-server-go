@@ -1,11 +1,12 @@
 package queue
 
 import (
+	"sync"
+	"time"
+
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
-	"sync"
-	"time"
 )
 
 type MqProducer interface {
@@ -107,10 +108,10 @@ func NewProducer(groupName string) (mqClient MqProducer, err error) {
 
 	switch config.Driver {
 	case "rocketmq":
-		if len(config.Rocketmq.Endpoint) == 0 {
-			err = gerror.New("queue.rocketmq.endpoint is empty.")
-			return
-		}
+		//if len(config.Rocketmq.Endpoint) == 0 {
+		//	err = gerror.New("queue.rocketmq.endpoint is empty.")
+		//	return
+		//}
 		mqClient, err = RegisterRocketProducer()
 	//case "kafka":
 	//	if len(config.Kafka.Address) == 0 {
