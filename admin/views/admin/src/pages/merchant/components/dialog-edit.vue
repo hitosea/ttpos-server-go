@@ -279,7 +279,7 @@
           <el-input v-model="formData.address" type="textarea" rows="5" maxlength="500" clearable :placeholder="$t('请输入所在地')"></el-input>
         </el-form-item>
         <el-form-item :label="$t('经纬度')">
-          <el-input v-model="formData.coordinates" type="textarea" rows="5" maxlength="500" clearable :placeholder="$t('请输入经纬度')"></el-input>
+          <el-input v-model="formData.coordinates" type="textarea" rows="5" maxlength="500" clearable :placeholder="$t('如:13.716412789763694, 100.52312952599786')"></el-input>
         </el-form-item>
       </el-form>
     </div>
