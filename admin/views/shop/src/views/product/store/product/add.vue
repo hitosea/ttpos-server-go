@@ -304,20 +304,6 @@
         await formRef.value.validate(() => {
           moveToError();
         });
-        // 验证套餐的库存唯一
-        if (form.model.type == 30 && typeof res.data == 'object') {
-          // key值代表第几组
-          form.model.package_group.forEach((group, index) => {
-            group.product_list.forEach((product) => {
-              if (res.data[index + 1] && res.data[index + 1].some((item) => item.product_id === product.product_id && item.stock_num < 0)) {
-                product.stock_num = 0;
-              }
-            });
-          });
-          await formRef.value.validate(() => {
-            moveToError();
-          });
-        }
       }
     } else {
       loading.value = false;

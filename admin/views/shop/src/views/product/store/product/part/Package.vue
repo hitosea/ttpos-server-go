@@ -60,7 +60,11 @@
             <el-table-column :label="$t('序号')" width="80" type="index" />
             <el-table-column prop="product_name_text" :label="$t('商品名称')" />
             <el-table-column prop="spec_name_text" :label="$t('规格')" width="120" />
-            <el-table-column prop="product_price" :label="$t('商品价格')" width="120" />
+            <el-table-column prop="product_price" :label="$t('商品价格')" width="120">
+              <template #default="scope">
+                {{ $formatPrice(scope.row.product_price) }}
+              </template>
+            </el-table-column>
             <el-table-column prop="num" :label="$t('数量')" width="120">
               <template #default="scope">
                 <el-form-item class="mt16" :prop="`model.package_group.${groupIndex}.product_list.${scope.$index}.num`" :rules="[{ required: true, message: $t('请输入数量') }]">
@@ -77,13 +81,7 @@
             </el-table-column>
             <el-table-column prop="stock_num" :label="$t('商品库存')" width="160">
               <template #default="scope">
-                <el-form-item
-                  class="mt16"
-                  :prop="`model.package_group.${groupIndex}.product_list.${scope.$index}.stock_num`"
-                  :rules="[{ required: true, validator: validateStockNum, message: $t('商品库存不足') }]"
-                >
-                  {{ scope.row.stock_num }}
-                </el-form-item>
+                {{ scope.row.stock_num }}
               </template>
             </el-table-column>
             <el-table-column prop="action" :label="$t('操作')" width="100" fixed="right">
@@ -154,8 +152,7 @@
       selectorType="all"
       :selectedProductIds="selectedProductIds"
       :haveSku="true"
-      :stockZero="true"
-      :haveStatusZero="true"
+      :haveStatusClose="true"
     >
     </ProductSelector>
 
@@ -426,15 +423,6 @@
   const validatePackageGroup = (rule, value, callback) => {
     if (value.length === 0) {
       callback(new Error($t('请添加套餐商品')));
-    } else {
-      callback();
-    }
-  };
-
-  // 校验商品库存
-  const validateStockNum = (rule, value, callback) => {
-    if (value <= 0) {
-      callback(new Error($t('商品库存不足')));
     } else {
       callback();
     }
