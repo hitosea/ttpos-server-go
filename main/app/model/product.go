@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/dto/resp/product_resp"
+	"ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
@@ -257,11 +258,24 @@ func (model *ProductPackage) GetOpenOverallDiscount() bool {
 func (model *ProductPackage) GetRespFlavorList() []product_resp.ProductFlavor {
 	flavorList := make([]product_resp.ProductFlavor, 0)
 	for _, bom := range model.ProductBoms {
+		// 商品规格
 		if bom.IsFlavor() && !bom.IsDelete() {
 			flavorList = append(flavorList, product_resp.ProductFlavor{
 				Uuid:       bom.ProductFlavor.Uuid,
 				BomUuid:    bom.Uuid,
 				LocaleName: bom.ProductFlavor.MultiLanguageName.GetNames(),
+				Price:      bom.Price,
+				StockNum:   bom.GetStockNum(),
+				Barcode:    bom.BarcodeValue,
+			})
+		}
+		// 套餐规格
+		if bom.IsPackageFlavor() && !bom.IsDelete() {
+			name := language.JsonToLocaleResponse(bom.Name)
+			flavorList = append(flavorList, product_resp.ProductFlavor{
+				Uuid:       0,
+				BomUuid:    bom.Uuid,
+				LocaleName: *name,
 				Price:      bom.Price,
 				StockNum:   bom.GetStockNum(),
 				Barcode:    bom.BarcodeValue,
@@ -321,12 +335,12 @@ func (model *ProductPackage) GetRespAttributeGroupList() []product_resp.ProductA
 func (model *ProductPackage) GetRespPackageSubProductGroupList() []product_resp.ProductPackageSubProductGroup {
 	packageSubProductGroupList := make([]product_resp.ProductPackageSubProductGroup, 0)
 	for _, packageSubProductGroup := range model.ProductPackageGroups {
-		if packageSubProductGroup.DeleteTime > 0 {
+		if packageSubProductGroup.IsDelete() {
 			continue
 		}
 		products := make([]product_resp.ProductPackageSubProduct, 0)
 		for _, product := range packageSubProductGroup.ProductPackageGroupItems {
-			if product.DeleteTime > 0 {
+			if product.IsDelete() {
 				continue
 			}
 			products = append(products, product_resp.ProductPackageSubProduct{
@@ -715,6 +729,11 @@ func (model *ProductPackage) GetSauces() []ProductSauce {
 // IsFlavor 判断是否为商品规格
 func (model *ProductBom) IsFlavor() bool {
 	return model.ProductFlavorUuid != 0
+}
+
+// 是否是套餐的规格
+func (model *ProductBom) IsPackageFlavor() bool {
+	return model.ProductFlavorUuid == 0 && model.ProductSauceUuid == 0
 }
 
 // IsSauceProduct 判断是否为商品小料

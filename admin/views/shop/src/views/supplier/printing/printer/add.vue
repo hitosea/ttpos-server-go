@@ -73,7 +73,16 @@
       <!-- 商米打印 -->
       <div v-if="form.printer_type == 'SUNMI_LAN'">
         <el-form-item for="no_click" :label="$t('打印机IP')" prop="SUNMI_LAN.IP" :rules="[{ required: true, message: ' ' }]">
-          <el-input v-model="form.SUNMI_LAN.IP"></el-input>
+          <el-autocomplete
+            v-model="form.SUNMI_LAN.IP"
+            :fetch-suggestions="getIPSuggestions"
+            clearable
+            :placeholder="$t('请选择或输入IP地址')"
+            style="width: 100%">
+            <template #default="{ item }">
+              <div>{{ item.label }}</div>
+            </template>
+          </el-autocomplete>
         </el-form-item>
 
         <el-form-item for="no_click" :label="$t('打印机SN')" prop="SUNMI_LAN.SN" :rules="[{ required: true, message: ' ' }]">
@@ -98,7 +107,16 @@
       <!-- 芯烨打印 -->
       <div v-if="form.printer_type == 'XPRINTER_LAN' || form.printer_type == 'XPRINTER_WIFI'">
         <el-form-item for="no_click" :label="$t('打印机IP')" prop="XPRINTER_LAN.IP" :rules="[{ required: true, message: ' ' }]">
-          <el-input v-model="form.XPRINTER_LAN.IP"></el-input>
+          <el-autocomplete
+            v-model="form.XPRINTER_LAN.IP"
+            :fetch-suggestions="getIPSuggestions"
+            clearable
+            :placeholder="$t('请选择或输入IP地址')"
+            style="width: 100%">
+            <template #default="{ item }">
+              <div>{{ item.label }}</div>
+            </template>
+          </el-autocomplete>
         </el-form-item>
 
         <el-form-item for="no_click" :label="$t('打印机PORT')" prop="XPRINTER_LAN.PORT" :rules="[{ required: true, message: ' ' }]">
@@ -112,7 +130,16 @@
       <!-- CODESOFT打印 -->
       <div v-if="form.printer_type == 'CODESOFT_LAN' || form.printer_type == 'CODESOFT_WIFI'">
         <el-form-item for="no_click" :label="$t('打印机IP')" prop="CODESOFT_LAN.IP" :rules="[{ required: true, message: ' ' }]">
-          <el-input v-model="form.CODESOFT_LAN.IP"></el-input>
+          <el-autocomplete
+            v-model="form.CODESOFT_LAN.IP"
+            :fetch-suggestions="getIPSuggestions"
+            clearable
+            :placeholder="$t('请选择或输入IP地址')"
+            style="width: 100%">
+            <template #default="{ item }">
+              <div>{{ item.label }}</div>
+            </template>
+          </el-autocomplete>
         </el-form-item>
 
         <el-form-item for="no_click" :label="$t('打印机PORT')" prop="CODESOFT_LAN.PORT" :rules="[{ required: true, message: ' ' }]">
@@ -224,6 +251,7 @@
         type: [],
         cashierList: [],
         dialogVisible: false,
+        ipOptions: [],
       };
     },
 
@@ -233,6 +261,7 @@
           .then((data) => {
             this.type = data.data.printerType;
             this.cashierList = data.data.cashierList;
+            this.ipOptions = data.data.lanPrinter || [];
           })
           .catch(() => {});
       },
@@ -280,6 +309,12 @@
       },
 
       uniqueNameValidator: uniqueNameValidator,
+
+      getIPSuggestions(queryString, cb) {
+        const suggestions = this.ipOptions;
+        const results = queryString ? suggestions.filter(item => item.value.indexOf(queryString) === 0) : suggestions;
+        cb(results);
+      },
     },
   };
 </script>

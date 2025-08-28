@@ -968,6 +968,12 @@ func (model *SaleOrder) IsFreeSaleOrder() bool {
 	return model.IsFree == constant.SaleOrderIsFreeYes
 }
 
+// erp是否进行过反结账
+func (model *SaleOrder) IsErpReverseSettle() bool {
+	// 结账后saleOrder中就会记录下这两个发票名称
+	return model.ErpProductsInvoiceName != "" && model.ErpMaterialInvoiceName != ""
+}
+
 // TableName 指定表名
 func (model *SaleOrder) TableName() string {
 	return "ttpos_sale_order"

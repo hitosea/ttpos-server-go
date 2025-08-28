@@ -11,10 +11,11 @@ import (
 
 type IReturnOrderRepo interface {
 	IReturnOrderQueryRepo
-	CreateReturnOrder(order model.ReturnOrder) (model.ReturnOrder, error) // 创建退货单
-	CreateReturnOrderRecord(order model.ReturnOrder) (uint64, error)      // 创建退货单
-	CreateReturnOrderAmount(amounts []model.ReturnOrderAmount) error      // 创建退货金额
-	CreateReturnOrderProduct(products []*model.ReturnOrderProduct) error  // 创建退货商品
+	CreateReturnOrder(order model.ReturnOrder) (model.ReturnOrder, error)           // 创建退货单
+	CreateReturnOrderRecord(order model.ReturnOrder) (uint64, error)                // 创建退货单
+	UpdateReturnOrderRecordErpInvoiceName(uuid uint64, erpInvoiceName string) error // 更新退货单erp发票名
+	CreateReturnOrderAmount(amounts []model.ReturnOrderAmount) error                // 创建退货金额
+	CreateReturnOrderProduct(products []*model.ReturnOrderProduct) error            // 创建退货商品
 	UpdateReturnOrder(opts []DBOption, order model.ReturnOrder) error
 	UpdateReturnOrderAmount(opts []DBOption, amount model.ReturnOrderAmount) error
 	SumRefundAmount(opts ...DBOption) float64 // 统计退款金额
@@ -48,6 +49,14 @@ func (r *returnOrderRepo) CreateReturnOrderRecord(order model.ReturnOrder) (uint
 	order.SetNil()
 	err := r.db.Model(&model.ReturnOrder{}).Create(&order).Error
 	return order.Uuid, errors.WithMessage(err)
+}
+
+func (r *returnOrderRepo) UpdateReturnOrderRecordErpInvoiceName(uuid uint64, erpInvoiceName string) error {
+	err := r.db.Model(&model.ReturnOrder{}).Where("uuid = ?", uuid).Update("erp_invoice_name", erpInvoiceName).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
 }
 
 func (r *returnOrderRepo) CreateReturnOrder(order model.ReturnOrder) (model.ReturnOrder, error) {

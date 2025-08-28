@@ -205,6 +205,9 @@ func (s *erpSrv) SavePosInvoice(ctx pkgCtx.Context, savePosInvoiceReq req.SavePo
 		MaterialItems:     savePosInvoiceReq.MaterialItems,
 		Taxes:             savePosInvoiceReq.Taxes,
 		Payments:          savePosInvoiceReq.Payments,
+		// 反结账后，重新结账时填写原商品发票名称
+		AmendedProductsInvoiceName: savePosInvoiceReq.AmendedProductsInvoiceName,
+		AmendedMaterialInvoiceName: savePosInvoiceReq.AmendedMaterialInvoiceName,
 	}
 	res, err := client.SavePosInvoice(WithSiteCode(ctx.GetContext(), savePosInvoiceReq.SiteCode), params)
 	if err != nil {
@@ -222,6 +225,29 @@ func (s *erpSrv) SavePosInvoice(ctx pkgCtx.Context, savePosInvoiceReq req.SavePo
 		return &savePosInvoiceResp, nil
 	}
 	return nil, errors.WithMessage(errors.New("保存POS发票异常, data为空"))
+}
+
+func (s *erpSrv) CancelPosInvoice(ctx pkgCtx.Context, cancelPosInvoiceReq req.CancelPosInvoiceReq) error {
+	companySetting := ctx.GetCompanySetting()
+
+	client, conn, err := NewErpSellingClient()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	defer conn.Close()
+
+	params := &selling.CancelPosInvoiceReq{
+		ProductsInvoiceName: cancelPosInvoiceReq.ProductsInvoiceName,
+		MaterialInvoiceName: cancelPosInvoiceReq.MaterialInvoiceName,
+	}
+	res, err := client.CancelPosInvoice(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), params)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	if res.GetCode() != "0" {
+		return errors.WithMessage(errors.New(res.Message))
+	}
+	return nil
 }
 
 func (s *erpSrv) ReturnPosInvoice(ctx pkgCtx.Context, returnPosInvoiceReq req.ReturnPosInvoiceReq) (*selling.ReturnPosInvoiceResp, error) {
