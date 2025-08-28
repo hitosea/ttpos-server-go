@@ -2,9 +2,10 @@ package consumer
 
 import (
 	"context"
-	"github.com/gogf/gf/v2/frame/g"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/internal/pkg/queue"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 type ItemSyncConsumer struct {
