@@ -173,3 +173,20 @@ type MaterialImportListItemReq struct {
 type MaterialImportListReq struct {
 	List []MaterialImportListItemReq `json:"list" binding:"required,dive"` // 物品列表
 }
+
+// ProductImportItemReq 导入商品项请求
+type MaterialImportItemReq struct {
+	LocaleName   dto.LocaleResponse `json:"locale_name" binding:"required"`      // 物品名称
+	CategoryUuid uint64             `json:"category_uuid" binding:"required"`    // 分类UUID
+	UnitUuid     uint64             `json:"unit_uuid" binding:"required"`        // 单位UUID
+	Valuation    float64            `json:"valuation" binding:"required,min=0"`  // 估值率
+	InitStock    float64            `json:"init_stock" binding:"required,min=0"` // 期初库存
+	BarcodeValue string             `json:"barcode_value"`                       // 条形码值
+	Status       int                `json:"status"`                              // 状态，1-启用 0-停用
+	Row          int                `json:"row" binding:"required"`              // excel表的行编号
+}
+
+// ProductImportReq 导入商品请求
+type MaterialImportReq struct {
+	List []MaterialImportItemReq `json:"list" binding:"required,dive"` // 商品列表
+}

@@ -380,14 +380,14 @@ func (h *MaterialHandler) ImportProductBomCard(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
-// ImportMaterialList 导入物品列表
-// @Summary 导入物品列表
-// @Description 导入物品列表
+// ImportMaterialList 获取导入物品列表
+// @Summary 获取导入物品列表
+// @Description 获取导入物品列表
 // @Tags 商家端.物品管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param data body req.MaterialImportListReq true "物品导入请求"
+// @Param data body req.MaterialImportListReq true "获取导入物品列表请求"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /shop/material/import/list [get]
@@ -405,6 +405,32 @@ func (h *MaterialHandler) ImportMaterialList(c *gin.Context) {
 		return
 	}
 	helper.Success(c, res)
+}
+
+// ImportMaterial 导入物品
+// @Summary 导入物品
+// @Description 导入物品
+// @Tags 商家端.物品管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.MaterialImportReq true "导入物品请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/material/import [post]
+func (h *MaterialHandler) ImportMaterial(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	importReq := req.MaterialImportReq{}
+	if err := c.ShouldBindJSON(&importReq); err != nil {
+		helper.HandleValidationError(c, err, importReq, dto.PageReqMessage)
+		return
+	}
+	err := h.materialSrv.ImportMaterial(ctx, importReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{}, "导入成功")
 }
 
 func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
@@ -446,5 +472,6 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		privateApi.POST("/product_bom/card/import", wrapper.ImportProductBomCard)   // 从菜品导入成本卡
 
 		privateApi.GET("/material/import/list", wrapper.ImportMaterialList) // 导入物品列表
+		privateApi.POST("/material/import", wrapper.ImportMaterial)         // 导入物品
 	}
 }

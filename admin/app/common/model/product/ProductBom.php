@@ -176,6 +176,14 @@ class ProductBom extends BaseModel
     }
 
     /**
+     * 商品规格关联套餐组商品
+     */
+    public function productPackageGroupItem()
+    {
+        return $this->hasMany(ProductPackageGroupItem::class, 'product_bom_uuid', 'uuid');
+    }
+
+    /**
      * 通过规格获取商品SKU列表
      */
     public static function getProductBomList($params, $filterHavingMaterial = 0, $filterHavingPackage = 0, $filterHavingDecimal = 0)
