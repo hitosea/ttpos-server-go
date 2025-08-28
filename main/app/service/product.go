@@ -3029,7 +3029,7 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 				}
 				packageItems, _ := productPackageGroupRepo.GetProductPackageGroupItems(
 					commonRepo.WhereBySoftDelete(),
-					productRepo.WhereBomUuid(productBom.Uuid),
+					commonRepo.WhereByProductBomUuid(productBom.Uuid),
 					productPackageGroupRepo.WithProductPackageGroup(
 						commonRepo.WhereBySoftDelete(),
 					),
@@ -4367,7 +4367,7 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 				}
 				productPackageGroupItems, _ := productPackageGroupRepo.GetProductPackageGroupItems(
 					commonRepo.WhereBySoftDelete(),
-					productRepo.WhereBomUuid(flavor.BomUuid),
+					commonRepo.WhereByProductBomUuid(flavor.BomUuid),
 					productPackageGroupRepo.WithProductPackageGroup(commonRepo.WhereBySoftDelete()),
 					productPackageGroupRepo.WithProductPackageGroupProduct(commonRepo.WhereBySoftDelete()),
 					productPackageGroupRepo.WithProductPackageGroupProductMultiLanguageName(commonRepo.WhereBySoftDelete()),
@@ -4387,7 +4387,7 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 		if len(flavorNames) > 0 {
 			return &product_resp.ProductEditResp{
 				List: packageNames,
-			}, errors.NewWithReplace("规格“%s”已关联如下套餐，暂时无法删除，请先修改套餐", []string{strings.Join(packageNames, "、")})
+			}, errors.NewWithReplace("规格“%s”已关联如下套餐，暂时无法删除，请先修改套餐", []string{strings.Join(flavorNames, "、")})
 		}
 		result, err := productCheckSrv.CheckProductFlavor(db, flavors)
 		if err != nil {
