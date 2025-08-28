@@ -1408,7 +1408,7 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 	}
 	// 获取当前最大的排序值
 	var maxSort int
-	db.Model(&model.ProductUnit{}).Select("MAX(sort)").Scan(&maxSort)
+	db.Model(&model.ProductUnit{}).Scopes(repository.NotDeleted).Select("ifnull(max(sort), 0)").Scan(&maxSort)
 
 	// 保存产品单位
 	productUnit := model.ProductUnit{
@@ -1852,7 +1852,7 @@ func (s *productSrv) AddProductSauce(ctx context.Context, addReq req.ProductSauc
 
 	// 获取当前最大的排序值
 	var maxSort int
-	db.Model(&model.ProductSauce{}).Select("MAX(sort)").Scan(&maxSort)
+	db.Model(&model.ProductSauce{}).Scopes(repository.NotDeleted).Select("ifnull(max(sort), 0)").Scan(&maxSort)
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 保存多语言名称
@@ -2336,7 +2336,7 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 
 	// 获取当前最大的排序值
 	var maxSort int
-	db.Model(&model.ProductAttributeGroup{}).Select("MAX(sort)").Scan(&maxSort)
+	db.Model(&model.ProductAttributeGroup{}).Scopes(repository.NotDeleted).Select("ifnull(max(sort), 0)").Scan(&maxSort)
 
 	productAttributeGroup := model.ProductAttributeGroup{
 		Name: addReq.LocaleName.ToJson(),

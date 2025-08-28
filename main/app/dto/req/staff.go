@@ -5,7 +5,7 @@ type UpdateStaffReq struct {
 	RealName        string   `json:"real_name" binding:"required,max=100"`                  // 姓名，限制100个字符
 	Username        string   `json:"username" binding:"required,max=64,email"`              // 邮箱，限制64个字符
 	Phone           string   `json:"phone" binding:"required,max=20"`                       // 手机号，限制20个字符
-	Roles           []uint64 `json:"roles" binding:"required"`                              // 角色ID列表
+	Roles           []uint64 `json:"roles"`                                                 // 角色ID列表，非必填，超管没有角色
 	Password        string   `json:"password" binding:"omitempty,strong_password"`          // 密码，如果不为空，则不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种
 	ConfirmPassword string   `json:"confirm_password" binding:"omitempty,eqfield=Password"` // 确认密码
 }
@@ -19,7 +19,6 @@ var UpdateStaffRequestMessage = map[string]string{
 	"username.email":           "邮箱必须是有效的邮箱格式",
 	"phone.required":           "手机号不能为空",
 	"phone.max":                "手机号不能超过20个字",
-	"roles.required":           "角色不能为空",
 	"password.strong_password": "密码不符合要求：不能包含空格，长度为8-16个字符，必须包含字母、数字、符号中至少2种",
 	"confirm_password.eqfield": "两次密码不一致",
 }
