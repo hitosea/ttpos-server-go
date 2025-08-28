@@ -2326,17 +2326,6 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	err = repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		ctx.SetDB(db) // 否则 s.memberSrv.HandleMemberBalance会事务失效
 
-		// 保存发票到erp
-		company := ctx.GetCompany()
-		companySetting := ctx.GetCompanySetting()
-		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
-			res, err := s.ReturnPosInvoice(ctx, saleOrder, returnOrder, db)
-			if err != nil {
-				return errors.WithMessage(err)
-			}
-			returnOrder.ErpInvoiceName = res.InvoiceName
-		}
-
 		// 创建退货单
 		if _, err = repository.NewReturnOrderRepo(db).CreateReturnOrderRecord(*returnOrder); err != nil {
 			return errors.WithMessage(err)
@@ -2491,6 +2480,22 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 
 			}
 		}
+
+		// 保存发票到erp
+		company := ctx.GetCompany()
+		companySetting := ctx.GetCompanySetting()
+		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
+			res, err := s.ReturnPosInvoice(ctx, saleOrder, returnOrder, db)
+			if err != nil {
+				return errors.WithMessage(err)
+			}
+			returnOrder.ErpInvoiceName = res.InvoiceName
+		}
+		// 更新退货单erp发票名
+		if err := repository.NewReturnOrderRepo(db).UpdateReturnOrderRecordErpInvoiceName(returnOrder.Uuid, returnOrder.ErpInvoiceName); err != nil {
+			return errors.WithMessage(err)
+		}
+
 		return nil
 	})
 
@@ -6067,6 +6072,7 @@ func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, 
 			Name:           flavorProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 填顾客下单时规格的名字 todo preload
 			Price:          flavorProductBom.Price,
 			ProductBomUuid: product.FlavorProductBomUuid,
+			ErpCode:        flavorProductBom.ErpCode,
 		},
 		Attribute:     attributes,
 		IsAcceptOrder: uint(isAcceptOrder),
@@ -9916,6 +9922,20 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 	for _, product := range returnOrder.ReturnOrderProducts {
 		// TODO 如果退款套餐怎么处理
 		saleOrderProduct, _, _ := saleOrder.GetSaleOrderProduct(product.SaleOrderProductUuid)
+		if saleOrderProduct.IsPackageProduct() {
+			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+			for _, subProduct := range subProducts {
+				packageName := language.JsonToLocaleResponse(saleOrderProduct.Name) // 套餐名称
+				num := decimal.NewFromFloat(product.Num).Mul(decimal.NewFromFloat(subProduct.UnitNum)).Round(3).InexactFloat64()
+				items = append(items, &selling.PosInvoiceItem{
+					ItemCode:    subProduct.ErpCode,
+					Qty:         -num,
+					Rate:        0,                                                  // 套餐子商品没有单价
+					Amount:      0,                                                  // 套餐子商品没有金额
+					Description: fmt.Sprintf("Sales in package:%s", packageName.EN), // 套餐子商品描述
+				})
+			}
+		}
 		taxFee := saleOrderProduct.TaxFee // 商品税费
 		if !saleOrderProduct.HasTax() {
 			taxFee = 0
@@ -9926,7 +9946,7 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 		}
 		items = append(items, &selling.PosInvoiceItem{
 			ItemCode: product.ErpCode,
-			Qty:      product.Num,
+			Qty:      -product.Num,
 			Rate:     product.GetProductPriceNoneTax(taxFee),        // 商品未含税价格（折后）
 			Amount:   -product.GetProductTotalAmountNoneTax(taxFee), // 商品未含税价格（折后）* 数量
 		})
