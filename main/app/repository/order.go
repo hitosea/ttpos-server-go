@@ -1843,6 +1843,12 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64, opts ...GetSaleBillA
 				Query: "SaleOrders.SaleOrderProducts.ProductPackage.TakeoutTax",
 			},
 			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductUnit",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductUnit.MultiLanguageName",
+			},
+			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.ProductPackage.ProductCategory",
 			},
 			WithPreload{

@@ -58,6 +58,7 @@ type (
 		//   - apiSecret: API密钥
 		//   - err: 错误信息
 		GetUserApiKeySecret(ctx context.Context, userEmail string) (apiKey string, apiSecret string, err error)
+		InitErpDocTypeWithDirname(ctx context.Context, dirBase string) error
 		// InitCustomFields 初始化自定义字段
 		// 遍历manifest/erp-migrate/v2.5/custom_fields目录下所有JSON文件，创建Custom Field文档
 		// 参数：

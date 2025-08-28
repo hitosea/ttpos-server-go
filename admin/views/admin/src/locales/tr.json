@@ -431,5 +431,21 @@
     "密码验证": "Şifre Doğrulama",
     "请输入密码": "Lütfen şifre girin",
     "请确定授权信息，该操作不可逆，请仔细确认！": "Lütfen yetkilendirme bilgilerini onaylayın, bu işlem geri alınamaz, lütfen dikkatlice kontrol edin!",
-    "erpnext公司": "erpnext şirketi"
+    "erpnext公司": "erpnext şirketi",
+    "同步支付方式": "Ödeme yöntemini senkronize et",
+    "支付方式": "Ödeme Yöntemi",
+    "回显erp中的支付方式名称": "ERP'deki ödeme yöntemi adını geri yansıt",
+    "手续费": "Hizmet bedeli",
+    "默认0": "Varsayılan 0",
+    "结账显示": "Ödeme ekranı gösteriliyor",
+    "收银机": "Kasa Makinesi",
+    "会员充值": "Üye bakiyesi yükleme",
+    "请选择ERP支付方式": "Lütfen ERP ödeme yöntemini seçin",
+    "名称不能超过100个字符": "İsim 100 karakteri geçemez",
+    "请选择支付方式": "Lütfen ödeme yöntemi seçin",
+    "请输入手续费": "Lütfen işlem ücretini girin",
+    "手续费必须在0-100之间": "İşlem ücreti 0 ile 100 arasında olmalıdır",
+    "排序值必须在0-999之间": "Sıralama değeri 0 ile 999 arasında olmalıdır",
+    "支付管理": "Ödeme yönetimi",
+    "如:13.716412789763694, 100.52312952599786": "Örn: 13.716412789763694, 100.52312952599786"
 }

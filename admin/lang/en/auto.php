@@ -2194,4 +2194,10 @@ return [
     "最多可添加10个加料" => "You can add up to 10 toppings",
     "套餐名称长度不能超过150个字符" => "The package name cannot exceed 150 characters",
     "分组名称长度不能超过150个字符" => "The group name cannot exceed 150 characters in length",
+    "价格不能超过100000000" => "The price cannot exceed 100000000",
+    "套餐价格不能为0或超过100000000" => "The package price cannot be 0 or exceed 100000000",
+    "价格必须在0到100000000之间" => "The price must be between 0 and 100000000",
+    "限购数量必须在1到1000之间" => "The purchase limit must be between 1 and 1000",
+    "经纬度格式不正确" => "Incorrect latitude and longitude format",
+    "价格格式错误，请输入小数点后2位，范围：0-100000000" => "Incorrect price format. Please enter 2 decimal places, range: 0-100000000",
 ];

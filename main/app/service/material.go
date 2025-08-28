@@ -2,6 +2,8 @@ package service
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/manufacturing"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -13,6 +15,7 @@ import (
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/language"
@@ -40,6 +43,7 @@ type IMaterialSrv interface {
 	CopyProductBomCard(ctx context.Context, req req.ProductBomCardCopyReq) error
 	ImportProductBomCard(ctx context.Context, req req.ProductBomCardImportReq) error
 	ImportMaterialList(ctx context.Context, req req.MaterialImportListReq) (material_resp.MaterialImportResp, error)
+	ImportMaterial(ctx context.Context, req req.MaterialImportReq) error
 }
 
 type materialSrv struct {
@@ -1257,4 +1261,47 @@ func (s *materialSrv) ImportMaterialList(ctx context.Context, reqs req.MaterialI
 	}
 
 	return materialImportResp, nil
+}
+
+// ImportMaterial 导入物品
+func (s *materialSrv) ImportMaterial(ctx context.Context, reqs req.MaterialImportReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	language := ctx.GetLanguage()
+
+	for _, item := range reqs.List {
+		// 验证是否已经存在
+		materialNameIsExist := repository.NewMaterialRepo(db).CheckMultiLanguageNameExist(item.LocaleName)
+		if !materialNameIsExist.IsNull() {
+			return errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "物品名称已存在"))
+		}
+		// 验证条形码存在性检查
+		if repository.NewMaterialRepo(db).CheckBarcodeExist(item.BarcodeValue, 0) {
+			return errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "物品条码已存在"))
+		}
+	}
+
+	// 错误提示
+	errorMessages := make([]string, 0)
+	for _, item := range reqs.List {
+		tmp := req.MaterialAddReq{
+			LocaleName:       item.LocaleName,
+			CategoryUuid:     item.CategoryUuid,
+			UnitUuid:         item.UnitUuid,
+			Status:           item.Status,
+			Valuation:        item.Valuation,
+			InitStock:        item.InitStock,
+			BarcodeValue:     item.BarcodeValue,
+			PurchaseUnitUuid: item.UnitUuid,
+			CostUnitUuid:     item.UnitUuid,
+		}
+		err := s.AddMaterial(ctx, tmp)
+		if err != nil {
+			errorMessages = append(errorMessages, fmt.Sprintf("行[%d]: %s", item.Row, err.Error()))
+		}
+	}
+	if len(errorMessages) > 0 {
+		return errors.New(i18n.Translate(language, "商品导入失败") + ": " + strings.Join(errorMessages, "; "))
+	}
+
+	return nil
 }

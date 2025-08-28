@@ -31,7 +31,7 @@ ARG HTTP_PORT=14031
 ARG RPC_PORT=14032
 
 # 安装 ca-certificates 和 curl，并清除 apt 缓存
-RUN apt-get update && apt-get install -y ca-certificates curl \
+RUN apt-get update && apt-get install -y ca-certificates curl tzdata \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

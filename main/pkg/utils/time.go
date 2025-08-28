@@ -253,7 +253,9 @@ func (t Timezone) OpeningHoursStartEndUnix(openingHours string) (int64, int64) {
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
 
 	// 检查是否跨天（结束时间小于等于开始时间）
-	isCrossingDay := endHour <= startHour || (endHour == startHour && endMin <= startMin)
+	startTimeInt := startHour*100 + startMin
+	endTimeInt := endHour*100 + endMin
+	isCrossingDay := endTimeInt <= startTimeInt
 
 	// 构建开始和结束时间
 	var startTime, endTime time.Time

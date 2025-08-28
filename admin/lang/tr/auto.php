@@ -2194,4 +2194,10 @@ return [
     "最多可添加10个加料" => "En fazla 10 malzeme ekleyebilirsiniz",
     "套餐名称长度不能超过150个字符" => "Paket adı uzunluğu 150 karakteri geçemez",
     "分组名称长度不能超过150个字符" => "Grup adı uzunluğu 150 karakteri geçemez",
+    "价格不能超过100000000" => "Fiyat 100000000'u geçemez",
+    "套餐价格不能为0或超过100000000" => "Paket fiyatı 0 olamaz veya 100000000'u geçemez",
+    "价格必须在0到100000000之间" => "Fiyat 0 ile 100000000 arasında olmalıdır",
+    "限购数量必须在1到1000之间" => "Satın alma limiti 1 ile 1000 arasında olmalıdır",
+    "经纬度格式不正确" => "Enlem ve boylam formatı yanlış",
+    "价格格式错误，请输入小数点后2位，范围：0-100000000" => "Fiyat formatı hatalı, lütfen ondalık kısmı 2 hane girin, aralık: 0-100000000",
 ];
