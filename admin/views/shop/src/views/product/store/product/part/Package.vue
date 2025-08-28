@@ -447,10 +447,10 @@
       callback(new Error($t('请填写分组名称')));
       return;
     }
-    // 检查该分组下所有语言版本是否都已填写
+    // 以 languageList 中的key值为基准，检查该分组下所有语言版本是否都已填写
     const groupName = form.model.package_group[groupIndex].group_name;
-    const allLanguagesFilled = Object.keys(groupName).every((key) => {
-      const langValue = groupName[key];
+    const allLanguagesFilled = languageList.every((item) => {
+      const langValue = groupName[item.key];
       return langValue && langValue.trim();
     });
 
