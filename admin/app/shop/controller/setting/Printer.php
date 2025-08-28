@@ -6,6 +6,7 @@ use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
 use app\common\model\shop\BindRecord;
 use app\common\service\websocket\Websocket;
+use app\common\model\settings\LanPrinterScan;
 use app\shop\model\settings\Printer as PrinterModel;
 
 
@@ -66,7 +67,14 @@ class Printer extends Controller
         if ($this->request->isGet()) {
             $cashierList = BindRecord::getCashierList();
             $printerType = PrinterModel::getPrinterTypeList();
-            return  $this->renderSuccess('', compact('cashierList', 'printerType'));
+            $lanPrinter = LanPrinterScan::field('ip', 'label')->select();
+            $lanPrinter = array_map(function($item) {
+                return [
+                    'value' => $item['ip'],
+                    'label' => $item['ip'] . ' (' . __('来自收银机扫描') . ')',
+                ];
+            }, $lanPrinter->toArray());
+            return  $this->renderSuccess('', compact('cashierList', 'printerType', 'lanPrinter'));
         }
         // 新增记录
         $model = new PrinterModel;
