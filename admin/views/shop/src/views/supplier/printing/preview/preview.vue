@@ -248,7 +248,7 @@
           <h4 class="mb-12" v-if="mode == 1">
             {{ $t('桌位: A01 (4人)') }}
           </h4>
-          <h3 v-if="mode == 2 ">
+          <h3 v-if="mode == 2 || mode == 3">
             {{ $t('桌位: A01 (4人)') }}
           </h3>
         </template>
