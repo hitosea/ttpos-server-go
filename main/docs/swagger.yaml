@@ -5889,7 +5889,7 @@ definitions:
         maxLength: 100
         type: string
       roles:
-        description: 角色ID列表
+        description: 角色ID列表，非必填，超管没有角色
         items:
           type: integer
         type: array
@@ -5903,7 +5903,6 @@ definitions:
     required:
     - phone
     - real_name
-    - roles
     - username
     - uuid
     type: object
