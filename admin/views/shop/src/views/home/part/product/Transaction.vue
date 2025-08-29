@@ -170,6 +170,7 @@
         },
         true
       );
+      if (res.code != 1) return;
       dataList.value = res.data;
       loading.value = false;
       createOption();

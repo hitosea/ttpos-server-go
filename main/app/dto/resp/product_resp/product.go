@@ -412,6 +412,7 @@ type ProductSingleListItemResp struct {
 type ProductPackageSubProduct struct {
 	Uuid             uint64             `json:"uuid"`               // 套餐子商品UUID
 	BomUuid          uint64             `json:"bom_uuid"`           // 商品BOM UUID
+	ProductUuid      uint64             `json:"product_uuid"`       // 商品UUID
 	LocaleName       dto.LocaleResponse `json:"locale_name"`        // 套餐子商品名称
 	FlavorLocaleName dto.LocaleResponse `json:"flavor_locale_name"` // 商品规格名称
 	Num              float64            `json:"num"`                // 套餐子商品数量
