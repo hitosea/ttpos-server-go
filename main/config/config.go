@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
+	"ttpos-server-go/pkg/rocketmq"
 
 	"github.com/jinzhu/copier"
 	"github.com/joho/godotenv"
@@ -21,6 +23,8 @@ var SMS SMSConf
 var GoogleBucket GoogleBucketConf
 var Google GoogleConf
 var Nacos NacosConf
+
+var Rocketmq rocketmq.Config
 
 func Init() error {
 	// 加载 .env 文件
@@ -43,6 +47,7 @@ func Init() error {
 	googleConf(opt)          // 谷歌
 	migrateDatabaseConf(opt) // 迁移数据库
 	nacosConf(opt)           // nacos配置
+	rocketmqConf(opt)        // rocketmq配置
 
 	// 验证码
 	Captcha = CaptchaConf{CachePrefix: "captcha:"}
@@ -56,6 +61,27 @@ func Init() error {
 	}
 
 	return nil
+}
+
+func rocketmqConf(opt copier.Option) {
+	Rocketmq = rocketmq.Config{
+		NameServers: nil,
+		AccessKey:   "",
+		SecretKey:   "",
+		GroupName:   "ttpos-go-group",
+		Retry:       3,
+		LogLevel:    "warn",
+		Enabled:     false,
+	}
+	copier.CopyWithOption(&Rocketmq, rocketmq.Config{
+		NameServers: strings.Split(viper.GetString("ROCKETMQ_NAME_SRV_ADDR"), ","),
+		AccessKey:   viper.GetString("ROCKETMQ_ACCESS_KEY"),
+		SecretKey:   viper.GetString("ROCKETMQ_SECRET_KEY"),
+		GroupName:   viper.GetString("ROCKETMQ_GROUP_NAME"),
+		Retry:       viper.GetInt("ROCKETMQ_RETRY"),
+		LogLevel:    viper.GetString("ROCKETMQ_LOG_LEVEL"),
+		Enabled:     viper.GetBool("ROCKETMQ_ENABLED"),
+	}, opt)
 }
 
 func nacosConf(opt copier.Option) {
