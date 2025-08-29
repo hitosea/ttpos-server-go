@@ -1088,6 +1088,9 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			// 保存商品BOM UUID
 			var productBomUuid uint64
 			for _, productBom := range saleProduct.SaleOrderProductBoms {
+				if productBom.IsDelete() {
+					continue
+				}
 				if productBom.IsFlavorBom == 1 {
 					productBomUuid = productBom.ProductBomUuid
 				}

@@ -6578,6 +6578,9 @@ type FlavorNum struct {
 
 func (f *FlavorNum) IsStockShortage() bool {
 	for _, saleOrderProductBom := range f.SaleOrderProduct.SaleOrderProductBoms {
+		if saleOrderProductBom.IsDelete() {
+			continue
+		}
 		if saleOrderProductBom.IsFlavor() {
 			return saleOrderProductBom.ProductBom.IsStockShortageWithMaterial(f.Num)
 		}
@@ -7132,6 +7135,9 @@ func (s *orderSrv) getDecreaseStockList(ctx context.Context, cookingDeductSaleOr
 	list := make([]*model.Product, 0)
 	for _, cookingDeductSaleOrderProduct := range cookingDeductSaleOrderProducts {
 		for _, saleOrderProductBom := range cookingDeductSaleOrderProduct.SaleOrderProductBoms {
+			if saleOrderProductBom.IsDelete() {
+				continue
+			}
 			// 获取原材料的出库数量
 			productBomMaterials := make([]*model.ProductBomMaterials, 0)
 			// 如果是规格商品
@@ -11786,6 +11792,9 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 	if len(unCookingSaleOrderProducts) > 0 || len(h5OrderProductUnAccept) > 0 {
 		products := make([]resp.Product, 0)
 		for _, product := range unCookingSaleOrderProducts {
+			if product.IsPackageSubProduct() {
+				continue
+			}
 			products = append(products, resp.Product{
 				Uuid:          product.Uuid,
 				LocaleName:    product.GetNameAndFlavorName(),

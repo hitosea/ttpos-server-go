@@ -466,6 +466,9 @@ func (model *SaleOrderProduct) calcTotalPrice(serviceFeeRate float64, taxFeeType
 func (model *SaleOrderProduct) calcSaucePrice() float64 {
 	saucePrice := decimal.NewFromFloat(0)
 	for _, bom := range model.SaleOrderProductBoms {
+		if bom.IsDelete() {
+			continue
+		}
 		if !bom.IsFlavor() {
 			// 累加每个小料的价格
 			price := decimal.NewFromFloat(bom.Price) // 加料单价
@@ -483,6 +486,9 @@ func (model *SaleOrderProduct) calcSaucePrice() float64 {
 func (model *SaleOrderProduct) calcLastestSaucePrice() float64 {
 	saucePrice := decimal.NewFromFloat(0)
 	for _, bom := range model.SaleOrderProductBoms {
+		if bom.IsDelete() {
+			continue
+		}
 		if !bom.IsFlavor() {
 			// 累加每个小料的价格
 			price := bom.ProductBom.Price
