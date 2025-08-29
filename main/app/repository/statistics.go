@@ -217,7 +217,7 @@ func (r *StatisticsRepo) CountPayment(opts ...DBOption) []model.StatisticsPaymen
 		Joins("LEFT JOIN " + paymentMethodTable + " ON sp.payment_method_uuid = pm.uuid").
 		Group("sp.payment_method_uuid").
 		Order("pm.sort ASC").
-		Order("pm.id DESC").
+		Order("pm.create_time DESC").
 		Find(&result)
 
 	return result

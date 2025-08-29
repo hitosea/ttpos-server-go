@@ -346,6 +346,7 @@ func (model *ProductPackage) GetRespPackageSubProductGroupList() []product_resp.
 			products = append(products, product_resp.ProductPackageSubProduct{
 				Uuid:             product.Uuid,
 				BomUuid:          product.ProductBomUuid,
+				ProductUuid:      product.ProductPackage.Uuid,
 				LocaleName:       product.ProductPackage.MultiLanguageName.GetNames(),
 				FlavorLocaleName: product.ProductBom.ProductFlavor.MultiLanguageName.GetNames(),
 				Num:              product.Num,

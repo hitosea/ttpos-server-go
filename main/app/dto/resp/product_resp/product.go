@@ -252,6 +252,7 @@ type ProductShopCategoryDetailResp struct {
 	ParentName string             `json:"parent_name"` // 父级类别名称
 	Sort       uint               `json:"sort"`        // 商品类别排序
 	Status     int                `json:"status"`      // 商品类别状态 0-关闭 1-开启
+	CanDelete  bool               `json:"can_delete"`  // 是否可以删除 false-否 true-是
 }
 
 type ProductAttributeGroupItem struct {
@@ -411,6 +412,7 @@ type ProductSingleListItemResp struct {
 type ProductPackageSubProduct struct {
 	Uuid             uint64             `json:"uuid"`               // 套餐子商品UUID
 	BomUuid          uint64             `json:"bom_uuid"`           // 商品BOM UUID
+	ProductUuid      uint64             `json:"product_uuid"`       // 商品UUID
 	LocaleName       dto.LocaleResponse `json:"locale_name"`        // 套餐子商品名称
 	FlavorLocaleName dto.LocaleResponse `json:"flavor_locale_name"` // 商品规格名称
 	Num              float64            `json:"num"`                // 套餐子商品数量

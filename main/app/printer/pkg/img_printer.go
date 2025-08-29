@@ -1372,7 +1372,7 @@ func (i *ImgFont) Save(imageSrc string, reminderSound bool, openMoneybox int) st
 		imageSrc = "./tmp/printer/test_img.png"
 	}
 	//
-	maxHeight := 2200
+	maxHeight := 200
 	height := i.TextTotalHeight + i.TextLineHeight
 	headHeight := int(i.TextLineHeight/2) - 10
 

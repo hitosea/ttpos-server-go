@@ -287,7 +287,7 @@
   const getBaes = (event) => {
     IndexApi.base(true)
       .then((res) => {
-        if (res.code == -102) return;
+        if (res.code != 1) return;
         languageStore().setLanguageList(res.data.language);
         //获取是否在云端
         languageStore().setIsCloudDeploy(res.data.isCloudDeploy);
