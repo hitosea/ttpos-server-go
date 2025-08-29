@@ -235,6 +235,7 @@ func (s *productCheckSrv) CheckProductFlavor(db *gorm.DB, flavors []CheckProduct
 type CheckProductAttributeGroupParam struct {
 	Uuid         uint64                       `json:"uuid"`          // 属性组UUID
 	IsMust       int                          `json:"is_must"`       // 属性组是否必选 0-否 1-是
+	IsOpenInput  bool                         `json:"is_open_input"` // 属性组最大选择数量是否开启 false-否 true-是
 	MaxSelection int                          `json:"max_selection"` // 属性组最大选择数量
 	Attributes   []CheckProductAttributeParam `json:"attributes"`    // 属性列表
 	IsDelete     bool                         `json:"is_delete"`     // 是否删除, 如果是新增/编辑，则传false，删除时传true
@@ -296,7 +297,7 @@ func (s *productCheckSrv) CheckProductAttribute(db *gorm.DB, attributes []CheckP
 			if attributeGroupReq.MaxSelection > attributeCount {
 				return nil, errors.New("属性值数量不能大于最大选择数量")
 			}
-			if attributeDefaultCount > attributeGroupReq.MaxSelection {
+			if attributeGroupReq.IsOpenInput && attributeDefaultCount > attributeGroupReq.MaxSelection {
 				return nil, errors.New("默认勾选数量不能大于最大选择数量")
 			}
 			attributeGroupCount++

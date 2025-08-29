@@ -4161,6 +4161,7 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 				attributes = append(attributes, CheckProductAttributeGroupParam{
 					Uuid:         attribute.Uuid,
 					IsMust:       attribute.IsMust,
+					IsOpenInput:  attribute.IsOpenInput,
 					MaxSelection: attribute.MaxSelection,
 					Attributes:   attributeParams,
 				})
@@ -4413,6 +4414,7 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 				attributes = append(attributes, CheckProductAttributeGroupParam{
 					Uuid:         attribute.Uuid,
 					IsMust:       attribute.IsMust,
+					IsOpenInput:  attribute.IsOpenInput,
 					MaxSelection: attribute.MaxSelection,
 					Attributes:   attributeParams,
 					IsDelete:     attribute.IsDelete,

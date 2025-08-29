@@ -415,6 +415,7 @@ type ProductShopAddSauceItemReq struct {
 type ProductShopAddAttributeGroupReq struct {
 	Uuid         uint64                            `json:"uuid"`          // 商品属性组UUID
 	IsMust       int                               `json:"is_must"`       // 商品属性组是否必选 0-否 1-是
+	IsOpenInput  bool                              `json:"is_open_input"` // 商品属性组最大选择数量是否开启 false-关闭 true-开启
 	MaxSelection int                               `json:"max_selection"` // 商品属性组最大选择数量
 	Attributes   []ProductShopAddGroupAttributeReq `json:"attributes"`    // 商品属性列表
 }
@@ -514,6 +515,7 @@ type ProductShopEditSauceItemReq struct {
 type ProductShopEditAttributeGroupReq struct {
 	Uuid         uint64                             `json:"uuid"`          // 商品属性组UUID
 	IsMust       int                                `json:"is_must"`       // 商品属性组是否必选 0-否 1-是
+	IsOpenInput  bool                               `json:"is_open_input"` // 商品属性组最大选择数量是否开启 false-否 true-是
 	MaxSelection int                                `json:"max_selection"` // 商品属性组最大选择数量
 	Attributes   []ProductShopEditGroupAttributeReq `json:"attributes"`    // 商品属性列表
 	IsDelete     bool                               `json:"is_delete"`     // 是否删除, 如果是新增/编辑，则传false，删除时传true
