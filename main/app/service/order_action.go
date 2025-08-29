@@ -688,6 +688,9 @@ func (s *orderSrv) checkLimitPurchase(ctx context.Context, saleBill *model.SaleB
 		optionFunc(option)
 	}
 
+	// 过滤掉套餐子商品。子商品不占限购
+	saleOrderProducts = model.FilterPackageSubProduct(saleOrderProducts)
+
 	limitProducts := make(map[uint64]uint) // product_package_uuid => limit_num
 	var err error
 
