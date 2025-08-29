@@ -7458,7 +7458,20 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 	if returnSaleOrderProduct.DeductStockType == constant.ProductPackageDeductStockTypeCooking {
 		currentReturnSaleOrderProduct := *returnSaleOrderProduct
 		currentReturnSaleOrderProduct.Num = req.Num // 退菜数量,仅入库本次退菜的数量
-		productList, err := s.getDecreaseStockList(ctx, []*model.SaleOrderProduct{&currentReturnSaleOrderProduct})
+
+		cookingDeductSaleOrderProducts := []*model.SaleOrderProduct{&currentReturnSaleOrderProduct}
+
+		// 如果是套餐商品，则加上子商品的退菜信息
+		if currentReturnSaleOrderProduct.IsPackageProduct() {
+			subProducts := saleOrder.GetPackageSubProductList(currentReturnSaleOrderProduct.Uuid)
+			for _, subProduct := range subProducts {
+				product := *subProduct
+				product.Num = decimal.NewFromFloat(req.Num).Mul(decimal.NewFromFloat(subProduct.UnitNum)).Round(3).InexactFloat64() // 退菜数量,仅入库本次退菜的数量
+				cookingDeductSaleOrderProducts = append(cookingDeductSaleOrderProducts, &product)
+			}
+		}
+
+		productList, err := s.getDecreaseStockList(ctx, cookingDeductSaleOrderProducts)
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
