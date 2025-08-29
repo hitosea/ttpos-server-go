@@ -306,11 +306,6 @@ func (s *orderSrv) ActionAdd(ctx context.Context, request req.ProductAddReq, sal
 		}
 	}
 
-	if saleBill.IsTakeout() {
-		// 如果是打包订单，则需要更新所有商品为打包商品
-		saleBill.SetTakeoutSaleBill(constant.SaleBillDiningMethodTakeout)
-	}
-
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 			return errors.WithMessage(err)
@@ -692,6 +687,9 @@ func (s *orderSrv) checkLimitPurchase(ctx context.Context, saleBill *model.SaleB
 	for _, optionFunc := range options {
 		optionFunc(option)
 	}
+
+	// 过滤掉套餐子商品。子商品不占限购
+	saleOrderProducts = model.FilterPackageSubProduct(saleOrderProducts)
 
 	limitProducts := make(map[uint64]uint) // product_package_uuid => limit_num
 	var err error

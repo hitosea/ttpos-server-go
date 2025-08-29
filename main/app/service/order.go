@@ -5753,6 +5753,10 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				saleOrderProduct.SetMustPlanInfo(mustPlanUuid)
 			}
 		}
+		// 如果是打包订单，则更新商品打包状态
+		if params.SaleBill.IsTakeout() {
+			saleOrderProduct.SetWrap()
+		}
 		// 生成签名
 		saleOrderProduct.UpdateSign()
 		ctx.Log().Debug("生成商品签名", zap.Any("sign", saleOrderProduct.Sign))
@@ -6791,13 +6795,15 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 
 		// 只检查本次下单的商品是否超过限购
 		productPackageUuids := make([]uint64, 0)
-		for _, saleOrderProduct := range saleOrderProductAll {
+		// 过滤掉套餐子商品, 子商品不限购
+		productList := model.FilterPackageSubProduct(saleOrderProductAll)
+		for _, saleOrderProduct := range productList {
 			if options.SaleOrderProductUuids != nil && slices.Contains(options.SaleOrderProductUuids, saleOrderProduct.Uuid) {
 				productPackageUuids = append(productPackageUuids, saleOrderProduct.ProductPackageUuid)
 			}
 		}
 
-		for _, saleOrderProduct := range saleOrderProductAll {
+		for _, saleOrderProduct := range productList {
 			// 限购检查只检查本台的商品，并台过来的商品不记.
 			// 跳过非本台的商品
 			if !saleOrderProduct.IsCurrentDeskProduct() {
