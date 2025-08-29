@@ -660,10 +660,10 @@ func (model *SaleBill) SetTakeoutSaleBill(diningMethod uint) {
 			// 设置打包状态
 			if method == constant.SaleBillDiningMethodTakeout {
 				saleOrderProduct.SetWrap()
-				saleOrderProduct.Sign = saleOrderProduct.GenerateProductSign() // 重新生成签名
+				saleOrderProduct.UpdateSign() // 重新生成签名
 			} else {
 				saleOrderProduct.SetUnwrap()
-				saleOrderProduct.Sign = saleOrderProduct.GenerateProductSign() // 重新生成签名
+				saleOrderProduct.UpdateSign() // 重新生成签名
 			}
 		}
 	}
