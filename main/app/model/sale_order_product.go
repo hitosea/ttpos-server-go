@@ -186,6 +186,9 @@ func (model *SaleOrderProduct) GetProductNameAttributes(language string) string 
 	flavorName := flarvorSaleOrderProductBom.ProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(language)
 	attributes := make([]string, 0)
 	for _, saleOrderProductAttribute := range model.SaleOrderProductAttributes {
+		if saleOrderProductAttribute.IsDelete() {
+			continue
+		}
 		attributes = append(attributes, saleOrderProductAttribute.ProductAttribute.MultiLanguageName.GetNameByLang(language))
 	}
 	num := decimal.NewFromFloat(model.Num).Round(3).InexactFloat64() // 去掉末尾的0
@@ -198,6 +201,9 @@ func (model *SaleOrderProduct) GetProductNameAttributes(language string) string 
 
 func (model *SaleOrderProduct) GetFlarvorSaleOrderProductBom() *SaleOrderProductBom {
 	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
+		if saleOrderProductBom.IsDelete() {
+			continue
+		}
 		if saleOrderProductBom.IsFlavor() {
 			return saleOrderProductBom
 		}
