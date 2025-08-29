@@ -1401,6 +1401,7 @@ type CountReq struct {
 	RankType       int    `json:"rank_type"`        // 排行类型 (1 按销售数量, 2 按销售金额)
 	RankDirection  int    `json:"rank_direction"`   // 排行方向 (1 升序, 2 降序)
 	IsCreateTime   bool   `json:"is_create_time"`   // 是否是创建时间
+	IsUpdateTime   bool   `json:"is_update_time"`   // 是否是更新时间
 	PageNo         int    `json:"page_no"`          // 页码
 	PageSize       int    `json:"page_size"`        // 每页大小
 	AreaUuid       uint64 `json:"area_uuid"`        // 区域UUID -1=全都
@@ -1441,6 +1442,8 @@ func (s *statisticsSrv) buildCountOpts(ctx context.Context, req CountReq) []repo
 	if queryStartTime > 0 && queryEndTime > 0 {
 		if req.IsCreateTime {
 			opts = append(opts, commonRepo.WhereBetweenByCreateTime(queryStartTime, queryEndTime))
+		} else if req.IsUpdateTime {
+			opts = append(opts, commonRepo.WhereBetweenByUpdateTime(queryStartTime, queryEndTime))
 		} else {
 			opts = append(opts, commonRepo.WhereBetweenByCompleteTime(queryStartTime, queryEndTime))
 		}
@@ -1920,7 +1923,7 @@ type CountCancelOrderResp struct {
 func (s *statisticsSrv) CountCancelOrder(ctx context.Context, req CountReq) CountCancelOrderResp {
 	db := database.GetDBManager(config.DatabaseConf{}).GetDB(ctx.GetCompanyUuid())
 	statisticsRepo := repository.NewStatisticsRepo(db)
-	req.IsCreateTime = true
+	req.IsUpdateTime = true
 	cancelOrderData := statisticsRepo.CountCancelOrder(s.buildCountOpts(ctx, req)...)
 
 	return CountCancelOrderResp{
