@@ -439,7 +439,8 @@ func (model *SaleOrderProduct) IsSingleFlavorPackageProduct() bool {
 // 设置打包时间
 func (model *SaleOrderProduct) SetWrap() {
 	defer model.SetUpdate() // 标记要更新model
-	model.WrapTime = time.Now().Unix()
+	// model.WrapTime = time.Now().Unix()
+	model.WrapTime = 1 // 不需要按打包时间合并商品。打包时间=1
 	model.UpdateSign() // 更新签名
 }
 

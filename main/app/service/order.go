@@ -5753,6 +5753,10 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				saleOrderProduct.SetMustPlanInfo(mustPlanUuid)
 			}
 		}
+		// 如果是打包订单，则更新商品打包状态
+		if params.SaleBill.IsTakeout() {
+			saleOrderProduct.SetWrap()
+		}
 		// 生成签名
 		saleOrderProduct.UpdateSign()
 		ctx.Log().Debug("生成商品签名", zap.Any("sign", saleOrderProduct.Sign))
