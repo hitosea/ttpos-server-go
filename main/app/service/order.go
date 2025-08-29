@@ -7624,6 +7624,21 @@ func (s *orderSrv) InstantOrderCartProductCancelReturning(ctx context.Context, r
 			"CancelTime":   true,
 			"CancelReason": true,
 		})
+		// 更新套餐子商品
+		if saleOrderProduct.IsPackageProduct() {
+			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+			for _, subProduct := range subProducts {
+				saleBill.SetProductFields(subProduct.Uuid, model.SaleOrderProduct{
+					Status:       0,
+					CancelTime:   0,
+					CancelReason: "",
+				}, map[string]bool{
+					"Status":       true,
+					"CancelTime":   true,
+					"CancelReason": true,
+				})
+			}
+		}
 		// 计算订单商品、订单、账单金额并更新或创建
 		if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
 			return errors.New("更新数据失败")
