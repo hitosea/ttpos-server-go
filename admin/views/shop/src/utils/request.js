@@ -71,8 +71,14 @@ axios.interceptors.response.use(
       res.data = await decrypt(res.data.encrypted, clientSecretKey.privateKey, clientSecretKey.id);
     }
     
-    // 自动格式化返回数据中的数字，去掉多余的0
-    if (res.data) {
+    // 只对特定接口进行数字格式化处理，去掉多余的0
+    const formatApis = [
+      '/shop/product.store.product/edit',        // 商品相关接口
+    ];
+    
+    const shouldFormat = formatApis.some(api => res.config.url && res.config.url.includes(api));
+    
+    if (shouldFormat && res.data) {
       res.data = formatNumbers(res.data);
     }
     // 错误状态码并且不用弹窗的状态码
@@ -241,6 +247,26 @@ function formatNumbers(data) {
   if (typeof data === 'number') {
     // 将数字转换为字符串后再转回数字，自动去掉多余的0
     return parseFloat(data.toString());
+  }
+
+  // 如果是字符串类型，判断是否为数字字符串
+  if (typeof data === 'string') {
+    // 去除首尾空格
+    const trimmedData = data.trim();
+    
+    // 判断是否为纯数字字符串（包括小数）
+    if (trimmedData !== '' && !isNaN(parseFloat(trimmedData)) && isFinite(trimmedData)) {
+      
+      // 排除编号类字符串：如果以0开头且长度>1且第二个字符不是小数点，认为是编号
+      if (trimmedData.startsWith('0') && trimmedData.length > 1 && trimmedData[1] !== '.') {
+        return data; // 保持原样，不处理编号
+      }
+      
+      // 转换为数字，自动去掉多余的0，然后转回字符串保持数据类型
+      const numValue = parseFloat(trimmedData);
+      // 转回字符串格式
+      return numValue.toString();
+    }
   }
 
   // 其他类型保持不变
