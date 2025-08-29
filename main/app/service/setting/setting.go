@@ -245,6 +245,7 @@ func (s *Srv) GetStoreSetting(ctx context.Context) (setting.Store, error) {
 	}
 
 	defaultStore := s.getDefaultStore(ctx.GetLanguage())
+	store.TimeZoneList = nil
 	err = copier.CopyWithOption(&defaultStore, store, copier.Option{IgnoreEmpty: true})
 	if err != nil {
 		ctx.Log().Error("合并商城设置失败", zap.Error(err))
@@ -1583,12 +1584,12 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 		"name": storeSettingReq.Name,
 		"logo": storeSettingReq.LogoUrl,
 	})
+
 	saasDB.Model(&model.CompanySetting{}).Where("company_uuid = ?", companyUuid).Updates(map[string]any{
 		"timezone":    storeSettingReq.TimeZone,
 		"link_phone":  storeSettingReq.Phone,
 		"address":     storeSettingReq.Address,
 		"coordinates": storeSettingReq.Coordinates,
-		"tax_number":  storeSettingReq.TaxNumber,
 	})
 	companyDB.Model(&model.Company{}).Where("uuid = ?", companyUuid).Updates(map[string]any{
 		"name": storeSettingReq.Name,
@@ -1599,7 +1600,6 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 		"link_phone":  storeSettingReq.Phone,
 		"address":     storeSettingReq.Address,
 		"coordinates": storeSettingReq.Coordinates,
-		"tax_number":  storeSettingReq.TaxNumber,
 	})
 
 	// 保存白底黑字图片

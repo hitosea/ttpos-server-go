@@ -429,7 +429,7 @@
     height: 100%;
     background-color: rgba(16, 10, 5, 0.3);
     /* 半透明黑色遮罩层 */
-    z-index: 999;
+    z-index: 99999999;
     /* 设置z-index使遮罩层位于其他内容上方 */
     display: flex;
     justify-content: center;

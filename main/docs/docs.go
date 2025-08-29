@@ -32836,7 +32836,6 @@ const docTemplate = `{
             "required": [
                 "phone",
                 "real_name",
-                "roles",
                 "username",
                 "uuid"
             ],
@@ -32860,7 +32859,7 @@ const docTemplate = `{
                     "maxLength": 100
                 },
                 "roles": {
-                    "description": "角色ID列表",
+                    "description": "角色ID列表，非必填，超管没有角色",
                     "type": "array",
                     "items": {
                         "type": "integer"
