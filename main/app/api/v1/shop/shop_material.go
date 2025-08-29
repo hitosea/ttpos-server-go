@@ -155,6 +155,10 @@ func (h *MaterialHandler) AddMaterial(c *gin.Context) {
 		helper.HandleValidationError(c, err, addReq, dto.PageReqMessage)
 		return
 	}
+	if err := addReq.Validate(); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.WithMessage(err))
+		return
+	}
 	err := h.materialSrv.AddMaterial(ctx, addReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))

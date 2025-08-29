@@ -2,6 +2,7 @@ package req
 
 import (
 	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/errors"
 )
 
 // MaterialCategoryAddReq 创建物品类别请求
@@ -38,16 +39,35 @@ type MaterialDetailReq struct {
 
 // MaterialAddReq 添加物品请求
 type MaterialAddReq struct {
-	LocaleName       dto.LocaleResponse `json:"locale_name" binding:"required"`        // 物品名称
-	CategoryUuid     uint64             `json:"category_uuid" binding:"required"`      // 分类UUID
-	Status           int                `json:"status" binding:"required"`             // 状态，1-启用 2-停用
-	Valuation        float64            `json:"valuation" binding:"required,min=0"`    // 估值率
-	InitStock        float64            `json:"init_stock" binding:"required,min=0"`   // 期初库存
-	BarcodeValue     string             `json:"barcode_value"`                         // 条形码值
-	UnitUuid         uint64             `json:"unit_uuid" binding:"required"`          // 基准单位UUID
-	UnitList         []MaterialUnitReq  `json:"unit_list" binding:"required,dive"`     // 单位列表
-	PurchaseUnitUuid uint64             `json:"purchase_unit_uuid" binding:"required"` // 采购单位UUID
-	CostUnitUuid     uint64             `json:"cost_unit_uuid" binding:"required"`     // 成本单位UUID
+	LocaleName       dto.LocaleResponse `json:"locale_name"`        // 物品名称
+	CategoryUuid     uint64             `json:"category_uuid"`      // 分类UUID
+	Status           int                `json:"status"`             // 状态，1-启用 2-停用
+	Valuation        float64            `json:"valuation"`          // 估值率
+	InitStock        float64            `json:"init_stock"`         // 期初库存
+	BarcodeValue     string             `json:"barcode_value"`      // 条形码值
+	UnitUuid         uint64             `json:"unit_uuid"`          // 基准单位UUID
+	UnitList         []MaterialUnitReq  `json:"unit_list"`          // 单位列表
+	PurchaseUnitUuid uint64             `json:"purchase_unit_uuid"` // 采购单位UUID
+	CostUnitUuid     uint64             `json:"cost_unit_uuid"`     // 成本单位UUID
+}
+
+func (r *MaterialAddReq) Validate() error {
+	if r.LocaleName.IsNull() {
+		return errors.WithMessage(errors.New("名称不能为空"))
+	}
+	if r.CategoryUuid == 0 {
+		return errors.WithMessage(errors.New("分类不能为空"))
+	}
+	if r.UnitUuid == 0 {
+		return errors.WithMessage(errors.New("基准单位不能为空"))
+	}
+	if r.PurchaseUnitUuid == 0 {
+		return errors.WithMessage(errors.New("采购单位不能为空"))
+	}
+	if r.CostUnitUuid == 0 {
+		return errors.WithMessage(errors.New("成本单位不能为空"))
+	}
+	return nil
 }
 
 type MaterialAddErpReq struct {
