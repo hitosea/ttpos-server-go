@@ -608,7 +608,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	staff, err := staffRepo.GetStaff(staffRepo.WhereUuid(auth.StaffUuid), staffRepo.WithCompany(), staffRepo.WithCompanySetting())
 	if err != nil {
 		logger.Logger.Error("获取员工信息失败", zap.Error(err))
-		return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeSystemError, "数据库失联，请稍候再试")
+		return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeTokenInvalid, "没有找到用户信息")
 	}
 	if staff.Uuid == 0 {
 		return company, companySetting, staff, desk, errors.New("用户不存在")
