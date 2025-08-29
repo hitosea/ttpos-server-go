@@ -7,7 +7,14 @@ import (
 
 // MaterialCategoryAddReq 创建物品类别请求
 type MaterialCategoryAddReq struct {
-	LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 物品类别名称
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 物品类别名称
+}
+
+func (r *MaterialCategoryAddReq) Validate() error {
+	if r.LocaleName.IsNull() {
+		return errors.WithMessage(errors.New("名称不能为空"))
+	}
+	return nil
 }
 
 // MaterialCategoryListReq 获取物品类别列表请求
