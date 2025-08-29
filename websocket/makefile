@@ -1,3 +1,6 @@
+LOCAL_IP := $(shell ifconfig | grep "inet " | grep "192" | awk '{print $$2}' | head -n 1)
+GO_PATH := $(shell go env GOPATH)
+
 # 运行run
 run:
 	if [ ! -f "./main" ]; then \
@@ -7,7 +10,7 @@ run:
 
 # 启动开发模式 - 热重启
 dev:
-	${HOME}/go/bin/fresh -c ./fresh.conf
+	${GO_PATH}/bin/fresh -c ./fresh.conf
 	
 # test	
 test:
