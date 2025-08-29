@@ -4027,7 +4027,7 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 		if saleOrderProduct.IsPackageProduct() {
 			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
 			for _, subProduct := range subProducts {
-				subProduct.Sign = subProduct.GenerateProductSign()
+				subProduct.UpdateSign()
 				if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProductRecord(*subProduct); errUpdate != nil {
 					return errUpdate
 				}
@@ -4780,7 +4780,8 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 	// 更新订单商品备注
 	repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		saleOrderProduct.Remark = req.Remark
-		sign := saleOrderProduct.GenerateProductSign()
+		saleOrderProduct.UpdateSign()
+		sign := saleOrderProduct.Sign
 		if err := repository.NewOrderRepo(db).ChangeProductRemark(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid, req.Remark, sign); err != nil {
 			return errors.WithMessage(err)
 		}
@@ -4788,7 +4789,7 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 		if saleOrderProduct.IsPackageProduct() {
 			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
 			for _, subProduct := range subProducts {
-				subProduct.Sign = subProduct.GenerateProductSign()
+				subProduct.UpdateSign()
 				if err := repository.NewOrderRepo(db).ChangeProductRemark(req.SaleBillUuid, req.SaleOrderUuid, subProduct.Uuid, req.Remark, subProduct.Sign); err != nil {
 					return errors.WithMessage(err)
 				}
@@ -5283,7 +5284,7 @@ func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context,
 			return utils.ToJson(subProductList)
 		}()
 		// 重新计算套餐商品的签名
-		saleOrderProduct.Sign = saleOrderProduct.GeneratePackageSign()
+		saleOrderProduct.UpdateSign()
 	}
 
 	// 从新计算订单并保存
@@ -5358,7 +5359,7 @@ func EditProduct(ctx context.Context, db *gorm.DB, saleOrder *model.SaleOrder, s
 	}
 
 	// 重新计算商品的签名
-	saleOrderProduct.Sign = saleOrderProduct.GenerateProductSign()
+	saleOrderProduct.UpdateSign()
 	return saleOrderProduct, nil
 }
 
@@ -5752,13 +5753,8 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				saleOrderProduct.SetMustPlanInfo(mustPlanUuid)
 			}
 		}
-
 		// 生成签名
-		if saleOrderProduct.ProductType == constant.ProductTypePackage {
-			saleOrderProduct.Sign = saleOrderProduct.GeneratePackageSign()
-		} else {
-			saleOrderProduct.Sign = saleOrderProduct.GenerateProductSign()
-		}
+		saleOrderProduct.UpdateSign()
 		ctx.Log().Debug("生成商品签名", zap.Any("sign", saleOrderProduct.Sign))
 
 		// 计算商品数据。折扣、税费、服务
@@ -6100,7 +6096,7 @@ func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, 
 	}, &productPackage, product.Operation)
 
 	// 生成签名
-	saleOrderProduct.Sign = saleOrderProduct.GenerateProductSign()
+	saleOrderProduct.UpdateSign()
 	ctx.Log().Debug("生成商品签名", zap.Any("sign", saleOrderProduct.Sign))
 
 	// 计算商品数据。折扣、税费、服务

@@ -216,11 +216,7 @@ func (model *SaleOrderProduct) SetGiftProduct(giftReason string) {
 	model.GiftTime = time.Now().Unix()
 	model.SetUpdate()
 	model.GiftReason = giftReason
-	if model.IsPackageProduct() {
-		model.Sign = model.GeneratePackageSign()
-	} else {
-		model.Sign = model.GenerateProductSign()
-	}
+	model.UpdateSign() // 更新签名
 }
 
 // 是否为套餐子商品
@@ -438,11 +434,7 @@ func (model *SaleOrderProduct) IsSingleFlavorPackageProduct() bool {
 func (model *SaleOrderProduct) SetWrap() {
 	defer model.SetUpdate() // 标记要更新model
 	model.WrapTime = time.Now().Unix()
-	if model.IsPackageProduct() {
-		model.Sign = model.GeneratePackageSign()
-	} else {
-		model.Sign = model.GenerateProductSign()
-	}
+	model.UpdateSign() // 更新签名
 }
 
 // 设置取消打包
@@ -468,14 +460,14 @@ func (model *SaleOrderProduct) IsAcceptOrderProduct() bool {
 func (model *SaleOrderProduct) SetAcceptOrderProduct() {
 	defer model.SetUpdate() // 标记要更新model
 	model.IsAcceptOrder = constant.OrderProductIsAcceptOrderAccepted
-	model.Sign = model.GenerateProductSign() // 更新签名
+	model.UpdateSign() // 更新签名
 }
 
 // 将未下单的h5订单商品变为已下单的h5订单商品
 func (model *SaleOrderProduct) SetH5OrderProduct(h5OrderUuid uint64) {
 	model.unOrderH5Product = true // 标记为未下单的h5订单商品
 	model.H5OrderUuid = h5OrderUuid
-	model.Sign = model.GenerateProductSign() // 更新签名
+	model.UpdateSign() // 更新签名
 	// model.H5OrderProductUuid = h5OrderProductUuid
 }
 
@@ -611,7 +603,7 @@ func (model *SaleOrderProduct) SetFields(updateProduct SaleOrderProduct, special
 func (model *SaleOrderProduct) SetCooking(productionOrderUuid uint64) {
 	model.Status = constant.SaleOrderProductStatusCooking
 	model.ProductionOrderUuid = productionOrderUuid
-	model.Sign = model.GenerateProductSign()  // 更新签名
+	model.UpdateSign()                        // 更新签名
 	model.SendKitchenTime = time.Now().Unix() // 送厨时间
 	model.SetUpdate()                         // 标记该model需要更新
 }
@@ -843,11 +835,7 @@ func (model *SaleOrderProduct) SetCancelInfo(reason string, reasons []*SaleOrder
 
 	model.ProductionOrderUuid = 0 // 取消生产订单关联
 	// 更新签名
-	if model.IsPackageSubProduct() {
-		model.Sign = model.GeneratePackageSign()
-	} else {
-		model.Sign = model.GenerateProductSign()
-	}
+	model.UpdateSign()
 }
 
 // 获取退菜原因
@@ -1064,7 +1052,7 @@ func (model *SaleOrderProduct) ChangeProductPrice(price float64) {
 	model.ChangePriceTime = time.Now().Unix()
 	model.SalePrice = price
 	// 重新签名商品
-	model.Sign = model.GenerateProductSign()
+	model.UpdateSign()
 }
 
 // 获取商品销售价(折前价)
@@ -1550,6 +1538,15 @@ func (model *SaleOrderProduct) ProductKey() string {
 
 	// 按照“规格id-属性id,属性id-加料id,加料id”的格式拼接
 	return fmt.Sprintf("%d-%s-%s", flavorUuid, strings.Join(attributeIdStrList, ","), strings.Join(sauceUuidStrList, ","))
+}
+
+func (model *SaleOrderProduct) UpdateSign() {
+	defer model.SetUpdate() // 标记要更新model
+	if model.IsPackageProduct() {
+		model.Sign = model.GeneratePackageSign()
+	} else {
+		model.Sign = model.GenerateProductSign()
+	}
 }
 
 // GenerateProductSign 生成商品包签名. 相同的商品，商品签名相同,用于取消拆单时合并商品。
