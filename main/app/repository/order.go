@@ -46,7 +46,6 @@ type IOrderQueryRepo interface {
 	GetCashierOrderExportListWithPagination(param GetCashierOrderListWithPaginationType, tz string) ([]model.SaleBill, int64, DBOption, error) // 获取收银的订单列表
 	GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                                         // 获取销售账单详细信息
 	GetSaleBillInfoByDesk(deskUuid, saleOrderUuid uint64) (model.SaleBill, error)                                                              // 获取桌台的销售账单详细信息
-	GetSaleBillProductInfoByDesk(deskUuid uint64) (model.SaleBill, error)                                                                      // 获取桌台的销售账单详细信息
 	GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoOptionFunc) (*ro.ShopCartRepo, error)                                           // 获取点餐购物车信息
 	GetOrderBuffetInfo(saleBillUuid, saleOrderUuid uint64) (model.SaleBill, error)                                                             // 获取订单自助餐信息
 	GetSaleBillInfoAndProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) (model.SaleBill, error)                  // 获取销售账单详细信息-包含商品信息
@@ -1239,12 +1238,18 @@ func (r *orderRepo) GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName",
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
 			},
 			WithPreload{
 				Query: "SaleOrders.ReturnOrders",
@@ -2072,19 +2077,6 @@ func (r *orderRepo) ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint6
 		return fmt.Errorf("ChangeProductRemark: %v", err)
 	}
 	return nil
-}
-
-// GetSaleBillProductInfoByDesk 获取桌台的账单商品信息
-func (r *orderRepo) GetSaleBillProductInfoByDesk(deskUuid uint64) (model.SaleBill, error) {
-	var saleBill model.SaleBill
-	if err := r.db.Preload("SaleOrders", func(db *gorm.DB) *gorm.DB {
-		return db.Where("delete_time = ?", constant.NotDeleted)
-	}).Preload("SaleOrders.SaleOrderProducts", func(db *gorm.DB) *gorm.DB {
-		return db.Where("delete_time = ? AND is_accept_order = ?", constant.NotDeleted, constant.OrderProductIsAcceptOrderAccepted)
-	}).Preload("SaleOrders.SaleOrderProducts.MultiLanguageName").Preload("SaleOrders.SaleOrderProducts.SaleOrderProductAttributes").Model(&model.SaleBill{}).Where("desk_uuid = ?", deskUuid).Find(&saleBill).Error; err != nil {
-		return model.SaleBill{}, fmt.Errorf("GetSaleBillProductInfoByDesk: %v", err)
-	}
-	return saleBill, nil
 }
 
 // HasShowOrder 判断该设备是否有未挂单的点餐订单

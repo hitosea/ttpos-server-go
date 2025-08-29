@@ -105,13 +105,13 @@ func (r *productionRepo) GetProducts(limit int, orderBy string, statusOpt DBOpti
 	db.Preload("SaleBill").
 		Preload("SaleOrderProduct").
 		Preload("SaleOrderProduct.MultiLanguageName").
-		Preload("SaleOrderProduct.SaleOrderProductBoms").
+		Preload("SaleOrderProduct.SaleOrderProductBoms", NotDeleted).
 		Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom").
 		Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductFlavor").
 		Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductFlavor.MultiLanguageName").
 		Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductSauce").
 		Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductSauce.MultiLanguageName").
-		Preload("SaleOrderProduct.SaleOrderProductAttributes").
+		Preload("SaleOrderProduct.SaleOrderProductAttributes", NotDeleted).
 		Preload("SaleOrderProduct.SaleOrderProductAttributes.ProductAttribute").
 		Preload("SaleOrderProduct.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName").Order(orderBy)
 	if limit > 0 {
@@ -264,13 +264,13 @@ func (r *productionRepo) WithSaleBill() DBOption {
 func (r *productionRepo) WithSaleOrderProductAll() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("SaleOrderProduct.MultiLanguageName").
-			Preload("SaleOrderProduct.SaleOrderProductBoms").
+			Preload("SaleOrderProduct.SaleOrderProductBoms", NotDeleted).
 			Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom").
 			Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductFlavor").
 			Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductFlavor.MultiLanguageName").
 			Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductSauce").
 			Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductSauce.MultiLanguageName").
-			Preload("SaleOrderProduct.SaleOrderProductAttributes").
+			Preload("SaleOrderProduct.SaleOrderProductAttributes", NotDeleted).
 			Preload("SaleOrderProduct.SaleOrderProductAttributes.ProductAttribute").
 			Preload("SaleOrderProduct.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName")
 	}

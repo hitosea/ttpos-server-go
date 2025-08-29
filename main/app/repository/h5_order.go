@@ -230,6 +230,9 @@ func (r *H5OrderRepoImpl) GetH5OrderDetail(h5OrderUuid uint64, isNeedAudit bool)
 			},
 			WithPreload{
 				Query: "SaleOrderProducts.SaleOrderProductAttributes",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
 			},
 			WithPreload{
 				Query: "SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName",
