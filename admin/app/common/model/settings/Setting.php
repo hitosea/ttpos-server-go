@@ -195,6 +195,10 @@ class Setting extends BaseModel
         if (isset($userData['store']['values']['ip_white_list'])) {
             $userData['store']['values']['ip_white_list'] = env('PAY_SERVICE_IP', '');
         }
+        // 时区列表拿默认列表
+        if (isset($userData['store']['values']['time_zone_list'])) {
+            unset($userData['store']['values']['time_zone_list']);
+        }
         // 接单语音，设备本地处理，不需要合并
         if (isset($userData['cashier']['values']['is_auto_voice'])) {
             unset($userData['cashier']['values']['is_auto_voice']);
@@ -268,7 +272,7 @@ class Setting extends BaseModel
         // 处理商家信息图片路径
         if (isset($userData['store']['values']['logoUrl']) && !empty($userData['store']['values']['logoUrl'])) {
             $userData['store']['values']['logoUrl'] = ImgHelp::addImageDomain($userData['store']['values']['logoUrl']);
-        }
+        } 
         // 总权限 - 不开启自助餐 -（v1.1.1需要兼容初始化设置没有键值，但是商家端默认是开启的情况）
         $licenses = request()->licenses;
         if (($licenses['is_open_buffet'] ?? 0) == 0) {
