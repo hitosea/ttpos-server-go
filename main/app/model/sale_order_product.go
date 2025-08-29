@@ -129,6 +129,9 @@ type SaleOrderProduct struct {
 func (model *SaleOrderProduct) GetErpProductBomMaterials() []*ErpProductBomMaterials {
 	materials := make([]*ErpProductBomMaterials, 0)
 	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
+		if saleOrderProductBom.IsDelete() {
+			continue
+		}
 		if saleOrderProductBom.IsFlavor() {
 			if saleOrderProductBom.ProductBom.HasProductBomCard() {
 				card := saleOrderProductBom.ProductBom.ProductBomCard
@@ -263,6 +266,9 @@ func (model *SaleOrderProduct) GetCustomDiscountRate() float64 {
 // 获取商品包的规格uuid
 func (model *SaleOrderProduct) GetFlavorBomUuid() uint64 {
 	for _, bom := range model.SaleOrderProductBoms {
+		if bom.IsDelete() {
+			continue
+		}
 		if bom.IsFlavor() {
 			return bom.ProductBomUuid
 		}
@@ -612,6 +618,9 @@ func (model *SaleOrderProduct) SetCooking(productionOrderUuid uint64) {
 func (model *SaleOrderProduct) CheckOutProduct() (int, string) {
 	// 检查商品是否删除、下架、库存是否充足、价格变动
 	for _, bom := range model.SaleOrderProductBoms {
+		if bom.IsDelete() {
+			continue
+		}
 		if bom.ProductBom.IsFlavor() || bom.ProductBom.IsPackageFlavor() {
 			// 只检查结账减库存的商品
 			if model.DeductStockType == constant.ProductPackageDeductStockTypePay {
@@ -677,6 +686,9 @@ func (model *SaleOrderProduct) CheckCookingProduct(lang string) (int, string) {
 	}
 	// 检查商品是否删除、下架、库存是否充足、价格变动
 	for _, bom := range model.SaleOrderProductBoms {
+		if bom.IsDelete() {
+			continue
+		}
 		if bom.ProductBom.IsFlavor() {
 			// 商品已经沽清
 			if bom.ProductBom.IsSoldOutStatus() {
@@ -755,6 +767,9 @@ func (model *SaleOrderProduct) overallDiscountChanged() bool {
 func (model *SaleOrderProduct) saucePriceChanged(saucePrice float64) bool {
 	price := decimal.NewFromFloat(0)
 	for _, bom := range model.SaleOrderProductBoms {
+		if bom.IsDelete() {
+			continue
+		}
 		if bom.ProductBom.IsSauce() {
 			price = price.Add(decimal.NewFromFloat(bom.ProductBom.Price))
 		}
@@ -791,14 +806,19 @@ func (model *SaleOrderProduct) CopyOrderProduct(saleOrderUuid uint64) *SaleOrder
 		product.SaleOrderUuid = saleOrderUuid
 	}
 	// 复制SaleOrderProductBoms
-	product.SaleOrderProductBoms = make([]*SaleOrderProductBom, 0)
 	for _, bom := range model.SaleOrderProductBoms {
+		if bom.IsDelete() {
+			continue
+		}
 		newBom := bom.CopyBom(saleOrderUuid, productUuid)
 		product.SaleOrderProductBoms = append(product.SaleOrderProductBoms, newBom)
 	}
 	// 复制SaleOrderProductAttributes
 	product.SaleOrderProductAttributes = make([]*SaleOrderProductAttribute, 0)
 	for _, attribute := range model.SaleOrderProductAttributes {
+		if attribute.IsDelete() {
+			continue
+		}
 		newAttribute := attribute.CopyAttribute(model.SaleOrderUuid, productUuid)
 		product.SaleOrderProductAttributes = append(product.SaleOrderProductAttributes, newAttribute)
 	}
@@ -1202,6 +1222,9 @@ func (model *SaleOrderProduct) GetMaterialBom() []*ProductionOrderMaterial {
 func (model *SaleOrderProduct) GetNameAndFlavorName() dto.LocaleResponse {
 	var flavorName dto.LocaleResponse
 	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
+		if saleOrderProductBom.IsDelete() {
+			continue
+		}
 		if saleOrderProductBom.IsFlavor() {
 			flavorName = saleOrderProductBom.ProductBom.ProductFlavor.MultiLanguageName.GetNames()
 		}
@@ -1290,6 +1313,9 @@ func (model *SaleOrderProduct) GetAttributeNameList() []dto.LocaleResponse {
 func (model *SaleOrderProduct) GetSauceNamesList() []dto.LocaleResponse {
 	var sauceNames []dto.LocaleResponse
 	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
+		if saleOrderProductBom.IsDelete() {
+			continue
+		}
 		if !saleOrderProductBom.IsFlavor() {
 			sauceName := saleOrderProductBom.ProductBom.ProductSauce.MultiLanguageName.GetNames()
 			sauceNames = append(sauceNames, sauceName)
@@ -1342,6 +1368,9 @@ func (model *SaleOrderProduct) GetAttributeNamesByLang(lang string, showSku ...b
 		isShowSku = showSku[0]
 	}
 	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
+		if saleOrderProductBom.IsDelete() {
+			continue
+		}
 		if saleOrderProductBom.IsFlavor() {
 			flavorName = saleOrderProductBom.ProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(lang)
 		} else {
@@ -1351,6 +1380,9 @@ func (model *SaleOrderProduct) GetAttributeNamesByLang(lang string, showSku ...b
 	}
 	// 获取商品属性
 	for _, saleOrderProductAttribute := range model.SaleOrderProductAttributes {
+		if saleOrderProductAttribute.IsDelete() {
+			continue
+		}
 		attributeName := saleOrderProductAttribute.ProductAttribute.MultiLanguageName.GetNameByLang(lang)
 		attributeNames = append(attributeNames, attributeName)
 	}
@@ -1508,6 +1540,9 @@ func (model *SaleOrderProduct) ProductKey() string {
 
 	// 物料ID列表
 	for _, bom := range model.SaleOrderProductBoms {
+		if bom.IsDelete() {
+			continue
+		}
 		if bom.IsFlavor() {
 			flavorUuid = bom.ProductBomUuid
 		} else if bom.IsSauce() {
@@ -1516,6 +1551,9 @@ func (model *SaleOrderProduct) ProductKey() string {
 	}
 	// 属性ID列表
 	for _, attribute := range model.SaleOrderProductAttributes {
+		if attribute.IsDelete() {
+			continue
+		}
 		attributeIdList = append(attributeIdList, attribute.ProductAttributeUuid)
 	}
 
@@ -1566,10 +1604,16 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 
 	// 物料ID列表
 	for _, bom := range model.SaleOrderProductBoms {
+		if bom.IsDelete() {
+			continue
+		}
 		bomIdList = append(bomIdList, strconv.FormatUint(bom.ProductBomUuid, 10))
 	}
 	// 属性ID列表
 	for _, attributeGroup := range model.SaleOrderProductAttributes {
+		if attributeGroup.IsDelete() {
+			continue
+		}
 		attributeIdList = append(attributeIdList, strconv.FormatUint(attributeGroup.ProductAttributeUuid, 10))
 	}
 	// 物料ID列表和属性ID列表排序
@@ -1654,14 +1698,23 @@ func (model *SaleOrderProduct) GeneratePackageSign() string {
 func (model *SaleOrderProduct) GetAttributeNames() string {
 	attributeNames := []string{}
 	for _, bom := range model.SaleOrderProductBoms {
+		if bom.IsDelete() {
+			continue
+		}
 		if bom.IsFlavorBom == 1 {
 			attributeNames = append(attributeNames, bom.Name)
 		}
 	}
 	for _, attribute := range model.SaleOrderProductAttributes {
+		if attribute.IsDelete() {
+			continue
+		}
 		attributeNames = append(attributeNames, attribute.Name)
 	}
 	for _, bom := range model.SaleOrderProductBoms {
+		if bom.IsDelete() {
+			continue
+		}
 		if bom.IsFlavorBom != 1 {
 			attributeNames = append(attributeNames, bom.Name)
 		}
@@ -1673,6 +1726,9 @@ func (model *SaleOrderProduct) GetAttributeNames() string {
 func (model *SaleOrderProduct) GetAttributeUuidList() []uint64 {
 	attributeUuidList := make([]uint64, 0)
 	for _, attribute := range model.SaleOrderProductAttributes {
+		if attribute.IsDelete() {
+			continue
+		}
 		attributeUuidList = append(attributeUuidList, attribute.ProductPackageAttributeUuid)
 	}
 	sort.Slice(attributeUuidList, func(i, j int) bool {

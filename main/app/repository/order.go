@@ -1460,6 +1460,7 @@ func (r *orderRepo) GetCacheSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBil
 					CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
 						return db.Order("id asc")
 					}),
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 				},
 			},
 			WithPreload{
@@ -1469,6 +1470,7 @@ func (r *orderRepo) GetCacheSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBil
 					CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
 						return db.Order("product_bom_uuid asc")
 					}),
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 				},
 			},
 			// ==================== 销售账单的退款信息 ====================
@@ -1603,11 +1605,17 @@ func (r *orderRepo) GetCacheSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBil
 					productPackageUuids = append(productPackageUuids, saleOrderProduct.ProductPackageUuid)
 					if len(saleOrderProduct.SaleOrderProductBoms) > 0 {
 						for _, saleOrderProductBom := range saleOrderProduct.SaleOrderProductBoms {
+							if saleOrderProductBom.IsDelete() {
+								continue
+							}
 							productBomUuids = append(productBomUuids, saleOrderProductBom.ProductBomUuid)
 						}
 					}
 					if len(saleOrderProduct.SaleOrderProductAttributes) > 0 {
 						for _, saleOrderProductAttribute := range saleOrderProduct.SaleOrderProductAttributes {
+							if saleOrderProductAttribute.IsDelete() {
+								continue
+							}
 							productAttributeUuids = append(productAttributeUuids, saleOrderProductAttribute.ProductAttributeUuid)
 						}
 					}
@@ -1637,6 +1645,9 @@ func (r *orderRepo) GetCacheSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBil
 					for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
 						if len(saleOrderProduct.SaleOrderProductBoms) > 0 {
 							for _, saleOrderProductBom := range saleOrderProduct.SaleOrderProductBoms {
+								if saleOrderProductBom.IsDelete() {
+									continue
+								}
 								if saleOrderProductBom.ProductBomUuid == productBom.Uuid {
 									saleOrderProductBom.ProductBom = *productBom
 								}
@@ -1654,6 +1665,9 @@ func (r *orderRepo) GetCacheSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBil
 				for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
 					if len(saleOrderProduct.SaleOrderProductAttributes) > 0 {
 						for _, saleOrderProductAttribute := range saleOrderProduct.SaleOrderProductAttributes {
+							if saleOrderProductAttribute.IsDelete() {
+								continue
+							}
 							for _, productAttribute := range productAttributes {
 								if saleOrderProductAttribute.ProductAttributeUuid == productAttribute.Uuid {
 									saleOrderProductAttribute.ProductAttribute = *productAttribute
