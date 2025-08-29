@@ -252,6 +252,7 @@ type ProductShopCategoryDetailResp struct {
 	ParentName string             `json:"parent_name"` // 父级类别名称
 	Sort       uint               `json:"sort"`        // 商品类别排序
 	Status     int                `json:"status"`      // 商品类别状态 0-关闭 1-开启
+	CanDelete  bool               `json:"can_delete"`  // 是否可以删除 false-否 true-是
 }
 
 type ProductAttributeGroupItem struct {

@@ -685,6 +685,29 @@ func (s *productSrv) GetProductShopCategory(ctx context.Context, req req.Product
 		parentName = parentCategory.MultiLanguageName.GetNameByLang(language)
 	}
 
+	canDelete := true
+	opts := []repository.DBOption{
+		commonRepo.WhereBySoftDelete(),
+	}
+	if productCategory.IsSpecial == 1 {
+		opts = append(opts, productRepo.WhereSpecialCategoryUuid(productCategory.Uuid))
+	} else {
+		opts = append(opts, productRepo.WhereCategoryUuid(productCategory.Uuid))
+	}
+	productCount, _ := productRepo.GetProductCount(opts...)
+	if productCount > 0 {
+		canDelete = false
+	}
+	if productCategory.ParentUuid == 0 && productCategory.IsSpecial == 0 {
+		categoryCount, _ := productRepo.GetProductCategoryCount(
+			commonRepo.WhereBySoftDelete(),
+			productRepo.WhereParentUuid(productCategory.Uuid),
+		)
+		if categoryCount > 0 {
+			canDelete = false
+		}
+	}
+
 	return product_resp.ProductShopCategoryDetailResp{
 		Uuid:       productCategory.Uuid,
 		LocaleName: productCategory.MultiLanguageName.GetNames(),
@@ -692,6 +715,7 @@ func (s *productSrv) GetProductShopCategory(ctx context.Context, req req.Product
 		ParentName: parentName,
 		Sort:       productCategory.Sort,
 		Status:     productCategory.Status,
+		CanDelete:  canDelete,
 	}, nil
 }
 

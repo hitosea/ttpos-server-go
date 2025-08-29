@@ -12,4 +12,5 @@ import (
 
 type ICallbackV1 interface {
 	DocChange(ctx context.Context, req *v1.DocChangeReq) (res *v1.DocChangeRes, err error)
+	ItemChange(ctx context.Context, req *v1.ItemChangeReq) (res *v1.ItemChangeRes, err error)
 }
