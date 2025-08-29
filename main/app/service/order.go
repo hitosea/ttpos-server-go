@@ -11786,6 +11786,9 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 	if len(unCookingSaleOrderProducts) > 0 || len(h5OrderProductUnAccept) > 0 {
 		products := make([]resp.Product, 0)
 		for _, product := range unCookingSaleOrderProducts {
+			if product.IsPackageSubProduct() {
+				continue
+			}
 			products = append(products, resp.Product{
 				Uuid:          product.Uuid,
 				LocaleName:    product.GetNameAndFlavorName(),
