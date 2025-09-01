@@ -27474,6 +27474,10 @@ const docTemplate = `{
                     "description": "套餐子商品价格",
                     "type": "number"
                 },
+                "product_uuid": {
+                    "description": "商品UUID",
+                    "type": "integer"
+                },
                 "uuid": {
                     "description": "套餐子商品UUID",
                     "type": "integer"
@@ -27723,6 +27727,10 @@ const docTemplate = `{
         "product_resp.ProductShopCategoryDetailResp": {
             "type": "object",
             "properties": {
+                "can_delete": {
+                    "description": "是否可以删除 false-否 true-是",
+                    "type": "boolean"
+                },
                 "locale_name": {
                     "description": "商品类别名称",
                     "allOf": [
@@ -29082,17 +29090,6 @@ const docTemplate = `{
         },
         "req.MaterialAddReq": {
             "type": "object",
-            "required": [
-                "category_uuid",
-                "cost_unit_uuid",
-                "init_stock",
-                "locale_name",
-                "purchase_unit_uuid",
-                "status",
-                "unit_list",
-                "unit_uuid",
-                "valuation"
-            ],
             "properties": {
                 "barcode_value": {
                     "description": "条形码值",
@@ -29108,8 +29105,7 @@ const docTemplate = `{
                 },
                 "init_stock": {
                     "description": "期初库存",
-                    "type": "number",
-                    "minimum": 0
+                    "type": "number"
                 },
                 "locale_name": {
                     "description": "物品名称",
@@ -29140,16 +29136,12 @@ const docTemplate = `{
                 },
                 "valuation": {
                     "description": "估值率",
-                    "type": "number",
-                    "minimum": 0
+                    "type": "number"
                 }
             }
         },
         "req.MaterialCategoryAddReq": {
             "type": "object",
-            "required": [
-                "locale_name"
-            ],
             "properties": {
                 "locale_name": {
                     "description": "物品类别名称",
@@ -30459,17 +30451,8 @@ const docTemplate = `{
         "req.ProductBomCardImportReq": {
             "type": "object",
             "required": [
-                "category_uuid",
-                "cost_unit_uuid",
-                "init_stock",
-                "locale_name",
                 "num",
-                "purchase_unit_uuid",
-                "related_uuid",
-                "status",
-                "unit_list",
-                "unit_uuid",
-                "valuation"
+                "related_uuid"
             ],
             "properties": {
                 "barcode_value": {
@@ -30486,8 +30469,7 @@ const docTemplate = `{
                 },
                 "init_stock": {
                     "description": "期初库存",
-                    "type": "number",
-                    "minimum": 0
+                    "type": "number"
                 },
                 "locale_name": {
                     "description": "物品名称",
@@ -30526,8 +30508,7 @@ const docTemplate = `{
                 },
                 "valuation": {
                     "description": "估值率",
-                    "type": "number",
-                    "minimum": 0
+                    "type": "number"
                 }
             }
         },
@@ -31186,6 +31167,10 @@ const docTemplate = `{
                     "description": "商品属性组是否必选 0-否 1-是",
                     "type": "integer"
                 },
+                "is_open_input": {
+                    "description": "商品属性组最大选择数量是否开启 false-关闭 true-开启",
+                    "type": "boolean"
+                },
                 "max_selection": {
                     "description": "商品属性组最大选择数量",
                     "type": "integer"
@@ -31411,6 +31396,10 @@ const docTemplate = `{
                     "description": "是否必选 0-否 1-是",
                     "type": "integer"
                 },
+                "is_open_input": {
+                    "description": "是否开启输入 0-否 1-是",
+                    "type": "boolean"
+                },
                 "max_selection": {
                     "description": "最大选择数量",
                     "type": "integer"
@@ -31624,6 +31613,10 @@ const docTemplate = `{
                 "is_must": {
                     "description": "商品属性组是否必选 0-否 1-是",
                     "type": "integer"
+                },
+                "is_open_input": {
+                    "description": "商品属性组最大选择数量是否开启 false-否 true-是",
+                    "type": "boolean"
                 },
                 "max_selection": {
                     "description": "商品属性组最大选择数量",
@@ -31885,6 +31878,10 @@ const docTemplate = `{
                 "is_must": {
                     "description": "是否必选 0-否 1-是",
                     "type": "integer"
+                },
+                "is_open_input": {
+                    "description": "是否开启输入 0-否 1-是",
+                    "type": "boolean"
                 },
                 "max_selection": {
                     "description": "最大选择数量",

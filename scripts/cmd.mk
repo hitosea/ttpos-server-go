@@ -121,6 +121,7 @@ init-bmp-env:
 			echo "🔄 从上级目录的 .env 文件同步数据库密码..."; \
 			PARENT_DB_PASSWORD=$$(grep '^DB_PASSWORD=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' ' || echo ""); \
 			PARENT_DB_ROOT_PASSWORD=$$(grep '^DB_ROOT_PASSWORD=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' ' || echo ""); \
+			PARENT_DB_USERNAME=$$(grep '^DB_USERNAME=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' ' || echo ""); \
 			if [ "$$PARENT_DB_PASSWORD" != "" ]; then \
 				sed -i.bak "s/^DB_PASSWORD=.*/DB_PASSWORD=$$PARENT_DB_PASSWORD/" ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
 				echo "✅ 已同步 DB_PASSWORD"; \
@@ -128,6 +129,10 @@ init-bmp-env:
 			if [ "$$PARENT_DB_ROOT_PASSWORD" != "" ]; then \
 				sed -i.bak "s/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD=$$PARENT_DB_ROOT_PASSWORD/" ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
 				echo "✅ 已同步 DB_ROOT_PASSWORD"; \
+			fi; \
+			if [ "$$PARENT_DB_USERNAME" != "" ]; then \
+				sed -i.bak "s/^DB_USERNAME=.*/DB_USERNAME=$$PARENT_DB_USERNAME/" ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
+				echo "✅ 已同步 DB_USERNAME"; \
 			fi; \
 		fi; \
 		sed -i.bak 's/^REDIS_HOST=.*/REDIS_HOST=$(LOCAL_IP),$(LOCAL_IP),$(LOCAL_IP)/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \

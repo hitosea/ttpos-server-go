@@ -2148,6 +2148,9 @@ definitions:
       price:
         description: 套餐子商品价格
         type: number
+      product_uuid:
+        description: 商品UUID
+        type: integer
       uuid:
         description: 套餐子商品UUID
         type: integer
@@ -2309,6 +2312,9 @@ definitions:
     type: object
   product_resp.ProductShopCategoryDetailResp:
     properties:
+      can_delete:
+        description: 是否可以删除 false-否 true-是
+        type: boolean
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -3252,7 +3258,6 @@ definitions:
         type: integer
       init_stock:
         description: 期初库存
-        minimum: 0
         type: number
       locale_name:
         allOf:
@@ -3274,18 +3279,7 @@ definitions:
         type: integer
       valuation:
         description: 估值率
-        minimum: 0
         type: number
-    required:
-    - category_uuid
-    - cost_unit_uuid
-    - init_stock
-    - locale_name
-    - purchase_unit_uuid
-    - status
-    - unit_list
-    - unit_uuid
-    - valuation
     type: object
   req.MaterialCategoryAddReq:
     properties:
@@ -3293,8 +3287,6 @@ definitions:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 物品类别名称
-    required:
-    - locale_name
     type: object
   req.MaterialEditReq:
     properties:
@@ -4219,7 +4211,6 @@ definitions:
         type: integer
       init_stock:
         description: 期初库存
-        minimum: 0
         type: number
       locale_name:
         allOf:
@@ -4247,20 +4238,10 @@ definitions:
         type: integer
       valuation:
         description: 估值率
-        minimum: 0
         type: number
     required:
-    - category_uuid
-    - cost_unit_uuid
-    - init_stock
-    - locale_name
     - num
-    - purchase_unit_uuid
     - related_uuid
-    - status
-    - unit_list
-    - unit_uuid
-    - valuation
     type: object
   req.ProductBomCardMaterialListReq:
     properties:
@@ -4726,6 +4707,9 @@ definitions:
       is_must:
         description: 商品属性组是否必选 0-否 1-是
         type: integer
+      is_open_input:
+        description: 商品属性组最大选择数量是否开启 false-关闭 true-开启
+        type: boolean
       max_selection:
         description: 商品属性组最大选择数量
         type: integer
@@ -4873,6 +4857,9 @@ definitions:
       is_must:
         description: 是否必选 0-否 1-是
         type: integer
+      is_open_input:
+        description: 是否开启输入 0-否 1-是
+        type: boolean
       max_selection:
         description: 最大选择数量
         type: integer
@@ -5019,6 +5006,9 @@ definitions:
       is_must:
         description: 商品属性组是否必选 0-否 1-是
         type: integer
+      is_open_input:
+        description: 商品属性组最大选择数量是否开启 false-否 true-是
+        type: boolean
       max_selection:
         description: 商品属性组最大选择数量
         type: integer
@@ -5193,6 +5183,9 @@ definitions:
       is_must:
         description: 是否必选 0-否 1-是
         type: integer
+      is_open_input:
+        description: 是否开启输入 0-否 1-是
+        type: boolean
       max_selection:
         description: 最大选择数量
         type: integer

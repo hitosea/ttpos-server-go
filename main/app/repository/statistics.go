@@ -190,6 +190,9 @@ func (r *StatisticsRepo) CountSaleDays(opts ...DBOption) []model.StatisticsSaleD
 
 var (
 	countPaymentSelect = []string{
+		"pm.id",
+		"pm.sort",
+		"pm.create_time",
 		"sp.payment_method_uuid",
 		"pm.payment_name AS payment_name",
 		"pm.code AS payment_code",
@@ -724,6 +727,9 @@ func (r *StatisticsRepo) CountMemberDays(opts ...DBOption) []model.StatisticsMem
 
 var (
 	countMemberPaymentSelect = []string{
+		"pm.id",
+		"pm.sort",
+		"pm.create_time",
 		"smp.payment_method_uuid",
 		"pm.payment_name AS payment_name",
 		"pm.code AS payment_code",

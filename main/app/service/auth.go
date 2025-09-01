@@ -132,17 +132,21 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 	if config.Server.DeployMode == "cloud" { // 云上版本
 		companyStaffRepo := repository.NewCompanyStaffRepo(s.dbm.GetDB(constant.DefaultDB))
 		companyStaff := companyStaffRepo.GetCompanyStaff(companyStaffRepo.WhereUsername(loginReq.Username))
-		if companyStaff.Uuid == 0 {
-			return loginResp, errors.New("账号或密码错误")
-		}
 		if companyStaff.CompanyUuid == 0 {
 			return loginResp, errors.New("未找到绑定的商家，请确认登录信息")
+		}
+		if companyStaff.Uuid == 0 {
+			return loginResp, errors.New("账号或密码错误")
 		}
 		staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyStaff.CompanyUuid))
 		staff, _ = staffRepo.GetStaff(staffRepo.WhereUuid(companyStaff.Uuid), staffRepo.WithCompany())
 	} else { // 离线版本
 		staffRepo := repository.NewStaffRepo(s.dbm.GetDB(constant.DefaultDB))
 		staff, _ = staffRepo.GetStaff(staffRepo.WhereUsername(loginReq.Username), staffRepo.WithCompany())
+	}
+	// 商家状态
+	if staff.Company == nil {
+		return loginResp, errors.New("未找到绑定的商家，请确认登录信息")
 	}
 	if staff.Uuid == 0 || utils.EncryptPassword(loginReq.Password) != staff.Password {
 		return loginResp, errors.New("账号或密码错误")
@@ -153,10 +157,6 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 	}
 	if staff.IsDisable == 1 {
 		return loginResp, errors.New("账号被禁用，请联系管理员")
-	}
-	// 商家状态
-	if staff.Company == nil {
-		return loginResp, errors.New("未找到绑定的商家，请确认登录信息")
 	}
 	if staff.Company.IsExpired() {
 		return loginResp, errors.NewWithCode(constant.CodeCompanyLicenceExpired, "店铺状态已到期，如需继续使用，请联系销售代表")
