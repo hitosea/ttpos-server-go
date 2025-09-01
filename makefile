@@ -65,7 +65,7 @@ migrate:
 	@echo "🗄️  运行主项目数据库迁移..."
 	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh think migrate:run
 	@echo "🚀 更新 中台 模块数据库..."
-	@cd ttpos-bmp && make conf && make migrate
+	@cd ttpos-bmp && make update-ip && make conf && make migrate
 	@echo "✅ 数据库迁移完成"
 
 
