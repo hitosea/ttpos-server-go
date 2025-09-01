@@ -29,6 +29,7 @@ build:
 	@cd ./main && GOOS=linux GOARCH=amd64 go build -o main main.go
 	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
 	@echo "✅ Docker 构建完成"
+	@$(call update_env_and_run)
 	@echo "🗄️  运行数据库迁移..."
 	@make migrate
 	@echo "✅ 构建完成"
