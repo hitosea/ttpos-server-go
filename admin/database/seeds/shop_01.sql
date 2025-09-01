@@ -412,7 +412,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
 
     `package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '套餐uuid',
     `package_group_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '套餐分组UUID',
-    `product_type` INT(10) NOT NULL DEFAULT 0 COMMENT '商品类型, 0-商品 1-套餐',
+    `product_type` INT(10) NOT NULL DEFAULT 0 COMMENT '商品类型, 0-商品 1-套餐 2-套餐子商品',
     `package_sub_product_params` TEXT COMMENT '套餐子商品参数',
 
     `send_kitchen_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '送厨时间(时间戳)',
@@ -1656,6 +1656,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_out_form_item` (
     `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品uuid,用于结账完成时判断订单的每个商品是否都已有对应的出库记录',
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单uuid,用于结账完成时判断订单的每个商品是否都已有对应的出库记录',
     `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单uuid,用于结账完成时判断订单的每个商品是否都已有对应的出库记录',
+    `package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '套餐uuid，只有套餐子商品才有这个字段，用于不增加子商品销量',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
