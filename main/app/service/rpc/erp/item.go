@@ -43,6 +43,10 @@ func (s *erpSrv) GetUomList(ctx context.Context, getUomListReq req.GetUomListReq
 	if err != nil {
 		return getUomListResp, err
 	}
+	if result.GetCode() != "0" || result.Data == nil {
+		logger.Logger.Error("GetUomList", zap.String("code", result.GetCode()), zap.String("msg", result.GetMessage()))
+		return getUomListResp, errors.New(result.GetMessage())
+	}
 	response := &item.GetUomListResp{}
 	if err := result.Data.UnmarshalTo(response); err != nil {
 		return getUomListResp, err
@@ -76,6 +80,10 @@ func (s *erpSrv) GetAttributeList(ctx context.Context, getAttributeListReq req.G
 	result, err := client.GetAttributeList(WithSiteCode(ctx, getAttributeListReq.SiteCode), req)
 	if err != nil {
 		return getAttributeListResp, err
+	}
+	if result.GetCode() != "0" || result.Data == nil {
+		logger.Logger.Error("GetAttributeList", zap.String("code", result.GetCode()), zap.String("msg", result.GetMessage()))
+		return getAttributeListResp, errors.New(result.GetMessage())
 	}
 	response := &item.GetAttributeListResp{}
 	if err := result.Data.UnmarshalTo(response); err != nil {
@@ -347,7 +355,7 @@ func (s *erpSrv) SaveUom(ctx context.Context, saveUomReq req.SaveUomReq) error {
 		return err
 	}
 	if result.Code != "0" {
-		return errors.New("保存失败")
+		return errors.New(result.GetMessage())
 	}
 	return nil
 }
@@ -380,7 +388,7 @@ func (s *erpSrv) SaveAttribute(ctx context.Context, saveAttributeReq req.SaveAtt
 		return err
 	}
 	if result.Code != "0" {
-		return errors.New("保存失败")
+		return errors.New(result.GetMessage())
 	}
 
 	return nil

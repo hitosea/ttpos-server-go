@@ -2,11 +2,14 @@ package erp
 
 import (
 	"context"
+	"errors"
 	companyApi "ttpos-bmp/app/ttpos-erp/api/company"
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/pkg/logger"
 
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
 
@@ -37,6 +40,10 @@ func (s *erpSrv) GetCompanyList(ctx context.Context, erpnextSiteCompanyReq req.E
 	result, err := client.GetCompanyList(WithSiteCode(ctx, erpnextSiteCompanyReq.SiteCode), req)
 	if err != nil {
 		return companyResp, err
+	}
+	if result.GetCode() != "0" || result.Data == nil {
+		logger.Logger.Error("GetCompanyList", zap.String("code", result.GetCode()), zap.String("msg", result.GetMessage()))
+		return companyResp, errors.New("获取公司列表失败")
 	}
 	// 反序列化响应数据
 	response := &companyApi.GetCompanyListResp{}

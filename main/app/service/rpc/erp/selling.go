@@ -47,20 +47,22 @@ func (s *erpSrv) GetPosProfileList(ctx context.Context, getPosProfileListReq req
 	if err != nil {
 		return getPosProfileListResp, err
 	}
-	if result.Data != nil {
-		var posProfileListResp selling.PosProfileListResp
-		if err := result.Data.UnmarshalTo(&posProfileListResp); err != nil {
-			logger.Logger.Error("GetPosProfileList-UnmarshalTo", zap.Any("err", err))
-			return getPosProfileListResp, err
-		}
-		for _, profile := range posProfileListResp.ProfileList {
-			getPosProfileListResp.List = append(getPosProfileListResp.List, resp.PosProfileInfo{
-				Name:      profile.Name,
-				Company:   profile.Company,
-				Branch:    profile.Branch,
-				Warehouse: profile.Warehouse,
-			})
-		}
+	if result.GetCode() != "0" || result.Data == nil {
+		logger.Logger.Error("GetPosProfileList", zap.String("msg", result.GetMessage()), zap.String("code", result.GetCode()))
+		return getPosProfileListResp, errors.New(result.GetMessage())
+	}
+	var posProfileListResp selling.PosProfileListResp
+	if err := result.Data.UnmarshalTo(&posProfileListResp); err != nil {
+		logger.Logger.Error("GetPosProfileList-UnmarshalTo", zap.Any("err", err))
+		return getPosProfileListResp, err
+	}
+	for _, profile := range posProfileListResp.ProfileList {
+		getPosProfileListResp.List = append(getPosProfileListResp.List, resp.PosProfileInfo{
+			Name:      profile.Name,
+			Company:   profile.Company,
+			Branch:    profile.Branch,
+			Warehouse: profile.Warehouse,
+		})
 	}
 	return getPosProfileListResp, nil
 }
@@ -123,22 +125,23 @@ func (s *erpSrv) OpenPosEntry(ctx context.Context, openEntryReq req.OpenPosEntry
 		OpenPosEntryDetail: openPosEntryDetail,
 		Branch:             openEntryReq.Branch,
 	}
-	res, err := client.OpenPosEntry(WithSiteCode(ctx, openEntryReq.SiteCode), openPosEntryReq)
+	result, err := client.OpenPosEntry(WithSiteCode(ctx, openEntryReq.SiteCode), openPosEntryReq)
 	if err != nil {
 		return "", err
 	}
-	if res.Data == nil {
-		return "", errors.New(res.Message)
+	if result.GetCode() != "0" || result.Data == nil {
+		logger.Logger.Error("OpenPosEntry", zap.String("msg", result.GetMessage()), zap.String("code", result.GetCode()))
+		return "", errors.New(result.GetMessage())
 	}
 	var openPosEntryResp selling.OpenPosEntryResp
-	if err := res.Data.UnmarshalTo(&openPosEntryResp); err != nil {
+	if err := result.Data.UnmarshalTo(&openPosEntryResp); err != nil {
 		logger.Logger.Error("OpenPosEntry-UnmarshalTo", zap.Any("err", err))
 		return "", err
 	}
-	if openPosEntryResp.OpenPosEntryInfo != nil {
-		return openPosEntryResp.OpenPosEntryInfo.OpenPosEntryName, nil
+	if openPosEntryResp.OpenPosEntryInfo == nil {
+		return "", errors.New(result.GetMessage())
 	}
-	return "", errors.New(res.Message)
+	return openPosEntryResp.OpenPosEntryInfo.OpenPosEntryName, nil
 }
 
 // ClosePosEntry 关账
@@ -164,21 +167,23 @@ func (s *erpSrv) ClosePosEntry(ctx context.Context, closeEntryReq req.ClosePosEn
 		PeriodEndDate:       closeEntryReq.PeriodEndDate,
 		ClosePosEntryDetail: closePosEntryDetail,
 	}
-	res, err := client.ClosePosEntry(WithSiteCode(ctx, closeEntryReq.SiteCode), closePosEntryReq)
+	result, err := client.ClosePosEntry(WithSiteCode(ctx, closeEntryReq.SiteCode), closePosEntryReq)
 	if err != nil {
 		return "", err
 	}
-	if res.Data != nil {
-		var closePosEntryResp selling.ClosePosEntryResp
-		if err := res.Data.UnmarshalTo(&closePosEntryResp); err != nil {
-			logger.Logger.Error("ClosePosEntry-UnmarshalTo", zap.Any("err", err))
-			return "", err
-		}
-		if closePosEntryResp.ClosePosEntryInfo != nil {
-			return closePosEntryResp.ClosePosEntryInfo.ClosePosEntryName, nil
-		}
+	if result.GetCode() != "0" || result.Data == nil {
+		logger.Logger.Error("ClosePosEntry", zap.String("msg", result.GetMessage()), zap.String("code", result.GetCode()))
+		return "", errors.New(result.GetMessage())
 	}
-	return "", nil
+	var closePosEntryResp selling.ClosePosEntryResp
+	if err := result.Data.UnmarshalTo(&closePosEntryResp); err != nil {
+		logger.Logger.Error("ClosePosEntry-UnmarshalTo", zap.Any("err", err))
+		return "", err
+	}
+	if closePosEntryResp.ClosePosEntryInfo == nil {
+		return "", errors.New(result.GetMessage())
+	}
+	return closePosEntryResp.ClosePosEntryInfo.ClosePosEntryName, nil
 }
 
 // SavePosInvoice 保存 Pos Invoice
@@ -305,40 +310,38 @@ func (s *erpSrv) GetPaymentMethodList(ctx pkgCtx.Context, getPaymentReq req.GetP
 	defer conn.Close()
 
 	params := &selling.GetModeOfPaymentListReq{}
-	res, err := client.GetModeOfPaymentList(WithSiteCode(ctx.GetContext(), company.CompanySetting.ErpnextSiteCode), params)
+	result, err := client.GetModeOfPaymentList(WithSiteCode(ctx.GetContext(), company.CompanySetting.ErpnextSiteCode), params)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
-	if res.GetCode() != "0" {
-		return nil, errors.WithMessage(errors.New(res.Message))
+	if result.GetCode() != "0" || result.Data == nil {
+		logger.Logger.Error("GetPaymentMethodList-GetModeOfPaymentList", zap.String("msg", result.GetMessage()), zap.String("code", result.GetCode()))
+		return nil, errors.WithMessage(errors.New(result.GetMessage()))
 	}
-	if res.Data != nil {
-		var getModeOfPaymentListResp selling.GetModeOfPaymentListResp
-		if err := res.Data.UnmarshalTo(&getModeOfPaymentListResp); err != nil {
-			logger.Logger.Error("GetModeOfPaymentList-UnmarshalTo", zap.Any("err", err))
-			return nil, errors.WithMessage(err)
-		}
-		// 获取商家支付方式列表
-		paymentMethodList := repository.NewPaymentMethodRepo(s.dbm.GetDB(getPaymentReq.CompanyUuid)).GetPaymentMethodList()
-		// “免单”默认置灰
-		var erpnextPayments []string
-		for _, paymentMethod := range paymentMethodList {
-			erpnextPayments = append(erpnextPayments, paymentMethod.ErpnextPayment)
-		}
-		// 获取支付方式列表
-		var paymentMethodListResp []resp.PaymentMethodInfo
-		for _, modeOfPayment := range getModeOfPaymentListResp.ModeOfPaymentList {
-			if modeOfPayment.Name == "Free Meal" {
-				continue
-			}
-			paymentMethodListResp = append(paymentMethodListResp, resp.PaymentMethodInfo{
-				Name:      modeOfPayment.Name,
-				IsAddable: !slices.Contains(erpnextPayments, modeOfPayment.Name),
-			})
-		}
-		return &resp.GetPaymentMethodListResp{List: paymentMethodListResp}, nil
+	var getModeOfPaymentListResp selling.GetModeOfPaymentListResp
+	if err := result.Data.UnmarshalTo(&getModeOfPaymentListResp); err != nil {
+		logger.Logger.Error("GetModeOfPaymentList-UnmarshalTo", zap.Any("err", err))
+		return nil, errors.WithMessage(err)
 	}
-	return nil, errors.WithMessage(errors.New(res.Message))
+	// 获取商家支付方式列表
+	paymentMethodList := repository.NewPaymentMethodRepo(s.dbm.GetDB(getPaymentReq.CompanyUuid)).GetPaymentMethodList()
+	// “免单”默认置灰
+	var erpnextPayments []string
+	for _, paymentMethod := range paymentMethodList {
+		erpnextPayments = append(erpnextPayments, paymentMethod.ErpnextPayment)
+	}
+	// 获取支付方式列表
+	var paymentMethodListResp []resp.PaymentMethodInfo
+	for _, modeOfPayment := range getModeOfPaymentListResp.ModeOfPaymentList {
+		if modeOfPayment.Name == "Free Meal" {
+			continue
+		}
+		paymentMethodListResp = append(paymentMethodListResp, resp.PaymentMethodInfo{
+			Name:      modeOfPayment.Name,
+			IsAddable: !slices.Contains(erpnextPayments, modeOfPayment.Name),
+		})
+	}
+	return &resp.GetPaymentMethodListResp{List: paymentMethodListResp}, nil
 }
 
 func (s *erpSrv) AddPaymentMethod(ctx pkgCtx.Context, addPaymentMethodReq req.AddPaymentMethodReq) error {
@@ -370,12 +373,13 @@ func (s *erpSrv) AddPaymentMethod(ctx pkgCtx.Context, addPaymentMethodReq req.Ad
 		Branch:      company.CompanySetting.ErpnextBranchName,
 		PaymentType: addPaymentMethodReq.ErpnextPayment,
 	}
-	res, err := client.CreatePaymentAccount(WithSiteCode(ctx.GetContext(), company.CompanySetting.ErpnextSiteCode), params)
+	result, err := client.CreatePaymentAccount(WithSiteCode(ctx.GetContext(), company.CompanySetting.ErpnextSiteCode), params)
 	if err != nil {
 		return errors.WithMessage(err)
 	}
-	if res.GetCode() != "0" {
-		return errors.WithMessage(errors.New(res.Message))
+	if result.GetCode() != "0" {
+		logger.Logger.Error("AddPaymentMethod-CreatePaymentAccount", zap.String("msg", result.GetMessage()), zap.String("code", result.GetCode()))
+		return errors.WithMessage(errors.New(result.GetMessage()))
 	}
 	// 获取来源是1的支付方式code最大值
 	var maxCode = 20000

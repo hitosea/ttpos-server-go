@@ -12,7 +12,9 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	cc "ttpos-server-go/pkg/context"
+	"ttpos-server-go/pkg/logger"
 
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
 
@@ -60,6 +62,10 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 	result, err := client.InitShop(WithSiteCode(context.Background(), initShopReq.SiteCode), req)
 	if err != nil {
 		return resp.InitShopResp{}, err
+	}
+	if result.GetCode() != "0" || result.Data == nil {
+		logger.Logger.Error("InitShop-InitShop", zap.Any("err", err), zap.String("code", result.GetCode()), zap.String("msg", result.GetMessage()))
+		return resp.InitShopResp{}, errors.New("初始化失败")
 	}
 	response := &setup.InitShopResp{}
 	if err := result.Data.UnmarshalTo(response); err != nil {
