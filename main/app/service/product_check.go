@@ -560,6 +560,7 @@ type CheckProductPackageGroupProductResult struct {
 func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, param CheckProductPackageParam) (*CheckProductPackageResult, error) {
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(db)
+	productPackageGroupRepo := repository.NewProductPackageGroupRepo(db)
 	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
 	if !productRepo.CheckPrice(param.Price, 0, 100000000, 2) {
 		return nil, errors.New("套餐价格范围错误")
@@ -571,6 +572,16 @@ func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, 
 	var stockNum float64 = 0
 	groups := make([]CheckProductPackageGroupResult, 0)
 	for _, group := range param.Groups {
+		// 判断套餐分组是否存在
+		if group.Uuid != 0 {
+			productPackageGroup, _ := productPackageGroupRepo.GetProductPackageGroup(
+				commonRepo.WhereBySoftDelete(),
+				commonRepo.WhereByUuid(group.Uuid),
+			)
+			if productPackageGroup.ID == 0 {
+				return nil, errors.New("套餐分组不存在")
+			}
+		}
 		isDelete := group.IsDelete
 		if !isDelete && !group.LocaleName.CheckRequiredLocale(storeLanguages) {
 			return nil, errors.New("分组名称不能为空")
@@ -586,13 +597,23 @@ func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, 
 			if isDelete {
 				product.IsDelete = true
 			} else {
+				if product.Uuid != 0 {
+					productPackageGroupItem, _ := productPackageGroupRepo.GetProductPackageGroupItem(
+						commonRepo.WhereBySoftDelete(),
+						commonRepo.WhereByProductPackageGroupUuid(group.Uuid),
+						commonRepo.WhereByUuid(product.Uuid),
+					)
+					if productPackageGroupItem.ID == 0 {
+						return nil, errors.New("套餐分组商品不存在")
+					}
+				}
 				if !product.IsDelete {
-					bom, err := productRepo.GetProductBom(
+					bom, _ := productRepo.GetProductBom(
 						commonRepo.WhereBySoftDelete(),
 						productRepo.WhereUuid(product.BomUuid),
 					)
-					if err != nil || bom.ID == 0 {
-						return nil, errors.WithMessage(err, "商品规格失败")
+					if bom.ID == 0 {
+						return nil, errors.New("商品规格不存在")
 					}
 					if bom.StockNum >= float64(product.Num) {
 						currentStockNum := decimal.NewFromFloat(bom.StockNum).Div(decimal.NewFromFloat(float64(product.Num))).Floor()
