@@ -217,7 +217,7 @@ func (r *MemberSaleOrderRepo) PaginateGetMemberSaleOrder(pageNo, pageSize int, o
 func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderList(pageNo, pageSize int, statusList []uint) ([]model.MemberSaleOrder, int64, error) {
 	opts := []DBOption{
 		CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
-		CommonRepo.DBOption(CommonRepo.SortWithPayTime("asc")),
+		CommonRepo.DBOption(CommonRepo.SortWithPayTime("desc")),
 		CommonRepo.DBOption(CommonRepo.WhereByNoSelectingTimeout()),
 	}
 
