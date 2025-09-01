@@ -246,13 +246,14 @@ type ProductShopCategoryListResp struct {
 
 // ProductShopCategoryDetailResp 商品分类详情响应（商家端）
 type ProductShopCategoryDetailResp struct {
-	Uuid       uint64             `json:"uuid"`        // 商品类别UUID
-	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品类别名称
-	ParentUuid uint64             `json:"parent_uuid"` // 父级类别UUID
-	ParentName string             `json:"parent_name"` // 父级类别名称
-	Sort       uint               `json:"sort"`        // 商品类别排序
-	Status     int                `json:"status"`      // 商品类别状态 0-关闭 1-开启
-	CanDelete  bool               `json:"can_delete"`  // 是否可以删除 false-否 true-是
+	Uuid         uint64             `json:"uuid"`          // 商品类别UUID
+	LocaleName   dto.LocaleResponse `json:"locale_name"`   // 商品类别名称
+	ParentUuid   uint64             `json:"parent_uuid"`   // 父级类别UUID
+	ParentName   string             `json:"parent_name"`   // 父级类别名称
+	Sort         uint               `json:"sort"`          // 商品类别排序
+	Status       int                `json:"status"`        // 商品类别状态 0-关闭 1-开启
+	ProductCount int64              `json:"product_count"` // 商品数量
+	ChildCount   int64              `json:"child_count"`   // 子级数量
 }
 
 type ProductAttributeGroupItem struct {

@@ -685,7 +685,8 @@ func (s *productSrv) GetProductShopCategory(ctx context.Context, req req.Product
 		parentName = parentCategory.MultiLanguageName.GetNameByLang(language)
 	}
 
-	canDelete := true
+	// 获取商品数量和子级数量
+	var productCount, childCount int64
 	opts := []repository.DBOption{
 		commonRepo.WhereBySoftDelete(),
 	}
@@ -694,28 +695,25 @@ func (s *productSrv) GetProductShopCategory(ctx context.Context, req req.Product
 	} else {
 		opts = append(opts, productRepo.WhereCategoryUuid(productCategory.Uuid))
 	}
-	productCount, _ := productRepo.GetProductCount(opts...)
-	if productCount > 0 {
-		canDelete = false
-	}
+	productCount, _ = productRepo.GetProductCount(opts...)
+
 	if productCategory.ParentUuid == 0 && productCategory.IsSpecial == 0 {
 		categoryCount, _ := productRepo.GetProductCategoryCount(
 			commonRepo.WhereBySoftDelete(),
 			productRepo.WhereParentUuid(productCategory.Uuid),
 		)
-		if categoryCount > 0 {
-			canDelete = false
-		}
+		childCount = categoryCount
 	}
 
 	return product_resp.ProductShopCategoryDetailResp{
-		Uuid:       productCategory.Uuid,
-		LocaleName: productCategory.MultiLanguageName.GetNames(),
-		ParentUuid: productCategory.ParentUuid,
-		ParentName: parentName,
-		Sort:       productCategory.Sort,
-		Status:     productCategory.Status,
-		CanDelete:  canDelete,
+		Uuid:         productCategory.Uuid,
+		LocaleName:   productCategory.MultiLanguageName.GetNames(),
+		ParentUuid:   productCategory.ParentUuid,
+		ParentName:   parentName,
+		Sort:         productCategory.Sort,
+		Status:       productCategory.Status,
+		ProductCount: productCount,
+		ChildCount:   childCount,
 	}, nil
 }
 
