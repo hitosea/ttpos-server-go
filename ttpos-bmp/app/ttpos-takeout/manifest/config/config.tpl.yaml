@@ -22,7 +22,7 @@ logger:
 # https://goframe.org/docs/core/gdb-config-file
 database:
   default:
-    link: "mysql:$DB_USERNAME:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT)/takeout?charset=utf8mb4&parseTime=True&loc=Local&timeout=5s"
+    link: "mysql:$DB_USERNAME:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/takeout?charset=utf8mb4&parseTime=True&loc=Local&timeout=5s"
     maxIdle: 10                 # (可选)连接池最大闲置的连接数(默认10)
     maxOpen: 100                # (可选)连接池最大打开的连接数(默认无限制)
     maxLifetime: "30s"          # (可选)连接对象可重复使用的时间长度(默认30秒)

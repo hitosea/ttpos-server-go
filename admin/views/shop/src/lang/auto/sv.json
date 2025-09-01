@@ -2130,5 +2130,7 @@
     "如：13.716412789763694, 100.52312952599786": "T.ex.: 13.716412789763694, 100.52312952599786",
     "请选择或输入IP地址": "Vänligen välj eller ange en IP-adress",
     "最多只能选择": "Du kan välja högst",
-    "起始序列号": "Startserienummer"
+    "起始序列号": "Startserienummer",
+    "起始流水号": "Startserienummer",
+    "请输入起始流水号": "Ange startserienummern"
 }
