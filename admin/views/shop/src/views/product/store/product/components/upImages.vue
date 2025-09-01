@@ -85,7 +85,11 @@
           </template>
         </el-table-column>
         <el-table-column prop="product_name_text" :label="$t('商品名称')" minWidth="300"> </el-table-column>
-        <el-table-column prop="path_name_text" :label="$t('所属分类')" width="180"></el-table-column>
+        <el-table-column prop="category_name_text" :label="$t('所属分类')" width="180">
+          <template #default="scope">
+            {{ scope.row.category_name_text || '-' }}
+          </template>
+        </el-table-column>
         <el-table-column prop="file_name" :label="$t('图片名称')" width="180"></el-table-column>
       </el-table>
       <!--分页-->
@@ -347,18 +351,6 @@
           totalDataNumber.value = res.data?.total;
         });
 
-        // 第四步：补充 path_name_text（方法二）
-        await Promise.resolve().then(() => {
-          if (repeat_list.value.length > 0) {
-            (repeat_list.value || []).map((item) => {
-              tableData.value.map((item2) => {
-                if (item2.product_id === item.product_id) {
-                  item.path_name_text = item2.path_name_text;
-                }
-              });
-            });
-          }
-        });
 
         dialogVisible.value = true;
       } else {
