@@ -357,6 +357,9 @@ type CountPaymentResp struct {
 }
 
 type CountPaymentRespList struct {
+	ID                 uint64  `json:"id"`                   // 支付方式ID
+	Sort               int     `json:"sort"`                 // 支付方式排序
+	CreateTime         int64   `json:"create_time"`          // 支付方式创建时间
 	PaymentName        string  `json:"payment_name"`         // 支付方式名称
 	PaymentCode        int     `json:"payment_code"`         // 支付方式编码
 	TotalOrderNum      int64   `json:"total_order_num"`      // 总订单数量
@@ -383,6 +386,9 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 		})
 		if !ok {
 			list = append(list, CountPaymentRespList{
+				ID:         payment.ID,
+				Sort:       payment.Sort,
+				CreateTime: payment.CreateTime,
 				PaymentName: func() string {
 					if payment.PaymentCode == 0 {
 						return i18n.Translate(ctx.GetLanguage(), "免单")
@@ -415,6 +421,9 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 		})
 		if !ok {
 			list = append(list, CountPaymentRespList{
+				ID:         memberPayment.ID,
+				Sort:       memberPayment.Sort,
+				CreateTime: memberPayment.CreateTime,
 				PaymentName: func() string {
 					if memberPayment.PaymentName == "" {
 						return "-"
@@ -430,6 +439,19 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 			item.TotalPaymentAmount += memberPayment.TotalPaymentAmount
 			list[i] = *item
 		}
+	}
+
+	// 先按Sort升序排序，再按CreateTime降序排序， ID降序排序
+	if len(list) > 0 {
+		sort.SliceStable(list, func(i, j int) bool {
+			if list[i].Sort == list[j].Sort {
+				if list[i].CreateTime == list[j].CreateTime {
+					return list[i].ID < list[j].ID
+				}
+				return list[i].CreateTime > list[j].CreateTime
+			}
+			return list[i].Sort < list[j].Sort
+		})
 	}
 
 	totalReceivedAmount = totalReceivedAmount.Add(decimal.NewFromFloat(memberPaymentData.TotalReceivedAmount))
@@ -459,6 +481,9 @@ func (s *statisticsSrv) CountPaymentDays(ctx context.Context, req CountReq, days
 		for _, payment := range paymentData {
 			if payment.Day.String == day {
 				paymentList = append(paymentList, CountPaymentRespList{
+					ID:         payment.ID,
+					Sort:       payment.Sort,
+					CreateTime: payment.CreateTime,
 					PaymentName: func() string {
 						if payment.PaymentName == "" {
 							return "-"
@@ -492,6 +517,9 @@ func (s *statisticsSrv) CountMemberPayment(ctx context.Context, req CountReq) Co
 	)
 	for _, payment := range paymentData {
 		list = append(list, CountPaymentRespList{
+			ID:         payment.ID,
+			Sort:       payment.Sort,
+			CreateTime: payment.CreateTime,
 			PaymentName: func() string {
 				if payment.PaymentName == "" {
 					return "-"
@@ -525,6 +553,9 @@ func (s *statisticsSrv) CountMemberPaymentDays(ctx context.Context, req CountReq
 		for _, payment := range paymentData {
 			if payment.Day.String == day {
 				paymentList = append(paymentList, CountPaymentRespList{
+					ID:         payment.ID,
+					Sort:       payment.Sort,
+					CreateTime: payment.CreateTime,
 					PaymentName: func() string {
 						if payment.PaymentName == "" {
 							return "-"
@@ -1768,6 +1799,9 @@ type CountExportAreaData struct {
 
 // CountExportPaymentData 统计导出支付数据
 type CountExportPaymentData struct {
+	ID                 uint64  `json:"id"`
+	Sort               int     `json:"sort"`
+	CreateTime         int64   `json:"create_time"`
 	PaymentName        string  `json:"payment_name"`
 	PaymentCode        int     `json:"payment_code"`
 	TotalOrderNum      int64   `json:"total_order_num"`
