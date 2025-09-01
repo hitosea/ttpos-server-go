@@ -71,6 +71,11 @@ func (r *saleOrderProductRepo) CreateSaleOrderProductAndBomAndAttribute(obj mode
 	// 创建BOM
 	for _, bom := range obj.SaleOrderProductBoms {
 		bom.SaleOrderProductUuid = obj.Uuid
+
+		//  如果是新建，这两个字段要清空
+		bom.ID = 0
+		bom.Uuid = 0
+
 		if err := db.Create(&bom).Error; err != nil {
 			return 0, errors.WithMessage(err)
 		}
