@@ -93,15 +93,19 @@ func ReduceStock(db *gorm.DB, saleBillUuid uint64) {
 			if ProductBoms[warehouseOutFormItem.ProductBomUuid] == nil {
 				ProductBoms[warehouseOutFormItem.ProductBomUuid] = warehouseOutFormItem.ProductBom
 			}
-			ProductBoms[warehouseOutFormItem.ProductBomUuid].StockNum -= warehouseOutFormItem.Num      // 扣减库存
-			ProductBoms[warehouseOutFormItem.ProductBomUuid].ActualSaleNum += warehouseOutFormItem.Num // 增加实际销量
+			ProductBoms[warehouseOutFormItem.ProductBomUuid].StockNum -= warehouseOutFormItem.Num // 扣减库存
+			if warehouseOutFormItem.PackageUuid == 0 {                                            // 非套餐子商品都增加实际销量
+				ProductBoms[warehouseOutFormItem.ProductBomUuid].ActualSaleNum += warehouseOutFormItem.Num // 增加实际销量
+			}
 			productPackageUuid := ProductBoms[warehouseOutFormItem.ProductBomUuid].ProductPackageUuid
 			// 只有规格才给商品包增加销量
-			if ProductBoms[warehouseOutFormItem.ProductBomUuid].IsFlavor() {
+			if ProductBoms[warehouseOutFormItem.ProductBomUuid].IsFlavor() /* 商品规格 */ || ProductBoms[warehouseOutFormItem.ProductBomUuid].IsPackageFlavor() /* 套餐规格 */ {
 				if ProducttPackages[productPackageUuid] == nil {
 					ProducttPackages[productPackageUuid] = &ProductBoms[warehouseOutFormItem.ProductBomUuid].ProductPackage
 				}
-				ProducttPackages[productPackageUuid].ActualSaleNum += warehouseOutFormItem.Num
+				if warehouseOutFormItem.PackageUuid == 0 { // 非套餐子商品都增加实际销量
+					ProducttPackages[productPackageUuid].ActualSaleNum += warehouseOutFormItem.Num // 增加实际销量
+				}
 			}
 		} else if warehouseOutFormItem.IsMaterial() {
 			if Materials[warehouseOutFormItem.MaterialUuid] == nil {

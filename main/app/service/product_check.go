@@ -311,6 +311,7 @@ func (s *productCheckSrv) CheckProductAttribute(db *gorm.DB, attributes []CheckP
 
 type CheckProductSauceParam struct {
 	IsMust       int                          `json:"is_must"`       // 商品加料是否必选 0-否 1-是
+	IsOpenInput  bool                         `json:"is_open_input"` // 商品加料最大选择数量是否开启 0-否 1-是
 	MaxSelection int                          `json:"max_selection"` // 商品加料最大选择数量
 	Sauces       []CheckProductSauceItemParam `json:"items"`         // 商品加料列表
 }
@@ -374,10 +375,10 @@ func (s *productCheckSrv) CheckProductSauce(db *gorm.DB, param CheckProductSauce
 			sauceCount++
 		}
 	}
-	if param.MaxSelection > sauceCount {
+	if param.IsOpenInput && param.MaxSelection > sauceCount {
 		return nil, errors.New("加料项数量不能大于最大选择数量")
 	}
-	if sauceDefaultCount > param.MaxSelection {
+	if param.IsOpenInput && sauceDefaultCount > param.MaxSelection {
 		return nil, errors.New("默认勾选数量不能大于最大选择数量")
 	}
 	if sauceCount > 10 {

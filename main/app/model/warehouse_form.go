@@ -103,6 +103,7 @@ type WarehouseOutFormItem struct {
 	// 关联uuid
 	WarehouseOutFormUuid uint64 `gorm:"column:warehouse_out_form_uuid;type:bigint(20) unsigned;default:0;comment:出库单uuid"`
 	ProductBomUuid       uint64 `gorm:"column:product_bom_uuid;type:bigint(20) unsigned;default:0;comment:商品BOM表uuid, 规格商品或小料"`
+	PackageUuid          uint64 `gorm:"column:package_uuid;type:bigint(20) unsigned;default:0;comment:套餐uuid，只有套餐子商品才有这个字段，用于不增加子商品销量"`
 	MaterialUuid         uint64 `gorm:"column:material_uuid;type:bigint(20) unsigned;default:0;comment:材料uuid，原材料"`
 	SaleOrderProductUuid uint64 `gorm:"column:sale_order_product_uuid;type:bigint(20) unsigned;default:0;comment:销售订单商品uuid,用于结账完成时判断订单的每个商品是否都已有对应的出库记录"`
 	SaleOrderUuid        uint64 `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;default:0;comment:销售订单uuid,用于结账完成时判断订单的每个商品是否都已有对应的出库记录"`
@@ -130,6 +131,7 @@ func (model *WarehouseOutFormItem) IsProductBom() bool {
 type Product struct {
 	SaleOrderProductUuid uint64                 `json:"sale_order_product_uuid"` // 销售订单商品uuid
 	ProductBomUuid       uint64                 `json:"product_bom_uuid"`        // 规格商品或小料的uuid
+	PackageUuid          uint64                 `json:"package_uuid"`            // 套餐的uuid
 	SaleOrderUuid        uint64                 `json:"sale_order_uuid"`         // 销售订单uuid
 	Num                  float64                `json:"num"`                     // 数量
 	ProductBomMaterials  []*ProductBomMaterials `json:"product_bom_materials"`   // 规格商品或小料的材料
@@ -186,6 +188,7 @@ func NewWarehouseOutForm(list ProductList, isCheckout bool, saleBillUuid uint64,
 		items = append(items, &WarehouseOutFormItem{
 			WarehouseOutFormUuid: form.Uuid,
 			ProductBomUuid:       item.ProductBomUuid,
+			PackageUuid:          item.PackageUuid,
 			Num:                  item.Num,
 			Scene:                constant.WarehouseOutFormSceneSales, // 销售出库
 			Status:               status,

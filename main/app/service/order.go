@@ -7173,6 +7173,7 @@ func (s *orderSrv) getDecreaseStockList(ctx context.Context, cookingDeductSaleOr
 			if int(cookingDeductSaleOrderProduct.Num) > 0 {
 				list = append(list, &model.Product{
 					ProductBomUuid:       saleOrderProductBom.ProductBomUuid,
+					PackageUuid:          cookingDeductSaleOrderProduct.PackageUuid,
 					SaleOrderProductUuid: cookingDeductSaleOrderProduct.Uuid,
 					SaleOrderUuid:        cookingDeductSaleOrderProduct.SaleOrderUuid,
 					Num:                  cookingDeductSaleOrderProduct.Num,

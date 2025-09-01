@@ -117,7 +117,6 @@ init-bmp-env:
 	@echo "🔍 检查 ttpos-bmp/.env 文件是否存在"
 	if [ -f "ttpos-bmp/.env" ]; then \
 		sed -i.bak 's/^DB_HOST=.*/DB_HOST=$(LOCAL_IP)/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
-		sed -i.bak 's/^DB_PORT=.*/DB_PORT=13306/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
 		if [ -f ".env" ]; then \
 			echo "🔄 从上级目录的 .env 文件同步数据库密码..."; \
 			PARENT_DB_PASSWORD=$$(grep '^DB_PASSWORD=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' ' || echo ""); \
