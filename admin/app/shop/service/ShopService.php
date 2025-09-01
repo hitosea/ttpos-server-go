@@ -89,7 +89,7 @@ class ShopService
                 // 实收金额
                 'total_money' => $businessData['total_received_price'],
                 // 折扣总额
-                'total_discount_money' => Helper::bcadd($businessData['total_discount_money'], $businessData['total_user_discount_money']),
+                'total_discount_money' => Helper::bcadd($businessData['total_discount_money'] ?: 0, $businessData['total_user_discount_money'] ?: 0),
                 // 优惠折扣
                 'discount_money' => $businessData['total_discount_money'],
                 // 会员折扣
