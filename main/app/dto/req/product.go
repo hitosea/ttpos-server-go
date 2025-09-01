@@ -403,6 +403,7 @@ type ProductShopAddSauceReq struct {
 	Sauces       []ProductShopAddSauceItemReq `json:"sauces"`        // 商品加料列表
 	IsMust       int                          `json:"is_must"`       // 是否必选 0-否 1-是
 	MaxSelection int                          `json:"max_selection"` // 最大选择数量
+	IsOpenInput  bool                         `json:"is_open_input"` // 是否开启输入 0-否 1-是
 }
 
 // ProductShopAddSauceItemReq 商品加料项添加请求
@@ -500,6 +501,7 @@ type ProductShopEditTaxReq struct {
 type ProductShopEditSauceReq struct {
 	Sauces       []ProductShopEditSauceItemReq `json:"sauces"`        // 商品加料列表
 	IsMust       int                           `json:"is_must"`       // 是否必选 0-否 1-是
+	IsOpenInput  bool                          `json:"is_open_input"` // 是否开启输入 0-否 1-是
 	MaxSelection int                           `json:"max_selection"` // 最大选择数量
 }
 

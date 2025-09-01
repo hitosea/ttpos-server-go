@@ -78,3 +78,9 @@ migrate:
 	#@cd app/ttpos-manager  && make db_up.docker
 	#@cd app/ttpos-shop  && make db_up.docker
 	@cd app/ttpos-erp  && make db_up.docker
+
+
+# 替换本地IP， 开发用
+.PHONY: update-ip
+update-ip:
+	@./hack/update_ip.sh
