@@ -5172,8 +5172,8 @@ func (s *productSrv) SaveProductPackageAttribute(tx *gorm.DB, attributeGroupList
 			} else {
 				// 更新商品包关联属性组
 				err := productPackageAttributeGroupRepo.UpdateProductPackageAttributeGroup(map[string]any{
-					"is_must":       productPackageAttributeGroup.IsMust,
-					"max_selection": productPackageAttributeGroup.MaxSelection,
+					"is_must":       attributeGroup.IsMust,
+					"max_selection": attributeGroup.MaxSelection,
 				}, commonRepo.WhereByUuid(productPackageAttributeGroup.Uuid))
 				if err != nil {
 					return errors.WithMessage(err, "更新商品包关联属性组失败")
@@ -5210,7 +5210,7 @@ func (s *productSrv) SaveProductPackageAttribute(tx *gorm.DB, attributeGroupList
 							}
 						} else {
 							err := productPackageAttributeRepo.UpdateProductPackageAttribute(map[string]any{
-								"is_default_selected": productPackageAttribute.IsDefaultSelected,
+								"is_default_selected": attribute.IsDefaultSelected,
 							}, commonRepo.WhereByUuid(productPackageAttribute.Uuid))
 							if err != nil {
 								return errors.WithMessage(err, "更新商品包关联属性值失败")
