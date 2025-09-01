@@ -4207,6 +4207,7 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 			}
 			result, err := productCheckSrv.CheckProductSauce(db, CheckProductSauceParam{
 				IsMust:       req.Sauce.IsMust,
+				IsOpenInput:  req.Sauce.IsOpenInput,
 				MaxSelection: req.Sauce.MaxSelection,
 				Sauces:       sauceListParam,
 			})
@@ -4463,6 +4464,7 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 			}
 			result, err := productCheckSrv.CheckProductSauce(db, CheckProductSauceParam{
 				IsMust:       req.Sauce.IsMust,
+				IsOpenInput:  req.Sauce.IsOpenInput,
 				MaxSelection: req.Sauce.MaxSelection,
 				Sauces:       sauceListParam,
 			})
