@@ -31,7 +31,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     -- 随订单修改而更新的字段
     `amount`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '订单金额(折后价),关联销售订单的总金额之和',
     `origin_amount`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '订单金额(折前价)。商品未含税时，订单金额(折前价)=商品金额+服务费+税费。商品已含税时，订单金额(折前价)=商品金额（含商品消费税）+服务费+税费（只有服务费税）',
-    
 
     -- 完成账单才记录的字段
     `product_amount`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '商品金额,关联销售订单的商品金额之和',
@@ -63,6 +62,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `lock_time` INT(10) NOT NULL DEFAULT 0 COMMENT '锁单时间',
     `production_time` INT(10) NOT NULL DEFAULT 0 COMMENT '首次送厨时间(时间戳)',
     `finish_time` INT(10) NOT NULL DEFAULT 0 COMMENT '完成时间(时间戳),结账时间',
+    `is_kitchen_confirm` INT(10) NOT NULL DEFAULT 0 COMMENT '厨显是否确认退菜，确认后不在厨显端显示已经整单取消的菜品,0:未确认,1:已确认',
+    `reverse_settle_count` INT(10) NOT NULL DEFAULT 0 COMMENT '反结账次数',
+
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳),开台时间',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -215,7 +217,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order` (
     `rider_accept_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '骑手接单时间（时间戳）',
     `rider_start_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '骑手开始配送时间（时间戳）',
     `finish_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '骑手送达时间（时间戳）',
-    `expected_finish_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '预计送达时间（时间戳）',
+    `expected_finish_time` varchar(255) NOT NULL DEFAULT '' COMMENT '预计送达时间',
     `cancel_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '取消时间（时间戳）',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)，前端提交订单的时间',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -338,8 +340,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_payment_method` (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '支付方式表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
-    -- 快照的商品设置信息
-    `open_member_discount` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启会员折扣, 0-否 1-是。添加商品时记录下状态不受后台改变，结账时检查是否改变',
     -- 基本信息
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID',
@@ -347,6 +347,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `flavor_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '规格名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `num` DECIMAL(12, 8) NOT NULL DEFAULT 0 COMMENT '商品数量。不能减为0，当数量为1再减时，标记删除',
+    `num_type` INT(10) NOT NULL DEFAULT 0 COMMENT '数量计算方法, 0-整数 1-小数',
     `unit_num` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '单位数量，用于套餐子商品',
     `image_file_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品图片ID',
     `device_id` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '设备ID,用于标识订单来源设备.来源h5时，device_id为h5',
@@ -364,6 +365,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     -- 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
     `member_discount_rate` DECIMAL(22, 4) NOT NULL DEFAULT 1 COMMENT '会员折扣率(0-100%)',
     `member_card_discount_rate` DECIMAL(22, 4) NOT NULL DEFAULT 1 COMMENT '会员卡折扣率(0-100%)',
+    `member_order_discount_rate` DECIMAL(22, 4) NOT NULL DEFAULT 1 COMMENT '会员端商品价格上浮比例1%-300%',
     `custom_discount_rate` DECIMAL(22, 4) NOT NULL DEFAULT 1 COMMENT '自定义折扣率(0-100%)',
     `open_overall_discount` INT(10) NOT NULL DEFAULT 1 COMMENT '是否开启 Overall 折扣, 0-否 1-是',
     -- 会员折扣后的价格
@@ -417,6 +419,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
 
     `send_kitchen_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '送厨时间(时间戳)',
     `erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERP系统商品编码',
+
+    -- 快照的商品设置信息
+    `open_member_discount` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启会员折扣, 0-否 1-是。添加商品时记录下状态不受后台改变，结账时检查是否改变',
 
     -- 时间信息
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
@@ -602,6 +607,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order_product` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '生产订单商品ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
     `num`  DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '商品数量',
+    `init_num`  DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '初始送厨数量，退菜后，init_num肯定大于num',
     `flavor_name` TEXT COMMENT '规格名称,不随后台改变',
     `product_attribute_names` text COMMENT '商品属性名称,多个属性名用逗号分隔,不随后台改变',
     `product_sauces_names` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品加料名称,多个加料名用逗号分隔,不随后台改变',
@@ -1315,6 +1321,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_member` (
     `birthday` INT(10) NOT NULL DEFAULT 0 COMMENT '生日,时间戳',
     `point`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '积分',
     `frozen_point`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '冻结积分。冻结积分不能使用，在前端显示为已扣除或已增加。冻结积分可为负数。积分余额=积分+冻结积分',
+    `accumulated_get_point`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '累计获取积分',
+    `accumulated_consumption_get_point`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '累计消费获取积分(只存消费赠送积分，不存充值与活动赠送积分)',
     `accumulated_consumption_amount`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '累计消费金额',
     `consumption_count` INT(11) NOT NULL DEFAULT 0 COMMENT '消费次数',
     `balance`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '余额',
@@ -1449,7 +1457,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_point_log` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '积分变动记录ID',
     `member_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员ID',
-    `scene` INT(10) NOT NULL DEFAULT 0 COMMENT '场景,10-用户充值 20-订单赠送 30-管理员操作 40-退款扣除 60-订单反结账 70-充值赠送 80-充值反结账 90-扣减',
+    `scene` INT(10) NOT NULL DEFAULT 0 COMMENT '场景,10-用户充值 20-订单赠送 30-管理员操作 40-退款扣除 60-订单反结账 70-充值赠送 80-充值反结账 90-扣减 100-收银机、点餐助手发卡赠送 110-积分抵扣 120-积分抵扣反结账 130-营销活动赠送',
     `value`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '数值,负数:减积分 正数:加积分',
     `describe` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '变动描述',
     `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联uuid. 表示积分变动记录关联的业务订单ID,可能是销售订单、充值订单、退款单、退货单退款金额',
@@ -1746,6 +1754,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer` (
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '打印机名称',
     `printer_type_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '打印机类型ID',
     `config_json` TEXT COMMENT '打印机json配置',
+    `sn` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '打印机SN',
     `is_usb` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否usb 0-否 1-是',
     `is_enable_usb` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否启用usb 0-否 1-是',
     `status` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '状态 0-离线 1-在线',  
@@ -1754,6 +1763,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer` (
     `copies` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '打印份数',
     `width` INT UNSIGNED NOT NULL DEFAULT 80 COMMENT '纸张宽度（mm）',
     `sort` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '排序',
+    `print_method` INT(10) NOT NULL DEFAULT 1 COMMENT '打印方式 1文本打印, 2图片打印',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -2120,6 +2130,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_device` (
     `finally_login_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '最后登录时间',
     `source` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '来源 cashier-收银机 tablet-平板端 kitchen-厨显端',
     `device_id` VARCHAR(255) DEFAULT '' COMMENT '唯一设备标识id',
+    `related_printer_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联打印机uuid,表示该设备关联的打印机uuid',
     `is_main` INT(10) DEFAULT 0 COMMENT '是否主设备 0-常规 1-主',
     `product_printer_uuid` BIGINT DEFAULT 0 COMMENT '打印档口Uuid',
     `address` VARCHAR(255) DEFAULT '' COMMENT '绑定地址',
@@ -2616,6 +2627,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_marketing_activity` (
   `multi_language_desc_uuid` bigint(20) DEFAULT 0 COMMENT '活动文案多语言uuid',
   `start_time` int(11) DEFAULT 0 COMMENT '活动开始时间',
   `end_time` int(11) DEFAULT 0 COMMENT '活动结束时间',
+  `reward_type` int(1) DEFAULT 0 COMMENT '奖励类型 0优惠券 1积分',
+  `reward_value`  DECIMAL(22, 4) DEFAULT 0.00 COMMENT '奖励值',
+  `is_send_sms` int(1) DEFAULT 0 COMMENT '是否发送短信通知 0否 1是',
   `reward_condition_amount`  DECIMAL(22, 4) DEFAULT 0.00 COMMENT '奖励条件金额',
   `is_open_reward_limit` int(1) DEFAULT 0 COMMENT '是否开启奖励次数限制 0否 1是',
   `reward_limit` int(11) DEFAULT 0 COMMENT '奖励次数限制',
@@ -2734,6 +2748,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_marketing_activity_record` (
   `prize_uuid` bigint(20) DEFAULT 0 COMMENT '奖品uuid',
   `member_uuid` bigint(20) DEFAULT 0 COMMENT '会员uuid',
   `reward_count` int(11) DEFAULT 0 COMMENT '已获得奖励次数',
+  `reward_value`  DECIMAL(22, 4) DEFAULT 0.00 COMMENT '奖励值',
   `last_reward_time` int(11) DEFAULT 0 COMMENT '最后一次获得奖励时间',
   `create_time` int(11) DEFAULT 0 COMMENT '创建时间',
   `update_time` int(11) DEFAULT 0 COMMENT '更新时间',

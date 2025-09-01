@@ -406,4 +406,18 @@ CREATE TABLE `ttpos_delivery_ledger_settle` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外送台账结清数据';
 
+CREATE TABLE `ttpos_member` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint(20) NOT NULL,
+  `company_uuid` bigint(20) NOT NULL DEFAULT 0 COMMENT '公司ID',
+  `device_id` varchar(255) NOT NULL COMMENT '设备ID',
+  `is_visitor` int(1) NOT NULL COMMENT '是否游客 0否 1是',
+  `nickname` varchar(255) DEFAULT '' COMMENT '昵称',
+  `phone` varchar(20) DEFAULT '' COMMENT '手机号',
+  `create_time` int(11) DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(11) DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',
+  PRIMARY KEY (`id`,`uuid`) USING BTREE
+) ENGINE=InnoDB AUTO_INCREMENT=210 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会员表';
+
 SET FOREIGN_KEY_CHECKS = 1;
