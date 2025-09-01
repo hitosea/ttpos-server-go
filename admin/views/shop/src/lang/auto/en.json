@@ -2134,5 +2134,7 @@
     "如：13.716412789763694, 100.52312952599786": "E.g.: 13.716412789763694, 100.52312952599786",
     "请选择或输入IP地址": "Please select or enter an IP address",
     "最多只能选择": "You can select up to",
-    "起始序列号": "Starting serial number"
+    "起始序列号": "Starting serial number",
+    "起始流水号": "Starting serial number",
+    "请输入起始流水号": "Please enter the starting serial number"
 }
