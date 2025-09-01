@@ -214,7 +214,7 @@ class App extends AppModel
             })
             ->when(!$configured, function ($q) {
                 return $q->where(function ($qq) {
-                    $qq->where('app.expire_time', '=', "0")->whereOr('app.expire_time', '>', time()); 
+                    $qq->where('app.expire_time', '=', "0")->whereOr('app.expire_time', '>', time())->where('app.status', '=', 1); 
                 });
             })
             ->order(["su.create_time" => 'asc'])
