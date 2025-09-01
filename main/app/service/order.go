@@ -4191,8 +4191,13 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, req req.OrderDiscountReq) 
 	// 设置整单折扣率
 	saleOrder.SetCustomDiscount(req.GetDiscount())
 
+	// 获取最新的设置
+	newSetting, err := s.NewSaleBillSetting(ctx, saleBill.Uuid, saleBill.DeskUuid, false)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
 	// 计算并保存销售账单
-	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill, model.WithLatestPrice(), model.WithSaleBillSetting(newSetting)); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -4323,8 +4328,13 @@ func (s *orderSrv) OrderDiscountCancel(ctx context.Context, req req.OrderDiscoun
 	// 撤销订单的优惠折扣
 	saleOrder.SetAllDiscountCancel()
 
+	// 获取最新的设置
+	newSetting, err := s.NewSaleBillSetting(ctx, saleBill.Uuid, saleBill.DeskUuid, false)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
 	// 计算并保存销售账单
-	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill, model.WithLatestPrice(), model.WithSaleBillSetting(newSetting)); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
