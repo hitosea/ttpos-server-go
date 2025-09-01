@@ -205,6 +205,9 @@ type StatisticsSaleDaysData struct {
 
 // StatisticsPaymentData 支付统计数据
 type StatisticsPaymentData struct {
+	ID                 uint64          `gorm:"column:id;comment:支付方式ID"`
+	Sort               int             `gorm:"column:sort;comment:支付方式排序"`
+	CreateTime         int64           `gorm:"column:create_time;comment:支付方式创建时间"`
 	PaymentName        string          `gorm:"column:payment_name;comment:支付方式名称"`
 	PaymentCode        int             `gorm:"column:payment_code;comment:支付方式编码"`
 	TotalOrderNum      sql.NullInt64   `gorm:"column:total_order_num;comment:总订单数量"`
