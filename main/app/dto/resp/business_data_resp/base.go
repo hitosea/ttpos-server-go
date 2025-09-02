@@ -261,6 +261,9 @@ type BusinessDataExportArea struct {
 
 // 营业数据 - 导出 - 支付
 type BusinessDataExportPayment struct {
+	ID                 uint64  `json:"id"`                   // 支付方式ID
+	Sort               int     `json:"sort"`                 // 支付方式排序
+	CreateTime         int64   `json:"create_time"`          // 支付方式创建时间
 	PaymentName        string  `json:"payment_name"`         // 支付名称
 	PaymentCode        int     `json:"payment_code"`         // 支付编码
 	TotalOrderNum      int64   `json:"total_order_num"`      // 总订单数

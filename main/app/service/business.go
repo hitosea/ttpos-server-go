@@ -764,6 +764,9 @@ func (s *businessSrv) CountExport(ctx context.Context, req req.BusinessDataCount
 		paymentList := make([]business_data_resp.BusinessDataExportPayment, 0, len(export.PaymentList))
 		for _, payment := range export.PaymentList {
 			paymentList = append(paymentList, business_data_resp.BusinessDataExportPayment{
+				ID:                 payment.ID,
+				Sort:               payment.Sort,
+				CreateTime:         payment.CreateTime,
 				PaymentName:        payment.PaymentName,
 				PaymentCode:        payment.PaymentCode,
 				TotalOrderNum:      payment.TotalOrderNum,
