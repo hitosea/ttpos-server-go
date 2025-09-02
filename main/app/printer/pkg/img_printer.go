@@ -65,6 +65,8 @@ type ImgFont struct {
 	FontCache map[string]*truetype.Font
 	// 字符宽度缓存
 	CharWidthCache map[string]int
+	// 分割高度
+	SegmentationHeight int
 }
 
 // 字体常量
@@ -93,6 +95,7 @@ func NewImgFont(imageWidth int, defaultTextLineHeight int, direction int) *ImgFo
 		MySpecialFonts:        make(map[string]string),
 		FontCache:             make(map[string]*truetype.Font),
 		CharWidthCache:        make(map[string]int),
+		SegmentationHeight:    2200,
 	}
 
 	// 设置自定义宽度
@@ -644,6 +647,12 @@ func (i *ImgFont) drawText(text, fontPath string, fontSize, fontWeight int, x, y
 		}
 	}
 
+}
+
+// SetSegmentationHeight 设置分割高度
+func (i *ImgFont) SetSegmentationHeight(height int) *ImgFont {
+	i.SegmentationHeight = height
+	return i
 }
 
 // AppendPartingline 添加文本行
@@ -1372,7 +1381,7 @@ func (i *ImgFont) Save(imageSrc string, reminderSound bool, openMoneybox int) st
 		imageSrc = "./tmp/printer/test_img.png"
 	}
 	//
-	maxHeight := 200
+	maxHeight := i.SegmentationHeight
 	height := i.TextTotalHeight + i.TextLineHeight
 	headHeight := int(i.TextLineHeight/2) - 10
 
