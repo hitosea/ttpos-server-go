@@ -344,6 +344,15 @@ func (s *materialSrv) AddMaterial(ctx context.Context, req req.MaterialAddReq) e
 }
 
 func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (*model.Material, *req.MaterialAddErpReq, error) {
+	// 非基准单位不能重复
+	requestUnitList := make(map[uint64]bool)
+	for _, unit := range request.UnitList {
+		if requestUnitList[unit.Uuid] {
+			return nil, nil, errors.WithMessage(errors.New("非基准单位不能重复"))
+		}
+		requestUnitList[unit.Uuid] = true
+	}
+
 	materialUuid, _ := utils.GetID()
 	materialRepo := repository.NewMaterialRepo(tx)
 	// 创建多语言名称
