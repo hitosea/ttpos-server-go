@@ -198,7 +198,49 @@ func checkoutSaleOrderEventHandler() {
 		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
 			HandleActivityConsumption(payload)
 		})
+
+		// 增加销量
+		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
+			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+			payload.Ctx.SetDB(db)
+			HandleAddSalesVolume(payload)
+		})
 	})
+}
+
+// 增加销量
+func HandleAddSalesVolume(payload event.CheckoutSaleOrderPayload) {
+	ProductBoms, ProducttPackages := getSalesVolume(payload.SaleBill)
+
+	for productBomUuid, saleNum := range ProductBoms {
+		if err := repository.NewProductBomRepo(payload.Ctx.GetDB()).AddActualSaleNum(productBomUuid, saleNum); err != nil {
+			logger.Logger.Error("HandleAddSalesVolume process, AddActualSaleNum failed", zap.Any("productBomUuid", productBomUuid), zap.Any("saleNum", saleNum), zap.Error(err))
+			continue
+		}
+	}
+	for productPackageUuid, saleNum := range ProducttPackages {
+		if err := repository.NewProductPackageRepo(payload.Ctx.GetDB()).AddActualSaleNum(productPackageUuid, saleNum); err != nil {
+			logger.Logger.Error("HandleAddSalesVolume process, AddActualSaleNum failed", zap.Any("productPackageUuid", productPackageUuid), zap.Any("saleNum", saleNum), zap.Error(err))
+			continue
+		}
+	}
+}
+
+// 获取销量
+func getSalesVolume(saleBill *model.SaleBill) (map[uint64]float64, map[uint64]float64) {
+	ProductBoms := make(map[uint64]float64)      // 规格商品销量 map[规格商品UUID]销量
+	ProducttPackages := make(map[uint64]float64) // 套餐商品销量 map[套餐商品UUID]销量
+	for _, saleOrder := range saleBill.SaleOrders {
+		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+			// 删除商品、取消商品、未送厨商品、套餐子商品不增加销量
+			if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || !saleOrderProduct.IsSendKitchen() || saleOrderProduct.IsPackageSubProduct() {
+				continue
+			}
+			ProductBoms[saleOrderProduct.GetFlavorBomUuid()] = decimal.NewFromFloat(ProductBoms[saleOrderProduct.GetFlavorBomUuid()]).Add(decimal.NewFromFloat(saleOrderProduct.Num)).InexactFloat64()           // 增加实际销量
+			ProducttPackages[saleOrderProduct.ProductPackageUuid] = decimal.NewFromFloat(ProducttPackages[saleOrderProduct.ProductPackageUuid]).Add(decimal.NewFromFloat(saleOrderProduct.Num)).InexactFloat64() // 增加实际销量
+		}
+	}
+	return ProductBoms, ProducttPackages
 }
 
 // 处理积分变动
