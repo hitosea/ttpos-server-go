@@ -80,6 +80,10 @@ up:
 	@echo "🔍 启动HTTP调试代理..."
 	@make start-http-debug-proxy
 
+# up 中台模块
+up-bmp:
+	@cd ttpos-bmp && make up
+
 # docker-compose ps
 ps:
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh ps

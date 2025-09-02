@@ -52,6 +52,7 @@ func (s *orderSrv) convertToEventOrderProduct(saleOrderProduct *model.SaleOrderP
 		ProductId:             saleOrderProduct.ProductPackageUuid,
 		ProductName:           saleOrderProduct.MultiLanguageName.GetNames(),
 		ProductAttr:           saleOrderProduct.GetAttributeName(),
+		ProductType:           saleOrderProduct.ProductType,
 		ProductAttrList:       saleOrderProduct.GetAttributeNameList(),
 		ProductSauceNamesList: saleOrderProduct.GetSauceNamesList(),
 		TotalNum:              saleOrderProduct.Num,

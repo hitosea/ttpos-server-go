@@ -27727,9 +27727,9 @@ const docTemplate = `{
         "product_resp.ProductShopCategoryDetailResp": {
             "type": "object",
             "properties": {
-                "can_delete": {
-                    "description": "是否可以删除 false-否 true-是",
-                    "type": "boolean"
+                "child_count": {
+                    "description": "子级数量",
+                    "type": "integer"
                 },
                 "locale_name": {
                     "description": "商品类别名称",
@@ -27745,6 +27745,10 @@ const docTemplate = `{
                 },
                 "parent_uuid": {
                     "description": "父级类别UUID",
+                    "type": "integer"
+                },
+                "product_count": {
+                    "description": "商品数量",
                     "type": "integer"
                 },
                 "sort": {
