@@ -3,8 +3,6 @@ package model
 // ProductPackageGroupItem 商品套餐组商品模型 `ttpos_product_package_group_item`
 type ProductPackageGroupItem struct {
 	BaseModel
-	Id                      uint64  `json:"id" gorm:"primaryKey;autoIncrement;comment:自增ID"`
-	Uuid                    uint64  `json:"uuid" gorm:"uniqueIndex:unique_uuid;not null;default:0;comment:商品套餐组商品ID"`
 	ProductPackageGroupUuid uint64  `json:"product_package_group_uuid" gorm:"index:idx_product_package_group_uuid;not null;default:0;comment:商品套餐组ID"`
 	RelatedUuid             uint64  `json:"related_uuid" gorm:"index:idx_related_uuid;not null;default:0;comment:关联商品UUID, product_package_uuid"`
 	ProductBomUuid          uint64  `json:"product_bom_uuid" gorm:"index:idx_product_bom_uuid;not null;default:0;comment:商品BOM UUID,商品规格uuid"`
