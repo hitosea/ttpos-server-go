@@ -15,4 +15,5 @@ const (
 	DocTypePosOpeningEntry = "POS Opening Entry"
 	DocTypePosClosingEntry = "POS Closing Entry"
 	DocTypeModeOfPayment   = "Mode of Payment"
+	DocTypeBranch          = "Branch"
 )

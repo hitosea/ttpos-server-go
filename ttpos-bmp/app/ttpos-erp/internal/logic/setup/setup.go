@@ -44,7 +44,17 @@ func (s *sSetup) CreateBranch(ctx context.Context, req *setup.InitShopReq) (bran
 	if err := s.validateCreateBranchReq(req); err != nil {
 		return "", err
 	}
-
+	count, err := service.Doctype().Count(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeBranch,
+		Name:    req.ShopName,
+	}, nil)
+	if err != nil {
+		g.Log().Error(ctx, "查询分支失败", err)
+		return "", gerror.Wrap(err, "查询分支失败")
+	}
+	if count > 0 {
+		return "", gerror.New("店铺已初始化，不能重复初始化")
+	}
 	// 获取公司信息
 	company, err := service.Company().GetCompanyWithAbbr(ctx, req.CompanyAbbr)
 	if err != nil {
@@ -58,7 +68,7 @@ func (s *sSetup) CreateBranch(ctx context.Context, req *setup.InitShopReq) (bran
 		"custom_company": company.CompanyName,
 	}
 
-	if _, err := service.Document().Create(ctx, "Branch", branchPayload); err != nil {
+	if _, err := service.Document().Create(ctx, erp.DocTypeBranch, branchPayload); err != nil {
 		g.Log().Error(ctx, "创建分支失败", err)
 		return "", gerror.Wrapf(err, "创建分支失败")
 	}
@@ -170,10 +180,18 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *se
 		adminEmail = fmt.Sprintf("%s@ttpos-user.com", req.AdminUuid)
 	)
 
+	cashierCount, err := dao.ShopCashier.Ctx(ctx).Count(dao.ShopCashier.Columns().ShopUuid, req.ShopUuid)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询门店收银账户失败")
+	}
+	if cashierCount > 0 {
+		return nil, gerror.New("店铺已初始化，不能重复初始化")
+	}
+
 	// 创建分支
 	branchName, err = s.CreateBranch(ctx, req)
 	if err != nil {
-		return nil, gerror.Wrapf(err, "创建分店失败")
+		return nil, gerror.Wrapf(err, "创建店铺失败")
 	}
 
 	// 创建默认用户
