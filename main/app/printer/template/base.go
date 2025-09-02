@@ -523,13 +523,13 @@ func (p *printerTemplate) MergeSaleOrderProduct(options MergeSaleOrderProductOpt
 		productTotalPrice := utils.IfFloat64(item.IsBuffetProduct(), item.GetTotalSaucePrice(), item.GetSalePrice()) // 商品原价
 		// 赠品
 		var gift string
-		if item.IsGiftProduct() {
+		if item.IsGiftProduct() && !item.IsPackageSubProduct() {
 			gift = "(" + p.Translate("赠") + ") "
 			productTotalPrice = 0
 		}
 		// 打包商品
 		var wrap string
-		if options.IsShowWrap {
+		if options.IsShowWrap && !item.IsPackageSubProduct() {
 			if item.IsWrapProduct() || (saleBill.IsTakeout() && saleBill.MemberSaleOrderUuid == 0) {
 				wrap = "(" + p.Translate("打包") + ") "
 			}

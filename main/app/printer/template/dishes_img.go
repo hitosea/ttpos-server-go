@@ -162,6 +162,17 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 
 		// 商品和数量
 		for _, product := range products {
+
+			// 打包商品
+			wrapText := ""
+			if product.IsWrap {
+				wrapText = "(" + t.base.Translate("打包") + ") "
+			}
+			// 套餐
+			packageText := ""
+			if product.ProductType > constant.ProductTypeProduct {
+				packageText = t.base.Translate("套餐") + "-"
+			}
 			// 处理自助餐文本
 			buffetText := ""
 			if buffetSignOpen == "1" {
@@ -169,13 +180,9 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 					buffetText = t.base.Translate("自助餐") + "-"
 				}
 			}
-			// 打包商品
-			wrapText := ""
-			if product.IsWrap {
-				wrapText = "(" + t.base.Translate("打包") + ") "
-			}
+
 			// 产品名称
-			productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
+			productName := wrapText + packageText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 
 			// 定义产品导出函数
 			exportation := func(num float64) {
@@ -275,6 +282,16 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 
 		// 商品和数量
 		for _, product := range products {
+			// 打包商品
+			wrapText := ""
+			if product.IsWrap {
+				wrapText = "(" + t.base.Translate("打包") + ") "
+			}
+			// 套餐
+			packageText := ""
+			if product.ProductType > constant.ProductTypeProduct {
+				packageText = t.base.Translate("套餐") + "-"
+			}
 			// 处理自助餐文本
 			buffetText := ""
 			if buffetSignOpen == "1" {
@@ -282,13 +299,9 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 					buffetText = t.base.Translate("自助餐") + "-"
 				}
 			}
-			// 打包商品
-			wrapText := ""
-			if product.IsWrap {
-				wrapText = "(" + t.base.Translate("打包") + ") "
-			}
+
 			// 产品名称
-			productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
+			productName := wrapText + packageText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 
 			// 定义产品导出函数
 			exportation := func(num float64) {
@@ -621,6 +634,17 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 
 	// 商品和数量
 	for _, product := range products {
+
+		// 打包商品
+		wrapText := ""
+		if product.IsWrap {
+			wrapText = "(" + t.base.Translate("打包") + ") "
+		}
+		// 套餐
+		packageText := ""
+		if product.ProductType > constant.ProductTypeProduct {
+			packageText = t.base.Translate("套餐") + "-"
+		}
 		// 处理自助餐文本
 		buffetText := ""
 		if buffetSignOpen == "1" {
@@ -629,20 +653,8 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 			}
 		}
 
-		// 打包商品
-		wrapText := ""
-		if product.IsWrap {
-			wrapText = "(" + t.base.Translate("打包") + ") "
-		}
-
-		// 套餐
-		packageText := ""
-		if product.ProductType > constant.ProductTypeProduct {
-			packageText = t.base.Translate("套餐") + "-"
-		}
-
 		// 产品名称
-		productName := packageText + wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
+		productName := wrapText + packageText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 		// 套餐-
 		img.SetTextLineHeight(utils.IfInt(t.base.Lang == "my", 90, 64))
 		img.LineFeed(1, 12)
