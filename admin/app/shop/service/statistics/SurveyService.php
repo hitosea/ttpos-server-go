@@ -25,12 +25,28 @@ class SurveyService
 
         // 所有区域数据
         $allRegionData = [];
+        $paymentType = [];
         $list = $list['data'];
         foreach ($list as $date => $data) {
             foreach ($data['area_list'] as $region) {
                 $allRegionData[$region['area_id']] = $region;
             }
+            foreach ($data['payment_list'] as $payment) {
+                $paymentType[$payment['payment_code']] = $payment;
+            }
         }
+
+        // 支付方式排序，先按Sort升序排序，再按CreateTime降序排序， ID降序排序
+        $paymentType = array_values($paymentType);
+        usort($paymentType, function ($a, $b) {
+            if ($a['sort'] == $b['sort']) {
+                if ($a['create_time'] == $b['create_time']) {
+                    return $a['id'] <=> $b['id'];
+                }
+                return $b['create_time'] <=> $a['create_time'];
+            }
+            return $a['sort'] <=> $b['sort'];
+        });
 
         //
         $spreadsheet = new Spreadsheet();
@@ -110,7 +126,6 @@ class SurveyService
         }
         $sheet->setCellValue('A' . ($index = $payRow = $index + 1), __('支付数据'));
         // 纵向的支付数据
-        $paymentType = array_values($list)[0]['payment_list'];
         foreach ($paymentType as $value) {
             $sheet->setCellValue('A' . ($index + 1), $value['payment_name']);
             $index++;
@@ -194,10 +209,17 @@ class SurveyService
             }
             // 支付数据
             $payColumnIndex = $index + 1;
-            foreach ($data['payment_list'] as $value) {
-                $sheet->setCellValue($columnLetter . ($payColumnIndex + 1), $value['total_payment_amount']);
+            foreach ($paymentType as $value) {
+                $totalPaymentAmount = 0;
+                foreach ($data['payment_list'] as $payment) {
+                    if ($value['payment_code'] == $payment['payment_code']) {
+                        $totalPaymentAmount = $payment['total_payment_amount'];
+                    }
+                }
+                $sheet->setCellValue($columnLetter . ($payColumnIndex + 1), $totalPaymentAmount);
                 $payColumnIndex++;
             }
+            
             $columnIndex++;
         }
 

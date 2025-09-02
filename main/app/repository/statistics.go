@@ -461,7 +461,7 @@ func (r *StatisticsRepo) CountAreaDays(opts ...DBOption) []model.StatisticsAreaD
 	deskTable := prefix + "desk as d"
 	deskRegionTable := prefix + "desk_region as dr"
 	db.Table(statisticsSaleTable).
-		Select(countAreaSelect, "FROM_UNIXTIME(ss.complete_time, '%Y-%m-%d') AS day").
+		Select(countAreaSelect, "dr.uuid AS area_id", "FROM_UNIXTIME(ss.complete_time, '%Y-%m-%d') AS day").
 		Joins("LEFT JOIN " + deskTable + " ON ss.desk_uuid = d.uuid").
 		Joins("LEFT JOIN " + deskRegionTable + " ON d.region_uuid = dr.uuid").
 		Where("ss.desk_uuid > 0").

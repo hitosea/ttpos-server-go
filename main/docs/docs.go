@@ -24931,6 +24931,14 @@ const docTemplate = `{
         "business_data_resp.BusinessDataExportPayment": {
             "type": "object",
             "properties": {
+                "create_time": {
+                    "description": "支付方式创建时间",
+                    "type": "integer"
+                },
+                "id": {
+                    "description": "支付方式ID",
+                    "type": "integer"
+                },
                 "payment_code": {
                     "description": "支付编码",
                     "type": "integer"
@@ -24938,6 +24946,10 @@ const docTemplate = `{
                 "payment_name": {
                     "description": "支付名称",
                     "type": "string"
+                },
+                "sort": {
+                    "description": "支付方式排序",
+                    "type": "integer"
                 },
                 "total_order_num": {
                     "description": "总订单数",

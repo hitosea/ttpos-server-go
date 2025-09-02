@@ -209,7 +209,7 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 			}
 			var item resp.ProductionItem
 			copier.Copy(&item, product)
-			if product.SaleOrderProduct.IsPackageSubProduct() {
+			if product.SaleOrderProduct.IsPackageSubProduct() && item.Remark != "" {
 				item.Remark = i18n.Translate(language, "套餐备注：") + item.Remark
 			}
 			item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
@@ -318,7 +318,7 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 			if err != nil {
 				logger.Logger.Error("copier error", zap.Error(err))
 			}
-			if product.SaleOrderProduct.IsPackageSubProduct() {
+			if product.SaleOrderProduct.IsPackageSubProduct() && item.Remark != "" {
 				item.Remark = i18n.Translate(language, "套餐备注：") + item.Remark
 			}
 			item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
