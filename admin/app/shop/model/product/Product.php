@@ -76,7 +76,7 @@ class Product extends ProductModel
                 if (!isset($firstError[$errorMsg2])) {
                     $firstError[$errorMsg2] = [];
                 }
-                if ($info['barcode'] && !preg_match('/^[0-9]{12,13}$/', $info['barcode'])) {
+                if ($info['barcode'] && !preg_match('/^[0-9]{1,13}$/', $info['barcode'])) {
                     $barcodeError2 = false;
                 }
                 $firstError[$errorMsg2][] = $barcodeError2;
@@ -425,7 +425,7 @@ class Product extends ProductModel
                 if (!isset($firstError[$errorMsg2])) {
                     $firstError[$errorMsg2] = [];
                 }
-                if ($info['barcode'] && !preg_match('/^[0-9]{12,13}$/', $info['barcode'])) {
+                if ($info['barcode'] && !preg_match('/^[0-9]{1,13}$/', $info['barcode'])) {
                     $barcodeError2 = false;
                 }
                 $firstError[$errorMsg2][] = $barcodeError2;
