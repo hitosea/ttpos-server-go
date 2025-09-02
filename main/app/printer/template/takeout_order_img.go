@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
 )
@@ -234,6 +235,8 @@ func (t *takeoutOrderImgTemplate) GetPrintContent(
 	}
 	//
 	img.LineFeed(4)
-
+	//
+	img.SetSegmentationHeight(utils.IfInt(settingPrinterInfo.IsCashierPrinter, 2200, 200))
+	//
 	return img.Save("", !t.base.IsSunMi, 0)
 }

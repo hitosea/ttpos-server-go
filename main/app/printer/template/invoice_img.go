@@ -10,6 +10,7 @@ import (
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/app/printer/pkg/images"
 	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/utils"
 )
 
 // invoiceImgTemplate 图片订单打印模板
@@ -296,6 +297,8 @@ func (t *invoiceImgTemplate) GetPrintContent(
 	}
 	//
 	img.LineFeed(4)
-
+	//
+	img.SetSegmentationHeight(utils.IfInt(settingPrinterInfo.IsCashierPrinter, 2200, 200))
+	//
 	return img.Save("", !t.base.IsSunMi, 0)
 }

@@ -178,7 +178,7 @@ func (t *dishesImgTemplate) CompleteOrder(
 	//
 	img.LineFeed(3, 110)
 	//
-	return img.Save("", !t.base.IsSunMi, 0)
+	return img.SetSegmentationHeight(200).Save("", !t.base.IsSunMi, 0)
 }
 
 // OneDishOneOrder 一菜一单模版
@@ -434,7 +434,7 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 	img.SetTextLineHeight(30)
 	img.LineFeed(4)
 	//
-	return img.Save("", !t.base.IsSunMi, 0)
+	return img.SetSegmentationHeight(200).Save("", !t.base.IsSunMi, 0)
 }
 
 // ReturnMenuTemplate 退菜单模版
@@ -613,7 +613,7 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 	// 换行
 	img.LineFeed(3)
 	//
-	return img.Save("", !t.base.IsSunMi, 0)
+	return img.SetSegmentationHeight(200).Save("", !t.base.IsSunMi, 0)
 }
 
 // OutMenuTemplate 出菜单模版
@@ -761,5 +761,5 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 	// 换行
 	img.LineFeed(3)
 	//
-	return img.Save("", !t.base.IsSunMi, 0)
+	return img.SetSegmentationHeight(200).Save("", !t.base.IsSunMi, 0)
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp/business_data_resp"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/pkg/utils"
@@ -29,6 +30,7 @@ func NewHandoverImgTemplate(
 
 // GetPrintContent 图片打印
 func (t *handoverImgTemplate) GetPrintContent(
+	settingPrinterInfo settingResp.PrinterInfo,
 	temp int,
 	log *model.StaffShiftLog,
 	businessData *business_data_resp.BusinessDataAll,
@@ -653,5 +655,8 @@ func (t *handoverImgTemplate) GetPrintContent(
 	if openMoneybox {
 		openMoneyboxInt = utils.IfInt(t.base.IsSunMi, 2, 1)
 	}
+	//
+	img.SetSegmentationHeight(utils.IfInt(settingPrinterInfo.IsCashierPrinter, 2200, 200))
+	//
 	return img.Save("", !t.base.IsSunMi, openMoneyboxInt)
 }

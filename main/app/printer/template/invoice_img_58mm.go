@@ -10,6 +10,7 @@ import (
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/app/printer/pkg/images"
 	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/utils"
 )
 
 // invoiceImg58mmTemplate 图片订单打印模板 - 58mm适配版
@@ -300,6 +301,8 @@ func (t *invoiceImg58mmTemplate) GetPrintContent58mm(
 	}
 	//
 	img.LineFeed(4)
-
+	//
+	img.SetSegmentationHeight(utils.IfInt(settingPrinterInfo.IsCashierPrinter, 2200, 200))
+	//
 	return img.Save("", !t.base.IsSunMi, 0)
 }
