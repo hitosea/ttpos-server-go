@@ -14,6 +14,6 @@ const (
 	DocTypePosInvoice      = "POS Invoice"
 	DocTypePosOpeningEntry = "POS Opening Entry"
 	DocTypePosClosingEntry = "POS Closing Entry"
-	DocTypeModeOfPayment   = "Mode of Payment"
+	DocTypeModeOfPayment   = "Mode Of Payment"
 	DocTypeBranch          = "Branch"
 )
