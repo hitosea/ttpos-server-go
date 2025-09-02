@@ -16,6 +16,8 @@ type IProductBomRepo interface {
 	CreateProductBoms(productBoms []model.ProductBom) error                             // 创建ProductBom
 	UpdateProductBomCard(productBomUuid uint64, productBomCardUuid uint64) error        // 更新规格商品的成本卡
 	GetProductBomCardByUuid(productBomUuid uint64) (*model.ProductBomCard, error)       // 获取成本卡
+	AddActualSaleNum(productBomUuid uint64, saleNum float64) error                      // 增加实际销量
+	SubActualSaleNum(productBomUuid uint64, saleNum float64) error                      // 减少实际销量
 }
 
 // IProductBomQueryRepo 定义仓库查询接口
@@ -248,4 +250,18 @@ func (r *productBomRepoImpl) GetProductBomCardByUuid(productBomUuid uint64) (*mo
 		return nil, errors.WithMessage(err)
 	}
 	return productBom.ProductBomCard, nil
+}
+
+func (r *productBomRepoImpl) AddActualSaleNum(productBomUuid uint64, saleNum float64) error {
+	if err := r.db.Model(&model.ProductBom{}).Where("uuid = ?", productBomUuid).Update("actual_sale_num", gorm.Expr("actual_sale_num + ?", saleNum)).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+func (r *productBomRepoImpl) SubActualSaleNum(productBomUuid uint64, saleNum float64) error {
+	if err := r.db.Model(&model.ProductBom{}).Where("uuid = ?", productBomUuid).Update("actual_sale_num", gorm.Expr("actual_sale_num - ?", saleNum)).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
 }

@@ -18,6 +18,7 @@ server:
 logger:
   level : "all"
   stdout: true
+  path: "./log/takeout"
 
 # https://goframe.org/docs/core/gdb-config-file
 database:

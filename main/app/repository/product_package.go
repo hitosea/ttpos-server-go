@@ -11,6 +11,8 @@ type IProductPackageRepo interface {
 	IProductPackageQueryRepo
 	CreateProductPackage(productPackage *model.ProductPackage) error
 	UpdateProductPackage(data map[string]any, opts ...DBOption) error
+	AddActualSaleNum(productPackageUuid uint64, saleNum float64) error
+	SubActualSaleNum(productPackageUuid uint64, saleNum float64) error
 }
 
 type IProductPackageQueryRepo interface {
@@ -163,6 +165,20 @@ func (r *productPackageRepoImpl) UpdateProductPackage(data map[string]any, opts 
 	}
 	err := db.Model(&model.ProductPackage{}).Updates(data).Error
 	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+func (r *productPackageRepoImpl) AddActualSaleNum(productPackageUuid uint64, saleNum float64) error {
+	if err := r.db.Model(&model.ProductPackage{}).Where("uuid = ?", productPackageUuid).Update("actual_sale_num", gorm.Expr("actual_sale_num + ?", saleNum)).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+func (r *productPackageRepoImpl) SubActualSaleNum(productPackageUuid uint64, saleNum float64) error {
+	if err := r.db.Model(&model.ProductPackage{}).Where("uuid = ?", productPackageUuid).Update("actual_sale_num", gorm.Expr("actual_sale_num - ?", saleNum)).Error; err != nil {
 		return errors.WithMessage(err)
 	}
 	return nil

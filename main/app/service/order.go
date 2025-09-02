@@ -3464,6 +3464,21 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 			}
 		}
 
+		// 更新销量. 如果是反结账，则减少销量
+		if opt.IsReverseSettle {
+			ProductBoms, ProducttPackages := GetSalesVolume(saleBill)
+			for productBomUuid, saleNum := range ProductBoms {
+				if err := repository.NewProductBomRepo(db).SubActualSaleNum(productBomUuid, saleNum); err != nil {
+					return errors.WithMessage(err)
+				}
+			}
+			for productPackageUuid, saleNum := range ProducttPackages {
+				if err := repository.NewProductPackageRepo(db).SubActualSaleNum(productPackageUuid, saleNum); err != nil {
+					return errors.WithMessage(err)
+				}
+			}
+		}
+
 		// 如果出库单明细不为空，则创建出库单
 		for _, warehouseOutForm := range warehouseOutForms {
 			if warehouseOutForm != nil && len(warehouseOutForm.WarehouseOutFormItems) > 0 {
@@ -3497,6 +3512,23 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 	}()
 
 	return nil
+}
+
+// 获取销量
+func GetSalesVolume(saleBill *model.SaleBill) (map[uint64]float64, map[uint64]float64) {
+	ProductBoms := make(map[uint64]float64)      // 规格商品销量 map[规格商品UUID]销量
+	ProducttPackages := make(map[uint64]float64) // 套餐商品销量 map[套餐商品UUID]销量
+	for _, saleOrder := range saleBill.SaleOrders {
+		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+			// 删除商品、取消商品、未送厨商品、套餐子商品不增加销量
+			if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || !saleOrderProduct.IsSendKitchen() || saleOrderProduct.IsPackageSubProduct() {
+				continue
+			}
+			ProductBoms[saleOrderProduct.GetFlavorBomUuid()] = decimal.NewFromFloat(ProductBoms[saleOrderProduct.GetFlavorBomUuid()]).Add(decimal.NewFromFloat(saleOrderProduct.Num)).InexactFloat64()           // 增加实际销量
+			ProducttPackages[saleOrderProduct.ProductPackageUuid] = decimal.NewFromFloat(ProducttPackages[saleOrderProduct.ProductPackageUuid]).Add(decimal.NewFromFloat(saleOrderProduct.Num)).InexactFloat64() // 增加实际销量
+		}
+	}
+	return ProductBoms, ProducttPackages
 }
 
 // HideOrder 隐藏订单（挂单）

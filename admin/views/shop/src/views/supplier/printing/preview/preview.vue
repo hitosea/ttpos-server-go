@@ -134,6 +134,9 @@
           <p class="mb-8">
             <span class="span4">{{ $t('这是备注这是备注这是备注') }}</span>
           </p>
+          <p>
+            <span class="span3">{{ $t('（打包）') }}{{ $t('套餐') }}-{{ $t('套餐名称套餐名称') }}</span> <span class="span3">X1</span>
+          </p>
           <h2 class="border-top">2024/05/04 14:15:12</h2>
         </template>
       </div>
