@@ -688,6 +688,8 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	}
 	//
 	img.LineFeed(4)
-
+	//
+	img.SetSegmentationHeight(utils.IfInt(settingPrinterInfo.IsCashierPrinter, 2200, 200))
+	//
 	return img.Save("", !t.base.IsSunMi, 0)
 }

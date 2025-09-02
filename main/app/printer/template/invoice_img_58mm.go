@@ -304,6 +304,8 @@ func (t *invoiceImg58mmTemplate) GetPrintContent58mm(
 	}
 	//
 	img.LineFeed(4)
-
+	//
+	img.SetSegmentationHeight(utils.IfInt(settingPrinterInfo.IsCashierPrinter, 2200, 200))
+	//
 	return img.Save("", !t.base.IsSunMi, 0)
 }
