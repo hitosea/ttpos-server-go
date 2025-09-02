@@ -42,9 +42,8 @@
                 items.textCenter ? 'text-center' : '',
                 items.font16Bold ? 'font16Bold' : '',
               ]"
-              
             >
-              {{ items.name }}{{  is_show_sku == 1 && items.addLabel ? items.addLabel : '' }}
+              {{ items.name }}{{ is_show_sku == 1 && items.addLabel ? items.addLabel : '' }}
             </div>
             <!-- 右边的字段 -->
             <div v-if="items.label" class="text-box text-box-r" :class="[items.flexWidthRight ? 'flexWidthRight' : '', items.num ? 'flex-end' : '']">
@@ -112,6 +111,9 @@
           <p class="mb-8">
             <span class="span4">{{ $t('这是备注这是备注这是备注') }}</span>
           </p>
+          <p>
+            <span class="span3">{{ $t('（打包）') }}{{ $t('套餐') }}-{{ $t('套餐名称套餐名称') }}</span> <span class="span3">X1</span>
+          </p>
         </template>
         <template v-if="mode == 2">
           <h3>
@@ -134,7 +136,6 @@
           </p>
           <h2 class="border-top">2024/05/04 14:15:12</h2>
         </template>
-
       </div>
     </template>
 
@@ -146,7 +147,7 @@
         <div @click="modeChange(2)" class="tabs-button" :class="mode == 2 ? 'tabs-active' : ''">
           {{ $t('模板2') }}
         </div>
-        <div @click="modeChange(3)" v-if=" title != $t('退菜单')" class="tabs-button" :class="mode == 3 ? 'tabs-active' : ''">
+        <div @click="modeChange(3)" v-if="title != $t('退菜单')" class="tabs-button" :class="mode == 3 ? 'tabs-active' : ''">
           {{ $t('模板3') }}
         </div>
         <div @click="modeChange(4)" v-if="title == $t('结账单') || title == $t('预结账单')" class="tabs-button" :class="mode == 4 ? 'tabs-active' : ''">
@@ -282,7 +283,13 @@
           :key="index"
           v-show="(item[0]?.allHide && item[0].allHide.includes(mode)) || !item[0]?.allHide"
         >
-          <div class="box-text-box" :class="items.showSkuAttr && is_show_sku == 0 ? 'show-sku-attr' : ''" v-for="(items, indexs) in item" :key="indexs" v-show="(items.typeShow && items.typeShow.includes(mode)) || !items.typeShow">
+          <div
+            class="box-text-box"
+            :class="items.showSkuAttr && is_show_sku == 0 ? 'show-sku-attr' : ''"
+            v-for="(items, indexs) in item"
+            :key="indexs"
+            v-show="(items.typeShow && items.typeShow.includes(mode)) || !items.typeShow"
+          >
             <!-- 左边的字段 -->
             <div
               class="text-box"
@@ -357,7 +364,10 @@
         <div class="code-box" v-if="title == $t('结账单') && mode == 5" :class="title == $t('结账单') && mode == 5 ? 'border-top-12' : ''">
           <img src="@/assets/barcode.png" alt="" class="barcode" />
         </div>
-        <div class="brand-box" :class="title == $t('预结账单') || title == $t('结账单') && mode == 5 ? 'border-top' : ''" v-if="title == $t('结账单') || title == $t('预结账单') || title == $t('外送单')"
+        <div
+          class="brand-box"
+          :class="title == $t('预结账单') || (title == $t('结账单') && mode == 5) ? 'border-top' : ''"
+          v-if="title == $t('结账单') || title == $t('预结账单') || title == $t('外送单')"
           >{{ $t('感谢您的光临！本店由') }}{{ brand }}{{ $t('系统提供支持') }}</div
         >
         <template v-if="title == $t('退菜单') && mode == 2">
@@ -469,7 +479,7 @@
           this.details = previewData.eight;
         }
         this.dialogWidth = 1;
-        this.titleName = $t('发票 ');
+        this.titleName = $t('发票');
       }
       if (this.title == $t('充值单')) {
         this.details = previewData.ten;
@@ -497,7 +507,7 @@
       }
     },
     methods: {
-      onSubmit() {  
+      onSubmit() {
         if (((this.title == $t('结账单') && this.mode == '3') || (this.title == $t('发票') && this.mode == '2') || this.title == $t('预结账单')) && this.print_method == 1) {
           ElMessageBox.confirm($t('请前去打印设置调整打印方式为“图片打印”，否则图片将无法正常打印，如已设置，请忽略此步骤'), $t('提示'), {
             confirmButtonText: $t('确定'),
@@ -542,7 +552,6 @@
       handleClose() {
         this.$emit('close');
       },
-
 
       modeChange(e) {
         this.mode = e;

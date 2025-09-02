@@ -1113,13 +1113,13 @@ func (h *ProductHandler) ProductShopEdit(c *gin.Context) {
 		helper.HandleValidationError(c, err, editReq, nil)
 		return
 	}
-	data, err := h.productSrv.EditProductShop(ctx, editReq)
+	data, replace, err := h.productSrv.EditProductShop(ctx, editReq)
 	if err != nil {
 		if data != nil {
 			appErr := errors.AppError{
 				Code:    constant.CodeProductEditCanNotDeletePackage,
 				Message: err.Error(),
-				Replace: data.List,
+				Replace: replace,
 			}
 			helper.ErrorWithData(c, constant.CodeFail, data, appErr)
 		} else {

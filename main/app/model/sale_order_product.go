@@ -125,6 +125,11 @@ type SaleOrderProduct struct {
 	unOrderH5Product bool   `gorm:"-"` // 是否为未下单的h5订单商品。 特别标记该商品为正在下单的h5订单商品
 }
 
+// IsCookingDeductStock 判断商品是否是下单减库存
+func (model *SaleOrderProduct) IsCookingDeductStock() bool {
+	return model.DeductStockType == constant.ProductPackageDeductStockTypeCooking
+}
+
 // 获取商品的原材料
 func (model *SaleOrderProduct) GetErpProductBomMaterials() []*ErpProductBomMaterials {
 	materials := make([]*ErpProductBomMaterials, 0)

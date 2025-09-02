@@ -5801,7 +5801,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			}
 			// 如果该商品是套餐，则新建套餐子商品
 			if saleOrderProduct.ProductType == constant.ProductTypePackage {
-				subProducts, err := s.newPackageSubProducts(ctx, product.GetSubProducts(), innerParams, params, saleOrderProduct.Uuid)
+				subProducts, err := s.newPackageSubProducts(ctx, product.GetSubProducts(), innerParams, params, saleOrderProduct.Uuid, saleOrderProduct.DeductStockType)
 				if err != nil {
 					return nil, errors.WithMessage(err)
 				}
@@ -5876,7 +5876,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				saleOrderProducts = append(saleOrderProducts, saleOrderProduct)
 				// 如果该商品是套餐，则新建套餐子商品
 				if saleOrderProduct.ProductType == constant.ProductTypePackage {
-					subProducts, err := s.newPackageSubProducts(ctx, product.GetSubProducts(), innerParams, params, saleOrderProduct.Uuid)
+					subProducts, err := s.newPackageSubProducts(ctx, product.GetSubProducts(), innerParams, params, saleOrderProduct.Uuid, saleOrderProduct.DeductStockType)
 					if err != nil {
 						return nil, errors.WithMessage(err)
 					}
@@ -5945,10 +5945,11 @@ func sortProductAttributes(ctx context.Context, productAttributes map[uint64]*mo
 }
 
 // 新建套餐子商品
-func (s *orderSrv) newPackageSubProducts(ctx context.Context, subProducts []req.ProductParams, innerParams InnerParams, params CreateSaleOrderProductParams, packageUuid uint64) ([]*model.SaleOrderProduct, error) {
+func (s *orderSrv) newPackageSubProducts(ctx context.Context, subProducts []req.ProductParams, innerParams InnerParams,
+	params CreateSaleOrderProductParams, packageUuid uint64, deductStockType uint) ([]*model.SaleOrderProduct, error) {
 	subSaleOrderProducts := make([]*model.SaleOrderProduct, 0)
 	for _, subProduct := range subProducts {
-		subSaleOrderProduct, err := s.newSaleOrderProductForPackageSubProduct(ctx, subProduct, innerParams, params, packageUuid)
+		subSaleOrderProduct, err := s.newSaleOrderProductForPackageSubProduct(ctx, subProduct, innerParams, params, packageUuid, deductStockType)
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
@@ -5957,7 +5958,7 @@ func (s *orderSrv) newPackageSubProducts(ctx context.Context, subProducts []req.
 	return subSaleOrderProducts, nil
 }
 
-func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, product req.ProductParams, innerParams InnerParams, params CreateSaleOrderProductParams, packageUuid uint64) (*model.SaleOrderProduct, error) {
+func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, product req.ProductParams, innerParams InnerParams, params CreateSaleOrderProductParams, packageUuid uint64, deductStockType uint) (*model.SaleOrderProduct, error) {
 	db := ctx.GetDB()
 	// 获取商品包信息
 	productBom, err := repository.NewProductPackageRepo(db).GetProductPackageBaseInfoByBomUuid(product.FlavorProductBomUuid)
@@ -6077,7 +6078,7 @@ func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, 
 		Name:                   productPackage.Name,
 		OpenMemberDiscount:     productPackage.OpenDiscount,
 		TaxRate:                productPackage.TaxRate(innerParams.DiningMethod),
-		DeductStockType:        productPackage.DeductStockType,
+		DeductStockType:        deductStockType,
 		MultiLanguageNameUuid:  productPackage.MultiLanguageNameUuid,
 		ImageFileUuid:          productPackage.ImageFileUuid,
 		ProductPackageUuid:     productPackage.Uuid,
@@ -7139,7 +7140,7 @@ func (s *orderSrv) getOrderProductForDecreaseStock(ctx context.Context, unCookin
 	products := make([]*model.SaleOrderProduct, 0)
 	for _, unCookingSaleOrderProduct := range unCookingSaleOrderProducts {
 
-		if unCookingSaleOrderProduct.ProductPackage.IsCookingDeductStock() {
+		if unCookingSaleOrderProduct.IsCookingDeductStock() {
 			products = append(products, unCookingSaleOrderProduct)
 		}
 	}

@@ -114,7 +114,7 @@
     </el-form-item> -->
 
     <el-form-item v-if="form.model.is_open_stock" for="no_click" :prop="`model.package_stock`" :label="$t('套餐可售总量')" :rules="[{ required: true, message: $t('请输入库存') }]">
-      <numInput type="text" :placeholder="$t('请输入库存')" :precision="0" v-model="form.model.package_stock" :maxlength="50" class="max-w460"></numInput>
+      <numInput type="text" :placeholder="$t('请输入库存')" :precision="0" v-model="form.model.package_stock" :min="0" :max="99999999" class="max-w460"></numInput>
       <div class="gray9">{{ $t('库存为0时套餐自动售罄') }}</div>
     </el-form-item>
 

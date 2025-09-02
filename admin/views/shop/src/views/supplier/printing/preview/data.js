@@ -347,9 +347,25 @@ export const previewData = {
                 typeShow: '4',
             },
             {
-                name: $t('（打包）') + $t('商品名称商品名称'),
+                name: $t('（打包）') + $t('（赠）') + $t('套餐名称套餐名称'),
                 num: '55*2',
                 label: '￥50',
+            },
+
+            {
+                name: '-' + $t('套餐商品1'),
+                num: '',
+                label: '',
+            },
+            {
+                name: $t('少冰'),
+                num: '',
+                label: '',
+            },
+            {
+                name: '-' + $t('套餐商品2'),
+                num: '',
+                label: '',
             },
         ],
         [
@@ -614,9 +630,25 @@ export const previewData = {
                 typeShow: '4',
             },
             {
-                name: $t('（打包）') + $t('商品名称商品名称'),
+                name: $t('（打包）') + $t('（赠）') + $t('套餐名称套餐名称'),
                 num: '55*2',
                 label: '￥50',
+            },
+
+            {
+                name: '-' + $t('套餐商品1'),
+                num: '',
+                label: '',
+            },
+            {
+                name: $t('少冰'),
+                num: '',
+                label: '',
+            },
+            {
+                name: '-' + $t('套餐商品2'),
+                num: '',
+                label: '',
             },
         ],
         [
@@ -1029,7 +1061,7 @@ export const previewData = {
                 font16Normal: true,
             },
             {
-                name: `${$t('少冰')}` + '\n' + `${$t('加珍珠')}` ,
+                name: `${$t('少冰')}` + '\n' + `${$t('加珍珠')}`,
                 typeShow: '1',
                 flexWidth: true,
                 showSkuAttr: true,
@@ -1256,9 +1288,25 @@ export const previewData = {
             },
 
             {
-                name: $t('（打包）') + $t('商品名称商品名称'),
+                name: $t('（打包）') + $t('（赠）') + $t('套餐名称套餐名称'),
                 num: '55*2',
                 label: '￥50',
+            },
+
+            {
+                name: '-' + $t('套餐商品1'),
+                num: '',
+                label: '',
+            },
+            {
+                name: $t('少冰'),
+                num: '',
+                label: '',
+            },
+            {
+                name: '-' + $t('套餐商品2'),
+                num: '',
+                label: '',
             },
         ],
         [
@@ -2031,7 +2079,7 @@ export const previewData = {
                 flexWidth: true,
             },
             {
-                name: $t('（打包）') + $t('商品名称商品名称'),
+                name: $t('（打包）') + $t('套餐') + '-' + $t('商品名称商品名称'),
                 label: 'X2',
                 font22: true,
                 flexWidth: true,
