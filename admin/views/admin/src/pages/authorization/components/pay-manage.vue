@@ -173,8 +173,8 @@
       erpnext_payment: '', // 支付方式
       fee: undefined, // 手续费
       sort: 0, // 排序
-      checkout_show: ['cashier'], // 结账显示（复选框）
-      member_recharge_show: ['cashier'], // 会员充值（复选框）
+      checkout_show: [], // 结账显示（复选框）
+      member_recharge_show: [], // 会员充值（复选框）
       status: 1, // 状态
     };
     nameError.value = false;
@@ -213,7 +213,7 @@
     if (value == 'Balance') {
       formData.value.member_recharge_show = [];
     } else {
-      formData.value.member_recharge_show = ['cashier'];
+      formData.value.member_recharge_show = [];
     }
   };
 
