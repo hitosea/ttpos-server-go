@@ -2158,6 +2158,7 @@ export const previewData = {
 
             {
                 name: '-' + $t('套餐商品1'),
+                label: '-1',
                 font18Small: true,
                 flexWidth: true,
             },
@@ -2168,6 +2169,7 @@ export const previewData = {
             },
             {
                 name: '-' + $t('套餐商品2'),
+                label: '-1',
                 font18Small: true,
                 flexWidth: true,
             },
