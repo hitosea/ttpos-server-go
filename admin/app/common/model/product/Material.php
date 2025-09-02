@@ -255,7 +255,7 @@ class Material extends BaseModel
         }
         // 条码格式验证，12或13位数字
         $barcode = $data['sku'][0]['barcode'] ?? '';
-        if ($barcode && !preg_match('/^[0-9]{12,13}$/', $barcode)) {
+        if ($barcode && !preg_match('/^[0-9]{1,13}$/', $barcode)) {
             $this->error = '输入条形码不合规，请重新检查';
             return false;
         }
@@ -336,7 +336,7 @@ class Material extends BaseModel
         }
         // 条码格式验证，12或13位数字
         $barcode = $data['sku'][0]['barcode'] ?? '';
-        if ($barcode && !preg_match('/^[0-9]{12,13}$/', $barcode)) {
+        if ($barcode && !preg_match('/^[0-9]{1,13}$/', $barcode)) {
             $this->error = '输入条形码不合规，请重新检查';
             return false;
         }
