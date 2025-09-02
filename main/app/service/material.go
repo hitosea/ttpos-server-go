@@ -442,8 +442,12 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 		}
 	}
 
+	getEnName, err := GetEnName(ctx, request.LocaleName)
+	if err != nil {
+		return nil, nil, errors.WithMessage(err, "翻译失败")
+	}
 	materialAddErpReq := &req.MaterialAddErpReq{
-		ItemName:      request.LocaleName.GetLocale(string(dto.LocaleEN)),
+		ItemName:      getEnName,
 		StockUom:      productUnit.ErpnextUom,
 		ValuationRate: request.Valuation,
 		OpeningStock:  request.InitStock,

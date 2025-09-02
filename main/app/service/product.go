@@ -1538,6 +1538,10 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 }
 
 func (s *productSrv) getEnName(ctx context.Context, locale dto.LocaleResponse) (string, error) {
+	return GetEnName(ctx, locale)
+}
+
+func GetEnName(ctx context.Context, locale dto.LocaleResponse) (string, error) {
 	enName := locale.EN
 	if enName != "" {
 		return enName, nil
