@@ -2151,7 +2151,7 @@ export const previewData = {
             },
             {
                 name: `(${$t('退')})` + $t('套餐名称套餐名称'),
-                label: 'X2',
+                label: '-2',
                 font22: true,
                 flexWidth: true,
             },
