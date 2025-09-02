@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/dto/resp/business_data_resp"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/service"
@@ -59,7 +60,7 @@ func (p *PrinterRepoImpl) PrintingHandoverOrder(
 	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
 
 	// 获取打印内容
-	printContent := p.getPrintingHandoverOrderContent(settingPrinterInfo.PrinterType, log, businessData, openMoneybox)
+	printContent := p.getPrintingHandoverOrderContent(settingPrinterInfo, log, businessData, openMoneybox)
 	if printContent == "" {
 		return nil, errors.New("获取打印内容失败")
 	}
@@ -105,11 +106,12 @@ func (p *PrinterRepoImpl) PrintingHandoverOrder(
 
 // 构建订单打印的内容
 func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
-	printerType string, // 打印机类型
+	settingPrinterInfo settingResp.PrinterInfo,
 	log *model.StaffShiftLog,
 	businessData *business_data_resp.BusinessDataAll,
 	openMoneybox bool,
 ) string {
+	printerType := settingPrinterInfo.PrinterType
 	// 获取打印模板
 	tmp := p.GetPrinterTemplate(uint64(constant.PrinterTemplateHandoverSheet))
 
@@ -137,6 +139,7 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 	if p.IsImagePrinterMethod() {
 		if !p.Is58mmPrinter() {
 			return template.NewHandoverImgTemplate(base).GetPrintContent(
+				settingPrinterInfo,
 				tmp,
 				log,
 				businessData,
@@ -144,6 +147,7 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 			)
 		} else {
 			return template.NewHandoverImg58mmTemplate(base).GetPrintContent58mm(
+				settingPrinterInfo,
 				tmp,
 				log,
 				businessData,
