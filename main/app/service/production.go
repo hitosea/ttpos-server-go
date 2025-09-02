@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
@@ -95,7 +96,7 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 	}
 	return resp.ProductionListWithPagination{
 		SendKitchenNum: sendKitchenNum,
-		List:           s.groupByOrder(limitedProducts, products),
+		List:           s.groupByOrder(ctx, limitedProducts, products),
 		FinishedList:   finishedList,
 		Meta: dto.PageResponse{
 			PageNo:   req.PageNo,
@@ -153,6 +154,7 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 	if err != nil || len(productPackageUuids) == 0 {
 		return emptyRes, err
 	}
+	language := ctx.GetLanguage()
 	productionRepo := repository.NewProductionRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 	statusOpt := productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusCooking)
 	productPackageUuidOpt := productionRepo.WhereProductPackageUuidIn(productPackageUuids)
@@ -207,6 +209,9 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 			}
 			var item resp.ProductionItem
 			copier.Copy(&item, product)
+			if product.SaleOrderProduct.IsPackageSubProduct() {
+				item.Remark = i18n.Translate(language, "套餐备注：") + item.Remark
+			}
 			item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
 			item.ProductAttributeNames = product.SaleOrderProduct.GetAttributeName()
 			item.SerialNo = product.SaleBill.SerialNo
@@ -276,13 +281,14 @@ func (s *productionSrv) GetHistory(ctx context.Context) (resp.ProductionHistory,
 	}
 
 	return resp.ProductionHistory{
-		List: s.groupByOrder(limitProducts, products),
+		List: s.groupByOrder(ctx, limitProducts, products),
 	}, nil
 }
 
 // 根据销售账单分组
-func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduct, products []model.ProductionOrderProduct) []resp.ProductionGroup {
+func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.ProductionOrderProduct, products []model.ProductionOrderProduct) []resp.ProductionGroup {
 	groups := make([]resp.ProductionGroup, 0, len(limitProducts))
+	language := ctx.GetLanguage()
 	for _, paginatedProduct := range limitProducts {
 		var group resp.ProductionGroup
 		items := make([]resp.ProductionItem, 0) // 生产单商品列表
@@ -311,6 +317,9 @@ func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduc
 			err := copier.Copy(&item, product)
 			if err != nil {
 				logger.Logger.Error("copier error", zap.Error(err))
+			}
+			if product.SaleOrderProduct.IsPackageSubProduct() {
+				item.Remark = i18n.Translate(language, "套餐备注：") + item.Remark
 			}
 			item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
 			item.ProductAttributeNames = product.SaleOrderProduct.GetAttributeName()
