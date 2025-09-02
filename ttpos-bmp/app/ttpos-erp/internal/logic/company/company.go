@@ -2,6 +2,7 @@ package company
 
 import (
 	"context"
+	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/company"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
@@ -24,13 +25,25 @@ func (s *sCompany) GetCompanyList(ctx context.Context, req *company.GetCompanyLi
 	var filters = make([][]string, 0)
 	// 调用 erpnext 下 document 服务，从外部获取 company 信息
 	if len(req.CompanyName) > 0 {
-		filters = append(filters, g.ArrayStr{"name", "like", "%" + req.CompanyName + "%"})
+		if strings.Contains(req.CompanyName, "%") {
+			filters = append(filters, g.ArrayStr{"name", "like", req.CompanyName})
+		} else {
+			filters = append(filters, g.ArrayStr{"name", "=", req.CompanyName})
+		}
 	}
 	if len(req.CompanyAbbr) > 0 {
-		filters = append(filters, g.ArrayStr{"abbr", "like", "%" + req.CompanyAbbr + "%"})
+		if strings.Contains(req.CompanyAbbr, "%") {
+			filters = append(filters, g.ArrayStr{"abbr", "like", req.CompanyAbbr})
+		} else {
+			filters = append(filters, g.ArrayStr{"abbr", "=", req.CompanyAbbr})
+		}
 	}
 	if len(req.ParentCompany) > 0 {
-		filters = append(filters, g.ArrayStr{"parent_company", "like", "%" + req.ParentCompany + "%"})
+		if strings.Contains(req.ParentCompany, "%") {
+			filters = append(filters, g.ArrayStr{"parent_company", "like", req.ParentCompany})
+		} else {
+			filters = append(filters, g.ArrayStr{"parent_company", "=", req.ParentCompany})
+		}
 	}
 	// 1. 调用 erpnext document 服务获取公司信息
 	erpCompanyList, err := service.Document().List(ctx, &erp.ErpReq{
