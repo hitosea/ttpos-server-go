@@ -390,7 +390,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态, 0-未送厨 1-已送厨',
     `is_require` INT(10) NOT NULL DEFAULT 0 COMMENT '是否必点商品 0-否 1-是。用于在前端显示必点图标',
     -- 下单是指加购商品吗？还是送厨商品？如果下单指加购，则可以理解这类商品为抢购商品，先抢先得。
-    `deduct_stock_type` INT(10) NOT NULL DEFAULT 0 COMMENT '库存计算方式,0-下单减库存 1-付款减库存。加购商品时记录，不受后台影响，用于减少查询次数',
+    `deduct_stock_type` INT(10) NOT NULL DEFAULT 0 COMMENT '库存计算方式,1-下单减库存 0-付款减库存。加购商品时记录，不受后台影响，用于减少查询次数',
     -- 送厨时检查商品是否要减库存；结账时检查商品是否已减库存，无论商品是下单减库存还是付款减库存，都要检查商品是否已减库存，避免商品漏减库存
     `deduct_stock_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '减库存的时间(时间戳)，0-未减库存。标记是否已减库存，用于取消订单时恢复库存、避免重复减库存、避免漏减库存',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注，顾客对商品的备注信息',
