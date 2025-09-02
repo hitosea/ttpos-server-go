@@ -322,7 +322,7 @@ func (s *materialSrv) AddMaterial(ctx context.Context, req req.MaterialAddReq) e
 			erpSrv := erp.NewIErpSrv(s.dbm)
 			itemInfo, errErp := erpSrv.AddMaterial(ctx, *materialAddErpReq)
 			if errErp != nil {
-				return errors.WithMessage(err)
+				return errors.WithMessage(errErp)
 			}
 			code = itemInfo.ItemCode
 		} else {
