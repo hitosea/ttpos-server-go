@@ -32,7 +32,14 @@
     </el-form-item>
 
     <el-form-item for="no_click" v-if="baseSale == '1'" :label="$t('采购单价：')" width="80">
-      <el-input-number :min="0" :max="100000000" :controls="false" v-model="form.model.sku[0].purchase_price" :placeholder="$t('请填写采购单价')" class="max-w460"></el-input-number>
+      <el-input-number
+        :min="0"
+        :max="100000000"
+        :controls="false"
+        v-model="form.model.sku[0].purchase_price"
+        :placeholder="$t('请填写采购单价')"
+        class="max-w460"
+      ></el-input-number>
     </el-form-item>
 
     <el-form-item for="no_click" :label="$t('库存数量：')" v-if="form.model.type == 10" :rules="[{ required: true, message: $t('请填写库存数量') }]" prop="model.sku[0].stock_num">
@@ -80,6 +87,7 @@
       <el-input
         :placeholder="$t('请输入商品条码')"
         :disabled="erp_is_open == 1"
+        :maxlength="13"
         @input="
           () => {
             form.model.sku[0].barcodeUniqueness = true;
@@ -178,7 +186,7 @@
         (val || []).map((item, index) => {
           nextTick(() => {
             if (form.model.sku[index].barcode) {
-              form.model.sku[index].barcode = item.barcode.match(/[a-zA-Z0-9]*/g).join('');
+              form.model.sku[index].barcode = item.barcode.match(/[0-9]*/g).join('');
             }
           });
         });
