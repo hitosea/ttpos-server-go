@@ -5280,7 +5280,7 @@ func (s *productSrv) SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProdu
 					}
 					itemUuid, _ := utils.GetID()
 					productPackageGroupRepo.CreateProductPackageGroupItem(&model.ProductPackageGroupItem{
-						Uuid:                    itemUuid,
+						BaseModel:               model.BaseModel{Uuid: itemUuid},
 						ProductPackageGroupUuid: groupUuid,
 						RelatedUuid:             bom.ProductPackageUuid,
 						ProductBomUuid:          item.BomUuid,
@@ -5336,7 +5336,7 @@ func (s *productSrv) SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProdu
 						if item.Uuid == 0 {
 							itemUuid, _ := utils.GetID()
 							err := productPackageGroupRepo.CreateProductPackageGroupItem(&model.ProductPackageGroupItem{
-								Uuid:                    itemUuid,
+								BaseModel:               model.BaseModel{Uuid: itemUuid},
 								ProductPackageGroupUuid: curGroup.Uuid,
 								RelatedUuid:             bom.ProductPackageUuid,
 								ProductBomUuid:          item.BomUuid,
