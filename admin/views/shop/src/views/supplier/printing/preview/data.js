@@ -361,6 +361,7 @@ export const previewData = {
                 name: $t('少冰'),
                 num: '',
                 label: '',
+                typeShow: '1,2,3,5',
             },
             {
                 name: '-' + $t('套餐商品2'),
@@ -644,6 +645,7 @@ export const previewData = {
                 name: $t('少冰'),
                 num: '',
                 label: '',
+                typeShow: '1,2,3',
             },
             {
                 name: '-' + $t('套餐商品2'),
@@ -1080,6 +1082,32 @@ export const previewData = {
                 font16Normal: true,
             },
             {
+                name:  $t('（打包）') + $t('套餐名称套餐名称'),
+                label: 'X2',
+                typeShow: '1',
+                flexWidth: true,
+                font16Normal: true,
+            },
+
+            {
+                name: '-' + $t('套餐商品1'),
+                typeShow: '1',
+                flexWidth: true,
+                showSkuAttr: true,
+            },
+            {
+                name: $t('少冰'),
+                typeShow: '1',
+                flexWidth: true,
+                showSkuAttr: true,
+            },
+            {
+                name: '-' + $t('套餐商品2'),
+                typeShow: '1',
+                flexWidth: true,
+                showSkuAttr: true,
+            },
+            {
                 name: $t('商品名称商品名称品名称商品名称商品名称品名称'),
                 label: 'X2',
                 font24: true,
@@ -1106,6 +1134,36 @@ export const previewData = {
                 typeShow: '2',
                 flexWidth: true,
             },
+            {
+                name:  $t('（打包）') + $t('套餐名称套餐名称'),
+                label: 'X2',
+                font24: true,
+                typeShow: '2',
+                flexWidth: true,
+            },
+
+            {
+                name: '-' + $t('套餐商品1'),
+                typeShow: '2',
+                flexWidth: true,
+                font18Small: true,
+                showSkuAttr: true,
+            },
+            {
+                name: $t('少冰'),
+                typeShow: '2',
+                flexWidth: true,
+                font18Small: true,
+                showSkuAttr: true,
+            },
+            {
+                name: '-' + $t('套餐商品2'),
+                typeShow: '2',
+                flexWidth: true,
+                font18Small: true,
+                showSkuAttr: true,
+            },
+
             {
                 name: $t('商品名称商品名称品名称商品名称商品名称品名称'),
                 label: 'X2',
@@ -1136,6 +1194,40 @@ export const previewData = {
                 font24: true,
                 typeShow: '3',
                 flexWidth: true,
+            },
+            {
+                name: $t('（打包）') + $t('套餐名称套餐名称'),
+                label: 'X2',
+                font24: true,
+                typeShow: '3',
+                flexWidth: true,
+            },
+            {
+                name:`<span class="grey"> -${$t('套餐商品1')}</span>`,
+                typeShow: '3',
+                flexWidth: true,
+                font24: true,
+                right: false,
+                showSkuAttr: true,
+                lineHeight: '2-5',
+            },
+            {
+                name: `<span class="grey"> ${$t('少冰')}</span>`,
+                typeShow: '3',
+                flexWidth: true,
+                font24: true,
+                right: false,
+                showSkuAttr: true,
+                lineHeight: '2-5',
+            },
+            {
+                name: `<span class="grey"> -${$t('套餐商品2')}</span>`,
+                typeShow: '3',
+                flexWidth: true,
+                font24: true,
+                right: false,
+                showSkuAttr: true,
+                lineHeight: '2-5',
             },
         ],
     ],
@@ -1729,6 +1821,28 @@ export const previewData = {
                 font22: true,
                 flexWidth: true,
             },
+            {
+                name: `(${$t('退')})` + $t('套餐名称套餐名称'),
+                label: 'X2',
+                font22: true,
+                flexWidth: true,
+            },
+
+            {
+                name: '-' + $t('套餐商品1'),
+                font18Small: true,
+                flexWidth: true,
+            },
+            {
+                name: $t('少冰'),
+                font18Small: true,
+                flexWidth: true,
+            },
+            {
+                name: '-' + $t('套餐商品2'),
+                font18Small: true,
+                flexWidth: true,
+            },
         ],
         [
             {
@@ -2033,6 +2147,30 @@ export const previewData = {
                 name: `!!!(${$t('退')})` + $t('商品名称商品名称'),
                 label: '-2',
                 font22: true,
+                flexWidth: true,
+            },
+            {
+                name: `!!!(${$t('退')})` + $t('套餐名称套餐名称'),
+                label: '-2',
+                font22: true,
+                flexWidth: true,
+            },
+
+            {
+                name: '-' + $t('套餐商品1'),
+                label: '-1',
+                font18Small: true,
+                flexWidth: true,
+            },
+            {
+                name: $t('少冰'),
+                font18Small: true,
+                flexWidth: true,
+            },
+            {
+                name: '-' + $t('套餐商品2'),
+                label: '-1',
+                font18Small: true,
                 flexWidth: true,
             },
         ],
