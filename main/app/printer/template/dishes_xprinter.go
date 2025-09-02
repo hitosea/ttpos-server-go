@@ -493,7 +493,16 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 
 		// 遍历订单中的产品
 		for _, product := range products {
-
+			// 打包商品
+			wrapText := ""
+			if product.IsWrap {
+				wrapText = "(" + t.base.Translate("打包") + ") "
+			}
+			// 套餐
+			packageText := ""
+			if product.ProductType > constant.ProductTypeProduct {
+				packageText = t.base.Translate("套餐") + "-"
+			}
 			// 处理自助餐标记
 			buffetText := ""
 			if buffetSignOpen == "1" {
@@ -501,13 +510,8 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 					buffetText = t.base.Translate("自助餐") + "-"
 				}
 			}
-			// 打包商品
-			wrapText := ""
-			if product.IsWrap {
-				wrapText = "(" + t.base.Translate("打包") + ") "
-			}
 			// 产品名称
-			productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
+			productName := wrapText + packageText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 
 			// 定义产品导出函数
 			exportation := func(num float64) {
@@ -648,7 +652,16 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 
 		// 遍历订单中的产品
 		for _, product := range products {
-
+			// 打包商品
+			wrapText := ""
+			if product.IsWrap {
+				wrapText = "(" + t.base.Translate("打包") + ") "
+			}
+			// 套餐
+			packageText := ""
+			if product.ProductType > constant.ProductTypeProduct {
+				packageText = t.base.Translate("套餐") + "-"
+			}
 			// 处理自助餐文本
 			buffetText := ""
 			if buffetSignOpen == "1" {
@@ -656,13 +669,9 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 					buffetText = t.base.Translate("自助餐") + "-"
 				}
 			}
-			// 打包商品
-			wrapText := ""
-			if product.IsWrap {
-				wrapText = "(" + t.base.Translate("打包") + ") "
-			}
+
 			// 产品名称
-			productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
+			productName := wrapText + packageText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 
 			// 定义产品导出函数
 			exportation := func(num float64) {
@@ -1126,13 +1135,6 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 	for _, product := range products {
 		// 设置行间距
 		printer.SetLineSpacing(45)
-		// 处理自助餐文本
-		buffetText := ""
-		if buffetSignOpen == "1" {
-			if product.IsBuffet {
-				buffetText = t.base.Translate("自助餐") + "-"
-			}
-		}
 		// 打包商品
 		wrapText := ""
 		if product.IsWrap {
@@ -1143,8 +1145,15 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 		if product.ProductType > constant.ProductTypeProduct {
 			packageText = t.base.Translate("套餐") + "-"
 		}
+		// 处理自助餐文本
+		buffetText := ""
+		if buffetSignOpen == "1" {
+			if product.IsBuffet {
+				buffetText = t.base.Translate("自助餐") + "-"
+			}
+		}
 		// 产品名称
-		productName := packageText + wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
+		productName := wrapText + packageText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 
 		// 设置字符大小和行间距
 		if printerType == PrinterTypeXPrinterWifi {
