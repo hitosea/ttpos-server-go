@@ -2150,7 +2150,7 @@ export const previewData = {
                 flexWidth: true,
             },
             {
-                name: `(${$t('退')})` + $t('套餐名称套餐名称'),
+                name: `!!!(${$t('退')})` + $t('套餐名称套餐名称'),
                 label: '-2',
                 font22: true,
                 flexWidth: true,
