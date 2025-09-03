@@ -2862,6 +2862,13 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 				if err != nil {
 					return errors.WithMessage(errors.New("保存属性值名称多语言失败"), err.Error())
 				}
+				err = tx.Model(&model.ProductAttribute{}).Where("uuid = ?", productAttribute.Uuid).Updates(map[string]any{
+					"name": productAttribute.LocaleName.ToJson(),
+					"sort": productAttribute.Sort,
+				}).Error
+				if err != nil {
+					return errors.WithMessage(errors.New("保存属性值失败"), err.Error())
+				}
 			} else { // 新增属性值多语言
 				multiLanguageName := model.MultiLanguageName{
 					ZhName:   productAttribute.LocaleName.ZH,
