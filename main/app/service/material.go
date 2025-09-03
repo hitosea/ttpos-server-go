@@ -226,6 +226,7 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 	for _, materialUnit := range materialUnitList {
 		unitList = append(unitList, material_resp.MaterialUnit{
 			Uuid:           materialUnit.Uuid,
+			FromUnitUuid:   materialUnit.UnitUuid,
 			Name:           materialUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 			LocaleName:     materialUnit.Unit.MultiLanguageName.GetNames(),
 			ConversionRate: materialUnit.ConversionRate,
