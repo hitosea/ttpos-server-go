@@ -74,6 +74,18 @@ func (r *MaterialAddReq) Validate() error {
 	if r.CostUnitUuid == 0 {
 		return errors.WithMessage(errors.New("成本单位不能为空"))
 	}
+	if r.BarcodeValue != "" {
+		// 检查条形码长度（条形码长度为1-13位）
+		if len(r.BarcodeValue) < 1 || len(r.BarcodeValue) > 13 {
+			return errors.WithMessage(errors.New("条形码长度应为1-13位"))
+		}
+		// 检查是否只包含数字
+		for _, char := range r.BarcodeValue {
+			if char < '0' || char > '9' {
+				return errors.WithMessage(errors.New("条形码只能包含数字"))
+			}
+		}
+	}
 	return nil
 }
 
@@ -112,15 +124,46 @@ type MaterialUnitReq struct {
 
 // MaterialEditReq 编辑物品请求
 type MaterialEditReq struct {
-	Uuid             uint64             `json:"uuid" binding:"required"`               // 物品UUID
-	LocaleName       dto.LocaleResponse `json:"locale_name" binding:"required"`        // 物品名称
-	CategoryUuid     uint64             `json:"category_uuid" binding:"required"`      // 分类UUID
-	Status           int                `json:"status"`                                // 状态，1-启用 0-停用
-	Valuation        float64            `json:"valuation" binding:"required,min=0"`    // 估值率
-	BarcodeValue     string             `json:"barcode_value" binding:"required"`      // 条形码值
-	UnitList         []MaterialUnitReq  `json:"unit_list" binding:"required,dive"`     // 单位列表,新增的非基准单位
-	PurchaseUnitUuid uint64             `json:"purchase_unit_uuid" binding:"required"` // 采购单位UUID
-	CostUnitUuid     uint64             `json:"cost_unit_uuid" binding:"required"`     // 成本单位UUID
+	Uuid             uint64             `json:"uuid"`               // 物品UUID
+	LocaleName       dto.LocaleResponse `json:"locale_name"`        // 物品名称
+	CategoryUuid     uint64             `json:"category_uuid"`      // 分类UUID
+	Status           int                `json:"status"`             // 状态，1-启用 0-停用
+	Valuation        float64            `json:"valuation"`          // 估值率
+	BarcodeValue     string             `json:"barcode_value"`      // 条形码值
+	UnitList         []MaterialUnitReq  `json:"unit_list"`          // 单位列表,新增的非基准单位
+	PurchaseUnitUuid uint64             `json:"purchase_unit_uuid"` // 采购单位UUID
+	CostUnitUuid     uint64             `json:"cost_unit_uuid"`     // 成本单位UUID
+}
+
+func (r *MaterialEditReq) Validate() error {
+	if r.Uuid == 0 {
+		return errors.WithMessage(errors.New("物品ID不能为空"))
+	}
+	if r.LocaleName.IsNull() {
+		return errors.WithMessage(errors.New("名称不能为空"))
+	}
+	if r.CategoryUuid == 0 {
+		return errors.WithMessage(errors.New("分类不能为空"))
+	}
+	if r.PurchaseUnitUuid == 0 {
+		return errors.WithMessage(errors.New("采购单位不能为空"))
+	}
+	if r.CostUnitUuid == 0 {
+		return errors.WithMessage(errors.New("成本单位不能为空"))
+	}
+	if r.BarcodeValue != "" {
+		// 检查条形码长度（条形码长度为1-13位）
+		if len(r.BarcodeValue) < 1 || len(r.BarcodeValue) > 13 {
+			return errors.WithMessage(errors.New("条形码长度应为1-13位"))
+		}
+		// 检查是否只包含数字
+		for _, char := range r.BarcodeValue {
+			if char < '0' || char > '9' {
+				return errors.WithMessage(errors.New("条形码只能包含数字"))
+			}
+		}
+	}
+	return nil
 }
 
 // MaterialDeleteReq 删除物品请求
