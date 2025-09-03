@@ -572,7 +572,9 @@ func (r *productRepo) WithProductBomsProductSauceMultiLanguageName() DBOption {
 // WithProductPackageAttributeGroup 预加载产品包装属性组
 func (r *productRepo) WithProductPackageAttributeGroup() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("ProductPackageAttributeGroups", "delete_time = ?", constant.NotDeleted)
+		return db.Preload("ProductPackageAttributeGroups", "delete_time = ?", constant.NotDeleted, func(db *gorm.DB) *gorm.DB {
+			return db.Order("sort asc, create_time asc")
+		})
 	}
 }
 
@@ -593,7 +595,9 @@ func (r *productRepo) WithProductPackageAttributeGroupProductAttributeGroupMulti
 // WithProductPackageAttributeGroupProductPackageAttributes 预加载产品包装属性组产品包装属性
 func (r *productRepo) WithProductPackageAttributeGroupProductPackageAttributes() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("ProductPackageAttributeGroups.ProductPackageAttributes", "delete_time = ?", constant.NotDeleted)
+		return db.Preload("ProductPackageAttributeGroups.ProductPackageAttributes", "delete_time = ?", constant.NotDeleted, func(db *gorm.DB) *gorm.DB {
+			return db.Order("sort asc, create_time asc")
+		})
 	}
 }
 

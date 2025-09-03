@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/dao"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
@@ -90,7 +91,11 @@ func detectError(resp *gvar.Var) error {
 			}
 			if j.Contains("errors") {
 				g.Log().Errorf(gctx.GetInitCtx(), "调用erpnext接口返回异常: %v", j)
-				return gerror.Newf("调用erpnext接口返回异常,error:%s", j.Get("errors").String())
+				errMsgList := make([]string, 0)
+				for _, errItem := range j.GetJsons("errors") {
+					errMsgList = append(errMsgList, errItem.Get("message").String())
+				}
+				return gerror.Newf("调用erpnext接口返回异常,error:%s", strings.Join(errMsgList, ";"))
 			}
 		} else {
 			g.Log().Errorf(gctx.GetInitCtx(), "调用erpnext接口返回解析异常: %v", err)
