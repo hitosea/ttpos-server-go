@@ -81,7 +81,7 @@ func (model *Material) GetImage(baseUrl string) string {
 type MaterialUnit struct {
 	BaseModel
 	Name           string  `gorm:"default:'';column:name;comment:'原料单位名称'"`
-	UnitUuid       uint64  `gorm:"default:0;column:unit_uuid;comment:'单位ID'"`
+	UnitUuid       uint64  `gorm:"default:0;column:unit_uuid;comment:'单位ID'"` // 商品单位ID
 	ConversionRate float64 `gorm:"type:decimal(12,4);default:1;column:conversion_rate;comment:'转换率'"`
 	FromUnitUuid   uint64  `gorm:"default:0;column:from_unit_uuid;comment:'来源单位ID. 来源单位为克，则转换率为1000，该原料单位为千克'"`
 	IsDefault      int     `gorm:"default:0;column:is_default;comment:'是否为基准单位, 0-否 1-是'"`
