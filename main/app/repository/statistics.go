@@ -468,6 +468,7 @@ func (r *StatisticsRepo) CountAreaDays(opts ...DBOption) []model.StatisticsAreaD
 		Group("dr.uuid").
 		Group("day").
 		Order("day ASC").
+		Order("dr.id ASC").
 		Find(&result)
 
 	return result

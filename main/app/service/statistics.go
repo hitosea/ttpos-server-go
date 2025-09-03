@@ -766,18 +766,18 @@ func (s *statisticsSrv) CountAreaDays(ctx context.Context, req CountReq, days []
 
 	for _, day := range days {
 		var areaList []CountAreaResp
-		result, ok := slice.FindBy(areaData, func(index int, dayData model.StatisticsAreaDaysData) bool {
-			return dayData.Day.String == day
-		})
-		if ok {
-			areaList = append(areaList, CountAreaResp{
-				AreaID:             result.AreaID.Int64,
-				AreaName:           result.AreaName.String,
-				AreaSaleAmount:     result.AreaSaleAmount.Float64,
-				AreaBusinessAmount: result.AreaBusinessAmount.Float64,
-				AreaProductNum:     result.AreaProductNum.Float64,
-			})
+		for _, area := range areaData {
+			if area.Day.String == day {
+				areaList = append(areaList, CountAreaResp{
+					AreaID:             area.AreaID.Int64,
+					AreaName:           area.AreaName.String,
+					AreaSaleAmount:     area.AreaSaleAmount.Float64,
+					AreaBusinessAmount: area.AreaBusinessAmount.Float64,
+					AreaProductNum:     area.AreaProductNum.Float64,
+				})
+			}
 		}
+
 		list = append(list, CountAreaDaysResp{
 			AreaList: areaList,
 			Day:      day,
