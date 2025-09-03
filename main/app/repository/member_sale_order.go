@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -247,8 +248,6 @@ func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderManageList(pageNo, pageSi
 	opts := []DBOption{
 		CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 		CommonRepo.DBOption(CommonRepo.WhereByNoSelectingTimeout()),
-		CommonRepo.DBOption(CommonRepo.SortWithSort("desc")),
-		CommonRepo.DBOption(CommonRepo.SortWithSubmitPayTime("desc")),
 		CommonRepo.Preload(
 			WithPreload{
 				Query: "PaymentMethod",
@@ -263,6 +262,10 @@ func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderManageList(pageNo, pageSi
 				Query: "Address.Member",
 			},
 		),
+		// status = 6(骑手配送中) 排在前面，其他按照create_time 倒序
+		func(db *gorm.DB) *gorm.DB {
+			return db.Order(fmt.Sprintf("status = %d desc, create_time desc", constant.MemberSaleOrderStatusDelivering))
+		},
 	}
 
 	// 根据外送序号搜索
