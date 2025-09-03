@@ -353,6 +353,14 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 		requestUnitList[unit.Uuid] = true
 	}
 
+	// 检查条形码唯一性
+	if request.BarcodeValue != "" {
+		materialRepo := repository.NewMaterialRepo(tx)
+		if materialRepo.CheckBarcodeExist(request.BarcodeValue, 0) {
+			return nil, nil, errors.WithMessage(errors.New("条形码已存在，请使用其他条形码"))
+		}
+	}
+
 	materialUuid, _ := utils.GetID()
 	materialRepo := repository.NewMaterialRepo(tx)
 	// 创建多语言名称
@@ -468,6 +476,11 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 
 // EditMaterial 编辑物品
 func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEditReq) error {
+	// 验证请求参数
+	if err := request.Validate(); err != nil {
+		return errors.WithMessage(err)
+	}
+
 	dbId := ctx.GetDbId()
 	db := s.dbm.GetDB(dbId)
 
@@ -478,6 +491,13 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 		existingMaterial, err := materialRepo.GetMaterialDetailByUuid(request.Uuid)
 		if err != nil {
 			return errors.WithMessage(err, "物品不存在")
+		}
+
+		// 检查条形码唯一性
+		if request.BarcodeValue != "" && request.BarcodeValue != existingMaterial.BarcodeValue {
+			if materialRepo.CheckBarcodeExist(request.BarcodeValue, request.Uuid) {
+				return errors.WithMessage(errors.New("条形码已存在，请使用其他条形码"))
+			}
 		}
 
 		// 判断名称是否修改

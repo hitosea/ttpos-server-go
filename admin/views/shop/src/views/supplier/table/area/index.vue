@@ -19,6 +19,17 @@
           </el-table-column>
         </el-table>
       </div>
+      <div class="pagination">
+        <el-pagination
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+          background
+          :current-page="curPage"
+          :page-size="pageSize"
+          layout="total, prev, pager, next, jumper"
+          :total="totalDataNumber"
+        ></el-pagination>
+      </div>
     </div>
     <!--添加-->
     <Add v-if="open_add" :open_add="open_add" :addform="categoryModel" @closeDialog="closeDialogFunc($event, 'add')"> </Add>
@@ -52,6 +63,9 @@
         categoryModel: {
           model: '',
         },
+        curPage: 1,
+        pageSize: 10,
+        totalDataNumber: 0,
       };
     },
     created() {
@@ -59,6 +73,14 @@
       this.getData();
     },
     methods: {
+      handleSizeChange(size) {
+        this.pageSize = size;
+        this.getData();
+      },
+      handleCurrentChange(page) {
+        this.curPage = page;
+        this.getData();
+      },
       handleClick() {
         this.getData();
       },
@@ -66,11 +88,15 @@
       getData() {
         let self = this;
         self.loading = true;
-        StoreApi.arealist({}, true)
+        let params = {};
+        params.page = self.curPage;
+        params.list_rows = self.pageSize;
+        StoreApi.arealist(params, true)
           .then((data) => {
             self.loading = false;
             self.tableData = data.data.list.data;
             self.categoryModel = data.data.list.data;
+            self.totalDataNumber = data.data.list.total;
           })
           .catch(() => {
             self.loading = false;

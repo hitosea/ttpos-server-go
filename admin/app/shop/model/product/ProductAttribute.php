@@ -16,13 +16,14 @@ class ProductAttribute
     public static function addAttribute($data, Product $product)
     {
         $attributeList = $data['product_attr'] ?? [];
-        foreach ($attributeList as $item) {
+        foreach ($attributeList as $key => $item) {
             // 新增属性组
             $group = ProductAttributeGroupModel::create([
                 'is_must' => $item['attribute_required'] ?? 0, // 是否必选
                 'max_selection' => $item['attribute_max_select'] ?? 0, // 最大选择数量
                 'product_package_uuid' => $product['uuid'], // 产品包uuid
-                'product_attribute_group_uuid' => $item['parent_id'] // 属性组uuid
+                'product_attribute_group_uuid' => $item['parent_id'], // 属性组uuid
+                'sort' => $key // 排序
             ]);
             // 新增属性值
             foreach ($item['attribute_ids'] as $key => $attributeId) {
@@ -30,6 +31,7 @@ class ProductAttribute
                     'product_package_attribute_group_uuid' => $group['uuid'],
                     'attribute_uuid' => $attributeId,
                     'is_default_selected' => $item['default_select'][$key] ?? 0,
+                    'sort' => $key // 排序
                 ]);
             }
         }
@@ -47,7 +49,7 @@ class ProductAttribute
             self::deleteAttribute($product);
             return;
         }
-        foreach ($attributeList as $item) {
+        foreach ($attributeList as $key => $item) {
             // 属性组
             $group = ProductAttributeGroupModel::where('product_attribute_group_uuid', $item['parent_id'])
                 ->where('product_package_uuid', $product['uuid'])
@@ -57,7 +59,8 @@ class ProductAttribute
                     'is_must' => $item['attribute_required'] ?? 0,
                     'max_selection' => $item['attribute_max_select'] ?? 0,
                     'product_package_uuid' => $product['uuid'],
-                    'product_attribute_group_uuid' => $item['parent_id']
+                    'product_attribute_group_uuid' => $item['parent_id'],
+                    'sort' => $key
                 ]);
             } else {
                 $attributeOpenMaxSelect = $item['attribute_open_max_select'] ?? 0;
@@ -68,6 +71,7 @@ class ProductAttribute
                 $group->save([
                     'is_must' => $item['attribute_required'] ?? 0,
                     'max_selection' => $attributeMaxSelect,
+                    'sort' => $group['sort'] != $key ? $key : $group['sort']
                 ]);
             }
             $groupUuidList[] = $group['uuid'];
@@ -82,10 +86,12 @@ class ProductAttribute
                         'product_package_attribute_group_uuid' => $group['uuid'],
                         'attribute_uuid' => $attributeId,
                         'is_default_selected' => $item['default_select'][$key] ?? 0,
+                        'sort' => $key
                     ]);
                 } else {
                     $attribute->save([
                         'is_default_selected' => $item['default_select'][$key] ?? 0,
+                        'sort' => $group['sort'] != $key ? $key : $group['sort']
                     ]);
                 }
                 $attributeUuidList[$group['uuid']][] = $attribute['uuid'];
