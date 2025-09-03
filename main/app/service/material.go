@@ -226,6 +226,7 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 	for _, materialUnit := range materialUnitList {
 		unitList = append(unitList, material_resp.MaterialUnit{
 			Uuid:           materialUnit.Uuid,
+			FromUnitUuid:   materialUnit.UnitUuid,
 			Name:           materialUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 			LocaleName:     materialUnit.Unit.MultiLanguageName.GetNames(),
 			ConversionRate: materialUnit.ConversionRate,
@@ -245,6 +246,19 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 	if baseUnit != nil {
 		baseUnitLocaleName = *language.JsonToLocaleResponse(baseUnit.Name)
 	}
+
+	fromUnitUuid := uint64(0)
+	if material.Unit != nil {
+		fromUnitUuid = material.GetUnit(material.UnitUuid).UnitUuid
+	}
+	fromPurchaseUnitUuid := uint64(0)
+	if material.PurchaseUnit != nil {
+		fromPurchaseUnitUuid = material.GetUnit(material.PurchaseUnitUuid).UnitUuid
+	}
+	fromCostUnitUuid := uint64(0)
+	if material.CostUnit != nil {
+		fromCostUnitUuid = material.GetUnit(material.CostUnitUuid).UnitUuid
+	}
 	return material_resp.MaterialDetailResp{
 		Uuid:                   material.Uuid,
 		LocaleName:             material.MultiLanguageName.GetNames(),
@@ -256,11 +270,14 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		BarcodeValue:           material.BarcodeValue,
 		UnitName:               material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 		UnitUuid:               material.UnitUuid,
+		FromUnitUuid:           fromUnitUuid,
 		UnitList:               material_resp.MaterialUnitListResp{List: unitList},
 		PurchaseUnitName:       material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 		PurchaseUnitUuid:       material.PurchaseUnitUuid,
+		FromPurchaseUnitUuid:   fromPurchaseUnitUuid,
 		CostUnitName:           material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 		CostUnitUuid:           material.CostUnitUuid,
+		FromCostUnitUuid:       fromCostUnitUuid,
 		PurchaseUnitLocaleName: purchaseUnitLocaleName,
 		CostUnitLocaleName:     costUnitLocaleName,
 		UnitLocaleName:         baseUnitLocaleName,

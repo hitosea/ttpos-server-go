@@ -3398,7 +3398,14 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 	// 获取账单的所有商品，退菜的商品除外
 	var warehouseForm *model.WarehouseForm
 	{
-		products := saleBill.GetSaleOrderProductCooking()
+		var products []*model.SaleOrderProduct
+		if opt.IsReverseSettle {
+			products = saleBill.GetSaleOrderProductCooking()
+		} else { // 整单取消订单时，需要过滤掉付款减库存的商品。
+			products = saleBill.GetSaleOrderProductUnCooking()
+			// 过滤掉付款减库存的商品
+			products = model.FilterPaymentDeductStockProduct(products)
+		}
 		//
 		productList, err := s.getDecreaseStockList(ctx, products)
 		if err != nil {

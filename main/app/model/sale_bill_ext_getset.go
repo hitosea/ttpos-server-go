@@ -104,6 +104,17 @@ func (model *SaleBill) GetSaleOrderProductUnCooking() []*SaleOrderProduct {
 	return unCookingSaleOrderProducts
 }
 
+func FilterPaymentDeductStockProduct(products []*SaleOrderProduct) []*SaleOrderProduct {
+	list := make([]*SaleOrderProduct, 0)
+	for _, product := range products {
+		if product.DeductStockType == constant.ProductPackageDeductStockTypePay {
+			continue
+		}
+		list = append(list, product)
+	}
+	return list
+}
+
 // 获取未送厨的销售订单商品
 func (model *SaleBill) SetSaleOrderProductCooking() {
 	for _, saleOrder := range model.SaleOrders {

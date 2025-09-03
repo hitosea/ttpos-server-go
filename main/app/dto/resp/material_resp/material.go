@@ -45,14 +45,17 @@ type MaterialDetailResp struct {
 	BarcodeValue           string               `json:"barcode_value"`             // 条形码值
 	UnitName               string               `json:"unit_name"`                 // 单位名称
 	UnitUuid               uint64               `json:"unit_uuid"`                 // 单位UUID
+	FromUnitUuid           uint64               `json:"from_unit_uuid"`            // 来源单位UUID
 	UnitLocaleName         dto.LocaleResponse   `json:"unit_locale_name"`          // 单位名称
 	UnitList               MaterialUnitListResp `json:"unit_list"`                 // 单位列表
 	PurchaseUnitName       string               `json:"purchase_unit_name"`        // 采购单位名称
 	PurchaseUnitLocaleName dto.LocaleResponse   `json:"purchase_unit_locale_name"` // 采购单位名称
 	PurchaseUnitUuid       uint64               `json:"purchase_unit_uuid"`        // 采购单位UUID
+	FromPurchaseUnitUuid   uint64               `json:"from_purchase_unit_uuid"`   // 来源采购单位UUID
 	CostUnitName           string               `json:"cost_unit_name"`            // 成本单位名称
 	CostUnitLocaleName     dto.LocaleResponse   `json:"cost_unit_locale_name"`     // 成本单位名称
 	CostUnitUuid           uint64               `json:"cost_unit_uuid"`            // 成本单位UUID
+	FromCostUnitUuid       uint64               `json:"from_cost_unit_uuid"`       // 来源成本单位UUID
 }
 
 // MaterialUnitListResp 物品单位列表响应
@@ -63,6 +66,7 @@ type MaterialUnitListResp struct {
 // MaterialUnit 物品单位
 type MaterialUnit struct {
 	Uuid           uint64             `json:"uuid"`            // 单位UUID
+	FromUnitUuid   uint64             `json:"from_unit_uuid"`  // 来源单位UUID
 	Name           string             `json:"name"`            // 单位名称
 	LocaleName     dto.LocaleResponse `json:"locale_name"`     // 单位名称
 	ConversionRate float64            `json:"conversion_rate"` // 转换率
