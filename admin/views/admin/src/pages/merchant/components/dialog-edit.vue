@@ -530,6 +530,8 @@
       try {
         formLoading.value = true;
         let res = null;
+        // formData.name 去掉前后空格
+        formData.value.name = formData.value.name?.trim();
         formData.value.auth_start_time = dayjs(formData.value.auth_start_time).format('YYYY-MM-DD HH:mm:ss');
         if (limitPrinter.value) {
           formData.value.printer_limit = -1;
