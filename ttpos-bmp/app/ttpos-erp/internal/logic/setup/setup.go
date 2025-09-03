@@ -46,8 +46,9 @@ func (s *sSetup) CreateBranch(ctx context.Context, req *setup.InitShopReq) (bran
 	}
 	count, err := service.Doctype().Count(ctx, &erp.ErpReq{
 		DocType: erp.DocTypeBranch,
-		Name:    req.ShopName,
-	}, nil)
+	}, &erp.RequestParams{
+		Filters: [][]string{{"branch", "=", req.ShopName}},
+	})
 	if err != nil {
 		g.Log().Error(ctx, "查询分支失败", err)
 		return "", gerror.Wrap(err, "查询分支失败")
@@ -185,7 +186,7 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *se
 		return nil, gerror.Wrapf(err, "查询门店收银账户失败")
 	}
 	if cashierCount > 0 {
-		return nil, gerror.New("店铺已初始化，不能重复初始化")
+		return nil, gerror.New("收银员已初始化，不能重复初始化")
 	}
 
 	// 创建分支
