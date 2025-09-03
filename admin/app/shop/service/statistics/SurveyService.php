@@ -36,9 +36,15 @@ class SurveyService
             }
         }
 
-        // 支付方式排序，先按Sort升序排序，再按CreateTime降序排序， ID降序排序
+        // 支付方式排序，先ID=0排在最后, 再按Sort升序排序，再按CreateTime降序排序， ID降序排序
         $paymentType = array_values($paymentType);
         usort($paymentType, function ($a, $b) {
+            if ($a['id'] == 0) {
+                return 1;
+            }
+            if ($b['id'] == 0) {
+                return -1;
+            }
             if ($a['sort'] == $b['sort']) {
                 if ($a['create_time'] == $b['create_time']) {
                     return $a['id'] <=> $b['id'];
