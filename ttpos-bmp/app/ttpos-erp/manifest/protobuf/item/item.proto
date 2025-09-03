@@ -40,6 +40,7 @@ message ItemInfo {
   string company = 12; // 公司名称，可选
   string item_specification = 13; // 物品规格，可选 ttpos 传英文过来 多规格商品时必填
   repeated UomDetail uoms = 14; // 单位列表，可选
+  bool disabled = 15; // 是否禁用，可选
 }
 
 message UomDetail {

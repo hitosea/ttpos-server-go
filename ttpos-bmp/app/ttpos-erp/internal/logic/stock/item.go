@@ -243,6 +243,11 @@ func (s *sItem) buildUpdateItemData(req *item.ItemInfo) g.Map {
 		itemForUpdate["uoms"] = uoms
 	}
 
+	// 禁用状态更新
+	if req.Disabled {
+		itemForUpdate["disabled"] = 1
+	}
+
 	return itemForUpdate
 }
 

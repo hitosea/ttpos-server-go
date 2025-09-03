@@ -103,6 +103,7 @@ type ProductAddErpReq struct {
 	ItemCode          string `json:"item_code" binding:"required"`          // 商品编码，如果为空，则为新增；如果非空，则为编辑
 	TemplateItemCode  string `json:"template_item_code" binding:"required"` // 模版商品编码
 	ItemSpecification string `json:"item_specification" binding:"required"` // 商品规格
+	BarcodeValue      string `json:"barcode_value" binding:"required"`      // 条形码值
 }
 
 type PackageAddErpReq struct {

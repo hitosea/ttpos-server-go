@@ -219,6 +219,7 @@ type ItemInfo struct {
 	Company           string                 `protobuf:"bytes,12,opt,name=company,proto3" json:"company,omitempty" dc:"公司名称，可选"`                                                                                  // 公司名称，可选
 	ItemSpecification string                 `protobuf:"bytes,13,opt,name=item_specification,json=itemSpecification,proto3" json:"item_specification,omitempty" dc:"物品规格，可选 ttpos 传英文过来 多规格商品时必填"`                // 物品规格，可选 ttpos 传英文过来 多规格商品时必填
 	Uoms              []*UomDetail           `protobuf:"bytes,14,rep,name=uoms,proto3" json:"uoms,omitempty" dc:"单位列表，可选"`                                                                                        // 单位列表，可选
+	Disabled          bool                   `protobuf:"varint,15,opt,name=disabled,proto3" json:"disabled,omitempty" dc:"是否禁用，可选"`                                                                               // 是否禁用，可选
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -349,6 +350,13 @@ func (x *ItemInfo) GetUoms() []*UomDetail {
 		return x.Uoms
 	}
 	return nil
+}
+
+func (x *ItemInfo) GetDisabled() bool {
+	if x != nil {
+		return x.Disabled
+	}
+	return false
 }
 
 type UomDetail struct {
@@ -1233,7 +1241,7 @@ const file_item_item_proto_rawDesc = "" +
 	"\titem_code\x18\x05 \x01(\tR\bitemCode\x12(\n" +
 	"\x10item_code_prefix\x18\x06 \x01(\tR\x0eitemCodePrefix\">\n" +
 	"\x0fGetItemListResp\x12+\n" +
-	"\titem_list\x18\x01 \x03(\v2\x0e.item.ItemInfoR\bitemList\"\xf2\x03\n" +
+	"\titem_list\x18\x01 \x03(\v2\x0e.item.ItemInfoR\bitemList\"\x8e\x04\n" +
 	"\bItemInfo\x12\x1b\n" +
 	"\titem_name\x18\x01 \x01(\tR\bitemName\x12.\n" +
 	"\n" +
@@ -1250,7 +1258,8 @@ const file_item_item_proto_rawDesc = "" +
 	"\fcompany_abbr\x18\v \x01(\tR\vcompanyAbbr\x12\x18\n" +
 	"\acompany\x18\f \x01(\tR\acompany\x12-\n" +
 	"\x12item_specification\x18\r \x01(\tR\x11itemSpecification\x12#\n" +
-	"\x04uoms\x18\x0e \x03(\v2\x0f.item.UomDetailR\x04uoms\"J\n" +
+	"\x04uoms\x18\x0e \x03(\v2\x0f.item.UomDetailR\x04uoms\x12\x1a\n" +
+	"\bdisabled\x18\x0f \x01(\bR\bdisabled\"J\n" +
 	"\tUomDetail\x12\x10\n" +
 	"\x03uom\x18\x01 \x01(\tR\x03uom\x12+\n" +
 	"\x11conversion_factor\x18\x02 \x01(\x01R\x10conversionFactor\"\x84\x01\n" +

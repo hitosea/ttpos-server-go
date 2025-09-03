@@ -255,6 +255,7 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		Valuation:              material.Valuation,
 		BarcodeValue:           material.BarcodeValue,
 		UnitName:               material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+		UnitUuid:               material.UnitUuid,
 		UnitList:               material_resp.MaterialUnitListResp{List: unitList},
 		PurchaseUnitName:       material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 		PurchaseUnitUuid:       material.PurchaseUnitUuid,

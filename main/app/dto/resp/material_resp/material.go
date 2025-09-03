@@ -44,6 +44,7 @@ type MaterialDetailResp struct {
 	Valuation              float64              `json:"valuation"`                 // 估值率
 	BarcodeValue           string               `json:"barcode_value"`             // 条形码值
 	UnitName               string               `json:"unit_name"`                 // 单位名称
+	UnitUuid               uint64               `json:"unit_uuid"`                 // 单位UUID
 	UnitLocaleName         dto.LocaleResponse   `json:"unit_locale_name"`          // 单位名称
 	UnitList               MaterialUnitListResp `json:"unit_list"`                 // 单位列表
 	PurchaseUnitName       string               `json:"purchase_unit_name"`        // 采购单位名称

@@ -28,11 +28,15 @@
             label: 'company_name',
             value: 'company_abbr',
             checkStrictly: true,
+            expandTrigger: 'hover',
           }"
           clearable
           :disabled="props.hasEdit || confirmPassword"
-          @change="handleCompanyChange"
-        />
+        >
+          <template #default="{ data }">
+            <span class="!w-full block" @click="handleCompanyChange(data.company_abbr)">{{ data.company_name }}</span>
+          </template>
+        </el-cascader>
       </el-form-item>
       <el-form-item v-if="confirmPassword && !props.hasEdit" :label="$t('密码验证')" prop="password">
         <el-input v-model="formData.password" type="password" :placeholder="$t('请输入密码')" clearable :disabled="props.hasEdit" />
