@@ -2150,14 +2150,15 @@ export const previewData = {
                 flexWidth: true,
             },
             {
-                name: `(${$t('退')})` + $t('套餐名称套餐名称'),
-                label: 'X2',
+                name: `!!!(${$t('退')})` + $t('套餐名称套餐名称'),
+                label: '-2',
                 font22: true,
                 flexWidth: true,
             },
 
             {
                 name: '-' + $t('套餐商品1'),
+                label: '-1',
                 font18Small: true,
                 flexWidth: true,
             },
@@ -2168,6 +2169,7 @@ export const previewData = {
             },
             {
                 name: '-' + $t('套餐商品2'),
+                label: '-1',
                 font18Small: true,
                 flexWidth: true,
             },

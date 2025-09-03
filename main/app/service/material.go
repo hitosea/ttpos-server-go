@@ -344,6 +344,15 @@ func (s *materialSrv) AddMaterial(ctx context.Context, req req.MaterialAddReq) e
 }
 
 func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (*model.Material, *req.MaterialAddErpReq, error) {
+	// 非基准单位不能重复
+	requestUnitList := make(map[uint64]bool)
+	for _, unit := range request.UnitList {
+		if requestUnitList[unit.Uuid] {
+			return nil, nil, errors.WithMessage(errors.New("非基准单位不能重复"))
+		}
+		requestUnitList[unit.Uuid] = true
+	}
+
 	materialUuid, _ := utils.GetID()
 	materialRepo := repository.NewMaterialRepo(tx)
 	// 创建多语言名称
@@ -846,18 +855,26 @@ func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomC
 			erpBomItemList := []*manufacturing.BomItem{}
 			for _, material := range materialList {
 				unitName := model.NewMultiLanguageName(material.UnitName)
+				enName, err := GetEnName(ctx, unitName.GetNames())
+				if err != nil {
+					return errors.WithMessage(err, "翻译失败")
+				}
 				erpBomItemList = append(erpBomItemList, &manufacturing.BomItem{
 					ItemCode: material.Material.Code,
 					Rate:     material.Material.Valuation,
 					Qty:      material.Num,
-					Uom:      unitName.EnName,
+					Uom:      enName,
 				})
 			}
 			erpSrv := erp.NewIErpSrv(s.dbm)
+			enName, err := GetEnName(ctx, productBom.ProductPackage.ProductUnit.MultiLanguageName.GetNames())
+			if err != nil {
+				return errors.WithMessage(err, "翻译失败")
+			}
 			erpBomResp, errErp := erpSrv.AddProductBomCard(ctx, erp.ProductBomCardAddErpReq{
-				ItemCode: productBom.ErpCode,                                             // 商品编码
-				Quantity: float64(req.Num),                                               // 数量
-				Uom:      productBom.ProductPackage.ProductUnit.MultiLanguageName.EnName, // 单位
+				ItemCode: productBom.ErpCode, // 商品编码
+				Quantity: float64(req.Num),   // 数量
+				Uom:      enName,             // 单位
 				Items:    erpBomItemList,
 			})
 			if errErp != nil {
@@ -1193,11 +1210,15 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 			erpBomItemList := []*manufacturing.BomItem{}
 			for _, material := range materialList {
 				unitName := model.NewMultiLanguageName(material.UnitName)
+				enName, err := GetEnName(ctx, unitName.GetNames())
+				if err != nil {
+					return errors.WithMessage(err, "翻译失败")
+				}
 				erpBomItemList = append(erpBomItemList, &manufacturing.BomItem{
 					ItemCode: code,
 					Rate:     material.Material.Valuation,
 					Qty:      material.Num,
-					Uom:      unitName.EnName,
+					Uom:      enName,
 				})
 			}
 			productBomRepo := repository.NewProductBomRepo(db)

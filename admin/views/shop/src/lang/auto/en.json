@@ -2136,5 +2136,8 @@
     "最多只能选择": "You can select up to",
     "起始序列号": "Starting serial number",
     "起始流水号": "Starting serial number",
-    "请输入起始流水号": "Please enter the starting serial number"
+    "请输入起始流水号": "Please enter the starting serial number",
+    "套餐名称套餐名称": "Package Name Package Name",
+    "套餐商品1": "Package Product 1",
+    "套餐商品2": "Package Product 2"
 }
