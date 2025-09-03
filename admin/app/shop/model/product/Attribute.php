@@ -68,7 +68,7 @@ class Attribute extends AttributeModel
         $model = $model->alias('a')
             ->leftJoin('product_attribute_group parent', 'a.attribute_group_uuid = parent.uuid')
             ->field('a.*, parent.name as parent_attribute_name')
-            ->order(['a.sort' => 'asc', 'a.create_time' => 'asc']);
+            ->order(['parent.sort' => 'asc', 'parent.create_time' => 'asc', 'a.sort' => 'asc', 'a.create_time' => 'asc']);
         return $model->paginate($data);
     }
 

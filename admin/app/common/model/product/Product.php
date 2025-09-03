@@ -1326,12 +1326,15 @@ class Product extends BaseModel
                 ],
                 'productPackageGroupItem',
             ],
-            'productAttributeGroup' => [
-                'attribute', 
-                'productAttribute' => [
-                    'attribute'
-                ]
-            ],
+            'productAttributeGroup' => function ($q) {
+                $q->with([
+                    'productAttribute' => function ($q) {
+                        $q->with([
+                            'attribute'
+                        ])->order('sort', 'asc');
+                    }
+                ])->order('sort', 'asc');
+            },
             'feed' => [
                 'productSauce' => [
                     'relatedMaterial' => [
