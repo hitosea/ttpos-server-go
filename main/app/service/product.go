@@ -4929,6 +4929,7 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 							StockUom:          stockUom,
 							TemplateItemCode:  templateItemCode,
 							ItemSpecification: enName,
+							BarcodeValue:      flavor.BarcodeValue,
 						}
 						itemInfo, errErp := erpSrv.AddProduct(ctx, params)
 						if errErp != nil {
@@ -5045,6 +5046,7 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 							ItemCode:          productBom.ErpCode,
 							TemplateItemCode:  templateItemCode,
 							ItemSpecification: enName,
+							BarcodeValue:      flavor.BarcodeValue,
 						})
 						if errErp != nil {
 							return errors.WithMessage(errErp)
