@@ -222,4 +222,11 @@ class App extends BaseModel
         //
         return $data;
     }
+
+    /**
+     * 是否开启ERP
+     */
+    public function isEnableErp() {
+        return $this->is_enable_erp == 1;
+    }
 }
