@@ -35,6 +35,20 @@ INSERT INTO `ttpos_member_level` (`id`, `uuid`, `name`, `open_money`, `upgrade_m
 COMMIT;
 
 -- ----------------------------
+-- Records of ttpos_multi_language_name
+-- ----------------------------
+BEGIN;
+INSERT INTO `ttpos_multi_language_name` (`id`, `uuid`, `zh_name`, `th_name`, `en_name`, `zh_tw_name`, `ja_name`, `ko_name`, `my_name`, `tr_name`, `sv_name`, `create_time`, `update_time`, `delete_time`) VALUES (1, 1, '商品（系统创建）', 'สินค้า (ระบบสร้าง)', 'Product (System Created)', '商品（系統創建）', '商品（システム作成）', '상품（시스템 생성）', 'ပစ္စည်း (စနစ်ဖန်တီးသည်)', 'Ürün (Sistem Oluşturuldu)', 'Produkt (Systemskapad)', @nowTime, @nowTime, 0);
+COMMIT;
+
+-- ----------------------------
+-- Records of ttpos_material_category
+-- ----------------------------
+BEGIN;
+INSERT INTO `ttpos_material_category` (`id`, `uuid`, `name`, `multi_language_name_uuid`, `create_time`, `update_time`, `delete_time`) VALUES (1, 1, '商品（系统创建）', 1, @nowTime, @nowTime, 0);
+COMMIT;
+
+-- ----------------------------
 -- Records of ttpos_printer_template
 -- ----------------------------
 BEGIN;

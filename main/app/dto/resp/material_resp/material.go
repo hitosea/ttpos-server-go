@@ -10,6 +10,7 @@ type Material struct {
 	Name             string             `json:"name"`               // 物品名称
 	LocaleName       dto.LocaleResponse `json:"locale_name"`        // 物品名称
 	ErpCode          string             `json:"erp_code"`           // erp编码
+	BarcodeValue     string             `json:"barcode_value"`      // 条形码值
 	Num              float64            `json:"num"`                // 库存数量
 	CategoryUuid     uint64             `json:"category_uuid"`      // 分类UUID
 	Image            string             `json:"image"`              // 图片

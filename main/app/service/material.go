@@ -174,6 +174,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			Name:         material.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 			LocaleName:   material.MultiLanguageName.GetNames(),
 			ErpCode:      material.Code,
+			BarcodeValue: material.BarcodeValue,
 			Num:          material.StockNum,
 			CategoryUuid: material.CategoryUuid,
 			Image:        material.GetImage(utils.GetBaseURL(ctx.GetGin().Request)),
