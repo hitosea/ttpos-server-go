@@ -341,7 +341,7 @@
 
   // 强制下架上架
   const undercarriage = (row, state) => {
-    if (!proxy.$filter.isAuth('/product/store/product/state')) {
+    if (!proxy.$filter.isAuth('/product/store/product/state') || erp_is_open == 1) {
       return;
     }
     let war = '';
