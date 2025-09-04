@@ -1469,71 +1469,69 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 				return errors.WithMessage(errors.New("保存关联商品失败"), err.Error())
 			}
 		}
-		return nil
-	})
 
-	company := ctx.GetCompany()
-	companySetting := ctx.GetCompanySetting()
+		company := ctx.GetCompany()
+		companySetting := ctx.GetCompanySetting()
+		// 开启了ERP，并且是TTPOS站点，同步到ERPNext
+		if company.IsOpenErp() && companySetting.IsTtposSite() {
+			enName, err := s.getEnName(ctx, addReq.LocaleName)
+			if err != nil {
+				return errors.WithMessage(errors.New("翻译失败"), err.Error())
+			}
+			erpUom := company.Name + "-" + enName
+			err = erp.NewIErpSrv(s.dbm).SaveUom(ctx.GetContext(), req.SaveUomReq{
+				SiteCode:          companySetting.ErpnextSiteCode,
+				CompanyAbbr:       companySetting.ErpnextCompanyAbbr,
+				Branch:            companySetting.ErpnextBranchName,
+				UomName:           erpUom,
+				AliasName:         enName,
+				MustBeWholeNumber: true,
+			})
+			if err != nil {
+				return errors.WithMessage(errors.New("同步单位到erp失败"), err.Error())
+			}
+			err = tx.Model(&model.ProductUnit{}).Where("uuid = ?", productUnit.Uuid).Update("erpnext_uom", erpUom).Error
+			if err != nil {
+				return errors.WithMessage(errors.New("保存erp单位失败"), err.Error())
+			}
 
-	// 开启了ERP，并且是TTPOS站点，同步到ERPNext
-	if company.IsOpenErp() && companySetting.IsTtposSite() {
-		enName, err := s.getEnName(ctx, addReq.LocaleName)
-		if err != nil {
-			return errors.WithMessage(errors.New("翻译失败"), err.Error())
-		}
-		erpUom := company.Name + "-" + enName
-		err = erp.NewIErpSrv(s.dbm).SaveUom(ctx.GetContext(), req.SaveUomReq{
-			SiteCode:          companySetting.ErpnextSiteCode,
-			CompanyAbbr:       companySetting.ErpnextCompanyAbbr,
-			Branch:            companySetting.ErpnextBranchName,
-			UomName:           erpUom,
-			AliasName:         enName,
-			MustBeWholeNumber: true,
-		})
-		if err != nil {
-			return errors.WithMessage(errors.New("同步单位到erp失败"), err.Error())
-		}
-		err = db.Model(&model.ProductUnit{}).Where("uuid = ?", productUnit.Uuid).Update("erpnext_uom", erpUom).Error
-		if err != nil {
-			return errors.WithMessage(errors.New("保存erp单位失败"), err.Error())
-		}
-
-		// 修改商品的单位UUID
-		for _, productPackageUuid := range addReq.ProductPackageUuids {
-			// 同步更新商品到erp
-			if ctx.GetCompany().IsOpenErp() {
-				productPackageRepo := repository.NewProductPackageRepo(db)
-				productPackage, errGetProductPackage := productPackageRepo.GetProductPackage(
-					repository.CommonRepo.WhereByUuid(productPackageUuid),
-					repository.CommonRepo.Preload(
-						repository.WithPreload{
-							Query: "ProductBoms",
-						},
-					),
-				)
-				if errGetProductPackage != nil {
-					return errors.WithMessage(errGetProductPackage, "获取商品包失败")
-				}
-				for _, productBom := range productPackage.ProductBoms {
-					multiLanguageName := model.NewMultiLanguageName(productBom.Name)
-					enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
-					if err != nil {
-						return errors.WithMessage(err, "翻译失败")
+			// 修改商品的单位UUID
+			for _, productPackageUuid := range addReq.ProductPackageUuids {
+				// 同步更新商品到erp
+				if ctx.GetCompany().IsOpenErp() {
+					productPackageRepo := repository.NewProductPackageRepo(tx)
+					productPackage, errGetProductPackage := productPackageRepo.GetProductPackage(
+						repository.CommonRepo.WhereByUuid(productPackageUuid),
+						repository.CommonRepo.Preload(
+							repository.WithPreload{
+								Query: "ProductBoms",
+							},
+						),
+					)
+					if errGetProductPackage != nil {
+						return errors.WithMessage(errGetProductPackage, "获取商品包失败")
 					}
-					erpSrv := erp.NewIErpSrv(s.dbm)
-					_, errErp := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
-						ItemName: enName,
-						StockUom: erpUom,
-						ItemCode: productBom.ErpCode,
-					})
-					if errErp != nil {
-						return errors.WithMessage(errErp, "同步商品到erp失败")
+					for _, productBom := range productPackage.ProductBoms {
+						multiLanguageName := model.NewMultiLanguageName(productBom.Name)
+						enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
+						if err != nil {
+							return errors.WithMessage(err, "翻译失败")
+						}
+						erpSrv := erp.NewIErpSrv(s.dbm)
+						_, errErp := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
+							ItemName: enName,
+							StockUom: erpUom,
+							ItemCode: productBom.ErpCode,
+						})
+						if errErp != nil {
+							return errors.WithMessage(errErp, "同步商品到erp失败")
+						}
 					}
 				}
 			}
 		}
-	}
-
+		return nil
+	})
 	return err
 }
 

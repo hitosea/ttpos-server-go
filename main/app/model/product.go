@@ -554,10 +554,20 @@ type RelatedMaterial struct {
 	BaseUnitConversionRate float64 `gorm:"column:base_unit_conversion_rate;type:decimal(12,4);default:1;comment:'基准单位转换率。用量*转换率=基准单位用量'"`
 
 	Material *Material `gorm:"foreignKey:material_uuid;references:uuid" json:"material"`
+
+	unitErpnextUom string // 单位ERPNext单位
 }
 
 func (model *RelatedMaterial) SetNil() {
 	model.Material = nil
+}
+
+func (model *RelatedMaterial) SetUnitErpnextUom(unitErpnextUom string) {
+	model.unitErpnextUom = unitErpnextUom
+}
+
+func (model *RelatedMaterial) GetUnitErpnextUom() string {
+	return model.unitErpnextUom
 }
 
 func (model *RelatedMaterial) GetUnitName(lang string) string {

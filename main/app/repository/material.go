@@ -15,6 +15,8 @@ import (
 type IMaterialRepo interface {
 	GetMaterialListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.Material, int64, error)
 	GetMaterialByUuid(uuid uint64, opts ...DBOption) (model.Material, error)
+	GetMaterialByUuids(uuids []uint64, opts ...DBOption) ([]*model.Material, error)
+	GetMaterialDetailByUuids(uuids []uint64) ([]*model.Material, error)
 	GetMaterialDetailByUuid(uuid uint64) (*model.Material, error)
 	CreateMaterial(material model.Material) (uint64, error)
 	UpdateMaterialCode(uuid uint64, code string) error
@@ -91,6 +93,24 @@ func (r *MaterialRepoImpl) GetMaterialByUuid(uuid uint64, opts ...DBOption) (mod
 	return material, nil
 }
 
+// GetMaterialByUuids 根据UUIDs获取物品详情
+func (r *MaterialRepoImpl) GetMaterialByUuids(uuids []uint64, opts ...DBOption) ([]*model.Material, error) {
+	var materials []*model.Material
+
+	query := r.db.Model(&model.Material{}).Where("uuid IN (?) AND delete_time = ?", uuids, 0)
+
+	// 应用查询选项
+	for _, opt := range opts {
+		query = opt(query)
+	}
+
+	if err := query.Find(&materials).Error; err != nil {
+		return nil, errors.WithMessage(err, "查询物品详情失败")
+	}
+
+	return materials, nil
+}
+
 func (r *MaterialRepoImpl) GetMaterialDetailByUuid(uuid uint64) (*model.Material, error) {
 	material, err := r.GetMaterialByUuid(uuid,
 		CommonRepo.Preload(
@@ -118,6 +138,36 @@ func (r *MaterialRepoImpl) GetMaterialDetailByUuid(uuid uint64) (*model.Material
 		return nil, errors.WithMessage(err, "查询物品详情失败")
 	}
 	return &material, nil
+}
+
+// GetMaterialDetailByUuids 根据UUIDs获取物品详情
+func (r *MaterialRepoImpl) GetMaterialDetailByUuids(uuids []uint64) ([]*model.Material, error) {
+	materials, err := r.GetMaterialByUuids(uuids,
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "MultiLanguageName",
+			},
+			WithPreload{
+				Query: "Category.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "Unit.Unit.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "PurchaseUnit.Unit.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "CostUnit.Unit.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "NotBaseUnitList.Unit.MultiLanguageName",
+			},
+		),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询物品详情失败")
+	}
+	return materials, nil
 }
 
 // CreateMaterial 创建物品
