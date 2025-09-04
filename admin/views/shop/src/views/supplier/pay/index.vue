@@ -3,7 +3,7 @@
     <!--内容-->
     <div class="supplier-content">
       <div class="common-level-rail">
-        <el-button size="small" type="primary" @click="addClick" v-auth="'/supplier/pay/add'" :disabled="erp_is_open == 1 && erp_site_code == '2'">
+        <el-button size="small" type="primary" @click="addClick" v-auth="'/supplier/pay/add'" :disabled="erp_is_open == 1">
           {{ $t('添加') }}
         </el-button>
       </div>
