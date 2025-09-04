@@ -4122,6 +4122,12 @@ func (s *productSrv) ProductShopStatus(ctx context.Context, req req.ProductShopS
 		if err != nil {
 			return errors.WithMessage(err, "修改商品状态失败")
 		}
+		err = tx.Model(&model.ProductBom{}).Select("status").Where("product_package_uuid = ?", productPackage.Uuid).Updates(map[string]any{
+			"status": req.Status,
+		}).Error
+		if err != nil {
+			return errors.WithMessage(err, "修改商品规格状态失败")
+		}
 		if productPackage.ProductType == constant.ProductTypeProduct && *req.Status == 0 {
 			productPackageGroupItems, err := productPackageGroupRepo.GetProductPackageGroupItems(
 				commonRepo.WhereBySoftDelete(),
