@@ -249,6 +249,10 @@ func (s *sItem) buildUpdateItemData(req *item.ItemInfo) g.Map {
 	} else {
 		itemForUpdate["disabled"] = 0
 	}
+	// 更新估值率
+	if req.ValuationRate != 0 {
+		itemForUpdate["valuation_rate"] = req.ValuationRate
+	}
 
 	return itemForUpdate
 }
