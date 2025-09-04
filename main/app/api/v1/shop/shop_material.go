@@ -277,7 +277,7 @@ func (h *MaterialHandler) AddProductBomCard(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, nil, "关联成本卡成功")
 }
 
 // GetProductBomCardDetail 规格商品成本卡详情
