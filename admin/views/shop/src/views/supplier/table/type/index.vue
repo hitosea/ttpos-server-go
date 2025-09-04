@@ -98,6 +98,7 @@
             self.loading = false;
             self.tableData = data.data.list.data;
             self.categoryModel = data.data.list.data;
+            self.totalDataNumber = data.data.list.total;
           })
           .catch(() => {
             self.loading = false;
