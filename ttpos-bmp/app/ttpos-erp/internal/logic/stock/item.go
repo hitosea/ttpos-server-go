@@ -313,6 +313,10 @@ func (s *sItem) buildNewItemData(ctx context.Context, req *item.ItemInfo, compan
 			},
 		}
 	}
+	// 禁用状态更新
+	if req.Disabled {
+		newItem["disabled"] = 1
+	}
 
 	return newItem, nil
 }
