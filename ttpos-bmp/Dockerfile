@@ -24,7 +24,7 @@ RUN cd app/ttpos-$MODULE && gf build -a amd64 -s linux -p bin -ew
 RUN chmod +x app/ttpos-$MODULE/bin/linux_amd64/main
 
 # 使用轻量级的镜像来运行应用
-FROM ubuntu:latest
+FROM ubuntu:alpine
 #构建模块
 ARG MODULE=takeout
 ARG HTTP_PORT=14031
