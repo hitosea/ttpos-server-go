@@ -20,7 +20,7 @@ COPY . .
 RUN go build -o main ./main.go 
 
 # 使用轻量级的镜像来运行应用
-FROM ubuntu:alpine
+FROM ubuntu:latest
 
 # 设置工作目录
 WORKDIR /var/www

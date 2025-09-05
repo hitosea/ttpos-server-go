@@ -35,7 +35,7 @@ RUN  go build -toolexec=/app/apache-skywalking-go-0.6.0-bin/bin/skywalking-go-ag
 RUN chmod +x main
 
 # 使用轻量级的镜像来运行应用
-FROM ubuntu:alpine
+FROM ubuntu:latest
 
 ENV SW_AGENT_NAME=ttpos-server-main
 ENV SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE=103.63.136.110:30435
