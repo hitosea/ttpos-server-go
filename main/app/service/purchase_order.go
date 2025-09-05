@@ -562,6 +562,36 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptCreateReq) (resp.PurchaseReceiptOrderCreateResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 
+	// 判断物品明细是否已经停用
+	if req.IsConfirm {
+		var disabledMaterials []string
+		for _, item := range req.Items {
+			purchaseOrderItem, err := repository.NewPurchaseOrderItemRepo(db).GetByUuid(item.PurchaseOrderItemUuid)
+			if err != nil {
+				return resp.PurchaseReceiptOrderCreateResp{}, errors.WithMessage(err, "查询采购申请明细失败")
+			}
+			material, err := repository.NewMaterialRepo(db).GetMaterialByUuid(purchaseOrderItem.MaterialUuid)
+			if err != nil {
+				return resp.PurchaseReceiptOrderCreateResp{}, errors.WithMessage(err, "查询物品明细失败")
+			}
+			// 判断物品是否停用
+			if material.Status == false {
+				materialName := language.JsonToLocaleResponse(purchaseOrderItem.MaterialName).GetLocale(ctx.GetLanguage())
+				disabledMaterials = append(disabledMaterials, materialName)
+			}
+		}
+		// 如果有停用的物品，返回相应的错误消息
+		if len(disabledMaterials) > 0 {
+			return resp.PurchaseReceiptOrderCreateResp{}, errors.NewWithCode(
+				constant.CodeMaterialDisabled,
+				fmt.Sprintf(
+					i18n.Translate(ctx.GetLanguage(), "有%d项物品已停用，您可启用物品后再进行收货"),
+					len(disabledMaterials),
+				),
+			)
+		}
+	}
+
 	var result resp.PurchaseReceiptOrderCreateResp
 
 	err := db.Transaction(func(tx *gorm.DB) error {
@@ -683,6 +713,36 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptOrderUpdateReq) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
 
+	// 判断物品明细是否已经停用
+	if req.IsConfirm {
+		var disabledMaterials []string
+		for _, item := range req.Items {
+			purchaseOrderItem, err := repository.NewPurchaseOrderItemRepo(db).GetByUuid(item.PurchaseOrderItemUuid)
+			if err != nil {
+				return errors.WithMessage(err, "查询采购申请明细失败")
+			}
+			material, err := repository.NewMaterialRepo(db).GetMaterialByUuid(purchaseOrderItem.MaterialUuid)
+			if err != nil {
+				return errors.WithMessage(err, "查询物品明细失败")
+			}
+			// 判断物品是否停用
+			if material.Status == false {
+				materialName := language.JsonToLocaleResponse(purchaseOrderItem.MaterialName).GetLocale(ctx.GetLanguage())
+				disabledMaterials = append(disabledMaterials, materialName)
+			}
+		}
+		// 如果有停用的物品，返回相应的错误消息
+		if len(disabledMaterials) > 0 {
+			return errors.NewWithCode(
+				constant.CodeMaterialDisabled,
+				fmt.Sprintf(
+					i18n.Translate(ctx.GetLanguage(), "有%d项物品已停用，您可启用物品后再进行收货"),
+					len(disabledMaterials),
+				),
+			)
+		}
+	}
+
 	err := db.Transaction(func(tx *gorm.DB) error {
 		purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(tx)
 		receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(tx)
@@ -713,7 +773,7 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 			// 查询收货单明细
 			receiptOrderItem, err := receiptOrderItemRepo.GetByUuid(itemReq.Uuid)
 			if err != nil {
-				return errors.WithMessage(err, "查询采购申请明细失败")
+				return errors.WithMessage(err, "查询收货单明细失败")
 			}
 
 			// 查询采购申请明细

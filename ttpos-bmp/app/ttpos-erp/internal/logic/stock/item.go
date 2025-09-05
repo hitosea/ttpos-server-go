@@ -246,6 +246,12 @@ func (s *sItem) buildUpdateItemData(req *item.ItemInfo) g.Map {
 	// 禁用状态更新
 	if req.Disabled {
 		itemForUpdate["disabled"] = 1
+	} else {
+		itemForUpdate["disabled"] = 0
+	}
+	// 更新估值率
+	if req.ValuationRate != 0 {
+		itemForUpdate["valuation_rate"] = req.ValuationRate
 	}
 
 	return itemForUpdate
@@ -316,6 +322,9 @@ func (s *sItem) buildNewItemData(ctx context.Context, req *item.ItemInfo, compan
 	// 禁用状态更新
 	if req.Disabled {
 		newItem["disabled"] = 1
+	} else {
+		//启用
+		newItem["disabled"] = 0
 	}
 
 	return newItem, nil

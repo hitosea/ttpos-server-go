@@ -369,7 +369,7 @@ class Product extends ProductModel
     /**
      * 编辑商品
      */
-    public function edit($data)
+    public function edit($data, $enableErp = false)
     {
         if (!isset($data['type']) || !in_array($data['type'], [ProductModel::TYPE_PRODUCT, ProductModel::TYPE_MATERIAL, ProductModel::TYPE_PACKAGE])) {
             $this->error = '商品类型不能为空';

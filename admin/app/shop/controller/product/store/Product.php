@@ -13,6 +13,7 @@ use app\common\model\product\Spec as SpecModel;
 use app\common\model\product\Unit as UnitModel;
 use app\shop\model\product\Product as ProductModel;
 use app\common\model\product\Material as MaterialModel;
+use app\common\model\product\MaterialCategory;
 use app\common\model\product\ProductPackageRecommend;
 use app\shop\model\product\Category as CategoryModel;
 use app\shop\validate\ProductPackageRecommendValidate;
@@ -249,17 +250,26 @@ class Product extends Controller
      */
     public function edit($product_id, $scene = 'edit')
     {
+        // 兼容erp
+        $enableErp = $this->store['app']['is_enable_erp'] == 1;
         if ($this->request->isGet()) {
+            $data = ProductService::getEditData(1, $this->store);
             $model = ProductModel::detail($product_id);
             if (!$model) {
-                $model = MaterialModel::detail($product_id);
+                if ($enableErp) {
+                    $materailCategories = MaterialCategory::getAllList();
+                    foreach ($materailCategories as $materailCategory) {
+                        $data['category'][] = $materailCategory;
+                    }
+                }
+                $model = MaterialModel::detail($product_id, $enableErp);
             }
-            return $this->renderSuccess('', array_merge(ProductService::getEditData(1, $this->store), compact('model')));
+            return $this->renderSuccess('', array_merge($data, compact('model')));
         }
         $data = array_merge(json_decode($this->postData()['params'], true), ['shop_user_id' => $this->store['user']['shop_user_id']]);
         /** @var ProductModel $model */
-        $model = in_array(($data['type'] ?? 10), [10, 30]) ? ProductModel::detail($product_id) : MaterialModel::detail($product_id);
-        if ($model->edit($data)) {
+        $model = in_array(($data['type'] ?? 10), [10, 30]) ? ProductModel::detail($product_id) : MaterialModel::detail($product_id, $enableErp);
+        if ($model->edit($data, $enableErp)) {
             return $this->renderSuccess('更新成功');
         }
         return $this->renderError($model->getError() ?: '更新失败', $model->getErrorData() ?: []);

@@ -48,7 +48,7 @@ type MaterialDetailReq struct {
 type MaterialAddReq struct {
 	LocaleName       dto.LocaleResponse `json:"locale_name"`        // 物品名称
 	CategoryUuid     uint64             `json:"category_uuid"`      // 分类UUID
-	Status           int                `json:"status"`             // 状态，1-启用 2-停用
+	Status           int                `json:"status"`             // 状态，1-启用 0-停用
 	Valuation        float64            `json:"valuation"`          // 估值率
 	InitStock        float64            `json:"init_stock"`         // 期初库存
 	BarcodeValue     string             `json:"barcode_value"`      // 条形码值
@@ -90,8 +90,11 @@ func (r *MaterialAddReq) Validate() error {
 }
 
 type MaterialAddErpReq struct {
+	ItemCode      string           `json:"item_code" binding:"required"`      // 物品编码, 如果为空，则为新增；如果非空，则为编辑
 	ItemName      string           `json:"item_name" binding:"required"`      // 物品名称, 英文
 	StockUom      string           `json:"stock_uom" binding:"required"`      // 基准库存单位, 英文
+	Disabled      bool             `json:"disabled" binding:"required"`       // 是否禁用
+	BarcodeValue  string           `json:"barcode_value" binding:"required"`  // 条形码值
 	ValuationRate float64          `json:"valuation_rate" binding:"required"` // 估值率
 	OpeningStock  float64          `json:"opening_stock" binding:"required"`  // 期初库存
 	Uoms          []MaterialUomReq `json:"uoms" binding:"required,dive"`      // 单位列表

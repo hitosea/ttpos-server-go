@@ -485,6 +485,8 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 	materialAddErpReq := &req.MaterialAddErpReq{
 		ItemName:      getEnName,
 		StockUom:      productUnit.ErpnextUom,
+		BarcodeValue:  request.BarcodeValue,
+		Disabled:      request.Status == 0,
 		ValuationRate: request.Valuation,
 		OpeningStock:  request.InitStock,
 		Uoms:          unitList,
@@ -620,6 +622,48 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 			}
 		}
 
+		if ctx.GetCompany().IsOpenErp() {
+			erpSrv := erp.NewIErpSrv(s.dbm)
+			enName, err := GetEnName(ctx, existingMaterial.MultiLanguageName.GetNames())
+			if err != nil {
+				return errors.WithMessage(err, "翻译失败")
+			}
+
+			unitList := []req.MaterialUomReq{}
+			// 新增的非基准单位
+			for _, unit := range request.UnitList {
+				productUnit, err := repository.NewProductRepo(tx).GetProductUnitByUnitUuid(unit.Uuid)
+				if err != nil {
+					return errors.WithMessage(err, "获取产品单位失败")
+				}
+
+				unitList = append(unitList, req.MaterialUomReq{
+					Uom:            productUnit.ErpnextUom,
+					ConversionRate: unit.ConversionRate,
+				})
+			}
+			// 旧的非基准单位
+			for _, unit := range existingMaterial.NotBaseUnitList {
+				unitList = append(unitList, req.MaterialUomReq{
+					Uom:            unit.Unit.ErpnextUom,
+					ConversionRate: unit.ConversionRate,
+				})
+			}
+
+			_, errErp := erpSrv.AddMaterial(ctx, req.MaterialAddErpReq{
+				ItemCode:      existingMaterial.Code,
+				ItemName:      enName,
+				StockUom:      existingMaterial.Unit.Unit.ErpnextUom,
+				Disabled:      request.Status == 0,
+				ValuationRate: material.Valuation,
+				BarcodeValue:  material.BarcodeValue,
+				Uoms:          unitList,
+			})
+			if errErp != nil {
+				return errors.WithMessage(errErp)
+			}
+		}
+
 		return nil
 	}); err != nil {
 		return errors.WithMessage(err)
@@ -649,13 +693,53 @@ func (s *materialSrv) DeleteMaterial(ctx context.Context, req req.MaterialDelete
 }
 
 // UpdateMaterialStatusBatch 批量修改物品状态
-func (s *materialSrv) UpdateMaterialStatusBatch(ctx context.Context, req req.MaterialStatusReq) error {
+func (s *materialSrv) UpdateMaterialStatusBatch(ctx context.Context, request req.MaterialStatusReq) error {
 	dbId := ctx.GetDbId()
 	db := s.dbm.GetDB(dbId)
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		materialRepo := repository.NewMaterialRepo(tx)
-		return materialRepo.UpdateMaterialStatusBatch(req.Uuids, req.Status)
+		if err := materialRepo.UpdateMaterialStatusBatch(request.Uuids, request.Status); err != nil {
+			return errors.WithMessage(err)
+		}
+
+		// 调用erp接口,更新状态
+		if ctx.GetCompany().IsOpenErp() {
+			existingMaterials, err := materialRepo.GetMaterialDetailByUuids(request.Uuids)
+			if err != nil {
+				return errors.WithMessage(err, "获取物品详情失败")
+			}
+			erpSrv := erp.NewIErpSrv(s.dbm)
+			for _, existingMaterial := range existingMaterials {
+				enName, err := GetEnName(ctx, existingMaterial.MultiLanguageName.GetNames())
+				if err != nil {
+					return errors.WithMessage(err, "翻译失败")
+				}
+
+				// 旧的非基准单位
+				unitList := []req.MaterialUomReq{}
+				for _, unit := range existingMaterial.NotBaseUnitList {
+					unitList = append(unitList, req.MaterialUomReq{
+						Uom:            unit.Unit.ErpnextUom,
+						ConversionRate: unit.ConversionRate,
+					})
+				}
+
+				_, errErp := erpSrv.AddMaterial(ctx, req.MaterialAddErpReq{
+					ItemCode:      existingMaterial.Code,
+					ItemName:      enName,
+					StockUom:      existingMaterial.Unit.Unit.ErpnextUom,
+					Disabled:      request.Status == 0,
+					ValuationRate: existingMaterial.Valuation,
+					BarcodeValue:  existingMaterial.BarcodeValue,
+					Uoms:          unitList,
+				})
+				if errErp != nil {
+					return errors.WithMessage(errErp)
+				}
+			}
+		}
+		return nil
 	}); err != nil {
 		return errors.WithMessage(err)
 	}
@@ -859,7 +943,7 @@ func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomC
 		materialUnit := material.GetUnit(materialParam.UnitUuid)
 		baseUnit := material.GetBaseUnit()
 
-		materialList = append(materialList, &model.RelatedMaterial{
+		item := &model.RelatedMaterial{
 			RelatedUuid:            cardUuid,
 			MaterialUuid:           materialParam.MaterialUuid,
 			Num:                    materialParam.Num,
@@ -869,7 +953,9 @@ func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomC
 			BaseUnitName:           baseUnit.Unit.MultiLanguageName.ToJson(),
 			BaseUnitConversionRate: materialUnit.ConversionRate,
 			Material:               material,
-		})
+		}
+		item.SetUnitErpnextUom(materialUnit.Unit.ErpnextUom)
+		materialList = append(materialList, item)
 	}
 
 	productBomCard := model.ProductBomCard{
@@ -894,26 +980,27 @@ func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomC
 			erpBomItemList := []*manufacturing.BomItem{}
 			for _, material := range materialList {
 				unitName := model.NewMultiLanguageName(material.UnitName)
-				enName, err := GetEnName(ctx, unitName.GetNames())
-				if err != nil {
-					return errors.WithMessage(err, "翻译失败")
+				erpnextUom := material.GetUnitErpnextUom()
+				// 兼容开发阶段产生的脏数据
+				if erpnextUom == "" {
+					enName, err := GetEnName(ctx, unitName.GetNames())
+					if err != nil {
+						return errors.WithMessage(err, "翻译失败")
+					}
+					erpnextUom = enName
 				}
 				erpBomItemList = append(erpBomItemList, &manufacturing.BomItem{
 					ItemCode: material.Material.Code,
 					Rate:     material.Material.Valuation,
 					Qty:      material.Num,
-					Uom:      enName,
+					Uom:      erpnextUom,
 				})
 			}
 			erpSrv := erp.NewIErpSrv(s.dbm)
-			enName, err := GetEnName(ctx, productBom.ProductPackage.ProductUnit.MultiLanguageName.GetNames())
-			if err != nil {
-				return errors.WithMessage(err, "翻译失败")
-			}
 			erpBomResp, errErp := erpSrv.AddProductBomCard(ctx, erp.ProductBomCardAddErpReq{
-				ItemCode: productBom.ErpCode, // 商品编码
-				Quantity: float64(req.Num),   // 数量
-				Uom:      enName,             // 单位
+				ItemCode: productBom.ErpCode,                               // 商品编码
+				Quantity: float64(req.Num),                                 // 数量
+				Uom:      productBom.ProductPackage.ProductUnit.ErpnextUom, // 单位
 				Items:    erpBomItemList,
 			})
 			if errErp != nil {

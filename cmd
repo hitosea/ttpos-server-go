@@ -297,10 +297,10 @@ if [ $# -gt 0 ]; then
                 run_exec php "composer update --ignore-platform-reqs"
                 run_exec php "php think migrate:run"
                 echo -e "${OK} ${GreenBG} 更新完成 ${Font}"
-                echo -e "${OK} ${GreenBG} 更新外送服务 ${Font}"
-                cd takeout && make conf && make db_up.docker
-                echo -e "${OK} ${GreenBG} 更新外送服务完成 ${Font}"
-                cd ..
+                # echo -e "${OK} ${GreenBG} 更新外送服务 ${Font}"
+                # cd takeout && make conf && make db_up.docker
+                # echo -e "${OK} ${GreenBG} 更新外送服务完成 ${Font}"
+                # cd ..
                 $COMPOSE down
                 $COMPOSE up -d --pull always
             else

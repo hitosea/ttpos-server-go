@@ -45,17 +45,22 @@ func (s *erpSrv) AddMaterial(ctx context.Context, params req.MaterialAddErpReq) 
 			ConversionFactor: uom.ConversionRate,
 		})
 	}
-	result, err := client.SaveItem(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.ItemInfo{
+
+	param := &item.ItemInfo{
+		ItemCode:      params.ItemCode,
 		ItemName:      params.ItemName,
 		ItemGroup:     item.ItemGroup_RawMaterial,
 		StockUom:      params.StockUom,
 		ValuationRate: params.ValuationRate,
 		OpeningStock:  params.OpeningStock,
 		IsStockItem:   true,
+		Disabled:      params.Disabled,
+		Barcode:       params.BarcodeValue,
 		Branch:        companySetting.ErpnextBranchName,
 		CompanyAbbr:   companySetting.ErpnextCompanyAbbr,
 		Uoms:          unitList,
-	})
+	}
+	result, err := client.SaveItem(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), param)
 	if err != nil {
 		return nil, err
 	}
