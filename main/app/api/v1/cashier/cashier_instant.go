@@ -938,7 +938,7 @@ func (h *InstantHandler) OrderPaymentFinish(c *gin.Context) {
 			helper.ErrorWithData(c, constant.CodeCouponInvalid, res, fmt.Errorf("%s", i18n.Translate(ctx.GetLanguage(), "优惠券信息变化，请重新确认。")))
 			return
 		}
-		helper.ErrorWithDetail(c, constant.CodeFail, fmt.Errorf("%s %s", ctx.GetRequestUuid(), err))
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	ctx.Log().Debug("销售订单的付款结账成功", zap.Any("res", res))

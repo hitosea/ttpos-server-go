@@ -161,7 +161,7 @@
   </div>
 </template>
 <script setup>
-  import { ref, inject, nextTick, computed, defineEmits, reactive, onMounted } from 'vue';
+  import { ref, inject, nextTick, computed, defineEmits, reactive, watch } from 'vue';
   import { languageStore } from '@/store/model/language.js';
   import UniqueNameForm from '@/components/product/UniqueNameForm.vue';
   import ProductSelector from '@/components/product/Selector.vue';
@@ -459,20 +459,25 @@
     }
   };
 
-  onMounted(() => {
-    form.unit.map((item, index) => {
-      let unit_name = isValidJSON(item.unit_name) ? JSON.parse(item.unit_name) : {};
-      languageList.forEach((items) => {
-        if (unit_name[items.key] != null) {
-          restaurantsObj[items.key].push({
-            value: unit_name[items.key] == '' ? '-' : unit_name[items.key],
-            index: index,
-            unit_id: item.unit_id,
-          });
-        }
+  watch(
+    () => form.unit,
+    (val) => {
+      val.map((item, index) => {
+        let unit_name = isValidJSON(item.unit_name) ? JSON.parse(item.unit_name) : {};
+        languageList.forEach((items) => {
+          if (unit_name[items.key] != null) {
+            restaurantsObj[items.key].push({
+              value: unit_name[items.key] == '' ? '-' : unit_name[items.key],
+              index: index,
+              unit_id: item.unit_id,
+            });
+          }
+        });
       });
-    });
-  });
+    },
+    { deep: true, immediate: true }
+  );
+
 </script>
 <style scoped lang="scss">
   .w-full {

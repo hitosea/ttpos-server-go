@@ -56,6 +56,7 @@ type staffShiftSrv struct {
 	cacheKeyPrefix string
 	cashBoxSrv     ICashBoxSrv
 	statisticsSrv  IStatisticsSrv
+	MaxAmount      string
 }
 
 func NewShiftSrvImpl(cache cache.Cache, dbm *database.DBManager, cashBoxSrv ICashBoxSrv, statisticsSrv IStatisticsSrv) IStaffShiftSrv {
@@ -65,6 +66,7 @@ func NewShiftSrvImpl(cache cache.Cache, dbm *database.DBManager, cashBoxSrv ICas
 		cacheKeyPrefix: "__USERSHIFTLOG_GENERATENUMBER__",
 		cashBoxSrv:     cashBoxSrv,
 		statisticsSrv:  statisticsSrv,
+		MaxAmount:      "10000000000000000",
 	}
 }
 
@@ -478,6 +480,14 @@ func (s *staffShiftSrv) ShiftWithdraw(ctx context.Context, req req.ShiftWithdraw
 		return errors.New("当前班次已交班")
 	}
 
+	maxAmount, err := decimal.NewFromString(s.MaxAmount)
+	if err != nil {
+		return errors.New("最大金额格式错误")
+	}
+	if decimal.NewFromFloat(log.WithdrawCash).Add(decimal.NewFromFloat(req.WithdrawCash)).GreaterThanOrEqual(maxAmount) {
+		return errors.New("当前班次取钱累计金额不能大于最大金额" + s.MaxAmount)
+	}
+
 	err = repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 		// 更新钱箱记录
 		err = s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
@@ -533,6 +543,25 @@ func (s *staffShiftSrv) ShiftDeposit(ctx context.Context, req req.ShiftDepositRe
 	}
 	if log.IsHandedOver() {
 		return errors.New("当前班次已交班")
+	}
+
+	maxAmount, err := decimal.NewFromString(s.MaxAmount)
+	if err != nil {
+		return errors.New("最大金额格式错误")
+	}
+
+	// 当前班次存钱累计金额不能大于最大金额
+	if decimal.NewFromFloat(log.DepositCash).Add(decimal.NewFromFloat(req.DepositCash)).GreaterThanOrEqual(maxAmount) {
+		return errors.New("当前班次存钱累计金额不能大于最大金额" + s.MaxAmount)
+	}
+
+	// 钱箱余额不能大于最大金额
+	balance, err := s.cashBoxSrv.GetBalance(ctx)
+	if err != nil {
+		return errors.New("获取钱箱余额失败")
+	}
+	if decimal.NewFromFloat(balance).Add(decimal.NewFromFloat(req.DepositCash)).GreaterThanOrEqual(maxAmount) {
+		return errors.New("钱箱余额不能大于最大金额" + s.MaxAmount)
 	}
 
 	err = repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {

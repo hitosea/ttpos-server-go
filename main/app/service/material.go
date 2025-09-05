@@ -404,6 +404,7 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 		IsDefault:      1,
 		FromUnitUuid:   0,
 		MaterialUuid:   materialUuid,
+		Unit:           productUnit,
 	}
 	unitUuid, err := repository.NewMaterialUnitRepo(tx).CreateMaterialUnit(unit)
 	if err != nil {
@@ -1303,7 +1304,7 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 			return errors.WithMessage(err, "创建多语言名称失败")
 		}
 		materialList := []*model.RelatedMaterial{}
-		materialList = append(materialList, &model.RelatedMaterial{
+		item := &model.RelatedMaterial{
 			RelatedUuid:            productBomCardUuid,
 			MaterialUuid:           material.Uuid,
 			Num:                    req.Num,
@@ -1313,7 +1314,9 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 			BaseUnitName:           material.Unit.Name,
 			BaseUnitConversionRate: 1,
 			Material:               material,
-		})
+		}
+		item.SetUnitErpnextUom(material.Unit.Unit.ErpnextUom)
+		materialList = append(materialList, item)
 
 		productBomCard := model.ProductBomCard{
 			BaseModel: model.BaseModel{
@@ -1335,16 +1338,20 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 			// 同步成本卡到erp
 			erpBomItemList := []*manufacturing.BomItem{}
 			for _, material := range materialList {
-				unitName := model.NewMultiLanguageName(material.UnitName)
-				enName, err := GetEnName(ctx, unitName.GetNames())
-				if err != nil {
-					return errors.WithMessage(err, "翻译失败")
+				erpnextUom := material.GetUnitErpnextUom()
+				if erpnextUom == "" {
+					unitName := model.NewMultiLanguageName(material.UnitName)
+					enName, err := GetEnName(ctx, unitName.GetNames())
+					if err != nil {
+						return errors.WithMessage(err, "翻译失败")
+					}
+					erpnextUom = enName
 				}
 				erpBomItemList = append(erpBomItemList, &manufacturing.BomItem{
 					ItemCode: code,
 					Rate:     material.Material.Valuation,
 					Qty:      material.Num,
-					Uom:      enName,
+					Uom:      erpnextUom,
 				})
 			}
 			productBomRepo := repository.NewProductBomRepo(db)

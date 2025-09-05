@@ -827,6 +827,19 @@ func (model *SaleOrder) SetMemberDiscountCancel() {
 	}
 }
 
+// 获取订单中的会员余额支付
+func (model *SaleOrder) GetMemberBalancePayment() *PaymentOrder {
+	for _, paymentOrder := range model.PaymentOrders {
+		if paymentOrder.IsDelete() {
+			continue
+		}
+		if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeBalance {
+			return paymentOrder
+		}
+	}
+	return nil
+}
+
 // 删除销售订单中所有优惠券
 func (model *SaleOrder) SetAllCouponCancel() {
 	for _, coupon := range model.Coupons {
