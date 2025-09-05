@@ -25301,6 +25301,10 @@ const docTemplate = `{
         "material_resp.Material": {
             "type": "object",
             "properties": {
+                "barcode_value": {
+                    "description": "条形码值",
+                    "type": "string"
+                },
                 "category_uuid": {
                     "description": "分类UUID",
                     "type": "integer"
@@ -25461,6 +25465,18 @@ const docTemplate = `{
                     "description": "成本单位UUID",
                     "type": "integer"
                 },
+                "from_cost_unit_uuid": {
+                    "description": "来源成本单位UUID",
+                    "type": "integer"
+                },
+                "from_purchase_unit_uuid": {
+                    "description": "来源采购单位UUID",
+                    "type": "integer"
+                },
+                "from_unit_uuid": {
+                    "description": "来源单位UUID",
+                    "type": "integer"
+                },
                 "locale_name": {
                     "description": "物品名称",
                     "allOf": [
@@ -25509,6 +25525,10 @@ const docTemplate = `{
                     "description": "单位名称",
                     "type": "string"
                 },
+                "unit_uuid": {
+                    "description": "单位UUID",
+                    "type": "integer"
+                },
                 "uuid": {
                     "description": "物品UUID",
                     "type": "integer"
@@ -25556,6 +25576,10 @@ const docTemplate = `{
                 "conversion_rate": {
                     "description": "转换率",
                     "type": "number"
+                },
+                "from_unit_uuid": {
+                    "description": "来源单位UUID",
+                    "type": "integer"
                 },
                 "locale_name": {
                     "description": "单位名称",
@@ -29136,7 +29160,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "status": {
-                    "description": "状态，1-启用 2-停用",
+                    "description": "状态，1-启用 0-停用",
                     "type": "integer"
                 },
                 "unit_list": {
@@ -29171,16 +29195,6 @@ const docTemplate = `{
         },
         "req.MaterialEditReq": {
             "type": "object",
-            "required": [
-                "barcode_value",
-                "category_uuid",
-                "cost_unit_uuid",
-                "locale_name",
-                "purchase_unit_uuid",
-                "unit_list",
-                "uuid",
-                "valuation"
-            ],
             "properties": {
                 "barcode_value": {
                     "description": "条形码值",
@@ -29223,8 +29237,7 @@ const docTemplate = `{
                 },
                 "valuation": {
                     "description": "估值率",
-                    "type": "number",
-                    "minimum": 0
+                    "type": "number"
                 }
             }
         },
@@ -30508,7 +30521,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "status": {
-                    "description": "状态，1-启用 2-停用",
+                    "description": "状态，1-启用 0-停用",
                     "type": "integer"
                 },
                 "unit_list": {
@@ -37487,6 +37500,10 @@ const docTemplate = `{
         "resp.PaymentMethodAmount": {
             "type": "object",
             "properties": {
+                "code": {
+                    "description": "支付方式代码。",
+                    "type": "integer"
+                },
                 "commission_fee": {
                     "description": "已付款的手续费。用于显示最终应收，前端显示的最终应收=应收金额+已付款的手续费+（当前支付方式的手续费费率*当前支付方式的金额输入框的值）",
                     "type": "number"

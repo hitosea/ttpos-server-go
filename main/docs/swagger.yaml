@@ -706,6 +706,9 @@ definitions:
     type: object
   material_resp.Material:
     properties:
+      barcode_value:
+        description: 条形码值
+        type: string
       category_uuid:
         description: 分类UUID
         type: integer
@@ -811,6 +814,15 @@ definitions:
       cost_unit_uuid:
         description: 成本单位UUID
         type: integer
+      from_cost_unit_uuid:
+        description: 来源成本单位UUID
+        type: integer
+      from_purchase_unit_uuid:
+        description: 来源采购单位UUID
+        type: integer
+      from_unit_uuid:
+        description: 来源单位UUID
+        type: integer
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -839,6 +851,9 @@ definitions:
       unit_name:
         description: 单位名称
         type: string
+      unit_uuid:
+        description: 单位UUID
+        type: integer
       uuid:
         description: 物品UUID
         type: integer
@@ -872,6 +887,9 @@ definitions:
       conversion_rate:
         description: 转换率
         type: number
+      from_unit_uuid:
+        description: 来源单位UUID
+        type: integer
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -3279,7 +3297,7 @@ definitions:
         description: 采购单位UUID
         type: integer
       status:
-        description: 状态，1-启用 2-停用
+        description: 状态，1-启用 0-停用
         type: integer
       unit_list:
         description: 单位列表
@@ -3331,17 +3349,7 @@ definitions:
         type: integer
       valuation:
         description: 估值率
-        minimum: 0
         type: number
-    required:
-    - barcode_value
-    - category_uuid
-    - cost_unit_uuid
-    - locale_name
-    - purchase_unit_uuid
-    - unit_list
-    - uuid
-    - valuation
     type: object
   req.MaterialImportItemReq:
     properties:
@@ -4238,7 +4246,7 @@ definitions:
         description: 关联UUID,给规格商品绑定成本卡。规格商品时，关联UUID为规格商品UUID；
         type: integer
       status:
-        description: 状态，1-启用 2-停用
+        description: 状态，1-启用 0-停用
         type: integer
       unit_list:
         description: 单位列表
@@ -8968,6 +8976,9 @@ definitions:
     type: object
   resp.PaymentMethodAmount:
     properties:
+      code:
+        description: 支付方式代码。
+        type: integer
       commission_fee:
         description: 已付款的手续费。用于显示最终应收，前端显示的最终应收=应收金额+已付款的手续费+（当前支付方式的手续费费率*当前支付方式的金额输入框的值）
         type: number
