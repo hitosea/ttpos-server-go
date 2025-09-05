@@ -3288,6 +3288,7 @@
   "订单检查失败": "Sipariş kontrolü başarısız",
   "订单检查成功": "Sipariş kontrolü başarılı",
   "订单没有会员": "Sipariş üyesi yok",
+  "订单没有会员，请撤销会员余额支付": "Siparişte üye yok, lütfen üye bakiyesiyle yapılan ödemeyi iptal edin",
   "订单没有商品，请选购商品": "Siparişte ürün yok, lütfen ürün seçin",
   "订单状态": "Sipariş durumu",
   "订单状态不允许删除": "Sipariş durumu silinmeye izin vermiyor",

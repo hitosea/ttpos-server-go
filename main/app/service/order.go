@@ -9119,6 +9119,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 				ZeroAmount:            0, // 只有没有手续费时才会抹零
 				ZeroRule:              constant.SaleBillSettingCheckoutZeroingMethodNone,
 				PaymentMethodUuid:     methodItem.Uuid,
+				Code:                  methodItem.Code,
 			}
 			amounts = append(amounts, amount)
 		} else {
@@ -9142,6 +9143,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 				IsAutoZero:            saleOrder.IsAutoCheckoutZeroDiscount(*saleBill.SaleBillSetting),
 				ZeroRule:              saleOrder.ZeroCheckoutRule,
 				PaymentMethodUuid:     methodItem.Uuid,
+				Code:                  methodItem.Code,
 			}
 			amounts = append(amounts, amount)
 		}
@@ -10162,6 +10164,10 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 	var commissionFee float64 // 手续费，付款已经产生的手续费
 	// 获取最小的那个未付款金额。因为可能结账抹零后已经没有未付款金额了
 	for index, amountItem := range infoResp.Amounts.List {
+		// 如果订单没有会员，但又支付了会员余额，则提示先撤销会员余额支付
+		if amountItem.Code == constant.PaymentMethodCodeBalance && saleOrder.ConsumerUuid == 0 {
+			return nil, errors.New("订单没有会员，请撤销会员余额支付")
+		}
 		if index == 0 {
 			unpaidAmount = amountItem.UnpaidAmount
 			commissionFee = amountItem.CommissionFee
@@ -12264,6 +12270,15 @@ func (s *orderSrv) OrderMemberCancel(ctx context.Context, request req.OrderMembe
 	saleOrder.SetAllCouponCancel()
 	if err := repository.NewSaleOrderCouponRepo(db).UpdateSaleOrderCouponCancelAll(saleOrder.Uuid); err != nil {
 		return nil, errors.WithMessage(err, "取消销售订单会员优惠券失败")
+	}
+
+	// 取消会员余额支付
+	if saleOrder.ConsumerUuid == 0 {
+		memberBalancePayment := saleOrder.GetMemberBalancePayment()
+		if memberBalancePayment != nil {
+			memberBalancePayment.SetDelete()
+			repository.NewPaymentOrderRepo(db).DeletePaymentOrderRecord(memberBalancePayment.Uuid)
+		}
 	}
 
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {

@@ -3288,6 +3288,7 @@
   "订单检查失败": "Bestellprüfung fehlgeschlagen",
   "订单检查成功": "Bestellprüfung erfolgreich",
   "订单没有会员": "Keine Mitglieder in der Bestellung",
+  "订单没有会员，请撤销会员余额支付": "Für diese Bestellung gibt es kein Mitglied. Bitte stornieren Sie die Zahlung mit dem Mitgliedsguthaben",
   "订单没有商品，请选购商品": "Keine Artikel in der Bestellung, bitte wählen Sie Artikel aus",
   "订单状态": "Bestellstatus",
   "订单状态不允许删除": "Löschen im aktuellen Bestellstatus nicht erlaubt",
