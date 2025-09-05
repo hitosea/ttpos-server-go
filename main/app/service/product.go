@@ -2556,6 +2556,8 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 	err = db.Transaction(func(tx *gorm.DB) error {
 		commonRepo := repository.NewCommonRepo()
 		productRepo := repository.NewProductRepo(tx)
+		warehouseFormRepo := repository.NewWarehouseFormRepo(tx)
+		warehouseMonthlyFormRepo := repository.NewWarehouseMonthlyFormRepo(tx)
 		// 保存多语言名称
 		multiLanguageName := model.MultiLanguageName{
 			ZhName:   addReq.LocaleName.ZH,
@@ -2638,7 +2640,37 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 					Status:             int(productPackage.Status),
 					ProductFlavorUuid:  productFlavor.Uuid,
 					ProductPackageUuid: productPackage.Uuid,
+					StockNum:           99999999,
 				})
+
+				setting, err := s.settingSrv.GetCompanySetting(ctx)
+				// 开启库存管理
+				if setting.SaleStock == 1 {
+					// 添加入库
+					warehouseForm := model.WarehouseForm{
+						FormNo:         warehouseFormRepo.GenerateWarehouseFormNo(setting.Timezone),
+						Scene:          constant.WarehouseFormSceneAddStock,
+						Num:            99999999,
+						ProductBomUuid: uuid,
+						OperatorUuid:   ctx.GetStaffUuid(),
+					}
+					err = warehouseFormRepo.CreateWarehouseFormRecord(warehouseForm)
+					if err != nil {
+						return errors.WithMessage(err, "保存入库单失败")
+					}
+					// 添加月初库存记录
+					warehouseMonthlyProductBomForm := model.WarehouseMonthlyProductBomForm{
+						Year:           utils.SetTimezone(setting.Timezone).Now().Year(),
+						Month:          int(utils.SetTimezone(setting.Timezone).Now().Month()),
+						Scene:          constant.WarehouseMonthlyFormSceneStart,
+						ProductBomUuid: uuid,
+						Stock:          99999999,
+					}
+					err = warehouseMonthlyFormRepo.CreateWarehouseMonthlyProductBomForm(warehouseMonthlyProductBomForm)
+					if err != nil {
+						return errors.WithMessage(err, "保存月初库存记录失败")
+					}
+				}
 			}
 		}
 
@@ -3113,6 +3145,8 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 	err := db.Transaction(func(tx *gorm.DB) error {
 		commonRepo := repository.NewCommonRepo()
 		productRepo := repository.NewProductRepo(tx)
+		warehouseFormRepo := repository.NewWarehouseFormRepo(tx)
+		warehouseMonthlyFormRepo := repository.NewWarehouseMonthlyFormRepo(tx)
 
 		flavor, err := productRepo.GetProductFlavor(
 			productRepo.WhereUuid(editReq.Uuid),
@@ -3145,15 +3179,53 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 			return err
 		}
 
+		setting, err := s.settingSrv.GetCompanySetting(ctx)
+
 		// 更新关联商品包
 		for _, item := range editReq.List {
 			if item.IsDelete {
+				productBom, _ := productRepo.GetProductBom(
+					commonRepo.WhereBySoftDelete(),
+					commonRepo.WhereByUuid(item.BomUuid),
+				)
+				if productBom.ID == 0 {
+					return errors.New("商品bom不存在")
+				}
 				// 删除商品BOM
-				err := tx.Model(&model.ProductBom{}).Where("uuid = ?", item.BomUuid).Updates(map[string]any{
+				err := tx.Model(&model.ProductBom{}).Where("uuid = ?", productBom.Uuid).Updates(map[string]any{
 					"delete_time": time.Now().Unix(),
 				}).Error
 				if err != nil {
 					return err
+				}
+				if setting.SaleStock == 1 {
+					// 删除出库
+					outFormUuid, _ := utils.GetID()
+					warehouseForm := model.WarehouseOutForm{
+						BaseModel: model.BaseModel{
+							Uuid: outFormUuid,
+						},
+						FormNo:       warehouseFormRepo.GenerateWarehouseOutFormNo(setting.Timezone),
+						Scene:        constant.WarehouseOutFormSceneDelete,
+						Status:       constant.WarehouseOutFormStatusSuccess,
+						OperatorUuid: ctx.GetStaffUuid(),
+					}
+					err = warehouseFormRepo.CreateWarehouseOutFormRecord(warehouseForm)
+					if err != nil {
+						return errors.WithMessage(err, "保存出库单失败")
+					}
+					warehouseOutFormItem := model.WarehouseOutFormItem{
+						Num:                  productBom.StockNum,
+						Scene:                constant.WarehouseOutFormSceneDelete,
+						Status:               1,
+						ReduceStock:          constant.WarehouseOutFormItemReduceStockSuccess,
+						WarehouseOutFormUuid: outFormUuid,
+						ProductBomUuid:       productBom.Uuid,
+					}
+					err = warehouseFormRepo.CreateWarehouseOutFormItemRecord(warehouseOutFormItem)
+					if err != nil {
+						return errors.WithMessage(err, "保存出库单明细失败")
+					}
 				}
 			} else {
 				// 判断商品是否存在
@@ -3192,16 +3264,49 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 						erpCode = itemInfo.ItemCode
 					}
 					// 新增商品BOM
+					uuid, _ := utils.GetID()
 					err := tx.Create(&model.ProductBom{
+						BaseModel: model.BaseModel{
+							Uuid: uuid,
+						},
 						Price:              item.Price,
 						Name:               editReq.LocaleName.ToJson(),
 						ErpCode:            erpCode,
 						Status:             int(productPackage.Status),
 						ProductFlavorUuid:  flavor.Uuid,
 						ProductPackageUuid: item.Uuid,
+						StockNum:           99999999,
 					}).Error
 					if err != nil {
 						return err
+					}
+					setting, err := s.settingSrv.GetCompanySetting(ctx)
+					// 开启库存管理
+					if setting.SaleStock == 1 {
+						// 添加入库
+						warehouseForm := model.WarehouseForm{
+							FormNo:         warehouseFormRepo.GenerateWarehouseFormNo(setting.Timezone),
+							Scene:          constant.WarehouseFormSceneAddStock,
+							Num:            99999999,
+							ProductBomUuid: uuid,
+							OperatorUuid:   ctx.GetStaffUuid(),
+						}
+						err = warehouseFormRepo.CreateWarehouseFormRecord(warehouseForm)
+						if err != nil {
+							return errors.WithMessage(err, "保存入库单失败")
+						}
+						// 添加月初库存记录
+						warehouseMonthlyProductBomForm := model.WarehouseMonthlyProductBomForm{
+							Year:           utils.SetTimezone(setting.Timezone).Now().Year(),
+							Month:          int(utils.SetTimezone(setting.Timezone).Now().Month()),
+							Scene:          constant.WarehouseMonthlyFormSceneStart,
+							ProductBomUuid: uuid,
+							Stock:          99999999,
+						}
+						err = warehouseMonthlyFormRepo.CreateWarehouseMonthlyProductBomForm(warehouseMonthlyProductBomForm)
+						if err != nil {
+							return errors.WithMessage(err, "保存月初库存记录失败")
+						}
 					}
 				} else {
 					// 同步更新商品到erp
