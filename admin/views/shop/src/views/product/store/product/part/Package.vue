@@ -22,7 +22,7 @@
             <el-option :value="items.index" :label="items.value"></el-option>
           </template>
         </el-select>
-        <el-button size="small" type="primary" class="el-icon-circle-plus" @click="addUnit">{{ $t('添加单位') }}+</el-button>
+        <el-button size="small" type="primary" :disabled="erp_is_open == 1" class="el-icon-circle-plus" @click="addUnit">{{ $t('添加单位') }}+</el-button>
       </el-form-item>
     </template>
 

@@ -30,7 +30,7 @@
         style="width: 100%"
         :placeholder="$t('请选择分类')"
       ></el-cascader>
-      <el-button size="small" type="primary" class="el-icon-circle-plus" @click="addCategory">{{ $t('添加分类') }}+</el-button>
+      <el-button size="small" type="primary" class="el-icon-circle-plus" :disabled="erp_is_open == 1" @click="addCategory">{{ $t('添加分类') }}+</el-button>
     </el-form-item>
     <el-form-item for="no_click" :label="$t('供应商：')" v-if="baseSale == '1' && form.model.type == 20">
       <el-select v-model="form.model.erp_supplier_id" filterable clearable class="max-w460" size="default" :placeholder="$t('请选择供应商')" :disabled="erp_is_open == 1">

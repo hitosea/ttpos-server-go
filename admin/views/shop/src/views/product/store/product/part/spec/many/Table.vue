@@ -38,7 +38,7 @@
                         <el-option :value="items.index" :label="items.value"></el-option>
                       </template>
                     </el-select>
-                    <el-button size="small" type="primary" class="el-icon-circle-plus mr0" @click="addSku">{{ $t('添加规格') }}+</el-button>
+                    <el-button size="small" type="primary" :disabled="erp_is_open == 1" class="el-icon-circle-plus mr0" @click="addSku">{{ $t('添加规格') }}+</el-button>
                   </el-form-item>
                 </template>
               </div>
