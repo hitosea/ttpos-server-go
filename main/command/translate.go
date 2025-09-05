@@ -23,12 +23,12 @@ import (
 
 var URL = "https://aitrans.ttpos.com/translate"
 
-var languageName string
+var newLanguage string
 var num int
 
 func init() {
 	rootCommand.AddCommand(translateCmd)
-	translateCmd.Flags().StringVar(&languageName, "language-name", "", "新语言文件名")
+	translateCmd.Flags().StringVar(&newLanguage, "new-language", "", "新语言文件名")
 	translateCmd.Flags().IntVar(&num, "num", 10, "每次关键字翻译数量")
 }
 
@@ -40,8 +40,8 @@ var translateCmd = &cobra.Command{
 		if err := config.Init(); err != nil {
 			log.Fatalf("Failed to initialize config: %v", err)
 		}
-		if languageName != "" && !slices.Contains(i18n.GetLanguageList(), languageName) {
-			log.Fatalf("language-name [%s] is not in language list: %v", languageName, i18n.GetLanguageList())
+		if newLanguage != "" && !slices.Contains(i18n.GetLanguageList(), newLanguage) {
+			log.Fatalf("language-name [%s] is not in language list: %v", newLanguage, i18n.GetLanguageList())
 		}
 	},
 	Run: func(_ *cobra.Command, _ []string) {
@@ -59,20 +59,20 @@ func execute() {
 	languageList := i18n.GetLanguageList()
 	fmt.Println("languageList: ", languageList)
 
-	// 指定要扫描的目录
-	dir := "./"
+	// 获取中文数据
+	zhData := getLangData("zh")
 
-	// 提取的中文
-	chineseTextMap := make(map[string]struct{})
-
-	// 如果指定新的语言文件，则不读取目录下的文件
-	if languageName == "" {
+	var chineseTexts []string
+	if newLanguage == "" { // 增量更新翻译
+		// 指定要扫描的目录
+		dir := "./"
+		// 提取的中文
+		chineseTextMap := make(map[string]struct{})
 		// 遍历目录下的所有文件
 		err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
-
 			// 只处理.go文件
 			if !info.IsDir() &&
 				strings.HasSuffix(path, ".go") &&
@@ -89,7 +89,6 @@ func execute() {
 				if err != nil {
 					return err
 				}
-
 				// 使用正则表达式匹配中文字符和相关内容，包括以%s开头且后面跟汉字的情况
 				re := regexp.MustCompile(`('|")((auto\.)?(([a-zA-Z0-9\/-]+)?[\p{Han}]+.*?|%s[\p{Han}]+.*?))('|")`)
 				matches := re.FindAllStringSubmatch(string(content), -1)
@@ -99,20 +98,12 @@ func execute() {
 					chineseTextMap[match[2]] = struct{}{}
 				}
 			}
-
 			return nil
 		})
-
 		if err != nil {
 			fmt.Printf("Error scanning directory: %v\n", err)
 			return
 		}
-	}
-
-	zhData := getLangData("zh")
-
-	var chineseTexts []string
-	if languageName == "" {
 		// 过滤掉已存在的 key
 		var filteredTexts []string
 		for text := range chineseTextMap {
@@ -128,8 +119,11 @@ func execute() {
 		// 更新 chineseTexts
 		chineseTexts = append(filteredTexts, missingTexts...)
 		chineseTexts = slice.Unique(chineseTexts)
-	} else {
-		// 新语言要翻译的中文文案
+
+		// 删除其他语言中多语的文案
+		defer handleDuplicateText()
+
+	} else { // 新添加语言翻译
 		chineseTexts = maputil.Keys(zhData)
 	}
 
@@ -144,11 +138,6 @@ func execute() {
 		processGroup(chunk)
 		fmt.Printf("process: %.2f%%\n", float64(len(chunk)+count)/float64(len(chineseTexts))*100)
 		count += len(chunk)
-	}
-
-	if languageName == "" {
-		// 删除其他语言中多语的文案
-		handleDuplicateText()
 	}
 }
 
@@ -167,8 +156,8 @@ func processGroup(texts []string) {
 		})
 	}
 	data["data"] = textData
-	if languageName != "" {
-		data["trans"] = []string{languageName}
+	if newLanguage != "" {
+		data["trans"] = []string{newLanguage}
 	}
 
 	jsonData, err := json.Marshal(data)
@@ -197,7 +186,7 @@ func processGroup(texts []string) {
 		}
 	}()
 
-	var result map[string]interface{}
+	var result map[string]any
 	err = json.Unmarshal(body, &result)
 	if err != nil {
 		fmt.Printf("Error parsing response: %v\n", err)
@@ -206,10 +195,10 @@ func processGroup(texts []string) {
 
 	if result["code"].(float64) == 200 {
 		// 直接使用data数组，不需要转换为字符串
-		translations := result["data"].([]interface{})
+		translations := result["data"].([]any)
 		for _, lang := range i18n.GetLanguageList() {
-			if languageName != "" {
-				if lang != languageName {
+			if newLanguage != "" {
+				if lang != newLanguage {
 					continue
 				}
 				newLangFile := fmt.Sprintf("./i18n/languages/%s.json", lang)
@@ -221,7 +210,7 @@ func processGroup(texts []string) {
 			// 更新现有键并收集新条目
 			newEntries := make(map[string]string)
 			for _, trans := range translations {
-				transMap := trans.(map[string]interface{})
+				transMap := trans.(map[string]any)
 				key := transMap["key"].(string)
 				langKey := lang
 				if lang == "zhtw" {
