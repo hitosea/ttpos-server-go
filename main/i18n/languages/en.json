@@ -3294,6 +3294,7 @@
   "订单检查失败": "Order verification failed",
   "订单检查成功": "Order check successful",
   "订单没有会员": "No member in order",
+  "订单没有会员，请撤销会员余额支付": "There is no member for this order. Please cancel the member balance payment",
   "订单没有商品，请选购商品": "No items in order, please select items",
   "订单状态": "Order Status",
   "订单状态不允许删除": "Order status does not allow deletion",

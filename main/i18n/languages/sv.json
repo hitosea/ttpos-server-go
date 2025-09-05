@@ -3294,6 +3294,7 @@
   "订单检查失败": "Orderkontroll misslyckades",
   "订单检查成功": "Orderkontroll lyckades",
   "订单没有会员": "Beställningen har ingen medlem",
+  "订单没有会员，请撤销会员余额支付": "Det finns ingen medlem för denna beställning. Vänligen avbryt betalningen med medlemsbalansen",
   "订单没有商品，请选购商品": "Det finns inga varor i beställningen, vänligen välj varor",
   "订单状态": "Orderstatus",
   "订单状态不允许删除": "Orderstatus tillåter inte borttagning",

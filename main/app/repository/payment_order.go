@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -26,6 +27,7 @@ type IPaymentOrderRepo interface {
 	UpdateOrCreatePaymentOrderRecord(obj model.PaymentOrder) error // 没有主键时创建，有主键时更新
 	Update(uuid uint64, vars map[string]any) error                 // 更新支付订单金额
 	CreateRefundOrderRecord(refundOrder model.RefundOrder) error   // 创建退款单
+	DeletePaymentOrderRecord(uuid uint64) error                    // 删除支付订单
 }
 
 // IPaymentOrderQueryRepo 定义仓库查询接口
@@ -227,4 +229,10 @@ func (r *paymentOrderRepo) WithMemberRechargeOrder() DBOption { // 关联会员�
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("MemberRechargeOrder")
 	}
+}
+
+// DeletePaymentOrderRecord 删除支付订单
+func (r *paymentOrderRepo) DeletePaymentOrderRecord(uuid uint64) error {
+	err := r.db.Model(&model.PaymentOrder{}).Where("uuid = ?", uuid).Update("delete_time", time.Now().Unix()).Error
+	return errors.WithMessage(err)
 }
