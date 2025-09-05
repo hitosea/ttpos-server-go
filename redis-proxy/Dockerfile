@@ -23,7 +23,7 @@ RUN go build -o main ./main.go
 RUN chmod +x main
 
 # 使用轻量级的镜像来运行应用
-FROM ubuntu:latest
+FROM ubuntu:alpine
 
 # 安装必要的依赖（如有需要）
 # RUN apk add --no-cache <必要的包>
