@@ -30,7 +30,7 @@ message ItemInfo {
   ItemGroup item_group = 2; // 物品分组，必填 Products 商品/Raw Material 原材料/Package 套餐
   string stock_uom = 3; // 库存单位，必填 ttpos 传英文过来
   string item_code = 4; // 物品编码，可选
-  double valuation_rate = 5; // 估值率，可选, 原材料必填
+  double valuation_rate = 5; // 估值率，必填
   string barcode = 6; // 条码，可选
   double opening_stock = 7; // 期初库存，可选
   bool is_stock_item = 8; // 是否库存物品，可选

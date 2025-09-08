@@ -221,6 +221,8 @@ func (s *sItem) buildUpdateItemData(req *item.ItemInfo) g.Map {
 	if len(req.ItemSpecification) > 0 {
 		itemForUpdate["custom_specification"] = req.ItemSpecification
 	}
+	//更新估值率 不更新也必须传入此字段，否erp会设置成0
+	itemForUpdate["valuation_rate"] = req.ValuationRate
 
 	// 条形码更新
 	//note: ttpos 不更新条形码也必须传入此字段，否erp会删除条形码
