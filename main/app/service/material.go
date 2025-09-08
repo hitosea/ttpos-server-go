@@ -1373,11 +1373,12 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 			if err != nil {
 				return errors.WithMessage(err, "获取商品规格失败")
 			}
+			uom := productBom.ProductPackage.ProductUnit.ErpnextUom
 			erpSrv := erp.NewIErpSrv(s.dbm)
 			erpBomResp, errErp := erpSrv.AddProductBomCard(ctx, erp.ProductBomCardAddErpReq{
 				ItemCode: productBom.ErpCode,
 				Quantity: 1,
-				Uom:      productBom.ProductPackage.ProductUnit.ErpnextUom,
+				Uom:      uom,
 				Items:    erpBomItemList,
 			})
 			if errErp != nil {
