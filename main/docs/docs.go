@@ -191,7 +191,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dto.Response"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ErpnextSiteCompanyResp"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -34604,6 +34616,42 @@ const docTemplate = `{
                 "rating": {
                     "description": "骑手评分",
                     "type": "number"
+                }
+            }
+        },
+        "resp.ErpnextSiteCompany": {
+            "type": "object",
+            "properties": {
+                "children": {
+                    "description": "子公司列表，用于树形结构",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ErpnextSiteCompany"
+                    }
+                },
+                "company_abbr": {
+                    "type": "string"
+                },
+                "company_name": {
+                    "type": "string"
+                },
+                "is_used": {
+                    "description": "是否已被使用",
+                    "type": "boolean"
+                },
+                "parent_company": {
+                    "type": "string"
+                }
+            }
+        },
+        "resp.ErpnextSiteCompanyResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ErpnextSiteCompany"
+                    }
                 }
             }
         },

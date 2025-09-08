@@ -607,6 +607,9 @@ func (model *ProductBom) IsStockShortageWithMaterial(productNum float64) bool {
 	// 如果是关联材料的规格，则检查关联材料的库存
 	if model.IsFlavor() {
 		for _, material := range model.FlavorMaterials {
+			if material.IsDelete() {
+				continue
+			}
 			if material.Material.StockNum < material.GetDecreaseNum(productNum) {
 				return true
 			}
