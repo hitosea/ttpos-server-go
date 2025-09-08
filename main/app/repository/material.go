@@ -22,6 +22,8 @@ type IMaterialRepo interface {
 	UpdateMaterialCode(uuid uint64, code string) error
 	UpdateMaterial(material model.Material) error
 	UpdateMaterialStatus(uuid uint64, status bool) error
+	ClearMaterialBarcodeValue(uuid uint64) error // 清空物品条形码值
+	ClearMaterialValuation(uuid uint64) error    // 清空物品估值率
 	DeleteMaterial(uuid uint64) error
 	GetMaterialCategoryByName(name string) (*model.MaterialCategory, error)
 	CreateMaterialCategory(materialCategory model.MaterialCategory) (uint64, error)
@@ -242,6 +244,20 @@ func (r *MaterialRepoImpl) GetMaterialCategoryList() ([]model.MaterialCategory, 
 func (r *MaterialRepoImpl) UpdateMaterialStatusBatch(uuids []uint64, status int) error {
 	if err := r.db.Model(&model.Material{}).Where("uuid IN (?)", uuids).Update("status", status).Error; err != nil {
 		return errors.WithMessage(err, "批量修改物品状态失败")
+	}
+	return nil
+}
+
+func (r *MaterialRepoImpl) ClearMaterialBarcodeValue(uuid uint64) error {
+	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("barcode_value", "").Error; err != nil {
+		return errors.WithMessage(err, "清空物品条形码值失败")
+	}
+	return nil
+}
+
+func (r *MaterialRepoImpl) ClearMaterialValuation(uuid uint64) error {
+	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("valuation", 0).Error; err != nil {
+		return errors.WithMessage(err, "清空物品估值率失败")
 	}
 	return nil
 }
