@@ -17,7 +17,7 @@ import (
 )
 
 type IErpSrv interface {
-	GetCompanyList(ctx context.Context, erpnextSiteCompanyReq req.ErpnextSiteCompanyReq) (resp.ErpnextSiteCompanyResp, error)
+	GetCompanyList(ctx pkgCtx.Context, erpnextSiteCompanyReq req.ErpnextSiteCompanyReq) (resp.ErpnextSiteCompanyResp, error)
 	InitShop(ctx pkgCtx.Context, initShopReq req.InitShopReq) (resp.InitShopResp, error)
 	GetUomList(ctx context.Context, getUomListReq req.GetUomListReq) (resp.GetUomListResp, error)
 	GetAttributeList(ctx context.Context, getAttributeListReq req.GetAttributeListReq) (resp.GetAttributeListResp, error)

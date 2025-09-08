@@ -8,6 +8,7 @@ type ErpnextSiteCompany struct {
 	CompanyName   string               `json:"company_name"`
 	CompanyAbbr   string               `json:"company_abbr"`
 	ParentCompany string               `json:"parent_company"`
+	IsUsed        bool                 `json:"is_used"`  // 是否已被使用
 	Children      []ErpnextSiteCompany `json:"children"` // 子公司列表，用于树形结构
 }
 
