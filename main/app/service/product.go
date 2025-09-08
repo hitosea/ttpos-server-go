@@ -4820,6 +4820,12 @@ func (s *productSrv) EditProductPackage(ctx context.Context, tx *gorm.DB, req re
 	if err != nil {
 		return nil, errors.WithMessage(err, "保存多语言名称失败")
 	}
+	// 处理外送端,如果外送端未开启，则不显示外送端
+	isShowDelivery := uint(req.Show.IsShowDelivery)
+	companySetting := ctx.GetCompanySetting()
+	if !companySetting.IsOpenRider() {
+		isShowDelivery = 0
+	}
 	err = productPackageRepo.UpdateProductPackage(map[string]any{
 		"name":                  req.LocaleName.ToJson(),
 		"image_file_uuid":       req.ImageFileUuid,
@@ -4835,7 +4841,7 @@ func (s *productSrv) EditProductPackage(ctx context.Context, tx *gorm.DB, req re
 		"is_show_kitchen":       req.Show.IsShowKitchen,
 		"is_show_assistant":     req.Show.IsShowAssistant,
 		"is_show_h5":            req.Show.IsShowH5,
-		"is_show_delivery":      req.Show.IsShowDelivery,
+		"is_show_delivery":      isShowDelivery,
 		"price":                 price,
 		"open_discount":         req.Discount.IsEnableMemberDiscount,
 		"open_overall_discount": req.Discount.IsEnableOverallDiscount,
@@ -4905,6 +4911,12 @@ func (s *productSrv) AddProductPackage(ctx context.Context, tx *gorm.DB, request
 			erpCode = itemInfo.ItemCode
 		}
 	}
+	// 处理外送端,如果外送端未开启，则不显示外送端
+	isShowDelivery := uint(request.Show.IsShowDelivery)
+	companySetting := ctx.GetCompanySetting()
+	if !companySetting.IsOpenRider() {
+		isShowDelivery = 0
+	}
 	productPackage := &model.ProductPackage{
 		BaseModel: model.BaseModel{
 			Uuid:       uuid,
@@ -4927,7 +4939,7 @@ func (s *productSrv) AddProductPackage(ctx context.Context, tx *gorm.DB, request
 		IsShowKitchen:         uint(request.Show.IsShowKitchen),
 		IsShowAssistant:       uint(request.Show.IsShowAssistant),
 		IsShowH5:              uint(request.Show.IsShowH5),
-		IsShowDelivery:        uint(request.Show.IsShowDelivery),
+		IsShowDelivery:        isShowDelivery,
 		Sort:                  uint(sort),
 		Price:                 price,
 		ProductType:           uint(request.Type),
