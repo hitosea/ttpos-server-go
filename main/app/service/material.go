@@ -623,6 +623,20 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 			}
 		}
 
+		if request.BarcodeValue == "" {
+			err = materialRepo.ClearMaterialBarcodeValue(request.Uuid)
+			if err != nil {
+				return errors.WithMessage(err, "清空物品条形码值失败")
+			}
+		}
+
+		if request.Valuation == 0 {
+			err = materialRepo.ClearMaterialValuation(request.Uuid)
+			if err != nil {
+				return errors.WithMessage(err, "清空物品估值率失败")
+			}
+		}
+
 		if ctx.GetCompany().IsOpenErp() {
 			erpSrv := erp.NewIErpSrv(s.dbm)
 			enName, err := GetEnName(ctx, existingMaterial.MultiLanguageName.GetNames())
