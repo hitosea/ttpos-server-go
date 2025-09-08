@@ -86,6 +86,13 @@ func (r *MaterialAddReq) Validate() error {
 			}
 		}
 	}
+	// 创建的时候期初库存跟估值率要大于0
+	if r.Valuation <= 0 {
+		return errors.WithMessage(errors.New("估值率需大于零"))
+	}
+	if r.InitStock <= 0 {
+		return errors.WithMessage(errors.New("期初库存需大于零"))
+	}
 	return nil
 }
 
