@@ -42,6 +42,7 @@ export interface erpnextSiteCompanyParams {
 export interface erpnextSiteCompanyItem {
   company_name: string;
   company_abbr: string;
+  is_used?: boolean; // 添加是否被使用的字段
 }
 
 export interface erpnextPosProfileItem {

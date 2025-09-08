@@ -27,6 +27,7 @@
           :props="{
             label: 'company_name',
             value: 'company_abbr',
+            disabled: 'is_used', // 添加禁用字段
             checkStrictly: true,
             expandTrigger: 'hover',
           }"
@@ -34,7 +35,13 @@
           :disabled="props.hasEdit || confirmPassword"
         >
           <template #default="{ data }">
-            <span class="!w-full block" @click="handleCompanyChange(data.company_abbr)">{{ data.company_name }}</span>
+            <span 
+              class="!w-full block" 
+              :class="{ 'text-gray-400 cursor-not-allowed': data.is_used, 'cursor-pointer': !data.is_used }" 
+              @click="handleCompanyClick(data)"
+            >
+              {{ data.company_name }}
+            </span>
           </template>
         </el-cascader>
       </el-form-item>
@@ -165,6 +172,16 @@
       // 如果已经是字符串，直接使用
       formData.value.erpnext_company_abbr = value || '';
     }
+  };
+
+  // 处理公司点击事件，阻止已被使用的项目被选中
+  const handleCompanyClick = (data: any) => {
+    // 如果已被使用，阻止选择
+    if (data.is_used) {
+      return;
+    }
+    // 如果未被使用，允许选择
+    handleCompanyChange(data.company_abbr);
   };
 
   const formData = ref<erpnextAddParams>({
