@@ -10164,10 +10164,6 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 	var commissionFee float64 // 手续费，付款已经产生的手续费
 	// 获取最小的那个未付款金额。因为可能结账抹零后已经没有未付款金额了
 	for index, amountItem := range infoResp.Amounts.List {
-		// 如果订单没有会员，但又支付了会员余额，则提示先撤销会员余额支付
-		if amountItem.Code == constant.PaymentMethodCodeBalance && saleOrder.ConsumerUuid == 0 {
-			return nil, errors.New("订单没有会员，请撤销会员余额支付")
-		}
 		if index == 0 {
 			unpaidAmount = amountItem.UnpaidAmount
 			commissionFee = amountItem.CommissionFee
@@ -10197,6 +10193,10 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 
 	totalPay := float64(0) // 总付款金额=各个付款单的实收金额之和
 	for _, paymentOrder := range infoResp.PaymentOrders.List {
+		// 如果订单没有会员，但又支付了会员余额，则提示先撤销会员余额支付
+		if paymentOrder.PaymentMethodCode == constant.PaymentMethodCodeBalance && saleOrder.ConsumerUuid == 0 {
+			return nil, errors.New("订单没有会员，请撤销会员余额支付")
+		}
 		totalPay = decimal.NewFromFloat(totalPay).Add(decimal.NewFromFloat(paymentOrder.Amount)).InexactFloat64()
 	}
 	originTotalPay := totalPay // 结账完成后的弹窗要显示的金额。需要包含找零金额
@@ -10328,6 +10328,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 
+		// 更新发票信息
 		company := ctx.GetCompany()
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
@@ -10338,7 +10339,6 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 			saleOrder.ErpProductsInvoiceName = res.ProductsInvoiceName
 			saleOrder.ErpMaterialInvoiceName = res.MaterialInvoiceName
 		}
-		// 更新发票信息
 		ctx.SetDB(db)
 		if cashPaymentOrder != nil {
 			// 更新现金支付单
