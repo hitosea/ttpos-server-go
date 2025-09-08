@@ -4820,10 +4820,10 @@ func (s *productSrv) EditProductPackage(ctx context.Context, tx *gorm.DB, req re
 	if err != nil {
 		return nil, errors.WithMessage(err, "保存多语言名称失败")
 	}
-	// 处理外送端,如果外送端未开启，则不显示外送端
+	// 处理外送端,如果外送端未开启, 套餐商品或者小数计价,则不显示外送端
 	isShowDelivery := uint(req.Show.IsShowDelivery)
 	companySetting := ctx.GetCompanySetting()
-	if !companySetting.IsOpenRider() {
+	if !companySetting.IsOpenRider() || req.Type == constant.ProductTypePackage || req.NumType == constant.ProductNumTypeDecimal {
 		isShowDelivery = 0
 	}
 	err = productPackageRepo.UpdateProductPackage(map[string]any{
@@ -4911,10 +4911,10 @@ func (s *productSrv) AddProductPackage(ctx context.Context, tx *gorm.DB, request
 			erpCode = itemInfo.ItemCode
 		}
 	}
-	// 处理外送端,如果外送端未开启，则不显示外送端
+	// 处理外送端,如果外送端未开启, 套餐商品或者小数计价,则不显示外送端
 	isShowDelivery := uint(request.Show.IsShowDelivery)
 	companySetting := ctx.GetCompanySetting()
-	if !companySetting.IsOpenRider() {
+	if !companySetting.IsOpenRider() || request.Type == constant.ProductTypePackage || request.NumType == constant.ProductNumTypeDecimal {
 		isShowDelivery = 0
 	}
 	productPackage := &model.ProductPackage{
