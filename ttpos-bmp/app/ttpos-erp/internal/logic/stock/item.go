@@ -223,12 +223,15 @@ func (s *sItem) buildUpdateItemData(req *item.ItemInfo) g.Map {
 	}
 
 	// 条形码更新
+	//note: ttpos 不更新条形码也必须传入此字段，否erp会删除条形码
 	if len(req.Barcode) > 0 {
 		itemForUpdate["barcodes"] = g.Array{
 			g.Map{
 				"barcode": req.Barcode,
 			},
 		}
+	} else {
+		itemForUpdate["barcodes"] = g.Array{}
 	}
 
 	// 转换单位更新
