@@ -479,7 +479,7 @@ func (h *BaseHandler) ShiftWithdraw(c *gin.Context) {
 
 	err := h.staffShiftSrv.ShiftWithdraw(ctx, withdrawReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	helper.Success(c, gin.H{})
@@ -505,7 +505,7 @@ func (h *BaseHandler) ShiftDeposit(c *gin.Context) {
 
 	err := h.staffShiftSrv.ShiftDeposit(ctx, depositReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 	helper.Success(c, gin.H{})
