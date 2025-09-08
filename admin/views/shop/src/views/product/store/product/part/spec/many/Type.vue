@@ -1,6 +1,6 @@
 <template>
   <!--添加规格-->
-  <el-button v-if="!form.isSpecLocked" size="small" type="primary" class="el-icon-circle-plus" @click="onToggleAddGroupForm">{{ $t('添加规格') }}+</el-button>
+  <el-button v-if="!form.isSpecLocked" size="small" type="primary" :disabled="erp_is_open == 1" class="el-icon-circle-plus" @click="onToggleAddGroupForm">{{ $t('添加规格') }}+</el-button>
 </template>
 
 <script setup>
