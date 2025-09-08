@@ -10164,10 +10164,6 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 	var commissionFee float64 // 手续费，付款已经产生的手续费
 	// 获取最小的那个未付款金额。因为可能结账抹零后已经没有未付款金额了
 	for index, amountItem := range infoResp.Amounts.List {
-		// 如果订单没有会员，但又支付了会员余额，则提示先撤销会员余额支付
-		if amountItem.Code == constant.PaymentMethodCodeBalance && saleOrder.ConsumerUuid == 0 {
-			return nil, errors.New("订单没有会员，请撤销会员余额支付")
-		}
 		if index == 0 {
 			unpaidAmount = amountItem.UnpaidAmount
 			commissionFee = amountItem.CommissionFee
