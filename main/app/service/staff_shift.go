@@ -485,7 +485,7 @@ func (s *staffShiftSrv) ShiftWithdraw(ctx context.Context, req req.ShiftWithdraw
 		return errors.New("最大金额格式错误")
 	}
 	if decimal.NewFromFloat(log.WithdrawCash).Add(decimal.NewFromFloat(req.WithdrawCash)).GreaterThanOrEqual(maxAmount) {
-		return errors.New("当前班次取钱累计金额不能大于最大金额" + s.MaxAmount)
+		return errors.NewWithReplace("当前班次取钱累计金额不能大于最大金额%s", []string{s.MaxAmount})
 	}
 
 	err = repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
@@ -552,7 +552,7 @@ func (s *staffShiftSrv) ShiftDeposit(ctx context.Context, req req.ShiftDepositRe
 
 	// 当前班次存钱累计金额不能大于最大金额
 	if decimal.NewFromFloat(log.DepositCash).Add(decimal.NewFromFloat(req.DepositCash)).GreaterThanOrEqual(maxAmount) {
-		return errors.New("当前班次存钱累计金额不能大于最大金额" + s.MaxAmount)
+		return errors.NewWithReplace("当前班次存钱累计金额不能大于最大金额%s", []string{s.MaxAmount})
 	}
 
 	// 钱箱余额不能大于最大金额
@@ -561,7 +561,7 @@ func (s *staffShiftSrv) ShiftDeposit(ctx context.Context, req req.ShiftDepositRe
 		return errors.New("获取钱箱余额失败")
 	}
 	if decimal.NewFromFloat(balance).Add(decimal.NewFromFloat(req.DepositCash)).GreaterThanOrEqual(maxAmount) {
-		return errors.New("钱箱余额不能大于最大金额" + s.MaxAmount)
+		return errors.NewWithReplace("钱箱余额不能大于最大金额%s", []string{s.MaxAmount})
 	}
 
 	err = repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
