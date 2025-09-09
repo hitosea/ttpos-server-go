@@ -943,11 +943,10 @@ func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.Pr
 }
 
 // DeleteProductShop 删除商品
-func (s *productSrv) DeleteProductShop(ctx context.Context, req req.ProductShopDeleteReq) (*product_resp.ProductDeleteResp, error) {
+func (s *productSrv) DeleteProductShop(ctx context.Context, request req.ProductShopDeleteReq) (*product_resp.ProductDeleteResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(db)
-	productBomRepo := repository.NewProductBomRepo(db)
 	productPackageGroupRepo := repository.NewProductPackageGroupRepo(db)
 	setting, err := s.settingSrv.GetCompanySetting(ctx)
 	if err != nil {
@@ -956,10 +955,11 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, req req.ProductShopD
 
 	product, err := productRepo.GetProduct(
 		commonRepo.WhereBySoftDelete(),
-		productRepo.WhereUuid(req.Uuid),
+		productRepo.WhereUuid(request.Uuid),
 		productRepo.WithProductBoms(
 			commonRepo.WhereBySoftDelete(),
 		),
+		productRepo.WithProductUnit(),
 	)
 	if product.Uuid == 0 || err != nil {
 		return nil, errors.New("商品不存在")
@@ -967,7 +967,7 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, req req.ProductShopD
 
 	productPackageGroupItems, err := productPackageGroupRepo.GetProductPackageGroupItems(
 		commonRepo.WhereBySoftDelete(),
-		commonRepo.WhereByRelatedUuid(req.Uuid),
+		commonRepo.WhereByRelatedUuid(request.Uuid),
 		productPackageGroupRepo.WithProductPackageGroup(commonRepo.WhereBySoftDelete()),
 		productPackageGroupRepo.WithProductPackageGroupProduct(commonRepo.WhereBySoftDelete()),
 		productPackageGroupRepo.WithProductPackageGroupProductMultiLanguageName(commonRepo.WhereBySoftDelete()),
@@ -991,8 +991,9 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, req req.ProductShopD
 		productPackageAttributeGroupRepo := repository.NewProductPackageAttributeGroupRepo(tx)
 		productPackageAttributeRepo := repository.NewProductPackageAttributeRepo(tx)
 		warehouseFormRepo := repository.NewWarehouseFormRepo(tx)
+		productBomRepo := repository.NewProductBomRepo(tx) // 避免事务失效
 		// 删除商品包
-		err := tx.Model(&model.ProductPackage{}).Where("uuid = ?", req.Uuid).Updates(map[string]any{
+		err := tx.Model(&model.ProductPackage{}).Where("uuid = ?", request.Uuid).Updates(map[string]any{
 			"delete_time": time.Now().Unix(),
 		}).Error
 		if err != nil {
@@ -1046,7 +1047,7 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, req req.ProductShopD
 		}
 
 		groups, err := productPackageAttributeGroupRepo.GetProductPackageAttributeGroups(
-			commonRepo.WhereByProductPackageUuid(req.Uuid),
+			commonRepo.WhereByProductPackageUuid(request.Uuid),
 			commonRepo.WhereBySoftDelete(),
 		)
 		if err != nil {
@@ -1069,11 +1070,43 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, req req.ProductShopD
 			}
 		}
 
+		// 删除erp中的item
+		if ctx.GetCompany().IsOpenErp() {
+			items := []req.DeleteProductErpItemReq{}
+			for _, productBom := range product.ProductBoms {
+				multiLanguageName := model.NewMultiLanguageName(productBom.Name)
+				enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
+				if err != nil {
+					return errors.WithMessage(err, "翻译失败")
+				}
+				items = append(items, req.DeleteProductErpItemReq{
+					ItemCode: productBom.ErpCode,
+					ItemName: enName,
+					StockUom: product.ProductUnit.ErpnextUom,
+				})
+			}
+			multiLanguageName := model.NewMultiLanguageName(product.Name)
+			enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
+			if err != nil {
+				return errors.WithMessage(err, "翻译失败")
+			}
+			items = append(items, req.DeleteProductErpItemReq{
+				ItemCode: product.ErpCode,
+				ItemName: enName,
+				StockUom: product.ProductUnit.ErpnextUom,
+			})
+			erpSrv := erp.NewIErpSrv(s.dbm)
+			if err := erpSrv.DeleteProduct(ctx, req.DeleteProductErpReq{
+				Items: items,
+			}); err != nil {
+				return errors.WithMessage(err, "删除商品到erp失败")
+			}
+		}
 		return nil
 	})
 
 	if err != nil {
-		logger.Logger.Error("删除商品失败", zap.Any("func", "DeleteProductShop"), zap.Any("params", req), zap.Error(err))
+		logger.Logger.Error("删除商品失败", zap.Any("func", "DeleteProductShop"), zap.Any("params", request), zap.Error(err))
 		return nil, errors.New("删除商品失败")
 	}
 
