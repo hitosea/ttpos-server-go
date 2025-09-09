@@ -3402,7 +3402,7 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 		if opt.IsReverseSettle {
 			products = saleBill.GetSaleOrderProductCooking()
 		} else { // 整单取消订单时，需要过滤掉付款减库存的商品。
-			products = saleBill.GetSaleOrderProductUnCooking()
+			products = saleBill.GetSaleOrderProductCooking()
 			// 过滤掉付款减库存的商品
 			products = model.FilterPaymentDeductStockProduct(products)
 		}
