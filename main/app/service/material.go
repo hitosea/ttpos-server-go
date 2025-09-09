@@ -868,8 +868,10 @@ func (s *materialSrv) addSauceBomCard(ctx context.Context, req req.ProductBomCar
 			Num:                    materialParam.Num,
 			UnitUuid:               materialParam.UnitUuid,
 			UnitName:               materialUnit.Unit.MultiLanguageName.ToJson(),
+			UnitUom:                materialUnit.Unit.ErpnextUom,
 			BaseUnitUuid:           baseUnit.Uuid,
 			BaseUnitName:           baseUnit.Unit.MultiLanguageName.ToJson(),
+			BaseUnitUom:            baseUnit.Unit.ErpnextUom,
 			BaseUnitConversionRate: materialUnit.ConversionRate,
 		})
 	}
@@ -964,8 +966,10 @@ func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomC
 			Num:                    materialParam.Num,
 			UnitUuid:               materialParam.UnitUuid,
 			UnitName:               materialUnit.Unit.MultiLanguageName.ToJson(),
+			UnitUom:                materialUnit.Unit.ErpnextUom,
 			BaseUnitUuid:           baseUnit.Uuid,
 			BaseUnitName:           baseUnit.Unit.MultiLanguageName.ToJson(),
+			BaseUnitUom:            baseUnit.Unit.ErpnextUom,
 			BaseUnitConversionRate: materialUnit.ConversionRate,
 			Material:               material,
 		}
@@ -1324,8 +1328,10 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 			Num:                    req.Num,
 			UnitUuid:               material.UnitUuid,
 			UnitName:               material.Unit.Name,
+			UnitUom:                material.Unit.Unit.ErpnextUom,
 			BaseUnitUuid:           material.UnitUuid,
 			BaseUnitName:           material.Unit.Name,
+			BaseUnitUom:            material.Unit.Unit.ErpnextUom,
 			BaseUnitConversionRate: 1,
 			Material:               material,
 		}
