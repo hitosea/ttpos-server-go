@@ -7066,6 +7066,30 @@ definitions:
         description: 骑手评分
         type: number
     type: object
+  resp.ErpnextSiteCompany:
+    properties:
+      children:
+        description: 子公司列表，用于树形结构
+        items:
+          $ref: '#/definitions/resp.ErpnextSiteCompany'
+        type: array
+      company_abbr:
+        type: string
+      company_name:
+        type: string
+      is_used:
+        description: 是否已被使用
+        type: boolean
+      parent_company:
+        type: string
+    type: object
+  resp.ErpnextSiteCompanyResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.ErpnextSiteCompany'
+        type: array
+    type: object
   resp.ExtraMemberCashierOrderListMeta:
     properties:
       accept_num:
@@ -11964,7 +11988,12 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.Response'
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ErpnextSiteCompanyResp'
+              type: object
       summary: 获取ERPNext站点公司名称
       tags:
       - 平台端.商家授权

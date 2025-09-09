@@ -141,11 +141,15 @@ func (model *SaleOrderProduct) GetErpProductBomMaterials() []*ErpProductBomMater
 			if saleOrderProductBom.ProductBom.HasProductBomCard() {
 				card := saleOrderProductBom.ProductBom.ProductBomCard
 				for _, relatedMaterial := range card.RelatedMaterials {
-					unitName := language.JsonToLocaleResponse(relatedMaterial.UnitName)
+					uom := relatedMaterial.UnitUom
+					if uom == "" {
+						unitName := language.JsonToLocaleResponse(relatedMaterial.UnitName)
+						uom = unitName.EN
+					}
 					materials = append(materials, &ErpProductBomMaterials{
 						ErpCode: relatedMaterial.Material.Code,
 						Num:     relatedMaterial.Num,
-						Uom:     unitName.EN,
+						Uom:     uom,
 					})
 				}
 			}

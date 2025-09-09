@@ -145,9 +145,11 @@ class Erpnext extends Controller
      * @Apidoc\Returned("list", type="array", desc="公司列表、树形结构", children={
      *      @Apidoc\Returned("company_name", type="string", desc="公司名称"),
      *      @Apidoc\Returned("company_abbr", type="string", desc="公司缩写"),
+     *      @Apidoc\Returned("is_used", type="boolean", desc="是否已被使用"),
      *      @Apidoc\Returned("children", type="array", desc="子公司列表", children={
      *          @Apidoc\Returned("company_name", type="string", desc="公司名称"),
      *          @Apidoc\Returned("company_abbr", type="string", desc="公司缩写"),
+     *          @Apidoc\Returned("is_used", type="boolean", desc="是否已被使用"),
      *      }),
      * })
      */

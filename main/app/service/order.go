@@ -3402,7 +3402,7 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 		if opt.IsReverseSettle {
 			products = saleBill.GetSaleOrderProductCooking()
 		} else { // 整单取消订单时，需要过滤掉付款减库存的商品。
-			products = saleBill.GetSaleOrderProductUnCooking()
+			products = saleBill.GetSaleOrderProductCooking()
 			// 过滤掉付款减库存的商品
 			products = model.FilterPaymentDeductStockProduct(products)
 		}
@@ -5635,6 +5635,9 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		// 如果商品规格关联了材料，检查材料库存是否充足
 		if len(flavorProductBom.FlavorMaterials) > 0 {
 			for _, flavorMaterial := range flavorProductBom.FlavorMaterials {
+				if flavorMaterial.IsDelete() {
+					continue
+				}
 				if flavorMaterial.Material.StockNum < flavorMaterial.GetDecreaseNum(product.Num) {
 					return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "材料库存不足")))
 				}
@@ -6026,6 +6029,9 @@ func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, 
 	// 如果商品规格关联了材料，检查材料库存是否充足
 	if len(flavorProductBom.FlavorMaterials) > 0 {
 		for _, flavorMaterial := range flavorProductBom.FlavorMaterials {
+			if flavorMaterial.IsDelete() {
+				continue
+			}
 			if flavorMaterial.Material.StockNum < flavorMaterial.GetDecreaseNum(product.Num) {
 				return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "材料库存不足")))
 			}
@@ -7199,6 +7205,9 @@ func (s *orderSrv) getDecreaseStockList(ctx context.Context, cookingDeductSaleOr
 			// 如果是规格商品
 			if saleOrderProductBom.IsFlavor() {
 				for _, productBomMaterial := range saleOrderProductBom.ProductBom.FlavorMaterials {
+					if productBomMaterial.IsDelete() {
+						continue
+					}
 					if num := productBomMaterial.GetDecreaseNum(cookingDeductSaleOrderProduct.Num); num > 0 {
 						productBomMaterials = append(productBomMaterials, &model.ProductBomMaterials{
 							MaterialUuid:  productBomMaterial.MaterialUuid,
@@ -10164,10 +10173,6 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 	var commissionFee float64 // 手续费，付款已经产生的手续费
 	// 获取最小的那个未付款金额。因为可能结账抹零后已经没有未付款金额了
 	for index, amountItem := range infoResp.Amounts.List {
-		// 如果订单没有会员，但又支付了会员余额，则提示先撤销会员余额支付
-		if amountItem.Code == constant.PaymentMethodCodeBalance && saleOrder.ConsumerUuid == 0 {
-			return nil, errors.New("订单没有会员，请撤销会员余额支付")
-		}
 		if index == 0 {
 			unpaidAmount = amountItem.UnpaidAmount
 			commissionFee = amountItem.CommissionFee
@@ -10197,6 +10202,10 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 
 	totalPay := float64(0) // 总付款金额=各个付款单的实收金额之和
 	for _, paymentOrder := range infoResp.PaymentOrders.List {
+		// 如果订单没有会员，但又支付了会员余额，则提示先撤销会员余额支付
+		if paymentOrder.PaymentMethodCode == constant.PaymentMethodCodeBalance && saleOrder.ConsumerUuid == 0 {
+			return nil, errors.New("订单没有会员，请撤销会员余额支付")
+		}
 		totalPay = decimal.NewFromFloat(totalPay).Add(decimal.NewFromFloat(paymentOrder.Amount)).InexactFloat64()
 	}
 	originTotalPay := totalPay // 结账完成后的弹窗要显示的金额。需要包含找零金额
@@ -10328,6 +10337,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 
+		// 更新发票信息
 		company := ctx.GetCompany()
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
@@ -10338,7 +10348,6 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 			saleOrder.ErpProductsInvoiceName = res.ProductsInvoiceName
 			saleOrder.ErpMaterialInvoiceName = res.MaterialInvoiceName
 		}
-		// 更新发票信息
 		ctx.SetDB(db)
 		if cashPaymentOrder != nil {
 			// 更新现金支付单

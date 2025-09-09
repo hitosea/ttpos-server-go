@@ -380,6 +380,10 @@ func (h *MaterialHandler) ImportProductBomCard(c *gin.Context) {
 		helper.HandleValidationError(c, err, importReq, dto.PageReqMessage)
 		return
 	}
+	if err := importReq.Validate(); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.WithMessage(err))
+		return
+	}
 	err := h.materialSrv.ImportProductBomCard(ctx, importReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))

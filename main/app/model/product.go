@@ -549,8 +549,10 @@ type RelatedMaterial struct {
 	Num                    float64 `gorm:"column:num;type:decimal(12,4);default:0;comment:'材料用量,可小数'"`
 	UnitUuid               uint64  `gorm:"column:unit_uuid;type:bigint(20) unsigned;default:0;comment:'单位ID,物品单位'"`
 	UnitName               string  `gorm:"column:unit_name;type:text;default:'';comment:'单位名称JSON,物品单位名称'"`
+	UnitUom                string  `gorm:"column:unit_uom;type:varchar(255);default:'';comment:'单位ERPNext UOM'"`
 	BaseUnitUuid           uint64  `gorm:"column:base_unit_uuid;type:bigint(20) unsigned;default:0;comment:'基准单位ID,物品基准单位'"`
 	BaseUnitName           string  `gorm:"column:base_unit_name;type:text;default:'';comment:'基准单位名称JSON,物品基准单位名称'"`
+	BaseUnitUom            string  `gorm:"column:base_unit_uom;type:varchar(255);default:'';comment:'基准单位ERPNext UOM'"`
 	BaseUnitConversionRate float64 `gorm:"column:base_unit_conversion_rate;type:decimal(12,4);default:1;comment:'基准单位转换率。用量*转换率=基准单位用量'"`
 
 	Material *Material `gorm:"foreignKey:material_uuid;references:uuid" json:"material"`
@@ -607,6 +609,9 @@ func (model *ProductBom) IsStockShortageWithMaterial(productNum float64) bool {
 	// 如果是关联材料的规格，则检查关联材料的库存
 	if model.IsFlavor() {
 		for _, material := range model.FlavorMaterials {
+			if material.IsDelete() {
+				continue
+			}
 			if material.Material.StockNum < material.GetDecreaseNum(productNum) {
 				return true
 			}

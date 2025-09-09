@@ -24,28 +24,28 @@ services:
         ipv4_address: 10.0.10.40
 
   # 门店管理服务 (预留)
-  bmp-shop:
-    container_name: "ttpos-bmp-shop-${APP_ID}"
-    build:
-      args:
-        MODULE: shop
-        HTTP_PORT: 14011
-        RPC_PORT: 14012
-    image: ttpos-bmp-shop
-    environment:
-      # GRPC_ENDPOINTS: "192.168.100.88:14012"  #生产环境调成服务IP
-      SW_AGENT_NAME: "ttpos-bmp-shop"
-      SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
-      SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
-    volumes:
-      - ./app/ttpos-shop/manifest/config:/app/config  #生产环境根据需要调整
-    restart: always
-    ports:
-      - "14011:14011"
-      - "14012:14012"
-    networks:
-      bmp-network:
-        ipv4_address: 10.0.10.41
+#  bmp-shop:
+#    container_name: "ttpos-bmp-shop-${APP_ID}"
+#    build:
+#      args:
+#        MODULE: shop
+#        HTTP_PORT: 14011
+#        RPC_PORT: 14012
+#    image: ttpos-bmp-shop
+#    environment:
+#      # GRPC_ENDPOINTS: "192.168.100.88:14012"  #生产环境调成服务IP
+#      SW_AGENT_NAME: "ttpos-bmp-shop"
+#      SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
+#      SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
+#    volumes:
+#      - ./app/ttpos-shop/manifest/config:/app/config  #生产环境根据需要调整
+#    restart: always
+#    ports:
+#      - "14011:14011"
+#      - "14012:14012"
+#    networks:
+#      bmp-network:
+#        ipv4_address: 10.0.10.41
 
   #erp管理模块
   bmp-erp:
@@ -72,28 +72,28 @@ services:
         ipv4_address: 10.0.10.42
 
   #云平台管理模块
-  bmp-manager:
-    container_name: "ttpos-bmp-manager-${APP_ID}"
-    build:
-      args:
-        MODULE: manager
-        HTTP_PORT: 14001
-        RPC_PORT: 14002
-    image: ttpos-bmp-manager
-    environment:
-    #  GRPC_ENDPOINTS: "192.168.100.88:14002"  #生产环境调成服务IP
-      SW_AGENT_NAME: "ttpos-bmp-manager"
-      SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
-      SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
-    volumes:
-      - ./app/ttpos-manager/manifest/config:/app/config  #生产环境根据需要调整
-    restart: always
-    ports:
-      - "14001:14001"
-      - "14002:14002"
-    networks:
-      bmp-network:
-        ipv4_address: 10.0.10.43
+#  bmp-manager:
+#    container_name: "ttpos-bmp-manager-${APP_ID}"
+#    build:
+#      args:
+#        MODULE: manager
+#        HTTP_PORT: 14001
+#        RPC_PORT: 14002
+#    image: ttpos-bmp-manager
+#    environment:
+#    #  GRPC_ENDPOINTS: "192.168.100.88:14002"  #生产环境调成服务IP
+#      SW_AGENT_NAME: "ttpos-bmp-manager"
+#      SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
+#      SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
+#    volumes:
+#      - ./app/ttpos-manager/manifest/config:/app/config  #生产环境根据需要调整
+#    restart: always
+#    ports:
+#      - "14001:14001"
+#      - "14002:14002"
+#    networks:
+#      bmp-network:
+#        ipv4_address: 10.0.10.43
 
 networks:
   bmp-network:
