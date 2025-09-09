@@ -5037,6 +5037,46 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 					return errors.WithMessage(err, "保存出库单明细失败")
 				}
 			}
+			// 删除商品规格的item
+			if ctx.GetCompany().IsOpenErp() {
+				// 获取商品包信息
+				productPackage, err := productPackageRepo.GetProductPackage(
+					commonRepo.WhereByUuid(productPackageUuid),
+					commonRepo.Preload(
+						repository.WithPreload{
+							Query: "ProductUnit",
+						},
+					),
+				)
+				if err != nil {
+					return errors.WithMessage(err, "获取商品包失败")
+				}
+
+				// 获取商品bom信息
+				productBom, err := productBomRepo.GetProductBom(commonRepo.WhereByUuid(flavor.BomUuid))
+				if err != nil {
+					return errors.WithMessage(err, "获取商品bom失败")
+				}
+
+				languageName := model.NewMultiLanguageName(flavor.Name)
+				enName, err := s.getEnName(ctx, languageName.GetNames())
+				if err != nil {
+					return errors.WithMessage(err, "翻译失败")
+				}
+				erpSrv := erp.NewIErpSrv(s.dbm)
+				if err := erpSrv.DeleteProduct(ctx, req.DeleteProductErpReq{
+					Items: []req.DeleteProductErpItemReq{
+						{
+							ItemCode: productBom.ErpCode,
+							ItemName: enName,
+							StockUom: productPackage.ProductUnit.ErpnextUom,
+						},
+					},
+				}); err != nil {
+					return errors.WithMessage(err, "删除商品规格的item失败")
+				}
+
+			}
 		} else {
 			if flavor.BomUuid == 0 {
 				erpCode := ""
