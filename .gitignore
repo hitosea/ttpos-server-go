@@ -49,3 +49,6 @@ Thumbs.db
 # 不再接受编译后文件提交git
 admin/public/admin
 admin/public/shop
+
+# MCP Servers
+.spec-workflow/session.json
