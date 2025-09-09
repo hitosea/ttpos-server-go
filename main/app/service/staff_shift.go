@@ -66,7 +66,7 @@ func NewShiftSrvImpl(cache cache.Cache, dbm *database.DBManager, cashBoxSrv ICas
 		cacheKeyPrefix: "__USERSHIFTLOG_GENERATENUMBER__",
 		cashBoxSrv:     cashBoxSrv,
 		statisticsSrv:  statisticsSrv,
-		MaxAmount:      "10000000000000000",
+		MaxAmount:      "1000000000000000",
 	}
 }
 
