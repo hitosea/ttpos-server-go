@@ -51,6 +51,7 @@ func (s *sCompany) GetCompanyList(ctx context.Context, req *company.GetCompanyLi
 	}, &erp.RequestParams{
 		Fields:  g.ArrayStr{"name", "abbr", "parent_company"},
 		Filters: filters,
+		Limit:   1000,
 	})
 	if err != nil {
 		// 错误处理，返回错误信息
