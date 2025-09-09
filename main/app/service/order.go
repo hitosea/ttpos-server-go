@@ -5635,6 +5635,9 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		// 如果商品规格关联了材料，检查材料库存是否充足
 		if len(flavorProductBom.FlavorMaterials) > 0 {
 			for _, flavorMaterial := range flavorProductBom.FlavorMaterials {
+				if flavorMaterial.IsDelete() {
+					continue
+				}
 				if flavorMaterial.Material.StockNum < flavorMaterial.GetDecreaseNum(product.Num) {
 					return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "材料库存不足")))
 				}
@@ -6026,6 +6029,9 @@ func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, 
 	// 如果商品规格关联了材料，检查材料库存是否充足
 	if len(flavorProductBom.FlavorMaterials) > 0 {
 		for _, flavorMaterial := range flavorProductBom.FlavorMaterials {
+			if flavorMaterial.IsDelete() {
+				continue
+			}
 			if flavorMaterial.Material.StockNum < flavorMaterial.GetDecreaseNum(product.Num) {
 				return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "材料库存不足")))
 			}
@@ -7199,6 +7205,9 @@ func (s *orderSrv) getDecreaseStockList(ctx context.Context, cookingDeductSaleOr
 			// 如果是规格商品
 			if saleOrderProductBom.IsFlavor() {
 				for _, productBomMaterial := range saleOrderProductBom.ProductBom.FlavorMaterials {
+					if productBomMaterial.IsDelete() {
+						continue
+					}
 					if num := productBomMaterial.GetDecreaseNum(cookingDeductSaleOrderProduct.Num); num > 0 {
 						productBomMaterials = append(productBomMaterials, &model.ProductBomMaterials{
 							MaterialUuid:  productBomMaterial.MaterialUuid,
