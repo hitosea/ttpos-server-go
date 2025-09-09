@@ -164,22 +164,48 @@
         </el-form-item>
       </div>
 
-      <el-form-item for="no_click" :label="$t('打印联数')" prop="print_times" :rules="[{ required: true, message: $t('请输入打印联数') }]">
-        <el-input-number
-          :controls="false"
-          :min="1"
-          :max="10"
-          :precision="0"
-          :placeholder="$t('请输入打印联数')"
-          v-model.number="form.print_times"
-          autocomplete="off"
-        ></el-input-number>
-        <div class="tips">{{ $t('同一订单，打印的次数') }}</div>
-      </el-form-item>
-
-      <el-form-item for="no_click" :label="$t('排序')" prop="sort" :rules="[{ required: true, message: $t('接近0，排序等级越高') }]">
-        <el-input-number :controls="false" :min="0" :max="999" :placeholder="$t('接近0，排序等级越高')" v-model.number="form.sort" autocomplete="off"></el-input-number>
-      </el-form-item>
+      <!-- 排序、打印联数、纸张宽度、状态检查合并为一行 -->
+      <el-row :gutter="20">
+        <el-col :span="6">
+          <el-form-item for="no_click" :label="$t('排序')" prop="sort" :rules="[{ required: true, message: $t('接近0，排序等级越高') }]">
+            <el-input-number :controls="false" :min="0" :max="999" :placeholder="$t('接近0，排序等级越高')" v-model.number="form.sort" autocomplete="off" style="width: 100%"></el-input-number>
+          </el-form-item>
+        </el-col>
+        <el-col :span="6">
+          <el-form-item for="no_click" :label="$t('打印联数')" prop="print_times" :rules="[{ required: true, message: $t('请输入打印联数') }]">
+            <el-input-number
+              :controls="false"
+              :min="1"
+              :max="10"
+              :precision="0"
+              :placeholder="$t('请输入打印联数')"
+              v-model.number="form.print_times"
+              autocomplete="off"
+              style="width: 100%"
+            ></el-input-number>
+            <div class="tips">{{ $t('同一订单，打印的次数') }}</div>
+          </el-form-item>
+        </el-col>
+        <el-col :span="6">
+          <el-form-item for="no_click" :label="$t('纸张宽度（mm）')" prop="width">
+            <el-select v-model="form.width" :placeholder="$t('请选择纸张宽度')" style="width: 100%" clearable>
+              <el-option :label="'58mm'" :value="58"></el-option>
+              <el-option :label="'80mm'" :value="80"></el-option>
+            </el-select>
+          </el-form-item>
+        </el-col>
+        <el-col :span="6">
+          <el-form-item for="no_click" :label="$t('状态检查')" prop="enable_status_check">
+            <div style="text-align: center;">
+              <el-switch
+                v-model="form.enable_status_check"
+                :active-value="1"
+                :inactive-value="0"
+              />
+            </div>
+          </el-form-item>
+        </el-col>
+      </el-row>
 
       <el-form-item for="no_click" :label="$t('打印关联收银机')" prop="is_main" v-if="is_usb != 1">
         <el-select v-model="form.source_device_sn" :placeholder="$t('选择打印机所关联的收银机')" style="width: 100%" clearable>
@@ -226,6 +252,8 @@
           print_method: '',
           sort: null,
           print_times: 1,
+          width: 80, // 纸张宽度，默认80mm
+          enable_status_check: 1, // 是否启用状态检查，默认开启
           source_device_sn: '',
           sn: '',
           FEI_E_YUN: {
