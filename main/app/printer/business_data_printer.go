@@ -158,6 +158,7 @@ func (p *PrinterRepoImpl) getPrintingBusinessDataContent(
 		constant.PrinterTypeXPrinterWifi,
 		constant.PrinterTypeCodesoftLan,
 		constant.PrinterTypeCodesoftWifi,
+		constant.PrinterTypeGpCloud,
 		constant.BrandA11510P,
 	}, printerType) {
 		return template.NewBusinessDataXprinterTemplate(base).GetPrintContent(

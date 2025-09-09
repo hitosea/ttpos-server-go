@@ -202,7 +202,7 @@ func (p *PrinterRepoImpl) getPrintingContent(
 	/* *
 	* CODESOFT 打印机
 	 */
-	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi}, settingPrinterInfo.PrinterType) {
+	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi, constant.PrinterTypeGpCloud}, settingPrinterInfo.PrinterType) {
 		return template.NewTakeoutOrderCodesoftTemplate(base).GetPrintContent(
 			settingPrinterInfo.PrinterType,
 			tmp,

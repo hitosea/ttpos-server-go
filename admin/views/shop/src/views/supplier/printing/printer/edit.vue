@@ -95,6 +95,19 @@
         </el-form-item>
       </div>
 
+      <!-- 佳博云打印 -->
+      <div v-if="form.printer_type == 'GP_CLOUD' && is_usb != 1">
+        <el-form-item for="no_click" :label="$t('打印机APPID')" prop="GP_CLOUD.APP_ID" :rules="[{ required: true, message: ' ' }]">
+          <el-input v-model="form.GP_CLOUD.APP_ID"></el-input>
+        </el-form-item>
+        <el-form-item for="no_click" :label="$t('打印机APPKEY')" prop="GP_CLOUD.APP_KEY" :rules="[{ required: true, message: ' ' }]">
+          <el-input v-model="form.GP_CLOUD.APP_KEY"></el-input>
+        </el-form-item>
+        <el-form-item for="no_click" :label="$t('打印机SN')" prop="GP_CLOUD.SN" :rules="[{ required: true, message: ' ' }]">
+          <el-input v-model="form.GP_CLOUD.SN"></el-input>
+        </el-form-item>
+      </div>
+
       <!-- 芯烨打印 -->
       <div v-if="(form.printer_type == 'XPRINTER_LAN' || form.printer_type == 'XPRINTER_WIFI') && is_usb != 1">
         <el-form-item for="no_click" :label="$t('打印机IP')" prop="XPRINTER_LAN.IP" :rules="[{ required: true, message: ' ' }]">
@@ -216,6 +229,11 @@
             APP_KEY: '',
             SN: '',
           },
+          GP_CLOUD: {
+            APP_ID: '',
+            APP_KEY: '',
+            SN: '',
+          },
           CODESOFT_LAN: {
             IP: '',
             PORT: 9100,
@@ -271,6 +289,11 @@
               self.form.SUNMI_CLOUD.APP_ID = detail.printer_config.APP_ID;
               self.form.SUNMI_CLOUD.APP_KEY = detail.printer_config.APP_KEY;
               self.form.SUNMI_CLOUD.SN = detail.printer_config.SN;
+            }
+            if (detail.printer_type.value == 'GP_CLOUD') {
+              self.form.GP_CLOUD.APP_ID = detail.printer_config.APP_ID;
+              self.form.GP_CLOUD.APP_KEY = detail.printer_config.APP_KEY;
+              self.form.GP_CLOUD.SN = detail.printer_config.SN;
             }
             if (detail.printer_type.value == 'XPRINTER_LAN' || self.form.printer_type == 'XPRINTER_WIFI') {
               self.form.XPRINTER_LAN.IP = detail.printer_config.IP;

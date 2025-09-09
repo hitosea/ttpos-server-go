@@ -359,6 +359,7 @@ func (p *PrinterRepoImpl) getPrintProductOneContent(
 	if printerItem.Printer != nil && slices.Contains([]string{
 		constant.PrinterTypeCodesoftLan,
 		constant.PrinterTypeCodesoftWifi,
+		constant.PrinterTypeGpCloud,
 	}, printerType) {
 		t := template.NewDishesCodesoftTemplate(base)
 		return t.OneDishOneOrder(tmpInfo, productPrinter, printerItem, saleBill, []printer_model.OrderProduct{product})

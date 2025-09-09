@@ -134,7 +134,24 @@ class InitPrinterType extends Migrator
                 'key' => 'CODESOFT_WIFI',
                 'create_time' => time(),
                 'update_time' => time(),
-            ]
+            ],
+            [
+                'name' => [
+                    'en' => 'GP Cloud 80mm',
+                    'zh' => '佳博（云打印）80mm',
+                    'zhtw' => '佳博（雲打印）80mm',
+                    'th' => 'เครื่องพิมพ์ GP (คลาวด์)80mm',
+                    'my' => 'GP ပရင်တာ (Cloud)80mm',
+                    'ja' => 'GPプリンター（クラウド）80mm',
+                    'ko' => 'GP 프린터(클라우드)80mm',
+                    'tr' => 'GP Yazıcı (Bulut)80mm',
+                    'sv' => 'GP skrivare (Moln)80mm',
+                ],
+                'multi_language_name_uuid' => 0,
+                'key' => 'GP_CLOUD',
+                'create_time' => time(),
+                'update_time' => time(),
+            ],
         ];
 
         foreach ($printerTypeList as $item) {

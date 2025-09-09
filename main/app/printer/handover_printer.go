@@ -197,7 +197,7 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 	/* *
 	* CODESOFT 打印机
 	 */
-	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi}, printerType) {
+	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi, constant.PrinterTypeGpCloud}, printerType) {
 		return template.NewHandoverCodesoftTemplate(base).GetPrintContent(
 			printerType,
 			tmp,
