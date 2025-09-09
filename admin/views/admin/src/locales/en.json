@@ -446,6 +446,6 @@
     "请输入手续费": "Please enter the handling fee",
     "手续费必须在0-100之间": "The handling fee must be between 0 and 100",
     "排序值必须在0-999之间": "The sorting value must be between 0 and 999",
-    "支付管理": "Payment Management",
+    "支付管理": "Payment",
     "如:13.716412789763694, 100.52312952599786": "e.g.: 13.716412789763694, 100.52312952599786"
 }
