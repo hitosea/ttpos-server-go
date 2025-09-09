@@ -42,6 +42,9 @@ class PrinterTypeEnum extends Enum
     //Codesoft（WIFI）80mm 
     const CODESOFT_WIFI = 'CODESOFT_WIFI';  
 
+    // GP_CLOUD 
+    const GP_CLOUD = 'GP_CLOUD';  
+
     // 获取打印机类型名称
     public static function getTypeName()
     {
@@ -51,7 +54,8 @@ class PrinterTypeEnum extends Enum
             self::XPRINTER_LAN => __('芯烨打印机（有线）') . '80mm',
             self::XPRINTER_WIFI => __('芯烨打印机（WIFI）') . '80mm',
             self::CODESOFT_LAN => __('Codesoft（网口）') . '80mm',
-            self::CODESOFT_WIFI => __('Codesoft（WIFI）') . '80mm'
+            self::CODESOFT_WIFI => __('Codesoft（WIFI）') . '80mm',
+            self::GP_CLOUD => __('佳博（云打印）') . '80mm'
         ];
     }
 
@@ -67,6 +71,7 @@ class PrinterTypeEnum extends Enum
             self::XPRINTER_WIFI => __('芯烨打印机（WIFI）') . '80mm',
             self::CODESOFT_LAN => __('Codesoft（网口）') . '80mm',
             self::CODESOFT_WIFI => __('Codesoft（WIFI）') . '80mm',
+            self::GP_CLOUD => __('佳博（云打印）') . '80mm',
             0 => __('SUNMI 商米 收银打印机') . '80mm',
             -1 => __('Compax 收银打印机') . '80mm',
         ];

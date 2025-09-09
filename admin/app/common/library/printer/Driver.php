@@ -24,6 +24,7 @@ class Driver
         PrinterTypeEnum::XPRINTER_WIFI => 'Xprinter',
         PrinterTypeEnum::CODESOFT_LAN => 'Xprinter',
         PrinterTypeEnum::CODESOFT_WIFI => 'Xprinter',
+        PrinterTypeEnum::GP_CLOUD => 'Xprinter',
     ];
 
     /**

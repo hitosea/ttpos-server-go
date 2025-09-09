@@ -151,7 +151,7 @@ func (p *PrinterRepoImpl) getPrintingRechargeOrderContent(
 	/* *
 	* CODESOFT 打印机
 	 */
-	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi}, printerType) {
+	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi, constant.PrinterTypeGpCloud}, printerType) {
 		return template.NewRechargeCodesoftTemplate(base).GetPrintContent(order)
 	}
 

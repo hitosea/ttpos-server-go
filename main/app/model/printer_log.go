@@ -124,6 +124,7 @@ func (model *PrinterLog) IsCashierPrinter() bool {
 		constant.PrinterTypeXPrinterWifi,
 		constant.PrinterTypeCodesoftLan,
 		constant.PrinterTypeCodesoftWifi,
+		constant.PrinterTypeGpCloud,
 	}, model.PrinterType)
 }
 

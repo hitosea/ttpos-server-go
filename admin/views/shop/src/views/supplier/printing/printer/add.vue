@@ -104,6 +104,20 @@
         </el-form-item>
       </div>
 
+      <!-- 佳博云打印 -->
+      <div v-if="form.printer_type == 'GP_CLOUD'">
+        <el-form-item for="no_click" :label="$t('打印机APPID')" prop="GP_CLOUD.APP_ID" :rules="[{ required: true, message: ' ' }]">
+          <el-input v-model="form.GP_CLOUD.APP_ID"></el-input>
+        </el-form-item>
+
+        <el-form-item for="no_click" :label="$t('打印机APPKEY')" prop="GP_CLOUD.APP_KEY" :rules="[{ required: true, message: ' ' }]">
+          <el-input v-model="form.GP_CLOUD.APP_KEY"></el-input>
+        </el-form-item>
+        <el-form-item for="no_click" :label="$t('打印机SN')" prop="GP_CLOUD.SN" :rules="[{ required: true, message: ' ' }]">
+          <el-input v-model="form.GP_CLOUD.SN"></el-input>
+        </el-form-item>
+      </div>
+
       <!-- 芯烨打印 -->
       <div v-if="form.printer_type == 'XPRINTER_LAN' || form.printer_type == 'XPRINTER_WIFI'">
         <el-form-item for="no_click" :label="$t('打印机IP')" prop="XPRINTER_LAN.IP" :rules="[{ required: true, message: ' ' }]">
@@ -237,6 +251,11 @@
             PORT: 9100,
           },
           SUNMI_CLOUD: {
+            APP_ID: '',
+            APP_KEY: '',
+            SN: '',
+          },
+          GP_CLOUD: {
             APP_ID: '',
             APP_KEY: '',
             SN: '',
