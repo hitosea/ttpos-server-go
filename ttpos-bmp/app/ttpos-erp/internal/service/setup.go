@@ -9,6 +9,8 @@ import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/setup"
 	setup2 "ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
+
+	"github.com/gogf/gf/v2/os/gtime"
 )
 
 type (
@@ -83,6 +85,24 @@ type (
 		// 返回：
 		//   - err: 错误信息
 		InitModeOfPayment(ctx context.Context, dirBase string) error
+		// GetDefaultTimeZone 获取默认时区
+		// 参数：
+		//   - ctx: 上下文对象
+		//
+		// 返回：
+		//   - string: 时区
+		GetDefaultTimeZone(ctx context.Context) string
+		// MustGetLocalDateTime 获取本地时间
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - utcTime: UTC时间
+		//
+		// 返回：
+		//   - *gtime.Time: 本地时间
+		//
+		// 注意：
+		//   - 如果转换失败，会返回UTC时间
+		MustGetLocalDateTime(ctx context.Context, utcTime *gtime.Time) *gtime.Time
 	}
 )
 

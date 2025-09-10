@@ -13,6 +13,7 @@ import (
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
 )
@@ -453,7 +454,7 @@ func (s *sSelling) buildOpeningEntryRequest(req *selling.OpenPosEntryReq, compan
 	return &erp.POSOpeningEntry{
 		PosProfile:      req.PosProfileName,
 		Company:         companyName,
-		PeriodStartDate: gtime.New(req.PeriodStartDate).Format("Y-m-d H:i:s"),
+		PeriodStartDate: service.Setup().MustGetLocalDateTime(gctx.GetInitCtx(), gtime.New(req.PeriodStartDate)).Format("Y-m-d H:i:s"),
 		User:            req.CashierEmail,
 		BalanceDetails:  openDetails,
 	}
@@ -503,8 +504,8 @@ func (s *sSelling) ClosePosEntry(ctx context.Context, req *selling.ClosePosEntry
 	// 获取期间发票
 	invoices, err := s.GetPosInvoiceList(ctx, &dtoSelling.GetPosInvoiceListReq{
 		PosProfile: openEntry.PosProfile,
-		StartDate:  gtime.New(openEntry.PeriodStartDate),
-		EndDate:    gtime.New(req.PeriodEndDate),
+		StartDate:  openEntry.PeriodStartDate,
+		EndDate:    service.Setup().MustGetLocalDateTime(ctx, gtime.New(req.PeriodEndDate)).Format("Y-m-d H:i:s"),
 		User:       openEntry.User,
 	})
 	if err != nil {
@@ -645,7 +646,7 @@ func (s *sSelling) GetPosInvoiceList(ctx context.Context, req *dtoSelling.GetPos
 		Fields: g.ArrayStr{"name", "posting_date", "customer", "grand_total", "is_return", "return_against"},
 		Filters: [][]string{{"pos_profile", "=", req.PosProfile},
 			{"owner", "=", req.User},
-			{"creation", ">=", req.StartDate.Format("Y-m-d H:i:s")}, {"creation", "<=", req.EndDate.Format("Y-m-d H:i:s")}},
+			{"creation", ">=", req.StartDate}, {"creation", "<=", req.EndDate}},
 	})
 	if err != nil {
 		return nil, gerror.Wrapf(err, "查询POS发票列表失败")
@@ -767,11 +768,9 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
 // 返回：
 //   - *erp.POSInvoice: POS发票信息
 func (s *sSelling) buildPosInvoice(ctx context.Context, req *selling.SavePosInvoiceReq, openingEntry *erp.POSOpeningEntry) *erp.POSInvoice {
-	postingDatetime, err := gtime.New(req.PostingDatetime).ToZone(service.User().MustGetUserTimeZone(ctx, openingEntry.User))
-	if err != nil {
-		g.Log().Error(ctx, "转换时间失败", err, g.Map{"postingDatetime": req.PostingDatetime})
-		postingDatetime = gtime.New(req.PostingDatetime)
-	}
+	//postingDatetime, err := gtime.New(req.PostingDatetime).ToZone(service.User().MustGetUserTimeZone(ctx, openingEntry.User))
+	postingDatetime := service.Setup().MustGetLocalDateTime(ctx, gtime.New(req.PostingDatetime))
+
 	posInvoice := &erp.POSInvoice{
 		PosProfile:        openingEntry.PosProfile,
 		Company:           openingEntry.Company,
