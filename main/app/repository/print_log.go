@@ -233,6 +233,12 @@ func (r *printerLogRepo) GetShiftPrinterData(deviceSn string, opts ...DBOption) 
 				return string(configJson)
 			}(),
 			PrintingTime: printerLog.PrintingTime,
+			EnableStatusCheck: func() int {
+				if printerLog.Printer == nil {
+					return 0
+				}
+				return printerLog.Printer.EnableStatusCheck
+			}(),
 		}
 	}
 

@@ -271,3 +271,14 @@ type MaterialImportItemReq struct {
 type MaterialImportReq struct {
 	List []MaterialImportItemReq `json:"list" binding:"required,dive"` // 商品列表
 }
+
+// DeleteProductErpReq 删除商品请求
+type DeleteProductErpReq struct {
+	Items []DeleteProductErpItemReq `json:"items"` // 商品列表
+}
+
+type DeleteProductErpItemReq struct {
+	ItemCode string `json:"item_code" binding:"required"` // 商品编码
+	ItemName string `json:"item_name" binding:"required"` // 商品名称, 英文.没办法，接口要传
+	StockUom string `json:"stock_uom" binding:"required"` // 商品单位, 英文.没办法，接口要传
+}

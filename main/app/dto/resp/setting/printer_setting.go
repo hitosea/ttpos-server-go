@@ -53,4 +53,5 @@ type PrinterInfo struct {
 	PrintMethod            int    // 打印方式 1文本打印, 2图片打印
 	PrinterSn              string // 打印机SN
 	PrinterWidth           int    // 打印机宽度mm
+	EnableStatusCheck      int    // 是否启用状态检查
 }

@@ -1766,6 +1766,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer` (
     `source_device_sn` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '来源设备SN',
     `copies` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '打印份数',
     `width` INT UNSIGNED NOT NULL DEFAULT 80 COMMENT '纸张宽度（mm）',
+    `enable_status_check` INT(1) UNSIGNED NOT NULL DEFAULT 1 COMMENT '是否启用状态检查 0-关闭 1-开启',
     `sort` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '排序',
     `print_method` INT(10) NOT NULL DEFAULT 1 COMMENT '打印方式 1文本打印, 2图片打印',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',

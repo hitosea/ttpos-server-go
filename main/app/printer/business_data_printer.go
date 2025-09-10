@@ -89,15 +89,16 @@ func (p *PrinterRepoImpl) PrintingBusinessData(
 
 	// 打印
 	return &resp.PrinterData{
-		Data:             printerLogData.Data,
-		PrintMethod:      printMethod,
-		Uuid:             printerLogData.Uuid,
-		Copies:           settingPrinterInfo.Copies,
-		PrinterType:      settingPrinterInfo.PrinterType,
-		PrinterConfig:    settingPrinterInfo.PrinterConfig,
-		IsCashierPrinter: settingPrinterInfo.IsCashierPrinter,
-		IsUsbPrinter:     settingPrinterInfo.IsUsbPrinter,
-		PrintingTime:     printerLogData.PrintingTime,
+		Data:              printerLogData.Data,
+		PrintMethod:       printMethod,
+		Uuid:              printerLogData.Uuid,
+		Copies:            settingPrinterInfo.Copies,
+		PrinterType:       settingPrinterInfo.PrinterType,
+		PrinterConfig:     settingPrinterInfo.PrinterConfig,
+		IsCashierPrinter:  settingPrinterInfo.IsCashierPrinter,
+		IsUsbPrinter:      settingPrinterInfo.IsUsbPrinter,
+		PrintingTime:      printerLogData.PrintingTime,
+		EnableStatusCheck: settingPrinterInfo.EnableStatusCheck,
 	}, nil
 }
 
@@ -158,6 +159,7 @@ func (p *PrinterRepoImpl) getPrintingBusinessDataContent(
 		constant.PrinterTypeXPrinterWifi,
 		constant.PrinterTypeCodesoftLan,
 		constant.PrinterTypeCodesoftWifi,
+		constant.PrinterTypeGpCloud,
 		constant.BrandA11510P,
 	}, printerType) {
 		return template.NewBusinessDataXprinterTemplate(base).GetPrintContent(

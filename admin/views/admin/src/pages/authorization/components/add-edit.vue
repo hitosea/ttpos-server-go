@@ -32,6 +32,7 @@
             expandTrigger: 'hover',
           }"
           clearable
+          filterable
           :disabled="props.hasEdit || confirmPassword"
         >
           <template #default="{ data }">

@@ -40,6 +40,8 @@ class Printer extends PrinterModel
         $data['uuid'] = createUuid();
         $data['name'] = $data['printer_name'] ?? '';
         $data['copies'] = $data['print_times'] ?? 0;
+        $data['width'] = $data['width'] ?? 80; // 纸张宽度，默认80mm
+        $data['enable_status_check'] = $data['enable_status_check'] ?? 1; // 是否启用状态检查，默认开启
         $data['printer_type_uuid'] = $type['uuid'];
         $data['config_json'] = json_encode($data[$printerType], JSON_UNESCAPED_UNICODE);
         if (!$this->save($data)) {
@@ -72,6 +74,8 @@ class Printer extends PrinterModel
         }
         $data['name'] = $data['printer_name'] ?? '';
         $data['copies'] = $data['print_times'] ?? 0;
+        $data['width'] = $data['width'] ?? 80; // 纸张宽度，默认80mm
+        $data['enable_status_check'] = $data['enable_status_check'] ?? 1; // 是否启用状态检查，默认开启
         $data['printer_type_uuid'] = $type['uuid'];
         if (!empty($data[$printerType]) && $this->is_usb != 1) {
             $data['config_json'] = json_encode($data[$printerType], JSON_UNESCAPED_UNICODE);

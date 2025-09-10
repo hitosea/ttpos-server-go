@@ -537,9 +537,6 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 			if err != nil {
 				return errors.WithMessage(err, "调用erp接口失败")
 			}
-
-			fmt.Println("resp", utils.ToJsonString(resp))
-
 			// 更新采购申请单号
 			purchaseOrder.ErpOrderNo = resp.PurchaseOrder
 			err = purchaseOrderRepo.Update(purchaseOrder)

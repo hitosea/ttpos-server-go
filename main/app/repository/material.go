@@ -28,8 +28,9 @@ type IMaterialRepo interface {
 	GetMaterialCategoryByName(name string) (*model.MaterialCategory, error)
 	CreateMaterialCategory(materialCategory model.MaterialCategory) (uint64, error)
 	GetMaterialCategoryList() ([]model.MaterialCategory, error)
-	UpdateMaterialStatusBatch(uuids []uint64, status int) error // 批量修改物品状态
-	UpdateMaterialStockNum(materials []*model.Material) error   // 更新物品库存数量
+	UpdateMaterialStatusBatch(uuids []uint64, status int) error  // 批量修改物品状态
+	UpdateMaterialStockNum(materials []*model.Material) error    // 更新物品库存数量
+	AddActualSaleNum(materialUuid uint64, saleNum float64) error // 增加材料销量
 
 	CheckMultiLanguageNameExist(localeResponse dto.LocaleResponse) dto.LocaleResponse // 检查多语言名称是否存在
 	GetCategoryUuidByNameOptimized(name string) (uint64, error)
@@ -270,6 +271,13 @@ func (r *MaterialRepoImpl) UpdateMaterialStockNum(materials []*model.Material) e
 		if err := r.db.Model(&model.Material{}).Where("uuid = ?", material.Uuid).Update("stock_num", material.StockNum).Error; err != nil {
 			return errors.WithMessage(err, "更新物品库存数量失败")
 		}
+	}
+	return nil
+}
+
+func (r *MaterialRepoImpl) AddActualSaleNum(materialUuid uint64, saleNum float64) error {
+	if err := r.db.Model(&model.Material{}).Where("uuid = ?", materialUuid).Update("actual_sale_num", gorm.Expr("actual_sale_num + ?", saleNum)).Error; err != nil {
+		return errors.WithMessage(err)
 	}
 	return nil
 }

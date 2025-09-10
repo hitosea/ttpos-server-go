@@ -816,6 +816,7 @@ func (model *SaleOrderProduct) CopyOrderProduct(saleOrderUuid uint64) *SaleOrder
 		product.SaleOrderUuid = saleOrderUuid
 	}
 	// 复制SaleOrderProductBoms
+	product.SaleOrderProductBoms = make([]*SaleOrderProductBom, 0) // 必须重置，否则会重复添加
 	for _, bom := range model.SaleOrderProductBoms {
 		if bom.IsDelete() {
 			continue
