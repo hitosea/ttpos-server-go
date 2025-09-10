@@ -509,7 +509,7 @@ func (s *sSetup) InitModeOfPayment(ctx context.Context, dirBase string) error {
 // 返回：
 //   - string: 时区
 func (s *sSetup) GetDefaultTimeZone(ctx context.Context) string {
-	return "Asia/Bangkok"
+	return "Asia/Shanghai"
 }
 
 // MustGetLocalDateTime 获取本地时间
