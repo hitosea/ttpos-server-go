@@ -30745,23 +30745,6 @@ const docTemplate = `{
         },
         "req.ProductImportItemReq": {
             "type": "object",
-            "required": [
-                "barcode",
-                "category_name",
-                "deduct_stock_type",
-                "is_enable_grade",
-                "locale_name",
-                "num_type",
-                "open_overall_discount",
-                "product_price",
-                "product_rating_tax_type",
-                "product_status",
-                "product_takeout_tax_type",
-                "product_unit",
-                "row",
-                "shows",
-                "sku_name"
-            ],
             "properties": {
                 "barcode": {
                     "description": "商品条码",
@@ -30875,23 +30858,6 @@ const docTemplate = `{
         },
         "req.ProductImportListItemReq": {
             "type": "object",
-            "required": [
-                "barcode",
-                "category_name",
-                "deduct_stock_type",
-                "is_enable_grade",
-                "locale_name",
-                "num_type",
-                "open_overall_discount",
-                "product_price",
-                "product_rating_tax_type",
-                "product_status",
-                "product_takeout_tax_type",
-                "product_unit",
-                "row",
-                "shows",
-                "sku_name"
-            ],
             "properties": {
                 "barcode": {
                     "description": "商品条码",
@@ -37831,6 +37797,10 @@ const docTemplate = `{
                     "description": "打印数据",
                     "type": "string"
                 },
+                "enable_status_check": {
+                    "description": "是否启用状态检查",
+                    "type": "integer"
+                },
                 "is_cashier_printer": {
                     "description": "是否是收银机自带打印机",
                     "type": "boolean"
@@ -38836,6 +38806,10 @@ const docTemplate = `{
                     "description": "采购单ID",
                     "type": "integer"
                 },
+                "purchase_time": {
+                    "description": "采购时间",
+                    "type": "integer"
+                },
                 "receive_time": {
                     "description": "收货日期",
                     "type": "integer"
@@ -38883,6 +38857,10 @@ const docTemplate = `{
                 },
                 "purchase_order_uuid": {
                     "description": "采购单ID",
+                    "type": "integer"
+                },
+                "purchase_time": {
+                    "description": "采购时间",
                     "type": "integer"
                 },
                 "receive_time": {

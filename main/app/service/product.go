@@ -4550,12 +4550,12 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 	sauceListResult := CheckProductSauceResult{}
 	attributeListResult := []CheckProductAttributeGroupParam{}
 	packageResult := CheckProductPackageResult{}
-	if req.Type == constant.ProductTypeProduct {
+	if req.Type == constant.ProductTypeProduct { // 编辑商品
 		// 商品规格, 必填
 		var packageNames []string
 		var flavorNames []string
 		var flavors []CheckProductFlavorParam
-		for _, flavor := range req.Flavors {
+		for _, flavor := range req.Flavors { // 商品规格
 			flavors = append(flavors, CheckProductFlavorParam{
 				Uuid:         flavor.Uuid,
 				Price:        flavor.Price,
@@ -4653,7 +4653,7 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 			sauceListResult = *result
 			sauceListResult.Status = req.Status
 		}
-	} else {
+	} else { // 编辑套餐
 		var groups []CheckProductPackageGroupParam
 		for _, group := range req.Package.Groups {
 			var products []CheckProductPackageGroupProductParam
@@ -4998,6 +4998,11 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 	warehouseFormRepo := repository.NewWarehouseFormRepo(tx)
 	warehouseMonthlyFormRepo := repository.NewWarehouseMonthlyFormRepo(tx)
 	setting, err := s.settingSrv.GetCompanySetting(ctx)
+
+	// flavorListResult.Flavors 根据IsDelete排序，如果IsDelete=true，则排在前面，优先删除，然后再添加
+	sort.Slice(flavorListResult.Flavors, func(i, j int) bool {
+		return flavorListResult.Flavors[i].IsDelete && !flavorListResult.Flavors[j].IsDelete
+	})
 
 	// 商品规格
 	for _, flavor := range flavorListResult.Flavors {
