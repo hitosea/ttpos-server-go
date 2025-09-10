@@ -431,7 +431,7 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 		purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(tx)
 
 		// 查询采购申请
-		purchaseOrder, err := purchaseOrderRepo.GetByUuid(req.Uuid)
+		purchaseOrder, err := purchaseOrderRepo.GetByUuid(req.Uuid, purchaseOrderRepo.WithItems())
 		if err != nil {
 			if err == gorm.ErrRecordNotFound {
 				return errors.New("采购申请不存在")
@@ -439,21 +439,30 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 			return errors.WithMessage(err, "查询采购申请失败")
 		}
 
+		// 删除物品为0的数据
+		err = purchaseOrderItemRepo.DeleteByPurchaseOrderUuidAndNumIsZero(req.Uuid)
+		if err != nil {
+			return errors.WithMessage(err, "删除采购申请明细失败")
+		}
+
+		// 过滤掉数量为0的项目后重新计算数量
+		validItems := make([]model.PurchaseOrderItem, 0)
+		for _, item := range purchaseOrder.Items {
+			if item.Num > 0 {
+				validItems = append(validItems, item)
+			}
+		}
+
 		oldStatus := purchaseOrder.Status
 		purchaseOrder.Status = constant.PurchaseOrderStatusPending
 		purchaseOrder.OrderTime = time.Now().Unix()
 		purchaseOrder.ApplicantUuid = ctx.GetStaffUuid()
 		purchaseOrder.ApplicantName = ctx.GetStaff().RealName
+		purchaseOrder.Num = float64(len(validItems)) // 使用过滤后的数量
 
 		err = purchaseOrderRepo.Update(purchaseOrder)
 		if err != nil {
 			return errors.WithMessage(err, "更新采购申请状态失败")
-		}
-
-		// 删除物品为0的数据
-		err = purchaseOrderItemRepo.DeleteByPurchaseOrderUuidAndNumIsZero(req.Uuid)
-		if err != nil {
-			return errors.WithMessage(err, "删除采购申请明细失败")
 		}
 
 		// 记录操作日志
@@ -1169,11 +1178,9 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 		return nil
 	}
 
-	// 获取收货单明细
-	items := receiptOrder.Items
 	// 添加物料库存
 	materialRepo := repository.NewMaterialRepo(db)
-	for _, item := range items {
+	for _, item := range receiptOrder.Items {
 		// 获取物料信息
 		material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid)
 		if err != nil {
