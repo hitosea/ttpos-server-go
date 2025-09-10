@@ -418,7 +418,7 @@ func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model
 var (
 	countAreaSelect = []string{
 		"dr.name AS area_name",
-		"SUM(ss.product_price + ss.product_tax + ss.service_fee + ss.service_tax + ss.payment_fee - ss.refund_tax - ss.refund_service_fee + ss.extend_price) AS area_sale_amount",
+		"SUM(ss.product_price + ss.product_tax + ss.service_fee + ss.service_tax + ss.payment_fee + ss.no_refund_tax - ss.refund_tax - ss.refund_service_fee + ss.extend_price) AS area_sale_amount",
 		"SUM(ss.payment_amount - ss.refund_amount - ss.refund_payment_balance - ss.product_tax - ss.service_tax + ss.refund_tax) AS area_business_amount",
 		"SUM(ss.product_num) AS area_product_num",
 	}
