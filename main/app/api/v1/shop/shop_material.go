@@ -331,7 +331,7 @@ func (h *MaterialHandler) UnlinkProductBomCard(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, nil, "解除成功")
 }
 
 // CopyProductBomCard 复制成本卡

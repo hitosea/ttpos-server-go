@@ -7488,6 +7488,15 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			// CalcAndSaveSaleBill 方法会检查到newSaleOrderProduct没有主键ID，会创建新记录。所以不用另外创建该订单商品，否则会重复创建
 			saleOrder.SaleOrderProducts = append(saleOrder.SaleOrderProducts, newSaleOrderProduct)
 			returnSaleOrderProduct = newSaleOrderProduct
+			// 补全newSaleOrderProduct对象的ProductBom对象
+			for _, saleOrderProductBom := range newSaleOrderProduct.SaleOrderProductBoms {
+				productBom, err := repository.NewProductBomRepo(db).GetFlavorProductBomByUuid(saleOrderProductBom.ProductBomUuid)
+				if err != nil {
+					return nil, errors.WithMessage(err)
+				}
+				saleOrderProductBom.ProductBom = *productBom
+			}
+
 			// 如果是套餐商品，则更新套餐子商品退菜信息
 			if saleOrderProduct.IsPackageProduct() {
 				subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
