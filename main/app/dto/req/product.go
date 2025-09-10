@@ -260,21 +260,21 @@ func (p *ProductImportListReq) GetBarcodeDuplicateRows() []int {
 
 // ProductImportItemReq 导入商品项请求
 type ProductImportListItemReq struct {
-	LocaleName            dto.LocaleResponse `json:"locale_name" binding:"required"`              // 商品名称
-	CategoryName          string             `json:"category_name" binding:"required"`            // 分类名称
-	ProductUnit           string             `json:"product_unit" binding:"required"`             // 商品单位
-	SkuName               string             `json:"sku_name" binding:"required"`                 // 规格名称
-	ProductPrice          float64            `json:"product_price" binding:"required"`            // 商品价格
-	NumType               int                `json:"num_type" binding:"required"`                 // 数量计算方法, 1-整数 2-小数
-	Barcode               string             `json:"barcode" binding:"required"`                  // 商品条码
-	ProductStatus         int                `json:"product_status" binding:"required"`           // 商品状态, 1-上架 0-下架
-	ProductRatingTaxType  string             `json:"product_rating_tax_type" binding:"required"`  // 堂食税类
-	ProductTakeoutTaxType string             `json:"product_takeout_tax_type" binding:"required"` // 外带税类
-	DeductStockType       int                `json:"deduct_stock_type" binding:"required"`        // 库存计算方式, 2-付款减库存 1-下单减库存
-	Shows                 string             `json:"shows" binding:"required"`                    // 显示：123456
-	IsEnableGrade         int                `json:"is_enable_grade" binding:"required"`          // 是否开启会员折扣(1开启 0关闭)
-	OpenOverallDiscount   int                `json:"open_overall_discount" binding:"required"`    // 整单折扣(1开启 0关闭)
-	Row                   int                `json:"row" binding:"required"`                      // excel表的行编号
+	LocaleName            dto.LocaleResponse `json:"locale_name"`              // 商品名称
+	CategoryName          string             `json:"category_name"`            // 分类名称
+	ProductUnit           string             `json:"product_unit"`             // 商品单位
+	SkuName               string             `json:"sku_name"`                 // 规格名称
+	ProductPrice          float64            `json:"product_price"`            // 商品价格
+	NumType               int                `json:"num_type"`                 // 数量计算方法, 1-整数 2-小数
+	Barcode               string             `json:"barcode"`                  // 商品条码
+	ProductStatus         int                `json:"product_status"`           // 商品状态, 1-上架 0-下架
+	ProductRatingTaxType  string             `json:"product_rating_tax_type"`  // 堂食税类
+	ProductTakeoutTaxType string             `json:"product_takeout_tax_type"` // 外带税类
+	DeductStockType       int                `json:"deduct_stock_type"`        // 库存计算方式, 2-付款减库存 1-下单减库存
+	Shows                 string             `json:"shows"`                    // 显示：123456
+	IsEnableGrade         int                `json:"is_enable_grade"`          // 是否开启会员折扣(1开启 0关闭)
+	OpenOverallDiscount   int                `json:"open_overall_discount"`    // 整单折扣(1开启 0关闭)
+	Row                   int                `json:"row"`                      // excel表的行编号
 }
 
 // ProductImportReq 导入商品请求
