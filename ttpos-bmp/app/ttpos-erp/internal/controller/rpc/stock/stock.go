@@ -49,11 +49,15 @@ func (*Controller) SaveMaterialRequest(ctx context.Context, req *stock.SaveMater
 		return rpc.ApiError(err.Error()), nil
 	}
 
+	requiredBy := service.Setup().MustGetLocalDateTime(ctx, gtime.New(req.RequiredBy)).Format("Y-m-d")
+
+	//note下面的交易时间是系统生成的默认是改不了的 transactionDate
 	if len(req.Purpose) == 0 || req.Purpose == erp.StockEntryTypePurchase {
 		// 创建并提交采购申请
 		purchaseOrder, err := service.Buying().CreatePurchaseFromMq(ctx, &dto.CreatePurchaseFromMqReq{
 			SourceName: resp.MaterialRequestName,
 			Supplier:   req.Supplier,
+			RequiredBy: requiredBy,
 		})
 		if err != nil {
 			return rpc.ApiError(err.Error()), nil
@@ -62,7 +66,7 @@ func (*Controller) SaveMaterialRequest(ctx context.Context, req *stock.SaveMater
 
 		service.Buying().CreateInnerSaleOrderFromPurchaseOrder(ctx, &dto.CreateInnerSaleOrderFromPurchaseOrderReq{
 			SourceName:   purchaseOrder.Name,
-			DeliveryDate: gtime.New(req.RequiredBy).Format("Y-m-d"),
+			DeliveryDate: requiredBy,
 		})
 		if err != nil {
 			return rpc.ApiError(err.Error()), nil

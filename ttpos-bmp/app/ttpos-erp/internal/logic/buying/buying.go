@@ -97,6 +97,7 @@ func (s *sBuying) CreatePurchaseFromMq(ctx context.Context, req *dto.CreatePurch
 	//修改货币类型
 	purchaseOrder.Currency = purchaseOrder.PriceListCurrency
 	purchaseOrder.Supplier = req.Supplier
+	purchaseOrder.ScheduleDate = req.RequiredBy
 
 	//创建采购订单
 	resp, err = service.Document().Create(ctx, "Purchase Order", purchaseOrder)

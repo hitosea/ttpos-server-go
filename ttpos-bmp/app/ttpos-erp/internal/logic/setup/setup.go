@@ -19,6 +19,7 @@ import (
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/gtime"
 )
 
 var (
@@ -499,4 +500,33 @@ func (s *sSetup) InitModeOfPayment(ctx context.Context, dirBase string) error {
 		ItemName:   "支付方式",
 		ItemNameEn: "mode of payment",
 	})
+}
+
+// GetDefaultTimeZone 获取默认时区
+// 参数：
+//   - ctx: 上下文对象
+//
+// 返回：
+//   - string: 时区
+func (s *sSetup) GetDefaultTimeZone(ctx context.Context) string {
+	return "Asia/Bangkok"
+}
+
+// MustGetLocalDateTime 获取本地时间
+// 参数：
+//   - ctx: 上下文对象
+//   - utcTime: UTC时间
+//
+// 返回：
+//   - *gtime.Time: 本地时间
+//
+// 注意：
+//   - 如果转换失败，会返回UTC时间
+func (s *sSetup) MustGetLocalDateTime(ctx context.Context, utcTime *gtime.Time) *gtime.Time {
+	localTime, err := utcTime.ToZone(s.GetDefaultTimeZone(ctx))
+	if err != nil {
+		g.Log().Error(ctx, "转换时区失败", err, g.Map{"utcTime": utcTime})
+		return utcTime
+	}
+	return localTime
 }
