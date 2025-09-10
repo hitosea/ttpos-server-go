@@ -7204,7 +7204,15 @@ func (s *orderSrv) getDecreaseStockList(ctx context.Context, cookingDeductSaleOr
 			productBomMaterials := make([]*model.ProductBomMaterials, 0)
 			// 如果是规格商品
 			if saleOrderProductBom.IsFlavor() {
-				for _, productBomMaterial := range saleOrderProductBom.ProductBom.FlavorMaterials {
+				// 如果没有成本卡，则使用规格商品的原材料
+				flavorMaterials := saleOrderProductBom.ProductBom.FlavorMaterials
+				// 如果有成本卡，则使用成本卡的原材料
+				if saleOrderProductBom.ProductBom.HasProductBomCard() {
+					ProductBomCard := saleOrderProductBom.ProductBom.ProductBomCard
+					flavorMaterials = ProductBomCard.RelatedMaterials
+				}
+				// 遍历原材料
+				for _, productBomMaterial := range flavorMaterials {
 					if productBomMaterial.IsDelete() {
 						continue
 					}
@@ -7219,7 +7227,15 @@ func (s *orderSrv) getDecreaseStockList(ctx context.Context, cookingDeductSaleOr
 			}
 			// 如果是小料
 			if saleOrderProductBom.IsSauce() {
-				for _, material := range saleOrderProductBom.ProductBom.ProductSauce.SauceMaterials {
+				// 如果没有成本卡，则使用小料的原材料
+				sauceMaterials := saleOrderProductBom.ProductBom.ProductSauce.SauceMaterials
+				// 如果有成本卡，则使用成本卡的原材料
+				if saleOrderProductBom.ProductBom.ProductSauce.HasProductBomCard() {
+					ProductBomCard := saleOrderProductBom.ProductBom.ProductSauce.ProductBomCard
+					sauceMaterials = ProductBomCard.RelatedMaterials
+				}
+				// 遍历原材料
+				for _, material := range sauceMaterials {
 					if num := material.GetDecreaseNum(cookingDeductSaleOrderProduct.Num); num > 0 {
 						productBomMaterials = append(productBomMaterials, &model.ProductBomMaterials{
 							MaterialUuid: material.MaterialUuid,
