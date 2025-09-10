@@ -749,13 +749,13 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
 		}
 
 		res.MaterialInvoiceName = j.Get("data.name").String()
+		// 提交发票记录
+		_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePosInvoice, res.MaterialInvoiceName, 1)
+		if err != nil {
+			return nil, gerror.Wrapf(err, "提交发票记录失败")
+		}
 	}
 
-	// 提交发票记录
-	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePosInvoice, res.MaterialInvoiceName, 1)
-	if err != nil {
-		return nil, gerror.Wrapf(err, "提交发票记录失败")
-	}
 	return res, nil
 }
 
