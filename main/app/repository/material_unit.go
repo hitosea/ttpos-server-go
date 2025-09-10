@@ -11,6 +11,7 @@ import (
 type IMaterialUnitRepo interface {
 	// 基础CRUD操作
 	GetMaterialUnitByUuid(uuid uint64, opts ...DBOption) (model.MaterialUnit, error)
+	GetMaterialUnitsByUuid(uuid uint64, opts ...DBOption) (model.MaterialUnit, error)
 	GetMaterialUnitList(opts ...DBOption) ([]*model.MaterialUnit, error)
 	CreateMaterialUnit(materialUnit model.MaterialUnit) (uint64, error)
 	GetMaterialUnitListByBaseUnitUuid(baseUnitUuid uint64) ([]*model.MaterialUnit, error)
@@ -70,6 +71,19 @@ func (r *MaterialUnitRepoImpl) GetMaterialUnitList(opts ...DBOption) ([]*model.M
 		return nil, errors.WithMessage(err, "查询原料单位列表失败")
 	}
 	return materialUnits, nil
+}
+
+func (r *MaterialUnitRepoImpl) GetMaterialUnitsByUuid(baseUnitUuid uint64, opts ...DBOption) (model.MaterialUnit, error) {
+	return r.GetMaterialUnitByUuid(
+		baseUnitUuid,
+		CommonRepo.WhereByFromUnitUuid(baseUnitUuid),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "Unit",
+			},
+		),
+	)
 }
 
 func (r *MaterialUnitRepoImpl) GetMaterialUnitListByBaseUnitUuid(baseUnitUuid uint64) ([]*model.MaterialUnit, error) {
