@@ -612,6 +612,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 			Status:            utils.IfInt(req.IsConfirm, constant.ReceiptOrderStatusReceived, constant.ReceiptOrderStatusPending), // 待收货状态
 			PurchaseOrderUuid: req.PurchaseOrderUuid,
 			PurchaseOrderNo:   purchaseOrder.OrderNo,
+			PurchaseTime:      purchaseOrder.OrderTime,
 			Num:               float64(len(req.Items)),
 			ExpectArrivalTime: purchaseOrder.ExpectArrivalTime,
 			ReceiveTime:       req.ReceiveTime,
