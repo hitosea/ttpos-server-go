@@ -451,6 +451,7 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 		Code:                  "", // 先添加物品，之后调用erp接口后再更新编码
 		Valuation:             request.Valuation,
 		InitStock:             request.InitStock,
+		StockNum:              request.InitStock,
 		MultiLanguageNameUuid: nameId,
 		CategoryUuid:          request.CategoryUuid,
 		UnitUuid:              unitMap[request.UnitUuid],
@@ -974,6 +975,7 @@ func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomC
 			Material:               material,
 		}
 		item.SetUnitErpnextUom(materialUnit.Unit.ErpnextUom)
+		item.SetExpectedProductionNum(item.CalculateExpectedProductionNum())
 		materialList = append(materialList, item)
 	}
 
@@ -994,6 +996,23 @@ func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomC
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		productBomCardRepo := repository.NewProductBomCardRepo(tx)
+		if err := productBomCardRepo.CreateProductBomCard(productBomCard); err != nil {
+			return errors.WithMessage(err, "创建成本卡失败")
+		}
+		for _, material := range materialList {
+			if err := productBomCardRepo.CreateProductBomCardMaterial(*material); err != nil {
+				return errors.WithMessage(err, "创建成本卡材料失败")
+			}
+		}
+		stockNum := productBomCard.CalculateExpectedProductionNum()
+		if err := repository.NewProductBomRepo(tx).UpdateProductBomCard(req.RelatedUuid, cardUuid, stockNum); err != nil {
+			return errors.WithMessage(err, "更新成本卡失败")
+		}
+		if err := repository.NewProductBomCardLogRepo(tx).CreateProductBomCardLog(*productBomCardLog); err != nil {
+			return errors.WithMessage(err, "创建成本卡日志失败")
+		}
+
 		if ctx.GetCompany().IsOpenErp() {
 			// 同步成本卡到erp
 			erpBomItemList := []*manufacturing.BomItem{}
@@ -1026,22 +1045,11 @@ func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomC
 				return errors.WithMessage(errErp)
 			}
 			productBomCard.ErpCode = erpBomResp.BomName // 记录erp成本卡编码
-		}
 
-		productBomCardRepo := repository.NewProductBomCardRepo(tx)
-		if err := productBomCardRepo.CreateProductBomCard(productBomCard); err != nil {
-			return errors.WithMessage(err, "创建成本卡失败")
-		}
-		for _, material := range materialList {
-			if err := productBomCardRepo.CreateProductBomCardMaterial(*material); err != nil {
-				return errors.WithMessage(err, "创建成本卡材料失败")
+			// 更新成本卡ErpCode
+			if err := productBomCardRepo.UpdateProductBomCardErpCode(cardUuid, erpBomResp.BomName); err != nil {
+				return errors.WithMessage(err, "更新成本卡ErpCode失败")
 			}
-		}
-		if err := repository.NewProductBomRepo(tx).UpdateProductBomCard(req.RelatedUuid, cardUuid); err != nil {
-			return errors.WithMessage(err, "更新成本卡失败")
-		}
-		if err := repository.NewProductBomCardLogRepo(tx).CreateProductBomCardLog(*productBomCardLog); err != nil {
-			return errors.WithMessage(err, "创建成本卡日志失败")
 		}
 		return nil
 	}); err != nil {
@@ -1196,7 +1204,7 @@ func (s *materialSrv) unlinkProductBomCard(ctx context.Context, req req.ProductB
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		productBomCardRepo := repository.NewProductBomRepo(tx)
-		if err := productBomCardRepo.UpdateProductBomCard(req.RelatedUuid, 0); err != nil {
+		if err := productBomCardRepo.UpdateProductBomCard(req.RelatedUuid, 0, 999999999); err != nil {
 			return errors.WithMessage(err, "更新成本卡失败")
 		}
 		if err := repository.NewProductBomCardLogRepo(tx).CreateProductBomCardLog(*productBomCardLog); err != nil {
@@ -1222,6 +1230,7 @@ func (s *materialSrv) CopyProductBomCard(ctx context.Context, req req.ProductBom
 	}
 
 	copyProductBomCard := productBomCard.Copy()
+	stockNum := copyProductBomCard.CalculateExpectedProductionNum()
 
 	relatedName := ""
 	if req.RelatedType == constant.ProductBomCardRelatedTypeFlavor {
@@ -1262,7 +1271,7 @@ func (s *materialSrv) CopyProductBomCard(ctx context.Context, req req.ProductBom
 		}
 		// 更新成本卡关联
 		if req.RelatedType == constant.ProductBomCardRelatedTypeFlavor {
-			if err := repository.NewProductBomRepo(tx).UpdateProductBomCard(req.RelatedUuid, copyProductBomCard.Uuid); err != nil {
+			if err := repository.NewProductBomRepo(tx).UpdateProductBomCard(req.RelatedUuid, copyProductBomCard.Uuid, stockNum); err != nil {
 				return errors.WithMessage(err, "更新成本卡失败")
 			}
 		} else if req.RelatedType == constant.ProductBomCardRelatedTypeSauce {
@@ -1350,6 +1359,7 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 			Material:               material,
 		}
 		item.SetUnitErpnextUom(material.Unit.Unit.ErpnextUom)
+		item.SetExpectedProductionNum(item.CalculateExpectedProductionNum()) // 计算预计可生产的产品数量
 		materialList = append(materialList, item)
 
 		productBomCard := model.ProductBomCard{
@@ -1419,7 +1429,8 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 		if err := repository.NewProductBomCardLogRepo(db).CreateProductBomCardLog(*productBomCardLog); err != nil {
 			return errors.WithMessage(err, "创建成本卡日志失败")
 		}
-		if err := repository.NewProductBomRepo(db).UpdateProductBomCard(req.RelatedUuid, productBomCardUuid); err != nil {
+		stockNum := productBomCard.CalculateExpectedProductionNum()
+		if err := repository.NewProductBomRepo(db).UpdateProductBomCard(req.RelatedUuid, productBomCardUuid, stockNum); err != nil {
 			return errors.WithMessage(err, "更新成本卡失败")
 		}
 

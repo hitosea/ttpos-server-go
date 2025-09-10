@@ -530,11 +530,18 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 		if ctx.GetCompany().IsOpenErp() && newStatus == constant.PurchaseOrderStatusApproved {
 			stockItems := make([]*stock.MaterialRequestItem, 0)
 			for _, item := range purchaseOrder.Items {
+				materialUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(item.UnitUuid)
+				if err != nil {
+					return errors.WithMessage(err, "查询物品单位失败")
+				}
+				if materialUnit.Unit == nil {
+					return errors.New("查询物品原始单位失败")
+				}
 				stockItems = append(stockItems, &stock.MaterialRequestItem{
 					ItemCode:     item.MaterialCode,
 					Qty:          item.Num,
 					ScheduleDate: purchaseOrder.ExpectArrivalTime,
-					Uom:          language.JsonToLocaleResponse(item.UnitName).EN,
+					Uom:          materialUnit.Unit.ErpnextUom,
 				})
 			}
 			resp, err := erp.NewIErpSrv(s.dbm).CreatePurchaseOrder(ctx, &stock.SaveMaterialRequestReq{
