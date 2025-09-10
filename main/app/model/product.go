@@ -558,10 +558,36 @@ type RelatedMaterial struct {
 	Material *Material `gorm:"foreignKey:material_uuid;references:uuid" json:"material"`
 
 	unitErpnextUom string // 单位ERPNext单位
+
+	expectedProductionNum float64 // 预计可生产的产品数量
 }
 
 func (model *RelatedMaterial) SetNil() {
 	model.Material = nil
+}
+
+// 计算预计可生产的产品数量。材料库存数量 / 材料用量
+func (model *RelatedMaterial) CalculateExpectedProductionNum() float64 {
+	materialStockNum := model.Material.StockNum // 材料库存数量，单位：基准单位
+	if materialStockNum <= 0 {
+		return 0
+	}
+
+	// 消耗材料数量，单位：基准单位
+	num := decimal.NewFromFloat(model.Num).Mul(decimal.NewFromFloat(model.BaseUnitConversionRate)).InexactFloat64()
+	if num <= 0 {
+		return 999999999 // 如果材料用量为0，则返回999999999
+	}
+
+	return decimal.NewFromFloat(materialStockNum).Div(decimal.NewFromFloat(model.Num)).Truncate(0).InexactFloat64()
+}
+
+func (model *RelatedMaterial) GetExpectedProductionNum() float64 {
+	return model.expectedProductionNum
+}
+
+func (model *RelatedMaterial) SetExpectedProductionNum(expectedProductionNum float64) {
+	model.expectedProductionNum = expectedProductionNum
 }
 
 func (model *RelatedMaterial) SetUnitErpnextUom(unitErpnextUom string) {
@@ -778,6 +804,19 @@ func (ProductBomCard) TableName() string {
 func (model *ProductBomCard) SetNil() {
 	model.MultiLanguageName = nil
 	model.RelatedMaterials = nil
+}
+
+// 计算预计可生产的产品数量
+func (model *ProductBomCard) CalculateExpectedProductionNum() float64 {
+	totalExpectedProductionNum := 9999999999.0
+	for _, material := range model.RelatedMaterials {
+		// 取最小值
+		expectedProductionNum := material.GetExpectedProductionNum()
+		if expectedProductionNum < totalExpectedProductionNum {
+			totalExpectedProductionNum = expectedProductionNum
+		}
+	}
+	return totalExpectedProductionNum
 }
 
 func (model *ProductBomCard) Copy() *ProductBomCard {
