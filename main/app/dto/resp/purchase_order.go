@@ -144,6 +144,7 @@ type PurchaseReceiptOrderInfo struct {
 	PurchaseOrderUuid uint64 `json:"purchase_order_uuid"` // 采购单ID
 	Num               int    `json:"num"`                 // 物品数量
 	ExpectArrivalTime int    `json:"expect_arrival_time"` // 期望到货日期
+	PurchaseTime      uint64 `json:"purchase_time"`       // 采购时间
 	ReceiveTime       int    `json:"receive_time"`        // 收货日期
 	CancelTime        int    `json:"cancel_time"`         // 取消时间
 	CreateTime        int    `json:"create_time"`         // 创建时间
