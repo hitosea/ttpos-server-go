@@ -76,7 +76,6 @@ func (r *MaterialUnitRepoImpl) GetMaterialUnitList(opts ...DBOption) ([]*model.M
 func (r *MaterialUnitRepoImpl) GetMaterialUnitsByUuid(baseUnitUuid uint64, opts ...DBOption) (model.MaterialUnit, error) {
 	return r.GetMaterialUnitByUuid(
 		baseUnitUuid,
-		CommonRepo.WhereByFromUnitUuid(baseUnitUuid),
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.Preload(
 			WithPreload{
