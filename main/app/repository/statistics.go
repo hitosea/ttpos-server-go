@@ -71,7 +71,7 @@ var (
 		"is_meger",
 		"is_special",
 		"is_takeout",
-		"SUM(product_price + product_tax + service_fee + service_tax + no_refund_tax + payment_fee - refund_tax - refund_service_fee - refund_fee + extend_price) AS sale_amount",
+		"SUM(product_price + product_tax + service_fee + service_tax + payment_fee - refund_tax - refund_service_fee - refund_fee + extend_price) AS sale_amount",
 		"SUM(payment_amount - refund_amount - payment_balance) AS received_amount",
 		"SUM(product_price) AS product_price",
 		"SUM(product_origin_price) AS product_origin_price",
@@ -418,7 +418,7 @@ func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model
 var (
 	countAreaSelect = []string{
 		"dr.name AS area_name",
-		"SUM(ss.product_price + ss.product_tax + ss.service_fee + ss.service_tax + ss.payment_fee + ss.no_refund_tax - ss.refund_tax - ss.refund_service_fee + ss.extend_price) AS area_sale_amount",
+		"SUM(ss.product_price + ss.product_tax + ss.service_fee + ss.service_tax + ss.payment_fee - ss.refund_tax - ss.refund_service_fee + ss.extend_price) AS area_sale_amount",
 		"SUM(ss.payment_amount - ss.refund_amount - ss.refund_payment_balance - ss.product_tax - ss.service_tax + ss.refund_tax) AS area_business_amount",
 		"SUM(ss.product_num) AS area_product_num",
 	}
