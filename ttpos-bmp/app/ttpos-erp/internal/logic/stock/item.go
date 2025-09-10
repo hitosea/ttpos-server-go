@@ -100,8 +100,9 @@ func (s *sItem) buildItemListFilters(ctx context.Context, req *item.GetItemListR
 	}
 
 	// 只查询未禁用的物品
-	filters = append(filters, []string{"disabled", "!=", "1"})
-
+	if !req.ContainDisabled {
+		filters = append(filters, []string{"disabled", "!=", "1"})
+	}
 	return filters
 }
 
@@ -110,7 +111,7 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string) ([]*item.
 	resp, err := service.Document().List(ctx, &erp.ErpReq{
 		DocType: "Item",
 	}, &erp.RequestParams{
-		Fields:  g.ArrayStr{"item_name", "item_code", "item_group", "custom_branch", "custom_company", "custom_specification", "stock_uom"},
+		Fields:  g.ArrayStr{"item_name", "item_code", "item_group", "custom_branch", "disabled", "custom_company", "custom_specification", "stock_uom"},
 		Filters: filters,
 		Limit:   consts.Limit999,
 	})
@@ -137,6 +138,7 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string) ([]*item.
 			ItemCode:  data.Get("item_code").String(),
 			ItemGroup: utility.ParseItemGroupFromString(data.Get("item_group").String()),
 			StockUom:  data.Get("stock_uom").String(),
+			Disabled:  data.Get("disabled").Bool(),
 		})
 	}
 
@@ -462,7 +464,8 @@ func (s *sItem) generateItemCodeWithTemplate(ctx context.Context, templateItemCo
 
 	// 查询现有物品列表
 	itemList, err := s.GetItemList(ctx, &item.GetItemListReq{
-		ItemCodePrefix: itemCodePrefix,
+		ItemCodePrefix:  itemCodePrefix,
+		ContainDisabled: true,
 	})
 	if err != nil {
 		return "", gerror.Wrapf(err, "查询无规格物品列表失败")

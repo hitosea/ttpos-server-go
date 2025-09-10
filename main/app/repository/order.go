@@ -1915,6 +1915,9 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64, opts ...GetSaleBillA
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.SauceMaterials.Material",
 			},
 			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.ProductBomCard.RelatedMaterials.Material",
+			},
+			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductBomCard.RelatedMaterials.Material",
 			},
 			WithPreload{

@@ -164,6 +164,15 @@ func (s *productCheckSrv) CheckProductFlavor(db *gorm.DB, flavors []CheckProduct
 	minPrice := 0.0
 	maxPrice := 0.0
 	flavorResults := make([]CheckProductFlavorItemResult, 0)
+
+	// 已删除的条码值
+	excludeBarcode := make([]string, 0)
+	for _, flavor := range flavors {
+		if flavor.IsDelete && flavor.BarcodeValue != "" {
+			excludeBarcode = append(excludeBarcode, flavor.BarcodeValue)
+		}
+	}
+
 	for _, flavorReq := range flavors {
 		isDelete := flavorReq.IsDelete
 		// 商品规格UUID
@@ -188,7 +197,8 @@ func (s *productCheckSrv) CheckProductFlavor(db *gorm.DB, flavors []CheckProduct
 			}
 			// 判断条码是否存在
 			exists := productRepo.CheckBarcodeExist(flavorReq.BarcodeValue, flavorReq.BomUuid)
-			if exists {
+			// 不在已删除的条码值中，且数据库已存在
+			if !slices.Contains(excludeBarcode, flavorReq.BarcodeValue) && exists {
 				return nil, errors.New("规格条码值已存在")
 			}
 		}
