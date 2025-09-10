@@ -95,6 +95,19 @@
         </el-form-item>
       </div>
 
+      <!-- 佳博云打印 -->
+      <div v-if="form.printer_type == 'GP_CLOUD' && is_usb != 1">
+        <el-form-item for="no_click" :label="$t('打印机APPID')" prop="GP_CLOUD.APP_ID" :rules="[{ required: true, message: ' ' }]">
+          <el-input v-model="form.GP_CLOUD.APP_ID"></el-input>
+        </el-form-item>
+        <el-form-item for="no_click" :label="$t('打印机APPKEY')" prop="GP_CLOUD.APP_KEY" :rules="[{ required: true, message: ' ' }]">
+          <el-input v-model="form.GP_CLOUD.APP_KEY"></el-input>
+        </el-form-item>
+        <el-form-item for="no_click" :label="$t('打印机SN')" prop="GP_CLOUD.SN" :rules="[{ required: true, message: ' ' }]">
+          <el-input v-model="form.GP_CLOUD.SN"></el-input>
+        </el-form-item>
+      </div>
+
       <!-- 芯烨打印 -->
       <div v-if="(form.printer_type == 'XPRINTER_LAN' || form.printer_type == 'XPRINTER_WIFI') && is_usb != 1">
         <el-form-item for="no_click" :label="$t('打印机IP')" prop="XPRINTER_LAN.IP" :rules="[{ required: true, message: ' ' }]">
@@ -123,22 +136,48 @@
         <el-input v-model="form.sn"></el-input>
       </el-form-item>
 
-      <el-form-item for="no_click" :label="$t('打印联数')" prop="print_times" :rules="[{ required: true, message: $t('请输入打印联数') }]">
-        <el-input-number
-          :controls="false"
-          :min="1"
-          :max="10"
-          :precision="0"
-          :placeholder="$t('请输入打印联数')"
-          v-model.number="form.print_times"
-          autocomplete="off"
-        ></el-input-number>
-        <div class="tips">{{ $t('同一订单，打印的次数') }}</div>
-      </el-form-item>
-
-      <el-form-item for="no_click" :label="$t('排序')" prop="sort" :rules="[{ required: true, message: $t('接近0，排序等级越高') }]">
-        <el-input-number :controls="false" :min="0" :max="999" :placeholder="$t('接近0，排序等级越高')" v-model.number="form.sort" autocomplete="off"></el-input-number>
-      </el-form-item>
+      <!-- 排序、打印联数、纸张宽度、状态检查合并为一行 -->
+      <el-row :gutter="20">
+        <el-col :span="6">
+          <el-form-item for="no_click" :label="$t('排序')" prop="sort" :rules="[{ required: true, message: $t('接近0，排序等级越高') }]">
+            <el-input-number :controls="false" :min="0" :max="999" :placeholder="$t('接近0，排序等级越高')" v-model.number="form.sort" autocomplete="off" style="width: 100%"></el-input-number>
+          </el-form-item>
+        </el-col>
+        <el-col :span="6">
+          <el-form-item for="no_click" :label="$t('打印联数')" prop="print_times" :rules="[{ required: true, message: $t('请输入打印联数') }]">
+            <el-input-number
+              :controls="false"
+              :min="1"
+              :max="10"
+              :precision="0"
+              :placeholder="$t('请输入打印联数')"
+              v-model.number="form.print_times"
+              autocomplete="off"
+              style="width: 100%"
+            ></el-input-number>
+            <div class="tips">{{ $t('同一订单，打印的次数') }}</div>
+          </el-form-item>
+        </el-col>
+        <el-col :span="6">
+          <el-form-item for="no_click" :label="$t('纸张宽度（mm）')" prop="width">
+            <el-select v-model="form.width" :placeholder="$t('请选择纸张宽度')" style="width: 100%" clearable>
+              <el-option :label="'58mm'" :value="58"></el-option>
+              <el-option :label="'80mm'" :value="80"></el-option>
+            </el-select>
+          </el-form-item>
+        </el-col>
+        <el-col :span="6">
+          <el-form-item for="no_click" :label="$t('状态检查')" prop="enable_status_check">
+            <div style="text-align: center;">
+              <el-switch
+                v-model="form.enable_status_check"
+                :active-value="1"
+                :inactive-value="0"
+              />
+            </div>
+          </el-form-item>
+        </el-col>
+      </el-row>
 
       <el-form-item for="no_click" :label="$t('打印关联收银机')" prop="is_main" v-if="is_usb != 1">
         <el-select v-model="form.source_device_sn" :placeholder="$t('选择打印机所关联的收银机')" style="width: 100%" clearable>
@@ -188,6 +227,8 @@
           print_method: '',
           sort: 1,
           print_times: 1,
+          width: 80, // 纸张宽度，默认80mm
+          enable_status_check: 1, // 是否启用状态检查，默认开启
           sn: '',
           FEI_E_YUN: {
             USER: '',
@@ -212,6 +253,11 @@
             PORT: 9100,
           },
           SUNMI_CLOUD: {
+            APP_ID: '',
+            APP_KEY: '',
+            SN: '',
+          },
+          GP_CLOUD: {
             APP_ID: '',
             APP_KEY: '',
             SN: '',
@@ -247,6 +293,8 @@
             self.form.sort = detail.sort;
             self.form.printer_id = detail.printer_id;
             self.form.print_times = detail.print_times;
+            self.form.width = detail.width || 80; // 纸张宽度
+            self.form.enable_status_check = detail.enable_status_check !== undefined ? detail.enable_status_check : 1; // 状态检查
             self.form.source_device_sn = detail.source_device_sn;
             self.form.print_method = detail.print_method || '';
             if (detail.printer_type.value == 'FEI_E_YUN') {
@@ -271,6 +319,11 @@
               self.form.SUNMI_CLOUD.APP_ID = detail.printer_config.APP_ID;
               self.form.SUNMI_CLOUD.APP_KEY = detail.printer_config.APP_KEY;
               self.form.SUNMI_CLOUD.SN = detail.printer_config.SN;
+            }
+            if (detail.printer_type.value == 'GP_CLOUD') {
+              self.form.GP_CLOUD.APP_ID = detail.printer_config.APP_ID;
+              self.form.GP_CLOUD.APP_KEY = detail.printer_config.APP_KEY;
+              self.form.GP_CLOUD.SN = detail.printer_config.SN;
             }
             if (detail.printer_type.value == 'XPRINTER_LAN' || self.form.printer_type == 'XPRINTER_WIFI') {
               self.form.XPRINTER_LAN.IP = detail.printer_config.IP;

@@ -365,6 +365,12 @@ func (s *printerLogSrv) GetPrinterData(ctx context.Context) (*resp.PrinterDataLi
 			IsCashierPrinter: log.IsCashierPrinter(),
 			IsUsbPrinter:     log.IsUsbPrinter(),
 			PrintingTime:     log.PrintingTime,
+			EnableStatusCheck: func() int {
+				if log.Printer == nil {
+					return 0
+				}
+				return log.Printer.EnableStatusCheck
+			}(),
 		})
 	}
 
@@ -441,6 +447,12 @@ func (s *printerLogSrv) PrinterPrint(ctx context.Context, req req.PrinterPrintRe
 			return string(configJson)
 		}(),
 		PrintingTime: printerLog.PrintingTime,
+		EnableStatusCheck: func() int {
+			if printerLog.Printer == nil {
+				return 0
+			}
+			return printerLog.Printer.EnableStatusCheck
+		}(),
 	}, nil
 }
 
@@ -553,15 +565,16 @@ func (s *printerLogSrv) GetStaticOpenCashBoxPrinterConfig(ctx context.Context) (
 
 	//
 	return &resp.PrinterData{
-		Uuid:             0,
-		Data:             data,
-		PrintMethod:      1,
-		Copies:           settingPrinterInfo.Copies,
-		PrinterType:      settingPrinterInfo.PrinterType,
-		PrinterConfig:    settingPrinterInfo.PrinterConfig,
-		IsCashierPrinter: settingPrinterInfo.IsCashierPrinter,
-		PrintingTime:     200,
-		IsUsbPrinter:     settingPrinterInfo.IsUsbPrinter,
+		Uuid:              0,
+		Data:              data,
+		PrintMethod:       1,
+		Copies:            settingPrinterInfo.Copies,
+		PrinterType:       settingPrinterInfo.PrinterType,
+		PrinterConfig:     settingPrinterInfo.PrinterConfig,
+		IsCashierPrinter:  settingPrinterInfo.IsCashierPrinter,
+		PrintingTime:      200,
+		IsUsbPrinter:      settingPrinterInfo.IsUsbPrinter,
+		EnableStatusCheck: settingPrinterInfo.EnableStatusCheck,
 	}, nil
 }
 
@@ -623,14 +636,15 @@ func (s *printerLogSrv) GetOldOrderPrinterConfig(ctx context.Context, data strin
 	}
 	//
 	return &resp.PrinterData{
-		Uuid:             0,
-		Data:             utils.GzipCompressData(data),
-		PrintMethod:      2,
-		Copies:           settingPrinterInfo.Copies,
-		PrinterType:      settingPrinterInfo.PrinterType,
-		PrinterConfig:    settingPrinterInfo.PrinterConfig,
-		IsCashierPrinter: settingPrinterInfo.IsCashierPrinter,
-		IsUsbPrinter:     settingPrinterInfo.IsUsbPrinter,
-		PrintingTime:     200,
+		Uuid:              0,
+		Data:              utils.GzipCompressData(data),
+		PrintMethod:       2,
+		Copies:            settingPrinterInfo.Copies,
+		PrinterType:       settingPrinterInfo.PrinterType,
+		PrinterConfig:     settingPrinterInfo.PrinterConfig,
+		IsCashierPrinter:  settingPrinterInfo.IsCashierPrinter,
+		IsUsbPrinter:      settingPrinterInfo.IsUsbPrinter,
+		PrintingTime:      200,
+		EnableStatusCheck: settingPrinterInfo.EnableStatusCheck,
 	}, nil
 }

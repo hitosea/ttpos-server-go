@@ -414,6 +414,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		printMethod            int  // 打印方式 1文本打印, 2图片打印
 		printerSn              string
 		printerWidth           int = 80 // 默认80mm打印机
+		enableStatusCheck      int = 0  // 是否启用状态检查
 	)
 
 	// 收银机开启
@@ -457,6 +458,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 			printerCashierDeviceSn = deviceSn
 			printMethod = int(printer.PrintMethod)
 			printerWidth = printer.Width
+			enableStatusCheck = printer.EnableStatusCheck
 		} else if printerId != "0" && printerId != "" {
 			// 收银机内置的打印机
 			printerCashierDeviceSn = printerId
@@ -488,6 +490,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		PrintMethod:            printMethod,
 		PrinterSn:              printerSn,
 		PrinterWidth:           printerWidth,
+		EnableStatusCheck:      enableStatusCheck,
 	}, nil
 }
 
