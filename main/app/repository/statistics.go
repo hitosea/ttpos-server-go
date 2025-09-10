@@ -840,8 +840,8 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 			"JSON_UNQUOTE(JSON_EXTRACT(ppc.name, '$."+req.Language+"')) AS category_parent_name",
 			"SUM(sp.product_num) AS sale_num",
 			"SUM((sp.product_price + sp.tax_fee + sp.service_fee + service_tax) * sp.product_num) AS origin_sale_amount",
-			"SUM(sp.product_final_price * (sp.product_num - sp.refund_num)) AS actual_sale_amount",
-			"SUM((sp.product_final_price - sp.tax_fee - sp.service_tax) * (sp.product_num - sp.refund_num)) AS business_amount",
+			"SUM(IF(sp.free_num > 0 OR sp.give_num > 0, 0, sp.product_final_price * (sp.product_num - sp.refund_num))) AS actual_sale_amount",
+			"SUM(IF(sp.free_num > 0 OR sp.give_num > 0, 0, (sp.product_final_price - sp.tax_fee - sp.service_tax) * (sp.product_num - sp.refund_num))) AS business_amount",
 			"SUM(IF(sp.free_num > 0, sp.free_num, sp.give_num)) AS give_num",
 		).
 		Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
