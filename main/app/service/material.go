@@ -1311,11 +1311,25 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 			return errors.WithMessage(err, "更新物品编码失败")
 		}
 
+		// 获取商品名称
+		productBom, err := repository.NewProductBomRepo(db).GetProductBom(
+			repository.CommonRepo.WhereByUuid(req.RelatedUuid),
+			repository.CommonRepo.Preload(
+				repository.WithPreload{
+					Query: "ProductPackage.MultiLanguageName",
+				},
+			),
+		)
+		if err != nil {
+			return errors.WithMessage(err, "获取商品规格失败")
+		}
+		productBomCardName := productBom.ProductPackage.MultiLanguageName.GetNames()
+
 		// 创建成本卡
 		productBomCardUuid, _ := utils.GetID()
 		nameUuid, _ := utils.GetID()
 		multiLanguageName := model.MultiLanguageName{}
-		multiLanguageName.InitByLocaleResponse(req.MaterialAddReq.LocaleName)
+		multiLanguageName.InitByLocaleResponse(productBomCardName)
 		multiLanguageName.Uuid = nameUuid
 		_, errName := repository.NewMultiLanguageNameRepo(db).CreateMultiLanguageName(multiLanguageName)
 		if errName != nil {
