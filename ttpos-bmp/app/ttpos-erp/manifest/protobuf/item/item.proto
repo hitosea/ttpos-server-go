@@ -19,6 +19,7 @@ message GetItemListReq {
   string company_abbr = 4; // 公司简称，可选
   string item_code = 5; // 物品编码，可选
   string item_code_prefix = 6; // 物品编码前缀，可选
+  bool contain_disabled = 7; // 是否包含禁用状态，可选，默认只取有效
 }
 
 message GetItemListResp {
