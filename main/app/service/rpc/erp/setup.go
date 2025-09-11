@@ -64,7 +64,7 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		return resp.InitShopResp{}, err
 	}
 	if result.GetCode() != "0" || result.Data == nil {
-		logger.Logger.Error("InitShop-InitShop", zap.Any("err", err), zap.String("code", result.GetCode()), zap.String("msg", result.GetMessage()))
+		logger.Logger.Error("InitShop-InitShop", zap.Any("err", err), zap.String("code", result.GetCode()), zap.String("result_message", result.GetMessage()))
 		return resp.InitShopResp{}, errors.New("初始化失败")
 	}
 	response := &setup.InitShopResp{}

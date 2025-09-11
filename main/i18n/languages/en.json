@@ -3719,6 +3719,7 @@
   "通过device_sn查询设备uuid": "Query device UUID via device_sn",
   "通过设备ID查询未挂单的销售账单": "Query unheld sales invoices via device ID",
   "速通物流": "Suto ​​Logistics",
+  "遗留备用金最大为100000000000": "The maximum carryover reserve fund is 100000000000",
   "遗留现金不能小于0": "The remaining cash cannot be less than 0",
   "邀请有礼": "Invite to receive gift",
   "邀请有礼奖励": "Reward for invite to receive gift reward",

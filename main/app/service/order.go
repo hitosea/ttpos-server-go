@@ -10012,15 +10012,16 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 			Amount:        0,
 		})
 	} else {
-		for _, payment := range saleOrder.PaymentOrders {
-			// Cash 现金、Balance 余额、LianlianPay-WeChat Pay 微信支付、LianlianPay-Alipay 支付宝支付、LianlianPay-QR PromptPay 二维码支付
-			methodMap := map[int]string{
-				constant.PaymentMethodCodeCash:                "Cash",
-				constant.PaymentMethodCodeBalance:             "Balance",
-				constant.PaymentMethodCodeLianLianWechatPay:   "LianlianPay-WeChat Pay",
-				constant.PaymentMethodCodeLianLianAliPay:      "LianlianPay-Alipay",
-				constant.PaymentMethodCodeLianLianQRPromptPay: "LianlianPay-QR PromptPay",
+		// 获取所有支付方式
+		paymentMethodRepo := repository.NewPaymentMethodRepo(db)
+		paymentMethods := paymentMethodRepo.GetPaymentMethodList(paymentMethodRepo.WhereStatus(constant.PaymentMethodStatusEnable))
+		methodMap := make(map[int]string)
+		for _, paymentMethod := range paymentMethods {
+			if paymentMethod.ErpnextPayment != "" {
+				methodMap[paymentMethod.Code] = paymentMethod.ErpnextPayment
 			}
+		}
+		for _, payment := range saleOrder.PaymentOrders {
 			var modeOfPayment string
 			if method, ok := methodMap[payment.PaymentMethod.Code]; ok {
 				modeOfPayment = method
@@ -10120,16 +10121,17 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 		})
 	}
 
+	// 获取所有支付方式
+	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
+	paymentMethods := paymentMethodRepo.GetPaymentMethodList(paymentMethodRepo.WhereStatus(constant.PaymentMethodStatusEnable))
+	methodMap := make(map[int]string)
+	for _, paymentMethod := range paymentMethods {
+		if paymentMethod.ErpnextPayment != "" {
+			methodMap[paymentMethod.Code] = paymentMethod.ErpnextPayment
+		}
+	}
 	payments := make([]*selling.PosInvoicePayment, 0)
 	for _, payment := range returnOrder.ReturnOrderAmounts {
-		// Cash 现金、Balance 余额、LianlianPay-WeChat Pay 微信支付、LianlianPay-Alipay 支付宝支付、LianlianPay-QR PromptPay 二维码支付
-		methodMap := map[int]string{
-			constant.PaymentMethodCodeCash:                "Cash",
-			constant.PaymentMethodCodeBalance:             "Balance",
-			constant.PaymentMethodCodeLianLianWechatPay:   "LianlianPay-WeChat Pay",
-			constant.PaymentMethodCodeLianLianAliPay:      "LianlianPay-Alipay",
-			constant.PaymentMethodCodeLianLianQRPromptPay: "LianlianPay-QR PromptPay",
-		}
 		var modeOfPayment string
 		if method, ok := methodMap[payment.PaymentMethod.Code]; ok {
 			modeOfPayment = method
