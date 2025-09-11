@@ -112,7 +112,7 @@ func (s *h5Srv) GetBaseInfo(ctx context.Context, deskUuid uint64) (*resp.H5BaseI
 			GiftMethodList:            make([]setting.GiftMethodItem, 0),
 			FreeMethodList:            make([]setting.FreeMethodItem, 0),
 		},
-		Kitchen: kitchenSetting,
+		Kitchen: kitchenSettingResp,
 	}, nil
 }
 

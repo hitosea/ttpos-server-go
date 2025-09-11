@@ -141,14 +141,14 @@ func (model *SaleOrderProduct) GetErpProductBomMaterials() []*ErpProductBomMater
 			if saleOrderProductBom.ProductBom.HasProductBomCard() {
 				card := saleOrderProductBom.ProductBom.ProductBomCard
 				for _, relatedMaterial := range card.RelatedMaterials {
-					uom := relatedMaterial.UnitUom
+					uom := relatedMaterial.BaseUnitUom
 					if uom == "" {
-						unitName := language.JsonToLocaleResponse(relatedMaterial.UnitName)
+						unitName := language.JsonToLocaleResponse(relatedMaterial.BaseUnitName)
 						uom = unitName.EN
 					}
 					materials = append(materials, &ErpProductBomMaterials{
 						ErpCode: relatedMaterial.Material.Code,
-						Num:     relatedMaterial.Num,
+						Num:     relatedMaterial.GetDecreaseNum(1), // 单商品的材料消耗量（单位为基准单位）
 						Uom:     uom,
 					})
 				}
@@ -158,11 +158,15 @@ func (model *SaleOrderProduct) GetErpProductBomMaterials() []*ErpProductBomMater
 			if saleOrderProductBom.ProductBom.ProductSauce.HasProductBomCard() {
 				card := saleOrderProductBom.ProductBom.ProductSauce.ProductBomCard
 				for _, relatedMaterial := range card.RelatedMaterials {
-					unitName := language.JsonToLocaleResponse(relatedMaterial.UnitName)
+					uom := relatedMaterial.BaseUnitUom
+					if uom == "" {
+						unitName := language.JsonToLocaleResponse(relatedMaterial.BaseUnitName)
+						uom = unitName.EN
+					}
 					materials = append(materials, &ErpProductBomMaterials{
 						ErpCode: relatedMaterial.Material.Code,
-						Num:     relatedMaterial.Num,
-						Uom:     unitName.EN,
+						Num:     relatedMaterial.GetDecreaseNum(1), // 单商品的材料消耗量（单位为基准单位）
+						Uom:     uom,
 					})
 				}
 			}
