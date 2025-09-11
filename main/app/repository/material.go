@@ -35,6 +35,8 @@ type IMaterialRepo interface {
 	CheckMultiLanguageNameExist(localeResponse dto.LocaleResponse) dto.LocaleResponse // 检查多语言名称是否存在
 	GetCategoryUuidByNameOptimized(name string) (uint64, error)
 	CheckBarcodeExist(barcode string, uuid uint64) bool // 检查条形码是否存在
+
+	WithRelatedMaterialList() DBOption
 }
 
 // NewMaterialRepo 创建新的物品仓库
@@ -49,6 +51,12 @@ func NewMaterialRepoImpl(db *gorm.DB) *MaterialRepoImpl {
 
 type MaterialRepoImpl struct {
 	db *gorm.DB // 数据库连接
+}
+
+func (r *MaterialRepoImpl) WithRelatedMaterialList() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("RelatedMaterialList")
+	}
 }
 
 // GetMaterialListWithPagination 获取物品列表（分页）

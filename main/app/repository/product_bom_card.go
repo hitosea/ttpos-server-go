@@ -15,6 +15,7 @@ type IProductBomCardRepo interface {
 	UpdateProductBomCardMaterial(productBomCardMaterial model.RelatedMaterial) error
 	CreateOrUpdateProductBomCardMaterial(productBomCardMaterial model.RelatedMaterial) error
 	UpdateProductBomCardErpCode(uuid uint64, erpCode string) error
+	UpdateProductBomCardIsUsed(uuid uint64, isUsed int) error
 }
 
 type IProductBomCardQueryRepo interface {
@@ -149,6 +150,21 @@ func (r *productBomCardRepoImpl) UpdateProductBomCardErpCode(uuid uint64, erpCod
 	})
 	if result.Error != nil {
 		return errors.WithMessage(result.Error)
+	}
+	return nil
+}
+
+func (r *productBomCardRepoImpl) UpdateProductBomCardIsUsed(uuid uint64, isUsed int) error {
+	if err := r.db.Model(&model.ProductBomCard{}).Where("uuid = ?", uuid).Updates(map[string]interface{}{
+		"is_used": isUsed,
+	}).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	// 更新关联材料
+	if err := r.db.Model(&model.RelatedMaterial{}).Where("related_uuid = ?", uuid).Updates(map[string]interface{}{
+		"is_used": isUsed,
+	}).Error; err != nil {
+		return errors.WithMessage(err)
 	}
 	return nil
 }

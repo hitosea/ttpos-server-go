@@ -85,7 +85,7 @@ func (s *erpSrv) DeleteProduct(ctx context.Context, params req.DeleteProductErpR
 
 	client, conn, err := NewErpItemClient()
 	if err != nil {
-		return err
+		return errors.WithMessage(err, "删除商品到erp失败")
 	}
 	defer conn.Close()
 
@@ -97,7 +97,7 @@ func (s *erpSrv) DeleteProduct(ctx context.Context, params req.DeleteProductErpR
 			StockUom: obj.StockUom,
 		})
 		if err != nil {
-			return err
+			return errors.WithMessage(err, "删除商品到erp失败")
 		}
 		if result.GetCode() != "0" {
 			return errors.WithMessage(errors.New(result.GetMessage()), "删除商品到erp失败")

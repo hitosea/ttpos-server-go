@@ -960,6 +960,11 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, request req.ProductS
 			commonRepo.WhereBySoftDelete(),
 		),
 		productRepo.WithProductUnit(),
+		repository.CommonRepo.Preload(
+			repository.WithPreload{
+				Query: "ProductBoms.ProductSauce",
+			},
+		),
 	)
 	if product.Uuid == 0 || err != nil {
 		return nil, errors.New("商品不存在")
@@ -1074,16 +1079,29 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, request req.ProductS
 		if ctx.GetCompany().IsOpenErp() {
 			items := []req.DeleteProductErpItemReq{}
 			for _, productBom := range product.ProductBoms {
-				multiLanguageName := model.NewMultiLanguageName(productBom.Name)
-				enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
-				if err != nil {
-					return errors.WithMessage(err, "翻译失败")
+				if productBom.IsFlavor() {
+					multiLanguageName := model.NewMultiLanguageName(productBom.Name)
+					enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
+					if err != nil {
+						return errors.WithMessage(err, "翻译失败")
+					}
+					items = append(items, req.DeleteProductErpItemReq{
+						ItemCode: productBom.ErpCode,
+						ItemName: enName,
+						StockUom: product.ProductUnit.ErpnextUom,
+					})
+				} else if productBom.IsSauce() {
+					multiLanguageName := model.NewMultiLanguageName(productBom.Name)
+					enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
+					if err != nil {
+						return errors.WithMessage(err, "翻译失败")
+					}
+					items = append(items, req.DeleteProductErpItemReq{
+						ItemCode: productBom.ProductSauce.ErpCode,
+						ItemName: enName,
+						StockUom: product.ProductUnit.ErpnextUom,
+					})
 				}
-				items = append(items, req.DeleteProductErpItemReq{
-					ItemCode: productBom.ErpCode,
-					ItemName: enName,
-					StockUom: product.ProductUnit.ErpnextUom,
-				})
 			}
 			multiLanguageName := model.NewMultiLanguageName(product.Name)
 			enName, err := s.getEnName(ctx, multiLanguageName.GetNames())

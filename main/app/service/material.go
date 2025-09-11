@@ -874,6 +874,7 @@ func (s *materialSrv) addSauceBomCard(ctx context.Context, req req.ProductBomCar
 			BaseUnitName:           baseUnit.Unit.MultiLanguageName.ToJson(),
 			BaseUnitUom:            baseUnit.Unit.ErpnextUom,
 			BaseUnitConversionRate: materialUnit.ConversionRate,
+			IsUsed:                 1, // 成本卡被使用
 		})
 	}
 
@@ -884,6 +885,7 @@ func (s *materialSrv) addSauceBomCard(ctx context.Context, req req.ProductBomCar
 		Name:                  multiLanguageName.ToJson(),
 		MultiLanguageNameUuid: nameUuid,
 		Num:                   float64(req.Num),
+		IsUsed:                1, // 成本卡被使用
 		RelatedMaterials:      materialList,
 	}
 
@@ -894,6 +896,11 @@ func (s *materialSrv) addSauceBomCard(ctx context.Context, req req.ProductBomCar
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		// 修改旧的成本卡为未使用
+		if err := repository.NewProductBomCardRepo(tx).UpdateProductBomCardIsUsed(sauce.ProductBomCardUuid, 0); err != nil {
+			return errors.WithMessage(err, "更新成本卡失败")
+		}
+		// 创建新成本卡
 		productBomCardRepo := repository.NewProductBomCardRepo(tx)
 		if err := productBomCardRepo.CreateProductBomCard(productBomCard); err != nil {
 			return errors.WithMessage(err, "创建成本卡失败")
@@ -973,6 +980,7 @@ func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomC
 			BaseUnitUom:            baseUnit.Unit.ErpnextUom,
 			BaseUnitConversionRate: materialUnit.ConversionRate,
 			Material:               material,
+			IsUsed:                 1, // 成本卡被使用
 		}
 		item.SetUnitErpnextUom(materialUnit.Unit.ErpnextUom)
 		item.SetExpectedProductionNum(item.CalculateExpectedProductionNum())
@@ -986,6 +994,7 @@ func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomC
 		Name:                  multiLanguageName.ToJson(),
 		MultiLanguageNameUuid: nameUuid,
 		Num:                   float64(req.Num),
+		IsUsed:                1, // 成本卡被使用
 		RelatedMaterials:      materialList,
 	}
 
@@ -996,6 +1005,11 @@ func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomC
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		// 修改旧的成本卡为未使用
+		if err := repository.NewProductBomCardRepo(tx).UpdateProductBomCardIsUsed(productBom.ProductBomCardUuid, 0); err != nil {
+			return errors.WithMessage(err, "更新成本卡失败")
+		}
+		// 创建新成本卡
 		productBomCardRepo := repository.NewProductBomCardRepo(tx)
 		if err := productBomCardRepo.CreateProductBomCard(productBomCard); err != nil {
 			return errors.WithMessage(err, "创建成本卡失败")
@@ -1174,6 +1188,11 @@ func (s *materialSrv) unlinkSauceBomCard(ctx context.Context, req req.ProductBom
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		// 修改旧的成本卡为未使用
+		if err := repository.NewProductBomCardRepo(tx).UpdateProductBomCardIsUsed(sauce.ProductBomCardUuid, 0); err != nil {
+			return errors.WithMessage(err, "更新成本卡失败")
+		}
+		// 创建新成本卡
 		productBomCardRepo := repository.NewProductSauceRepo(tx)
 		if err := productBomCardRepo.UpdateProductBomCard(req.RelatedUuid, 0); err != nil {
 			return errors.WithMessage(err, "更新成本卡失败")
@@ -1203,6 +1222,11 @@ func (s *materialSrv) unlinkProductBomCard(ctx context.Context, req req.ProductB
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		// 修改旧的成本卡为未使用
+		if err := repository.NewProductBomCardRepo(tx).UpdateProductBomCardIsUsed(productBom.ProductBomCardUuid, 0); err != nil {
+			return errors.WithMessage(err, "更新成本卡失败")
+		}
+		// 创建新成本卡
 		productBomCardRepo := repository.NewProductBomRepo(tx)
 		if err := productBomCardRepo.UpdateProductBomCard(req.RelatedUuid, 0, 999999999); err != nil {
 			return errors.WithMessage(err, "更新成本卡失败")
@@ -1357,6 +1381,7 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 			BaseUnitUom:            material.Unit.Unit.ErpnextUom,
 			BaseUnitConversionRate: 1,
 			Material:               material,
+			IsUsed:                 1, // 成本卡被使用
 		}
 		item.SetUnitErpnextUom(material.Unit.Unit.ErpnextUom)
 		item.SetExpectedProductionNum(item.CalculateExpectedProductionNum()) // 计算预计可生产的产品数量
@@ -1369,6 +1394,7 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 			Name:                  multiLanguageName.ToJson(),
 			MultiLanguageNameUuid: nameUuid,
 			Num:                   1, // 加工份数,目前成本卡的加工份数固定为1
+			IsUsed:                1, // 成本卡被使用
 			RelatedMaterials:      materialList,
 		}
 
