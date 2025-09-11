@@ -770,8 +770,8 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
 // 返回：
 //   - *erp.POSInvoice: POS发票信息
 func (s *sSelling) buildPosInvoice(ctx context.Context, req *selling.SavePosInvoiceReq, openingEntry *erp.POSOpeningEntry) *erp.POSInvoice {
-	//postingDatetime, err := gtime.New(req.PostingDatetime).ToZone(service.User().MustGetUserTimeZone(ctx, openingEntry.User))
-	postingDatetime := service.Setup().MustGetLocalDateTime(ctx, gtime.New(req.PostingDatetime))
+	postingDatetime, _ := gtime.New(req.PostingDatetime).ToZone(service.User().MustGetUserTimeZone(ctx, openingEntry.User))
+	//postingDatetime := service.Setup().MustGetLocalDateTime(ctx, gtime.New(req.PostingDatetime))
 
 	posInvoice := &erp.POSInvoice{
 		PosProfile:        openingEntry.PosProfile,
@@ -789,6 +789,8 @@ func (s *sSelling) buildPosInvoice(ctx context.Context, req *selling.SavePosInvo
 	if len(req.CustomerUuid) > 0 {
 		posInvoice.Customer = "Member"
 		posInvoice.CustomerUUID = req.CustomerUuid
+	} else {
+		posInvoice.Customer = "Default"
 	}
 
 	// 构建发票项目
@@ -943,7 +945,7 @@ func (s *sSelling) ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosI
 		return nil, gerror.Wrapf(err, "解析原销售订单响应失败")
 	}
 
-	postingDatetime := service.Setup().MustGetLocalDateTime(ctx, gtime.New(req.PostingDatetime))
+	//postingDatetime := service.Setup().MustGetLocalDateTime(ctx, gtime.New(req.PostingDatetime))
 
 	grandTotal := 0.0
 	for _, payment := range req.Payments {
@@ -959,16 +961,16 @@ func (s *sSelling) ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosI
 		Company:           saleInvoice.Company,
 		Currency:          saleInvoice.Currency,
 		PriceListCurrency: saleInvoice.PriceListCurrency,
-		PostingDate:       postingDatetime.Format(DateFormat),
-		PostingTime:       postingDatetime.Format(TimeFormat),
-		UpdateStock:       0,
-		ReturnAgainst:     req.InvoiceName,
-		IsReturn:          1,
-		IsPos:             1,
-		GrandTotal:        grandTotal,
-		PaidAmount:        grandTotal,
-		SetPostingTime:    1,
-		Customer:          saleInvoice.Customer,
+		//PostingDate:       postingDatetime.Format(DateFormat),
+		//PostingTime:       postingDatetime.Format(TimeFormat),
+		UpdateStock:   0,
+		ReturnAgainst: req.InvoiceName,
+		IsReturn:      1,
+		IsPos:         1,
+		GrandTotal:    grandTotal,
+		PaidAmount:    grandTotal,
+		//SetPostingTime:    1,
+		Customer: saleInvoice.Customer,
 	}
 
 	//创建物品销售记录
