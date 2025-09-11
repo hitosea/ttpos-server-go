@@ -570,7 +570,7 @@ func (s *sSelling) buildClosingEntryDetails(details []*selling.ClosePosEntryDeta
 func (s *sSelling) buildClosingEntryRequest(req *selling.ClosePosEntryReq, closeDetails []erp.POSPaymentReconciliation) *erp.POSCloseEntry {
 	return &erp.POSCloseEntry{
 		PosOpeningEntry:       req.PosOpenEntryName,
-		PeriodEndDate:         gtime.New(req.PeriodEndDate).Format("Y-m-d H:i:s"),
+		PeriodEndDate:         service.Setup().MustGetLocalDateTime(gctx.GetInitCtx(), gtime.New(req.PeriodEndDate)).Format("Y-m-d H:i:s"),
 		PaymentReconciliation: closeDetails,
 	}
 }
