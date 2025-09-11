@@ -1189,7 +1189,7 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 	materialRepo := repository.NewMaterialRepo(db)
 	for _, item := range receiptOrder.Items {
 		// 获取物料信息
-		material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid)
+		material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid, materialRepo.WithRelatedMaterialList())
 		if err != nil {
 			return errors.WithMessage(err, "获取物料信息失败")
 		}
@@ -1200,6 +1200,15 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 		err = materialRepo.UpdateMaterial(material)
 		if err != nil {
 			return errors.WithMessage(err, "更新物料库存失败")
+		}
+		//
+		relatedMaterialUuids := make([]uint64, 0)
+		for _, relatedMaterial := range material.RelatedMaterialList {
+			relatedMaterialUuids = append(relatedMaterialUuids, relatedMaterial.Uuid)
+		}
+		err = s.updateRelatedMaterialStock(db, relatedMaterialUuids)
+		if err != nil {
+			return errors.WithMessage(err, "更新规格/加料关联材料库存失败")
 		}
 	}
 
@@ -1231,4 +1240,57 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 	}
 
 	return nil
+}
+
+// updateRelatedMaterialStock 更新规格/加料关联材料库存
+func (s *purchaseOrderSrv) updateRelatedMaterialStock(db *gorm.DB, relatedMaterialUuids []uint64) error {
+	// 如果材料UUID列表为空，直接返回
+	if len(relatedMaterialUuids) == 0 {
+		return nil
+	}
+	// 使用事务确保数据一致性
+	return db.Transaction(func(tx *gorm.DB) error {
+		// 构建复杂SQL查询来更新产品BOM的库存数量
+		// 1. 从related_material表获取关联信息
+		// 2. 连接material表获取材料库存信息
+		// 3. 计算每个关联的最小库存数量（材料库存/用量）
+		// 4. 更新product_bom表的stock_num字段
+		sql := `
+			UPDATE ttpos_product_bom AS pb 
+			JOIN (
+				SELECT 
+					rm.related_uuid, 
+					LEAST(IFNULL(
+						FLOOR(
+							MIN(
+								m.stock_num / (rm.num * rm.base_unit_conversion_rate)
+							)
+						)
+					, 0), 99999999) AS min_stock_num
+				FROM ttpos_related_material AS rm
+				JOIN ttpos_material AS m ON rm.material_uuid = m.uuid
+				WHERE rm.uuid IN (?) 
+				  AND rm.delete_time = 0 
+				  AND rm.unit_uuid > 0
+				GROUP BY rm.related_uuid
+			) AS sub ON pb.product_bom_card_uuid = sub.related_uuid
+			SET pb.stock_num = sub.min_stock_num
+			WHERE pb.product_bom_card_uuid IN (
+				SELECT 
+					DISTINCT related_uuid 
+				FROM ttpos_related_material 
+				WHERE uuid IN (?) 
+				AND delete_time = 0 
+				AND unit_uuid > 0
+			)
+		`
+
+		// 执行SQL更新
+		err := tx.Exec(sql, relatedMaterialUuids, relatedMaterialUuids).Error
+		if err != nil {
+			return errors.WithMessage(err, "更新规格/加料关联材料库存失败")
+		}
+
+		return nil
+	})
 }

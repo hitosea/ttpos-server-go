@@ -1090,7 +1090,7 @@ class Product extends BaseModel
         
         foreach ($rows as $row) {
             // 分类
-            $categoryNames = (new MultiLanguageName())->getNames($row['category_multi_language_name_uuid']);
+            $categoryNames = (new MultiLanguageName())->getNames($row['category_multi_language_name_uuid'] ?? 0);
             $pathNameText = extractLanguage($categoryNames);
             if ($row['category_parent_multi_language_name_uuid']) {
                 $cayegoryParentNames = (new MultiLanguageName())->getNames($row['category_parent_multi_language_name_uuid']);
