@@ -1090,17 +1090,6 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, request req.ProductS
 						ItemName: enName,
 						StockUom: product.ProductUnit.ErpnextUom,
 					})
-				} else if productBom.IsSauce() {
-					multiLanguageName := model.NewMultiLanguageName(productBom.Name)
-					enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
-					if err != nil {
-						return errors.WithMessage(err, "翻译失败")
-					}
-					items = append(items, req.DeleteProductErpItemReq{
-						ItemCode: productBom.ProductSauce.ErpCode,
-						ItemName: enName,
-						StockUom: product.ProductUnit.ErpnextUom,
-					})
 				}
 			}
 			multiLanguageName := model.NewMultiLanguageName(product.Name)
@@ -2186,7 +2175,7 @@ func (s *productSrv) DeleteProductSauce(ctx context.Context, deleteReq req.Produ
 				},
 			})
 			if errErp != nil {
-				return errors.WithMessage(errErp, "同步删除加料到erp失败")
+				return errors.WithMessage(errErp, "同步新增加料到erp失败")
 			}
 		}
 		return nil
@@ -5406,52 +5395,6 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 			}, commonRepo.WhereByUuid(sauce.BomUuid))
 			if err != nil {
 				return errors.WithMessage(err, "删除商品bom失败")
-			}
-			// 删除商品规格的item
-			if ctx.GetCompany().IsOpenErp() {
-				// 获取商品包信息
-				productPackage, err := productPackageRepo.GetProductPackage(
-					commonRepo.WhereByUuid(productPackageUuid),
-					commonRepo.Preload(
-						repository.WithPreload{
-							Query: "ProductUnit",
-						},
-					),
-				)
-				if err != nil {
-					return errors.WithMessage(err, "获取商品包失败")
-				}
-
-				// 获取商品bom信息
-				productBom, err := productBomRepo.GetProductBom(
-					commonRepo.WhereByUuid(sauce.BomUuid),
-					commonRepo.Preload(
-						repository.WithPreload{
-							Query: "ProductSauce",
-						},
-					),
-				)
-				if err != nil {
-					return errors.WithMessage(err, "获取商品bom失败")
-				}
-
-				languageName := model.NewMultiLanguageName(sauce.Name)
-				enName, err := s.getEnName(ctx, languageName.GetNames())
-				if err != nil {
-					return errors.WithMessage(err, "翻译失败")
-				}
-				erpSrv := erp.NewIErpSrv(s.dbm)
-				if err := erpSrv.DeleteProduct(ctx, req.DeleteProductErpReq{
-					Items: []req.DeleteProductErpItemReq{
-						{
-							ItemCode: productBom.ProductSauce.ErpCode,
-							ItemName: enName,
-							StockUom: productPackage.ProductUnit.ErpnextUom,
-						},
-					},
-				}); err != nil {
-					return errors.WithMessage(err, "删除商品规格的item失败")
-				}
 			}
 		} else {
 			if sauce.BomUuid == 0 {
