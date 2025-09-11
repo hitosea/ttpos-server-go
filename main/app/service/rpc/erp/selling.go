@@ -399,7 +399,7 @@ func (s *erpSrv) AddPaymentMethod(ctx pkgCtx.Context, addPaymentMethodReq req.Ad
 	}
 	feePercent := decimal.NewFromFloat(*addPaymentMethodReq.Fee).Div(decimal.NewFromInt(100)).Round(4).InexactFloat64()
 	paymentMethod := model.PaymentMethod{
-		Name:                 addPaymentMethodReq.Name,
+		Name:                 addPaymentMethodReq.ErpnextPayment,
 		Code:                 maxCode + 100,
 		PaymentName:          addPaymentMethodReq.Name,
 		Source:               constant.PaymentMethodSourceDefault,
