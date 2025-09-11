@@ -66,7 +66,7 @@ func NewShiftSrvImpl(cache cache.Cache, dbm *database.DBManager, cashBoxSrv ICas
 		cacheKeyPrefix: "__USERSHIFTLOG_GENERATENUMBER__",
 		cashBoxSrv:     cashBoxSrv,
 		statisticsSrv:  statisticsSrv,
-		MaxAmount:      "1000000000000000",
+		MaxAmount:      "100000000000000",
 	}
 }
 
@@ -458,12 +458,19 @@ func (s *staffShiftSrv) SubmitCashierReport(ctx context.Context, req req.Cashier
 
 // ShiftWithdraw 交班取钱
 func (s *staffShiftSrv) ShiftWithdraw(ctx context.Context, req req.ShiftWithdrawReq) error {
-	if req.WithdrawCash <= 0 {
+	withdrawCash, err := decimal.NewFromString(req.WithdrawCash)
+	if err != nil {
+		return errors.New("请输入正确金额")
+	}
+	if withdrawCash.LessThanOrEqual(decimal.Zero) {
+		return errors.New("请输入正确金额")
+	}
+	if withdrawCash.LessThanOrEqual(decimal.Zero) {
 		return errors.New("请输入正确金额")
 	}
 	// 验证参数, 大于0, 最多小数点后两位
 	reg := regexp.MustCompile(`^([1-9]\d*|0)(\.\d{1,2})?$`)
-	if !reg.MatchString(convertor.ToString(req.WithdrawCash)) {
+	if !reg.MatchString(withdrawCash.String()) {
 		return errors.New("请输入正确金额")
 	}
 	staff := ctx.GetStaff()
@@ -484,15 +491,15 @@ func (s *staffShiftSrv) ShiftWithdraw(ctx context.Context, req req.ShiftWithdraw
 	if err != nil {
 		return errors.New("最大金额格式错误")
 	}
-	if decimal.NewFromFloat(log.WithdrawCash).Add(decimal.NewFromFloat(req.WithdrawCash)).GreaterThanOrEqual(maxAmount) {
+	if decimal.NewFromFloat(log.WithdrawCash).Add(withdrawCash).GreaterThanOrEqual(maxAmount) {
 		return errors.NewWithReplace("当前班次取钱累计金额不能大于最大金额%s", []string{s.MaxAmount})
 	}
 
 	err = repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 		// 更新钱箱记录
 		err = s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
-			Amount:         -req.WithdrawCash,
-			CashWithdrawal: req.WithdrawCash,
+			Amount:         -withdrawCash.InexactFloat64(),
+			CashWithdrawal: withdrawCash.InexactFloat64(),
 			Scene:          constant.CashBoxLogSceneOut,
 		})
 		if err != nil {
@@ -505,7 +512,7 @@ func (s *staffShiftSrv) ShiftWithdraw(ctx context.Context, req req.ShiftWithdraw
 			return errors.New("获取钱箱余额失败")
 		}
 		_, err = shiftLogRepo.Update(log, map[string]interface{}{
-			"withdraw_cash": gorm.Expr("withdraw_cash + ?", req.WithdrawCash),
+			"withdraw_cash": gorm.Expr("withdraw_cash + ?", withdrawCash.InexactFloat64()),
 			"cash_left":     balance,
 		})
 		if err != nil {
@@ -524,11 +531,15 @@ func (s *staffShiftSrv) ShiftWithdraw(ctx context.Context, req req.ShiftWithdraw
 // ShiftDeposit 交班存钱
 func (s *staffShiftSrv) ShiftDeposit(ctx context.Context, req req.ShiftDepositReq) error {
 	// 验证参数, 大于0, 最多小数点后两位
-	if req.DepositCash <= 0 {
+	depositCash, err := decimal.NewFromString(req.DepositCash)
+	if err != nil {
+		return errors.New("请输入正确金额")
+	}
+	if depositCash.LessThanOrEqual(decimal.Zero) {
 		return errors.New("请输入正确金额")
 	}
 	reg := regexp.MustCompile(`^([1-9]\d*|0)(\.\d{1,2})?$`)
-	if !reg.MatchString(convertor.ToString(req.DepositCash)) {
+	if !reg.MatchString(depositCash.String()) {
 		return errors.New("请输入正确金额")
 	}
 	staff := ctx.GetStaff()
@@ -551,7 +562,7 @@ func (s *staffShiftSrv) ShiftDeposit(ctx context.Context, req req.ShiftDepositRe
 	}
 
 	// 当前班次存钱累计金额不能大于最大金额
-	if decimal.NewFromFloat(log.DepositCash).Add(decimal.NewFromFloat(req.DepositCash)).GreaterThanOrEqual(maxAmount) {
+	if decimal.NewFromFloat(log.DepositCash).Add(depositCash).GreaterThanOrEqual(maxAmount) {
 		return errors.NewWithReplace("当前班次存钱累计金额不能大于最大金额%s", []string{s.MaxAmount})
 	}
 
@@ -560,23 +571,23 @@ func (s *staffShiftSrv) ShiftDeposit(ctx context.Context, req req.ShiftDepositRe
 	if err != nil {
 		return errors.New("获取钱箱余额失败")
 	}
-	if decimal.NewFromFloat(balance).Add(decimal.NewFromFloat(req.DepositCash)).GreaterThanOrEqual(maxAmount) {
+	if decimal.NewFromFloat(balance).Add(depositCash).GreaterThanOrEqual(maxAmount) {
 		return errors.NewWithReplace("钱箱余额不能大于最大金额%s", []string{s.MaxAmount})
 	}
 
 	err = repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 		// 更新交班记录
 		_, err = shiftLogRepo.Update(log, map[string]interface{}{
-			"deposit_cash": gorm.Expr("deposit_cash + ?", req.DepositCash),
-			"cash_left":    gorm.Expr("cash_left + ?", req.DepositCash),
+			"deposit_cash": gorm.Expr("deposit_cash + ?", depositCash.InexactFloat64()),
+			"cash_left":    gorm.Expr("cash_left + ?", depositCash.InexactFloat64()),
 		})
 		if err != nil {
 			return errors.New("存钱失败")
 		}
 		// 更新钱箱记录
 		err = s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
-			Amount:      req.DepositCash,
-			CashDeposit: req.DepositCash,
+			Amount:      depositCash.InexactFloat64(),
+			CashDeposit: depositCash.InexactFloat64(),
 			Scene:       constant.CashBoxLogSceneIn,
 		})
 		if err != nil {

@@ -1056,6 +1056,9 @@ func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomC
 				Items:    erpBomItemList,
 			})
 			if errErp != nil {
+				if strings.Contains(errErp.Error(), "Must be Whole Number") {
+					return errors.WithMessage(errors.New("请输入正整数"), errErp.Error())
+				}
 				return errors.WithMessage(errErp)
 			}
 			productBomCard.ErpCode = erpBomResp.BomName // 记录erp成本卡编码
