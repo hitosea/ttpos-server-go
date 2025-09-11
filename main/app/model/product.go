@@ -554,6 +554,7 @@ type RelatedMaterial struct {
 	BaseUnitName           string  `gorm:"column:base_unit_name;type:text;default:'';comment:'基准单位名称JSON,物品基准单位名称'"`
 	BaseUnitUom            string  `gorm:"column:base_unit_uom;type:varchar(255);default:'';comment:'基准单位ERPNext UOM'"`
 	BaseUnitConversionRate float64 `gorm:"column:base_unit_conversion_rate;type:decimal(12,4);default:1;comment:'基准单位转换率。用量*转换率=基准单位用量'"`
+	IsUsed                 int     `gorm:"column:is_used;type:int(10);default:0;comment:'是否被使用, 0-否 1-是'"`
 
 	Material *Material `gorm:"foreignKey:material_uuid;references:uuid" json:"material"`
 
@@ -806,6 +807,7 @@ type ProductBomCard struct {
 	ErpCode               string  `gorm:"column:erp_code;type:varchar(255);not null;default:'';comment:ERPNext 成本卡编码" json:"erp_code"`
 	MultiLanguageNameUuid uint64  `gorm:"column:multi_language_name_uuid;type:bigint(20) unsigned;not null;default:0;comment:多语言名称ID" json:"multi_language_name_uuid"`
 	Num                   float64 `gorm:"column:num;type:decimal(14,4);not null;default:0.0000;comment:加工份数" json:"num"`
+	IsUsed                int     `gorm:"column:is_used;type:int(10);not null;default:0;comment:是否被使用, 0-否 1-是" json:"is_used"`
 
 	// 关联关系
 	MultiLanguageName *MultiLanguageName `gorm:"foreignKey:MultiLanguageNameUuid;references:Uuid" json:"multi_language_name,omitempty"`
