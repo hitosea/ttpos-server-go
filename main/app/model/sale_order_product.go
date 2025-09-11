@@ -51,10 +51,10 @@ type SaleOrderProduct struct {
 	ChangePriceTime         int64   `gorm:"column:change_price_time;type:int(10);not null;default:0;comment:'改价时间(时间戳),用于判断是否改价和不同时间改价的商品不合并'" json:"change_price_time"`
 	OpenMemberDiscount      uint    `gorm:"column:open_member_discount;type:tinyint(1);not null;default:0;comment:'是否开启会员折扣, 0-否 1-是'" json:"open_member_discount"` // 快照设置相关，不受后台改变，结账时检查
 	OpenOverallDiscount     uint    `gorm:"column:open_overall_discount;type:tinyint(1);not null;default:0;comment:'是否开启 Overall 折扣, 0-否 1-是'" json:"open_overall_discount"`
-	MemberDiscountRate      float64 `gorm:"column:member_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员折扣率(0-100%)'" json:"member_discount_rate"`                 // 与sale_order的member_discount_rate一致
-	MemberCardDiscountRate  float64 `gorm:"column:member_card_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员卡折扣率(0-100%)'" json:"member_card_discount_rate"`     // 与sale_order的member_card_discount_rate一致
+	MemberDiscountRate      float64 `gorm:"column:member_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员折扣率(0-100%)'" json:"member_discount_rate"`               // 与sale_order的member_discount_rate一致
+	MemberCardDiscountRate  float64 `gorm:"column:member_card_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员卡折扣率(0-100%)'" json:"member_card_discount_rate"`    // 与sale_order的member_card_discount_rate一致
 	MemberOrderDiscountRate float64 `gorm:"column:member_order_discount_rate;type:decimal(12,2);not null;default:1.00;comment:'会员订单折扣率(1-300%)'" json:"member_order_discount_rate"` // 用于上浮会员端上的商品价格
-	CustomDiscountRate      float64 `gorm:"column:custom_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'自定义折扣率(0-100%)'" json:"custom_discount_rate"`               // 与sale_order的custom_discount_rate一致
+	CustomDiscountRate      float64 `gorm:"column:custom_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'自定义折扣率(0-100%)'" json:"custom_discount_rate"`              // 与sale_order的custom_discount_rate一致
 
 	// 折扣金额字段
 	DiscountFee       float64 `gorm:"column:discount_fee;type:decimal(12,2);not null;default:0.00;comment:'打折金额（单商品）=销售价-最终单价。校验：打折金额=会员折扣金额+自定义折扣金额'" json:"discount_fee"`
@@ -96,7 +96,7 @@ type SaleOrderProduct struct {
 	H5OrderUuid        uint64 `gorm:"column:h5_order_uuid;type:bigint(20) unsigned;default:0;comment:扫码订单ID，用于关联扫码订单，用于判断是否为扫码订单商品;NOT NULL" json:"h5_order_uuid"`
 
 	// 套餐相关
-	PackageUuid             uint64 `gorm:"column:package_uuid;type:bigint(20);not null;default:0;comment:'套餐uuid'" json:"package_uuid"`                                              // 只有套餐子商品才会有这个字段
+	PackageUuid             uint64 `gorm:"column:package_uuid;type:bigint(20);not null;default:0;comment:'套餐uuid'" json:"package_uuid"`                                            // 只有套餐子商品才会有这个字段
 	PackageGroupUuid        uint64 `gorm:"column:package_group_uuid;type:bigint(20);not null;default:0;comment:'套餐分组uuid';index:idx_package_group_uuid" json:"package_group_uuid"` // 只有套餐子商品才会有这个字段
 	ProductType             uint8  `gorm:"column:product_type;type:tinyint(1);not null;default:0;comment:'商品类型, 0-商品 1-套餐 2-套餐子商品'" json:"product_type"`
 	PackageSubProductParams string `gorm:"column:package_sub_product_params;type:text;comment:'套餐子商品参数'" json:"package_sub_product_params"`
@@ -141,9 +141,9 @@ func (model *SaleOrderProduct) GetErpProductBomMaterials() []*ErpProductBomMater
 			if saleOrderProductBom.ProductBom.HasProductBomCard() {
 				card := saleOrderProductBom.ProductBom.ProductBomCard
 				for _, relatedMaterial := range card.RelatedMaterials {
-					uom := relatedMaterial.UnitUom
+					uom := relatedMaterial.BaseUnitUom
 					if uom == "" {
-						unitName := language.JsonToLocaleResponse(relatedMaterial.UnitName)
+						unitName := language.JsonToLocaleResponse(relatedMaterial.BaseUnitName)
 						uom = unitName.EN
 					}
 					materials = append(materials, &ErpProductBomMaterials{
@@ -158,11 +158,15 @@ func (model *SaleOrderProduct) GetErpProductBomMaterials() []*ErpProductBomMater
 			if saleOrderProductBom.ProductBom.ProductSauce.HasProductBomCard() {
 				card := saleOrderProductBom.ProductBom.ProductSauce.ProductBomCard
 				for _, relatedMaterial := range card.RelatedMaterials {
-					unitName := language.JsonToLocaleResponse(relatedMaterial.UnitName)
+					uom := relatedMaterial.BaseUnitUom
+					if uom == "" {
+						unitName := language.JsonToLocaleResponse(relatedMaterial.BaseUnitName)
+						uom = unitName.EN
+					}
 					materials = append(materials, &ErpProductBomMaterials{
 						ErpCode: relatedMaterial.Material.Code,
 						Num:     relatedMaterial.GetDecreaseNum(1), // 单商品的材料消耗量（单位为基准单位）
-						Uom:     unitName.EN,
+						Uom:     uom,
 					})
 				}
 			}
