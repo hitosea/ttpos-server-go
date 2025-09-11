@@ -32552,7 +32552,7 @@ const docTemplate = `{
             "properties": {
                 "deposit_cash": {
                     "description": "存入金额, 最多小数点后两位",
-                    "type": "number"
+                    "type": "string"
                 }
             }
         },
@@ -32578,7 +32578,7 @@ const docTemplate = `{
             "properties": {
                 "withdraw_cash": {
                     "description": "取出金额, 最多小数点后两位",
-                    "type": "number"
+                    "type": "string"
                 }
             }
         },
