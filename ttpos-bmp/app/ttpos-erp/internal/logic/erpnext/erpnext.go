@@ -96,7 +96,7 @@ func detectError(resp *gvar.Var) error {
 					if errItem.Contains("message") {
 						errMsgList = append(errMsgList, errItem.Get("message").String())
 					} else {
-						errMsgList = append(errMsgList, j.Get("exception").String())
+						errMsgList = append(errMsgList, errItem.Get("exception").String())
 					}
 				}
 				return gerror.Newf("调用erpnext接口返回异常,error:%s", strings.Join(errMsgList, ";"))
