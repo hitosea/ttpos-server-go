@@ -3032,7 +3032,7 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 			}
 			var erpValueName string
 			if v, ok := uuidAttributeMap[uuid]; !ok { // 新增属性值
-				erpValueName := company.Name + "-" + enValueName
+				erpValueName = company.Name + "-" + enValueName
 				uuidErpValueNameMap[uuid] = erpValueName
 			} else { // 已存在属性值，使用erpnext_attribute_value
 				erpValueName = v.ErpnextAttributeValue
