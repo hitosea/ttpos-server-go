@@ -10365,18 +10365,6 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
-
-		// 更新发票信息
-		company := ctx.GetCompany()
-		companySetting := ctx.GetCompanySetting()
-		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
-			res, err := s.SavePosInvoice(ctx, saleOrder, db)
-			if err != nil {
-				return errors.WithMessage(err)
-			}
-			saleOrder.ErpProductsInvoiceName = res.ProductsInvoiceName
-			saleOrder.ErpMaterialInvoiceName = res.MaterialInvoiceName
-		}
 		ctx.SetDB(db)
 		if cashPaymentOrder != nil {
 			// 更新现金支付单
@@ -10446,6 +10434,21 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 		if err := s.VerifyCoupon(ctx, saleOrder, db); err != nil {
 			needCancelCoupon = true
 			return errors.WithMessage(err)
+		}
+
+		// 更新发票信息
+		company := ctx.GetCompany()
+		companySetting := ctx.GetCompanySetting()
+		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
+			res, err := s.SavePosInvoice(ctx, saleOrder, db)
+			if err != nil {
+				return errors.WithMessage(err)
+			}
+			saleOrder.ErpProductsInvoiceName = res.ProductsInvoiceName
+			saleOrder.ErpMaterialInvoiceName = res.MaterialInvoiceName
+			if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderErpInvoice(saleOrder.Uuid, saleOrder.ErpProductsInvoiceName, saleOrder.ErpMaterialInvoiceName); err != nil {
+				return errors.WithMessage(err)
+			}
 		}
 		return nil
 	}); err != nil {
