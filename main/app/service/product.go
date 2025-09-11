@@ -5183,6 +5183,23 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 						}
 						itemInfo, errErp := erpSrv.AddProduct(ctx, params)
 						if errErp != nil {
+							// error:Barcode 123 already used in Item WPR3685534857822209
+							if strings.Contains(errErp.Error(), "already used in Item") {
+								// 创建规格item失败时，删除模板item
+								if err := erpSrv.DeleteProduct(ctx, req.DeleteProductErpReq{
+									Items: []req.DeleteProductErpItemReq{
+										{
+											ItemCode: templateItemCode,
+											ItemName: "delete",
+											StockUom: stockUom,
+										},
+									},
+								}); err != nil {
+									return errors.WithMessage(err)
+								}
+								// 条码已存在
+								return errors.WithMessage(errors.New("条码已存在"), errErp.Error())
+							}
 							return errors.WithMessage(errErp)
 						}
 						erpCode = itemInfo.ItemCode
