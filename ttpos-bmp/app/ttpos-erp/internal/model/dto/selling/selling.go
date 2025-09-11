@@ -5,6 +5,8 @@ type GetPosInvoiceListReq struct {
 	EndDate    string `json:"end"`
 	PosProfile string `json:"pos_profile"`
 	User       string `json:"user,omitempty"`
+	Docstatus  string `json:"docstatus,omitempty"` //文档状态
+	IsReturn   string `json:"is_return,omitempty"` //是否退款
 }
 
 // SimplePosInvoice 结构体定义

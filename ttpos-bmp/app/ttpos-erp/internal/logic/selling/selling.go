@@ -507,6 +507,8 @@ func (s *sSelling) ClosePosEntry(ctx context.Context, req *selling.ClosePosEntry
 		StartDate:  openEntry.PeriodStartDate,
 		EndDate:    service.Setup().MustGetLocalDateTime(ctx, gtime.New(req.PeriodEndDate)).Format("Y-m-d H:i:s"),
 		User:       openEntry.User,
+		Docstatus:  erp.DocstatusSubmitted,
+		IsReturn:   "0",
 	})
 	if err != nil {
 		return nil, gerror.Wrapf(err, "获取期间发票失败")
@@ -646,7 +648,8 @@ func (s *sSelling) GetPosInvoiceList(ctx context.Context, req *dtoSelling.GetPos
 		Fields: g.ArrayStr{"name", "posting_date", "customer", "grand_total", "is_return", "return_against"},
 		Filters: [][]string{{"pos_profile", "=", req.PosProfile},
 			{"owner", "=", req.User},
-			{"creation", ">=", req.StartDate}, {"creation", "<=", req.EndDate}},
+			{"creation", ">=", req.StartDate}, {"creation", "<=", req.EndDate},
+			{"docstatus", "=", req.Docstatus}, {"is_return", "=", req.IsReturn}},
 	})
 	if err != nil {
 		return nil, gerror.Wrapf(err, "查询POS发票列表失败")
