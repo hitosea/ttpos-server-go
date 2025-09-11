@@ -298,7 +298,20 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 				}},
 			})
 			if err != nil {
-				return errors.WithMessage(err, "交班失败")
+				ctx.Log().Info("ClosePosEntry", zap.String("msg", err.Error()))
+				msg := utils.ShortenErpnextError(err.Error())
+				if isItemDisabled, itemCode := utils.IsItemDisabledError(msg); isItemDisabled {
+					material, err := repository.NewMaterialRepo(db).GetMaterialByErpCode(itemCode)
+					if err != nil {
+						ctx.Log().Info("GetMaterialByErpCode", zap.String("msg", err.Error()), zap.String("erp_msg", msg))
+						return errors.WithMessage(err)
+					}
+					// 物品被禁用，无法交班
+					tips := i18n.Translate(ctx.GetLanguage(), "物品被禁用，无法交班")
+					name := material.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+					return errors.WithMessage(errors.New(fmt.Sprintf("%s: %s", tips, name)), fmt.Sprintf("物品%s已禁用", name))
+				}
+				return errors.WithMessage(errors.New(msg), "交班失败")
 			}
 			erpnextClosePosEntryName = openPosEntryName
 		}

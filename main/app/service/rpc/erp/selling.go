@@ -10,6 +10,7 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/model"
 	pkgCtx "ttpos-server-go/pkg/context"
+	"ttpos-server-go/pkg/utils"
 
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository"
@@ -216,10 +217,14 @@ func (s *erpSrv) SavePosInvoice(ctx pkgCtx.Context, savePosInvoiceReq req.SavePo
 	}
 	res, err := client.SavePosInvoice(WithSiteCode(ctx.GetContext(), savePosInvoiceReq.SiteCode), params)
 	if err != nil {
-		return nil, errors.WithMessage(err)
+		ctx.Log().Info("SavePosInvoice", zap.String("msg", err.Error()))
+		msg := utils.ShortenErpnextError(err.Error())
+		return nil, errors.WithMessage(errors.New(msg))
 	}
 	if res.GetCode() != "0" {
-		return nil, errors.WithMessage(errors.New(res.Message))
+		ctx.Log().Info("SavePosInvoice", zap.String("msg", res.Message), zap.String("code", res.GetCode()))
+		msg := utils.ShortenErpnextError(res.Message)
+		return nil, errors.WithMessage(errors.New(msg))
 	}
 	if res.Data != nil {
 		var savePosInvoiceResp selling.SavePosInvoiceResp
