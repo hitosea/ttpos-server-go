@@ -62,12 +62,12 @@ type CashierReportReq struct {
 
 // ShiftWithdrawReq 交班取钱
 type ShiftWithdrawReq struct {
-	WithdrawCash float64 `json:"withdraw_cash"` // 取出金额, 最多小数点后两位
+	WithdrawCash string `json:"withdraw_cash"` // 取出金额, 最多小数点后两位
 }
 
 // ShiftDepositReq 交班存钱
 type ShiftDepositReq struct {
-	DepositCash float64 `json:"deposit_cash"` // 存入金额, 最多小数点后两位
+	DepositCash string `json:"deposit_cash"` // 存入金额, 最多小数点后两位
 }
 
 type ShiftPrinterReq struct {
