@@ -941,10 +941,8 @@ func (s *sSelling) ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosI
 		return nil, gerror.Wrapf(err, "解析原销售订单响应失败")
 	}
 
-	postingDatetime, err := gtime.New(req.PostingDatetime).ToZone(service.User().MustGetUserTimeZone(ctx, openingEntry.User))
-	if err != nil {
-		return nil, gerror.Wrapf(err, "转换时间失败")
-	}
+	postingDatetime := service.Setup().MustGetLocalDateTime(ctx, gtime.New(req.PostingDatetime))
+
 	grandTotal := 0.0
 	for _, payment := range req.Payments {
 		grandTotal += payment.Amount
