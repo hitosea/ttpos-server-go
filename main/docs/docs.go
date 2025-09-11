@@ -35051,7 +35051,7 @@ const docTemplate = `{
                     "description": "厨显设置",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/setting.Kitchen"
+                            "$ref": "#/definitions/setting.KitchenResp"
                         }
                     ]
                 }
@@ -41239,64 +41239,6 @@ const docTemplate = `{
                             "$ref": "#/definitions/setting.OrderLimit"
                         }
                     ]
-                }
-            }
-        },
-        "setting.Kitchen": {
-            "type": "object",
-            "properties": {
-                "advanced_password": {
-                    "description": "高级设置密码",
-                    "type": "string"
-                },
-                "default_language": {
-                    "description": "默认语言",
-                    "type": "string"
-                },
-                "is_call_service": {
-                    "description": "是否开启顾客呼叫提醒 0-关闭 1-开启",
-                    "type": "string"
-                },
-                "is_come_dish": {
-                    "description": "是否开启来菜提醒 0-关闭 1-开启",
-                    "type": "string"
-                },
-                "is_open": {
-                    "description": "是否开启厨显功能 0关闭 1开启",
-                    "type": "string"
-                },
-                "is_wait_color": {
-                    "description": "是否开启等待时长颜色 0-关闭 1-开启",
-                    "type": "string"
-                },
-                "language": {
-                    "description": "常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "language_list": {
-                    "description": "语言列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/dto.LanguageItem"
-                    }
-                },
-                "server": {
-                    "description": "厨显服务器连接",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/setting.Server"
-                        }
-                    ]
-                },
-                "wait_color": {
-                    "description": "时长颜色 10分钟-黄色#ffff00 20分钟-红色#ff0000",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
                 }
             }
         },

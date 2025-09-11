@@ -124,15 +124,15 @@ type H5 struct {
 }
 
 type H5BaseInfo struct {
-	IsOpenH5Order int                `json:"is_open_h5_order"` // 是否开启扫码点餐接单 0不开启, 1开启
-	Desk          Desk               `json:"desk"`             // 桌台信息
-	Company       Company            `json:"company"`          // 商家信息
-	H5            setting.H5         `json:"h5"`               // 扫码H5设置
-	Buffet        setting.BuffetResp `json:"buffet"`           // 自助餐设置
-	Currency      setting.Currency   `json:"currency"`         // 货币设置
-	CloudBasic    setting.CloudBasic `json:"cloud"`            // 云端基础信息
-	Business      setting.Business   `json:"business"`         // 门店业务设置.为了前端业务统一，这个字段实际未返回任何东西
-	Kitchen       setting.Kitchen    `json:"kitchen"`          // 厨显设置
+	IsOpenH5Order int                 `json:"is_open_h5_order"` // 是否开启扫码点餐接单 0不开启, 1开启
+	Desk          Desk                `json:"desk"`             // 桌台信息
+	Company       Company             `json:"company"`          // 商家信息
+	H5            setting.H5          `json:"h5"`               // 扫码H5设置
+	Buffet        setting.BuffetResp  `json:"buffet"`           // 自助餐设置
+	Currency      setting.Currency    `json:"currency"`         // 货币设置
+	CloudBasic    setting.CloudBasic  `json:"cloud"`            // 云端基础信息
+	Business      setting.Business    `json:"business"`         // 门店业务设置.为了前端业务统一，这个字段实际未返回任何东西
+	Kitchen       setting.KitchenResp `json:"kitchen"`          // 厨显设置
 }
 
 type Menu struct {
