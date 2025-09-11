@@ -39,6 +39,7 @@
         v-model="form.model.sku[0].purchase_price"
         :placeholder="$t('请填写采购单价')"
         class="max-w460"
+        :disabled="erp_is_open == 1"
       ></el-input-number>
     </el-form-item>
 
