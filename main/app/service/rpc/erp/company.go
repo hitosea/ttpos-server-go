@@ -44,7 +44,7 @@ func (s *erpSrv) GetCompanyList(ctx pkgCtx.Context, erpnextSiteCompanyReq req.Er
 		return companyResp, err
 	}
 	if result.GetCode() != "0" || result.Data == nil {
-		logger.Logger.Error("GetCompanyList", zap.String("code", result.GetCode()), zap.String("msg", result.GetMessage()))
+		logger.Logger.Error("GetCompanyList", zap.String("code", result.GetCode()), zap.String("result_message", result.GetMessage()))
 		return companyResp, errors.New("获取公司列表失败")
 	}
 	// 反序列化响应数据

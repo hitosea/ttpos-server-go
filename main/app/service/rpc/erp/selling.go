@@ -3,6 +3,7 @@ package erp
 import (
 	"context"
 	"slices"
+	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/constant"
@@ -49,7 +50,7 @@ func (s *erpSrv) GetPosProfileList(ctx context.Context, getPosProfileListReq req
 		return getPosProfileListResp, err
 	}
 	if result.GetCode() != "0" || result.Data == nil {
-		logger.Logger.Error("GetPosProfileList", zap.String("msg", result.GetMessage()), zap.String("code", result.GetCode()))
+		logger.Logger.Error("GetPosProfileList", zap.String("result_message", result.GetMessage()), zap.String("code", result.GetCode()))
 		return getPosProfileListResp, errors.New(result.GetMessage())
 	}
 	var posProfileListResp selling.PosProfileListResp
@@ -131,7 +132,7 @@ func (s *erpSrv) OpenPosEntry(ctx context.Context, openEntryReq req.OpenPosEntry
 		return "", err
 	}
 	if result.GetCode() != "0" || result.Data == nil {
-		logger.Logger.Error("OpenPosEntry", zap.String("msg", result.GetMessage()), zap.String("code", result.GetCode()))
+		logger.Logger.Error("OpenPosEntry", zap.String("result_message", result.GetMessage()), zap.String("code", result.GetCode()))
 		return "", errors.New(result.GetMessage())
 	}
 	var openPosEntryResp selling.OpenPosEntryResp
@@ -173,8 +174,12 @@ func (s *erpSrv) ClosePosEntry(ctx context.Context, closeEntryReq req.ClosePosEn
 		return "", err
 	}
 	if result.GetCode() != "0" || result.Data == nil {
-		logger.Logger.Error("ClosePosEntry", zap.String("msg", result.GetMessage()), zap.String("code", result.GetCode()))
-		return "", errors.New(result.GetMessage())
+		resultMessage := result.GetMessage()
+		logger.Logger.Error("ClosePosEntry", zap.String("result_message", resultMessage), zap.String("code", result.GetCode()))
+		if strings.Contains(resultMessage, "Out of range value for column") {
+			return "", errors.New("遗留备用金最大为100000000000")
+		}
+		return "", errors.New(resultMessage)
 	}
 	var closePosEntryResp selling.ClosePosEntryResp
 	if err := result.Data.UnmarshalTo(&closePosEntryResp); err != nil {
@@ -320,7 +325,7 @@ func (s *erpSrv) GetPaymentMethodList(ctx pkgCtx.Context, getPaymentReq req.GetP
 		return nil, errors.WithMessage(err)
 	}
 	if result.GetCode() != "0" || result.Data == nil {
-		logger.Logger.Error("GetPaymentMethodList-GetModeOfPaymentList", zap.String("msg", result.GetMessage()), zap.String("code", result.GetCode()))
+		logger.Logger.Error("GetPaymentMethodList-GetModeOfPaymentList", zap.String("result_message", result.GetMessage()), zap.String("code", result.GetCode()))
 		return nil, errors.WithMessage(errors.New(result.GetMessage()))
 	}
 	var getModeOfPaymentListResp selling.GetModeOfPaymentListResp
@@ -383,7 +388,7 @@ func (s *erpSrv) AddPaymentMethod(ctx pkgCtx.Context, addPaymentMethodReq req.Ad
 		return errors.WithMessage(err)
 	}
 	if result.GetCode() != "0" {
-		logger.Logger.Error("AddPaymentMethod-CreatePaymentAccount", zap.String("msg", result.GetMessage()), zap.String("code", result.GetCode()))
+		logger.Logger.Error("AddPaymentMethod-CreatePaymentAccount", zap.String("result_message", result.GetMessage()), zap.String("code", result.GetCode()))
 		return errors.WithMessage(errors.New(result.GetMessage()))
 	}
 	// 获取来源是1的支付方式code最大值

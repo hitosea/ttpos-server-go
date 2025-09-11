@@ -3719,6 +3719,7 @@
   "通过device_sn查询设备uuid": "Sök enhetens uuid via device_sn",
   "通过设备ID查询未挂单的销售账单": "Sök osuspenderade försäljningsfakturor via enhets-ID",
   "速通物流": "Sutong Logistik",
+  "遗留备用金最大为100000000000": "Maximalt kvarvarande reservfond är 100000000000",
   "遗留现金不能小于0": "Kvarvarande kontanter får inte vara mindre än 0",
   "邀请有礼": "Bjud in och få belöning",
   "邀请有礼奖励": "Inbjudningsbelöning",
