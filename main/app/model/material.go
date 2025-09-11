@@ -21,13 +21,14 @@ type Material struct {
 	BarcodeValue          string  `gorm:"default:'';column:barcode_value;comment:'条形码值'"`
 	Status                bool    `gorm:"default:false;column:status;comment:'状态,true上架 false下架'"`
 
-	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
-	Unit              *MaterialUnit     `gorm:"foreignKey:uuid;references:unit_uuid"`                // 基准单位
-	PurchaseUnit      *MaterialUnit     `gorm:"foreignKey:purchase_unit_uuid;references:uuid"`       // 采购单位
-	CostUnit          *MaterialUnit     `gorm:"foreignKey:cost_unit_uuid;references:uuid"`           // 成本单位
-	Category          MaterialCategory  `gorm:"foreignKey:category_uuid;references:uuid"`            // 分类
-	NotBaseUnitList   []*MaterialUnit   `gorm:"foreignKey:material_uuid;references:uuid"`            // 非基准单位列表
-	ImageFile         *File             `gorm:"foreignKey:image_uuid;references:uuid"`               // 图片
+	MultiLanguageName   MultiLanguageName  `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
+	Unit                *MaterialUnit      `gorm:"foreignKey:uuid;references:unit_uuid"`                // 基准单位
+	PurchaseUnit        *MaterialUnit      `gorm:"foreignKey:purchase_unit_uuid;references:uuid"`       // 采购单位
+	CostUnit            *MaterialUnit      `gorm:"foreignKey:cost_unit_uuid;references:uuid"`           // 成本单位
+	Category            MaterialCategory   `gorm:"foreignKey:category_uuid;references:uuid"`            // 分类
+	NotBaseUnitList     []*MaterialUnit    `gorm:"foreignKey:material_uuid;references:uuid"`            // 非基准单位列表
+	ImageFile           *File              `gorm:"foreignKey:image_uuid;references:uuid"`               // 图片
+	RelatedMaterialList []*RelatedMaterial `gorm:"foreignKey:material_uuid;references:uuid"`            // 规格/加料关联材料
 }
 
 func (model *Material) SetNil() {
