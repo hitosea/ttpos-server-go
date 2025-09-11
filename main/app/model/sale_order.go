@@ -105,7 +105,12 @@ type SaleOrder struct {
 func (model *SaleOrder) GetErpProductBomMaterials() []*ErpProductBomMaterials {
 	materials := make([]*ErpProductBomMaterials, 0)
 	for _, saleOrderProduct := range model.SaleOrderProducts {
-		materials = append(materials, saleOrderProduct.GetErpProductBomMaterials()...)
+		saleOrderProductMaterials := saleOrderProduct.GetErpProductBomMaterials()
+		for index, _ := range saleOrderProductMaterials {
+			material := saleOrderProductMaterials[index]
+			material.Num = decimal.NewFromFloat(material.Num).Mul(decimal.NewFromFloat(saleOrderProduct.Num)).Round(4).InexactFloat64()
+		}
+		materials = append(materials, saleOrderProductMaterials...)
 	}
 	// 去重
 	splitKey := "--@--"
