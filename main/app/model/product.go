@@ -580,7 +580,8 @@ func (model *RelatedMaterial) CalculateExpectedProductionNum() float64 {
 		return 999999999 // 如果材料用量为0，则返回999999999
 	}
 
-	return decimal.NewFromFloat(materialStockNum).Div(decimal.NewFromFloat(model.Num)).Truncate(0).InexactFloat64()
+	result := decimal.NewFromFloat(materialStockNum).Div(decimal.NewFromFloat(num)).Truncate(0).InexactFloat64()
+	return result
 }
 
 func (model *RelatedMaterial) GetExpectedProductionNum() float64 {

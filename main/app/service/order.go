@@ -7216,6 +7216,10 @@ func (s *orderSrv) getDecreaseStockList(ctx context.Context, cookingDeductSaleOr
 					if productBomMaterial.IsDelete() {
 						continue
 					}
+					// 如果材料被禁用，则跳过，不扣减库存
+					if productBomMaterial.Material.Status == false {
+						continue
+					}
 					if num := productBomMaterial.GetDecreaseNum(cookingDeductSaleOrderProduct.Num); num > 0 {
 						productBomMaterials = append(productBomMaterials, &model.ProductBomMaterials{
 							MaterialUuid:  productBomMaterial.MaterialUuid,
@@ -7236,6 +7240,10 @@ func (s *orderSrv) getDecreaseStockList(ctx context.Context, cookingDeductSaleOr
 				}
 				// 遍历原材料
 				for _, material := range sauceMaterials {
+					// 如果材料被禁用，则跳过，不扣减库存
+					if material.Material.Status == false {
+						continue
+					}
 					if num := material.GetDecreaseNum(cookingDeductSaleOrderProduct.Num); num > 0 {
 						productBomMaterials = append(productBomMaterials, &model.ProductBomMaterials{
 							MaterialUuid: material.MaterialUuid,

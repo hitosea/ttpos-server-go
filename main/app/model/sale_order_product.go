@@ -141,6 +141,10 @@ func (model *SaleOrderProduct) GetErpProductBomMaterials() []*ErpProductBomMater
 			if saleOrderProductBom.ProductBom.HasProductBomCard() {
 				card := saleOrderProductBom.ProductBom.ProductBomCard
 				for _, relatedMaterial := range card.RelatedMaterials {
+					// 如果材料被禁用，则跳过，不扣减库存
+					if relatedMaterial.Material.Status == false {
+						continue
+					}
 					uom := relatedMaterial.BaseUnitUom
 					if uom == "" {
 						unitName := language.JsonToLocaleResponse(relatedMaterial.BaseUnitName)
@@ -158,6 +162,10 @@ func (model *SaleOrderProduct) GetErpProductBomMaterials() []*ErpProductBomMater
 			if saleOrderProductBom.ProductBom.ProductSauce.HasProductBomCard() {
 				card := saleOrderProductBom.ProductBom.ProductSauce.ProductBomCard
 				for _, relatedMaterial := range card.RelatedMaterials {
+					// 如果材料被禁用，则跳过，不扣减库存
+					if relatedMaterial.Material.Status == false {
+						continue
+					}
 					uom := relatedMaterial.BaseUnitUom
 					if uom == "" {
 						unitName := language.JsonToLocaleResponse(relatedMaterial.BaseUnitName)
