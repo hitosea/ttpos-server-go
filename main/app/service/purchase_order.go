@@ -1204,6 +1204,12 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 		//
 		relatedMaterialUuids := make([]uint64, 0)
 		for _, relatedMaterial := range material.RelatedMaterialList {
+			if relatedMaterial.IsDelete() {
+				continue
+			}
+			if relatedMaterial.IsUsed == 0 {
+				continue
+			}
 			relatedMaterialUuids = append(relatedMaterialUuids, relatedMaterial.Uuid)
 		}
 		err = s.updateRelatedMaterialStock(db, relatedMaterialUuids)
