@@ -3181,7 +3181,40 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 						}
 					}
 				}
+				// 删除商品规格的item
+				if ctx.GetCompany().IsOpenErp() {
+					// 获取商品包信息
+					productPackageRepo := repository.NewProductPackageRepo(db)
+					productPackage, err := productPackageRepo.GetProductPackage(
+						commonRepo.WhereByUuid(productPackage.Uuid),
+						commonRepo.Preload(
+							repository.WithPreload{
+								Query: "ProductUnit",
+							},
+						),
+					)
+					if err != nil {
+						return errors.WithMessage(err, "获取商品包失败")
+					}
 
+					languageName := model.NewMultiLanguageName(productBom.Name)
+					enName, err := s.getEnName(ctx, languageName.GetNames())
+					if err != nil {
+						return errors.WithMessage(err, "翻译失败")
+					}
+					erpSrv := erp.NewIErpSrv(s.dbm)
+					if err := erpSrv.DeleteProduct(ctx, req.DeleteProductErpReq{
+						Items: []req.DeleteProductErpItemReq{
+							{
+								ItemCode: productBom.ErpCode,
+								ItemName: enName,
+								StockUom: productPackage.ProductUnit.ErpnextUom,
+							},
+						},
+					}); err != nil {
+						return errors.WithMessage(err, "删除商品规格的item失败")
+					}
+				}
 			}
 		}
 	}
