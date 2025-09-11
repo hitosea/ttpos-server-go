@@ -154,12 +154,16 @@ class User extends BaseModel
         $filter = $includeDeleted ? [] : ['delete_time' => 0];
         $filter = is_array($where) ? array_merge($filter, $where) : array_merge($filter, ['uuid' => (int) $where]);
 
-        $info = $model->field(['*, (balance + gift_balance) as balance'])->where($filter)->with([
+        $model = $model->field(['*, (balance + gift_balance) as balance'])->where($filter)->with([
             'grade',
             'memberCard' => [
                 'card'
             ]
-        ])->find();
+        ]);
+        if ($includeDeleted) {
+            $model = $model->withTrashed();
+        }
+        $info = $model->find();
         if ($info) {
             $info->password = '';
         }
