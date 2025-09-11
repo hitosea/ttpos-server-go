@@ -9926,6 +9926,10 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 	items := make([]*selling.PosInvoiceItem, 0)
 	isFreeOrder := saleOrder.IsFreeSaleOrder()
 	for _, product := range saleOrder.SaleOrderProducts {
+		// 如果商品已删除，则跳过
+		if product.IsDelete() || product.IsCancelProduct() {
+			continue
+		}
 		if product.IsPackageSubProduct() {
 			continue
 		}
