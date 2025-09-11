@@ -44,7 +44,7 @@ func (s *erpSrv) GetUomList(ctx context.Context, getUomListReq req.GetUomListReq
 		return getUomListResp, err
 	}
 	if result.GetCode() != "0" || result.Data == nil {
-		logger.Logger.Error("GetUomList", zap.String("code", result.GetCode()), zap.String("msg", result.GetMessage()))
+		logger.Logger.Error("GetUomList", zap.String("code", result.GetCode()), zap.String("result_message", result.GetMessage()))
 		return getUomListResp, errors.New(result.GetMessage())
 	}
 	response := &item.GetUomListResp{}
@@ -82,7 +82,7 @@ func (s *erpSrv) GetAttributeList(ctx context.Context, getAttributeListReq req.G
 		return getAttributeListResp, err
 	}
 	if result.GetCode() != "0" || result.Data == nil {
-		logger.Logger.Error("GetAttributeList", zap.String("code", result.GetCode()), zap.String("msg", result.GetMessage()))
+		logger.Logger.Error("GetAttributeList", zap.String("code", result.GetCode()), zap.String("result_message", result.GetMessage()))
 		return getAttributeListResp, errors.New(result.GetMessage())
 	}
 	response := &item.GetAttributeListResp{}

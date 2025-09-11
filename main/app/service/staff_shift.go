@@ -269,6 +269,7 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 		paymentData := s.statisticsSrv.CountPayment(ctx, CountReq{
 			DutyNo: shiftLog.ShiftNo,
 		})
+		closePosEntryDetail := make([]req.ClosePosEntryDetail, 0)
 		for _, payment := range paymentData.PaymentList {
 			paymentMethodIncomeList = append(paymentMethodIncomeList, resp.PaymentMethodIncome{
 				Name:   payment.PaymentName,
@@ -276,7 +277,25 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 			})
 			if payment.PaymentCode == constant.PaymentMethodCodeCash {
 				cashAmount = decimal.NewFromFloat(cashAmount).Add(decimal.NewFromFloat(payment.TotalPaymentAmount)).InexactFloat64()
+			} else {
+				closePosEntryDetail = append(closePosEntryDetail, req.ClosePosEntryDetail{
+					ModeOfPayment: payment.ErpnextPayment,
+					OpeningAmount: 0,
+					ClosingAmount: payment.TotalPaymentAmount,
+				})
 			}
+		}
+		closePosEntryDetail = append(closePosEntryDetail, req.ClosePosEntryDetail{
+			ModeOfPayment: "Cash",
+			OpeningAmount: shiftLog.PreviousShiftCash,
+			ClosingAmount: decimal.NewFromFloat(cashAmount).Add(decimal.NewFromFloat(shiftLog.PreviousShiftCash)).InexactFloat64(),
+		})
+		if saleData.TotalFreeAmount > 0 {
+			closePosEntryDetail = append(closePosEntryDetail, req.ClosePosEntryDetail{
+				ModeOfPayment: "Free Meal",
+				OpeningAmount: 0,
+				ClosingAmount: saleData.TotalFreeAmount,
+			})
 		}
 		incomes, _ := convertor.ToJson(paymentMethodIncomeList)
 		// 更新当班记录
@@ -287,18 +306,27 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 		if company.IsOpenErp() && companySetting.ErpnextSiteCode != "" && shiftLog.ErpnextOpenPosEntryName != "" {
 			erpSrv := erp.NewIErpSrv(s.dbm)
 			openPosEntryName, err := erpSrv.ClosePosEntry(ctx.GetContext(), req.ClosePosEntryReq{
-				SiteCode:         companySetting.ErpnextSiteCode,
-				PosProfileName:   companySetting.ErpnextPosProfileName,
-				PosOpenEntryName: shiftLog.ErpnextOpenPosEntryName,
-				PeriodEndDate:    time.Now().Unix(),
-				ClosePosEntryDetail: []req.ClosePosEntryDetail{{
-					ModeOfPayment: "Cash",
-					OpeningAmount: shiftLog.PreviousShiftCash,
-					ClosingAmount: currentCashTotal.InexactFloat64(),
-				}},
+				SiteCode:            companySetting.ErpnextSiteCode,
+				PosProfileName:      companySetting.ErpnextPosProfileName,
+				PosOpenEntryName:    shiftLog.ErpnextOpenPosEntryName,
+				PeriodEndDate:       time.Now().Unix(),
+				ClosePosEntryDetail: closePosEntryDetail,
 			})
 			if err != nil {
-				return errors.WithMessage(err, "交班失败")
+				ctx.Log().Info("ClosePosEntry", zap.String("msg", err.Error()))
+				msg := utils.ShortenErpnextError(err.Error())
+				if isItemDisabled, itemCode := utils.IsItemDisabledError(msg); isItemDisabled {
+					material, err := repository.NewMaterialRepo(db).GetMaterialByErpCode(itemCode)
+					if err != nil {
+						ctx.Log().Info("GetMaterialByErpCode", zap.String("msg", err.Error()), zap.String("erp_msg", msg))
+						return errors.WithMessage(err)
+					}
+					// 物品被禁用，无法交班
+					tips := i18n.Translate(ctx.GetLanguage(), "物品被禁用，无法交班")
+					name := material.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+					return errors.WithMessage(errors.New(fmt.Sprintf("%s: %s", tips, name)), fmt.Sprintf("物品%s已禁用", name))
+				}
+				return errors.WithMessage(errors.New(msg), "交班失败")
 			}
 			erpnextClosePosEntryName = openPosEntryName
 		}

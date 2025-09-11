@@ -28,9 +28,10 @@ type IMaterialRepo interface {
 	GetMaterialCategoryByName(name string) (*model.MaterialCategory, error)
 	CreateMaterialCategory(materialCategory model.MaterialCategory) (uint64, error)
 	GetMaterialCategoryList() ([]model.MaterialCategory, error)
-	UpdateMaterialStatusBatch(uuids []uint64, status int) error  // 批量修改物品状态
-	UpdateMaterialStockNum(materials []*model.Material) error    // 更新物品库存数量
-	AddActualSaleNum(materialUuid uint64, saleNum float64) error // 增加材料销量
+	UpdateMaterialStatusBatch(uuids []uint64, status int) error   // 批量修改物品状态
+	UpdateMaterialStockNum(materials []*model.Material) error     // 更新物品库存数量
+	AddActualSaleNum(materialUuid uint64, saleNum float64) error  // 增加材料销量
+	GetMaterialByErpCode(erpCode string) (*model.Material, error) // 根据erp_code获取物品
 
 	CheckMultiLanguageNameExist(localeResponse dto.LocaleResponse) dto.LocaleResponse // 检查多语言名称是否存在
 	GetCategoryUuidByNameOptimized(name string) (uint64, error)
@@ -371,4 +372,12 @@ func (r *MaterialRepoImpl) CheckBarcodeExist(barcode string, uuid uint64) bool {
 		db = db.Where("uuid <> ?", uuid)
 	}
 	return db.First(&model.Material{}).Error == nil
+}
+
+func (r *MaterialRepoImpl) GetMaterialByErpCode(erpCode string) (*model.Material, error) {
+	var material model.Material
+	if err := r.db.Model(&model.Material{}).Preload("MultiLanguageName").Where("code = ?", erpCode).First(&material).Error; err != nil {
+		return nil, errors.WithMessage(err, "根据erp_code获取物品失败")
+	}
+	return &material, nil
 }
