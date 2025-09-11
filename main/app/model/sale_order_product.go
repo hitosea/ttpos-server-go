@@ -223,6 +223,7 @@ func (model *SaleOrderProduct) GetProductNameAttributes(language string) string 
 	return message
 }
 
+// 获取商品的规格
 func (model *SaleOrderProduct) GetFlarvorSaleOrderProductBom() *SaleOrderProductBom {
 	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
 		if saleOrderProductBom.IsDelete() {
@@ -233,6 +234,20 @@ func (model *SaleOrderProduct) GetFlarvorSaleOrderProductBom() *SaleOrderProduct
 		}
 	}
 	return &SaleOrderProductBom{}
+}
+
+// 获取商品的小料
+func (model *SaleOrderProduct) GetSauceSaleOrderProductBom() []*SaleOrderProductBom {
+	sauces := make([]*SaleOrderProductBom, 0)
+	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
+		if saleOrderProductBom.IsDelete() {
+			continue
+		}
+		if saleOrderProductBom.IsSauce() {
+			sauces = append(sauces, saleOrderProductBom)
+		}
+	}
+	return sauces
 }
 
 // 设置商品为赠菜

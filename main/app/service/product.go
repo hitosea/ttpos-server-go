@@ -1090,17 +1090,6 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, request req.ProductS
 						ItemName: enName,
 						StockUom: product.ProductUnit.ErpnextUom,
 					})
-				} else if productBom.IsSauce() {
-					multiLanguageName := model.NewMultiLanguageName(productBom.Name)
-					enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
-					if err != nil {
-						return errors.WithMessage(err, "翻译失败")
-					}
-					items = append(items, req.DeleteProductErpItemReq{
-						ItemCode: productBom.ProductSauce.ErpCode,
-						ItemName: enName,
-						StockUom: product.ProductUnit.ErpnextUom,
-					})
 				}
 			}
 			multiLanguageName := model.NewMultiLanguageName(product.Name)
@@ -2166,6 +2155,28 @@ func (s *productSrv) DeleteProductSauce(ctx context.Context, deleteReq req.Produ
 		err = productRepo.BatchUpdateSort(&model.ProductSauce{}, sorts)
 		if err != nil {
 			return errors.WithMessage(errors.New("重新排序加料失败"), err.Error())
+		}
+
+		// 同步删除加料到erp
+		if ctx.GetCompany().IsOpenErp() {
+			multiLanguageName := model.NewMultiLanguageName(productSauce.Name)
+			enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
+			if err != nil {
+				return errors.WithMessage(err, "翻译失败")
+			}
+			erpSrv := erp.NewIErpSrv(s.dbm)
+			errErp := erpSrv.DeleteProduct(ctx, req.DeleteProductErpReq{
+				Items: []req.DeleteProductErpItemReq{
+					{
+						ItemCode: productSauce.ErpCode,
+						ItemName: enName,
+						StockUom: "Nos",
+					},
+				},
+			})
+			if errErp != nil {
+				return errors.WithMessage(errErp, "同步新增加料到erp失败")
+			}
 		}
 		return nil
 	})

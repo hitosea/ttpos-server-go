@@ -17,3 +17,11 @@ const (
 	DocTypeModeOfPayment   = "Mode of Payment"
 	DocTypeBranch          = "Branch"
 )
+
+const (
+	//0 - 已保存, 1 - 已提交, 2 - 已取消
+
+	DocstatusDraft     = "0"
+	DocstatusSubmitted = "1"
+	DocstatusCancelled = "2"
+)

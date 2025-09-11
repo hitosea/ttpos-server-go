@@ -9966,6 +9966,18 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 			Amount:     product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
 			IsFreeItem: isFreeOrder,
 		})
+		// 如果有小料，则需要添加小料
+		sauceBoms := product.GetSauceSaleOrderProductBom()
+		for _, sauceBom := range sauceBoms {
+			erpCode := sauceBom.ProductBom.ProductSauce.ErpCode
+			items = append(items, &selling.PosInvoiceItem{
+				ItemCode:   erpCode,
+				Qty:        product.Num,
+				Rate:       0, // 加料没有单价
+				Amount:     0, // 加料没有金额
+				IsFreeItem: true,
+			})
+		}
 	}
 	materialItems := make([]*selling.PosInvoiceItem, 0)
 	erpProductBomMaterials := saleOrder.GetErpProductBomMaterials()
