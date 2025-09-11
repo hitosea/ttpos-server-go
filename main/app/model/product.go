@@ -618,7 +618,23 @@ func (model *RelatedMaterial) GetUnitLocaleName() dto.LocaleResponse {
 
 // GetDecreaseNum 获取减少的库存数量. 减少的库存数量 = 材料用量 * 商品数量
 func (model *RelatedMaterial) GetDecreaseNum(productNum float64) float64 {
-	return decimal.NewFromFloat(model.Num).Mul(decimal.NewFromFloat(productNum)).Round(2).InexactFloat64()
+	num := decimal.NewFromFloat(model.Num).Mul(decimal.NewFromFloat(productNum)).Round(2).InexactFloat64()
+	// 如果材料是由成本卡管理
+	if model.IsBomCardManage() {
+		// 基准单位下的材料用量 * 商品数量
+		materialNum := decimal.NewFromFloat(model.BaseUnitConversionRate).Mul(decimal.NewFromFloat(model.Num))
+		num = materialNum.Mul(decimal.NewFromFloat(productNum)).InexactFloat64()
+		return num
+	}
+	return num
+}
+
+// 判断材料是否是由成本卡管理
+func (model *RelatedMaterial) IsBomCardManage() bool {
+	if model.UnitUuid != 0 { // 只有有材料单位都是由成本卡管理的
+		return true
+	}
+	return false
 }
 
 // IsStockShortage 判断库存是否不足
