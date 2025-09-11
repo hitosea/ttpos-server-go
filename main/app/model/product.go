@@ -803,7 +803,7 @@ func (model *ProductBom) IsSauce() bool {
 // ProductBomCard 成本卡表 ttpos_product_bom_card
 type ProductBomCard struct {
 	BaseModel
-	Name                  string  `gorm:"column:name;type:varchar(255);not null;default:'';comment:名称" json:"name"`
+	Name                  string  `gorm:"column:name;type:text;not null;comment:名称" json:"name"`
 	ErpCode               string  `gorm:"column:erp_code;type:varchar(255);not null;default:'';comment:ERPNext 成本卡编码" json:"erp_code"`
 	MultiLanguageNameUuid uint64  `gorm:"column:multi_language_name_uuid;type:bigint(20) unsigned;not null;default:0;comment:多语言名称ID" json:"multi_language_name_uuid"`
 	Num                   float64 `gorm:"column:num;type:decimal(14,4);not null;default:0.0000;comment:加工份数" json:"num"`
