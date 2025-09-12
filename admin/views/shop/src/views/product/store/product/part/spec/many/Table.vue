@@ -149,7 +149,7 @@
           <el-table-column v-if="baseSale == '1'" :label="$t('材料')" minWidth="330">
             <template #default="scope">
               <el-form-item for="no_click" label="" style="margin-bottom: 0">
-                <el-button type="primary" :style="form.many_select_list[scope.$index].length > 0 ? 'margin-top: 16px;' : ''" @click="addMaterials(scope.$index)">{{
+                <el-button type="primary" :disabled="erp_is_open == 1" :style="form.many_select_list[scope.$index].length > 0 ? 'margin-top: 16px;' : ''" @click="addMaterials(scope.$index)">{{
                   $t('添加材料')
                 }}</el-button>
               </el-form-item>

@@ -117,7 +117,10 @@ type ReturnOrderProduct struct {
 }
 
 // 退款商品的未含税价格. 当商品已含税时，需要减去税费。当商品未含税时，直接返回商品单价， taxFee 为 0。
-func (r *ReturnOrderProduct) GetProductPriceNoneTax(taxFee float64) float64 {
+func (r *ReturnOrderProduct) GetProductPriceNoneTax(taxFee float64, hasTax bool) float64 {
+	if !hasTax {
+		taxFee = 0 // 商品未含税时，不用从商品单价中减去税费
+	}
 	price := decimal.NewFromFloat(r.ProductPrice) // 商品最终售价（显示在订单中的价格）
 	tax := decimal.NewFromFloat(taxFee)
 	price = price.Sub(tax) // 商品已含税时，需要减去税费. 商品未含税时，直接返回商品单价， taxFee 为 0。
@@ -125,8 +128,8 @@ func (r *ReturnOrderProduct) GetProductPriceNoneTax(taxFee float64) float64 {
 }
 
 // 不含税费的商品总金额
-func (r *ReturnOrderProduct) GetProductTotalAmountNoneTax(taxFee float64) float64 {
-	return decimal.NewFromFloat(r.GetProductPriceNoneTax(taxFee)).Mul(decimal.NewFromFloat(r.Num)).Round(2).InexactFloat64()
+func (r *ReturnOrderProduct) GetProductTotalAmountNoneTax(taxFee float64, hasTax bool) float64 {
+	return decimal.NewFromFloat(r.GetProductPriceNoneTax(taxFee, hasTax)).Mul(decimal.NewFromFloat(r.Num)).Round(2).InexactFloat64()
 }
 
 // SetNil 设置关联对象为nil，避免gorm创建时将关联对象也创建
