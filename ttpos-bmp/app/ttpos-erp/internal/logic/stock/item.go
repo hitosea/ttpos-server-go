@@ -261,6 +261,16 @@ func (s *sItem) buildUpdateItemData(req *item.ItemInfo) g.Map {
 		itemForUpdate["valuation_rate"] = req.ValuationRate
 	}
 
+	if req.Classification != "" {
+		itemForUpdate["custom_classification"] = req.Classification
+	}
+	if req.ClassificationCode != "" {
+		itemForUpdate["custom_classification_code"] = req.ClassificationCode
+	}
+	if req.InternalCode != "" {
+		itemForUpdate["custom_internal_code"] = req.InternalCode
+	}
+
 	return itemForUpdate
 }
 
@@ -307,12 +317,15 @@ func (s *sItem) getCompanyInfo(ctx context.Context, companyAbbr string) (*compan
 func (s *sItem) buildNewItemData(ctx context.Context, req *item.ItemInfo, company *company.CompanyInfo, itemCode string) (g.Map, error) {
 	// 基础数据
 	newItem := g.Map{
-		"item_code":      itemCode,
-		"item_name":      req.ItemName,
-		"stock_uom":      req.StockUom,
-		"item_group":     utility.ItemGroupToString(req.ItemGroup),
-		"custom_branch":  req.Branch,
-		"custom_company": company.CompanyName,
+		"item_code":                  itemCode,
+		"item_name":                  req.ItemName,
+		"stock_uom":                  req.StockUom,
+		"item_group":                 utility.ItemGroupToString(req.ItemGroup),
+		"custom_branch":              req.Branch,
+		"custom_company":             company.CompanyName,
+		"custom_classification":      req.Classification,
+		"custom_classification_code": req.ClassificationCode,
+		"custom_internal_code":       req.InternalCode,
 	}
 
 	// 根据物品分组添加特定字段
