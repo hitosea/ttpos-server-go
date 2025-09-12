@@ -10113,9 +10113,6 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 			}
 		}
 		taxFee := saleOrderProduct.TaxFee // 商品税费,仅消费税
-		if !saleOrderProduct.HasTax() {
-			taxFee = 0
-		}
 		// 无论商品是否“已含税”或“未含税”都是要累积税费
 		{
 			// 累计本次退款操作中退款商品的税费
@@ -10127,8 +10124,8 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 		items = append(items, &selling.PosInvoiceItem{
 			ItemCode: product.ErpCode,
 			Qty:      -product.Num,
-			Rate:     product.GetProductPriceNoneTax(taxFee),        // 商品未含税价格（折后）
-			Amount:   -product.GetProductTotalAmountNoneTax(taxFee), // 商品未含税价格（折后）* 数量
+			Rate:     product.GetProductPriceNoneTax(taxFee, saleOrderProduct.HasTax()),        // 商品未含税价格（折后）
+			Amount:   -product.GetProductTotalAmountNoneTax(taxFee, saleOrderProduct.HasTax()), // 商品未含税价格（折后）* 数量
 		})
 	}
 
