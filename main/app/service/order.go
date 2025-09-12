@@ -10048,13 +10048,17 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 		}
 	}
 
+	customerUuid := fmt.Sprintf("%d", saleOrder.ConsumerUuid)
+	if customerUuid == "0" {
+		customerUuid = ""
+	}
 	erpSrv := erp.NewIErpSrv(s.dbm)
 	param := req.SavePosInvoiceReq{
 		SiteCode:         companySetting.ErpnextSiteCode,
 		OrderNo:          saleOrder.OrderNo,
 		OpenPosEntryName: shiftLog.ErpnextOpenPosEntryName,
 		PostingDatetime:  saleOrder.FinishTime,
-		CustomerUuid:     fmt.Sprintf("%d", saleOrder.ConsumerUuid),
+		CustomerUuid:     customerUuid,
 		Items:            items,         // 订单商品列表
 		MaterialItems:    materialItems, // 订单原材料列表
 		Taxes:            taxes,         // 订单税费列表
@@ -10111,7 +10115,9 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 		taxFee := saleOrderProduct.TaxFee // 商品税费,仅消费税
 		if !saleOrderProduct.HasTax() {
 			taxFee = 0
-		} else {
+		}
+		// 无论商品是否“已含税”或“未含税”都是要累积税费
+		{
 			// 累计本次退款操作中退款商品的税费
 			tax := decimal.NewFromFloat(taxFee).Mul(decimal.NewFromFloat(product.Num)).Round(2).InexactFloat64()                                   // 仅消费税
 			serviceTaxFee := decimal.NewFromFloat(saleOrderProduct.ServiceTaxFee).Mul(decimal.NewFromFloat(product.Num)).Round(2).InexactFloat64() // 仅服务费税费
