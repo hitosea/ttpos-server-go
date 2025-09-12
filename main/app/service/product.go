@@ -3060,10 +3060,10 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 				return errors.WithMessage(errors.New("翻译失败"), err.Error())
 			}
 			var erpValueName string
-			if v, ok := uuidAttributeMap[uuid]; !ok { // 新增属性值
+			if v, ok := uuidAttributeMap[uuid]; !ok || v.ErpnextAttributeValue == "" { // 新增属性值，或erpnext_attribute_value为空
 				erpValueName = company.Name + "-" + enValueName
 				uuidErpValueNameMap[uuid] = erpValueName
-			} else { // 已存在属性值，使用erpnext_attribute_value
+			} else { // 已存在属性值，且erpnext_attribute_value不为空，则使用旧值
 				erpValueName = v.ErpnextAttributeValue
 			}
 			valueList = append(valueList, req.SaveAttributeValueReq{
