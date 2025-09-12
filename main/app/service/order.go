@@ -10119,7 +10119,8 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 			tax := decimal.NewFromFloat(taxFee).Mul(decimal.NewFromFloat(product.Num)).Round(2).InexactFloat64()                                   // 仅消费税
 			serviceTaxFee := decimal.NewFromFloat(saleOrderProduct.ServiceTaxFee).Mul(decimal.NewFromFloat(product.Num)).Round(2).InexactFloat64() // 仅服务费税费
 			totalTaxFee = totalTaxFee.Add(decimal.NewFromFloat(tax)).Add(decimal.NewFromFloat(serviceTaxFee))
-			totalServiceFee = totalServiceFee.Add(decimal.NewFromFloat(saleOrderProduct.ServiceFee))
+			serviceFee := decimal.NewFromFloat(saleOrderProduct.ServiceFee).Mul(decimal.NewFromFloat(product.Num))
+			totalServiceFee = totalServiceFee.Add(serviceFee)
 		}
 		items = append(items, &selling.PosInvoiceItem{
 			ItemCode: product.ErpCode,
@@ -10148,14 +10149,29 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 	}
 	// 如果是整单退款，则退支付手续费、固定服务费
 	if returnType == constant.ReturnOrderRefundTypeTotal {
-		taxes = append(taxes, &selling.PosInvoiceTax{
-			TaxAmount:   -saleOrder.PaymentCommissionFee,
-			Description: "Payment Processing Fee", // 支付手续费
-		})
-		taxes = append(taxes, &selling.PosInvoiceTax{
-			TaxAmount:   -saleOrder.ServiceFee,
-			Description: "Service Fee", // 固定服务费
-		})
+		if saleOrder.PaymentCommissionFee > 0 { // 有支付手续费，才退
+			taxes = append(taxes, &selling.PosInvoiceTax{
+				TaxAmount:   -saleOrder.PaymentCommissionFee,
+				Description: "Payment Processing Fee", // 支付手续费
+			})
+		}
+		//如果是固定服务费
+		if saleOrder.IsFixedServiceFee() {
+			if saleOrder.ServiceFee > 0 { // 有固定服务费，才退
+				taxes = append(taxes, &selling.PosInvoiceTax{
+					TaxAmount:   -saleOrder.ServiceFee,
+					Description: "Service Fee", // 固定服务费
+				})
+			}
+		} else {
+			// 按比例收取服务费
+			if totalServiceFee.GreaterThan(decimal.NewFromFloat(0)) {
+				taxes = append(taxes, &selling.PosInvoiceTax{
+					TaxAmount:   -totalServiceFee.InexactFloat64(),
+					Description: "Service Fee", // 服务费(按比例收取)
+				})
+			}
+		}
 	}
 
 	// 获取所有支付方式

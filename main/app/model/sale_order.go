@@ -101,6 +101,19 @@ type SaleOrder struct {
 	index int `gorm:"-"`
 }
 
+// 判断订单是不是固定服务费。根据销售订单商品有没有服务费，有则不是固定服务费
+func (model *SaleOrder) IsFixedServiceFee() bool {
+	for _, saleOrderProduct := range model.SaleOrderProducts {
+		if saleOrderProduct.IsDelete() || saleOrderProduct.IsPackageSubProduct() || saleOrderProduct.IsGiftProduct() || saleOrderProduct.IsCancelProduct() {
+			continue
+		}
+		if saleOrderProduct.ServiceFee > 0 {
+			return false
+		}
+	}
+	return true
+}
+
 // 获取订单的erp原材料列表
 func (model *SaleOrder) GetErpProductBomMaterials() []*ErpProductBomMaterials {
 	materials := make([]*ErpProductBomMaterials, 0)
