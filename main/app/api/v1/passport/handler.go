@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
+	printerPkg "ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/app/service"
 )
 
@@ -142,6 +143,7 @@ func (h *Handler) GetMemoryStats(c *gin.Context) {
 		"lookups":          m.Lookups,              // 查找次数
 		"mallocs":          m.Mallocs,              // 分配次数
 		"frees":            m.Frees,                // 释放次数
+		"imgFontSemaphore": printerPkg.GetImgFontStatus(),
 	}
 
 	helper.Success(c, memStats)

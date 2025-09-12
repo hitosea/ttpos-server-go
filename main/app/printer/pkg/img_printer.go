@@ -1626,29 +1626,6 @@ func (i *ImgFont) SetImagePadding(padding int) *ImgFont {
 	return i
 }
 
-// GetCacheInfo 获取缓存信息（调试用）
-func (i *ImgFont) GetCacheInfo() map[string]int {
-	globalFontManager.mutex.RLock()
-	fontCacheSize := len(globalFontManager.fonts)
-	widthCacheSize := len(globalFontManager.widths)
-	globalFontManager.mutex.RUnlock()
-
-	return map[string]int{
-		"global_font_cache":  fontCacheSize,
-		"global_width_cache": widthCacheSize,
-		"max_width_cache":    globalFontManager.maxWidths,
-		"initialized":        boolToInt(globalFontManager.initialized),
-	}
-}
-
-// boolToInt 将bool转换为int
-func boolToInt(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
-}
-
 // expandImageHeight 扩大图片高度
 func (i *ImgFont) expandImageHeight(newHeight int) {
 	// 如果新高度不大于当前高度，则不需要扩大
@@ -1771,11 +1748,6 @@ func (i *ImgFont) Save(imageSrc string, reminderSound bool, openMoneybox int) st
 		// 使用字节表示方式代替PHP的chr()函数
 		printCode += "\x1B\x70\x00\x19\xFA"
 	}
-
-	// 打印内存消耗
-	var memStats runtime.MemStats
-	runtime.ReadMemStats(&memStats)
-	fmt.Println("内存消耗:", memStats.Alloc/1024/1024, "MB")
 
 	// 转换为16进制字符串
 	return hex.EncodeToString([]byte(printCode))
