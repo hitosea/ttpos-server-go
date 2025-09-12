@@ -10098,6 +10098,9 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 	totalServiceFee := decimal.NewFromFloat(0)
 	for _, product := range returnOrder.ReturnOrderProducts {
 		saleOrderProduct, _, _ := saleOrder.GetSaleOrderProduct(product.SaleOrderProductUuid)
+		if saleOrderProduct.IsPackageSubProduct() {
+			continue // 跳过子商品，因为在套餐商品中已经录入了子商品
+		}
 		if saleOrderProduct.IsPackageProduct() {
 			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
 			for _, subProduct := range subProducts {
@@ -10109,6 +10112,7 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 					Rate:        0,                                                  // 套餐子商品没有单价
 					Amount:      0,                                                  // 套餐子商品没有金额
 					Description: fmt.Sprintf("Sales in package:%s", packageName.EN), // 套餐子商品描述
+					IsFreeItem:  true,
 				})
 			}
 		}
