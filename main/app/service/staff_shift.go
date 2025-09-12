@@ -249,6 +249,11 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 			repository.CommonRepo.WhereByShiftNo(staff.DutyNo),
 		)
 		if err != nil {
+			logger.Logger.Error("SubmitShif",
+				zap.Any("tips", "当前班次不存在"),
+				zap.Any("staff", staff),
+				zap.Error(err),
+			)
 			return errors.New("当前班次不存在")
 		}
 		if shiftLog.IsHandedOver() {
