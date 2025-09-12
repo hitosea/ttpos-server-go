@@ -1051,7 +1051,7 @@ func (s *purchaseOrderSrv) generatePurchaseOrderSerialNo(ctx context.Context, db
 // 格式：CSSH+年月日+0000自增序列号
 func (s *purchaseOrderSrv) generateReceiptNo(ctx context.Context, db *gorm.DB) string {
 	// 固定前缀
-	prefix := "CGSH"
+	prefix := "SHRK"
 	// 年月日部分
 	datePart := time.Now().Format("20060102")
 
