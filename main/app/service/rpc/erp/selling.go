@@ -3,7 +3,6 @@ package erp
 import (
 	"context"
 	"slices"
-	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/constant"
@@ -176,9 +175,6 @@ func (s *erpSrv) ClosePosEntry(ctx context.Context, closeEntryReq req.ClosePosEn
 	if result.GetCode() != "0" || result.Data == nil {
 		resultMessage := result.GetMessage()
 		logger.Logger.Error("ClosePosEntry", zap.String("result_message", resultMessage), zap.String("code", result.GetCode()))
-		if strings.Contains(resultMessage, "Out of range value for column") {
-			return "", errors.New("遗留备用金最大为100000000000")
-		}
 		return "", errors.New(resultMessage)
 	}
 	var closePosEntryResp selling.ClosePosEntryResp
