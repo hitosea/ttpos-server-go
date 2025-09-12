@@ -42,6 +42,14 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		{
 			passport.RegisterHandlers(passportGroup, dbm, cache)
 		}
+
+		// 内部接口
+		internalGroup := apiV1.Group("/internal")
+		{
+			internalGroup.Use(middleware.Internal())
+			passport.RegisterInternalHandlers(internalGroup, dbm, cache)
+		}
+
 		// 商家端/移动管理端
 		shopGroup := apiV1.Group("/shop")
 		{

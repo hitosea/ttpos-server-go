@@ -110,8 +110,8 @@
       <el-input-number :controls="false" :min="0" :max="999" v-model="form.model.limit_num" class="max-w460"></el-input-number>
       <div class="gray9">{{ $t('每单/每桌购买的最大数量，0为不限购') }}</div>
     </el-form-item>
-    <template v-if="showMore && form.model.type == 10">
-      <el-form-item for="no_click" :label="$t('特色分类：')" v-if="form.model.type == 10">
+    <template v-if="showMore && (form.model.type == 10 || form.model.type == 30)">
+      <el-form-item for="no_click" :label="$t('特色分类：')" v-if="form.model.type == 10 || form.model.type == 30">
         <el-select v-model="form.model.special_id" clearable class="max-w460" size="default" :placeholder="$t('请选择特色分类')">
           <template v-for="cat in form.special" :key="cat.category_id">
             <el-option :value="cat.category_id" :label="cat.name_text"></el-option>
@@ -122,7 +122,7 @@
         </el-select>
       </el-form-item>
 
-      <el-form-item for="no_click" :label="$t('商品卖点：')">
+      <el-form-item for="no_click" :label="$t('商品卖点：')" v-if="form.model.type == 10">
         <el-input type="textarea" :placeholder="$t('请输入商品卖点')" v-model="form.model.selling_point" show-word-limit :maxlength="50" class="max-w460"></el-input>
       </el-form-item>
 
@@ -134,7 +134,7 @@
         </el-select>
       </el-form-item>
 
-      <el-form-item for="no_click" :label="$t('打印标签：')" prop="model.label_id">
+      <el-form-item for="no_click" :label="$t('打印标签：')" prop="model.label_id" v-if="form.model.type == 10">
         <el-select v-model="form.model.label_id" clearable class="max-w460" size="default" :placeholder="$t('请选择')">
           <el-option :value="0" :label="$t('无')"></el-option>
           <template v-for="cat in form.labelList" :key="cat.label_id">
@@ -143,7 +143,7 @@
         </el-select>
       </el-form-item>
     </template>
-    <el-form-item for="no_click" label="" v-if="form.model.type == 10">
+    <el-form-item for="no_click" label="" v-if="form.model.type == 10 || form.model.type == 30">
       <p
         @click="
           () => {

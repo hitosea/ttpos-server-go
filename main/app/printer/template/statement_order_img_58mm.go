@@ -381,8 +381,8 @@ func (t *statementOrderImg58mmTemplate) GetPrintContent58mm(
 		for _, subProduct := range product.SubProducts {
 			img.SetTextLineHeight(40)
 			img.PrintInColumns(
-				pkg.ColumnConfig{Text: subProduct.ProductName, Width: 300, RightPadding: 40, Align: pkg.AlignLeft},
-				pkg.ColumnConfig{Text: fmt.Sprintf("%v", subProduct.ProductNum), Width: 120, RightPadding: 15, Align: pkg.AlignCenter},
+				pkg.ColumnConfig{Text: subProduct.ProductName, Width: 203, RightPadding: 27, Align: pkg.AlignLeft},
+				pkg.ColumnConfig{Text: fmt.Sprintf("%v", subProduct.ProductNum), Width: 81, RightPadding: 10, Align: pkg.AlignCenter},
 				pkg.ColumnConfig{Text: "", Width: 0, Align: pkg.AlignRight},
 			)
 		}
