@@ -18133,7 +18133,7 @@ const docTemplate = `{
             }
         },
         "/shop/material/import/list": {
-            "get": {
+            "post": {
                 "security": [
                     {
                         "JwtToken": []
@@ -29255,14 +29255,6 @@ const docTemplate = `{
         },
         "req.MaterialImportItemReq": {
             "type": "object",
-            "required": [
-                "category_uuid",
-                "init_stock",
-                "locale_name",
-                "row",
-                "unit_uuid",
-                "valuation"
-            ],
             "properties": {
                 "barcode_value": {
                     "description": "条形码值",
@@ -29274,8 +29266,7 @@ const docTemplate = `{
                 },
                 "init_stock": {
                     "description": "期初库存",
-                    "type": "number",
-                    "minimum": 0
+                    "type": "number"
                 },
                 "locale_name": {
                     "description": "物品名称",
@@ -29299,21 +29290,12 @@ const docTemplate = `{
                 },
                 "valuation": {
                     "description": "估值率",
-                    "type": "number",
-                    "minimum": 0
+                    "type": "number"
                 }
             }
         },
         "req.MaterialImportListItemReq": {
             "type": "object",
-            "required": [
-                "category_name",
-                "init_stock",
-                "locale_name",
-                "row",
-                "unit_name",
-                "valuation"
-            ],
             "properties": {
                 "barcode_value": {
                     "description": "条形码值",
@@ -29325,8 +29307,7 @@ const docTemplate = `{
                 },
                 "init_stock": {
                     "description": "期初库存",
-                    "type": "number",
-                    "minimum": 0
+                    "type": "number"
                 },
                 "locale_name": {
                     "description": "名称",
@@ -29350,8 +29331,7 @@ const docTemplate = `{
                 },
                 "valuation": {
                     "description": "估值率",
-                    "type": "number",
-                    "minimum": 0
+                    "type": "number"
                 }
             }
         },

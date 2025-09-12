@@ -3361,7 +3361,6 @@ definitions:
         type: integer
       init_stock:
         description: 期初库存
-        minimum: 0
         type: number
       locale_name:
         allOf:
@@ -3378,15 +3377,7 @@ definitions:
         type: integer
       valuation:
         description: 估值率
-        minimum: 0
         type: number
-    required:
-    - category_uuid
-    - init_stock
-    - locale_name
-    - row
-    - unit_uuid
-    - valuation
     type: object
   req.MaterialImportListItemReq:
     properties:
@@ -3398,7 +3389,6 @@ definitions:
         type: string
       init_stock:
         description: 期初库存
-        minimum: 0
         type: number
       locale_name:
         allOf:
@@ -3415,15 +3405,7 @@ definitions:
         type: string
       valuation:
         description: 估值率
-        minimum: 0
         type: number
-    required:
-    - category_name
-    - init_stock
-    - locale_name
-    - row
-    - unit_name
-    - valuation
     type: object
   req.MaterialImportListReq:
     properties:
@@ -22475,7 +22457,7 @@ paths:
       tags:
       - 商家端.物品管理
   /shop/material/import/list:
-    get:
+    post:
       consumes:
       - application/json
       description: 获取导入物品列表
