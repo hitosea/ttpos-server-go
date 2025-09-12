@@ -875,6 +875,7 @@ func (s *materialSrv) addSauceBomCard(ctx context.Context, req req.ProductBomCar
 			BaseUnitUom:            baseUnit.Unit.ErpnextUom,
 			BaseUnitConversionRate: materialUnit.ConversionRate,
 			IsUsed:                 1, // 成本卡被使用
+			Material:               material,
 		})
 	}
 
@@ -915,6 +916,47 @@ func (s *materialSrv) addSauceBomCard(ctx context.Context, req req.ProductBomCar
 		}
 		if err := repository.NewProductBomCardLogRepo(tx).CreateProductBomCardLog(*productBomCardLog); err != nil {
 			return errors.WithMessage(err, "创建成本卡日志失败")
+		}
+		if ctx.GetCompany().IsOpenErp() {
+			// 同步成本卡到erp
+			erpBomItemList := []*manufacturing.BomItem{}
+			for _, material := range materialList {
+				unitName := model.NewMultiLanguageName(material.UnitName)
+				erpnextUom := material.GetUnitErpnextUom()
+				// 兼容开发阶段产生的脏数据
+				if erpnextUom == "" {
+					enName, err := GetEnName(ctx, unitName.GetNames())
+					if err != nil {
+						return errors.WithMessage(err, "翻译失败")
+					}
+					erpnextUom = enName
+				}
+				erpBomItemList = append(erpBomItemList, &manufacturing.BomItem{
+					ItemCode: material.Material.Code,
+					Rate:     material.Material.Valuation,
+					Qty:      material.Num,
+					Uom:      erpnextUom,
+				})
+			}
+			erpSrv := erp.NewIErpSrv(s.dbm)
+			erpBomResp, errErp := erpSrv.AddProductBomCard(ctx, erp.ProductBomCardAddErpReq{
+				ItemCode: sauce.ErpCode,    // 商品编码
+				Quantity: float64(req.Num), // 数量
+				Uom:      "Nos",            // 单位,小料的单位固定为Nos
+				Items:    erpBomItemList,
+			})
+			if errErp != nil {
+				if strings.Contains(errErp.Error(), "Must be Whole Number") {
+					return errors.WithMessage(errors.New("请输入正整数"), errErp.Error())
+				}
+				return errors.WithMessage(errErp)
+			}
+			productBomCard.ErpCode = erpBomResp.BomName // 记录erp成本卡编码
+
+			// 更新成本卡ErpCode
+			if err := productBomCardRepo.UpdateProductBomCardErpCode(cardUuid, erpBomResp.BomName); err != nil {
+				return errors.WithMessage(err, "更新成本卡ErpCode失败")
+			}
 		}
 		return nil
 	}); err != nil {
