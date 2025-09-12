@@ -118,9 +118,9 @@ type ReturnOrderProduct struct {
 
 // 退款商品的未含税价格. 当商品已含税时，需要减去税费。当商品未含税时，直接返回商品单价， taxFee 为 0。
 func (r *ReturnOrderProduct) GetProductPriceNoneTax(taxFee float64) float64 {
-	price := decimal.NewFromFloat(r.ProductPrice)
+	price := decimal.NewFromFloat(r.ProductPrice) // 商品最终售价（显示在订单中的价格）
 	tax := decimal.NewFromFloat(taxFee)
-	price = price.Sub(tax)
+	price = price.Sub(tax) // 商品已含税时，需要减去税费. 商品未含税时，直接返回商品单价， taxFee 为 0。
 	return price.Round(2).InexactFloat64()
 }
 

@@ -2485,7 +2485,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 		company := ctx.GetCompany()
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
-			res, err := s.ReturnPosInvoice(ctx, saleOrder, returnOrder, db)
+			res, err := s.ReturnPosInvoice(ctx, saleOrder, returnOrder, db, returnType)
 			if err != nil {
 				return errors.WithMessage(err)
 			}
@@ -10072,7 +10072,7 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 }
 
 // 退款发票到erp
-func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOrder, returnOrder *model.ReturnOrder, db *gorm.DB) (*selling.ReturnPosInvoiceResp, error) {
+func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOrder, returnOrder *model.ReturnOrder, db *gorm.DB, returnType int) (*selling.ReturnPosInvoiceResp, error) {
 	companySetting := ctx.GetCompanySetting()
 
 	staff := ctx.GetStaff()
@@ -10091,8 +10091,8 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 	// 订单商品列表
 	items := make([]*selling.PosInvoiceItem, 0)
 	totalTaxFee := decimal.NewFromFloat(0)
+	totalServiceFee := decimal.NewFromFloat(0)
 	for _, product := range returnOrder.ReturnOrderProducts {
-		// TODO 如果退款套餐怎么处理
 		saleOrderProduct, _, _ := saleOrder.GetSaleOrderProduct(product.SaleOrderProductUuid)
 		if saleOrderProduct.IsPackageProduct() {
 			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
@@ -10108,13 +10108,15 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 				})
 			}
 		}
-		taxFee := saleOrderProduct.TaxFee // 商品税费
+		taxFee := saleOrderProduct.TaxFee // 商品税费,仅消费税
 		if !saleOrderProduct.HasTax() {
 			taxFee = 0
 		} else {
 			// 累计本次退款操作中退款商品的税费
-			tax := decimal.NewFromFloat(taxFee).Mul(decimal.NewFromFloat(product.Num)).Round(2).InexactFloat64()
-			totalTaxFee = totalTaxFee.Add(decimal.NewFromFloat(tax))
+			tax := decimal.NewFromFloat(taxFee).Mul(decimal.NewFromFloat(product.Num)).Round(2).InexactFloat64()                                   // 仅消费税
+			serviceTaxFee := decimal.NewFromFloat(saleOrderProduct.ServiceTaxFee).Mul(decimal.NewFromFloat(product.Num)).Round(2).InexactFloat64() // 仅服务费税费
+			totalTaxFee = totalTaxFee.Add(decimal.NewFromFloat(tax)).Add(decimal.NewFromFloat(serviceTaxFee))
+			totalServiceFee = totalServiceFee.Add(decimal.NewFromFloat(saleOrderProduct.ServiceFee))
 		}
 		items = append(items, &selling.PosInvoiceItem{
 			ItemCode: product.ErpCode,
@@ -10130,6 +10132,26 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 		taxes = append(taxes, &selling.PosInvoiceTax{
 			TaxAmount:   -totalTaxFee.InexactFloat64(),
 			Description: "Tax", // 消费税
+		})
+	}
+	// 如果是部分退款，则需要添加服务费(从各个saleOrderProduct中累计的按比例收取的服务费)
+	if returnType == constant.ReturnOrderRefundTypePart {
+		if totalServiceFee.GreaterThan(decimal.NewFromFloat(0)) {
+			taxes = append(taxes, &selling.PosInvoiceTax{
+				TaxAmount:   -totalServiceFee.InexactFloat64(),
+				Description: "Service Fee", // 服务费
+			})
+		}
+	}
+	// 如果是整单退款，则退支付手续费、固定服务费
+	if returnType == constant.ReturnOrderRefundTypeTotal {
+		taxes = append(taxes, &selling.PosInvoiceTax{
+			TaxAmount:   -saleOrder.PaymentCommissionFee,
+			Description: "Payment Processing Fee", // 支付手续费
+		})
+		taxes = append(taxes, &selling.PosInvoiceTax{
+			TaxAmount:   -saleOrder.ServiceFee,
+			Description: "Service Fee", // 固定服务费
 		})
 	}
 
