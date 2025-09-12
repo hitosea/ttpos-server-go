@@ -10012,6 +10012,19 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 		})
 	}
 
+	// 如果有订单应收优惠的话，赠加一个taxes元素
+	erpDiscountAmount := saleOrder.GetErpDiscountAmount()
+	if erpDiscountAmount != 0 {
+		taxes = append(taxes, &selling.PosInvoiceTax{
+			TaxAmount:   erpDiscountAmount,
+			Description: "Custom Discount", // 订单应收优惠
+		})
+		// 更新saleOrder的erp_discount_amount字段
+		if err := repository.NewOrderRepo(db).UpdateErpDiscountAmount(saleOrder.Uuid, erpDiscountAmount); err != nil {
+			return nil, errors.WithMessage(err)
+		}
+	}
+
 	// 免单订单不收税费、服务费、支付手续费
 	if isFreeOrder {
 		taxes = make([]*selling.PosInvoiceTax, 0)
@@ -10175,6 +10188,13 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 					Description: "Service Fee", // 服务费(按比例收取)
 				})
 			}
+		}
+		// 如果是整单退款，有订单应收优惠的话，退款时加上订单应收优惠tax项
+		if saleOrder.ErpDiscountAmount != 0 {
+			taxes = append(taxes, &selling.PosInvoiceTax{
+				TaxAmount:   -saleOrder.ErpDiscountAmount, // 前面加符号，表示返还。通常情况下，订单应收优惠金额是负数，负负得正。该item要是正数
+				Description: "Custom Discount",            // 订单应收优惠
+			})
 		}
 	}
 
