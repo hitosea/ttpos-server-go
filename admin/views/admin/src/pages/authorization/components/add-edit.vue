@@ -34,13 +34,10 @@
           clearable
           filterable
           :disabled="props.hasEdit || confirmPassword"
+          @change="handleCompanyChange"
         >
           <template #default="{ data }">
-            <span 
-              class="!w-full block" 
-              :class="{ 'text-gray-400 cursor-not-allowed': data.is_used, 'cursor-pointer': !data.is_used }" 
-              @click="handleCompanyClick(data)"
-            >
+            <span class="!w-full block" :class="{ 'text-gray-400 cursor-not-allowed': data.is_used, 'cursor-pointer': !data.is_used }" @click="handleCompanyClick(data)">
               {{ data.company_name }}
             </span>
           </template>
