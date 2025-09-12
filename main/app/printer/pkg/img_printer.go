@@ -371,7 +371,6 @@ func SetMaxImgFontConcurrent(max int) {
 
 		// 重新创建信号量通道
 		imgFontSemaphore = make(chan struct{}, max)
-		fmt.Printf("最大ImgFont并发数已设置为: %d\n", max)
 	}
 }
 
