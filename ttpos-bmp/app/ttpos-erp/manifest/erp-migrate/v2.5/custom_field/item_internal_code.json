@@ -1,0 +1,8 @@
+{
+  "doctype": "DocType",
+  "label": "Internal Code",
+  "fieldname": "custom_internal_code",
+  "fieldtype": "Data",
+  "insert_after": "item_name",
+  "dt": "Item"
+}

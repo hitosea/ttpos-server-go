@@ -10012,6 +10012,48 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 		})
 	}
 
+	// 整单改价 - Whole Order Price Adjustment
+	// 优惠折扣抹零 - Discount Rounding Off
+	// 结账抹零 - Checkout Rounding Off
+	// 优惠券抵扣 - Coupon Deduction
+	// 积分抵扣 - Points Deduction
+	// 如果有订单应收优惠的话，赠加一个taxes元素
+	erpDiscountAmount := saleOrder.GetErpCustomAmount()
+	if erpDiscountAmount != 0 {
+		taxes = append(taxes, &selling.PosInvoiceTax{
+			TaxAmount:   -erpDiscountAmount,
+			Description: "Whole Order Price Adjustment", // 订单应收优惠
+		})
+		// 更新saleOrder的erp_discount_amount字段
+		if err := repository.NewOrderRepo(db).UpdateErpDiscountAmount(saleOrder.Uuid, erpDiscountAmount); err != nil {
+			return nil, errors.WithMessage(err)
+		}
+	}
+	if saleOrder.ZeroFee != 0 {
+		taxes = append(taxes, &selling.PosInvoiceTax{
+			TaxAmount:   -saleOrder.ZeroFee,
+			Description: "Discount Rounding Off", // 优惠折扣抹零
+		})
+	}
+	if saleOrder.ZeroCheckoutFee != 0 {
+		taxes = append(taxes, &selling.PosInvoiceTax{
+			TaxAmount:   -saleOrder.ZeroCheckoutFee,
+			Description: "Checkout Rounding Off", // 结账抹零
+		})
+	}
+	if saleOrder.CouponAmount != 0 {
+		taxes = append(taxes, &selling.PosInvoiceTax{
+			TaxAmount:   -saleOrder.CouponAmount,
+			Description: "Coupon Deduction", // 优惠券抵扣
+		})
+	}
+	if saleOrder.PayPointsAmount != 0 {
+		taxes = append(taxes, &selling.PosInvoiceTax{
+			TaxAmount:   -saleOrder.PayPointsAmount,
+			Description: "Points Deduction", // 积分抵扣
+		})
+	}
+
 	// 免单订单不收税费、服务费、支付手续费
 	if isFreeOrder {
 		taxes = make([]*selling.PosInvoiceTax, 0)
@@ -10175,6 +10217,44 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 					Description: "Service Fee", // 服务费(按比例收取)
 				})
 			}
+		}
+
+		// 整单改价 - Whole Order Price Adjustment
+		// 优惠折扣抹零 - Discount Rounding Off
+		// 结账抹零 - Checkout Rounding Off
+		// 优惠券抵扣 - Coupon Deduction
+		// 积分抵扣 - Points Deduction
+		// 如果是整单退款，有订单应收优惠的话，退款时加上订单应收优惠tax项
+		if saleOrder.ErpDiscountAmount != 0 {
+			taxes = append(taxes, &selling.PosInvoiceTax{
+				TaxAmount:   saleOrder.ErpDiscountAmount,    // 该item要是正数表示返还
+				Description: "Whole Order Price Adjustment", // 整单改价
+			})
+		}
+		// 如果是整单退款，有整单改价的话，退款时加上整单改价tax项
+		if saleOrder.ZeroFee != 0 {
+			taxes = append(taxes, &selling.PosInvoiceTax{
+				TaxAmount:   saleOrder.ZeroFee,
+				Description: "Discount Rounding Off", // 优惠折扣抹零
+			})
+		}
+		if saleOrder.ZeroCheckoutFee != 0 {
+			taxes = append(taxes, &selling.PosInvoiceTax{
+				TaxAmount:   saleOrder.ZeroCheckoutFee,
+				Description: "Checkout Rounding Off", // 结账抹零
+			})
+		}
+		if saleOrder.CouponAmount != 0 {
+			taxes = append(taxes, &selling.PosInvoiceTax{
+				TaxAmount:   saleOrder.CouponAmount,
+				Description: "Coupon Deduction", // 优惠券抵扣
+			})
+		}
+		if saleOrder.PayPointsAmount != 0 {
+			taxes = append(taxes, &selling.PosInvoiceTax{
+				TaxAmount:   saleOrder.PayPointsAmount,
+				Description: "Points Deduction", // 积分抵扣
+			})
 		}
 	}
 
