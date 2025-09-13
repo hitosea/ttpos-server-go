@@ -1007,6 +1007,7 @@ func (model *SaleOrder) SetFinishStatus(final FinalAmount) {
 	model.Status = constant.SaleOrderStatusFinish
 	model.FinishTime = time.Now().Unix()
 	// 更新订单结算后要计算的金额字段
+	model.CouponAmount = final.CouponAmount
 	model.PaymentAmount = final.PaymentAmount
 	model.ChangeAmount = final.ChangeAmount
 	model.ZeroCheckoutFee = final.ZeroCheckoutFee
