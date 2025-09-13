@@ -102,6 +102,18 @@ type SaleOrder struct {
 	index int `gorm:"-"`
 }
 
+// 计算销售订单的优惠券抵扣金额
+func (model *SaleOrder) CalcCouponAmount() float64 {
+	couponAmount := decimal.NewFromFloat(0)
+	for _, coupon := range model.Coupons {
+		if coupon.IsDelete() {
+			continue
+		}
+		couponAmount = couponAmount.Add(decimal.NewFromFloat(coupon.CouponAmount))
+	}
+	return couponAmount.Round(2).InexactFloat64()
+}
+
 // 获取订单应收优惠金额。整单改价、订单抹零、结账抹零、优惠券抵扣、积分抵扣，以上总共的优惠金额（正常是负数，有时候是正数）
 func (model *SaleOrder) GetErpDiscountAmount() float64 {
 	customAmount := model.GetErpCustomAmount() // 整单改价后会有的金额。改价前的差额
@@ -1082,6 +1094,7 @@ type BuffetUuidMapBuffetCustomerTypes struct {
 }
 
 type FinalAmount struct {
+	CouponAmount         float64 // 优惠券金额
 	PaymentAmount        float64 // 已支付的金额
 	ChangeAmount         float64 // 找零金额
 	ZeroCheckoutFee      float64 // 结账抹零金额
