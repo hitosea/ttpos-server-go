@@ -84,7 +84,7 @@ type SaleOrder struct {
 	// erp相关
 	ErpProductsInvoiceName string  `gorm:"column:erp_products_invoice_name;type:varchar(255);comment:商品发票名称;NOT NULL" json:"erp_products_invoice_name"`
 	ErpMaterialInvoiceName string  `gorm:"column:erp_material_invoice_name;type:varchar(255);comment:原材料发票名称;NOT NULL" json:"erp_material_invoice_name"`
-	ErpDiscountAmount      float64 `gorm:"column:erp_discount_amount;type:decimal(12,2);default:0;comment:订单应收优惠金额" json:"erp_discount_amount"`
+	ErpDiscountAmount      float64 `gorm:"column:erp_discount_amount;type:decimal(12,2);default:0;comment:订单应收优惠金额，整单改价优惠掉的金额" json:"erp_discount_amount"`
 
 	// 关联对象
 	PaymentOrders                []*PaymentOrder                `gorm:"foreignKey:RelatedUuid;references:uuid"` // 支付订单，也叫付款单
@@ -123,7 +123,7 @@ func (model *SaleOrder) GetErpCustomAmount() float64 {
 	if model.CustomAmount == constant.SaleOrderCustomAmountCancel {
 		return 0
 	}
-	return decimal.NewFromFloat(model.CustomAmount).Sub(decimal.NewFromFloat(model.Amount)).Round(2).InexactFloat64()
+	return decimal.NewFromFloat(model.Amount).Sub(decimal.NewFromFloat(model.CustomAmount)).Round(2).InexactFloat64()
 }
 
 // 判断订单是不是固定服务费。根据销售订单商品有没有服务费，有则不是固定服务费

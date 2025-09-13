@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     -- erp相关
     `erp_products_invoice_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品发票名称',
     `erp_material_invoice_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '原材料发票名称',
-    `erp_discount_amount` DECIMAL(14,2) NOT NULL DEFAULT 0 COMMENT '订单应收优惠金额',
+    `erp_discount_amount` DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '订单应收优惠金额，整单改价优惠掉的金额',
     -- 关联ID
     `consumer_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '消费者ID',
     `cashier_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '收银员ID',
