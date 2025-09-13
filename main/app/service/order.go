@@ -10076,6 +10076,11 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 			ModeOfPayment: "Free Meal", // 免单
 			Amount:        0,
 		})
+	} else if saleOrder.GetAmountValue() == 0 { // 如果订单应收为0元时
+		payments = append(payments, &selling.PosInvoicePayment{
+			ModeOfPayment: "Cash", // 现金支付
+			Amount:        0,
+		})
 	} else {
 		// 获取所有支付方式
 		paymentMethodRepo := repository.NewPaymentMethodRepo(db)
