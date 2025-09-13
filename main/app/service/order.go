@@ -10052,7 +10052,7 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 			Description: "Checkout Rounding Off", // 结账抹零
 		})
 	}
-	if saleOrder.CouponAmount != 0 {
+	if saleOrder.CalcCouponAmount() != 0 {
 		taxes = append(taxes, &selling.PosInvoiceTax{
 			TaxAmount:   -saleOrder.CouponAmount,
 			Description: "Coupon Deduction", // 优惠券抵扣
@@ -10260,7 +10260,7 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 				Description: "Checkout Rounding Off", // 结账抹零
 			})
 		}
-		if saleOrder.CouponAmount != 0 {
+		if saleOrder.CalcCouponAmount() != 0 {
 			taxes = append(taxes, &selling.PosInvoiceTax{
 				TaxAmount:   saleOrder.CouponAmount,
 				Description: "Coupon Deduction", // 优惠券抵扣
