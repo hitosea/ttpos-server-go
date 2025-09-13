@@ -9959,13 +9959,24 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 		}
 		productBom := product.GetFlarvorSaleOrderProductBom()
 		erpCode := productBom.ProductBom.ErpCode
-		items = append(items, &selling.PosInvoiceItem{
-			ItemCode:   erpCode,
-			Qty:        product.Num,
-			Rate:       product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
-			Amount:     product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
-			IsFreeItem: isFreeOrder,
-		})
+		// 是否是赠菜
+		if product.IsGiftProduct() {
+			items = append(items, &selling.PosInvoiceItem{
+				ItemCode:   erpCode,
+				Qty:        product.Num,
+				Rate:       product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
+				Amount:     product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
+				IsFreeItem: true,                                      // 赠菜
+			})
+		} else {
+			items = append(items, &selling.PosInvoiceItem{
+				ItemCode:   erpCode,
+				Qty:        product.Num,
+				Rate:       product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
+				Amount:     product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
+				IsFreeItem: isFreeOrder,
+			})
+		}
 		// 如果有小料，则需要添加小料
 		sauceBoms := product.GetSauceSaleOrderProductBom()
 		for _, sauceBom := range sauceBoms {
