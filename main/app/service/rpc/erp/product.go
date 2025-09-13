@@ -77,3 +77,32 @@ func (s *erpSrv) AddPackage(ctx context.Context, params req.PackageAddErpReq) (*
 
 	return response, nil
 }
+
+// 删除商品
+func (s *erpSrv) DeleteProduct(ctx context.Context, params req.DeleteProductErpReq) error {
+	company := ctx.GetCompany()
+	companySetting := company.CompanySetting
+
+	client, conn, err := NewErpItemClient()
+	if err != nil {
+		return errors.WithMessage(err, "删除商品到erp失败")
+	}
+	defer conn.Close()
+
+	for _, obj := range params.Items {
+		result, err := client.SaveItem(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.ItemInfo{
+			ItemCode: obj.ItemCode,
+			Disabled: true,
+			ItemName: obj.ItemName,
+			StockUom: obj.StockUom,
+		})
+		if err != nil {
+			return errors.WithMessage(err, "删除商品到erp失败")
+		}
+		if result.GetCode() != "0" {
+			return errors.WithMessage(errors.New(result.GetMessage()), "删除商品到erp失败")
+		}
+	}
+
+	return nil
+}

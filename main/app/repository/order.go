@@ -33,6 +33,7 @@ type IOrderRepo interface {
 	ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string, sign string) error  // 修改订单商品备注
 	SetLock(saleBillUuid uint64, isLock bool) error                                                                            // 设置订单锁定状态
 	SaveOrUpdateInvoiceInfo(saleOrderUuid uint64, invoiceInfo model.SaleOrderInvoiceInfo) (*model.SaleOrderInvoiceInfo, error) // 设置订单发票信息
+	UpdateErpDiscountAmount(saleOrderUuid uint64, erpDiscountAmount float64) error                                             // 更新订单应收优惠金额
 }
 
 // IOrderQueryRepo 订单查询
@@ -1903,10 +1904,19 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64, opts ...GetSaleBillA
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.MultiLanguageName",
 			},
 			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.FlavorMaterials",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.FlavorMaterials.Material",
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.SauceMaterials.Material",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.ProductBomCard.RelatedMaterials.Material",
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductBomCard.RelatedMaterials.Material",
@@ -2155,4 +2165,11 @@ func (r *orderRepo) GetInvoiceInfo(saleOrderUuid uint64) (*model.SaleOrderInvoic
 	var invoiceInfo model.SaleOrderInvoiceInfo
 	result := r.db.Where("sale_order_uuid = ?", saleOrderUuid).First(&invoiceInfo)
 	return &invoiceInfo, result.Error
+}
+
+// UpdateErpDiscountAmount 更新订单应收优惠金额
+func (r *orderRepo) UpdateErpDiscountAmount(saleOrderUuid uint64, erpDiscountAmount float64) error {
+	return r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Updates(map[string]interface{}{
+		"erp_discount_amount": erpDiscountAmount,
+	}).Error
 }

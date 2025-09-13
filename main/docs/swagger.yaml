@@ -706,6 +706,9 @@ definitions:
     type: object
   material_resp.Material:
     properties:
+      barcode_value:
+        description: 条形码值
+        type: string
       category_uuid:
         description: 分类UUID
         type: integer
@@ -811,6 +814,15 @@ definitions:
       cost_unit_uuid:
         description: 成本单位UUID
         type: integer
+      from_cost_unit_uuid:
+        description: 来源成本单位UUID
+        type: integer
+      from_purchase_unit_uuid:
+        description: 来源采购单位UUID
+        type: integer
+      from_unit_uuid:
+        description: 来源单位UUID
+        type: integer
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -839,6 +851,9 @@ definitions:
       unit_name:
         description: 单位名称
         type: string
+      unit_uuid:
+        description: 单位UUID
+        type: integer
       uuid:
         description: 物品UUID
         type: integer
@@ -872,6 +887,9 @@ definitions:
       conversion_rate:
         description: 转换率
         type: number
+      from_unit_uuid:
+        description: 来源单位UUID
+        type: integer
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -3279,7 +3297,7 @@ definitions:
         description: 采购单位UUID
         type: integer
       status:
-        description: 状态，1-启用 2-停用
+        description: 状态，1-启用 0-停用
         type: integer
       unit_list:
         description: 单位列表
@@ -3331,17 +3349,7 @@ definitions:
         type: integer
       valuation:
         description: 估值率
-        minimum: 0
         type: number
-    required:
-    - barcode_value
-    - category_uuid
-    - cost_unit_uuid
-    - locale_name
-    - purchase_unit_uuid
-    - unit_list
-    - uuid
-    - valuation
     type: object
   req.MaterialImportItemReq:
     properties:
@@ -3353,7 +3361,6 @@ definitions:
         type: integer
       init_stock:
         description: 期初库存
-        minimum: 0
         type: number
       locale_name:
         allOf:
@@ -3370,15 +3377,7 @@ definitions:
         type: integer
       valuation:
         description: 估值率
-        minimum: 0
         type: number
-    required:
-    - category_uuid
-    - init_stock
-    - locale_name
-    - row
-    - unit_uuid
-    - valuation
     type: object
   req.MaterialImportListItemReq:
     properties:
@@ -3390,7 +3389,6 @@ definitions:
         type: string
       init_stock:
         description: 期初库存
-        minimum: 0
         type: number
       locale_name:
         allOf:
@@ -3407,15 +3405,7 @@ definitions:
         type: string
       valuation:
         description: 估值率
-        minimum: 0
         type: number
-    required:
-    - category_name
-    - init_stock
-    - locale_name
-    - row
-    - unit_name
-    - valuation
     type: object
   req.MaterialImportListReq:
     properties:
@@ -4238,7 +4228,7 @@ definitions:
         description: 关联UUID,给规格商品绑定成本卡。规格商品时，关联UUID为规格商品UUID；
         type: integer
       status:
-        description: 状态，1-启用 2-停用
+        description: 状态，1-启用 0-停用
         type: integer
       unit_list:
         description: 单位列表
@@ -4465,22 +4455,6 @@ definitions:
       unit_uuid:
         description: 单位UUID
         type: integer
-    required:
-    - barcode
-    - category_name
-    - deduct_stock_type
-    - is_enable_grade
-    - locale_name
-    - num_type
-    - open_overall_discount
-    - product_price
-    - product_rating_tax_type
-    - product_status
-    - product_takeout_tax_type
-    - product_unit
-    - row
-    - shows
-    - sku_name
     type: object
   req.ProductImportListItemReq:
     properties:
@@ -4530,22 +4504,6 @@ definitions:
       sku_name:
         description: 规格名称
         type: string
-    required:
-    - barcode
-    - category_name
-    - deduct_stock_type
-    - is_enable_grade
-    - locale_name
-    - num_type
-    - open_overall_discount
-    - product_price
-    - product_rating_tax_type
-    - product_status
-    - product_takeout_tax_type
-    - product_unit
-    - row
-    - shows
-    - sku_name
     type: object
   req.ProductImportListReq:
     properties:
@@ -5670,7 +5628,7 @@ definitions:
     properties:
       deposit_cash:
         description: 存入金额, 最多小数点后两位
-        type: number
+        type: string
     type: object
   req.ShiftPrinterReq:
     properties:
@@ -5688,7 +5646,7 @@ definitions:
     properties:
       withdraw_cash:
         description: 取出金额, 最多小数点后两位
-        type: number
+        type: string
     type: object
   req.SoldOutItem:
     properties:
@@ -7058,6 +7016,30 @@ definitions:
         description: 骑手评分
         type: number
     type: object
+  resp.ErpnextSiteCompany:
+    properties:
+      children:
+        description: 子公司列表，用于树形结构
+        items:
+          $ref: '#/definitions/resp.ErpnextSiteCompany'
+        type: array
+      company_abbr:
+        type: string
+      company_name:
+        type: string
+      is_used:
+        description: 是否已被使用
+        type: boolean
+      parent_company:
+        type: string
+    type: object
+  resp.ErpnextSiteCompanyResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.ErpnextSiteCompany'
+        type: array
+    type: object
   resp.ExtraMemberCashierOrderListMeta:
     properties:
       accept_num:
@@ -7334,7 +7316,7 @@ definitions:
         type: integer
       kitchen:
         allOf:
-        - $ref: '#/definitions/setting.Kitchen'
+        - $ref: '#/definitions/setting.KitchenResp'
         description: 厨显设置
     type: object
   resp.H5CartSendProduct:
@@ -8968,6 +8950,9 @@ definitions:
     type: object
   resp.PaymentMethodAmount:
     properties:
+      code:
+        description: 支付方式代码。
+        type: integer
       commission_fee:
         description: 已付款的手续费。用于显示最终应收，前端显示的最终应收=应收金额+已付款的手续费+（当前支付方式的手续费费率*当前支付方式的金额输入框的值）
         type: number
@@ -9168,6 +9153,9 @@ definitions:
       data:
         description: 打印数据
         type: string
+      enable_status_check:
+        description: 是否启用状态检查
+        type: integer
       is_cashier_printer:
         description: 是否是收银机自带打印机
         type: boolean
@@ -9836,6 +9824,9 @@ definitions:
       purchase_order_uuid:
         description: 采购单ID
         type: integer
+      purchase_time:
+        description: 采购时间
+        type: integer
       receive_time:
         description: 收货日期
         type: integer
@@ -9871,6 +9862,9 @@ definitions:
         type: string
       purchase_order_uuid:
         description: 采购单ID
+        type: integer
+      purchase_time:
+        description: 采购时间
         type: integer
       receive_time:
         description: 收货日期
@@ -11479,46 +11473,6 @@ definitions:
         - $ref: '#/definitions/setting.OrderLimit'
         description: 非自助餐下单限制
     type: object
-  setting.Kitchen:
-    properties:
-      advanced_password:
-        description: 高级设置密码
-        type: string
-      default_language:
-        description: 默认语言
-        type: string
-      is_call_service:
-        description: 是否开启顾客呼叫提醒 0-关闭 1-开启
-        type: string
-      is_come_dish:
-        description: 是否开启来菜提醒 0-关闭 1-开启
-        type: string
-      is_open:
-        description: 是否开启厨显功能 0关闭 1开启
-        type: string
-      is_wait_color:
-        description: 是否开启等待时长颜色 0-关闭 1-开启
-        type: string
-      language:
-        description: 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
-        items:
-          type: string
-        type: array
-      language_list:
-        description: 语言列表
-        items:
-          $ref: '#/definitions/dto.LanguageItem'
-        type: array
-      server:
-        allOf:
-        - $ref: '#/definitions/setting.Server'
-        description: 厨显服务器连接
-      wait_color:
-        description: 时长颜色 10分钟-黄色#ffff00 20分钟-红色#ff0000
-        items:
-          type: string
-        type: array
-    type: object
   setting.KitchenResp:
     properties:
       default_language:
@@ -11953,7 +11907,12 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.Response'
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ErpnextSiteCompanyResp'
+              type: object
       summary: 获取ERPNext站点公司名称
       tags:
       - 平台端.商家授权
@@ -22498,7 +22457,7 @@ paths:
       tags:
       - 商家端.物品管理
   /shop/material/import/list:
-    get:
+    post:
       consumes:
       - application/json
       description: 获取导入物品列表

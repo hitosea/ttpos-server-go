@@ -549,15 +549,55 @@ type RelatedMaterial struct {
 	Num                    float64 `gorm:"column:num;type:decimal(12,4);default:0;comment:'材料用量,可小数'"`
 	UnitUuid               uint64  `gorm:"column:unit_uuid;type:bigint(20) unsigned;default:0;comment:'单位ID,物品单位'"`
 	UnitName               string  `gorm:"column:unit_name;type:text;default:'';comment:'单位名称JSON,物品单位名称'"`
+	UnitUom                string  `gorm:"column:unit_uom;type:varchar(255);default:'';comment:'单位ERPNext UOM'"`
 	BaseUnitUuid           uint64  `gorm:"column:base_unit_uuid;type:bigint(20) unsigned;default:0;comment:'基准单位ID,物品基准单位'"`
 	BaseUnitName           string  `gorm:"column:base_unit_name;type:text;default:'';comment:'基准单位名称JSON,物品基准单位名称'"`
+	BaseUnitUom            string  `gorm:"column:base_unit_uom;type:varchar(255);default:'';comment:'基准单位ERPNext UOM'"`
 	BaseUnitConversionRate float64 `gorm:"column:base_unit_conversion_rate;type:decimal(12,4);default:1;comment:'基准单位转换率。用量*转换率=基准单位用量'"`
+	IsUsed                 int     `gorm:"column:is_used;type:int(10);default:0;comment:'是否被使用, 0-否 1-是'"`
 
 	Material *Material `gorm:"foreignKey:material_uuid;references:uuid" json:"material"`
+
+	unitErpnextUom string // 单位ERPNext单位
+
+	expectedProductionNum float64 // 预计可生产的产品数量
 }
 
 func (model *RelatedMaterial) SetNil() {
 	model.Material = nil
+}
+
+// 计算预计可生产的产品数量。材料库存数量 / 材料用量
+func (model *RelatedMaterial) CalculateExpectedProductionNum() float64 {
+	materialStockNum := model.Material.StockNum // 材料库存数量，单位：基准单位
+	if materialStockNum <= 0 {
+		return 0
+	}
+
+	// 消耗材料数量，单位：基准单位
+	num := decimal.NewFromFloat(model.Num).Mul(decimal.NewFromFloat(model.BaseUnitConversionRate)).InexactFloat64()
+	if num <= 0 {
+		return 999999999 // 如果材料用量为0，则返回999999999
+	}
+
+	result := decimal.NewFromFloat(materialStockNum).Div(decimal.NewFromFloat(num)).Truncate(0).InexactFloat64()
+	return result
+}
+
+func (model *RelatedMaterial) GetExpectedProductionNum() float64 {
+	return model.expectedProductionNum
+}
+
+func (model *RelatedMaterial) SetExpectedProductionNum(expectedProductionNum float64) {
+	model.expectedProductionNum = expectedProductionNum
+}
+
+func (model *RelatedMaterial) SetUnitErpnextUom(unitErpnextUom string) {
+	model.unitErpnextUom = unitErpnextUom
+}
+
+func (model *RelatedMaterial) GetUnitErpnextUom() string {
+	return model.unitErpnextUom
 }
 
 func (model *RelatedMaterial) GetUnitName(lang string) string {
@@ -580,7 +620,23 @@ func (model *RelatedMaterial) GetUnitLocaleName() dto.LocaleResponse {
 
 // GetDecreaseNum 获取减少的库存数量. 减少的库存数量 = 材料用量 * 商品数量
 func (model *RelatedMaterial) GetDecreaseNum(productNum float64) float64 {
-	return decimal.NewFromFloat(model.Num).Mul(decimal.NewFromFloat(productNum)).Round(2).InexactFloat64()
+	num := decimal.NewFromFloat(model.Num).Mul(decimal.NewFromFloat(productNum)).Round(2).InexactFloat64()
+	// 如果材料是由成本卡管理
+	if model.IsBomCardManage() {
+		// 基准单位下的材料用量 * 商品数量
+		materialNum := decimal.NewFromFloat(model.BaseUnitConversionRate).Mul(decimal.NewFromFloat(model.Num))
+		num = materialNum.Mul(decimal.NewFromFloat(productNum)).InexactFloat64()
+		return num
+	}
+	return num
+}
+
+// 判断材料是否是由成本卡管理
+func (model *RelatedMaterial) IsBomCardManage() bool {
+	if model.UnitUuid != 0 { // 只有有材料单位都是由成本卡管理的
+		return true
+	}
+	return false
 }
 
 // IsStockShortage 判断库存是否不足
@@ -597,6 +653,9 @@ func (model *ProductBom) IsStockShortageWithMaterial(productNum float64) bool {
 	// 如果是关联材料的规格，则检查关联材料的库存
 	if model.IsFlavor() {
 		for _, material := range model.FlavorMaterials {
+			if material.IsDelete() {
+				continue
+			}
 			if material.Material.StockNum < material.GetDecreaseNum(productNum) {
 				return true
 			}
@@ -745,10 +804,11 @@ func (model *ProductBom) IsSauce() bool {
 // ProductBomCard 成本卡表 ttpos_product_bom_card
 type ProductBomCard struct {
 	BaseModel
-	Name                  string  `gorm:"column:name;type:varchar(255);not null;default:'';comment:名称" json:"name"`
+	Name                  string  `gorm:"column:name;type:text;not null;comment:名称" json:"name"`
 	ErpCode               string  `gorm:"column:erp_code;type:varchar(255);not null;default:'';comment:ERPNext 成本卡编码" json:"erp_code"`
 	MultiLanguageNameUuid uint64  `gorm:"column:multi_language_name_uuid;type:bigint(20) unsigned;not null;default:0;comment:多语言名称ID" json:"multi_language_name_uuid"`
 	Num                   float64 `gorm:"column:num;type:decimal(14,4);not null;default:0.0000;comment:加工份数" json:"num"`
+	IsUsed                int     `gorm:"column:is_used;type:int(10);not null;default:0;comment:是否被使用, 0-否 1-是" json:"is_used"`
 
 	// 关联关系
 	MultiLanguageName *MultiLanguageName `gorm:"foreignKey:MultiLanguageNameUuid;references:Uuid" json:"multi_language_name,omitempty"`
@@ -763,6 +823,19 @@ func (ProductBomCard) TableName() string {
 func (model *ProductBomCard) SetNil() {
 	model.MultiLanguageName = nil
 	model.RelatedMaterials = nil
+}
+
+// 计算预计可生产的产品数量
+func (model *ProductBomCard) CalculateExpectedProductionNum() float64 {
+	totalExpectedProductionNum := 9999999999.0
+	for _, material := range model.RelatedMaterials {
+		// 取最小值
+		expectedProductionNum := material.GetExpectedProductionNum()
+		if expectedProductionNum < totalExpectedProductionNum {
+			totalExpectedProductionNum = expectedProductionNum
+		}
+	}
+	return totalExpectedProductionNum
 }
 
 func (model *ProductBomCard) Copy() *ProductBomCard {

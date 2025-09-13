@@ -33,12 +33,13 @@
                       class="max-w460"
                       size="default"
                       :placeholder="$t('请选择') + `(${item.value})`"
+                      :disabled="erp_is_open == 1"
                     >
                       <template v-for="items in restaurantsObj[item.key]">
                         <el-option :value="items.index" :label="items.value"></el-option>
                       </template>
                     </el-select>
-                    <el-button size="small" type="primary" class="el-icon-circle-plus mr0" @click="addSku">{{ $t('添加规格') }}+</el-button>
+                    <el-button size="small" type="primary" :disabled="erp_is_open == 1" class="el-icon-circle-plus mr0" @click="addSku">{{ $t('添加规格') }}+</el-button>
                   </el-form-item>
                 </template>
               </div>
@@ -48,7 +49,7 @@
           <el-table-column v-if="baseSale == '1'" :label="$t('采购单价')" minWidth="160">
             <template #default="scope">
               <el-form-item for="no_click" label="" style="margin-bottom: 0">
-                <numInput :min="0" :max="100000000" :precision="2" :placeholder="$t('请输入采购单价')" v-model="scope.row.purchase_price"></numInput>
+                <numInput :disabled="erp_is_open == 1" :min="0" :max="100000000" :precision="2" :placeholder="$t('请输入采购单价')" v-model="scope.row.purchase_price"></numInput>
               </el-form-item>
             </template>
           </el-table-column>
@@ -141,14 +142,14 @@
                   },
                 ]"
               >
-                <numInput :min="0" :max="100000000" :precision="2" :placeholder="$t('请输入商品价格')" v-model="scope.row.product_price"></numInput>
+                <numInput :disabled="erp_is_open == 1" :min="0" :max="100000000" :precision="2" :placeholder="$t('请输入商品价格')" v-model="scope.row.product_price"></numInput>
               </el-form-item>
             </template>
           </el-table-column>
           <el-table-column v-if="baseSale == '1'" :label="$t('材料')" minWidth="330">
             <template #default="scope">
               <el-form-item for="no_click" label="" style="margin-bottom: 0">
-                <el-button type="primary" :style="form.many_select_list[scope.$index].length > 0 ? 'margin-top: 16px;' : ''" @click="addMaterials(scope.$index)">{{
+                <el-button type="primary" :disabled="erp_is_open == 1" :style="form.many_select_list[scope.$index].length > 0 ? 'margin-top: 16px;' : ''" @click="addMaterials(scope.$index)">{{
                   $t('添加材料')
                 }}</el-button>
               </el-form-item>

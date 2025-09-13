@@ -286,9 +286,9 @@ func (c *Controller) validateSavePosInvoiceReq(req *selling.SavePosInvoiceReq) e
 		if tax.Rate < 0 {
 			return gerror.Newf("第%d项税率不能为负数", i+1)
 		}
-		if tax.TaxAmount < 0 {
-			return gerror.Newf("第%d项税费金额不能为负数", i+1)
-		}
+		//if tax.TaxAmount < 0 {
+		//	return gerror.Newf("第%d项税费金额不能为负数", i+1)
+		//}
 		if strings.TrimSpace(tax.Description) == "" {
 			return gerror.Newf("第%d项税费描述不能为空", i+1)
 		}
@@ -400,12 +400,12 @@ func (c *Controller) validateReturnPosInvoiceReq(req *selling.ReturnPosInvoiceRe
 
 	// 验证税费
 	for i, tax := range req.Taxes {
-		if tax.Rate < 0 {
-			return gerror.Newf("第%d项费率不能为负数", i+1)
-		}
-		if tax.TaxAmount > 0 {
-			return gerror.Newf("第%d项税费金额不能为正数", i+1)
-		}
+		//if tax.Rate < 0 {
+		//	return gerror.Newf("第%d项费率不能为负数", i+1)
+		//}
+		//if tax.TaxAmount > 0 {
+		//	return gerror.Newf("第%d项税费金额不能为正数", i+1)
+		//}
 		if strings.TrimSpace(tax.Description) == "" {
 			return gerror.Newf("第%d项税费描述不能为空", i+1)
 		}

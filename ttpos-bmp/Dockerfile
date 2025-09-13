@@ -18,10 +18,10 @@ COPY . .
 RUN  go mod download
 
 # 编译Go程序
-RUN cd app/ttpos-$MODULE && gf build -a amd64 -s linux -p bin -ew
+RUN cd app/ttpos-$MODULE && gf build -a amd64 -s linux -ew -o bin/ttpos-$MODULE
 
 # 添加执行权限
-RUN chmod +x app/ttpos-$MODULE/bin/linux_amd64/main
+RUN chmod +x "app/ttpos-$MODULE/bin/ttpos-$MODULE"
 
 # 使用轻量级的镜像来运行应用
 FROM ubuntu:latest
@@ -39,13 +39,18 @@ RUN apt-get update && apt-get install -y ca-certificates curl tzdata \
 WORKDIR /app
 
 # 复制编译好的二进制文件到新镜像
-COPY --from=builder /app/ttpos-bmp/app/ttpos-$MODULE/bin/linux_amd64/main .
+COPY --from=builder /app/ttpos-bmp/app/ttpos-$MODULE/bin/ttpos-$MODULE .
+COPY manifest/deploy/entrypoint.sh ./
 
 ENV GRPC_ENDPOINTS=""
+# 生成 Core Dump 文件
+ENV GOTRACEBACK=crash
+ENV APP_NAME="ttpos-$MODULE"
 
 # 暴露应用运行的端口
 EXPOSE $HTTP_PORT
 EXPOSE $RPC_PORT
 
 # 运行应用
-CMD ["./main"]
+ENTRYPOINT ["./entrypoint.sh"]
+#CMD ["./$APP_NAME"]

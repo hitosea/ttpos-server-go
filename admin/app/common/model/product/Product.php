@@ -7,6 +7,7 @@ use app\common\service\websocket\Websocket;
 use think\facade\Db;
 use think\facade\Env;
 use app\common\library\helper;
+use app\common\model\app\App;
 use app\common\model\BaseModel;
 use app\common\model\buffet\BuffetProduct;
 use app\common\model\erp\ErpSupplier;
@@ -886,8 +887,8 @@ class Product extends BaseModel
                 'p.name as product_name', 
                 'p.actual_sale_num as sales_actual',
                 'p.sort as product_sort',
-                'c1.name as category_name', 
-                'c2.name as category_parent_name', 
+                'c1.multi_language_name_uuid as category_multi_language_name_uuid', 
+                'c2.multi_language_name_uuid as category_parent_multi_language_name_uuid', 
                 '(SELECT sum(stock_num) FROM ttpos_product_bom WHERE product_package_uuid = p.uuid AND delete_time = 0 AND product_sauce_uuid = 0) AS product_stock',
                 '(SELECT min(price) FROM ttpos_product_bom WHERE product_package_uuid = p.uuid AND product_sauce_uuid = 0 AND delete_time = 0) AS product_price',
                 'CASE WHEN product_type = 1 THEN 30 ELSE 10 END as type',
@@ -896,7 +897,7 @@ class Product extends BaseModel
                 '0 as is_material_used',
                 'p.sort as sort',
                 'p.id as id',
-                'pu.name as product_unit',
+                'pu.multi_language_name_uuid as product_unit_multi_language_name_uuid',
                 'bom.is_open_stock',
                 '(SELECT count(uuid) FROM ttpos_product_package_group_item WHERE related_uuid = p.uuid AND delete_time = 0) as is_package_used',
             ]))
@@ -913,7 +914,8 @@ class Product extends BaseModel
             ->buildSql();
 
         // 材料
-        $materialSql = Material::alias('m')
+        $enableErp = App::detail(self::$app_id)->isEnableErp();
+        $materialSqlBuilder = Material::alias('m')
             ->field(implode(',', [
                 'file.file_type',
                 'file.file_url',
@@ -927,28 +929,40 @@ class Product extends BaseModel
                 'm.name as product_name', 
                 'm.actual_sale_num as sales_actual',
                 '0 as product_sort',
-                'c1.name as category_name', 
-                'c2.name as category_parent_name', 
+                'c1.multi_language_name_uuid as category_multi_language_name_uuid', 
+                !$enableErp ? 'c2.multi_language_name_uuid as category_parent_multi_language_name_uuid' : '0 as category_parent_multi_language_name_uuid', 
                 'm.stock_num as product_stock',
                 '0 as product_price',
                 '20 as type', 
                 'c1.uuid as category_uuid',
-                'c2.uuid as category_parent_uuid',
+                !$enableErp ? 'c2.uuid as category_parent_uuid' : '0 as category_parent_uuid',
                 'count(rm.uuid) as is_material_used',
                 '0 as sort',
                 'm.id as id',
-                'pu.name as product_unit',
+                'pu.multi_language_name_uuid as product_unit_multi_language_name_uuid',
                 '1 as is_open_stock',
                 '0 as is_package_used',
-            ]))
-            ->leftJoin('product_category c1', 'm.category_uuid = c1.uuid')
-            ->leftJoin('product_category c2', 'c1.parent_uuid = c2.uuid')
-            ->leftJoin('file', 'm.image_uuid = file.uuid')
-            ->leftJoin('related_material rm', 'm.uuid = rm.material_uuid AND rm.delete_time = 0')
-            ->leftJoin('product_unit pu', 'm.unit_uuid = pu.uuid')
-            ->group('m.uuid')
-            ->order('m.id', 'desc')
-            ->buildSql();
+            ]));
+
+            if (!$enableErp) {
+                $materialSqlBuilder
+                    ->leftJoin('product_category c1', 'm.category_uuid = c1.uuid')
+                    ->leftJoin('product_category c2', 'c1.parent_uuid = c2.uuid')
+                    ->leftJoin('product_unit pu', 'm.unit_uuid = pu.uuid');
+            } else {
+                $materialSqlBuilder
+                    ->leftJoin('material_category c1', 'm.category_uuid = c1.uuid')
+                    ->leftJoin('material_unit mu', 'm.unit_uuid = mu.uuid')
+                    ->leftJoin('product_unit pu', 'mu.unit_uuid = pu.uuid');
+            }
+            
+            $materialSqlBuilder
+                ->leftJoin('file', 'm.image_uuid = file.uuid')
+                ->leftJoin('related_material rm', 'm.uuid = rm.material_uuid AND rm.delete_time = 0')
+                ->group('m.uuid')
+                ->order('m.id', 'desc');
+
+        $materialSql = $materialSqlBuilder->buildSql();
 
         // 分页
         $offset = ($params['page'] - 1) * $params['list_rows'];
@@ -1032,8 +1046,8 @@ class Product extends BaseModel
 
         $querySql = "SELECT " . implode(',', [
             'create_time',
-            'category_name', 
-            'category_parent_name', 
+            'category_multi_language_name_uuid', 
+            'category_parent_multi_language_name_uuid', 
             'file_type',
             'file_url',
             'file_name',
@@ -1053,7 +1067,7 @@ class Product extends BaseModel
             'is_material_used',
             'sort',
             'id',
-            'product_unit',
+            'product_unit_multi_language_name_uuid',
             'is_open_stock',
             'is_package_used',
         ]) . " FROM ($productSql UNION ALL $materialSql) AS all_product";
@@ -1076,9 +1090,11 @@ class Product extends BaseModel
         
         foreach ($rows as $row) {
             // 分类
-            $pathNameText = extractLanguage($row['category_name']);
-            if ($row['category_parent_name']) {
-                $pathNameText = extractLanguage($row['category_parent_name']) . '-' . $pathNameText;
+            $categoryNames = (new MultiLanguageName())->getNames($row['category_multi_language_name_uuid'] ?? 0);
+            $pathNameText = extractLanguage($categoryNames);
+            if ($row['category_parent_multi_language_name_uuid']) {
+                $cayegoryParentNames = (new MultiLanguageName())->getNames($row['category_parent_multi_language_name_uuid']);
+                $pathNameText = extractLanguage($cayegoryParentNames) . '-' . $pathNameText;
             }
             // 库存
             $productStock = 0;
@@ -1106,9 +1122,10 @@ class Product extends BaseModel
             }
 
             // 单位
-            $productUnit = $row['product_unit'] ?? '';
+            $productUnit = '';
             $productUnitText = '';
-            if ($productUnit) {
+            if ($row['product_unit_multi_language_name_uuid']) {
+                $productUnit = (new MultiLanguageName())->getNames($row['product_unit_multi_language_name_uuid']);
                 $productUnitText = extractLanguage($productUnit);
             }
             

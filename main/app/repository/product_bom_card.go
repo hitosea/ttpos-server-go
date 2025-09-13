@@ -14,6 +14,8 @@ type IProductBomCardRepo interface {
 	CreateProductBomCardMaterial(productBomCardMaterial model.RelatedMaterial) error
 	UpdateProductBomCardMaterial(productBomCardMaterial model.RelatedMaterial) error
 	CreateOrUpdateProductBomCardMaterial(productBomCardMaterial model.RelatedMaterial) error
+	UpdateProductBomCardErpCode(uuid uint64, erpCode string) error
+	UpdateProductBomCardIsUsed(uuid uint64, isUsed int) error
 }
 
 type IProductBomCardQueryRepo interface {
@@ -139,4 +141,30 @@ func (r *productBomCardRepoImpl) GetProductBomCardName(uuid uint64) (dto.LocaleR
 		return dto.LocaleResponse{}, err
 	}
 	return card.MultiLanguageName.GetNames(), nil
+}
+
+// 更新成本卡ERP编码
+func (r *productBomCardRepoImpl) UpdateProductBomCardErpCode(uuid uint64, erpCode string) error {
+	result := r.db.Model(&model.ProductBomCard{}).Where("uuid = ?", uuid).Updates(map[string]interface{}{
+		"erp_code": erpCode,
+	})
+	if result.Error != nil {
+		return errors.WithMessage(result.Error)
+	}
+	return nil
+}
+
+func (r *productBomCardRepoImpl) UpdateProductBomCardIsUsed(uuid uint64, isUsed int) error {
+	if err := r.db.Model(&model.ProductBomCard{}).Where("uuid = ?", uuid).Updates(map[string]interface{}{
+		"is_used": isUsed,
+	}).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	// 更新关联材料
+	if err := r.db.Model(&model.RelatedMaterial{}).Where("related_uuid = ?", uuid).Updates(map[string]interface{}{
+		"is_used": isUsed,
+	}).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
 }

@@ -102,15 +102,16 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 
 	// 打印
 	return &resp.PrinterData{
-		Data:             printerLogData.Data,
-		PrintMethod:      printMethod,
-		Uuid:             printerLogData.Uuid,
-		Copies:           settingPrinterInfo.Copies,
-		PrinterType:      settingPrinterInfo.PrinterType,
-		PrinterConfig:    settingPrinterInfo.PrinterConfig,
-		IsCashierPrinter: settingPrinterInfo.IsCashierPrinter,
-		IsUsbPrinter:     settingPrinterInfo.IsUsbPrinter,
-		PrintingTime:     printerLogData.PrintingTime,
+		Data:              printerLogData.Data,
+		PrintMethod:       printMethod,
+		Uuid:              printerLogData.Uuid,
+		Copies:            settingPrinterInfo.Copies,
+		PrinterType:       settingPrinterInfo.PrinterType,
+		PrinterConfig:     settingPrinterInfo.PrinterConfig,
+		IsCashierPrinter:  settingPrinterInfo.IsCashierPrinter,
+		IsUsbPrinter:      settingPrinterInfo.IsUsbPrinter,
+		PrintingTime:      printerLogData.PrintingTime,
+		EnableStatusCheck: settingPrinterInfo.EnableStatusCheck,
 	}, nil
 }
 
@@ -212,7 +213,7 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	/* *
 	* CODESOFT 打印机
 	 */
-	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi}, settingPrinterInfo.PrinterType) {
+	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi, constant.PrinterTypeGpCloud}, settingPrinterInfo.PrinterType) {
 		return template.NewStatementOrderCodesoftTemplate(base).GetPrintContent(
 			settingPrinterInfo,
 			printType,

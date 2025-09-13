@@ -110,7 +110,6 @@
       <el-input-number :controls="false" :min="0" :max="999" v-model="form.model.limit_num" class="max-w460"></el-input-number>
       <div class="gray9">{{ $t('每单/每桌购买的最大数量，0为不限购') }}</div>
     </el-form-item>
-    
     <template v-if="showMore && (form.model.type == 10 || form.model.type == 30)">
       <el-form-item for="no_click" :label="$t('特色分类：')" v-if="form.model.type == 10 || form.model.type == 30">
         <el-select v-model="form.model.special_id" clearable class="max-w460" size="default" :placeholder="$t('请选择特色分类')">

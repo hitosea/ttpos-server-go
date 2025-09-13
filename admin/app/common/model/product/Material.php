@@ -183,22 +183,48 @@ class Material extends BaseModel
     }
 
     /**
+     * 关联材料单位
+     */
+    public function materialUnit()
+    {
+        return $this->belongsTo(MaterialUnit::class, 'unit_uuid', 'uuid')->where('is_default', '=', 1);
+    }
+
+    /**
      * 详情
      */
-    public static function detail($id)
+    public static function detail($id, $enableErp = false)
     {
-        $material = (new static())->with([
+        $with = [
             'image',
-            'unit',
             'MultiLanguageName',
             'relatedMaterial',
-        ])->where('uuid', '=', $id)->find();
+            'unit',
+        ];
+        if ($enableErp) {
+            $with = [
+                'image',
+                'MultiLanguageName',
+                'relatedMaterial',
+                'materialUnit' => function ($query) {
+                    $query->with('unit');
+                },
+            ];
+        }
+        $material = (new static())->with($with)->where('uuid', '=', $id)->find();
         if ($material) {
             // 材料图片
             $image = $material->image ? [ $material->image ] : [];
             $material->image = $image;
             // 材料单位
-            $material->product_unit = $material->unit->name;
+            if (!$enableErp) {
+                $material->product_unit = $material->unit?->name;
+            } else {
+                $material->product_unit = $material->materialUnit?->unit?->name;
+                $material->product_unit_text = extractLanguage($material->product_unit);
+                $material->unit_uuid = $material->materialUnit?->unit?->uuid;
+                $material->unit_id = $material->materialUnit?->unit?->uuid;
+            }
             // 材料规格
             $material->product_sku = [
                 [
@@ -300,7 +326,7 @@ class Material extends BaseModel
      * 更新原料
      * @return bool
      */
-    public function edit($data)
+    public function edit($data, $enableErp = false)
     {
         if (!isset($data['type']) || !in_array($data['type'], [Product::TYPE_PRODUCT, Product::TYPE_MATERIAL])) {
             $this->error = '商品类型不能为空';
@@ -347,24 +373,36 @@ class Material extends BaseModel
         $data = $this->sanitizeProductData($data);
         //
 
-        return Db::transaction(function () use ($data, $product_name, $imageIds) {
-            $data['name'] = $product_name;
-            $data['multi_language_name_uuid'] = (new MultiLanguageName)->saveNames($product_name, $this['multi_language_name_uuid']);
-            $data['category_uuid'] = $data['category_id'] ?? 0;
-            $data['supplier_uuid'] = $data['erp_supplier_id'] ?? 0;
-            $data['image_uuid'] = $imageIds[0] ?? 0;
-            $data['image_name'] = $data['img_name'] ?? 0;
-            $data['unit_uuid'] = $data['unit_id'] ?? 0;
-            $data['price'] = $data['sku'][0]['purchase_price'] ?? 0;;
-            $data['stock_num'] = $data['sku'][0]['material_stock'] ?? 0; // 库存数量
-            $data['barcode_value'] = $data['sku'][0]['barcode'] ?? ''; // 条形码值
-            $data['status'] = $data['product_status'] == 10 ? 1 : 0; // 状态, 1-上架 0-下架
-
-            $oldStockNum = floatval($this->stock_num); // 旧库存
-            $newStockNum = floatval($data['stock_num']); // 新库存
-
-            if(!$this->save($data)) {
-                return false;
+        return Db::transaction(function () use ($data, $product_name, $imageIds, $enableErp) {
+            if (!$enableErp) {
+                $data['name'] = $product_name;
+                $data['multi_language_name_uuid'] = (new MultiLanguageName)->saveNames($product_name, $this['multi_language_name_uuid']);
+                $data['category_uuid'] = $data['category_id'] ?? 0;
+                $data['supplier_uuid'] = $data['erp_supplier_id'] ?? 0;
+                $data['image_uuid'] = $imageIds[0] ?? 0;
+                $data['image_name'] = $data['img_name'] ?? 0;
+                $data['unit_uuid'] = $data['unit_id'] ?? 0;
+                $data['price'] = $data['sku'][0]['purchase_price'] ?? 0;
+                $data['stock_num'] = $data['sku'][0]['material_stock'] ?? 0; // 库存数量
+                $data['barcode_value'] = $data['sku'][0]['barcode'] ?? ''; // 条形码值
+                $data['status'] = $data['product_status'] == 10 ? 1 : 0; // 状态, 1-上架 0-下架
+                $oldStockNum = floatval($this->stock_num); // 旧库存
+                $newStockNum = floatval($data['stock_num']); // 新库存
+                if(!$this->save($data)) {
+                    return false;
+                }
+            } else {
+                $data = [
+                    'shop_user_id' => $data['shop_user_id'],
+                    'price' => $data['sku'][0]['purchase_price'] ?? 0,
+                    'stock_num' => $data['sku'][0]['material_stock'] ?? 0, // 库存数量
+                    'stock_remark' => $data['stock_remark'] ?? '',
+                ];
+                $oldStockNum = floatval($this->stock_num); // 旧库存
+                $newStockNum = floatval($data['stock_num']); // 新库存
+                if(!self::update($data, ['id' => $this['id']])) {
+                    return false;
+                }
             }
 
             $product = new Product();

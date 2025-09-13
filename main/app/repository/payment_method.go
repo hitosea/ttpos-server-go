@@ -17,6 +17,7 @@ type IPaymentMethodRepo interface {
 	WhereCashierMemberRecharge() DBOption // 收银端充值时显示
 	WhereAssistant() DBOption             // 在助手端结账时显示
 	WhereStatus(status int) DBOption
+	WhereExistsErpnextPayment() DBOption // 排除ERPNext支付方式
 
 	WithLogoFile() DBOption   // 关联logo文件
 	WithQrcodeFile() DBOption // 关联二维码文件
@@ -218,4 +219,10 @@ func (r *paymentMethodRepo) InitErpnextPayment(payments map[int]string) error {
 		return errors.WithMessage(errors.New("更新支付方式失败"), err.Error())
 	}
 	return nil
+}
+
+func (r *paymentMethodRepo) WhereExistsErpnextPayment() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("erpnext_payment != ''")
+	}
 }

@@ -20,6 +20,7 @@ type ISaleOrderRepo interface {
 	UpdateOrCreateSaleOrderRecord(obj model.SaleOrder) error
 	UpdateSaleOrderSoftDeleteByUuid(uuid uint64) error
 	DeleteSaleOrder(saleOrderUuid uint64) error
+	UpdateSaleOrderErpInvoice(saleOrderUuid uint64, productsInvoiceName string, materialInvoiceName string) error
 }
 
 // ISaleOrderQueryRepo 销售账单查询
@@ -117,5 +118,12 @@ func (r *saleOrderRepo) SetCheckoutZeroRuleCancel(saleOrderUuid uint64) error {
 	return r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Updates(map[string]interface{}{
 		"zero_checkout_rule": constant.SaleBillSettingCheckoutZeroingMethodNone,
 		"zero_checkout_fee":  0,
+	}).Error
+}
+
+func (r *saleOrderRepo) UpdateSaleOrderErpInvoice(saleOrderUuid uint64, productsInvoiceName string, materialInvoiceName string) error {
+	return r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Updates(map[string]interface{}{
+		"erp_products_invoice_name": productsInvoiceName,
+		"erp_material_invoice_name": materialInvoiceName,
 	}).Error
 }

@@ -362,6 +362,7 @@ type CountPaymentRespList struct {
 	CreateTime         int64   `json:"create_time"`          // 支付方式创建时间
 	PaymentName        string  `json:"payment_name"`         // 支付方式名称
 	PaymentCode        int     `json:"payment_code"`         // 支付方式编码
+	ErpnextPayment     string  `json:"erpnext_payment"`      // ERPNext支付方式
 	TotalOrderNum      int64   `json:"total_order_num"`      // 总订单数量
 	TotalPaymentAmount float64 `json:"total_payment_amount"` // 总支付金额
 }
@@ -399,6 +400,7 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 					return payment.PaymentName
 				}(),
 				PaymentCode:        payment.PaymentCode,
+				ErpnextPayment:     payment.ErpnextPayment,
 				TotalOrderNum:      payment.TotalOrderNum.Int64,
 				TotalPaymentAmount: payment.TotalPaymentAmount.Float64,
 			})
@@ -432,6 +434,7 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 				}(),
 				PaymentCode:        memberPayment.PaymentCode,
 				TotalOrderNum:      memberPayment.TotalOrderNum,
+				ErpnextPayment:     memberPayment.ErpnextPayment,
 				TotalPaymentAmount: memberPayment.TotalPaymentAmount,
 			})
 		} else {
@@ -527,6 +530,7 @@ func (s *statisticsSrv) CountMemberPayment(ctx context.Context, req CountReq) Co
 				return payment.PaymentName
 			}(),
 			PaymentCode:        payment.PaymentCode,
+			ErpnextPayment:     payment.ErpnextPayment,
 			TotalOrderNum:      payment.TotalOrderNum.Int64,
 			TotalPaymentAmount: payment.TotalPaymentAmount.Float64,
 		})
@@ -1808,6 +1812,7 @@ type CountExportPaymentData struct {
 	CreateTime         int64   `json:"create_time"`
 	PaymentName        string  `json:"payment_name"`
 	PaymentCode        int     `json:"payment_code"`
+	ErpnextPayment     string  `json:"erpnext_payment"`
 	TotalOrderNum      int64   `json:"total_order_num"`
 	TotalPaymentAmount float64 `json:"total_payment_amount"`
 }

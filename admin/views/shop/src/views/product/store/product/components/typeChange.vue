@@ -14,7 +14,7 @@
     ]"
   >
     <el-cascader class="max-w460 mr8" :options="options" v-model="form.category_id" clearable style="width: 100%" :placeholder="$t('请选择分类')"></el-cascader>
-    <el-button type="primary" size="small" :loading="loading" @click="add">{{ $t('添加分类') }} </el-button>
+    <el-button type="primary" size="small" :loading="loading" :disabled="erp_is_open == 1" @click="add">{{ $t('添加分类') }} </el-button>
   </el-form-item>
 
   <!--添加-->

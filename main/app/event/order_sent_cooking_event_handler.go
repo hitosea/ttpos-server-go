@@ -106,7 +106,7 @@ func ReduceStock(db *gorm.DB, saleBillUuid uint64) {
 				Materials[warehouseOutFormItem.MaterialUuid] = warehouseOutFormItem.Material
 			}
 			Materials[warehouseOutFormItem.MaterialUuid].StockNum -= warehouseOutFormItem.Num
-			Materials[warehouseOutFormItem.MaterialUuid].ActualSaleNum += warehouseOutFormItem.Num // TODO 考虑怎么跟商品一起增加实际销量
+			// Materials[warehouseOutFormItem.MaterialUuid].ActualSaleNum += warehouseOutFormItem.Num // TODO 考虑怎么跟商品一起增加实际销量
 		}
 	}
 

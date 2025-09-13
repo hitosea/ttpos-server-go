@@ -93,7 +93,11 @@ func detectError(resp *gvar.Var) error {
 				g.Log().Errorf(gctx.GetInitCtx(), "调用erpnext接口返回异常: %v", j)
 				errMsgList := make([]string, 0)
 				for _, errItem := range j.GetJsons("errors") {
-					errMsgList = append(errMsgList, errItem.Get("message").String())
+					if errItem.Contains("message") {
+						errMsgList = append(errMsgList, errItem.Get("message").String())
+					} else {
+						errMsgList = append(errMsgList, errItem.Get("exception").String())
+					}
 				}
 				return gerror.Newf("调用erpnext接口返回异常,error:%s", strings.Join(errMsgList, ";"))
 			}

@@ -141,11 +141,19 @@ func (model *SaleOrderProduct) GetErpProductBomMaterials() []*ErpProductBomMater
 			if saleOrderProductBom.ProductBom.HasProductBomCard() {
 				card := saleOrderProductBom.ProductBom.ProductBomCard
 				for _, relatedMaterial := range card.RelatedMaterials {
-					unitName := language.JsonToLocaleResponse(relatedMaterial.UnitName)
+					// 如果材料被禁用，则跳过，不扣减库存
+					if relatedMaterial.Material.Status == false {
+						continue
+					}
+					uom := relatedMaterial.BaseUnitUom
+					if uom == "" {
+						unitName := language.JsonToLocaleResponse(relatedMaterial.BaseUnitName)
+						uom = unitName.EN
+					}
 					materials = append(materials, &ErpProductBomMaterials{
 						ErpCode: relatedMaterial.Material.Code,
-						Num:     relatedMaterial.Num,
-						Uom:     unitName.EN,
+						Num:     relatedMaterial.GetDecreaseNum(1), // 单商品的材料消耗量（单位为基准单位）
+						Uom:     uom,
 					})
 				}
 			}
@@ -154,11 +162,19 @@ func (model *SaleOrderProduct) GetErpProductBomMaterials() []*ErpProductBomMater
 			if saleOrderProductBom.ProductBom.ProductSauce.HasProductBomCard() {
 				card := saleOrderProductBom.ProductBom.ProductSauce.ProductBomCard
 				for _, relatedMaterial := range card.RelatedMaterials {
-					unitName := language.JsonToLocaleResponse(relatedMaterial.UnitName)
+					// 如果材料被禁用，则跳过，不扣减库存
+					if relatedMaterial.Material.Status == false {
+						continue
+					}
+					uom := relatedMaterial.BaseUnitUom
+					if uom == "" {
+						unitName := language.JsonToLocaleResponse(relatedMaterial.BaseUnitName)
+						uom = unitName.EN
+					}
 					materials = append(materials, &ErpProductBomMaterials{
 						ErpCode: relatedMaterial.Material.Code,
-						Num:     relatedMaterial.Num,
-						Uom:     unitName.EN,
+						Num:     relatedMaterial.GetDecreaseNum(1), // 单商品的材料消耗量（单位为基准单位）
+						Uom:     uom,
 					})
 				}
 			}
@@ -207,6 +223,7 @@ func (model *SaleOrderProduct) GetProductNameAttributes(language string) string 
 	return message
 }
 
+// 获取商品的规格
 func (model *SaleOrderProduct) GetFlarvorSaleOrderProductBom() *SaleOrderProductBom {
 	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
 		if saleOrderProductBom.IsDelete() {
@@ -217,6 +234,20 @@ func (model *SaleOrderProduct) GetFlarvorSaleOrderProductBom() *SaleOrderProduct
 		}
 	}
 	return &SaleOrderProductBom{}
+}
+
+// 获取商品的小料
+func (model *SaleOrderProduct) GetSauceSaleOrderProductBom() []*SaleOrderProductBom {
+	sauces := make([]*SaleOrderProductBom, 0)
+	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
+		if saleOrderProductBom.IsDelete() {
+			continue
+		}
+		if saleOrderProductBom.IsSauce() {
+			sauces = append(sauces, saleOrderProductBom)
+		}
+	}
+	return sauces
 }
 
 // 设置商品为赠菜
@@ -812,6 +843,7 @@ func (model *SaleOrderProduct) CopyOrderProduct(saleOrderUuid uint64) *SaleOrder
 		product.SaleOrderUuid = saleOrderUuid
 	}
 	// 复制SaleOrderProductBoms
+	product.SaleOrderProductBoms = make([]*SaleOrderProductBom, 0) // 必须重置，否则会重复添加
 	for _, bom := range model.SaleOrderProductBoms {
 		if bom.IsDelete() {
 			continue

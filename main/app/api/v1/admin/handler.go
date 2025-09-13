@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -29,7 +28,7 @@ type Handler struct {
 // @Param company_name query string false "公司名称"
 // @Param company_abbr query string false "公司缩写"
 // @Param parent_company query string false "父公司名称"
-// @Success 200 {object} dto.Response
+// @Success 200 {object} dto.Response{data=resp.ErpnextSiteCompanyResp}
 // @Router /admin/erpnext/site/company [get]
 func (h *Handler) GetErpnextSiteCompany(c *gin.Context) {
 	var siteCompanyReq req.ErpnextSiteCompanyReq
@@ -44,7 +43,7 @@ func (h *Handler) GetErpnextSiteCompany(c *gin.Context) {
 		ParentCompany: siteCompanyReq.ParentCompany,
 	}
 	// 调用erpnext服务，获取公司名称
-	companyResp, err := erp.NewIErpSrv(h.dbm).GetCompanyList(context.Background(), erpnextSiteCompanyReq)
+	companyResp, err := erp.NewIErpSrv(h.dbm).GetCompanyList(helper.GetContext(c), erpnextSiteCompanyReq)
 	if err != nil {
 		helper.ErrorWithMessage(c, constant.CodeFail, err)
 		return

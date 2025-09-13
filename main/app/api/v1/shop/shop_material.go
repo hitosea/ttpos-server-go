@@ -277,7 +277,7 @@ func (h *MaterialHandler) AddProductBomCard(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil, "关联成本卡成功")
+	helper.Success(c, nil, "创建成功")
 }
 
 // GetProductBomCardDetail 规格商品成本卡详情
@@ -331,7 +331,7 @@ func (h *MaterialHandler) UnlinkProductBomCard(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, nil, "解除成功")
 }
 
 // CopyProductBomCard 复制成本卡
@@ -358,7 +358,7 @@ func (h *MaterialHandler) CopyProductBomCard(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, nil, "关联成本卡成功")
 }
 
 // ImportProductBomCard 从菜品导入成本卡
@@ -380,6 +380,10 @@ func (h *MaterialHandler) ImportProductBomCard(c *gin.Context) {
 		helper.HandleValidationError(c, err, importReq, dto.PageReqMessage)
 		return
 	}
+	if err := importReq.Validate(); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeParamError, errors.WithMessage(err))
+		return
+	}
 	err := h.materialSrv.ImportProductBomCard(ctx, importReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -398,7 +402,7 @@ func (h *MaterialHandler) ImportProductBomCard(c *gin.Context) {
 // @Param data body req.MaterialImportListReq true "获取导入物品列表请求"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
-// @Router /shop/material/import/list [get]
+// @Router /shop/material/import/list [post]
 func (h *MaterialHandler) ImportMaterialList(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	importReq := req.MaterialImportListReq{}
@@ -479,7 +483,7 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		privateApi.POST("/product_bom/card/copy", wrapper.CopyProductBomCard)       // 复制成本卡
 		privateApi.POST("/product_bom/card/import", wrapper.ImportProductBomCard)   // 从菜品导入成本卡
 
-		privateApi.GET("/material/import/list", wrapper.ImportMaterialList) // 导入物品列表
-		privateApi.POST("/material/import", wrapper.ImportMaterial)         // 导入物品
+		privateApi.POST("/material/import/list", wrapper.ImportMaterialList) // 导入物品列表
+		privateApi.POST("/material/import", wrapper.ImportMaterial)          // 导入物品
 	}
 }

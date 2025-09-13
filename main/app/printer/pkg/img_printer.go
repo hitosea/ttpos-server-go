@@ -15,7 +15,10 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
+	"sync"
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/printer/pkg/fonts"
 	"ttpos-server-go/app/printer/pkg/images"
@@ -31,6 +34,171 @@ import (
 	"github.com/nfnt/resize"
 	"golang.org/x/image/font"
 )
+
+// 图片创建控制器 - 控制NewImgFont的并发
+var (
+	imgFontSemaphore     chan struct{} // 信号量通道
+	maxImgFontConcurrent = 200         // 最大并发数
+	imgFontMutex         sync.RWMutex  // 读写锁
+	activeImgFontCount   = 0           // 当前活跃数量
+)
+
+// 初始化图片创建控制器
+func init() {
+	// 创建信号量通道
+	imgFontSemaphore = make(chan struct{}, maxImgFontConcurrent)
+}
+
+// 全局字体管理器
+type GlobalFontManager struct {
+	fonts       map[string]*truetype.Font // 字体缓存
+	widths      map[string]int            // 字符宽度缓存
+	widthAccess map[string]int64          // 宽度缓存访问时间（LRU）
+	mutex       sync.RWMutex              // 读写锁
+	initialized bool                      // 是否已初始化
+	maxWidths   int                       // 最大宽度缓存数量
+}
+
+var globalFontManager = &GlobalFontManager{
+	fonts:       make(map[string]*truetype.Font),
+	widths:      make(map[string]int),
+	widthAccess: make(map[string]int64),
+	maxWidths:   3000, // 减少最大缓存数量
+}
+
+// GetFont 获取字体（线程安全）
+func (gfm *GlobalFontManager) GetFont(fontPath string) (*truetype.Font, error) {
+	gfm.mutex.RLock()
+	if font, exists := gfm.fonts[fontPath]; exists {
+		gfm.mutex.RUnlock()
+		return font, nil
+	}
+	gfm.mutex.RUnlock()
+
+	// 需要加载字体
+	gfm.mutex.Lock()
+	defer gfm.mutex.Unlock()
+
+	// 双重检查
+	if font, exists := gfm.fonts[fontPath]; exists {
+		return font, nil
+	}
+
+	// 加载字体
+	fontBytes, err := fonts.GetFontData(fontPath)
+	if err != nil {
+		return nil, err
+	}
+
+	font, err := freetype.ParseFont(fontBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	gfm.fonts[fontPath] = font
+	return font, nil
+}
+
+// GetFace 获取字体表面（线程安全，每次创建新实例）
+func (gfm *GlobalFontManager) GetFace(fontPath string, fontSize int) (font.Face, error) {
+	fonts, err := gfm.GetFont(fontPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// 每次创建新的字体表面实例，确保线程安全
+	face := truetype.NewFace(fonts, &truetype.Options{
+		Size:    float64(fontSize),
+		DPI:     95,
+		Hinting: font.HintingNone,
+	})
+
+	return face, nil
+}
+
+// GetCharWidth 获取字符宽度（线程安全，带LRU）
+func (gfm *GlobalFontManager) GetCharWidth(fontPath string, fontSize int, char string) (int, bool) {
+	cacheKey := fmt.Sprintf("%s_%d_%s", fontPath, fontSize, char)
+
+	gfm.mutex.Lock() // 使用写锁因为要更新访问时间
+	defer gfm.mutex.Unlock()
+
+	if width, exists := gfm.widths[cacheKey]; exists {
+		// 更新访问时间
+		gfm.widthAccess[cacheKey] = time.Now().UnixNano()
+		return width, true
+	}
+
+	return 0, false
+}
+
+// SetCharWidth 设置字符宽度（线程安全，带LRU清理）
+func (gfm *GlobalFontManager) SetCharWidth(fontPath string, fontSize int, char string, width int) {
+	cacheKey := fmt.Sprintf("%s_%d_%s", fontPath, fontSize, char)
+
+	gfm.mutex.Lock()
+	defer gfm.mutex.Unlock()
+
+	// 如果缓存已满，清理最少使用的条目
+	if len(gfm.widths) >= gfm.maxWidths {
+		gfm.cleanupLRUWidthCache()
+	}
+
+	// 添加新缓存
+	gfm.widths[cacheKey] = width
+	gfm.widthAccess[cacheKey] = time.Now().UnixNano()
+}
+
+// cleanupLRUWidthCache 清理最少使用的宽度缓存（内部方法，调用时已加锁）
+func (gfm *GlobalFontManager) cleanupLRUWidthCache() {
+	if len(gfm.widths) == 0 {
+		return
+	}
+
+	// 找到最旧的25%缓存项并删除
+	type accessItem struct {
+		key        string
+		accessTime int64
+	}
+
+	items := make([]accessItem, 0, len(gfm.widthAccess))
+	for key, accessTime := range gfm.widthAccess {
+		items = append(items, accessItem{key, accessTime})
+	}
+
+	// 按访问时间排序
+	for i := 0; i < len(items)-1; i++ {
+		for j := i + 1; j < len(items); j++ {
+			if items[i].accessTime > items[j].accessTime {
+				items[i], items[j] = items[j], items[i]
+			}
+		}
+	}
+
+	// 删除最旧的25%
+	removeCount := len(items) / 4
+	for i := 0; i < removeCount; i++ {
+		key := items[i].key
+		delete(gfm.widths, key)
+		delete(gfm.widthAccess, key)
+	}
+}
+
+// PreloadCommonFonts 预加载常用字体
+func (gfm *GlobalFontManager) PreloadCommonFonts() {
+	commonFonts := []string{
+		fonts.FontEN, fonts.FontZH, fonts.FontJA, fonts.FontKO,
+	}
+
+	// 只预加载字体对象，不预加载Face（因为Face不缓存）
+	for _, fontPath := range commonFonts {
+		gfm.GetFont(fontPath) // 预加载字体
+	}
+
+	gfm.mutex.Lock()
+	gfm.initialized = true
+	gfm.mutex.Unlock()
+}
 
 // ImgFont 类用于生成图像并添加文本
 type ImgFont struct {
@@ -61,24 +229,23 @@ type ImgFont struct {
 	FontWeight int
 	// 缅甸语的特殊字体
 	MySpecialFonts map[string]string
-	// 字体缓存
-	FontCache map[string]*truetype.Font
-	// 字符宽度缓存
-	CharWidthCache map[string]int
+	// 本地缓存已移除，使用全局字体管理器
 	// 分割高度
 	SegmentationHeight int
+	// 信号量控制（用于并发控制）
+	hasSemaphore bool
 }
-
-// 字体常量
-const (
-	// 横向排列
-	DIRECTION_X = 0
-	// 竖向排列
-	DIRECTION_Y = 1
-)
 
 // NewImgFont 创建一个新的ImgFont实例
 func NewImgFont(imageWidth int, defaultTextLineHeight int, direction int) *ImgFont {
+	// 获取信号量，控制并发数量
+	imgFontSemaphore <- struct{}{}
+
+	// 增加活跃计数
+	imgFontMutex.Lock()
+	activeImgFontCount++
+	imgFontMutex.Unlock()
+
 	img := &ImgFont{
 		ImageWidth:            567, // 默认宽度
 		ImageHeight:           0,
@@ -93,9 +260,8 @@ func NewImgFont(imageWidth int, defaultTextLineHeight int, direction int) *ImgFo
 		FontWeight:            1,
 		Direction:             0,
 		MySpecialFonts:        make(map[string]string),
-		FontCache:             make(map[string]*truetype.Font),
-		CharWidthCache:        make(map[string]int),
 		SegmentationHeight:    2200,
+		hasSemaphore:          true, // 标记已获取信号量
 	}
 
 	// 设置自定义宽度
@@ -110,7 +276,7 @@ func NewImgFont(imageWidth int, defaultTextLineHeight int, direction int) *ImgFo
 	}
 
 	// 设置方向
-	if direction == DIRECTION_Y {
+	if direction == 1 {
 		img.Direction = 90
 		img.ImageHeight = imageWidth
 	}
@@ -132,16 +298,96 @@ func NewImgFont(imageWidth int, defaultTextLineHeight int, direction int) *ImgFo
 		"န္အ":  rabbit.Uni2Zg("နၲ"),
 	}
 
+	// 确保全局字体管理器已初始化
+	if !globalFontManager.initialized {
+		globalFontManager.PreloadCommonFonts()
+	}
+
 	// 创建图像
 	img.createImg()
 
+	// gc的时候Cleanup()
+	runtime.SetFinalizer(img, func(i *ImgFont) {
+		i.Cleanup()
+	})
+
 	return img
+}
+
+// ReleaseSemaphore 释放信号量（在ImgFont使用完毕后调用）
+func (i *ImgFont) ReleaseSemaphore() {
+	if i.hasSemaphore {
+		// 释放信号量
+		<-imgFontSemaphore
+
+		// 减少活跃计数
+		imgFontMutex.Lock()
+		if activeImgFontCount > 0 {
+			activeImgFontCount--
+		}
+		imgFontMutex.Unlock()
+
+		// 标记已释放
+		i.hasSemaphore = false
+	}
+}
+
+// Cleanup 清理ImgFont实例内存（包含信号量释放）
+func (i *ImgFont) Cleanup() {
+	// 释放信号量
+	i.ReleaseSemaphore()
+
+	// 清理图像资源
+	i.Image = nil
+	i.MySpecialFonts = nil
+
+	// 只在内存压力大时强制GC
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	if m.Alloc > 1000*1024*1024 { // 超过1000MB时
+		runtime.GC()
+	}
+}
+
+// GetImgFontStatus 获取ImgFont控制器状态
+func GetImgFontStatus() map[string]interface{} {
+	imgFontMutex.RLock()
+	defer imgFontMutex.RUnlock()
+
+	return map[string]interface{}{
+		"max_concurrent":   maxImgFontConcurrent,
+		"active_count":     activeImgFontCount,
+		"available":        maxImgFontConcurrent - activeImgFontCount,
+		"semaphore_length": len(imgFontSemaphore),
+	}
+}
+
+// SetMaxImgFontConcurrent 设置最大ImgFont并发数
+func SetMaxImgFontConcurrent(max int) {
+	if max > 0 && max <= 200 {
+		imgFontMutex.Lock()
+		maxImgFontConcurrent = max
+		imgFontMutex.Unlock()
+
+		// 重新创建信号量通道
+		imgFontSemaphore = make(chan struct{}, max)
+	}
+}
+
+// PrintImgFontStats 打印ImgFont统计信息
+func PrintImgFontStats() {
+	status := GetImgFontStatus()
+	fmt.Printf("ImgFont状态: 最大并发 %d, 活跃数量 %d, 可用 %d, 信号量长度 %d\n",
+		status["max_concurrent"],
+		status["active_count"],
+		status["available"],
+		status["semaphore_length"])
 }
 
 // createImg 创建一个新的图像
 func (i *ImgFont) createImg() {
 	// 创建一个空白画布
-	i.Image = image.NewRGBA(image.Rect(0, 0, i.ImageWidth, 20000))
+	i.Image = image.NewRGBA(image.Rect(0, 0, i.ImageWidth, 1500))
 
 	// 设置背景颜色为白色
 	draw.Draw(i.Image, i.Image.Bounds(), &image.Uniform{color.White}, image.Point{}, draw.Src)
@@ -207,25 +453,23 @@ func (i *ImgFont) GetFontPath(char string) string {
 * @param string $text
 * @return string
  */
-// GetFontWeight 获取字体宽度
+// GetFontWeight 获取字体宽度（优化版）
 func (i *ImgFont) GetFontWeight(fontSize int, char string) int {
 	// 特殊字符'ြ'的处理
 	if char == "ြ" {
 		return 5
 	}
 
-	// 检查缓存
-	cacheKey := fmt.Sprintf("%s_%d_%s", i.GetFontPath(char), fontSize, char)
-	if width, ok := i.CharWidthCache[cacheKey]; ok {
-		return width
-	}
-
 	// 获取字体路径
 	fontPath := i.GetFontPath(char)
 
-	// 获取字体宽度
-	// 使用getCharWidth计算字符宽度
-	contextWidth := i.getCharWidth(fontPath, fontSize, char)
+	// 先检查全局缓存
+	if width, exists := globalFontManager.GetCharWidth(fontPath, fontSize, char); exists {
+		return width
+	}
+
+	// 需要计算宽度
+	contextWidth := i.fastGetCharWidth(fontPath, fontSize, char)
 
 	// 缅甸语特殊处理
 	if fontPath == fonts.FontMY || fontPath == fonts.FontMY2 {
@@ -234,50 +478,68 @@ func (i *ImgFont) GetFontWeight(fontSize int, char string) int {
 		}
 	}
 
-	// 存入缓存
-	i.CharWidthCache[cacheKey] = contextWidth
+	// 存入全局缓存
+	globalFontManager.SetCharWidth(fontPath, fontSize, char, contextWidth)
+
 	return contextWidth
 }
 
-// getCharWidth 使用freetype获取字符宽度 - 模拟PHP的imagettfbbox的行为
+// fastGetCharWidth 高性能字符宽度计算（改进UTF-8处理）
+func (i *ImgFont) fastGetCharWidth(fontPath string, fontSize int, char string) int {
+	// 如果文本为空，返回默认值
+	if len(char) == 0 {
+		return fontSize
+	}
+
+	// 使用全局字体管理器获取字体表面
+	face, err := globalFontManager.GetFace(fontPath, fontSize)
+	if err != nil {
+		return fontSize
+	}
+
+	// 正确处理UTF-8字符
+	runes := []rune(char)
+	if len(runes) == 0 {
+		return fontSize
+	}
+
+	// 计算第一个Unicode字符的宽度
+	advance, ok := face.GlyphAdvance(runes[0])
+	if !ok {
+		// 如果无法获取字形宽度，尝试使用字体度量
+		metrics := face.Metrics()
+		return metrics.Height.Round() / 2 // 使用高度的一半作为默认宽度
+	}
+
+	// 应用缩放系数
+	width := advance.Round()
+	scaleFactor := 0.99
+	if fontPath == fonts.FontTH || fontPath == fonts.FontTHExt {
+		scaleFactor = 1.1
+	}
+
+	return int(float64(width) * scaleFactor)
+}
+
+// getCharWidth 使用freetype获取字符宽度 - 模拟PHP的imagettfbbox的行为（保留兼容性）
 func (i *ImgFont) getCharWidth(fontPath string, fontSize int, text string) int {
 	// 如果文本为空，返回默认值
 	if len(text) == 0 {
 		return fontSize
 	}
 
-	// 尝试从字体缓存获取
-	var f *truetype.Font
-	var ok bool
-
-	if f, ok = i.FontCache[fontPath]; !ok {
-		// 加载字体文件
-		var fontBytes []byte
-		var err error
-
-		// 使用嵌入字体模块
-		fontBytes, err = fonts.GetFontData(fontPath)
-		if err != nil {
-			fmt.Println("从嵌入字体加载失败:", err)
-			return fontSize
-		}
-
-		// 解析字体
-		f, err = freetype.ParseFont(fontBytes)
-		if err != nil {
-			fmt.Println("解析字体失败:", err)
-			return fontSize
-		}
-
-		// 添加到缓存
-		i.FontCache[fontPath] = f
+	// 使用全局字体管理器获取字体
+	f, err := globalFontManager.GetFont(fontPath)
+	if err != nil {
+		fmt.Println("获取字体失败:", err)
+		return fontSize
 	}
 
 	// 创建字体选项
 	opt := truetype.Options{
 		Size:    float64(fontSize),
 		DPI:     95,
-		Hinting: font.HintingNone, // 完全禁用hinting模式以避免栈溢出错误
+		Hinting: font.HintingNone,
 	}
 
 	// 获取字体表面
@@ -399,6 +661,21 @@ func (i *ImgFont) GetFontArrays(texts string) []string {
 
 // AddText 添加文本并返回当前高度和宽度
 func (i *ImgFont) AddText(text string, height float64, fixedWidth, deviationWidth float64) map[string]float64 {
+	// 智能估算所需高度
+	estimatedHeight := int(height) + i.TextLineHeight*2 + 100 // 减少缓冲空间
+	currentImageHeight := i.Image.Bounds().Dy()
+	if estimatedHeight > currentImageHeight {
+		// 智能计算新高度：按需增长，避免过度分配
+		requiredGrowth := estimatedHeight - currentImageHeight
+		growthIncrement := 500 // 基础增长单位
+		// 根据需要动态调整增长量
+		if requiredGrowth > 1000 {
+			growthIncrement = 1000
+		}
+		newHeight := currentImageHeight + ((requiredGrowth/growthIncrement)+1)*growthIncrement
+		i.expandImageHeight(newHeight)
+	}
+
 	// 字体大小和粗细
 	fontSize := i.FontSize
 	fontWeight := i.FontWeight
@@ -558,54 +835,28 @@ func (i *ImgFont) AddText(text string, height float64, fixedWidth, deviationWidt
 	}
 }
 
-// GetTextWidth 批量计算文本宽度
+// GetTextWidth 批量计算文本宽度（优化版）
 func (i *ImgFont) GetTextWidth(fontSize int, text string) float64 {
 	if text == "" {
 		return 0
 	}
 
-	// 检查缓存
-	cacheKey := fmt.Sprintf("text_%d_%s", fontSize, text)
-	if width, ok := i.CharWidthCache[cacheKey]; ok {
-		return float64(width) * i.TextSpacing
-	}
-
-	// 计算宽度
+	// 计算宽度 - 直接计算，不缓存文本宽度
 	totalWidth := 0.0
 	for _, char := range i.GetFontArrays(text) {
 		totalWidth += float64(i.GetFontWeight(fontSize, char))
 	}
 
-	// 存入缓存 - 只缓存短文本
-	if len(text) <= 10 {
-		i.CharWidthCache[cacheKey] = int(totalWidth)
-	}
-
 	return totalWidth * i.TextSpacing
 }
 
-// drawText 使用freetype绘制文本
+// drawText 使用freetype绘制文本（优化版）
 func (i *ImgFont) drawText(text, fontPath string, fontSize, fontWeight int, x, y int, textColor color.RGBA) {
-	// 从缓存获取字体
-	f, ok := i.FontCache[fontPath]
-	if !ok {
-		// 使用嵌入的字体文件
-		fontBytes, err := fonts.GetFontData(fontPath)
-		if err != nil {
-			fmt.Println("获取嵌入字体文件失败:", err)
-			return
-		}
-
-		// 解析字体
-		var parseErr error
-		f, parseErr = freetype.ParseFont(fontBytes)
-		if parseErr != nil {
-			fmt.Println("解析字体失败:", parseErr)
-			return
-		}
-
-		// 添加到缓存
-		i.FontCache[fontPath] = f
+	// 从全局字体管理器获取字体
+	f, err := globalFontManager.GetFont(fontPath)
+	if err != nil {
+		fmt.Println("获取字体失败:", err)
+		return
 	}
 
 	// 先绘制描边（黑色或深色）
@@ -619,7 +870,7 @@ func (i *ImgFont) drawText(text, fontPath string, fontSize, fontWeight int, x, y
 	ctx.SetDst(i.Image)
 	ctx.SetFontSize(float64(fontSize))
 	ctx.SetSrc(image.NewUniform(outlineColor))
-	ctx.SetHinting(font.HintingNone)
+	ctx.SetHinting(0) // font.HintingNone
 
 	// 后绘制原始文本
 	ctx.SetSrc(image.NewUniform(textColor))
@@ -651,7 +902,7 @@ func (i *ImgFont) drawText(text, fontPath string, fontSize, fontWeight int, x, y
 
 // SetSegmentationHeight 设置分割高度
 func (i *ImgFont) SetSegmentationHeight(height int) *ImgFont {
-	i.SegmentationHeight = height
+	// i.SegmentationHeight = height
 	return i
 }
 
@@ -1375,12 +1626,44 @@ func (i *ImgFont) SetImagePadding(padding int) *ImgFont {
 	return i
 }
 
+// expandImageHeight 扩大图片高度
+func (i *ImgFont) expandImageHeight(newHeight int) {
+	// 如果新高度不大于当前高度，则不需要扩大
+	currentHeight := i.Image.Bounds().Dy()
+	if newHeight <= currentHeight {
+		return
+	}
+
+	// 保存原图片引用用于复制
+	oldImage := i.Image
+
+	// 创建新的更大的图片
+	newImage := image.NewRGBA(image.Rect(0, 0, i.ImageWidth, newHeight))
+
+	// 设置背景颜色为白色
+	draw.Draw(newImage, newImage.Bounds(), &image.Uniform{color.White}, image.Point{}, draw.Src)
+
+	// 将原图片内容复制到新图片中
+	draw.Draw(newImage, oldImage.Bounds(), oldImage, image.Point{}, draw.Src)
+
+	// 替换原图片
+	i.Image = newImage
+
+	// 显式清空原图片引用，帮助GC回收
+	oldImage = nil
+
+	// 使用全局字体管理器，无需本地清理
+}
+
 // Save 保存图像并返回打印数据
 func (i *ImgFont) Save(imageSrc string, reminderSound bool, openMoneybox int) string {
+	// 清理ImgFont实例内存
+	defer i.Cleanup()
+
 	if config.Server.Mode == constant.ServerModeDebug && imageSrc == "" {
 		imageSrc = "./tmp/printer/test_img.png"
 	}
-	//
+
 	maxHeight := i.SegmentationHeight
 	height := i.TextTotalHeight + i.TextLineHeight
 	headHeight := int(i.TextLineHeight/2) - 10
@@ -1561,7 +1844,7 @@ func (i *ImgFont) GetBytesFromBitMap(bitmap image.Image) string {
 	// 计算字节宽度，确保8字节对齐
 	bw := (width + 7) / 8 // 向上取整到8的倍数
 
-	// 预分配足够的空间
+	// 预分配足够的空间，并初始化为0
 	rv := make([]byte, height*bw+4)
 
 	// 设置头部信息（宽度和高度）
@@ -1570,63 +1853,70 @@ func (i *ImgFont) GetBytesFromBitMap(bitmap image.Image) string {
 	rv[2] = byte(height & 0xFF)        // yL
 	rv[3] = byte((height >> 8) & 0xFF) // yH
 
-	// 优化：预处理行索引和移位计算
-	rowOffsets := make([]int, height)
-	for i := 0; i < height; i++ {
-		rowOffsets[i] = i * width
-	}
-
-	// 优化：预计算每个像素的移位量
-	shifts := make([]byte, 8)
-	for i := 0; i < 8; i++ {
-		shifts[i] = byte(7 - i)
-	}
+	// 优化：使用常量数组避免重复计算
+	var shifts = [8]byte{7, 6, 5, 4, 3, 2, 1, 0}
 
 	// 优化：使用类型断言加速常见图像类型的访问
 	switch img := bitmap.(type) {
 	case *image.RGBA:
-		// 直接访问 RGBA 图像的像素数据
+		// 直接访问 RGBA 图像的像素数据 - 高度优化版本
 		pix := img.Pix
 		stride := img.Stride
 		for y := 0; y < height; y++ {
 			rowOffset := y * stride
+			baseIndex := y*bw + 4 // 预计算行基础索引
+
 			for x := 0; x < width; x++ {
-				i := rowOffset + x*4
-				red := pix[i]
-				green := pix[i+1]
-				blue := pix[i+2]
+				pixelOffset := rowOffset + x*4
 
-				// 转换为灰度值
-				gray := RGB2Gray(red, green, blue)
+				// 使用位运算快速灰度计算
+				r, g, b := pix[pixelOffset], pix[pixelOffset+1], pix[pixelOffset+2]
+				// 快速灰度计算：(77*R + 151*G + 28*B) >> 8
+				gray := (77*uint32(r) + 151*uint32(g) + 28*uint32(b)) >> 8
 
-				// 设置相应位
-				pixelIndex := rowOffsets[y] + x
-				index := pixelIndex/8 + 4
-				shift := pixelIndex % 8
-				rv[index] |= (gray << shifts[shift])
+				// 快速二值化
+				var bit byte
+				if gray > 127 {
+					bit = 0
+				} else {
+					bit = 1
+				}
+
+				// 优化的位设置
+				byteIndex := baseIndex + x/8
+				bitPos := x % 8
+				rv[byteIndex] |= bit << shifts[bitPos]
 			}
 		}
 	default:
 		// 对于其他类型的图像，使用通用方法
 		for y := 0; y < height; y++ {
-			rowOffset := rowOffsets[y]
+			baseIndex := y*bw + 4 // 预计算行基础索引
+
 			for x := 0; x < width; x++ {
 				// 获取像素颜色
 				r, g, b, _ := bitmap.At(x+bounds.Min.X, y+bounds.Min.Y).RGBA()
 
-				// 转换为8位值
+				// 转换为8位值并快速灰度计算
 				red := uint8(r >> 8)
 				green := uint8(g >> 8)
 				blue := uint8(b >> 8)
 
-				// 转换为灰度值
-				gray := RGB2Gray(red, green, blue)
+				// 快速灰度计算
+				gray := (77*uint32(red) + 151*uint32(green) + 28*uint32(blue)) >> 8
 
-				// 设置相应位
-				pixelIndex := rowOffset + x
-				index := pixelIndex/8 + 4
-				shift := pixelIndex % 8
-				rv[index] |= (gray << shifts[shift])
+				// 快速二值化
+				var bit byte
+				if gray > 127 {
+					bit = 0
+				} else {
+					bit = 1
+				}
+
+				// 优化的位设置
+				byteIndex := baseIndex + x/8
+				bitPos := x % 8
+				rv[byteIndex] |= bit << shifts[bitPos]
 			}
 		}
 	}

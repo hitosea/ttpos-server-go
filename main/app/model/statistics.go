@@ -210,6 +210,7 @@ type StatisticsPaymentData struct {
 	CreateTime         int64           `gorm:"column:create_time;comment:支付方式创建时间"`
 	PaymentName        string          `gorm:"column:payment_name;comment:支付方式名称"`
 	PaymentCode        int             `gorm:"column:payment_code;comment:支付方式编码"`
+	ErpnextPayment     string          `gorm:"column:erpnext_payment;comment:ERPNext支付方式"`
 	TotalOrderNum      sql.NullInt64   `gorm:"column:total_order_num;comment:总订单数量"`
 	TotalPaymentAmount sql.NullFloat64 `gorm:"column:total_payment_amount;comment:总支付金额"`
 	TotalRefundAmount  sql.NullFloat64 `gorm:"column:total_refund_amount;comment:总退款金额"`

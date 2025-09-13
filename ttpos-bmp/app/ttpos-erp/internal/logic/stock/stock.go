@@ -429,7 +429,7 @@ func (s *sStock) CreateMaterialRequest(ctx context.Context, req *stock.SaveMater
 
 	data := g.MapStrAny{
 		"naming_series":    erp.DefaultMaterialRequestSeries,
-		"transaction_date": gtime.New(req.TransactionDate).Format("Y-m-d"),
+		"transaction_date": service.Setup().MustGetLocalDateTime(ctx, gtime.New(req.TransactionDate)).Format("Y-m-d"),
 		"company":          companyName.CompanyName,
 	}
 
@@ -445,7 +445,7 @@ func (s *sStock) CreateMaterialRequest(ctx context.Context, req *stock.SaveMater
 			"item_code":     item.ItemCode,
 			"qty":           item.Qty,
 			"uom":           item.Uom,
-			"schedule_date": gtime.New(req.RequiredBy).Format("Y-m-d"),
+			"schedule_date": service.Setup().MustGetLocalDateTime(ctx, gtime.New(req.RequiredBy)).Format("Y-m-d"),
 			"warehouse":     warehouse.Name,
 		})
 	}

@@ -191,7 +191,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dto.Response"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ErpnextSiteCompanyResp"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -18121,7 +18133,7 @@ const docTemplate = `{
             }
         },
         "/shop/material/import/list": {
-            "get": {
+            "post": {
                 "security": [
                     {
                         "JwtToken": []
@@ -25301,6 +25313,10 @@ const docTemplate = `{
         "material_resp.Material": {
             "type": "object",
             "properties": {
+                "barcode_value": {
+                    "description": "条形码值",
+                    "type": "string"
+                },
                 "category_uuid": {
                     "description": "分类UUID",
                     "type": "integer"
@@ -25461,6 +25477,18 @@ const docTemplate = `{
                     "description": "成本单位UUID",
                     "type": "integer"
                 },
+                "from_cost_unit_uuid": {
+                    "description": "来源成本单位UUID",
+                    "type": "integer"
+                },
+                "from_purchase_unit_uuid": {
+                    "description": "来源采购单位UUID",
+                    "type": "integer"
+                },
+                "from_unit_uuid": {
+                    "description": "来源单位UUID",
+                    "type": "integer"
+                },
                 "locale_name": {
                     "description": "物品名称",
                     "allOf": [
@@ -25509,6 +25537,10 @@ const docTemplate = `{
                     "description": "单位名称",
                     "type": "string"
                 },
+                "unit_uuid": {
+                    "description": "单位UUID",
+                    "type": "integer"
+                },
                 "uuid": {
                     "description": "物品UUID",
                     "type": "integer"
@@ -25556,6 +25588,10 @@ const docTemplate = `{
                 "conversion_rate": {
                     "description": "转换率",
                     "type": "number"
+                },
+                "from_unit_uuid": {
+                    "description": "来源单位UUID",
+                    "type": "integer"
                 },
                 "locale_name": {
                     "description": "单位名称",
@@ -29136,7 +29172,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "status": {
-                    "description": "状态，1-启用 2-停用",
+                    "description": "状态，1-启用 0-停用",
                     "type": "integer"
                 },
                 "unit_list": {
@@ -29171,16 +29207,6 @@ const docTemplate = `{
         },
         "req.MaterialEditReq": {
             "type": "object",
-            "required": [
-                "barcode_value",
-                "category_uuid",
-                "cost_unit_uuid",
-                "locale_name",
-                "purchase_unit_uuid",
-                "unit_list",
-                "uuid",
-                "valuation"
-            ],
             "properties": {
                 "barcode_value": {
                     "description": "条形码值",
@@ -29223,21 +29249,12 @@ const docTemplate = `{
                 },
                 "valuation": {
                     "description": "估值率",
-                    "type": "number",
-                    "minimum": 0
+                    "type": "number"
                 }
             }
         },
         "req.MaterialImportItemReq": {
             "type": "object",
-            "required": [
-                "category_uuid",
-                "init_stock",
-                "locale_name",
-                "row",
-                "unit_uuid",
-                "valuation"
-            ],
             "properties": {
                 "barcode_value": {
                     "description": "条形码值",
@@ -29249,8 +29266,7 @@ const docTemplate = `{
                 },
                 "init_stock": {
                     "description": "期初库存",
-                    "type": "number",
-                    "minimum": 0
+                    "type": "number"
                 },
                 "locale_name": {
                     "description": "物品名称",
@@ -29274,21 +29290,12 @@ const docTemplate = `{
                 },
                 "valuation": {
                     "description": "估值率",
-                    "type": "number",
-                    "minimum": 0
+                    "type": "number"
                 }
             }
         },
         "req.MaterialImportListItemReq": {
             "type": "object",
-            "required": [
-                "category_name",
-                "init_stock",
-                "locale_name",
-                "row",
-                "unit_name",
-                "valuation"
-            ],
             "properties": {
                 "barcode_value": {
                     "description": "条形码值",
@@ -29300,8 +29307,7 @@ const docTemplate = `{
                 },
                 "init_stock": {
                     "description": "期初库存",
-                    "type": "number",
-                    "minimum": 0
+                    "type": "number"
                 },
                 "locale_name": {
                     "description": "名称",
@@ -29325,8 +29331,7 @@ const docTemplate = `{
                 },
                 "valuation": {
                     "description": "估值率",
-                    "type": "number",
-                    "minimum": 0
+                    "type": "number"
                 }
             }
         },
@@ -30508,7 +30513,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "status": {
-                    "description": "状态，1-启用 2-停用",
+                    "description": "状态，1-启用 0-停用",
                     "type": "integer"
                 },
                 "unit_list": {
@@ -30720,23 +30725,6 @@ const docTemplate = `{
         },
         "req.ProductImportItemReq": {
             "type": "object",
-            "required": [
-                "barcode",
-                "category_name",
-                "deduct_stock_type",
-                "is_enable_grade",
-                "locale_name",
-                "num_type",
-                "open_overall_discount",
-                "product_price",
-                "product_rating_tax_type",
-                "product_status",
-                "product_takeout_tax_type",
-                "product_unit",
-                "row",
-                "shows",
-                "sku_name"
-            ],
             "properties": {
                 "barcode": {
                     "description": "商品条码",
@@ -30850,23 +30838,6 @@ const docTemplate = `{
         },
         "req.ProductImportListItemReq": {
             "type": "object",
-            "required": [
-                "barcode",
-                "category_name",
-                "deduct_stock_type",
-                "is_enable_grade",
-                "locale_name",
-                "num_type",
-                "open_overall_discount",
-                "product_price",
-                "product_rating_tax_type",
-                "product_status",
-                "product_takeout_tax_type",
-                "product_unit",
-                "row",
-                "shows",
-                "sku_name"
-            ],
             "properties": {
                 "barcode": {
                     "description": "商品条码",
@@ -32561,7 +32532,7 @@ const docTemplate = `{
             "properties": {
                 "deposit_cash": {
                     "description": "存入金额, 最多小数点后两位",
-                    "type": "number"
+                    "type": "string"
                 }
             }
         },
@@ -32587,7 +32558,7 @@ const docTemplate = `{
             "properties": {
                 "withdraw_cash": {
                     "description": "取出金额, 最多小数点后两位",
-                    "type": "number"
+                    "type": "string"
                 }
             }
         },
@@ -34594,6 +34565,42 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.ErpnextSiteCompany": {
+            "type": "object",
+            "properties": {
+                "children": {
+                    "description": "子公司列表，用于树形结构",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ErpnextSiteCompany"
+                    }
+                },
+                "company_abbr": {
+                    "type": "string"
+                },
+                "company_name": {
+                    "type": "string"
+                },
+                "is_used": {
+                    "description": "是否已被使用",
+                    "type": "boolean"
+                },
+                "parent_company": {
+                    "type": "string"
+                }
+            }
+        },
+        "resp.ErpnextSiteCompanyResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ErpnextSiteCompany"
+                    }
+                }
+            }
+        },
         "resp.ExtraMemberCashierOrderListMeta": {
             "type": "object",
             "properties": {
@@ -35024,7 +35031,7 @@ const docTemplate = `{
                     "description": "厨显设置",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/setting.Kitchen"
+                            "$ref": "#/definitions/setting.KitchenResp"
                         }
                     ]
                 }
@@ -37487,6 +37494,10 @@ const docTemplate = `{
         "resp.PaymentMethodAmount": {
             "type": "object",
             "properties": {
+                "code": {
+                    "description": "支付方式代码。",
+                    "type": "integer"
+                },
                 "commission_fee": {
                     "description": "已付款的手续费。用于显示最终应收，前端显示的最终应收=应收金额+已付款的手续费+（当前支付方式的手续费费率*当前支付方式的金额输入框的值）",
                     "type": "number"
@@ -37765,6 +37776,10 @@ const docTemplate = `{
                 "data": {
                     "description": "打印数据",
                     "type": "string"
+                },
+                "enable_status_check": {
+                    "description": "是否启用状态检查",
+                    "type": "integer"
                 },
                 "is_cashier_printer": {
                     "description": "是否是收银机自带打印机",
@@ -38771,6 +38786,10 @@ const docTemplate = `{
                     "description": "采购单ID",
                     "type": "integer"
                 },
+                "purchase_time": {
+                    "description": "采购时间",
+                    "type": "integer"
+                },
                 "receive_time": {
                     "description": "收货日期",
                     "type": "integer"
@@ -38818,6 +38837,10 @@ const docTemplate = `{
                 },
                 "purchase_order_uuid": {
                     "description": "采购单ID",
+                    "type": "integer"
+                },
+                "purchase_time": {
+                    "description": "采购时间",
                     "type": "integer"
                 },
                 "receive_time": {
@@ -41196,64 +41219,6 @@ const docTemplate = `{
                             "$ref": "#/definitions/setting.OrderLimit"
                         }
                     ]
-                }
-            }
-        },
-        "setting.Kitchen": {
-            "type": "object",
-            "properties": {
-                "advanced_password": {
-                    "description": "高级设置密码",
-                    "type": "string"
-                },
-                "default_language": {
-                    "description": "默认语言",
-                    "type": "string"
-                },
-                "is_call_service": {
-                    "description": "是否开启顾客呼叫提醒 0-关闭 1-开启",
-                    "type": "string"
-                },
-                "is_come_dish": {
-                    "description": "是否开启来菜提醒 0-关闭 1-开启",
-                    "type": "string"
-                },
-                "is_open": {
-                    "description": "是否开启厨显功能 0关闭 1开启",
-                    "type": "string"
-                },
-                "is_wait_color": {
-                    "description": "是否开启等待时长颜色 0-关闭 1-开启",
-                    "type": "string"
-                },
-                "language": {
-                    "description": "常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "language_list": {
-                    "description": "语言列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/dto.LanguageItem"
-                    }
-                },
-                "server": {
-                    "description": "厨显服务器连接",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/setting.Server"
-                        }
-                    ]
-                },
-                "wait_color": {
-                    "description": "时长颜色 10分钟-黄色#ffff00 20分钟-红色#ff0000",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
                 }
             }
         },

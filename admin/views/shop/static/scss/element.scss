@@ -103,6 +103,12 @@
   color: var(--el-color-black);
   border-color: var(--el-color-border);
 }
+.el-button.is-disabled {
+  background-image: none;
+  border-color: var(--el-button-disabled-border-color);
+  color: var(--el-button-disabled-text-color);
+}
+
 .el-button:focus {
   outline: none;
 }

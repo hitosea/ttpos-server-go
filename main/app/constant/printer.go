@@ -35,7 +35,8 @@ const (
 	PrinterTypeXPrinterWifi = "XPRINTER_WIFI" // 芯烨-WIFI
 	PrinterTypeCodesoftLan  = "CODESOFT_LAN"  // Codesoft（网口）80mm
 	PrinterTypeCodesoftWifi = "CODESOFT_WIFI" // Codesoft（WIFI）80mm
-	//
+	PrinterTypeGpCloud      = "GP_CLOUD"      // 佳博 云打印
+	// 收银打印机
 	PrinterTypeCashierCompax = "CASHIER_COMPAX" // Compax 收银打印机 80mm 自带
 	PrinterTypeCashierSunmi  = "CASHIER_SUNMI"  // SUNMI 商米 收银打印机 80mm 自带
 )

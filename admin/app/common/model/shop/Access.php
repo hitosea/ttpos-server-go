@@ -2,6 +2,7 @@
 
 namespace app\common\model\shop;
 
+use app\common\model\app\App;
 use app\common\model\BaseModel;
 
 /**
@@ -49,6 +50,15 @@ class Access extends BaseModel
                 $model = $model->where('path', 'not in', ['/product/takeaway/category/index', '/product/store/category/index']);
             }
             $model = $model->where('is_supplier', '=', 1);
+        }
+        $enableErp = App::detail(self::$app_id)->isEnableErp();
+        if ($enableErp) {
+            $model = $model->where('path', 'not in', [
+                '/purchase/order/index', 
+                '/purchase/supplier/index',
+                '/inventory/wastage/index',
+                '/inventory/statement/index',
+            ]);
         }
         if ($isShow != -1) {
             $data = $model->where('is_show', '=', $isShow)

@@ -1,12 +1,14 @@
 package erp
 
 import (
-	"context"
 	"errors"
+	"slices"
 	companyApi "ttpos-bmp/app/ttpos-erp/api/company"
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/repository"
+	pkgCtx "ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/logger"
 
 	"go.uber.org/zap"
@@ -22,7 +24,7 @@ func NewErpCompanyClient() (companyApi.CompanyServiceClient, *grpc.ClientConn, e
 }
 
 // GetCompanyList 获取公司列表
-func (s *erpSrv) GetCompanyList(ctx context.Context, erpnextSiteCompanyReq req.ErpnextSiteCompanyReq) (resp.ErpnextSiteCompanyResp, error) {
+func (s *erpSrv) GetCompanyList(ctx pkgCtx.Context, erpnextSiteCompanyReq req.ErpnextSiteCompanyReq) (resp.ErpnextSiteCompanyResp, error) {
 	companyResp := resp.ErpnextSiteCompanyResp{
 		List: make([]resp.ErpnextSiteCompany, 0),
 	}
@@ -37,12 +39,12 @@ func (s *erpSrv) GetCompanyList(ctx context.Context, erpnextSiteCompanyReq req.E
 		CompanyAbbr:   erpnextSiteCompanyReq.CompanyAbbr,
 		ParentCompany: erpnextSiteCompanyReq.ParentCompany,
 	}
-	result, err := client.GetCompanyList(WithSiteCode(ctx, erpnextSiteCompanyReq.SiteCode), req)
+	result, err := client.GetCompanyList(WithSiteCode(ctx.GetContext(), erpnextSiteCompanyReq.SiteCode), req)
 	if err != nil {
 		return companyResp, err
 	}
 	if result.GetCode() != "0" || result.Data == nil {
-		logger.Logger.Error("GetCompanyList", zap.String("code", result.GetCode()), zap.String("msg", result.GetMessage()))
+		logger.Logger.Error("GetCompanyList", zap.String("code", result.GetCode()), zap.String("result_message", result.GetMessage()))
 		return companyResp, errors.New("获取公司列表失败")
 	}
 	// 反序列化响应数据
@@ -50,12 +52,20 @@ func (s *erpSrv) GetCompanyList(ctx context.Context, erpnextSiteCompanyReq req.E
 	if err := result.Data.UnmarshalTo(response); err != nil {
 		return resp.ErpnextSiteCompanyResp{}, err
 	}
+
+	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(0))
+	erpnextCompanyAbbrs, err := companySettingRepo.GetErpnextCompanyAbbrs(companySettingRepo.WhereErpnextCompanyAbbrNotEmpty())
+	if err != nil {
+		return companyResp, errors.New("获取公司列表失败")
+	}
+
 	var companyList []resp.ErpnextSiteCompany
 	for _, company := range response.CompanyList {
 		companyList = append(companyList, resp.ErpnextSiteCompany{
 			CompanyName:   company.CompanyName,
 			CompanyAbbr:   company.CompanyAbbr,
 			ParentCompany: company.ParentCompany,
+			IsUsed:        slices.Contains(erpnextCompanyAbbrs, company.CompanyAbbr),
 			Children:      []resp.ErpnextSiteCompany{},
 		})
 	}

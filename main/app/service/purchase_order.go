@@ -431,7 +431,7 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 		purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(tx)
 
 		// 查询采购申请
-		purchaseOrder, err := purchaseOrderRepo.GetByUuid(req.Uuid)
+		purchaseOrder, err := purchaseOrderRepo.GetByUuid(req.Uuid, purchaseOrderRepo.WithItems())
 		if err != nil {
 			if err == gorm.ErrRecordNotFound {
 				return errors.New("采购申请不存在")
@@ -439,21 +439,30 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 			return errors.WithMessage(err, "查询采购申请失败")
 		}
 
+		// 删除物品为0的数据
+		err = purchaseOrderItemRepo.DeleteByPurchaseOrderUuidAndNumIsZero(req.Uuid)
+		if err != nil {
+			return errors.WithMessage(err, "删除采购申请明细失败")
+		}
+
+		// 过滤掉数量为0的项目后重新计算数量
+		validItems := make([]model.PurchaseOrderItem, 0)
+		for _, item := range purchaseOrder.Items {
+			if item.Num > 0 {
+				validItems = append(validItems, item)
+			}
+		}
+
 		oldStatus := purchaseOrder.Status
 		purchaseOrder.Status = constant.PurchaseOrderStatusPending
 		purchaseOrder.OrderTime = time.Now().Unix()
 		purchaseOrder.ApplicantUuid = ctx.GetStaffUuid()
 		purchaseOrder.ApplicantName = ctx.GetStaff().RealName
+		purchaseOrder.Num = float64(len(validItems)) // 使用过滤后的数量
 
 		err = purchaseOrderRepo.Update(purchaseOrder)
 		if err != nil {
 			return errors.WithMessage(err, "更新采购申请状态失败")
-		}
-
-		// 删除物品为0的数据
-		err = purchaseOrderItemRepo.DeleteByPurchaseOrderUuidAndNumIsZero(req.Uuid)
-		if err != nil {
-			return errors.WithMessage(err, "删除采购申请明细失败")
 		}
 
 		// 记录操作日志
@@ -521,11 +530,18 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 		if ctx.GetCompany().IsOpenErp() && newStatus == constant.PurchaseOrderStatusApproved {
 			stockItems := make([]*stock.MaterialRequestItem, 0)
 			for _, item := range purchaseOrder.Items {
+				materialUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(item.UnitUuid)
+				if err != nil {
+					return errors.WithMessage(err, "查询物品单位失败")
+				}
+				if materialUnit.Unit == nil {
+					return errors.New("查询物品原始单位失败")
+				}
 				stockItems = append(stockItems, &stock.MaterialRequestItem{
 					ItemCode:     item.MaterialCode,
 					Qty:          item.Num,
 					ScheduleDate: purchaseOrder.ExpectArrivalTime,
-					Uom:          language.JsonToLocaleResponse(item.UnitName).EN,
+					Uom:          materialUnit.Unit.ErpnextUom,
 				})
 			}
 			resp, err := erp.NewIErpSrv(s.dbm).CreatePurchaseOrder(ctx, &stock.SaveMaterialRequestReq{
@@ -537,9 +553,6 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 			if err != nil {
 				return errors.WithMessage(err, "调用erp接口失败")
 			}
-
-			fmt.Println("resp", utils.ToJsonString(resp))
-
 			// 更新采购申请单号
 			purchaseOrder.ErpOrderNo = resp.PurchaseOrder
 			err = purchaseOrderRepo.Update(purchaseOrder)
@@ -615,6 +628,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 			Status:            utils.IfInt(req.IsConfirm, constant.ReceiptOrderStatusReceived, constant.ReceiptOrderStatusPending), // 待收货状态
 			PurchaseOrderUuid: req.PurchaseOrderUuid,
 			PurchaseOrderNo:   purchaseOrder.OrderNo,
+			PurchaseTime:      purchaseOrder.OrderTime,
 			Num:               float64(len(req.Items)),
 			ExpectArrivalTime: purchaseOrder.ExpectArrivalTime,
 			ReceiveTime:       req.ReceiveTime,
@@ -1037,7 +1051,7 @@ func (s *purchaseOrderSrv) generatePurchaseOrderSerialNo(ctx context.Context, db
 // 格式：CSSH+年月日+0000自增序列号
 func (s *purchaseOrderSrv) generateReceiptNo(ctx context.Context, db *gorm.DB) string {
 	// 固定前缀
-	prefix := "CGSH"
+	prefix := "SHRK"
 	// 年月日部分
 	datePart := time.Now().Format("20060102")
 
@@ -1171,13 +1185,11 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 		return nil
 	}
 
-	// 获取收货单明细
-	items := receiptOrder.Items
 	// 添加物料库存
 	materialRepo := repository.NewMaterialRepo(db)
-	for _, item := range items {
+	for _, item := range receiptOrder.Items {
 		// 获取物料信息
-		material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid)
+		material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid, materialRepo.WithRelatedMaterialList())
 		if err != nil {
 			return errors.WithMessage(err, "获取物料信息失败")
 		}
@@ -1188,6 +1200,21 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 		err = materialRepo.UpdateMaterial(material)
 		if err != nil {
 			return errors.WithMessage(err, "更新物料库存失败")
+		}
+		//
+		relatedMaterialUuids := make([]uint64, 0)
+		for _, relatedMaterial := range material.RelatedMaterialList {
+			if relatedMaterial.IsDelete() {
+				continue
+			}
+			if relatedMaterial.IsUsed == 0 {
+				continue
+			}
+			relatedMaterialUuids = append(relatedMaterialUuids, relatedMaterial.Uuid)
+		}
+		err = s.updateRelatedMaterialStock(db, relatedMaterialUuids)
+		if err != nil {
+			return errors.WithMessage(err, "更新规格/加料关联材料库存失败")
 		}
 	}
 
@@ -1219,4 +1246,57 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 	}
 
 	return nil
+}
+
+// updateRelatedMaterialStock 更新规格/加料关联材料库存
+func (s *purchaseOrderSrv) updateRelatedMaterialStock(db *gorm.DB, relatedMaterialUuids []uint64) error {
+	// 如果材料UUID列表为空，直接返回
+	if len(relatedMaterialUuids) == 0 {
+		return nil
+	}
+	// 使用事务确保数据一致性
+	return db.Transaction(func(tx *gorm.DB) error {
+		// 构建复杂SQL查询来更新产品BOM的库存数量
+		// 1. 从related_material表获取关联信息
+		// 2. 连接material表获取材料库存信息
+		// 3. 计算每个关联的最小库存数量（材料库存/用量）
+		// 4. 更新product_bom表的stock_num字段
+		sql := `
+			UPDATE ttpos_product_bom AS pb 
+			JOIN (
+				SELECT 
+					rm.related_uuid, 
+					LEAST(IFNULL(
+						FLOOR(
+							MIN(
+								m.stock_num / (rm.num * rm.base_unit_conversion_rate)
+							)
+						)
+					, 0), 99999999) AS min_stock_num
+				FROM ttpos_related_material AS rm
+				JOIN ttpos_material AS m ON rm.material_uuid = m.uuid
+				WHERE rm.uuid IN (?) 
+				  AND rm.delete_time = 0 
+				  AND rm.unit_uuid > 0
+				GROUP BY rm.related_uuid
+			) AS sub ON pb.product_bom_card_uuid = sub.related_uuid
+			SET pb.stock_num = sub.min_stock_num
+			WHERE pb.product_bom_card_uuid IN (
+				SELECT 
+					DISTINCT related_uuid 
+				FROM ttpos_related_material 
+				WHERE uuid IN (?) 
+				AND delete_time = 0 
+				AND unit_uuid > 0
+			)
+		`
+
+		// 执行SQL更新
+		err := tx.Exec(sql, relatedMaterialUuids, relatedMaterialUuids).Error
+		if err != nil {
+			return errors.WithMessage(err, "更新规格/加料关联材料库存失败")
+		}
+
+		return nil
+	})
 }

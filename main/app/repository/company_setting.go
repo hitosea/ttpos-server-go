@@ -9,10 +9,13 @@ import (
 
 type ICompanySettingRepo interface {
 	WhereErpnextCompanyAbbr(erpnextCompanyAbbr string) DBOption
+	WhereErpnextCompanyAbbrNotEmpty() DBOption
 
 	GetOne(opts ...DBOption) (model.CompanySetting, error)
 	Get() model.CompanySetting
 	UpdateSmsQuota(companyUuid uint64, quota int) error // 扣减公司的短信余额
+
+	GetErpnextCompanyAbbrs(opts ...DBOption) ([]string, error)
 }
 
 func NewCompanySettingRepo(db *gorm.DB) ICompanySettingRepo {
@@ -54,4 +57,20 @@ func (r *companySettingRepo) GetOne(opts ...DBOption) (model.CompanySetting, err
 	}
 	err := db.Take(&companySetting).Error
 	return companySetting, err
+}
+
+func (r *companySettingRepo) GetErpnextCompanyAbbrs(opts ...DBOption) ([]string, error) {
+	var erpnextCompanyAbbrs []string
+	db := r.db.Model(&model.CompanySetting{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Pluck("erpnext_company_abbr", &erpnextCompanyAbbrs).Error
+	return erpnextCompanyAbbrs, errors.WithMessage(err)
+}
+
+func (r *companySettingRepo) WhereErpnextCompanyAbbrNotEmpty() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("erpnext_company_abbr != ''")
+	}
 }

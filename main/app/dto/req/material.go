@@ -48,7 +48,7 @@ type MaterialDetailReq struct {
 type MaterialAddReq struct {
 	LocaleName       dto.LocaleResponse `json:"locale_name"`        // 物品名称
 	CategoryUuid     uint64             `json:"category_uuid"`      // 分类UUID
-	Status           int                `json:"status"`             // 状态，1-启用 2-停用
+	Status           int                `json:"status"`             // 状态，1-启用 0-停用
 	Valuation        float64            `json:"valuation"`          // 估值率
 	InitStock        float64            `json:"init_stock"`         // 期初库存
 	BarcodeValue     string             `json:"barcode_value"`      // 条形码值
@@ -86,12 +86,22 @@ func (r *MaterialAddReq) Validate() error {
 			}
 		}
 	}
+	// 创建的时候期初库存跟估值率要大于0
+	if r.Valuation <= 0 {
+		return errors.WithMessage(errors.New("估值率需大于零"))
+	}
+	if r.InitStock <= 0 {
+		return errors.WithMessage(errors.New("期初库存需大于零"))
+	}
 	return nil
 }
 
 type MaterialAddErpReq struct {
+	ItemCode      string           `json:"item_code" binding:"required"`      // 物品编码, 如果为空，则为新增；如果非空，则为编辑
 	ItemName      string           `json:"item_name" binding:"required"`      // 物品名称, 英文
 	StockUom      string           `json:"stock_uom" binding:"required"`      // 基准库存单位, 英文
+	Disabled      bool             `json:"disabled" binding:"required"`       // 是否禁用
+	BarcodeValue  string           `json:"barcode_value" binding:"required"`  // 条形码值
 	ValuationRate float64          `json:"valuation_rate" binding:"required"` // 估值率
 	OpeningStock  float64          `json:"opening_stock" binding:"required"`  // 期初库存
 	Uoms          []MaterialUomReq `json:"uoms" binding:"required,dive"`      // 单位列表
@@ -230,14 +240,14 @@ type ProductBomCardImportReq struct {
 
 // MaterialImportListItemReq 导入物品项请求
 type MaterialImportListItemReq struct {
-	LocaleName   dto.LocaleResponse `json:"locale_name" binding:"required"`      // 名称
-	CategoryName string             `json:"category_name" binding:"required"`    // 分类名称
-	BarcodeValue string             `json:"barcode_value"`                       // 条形码值
-	Status       int                `json:"status"`                              // 状态，1-启用 0-停用
-	UnitName     string             `json:"unit_name" binding:"required"`        // 基准单位名称
-	Valuation    float64            `json:"valuation" binding:"required,min=0"`  // 估值率
-	InitStock    float64            `json:"init_stock" binding:"required,min=0"` // 期初库存
-	Row          int                `json:"row" binding:"required"`              // 行号
+	LocaleName   dto.LocaleResponse `json:"locale_name"`   // 名称
+	CategoryName string             `json:"category_name"` // 分类名称
+	BarcodeValue string             `json:"barcode_value"` // 条形码值
+	Status       int                `json:"status"`        // 状态，1-启用 0-停用
+	UnitName     string             `json:"unit_name"`     // 基准单位名称
+	Valuation    float64            `json:"valuation"`     // 估值率
+	InitStock    float64            `json:"init_stock"`    // 期初库存
+	Row          int                `json:"row"`           // 行号
 }
 
 // MaterialImportListReq 导入物品列表请求
@@ -247,17 +257,28 @@ type MaterialImportListReq struct {
 
 // ProductImportItemReq 导入商品项请求
 type MaterialImportItemReq struct {
-	LocaleName   dto.LocaleResponse `json:"locale_name" binding:"required"`      // 物品名称
-	CategoryUuid uint64             `json:"category_uuid" binding:"required"`    // 分类UUID
-	UnitUuid     uint64             `json:"unit_uuid" binding:"required"`        // 单位UUID
-	Valuation    float64            `json:"valuation" binding:"required,min=0"`  // 估值率
-	InitStock    float64            `json:"init_stock" binding:"required,min=0"` // 期初库存
-	BarcodeValue string             `json:"barcode_value"`                       // 条形码值
-	Status       int                `json:"status"`                              // 状态，1-启用 0-停用
-	Row          int                `json:"row" binding:"required"`              // excel表的行编号
+	LocaleName   dto.LocaleResponse `json:"locale_name"`   // 物品名称
+	CategoryUuid uint64             `json:"category_uuid"` // 分类UUID
+	UnitUuid     uint64             `json:"unit_uuid"`     // 单位UUID
+	Valuation    float64            `json:"valuation"`     // 估值率
+	InitStock    float64            `json:"init_stock"`    // 期初库存
+	BarcodeValue string             `json:"barcode_value"` // 条形码值
+	Status       int                `json:"status"`        // 状态，1-启用 0-停用
+	Row          int                `json:"row"`           // excel表的行编号
 }
 
 // ProductImportReq 导入商品请求
 type MaterialImportReq struct {
 	List []MaterialImportItemReq `json:"list" binding:"required,dive"` // 商品列表
+}
+
+// DeleteProductErpReq 删除商品请求
+type DeleteProductErpReq struct {
+	Items []DeleteProductErpItemReq `json:"items"` // 商品列表
+}
+
+type DeleteProductErpItemReq struct {
+	ItemCode string `json:"item_code" binding:"required"` // 商品编码
+	ItemName string `json:"item_name" binding:"required"` // 商品名称, 英文.没办法，接口要传
+	StockUom string `json:"stock_uom" binding:"required"` // 商品单位, 英文.没办法，接口要传
 }

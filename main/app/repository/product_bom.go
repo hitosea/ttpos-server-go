@@ -11,13 +11,13 @@ type IProductBomRepo interface {
 	IProductBomQueryRepo
 	CreateProductBom(productBom model.ProductBom) (*model.ProductBom, error)
 	UpdateProductBom(data map[string]any, opts ...DBOption) error
-	UpdateProductBomStockNum(warehouseOutFormItems []*model.WarehouseOutFormItem) error // 更新规格商品或小料的库存数量
-	UpdateProductBoms(productBoms []*model.ProductBom) error                            // 更新ProductBom
-	CreateProductBoms(productBoms []model.ProductBom) error                             // 创建ProductBom
-	UpdateProductBomCard(productBomUuid uint64, productBomCardUuid uint64) error        // 更新规格商品的成本卡
-	GetProductBomCardByUuid(productBomUuid uint64) (*model.ProductBomCard, error)       // 获取成本卡
-	AddActualSaleNum(productBomUuid uint64, saleNum float64) error                      // 增加实际销量
-	SubActualSaleNum(productBomUuid uint64, saleNum float64) error                      // 减少实际销量
+	UpdateProductBomStockNum(warehouseOutFormItems []*model.WarehouseOutFormItem) error            // 更新规格商品或小料的库存数量
+	UpdateProductBoms(productBoms []*model.ProductBom) error                                       // 更新ProductBom
+	CreateProductBoms(productBoms []model.ProductBom) error                                        // 创建ProductBom
+	UpdateProductBomCard(productBomUuid uint64, productBomCardUuid uint64, stockNum float64) error // 更新规格商品的成本卡
+	GetProductBomCardByUuid(productBomUuid uint64) (*model.ProductBomCard, error)                  // 获取成本卡
+	AddActualSaleNum(productBomUuid uint64, saleNum float64) error                                 // 增加实际销量
+	SubActualSaleNum(productBomUuid uint64, saleNum float64) error                                 // 减少实际销量
 }
 
 // IProductBomQueryRepo 定义仓库查询接口
@@ -113,6 +113,12 @@ func (r *productBomRepoImpl) GetFlavorProductBomByUuid(uuid uint64) (*model.Prod
 			},
 			WithPreload{
 				Query: "ProductPackage.ProductUnit",
+			},
+			WithPreload{
+				Query: "ProductBomCard.RelatedMaterials.Material",
+			},
+			WithPreload{
+				Query: "ProductSauce.ProductBomCard.RelatedMaterials.Material",
 			},
 		),
 	)
@@ -222,9 +228,11 @@ func (r *productBomRepoImpl) WhereProductSauceUuid(uuid uint64) DBOption {
 	}
 }
 
-func (r *productBomRepoImpl) UpdateProductBomCard(productBomUuid uint64, productBomCardUuid uint64) error {
+// 更新规格商品的成本卡，修改成本卡uuid和库存数量
+func (r *productBomRepoImpl) UpdateProductBomCard(productBomUuid uint64, productBomCardUuid uint64, stockNum float64) error {
 	if err := r.db.Model(&model.ProductBom{}).Where("uuid = ?", productBomUuid).Updates(map[string]interface{}{
 		"product_bom_card_uuid": productBomCardUuid,
+		"stock_num":             stockNum,
 	}).Error; err != nil {
 		return errors.WithMessage(err)
 	}

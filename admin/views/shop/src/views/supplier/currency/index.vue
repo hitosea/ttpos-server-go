@@ -23,7 +23,7 @@
         <el-input class="max-w460" v-model="form.vice_unit" :placeholder="$t('请输入')" :maxlength="50"></el-input>
       </el-form-item>
       <el-form-item v-if="form.is_open == '1'" :label="$t('副货币汇率')" prop="unit_rate">
-        <el-input-number class="max-w460" :controls="false" :precision="4" :min="0" :placeholder="$t('请输入')" v-model.number="form.unit_rate"></el-input-number>
+        <el-input-number class="max-w460" :controls="false"  :min="0" :placeholder="$t('请输入')" v-model.number="form.unit_rate"></el-input-number>
       </el-form-item>
       <el-form-item v-if="form.is_open == '1'" :label="$t('副货币显示位置')" prop="vice_unit_position">
         <div>

@@ -56,6 +56,7 @@ type staffShiftSrv struct {
 	cacheKeyPrefix string
 	cashBoxSrv     ICashBoxSrv
 	statisticsSrv  IStatisticsSrv
+	MaxAmount      string
 }
 
 func NewShiftSrvImpl(cache cache.Cache, dbm *database.DBManager, cashBoxSrv ICashBoxSrv, statisticsSrv IStatisticsSrv) IStaffShiftSrv {
@@ -65,6 +66,7 @@ func NewShiftSrvImpl(cache cache.Cache, dbm *database.DBManager, cashBoxSrv ICas
 		cacheKeyPrefix: "__USERSHIFTLOG_GENERATENUMBER__",
 		cashBoxSrv:     cashBoxSrv,
 		statisticsSrv:  statisticsSrv,
+		MaxAmount:      "1000000000000",
 	}
 }
 
@@ -229,6 +231,15 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 	if staff.Uuid == 0 {
 		return nil, errors.New("员工不存在")
 	}
+	// 获取所有支付方式
+	paymentRepo := repository.NewPaymentMethodRepo(db)
+	paymentMethodList := paymentRepo.GetPaymentMethodList(paymentRepo.WhereExistsErpnextPayment())
+	paymentMethodMap := make(map[string]string)
+	for _, paymentMethod := range paymentMethodList {
+		if paymentMethod.ErpnextPayment != "" {
+			paymentMethodMap[paymentMethod.ErpnextPayment] = paymentMethod.PaymentName
+		}
+	}
 	var currentCashTotal decimal.Decimal
 	err := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 		// 获取当前班次
@@ -238,6 +249,11 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 			repository.CommonRepo.WhereByShiftNo(staff.DutyNo),
 		)
 		if err != nil {
+			logger.Logger.Error("SubmitShif",
+				zap.Any("tips", "当前班次不存在"),
+				zap.Any("staff", staff),
+				zap.Error(err),
+			)
 			return errors.New("当前班次不存在")
 		}
 		if shiftLog.IsHandedOver() {
@@ -267,6 +283,10 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 		paymentData := s.statisticsSrv.CountPayment(ctx, CountReq{
 			DutyNo: shiftLog.ShiftNo,
 		})
+		companySetting := ctx.GetCompanySetting()
+		company := ctx.GetCompany()
+		needErpClosePos := company.IsOpenErp() && companySetting.ErpnextSiteCode != "" && shiftLog.ErpnextOpenPosEntryName != ""
+		closePosEntryDetail := make([]req.ClosePosEntryDetail, 0)
 		for _, payment := range paymentData.PaymentList {
 			paymentMethodIncomeList = append(paymentMethodIncomeList, resp.PaymentMethodIncome{
 				Name:   payment.PaymentName,
@@ -274,34 +294,67 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 			})
 			if payment.PaymentCode == constant.PaymentMethodCodeCash {
 				cashAmount = decimal.NewFromFloat(cashAmount).Add(decimal.NewFromFloat(payment.TotalPaymentAmount)).InexactFloat64()
+			} else {
+				if needErpClosePos && decimal.NewFromFloat(payment.TotalPaymentAmount).GreaterThan(decimal.NewFromFloat(999999999999.99)) {
+					return errors.WithMessage(errors.New(paymentMethodMap[payment.ErpnextPayment]+i18n.Translate(ctx.GetLanguage(), "最大为999999999999.99")), "交班失败")
+				}
+				closePosEntryDetail = append(closePosEntryDetail, req.ClosePosEntryDetail{
+					ModeOfPayment: payment.ErpnextPayment,
+					OpeningAmount: 0,
+					ClosingAmount: payment.TotalPaymentAmount,
+				})
 			}
+		}
+		cashAmountDecimal := decimal.NewFromFloat(cashAmount).Add(decimal.NewFromFloat(shiftLog.PreviousShiftCash))
+		if needErpClosePos && cashAmountDecimal.GreaterThan(decimal.NewFromFloat(999999999999.99)) {
+			return errors.WithMessage(errors.New(paymentMethodMap["Cash"]+i18n.Translate(ctx.GetLanguage(), "最大为999999999999.99")), "交班失败")
+		}
+		closePosEntryDetail = append(closePosEntryDetail, req.ClosePosEntryDetail{
+			ModeOfPayment: "Cash",
+			OpeningAmount: shiftLog.PreviousShiftCash,
+			ClosingAmount: cashAmountDecimal.InexactFloat64(),
+		})
+		if saleData.TotalFreeAmount > 0 {
+			closePosEntryDetail = append(closePosEntryDetail, req.ClosePosEntryDetail{
+				ModeOfPayment: "Free Meal",
+				OpeningAmount: 0,
+				ClosingAmount: saleData.TotalFreeAmount,
+			})
 		}
 		incomes, _ := convertor.ToJson(paymentMethodIncomeList)
 		// 更新当班记录
 		currentCashTotal = leaveCash
 		var erpnextClosePosEntryName string
-		companySetting := ctx.GetCompanySetting()
-		company := ctx.GetCompany()
-		if company.IsOpenErp() && companySetting.ErpnextSiteCode != "" && shiftLog.ErpnextOpenPosEntryName != "" {
+		if needErpClosePos {
 			erpSrv := erp.NewIErpSrv(s.dbm)
 			openPosEntryName, err := erpSrv.ClosePosEntry(ctx.GetContext(), req.ClosePosEntryReq{
-				SiteCode:         companySetting.ErpnextSiteCode,
-				PosProfileName:   companySetting.ErpnextPosProfileName,
-				PosOpenEntryName: shiftLog.ErpnextOpenPosEntryName,
-				PeriodEndDate:    time.Now().Unix(),
-				ClosePosEntryDetail: []req.ClosePosEntryDetail{{
-					ModeOfPayment: "Cash",
-					OpeningAmount: shiftLog.PreviousShiftCash,
-					ClosingAmount: currentCashTotal.InexactFloat64(),
-				}},
+				SiteCode:            companySetting.ErpnextSiteCode,
+				PosProfileName:      companySetting.ErpnextPosProfileName,
+				PosOpenEntryName:    shiftLog.ErpnextOpenPosEntryName,
+				PeriodEndDate:       time.Now().Unix(),
+				ClosePosEntryDetail: closePosEntryDetail,
 			})
 			if err != nil {
-				return errors.WithMessage(err, "交班失败")
+				ctx.Log().Info("ClosePosEntry", zap.String("msg", err.Error()))
+				// 1、交班时物品被禁用
+				msg := utils.ShortenErpnextError(err.Error())
+				if isItemDisabled, itemCode := utils.IsItemDisabledError(msg); isItemDisabled {
+					material, err := repository.NewMaterialRepo(db).GetMaterialByErpCode(itemCode)
+					if err != nil {
+						ctx.Log().Info("GetMaterialByErpCode", zap.String("msg", err.Error()), zap.String("erp_msg", msg))
+						return errors.WithMessage(err)
+					}
+					// 物品被禁用，无法交班
+					tips := i18n.Translate(ctx.GetLanguage(), "物品被禁用，无法交班")
+					name := material.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+					return errors.WithMessage(errors.New(fmt.Sprintf("%s: %s", tips, name)), fmt.Sprintf("物品%s已禁用", name))
+				}
+				return errors.WithMessage(errors.New("交班失败，请重试"), "交班失败")
 			}
 			erpnextClosePosEntryName = openPosEntryName
 		}
 		shiftEndTime := time.Now().Unix()
-		_, err = shiftLogRepo.Update(shiftLog, map[string]interface{}{
+		_, err = shiftLogRepo.Update(shiftLog, map[string]any{
 			"status":                       constant.StaffHandedOver,          // 交班状态
 			"current_cash_total":           currentCashTotal.InexactFloat64(), // 当前钱箱现金总计
 			"cash_taken_out":               withdrawCash.InexactFloat64(),     // 取出现金
@@ -359,7 +412,7 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 		}()
 
 		//
-		go websocket.PushClient(staff.CompanyUuid, websocket.SourceAssistant, websocket.SourceAll, websocket.UPDATE_CONFIG, map[string]interface{}{
+		go websocket.PushClient(staff.CompanyUuid, websocket.SourceAssistant, websocket.SourceAll, websocket.UPDATE_CONFIG, map[string]any{
 			"update_time": time.Now().Unix(),
 		})
 
@@ -444,7 +497,7 @@ func (s *staffShiftSrv) SubmitCashierReport(ctx context.Context, req req.Cashier
 		return errors.New("当前班次已交班")
 	}
 	// 更新交班记录
-	_, err = shiftLogRepo.Update(log, map[string]interface{}{
+	_, err = shiftLogRepo.Update(log, map[string]any{
 		"exception_remark": req.ExceptionRemark,
 	})
 	if err != nil {
@@ -456,12 +509,19 @@ func (s *staffShiftSrv) SubmitCashierReport(ctx context.Context, req req.Cashier
 
 // ShiftWithdraw 交班取钱
 func (s *staffShiftSrv) ShiftWithdraw(ctx context.Context, req req.ShiftWithdrawReq) error {
-	if req.WithdrawCash <= 0 {
+	withdrawCash, err := decimal.NewFromString(req.WithdrawCash)
+	if err != nil {
+		return errors.New("请输入正确金额")
+	}
+	if withdrawCash.LessThanOrEqual(decimal.Zero) {
+		return errors.New("请输入正确金额")
+	}
+	if withdrawCash.LessThanOrEqual(decimal.Zero) {
 		return errors.New("请输入正确金额")
 	}
 	// 验证参数, 大于0, 最多小数点后两位
 	reg := regexp.MustCompile(`^([1-9]\d*|0)(\.\d{1,2})?$`)
-	if !reg.MatchString(convertor.ToString(req.WithdrawCash)) {
+	if !reg.MatchString(withdrawCash.String()) {
 		return errors.New("请输入正确金额")
 	}
 	staff := ctx.GetStaff()
@@ -478,11 +538,19 @@ func (s *staffShiftSrv) ShiftWithdraw(ctx context.Context, req req.ShiftWithdraw
 		return errors.New("当前班次已交班")
 	}
 
+	maxAmount, err := decimal.NewFromString(s.MaxAmount)
+	if err != nil {
+		return errors.New("最大金额格式错误")
+	}
+	if decimal.NewFromFloat(log.WithdrawCash).Add(withdrawCash).GreaterThanOrEqual(maxAmount) {
+		return errors.NewWithReplace("当前班次取钱累计金额不能大于最大金额%s", []string{s.MaxAmount})
+	}
+
 	err = repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 		// 更新钱箱记录
 		err = s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
-			Amount:         -req.WithdrawCash,
-			CashWithdrawal: req.WithdrawCash,
+			Amount:         -withdrawCash.InexactFloat64(),
+			CashWithdrawal: withdrawCash.InexactFloat64(),
 			Scene:          constant.CashBoxLogSceneOut,
 		})
 		if err != nil {
@@ -494,8 +562,8 @@ func (s *staffShiftSrv) ShiftWithdraw(ctx context.Context, req req.ShiftWithdraw
 		if err != nil {
 			return errors.New("获取钱箱余额失败")
 		}
-		_, err = shiftLogRepo.Update(log, map[string]interface{}{
-			"withdraw_cash": gorm.Expr("withdraw_cash + ?", req.WithdrawCash),
+		_, err = shiftLogRepo.Update(log, map[string]any{
+			"withdraw_cash": gorm.Expr("withdraw_cash + ?", withdrawCash.InexactFloat64()),
 			"cash_left":     balance,
 		})
 		if err != nil {
@@ -514,11 +582,15 @@ func (s *staffShiftSrv) ShiftWithdraw(ctx context.Context, req req.ShiftWithdraw
 // ShiftDeposit 交班存钱
 func (s *staffShiftSrv) ShiftDeposit(ctx context.Context, req req.ShiftDepositReq) error {
 	// 验证参数, 大于0, 最多小数点后两位
-	if req.DepositCash <= 0 {
+	depositCash, err := decimal.NewFromString(req.DepositCash)
+	if err != nil {
+		return errors.New("请输入正确金额")
+	}
+	if depositCash.LessThanOrEqual(decimal.Zero) {
 		return errors.New("请输入正确金额")
 	}
 	reg := regexp.MustCompile(`^([1-9]\d*|0)(\.\d{1,2})?$`)
-	if !reg.MatchString(convertor.ToString(req.DepositCash)) {
+	if !reg.MatchString(depositCash.String()) {
 		return errors.New("请输入正确金额")
 	}
 	staff := ctx.GetStaff()
@@ -535,19 +607,38 @@ func (s *staffShiftSrv) ShiftDeposit(ctx context.Context, req req.ShiftDepositRe
 		return errors.New("当前班次已交班")
 	}
 
+	maxAmount, err := decimal.NewFromString(s.MaxAmount)
+	if err != nil {
+		return errors.New("最大金额格式错误")
+	}
+
+	// 当前班次存钱累计金额不能大于最大金额
+	if decimal.NewFromFloat(log.DepositCash).Add(depositCash).GreaterThanOrEqual(maxAmount) {
+		return errors.NewWithReplace("当前班次存钱累计金额不能大于最大金额%s", []string{s.MaxAmount})
+	}
+
+	// 钱箱余额不能大于最大金额
+	balance, err := s.cashBoxSrv.GetBalance(ctx)
+	if err != nil {
+		return errors.New("获取钱箱余额失败")
+	}
+	if decimal.NewFromFloat(balance).Add(depositCash).GreaterThanOrEqual(maxAmount) {
+		return errors.NewWithReplace("钱箱余额不能大于最大金额%s", []string{s.MaxAmount})
+	}
+
 	err = repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 		// 更新交班记录
-		_, err = shiftLogRepo.Update(log, map[string]interface{}{
-			"deposit_cash": gorm.Expr("deposit_cash + ?", req.DepositCash),
-			"cash_left":    gorm.Expr("cash_left + ?", req.DepositCash),
+		_, err = shiftLogRepo.Update(log, map[string]any{
+			"deposit_cash": gorm.Expr("deposit_cash + ?", depositCash.InexactFloat64()),
+			"cash_left":    gorm.Expr("cash_left + ?", depositCash.InexactFloat64()),
 		})
 		if err != nil {
 			return errors.New("存钱失败")
 		}
 		// 更新钱箱记录
 		err = s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
-			Amount:      req.DepositCash,
-			CashDeposit: req.DepositCash,
+			Amount:      depositCash.InexactFloat64(),
+			CashDeposit: depositCash.InexactFloat64(),
 			Scene:       constant.CashBoxLogSceneIn,
 		})
 		if err != nil {

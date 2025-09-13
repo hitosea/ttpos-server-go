@@ -18,11 +18,15 @@ class CardRecord extends CardRecordModel
     {
         $model = $this->withTrashed()->alias('r')
                 ->field('r.*')
-                ->with(['card', 'user'])
+                ->with([
+                    'card', 
+                    'user' => function($query) {
+                        $query->withTrashed();
+                    }
+                ])
                 ->join('member u', 'u.uuid=r.member_uuid')
                 ->join('member_card_type c', 'c.uuid=r.member_card_type_uuid')
                 ->where('r.delete_time', '=', 0)
-                ->where('u.delete_time', '=', 0)
                 ->order(['r.create_time' => 'desc']);
 
         if (isset($data['card_name']) && $data['card_name'] != '') {

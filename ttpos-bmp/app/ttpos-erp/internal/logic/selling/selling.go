@@ -13,6 +13,7 @@ import (
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
 )
@@ -453,7 +454,7 @@ func (s *sSelling) buildOpeningEntryRequest(req *selling.OpenPosEntryReq, compan
 	return &erp.POSOpeningEntry{
 		PosProfile:      req.PosProfileName,
 		Company:         companyName,
-		PeriodStartDate: gtime.New(req.PeriodStartDate).Format("Y-m-d H:i:s"),
+		PeriodStartDate: service.Setup().MustGetLocalDateTime(gctx.GetInitCtx(), gtime.New(req.PeriodStartDate)).Format("Y-m-d H:i:s"),
 		User:            req.CashierEmail,
 		BalanceDetails:  openDetails,
 	}
@@ -503,9 +504,10 @@ func (s *sSelling) ClosePosEntry(ctx context.Context, req *selling.ClosePosEntry
 	// 获取期间发票
 	invoices, err := s.GetPosInvoiceList(ctx, &dtoSelling.GetPosInvoiceListReq{
 		PosProfile: openEntry.PosProfile,
-		StartDate:  gtime.New(openEntry.PeriodStartDate),
-		EndDate:    gtime.New(req.PeriodEndDate),
+		StartDate:  openEntry.PeriodStartDate,
+		EndDate:    service.Setup().MustGetLocalDateTime(ctx, gtime.New(req.PeriodEndDate)).Format("Y-m-d H:i:s"),
 		User:       openEntry.User,
+		Docstatus:  erp.DocstatusSubmitted,
 	})
 	if err != nil {
 		return nil, gerror.Wrapf(err, "获取期间发票失败")
@@ -569,7 +571,7 @@ func (s *sSelling) buildClosingEntryDetails(details []*selling.ClosePosEntryDeta
 func (s *sSelling) buildClosingEntryRequest(req *selling.ClosePosEntryReq, closeDetails []erp.POSPaymentReconciliation) *erp.POSCloseEntry {
 	return &erp.POSCloseEntry{
 		PosOpeningEntry:       req.PosOpenEntryName,
-		PeriodEndDate:         gtime.New(req.PeriodEndDate).Format("Y-m-d H:i:s"),
+		PeriodEndDate:         service.Setup().MustGetLocalDateTime(gctx.GetInitCtx(), gtime.New(req.PeriodEndDate)).Format("Y-m-d H:i:s"),
 		PaymentReconciliation: closeDetails,
 	}
 }
@@ -645,7 +647,8 @@ func (s *sSelling) GetPosInvoiceList(ctx context.Context, req *dtoSelling.GetPos
 		Fields: g.ArrayStr{"name", "posting_date", "customer", "grand_total", "is_return", "return_against"},
 		Filters: [][]string{{"pos_profile", "=", req.PosProfile},
 			{"owner", "=", req.User},
-			{"creation", ">=", req.StartDate.Format("Y-m-d H:i:s")}, {"creation", "<=", req.EndDate.Format("Y-m-d H:i:s")}},
+			{"creation", ">=", req.StartDate}, {"creation", "<=", req.EndDate},
+			{"docstatus", "=", req.Docstatus}},
 	})
 	if err != nil {
 		return nil, gerror.Wrapf(err, "查询POS发票列表失败")
@@ -748,13 +751,13 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
 		}
 
 		res.MaterialInvoiceName = j.Get("data.name").String()
+		// 提交发票记录
+		_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePosInvoice, res.MaterialInvoiceName, 1)
+		if err != nil {
+			return nil, gerror.Wrapf(err, "提交发票记录失败")
+		}
 	}
 
-	// 提交发票记录
-	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePosInvoice, res.MaterialInvoiceName, 1)
-	if err != nil {
-		return nil, gerror.Wrapf(err, "提交发票记录失败")
-	}
 	return res, nil
 }
 
@@ -767,11 +770,9 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
 // 返回：
 //   - *erp.POSInvoice: POS发票信息
 func (s *sSelling) buildPosInvoice(ctx context.Context, req *selling.SavePosInvoiceReq, openingEntry *erp.POSOpeningEntry) *erp.POSInvoice {
-	postingDatetime, err := gtime.New(req.PostingDatetime).ToZone(service.User().MustGetUserTimeZone(ctx, openingEntry.User))
-	if err != nil {
-		g.Log().Error(ctx, "转换时间失败", err, g.Map{"postingDatetime": req.PostingDatetime})
-		postingDatetime = gtime.New(req.PostingDatetime)
-	}
+	postingDatetime, _ := gtime.New(req.PostingDatetime).ToZone(service.User().MustGetUserTimeZone(ctx, openingEntry.User))
+	//postingDatetime := service.Setup().MustGetLocalDateTime(ctx, gtime.New(req.PostingDatetime))
+
 	posInvoice := &erp.POSInvoice{
 		PosProfile:        openingEntry.PosProfile,
 		Company:           openingEntry.Company,
@@ -788,6 +789,8 @@ func (s *sSelling) buildPosInvoice(ctx context.Context, req *selling.SavePosInvo
 	if len(req.CustomerUuid) > 0 {
 		posInvoice.Customer = "Member"
 		posInvoice.CustomerUUID = req.CustomerUuid
+	} else {
+		posInvoice.Customer = "Default"
 	}
 
 	// 构建发票项目
@@ -942,10 +945,8 @@ func (s *sSelling) ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosI
 		return nil, gerror.Wrapf(err, "解析原销售订单响应失败")
 	}
 
-	postingDatetime, err := gtime.New(req.PostingDatetime).ToZone(service.User().MustGetUserTimeZone(ctx, openingEntry.User))
-	if err != nil {
-		return nil, gerror.Wrapf(err, "转换时间失败")
-	}
+	//postingDatetime := service.Setup().MustGetLocalDateTime(ctx, gtime.New(req.PostingDatetime))
+
 	grandTotal := 0.0
 	for _, payment := range req.Payments {
 		grandTotal += payment.Amount
@@ -960,15 +961,16 @@ func (s *sSelling) ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosI
 		Company:           saleInvoice.Company,
 		Currency:          saleInvoice.Currency,
 		PriceListCurrency: saleInvoice.PriceListCurrency,
-		PostingDate:       postingDatetime.Format(DateFormat),
-		PostingTime:       postingDatetime.Format(TimeFormat),
-		UpdateStock:       0,
-		ReturnAgainst:     req.InvoiceName,
-		IsReturn:          1,
-		IsPos:             1,
-		GrandTotal:        grandTotal,
-		PaidAmount:        grandTotal,
-		SetPostingTime:    1,
+		//PostingDate:       postingDatetime.Format(DateFormat),
+		//PostingTime:       postingDatetime.Format(TimeFormat),
+		UpdateStock:   0,
+		ReturnAgainst: req.InvoiceName,
+		IsReturn:      1,
+		IsPos:         1,
+		GrandTotal:    grandTotal,
+		PaidAmount:    grandTotal,
+		//SetPostingTime:    1,
+		Customer: saleInvoice.Customer,
 	}
 
 	//创建物品销售记录

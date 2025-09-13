@@ -84,3 +84,32 @@ migrate:
 .PHONY: update-ip
 update-ip:
 	@./hack/update_ip.sh
+
+# 执行ERP数据迁移，初始化自定义字段、客户和支付方式
+# 使用方法: make erp.migrate SITE_CODE=1 DIR_BASE=./manifest/erp-migrate/v2.5
+# 参数说明:
+#   SITE_CODE: ERP站点代码，默认为 1
+#   DIR_BASE:  迁移文件目录路径，默认为 ./manifest/erp-migrate/v2.5
+.PHONY: erp.migrate
+erp.migrate:
+	@if [ -z "$(SITE_CODE)" ]; then \
+		echo "❌ 错误: 请提供 SITE_CODE 参数"; \
+		echo "📖 使用方法: make erp.migrate SITE_CODE=1 DIR_BASE=./manifest/erp-migrate/v2.5"; \
+		echo "📋 示例:"; \
+		echo "   make erp.migrate SITE_CODE=1 DIR_BASE=./manifest/erp-migrate/v2.5"; \
+		echo "   make erp.migrate SITE_CODE=2 DIR_BASE=./manifest/erp-migrate/payment"; \
+		exit 1; \
+	fi
+	@if [ -z "$(DIR_BASE)" ]; then \
+		echo "❌ 错误: 请提供 DIR_BASE 参数"; \
+		echo "📖 使用方法: make erp.migrate SITE_CODE=1 DIR_BASE=./manifest/erp-migrate/v2.5"; \
+		echo "📋 示例:"; \
+		echo "   make erp.migrate SITE_CODE=1 DIR_BASE=./manifest/erp-migrate/v2.5"; \
+		echo "   make erp.migrate SITE_CODE=2 DIR_BASE=./manifest/erp-migrate/payment"; \
+		exit 1; \
+	fi
+	@echo "🚀 开始执行ERP数据迁移..."
+	@echo "📍 站点代码: $(SITE_CODE)"
+	@echo "📁 迁移目录: $(DIR_BASE)"
+	@cd app/ttpos-erp && gf run main.go --args "migrate --siteCode $(SITE_CODE) --dirBase $(DIR_BASE)"
+	@echo "✅ ERP数据迁移执行完成!"

@@ -200,10 +200,17 @@ func checkoutSaleOrderEventHandler() {
 		})
 
 		// 增加销量
+		// 增加产品销量
 		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			payload.Ctx.SetDB(db)
 			HandleAddSalesVolume(payload)
+		})
+		// 增加材料销量
+		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
+			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+			payload.Ctx.SetDB(db)
+			HandleAddMaterialSalesVolume(payload)
 		})
 	})
 }
@@ -226,6 +233,17 @@ func HandleAddSalesVolume(payload event.CheckoutSaleOrderPayload) {
 	}
 }
 
+// 增加材料销量
+func HandleAddMaterialSalesVolume(payload event.CheckoutSaleOrderPayload) {
+	MaterialSalesVolume := getMaterialSalesVolume(payload.CompanyUuid, payload.SaleOrderUuid)
+	for materialUuid, saleNum := range MaterialSalesVolume {
+		if err := repository.NewMaterialRepo(payload.Ctx.GetDB()).AddActualSaleNum(materialUuid, saleNum); err != nil {
+			logger.Logger.Error("HandleAddMaterialSalesVolume process, AddActualSaleNum failed", zap.Any("materialUuid", materialUuid), zap.Any("saleNum", saleNum), zap.Error(err))
+			continue
+		}
+	}
+}
+
 // 获取销量
 func getSalesVolume(saleBill *model.SaleBill) (map[uint64]float64, map[uint64]float64) {
 	ProductBoms := make(map[uint64]float64)      // 规格商品销量 map[规格商品UUID]销量
@@ -241,6 +259,22 @@ func getSalesVolume(saleBill *model.SaleBill) (map[uint64]float64, map[uint64]fl
 		}
 	}
 	return ProductBoms, ProducttPackages
+}
+
+// 获取材料销量
+func getMaterialSalesVolume(companyUuid uint64, saleOrderUuid uint64) map[uint64]float64 {
+	db := database.GetDBManager(config.DatabaseConf{}).GetDB(companyUuid)
+	// 通过sale_order_uuid查询出库单明细中有效的出库材料,然后统计每个材料的销量
+	warehouseOutFormItems, err := repository.NewWarehouseFormRepo(db).GetWarehouseOutFormItemBySaleOrderUuid(saleOrderUuid)
+	if err != nil {
+		logger.Logger.Error("getMaterialSalesVolume process, GetWarehouseOutFormItemsBySaleOrderUuid failed", zap.Error(err))
+		return nil
+	}
+	MaterialSalesVolume := make(map[uint64]float64) // 材料销量 map[材料UUID]销量
+	for _, warehouseOutFormItem := range warehouseOutFormItems {
+		MaterialSalesVolume[warehouseOutFormItem.MaterialUuid] = decimal.NewFromFloat(MaterialSalesVolume[warehouseOutFormItem.MaterialUuid]).Add(decimal.NewFromFloat(warehouseOutFormItem.Num)).Round(4).InexactFloat64()
+	}
+	return MaterialSalesVolume
 }
 
 // 处理积分变动
