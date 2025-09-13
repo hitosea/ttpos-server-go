@@ -14,6 +14,11 @@ func ConvertToTitleCase(input string) string {
 		return ""
 	}
 
+	//特殊处理 mode_of_payment
+	if input == "mode_of_payment" {
+		return "Mode of Payment"
+	}
+
 	// 按下划线分割字符串
 	words := strings.Split(input, "_")
 

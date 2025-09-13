@@ -1,0 +1,8 @@
+{
+  "doctype": "DocType",
+  "label": "Classification",
+  "fieldname": "custom_classification",
+  "fieldtype": "Data",
+  "insert_after": "item_name",
+  "dt": "Item"
+}

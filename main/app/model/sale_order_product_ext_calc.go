@@ -195,6 +195,8 @@ func (model *SaleOrderProduct) calcLastestSaleOrderProduct(serviceFeeRate float6
 	model.ProductPrice = calc.ProductPrice
 	calc.SalePrice = model.calcSalePrice()
 	model.SalePrice = calc.SalePrice
+	calc.SalePriceNoTax = model.calcProductPriceNoneTax(model.SalePrice, taxFeeType)
+	model.SalePriceNoTax = calc.SalePriceNoTax
 	calc.Price = model.calcPrice()
 	model.Price = calc.Price
 	calc.MemberDiscountFee = model.calcMemberDiscountFee()

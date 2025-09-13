@@ -21,7 +21,7 @@ gfcli:
   run:
     path: "./bin"
     extra: ""
-    args: "all"
+    args: ""
     watchPaths:
       - api/*.go
       - internal/*.go

@@ -1140,7 +1140,9 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 					).Mul(decimal.NewFromFloat(refundProduct.Num)),
 				)
 				if isFeeType {
-					noOrderRefundTax = noOrderRefundTax.Add(decimal.NewFromFloat(saleProduct.TaxFee))
+					noOrderRefundTax = noOrderRefundTax.Add(
+						decimal.NewFromFloat(saleProduct.TaxFee).Mul(decimal.NewFromFloat(refundProduct.Num)),
+					)
 				}
 				if !isFixServiceFee {
 					orderRefundServiceFee = orderRefundServiceFee.Add(
@@ -1228,7 +1230,9 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 					).Mul(decimal.NewFromFloat(refundProduct.Num)),
 				)
 				if isFeeType {
-					noOrderRefundTax = noOrderRefundTax.Add(decimal.NewFromFloat(saleBuffetCustomerType.TaxFee))
+					noOrderRefundTax = noOrderRefundTax.Add(
+						decimal.NewFromFloat(saleBuffetCustomerType.TaxFee).Mul(decimal.NewFromFloat(refundProduct.Num)),
+					)
 				}
 				if !isFixServiceFee {
 					orderRefundServiceFee = orderRefundServiceFee.Add(

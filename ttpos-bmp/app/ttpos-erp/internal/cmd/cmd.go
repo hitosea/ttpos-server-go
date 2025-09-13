@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"os"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/callback"
 
@@ -55,6 +56,8 @@ var (
 			}
 
 			g.Log().Info(ctx, "ERP数据迁移执行完成!")
+			// 操作完成后退出
+			os.Exit(0)
 			return nil
 		},
 	}
