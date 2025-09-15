@@ -157,7 +157,9 @@ func TestCompanyList() error {
 		panic(err)
 	}
 	defer conn.Close()
-	result, err := client.GetPosProfileList(erp.WithSiteCode(context.Background(), "1"), &selling.PosProfileReq{})
+	result, err := client.GetPosProfileList(erp.WithSiteCode(context.Background(), "2"), &selling.PosProfileReq{
+		CompanyAbbr: "wallace-pjd",
+	})
 	if err != nil {
 		panic(err)
 	}

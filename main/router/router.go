@@ -28,6 +28,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 	})
 	r.GET("api/v1/testrpc", middleware.Internal(), func(c *gin.Context) {
 		rpc.TestCompanyList()
+		rpc.TestEstimateDistance()
 		c.String(http.StatusOK, "Success")
 	})
 	apiV1 := r.Group("api/v1")
