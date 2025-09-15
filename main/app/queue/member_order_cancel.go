@@ -20,19 +20,70 @@ import (
 var (
 	memberOrderCancelQueue *delayqueue.DelayQueue
 	memberOrderInit        sync.Once
+
+	// 服务实例缓存 - 避免重复创建
+	serviceInstances struct {
+		settingSrv  setting.ISrv
+		orderSrv    service.IOrderSrv
+		localeSrv   service.ILocaleSrv
+		mustPlanSrv service.IMustPlanSrv
+		paymentSrv  service.IPaymentMethodSrv
+		memberSrv   service.IMemberSrv
+		cashBoxSrv  service.ICashBoxSrv
+		initialized bool
+		mu          sync.RWMutex
+	}
 )
 
 // InitMemberOrderCancel 初始化会员订单自动取消队列
 func initMemberOrderCancel() {
 	memberOrderInit.Do(func() {
+		// 初始化服务实例缓存
+		initServiceInstances()
+
+		// 增加并发数以提高性能
+		concurrent := 10 // 从5增加到10
 		if cache.Global.GetClusterClient() != nil {
-			memberOrderCancelQueue = delayqueue.NewQueueOnCluster(MEMBER_ORDER_CANCEL, cache.Global.GetClusterClient(), ProcessMemberOrderCancel).WithConcurrent(5)
+			memberOrderCancelQueue = delayqueue.NewQueueOnCluster(MEMBER_ORDER_CANCEL, cache.Global.GetClusterClient(), ProcessMemberOrderCancel).WithConcurrent(uint(concurrent))
 		} else {
-			memberOrderCancelQueue = delayqueue.NewQueue(MEMBER_ORDER_CANCEL, cache.Global.GetClient(), ProcessMemberOrderCancel).WithConcurrent(5)
+			memberOrderCancelQueue = delayqueue.NewQueue(MEMBER_ORDER_CANCEL, cache.Global.GetClient(), ProcessMemberOrderCancel).WithConcurrent(uint(concurrent))
 		}
 		service.Queue.RegisterMemberOrderCancelQueue(memberOrderCancelQueue)
 		memberOrderCancelQueue.StartConsume()
 	})
+}
+
+// initServiceInstances 初始化服务实例缓存
+func initServiceInstances() {
+	serviceInstances.mu.Lock()
+	defer serviceInstances.mu.Unlock()
+
+	if serviceInstances.initialized {
+		return
+	}
+
+	// 获取DB管理器
+	dbm := database.GetDBManager(config.DatabaseConf{})
+
+	// 创建服务实例
+	serviceInstances.settingSrv = setting.NewSrv(dbm, cache.Global)
+	serviceInstances.localeSrv = service.NewLocaleSrv()
+	serviceInstances.mustPlanSrv = service.NewMustPlanSrv(dbm)
+	serviceInstances.paymentSrv = service.NewPaymentMethodSrv(dbm, serviceInstances.settingSrv)
+	serviceInstances.memberSrv = service.NewMemberSrv(dbm, cache.Global)
+	serviceInstances.cashBoxSrv = service.NewCashBoxSrv(dbm)
+	serviceInstances.orderSrv = service.NewOrderSrv(
+		dbm,
+		serviceInstances.localeSrv,
+		serviceInstances.settingSrv,
+		serviceInstances.mustPlanSrv,
+		serviceInstances.paymentSrv,
+		serviceInstances.memberSrv,
+		serviceInstances.cashBoxSrv,
+	)
+
+	serviceInstances.initialized = true
+	logger.Logger.Info("服务实例缓存初始化完成")
 }
 
 func GetMemberOrderCancelQueue() *delayqueue.DelayQueue {
@@ -65,17 +116,15 @@ func ProcessMemberOrderCancel(paramsJson string) bool {
 	)
 	ctx.SetDB(db)
 
-	// 创建订单服务
-	settingSrv := setting.NewSrv(dbm, cache.Global)
-	orderSrv := service.NewOrderSrv(
-		dbm,
-		service.NewLocaleSrv(),
-		settingSrv,
-		service.NewMustPlanSrv(dbm),
-		service.NewPaymentMethodSrv(dbm, settingSrv),
-		service.NewMemberSrv(dbm, cache.Global),
-		service.NewCashBoxSrv(dbm),
-	)
+	// 使用缓存的服务实例 - 避免重复创建
+	serviceInstances.mu.RLock()
+	orderSrv := serviceInstances.orderSrv
+	serviceInstances.mu.RUnlock()
+
+	if orderSrv == nil {
+		logger.Logger.Error("订单服务实例未初始化")
+		return false
+	}
 
 	// 选购超时自动取消订单
 	if params.CancelScene == constant.MemberSaleOrderSceneSelectingTimeout {
