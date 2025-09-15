@@ -3,6 +3,8 @@ package command
 import (
 	"fmt"
 	"log"
+	"net/http"
+	"net/http/pprof"
 	"os"
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/queue"
@@ -120,6 +122,9 @@ func initializeExternalService(dbm *database.DBManager, cache cache.Cache) {
 	docs.SwaggerInfo.BasePath = "/api/v1"
 	// Swagger API 文档
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// 方式1：直接挂载到根路由组（路径：/debug/pprof/...）
+	r.GET("/debug/pprof/*path", gin.WrapH(http.HandlerFunc(pprof.Index)))
 	// 注册路由
 	router.Setup(r, dbm, cache)
 	if err := r.Run(":" + config.Server.Port); err != nil {
