@@ -85,6 +85,10 @@ func (m *DBManager) GetDB(index uint64) *gorm.DB {
 		if time.Since(m.lastCheck[index]) > m.checkInterval {
 			if sqlDB, err := db.DB(); err == nil {
 				if err := sqlDB.Ping(); err != nil {
+					// 先关闭现有连接
+					if closeErr := sqlDB.Close(); closeErr != nil {
+						log.Printf("关闭失效连接失败: %v", closeErr)
+					}
 					// 连接失效，删除并重建
 					delete(m.dbs, index)
 					delete(m.lastCheck, index)
