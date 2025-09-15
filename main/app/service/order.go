@@ -9968,6 +9968,14 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 				Amount:     product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
 				IsFreeItem: true,                                      // 赠菜
 			})
+		} else if product.SalePrice == 0 { // 当商品是0元商品时，可能是通过商品改价为0或原本售价就是0
+			items = append(items, &selling.PosInvoiceItem{
+				ItemCode:   erpCode,
+				Qty:        product.Num,
+				Rate:       0,    // 商品未含税价格（折后）
+				Amount:     0,    // 商品未含税价格（折后）* 数量
+				IsFreeItem: true, // 零元商品当作赠菜
+			})
 		} else {
 			items = append(items, &selling.PosInvoiceItem{
 				ItemCode:   erpCode,
@@ -10184,12 +10192,22 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 			serviceFee := decimal.NewFromFloat(saleOrderProduct.ServiceFee).Mul(decimal.NewFromFloat(product.Num))
 			totalServiceFee = totalServiceFee.Add(serviceFee)
 		}
-		items = append(items, &selling.PosInvoiceItem{
-			ItemCode: product.ErpCode,
-			Qty:      -product.Num,
-			Rate:     product.GetProductPriceNoneTax(taxFee, saleOrderProduct.HasTax()),        // 商品未含税价格（折后）
-			Amount:   -product.GetProductTotalAmountNoneTax(taxFee, saleOrderProduct.HasTax()), // 商品未含税价格（折后）* 数量
-		})
+		if saleOrderProduct.SalePrice == 0 { // 当商品是0元商品时，可能是通过商品改价为0或原本售价就是0
+			items = append(items, &selling.PosInvoiceItem{
+				ItemCode:   product.ErpCode,
+				Qty:        -product.Num,
+				Rate:       0,    // 商品未含税价格（折后）
+				Amount:     0,    // 商品未含税价格（折后）* 数量
+				IsFreeItem: true, // 零元商品当作赠菜
+			})
+		} else {
+			items = append(items, &selling.PosInvoiceItem{
+				ItemCode: product.ErpCode,
+				Qty:      -product.Num,
+				Rate:     product.GetProductPriceNoneTax(taxFee, saleOrderProduct.HasTax()),        // 商品未含税价格（折后）
+				Amount:   -product.GetProductTotalAmountNoneTax(taxFee, saleOrderProduct.HasTax()), // 商品未含税价格（折后）* 数量
+			})
+		}
 	}
 
 	taxes := make([]*selling.PosInvoiceTax, 0)
