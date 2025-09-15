@@ -102,6 +102,14 @@ type SaleOrder struct {
 	index int `gorm:"-"`
 }
 
+// 获取销售订单的优惠券uuid
+func (model *SaleOrder) GetSaleOrderCouponUuid() uint64 {
+	if model.Coupons != nil && len(model.Coupons) > 0 {
+		return model.Coupons[0].Uuid
+	}
+	return 0
+}
+
 // 计算销售订单的优惠券抵扣金额
 func (model *SaleOrder) CalcCouponAmount() float64 {
 	couponAmount := decimal.NewFromFloat(0)
@@ -457,6 +465,7 @@ func (model *SaleOrder) IsSettled() bool {
 
 // 清除结账信息
 func (model *SaleOrder) ClearSettleInfo() {
+	model.CouponAmount = 0
 	model.PaymentAmount = 0
 	model.ChangeAmount = 0
 	model.ZeroCheckoutFee = 0
