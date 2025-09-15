@@ -1,12 +1,14 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
-	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"websocket/config"
 	"websocket/constant"
@@ -25,13 +27,17 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-// WsClients 存储所有的连接
-var WsClients []ConnectionInfo
+// WsClients 存储所有的连接 - 使用sync.Map提高并发安全性
+var WsClients sync.Map
+
+// 全局context用于控制协程生命周期
+var globalCtx context.Context
+var globalCancel context.CancelFunc
 
 // 初始化函数，启动定时检查心跳超时的连接
 func init() {
+	globalCtx, globalCancel = context.WithCancel(context.Background())
 	go checkHeartbeatTimeout()
-	// go checkPrinterHeartbeatTimeout()
 }
 
 // Message represents a generic message structure
@@ -58,6 +64,7 @@ type ConnectionInfo struct {
 	StaffUuid     uint64 `json:"staff_uuid"`
 	LastHeartbeat string `json:"last_heartbeat"`
 	ws            *websocket.Conn
+	writeMutex    *sync.Mutex // 使用指针避免复制锁
 }
 
 type UsbPrinter struct {
@@ -79,6 +86,16 @@ type LanPrinter struct {
 func getMsgData(msg PushMessage) []byte {
 	jsonData, _ := json.Marshal(msg)
 	return jsonData
+}
+
+// safeWriteMessage 安全写入消息，防止并发冲突
+func safeWriteMessage(conn *ConnectionInfo, messageType int, data []byte, timeout time.Duration) error {
+	conn.writeMutex.Lock()
+	defer conn.writeMutex.Unlock()
+
+	// 设置写入超时时间
+	conn.ws.SetWriteDeadline(time.Now().Add(timeout))
+	return conn.ws.WriteMessage(messageType, data)
 }
 
 // fixJSONFormat 修复常见的JSON格式问题
@@ -130,25 +147,107 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
-	// 发送ping消息
+	// 创建连接专用的context
+	connCtx, connCancel := context.WithCancel(globalCtx)
+	defer connCancel()
+
+	// 发送ping消息 - 使用context控制协程生命周期
 	go func() {
-		for range ticker.C {
-			if err := ws.WriteMessage(websocket.PingMessage, nil); err != nil {
-				fmt.Printf("[%s] Error sending ping message: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
+		for {
+			select {
+			case <-connCtx.Done():
+				// 连接关闭或服务停止时退出
 				return
+			case <-ticker.C:
+				// 使用安全的写入函数发送ping消息
+				if err := safeWriteMessage(newConn, websocket.PingMessage, nil, 10*time.Second); err != nil {
+					fmt.Printf("[%s] Error sending ping message: %v DeviceId: %s\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err, newConn.DeviceId)
+					connCancel() // 发送失败时取消context
+					return
+				}
 			}
 		}
 	}()
 
+	// 添加资源清理
+	defer func() {
+		// 清理连接资源
+		if ws != nil {
+			ws.Close()
+		}
+
+		// 从连接池中移除
+		WsClients.Range(func(key, value interface{}) bool {
+			if conn, ok := value.(ConnectionInfo); ok {
+				if conn.ws == ws {
+					WsClients.Delete(key)
+					return false
+				}
+			}
+			return true
+		})
+
+		// 停止心跳协程
+		connCancel()
+
+		fmt.Printf("[%s] 连接已清理 DeviceId: %s\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), newConn.DeviceId)
+	}()
+
 	// 主循环
 	for {
-		_, msg, err := ws.ReadMessage()
-		if err != nil {
-			fmt.Printf("[%s] Error reading message: %v DeviceId: %s\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err, newConn.DeviceId)
+		// 检查context是否已取消
+		select {
+		case <-connCtx.Done():
+			fmt.Printf("[%s] 连接被取消，退出读取循环 DeviceId: %s\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), newConn.DeviceId)
+			return
+		default:
+			// 继续读取消息
+		}
+
+		// 检查连接是否仍然有效
+		if ws == nil {
+			fmt.Printf("[%s] WebSocket连接已断开 DeviceId: %s\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), newConn.DeviceId)
 			break
 		}
-		// 处理消息
-		handleMessage(ws, msg, newConn)
+
+		// 设置读取超时
+		ws.SetReadDeadline(time.Now().Add(30 * time.Second))
+
+		// 读取消息
+		_, msg, err := ws.ReadMessage()
+		if err != nil {
+			// 检查是否是网络临时错误，可以重试
+			if netErr, ok := err.(net.Error); ok && netErr.Temporary() {
+				fmt.Printf("[%s] 网络临时错误，重试中 DeviceId: %s: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), newConn.DeviceId, err)
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
+
+			// 检查是否是超时或连接关闭错误
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				fmt.Printf("[%s] WebSocket连接异常关闭: %v DeviceId: %s\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err, newConn.DeviceId)
+			} else {
+				fmt.Printf("[%s] 读取消息错误: %v DeviceId: %s\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err, newConn.DeviceId)
+			}
+			break
+		}
+
+		// 检查消息大小，防止内存溢出
+		if len(msg) > 1024*1024 { // 1MB限制
+			fmt.Printf("[%s] 消息过大，忽略 DeviceId: %s, Size: %d\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), newConn.DeviceId, len(msg))
+			continue
+		}
+
+		// 使用recover保护消息处理
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Printf("[%s] 消息处理异常 DeviceId: %s: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), newConn.DeviceId, r)
+					logger.Logger.Error(fmt.Sprintf("消息处理异常 DeviceId: %s: %v", newConn.DeviceId, r))
+				}
+			}()
+			handleMessage(ws, msg, newConn)
+		}()
 	}
 }
 
@@ -165,11 +264,13 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) *ConnectionInf
 	// 验证token
 	claims, err := utils.ParseToken(token, config.JWT.Secret)
 	if err != nil {
-		ws.WriteMessage(websocket.TextMessage, getMsgData(PushMessage{
+		// 创建临时连接信息用于安全写入
+		tempConn := &ConnectionInfo{ws: ws, writeMutex: &sync.Mutex{}}
+		safeWriteMessage(tempConn, websocket.TextMessage, getMsgData(PushMessage{
 			Event: "connect",
 			State: constant.CodeFail,
 			Msg:   "Token Error",
-		}))
+		}), 5*time.Second)
 		ws.Close()
 		return nil
 	}
@@ -178,11 +279,13 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) *ConnectionInf
 	deviceRepo := repository.NewDeviceRepository(database.Instance)
 	existsDevice := deviceRepo.GetRecordBySourceAndDeviceId(claims.CompanyUuid, claims.Source, claims.DeviceId)
 	if existsDevice.ID == 0 {
-		ws.WriteMessage(websocket.TextMessage, getMsgData(PushMessage{
+		// 创建临时连接信息用于安全写入
+		tempConn := &ConnectionInfo{ws: ws, writeMutex: &sync.Mutex{}}
+		safeWriteMessage(tempConn, websocket.TextMessage, getMsgData(PushMessage{
 			Event: "connect",
 			State: constant.CodeFail,
 			Msg:   "No binding device-id: " + claims.DeviceId,
-		}))
+		}), 5*time.Second)
 		ws.Close()
 		return nil
 	}
@@ -190,28 +293,34 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) *ConnectionInf
 	// 允许一个设备最多存在两个连接，超过则清空之前的连接
 	// 计算当前设备的连接数量
 	connCount := 0
-	connIndexes := []int{}
-	for i, conn := range WsClients {
-		if conn.CompanyUuid == claims.CompanyUuid &&
-			conn.SourceClient == existsDevice.Source &&
-			conn.DeviceId == existsDevice.DeviceId &&
-			conn.ws != ws {
-			connCount++
-			connIndexes = append(connIndexes, i)
+
+	// 遍历现有连接，统计同设备的连接数
+	WsClients.Range(func(key, value interface{}) bool {
+		if conn, ok := value.(ConnectionInfo); ok {
+			if conn.CompanyUuid == claims.CompanyUuid &&
+				conn.SourceClient == existsDevice.Source &&
+				conn.DeviceId == existsDevice.DeviceId &&
+				conn.ws != ws {
+				connCount++
+			}
 		}
-	}
+		return true
+	})
 
 	// 如果连接数量大于等于2，则清空之前的连接
 	if connCount >= 2 {
-		// 从后向前遍历，避免删除元素影响索引
-		for i := len(connIndexes) - 1; i >= 0; i-- {
-			index := connIndexes[i]
-			// 确保索引有效
-			if index >= 0 && index < len(WsClients) {
-				WsClients[index].ws.Close()
-				WsClients = slices.Delete(WsClients, index, index+1)
+		WsClients.Range(func(key, value interface{}) bool {
+			if conn, ok := value.(ConnectionInfo); ok {
+				if conn.CompanyUuid == claims.CompanyUuid &&
+					conn.SourceClient == existsDevice.Source &&
+					conn.DeviceId == existsDevice.DeviceId &&
+					conn.ws != ws {
+					conn.ws.Close()
+					WsClients.Delete(key)
+				}
 			}
-		}
+			return true
+		})
 	}
 
 	// 添加新连接
@@ -222,25 +331,32 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) *ConnectionInf
 		DeviceId:      existsDevice.DeviceId,
 		LastHeartbeat: time.Now().Format(time.RFC3339),
 		ws:            ws,
+		writeMutex:    &sync.Mutex{}, // 初始化写入锁
 	}
-	WsClients = append(WsClients, newConn)
+
+	// 生成唯一的连接key
+	connKey := fmt.Sprintf("%d_%s_%s_%d", claims.CompanyUuid, existsDevice.Source, existsDevice.DeviceId, time.Now().UnixNano())
+	WsClients.Store(connKey, newConn)
 
 	// 监听关闭事件以删除连接详细信息
 	ws.SetCloseHandler(func(code int, text string) error {
-		for i, conn := range WsClients {
-			if conn.CompanyUuid == claims.CompanyUuid &&
-				conn.SourceClient == existsDevice.Source &&
-				conn.DeviceId == existsDevice.DeviceId &&
-				conn.ws == ws {
-				WsClients = slices.Delete(WsClients, i, i+1)
-				break
+		WsClients.Range(func(key, value interface{}) bool {
+			if conn, ok := value.(ConnectionInfo); ok {
+				if conn.CompanyUuid == claims.CompanyUuid &&
+					conn.SourceClient == existsDevice.Source &&
+					conn.DeviceId == existsDevice.DeviceId &&
+					conn.ws == ws {
+					WsClients.Delete(key)
+					return false // 找到后停止遍历
+				}
 			}
-		}
+			return true
+		})
 		return nil
 	})
 
 	// 发送连接成功消息
-	if err := ws.WriteMessage(websocket.TextMessage, getMsgData(PushMessage{
+	if err := safeWriteMessage(&newConn, websocket.TextMessage, getMsgData(PushMessage{
 		Event: "connect",
 		State: constant.CodeSuccess,
 		Msg:   "Connected successfully",
@@ -250,8 +366,8 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) *ConnectionInf
 			"staff_uuid":   claims.StaffUuid,
 			"device_id":    claims.DeviceId,
 		},
-	})); err != nil {
-		fmt.Printf("[%s] Error sending ping message: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
+	}), 10*time.Second); err != nil {
+		fmt.Printf("[%s] Error sending connect success message: %v DeviceId: %s\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err, claims.DeviceId)
 		return nil
 	}
 	return &newConn
@@ -281,22 +397,33 @@ func handleMessage(ws *websocket.Conn, msg []byte, newConn *ConnectionInfo) {
 	// 处理心跳消息
 	if clientMessage.Type == "heartbeat" {
 		// 更新心跳时间
-		for i, conn := range WsClients {
-			if conn.CompanyUuid == newConn.CompanyUuid &&
-				conn.SourceClient == newConn.SourceClient &&
-				conn.DeviceId == newConn.DeviceId &&
-				conn.ws == newConn.ws {
-				WsClients[i].LastHeartbeat = time.Now().Format(time.RFC3339)
-				break
+		WsClients.Range(func(key, value interface{}) bool {
+			if conn, ok := value.(ConnectionInfo); ok {
+				if conn.CompanyUuid == newConn.CompanyUuid &&
+					conn.SourceClient == newConn.SourceClient &&
+					conn.DeviceId == newConn.DeviceId &&
+					conn.ws == newConn.ws {
+					// 更新心跳时间
+					updatedConn := conn
+					updatedConn.LastHeartbeat = time.Now().Format(time.RFC3339)
+					WsClients.Store(key, updatedConn)
+					return false // 找到后停止遍历
+				}
 			}
-		}
+			return true
+		})
 
 		isOnline := false
-		for _, conn := range WsClients {
-			if conn.DeviceId == newConn.DeviceId {
-				isOnline = true
+		WsClients.Range(func(key, value interface{}) bool {
+			if conn, ok := value.(ConnectionInfo); ok {
+				if conn.DeviceId == newConn.DeviceId {
+					isOnline = true
+					return false // 找到后停止遍历
+				}
 			}
-		}
+			return true
+		})
+
 		if !isOnline {
 			fmt.Printf("[%s] Heartbeat message DeviceId - 离线: %s\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), newConn.DeviceId)
 			logger.Logger.Info(fmt.Sprintf("Heartbeat message DeviceId - 离线: %s", newConn.DeviceId))
@@ -334,64 +461,37 @@ func checkHeartbeatTimeout() {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		// 遍历所有连接
-		for i := len(WsClients) - 1; i >= 0; i-- {
-			// 确保索引有效
-			if i < len(WsClients) {
-				conn := WsClients[i]
-				// 解析最后心跳时间
-				lastHeartbeat, err := time.Parse(time.RFC3339, conn.LastHeartbeat)
-				if err != nil {
-					// 如果解析出错，可能是初始值或无效值，设置为当前时间
-					lastHeartbeat = time.Now()
-				}
-				// 检查是否超过2分钟没有心跳
-				if time.Since(lastHeartbeat) > 2*time.Minute {
-					fmt.Printf("[%s] 断开超时2分钟没有心跳的连接: %s, 最后心跳时间: %s\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), conn.DeviceId, conn.LastHeartbeat)
-					// 关闭连接
-					conn.ws.Close()
-					// 从列表中移除
-					WsClients = slices.Delete(WsClients, i, i+1)
-				}
-			}
-		}
-	}
-}
-
-// checkPrinterHeartbeatTimeout 检查打印机心跳超时并更新状态为离线
-func checkPrinterHeartbeatTimeout() {
-	// 每5秒检查一次
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		// 创建打印机仓库
-		repo := repository.NewPrinterRepository(database.Instance)
-		// 获取所有公司ID - 从现有连接中提取
-		companyUuids := make(map[uint64]ConnectionInfo)
-		for _, conn := range WsClients {
-			companyUuids[conn.CompanyUuid] = conn
-		}
-		// 遍历每个公司
-		for companyUuid, conn := range companyUuids {
-			// 获取该公司的所有USB打印机
-			printers := repo.GetUsbListByStatus(companyUuid, 1)
-			// 当前时间戳
-			currentTime := uint(time.Now().Unix())
-			// 遍历所有打印机
-			for _, printer := range printers {
-				// 如果打印机状态为在线，且最后心跳时间超过8秒，则更新为离线
-				if printer.Status == 1 && (currentTime-printer.LastHeartbeatTime) > 8 {
-					if err := repo.UpdateBySourceDeviceSn(companyUuid, printer.ID, conn.DeviceId, map[string]interface{}{
-						"status": 0,
-					}); err != nil {
-						fmt.Printf("[%s] Error updating printer status to offline: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
-					} else {
-						logger.Logger.Info(fmt.Sprintf("更新打印机状态为离线: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒", companyUuid, conn.DeviceId, printer.Uuid, printer.Name, printer.LastHeartbeatTime))
-						fmt.Printf("[%s] 更新打印机状态为离线: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), companyUuid, conn.DeviceId, printer.Uuid, printer.Name, printer.LastHeartbeatTime)
+	for {
+		select {
+		case <-globalCtx.Done():
+			// 服务停止时退出
+			return
+		case <-ticker.C:
+			// 遍历所有连接
+			var expiredKeys []interface{}
+			WsClients.Range(func(key, value interface{}) bool {
+				if conn, ok := value.(ConnectionInfo); ok {
+					// 解析最后心跳时间
+					lastHeartbeat, err := time.Parse(time.RFC3339, conn.LastHeartbeat)
+					if err != nil {
+						// 如果解析出错，可能是初始值或无效值，设置为当前时间
+						lastHeartbeat = time.Now()
+					}
+					// 检查是否超过2分钟没有心跳
+					if time.Since(lastHeartbeat) > 2*time.Minute {
+						fmt.Printf("[%s] 断开超时2分钟没有心跳的连接: %s, 最后心跳时间: %s\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), conn.DeviceId, conn.LastHeartbeat)
+						// 关闭连接
+						conn.ws.Close()
+						// 记录需要删除的key
+						expiredKeys = append(expiredKeys, key)
 					}
 				}
+				return true
+			})
+
+			// 删除过期的连接
+			for _, key := range expiredKeys {
+				WsClients.Delete(key)
 			}
 		}
 	}
@@ -589,64 +689,109 @@ func reportLanPrinter(newConn *ConnectionInfo, clientMessage ClientMessage) {
 
 // PushClient 推送消息
 func PushClient(messageData MessageData) {
-	for _, conn := range WsClients {
-		if conn.CompanyUuid == messageData.CompanyUuid &&
-			(conn.StaffUuid == messageData.StaffUuid || messageData.StaffUuid == 0) &&
-			(conn.StaffUuid != messageData.NotStaffUuid || messageData.NotStaffUuid == 0) &&
-			(conn.SourceClient == messageData.SourceClient || messageData.SourceClient == "*") &&
-			(conn.DeviceId == messageData.DeviceId || messageData.DeviceId == "*") &&
-			(conn.DeviceId != messageData.NotDeviceId || messageData.NotDeviceId == "*" || messageData.NotDeviceId == "") {
-			// 创建一个 WebSocketMsgRepository 实例
-			repo := repository.NewWebSocketMsgRepository(database.Instance)
+	// 复用数据库连接，避免重复创建
+	repo := repository.NewWebSocketMsgRepository(database.Instance)
 
-			// 1. 先删后加 - 同一个类型，只保留最新的
-			err := repo.DeleteByTypeAndCompanyId(messageData.MessageType, messageData.CompanyUuid)
-			if err != nil {
-				fmt.Printf("[%s] Error deleting old messages: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
-			}
+	// 1. 先删后加 - 同一个类型，只保留最新的
+	err := repo.DeleteByTypeAndCompanyId(messageData.MessageType, messageData.CompanyUuid)
+	if err != nil {
+		fmt.Printf("[%s] Error deleting old messages: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
+	}
 
-			// 2. 创建
-			id, err := repo.Create(model.WebSocketMsg{
-				CompanyUuid:  messageData.CompanyUuid,
-				Uid:          conn.DeviceId,
-				Msg:          utils.StructToJson(messageData.Data),
-				Type:         messageData.MessageType,
-				SourceClient: conn.SourceClient,
-				Status:       0,
-				IsOffline:    0,
-				CreateTime:   uint(time.Now().Unix()),
-				UpdateTime:   uint(time.Now().Unix()),
-			})
-			if err != nil {
-				fmt.Printf("[%s] Error creating WebSocket message: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
-				logger.Logger.Error(fmt.Sprintf("Error creating WebSocket message: %v\n", err))
-				continue
-			}
-
-			// 发送消息
-			message := PushMessage{
-				Event: messageData.MessageType,
-				State: constant.CodeSuccess,
-				Data:  messageData.Data,
-				MsgId: int(id),
-			}
-
-			err = conn.ws.WriteMessage(websocket.TextMessage, getMsgData(message))
-			if err != nil {
-				fmt.Printf("[%s] Error sending message to client: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
-				logger.Logger.Error(fmt.Sprintf("Error sending message to client: %v\n", err))
-			} else {
-				fmt.Printf("[%s] 推送消息: %s\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), utils.StructToJson(map[string]interface{}{
-					"SourceClient": conn.SourceClient,
-					"CompanyUuid":  messageData.CompanyUuid,
-					"DeviceId":     conn.DeviceId,
-					"Event":        messageData.MessageType,
-					"State":        constant.CodeSuccess,
-					"Data":         messageData.Data,
-					"MsgId":        int(id),
-				}))
-				logger.Logger.Info(fmt.Sprintf("推送消息: SourceClient=%s, CompanyUuid=%d, DeviceId=%s, Event=%s, State=%d, Data=%s, MsgId=%d", conn.SourceClient, messageData.CompanyUuid, conn.DeviceId, messageData.MessageType, constant.CodeSuccess, utils.StructToJson(messageData.Data), id))
+	// 收集匹配的连接
+	var matchedConnections []ConnectionInfo
+	WsClients.Range(func(key, value interface{}) bool {
+		if conn, ok := value.(ConnectionInfo); ok {
+			if conn.CompanyUuid == messageData.CompanyUuid &&
+				(conn.StaffUuid == messageData.StaffUuid || messageData.StaffUuid == 0) &&
+				(conn.StaffUuid != messageData.NotStaffUuid || messageData.NotStaffUuid == 0) &&
+				(conn.SourceClient == messageData.SourceClient || messageData.SourceClient == "*") &&
+				(conn.DeviceId == messageData.DeviceId || messageData.DeviceId == "*") &&
+				(conn.DeviceId != messageData.NotDeviceId || messageData.NotDeviceId == "*" || messageData.NotDeviceId == "") {
+				matchedConnections = append(matchedConnections, conn)
 			}
 		}
+		return true
+	})
+
+	// 批量处理匹配的连接
+	for _, conn := range matchedConnections {
+		// 2. 创建消息记录
+		id, err := repo.Create(model.WebSocketMsg{
+			CompanyUuid:  messageData.CompanyUuid,
+			Uid:          conn.DeviceId,
+			Msg:          utils.StructToJson(messageData.Data),
+			Type:         messageData.MessageType,
+			SourceClient: conn.SourceClient,
+			Status:       0,
+			IsOffline:    0,
+			CreateTime:   uint(time.Now().Unix()),
+			UpdateTime:   uint(time.Now().Unix()),
+		})
+		if err != nil {
+			fmt.Printf("[%s] Error creating WebSocket message: %v\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err)
+			logger.Logger.Error(fmt.Sprintf("Error creating WebSocket message: %v\n", err))
+			continue
+		}
+
+		// 发送消息
+		message := PushMessage{
+			Event: messageData.MessageType,
+			State: constant.CodeSuccess,
+			Data:  messageData.Data,
+			MsgId: int(id),
+		}
+
+		// 使用安全的写入函数发送消息
+		err = safeWriteMessage(&conn, websocket.TextMessage, getMsgData(message), 10*time.Second)
+		if err != nil {
+			fmt.Printf("[%s] Error sending message to client: %v DeviceId: %s\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), err, conn.DeviceId)
+			logger.Logger.Error(fmt.Sprintf("Error sending message to client: %v DeviceId: %s\n", err, conn.DeviceId))
+		} else {
+			fmt.Printf("[%s] 推送消息: %s\n", time.Now().In(time.FixedZone("CST", 8*60*60)).Format("2006-01-02 15:04:05"), utils.StructToJson(map[string]interface{}{
+				"SourceClient": conn.SourceClient,
+				"CompanyUuid":  messageData.CompanyUuid,
+				"DeviceId":     conn.DeviceId,
+				"Event":        messageData.MessageType,
+				"State":        constant.CodeSuccess,
+				"Data":         messageData.Data,
+				"MsgId":        int(id),
+			}))
+			logger.Logger.Info(fmt.Sprintf("推送消息: SourceClient=%s, CompanyUuid=%d, DeviceId=%s, Event=%s, State=%d, Data=%s, MsgId=%d", conn.SourceClient, messageData.CompanyUuid, conn.DeviceId, messageData.MessageType, constant.CodeSuccess, utils.StructToJson(messageData.Data), id))
+		}
 	}
+}
+
+// GetConnectionStats 获取连接统计信息
+func GetConnectionStats() map[string]interface{} {
+	stats := map[string]interface{}{
+		"total_connections": 0,
+		"by_company":        make(map[uint64]int),
+		"by_source":         make(map[string]int),
+		"by_device":         make(map[string]int),
+	}
+
+	WsClients.Range(func(key, value interface{}) bool {
+		if conn, ok := value.(ConnectionInfo); ok {
+			stats["total_connections"] = stats["total_connections"].(int) + 1
+
+			// 按公司统计
+			if byCompany, ok := stats["by_company"].(map[uint64]int); ok {
+				byCompany[conn.CompanyUuid]++
+			}
+
+			// 按来源统计
+			if bySource, ok := stats["by_source"].(map[string]int); ok {
+				bySource[conn.SourceClient]++
+			}
+
+			// 按设备统计
+			if byDevice, ok := stats["by_device"].(map[string]int); ok {
+				byDevice[conn.DeviceId]++
+			}
+		}
+		return true
+	})
+
+	return stats
 }

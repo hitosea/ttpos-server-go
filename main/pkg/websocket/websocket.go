@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"ttpos-server-go/config"
 )
 
 // 源类型
@@ -126,6 +127,7 @@ func PushClient(company_uuid uint64, source_client, device_id, message_type stri
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-KEY", config.JWT.Secret)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
