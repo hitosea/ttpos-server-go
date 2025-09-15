@@ -10652,6 +10652,9 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 		return nil, errors.WithMessage(err)
 	}
 
+	// 事务结束了，从新使用回db，而不是tx
+	ctx.SetDB(db)
+
 	// 出库
 	go func() {
 		// 判断销售订单的每个商品是否都已有对应的出库记录
