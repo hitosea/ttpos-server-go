@@ -10052,7 +10052,7 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 			Description: "Checkout Rounding Off", // 结账抹零
 		})
 	}
-	if saleOrder.CalcCouponAmount() != 0 {
+	if saleOrder.CouponAmount != 0 {
 		taxes = append(taxes, &selling.PosInvoiceTax{
 			TaxAmount:   -saleOrder.CouponAmount,
 			Description: "Coupon Deduction", // 优惠券抵扣
@@ -10260,7 +10260,7 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 				Description: "Checkout Rounding Off", // 结账抹零
 			})
 		}
-		if saleOrder.CalcCouponAmount() != 0 {
+		if saleOrder.CouponAmount != 0 {
 			taxes = append(taxes, &selling.PosInvoiceTax{
 				TaxAmount:   saleOrder.CouponAmount,
 				Description: "Coupon Deduction", // 优惠券抵扣
@@ -10444,7 +10444,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 
 	// 修改订单为支付完成，并记录找零金额、最终付款金额等结算后才计算的字段
 	final := model.FinalAmount{
-		CouponAmount:         saleOrder.CalcCouponAmount(),
+		CouponAmount:         saleOrder.CalcCouponExchangeAmount(),
 		PaymentAmount:        totalPay,
 		ChangeAmount:         changeAmount,
 		ZeroCheckoutFee:      saleOrder.CalcCheckOutZeroFee(),
@@ -10598,6 +10598,13 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 		if err := s.VerifyCoupon(ctx, saleOrder, db); err != nil {
 			needCancelCoupon = true
 			return errors.WithMessage(err)
+		}
+
+		// 更新优惠券抵扣金额
+		if saleOrder.HasCoupon() {
+			if err := repository.NewSaleOrderCouponRepo(db).UpdateSaleOrderCouponAmount(saleOrder.Uuid, saleOrder.CouponAmount); err != nil {
+				return errors.WithMessage(err)
+			}
 		}
 
 		// 更新发票信息
