@@ -77,6 +77,16 @@ func displayMemoryStats(body []byte) {
 		fmt.Printf("  活跃数量: %v\n", imgFontData["active_count"])
 		fmt.Printf("  可用数量: %v\n", imgFontData["available"])
 		fmt.Printf("  信号量长度: %v\n", imgFontData["semaphore_length"])
+		fmt.Printf("  字体库数量: %v\n", imgFontData["font_count"])
+		fmt.Printf("  字体宽度数量: %v\n", imgFontData["width_cache_count"])
+		fmt.Printf("  访问缓存计数: %v\n", imgFontData["access_cache_count"])
+		if memoryUsage, ok := imgFontData["memory_usage"].(float64); ok {
+			fmt.Printf("  字体管理器内存使用: %.2f M\n", memoryUsage/1024/1024)
+		} else if memoryUsage, ok := imgFontData["memory_usage"].(int64); ok {
+			fmt.Printf("  字体管理器内存使用: %.2f M\n", float64(memoryUsage)/1024/1024)
+		} else {
+			fmt.Printf("  字体管理器内存使用: %v\n", imgFontData["memory_usage"])
+		}
 	} else {
 		fmt.Println("  ImgFont状态数据不可用")
 	}
@@ -132,7 +142,7 @@ var statsCmd = &cobra.Command{
 		fmt.Println("==================================================")
 
 		// 创建定时器，每秒更新一次
-		ticker := time.NewTicker(100 * time.Millisecond)
+		ticker := time.NewTicker(300 * time.Millisecond)
 		defer ticker.Stop()
 
 		// 创建信号通道
