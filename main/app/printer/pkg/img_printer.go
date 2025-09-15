@@ -1063,7 +1063,9 @@ func (i *ImgFont) AppendImg(imgPath string, size int, isRoundness bool, topHeigh
 			}
 		}
 
+		srcImg = nil
 		srcImg = resizedImg
+		resized = nil
 	}
 
 	// 处理圆角
@@ -1098,6 +1100,7 @@ func (i *ImgFont) AppendImg(imgPath string, size int, isRoundness bool, topHeigh
 		roundedImg := image.NewRGBA(image.Rect(0, 0, width, height))
 		draw.DrawMask(roundedImg, roundedImg.Bounds(), srcImg, image.Point{}, mask, image.Point{}, draw.Over)
 		srcImg = roundedImg
+		mask = nil
 	}
 
 	// 计算图片位置 (水平居中)
@@ -1123,6 +1126,9 @@ func (i *ImgFont) AppendImg(imgPath string, size int, isRoundness bool, topHeigh
 
 	// 添加换行
 	i.LineFeed(1)
+
+	//
+	srcImg = nil
 
 	return i
 }
@@ -1748,6 +1754,10 @@ func (i *ImgFont) Save(imageSrc string, reminderSound bool, openMoneybox int) st
 		// 生成打印数据
 		printData := string([]byte{29, 118, 48, 0}) + i.GetBytesFromBitMap(rotatedImage)
 		data = append(data, printData)
+
+		// 加快释放
+		croppedImage = nil
+		rotatedImage = nil
 	}
 
 	// 合并打印数据
