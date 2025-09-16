@@ -61,6 +61,13 @@ type MaterialDetailReq struct {
 	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 物品UUID
 }
 
+// MaterialCategoryEditReq 编辑物品类别请求
+type MaterialCategoryEditReq struct {
+	Uuid       uint64             `json:"uuid"`        // 物品类别UUID
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 物品类别名称
+	Code       string             `json:"code"`        // 物品类别编码
+}
+
 // MaterialAddReq 添加物品请求
 type MaterialAddReq struct {
 	LocaleName       dto.LocaleResponse `json:"locale_name"`        // 物品名称

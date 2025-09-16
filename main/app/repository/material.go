@@ -16,6 +16,7 @@ type IMaterialRepo interface {
 	GetMaterialListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.Material, int64, error)
 	GetMaterialByUuid(uuid uint64, opts ...DBOption) (model.Material, error)
 	GetMaterialByUuids(uuids []uint64, opts ...DBOption) ([]*model.Material, error)
+	GetMaterialByCategoryUuid(categoryUuid uint64) ([]*model.Material, error)
 	GetMaterialDetailByUuids(uuids []uint64) ([]*model.Material, error)
 	GetMaterialDetailByUuid(uuid uint64) (*model.Material, error)
 	CreateMaterial(material model.Material) (uint64, error)
@@ -28,6 +29,7 @@ type IMaterialRepo interface {
 	DeleteMaterial(uuid uint64) error
 	GetMaterialCategoryByName(name string) (*model.MaterialCategory, error)
 	GetMaterialCategoryByUuid(uuid uint64) (*model.MaterialCategory, error)
+	UpdateMaterialCategory(materialCategory model.MaterialCategory) error
 	CreateMaterialCategory(materialCategory model.MaterialCategory) (uint64, error)
 	GetMaterialCategoryList() ([]model.MaterialCategory, error)
 	UpdateMaterialStatusBatch(uuids []uint64, status int) error   // 批量修改物品状态
@@ -124,6 +126,14 @@ func (r *MaterialRepoImpl) GetMaterialByUuids(uuids []uint64, opts ...DBOption) 
 		return nil, errors.WithMessage(err, "查询物品详情失败")
 	}
 
+	return materials, nil
+}
+
+func (r *MaterialRepoImpl) GetMaterialByCategoryUuid(categoryUuid uint64) ([]*model.Material, error) {
+	var materials []*model.Material
+	if err := r.db.Model(&model.Material{}).Preload("NotBaseUnitList.Unit").Where("category_uuid = ?", categoryUuid).Where("delete_time = ?", 0).Find(&materials).Error; err != nil {
+		return nil, errors.WithMessage(err, "查询物品失败")
+	}
 	return materials, nil
 }
 
@@ -421,4 +431,14 @@ func (r *MaterialRepoImpl) CheckMaterialCategoryCodeExist(code string, uuid uint
 		db = db.Where("uuid <> ?", uuid)
 	}
 	return db.First(&model.MaterialCategory{}).Error == nil
+}
+
+func (r *MaterialRepoImpl) UpdateMaterialCategory(materialCategory model.MaterialCategory) error {
+	if err := r.db.Model(&model.MaterialCategory{}).Where("uuid = ?", materialCategory.Uuid).Updates(map[string]any{
+		"name": materialCategory.Name,
+		"code": materialCategory.Code,
+	}).Error; err != nil {
+		return errors.WithMessage(err, "更新物品类别失败")
+	}
+	return nil
 }

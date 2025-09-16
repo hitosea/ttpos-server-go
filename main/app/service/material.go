@@ -36,6 +36,7 @@ type IMaterialSrv interface {
 	AddMaterialCategory(ctx context.Context, req req.MaterialCategoryAddReq) error
 	GetMaterialCategoryList(ctx context.Context, req req.MaterialCategoryListReq) (material_resp.MaterialCategoryListResp, error)
 	SortMaterialCategory(ctx context.Context, req req.MaterialCategorySortReq) error
+	EditMaterialCategory(ctx context.Context, req req.MaterialCategoryEditReq) error
 	GetMaterialUnitList(ctx context.Context, req req.MaterialUnitListReq) (material_resp.MaterialUnitListResp, error)
 	AddProductBomCard(ctx context.Context, req req.ProductBomCardAddReq) error
 	GetProductBomCardDetail(ctx context.Context, req req.ProductBomCardDetailReq) (*material_resp.ProductBomCardDetailResp, error)
@@ -879,6 +880,93 @@ func (s *materialSrv) SortMaterialCategory(ctx context.Context, req req.Material
 	err := productRepo.BatchUpdateSort(&model.MaterialCategory{}, sorts)
 	if err != nil {
 		return errors.WithMessage(errors.New("排序分类失败"), err.Error())
+	}
+	return nil
+}
+
+func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.MaterialCategoryEditReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	materialCategoryRepo := repository.NewMaterialRepo(db)
+	materialCategory, err := materialCategoryRepo.GetMaterialCategoryByUuid(request.Uuid)
+	if err != nil {
+		return errors.WithMessage(err, "获取物品类别失败")
+	}
+	changeCode := false
+	if materialCategory.Code != request.Code {
+		changeCode = true
+	}
+	materialCategory.Name = request.LocaleName.ToJson()
+	materialCategory.Code = request.Code
+	materialCategory.MultiLanguageName.InitByLocaleResponse(request.LocaleName)
+
+	checkService := NewCheckNameSrv(s.dbm)
+	names := checkService.MakeCheckNameList(ctx, request.LocaleName)
+	for _, name := range names {
+		if !checkService.CheckNameLength(ctx, name.Text, 50) {
+			return errors.New("名称长度不能超过50")
+		}
+	}
+	// 检查物品类别名称是否已存在
+	if _, err := materialCategoryRepo.GetMaterialCategoryByName(request.LocaleName.ToJson()); err == nil {
+		return errors.New("名称已存在")
+	}
+
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		materialCategoryRepo := repository.NewMaterialRepo(tx)
+		if err := materialCategoryRepo.UpdateMaterialCategory(*materialCategory); err != nil {
+			return errors.WithMessage(err, "更新物品类别失败")
+		}
+		// 更新多语言名称
+		if err = repository.NewMultiLanguageNameRepo(tx).UpdateMultiLanguageName(materialCategory.MultiLanguageNameUuid, materialCategory.MultiLanguageName); err != nil {
+			return errors.WithMessage(err, "更新多语言名称失败")
+		}
+		// 如果修改了物品编码，同步更新所有关联了这个分类的erp物品
+		if ctx.GetCompany().IsOpenErp() {
+			if changeCode {
+				materialRepo := repository.NewMaterialRepo(tx)
+				materials, err := materialRepo.GetMaterialByCategoryUuid(materialCategory.Uuid)
+				if err != nil {
+					return errors.WithMessage(err, "获取物品失败")
+				}
+				erpSrv := erp.NewIErpSrv(s.dbm)
+				for _, material := range materials {
+					enName, err := GetEnName(ctx, material.MultiLanguageName.GetNames())
+					if err != nil {
+						return errors.WithMessage(err, "翻译失败")
+					}
+
+					// 旧的非基准单位
+					unitList := []req.MaterialUomReq{}
+					for _, unit := range material.NotBaseUnitList {
+						unitList = append(unitList, req.MaterialUomReq{
+							Uom:            unit.Unit.ErpnextUom,
+							ConversionRate: unit.ConversionRate,
+						})
+					}
+
+					getMaterialCategoryName, err := GetEnName(ctx, materialCategory.MultiLanguageName.GetNames())
+					if err != nil {
+						return errors.WithMessage(err, "翻译失败")
+					}
+
+					erpSrv.AddMaterial(ctx, req.MaterialAddErpReq{
+						ItemCode:           material.Code,
+						ItemName:           enName,
+						StockUom:           material.Unit.Unit.ErpnextUom,
+						Disabled:           material.Status == false,
+						ValuationRate:      material.Valuation,
+						BarcodeValue:       material.BarcodeValue,
+						Uoms:               unitList,
+						InternalCode:       material.InternalCode,
+						Classification:     getMaterialCategoryName,
+						ClassificationCode: materialCategory.Code,
+					})
+				}
+			}
+		}
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err)
 	}
 	return nil
 }
