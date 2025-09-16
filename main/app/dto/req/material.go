@@ -56,6 +56,7 @@ type MaterialAddReq struct {
 	UnitList         []MaterialUnitReq  `json:"unit_list"`          // 单位列表
 	PurchaseUnitUuid uint64             `json:"purchase_unit_uuid"` // 采购单位UUID
 	CostUnitUuid     uint64             `json:"cost_unit_uuid"`     // 成本单位UUID
+	InternalCode     string             `json:"internal_code"`      // 内部编码
 }
 
 func (r *MaterialAddReq) Validate() error {
@@ -104,6 +105,7 @@ type MaterialAddErpReq struct {
 	BarcodeValue  string           `json:"barcode_value" binding:"required"`  // 条形码值
 	ValuationRate float64          `json:"valuation_rate" binding:"required"` // 估值率
 	OpeningStock  float64          `json:"opening_stock" binding:"required"`  // 期初库存
+	InternalCode  string           `json:"internal_code" `                    // 内部编码
 	Uoms          []MaterialUomReq `json:"uoms" binding:"required,dive"`      // 单位列表
 }
 
@@ -144,6 +146,7 @@ type MaterialEditReq struct {
 	UnitList         []MaterialUnitReq  `json:"unit_list"`          // 单位列表,新增的非基准单位
 	PurchaseUnitUuid uint64             `json:"purchase_unit_uuid"` // 采购单位UUID
 	CostUnitUuid     uint64             `json:"cost_unit_uuid"`     // 成本单位UUID
+	InternalCode     string             `json:"internal_code"`      // 内部编码
 }
 
 func (r *MaterialEditReq) Validate() error {

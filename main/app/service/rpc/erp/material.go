@@ -59,6 +59,7 @@ func (s *erpSrv) AddMaterial(ctx context.Context, params req.MaterialAddErpReq) 
 		Branch:        companySetting.ErpnextBranchName,
 		CompanyAbbr:   companySetting.ErpnextCompanyAbbr,
 		Uoms:          unitList,
+		InternalCode:  params.InternalCode,
 	}
 	result, err := client.SaveItem(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), param)
 	if err != nil {

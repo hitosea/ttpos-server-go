@@ -466,6 +466,7 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 		}(),
 		NotBaseUnitList: notBaseUnitList,
 		Unit:            &unit,
+		InternalCode:    request.InternalCode,
 	}
 
 	_, err = materialRepo.CreateMaterial(material)
@@ -492,6 +493,7 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 		ValuationRate: request.Valuation,
 		OpeningStock:  request.InitStock,
 		Uoms:          unitList,
+		InternalCode:  request.InternalCode,
 	}
 
 	return &material, materialAddErpReq, nil
@@ -637,6 +639,12 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 				return errors.WithMessage(err, "清空物品估值率失败")
 			}
 		}
+		if request.InternalCode == "" {
+			err = materialRepo.ClearMaterialInternalCode(request.Uuid)
+			if err != nil {
+				return errors.WithMessage(err, "清空物品内部编码失败")
+			}
+		}
 
 		if ctx.GetCompany().IsOpenErp() {
 			erpSrv := erp.NewIErpSrv(s.dbm)
@@ -674,6 +682,12 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 				ValuationRate: material.Valuation,
 				BarcodeValue:  material.BarcodeValue,
 				Uoms:          unitList,
+				InternalCode: func() string {
+					if request.InternalCode != "" {
+						return request.InternalCode
+					}
+					return " " // 内部编码为空时，传空格给ErpNext
+				}(),
 			})
 			if errErp != nil {
 				return errors.WithMessage(errErp)
@@ -749,6 +763,7 @@ func (s *materialSrv) UpdateMaterialStatusBatch(ctx context.Context, request req
 					ValuationRate: existingMaterial.Valuation,
 					BarcodeValue:  existingMaterial.BarcodeValue,
 					Uoms:          unitList,
+					InternalCode:  existingMaterial.InternalCode,
 				})
 				if errErp != nil {
 					return errors.WithMessage(errErp)

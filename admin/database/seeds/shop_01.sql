@@ -868,6 +868,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_material` (
     `price`  DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '采购单价',
     `stock_num`  DECIMAL(22, 4) UNSIGNED NOT NULL DEFAULT 0.0000 COMMENT '库存数量',
     `barcode_value` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '条形码值',
+    `internal_code` VARCHAR(255) DEFAULT '' COMMENT '内部编码',
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态, 1-上架 0-下架',
     `actual_sale_num`  DECIMAL(22, 4) NOT NULL DEFAULT 0.0000 COMMENT '实际销量。每次卖出时,实际销量增加',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
