@@ -585,7 +585,11 @@ func (model *RelatedMaterial) CalculateExpectedProductionNum() float64 {
 }
 
 func (model *RelatedMaterial) GetExpectedProductionNum() float64 {
-	return model.expectedProductionNum
+	num := model.expectedProductionNum
+	if num <= 0 {
+		num = model.CalculateExpectedProductionNum()
+	}
+	return num
 }
 
 func (model *RelatedMaterial) SetExpectedProductionNum(expectedProductionNum float64) {
@@ -868,6 +872,7 @@ func (model *ProductBomCard) Copy() *ProductBomCard {
 			BaseUnitUuid:           material.BaseUnitUuid,
 			BaseUnitName:           material.BaseUnitName,
 			BaseUnitConversionRate: material.BaseUnitConversionRate,
+			Material:               material.Material,
 		})
 	}
 
