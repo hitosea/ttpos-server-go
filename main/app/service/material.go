@@ -294,9 +294,14 @@ func (s *materialSrv) AddMaterialCategory(ctx context.Context, req req.MaterialC
 		materialCategoryRepo := repository.NewMaterialRepo(tx)
 
 		// 检查物品类别名称是否已存在
-		_, err := materialCategoryRepo.GetMaterialCategoryByName(req.LocaleName.ZH)
+		_, err := materialCategoryRepo.GetMaterialCategoryByName(req.LocaleName.ToJson())
 		if err == nil {
 			return errors.New("物品类别名称已存在")
+		}
+
+		// 检查物品类别编码是否已存在
+		if exist := materialCategoryRepo.CheckMaterialCategoryCodeExist(req.Code, 0); exist {
+			return errors.New("物品类别编码已存在")
 		}
 
 		// 创建多语言名称

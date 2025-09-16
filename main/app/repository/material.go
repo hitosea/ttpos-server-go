@@ -39,6 +39,7 @@ type IMaterialRepo interface {
 	GetCategoryUuidByNameOptimized(name string) (uint64, error)
 	CheckBarcodeExist(barcode string, uuid uint64) bool                   // 检查条形码是否存在
 	CheckMaterialInternalCodeExist(internalCode string, uuid uint64) bool // 检查内部编码是否存在
+	CheckMaterialCategoryCodeExist(code string, uuid uint64) bool         // 检查物品类别编码是否存在
 
 	WithRelatedMaterialList() DBOption
 }
@@ -409,4 +410,15 @@ func (r *MaterialRepoImpl) GetMaterialCategoryByUuid(uuid uint64) (*model.Materi
 		return nil, errors.WithMessage(err, "根据UUID获取物品分类失败")
 	}
 	return &materialCategory, nil
+}
+
+func (r *MaterialRepoImpl) CheckMaterialCategoryCodeExist(code string, uuid uint64) bool {
+	db := r.db.Model(&model.MaterialCategory{}).
+		Where("delete_time = ?", constant.NotDeleted).
+		Where("code = ?", code).
+		Where("code <> ?", "")
+	if uuid != 0 {
+		db = db.Where("uuid <> ?", uuid)
+	}
+	return db.First(&model.MaterialCategory{}).Error == nil
 }
