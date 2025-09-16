@@ -140,6 +140,33 @@ func (h *MaterialHandler) GetMaterialCategoryList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// SortMaterialCategory 排序物品类别
+// @Summary 排序物品类别
+// @Description 排序物品类别
+// @Tags 商家端.物品管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.MaterialCategorySortReq true "物品类别排序请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/material/category/sort [post]
+func (h *MaterialHandler) SortMaterialCategory(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	sortReq := req.MaterialCategorySortReq{}
+
+	if err := c.ShouldBindJSON(&sortReq); err != nil {
+		helper.HandleValidationError(c, err, sortReq, dto.PageReqMessage)
+		return
+	}
+	err := h.materialSrv.SortMaterialCategory(ctx, sortReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
 // AddMaterial 添加物品
 // @Summary 添加物品
 // @Description 添加物品
@@ -472,6 +499,7 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		privateApi.GET("/material/detail", wrapper.GetMaterialDetail)                // 获取物品详情
 		privateApi.POST("/material/category/add", wrapper.AddMaterialCategory)       // 创建物品类别
 		privateApi.GET("/material/category/list", wrapper.GetMaterialCategoryList)   // 获取物品类别列表
+		privateApi.POST("/material/category/sort", wrapper.SortMaterialCategory)     // 排序物品类别
 		privateApi.POST("/material/add", wrapper.AddMaterial)                        // 添加物品
 		privateApi.POST("/material/edit", wrapper.EditMaterial)                      // 编辑物品
 		privateApi.POST("/material/status/batch", wrapper.UpdateMaterialStatusBatch) // 批量修改物品状态

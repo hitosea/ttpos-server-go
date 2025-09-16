@@ -87,6 +87,7 @@ type IProductQueryRepo interface {
 	GetProductCategoryList(opts ...DBOption) ([]model.ProductCategory, error)                                       // 获取产品类别列表
 	GetProductCategory(opts ...DBOption) (model.ProductCategory, error)                                             // 获取产品分类详情
 	GetProductCategoryCount(opts ...DBOption) (int64, error)                                                        // 获取产品分类数量
+	GetMaterialCategoryCount(opts ...DBOption) (int64, error)                                                       // 获取物品分类数量
 	GetProductCategoryMaxSort(opts ...DBOption) (int64, error)                                                      // 获取产品分类最大排序
 	GetProduct(opts ...DBOption) (model.ProductPackage, error)                                                      // 获取商品详情
 	GetProductDetail(uuid uint64) (*model.ProductPackage, error)                                                    // 获取商品详情
@@ -320,6 +321,16 @@ func (r *productRepo) GetProductCategoryList(opts ...DBOption) ([]model.ProductC
 func (r *productRepo) GetProductCategoryCount(opts ...DBOption) (int64, error) {
 	var total int64
 	db := r.db.Model(&model.ProductCategory{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Count(&total).Error
+	return total, errors.WithMessage(err)
+}
+
+func (r *productRepo) GetMaterialCategoryCount(opts ...DBOption) (int64, error) {
+	var total int64
+	db := r.db.Model(&model.MaterialCategory{})
 	for _, opt := range opts {
 		db = opt(db)
 	}
@@ -1320,7 +1331,7 @@ func (r *productRepo) BatchUpdateSort(table any, sorts map[uint64]int) error {
 	// 根据传入的模型类型确定错误消息
 	var errorMessage string
 	switch table.(type) {
-	case *model.ProductUnit, *model.ProductAttributeGroup, *model.ProductAttribute, *model.ProductSauce, *model.ProductFlavor, *model.ProductCategory:
+	case *model.ProductUnit, *model.ProductAttributeGroup, *model.ProductAttribute, *model.ProductSauce, *model.ProductFlavor, *model.ProductCategory, *model.MaterialCategory:
 		// 无需处理
 	default:
 		return errors.New("更新排序失败")

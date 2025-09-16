@@ -35,6 +35,7 @@ type IMaterialSrv interface {
 	UpdateMaterialStatusBatch(ctx context.Context, req req.MaterialStatusReq) error
 	AddMaterialCategory(ctx context.Context, req req.MaterialCategoryAddReq) error
 	GetMaterialCategoryList(ctx context.Context, req req.MaterialCategoryListReq) (material_resp.MaterialCategoryListResp, error)
+	SortMaterialCategory(ctx context.Context, req req.MaterialCategorySortReq) error
 	GetMaterialUnitList(ctx context.Context, req req.MaterialUnitListReq) (material_resp.MaterialUnitListResp, error)
 	AddProductBomCard(ctx context.Context, req req.ProductBomCardAddReq) error
 	GetProductBomCardDetail(ctx context.Context, req req.ProductBomCardDetailReq) (*material_resp.ProductBomCardDetailResp, error)
@@ -849,6 +850,37 @@ func (s *materialSrv) GetMaterialCategoryList(ctx context.Context, req req.Mater
 	return material_resp.MaterialCategoryListResp{
 		List: materialCategoryList,
 	}, nil
+}
+
+func (s *materialSrv) SortMaterialCategory(ctx context.Context, req req.MaterialCategorySortReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	commonRepo := repository.NewCommonRepo()
+	productRepo := repository.NewProductRepo(db)
+
+	materialCategoryUuids := make([]uint64, 0, len(req.List))
+	for _, item := range req.List {
+		materialCategoryUuids = append(materialCategoryUuids, item.Uuid)
+	}
+	productCategories, _ := productRepo.GetMaterialCategoryCount(
+		commonRepo.WhereBySoftDelete(),
+		productRepo.WhereUuidIn(materialCategoryUuids),
+	)
+	if productCategories != int64(len(materialCategoryUuids)) {
+		return errors.New("分类不存在")
+	}
+
+	sorts := make(map[uint64]int)
+	for _, item := range req.List {
+		if item.Sort == 0 {
+			return errors.New("排序不能为0")
+		}
+		sorts[item.Uuid] = item.Sort
+	}
+	err := productRepo.BatchUpdateSort(&model.MaterialCategory{}, sorts)
+	if err != nil {
+		return errors.WithMessage(errors.New("排序分类失败"), err.Error())
+	}
+	return nil
 }
 
 func (s *materialSrv) GetMaterialUnitList(ctx context.Context, req req.MaterialUnitListReq) (material_resp.MaterialUnitListResp, error) {

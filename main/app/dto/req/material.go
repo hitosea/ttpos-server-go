@@ -28,6 +28,16 @@ func (r *MaterialCategoryAddReq) Validate() error {
 type MaterialCategoryListReq struct {
 }
 
+// MaterialCategorySortReq 物品类别排序请求
+type MaterialCategorySortReq struct {
+	List []MaterialCategorySortItemReq `json:"list" binding:"required,dive"` // 物品类别列表
+}
+
+type MaterialCategorySortItemReq struct {
+	Uuid uint64 `json:"uuid" binding:"required"` // 物品类别UUID
+	Sort int    `json:"sort" binding:"required"` // 排序
+}
+
 // MaterialListReq 物品列表查询
 type MaterialListReq struct {
 	dto.PageReq            // 分页参数
