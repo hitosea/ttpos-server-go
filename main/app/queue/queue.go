@@ -1,6 +1,7 @@
 package queue
 
 import (
+	"context"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/logger"
@@ -41,4 +42,24 @@ func Init() {
 		logger.Logger.Error("订阅 RocketMQ 主题失败", zap.Error(err))
 	}
 
+}
+
+// Shutdown 优雅关闭 RocketMQ 消费者管理器
+func Shutdown() error {
+	if manager == nil {
+		return nil
+	}
+
+	logger.Logger.Info("开始关闭 RocketMQ 消费者管理器")
+
+	// 使用管理器的 Shutdown 方法优雅关闭
+	ctx := context.Background()
+	if err := manager.Shutdown(ctx); err != nil {
+		logger.Logger.Error("关闭 RocketMQ 消费者管理器失败", zap.Error(err))
+		return err
+	}
+
+	manager = nil
+	logger.Logger.Info("RocketMQ 消费者管理器已关闭")
+	return nil
 }
