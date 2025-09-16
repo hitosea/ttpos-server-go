@@ -42,7 +42,7 @@ RUN if [ ! -f main ] || [ ! -x main ]; then \
 RUN chmod +x main
 
 # 使用轻量级的镜像来运行应用
-FROM ubuntu:latest
+FROM golang:1.25-trixie
 
 ENV SW_AGENT_NAME=ttpos-server-main
 ENV SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE=103.63.136.110:30435
