@@ -1419,11 +1419,14 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 	}
 
 	// 组合列表源数据
+	monthMap := make(map[string]int64)
+	timeUtil := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
 	exportLists := make([]resp.OrderExportInfo, 0)
 	for _, bill := range lists {
 		isSplit := len(bill.SaleOrders) > 1
 		// 拆单
 		for index, saleOrder := range bill.SaleOrders {
+
 			var products []*resp.OrderExportInfoProduct
 			// 添加自助餐顾客
 			for _, orderBuffetCustomer := range saleOrder.SaleOrderBuffetCustomerTypes {
@@ -1461,8 +1464,13 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 					TotalPrice: saleOrderProduct.GetTotalPrice(),
 				})
 			}
+			// 获取创建时间
+			timeDetail := timeUtil.FormatUnixTimeDetail(saleOrder.CreateTime)
+			month := fmt.Sprintf("%d-%02d", timeDetail.Year, timeDetail.Month)
+			monthMap[month]++
 			//
 			exportLists = append(exportLists, resp.OrderExportInfo{
+				CreateTime:    saleOrder.CreateTime,
 				BillUuid:      bill.Uuid,
 				BillType:      utils.IfString(bill.IsInstantBill(), i18n.Translate(language, "点餐订单"), i18n.Translate(language, "桌台订单")),
 				Products:      products,
@@ -1492,6 +1500,10 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 		// 拆单
 		if isSplit && len(exportLists) > 0 {
 			mainOrder := exportLists[len(exportLists)-1]
+			// 获取创建时间
+			timeDetail := timeUtil.FormatUnixTimeDetail(mainOrder.CreateTime)
+			month := fmt.Sprintf("%d-%02d", timeDetail.Year, timeDetail.Month)
+			monthMap[month]++
 			// 收集当前账单所有会员名称并去重
 			var allMemberNames []string
 			var allMemberUuids []string
@@ -1548,6 +1560,12 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 			mainOrder.CashierName = bill.CashierName
 			exportLists = append(exportLists, mainOrder)
 		}
+	}
+	for i, exportList := range exportLists {
+		timeDetail := timeUtil.FormatUnixTimeDetail(exportList.CreateTime)
+		month := fmt.Sprintf("%d-%02d", timeDetail.Year, timeDetail.Month)
+		monthMap[month]--
+		exportLists[i].OrderID = fmt.Sprintf("OID%d%02d%05d", timeDetail.Year, timeDetail.Month, monthMap[month])
 	}
 	//
 	return resp.OrderExportListPaginationResp{
