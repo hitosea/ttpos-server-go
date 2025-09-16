@@ -350,7 +350,7 @@ type ProductImportListItem struct {
 	CategoryName          string             `json:"category_name" binding:"required"`            // 分类名称
 	ProductUnit           string             `json:"product_unit" binding:"required"`             // 商品单位
 	SpecName              string             `json:"spec_name" binding:"required"`                // 规格名称
-	ProductPrice          string             `json:"product_price" binding:"required"`            // 商品价格
+	ProductPrice          float64            `json:"product_price" binding:"required"`            // 商品价格
 	NumType               int                `json:"num_type" binding:"required"`                 // 数量计算方法, 1-整数 2-小数
 	Barcode               string             `json:"barcode" binding:"required"`                  // 商品条码
 	ProductStatus         int                `json:"product_status" binding:"required"`           // 商品状态, 1-上架 0-下架

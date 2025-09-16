@@ -27,23 +27,43 @@ const (
 func Init() {
 	once := sync.Once{}
 	once.Do(func() {
-		var err error
 		if config.Server.Mode == "debug" {
-			go func() {
-				if nacosClient, err = nacos.NewNacosClient(config.Nacos); err != nil {
-					fmt.Println("初始化nacos客户端服务失败:", zap.Error(err))
-					logger.Logger.Error("初始化nacos客户端服务失败:", zap.Error(err))
-				}
-				fmt.Println("初始化nacos客户端服务成功")
-			}()
+			go Startup()
 		} else {
-			if nacosClient, err = nacos.NewNacosClient(config.Nacos); err != nil {
-				fmt.Println("初始化nacos客户端服务失败:", zap.Error(err))
-				logger.Logger.Error("初始化nacos客户端服务失败:", zap.Error(err))
-			}
-			fmt.Println("初始化nacos客户端服务成功")
+			Startup()
 		}
 	})
+}
+
+// Shutdown 优雅关闭 Nacos 客户端
+func Shutdown() error {
+	if nacosClient == nil {
+		return nil
+	}
+
+	logger.Logger.Info("开始关闭 Nacos 客户端")
+
+	// Nacos SDK 没有提供显式的关闭方法，但我们可以清空引用
+	nacosClient = nil
+
+	logger.Logger.Info("Nacos 客户端已关闭")
+	return nil
+}
+
+// Startup 初始化Nacos客户端服务
+// 返回：错误信息
+func Startup() error {
+	// 移除不必要的 goroutine，统一处理逻辑
+	client, err := nacos.NewNacosClient(config.Nacos)
+	if err != nil {
+		fmt.Println("初始化nacos客户端服务失败:", zap.Error(err))
+		logger.Logger.Error("初始化nacos客户端服务失败:", zap.Error(err))
+		return err
+	}
+	nacosClient = client
+	fmt.Println("初始化nacos客户端服务成功")
+	logger.Logger.Info("初始化nacos客户端服务成功")
+	return nil
 }
 
 func GetServiceGrpcAddr(serviceName string) (string, error) {

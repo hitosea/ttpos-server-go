@@ -1098,8 +1098,13 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, request req.ProductS
 			if err != nil {
 				return errors.WithMessage(err, "翻译失败")
 			}
+
+			erpCode := product.ErpCode
+			if product.IsPackage() { // 如果是删除套餐
+				erpCode = product.GetPackageProductBom().ErpCode
+			}
 			items = append(items, req.DeleteProductErpItemReq{
-				ItemCode: product.ErpCode,
+				ItemCode: erpCode,
 				ItemName: enName,
 				StockUom: product.ProductUnit.ErpnextUom,
 			})
@@ -3878,8 +3883,6 @@ func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportRe
 		if repository.NewProductRepo(db).CheckBarcodeExist(item.Barcode, 0) {
 			return errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "商品条码已存在"))
 		}
-		// 处理显示
-		item.NumType = utils.IfInt(item.NumType == 1, 0, 1)
 	}
 
 	// 多规格合并
@@ -3906,8 +3909,8 @@ func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportRe
 					TakeoutUuid: item.TakeoutTaxUuid,
 				},
 				Status:          item.ProductStatus,
-				NumType:         item.NumType,
-				DeductStockType: item.DeductStockType,
+				NumType:         utils.IfInt(item.NumType == 1, 0, 1),
+				DeductStockType: utils.IfInt(item.DeductStockType == 2, 0, 1),
 				Show: req.ProductShopAddShowReq{
 					IsShowCashier:   item.IsShowCashier,
 					IsShowTablet:    item.IsShowTablet,

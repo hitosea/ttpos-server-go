@@ -1,9 +1,15 @@
 package command
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/queue"
 	"ttpos-server-go/app/tasks"
@@ -21,6 +27,7 @@ import (
 	"ttpos-server-go/pkg/validator"
 	"ttpos-server-go/router"
 
+	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
 	"github.com/robfig/cron/v3"
@@ -106,6 +113,7 @@ func initializeExternalService(dbm *database.DBManager, cache cache.Cache) {
 	gin.SetMode(config.Server.Mode)
 	// 创建Gin引擎
 	r := gin.New()
+	pprof.Register(r)
 	// 添加中间件
 	r.Use(middleware.Cors())
 	// 添加请求参数日志中间件
@@ -122,9 +130,73 @@ func initializeExternalService(dbm *database.DBManager, cache cache.Cache) {
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	// 注册路由
 	router.Setup(r, dbm, cache)
-	if err := r.Run(":" + config.Server.Port); err != nil {
-		logger.Logger.Fatal("Error starting server", zap.Error(err))
+
+	// 创建 HTTP 服务器
+	srv := &http.Server{
+		Addr:    ":" + config.Server.Port,
+		Handler: r,
 	}
+
+	// 启动服务器的 goroutine
+	go func() {
+		logger.Logger.Info("HTTP 服务器启动", zap.String("port", config.Server.Port))
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Logger.Fatal("HTTP 服务器启动失败", zap.Error(err))
+		}
+	}()
+
+	// 等待中断信号来优雅关闭服务器
+	gracefulShutdown(srv)
+}
+
+// gracefulShutdown 优雅关闭服务器和相关资源
+func gracefulShutdown(srv *http.Server) {
+	// 创建一个接收系统信号的通道
+	quit := make(chan os.Signal, 1)
+	// 监听 SIGINT (Ctrl+C) 和 SIGTERM 信号
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	// 阻塞等待信号
+	<-quit
+	logger.Logger.Info("收到关闭信号，开始优雅关闭...")
+
+	// 创建一个带超时的 context
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// 关闭 HTTP 服务器
+	logger.Logger.Info("正在关闭 HTTP 服务器...")
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Logger.Error("HTTP 服务器关闭失败", zap.Error(err))
+	} else {
+		logger.Logger.Info("HTTP 服务器已关闭")
+	}
+
+	// 关闭 RocketMQ 消费者
+	logger.Logger.Info("正在关闭 RocketMQ 消费者...")
+	if err := queue.Shutdown(); err != nil {
+		logger.Logger.Error("RocketMQ 消费者关闭失败", zap.Error(err))
+	} else {
+		logger.Logger.Info("RocketMQ 消费者已关闭")
+	}
+
+	// 关闭 Nacos 客户端
+	logger.Logger.Info("正在关闭 Nacos 客户端...")
+	if err := cloud.Shutdown(); err != nil {
+		logger.Logger.Error("Nacos 客户端关闭失败", zap.Error(err))
+	} else {
+		logger.Logger.Info("Nacos 客户端已关闭")
+	}
+
+	// 关闭数据库连接
+	logger.Logger.Info("正在关闭数据库连接...")
+	database.CloseAll()
+	logger.Logger.Info("数据库连接已关闭")
+
+	// 同步日志
+	logger.Logger.Sync()
+
+	logger.Logger.Info("应用程序已优雅关闭")
 }
 
 // 初始化定时器任务

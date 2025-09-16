@@ -20,8 +20,10 @@ var (
 	maxConcurrentMessages = 500
 	// 信号量通道，用于限制并发
 	messageSemaphore = make(chan struct{}, maxConcurrentMessages)
-	// 保护共享资源的锁
-	messageMutex sync.Mutex
+	// 基于MessageKey的细粒度锁映射
+	messageKeyMutexes = sync.Map{} // map[string]*sync.Mutex
+	// 保护messageKeyMutexes的锁
+	mutexMapLock sync.Mutex
 )
 
 // 消息任务结构体
@@ -40,6 +42,29 @@ func init() {
 	for i := 0; i < maxConcurrentMessages; i++ {
 		messageSemaphore <- struct{}{}
 	}
+}
+
+// getMessageKeyMutex 获取指定MessageKey的专用锁
+func getMessageKeyMutex(messageKey string) *sync.Mutex {
+	// 先尝试获取已存在的锁
+	if mutex, exists := messageKeyMutexes.Load(messageKey); exists {
+		return mutex.(*sync.Mutex)
+	}
+
+	// 如果不存在，需要创建新锁
+	mutexMapLock.Lock()
+	defer mutexMapLock.Unlock()
+
+	// 双重检查，防止并发创建
+	if mutex, exists := messageKeyMutexes.Load(messageKey); exists {
+		return mutex.(*sync.Mutex)
+	}
+
+	// 创建新锁并存储
+	newMutex := &sync.Mutex{}
+	messageKeyMutexes.Store(messageKey, newMutex)
+
+	return newMutex
 }
 
 func PushClient(w http.ResponseWriter, r *http.Request) {
@@ -83,8 +108,9 @@ func PushClient(w http.ResponseWriter, r *http.Request) {
 
 	// 设置缓存和计数
 	if params.MessageKey != "" {
-		// 使用互斥锁保护共享资源
-		messageMutex.Lock()
+		// 使用MessageKey专用的细粒度锁
+		keyMutex := getMessageKeyMutex(params.MessageKey)
+		keyMutex.Lock()
 		cache.GlobalRedis.Set(params.MessageKey, uuidStr, 2*time.Second)
 		// 检查消息次数
 		task.CountKey = fmt.Sprintf("%s_count", params.MessageKey)
@@ -97,6 +123,10 @@ func PushClient(w http.ResponseWriter, r *http.Request) {
 				// 尝试将字符串转换为int64
 				if intVal, err := strconv.ParseInt(v, 10, 64); err == nil {
 					task.Count = intVal
+				} else {
+					// 转换失败，使用默认值0
+					fmt.Printf("Failed to parse count string '%s': %v\n", v, err)
+					task.Count = 11
 				}
 			default:
 				// 如果是其他类型，使用默认值0
@@ -105,7 +135,7 @@ func PushClient(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		cache.GlobalRedis.Set(task.CountKey, fmt.Sprintf("%d", task.Count+1), 2*time.Second)
-		messageMutex.Unlock()
+		keyMutex.Unlock()
 	}
 
 	// 非阻塞地尝试获取信号量
@@ -114,13 +144,6 @@ func PushClient(w http.ResponseWriter, r *http.Request) {
 		// 成功获取信号量，启动goroutine处理
 		go processMessage(task)
 	default:
-		// 无法获取信号量，表示并发量已满
-		// 直接在当前协程中处理，但不等待
-		go func() {
-			// 阻塞等待信号量
-			<-messageSemaphore
-			processMessage(task)
-		}()
 	}
 
 	// 立即返回成功响应，不等待处理完成
@@ -147,8 +170,9 @@ func processMessage(task messageTask) {
 
 		// 检查消息次数
 		if task.Count <= 10 {
-			// 使用互斥锁保护共享资源
-			messageMutex.Lock()
+			// 使用MessageKey专用的细粒度锁
+			keyMutex := getMessageKeyMutex(task.MessageKey)
+			keyMutex.Lock()
 			// 检查UUID
 			if cachedUUID, exists := cache.GlobalRedis.Get(task.MessageKey); exists {
 				// 安全地转换类型
@@ -164,7 +188,7 @@ func processMessage(task messageTask) {
 					shouldSend = false
 				}
 			}
-			messageMutex.Unlock()
+			keyMutex.Unlock()
 		}
 	}
 
@@ -176,13 +200,18 @@ func processMessage(task messageTask) {
 	// 推送消息
 	params := task.Params
 
-	// 使用互斥锁保护Redis操作
-	messageMutex.Lock()
-	if task.CountKey != "" {
-		cache.GlobalRedis.Del(task.CountKey)
+	// 使用MessageKey专用的细粒度锁保护Redis操作
+	if task.MessageKey != "" {
+		keyMutex := getMessageKeyMutex(task.MessageKey)
+		keyMutex.Lock()
+		if task.CountKey != "" {
+			cache.GlobalRedis.Del(task.CountKey)
+		}
+		keyMutex.Unlock()
 	}
+
+	// Redis发布操作不需要锁，因为Redis本身是线程安全的
 	err := cache.GlobalRedis.Publish("websocket_msg_push", utils.StructToJson(params))
-	messageMutex.Unlock()
 
 	if err != nil {
 		// 注意：这里不能再写入HTTP响应，因为响应可能已经发送

@@ -85,6 +85,10 @@ func (m *DBManager) GetDB(index uint64) *gorm.DB {
 		if time.Since(m.lastCheck[index]) > m.checkInterval {
 			if sqlDB, err := db.DB(); err == nil {
 				if err := sqlDB.Ping(); err != nil {
+					// 先关闭现有连接
+					if closeErr := sqlDB.Close(); closeErr != nil {
+						log.Printf("关闭失效连接失败: %v", closeErr)
+					}
 					// 连接失效，删除并重建
 					delete(m.dbs, index)
 					delete(m.lastCheck, index)
@@ -131,4 +135,37 @@ func (m *DBManager) SetMockDB(db *gorm.DB) {
 // GetMockDB 获取测试用的DB实例
 func (m *DBManager) GetMockDB() *gorm.DB {
 	return m.dbs[constant.MockDB]
+}
+
+// CloseAll 关闭所有数据库连接
+func (m *DBManager) CloseAll() error {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	var errors []error
+	for index, db := range m.dbs {
+		if sqlDB, err := db.DB(); err == nil {
+			if err := sqlDB.Close(); err != nil {
+				errors = append(errors, fmt.Errorf("关闭数据库连接 %d 失败: %w", index, err))
+			}
+		}
+	}
+
+	// 清空连接映射
+	m.dbs = make(map[uint64]*gorm.DB)
+	m.lastCheck = make(map[uint64]time.Time)
+
+	if len(errors) > 0 {
+		return fmt.Errorf("关闭数据库连接时发生错误: %v", errors)
+	}
+
+	return nil
+}
+
+// CloseAll 全局关闭所有数据库连接
+func CloseAll() error {
+	if instance != nil {
+		return instance.CloseAll()
+	}
+	return nil
 }
