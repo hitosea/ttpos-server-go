@@ -30,6 +30,7 @@ type IMaterialRepo interface {
 	GetMaterialCategoryByName(name string) (*model.MaterialCategory, error)
 	GetMaterialCategoryByUuid(uuid uint64) (*model.MaterialCategory, error)
 	UpdateMaterialCategory(materialCategory model.MaterialCategory) error
+	DeleteMaterialCategory(uuid uint64) error
 	CreateMaterialCategory(materialCategory model.MaterialCategory) (uint64, error)
 	GetMaterialCategoryList() ([]model.MaterialCategory, error)
 	UpdateMaterialStatusBatch(uuids []uint64, status int) error   // 批量修改物品状态
@@ -439,6 +440,13 @@ func (r *MaterialRepoImpl) UpdateMaterialCategory(materialCategory model.Materia
 		"code": materialCategory.Code,
 	}).Error; err != nil {
 		return errors.WithMessage(err, "更新物品类别失败")
+	}
+	return nil
+}
+
+func (r *MaterialRepoImpl) DeleteMaterialCategory(uuid uint64) error {
+	if err := r.db.Model(&model.MaterialCategory{}).Where("uuid = ?", uuid).Update("delete_time", time.Now().Unix()).Error; err != nil {
+		return errors.WithMessage(err, "删除物品类别失败")
 	}
 	return nil
 }

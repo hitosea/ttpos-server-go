@@ -194,6 +194,32 @@ func (h *MaterialHandler) EditMaterialCategory(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// DeleteMaterialCategory 删除物品类别
+// @Summary 删除物品类别
+// @Description 删除物品类别
+// @Tags 商家端.物品管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.MaterialCategoryDeleteReq true "物品类别删除请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/material/category/delete [post]
+func (h *MaterialHandler) DeleteMaterialCategory(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	editReq := req.MaterialCategoryDeleteReq{}
+	if err := c.ShouldBindJSON(&editReq); err != nil {
+		helper.HandleValidationError(c, err, editReq, dto.PageReqMessage)
+		return
+	}
+	err := h.materialSrv.DeleteMaterialCategory(ctx, editReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
 // AddMaterial 添加物品
 // @Summary 添加物品
 // @Description 添加物品
@@ -528,6 +554,7 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		privateApi.GET("/material/category/list", wrapper.GetMaterialCategoryList)   // 获取物品类别列表
 		privateApi.POST("/material/category/sort", wrapper.SortMaterialCategory)     // 排序物品类别
 		privateApi.POST("/material/category/edit", wrapper.EditMaterialCategory)     // 编辑物品类别
+		privateApi.POST("/material/category/delete", wrapper.DeleteMaterialCategory) // 删除物品类别
 		privateApi.POST("/material/add", wrapper.AddMaterial)                        // 添加物品
 		privateApi.POST("/material/edit", wrapper.EditMaterial)                      // 编辑物品
 		privateApi.POST("/material/status/batch", wrapper.UpdateMaterialStatusBatch) // 批量修改物品状态

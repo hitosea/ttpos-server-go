@@ -38,6 +38,7 @@ type IMaterialSrv interface {
 	SortMaterialCategory(ctx context.Context, req req.MaterialCategorySortReq) error
 	EditMaterialCategory(ctx context.Context, req req.MaterialCategoryEditReq) error
 	GetMaterialUnitList(ctx context.Context, req req.MaterialUnitListReq) (material_resp.MaterialUnitListResp, error)
+	DeleteMaterialCategory(ctx context.Context, req req.MaterialCategoryDeleteReq) error
 	AddProductBomCard(ctx context.Context, req req.ProductBomCardAddReq) error
 	GetProductBomCardDetail(ctx context.Context, req req.ProductBomCardDetailReq) (*material_resp.ProductBomCardDetailResp, error)
 	UnlinkProductBomCard(ctx context.Context, req req.ProductBomCardUnlinkReq) error
@@ -992,6 +993,28 @@ func (s *materialSrv) GetMaterialUnitList(ctx context.Context, req req.MaterialU
 	return material_resp.MaterialUnitListResp{
 		List: materialUnitListResp,
 	}, nil
+}
+
+func (s *materialSrv) DeleteMaterialCategory(ctx context.Context, req req.MaterialCategoryDeleteReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	materialCategoryRepo := repository.NewMaterialRepo(db)
+	materialCategory, err := materialCategoryRepo.GetMaterialCategoryByUuid(req.Uuid)
+	if err != nil {
+		return errors.WithMessage(err, "获取物品类别失败")
+	}
+	// 检查物品类别是否关联了物品
+	materialRepo := repository.NewMaterialRepo(db)
+	materials, err := materialRepo.GetMaterialByCategoryUuid(materialCategory.Uuid)
+	if err != nil {
+		return errors.WithMessage(err, "获取物品失败")
+	}
+	if len(materials) > 0 {
+		return errors.New("该类别已经关联了物品，不可删除")
+	}
+	if err := materialCategoryRepo.DeleteMaterialCategory(materialCategory.Uuid); err != nil {
+		return errors.WithMessage(err, "删除物品类别失败")
+	}
+	return nil
 }
 
 func (s *materialSrv) AddProductBomCard(ctx context.Context, req req.ProductBomCardAddReq) error {
