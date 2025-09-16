@@ -774,6 +774,17 @@ func (model *ProductPackage) GetFlavorProductBom() ProductBom {
 	return ProductBom{}
 }
 
+// GetPackageProductBom 获取商品套餐BOM
+func (model *ProductPackage) GetPackageProductBom() ProductBom {
+	for _, bom := range model.ProductBoms {
+		if bom.IsPackageFlavor() {
+			return bom
+		}
+	}
+
+	return ProductBom{}
+}
+
 // GetSauces 获取商品小料
 func (model *ProductPackage) GetSauces() []ProductSauce {
 	sauces := make([]ProductSauce, 0)

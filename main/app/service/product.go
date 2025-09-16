@@ -1120,8 +1120,13 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, request req.ProductS
 			if err != nil {
 				return errors.WithMessage(err, "翻译失败")
 			}
+
+			erpCode := product.ErpCode
+			if product.IsPackage() { // 如果是删除套餐
+				erpCode = product.GetPackageProductBom().ErpCode
+			}
 			items = append(items, req.DeleteProductErpItemReq{
-				ItemCode: product.ErpCode,
+				ItemCode: erpCode,
 				ItemName: enName,
 				StockUom: product.ProductUnit.ErpnextUom,
 			})
