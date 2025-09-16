@@ -102,6 +102,7 @@ type MaterialCategory struct {
 	Name                  string `gorm:"default:'';column:name;comment:'原料分类名称'"`
 	Code                  string `gorm:"default:'';column:code;comment:'原料分类编码'"`
 	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称ID'"`
+	Sort                  int    `gorm:"default:0;column:sort;comment:'排序'"`
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 }
