@@ -379,6 +379,13 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 			return nil, nil, errors.WithMessage(errors.New("条形码已存在，请使用其他条形码"))
 		}
 	}
+	// 检查内部编码唯一性
+	if request.InternalCode != "" {
+		materialRepo := repository.NewMaterialRepo(tx)
+		if materialRepo.CheckMaterialInternalCodeExist(request.InternalCode, 0) {
+			return nil, nil, errors.WithMessage(errors.New("内部编码已存在，请使用其他内部编码"))
+		}
+	}
 
 	materialUuid, _ := utils.GetID()
 	materialRepo := repository.NewMaterialRepo(tx)
@@ -522,6 +529,12 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 		if request.BarcodeValue != "" && request.BarcodeValue != existingMaterial.BarcodeValue {
 			if materialRepo.CheckBarcodeExist(request.BarcodeValue, request.Uuid) {
 				return errors.WithMessage(errors.New("条形码已存在，请使用其他条形码"))
+			}
+		}
+		// 检查内部编码唯一性
+		if request.InternalCode != "" && request.InternalCode != existingMaterial.InternalCode {
+			if materialRepo.CheckMaterialInternalCodeExist(request.InternalCode, request.Uuid) {
+				return errors.WithMessage(errors.New("内部编码已存在，请使用其他内部编码"))
 			}
 		}
 

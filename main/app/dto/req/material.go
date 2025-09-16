@@ -3,6 +3,7 @@ package req
 import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/pkg/utils"
 )
 
 // MaterialCategoryAddReq 创建物品类别请求
@@ -94,6 +95,12 @@ func (r *MaterialAddReq) Validate() error {
 	if r.InitStock <= 0 {
 		return errors.WithMessage(errors.New("期初库存需大于零"))
 	}
+	// 非必填，门店唯一，1-13位（可输入纯数字/纯字母/数字+字母）
+	if r.InternalCode != "" {
+		if !utils.IsValidInternalCode(r.InternalCode) {
+			return errors.WithMessage(errors.New("内部编码长度应为1-13位，可输入纯数字/纯字母/数字+字母"))
+		}
+	}
 	return nil
 }
 
@@ -175,6 +182,12 @@ func (r *MaterialEditReq) Validate() error {
 			if char < '0' || char > '9' {
 				return errors.WithMessage(errors.New("条形码只能包含数字"))
 			}
+		}
+	}
+	// 非必填，门店唯一，1-13位（可输入纯数字/纯字母/数字+字母）
+	if r.InternalCode != "" {
+		if !utils.IsValidInternalCode(r.InternalCode) {
+			return errors.WithMessage(errors.New("内部编码长度应为1-13位，可输入纯数字/纯字母/数字+字母"))
 		}
 	}
 	return nil

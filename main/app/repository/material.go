@@ -36,7 +36,8 @@ type IMaterialRepo interface {
 
 	CheckMultiLanguageNameExist(localeResponse dto.LocaleResponse) dto.LocaleResponse // 检查多语言名称是否存在
 	GetCategoryUuidByNameOptimized(name string) (uint64, error)
-	CheckBarcodeExist(barcode string, uuid uint64) bool // 检查条形码是否存在
+	CheckBarcodeExist(barcode string, uuid uint64) bool                   // 检查条形码是否存在
+	CheckMaterialInternalCodeExist(internalCode string, uuid uint64) bool // 检查内部编码是否存在
 
 	WithRelatedMaterialList() DBOption
 }
@@ -388,4 +389,15 @@ func (r *MaterialRepoImpl) ClearMaterialInternalCode(uuid uint64) error {
 		return errors.WithMessage(err, "清空物品内部编码失败")
 	}
 	return nil
+}
+
+func (r *MaterialRepoImpl) CheckMaterialInternalCodeExist(internalCode string, uuid uint64) bool {
+	db := r.db.Model(&model.Material{}).
+		Where("delete_time = ?", constant.NotDeleted).
+		Where("internal_code = ?", internalCode).
+		Where("internal_code <> ?", "")
+	if uuid != 0 {
+		db = db.Where("uuid <> ?", uuid)
+	}
+	return db.First(&model.Material{}).Error == nil
 }
