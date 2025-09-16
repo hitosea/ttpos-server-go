@@ -1,6 +1,6 @@
 {
   "doctype": "DocType",
-  "label": "客户UUID",
+  "label": "Customer UUID",
   "fieldname": "custom_customer_uuid",
   "fieldtype": "Data",
   "insert_after": "Customer",
