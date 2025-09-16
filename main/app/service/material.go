@@ -837,6 +837,7 @@ func (s *materialSrv) GetMaterialCategoryList(ctx context.Context, req req.Mater
 			Uuid:       materialCategory.Uuid,
 			Name:       materialCategory.Name,
 			LocaleName: materialCategory.MultiLanguageName.GetNames(),
+			Code:       materialCategory.Code,
 		})
 	}
 
