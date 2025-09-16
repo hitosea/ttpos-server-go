@@ -9,11 +9,17 @@ import (
 // MaterialCategoryAddReq 创建物品类别请求
 type MaterialCategoryAddReq struct {
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 物品类别名称
+	Code       string             `json:"code"`        // 物品类别编码
 }
 
 func (r *MaterialCategoryAddReq) Validate() error {
 	if r.LocaleName.IsNull() {
 		return errors.WithMessage(errors.New("名称不能为空"))
+	}
+	if r.Code != "" {
+		if !utils.IsValidInternalCode(r.Code) {
+			return errors.WithMessage(errors.New("编码长度应为1-13位，可输入纯数字/纯字母/数字+字母"))
+		}
 	}
 	return nil
 }
@@ -105,15 +111,17 @@ func (r *MaterialAddReq) Validate() error {
 }
 
 type MaterialAddErpReq struct {
-	ItemCode      string           `json:"item_code" binding:"required"`      // 物品编码, 如果为空，则为新增；如果非空，则为编辑
-	ItemName      string           `json:"item_name" binding:"required"`      // 物品名称, 英文
-	StockUom      string           `json:"stock_uom" binding:"required"`      // 基准库存单位, 英文
-	Disabled      bool             `json:"disabled" binding:"required"`       // 是否禁用
-	BarcodeValue  string           `json:"barcode_value" binding:"required"`  // 条形码值
-	ValuationRate float64          `json:"valuation_rate" binding:"required"` // 估值率
-	OpeningStock  float64          `json:"opening_stock" binding:"required"`  // 期初库存
-	InternalCode  string           `json:"internal_code" `                    // 内部编码
-	Uoms          []MaterialUomReq `json:"uoms" binding:"required,dive"`      // 单位列表
+	ItemCode           string           `json:"item_code" binding:"required"`      // 物品编码, 如果为空，则为新增；如果非空，则为编辑
+	ItemName           string           `json:"item_name" binding:"required"`      // 物品名称, 英文
+	StockUom           string           `json:"stock_uom" binding:"required"`      // 基准库存单位, 英文
+	Disabled           bool             `json:"disabled" binding:"required"`       // 是否禁用
+	BarcodeValue       string           `json:"barcode_value" binding:"required"`  // 条形码值
+	ValuationRate      float64          `json:"valuation_rate" binding:"required"` // 估值率
+	OpeningStock       float64          `json:"opening_stock" binding:"required"`  // 期初库存
+	InternalCode       string           `json:"internal_code" `                    // 内部编码
+	Classification     string           `json:"classification" `                   // 分类
+	ClassificationCode string           `json:"classification_code" `              // 分类编码
+	Uoms               []MaterialUomReq `json:"uoms" binding:"required,dive"`      // 单位列表
 }
 
 type ProductAddErpReq struct {

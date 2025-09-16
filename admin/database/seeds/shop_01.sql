@@ -880,7 +880,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_material` (
 CREATE TABLE IF NOT EXISTS `ttpos_material_category` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '原料分类ID',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '原料分类名称',
+    `name` text COMMENT '原料分类名称',
+    `code` VARCHAR(255) DEFAULT '' COMMENT '原料分类编码',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',

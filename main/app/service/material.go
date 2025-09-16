@@ -310,7 +310,8 @@ func (s *materialSrv) AddMaterialCategory(ctx context.Context, req req.MaterialC
 		// 创建物品类别
 		materialCategory := model.MaterialCategory{
 			MultiLanguageNameUuid: nameId,
-			Name:                  req.LocaleName.ZH,
+			Name:                  req.LocaleName.ToJson(),
+			Code:                  req.Code,
 		}
 
 		_, err = materialCategoryRepo.CreateMaterialCategory(materialCategory)
@@ -492,15 +493,28 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "翻译失败")
 	}
+	// 获取物品分类信息
+	materialCategoryRepo := repository.NewMaterialRepo(tx)
+	materialCategory, err := materialCategoryRepo.GetMaterialCategoryByUuid(request.CategoryUuid)
+	if err != nil {
+		return nil, nil, errors.WithMessage(err, "获取物品分类失败")
+	}
+
+	getMaterialCategoryName, err := GetEnName(ctx, materialCategory.MultiLanguageName.GetNames())
+	if err != nil {
+		return nil, nil, errors.WithMessage(err, "翻译失败")
+	}
 	materialAddErpReq := &req.MaterialAddErpReq{
-		ItemName:      getEnName,
-		StockUom:      productUnit.ErpnextUom,
-		BarcodeValue:  request.BarcodeValue,
-		Disabled:      request.Status == 0,
-		ValuationRate: request.Valuation,
-		OpeningStock:  request.InitStock,
-		Uoms:          unitList,
-		InternalCode:  request.InternalCode,
+		ItemName:           getEnName,
+		StockUom:           productUnit.ErpnextUom,
+		BarcodeValue:       request.BarcodeValue,
+		Disabled:           request.Status == 0,
+		ValuationRate:      request.Valuation,
+		OpeningStock:       request.InitStock,
+		Uoms:               unitList,
+		InternalCode:       request.InternalCode,
+		Classification:     getMaterialCategoryName,
+		ClassificationCode: materialCategory.Code,
 	}
 
 	return &material, materialAddErpReq, nil
@@ -687,6 +701,18 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 				})
 			}
 
+			// 获取物品分类信息
+			materialCategoryRepo := repository.NewMaterialRepo(tx)
+			materialCategory, err := materialCategoryRepo.GetMaterialCategoryByUuid(request.CategoryUuid)
+			if err != nil {
+				return errors.WithMessage(err, "获取物品分类失败")
+			}
+			materialCategoryName := language.JsonToLocaleResponse(materialCategory.MultiLanguageName.ToJson())
+			getMaterialCategoryName, err := GetEnName(ctx, *materialCategoryName)
+			if err != nil {
+				return errors.WithMessage(err, "翻译失败")
+			}
+
 			_, errErp := erpSrv.AddMaterial(ctx, req.MaterialAddErpReq{
 				ItemCode:      existingMaterial.Code,
 				ItemName:      enName,
@@ -701,6 +727,8 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 					}
 					return " " // 内部编码为空时，传空格给ErpNext
 				}(),
+				Classification:     getMaterialCategoryName,
+				ClassificationCode: materialCategory.Code,
 			})
 			if errErp != nil {
 				return errors.WithMessage(errErp)

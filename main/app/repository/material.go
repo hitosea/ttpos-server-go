@@ -27,6 +27,7 @@ type IMaterialRepo interface {
 	ClearMaterialInternalCode(uuid uint64) error // 清空物品内部编码
 	DeleteMaterial(uuid uint64) error
 	GetMaterialCategoryByName(name string) (*model.MaterialCategory, error)
+	GetMaterialCategoryByUuid(uuid uint64) (*model.MaterialCategory, error)
 	CreateMaterialCategory(materialCategory model.MaterialCategory) (uint64, error)
 	GetMaterialCategoryList() ([]model.MaterialCategory, error)
 	UpdateMaterialStatusBatch(uuids []uint64, status int) error   // 批量修改物品状态
@@ -400,4 +401,12 @@ func (r *MaterialRepoImpl) CheckMaterialInternalCodeExist(internalCode string, u
 		db = db.Where("uuid <> ?", uuid)
 	}
 	return db.First(&model.Material{}).Error == nil
+}
+
+func (r *MaterialRepoImpl) GetMaterialCategoryByUuid(uuid uint64) (*model.MaterialCategory, error) {
+	var materialCategory model.MaterialCategory
+	if err := r.db.Model(&model.MaterialCategory{}).Preload("MultiLanguageName").Where("uuid = ?", uuid).First(&materialCategory).Error; err != nil {
+		return nil, errors.WithMessage(err, "根据UUID获取物品分类失败")
+	}
+	return &materialCategory, nil
 }
