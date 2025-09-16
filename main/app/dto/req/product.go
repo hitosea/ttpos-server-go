@@ -287,6 +287,9 @@ func (p *ProductImportReq) GetBarcodeDuplicateRows() []int {
 	barcodeMap := make(map[string]bool)
 	duplicateRows := []int{}
 	for _, item := range p.List {
+		if item.Barcode == "" {
+			continue
+		}
 		if _, ok := barcodeMap[item.Barcode]; ok {
 			duplicateRows = append(duplicateRows, item.Row)
 		}

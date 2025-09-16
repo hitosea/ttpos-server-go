@@ -3878,8 +3878,6 @@ func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportRe
 		if repository.NewProductRepo(db).CheckBarcodeExist(item.Barcode, 0) {
 			return errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "商品条码已存在"))
 		}
-		// 处理显示
-		item.NumType = utils.IfInt(item.NumType == 1, 0, 1)
 	}
 
 	// 多规格合并
@@ -3906,8 +3904,8 @@ func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportRe
 					TakeoutUuid: item.TakeoutTaxUuid,
 				},
 				Status:          item.ProductStatus,
-				NumType:         item.NumType,
-				DeductStockType: item.DeductStockType,
+				NumType:         utils.IfInt(item.NumType == 1, 0, 1),
+				DeductStockType: utils.IfInt(item.DeductStockType == 2, 0, 1),
 				Show: req.ProductShopAddShowReq{
 					IsShowCashier:   item.IsShowCashier,
 					IsShowTablet:    item.IsShowTablet,
