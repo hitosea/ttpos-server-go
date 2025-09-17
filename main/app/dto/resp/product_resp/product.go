@@ -254,6 +254,7 @@ type ProductShopCategoryDetailResp struct {
 	Status       int                `json:"status"`        // 商品类别状态 0-关闭 1-开启
 	ProductCount int64              `json:"product_count"` // 商品数量
 	ChildCount   int64              `json:"child_count"`   // 子级数量
+	Code         string             `json:"code"`          // 分类编码
 }
 
 type ProductAttributeGroupItem struct {

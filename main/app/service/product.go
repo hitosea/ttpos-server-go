@@ -716,6 +716,7 @@ func (s *productSrv) GetProductShopCategory(ctx context.Context, req req.Product
 		Status:       productCategory.Status,
 		ProductCount: productCount,
 		ChildCount:   childCount,
+		Code:         productCategory.Code,
 	}, nil
 }
 
@@ -800,6 +801,11 @@ func (s *productSrv) AddProductShopCategory(ctx context.Context, addReq req.Prod
 	}
 	sort := uint(maxSort + 1)
 
+	// 检查分类编码是否已存在
+	if exist := productRepo.CheckProductCategoryCodeExist(addReq.Code, 0); exist {
+		return errors.New("分类编码已存在")
+	}
+
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 保存多语言名称
 		multiLanguageName := model.MultiLanguageName{
@@ -879,6 +885,11 @@ func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.Pr
 	changeCode := false // 是否修改了分类编码
 	if editReq.Code != productCategory.Code {
 		changeCode = true
+	}
+	if changeCode {
+		if exist := productRepo.CheckProductCategoryCodeExist(editReq.Code, editReq.Uuid); exist {
+			return errors.New("分类编码已存在")
+		}
 	}
 	if editReq.ParentUuid != 0 {
 		count, err := productRepo.GetProductCategoryCount(

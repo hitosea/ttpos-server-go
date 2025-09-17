@@ -82,6 +82,7 @@ type IProductRepo interface {
 
 // IProductQueryRepo 商品查询仓库接口
 type IProductQueryRepo interface {
+	CheckProductCategoryCodeExist(code string, uuid uint64) bool                                                    // 检查分类编码是否已存在
 	GetProductListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductPackage, int64, error) // 分页获取商品列表
 	GetProductPackageListByUuids(uuids []uint64) ([]model.ProductPackage, error)                                    // 通过uuid列表获取商品列表
 	GetProductCategoryList(opts ...DBOption) ([]model.ProductCategory, error)                                       // 获取产品类别列表
@@ -1370,4 +1371,12 @@ func (r *productRepo) GetProductFlavorList(opts ...DBOption) ([]model.ProductFla
 	}
 	err := db.Order("sort asc, create_time asc").Find(&flavors).Error
 	return flavors, errors.WithMessage(err)
+}
+
+func (r *productRepo) CheckProductCategoryCodeExist(code string, uuid uint64) bool {
+	db := r.db.Model(&model.ProductCategory{}).Where("delete_time = ?", constant.NotDeleted).Where("code = ?", code)
+	if uuid != 0 {
+		db = db.Where("uuid <> ?", uuid)
+	}
+	return db.First(&model.ProductCategory{}).Error == nil
 }
