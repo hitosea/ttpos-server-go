@@ -54,7 +54,7 @@ func (s *erpSrv) GetCompanyList(ctx pkgCtx.Context, erpnextSiteCompanyReq req.Er
 	}
 
 	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(0))
-	erpnextCompanyAbbrs, err := companySettingRepo.GetErpnextCompanyAbbrs(companySettingRepo.WhereErpnextCompanyAbbrNotEmpty())
+	erpnextCompanyAbbrs, err := companySettingRepo.GetErpnextCompanyAbbrs(companySettingRepo.WhereErpnextCompanyAbbrNotEmpty(), companySettingRepo.WhereSiteCode(erpnextSiteCompanyReq.SiteCode))
 	if err != nil {
 		return companyResp, errors.New("获取公司列表失败")
 	}
