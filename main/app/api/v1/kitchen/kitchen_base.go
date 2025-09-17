@@ -106,14 +106,14 @@ func (h *BaseHandler) GetProductPrinterList(c *gin.Context) {
 	helper.Success(c, data)
 }
 
-// Bind 绑定商品打印
-// @Summary 绑定商品打印
-// @Description 绑定商品打印
+// Bind 绑定商品打印、设置工作模式
+// @Summary 绑定商品打印、设置工作模式
+// @Description 绑定商品打印、设置工作模式
 // @Tags 厨显端.基础信息
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.KitchenBindReq true "绑定商品打印参数"
+// @param data body req.KitchenBindReq true "绑定商品打印、设置工作模式参数"
 // @Success 200 {object} dto.Response
 // @Router /kitchen/bind [post]
 func (h *BaseHandler) Bind(c *gin.Context) {

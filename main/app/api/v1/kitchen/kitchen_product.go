@@ -147,7 +147,7 @@ func (h *ProductHandler) Finish(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.ProductUuid true "送厨商品Uuid参数"
+// @param data body req.RecoveryReq true "送厨商品Uuid参数"
 // @Router /kitchen/product/recovery [post]
 func (h *ProductHandler) Recovery(c *gin.Context) {
 	var recoveryReq req.RecoveryReq

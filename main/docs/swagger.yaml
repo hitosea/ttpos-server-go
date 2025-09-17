@@ -3258,7 +3258,7 @@ definitions:
         description: 品牌
         type: string
       mode:
-        description: 模式 0-默认，传菜模式; 1-制作、传菜模式
+        description: 模式 0-默认，传菜模式; 1-制作模式; 2-制作+传菜模式
         type: integer
       product_printer_uuid:
         description: 商品打印Uuid
@@ -5651,6 +5651,15 @@ definitions:
     required:
     - member_uuid
     - recharge_amount
+    type: object
+  req.RecoveryReq:
+    properties:
+      mode:
+        description: 模式 0-传菜历史恢复 ; 1-制作历史恢复
+        type: integer
+      product_uuid:
+        description: 送厨商品ID
+        type: integer
     type: object
   req.RejectH5OrderReq:
     properties:
@@ -20678,9 +20687,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: 绑定商品打印
+      description: 绑定商品打印、设置工作模式
       parameters:
-      - description: 绑定商品打印参数
+      - description: 绑定商品打印、设置工作模式参数
         in: body
         name: data
         required: true
@@ -20695,7 +20704,7 @@ paths:
             $ref: '#/definitions/dto.Response'
       security:
       - JwtToken: []
-      summary: 绑定商品打印
+      summary: 绑定商品打印、设置工作模式
       tags:
       - 厨显端.基础信息
   /kitchen/call/processed:
@@ -21061,7 +21070,7 @@ paths:
         name: data
         required: true
         schema:
-          $ref: '#/definitions/req.ProductUuid'
+          $ref: '#/definitions/req.RecoveryReq'
       produces:
       - application/json
       responses: {}

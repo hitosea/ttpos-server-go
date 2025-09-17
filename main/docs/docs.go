@@ -15042,7 +15042,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "绑定商品打印",
+                "description": "绑定商品打印、设置工作模式",
                 "consumes": [
                     "application/json"
                 ],
@@ -15052,10 +15052,10 @@ const docTemplate = `{
                 "tags": [
                     "厨显端.基础信息"
                 ],
-                "summary": "绑定商品打印",
+                "summary": "绑定商品打印、设置工作模式",
                 "parameters": [
                     {
-                        "description": "绑定商品打印参数",
+                        "description": "绑定商品打印、设置工作模式参数",
                         "name": "data",
                         "in": "body",
                         "required": true,
@@ -15689,7 +15689,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/req.ProductUuid"
+                            "$ref": "#/definitions/req.RecoveryReq"
                         }
                     }
                 ],
@@ -29253,7 +29253,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "mode": {
-                    "description": "模式 0-默认，传菜模式; 1-制作、传菜模式",
+                    "description": "模式 0-默认，传菜模式; 1-制作模式; 2-制作+传菜模式",
                     "type": "integer"
                 },
                 "product_printer_uuid": {
@@ -32699,6 +32699,19 @@ const docTemplate = `{
                 },
                 "recharge_order_uuid": {
                     "description": "进行中的充值订单，如果没有进行中的充值订单，传递0",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.RecoveryReq": {
+            "type": "object",
+            "properties": {
+                "mode": {
+                    "description": "模式 0-传菜历史恢复 ; 1-制作历史恢复",
+                    "type": "integer"
+                },
+                "product_uuid": {
+                    "description": "送厨商品ID",
                     "type": "integer"
                 }
             }
