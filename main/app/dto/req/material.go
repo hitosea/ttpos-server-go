@@ -28,6 +28,11 @@ func (r *MaterialCategoryAddReq) Validate() error {
 type MaterialCategoryListReq struct {
 }
 
+// MaterialCategoryDetailReq 获取物品类别详情请求
+type MaterialCategoryDetailReq struct {
+	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 物品类别UUID
+}
+
 // MaterialCategorySortReq 物品类别排序请求
 type MaterialCategorySortReq struct {
 	List []MaterialCategorySortItemReq `json:"list" binding:"required,dive"` // 物品类别列表
@@ -147,12 +152,14 @@ type MaterialAddErpReq struct {
 }
 
 type ProductAddErpReq struct {
-	ItemName          string `json:"item_name" binding:"required"`          // 商品名称, 英文
-	StockUom          string `json:"stock_uom" binding:"required"`          // 商品单位, 英文
-	ItemCode          string `json:"item_code" binding:"required"`          // 商品编码，如果为空，则为新增；如果非空，则为编辑
-	TemplateItemCode  string `json:"template_item_code" binding:"required"` // 模版商品编码
-	ItemSpecification string `json:"item_specification" binding:"required"` // 商品规格
-	BarcodeValue      string `json:"barcode_value" binding:"required"`      // 条形码值
+	ItemName           string `json:"item_name" binding:"required"`           // 商品名称, 英文
+	StockUom           string `json:"stock_uom" binding:"required"`           // 商品单位, 英文
+	ItemCode           string `json:"item_code" binding:"required"`           // 商品编码，如果为空，则为新增；如果非空，则为编辑
+	TemplateItemCode   string `json:"template_item_code" binding:"required"`  // 模版商品编码
+	ItemSpecification  string `json:"item_specification" binding:"required"`  // 商品规格
+	BarcodeValue       string `json:"barcode_value" binding:"required"`       // 条形码值
+	Classification     string `json:"classification" binding:"required"`      // 分类
+	ClassificationCode string `json:"classification_code" binding:"required"` // 分类编码
 }
 
 type PackageAddErpReq struct {

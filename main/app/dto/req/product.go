@@ -117,6 +117,7 @@ type ProductShopCategoryAddReq struct {
 	ParentUuid uint64             `json:"parent_uuid"`                    // 父级分类UUID, 一级分类为0, 二级分类为一级分类的uuid
 	LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品分类名称, 多语言
 	Status     int                `json:"status"`                         // 商品分类状态 0-关闭 1-开启
+	Code       string             `json:"code"`                           // 分类编码
 }
 
 // ProductShopCategoryEditReq 商品分类编辑请求
@@ -125,6 +126,7 @@ type ProductShopCategoryEditReq struct {
 	ParentUuid uint64             `json:"parent_uuid"`                    // 父级分类UUID, 一级分类为0, 二级分类为一级分类的uuid
 	LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品分类名称, 多语言
 	Status     int                `json:"status"`                         // 商品分类状态 0-关闭 1-开启
+	Code       string             `json:"code"`                           // 分类编码
 }
 
 // ProductShopCategoryDeleteReq 商品分类请求

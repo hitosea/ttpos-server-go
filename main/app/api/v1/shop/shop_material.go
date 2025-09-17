@@ -140,6 +140,32 @@ func (h *MaterialHandler) GetMaterialCategoryList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetMaterialCategoryDetail 获取物品类别详情
+// @Summary 获取物品类别详情
+// @Description 获取物品类别详情
+// @Tags 商家端.物品管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param uuid query string true "物品类别UUID"
+// @Success 200 {object} material_resp.MaterialCategory "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/material/category/detail [get]
+func (h *MaterialHandler) GetMaterialCategoryDetail(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	detailReq := req.MaterialCategoryDetailReq{}
+	if err := c.ShouldBindQuery(&detailReq); err != nil {
+		helper.HandleValidationError(c, err, detailReq, dto.PageReqMessage)
+		return
+	}
+	res, err := h.materialSrv.GetMaterialCategoryDetail(ctx, detailReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
 // SortMaterialCategory 排序物品类别
 // @Summary 排序物品类别
 // @Description 排序物品类别
@@ -548,17 +574,18 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/material/list", wrapper.GetMaterialList)                    // 获取物品列表
-		privateApi.GET("/material/detail", wrapper.GetMaterialDetail)                // 获取物品详情
-		privateApi.POST("/material/category/add", wrapper.AddMaterialCategory)       // 创建物品类别
-		privateApi.GET("/material/category/list", wrapper.GetMaterialCategoryList)   // 获取物品类别列表
-		privateApi.POST("/material/category/sort", wrapper.SortMaterialCategory)     // 排序物品类别
-		privateApi.POST("/material/category/edit", wrapper.EditMaterialCategory)     // 编辑物品类别
-		privateApi.POST("/material/category/delete", wrapper.DeleteMaterialCategory) // 删除物品类别
-		privateApi.POST("/material/add", wrapper.AddMaterial)                        // 添加物品
-		privateApi.POST("/material/edit", wrapper.EditMaterial)                      // 编辑物品
-		privateApi.POST("/material/status/batch", wrapper.UpdateMaterialStatusBatch) // 批量修改物品状态
-		privateApi.GET("/material/unit/list", wrapper.GetMaterialUnitList)           // 获取物品的单位列表
+		privateApi.GET("/material/list", wrapper.GetMaterialList)                      // 获取物品列表
+		privateApi.GET("/material/detail", wrapper.GetMaterialDetail)                  // 获取物品详情
+		privateApi.POST("/material/category/add", wrapper.AddMaterialCategory)         // 创建物品类别
+		privateApi.GET("/material/category/list", wrapper.GetMaterialCategoryList)     // 获取物品类别列表
+		privateApi.GET("/material/category/detail", wrapper.GetMaterialCategoryDetail) // 获取物品类别详情
+		privateApi.POST("/material/category/sort", wrapper.SortMaterialCategory)       // 排序物品类别
+		privateApi.POST("/material/category/edit", wrapper.EditMaterialCategory)       // 编辑物品类别
+		privateApi.POST("/material/category/delete", wrapper.DeleteMaterialCategory)   // 删除物品类别
+		privateApi.POST("/material/add", wrapper.AddMaterial)                          // 添加物品
+		privateApi.POST("/material/edit", wrapper.EditMaterial)                        // 编辑物品
+		privateApi.POST("/material/status/batch", wrapper.UpdateMaterialStatusBatch)   // 批量修改物品状态
+		privateApi.GET("/material/unit/list", wrapper.GetMaterialUnitList)             // 获取物品的单位列表
 
 		privateApi.POST("/product_bom/card/add", wrapper.AddProductBomCard)         // 添加成本卡
 		privateApi.GET("/product_bom/card/detail", wrapper.GetProductBomCardDetail) // 规格商品成本卡详情

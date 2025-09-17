@@ -18022,6 +18022,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/material/category/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取物品类别详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "获取物品类别详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "物品类别UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/material_resp.MaterialCategory"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/material/category/edit": {
             "post": {
                 "security": [
@@ -31641,6 +31681,10 @@ const docTemplate = `{
                 "locale_name"
             ],
             "properties": {
+                "code": {
+                    "description": "分类编码",
+                    "type": "string"
+                },
                 "is_special": {
                     "description": "是否特殊分类, false-否 true-是",
                     "type": "boolean"
@@ -31682,6 +31726,10 @@ const docTemplate = `{
                 "uuid"
             ],
             "properties": {
+                "code": {
+                    "description": "分类编码",
+                    "type": "string"
+                },
                 "locale_name": {
                     "description": "商品分类名称, 多语言",
                     "allOf": [

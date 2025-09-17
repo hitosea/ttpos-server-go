@@ -13,6 +13,7 @@ import (
 // IProductCategoryRepo 商品类别
 type IProductCategoryRepo interface {
 	CreateProductCategory(productCategory model.ProductCategory) (uint64, error)
+	GetProductCategory(opts ...DBOption) (*model.ProductCategory, error)
 }
 
 func NewProductCategoryRepo(db *gorm.DB) IProductCategoryRepo {
@@ -130,4 +131,17 @@ func (s *CategoryRepositoryService) findCategoryByName(categories []model.Produc
 	}
 
 	return 0, nil
+}
+
+func (r *ProductCategoryRepoImpl) GetProductCategory(opts ...DBOption) (*model.ProductCategory, error) {
+	var productCategory model.ProductCategory
+	db := r.db.Model(&model.ProductCategory{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.First(&productCategory).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return &productCategory, nil
 }

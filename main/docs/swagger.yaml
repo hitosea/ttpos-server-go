@@ -4922,6 +4922,9 @@ definitions:
     type: object
   req.ProductShopCategoryAddReq:
     properties:
+      code:
+        description: 分类编码
+        type: string
       is_special:
         description: 是否特殊分类, false-否 true-是
         type: boolean
@@ -4948,6 +4951,9 @@ definitions:
     type: object
   req.ProductShopCategoryEditReq:
     properties:
+      code:
+        description: 分类编码
+        type: string
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -22437,6 +22443,31 @@ paths:
       security:
       - JwtToken: []
       summary: 删除物品类别
+      tags:
+      - 商家端.物品管理
+  /shop/material/category/detail:
+    get:
+      consumes:
+      - application/json
+      description: 获取物品类别详情
+      parameters:
+      - description: 物品类别UUID
+        in: query
+        name: uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/material_resp.MaterialCategory'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取物品类别详情
       tags:
       - 商家端.物品管理
   /shop/material/category/edit:

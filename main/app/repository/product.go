@@ -90,6 +90,7 @@ type IProductQueryRepo interface {
 	GetMaterialCategoryCount(opts ...DBOption) (int64, error)                                                       // 获取物品分类数量
 	GetProductCategoryMaxSort(opts ...DBOption) (int64, error)                                                      // 获取产品分类最大排序
 	GetProduct(opts ...DBOption) (model.ProductPackage, error)                                                      // 获取商品详情
+	GetProducts(opts ...DBOption) ([]*model.ProductPackage, error)                                                  // 获取商品列表
 	GetProductDetail(uuid uint64) (*model.ProductPackage, error)                                                    // 获取商品详情
 	GetProductCount(opts ...DBOption) (int64, error)                                                                // 获取商品数量
 	GetProductFlavor(opts ...DBOption) (model.ProductFlavor, error)                                                 // 获取商品口味详情
@@ -374,6 +375,20 @@ func (r *productRepo) GetProduct(opts ...DBOption) (model.ProductPackage, error)
 	err := db.First(&product).Error
 
 	return product, errors.WithMessage(err)
+}
+
+func (r *productRepo) GetProducts(opts ...DBOption) ([]*model.ProductPackage, error) {
+	var products []*model.ProductPackage
+
+	db := r.db.Model(&model.ProductPackage{})
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	err := db.Find(&products).Error
+
+	return products, errors.WithMessage(err)
 }
 
 // GetProductDetail 获取商品详情
