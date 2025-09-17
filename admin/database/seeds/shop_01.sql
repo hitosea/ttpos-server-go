@@ -621,6 +621,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order_product` (
     `production_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '生产订单ID',
     `first_category_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '一级分类ID',
     `finished_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '完成时间(时间戳)',
+    `make_status` INT(10) NOT NULL DEFAULT 0 COMMENT '制作状态 0-默认，未制作完成，1-已制作完成，2-已恢复到制作中',
+    `made_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '制作完成时间(时间戳)',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳),送厨时间',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -2153,6 +2155,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_device` (
     `brand` VARCHAR(255) DEFAULT '' COMMENT '品牌名称',
     `platform` INT(10) DEFAULT 0 COMMENT '平台,0-Web-网页, 1-Android-安卓, 2-iPhone-苹果, 3-Mobile-移动端',
     `user_agent` LONGTEXT COMMENT '请求头信息',
+    `kds_mode` INT(10) DEFAULT 0 COMMENT '厨显端模式 0-默认，传菜模式; 1-制作模式; 2-制作+传菜模式',
     -- 收银加密配置
     `cash_sign` VARCHAR(255) DEFAULT '' COMMENT '收银终端标识',
     `cash_box_id` VARCHAR(255) DEFAULT '' COMMENT '现金箱ID',

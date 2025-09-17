@@ -142,7 +142,7 @@ class Product extends Controller
      *   @Apidoc\Param("package_stock", type="decimal", require=false, desc="套餐可售卖库存"),
      *   @Apidoc\Param("package_group", type="array", require=false, desc="套餐分组", children={
      *      @Apidoc\Param("group_name", type="string", require=true, desc="套餐分组名称"),
-     *      @Apidoc\Param("product_list", type="array", require=true, desc="套餐分组商品", children => {
+     *      @Apidoc\Param("product_list", type="array", require=true, desc="套餐分组商品", children = {
      *          @Apidoc\Param("product_id", type="int", require=true, desc="商品id: product_bom_uuid"),
      *          @Apidoc\Param("sort", type="int", require=true, desc="商品排序"),
      *          @Apidoc\Param("num", type="int", require=true, desc="商品数量"),
@@ -239,7 +239,7 @@ class Product extends Controller
      *  @Apidoc\Param("package_group", type="array", require=false, desc="套餐分组", children={
      *     @Apidoc\Param("group_id", type="int", require=true, desc="套餐分组id"),
      *     @Apidoc\Param("group_name", type="string", require=true, desc="套餐分组名称"),
-     *     @Apidoc\Param("product_list", type="array", require=true, desc="套餐分组商品", children => {
+     *     @Apidoc\Param("product_list", type="array", require=true, desc="套餐分组商品", children = {
      *         @Apidoc\Param("item_id", type="int", require=true, desc="套餐分组商品id"),
      *         @Apidoc\Param("product_id", type="int", require=true, desc="商品id: product_bom_uuid"),
      *         @Apidoc\Param("sort", type="int", require=true, desc="商品排序"),

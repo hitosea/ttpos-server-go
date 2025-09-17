@@ -1326,7 +1326,7 @@ func (s *Srv) CheckUpdate(ctx context.Context, appType int, brand string, langua
 	url := fmt.Sprintf("%s/api/admin/client.client/getNewVersion?type=%d&brand=%s&language=%s", viper.GetString("CLOUD_PLATFORM_HOST"), appType, brand, language)
 	res, err := gohttp.NewRequest().Post(url)
 	if err != nil {
-		return resp.UpdateInfo{}, errors.New("获取最新版本信息失败")
+		return resp.UpdateInfo{}, errors.WithMessage(errors.New("获取最新版本信息失败"), err.Error())
 	}
 	bodyBytes, _ := res.GetBodyAsByte()
 	var updateData UpdateData
