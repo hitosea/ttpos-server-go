@@ -1,6 +1,6 @@
 {
   "doctype": "DocType",
-  "label": "分支",
+  "label": "Branch",
   "fieldname": "custom_branch",
   "fieldtype": "Link",
   "options": "Branch",

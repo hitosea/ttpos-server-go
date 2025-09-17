@@ -27,42 +27,44 @@ class ExportService
         //设置工作表标题名称
         $sheet->setTitle(__('订单明细'));
 
-        $sheet->setCellValue('A1', __('订单类型'));
-        $sheet->setCellValue('B1', __('商品信息'));
-        $sheet->setCellValue('C1', __('桌号/序号'));
-        $sheet->setCellValue('D1', __('订单号'));
-        $sheet->setCellValue('E1', __('状态'));
-        $sheet->setCellValue('F1', __('支付时间'));
-        $sheet->setCellValue('G1', __('订单金额'));
-        $sheet->setCellValue('H1', __('服务费'));
-        $sheet->setCellValue('I1', __('优惠折扣'));
-        $sheet->setCellValue('J1', __('会员折扣'));
-        $sheet->setCellValue('K1', __('实付金额'));
-        $sheet->setCellValue('L1', __('退款金额'));
-        $sheet->setCellValue('M1', __('会员'));
-        $sheet->setCellValue('N1', __('支付方式'));
-        $sheet->setCellValue('O1', __('用餐方式'));
-        $sheet->setCellValue('P1', __('收银员'));
+        $sheet->setCellValue('A1', __('订单ID'));
+        $sheet->setCellValue('B1', __('订单类型'));
+        $sheet->setCellValue('C1', __('商品信息'));
+        $sheet->setCellValue('D1', __('桌号/序号'));
+        $sheet->setCellValue('E1', __('订单号'));
+        $sheet->setCellValue('F1', __('状态'));
+        $sheet->setCellValue('G1', __('支付时间'));
+        $sheet->setCellValue('H1', __('订单金额'));
+        $sheet->setCellValue('I1', __('服务费'));
+        $sheet->setCellValue('J1', __('优惠折扣'));
+        $sheet->setCellValue('K1', __('会员折扣'));
+        $sheet->setCellValue('L1', __('实付金额'));
+        $sheet->setCellValue('M1', __('退款金额'));
+        $sheet->setCellValue('N1', __('会员'));
+        $sheet->setCellValue('O1', __('支付方式'));
+        $sheet->setCellValue('P1', __('用餐方式'));
+        $sheet->setCellValue('Q1', __('收银员'));
 
         //填充数据
         $index = 0;
         foreach ($list as $order) {
-            $sheet->setCellValue('A' . ($index + 2), $order['bill_type']);
-            $sheet->setCellValue('B' . ($index + 2), $this->filterProductInfo($order));
-            $sheet->setCellValue('C' . ($index + 2), $order['serial_no'] ?? '');
-            $sheet->setCellValue('D' . ($index + 2), "\t" . $order['order_no'] . "\t");
-            $sheet->setCellValue('E' . ($index + 2), $order['status_text']);
-            $sheet->setCellValue('F' . ($index + 2), $this->filterTime($order['finish_time']));
-            $sheet->setCellValue('G' . ($index + 2), $order['order_amount']);
-            $sheet->setCellValue('H' . ($index + 2), $order['service_fee']);
-            $sheet->setCellValue('I' . ($index + 2), $order['discount_fee']);
-            $sheet->setCellValue('J' . ($index + 2), $order['member_fee']);
-            $sheet->setCellValue('K' . ($index + 2), Helper::number2($order['payment_amount']));
-            $sheet->setCellValue('L' . ($index + 2), $order['refund_amount']);
-            $sheet->setCellValue('M' . ($index + 2), $order['member_names'] ?? '');
-            $sheet->setCellValue('N' . ($index + 2), rtrim($order['pay_type_name'], '+'));
-            $sheet->setCellValue('O' . ($index + 2), ($order['dining_method'] ?? 0) == 1 ? __('打包带走') : __('店内就餐') );
-            $sheet->setCellValue('P' . ($index + 2), $order['cashier_name'] ?? '');
+            $sheet->setCellValue('A' . ($index + 2), $order['order_id']);
+            $sheet->setCellValue('B' . ($index + 2), $order['bill_type']);
+            $sheet->setCellValue('C' . ($index + 2), $this->filterProductInfo($order));
+            $sheet->setCellValue('D' . ($index + 2), $order['serial_no'] ?? '');
+            $sheet->setCellValue('E' . ($index + 2), "\t" . $order['order_no'] . "\t");
+            $sheet->setCellValue('F' . ($index + 2), $order['status_text']);
+            $sheet->setCellValue('G' . ($index + 2), $this->filterTime($order['finish_time']));
+            $sheet->setCellValue('H' . ($index + 2), $order['order_amount']);
+            $sheet->setCellValue('I' . ($index + 2), $order['service_fee']);
+            $sheet->setCellValue('J' . ($index + 2), $order['discount_fee']);
+            $sheet->setCellValue('K' . ($index + 2), $order['member_fee']);
+            $sheet->setCellValue('L' . ($index + 2), Helper::number2($order['payment_amount']));
+            $sheet->setCellValue('M' . ($index + 2), $order['refund_amount']);
+            $sheet->setCellValue('N' . ($index + 2), $order['member_names'] ?? '');
+            $sheet->setCellValue('O' . ($index + 2), rtrim($order['pay_type_name'], '+'));
+            $sheet->setCellValue('P' . ($index + 2), ($order['dining_method'] ?? 0) == 1 ? __('打包带走') : __('店内就餐') );
+            $sheet->setCellValue('Q' . ($index + 2), $order['cashier_name'] ?? '');
 
             $index++;
         }

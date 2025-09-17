@@ -361,6 +361,7 @@
                 //接口调用方法统一处理
                 console.error('登录接口调用失败:', error);
                 this.getCode();
+                this.ruleForm.code = '';
                 _this.logining = false;
               });
           }

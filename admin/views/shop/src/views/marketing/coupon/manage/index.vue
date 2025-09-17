@@ -1,9 +1,4 @@
 <template>
-  <!--
-          
-          时间：2019-10-25
-          描述：会员-用户列表
-      -->
   <div class="user">
     <!--搜索表单-->
     <div class="common-search-wrap flex">
@@ -48,9 +43,10 @@
           <el-table-column prop="valid_day_time_range" :label="$t('适用时间')"> </el-table-column>
           <el-table-column prop="count" :label="$t('数量（张）')"> </el-table-column>
           <el-table-column prop="create_time" :label="$t('添加時間')"> </el-table-column>
-          <el-table-column fixed="right" :label="$t('操作')" width="80">
+          <el-table-column fixed="right" :label="$t('操作')" width="160">
             <template #default="scope">
               <el-button v-auth="'/marketing/coupon/edit'" @click="editClick(scope.row)" type="primary" link size="small">{{ $t('编辑') }}</el-button>
+              <el-button  @click="deleteClick(scope.row)" type="primary" link size="small">{{ $t('删除') }}</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -155,6 +151,16 @@
     title.value = $t('编辑优惠券');
     editData.value = item;
     open_addEdit.value = true;
+  };
+
+  const deleteClick = (item) => {
+    ElMessageBox.confirm($t('确定删除该优惠券吗？'), $t('提示'), {
+      confirmButtonText: $t('确定'),
+      cancelButtonText: $t('取消'),
+      type: 'warning',
+    }).then(() => {
+      //TODO: 删除优惠券
+    });
   };
 
   // 生命周期

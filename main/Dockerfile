@@ -43,7 +43,7 @@ ENV SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL=20
 
 
 # 安装 ca-certificates 和 curl
-RUN apt-get update && apt-get install -y ca-certificates curl golang
+RUN apt-get update && apt-get install -y ca-certificates curl
 
 RUN apt-get clean && apt-get autoclean && apt-get autoremove --yes \
 && rm -rf /var/lib/{apt,dpkg,cache,log}/

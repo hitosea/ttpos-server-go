@@ -47,18 +47,21 @@ func (s *erpSrv) AddMaterial(ctx context.Context, params req.MaterialAddErpReq) 
 	}
 
 	param := &item.ItemInfo{
-		ItemCode:      params.ItemCode,
-		ItemName:      params.ItemName,
-		ItemGroup:     item.ItemGroup_RawMaterial,
-		StockUom:      params.StockUom,
-		ValuationRate: params.ValuationRate,
-		OpeningStock:  params.OpeningStock,
-		IsStockItem:   true,
-		Disabled:      params.Disabled,
-		Barcode:       params.BarcodeValue,
-		Branch:        companySetting.ErpnextBranchName,
-		CompanyAbbr:   companySetting.ErpnextCompanyAbbr,
-		Uoms:          unitList,
+		ItemCode:           params.ItemCode,
+		ItemName:           params.ItemName,
+		ItemGroup:          item.ItemGroup_RawMaterial,
+		StockUom:           params.StockUom,
+		ValuationRate:      params.ValuationRate,
+		OpeningStock:       params.OpeningStock,
+		IsStockItem:        true,
+		Disabled:           params.Disabled,
+		Barcode:            params.BarcodeValue,
+		Branch:             companySetting.ErpnextBranchName,
+		CompanyAbbr:        companySetting.ErpnextCompanyAbbr,
+		Uoms:               unitList,
+		InternalCode:       params.InternalCode,
+		Classification:     params.Classification,
+		ClassificationCode: params.ClassificationCode,
 	}
 	result, err := client.SaveItem(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), param)
 	if err != nil {

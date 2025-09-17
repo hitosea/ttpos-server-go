@@ -19,6 +19,7 @@ type Material struct {
 	StockNum              float64 `gorm:"default:0;column:stock_num;comment:'库存数量'"`
 	ActualSaleNum         float64 `gorm:"default:0;column:actual_sale_num;comment:'实际销量'"`
 	BarcodeValue          string  `gorm:"default:'';column:barcode_value;comment:'条形码值'"`
+	InternalCode          string  `gorm:"default:'';column:internal_code;comment:'内部编码'"`
 	Status                bool    `gorm:"default:false;column:status;comment:'状态,true上架 false下架'"`
 
 	MultiLanguageName   MultiLanguageName  `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
@@ -99,7 +100,9 @@ func (model *MaterialUnit) SetNil() {
 type MaterialCategory struct {
 	BaseModel
 	Name                  string `gorm:"default:'';column:name;comment:'原料分类名称'"`
+	Code                  string `gorm:"default:'';column:code;comment:'原料分类编码'"`
 	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称ID'"`
+	Sort                  int    `gorm:"default:0;column:sort;comment:'排序'"`
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 }

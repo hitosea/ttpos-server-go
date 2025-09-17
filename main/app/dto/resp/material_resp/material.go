@@ -83,6 +83,7 @@ type MaterialCategory struct {
 	Uuid       uint64             `json:"uuid"`        // 分类UUID
 	Name       string             `json:"name"`        // 分类名称
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 分类名称
+	Code       string             `json:"code"`        // 分类编码
 }
 
 // MaterialImportUnitListItem 导入物品单位列表项

@@ -35,7 +35,10 @@ type IMaterialSrv interface {
 	UpdateMaterialStatusBatch(ctx context.Context, req req.MaterialStatusReq) error
 	AddMaterialCategory(ctx context.Context, req req.MaterialCategoryAddReq) error
 	GetMaterialCategoryList(ctx context.Context, req req.MaterialCategoryListReq) (material_resp.MaterialCategoryListResp, error)
+	SortMaterialCategory(ctx context.Context, req req.MaterialCategorySortReq) error
+	EditMaterialCategory(ctx context.Context, req req.MaterialCategoryEditReq) error
 	GetMaterialUnitList(ctx context.Context, req req.MaterialUnitListReq) (material_resp.MaterialUnitListResp, error)
+	DeleteMaterialCategory(ctx context.Context, req req.MaterialCategoryDeleteReq) error
 	AddProductBomCard(ctx context.Context, req req.ProductBomCardAddReq) error
 	GetProductBomCardDetail(ctx context.Context, req req.ProductBomCardDetailReq) (*material_resp.ProductBomCardDetailResp, error)
 	UnlinkProductBomCard(ctx context.Context, req req.ProductBomCardUnlinkReq) error
@@ -294,9 +297,14 @@ func (s *materialSrv) AddMaterialCategory(ctx context.Context, req req.MaterialC
 		materialCategoryRepo := repository.NewMaterialRepo(tx)
 
 		// 检查物品类别名称是否已存在
-		_, err := materialCategoryRepo.GetMaterialCategoryByName(req.LocaleName.ZH)
+		_, err := materialCategoryRepo.GetMaterialCategoryByName(req.LocaleName.ToJson())
 		if err == nil {
 			return errors.New("物品类别名称已存在")
+		}
+
+		// 检查物品类别编码是否已存在
+		if exist := materialCategoryRepo.CheckMaterialCategoryCodeExist(req.Code, 0); exist {
+			return errors.New("物品类别编码已存在")
 		}
 
 		// 创建多语言名称
@@ -310,7 +318,8 @@ func (s *materialSrv) AddMaterialCategory(ctx context.Context, req req.MaterialC
 		// 创建物品类别
 		materialCategory := model.MaterialCategory{
 			MultiLanguageNameUuid: nameId,
-			Name:                  req.LocaleName.ZH,
+			Name:                  req.LocaleName.ToJson(),
+			Code:                  req.Code,
 		}
 
 		_, err = materialCategoryRepo.CreateMaterialCategory(materialCategory)
@@ -377,6 +386,13 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 		materialRepo := repository.NewMaterialRepo(tx)
 		if materialRepo.CheckBarcodeExist(request.BarcodeValue, 0) {
 			return nil, nil, errors.WithMessage(errors.New("条形码已存在，请使用其他条形码"))
+		}
+	}
+	// 检查内部编码唯一性
+	if request.InternalCode != "" {
+		materialRepo := repository.NewMaterialRepo(tx)
+		if materialRepo.CheckMaterialInternalCodeExist(request.InternalCode, 0) {
+			return nil, nil, errors.WithMessage(errors.New("内部编码已存在，请使用其他内部编码"))
 		}
 	}
 
@@ -466,6 +482,7 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 		}(),
 		NotBaseUnitList: notBaseUnitList,
 		Unit:            &unit,
+		InternalCode:    request.InternalCode,
 	}
 
 	_, err = materialRepo.CreateMaterial(material)
@@ -484,14 +501,28 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "翻译失败")
 	}
+	// 获取物品分类信息
+	materialCategoryRepo := repository.NewMaterialRepo(tx)
+	materialCategory, err := materialCategoryRepo.GetMaterialCategoryByUuid(request.CategoryUuid)
+	if err != nil {
+		return nil, nil, errors.WithMessage(err, "获取物品分类失败")
+	}
+
+	getMaterialCategoryName, err := GetEnName(ctx, materialCategory.MultiLanguageName.GetNames())
+	if err != nil {
+		return nil, nil, errors.WithMessage(err, "翻译失败")
+	}
 	materialAddErpReq := &req.MaterialAddErpReq{
-		ItemName:      getEnName,
-		StockUom:      productUnit.ErpnextUom,
-		BarcodeValue:  request.BarcodeValue,
-		Disabled:      request.Status == 0,
-		ValuationRate: request.Valuation,
-		OpeningStock:  request.InitStock,
-		Uoms:          unitList,
+		ItemName:           getEnName,
+		StockUom:           productUnit.ErpnextUom,
+		BarcodeValue:       request.BarcodeValue,
+		Disabled:           request.Status == 0,
+		ValuationRate:      request.Valuation,
+		OpeningStock:       request.InitStock,
+		Uoms:               unitList,
+		InternalCode:       request.InternalCode,
+		Classification:     getMaterialCategoryName,
+		ClassificationCode: materialCategory.Code,
 	}
 
 	return &material, materialAddErpReq, nil
@@ -520,6 +551,12 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 		if request.BarcodeValue != "" && request.BarcodeValue != existingMaterial.BarcodeValue {
 			if materialRepo.CheckBarcodeExist(request.BarcodeValue, request.Uuid) {
 				return errors.WithMessage(errors.New("条形码已存在，请使用其他条形码"))
+			}
+		}
+		// 检查内部编码唯一性
+		if request.InternalCode != "" && request.InternalCode != existingMaterial.InternalCode {
+			if materialRepo.CheckMaterialInternalCodeExist(request.InternalCode, request.Uuid) {
+				return errors.WithMessage(errors.New("内部编码已存在，请使用其他内部编码"))
 			}
 		}
 
@@ -637,6 +674,12 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 				return errors.WithMessage(err, "清空物品估值率失败")
 			}
 		}
+		if request.InternalCode == "" {
+			err = materialRepo.ClearMaterialInternalCode(request.Uuid)
+			if err != nil {
+				return errors.WithMessage(err, "清空物品内部编码失败")
+			}
+		}
 
 		if ctx.GetCompany().IsOpenErp() {
 			erpSrv := erp.NewIErpSrv(s.dbm)
@@ -666,6 +709,18 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 				})
 			}
 
+			// 获取物品分类信息
+			materialCategoryRepo := repository.NewMaterialRepo(tx)
+			materialCategory, err := materialCategoryRepo.GetMaterialCategoryByUuid(request.CategoryUuid)
+			if err != nil {
+				return errors.WithMessage(err, "获取物品分类失败")
+			}
+			materialCategoryName := language.JsonToLocaleResponse(materialCategory.MultiLanguageName.ToJson())
+			getMaterialCategoryName, err := GetEnName(ctx, *materialCategoryName)
+			if err != nil {
+				return errors.WithMessage(err, "翻译失败")
+			}
+
 			_, errErp := erpSrv.AddMaterial(ctx, req.MaterialAddErpReq{
 				ItemCode:      existingMaterial.Code,
 				ItemName:      enName,
@@ -674,6 +729,14 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 				ValuationRate: material.Valuation,
 				BarcodeValue:  material.BarcodeValue,
 				Uoms:          unitList,
+				InternalCode: func() string {
+					if request.InternalCode != "" {
+						return request.InternalCode
+					}
+					return " " // 内部编码为空时，传空格给ErpNext
+				}(),
+				Classification:     getMaterialCategoryName,
+				ClassificationCode: materialCategory.Code,
 			})
 			if errErp != nil {
 				return errors.WithMessage(errErp)
@@ -749,6 +812,7 @@ func (s *materialSrv) UpdateMaterialStatusBatch(ctx context.Context, request req
 					ValuationRate: existingMaterial.Valuation,
 					BarcodeValue:  existingMaterial.BarcodeValue,
 					Uoms:          unitList,
+					InternalCode:  existingMaterial.InternalCode,
 				})
 				if errErp != nil {
 					return errors.WithMessage(errErp)
@@ -781,12 +845,131 @@ func (s *materialSrv) GetMaterialCategoryList(ctx context.Context, req req.Mater
 			Uuid:       materialCategory.Uuid,
 			Name:       materialCategory.Name,
 			LocaleName: materialCategory.MultiLanguageName.GetNames(),
+			Code:       materialCategory.Code,
 		})
 	}
 
 	return material_resp.MaterialCategoryListResp{
 		List: materialCategoryList,
 	}, nil
+}
+
+func (s *materialSrv) SortMaterialCategory(ctx context.Context, req req.MaterialCategorySortReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	commonRepo := repository.NewCommonRepo()
+	productRepo := repository.NewProductRepo(db)
+
+	materialCategoryUuids := make([]uint64, 0, len(req.List))
+	for _, item := range req.List {
+		materialCategoryUuids = append(materialCategoryUuids, item.Uuid)
+	}
+	productCategories, _ := productRepo.GetMaterialCategoryCount(
+		commonRepo.WhereBySoftDelete(),
+		productRepo.WhereUuidIn(materialCategoryUuids),
+	)
+	if productCategories != int64(len(materialCategoryUuids)) {
+		return errors.New("分类不存在")
+	}
+
+	sorts := make(map[uint64]int)
+	for _, item := range req.List {
+		if item.Sort == 0 {
+			return errors.New("排序不能为0")
+		}
+		sorts[item.Uuid] = item.Sort
+	}
+	err := productRepo.BatchUpdateSort(&model.MaterialCategory{}, sorts)
+	if err != nil {
+		return errors.WithMessage(errors.New("排序分类失败"), err.Error())
+	}
+	return nil
+}
+
+func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.MaterialCategoryEditReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	materialCategoryRepo := repository.NewMaterialRepo(db)
+	materialCategory, err := materialCategoryRepo.GetMaterialCategoryByUuid(request.Uuid)
+	if err != nil {
+		return errors.WithMessage(err, "获取物品类别失败")
+	}
+	changeCode := false
+	if materialCategory.Code != request.Code {
+		changeCode = true
+	}
+	materialCategory.Name = request.LocaleName.ToJson()
+	materialCategory.Code = request.Code
+	materialCategory.MultiLanguageName.InitByLocaleResponse(request.LocaleName)
+
+	checkService := NewCheckNameSrv(s.dbm)
+	names := checkService.MakeCheckNameList(ctx, request.LocaleName)
+	for _, name := range names {
+		if !checkService.CheckNameLength(ctx, name.Text, 50) {
+			return errors.New("名称长度不能超过50")
+		}
+	}
+	// 检查物品类别名称是否已存在
+	if _, err := materialCategoryRepo.GetMaterialCategoryByName(request.LocaleName.ToJson()); err == nil {
+		return errors.New("名称已存在")
+	}
+
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		materialCategoryRepo := repository.NewMaterialRepo(tx)
+		if err := materialCategoryRepo.UpdateMaterialCategory(*materialCategory); err != nil {
+			return errors.WithMessage(err, "更新物品类别失败")
+		}
+		// 更新多语言名称
+		if err = repository.NewMultiLanguageNameRepo(tx).UpdateMultiLanguageName(materialCategory.MultiLanguageNameUuid, materialCategory.MultiLanguageName); err != nil {
+			return errors.WithMessage(err, "更新多语言名称失败")
+		}
+		// 如果修改了物品编码，同步更新所有关联了这个分类的erp物品
+		if ctx.GetCompany().IsOpenErp() {
+			if changeCode {
+				materialRepo := repository.NewMaterialRepo(tx)
+				materials, err := materialRepo.GetMaterialByCategoryUuid(materialCategory.Uuid)
+				if err != nil {
+					return errors.WithMessage(err, "获取物品失败")
+				}
+				erpSrv := erp.NewIErpSrv(s.dbm)
+				for _, material := range materials {
+					enName, err := GetEnName(ctx, material.MultiLanguageName.GetNames())
+					if err != nil {
+						return errors.WithMessage(err, "翻译失败")
+					}
+
+					// 旧的非基准单位
+					unitList := []req.MaterialUomReq{}
+					for _, unit := range material.NotBaseUnitList {
+						unitList = append(unitList, req.MaterialUomReq{
+							Uom:            unit.Unit.ErpnextUom,
+							ConversionRate: unit.ConversionRate,
+						})
+					}
+
+					getMaterialCategoryName, err := GetEnName(ctx, materialCategory.MultiLanguageName.GetNames())
+					if err != nil {
+						return errors.WithMessage(err, "翻译失败")
+					}
+
+					erpSrv.AddMaterial(ctx, req.MaterialAddErpReq{
+						ItemCode:           material.Code,
+						ItemName:           enName,
+						StockUom:           material.Unit.Unit.ErpnextUom,
+						Disabled:           material.Status == false,
+						ValuationRate:      material.Valuation,
+						BarcodeValue:       material.BarcodeValue,
+						Uoms:               unitList,
+						InternalCode:       material.InternalCode,
+						Classification:     getMaterialCategoryName,
+						ClassificationCode: materialCategory.Code,
+					})
+				}
+			}
+		}
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
 }
 
 func (s *materialSrv) GetMaterialUnitList(ctx context.Context, req req.MaterialUnitListReq) (material_resp.MaterialUnitListResp, error) {
@@ -810,6 +993,28 @@ func (s *materialSrv) GetMaterialUnitList(ctx context.Context, req req.MaterialU
 	return material_resp.MaterialUnitListResp{
 		List: materialUnitListResp,
 	}, nil
+}
+
+func (s *materialSrv) DeleteMaterialCategory(ctx context.Context, req req.MaterialCategoryDeleteReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	materialCategoryRepo := repository.NewMaterialRepo(db)
+	materialCategory, err := materialCategoryRepo.GetMaterialCategoryByUuid(req.Uuid)
+	if err != nil {
+		return errors.WithMessage(err, "获取物品类别失败")
+	}
+	// 检查物品类别是否关联了物品
+	materialRepo := repository.NewMaterialRepo(db)
+	materials, err := materialRepo.GetMaterialByCategoryUuid(materialCategory.Uuid)
+	if err != nil {
+		return errors.WithMessage(err, "获取物品失败")
+	}
+	if len(materials) > 0 {
+		return errors.New("该类别已经关联了物品，不可删除")
+	}
+	if err := materialCategoryRepo.DeleteMaterialCategory(materialCategory.Uuid); err != nil {
+		return errors.WithMessage(err, "删除物品类别失败")
+	}
+	return nil
 }
 
 func (s *materialSrv) AddProductBomCard(ctx context.Context, req req.ProductBomCardAddReq) error {

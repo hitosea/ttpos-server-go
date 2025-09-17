@@ -25,6 +25,7 @@ type TimeUtil interface {
 	FormatUnixTime(timestamp int64, layout string) string        // 将时间戳转换为指定格式的时间字符串
 	FormatUnixTimeDefault(timestamp int64) string                // 将时间戳转换为默认格式(2006-01-02 15:04:05)的时间字符串
 	FormatUnixTimeWithSlash(timestamp int64) string              // 将时间戳转换为默认格式(2006/01/02 15:04:05)的时间字符串
+	FormatUnixTimeDetail(timestamp int64) TimeDetail             // 获取时间详情
 	GetTimeRange(dayType DayType) (int64, int64, error)          // 订单列表：今天、昨天、本周搜索时间范围
 	FormatTimeToUnix(timeStr string) (int64, error)              // 2025-04-30转为时间戳
 	OpeningHoursStartEndUnix(openingHours string) (int64, int64) // 营业时间开始和结束时间戳
@@ -154,6 +155,33 @@ func (t Timezone) FormatUnixTimeDefault(timestamp int64) string {
 // 这是一个便捷方法，等同于使用FormatUnixTime方法并传入空字符串作为layout
 func (t Timezone) FormatUnixTimeWithSlash(timestamp int64) string {
 	return t.FormatUnixTime(timestamp, "2006/01/02 15:04:05")
+}
+
+type TimeDetail struct {
+	Year   int
+	Month  int
+	Day    int
+	Hour   int
+	Minute int
+	Second int
+}
+
+// FormatUnixTimeDetail 将Unix时间戳转换为时间详情
+func (t Timezone) FormatUnixTimeDetail(timestamp int64) TimeDetail {
+	timezone := string(t)
+	loc, err := time.LoadLocation(timezone)
+	if err != nil {
+		loc = time.Local
+	}
+	tm := time.Unix(timestamp, 0).In(loc)
+	return TimeDetail{
+		Year:   tm.Year(),
+		Month:  int(tm.Month()),
+		Day:    tm.Day(),
+		Hour:   tm.Hour(),
+		Minute: tm.Minute(),
+		Second: tm.Second(),
+	}
 }
 
 // GetTimeRange 订单列表：今天、昨天、本周搜索时间范围
