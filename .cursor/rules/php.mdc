@@ -12,7 +12,7 @@ alwaysApply: true
 5. 都添加uuid字段, 类型是biginteger, 默认值是0, 不要用bigint类型
 6. 都添加create_time, update_time, delete_time字段, 类型是int, 默认值是0, 不要用datetime类型
 7. 所有的迁移文件都写在php中，不要写在go中
-8. 新增迁移文件的时候，文件名的前缀我希望是20250721370408_， 比如20250721370408_add_table_name_table.php 并以上一个文件的序号+1作为新的文件名
+8. 新增迁移文件的时候，文件名的前缀我希望是保持跟其他一致， 比如20250721370408_add_table_name_table.php 并以上一个文件的序号+1作为新的文件名
 9. 在迁移文件中新增表或者删除字段的时候，也要同步改动 seeds/shop_01.sql 文件。../main/app/model/ 目录下也有对应的模型文件，也要同步改动
 10. 迁移文件不用写表的前缀 "ttpos_"
 11. 新增表的时候一定要加上表名注释

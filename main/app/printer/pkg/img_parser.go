@@ -182,26 +182,27 @@ func (p *ImgTemplateParser) parseRow(img *ImgFont, blocks []ImgTemplateBlock, le
 		// 获取宽度
 		width := p.getWidthValue(block.BlockAttr.Width)
 		widthInt := int(width)
+		text := p.getBlockText(block)
 
 		// 添加文本
 		if block.BlockType == "img" {
 			img.SetTextLineHeight(25)
-			img.AppendImg(p.getBlockText(block), widthInt, false, 0)
+			img.AppendImg(text, widthInt, false, 0)
 			img.RecoverDefaultTextLineHeight()
 		} else if block.BlockType == "qrcode" {
 			img.SetTextTotalHeight(20)
 			img.SetTextLineHeight(25)
-			if strings.HasPrefix(p.getBlockText(block), "data:image/png;base64,") {
-				img.AppendQrcode(p.getBlockText(block), widthInt, 0, true)
+			if strings.HasPrefix(text, "data:image/png;base64,") {
+				img.AppendQrcode(text, widthInt, 0, true)
 			} else {
-				img.AppendQrcode(p.getBlockText(block), widthInt, 0, false)
+				img.AppendQrcode(text, widthInt, 0, false)
 			}
 			img.RecoverDefaultTextLineHeight()
 		} else if block.BlockType == "barcode" {
-			img.AppendBarcode(p.getBlockText(block), widthInt, 120)
+			img.AppendBarcode(text, widthInt, 120)
 			img.LineFeed(1, 12)
 			img.SetAlignment(AlignCenter)
-			img.AppendText(p.getBlockText(block))
+			img.AppendText(text)
 			img.LineFeed(1)
 			img.RecoverDefaultTextLineHeight()
 		} else if strings.Contains(block.BlockType, "label:auto:value") {
@@ -214,9 +215,11 @@ func (p *ImgTemplateParser) parseRow(img *ImgFont, blocks []ImgTemplateBlock, le
 			)
 		} else if !strings.Contains(block.BlockType, "array") {
 			// 获取显示文本
-			img.AppendText(p.getBlockText(block))
+			img.AppendText(text)
 			// 添加换行
-			img.LineFeed(1)
+			if len(text) > 0 {
+				img.LineFeed(1)
+			}
 		}
 
 	} else if (len(block.Rows) == 0 || level > 0) && block.BlockType != "column" {
