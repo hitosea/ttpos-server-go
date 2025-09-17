@@ -847,6 +847,7 @@ func (s *materialSrv) GetMaterialCategoryList(ctx context.Context, req req.Mater
 			Name:       materialCategory.Name,
 			LocaleName: materialCategory.MultiLanguageName.GetNames(),
 			Code:       materialCategory.Code,
+			Sort:       materialCategory.Sort,
 		})
 	}
 
@@ -873,6 +874,7 @@ func (s *materialSrv) GetMaterialCategoryDetail(ctx context.Context, req req.Mat
 		Name:       materialCategory.Name,
 		LocaleName: materialCategory.MultiLanguageName.GetNames(),
 		Code:       materialCategory.Code,
+		Sort:       materialCategory.Sort,
 		IsRelated:  len(materials) > 0,
 	}, nil
 }
@@ -931,7 +933,7 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 		}
 	}
 	// 检查物品类别名称是否已存在
-	if _, err := materialCategoryRepo.GetMaterialCategoryByName(request.LocaleName.ToJson()); err == nil {
+	if exist, err := materialCategoryRepo.GetMaterialCategoryByName(request.LocaleName.ToJson()); err == nil && exist.Uuid != materialCategory.Uuid {
 		return errors.New("名称已存在")
 	}
 

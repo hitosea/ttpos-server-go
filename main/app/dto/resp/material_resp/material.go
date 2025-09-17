@@ -84,6 +84,7 @@ type MaterialCategory struct {
 	Name       string             `json:"name"`        // 分类名称
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 分类名称
 	Code       string             `json:"code"`        // 分类编码
+	Sort       int                `json:"sort"`        // 排序
 	IsRelated  bool               `json:"is_related"`  // 是否关联了物品
 }
 
