@@ -22360,6 +22360,29 @@ paths:
       summary: 检查名称是否存在
       tags:
       - 通用
+  /shop/check_update:
+    get:
+      consumes:
+      - application/json
+      description: 检查更新
+      parameters:
+      - description: 品牌参数
+        in: query
+        name: brand
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 检查更新
+      tags:
+      - 商家端.基础信息
   /shop/login:
     post:
       consumes:
