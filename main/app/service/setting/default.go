@@ -155,6 +155,7 @@ func (s *Srv) getDefaultKitchen(languageList []dto.LanguageItem) setting.Kitchen
 			LanguageList:    languageList,                       // 语言列表
 			Language:        []string{defaultLanguage},          // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
 			DefaultLanguage: defaultLanguage,                    // 默认语言
+			IsSmartKitchen:  "0",                                // 是否开启智能后厨 0-关闭 1-开启
 		},
 		AdvancedPassword: "666888", // 高级设置密码
 	}

@@ -31,6 +31,8 @@ type ProductionOrderProduct struct {
 	ProductionOrderUuid   uint64  `gorm:"column:production_order_uuid;type:bigint(20) unsigned;default:0;comment:生产订单ID;NOT NULL" json:"production_order_uuid"`
 	FirstCategoryUuid     uint64  `gorm:"column:first_category_uuid;type:bigint(20) unsigned;default:0;comment:一级分类ID;NOT NULL" json:"first_category_uuid"`
 	FinishedTime          uint    `gorm:"column:finished_time;type:int(10) unsigned;default:0;comment:完成时间(时间戳);NOT NULL" json:"finished_time"`
+	MakeStatus            int     `gorm:"column:make_status;type:tinyint(1);default:0;comment:制作状态 0-默认，未制作完成，1-已制作完成，2-已恢复到制作中;NOT NULL" json:"make_status"`
+	MadeTime              int64   `gorm:"column:made_time;type:int(10) unsigned;default:0;comment:制作完成时间(时间戳);NOT NULL" json:"made_time"`
 
 	ProductionOrderMaterials []*ProductionOrderMaterial `gorm:"foreignKey:ProductionOrderProductUuid;references:Uuid" json:"production_order_materials"`
 	SaleOrderProduct         SaleOrderProduct           `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid" json:"sale_order_product"`

@@ -89,6 +89,7 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 			"user_agent":           userAgent,
 			"finally_login_uuid":   addReq.FinallyLoginUuid,
 			"finally_login_time":   finallyLoginTime,
+			"kds_mode":             addReq.KdsMode,
 		})
 		if err != nil {
 			return 0, errors.WithMessage(err, "更新绑定信息失败")
@@ -125,6 +126,7 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		Brand:            addReq.Brand,
 		Platform:         platform,
 		UserAgent:        userAgent,
+		KdsMode:          addReq.KdsMode,
 	})
 	if err != nil {
 		return 0, errors.WithMessage(err)

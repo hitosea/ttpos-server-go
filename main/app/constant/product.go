@@ -71,6 +71,12 @@ const (
 )
 
 const (
+	ProductionOrderProductMakeStatusDefault  = 0 // 未制作完成
+	ProductionOrderProductMakeStatusFinished = 1 // 已制作完成
+	ProductionOrderProductMakeStatusRecovery = 2 // 已恢复到制作中
+)
+
+const (
 	CustomPriceOn  = Yes // 是, 商品已改价
 	CustomPriceOff = No  // 否, 商品未改价
 )

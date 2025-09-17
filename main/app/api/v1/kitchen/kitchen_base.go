@@ -130,6 +130,7 @@ func (h *BaseHandler) Bind(c *gin.Context) {
 		CompanyUuid:        helper.GetCompanyUuid(c),
 		ProductPrinterUuid: kitchenBindReq.ProductPrinterUuid,
 		Remark:             kitchenBindReq.Remark,
+		KdsMode:            kitchenBindReq.Mode,
 	})
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
