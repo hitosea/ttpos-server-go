@@ -60,7 +60,12 @@ class Card extends BaseModel
     }
     public function getReceiveNumAttr($value, $data)
     {
-        return (new CardRecord)->where('member_card_type_uuid', '=', $this->uuid)->count();
+        return (new CardRecord)
+            ->alias('member_card_log')
+            ->leftJoin('member', 'member.uuid=member_card_log.member_uuid')
+            ->where('member.delete_time', '=', 0)
+            ->where('member_card_type_uuid', '=', $this->uuid)
+            ->count();
     }
     public function getOpenPointsAttr($value, $data)
     {
