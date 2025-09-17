@@ -223,6 +223,10 @@ func (p *ImgTemplateParser) parseRow(img *ImgFont, blocks []ImgTemplateBlock, le
 		// 创建列配置
 		columns := make([]ColumnConfig, 0, len(blocks))
 		for _, block := range blocks {
+			// 检查条件显示
+			if !p.checkConditions(block.Conditions) {
+				continue
+			}
 			lineHeight := block.BlockAttr.LineHeight
 			if isLast && lineHeight > 33 {
 				lineHeight = 33
@@ -598,29 +602,29 @@ func (p *ImgTemplateParser) checkCondition(condition ImgTemplateCondition) bool 
 	fieldValue := p.getDataValue(condition.Field)
 
 	switch condition.Operator {
-	case "eq":
-		return fieldValue == condition.Value
-	case "ne":
-		return fieldValue != condition.Value
-	case "gt":
+	case "eq": // 等于
+		return p.convertToFloat64(fieldValue) == p.convertToFloat64(condition.Value)
+	case "ne": // 不等于
+		return p.convertToFloat64(fieldValue) != p.convertToFloat64(condition.Value)
+	case "gt": // 大于
 		return p.compareValues(fieldValue, condition.Value) > 0
-	case "lt":
+	case "lt": // 小于
 		return p.compareValues(fieldValue, condition.Value) < 0
-	case "gte":
+	case "gte": // 大于等于
 		return p.compareValues(fieldValue, condition.Value) >= 0
-	case "lte":
+	case "lte": // 小于等于
 		return p.compareValues(fieldValue, condition.Value) <= 0
-	case "empty":
+	case "empty": // 空
 		return p.isEmptyOrZero(fieldValue)
-	case "not_empty":
+	case "not_empty": // 非空
 		return !p.isEmptyOrZero(fieldValue)
-	case "contains":
+	case "contains": // 包含
 		return p.containsValue(fieldValue, condition.Value)
-	case "not_contains":
+	case "not_contains": // 不包含
 		return !p.containsValue(fieldValue, condition.Value)
-	case "in":
+	case "in": // 在
 		return p.isInValue(fieldValue, condition.Value)
-	case "not_in":
+	case "not_in": // 不在
 		return !p.isInValue(fieldValue, condition.Value)
 	default:
 		return false
