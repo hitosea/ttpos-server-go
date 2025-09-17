@@ -4741,6 +4741,7 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 				Uuid:         flavor.Uuid,
 				Price:        flavor.Price,
 				BarcodeValue: flavor.BarcodeValue,
+				InternalCode: flavor.InternalCode,
 				BomUuid:      flavor.BomUuid,
 				IsDelete:     flavor.IsDelete,
 			})
@@ -4879,9 +4880,10 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 			Status:   req.Status,
 			Flavors: []CheckProductFlavorItemResult{
 				{
-					BomUuid: bom.Uuid,
-					Name:    req.LocaleName.ToJson(),
-					Price:   packageResult.Price,
+					BomUuid:      bom.Uuid,
+					Name:         req.LocaleName.ToJson(),
+					InternalCode: req.Package.InternalCode,
+					Price:        packageResult.Price,
 				},
 			},
 			IsPackage: true,
@@ -5281,8 +5283,9 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 						erpSrv := erp.NewIErpSrv(s.dbm)
 						stockUom := productUnit.ErpnextUom
 						params := req.PackageAddErpReq{
-							ItemName: enName,
-							StockUom: stockUom,
+							ItemName:     enName,
+							StockUom:     stockUom,
+							InternalCode: flavorListResult.Flavors[0].InternalCode,
 						}
 						itemInfo, errErp := erpSrv.AddPackage(ctx, params)
 						if errErp != nil {
@@ -5322,6 +5325,7 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 							BarcodeValue:       flavor.BarcodeValue,
 							Classification:     classification,
 							ClassificationCode: productCategory.Code,
+							InternalCode:       flavor.InternalCode,
 						}
 						itemInfo, errErp := erpSrv.AddProduct(ctx, params)
 						if errErp != nil {
@@ -5360,6 +5364,7 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 					ProductPackageUuid: productPackageUuid,
 					StockNum:           flavorListResult.StockNum,
 					BarcodeValue:       flavor.BarcodeValue,
+					InternalCode:       flavor.InternalCode,
 					Status:             flavorListResult.Status,
 					IsOpenStock:        1,
 				})
@@ -5400,6 +5405,7 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 					"product_flavor_uuid":  flavor.Uuid,
 					"product_package_uuid": productPackageUuid,
 					"barcode_value":        flavor.BarcodeValue,
+					"internal_code":        flavor.InternalCode,
 					"status":               flavorListResult.Status,
 					"is_open_stock":        1,
 				}, commonRepo.WhereByUuid(flavor.BomUuid))
@@ -5429,6 +5435,12 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 							ItemName: enName,
 							StockUom: productUnit.ErpnextUom,
 							ItemCode: productBom.ErpCode,
+							InternalCode: func() string {
+								if flavor.InternalCode != "" {
+									return flavor.InternalCode
+								}
+								return " " // 内部编码为空时，传空格给ErpNext
+							}(),
 						})
 						if errErp != nil {
 							return errors.WithMessage(errErp, "同步套餐到erp失败")
@@ -5466,6 +5478,12 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 							BarcodeValue:       flavor.BarcodeValue,
 							Classification:     classification,
 							ClassificationCode: productCategory.Code,
+							InternalCode: func() string {
+								if flavor.InternalCode != "" {
+									return flavor.InternalCode
+								}
+								return " " // 内部编码为空时，传空格给ErpNext
+							}(),
 						})
 						if errErp != nil {
 							return errors.WithMessage(errErp)

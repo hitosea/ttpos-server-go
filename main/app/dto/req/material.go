@@ -160,12 +160,14 @@ type ProductAddErpReq struct {
 	BarcodeValue       string `json:"barcode_value" binding:"required"`       // 条形码值
 	Classification     string `json:"classification" binding:"required"`      // 分类
 	ClassificationCode string `json:"classification_code" binding:"required"` // 分类编码
+	InternalCode       string `json:"internal_code" `                         // 内部编码
 }
 
 type PackageAddErpReq struct {
-	ItemName string `json:"item_name" binding:"required"` // 套餐名称, 英文
-	StockUom string `json:"stock_uom" binding:"required"` // 套餐单位, 英文
-	ItemCode string `json:"item_code" binding:"required"` // 套餐编码，如果为空，则为新增；如果非空，则为编辑
+	ItemName     string `json:"item_name" binding:"required"` // 套餐名称, 英文
+	StockUom     string `json:"stock_uom" binding:"required"` // 套餐单位, 英文
+	ItemCode     string `json:"item_code" binding:"required"` // 套餐编码，如果为空，则为新增；如果非空，则为编辑
+	InternalCode string `json:"internal_code" `               // 内部编码
 }
 
 type MaterialUomReq struct {
