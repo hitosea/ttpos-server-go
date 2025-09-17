@@ -615,9 +615,6 @@ func (s *productionSrv) Finish(ctx context.Context, req req.FinishReq) error {
 
 // Recovery 恢复制作
 func (s *productionSrv) Recovery(ctx context.Context, req req.RecoveryReq) error {
-
-	// TODO 恢复制作、恢复传菜
-
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	productionRepo := repository.NewProductionRepo(db)
 	product, _ := productionRepo.GetProduct(productionRepo.WhereProductUuid(req.ProductUuid))
@@ -627,8 +624,34 @@ func (s *productionSrv) Recovery(ctx context.Context, req req.RecoveryReq) error
 	if product.Status != constant.ProductionOrderProductStatusFinished {
 		return errors.New("订单商品未完成")
 	}
+	mode, err := s.getMode(ctx, req.Mode)
+	if err != nil {
+		return err
+	}
 
-	err := db.Transaction(func(tx *gorm.DB) error {
+	if mode != nil && *mode == constant.KdsModeMake {
+		// 是否已制作完成
+		if product.MakeStatus != constant.ProductionOrderProductMakeStatusFinished {
+			return errors.New("订单商品未制作完成")
+		}
+		// 是否已经传菜
+		if product.Status == constant.ProductionOrderProductStatusFinished {
+			return errors.New("订单商品已传菜")
+		}
+		if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(req.ProductUuid)}, map[string]any{
+			"make_status": constant.ProductionOrderProductMakeStatusDefault,
+			"made_time":   0,
+		}); err != nil {
+			return errors.WithMessage(errors.New("恢复送厨单商品制作状态失败"), err.Error())
+		}
+		// 恢复制作后，推送更新厨显
+		go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
+			"update_time": time.Now().Unix(),
+		})
+		return nil
+	}
+
+	err = db.Transaction(func(tx *gorm.DB) error {
 		productionRepo := repository.NewProductionRepo(tx)
 		if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(req.ProductUuid)}, map[string]any{
 			"status":        constant.ProductionOrderProductStatusCooking,
