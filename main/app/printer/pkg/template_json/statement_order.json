@@ -682,7 +682,14 @@
                                 "leading_blank_lines": 0,
                                 "trailing_blank_lines": 0,
                                 "width": 20
-                            }
+                            },
+                            "conditions": [
+                                {
+                                    "field": "is_sub_product",
+                                    "operator": "eq",
+                                    "value": 0
+                                }
+                            ]
                         },
                         {
                             "block_id": "subtotal",
@@ -697,7 +704,14 @@
                                 "trailing_blank_lines": 0,
                                 "show_currency_unit": true,
                                 "width": 0
-                            }
+                            },
+                            "conditions": [
+                                {
+                                    "field": "is_sub_product",
+                                    "operator": "eq",
+                                    "value": 0
+                                }
+                            ]
                         }
                     ]
                 ]

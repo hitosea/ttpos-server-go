@@ -275,7 +275,7 @@ func NewImgFont(imageWidth int, defaultTextLineHeight int, direction int) *ImgFo
 		FontWeight:            1,
 		Direction:             0,
 		MySpecialFonts:        make(map[string]string),
-		SegmentationHeight:    2200,
+		SegmentationHeight:    22200,
 		hasSemaphore:          true, // 标记已获取信号量
 	}
 
@@ -1376,6 +1376,7 @@ type appendSplitlineOptions struct {
 	isLineFeed bool
 	lineHeight int
 	fontWeight int
+	fontSize   int
 }
 
 // DefaultAppendSplitLineOptions 返回默认的 AppendSplitline 选项
@@ -1384,6 +1385,7 @@ func DefaultAppendSplitLineOptions() appendSplitlineOptions {
 		isLineFeed: false,
 		lineHeight: 0,
 		fontWeight: 1,
+		fontSize:   20,
 	}
 }
 
@@ -1421,8 +1423,14 @@ func (i *ImgFont) AppendSplitLine(opts ...AppendSplitlineOption) *ImgFont {
 	// 保存原始字体粗细
 	originalFontWeight := i.FontWeight
 
+	// 保存原始字体大小
+	originalFontSize := i.FontSize
+
 	// 设置分割线的字体粗细
 	i.SetFontWeight(options.fontWeight)
+
+	// 设置分割线的字体大小
+	i.SetFontSize(options.fontSize)
 
 	// 根据图像宽度添加分割线
 	if i.ImageWidth == 567 || i.ImageWidth == 568 {
@@ -1442,6 +1450,9 @@ func (i *ImgFont) AppendSplitLine(opts ...AppendSplitlineOption) *ImgFont {
 
 	// 恢复原始字体粗细
 	i.SetFontWeight(originalFontWeight)
+
+	// 恢复原始字体大小
+	i.SetFontSize(originalFontSize)
 
 	return i
 }
