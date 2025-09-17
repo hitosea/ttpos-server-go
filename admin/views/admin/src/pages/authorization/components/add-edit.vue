@@ -143,6 +143,8 @@
     getErpnextCompanyList(site_code);
   };
   const getErpnextCompanyList = async (site_code: string) => {
+    erpnextCompanyList.value = [];
+
     // 循环erpnextSiteList获取erpnext_default_company_abbr
     for (const item of erpnextSiteList.value) {
       if (item.code === site_code) {
