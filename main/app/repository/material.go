@@ -377,6 +377,9 @@ func (r *MaterialRepoImpl) CheckMultiLanguageNameExist(localeResponse dto.Locale
 func (r *MaterialRepoImpl) GetCategoryUuidByNameOptimized(name string) (uint64, error) {
 	var category model.MaterialCategory
 	if err := r.db.Model(&model.MaterialCategory{}).Where("name = ?", name).First(&category).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return 0, nil
+		}
 		return 0, errors.WithMessage(err, "根据名称查询物品类别失败")
 	}
 	return category.Uuid, nil

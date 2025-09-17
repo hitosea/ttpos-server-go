@@ -1753,12 +1753,12 @@ func (s *materialSrv) ImportMaterialList(ctx context.Context, reqs req.MaterialI
 		material := material_resp.MaterialImportListItem{}
 		copier.Copy(&material, item)
 		// 获取分类ID
-		categoryUuid, err := repository.NewMaterialRepo(db).GetCategoryUuidByNameOptimized(item.CategoryName)
+		categoryUuid, err := repository.NewMaterialRepo(db).GetCategoryUuidByNameOptimized(strings.TrimSpace(item.CategoryName))
 		if err != nil {
 			return material_resp.MaterialImportResp{}, err
 		}
 		// 获取单位ID
-		unitUuid, err := base.NewProductUnitRepo(db).GetProductUnitUuidByNameOptimized(item.UnitName)
+		unitUuid, err := base.NewProductUnitRepo(db).GetProductUnitUuidByNameOptimized(strings.TrimSpace(item.UnitName))
 		if err != nil {
 			return material_resp.MaterialImportResp{}, err
 		}
