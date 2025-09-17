@@ -10,6 +10,7 @@ import (
 type ICompanySettingRepo interface {
 	WhereErpnextCompanyAbbr(erpnextCompanyAbbr string) DBOption
 	WhereErpnextCompanyAbbrNotEmpty() DBOption
+	WhereSiteCode(siteCode string) DBOption
 
 	GetOne(opts ...DBOption) (model.CompanySetting, error)
 	Get() model.CompanySetting
@@ -72,5 +73,11 @@ func (r *companySettingRepo) GetErpnextCompanyAbbrs(opts ...DBOption) ([]string,
 func (r *companySettingRepo) WhereErpnextCompanyAbbrNotEmpty() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("erpnext_company_abbr != ''")
+	}
+}
+
+func (r *companySettingRepo) WhereSiteCode(siteCode string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("erpnext_site_code = ?", siteCode)
 	}
 }

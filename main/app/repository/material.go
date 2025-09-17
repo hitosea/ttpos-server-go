@@ -132,7 +132,11 @@ func (r *MaterialRepoImpl) GetMaterialByUuids(uuids []uint64, opts ...DBOption) 
 
 func (r *MaterialRepoImpl) GetMaterialByCategoryUuid(categoryUuid uint64) ([]*model.Material, error) {
 	var materials []*model.Material
-	if err := r.db.Model(&model.Material{}).Preload("NotBaseUnitList.Unit").Where("category_uuid = ?", categoryUuid).Where("delete_time = ?", 0).Find(&materials).Error; err != nil {
+	if err := r.db.Model(&model.Material{}).
+		Preload("NotBaseUnitList.Unit").
+		Preload("Unit.Unit").
+		Preload("MultiLanguageName").
+		Where("category_uuid = ?", categoryUuid).Where("delete_time = ?", 0).Find(&materials).Error; err != nil {
 		return nil, errors.WithMessage(err, "查询物品失败")
 	}
 	return materials, nil
@@ -259,7 +263,7 @@ func (r *MaterialRepoImpl) CreateMaterialCategory(materialCategory model.Materia
 func (r *MaterialRepoImpl) GetMaterialCategoryList() ([]model.MaterialCategory, error) {
 	var materialCategories []model.MaterialCategory
 
-	if err := r.db.Model(&model.MaterialCategory{}).Where("delete_time = ?", 0).Preload("MultiLanguageName").Order("create_time ASC").Find(&materialCategories).Error; err != nil {
+	if err := r.db.Model(&model.MaterialCategory{}).Where("delete_time = ?", 0).Preload("MultiLanguageName").Order("sort ASC").Find(&materialCategories).Error; err != nil {
 		return nil, errors.WithMessage(err, "获取物品类别列表失败")
 	}
 
@@ -373,6 +377,9 @@ func (r *MaterialRepoImpl) CheckMultiLanguageNameExist(localeResponse dto.Locale
 func (r *MaterialRepoImpl) GetCategoryUuidByNameOptimized(name string) (uint64, error) {
 	var category model.MaterialCategory
 	if err := r.db.Model(&model.MaterialCategory{}).Where("name = ?", name).First(&category).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return 0, nil
+		}
 		return 0, errors.WithMessage(err, "根据名称查询物品类别失败")
 	}
 	return category.Uuid, nil

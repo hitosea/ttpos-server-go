@@ -35,6 +35,7 @@ type IMaterialSrv interface {
 	UpdateMaterialStatusBatch(ctx context.Context, req req.MaterialStatusReq) error
 	AddMaterialCategory(ctx context.Context, req req.MaterialCategoryAddReq) error
 	GetMaterialCategoryList(ctx context.Context, req req.MaterialCategoryListReq) (material_resp.MaterialCategoryListResp, error)
+	GetMaterialCategoryDetail(ctx context.Context, req req.MaterialCategoryDetailReq) (*material_resp.MaterialCategory, error)
 	SortMaterialCategory(ctx context.Context, req req.MaterialCategorySortReq) error
 	EditMaterialCategory(ctx context.Context, req req.MaterialCategoryEditReq) error
 	GetMaterialUnitList(ctx context.Context, req req.MaterialUnitListReq) (material_resp.MaterialUnitListResp, error)
@@ -846,11 +847,35 @@ func (s *materialSrv) GetMaterialCategoryList(ctx context.Context, req req.Mater
 			Name:       materialCategory.Name,
 			LocaleName: materialCategory.MultiLanguageName.GetNames(),
 			Code:       materialCategory.Code,
+			Sort:       materialCategory.Sort,
 		})
 	}
 
 	return material_resp.MaterialCategoryListResp{
 		List: materialCategoryList,
+	}, nil
+}
+
+func (s *materialSrv) GetMaterialCategoryDetail(ctx context.Context, req req.MaterialCategoryDetailReq) (*material_resp.MaterialCategory, error) {
+	dbId := ctx.GetDbId()
+	materialCategoryRepo := repository.NewMaterialRepo(s.dbm.GetDB(dbId))
+	materialCategory, err := materialCategoryRepo.GetMaterialCategoryByUuid(req.Uuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取物品类别失败")
+	}
+	// 是否关联了物品
+	materialRepo := repository.NewMaterialRepo(s.dbm.GetDB(dbId))
+	materials, err := materialRepo.GetMaterialByCategoryUuid(materialCategory.Uuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取物品失败")
+	}
+	return &material_resp.MaterialCategory{
+		Uuid:       materialCategory.Uuid,
+		Name:       materialCategory.Name,
+		LocaleName: materialCategory.MultiLanguageName.GetNames(),
+		Code:       materialCategory.Code,
+		Sort:       materialCategory.Sort,
+		IsRelated:  len(materials) > 0,
 	}, nil
 }
 
@@ -908,7 +933,7 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 		}
 	}
 	// 检查物品类别名称是否已存在
-	if _, err := materialCategoryRepo.GetMaterialCategoryByName(request.LocaleName.ToJson()); err == nil {
+	if exist, err := materialCategoryRepo.GetMaterialCategoryByName(request.LocaleName.ToJson()); err == nil && exist.Uuid != materialCategory.Uuid {
 		return errors.New("名称已存在")
 	}
 
@@ -1728,12 +1753,12 @@ func (s *materialSrv) ImportMaterialList(ctx context.Context, reqs req.MaterialI
 		material := material_resp.MaterialImportListItem{}
 		copier.Copy(&material, item)
 		// 获取分类ID
-		categoryUuid, err := repository.NewMaterialRepo(db).GetCategoryUuidByNameOptimized(item.CategoryName)
+		categoryUuid, err := repository.NewMaterialRepo(db).GetCategoryUuidByNameOptimized(strings.TrimSpace(item.CategoryName))
 		if err != nil {
 			return material_resp.MaterialImportResp{}, err
 		}
 		// 获取单位ID
-		unitUuid, err := base.NewProductUnitRepo(db).GetProductUnitUuidByNameOptimized(item.UnitName)
+		unitUuid, err := base.NewProductUnitRepo(db).GetProductUnitUuidByNameOptimized(strings.TrimSpace(item.UnitName))
 		if err != nil {
 			return material_resp.MaterialImportResp{}, err
 		}

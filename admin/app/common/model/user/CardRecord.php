@@ -139,7 +139,11 @@ class CardRecord extends BaseModel
     public static function checkExistByRecordId($card_id)
     {
         $model = new static;
-        return !!$model->where('member_card_type_uuid', '=', (int)$card_id)->count();
+        return !!$model->alias('member_card_log')
+            ->leftJoin('member', 'member.uuid=member_card_log.member_uuid')
+            ->where('member.delete_time', '=', 0)
+            ->where('member_card_type_uuid', '=', (int)$card_id)
+            ->count();
     }
 
     /**

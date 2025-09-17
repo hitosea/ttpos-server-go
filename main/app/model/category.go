@@ -10,6 +10,7 @@ type ProductCategory struct {
 	IsSpecial             int    `gorm:"column:is_special;type:tinyint(1);default:0;comment:特殊分类, 1-是 0-否;NOT NULL" json:"is_special"`
 	CategoryKey           string `gorm:"column:category_key;type:varchar(255);comment:关键字;NOT NULL" json:"category_key"`
 	Sort                  uint   `gorm:"column:sort;type:int(11);default:0;comment:排序;NOT NULL" json:"sort"`
+	Code                  string `gorm:"column:code;type:varchar(255);comment:分类编码;NOT NULL" json:"code"`
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
 }

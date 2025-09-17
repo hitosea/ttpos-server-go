@@ -82,6 +82,7 @@ type IProductRepo interface {
 
 // IProductQueryRepo 商品查询仓库接口
 type IProductQueryRepo interface {
+	CheckProductCategoryCodeExist(code string, uuid uint64) bool                                                    // 检查分类编码是否已存在
 	GetProductListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductPackage, int64, error) // 分页获取商品列表
 	GetProductPackageListByUuids(uuids []uint64) ([]model.ProductPackage, error)                                    // 通过uuid列表获取商品列表
 	GetProductCategoryList(opts ...DBOption) ([]model.ProductCategory, error)                                       // 获取产品类别列表
@@ -90,6 +91,7 @@ type IProductQueryRepo interface {
 	GetMaterialCategoryCount(opts ...DBOption) (int64, error)                                                       // 获取物品分类数量
 	GetProductCategoryMaxSort(opts ...DBOption) (int64, error)                                                      // 获取产品分类最大排序
 	GetProduct(opts ...DBOption) (model.ProductPackage, error)                                                      // 获取商品详情
+	GetProducts(opts ...DBOption) ([]*model.ProductPackage, error)                                                  // 获取商品列表
 	GetProductDetail(uuid uint64) (*model.ProductPackage, error)                                                    // 获取商品详情
 	GetProductCount(opts ...DBOption) (int64, error)                                                                // 获取商品数量
 	GetProductFlavor(opts ...DBOption) (model.ProductFlavor, error)                                                 // 获取商品口味详情
@@ -374,6 +376,20 @@ func (r *productRepo) GetProduct(opts ...DBOption) (model.ProductPackage, error)
 	err := db.First(&product).Error
 
 	return product, errors.WithMessage(err)
+}
+
+func (r *productRepo) GetProducts(opts ...DBOption) ([]*model.ProductPackage, error) {
+	var products []*model.ProductPackage
+
+	db := r.db.Model(&model.ProductPackage{})
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	err := db.Find(&products).Error
+
+	return products, errors.WithMessage(err)
 }
 
 // GetProductDetail 获取商品详情
@@ -1355,4 +1371,12 @@ func (r *productRepo) GetProductFlavorList(opts ...DBOption) ([]model.ProductFla
 	}
 	err := db.Order("sort asc, create_time asc").Find(&flavors).Error
 	return flavors, errors.WithMessage(err)
+}
+
+func (r *productRepo) CheckProductCategoryCodeExist(code string, uuid uint64) bool {
+	db := r.db.Model(&model.ProductCategory{}).Where("delete_time = ?", constant.NotDeleted).Where("code = ?", code)
+	if uuid != 0 {
+		db = db.Where("uuid <> ?", uuid)
+	}
+	return db.First(&model.ProductCategory{}).Error == nil
 }
