@@ -29,6 +29,7 @@ import (
 type IMaterialSrv interface {
 	GetMaterialList(ctx context.Context, req req.MaterialListReq) (material_resp.MaterialListWithPaginationResp, error)
 	GetMaterialDetail(ctx context.Context, req req.MaterialDetailReq) (material_resp.MaterialDetailResp, error)
+	GetMaterialStockDetail(ctx context.Context, req req.MaterialStockDetailReq) (material_resp.MaterialStockDetailResp, error)
 	AddMaterial(ctx context.Context, req req.MaterialAddReq) error
 	EditMaterial(ctx context.Context, req req.MaterialEditReq) error
 	DeleteMaterial(ctx context.Context, req req.MaterialDeleteReq) error
@@ -291,6 +292,42 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		PurchaseUnitLocaleName: purchaseUnitLocaleName,
 		CostUnitLocaleName:     costUnitLocaleName,
 		UnitLocaleName:         baseUnitLocaleName,
+	}, nil
+}
+
+// GetMaterialStockDetail 获取物品库存详情
+func (s *materialSrv) GetMaterialStockDetail(ctx context.Context, req req.MaterialStockDetailReq) (material_resp.MaterialStockDetailResp, error) {
+	dbId := ctx.GetDbId()
+	materialRepo := repository.NewMaterialRepo(s.dbm.GetDB(dbId))
+	material, err := materialRepo.GetMaterialDetailByUuid(req.Uuid)
+	if err != nil {
+		return material_resp.MaterialStockDetailResp{}, errors.WithMessage(err, "获取物品库存详情失败")
+	}
+	// mock 假数据
+	return material_resp.MaterialStockDetailResp{
+		Uuid:       req.Uuid,
+		LocaleName: material.MultiLanguageName.GetNames(),
+		Code:       material.Code,
+		Warehouses: material_resp.WarehouseList{
+			Amount: 380,
+			List: []material_resp.Warehouse{
+				{
+					Uuid:       req.Uuid,
+					LocaleName: material.MultiLanguageName.GetNames(),
+					Num:        80,
+				},
+				{
+					Uuid:       req.Uuid,
+					LocaleName: material.MultiLanguageName.GetNames(),
+					Num:        100,
+				},
+				{
+					Uuid:       req.Uuid,
+					LocaleName: material.MultiLanguageName.GetNames(),
+					Num:        200,
+				},
+			},
+		},
 	}, nil
 }
 

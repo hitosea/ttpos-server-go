@@ -66,6 +66,11 @@ type MaterialDetailReq struct {
 	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 物品UUID
 }
 
+// MaterialStockDetailReq 物品库存详情查询
+type MaterialStockDetailReq struct {
+	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 物品UUID
+}
+
 // MaterialCategoryDeleteReq 删除物品类别请求
 type MaterialCategoryDeleteReq struct {
 	Uuid uint64 `json:"uuid" binding:"required"` // 物品类别UUID
