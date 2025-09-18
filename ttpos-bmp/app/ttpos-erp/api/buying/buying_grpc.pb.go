@@ -22,6 +22,11 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	BuyingService_GetSupplierList_FullMethodName     = "/buying.BuyingService/GetSupplierList"
+	BuyingService_CreateSupplier_FullMethodName      = "/buying.BuyingService/CreateSupplier"
+	BuyingService_GetSupplier_FullMethodName         = "/buying.BuyingService/GetSupplier"
+	BuyingService_UpdateSupplier_FullMethodName      = "/buying.BuyingService/UpdateSupplier"
+	BuyingService_DeleteSupplier_FullMethodName      = "/buying.BuyingService/DeleteSupplier"
+	BuyingService_ListSuppliers_FullMethodName       = "/buying.BuyingService/ListSuppliers"
 	BuyingService_GetPurchaseOrder_FullMethodName    = "/buying.BuyingService/GetPurchaseOrder"
 	BuyingService_SavePurchaseReceipt_FullMethodName = "/buying.BuyingService/SavePurchaseReceipt"
 )
@@ -30,10 +35,30 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type BuyingServiceClient interface {
-	// 获取供应商列表
+	// 获取内部供应商列表
 	// 参数：公司缩写编码
 	// 返回：供应商列表
 	GetSupplierList(ctx context.Context, in *GetSupplierListReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 创建供应商
+	// 参数：供应商信息
+	// 返回：创建结果
+	CreateSupplier(ctx context.Context, in *CreateSupplierReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 获取供应商详情
+	// 参数：供应商名称
+	// 返回：供应商详细信息
+	GetSupplier(ctx context.Context, in *GetSupplierReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 更新供应商
+	// 参数：供应商更新信息
+	// 返回：更新结果
+	UpdateSupplier(ctx context.Context, in *UpdateSupplierReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 删除供应商
+	// 参数：供应商名称
+	// 返回：删除结果
+	DeleteSupplier(ctx context.Context, in *DeleteSupplierReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 获取供应商列表（带分页和过滤）
+	// 参数：过滤条件和分页参数
+	// 返回：供应商列表
+	ListSuppliers(ctx context.Context, in *ListSuppliersReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 	// 获取采购订单
 	// 参数：采购订单名称
 	// 返回：采购订单信息
@@ -56,6 +81,56 @@ func (c *buyingServiceClient) GetSupplierList(ctx context.Context, in *GetSuppli
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(api.ResponseInfo)
 	err := c.cc.Invoke(ctx, BuyingService_GetSupplierList_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *buyingServiceClient) CreateSupplier(ctx context.Context, in *CreateSupplierReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, BuyingService_CreateSupplier_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *buyingServiceClient) GetSupplier(ctx context.Context, in *GetSupplierReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, BuyingService_GetSupplier_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *buyingServiceClient) UpdateSupplier(ctx context.Context, in *UpdateSupplierReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, BuyingService_UpdateSupplier_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *buyingServiceClient) DeleteSupplier(ctx context.Context, in *DeleteSupplierReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, BuyingService_DeleteSupplier_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *buyingServiceClient) ListSuppliers(ctx context.Context, in *ListSuppliersReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, BuyingService_ListSuppliers_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -86,10 +161,30 @@ func (c *buyingServiceClient) SavePurchaseReceipt(ctx context.Context, in *SaveP
 // All implementations must embed UnimplementedBuyingServiceServer
 // for forward compatibility.
 type BuyingServiceServer interface {
-	// 获取供应商列表
+	// 获取内部供应商列表
 	// 参数：公司缩写编码
 	// 返回：供应商列表
 	GetSupplierList(context.Context, *GetSupplierListReq) (*api.ResponseInfo, error)
+	// 创建供应商
+	// 参数：供应商信息
+	// 返回：创建结果
+	CreateSupplier(context.Context, *CreateSupplierReq) (*api.ResponseInfo, error)
+	// 获取供应商详情
+	// 参数：供应商名称
+	// 返回：供应商详细信息
+	GetSupplier(context.Context, *GetSupplierReq) (*api.ResponseInfo, error)
+	// 更新供应商
+	// 参数：供应商更新信息
+	// 返回：更新结果
+	UpdateSupplier(context.Context, *UpdateSupplierReq) (*api.ResponseInfo, error)
+	// 删除供应商
+	// 参数：供应商名称
+	// 返回：删除结果
+	DeleteSupplier(context.Context, *DeleteSupplierReq) (*api.ResponseInfo, error)
+	// 获取供应商列表（带分页和过滤）
+	// 参数：过滤条件和分页参数
+	// 返回：供应商列表
+	ListSuppliers(context.Context, *ListSuppliersReq) (*api.ResponseInfo, error)
 	// 获取采购订单
 	// 参数：采购订单名称
 	// 返回：采购订单信息
@@ -110,6 +205,21 @@ type UnimplementedBuyingServiceServer struct{}
 
 func (UnimplementedBuyingServiceServer) GetSupplierList(context.Context, *GetSupplierListReq) (*api.ResponseInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetSupplierList not implemented")
+}
+func (UnimplementedBuyingServiceServer) CreateSupplier(context.Context, *CreateSupplierReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateSupplier not implemented")
+}
+func (UnimplementedBuyingServiceServer) GetSupplier(context.Context, *GetSupplierReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSupplier not implemented")
+}
+func (UnimplementedBuyingServiceServer) UpdateSupplier(context.Context, *UpdateSupplierReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateSupplier not implemented")
+}
+func (UnimplementedBuyingServiceServer) DeleteSupplier(context.Context, *DeleteSupplierReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteSupplier not implemented")
+}
+func (UnimplementedBuyingServiceServer) ListSuppliers(context.Context, *ListSuppliersReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListSuppliers not implemented")
 }
 func (UnimplementedBuyingServiceServer) GetPurchaseOrder(context.Context, *GetPurchaseOrderReq) (*api.ResponseInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPurchaseOrder not implemented")
@@ -152,6 +262,96 @@ func _BuyingService_GetSupplierList_Handler(srv interface{}, ctx context.Context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(BuyingServiceServer).GetSupplierList(ctx, req.(*GetSupplierListReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BuyingService_CreateSupplier_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateSupplierReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BuyingServiceServer).CreateSupplier(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BuyingService_CreateSupplier_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BuyingServiceServer).CreateSupplier(ctx, req.(*CreateSupplierReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BuyingService_GetSupplier_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSupplierReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BuyingServiceServer).GetSupplier(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BuyingService_GetSupplier_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BuyingServiceServer).GetSupplier(ctx, req.(*GetSupplierReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BuyingService_UpdateSupplier_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateSupplierReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BuyingServiceServer).UpdateSupplier(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BuyingService_UpdateSupplier_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BuyingServiceServer).UpdateSupplier(ctx, req.(*UpdateSupplierReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BuyingService_DeleteSupplier_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteSupplierReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BuyingServiceServer).DeleteSupplier(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BuyingService_DeleteSupplier_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BuyingServiceServer).DeleteSupplier(ctx, req.(*DeleteSupplierReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BuyingService_ListSuppliers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSuppliersReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BuyingServiceServer).ListSuppliers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BuyingService_ListSuppliers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BuyingServiceServer).ListSuppliers(ctx, req.(*ListSuppliersReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -202,6 +402,26 @@ var BuyingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetSupplierList",
 			Handler:    _BuyingService_GetSupplierList_Handler,
+		},
+		{
+			MethodName: "CreateSupplier",
+			Handler:    _BuyingService_CreateSupplier_Handler,
+		},
+		{
+			MethodName: "GetSupplier",
+			Handler:    _BuyingService_GetSupplier_Handler,
+		},
+		{
+			MethodName: "UpdateSupplier",
+			Handler:    _BuyingService_UpdateSupplier_Handler,
+		},
+		{
+			MethodName: "DeleteSupplier",
+			Handler:    _BuyingService_DeleteSupplier_Handler,
+		},
+		{
+			MethodName: "ListSuppliers",
+			Handler:    _BuyingService_ListSuppliers_Handler,
 		},
 		{
 			MethodName: "GetPurchaseOrder",

@@ -1067,6 +1067,9 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, request req.ProductS
 			repository.WithPreload{
 				Query: "ProductBoms.ProductSauce",
 			},
+			repository.WithPreload{
+				Query: "ProductPackageGroups",
+			},
 		),
 	)
 	if product.Uuid == 0 || err != nil {
@@ -1100,6 +1103,25 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, request req.ProductS
 		productPackageAttributeRepo := repository.NewProductPackageAttributeRepo(tx)
 		warehouseFormRepo := repository.NewWarehouseFormRepo(tx)
 		productBomRepo := repository.NewProductBomRepo(tx) // 避免事务失效
+		// 如果删除的是套餐
+		if product.IsPackage() {
+			// 删除ttpos_product_package_group_item、ttpos_product_package_group表的记录
+			for _, productPackageGroup := range product.ProductPackageGroups {
+				err := tx.Model(&model.ProductPackageGroupItem{}).Where("product_package_group_uuid = ?", productPackageGroup.Uuid).Updates(map[string]any{
+					"delete_time": time.Now().Unix(),
+				}).Error
+				if err != nil {
+					return err
+				}
+			}
+			err = tx.Model(&model.ProductPackageGroup{}).Where("product_package_uuid = ?", request.Uuid).Updates(map[string]any{
+				"delete_time": time.Now().Unix(),
+			}).Error
+			if err != nil {
+				return err
+			}
+		}
+
 		// 删除商品包
 		err := tx.Model(&model.ProductPackage{}).Where("uuid = ?", request.Uuid).Updates(map[string]any{
 			"delete_time": time.Now().Unix(),

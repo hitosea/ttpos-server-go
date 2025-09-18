@@ -167,7 +167,7 @@ func (s *sWarehouse) buildWarehouseListFilters(ctx context.Context, req *warehou
 
 	// 按仓库别名过滤
 	if len(req.AliasName) > 0 {
-		filters = append(filters, g.ArrayStr{"custom_aliasname", "like", "%" + req.AliasName + "%"})
+		filters = append(filters, g.ArrayStr{"custom_aliasname", "=", req.AliasName})
 	}
 
 	if len(req.CompanyAbbr) > 0 {
@@ -184,7 +184,7 @@ func (s *sWarehouse) queryWarehouseList(ctx context.Context, filters [][]string)
 	resp, err := service.Document().List(ctx, &erp.ErpReq{
 		DocType: "Warehouse",
 	}, &erp.RequestParams{
-		Fields:  g.ArrayStr{"name", "warehouse_name", "warehouse_type", "custom_branch", "custom_aliasname", "company"},
+		Fields:  g.ArrayStr{"name", "warehouse_name", "warehouse_type", "custom_branch", "custom_aliasname", "company", "disabled"},
 		Filters: filters,
 		Limit:   consts.Limit999,
 	})
@@ -211,6 +211,7 @@ func (s *sWarehouse) queryWarehouseList(ctx context.Context, filters [][]string)
 			WarehouseName: data.Get("warehouse_name").String(),
 			WarehouseType: data.Get("warehouse_type").String(),
 			AliasName:     data.Get("custom_aliasname").String(),
+			Disabled:      data.Get("disabled").Bool(),
 		}
 		warehouseList = append(warehouseList, warehouseInfo)
 	}
