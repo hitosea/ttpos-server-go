@@ -51,8 +51,8 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		return 0, errors.New("来源设备错误")
 	}
 	// 判断厨显模式
-	if addReq.Source == constant.SourceKitchen {
-		if !slices.Contains([]uint{constant.KdsModeDefault, constant.KdsModeMake, constant.KdsModeMakeAndSend}, addReq.KdsMode) {
+	if addReq.Source == constant.SourceKitchen && addReq.KdsMode != nil {
+		if !slices.Contains([]uint{constant.KdsModeDefault, constant.KdsModeMake, constant.KdsModeMakeAndSend}, *addReq.KdsMode) {
 			return 0, errors.New("厨显工作模式错误")
 		}
 	}
@@ -76,6 +76,10 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		if productPrinterUuid == 0 {
 			productPrinterUuid = existsDevice.ProductPrinterUuid
 		}
+		kdsMode := existsDevice.KdsMode
+		if addReq.KdsMode != nil {
+			kdsMode = *addReq.KdsMode
+		}
 		remark := addReq.Remark
 		if remark == "" {
 			remark = existsDevice.Remark
@@ -94,7 +98,7 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 			"user_agent":           userAgent,
 			"finally_login_uuid":   addReq.FinallyLoginUuid,
 			"finally_login_time":   finallyLoginTime,
-			"kds_mode":             addReq.KdsMode,
+			"kds_mode":             kdsMode,
 		})
 		if err != nil {
 			return 0, errors.WithMessage(err, "更新绑定信息失败")
@@ -122,6 +126,10 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		}
 	}
 
+	kdsMode := uint(0)
+	if addReq.KdsMode != nil {
+		kdsMode = *addReq.KdsMode
+	}
 	device, err := deviceRepo.CreateDevice(model.Device{
 		FinallyLoginUuid: addReq.FinallyLoginUuid,
 		FinallyLoginTime: addReq.FinallyLoginTime,
@@ -131,7 +139,7 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		Brand:            addReq.Brand,
 		Platform:         platform,
 		UserAgent:        userAgent,
-		KdsMode:          addReq.KdsMode,
+		KdsMode:          kdsMode,
 		IsMain: func() int {
 			if addReq.Source == constant.SourceCashier {
 				bindCount := deviceRepo.GetBindCountBySource(constant.SourceCashier)
