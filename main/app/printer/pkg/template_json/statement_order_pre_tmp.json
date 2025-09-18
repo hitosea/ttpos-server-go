@@ -902,7 +902,7 @@
                     {
                         "field": "order.is_contain_tax",
                         "operator": "ne",
-                        "value": 0
+                        "value": 1
                     }
                 ]
             }
@@ -1360,7 +1360,7 @@
                     {
                         "field": "order.is_contain_tax",
                         "operator": "eq",
-                        "value": 0
+                        "value": 2
                     }
                 ],
                 "rows": [

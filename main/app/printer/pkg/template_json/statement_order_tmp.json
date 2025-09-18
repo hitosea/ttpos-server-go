@@ -344,7 +344,7 @@
         ],
         [
             {
-                "block_id": "order.time",
+                "block_id": "order.pay_time",
                 "block_type": "label:value",
                 "block_label": {
                     "zh": "时间:",
@@ -904,8 +904,8 @@
                 "conditions": [
                     {
                         "field": "order.is_contain_tax",
-                        "operator": "ne",
-                        "value": 0
+                        "operator": "eq",
+                        "value": 1
                     }
                 ]
             }
@@ -1363,7 +1363,7 @@
                     {
                         "field": "order.is_contain_tax",
                         "operator": "eq",
-                        "value": 0
+                        "value": 2
                     }
                 ],
                 "rows": [
