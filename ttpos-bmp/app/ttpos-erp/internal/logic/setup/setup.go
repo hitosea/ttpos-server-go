@@ -13,11 +13,13 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/dao"
 	"ttpos-bmp/app/ttpos-erp/internal/model/do"
+	dto "ttpos-bmp/app/ttpos-erp/internal/model/dto/buying"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	setup2 "ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 	"ttpos-bmp/utility"
 
+	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -312,7 +314,18 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *se
 		return nil, gerror.Wrapf(err, "创建默认pos profile失败")
 	}
 
-	//TODO 连锁店模式下，将本公司增加至总店供应商内部交易对象
+	//FIXME 目前除了 ttpos site 其他都是连锁
+	ctxMap := grpcx.Ctx.IncomingMap(ctx)
+	if ctxMap.Contains(consts.ContextSiteCode) && ctxMap.Get(consts.ContextSiteCode) != consts.SiteCodeTtpos {
+		//连锁店模式下，将本公司增加至总店供应商内部交易对象
+		err = service.Supplier().AddSupplerTransactCompany(ctx, &dto.AddSupplerTransactCompanyReq{
+			Supplier:        erp.HeadquartersSupplier,
+			WithCompanyAbbr: req.CompanyAbbr,
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "添加供应商内部交易对象失败")
+		}
+	}
 
 	return &setup.InitShopResp{
 		BranchName: branchName,
