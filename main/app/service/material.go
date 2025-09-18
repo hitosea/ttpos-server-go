@@ -1767,6 +1767,8 @@ func (s *materialSrv) ImportMaterialList(ctx context.Context, reqs req.MaterialI
 		if err != nil {
 			return material_resp.MaterialImportResp{}, err
 		}
+		// 处理条码：过滤空格、非数字字符，截取13位
+		material.BarcodeValue = utils.ProcessBarcode(material.BarcodeValue)
 		// 设置分类ID、单位ID
 		material.CategoryUuid = categoryUuid
 		material.UnitUuid = unitUuid
@@ -1803,6 +1805,11 @@ func (s *materialSrv) ImportMaterialList(ctx context.Context, reqs req.MaterialI
 func (s *materialSrv) ImportMaterial(ctx context.Context, reqs req.MaterialImportReq) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	language := ctx.GetLanguage()
+
+	// 处理条码：过滤空格、非数字字符，截取13位
+	for i := range reqs.List {
+		reqs.List[i].BarcodeValue = utils.ProcessBarcode(reqs.List[i].BarcodeValue)
+	}
 
 	for _, item := range reqs.List {
 		// 验证是否已经存在
