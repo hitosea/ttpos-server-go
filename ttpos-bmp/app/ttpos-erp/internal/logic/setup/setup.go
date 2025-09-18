@@ -7,7 +7,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-bmp/app/ttpos-erp/api/setup"
+	"ttpos-bmp/app/ttpos-erp/api/warehouse"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/dao"
 	"ttpos-bmp/app/ttpos-erp/internal/model/do"
@@ -54,26 +56,34 @@ func (s *sSetup) CreateBranch(ctx context.Context, req *setup.InitShopReq) (bran
 		g.Log().Error(ctx, "查询分支失败", err)
 		return "", gerror.Wrap(err, "查询分支失败")
 	}
-	if count > 0 {
-		return "", gerror.New("店铺已初始化，不能重复初始化")
-	}
-	// 获取公司信息
-	company, err := service.Company().GetCompanyWithAbbr(ctx, req.CompanyAbbr)
-	if err != nil {
-		g.Log().Error(ctx, "获取公司信息失败", err)
-		return "", gerror.Wrap(err, "获取公司信息失败")
-	}
 
-	// 创建分支
-	branchPayload := g.Map{
-		"branch":         req.ShopName,
-		"custom_company": company.CompanyName,
-	}
+	if count == 0 {
+		// 获取公司信息
+		company, err := service.Company().GetCompanyWithAbbr(ctx, req.CompanyAbbr)
+		if err != nil {
+			g.Log().Error(ctx, "获取公司信息失败", err)
+			return "", gerror.Wrap(err, "获取公司信息失败")
+		}
 
-	if _, err := service.Document().Create(ctx, erp.DocTypeBranch, branchPayload); err != nil {
-		g.Log().Error(ctx, "创建分支失败", err)
-		return "", gerror.Wrapf(err, "创建分支失败")
+		// 创建分支
+		branchPayload := g.Map{
+			"branch":         req.ShopName,
+			"custom_company": company.CompanyName,
+		}
+
+		if _, err := service.Document().Create(ctx, erp.DocTypeBranch, branchPayload); err != nil {
+			g.Log().Error(ctx, "创建分支失败", err)
+			return "", gerror.Wrapf(err, "创建分支失败")
+		}
 	}
+	//默认忽略已存在，如果不行再改这里
+	//else {
+	//
+	//	// 店铺已存在，根据ignoreExists参数判断是否忽略
+	//	//if !ignoreExists {
+	//	//	return "", gerror.New("店铺已初始化，不能重复初始化")
+	//	//}
+	//}
 
 	return req.ShopName, nil
 }
@@ -127,6 +137,18 @@ func (s *sSetup) CreateUser(ctx context.Context, req *setup2.CreateUserInp) erro
 //   - posProfileName: POS配置文件名称
 //   - err: 错误信息
 func (s *sSetup) CreateDefaultPosProfile(ctx context.Context, req *setup.CreateDefaultPosProfileReq) (posProfileName string, err error) {
+
+	posProfileList, err := service.Selling().GetPosProfileList(ctx, &selling.PosProfileReq{
+		Name: req.Name,
+	})
+	if err != nil {
+		g.Log().Error(ctx, "获取POS配置文件列表失败", err)
+		return "", gerror.Wrap(err, "获取POS配置文件列表失败")
+	}
+	if len(posProfileList.ProfileList) > 0 {
+		g.Log().Info(ctx, "POS配置文件已存在，无需创建", req.Name)
+		return req.Name, nil
+	}
 	// 获取公司名称
 	companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
 	if err != nil {
@@ -182,73 +204,94 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *se
 		adminEmail = fmt.Sprintf("%s@ttpos-user.com", req.AdminUuid)
 	)
 
-	cashierCount, err := dao.ShopCashier.Ctx(ctx).Count(dao.ShopCashier.Columns().ShopUuid, req.ShopUuid)
-	if err != nil {
-		return nil, gerror.Wrapf(err, "查询门店收银账户失败")
-	}
-	if cashierCount > 0 {
-		return nil, gerror.New("收银员已初始化，不能重复初始化")
-	}
-
 	// 创建分支
 	branchName, err = s.CreateBranch(ctx, req)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建店铺失败")
 	}
 
-	// 创建默认用户
-	err = s.CreateUser(ctx, &setup2.CreateUserInp{
-		UserEmail: adminEmail,
-		FirstName: req.ShopName,
-		AdminUuid: req.AdminUuid,
-		ShopUuid:  req.ShopUuid,
-	})
+	cashierCount, err := dao.ShopCashier.Ctx(ctx).Count(dao.ShopCashier.Columns().ShopUuid, req.ShopUuid)
 	if err != nil {
-		return nil, gerror.Wrapf(err, "创建用户失败")
+		return nil, gerror.Wrapf(err, "查询门店收银账户失败")
+	}
+	if cashierCount > 0 {
+		g.Log().Infof(ctx, "收银员已初始化,%s", req.ShopUuid)
+		//return nil, gerror.New("收银员已初始化，不能重复初始化")
 	}
 
-	// 获取用户的API_KEY/API_SECRET
-	apiKey, apiSecret, err := s.GetUserApiKeySecret(ctx, adminEmail)
-	if err != nil {
-		return nil, gerror.Wrapf(err, "获取用户API_KEY/API_SECRET失败")
-	}
+	if cashierCount == 0 {
+		// 创建默认用户
+		err = s.CreateUser(ctx, &setup2.CreateUserInp{
+			UserEmail: adminEmail,
+			FirstName: req.ShopName,
+			AdminUuid: req.AdminUuid,
+			ShopUuid:  req.ShopUuid,
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "创建用户失败")
+		}
 
-	// 记录门店管理员关联关系，记录api_key/api_secret
-	_, err = dao.ShopCashier.Ctx(ctx).Insert(&do.ShopCashier{
-		ShopUuid:     req.ShopUuid,
-		AdminUuid:    req.AdminUuid,
-		CashierEmail: adminEmail,
-		ApiKey:       apiKey,
-		ApiSecret:    apiSecret,
-		CompanyAbbr:  req.CompanyAbbr,
-		Branch:       branchName,
-	})
-	if err != nil {
-		return nil, gerror.Wrapf(err, "创建门店管理员关联关系失败")
+		// 获取用户的API_KEY/API_SECRET
+		apiKey, apiSecret, err := s.GetUserApiKeySecret(ctx, adminEmail)
+		if err != nil {
+			return nil, gerror.Wrapf(err, "获取用户API_KEY/API_SECRET失败")
+		}
+
+		// 记录门店管理员关联关系，记录api_key/api_secret
+		_, err = dao.ShopCashier.Ctx(ctx).Insert(&do.ShopCashier{
+			ShopUuid:     req.ShopUuid,
+			AdminUuid:    req.AdminUuid,
+			CashierEmail: adminEmail,
+			ApiKey:       apiKey,
+			ApiSecret:    apiSecret,
+			CompanyAbbr:  req.CompanyAbbr,
+			Branch:       branchName,
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "创建门店管理员关联关系失败")
+		}
 	}
 
 	// 创建默认仓库
-	_, err = service.Warehouse().CreateWarehouse(ctx, &setup2.CreateWarehouseInp{
+	warehouseList, err := service.Warehouse().GetWarehouseList(ctx, &warehouse.GetWarehouseListReq{
 		Branch:      branchName,
-		WhType:      "Normal",
+		CompanyAbbr: req.CompanyAbbr,
 		AliasName:   "Default",
-		CompanyAbbr: req.CompanyAbbr,
 	})
 	if err != nil {
-		return nil, gerror.Wrapf(err, "创建默认仓库失败")
+		return nil, gerror.Wrapf(err, "获取仓库列表失败")
 	}
-
+	if len(warehouseList.WarehouseList) == 0 {
+		_, err = service.Warehouse().CreateWarehouse(ctx, &setup2.CreateWarehouseInp{
+			Branch:      branchName,
+			WhType:      "Normal",
+			AliasName:   "Default",
+			CompanyAbbr: req.CompanyAbbr,
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "创建默认仓库失败")
+		}
+	}
 	// 创建在途仓
-	_, err = service.Warehouse().CreateWarehouse(ctx, &setup2.CreateWarehouseInp{
+	warehouseList, err = service.Warehouse().GetWarehouseList(ctx, &warehouse.GetWarehouseListReq{
 		Branch:      branchName,
-		WhType:      "Transit",
-		AliasName:   "Transit",
 		CompanyAbbr: req.CompanyAbbr,
+		AliasName:   "Transit",
 	})
 	if err != nil {
-		return nil, gerror.Wrapf(err, "创建在途仓失败")
+		return nil, gerror.Wrapf(err, "获取仓库列表失败")
 	}
-
+	if len(warehouseList.WarehouseList) == 0 {
+		_, err = service.Warehouse().CreateWarehouse(ctx, &setup2.CreateWarehouseInp{
+			Branch:      branchName,
+			WhType:      "Transit",
+			AliasName:   "Transit",
+			CompanyAbbr: req.CompanyAbbr,
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "创建在途仓失败")
+		}
+	}
 	// 创建默认的Cash，Balance，Free Meal账号关联
 	if err = s.createPaymentAccounts(ctx, req.CompanyAbbr); err != nil {
 		return nil, gerror.Wrapf(err, "创建支付方式账号关联失败")
@@ -268,6 +311,8 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *se
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建默认pos profile失败")
 	}
+
+	//TODO 连锁店模式下，将本公司增加至总店供应商内部交易对象
 
 	return &setup.InitShopResp{
 		BranchName: branchName,
