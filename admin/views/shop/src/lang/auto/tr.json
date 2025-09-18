@@ -1894,5 +1894,9 @@
     "请输入起始流水号": "Lütfen başlangıç seri numarasını girin",
     "套餐名称套餐名称": "Paket Adı Paket Adı",
     "套餐商品1": "Paket Ürünü 1",
-    "套餐商品2": "Paket Ürünü 2"
+    "套餐商品2": "Paket Ürünü 2",
+    "确定删除该优惠券吗？": "Bu kuponu silmek istediğinizden emin misiniz?",
+    "纸张宽度（mm）": "Kağıt genişliği (mm)",
+    "请选择纸张宽度": "Lütfen kağıt genişliğini seçin",
+    "状态检查": "Durum kontrolü"
 }
