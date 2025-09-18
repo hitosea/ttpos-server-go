@@ -585,7 +585,11 @@ func (model *RelatedMaterial) CalculateExpectedProductionNum() float64 {
 }
 
 func (model *RelatedMaterial) GetExpectedProductionNum() float64 {
-	return model.expectedProductionNum
+	num := model.expectedProductionNum
+	if num <= 0 {
+		num = model.CalculateExpectedProductionNum()
+	}
+	return num
 }
 
 func (model *RelatedMaterial) SetExpectedProductionNum(expectedProductionNum float64) {
@@ -774,6 +778,17 @@ func (model *ProductPackage) GetFlavorProductBom() ProductBom {
 	return ProductBom{}
 }
 
+// GetPackageProductBom 获取商品套餐BOM
+func (model *ProductPackage) GetPackageProductBom() ProductBom {
+	for _, bom := range model.ProductBoms {
+		if bom.IsPackageFlavor() {
+			return bom
+		}
+	}
+
+	return ProductBom{}
+}
+
 // GetSauces 获取商品小料
 func (model *ProductPackage) GetSauces() []ProductSauce {
 	sauces := make([]ProductSauce, 0)
@@ -857,6 +872,7 @@ func (model *ProductBomCard) Copy() *ProductBomCard {
 			BaseUnitUuid:           material.BaseUnitUuid,
 			BaseUnitName:           material.BaseUnitName,
 			BaseUnitConversionRate: material.BaseUnitConversionRate,
+			Material:               material.Material,
 		})
 	}
 
