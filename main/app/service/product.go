@@ -969,6 +969,11 @@ func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.Pr
 					erpSrv := erp.NewIErpSrv(s.dbm)
 					for _, product := range products {
 						for _, productBom := range product.ProductBoms {
+							productMultiLanguageName := model.NewMultiLanguageName(product.Name)
+							productEnName, err := s.getEnName(ctx, productMultiLanguageName.GetNames())
+							if err != nil {
+								return errors.WithMessage(err, "翻译失败")
+							}
 
 							multiLanguageName := model.NewMultiLanguageName(productBom.Name)
 							enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
@@ -986,8 +991,9 @@ func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.Pr
 								return errors.WithMessage(err, "翻译失败")
 							}
 							if productBom.IsFlavor() {
+								itemName := fmt.Sprintf("%s-%s", productEnName, enName)
 								if _, err := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
-									ItemName:          enName,
+									ItemName:          itemName,
 									StockUom:          productUnit.ErpnextUom,
 									ItemCode:          productBom.ErpCode,
 									TemplateItemCode:  product.ErpCode,
@@ -1004,8 +1010,9 @@ func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.Pr
 								}
 							}
 							if productBom.IsPackageFlavor() {
+								itemName := fmt.Sprintf("%s-%s", productEnName, enName)
 								if _, err := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
-									ItemName:          enName,
+									ItemName:          itemName,
 									StockUom:          productUnit.ErpnextUom,
 									ItemCode:          productBom.ErpCode,
 									TemplateItemCode:  product.ErpCode,
@@ -1653,14 +1660,20 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 						return errors.WithMessage(errGetProductPackage, "获取商品包失败")
 					}
 					for _, productBom := range productPackage.ProductBoms {
+						productMultiLanguageName := model.NewMultiLanguageName(productPackage.Name)
+						productEnName, err := s.getEnName(ctx, productMultiLanguageName.GetNames())
+						if err != nil {
+							return errors.WithMessage(err, "翻译失败")
+						}
 						multiLanguageName := model.NewMultiLanguageName(productBom.Name)
 						enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
 						if err != nil {
 							return errors.WithMessage(err, "翻译失败")
 						}
 						erpSrv := erp.NewIErpSrv(s.dbm)
+						itemName := fmt.Sprintf("%s-%s", productEnName, enName)
 						_, errErp := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
-							ItemName: enName,
+							ItemName: itemName,
 							StockUom: erpUom,
 							ItemCode: productBom.ErpCode,
 						})
@@ -1799,14 +1812,20 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 								}
 							} else if productPackage.IsProduct() {
 								// 同步商品到erp
+								productMultiLanguageName := model.NewMultiLanguageName(productPackage.Name)
+								productEnName, err := s.getEnName(ctx, productMultiLanguageName.GetNames())
+								if err != nil {
+									return errors.WithMessage(err, "翻译失败")
+								}
 								multiLanguageName := model.NewMultiLanguageName(productBom.Name)
 								enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
 								if err != nil {
 									return errors.WithMessage(err, "翻译失败")
 								}
 								erpSrv := erp.NewIErpSrv(s.dbm)
+								itemName := fmt.Sprintf("%s-%s", productEnName, enName)
 								_, errErp := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
-									ItemName: enName,
+									ItemName: itemName,
 									StockUom: productUnit.ErpnextUom,
 									ItemCode: productBom.ErpCode,
 								})
@@ -2772,6 +2791,11 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 				// 同步新增商品到erp
 				erpCode := ""
 				if ctx.GetCompany().IsOpenErp() {
+					productMultiLanguageName := model.NewMultiLanguageName(productPackage.Name)
+					productEnName, err := s.getEnName(ctx, productMultiLanguageName.GetNames())
+					if err != nil {
+						return errors.WithMessage(err, "翻译失败")
+					}
 					multiLanguageName := model.NewMultiLanguageName(addReq.LocaleName.ToJson())
 					enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
 					if err != nil {
@@ -2788,8 +2812,9 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 						return errors.WithMessage(err, "翻译失败")
 					}
 					erpSrv := erp.NewIErpSrv(s.dbm)
+					itemName := fmt.Sprintf("%s-%s", productEnName, enName)
 					itemInfo, errErp := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
-						ItemName:           enName,
+						ItemName:           itemName,
 						StockUom:           productUnit.ErpnextUom,
 						TemplateItemCode:   productPackage.ErpCode,
 						ItemSpecification:  enName,
@@ -3449,6 +3474,11 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 					// 同步新增商品到erp
 					erpCode := ""
 					if ctx.GetCompany().IsOpenErp() {
+						productMultiLanguageName := model.NewMultiLanguageName(productPackage.Name)
+						productEnName, err := s.getEnName(ctx, productMultiLanguageName.GetNames())
+						if err != nil {
+							return errors.WithMessage(err, "翻译失败")
+						}
 						multiLanguageName := model.NewMultiLanguageName(editReq.LocaleName.ToJson())
 						enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
 						if err != nil {
@@ -3466,8 +3496,9 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 						}
 
 						erpSrv := erp.NewIErpSrv(s.dbm)
+						itemName := fmt.Sprintf("%s-%s", productEnName, enName)
 						itemInfo, errErp := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
-							ItemName:           enName,
+							ItemName:           itemName,
 							StockUom:           productUnit.ErpnextUom,
 							TemplateItemCode:   productPackage.ErpCode,
 							ItemSpecification:  enName,
@@ -3527,6 +3558,11 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 				} else {
 					// 同步更新商品到erp
 					if ctx.GetCompany().IsOpenErp() {
+						productMultiLanguageName := model.NewMultiLanguageName(productPackage.Name)
+						productEnName, err := s.getEnName(ctx, productMultiLanguageName.GetNames())
+						if err != nil {
+							return errors.WithMessage(err, "翻译失败")
+						}
 						multiLanguageName := model.NewMultiLanguageName(editReq.LocaleName.ToJson())
 						enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
 						if err != nil {
@@ -3543,8 +3579,9 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 						}
 
 						erpSrv := erp.NewIErpSrv(s.dbm)
+						itemName := fmt.Sprintf("%s-%s", productEnName, enName)
 						_, errErp := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
-							ItemName:          enName,
+							ItemName:          itemName,
 							StockUom:          productUnit.ErpnextUom,
 							ItemCode:          productBom.ErpCode,
 							TemplateItemCode:  productPackage.ErpCode,
@@ -5239,6 +5276,11 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 				if err != nil {
 					return errors.WithMessage(err, "获取商品包失败")
 				}
+				productPackageMultiLanguageName := model.NewMultiLanguageName(productPackage.Name)
+				productPackageEnName, err := s.getEnName(ctx, productPackageMultiLanguageName.GetNames())
+				if err != nil {
+					return errors.WithMessage(err, "翻译失败")
+				}
 
 				// 获取商品bom信息
 				productBom, err := productBomRepo.GetProductBom(commonRepo.WhereByUuid(flavor.BomUuid))
@@ -5252,11 +5294,12 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 					return errors.WithMessage(err, "翻译失败")
 				}
 				erpSrv := erp.NewIErpSrv(s.dbm)
+				itemName := fmt.Sprintf("%s-%s", productPackageEnName, enName)
 				if err := erpSrv.DeleteProduct(ctx, req.DeleteProductErpReq{
 					Items: []req.DeleteProductErpItemReq{
 						{
 							ItemCode: productBom.ErpCode,
-							ItemName: enName,
+							ItemName: itemName,
 							StockUom: productPackage.ProductUnit.ErpnextUom,
 						},
 					},
@@ -5296,6 +5339,24 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 				} else {
 					// 同步商品到erp
 					if ctx.GetCompany().IsOpenErp() {
+						// 获取商品包信息
+						productPackage, err := productPackageRepo.GetProductPackage(
+							commonRepo.WhereByUuid(productPackageUuid),
+							commonRepo.Preload(
+								repository.WithPreload{
+									Query: "ProductUnit",
+								},
+							),
+						)
+						if err != nil {
+							return errors.WithMessage(err, "获取商品包失败")
+						}
+						productPackageMultiLanguageName := model.NewMultiLanguageName(productPackage.Name)
+						productPackageEnName, err := s.getEnName(ctx, productPackageMultiLanguageName.GetNames())
+						if err != nil {
+							return errors.WithMessage(err, "翻译失败")
+						}
+
 						multiLanguageName := model.NewMultiLanguageName(flavor.Name)
 						enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
 						if err != nil {
@@ -5317,8 +5378,9 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 						}
 						erpSrv := erp.NewIErpSrv(s.dbm)
 						stockUom := productUnit.ErpnextUom
+						itemName := fmt.Sprintf("%s-%s", productPackageEnName, enName)
 						params := req.ProductAddErpReq{
-							ItemName:           enName,
+							ItemName:           itemName,
 							StockUom:           stockUom,
 							TemplateItemCode:   templateItemCode,
 							ItemSpecification:  enName,
@@ -5447,6 +5509,23 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 						}
 					} else {
 						// 同步商品到erp
+						// 获取商品包信息
+						productPackage, err := productPackageRepo.GetProductPackage(
+							commonRepo.WhereByUuid(productPackageUuid),
+							commonRepo.Preload(
+								repository.WithPreload{
+									Query: "ProductUnit",
+								},
+							),
+						)
+						if err != nil {
+							return errors.WithMessage(err, "获取商品包失败")
+						}
+						productPackageMultiLanguageName := model.NewMultiLanguageName(productPackage.Name)
+						productPackageEnName, err := s.getEnName(ctx, productPackageMultiLanguageName.GetNames())
+						if err != nil {
+							return errors.WithMessage(err, "翻译失败")
+						}
 						multiLanguageName := model.NewMultiLanguageName(flavor.Name)
 						enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
 						if err != nil {
@@ -5468,9 +5547,10 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 						if err != nil {
 							return errors.WithMessage(err, "翻译失败")
 						}
+						itemName := fmt.Sprintf("%s-%s", productPackageEnName, enName)
 						erpSrv := erp.NewIErpSrv(s.dbm)
 						_, errErp := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
-							ItemName:           enName,
+							ItemName:           itemName,
 							StockUom:           productUnit.ErpnextUom,
 							ItemCode:           productBom.ErpCode,
 							TemplateItemCode:   templateItemCode,
