@@ -23,7 +23,6 @@ func (s *erpSrv) AddProduct(ctx context.Context, params req.ProductAddErpReq) (*
 		ItemGroup:          item.ItemGroup_Products,
 		StockUom:           params.StockUom,
 		ItemCode:           params.ItemCode,
-		Barcode:            params.BarcodeValue,
 		Branch:             companySetting.ErpnextBranchName,
 		CompanyAbbr:        companySetting.ErpnextCompanyAbbr,
 		TemplateItemCode:   params.TemplateItemCode,
