@@ -375,14 +375,24 @@ func (r *MaterialRepoImpl) CheckMultiLanguageNameExist(localeResponse dto.Locale
 }
 
 func (r *MaterialRepoImpl) GetCategoryUuidByNameOptimized(name string) (uint64, error) {
-	var category model.MaterialCategory
-	if err := r.db.Model(&model.MaterialCategory{}).Where("name = ?", name).First(&category).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return 0, nil
-		}
-		return 0, errors.WithMessage(err, "根据名称查询物品类别失败")
+	var categorys []model.MaterialCategory
+	err := r.db.Model(&model.MaterialCategory{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Find(&categorys).Error
+	if err != nil {
+		return 0, errors.WithMessage(err)
 	}
-	return category.Uuid, nil
+	// 在内存中查找匹配的商品规格
+	for _, category := range categorys {
+		// 然后检查多语言字段
+		if category.MultiLanguageName.Uuid != 0 {
+			names := category.MultiLanguageName.GetNames()
+			if names.ZH == name || names.ZHTW == name || names.EN == name ||
+				names.TH == name || names.MY == name || names.JA == name ||
+				names.KO == name || names.TR == name || names.SV == name {
+				return category.Uuid, nil
+			}
+		}
+	}
+	return 0, nil
 }
 
 func (r *MaterialRepoImpl) CheckBarcodeExist(barcode string, uuid uint64) bool {

@@ -188,7 +188,12 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				}
 				return 0
 			}(),
-			UnitName:               material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			UnitName: func() string {
+				if material.Unit != nil {
+					return material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+				}
+				return ""
+			}(),
 			UnitUuid:               material.UnitUuid,
 			PurchaseUnitName:       material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 			PurchaseUnitUuid:       material.PurchaseUnitUuid,
