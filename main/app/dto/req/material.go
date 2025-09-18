@@ -195,14 +195,14 @@ type MaterialUnitListReq struct {
 
 // ProductBomCardAddReq 添加成本卡请求
 type ProductBomCardAddReq struct {
-	RelatedUuid uint64                        `json:"related_uuid" binding:"required"`   // 关联UUID,给规格商品或加料绑定成本卡。规格商品时，关联UUID为规格商品UUID；加料时，关联UUID为加料UUID
-	RelatedType uint8                         `json:"related_type" binding:"required"`   // 关联类型,1-规格商品 2-加料
-	Num         int                           `json:"num" binding:"required"`            // 加工份数
-	Materials   ProductBomCardMaterialListReq `json:"materials" binding:"required,dive"` // 材料列表
+	RelatedUuid uint64                        `json:"related_uuid"` // 关联UUID,给规格商品或加料绑定成本卡。规格商品时，关联UUID为规格商品UUID；加料时，关联UUID为加料UUID
+	RelatedType uint8                         `json:"related_type"` // 关联类型,1-规格商品 2-加料
+	Num         int                           `json:"num"`          // 加工份数
+	Materials   ProductBomCardMaterialListReq `json:"materials"`    // 材料列表
 }
 
 type ProductBomCardMaterialListReq struct {
-	List []ProductBomCardMaterialReq `json:"list" binding:"required,dive"` // 材料列表
+	List []ProductBomCardMaterialReq `json:"list"` // 材料列表
 }
 
 type ProductBomCardMaterialReq struct {
