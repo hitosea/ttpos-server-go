@@ -132,6 +132,15 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		Platform:         platform,
 		UserAgent:        userAgent,
 		KdsMode:          addReq.KdsMode,
+		IsMain: func() int {
+			if addReq.Source == constant.SourceCashier {
+				bindCount := deviceRepo.GetBindCountBySource(constant.SourceCashier)
+				if bindCount == 0 {
+					return 1
+				}
+			}
+			return 0
+		}(),
 	})
 	if err != nil {
 		return 0, errors.WithMessage(err)
