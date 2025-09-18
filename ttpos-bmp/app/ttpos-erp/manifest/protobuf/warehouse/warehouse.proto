@@ -28,6 +28,7 @@ message WarehouseInfo {
   string branch = 5; // 分支名称，可选
   string alias_name = 6; // 仓库别名
   string warehouse_type = 7; // 仓库类型
+  bool disabled = 8 ; //是否禁用，可选
 }
 
 
