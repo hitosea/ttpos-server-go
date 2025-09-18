@@ -72,6 +72,16 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		return resp.InitShopResp{}, err
 	}
 
+	headquarterAbbr := initShopReq.CompanyAbbr
+	// NOTE: 先默认华莱士site的总部CFG
+	if initShopReq.SiteCode == "2" {
+		headquarterAbbr = "CFG"
+	}
+	var headquarter model.CompanySetting
+	s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("erpnext_site_code = ?", initShopReq.SiteCode).Where("erpnext_headquarter_abbr = ?", headquarterAbbr).Scopes(repository.NotDeleted).First(&headquarter)
+	if headquarter.Uuid == 0 {
+		return resp.InitShopResp{}, errors.New("总部公司不存在")
+	}
 	// 更新saas库
 	s.dbm.GetDB(0).Model(&model.Company{}).Where("uuid = ?", company.Uuid).Updates(map[string]any{
 		"is_enable_erp": 1,
@@ -82,6 +92,8 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		"erpnext_branch_name":      response.BranchName,
 		"erpnext_pos_profile_name": response.PosProfile,
 		"erpnext_admin_email":      response.AdminEmail,
+		"erpnext_headquarter_abbr": headquarterAbbr,
+		"headquarter_uuid":         headquarter.Uuid,
 	})
 
 	// 更新商家库
@@ -94,6 +106,8 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		"erpnext_branch_name":      response.BranchName,
 		"erpnext_pos_profile_name": response.PosProfile,
 		"erpnext_admin_email":      response.AdminEmail,
+		"erpnext_headquarter_abbr": headquarterAbbr,
+		"headquarter_uuid":         headquarter.Uuid,
 	})
 
 	// 自动同步了支付方式，cash, balance, lianlian(wechat, alipay, qr_promptpay)
