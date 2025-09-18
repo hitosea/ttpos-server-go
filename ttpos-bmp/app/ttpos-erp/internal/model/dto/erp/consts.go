@@ -16,6 +16,7 @@ const (
 	DocTypePosClosingEntry = "POS Closing Entry"
 	DocTypeModeOfPayment   = "Mode of Payment"
 	DocTypeBranch          = "Branch"
+	DocTypeSupplier        = "Supplier"
 )
 
 const (
@@ -24,4 +25,9 @@ const (
 	DocstatusDraft     = "0"
 	DocstatusSubmitted = "1"
 	DocstatusCancelled = "2"
+)
+
+const (
+	// HeadquartersSupplier 总部供应商，连锁模式默认
+	HeadquartersSupplier = "Headquarters - Supplier"
 )

@@ -10,3 +10,8 @@ type CreateInnerSaleOrderFromPurchaseOrderReq struct {
 	SourceName   string `json:"source_name,omitempty"`
 	DeliveryDate string `json:"delivery_date,omitempty"`
 }
+
+type AddSupplerTransactCompanyReq struct {
+	Supplier        string `json:"supplier"`
+	WithCompanyAbbr string `json:"companyAbbr"`
+}
