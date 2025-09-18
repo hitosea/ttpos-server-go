@@ -4581,6 +4581,7 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 				Uuid:         flavor.Uuid,
 				Price:        flavor.Price,
 				BarcodeValue: flavor.BarcodeValue,
+				InternalCode: flavor.InternalCode,
 			})
 		}
 		result, err := productCheckSrv.CheckProductFlavor(db, flavors)

@@ -84,12 +84,13 @@ func (p *PackageProductDetail) GetCanEdit() bool {
 
 // ProductFlavor 商品规格
 type ProductFlavor struct {
-	Uuid       uint64             `json:"uuid"`        // 商品规格UUID
-	BomUuid    uint64             `json:"bom_uuid"`    // 商品BOM UUID
-	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品规格名称
-	Price      float64            `json:"price"`       // 商品规格价格
-	StockNum   float64            `json:"stock_num"`   // 商品库存数量
-	Barcode    string             `json:"barcode"`     // 商品码。用于根据扫码枪扫码商品得到商品码在商品列表中搜索到商品
+	Uuid         uint64             `json:"uuid"`          // 商品规格UUID
+	BomUuid      uint64             `json:"bom_uuid"`      // 商品BOM UUID
+	LocaleName   dto.LocaleResponse `json:"locale_name"`   // 商品规格名称
+	Price        float64            `json:"price"`         // 商品规格价格
+	StockNum     float64            `json:"stock_num"`     // 商品库存数量
+	Barcode      string             `json:"barcode"`       // 商品码。用于根据扫码枪扫码商品得到商品码在商品列表中搜索到商品
+	InternalCode string             `json:"internal_code"` // 商品规格内部编码
 }
 
 // ProductSauce 商品小料
