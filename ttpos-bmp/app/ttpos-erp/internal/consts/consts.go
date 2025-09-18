@@ -40,3 +40,9 @@ const (
 	ContextFakeUser = "ctx_fake_user"
 	ContextSiteCode = "erp_site_code"
 )
+
+const (
+	SiteCodeUat     = "0"
+	SiteCodeTtpos   = "1"
+	SiteCodeWallace = "4"
+)
