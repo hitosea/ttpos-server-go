@@ -3952,8 +3952,6 @@ func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImpor
 		if companySetting.DeliveryStatus != 1 && products.IsShowDelivery {
 			return product_resp.ProductImportResp{}, errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "未配置外送渠道，无法选择在外送显示"))
 		}
-		// 处理条码：过滤空格、非数字字符，截取13位
-		products.Barcode = utils.ProcessBarcode(products.Barcode)
 		// 处理商品名称
 		products.LocaleName = item.LocaleName
 		products.IsShowCashier = strings.Contains(item.Shows, "1")
@@ -4020,11 +4018,6 @@ func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImpor
 func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportReq) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	language := ctx.GetLanguage()
-
-	// 处理条码：过滤空格、非数字字符，截取13位
-	for i := range reqs.List {
-		reqs.List[i].Barcode = utils.ProcessBarcode(reqs.List[i].Barcode)
-	}
 
 	// 验证条形码是否重复
 	duplicateRows := reqs.GetBarcodeDuplicateRows()
