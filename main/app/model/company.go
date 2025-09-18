@@ -103,6 +103,12 @@ type CompanySetting struct {
 	ErpnextAdminEmail     string `gorm:"column:erpnext_admin_email;type:varchar(255);default:'';comment:ERPNext 管理员邮箱;NOT NULL" json:"erpnext_admin_email"`
 }
 
+// 是否是子商户
+func (model *CompanySetting) IsSubShop() bool {
+	// TODO: 待华总完善。判断是否是子商户
+	return true
+}
+
 func (model *CompanySetting) GetTimezone() string {
 	if model.Timezone == "" {
 		return string(utils.ZH_TIMEZONE)
