@@ -1632,16 +1632,17 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 				})
 			}
 		}
-		// 如果cashierSetting.DefaultLanguage 不在 storeSettingReq.Language 中，则设置为 storeSettingReq.Language 中的第一个语言
-		if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
-			return item.Name == cashierSetting.DefaultLanguage
+		if len(cashierSetting.Language) == 0 {
+			cashierSetting.Language = []string{storeSettingReq.Language[0].Name}
+		}
+		// 如果 cashierSetting.DefaultLanguage 不在 cashierSetting.Language 中，则设置为 cashierSetting.Language 中的第一个语言
+		if !slices.ContainsFunc(cashierSetting.Language, func(item string) bool {
+			return item == cashierSetting.DefaultLanguage
 		}) {
-			cashierSetting.DefaultLanguage = storeSettingReq.Language[0].Name
+			cashierSetting.DefaultLanguage = cashierSetting.Language[0]
 		}
 		// 清除 cashierSetting.LanguageList 中的数据
-		if len(cashierSetting.LanguageList) != 0 {
-			cashierSetting.Language = []string{}
-		}
+		cashierSetting.LanguageList = []dto.LanguageItem{}
 		s.UpdateSetting(ctx, constant.SettingCashier, cashierSetting)
 
 		// 2、处理 tablet 设置
@@ -1659,16 +1660,16 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 				})
 			}
 		}
-		// 如果tabletSetting.DefaultLanguage 不在 storeSettingReq.Language 中，则设置为 storeSettingReq.Language 中的第一个语言
-		if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
-			return item.Name == tabletSetting.DefaultLanguage
+		if len(tabletSetting.Language) == 0 {
+			tabletSetting.Language = []string{storeSettingReq.Language[0].Name}
+		}
+		// 如果 tabletSetting.DefaultLanguage 不在 tabletSetting.Language 中，则设置为 tabletSetting.Language 中的第一个语言
+		if !slices.ContainsFunc(tabletSetting.Language, func(item string) bool {
+			return item == tabletSetting.DefaultLanguage
 		}) {
-			tabletSetting.DefaultLanguage = storeSettingReq.Language[0].Name
+			tabletSetting.DefaultLanguage = tabletSetting.Language[0]
 		}
-		// 清除 tabletSetting.LanguageList 中的数据
-		if len(tabletSetting.LanguageList) != 0 {
-			tabletSetting.Language = []string{}
-		}
+		tabletSetting.LanguageList = nil
 		s.UpdateSetting(ctx, constant.SettingTablet, tabletSetting)
 
 		// 3、处理 h5 设置
@@ -1687,16 +1688,16 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 				})
 			}
 		}
-		// 如果tabletSetting.DefaultLanguage 不在 storeSettingReq.Language 中，则设置为 storeSettingReq.Language 中的第一个语言
-		if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
-			return item.Name == h5Setting.DefaultLanguage
+		if len(h5Setting.Language) == 0 {
+			h5Setting.Language = []string{storeSettingReq.Language[0].Name}
+		}
+		// 如果 h5Setting.DefaultLanguage 不在 h5Setting.Language 中，则设置为 h5Setting.Language 中的第一个语言
+		if !slices.ContainsFunc(h5Setting.Language, func(item string) bool {
+			return item == h5Setting.DefaultLanguage
 		}) {
-			h5Setting.DefaultLanguage = storeSettingReq.Language[0].Name
+			h5Setting.DefaultLanguage = h5Setting.Language[0]
 		}
-		// 清除 h5Setting.LanguageList 中的数据
-		if len(h5Setting.LanguageList) != 0 {
-			h5Setting.Language = []string{}
-		}
+		h5Setting.LanguageList = nil
 		s.UpdateSetting(ctx, constant.SettingH5, h5Setting)
 
 		// 4、处理 kitchen 设置
@@ -1714,16 +1715,16 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 				})
 			}
 		}
-		// 如果tabletSetting.DefaultLanguage 不在 storeSettingReq.Language 中，则设置为 storeSettingReq.Language 中的第一个语言
-		if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
-			return item.Name == kitchenSetting.DefaultLanguage
+		if len(kitchenSetting.Language) == 0 {
+			kitchenSetting.Language = []string{storeSettingReq.Language[0].Name}
+		}
+		// 如果 kitchenSetting.DefaultLanguage 不在 kitchenSetting.Language 中，则设置为 kitchenSetting.Language 中的第一个语言
+		if !slices.ContainsFunc(kitchenSetting.Language, func(item string) bool {
+			return item == kitchenSetting.DefaultLanguage
 		}) {
-			kitchenSetting.DefaultLanguage = storeSettingReq.Language[0].Name
+			kitchenSetting.DefaultLanguage = kitchenSetting.Language[0]
 		}
-		// 清除 kitchenSetting.LanguageList 中的数据
-		if len(kitchenSetting.LanguageList) != 0 {
-			kitchenSetting.Language = []string{}
-		}
+		kitchenSetting.LanguageList = nil
 		s.UpdateSetting(ctx, constant.SettingKitchen, kitchenSetting)
 
 		// 5、处理 assistant 设置
@@ -1731,7 +1732,6 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 		if err != nil {
 			return errors.WithMessage(err)
 		}
-
 		// 去掉assistantSetting.Language中不在storeSettingReq.Language中的语言
 		for _, language := range assistantSetting.Language {
 			if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
@@ -1742,16 +1742,16 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 				})
 			}
 		}
-		// 如果tabletSetting.DefaultLanguage 不在 storeSettingReq.Language 中，则设置为 storeSettingReq.Language 中的第一个语言
-		if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
-			return item.Name == assistantSetting.DefaultLanguage
+		if len(assistantSetting.Language) == 0 {
+			assistantSetting.Language = []string{storeSettingReq.Language[0].Name}
+		}
+		// 如果 assistantSetting.DefaultLanguage 不在 assistantSetting.Language 中，则设置为 assistantSetting.Language 中的第一个语言
+		if !slices.ContainsFunc(assistantSetting.Language, func(item string) bool {
+			return item == assistantSetting.DefaultLanguage
 		}) {
-			assistantSetting.DefaultLanguage = storeSettingReq.Language[0].Name
+			assistantSetting.DefaultLanguage = assistantSetting.Language[0]
 		}
-		// 清除 assistantSetting.LanguageList 中的数据
-		if len(assistantSetting.LanguageList) != 0 {
-			assistantSetting.Language = []string{}
-		}
+		assistantSetting.LanguageList = nil
 		s.UpdateSetting(ctx, constant.SettingAssistant, assistantSetting)
 
 		// 6、处理 printer 设置
@@ -1759,7 +1759,6 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 		if err != nil {
 			return errors.WithMessage(err)
 		}
-
 		// 去掉printerSetting.Language中不在storeSettingReq.Language中的语言
 		for _, language := range printerSetting.Language {
 			if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
@@ -1770,23 +1769,22 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 				})
 			}
 		}
-		// 如果 printerSetting.DefaultLanguage 不在 storeSettingReq.Language 中，则设置为 storeSettingReq.Language 中的第一个语言
-		if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
-			return item.Name == printerSetting.DefaultLanguage
+		if len(printerSetting.Language) == 0 {
+			printerSetting.Language = []string{storeSettingReq.Language[0].Name}
+		}
+		// 如果 printerSetting.DefaultLanguage 不在 printerSetting.Language 中，则设置为 printerSetting.Language 中的第一个语言
+		if !slices.ContainsFunc(printerSetting.Language, func(item string) bool {
+			return item == printerSetting.DefaultLanguage
 		}) {
-			printerSetting.DefaultLanguage = storeSettingReq.Language[0].Name
+			printerSetting.DefaultLanguage = printerSetting.Language[0]
 		}
-		// 如果 printerSetting.KitchenLanguage 不在 storeSettingReq.Language 中，则设置为 storeSettingReq.Language 中的第一个语言
-		if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
-			return item.Name == printerSetting.KitchenLanguage
+		// 如果 printerSetting.KitchenLanguage 不在 printerSetting.Language 中，则设置为 printerSetting.Language 中的第一个语言
+		if !slices.ContainsFunc(printerSetting.Language, func(item string) bool {
+			return item == printerSetting.KitchenLanguage
 		}) {
-			printerSetting.KitchenLanguage = storeSettingReq.Language[0].Name
+			printerSetting.KitchenLanguage = printerSetting.Language[0]
 		}
-
-		// 清除 printerSetting.LanguageList 中的数据
-		if len(printerSetting.LanguageList) != 0 {
-			printerSetting.Language = []string{}
-		}
+		printerSetting.LanguageList = nil
 		s.UpdateSetting(ctx, constant.SettingPrinter, printerSetting)
 	}
 

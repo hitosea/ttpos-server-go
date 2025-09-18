@@ -128,7 +128,7 @@ func (p *PrinterRepoImpl) getPrintingContent(
 	saleOrder *model.SaleOrder,
 ) string {
 	// 获取打印模板
-	tmp := p.GetPrinterTemplate(uint64(printType))
+	tmp, _, _ := p.GetPrinterTemplate(uint64(printType))
 
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(

@@ -380,7 +380,7 @@ func (p *PrinterRepoImpl) getPrintReturnProductContent(
 	saleBill model.SaleBill,
 	products printer_model.Products,
 ) string {
-	tmp := p.GetPrinterTemplate(constant.PrinterTemplateReturnDish)
+	tmp, _, _ := p.GetPrinterTemplate(constant.PrinterTemplateReturnDish)
 
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(
@@ -413,7 +413,7 @@ func (p *PrinterRepoImpl) getPrintProductOutMenuContent(
 	saleBill model.SaleBill,
 	products printer_model.Products,
 ) string {
-	tmp := p.GetPrinterTemplate(constant.PrinterTemplateOutMenu)
+	tmp, _, _ := p.GetPrinterTemplate(constant.PrinterTemplateOutMenu)
 
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(

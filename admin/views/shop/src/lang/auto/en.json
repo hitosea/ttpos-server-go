@@ -2139,5 +2139,9 @@
     "请输入起始流水号": "Please enter the starting serial number",
     "套餐名称套餐名称": "Package Name Package Name",
     "套餐商品1": "Package Product 1",
-    "套餐商品2": "Package Product 2"
+    "套餐商品2": "Package Product 2",
+    "确定删除该优惠券吗？": "Are you sure you want to delete this coupon?",
+    "纸张宽度（mm）": "Paper width (mm)",
+    "请选择纸张宽度": "Please select paper width",
+    "状态检查": "Status check"
 }

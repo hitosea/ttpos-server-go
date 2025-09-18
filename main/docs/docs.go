@@ -25630,6 +25630,10 @@ const docTemplate = `{
                     "description": "分类编码",
                     "type": "string"
                 },
+                "is_related": {
+                    "description": "是否关联了物品",
+                    "type": "boolean"
+                },
                 "locale_name": {
                     "description": "分类名称",
                     "allOf": [
@@ -25641,6 +25645,10 @@ const docTemplate = `{
                 "name": {
                     "description": "分类名称",
                     "type": "string"
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
                 },
                 "uuid": {
                     "description": "分类UUID",
@@ -27995,6 +28003,10 @@ const docTemplate = `{
                 "child_count": {
                     "description": "子级数量",
                     "type": "integer"
+                },
+                "code": {
+                    "description": "分类编码",
+                    "type": "string"
                 },
                 "locale_name": {
                     "description": "商品类别名称",
@@ -31494,6 +31506,10 @@ const docTemplate = `{
                     "description": "商品加料条码值, 可选",
                     "type": "string"
                 },
+                "internal_code": {
+                    "description": "内部编码",
+                    "type": "string"
+                },
                 "price": {
                     "description": "商品规格价格",
                     "type": "number"
@@ -31953,6 +31969,10 @@ const docTemplate = `{
                     "description": "商品BOM UUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID",
                     "type": "integer"
                 },
+                "internal_code": {
+                    "description": "商品规格内部编码",
+                    "type": "string"
+                },
                 "is_delete": {
                     "description": "是否删除, 如果是新增/编辑，则传false，删除时传true",
                     "type": "boolean"
@@ -32046,6 +32066,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/req.ProductShopEditPackageGroupReq"
                     }
+                },
+                "internal_code": {
+                    "description": "商品套餐内部编码",
+                    "type": "string"
                 },
                 "price": {
                     "description": "套餐价格",

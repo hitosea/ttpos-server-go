@@ -395,6 +395,7 @@ type ProductShopAddFlavorReq struct {
 	Uuid         uint64  `json:"uuid"`          // 商品规格UUID
 	Price        float64 `json:"price"`         // 商品规格价格
 	BarcodeValue string  `json:"barcode_value"` // 商品加料条码值, 可选
+	InternalCode string  `json:"internal_code"` // 内部编码
 }
 
 // ProductShopAddTaxReq 商品税类添加请求
@@ -492,6 +493,7 @@ type ProductShopEditFlavorReq struct {
 	Uuid         uint64  `json:"uuid"`          // 商品规格UUID
 	Price        float64 `json:"price"`         // 商品规格价格
 	BarcodeValue string  `json:"barcode_value"` // 商品加料条码值, 可选
+	InternalCode string  `json:"internal_code"` // 商品规格内部编码
 	BomUuid      uint64  `json:"bom_uuid"`      // 商品BOM UUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID
 	IsDelete     bool    `json:"is_delete"`     // 是否删除, 如果是新增/编辑，则传false，删除时传true
 }
@@ -553,8 +555,9 @@ type ProductShopEditDiscountReq struct {
 
 // ProductShopEditPackageReq 商品套餐添加请求
 type ProductShopEditPackageReq struct {
-	Price  float64                          `json:"price"`  // 套餐价格
-	Groups []ProductShopEditPackageGroupReq `json:"groups"` // 套餐分组列表
+	Price        float64                          `json:"price"`         // 套餐价格
+	InternalCode string                           `json:"internal_code"` // 商品套餐内部编码
+	Groups       []ProductShopEditPackageGroupReq `json:"groups"`        // 套餐分组列表
 }
 
 // ProductShopAddPackageGroupReq 套餐分组添加请求

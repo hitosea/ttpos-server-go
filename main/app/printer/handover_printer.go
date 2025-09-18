@@ -114,7 +114,7 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 ) string {
 	printerType := settingPrinterInfo.PrinterType
 	// 获取打印模板
-	tmp := p.GetPrinterTemplate(uint64(constant.PrinterTemplateHandoverSheet))
+	tmp, _, _ := p.GetPrinterTemplate(uint64(constant.PrinterTemplateHandoverSheet))
 
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(

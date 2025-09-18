@@ -24,6 +24,14 @@
           </el-radio-group>
         </el-form-item>
 
+        <el-form-item for="no_click" :label="$t('智能后厨：')" :rules="[{ required: true, message: '' }]">
+          <el-radio-group v-model="form.is_smart_kitchen">
+            <el-radio value="1">{{ $t('开') }}</el-radio>
+            <el-radio value="0">{{ $t('关') }}</el-radio>
+          </el-radio-group>
+          <div class="tips">{{ $t('开启后可在厨显设备管理商品的制作、传菜') }}</div>
+        </el-form-item>
+
         <el-form-item for="no_click" :label="$t('等待时长颜色：')" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.is_wait_color">
             <el-radio value="1">{{ $t('开') }}</el-radio>
@@ -174,6 +182,7 @@
           is_come_dish: '1',
           is_call_service: '1',
           is_open: '1',
+          is_smart_kitchen: '0',
         },
         onlineList: [], //  在线设备列表
         offlineList: [], //离线设备列表
