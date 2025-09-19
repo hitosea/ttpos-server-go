@@ -1293,6 +1293,383 @@ func (x *SavePurchaseReceiptResp) GetPurchaseReceipt() *PurchaseReceiptInfo {
 	return nil
 }
 
+// 获取采购订单列表请求消息
+type GetPurchaseOrderListReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Supplier      string                 `protobuf:"bytes,1,opt,name=supplier,proto3" json:"supplier,omitempty" dc:"供应商过滤，可选"`                           // 供应商过滤，可选
+	CompanyAbbr   string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写过滤，可选"` // 公司缩写过滤，可选
+	FromDate      string                 `protobuf:"bytes,3,opt,name=from_date,json=fromDate,proto3" json:"from_date,omitempty" dc:"开始日期过滤Y-m-d，可选"`     // 开始日期过滤Y-m-d，可选
+	ToDate        string                 `protobuf:"bytes,4,opt,name=to_date,json=toDate,proto3" json:"to_date,omitempty" dc:"结束日期过滤Y-m-d，可选"`           // 结束日期过滤Y-m-d，可选
+	PageNo        int32                  `protobuf:"varint,5,opt,name=page_no,json=pageNo,proto3" json:"page_no,omitempty" dc:"页码，从1开始"`                 // 页码，从1开始
+	PageSize      int32                  `protobuf:"varint,6,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty" dc:"每页数量"`              // 每页数量
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPurchaseOrderListReq) Reset() {
+	*x = GetPurchaseOrderListReq{}
+	mi := &file_buying_buying_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPurchaseOrderListReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPurchaseOrderListReq) ProtoMessage() {}
+
+func (x *GetPurchaseOrderListReq) ProtoReflect() protoreflect.Message {
+	mi := &file_buying_buying_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPurchaseOrderListReq.ProtoReflect.Descriptor instead.
+func (*GetPurchaseOrderListReq) Descriptor() ([]byte, []int) {
+	return file_buying_buying_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *GetPurchaseOrderListReq) GetSupplier() string {
+	if x != nil {
+		return x.Supplier
+	}
+	return ""
+}
+
+func (x *GetPurchaseOrderListReq) GetCompanyAbbr() string {
+	if x != nil {
+		return x.CompanyAbbr
+	}
+	return ""
+}
+
+func (x *GetPurchaseOrderListReq) GetFromDate() string {
+	if x != nil {
+		return x.FromDate
+	}
+	return ""
+}
+
+func (x *GetPurchaseOrderListReq) GetToDate() string {
+	if x != nil {
+		return x.ToDate
+	}
+	return ""
+}
+
+func (x *GetPurchaseOrderListReq) GetPageNo() int32 {
+	if x != nil {
+		return x.PageNo
+	}
+	return 0
+}
+
+func (x *GetPurchaseOrderListReq) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+// 获取采购订单列表响应消息
+type GetPurchaseOrderListResp struct {
+	state          protoimpl.MessageState   `protogen:"open.v1"`
+	PurchaseOrders []*PurchaseOrderListItem `protobuf:"bytes,1,rep,name=purchase_orders,json=purchaseOrders,proto3" json:"purchase_orders,omitempty" dc:"采购订单列表"` // 采购订单列表
+	TotalCount     int32                    `protobuf:"varint,2,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty" dc:"总数量"`               // 总数量
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetPurchaseOrderListResp) Reset() {
+	*x = GetPurchaseOrderListResp{}
+	mi := &file_buying_buying_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPurchaseOrderListResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPurchaseOrderListResp) ProtoMessage() {}
+
+func (x *GetPurchaseOrderListResp) ProtoReflect() protoreflect.Message {
+	mi := &file_buying_buying_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPurchaseOrderListResp.ProtoReflect.Descriptor instead.
+func (*GetPurchaseOrderListResp) Descriptor() ([]byte, []int) {
+	return file_buying_buying_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *GetPurchaseOrderListResp) GetPurchaseOrders() []*PurchaseOrderListItem {
+	if x != nil {
+		return x.PurchaseOrders
+	}
+	return nil
+}
+
+func (x *GetPurchaseOrderListResp) GetTotalCount() int32 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
+}
+
+// 采购订单列表项
+type PurchaseOrderListItem struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Name            string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty" dc:"采购订单名称"`                                                  // 采购订单名称
+	Supplier        string                 `protobuf:"bytes,2,opt,name=supplier,proto3" json:"supplier,omitempty" dc:"供应商"`                                             // 供应商
+	Company         string                 `protobuf:"bytes,3,opt,name=company,proto3" json:"company,omitempty" dc:"公司"`                                                // 公司
+	GrandTotal      float64                `protobuf:"fixed64,4,opt,name=grand_total,json=grandTotal,proto3" json:"grand_total,omitempty" dc:"总金额"`                     // 总金额
+	Status          string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty" dc:"状态"`                                                  // 状态
+	TransactionDate string                 `protobuf:"bytes,6,opt,name=transaction_date,json=transactionDate,proto3" json:"transaction_date,omitempty" dc:"Y-m-d 交易日期"` // Y-m-d 交易日期
+	ScheduleDate    string                 `protobuf:"bytes,7,opt,name=schedule_date,json=scheduleDate,proto3" json:"schedule_date,omitempty" dc:"Y-m-d 计划日期"`          // Y-m-d 计划日期
+	PerReceived     float64                `protobuf:"fixed64,8,opt,name=per_received,json=perReceived,proto3" json:"per_received,omitempty" dc:"已接收百分比"`               // 已接收百分比
+	PerBilled       float64                `protobuf:"fixed64,9,opt,name=per_billed,json=perBilled,proto3" json:"per_billed,omitempty" dc:"已开票百分比"`                     // 已开票百分比
+	Currency        string                 `protobuf:"bytes,10,opt,name=currency,proto3" json:"currency,omitempty" dc:"货币"`                                             // 货币
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *PurchaseOrderListItem) Reset() {
+	*x = PurchaseOrderListItem{}
+	mi := &file_buying_buying_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PurchaseOrderListItem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PurchaseOrderListItem) ProtoMessage() {}
+
+func (x *PurchaseOrderListItem) ProtoReflect() protoreflect.Message {
+	mi := &file_buying_buying_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PurchaseOrderListItem.ProtoReflect.Descriptor instead.
+func (*PurchaseOrderListItem) Descriptor() ([]byte, []int) {
+	return file_buying_buying_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *PurchaseOrderListItem) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *PurchaseOrderListItem) GetSupplier() string {
+	if x != nil {
+		return x.Supplier
+	}
+	return ""
+}
+
+func (x *PurchaseOrderListItem) GetCompany() string {
+	if x != nil {
+		return x.Company
+	}
+	return ""
+}
+
+func (x *PurchaseOrderListItem) GetGrandTotal() float64 {
+	if x != nil {
+		return x.GrandTotal
+	}
+	return 0
+}
+
+func (x *PurchaseOrderListItem) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *PurchaseOrderListItem) GetTransactionDate() string {
+	if x != nil {
+		return x.TransactionDate
+	}
+	return ""
+}
+
+func (x *PurchaseOrderListItem) GetScheduleDate() string {
+	if x != nil {
+		return x.ScheduleDate
+	}
+	return ""
+}
+
+func (x *PurchaseOrderListItem) GetPerReceived() float64 {
+	if x != nil {
+		return x.PerReceived
+	}
+	return 0
+}
+
+func (x *PurchaseOrderListItem) GetPerBilled() float64 {
+	if x != nil {
+		return x.PerBilled
+	}
+	return 0
+}
+
+func (x *PurchaseOrderListItem) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
+// 获取采购订单数量请求消息
+type GetPurchaseOrderCountReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Supplier      string                 `protobuf:"bytes,1,opt,name=supplier,proto3" json:"supplier,omitempty" dc:"供应商过滤，可选"`                           // 供应商过滤，可选
+	CompanyAbbr   string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写过滤，可选"` // 公司缩写过滤，可选
+	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty" dc:"状态过滤，可选"`                                // 状态过滤，可选
+	FromDate      string                 `protobuf:"bytes,4,opt,name=from_date,json=fromDate,proto3" json:"from_date,omitempty" dc:"开始日期过滤 Y-m-d，可选"`    // 开始日期过滤 Y-m-d，可选
+	ToDate        string                 `protobuf:"bytes,5,opt,name=to_date,json=toDate,proto3" json:"to_date,omitempty" dc:"结束日期过滤 Y-m-d，可选"`          // 结束日期过滤 Y-m-d，可选
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPurchaseOrderCountReq) Reset() {
+	*x = GetPurchaseOrderCountReq{}
+	mi := &file_buying_buying_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPurchaseOrderCountReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPurchaseOrderCountReq) ProtoMessage() {}
+
+func (x *GetPurchaseOrderCountReq) ProtoReflect() protoreflect.Message {
+	mi := &file_buying_buying_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPurchaseOrderCountReq.ProtoReflect.Descriptor instead.
+func (*GetPurchaseOrderCountReq) Descriptor() ([]byte, []int) {
+	return file_buying_buying_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *GetPurchaseOrderCountReq) GetSupplier() string {
+	if x != nil {
+		return x.Supplier
+	}
+	return ""
+}
+
+func (x *GetPurchaseOrderCountReq) GetCompanyAbbr() string {
+	if x != nil {
+		return x.CompanyAbbr
+	}
+	return ""
+}
+
+func (x *GetPurchaseOrderCountReq) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *GetPurchaseOrderCountReq) GetFromDate() string {
+	if x != nil {
+		return x.FromDate
+	}
+	return ""
+}
+
+func (x *GetPurchaseOrderCountReq) GetToDate() string {
+	if x != nil {
+		return x.ToDate
+	}
+	return ""
+}
+
+// 获取采购订单数量响应消息
+type GetPurchaseOrderCountResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Count         int32                  `protobuf:"varint,1,opt,name=count,proto3" json:"count,omitempty" dc:"采购订单数量"` // 采购订单数量
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPurchaseOrderCountResp) Reset() {
+	*x = GetPurchaseOrderCountResp{}
+	mi := &file_buying_buying_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPurchaseOrderCountResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPurchaseOrderCountResp) ProtoMessage() {}
+
+func (x *GetPurchaseOrderCountResp) ProtoReflect() protoreflect.Message {
+	mi := &file_buying_buying_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPurchaseOrderCountResp.ProtoReflect.Descriptor instead.
+func (*GetPurchaseOrderCountResp) Descriptor() ([]byte, []int) {
+	return file_buying_buying_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *GetPurchaseOrderCountResp) GetCount() int32 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
 var File_buying_buying_proto protoreflect.FileDescriptor
 
 const file_buying_buying_proto_rawDesc = "" +
@@ -1380,7 +1757,40 @@ const file_buying_buying_proto_rawDesc = "" +
 	"\x13purchase_order_name\x18\x01 \x01(\tR\x11purchaseOrderName\x12/\n" +
 	"\x05items\x18\x02 \x03(\v2\x19.buying.PurchaseOrderItemR\x05items\"a\n" +
 	"\x17SavePurchaseReceiptResp\x12F\n" +
-	"\x10purchase_receipt\x18\x01 \x01(\v2\x1b.buying.PurchaseReceiptInfoR\x0fpurchaseReceipt2\x97\x04\n" +
+	"\x10purchase_receipt\x18\x01 \x01(\v2\x1b.buying.PurchaseReceiptInfoR\x0fpurchaseReceipt\"\xc4\x01\n" +
+	"\x17GetPurchaseOrderListReq\x12\x1a\n" +
+	"\bsupplier\x18\x01 \x01(\tR\bsupplier\x12!\n" +
+	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12\x1b\n" +
+	"\tfrom_date\x18\x03 \x01(\tR\bfromDate\x12\x17\n" +
+	"\ato_date\x18\x04 \x01(\tR\x06toDate\x12\x17\n" +
+	"\apage_no\x18\x05 \x01(\x05R\x06pageNo\x12\x1b\n" +
+	"\tpage_size\x18\x06 \x01(\x05R\bpageSize\"\x83\x01\n" +
+	"\x18GetPurchaseOrderListResp\x12F\n" +
+	"\x0fpurchase_orders\x18\x01 \x03(\v2\x1d.buying.PurchaseOrderListItemR\x0epurchaseOrders\x12\x1f\n" +
+	"\vtotal_count\x18\x02 \x01(\x05R\n" +
+	"totalCount\"\xc8\x02\n" +
+	"\x15PurchaseOrderListItem\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n" +
+	"\bsupplier\x18\x02 \x01(\tR\bsupplier\x12\x18\n" +
+	"\acompany\x18\x03 \x01(\tR\acompany\x12\x1f\n" +
+	"\vgrand_total\x18\x04 \x01(\x01R\n" +
+	"grandTotal\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\x12)\n" +
+	"\x10transaction_date\x18\x06 \x01(\tR\x0ftransactionDate\x12#\n" +
+	"\rschedule_date\x18\a \x01(\tR\fscheduleDate\x12!\n" +
+	"\fper_received\x18\b \x01(\x01R\vperReceived\x12\x1d\n" +
+	"\n" +
+	"per_billed\x18\t \x01(\x01R\tperBilled\x12\x1a\n" +
+	"\bcurrency\x18\n" +
+	" \x01(\tR\bcurrency\"\xa7\x01\n" +
+	"\x18GetPurchaseOrderCountReq\x12\x1a\n" +
+	"\bsupplier\x18\x01 \x01(\tR\bsupplier\x12!\n" +
+	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\x12\x1b\n" +
+	"\tfrom_date\x18\x04 \x01(\tR\bfromDate\x12\x17\n" +
+	"\ato_date\x18\x05 \x01(\tR\x06toDate\"1\n" +
+	"\x19GetPurchaseOrderCountResp\x12\x14\n" +
+	"\x05count\x18\x01 \x01(\x05R\x05count2\xb1\x05\n" +
 	"\rBuyingService\x12@\n" +
 	"\x0fGetSupplierList\x12\x1a.buying.GetSupplierListReq\x1a\x11.erp.ResponseInfo\x12>\n" +
 	"\x0eCreateSupplier\x12\x19.buying.CreateSupplierReq\x1a\x11.erp.ResponseInfo\x128\n" +
@@ -1389,7 +1799,9 @@ const file_buying_buying_proto_rawDesc = "" +
 	"\x0eDeleteSupplier\x12\x19.buying.DeleteSupplierReq\x1a\x11.erp.ResponseInfo\x12<\n" +
 	"\rListSuppliers\x12\x18.buying.ListSuppliersReq\x1a\x11.erp.ResponseInfo\x12B\n" +
 	"\x10GetPurchaseOrder\x12\x1b.buying.GetPurchaseOrderReq\x1a\x11.erp.ResponseInfo\x12H\n" +
-	"\x13SavePurchaseReceipt\x12\x1e.buying.SavePurchaseReceiptReq\x1a\x11.erp.ResponseInfoB$Z\"ttpos-bmp/app/ttpos-erp/api/buyingb\x06proto3"
+	"\x13SavePurchaseReceipt\x12\x1e.buying.SavePurchaseReceiptReq\x1a\x11.erp.ResponseInfo\x12J\n" +
+	"\x14GetPurchaseOrderList\x12\x1f.buying.GetPurchaseOrderListReq\x1a\x11.erp.ResponseInfo\x12L\n" +
+	"\x15GetPurchaseOrderCount\x12 .buying.GetPurchaseOrderCountReq\x1a\x11.erp.ResponseInfoB$Z\"ttpos-bmp/app/ttpos-erp/api/buyingb\x06proto3"
 
 var (
 	file_buying_buying_proto_rawDescOnce sync.Once
@@ -1403,31 +1815,36 @@ func file_buying_buying_proto_rawDescGZIP() []byte {
 	return file_buying_buying_proto_rawDescData
 }
 
-var file_buying_buying_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_buying_buying_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
 var file_buying_buying_proto_goTypes = []any{
-	(*GetSupplierListReq)(nil),      // 0: buying.GetSupplierListReq
-	(*GetSupplierListResp)(nil),     // 1: buying.GetSupplierListResp
-	(*SupplierInfo)(nil),            // 2: buying.SupplierInfo
-	(*CreateSupplierReq)(nil),       // 3: buying.CreateSupplierReq
-	(*CreateSupplierResp)(nil),      // 4: buying.CreateSupplierResp
-	(*GetSupplierReq)(nil),          // 5: buying.GetSupplierReq
-	(*GetSupplierResp)(nil),         // 6: buying.GetSupplierResp
-	(*UpdateSupplierReq)(nil),       // 7: buying.UpdateSupplierReq
-	(*UpdateSupplierResp)(nil),      // 8: buying.UpdateSupplierResp
-	(*DeleteSupplierReq)(nil),       // 9: buying.DeleteSupplierReq
-	(*DeleteSupplierResp)(nil),      // 10: buying.DeleteSupplierResp
-	(*ListSuppliersReq)(nil),        // 11: buying.ListSuppliersReq
-	(*ListSuppliersResp)(nil),       // 12: buying.ListSuppliersResp
-	(*SupplierData)(nil),            // 13: buying.SupplierData
-	(*GetPurchaseOrderReq)(nil),     // 14: buying.GetPurchaseOrderReq
-	(*GetPurchaseOrderResp)(nil),    // 15: buying.GetPurchaseOrderResp
-	(*PurchaseOrderInfo)(nil),       // 16: buying.PurchaseOrderInfo
-	(*PurchaseOrderItem)(nil),       // 17: buying.PurchaseOrderItem
-	(*PurchaseReceiptInfo)(nil),     // 18: buying.PurchaseReceiptInfo
-	(*PurchaseReceiptItem)(nil),     // 19: buying.PurchaseReceiptItem
-	(*SavePurchaseReceiptReq)(nil),  // 20: buying.SavePurchaseReceiptReq
-	(*SavePurchaseReceiptResp)(nil), // 21: buying.SavePurchaseReceiptResp
-	(*api.ResponseInfo)(nil),        // 22: erp.ResponseInfo
+	(*GetSupplierListReq)(nil),        // 0: buying.GetSupplierListReq
+	(*GetSupplierListResp)(nil),       // 1: buying.GetSupplierListResp
+	(*SupplierInfo)(nil),              // 2: buying.SupplierInfo
+	(*CreateSupplierReq)(nil),         // 3: buying.CreateSupplierReq
+	(*CreateSupplierResp)(nil),        // 4: buying.CreateSupplierResp
+	(*GetSupplierReq)(nil),            // 5: buying.GetSupplierReq
+	(*GetSupplierResp)(nil),           // 6: buying.GetSupplierResp
+	(*UpdateSupplierReq)(nil),         // 7: buying.UpdateSupplierReq
+	(*UpdateSupplierResp)(nil),        // 8: buying.UpdateSupplierResp
+	(*DeleteSupplierReq)(nil),         // 9: buying.DeleteSupplierReq
+	(*DeleteSupplierResp)(nil),        // 10: buying.DeleteSupplierResp
+	(*ListSuppliersReq)(nil),          // 11: buying.ListSuppliersReq
+	(*ListSuppliersResp)(nil),         // 12: buying.ListSuppliersResp
+	(*SupplierData)(nil),              // 13: buying.SupplierData
+	(*GetPurchaseOrderReq)(nil),       // 14: buying.GetPurchaseOrderReq
+	(*GetPurchaseOrderResp)(nil),      // 15: buying.GetPurchaseOrderResp
+	(*PurchaseOrderInfo)(nil),         // 16: buying.PurchaseOrderInfo
+	(*PurchaseOrderItem)(nil),         // 17: buying.PurchaseOrderItem
+	(*PurchaseReceiptInfo)(nil),       // 18: buying.PurchaseReceiptInfo
+	(*PurchaseReceiptItem)(nil),       // 19: buying.PurchaseReceiptItem
+	(*SavePurchaseReceiptReq)(nil),    // 20: buying.SavePurchaseReceiptReq
+	(*SavePurchaseReceiptResp)(nil),   // 21: buying.SavePurchaseReceiptResp
+	(*GetPurchaseOrderListReq)(nil),   // 22: buying.GetPurchaseOrderListReq
+	(*GetPurchaseOrderListResp)(nil),  // 23: buying.GetPurchaseOrderListResp
+	(*PurchaseOrderListItem)(nil),     // 24: buying.PurchaseOrderListItem
+	(*GetPurchaseOrderCountReq)(nil),  // 25: buying.GetPurchaseOrderCountReq
+	(*GetPurchaseOrderCountResp)(nil), // 26: buying.GetPurchaseOrderCountResp
+	(*api.ResponseInfo)(nil),          // 27: erp.ResponseInfo
 }
 var file_buying_buying_proto_depIdxs = []int32{
 	2,  // 0: buying.GetSupplierListResp.supplier_list:type_name -> buying.SupplierInfo
@@ -1442,27 +1859,32 @@ var file_buying_buying_proto_depIdxs = []int32{
 	19, // 9: buying.PurchaseReceiptInfo.items:type_name -> buying.PurchaseReceiptItem
 	17, // 10: buying.SavePurchaseReceiptReq.items:type_name -> buying.PurchaseOrderItem
 	18, // 11: buying.SavePurchaseReceiptResp.purchase_receipt:type_name -> buying.PurchaseReceiptInfo
-	0,  // 12: buying.BuyingService.GetSupplierList:input_type -> buying.GetSupplierListReq
-	3,  // 13: buying.BuyingService.CreateSupplier:input_type -> buying.CreateSupplierReq
-	5,  // 14: buying.BuyingService.GetSupplier:input_type -> buying.GetSupplierReq
-	7,  // 15: buying.BuyingService.UpdateSupplier:input_type -> buying.UpdateSupplierReq
-	9,  // 16: buying.BuyingService.DeleteSupplier:input_type -> buying.DeleteSupplierReq
-	11, // 17: buying.BuyingService.ListSuppliers:input_type -> buying.ListSuppliersReq
-	14, // 18: buying.BuyingService.GetPurchaseOrder:input_type -> buying.GetPurchaseOrderReq
-	20, // 19: buying.BuyingService.SavePurchaseReceipt:input_type -> buying.SavePurchaseReceiptReq
-	22, // 20: buying.BuyingService.GetSupplierList:output_type -> erp.ResponseInfo
-	22, // 21: buying.BuyingService.CreateSupplier:output_type -> erp.ResponseInfo
-	22, // 22: buying.BuyingService.GetSupplier:output_type -> erp.ResponseInfo
-	22, // 23: buying.BuyingService.UpdateSupplier:output_type -> erp.ResponseInfo
-	22, // 24: buying.BuyingService.DeleteSupplier:output_type -> erp.ResponseInfo
-	22, // 25: buying.BuyingService.ListSuppliers:output_type -> erp.ResponseInfo
-	22, // 26: buying.BuyingService.GetPurchaseOrder:output_type -> erp.ResponseInfo
-	22, // 27: buying.BuyingService.SavePurchaseReceipt:output_type -> erp.ResponseInfo
-	20, // [20:28] is the sub-list for method output_type
-	12, // [12:20] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	24, // 12: buying.GetPurchaseOrderListResp.purchase_orders:type_name -> buying.PurchaseOrderListItem
+	0,  // 13: buying.BuyingService.GetSupplierList:input_type -> buying.GetSupplierListReq
+	3,  // 14: buying.BuyingService.CreateSupplier:input_type -> buying.CreateSupplierReq
+	5,  // 15: buying.BuyingService.GetSupplier:input_type -> buying.GetSupplierReq
+	7,  // 16: buying.BuyingService.UpdateSupplier:input_type -> buying.UpdateSupplierReq
+	9,  // 17: buying.BuyingService.DeleteSupplier:input_type -> buying.DeleteSupplierReq
+	11, // 18: buying.BuyingService.ListSuppliers:input_type -> buying.ListSuppliersReq
+	14, // 19: buying.BuyingService.GetPurchaseOrder:input_type -> buying.GetPurchaseOrderReq
+	20, // 20: buying.BuyingService.SavePurchaseReceipt:input_type -> buying.SavePurchaseReceiptReq
+	22, // 21: buying.BuyingService.GetPurchaseOrderList:input_type -> buying.GetPurchaseOrderListReq
+	25, // 22: buying.BuyingService.GetPurchaseOrderCount:input_type -> buying.GetPurchaseOrderCountReq
+	27, // 23: buying.BuyingService.GetSupplierList:output_type -> erp.ResponseInfo
+	27, // 24: buying.BuyingService.CreateSupplier:output_type -> erp.ResponseInfo
+	27, // 25: buying.BuyingService.GetSupplier:output_type -> erp.ResponseInfo
+	27, // 26: buying.BuyingService.UpdateSupplier:output_type -> erp.ResponseInfo
+	27, // 27: buying.BuyingService.DeleteSupplier:output_type -> erp.ResponseInfo
+	27, // 28: buying.BuyingService.ListSuppliers:output_type -> erp.ResponseInfo
+	27, // 29: buying.BuyingService.GetPurchaseOrder:output_type -> erp.ResponseInfo
+	27, // 30: buying.BuyingService.SavePurchaseReceipt:output_type -> erp.ResponseInfo
+	27, // 31: buying.BuyingService.GetPurchaseOrderList:output_type -> erp.ResponseInfo
+	27, // 32: buying.BuyingService.GetPurchaseOrderCount:output_type -> erp.ResponseInfo
+	23, // [23:33] is the sub-list for method output_type
+	13, // [13:23] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_buying_buying_proto_init() }
@@ -1476,7 +1898,7 @@ func file_buying_buying_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_buying_buying_proto_rawDesc), len(file_buying_buying_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   27,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

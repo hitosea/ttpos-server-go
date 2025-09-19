@@ -151,6 +151,50 @@ message SavePurchaseReceiptResp {
   PurchaseReceiptInfo purchase_receipt = 1; // 采购订单信息
 }
 
+// 获取采购订单列表请求消息
+message GetPurchaseOrderListReq {
+  string supplier = 1; // 供应商过滤，可选
+  string company_abbr = 2; // 公司缩写过滤，可选
+  string from_date = 3; // 开始日期过滤Y-m-d，可选
+  string to_date = 4; // 结束日期过滤Y-m-d，可选
+  int32 page_no = 5; // 页码，从1开始
+  int32 page_size = 6; // 每页数量
+}
+
+// 获取采购订单列表响应消息
+message GetPurchaseOrderListResp {
+  repeated PurchaseOrderListItem purchase_orders = 1; // 采购订单列表
+  int32 total_count = 2; // 总数量
+}
+
+// 采购订单列表项
+message PurchaseOrderListItem {
+  string name = 1; // 采购订单名称
+  string supplier = 2; // 供应商
+  string company = 3; // 公司
+  double grand_total = 4; // 总金额
+  string status = 5; // 状态
+  string transaction_date = 6; // Y-m-d 交易日期
+  string schedule_date = 7; // Y-m-d 计划日期
+  double per_received = 8; // 已接收百分比
+  double per_billed = 9; // 已开票百分比
+  string currency = 10; // 货币
+}
+
+// 获取采购订单数量请求消息
+message GetPurchaseOrderCountReq {
+  string supplier = 1; // 供应商过滤，可选
+  string company_abbr = 2; // 公司缩写过滤，可选
+  string status = 3; // 状态过滤，可选
+  string from_date = 4; // 开始日期过滤 Y-m-d，可选
+  string to_date = 5; // 结束日期过滤 Y-m-d，可选
+}
+
+// 获取采购订单数量响应消息
+message GetPurchaseOrderCountResp {
+  int32 count = 1; // 采购订单数量
+}
+
 service BuyingService {
   // 获取内部供应商列表
   // 参数：公司缩写编码
@@ -191,4 +235,14 @@ service BuyingService {
   // 参数：采购收货单信息
   // 返回：操作结果
   rpc SavePurchaseReceipt(SavePurchaseReceiptReq) returns (erp.ResponseInfo);
+
+  // 获取采购订单列表
+  // 参数：查询条件和分页参数
+  // 返回：采购订单列表
+  rpc GetPurchaseOrderList(GetPurchaseOrderListReq) returns (erp.ResponseInfo);
+
+  // 获取采购订单数量
+  // 参数：查询条件
+  // 返回：采购订单数量
+  rpc GetPurchaseOrderCount(GetPurchaseOrderCountReq) returns (erp.ResponseInfo);
 }

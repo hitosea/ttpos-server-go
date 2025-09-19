@@ -10,3 +10,8 @@ const (
 	// ItemGroupOthers 其他
 	ItemGroupOthers ItemGroup = ""
 )
+
+const (
+	ErpHeadquartersSupplierCode = "Headquarters - Supplier"
+	ErpRequestPageSize          = 999
+)

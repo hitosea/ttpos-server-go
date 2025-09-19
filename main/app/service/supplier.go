@@ -1,6 +1,7 @@
 package service
 
 import (
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -18,11 +19,11 @@ import (
 
 // ISupplierSrv 供应商服务接口
 type ISupplierSrv interface {
-	GetSupplierList(ctx context.Context, req req.SupplierListReq) (resp.SupplierListResp, error) // 供应商列表
-	CreateSupplier(ctx context.Context, req req.SupplierCreateReq) error                         // 创建供应商
-	UpdateSupplier(ctx context.Context, req req.SupplierUpdateReq) error                         // 更新供应商
-	DeleteSupplier(ctx context.Context, req req.SupplierDeleteReq) error                         // 删除供应商
-	GetSupplierSelect(ctx context.Context) (resp.SupplierSelectResp, error)                      // 获取供应商选择器列表
+	GetSupplierList(ctx context.Context, req req.SupplierListReq) (resp.SupplierListResp, error)       // 供应商列表
+	CreateSupplier(ctx context.Context, req req.SupplierCreateReq) error                               // 创建供应商
+	UpdateSupplier(ctx context.Context, req req.SupplierUpdateReq) error                               // 更新供应商
+	DeleteSupplier(ctx context.Context, req req.SupplierDeleteReq) error                               // 删除供应商
+	GetSupplierSelect(ctx context.Context, req req.SupplierSelectReq) (resp.SupplierSelectResp, error) // 获取供应商选择器列表
 }
 
 // NewSupplierSrv 创建供应商服务
@@ -210,10 +211,9 @@ func (s *supplierSrv) DeleteSupplier(ctx context.Context, req req.SupplierDelete
 }
 
 // GetSupplierSelect 获取供应商选择器列表
-func (s *supplierSrv) GetSupplierSelect(ctx context.Context) (resp.SupplierSelectResp, error) {
+func (s *supplierSrv) GetSupplierSelect(ctx context.Context, req req.SupplierSelectReq) (resp.SupplierSelectResp, error) {
 
-	// 调用erp接口
-	if ctx.GetCompany().IsOpenErp() {
+	if ctx.GetCompany().IsOpenErp() && ctx.Version(context.LT, "2.6.0") {
 		erpResp, err := erp.NewIErpSrv(s.dbm).GetSupplierList(ctx)
 		if err != nil {
 			return resp.SupplierSelectResp{}, errors.WithMessage(err, "获取供应商选择器列表失败")
@@ -223,6 +223,7 @@ func (s *supplierSrv) GetSupplierSelect(ctx context.Context) (resp.SupplierSelec
 		for _, supplier := range erpResp.SupplierList {
 			supplierList = append(supplierList, &resp.SupplierSimpleInfo{
 				Name: supplier.SupplierName,
+				Code: supplier.Name,
 			})
 		}
 		return resp.SupplierSelectResp{
@@ -236,6 +237,12 @@ func (s *supplierSrv) GetSupplierSelect(ctx context.Context) (resp.SupplierSelec
 	// 构建查询选项
 	opts := []repository.DBOption{
 		supplierRepo.OrderByName(false), // 按名称升序排序
+		supplierRepo.WhereNotDeleted(),
+	}
+
+	// 如果公司开启了erp，则查询erp供应商
+	if ctx.GetCompany().IsOpenErp() {
+		opts = append(opts, supplierRepo.WhereErpCodeExists())
 	}
 
 	suppliers, err := supplierRepo.GetList(opts...)
@@ -246,8 +253,20 @@ func (s *supplierSrv) GetSupplierSelect(ctx context.Context) (resp.SupplierSelec
 	// 转换响应格式
 	var supplierList []*resp.SupplierSimpleInfo
 	for _, supplier := range suppliers {
+		// 外部采购 去掉总部
+		if req.PurchaseType == 1 {
+			if supplier.ErpCode == constant.ErpHeadquartersSupplierCode {
+				continue
+			}
+		} else {
+			// 内部采购 去掉非总部
+			if supplier.ErpCode != constant.ErpHeadquartersSupplierCode {
+				continue
+			}
+		}
 		supplierList = append(supplierList, &resp.SupplierSimpleInfo{
 			Name: supplier.Name,
+			Code: supplier.ErpCode,
 		})
 	}
 

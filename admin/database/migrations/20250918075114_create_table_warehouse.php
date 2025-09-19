@@ -46,6 +46,7 @@ class CreateTableWarehouse extends Migrator
                 ->addColumn('update_time', 'integer', ['default' => 0, 'comment' => '更新时间'])
                 ->addColumn('delete_time', 'integer', ['default' => 0, 'comment' => '删除时间'])
                 ->addIndex(['uuid'], ['unique' => true, 'name' => 'unique_uuid'])
+                ->addIndex(['erp_code'], ['unique' => true, 'name' => 'unique_erp_code'])
                 ->create();
         }
 

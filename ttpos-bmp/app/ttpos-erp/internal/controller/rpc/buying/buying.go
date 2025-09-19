@@ -199,3 +199,21 @@ func (*Controller) ListSuppliers(ctx context.Context, req *buying.ListSuppliersR
 	}
 	return rpc.ApiSuccessWithData("获取供应商列表成功", resp), nil
 }
+
+// GetPurchaseOrderList 获取采购订单列表
+func (*Controller) GetPurchaseOrderList(ctx context.Context, req *buying.GetPurchaseOrderListReq) (*api.ResponseInfo, error) {
+	resp, err := service.Buying().GetPurchaseOrderList(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccessWithData("获取采购订单列表成功", resp), nil
+}
+
+// GetPurchaseOrderCount 获取采购订单数量
+func (*Controller) GetPurchaseOrderCount(ctx context.Context, req *buying.GetPurchaseOrderCountReq) (*api.ResponseInfo, error) {
+	resp, err := service.Buying().GetPurchaseOrderCount(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccessWithData("获取采购订单数量成功", resp), nil
+}

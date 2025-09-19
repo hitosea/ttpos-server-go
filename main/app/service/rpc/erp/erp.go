@@ -9,6 +9,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/model"
 
 	"google.golang.org/grpc/metadata"
 
@@ -41,6 +42,7 @@ type IErpSrv interface {
 
 	// 供应商
 	GetSupplierList(ctx pkgCtx.Context) (*buying.GetSupplierListResp, error)
+	ListSuppliers(ctx pkgCtx.Context, companySetting model.CompanySetting, listSuppliersReq *buying.ListSuppliersReq) (*buying.GetSupplierListResp, error)
 
 	// 物品
 	AddMaterial(ctx pkgCtx.Context, params req.MaterialAddErpReq) (*item.ItemInfo, error)                     // 添加物品

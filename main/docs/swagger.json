@@ -23861,7 +23861,7 @@
             }
         },
         "/shop/supplier/update": {
-            "put": {
+            "post": {
                 "security": [
                     {
                         "JwtToken": []
@@ -24050,7 +24050,7 @@
             }
         },
         "/shop/warehouse/set_default": {
-            "put": {
+            "post": {
                 "security": [
                     {
                         "JwtToken": []
@@ -24089,7 +24089,7 @@
             }
         },
         "/shop/warehouse/update": {
-            "put": {
+            "post": {
                 "security": [
                     {
                         "JwtToken": []

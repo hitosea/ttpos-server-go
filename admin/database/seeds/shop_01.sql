@@ -915,6 +915,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_order` (
     `erp_order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERP采购单号',
     `order_type` INT(10) NOT NULL DEFAULT 0 COMMENT '申请类型, 0-仓库调拨',
     `supplier_name` VARCHAR(100) NOT NULL DEFAULT '' COMMENT '供应商名称',
+    `supplier_erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '供应商编码',
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态, 0-待提交 1-待审核 2-已通过 3-已驳回 4-部分收货 5-全部收货',
     `num` DECIMAL(22, 4) NOT NULL DEFAULT 0.0000 COMMENT '物资数量，每种物品算一个',
     `order_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '单据日期，采购单提交的时间（时间戳）',
@@ -927,6 +928,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_order` (
     `reject_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '驳回时间（时间戳）',
     `first_receive_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '第一次收货时间（时间戳），从“已通过”状态变成“部分收货”状态的时间',
     `final_receive_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '最终收货时间（时间戳），从“部分收货”状态变成“全部收货”状态的时间',
+    `is_external` INT(10) NOT NULL DEFAULT 0 COMMENT '是否外部采购, 0-否 1-是',
+    `company_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '公司名称',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -1505,6 +1508,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_recharge_order` (
     `payment_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '支付时间(时间戳)',
     `balance`  DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '充值前会员余额',
     `balance_recharged`  DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '充值后会员余额',
+    `erp_products_invoice_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品发票名称',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -1565,6 +1569,7 @@ CREATE TABLE `ttpos_warehouse` (
   `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_uuid` (`uuid`)
+  UNIQUE KEY `unique_erp_code` (`erp_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='仓库';
 
 CREATE TABLE IF NOT EXISTS `ttpos_supplier` (

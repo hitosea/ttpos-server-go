@@ -87,7 +87,7 @@ func (h *WarehouseHandler) CreateWarehouse(c *gin.Context) {
 // @Security JwtToken
 // @Param request body req.UpdateWarehouseReq true "更新仓库请求"
 // @Success 200 {object} dto.Response "成功"
-// @Router /shop/warehouse/update [put]
+// @Router /shop/warehouse/update [post]
 func (h *WarehouseHandler) UpdateWarehouse(c *gin.Context) {
 	ctx := helper.GetContext(c)
 
@@ -115,7 +115,7 @@ func (h *WarehouseHandler) UpdateWarehouse(c *gin.Context) {
 // @Security JwtToken
 // @Param request body req.SetDefaultWarehouseReq true "设置默认仓库请求"
 // @Success 200 {object} dto.Response "成功"
-// @Router /shop/warehouse/set_default [put]
+// @Router /shop/warehouse/set_default [post]
 func (h *WarehouseHandler) SetDefaultWarehouse(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var request req.SetDefaultWarehouseReq
@@ -179,11 +179,11 @@ func RegisterWarehouseHandlers(router gin.IRouter, dbm *database.DBManager, cach
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 
-		privateApi.GET("/warehouse/list", warehouseHandler.GetWarehouseList)           // 仓库列表
-		privateApi.POST("/warehouse/create", warehouseHandler.CreateWarehouse)         // 创建仓库
-		privateApi.POST("/warehouse/update", warehouseHandler.UpdateWarehouse)         // 更新仓库
-		privateApi.DELETE("/warehouse/delete", warehouseHandler.DeleteWarehouse)       // 删除仓库
-		privateApi.PUT("/warehouse/set_default", warehouseHandler.SetDefaultWarehouse) // 设置默认
+		privateApi.GET("/warehouse/list", warehouseHandler.GetWarehouseList)            // 仓库列表
+		privateApi.POST("/warehouse/create", warehouseHandler.CreateWarehouse)          // 创建仓库
+		privateApi.POST("/warehouse/update", warehouseHandler.UpdateWarehouse)          // 更新仓库
+		privateApi.DELETE("/warehouse/delete", warehouseHandler.DeleteWarehouse)        // 删除仓库
+		privateApi.POST("/warehouse/set_default", warehouseHandler.SetDefaultWarehouse) // 设置默认
 
 	}
 }
