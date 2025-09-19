@@ -22,6 +22,26 @@ type (
 		GetPurchaseOrder(ctx context.Context, req *buying.GetPurchaseOrderReq) (*erp.PurchaseOrder, error)
 		// CreatePurchaseReceiptFromOrder 创建采购收货订单
 		CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.SavePurchaseReceiptReq) (*erp.PurchaseReceipt, error)
+		// GetPurchaseOrderList 获取采购订单列表
+		// 根据查询条件过滤并返回采购订单信息列表
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 获取采购订单列表请求参数
+		//
+		// 返回：
+		//   - res: 采购订单列表响应
+		//   - err: 错误信息
+		GetPurchaseOrderList(ctx context.Context, req *buying.GetPurchaseOrderListReq) (res *buying.GetPurchaseOrderListResp, err error)
+		// GetPurchaseOrderCount 获取采购订单数量
+		// 根据查询条件统计采购订单数量
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 获取采购订单数量请求参数
+		//
+		// 返回：
+		//   - res: 采购订单数量响应
+		//   - err: 错误信息
+		GetPurchaseOrderCount(ctx context.Context, req *buying.GetPurchaseOrderCountReq) (res *buying.GetPurchaseOrderCountResp, err error)
 	}
 	ISupplier interface {
 		// GetInnerSupplierList 获取内部供应商列表
