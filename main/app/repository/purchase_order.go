@@ -30,10 +30,16 @@ type IPurchaseOrderRepo interface {
 	WhereStatusIn(statusIn []int) DBOption
 	WherePriority(priority int) DBOption
 	WhereSupplierUuid(supplierUuid uint64) DBOption
+	WhereSupplierName(supplierName string) DBOption
 	WhereApplicantUuid(applicantUuid uint64) DBOption
 	WhereApproverUuid(approverUuid uint64) DBOption
 	WhereCreateTimeRange(start, end int) DBOption
 	WhereDeliveryTimeRange(start, end int) DBOption
+	WhereOrderTimeRange(start, end int) DBOption
+	WhereExpectArrivalTimeRange(start, end int) DBOption
+	WherePurchaseType(purchaseType int) DBOption
+	WhereWarehouseErpCode(warehouseErpCode string) DBOption
+	WhereCompanyUuid(companyUuid uint64) DBOption
 	WithItems() DBOption
 	WithLogs() DBOption
 	WithReceipts() DBOption
@@ -207,6 +213,13 @@ func (r *PurchaseOrderRepoImpl) WhereApproverUuid(approverUuid uint64) DBOption 
 	}
 }
 
+// WhereSupplierName 供应商名称条件
+func (r *PurchaseOrderRepoImpl) WhereSupplierName(supplierName string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("supplier_name LIKE ?", "%"+supplierName+"%")
+	}
+}
+
 // WhereCreateTimeRange 创建时间范围条件
 func (r *PurchaseOrderRepoImpl) WhereCreateTimeRange(start, end int) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
@@ -228,6 +241,32 @@ func (r *PurchaseOrderRepoImpl) WhereDeliveryTimeRange(start, end int) DBOption 
 		}
 		if end > 0 {
 			db = db.Where("expected_delivery_time <= ?", end)
+		}
+		return db
+	}
+}
+
+// WhereOrderTimeRange 订单时间范围条件
+func (r *PurchaseOrderRepoImpl) WhereOrderTimeRange(start, end int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if start > 0 {
+			db = db.Where("order_time >= ?", start)
+		}
+		if end > 0 {
+			db = db.Where("order_time <= ?", end)
+		}
+		return db
+	}
+}
+
+// WhereExpectArrivalTimeRange 期望到货时间范围条件
+func (r *PurchaseOrderRepoImpl) WhereExpectArrivalTimeRange(start, end int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if start > 0 {
+			db = db.Where("expect_arrival_time >= ?", start)
+		}
+		if end > 0 {
+			db = db.Where("expect_arrival_time <= ?", end)
 		}
 		return db
 	}
@@ -277,6 +316,27 @@ func (r *PurchaseOrderRepoImpl) OrderByOrderTime(desc bool) DBOption {
 			return db.Order("order_time DESC")
 		}
 		return db.Order("order_time ASC")
+	}
+}
+
+// WherePurchaseType 按采购类型条件
+func (r *PurchaseOrderRepoImpl) WherePurchaseType(purchaseType int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("purchase_type = ?", purchaseType)
+	}
+}
+
+// WhereWarehouseErpCode 仓库编码条件
+func (r *PurchaseOrderRepoImpl) WhereWarehouseErpCode(warehouseErpCode string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("warehouse_erp_code = ?", warehouseErpCode)
+	}
+}
+
+// WhereCompanyUuid 公司UUID条件
+func (r *PurchaseOrderRepoImpl) WhereCompanyUuid(companyUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("company_uuid = ?", companyUuid)
 	}
 }
 

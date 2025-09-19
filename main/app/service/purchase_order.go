@@ -75,9 +75,32 @@ func (s *purchaseOrderSrv) GetPurchaseOrderList(ctx context.Context, req req.Pur
 	if len(req.StatusIn) > 0 {
 		opts = append(opts, purchaseOrderRepo.WhereStatusIn(req.StatusIn))
 	}
+	if req.SupplierName != "" {
+		opts = append(opts, purchaseOrderRepo.WhereSupplierName(req.SupplierName))
+	}
+	if req.WarehouseErpCode != "" {
+		opts = append(opts, purchaseOrderRepo.WhereWarehouseErpCode(req.WarehouseErpCode))
+	}
+	if req.CompanyUuid > 0 {
+		opts = append(opts, purchaseOrderRepo.WhereCompanyUuid(req.CompanyUuid))
+	}
+	if req.CreateTimeStart > 0 || req.CreateTimeEnd > 0 {
+		opts = append(opts, purchaseOrderRepo.WhereCreateTimeRange(req.CreateTimeStart, req.CreateTimeEnd))
+	}
+	if req.OrderTimeStart > 0 || req.OrderTimeEnd > 0 {
+		opts = append(opts, purchaseOrderRepo.WhereOrderTimeRange(req.OrderTimeStart, req.OrderTimeEnd))
+	}
+	if req.ExpectArrivalTimeStart > 0 || req.ExpectArrivalTimeEnd > 0 {
+		opts = append(opts, purchaseOrderRepo.WhereExpectArrivalTimeRange(req.ExpectArrivalTimeStart, req.ExpectArrivalTimeEnd))
+	}
 
 	// 排序
 	opts = append(opts, purchaseOrderRepo.OrderByOrderTime(true))
+	if req.PurchaseType == 2 {
+		opts = append(opts, purchaseOrderRepo.WherePurchaseType(req.PurchaseType))
+	} else {
+		opts = append(opts, purchaseOrderRepo.WherePurchaseType(1))
+	}
 
 	// WithItems()
 	opts = append(opts, purchaseOrderRepo.WithItems())
@@ -541,8 +564,16 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 			return errors.New("无效的审核动作")
 		}
 
+		// 更新状态
 		purchaseOrder.Status = newStatus
 
+		// 更新总部状态
+		if purchaseOrder.PurchaseType == 2 && newStatus == constant.PurchaseOrderStatusApproved {
+			purchaseOrder.Status = constant.PurchaseOrderStatusHeadquarterPending
+			purchaseOrder.HeadquarterStatus = constant.HeadquarterStatusPending
+		}
+
+		// 更新状态
 		err = purchaseOrderRepo.Update(purchaseOrder)
 		if err != nil {
 			return errors.WithMessage(err, "更新采购申请状态失败")
@@ -554,8 +585,70 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 			return errors.WithMessage(err, "记录操作日志失败")
 		}
 
-		// 调用erp接口
-		if ctx.GetCompany().IsOpenErp() && newStatus == constant.PurchaseOrderStatusApproved {
+		// 内部采购 不调用erp接口
+		if purchaseOrder.PurchaseType == 2 {
+			// 获取总部数据库
+			db = s.dbm.GetDB(ctx.GetCompanySetting().HeadquarterUuid)
+			if db == nil {
+				return errors.New("获取总部数据库失败")
+			}
+			// 整单复制到总部采购申请
+			headquarterPurchaseOrder := &model.PurchaseOrder{
+				BaseModel: model.BaseModel{
+					Uuid: func() uint64 {
+						uuid, _ := utils.GetID()
+						return uuid
+					}(),
+				},
+				SubUuid:           purchaseOrder.Uuid,
+				OrderNo:           purchaseOrder.OrderNo,
+				SupplierName:      purchaseOrder.SupplierName,
+				SupplierErpCode:   purchaseOrder.SupplierErpCode,
+				Status:            constant.PurchaseOrderStatusPending,
+				HeadquarterStatus: constant.HeadquarterStatusPending,
+				OrderTime:         purchaseOrder.OrderTime,
+				ExpectArrivalTime: purchaseOrder.ExpectArrivalTime,
+				WarehouseErpCode:  purchaseOrder.WarehouseErpCode,
+				PurchaseType:      purchaseOrder.PurchaseType,
+				ApplicantUuid:     purchaseOrder.ApplicantUuid,
+				ApplicantName:     purchaseOrder.ApplicantName,
+				ApproverUuid:      purchaseOrder.ApproverUuid,
+				ApproverName:      purchaseOrder.ApproverName,
+				Num:               purchaseOrder.Num,
+				OrderType:         purchaseOrder.OrderType,
+				CompanyUuid:       purchaseOrder.CompanyUuid,
+				CompanyName:       purchaseOrder.CompanyName,
+			}
+			err = repository.NewPurchaseOrderRepo(db).Create(headquarterPurchaseOrder)
+			if err != nil {
+				return errors.WithMessage(err, "创建总部采购申请失败")
+			}
+
+			// 创建总部采购申请明细
+			var headquarterItems []model.PurchaseOrderItem
+			for _, item := range purchaseOrder.Items {
+				headquarterItem := model.PurchaseOrderItem{
+					PurchaseOrderUuid:  headquarterPurchaseOrder.Uuid,
+					MaterialCode:       item.MaterialCode,
+					MaterialName:       item.MaterialName,
+					MaterialUuid:       item.MaterialUuid,
+					Num:                item.Num,
+					ArrivalNum:         item.ArrivalNum,
+					UnitUuid:           item.UnitUuid,
+					UnitName:           item.UnitName,
+					UnitConversionRate: item.UnitConversionRate,
+					BaseUnitUuid:       item.BaseUnitUuid,
+					BaseUnitName:       item.BaseUnitName,
+				}
+				headquarterItems = append(headquarterItems, headquarterItem)
+			}
+			err = repository.NewPurchaseOrderItemRepo(db).CreateBatch(headquarterItems)
+			if err != nil {
+				return errors.WithMessage(err, "创建总部采购申请明细失败")
+			}
+		}
+
+		if ctx.GetCompany().IsOpenErp() && purchaseOrder.Status == constant.PurchaseOrderStatusApproved {
 			stockItems := make([]*stock.MaterialRequestItem, 0)
 			for _, item := range purchaseOrder.Items {
 				materialUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(item.UnitUuid)
