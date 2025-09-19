@@ -31,12 +31,53 @@ message WarehouseInfo {
   bool disabled = 8 ; //是否禁用，可选
 }
 
+// 获取仓库详情请求消息
+message GetWarehouseReq {
+  string name = 1; // 仓库名称，必填
+}
+
+// 获取仓库详情响应消息
+message GetWarehouseResp {
+  WarehouseInfo warehouse = 1; // 仓库详细信息
+}
+
+// 更新仓库请求消息
+message UpdateWarehouseReq {
+  WarehouseInfo warehouse = 1; // 仓库更新信息，必填
+}
+
+// 更新仓库响应消息
+message UpdateWarehouseResp {
+  WarehouseInfo warehouse = 1; // 更新后的仓库信息
+}
+
+// 删除仓库请求消息
+message DeleteWarehouseReq {
+  string name = 1; // 仓库名称，必填
+}
+
+// 删除仓库响应消息
+message DeleteWarehouseResp {
+  bool success = 1; // 删除是否成功
+  string message = 2; // 结果消息
+}
+
 
 // 仓库服务
 service WarehouseService {
   // 创建仓库
   rpc CreateWarehouse(WarehouseInfo) returns (erp.ResponseInfo);
-  //查询仓库列表
+  
+  // 获取仓库详情
+  rpc GetWarehouse(GetWarehouseReq) returns (erp.ResponseInfo);
+  
+  // 更新仓库
+  rpc UpdateWarehouse(UpdateWarehouseReq) returns (erp.ResponseInfo);
+  
+  // 删除仓库
+  rpc DeleteWarehouse(DeleteWarehouseReq) returns (erp.ResponseInfo);
+  
+  // 查询仓库列表
   rpc GetWarehouseList(GetWarehouseListReq) returns (erp.ResponseInfo);
 }
 

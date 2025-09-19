@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"sort"
 	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-bmp/app/ttpos-erp/api/setup"
@@ -13,11 +15,13 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/dao"
 	"ttpos-bmp/app/ttpos-erp/internal/model/do"
+	dto "ttpos-bmp/app/ttpos-erp/internal/model/dto/buying"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	setup2 "ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 	"ttpos-bmp/utility"
 
+	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -32,6 +36,19 @@ type sSetup struct{}
 
 func init() {
 	service.RegisterSetup(Setup)
+}
+
+// pruneNumericPrefix 删除目录名称中的数字前缀
+// 例如: "00_custom_fields" -> "custom_fields"
+// 参数：
+//   - dirName: 原始目录名称
+//
+// 返回：
+//   - string: 处理后的目录名称
+func (s *sSetup) pruneNumericPrefix(dirName string) string {
+	// 匹配以数字开头，后跟下划线的模式，如 "00_", "1_", "123_"
+	re := regexp.MustCompile(`^\d+_`)
+	return re.ReplaceAllString(dirName, "")
 }
 
 // CreateBranch 创建分店
@@ -312,7 +329,18 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *se
 		return nil, gerror.Wrapf(err, "创建默认pos profile失败")
 	}
 
-	//TODO 连锁店模式下，将本公司增加至总店供应商内部交易对象
+	//FIXME 目前除了 ttpos site 其他都是连锁
+	ctxMap := grpcx.Ctx.IncomingMap(ctx)
+	if ctxMap.Contains(consts.ContextSiteCode) && ctxMap.Get(consts.ContextSiteCode) != consts.SiteCodeTtpos {
+		//连锁店模式下，将本公司增加至总店供应商内部交易对象
+		err = service.Supplier().AddSupplerTransactCompany(ctx, &dto.AddSupplerTransactCompanyReq{
+			Supplier:        erp.HeadquartersSupplier,
+			WithCompanyAbbr: req.CompanyAbbr,
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "添加供应商内部交易对象失败")
+		}
+	}
 
 	return &setup.InitShopResp{
 		BranchName: branchName,
@@ -474,25 +502,46 @@ func (s *sSetup) InitErpDocTypeWithDirname(ctx context.Context, dirBase string) 
 		return gerror.Newf("%s目录不存在", dirBase)
 	}
 	g.Log().Infof(ctx, "开始初始化%s", dirBase)
+
+	// 读取目录中的所有文件
 	files, err := os.ReadDir(dirBase)
 	if err != nil {
 		return gerror.Wrapf(err, "读取目录失败")
 	}
+
+	// 过滤出目录并按名称排序
+	var dirs []string
 	for _, file := range files {
 		if file.IsDir() {
-			config := DocumentInitConfig{
-				DirBase:  dirBase,
-				DirName:  file.Name(),
-				DocType:  utility.ConvertToTitleCase(file.Name()),
-				ItemName: utility.ConvertToTitleCase(file.Name()),
-			}
-			g.Log().Infof(ctx, "开始初始化%s，目录: %s", config.ItemName, file.Name())
-			s.initDocumentsFromDir(ctx, config)
+			dirs = append(dirs, file.Name())
 		}
 	}
-	if err != nil {
-		return gerror.Wrapf(err, "初始化%s失败", dirBase)
+
+	// 按照目录名称进行排序
+	sort.Strings(dirs)
+
+	// 按照排序后的顺序处理每个目录
+	for _, dirName := range dirs {
+		// 删除数字前缀（如 "00_"）
+		prunedDirName := s.pruneNumericPrefix(dirName)
+		g.Log().Infof(ctx, "处理目录: %s -> %s", dirName, prunedDirName)
+
+		config := DocumentInitConfig{
+			DirBase:  dirBase,
+			DirName:  dirName, // 保持原始目录名称用于文件路径
+			DocType:  utility.ConvertToTitleCase(prunedDirName),
+			ItemName: utility.ConvertToTitleCase(prunedDirName),
+		}
+		g.Log().Infof(ctx, "开始初始化%s，目录: %s", config.ItemName, prunedDirName)
+
+		// 处理单个目录，记录错误但不中断其他目录的处理
+		if err := s.initDocumentsFromDir(ctx, config); err != nil {
+			g.Log().Errorf(ctx, "初始化%s失败: %v", config.ItemName, err)
+			return gerror.Wrapf(err, "初始化%s失败", config.ItemName)
+		}
 	}
+
+	g.Log().Infof(ctx, "所有目录初始化完成")
 	return nil
 }
 

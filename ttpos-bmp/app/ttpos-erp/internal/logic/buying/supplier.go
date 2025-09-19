@@ -163,11 +163,11 @@ func (s *sSupplier) AddSupplerTransactCompany(ctx context.Context, req *dto.AddS
 	// 检查公司是否已存在
 	for _, company := range supplier.Companies {
 		if company.Company == companyName {
-			g.Log().Error(ctx, "公司已存在于供应商关联列表中", g.Map{
+			g.Log().Warning(ctx, "公司已存在于供应商关联列表中", g.Map{
 				"supplier":     req.Supplier,
 				"company_name": companyName,
 			})
-			return gerror.New("该公司已存在于供应商关联列表中")
+			return nil
 		}
 	}
 

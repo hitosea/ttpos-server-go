@@ -100,7 +100,7 @@ class Erpnext extends Controller
         $params = [
             'company_uuid' => $param['uuid'],
             'site_code' => $param['erpnext_site_code'],
-            'company_abbr' => $param['erpnext_company_abbr'], 
+            'company_abbr' => $param['erpnext_company_abbr'],
         ];
         $res = HttpHelp::postRequest('http://nginx/api/v1/admin/erpnext/shop/init', json_encode($params), [
             'X-API-KEY: ' . env('JWT_SECRET'),

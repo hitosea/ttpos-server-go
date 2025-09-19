@@ -17,6 +17,7 @@ const (
 	DocTypeModeOfPayment   = "Mode of Payment"
 	DocTypeBranch          = "Branch"
 	DocTypeSupplier        = "Supplier"
+	DocTypeItem            = "Item"
 )
 
 const (

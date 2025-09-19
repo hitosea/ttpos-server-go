@@ -16,6 +16,14 @@ class ErpSupplier extends BaseModel
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
 
+    // 定义全局的查询范围
+    protected $globalScope = ['erp_code'];
+
+    public function scopeErp_code($query)
+    {
+        $query->where('erp_code', '');
+    }
+
     /**
      * 追加字段
      * @var string[]

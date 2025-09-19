@@ -1546,15 +1546,39 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_recharge_order_abnormal_record` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售账单异常日志表';
 
+
+CREATE TABLE `ttpos_warehouse` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint(20) DEFAULT 0 COMMENT '唯一ID',
+  `name` text COMMENT '名称',
+  `multi_language_name_uuid` bigint(20) DEFAULT 0 COMMENT '多语言名称UUID',
+  `type` varchar(255) NOT NULL DEFAULT '' COMMENT '仓库类型',
+  `code` varchar(255) NOT NULL DEFAULT '' COMMENT '仓库编码',
+  `status` int(11) NOT NULL DEFAULT 0 COMMENT '仓库状态',
+  `contact` varchar(255) NOT NULL DEFAULT '' COMMENT '联系人',
+  `phone` varchar(255) NOT NULL DEFAULT '' COMMENT '联系电话',
+  `address` varchar(255) NOT NULL DEFAULT '' COMMENT '地址',
+  `is_default` int(11) NOT NULL DEFAULT 0 COMMENT '是否默认：0-否；1-是',
+  `erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT '关联erpnext',
+  `create_time` int(11) DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(11) DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='仓库';
+
 CREATE TABLE IF NOT EXISTS `ttpos_supplier` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '供应商ID',
-    `name` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '供应商名称',
+    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '供应商名称',
+    `code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '编码',
+    `status` INT(11) NOT NULL DEFAULT 0 COMMENT '状态：0-禁用；1-启用',
     `address` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '供应商地址',
-    `contact_name` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '联系人姓名',
-    `contact_phone` VARCHAR(20) NOT NULL DEFAULT '' COMMENT '联系人电话',
+    `contact_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系人姓名',
+    `contact_phone` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系人电话',
     `position` VARCHAR(100) NOT NULL DEFAULT '' COMMENT '职位',
     `staff_uuid` BIGINT UNSIGNED NOT NULL COMMENT '员工ID, 采购负责人',
+    `erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT '关联erpnext',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -2021,6 +2045,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     `delivery_config` text COMMENT '外送配置',
     `erpnext_site_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext站点编码',
     `erpnext_company_abbr` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext公司缩写',
+    `erpnext_headquarter_abbr` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext总部简称',
+    `headquarter_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '总部Uuid',
     `erpnext_branch_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext分支名称',
     `erpnext_pos_profile_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext Pos Profile名称',
     `erpnext_admin_email` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext 管理员邮箱',

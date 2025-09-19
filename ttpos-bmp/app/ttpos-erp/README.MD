@@ -23,5 +23,6 @@ make conf
 ## 部署注意
 1. 新增Role Profile: ShopCashier, 权限包括 Accounts Manager，Accounts User，Sales Manager，Sales Master Manager，Sales User，Stock Manager
 2. 修改数据库 erp.erp_site 各erpnext site 地址，以及管理员账号的 api_key , api_secret
-3. 执行 `main  migrate --siteCode 1 --dirBase ./manifest/erp-migrate/v2.5` 在erpnext中迁移脚本
-4. 执行 `main  migrate --siteCode 1 --dirBase ./manifest/erp-migrate/payment` 在erpnext中迁移支付方式
+3. 连锁模式的 site 新增一个总部供应商，名称固定 "Headquarters - Supplier" ,代表公司选择总部公司
+4. 执行 `main  migrate --siteCode 1 --dirBase ./manifest/erp-migrate/v2.5` 在erpnext中迁移脚本
+5. 执行 `main  migrate --siteCode 1 --dirBase ./manifest/erp-migrate/payment` 在erpnext中迁移支付方式

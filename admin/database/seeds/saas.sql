@@ -246,6 +246,8 @@ CREATE TABLE `ttpos_company_setting` (
     `delivery_config` text COMMENT '外送配置',
     `erpnext_site_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext站点编码',
     `erpnext_company_abbr` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext公司缩写',
+    `erpnext_headquarter_abbr` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext总部简称',
+    `headquarter_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '总部Uuid',
     `erpnext_branch_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext分支名称',
     `erpnext_pos_profile_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext Pos Profile名称',
     `erpnext_admin_email` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext 管理员邮箱',

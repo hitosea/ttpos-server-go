@@ -261,24 +261,26 @@ func (model *ProductPackage) GetRespFlavorList() []product_resp.ProductFlavor {
 		// 商品规格
 		if bom.IsFlavor() && !bom.IsDelete() {
 			flavorList = append(flavorList, product_resp.ProductFlavor{
-				Uuid:       bom.ProductFlavor.Uuid,
-				BomUuid:    bom.Uuid,
-				LocaleName: bom.ProductFlavor.MultiLanguageName.GetNames(),
-				Price:      bom.Price,
-				StockNum:   bom.GetStockNum(),
-				Barcode:    bom.BarcodeValue,
+				Uuid:         bom.ProductFlavor.Uuid,
+				BomUuid:      bom.Uuid,
+				LocaleName:   bom.ProductFlavor.MultiLanguageName.GetNames(),
+				Price:        bom.Price,
+				StockNum:     bom.GetStockNum(),
+				Barcode:      bom.BarcodeValue,
+				InternalCode: bom.InternalCode,
 			})
 		}
 		// 套餐规格
 		if bom.IsPackageFlavor() && !bom.IsDelete() {
 			name := language.JsonToLocaleResponse(bom.Name)
 			flavorList = append(flavorList, product_resp.ProductFlavor{
-				Uuid:       0,
-				BomUuid:    bom.Uuid,
-				LocaleName: *name,
-				Price:      bom.Price,
-				StockNum:   bom.GetStockNum(),
-				Barcode:    bom.BarcodeValue,
+				Uuid:         0,
+				BomUuid:      bom.Uuid,
+				LocaleName:   *name,
+				Price:        bom.Price,
+				StockNum:     bom.GetStockNum(),
+				Barcode:      bom.BarcodeValue,
+				InternalCode: bom.InternalCode,
 			})
 		}
 	}

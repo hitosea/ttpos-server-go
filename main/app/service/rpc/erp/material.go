@@ -55,7 +55,6 @@ func (s *erpSrv) AddMaterial(ctx context.Context, params req.MaterialAddErpReq) 
 		OpeningStock:       params.OpeningStock,
 		IsStockItem:        true,
 		Disabled:           params.Disabled,
-		Barcode:            params.BarcodeValue,
 		Branch:             companySetting.ErpnextBranchName,
 		CompanyAbbr:        companySetting.ErpnextCompanyAbbr,
 		Uoms:               unitList,

@@ -59,6 +59,27 @@ type MaterialDetailResp struct {
 	FromCostUnitUuid       uint64               `json:"from_cost_unit_uuid"`       // 来源成本单位UUID
 }
 
+// MaterialStockDetailResp 物品库存详情响应
+type MaterialStockDetailResp struct {
+	Uuid       uint64             `json:"uuid"`        // 物品UUID
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 物品名称
+	Code       string             `json:"code"`        // 物品编码
+	Warehouses WarehouseList      `json:"warehouses"`  // 库存列表
+}
+
+// WarehouseList 仓库列表
+type WarehouseList struct {
+	Amount float64     `json:"amount"` // 合计库存数
+	List   []Warehouse `json:"list"`
+}
+
+// Warehouse 仓库
+type Warehouse struct {
+	Uuid       uint64             `json:"uuid"`        // 仓库UUID
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 仓库名称
+	Num        float64            `json:"num"`         // 物品库存数量
+}
+
 // MaterialUnitListResp 物品单位列表响应
 type MaterialUnitListResp struct {
 	List []MaterialUnit `json:"list"`

@@ -83,6 +83,32 @@ func (h *MaterialHandler) GetMaterialDetail(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetMaterialStockDetail 查询物品库存详情
+// @Summary 查询物品库存详情
+// @Description 查询物品库存详情
+// @Tags 商家端.物品管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param uuid query string true "物品UUID"
+// @Success 200 {object} material_resp.MaterialStockDetailResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/material/stock/detail [get]
+func (h *MaterialHandler) GetMaterialStockDetail(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	stockDetailReq := req.MaterialStockDetailReq{}
+	if err := c.ShouldBindQuery(&stockDetailReq); err != nil {
+		helper.HandleValidationError(c, err, stockDetailReq, dto.PageReqMessage)
+		return
+	}
+	res, err := h.materialSrv.GetMaterialStockDetail(ctx, stockDetailReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
 // AddMaterialCategory 创建物品类别
 // @Summary 创建物品类别
 // @Description 创建物品类别
@@ -576,6 +602,7 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 	{
 		privateApi.GET("/material/list", wrapper.GetMaterialList)                      // 获取物品列表
 		privateApi.GET("/material/detail", wrapper.GetMaterialDetail)                  // 获取物品详情
+		privateApi.GET("/material/stock/detail", wrapper.GetMaterialStockDetail)       // 查询物品库存详情
 		privateApi.POST("/material/category/add", wrapper.AddMaterialCategory)         // 创建物品类别
 		privateApi.GET("/material/category/list", wrapper.GetMaterialCategoryList)     // 获取物品类别列表
 		privateApi.GET("/material/category/detail", wrapper.GetMaterialCategoryDetail) // 获取物品类别详情

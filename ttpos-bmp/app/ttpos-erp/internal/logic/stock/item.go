@@ -294,10 +294,23 @@ func (s *sItem) createNewItem(ctx context.Context, req *item.ItemInfo) (*item.It
 		return nil, err
 	}
 
+	//创建禁用物品时，erpnext无法直接创建禁用物品。先创建一个启用的物品，再修改为禁用状态
+	if req.Disabled {
+		newItem["disabled"] = 0
+	}
+
 	// 创建物品
 	_, err = service.Document().Create(ctx, "Item", &newItem)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建物品失败")
+	}
+
+	if req.Disabled {
+		newItem["disabled"] = 1
+		service.Document().Update(ctx, &erp.ErpReq{
+			DocType: erp.DocTypeItem,
+			Name:    itemCode,
+		}, &newItem)
 	}
 
 	// 转换并返回结果

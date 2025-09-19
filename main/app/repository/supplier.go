@@ -15,21 +15,19 @@ type ISupplierRepo interface {
 	Delete(uuid uint64) error
 	GetByUuid(uuid uint64, opts ...DBOption) (*model.Supplier, error)
 	GetByName(name string, opts ...DBOption) (*model.Supplier, error)
+	GetByCode(code string, opts ...DBOption) (*model.Supplier, error)
 
 	// 查询操作
 	GetList(opts ...DBOption) ([]model.Supplier, error)
 	GetListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.Supplier, int64, error)
 	Count(opts ...DBOption) (int64, error)
 	IsNameExists(name string, excludeUuid uint64) (bool, error)
+	IsCodeExists(code string, excludeUuid uint64) (bool, error)
 
 	// 条件查询选项
 	WhereUuid(uuid uint64) DBOption
 	WhereName(name string) DBOption
-	WhereNameLike(name string) DBOption
-	WhereContactName(contactName string) DBOption
-	WhereContactNameLike(contactName string) DBOption
-	WhereStaffUuid(staffUuid uint64) DBOption
-	WhereNotDeleted() DBOption
+	WhereNameOrCodeLike(name string) DBOption
 	OrderByCreateTime(desc bool) DBOption
 	OrderByName(desc bool) DBOption
 }
@@ -51,7 +49,7 @@ func (r *SupplierRepoImpl) Create(supplier *model.Supplier) error {
 
 // Update 更新供应商
 func (r *SupplierRepoImpl) Update(supplier *model.Supplier) error {
-	return r.db.Model(supplier).Where("uuid = ?", supplier.Uuid).Updates(supplier).Error
+	return r.db.Model(supplier).Select("name", "code", "status", "address", "contact_name", "contact_phone").Where("uuid = ?", supplier.Uuid).Updates(supplier).Error
 }
 
 // Delete 软删除供应商
@@ -85,6 +83,18 @@ func (r *SupplierRepoImpl) GetByName(name string, opts ...DBOption) (*model.Supp
 	return &supplier, nil
 }
 
+// GetByCode 根据编码查询供应商
+func (r *SupplierRepoImpl) GetByCode(code string, opts ...DBOption) (*model.Supplier, error) {
+	var supplier model.Supplier
+	db := r.db.Model(&model.Supplier{}).Where("code = ?", code)
+	db = r.applyOptions(db, opts...)
+	err := db.First(&supplier).Error
+	if err != nil {
+		return nil, err
+	}
+	return &supplier, nil
+}
+
 // GetList 获取供应商列表
 func (r *SupplierRepoImpl) GetList(opts ...DBOption) ([]model.Supplier, error) {
 	var suppliers []model.Supplier
@@ -100,7 +110,7 @@ func (r *SupplierRepoImpl) GetListWithPagination(pageNo, pageSize int, opts ...D
 	var total int64
 
 	// 构建基础查询
-	db := r.db.Model(&model.Supplier{})
+	db := r.db.Model(&model.Supplier{}).Scopes(NotDeleted)
 	db = r.applyOptions(db, opts...)
 
 	// 获取总数
@@ -145,6 +155,23 @@ func (r *SupplierRepoImpl) IsNameExists(name string, excludeUuid uint64) (bool, 
 	return count > 0, nil
 }
 
+// IsCodeExists 检查供应商编码是否存在
+func (r *SupplierRepoImpl) IsCodeExists(code string, excludeUuid uint64) (bool, error) {
+	var count int64
+	query := r.db.Model(&model.Supplier{}).
+		Where("code = ? AND delete_time = ?", code, 0)
+
+	if excludeUuid != 0 {
+		query = query.Where("uuid != ?", excludeUuid)
+	}
+
+	err := query.Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 // applyOptions 应用查询选项
 func (r *SupplierRepoImpl) applyOptions(db *gorm.DB, opts ...DBOption) *gorm.DB {
 	for _, opt := range opts {
@@ -170,30 +197,9 @@ func (r *SupplierRepoImpl) WhereName(name string) DBOption {
 }
 
 // WhereNameLike 名称模糊匹配条件
-func (r *SupplierRepoImpl) WhereNameLike(name string) DBOption {
+func (r *SupplierRepoImpl) WhereNameOrCodeLike(name string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("name LIKE ?", "%"+name+"%")
-	}
-}
-
-// WhereContactName 联系人姓名精确匹配条件
-func (r *SupplierRepoImpl) WhereContactName(contactName string) DBOption {
-	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("contact_name = ?", contactName)
-	}
-}
-
-// WhereContactNameLike 联系人姓名模糊匹配条件
-func (r *SupplierRepoImpl) WhereContactNameLike(contactName string) DBOption {
-	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("contact_name LIKE ?", "%"+contactName+"%")
-	}
-}
-
-// WhereStaffUuid 采购负责人条件
-func (r *SupplierRepoImpl) WhereStaffUuid(staffUuid uint64) DBOption {
-	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("staff_uuid = ?", staffUuid)
+		return db.Where("name LIKE ? OR code LIKE ?", "%"+name+"%", "%"+name+"%")
 	}
 }
 

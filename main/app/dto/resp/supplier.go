@@ -4,8 +4,17 @@ import "ttpos-server-go/app/dto"
 
 // SupplierInfo 供应商信息
 type SupplierInfo struct {
-	Uuid uint64 `json:"uuid"` // 供应商UUID
-	Name string `json:"name"` // 供应商名称
+	Uuid         uint64 `json:"uuid"`          // 供应商UUID
+	Name         string `json:"name"`          // 供应商名称
+	Code         string `json:"code"`          // 供应商编码
+	Address      string `json:"address"`       // 供应商地址
+	ContactName  string `json:"contact_name"`  // 联系人姓名
+	ContactPhone string `json:"contact_phone"` // 联系人电话
+	Status       int    `json:"status"`        // 状态：0-禁用；1-启用
+	Position     string `json:"position"`      // 职位
+	StaffUuid    uint64 `json:"staff_uuid"`    // 采购负责人UUID
+	CreateTime   int64  `json:"create_time"`   // 创建时间
+	UpdateTime   int64  `json:"update_time"`   // 更新时间
 }
 
 // SupplierListResp 供应商列表响应
