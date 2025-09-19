@@ -34,6 +34,11 @@ build:
 	@make migrate
 	@echo "✅ 构建完成"
 
+#重新构建中台模块
+build-bmp:
+	@echo "🐳 构建中台模块..."
+	@cd ttpos-bmp && make up
+
 # 生成文档
 build-doc:
 	cd main && go install github.com/swaggo/swag/cmd/swag@latest && ${GO_PATH}/bin/swag init
