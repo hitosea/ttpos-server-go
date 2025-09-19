@@ -530,6 +530,7 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 // ApprovePurchaseOrder 审核采购申请
 func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.PurchaseOrderApproveReq) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
+	companySetting := ctx.GetCompanySetting()
 
 	err := db.Transaction(func(tx *gorm.DB) error {
 		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
@@ -566,9 +567,10 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 
 		// 更新状态
 		purchaseOrder.Status = newStatus
+		purchaseOrder.HeadquarterStatus = newStatus
 
 		// 更新总部状态
-		if purchaseOrder.PurchaseType == 2 && newStatus == constant.PurchaseOrderStatusApproved {
+		if companySetting.IsTtposSite() && companySetting.IsSubShop() && purchaseOrder.PurchaseType == 2 && newStatus == constant.PurchaseOrderStatusApproved {
 			purchaseOrder.Status = constant.PurchaseOrderStatusHeadquarterPending
 			purchaseOrder.HeadquarterStatus = constant.HeadquarterStatusPending
 		}
@@ -586,13 +588,14 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 		}
 
 		// 内部采购 不调用erp接口
-		if purchaseOrder.PurchaseType == 2 {
+		if purchaseOrder.Status == constant.PurchaseOrderStatusHeadquarterPending {
+			//  ------ 整单复制到总部采购申请 ---------
 			// 获取总部数据库
-			db = s.dbm.GetDB(ctx.GetCompanySetting().HeadquarterUuid)
+			db = s.dbm.GetDB(companySetting.HeadquarterUuid)
 			if db == nil {
 				return errors.New("获取总部数据库失败")
 			}
-			// 整单复制到总部采购申请
+			// 整单复制
 			headquarterPurchaseOrder := &model.PurchaseOrder{
 				BaseModel: model.BaseModel{
 					Uuid: func() uint64 {
@@ -648,6 +651,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 			}
 		}
 
+		// 调用erp接口
 		if ctx.GetCompany().IsOpenErp() && purchaseOrder.Status == constant.PurchaseOrderStatusApproved {
 			stockItems := make([]*stock.MaterialRequestItem, 0)
 			for _, item := range purchaseOrder.Items {
@@ -677,6 +681,22 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 			// 更新采购申请单号
 			purchaseOrder.ErpOrderNo = resp.PurchaseOrder
 			err = purchaseOrderRepo.Update(purchaseOrder)
+			if err != nil {
+				return errors.WithMessage(err, "更新采购申请单号失败")
+			}
+
+			//  ------ 同步状态到子商户采购申请 ---------
+			subPurchaseOrder, err := purchaseOrderRepo.GetByUuid(purchaseOrder.SubUuid, purchaseOrderRepo.WithItems())
+			if err != nil {
+				if err == gorm.ErrRecordNotFound {
+					return errors.New("采购申请不存在")
+				}
+				return errors.WithMessage(err, "查询采购申请失败")
+			}
+			subPurchaseOrder.ErpOrderNo = purchaseOrder.ErpOrderNo
+			subPurchaseOrder.Status = constant.PurchaseOrderStatusApproved
+			subPurchaseOrder.HeadquarterStatus = constant.HeadquarterStatusApproved
+			err = repository.NewPurchaseOrderRepo(s.dbm.GetDB(purchaseOrder.CompanyUuid)).Update(subPurchaseOrder)
 			if err != nil {
 				return errors.WithMessage(err, "更新采购申请单号失败")
 			}
