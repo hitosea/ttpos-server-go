@@ -409,7 +409,7 @@ func (s *sSelling) OpenPosEntry(ctx context.Context, req *selling.OpenPosEntryRe
 	}
 
 	// 提交开帐记录
-	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePosOpeningEntry, openEntry.Name, 1)
+	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePosOpeningEntry, openEntry.Name, erp.DocstatusSubmitted)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "提交开帐记录失败")
 	}
@@ -529,7 +529,7 @@ func (s *sSelling) ClosePosEntry(ctx context.Context, req *selling.ClosePosEntry
 	}
 
 	// 提交关帐记录
-	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePosClosingEntry, closeEntry.Name, 1)
+	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePosClosingEntry, closeEntry.Name, erp.DocstatusSubmitted)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "提交关帐记录失败")
 	}
@@ -714,7 +714,7 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
 	res.ProductsInvoiceName = j.Get("data.name").String()
 
 	// 提交发票记录
-	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePosInvoice, res.ProductsInvoiceName, 1)
+	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePosInvoice, res.ProductsInvoiceName, erp.DocstatusSubmitted)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "提交发票记录失败")
 	}
@@ -752,7 +752,7 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
 
 		res.MaterialInvoiceName = j.Get("data.name").String()
 		// 提交发票记录
-		_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePosInvoice, res.MaterialInvoiceName, 1)
+		_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePosInvoice, res.MaterialInvoiceName, erp.DocstatusSubmitted)
 		if err != nil {
 			return nil, gerror.Wrapf(err, "提交发票记录失败")
 		}
@@ -989,7 +989,7 @@ func (s *sSelling) ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosI
 	}
 
 	// 提交发票记录
-	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePosInvoice, res.InvoiceName, 1)
+	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePosInvoice, res.InvoiceName, erp.DocstatusSubmitted)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "提交销售退款订单发票记录失败")
 	}

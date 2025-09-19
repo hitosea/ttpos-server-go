@@ -65,7 +65,7 @@ func (s *sBuying) CreatePurchaseFromMq(ctx context.Context, req *dto.CreatePurch
 	res.Name = j.Get("data.name").String()
 
 	//提交采购订单
-	_, err = service.Document().ChangeDocStatus(ctx, "Purchase Order", res.Name, 1)
+	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePurchaseOrder, res.Name, erp.DocstatusSubmitted)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "提交采购订单失败")
 	}
@@ -118,7 +118,7 @@ func (*sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req *
 	j.Get("data").Scan(salesOrder)
 
 	// 提交订单
-	_, err = service.Document().ChangeDocStatus(ctx, "Sales Order", salesOrder.Name, 1)
+	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeSaleOrder, salesOrder.Name, erp.DocstatusSubmitted)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "提交内部销售订单失败")
 	}
@@ -180,9 +180,9 @@ func (*sBuying) CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.
 	receipt.Items = receiptItems
 
 	//创建采购收货订单
-	resp, err = service.Document().Create(ctx, "Purchase Receipt", receipt)
+	resp, err = service.Document().Create(ctx, erp.DocTypePurchaseReceipt, receipt)
 	if err != nil {
-		return nil, gerror.Wrapf(err, "创建采购订单失败")
+		return nil, gerror.Wrapf(err, "创建采购收货订单失败")
 	}
 
 	// 解析响应数据
@@ -193,7 +193,7 @@ func (*sBuying) CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.
 	j.Get("data").Scan(receipt)
 
 	// 提交订单
-	_, err = service.Document().ChangeDocStatus(ctx, "Purchase Receipt", receipt.Name, 1)
+	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePurchaseReceipt, receipt.Name, erp.DocstatusSubmitted)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "提交采购收货订单失败")
 	}

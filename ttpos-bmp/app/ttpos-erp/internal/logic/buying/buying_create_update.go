@@ -50,13 +50,14 @@ func (s *sBuying) CreatePurchaseOrder(ctx context.Context, req *buying.CreatePur
 	}
 
 	//提交采购订单
-	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePurchaseOrder, res.Name, 1)
+	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePurchaseOrder, j.Get("data.name").String(), erp.DocstatusSubmitted)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "提交采购订单失败")
 	}
 
 	return &buying.CreatePurchaseOrderResp{
 		Name:       j.Get("data.name").String(),
+		Status:     "Receive and Bill",
 		GrandTotal: j.Get("data.grand_total").Float64(),
 	}, nil
 }

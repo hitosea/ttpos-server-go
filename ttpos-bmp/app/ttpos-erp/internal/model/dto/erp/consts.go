@@ -19,6 +19,10 @@ const (
 	DocTypeSupplier        = "Supplier"
 	DocTypeItem            = "Item"
 	DocTypePurchaseOrder   = "Purchase Order"
+	DocTypeSaleOrder       = "Sales Order"
+	DocTypePurchaseReceipt = "Purchase Receipt"
+	DocTypeBom             = "BOM"
+	DocTypeMaterialRequest = "Material Request"
 )
 
 const (
