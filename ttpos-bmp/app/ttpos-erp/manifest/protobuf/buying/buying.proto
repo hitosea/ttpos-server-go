@@ -195,6 +195,49 @@ message GetPurchaseOrderCountResp {
   int32 count = 1; // 采购订单数量
 }
 
+// 创建采购订单请求消息
+message CreatePurchaseOrderReq {
+  string supplier = 1; // 供应商，必填
+  string company_abbr = 2; // 公司缩写，必填
+  string schedule_date = 3; // 计划日期 Y-m-d，必填
+  string currency = 4; // 货币，可选，默认THB
+  repeated PurchaseOrderItemInput items = 5; // 采购订单项目列表，必填
+  string remarks = 6; // 备注，可选
+}
+
+// 采购订单项目输入
+message PurchaseOrderItemInput {
+  string item_code = 1; // 物品编码，必填
+  double qty = 2; // 数量，必填
+  double rate = 3; // 单价，可选
+  string uom = 4; // 单位，可选
+  string warehouse = 5; // 仓库，可选
+}
+
+// 创建采购订单响应消息
+message CreatePurchaseOrderResp {
+  string name = 1; // 采购订单名称
+  string status = 2; // 状态
+  double grand_total = 3; // 总金额
+}
+
+// 更新采购订单请求消息
+message UpdatePurchaseOrderReq {
+  string name = 1; // 采购订单名称，必填
+  string supplier = 2; // 供应商，可选
+  string transaction_date = 3; // 交易日期 Y-m-d，可选
+  string schedule_date = 4; // 计划日期 Y-m-d，可选
+  repeated PurchaseOrderItemInput items = 5; // 采购订单项目列表，可选
+  string remarks = 6; // 备注，可选
+}
+
+// 更新采购订单响应消息
+message UpdatePurchaseOrderResp {
+  string name = 1; // 采购订单名称
+  string status = 2; // 状态
+  double grand_total = 3; // 总金额
+}
+
 service BuyingService {
   // 获取内部供应商列表
   // 参数：公司缩写编码
@@ -245,4 +288,14 @@ service BuyingService {
   // 参数：查询条件
   // 返回：采购订单数量
   rpc GetPurchaseOrderCount(GetPurchaseOrderCountReq) returns (erp.ResponseInfo);
+
+  // 创建采购订单
+  // 参数：采购订单创建信息
+  // 返回：创建结果
+  rpc CreatePurchaseOrder(CreatePurchaseOrderReq) returns (erp.ResponseInfo);
+
+  // 更新采购订单
+  // 参数：采购订单更新信息
+  // 返回：更新结果
+  rpc UpdatePurchaseOrder(UpdatePurchaseOrderReq) returns (erp.ResponseInfo);
 }
