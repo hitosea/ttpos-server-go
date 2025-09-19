@@ -18,6 +18,7 @@ const (
 	DocTypeBranch          = "Branch"
 	DocTypeSupplier        = "Supplier"
 	DocTypeItem            = "Item"
+	DocTypePurchaseOrder   = "Purchase Order"
 )
 
 const (
