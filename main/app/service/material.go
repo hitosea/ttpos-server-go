@@ -382,6 +382,12 @@ func (s *materialSrv) AddMaterial(ctx context.Context, req req.MaterialAddReq) e
 	dbId := ctx.GetDbId()
 	db := s.dbm.GetDB(dbId)
 
+	// 检查物品名称
+	productCheckSrv := NewProductCheckSrv(s.dbm, s.localeSrv, s.settingSrv)
+	if err := productCheckSrv.CheckProductName(ctx, 0, req.LocaleName); err != nil {
+		return errors.WithMessage(err, "检查物品名称失败")
+	}
+
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		material, materialAddErpReq, err := addMaterial(ctx, tx, req)
 		if err != nil {
@@ -576,6 +582,12 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 	// 验证请求参数
 	if err := request.Validate(); err != nil {
 		return errors.WithMessage(err)
+	}
+
+	// 检查物品名称
+	productCheckSrv := NewProductCheckSrv(s.dbm, s.localeSrv, s.settingSrv)
+	if err := productCheckSrv.CheckProductName(ctx, request.Uuid, request.LocaleName); err != nil {
+		return errors.WithMessage(err, "检查物品名称失败")
 	}
 
 	dbId := ctx.GetDbId()
@@ -1636,6 +1648,12 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 	dbId := ctx.GetDbId()
 	db := s.dbm.GetDB(dbId)
 	ctx.SetDB(db)
+
+	// 检查物品名称
+	productCheckSrv := NewProductCheckSrv(s.dbm, s.localeSrv, s.settingSrv)
+	if err := productCheckSrv.CheckProductName(ctx, 0, req.LocaleName); err != nil {
+		return errors.WithMessage(err, "检查物品名称失败")
+	}
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		// 创建物品
