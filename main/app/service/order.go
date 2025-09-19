@@ -10039,7 +10039,7 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 	// 如果有服务费，则添加一个虚拟商品来记录服务费
 	if saleOrder.ServiceFee > 0 {
 		items = append(items, &selling.PosInvoiceItem{
-			ItemCode: "VP001",
+			ItemCode: constant.PosInvoiceItemCodeServiceFee,
 			Qty:      saleOrder.ServiceFee,
 			Rate:     1,
 			Amount:   saleOrder.ServiceFee,
@@ -10052,7 +10052,7 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 	// 如果有支付手续费，则添加一个虚拟商品来记录支付手续费
 	if saleOrder.PaymentCommissionFee > 0 {
 		items = append(items, &selling.PosInvoiceItem{
-			ItemCode: "VP004",
+			ItemCode: constant.PosInvoiceItemCodePaymentProcessingFee,
 			Qty:      saleOrder.PaymentCommissionFee,
 			Rate:     1,
 			Amount:   saleOrder.PaymentCommissionFee,
@@ -10132,6 +10132,9 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 			}
 		}
 		for _, payment := range saleOrder.PaymentOrders {
+			if payment.IsDelete() {
+				continue
+			}
 			var modeOfPayment string
 			if method, ok := methodMap[payment.PaymentMethod.Code]; ok {
 				modeOfPayment = method
@@ -10254,7 +10257,7 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 	if returnType == constant.ReturnOrderRefundTypePart {
 		if totalServiceFee.GreaterThan(decimal.NewFromFloat(0)) {
 			items = append(items, &selling.PosInvoiceItem{
-				ItemCode: "VP001",
+				ItemCode: constant.PosInvoiceItemCodeServiceFee,
 				Qty:      -totalServiceFee.InexactFloat64(),
 				Rate:     1,
 				Amount:   -totalServiceFee.InexactFloat64(),
@@ -10269,7 +10272,7 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 	if returnType == constant.ReturnOrderRefundTypeTotal {
 		if saleOrder.PaymentCommissionFee > 0 { // 有支付手续费，才退
 			items = append(items, &selling.PosInvoiceItem{
-				ItemCode: "VP004",
+				ItemCode: constant.PosInvoiceItemCodePaymentProcessingFee,
 				Qty:      -saleOrder.PaymentCommissionFee,
 				Rate:     1,
 				Amount:   -saleOrder.PaymentCommissionFee,
@@ -10283,7 +10286,7 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 		if saleOrder.IsFixedServiceFee() {
 			if saleOrder.ServiceFee > 0 { // 有固定服务费，才退
 				items = append(items, &selling.PosInvoiceItem{
-					ItemCode: "VP001",
+					ItemCode: constant.PosInvoiceItemCodeServiceFee,
 					Qty:      -saleOrder.ServiceFee,
 					Rate:     1,
 					Amount:   -saleOrder.ServiceFee,
@@ -10297,7 +10300,7 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 			// 按比例收取服务费
 			if totalServiceFee.GreaterThan(decimal.NewFromFloat(0)) {
 				items = append(items, &selling.PosInvoiceItem{
-					ItemCode: "VP001",
+					ItemCode: constant.PosInvoiceItemCodeServiceFee,
 					Qty:      -totalServiceFee.InexactFloat64(),
 					Rate:     1,
 					Amount:   -totalServiceFee.InexactFloat64(),

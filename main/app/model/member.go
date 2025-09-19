@@ -348,6 +348,9 @@ type MemberRechargeOrder struct {
 	Balance          float64 `gorm:"column:balance;type:decimal(12,2);default:0.00;comment:充值前会员余额" json:"balance"`
 	BalanceRecharged float64 `gorm:"column:balance_recharged;type:decimal(12,2);default:0.00;comment:充值后会员余额" json:"balance_recharged"`
 
+	// ERP发票
+	ErpProductsInvoiceName string `gorm:"column:erp_products_invoice_name;type:varchar(255);comment:商品发票名称" json:"erp_products_invoice_name"`
+
 	PaymentOrders              []PaymentOrder                    `gorm:"foreignKey:RelatedUuid;references:Uuid"`       // 一个会员充值订单关联多个支付订单
 	Member                     *Member                           `gorm:"foreignKey:MemberUuid;references:Uuid"`        // 关联会员
 	Staff                      *Staff                            `gorm:"foreignKey:StaffUuid;references:Uuid"`         // 关联操作员工
@@ -369,6 +372,22 @@ func (model *MemberRechargeOrder) GetReceivableAmount() float64 {
 	payAmount = payAmount.Add(decimal.NewFromFloat(model.Amount))
 	payAmount = payAmount.Sub(decimal.NewFromFloat(model.RefundMoney))
 	return payAmount.InexactFloat64()
+}
+
+// 获取手续费金额
+func (model *MemberRechargeOrder) GetCommissionFee() float64 {
+	return decimal.NewFromFloat(model.Amount).Sub(decimal.NewFromFloat(model.RechargeAmount)).Round(2).InexactFloat64()
+}
+
+// erp是否进行过反结账
+func (model *MemberRechargeOrder) IsErpReverseSettle() bool {
+	// 结账后MemberRechargeOrder中就会记录下这两个发票名称
+	return model.ErpProductsInvoiceName != ""
+}
+
+// 剩余的充值金额。如充值10元，退款2元，则剩余8元
+func (model *MemberRechargeOrder) GetRemainingAmount() float64 {
+	return decimal.NewFromFloat(model.RechargeAmount).Sub(decimal.NewFromFloat(model.RefundAmount)).Round(2).InexactFloat64()
 }
 
 // MemberRechargeOrderOperationLog 会员充值订单操作记录表 `ttpos_member_recharge_order_operation_log`

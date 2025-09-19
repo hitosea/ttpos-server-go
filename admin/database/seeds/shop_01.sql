@@ -1505,6 +1505,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_recharge_order` (
     `payment_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '支付时间(时间戳)',
     `balance`  DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '充值前会员余额',
     `balance_recharged`  DECIMAL(22, 4) NOT NULL DEFAULT 0.00 COMMENT '充值后会员余额',
+    `erp_products_invoice_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '商品发票名称',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
