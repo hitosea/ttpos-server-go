@@ -23,7 +23,7 @@ type WarehouseHandler struct {
 // GetWarehouseList 获取仓库列表
 // @Summary 获取仓库列表
 // @Description 获取仓库列表，支持分页和筛选
-// @Tags 商家端.仓库管理
+// @Tags 商家端.仓库档案
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -53,7 +53,7 @@ func (h *WarehouseHandler) GetWarehouseList(c *gin.Context) {
 // GetWarehouse 获取仓库
 // @Summary 获取仓库
 // @Description 获取仓库
-// @Tags 商家端.仓库管理
+// @Tags 商家端.仓库档案
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -78,7 +78,7 @@ func (h *WarehouseHandler) GetWarehouse(c *gin.Context) {
 // CreateWarehouse 创建仓库
 // @Summary 创建仓库
 // @Description 创建新的仓库
-// @Tags 商家端.仓库管理
+// @Tags 商家端.仓库档案
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -104,7 +104,7 @@ func (h *WarehouseHandler) CreateWarehouse(c *gin.Context) {
 // UpdateWarehouse 更新仓库
 // @Summary 更新仓库
 // @Description 更新仓库信息
-// @Tags 商家端.仓库管理
+// @Tags 商家端.仓库档案
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -132,7 +132,7 @@ func (h *WarehouseHandler) UpdateWarehouse(c *gin.Context) {
 // SetDefaultWarehouse 设置默认仓库
 // @Summary 更新仓库
 // @Description 更新仓库信息
-// @Tags 商家端.仓库管理
+// @Tags 商家端.仓库档案
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -157,7 +157,7 @@ func (h *WarehouseHandler) SetDefaultWarehouse(c *gin.Context) {
 // DeleteWarehouse 删除仓库
 // @Summary 删除仓库
 // @Description 删除仓库
-// @Tags 商家端.仓库管理
+// @Tags 商家端.仓库档案
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -207,6 +207,5 @@ func RegisterWarehouseHandlers(router gin.IRouter, dbm *database.DBManager, cach
 		privateApi.POST("/warehouse/update", warehouseHandler.UpdateWarehouse)          // 更新仓库
 		privateApi.DELETE("/warehouse/delete", warehouseHandler.DeleteWarehouse)        // 删除仓库
 		privateApi.POST("/warehouse/set_default", warehouseHandler.SetDefaultWarehouse) // 设置默认
-
 	}
 }

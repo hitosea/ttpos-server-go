@@ -23689,7 +23689,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.供应商管理"
+                    "商家端.供应商档案"
                 ],
                 "summary": "获取供应商",
                 "parameters": [
@@ -23737,7 +23737,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.供应商管理"
+                    "商家端.供应商档案"
                 ],
                 "summary": "创建供应商",
                 "parameters": [
@@ -23788,7 +23788,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.供应商管理"
+                    "商家端.供应商档案"
                 ],
                 "summary": "删除供应商",
                 "parameters": [
@@ -23827,7 +23827,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.供应商管理"
+                    "商家端.供应商档案"
                 ],
                 "summary": "获取供应商列表",
                 "parameters": [
@@ -23889,7 +23889,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.供应商管理"
+                    "商家端.供应商档案"
                 ],
                 "summary": "获取供应商列表选择器",
                 "parameters": [
@@ -23937,7 +23937,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.供应商管理"
+                    "商家端.供应商档案"
                 ],
                 "summary": "更新供应商",
                 "parameters": [
@@ -23976,7 +23976,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.仓库管理"
+                    "商家端.仓库档案"
                 ],
                 "summary": "获取仓库",
                 "parameters": [
@@ -24024,7 +24024,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.仓库管理"
+                    "商家端.仓库档案"
                 ],
                 "summary": "创建仓库",
                 "parameters": [
@@ -24063,7 +24063,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.仓库管理"
+                    "商家端.仓库档案"
                 ],
                 "summary": "删除仓库",
                 "parameters": [
@@ -24102,7 +24102,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.仓库管理"
+                    "商家端.仓库档案"
                 ],
                 "summary": "获取仓库列表",
                 "parameters": [
@@ -24174,7 +24174,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.仓库管理"
+                    "商家端.仓库档案"
                 ],
                 "summary": "更新仓库",
                 "parameters": [
@@ -24213,7 +24213,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.仓库管理"
+                    "商家端.仓库档案"
                 ],
                 "summary": "更新仓库",
                 "parameters": [

@@ -26329,7 +26329,7 @@ paths:
       - JwtToken: []
       summary: 获取供应商
       tags:
-      - 商家端.供应商管理
+      - 商家端.供应商档案
   /shop/supplier/create:
     post:
       consumes:
@@ -26358,7 +26358,7 @@ paths:
       - JwtToken: []
       summary: 创建供应商
       tags:
-      - 商家端.供应商管理
+      - 商家端.供应商档案
   /shop/supplier/delete:
     delete:
       consumes:
@@ -26382,7 +26382,7 @@ paths:
       - JwtToken: []
       summary: 删除供应商
       tags:
-      - 商家端.供应商管理
+      - 商家端.供应商档案
   /shop/supplier/list:
     get:
       consumes:
@@ -26419,7 +26419,7 @@ paths:
       - JwtToken: []
       summary: 获取供应商列表
       tags:
-      - 商家端.供应商管理
+      - 商家端.供应商档案
   /shop/supplier/select:
     get:
       consumes:
@@ -26446,7 +26446,7 @@ paths:
       - JwtToken: []
       summary: 获取供应商列表选择器
       tags:
-      - 商家端.供应商管理
+      - 商家端.供应商档案
   /shop/supplier/update:
     post:
       consumes:
@@ -26470,7 +26470,7 @@ paths:
       - JwtToken: []
       summary: 更新供应商
       tags:
-      - 商家端.供应商管理
+      - 商家端.供应商档案
   /shop/warehouse:
     get:
       consumes:
@@ -26497,7 +26497,7 @@ paths:
       - JwtToken: []
       summary: 获取仓库
       tags:
-      - 商家端.仓库管理
+      - 商家端.仓库档案
   /shop/warehouse/create:
     post:
       consumes:
@@ -26521,7 +26521,7 @@ paths:
       - JwtToken: []
       summary: 创建仓库
       tags:
-      - 商家端.仓库管理
+      - 商家端.仓库档案
   /shop/warehouse/delete:
     delete:
       consumes:
@@ -26545,7 +26545,7 @@ paths:
       - JwtToken: []
       summary: 删除仓库
       tags:
-      - 商家端.仓库管理
+      - 商家端.仓库档案
   /shop/warehouse/list:
     get:
       consumes:
@@ -26588,7 +26588,7 @@ paths:
       - JwtToken: []
       summary: 获取仓库列表
       tags:
-      - 商家端.仓库管理
+      - 商家端.仓库档案
   /shop/warehouse/set_default:
     post:
       consumes:
@@ -26612,7 +26612,7 @@ paths:
       - JwtToken: []
       summary: 更新仓库
       tags:
-      - 商家端.仓库管理
+      - 商家端.仓库档案
   /shop/warehouse/update:
     post:
       consumes:
@@ -26636,7 +26636,7 @@ paths:
       - JwtToken: []
       summary: 更新仓库
       tags:
-      - 商家端.仓库管理
+      - 商家端.仓库档案
   /tablet/base:
     get:
       consumes:

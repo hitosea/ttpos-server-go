@@ -300,7 +300,7 @@ func (s *warehouseSrv) UpdateWarehouse(ctx context.Context, updateReq req.Update
 				Name: existingWarehouse.ErpCode,
 			})
 			if err != nil {
-				return errors.WithMessage(errors.New("创建供应商失败"), err.Error())
+				return errors.WithMessage(errors.New("更新仓库失败"), err.Error())
 			}
 		}
 

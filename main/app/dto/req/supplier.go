@@ -39,40 +39,6 @@ type SupplierSelectReq struct {
 	PurchaseType int `form:"purchase_type" json:"purchase_type"` // 采购类型, 1-外部采购 2-内部采购
 }
 
-// 供应商请求验证消息
-var SupplierCreateReqMessage = map[string]string{
-	"name.required":          "供应商名称不能为空",
-	"name.max":               "供应商名称不能超过100个字符",
-	"code.required":          "供应商编码不能为空",
-	"code.max":               "供应商编码不能超过50个字符",
-	"contact_name.required":  "联系人姓名不能为空",
-	"contact_name.max":       "联系人姓名不能超过50个字符",
-	"contact_phone.required": "联系人电话不能为空",
-	"contact_phone.max":      "联系人电话不能超过20个字符",
-	"position.max":           "职位不能超过50个字符",
-	"address.max":            "地址不能超过200个字符",
-	"staff_uuid.required":    "采购负责人不能为空",
-}
-
-var SupplierUpdateReqMessage = map[string]string{
-	"uuid.required":          "供应商UUID不能为空",
-	"name.required":          "供应商名称不能为空",
-	"name.max":               "供应商名称不能超过100个字符",
-	"code.required":          "供应商编码不能为空",
-	"code.max":               "供应商编码不能超过50个字符",
-	"contact_name.required":  "联系人姓名不能为空",
-	"contact_name.max":       "联系人姓名不能超过50个字符",
-	"contact_phone.required": "联系人电话不能为空",
-	"contact_phone.max":      "联系人电话不能超过20个字符",
-	"position.max":           "职位不能超过50个字符",
-	"address.max":            "地址不能超过200个字符",
-	"staff_uuid.required":    "采购负责人不能为空",
-}
-
-var SupplierDeleteReqMessage = map[string]string{
-	"uuid.required": "供应商UUID不能为空",
-}
-
 // SupplierReq 获取供应商请求
 type SupplierReq struct {
 	Uuid uint64 `json:"uuid" form:"uuid" binding:"required"` // 供应商UUID

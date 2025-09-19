@@ -23,7 +23,7 @@ type SupplierHandler struct {
 // GetSupplierList 获取供应商列表
 // @Summary 获取供应商列表
 // @Description 获取供应商列表，支持名称和编码关键字搜索
-// @Tags 商家端.供应商管理
+// @Tags 商家端.供应商档案
 // @Accept json
 // @Produce json
 // @Param keyword query string false "关键字搜索：名称、编码"
@@ -51,7 +51,7 @@ func (h *SupplierHandler) GetSupplierList(c *gin.Context) {
 // GetSupplier 获取供应商
 // @Summary 获取供应商
 // @Description 获取供应商列表，支持名称和编码关键字搜索
-// @Tags 商家端.供应商管理
+// @Tags 商家端.供应商档案
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -76,7 +76,7 @@ func (h *SupplierHandler) GetSupplier(c *gin.Context) {
 // CreateSupplier 创建供应商
 // @Summary 创建供应商
 // @Description 创建供应商，包含名称和编码重复性验证
-// @Tags 商家端.供应商管理
+// @Tags 商家端.供应商档案
 // @Accept json
 // @Produce json
 // @Param request body req.SupplierCreateReq true "创建供应商请求"
@@ -101,7 +101,7 @@ func (h *SupplierHandler) CreateSupplier(c *gin.Context) {
 // UpdateSupplier 更新供应商
 // @Summary 更新供应商
 // @Description 更新供应商信息，包含名称和编码重复性验证
-// @Tags 商家端.供应商管理
+// @Tags 商家端.供应商档案
 // @Accept json
 // @Produce json
 // @Param request body req.SupplierUpdateReq true "更新供应商请求"
@@ -126,7 +126,7 @@ func (h *SupplierHandler) UpdateSupplier(c *gin.Context) {
 // DeleteSupplier 删除供应商
 // @Summary 删除供应商
 // @Description 删除供应商
-// @Tags 商家端.供应商管理
+// @Tags 商家端.供应商档案
 // @Accept json
 // @Produce json
 // @Param request body req.SupplierDeleteReq true "删除供应商请求"
@@ -153,7 +153,7 @@ func (h *SupplierHandler) DeleteSupplier(c *gin.Context) {
 // GetSupplierSelect 获取供应商列表选择器
 // @Summary 获取供应商列表选择器
 // @Description 获取供应商列表选择器，支持根据是否外部采购过滤
-// @Tags 商家端.供应商管理
+// @Tags 商家端.供应商档案
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -164,7 +164,7 @@ func (h *SupplierHandler) GetSupplierSelect(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var selectReq req.SupplierSelectReq
 	if err := c.ShouldBindQuery(&selectReq); err != nil {
-		helper.HandleValidationError(c, err, selectReq, req.SupplierSelectReqMessage)
+		helper.HandleValidationError(c, err, selectReq, nil)
 		return
 	}
 
