@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"sort"
 	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-bmp/app/ttpos-erp/api/setup"
@@ -34,6 +36,19 @@ type sSetup struct{}
 
 func init() {
 	service.RegisterSetup(Setup)
+}
+
+// pruneNumericPrefix 删除目录名称中的数字前缀
+// 例如: "00_custom_fields" -> "custom_fields"
+// 参数：
+//   - dirName: 原始目录名称
+//
+// 返回：
+//   - string: 处理后的目录名称
+func (s *sSetup) pruneNumericPrefix(dirName string) string {
+	// 匹配以数字开头，后跟下划线的模式，如 "00_", "1_", "123_"
+	re := regexp.MustCompile(`^\d+_`)
+	return re.ReplaceAllString(dirName, "")
 }
 
 // CreateBranch 创建分店
@@ -487,25 +502,46 @@ func (s *sSetup) InitErpDocTypeWithDirname(ctx context.Context, dirBase string) 
 		return gerror.Newf("%s目录不存在", dirBase)
 	}
 	g.Log().Infof(ctx, "开始初始化%s", dirBase)
+
+	// 读取目录中的所有文件
 	files, err := os.ReadDir(dirBase)
 	if err != nil {
 		return gerror.Wrapf(err, "读取目录失败")
 	}
+
+	// 过滤出目录并按名称排序
+	var dirs []string
 	for _, file := range files {
 		if file.IsDir() {
-			config := DocumentInitConfig{
-				DirBase:  dirBase,
-				DirName:  file.Name(),
-				DocType:  utility.ConvertToTitleCase(file.Name()),
-				ItemName: utility.ConvertToTitleCase(file.Name()),
-			}
-			g.Log().Infof(ctx, "开始初始化%s，目录: %s", config.ItemName, file.Name())
-			s.initDocumentsFromDir(ctx, config)
+			dirs = append(dirs, file.Name())
 		}
 	}
-	if err != nil {
-		return gerror.Wrapf(err, "初始化%s失败", dirBase)
+
+	// 按照目录名称进行排序
+	sort.Strings(dirs)
+
+	// 按照排序后的顺序处理每个目录
+	for _, dirName := range dirs {
+		// 删除数字前缀（如 "00_"）
+		prunedDirName := s.pruneNumericPrefix(dirName)
+		g.Log().Infof(ctx, "处理目录: %s -> %s", dirName, prunedDirName)
+
+		config := DocumentInitConfig{
+			DirBase:  dirBase,
+			DirName:  dirName, // 保持原始目录名称用于文件路径
+			DocType:  utility.ConvertToTitleCase(prunedDirName),
+			ItemName: utility.ConvertToTitleCase(prunedDirName),
+		}
+		g.Log().Infof(ctx, "开始初始化%s，目录: %s", config.ItemName, prunedDirName)
+
+		// 处理单个目录，记录错误但不中断其他目录的处理
+		if err := s.initDocumentsFromDir(ctx, config); err != nil {
+			g.Log().Errorf(ctx, "初始化%s失败: %v", config.ItemName, err)
+			return gerror.Wrapf(err, "初始化%s失败", config.ItemName)
+		}
 	}
+
+	g.Log().Infof(ctx, "所有目录初始化完成")
 	return nil
 }
 

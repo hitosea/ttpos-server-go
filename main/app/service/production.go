@@ -311,17 +311,19 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 // getFinishedList 获取最近上菜历史
 func (s *productionSrv) getFinishedList(productionRepo repository.IProductionOrderRepo, mode *uint, opts ...repository.DBOption) (resp.ProductionList, error) {
 	var finishStatusOpt repository.DBOption = nil
+	var orderBy string = repository.FinishedTimeDesc
 	if mode != nil {
 		switch *mode {
 		case constant.KdsModeMake: // 制作模式，只显示已制作完成的商品
 			opts = append(opts, productionRepo.WhereProductMakeStatus([]uint{constant.ProductionOrderProductMakeStatusFinished}))
+			orderBy = repository.MadeTimeDesc
 		case constant.KdsModeDefault: // 传菜模式
 			finishStatusOpt = productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusFinished)
 		}
 	} else {
 		finishStatusOpt = productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusFinished)
 	}
-	finishedList, err := s.getLatestFinishedList(productionRepo, finishStatusOpt, opts...)
+	finishedList, err := s.getLatestFinishedList(productionRepo, orderBy, finishStatusOpt, opts...)
 	if err != nil {
 		errMsg := "获取最近上菜历史失败"
 		if mode != nil {
@@ -338,8 +340,8 @@ func (s *productionSrv) getFinishedList(productionRepo repository.IProductionOrd
 }
 
 // 最近上菜历史
-func (s *productionSrv) getLatestFinishedList(productionRepo repository.IProductionOrderRepo, statusOpt repository.DBOption, opts ...repository.DBOption) (resp.ProductionList, error) {
-	_, products, err := productionRepo.GetProducts(3, repository.FinishedTimeDesc, statusOpt, opts...)
+func (s *productionSrv) getLatestFinishedList(productionRepo repository.IProductionOrderRepo, orderBy string, statusOpt repository.DBOption, opts ...repository.DBOption) (resp.ProductionList, error) {
+	_, products, err := productionRepo.GetProducts(3, orderBy, statusOpt, opts...)
 	if err != nil {
 		return resp.ProductionList{}, errors.ErrInternal
 	}
@@ -621,9 +623,7 @@ func (s *productionSrv) Recovery(ctx context.Context, req req.RecoveryReq) error
 	if product.Uuid == 0 {
 		return errors.New("订单商品不存在")
 	}
-	if product.Status != constant.ProductionOrderProductStatusFinished {
-		return errors.New("订单商品未完成")
-	}
+
 	mode, err := s.getMode(ctx, req.Mode)
 	if err != nil {
 		return err
@@ -651,6 +651,9 @@ func (s *productionSrv) Recovery(ctx context.Context, req req.RecoveryReq) error
 		return nil
 	}
 
+	if product.Status != constant.ProductionOrderProductStatusFinished {
+		return errors.New("订单商品未完成")
+	}
 	err = db.Transaction(func(tx *gorm.DB) error {
 		productionRepo := repository.NewProductionRepo(tx)
 		if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(req.ProductUuid)}, map[string]any{

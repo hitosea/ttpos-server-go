@@ -26347,7 +26347,7 @@ paths:
       tags:
       - 商家端.供应商管理
   /shop/supplier/update:
-    put:
+    post:
       consumes:
       - application/json
       description: 更新供应商信息，包含名称和编码重复性验证
@@ -26462,7 +26462,7 @@ paths:
       tags:
       - 商家端.仓库管理
   /shop/warehouse/set_default:
-    put:
+    post:
       consumes:
       - application/json
       description: 更新仓库信息
@@ -26486,7 +26486,7 @@ paths:
       tags:
       - 商家端.仓库管理
   /shop/warehouse/update:
-    put:
+    post:
       consumes:
       - application/json
       description: 更新仓库信息

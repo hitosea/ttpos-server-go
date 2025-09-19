@@ -23867,7 +23867,7 @@ const docTemplate = `{
             }
         },
         "/shop/supplier/update": {
-            "put": {
+            "post": {
                 "security": [
                     {
                         "JwtToken": []
@@ -24056,7 +24056,7 @@ const docTemplate = `{
             }
         },
         "/shop/warehouse/set_default": {
-            "put": {
+            "post": {
                 "security": [
                     {
                         "JwtToken": []
@@ -24095,7 +24095,7 @@ const docTemplate = `{
             }
         },
         "/shop/warehouse/update": {
-            "put": {
+            "post": {
                 "security": [
                     {
                         "JwtToken": []
