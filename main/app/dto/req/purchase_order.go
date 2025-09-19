@@ -16,8 +16,11 @@ type PurchaseOrderListReq struct {
 type PurchaseOrderCreateReq struct {
 	OrderTime            int64                        `json:"order_time" binding:"required,min=0"`              // 单据日期
 	SupplierName         string                       `json:"supplier_name" binding:"required,min=1"`           // 供应商名称
+	SupplierErpCode      string                       `json:"supplier_erp_code" binding:"omitempty,max=255"`    // V2.6 供应商编码
 	ExpectedDeliveryTime int64                        `json:"expected_delivery_time" binding:"omitempty,min=0"` // 期望到货时间(时间戳)
 	Items                []PurchaseOrderItemCreateReq `json:"items" binding:"required,min=1,max=200,dive"`      // 物品明细
+	PurchaseType         int                          `json:"purchase_type" binding:"omitempty,min=0,max=1"`    // V2.6  采购类型, 1-外部采购 2-内部采购
+	WarehouseErpCode     string                       `json:"warehouse_erp_code" binding:"omitempty,max=255"`   // V2.6 仓库编码
 }
 
 func (r *PurchaseOrderCreateReq) Validate() error {
@@ -46,6 +49,8 @@ type PurchaseOrderUpdateReq struct {
 	Uuid                 uint64                       `json:"uuid" binding:"required,min=1"`                    // 采购订单ID
 	ExpectedDeliveryTime int64                        `json:"expected_delivery_time" binding:"omitempty,min=0"` // 期望到货时间(时间戳)
 	SupplierName         string                       `json:"supplier_name" binding:"omitempty,min=1"`          // 供应商名称
+	SupplierErpCode      string                       `json:"supplier_erp_code" binding:"omitempty,max=255"`    // V2.6 供应商编码
+	WarehouseErpCode     string                       `json:"warehouse_erp_code" binding:"omitempty,max=255"`   // V2.6 仓库编码
 	Items                []PurchaseOrderItemUpdateReq `json:"items" binding:"omitempty,min=1,max=200,dive"`     // 采购商品明细
 }
 

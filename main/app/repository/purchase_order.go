@@ -38,6 +38,8 @@ type IPurchaseOrderRepo interface {
 	WithLogs() DBOption
 	WithReceipts() DBOption
 	OrderByCreateTime(desc bool) DBOption
+	OrderByOrderTime(desc bool) DBOption
+
 	OrderByStatus() DBOption
 	OrderByPriority() DBOption
 
@@ -262,6 +264,16 @@ func (r *PurchaseOrderRepoImpl) OrderByCreateTime(desc bool) DBOption {
 			return db.Order("create_time DESC")
 		}
 		return db.Order("create_time ASC")
+	}
+}
+
+// OrderByOrderTime 按订单时间排序
+func (r *PurchaseOrderRepoImpl) OrderByOrderTime(desc bool) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if desc {
+			return db.Order("order_time DESC")
+		}
+		return db.Order("order_time ASC")
 	}
 }
 

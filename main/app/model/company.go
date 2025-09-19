@@ -160,6 +160,7 @@ func (model *CompanySetting) GetDeliveryConfig(channel string, distance float64)
 	return config, nil
 }
 
+// 是否连锁店
 func (model *CompanySetting) IsTtposSite() bool {
 	return model.ErpnextSiteCode == "1" || model.ErpnextSiteCode == ""
 }

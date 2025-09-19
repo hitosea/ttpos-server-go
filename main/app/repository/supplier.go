@@ -25,6 +25,8 @@ type ISupplierRepo interface {
 	WhereNameOrCodeLike(name string) DBOption
 	OrderByCreateTime(desc bool) DBOption
 	OrderByName(desc bool) DBOption
+	WhereNotDeleted() DBOption
+	WhereErpCodeExists() DBOption
 }
 
 // SupplierRepoImpl 供应商Repository实现
@@ -148,6 +150,13 @@ func (r *SupplierRepoImpl) applyOptions(db *gorm.DB, opts ...DBOption) *gorm.DB 
 func (r *SupplierRepoImpl) WhereNameOrCodeLike(name string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("name LIKE ? OR code LIKE ?", "%"+name+"%", "%"+name+"%")
+	}
+}
+
+// WhereErpCodeExists 存在erp_code条件
+func (r *SupplierRepoImpl) WhereErpCodeExists() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("erp_code != ?", "")
 	}
 }
 

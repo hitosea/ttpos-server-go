@@ -77,7 +77,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderList(ctx context.Context, req req.Pur
 	}
 
 	// 排序
-	opts = append(opts, purchaseOrderRepo.OrderByCreateTime(true))
+	opts = append(opts, purchaseOrderRepo.OrderByOrderTime(true))
 
 	// WithItems()
 	opts = append(opts, purchaseOrderRepo.WithItems())
@@ -154,6 +154,15 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 		return resp.PurchaseOrderCreateResp{}, err
 	}
 
+	if ctx.Version(context.GTE, "2.6.0") {
+		if req.SupplierErpCode == "" {
+			return resp.PurchaseOrderCreateResp{}, errors.New("供应商编码不能为空")
+		}
+		if req.PurchaseType == 2 && req.WarehouseErpCode == "" {
+			return resp.PurchaseOrderCreateResp{}, errors.New("仓库编码不能为空")
+		}
+	}
+
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	var result resp.PurchaseOrderCreateResp
@@ -164,12 +173,20 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 		purchaseOrder := &model.PurchaseOrder{
 			OrderNo:           s.generateOrderNo(ctx, db),
 			SupplierName:      req.SupplierName,
+			SupplierErpCode:   utils.IfString(req.SupplierErpCode != "", req.SupplierErpCode, req.SupplierName),
 			Status:            constant.PurchaseOrderStatusDraft, // 待提交状态
 			Num:               float64(len(req.Items)),
 			OrderTime:         req.OrderTime,
 			ExpectArrivalTime: req.ExpectedDeliveryTime,
 			ApplicantUuid:     ctx.GetStaffUuid(),
 			ApplicantName:     ctx.GetStaff().RealName,
+			PurchaseType: func() int {
+				if req.PurchaseType == 2 {
+					return 2
+				}
+				return 1
+			}(),
+			WarehouseErpCode: req.WarehouseErpCode,
 		}
 		err := purchaseOrderRepo.Create(purchaseOrder)
 		if err != nil {
@@ -293,10 +310,21 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(ctx context.Context, req req.Purc
 			return errors.New("当前状态不允许编辑")
 		}
 
+		if ctx.Version(context.GTE, "2.6.0") {
+			if req.SupplierErpCode == "" {
+				return errors.New("供应商编码不能为空")
+			}
+			if purchaseOrder.PurchaseType == 2 && req.WarehouseErpCode == "" {
+				return errors.New("仓库编码不能为空")
+			}
+		}
+
 		// 更新采购申请基本信息
 		purchaseOrder.Num = float64(len(req.Items))
 		purchaseOrder.SupplierName = req.SupplierName
+		purchaseOrder.SupplierErpCode = req.SupplierErpCode
 		purchaseOrder.ExpectArrivalTime = req.ExpectedDeliveryTime
+		purchaseOrder.WarehouseErpCode = req.WarehouseErpCode
 		err = purchaseOrderRepo.Update(purchaseOrder)
 		if err != nil {
 			return errors.WithMessage(err, "更新采购申请失败")
