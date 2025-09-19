@@ -1729,7 +1729,7 @@ func GetEnName(ctx context.Context, locale dto.LocaleResponse) (string, error) {
 		},
 	})
 	if err != nil {
-		return "", errors.WithMessage(err, "翻译失败")
+		return "", errors.WithMessage(errors.New("翻译失败"), err.Error())
 	}
 	return res.Data[0].En, nil
 }

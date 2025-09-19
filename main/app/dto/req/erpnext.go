@@ -150,3 +150,41 @@ type AddPaymentMethodReq struct {
 	CheckoutShow       []string `json:"checkout_show"`                      // 结账显示，可选cashier、assistant
 	MemberRechargeShow []string `json:"member_recharge_show"`               // 会员充值显示，可选cashier
 }
+
+type CreateSupplierReq struct {
+	SiteCode     string
+	SupplierName string // 供应商名称
+	CompanyAbbr  string // 公司缩写编码
+	Branch       string // 分支
+	Disabled     bool   // 是否禁用
+}
+
+type UpdateSupplierReq struct {
+	CreateSupplierReq
+	Name string // 供应商erp_code
+}
+
+type DeleteSupplierReq struct {
+	Name     string // 供应商erp_code
+	SiteCode string // 站点编码
+}
+
+type CreateErpnextWarehouseReq struct {
+	SiteCode      string // 站点编码
+	WarehouseName string // 仓库名称
+	AliasName     string // 别名
+	CompanyAbbr   string // 公司简称
+	Branch        string // 分支
+	Disabled      bool   // 是否禁用
+	WarehouseType string // 仓库类型
+}
+
+type UpdateErpnextWarehouseReq struct {
+	CreateErpnextWarehouseReq
+	Name string // erp_Code
+}
+
+type DeleteErpnextWarehouseReq struct {
+	SiteCode string // 站点编码
+	Name     string // erp_code
+}

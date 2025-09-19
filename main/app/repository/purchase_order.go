@@ -52,6 +52,9 @@ type IPurchaseOrderRepo interface {
 
 	// 获取今天最新的采购申请
 	GetLatestOrderToday() (*model.PurchaseOrder, error)
+
+	// 判断供应商是否存在
+	IsSupplierExists(supplierErpCode string) (bool, error)
 }
 
 // PurchaseOrderRepoImpl 采购订单Repository实现
@@ -429,4 +432,13 @@ func (r *PurchaseOrderRepoImpl) applyOptions(db *gorm.DB, opts ...DBOption) *gor
 		db = opt(db)
 	}
 	return db
+}
+
+func (r *PurchaseOrderRepoImpl) IsSupplierExists(supplierErpCode string) (bool, error) {
+	var count int64
+	err := r.db.Model(&model.PurchaseOrder{}).Where("supplier_erp_code = ?", supplierErpCode).Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }

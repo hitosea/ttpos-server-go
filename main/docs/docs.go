@@ -23674,6 +23674,54 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/supplier": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取供应商列表，支持名称和编码关键字搜索",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.供应商管理"
+                ],
+                "summary": "获取供应商",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "供应商ID",
+                        "name": "uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.SupplierResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/supplier/create": {
             "post": {
                 "security": [
@@ -23833,7 +23881,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "获取供应商列表选择器",
+                "description": "获取供应商列表选择器，支持根据是否外部采购过滤",
                 "consumes": [
                     "application/json"
                 ],
@@ -23844,6 +23892,14 @@ const docTemplate = `{
                     "商家端.供应商管理"
                 ],
                 "summary": "获取供应商列表选择器",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "采购类型, 1-外部采购 2-内部采购",
+                        "name": "purchase_type",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "成功",
@@ -23900,6 +23956,54 @@ const docTemplate = `{
                         "description": "成功",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/warehouse": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取仓库",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.仓库管理"
+                ],
+                "summary": "获取仓库",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "仓库ID",
+                        "name": "uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.WarehouseResp"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -33031,10 +33135,26 @@ const docTemplate = `{
                     "type": "integer",
                     "minimum": 0
                 },
+                "purchase_type": {
+                    "description": "V2.6  采购类型, 1-外部采购 2-内部采购",
+                    "type": "integer",
+                    "maximum": 1,
+                    "minimum": 0
+                },
+                "supplier_erp_code": {
+                    "description": "V2.6 供应商编码",
+                    "type": "string",
+                    "maxLength": 255
+                },
                 "supplier_name": {
                     "description": "供应商名称",
                     "type": "string",
                     "minLength": 1
+                },
+                "warehouse_erp_code": {
+                    "description": "V2.6 仓库编码",
+                    "type": "string",
+                    "maxLength": 255
                 }
             }
         },
@@ -33148,6 +33268,11 @@ const docTemplate = `{
                         "$ref": "#/definitions/req.PurchaseOrderItemUpdateReq"
                     }
                 },
+                "supplier_erp_code": {
+                    "description": "V2.6 供应商编码",
+                    "type": "string",
+                    "maxLength": 255
+                },
                 "supplier_name": {
                     "description": "供应商名称",
                     "type": "string",
@@ -33157,6 +33282,11 @@ const docTemplate = `{
                     "description": "采购订单ID",
                     "type": "integer",
                     "minimum": 1
+                },
+                "warehouse_erp_code": {
+                    "description": "V2.6 仓库编码",
+                    "type": "string",
+                    "maxLength": 255
                 }
             }
         },
@@ -39611,6 +39741,14 @@ const docTemplate = `{
         "resp.PurchaseOrderDetailResp": {
             "type": "object",
             "properties": {
+                "company_name": {
+                    "description": "V2.6 公司名称",
+                    "type": "string"
+                },
+                "company_uuid": {
+                    "description": "V2.6 公司UUID",
+                    "type": "integer"
+                },
                 "erp_order_no": {
                     "description": "ERP申请单编号（采购单号）",
                     "type": "string"
@@ -39618,6 +39756,10 @@ const docTemplate = `{
                 "expect_arrival_time": {
                     "description": "期望到货日期",
                     "type": "integer"
+                },
+                "headquarter_status": {
+                    "description": "V2.6 总部状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)",
+                    "type": "string"
                 },
                 "items": {
                     "description": "采购明细",
@@ -39642,6 +39784,10 @@ const docTemplate = `{
                     "description": "申请类型",
                     "type": "integer"
                 },
+                "purchase_type": {
+                    "description": "V2.6 采购类型",
+                    "type": "integer"
+                },
                 "receipt_progress": {
                     "description": "收货进度（百分比0.00%）前端直接显示",
                     "type": "string"
@@ -39650,6 +39796,10 @@ const docTemplate = `{
                     "description": "状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)",
                     "type": "integer"
                 },
+                "supplier_erp_code": {
+                    "description": "供应商编码",
+                    "type": "string"
+                },
                 "supplier_name": {
                     "description": "供应商名称",
                     "type": "string"
@@ -39657,12 +39807,24 @@ const docTemplate = `{
                 "uuid": {
                     "description": "采购订单ID",
                     "type": "integer"
+                },
+                "warehouse_erp_code": {
+                    "description": "V2.6 仓库编码",
+                    "type": "string"
                 }
             }
         },
         "resp.PurchaseOrderInfo": {
             "type": "object",
             "properties": {
+                "company_name": {
+                    "description": "V2.6 公司名称",
+                    "type": "string"
+                },
+                "company_uuid": {
+                    "description": "V2.6 公司UUID",
+                    "type": "integer"
+                },
                 "erp_order_no": {
                     "description": "ERP申请单编号（采购单号）",
                     "type": "string"
@@ -39670,6 +39832,10 @@ const docTemplate = `{
                 "expect_arrival_time": {
                     "description": "期望到货日期",
                     "type": "integer"
+                },
+                "headquarter_status": {
+                    "description": "V2.6 总部状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)",
+                    "type": "string"
                 },
                 "num": {
                     "description": "物品数量",
@@ -39687,6 +39853,10 @@ const docTemplate = `{
                     "description": "申请类型",
                     "type": "integer"
                 },
+                "purchase_type": {
+                    "description": "V2.6 采购类型",
+                    "type": "integer"
+                },
                 "receipt_progress": {
                     "description": "收货进度（百分比0.00%）前端直接显示",
                     "type": "string"
@@ -39695,6 +39865,10 @@ const docTemplate = `{
                     "description": "状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)",
                     "type": "integer"
                 },
+                "supplier_erp_code": {
+                    "description": "供应商编码",
+                    "type": "string"
+                },
                 "supplier_name": {
                     "description": "供应商名称",
                     "type": "string"
@@ -39702,6 +39876,10 @@ const docTemplate = `{
                 "uuid": {
                     "description": "采购订单ID",
                     "type": "integer"
+                },
+                "warehouse_erp_code": {
+                    "description": "V2.6 仓库编码",
+                    "type": "string"
                 }
             }
         },
@@ -41300,45 +41478,17 @@ const docTemplate = `{
         "resp.SupplierInfo": {
             "type": "object",
             "properties": {
-                "address": {
-                    "description": "供应商地址",
-                    "type": "string"
-                },
                 "code": {
                     "description": "供应商编码",
                     "type": "string"
                 },
-                "contact_name": {
-                    "description": "联系人姓名",
-                    "type": "string"
-                },
-                "contact_phone": {
-                    "description": "联系人电话",
-                    "type": "string"
-                },
-                "create_time": {
-                    "description": "创建时间",
-                    "type": "integer"
+                "is_headquarter": {
+                    "description": "是否为总部",
+                    "type": "boolean"
                 },
                 "name": {
                     "description": "供应商名称",
                     "type": "string"
-                },
-                "position": {
-                    "description": "职位",
-                    "type": "string"
-                },
-                "staff_uuid": {
-                    "description": "采购负责人UUID",
-                    "type": "integer"
-                },
-                "status": {
-                    "description": "状态：0-禁用；1-启用",
-                    "type": "integer"
-                },
-                "update_time": {
-                    "description": "更新时间",
-                    "type": "integer"
                 },
                 "uuid": {
                     "description": "供应商UUID",
@@ -41360,6 +41510,47 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.SupplierResp": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "description": "供应商地址",
+                    "type": "string"
+                },
+                "code": {
+                    "description": "供应商编码",
+                    "type": "string"
+                },
+                "contact_name": {
+                    "description": "联系人姓名",
+                    "type": "string"
+                },
+                "contact_phone": {
+                    "description": "联系人电话",
+                    "type": "string"
+                },
+                "has_related_purchase_order": {
+                    "description": "是否有关联的采购单",
+                    "type": "boolean"
+                },
+                "is_headquarter": {
+                    "description": "是否为总部",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "供应商名称",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "状态：0-禁用；1-启用",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "供应商UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "resp.SupplierSelectResp": {
             "type": "object",
             "properties": {
@@ -41374,6 +41565,10 @@ const docTemplate = `{
         "resp.SupplierSimpleInfo": {
             "type": "object",
             "properties": {
+                "code": {
+                    "description": "供应商编码",
+                    "type": "string"
+                },
                 "name": {
                     "description": "供应商名称",
                     "type": "string"

@@ -55,7 +55,7 @@ func (r *WarehouseRepoImpl) Delete(uuid uint64) error {
 // GetByUuid 根据UUID获取仓库
 func (r *WarehouseRepoImpl) GetByUuid(uuid uint64, opts ...DBOption) (*model.Warehouse, error) {
 	var warehouse model.Warehouse
-	query := r.db.Where("uuid = ?", uuid).Scopes(NotDeleted)
+	query := r.db.Where("uuid = ?", uuid).Preload("MultiLanguageName").Scopes(NotDeleted)
 	// 应用查询选项
 	for _, opt := range opts {
 		query = opt(query)
@@ -65,48 +65,6 @@ func (r *WarehouseRepoImpl) GetByUuid(uuid uint64, opts ...DBOption) (*model.War
 		return nil, err
 	}
 	return &warehouse, nil
-}
-
-// GetByCode 根据编码获取仓库
-func (r *WarehouseRepoImpl) GetByCode(code string, opts ...DBOption) (*model.Warehouse, error) {
-	var warehouse model.Warehouse
-	query := r.db.Where("code = ?", code)
-	// 应用查询选项
-	for _, opt := range opts {
-		query = opt(query)
-	}
-	err := query.First(&warehouse).Error
-	if err != nil {
-		return nil, err
-	}
-	return &warehouse, nil
-}
-
-// GetByName 根据名称获取仓库
-func (r *WarehouseRepoImpl) GetByName(name string, opts ...DBOption) (*model.Warehouse, error) {
-	var warehouse model.Warehouse
-	query := r.db.Where("name = ?", name)
-	// 应用查询选项
-	for _, opt := range opts {
-		query = opt(query)
-	}
-	err := query.First(&warehouse).Error
-	if err != nil {
-		return nil, err
-	}
-	return &warehouse, nil
-}
-
-// GetList 获取仓库列表
-func (r *WarehouseRepoImpl) GetList(opts ...DBOption) ([]model.Warehouse, error) {
-	var warehouses []model.Warehouse
-	query := r.db.Model(&model.Warehouse{})
-	// 应用查询选项
-	for _, opt := range opts {
-		query = opt(query)
-	}
-	err := query.Find(&warehouses).Error
-	return warehouses, err
 }
 
 // GetListWithPagination 分页获取仓库列表

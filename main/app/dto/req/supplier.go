@@ -73,6 +73,11 @@ var SupplierDeleteReqMessage = map[string]string{
 	"uuid.required": "供应商UUID不能为空",
 }
 
+// SupplierReq 获取供应商请求
+type SupplierReq struct {
+	Uuid uint64 `json:"uuid" form:"uuid" binding:"required"` // 供应商UUID
+}
+
 var SupplierSelectReqMessage = map[string]string{
 	"is_external.oneof": "是否外部采购参数值只能是0或1",
 }

@@ -38,6 +38,11 @@ type DeleteWarehouseReq struct {
 	Uuid uint64 `json:"uuid" binding:"required"` // 仓库ID
 }
 
+// DeleteWarehouseReq 删除仓库请求
+type WarehouseReq struct {
+	Uuid uint64 `json:"uuid" form:"uuid" binding:"required"` // 仓库ID
+}
+
 // WarehouseDetailReq 仓库详情请求
 type WarehouseDetailReq struct {
 	Uuid uint64 `json:"uuid" form:"uuid" binding:"required"` // 仓库ID

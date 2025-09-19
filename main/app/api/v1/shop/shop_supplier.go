@@ -35,7 +35,7 @@ type SupplierHandler struct {
 func (h *SupplierHandler) GetSupplierList(c *gin.Context) {
 	var request req.SupplierListReq
 	if err := c.ShouldBind(&request); err != nil {
-		helper.Fail(c, constant.CodeParamError, "参数错误")
+		helper.HandleValidationError(c, err, request, nil)
 		return
 	}
 	ctx := helper.GetContext(c)
@@ -45,6 +45,31 @@ func (h *SupplierHandler) GetSupplierList(c *gin.Context) {
 		return
 	}
 
+	helper.Success(c, result)
+}
+
+// GetSupplier 获取供应商
+// @Summary 获取供应商
+// @Description 获取供应商列表，支持名称和编码关键字搜索
+// @Tags 商家端.供应商管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param uuid query string false "供应商ID"
+// @Success 200 {object} dto.Response{data=resp.SupplierResp} "成功"
+// @Router /shop/supplier [get]
+func (h *SupplierHandler) GetSupplier(c *gin.Context) {
+	var request req.SupplierReq
+	if err := c.ShouldBindQuery(&request); err != nil {
+		helper.HandleValidationError(c, err, request, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	result, err := h.supplierSrv.GetSupplier(ctx, request)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
 	helper.Success(c, result)
 }
 
@@ -61,7 +86,7 @@ func (h *SupplierHandler) GetSupplierList(c *gin.Context) {
 func (h *SupplierHandler) CreateSupplier(c *gin.Context) {
 	var request req.SupplierCreateReq
 	if err := c.ShouldBindJSON(&request); err != nil {
-		helper.HandleValidationError(c, err, request, req.SupplierCreateReqMessage)
+		helper.HandleValidationError(c, err, request, nil)
 		return
 	}
 	ctx := helper.GetContext(c)
@@ -86,7 +111,7 @@ func (h *SupplierHandler) CreateSupplier(c *gin.Context) {
 func (h *SupplierHandler) UpdateSupplier(c *gin.Context) {
 	var request req.SupplierUpdateReq
 	if err := c.ShouldBindJSON(&request); err != nil {
-		helper.HandleValidationError(c, err, request, req.SupplierUpdateReqMessage)
+		helper.HandleValidationError(c, err, request, nil)
 		return
 	}
 	ctx := helper.GetContext(c)
@@ -111,7 +136,7 @@ func (h *SupplierHandler) UpdateSupplier(c *gin.Context) {
 func (h *SupplierHandler) DeleteSupplier(c *gin.Context) {
 	var request req.SupplierDeleteReq
 	if err := c.ShouldBindJSON(&request); err != nil {
-		helper.HandleValidationError(c, err, request, req.SupplierDeleteReqMessage)
+		helper.HandleValidationError(c, err, request, nil)
 		return
 	}
 
@@ -176,6 +201,7 @@ func RegisterSupplierHandlers(router gin.IRouter, dbm *database.DBManager, cache
 	{
 		privateApi.GET("/supplier/select", wrapper.GetSupplierSelect)
 		privateApi.GET("/supplier/list", wrapper.GetSupplierList)
+		privateApi.GET("/supplier", wrapper.GetSupplier)
 		privateApi.POST("/supplier/create", wrapper.CreateSupplier)
 		privateApi.POST("/supplier/update", wrapper.UpdateSupplier)
 		privateApi.DELETE("/supplier/delete", wrapper.DeleteSupplier)

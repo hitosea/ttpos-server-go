@@ -38,7 +38,7 @@ func (h *WarehouseHandler) GetWarehouseList(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var request req.WarehouseListReq
 	if err := c.ShouldBindQuery(&request); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		helper.HandleValidationError(c, err, request, nil)
 		return
 	}
 	result, err := h.warehouseSrv.GetWarehouseList(ctx, request)
@@ -47,6 +47,31 @@ func (h *WarehouseHandler) GetWarehouseList(c *gin.Context) {
 		return
 	}
 
+	helper.Success(c, result)
+}
+
+// GetWarehouse 获取仓库
+// @Summary 获取仓库
+// @Description 获取仓库
+// @Tags 商家端.仓库管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param uuid query string false "仓库ID"
+// @Success 200 {object} dto.Response{data=resp.WarehouseResp} "成功"
+// @Router /shop/warehouse [get]
+func (h *WarehouseHandler) GetWarehouse(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var request req.WarehouseReq
+	if err := c.ShouldBindQuery(&request); err != nil {
+		helper.HandleValidationError(c, err, request, nil)
+		return
+	}
+	result, err := h.warehouseSrv.GetWarehouse(ctx, request)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
 	helper.Success(c, result)
 }
 
@@ -62,13 +87,11 @@ func (h *WarehouseHandler) GetWarehouseList(c *gin.Context) {
 // @Router /shop/warehouse/create [post]
 func (h *WarehouseHandler) CreateWarehouse(c *gin.Context) {
 	ctx := helper.GetContext(c)
-
 	var request req.CreateWarehouseReq
 	if err := c.ShouldBindJSON(&request); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		helper.HandleValidationError(c, err, request, nil)
 		return
 	}
-
 	err := h.warehouseSrv.CreateWarehouse(ctx, request)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -93,7 +116,7 @@ func (h *WarehouseHandler) UpdateWarehouse(c *gin.Context) {
 
 	var request req.UpdateWarehouseReq
 	if err := c.ShouldBindJSON(&request); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		helper.HandleValidationError(c, err, request, nil)
 		return
 	}
 
@@ -120,7 +143,7 @@ func (h *WarehouseHandler) SetDefaultWarehouse(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var request req.SetDefaultWarehouseReq
 	if err := c.ShouldBindJSON(&request); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		helper.HandleValidationError(c, err, request, nil)
 		return
 	}
 	err := h.warehouseSrv.SetDefaultWarehouse(ctx, request)
@@ -145,7 +168,7 @@ func (h *WarehouseHandler) DeleteWarehouse(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var request req.DeleteWarehouseReq
 	if err := c.ShouldBindJSON(&request); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		helper.HandleValidationError(c, err, request, nil)
 		return
 	}
 	err := h.warehouseSrv.DeleteWarehouse(ctx, request)
@@ -178,8 +201,8 @@ func RegisterWarehouseHandlers(router gin.IRouter, dbm *database.DBManager, cach
 	// 需要认证的路由
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-
 		privateApi.GET("/warehouse/list", warehouseHandler.GetWarehouseList)            // 仓库列表
+		privateApi.GET("/warehouse", warehouseHandler.GetWarehouse)                     // 获取仓库
 		privateApi.POST("/warehouse/create", warehouseHandler.CreateWarehouse)          // 创建仓库
 		privateApi.POST("/warehouse/update", warehouseHandler.UpdateWarehouse)          // 更新仓库
 		privateApi.DELETE("/warehouse/delete", warehouseHandler.DeleteWarehouse)        // 删除仓库
