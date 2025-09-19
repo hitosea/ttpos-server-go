@@ -14,19 +14,14 @@ type ISupplierRepo interface {
 	Update(supplier *model.Supplier) error
 	Delete(uuid uint64) error
 	GetByUuid(uuid uint64, opts ...DBOption) (*model.Supplier, error)
-	GetByName(name string, opts ...DBOption) (*model.Supplier, error)
-	GetByCode(code string, opts ...DBOption) (*model.Supplier, error)
 
 	// 查询操作
 	GetList(opts ...DBOption) ([]model.Supplier, error)
 	GetListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.Supplier, int64, error)
-	Count(opts ...DBOption) (int64, error)
 	IsNameExists(name string, excludeUuid uint64) (bool, error)
 	IsCodeExists(code string, excludeUuid uint64) (bool, error)
 
 	// 条件查询选项
-	WhereUuid(uuid uint64) DBOption
-	WhereName(name string) DBOption
 	WhereNameOrCodeLike(name string) DBOption
 	OrderByCreateTime(desc bool) DBOption
 	OrderByName(desc bool) DBOption
@@ -71,30 +66,6 @@ func (r *SupplierRepoImpl) GetByUuid(uuid uint64, opts ...DBOption) (*model.Supp
 	return &supplier, nil
 }
 
-// GetByName 根据名称查询供应商
-func (r *SupplierRepoImpl) GetByName(name string, opts ...DBOption) (*model.Supplier, error) {
-	var supplier model.Supplier
-	db := r.db.Model(&model.Supplier{}).Where("name = ?", name)
-	db = r.applyOptions(db, opts...)
-	err := db.First(&supplier).Error
-	if err != nil {
-		return nil, err
-	}
-	return &supplier, nil
-}
-
-// GetByCode 根据编码查询供应商
-func (r *SupplierRepoImpl) GetByCode(code string, opts ...DBOption) (*model.Supplier, error) {
-	var supplier model.Supplier
-	db := r.db.Model(&model.Supplier{}).Where("code = ?", code)
-	db = r.applyOptions(db, opts...)
-	err := db.First(&supplier).Error
-	if err != nil {
-		return nil, err
-	}
-	return &supplier, nil
-}
-
 // GetList 获取供应商列表
 func (r *SupplierRepoImpl) GetList(opts ...DBOption) ([]model.Supplier, error) {
 	var suppliers []model.Supplier
@@ -127,15 +98,6 @@ func (r *SupplierRepoImpl) GetListWithPagination(pageNo, pageSize int, opts ...D
 	}
 
 	return suppliers, total, nil
-}
-
-// Count 统计供应商数量
-func (r *SupplierRepoImpl) Count(opts ...DBOption) (int64, error) {
-	var count int64
-	db := r.db.Model(&model.Supplier{})
-	db = r.applyOptions(db, opts...)
-	err := db.Count(&count).Error
-	return count, err
 }
 
 // IsNameExists 检查供应商名称是否存在
@@ -181,20 +143,6 @@ func (r *SupplierRepoImpl) applyOptions(db *gorm.DB, opts ...DBOption) *gorm.DB 
 }
 
 // 查询选项实现
-
-// WhereUuid UUID条件
-func (r *SupplierRepoImpl) WhereUuid(uuid uint64) DBOption {
-	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("uuid = ?", uuid)
-	}
-}
-
-// WhereName 名称精确匹配条件
-func (r *SupplierRepoImpl) WhereName(name string) DBOption {
-	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("name = ?", name)
-	}
-}
 
 // WhereNameLike 名称模糊匹配条件
 func (r *SupplierRepoImpl) WhereNameOrCodeLike(name string) DBOption {

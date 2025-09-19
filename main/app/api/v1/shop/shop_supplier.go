@@ -82,7 +82,7 @@ func (h *SupplierHandler) CreateSupplier(c *gin.Context) {
 // @Param request body req.SupplierUpdateReq true "更新供应商请求"
 // @Security JwtToken
 // @Success 200 {object} dto.Response "成功"
-// @Router /shop/supplier/update [put]
+// @Router /shop/supplier/update [post]
 func (h *SupplierHandler) UpdateSupplier(c *gin.Context) {
 	var request req.SupplierUpdateReq
 	if err := c.ShouldBindJSON(&request); err != nil {
