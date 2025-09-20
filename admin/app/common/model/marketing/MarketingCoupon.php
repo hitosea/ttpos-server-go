@@ -2,14 +2,21 @@
 namespace app\common\model\marketing;
 
 use app\common\model\BaseModel;
-use Carbon\Carbon;
+use app\common\model\bill\SaleOrderConpon;
+use think\model\concern\SoftDelete;
 
 /**
  * 优惠券模型
  */
 class MarketingCoupon extends BaseModel
 {
+    use SoftDelete;
+
     protected $name = 'marketing_coupon';
+    protected $pk = 'uuid';
+    protected $autoWriteTimestamp = true;
+    protected $deleteTime = 'delete_time';
+    protected $defaultSoftDelete = 0;
 
     // 追加属性
     protected $append = [
@@ -53,5 +60,23 @@ class MarketingCoupon extends BaseModel
     public function getValidDayTimeRangeAttr($value, $data)
     {
         return sprintf("%s~%s", $data['day_start_time'], $data['day_end_time']);
+    }
+
+    // 关联奖品
+    public function prizes()
+    {
+        return $this->hasMany('MarketingActivityPrize', 'prize_uuid', 'uuid');
+    }
+
+    // 关联会员优惠券
+    public function memberCoupons()
+    {
+        return $this->hasMany(SaleOrderConpon::class, 'member_coupon_uuid', 'uuid');
+    }
+
+    // 关联营销优惠券
+    public function marketingCoupons()
+    {
+        return $this->hasMany(SaleOrderConpon::class, 'marketing_coupon_uuid', 'uuid');
     }
 } 

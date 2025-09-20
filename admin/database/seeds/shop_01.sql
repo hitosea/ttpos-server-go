@@ -2739,6 +2739,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_marketing_coupon` (
   `valid_start_time` int(11) DEFAULT 0 COMMENT '优惠券有效开始时间, requirement = none 时有效',
   `valid_end_time` int(11) DEFAULT 0 COMMENT '优惠券有效结束时间, requirement = none 时有效',
   `valid_days` int(11) DEFAULT 0 COMMENT '领取优惠券后n天内有效, requirement = marketing 时有效',
+  `status` int(11) DEFAULT 1 COMMENT '优惠券状态 0禁用 1开启',
   `create_time` int(11) DEFAULT 0 COMMENT '创建时间',
   `update_time` int(11) DEFAULT 0 COMMENT '更新时间',
   `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',
