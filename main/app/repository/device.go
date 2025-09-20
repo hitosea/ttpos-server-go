@@ -22,6 +22,8 @@ type IDeviceRepo interface {
 	GetBindCountBySource(source string) uint                // 根据来源获取设备绑定数量
 	CreateDevice(device model.Device) (model.Device, error) // 创建设备
 	UpdateDevice(uuid uint64, vars map[string]any) error    // 更新设备
+	GetDeviceList(opts ...DBOption) ([]model.Device, error) // 获取设备列表
+
 }
 
 func NewDeviceRepo(db *gorm.DB) IDeviceRepo {
@@ -128,4 +130,14 @@ func (r *deviceRepo) UpdateDevice(uuid uint64, vars map[string]interface{}) erro
 func (r *deviceRepo) CreateDevice(device model.Device) (model.Device, error) {
 	err := r.db.Model(&model.Device{}).Create(&device).Error
 	return device, errors.WithMessage(err)
+}
+
+func (r *deviceRepo) GetDeviceList(opts ...DBOption) ([]model.Device, error) {
+	var devices []model.Device
+	db := r.db.Model(&model.Device{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Find(&devices).Error
+	return devices, errors.WithMessage(err, "db.Find failed")
 }

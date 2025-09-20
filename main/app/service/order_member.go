@@ -924,6 +924,13 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, request member_req.Can
 		OrderNo:     memberSaleOrder.OrderNo,
 	})
 
+	// 通知叫号系统
+	utils.SafeGo(func() {
+		s.bus.PublishCallBoardChangeEvent(event.CallBoardChangeEvent{
+			CompanyUuid: ctx.GetCompanyUuid(),
+		})
+	})
+
 	// 成功后，推送到厨显端更新订单
 	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
 		"update_time": time.Now().Unix(),

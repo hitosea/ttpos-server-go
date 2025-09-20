@@ -14,6 +14,7 @@ import (
 	"ttpos-server-go/app/repository/ro"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
+	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
 
 	"github.com/shopspring/decimal"
@@ -282,6 +283,14 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 				return products
 			}(),
 		})
+
+		// 通知叫号系统
+		utils.SafeGo(func() {
+			s.bus.PublishCallBoardChangeEvent(event.CallBoardChangeEvent{
+				CompanyUuid: ctx.GetCompanyUuid(),
+			})
+		})
+
 		// 送厨成功后，推送更新订单
 		go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
 			"update_time": time.Now().Unix(),

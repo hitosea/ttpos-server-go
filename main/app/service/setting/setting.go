@@ -23,6 +23,7 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
 
@@ -171,6 +172,7 @@ func (s *Srv) getSettingByKey(ctx context.Context, key string) model.Setting {
 			if err != nil {
 				return defaultSetting
 			}
+			defer res.GetBody().Close()
 			bodyBytes, _ := res.GetBodyAsByte()
 			var base Base
 			if err := json.Unmarshal(bodyBytes, &base); err != nil {
@@ -1797,6 +1799,12 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 	tc.TagClear("common_get_settingLanguages")
 	s.cache.Del(fmt.Sprintf("{common_get_settingLanguages}_common_setting_languages%d", companyUuid))
 	tc.TagClear("cashier")
+
+	utils.SafeGo(func() {
+		event.NewSystemBus().PublishCallBoardLanguageChangeEvent(event.CallBoardLanguageChangeEvent{
+			CompanyUuid: companyUuid,
+		})
+	})
 
 	// 推送配置更新
 	go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_CONFIG, map[string]any{

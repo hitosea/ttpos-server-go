@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"ttpos-server-go/app/api/v1/admin"
 	"ttpos-server-go/app/api/v1/assistant"
+	"ttpos-server-go/app/api/v1/callboard"
 	"ttpos-server-go/app/api/v1/cashier"
 	"ttpos-server-go/app/api/v1/h5"
 	"ttpos-server-go/app/api/v1/kitchen"
@@ -58,14 +59,16 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterRechargeOrderHandlers(shopGroup, dbm, cache)
 			shop.RegisterStatisticsHandlers(shopGroup, dbm, cache)
 			shop.RegisterMemberOrderHandlers(shopGroup, dbm, cache)
-			shop.RegisterAuthHandlers(shopGroup, dbm, cache)     // 认证
-			shop.RegisterStaffHandlers(shopGroup, dbm, cache)    // 管理员管理
-			shop.RegisterSettingHandlers(shopGroup, dbm, cache)  // 设置
-			shop.RegisterProductHandlers(shopGroup, dbm, cache)  // 商品
-			shop.RegisterMaterialHandlers(shopGroup, dbm, cache) // 物品管理
-			shop.RegisterMiscHandlers(shopGroup, dbm, cache)     // 杂项
-			shop.RegisterPurchaseHandlers(shopGroup, dbm, cache) // 采购
-			shop.RegisterSupplierHandlers(shopGroup, dbm, cache) // 供应商
+			shop.RegisterAuthHandlers(shopGroup, dbm, cache)      // 认证
+			shop.RegisterStaffHandlers(shopGroup, dbm, cache)     // 管理员管理
+			shop.RegisterSettingHandlers(shopGroup, dbm, cache)   // 设置
+			shop.RegisterProductHandlers(shopGroup, dbm, cache)   // 商品
+			shop.RegisterMaterialHandlers(shopGroup, dbm, cache)  // 物品管理
+			shop.RegisterMiscHandlers(shopGroup, dbm, cache)      // 杂项
+			shop.RegisterPurchaseHandlers(shopGroup, dbm, cache)  // 采购
+			shop.RegisterSupplierHandlers(shopGroup, dbm, cache)  // 供应商
+			shop.RegisterCallBoardHandlers(shopGroup, dbm, cache) // 叫号展示
+
 		}
 		// 收银端
 		cashierGroup := apiV1.Group("/cashier")
@@ -141,5 +144,10 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			member.RegisterMemberCallbackHandlers(memberGroup, dbm, cache)
 		}
 
+		// 叫号展示设备端
+		callBoardGroup := apiV1.Group("/callboard")
+		{
+			callboard.RegisterHandlers(callBoardGroup, dbm, cache)
+		}
 	}
 }
