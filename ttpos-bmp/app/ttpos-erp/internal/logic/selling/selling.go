@@ -758,7 +758,7 @@ func (s *sSelling) SavePosInvoiceStep(ctx context.Context, req *selling.SavePosI
 	InvoiceName = j.Get("data.name").String()
 
 	// 提交发票记录
-	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePosInvoice, InvoiceName, 1)
+	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePosInvoice, InvoiceName, erp.DocstatusSubmitted)
 	if err != nil {
 		return InvoiceName, gerror.Wrapf(err, "提交发票记录失败")
 	}
