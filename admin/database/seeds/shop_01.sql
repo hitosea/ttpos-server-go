@@ -1573,7 +1573,6 @@ CREATE TABLE `ttpos_warehouse` (
   `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_uuid` (`uuid`)
-  UNIQUE KEY `unique_erp_code` (`erp_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='仓库';
 
 CREATE TABLE IF NOT EXISTS `ttpos_supplier` (
