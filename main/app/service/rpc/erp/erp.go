@@ -9,6 +9,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/model"
 
 	"google.golang.org/grpc/metadata"
 
@@ -41,6 +42,10 @@ type IErpSrv interface {
 
 	// 供应商
 	GetSupplierList(ctx pkgCtx.Context) (*buying.GetSupplierListResp, error)
+	ListSuppliers(ctx pkgCtx.Context, companySetting model.CompanySetting, listSuppliersReq *buying.ListSuppliersReq) (*buying.GetSupplierListResp, error)
+	CreateSupplier(ctx context.Context, createSupplierReq req.CreateSupplierReq) (string, error)
+	UpdateSupplier(ctx context.Context, updateSupplierReq req.UpdateSupplierReq) error
+	DeleteSupplier(ctx context.Context, deleteSupplierReq req.DeleteSupplierReq) error
 
 	// 物品
 	AddMaterial(ctx pkgCtx.Context, params req.MaterialAddErpReq) (*item.ItemInfo, error)                     // 添加物品
@@ -49,6 +54,11 @@ type IErpSrv interface {
 	DeleteProduct(ctx pkgCtx.Context, params req.DeleteProductErpReq) error                                   // 删除商品。删除所有规格和商品模版
 	AddPackage(ctx pkgCtx.Context, params req.PackageAddErpReq) (*item.ItemInfo, error)                       // 添加套餐
 	GetMaterialStockNum(ctx pkgCtx.Context) (*item.GetItemStockResp, error)                                   // 获取物品库存数量
+
+	// 仓库
+	CreateWarehouse(ctx context.Context, createWarehouseReq req.CreateErpnextWarehouseReq) (string, error) // 创建仓库
+	UpdateWarehouse(ctx context.Context, updateWarehouseReq req.UpdateErpnextWarehouseReq) error           // 更新仓库
+	DeleteWarehouse(ctx context.Context, deleteWarehouseReq req.DeleteErpnextWarehouseReq) error           // 删除仓库
 }
 type erpSrv struct {
 	dbm *database.DBManager

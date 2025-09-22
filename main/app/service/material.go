@@ -1813,14 +1813,22 @@ func (s *materialSrv) ImportMaterialList(ctx context.Context, reqs req.MaterialI
 		material := material_resp.MaterialImportListItem{}
 		copier.Copy(&material, item)
 		// 获取分类ID
-		categoryUuid, err := repository.NewMaterialRepo(db).GetCategoryUuidByNameOptimized(strings.TrimSpace(item.CategoryName))
-		if err != nil {
-			return material_resp.MaterialImportResp{}, err
+		categoryUuid := uint64(0)
+		if categoryName := strings.TrimSpace(item.CategoryName); categoryName != "" {
+			categoryUuidTmp, err := repository.NewMaterialRepo(db).GetCategoryUuidByNameOptimized(categoryName)
+			if err != nil {
+				return material_resp.MaterialImportResp{}, err
+			}
+			categoryUuid = categoryUuidTmp
 		}
 		// 获取单位ID
-		unitUuid, err := base.NewProductUnitRepo(db).GetProductUnitUuidByNameOptimized(strings.TrimSpace(item.UnitName))
-		if err != nil {
-			return material_resp.MaterialImportResp{}, err
+		unitUuid := uint64(0)
+		if unitName := strings.TrimSpace(item.UnitName); unitName != "" {
+			unitUuidTmp, err := base.NewProductUnitRepo(db).GetProductUnitUuidByNameOptimized(unitName)
+			if err != nil {
+				return material_resp.MaterialImportResp{}, err
+			}
+			unitUuid = unitUuidTmp
 		}
 		// 处理条码：过滤空格、非数字字符，截取13位
 		material.BarcodeValue = utils.ProcessBarcode(material.BarcodeValue)

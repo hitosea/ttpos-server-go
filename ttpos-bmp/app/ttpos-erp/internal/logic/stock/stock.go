@@ -461,7 +461,7 @@ func (s *sStock) CreateMaterialRequest(ctx context.Context, req *stock.SaveMater
 	if j.Contains("data") {
 		//创建后提交
 		//提交采购订单
-		_, err = service.Document().ChangeDocStatus(ctx, "Material Request", j.Get("data.name").String(), 1)
+		_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeMaterialRequest, j.Get("data.name").String(), erp.DocstatusSubmitted)
 		if err != nil {
 			return nil, gerror.Wrapf(err, "提交物料请求失败")
 		}

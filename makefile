@@ -34,6 +34,11 @@ build:
 	@make migrate
 	@echo "✅ 构建完成"
 
+#重新构建中台模块
+build-bmp:
+	@echo "🐳 构建中台模块..."
+	@cd ttpos-bmp && make up
+
 # 生成文档
 build-doc:
 	cd main && go install github.com/swaggo/swag/cmd/swag@latest && ${GO_PATH}/bin/swag init
@@ -55,13 +60,8 @@ dev: debug
 	fi
 	cd main && $(GO_PATH)/bin/fresh -c ./fresh.conf
 
-# 开启mysql端口
-mysql-open:
-	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh mysql open
-
 # 运行数据库迁移
 migrate:
-	@make check-db-host-open-mysql
 	@echo "🗄️  运行主项目数据库迁移..."
 	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh think migrate:run
 	@echo "🚀 更新 中台 模块数据库..."
@@ -97,7 +97,7 @@ down:
 translate:
 	cd main && go run ./main.go translate
 
-# 运行数据库旧数据迁移
+# 运行数据库旧数据迁移admin
 migrate-data:
 	cd main && go run ./main.go migrate-data
 

@@ -118,6 +118,11 @@ func (model *CompanySetting) GetTimezone() string {
 	return model.Timezone
 }
 
+// 是否总部。 如果公司简称和总部简称相同，并且不是散户，则认为是总部
+func (model *CompanySetting) IsHeadquarter() bool {
+	return model.ErpnextCompanyAbbr == model.ErpnextHeadquarterAbbr && !model.IsTtposSite()
+}
+
 func (model *CompanySetting) GetCoordinates() (latitude, longitude string) {
 	if model.Coordinates == "" {
 		return
@@ -160,6 +165,7 @@ func (model *CompanySetting) GetDeliveryConfig(channel string, distance float64)
 	return config, nil
 }
 
+// 是否连锁店
 func (model *CompanySetting) IsTtposSite() bool {
 	return model.ErpnextSiteCode == "1" || model.ErpnextSiteCode == ""
 }

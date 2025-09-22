@@ -5488,9 +5488,22 @@ definitions:
         description: 单据日期
         minimum: 0
         type: integer
+      purchase_type:
+        description: V2.6  采购类型, 1-外部采购 2-内部采购
+        maximum: 1
+        minimum: 0
+        type: integer
+      supplier_erp_code:
+        description: V2.6 供应商编码
+        maxLength: 255
+        type: string
       supplier_name:
         description: 供应商名称
         minLength: 1
+        type: string
+      warehouse_erp_code:
+        description: V2.6 仓库编码
+        maxLength: 255
         type: string
     required:
     - items
@@ -5575,6 +5588,10 @@ definitions:
         maxItems: 200
         minItems: 1
         type: array
+      supplier_erp_code:
+        description: V2.6 供应商编码
+        maxLength: 255
+        type: string
       supplier_name:
         description: 供应商名称
         minLength: 1
@@ -5583,6 +5600,10 @@ definitions:
         description: 采购订单ID
         minimum: 1
         type: integer
+      warehouse_erp_code:
+        description: V2.6 仓库编码
+        maxLength: 255
+        type: string
     required:
     - uuid
     type: object
@@ -9937,12 +9958,21 @@ definitions:
     type: object
   resp.PurchaseOrderDetailResp:
     properties:
+      company_name:
+        description: V2.6 公司名称
+        type: string
+      company_uuid:
+        description: V2.6 公司UUID
+        type: integer
       erp_order_no:
         description: ERP申请单编号（采购单号）
         type: string
       expect_arrival_time:
         description: 期望到货日期
         type: integer
+      headquarter_status:
+        description: V2.6 总部状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)
+        type: string
       items:
         description: 采购明细
         items:
@@ -9960,27 +9990,45 @@ definitions:
       order_type:
         description: 申请类型
         type: integer
+      purchase_type:
+        description: V2.6 采购类型
+        type: integer
       receipt_progress:
         description: 收货进度（百分比0.00%）前端直接显示
         type: string
       status:
         description: 状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)
         type: integer
+      supplier_erp_code:
+        description: 供应商编码
+        type: string
       supplier_name:
         description: 供应商名称
         type: string
       uuid:
         description: 采购订单ID
         type: integer
+      warehouse_erp_code:
+        description: V2.6 仓库编码
+        type: string
     type: object
   resp.PurchaseOrderInfo:
     properties:
+      company_name:
+        description: V2.6 公司名称
+        type: string
+      company_uuid:
+        description: V2.6 公司UUID
+        type: integer
       erp_order_no:
         description: ERP申请单编号（采购单号）
         type: string
       expect_arrival_time:
         description: 期望到货日期
         type: integer
+      headquarter_status:
+        description: V2.6 总部状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)
+        type: string
       num:
         description: 物品数量
         type: integer
@@ -9993,18 +10041,27 @@ definitions:
       order_type:
         description: 申请类型
         type: integer
+      purchase_type:
+        description: V2.6 采购类型
+        type: integer
       receipt_progress:
         description: 收货进度（百分比0.00%）前端直接显示
         type: string
       status:
         description: 状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)
         type: integer
+      supplier_erp_code:
+        description: 供应商编码
+        type: string
       supplier_name:
         description: 供应商名称
         type: string
       uuid:
         description: 采购订单ID
         type: integer
+      warehouse_erp_code:
+        description: V2.6 仓库编码
+        type: string
     type: object
   resp.PurchaseOrderItemInfo:
     properties:
@@ -11079,36 +11136,15 @@ definitions:
     type: object
   resp.SupplierInfo:
     properties:
-      address:
-        description: 供应商地址
-        type: string
       code:
         description: 供应商编码
         type: string
-      contact_name:
-        description: 联系人姓名
-        type: string
-      contact_phone:
-        description: 联系人电话
-        type: string
-      create_time:
-        description: 创建时间
-        type: integer
+      is_headquarter:
+        description: 是否为总部
+        type: boolean
       name:
         description: 供应商名称
         type: string
-      position:
-        description: 职位
-        type: string
-      staff_uuid:
-        description: 采购负责人UUID
-        type: integer
-      status:
-        description: 状态：0-禁用；1-启用
-        type: integer
-      update_time:
-        description: 更新时间
-        type: integer
       uuid:
         description: 供应商UUID
         type: integer
@@ -11122,6 +11158,36 @@ definitions:
       meta:
         $ref: '#/definitions/dto.PageResponse'
     type: object
+  resp.SupplierResp:
+    properties:
+      address:
+        description: 供应商地址
+        type: string
+      code:
+        description: 供应商编码
+        type: string
+      contact_name:
+        description: 联系人姓名
+        type: string
+      contact_phone:
+        description: 联系人电话
+        type: string
+      has_related_purchase_order:
+        description: 是否有关联的采购单
+        type: boolean
+      is_headquarter:
+        description: 是否为总部
+        type: boolean
+      name:
+        description: 供应商名称
+        type: string
+      status:
+        description: 状态：0-禁用；1-启用
+        type: integer
+      uuid:
+        description: 供应商UUID
+        type: integer
+    type: object
   resp.SupplierSelectResp:
     properties:
       list:
@@ -11131,6 +11197,9 @@ definitions:
     type: object
   resp.SupplierSimpleInfo:
     properties:
+      code:
+        description: 供应商编码
+        type: string
       name:
         description: 供应商名称
         type: string
@@ -26234,6 +26303,33 @@ paths:
       summary: 统计班次退款金额
       tags:
       - 商家端.营业数据
+  /shop/supplier:
+    get:
+      consumes:
+      - application/json
+      description: 获取供应商列表，支持名称和编码关键字搜索
+      parameters:
+      - description: 供应商ID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.SupplierResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取供应商
+      tags:
+      - 商家端.供应商档案
   /shop/supplier/create:
     post:
       consumes:
@@ -26262,7 +26358,7 @@ paths:
       - JwtToken: []
       summary: 创建供应商
       tags:
-      - 商家端.供应商管理
+      - 商家端.供应商档案
   /shop/supplier/delete:
     delete:
       consumes:
@@ -26286,7 +26382,7 @@ paths:
       - JwtToken: []
       summary: 删除供应商
       tags:
-      - 商家端.供应商管理
+      - 商家端.供应商档案
   /shop/supplier/list:
     get:
       consumes:
@@ -26323,12 +26419,17 @@ paths:
       - JwtToken: []
       summary: 获取供应商列表
       tags:
-      - 商家端.供应商管理
+      - 商家端.供应商档案
   /shop/supplier/select:
     get:
       consumes:
       - application/json
-      description: 获取供应商列表选择器
+      description: 获取供应商列表选择器，支持根据是否外部采购过滤
+      parameters:
+      - description: 采购类型, 1-外部采购 2-内部采购
+        in: query
+        name: purchase_type
+        type: integer
       produces:
       - application/json
       responses:
@@ -26345,7 +26446,7 @@ paths:
       - JwtToken: []
       summary: 获取供应商列表选择器
       tags:
-      - 商家端.供应商管理
+      - 商家端.供应商档案
   /shop/supplier/update:
     post:
       consumes:
@@ -26369,7 +26470,34 @@ paths:
       - JwtToken: []
       summary: 更新供应商
       tags:
-      - 商家端.供应商管理
+      - 商家端.供应商档案
+  /shop/warehouse:
+    get:
+      consumes:
+      - application/json
+      description: 获取仓库
+      parameters:
+      - description: 仓库ID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.WarehouseResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取仓库
+      tags:
+      - 商家端.仓库档案
   /shop/warehouse/create:
     post:
       consumes:
@@ -26393,7 +26521,7 @@ paths:
       - JwtToken: []
       summary: 创建仓库
       tags:
-      - 商家端.仓库管理
+      - 商家端.仓库档案
   /shop/warehouse/delete:
     delete:
       consumes:
@@ -26417,7 +26545,7 @@ paths:
       - JwtToken: []
       summary: 删除仓库
       tags:
-      - 商家端.仓库管理
+      - 商家端.仓库档案
   /shop/warehouse/list:
     get:
       consumes:
@@ -26460,7 +26588,7 @@ paths:
       - JwtToken: []
       summary: 获取仓库列表
       tags:
-      - 商家端.仓库管理
+      - 商家端.仓库档案
   /shop/warehouse/set_default:
     post:
       consumes:
@@ -26484,7 +26612,7 @@ paths:
       - JwtToken: []
       summary: 更新仓库
       tags:
-      - 商家端.仓库管理
+      - 商家端.仓库档案
   /shop/warehouse/update:
     post:
       consumes:
@@ -26508,7 +26636,7 @@ paths:
       - JwtToken: []
       summary: 更新仓库
       tags:
-      - 商家端.仓库管理
+      - 商家端.仓库档案
   /tablet/base:
     get:
       consumes:

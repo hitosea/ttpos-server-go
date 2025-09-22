@@ -182,7 +182,7 @@ func (s *sWarehouse) buildWarehouseListFilters(ctx context.Context, req *warehou
 func (s *sWarehouse) queryWarehouseList(ctx context.Context, filters [][]string) ([]*warehouse.WarehouseInfo, error) {
 	// 查询仓库列表
 	resp, err := service.Document().List(ctx, &erp.ErpReq{
-		DocType: "Warehouse",
+		DocType: erp.DocTypeWarehouse,
 	}, &erp.RequestParams{
 		Fields:  g.ArrayStr{"name", "warehouse_name", "warehouse_type", "custom_branch", "custom_aliasname", "company", "disabled"},
 		Filters: filters,
@@ -217,4 +217,224 @@ func (s *sWarehouse) queryWarehouseList(ctx context.Context, filters [][]string)
 	}
 
 	return warehouseList, nil
+}
+
+// GetWarehouse 获取单个仓库详情
+// 根据仓库名称获取仓库详细信息
+func (s *sWarehouse) GetWarehouse(ctx context.Context, req *warehouse.GetWarehouseReq) (res *warehouse.GetWarehouseResp, err error) {
+	// 参数验证
+	if err := s.validateGetWarehouseReq(req); err != nil {
+		return nil, err
+	}
+
+	// 查询仓库详情
+	warehouseInfo, err := s.queryWarehouseDetail(ctx, req.Name)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询仓库详情失败")
+	}
+
+	return &warehouse.GetWarehouseResp{
+		Warehouse: warehouseInfo,
+	}, nil
+}
+
+// UpdateWarehouse 更新仓库信息
+// 根据仓库名称更新仓库的相关信息
+func (s *sWarehouse) UpdateWarehouse(ctx context.Context, req *warehouse.UpdateWarehouseReq) (res *warehouse.UpdateWarehouseResp, err error) {
+	// 参数验证
+	if err := s.validateUpdateWarehouseReq(req); err != nil {
+		return nil, err
+	}
+
+	// 检查仓库是否存在
+	if err := s.checkWarehouseExists(ctx, req.Warehouse.Name); err != nil {
+		return nil, err
+	}
+
+	// 更新仓库信息
+	updatedWarehouse, err := s.updateWarehouseDocument(ctx, req.Warehouse)
+	if err != nil {
+		return nil, err
+	}
+
+	return &warehouse.UpdateWarehouseResp{
+		Warehouse: updatedWarehouse,
+	}, nil
+}
+
+// DeleteWarehouse 删除仓库
+// 根据仓库名称删除指定仓库
+func (s *sWarehouse) DeleteWarehouse(ctx context.Context, req *warehouse.DeleteWarehouseReq) (res *warehouse.DeleteWarehouseResp, err error) {
+	// 参数验证
+	if err := s.validateDeleteWarehouseReq(req); err != nil {
+		return nil, gerror.Wrapf(err, "参数验证失败")
+	}
+
+	// 检查仓库是否存在
+	if err := s.checkWarehouseExists(ctx, req.Name); err != nil {
+		return nil, err
+	}
+
+	// 检查仓库是否可以删除（如是否有库存等）
+	if err := s.checkWarehouseDeletable(ctx, req.Name); err != nil {
+		return nil, err
+	}
+
+	// 删除仓库文档
+	if err := s.deleteWarehouseDocument(ctx, req.Name); err != nil {
+		return nil, err
+	}
+
+	return &warehouse.DeleteWarehouseResp{
+		Success: true,
+		Message: "仓库删除成功",
+	}, nil
+}
+
+// validateGetWarehouseReq 验证获取仓库详情请求参数
+func (s *sWarehouse) validateGetWarehouseReq(req *warehouse.GetWarehouseReq) error {
+	if req == nil {
+		return gerror.New("请求参数不能为空")
+	}
+	if len(req.Name) == 0 {
+		return gerror.New("仓库名称不能为空")
+	}
+	return nil
+}
+
+// validateUpdateWarehouseReq 验证更新仓库请求参数
+func (s *sWarehouse) validateUpdateWarehouseReq(req *warehouse.UpdateWarehouseReq) error {
+	if req == nil {
+		return gerror.New("请求参数不能为空")
+	}
+	if req.Warehouse == nil {
+		return gerror.New("仓库信息不能为空")
+	}
+	if len(req.Warehouse.Name) == 0 {
+		return gerror.New("仓库名称不能为空")
+	}
+	return nil
+}
+
+// validateDeleteWarehouseReq 验证删除仓库请求参数
+func (s *sWarehouse) validateDeleteWarehouseReq(req *warehouse.DeleteWarehouseReq) error {
+	if req == nil {
+		return gerror.New("请求参数不能为空")
+	}
+	if len(req.Name) == 0 {
+		return gerror.New("仓库名称不能为空")
+	}
+	return nil
+}
+
+// queryWarehouseDetail 查询仓库详情
+func (s *sWarehouse) queryWarehouseDetail(ctx context.Context, warehouseName string) (*warehouse.WarehouseInfo, error) {
+	// 查询仓库详情
+	resp, err := service.Document().Get(ctx, &erp.ErpReq{
+		DocType: "Warehouse",
+		Name:    warehouseName,
+	}, &erp.RequestParams{
+		Fields: g.ArrayStr{"name", "warehouse_name", "warehouse_type", "custom_branch", "custom_aliasname", "company", "disabled"},
+	})
+
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询仓库文档失败")
+	}
+
+	// 解析响应数据
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析仓库详情响应失败")
+	}
+
+	dataJson := j.GetJson("data")
+	if dataJson == nil {
+		return nil, gerror.New("仓库不存在")
+	}
+
+	// 转换为仓库信息
+	warehouseInfo := &warehouse.WarehouseInfo{
+		Name:          dataJson.Get("name").String(),
+		Branch:        dataJson.Get("custom_branch").String(),
+		Company:       dataJson.Get("company").String(),
+		WarehouseName: dataJson.Get("warehouse_name").String(),
+		WarehouseType: dataJson.Get("warehouse_type").String(),
+		AliasName:     dataJson.Get("custom_aliasname").String(),
+		Disabled:      dataJson.Get("disabled").Bool(),
+	}
+
+	return warehouseInfo, nil
+}
+
+// checkWarehouseExists 检查仓库是否存在
+func (s *sWarehouse) checkWarehouseExists(ctx context.Context, warehouseName string) error {
+	_, err := s.queryWarehouseDetail(ctx, warehouseName)
+	if err != nil {
+		return gerror.Wrapf(err, "仓库不存在或查询失败")
+	}
+	return nil
+}
+
+// updateWarehouseDocument 更新仓库文档
+func (s *sWarehouse) updateWarehouseDocument(ctx context.Context, warehouseInfo *warehouse.WarehouseInfo) (*warehouse.WarehouseInfo, error) {
+	// 构建更新参数
+	updateData := g.Map{}
+
+	// 只更新非空字段
+	if warehouseInfo.WarehouseName != "" {
+		updateData["warehouse_name"] = warehouseInfo.WarehouseName
+	}
+	if warehouseInfo.Branch != "" {
+		updateData["custom_branch"] = warehouseInfo.Branch
+	}
+	if warehouseInfo.AliasName != "" {
+		updateData["custom_aliasname"] = warehouseInfo.AliasName
+	}
+	if warehouseInfo.Company != "" {
+		updateData["company"] = warehouseInfo.Company
+	}
+	if warehouseInfo.WarehouseType != "" {
+		updateData["warehouse_type"] = warehouseInfo.WarehouseType
+	}
+	// 禁用状态可以更新为 false
+	updateData["disabled"] = warehouseInfo.Disabled
+
+	// 更新仓库文档
+	if _, err := service.Document().Update(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeWarehouse,
+		Name:    warehouseInfo.Name,
+	}, updateData); err != nil {
+		g.Log().Error(ctx, "更新仓库失败", err)
+		return nil, gerror.Wrapf(err, "更新仓库失败")
+	}
+
+	// 返回更新后的仓库信息
+	return s.queryWarehouseDetail(ctx, warehouseInfo.Name)
+}
+
+// checkWarehouseDeletable 检查仓库是否可以删除
+func (s *sWarehouse) checkWarehouseDeletable(ctx context.Context, warehouseName string) error {
+	// 这里可以添加更多业务规则检查，比如：
+	// 1. 检查仓库是否有库存
+	// 2. 检查仓库是否有未完成的单据
+	// 3. 检查仓库是否是默认仓库等
+
+	// 目前只做基本检查，后续可以根据业务需求扩展
+	g.Log().Info(ctx, "检查仓库是否可以删除", warehouseName)
+
+	return nil
+}
+
+// deleteWarehouseDocument 删除仓库文档
+func (s *sWarehouse) deleteWarehouseDocument(ctx context.Context, warehouseName string) error {
+	// 删除仓库文档
+	if _, err := service.Document().Delete(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeWarehouse,
+		Name:    warehouseName,
+	}); err != nil {
+		g.Log().Error(ctx, "删除仓库失败", err)
+		return gerror.Wrapf(err, "删除仓库失败")
+	}
+
+	return nil
 }

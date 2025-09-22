@@ -57,6 +57,9 @@ class CreateTableWarehouse extends Migrator
         if (!$table->hasColumn('erp_code')) {
             $table->addColumn('erp_code', 'string', ['limit' => 255, 'null' => false, 'default' => '', 'comment' => '关联erpnext', 'after' => 'staff_uuid']);
         }
+        if (!$table->hasColumn('company_abbr')) {
+            $table->addColumn('company_abbr', 'string', ['limit' => 255, 'null' => false, 'default' => '', 'comment' => '所属公司简称，如果为空表示来自总部', 'after' => 'erp_code']);
+        }
         if (!$table->hasColumn('status')) {
             $table->addColumn('status', 'integer', ['null' => false, 'default' => 0, 'comment' => '状态：0-禁用；1-启用', 'after' => 'code']);
         }

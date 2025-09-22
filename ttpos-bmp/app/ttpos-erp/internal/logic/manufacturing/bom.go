@@ -147,7 +147,7 @@ func (s *sBom) SaveBom(ctx context.Context, req *manufacturing.SaveBomReq) (res 
 	}
 
 	//创建后是草稿状态，提交BOM
-	_, err = service.Document().ChangeDocStatus(ctx, "BOM", bomName, 1)
+	_, err = service.Document().ChangeDocStatus(ctx, "BOM", bomName, erp.DocstatusSubmitted)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "提交BOM失败")
 	}
