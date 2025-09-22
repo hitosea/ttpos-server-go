@@ -1548,7 +1548,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_recharge_order_abnormal_record` (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售账单异常日志表';
 
 
-CREATE TABLE `ttpos_warehouse` (
+CREATE TABLE IF NOT EXISTS `ttpos_warehouse` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `uuid` bigint(20) DEFAULT 0 COMMENT '唯一ID',
   `name` text COMMENT '名称',
@@ -1567,6 +1567,28 @@ CREATE TABLE `ttpos_warehouse` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='仓库';
+
+CREATE TABLE IF NOT EXISTS `ttpos_warehouse_in_out_log` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '出入库记录ID',
+    `log_type` INT(10) NOT NULL DEFAULT 0 COMMENT '日志类型,0-入库 1-出库',
+    `scene` INT(10) NOT NULL DEFAULT 0 COMMENT '场景,0-采购入库 1-销售出库 2-发货出库',
+    `warehouse_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '仓库ID',
+    `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物品ID',
+    `material_name` TEXT DEFAULT '' COMMENT '物品名称JSON,记录当时物品名称',
+    `material_base_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物品基准单位ID',
+    `material_base_unit_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '物品基准单位名称',
+    `num` DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '数量',
+    `price` DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '单价，物品基准单位单价',
+    `amount` DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '金额,单价*数量',
+    `supplier_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '供应商ID',
+    `order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '单据编号',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '仓库出入库记录表';
+
 
 CREATE TABLE IF NOT EXISTS `ttpos_supplier` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
