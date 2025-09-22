@@ -95,6 +95,10 @@ services:
       - ./docker/golang/logs:/var/www/log
       - ./admin/public:/var/www/public
     restart: always
+    environment:
+      SW_AGENT_NAME: "${SW_AGENT_NAME:-ttpos-main}"
+      SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-103.63.136.110:30435}"
+      SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
     networks:
       saas-network:
         ipv4_address: 10.0.0.14
