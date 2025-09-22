@@ -131,6 +131,31 @@ func (h *WarehouseHandler) SetDefaultWarehouse(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// GetWarehouseInOutList 获取仓库出入库明细列表
+// @Summary 获取仓库出入库明细列表
+// @Description 获取仓库出入库明细列表
+// @Tags 商家端.仓库管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param request body req.GetWarehouseInOutListReq true "获取仓库出入库明细列表请求"
+// @Success 200 {object} dto.Response "成功"
+// @Router /shop/warehouse/in_out/list [get]
+func (h *WarehouseHandler) GetWarehouseInOutList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var request req.GetWarehouseInOutListReq
+	if err := c.ShouldBindQuery(&request); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	result, err := h.warehouseSrv.GetWarehouseInOutList(ctx, request)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, result)
+}
+
 // DeleteWarehouse 删除仓库
 // @Summary 删除仓库
 // @Description 删除仓库
@@ -185,5 +210,6 @@ func RegisterWarehouseHandlers(router gin.IRouter, dbm *database.DBManager, cach
 		privateApi.DELETE("/warehouse/delete", warehouseHandler.DeleteWarehouse)        // 删除仓库
 		privateApi.POST("/warehouse/set_default", warehouseHandler.SetDefaultWarehouse) // 设置默认
 
+		privateApi.GET("/warehouse/in_out/list", warehouseHandler.GetWarehouseInOutList) // 出入库明细列表
 	}
 }

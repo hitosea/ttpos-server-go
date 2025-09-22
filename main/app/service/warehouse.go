@@ -20,11 +20,12 @@ import (
 
 // IWarehouseSrv 仓库服务接口
 type IWarehouseSrv interface {
-	GetWarehouseList(ctx context.Context, req req.WarehouseListReq) (resp.WarehouseListResp, error) // 仓库列表
-	CreateWarehouse(ctx context.Context, addReq req.CreateWarehouseReq) error                       // 创建仓库
-	UpdateWarehouse(ctx context.Context, req req.UpdateWarehouseReq) error                          // 更新仓库
-	DeleteWarehouse(ctx context.Context, req req.DeleteWarehouseReq) error                          // 删除仓库
-	SetDefaultWarehouse(ctx context.Context, req req.SetDefaultWarehouseReq) error                  // 设置默认仓库
+	GetWarehouseList(ctx context.Context, req req.WarehouseListReq) (resp.WarehouseListResp, error)                   // 仓库列表
+	CreateWarehouse(ctx context.Context, addReq req.CreateWarehouseReq) error                                         // 创建仓库
+	UpdateWarehouse(ctx context.Context, req req.UpdateWarehouseReq) error                                            // 更新仓库
+	DeleteWarehouse(ctx context.Context, req req.DeleteWarehouseReq) error                                            // 删除仓库
+	SetDefaultWarehouse(ctx context.Context, req req.SetDefaultWarehouseReq) error                                    // 设置默认仓库
+	GetWarehouseInOutList(ctx context.Context, req req.GetWarehouseInOutListReq) (resp.WarehouseInOutListResp, error) // 出入库明细列表
 }
 
 // NewWarehouseSrv 创建仓库服务
@@ -317,4 +318,8 @@ func (s *warehouseSrv) SetDefaultWarehouse(ctx context.Context, req req.SetDefau
 	}
 
 	return nil
+}
+
+func (s *warehouseSrv) GetWarehouseInOutList(ctx context.Context, req req.GetWarehouseInOutListReq) (resp.WarehouseInOutListResp, error) {
+	return resp.WarehouseInOutListResp{}, nil
 }
