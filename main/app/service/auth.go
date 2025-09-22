@@ -1011,6 +1011,7 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 			CompanyName:     storeSetting.Company,
 		},
 		IsTtposSite:   companySetting.IsTtposSite(),
+		IsHeadquarter: companySetting.IsHeadquarter(),
 		UpdateTime:    time.Now().Unix(),
 		ServerVersion: utils.GetVersion(),
 		IsOpenTax:     taxSetting.IsOpen == "1",

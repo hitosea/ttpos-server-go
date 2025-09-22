@@ -422,9 +422,18 @@ func (s *sStock) CreateMaterialRequest(ctx context.Context, req *stock.SaveMater
 	if err != nil {
 		return nil, err
 	}
-	warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, companyName.CompanyName, req.Branch)
-	if err != nil {
-		return nil, err
+	//设置默认到货仓
+	var (
+		targetWarehouseName string
+	)
+	if req.TargetWarehouse == "" {
+		warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, companyName.CompanyName, req.Branch)
+		if err != nil {
+			return nil, err
+		}
+		targetWarehouseName = warehouse.Name
+	} else {
+		targetWarehouseName = req.TargetWarehouse
 	}
 
 	data := g.MapStrAny{
@@ -446,11 +455,11 @@ func (s *sStock) CreateMaterialRequest(ctx context.Context, req *stock.SaveMater
 			"qty":           item.Qty,
 			"uom":           item.Uom,
 			"schedule_date": service.Setup().MustGetLocalDateTime(ctx, gtime.New(req.RequiredBy)).Format("Y-m-d"),
-			"warehouse":     warehouse.Name,
+			"warehouse":     targetWarehouseName,
 		})
 	}
 	data["items"] = itemList
-	resp, err := service.Document().Create(ctx, "Material Request", &data)
+	resp, err := service.Document().Create(ctx, erp.DocTypeMaterialRequest, &data)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建物料请求失败")
 	}

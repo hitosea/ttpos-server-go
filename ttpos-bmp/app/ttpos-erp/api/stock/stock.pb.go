@@ -197,9 +197,11 @@ type SaveMaterialRequestReq struct {
 	CompanyAbbr     string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写,必填"`              // 公司缩写,必填
 	Branch          string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称 必填"`                                           // 分支名称 必填
 	RequiredBy      int64                  `protobuf:"varint,4,opt,name=required_by,json=requiredBy,proto3" json:"required_by,omitempty" dc:"需求时间,必填"`                // 需求时间,必填
-	Purpose         string                 `protobuf:"bytes,5,opt,name=purpose,proto3" json:"purpose,omitempty" dc:"申请目的,可选 默认 Purchase"`                             // 申请目的,可选 默认 Purchase
-	Supplier        string                 `protobuf:"bytes,6,opt,name=supplier,proto3" json:"supplier,omitempty" dc:"供应商名称, purpose 为 Purchases时 必填"`                // 供应商名称, purpose 为 Purchases时 必填
-	Items           []*MaterialRequestItem `protobuf:"bytes,7,rep,name=items,proto3" json:"items,omitempty" dc:"物品列表，"`                                               // 物品列表，
+	SourceWarehouse string                 `protobuf:"bytes,5,opt,name=source_warehouse,json=sourceWarehouse,proto3" json:"source_warehouse,omitempty" dc:"来源仓库，必填"`  //来源仓库，必填
+	TargetWarehouse string                 `protobuf:"bytes,6,opt,name=target_warehouse,json=targetWarehouse,proto3" json:"target_warehouse,omitempty" dc:"目标仓库，必填"`  //目标仓库，必填
+	Purpose         string                 `protobuf:"bytes,7,opt,name=purpose,proto3" json:"purpose,omitempty" dc:"申请目的,可选 默认 Purchase"`                             // 申请目的,可选 默认 Purchase
+	Supplier        string                 `protobuf:"bytes,8,opt,name=supplier,proto3" json:"supplier,omitempty" dc:"供应商名称, purpose 为 Purchases时 必填"`                // 供应商名称, purpose 为 Purchases时 必填
+	Items           []*MaterialRequestItem `protobuf:"bytes,9,rep,name=items,proto3" json:"items,omitempty" dc:"物品列表，"`                                               // 物品列表，
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -260,6 +262,20 @@ func (x *SaveMaterialRequestReq) GetRequiredBy() int64 {
 		return x.RequiredBy
 	}
 	return 0
+}
+
+func (x *SaveMaterialRequestReq) GetSourceWarehouse() string {
+	if x != nil {
+		return x.SourceWarehouse
+	}
+	return ""
+}
+
+func (x *SaveMaterialRequestReq) GetTargetWarehouse() string {
+	if x != nil {
+		return x.TargetWarehouse
+	}
+	return ""
 }
 
 func (x *SaveMaterialRequestReq) GetPurpose() string {
@@ -450,16 +466,18 @@ const file_stock_stock_proto_rawDesc = "" +
 	"\rschedule_date\x18\x02 \x01(\x03R\fscheduleDate\x12\x10\n" +
 	"\x03qty\x18\x03 \x01(\x01R\x03qty\x12\x1c\n" +
 	"\twarehouse\x18\x04 \x01(\tR\twarehouse\x12\x10\n" +
-	"\x03uom\x18\x05 \x01(\tR\x03uom\"\x87\x02\n" +
+	"\x03uom\x18\x05 \x01(\tR\x03uom\"\xdd\x02\n" +
 	"\x16SaveMaterialRequestReq\x12)\n" +
 	"\x10transaction_date\x18\x01 \x01(\x03R\x0ftransactionDate\x12!\n" +
 	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12\x16\n" +
 	"\x06branch\x18\x03 \x01(\tR\x06branch\x12\x1f\n" +
 	"\vrequired_by\x18\x04 \x01(\x03R\n" +
-	"requiredBy\x12\x18\n" +
-	"\apurpose\x18\x05 \x01(\tR\apurpose\x12\x1a\n" +
-	"\bsupplier\x18\x06 \x01(\tR\bsupplier\x120\n" +
-	"\x05items\x18\a \x03(\v2\x1a.stock.MaterialRequestItemR\x05items\"t\n" +
+	"requiredBy\x12)\n" +
+	"\x10source_warehouse\x18\x05 \x01(\tR\x0fsourceWarehouse\x12)\n" +
+	"\x10target_warehouse\x18\x06 \x01(\tR\x0ftargetWarehouse\x12\x18\n" +
+	"\apurpose\x18\a \x01(\tR\apurpose\x12\x1a\n" +
+	"\bsupplier\x18\b \x01(\tR\bsupplier\x120\n" +
+	"\x05items\x18\t \x03(\v2\x1a.stock.MaterialRequestItemR\x05items\"t\n" +
 	"\x17SaveMaterialRequestResp\x122\n" +
 	"\x15material_request_name\x18\x01 \x01(\tR\x13materialRequestName\x12%\n" +
 	"\x0epurchase_order\x18\x02 \x01(\tR\rpurchaseOrder\"V\n" +

@@ -100,11 +100,15 @@ type MarketingCoupon struct {
 	ValidStartTime int     `gorm:"column:valid_start_time;type:int(11);default:0;comment:优惠券有效开始时间, requirement = none 时有效" json:"valid_start_time"`
 	ValidEndTime   int     `gorm:"column:valid_end_time;type:int(11);default:0;comment:优惠券有效结束时间, requirement = none 时有效" json:"valid_end_time"`
 	ValidDays      int     `gorm:"column:valid_days;type:int(11);default:0;comment:领取优惠券后n天内有效, requirement = marketing 时有效" json:"valid_days"`
+	Status         int     `gorm:"column:status;type:int(11);default:1;comment:优惠券状态 0禁用 1开启" json:"status"`
 }
 
 // 判断优惠券是否可用
 // nowTime 订单点击结账时该商家的时区实时时间，格式：HH:mm
 func (model *MarketingCoupon) IsAvailable(nowTime string) error {
+	if model.IsDisabled() {
+		return errors.New("优惠券已禁用")
+	}
 	if model.Requirement != constant.CouponRequirementNone {
 		return errors.WithMessage(errors.New("无效优惠券"))
 	}
@@ -135,6 +139,11 @@ func (model *MarketingCoupon) IsExpire() bool {
 		return false
 	}
 	return true
+}
+
+// 判断优惠券是否已禁用
+func (model *MarketingCoupon) IsDisabled() bool {
+	return model.Status == 0 // 0禁用 1开启
 }
 
 // 判断优惠券是否已经使用

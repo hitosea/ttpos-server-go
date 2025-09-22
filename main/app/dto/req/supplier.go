@@ -47,3 +47,13 @@ type SupplierReq struct {
 var SupplierSelectReqMessage = map[string]string{
 	"is_external.oneof": "是否外部采购参数值只能是0或1",
 }
+
+type CheckNameExistsReq struct {
+	Name string `json:"name" form:"name" binding:"required"` // 供应商名称
+	Uuid uint64 `json:"uuid" form:"uuid"`                    // 供应商UUID
+}
+
+type CheckCodeExistsReq struct {
+	Code string `json:"code" form:"code" binding:"required"` // 供应商编码
+	Uuid uint64 `json:"uuid" form:"uuid"`                    // 供应商UUID
+}
