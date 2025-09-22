@@ -777,6 +777,12 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 			ExpectArrivalTime: purchaseOrder.ExpectArrivalTime,
 			ReceiveTime:       req.ReceiveTime,
 			PurchaseOrder:     *purchaseOrder,
+			ReceiptType: func() int {
+				if req.ReceiptType == 2 {
+					return 2
+				}
+				return 1
+			}(),
 		}
 
 		err = receiptOrderRepo.Create(receiptOrder)
@@ -1034,6 +1040,16 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderList(ctx context.Context, req 
 	}
 	if len(req.StatusIn) > 0 {
 		opts = append(opts, receiptOrderRepo.WhereStatusIn(req.StatusIn))
+	}
+
+	// 收货时间范围查询
+	if req.ReceiveTimeStart > 0 || req.ReceiveTimeEnd > 0 {
+		opts = append(opts, receiptOrderRepo.WhereReceiptTimeRange(int(req.ReceiveTimeStart), int(req.ReceiveTimeEnd)))
+	}
+
+	// 创建时间范围查询
+	if req.CreateTimeStart > 0 || req.CreateTimeEnd > 0 {
+		opts = append(opts, receiptOrderRepo.WhereCreateTimeRange(int(req.CreateTimeStart), int(req.CreateTimeEnd)))
 	}
 
 	// 排序

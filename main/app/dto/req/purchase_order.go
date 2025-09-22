@@ -115,6 +115,7 @@ type PurchaseOrderSubmitReq struct {
 type PurchaseReceiptCreateReq struct {
 	PurchaseOrderUuid uint64                         `json:"purchase_order_uuid" binding:"required,min=1"` // 采购订单ID
 	ReceiveTime       int64                          `json:"receive_time" binding:"required,min=0"`        // 收货时间(时间戳)
+	ReceiptType       int                            `json:"receipt_type" binding:"required,min=1,max=2"`  // 收货类型 1-外部收货 2-内部收货
 	Items             []PurchaseReceiptItemCreateReq `json:"items" binding:"required,min=1,max=200,dive"`  // 收货明细
 	IsConfirm         bool                           `json:"is_confirm"`                                   // 是否确认收货
 }
@@ -158,9 +159,14 @@ type PurchaseOrderStatisticsReq struct {
 
 // PurchaseReceiptOrderListReq 收货单列表请求
 type PurchaseReceiptOrderListReq struct {
-	dto.PageReq        // 分页参数
-	OrderNo     string `json:"order_no" form:"order_no" binding:"omitempty,max=50"`        // 订单编号
-	StatusIn    []int  `json:"status_in" form:"status_in" binding:"omitempty,min=0,max=5"` // 状态筛选: [0,1,2], 0-待收货 1-已收货 2-已取消
+	dto.PageReq             // 分页参数
+	ReceiptType      int    `json:"receipt_type" form:"receipt_type" binding:"omitempty,min=0,max=1"`       // V2.6 采购收货类型, 1-外部采购 2-内部采购
+	OrderNo          string `json:"order_no" form:"order_no" binding:"omitempty,max=50"`                    // 订单编号
+	StatusIn         []int  `json:"status_in" form:"status_in" binding:"omitempty,min=0,max=5"`             // 状态筛选: [0,1,2], 0-待收货 1-已收货 2-已取消
+	ReceiveTimeStart int64  `json:"receive_time_start" form:"receive_time_start" binding:"omitempty,min=0"` // 收货时间开始（时间戳）
+	ReceiveTimeEnd   int64  `json:"receive_time_end" form:"receive_time_end" binding:"omitempty,min=0"`     // 收货时间结束（时间戳）
+	CreateTimeStart  int64  `json:"create_time_start" form:"create_time_start" binding:"omitempty,min=0"`   // 创建时间开始（时间戳）
+	CreateTimeEnd    int64  `json:"create_time_end" form:"create_time_end" binding:"omitempty,min=0"`       // 创建时间结束（时间戳）
 }
 
 // PurchaseReceiptOrderDetailReq 收货单详情请求

@@ -188,6 +188,7 @@ type PurchaseReceiptOrder struct {
 	ReceiveTime       int64   `gorm:"column:receive_time;type:int(10) unsigned;not null;default:0;comment:收货时间（时间戳）" json:"receive_time"`
 	CancelTime        int64   `gorm:"column:cancel_time;type:int(10) unsigned;not null;default:0;comment:取消时间（时间戳）" json:"cancel_time"`
 	PurchaseTime      int64   `gorm:"column:purchase_time;type:int(10) unsigned;not null;default:0;comment:采购时间（时间戳）" json:"purchase_time"`
+	ReceiptType       int     `gorm:"column:receipt_type;type:int(10);not null;default:1;comment:收货类型 1-外部收货 2-内部收货" json:"receipt_type"`
 
 	// 关联关系
 	PurchaseOrder PurchaseOrder              `gorm:"foreignKey:PurchaseOrderUuid;references:Uuid" json:"purchase_order,omitempty"`

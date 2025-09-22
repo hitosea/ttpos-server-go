@@ -32,6 +32,7 @@ type IPurchaseReceiptOrderRepo interface {
 	WhereReceiverUuid(receiverUuid uint64) DBOption
 	WhereQualityStatus(qualityStatus int) DBOption
 	WhereReceiptTimeRange(start, end int) DBOption
+	WhereCreateTimeRange(start, end int) DBOption
 	WhereStatusIn(statusIn []int) DBOption
 	WithItems() DBOption
 	OrderByReceiptTime(desc bool) DBOption
@@ -197,10 +198,23 @@ func (r *PurchaseReceiptOrderRepoImpl) WhereQualityStatus(qualityStatus int) DBO
 func (r *PurchaseReceiptOrderRepoImpl) WhereReceiptTimeRange(start, end int) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		if start > 0 {
-			db = db.Where("receipt_time >= ?", start)
+			db = db.Where("receive_time >= ?", start)
 		}
 		if end > 0 {
-			db = db.Where("receipt_time <= ?", end)
+			db = db.Where("receive_time <= ?", end)
+		}
+		return db
+	}
+}
+
+// WhereCreateTimeRange 创建时间范围条件
+func (r *PurchaseReceiptOrderRepoImpl) WhereCreateTimeRange(start, end int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if start > 0 {
+			db = db.Where("create_time >= ?", start)
+		}
+		if end > 0 {
+			db = db.Where("create_time <= ?", end)
 		}
 		return db
 	}

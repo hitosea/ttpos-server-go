@@ -974,6 +974,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_receipt_order` (
     `receive_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '收货时间（时间戳）',
     `cancel_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '取消时间（时间戳）',
     `purchase_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购时间（时间戳）',
+    `receipt_type` INT(10) NOT NULL DEFAULT 1 COMMENT '收货类型 1-外部收货 2-内部收货',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
