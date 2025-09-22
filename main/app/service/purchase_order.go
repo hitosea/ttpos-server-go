@@ -670,7 +670,6 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 					stockItems = append(stockItems, &buying.PurchaseOrderItemInput{
 						ItemCode: item.MaterialCode,
 						Qty:      item.Num,
-						Rate:     1, // TODO: wfs 未知
 						Uom:      materialUnit.Unit.ErpnextUom,
 					})
 				}
@@ -689,7 +688,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 				if err != nil {
 					return errors.WithMessage(err, "调用erp接口失败")
 				}
-				// TODO: wfs 获取采购订单号 - 6哥还没有返回
+				// 获取采购订单号 - 6哥说这里的 "名称就是采购单号"
 				erpOrderNo = erpResp.Name
 
 			} else {
@@ -1462,7 +1461,7 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 			return errors.WithMessage(err, "更新收货单号失败")
 		}
 
-		// TODO: wfs 如果是内部采购 - 需要减总部的库存
+		// TODO: wfs 如果是内部采购 - 需要减总部的库存,需要出入库的记录
 		if receiptOrder.ReceiptType == 2 {
 			// 获取总部数据库
 			// db = s.dbm.GetDB(companySetting.HeadquarterUuid)
