@@ -41480,6 +41480,10 @@ const docTemplate = `{
                     "description": "设备备注",
                     "type": "string"
                 },
+                "is_headquarter": {
+                    "description": "是否是总部",
+                    "type": "boolean"
+                },
                 "is_open_tax": {
                     "description": "税率设置: false-关闭 true-开启",
                     "type": "boolean"
