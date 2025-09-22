@@ -708,10 +708,16 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 						Uom:          materialUnit.Unit.ErpnextUom,
 					})
 				}
+				defaultWarehouse, err := repository.NewWarehouseRepo(db).GetDefaultWarehouse()
+				if err != nil {
+					return errors.WithMessage(err, "获取默认仓库失败")
+				}
 				stockResp, err := erp.NewIErpSrv(s.dbm).SaveMaterialRequest(ctx, &stock.SaveMaterialRequestReq{
 					TransactionDate: purchaseOrder.OrderTime,
 					RequiredBy:      purchaseOrder.ExpectArrivalTime,
 					Supplier:        purchaseOrder.SupplierName,
+					SourceWarehouse: purchaseOrder.WarehouseErpCode,
+					TargetWarehouse: defaultWarehouse.ErpCode,
 					Items:           stockItems,
 				})
 				if err != nil {
