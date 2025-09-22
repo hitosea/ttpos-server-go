@@ -8819,7 +8819,10 @@ func (s *orderSrv) GetValidMemberCouponList(ctx context.Context, memberUuid uint
 		couponMap := make(map[string][]*model.MemberCoupon, 0)
 
 		for _, coupon := range memberCouponList {
-
+			// 过滤掉已经被禁用的营销优惠券
+			if coupon.MarketingCoupon.Status == 0 { // 0禁用 1开启
+				continue
+			}
 			startTime := timezone.FormatUnixTime(coupon.StartTime, layout)
 			endTime := timezone.FormatUnixTime(coupon.EndTime, layout)
 			key := fmt.Sprintf("%d_%s_%s_%s_%s", coupon.CouponUuid, startTime, endTime, coupon.DayStartTime, coupon.DayEndTime)

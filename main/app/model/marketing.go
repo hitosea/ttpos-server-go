@@ -100,6 +100,7 @@ type MarketingCoupon struct {
 	ValidStartTime int     `gorm:"column:valid_start_time;type:int(11);default:0;comment:优惠券有效开始时间, requirement = none 时有效" json:"valid_start_time"`
 	ValidEndTime   int     `gorm:"column:valid_end_time;type:int(11);default:0;comment:优惠券有效结束时间, requirement = none 时有效" json:"valid_end_time"`
 	ValidDays      int     `gorm:"column:valid_days;type:int(11);default:0;comment:领取优惠券后n天内有效, requirement = marketing 时有效" json:"valid_days"`
+	Status         int     `gorm:"column:status;type:int(11);default:1;comment:优惠券状态 0禁用 1开启" json:"status"`
 }
 
 // 判断优惠券是否可用
