@@ -20,6 +20,8 @@ type PurchaseOrderListReq struct {
 	OrderTimeEnd           int    `json:"order_time_end" form:"order_time_end" binding:"omitempty,min=0"`                       // 订单时间结束
 	ExpectArrivalTimeStart int    `json:"expect_arrival_time_start" form:"expect_arrival_time_start" binding:"omitempty,min=0"` // 期望到货时间开始
 	ExpectArrivalTimeEnd   int    `json:"expect_arrival_time_end" form:"expect_arrival_time_end" binding:"omitempty,min=0"`     // 期望到货时间结束
+	ReceiveTimeStart       int    `json:"receive_time_start" form:"receive_time_start" binding:"omitempty,min=0"`               // 收货时间开始
+	ReceiveTimeEnd         int    `json:"receive_time_end" form:"receive_time_end" binding:"omitempty,min=0"`                   // 收货时间结束
 }
 
 // PurchaseOrderCreateReq 创建采购订单请求

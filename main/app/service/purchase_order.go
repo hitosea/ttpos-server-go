@@ -93,6 +93,9 @@ func (s *purchaseOrderSrv) GetPurchaseOrderList(ctx context.Context, req req.Pur
 	if req.ExpectArrivalTimeStart > 0 || req.ExpectArrivalTimeEnd > 0 {
 		opts = append(opts, purchaseOrderRepo.WhereExpectArrivalTimeRange(req.ExpectArrivalTimeStart, req.ExpectArrivalTimeEnd))
 	}
+	if req.ReceiveTimeStart > 0 || req.ReceiveTimeEnd > 0 {
+		opts = append(opts, purchaseOrderRepo.WhereReceiveTimeRange(req.ReceiveTimeStart, req.ReceiveTimeEnd))
+	}
 
 	// 排序
 	opts = append(opts, purchaseOrderRepo.OrderByOrderTime(true))
