@@ -47,6 +47,9 @@ func (model *MemberCoupon) IsAvailable(memberUuid uint64, nowTime string) error 
 	if model.IsUsed() {
 		return errors.New("优惠券已使用")
 	}
+	if model.IsDisabled() {
+		return errors.New("优惠券已禁用")
+	}
 	if model.MemberUuid != memberUuid {
 		return errors.New("优惠券不属于该会员")
 	}
@@ -77,6 +80,11 @@ func (model *MemberCoupon) IsExpire() bool {
 // 判断优惠券是否已经使用
 func (model *MemberCoupon) IsUsed() bool {
 	return model.Status == 1 || model.UseTime != 0
+}
+
+// 判断优惠券是否已禁用
+func (model *MemberCoupon) IsDisabled() bool {
+	return model.MarketingCoupon.Status == 0 // 0禁用 1开启
 }
 
 // 会员优惠券使用记录 `ttpos_member_coupon_use_record`

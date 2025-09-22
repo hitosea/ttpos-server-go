@@ -106,6 +106,9 @@ type MarketingCoupon struct {
 // 判断优惠券是否可用
 // nowTime 订单点击结账时该商家的时区实时时间，格式：HH:mm
 func (model *MarketingCoupon) IsAvailable(nowTime string) error {
+	if model.IsDisabled() {
+		return errors.New("优惠券已禁用")
+	}
 	if model.Requirement != constant.CouponRequirementNone {
 		return errors.WithMessage(errors.New("无效优惠券"))
 	}
@@ -136,6 +139,11 @@ func (model *MarketingCoupon) IsExpire() bool {
 		return false
 	}
 	return true
+}
+
+// 判断优惠券是否已禁用
+func (model *MarketingCoupon) IsDisabled() bool {
+	return model.Status == 0 // 0禁用 1开启
 }
 
 // 判断优惠券是否已经使用
