@@ -37,8 +37,9 @@ type IErpSrv interface {
 	AddPaymentMethod(ctx pkgCtx.Context, addPaymentMethodReq req.AddPaymentMethodReq) error
 
 	// 采购单
-	CreatePurchaseOrder(ctx pkgCtx.Context, createPurchaseOrderReq *stock.SaveMaterialRequestReq) (*stock.SaveMaterialRequestResp, error)
+	SaveMaterialRequest(ctx pkgCtx.Context, createPurchaseOrderReq *stock.SaveMaterialRequestReq) (*stock.SaveMaterialRequestResp, error)
 	GetMaterialRequestList(ctx pkgCtx.Context, getMaterialRequestListReq *stock.GetMaterialRequestListReq) (*stock.GetMaterialRequestListResp, error)
+	CreatePurchaseOrder(ctx pkgCtx.Context, createPurchaseOrderReq *buying.CreatePurchaseOrderReq) (*buying.CreatePurchaseOrderResp, error)
 	SavePurchaseReceipt(ctx pkgCtx.Context, savePurchaseReceiptReq *buying.SavePurchaseReceiptReq) (*buying.SavePurchaseReceiptResp, error)
 
 	// 供应商

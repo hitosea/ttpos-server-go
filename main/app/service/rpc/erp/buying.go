@@ -211,3 +211,33 @@ func (s *erpSrv) DeleteSupplier(ctx context.Context, deleteSupplierReq req.Delet
 	}
 	return nil
 }
+
+// CreatePurchaseOrder 保存物品申请单请求
+func (s *erpSrv) CreatePurchaseOrder(ctx cc.Context, createPurchaseOrderReq *buying.CreatePurchaseOrderReq) (*buying.CreatePurchaseOrderResp, error) {
+	client, conn, err := NewErpBuyingClient()
+	if err != nil {
+		return &buying.CreatePurchaseOrderResp{}, err
+	}
+	defer conn.Close()
+
+	companySetting := ctx.GetCompany().CompanySetting
+	createPurchaseOrderReq.CompanyAbbr = companySetting.ErpnextCompanyAbbr
+
+	result, err := client.CreatePurchaseOrder(WithSiteCode(context.Background(), companySetting.ErpnextSiteCode), createPurchaseOrderReq)
+	if err != nil {
+		return &buying.CreatePurchaseOrderResp{}, err
+	}
+	if result.Code != "0" {
+		logger.Logger.Error("CreatePurchaseOrder-CreatePurchaseOrder", zap.Any("err", err))
+		return &buying.CreatePurchaseOrderResp{}, errors.New("调用erp接口失败 - 001")
+	}
+	if result.Data != nil {
+		var resp buying.CreatePurchaseOrderResp
+		if err := result.Data.UnmarshalTo(&resp); err != nil {
+			logger.Logger.Error("CreatePurchaseOrder-CreatePurchaseOrder", zap.Any("err", err))
+			return &buying.CreatePurchaseOrderResp{}, err
+		}
+		return &resp, nil
+	}
+	return &buying.CreatePurchaseOrderResp{}, nil
+}

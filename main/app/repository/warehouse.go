@@ -18,6 +18,7 @@ type IWarehouseRepo interface {
 	// 查询操作
 	GetListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.Warehouse, int64, error)
 	IsCodeExists(code string, excludeUuid uint64) (bool, error)
+	GetDefaultWarehouse() (*model.Warehouse, error)
 
 	// 条件查询选项
 	WhereNameOrCodeLike(name string) DBOption
@@ -119,6 +120,13 @@ func (r *WarehouseRepoImpl) IsNameExists(name string, excludeUuid uint64) (bool,
 	}
 	err := query.Count(&count).Error
 	return count > 0, err
+}
+
+// GetDefaultWarehouse 获取默认仓库
+func (r *WarehouseRepoImpl) GetDefaultWarehouse() (*model.Warehouse, error) {
+	var warehouse model.Warehouse
+	err := r.db.Model(&model.Warehouse{}).Where("is_default = 1").First(&warehouse).Error
+	return &warehouse, err
 }
 
 // 以下是查询选项方法
