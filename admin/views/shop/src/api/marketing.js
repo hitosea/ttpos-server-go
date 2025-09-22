@@ -56,6 +56,16 @@ let MarketingApi = {
         return request._get('/shop/marketing.activity/couponList', data, errorback);
     },
 
+    /*修改优惠券状态*/
+    couponStatus(data, errorback) {
+        return request._post('/shop/marketing.coupon/status', data, errorback);
+    },
+
+    /*删除优惠券*/
+    couponDelete(data, errorback) {
+        return request._post('/shop/marketing.coupon/delete', data, errorback);
+    },
+
 };
 
 export default MarketingApi;
