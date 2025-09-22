@@ -23,6 +23,7 @@ const (
 	DocTypePurchaseReceipt = "Purchase Receipt"
 	DocTypeBom             = "BOM"
 	DocTypeMaterialRequest = "Material Request"
+	DocTypeWarehouse       = "Warehouse"
 )
 
 const (

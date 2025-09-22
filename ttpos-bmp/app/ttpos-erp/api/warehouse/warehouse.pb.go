@@ -164,14 +164,14 @@ func (x *GetWarehouseListResp) GetWarehouseList() []*WarehouseInfo {
 // 仓库信息
 type WarehouseInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	WarehouseName string                 `protobuf:"bytes,1,opt,name=warehouse_name,json=warehouseName,proto3" json:"warehouse_name,omitempty" dc:"仓库名称,可选"` // 仓库名称,可选
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty" dc:"仓库名称 全称"`                                        // 仓库名称 全称
-	Company       string                 `protobuf:"bytes,3,opt,name=company,proto3" json:"company,omitempty" dc:"公司名称"`                                     // 公司名称
-	CompanyAbbr   string                 `protobuf:"bytes,4,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称,必填"`       // 公司简称,必填
-	Branch        string                 `protobuf:"bytes,5,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                    // 分支名称，可选
-	AliasName     string                 `protobuf:"bytes,6,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"仓库别名"`                // 仓库别名
-	WarehouseType string                 `protobuf:"bytes,7,opt,name=warehouse_type,json=warehouseType,proto3" json:"warehouse_type,omitempty" dc:"仓库类型"`    // 仓库类型
-	Disabled      bool                   `protobuf:"varint,8,opt,name=disabled,proto3" json:"disabled,omitempty" dc:"是否禁用，可选"`                               //是否禁用，可选
+	WarehouseName string                 `protobuf:"bytes,1,opt,name=warehouse_name,json=warehouseName,proto3" json:"warehouse_name,omitempty" dc:"仓库显示名称,可选"` // 仓库显示名称,可选
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty" dc:"仓库名称全称，带 abbr 后缀，主键"`                              // 仓库名称全称，带 abbr 后缀，主键
+	Company       string                 `protobuf:"bytes,3,opt,name=company,proto3" json:"company,omitempty" dc:"公司名称，可选显示用"`                                 // 公司名称，可选显示用
+	CompanyAbbr   string                 `protobuf:"bytes,4,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称,必填"`         // 公司简称,必填
+	Branch        string                 `protobuf:"bytes,5,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                      // 分支名称，可选
+	AliasName     string                 `protobuf:"bytes,6,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"仓库别名"`                  // 仓库别名
+	WarehouseType string                 `protobuf:"bytes,7,opt,name=warehouse_type,json=warehouseType,proto3" json:"warehouse_type,omitempty" dc:"仓库类型"`      // 仓库类型
+	Disabled      bool                   `protobuf:"varint,8,opt,name=disabled,proto3" json:"disabled,omitempty" dc:"是否禁用，必填，否则默认会启用仓库"`                       //是否禁用，必填，否则默认会启用仓库
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
