@@ -55,7 +55,7 @@ func (c *Controller) CreateWarehouse(ctx context.Context, req *warehouse.Warehou
 		CompanyAbbr:   req.CompanyAbbr,
 		Branch:        req.Branch,
 		AliasName:     warehouseName,
-		Name:          warehouseName + " - " + req.Branch,
+		Name:          warehouseName + " - " + req.CompanyAbbr,
 		WarehouseType: req.WarehouseType,
 	}), nil
 }
