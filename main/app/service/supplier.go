@@ -19,12 +19,14 @@ import (
 
 // ISupplierSrv 供应商服务接口
 type ISupplierSrv interface {
-	GetSupplierList(ctx context.Context, req req.SupplierListReq) (resp.SupplierListResp, error)       // 供应商列表
-	CreateSupplier(ctx context.Context, req req.SupplierCreateReq) error                               // 创建供应商
-	UpdateSupplier(ctx context.Context, req req.SupplierUpdateReq) error                               // 更新供应商
-	DeleteSupplier(ctx context.Context, req req.SupplierDeleteReq) error                               // 删除供应商
-	GetSupplierSelect(ctx context.Context, req req.SupplierSelectReq) (resp.SupplierSelectResp, error) // 获取供应商选择器列表
-	GetSupplier(ctx context.Context, req req.SupplierReq) (resp.SupplierResp, error)                   // 获取供应商
+	GetSupplierList(ctx context.Context, req req.SupplierListReq) (resp.SupplierListResp, error)           // 供应商列表
+	CreateSupplier(ctx context.Context, req req.SupplierCreateReq) error                                   // 创建供应商
+	UpdateSupplier(ctx context.Context, req req.SupplierUpdateReq) error                                   // 更新供应商
+	DeleteSupplier(ctx context.Context, req req.SupplierDeleteReq) error                                   // 删除供应商
+	GetSupplierSelect(ctx context.Context, req req.SupplierSelectReq) (resp.SupplierSelectResp, error)     // 获取供应商选择器列表
+	GetSupplier(ctx context.Context, req req.SupplierReq) (resp.SupplierResp, error)                       // 获取供应商
+	CheckNameExists(ctx context.Context, req req.CheckNameExistsReq) (resp.CheckNameCodeExistsResp, error) // 检查名称是否存在
+	CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error) // 检查编码是否存在
 }
 
 // NewSupplierSrv 创建供应商服务
@@ -358,4 +360,24 @@ func (s *supplierSrv) GetSupplierSelect(ctx context.Context, req req.SupplierSel
 	return resp.SupplierSelectResp{
 		List: supplierList,
 	}, nil
+}
+
+func (s *supplierSrv) CheckNameExists(ctx context.Context, req req.CheckNameExistsReq) (resp.CheckNameCodeExistsResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	supplierRepo := repository.NewSupplierRepo(db)
+	exists, err := supplierRepo.IsNameExists(req.Name, req.Uuid)
+	if err != nil {
+		return resp.CheckNameCodeExistsResp{}, errors.WithMessage(err, "检查名称是否存在失败")
+	}
+	return resp.CheckNameCodeExistsResp{Exists: exists}, nil
+}
+
+func (s *supplierSrv) CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	supplierRepo := repository.NewSupplierRepo(db)
+	exists, err := supplierRepo.IsCodeExists(req.Code, req.Uuid)
+	if err != nil {
+		return resp.CheckNameCodeExistsResp{}, errors.WithMessage(err, "检查编码是否存在失败")
+	}
+	return resp.CheckNameCodeExistsResp{Exists: exists}, nil
 }

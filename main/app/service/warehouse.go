@@ -29,6 +29,7 @@ type IWarehouseSrv interface {
 	SetDefaultWarehouse(ctx context.Context, req req.SetDefaultWarehouseReq) error                                    // 设置默认仓库
 	GetWarehouse(ctx context.Context, req req.WarehouseReq) (resp.WarehouseResp, error)                               // 获取仓库
 	GetWarehouseInOutList(ctx context.Context, req req.GetWarehouseInOutListReq) (resp.WarehouseInOutListResp, error) // 出入库明细列表
+	CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error)            // 检查仓库编码是否存在
 
 	SyncWarehouse(ctx context.Context) error // 同步仓库列表
 }
@@ -515,4 +516,14 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func (s *warehouseSrv) CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	warehouseRepo := repository.NewWarehouseRepo(db)
+	exists, err := warehouseRepo.IsCodeExists(req.Code, req.Uuid)
+	if err != nil {
+		return resp.CheckNameCodeExistsResp{}, errors.WithMessage(err, "检查仓库编码是否存在失败")
+	}
+	return resp.CheckNameCodeExistsResp{Exists: exists}, nil
 }

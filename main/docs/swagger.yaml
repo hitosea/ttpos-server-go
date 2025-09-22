@@ -6977,6 +6977,12 @@ definitions:
         description: 收银员账号
         type: string
     type: object
+  resp.CheckNameCodeExistsResp:
+    properties:
+      exists:
+        description: 是否存在
+        type: boolean
+    type: object
   resp.CheckNameItem:
     properties:
       lang:
@@ -26399,6 +26405,37 @@ paths:
       summary: 获取供应商
       tags:
       - 商家端.供应商档案
+  /shop/supplier/code_exists:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: 供应商编码
+        in: query
+        name: code
+        required: true
+        type: string
+      - description: 供应商UUID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CheckNameCodeExistsResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 检查供应商编码是否存在
+      tags:
+      - 商家端.供应商档案
   /shop/supplier/create:
     post:
       consumes:
@@ -26489,6 +26526,37 @@ paths:
       summary: 获取供应商列表
       tags:
       - 商家端.供应商档案
+  /shop/supplier/name_exists:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: 供应商名称
+        in: query
+        name: name
+        required: true
+        type: string
+      - description: 供应商UUID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CheckNameCodeExistsResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 检查供应商名称是否存在
+      tags:
+      - 商家端.供应商档案
   /shop/supplier/select:
     get:
       consumes:
@@ -26565,6 +26633,37 @@ paths:
       security:
       - JwtToken: []
       summary: 获取仓库
+      tags:
+      - 商家端.仓库档案
+  /shop/warehouse/code_exists:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: 仓库编码
+        in: query
+        name: code
+        required: true
+        type: string
+      - description: 仓库UUID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CheckNameCodeExistsResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 检查仓库编码是否存在
       tags:
       - 商家端.仓库档案
   /shop/warehouse/create:

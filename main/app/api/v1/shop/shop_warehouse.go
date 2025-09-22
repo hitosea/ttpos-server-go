@@ -223,6 +223,31 @@ func (h *WarehouseHandler) DeleteWarehouse(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// CheckCodeExists 检查仓库编码是否存在
+// @Summary 检查仓库编码是否存在
+// @Tags 商家端.仓库档案
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param code query string true "仓库编码"
+// @Param uuid query string false "仓库UUID"
+// @Success 200 {object} dto.Response{data=resp.CheckNameCodeExistsResp} "成功"
+// @Router /shop/warehouse/code_exists [get]
+func (h *WarehouseHandler) CheckCodeExists(c *gin.Context) {
+	var checkReq req.CheckCodeExistsReq
+	if err := c.ShouldBindQuery(&checkReq); err != nil {
+		helper.HandleValidationError(c, err, checkReq, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	res, err := h.warehouseSrv.CheckCodeExists(ctx, checkReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
 // RegisterWarehouseHandlers 注册仓库相关路由
 func RegisterWarehouseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -252,6 +277,7 @@ func RegisterWarehouseHandlers(router gin.IRouter, dbm *database.DBManager, cach
 		privateApi.DELETE("/warehouse/delete", warehouseHandler.DeleteWarehouse)        // 删除仓库
 		privateApi.POST("/warehouse/set_default", warehouseHandler.SetDefaultWarehouse) // 设置默认
 		privateApi.POST("/warehouse/sync", warehouseHandler.SyncWarehouse)              // 同步仓库列表
+		privateApi.GET("/warehouse/code_exists", warehouseHandler.CheckCodeExists)      // 检查仓库编码是否存在
 
 		privateApi.GET("/warehouse/in_out/list", warehouseHandler.GetWarehouseInOutList) // 出入库明细列表
 	}
