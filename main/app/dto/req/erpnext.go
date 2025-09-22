@@ -188,3 +188,9 @@ type DeleteErpnextWarehouseReq struct {
 	SiteCode string // 站点编码
 	Name     string // erp_code
 }
+
+type GetErpnextWarehouseListReq struct {
+	SiteCode    string // 站点编码
+	CompanyAbbr string
+	Branch      string
+}

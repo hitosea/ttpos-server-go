@@ -24087,6 +24087,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/warehouse/in_out/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取仓库出入库明细列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.仓库管理"
+                ],
+                "summary": "获取仓库出入库明细列表",
+                "parameters": [
+                    {
+                        "description": "获取仓库出入库明细列表请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.GetWarehouseInOutListReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/warehouse/list": {
             "get": {
                 "security": [
@@ -24188,6 +24227,34 @@ const docTemplate = `{
                         }
                     }
                 ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/warehouse/sync": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "同步仓库列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.仓库档案"
+                ],
+                "summary": "同步仓库列表",
                 "responses": {
                     "200": {
                         "description": "成功",
@@ -29808,6 +29875,45 @@ const docTemplate = `{
                 }
             }
         },
+        "req.GetWarehouseInOutListReq": {
+            "type": "object",
+            "properties": {
+                "end_time": {
+                    "description": "日期，结束时间",
+                    "type": "integer"
+                },
+                "keyword": {
+                    "description": "关键字, 物品名称、物品编码、物品条形码",
+                    "type": "string"
+                },
+                "material_category_uuids": {
+                    "description": "物料分类ID列表,多选",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "order_no": {
+                    "description": "单据编号",
+                    "type": "string"
+                },
+                "start_time": {
+                    "description": "日期，开始时间",
+                    "type": "integer"
+                },
+                "supplier_uuids": {
+                    "description": "供应商ID列表,多选",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "type": {
+                    "description": "类型：采购入库-purchase、销售出库-sale、发货出库-delivery",
+                    "type": "string"
+                }
+            }
+        },
         "req.InitShopReq": {
             "type": "object",
             "required": [
@@ -33208,10 +33314,45 @@ const docTemplate = `{
         "req.PurchaseOrderListReq": {
             "type": "object",
             "properties": {
+                "company_uuid": {
+                    "description": "公司UUID",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "create_time_end": {
+                    "description": "创建时间结束",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "create_time_start": {
+                    "description": "创建时间开始",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "expect_arrival_time_end": {
+                    "description": "期望到货时间结束",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "expect_arrival_time_start": {
+                    "description": "期望到货时间开始",
+                    "type": "integer",
+                    "minimum": 0
+                },
                 "order_no": {
                     "description": "订单编号",
                     "type": "string",
                     "maxLength": 50
+                },
+                "order_time_end": {
+                    "description": "订单时间结束",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "order_time_start": {
+                    "description": "订单时间开始",
+                    "type": "integer",
+                    "minimum": 0
                 },
                 "page_no": {
                     "description": "页码",
@@ -33224,14 +33365,30 @@ const docTemplate = `{
                     "maximum": 1100,
                     "minimum": 1
                 },
+                "purchase_type": {
+                    "description": "V2.6 采购类型, 1-外部采购 2-内部采购",
+                    "type": "integer",
+                    "maximum": 1,
+                    "minimum": 0
+                },
                 "status_in": {
-                    "description": "状态筛选: [0,1,2,3,4], 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)",
+                    "description": "状态筛选: [0,1,2,3,4], 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核",
                     "type": "array",
                     "maxItems": 5,
                     "minItems": 0,
                     "items": {
                         "type": "integer"
                     }
+                },
+                "supplier_name": {
+                    "description": "供应商名称",
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "warehouse_erp_code": {
+                    "description": "仓库编码",
+                    "type": "string",
+                    "maxLength": 255
                 }
             }
         },
@@ -39785,7 +39942,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "purchase_type": {
-                    "description": "V2.6 采购类型",
+                    "description": "V2.6 采购类型 1-外部采购 2-内部采购",
                     "type": "integer"
                 },
                 "receipt_progress": {
@@ -39793,7 +39950,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "status": {
-                    "description": "状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)",
+                    "description": "状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核",
                     "type": "integer"
                 },
                 "supplier_erp_code": {
@@ -39854,7 +40011,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "purchase_type": {
-                    "description": "V2.6 采购类型",
+                    "description": "V2.6 采购类型 1-外部采购 2-内部采购",
                     "type": "integer"
                 },
                 "receipt_progress": {
@@ -39862,7 +40019,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "status": {
-                    "description": "状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)",
+                    "description": "状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核",
                     "type": "integer"
                 },
                 "supplier_erp_code": {

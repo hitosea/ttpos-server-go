@@ -7,6 +7,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/api/manufacturing"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
+	"ttpos-bmp/app/ttpos-erp/api/warehouse"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/model"
@@ -56,9 +57,10 @@ type IErpSrv interface {
 	GetMaterialStockNum(ctx pkgCtx.Context) (*item.GetItemStockResp, error)                                   // 获取物品库存数量
 
 	// 仓库
-	CreateWarehouse(ctx context.Context, createWarehouseReq req.CreateErpnextWarehouseReq) (string, error) // 创建仓库
-	UpdateWarehouse(ctx context.Context, updateWarehouseReq req.UpdateErpnextWarehouseReq) error           // 更新仓库
-	DeleteWarehouse(ctx context.Context, deleteWarehouseReq req.DeleteErpnextWarehouseReq) error           // 删除仓库
+	CreateWarehouse(ctx context.Context, createWarehouseReq req.CreateErpnextWarehouseReq) (string, error)                        // 创建仓库
+	UpdateWarehouse(ctx context.Context, updateWarehouseReq req.UpdateErpnextWarehouseReq) error                                  // 更新仓库
+	DeleteWarehouse(ctx context.Context, deleteWarehouseReq req.DeleteErpnextWarehouseReq) error                                  // 删除仓库
+	GetWarehouseList(ctx context.Context, getWarehouseListReq req.GetErpnextWarehouseListReq) ([]*warehouse.WarehouseInfo, error) // 获取仓库列表
 }
 type erpSrv struct {
 	dbm *database.DBManager

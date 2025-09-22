@@ -154,6 +154,25 @@ func (h *WarehouseHandler) SetDefaultWarehouse(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// SyncWarehouse 同步仓库列表
+// @Summary 同步仓库列表
+// @Description 同步仓库列表
+// @Tags 商家端.仓库档案
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response "成功"
+// @Router /shop/warehouse/sync [post]
+func (h *WarehouseHandler) SyncWarehouse(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	err := h.warehouseSrv.SyncWarehouse(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 // GetWarehouseInOutList 获取仓库出入库明细列表
 // @Summary 获取仓库出入库明细列表
 // @Description 获取仓库出入库明细列表
@@ -232,6 +251,7 @@ func RegisterWarehouseHandlers(router gin.IRouter, dbm *database.DBManager, cach
 		privateApi.POST("/warehouse/update", warehouseHandler.UpdateWarehouse)          // 更新仓库
 		privateApi.DELETE("/warehouse/delete", warehouseHandler.DeleteWarehouse)        // 删除仓库
 		privateApi.POST("/warehouse/set_default", warehouseHandler.SetDefaultWarehouse) // 设置默认
+		privateApi.POST("/warehouse/sync", warehouseHandler.SyncWarehouse)              // 同步仓库列表
 
 		privateApi.GET("/warehouse/in_out/list", warehouseHandler.GetWarehouseInOutList) // 出入库明细列表
 	}
