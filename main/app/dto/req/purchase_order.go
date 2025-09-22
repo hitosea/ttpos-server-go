@@ -7,9 +7,19 @@ import (
 
 // PurchaseOrderListReq 采购订单列表请求
 type PurchaseOrderListReq struct {
-	dto.PageReq        // 分页参数
-	OrderNo     string `json:"order_no" form:"order_no" binding:"omitempty,max=50"`        // 订单编号
-	StatusIn    []int  `json:"status_in" form:"status_in" binding:"omitempty,min=0,max=5"` // 状态筛选: [0,1,2,3,4], 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)
+	dto.PageReq                   // 分页参数
+	OrderNo                string `json:"order_no" form:"order_no" binding:"omitempty,max=50"`                                  // 订单编号
+	PurchaseType           int    `json:"purchase_type" form:"purchase_type" binding:"omitempty,min=0,max=1"`                   // V2.6 采购类型, 1-外部采购 2-内部采购
+	StatusIn               []int  `json:"status_in" form:"status_in" binding:"omitempty,min=0,max=5"`                           // 状态筛选: [0,1,2,3,4], 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核
+	SupplierName           string `json:"supplier_name" form:"supplier_name" binding:"omitempty,max=100"`                       // 供应商名称
+	WarehouseErpCode       string `json:"warehouse_erp_code" form:"warehouse_erp_code" binding:"omitempty,max=255"`             // 仓库编码
+	CompanyUuid            uint64 `json:"company_uuid" form:"company_uuid" binding:"omitempty,min=1"`                           // 公司UUID
+	CreateTimeStart        int    `json:"create_time_start" form:"create_time_start" binding:"omitempty,min=0"`                 // 创建时间开始
+	CreateTimeEnd          int    `json:"create_time_end" form:"create_time_end" binding:"omitempty,min=0"`                     // 创建时间结束
+	OrderTimeStart         int    `json:"order_time_start" form:"order_time_start" binding:"omitempty,min=0"`                   // 订单时间开始
+	OrderTimeEnd           int    `json:"order_time_end" form:"order_time_end" binding:"omitempty,min=0"`                       // 订单时间结束
+	ExpectArrivalTimeStart int    `json:"expect_arrival_time_start" form:"expect_arrival_time_start" binding:"omitempty,min=0"` // 期望到货时间开始
+	ExpectArrivalTimeEnd   int    `json:"expect_arrival_time_end" form:"expect_arrival_time_end" binding:"omitempty,min=0"`     // 期望到货时间结束
 }
 
 // PurchaseOrderCreateReq 创建采购订单请求

@@ -46,7 +46,6 @@ class CreateTableWarehouse extends Migrator
                 ->addColumn('update_time', 'integer', ['default' => 0, 'comment' => '更新时间'])
                 ->addColumn('delete_time', 'integer', ['default' => 0, 'comment' => '删除时间'])
                 ->addIndex(['uuid'], ['unique' => true, 'name' => 'unique_uuid'])
-                ->addIndex(['erp_code'], ['unique' => true, 'name' => 'unique_erp_code'])
                 ->create();
         }
 
@@ -57,6 +56,9 @@ class CreateTableWarehouse extends Migrator
         }
         if (!$table->hasColumn('erp_code')) {
             $table->addColumn('erp_code', 'string', ['limit' => 255, 'null' => false, 'default' => '', 'comment' => '关联erpnext', 'after' => 'staff_uuid']);
+        }
+        if (!$table->hasColumn('company_abbr')) {
+            $table->addColumn('company_abbr', 'string', ['limit' => 255, 'null' => false, 'default' => '', 'comment' => '所属公司简称，如果为空表示来自总部', 'after' => 'erp_code']);
         }
         if (!$table->hasColumn('status')) {
             $table->addColumn('status', 'integer', ['null' => false, 'default' => 0, 'comment' => '状态：0-禁用；1-启用', 'after' => 'code']);

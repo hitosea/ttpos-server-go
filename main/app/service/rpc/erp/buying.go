@@ -5,8 +5,12 @@ import (
 	"errors"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-server-go/app/cloud"
+	"ttpos-server-go/app/dto/req"
+
 	"ttpos-server-go/app/model"
 	cc "ttpos-server-go/pkg/context"
+	pkgCtx "ttpos-server-go/pkg/context"
+
 	"ttpos-server-go/pkg/logger"
 
 	"go.uber.org/zap"
@@ -22,7 +26,7 @@ func NewErpBuyingClient() (buying.BuyingServiceClient, *grpc.ClientConn, error) 
 }
 
 // GetSupplierList 获取供应商列表
-func (s *erpSrv) GetSupplierList(ctx cc.Context) (*buying.GetSupplierListResp, error) {
+func (s *erpSrv) GetSupplierList(ctx pkgCtx.Context) (*buying.GetSupplierListResp, error) {
 	client, conn, err := NewErpBuyingClient()
 	if err != nil {
 		return &buying.GetSupplierListResp{}, err
@@ -82,7 +86,7 @@ func (s *erpSrv) ListSuppliers(ctx cc.Context, companySetting model.CompanySetti
 }
 
 // SavePurchaseReceipt 保存收货单
-func (s *erpSrv) SavePurchaseReceipt(ctx cc.Context, savePurchaseReceiptReq *buying.SavePurchaseReceiptReq) (*buying.SavePurchaseReceiptResp, error) {
+func (s *erpSrv) SavePurchaseReceipt(ctx pkgCtx.Context, savePurchaseReceiptReq *buying.SavePurchaseReceiptReq) (*buying.SavePurchaseReceiptResp, error) {
 	client, conn, err := NewErpBuyingClient()
 	if err != nil {
 		return &buying.SavePurchaseReceiptResp{}, err
@@ -108,4 +112,102 @@ func (s *erpSrv) SavePurchaseReceipt(ctx cc.Context, savePurchaseReceiptReq *buy
 		return &resp, nil
 	}
 	return &buying.SavePurchaseReceiptResp{}, nil
+}
+
+// CreateSupplier 创建供应商
+func (s *erpSrv) CreateSupplier(ctx context.Context, createSupplierReq req.CreateSupplierReq) (string, error) {
+	client, conn, err := NewErpBuyingClient()
+	if err != nil {
+		return "", err
+	}
+	defer conn.Close()
+
+	result, err := client.CreateSupplier(WithSiteCode(ctx, createSupplierReq.SiteCode), &buying.CreateSupplierReq{
+		Supplier: &buying.SupplierData{
+			SupplierName: createSupplierReq.SupplierName, // 供应商名称
+			CompanyAbbr:  createSupplierReq.CompanyAbbr,  // 总部在移动管理端创建供应商时不需要传
+			Branch:       createSupplierReq.Branch,       // 总部在移动管理端创建供应商时不需要传
+			Disabled:     createSupplierReq.Disabled,     // 是否禁用
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	if result.Code != "0" {
+		logger.Logger.Error("CreateSupplier-CreateSupplier", zap.Any("err", err))
+		return "", errors.New(result.GetMessage())
+	}
+	if result.Data != nil {
+		var resp buying.CreateSupplierResp
+		if err := result.Data.UnmarshalTo(&resp); err != nil {
+			logger.Logger.Error("CreateSupplier-UnmarshalTo", zap.Any("err", err))
+			return "", err
+		}
+		return resp.Supplier.Name, nil
+	}
+	return "", nil
+}
+
+// UpdateSupplier 更新供应商
+func (s *erpSrv) UpdateSupplier(ctx context.Context, updateSupplierReq req.UpdateSupplierReq) error {
+	client, conn, err := NewErpBuyingClient()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	result, err := client.UpdateSupplier(WithSiteCode(ctx, updateSupplierReq.SiteCode), &buying.UpdateSupplierReq{
+		Supplier: &buying.SupplierData{
+			Name:         updateSupplierReq.Name,
+			SupplierName: updateSupplierReq.SupplierName,
+			CompanyAbbr:  updateSupplierReq.CompanyAbbr,
+			Branch:       updateSupplierReq.Branch,
+			Disabled:     updateSupplierReq.Disabled,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	if result.Code != "0" {
+		logger.Logger.Error("UpdateSupplier-UpdateSupplier", zap.Any("err", err))
+		return errors.New(result.GetMessage())
+	}
+	if result.Data != nil {
+		var resp buying.UpdateSupplierResp
+		if err := result.Data.UnmarshalTo(&resp); err != nil {
+			logger.Logger.Error("UpdateSupplier-UnmarshalTo", zap.Any("err", err))
+			return err
+		}
+		return nil
+	}
+	return nil
+}
+
+// DeleteSupplier 删除供应商
+func (s *erpSrv) DeleteSupplier(ctx context.Context, deleteSupplierReq req.DeleteSupplierReq) error {
+	client, conn, err := NewErpBuyingClient()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	result, err := client.DeleteSupplier(WithSiteCode(ctx, deleteSupplierReq.SiteCode), &buying.DeleteSupplierReq{
+		Name: deleteSupplierReq.Name,
+	})
+	if err != nil {
+		return err
+	}
+	if result.Code != "0" {
+		logger.Logger.Error("DeleteSupplier-DeleteSupplier", zap.Any("err", err))
+		return errors.New(result.GetMessage())
+	}
+	if result.Data != nil {
+		var resp buying.DeleteSupplierResp
+		if err := result.Data.UnmarshalTo(&resp); err != nil {
+			logger.Logger.Error("DeleteSupplier-UnmarshalTo", zap.Any("err", err))
+			return err
+		}
+		return nil
+	}
+	return nil
 }

@@ -57,6 +57,15 @@ type (
 		// 根据查询条件过滤并返回仓库信息列表
 		GetWarehouseList(ctx context.Context, req *warehouse.GetWarehouseListReq) (res *warehouse.GetWarehouseListResp, err error)
 		GetDefaultWarehouse(ctx context.Context, company string, branch string) (res *warehouse.WarehouseInfo, err error)
+		// GetWarehouse 获取单个仓库详情
+		// 根据仓库名称获取仓库详细信息
+		GetWarehouse(ctx context.Context, req *warehouse.GetWarehouseReq) (res *warehouse.GetWarehouseResp, err error)
+		// UpdateWarehouse 更新仓库信息
+		// 根据仓库名称更新仓库的相关信息
+		UpdateWarehouse(ctx context.Context, req *warehouse.UpdateWarehouseReq) (res *warehouse.UpdateWarehouseResp, err error)
+		// DeleteWarehouse 删除仓库
+		// 根据仓库名称删除指定仓库
+		DeleteWarehouse(ctx context.Context, req *warehouse.DeleteWarehouseReq) (res *warehouse.DeleteWarehouseResp, err error)
 	}
 )
 

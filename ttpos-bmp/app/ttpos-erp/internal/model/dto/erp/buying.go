@@ -28,7 +28,7 @@ type Supplier struct {
 	IsTransporter      bool `json:"is_transporter,omitempty"`       // 是否承运商
 	IsInternalSupplier bool `json:"is_internal_supplier,omitempty"` // 是否内部供应商
 	IsFrozen           bool `json:"is_frozen,omitempty"`            // 是否冻结
-	Disabled           bool `json:"disabled,omitempty"`             // 是否禁用
+	Disabled           bool `json:"disabled"`                       // 是否禁用
 	OnHold             bool `json:"on_hold,omitempty"`              // 是否暂停
 
 	// 警告和阻止设置

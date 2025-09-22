@@ -1,6 +1,7 @@
 package consts
 
 var Limit999 = 999
+var Limit9999 = 9999
 
 type ModeOfPayment string
 

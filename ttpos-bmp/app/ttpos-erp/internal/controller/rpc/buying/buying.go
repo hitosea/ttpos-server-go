@@ -217,3 +217,21 @@ func (*Controller) GetPurchaseOrderCount(ctx context.Context, req *buying.GetPur
 	}
 	return rpc.ApiSuccessWithData("获取采购订单数量成功", resp), nil
 }
+
+// CreatePurchaseOrder 创建采购订单
+func (*Controller) CreatePurchaseOrder(ctx context.Context, req *buying.CreatePurchaseOrderReq) (*api.ResponseInfo, error) {
+	resp, err := service.Buying().CreatePurchaseOrder(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccessWithData("创建采购订单成功", resp), nil
+}
+
+// UpdatePurchaseOrder 更新采购订单
+func (*Controller) UpdatePurchaseOrder(ctx context.Context, req *buying.UpdatePurchaseOrderReq) (*api.ResponseInfo, error) {
+	resp, err := service.Buying().UpdatePurchaseOrder(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccessWithData("更新采购订单成功", resp), nil
+}

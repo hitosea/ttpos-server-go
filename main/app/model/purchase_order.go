@@ -11,6 +11,7 @@ import (
 type PurchaseOrder struct {
 	BaseModel
 	OrderNo           string  `gorm:"column:order_no;type:varchar(255);not null;default:'';comment:单号" json:"order_no"`
+	SubUuid           uint64  `gorm:"column:sub_uuid;type:bigint(20) unsigned;not null;default:0;comment:子订单UUID" json:"sub_uuid"`
 	ErpOrderNo        string  `gorm:"column:erp_order_no;type:varchar(255);not null;default:'';comment:ERP采购单号" json:"erp_order_no"`
 	OrderType         int     `gorm:"column:order_type;type:int(10);not null;default:0;comment:申请类型, 0-仓库调拨" json:"order_type"`
 	SupplierName      string  `gorm:"column:supplier_name;type:varchar(100);not null;default:'';comment:供应商名称" json:"supplier_name"`
@@ -29,6 +30,7 @@ type PurchaseOrder struct {
 	FinalReceiveTime  int64   `gorm:"column:final_receive_time;type:int(10) unsigned;not null;default:0;comment:最终收货时间（时间戳），从\"部分收货\"状态变成\"全部收货\"状态的时间" json:"final_receive_time"`
 	PurchaseType      int     `gorm:"column:purchase_type;type:int(10);not null;default:0;comment:采购类型, 1-外部采购 2-内部采购" json:"purchase_type"`
 	WarehouseErpCode  string  `gorm:"column:warehouse_erp_code;type:varchar(255);not null;default:'';comment:仓库编码" json:"warehouse_erp_code"`
+	HeadquarterStatus int     `gorm:"column:headquarter_status;type:int(10);not null;default:0;comment:总部状态：0-待提交 1-待审核 2-已通过 3-已驳回 4-部分收货 5-全部收货" json:"headquarter_status"`
 	CompanyUuid       uint64  `gorm:"column:company_uuid;type:bigint(20) unsigned;not null;default:0;comment:公司UUID-用于识别子商户" json:"company_uuid"`
 	CompanyName       string  `gorm:"column:company_name;type:varchar(255);not null;default:'';comment:公司名称" json:"company_name"`
 

@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
@@ -25,6 +26,8 @@ type IWarehouseSrv interface {
 	UpdateWarehouse(ctx context.Context, req req.UpdateWarehouseReq) error                          // 更新仓库
 	DeleteWarehouse(ctx context.Context, req req.DeleteWarehouseReq) error                          // 删除仓库
 	SetDefaultWarehouse(ctx context.Context, req req.SetDefaultWarehouseReq) error                  // 设置默认仓库
+	GetWarehouse(ctx context.Context, req req.WarehouseReq) (resp.WarehouseResp, error)             // 获取仓库
+	GetWarehouseInOutList(ctx context.Context, req req.GetWarehouseInOutListReq) (resp.WarehouseInOutListResp, error) // 出入库明细列表
 }
 
 // NewWarehouseSrv 创建仓库服务
@@ -89,6 +92,17 @@ func (s *warehouseSrv) GetWarehouseList(ctx context.Context, req req.WarehouseLi
 	}, nil
 }
 
+// GetWarehouse 获取仓库
+func (s *warehouseSrv) GetWarehouse(ctx context.Context, req req.WarehouseReq) (resp.WarehouseResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	warehouseRepo := repository.NewWarehouseRepo(db)
+	warehouse, err := warehouseRepo.GetByUuid(req.Uuid)
+	if err != nil {
+		return resp.WarehouseResp{}, errors.WithMessage(err, "获取仓库失败")
+	}
+	return s.buildWarehouseResp(*warehouse), nil
+}
+
 // CreateWarehouse 创建仓库
 func (s *warehouseSrv) CreateWarehouse(ctx context.Context, addReq req.CreateWarehouseReq) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
@@ -134,7 +148,16 @@ func (s *warehouseSrv) CreateWarehouse(ctx context.Context, addReq req.CreateWar
 		return errors.WithMessage(err, "数据复制失败")
 	}
 
+	companySetting := ctx.GetCompanySetting()
+	typeMap := map[string]string{
+		"normal":  "Normal",
+		"transit": "Transit",
+	}
 	err = db.Transaction(func(tx *gorm.DB) error {
+		warehouseName, err := GetEnName(ctx, addReq.LocaleName)
+		if err != nil {
+			return errors.WithMessage(errors.New("翻译失败"), err.Error())
+		}
 		// 保存多语言
 		multiLanguageName := model.MultiLanguageName{
 			ZhName:   addReq.LocaleName.ZH,
@@ -153,9 +176,23 @@ func (s *warehouseSrv) CreateWarehouse(ctx context.Context, addReq req.CreateWar
 		}
 		warehouse.Name = addReq.LocaleName.ToJson()
 		warehouse.MultiLanguageNameUuid = multiLanguageName.Uuid
-
-		// TODO 保存到erp
-
+		var erpCode string
+		// 调用erp接口
+		if ctx.GetCompany().IsOpenErp() {
+			erpCode, err = erp.NewIErpSrv(s.dbm).CreateWarehouse(ctx.GetContext(), req.CreateErpnextWarehouseReq{
+				SiteCode:      companySetting.ErpnextSiteCode,
+				WarehouseName: warehouseName,
+				AliasName:     warehouseName,
+				CompanyAbbr:   companySetting.ErpnextCompanyAbbr,
+				Branch:        companySetting.ErpnextBranchName,
+				Disabled:      addReq.Status == 0,
+				WarehouseType: typeMap[addReq.Type], // 修改为大驼峰
+			})
+			if err != nil {
+				return errors.WithMessage(errors.New("创建仓库失败"), err.Error())
+			}
+		}
+		warehouse.ErpCode = erpCode
 		// 保存到数据库
 		err = tx.Model(&model.Warehouse{}).Create(&warehouse).Error
 		if err != nil {
@@ -193,7 +230,6 @@ func (s *warehouseSrv) UpdateWarehouse(ctx context.Context, updateReq req.Update
 	if exists {
 		return errors.New("仓库编码已存在")
 	}
-
 	checkService := NewCheckNameSrv(s.dbm)
 	names := checkService.MakeCheckNameList(ctx, updateReq.LocaleName)
 	for _, name := range names {
@@ -220,7 +256,16 @@ func (s *warehouseSrv) UpdateWarehouse(ctx context.Context, updateReq req.Update
 		"address": updateReq.Address,
 	}
 
+	companySetting := ctx.GetCompanySetting()
+	typeMap := map[string]string{
+		"normal":  "Normal",
+		"transit": "Transit",
+	}
 	err = db.Transaction(func(tx *gorm.DB) error {
+		warehouseName, err := GetEnName(ctx, updateReq.LocaleName)
+		if err != nil {
+			return errors.WithMessage(errors.New("翻译失败"), err.Error())
+		}
 		// 更新多语言名称
 		err = tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", existingWarehouse.MultiLanguageNameUuid).Updates(map[string]any{
 			"zh_name":    updateReq.LocaleName.ZH,
@@ -242,7 +287,23 @@ func (s *warehouseSrv) UpdateWarehouse(ctx context.Context, updateReq req.Update
 			return errors.WithMessage(err, "更新仓库失败")
 		}
 
-		// TODO 同步到erp
+		if ctx.GetCompany().IsOpenErp() {
+			err = erp.NewIErpSrv(s.dbm).UpdateWarehouse(ctx.GetContext(), req.UpdateErpnextWarehouseReq{
+				CreateErpnextWarehouseReq: req.CreateErpnextWarehouseReq{
+					SiteCode:      companySetting.ErpnextSiteCode,
+					WarehouseName: warehouseName,
+					AliasName:     warehouseName,
+					CompanyAbbr:   companySetting.ErpnextCompanyAbbr,
+					Branch:        companySetting.ErpnextBranchName,
+					Disabled:      updateReq.Status == 0,
+					WarehouseType: typeMap[updateReq.Type],
+				},
+				Name: existingWarehouse.ErpCode,
+			})
+			if err != nil {
+				return errors.WithMessage(errors.New("更新仓库失败"), err.Error())
+			}
+		}
 
 		return nil
 	})
@@ -253,12 +314,12 @@ func (s *warehouseSrv) UpdateWarehouse(ctx context.Context, updateReq req.Update
 }
 
 // DeleteWarehouse 删除仓库
-func (s *warehouseSrv) DeleteWarehouse(ctx context.Context, req req.DeleteWarehouseReq) error {
+func (s *warehouseSrv) DeleteWarehouse(ctx context.Context, deleteWarehouseReq req.DeleteWarehouseReq) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	warehouseRepo := repository.NewWarehouseRepo(db)
 
 	// 检查仓库是否存在
-	_, err := warehouseRepo.GetByUuid(req.Uuid)
+	existingWarehouse, err := warehouseRepo.GetByUuid(deleteWarehouseReq.Uuid)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return errors.New("仓库不存在")
@@ -269,10 +330,20 @@ func (s *warehouseSrv) DeleteWarehouse(ctx context.Context, req req.DeleteWareho
 	// TODO: 这里可以添加业务逻辑检查，比如检查仓库是否有关联数据
 	// 例如：检查是否有库存等
 
+	companySetting := ctx.GetCompanySetting()
+	if ctx.GetCompany().IsOpenErp() {
+		err = erp.NewIErpSrv(s.dbm).DeleteWarehouse(ctx.GetContext(), req.DeleteErpnextWarehouseReq{
+			SiteCode: companySetting.ErpnextSiteCode,
+			Name:     existingWarehouse.ErpCode,
+		})
+		if err != nil {
+			return errors.WithMessage(errors.New("删除仓库失败"), err.Error())
+		}
+	}
 	// 执行软删除
-	err = warehouseRepo.Delete(req.Uuid)
+	err = warehouseRepo.Delete(existingWarehouse.Uuid)
 	if err != nil {
-		return errors.WithMessage(err, "删除仓库失败")
+		return errors.WithMessage(errors.New("删除仓库失败"), err.Error())
 	}
 
 	return nil
@@ -317,4 +388,8 @@ func (s *warehouseSrv) SetDefaultWarehouse(ctx context.Context, req req.SetDefau
 	}
 
 	return nil
+}
+
+func (s *warehouseSrv) GetWarehouseInOutList(ctx context.Context, req req.GetWarehouseInOutListReq) (resp.WarehouseInOutListResp, error) {
+	return resp.WarehouseInOutListResp{}, nil
 }

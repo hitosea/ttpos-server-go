@@ -1313,6 +1313,11 @@ func (h *DeskHandler) OrderPaymentFinish(c *gin.Context) {
 			helper.ErrorWithData(c, constant.CodeCouponInvalid, res, fmt.Errorf("%s", i18n.Translate(ctx.GetLanguage(), "优惠券信息变化，请重新确认。")))
 			return
 		}
+		if strings.Contains(err.Error(), "Stock quantity not enough for Item") {
+			ctx.Log().Error("桌台销售订单的付款结账失败", zap.Any("err", err))
+			helper.ErrorWithDetail(c, constant.CodeFail, fmt.Errorf("%s", i18n.Translate(ctx.GetLanguage(), "商品材料库存不足")))
+			return
+		}
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}

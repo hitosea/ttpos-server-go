@@ -911,6 +911,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_material_unit` (
 CREATE TABLE IF NOT EXISTS `ttpos_purchase_order` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购申请ID',
+    `sub_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '子订单UUID',
     `order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '单号',
     `erp_order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERP采购单号',
     `order_type` INT(10) NOT NULL DEFAULT 0 COMMENT '申请类型, 0-仓库调拨',
@@ -928,7 +929,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_order` (
     `reject_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '驳回时间（时间戳）',
     `first_receive_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '第一次收货时间（时间戳），从“已通过”状态变成“部分收货”状态的时间',
     `final_receive_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '最终收货时间（时间戳），从“部分收货”状态变成“全部收货”状态的时间',
-    `is_external` INT(10) NOT NULL DEFAULT 0 COMMENT '是否外部采购, 0-否 1-是',
+    `purchase_type` INT(10) NOT NULL DEFAULT 1 COMMENT '采购类型 1-外部采购 2-内部采购',
+    `warehouse_erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '仓库ERP编码',
+    `headquarter_status` INT(10) NOT NULL DEFAULT 0 COMMENT '总部状态：0-待提交 1-待审核 2-已通过 3-已驳回 4-部分收货 5-全部收货',
+    `company_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '公司UUID-用于识别子商户',
     `company_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '公司名称',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -1551,7 +1555,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_recharge_order_abnormal_record` (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售账单异常日志表';
 
 
-CREATE TABLE `ttpos_warehouse` (
+CREATE TABLE IF NOT EXISTS `ttpos_warehouse` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `uuid` bigint(20) DEFAULT 0 COMMENT '唯一ID',
   `name` text COMMENT '名称',
@@ -1569,8 +1573,29 @@ CREATE TABLE `ttpos_warehouse` (
   `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_uuid` (`uuid`)
-  UNIQUE KEY `unique_erp_code` (`erp_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='仓库';
+
+CREATE TABLE IF NOT EXISTS `ttpos_warehouse_in_out_log` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '出入库记录ID',
+    `log_type` INT(10) NOT NULL DEFAULT 0 COMMENT '日志类型,0-入库 1-出库',
+    `scene` INT(10) NOT NULL DEFAULT 0 COMMENT '场景,0-采购入库 1-销售出库 2-发货出库',
+    `warehouse_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '仓库ID',
+    `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物品ID',
+    `material_name` TEXT DEFAULT '' COMMENT '物品名称JSON,记录当时物品名称',
+    `material_base_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物品基准单位ID',
+    `material_base_unit_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '物品基准单位名称',
+    `num` DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '数量',
+    `price` DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '单价，物品基准单位单价',
+    `amount` DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '金额,单价*数量',
+    `supplier_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '供应商ID',
+    `order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '单据编号',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '仓库出入库记录表';
+
 
 CREATE TABLE IF NOT EXISTS `ttpos_supplier` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -1584,6 +1609,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_supplier` (
     `position` VARCHAR(100) NOT NULL DEFAULT '' COMMENT '职位',
     `staff_uuid` BIGINT UNSIGNED NOT NULL COMMENT '员工ID, 采购负责人',
     `erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT '关联erpnext',
+    `company_abbr` varchar(255) NOT NULL DEFAULT '' COMMENT '所属公司简称，如果为空表示来自总部',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -2734,6 +2760,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_marketing_coupon` (
   `valid_start_time` int(11) DEFAULT 0 COMMENT '优惠券有效开始时间, requirement = none 时有效',
   `valid_end_time` int(11) DEFAULT 0 COMMENT '优惠券有效结束时间, requirement = none 时有效',
   `valid_days` int(11) DEFAULT 0 COMMENT '领取优惠券后n天内有效, requirement = marketing 时有效',
+  `status` int(11) DEFAULT 1 COMMENT '优惠券状态 0禁用 1开启',
   `create_time` int(11) DEFAULT 0 COMMENT '创建时间',
   `update_time` int(11) DEFAULT 0 COMMENT '更新时间',
   `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',

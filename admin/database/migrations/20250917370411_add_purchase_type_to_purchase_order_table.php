@@ -40,5 +40,11 @@ class AddPurchaseTypeToPurchaseOrderTable extends Migrator
         if (!$table->hasColumn('company_name')) {
             $table->addColumn('company_name', 'string', ['limit' => 255, 'null' => false, 'default' => '', 'comment' => '公司名称', 'after' => 'company_uuid'])->update();
         }
+
+        // 检查字段是否已存在
+        if (!$table->hasColumn('sub_uuid')) {
+            $table->addColumn('sub_uuid', 'biginteger', ['limit' => 20, 'default' => 0, 'comment' => '子订单UUID', 'after' => 'uuid'])
+                  ->update();
+        }
     }
 }

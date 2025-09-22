@@ -42,6 +42,24 @@ type (
 		//   - res: 采购订单数量响应
 		//   - err: 错误信息
 		GetPurchaseOrderCount(ctx context.Context, req *buying.GetPurchaseOrderCountReq) (res *buying.GetPurchaseOrderCountResp, err error)
+		// CreatePurchaseOrder 创建采购订单
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 创建采购订单请求参数
+		//
+		// 返回：
+		//   - res: 创建采购订单响应
+		//   - err: 错误信息
+		CreatePurchaseOrder(ctx context.Context, req *buying.CreatePurchaseOrderReq) (res *buying.CreatePurchaseOrderResp, err error)
+		// UpdatePurchaseOrder 更新采购订单
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 更新采购订单请求参数
+		//
+		// 返回：
+		//   - res: 更新采购订单响应
+		//   - err: 错误信息
+		UpdatePurchaseOrder(ctx context.Context, req *buying.UpdatePurchaseOrderReq) (res *buying.UpdatePurchaseOrderResp, err error)
 	}
 	ISupplier interface {
 		// GetInnerSupplierList 获取内部供应商列表
