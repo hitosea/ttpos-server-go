@@ -79,6 +79,7 @@
   import { ref, reactive, onMounted, getCurrentInstance } from 'vue';
   import MarketingApi from '@/api/marketing.js';
   import AddEdit from './dialog/addEdit.vue';
+import { message } from '@/utils/message';
 
   // 获取全局属性
   const { proxy } = getCurrentInstance();
@@ -182,7 +183,6 @@
   };
 
   const changeStatus = (item) => {
-    console.log(item);
     let params = {
       uuid: item.uuid,
       status: item.status == 0 ? 0 : 1,
@@ -191,6 +191,7 @@
     MarketingApi.couponStatus(params, true)
       .then((res) => {
         getTableList();
+        message.success(res.msg);
       })
       .catch((error) => {
         console.log(error);
