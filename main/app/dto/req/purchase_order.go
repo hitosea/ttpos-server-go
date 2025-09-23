@@ -111,6 +111,13 @@ type PurchaseOrderSubmitReq struct {
 	Uuid uint64 `json:"uuid" binding:"required,min=1"` // 采购订单ID
 }
 
+// PurchaseOrderSupplierSyncReq 供应商同步确认请求
+type PurchaseOrderSupplierSyncReq struct {
+	Uuid            uint64 `json:"uuid" binding:"required,min=1"`        // 采购订单UUID
+	SupplierErpCode string `json:"supplier_erp_code" binding:"required"` // 供应商ERP编码
+	ConfirmSync     bool   `json:"confirm_sync" binding:"required"`      // 是否确认同步
+}
+
 // PurchaseReceiptCreateReq 创建收货记录请求
 type PurchaseReceiptCreateReq struct {
 	PurchaseOrderUuid uint64                         `json:"purchase_order_uuid" binding:"required,min=1"` // 采购订单ID

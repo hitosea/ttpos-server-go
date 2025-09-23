@@ -64,7 +64,7 @@ func NewPurchaseOrderSrvImpl(dbm *database.DBManager) IPurchaseOrderSrv {
 
 // GetPurchaseOrderList 获取采购申请列表
 func (s *purchaseOrderSrv) GetPurchaseOrderList(ctx context.Context, req req.PurchaseOrderListReq) (resp.PurchaseOrderListResp, error) {
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := ctx.GetDB()
 	purchaseOrderRepo := repository.NewPurchaseOrderRepo(db)
 
 	// 构建查询选项
@@ -138,7 +138,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderList(ctx context.Context, req req.Pur
 
 // GetPurchaseOrderDetail 获取采购申请详情
 func (s *purchaseOrderSrv) GetPurchaseOrderDetail(ctx context.Context, req req.PurchaseOrderDetailReq) (resp.PurchaseOrderDetailResp, error) {
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := ctx.GetDB()
 	purchaseOrderRepo := repository.NewPurchaseOrderRepo(db)
 
 	// 查询采购申请详情
@@ -189,7 +189,7 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 		}
 	}
 
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := ctx.GetDB()
 
 	var result resp.PurchaseOrderCreateResp
 	err := db.Transaction(func(tx *gorm.DB) error {
@@ -320,7 +320,7 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(ctx context.Context, req req.Purc
 		return err
 	}
 
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := ctx.GetDB()
 
 	err := db.Transaction(func(tx *gorm.DB) error {
 		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
@@ -484,7 +484,10 @@ func (s *purchaseOrderSrv) DeletePurchaseOrder(ctx context.Context, req req.Purc
 
 // SubmitPurchaseOrder 提交采购申请
 func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.PurchaseOrderSubmitReq) error {
-	return s.dbm.GetDB(ctx.GetDbId()).Transaction(func(tx *gorm.DB) error {
+	db := ctx.GetDB()
+	companySetting := ctx.GetCompanySetting()
+	//
+	return db.Transaction(func(tx *gorm.DB) error {
 		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
 		purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(tx)
 
@@ -495,6 +498,21 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 				return errors.New("采购申请不存在")
 			}
 			return errors.WithMessage(err, "查询采购申请失败")
+		}
+
+		// 检查供应商状态
+		if purchaseOrder.SupplierErpCode != "" {
+			dbs := tx
+			if companySetting.IsSubShop() && purchaseOrder.IsHeadquarterPurchase() {
+				dbs = s.dbm.GetDB(companySetting.HeadquarterUuid)
+			}
+			supplier, err := repository.NewSupplierRepo(dbs).GetByErpCode(purchaseOrder.SupplierErpCode)
+			if err != nil {
+				return errors.WithMessage(err, "查询供应商失败")
+			}
+			if err == nil && supplier.Status == 0 {
+				return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用")
+			}
 		}
 
 		// 删除物品为0的数据
@@ -536,7 +554,7 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 
 // ApprovePurchaseOrder 审核采购申请
 func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.PurchaseOrderApproveReq) error {
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := ctx.GetDB()
 	companySetting := ctx.GetCompanySetting()
 
 	err := db.Transaction(func(tx *gorm.DB) error {
@@ -554,6 +572,21 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 		// 检查是否可审核
 		if !purchaseOrder.CanApprove() && (companySetting.IsSubShop() || companySetting.IsHeadquarter()) {
 			return errors.New("当前状态不允许审核")
+		}
+
+		// 检查供应商状态
+		if purchaseOrder.SupplierErpCode != "" {
+			dbs := tx
+			if companySetting.IsSubShop() && purchaseOrder.IsHeadquarterPurchase() {
+				dbs = s.dbm.GetDB(companySetting.HeadquarterUuid)
+			}
+			supplier, err := repository.NewSupplierRepo(dbs).GetByErpCode(purchaseOrder.SupplierErpCode)
+			if err != nil {
+				return errors.WithMessage(err, "查询供应商失败")
+			}
+			if err == nil && supplier.Status == 0 {
+				return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用")
+			}
 		}
 
 		oldStatus := purchaseOrder.Status
@@ -604,32 +637,14 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 			}
 			err = db.Transaction(func(tx *gorm.DB) error {
 				// 整单复制
-				headquarterPurchaseOrder := &model.PurchaseOrder{
-					BaseModel: model.BaseModel{
-						Uuid: func() uint64 {
-							uuid, _ := utils.GetID()
-							return uuid
-						}(),
-					},
-					SubUuid:           purchaseOrder.Uuid,
-					OrderNo:           purchaseOrder.OrderNo,
-					SupplierName:      purchaseOrder.SupplierName,
-					SupplierErpCode:   purchaseOrder.SupplierErpCode,
-					Status:            constant.PurchaseOrderStatusPending,
-					HeadquarterStatus: constant.HeadquarterStatusPending,
-					OrderTime:         purchaseOrder.OrderTime,
-					ExpectArrivalTime: purchaseOrder.ExpectArrivalTime,
-					WarehouseErpCode:  purchaseOrder.WarehouseErpCode,
-					PurchaseType:      purchaseOrder.PurchaseType,
-					ApplicantUuid:     purchaseOrder.ApplicantUuid,
-					ApplicantName:     purchaseOrder.ApplicantName,
-					ApproverUuid:      purchaseOrder.ApproverUuid,
-					ApproverName:      purchaseOrder.ApproverName,
-					Num:               purchaseOrder.Num,
-					OrderType:         purchaseOrder.OrderType,
-					CompanyUuid:       purchaseOrder.CompanyUuid,
-					CompanyName:       purchaseOrder.CompanyName,
-				}
+				headquarterPurchaseOrder := purchaseOrder
+				headquarterPurchaseOrder.Uuid = func() uint64 {
+					uuid, _ := utils.GetID()
+					return uuid
+				}()
+				headquarterPurchaseOrder.SubUuid = purchaseOrder.Uuid
+				headquarterPurchaseOrder.Status = constant.PurchaseOrderStatusPending
+				headquarterPurchaseOrder.HeadquarterStatus = constant.HeadquarterStatusPending
 				err = repository.NewPurchaseOrderRepo(db).Create(headquarterPurchaseOrder)
 				if err != nil {
 					return errors.WithMessage(err, "创建总部采购申请失败")
@@ -640,21 +655,11 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 				for _, item := range purchaseOrder.Items {
 					material, err := repository.NewMaterialRepo(db).GetMaterialByErpCode(item.MaterialCode)
 					if err != nil {
-						return errors.WithMessage(err, "查询物品明细失败")
+						return errors.WithMessage(err, "查询总部物品明细失败")
 					}
-					headquarterItem := model.PurchaseOrderItem{
-						PurchaseOrderUuid:  headquarterPurchaseOrder.Uuid,
-						MaterialCode:       item.MaterialCode,
-						MaterialName:       item.MaterialName,
-						MaterialUuid:       material.Uuid,
-						Num:                item.Num,
-						ArrivalNum:         item.ArrivalNum,
-						UnitUuid:           item.UnitUuid,
-						UnitName:           item.UnitName,
-						UnitConversionRate: item.UnitConversionRate,
-						BaseUnitUuid:       item.BaseUnitUuid,
-						BaseUnitName:       item.BaseUnitName,
-					}
+					headquarterItem := item
+					headquarterItem.PurchaseOrderUuid = headquarterPurchaseOrder.Uuid
+					headquarterItem.MaterialUuid = material.Uuid
 					headquarterItems = append(headquarterItems, headquarterItem)
 				}
 				err = repository.NewPurchaseOrderItemRepo(db).CreateBatch(headquarterItems)
@@ -778,7 +783,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 
 // CreateReceiptOrder 创建收货单
 func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptCreateReq) (resp.PurchaseReceiptOrderCreateResp, error) {
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := ctx.GetDB()
 
 	// 判断物品明细是否已经停用
 	if req.IsConfirm {
@@ -947,7 +952,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 
 // UpdatePurchaseReceiptOrder 更新收货单
 func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptOrderUpdateReq) error {
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := ctx.GetDB()
 
 	// 判断物品明细是否已经停用
 	if req.IsConfirm {
@@ -1112,7 +1117,7 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 
 // GetReceiptOrderList 获取收货单列表
 func (s *purchaseOrderSrv) GetPurchaseReceiptOrderList(ctx context.Context, req req.PurchaseReceiptOrderListReq) (resp.PurchaseReceiptOrderListResp, error) {
-	receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(s.dbm.GetDB(ctx.GetDbId()))
+	receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(ctx.GetDB())
 
 	// 构建查询选项
 	var opts []repository.DBOption
@@ -1165,7 +1170,7 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderList(ctx context.Context, req 
 
 // GetReceiptOrderDetail 获取收货单详情
 func (s *purchaseOrderSrv) GetPurchaseReceiptOrderDetail(ctx context.Context, req req.PurchaseReceiptOrderDetailReq) (resp.PurchaseReceiptOrderDetailResp, error) {
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := ctx.GetDB()
 	receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(db)
 
 	// 查询收货单详情
@@ -1607,11 +1612,6 @@ func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, hea
 			warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(targetWarehouse.Uuid, item.MaterialUuid)
 			if err != nil && err != gorm.ErrRecordNotFound {
 				return errors.WithMessage(err, "查询仓库商品库存失败")
-			}
-
-			// 检查库存是否足够
-			if warehouseItem.Stock < actualNum {
-				return errors.New("总部库存不足，无法完成内部采购")
 			}
 
 			// 减少库存
