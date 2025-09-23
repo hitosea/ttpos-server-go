@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 	"ttpos-server-go/app/constant"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/pkg/utils"
 
@@ -28,11 +29,12 @@ func NewBusinessDataSunmiTemplate(
 
 // GetPrintContent 获取内容
 func (t *businessDataSunmiTemplate) GetPrintContent(
-	printerType string,
+	printerInfo settingResp.PrinterInfo,
 	businessData *PrintingBusinessData,
 	startTime int64,
 	endTime int64,
 ) string {
+	printerType := printerInfo.PrinterType
 	// 店铺设置
 	companySetting, _ := t.base.Setting.GetCompanySetting(t.base.Ctx)
 	paymentSetting, _ := t.base.Setting.GetPaymentSetting(t.base.Ctx, companySetting)

@@ -54,4 +54,15 @@ type PrinterInfo struct {
 	PrinterSn              string // 打印机SN
 	PrinterWidth           int    // 打印机宽度mm
 	EnableStatusCheck      int    // 是否启用状态检查
+	EnableSound            int    // 是否启用打印提示音
+}
+
+// 是否启用
+func (p *PrinterInfo) IsEnableSound() bool {
+	return p.EnableSound == 1
+}
+
+// 是否启用状态检查
+func (p *PrinterInfo) IsEnableStatusCheck() bool {
+	return p.EnableStatusCheck == 1
 }

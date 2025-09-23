@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 	"ttpos-server-go/app/constant"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/pkg/utils"
 
@@ -28,11 +29,12 @@ func NewBusinessDataXprinterTemplate(
 
 // GetPrintContent 获取内容
 func (t *businessDataXprinterTemplate) GetPrintContent(
-	printerType string,
+	printerInfo settingResp.PrinterInfo,
 	businessData *PrintingBusinessData,
 	startTime int64,
 	endTime int64,
 ) string {
+	printerType := printerInfo.PrinterType
 	// 店铺设置
 	companySetting, _ := t.base.Setting.GetCompanySetting(t.base.Ctx)
 	paymentSetting, _ := t.base.Setting.GetPaymentSetting(t.base.Ctx, companySetting)
@@ -307,7 +309,7 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 	// Print and exit page mode
 	printer.PrintAndExitPageMode()
 	printer.LineFeed(4)
-	printer.CutPaper(true)
+	printer.CutPaper(printerInfo.IsEnableSound())
 	//
 	return printer.GetOrderData()
 }

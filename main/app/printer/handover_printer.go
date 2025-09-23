@@ -162,6 +162,7 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 	 */
 	if printerType == constant.PrinterTypeCashierCompax {
 		return template.NewHandoverCompaxTemplate(base).GetPrintContent(
+			settingPrinterInfo,
 			tmp,
 			log,
 			businessData,
@@ -174,7 +175,7 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 	 */
 	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
 		return template.NewHandoverXprinterTemplate(base).GetPrintContent(
-			printerType,
+			settingPrinterInfo,
 			tmp,
 			log,
 			businessData,
@@ -187,7 +188,7 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 	 */
 	if base.IsSunMi {
 		return template.NewHandoverSunmiTemplate(base).GetPrintContent(
-			printerType,
+			settingPrinterInfo,
 			tmp,
 			log,
 			businessData,
@@ -200,7 +201,7 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 	 */
 	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi, constant.PrinterTypeGpCloud}, printerType) {
 		return template.NewHandoverCodesoftTemplate(base).GetPrintContent(
-			printerType,
+			settingPrinterInfo,
 			tmp,
 			log,
 			businessData,

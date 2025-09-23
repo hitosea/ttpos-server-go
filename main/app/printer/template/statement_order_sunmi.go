@@ -30,12 +30,13 @@ func NewStatementOrderSunmiTemplate(
 // GetPrintnrContent 获取打印内容
 func (t *statementOrderSunmiTemplate) GetPrintContent(
 	settingPrinterInfo settingResp.PrinterInfo,
-	printerType string,
 	printType int,
 	temp int,
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
 ) string {
+	printerType := settingPrinterInfo.PrinterType
+	//
 	name := t.base.Translate("人")
 	// 店铺设置
 	company := t.base.StoreSetting.Company

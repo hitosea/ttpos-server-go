@@ -691,5 +691,5 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	//
 	img.SetSegmentationHeight(utils.IfInt(settingPrinterInfo.IsCashierPrinter, 2200, 200))
 	//
-	return img.Save("", !t.base.IsSunMi, 0)
+	return img.Save("", !t.base.IsSunMi && settingPrinterInfo.IsEnableSound(), 0)
 }

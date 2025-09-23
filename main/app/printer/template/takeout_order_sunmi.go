@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"ttpos-server-go/app/constant"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/config"
@@ -28,12 +29,13 @@ func NewTakeoutOrderSunmiTemplate(
 
 // GetPrintnrContent 获取打印内容
 func (t *takeoutOrderSunmiTemplate) GetPrintContent(
-	printerType string,
+	settingPrinterInfo settingResp.PrinterInfo,
 	temp int,
 	memberSaleOrder *model.MemberSaleOrder,
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
 ) string {
+	printerType := settingPrinterInfo.PrinterType
 	// 品牌
 	brandName := config.Server.BrandName
 	// 日历
@@ -260,7 +262,7 @@ func (t *takeoutOrderSunmiTemplate) GetPrintContent(
 	printer.LineFeed()
 	printer.PrintAndExitPageMode()
 	printer.LineFeed(6)
-	printer.CutPaper(true)
+	printer.CutPaper(settingPrinterInfo.IsEnableSound())
 
 	// 返回打印数据
 	return printer.GetOrderData()

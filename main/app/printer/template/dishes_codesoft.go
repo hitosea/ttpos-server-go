@@ -16,7 +16,7 @@ type dishesCodesoftTemplate struct {
 	base *printerTemplate
 }
 
-// NewdishesCodesoftTemplate 创建新的Codesoft菜品打印模板
+// NewDishesCodesoftTemplate 创建新的Codesoft菜品打印模板
 func NewDishesCodesoftTemplate(
 	base *printerTemplate,
 ) *dishesCodesoftTemplate {
@@ -357,7 +357,7 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 	// 打印并退出页面模式
 	printer.PrintAndExitPageMode()
 	printer.LineFeed(4)
-	printer.CutPaper(true)
+	printer.CutPaper(printerItem.Printer.IsEnableSound())
 
 	// 返回打印数据
 	return printer.GetOrderData()
@@ -634,7 +634,7 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 	// 打印并退出页面模式
 	printer.PrintAndExitPageMode()
 	printer.LineFeed(6)
-	printer.CutPaper(false)
+	printer.CutPaper(printerItem.Printer.IsEnableSound())
 
 	// 返回打印结果
 	return printer.GetOrderData()
