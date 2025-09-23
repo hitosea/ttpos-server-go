@@ -573,7 +573,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 		purchaseOrder.HeadquarterStatus = newStatus
 
 		// 更新总部状态
-		if companySetting.IsTtposSite() && companySetting.IsSubShop() && purchaseOrder.PurchaseType == 2 && newStatus == constant.PurchaseOrderStatusApproved {
+		if companySetting.IsSubShop() && purchaseOrder.PurchaseType == 2 && newStatus == constant.PurchaseOrderStatusApproved {
 			purchaseOrder.Status = constant.PurchaseOrderStatusHeadquarterPending
 			purchaseOrder.HeadquarterStatus = constant.HeadquarterStatusPending
 		}
