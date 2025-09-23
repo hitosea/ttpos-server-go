@@ -58,7 +58,7 @@ func (h *WarehouseHandler) GetWarehouseList(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Success 200 {object} dto.Response{data=resp.WarehouseListResp} "成功"
-// @Router /shop/headquarter/warehouse/list [get]
+// @Router /shop/warehouse/headquarter/list [get]
 func (h *WarehouseHandler) GetHeadquarterWarehouseList(c *gin.Context) {
 	ctx := helper.GetContext(c)
 

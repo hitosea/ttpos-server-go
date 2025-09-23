@@ -119,7 +119,7 @@ func (s *warehouseSrv) GetHeadquarterWarehouseList(ctx context.Context) (resp.Wa
 		Branch:      companySetting.ErpnextBranchName,
 	})
 	if err != nil {
-		return resp.WarehouseListResp{}, errors.WithMessage(errors.New("同步仓库失败"), err.Error())
+		return resp.WarehouseListResp{}, errors.WithMessage(errors.New("获取erp仓库失败"), err.Error())
 	}
 
 	// 转换 warehouseList 为 resp.WarehouseResp 格式

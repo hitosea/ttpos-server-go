@@ -972,6 +972,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_receipt_order` (
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态, 0-待收货 1-已收货 2-已取消',
     `purchase_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购申请ID',
     `purchase_order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '采购申请单号',
+    `supplier_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '供应商名称',
+    `supplier_erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '供应商ERP编码',
     `num` DECIMAL(22, 4) NOT NULL DEFAULT 0.0000 COMMENT '物资数量，每种物品算一个',
     `expect_arrival_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '期望到货日期（时间戳），与采购申请单的期望到货日期一致',
     `receive_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '收货时间（时间戳）',
