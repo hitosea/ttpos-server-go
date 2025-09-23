@@ -24,6 +24,7 @@ const (
 	DocTypeBom             = "BOM"
 	DocTypeMaterialRequest = "Material Request"
 	DocTypeWarehouse       = "Warehouse"
+	DocPosPermissionRule   = "Pos Permission Rule"
 )
 
 const (
@@ -37,4 +38,9 @@ const (
 const (
 	// HeadquartersSupplier 总部供应商，连锁模式默认
 	HeadquartersSupplier = "Headquarters - Supplier"
+)
+
+const (
+	//ColumnCustomPermissionRule 自定义权限规则
+	ColumnCustomPermissionRule = "custom_permission_rule"
 )

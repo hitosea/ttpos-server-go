@@ -10,6 +10,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-bmp/app/ttpos-erp/api/warehouse"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
 )
 
@@ -27,6 +28,10 @@ type (
 		// GetItemStock 获取物品库存信息
 		// 根据公司简称、分支机构和物品编码查询库存信息
 		GetItemStock(ctx context.Context, req *item.GetItemStockReq) (res *item.GetItemStockResp, err error)
+		// GetItem 根据物品编码获取单个物品信息
+		// 参数：ctx 上下文，req 包含物品编码和可选的公司、分支信息
+		// 返回：物品详细信息，错误信息
+		GetItem(ctx context.Context, req *item.GetItemReq) (res *erp.Item, err error)
 	}
 	IStock interface {
 		// GetUomList 获取单位列表
