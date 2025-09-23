@@ -461,13 +461,23 @@ func (s *warehouseSrv) GetWarehouseInOutList(ctx context.Context, req req.GetWar
 }
 
 func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
-	if !ctx.GetCompany().IsOpenErp() {
+	// 商家数据库
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	var err error
+	company := ctx.GetCompany()
+	if company.Uuid == 0 {
+		company, err = repository.NewCompanyRepo(db).GetCompanyInfoByUuid(ctx.GetCompanyUuid())
+		if err != nil {
+			return errors.WithMessage(errors.New("同步仓库失败"), err.Error())
+		}
+	}
+	if !company.IsOpenErp() {
 		return errors.New("公司未授权erp")
 	}
-	db := s.dbm.GetDB(ctx.GetDbId())
-	translateClient := utils.NewTranslateClient()
-
 	companySetting := ctx.GetCompanySetting()
+	if companySetting.Uuid == 0 {
+		companySetting = repository.NewCompanySettingRepo(db).Get()
+	}
 	warehouseList, err := erp.NewIErpSrv(s.dbm).GetWarehouseList(ctx.GetContext(), req.GetErpnextWarehouseListReq{
 		SiteCode:    companySetting.ErpnextSiteCode,
 		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
@@ -477,6 +487,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 		return errors.WithMessage(errors.New("同步仓库失败"), err.Error())
 	}
 
+	// 翻译仓库名称
 	var translateItems []utils.TranslateItem
 	for _, erpWarehouse := range warehouseList {
 		translateItems = append(translateItems, utils.TranslateItem{
@@ -484,6 +495,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 			Content: erpWarehouse.WarehouseName,
 		})
 	}
+	translateClient := utils.NewTranslateClient()
 	multiLanguageMap := translateClient.TranslateWithRetry(ctx.GetContext(), translateItems, 10)
 
 	var syncEver int64

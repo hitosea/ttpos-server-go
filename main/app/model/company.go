@@ -105,10 +105,19 @@ type CompanySetting struct {
 	ErpnextAdminEmail      string `gorm:"column:erpnext_admin_email;type:varchar(255);default:'';comment:ERPNext 管理员邮箱;NOT NULL" json:"erpnext_admin_email"`
 }
 
-// 是否是子商户
+// 连锁子店
 func (model *CompanySetting) IsSubShop() bool {
-	// 存在 erp_code 并且 company_abbr 不等于 headquarter_abbr
-	return model.ErpnextSiteCode != "" && model.ErpnextCompanyAbbr != model.ErpnextHeadquarterAbbr
+	return !model.IsTtposSite() && model.ErpnextCompanyAbbr != model.ErpnextHeadquarterAbbr
+}
+
+// 连锁总部
+func (model *CompanySetting) IsHeadquarter() bool {
+	return !model.IsTtposSite() && model.ErpnextCompanyAbbr == model.ErpnextHeadquarterAbbr
+}
+
+// 散户
+func (model *CompanySetting) IsTtposSite() bool {
+	return model.ErpnextSiteCode == "1" || model.ErpnextSiteCode == ""
 }
 
 func (model *CompanySetting) GetTimezone() string {
@@ -116,11 +125,6 @@ func (model *CompanySetting) GetTimezone() string {
 		return string(utils.ZH_TIMEZONE)
 	}
 	return model.Timezone
-}
-
-// 是否总部。 如果公司简称和总部简称相同，并且不是散户，则认为是总部
-func (model *CompanySetting) IsHeadquarter() bool {
-	return model.ErpnextCompanyAbbr == model.ErpnextHeadquarterAbbr && !model.IsTtposSite()
 }
 
 func (model *CompanySetting) GetCoordinates() (latitude, longitude string) {
@@ -163,11 +167,6 @@ func (model *CompanySetting) GetDeliveryConfig(channel string, distance float64)
 		return nil, errors.WithMessage(err, "get delivery config failed")
 	}
 	return config, nil
-}
-
-// 是否连锁店
-func (model *CompanySetting) IsTtposSite() bool {
-	return model.ErpnextSiteCode == "1" || model.ErpnextSiteCode == ""
 }
 
 func (model *CompanySetting) IsOpenRider() bool {

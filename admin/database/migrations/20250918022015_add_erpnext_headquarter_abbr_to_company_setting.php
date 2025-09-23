@@ -40,18 +40,7 @@ class AddErpnextHeadquarterAbbrToCompanySetting extends Migrator
 
         $table->update();
 
-        // 华莱士site
-        $db = Db::connect(Db::getConfig('default'), true);
-        // TODO 要先有总部才行
-        // $headquarter = $db->name('company_setting')->where('erpnext_site_code', '2')->where('erpnext_company_abbr', 'CFG')->first();
-        // $headquarter['uuid']
-        $headquarterUuid = 0;
-        $db->name('company_setting')->where('erpnext_site_code', '2')->update(['erpnext_headquarter_abbr' => 'CFG', 'headquarter_uuid' => $headquarterUuid]);
-
-        // ttpos site (散户) 设置erpnext_headquarter_abbr为company_abbr的值
-        $companies = $db->name('company_setting')->where('erpnext_site_code', '1')->select();
-        foreach ($companies as $company) {
-            $db->name('company_setting')->where('id', $company['id'])->update(['erpnext_headquarter_abbr' => $company['erpnext_company_abbr'], 'headquarter_uuid' => $company['uuid']]);
-        }
+        // TODO 上线前，需要修改saas.ttpos_setting中key=erpnext_site的配置
+        // 指定总部后，修改 saas.ttpos_company_setting 和商家 ttpos_company_setting 的 erpnext_headquarter_abbr 和 headquarter_uuid 的值
     }
 }
