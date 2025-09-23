@@ -164,6 +164,10 @@ class MarketingCouponService
         if (isset($params['requirement'])) {
             $query->where('requirement', '=', $params['requirement']);
         }
+        // status
+        if (isset($params['status'])) {
+            $query->where('status', '=', $params['status']);
+        }
 
         $page = $params['page'] ?? 1;
         $pageSize = $params['list_rows'] ?? 10;
@@ -174,20 +178,6 @@ class MarketingCouponService
                         $query->where('delete_time', 0);
                     }
                 ])->where('prize_type', 1)->where('delete_time', 0);
-            },
-            'memberCoupons' => function($query) {
-                $query->with([
-                    'saleOrder' => function($query) {
-                        $query->where('delete_time', 0);
-                    }
-                ])->where('delete_time', 0);
-            },
-            'marketingCoupons' => function($query) {
-                $query->with([
-                    'saleOrder' => function($query) {
-                        $query->where('delete_time', 0);
-                    }
-                ])->where('delete_time', 0);
             },
         ])->order('sort asc, create_time desc')->page($page, $pageSize)->select();
         $total = $query->count();
@@ -238,6 +228,7 @@ class MarketingCouponService
                     MarketingCouponRecord::RecordTypeActivityDeduction,
                     MarketingCouponRecord::RecordTypeBonus,
                     MarketingCouponRecord::RecordTypeUsed,
+                    MarketingCouponRecord::RecordTypeDelete,
                 ]), function ($query) use ($params) {
                 $query->where('record.type', '=', $params['record_type']);
             });
@@ -269,20 +260,6 @@ class MarketingCouponService
                     }
                 ])->where('prize_type', 1)->where('delete_time', 0);
             },
-            'memberCoupons' => function($query) {
-                $query->with([
-                    'saleOrder' => function($query) {
-                        $query->where('delete_time', 0);
-                    }
-                ])->where('delete_time', 0);
-            },
-            'marketingCoupons' => function($query) {
-                $query->with([
-                    'saleOrder' => function($query) {
-                        $query->where('delete_time', 0);
-                    }
-                ])->where('delete_time', 0);
-            },
         ])->where('uuid', $uuid)->find();
         if (!$coupon) {
             return ['code' => 1, 'msg' => __('优惠券不存在')];
@@ -297,6 +274,7 @@ class MarketingCouponService
         if (!$res) {
             return ['code' => 1, 'msg' => __('删除优惠券失败')];
         }
+        $this->addRecord(MarketingCouponRecord::RecordTypeDelete, $coupon->uuid, $coupon->count, $coupon->count);
     }
 
     /**
@@ -327,25 +305,10 @@ class MarketingCouponService
             'can_delete' => true,
             'msg' => '',
         ];
-        $canDelete = true;
         foreach ($coupon->prizes as $prize) {
             if ($prize->activity && $prize->activity->status != 2) {
                 $result['can_delete'] = false;
                 $result['msg'] = __('活动未结束，不能删除');
-                break;
-            }
-        }
-        foreach ($coupon->memberCoupons as $memberCoupon) {
-            if ($memberCoupon->saleOrder && $memberCoupon->saleOrder->status == 1) {
-                $result['can_delete'] = false;
-                $result['msg'] = __('优惠券已使用，不能删除');
-                break;
-            }
-        }
-        foreach ($coupon->marketingCoupons as $marketingCoupon) {
-            if ($marketingCoupon->saleOrder && $marketingCoupon->saleOrder->status == 1) {
-                $result['can_delete'] = false;
-                $result['msg'] = __('优惠券已使用，不能删除');
                 break;
             }
         }
