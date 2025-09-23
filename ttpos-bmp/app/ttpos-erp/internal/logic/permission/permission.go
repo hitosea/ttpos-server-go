@@ -68,7 +68,7 @@ func (s *sPermission) buildPermissionRuleListFilters(req *erp.PosPermissionRule)
 // queryPermissionRuleList 执行权限规则列表查询
 func (s *sPermission) queryPermissionRuleList(ctx context.Context, filters [][]string) ([]*erp.PosPermissionRule, error) {
 	resp, err := service.Document().List(ctx, &erp.ErpReq{
-		DocType: erp.DocPosPermissionRule,
+		DocType: erp.DocTypePosPermissionRule,
 	}, &erp.RequestParams{
 		Fields:  g.ArrayStr{"name", "rule_code", "rule_name", "rule_type", "owner", "creation", "modified", "modified_by", "docstatus", "idx"},
 		Filters: filters,
@@ -101,7 +101,7 @@ func (s *sPermission) queryPermissionRuleList(ctx context.Context, filters [][]s
 			ModifiedBy: data.Get("modified_by").String(),
 			Docstatus:  data.Get("docstatus").Int(),
 			Idx:        data.Get("idx").Int(),
-			Doctype:    erp.DocPosPermissionRule,
+			Doctype:    erp.DocTypePosPermissionRule,
 		}
 		permissionRuleList = append(permissionRuleList, rule)
 	}
@@ -160,7 +160,7 @@ func (s *sPermission) GetPosPermissionRule(ctx context.Context, ruleCode string)
 
 	// 查询权限规则详情
 	resp, err := service.Document().Get(ctx, &erp.ErpReq{
-		DocType: erp.DocPosPermissionRule,
+		DocType: erp.DocTypePosPermissionRule,
 		Name:    ruleCode,
 	}, &erp.RequestParams{})
 
@@ -192,7 +192,7 @@ func (s *sPermission) CreatePosPermissionRule(ctx context.Context, req *erp.PosP
 	}
 
 	// 创建权限规则
-	resp, err := service.Document().Create(ctx, erp.DocPosPermissionRule, req)
+	resp, err := service.Document().Create(ctx, erp.DocTypePosPermissionRule, req)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建权限规则失败")
 	}
@@ -239,7 +239,7 @@ func (s *sPermission) UpdatePosPermissionRule(ctx context.Context, req *erp.PosP
 
 	// 更新权限规则
 	resp, err := service.Document().Update(ctx, &erp.ErpReq{
-		DocType: erp.DocPosPermissionRule,
+		DocType: erp.DocTypePosPermissionRule,
 		Name:    req.Name,
 	}, req)
 
@@ -272,7 +272,7 @@ func (s *sPermission) DeletePosPermissionRule(ctx context.Context, ruleCode stri
 
 	// 删除权限规则
 	_, err = service.Document().Delete(ctx, &erp.ErpReq{
-		DocType: erp.DocPosPermissionRule,
+		DocType: erp.DocTypePosPermissionRule,
 		Name:    ruleCode,
 	})
 
@@ -293,15 +293,24 @@ func (s *sPermission) DeletePosPermissionRule(ctx context.Context, ruleCode stri
 // 返回：
 //   - hasPermission: 是否有权限
 //   - err: 错误信息
-func (s *sPermission) CheckPermission(ctx context.Context, permissionList []*erp.PosPermissionRule, company string) (hasPermission bool, err error) {
-	// 参数验证
-	if len(company) == 0 {
-		return false, gerror.New("公司名称不能为空")
-	}
-
+func (s *sPermission) CheckPermission(ctx context.Context, permissionList []erp.PermissionRule, company string) (hasPermission bool, err error) {
 	if len(permissionList) == 0 {
 		// 如果没有权限规则，默认允许访问
 		return true, nil
+	}
+	permissionRuleList := make([]*erp.PosPermissionRule, 0, len(permissionList))
+	for _, rule := range permissionList {
+		permissionRule, err := service.Permission().GetPosPermissionRule(ctx, rule.PermissionRule)
+		if err != nil {
+			g.Log().Errorf(ctx, "获取权限规则失败,permissionList:%s,err:%v", permissionList, err)
+			return false, err // 获取权限规则失败，跳过该物品
+		}
+		permissionRuleList = append(permissionRuleList, permissionRule)
+	}
+
+	// 参数验证
+	if len(company) == 0 {
+		return false, gerror.New("公司名称不能为空")
 	}
 
 	// 标记是否存在白名单规则
@@ -310,7 +319,7 @@ func (s *sPermission) CheckPermission(ctx context.Context, permissionList []*erp
 	inWhiteList := false
 
 	// 遍历权限规则列表
-	for _, rule := range permissionList {
+	for _, rule := range permissionRuleList {
 		if rule == nil {
 			continue
 		}

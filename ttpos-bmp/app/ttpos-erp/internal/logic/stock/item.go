@@ -147,16 +147,7 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 				g.Log().Errorf(ctx, "获取物品信息失败,itemCode:%s,err:%v", data.Get("item_code").String(), err)
 				continue // 获取物品信息失败，跳过该物品
 			}
-			permissionRuleList := make([]*erp.PosPermissionRule, 0, len(itemInfo.CustomPermissionRule))
-			for _, rule := range itemInfo.CustomPermissionRule {
-				permissionRule, err := service.Permission().GetPosPermissionRule(ctx, rule.PermissionRule)
-				if err != nil {
-					g.Log().Errorf(ctx, "获取物品权限规则失败,itemCode:%s,err:%v", data.Get("item_code").String(), err)
-					continue // 获取权限规则失败，跳过该物品
-				}
-				permissionRuleList = append(permissionRuleList, permissionRule)
-			}
-			hasPermission, err := service.Permission().CheckPermission(ctx, permissionRuleList, subCompanyName)
+			hasPermission, err := service.Permission().CheckPermission(ctx, itemInfo.CustomPermissionRule, subCompanyName)
 			if err != nil {
 				g.Log().Errorf(ctx, "检查物品权限失败,itemCode:%s,err:%v", data.Get("item_code").String(), err)
 				continue // 检查权限失败，跳过该物品

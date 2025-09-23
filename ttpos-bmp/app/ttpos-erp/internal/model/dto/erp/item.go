@@ -79,11 +79,7 @@ type Item struct {
 	Classification       string           `json:"custom_classification,omitempty"`
 	ClassificationCode   string           `json:"custom_classification_code,omitempty"`
 	CustomInternalCode   string           `json:"custom_internal_code,omitempty"`
-	CustomPermissionRule []PermissionRule `json:"custom_permission_rule,omitempty"`
-}
-
-type PermissionRule struct {
-	PermissionRule string `json:"permission_rule,omitempty"`
+	CustomPermissionRule []PermissionRule `json:"custom_permission_rule,omitempty"` //自定权限清单 多选表格
 }
 
 type BarCode struct {
@@ -144,9 +140,10 @@ type ItemAttribute struct {
 	Doctype             string               `json:"doctype,omitempty"`               // 文档类型
 	ItemAttributeValues []ItemAttributeValue `json:"item_attribute_values,omitempty"` // 商品属性值列表
 	//自定义字段
-	CustomCompany string `json:"custom_company,omitempty"` // 自定义公司
-	CustomBranch  string `json:"custom_branch,omitempty"`  // 自定义分公司
-	CustomAlias   string `json:"custom_alias,omitempty"`   // 自定义别名
+	CustomCompany        string           `json:"custom_company,omitempty"`         // 自定义公司
+	CustomBranch         string           `json:"custom_branch,omitempty"`          // 自定义分公司
+	CustomAlias          string           `json:"custom_alias,omitempty"`           // 自定义别名
+	CustomPermissionRule []PermissionRule `json:"custom_permission_rule,omitempty"` //自定权限清单 多选表格
 }
 
 // ItemAttributeValue 结构体定义

@@ -37,7 +37,7 @@ type (
 		// 返回：
 		//   - hasPermission: 是否有权限
 		//   - err: 错误信息
-		CheckPermission(ctx context.Context, permissionList []*erp.PosPermissionRule, company string) (hasPermission bool, err error)
+		CheckPermission(ctx context.Context, permissionList []erp.PermissionRule, company string) (hasPermission bool, err error)
 	}
 )
 

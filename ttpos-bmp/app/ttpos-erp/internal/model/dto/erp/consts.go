@@ -10,21 +10,22 @@ const (
 
 // 文档类型
 const (
-	DocTypePosProfile      = "POS Profile"
-	DocTypePosInvoice      = "POS Invoice"
-	DocTypePosOpeningEntry = "POS Opening Entry"
-	DocTypePosClosingEntry = "POS Closing Entry"
-	DocTypeModeOfPayment   = "Mode of Payment"
-	DocTypeBranch          = "Branch"
-	DocTypeSupplier        = "Supplier"
-	DocTypeItem            = "Item"
-	DocTypePurchaseOrder   = "Purchase Order"
-	DocTypeSaleOrder       = "Sales Order"
-	DocTypePurchaseReceipt = "Purchase Receipt"
-	DocTypeBom             = "BOM"
-	DocTypeMaterialRequest = "Material Request"
-	DocTypeWarehouse       = "Warehouse"
-	DocPosPermissionRule   = "Pos Permission Rule"
+	DocTypePosProfile        = "POS Profile"
+	DocTypePosInvoice        = "POS Invoice"
+	DocTypePosOpeningEntry   = "POS Opening Entry"
+	DocTypePosClosingEntry   = "POS Closing Entry"
+	DocTypeModeOfPayment     = "Mode of Payment"
+	DocTypeBranch            = "Branch"
+	DocTypeSupplier          = "Supplier"
+	DocTypeItem              = "Item"
+	DocTypePurchaseOrder     = "Purchase Order"
+	DocTypeSaleOrder         = "Sales Order"
+	DocTypePurchaseReceipt   = "Purchase Receipt"
+	DocTypeBom               = "BOM"
+	DocTypeMaterialRequest   = "Material Request"
+	DocTypeWarehouse         = "Warehouse"
+	DocTypePosPermissionRule = "Pos Permission Rule"
+	DocTypeItemAttribute     = "Item Attribute"
 )
 
 const (

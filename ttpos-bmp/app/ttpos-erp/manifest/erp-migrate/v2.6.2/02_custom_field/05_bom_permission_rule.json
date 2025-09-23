@@ -1,0 +1,9 @@
+{
+  "doctype": "DocType",
+  "label": "Permission Rule",
+  "fieldname": "custom_permission_rule",
+  "fieldtype": "Table MultiSelect",
+  "options": "BOM Permission Rule",
+  "insert_after": "quantity",
+  "dt": "BOM"
+}

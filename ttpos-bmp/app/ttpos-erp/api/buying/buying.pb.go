@@ -1295,16 +1295,15 @@ func (x *SavePurchaseReceiptResp) GetPurchaseReceipt() *PurchaseReceiptInfo {
 
 // 获取采购订单列表请求消息
 type GetPurchaseOrderListReq struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Supplier       string                 `protobuf:"bytes,1,opt,name=supplier,proto3" json:"supplier,omitempty" dc:"供应商过滤，可选"`                                                                                                                              // 供应商过滤，可选
-	CompanyAbbr    string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写过滤，可选"`                                                                                                    // 公司缩写过滤，可选
-	FromDate       string                 `protobuf:"bytes,3,opt,name=from_date,json=fromDate,proto3" json:"from_date,omitempty" dc:"开始日期过滤Y-m-d，可选"`                                                                                                        // 开始日期过滤Y-m-d，可选
-	ToDate         string                 `protobuf:"bytes,4,opt,name=to_date,json=toDate,proto3" json:"to_date,omitempty" dc:"结束日期过滤Y-m-d，可选"`                                                                                                              // 结束日期过滤Y-m-d，可选
-	PageNo         int32                  `protobuf:"varint,5,opt,name=page_no,json=pageNo,proto3" json:"page_no,omitempty" dc:"页码，从1开始"`                                                                                                                    // 页码，从1开始
-	PageSize       int32                  `protobuf:"varint,6,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty" dc:"每页数量"`                                                                                                                 // 每页数量
-	SubCompanyAbbr string                 `protobuf:"bytes,7,opt,name=sub_company_abbr,json=subCompanyAbbr,proto3" json:"sub_company_abbr,omitempty" dc:"门店公司简称，可选。 company_abbr(总部公司简称)，sub_company_abbr(门店公司简称) 同时使用时,会过滤  permission rule 下的物品，黑名单优先级高。"` // 门店公司简称，可选。 company_abbr(总部公司简称)，sub_company_abbr(门店公司简称) 同时使用时,会过滤  permission rule 下的物品，黑名单优先级高。
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Supplier      string                 `protobuf:"bytes,1,opt,name=supplier,proto3" json:"supplier,omitempty" dc:"供应商过滤，可选"`                           // 供应商过滤，可选
+	CompanyAbbr   string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写过滤，可选"` // 公司缩写过滤，可选
+	FromDate      string                 `protobuf:"bytes,3,opt,name=from_date,json=fromDate,proto3" json:"from_date,omitempty" dc:"开始日期过滤Y-m-d，可选"`     // 开始日期过滤Y-m-d，可选
+	ToDate        string                 `protobuf:"bytes,4,opt,name=to_date,json=toDate,proto3" json:"to_date,omitempty" dc:"结束日期过滤Y-m-d，可选"`           // 结束日期过滤Y-m-d，可选
+	PageNo        int32                  `protobuf:"varint,5,opt,name=page_no,json=pageNo,proto3" json:"page_no,omitempty" dc:"页码，从1开始"`                 // 页码，从1开始
+	PageSize      int32                  `protobuf:"varint,6,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty" dc:"每页数量"`              // 每页数量
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetPurchaseOrderListReq) Reset() {
@@ -1377,13 +1376,6 @@ func (x *GetPurchaseOrderListReq) GetPageSize() int32 {
 		return x.PageSize
 	}
 	return 0
-}
-
-func (x *GetPurchaseOrderListReq) GetSubCompanyAbbr() string {
-	if x != nil {
-		return x.SubCompanyAbbr
-	}
-	return ""
 }
 
 // 获取采购订单列表响应消息
@@ -2142,15 +2134,14 @@ const file_buying_buying_proto_rawDesc = "" +
 	"\x13purchase_order_name\x18\x01 \x01(\tR\x11purchaseOrderName\x12/\n" +
 	"\x05items\x18\x02 \x03(\v2\x19.buying.PurchaseOrderItemR\x05items\"a\n" +
 	"\x17SavePurchaseReceiptResp\x12F\n" +
-	"\x10purchase_receipt\x18\x01 \x01(\v2\x1b.buying.PurchaseReceiptInfoR\x0fpurchaseReceipt\"\xee\x01\n" +
+	"\x10purchase_receipt\x18\x01 \x01(\v2\x1b.buying.PurchaseReceiptInfoR\x0fpurchaseReceipt\"\xc4\x01\n" +
 	"\x17GetPurchaseOrderListReq\x12\x1a\n" +
 	"\bsupplier\x18\x01 \x01(\tR\bsupplier\x12!\n" +
 	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12\x1b\n" +
 	"\tfrom_date\x18\x03 \x01(\tR\bfromDate\x12\x17\n" +
 	"\ato_date\x18\x04 \x01(\tR\x06toDate\x12\x17\n" +
 	"\apage_no\x18\x05 \x01(\x05R\x06pageNo\x12\x1b\n" +
-	"\tpage_size\x18\x06 \x01(\x05R\bpageSize\x12(\n" +
-	"\x10sub_company_abbr\x18\a \x01(\tR\x0esubCompanyAbbr\"\x83\x01\n" +
+	"\tpage_size\x18\x06 \x01(\x05R\bpageSize\"\x83\x01\n" +
 	"\x18GetPurchaseOrderListResp\x12F\n" +
 	"\x0fpurchase_orders\x18\x01 \x03(\v2\x1d.buying.PurchaseOrderListItemR\x0epurchaseOrders\x12\x1f\n" +
 	"\vtotal_count\x18\x02 \x01(\x05R\n" +

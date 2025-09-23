@@ -31,3 +31,8 @@ type PermissionCompanyList struct {
 	Parenttype  string `json:"parenttype,omitempty"`  // 父级文档类型
 	Doctype     string `json:"doctype,omitempty"`     // 文档类型
 }
+
+// PermissionRule 权限规则列表, 关联PosPermissionRuleName
+type PermissionRule struct {
+	PermissionRule string `json:"permission_rule,omitempty"`
+}

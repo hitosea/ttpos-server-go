@@ -52,6 +52,10 @@ type (
 		CreateMaterialRequest(ctx context.Context, req *stock.SaveMaterialRequestReq) (res *stock.SaveMaterialRequestResp, err error)
 		// GetMaterialRequestList 获取物料请求列表
 		GetMaterialRequestList(ctx context.Context, req *stock.GetMaterialRequestListReq) (res *stock.GetMaterialRequestListResp, err error)
+		// GetItemAttribute 根据属性名称获取单个属性详细信息
+		// 参数：ctx 上下文，attributeName 属性名称
+		// 返回：属性详细信息，错误信息
+		GetItemAttribute(ctx context.Context, attributeName string) (res *erp.ItemAttribute, err error)
 	}
 	IWarehouse interface {
 		// CreateWarehouse 创建仓库
