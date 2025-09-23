@@ -691,8 +691,8 @@ var (
 		"SUM(give_amount) AS total_give_amount",
 		"SUM(give_point) AS total_give_point",
 		"SUM(payment_amount - refund_amount - refund_fee) AS total_payment_amount",
-		"SUM(payment_fee) AS total_payment_fee",
-		"SUM(refund_amount) AS total_refund_amount",
+		"SUM(payment_fee - refund_fee) AS total_payment_fee",
+		"SUM(refund_amount + refund_fee) AS total_refund_amount",
 	}
 )
 
