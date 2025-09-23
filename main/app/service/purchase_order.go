@@ -1489,8 +1489,6 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 		// 调用erp接口
 		erpReq := buying.SavePurchaseReceiptReq{
 			PurchaseOrderName: receiptOrder.PurchaseOrder.ErpOrderNo,
-			SourceWarehouse:   receiptOrder.SourceWarehouseErpCode,
-			TargetWarehouse:   receiptOrder.TargetWarehouseErpCode,
 			Items:             make([]*buying.PurchaseOrderItem, 0),
 		}
 		for _, item := range receiptOrder.Items {
