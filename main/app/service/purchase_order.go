@@ -1415,9 +1415,7 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 			return errors.WithMessage(err, "获取物料信息失败")
 		}
 		// 更新库存数量
-		material.StockNum = decimal.NewFromFloat(material.StockNum).Add(
-			decimal.NewFromFloat(item.Num).Mul(decimal.NewFromFloat(item.UnitConversionRate).Round(4)),
-		).InexactFloat64()
+		material.StockNum = decimal.NewFromFloat(material.StockNum).Add(decimal.NewFromFloat(item.GetActualNum())).InexactFloat64()
 		err = materialRepo.UpdateMaterial(material)
 		if err != nil {
 			return errors.WithMessage(err, "更新物料库存失败")
@@ -1437,6 +1435,12 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 		if err != nil {
 			return errors.WithMessage(err, "更新规格/加料关联材料库存失败")
 		}
+	}
+
+	// 记录erp的入库记录
+	err := s.recordErpStockInLog(ctx, db, receiptOrder)
+	if err != nil {
+		return errors.WithMessage(err, "记录ERP入库记录失败")
 	}
 
 	// 调用erp接口
@@ -1467,19 +1471,143 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 			return errors.WithMessage(err, "更新收货单号失败")
 		}
 
-		// TODO: wfs 如果是内部采购 - 需要减总部的库存,需要出入库的记录
+		// 如果是内部采购 - 需要减总部的库存,需要出入库的记录
 		if receiptOrder.ReceiptType == 2 {
+			// 获取公司设置信息
+			companySetting := ctx.GetCompanySetting()
+			if companySetting.HeadquarterUuid == 0 {
+				return errors.New("总部UUID不能为空")
+			}
+
 			// 获取总部数据库
-			// db = s.dbm.GetDB(companySetting.HeadquarterUuid)
-			// if db == nil {
-			// 	return errors.New("获取总部数据库失败")
-			// }
-			// 减总部的库存
-			// err = s.updateRelatedMaterialStock(db, relatedMaterialUuids)
+			headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
+			if headquarterDb == nil {
+				return errors.New("获取总部数据库失败")
+			}
+
+			// 减总部的库存并记录出入库日志
+			err = s.reduceHeadquarterStockAndLog(ctx, headquarterDb, receiptOrder)
+			if err != nil {
+				return errors.WithMessage(err, "处理总部库存失败")
+			}
 		}
 	}
 
 	return nil
+}
+
+// recordErpStockInLog 记录ERP入库记录
+func (s *purchaseOrderSrv) recordErpStockInLog(ctx context.Context, db *gorm.DB, receiptOrder *model.PurchaseReceiptOrder) error {
+	// 使用事务确保数据一致性
+	return db.Transaction(func(tx *gorm.DB) error {
+		// 获取仓库出入库日志Repository
+		warehouseLogRepo := repository.NewWarehouseInOutLogRepo(tx)
+
+		// 获取目标仓库信息（通过ERP编码查找）
+		targetWarehouse, err := repository.NewWarehouseRepo(tx).GetByCode(receiptOrder.TargetWarehouseErpCode)
+		if err != nil {
+			return errors.WithMessage(err, "获取目标仓库信息失败")
+		}
+
+		// 处理每个收货单明细
+		for _, item := range receiptOrder.Items {
+			actualNum := item.GetActualNum()
+			// 记录入库日志
+			warehouseLog := &model.WarehouseInOutLog{
+				LogType:              0, // 入库
+				Scene:                0, // 采购入库
+				WarehouseUuid:        targetWarehouse.Uuid,
+				MaterialUuid:         item.MaterialUuid,
+				MaterialName:         item.MaterialName,
+				MaterialBaseUnitUuid: item.BaseUnitUuid,
+				MaterialBaseUnitName: item.BaseUnitName,
+				Num:                  actualNum,
+				Price:                1, // 采购入库价格由ERP系统管理
+				Amount:               1, // 采购入库金额由ERP系统管理
+				SupplierUuid:         1, // 供应商UUID暂时设为0，后续可通过供应商名称查找
+				OrderNo:              receiptOrder.OrderNo,
+			}
+
+			err = warehouseLogRepo.Create(warehouseLog)
+			if err != nil {
+				return errors.WithMessage(err, "记录入库日志失败")
+			}
+		}
+
+		return nil
+	})
+}
+
+// reduceHeadquarterStockAndLog 减少总部库存并记录出入库日志
+func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, headquarterDb *gorm.DB, receiptOrder *model.PurchaseReceiptOrder) error {
+	// 使用事务确保数据一致性
+	return headquarterDb.Transaction(func(tx *gorm.DB) error {
+		// 获取仓库商品库存Repository
+		warehouseItemRepo := repository.NewWarehouseItemRepo(tx)
+
+		// 获取仓库出入库日志Repository
+		warehouseLogRepo := repository.NewWarehouseInOutLogRepo(tx)
+
+		// 获取默认仓库
+		warehouseRepo := repository.NewWarehouseRepo(tx)
+		defaultWarehouse, err := warehouseRepo.GetDefaultWarehouse()
+		if err != nil {
+			return errors.WithMessage(err, "获取总部默认仓库失败")
+		}
+
+		// 处理每个收货单明细
+		for _, item := range receiptOrder.Items {
+			// 计算实际出库数量（考虑单位转换率）
+			actualNum := item.Num * item.UnitConversionRate
+
+			// 查找或创建仓库商品库存记录
+			warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(defaultWarehouse.Uuid, item.MaterialUuid)
+			if err != nil && err != gorm.ErrRecordNotFound {
+				return errors.WithMessage(err, "查询仓库商品库存失败")
+			}
+
+			// 检查库存是否足够
+			if warehouseItem.Stock < actualNum {
+				return errors.New("总部库存不足，无法完成内部采购")
+			}
+
+			// 减少库存
+			err = warehouseItemRepo.ReduceStock(warehouseItem.Uuid, actualNum)
+			if err != nil {
+				return errors.WithMessage(err, "减少总部库存失败")
+			}
+
+			// 生成UUID
+			logUuid, err := utils.GetID()
+			if err != nil {
+				return errors.WithMessage(err, "生成UUID失败")
+			}
+
+			// 记录出库日志
+			warehouseLog := &model.WarehouseInOutLog{
+				Uuid:                 logUuid,
+				LogType:              1, // 出库
+				Scene:                2, // 发货出库
+				WarehouseUuid:        defaultWarehouse.Uuid,
+				MaterialUuid:         item.MaterialUuid,
+				MaterialName:         item.MaterialName,
+				MaterialBaseUnitUuid: item.BaseUnitUuid,
+				MaterialBaseUnitName: item.BaseUnitName,
+				Num:                  actualNum,
+				Price:                0, // 内部采购无价格
+				Amount:               0, // 内部采购无金额
+				SupplierUuid:         0, // 内部采购无供应商
+				OrderNo:              receiptOrder.OrderNo,
+			}
+
+			err = warehouseLogRepo.Create(warehouseLog)
+			if err != nil {
+				return errors.WithMessage(err, "记录出库日志失败")
+			}
+		}
+
+		return nil
+	})
 }
 
 // updateRelatedMaterialStock 更新规格/加料关联材料库存
