@@ -297,6 +297,7 @@ class BindRecord extends BaseModel
                             return $item['printer_id'] != $device['device_id'];
                         }
                     });
+                    $newPrinter = array_values($newPrinter);
                     $printerSettings['cashier_printer'] = $newPrinter;
                     if (!$settingModel->edit(SettingEnum::PRINTER, $printerSettings, $staff ? $staff->company_uuid : 0, 0)) {
                         $this->error = "设置默认打印机失败";
