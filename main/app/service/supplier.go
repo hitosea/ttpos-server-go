@@ -223,8 +223,8 @@ func (s *supplierSrv) UpdateSupplier(ctx context.Context, updateSupplierReq req.
 	if ctx.GetCompany().IsOpenErp() && supplier.ErpCode != "" &&
 		supplier.CompanyAbbr == companySetting.ErpnextCompanyAbbr && supplier.ErpCode != constant.ErpHeadquartersSupplierCode {
 		var branch, companyAbbr string
-		// 总部调用erp接口创建的供应商，不传递branch、company_abbr
-		// 子店、散户调用erp接口创建的供应商，传递branch、company_abbr
+		// 总部调用erp接口创建的供应商，不传递 branch、company_abbr
+		// 子店、散户调用erp接口创建的供应商，传递 branch、company_abbr
 		if companySetting.IsHeadquarter() {
 			branch = ""
 			companyAbbr = ""

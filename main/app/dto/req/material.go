@@ -10,6 +10,16 @@ import (
 type MaterialCategoryAddReq struct {
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 物品类别名称
 	Code       string             `json:"code"`        // 物品类别编码
+
+	uuid uint64 `json:"uuid"` // 物品类别UUID。用于内部方法调用时
+}
+
+func (r *MaterialCategoryAddReq) GetUuid() uint64 {
+	return r.uuid
+}
+
+func (r *MaterialCategoryAddReq) SetUuid(uuid uint64) {
+	r.uuid = uuid
 }
 
 func (r *MaterialCategoryAddReq) Validate() error {
@@ -96,6 +106,16 @@ type MaterialAddReq struct {
 	PurchaseUnitUuid uint64             `json:"purchase_unit_uuid"` // 采购单位UUID
 	CostUnitUuid     uint64             `json:"cost_unit_uuid"`     // 成本单位UUID
 	InternalCode     string             `json:"internal_code"`      // 内部编码
+
+	headquarterUuid uint64 // 总部uuid。 内部调用使用，同步总部物品时
+}
+
+func (r *MaterialAddReq) GetHeadquarterUuid() uint64 {
+	return r.headquarterUuid
+}
+
+func (r *MaterialAddReq) SetHeadquarterUuid(uuid uint64) {
+	r.headquarterUuid = uuid
 }
 
 func (r *MaterialAddReq) Validate() error {
@@ -143,17 +163,17 @@ func (r *MaterialAddReq) Validate() error {
 }
 
 type MaterialAddErpReq struct {
-	ItemCode           string           `json:"item_code" binding:"required"`      // 物品编码, 如果为空，则为新增；如果非空，则为编辑
-	ItemName           string           `json:"item_name" binding:"required"`      // 物品名称, 英文
-	StockUom           string           `json:"stock_uom" binding:"required"`      // 基准库存单位, 英文
-	Disabled           bool             `json:"disabled" binding:"required"`       // 是否禁用
-	BarcodeValue       string           `json:"barcode_value" binding:"required"`  // 条形码值
-	ValuationRate      float64          `json:"valuation_rate" binding:"required"` // 估值率
-	OpeningStock       float64          `json:"opening_stock" binding:"required"`  // 期初库存
-	InternalCode       string           `json:"internal_code" `                    // 内部编码
-	Classification     string           `json:"classification" `                   // 分类
-	ClassificationCode string           `json:"classification_code" `              // 分类编码
-	Uoms               []MaterialUomReq `json:"uoms" binding:"required,dive"`      // 单位列表
+	ItemCode           string           `json:"item_code" `           // 物品编码, 如果为空，则为新增；如果非空，则为编辑
+	ItemName           string           `json:"item_name" `           // 物品名称, 英文
+	StockUom           string           `json:"stock_uom" `           // 基准库存单位, 英文
+	Disabled           bool             `json:"disabled" `            // 是否禁用
+	BarcodeValue       string           `json:"barcode_value" `       // 条形码值
+	ValuationRate      float64          `json:"valuation_rate" `      // 估值率
+	OpeningStock       float64          `json:"opening_stock" `       // 期初库存
+	InternalCode       string           `json:"internal_code" `       // 内部编码
+	Classification     string           `json:"classification" `      // 分类
+	ClassificationCode string           `json:"classification_code" ` // 分类编码
+	Uoms               []MaterialUomReq `json:"uoms" `                // 单位列表
 }
 
 type ProductAddErpReq struct {
@@ -176,8 +196,8 @@ type PackageAddErpReq struct {
 }
 
 type MaterialUomReq struct {
-	Uom            string  `json:"uom" binding:"required"`                   // 单位, 英文
-	ConversionRate float64 `json:"conversion_rate" binding:"required,min=0"` // 转换率
+	Uom            string  `json:"uom" `             // 单位, 英文
+	ConversionRate float64 `json:"conversion_rate" ` // 转换率
 }
 
 // MaterialUnitReq 物品单位请求

@@ -48,6 +48,28 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		return resp.InitShopResp{}, errors.New("商家超管不存在")
 	}
 
+	var headquarterAbbr string
+	headquarterUuid := initShopReq.HeadquarterUuid
+	if initShopReq.SiteCode != "1" && headquarterUuid == 0 {
+		return resp.InitShopResp{}, errors.New("连锁店总部未设置")
+	}
+	// 连锁店-总部关联处理
+	if headquarterUuid > 0 {
+		if headquarterUuid == company.Uuid { // 初始化总部
+			headquarterAbbr = initShopReq.CompanyAbbr
+		} else { // 初始化连锁子店
+			var headquarter model.CompanySetting
+			s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("uuid = ?", initShopReq.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter)
+			if headquarter.Uuid == 0 {
+				return resp.InitShopResp{}, errors.New("总部不存在")
+			}
+			if headquarter.ErpnextCompanyAbbr == "" {
+				return resp.InitShopResp{}, errors.New("总部未授权erp")
+			}
+			headquarterAbbr = headquarter.ErpnextCompanyAbbr
+		}
+	}
+
 	client, conn, err := NewErpSetupClient()
 	if err != nil {
 		return resp.InitShopResp{}, err
@@ -72,16 +94,6 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		return resp.InitShopResp{}, err
 	}
 
-	headquarterAbbr := initShopReq.CompanyAbbr
-	// NOTE: 先默认华莱士site的总部CFG
-	if initShopReq.SiteCode == "2" {
-		headquarterAbbr = "CFG"
-	}
-	var headquarter model.CompanySetting
-	s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("erpnext_site_code = ?", initShopReq.SiteCode).Where("erpnext_headquarter_abbr = ?", headquarterAbbr).Scopes(repository.NotDeleted).First(&headquarter)
-	if headquarter.Uuid == 0 {
-		return resp.InitShopResp{}, errors.New("总部公司不存在")
-	}
 	// 更新saas库
 	s.dbm.GetDB(0).Model(&model.Company{}).Where("uuid = ?", company.Uuid).Updates(map[string]any{
 		"is_enable_erp": 1,
@@ -93,7 +105,7 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		"erpnext_pos_profile_name": response.PosProfile,
 		"erpnext_admin_email":      response.AdminEmail,
 		"erpnext_headquarter_abbr": headquarterAbbr,
-		"headquarter_uuid":         headquarter.Uuid,
+		"headquarter_uuid":         headquarterUuid,
 	})
 
 	// 更新商家库
@@ -107,7 +119,7 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		"erpnext_pos_profile_name": response.PosProfile,
 		"erpnext_admin_email":      response.AdminEmail,
 		"erpnext_headquarter_abbr": headquarterAbbr,
-		"headquarter_uuid":         headquarter.Uuid,
+		"headquarter_uuid":         headquarterUuid,
 	})
 
 	// 自动同步了支付方式，cash, balance, lianlian(wechat, alipay, qr_promptpay)

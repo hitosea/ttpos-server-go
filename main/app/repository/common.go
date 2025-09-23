@@ -107,6 +107,8 @@ type ICommonRepo interface {
 	WhereByDutyNo(dutyNo string) DBOption                                                     // 根据班次编号查询
 	WhereByShiftLogUuid(shiftLogUuid uint64) DBOption                                         // 根据交班记录UUID查询
 	WhereByAction(action string) DBOption                                                     // 根据操作查询
+	WhereByCode(code string) DBOption                                                         // 根据编码查询
+	WhereByErpnextUom(erpnextUom string) DBOption                                             // 根据erpnext单位查询
 	WhereByOperatorUuid(operatorUuid uint64) DBOption                                         // 根据操作员UUID查询
 	WhereByIsVisitor(isVisitor uint) DBOption                                                 // 根据是否访客查询
 	WhereByProductAttributeGroupUuid(productAttributeGroupUuid uint64) DBOption               // 根据产品属性组UUID查询
@@ -829,5 +831,19 @@ func (r *commonRepo) WhereByProductPackageAttributeGroupUuid(productPackageAttri
 func (r *commonRepo) WhereByAttributeUuid(attributeUuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("attribute_uuid = ?", attributeUuid)
+	}
+}
+
+// WhereByCode 根据编码查询
+func (r *commonRepo) WhereByCode(code string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("code = ?", code)
+	}
+}
+
+// WhereByErpnextUom 根据erpnext单位查询
+func (r *commonRepo) WhereByErpnextUom(erpnextUom string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("erpnext_uom = ?", erpnextUom)
 	}
 }

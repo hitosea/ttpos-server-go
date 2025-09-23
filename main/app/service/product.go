@@ -1734,6 +1734,31 @@ func GetEnName(ctx context.Context, locale dto.LocaleResponse) (string, error) {
 	return res.Data[0].En, nil
 }
 
+func GetMultiLanguageName(ctx context.Context, enName string) (*dto.LocaleResponse, error) {
+	companySetting := ctx.GetCompanySetting()
+	defaultLanguage := companySetting.GetDefaultLanguage()
+	res, err := utils.NewTranslateClient().Translate(ctx.GetContext(), []utils.TranslateItem{
+		{
+			Lang:    defaultLanguage,
+			Content: enName,
+		},
+	})
+	if err != nil {
+		return nil, errors.WithMessage(errors.New("翻译失败"), err.Error())
+	}
+	return &dto.LocaleResponse{
+		EN:   res.Data[0].En,
+		ZH:   res.Data[0].Zh,
+		TH:   res.Data[0].Th,
+		ZHTW: res.Data[0].ZhTw,
+		JA:   res.Data[0].Ja,
+		KO:   res.Data[0].Ko,
+		MY:   res.Data[0].My,
+		TR:   res.Data[0].Tr,
+		SV:   res.Data[0].Sv,
+	}, nil
+}
+
 // EditProductUnit 编辑产品单位
 func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.ProductUnitEditReq) error {
 	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)

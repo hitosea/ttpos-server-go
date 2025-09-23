@@ -34,7 +34,8 @@ type IWarehouseSrv interface {
 	GetWarehouseInOutList(ctx context.Context, req req.GetWarehouseInOutListReq) (resp.WarehouseInOutListResp, error) // 出入库明细列表
 	CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error)            // 检查仓库编码是否存在
 
-	SyncWarehouse(ctx context.Context) error // 同步仓库列表
+	SyncWarehouse(ctx context.Context) error          // 同步仓库列表
+	FirstSyncWarehouseItem(ctx context.Context) error // 第一次同步仓库物品库存列表
 }
 
 // NewWarehouseSrv 创建仓库服务
@@ -461,13 +462,23 @@ func (s *warehouseSrv) GetWarehouseInOutList(ctx context.Context, req req.GetWar
 }
 
 func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
-	if !ctx.GetCompany().IsOpenErp() {
+	// 商家数据库
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	var err error
+	company := ctx.GetCompany()
+	if company.Uuid == 0 {
+		company, err = repository.NewCompanyRepo(db).GetCompanyInfoByUuid(ctx.GetCompanyUuid())
+		if err != nil {
+			return errors.WithMessage(errors.New("同步仓库失败"), err.Error())
+		}
+	}
+	if !company.IsOpenErp() {
 		return errors.New("公司未授权erp")
 	}
-	db := s.dbm.GetDB(ctx.GetDbId())
-	translateClient := utils.NewTranslateClient()
-
 	companySetting := ctx.GetCompanySetting()
+	if companySetting.Uuid == 0 {
+		companySetting = repository.NewCompanySettingRepo(db).Get()
+	}
 	warehouseList, err := erp.NewIErpSrv(s.dbm).GetWarehouseList(ctx.GetContext(), req.GetErpnextWarehouseListReq{
 		SiteCode:    companySetting.ErpnextSiteCode,
 		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
@@ -477,6 +488,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 		return errors.WithMessage(errors.New("同步仓库失败"), err.Error())
 	}
 
+	// 翻译仓库名称
 	var translateItems []utils.TranslateItem
 	for _, erpWarehouse := range warehouseList {
 		translateItems = append(translateItems, utils.TranslateItem{
@@ -484,6 +496,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 			Content: erpWarehouse.WarehouseName,
 		})
 	}
+	translateClient := utils.NewTranslateClient()
 	multiLanguageMap := translateClient.TranslateWithRetry(ctx.GetContext(), translateItems, 10)
 
 	var syncEver int64
@@ -569,6 +582,42 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 				IsDefault:             isDefault,
 			})
 		}
+	}
+	return nil
+}
+
+// FirstSyncWarehouseItem 第一次同步仓库物品库存。将物料表的库存同步到仓库物品库存表
+func (s *warehouseSrv) FirstSyncWarehouseItem(ctx context.Context) error {
+	// 查询material表
+	db := s.dbm.GetDB(ctx.GetDbId())
+	materialRepo := repository.NewMaterialRepo(db)
+	materials, _, err := materialRepo.GetMaterialListWithPagination(1, 9999999999)
+	if err != nil {
+		return errors.WithMessage(err, "查询物料列表失败")
+	}
+	// 查询warehouse表,获取默认仓库
+	warehouseRepo := repository.NewWarehouseRepo(db)
+	warehouse, err := warehouseRepo.GetDefaultWarehouse()
+	if err != nil {
+		return errors.WithMessage(err, "查询仓库列表失败")
+	}
+	// 遍历物料表
+	warehouseItems := []*model.WarehouseItem{}
+	for _, material := range materials {
+		// 创建仓库物品库存
+		warehouseItem := model.WarehouseItem{
+			WarehouseUuid: warehouse.Uuid,
+			MaterialUuid:  material.Uuid,
+			MaterialCode:  material.Code,
+			Stock:         material.StockNum,
+		}
+		warehouseItems = append(warehouseItems, &warehouseItem)
+	}
+	// 批量创建仓库物品库存
+	warehouseItemRepo := repository.NewWarehouseItemRepo(db)
+	err = warehouseItemRepo.CreateBatch(warehouseItems)
+	if err != nil {
+		return errors.WithMessage(err, "创建仓库物品库存失败")
 	}
 	return nil
 }

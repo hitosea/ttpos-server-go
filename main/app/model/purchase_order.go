@@ -120,6 +120,8 @@ type PurchaseOrderItem struct {
 	UnitConversionRate float64 `gorm:"column:unit_conversion_rate;type:decimal(12,4);not null;default:1;comment:单位转换率。申请数量*转换率=基准单位申请数量" json:"unit_conversion_rate"`
 	BaseUnitUuid       uint64  `gorm:"column:base_unit_uuid;type:bigint(20) unsigned;not null;default:0;comment:基准单位ID" json:"base_unit_uuid"`
 	BaseUnitName       string  `gorm:"column:base_unit_name;type:text;not null;default:'';comment:基准单位名称JSON, 提交采购时记录后不再修改" json:"base_unit_name"`
+	Valuation          float64 `gorm:"column:valuation;type:decimal(14,2);not null;default:0.00;comment:估值单价" json:"valuation"`
+	TotalPrice         float64 `gorm:"column:total_price;type:decimal(14,2);not null;default:0.00;comment:总价" json:"total_price"`
 
 	// 关联关系
 	PurchaseOrder PurchaseOrder `gorm:"foreignKey:PurchaseOrderUuid;references:Uuid" json:"purchase_order,omitempty"`
@@ -226,6 +228,7 @@ func (ro *PurchaseReceiptOrder) GetReceiveDate() time.Time {
 // PurchaseReceiptOrderItem 收货单物品表 ttpos_purchase_receipt_order_item
 type PurchaseReceiptOrderItem struct {
 	BaseModel
+
 	ReceiptOrderUuid      uint64  `gorm:"column:receipt_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:收货单ID;index" json:"receipt_order_uuid"`
 	PurchaseOrderItemUuid uint64  `gorm:"column:purchase_order_item_uuid;type:bigint(20) unsigned;not null;default:0;comment:采购申请物品ID;index" json:"purchase_order_item_uuid"`
 	MaterialCode          string  `gorm:"column:material_code;type:varchar(255);not null;default:'';comment:物品编码, 提交采购时记录后不再修改" json:"material_code"`
@@ -237,6 +240,8 @@ type PurchaseReceiptOrderItem struct {
 	UnitConversionRate    float64 `gorm:"column:unit_conversion_rate;type:decimal(12,4);not null;default:1;comment:单位转换率。收货数量*转换率=基准单位收货数量" json:"unit_conversion_rate"`
 	BaseUnitUuid          uint64  `gorm:"column:base_unit_uuid;type:bigint(20) unsigned;not null;default:0;comment:基准单位ID" json:"base_unit_uuid"`
 	BaseUnitName          string  `gorm:"column:base_unit_name;type:varchar(255);not null;default:'';comment:基准单位名称, 确认收货时记录后不再修改" json:"base_unit_name"`
+	Valuation             float64 `gorm:"column:valuation;type:decimal(14,8);not null;default:0.00;comment:估值单价" json:"valuation"`
+	TotalPrice            float64 `gorm:"column:total_price;type:decimal(14,8);not null;default:0.00;comment:总价" json:"total_price"`
 
 	// 关联关系
 	PurchaseReceiptOrder PurchaseReceiptOrder `gorm:"foreignKey:ReceiptOrderUuid;references:Uuid" json:"purchase_receipt_order,omitempty"`
@@ -244,7 +249,6 @@ type PurchaseReceiptOrderItem struct {
 	Material             *Material            `gorm:"foreignKey:MaterialUuid;references:Uuid" json:"material,omitempty"`
 }
 
-// TableName 指定表名
-func (PurchaseReceiptOrderItem) TableName() string {
-	return "ttpos_purchase_receipt_order_item"
+func (item PurchaseReceiptOrderItem) GetActualNum() float64 {
+	return decimal.NewFromFloat(item.Num).Mul(decimal.NewFromFloat(item.UnitConversionRate).Round(4)).InexactFloat64()
 }

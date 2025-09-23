@@ -43,7 +43,7 @@ type ProductSauceReq struct {
 }
 
 type ProductUnitReq struct {
-	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 商品单位UUID
+	Uuid uint64 `form:"uuid" json:"uuid"` // 商品单位UUID
 }
 
 type ProductUnitAddReq struct {

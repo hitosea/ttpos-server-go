@@ -873,6 +873,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_material` (
     `internal_code` VARCHAR(255) DEFAULT '' COMMENT '内部编码',
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态, 1-上架 0-下架',
     `actual_sale_num`  DECIMAL(22, 4) NOT NULL DEFAULT 0.0000 COMMENT '实际销量。每次卖出时,实际销量增加',
+    `headquarter_uuid` BIGINT UNSIGNED DEFAULT 0 COMMENT '总部Uuid',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -954,6 +955,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_order_item` (
     `unit_conversion_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '单位转换率。申请数量*转换率=基准单位申请数量',
     `base_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '基准单位ID',
     `base_unit_name` TEXT NOT NULL COMMENT '基准单位名称JSON, 提交采购时记录后不再修改',
+    `valuation` DECIMAL(14, 2) NOT NULL DEFAULT 1.00 COMMENT '估值单价',
+    `total_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '总价',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -997,6 +1000,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_receipt_order_item` (
     `unit_conversion_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '基准单位转换率。收货数量*转换率=基准单位收货数量',
     `base_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '基准单位ID',
     `base_unit_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '基准单位名称, 确认收货时记录后不再修改',
+    `valuation` DECIMAL(14, 2) NOT NULL DEFAULT 1.00 COMMENT '估值单价',
+    `total_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '总价',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -1612,7 +1617,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_supplier` (
     `position` VARCHAR(100) NOT NULL DEFAULT '' COMMENT '职位',
     `staff_uuid` BIGINT UNSIGNED NOT NULL COMMENT '员工ID, 采购负责人',
     `erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT '关联erpnext',
-    `company_abbr` varchar(255) NOT NULL DEFAULT '' COMMENT '所属公司简称，如果为空表示来自总部',
+    `company_abbr` varchar(255) NOT NULL DEFAULT '' COMMENT '所属公司简称，如果是自己的company_abbr表示自己创建，其他值表示非自己创建',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -2896,5 +2901,27 @@ CREATE TABLE `ttpos_purchase_order_log` (
   KEY `idx_action` (`action`),
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='采购订单操作日志表';
+
+-- ----------------------------
+-- Table structure for ttpos_warehouse_item
+-- ----------------------------
+DROP TABLE IF EXISTS `ttpos_warehouse_item`;
+CREATE TABLE `ttpos_warehouse_item` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint(20) unsigned DEFAULT 0 COMMENT 'UUID',
+  `warehouse_uuid` bigint(20) unsigned DEFAULT 0 COMMENT '仓库UUID',
+  `material_uuid` bigint(20) unsigned DEFAULT 0 COMMENT '物品UUID',
+  `material_code` varchar(255) DEFAULT '' COMMENT '物品编码',
+  `stock` decimal(14,8) DEFAULT 0.00 COMMENT '库存数量',
+  `reserved_stock` decimal(14,8) DEFAULT 0.00 COMMENT '预留库存数量',
+  `create_time` int(10) unsigned DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(10) unsigned DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(10) unsigned DEFAULT 0 COMMENT '删除时间',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_material_uuid` (`material_uuid`),
+  KEY `idx_material_code` (`material_code`),
+  KEY `idx_warehouse_uuid` (`warehouse_uuid`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='仓库商品库存表';
 
 SET FOREIGN_KEY_CHECKS = 1;
