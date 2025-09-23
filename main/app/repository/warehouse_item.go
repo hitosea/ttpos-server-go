@@ -11,6 +11,7 @@ import (
 type IWarehouseItemRepo interface {
 	// 基础操作
 	Create(warehouseItem *model.WarehouseItem) error
+	CreateBatch(warehouseItems []*model.WarehouseItem) error
 	Update(warehouseItem *model.WarehouseItem) error
 	Delete(uuid uint64) error
 	GetByUuid(uuid uint64, opts ...DBOption) (*model.WarehouseItem, error)
@@ -53,6 +54,14 @@ func NewWarehouseItemRepo(db *gorm.DB) IWarehouseItemRepo {
 // Create 创建仓库商品库存
 func (r *WarehouseItemRepoImpl) Create(warehouseItem *model.WarehouseItem) error {
 	return r.db.Create(warehouseItem).Error
+}
+
+// CreateBatch 批量创建仓库商品库存
+func (r *WarehouseItemRepoImpl) CreateBatch(warehouseItems []*model.WarehouseItem) error {
+	if len(warehouseItems) == 0 {
+		return nil
+	}
+	return r.db.CreateInBatches(warehouseItems, 100).Error
 }
 
 // Update 更新仓库商品库存

@@ -194,6 +194,25 @@ func (h *WarehouseHandler) SyncWarehouse(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// FirstSyncWarehouseItem 第一次同步仓库物品库存
+// @Summary 第一次同步仓库物品库存
+// @Description 第一次同步仓库物品库存
+// @Tags 商家端.仓库档案
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response "成功"
+// @Router /shop/warehouse/first_sync_item [post]
+func (h *WarehouseHandler) FirstSyncWarehouseItem(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	err := h.warehouseSrv.FirstSyncWarehouseItem(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 // GetWarehouseInOutList 获取仓库出入库明细列表
 // @Summary 获取仓库出入库明细列表
 // @Description 获取仓库出入库明细列表
@@ -299,6 +318,7 @@ func RegisterWarehouseHandlers(router gin.IRouter, dbm *database.DBManager, cach
 		privateApi.DELETE("/warehouse/delete", warehouseHandler.DeleteWarehouse)                    // 删除仓库
 		privateApi.POST("/warehouse/set_default", warehouseHandler.SetDefaultWarehouse)             // 设置默认
 		privateApi.POST("/warehouse/sync", warehouseHandler.SyncWarehouse)                          // 同步仓库列表
+		privateApi.POST("/warehouse/first_sync_item", warehouseHandler.FirstSyncWarehouseItem)      // 第一次同步仓库物品库存列表
 		privateApi.GET("/warehouse/code_exists", warehouseHandler.CheckCodeExists)                  // 检查仓库编码是否存在
 
 		privateApi.GET("/warehouse/in_out/list", warehouseHandler.GetWarehouseInOutList) // 出入库明细列表

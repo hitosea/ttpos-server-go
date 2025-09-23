@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// WarehouseItem 仓库商品库存表
+// WarehouseItem 仓库商品库存表 `ttpos_warehouse_item`
 type WarehouseItem struct {
 	Id            uint64  `json:"id" gorm:"primaryKey;autoIncrement;comment:自增ID"`
 	Uuid          uint64  `json:"uuid" gorm:"type:bigint;default:0;comment:UUID;uniqueIndex:unique_uuid"`
@@ -20,7 +20,7 @@ type WarehouseItem struct {
 
 // TableName 返回表名
 func (WarehouseItem) TableName() string {
-	return "warehouse_item"
+	return "ttpos_warehouse_item"
 }
 
 // BeforeCreate 创建前钩子

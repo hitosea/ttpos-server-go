@@ -34,7 +34,8 @@ type IWarehouseSrv interface {
 	GetWarehouseInOutList(ctx context.Context, req req.GetWarehouseInOutListReq) (resp.WarehouseInOutListResp, error) // 出入库明细列表
 	CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error)            // 检查仓库编码是否存在
 
-	SyncWarehouse(ctx context.Context) error // 同步仓库列表
+	SyncWarehouse(ctx context.Context) error          // 同步仓库列表
+	FirstSyncWarehouseItem(ctx context.Context) error // 第一次同步仓库物品库存列表
 }
 
 // NewWarehouseSrv 创建仓库服务
@@ -581,6 +582,42 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 				IsDefault:             isDefault,
 			})
 		}
+	}
+	return nil
+}
+
+// FirstSyncWarehouseItem 第一次同步仓库物品库存。将物料表的库存同步到仓库物品库存表
+func (s *warehouseSrv) FirstSyncWarehouseItem(ctx context.Context) error {
+	// 查询material表
+	db := s.dbm.GetDB(ctx.GetDbId())
+	materialRepo := repository.NewMaterialRepo(db)
+	materials, _, err := materialRepo.GetMaterialListWithPagination(1, 9999999999)
+	if err != nil {
+		return errors.WithMessage(err, "查询物料列表失败")
+	}
+	// 查询warehouse表,获取默认仓库
+	warehouseRepo := repository.NewWarehouseRepo(db)
+	warehouse, err := warehouseRepo.GetDefaultWarehouse()
+	if err != nil {
+		return errors.WithMessage(err, "查询仓库列表失败")
+	}
+	// 遍历物料表
+	warehouseItems := []*model.WarehouseItem{}
+	for _, material := range materials {
+		// 创建仓库物品库存
+		warehouseItem := model.WarehouseItem{
+			WarehouseUuid: warehouse.Uuid,
+			MaterialUuid:  material.Uuid,
+			MaterialCode:  material.Code,
+			Stock:         material.StockNum,
+		}
+		warehouseItems = append(warehouseItems, &warehouseItem)
+	}
+	// 批量创建仓库物品库存
+	warehouseItemRepo := repository.NewWarehouseItemRepo(db)
+	err = warehouseItemRepo.CreateBatch(warehouseItems)
+	if err != nil {
+		return errors.WithMessage(err, "创建仓库物品库存失败")
 	}
 	return nil
 }

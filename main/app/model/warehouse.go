@@ -1,6 +1,6 @@
 package model
 
-// 仓库
+// 仓库表 `ttpos_warehouse`
 type Warehouse struct {
 	BaseModel
 	Name                  string `gorm:"column:name;type:text;comment:名称;NOT NULL" json:"name"`
