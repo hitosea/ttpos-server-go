@@ -45,6 +45,11 @@ func (PurchaseOrder) TableName() string {
 	return "ttpos_purchase_order"
 }
 
+// 是否是总部采购
+func (po *PurchaseOrder) IsHeadquarterPurchase() bool {
+	return po.PurchaseType == 2
+}
+
 func (po *PurchaseOrder) GetReceiptProgress() float64 {
 	totalNum := 0
 	receivedNum := 0
@@ -185,6 +190,8 @@ type PurchaseReceiptOrder struct {
 	Status                 int     `gorm:"column:status;type:int(10);not null;default:0;comment:状态, 0-待收货 1-已收货 2-已取消" json:"status"`
 	PurchaseOrderUuid      uint64  `gorm:"column:purchase_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:采购申请ID" json:"purchase_order_uuid"`
 	PurchaseOrderNo        string  `gorm:"column:purchase_order_no;type:varchar(255);not null;default:'';comment:采购申请单号" json:"purchase_order_no"`
+	SupplierName           string  `gorm:"column:supplier_name;type:varchar(255);not null;default:'';comment:供应商名称" json:"supplier_name"`
+	SupplierErpCode        string  `gorm:"column:supplier_erp_code;type:varchar(255);not null;default:'';comment:供应商ERP编码" json:"supplier_erp_code"`
 	Num                    float64 `gorm:"column:num;type:decimal(14,4);not null;default:0.0000;comment:物资数量，每种物品算一个" json:"num"`
 	ExpectArrivalTime      int64   `gorm:"column:expect_arrival_time;type:int(10) unsigned;not null;default:0;comment:期望到货日期（时间戳），与采购申请单的期望到货日期一致" json:"expect_arrival_time"`
 	ReceiveTime            int64   `gorm:"column:receive_time;type:int(10) unsigned;not null;default:0;comment:收货时间（时间戳）" json:"receive_time"`
@@ -202,6 +209,11 @@ type PurchaseReceiptOrder struct {
 // TableName 指定表名
 func (PurchaseReceiptOrder) TableName() string {
 	return "ttpos_purchase_receipt_order"
+}
+
+// 是否是总部收货
+func (ro *PurchaseReceiptOrder) IsHeadquarterReceipt() bool {
+	return ro.ReceiptType == 2
 }
 
 // GetStatusText 获取状态文本

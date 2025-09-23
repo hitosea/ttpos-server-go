@@ -12,6 +12,7 @@ import (
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
+	"github.com/gogf/gf/v2/util/gconv"
 )
 
 var (
@@ -200,7 +201,7 @@ func (s *sStock) GetAttributeList(ctx context.Context, req *item.GetAttributeLis
 	filters := s.buildAttributeListFilters(ctx, req)
 
 	// 查询属性列表
-	attributeList, err := s.queryAttributeList(ctx, filters)
+	attributeList, err := s.queryAttributeList(ctx, filters, req)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "查询属性列表失败")
 	}
@@ -241,9 +242,9 @@ func (s *sStock) buildAttributeListFilters(ctx context.Context, req *item.GetAtt
 }
 
 // queryAttributeList 执行属性列表查询
-func (s *sStock) queryAttributeList(ctx context.Context, filters [][]string) ([]*item.AttributeInfo, error) {
+func (s *sStock) queryAttributeList(ctx context.Context, filters [][]string, req *item.GetAttributeListReq) ([]*item.AttributeInfo, error) {
 	resp, err := service.Document().List(ctx, &erp.ErpReq{
-		DocType: "Item Attribute",
+		DocType: erp.DocTypeItemAttribute,
 	}, &erp.RequestParams{
 		Fields:  g.ArrayStr{"name", "attribute_name", "custom_alias", "custom_company", "custom_branch"},
 		Filters: filters,
@@ -264,7 +265,31 @@ func (s *sStock) queryAttributeList(ctx context.Context, filters [][]string) ([]
 	attributeList := make([]*item.AttributeInfo, 0)
 	dataArray := j.GetJsons("data")
 
+	subCompanyName := ""
+	if len(req.SubCompanyAbbr) > 0 {
+		subCompanyName, err = service.Company().GetCompanyNameWithAbbr(ctx, req.SubCompanyAbbr)
+		if err != nil {
+			return nil, gerror.Wrapf(err, "获取子公司名称失败,companyAbbr:%s", req.SubCompanyAbbr)
+		}
+	}
+
 	for _, attribute := range dataArray {
+		// 查询attribute中的 permission_rule
+		if len(req.SubCompanyAbbr) > 0 {
+			attr, err := s.GetItemAttribute(ctx, attribute.Get("name").String())
+			if err != nil {
+				g.Log().Errorf(ctx, "获取物品属性失败,attribute:%s,err:%v", attribute.Get("name").String(), err)
+				continue // 获取物品属性失败，跳过
+			}
+			hasPermission, err := service.Permission().CheckPermission(ctx, attr.CustomPermissionRule, subCompanyName)
+			if err != nil {
+				g.Log().Errorf(ctx, "检查物品权限失败,attribute:%s,err:%v", attribute.Get("name").String(), err)
+				continue // 检查权限失败，跳过
+			}
+			if !hasPermission {
+				continue // 当前公司无权限，跳过该
+			}
+		}
 		attributeInfo := &item.AttributeInfo{
 			AttributeName: attribute.Get("name").String(),
 			AliasName:     attribute.Get("custom_alias").String(),
@@ -291,7 +316,7 @@ func (s *sStock) GetAttributeValuesList(ctx context.Context, attributeName strin
 	}
 
 	resp, err := service.Document().Get(ctx, &erp.ErpReq{
-		DocType: "Item Attribute",
+		DocType: erp.DocTypeItemAttribute,
 		Name:    attributeName,
 	}, nil)
 
@@ -353,7 +378,7 @@ func (s *sStock) checkAttributeExists(ctx context.Context, attributeName string)
 	filters := [][]string{{"attribute_name", "=", attributeName}}
 
 	count, err := service.Doctype().Count(ctx, &erp.ErpReq{
-		DocType: "Item Attribute",
+		DocType: erp.DocTypeItemAttribute,
 	}, &erp.RequestParams{
 		Filters: filters,
 	})
@@ -381,7 +406,7 @@ func (s *sStock) updateExistingAttribute(ctx context.Context, req *item.Attribut
 		})
 	}
 	_, err := service.Document().Update(ctx, &erp.ErpReq{
-		DocType: "Item Attribute",
+		DocType: erp.DocTypeItemAttribute,
 		Name:    req.AttributeName,
 	}, itemAttribute)
 
@@ -407,7 +432,7 @@ func (s *sStock) createNewAttribute(ctx context.Context, req *item.AttributeInfo
 			Abbr:           value.Abbr,
 		})
 	}
-	_, err := service.Document().Create(ctx, "Item Attribute", itemAttribute)
+	_, err := service.Document().Create(ctx, erp.DocTypeItemAttribute, itemAttribute)
 
 	if err != nil {
 		return gerror.Wrapf(err, "创建属性失败")
@@ -524,4 +549,36 @@ func (s *sStock) GetMaterialRequestList(ctx context.Context, req *stock.GetMater
 		})
 	}
 	return
+}
+
+// GetItemAttribute 根据属性名称获取单个属性详细信息
+// 参数：ctx 上下文，attributeName 属性名称
+// 返回：属性详细信息，错误信息
+func (s *sStock) GetItemAttribute(ctx context.Context, attributeName string) (res *erp.ItemAttribute, err error) {
+	// 参数验证
+	if len(attributeName) == 0 {
+		return nil, gerror.New("属性名称不能为空")
+	}
+
+	// 查询属性信息
+	resp, err := service.Document().Get(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeItemAttribute,
+		Name:    attributeName,
+	}, nil)
+
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询属性信息失败")
+	}
+
+	// 解析响应数据
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析属性信息响应失败")
+	}
+
+	// 转换为属性信息结构体
+	itemAttribute := &erp.ItemAttribute{}
+	gconv.Structs(j.GetJson("data"), &itemAttribute)
+
+	return itemAttribute, nil
 }
