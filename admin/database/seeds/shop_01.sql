@@ -2897,4 +2897,26 @@ CREATE TABLE `ttpos_purchase_order_log` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='采购订单操作日志表';
 
+-- ----------------------------
+-- Table structure for ttpos_warehouse_item
+-- ----------------------------
+DROP TABLE IF EXISTS `ttpos_warehouse_item`;
+CREATE TABLE `ttpos_warehouse_item` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint(20) unsigned DEFAULT 0 COMMENT 'UUID',
+  `warehouse_uuid` bigint(20) unsigned DEFAULT 0 COMMENT '仓库UUID',
+  `material_uuid` bigint(20) unsigned DEFAULT 0 COMMENT '商品UUID',
+  `material_code` varchar(255) DEFAULT '' COMMENT '商品编码',
+  `stock` decimal(14,2) DEFAULT 0.00 COMMENT '库存数量',
+  `reserved_stock` decimal(14,2) DEFAULT 0.00 COMMENT '预留库存数量',
+  `create_time` int(10) unsigned DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(10) unsigned DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(10) unsigned DEFAULT 0 COMMENT '删除时间',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_material_uuid` (`material_uuid`),
+  KEY `idx_material_code` (`material_code`),
+  KEY `idx_warehouse_uuid` (`warehouse_uuid`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='仓库商品库存表';
+
 SET FOREIGN_KEY_CHECKS = 1;
