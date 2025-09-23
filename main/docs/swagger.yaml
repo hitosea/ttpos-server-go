@@ -5700,6 +5700,11 @@ definitions:
         description: 采购订单ID
         minimum: 1
         type: integer
+      receipt_type:
+        description: 收货类型 1-外部收货 2-内部收货
+        maximum: 2
+        minimum: 1
+        type: integer
       receive_time:
         description: 收货时间(时间戳)
         minimum: 0
@@ -5707,6 +5712,7 @@ definitions:
     required:
     - items
     - purchase_order_uuid
+    - receipt_type
     - receive_time
     type: object
   req.PurchaseReceiptItemCreateReq:
@@ -22859,6 +22865,28 @@ paths:
       summary: 检查更新
       tags:
       - 商家端.基础信息
+  /shop/headquarter/warehouse/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取仓库列表，支持分页和筛选
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.WarehouseListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取总部仓库列表
+      tags:
+      - 商家端.仓库档案
   /shop/login:
     post:
       consumes:
@@ -25357,7 +25385,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 分页获取收货记录列表
+      description: 分页获取收货记录列表，支持按收货时间和创建时间筛选
       parameters:
       - default: 1
         description: 页码
@@ -25373,9 +25401,27 @@ paths:
         in: query
         name: order_no
         type: string
-      - description: 状态
+      - description: 状态筛选
         in: query
-        name: status
+        items:
+          type: integer
+        name: status_in
+        type: array
+      - description: 收货时间开始（时间戳）
+        in: query
+        name: receive_time_start
+        type: integer
+      - description: 收货时间结束（时间戳）
+        in: query
+        name: receive_time_end
+        type: integer
+      - description: 创建时间开始（时间戳）
+        in: query
+        name: create_time_start
+        type: integer
+      - description: 创建时间结束（时间戳）
+        in: query
+        name: create_time_end
         type: integer
       produces:
       - application/json
