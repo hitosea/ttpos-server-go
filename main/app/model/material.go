@@ -21,6 +21,7 @@ type Material struct {
 	BarcodeValue          string  `gorm:"default:'';column:barcode_value;comment:'条形码值'"`
 	InternalCode          string  `gorm:"default:'';column:internal_code;comment:'内部编码'"`
 	Status                bool    `gorm:"default:false;column:status;comment:'状态,true上架 false下架'"`
+	HeadquarterUuid       uint64  `gorm:"default:0;column:headquarter_uuid;comment:'总部ID'"`
 
 	MultiLanguageName   MultiLanguageName  `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 	Unit                *MaterialUnit      `gorm:"foreignKey:uuid;references:unit_uuid"`                // 基准单位

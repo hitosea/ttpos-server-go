@@ -873,6 +873,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_material` (
     `internal_code` VARCHAR(255) DEFAULT '' COMMENT '内部编码',
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态, 1-上架 0-下架',
     `actual_sale_num`  DECIMAL(22, 4) NOT NULL DEFAULT 0.0000 COMMENT '实际销量。每次卖出时,实际销量增加',
+    `headquarter_uuid` BIGINT UNSIGNED DEFAULT 0 COMMENT '总部Uuid',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

@@ -106,6 +106,7 @@ type IProductQueryRepo interface {
 	GetProductUnit(opts ...DBOption) (model.ProductUnit, error)                                                // 获取产品单位详情
 	GetProductUnitCount(opts ...DBOption) (int64, error)                                                       // 获取产品单位数量
 	GetProductUnitByUnitUuid(unitUuid uint64) (*model.ProductUnit, error)                                      // 获取产品单位详情
+	GetProductUnitByErpnextUom(erpnextUom string) (*model.ProductUnit, error)                                  // 根据erpnext单位获取产品单位详情
 
 	PaginateGetProductSauceList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductSauce, int64, error) // 分页获取商品加料列表
 	GetProductSauceList(opts ...DBOption) ([]model.ProductSauce, error)                                          // 获取商品加料列表
@@ -1379,4 +1380,15 @@ func (r *productRepo) CheckProductCategoryCodeExist(code string, uuid uint64) bo
 		db = db.Where("uuid <> ?", uuid)
 	}
 	return db.First(&model.ProductCategory{}).Error == nil
+}
+
+func (r *productRepo) GetProductUnitByErpnextUom(erpnextUom string) (*model.ProductUnit, error) {
+	productUnit, err := r.GetProductUnit(
+		CommonRepo.WhereByErpnextUom(erpnextUom),
+		CommonRepo.WhereBySoftDelete(),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return &productUnit, nil
 }

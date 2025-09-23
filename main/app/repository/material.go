@@ -27,8 +27,11 @@ type IMaterialRepo interface {
 	ClearMaterialValuation(uuid uint64) error    // 清空物品估值率
 	ClearMaterialInternalCode(uuid uint64) error // 清空物品内部编码
 	DeleteMaterial(uuid uint64) error
+	GetMaterialCategory(opts ...DBOption) (*model.MaterialCategory, error)
 	GetMaterialCategoryByName(name string) (*model.MaterialCategory, error)
 	GetMaterialCategoryByUuid(uuid uint64) (*model.MaterialCategory, error)
+	GetMaterialCategoryByCode(code string) (*model.MaterialCategory, bool, error)
+	GetMaterialCategoryByEnglishName(englishName string) (*model.MaterialCategory, bool, error)
 	UpdateMaterialCategory(materialCategory model.MaterialCategory) error
 	DeleteMaterialCategory(uuid uint64) error
 	CreateMaterialCategory(materialCategory model.MaterialCategory) (uint64, error)
@@ -466,4 +469,44 @@ func (r *MaterialRepoImpl) DeleteMaterialCategory(uuid uint64) error {
 		return errors.WithMessage(err, "删除物品类别失败")
 	}
 	return nil
+}
+
+func (r *MaterialRepoImpl) GetMaterialCategory(opts ...DBOption) (*model.MaterialCategory, error) {
+	var materialCategory model.MaterialCategory
+	db := r.db.Model(&model.MaterialCategory{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	if err := db.First(&materialCategory).Error; err != nil {
+		return nil, errors.WithMessage(err, "根据条件获取物品分类失败")
+	}
+	return &materialCategory, nil
+}
+
+// 根据编码获取物品分类
+func (r *MaterialRepoImpl) GetMaterialCategoryByCode(code string) (*model.MaterialCategory, bool, error) {
+	materialCategory, err := r.GetMaterialCategory(
+		CommonRepo.WhereByCode(code),
+		CommonRepo.WhereBySoftDelete(),
+	)
+	if err != nil {
+		if strings.Contains(err.Error(), "record not found") {
+			return nil, false, nil
+		}
+		return nil, false, errors.WithMessage(err, "根据编码获取物品分类失败")
+	}
+	return materialCategory, true, nil
+}
+
+// 根据英文名称获取物品分类
+func (r *MaterialRepoImpl) GetMaterialCategoryByEnglishName(englishName string) (*model.MaterialCategory, bool, error) {
+	var materialCategory model.MaterialCategory
+	// materialCategory表join multi_language_name表，where multi_language_name.en_name = englishName
+	if err := r.db.Model(&model.MaterialCategory{}).Joins("MultiLanguageName").Where("multi_language_name.en_name = ?", englishName).Where("material_category.delete_time = ?", 0).First(&materialCategory).Error; err != nil {
+		if strings.Contains(err.Error(), "record not found") {
+			return nil, false, nil
+		}
+		return nil, false, errors.WithMessage(err, "根据英文名称获取物品分类失败")
+	}
+	return &materialCategory, true, nil
 }
