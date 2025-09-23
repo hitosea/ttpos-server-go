@@ -718,6 +718,11 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 			return errors.WithMessage(err, "物品不存在")
 		}
 
+		// 如果是总部物品，则不能修改
+		if existingMaterial.IsHeadquarter() {
+			return errors.WithMessage(errors.New("总部物品不能修改"))
+		}
+
 		// 检查条形码唯一性
 		if request.BarcodeValue != "" && request.BarcodeValue != existingMaterial.BarcodeValue {
 			if materialRepo.CheckBarcodeExist(request.BarcodeValue, request.Uuid) {
@@ -928,9 +933,14 @@ func (s *materialSrv) DeleteMaterial(ctx context.Context, req req.MaterialDelete
 	materialRepo := repository.NewMaterialRepo(s.dbm.GetDB(dbId))
 
 	// 检查物品是否存在
-	_, err := materialRepo.GetMaterialDetailByUuid(req.Uuid)
+	material, err := materialRepo.GetMaterialDetailByUuid(req.Uuid)
 	if err != nil {
 		return errors.WithMessage(err, "物品不存在")
+	}
+
+	// 如果是总部物品，则不能删除
+	if material.IsHeadquarter() {
+		return errors.WithMessage(errors.New("总部物品不能删除"))
 	}
 
 	// 删除物品
@@ -961,6 +971,11 @@ func (s *materialSrv) UpdateMaterialStatusBatch(ctx context.Context, request req
 			}
 			erpSrv := erp.NewIErpSrv(s.dbm)
 			for _, existingMaterial := range existingMaterials {
+				// 如果是总部物品，则不能更新状态
+				if existingMaterial.IsHeadquarter() {
+					continue
+				}
+
 				enName, err := GetEnName(ctx, existingMaterial.MultiLanguageName.GetNames())
 				if err != nil {
 					return errors.WithMessage(err, "翻译失败")
@@ -1126,6 +1141,11 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 				}
 				erpSrv := erp.NewIErpSrv(s.dbm)
 				for _, material := range materials {
+					// 如果是总部物品，则不能更新
+					if material.IsHeadquarter() {
+						continue
+					}
+
 					enName, err := GetEnName(ctx, material.MultiLanguageName.GetNames())
 					if err != nil {
 						return errors.WithMessage(err, "翻译失败")

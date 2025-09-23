@@ -53,6 +53,11 @@ func (model *Material) IsUnit(unitUuid uint64) bool {
 	return false
 }
 
+// 判断该物品是不是总部物品
+func (model *Material) IsHeadquarter() bool {
+	return model.HeadquarterUuid != 0
+}
+
 // 获取物品的某个单位信息
 func (model *Material) GetUnit(unitUuid uint64) *MaterialUnit {
 	for _, unit := range model.NotBaseUnitList {
