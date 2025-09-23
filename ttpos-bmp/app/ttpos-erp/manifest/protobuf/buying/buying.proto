@@ -76,12 +76,12 @@ message ListSuppliersReq {
   string company = 8; //所属公司
   int32 page_no = 9; // 页码，从1开始
   int32 page_size = 10; // 每页数量
+  string sub_company_abbr = 11; // 门店公司简称，可选。 sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。
 }
 
 // 获取供应商列表响应消息
 message ListSuppliersResp {
   repeated SupplierData suppliers = 1; // 供应商列表
-  int32 total_count = 2; // 总数量
 }
 
 // 供应商数据结构

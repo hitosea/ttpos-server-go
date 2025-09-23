@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"regexp"
 	"strings"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
@@ -1313,9 +1314,24 @@ func (h *DeskHandler) OrderPaymentFinish(c *gin.Context) {
 			helper.ErrorWithData(c, constant.CodeCouponInvalid, res, fmt.Errorf("%s", i18n.Translate(ctx.GetLanguage(), "优惠券信息变化，请重新确认。")))
 			return
 		}
-		if strings.Contains(err.Error(), "Stock quantity not enough for Item") {
+		if strings.Contains(err.Error(), "物品库存不足") {
 			ctx.Log().Error("桌台销售订单的付款结账失败", zap.Any("err", err))
-			helper.ErrorWithDetail(c, constant.CodeFail, fmt.Errorf("%s", i18n.Translate(ctx.GetLanguage(), "商品材料库存不足")))
+			itemCode := ""
+			re := regexp.MustCompile(`物品库存不足,(WPR\d+)`)
+			matches := re.FindStringSubmatch(err.Error())
+			if len(matches) > 1 {
+				itemCode = matches[1]
+			}
+			productInfos, err := h.orderSrv.GetProductNameByItemCode(ctx, itemCode, params.SaleOrderUuid)
+			if err != nil {
+				helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+				return
+			}
+			productNames := make([]string, 0)
+			for _, productInfo := range productInfos {
+				productNames = append(productNames, productInfo.ProductName.GetLocale(ctx.GetLanguage()))
+			}
+			helper.ErrorWithDetail(c, constant.CodeOrderCheckProductStockZero, fmt.Errorf("%s:%s", i18n.Translate(ctx.GetLanguage(), "以下商品库存不足，请删除后再下单"), strings.Join(productNames, ",")))
 			return
 		}
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -1349,6 +1365,26 @@ func (h *DeskHandler) OrderFree(c *gin.Context) {
 	// 桌台免单
 	res, err := h.orderSrv.InstantOrderFree(ctx, params)
 	if err != nil {
+		if strings.Contains(err.Error(), "物品库存不足") {
+			ctx.Log().Error("桌台销售订单的付款结账失败", zap.Any("err", err))
+			itemCode := ""
+			re := regexp.MustCompile(`物品库存不足,(WPR\d+)`)
+			matches := re.FindStringSubmatch(err.Error())
+			if len(matches) > 1 {
+				itemCode = matches[1]
+			}
+			productInfos, err := h.orderSrv.GetProductNameByItemCode(ctx, itemCode, params.SaleOrderUuid)
+			if err != nil {
+				helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+				return
+			}
+			productNames := make([]string, 0)
+			for _, productInfo := range productInfos {
+				productNames = append(productNames, productInfo.ProductName.GetLocale(ctx.GetLanguage()))
+			}
+			helper.ErrorWithDetail(c, constant.CodeOrderCheckProductStockZero, fmt.Errorf("%s:%s", i18n.Translate(ctx.GetLanguage(), "以下商品库存不足，请删除后再下单"), strings.Join(productNames, ",")))
+			return
+		}
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}

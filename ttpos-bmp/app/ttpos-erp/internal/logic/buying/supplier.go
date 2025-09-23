@@ -375,7 +375,7 @@ func (s *sSupplier) ListSuppliers(ctx context.Context, req *buying.ListSuppliers
 
 	// 构建请求参数
 	params := &erp.RequestParams{
-		Fields:  g.ArrayStr{"name", "supplier_name", "country", "supplier_type", "disabled", "custom_company", "custom_branch"},
+		Fields:  g.ArrayStr{"name", "supplier_name", "country", "supplier_type", "disabled", "represents_company", "is_transporter", "is_internal_supplier", "custom_company", "custom_branch"},
 		Filters: filters,
 	}
 
@@ -400,19 +400,57 @@ func (s *sSupplier) ListSuppliers(ctx context.Context, req *buying.ListSuppliers
 	}
 
 	// 解析响应数据
-	suppliers, totalCount, err := s.parseListSuppliersResponse(resp.Bytes())
+	j, err := gjson.DecodeToJson(resp.Bytes())
 	if err != nil {
-		return nil, gerror.Wrapf(err, "解析供应商列表响应失败")
+		return nil, gerror.Wrapf(err, "解析物品列表响应失败")
 	}
 
-	g.Log().Debug(ctx, "获取供应商列表成功", g.Map{
-		"count": len(suppliers),
-		"total": totalCount,
-	})
+	// 解析供应商列表
+	supplierListData := j.GetJsons("data")
 
+	subCompanyName := ""
+	if len(req.SubCompanyAbbr) > 0 {
+		subCompanyName, err = service.Company().GetCompanyNameWithAbbr(ctx, req.SubCompanyAbbr)
+		if err != nil {
+			return nil, gerror.Wrapf(err, "获取子公司名称失败,companyAbbr:%s", req.SubCompanyAbbr)
+		}
+	}
+	var supplierList = make([]*buying.SupplierData, 0, len(supplierListData))
+
+	for _, data := range supplierListData {
+		//获取当前item 的所有 Item Permission List 判断是否有权限使用, 列表查询目前不支持 表格字段查询，只能每次遍历物品查询 对应的 custom_permission_rule
+		if len(req.SubCompanyAbbr) > 0 {
+			supplierInfo, err := s.GetSupplier(ctx, &buying.GetSupplierReq{
+				Name: data.Get("name").String(),
+			})
+			if err != nil {
+				g.Log().Errorf(ctx, "获取供应商信息失败,name:%s,err:%v", data.Get("name").String(), err)
+				continue // 获取供应商信息失败，跳过该供应商
+			}
+			hasPermission, err := service.Permission().CheckPermission(ctx, supplierInfo.CustomPermissionRule, subCompanyName)
+			if err != nil {
+				g.Log().Errorf(ctx, "检查供应商权限失败,name:%s,err:%v", data.Get("name").String(), err)
+				continue // 检查权限失败，跳过该供应商
+			}
+			if !hasPermission {
+				continue // 当前公司无权限，跳过该供应商
+			}
+		}
+		supplierList = append(supplierList, &buying.SupplierData{
+			Name:               data.Get("name").String(),
+			SupplierName:       data.Get("supplier_name").String(),
+			Company:            data.Get("custom_company").String(),
+			Branch:             data.Get("custom_branch").String(),
+			Country:            data.Get("country").String(),
+			SupplierType:       data.Get("supplier_type").String(),
+			RepresentsCompany:  data.Get("represents_company").String(),
+			IsTransporter:      data.Get("is_transporter").Bool(),
+			IsInternalSupplier: data.Get("is_internal_supplier").Bool(),
+			Disabled:           data.Get("disabled").Bool(),
+		})
+	}
 	return &buying.ListSuppliersResp{
-		Suppliers:  suppliers,
-		TotalCount: int32(totalCount),
+		Suppliers: supplierList,
 	}, nil
 }
 
@@ -578,35 +616,4 @@ func (s *sSupplier) parseUpdateSupplierResponse(data []byte) (*buying.SupplierDa
 	}
 
 	return &supplier, nil
-}
-
-// parseListSuppliersResponse 解析供应商列表响应
-func (s *sSupplier) parseListSuppliersResponse(data []byte) ([]*buying.SupplierData, int, error) {
-	jsonData := gjson.New(data)
-
-	// 解析供应商列表
-	supplierListData := jsonData.Get("data")
-	if supplierListData.IsNil() {
-		return []*buying.SupplierData{}, 0, nil
-	}
-
-	var supplierList []*erp.Supplier
-
-	if err := gconv.Structs(supplierListData, &supplierList); err != nil {
-		return nil, 0, gerror.Wrapf(err, "解析供应商列表失败")
-	}
-
-	var suppliers []*buying.SupplierData
-	if err := gconv.Structs(supplierList, &suppliers); err != nil {
-		return nil, 0, gerror.Wrapf(err, "解析供应商列表失败")
-	}
-	//特殊处理字段
-	for idx, supplier := range supplierList {
-		suppliers[idx].Company = supplier.Company
-		suppliers[idx].Branch = supplier.Branch
-	}
-	// 获取总数
-	totalCount := jsonData.Get("total_count").Int()
-
-	return suppliers, totalCount, nil
 }

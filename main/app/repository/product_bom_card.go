@@ -168,3 +168,11 @@ func (r *productBomCardRepoImpl) UpdateProductBomCardIsUsed(uuid uint64, isUsed 
 	}
 	return nil
 }
+
+func (r *productBomCardRepoImpl) GetProductBomCardByMaterialUuid(materialUuid uint64) (uint64, error) {
+	var productBomCard model.ProductBomCard
+	if err := r.db.Model(&model.ProductBomCard{}).Where("related_materials.material_uuid = ?", materialUuid).Preload("RelatedMaterials").First(&productBomCard).Error; err != nil {
+		return 0, errors.WithMessage(err)
+	}
+	return productBomCard.Uuid, nil
+}
