@@ -1,6 +1,7 @@
 package service
 
 import (
+	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -12,22 +13,28 @@ import (
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/jinzhu/copier"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 // IWarehouseSrv 仓库服务接口
 type IWarehouseSrv interface {
-	GetWarehouseList(ctx context.Context, req req.WarehouseListReq) (resp.WarehouseListResp, error) // 仓库列表
-	CreateWarehouse(ctx context.Context, addReq req.CreateWarehouseReq) error                       // 创建仓库
-	UpdateWarehouse(ctx context.Context, req req.UpdateWarehouseReq) error                          // 更新仓库
-	DeleteWarehouse(ctx context.Context, req req.DeleteWarehouseReq) error                          // 删除仓库
-	SetDefaultWarehouse(ctx context.Context, req req.SetDefaultWarehouseReq) error                  // 设置默认仓库
-	GetWarehouse(ctx context.Context, req req.WarehouseReq) (resp.WarehouseResp, error)             // 获取仓库
+	GetWarehouseList(ctx context.Context, req req.WarehouseListReq) (resp.WarehouseListResp, error)                   // 仓库列表
+	GetHeadquarterWarehouseList(ctx context.Context) (resp.WarehouseListResp, error)                                  // 总部仓库列表
+	CreateWarehouse(ctx context.Context, addReq req.CreateWarehouseReq) error                                         // 创建仓库
+	UpdateWarehouse(ctx context.Context, req req.UpdateWarehouseReq) error                                            // 更新仓库
+	DeleteWarehouse(ctx context.Context, req req.DeleteWarehouseReq) error                                            // 删除仓库
+	SetDefaultWarehouse(ctx context.Context, req req.SetDefaultWarehouseReq) error                                    // 设置默认仓库
+	GetWarehouse(ctx context.Context, req req.WarehouseReq) (resp.WarehouseResp, error)                               // 获取仓库
 	GetWarehouseInOutList(ctx context.Context, req req.GetWarehouseInOutListReq) (resp.WarehouseInOutListResp, error) // 出入库明细列表
+	CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error)            // 检查仓库编码是否存在
+
+	SyncWarehouse(ctx context.Context) error // 同步仓库列表
 }
 
 // NewWarehouseSrv 创建仓库服务
@@ -92,6 +99,58 @@ func (s *warehouseSrv) GetWarehouseList(ctx context.Context, req req.WarehouseLi
 	}, nil
 }
 
+// GetHeadquarterWarehouseList 获取总部仓库列表
+func (s *warehouseSrv) GetHeadquarterWarehouseList(ctx context.Context) (resp.WarehouseListResp, error) {
+	// 获取总部公司
+	headquarterUuid := ctx.GetCompanySetting().HeadquarterUuid
+	db := s.dbm.GetDB(headquarterUuid)
+	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(headquarterUuid)
+	if err != nil {
+		logger.Logger.Error("获取总部公司数据失败", zap.Error(err))
+		return resp.WarehouseListResp{}, errors.WithMessage(errors.New("获取总部公司数据失败"), err.Error())
+	}
+
+	// 获取总部仓库列表
+	companySetting := company.CompanySetting
+	warehouseList, err := erp.NewIErpSrv(s.dbm).GetWarehouseList(ctx.GetContext(), req.GetErpnextWarehouseListReq{
+		SiteCode:    companySetting.ErpnextSiteCode,
+		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+		Branch:      companySetting.ErpnextBranchName,
+	})
+	if err != nil {
+		return resp.WarehouseListResp{}, errors.WithMessage(errors.New("同步仓库失败"), err.Error())
+	}
+
+	// 转换 warehouseList 为 resp.WarehouseResp 格式
+	warehouseRespList := make([]resp.WarehouseResp, 0, len(warehouseList))
+	for _, warehouse := range warehouseList {
+		warehouseResp := resp.WarehouseResp{
+			LocalName: dto.LocaleResponse{
+				ZH:   warehouse.WarehouseName, // 使用仓库显示名称作为中文名称
+				EN:   warehouse.WarehouseName, // 使用仓库全称作为英文名称
+				TH:   warehouse.WarehouseName, // 使用仓库全称作为泰文名称
+				ZHTW: warehouse.WarehouseName, // 使用仓库全称作为粤文名称
+				JA:   warehouse.WarehouseName, // 使用仓库全称作为日文名称
+				KO:   warehouse.WarehouseName, // 使用仓库全称作为韩文名称
+				MY:   warehouse.WarehouseName, // 使用仓库全称作为缅文名称
+				TR:   warehouse.WarehouseName, // 使用仓库全称作为土耳其文名称
+				SV:   warehouse.WarehouseName, // 使用仓库全称作为瑞典文名称
+			},
+			Code: warehouse.Name, // 使用仓库全称作为编码
+		}
+		warehouseRespList = append(warehouseRespList, warehouseResp)
+	}
+
+	return resp.WarehouseListResp{
+		List: warehouseRespList,
+		Meta: dto.PageResponse{
+			PageNo:   1,
+			PageSize: len(warehouseRespList),
+			Total:    int64(len(warehouseRespList)),
+		},
+	}, nil
+}
+
 // GetWarehouse 获取仓库
 func (s *warehouseSrv) GetWarehouse(ctx context.Context, req req.WarehouseReq) (resp.WarehouseResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
@@ -106,6 +165,11 @@ func (s *warehouseSrv) GetWarehouse(ctx context.Context, req req.WarehouseReq) (
 // CreateWarehouse 创建仓库
 func (s *warehouseSrv) CreateWarehouse(ctx context.Context, addReq req.CreateWarehouseReq) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
+	var syncEver int64
+	db.Model(&model.Warehouse{}).Count(&syncEver)
+	if syncEver == 0 {
+		return errors.New("仓库未同步")
+	}
 	warehouseRepo := repository.NewWarehouseRepo(db)
 	// 检查仓库编码是否已存在
 	exists, err := warehouseRepo.IsCodeExists(addReq.Code, 0)
@@ -326,17 +390,19 @@ func (s *warehouseSrv) DeleteWarehouse(ctx context.Context, deleteWarehouseReq r
 		}
 		return errors.WithMessage(err, "获取仓库信息失败")
 	}
-
+	if existingWarehouse.IsDefault == 1 {
+		return errors.New("默认仓库不可删除")
+	}
 	// TODO: 这里可以添加业务逻辑检查，比如检查仓库是否有关联数据
 	// 例如：检查是否有库存等
 
 	companySetting := ctx.GetCompanySetting()
-	if ctx.GetCompany().IsOpenErp() {
+	if ctx.GetCompany().IsOpenErp() && existingWarehouse.ErpCode != "" {
 		err = erp.NewIErpSrv(s.dbm).DeleteWarehouse(ctx.GetContext(), req.DeleteErpnextWarehouseReq{
 			SiteCode: companySetting.ErpnextSiteCode,
 			Name:     existingWarehouse.ErpCode,
 		})
-		if err != nil {
+		if err != nil && !strings.Contains(err.Error(), "not found") {
 			return errors.WithMessage(errors.New("删除仓库失败"), err.Error())
 		}
 	}
@@ -392,4 +458,127 @@ func (s *warehouseSrv) SetDefaultWarehouse(ctx context.Context, req req.SetDefau
 
 func (s *warehouseSrv) GetWarehouseInOutList(ctx context.Context, req req.GetWarehouseInOutListReq) (resp.WarehouseInOutListResp, error) {
 	return resp.WarehouseInOutListResp{}, nil
+}
+
+func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
+	if !ctx.GetCompany().IsOpenErp() {
+		return errors.New("公司未授权erp")
+	}
+	db := s.dbm.GetDB(ctx.GetDbId())
+	translateClient := utils.NewTranslateClient()
+
+	companySetting := ctx.GetCompanySetting()
+	warehouseList, err := erp.NewIErpSrv(s.dbm).GetWarehouseList(ctx.GetContext(), req.GetErpnextWarehouseListReq{
+		SiteCode:    companySetting.ErpnextSiteCode,
+		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+		Branch:      companySetting.ErpnextBranchName,
+	})
+	if err != nil {
+		return errors.WithMessage(errors.New("同步仓库失败"), err.Error())
+	}
+
+	var translateItems []utils.TranslateItem
+	for _, erpWarehouse := range warehouseList {
+		translateItems = append(translateItems, utils.TranslateItem{
+			Lang:    "en",
+			Content: erpWarehouse.WarehouseName,
+		})
+	}
+	multiLanguageMap := translateClient.TranslateWithRetry(ctx.GetContext(), translateItems, 10)
+
+	var syncEver int64
+	db.Model(&model.Warehouse{}).Count(&syncEver)
+
+	for _, erpWarehouse := range warehouseList {
+		localeName, ok := multiLanguageMap[erpWarehouse.WarehouseName]
+		if !ok {
+			localeName = dto.LocaleResponse{
+				ZH:   erpWarehouse.WarehouseName,
+				TH:   erpWarehouse.WarehouseName,
+				EN:   erpWarehouse.WarehouseName,
+				ZHTW: erpWarehouse.WarehouseName,
+				JA:   erpWarehouse.WarehouseName,
+				KO:   erpWarehouse.WarehouseName,
+				MY:   erpWarehouse.WarehouseName,
+				TR:   erpWarehouse.WarehouseName,
+				SV:   erpWarehouse.WarehouseName,
+			}
+		}
+		var status int
+		if !erpWarehouse.Disabled {
+			status = 1
+		}
+		var code string
+		if strings.Contains(erpWarehouse.Name, constant.NormalWarehouseCodeContains) {
+			code = constant.NormalWarehouseCode
+		} else if strings.Contains(erpWarehouse.Name, constant.TransitWarehouseCodeContains) {
+			code = constant.TransitWarehouseCode
+		}
+		var warehouseType string
+		if erpWarehouse.WarehouseType == constant.ErpWarehouseTypeNormal1 || erpWarehouse.WarehouseType == constant.ErpWarehouseTypeNormal2 {
+			warehouseType = constant.WarehouseTypeNormal
+		} else if erpWarehouse.WarehouseType == constant.ErpWarehouseTypeTransit {
+			warehouseType = constant.WarehouseTypeTransit
+		}
+		var warehouse model.Warehouse
+		db.Model(&model.Warehouse{}).Where("erp_code = ?", erpWarehouse.Name).Scopes(repository.NotDeleted).First(&warehouse)
+		if warehouse.Uuid > 0 { // 如果存在，则更新
+			db.Model(&model.MultiLanguageName{}).Where("uuid = ?", warehouse.MultiLanguageNameUuid).Updates(map[string]any{
+				"zh_name":    localeName.ZH,
+				"th_name":    localeName.TH,
+				"en_name":    localeName.EN,
+				"zh_tw_name": localeName.ZHTW,
+				"ja_name":    localeName.JA,
+				"ko_name":    localeName.KO,
+				"my_name":    localeName.MY,
+				"tr_name":    localeName.TR,
+				"sv_name":    localeName.SV,
+			})
+			db.Model(&model.Warehouse{}).Where("uuid = ?", warehouse.Uuid).Updates(map[string]any{
+				"name":   localeName.ToJson(),
+				"type":   warehouseType,
+				"status": status,
+			})
+		} else { // 新增
+			var isDefault int
+			if code == constant.NormalWarehouseCode && syncEver == 0 {
+				isDefault = 1
+			}
+			// 保存多语言
+			multiLanguageName := model.MultiLanguageName{
+				ZhName:   localeName.ZH,
+				ThName:   localeName.TH,
+				EnName:   localeName.EN,
+				ZhTwName: localeName.ZHTW,
+				JaName:   localeName.JA,
+				KoName:   localeName.KO,
+				MyName:   localeName.MY,
+				TrName:   localeName.TR,
+				SvName:   localeName.SV,
+			}
+			err = db.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
+			if err != nil {
+				return errors.WithMessage(err, "创建多语言名称失败")
+			}
+			db.Model(&model.Warehouse{}).Create(&model.Warehouse{
+				Name:                  localeName.ToJson(),
+				MultiLanguageNameUuid: multiLanguageName.Uuid,
+				Type:                  warehouseType,
+				Code:                  code,
+				Status:                status,
+				IsDefault:             isDefault,
+			})
+		}
+	}
+	return nil
+}
+
+func (s *warehouseSrv) CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	warehouseRepo := repository.NewWarehouseRepo(db)
+	exists, err := warehouseRepo.IsCodeExists(req.Code, req.Uuid)
+	if err != nil {
+		return resp.CheckNameCodeExistsResp{}, errors.WithMessage(err, "检查仓库编码是否存在失败")
+	}
+	return resp.CheckNameCodeExistsResp{Exists: exists}, nil
 }

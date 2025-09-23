@@ -975,6 +975,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_receipt_order` (
     `receive_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '收货时间（时间戳）',
     `cancel_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '取消时间（时间戳）',
     `purchase_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购时间（时间戳）',
+    `receipt_type` INT(10) NOT NULL DEFAULT 1 COMMENT '收货类型 1-外部收货 2-内部收货',
+    `source_warehouse_erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '源仓库ERP编码',
+    `target_warehouse_erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '目标仓库ERP编码',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -2894,5 +2897,27 @@ CREATE TABLE `ttpos_purchase_order_log` (
   KEY `idx_action` (`action`),
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='采购订单操作日志表';
+
+-- ----------------------------
+-- Table structure for ttpos_warehouse_item
+-- ----------------------------
+DROP TABLE IF EXISTS `ttpos_warehouse_item`;
+CREATE TABLE `ttpos_warehouse_item` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint(20) unsigned DEFAULT 0 COMMENT 'UUID',
+  `warehouse_uuid` bigint(20) unsigned DEFAULT 0 COMMENT '仓库UUID',
+  `material_uuid` bigint(20) unsigned DEFAULT 0 COMMENT '商品UUID',
+  `material_code` varchar(255) DEFAULT '' COMMENT '商品编码',
+  `stock` decimal(14,2) DEFAULT 0.00 COMMENT '库存数量',
+  `reserved_stock` decimal(14,2) DEFAULT 0.00 COMMENT '预留库存数量',
+  `create_time` int(10) unsigned DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(10) unsigned DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(10) unsigned DEFAULT 0 COMMENT '删除时间',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_material_uuid` (`material_uuid`),
+  KEY `idx_material_code` (`material_code`),
+  KEY `idx_warehouse_uuid` (`warehouse_uuid`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='仓库商品库存表';
 
 SET FOREIGN_KEY_CHECKS = 1;

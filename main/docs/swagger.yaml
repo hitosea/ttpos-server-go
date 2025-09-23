@@ -3193,6 +3193,34 @@ definitions:
         description: 送厨商品ID
         type: integer
     type: object
+  req.GetWarehouseInOutListReq:
+    properties:
+      end_time:
+        description: 日期，结束时间
+        type: integer
+      keyword:
+        description: 关键字, 物品名称、物品编码、物品条形码
+        type: string
+      material_category_uuids:
+        description: 物料分类ID列表,多选
+        items:
+          type: integer
+        type: array
+      order_no:
+        description: 单据编号
+        type: string
+      start_time:
+        description: 日期，开始时间
+        type: integer
+      supplier_uuids:
+        description: 供应商ID列表,多选
+        items:
+          type: integer
+        type: array
+      type:
+        description: 类型：采购入库-purchase、销售出库-sale、发货出库-delivery
+        type: string
+    type: object
   req.InitShopReq:
     properties:
       company_abbr:
@@ -5545,10 +5573,38 @@ definitions:
     type: object
   req.PurchaseOrderListReq:
     properties:
+      company_uuid:
+        description: 公司UUID
+        minimum: 1
+        type: integer
+      create_time_end:
+        description: 创建时间结束
+        minimum: 0
+        type: integer
+      create_time_start:
+        description: 创建时间开始
+        minimum: 0
+        type: integer
+      expect_arrival_time_end:
+        description: 期望到货时间结束
+        minimum: 0
+        type: integer
+      expect_arrival_time_start:
+        description: 期望到货时间开始
+        minimum: 0
+        type: integer
       order_no:
         description: 订单编号
         maxLength: 50
         type: string
+      order_time_end:
+        description: 订单时间结束
+        minimum: 0
+        type: integer
+      order_time_start:
+        description: 订单时间开始
+        minimum: 0
+        type: integer
       page_no:
         description: 页码
         minimum: 1
@@ -5558,13 +5614,34 @@ definitions:
         maximum: 1100
         minimum: 1
         type: integer
+      purchase_type:
+        description: V2.6 采购类型, 1-外部采购 2-内部采购
+        maximum: 1
+        minimum: 0
+        type: integer
+      receive_time_end:
+        description: 收货时间结束
+        minimum: 0
+        type: integer
+      receive_time_start:
+        description: 收货时间开始
+        minimum: 0
+        type: integer
       status_in:
-        description: '状态筛选: [0,1,2,3,4], 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)'
+        description: '状态筛选: [0,1,2,3,4], 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核'
         items:
           type: integer
         maxItems: 5
         minItems: 0
         type: array
+      supplier_name:
+        description: 供应商名称
+        maxLength: 100
+        type: string
+      warehouse_erp_code:
+        description: 仓库编码
+        maxLength: 255
+        type: string
     type: object
   req.PurchaseOrderSubmitReq:
     properties:
@@ -5623,6 +5700,11 @@ definitions:
         description: 采购订单ID
         minimum: 1
         type: integer
+      receipt_type:
+        description: 收货类型 1-外部收货 2-内部收货
+        maximum: 2
+        minimum: 1
+        type: integer
       receive_time:
         description: 收货时间(时间戳)
         minimum: 0
@@ -5630,6 +5712,7 @@ definitions:
     required:
     - items
     - purchase_order_uuid
+    - receipt_type
     - receive_time
     type: object
   req.PurchaseReceiptItemCreateReq:
@@ -6907,6 +6990,12 @@ definitions:
       username:
         description: 收银员账号
         type: string
+    type: object
+  resp.CheckNameCodeExistsResp:
+    properties:
+      exists:
+        description: 是否存在
+        type: boolean
     type: object
   resp.CheckNameItem:
     properties:
@@ -9991,13 +10080,13 @@ definitions:
         description: 申请类型
         type: integer
       purchase_type:
-        description: V2.6 采购类型
+        description: V2.6 采购类型 1-外部采购 2-内部采购
         type: integer
       receipt_progress:
         description: 收货进度（百分比0.00%）前端直接显示
         type: string
       status:
-        description: 状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)
+        description: 状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核
         type: integer
       supplier_erp_code:
         description: 供应商编码
@@ -10042,13 +10131,13 @@ definitions:
         description: 申请类型
         type: integer
       purchase_type:
-        description: V2.6 采购类型
+        description: V2.6 采购类型 1-外部采购 2-内部采购
         type: integer
       receipt_progress:
         description: 收货进度（百分比0.00%）前端直接显示
         type: string
       status:
-        description: 状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)
+        description: 状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核
         type: integer
       supplier_erp_code:
         description: 供应商编码
@@ -10920,6 +11009,9 @@ definitions:
       device_remark:
         description: 设备备注
         type: string
+      is_headquarter:
+        description: 是否是总部
+        type: boolean
       is_open_tax:
         description: '税率设置: false-关闭 true-开启'
         type: boolean
@@ -22773,6 +22865,28 @@ paths:
       summary: 检查更新
       tags:
       - 商家端.基础信息
+  /shop/headquarter/warehouse/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取仓库列表，支持分页和筛选
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.WarehouseListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取总部仓库列表
+      tags:
+      - 商家端.仓库档案
   /shop/login:
     post:
       consumes:
@@ -25271,7 +25385,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 分页获取收货记录列表
+      description: 分页获取收货记录列表，支持按收货时间和创建时间筛选
       parameters:
       - default: 1
         description: 页码
@@ -25287,9 +25401,27 @@ paths:
         in: query
         name: order_no
         type: string
-      - description: 状态
+      - description: 状态筛选
         in: query
-        name: status
+        items:
+          type: integer
+        name: status_in
+        type: array
+      - description: 收货时间开始（时间戳）
+        in: query
+        name: receive_time_start
+        type: integer
+      - description: 收货时间结束（时间戳）
+        in: query
+        name: receive_time_end
+        type: integer
+      - description: 创建时间开始（时间戳）
+        in: query
+        name: create_time_start
+        type: integer
+      - description: 创建时间结束（时间戳）
+        in: query
+        name: create_time_end
         type: integer
       produces:
       - application/json
@@ -26330,6 +26462,37 @@ paths:
       summary: 获取供应商
       tags:
       - 商家端.供应商档案
+  /shop/supplier/code_exists:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: 供应商编码
+        in: query
+        name: code
+        required: true
+        type: string
+      - description: 供应商UUID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CheckNameCodeExistsResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 检查供应商编码是否存在
+      tags:
+      - 商家端.供应商档案
   /shop/supplier/create:
     post:
       consumes:
@@ -26420,6 +26583,37 @@ paths:
       summary: 获取供应商列表
       tags:
       - 商家端.供应商档案
+  /shop/supplier/name_exists:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: 供应商名称
+        in: query
+        name: name
+        required: true
+        type: string
+      - description: 供应商UUID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CheckNameCodeExistsResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 检查供应商名称是否存在
+      tags:
+      - 商家端.供应商档案
   /shop/supplier/select:
     get:
       consumes:
@@ -26445,6 +26639,22 @@ paths:
       security:
       - JwtToken: []
       summary: 获取供应商列表选择器
+      tags:
+      - 商家端.供应商档案
+  /shop/supplier/sync:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 同步供应商
       tags:
       - 商家端.供应商档案
   /shop/supplier/update:
@@ -26498,6 +26708,37 @@ paths:
       summary: 获取仓库
       tags:
       - 商家端.仓库档案
+  /shop/warehouse/code_exists:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: 仓库编码
+        in: query
+        name: code
+        required: true
+        type: string
+      - description: 仓库UUID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CheckNameCodeExistsResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 检查仓库编码是否存在
+      tags:
+      - 商家端.仓库档案
   /shop/warehouse/create:
     post:
       consumes:
@@ -26546,6 +26787,30 @@ paths:
       summary: 删除仓库
       tags:
       - 商家端.仓库档案
+  /shop/warehouse/in_out/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取仓库出入库明细列表
+      parameters:
+      - description: 获取仓库出入库明细列表请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/req.GetWarehouseInOutListReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取仓库出入库明细列表
+      tags:
+      - 商家端.仓库管理
   /shop/warehouse/list:
     get:
       consumes:
@@ -26611,6 +26876,23 @@ paths:
       security:
       - JwtToken: []
       summary: 更新仓库
+      tags:
+      - 商家端.仓库档案
+  /shop/warehouse/sync:
+    post:
+      consumes:
+      - application/json
+      description: 同步仓库列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 同步仓库列表
       tags:
       - 商家端.仓库档案
   /shop/warehouse/update:

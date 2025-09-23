@@ -178,16 +178,19 @@ func (PurchaseOrderLog) TableName() string {
 // ReceiptOrder 收货单表 ttpos_purchase_receipt_order
 type PurchaseReceiptOrder struct {
 	BaseModel
-	OrderNo           string  `gorm:"column:order_no;type:varchar(255);not null;default:'';comment:单号" json:"order_no"`
-	ErpOrderNo        string  `gorm:"column:erp_order_no;type:varchar(255);not null;default:'';comment:ERP收货单号" json:"erp_order_no"`
-	Status            int     `gorm:"column:status;type:int(10);not null;default:0;comment:状态, 0-待收货 1-已收货 2-已取消" json:"status"`
-	PurchaseOrderUuid uint64  `gorm:"column:purchase_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:采购申请ID" json:"purchase_order_uuid"`
-	PurchaseOrderNo   string  `gorm:"column:purchase_order_no;type:varchar(255);not null;default:'';comment:采购申请单号" json:"purchase_order_no"`
-	Num               float64 `gorm:"column:num;type:decimal(14,4);not null;default:0.0000;comment:物资数量，每种物品算一个" json:"num"`
-	ExpectArrivalTime int64   `gorm:"column:expect_arrival_time;type:int(10) unsigned;not null;default:0;comment:期望到货日期（时间戳），与采购申请单的期望到货日期一致" json:"expect_arrival_time"`
-	ReceiveTime       int64   `gorm:"column:receive_time;type:int(10) unsigned;not null;default:0;comment:收货时间（时间戳）" json:"receive_time"`
-	CancelTime        int64   `gorm:"column:cancel_time;type:int(10) unsigned;not null;default:0;comment:取消时间（时间戳）" json:"cancel_time"`
-	PurchaseTime      int64   `gorm:"column:purchase_time;type:int(10) unsigned;not null;default:0;comment:采购时间（时间戳）" json:"purchase_time"`
+	OrderNo                string  `gorm:"column:order_no;type:varchar(255);not null;default:'';comment:单号" json:"order_no"`
+	ErpOrderNo             string  `gorm:"column:erp_order_no;type:varchar(255);not null;default:'';comment:ERP收货单号" json:"erp_order_no"`
+	Status                 int     `gorm:"column:status;type:int(10);not null;default:0;comment:状态, 0-待收货 1-已收货 2-已取消" json:"status"`
+	PurchaseOrderUuid      uint64  `gorm:"column:purchase_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:采购申请ID" json:"purchase_order_uuid"`
+	PurchaseOrderNo        string  `gorm:"column:purchase_order_no;type:varchar(255);not null;default:'';comment:采购申请单号" json:"purchase_order_no"`
+	Num                    float64 `gorm:"column:num;type:decimal(14,4);not null;default:0.0000;comment:物资数量，每种物品算一个" json:"num"`
+	ExpectArrivalTime      int64   `gorm:"column:expect_arrival_time;type:int(10) unsigned;not null;default:0;comment:期望到货日期（时间戳），与采购申请单的期望到货日期一致" json:"expect_arrival_time"`
+	ReceiveTime            int64   `gorm:"column:receive_time;type:int(10) unsigned;not null;default:0;comment:收货时间（时间戳）" json:"receive_time"`
+	CancelTime             int64   `gorm:"column:cancel_time;type:int(10) unsigned;not null;default:0;comment:取消时间（时间戳）" json:"cancel_time"`
+	PurchaseTime           int64   `gorm:"column:purchase_time;type:int(10) unsigned;not null;default:0;comment:采购时间（时间戳）" json:"purchase_time"`
+	ReceiptType            int     `gorm:"column:receipt_type;type:int(10);not null;default:1;comment:收货类型 1-外部收货 2-内部收货" json:"receipt_type"`
+	SourceWarehouseErpCode string  `gorm:"column:source_warehouse_erp_code;type:varchar(255);not null;default:'';comment:源仓库ERP编码" json:"source_warehouse_erp_code"`
+	TargetWarehouseErpCode string  `gorm:"column:target_warehouse_erp_code;type:varchar(255);not null;default:'';comment:目标仓库ERP编码" json:"target_warehouse_erp_code"`
 
 	// 关联关系
 	PurchaseOrder PurchaseOrder              `gorm:"foreignKey:PurchaseOrderUuid;references:Uuid" json:"purchase_order,omitempty"`

@@ -1199,6 +1199,8 @@ func (x *PurchaseReceiptItem) GetQty() float64 {
 
 type SavePurchaseReceiptReq struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
+	SourceWarehouse   string                 `protobuf:"bytes,1,opt,name=source_warehouse,json=sourceWarehouse,proto3" json:"source_warehouse,omitempty" dc:"来源仓库,必填"`           // 来源仓库,必填
+	TargetWarehouse   string                 `protobuf:"bytes,2,opt,name=target_warehouse,json=targetWarehouse,proto3" json:"target_warehouse,omitempty" dc:"目标仓库,必填"`           // 目标仓库,必填
 	PurchaseOrderName string                 `protobuf:"bytes,1,opt,name=purchase_order_name,json=purchaseOrderName,proto3" json:"purchase_order_name,omitempty" dc:"采购订单名称,必填"` // 采购订单名称,必填
 	Items             []*PurchaseOrderItem   `protobuf:"bytes,2,rep,name=items,proto3" json:"items,omitempty" dc:"采购订单物品列表,必填"`                                                  // 采购订单物品列表,必填
 	unknownFields     protoimpl.UnknownFields
@@ -1670,17 +1672,18 @@ func (x *GetPurchaseOrderCountResp) GetCount() int32 {
 	return 0
 }
 
-// 创建采购订单请求消息
+// 创建采购订单请求消息，外部采购
 type CreatePurchaseOrderReq struct {
-	state         protoimpl.MessageState    `protogen:"open.v1"`
-	Supplier      string                    `protobuf:"bytes,1,opt,name=supplier,proto3" json:"supplier,omitempty" dc:"供应商，必填"`                                    // 供应商，必填
-	CompanyAbbr   string                    `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写，必填"`          // 公司缩写，必填
-	ScheduleDate  string                    `protobuf:"bytes,3,opt,name=schedule_date,json=scheduleDate,proto3" json:"schedule_date,omitempty" dc:"计划日期 Y-m-d，必填"` // 计划日期 Y-m-d，必填
-	Currency      string                    `protobuf:"bytes,4,opt,name=currency,proto3" json:"currency,omitempty" dc:"货币，可选，默认THB"`                               // 货币，可选，默认THB
-	Items         []*PurchaseOrderItemInput `protobuf:"bytes,5,rep,name=items,proto3" json:"items,omitempty" dc:"采购订单项目列表，必填"`                                     // 采购订单项目列表，必填
-	Remarks       string                    `protobuf:"bytes,6,opt,name=remarks,proto3" json:"remarks,omitempty" dc:"备注，可选"`                                       // 备注，可选
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState    `protogen:"open.v1"`
+	Supplier        string                    `protobuf:"bytes,1,opt,name=supplier,proto3" json:"supplier,omitempty" dc:"供应商，必填"`                                       // 供应商，必填
+	CompanyAbbr     string                    `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写，必填"`             // 公司缩写，必填
+	ScheduleDate    string                    `protobuf:"bytes,3,opt,name=schedule_date,json=scheduleDate,proto3" json:"schedule_date,omitempty" dc:"计划日期 Y-m-d，必填"`    // 计划日期 Y-m-d，必填
+	TargetWarehouse string                    `protobuf:"bytes,4,opt,name=target_warehouse,json=targetWarehouse,proto3" json:"target_warehouse,omitempty" dc:"目标仓库，必填"` //目标仓库，必填
+	Currency        string                    `protobuf:"bytes,5,opt,name=currency,proto3" json:"currency,omitempty" dc:"货币，可选，默认THB"`                                  // 货币，可选，默认THB
+	Items           []*PurchaseOrderItemInput `protobuf:"bytes,6,rep,name=items,proto3" json:"items,omitempty" dc:"采购订单项目列表，必填"`                                        // 采购订单项目列表，必填
+	Remarks         string                    `protobuf:"bytes,7,opt,name=remarks,proto3" json:"remarks,omitempty" dc:"备注，可选"`                                          // 备注，可选
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *CreatePurchaseOrderReq) Reset() {
@@ -1734,6 +1737,13 @@ func (x *CreatePurchaseOrderReq) GetScheduleDate() string {
 	return ""
 }
 
+func (x *CreatePurchaseOrderReq) GetTargetWarehouse() string {
+	if x != nil {
+		return x.TargetWarehouse
+	}
+	return ""
+}
+
 func (x *CreatePurchaseOrderReq) GetCurrency() string {
 	if x != nil {
 		return x.Currency
@@ -1762,7 +1772,6 @@ type PurchaseOrderItemInput struct {
 	Qty           float64                `protobuf:"fixed64,2,opt,name=qty,proto3" json:"qty,omitempty" dc:"数量，必填"`                           // 数量，必填
 	Rate          float64                `protobuf:"fixed64,3,opt,name=rate,proto3" json:"rate,omitempty" dc:"单价，可选"`                         // 单价，可选
 	Uom           string                 `protobuf:"bytes,4,opt,name=uom,proto3" json:"uom,omitempty" dc:"单位，可选"`                             // 单位，可选
-	Warehouse     string                 `protobuf:"bytes,5,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库，可选"`                 // 仓库，可选
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1821,13 +1830,6 @@ func (x *PurchaseOrderItemInput) GetRate() float64 {
 func (x *PurchaseOrderItemInput) GetUom() string {
 	if x != nil {
 		return x.Uom
-	}
-	return ""
-}
-
-func (x *PurchaseOrderItemInput) GetWarehouse() string {
-	if x != nil {
-		return x.Warehouse
 	}
 	return ""
 }
@@ -1900,8 +1902,9 @@ type UpdatePurchaseOrderReq struct {
 	Supplier        string                    `protobuf:"bytes,2,opt,name=supplier,proto3" json:"supplier,omitempty" dc:"供应商，可选"`                                             // 供应商，可选
 	TransactionDate string                    `protobuf:"bytes,3,opt,name=transaction_date,json=transactionDate,proto3" json:"transaction_date,omitempty" dc:"交易日期 Y-m-d，可选"` // 交易日期 Y-m-d，可选
 	ScheduleDate    string                    `protobuf:"bytes,4,opt,name=schedule_date,json=scheduleDate,proto3" json:"schedule_date,omitempty" dc:"计划日期 Y-m-d，可选"`          // 计划日期 Y-m-d，可选
-	Items           []*PurchaseOrderItemInput `protobuf:"bytes,5,rep,name=items,proto3" json:"items,omitempty" dc:"采购订单项目列表，可选"`                                              // 采购订单项目列表，可选
-	Remarks         string                    `protobuf:"bytes,6,opt,name=remarks,proto3" json:"remarks,omitempty" dc:"备注，可选"`                                                // 备注，可选
+	TargetWarehouse string                    `protobuf:"bytes,5,opt,name=target_warehouse,json=targetWarehouse,proto3" json:"target_warehouse,omitempty" dc:"目标仓库，可选"`       //目标仓库，可选
+	Items           []*PurchaseOrderItemInput `protobuf:"bytes,6,rep,name=items,proto3" json:"items,omitempty" dc:"采购订单项目列表，可选"`                                              // 采购订单项目列表，可选
+	Remarks         string                    `protobuf:"bytes,7,opt,name=remarks,proto3" json:"remarks,omitempty" dc:"备注，可选"`                                                // 备注，可选
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -1960,6 +1963,13 @@ func (x *UpdatePurchaseOrderReq) GetTransactionDate() string {
 func (x *UpdatePurchaseOrderReq) GetScheduleDate() string {
 	if x != nil {
 		return x.ScheduleDate
+	}
+	return ""
+}
+
+func (x *UpdatePurchaseOrderReq) GetTargetWarehouse() string {
+	if x != nil {
+		return x.TargetWarehouse
 	}
 	return ""
 }
@@ -2159,32 +2169,33 @@ const file_buying_buying_proto_rawDesc = "" +
 	"\tfrom_date\x18\x04 \x01(\tR\bfromDate\x12\x17\n" +
 	"\ato_date\x18\x05 \x01(\tR\x06toDate\"1\n" +
 	"\x19GetPurchaseOrderCountResp\x12\x14\n" +
-	"\x05count\x18\x01 \x01(\x05R\x05count\"\xe8\x01\n" +
+	"\x05count\x18\x01 \x01(\x05R\x05count\"\x93\x02\n" +
 	"\x16CreatePurchaseOrderReq\x12\x1a\n" +
 	"\bsupplier\x18\x01 \x01(\tR\bsupplier\x12!\n" +
 	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12#\n" +
-	"\rschedule_date\x18\x03 \x01(\tR\fscheduleDate\x12\x1a\n" +
-	"\bcurrency\x18\x04 \x01(\tR\bcurrency\x124\n" +
-	"\x05items\x18\x05 \x03(\v2\x1e.buying.PurchaseOrderItemInputR\x05items\x12\x18\n" +
-	"\aremarks\x18\x06 \x01(\tR\aremarks\"\x8b\x01\n" +
+	"\rschedule_date\x18\x03 \x01(\tR\fscheduleDate\x12)\n" +
+	"\x10target_warehouse\x18\x04 \x01(\tR\x0ftargetWarehouse\x12\x1a\n" +
+	"\bcurrency\x18\x05 \x01(\tR\bcurrency\x124\n" +
+	"\x05items\x18\x06 \x03(\v2\x1e.buying.PurchaseOrderItemInputR\x05items\x12\x18\n" +
+	"\aremarks\x18\a \x01(\tR\aremarks\"m\n" +
 	"\x16PurchaseOrderItemInput\x12\x1b\n" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x10\n" +
 	"\x03qty\x18\x02 \x01(\x01R\x03qty\x12\x12\n" +
 	"\x04rate\x18\x03 \x01(\x01R\x04rate\x12\x10\n" +
-	"\x03uom\x18\x04 \x01(\tR\x03uom\x12\x1c\n" +
-	"\twarehouse\x18\x05 \x01(\tR\twarehouse\"f\n" +
+	"\x03uom\x18\x04 \x01(\tR\x03uom\"f\n" +
 	"\x17CreatePurchaseOrderResp\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12\x1f\n" +
 	"\vgrand_total\x18\x03 \x01(\x01R\n" +
-	"grandTotal\"\xe8\x01\n" +
+	"grandTotal\"\x93\x02\n" +
 	"\x16UpdatePurchaseOrderReq\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n" +
 	"\bsupplier\x18\x02 \x01(\tR\bsupplier\x12)\n" +
 	"\x10transaction_date\x18\x03 \x01(\tR\x0ftransactionDate\x12#\n" +
-	"\rschedule_date\x18\x04 \x01(\tR\fscheduleDate\x124\n" +
-	"\x05items\x18\x05 \x03(\v2\x1e.buying.PurchaseOrderItemInputR\x05items\x12\x18\n" +
-	"\aremarks\x18\x06 \x01(\tR\aremarks\"f\n" +
+	"\rschedule_date\x18\x04 \x01(\tR\fscheduleDate\x12)\n" +
+	"\x10target_warehouse\x18\x05 \x01(\tR\x0ftargetWarehouse\x124\n" +
+	"\x05items\x18\x06 \x03(\v2\x1e.buying.PurchaseOrderItemInputR\x05items\x12\x18\n" +
+	"\aremarks\x18\a \x01(\tR\aremarks\"f\n" +
 	"\x17UpdatePurchaseOrderResp\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12\x1f\n" +

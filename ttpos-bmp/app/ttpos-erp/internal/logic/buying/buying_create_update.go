@@ -171,6 +171,9 @@ func (s *sBuying) buildCreatePurchaseOrderData(ctx context.Context, req *buying.
 	if len(req.Remarks) > 0 {
 		purchaseOrderData["remarks"] = req.Remarks
 	}
+	if len(req.TargetWarehouse) > 0 {
+		purchaseOrderData["set_warehouse"] = req.TargetWarehouse
+	}
 
 	// 构建项目列表
 	items := make([]g.Map, 0, len(req.Items))
@@ -185,9 +188,6 @@ func (s *sBuying) buildCreatePurchaseOrderData(ctx context.Context, req *buying.
 		}
 		if len(item.Uom) > 0 {
 			itemData["uom"] = item.Uom
-		}
-		if len(item.Warehouse) > 0 {
-			itemData["warehouse"] = item.Warehouse
 		}
 
 		items = append(items, itemData)
@@ -215,6 +215,9 @@ func (s *sBuying) buildUpdatePurchaseOrderData(ctx context.Context, req *buying.
 		updateData["remarks"] = req.Remarks
 	}
 
+	if len(req.TargetWarehouse) > 0 {
+		updateData["set_warehouse"] = req.TargetWarehouse
+	}
 	// 更新项目列表（如果有提供）
 	if len(req.Items) > 0 {
 		items := make([]g.Map, 0, len(req.Items))
@@ -230,10 +233,6 @@ func (s *sBuying) buildUpdatePurchaseOrderData(ctx context.Context, req *buying.
 			if len(item.Uom) > 0 {
 				itemData["uom"] = item.Uom
 			}
-			if len(item.Warehouse) > 0 {
-				itemData["warehouse"] = item.Warehouse
-			}
-
 			items = append(items, itemData)
 		}
 		updateData["items"] = items

@@ -11,7 +11,7 @@ import (
 type ISupplierRepo interface {
 	// 基础操作
 	Create(supplier *model.Supplier) error
-	Update(supplier *model.Supplier) error
+	Update(uuid uint64, data map[string]any) error
 	Delete(uuid uint64) error
 	GetByUuid(uuid uint64, opts ...DBOption) (*model.Supplier, error)
 
@@ -45,8 +45,8 @@ func (r *SupplierRepoImpl) Create(supplier *model.Supplier) error {
 }
 
 // Update 更新供应商
-func (r *SupplierRepoImpl) Update(supplier *model.Supplier) error {
-	return r.db.Model(supplier).Select("name", "code", "status", "address", "contact_name", "contact_phone").Where("uuid = ?", supplier.Uuid).Updates(supplier).Error
+func (r *SupplierRepoImpl) Update(uuid uint64, data map[string]any) error {
+	return r.db.Model(&model.Supplier{}).Where("uuid = ?", uuid).Updates(data).Error
 }
 
 // Delete 软删除供应商

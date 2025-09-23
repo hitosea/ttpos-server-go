@@ -45,3 +45,7 @@ type SupplierResp struct {
 	Status                  int    `json:"status"`                     // 状态：0-禁用；1-启用
 	HasRelatedPurchaseOrder bool   `json:"has_related_purchase_order"` // 是否有关联的采购单
 }
+
+type CheckNameCodeExistsResp struct {
+	Exists bool `json:"exists"` // 是否存在
+}

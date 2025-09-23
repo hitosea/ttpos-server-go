@@ -116,3 +116,30 @@ func (s *erpSrv) DeleteWarehouse(ctx context.Context, deleteWarehouseReq req.Del
 	}
 	return nil
 }
+
+func (s *erpSrv) GetWarehouseList(ctx context.Context, getWarehouseListReq req.GetErpnextWarehouseListReq) ([]*warehouse.WarehouseInfo, error) {
+	client, conn, err := NewErpWarehouseClient()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	result, err := client.GetWarehouseList(WithSiteCode(context.Background(), getWarehouseListReq.SiteCode), &warehouse.GetWarehouseListReq{
+		CompanyAbbr: getWarehouseListReq.CompanyAbbr,
+		Branch:      getWarehouseListReq.Branch,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if result.Code != "0" {
+		return nil, errors.New(result.Message)
+	}
+	if result.Data != nil {
+		var listResp warehouse.GetWarehouseListResp
+		if err := result.Data.UnmarshalTo(&listResp); err != nil {
+			logger.Logger.Error("GetWarehouseList-UnmarshalTo", zap.Any("err", err))
+			return nil, err
+		}
+		return listResp.WarehouseList, nil
+	}
+	return nil, nil
+}

@@ -46,3 +46,8 @@ const (
 	WarehouseMonthlyFormSceneStart = iota // 月初 0
 	WarehouseMonthlyFormSceneEnd          // 月末 1
 )
+
+const (
+	WarehouseTypeNormal  = "normal"
+	WarehouseTypeTransit = "transit"
+)

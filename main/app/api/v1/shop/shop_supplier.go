@@ -177,6 +177,74 @@ func (h *SupplierHandler) GetSupplierSelect(c *gin.Context) {
 	helper.Success(c, result)
 }
 
+// CheckNameExists 检查供应商名称是否存在
+// @Summary 检查供应商名称是否存在
+// @Tags 商家端.供应商档案
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param name query string true "供应商名称"
+// @Param uuid query string false "供应商UUID"
+// @Success 200 {object} dto.Response{data=resp.CheckNameCodeExistsResp} "成功"
+// @Router /shop/supplier/name_exists [get]
+func (h *SupplierHandler) CheckNameExists(c *gin.Context) {
+	var checkReq req.CheckNameExistsReq
+	if err := c.ShouldBindQuery(&checkReq); err != nil {
+		helper.HandleValidationError(c, err, checkReq, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	res, err := h.supplierSrv.CheckNameExists(ctx, checkReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
+// CheckCodeExists 检查供应商编码是否存在
+// @Summary 检查供应商编码是否存在
+// @Tags 商家端.供应商档案
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param code query string true "供应商编码"
+// @Param uuid query string false "供应商UUID"
+// @Success 200 {object} dto.Response{data=resp.CheckNameCodeExistsResp} "成功"
+// @Router /shop/supplier/code_exists [get]
+func (h *SupplierHandler) CheckCodeExists(c *gin.Context) {
+	var checkReq req.CheckCodeExistsReq
+	if err := c.ShouldBindQuery(&checkReq); err != nil {
+		helper.HandleValidationError(c, err, checkReq, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	res, err := h.supplierSrv.CheckCodeExists(ctx, checkReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
+// SyncSupplier 同步供应商
+// @Summary 同步供应商
+// @Tags 商家端.供应商档案
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response "成功"
+// @Router /shop/supplier/sync [get]
+func (h *SupplierHandler) SyncSupplier(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	err := h.supplierSrv.SyncSupplier(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
 func RegisterSupplierHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -205,5 +273,8 @@ func RegisterSupplierHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		privateApi.POST("/supplier/create", wrapper.CreateSupplier)
 		privateApi.POST("/supplier/update", wrapper.UpdateSupplier)
 		privateApi.DELETE("/supplier/delete", wrapper.DeleteSupplier)
+		privateApi.GET("/supplier/name_exists", wrapper.CheckNameExists)
+		privateApi.GET("/supplier/code_exists", wrapper.CheckCodeExists)
+		privateApi.GET("/supplier/sync", wrapper.SyncSupplier)
 	}
 }

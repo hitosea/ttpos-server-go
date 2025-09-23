@@ -48,9 +48,10 @@ func (s *sBuying) CreatePurchaseFromMq(ctx context.Context, req *dto.CreatePurch
 	purchaseOrder.Currency = purchaseOrder.PriceListCurrency
 	purchaseOrder.Supplier = req.Supplier
 	purchaseOrder.ScheduleDate = req.RequiredBy
+	//purchaseOrder.
 
 	//创建采购订单
-	resp, err = service.Document().Create(ctx, "Purchase Order", purchaseOrder)
+	resp, err = service.Document().Create(ctx, erp.DocTypePurchaseOrder, purchaseOrder)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建采购订单失败")
 	}
@@ -98,11 +99,15 @@ func (*sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req *
 	}
 
 	//设置来源仓库
-	warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, salesOrder.Company, "")
-	if err != nil {
-		return nil, gerror.Wrapf(err, "查询默认仓库失败")
+	if req.SourceWarehouse != "" {
+		salesOrder.SetWarehouse = req.SourceWarehouse
+	} else {
+		warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, salesOrder.Company, "")
+		if err != nil {
+			return nil, gerror.Wrapf(err, "查询默认仓库失败")
+		}
+		salesOrder.SetWarehouse = warehouse.Name
 	}
-	salesOrder.SetWarehouse = warehouse.Name
 
 	//创建采购订单
 	resp, err = service.Document().Create(ctx, "Sales Order", salesOrder)
@@ -129,7 +134,7 @@ func (*sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req *
 func (*sBuying) GetPurchaseOrder(ctx context.Context, req *buying.GetPurchaseOrderReq) (*erp.PurchaseOrder, error) {
 
 	resp, err := service.Document().Get(ctx, &erp.ErpReq{
-		DocType: "Purchase Order",
+		DocType: erp.DocTypePurchaseOrder,
 		Name:    req.PurchaseOrderName,
 	}, nil)
 	if err != nil {

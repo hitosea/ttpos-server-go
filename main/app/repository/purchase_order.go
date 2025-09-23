@@ -37,6 +37,7 @@ type IPurchaseOrderRepo interface {
 	WhereDeliveryTimeRange(start, end int) DBOption
 	WhereOrderTimeRange(start, end int) DBOption
 	WhereExpectArrivalTimeRange(start, end int) DBOption
+	WhereReceiveTimeRange(start, end int) DBOption
 	WherePurchaseType(purchaseType int) DBOption
 	WhereWarehouseErpCode(warehouseErpCode string) DBOption
 	WhereCompanyUuid(companyUuid uint64) DBOption
@@ -267,6 +268,19 @@ func (r *PurchaseOrderRepoImpl) WhereExpectArrivalTimeRange(start, end int) DBOp
 		}
 		if end > 0 {
 			db = db.Where("expect_arrival_time <= ?", end)
+		}
+		return db
+	}
+}
+
+// WhereReceiveTimeRange 收货时间范围条件
+func (r *PurchaseOrderRepoImpl) WhereReceiveTimeRange(start, end int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if start > 0 {
+			db = db.Where("final_receive_time >= ?", start)
+		}
+		if end > 0 {
+			db = db.Where("final_receive_time <= ?", end)
 		}
 		return db
 	}

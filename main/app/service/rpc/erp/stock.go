@@ -21,7 +21,7 @@ func NewErpStockClient() (stock.StockServiceClient, *grpc.ClientConn, error) {
 }
 
 // SaveMaterialRequestReq 保存物品申请单请求
-func (s *erpSrv) CreatePurchaseOrder(ctx cc.Context, createPurchaseOrderReq *stock.SaveMaterialRequestReq) (*stock.SaveMaterialRequestResp, error) {
+func (s *erpSrv) SaveMaterialRequest(ctx cc.Context, createPurchaseOrderReq *stock.SaveMaterialRequestReq) (*stock.SaveMaterialRequestResp, error) {
 	client, conn, err := NewErpStockClient()
 	if err != nil {
 		return &stock.SaveMaterialRequestResp{}, err
@@ -37,13 +37,13 @@ func (s *erpSrv) CreatePurchaseOrder(ctx cc.Context, createPurchaseOrderReq *sto
 		return &stock.SaveMaterialRequestResp{}, err
 	}
 	if result.Code != "0" {
-		logger.Logger.Error("CreatePurchaseOrder-SaveMaterialRequest", zap.Any("err", err))
+		logger.Logger.Error("SaveMaterialRequest-SaveMaterialRequest", zap.Any("err", err))
 		return &stock.SaveMaterialRequestResp{}, errors.New("调用erp接口失败 - 001")
 	}
 	if result.Data != nil {
 		var resp stock.SaveMaterialRequestResp
 		if err := result.Data.UnmarshalTo(&resp); err != nil {
-			logger.Logger.Error("CreatePurchaseOrder-UnmarshalTo", zap.Any("err", err))
+			logger.Logger.Error("SaveMaterialRequest-UnmarshalTo", zap.Any("err", err))
 			return &stock.SaveMaterialRequestResp{}, err
 		}
 		return &resp, nil

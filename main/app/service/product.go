@@ -4088,16 +4088,16 @@ func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportRe
 	lists := make(map[string]req.ProductShopAddReq)
 	for _, item := range reqs.List {
 		md5Key := item.LocaleName.GetMd5()
-		sku := []req.ProductShopAddFlavorReq{}
-		if _, exists := lists[md5Key]; exists {
-			sku = lists[md5Key].Flavors
-		}
-		sku = append(sku, req.ProductShopAddFlavorReq{
+
+		// 创建新的规格项
+		newFlavor := req.ProductShopAddFlavorReq{
 			Uuid:         item.SkuUuid,
 			Price:        item.ProductPrice,
 			BarcodeValue: item.Barcode,
-		})
+		}
+
 		if _, exists := lists[md5Key]; !exists {
+			// 如果商品不存在，创建新的商品记录
 			lists[md5Key] = req.ProductShopAddReq{
 				Type:         constant.ProductTypeProduct,
 				LocaleName:   item.LocaleName,
@@ -4122,14 +4122,15 @@ func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportRe
 					IsEnableMemberDiscount:  item.IsEnableGrade,
 					IsEnableOverallDiscount: item.OpenOverallDiscount,
 				},
-				Row: item.Row,
+				Row:     item.Row,
+				Flavors: []req.ProductShopAddFlavorReq{newFlavor}, // 直接添加新规格
 			}
+		} else {
+			// 如果商品已存在，直接添加新规格到现有规格列表
+			temp := lists[md5Key]
+			temp.Flavors = append(temp.Flavors, newFlavor)
+			lists[md5Key] = temp
 		}
-
-		// 更新规格列表
-		temp := lists[md5Key]
-		temp.Flavors = append(temp.Flavors, sku...)
-		lists[md5Key] = temp
 	}
 
 	// 错误提示

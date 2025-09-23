@@ -7,12 +7,13 @@ import (
 	"ttpos-bmp/app/ttpos-erp/api/manufacturing"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
+	"ttpos-bmp/app/ttpos-erp/api/warehouse"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
-	"ttpos-server-go/app/model"
 
 	"google.golang.org/grpc/metadata"
 
+	cc "ttpos-server-go/pkg/context"
 	pkgCtx "ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 )
@@ -36,13 +37,14 @@ type IErpSrv interface {
 	AddPaymentMethod(ctx pkgCtx.Context, addPaymentMethodReq req.AddPaymentMethodReq) error
 
 	// 采购单
-	CreatePurchaseOrder(ctx pkgCtx.Context, createPurchaseOrderReq *stock.SaveMaterialRequestReq) (*stock.SaveMaterialRequestResp, error)
+	SaveMaterialRequest(ctx pkgCtx.Context, createPurchaseOrderReq *stock.SaveMaterialRequestReq) (*stock.SaveMaterialRequestResp, error)
 	GetMaterialRequestList(ctx pkgCtx.Context, getMaterialRequestListReq *stock.GetMaterialRequestListReq) (*stock.GetMaterialRequestListResp, error)
+	CreatePurchaseOrder(ctx pkgCtx.Context, createPurchaseOrderReq *buying.CreatePurchaseOrderReq) (*buying.CreatePurchaseOrderResp, error)
 	SavePurchaseReceipt(ctx pkgCtx.Context, savePurchaseReceiptReq *buying.SavePurchaseReceiptReq) (*buying.SavePurchaseReceiptResp, error)
 
 	// 供应商
-	GetSupplierList(ctx pkgCtx.Context) (*buying.GetSupplierListResp, error)
-	ListSuppliers(ctx pkgCtx.Context, companySetting model.CompanySetting, listSuppliersReq *buying.ListSuppliersReq) (*buying.GetSupplierListResp, error)
+	GetSupplierList(ctx pkgCtx.Context) (*buying.GetSupplierListResp, error)                                      // 获取内部供应商
+	ListSuppliers(ctx cc.Context, listSuppliersReq req.GetErpnextSupplierListReq) ([]*buying.SupplierData, error) // 获取自己和总部创建可以看到的
 	CreateSupplier(ctx context.Context, createSupplierReq req.CreateSupplierReq) (string, error)
 	UpdateSupplier(ctx context.Context, updateSupplierReq req.UpdateSupplierReq) error
 	DeleteSupplier(ctx context.Context, deleteSupplierReq req.DeleteSupplierReq) error
@@ -56,9 +58,10 @@ type IErpSrv interface {
 	GetMaterialStockNum(ctx pkgCtx.Context) (*item.GetItemStockResp, error)                                   // 获取物品库存数量
 
 	// 仓库
-	CreateWarehouse(ctx context.Context, createWarehouseReq req.CreateErpnextWarehouseReq) (string, error) // 创建仓库
-	UpdateWarehouse(ctx context.Context, updateWarehouseReq req.UpdateErpnextWarehouseReq) error           // 更新仓库
-	DeleteWarehouse(ctx context.Context, deleteWarehouseReq req.DeleteErpnextWarehouseReq) error           // 删除仓库
+	CreateWarehouse(ctx context.Context, createWarehouseReq req.CreateErpnextWarehouseReq) (string, error)                        // 创建仓库
+	UpdateWarehouse(ctx context.Context, updateWarehouseReq req.UpdateErpnextWarehouseReq) error                                  // 更新仓库
+	DeleteWarehouse(ctx context.Context, deleteWarehouseReq req.DeleteErpnextWarehouseReq) error                                  // 删除仓库
+	GetWarehouseList(ctx context.Context, getWarehouseListReq req.GetErpnextWarehouseListReq) ([]*warehouse.WarehouseInfo, error) // 获取仓库列表
 }
 type erpSrv struct {
 	dbm *database.DBManager

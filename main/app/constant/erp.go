@@ -15,3 +15,19 @@ const (
 	ErpHeadquartersSupplierCode = "Headquarters - Supplier"
 	ErpRequestPageSize          = 999
 )
+
+const (
+	NormalWarehouseCodeContains  = "Normal-Default"
+	TransitWarehouseCodeContains = "Transit-Transit"
+)
+
+const (
+	NormalWarehouseCode  = "WH01"
+	TransitWarehouseCode = "WH02"
+)
+
+const (
+	ErpWarehouseTypeNormal1 = ""
+	ErpWarehouseTypeNormal2 = "Normal"
+	ErpWarehouseTypeTransit = "Transit"
+)

@@ -50,6 +50,27 @@ func (h *WarehouseHandler) GetWarehouseList(c *gin.Context) {
 	helper.Success(c, result)
 }
 
+// GetWarehouseList 获取总部仓库列表
+// @Summary 获取总部仓库列表
+// @Description 获取仓库列表，支持分页和筛选
+// @Tags 商家端.仓库档案
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.WarehouseListResp} "成功"
+// @Router /shop/headquarter/warehouse/list [get]
+func (h *WarehouseHandler) GetHeadquarterWarehouseList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	result, err := h.warehouseSrv.GetHeadquarterWarehouseList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, result)
+}
+
 // GetWarehouse 获取仓库
 // @Summary 获取仓库
 // @Description 获取仓库
@@ -154,6 +175,25 @@ func (h *WarehouseHandler) SetDefaultWarehouse(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// SyncWarehouse 同步仓库列表
+// @Summary 同步仓库列表
+// @Description 同步仓库列表
+// @Tags 商家端.仓库档案
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response "成功"
+// @Router /shop/warehouse/sync [post]
+func (h *WarehouseHandler) SyncWarehouse(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	err := h.warehouseSrv.SyncWarehouse(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 // GetWarehouseInOutList 获取仓库出入库明细列表
 // @Summary 获取仓库出入库明细列表
 // @Description 获取仓库出入库明细列表
@@ -204,6 +244,31 @@ func (h *WarehouseHandler) DeleteWarehouse(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// CheckCodeExists 检查仓库编码是否存在
+// @Summary 检查仓库编码是否存在
+// @Tags 商家端.仓库档案
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param code query string true "仓库编码"
+// @Param uuid query string false "仓库UUID"
+// @Success 200 {object} dto.Response{data=resp.CheckNameCodeExistsResp} "成功"
+// @Router /shop/warehouse/code_exists [get]
+func (h *WarehouseHandler) CheckCodeExists(c *gin.Context) {
+	var checkReq req.CheckCodeExistsReq
+	if err := c.ShouldBindQuery(&checkReq); err != nil {
+		helper.HandleValidationError(c, err, checkReq, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	res, err := h.warehouseSrv.CheckCodeExists(ctx, checkReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
 // RegisterWarehouseHandlers 注册仓库相关路由
 func RegisterWarehouseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -226,12 +291,15 @@ func RegisterWarehouseHandlers(router gin.IRouter, dbm *database.DBManager, cach
 	// 需要认证的路由
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/warehouse/list", warehouseHandler.GetWarehouseList)            // 仓库列表
-		privateApi.GET("/warehouse", warehouseHandler.GetWarehouse)                     // 获取仓库
-		privateApi.POST("/warehouse/create", warehouseHandler.CreateWarehouse)          // 创建仓库
-		privateApi.POST("/warehouse/update", warehouseHandler.UpdateWarehouse)          // 更新仓库
-		privateApi.DELETE("/warehouse/delete", warehouseHandler.DeleteWarehouse)        // 删除仓库
-		privateApi.POST("/warehouse/set_default", warehouseHandler.SetDefaultWarehouse) // 设置默认
+		privateApi.GET("/warehouse/list", warehouseHandler.GetWarehouseList)                        // 仓库列表
+		privateApi.GET("/warehouse/headquarter/list", warehouseHandler.GetHeadquarterWarehouseList) // 总部仓库列表
+		privateApi.GET("/warehouse", warehouseHandler.GetWarehouse)                                 // 获取仓库
+		privateApi.POST("/warehouse/create", warehouseHandler.CreateWarehouse)                      // 创建仓库
+		privateApi.POST("/warehouse/update", warehouseHandler.UpdateWarehouse)                      // 更新仓库
+		privateApi.DELETE("/warehouse/delete", warehouseHandler.DeleteWarehouse)                    // 删除仓库
+		privateApi.POST("/warehouse/set_default", warehouseHandler.SetDefaultWarehouse)             // 设置默认
+		privateApi.POST("/warehouse/sync", warehouseHandler.SyncWarehouse)                          // 同步仓库列表
+		privateApi.GET("/warehouse/code_exists", warehouseHandler.CheckCodeExists)                  // 检查仓库编码是否存在
 
 		privateApi.GET("/warehouse/in_out/list", warehouseHandler.GetWarehouseInOutList) // 出入库明细列表
 	}
