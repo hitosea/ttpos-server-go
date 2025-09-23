@@ -17880,6 +17880,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/headquarter/warehouse/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取仓库列表，支持分页和筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.仓库档案"
+                ],
+                "summary": "获取总部仓库列表",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.WarehouseListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/login": {
             "post": {
                 "description": "登录",
@@ -21932,7 +21972,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "分页获取收货记录列表",
+                "description": "分页获取收货记录列表，支持按收货时间和创建时间筛选",
                 "consumes": [
                     "application/json"
                 ],
@@ -21965,9 +22005,36 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "description": "状态筛选",
+                        "name": "status_in",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
-                        "description": "状态",
-                        "name": "status",
+                        "description": "收货时间开始（时间戳）",
+                        "name": "receive_time_start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "收货时间结束（时间戳）",
+                        "name": "receive_time_end",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "创建时间开始（时间戳）",
+                        "name": "create_time_start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "创建时间结束（时间戳）",
+                        "name": "create_time_end",
                         "in": "query"
                     }
                 ],
@@ -33651,6 +33718,7 @@ const docTemplate = `{
             "required": [
                 "items",
                 "purchase_order_uuid",
+                "receipt_type",
                 "receive_time"
             ],
             "properties": {
@@ -33670,6 +33738,12 @@ const docTemplate = `{
                 "purchase_order_uuid": {
                     "description": "采购订单ID",
                     "type": "integer",
+                    "minimum": 1
+                },
+                "receipt_type": {
+                    "description": "收货类型 1-外部收货 2-内部收货",
+                    "type": "integer",
+                    "maximum": 2,
                     "minimum": 1
                 },
                 "receive_time": {

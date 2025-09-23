@@ -364,7 +364,8 @@ func (s *erpSrv) AddPaymentMethod(ctx pkgCtx.Context, addPaymentMethodReq req.Ad
 	}
 	// 判断支付方式名称是否已经存在
 	var exists int64
-	db.Model(&model.PaymentMethod{}).Where("name = ? or erpnext_payment = ?", addPaymentMethodReq.Name, addPaymentMethodReq.ErpnextPayment).Scopes(repository.NotDeleted).Count(&exists)
+	db.Model(&model.PaymentMethod{}).Where("(payment_name = ? and source = ?) or erpnext_payment = ?",
+		addPaymentMethodReq.Name, constant.PaymentMethodSourceDefault, addPaymentMethodReq.ErpnextPayment).Scopes(repository.NotDeleted).Count(&exists)
 	if exists > 0 {
 		return errors.WithMessage(errors.New("支付方式已存在"))
 	}
