@@ -5619,6 +5619,14 @@ definitions:
         maximum: 1
         minimum: 0
         type: integer
+      receive_time_end:
+        description: 收货时间结束
+        minimum: 0
+        type: integer
+      receive_time_start:
+        description: 收货时间开始
+        minimum: 0
+        type: integer
       status_in:
         description: '状态筛选: [0,1,2,3,4], 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核'
         items:
@@ -26585,6 +26593,22 @@ paths:
       security:
       - JwtToken: []
       summary: 获取供应商列表选择器
+      tags:
+      - 商家端.供应商档案
+  /shop/supplier/sync:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 同步供应商
       tags:
       - 商家端.供应商档案
   /shop/supplier/update:

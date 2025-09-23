@@ -24030,6 +24030,33 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/supplier/sync": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.供应商档案"
+                ],
+                "summary": "同步供应商",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/supplier/update": {
             "post": {
                 "security": [
@@ -33531,6 +33558,16 @@ const docTemplate = `{
                     "description": "V2.6 采购类型, 1-外部采购 2-内部采购",
                     "type": "integer",
                     "maximum": 1,
+                    "minimum": 0
+                },
+                "receive_time_end": {
+                    "description": "收货时间结束",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "receive_time_start": {
+                    "description": "收货时间开始",
+                    "type": "integer",
                     "minimum": 0
                 },
                 "status_in": {

@@ -194,3 +194,9 @@ type GetErpnextWarehouseListReq struct {
 	CompanyAbbr string
 	Branch      string
 }
+
+type GetErpnextSupplierListReq struct {
+	SiteCode    string // 站点编码
+	CompanyAbbr string
+	Branch      string
+}

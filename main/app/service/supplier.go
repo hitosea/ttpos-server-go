@@ -27,6 +27,8 @@ type ISupplierSrv interface {
 	GetSupplier(ctx context.Context, req req.SupplierReq) (resp.SupplierResp, error)                       // 获取供应商
 	CheckNameExists(ctx context.Context, req req.CheckNameExistsReq) (resp.CheckNameCodeExistsResp, error) // 检查名称是否存在
 	CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error) // 检查编码是否存在
+
+	SyncSupplier(ctx context.Context) error // 同步供应商
 }
 
 // NewSupplierSrv 创建供应商服务
@@ -245,15 +247,18 @@ func (s *supplierSrv) UpdateSupplier(ctx context.Context, updateSupplierReq req.
 		}
 	}
 
-	// 更新供应商信息
-	supplier.Name = updateSupplierReq.Name
-	supplier.Code = updateSupplierReq.Code
-	supplier.Address = updateSupplierReq.Address
-	supplier.ContactName = updateSupplierReq.ContactName
-	supplier.ContactPhone = updateSupplierReq.ContactPhone
-	supplier.Status = updateSupplierReq.Status
-
-	err = supplierRepo.Update(supplier)
+	// 所有店铺都能修改名称
+	updateData := map[string]any{
+		"name": updateSupplierReq.Name,
+	}
+	// 可以修改自己的供应商、总部可修改“总部-供应商”
+	if supplier.CompanyAbbr == supplier.CompanyAbbr || (companySetting.IsHeadquarter() && supplier.ErpCode == constant.ErpHeadquartersSupplierCode) {
+		updateData["address"] = updateSupplierReq.Address
+		updateData["contact_name"] = updateSupplierReq.ContactName
+		updateData["contact_phone"] = updateSupplierReq.ContactPhone
+		updateData["status"] = updateSupplierReq.Status
+	}
+	err = supplierRepo.Update(supplier.Uuid, updateData)
 	if err != nil {
 		return errors.WithMessage(err, "更新供应商失败")
 	}
@@ -380,4 +385,39 @@ func (s *supplierSrv) CheckCodeExists(ctx context.Context, req req.CheckCodeExis
 		return resp.CheckNameCodeExistsResp{}, errors.WithMessage(err, "检查编码是否存在失败")
 	}
 	return resp.CheckNameCodeExistsResp{Exists: exists}, nil
+}
+
+func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
+	if !ctx.GetCompany().IsOpenErp() {
+		return errors.New("公司未授权erp")
+	}
+	companySetting := ctx.GetCompanySetting()
+	db := s.dbm.GetDB(ctx.GetDbId())
+	supplierList, err := erp.NewIErpSrv(s.dbm).ListSuppliers(ctx, req.GetErpnextSupplierListReq{
+		SiteCode:    companySetting.ErpnextSiteCode,
+		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+		Branch:      companySetting.ErpnextBranchName,
+	})
+	if err != nil {
+		return errors.WithMessage(errors.New("同步供应商失败"), err.Error())
+	}
+	for _, erpSupplier := range supplierList {
+		var supplier model.Supplier
+		db.Model(&model.Supplier{}).Where("erp_code = ?", erpSupplier.Name).Find(&supplier)
+		if supplier.Uuid == 0 {
+			db.Model(&model.Supplier{}).Create(&model.Supplier{
+				Name:        erpSupplier.SupplierName,
+				Code:        erpSupplier.Name,
+				Status:      1,
+				CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+			})
+		} else {
+			db.Model(&model.Supplier{}).Where("uuid = ?", supplier.Uuid).Updates(map[string]any{
+				"name": erpSupplier.SupplierName,
+			})
+		}
+	}
+
+	// TODO 还需要同步总部创建允许看到的
+	return nil
 }

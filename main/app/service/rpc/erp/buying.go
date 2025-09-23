@@ -7,7 +7,6 @@ import (
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/dto/req"
 
-	"ttpos-server-go/app/model"
 	cc "ttpos-server-go/pkg/context"
 	pkgCtx "ttpos-server-go/pkg/context"
 
@@ -56,33 +55,34 @@ func (s *erpSrv) GetSupplierList(ctx pkgCtx.Context) (*buying.GetSupplierListRes
 }
 
 // ListSuppliers 获取内部供应商列表
-func (s *erpSrv) ListSuppliers(ctx cc.Context, companySetting model.CompanySetting, listSuppliersReq *buying.ListSuppliersReq) (*buying.GetSupplierListResp, error) {
+func (s *erpSrv) ListSuppliers(ctx cc.Context, listSuppliersReq req.GetErpnextSupplierListReq) ([]*buying.SupplierData, error) {
 	client, conn, err := NewErpBuyingClient()
 	if err != nil {
-		return &buying.GetSupplierListResp{}, err
+		return nil, err
 	}
 	defer conn.Close()
-	result, err := client.ListSuppliers(WithSiteCode(context.Background(), companySetting.ErpnextSiteCode), &buying.ListSuppliersReq{
+	result, err := client.ListSuppliers(WithSiteCode(context.Background(), listSuppliersReq.SiteCode), &buying.ListSuppliersReq{
 		CompanyAbbr: listSuppliersReq.CompanyAbbr,
-		PageNo:      listSuppliersReq.PageNo,
-		PageSize:    listSuppliersReq.PageSize,
+		Branch:      listSuppliersReq.Branch,
+		PageNo:      1,
+		PageSize:    1000,
 	})
 	if err != nil {
-		return &buying.GetSupplierListResp{}, err
+		return nil, err
 	}
 	if result.Code != "0" {
 		logger.Logger.Error("ListSuppliers-ListSuppliers", zap.Any("err", err))
-		return &buying.GetSupplierListResp{}, errors.New("调用erp接口失败 - 20002")
+		return nil, errors.New("调用erp接口失败 - 20002")
 	}
 	if result.Data != nil {
-		var resp buying.GetSupplierListResp
+		var resp buying.ListSuppliersResp
 		if err := result.Data.UnmarshalTo(&resp); err != nil {
 			logger.Logger.Error("ListSuppliers-UnmarshalTo", zap.Any("err", err))
-			return &buying.GetSupplierListResp{}, err
+			return nil, err
 		}
-		return &resp, nil
+		return resp.Suppliers, nil
 	}
-	return &buying.GetSupplierListResp{}, nil
+	return nil, nil
 }
 
 // SavePurchaseReceipt 保存收货单
@@ -210,4 +210,34 @@ func (s *erpSrv) DeleteSupplier(ctx context.Context, deleteSupplierReq req.Delet
 		return nil
 	}
 	return nil
+}
+
+// CreatePurchaseOrder 保存物品申请单请求
+func (s *erpSrv) CreatePurchaseOrder(ctx cc.Context, createPurchaseOrderReq *buying.CreatePurchaseOrderReq) (*buying.CreatePurchaseOrderResp, error) {
+	client, conn, err := NewErpBuyingClient()
+	if err != nil {
+		return &buying.CreatePurchaseOrderResp{}, err
+	}
+	defer conn.Close()
+
+	companySetting := ctx.GetCompany().CompanySetting
+	createPurchaseOrderReq.CompanyAbbr = companySetting.ErpnextCompanyAbbr
+
+	result, err := client.CreatePurchaseOrder(WithSiteCode(context.Background(), companySetting.ErpnextSiteCode), createPurchaseOrderReq)
+	if err != nil {
+		return &buying.CreatePurchaseOrderResp{}, err
+	}
+	if result.Code != "0" {
+		logger.Logger.Error("CreatePurchaseOrder-CreatePurchaseOrder", zap.Any("err", err))
+		return &buying.CreatePurchaseOrderResp{}, errors.New("调用erp接口失败 - 001")
+	}
+	if result.Data != nil {
+		var resp buying.CreatePurchaseOrderResp
+		if err := result.Data.UnmarshalTo(&resp); err != nil {
+			logger.Logger.Error("CreatePurchaseOrder-CreatePurchaseOrder", zap.Any("err", err))
+			return &buying.CreatePurchaseOrderResp{}, err
+		}
+		return &resp, nil
+	}
+	return &buying.CreatePurchaseOrderResp{}, nil
 }

@@ -271,7 +271,7 @@ func (h *PurchaseHandler) UpdatePurchaseReceipt(c *gin.Context) {
 
 // GetPurchaseReceiptList 获取收货记录列表
 // @Summary 获取收货记录列表
-// @Description 分页获取收货记录列表
+// @Description 分页获取收货记录列表，支持按收货时间和创建时间筛选
 // @Tags 商家端.采购管理
 // @Accept json
 // @Produce json
@@ -279,7 +279,11 @@ func (h *PurchaseHandler) UpdatePurchaseReceipt(c *gin.Context) {
 // @Param page_no query int false "页码" default(1)
 // @Param page_size query int false "每页条数" default(20)
 // @Param order_no query string false "订单号"
-// @Param status query int false "状态"
+// @Param status_in query []int false "状态筛选"
+// @Param receive_time_start query int64 false "收货时间开始（时间戳）"
+// @Param receive_time_end query int64 false "收货时间结束（时间戳）"
+// @Param create_time_start query int64 false "创建时间开始（时间戳）"
+// @Param create_time_end query int64 false "创建时间结束（时间戳）"
 // @Success 200 {object} dto.Response{data=resp.PurchaseReceiptOrderListResp} "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
 // @Router /shop/purchase/receipt/list [get]
@@ -388,9 +392,9 @@ func RegisterPurchaseHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		privateApi.POST("/purchase/order/submit", wrapper.SubmitPurchaseOrder)
 
 		// 收货管理
+		privateApi.GET("/purchase/receipt/list", wrapper.GetPurchaseReceiptList)
 		privateApi.POST("/purchase/receipt/create", wrapper.CreatePurchaseReceipt)
 		privateApi.POST("/purchase/receipt/update", wrapper.UpdatePurchaseReceipt)
-		privateApi.GET("/purchase/receipt/list", wrapper.GetPurchaseReceiptList)
 		privateApi.GET("/purchase/receipt/detail", wrapper.GetPurchaseReceiptDetail)
 		privateApi.DELETE("/purchase/receipt/cancel", wrapper.CancelPurchaseReceipt)
 	}
