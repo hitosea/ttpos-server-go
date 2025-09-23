@@ -69,11 +69,17 @@ type Item struct {
 	ItemDefaults                     []ItemDefault         `json:"item_defaults,omitempty"`                       // 商品默认配置
 	Attributes                       []interface{}         `json:"attributes,omitempty"`                          // 属性
 	SupplierItems                    []interface{}         `json:"supplier_items,omitempty"`                      // 供应商商品
-	CustomerItems                    []interface{}         `json:"customer_items,omitempty"`                      // 客户商品
+	VariantOf                        string                `json:"variant_of,omitempty"`                          // 变体依据商品编码
+
+	CustomerItems []interface{} `json:"customer_items,omitempty"` // 客户商品
 	//自定义字段
-	CustomCompany       string `json:"custom_company,omitempty"`       // 自定义公司
-	CustomBranch        string `json:"custom_branch,omitempty"`        // 自定义分公司
-	CustomSpecification string `json:"custom_specification,omitempty"` // 自定义规格
+	CustomCompany        string           `json:"custom_company,omitempty"`       // 自定义公司
+	CustomBranch         string           `json:"custom_branch,omitempty"`        // 自定义分公司
+	CustomSpecification  string           `json:"custom_specification,omitempty"` // 自定义规格
+	Classification       string           `json:"custom_classification,omitempty"`
+	ClassificationCode   string           `json:"custom_classification_code,omitempty"`
+	CustomInternalCode   string           `json:"custom_internal_code,omitempty"`
+	CustomPermissionRule []PermissionRule `json:"custom_permission_rule,omitempty"` //自定权限清单 多选表格
 }
 
 type BarCode struct {
@@ -134,9 +140,10 @@ type ItemAttribute struct {
 	Doctype             string               `json:"doctype,omitempty"`               // 文档类型
 	ItemAttributeValues []ItemAttributeValue `json:"item_attribute_values,omitempty"` // 商品属性值列表
 	//自定义字段
-	CustomCompany string `json:"custom_company,omitempty"` // 自定义公司
-	CustomBranch  string `json:"custom_branch,omitempty"`  // 自定义分公司
-	CustomAlias   string `json:"custom_alias,omitempty"`   // 自定义别名
+	CustomCompany        string           `json:"custom_company,omitempty"`         // 自定义公司
+	CustomBranch         string           `json:"custom_branch,omitempty"`          // 自定义分公司
+	CustomAlias          string           `json:"custom_alias,omitempty"`           // 自定义别名
+	CustomPermissionRule []PermissionRule `json:"custom_permission_rule,omitempty"` //自定权限清单 多选表格
 }
 
 // ItemAttributeValue 结构体定义

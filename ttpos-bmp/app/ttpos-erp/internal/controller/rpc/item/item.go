@@ -139,3 +139,38 @@ func (*Controller) GetItemStock(ctx context.Context, req *item.GetItemStockReq) 
 	// 返回成功响应
 	return rpc.ApiSuccessWithData("获取物品库存成功", dataList), nil
 }
+
+// GetItem 根据物品编码获取单个物品信息
+// 参数：ctx 上下文，req 包含物品编码和可选的公司、分支信息
+// 返回：响应信息和错误
+func (c *Controller) GetItem(ctx context.Context, req *item.GetItemReq) (*api.ResponseInfo, error) {
+	// 参数验证
+	if req.ItemCode == "" {
+		return rpc.ApiError("物品编码不能为空"), nil
+	}
+
+	// 调用服务层获取数据
+	itemInfo, err := service.Item().GetItem(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	// 将 itemInfo 的值赋给 respItem
+	respItem := &item.ItemInfo{
+		ItemName:           itemInfo.ItemName,
+		StockUom:           itemInfo.StockUom,
+		ItemCode:           itemInfo.ItemCode,
+		ValuationRate:      itemInfo.ValuationRate,
+		IsStockItem:        itemInfo.IsStockItem == 1,
+		Branch:             itemInfo.CustomBranch,
+		Company:            itemInfo.CustomCompany,
+		ItemSpecification:  itemInfo.CustomSpecification,
+		Disabled:           itemInfo.Disabled == 1,
+		Classification:     itemInfo.Classification,
+		ClassificationCode: itemInfo.ClassificationCode,
+		InternalCode:       itemInfo.CustomInternalCode,
+	}
+
+	// 返回成功响应
+	return rpc.ApiSuccessWithData("获取物品信息成功", respItem), nil
+}

@@ -9,6 +9,7 @@ import (
 
 type IRelatedMaterialRepo interface {
 	CreateRelatedMaterials(relatedMaterials []model.RelatedMaterial) error
+	GetProductBomCardUuidsByMaterialUuid(materialUuid uint64) ([]uint64, error) // 通过物品uuid获取该材料相关的成本卡uuid列表
 }
 
 type relatedMaterialRepoImpl struct {
@@ -36,4 +37,13 @@ func (r *relatedMaterialRepoImpl) CreateRelatedMaterials(relatedMaterials []mode
 		return errors.WithMessage(err)
 	}
 	return nil
+}
+
+// 获取成本卡uuid列表
+func (r *relatedMaterialRepoImpl) GetProductBomCardUuidsByMaterialUuid(materialUuid uint64) ([]uint64, error) {
+	var productBomCardUuids []uint64
+	if err := r.db.Model(&model.RelatedMaterial{}).Where("material_uuid = ?", materialUuid).Where("delete_time = 0").Pluck("related_uuid", &productBomCardUuids).Error; err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productBomCardUuids, nil
 }

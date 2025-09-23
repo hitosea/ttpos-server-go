@@ -109,6 +109,7 @@ type IOrderSrv interface {
 	InstantOrderCartProductCancelGiving(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                                   // 取消赠菜购物车商品
 	InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, bool, error)                                                   // 获取点餐必点方案
 	InstantOrderPaymentInfo(ctx context.Context, saleBill *model.SaleBill, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error) // 获取结账页面信息
+	GetProductNameByItemCode(ctx context.Context, itemCode string, saleOrderUuid uint64) ([]ProductInfo, error)                                                  // 通过itemCode获取订单中库存不足的商品名称
 	OrderPaymentCoupon(ctx context.Context, req req.InstantOrderPaymentCouponReq) (*resp.InstantOrderPaymentInfoResp, error)
 	OrderPaymentPoints(ctx context.Context, req req.InstantOrderPaymentPointsReq) (*resp.InstantOrderPaymentInfoResp, error)                                                          // 设置订单的抵扣积分数量
 	InstantOrderPaymentQrcode(ctx context.Context, req req.InstantOrderPaymentQrcodeReq) (*resp.InstantOrderPaymentQrcodeInfoResp, error)                                             // 获取支付二维码
@@ -9224,6 +9225,60 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 	return infoResp, nil
 }
 
+type ProductInfo struct {
+	ProductName dto.LocaleResponse
+}
+
+// 通过itemCode获取订单中库存不足的商品名称
+func (s *orderSrv) GetProductNameByItemCode(ctx context.Context, itemCode string, saleOrderUuid uint64) ([]ProductInfo, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 获取物品
+	material, err := repository.NewMaterialRepo(db).GetMaterialByErpCode(itemCode)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	// 获取成本卡uuid列表
+	productBomCardUuids, err := repository.NewRelatedMaterialRepo(db).GetProductBomCardUuidsByMaterialUuid(material.Uuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	// 通过成本卡uuid列表获取product_bom列表
+	productBomUuids, err := repository.NewProductBomRepo(db).GetFlavorProductBomUuidsByCardUuids(productBomCardUuids)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	// 通过product_bom uuid列表查询sale_order_product_bom表获取sale_order_product_uuid列表
+	saleOrderProductUuids, err := repository.NewSaleOrderProductRepo(db).GetSaleOrderProductUuidsByProductBomUuids(saleOrderUuid, productBomUuids)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	// 获取商品信息
+	products, err := repository.NewSaleOrderProductRepo(db).GetSaleOrderProductBySaleOrderProductUuids(saleOrderProductUuids)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	productInfos := make([]ProductInfo, 0)
+	for _, product := range products {
+		localeName := product.GetNameAndFlavorName()
+		// 如果商品包没有多语言名称，则查询数据库获取
+		if product.MultiLanguageName.IsNullName() {
+			uuid := product.MultiLanguageNameUuid
+			names, err := repository.NewMultiLanguageNameRepositoryImpl(db).GetMultiLanguageNameByUuid(uuid)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
+			bom, _ := repository.NewProductPackageRepo(db).GetProductPackageBaseInfoByBomUuid(product.SaleOrderProductBoms[0].ProductBomUuid)
+			localeName = product.GetNameAndFlavorNameFrom(bom, &names)
+		}
+		productInfos = append(productInfos, ProductInfo{
+			ProductName: localeName,
+		})
+	}
+
+	return productInfos, nil
+}
+
 // OrderPaymentCoupon 使用优惠券 或 取消优惠券
 func (s *orderSrv) OrderPaymentCoupon(ctx context.Context, req req.InstantOrderPaymentCouponReq) (*resp.InstantOrderPaymentInfoResp, error) {
 	// 加锁
@@ -10174,6 +10229,14 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 	}
 	response, err := erpSrv.SavePosInvoice(ctx, param)
 	if err != nil {
+		erpSrv := erp.NewIErpSrv(s.dbm)
+		getPosInvoiceErrorResp, err := erpSrv.ParseSavePosInvoiceError(err)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		if getPosInvoiceErrorResp.ErrorScene == constant.ErpItemStockNotEnough {
+			return nil, errors.WithMessage(errors.New("物品库存不足," + getPosInvoiceErrorResp.ItemCode))
+		}
 		return nil, errors.WithMessage(err)
 	}
 	return response, nil

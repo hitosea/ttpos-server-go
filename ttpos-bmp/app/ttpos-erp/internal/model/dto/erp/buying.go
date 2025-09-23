@@ -51,6 +51,9 @@ type Supplier struct {
 
 	Company string `json:"custom_company,omitempty"` //所属公司
 	Branch  string `json:"custom_branch,omitempty"`  //所属分支
+
+	CustomPermissionRule []PermissionRule `json:"custom_permission_rule,omitempty"` //自定权限清单 多选表格
+
 }
 
 // AllowedToTransactWith 结构体，表示允许交易的公司

@@ -46,6 +46,11 @@ type AttributeValueInfo struct {
 	Abbr           string `json:"abbr"`            // 属性值缩写
 }
 
+type GetPosInvoiceErrorResp struct {
+	ErrorScene string `json:"error_scene"` // 错误场景
+	ItemCode   string `json:"item_code"`   // 物品编码
+}
+
 type GetPosProfileListResp struct {
 	List []PosProfileInfo `json:"list"`
 }

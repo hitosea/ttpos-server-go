@@ -14,6 +14,7 @@ type ISupplierRepo interface {
 	Update(uuid uint64, data map[string]any) error
 	Delete(uuid uint64) error
 	GetByUuid(uuid uint64, opts ...DBOption) (*model.Supplier, error)
+	GetByErpCode(erpCode string, opts ...DBOption) (*model.Supplier, error)
 
 	// 查询操作
 	GetList(opts ...DBOption) ([]model.Supplier, error)
@@ -60,6 +61,18 @@ func (r *SupplierRepoImpl) Delete(uuid uint64) error {
 func (r *SupplierRepoImpl) GetByUuid(uuid uint64, opts ...DBOption) (*model.Supplier, error) {
 	var supplier model.Supplier
 	db := r.db.Model(&model.Supplier{}).Where("uuid = ?", uuid)
+	db = r.applyOptions(db, opts...)
+	err := db.First(&supplier).Error
+	if err != nil {
+		return nil, err
+	}
+	return &supplier, nil
+}
+
+// GetByErpCode 根据ERP编码查询供应商
+func (r *SupplierRepoImpl) GetByErpCode(erpCode string, opts ...DBOption) (*model.Supplier, error) {
+	var supplier model.Supplier
+	db := r.db.Model(&model.Supplier{}).Where("erp_code = ?", erpCode)
 	db = r.applyOptions(db, opts...)
 	err := db.First(&supplier).Error
 	if err != nil {

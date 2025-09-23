@@ -13,13 +13,14 @@ enum ItemGroup {
 }
 
 message GetItemListReq {
-  ItemGroup item_group = 1; // 物品分组，可选  Products 商品/Raw Material 原材料/Package 套餐
+  ItemGroup item_group = 1; // 物品分组，可选  Products 商品/Raw Material 原材料/Package 套餐/Virtual Product 虚拟产品
   string item_name = 2; // 商品名称模糊查询，可选，如: %商品名称%
   string branch = 3; // 分支名称，可选
   string company_abbr = 4; // 公司简称，可选
-  string item_code = 5; // 物品编码，可选
-  string item_code_prefix = 6; // 物品编码前缀，可选
-  bool contain_disabled = 7; // 是否包含禁用状态，可选，默认只取有效
+  string sub_company_abbr = 5; // 门店公司简称，可选。 sub_company_abbr(门店公司简称) ,会过滤 item permission rule 下的物品，黑名单优先级高。
+  string item_code = 6; // 物品编码，可选
+  string item_code_prefix = 7; // 物品编码前缀，可选
+  bool contain_disabled = 8; // 是否包含禁用状态，可选，默认只取有效
 }
 
 message GetItemListResp {
@@ -57,6 +58,7 @@ message GetUomListReq {
   string company_abbr = 2; // 公司简称，可选
   string uom_name = 3; // 单位名称，可选
   string alias_name = 4; // 单位别名，可选
+  string sub_company_abbr = 5; // 门店公司简称，可选。 sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。
 }
 
 
@@ -79,6 +81,7 @@ message GetAttributeListReq {
   string company_abbr = 2; // 公司简称，可选
   string attribute_name = 3; // 属性名称，可选
   string alias_name = 4; // 属性别名，可选
+  string sub_company_abbr = 5; // 门店公司简称，可选。  sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。
 }
 
 message AttributeInfo {
@@ -116,10 +119,21 @@ message GetItemStockReq {
   string item_name = 4;      // 物品名称，可选，模糊查询
   ItemGroup item_group = 5;     // 物品分组，可选
   string warehouse = 6;      // 仓库名称，可选
+  string sub_company_abbr = 7; // 门店公司简称，可选。  sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。
 }
 
 message GetItemStockResp {
   repeated ItemStock item_stock_list = 1; // 物品库存列表
+}
+
+message GetItemReq {
+  string item_code = 1; // 物品编码，必填
+  string company_abbr = 2; // 公司简称，可选
+  string branch = 3; // 分支名称，可选
+}
+
+message GetItemResp {
+  ItemInfo item_info = 1; // 物品信息
 }
 
 message BomInfo {
@@ -141,14 +155,14 @@ message BomItem {
 
 
 service ItemService {
-  // 获取商品列表
+  // 获取物品列表
   // 参数：查询条件
-  // 返回：商品列表和分页信息
+  // 返回：物品列表，最大9999
   rpc GetItemList(item.GetItemListReq) returns (erp.ResponseInfo);
 
   // 获取单位列表
   // 参数：查询条件
-  // 返回：单位列表和分页信息
+  // 返回：单位列表
   rpc GetUomList(item.GetUomListReq) returns (erp.ResponseInfo);
 
   // 添加单位
@@ -175,5 +189,10 @@ service ItemService {
   // 参数：查询条件
   // 返回：商品库存列表
   rpc GetItemStock(item.GetItemStockReq) returns (erp.ResponseInfo);
+
+  // 根据物品编码获取单个物品信息
+  // 参数：物品编码和可选的公司、分支信息
+  // 返回：物品详细信息
+  rpc GetItem(item.GetItemReq) returns (erp.ResponseInfo);
 
 }

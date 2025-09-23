@@ -137,7 +137,7 @@ class Coupon extends Controller
      * @Apidoc\Returned("list", type="array", desc="优惠券记录列表", children={
      *      @Apidoc\Returned("coupon_name", type="string", desc="优惠券名称"),
      *      @Apidoc\Returned("serial_no", type="string", desc="记录编号"),
-     *      @Apidoc\Returned("record_type", type="string", desc="记录类型：1-首次添加、2-调整添加、3-调整扣减、4-活动扣减、5、奖励领取（冻结）、6、核销扣减"),
+     *      @Apidoc\Returned("record_type", type="string", desc="记录类型：1-首次添加、2-调整添加、3-调整扣减、4-活动扣减、5、奖励领取（冻结）、6、核销扣减、7、删除优惠券"),
      *      @Apidoc\Returned("create_time", type="integer", desc="时间"),
      *      @Apidoc\Returned("coupon_count", type="integer", desc="数量"),
      *      @Apidoc\Returned("left_count", type="integer", desc="剩余有效张数"),
