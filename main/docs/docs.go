@@ -30186,6 +30186,10 @@ const docTemplate = `{
                     "description": "公司UUID",
                     "type": "integer"
                 },
+                "headquarter_uuid": {
+                    "description": "总部UUID",
+                    "type": "integer"
+                },
                 "site_code": {
                     "description": "站点编码",
                     "type": "string"

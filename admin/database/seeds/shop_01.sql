@@ -1613,7 +1613,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_supplier` (
     `position` VARCHAR(100) NOT NULL DEFAULT '' COMMENT '职位',
     `staff_uuid` BIGINT UNSIGNED NOT NULL COMMENT '员工ID, 采购负责人',
     `erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT '关联erpnext',
-    `company_abbr` varchar(255) NOT NULL DEFAULT '' COMMENT '所属公司简称，如果为空表示来自总部',
+    `company_abbr` varchar(255) NOT NULL DEFAULT '' COMMENT '所属公司简称，如果是自己的company_abbr表示自己创建，其他值表示非自己创建',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

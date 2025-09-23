@@ -12,5 +12,5 @@ type Supplier struct {
 	Position     string `gorm:"default:'';column:position;comment:'职位'"`
 	StaffUuid    uint64 `gorm:"default:0;column:staff_uuid;comment:'员工ID, 采购负责人'"`
 	ErpCode      string `gorm:"default:'';column:erp_code;comment:'关联erpnext'"`
-	CompanyAbbr  string `gorm:"default:'';column:company_abbr;comment:'所属公司简称，如果为空表示来自总部'"`
+	CompanyAbbr  string `gorm:"default:'';column:company_abbr;comment:'所属公司简称，如果是自己的company_abbr表示自己创建，其他值表示非自己创建'"`
 }

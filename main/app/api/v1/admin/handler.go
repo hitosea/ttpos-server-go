@@ -4,18 +4,18 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 
-	cc "ttpos-server-go/pkg/context"
-
 	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
-	dbm *database.DBManager
+	dbm          *database.DBManager
+	warehouseSrv service.IWarehouseSrv
 }
 
 // 获取ERPNext站点公司名称
@@ -75,14 +75,6 @@ func (h *Handler) InitShop(c *gin.Context) {
 	if err != nil {
 		helper.ErrorWithMessage(c, constant.CodeFail, err)
 		return
-	}
-	// 连锁店会自动同步整site全部单位和属性，散户不自动同步
-	if initShopReq.SiteCode != "1" {
-		go func(ctx cc.Context) {
-			erp.NewIErpSrv(h.dbm).SyncUomAndAttribute(ctx, req.SyncUomAndAttributeReq{
-				SiteCode: initShopReq.SiteCode,
-			})
-		}(ctx)
 	}
 	helper.Success(c, initShopResp)
 }
@@ -164,7 +156,8 @@ func (h *Handler) AddPaymentMethod(c *gin.Context) {
 
 func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	wrapper := &Handler{
-		dbm: dbm,
+		dbm:          dbm,
+		warehouseSrv: service.NewWarehouseSrv(dbm),
 	}
 	router.GET("/erpnext/site/company", middleware.Internal(), wrapper.GetErpnextSiteCompany)
 	router.POST("/erpnext/shop/init", middleware.Internal(), wrapper.InitShop)
