@@ -510,7 +510,7 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 			if err != nil {
 				return errors.WithMessage(err, "查询供应商失败")
 			}
-			if err == nil && supplier.Status == 0 {
+			if supplier.Status == 0 {
 				return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用")
 			}
 		}
@@ -584,7 +584,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 			if err != nil {
 				return errors.WithMessage(err, "查询供应商失败")
 			}
-			if err == nil && supplier.Status == 0 {
+			if supplier.Status == 0 {
 				return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用")
 			}
 		}
@@ -645,7 +645,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 				headquarterPurchaseOrder.SubUuid = purchaseOrder.Uuid
 				headquarterPurchaseOrder.Status = constant.PurchaseOrderStatusPending
 				headquarterPurchaseOrder.HeadquarterStatus = constant.HeadquarterStatusPending
-				err = repository.NewPurchaseOrderRepo(db).Create(headquarterPurchaseOrder)
+				err = repository.NewPurchaseOrderRepo(tx).Create(headquarterPurchaseOrder)
 				if err != nil {
 					return errors.WithMessage(err, "创建总部采购申请失败")
 				}
@@ -653,7 +653,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 				// 创建总部采购申请明细
 				var headquarterItems []model.PurchaseOrderItem
 				for _, item := range purchaseOrder.Items {
-					material, err := repository.NewMaterialRepo(db).GetMaterialByErpCode(item.MaterialCode)
+					material, err := repository.NewMaterialRepo(tx).GetMaterialByErpCode(item.MaterialCode)
 					if err != nil {
 						return errors.WithMessage(err, "查询总部物品明细失败")
 					}
@@ -662,7 +662,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 					headquarterItem.MaterialUuid = material.Uuid
 					headquarterItems = append(headquarterItems, headquarterItem)
 				}
-				err = repository.NewPurchaseOrderItemRepo(db).CreateBatch(headquarterItems)
+				err = repository.NewPurchaseOrderItemRepo(tx).CreateBatch(headquarterItems)
 				if err != nil {
 					return errors.WithMessage(err, "创建总部采购申请明细失败")
 				}
@@ -1606,7 +1606,7 @@ func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, hea
 		// 处理每个收货单明细
 		for _, item := range receiptOrder.Items {
 			// 计算实际出库数量（考虑单位转换率）
-			actualNum := item.Num * item.UnitConversionRate
+			actualNum := item.GetActualNum()
 
 			// 查找或创建仓库商品库存记录
 			warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(targetWarehouse.Uuid, item.MaterialUuid)
@@ -1619,16 +1619,8 @@ func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, hea
 			if err != nil {
 				return errors.WithMessage(err, "减少总部库存失败")
 			}
-
-			// 生成UUID
-			logUuid, err := utils.GetID()
-			if err != nil {
-				return errors.WithMessage(err, "生成UUID失败")
-			}
-
 			// 记录出库日志
 			warehouseLog := &model.WarehouseInOutLog{
-				Uuid:                 logUuid,
 				LogType:              1, // 出库
 				Scene:                2, // 发货出库
 				WarehouseUuid:        targetWarehouse.Uuid,

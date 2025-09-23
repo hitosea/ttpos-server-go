@@ -60,7 +60,6 @@ type MaterialListReq struct {
 	Status           int      `form:"status" json:"status"`                         // 状态，0-全部 1-启用 2-停用
 	CategoryUuids    []uint64 `form:"category_uuids" json:"category_uuids"`         // 分类UUID列表,多选时
 	WarehouseErpCode string   `form:"warehouse_erp_code" json:"warehouse_erp_code"` // 仓库编码
-	WarehouseUuid    uint64   `form:"warehouse_uuid" json:"warehouse_uuid"`         // 仓库UUID
 }
 
 func (r *MaterialListReq) GetCategoryUuids() []uint64 {
