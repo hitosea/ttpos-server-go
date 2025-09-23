@@ -26,7 +26,8 @@ func ConvertToTitleCase(input string) string {
 	for i, word := range words {
 		if len(word) > 0 {
 			// 将单词转换为首字母大写，其余小写
-			words[i] = strings.ToUpper(string(word[0])) + strings.ToLower(word[1:])
+			//words[i] = strings.ToUpper(string(word[0])) + strings.ToLower(word[1:])
+			words[i] = strings.ToUpper(string(word[0])) + word[1:]
 		}
 	}
 
