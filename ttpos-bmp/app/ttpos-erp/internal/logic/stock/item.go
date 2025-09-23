@@ -45,7 +45,7 @@ func (s *sItem) GetItemList(ctx context.Context, req *item.GetItemListReq) (res 
 	filters := s.buildItemListFilters(ctx, req)
 
 	// 查询物品列表
-	itemList, err := s.queryItemList(ctx, filters)
+	itemList, err := s.queryItemList(ctx, filters, req)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "查询物品列表失败")
 	}
@@ -61,12 +61,12 @@ func (s *sItem) buildItemListFilters(ctx context.Context, req *item.GetItemListR
 
 	// 按分支机构过滤
 	if len(req.Branch) > 0 {
-		filters = append(filters, g.ArrayStr{"custom_branch", "like", "%" + req.Branch + "%"})
+		filters = append(filters, g.ArrayStr{"custom_branch", "=", req.Branch})
 	}
 
 	// 按物品名称过滤
 	if len(req.ItemName) > 0 {
-		filters = append(filters, g.ArrayStr{"name", "like", "%" + req.ItemName + "%"})
+		filters = append(filters, g.ArrayStr{"name", "=", req.ItemName})
 	}
 
 	// 按物品分组过滤
@@ -95,7 +95,7 @@ func (s *sItem) buildItemListFilters(ctx context.Context, req *item.GetItemListR
 	if len(req.CompanyAbbr) > 0 {
 		companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
 		if err == nil && len(companyName) > 0 {
-			filters = append(filters, []string{"custom_company", "like", companyName})
+			filters = append(filters, []string{"custom_company", "=", companyName})
 		}
 	}
 
@@ -107,13 +107,13 @@ func (s *sItem) buildItemListFilters(ctx context.Context, req *item.GetItemListR
 }
 
 // queryItemList 执行物品列表查询
-func (s *sItem) queryItemList(ctx context.Context, filters [][]string) ([]*item.ItemInfo, error) {
+func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item.GetItemListReq) ([]*item.ItemInfo, error) {
 	resp, err := service.Document().List(ctx, &erp.ErpReq{
-		DocType: "Item",
+		DocType: erp.DocTypeItem,
 	}, &erp.RequestParams{
 		Fields:  g.ArrayStr{"item_name", "item_code", "item_group", "custom_branch", "disabled", "custom_company", "custom_specification", "stock_uom"},
 		Filters: filters,
-		Limit:   consts.Limit999,
+		Limit:   consts.Limit9999,
 	})
 
 	if err != nil {
@@ -129,8 +129,33 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string) ([]*item.
 	// 转换为物品信息列表
 	dataArray := j.GetJsons("data")
 	itemList := make([]*item.ItemInfo, 0, len(dataArray))
+	subCompanyName := ""
+	if len(req.SubCompanyAbbr) > 0 {
+		subCompanyName, err = service.Company().GetCompanyNameWithAbbr(ctx, req.SubCompanyAbbr)
+		if err != nil {
+			return nil, gerror.Wrapf(err, "获取子公司名称失败,companyAbbr:%s", req.SubCompanyAbbr)
+		}
+	}
 
 	for _, data := range dataArray {
+		//获取当前item 的所有 Item Permission List 判断是否有权限使用, 列表查询目前不支持 表格字段查询，只能每次遍历物品查询 对应的 custom_permission_rule
+		if len(req.SubCompanyAbbr) > 0 {
+			itemInfo, err := s.GetItem(ctx, &item.GetItemReq{
+				ItemCode: data.Get("item_code").String(),
+			})
+			if err != nil {
+				g.Log().Errorf(ctx, "获取物品信息失败,itemCode:%s,err:%v", data.Get("item_code").String(), err)
+				continue // 获取物品信息失败，跳过该物品
+			}
+			hasPermission, err := service.Permission().CheckPermission(ctx, itemInfo.CustomPermissionRule, subCompanyName)
+			if err != nil {
+				g.Log().Errorf(ctx, "检查物品权限失败,itemCode:%s,err:%v", data.Get("item_code").String(), err)
+				continue // 检查权限失败，跳过该物品
+			}
+			if !hasPermission {
+				continue // 当前公司无权限，跳过该物品
+			}
+		}
 		itemList = append(itemList, &item.ItemInfo{
 			Branch:    data.Get("custom_branch").String(),
 			Company:   data.Get("custom_company").String(),
@@ -589,4 +614,34 @@ func (s *sItem) GetItemStock(ctx context.Context, req *item.GetItemStockReq) (re
 	return &item.GetItemStockResp{
 		ItemStockList: stockList,
 	}, nil
+}
+
+// GetItem 根据物品编码获取单个物品信息
+// 参数：ctx 上下文，req 包含物品编码和可选的公司、分支信息
+// 返回：物品详细信息，错误信息
+func (s *sItem) GetItem(ctx context.Context, req *item.GetItemReq) (res *erp.Item, err error) {
+	// 参数验证
+	if len(req.ItemCode) == 0 {
+		return nil, gerror.New("物品编码不能为空")
+	}
+
+	// 查询物品信息
+	resp, err := service.Document().Get(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeItem,
+		Name:    req.ItemCode,
+	}, nil)
+
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询物品信息失败")
+	}
+
+	// 解析响应数据
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析物品信息响应失败")
+	}
+	itemInfo := &erp.Item{}
+	gconv.Structs(j.GetJson("data"), &itemInfo)
+
+	return itemInfo, nil
 }

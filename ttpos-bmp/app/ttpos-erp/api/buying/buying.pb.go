@@ -1199,8 +1199,6 @@ func (x *PurchaseReceiptItem) GetQty() float64 {
 
 type SavePurchaseReceiptReq struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
-	SourceWarehouse   string                 `protobuf:"bytes,1,opt,name=source_warehouse,json=sourceWarehouse,proto3" json:"source_warehouse,omitempty" dc:"来源仓库,必填"`           // 来源仓库,必填
-	TargetWarehouse   string                 `protobuf:"bytes,2,opt,name=target_warehouse,json=targetWarehouse,proto3" json:"target_warehouse,omitempty" dc:"目标仓库,必填"`           // 目标仓库,必填
 	PurchaseOrderName string                 `protobuf:"bytes,1,opt,name=purchase_order_name,json=purchaseOrderName,proto3" json:"purchase_order_name,omitempty" dc:"采购订单名称,必填"` // 采购订单名称,必填
 	Items             []*PurchaseOrderItem   `protobuf:"bytes,2,rep,name=items,proto3" json:"items,omitempty" dc:"采购订单物品列表,必填"`                                                  // 采购订单物品列表,必填
 	unknownFields     protoimpl.UnknownFields
