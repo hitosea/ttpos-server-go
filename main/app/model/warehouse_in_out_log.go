@@ -1,0 +1,19 @@
+package model
+
+// WarehouseInOutLog 仓库出入库记录表
+type WarehouseInOutLog struct {
+	BaseModel
+	Uuid                 uint64  `json:"uuid" gorm:"type:bigint;default:0;comment:出入库记录ID;uniqueIndex:unique_uuid"`
+	LogType              int     `json:"log_type" gorm:"type:int;default:0;comment:日志类型,0-入库 1-出库"`
+	Scene                int     `json:"scene" gorm:"type:int;default:0;comment:场景,0-采购入库 1-销售出库 2-发货出库"`
+	WarehouseUuid        uint64  `json:"warehouse_uuid" gorm:"type:bigint;default:0;comment:仓库ID"`
+	MaterialUuid         uint64  `json:"material_uuid" gorm:"type:bigint;default:0;comment:物品ID"`
+	MaterialName         string  `json:"material_name" gorm:"type:text;default:'';comment:物品名称JSON,记录当时物品名称"`
+	MaterialBaseUnitUuid uint64  `json:"material_base_unit_uuid" gorm:"type:bigint;default:0;comment:物品基准单位ID"`
+	MaterialBaseUnitName string  `json:"material_base_unit_name" gorm:"type:varchar(255);default:'';comment:物品基准单位名称"`
+	Num                  float64 `json:"num" gorm:"type:decimal(22,4);default:0;comment:数量"`
+	Price                float64 `json:"price" gorm:"type:decimal(22,4);default:0;comment:单价，物品基准单位单价"`
+	Amount               float64 `json:"amount" gorm:"type:decimal(22,4);default:0;comment:金额,单价*数量"`
+	SupplierUuid         uint64  `json:"supplier_uuid" gorm:"type:bigint;default:0;comment:供应商ID"`
+	OrderNo              string  `json:"order_no" gorm:"type:varchar(255);default:'';comment:单据编号"`
+}

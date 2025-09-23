@@ -6,7 +6,7 @@ import (
 
 // WarehouseItem 仓库商品库存表 `ttpos_warehouse_item`
 type WarehouseItem struct {
-	Id            uint64  `json:"id" gorm:"primaryKey;autoIncrement;comment:自增ID"`
+	BaseModel
 	Uuid          uint64  `json:"uuid" gorm:"type:bigint;default:0;comment:UUID;uniqueIndex:unique_uuid"`
 	WarehouseUuid uint64  `json:"warehouse_uuid" gorm:"type:bigint;default:0;comment:仓库UUID;index:idx_warehouse_uuid"`
 	MaterialUuid  uint64  `json:"material_uuid" gorm:"type:bigint;default:0;comment:商品UUID;index:idx_material_uuid"`
