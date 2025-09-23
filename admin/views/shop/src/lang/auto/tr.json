@@ -1898,5 +1898,8 @@
     "确定删除该优惠券吗？": "Bu kuponu silmek istediğinizden emin misiniz?",
     "纸张宽度（mm）": "Kağıt genişliği (mm)",
     "请选择纸张宽度": "Lütfen kağıt genişliğini seçin",
-    "状态检查": "Durum kontrolü"
+    "状态检查": "Durum kontrolü",
+    "智能后厨：": "Akıllı Mutfak:",
+    "开启后可在厨显设备管理商品的制作、传菜": "Açıldıktan sonra mutfak ekranı cihazında ürünlerin hazırlanması ve servis edilmesi yönetilebilir",
+    "删除优惠券": "Kuponu Sil"
 }

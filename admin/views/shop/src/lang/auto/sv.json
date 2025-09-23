@@ -2139,5 +2139,8 @@
     "确定删除该优惠券吗？": "Är du säker på att du vill ta bort denna kupong?",
     "纸张宽度（mm）": "Pappersbredd (mm)",
     "请选择纸张宽度": "Vänligen välj pappersbredd",
-    "状态检查": "Statuskontroll"
+    "状态检查": "Statuskontroll",
+    "智能后厨：": "Smart kök:",
+    "开启后可在厨显设备管理商品的制作、传菜": "När det är aktiverat kan du hantera tillagning och servering av produkter på köksdisplayenheten",
+    "删除优惠券": "Ta bort kupong"
 }

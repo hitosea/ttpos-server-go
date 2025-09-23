@@ -15,6 +15,7 @@
             <el-option :label="$t('反结账退还')" value="4"></el-option>
             <el-option :label="$t('奖励领取（冻结）')" value="5"></el-option>
             <el-option :label="$t('核销扣减')" value="6"></el-option>
+            <el-option :label="$t('删除优惠券')" value="7"></el-option>
           </a-select>
         </el-form-item>
         <el-form-item :label="$t('优惠券类型')">
@@ -56,6 +57,7 @@
               <span v-if="scope.row.record_type == 4">{{ $t('反结账退还') }}</span>
               <span v-if="scope.row.record_type == 5">{{ $t('奖励领取（冻结）') }}</span>
               <span v-if="scope.row.record_type == 6">{{ $t('核销扣减') }}</span>
+              <span v-if="scope.row.record_type == 7">{{ $t('删除优惠券') }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="create_time" :label="$t('时间')" show-overflow-tooltip> </el-table-column>
