@@ -71,7 +71,7 @@ class Operate extends Controller
         // 搜索订单号
         $orderNo = $data['order_no'];
         // 搜索用餐方式: ''-全部 '30'-打包 '40'-堂食
-        $diningMethod = intval(trim($data['style_id']) ?: -1);
+        $diningMethod = intval(trim($data['style_id'] ?? '') ?: -1);
         if ($diningMethod == 30) {
             $diningMethod = 1;
         }
