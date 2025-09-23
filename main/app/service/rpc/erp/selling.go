@@ -2,7 +2,9 @@ package erp
 
 import (
 	"context"
+	"regexp"
 	"slices"
+	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/constant"
@@ -236,6 +238,34 @@ func (s *erpSrv) SavePosInvoice(ctx pkgCtx.Context, savePosInvoiceReq req.SavePo
 		return &savePosInvoiceResp, nil
 	}
 	return nil, errors.WithMessage(errors.New("保存POS发票异常, data为空"))
+}
+
+// 解析SavePosInvoice接口返回到错误信息
+func (s *erpSrv) ParseSavePosInvoiceError(err error) (*resp.GetPosInvoiceErrorResp, error) {
+	// 解析 “调用erpnext接口返回异常,error:Row #1: Item Code: <strong>WPR3685375438618625</strong> is not available under warehouse <strong>散户商家-Normal-Default - xs1</strong>.”
+	// 提取出Item Code
+	if strings.Contains(err.Error(), "Item Code: <strong>") && strings.Contains(err.Error(), "is not available under warehouse") {
+		itemCode := ""
+		re := regexp.MustCompile(`Item Code: <strong>(WPR\d+)</strong>`)
+		matches := re.FindStringSubmatch(err.Error())
+		if len(matches) > 1 {
+			itemCode = matches[1]
+		}
+		return &resp.GetPosInvoiceErrorResp{ErrorScene: constant.ErpItemStockNotEnough, ItemCode: itemCode}, nil
+	}
+
+	// 解析“Stock quantity not enough for Item Code: <strong>WPR3685375438618625</strong> under warehouse <strong>散户商家-Normal-Default - xs1</strong>.”
+	if strings.Contains(err.Error(), "Stock quantity not enough for Item Code") {
+		itemCode := ""
+		re := regexp.MustCompile(`Item Code: <strong>(WPR\d+)</strong>`)
+		matches := re.FindStringSubmatch(err.Error())
+		if len(matches) > 1 {
+			itemCode = matches[1]
+		}
+		return &resp.GetPosInvoiceErrorResp{ErrorScene: constant.ErpItemStockNotEnough, ItemCode: itemCode}, nil
+	}
+
+	return nil, errors.WithMessage(err)
 }
 
 func (s *erpSrv) CancelPosInvoice(ctx pkgCtx.Context, cancelPosInvoiceReq req.CancelPosInvoiceReq) error {

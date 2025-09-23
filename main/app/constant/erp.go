@@ -31,3 +31,9 @@ const (
 	ErpWarehouseTypeNormal2 = "Normal"
 	ErpWarehouseTypeTransit = "Transit"
 )
+
+// ErpPosInvoiceErrorScene 保存POS发票错误场景
+const (
+	// 物品库存不足
+	ErpItemStockNotEnough = "ItemStockNotEnough"
+)
