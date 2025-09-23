@@ -58,7 +58,7 @@ message GetUomListReq {
   string company_abbr = 2; // 公司简称，可选
   string uom_name = 3; // 单位名称，可选
   string alias_name = 4; // 单位别名，可选
-  string sub_company_abbr = 5; // 门店公司简称，可选。 sub_company_abbr(门店公司简称) ,会过滤 item permission rule 下的物品，黑名单优先级高。
+  string sub_company_abbr = 5; // 门店公司简称，可选。 sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。
 }
 
 
@@ -81,7 +81,7 @@ message GetAttributeListReq {
   string company_abbr = 2; // 公司简称，可选
   string attribute_name = 3; // 属性名称，可选
   string alias_name = 4; // 属性别名，可选
-  string sub_company_abbr = 5; // 门店公司简称，可选。  sub_company_abbr(门店公司简称) ,会过滤 item permission rule 下的物品，黑名单优先级高。
+  string sub_company_abbr = 5; // 门店公司简称，可选。  sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。
 }
 
 message AttributeInfo {
@@ -119,7 +119,7 @@ message GetItemStockReq {
   string item_name = 4;      // 物品名称，可选，模糊查询
   ItemGroup item_group = 5;     // 物品分组，可选
   string warehouse = 6;      // 仓库名称，可选
-  string sub_company_abbr = 7; // 门店公司简称，可选。  sub_company_abbr(门店公司简称) ,会过滤 item permission rule 下的物品，黑名单优先级高。
+  string sub_company_abbr = 7; // 门店公司简称，可选。  sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。
 }
 
 message GetItemStockResp {

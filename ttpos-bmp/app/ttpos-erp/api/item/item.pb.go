@@ -453,11 +453,11 @@ func (x *UomDetail) GetConversionFactor() float64 {
 
 type GetUomListReq struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
-	Branch         string                 `protobuf:"bytes,1,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                                                                             // 分支名称，可选
-	CompanyAbbr    string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                                                                                // 公司简称，可选
-	UomName        string                 `protobuf:"bytes,3,opt,name=uom_name,json=uomName,proto3" json:"uom_name,omitempty" dc:"单位名称，可选"`                                                                                            // 单位名称，可选
-	AliasName      string                 `protobuf:"bytes,4,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"单位别名，可选"`                                                                                      // 单位别名，可选
-	SubCompanyAbbr string                 `protobuf:"bytes,5,opt,name=sub_company_abbr,json=subCompanyAbbr,proto3" json:"sub_company_abbr,omitempty" dc:"门店公司简称，可选。 sub_company_abbr(门店公司简称) ,会过滤 item permission rule 下的物品，黑名单优先级高。"` // 门店公司简称，可选。 sub_company_abbr(门店公司简称) ,会过滤 item permission rule 下的物品，黑名单优先级高。
+	Branch         string                 `protobuf:"bytes,1,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                                                                         // 分支名称，可选
+	CompanyAbbr    string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                                                                            // 公司简称，可选
+	UomName        string                 `protobuf:"bytes,3,opt,name=uom_name,json=uomName,proto3" json:"uom_name,omitempty" dc:"单位名称，可选"`                                                                                        // 单位名称，可选
+	AliasName      string                 `protobuf:"bytes,4,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"单位别名，可选"`                                                                                  // 单位别名，可选
+	SubCompanyAbbr string                 `protobuf:"bytes,5,opt,name=sub_company_abbr,json=subCompanyAbbr,proto3" json:"sub_company_abbr,omitempty" dc:"门店公司简称，可选。 sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。"` // 门店公司简称，可选。 sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -657,11 +657,11 @@ func (x *UomInfo) GetMustBeWholeNumber() bool {
 
 type GetAttributeListReq struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
-	Branch         string                 `protobuf:"bytes,1,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                                                                              // 分支名称，可选
-	CompanyAbbr    string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                                                                                 // 公司简称，可选
-	AttributeName  string                 `protobuf:"bytes,3,opt,name=attribute_name,json=attributeName,proto3" json:"attribute_name,omitempty" dc:"属性名称，可选"`                                                                           // 属性名称，可选
-	AliasName      string                 `protobuf:"bytes,4,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"属性别名，可选"`                                                                                       // 属性别名，可选
-	SubCompanyAbbr string                 `protobuf:"bytes,5,opt,name=sub_company_abbr,json=subCompanyAbbr,proto3" json:"sub_company_abbr,omitempty" dc:"门店公司简称，可选。  sub_company_abbr(门店公司简称) ,会过滤 item permission rule 下的物品，黑名单优先级高。"` // 门店公司简称，可选。  sub_company_abbr(门店公司简称) ,会过滤 item permission rule 下的物品，黑名单优先级高。
+	Branch         string                 `protobuf:"bytes,1,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                                                                          // 分支名称，可选
+	CompanyAbbr    string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                                                                             // 公司简称，可选
+	AttributeName  string                 `protobuf:"bytes,3,opt,name=attribute_name,json=attributeName,proto3" json:"attribute_name,omitempty" dc:"属性名称，可选"`                                                                       // 属性名称，可选
+	AliasName      string                 `protobuf:"bytes,4,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"属性别名，可选"`                                                                                   // 属性别名，可选
+	SubCompanyAbbr string                 `protobuf:"bytes,5,opt,name=sub_company_abbr,json=subCompanyAbbr,proto3" json:"sub_company_abbr,omitempty" dc:"门店公司简称，可选。  sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。"` // 门店公司简称，可选。  sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -997,13 +997,13 @@ func (x *ItemStock) GetActualQty() float64 {
 
 type GetItemStockReq struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
-	CompanyAbbr    string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，必填"`                                                                                 // 公司简称，必填
-	Branch         string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，必填"`                                                                                                              // 分支名称，必填
-	ItemCode       string                 `protobuf:"bytes,3,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，可选"`                                                                                          // 物品编码，可选
-	ItemName       string                 `protobuf:"bytes,4,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称，可选，模糊查询"`                                                                                     // 物品名称，可选，模糊查询
-	ItemGroup      ItemGroup              `protobuf:"varint,5,opt,name=item_group,json=itemGroup,proto3,enum=item.ItemGroup" json:"item_group,omitempty" dc:"物品分组，可选"`                                                                  // 物品分组，可选
-	Warehouse      string                 `protobuf:"bytes,6,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库名称，可选"`                                                                                                        // 仓库名称，可选
-	SubCompanyAbbr string                 `protobuf:"bytes,7,opt,name=sub_company_abbr,json=subCompanyAbbr,proto3" json:"sub_company_abbr,omitempty" dc:"门店公司简称，可选。  sub_company_abbr(门店公司简称) ,会过滤 item permission rule 下的物品，黑名单优先级高。"` // 门店公司简称，可选。  sub_company_abbr(门店公司简称) ,会过滤 item permission rule 下的物品，黑名单优先级高。
+	CompanyAbbr    string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，必填"`                                                                             // 公司简称，必填
+	Branch         string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，必填"`                                                                                                          // 分支名称，必填
+	ItemCode       string                 `protobuf:"bytes,3,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，可选"`                                                                                      // 物品编码，可选
+	ItemName       string                 `protobuf:"bytes,4,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称，可选，模糊查询"`                                                                                 // 物品名称，可选，模糊查询
+	ItemGroup      ItemGroup              `protobuf:"varint,5,opt,name=item_group,json=itemGroup,proto3,enum=item.ItemGroup" json:"item_group,omitempty" dc:"物品分组，可选"`                                                              // 物品分组，可选
+	Warehouse      string                 `protobuf:"bytes,6,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库名称，可选"`                                                                                                    // 仓库名称，可选
+	SubCompanyAbbr string                 `protobuf:"bytes,7,opt,name=sub_company_abbr,json=subCompanyAbbr,proto3" json:"sub_company_abbr,omitempty" dc:"门店公司简称，可选。  sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。"` // 门店公司简称，可选。  sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
