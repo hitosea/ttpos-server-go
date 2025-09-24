@@ -1593,7 +1593,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_in_out_log` (
     `scene` INT(10) NOT NULL DEFAULT 0 COMMENT '场景,0-采购入库 1-销售出库 2-发货出库',
     `warehouse_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '仓库ID',
     `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物品ID',
-    `material_name` TEXT DEFAULT '' COMMENT '物品名称JSON,记录当时物品名称',
+    `material_name` TEXT COMMENT '物品名称JSON,记录当时物品名称',
     `material_base_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物品基准单位ID',
     `material_base_unit_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '物品基准单位名称',
     `num` DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '数量',
