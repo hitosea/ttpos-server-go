@@ -293,6 +293,7 @@
       document.removeEventListener('keyup', this.onEnter);
       window.removeEventListener('focus', this.handleFocus);
     },
+    
     methods: {
       onEnter(event) {
         if (event.key === 'Enter' && !this.logining) {
@@ -316,6 +317,7 @@
             /*调用登录接口*/
             UserApi.login(Params, true)
               .then(async (data) => {
+                this.ruleForm.code = '';
                 if (data.code == -102) {
                   _this.logining = false;
                   return;

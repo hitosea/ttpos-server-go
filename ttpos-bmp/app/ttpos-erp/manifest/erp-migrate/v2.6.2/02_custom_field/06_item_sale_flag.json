@@ -1,7 +1,7 @@
 {
   "doctype": "DocType",
-  "label": "Available For Sale",
-  "fieldname": "custom_available_for_sale",
+  "label": "Not For Sale",
+  "fieldname": "custom_not_for_sale",
   "fieldtype": "Check",
   "insert_after": "is_stock_item",
   "dt": "Item"

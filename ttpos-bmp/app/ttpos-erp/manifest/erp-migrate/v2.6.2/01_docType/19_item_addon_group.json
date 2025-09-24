@@ -1,0 +1,15 @@
+{
+  "module": "Stock",
+  "name": "Item Addon Group",
+  "custom": 1,
+  "istable": 1,
+  "editable_grid": 1,
+  "fields" : [
+    {
+      "fieldname": "addon_group",
+      "label": "Pos Addon Group",
+      "fieldtype": "Link",
+      "options": "Pos Addon Group"
+    }
+  ]
+}

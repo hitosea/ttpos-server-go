@@ -369,7 +369,7 @@ func (h *SettingHandler) Sync(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	helper.Success(c, "获取总部最新数据指令已下发")
+	helper.Success(c, gin.H{})
 }
 
 func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
