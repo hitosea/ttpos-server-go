@@ -734,7 +734,10 @@ func (s *warehouseSrv) Sync(ctx context.Context) error {
 // FirstSyncWarehouseItem 第一次同步仓库物品库存。将物料表的库存同步到仓库物品库存表
 func (s *warehouseSrv) FirstSyncWarehouseItem(ctx context.Context) error {
 	// 查询material表
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := ctx.GetDB()
+	if db == nil {
+		db = s.dbm.GetDB(ctx.GetDbId())
+	}
 	materialRepo := repository.NewMaterialRepo(db)
 	materials, _, err := materialRepo.GetMaterialListWithPagination(1, 9999999999)
 	if err != nil {
@@ -758,6 +761,11 @@ func (s *warehouseSrv) FirstSyncWarehouseItem(ctx context.Context) error {
 			Valuation:     1.0, // 默认
 		}
 		warehouseItems = append(warehouseItems, &warehouseItem)
+	}
+	// 更新物料表的仓库uuid
+	err = materialRepo.UpdateAllMaterialWarehouseUuid(warehouse.Uuid)
+	if err != nil {
+		return errors.WithMessage(err, "更新物料表的仓库uuid失败")
 	}
 	// 批量创建仓库物品库存
 	warehouseItemRepo := repository.NewWarehouseItemRepo(db)
