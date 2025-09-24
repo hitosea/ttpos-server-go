@@ -239,6 +239,7 @@ type ItemInfo struct {
 	Classification     string                 `protobuf:"bytes,16,opt,name=classification,proto3" json:"classification,omitempty" dc:"分类，可选"`                                                                      // 分类，可选
 	ClassificationCode string                 `protobuf:"bytes,17,opt,name=classification_code,json=classificationCode,proto3" json:"classification_code,omitempty" dc:"分类编码，可选"`                                  // 分类编码，可选
 	InternalCode       string                 `protobuf:"bytes,18,opt,name=internal_code,json=internalCode,proto3" json:"internal_code,omitempty" dc:"内部编码，可选"`                                                    // 内部编码，可选
+	NotForSale         bool                   `protobuf:"varint,19,opt,name=not_for_sale,json=notForSale,proto3" json:"not_for_sale,omitempty" dc:"是否禁售，可选"`                                                       //是否禁售，可选
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -397,6 +398,13 @@ func (x *ItemInfo) GetInternalCode() string {
 		return x.InternalCode
 	}
 	return ""
+}
+
+func (x *ItemInfo) GetNotForSale() bool {
+	if x != nil {
+		return x.NotForSale
+	}
+	return false
 }
 
 type UomDetail struct {
@@ -1499,7 +1507,7 @@ const file_item_item_proto_rawDesc = "" +
 	"\x10item_code_prefix\x18\a \x01(\tR\x0eitemCodePrefix\x12)\n" +
 	"\x10contain_disabled\x18\b \x01(\bR\x0fcontainDisabled\">\n" +
 	"\x0fGetItemListResp\x12+\n" +
-	"\titem_list\x18\x01 \x03(\v2\x0e.item.ItemInfoR\bitemList\"\x8c\x05\n" +
+	"\titem_list\x18\x01 \x03(\v2\x0e.item.ItemInfoR\bitemList\"\xae\x05\n" +
 	"\bItemInfo\x12\x1b\n" +
 	"\titem_name\x18\x01 \x01(\tR\bitemName\x12.\n" +
 	"\n" +
@@ -1520,7 +1528,9 @@ const file_item_item_proto_rawDesc = "" +
 	"\bdisabled\x18\x0f \x01(\bR\bdisabled\x12&\n" +
 	"\x0eclassification\x18\x10 \x01(\tR\x0eclassification\x12/\n" +
 	"\x13classification_code\x18\x11 \x01(\tR\x12classificationCode\x12#\n" +
-	"\rinternal_code\x18\x12 \x01(\tR\finternalCode\"J\n" +
+	"\rinternal_code\x18\x12 \x01(\tR\finternalCode\x12 \n" +
+	"\fnot_for_sale\x18\x13 \x01(\bR\n" +
+	"notForSale\"J\n" +
 	"\tUomDetail\x12\x10\n" +
 	"\x03uom\x18\x01 \x01(\tR\x03uom\x12+\n" +
 	"\x11conversion_factor\x18\x02 \x01(\x01R\x10conversionFactor\"\xae\x01\n" +

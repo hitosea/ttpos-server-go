@@ -46,6 +46,7 @@ message ItemInfo {
   string classification = 16; // 分类，可选
   string classification_code = 17; // 分类编码，可选
   string internal_code = 18; // 内部编码，可选
+  bool not_for_sale = 19; //是否禁售，可选
 }
 
 message UomDetail {
