@@ -26023,6 +26023,22 @@ paths:
       summary: 保存门店设置
       tags:
       - 商家端.门店设置
+  /shop/setting/sync:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取总部最新数据
+      tags:
+      - 商家端.业务设置
   /shop/setting/upload_logo:
     post:
       consumes:

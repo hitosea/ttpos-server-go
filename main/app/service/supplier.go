@@ -28,7 +28,7 @@ type ISupplierSrv interface {
 	CheckNameExists(ctx context.Context, req req.CheckNameExistsReq) (resp.CheckNameCodeExistsResp, error) // 检查名称是否存在
 	CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error) // 检查编码是否存在
 
-	SyncSupplier(ctx context.Context) error // 同步供应商
+	Sync(ctx context.Context) error // 同步供应商
 }
 
 // NewSupplierSrv 创建供应商服务
@@ -387,7 +387,7 @@ func (s *supplierSrv) CheckCodeExists(ctx context.Context, req req.CheckCodeExis
 	return resp.CheckNameCodeExistsResp{Exists: exists}, nil
 }
 
-func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
+func (s *supplierSrv) Sync(ctx context.Context) error {
 	if !ctx.GetCompany().IsOpenErp() {
 		return errors.New("公司未授权erp")
 	}

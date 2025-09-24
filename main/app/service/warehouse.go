@@ -34,7 +34,7 @@ type IWarehouseSrv interface {
 	GetWarehouseInOutList(ctx context.Context, req req.GetWarehouseInOutListReq) (resp.WarehouseInOutListResp, error) // 出入库明细列表
 	CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error)            // 检查仓库编码是否存在
 
-	SyncWarehouse(ctx context.Context) error          // 同步仓库列表
+	Sync(ctx context.Context) error                   // 同步仓库列表
 	FirstSyncWarehouseItem(ctx context.Context) error // 第一次同步仓库物品库存列表
 }
 
@@ -585,7 +585,7 @@ func (s *warehouseSrv) GetWarehouseInOutList(ctx context.Context, req req.GetWar
 	}, nil
 }
 
-func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
+func (s *warehouseSrv) Sync(ctx context.Context) error {
 	// 商家数据库
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	var err error
@@ -623,91 +623,112 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 	translateClient := utils.NewTranslateClient()
 	multiLanguageMap := translateClient.TranslateWithRetry(ctx.GetContext(), translateItems, 10)
 
+	// 根据是否有数据判断是否首次同步仓库
 	var syncEver int64
 	db.Model(&model.Warehouse{}).Count(&syncEver)
 
-	for _, erpWarehouse := range warehouseList {
-		localeName, ok := multiLanguageMap[erpWarehouse.WarehouseName]
-		if !ok {
-			localeName = dto.LocaleResponse{
-				ZH:   erpWarehouse.WarehouseName,
-				TH:   erpWarehouse.WarehouseName,
-				EN:   erpWarehouse.WarehouseName,
-				ZHTW: erpWarehouse.WarehouseName,
-				JA:   erpWarehouse.WarehouseName,
-				KO:   erpWarehouse.WarehouseName,
-				MY:   erpWarehouse.WarehouseName,
-				TR:   erpWarehouse.WarehouseName,
-				SV:   erpWarehouse.WarehouseName,
-			}
-		}
-		var status int
-		if !erpWarehouse.Disabled {
-			status = 1
-		}
-		var code string
-		if strings.Contains(erpWarehouse.Name, constant.NormalWarehouseCodeContains) {
-			code = constant.NormalWarehouseCode
-		} else if strings.Contains(erpWarehouse.Name, constant.TransitWarehouseCodeContains) {
-			code = constant.TransitWarehouseCode
-		}
-		var warehouseType string
-		if erpWarehouse.WarehouseType == constant.ErpWarehouseTypeNormal1 || erpWarehouse.WarehouseType == constant.ErpWarehouseTypeNormal2 {
-			warehouseType = constant.WarehouseTypeNormal
-		} else if erpWarehouse.WarehouseType == constant.ErpWarehouseTypeTransit {
-			warehouseType = constant.WarehouseTypeTransit
-		}
-		var warehouse model.Warehouse
-		db.Model(&model.Warehouse{}).Where("erp_code = ?", erpWarehouse.Name).Scopes(repository.NotDeleted).First(&warehouse)
-		if warehouse.Uuid > 0 { // 如果存在，则更新
-			db.Model(&model.MultiLanguageName{}).Where("uuid = ?", warehouse.MultiLanguageNameUuid).Updates(map[string]any{
-				"zh_name":    localeName.ZH,
-				"th_name":    localeName.TH,
-				"en_name":    localeName.EN,
-				"zh_tw_name": localeName.ZHTW,
-				"ja_name":    localeName.JA,
-				"ko_name":    localeName.KO,
-				"my_name":    localeName.MY,
-				"tr_name":    localeName.TR,
-				"sv_name":    localeName.SV,
-			})
-			db.Model(&model.Warehouse{}).Where("uuid = ?", warehouse.Uuid).Updates(map[string]any{
-				"name":   localeName.ToJson(),
-				"type":   warehouseType,
-				"status": status,
-			})
-		} else { // 新增
-			var isDefault int
-			if code == constant.NormalWarehouseCode && syncEver == 0 {
-				isDefault = 1
-			}
-			// 保存多语言
-			multiLanguageName := model.MultiLanguageName{
-				ZhName:   localeName.ZH,
-				ThName:   localeName.TH,
-				EnName:   localeName.EN,
-				ZhTwName: localeName.ZHTW,
-				JaName:   localeName.JA,
-				KoName:   localeName.KO,
-				MyName:   localeName.MY,
-				TrName:   localeName.TR,
-				SvName:   localeName.SV,
-			}
-			err = db.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
-			if err != nil {
-				return errors.WithMessage(err, "创建多语言名称失败")
-			}
-			db.Model(&model.Warehouse{}).Create(&model.Warehouse{
-				Name:                  localeName.ToJson(),
-				MultiLanguageNameUuid: multiLanguageName.Uuid,
-				Type:                  warehouseType,
-				Code:                  code,
-				Status:                status,
-				IsDefault:             isDefault,
-			})
+	var warehouses []model.Warehouse
+	db.Model(&model.Warehouse{}).Scopes(repository.NotDeleted).Find(&warehouses)
+	warehouseMap := make(map[string]model.Warehouse)
+	for _, warehouse := range warehouses {
+		if warehouse.ErpCode != "" {
+			warehouseMap[warehouse.ErpCode] = warehouse
 		}
 	}
-	return nil
+	err = db.Transaction(func(tx *gorm.DB) error {
+		for _, erpWarehouse := range warehouseList {
+			localeName, ok := multiLanguageMap[erpWarehouse.WarehouseName]
+			if !ok {
+				localeName = dto.LocaleResponse{
+					ZH:   erpWarehouse.WarehouseName,
+					TH:   erpWarehouse.WarehouseName,
+					EN:   erpWarehouse.WarehouseName,
+					ZHTW: erpWarehouse.WarehouseName,
+					JA:   erpWarehouse.WarehouseName,
+					KO:   erpWarehouse.WarehouseName,
+					MY:   erpWarehouse.WarehouseName,
+					TR:   erpWarehouse.WarehouseName,
+					SV:   erpWarehouse.WarehouseName,
+				}
+			}
+			var status int
+			if !erpWarehouse.Disabled {
+				status = 1
+			}
+			var code string
+			if strings.Contains(erpWarehouse.Name, constant.NormalWarehouseCodeContains) {
+				code = constant.NormalWarehouseCode
+			} else if strings.Contains(erpWarehouse.Name, constant.TransitWarehouseCodeContains) {
+				code = constant.TransitWarehouseCode
+			}
+			var warehouseType string
+			if erpWarehouse.WarehouseType == constant.ErpWarehouseTypeNormal1 || erpWarehouse.WarehouseType == constant.ErpWarehouseTypeNormal2 {
+				warehouseType = constant.WarehouseTypeNormal
+			} else if erpWarehouse.WarehouseType == constant.ErpWarehouseTypeTransit {
+				warehouseType = constant.WarehouseTypeTransit
+			}
+			warehouse := warehouseMap[erpWarehouse.Name]
+			if warehouse.Uuid > 0 { // 如果存在，则更新
+				tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", warehouse.MultiLanguageNameUuid).Updates(map[string]any{
+					"zh_name":    localeName.ZH,
+					"th_name":    localeName.TH,
+					"en_name":    localeName.EN,
+					"zh_tw_name": localeName.ZHTW,
+					"ja_name":    localeName.JA,
+					"ko_name":    localeName.KO,
+					"my_name":    localeName.MY,
+					"tr_name":    localeName.TR,
+					"sv_name":    localeName.SV,
+				})
+				db.Model(&model.Warehouse{}).Where("uuid = ?", warehouse.Uuid).Updates(map[string]any{
+					"name":   localeName.ToJson(),
+					"type":   warehouseType,
+					"status": status,
+				})
+			} else { // 新增
+				var isDefault int
+				if code == constant.NormalWarehouseCode && syncEver == 0 {
+					isDefault = 1
+				}
+				// 保存多语言
+				multiLanguageName := model.MultiLanguageName{
+					ZhName:   localeName.ZH,
+					ThName:   localeName.TH,
+					EnName:   localeName.EN,
+					ZhTwName: localeName.ZHTW,
+					JaName:   localeName.JA,
+					KoName:   localeName.KO,
+					MyName:   localeName.MY,
+					TrName:   localeName.TR,
+					SvName:   localeName.SV,
+				}
+				err = tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
+				if err != nil {
+					return errors.WithMessage(err, "创建多语言名称失败")
+				}
+				tx.Model(&model.Warehouse{}).Create(&model.Warehouse{
+					Name:                  localeName.ToJson(),
+					MultiLanguageNameUuid: multiLanguageName.Uuid,
+					Type:                  warehouseType,
+					Code:                  code,
+					Status:                status,
+					IsDefault:             isDefault,
+				})
+
+				// 首次同步仓库，同步ttpos库存到仓库中
+				if syncEver == 0 && isDefault == 1 {
+					ctx.SetDB(tx)
+					err := s.FirstSyncWarehouseItem(ctx)
+					if err != nil {
+						return errors.WithMessage(errors.New("同步仓库物品库存失败"), err.Error())
+					}
+				}
+			}
+		}
+		return nil
+	})
+
+	return err
 }
 
 // FirstSyncWarehouseItem 第一次同步仓库物品库存。将物料表的库存同步到仓库物品库存表
@@ -734,6 +755,7 @@ func (s *warehouseSrv) FirstSyncWarehouseItem(ctx context.Context) error {
 			MaterialUuid:  material.Uuid,
 			MaterialCode:  material.Code,
 			Stock:         material.StockNum,
+			Valuation:     1.0, // 默认
 		}
 		warehouseItems = append(warehouseItems, &warehouseItem)
 	}
