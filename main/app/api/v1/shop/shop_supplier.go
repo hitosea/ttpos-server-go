@@ -237,7 +237,7 @@ func (h *SupplierHandler) CheckCodeExists(c *gin.Context) {
 // @Router /shop/supplier/sync [get]
 func (h *SupplierHandler) Sync(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	err := h.supplierSrv.Sync(ctx)
+	err := h.supplierSrv.SyncSupplier(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

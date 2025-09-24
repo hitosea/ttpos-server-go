@@ -28,7 +28,7 @@ type ISupplierSrv interface {
 	CheckNameExists(ctx context.Context, req req.CheckNameExistsReq) (resp.CheckNameCodeExistsResp, error) // 检查名称是否存在
 	CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error) // 检查编码是否存在
 
-	Sync(ctx context.Context) error // 同步供应商
+	SyncSupplier(ctx context.Context) error // 同步供应商
 }
 
 // NewSupplierSrv 创建供应商服务
@@ -387,7 +387,7 @@ func (s *supplierSrv) CheckCodeExists(ctx context.Context, req req.CheckCodeExis
 	return resp.CheckNameCodeExistsResp{Exists: exists}, nil
 }
 
-func (s *supplierSrv) Sync(ctx context.Context) error {
+func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 	if !ctx.GetCompany().IsOpenErp() {
 		return errors.New("公司未授权erp")
 	}
@@ -401,23 +401,53 @@ func (s *supplierSrv) Sync(ctx context.Context) error {
 	if err != nil {
 		return errors.WithMessage(errors.New("同步供应商失败"), err.Error())
 	}
+
+	// 如果是子店，获取总部允许子店看到的
+	if companySetting.IsSubShop() {
+		var headquarter model.CompanySetting
+		saasDb := s.dbm.GetDB(0)
+		err := saasDb.Model(&model.CompanySetting{}).Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
+		if err != nil || headquarter.Uuid == 0 {
+			return errors.WithMessage(errors.New("获取总部公司失败"))
+		}
+		headquarterSupplierList, err := erp.NewIErpSrv(s.dbm).ListSuppliers(ctx, req.GetErpnextSupplierListReq{
+			SiteCode:       headquarter.ErpnextSiteCode,
+			CompanyAbbr:    headquarter.ErpnextCompanyAbbr,
+			Branch:         headquarter.ErpnextBranchName,
+			SubCompanyAbbr: companySetting.ErpnextCompanyAbbr,
+		})
+		if err != nil {
+			return errors.WithMessage(errors.New("获取总部供应商失败"), err.Error())
+		}
+		supplierList = append(supplierList, headquarterSupplierList...)
+	}
+
+	var suppliers []model.Supplier
+	db.Model(&model.Supplier{}).Scopes(repository.NotDeleted).Find(&suppliers)
+
+	supplierMap := make(map[string]model.Supplier)
+	for _, supplier := range suppliers {
+		if supplier.ErpCode == "" {
+			continue
+		}
+		supplierMap[supplier.ErpCode] = supplier
+	}
+
 	for _, erpSupplier := range supplierList {
-		var supplier model.Supplier
-		db.Model(&model.Supplier{}).Where("erp_code = ?", erpSupplier.Name).Find(&supplier)
+		supplier, _ := supplierMap[erpSupplier.Name]
 		if supplier.Uuid == 0 {
 			db.Model(&model.Supplier{}).Create(&model.Supplier{
 				Name:        erpSupplier.SupplierName,
 				Code:        erpSupplier.Name,
 				Status:      1,
-				CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+				CompanyAbbr: erpSupplier.CompanyAbbr,
 			})
 		} else {
 			db.Model(&model.Supplier{}).Where("uuid = ?", supplier.Uuid).Updates(map[string]any{
-				"name": erpSupplier.SupplierName,
+				"name":         erpSupplier.SupplierName,
+				"company_abbr": erpSupplier.CompanyAbbr,
 			})
 		}
 	}
-
-	// TODO 还需要同步总部创建允许看到的
 	return nil
 }

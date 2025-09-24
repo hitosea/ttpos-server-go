@@ -186,7 +186,7 @@ func (h *WarehouseHandler) SetDefaultWarehouse(c *gin.Context) {
 // @Router /shop/warehouse/sync [post]
 func (h *WarehouseHandler) Sync(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	err := h.warehouseSrv.Sync(ctx)
+	_, err := h.warehouseSrv.SyncWarehouse(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

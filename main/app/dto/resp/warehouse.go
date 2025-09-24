@@ -13,6 +13,7 @@ type WarehouseResp struct {
 	Phone     string             `json:"phone"`
 	Address   string             `json:"address"`
 	IsDefault int                `json:"is_default"`
+	Editable  bool               `json:"editable"`
 }
 
 // WarehouseListResp 仓库列表响应

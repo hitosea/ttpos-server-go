@@ -22,11 +22,12 @@ type InitShopReq struct {
 }
 
 type GetUomListReq struct {
-	SiteCode    string `form:"site_code" json:"site_code" binding:"required"`       // 站点编码
-	Branch      string `form:"branch" json:"branch" binding:"required"`             // 分支名称
-	CompanyAbbr string `form:"company_abbr" json:"company_abbr" binding:"required"` // 公司缩写编码
-	UomName     string `form:"uom_name" json:"uom_name" binding:"required"`         // 单位名称
-	AliasName   string `form:"alias_name" json:"alias_name" binding:"required"`     // 单位别名
+	SiteCode       string `form:"site_code" json:"site_code" binding:"required"`               // 站点编码
+	Branch         string `form:"branch" json:"branch" binding:"required"`                     // 分支名称
+	CompanyAbbr    string `form:"company_abbr" json:"company_abbr" binding:"required"`         // 公司缩写编码
+	UomName        string `form:"uom_name" json:"uom_name" binding:"required"`                 // 单位名称
+	AliasName      string `form:"alias_name" json:"alias_name" binding:"required"`             // 单位别名
+	SubCompanyAbbr string `form:"sub_company_abbr" json:"sub_company_abbr" binding:"required"` // 连锁子店公司简称
 }
 
 type GetAttributeListReq struct {
@@ -191,13 +192,15 @@ type DeleteErpnextWarehouseReq struct {
 }
 
 type GetErpnextWarehouseListReq struct {
-	SiteCode    string // 站点编码
-	CompanyAbbr string
-	Branch      string
+	SiteCode       string // 站点编码
+	CompanyAbbr    string
+	Branch         string
+	SubCompanyAbbr string // 连锁子店公司简称
 }
 
 type GetErpnextSupplierListReq struct {
-	SiteCode    string // 站点编码
-	CompanyAbbr string
-	Branch      string
+	SiteCode       string // 站点编码
+	CompanyAbbr    string
+	Branch         string
+	SubCompanyAbbr string // 连锁子店公司简称
 }
