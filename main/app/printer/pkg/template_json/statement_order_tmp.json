@@ -3,7 +3,8 @@
         "name": "statement_order",
         "description": "结账单模板",
         "paper_width": 80,
-        "version": "1.0"
+        "version": "1.0",
+        "thousandth": true
     },
     "rows": [
         [
@@ -285,6 +286,23 @@
         ],
         [
             {
+                "block_id": "blank_line",
+                "block_type": "blank_line",
+                "block_label": {},
+                "block_attr": {
+                    "font_size": 20,
+                    "align": "center",
+                    "font_bold": false,
+                    "dividing_line": true,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 0,
+                    "width": 100
+                },
+                "conditions": []
+            }
+        ],
+        [
+            {
                 "block_id": "order.serial_no",
                 "block_type": "value",
                 "block_label": {},
@@ -421,7 +439,7 @@
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
                     "width": {
-                        "zh": 50.0,
+                        "zh": 52.0,
                         "my": 35.0,
                         "tr": 40.0,
                         "de": 28.0
@@ -445,7 +463,7 @@
                 },
                 "block_attr": {
                     "font_size": 18,
-                    "align": "left",
+                    "align": "center",
                     "font_bold": true,
                     "dividing_line": false,
                     "leading_blank_lines": 0,
@@ -518,9 +536,9 @@
                             "rows": [
                                 [
                                     {
-                                        "block_id": "info",
+                                        "block_id": "attrs",
                                         "block_type": "label",
-                                        "block_label": "({info})",
+                                        "block_label": "({attrs})",
                                         "block_attr": {
                                             "font_size": 18,
                                             "align": "left",
@@ -541,7 +559,7 @@
                             "block_label": {},
                             "block_attr": {
                                 "font_size": 20,
-                                "align": "left",
+                                "align": "center",
                                 "font_bold": false,
                                 "dividing_line": false,
                                 "leading_blank_lines": 0,
@@ -604,7 +622,7 @@
                             "block_label": {},
                             "block_attr": {
                                 "font_size": 20,
-                                "align": "left",
+                                "align": "center",
                                 "font_bold": false,
                                 "dividing_line": false,
                                 "leading_blank_lines": 0,
@@ -719,7 +737,7 @@
                             "rows": [
                                 [
                                     {
-                                        "block_id": "info",
+                                        "block_id": "attr",
                                         "block_type": "label",
                                         "block_expand_labels": [
                                             {
@@ -733,7 +751,7 @@
                                                 ]
                                             }
                                         ],
-                                        "block_label": "({info})",
+                                        "block_label": "({attrs})",
                                         "block_attr": {
                                             "font_size": 18,
                                             "align": "left",
@@ -746,7 +764,7 @@
                                         },
                                         "conditions": [
                                             {
-                                                "field": "info",
+                                                "field": "attrs",
                                                 "operator": "not_empty",
                                                 "value": 0
                                             }
@@ -761,7 +779,7 @@
                             "block_label": {},
                             "block_attr": {
                                 "font_size": 20,
-                                "align": "left",
+                                "align": "center",
                                 "font_bold": false,
                                 "dividing_line": false,
                                 "leading_blank_lines": 0,
@@ -873,7 +891,14 @@
                     "trailing_blank_lines": 0,
                     "show_currency_unit": true,
                     "width": 100
-                }
+                },
+                "conditions": [
+                    {
+                        "field": "order.service_fee",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
+                ]
             }
         ],
         [
@@ -888,7 +913,7 @@
                     "tr": "VAT ({order.tax_rate}%):",
                     "de": "VAT ({order.tax_rate}%):",
                     "sv": "VAT ({order.tax_rate}%):",
-                    "ja": "VAT ({order.tax_rate}%):",
+                    "ja": "{order.tax_rate}% 対象消費税です :",
                     "zhtw": "VAT ({order.tax_rate}%):"
                 },
                 "block_attr": {
@@ -1055,7 +1080,7 @@
                     "zhtw": "會員卡折扣:"
                 },
                 "block_after_label": {
-                    "zh": "%",
+                    "zh": "拆",
                     "en": "%",
                     "ko": "%",
                     "my": "%",
@@ -1063,7 +1088,7 @@
                     "de": "%",
                     "sv": "%",
                     "ja": "%",
-                    "zhtw": "%",
+                    "zhtw": "拆",
                     "th": "%"
                 },
                 "block_attr": {
@@ -1211,7 +1236,14 @@
                     "trailing_blank_lines": 0,
                     "show_currency_unit": true,
                     "width": 100
-                }
+                },
+                "conditions": [
+                    {
+                        "field": "order.return_amount",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
+                ]
             }
         ],
         [
@@ -1238,7 +1270,14 @@
                     "trailing_blank_lines": 0,
                     "show_currency_unit": true,
                     "width": 100
-                }
+                },
+                "conditions": [
+                    {
+                        "field": "order.payment_commission_fee",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
+                ]
             }
         ],
         [
@@ -1273,6 +1312,23 @@
                         "value": 0
                     }
                 ]
+            }
+        ],
+        [
+            {
+                "block_id": "blank_line",
+                "block_type": "blank_line",
+                "block_label": {},
+                "block_attr": {
+                    "font_size": 20,
+                    "align": "center",
+                    "font_bold": false,
+                    "dividing_line": true,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 0,
+                    "width": 100
+                },
+                "conditions": []
             }
         ],
         [
@@ -1337,9 +1393,9 @@
                 },
                 "conditions": [
                     {
-                        "field": "order.total_due_with_vat",
-                        "operator": "not_empty",
-                        "value": 0
+                        "field": "order.is_contain_tax",
+                        "operator": "eq",
+                        "value": 2
                     }
                 ]
             }
@@ -1359,19 +1415,22 @@
                     "trailing_blank_lines": 0,
                     "width": 100
                 },
-                "conditions": [
-                    {
-                        "field": "order.is_contain_tax",
-                        "operator": "eq",
-                        "value": 2
-                    }
-                ],
                 "rows": [
                     [
                         {
-                            "block_id": "name",
-                            "block_type": "value",
-                            "block_label": {},
+                            "block_id": "tax_rate",
+                            "block_type": "label",
+                            "block_label": {
+                                "zh": "VAT ({tax_rate}%)",
+                                "en": "VAT ({tax_rate}%)",
+                                "ko": "VAT ({tax_rate}%)",
+                                "my": "VAT ({tax_rate}%)",
+                                "tr": "VAT ({tax_rate}%)",
+                                "de": "VAT ({tax_rate}%)",
+                                "sv": "VAT ({tax_rate}%)",
+                                "ja": "VAT ({tax_rate}%)",
+                                "zhtw": "VAT ({tax_rate}%)"
+                            },
                             "block_attr": {
                                 "font_size": 20,
                                 "align": "left",
@@ -1384,9 +1443,30 @@
                             }
                         },
                         {
-                            "block_id": "text",
-                            "block_type": "value",
-                            "block_label": {},
+                            "block_id": "tax_fee",
+                            "block_type": "label:value",
+                            "block_label": {
+                                "zh": "{total_price}(",
+                                "en": "{total_price}(",
+                                "ko": "{total_price}(",
+                                "my": "{total_price}(",
+                                "tr": "{total_price}(",
+                                "de": "{total_price}(",
+                                "sv": "{total_price}(",
+                                "ja": "{total_price}(",
+                                "zhtw": "{total_price}("
+                            },
+                            "block_after_label": {
+                                "zh": ")",
+                                "en": ")",
+                                "ko": ")",
+                                "my": ")",
+                                "tr": ")",
+                                "de": ")",
+                                "sv": ")",
+                                "ja": ")",
+                                "zhtw": ")"
+                            },
                             "block_attr": {
                                 "font_size": 20,
                                 "align": "right",
@@ -1400,6 +1480,13 @@
                             }
                         }
                     ]
+                ],
+                "conditions": [
+                    {
+                        "field": "order.is_contain_tax",
+                        "operator": "eq",
+                        "value": 2
+                    }
                 ]
             }
         ],
@@ -1449,6 +1536,13 @@
                             }
                         }
                     ]
+                ],
+                "conditions": [
+                    {
+                        "field": "order.payment_methods",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
                 ]
             }
         ],
@@ -1480,7 +1574,7 @@
                 },
                 "conditions": [
                     {
-                        "field": "order.member_remaining_balance",
+                        "field": "order.is_member",
                         "operator": "not_empty",
                         "value": 0
                     }
@@ -1512,12 +1606,19 @@
                     "trailing_blank_lines": 0,
                     "show_currency_unit": false,
                     "width": 50
-                }
+                },
+                "conditions": [
+                    {
+                        "field": "order.is_member",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
+                ]
             }
         ],
         [
             {
-                "block_id": "title",
+                "block_id": "order.payment_name",
                 "block_type": "label", 
                 "block_label": {
                     "zh": "请用{order.payment_name}扫一扫支付",
@@ -1539,12 +1640,19 @@
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
                     "width": 100
-                }
+                },
+                "conditions": [
+                    {
+                        "field": "order.payment_qrcode",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
+                ]
             }
         ],
         [
             {
-                "block_id": "barcode",
+                "block_id": "order.barcode",
                 "block_type": "barcode", 
                 "block_label": {},
                 "block_attr": {
@@ -1555,7 +1663,14 @@
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
                     "width": 500
-                }
+                },
+                "conditions": [
+                    {
+                        "field": "order.barcode",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
+                ]
             }
         ],
         [

@@ -1834,7 +1834,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer_template` (
     `template` int(11) DEFAULT 1 COMMENT '模板选择',
     `is_show_sku` int(1) DEFAULT 1 COMMENT '是否显示SKU：0=不显示，1=显示',
     `tmp_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '临时模板UUID',
-    `tmp_data` TEXT COMMENT '临时模板数据',
+    `tmp_data` LONGTEXT COMMENT '临时模板数据',
     `create_time` INT(11) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(11) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

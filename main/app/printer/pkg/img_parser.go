@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"ttpos-server-go/pkg/utils"
 )
@@ -24,12 +25,13 @@ type ImgTemplateMetadata struct {
 	Description string `json:"description"` // 模板描述
 	PaperWidth  int    `json:"paper_width"` // 纸张宽度（毫米）
 	Version     string `json:"version"`     // 模板版本
+	Thousandth  bool   `json:"thousandth"`  // 是否千分位
 }
 
 // ImgTemplateBlock 模板块定义
 type ImgTemplateBlock struct {
 	BlockID           string                   `json:"block_id"`            // 块唯一标识
-	BlockType         string                   `json:"block_type"`          // 块类型 label, value, label:auto:value, array, img, qrcode, barcode
+	BlockType         string                   `json:"block_type"`          // 块类型 label, value, label:auto:value, array, img, qrcode, barcode, blank_line
 	BlockLabel        interface{}              `json:"block_label"`         // 标签（支持字符串或多语言）
 	BlockBeforeLabel  interface{}              `json:"block_before_label"`  // 块前标签（支持字符串或多语言）
 	BlockAfterLabel   interface{}              `json:"block_after_label"`   // 块后标签（支持字符串或多语言）
@@ -137,10 +139,54 @@ func (p *ImgTemplateParser) Parse() (*ImgFont, error) {
 	return img, nil
 }
 
+// Thousandth 计算金额的千分位
+func (p *ImgTemplateParser) Thousandth(amount float64) string {
+	if amount == 0 {
+		return "0"
+	}
+	// 先格式化为2位小数
+	formattedAmount := strconv.FormatFloat(amount, 'f', 2, 64)
+
+	// 分割整数和小数部分
+	parts := strings.Split(formattedAmount, ".")
+	integerPart := parts[0]
+	decimalPart := ""
+	if len(parts) > 1 {
+		decimalPart = parts[1]
+	}
+
+	// 处理整数部分，添加千分位
+	var result strings.Builder
+	length := len(integerPart)
+	for i := length - 1; i >= 0; i-- {
+		result.WriteByte(integerPart[i])
+		if i > 0 && (length-i)%3 == 0 {
+			result.WriteByte(',')
+		}
+	}
+
+	// 反转字符串
+	reversed := result.String()
+	runes := []rune(reversed)
+	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+		runes[i], runes[j] = runes[j], runes[i]
+	}
+	integerPart = string(runes)
+
+	// 处理小数部分，去除尾部的0
+	decimalPart = strings.TrimRight(decimalPart, "0")
+
+	// 组合结果
+	if decimalPart != "" {
+		return integerPart + "." + decimalPart
+	}
+	return integerPart
+}
+
 // parseRows 解析模板行
 func (p *ImgTemplateParser) parseRows(img *ImgFont, rows [][]ImgTemplateBlock, level int, isLast bool) error {
-	for _, row := range rows {
-		err := p.parseRow(img, row, level, isLast)
+	for i, row := range rows {
+		err := p.parseRow(img, row, p.getNextValidRow(rows, i+1), level, isLast)
 		if err != nil {
 			return fmt.Errorf("解析行失败: %v", err)
 		}
@@ -148,21 +194,62 @@ func (p *ImgTemplateParser) parseRows(img *ImgFont, rows [][]ImgTemplateBlock, l
 	return nil
 }
 
+// getNextValidBlock 获取下一行有效的block
+func (p *ImgTemplateParser) validBlock(block ImgTemplateBlock) bool {
+	// 如果设置了不显示空值，且值为空或零，则返回空字符串
+	if block.BlockAttr.NotShowEmpty && p.isEmptyOrZero(p.getDataValue(block.BlockID)) {
+		return false
+	}
+	// 检查条件显示
+	if !p.checkConditions(block.Conditions) {
+		return false
+	}
+	return true
+}
+
+// getNextValidRow 获取下一行有效的blocks
+func (p *ImgTemplateParser) getNextValidRow(rows [][]ImgTemplateBlock, startIndex int) []ImgTemplateBlock {
+	// 从指定索引开始查找下一行有效的blocks
+	for i := startIndex; i < len(rows); i++ {
+		row := rows[i]
+		if len(row) == 0 {
+			continue // 跳过空行
+		}
+		// 检查这一行是否有效（至少有一个有效的block）
+		for _, block := range row {
+			// 检查条件显示
+			if !p.validBlock(block) {
+				continue
+			}
+			// 找到有效的block，返回这一行
+			return row
+		}
+	}
+	// 没有找到有效的行，返回空切片
+	return []ImgTemplateBlock{}
+}
+
 // parseRow 解析单行
-func (p *ImgTemplateParser) parseRow(img *ImgFont, blocks []ImgTemplateBlock, level int, isLast bool) error {
+func (p *ImgTemplateParser) parseRow(
+	img *ImgFont,
+	blocks []ImgTemplateBlock,
+	nextBlocks []ImgTemplateBlock,
+	level int,
+	isLast bool,
+) error {
 	if len(blocks) == 0 {
 		return nil
 	}
 
-	block := blocks[0]
-
-	// 如果设置了不显示空值，且值为空或零，则返回空字符串
-	if block.BlockAttr.NotShowEmpty && p.isEmptyOrZero(p.getDataValue(block.BlockID)) {
-		return nil
+	// 获取下一行的 blocks 作为 nextBlocks
+	var nextBlock ImgTemplateBlock
+	if len(nextBlocks) > 0 {
+		nextBlock = nextBlocks[0]
 	}
 
-	// 检查条件显示
-	if !p.checkConditions(block.Conditions) {
+	block := blocks[0]
+
+	if !p.validBlock(block) {
 		return nil
 	}
 
@@ -177,102 +264,111 @@ func (p *ImgTemplateParser) parseRow(img *ImgFont, blocks []ImgTemplateBlock, le
 	// 设置对齐方式
 	img.SetAlignment(p.convertAlign(block.BlockAttr.Align))
 
-	// 如果只有一个块，直接处理
-	if len(blocks) == 1 && block.BlockType != "column" {
-		// 获取宽度
-		width := p.getWidthValue(block.BlockAttr.Width)
-		widthInt := int(width)
-		text := p.getBlockText(block)
+	// 如果块ID不是空白行，则处理
+	if block.BlockID != "blank_line" {
 
-		// 添加文本
-		if block.BlockType == "img" {
-			img.SetTextLineHeight(25)
-			img.AppendImg(text, widthInt, false, 0)
-			img.RecoverDefaultTextLineHeight()
-		} else if block.BlockType == "qrcode" {
-			img.SetTextTotalHeight(20)
-			img.SetTextLineHeight(25)
-			if strings.HasPrefix(text, "data:image/png;base64,") {
-				img.AppendQrcode(text, widthInt, 0, true)
-			} else {
-				img.AppendQrcode(text, widthInt, 0, false)
-			}
-			img.RecoverDefaultTextLineHeight()
-		} else if block.BlockType == "barcode" {
-			img.AppendBarcode(text, widthInt, 120)
-			img.LineFeed(1, 12)
-			img.SetAlignment(AlignCenter)
-			img.AppendText(text)
-			img.LineFeed(1)
-			img.RecoverDefaultTextLineHeight()
-		} else if strings.Contains(block.BlockType, "label:auto:value") {
-			fontWeight := p.getFontWeight(block.BlockAttr)
-			lineHeight := block.BlockAttr.LineHeight
-			rightPadding := block.BlockAttr.PaddingRight
-			img.PrintInColumns(
-				ColumnConfig{Text: p.getLabel(block.BlockLabel), Width: p.getBlockWidth(img, block) - rightPadding - 50, Align: AlignLeft, FontWeight: 1, LineHeight: lineHeight, RightPadding: rightPadding},
-				ColumnConfig{Text: p.getBlockText(block), Width: 0, Align: AlignRight, FontWeight: fontWeight, LineHeight: lineHeight, RightPadding: rightPadding},
-			)
-		} else if !strings.Contains(block.BlockType, "array") {
-			// 获取显示文本
-			img.AppendText(text)
-			// 添加换行
-			if len(text) > 0 {
+		// 如果只有一个块，直接处理
+		if len(blocks) == 1 && block.BlockType != "column" {
+			// 获取宽度
+			width := p.getWidthValue(block.BlockAttr.Width)
+			widthInt := int(width)
+			text := p.getBlockText(block)
+
+			// 添加文本
+			if block.BlockType == "img" {
+				img.SetTextLineHeight(25)
+				img.AppendImg(text, widthInt, false, 0)
+				img.RecoverDefaultTextLineHeight()
+			} else if block.BlockType == "qrcode" {
+				img.SetTextTotalHeight(20)
+				img.SetTextLineHeight(25)
+				if strings.HasPrefix(text, "data:image/png;base64,") {
+					img.AppendQrcode(text, widthInt, 0, true)
+				} else {
+					img.AppendQrcode(text, widthInt, 0, false)
+				}
+				img.RecoverDefaultTextLineHeight()
+			} else if block.BlockType == "barcode" {
+				img.AppendBarcode(text, widthInt, 120)
+				img.LineFeed(1, 12)
+				img.SetAlignment(AlignCenter)
+				img.AppendText(text)
 				img.LineFeed(1)
-			}
-		}
-
-	} else if (len(block.Rows) == 0 || level > 0) && block.BlockType != "column" {
-		// 创建列配置
-		columns := make([]ColumnConfig, 0, len(blocks))
-		for _, block := range blocks {
-			// 检查条件显示
-			if !p.checkConditions(block.Conditions) {
-				continue
-			}
-			lineHeight := block.BlockAttr.LineHeight
-			if isLast && lineHeight > 33 {
-				lineHeight = 33
-			}
-			column := ColumnConfig{
-				Text:         p.getBlockText(block),
-				Width:        p.getBlockWidth(img, block), // 转换为像素宽度
-				Align:        p.convertAlign(block.BlockAttr.Align),
-				FontWeight:   p.getFontWeight(block.BlockAttr),
-				LineHeight:   lineHeight,
-				RightPadding: block.BlockAttr.PaddingRight,
-			}
-			columns = append(columns, column)
-		}
-		// 如果有有效的列，进行分列打印
-		if len(columns) > 0 {
-			img.PrintInColumns(columns...)
-		}
-
-		// 处理嵌套行 - 规格，备注等
-		if level > 0 {
-			for _, block := range blocks {
-				if len(block.Rows) > 0 {
-					err := p.parseRows(img, block.Rows, level+1, isLast)
-					if err != nil {
-						return err
+				img.RecoverDefaultTextLineHeight()
+			} else if strings.Contains(block.BlockType, "label:auto:value") {
+				fontWeight := p.getFontWeight(block.BlockAttr)
+				lineHeight := block.BlockAttr.LineHeight
+				rightPadding := block.BlockAttr.PaddingRight
+				img.PrintInColumns(
+					ColumnConfig{Text: p.getLabel(block.BlockLabel), Width: p.getBlockWidth(img, block) - rightPadding - 50, Align: AlignLeft, FontWeight: 1, LineHeight: lineHeight, RightPadding: rightPadding},
+					ColumnConfig{Text: p.getBlockText(block), Width: 0, Align: AlignRight, FontWeight: fontWeight, LineHeight: lineHeight, RightPadding: rightPadding},
+				)
+			} else if !strings.Contains(block.BlockType, "array") {
+				// 获取显示文本
+				img.AppendText(text)
+				// 添加换行
+				if len(text) > 0 {
+					// 如果下一行是空白行，则缩小间隔换行，否则正常换行
+					if nextBlock.BlockType == "blank_line" {
+						img.LineFeed(1, 40)
+					} else {
+						img.LineFeed(1)
 					}
 				}
 			}
-		}
-	} else {
-		// 处理嵌套行
-		for _, block := range blocks {
-			if len(block.Rows) > 0 {
-				originalData := p.data
-				blockDatas := p.getData(block.BlockID)
-				for index, blockData := range blockDatas {
-					p.data = blockData
-					isLast := index == len(blockDatas)-1 && block.BlockAttr.DividingLine
-					err := p.parseRows(img, block.Rows, level+1, isLast)
-					p.data = originalData // 恢复原始数据
-					if err != nil {
-						return err
+
+		} else if (len(block.Rows) == 0 || level > 0) && block.BlockType != "column" {
+			// 创建列配置
+			columns := make([]ColumnConfig, 0, len(blocks))
+			for _, block := range blocks {
+				// 检查条件显示
+				if !p.checkConditions(block.Conditions) {
+					continue
+				}
+				lineHeight := block.BlockAttr.LineHeight
+				if isLast && lineHeight > 33 {
+					lineHeight = 33
+				}
+				column := ColumnConfig{
+					Text:         p.getBlockText(block),
+					Width:        p.getBlockWidth(img, block), // 转换为像素宽度
+					Align:        p.convertAlign(block.BlockAttr.Align),
+					FontWeight:   p.getFontWeight(block.BlockAttr),
+					LineHeight:   lineHeight,
+					RightPadding: block.BlockAttr.PaddingRight,
+				}
+				columns = append(columns, column)
+			}
+			// 如果有有效的列，进行分列打印
+			if len(columns) > 0 {
+				img.PrintInColumns(columns...)
+			}
+
+			// 处理嵌套行 - 规格，备注等
+			if level > 0 {
+				for _, block := range blocks {
+					if len(block.Rows) > 0 {
+						err := p.parseRows(img, block.Rows, level+1, isLast)
+						if err != nil {
+							return err
+						}
+					}
+				}
+			}
+		} else {
+			// 处理嵌套行
+			for _, block := range blocks {
+				if len(block.Rows) > 0 {
+					originalData := p.data
+					blockDatas := p.getData(block.BlockID)
+					for index, blockData := range blockDatas {
+						p.data = blockData
+						isLast := index == len(blockDatas)-1 && block.BlockAttr.DividingLine
+						err := p.parseRows(img, block.Rows, level+1, isLast)
+						p.data = originalData // 恢复原始数据
+						if err != nil {
+							return err
+						}
 					}
 				}
 			}
@@ -280,7 +376,7 @@ func (p *ImgTemplateParser) parseRow(img *ImgFont, blocks []ImgTemplateBlock, le
 	}
 
 	// 添加分割线
-	if block.BlockAttr.DividingLine {
+	if block.BlockAttr.DividingLine || block.BlockType == "blank_line" {
 		img.AppendSplitLine(WithLineFeed(true))
 	}
 
@@ -377,6 +473,12 @@ func (p *ImgTemplateParser) convertToFloat64(value interface{}) float64 {
 		return float64(v)
 	case int64:
 		return float64(v)
+	case string:
+		// 尝试解析字符串为数字
+		if f, err := strconv.ParseFloat(v, 64); err == nil {
+			return f
+		}
+		return 0
 	default:
 		return 0
 	}
@@ -685,7 +787,7 @@ func (p *ImgTemplateParser) isEmptyOrZero(value interface{}) bool {
 	}
 	switch v := value.(type) {
 	case string:
-		return v == ""
+		return v == "" || v == "0" || v == "0.0" || v == "false"
 	case int, int8, int16, int32, int64:
 		return v == 0
 	case uint, uint8, uint16, uint32, uint64:
@@ -828,6 +930,12 @@ func (p *ImgTemplateParser) formatValue(value interface{}, attr ImgTemplateBlock
 	// 转换为字符串
 	valueStr := fmt.Sprintf("%v", value)
 	if attr.ShowCurrencyUnit && p.baseData.CurrencyUnit != "" {
+		if p.template.Metadata.Thousandth {
+			// 安全地转换为float64
+			if floatVal := p.convertToFloat64(value); floatVal != 0 {
+				valueStr = p.Thousandth(floatVal)
+			}
+		}
 		if p.baseData.CurrencyUnitPosition == 1 {
 			valueStr = valueStr + p.baseData.CurrencyUnit
 		} else {
