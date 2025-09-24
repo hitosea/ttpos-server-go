@@ -451,8 +451,9 @@ type ProductShopAddDiscountReq struct {
 
 // ProductShopAddPackageReq 商品套餐添加请求
 type ProductShopAddPackageReq struct {
-	Price  float64                         `json:"price"`  // 套餐价格
-	Groups []ProductShopAddPackageGroupReq `json:"groups"` // 套餐分组列表
+	Price        float64                         `json:"price"`         // 套餐价格
+	InternalCode string                          `json:"internal_code"` // 商品套餐内部编码
+	Groups       []ProductShopAddPackageGroupReq `json:"groups"`        // 套餐分组列表
 }
 
 // ProductShopAddPackageGroupReq 套餐分组添加请求

@@ -4699,8 +4699,9 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 			Status:   req.Status,
 			Flavors: []CheckProductFlavorItemResult{
 				{
-					Name:  req.LocaleName.ToJson(),
-					Price: packageResult.Price,
+					Name:         req.LocaleName.ToJson(),
+					Price:        packageResult.Price,
+					InternalCode: req.Package.InternalCode,
 				},
 			},
 			IsPackage: true,
