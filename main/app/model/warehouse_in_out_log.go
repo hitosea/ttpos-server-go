@@ -3,7 +3,6 @@ package model
 // WarehouseInOutLog 仓库出入库记录表
 type WarehouseInOutLog struct {
 	BaseModel
-	Uuid                 uint64  `json:"uuid" gorm:"type:bigint;default:0;comment:出入库记录ID;uniqueIndex:unique_uuid"`
 	LogType              int     `json:"log_type" gorm:"type:int;default:0;comment:日志类型,0-入库 1-出库"`
 	Scene                int     `json:"scene" gorm:"type:int;default:0;comment:场景,0-采购入库 1-销售出库 2-发货出库"`
 	WarehouseUuid        uint64  `json:"warehouse_uuid" gorm:"type:bigint;default:0;comment:仓库ID"`
@@ -21,4 +20,14 @@ type WarehouseInOutLog struct {
 	Material  *Material  `gorm:"foreignKey:MaterialUuid;references:Uuid" json:"material,omitempty"`
 	Supplier  *Supplier  `gorm:"foreignKey:SupplierUuid;references:Uuid" json:"supplier,omitempty"`
 	Warehouse *Warehouse `gorm:"foreignKey:WarehouseUuid;references:Uuid" json:"warehouse,omitempty"`
+}
+
+func (w *WarehouseInOutLog) TableName() string {
+	return "ttpos_warehouse_in_out_log"
+}
+
+func (w *WarehouseInOutLog) SetNil() {
+	w.Material = nil
+	w.Supplier = nil
+	w.Warehouse = nil
 }

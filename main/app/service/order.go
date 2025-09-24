@@ -189,7 +189,7 @@ func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv s
 	return &orderSrv{
 		bus:              event.NewSystemBus(),
 		dbm:              dbm,
-		lock:             lock.NewSystemLock(),
+		lock:           0 c
 		localeSrv:        localeSrv,
 		settingSrv:       settingSrv,
 		mustPlanSrv:      mustPlanSrv,

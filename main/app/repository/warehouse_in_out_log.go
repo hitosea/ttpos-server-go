@@ -17,6 +17,7 @@ type IWarehouseInOutLogRepo interface {
 
 	// 查询操作
 	GetListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.WarehouseInOutLog, int64, error)
+	GetWarehouseInOutLogs(opts ...DBOption) ([]*model.WarehouseInOutLog, error)
 	GetByWarehouseUuid(warehouseUuid uint64, opts ...DBOption) ([]model.WarehouseInOutLog, error)
 	GetByMaterialUuid(materialUuid uint64, opts ...DBOption) ([]model.WarehouseInOutLog, error)
 	GetByOrderNo(orderNo string, opts ...DBOption) ([]model.WarehouseInOutLog, error)
@@ -244,4 +245,15 @@ func (r *WarehouseInOutLogRepoImpl) WhereMaterialNameLike(keyword string) DBOpti
 		return db.Where("(m.name LIKE ? OR m.code LIKE ? OR m.barcode_value LIKE ?)",
 			"%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%")
 	}
+}
+
+func (r *WarehouseInOutLogRepoImpl) GetWarehouseInOutLogs(opts ...DBOption) ([]*model.WarehouseInOutLog, error) {
+	var warehouseLogs []*model.WarehouseInOutLog
+	query := r.db.Model(&model.WarehouseInOutLog{}).Scopes(NotDeleted)
+	// 应用查询选项
+	for _, opt := range opts {
+		query = opt(query)
+	}
+	err := query.Find(&warehouseLogs).Error
+	return warehouseLogs, err
 }

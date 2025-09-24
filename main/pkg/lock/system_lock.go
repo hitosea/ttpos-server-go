@@ -2,6 +2,10 @@ package lock
 
 import "sync"
 
+const (
+	DailySalesOutboundSummaryLock = 1 // 每日销售出库汇总锁
+)
+
 type Lock interface {
 	LockUuid(uuid uint64)
 	UnlockUuid(uuid uint64)
