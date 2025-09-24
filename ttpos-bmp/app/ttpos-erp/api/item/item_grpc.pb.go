@@ -23,6 +23,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	ItemService_GetItemList_FullMethodName      = "/item.ItemService/GetItemList"
 	ItemService_GetUomList_FullMethodName       = "/item.ItemService/GetUomList"
+	ItemService_GetUom_FullMethodName           = "/item.ItemService/GetUom"
 	ItemService_SaveUom_FullMethodName          = "/item.ItemService/SaveUom"
 	ItemService_GetAttributeList_FullMethodName = "/item.ItemService/GetAttributeList"
 	ItemService_SaveAttribute_FullMethodName    = "/item.ItemService/SaveAttribute"
@@ -43,6 +44,10 @@ type ItemServiceClient interface {
 	// 参数：查询条件
 	// 返回：单位列表
 	GetUomList(ctx context.Context, in *GetUomListReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 根据单位名称获取单个单位信息
+	// 参数：单位名称
+	// 返回：单位详细信息
+	GetUom(ctx context.Context, in *GetUomReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 	// 添加单位
 	// 参数：单位信息
 	// 返回：添加结果
@@ -91,6 +96,16 @@ func (c *itemServiceClient) GetUomList(ctx context.Context, in *GetUomListReq, o
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(api.ResponseInfo)
 	err := c.cc.Invoke(ctx, ItemService_GetUomList_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *itemServiceClient) GetUom(ctx context.Context, in *GetUomReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, ItemService_GetUom_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -169,6 +184,10 @@ type ItemServiceServer interface {
 	// 参数：查询条件
 	// 返回：单位列表
 	GetUomList(context.Context, *GetUomListReq) (*api.ResponseInfo, error)
+	// 根据单位名称获取单个单位信息
+	// 参数：单位名称
+	// 返回：单位详细信息
+	GetUom(context.Context, *GetUomReq) (*api.ResponseInfo, error)
 	// 添加单位
 	// 参数：单位信息
 	// 返回：添加结果
@@ -208,6 +227,9 @@ func (UnimplementedItemServiceServer) GetItemList(context.Context, *GetItemListR
 }
 func (UnimplementedItemServiceServer) GetUomList(context.Context, *GetUomListReq) (*api.ResponseInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUomList not implemented")
+}
+func (UnimplementedItemServiceServer) GetUom(context.Context, *GetUomReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUom not implemented")
 }
 func (UnimplementedItemServiceServer) SaveUom(context.Context, *UomInfo) (*api.ResponseInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SaveUom not implemented")
@@ -280,6 +302,24 @@ func _ItemService_GetUomList_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ItemServiceServer).GetUomList(ctx, req.(*GetUomListReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ItemService_GetUom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUomReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemServiceServer).GetUom(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ItemService_GetUom_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemServiceServer).GetUom(ctx, req.(*GetUomReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -406,6 +446,10 @@ var ItemService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUomList",
 			Handler:    _ItemService_GetUomList_Handler,
+		},
+		{
+			MethodName: "GetUom",
+			Handler:    _ItemService_GetUom_Handler,
 		},
 		{
 			MethodName: "SaveUom",
