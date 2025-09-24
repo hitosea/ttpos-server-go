@@ -3,6 +3,7 @@ package template
 
 import (
 	"fmt"
+	"os"
 	"ttpos-server-go/app/constant"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
@@ -145,7 +146,6 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 	saleOrder *model.SaleOrder,
 	payMethodUuid uint64,
 ) string { // 就餐人数
-
 	// 订单名称
 	orderName := saleOrder.GetOrderName()
 	// 就餐人数
@@ -334,9 +334,15 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 			PercentageLists:    []StatementPercentageData{}, // 需要根据实际业务逻辑填充
 			IsFree:             saleOrder.IsFreeSaleOrder(),
 			MemberRemainingBalance: func() float64 {
+				if saleOrder.Member == nil {
+					return 0
+				}
 				return saleOrder.GetMemberSurplusBalance()
 			}(),
 			MemberPoints: func() float64 {
+				if saleOrder.Member == nil {
+					return 0
+				}
 				var rule settingResp.PointsRule
 				if !saleOrder.IsPaid() {
 					pointsSetting, err := t.base.Setting.GetPointsSetting(t.base.Ctx)
@@ -354,6 +360,16 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 
 	// 将结构体转换为map
 	dataMap, _ := utils.StrToMap(utils.ToJsonString(statementData))
+
+	// 创建复杂的测试模板
+	templateJSON, err := os.ReadFile("../template_json/statement_order_tmp.json")
+	if err != nil {
+		logger.Logger.Error("读取 tmp.json 文件失败", zap.Error(err))
+		return ""
+	}
+
+	// 将 templateJSON 转换为字符串
+	tmpData = string(templateJSON)
 
 	// 创建解析器
 	parser, err := pkg.NewImgTemplateParser(pkg.ImgBaseData{
@@ -379,6 +395,9 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 		logger.Logger.Error("复杂模板解析失败", zap.Error(err))
 		return ""
 	}
+
+	// TODO: 临时测试
+	img.DebugSetSegmentationHeight(22200)
 
 	//
 	return img.Save("", !t.base.IsSunMi && settingPrinterInfo.IsEnableSound(), 0)

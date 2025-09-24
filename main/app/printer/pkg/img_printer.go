@@ -275,7 +275,7 @@ func NewImgFont(imageWidth int, defaultTextLineHeight int, direction int) *ImgFo
 		FontWeight:            1,
 		Direction:             0,
 		MySpecialFonts:        make(map[string]string),
-		SegmentationHeight:    22200,
+		SegmentationHeight:    2200,
 		hasSemaphore:          true, // 标记已获取信号量
 	}
 
@@ -923,6 +923,12 @@ func (i *ImgFont) drawText(text, fontPath string, fontSize, fontWeight int, x, y
 // SetSegmentationHeight 设置分割高度
 func (i *ImgFont) SetSegmentationHeight(height int) *ImgFont {
 	// i.SegmentationHeight = height
+	return i
+}
+
+// SetSegmentationHeight 设置分割高度
+func (i *ImgFont) DebugSetSegmentationHeight(height int) *ImgFont {
+	i.SegmentationHeight = height
 	return i
 }
 

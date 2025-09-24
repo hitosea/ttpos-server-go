@@ -510,6 +510,7 @@
                                 "leading_blank_lines": 0,
                                 "trailing_blank_lines": 0,
                                 "line_height": 30,
+                                "padding_right": 10,
                                 "width": 52
                             },
                             "rows": [
@@ -592,6 +593,7 @@
                                 "dividing_line": false,
                                 "leading_blank_lines": 0,
                                 "trailing_blank_lines": 0,
+                                "padding_right": 10,
                                 "width": 52
                             }
                         },
@@ -711,6 +713,7 @@
                                 "leading_blank_lines": 0,
                                 "trailing_blank_lines": 0,
                                 "line_height": 33,
+                                "padding_right": 10,
                                 "width": 52
                             },
                             "rows": [
@@ -902,7 +905,12 @@
                     {
                         "field": "order.is_contain_tax",
                         "operator": "ne",
-                        "value": 1
+                        "value": 0
+                    },
+                    {
+                        "field": "order.is_contain_tax",
+                        "operator": "ne",
+                        "value": 0
                     }
                 ]
             }
@@ -1360,7 +1368,7 @@
                     {
                         "field": "order.is_contain_tax",
                         "operator": "eq",
-                        "value": 2
+                        "value": 0
                     }
                 ],
                 "rows": [
