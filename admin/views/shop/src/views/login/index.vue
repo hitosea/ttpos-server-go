@@ -293,6 +293,7 @@
       document.removeEventListener('keyup', this.onEnter);
       window.removeEventListener('focus', this.handleFocus);
     },
+    
     methods: {
       onEnter(event) {
         if (event.key === 'Enter' && !this.logining) {
