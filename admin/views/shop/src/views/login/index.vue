@@ -316,6 +316,7 @@
             /*调用登录接口*/
             UserApi.login(Params, true)
               .then(async (data) => {
+                this.ruleForm.code = '';
                 if (data.code == -102) {
                   _this.logining = false;
                   return;
