@@ -320,6 +320,7 @@ func (s *sStock) queryAttributeList(ctx context.Context, filters [][]string, req
 			AliasName:     attribute.Get("custom_alias").String(),
 			Company:       attribute.Get("custom_company").String(),
 			Branch:        attribute.Get("custom_branch").String(),
+			CompanyAbbr:   req.CompanyAbbr,
 		}
 
 		// 获取属性值列表
