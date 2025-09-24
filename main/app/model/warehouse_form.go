@@ -140,6 +140,7 @@ type Product struct {
 
 type ProductBomMaterials struct {
 	MaterialUuid  uint64  `json:"material_uuid"`
+	WarehouseUuid uint64  `json:"warehouse_uuid"`
 	Num           float64 `json:"num"`
 	SaleOrderUuid uint64  `json:"sale_order_uuid"` // 销售订单uuid
 }
@@ -210,6 +211,7 @@ func NewWarehouseOutForm(list ProductList, isCheckout bool, saleBillUuid uint64,
 		items = append(items, &WarehouseOutFormItem{
 			WarehouseOutFormUuid: form.Uuid,
 			MaterialUuid:         material.MaterialUuid,
+			WarehouseUuid:        material.WarehouseUuid,
 			Num:                  material.Num,
 			Scene:                constant.WarehouseOutFormSceneSales, // 销售出库
 			Status:               status,

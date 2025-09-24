@@ -7242,6 +7242,7 @@ func (s *orderSrv) getDecreaseStockList(ctx context.Context, cookingDeductSaleOr
 					if num := productBomMaterial.GetDecreaseNum(cookingDeductSaleOrderProduct.Num); num > 0 {
 						productBomMaterials = append(productBomMaterials, &model.ProductBomMaterials{
 							MaterialUuid:  productBomMaterial.MaterialUuid,
+							WarehouseUuid: productBomMaterial.Material.WarehouseUuid,
 							Num:           num,
 							SaleOrderUuid: cookingDeductSaleOrderProduct.SaleOrderUuid,
 						})
@@ -7265,8 +7266,9 @@ func (s *orderSrv) getDecreaseStockList(ctx context.Context, cookingDeductSaleOr
 					}
 					if num := material.GetDecreaseNum(cookingDeductSaleOrderProduct.Num); num > 0 {
 						productBomMaterials = append(productBomMaterials, &model.ProductBomMaterials{
-							MaterialUuid: material.MaterialUuid,
-							Num:          num,
+							MaterialUuid:  material.MaterialUuid,
+							WarehouseUuid: material.Material.WarehouseUuid,
+							Num:           num,
 						})
 					}
 				}
