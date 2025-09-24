@@ -381,5 +381,5 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 	}
 
 	//
-	return img.Save("", false, 0)
+	return img.Save("", !t.base.IsSunMi && settingPrinterInfo.IsEnableSound(), 0)
 }

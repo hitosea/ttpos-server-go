@@ -22,6 +22,8 @@ type IWarehouseItemRepo interface {
 	GetByMaterialUuid(materialUuid uint64, opts ...DBOption) ([]model.WarehouseItem, error)
 	GetByWarehouseAndMaterial(warehouseUuid, materialUuid uint64, opts ...DBOption) (*model.WarehouseItem, error)
 	GetByMaterialCode(materialCode string, opts ...DBOption) ([]model.WarehouseItem, error)
+	GetByWarehouseErpCode(warehouseErpCode string, opts ...DBOption) ([]model.WarehouseItem, error)
+	GetListWithWarehouseInfo(pageNo, pageSize int, opts ...DBOption) ([]model.WarehouseItem, int64, error)
 
 	// 库存操作
 	UpdateStock(uuid uint64, stock, reservedStock float64) error
@@ -35,6 +37,7 @@ type IWarehouseItemRepo interface {
 	WhereWarehouseUuid(warehouseUuid uint64) DBOption
 	WhereMaterialUuid(materialUuid uint64) DBOption
 	WhereMaterialCode(materialCode string) DBOption
+	WhereWarehouseErpCode(warehouseErpCode string) DBOption
 	WhereStockGreaterThan(stock float64) DBOption
 	WhereReservedStockGreaterThan(reservedStock float64) DBOption
 	OrderByCreateTime(desc bool) DBOption
@@ -160,6 +163,43 @@ func (r *WarehouseItemRepoImpl) GetByMaterialCode(materialCode string, opts ...D
 	return warehouseItems, err
 }
 
+// GetByWarehouseErpCode 根据仓库ERP编码获取库存列表
+func (r *WarehouseItemRepoImpl) GetByWarehouseErpCode(warehouseErpCode string, opts ...DBOption) ([]model.WarehouseItem, error) {
+	var warehouseItems []model.WarehouseItem
+	query := r.db.Joins("JOIN ttpos_warehouse ON ttpos_warehouse_item.warehouse_uuid = ttpos_warehouse.uuid").
+		Where("ttpos_warehouse.erp_code = ?", warehouseErpCode).
+		Where("ttpos_warehouse.delete_time = 0").
+		Scopes(NotDeleted)
+	// 应用查询选项
+	for _, opt := range opts {
+		query = opt(query)
+	}
+	err := query.Find(&warehouseItems).Error
+	return warehouseItems, err
+}
+
+// GetListWithWarehouseInfo 分页获取仓库商品库存列表（包含仓库信息）
+func (r *WarehouseItemRepoImpl) GetListWithWarehouseInfo(pageNo, pageSize int, opts ...DBOption) ([]model.WarehouseItem, int64, error) {
+	var warehouseItems []model.WarehouseItem
+	var total int64
+	query := r.db.Model(&model.WarehouseItem{}).
+		Preload("Warehouse").
+		Scopes(NotDeleted)
+	// 应用查询选项
+	for _, opt := range opts {
+		query = opt(query)
+	}
+	// 获取总数
+	err := query.Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	// 分页查询
+	offset := (pageNo - 1) * pageSize
+	err = query.Offset(offset).Limit(pageSize).Find(&warehouseItems).Error
+	return warehouseItems, total, err
+}
+
 // UpdateStock 更新库存
 func (r *WarehouseItemRepoImpl) UpdateStock(uuid uint64, stock, reservedStock float64) error {
 	return r.db.Model(&model.WarehouseItem{}).Where("uuid = ?", uuid).Updates(map[string]interface{}{
@@ -221,6 +261,15 @@ func (r *WarehouseItemRepoImpl) WhereMaterialUuid(materialUuid uint64) DBOption 
 func (r *WarehouseItemRepoImpl) WhereMaterialCode(materialCode string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("material_code = ?", materialCode)
+	}
+}
+
+// WhereWarehouseErpCode 仓库ERP编码条件
+func (r *WarehouseItemRepoImpl) WhereWarehouseErpCode(warehouseErpCode string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Joins("JOIN ttpos_warehouse ON ttpos_warehouse_item.warehouse_uuid = ttpos_warehouse.uuid").
+			Where("ttpos_warehouse.erp_code = ?", warehouseErpCode).
+			Where("ttpos_warehouse.delete_time = 0")
 	}
 }
 

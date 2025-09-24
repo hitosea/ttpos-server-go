@@ -29,12 +29,12 @@ func NewInvoiceXprinterTemplate(
 // invoiceXprinterTemplate 获取打印内容
 func (t *invoiceXprinterTemplate) GetPrintContent(
 	settingPrinterInfo settingResp.PrinterInfo,
-	printerType string,
 	tmpInfo model.PrinterTemplate,
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
 	isCashierPrinter bool,
 ) string {
+	printerType := settingPrinterInfo.PrinterType
 	temp := tmpInfo.Template
 	isShowSku := tmpInfo.IsShowSku
 
@@ -44,7 +44,6 @@ func (t *invoiceXprinterTemplate) GetPrintContent(
 	if temp == 2 {
 		return NewStatementOrderXprinterTemplate(t.base).GetPrintContent(
 			settingPrinterInfo,
-			printerType,
 			constant.PrinterTemplateInvoice,
 			utils.IfInt(isShowSku == 0, 4, 3),
 			saleBill,
@@ -359,7 +358,7 @@ func (t *invoiceXprinterTemplate) GetPrintContent(
 	printer.LineFeed(4)
 	printer.PrintAndExitPageMode()
 	printer.LineFeed(4)
-	printer.CutPaper(true)
+	printer.CutPaper(settingPrinterInfo.IsEnableSound())
 
 	// 返回打印数据
 	return printer.GetOrderData()

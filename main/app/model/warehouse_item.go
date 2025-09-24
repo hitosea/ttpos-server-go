@@ -16,6 +16,9 @@ type WarehouseItem struct {
 	CreateTime    int     `json:"create_time" gorm:"type:int;default:0;comment:创建时间"`
 	UpdateTime    int     `json:"update_time" gorm:"type:int;default:0;comment:更新时间"`
 	DeleteTime    int     `json:"delete_time" gorm:"type:int;default:0;comment:删除时间"`
+
+	// 关联模型
+	Warehouse *Warehouse `gorm:"foreignKey:WarehouseUuid;references:Uuid" json:"warehouse,omitempty"`
 }
 
 // TableName 返回表名

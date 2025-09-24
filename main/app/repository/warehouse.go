@@ -20,6 +20,7 @@ type IWarehouseRepo interface {
 	IsCodeExists(code string, excludeUuid uint64) (bool, error)
 	GetDefaultWarehouse() (*model.Warehouse, error)
 	GetByCode(code string, opts ...DBOption) (*model.Warehouse, error)
+	GetByErpCode(erpCode string, opts ...DBOption) (*model.Warehouse, error)
 
 	// 条件查询选项
 	WhereNameOrCodeLike(name string) DBOption
@@ -134,6 +135,21 @@ func (r *WarehouseRepoImpl) GetDefaultWarehouse() (*model.Warehouse, error) {
 func (r *WarehouseRepoImpl) GetByCode(code string, opts ...DBOption) (*model.Warehouse, error) {
 	var warehouse model.Warehouse
 	query := r.db.Where("code = ?", code).Scopes(NotDeleted)
+	// 应用查询选项
+	for _, opt := range opts {
+		query = opt(query)
+	}
+	err := query.First(&warehouse).Error
+	if err != nil {
+		return nil, err
+	}
+	return &warehouse, nil
+}
+
+// GetByErpCode 根据ERP编码获取仓库
+func (r *WarehouseRepoImpl) GetByErpCode(erpCode string, opts ...DBOption) (*model.Warehouse, error) {
+	var warehouse model.Warehouse
+	query := r.db.Where("erp_code = ?", erpCode).Scopes(NotDeleted)
 	// 应用查询选项
 	for _, opt := range opts {
 		query = opt(query)

@@ -428,7 +428,7 @@ func (p *PrinterRepoImpl) getPrintProductOutMenuContent(
 
 	// 图片打印
 	if p.IsImagePrinterMethod(true) {
-		return template.NewDishesImgTemplate(base).OutMenuTemplate(tmp, saleBill, products, p.GetFinishedTime())
+		return template.NewDishesImgTemplate(base).OutMenuTemplate(tmp, printer, saleBill, products, p.GetFinishedTime())
 	}
 
 	// 商米和芯烨打印机

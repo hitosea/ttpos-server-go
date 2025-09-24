@@ -674,5 +674,5 @@ func (t *handoverImgTemplate) GetPrintContent(
 	//
 	img.SetSegmentationHeight(utils.IfInt(settingPrinterInfo.IsCashierPrinter, 2200, 200))
 	//
-	return img.Save("", !t.base.IsSunMi, openMoneyboxInt)
+	return img.Save("", !t.base.IsSunMi && settingPrinterInfo.IsEnableSound(), openMoneyboxInt)
 }

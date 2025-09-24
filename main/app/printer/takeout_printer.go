@@ -166,7 +166,7 @@ func (p *PrinterRepoImpl) getPrintingContent(
 	 */
 	if settingPrinterInfo.PrinterType == constant.PrinterTypeCashierCompax {
 		return template.NewTakeoutOrderCompaxTemplate(base).GetPrintContent(
-			settingPrinterInfo.PrinterType,
+			settingPrinterInfo,
 			tmp,
 			memberSaleOrder,
 			saleBill,
@@ -179,7 +179,7 @@ func (p *PrinterRepoImpl) getPrintingContent(
 	 */
 	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, settingPrinterInfo.PrinterType) {
 		return template.NewTakeoutOrderXprinterTemplate(base).GetPrintContent(
-			settingPrinterInfo.PrinterType,
+			settingPrinterInfo,
 			tmp,
 			memberSaleOrder,
 			saleBill,
@@ -192,7 +192,7 @@ func (p *PrinterRepoImpl) getPrintingContent(
 	 */
 	if base.IsSunMi {
 		return template.NewTakeoutOrderSunmiTemplate(base).GetPrintContent(
-			settingPrinterInfo.PrinterType,
+			settingPrinterInfo,
 			tmp,
 			memberSaleOrder,
 			saleBill,
@@ -205,7 +205,7 @@ func (p *PrinterRepoImpl) getPrintingContent(
 	 */
 	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi, constant.PrinterTypeGpCloud}, settingPrinterInfo.PrinterType) {
 		return template.NewTakeoutOrderCodesoftTemplate(base).GetPrintContent(
-			settingPrinterInfo.PrinterType,
+			settingPrinterInfo,
 			tmp,
 			memberSaleOrder,
 			saleBill,

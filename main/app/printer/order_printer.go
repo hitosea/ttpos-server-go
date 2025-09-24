@@ -196,7 +196,6 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, settingPrinterInfo.PrinterType) {
 		return template.NewStatementOrderXprinterTemplate(base).GetPrintContent(
 			settingPrinterInfo,
-			settingPrinterInfo.PrinterType,
 			printType,
 			tmp,
 			saleBill,
@@ -210,7 +209,6 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	if base.IsSunMi {
 		return template.NewStatementOrderSunmiTemplate(base).GetPrintContent(
 			settingPrinterInfo,
-			settingPrinterInfo.PrinterType,
 			printType,
 			tmp,
 			saleBill,

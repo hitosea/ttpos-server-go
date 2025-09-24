@@ -3,6 +3,7 @@ package template
 
 import (
 	"ttpos-server-go/app/constant"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/pkg/utils"
@@ -24,9 +25,10 @@ func NewRechargeSunmiTemplate(
 
 // GetPrintContent 图片打印
 func (t *rechargeSunmiPrinterTemplate) GetPrintContent(
-	printerType string,
+	settingPrinterInfo settingResp.PrinterInfo,
 	order model.MemberRechargeOrder,
 ) string {
+	printerType := settingPrinterInfo.PrinterType
 	// 日历
 	payTime := t.base.FormatUnixTimeDefault(order.PaymentTime)
 

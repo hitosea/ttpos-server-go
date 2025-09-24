@@ -4,6 +4,7 @@ package template
 import (
 	"fmt"
 	"strconv"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/config"
@@ -27,7 +28,7 @@ func NewTakeoutOrderCompaxTemplate(
 
 // GetPrintnrContent 获取打印内容
 func (t *takeoutOrderCompaxTemplate) GetPrintContent(
-	printerType string,
+	settingPrinterInfo settingResp.PrinterInfo,
 	temp int,
 	memberSaleOrder *model.MemberSaleOrder,
 	saleBill *model.SaleBill,
@@ -238,7 +239,7 @@ func (t *takeoutOrderCompaxTemplate) GetPrintContent(
 	printer.LineFeed()
 	printer.PrintAndExitPageMode()
 	printer.LineFeed(6)
-	printer.CutPaper(true)
+	printer.CutPaper(settingPrinterInfo.IsEnableSound())
 
 	// 返回打印数据
 	return printer.GetOrderData()

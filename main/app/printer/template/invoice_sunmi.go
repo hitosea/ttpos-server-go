@@ -29,12 +29,12 @@ func NewInvoiceSunmiTemplate(
 // GetPrintContent 获取打印内容
 func (t *invoiceSunmiTemplate) GetPrintContent(
 	settingPrinterInfo settingResp.PrinterInfo,
-	printerType string,
 	tmpInfo model.PrinterTemplate,
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
 	isCashierPrinter bool,
 ) string {
+	printerType := settingPrinterInfo.PrinterType
 	temp := tmpInfo.Template
 	isShowSku := tmpInfo.IsShowSku
 
@@ -44,7 +44,6 @@ func (t *invoiceSunmiTemplate) GetPrintContent(
 	if temp == 2 {
 		return NewStatementOrderSunmiTemplate(t.base).GetPrintContent(
 			settingPrinterInfo,
-			printerType,
 			constant.PrinterTemplateInvoice,
 			utils.IfInt(isShowSku == 0, 4, 3),
 			saleBill,

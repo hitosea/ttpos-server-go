@@ -178,7 +178,6 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
 		return template.NewInvoiceXprinterTemplate(base).GetPrintContent(
 			settingPrinterInfo,
-			printerType,
 			tmpInfo,
 			saleBill,
 			saleOrder,
@@ -192,7 +191,6 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 	if base.IsSunMi {
 		return template.NewInvoiceSunmiTemplate(base).GetPrintContent(
 			settingPrinterInfo,
-			printerType,
 			tmpInfo,
 			saleBill,
 			saleOrder,
@@ -206,7 +204,6 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi, constant.PrinterTypeGpCloud}, printerType) {
 		return template.NewInvoiceCodesoftTemplate(base).GetPrintContent(
 			settingPrinterInfo,
-			printerType,
 			tmpInfo,
 			saleBill,
 			saleOrder,

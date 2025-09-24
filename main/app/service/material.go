@@ -49,6 +49,7 @@ type IMaterialSrv interface {
 	ImportProductBomCard(ctx context.Context, req req.ProductBomCardImportReq) error
 	ImportMaterialList(ctx context.Context, req req.MaterialImportListReq) (material_resp.MaterialImportResp, error)
 	ImportMaterial(ctx context.Context, req req.MaterialImportReq) error
+	GetWarehouseItemsByErpCode(ctx context.Context, warehouseErpCode string, pageNo, pageSize int) ([]model.WarehouseItem, int64, error)
 }
 
 type materialSrv struct {
@@ -82,6 +83,17 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 	if req.Keyword != "" {
 		dbOptions = append(dbOptions, commonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
 			return db.Where("name LIKE ? OR code LIKE ? OR barcode_value LIKE ?", "%"+req.Keyword+"%", "%"+req.Keyword+"%", "%"+req.Keyword+"%")
+		}))
+	}
+	// WarehouseErpCode 根据仓库ERP编码过滤
+	// FIXME: 没有看到产品说按仓库，现在只先按是否同步物品进行
+	if req.WarehouseErpCode != "" {
+		dbOptions = append(dbOptions, commonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+			return db.Where("headquarter_uuid > ?", 0)
+		}))
+	} else {
+		dbOptions = append(dbOptions, commonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+			return db.Where("headquarter_uuid = ?", 0)
 		}))
 	}
 	if len(req.CategoryUuids) > 0 {
@@ -2046,4 +2058,35 @@ func (s *materialSrv) ImportMaterial(ctx context.Context, reqs req.MaterialImpor
 	}
 
 	return nil
+}
+
+// GetWarehouseItemsByErpCode 根据仓库ERP编码获取仓库商品库存列表
+func (s *materialSrv) GetWarehouseItemsByErpCode(ctx context.Context, warehouseErpCode string, pageNo, pageSize int) ([]model.WarehouseItem, int64, error) {
+	dbId := ctx.GetDbId()
+	warehouseItemRepo := repository.NewWarehouseItemRepo(s.dbm.GetDB(dbId))
+
+	// 构建查询选项
+	var dbOptions []repository.DBOption
+	commonRepo := repository.NewCommonRepo()
+
+	// 添加仓库ERP编码过滤条件
+	dbOptions = append(dbOptions, warehouseItemRepo.WhereWarehouseErpCode(warehouseErpCode))
+
+	// 预加载仓库信息
+	dbOptions = append(dbOptions, commonRepo.Preload(
+		repository.WithPreload{
+			Query: "Warehouse",
+		},
+		repository.WithPreload{
+			Query: "Warehouse.MultiLanguageName",
+		},
+	))
+
+	// 获取仓库商品库存列表
+	warehouseItems, total, err := warehouseItemRepo.GetListWithWarehouseInfo(pageNo, pageSize, dbOptions...)
+	if err != nil {
+		return nil, 0, errors.WithMessage(err, "根据仓库ERP编码获取库存列表失败")
+	}
+
+	return warehouseItems, total, nil
 }
