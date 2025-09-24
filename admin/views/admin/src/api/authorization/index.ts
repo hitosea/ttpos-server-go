@@ -16,14 +16,14 @@ export interface authorizationListTypeItem {
   erpnext_company_abbr: string;
   erpnext_branch_name: string;
   erpnext_default_company_abbr?: string;
-  headquarter_uuid: number;
+  headquarter_abbr: string;
 }
 
 export interface erpnextSiteCodeItem {
   name: string;
   code: string;
   default_company: string;
-  headquarter_uuid: number;
+  headquarter_abbr: string;
 }
 
 // 商家授权列表
@@ -65,7 +65,7 @@ export interface erpnextAddParams {
   erpnext_default_company_abbr?: string;
   erpnext_company_abbr: string;
   password: string;
-  headquarter_uuid: number | undefined;
+  headquarter_abbr: string;
 }
 
 export function erpnextAdd(data: erpnextAddParams) {

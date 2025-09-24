@@ -114,7 +114,7 @@
       if (res.data.list.length > 0 && !props.hasEdit) {
         formData.value.erpnext_site_code = res.data.list[0].code;
         formData.value.erpnext_default_company_abbr = res.data.list[0].default_company;
-        formData.value.headquarter_uuid = res.data.list[0].headquarter_uuid;
+        formData.value.headquarter_abbr = res.data.list[0].headquarter_abbr;
         getErpnextCompanyList(res.data.list[0].code);
       } else if (props.hasEdit) {
         // 保存编辑模式下的原始值
@@ -150,7 +150,7 @@
     for (const item of erpnextSiteList.value) {
       if (item.code === site_code) {
         formData.value.erpnext_default_company_abbr = item.default_company;
-        formData.value.headquarter_uuid = item.headquarter_uuid;
+        formData.value.headquarter_abbr = item.headquarter_abbr;
         break;
       }
     }
@@ -192,7 +192,7 @@
     erpnext_default_company_abbr: '',
     erpnext_company_abbr: '',
     password: '',
-    headquarter_uuid: 0,
+    headquarter_abbr: '',
   });
 
   const formRules = ref({
@@ -214,7 +214,7 @@
       erpnext_default_company_abbr: '',
       erpnext_company_abbr: '',
       password: '',
-      headquarter_uuid: undefined,
+      headquarter_abbr: '',
     };
     confirmPassword.value = false;
   };
@@ -252,7 +252,7 @@
             erpnext_default_company_abbr: props.editRow.erpnext_default_company_abbr || '',
             erpnext_company_abbr: props.editRow.erpnext_company_abbr || '',
             password: '',
-            headquarter_uuid: props.editRow.headquarter_uuid,
+            headquarter_abbr: props.editRow.headquarter_abbr,
           };
         }
 

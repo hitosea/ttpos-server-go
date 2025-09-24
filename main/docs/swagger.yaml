@@ -832,6 +832,9 @@ definitions:
       from_unit_uuid:
         description: 来源单位UUID
         type: integer
+      internal_code:
+        description: 内部编码
+        type: string
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -3209,6 +3212,15 @@ definitions:
       order_no:
         description: 单据编号
         type: string
+      page_no:
+        description: 页码
+        minimum: 1
+        type: integer
+      page_size:
+        description: 每页大小
+        maximum: 1100
+        minimum: 1
+        type: integer
       start_time:
         description: 日期，开始时间
         type: integer
@@ -3229,9 +3241,9 @@ definitions:
       company_uuid:
         description: 公司UUID
         type: integer
-      headquarter_uuid:
-        description: 总部UUID
-        type: integer
+      headquarter_abbr:
+        description: 总部简称
+        type: string
       site_code:
         description: 站点编码
         type: string
@@ -3419,6 +3431,44 @@ definitions:
     - device_id
     - password
     - username
+    type: object
+  req.MaterialAddErpReq:
+    properties:
+      barcode_value:
+        description: 条形码值
+        type: string
+      classification:
+        description: 分类
+        type: string
+      classification_code:
+        description: 分类编码
+        type: string
+      disabled:
+        description: 是否禁用
+        type: boolean
+      internal_code:
+        description: 内部编码
+        type: string
+      item_code:
+        description: 物品编码, 如果为空，则为新增；如果非空，则为编辑
+        type: string
+      item_name:
+        description: 物品名称, 英文
+        type: string
+      opening_stock:
+        description: 期初库存
+        type: number
+      stock_uom:
+        description: 基准库存单位, 英文
+        type: string
+      uoms:
+        description: 单位列表
+        items:
+          $ref: '#/definitions/req.MaterialUomReq'
+        type: array
+      valuation_rate:
+        description: 估值率
+        type: number
     type: object
   req.MaterialAddReq:
     properties:
@@ -3649,6 +3699,15 @@ definitions:
     required:
     - conversion_rate
     - uuid
+    type: object
+  req.MaterialUomReq:
+    properties:
+      conversion_rate:
+        description: 转换率
+        type: number
+      uom:
+        description: 单位, 英文
+        type: string
     type: object
   req.MemberOrderSendAuthCodeReq:
     properties:
@@ -5455,8 +5514,6 @@ definitions:
       uuid:
         description: 商品单位UUID
         type: integer
-    required:
-    - uuid
     type: object
   req.ProductUnitSortItem:
     properties:
@@ -22868,28 +22925,6 @@ paths:
       summary: 检查更新
       tags:
       - 商家端.基础信息
-  /shop/headquarter/warehouse/list:
-    get:
-      consumes:
-      - application/json
-      description: 获取仓库列表，支持分页和筛选
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.WarehouseListResp'
-              type: object
-      security:
-      - JwtToken: []
-      summary: 获取总部仓库列表
-      tags:
-      - 商家端.仓库档案
   /shop/login:
     post:
       consumes:
@@ -22961,6 +22996,30 @@ paths:
       security:
       - JwtToken: []
       summary: 添加物品
+      tags:
+      - 商家端.物品管理
+  /shop/material/add/erp:
+    post:
+      consumes:
+      - application/json
+      description: 从erp同步物品
+      parameters:
+      - description: 物品添加请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.MaterialAddErpReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 从erp同步物品
       tags:
       - 商家端.物品管理
   /shop/material/category/add:
@@ -26788,6 +26847,45 @@ paths:
       security:
       - JwtToken: []
       summary: 删除仓库
+      tags:
+      - 商家端.仓库档案
+  /shop/warehouse/first_sync_item:
+    post:
+      consumes:
+      - application/json
+      description: 第一次同步仓库物品库存
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 第一次同步仓库物品库存
+      tags:
+      - 商家端.仓库档案
+  /shop/warehouse/headquarter/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取仓库列表，支持分页和筛选
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.WarehouseListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取总部仓库列表
       tags:
       - 商家端.仓库档案
   /shop/warehouse/in_out/list:
