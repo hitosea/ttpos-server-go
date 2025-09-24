@@ -359,8 +359,10 @@ func (s *materialSrv) AddMaterialCategory(ctx context.Context, req req.MaterialC
 		}
 
 		// 检查物品类别编码是否已存在
-		if exist := materialCategoryRepo.CheckMaterialCategoryCodeExist(req.Code, 0); exist {
-			return errors.New("物品类别编码已存在")
+		if req.Code != "" {
+			if exist := materialCategoryRepo.CheckMaterialCategoryCodeExist(req.Code, 0); exist {
+				return errors.New("物品类别编码已存在")
+			}
 		}
 
 		// 创建多语言名称
