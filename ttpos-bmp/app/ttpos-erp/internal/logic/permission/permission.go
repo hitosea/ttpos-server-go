@@ -298,6 +298,12 @@ func (s *sPermission) CheckPermission(ctx context.Context, permissionList []erp.
 		// 如果没有权限规则，默认允许访问
 		return true, nil
 	}
+
+	// 参数验证
+	if len(company) == 0 {
+		return false, gerror.New("公司名称不能为空")
+	}
+
 	permissionRuleList := make([]*erp.PosPermissionRule, 0, len(permissionList))
 	for _, rule := range permissionList {
 		permissionRule, err := service.Permission().GetPosPermissionRule(ctx, rule.PermissionRule)
@@ -308,11 +314,6 @@ func (s *sPermission) CheckPermission(ctx context.Context, permissionList []erp.
 		permissionRuleList = append(permissionRuleList, permissionRule)
 	}
 
-	// 参数验证
-	if len(company) == 0 {
-		return false, gerror.New("公司名称不能为空")
-	}
-
 	// 标记是否存在白名单规则
 	hasWhiteRule := false
 	// 标记是否在白名单中
@@ -320,9 +321,6 @@ func (s *sPermission) CheckPermission(ctx context.Context, permissionList []erp.
 
 	// 遍历权限规则列表
 	for _, rule := range permissionRuleList {
-		if rule == nil {
-			continue
-		}
 
 		// 检查黑名单规则
 		if rule.RuleType == "Black" {
@@ -333,7 +331,7 @@ func (s *sPermission) CheckPermission(ctx context.Context, permissionList []erp.
 			}
 		}
 
-		// 检查白名单规则
+		// 检查白名单规则,白名单优先
 		if rule.RuleType == "White" {
 			hasWhiteRule = true
 			// 检查公司是否在白名单中

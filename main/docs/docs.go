@@ -17880,46 +17880,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/shop/headquarter/warehouse/list": {
-            "get": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "获取仓库列表，支持分页和筛选",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.仓库档案"
-                ],
-                "summary": "获取总部仓库列表",
-                "responses": {
-                    "200": {
-                        "description": "成功",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.WarehouseListResp"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
         "/shop/login": {
             "post": {
                 "description": "登录",
@@ -18027,6 +17987,45 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/req.MaterialAddReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/material/add/erp": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "从erp同步物品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "从erp同步物品",
+                "parameters": [
+                    {
+                        "description": "物品添加请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.MaterialAddErpReq"
                         }
                     }
                 ],
@@ -22921,6 +22920,33 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/setting/sync": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.业务设置"
+                ],
+                "summary": "获取总部最新数据",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/setting/upload_logo": {
             "post": {
                 "security": [
@@ -24338,6 +24364,74 @@ const docTemplate = `{
                         "description": "成功",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/warehouse/first_sync_item": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "第一次同步仓库物品库存",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.仓库档案"
+                ],
+                "summary": "第一次同步仓库物品库存",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/warehouse/headquarter/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取仓库列表，支持分页和筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.仓库档案"
+                ],
+                "summary": "获取总部仓库列表",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.WarehouseListResp"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -26599,6 +26693,10 @@ const docTemplate = `{
                 "from_unit_uuid": {
                     "description": "来源单位UUID",
                     "type": "integer"
+                },
+                "internal_code": {
+                    "description": "内部编码",
+                    "type": "string"
                 },
                 "locale_name": {
                     "description": "物品名称",
@@ -30153,6 +30251,17 @@ const docTemplate = `{
                     "description": "单据编号",
                     "type": "string"
                 },
+                "page_no": {
+                    "description": "页码",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "page_size": {
+                    "description": "每页大小",
+                    "type": "integer",
+                    "maximum": 1100,
+                    "minimum": 1
+                },
                 "start_time": {
                     "description": "日期，开始时间",
                     "type": "integer"
@@ -30186,9 +30295,9 @@ const docTemplate = `{
                     "description": "公司UUID",
                     "type": "integer"
                 },
-                "headquarter_uuid": {
-                    "description": "总部UUID",
-                    "type": "integer"
+                "headquarter_abbr": {
+                    "description": "总部简称",
+                    "type": "string"
                 },
                 "site_code": {
                     "description": "站点编码",
@@ -30447,6 +30556,58 @@ const docTemplate = `{
                 "username": {
                     "description": "用户名",
                     "type": "string"
+                }
+            }
+        },
+        "req.MaterialAddErpReq": {
+            "type": "object",
+            "properties": {
+                "barcode_value": {
+                    "description": "条形码值",
+                    "type": "string"
+                },
+                "classification": {
+                    "description": "分类",
+                    "type": "string"
+                },
+                "classification_code": {
+                    "description": "分类编码",
+                    "type": "string"
+                },
+                "disabled": {
+                    "description": "是否禁用",
+                    "type": "boolean"
+                },
+                "internal_code": {
+                    "description": "内部编码",
+                    "type": "string"
+                },
+                "item_code": {
+                    "description": "物品编码, 如果为空，则为新增；如果非空，则为编辑",
+                    "type": "string"
+                },
+                "item_name": {
+                    "description": "物品名称, 英文",
+                    "type": "string"
+                },
+                "opening_stock": {
+                    "description": "期初库存",
+                    "type": "number"
+                },
+                "stock_uom": {
+                    "description": "基准库存单位, 英文",
+                    "type": "string"
+                },
+                "uoms": {
+                    "description": "单位列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.MaterialUomReq"
+                    }
+                },
+                "valuation_rate": {
+                    "description": "估值率",
+                    "type": "number"
                 }
             }
         },
@@ -30786,6 +30947,19 @@ const docTemplate = `{
                 "uuid": {
                     "description": "单位UUID",
                     "type": "integer"
+                }
+            }
+        },
+        "req.MaterialUomReq": {
+            "type": "object",
+            "properties": {
+                "conversion_rate": {
+                    "description": "转换率",
+                    "type": "number"
+                },
+                "uom": {
+                    "description": "单位, 英文",
+                    "type": "string"
                 }
             }
         },
@@ -33401,9 +33575,6 @@ const docTemplate = `{
         },
         "req.ProductUnitReq": {
             "type": "object",
-            "required": [
-                "uuid"
-            ],
             "properties": {
                 "uuid": {
                     "description": "商品单位UUID",

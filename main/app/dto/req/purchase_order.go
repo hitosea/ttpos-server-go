@@ -9,7 +9,7 @@ import (
 type PurchaseOrderListReq struct {
 	dto.PageReq                   // 分页参数
 	OrderNo                string `json:"order_no" form:"order_no" binding:"omitempty,max=50"`                                  // 订单编号
-	PurchaseType           int    `json:"purchase_type" form:"purchase_type" binding:"omitempty,min=0,max=1"`                   // V2.6 采购类型, 1-外部采购 2-内部采购
+	PurchaseType           int    `json:"purchase_type" form:"purchase_type" binding:"omitempty,min=0,max=2"`                   // V2.6 采购类型, 1-外部采购 2-内部采购
 	StatusIn               []int  `json:"status_in" form:"status_in" binding:"omitempty,min=0,max=5"`                           // 状态筛选: [0,1,2,3,4], 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核
 	SupplierName           string `json:"supplier_name" form:"supplier_name" binding:"omitempty,max=100"`                       // 供应商名称
 	WarehouseErpCode       string `json:"warehouse_erp_code" form:"warehouse_erp_code" binding:"omitempty,max=255"`             // 仓库编码
@@ -31,7 +31,7 @@ type PurchaseOrderCreateReq struct {
 	SupplierErpCode      string                       `json:"supplier_erp_code" binding:"omitempty,max=255"`    // V2.6 供应商编码
 	ExpectedDeliveryTime int64                        `json:"expected_delivery_time" binding:"omitempty,min=0"` // 期望到货时间(时间戳)
 	Items                []PurchaseOrderItemCreateReq `json:"items" binding:"required,min=1,max=200,dive"`      // 物品明细
-	PurchaseType         int                          `json:"purchase_type" binding:"omitempty,min=0,max=1"`    // V2.6  采购类型, 1-外部采购 2-内部采购
+	PurchaseType         int                          `json:"purchase_type" binding:"omitempty,min=0,max=2"`    // V2.6  采购类型, 1-外部采购 2-内部采购
 	WarehouseErpCode     string                       `json:"warehouse_erp_code" binding:"omitempty,max=255"`   // V2.6 仓库编码
 }
 

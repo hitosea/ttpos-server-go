@@ -175,7 +175,7 @@ func (h *WarehouseHandler) SetDefaultWarehouse(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
-// SyncWarehouse 同步仓库列表
+// Sync  同步仓库列表
 // @Summary 同步仓库列表
 // @Description 同步仓库列表
 // @Tags 商家端.仓库档案
@@ -184,9 +184,9 @@ func (h *WarehouseHandler) SetDefaultWarehouse(c *gin.Context) {
 // @Security JwtToken
 // @Success 200 {object} dto.Response "成功"
 // @Router /shop/warehouse/sync [post]
-func (h *WarehouseHandler) SyncWarehouse(c *gin.Context) {
+func (h *WarehouseHandler) Sync(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	err := h.warehouseSrv.SyncWarehouse(ctx)
+	err := h.warehouseSrv.Sync(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -317,7 +317,7 @@ func RegisterWarehouseHandlers(router gin.IRouter, dbm *database.DBManager, cach
 		privateApi.POST("/warehouse/update", warehouseHandler.UpdateWarehouse)                      // 更新仓库
 		privateApi.DELETE("/warehouse/delete", warehouseHandler.DeleteWarehouse)                    // 删除仓库
 		privateApi.POST("/warehouse/set_default", warehouseHandler.SetDefaultWarehouse)             // 设置默认
-		privateApi.POST("/warehouse/sync", warehouseHandler.SyncWarehouse)                          // 同步仓库列表
+		privateApi.POST("/warehouse/sync", warehouseHandler.Sync)                                   // 同步仓库列表
 		privateApi.POST("/warehouse/first_sync_item", warehouseHandler.FirstSyncWarehouseItem)      // 第一次同步仓库物品库存列表
 		privateApi.GET("/warehouse/code_exists", warehouseHandler.CheckCodeExists)                  // 检查仓库编码是否存在
 

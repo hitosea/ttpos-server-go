@@ -35,6 +35,50 @@ func (s *Controller) GetBomList(ctx context.Context, req *manufacturing.GetBomLi
 	return rpc.ApiSuccessWithData("获取BOM列表成功", res), nil
 }
 
+// GetBom 根据BOM名称获取单个BOM信息
+// 参数：ctx 上下文，req 包含BOM名称
+// 返回：响应信息和错误
+func (s *Controller) GetBom(ctx context.Context, req *manufacturing.GetBomReq) (*api.ResponseInfo, error) {
+	if req == nil {
+		return rpc.ApiError("请求参数不能为空"), nil
+	}
+
+	if len(req.BomName) == 0 {
+		return rpc.ApiError("BOM名称不能为空"), nil
+	}
+
+	bomInfo, err := service.Bom().GetBom(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	// 转换为 protobuf 响应格式
+	resp := &manufacturing.GetBomResp{
+		BomInfo: &manufacturing.BomInfo{
+			ItemCode:  bomInfo.Item,
+			BomName:   bomInfo.Name,
+			Uom:       bomInfo.Uom,
+			Company:   bomInfo.Company,
+			Quantity:  bomInfo.Quantity,
+			IsActive:  bomInfo.IsActive,
+			IsDefault: bomInfo.IsDefault,
+			Items:     make([]*manufacturing.BomItem, 0),
+		},
+	}
+
+	// 转换BOM明细项目
+	for _, item := range bomInfo.Items {
+		resp.BomInfo.Items = append(resp.BomInfo.Items, &manufacturing.BomItem{
+			ItemCode: item.ItemCode,
+			Rate:     item.Rate,
+			Qty:      item.Qty,
+			Uom:      item.Uom,
+		})
+	}
+
+	return rpc.ApiSuccessWithData("获取BOM信息成功", resp), nil
+}
+
 func (s *Controller) SaveBom(ctx context.Context, req *manufacturing.SaveBomReq) (*api.ResponseInfo, error) {
 	// 参数校验
 	if err := s.validateSaveBomReq(req); err != nil {

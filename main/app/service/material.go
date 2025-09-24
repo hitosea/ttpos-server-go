@@ -292,6 +292,7 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		Status:                 int(utils.BoolToUint(material.Status)),
 		Valuation:              material.Valuation,
 		BarcodeValue:           material.BarcodeValue,
+		InternalCode:           material.InternalCode,
 		UnitName:               material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 		UnitUuid:               material.UnitUuid,
 		FromUnitUuid:           fromUnitUuid,
@@ -359,8 +360,10 @@ func (s *materialSrv) AddMaterialCategory(ctx context.Context, req req.MaterialC
 		}
 
 		// 检查物品类别编码是否已存在
-		if exist := materialCategoryRepo.CheckMaterialCategoryCodeExist(req.Code, 0); exist {
-			return errors.New("物品类别编码已存在")
+		if req.Code != "" {
+			if exist := materialCategoryRepo.CheckMaterialCategoryCodeExist(req.Code, 0); exist {
+				return errors.New("物品类别编码已存在")
+			}
 		}
 
 		// 创建多语言名称
@@ -714,7 +717,7 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 
 	// 检查物品名称
 	productCheckSrv := NewProductCheckSrv(s.dbm, s.localeSrv, s.settingSrv)
-	if err := productCheckSrv.CheckProductName(ctx, request.Uuid, request.LocaleName); err != nil {
+	if err := productCheckSrv.CheckMaterialName(ctx, request.Uuid, request.LocaleName); err != nil {
 		return errors.WithMessage(err, "检查物品名称失败")
 	}
 
@@ -821,6 +824,7 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 			}(),
 			Valuation:    request.Valuation,
 			BarcodeValue: request.BarcodeValue,
+			InternalCode: request.InternalCode,
 			PurchaseUnitUuid: func() uint64 {
 				// 如果选择了已经存在的单位，则使用已存在的单位
 				if _, ok := notBaseUnitList[request.PurchaseUnitUuid]; ok {

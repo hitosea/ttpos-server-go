@@ -18,7 +18,7 @@ type InitShopReq struct {
 	SiteCode        string `form:"site_code" json:"site_code" binding:"required"`       // 站点编码
 	CompanyAbbr     string `form:"company_abbr" json:"company_abbr" binding:"required"` // 公司缩写编码
 	CompanyUuid     uint64 `form:"company_uuid" json:"company_uuid" binding:"required"` // 公司UUID
-	HeadquarterUuid uint64 `form:"headquarter_uuid" json:"headquarter_uuid"`            // 总部UUID
+	HeadquarterAbbr string `form:"headquarter_abbr" json:"headquarter_abbr"`            // 总部简称
 }
 
 type GetUomListReq struct {

@@ -66,6 +66,14 @@ message GetUomListResp {
   repeated UomInfo uom_list = 1; //单位列表
 }
 
+message GetUomReq {
+  string uom_name = 1; // 单位名称，必填
+}
+
+message GetUomResp {
+  UomInfo uom_info = 1; // 单位信息
+}
+
 message UomInfo {
   string uom_name = 1; // 单位名称，必填
   string branch = 2; // 分支名称，可选
@@ -156,14 +164,21 @@ message BomItem {
 
 service ItemService {
   // 获取物品列表
+  // 输入条件如果未包含company 则会返回全量数据，如需要只显示无company 约束的数据，需要自行过滤结果中 company 为空的数据
   // 参数：查询条件
   // 返回：物品列表，最大9999
   rpc GetItemList(item.GetItemListReq) returns (erp.ResponseInfo);
 
   // 获取单位列表
+  // 输入条件如果未包含company 则会返回全量数据，如需要只显示无company 约束的数据，需要自行过滤结果中 company 为空的数据
   // 参数：查询条件
   // 返回：单位列表
   rpc GetUomList(item.GetUomListReq) returns (erp.ResponseInfo);
+
+  // 根据单位名称获取单个单位信息
+  // 参数：单位名称
+  // 返回：单位详细信息
+  rpc GetUom(item.GetUomReq) returns (erp.ResponseInfo);
 
   // 添加单位
   // 参数：单位信息

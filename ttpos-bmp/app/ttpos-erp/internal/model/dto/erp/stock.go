@@ -107,3 +107,23 @@ const (
 	// DefaultMaterialRequestSeries 默认申请单命名序列
 	DefaultMaterialRequestSeries = "MAT-MR-.YYYY.-"
 )
+
+// UOM 结构体，表示计量单位信息
+type UOM struct {
+	Name              string `json:"name,omitempty"`                 // 单位名称
+	Owner             string `json:"owner,omitempty"`                // 拥有者
+	Creation          string `json:"creation,omitempty"`             // 创建时间
+	Modified          string `json:"modified,omitempty"`             // 修改时间
+	ModifiedBy        string `json:"modified_by,omitempty"`          // 修改人
+	Docstatus         int    `json:"docstatus,omitempty"`            // 单据状态
+	Idx               int    `json:"idx,omitempty"`                  // 索引
+	UomName           string `json:"uom_name,omitempty"`             // 单位名称
+	MustBeWholeNumber int    `json:"must_be_whole_number,omitempty"` // 是否必须为整数
+	Enabled           int    `json:"enabled,omitempty"`              // 是否启用
+	Doctype           string `json:"doctype,omitempty"`              // 单据类型
+	// 自定义字段
+	CustomAlias          string           `json:"custom_alias,omitempty"`           // 自定义别名
+	CustomCompany        string           `json:"custom_company,omitempty"`         // 自定义公司
+	CustomBranch         string           `json:"custom_branch,omitempty"`          // 自定义分支
+	CustomPermissionRule []PermissionRule `json:"custom_permission_rule,omitempty"` // 自定义权限规则
+}

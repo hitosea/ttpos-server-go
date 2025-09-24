@@ -1,11 +1,11 @@
 <?php
 
-use think\facade\Db;
 use think\facade\Env;
+use think\facade\Db;
 use think\migration\Migrator;
 use think\migration\db\Column;
 
-class AddErpnextHeadquarterAbbrToCompanySetting extends Migrator
+class UpdateSaasSettingErpnext extends Migrator
 {
     const TARGET = 'all';
     /**
@@ -31,15 +31,7 @@ class AddErpnextHeadquarterAbbrToCompanySetting extends Migrator
      */
     public function change()
     {
-        $table = $this->table('company_setting');
-        if (!$table->hasColumn('erpnext_headquarter_abbr')) {
-            $table->addColumn('erpnext_headquarter_abbr', 'string', ['limit' => 255, 'null' => false, 'default' => '', 'comment' => 'ERPNext总部简称', 'after' => 'erpnext_company_abbr']);
-        }
-        if (!$table->hasColumn('headquarter_uuid')) {
-            $table->addColumn('headquarter_uuid', 'biginteger', ['null' => false, 'default' => 0, 'comment' => '总部Uuid', 'after' => 'erpnext_headquarter_abbr']);
-        }
-        $table->update();
-
+        // TODO 上线前删除
         $db = Db::connect(Db::getConfig('default'), true);
         // 查询erpnext_site是否存在
         $erpnextSite = $db->name('setting')->where('key', 'erpnext_site')->find();

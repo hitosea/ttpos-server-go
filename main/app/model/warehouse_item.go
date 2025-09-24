@@ -13,6 +13,7 @@ type WarehouseItem struct {
 	MaterialCode  string  `json:"material_code" gorm:"type:varchar(255);default:'';comment:商品编码;index:idx_material_code"`
 	Stock         float64 `json:"stock" gorm:"type:decimal(14,2);default:0.00;comment:库存数量"`
 	ReservedStock float64 `json:"reserved_stock" gorm:"type:decimal(14,2);default:0.00;comment:预留库存数量"`
+	Valuation     float64 `json:"valuation" gorm:"type:decimal(14,2);default:0.00;comment:估值单价"`
 	CreateTime    int     `json:"create_time" gorm:"type:int;default:0;comment:创建时间"`
 	UpdateTime    int     `json:"update_time" gorm:"type:int;default:0;comment:更新时间"`
 	DeleteTime    int     `json:"delete_time" gorm:"type:int;default:0;comment:删除时间"`

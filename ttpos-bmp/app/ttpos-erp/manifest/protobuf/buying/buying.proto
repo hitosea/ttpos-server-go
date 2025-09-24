@@ -266,7 +266,8 @@ service BuyingService {
   // 返回：删除结果
   rpc DeleteSupplier(DeleteSupplierReq) returns (erp.ResponseInfo);
 
-  // 获取供应商列表（带分页和过滤）
+  // 获取供应商列表
+  // 输入条件如果未包含company 则会返回全量数据，如需要只显示无company 约束的数据，需要自行过滤结果中 company 为空的数据
   // 参数：过滤条件和分页参数
   // 返回：供应商列表
   rpc ListSuppliers(ListSuppliersReq) returns (erp.ResponseInfo);

@@ -48,26 +48,16 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		return resp.InitShopResp{}, errors.New("商家超管不存在")
 	}
 
-	var headquarterAbbr string
-	headquarterUuid := initShopReq.HeadquarterUuid
-	if initShopReq.SiteCode != "1" && headquarterUuid == 0 {
+	var headquarterUuid uint64
+	headquarterAbbr := initShopReq.HeadquarterAbbr
+	if initShopReq.SiteCode != "1" && headquarterAbbr == "" {
 		return resp.InitShopResp{}, errors.New("连锁店总部未设置")
 	}
 	// 连锁店-总部关联处理
-	if headquarterUuid > 0 {
-		if headquarterUuid == company.Uuid { // 初始化总部
-			headquarterAbbr = initShopReq.CompanyAbbr
-		} else { // 初始化连锁子店
-			var headquarter model.CompanySetting
-			s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("uuid = ?", initShopReq.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter)
-			if headquarter.Uuid == 0 {
-				return resp.InitShopResp{}, errors.New("总部不存在")
-			}
-			if headquarter.ErpnextCompanyAbbr == "" {
-				return resp.InitShopResp{}, errors.New("总部未授权erp")
-			}
-			headquarterAbbr = headquarter.ErpnextCompanyAbbr
-		}
+	if headquarterAbbr != "" {
+		var headquarter model.CompanySetting
+		s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("erpnext_site_code = ? AND erpnext_company_abbr = ?", initShopReq.SiteCode, initShopReq.HeadquarterAbbr).Scopes(repository.NotDeleted).First(&headquarter)
+		headquarterUuid = headquarter.Uuid
 	}
 
 	client, conn, err := NewErpSetupClient()

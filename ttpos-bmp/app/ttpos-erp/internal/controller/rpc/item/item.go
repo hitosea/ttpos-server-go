@@ -75,6 +75,36 @@ func (c *Controller) GetUomList(ctx context.Context, req *item.GetUomListReq) (*
 	return rpc.ApiSuccessWithData("获取单位列表成功", dataList), nil
 }
 
+// GetUom 根据单位名称获取单个单位信息
+// 参数：ctx 上下文，req 包含单位名称
+// 返回：响应信息和错误
+func (c *Controller) GetUom(ctx context.Context, req *item.GetUomReq) (*api.ResponseInfo, error) {
+	// 参数验证
+	if req.UomName == "" {
+		return rpc.ApiError("单位名称不能为空"), nil
+	}
+
+	// 调用服务层获取数据
+	uomInfo, err := service.Stock().GetUom(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	// 转换为 protobuf 响应格式
+	resp := &item.GetUomResp{
+		UomInfo: &item.UomInfo{
+			UomName:           uomInfo.UomName,
+			AliasName:         uomInfo.CustomAlias,
+			Company:           uomInfo.CustomCompany,
+			Branch:            uomInfo.CustomBranch,
+			MustBeWholeNumber: uomInfo.MustBeWholeNumber == 1,
+		},
+	}
+
+	// 返回成功响应
+	return rpc.ApiSuccessWithData("获取单位信息成功", resp), nil
+}
+
 // SaveUom 保存单位信息
 func (*Controller) SaveUom(ctx context.Context, req *item.UomInfo) (*api.ResponseInfo, error) {
 	if req.UomName == "" {

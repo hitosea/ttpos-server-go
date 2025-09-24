@@ -227,7 +227,7 @@ func (h *SupplierHandler) CheckCodeExists(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// SyncSupplier 同步供应商
+// Sync 同步供应商
 // @Summary 同步供应商
 // @Tags 商家端.供应商档案
 // @Accept json
@@ -235,9 +235,9 @@ func (h *SupplierHandler) CheckCodeExists(c *gin.Context) {
 // @Security JwtToken
 // @Success 200 {object} dto.Response "成功"
 // @Router /shop/supplier/sync [get]
-func (h *SupplierHandler) SyncSupplier(c *gin.Context) {
+func (h *SupplierHandler) Sync(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	err := h.supplierSrv.SyncSupplier(ctx)
+	err := h.supplierSrv.Sync(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -275,6 +275,6 @@ func RegisterSupplierHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		privateApi.DELETE("/supplier/delete", wrapper.DeleteSupplier)
 		privateApi.GET("/supplier/name_exists", wrapper.CheckNameExists)
 		privateApi.GET("/supplier/code_exists", wrapper.CheckCodeExists)
-		privateApi.GET("/supplier/sync", wrapper.SyncSupplier)
+		privateApi.GET("/supplier/sync", wrapper.Sync)
 	}
 }

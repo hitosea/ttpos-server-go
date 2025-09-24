@@ -67,7 +67,7 @@ class Erpnext extends Controller
             empty($param['uuid']) ||
             !isset($param['erpnext_site_code']) ||
             empty($param['erpnext_company_abbr']) ||
-            !isset($param['headquarter_uuid']) ||
+            !isset($param['headquarter_abbr']) ||
             empty($param['password'])
         ) {
             return $this->renderError('参数错误');
@@ -102,7 +102,7 @@ class Erpnext extends Controller
             'site_code' => $param['erpnext_site_code'],
             'company_abbr' => $param['erpnext_company_abbr'],
             'company_uuid' => $param['uuid'],
-            'headquarter_uuid' => $param['headquarter_uuid'],
+            'headquarter_abbr' => $param['headquarter_abbr'],
         ];
         $res = HttpHelp::postRequest('http://nginx/api/v1/admin/erpnext/shop/init', json_encode($params), [
             'X-API-KEY: ' . env('JWT_SECRET'),
@@ -131,7 +131,6 @@ class Erpnext extends Controller
      */
     function siteCode()
     {
-        // TODO 增加总部headquarter_uuid字段
         $erpnextSite = Setting::where("key", "erpnext_site")->find();
         return $this->renderSuccess('', ['list' => $erpnextSite->values]);
     }

@@ -26,10 +26,13 @@ type IWarehouseInOutLogRepo interface {
 	// 条件查询选项
 	WhereWarehouseUuid(warehouseUuid uint64) DBOption
 	WhereMaterialUuid(materialUuid uint64) DBOption
+	WhereMaterialCategoryUuids(materialCategoryUuids []uint64) DBOption
+	WhereSupplierUuids(supplierUuids []uint64) DBOption
 	WhereOrderNo(orderNo string) DBOption
 	WhereLogType(logType int) DBOption
 	WhereScene(scene int) DBOption
 	WhereCreateTimeBetween(startTime, endTime int) DBOption
+	WhereMaterialNameLike(keyword string) DBOption // 根据物品名称模糊查询
 	OrderByCreateTime(desc bool) DBOption
 }
 
@@ -77,19 +80,33 @@ func (r *WarehouseInOutLogRepoImpl) GetByUuid(uuid uint64, opts ...DBOption) (*m
 func (r *WarehouseInOutLogRepoImpl) GetListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.WarehouseInOutLog, int64, error) {
 	var warehouseLogs []model.WarehouseInOutLog
 	var total int64
-	query := r.db.Model(&model.WarehouseInOutLog{}).Scopes(NotDeleted)
+
+	// 构建基础查询，包含联表和预加载
+	query := r.db.Model(&model.WarehouseInOutLog{}).
+		Scopes(NotDeleted).
+		Joins("LEFT JOIN ttpos_material m ON m.uuid = ttpos_warehouse_in_out_log.material_uuid").
+		Preload("Material.MultiLanguageName").
+		Preload("Supplier").
+		Preload("Warehouse.MultiLanguageName")
+
 	// 应用查询选项
 	for _, opt := range opts {
 		query = opt(query)
 	}
-	// 获取总数
+
+	// 计算总数
 	err := query.Count(&total).Error
 	if err != nil {
 		return nil, 0, err
 	}
+
 	// 分页查询
 	offset := (pageNo - 1) * pageSize
-	err = query.Offset(offset).Limit(pageSize).Find(&warehouseLogs).Error
+	err = query.Order("create_time DESC").
+		Offset(offset).
+		Limit(pageSize).
+		Find(&warehouseLogs).Error
+
 	return warehouseLogs, total, err
 }
 
@@ -169,6 +186,13 @@ func (r *WarehouseInOutLogRepoImpl) WhereMaterialUuid(materialUuid uint64) DBOpt
 	}
 }
 
+// WhereMaterialCategoryUuids 物料分类UUID列表条件
+func (r *WarehouseInOutLogRepoImpl) WhereMaterialCategoryUuids(materialCategoryUuids []uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("m.category_uuid IN ?", materialCategoryUuids)
+	}
+}
+
 // WhereOrderNo 单据编号条件
 func (r *WarehouseInOutLogRepoImpl) WhereOrderNo(orderNo string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
@@ -204,5 +228,20 @@ func (r *WarehouseInOutLogRepoImpl) OrderByCreateTime(desc bool) DBOption {
 			return db.Order("create_time DESC")
 		}
 		return db.Order("create_time ASC")
+	}
+}
+
+// WhereSupplierUuids 供应商UUID列表条件
+func (r *WarehouseInOutLogRepoImpl) WhereSupplierUuids(supplierUuids []uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("supplier_uuid IN ?", supplierUuids)
+	}
+}
+
+// WhereMaterialNameLike 根据物品名称模糊查询
+func (r *WarehouseInOutLogRepoImpl) WhereMaterialNameLike(keyword string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("(m.name LIKE ? OR m.code LIKE ? OR m.barcode_value LIKE ?)",
+			"%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%")
 	}
 }

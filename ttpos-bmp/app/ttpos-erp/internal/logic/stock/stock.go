@@ -32,7 +32,7 @@ func (s *sStock) GetUomList(ctx context.Context, req *item.GetUomListReq) (res *
 	filters := s.buildUomListFilters(ctx, req)
 
 	// 查询单位列表
-	uomList, err := s.queryUomList(ctx, filters)
+	uomList, err := s.queryUomList(ctx, filters, req)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "查询单位列表失败")
 	}
@@ -76,7 +76,7 @@ func (s *sStock) buildUomListFilters(ctx context.Context, req *item.GetUomListRe
 }
 
 // queryUomList 执行单位列表查询
-func (s *sStock) queryUomList(ctx context.Context, filters [][]string) ([]*item.UomInfo, error) {
+func (s *sStock) queryUomList(ctx context.Context, filters [][]string, req *item.GetUomListReq) ([]*item.UomInfo, error) {
 	resp, err := service.Document().List(ctx, &erp.ErpReq{
 		DocType: "UOM",
 	}, &erp.RequestParams{
@@ -99,7 +99,32 @@ func (s *sStock) queryUomList(ctx context.Context, filters [][]string) ([]*item.
 	uomList := make([]*item.UomInfo, 0)
 	dataArray := j.GetJsons("data")
 
+	subCompanyName := ""
+	if len(req.SubCompanyAbbr) > 0 {
+		subCompanyName, err = service.Company().GetCompanyNameWithAbbr(ctx, req.SubCompanyAbbr)
+		if err != nil {
+			return nil, gerror.Wrapf(err, "获取子公司名称失败,companyAbbr:%s", req.SubCompanyAbbr)
+		}
+	}
 	for _, uom := range dataArray {
+		//获取当前item 的所有 Item Permission List 判断是否有权限使用, 列表查询目前不支持 表格字段查询，只能每次遍历物品查询 对应的 custom_permission_rule
+		if len(req.SubCompanyAbbr) > 0 {
+			uomInfo, err := s.GetUom(ctx, &item.GetUomReq{
+				UomName: uom.Get("name").String(),
+			})
+			if err != nil {
+				g.Log().Errorf(ctx, "获取单位信息失败,uomName:%s,err:%v", uom.Get("name").String(), err)
+				continue // 获取单位信息失败，跳过该单位
+			}
+			hasPermission, err := service.Permission().CheckPermission(ctx, uomInfo.CustomPermissionRule, subCompanyName)
+			if err != nil {
+				g.Log().Errorf(ctx, "检查单位权限失败,uomName:%s,err:%v", uom.Get("name").String(), err)
+				continue // 检查权限失败，跳过该单位
+			}
+			if !hasPermission {
+				continue // 当前子公司无权限，跳过该单位
+			}
+		}
 		uomInfo := &item.UomInfo{
 			UomName:           uom.Get("name").String(),
 			AliasName:         uom.Get("custom_alias").String(),
@@ -549,6 +574,38 @@ func (s *sStock) GetMaterialRequestList(ctx context.Context, req *stock.GetMater
 		})
 	}
 	return
+}
+
+// GetUom 根据单位名称获取单个单位详细信息
+// 参数：ctx 上下文，req 包含单位名称
+// 返回：单位详细信息，错误信息
+func (s *sStock) GetUom(ctx context.Context, req *item.GetUomReq) (res *erp.UOM, err error) {
+	// 参数验证
+	if len(req.UomName) == 0 {
+		return nil, gerror.New("单位名称不能为空")
+	}
+
+	// 查询单位信息
+	resp, err := service.Document().Get(ctx, &erp.ErpReq{
+		DocType: "UOM",
+		Name:    req.UomName,
+	}, nil)
+
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询单位信息失败")
+	}
+
+	// 解析响应数据
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析单位信息响应失败")
+	}
+
+	// 转换为单位信息结构体
+	uomInfo := &erp.UOM{}
+	gconv.Structs(j.GetJson("data"), &uomInfo)
+
+	return uomInfo, nil
 }
 
 // GetItemAttribute 根据属性名称获取单个属性详细信息
