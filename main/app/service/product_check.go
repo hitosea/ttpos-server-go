@@ -20,6 +20,7 @@ import (
 type IProductCheckSrv interface {
 	CheckProductType(typ int) error                                                                                             // 检查商品类型
 	CheckProductName(ctx context.Context, uuid uint64, localeName dto.LocaleResponse) error                                     // 检查商品名称
+	CheckMaterialName(ctx context.Context, uuid uint64, localeName dto.LocaleResponse) error                                    // 检查物品名称
 	CheckProductCategory(db *gorm.DB, categoryUuid uint64) error                                                                // 检查商品分类
 	CheckProductUnique(db *gorm.DB, uuid uint64) error                                                                          // 检查商品唯一性
 	CheckProductFlavor(db *gorm.DB, flavors []CheckProductFlavorParam) (*CheckProductFlavorResult, error)                       // 检查商品规格
@@ -78,6 +79,28 @@ func (s *productCheckSrv) CheckProductName(ctx context.Context, uuid uint64, loc
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
 		Uuid:   uuid,
 		Source: constant.CheckNameSourceProduct,
+		Names:  checkService.MakeCheckNameList(ctx, localeName),
+	})
+	if exists {
+		return errors.New("名称已存在")
+	}
+	return nil
+}
+
+// 检查商品名称
+func (s *productCheckSrv) CheckMaterialName(ctx context.Context, uuid uint64, localeName dto.LocaleResponse) error {
+	// 物品名称
+	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+	if !localeName.CheckRequiredLocale(storeLanguages) {
+		return errors.New("名称不能为空")
+	}
+	if !localeName.CheckLenLocal(storeLanguages, 150) {
+		return errors.New("名称长度不能超过150")
+	}
+	checkService := NewCheckNameSrv(s.dbm)
+	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
+		Uuid:   uuid,
+		Source: constant.CheckNameSourceMaterial,
 		Names:  checkService.MakeCheckNameList(ctx, localeName),
 	})
 	if exists {

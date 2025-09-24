@@ -714,7 +714,7 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 
 	// 检查物品名称
 	productCheckSrv := NewProductCheckSrv(s.dbm, s.localeSrv, s.settingSrv)
-	if err := productCheckSrv.CheckProductName(ctx, request.Uuid, request.LocaleName); err != nil {
+	if err := productCheckSrv.CheckMaterialName(ctx, request.Uuid, request.LocaleName); err != nil {
 		return errors.WithMessage(err, "检查物品名称失败")
 	}
 
