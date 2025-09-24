@@ -16,4 +16,9 @@ type WarehouseInOutLog struct {
 	Amount               float64 `json:"amount" gorm:"type:decimal(22,4);default:0;comment:金额,单价*数量"`
 	SupplierUuid         uint64  `json:"supplier_uuid" gorm:"type:bigint;default:0;comment:供应商ID"`
 	OrderNo              string  `json:"order_no" gorm:"type:varchar(255);default:'';comment:单据编号"`
+
+	// 关联模型
+	Material  *Material  `gorm:"foreignKey:MaterialUuid;references:Uuid" json:"material,omitempty"`
+	Supplier  *Supplier  `gorm:"foreignKey:SupplierUuid;references:Uuid" json:"supplier,omitempty"`
+	Warehouse *Warehouse `gorm:"foreignKey:WarehouseUuid;references:Uuid" json:"warehouse,omitempty"`
 }

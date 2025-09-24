@@ -35,6 +35,7 @@ type WarehouseListReq struct {
 
 // GetWarehouseInOutListReq 获取仓库出入库明细列表请求
 type GetWarehouseInOutListReq struct {
+	dto.PageReq
 	Keyword               string   `json:"keyword" form:"keyword"`                                 // 关键字, 物品名称、物品编码、物品条形码
 	StartTime             int64    `json:"start_time" form:"start_time"`                           // 日期，开始时间
 	EndTime               int64    `json:"end_time" form:"end_time"`                               // 日期，结束时间

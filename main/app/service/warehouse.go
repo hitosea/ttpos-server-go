@@ -435,6 +435,82 @@ func (s *warehouseSrv) buildWarehouseResp(warehouse model.Warehouse) resp.Wareho
 	}
 }
 
+// buildWarehouseInOutResp 构建仓库出入库明细响应
+func (s *warehouseSrv) buildWarehouseInOutResp(log model.WarehouseInOutLog) resp.WarehouseInOutResp {
+	// 获取物品信息
+	var materialName dto.LocaleResponse
+	var materialCode, materialBarcode string
+	var materialCategoryUuid uint64
+	if log.Material != nil {
+		if log.Material.MultiLanguageName.Uuid != 0 {
+			materialName = log.Material.MultiLanguageName.GetNames()
+		}
+		materialCode = log.Material.Code
+		materialBarcode = log.Material.BarcodeValue
+		materialCategoryUuid = log.Material.CategoryUuid
+	}
+
+	// 获取供应商信息
+	var supplierName dto.LocaleResponse
+	if log.Supplier != nil {
+		supplierName = dto.LocaleResponse{
+			ZH:   log.Supplier.Name,
+			EN:   log.Supplier.Name,
+			TH:   log.Supplier.Name,
+			ZHTW: log.Supplier.Name,
+			JA:   log.Supplier.Name,
+			KO:   log.Supplier.Name,
+			MY:   log.Supplier.Name,
+			TR:   log.Supplier.Name,
+			SV:   log.Supplier.Name,
+		}
+	}
+
+	// 获取仓库信息
+	var warehouseName dto.LocaleResponse
+	if log.Warehouse != nil && log.Warehouse.MultiLanguageName != nil {
+		warehouseName = log.Warehouse.MultiLanguageName.GetNames()
+	}
+
+	// 转换类型
+	typeStr := ""
+	switch log.LogType {
+	case 0:
+		typeStr = "purchase"
+	case 1:
+		typeStr = "sale"
+	case 2:
+		typeStr = "delivery"
+	}
+
+	// 格式化日期
+	date := ""
+	if log.CreateTime > 0 {
+		date = time.Unix(log.CreateTime, 0).Format("2006-01-02")
+	}
+
+	return resp.WarehouseInOutResp{
+		Uuid:    log.Uuid,
+		OrderNo: log.OrderNo,
+		Type:    typeStr,
+		Date:    date,
+		Num:     int(log.Num), // 转换为整数显示
+		Amount:  log.Amount,
+		// 物品信息
+		MaterialUuid:         log.MaterialUuid,
+		MaterialName:         materialName,
+		MaterialCode:         materialCode,
+		MaterialBarcode:      materialBarcode,
+		MaterialCategoryUuid: materialCategoryUuid,
+		// 供应商信息
+		SupplierUuid: log.SupplierUuid,
+		SupplierName: supplierName,
+		// 仓库信息
+		WarehouseUuid: log.WarehouseUuid,
+		WarehouseName: warehouseName,
+	}
+}
+
 func (s *warehouseSrv) SetDefaultWarehouse(ctx context.Context, req req.SetDefaultWarehouseReq) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	warehouseRepo := repository.NewWarehouseRepo(db)
@@ -457,8 +533,56 @@ func (s *warehouseSrv) SetDefaultWarehouse(ctx context.Context, req req.SetDefau
 	return nil
 }
 
+// GetWarehouseInOutList 获取仓库出入库明细列表
 func (s *warehouseSrv) GetWarehouseInOutList(ctx context.Context, req req.GetWarehouseInOutListReq) (resp.WarehouseInOutListResp, error) {
-	return resp.WarehouseInOutListResp{}, nil
+	db := s.dbm.GetDB(ctx.GetDbId())
+	warehouseInOutLogRepo := repository.NewWarehouseInOutLogRepo(db)
+	// 构建查询条件
+	opts := []repository.DBOption{}
+	// 物品名称
+	if req.Keyword != "" {
+		opts = append(opts, warehouseInOutLogRepo.WhereMaterialNameLike(req.Keyword))
+	}
+	// 时间区间
+	if req.StartTime != 0 && req.EndTime != 0 {
+		opts = append(opts, warehouseInOutLogRepo.WhereCreateTimeBetween(int(req.StartTime), int(req.EndTime)))
+	}
+	// 类型
+	if req.Type != "" {
+		opts = append(opts, warehouseInOutLogRepo.WhereLogType(constant.WarehouseInOutLogTypeToInt(req.Type)))
+	}
+	// 物料分类ID列表
+	if len(req.MaterialCategoryUuids) > 0 {
+		opts = append(opts, warehouseInOutLogRepo.WhereMaterialCategoryUuids(req.MaterialCategoryUuids))
+	}
+	// 供应商ID列表
+	if len(req.SupplierUuids) > 0 {
+		opts = append(opts, warehouseInOutLogRepo.WhereSupplierUuids(req.SupplierUuids))
+	}
+	// 单据编号
+	if req.OrderNo != "" {
+		opts = append(opts, warehouseInOutLogRepo.WhereOrderNo(req.OrderNo))
+	}
+
+	warehouseInOutLogs, total, err := warehouseInOutLogRepo.GetListWithPagination(req.PageNo, req.PageSize, opts...)
+	if err != nil {
+		return resp.WarehouseInOutListResp{}, errors.WithMessage(err, "获取仓库出入库明细列表失败")
+	}
+
+	// 构建响应数据
+	list := make([]resp.WarehouseInOutResp, 0, len(warehouseInOutLogs))
+	for _, log := range warehouseInOutLogs {
+		list = append(list, s.buildWarehouseInOutResp(log))
+	}
+
+	return resp.WarehouseInOutListResp{
+		List: list,
+		Meta: dto.PageResponse{
+			PageNo:   req.PageNo,
+			PageSize: req.PageSize,
+			Total:    total,
+		},
+	}, nil
 }
 
 func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {

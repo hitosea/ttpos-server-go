@@ -51,3 +51,28 @@ const (
 	WarehouseTypeNormal  = "normal"
 	WarehouseTypeTransit = "transit"
 )
+
+// WarehouseInOutLogType 出入库日志类型
+const (
+	WarehouseInOutLogTypePurchase = "purchase" // 采购入库 0
+	WarehouseInOutLogTypeSale     = "sale"     // 销售出库 1
+	WarehouseInOutLogTypeDelivery = "delivery" // 发货出库 2
+)
+
+const (
+	WarehouseInOutLogTypePurchaseInt = 0 // 采购入库 0
+	WarehouseInOutLogTypeSaleInt     = 1 // 销售出库 1
+	WarehouseInOutLogTypeDeliveryInt = 2 // 发货出库 2
+)
+
+func WarehouseInOutLogTypeToInt(typ string) int {
+	switch typ {
+	case WarehouseInOutLogTypePurchase:
+		return 0
+	case WarehouseInOutLogTypeSale:
+		return 1
+	case WarehouseInOutLogTypeDelivery:
+		return 2
+	}
+	return -1
+}
