@@ -59,7 +59,8 @@ type BuyingServiceClient interface {
 	// 参数：供应商名称
 	// 返回：删除结果
 	DeleteSupplier(ctx context.Context, in *DeleteSupplierReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
-	// 获取供应商列表（带分页和过滤）
+	// 获取供应商列表
+	// 输入条件如果未包含company 则会返回全量数据，如需要只显示无company 约束的数据，需要自行过滤结果中 company 为空的数据
 	// 参数：过滤条件和分页参数
 	// 返回：供应商列表
 	ListSuppliers(ctx context.Context, in *ListSuppliersReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
@@ -241,7 +242,8 @@ type BuyingServiceServer interface {
 	// 参数：供应商名称
 	// 返回：删除结果
 	DeleteSupplier(context.Context, *DeleteSupplierReq) (*api.ResponseInfo, error)
-	// 获取供应商列表（带分页和过滤）
+	// 获取供应商列表
+	// 输入条件如果未包含company 则会返回全量数据，如需要只显示无company 约束的数据，需要自行过滤结果中 company 为空的数据
 	// 参数：过滤条件和分页参数
 	// 返回：供应商列表
 	ListSuppliers(context.Context, *ListSuppliersReq) (*api.ResponseInfo, error)

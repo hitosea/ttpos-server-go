@@ -37,10 +37,12 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ItemServiceClient interface {
 	// 获取物品列表
+	// 输入条件如果未包含company 则会返回全量数据，如需要只显示无company 约束的数据，需要自行过滤结果中 company 为空的数据
 	// 参数：查询条件
 	// 返回：物品列表，最大9999
 	GetItemList(ctx context.Context, in *GetItemListReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 	// 获取单位列表
+	// 输入条件如果未包含company 则会返回全量数据，如需要只显示无company 约束的数据，需要自行过滤结果中 company 为空的数据
 	// 参数：查询条件
 	// 返回：单位列表
 	GetUomList(ctx context.Context, in *GetUomListReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
@@ -177,10 +179,12 @@ func (c *itemServiceClient) GetItem(ctx context.Context, in *GetItemReq, opts ..
 // for forward compatibility.
 type ItemServiceServer interface {
 	// 获取物品列表
+	// 输入条件如果未包含company 则会返回全量数据，如需要只显示无company 约束的数据，需要自行过滤结果中 company 为空的数据
 	// 参数：查询条件
 	// 返回：物品列表，最大9999
 	GetItemList(context.Context, *GetItemListReq) (*api.ResponseInfo, error)
 	// 获取单位列表
+	// 输入条件如果未包含company 则会返回全量数据，如需要只显示无company 约束的数据，需要自行过滤结果中 company 为空的数据
 	// 参数：查询条件
 	// 返回：单位列表
 	GetUomList(context.Context, *GetUomListReq) (*api.ResponseInfo, error)

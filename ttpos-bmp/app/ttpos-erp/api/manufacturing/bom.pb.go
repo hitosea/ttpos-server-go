@@ -192,14 +192,15 @@ func (x *BomItem) GetUom() string {
 }
 
 type GetBomListReq struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	CompanyAbbr   string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，必填"` // 公司简称，必填
-	Branch        string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                              // 分支名称，可选
-	ItemCode      string                 `protobuf:"bytes,3,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，可选"`          // 物品编码，可选
-	IsActive      bool                   `protobuf:"varint,4,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty" dc:"是否激活 ，可选"`        //是否激活 ，可选
-	IsDefault     bool                   `protobuf:"varint,5,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty" dc:"是否默认，可选"`      //是否默认，可选
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	CompanyAbbr    string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，必填"`                                                                             // 公司简称，必填
+	Branch         string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                                                                          // 分支名称，可选
+	ItemCode       string                 `protobuf:"bytes,3,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，可选"`                                                                                      // 物品编码，可选
+	IsActive       bool                   `protobuf:"varint,4,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty" dc:"是否激活 ，可选"`                                                                                    //是否激活 ，可选
+	IsDefault      bool                   `protobuf:"varint,5,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty" dc:"是否默认，可选"`                                                                                  //是否默认，可选
+	SubCompanyAbbr string                 `protobuf:"bytes,6,opt,name=sub_company_abbr,json=subCompanyAbbr,proto3" json:"sub_company_abbr,omitempty" dc:"门店公司简称，可选。  sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。"` // 门店公司简称，可选。  sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *GetBomListReq) Reset() {
@@ -267,6 +268,13 @@ func (x *GetBomListReq) GetIsDefault() bool {
 	return false
 }
 
+func (x *GetBomListReq) GetSubCompanyAbbr() string {
+	if x != nil {
+		return x.SubCompanyAbbr
+	}
+	return ""
+}
+
 type GetBomListResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	BomList       []*BomInfo             `protobuf:"bytes,1,rep,name=bom_list,json=bomList,proto3" json:"bom_list,omitempty" dc:"物品列表"` // 物品列表
@@ -311,6 +319,94 @@ func (x *GetBomListResp) GetBomList() []*BomInfo {
 	return nil
 }
 
+type GetBomReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	BomName       string                 `protobuf:"bytes,1,opt,name=bom_name,json=bomName,proto3" json:"bom_name,omitempty" dc:"BOM名称，必填"` // BOM名称，必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetBomReq) Reset() {
+	*x = GetBomReq{}
+	mi := &file_manufacturing_bom_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetBomReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetBomReq) ProtoMessage() {}
+
+func (x *GetBomReq) ProtoReflect() protoreflect.Message {
+	mi := &file_manufacturing_bom_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetBomReq.ProtoReflect.Descriptor instead.
+func (*GetBomReq) Descriptor() ([]byte, []int) {
+	return file_manufacturing_bom_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetBomReq) GetBomName() string {
+	if x != nil {
+		return x.BomName
+	}
+	return ""
+}
+
+type GetBomResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	BomInfo       *BomInfo               `protobuf:"bytes,1,opt,name=bom_info,json=bomInfo,proto3" json:"bom_info,omitempty" dc:"BOM信息"` // BOM信息
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetBomResp) Reset() {
+	*x = GetBomResp{}
+	mi := &file_manufacturing_bom_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetBomResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetBomResp) ProtoMessage() {}
+
+func (x *GetBomResp) ProtoReflect() protoreflect.Message {
+	mi := &file_manufacturing_bom_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetBomResp.ProtoReflect.Descriptor instead.
+func (*GetBomResp) Descriptor() ([]byte, []int) {
+	return file_manufacturing_bom_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *GetBomResp) GetBomInfo() *BomInfo {
+	if x != nil {
+		return x.BomInfo
+	}
+	return nil
+}
+
 type SaveBomReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"商品编码，必填"`          //商品编码，必填
@@ -326,7 +422,7 @@ type SaveBomReq struct {
 
 func (x *SaveBomReq) Reset() {
 	*x = SaveBomReq{}
-	mi := &file_manufacturing_bom_proto_msgTypes[4]
+	mi := &file_manufacturing_bom_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -338,7 +434,7 @@ func (x *SaveBomReq) String() string {
 func (*SaveBomReq) ProtoMessage() {}
 
 func (x *SaveBomReq) ProtoReflect() protoreflect.Message {
-	mi := &file_manufacturing_bom_proto_msgTypes[4]
+	mi := &file_manufacturing_bom_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -351,7 +447,7 @@ func (x *SaveBomReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveBomReq.ProtoReflect.Descriptor instead.
 func (*SaveBomReq) Descriptor() ([]byte, []int) {
-	return file_manufacturing_bom_proto_rawDescGZIP(), []int{4}
+	return file_manufacturing_bom_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *SaveBomReq) GetItemCode() string {
@@ -412,7 +508,7 @@ type SaveBomResp struct {
 
 func (x *SaveBomResp) Reset() {
 	*x = SaveBomResp{}
-	mi := &file_manufacturing_bom_proto_msgTypes[5]
+	mi := &file_manufacturing_bom_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -424,7 +520,7 @@ func (x *SaveBomResp) String() string {
 func (*SaveBomResp) ProtoMessage() {}
 
 func (x *SaveBomResp) ProtoReflect() protoreflect.Message {
-	mi := &file_manufacturing_bom_proto_msgTypes[5]
+	mi := &file_manufacturing_bom_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -437,7 +533,7 @@ func (x *SaveBomResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveBomResp.ProtoReflect.Descriptor instead.
 func (*SaveBomResp) Descriptor() ([]byte, []int) {
-	return file_manufacturing_bom_proto_rawDescGZIP(), []int{5}
+	return file_manufacturing_bom_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *SaveBomResp) GetBomName() string {
@@ -466,16 +562,22 @@ const file_manufacturing_bom_proto_rawDesc = "" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x12\n" +
 	"\x04rate\x18\x02 \x01(\x01R\x04rate\x12\x10\n" +
 	"\x03qty\x18\x03 \x01(\x01R\x03qty\x12\x10\n" +
-	"\x03uom\x18\x04 \x01(\tR\x03uom\"\xa3\x01\n" +
+	"\x03uom\x18\x04 \x01(\tR\x03uom\"\xcd\x01\n" +
 	"\rGetBomListReq\x12!\n" +
 	"\fcompany_abbr\x18\x01 \x01(\tR\vcompanyAbbr\x12\x16\n" +
 	"\x06branch\x18\x02 \x01(\tR\x06branch\x12\x1b\n" +
 	"\titem_code\x18\x03 \x01(\tR\bitemCode\x12\x1b\n" +
 	"\tis_active\x18\x04 \x01(\bR\bisActive\x12\x1d\n" +
 	"\n" +
-	"is_default\x18\x05 \x01(\bR\tisDefault\"C\n" +
+	"is_default\x18\x05 \x01(\bR\tisDefault\x12(\n" +
+	"\x10sub_company_abbr\x18\x06 \x01(\tR\x0esubCompanyAbbr\"C\n" +
 	"\x0eGetBomListResp\x121\n" +
-	"\bbom_list\x18\x01 \x03(\v2\x16.manufacturing.BomInfoR\abomList\"\xe4\x01\n" +
+	"\bbom_list\x18\x01 \x03(\v2\x16.manufacturing.BomInfoR\abomList\"&\n" +
+	"\tGetBomReq\x12\x19\n" +
+	"\bbom_name\x18\x01 \x01(\tR\abomName\"?\n" +
+	"\n" +
+	"GetBomResp\x121\n" +
+	"\bbom_info\x18\x01 \x01(\v2\x16.manufacturing.BomInfoR\abomInfo\"\xe4\x01\n" +
 	"\n" +
 	"SaveBomReq\x12\x1b\n" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12!\n" +
@@ -487,11 +589,12 @@ const file_manufacturing_bom_proto_rawDesc = "" +
 	"is_default\x18\x06 \x01(\bR\tisDefault\x12,\n" +
 	"\x05items\x18\a \x03(\v2\x16.manufacturing.BomItemR\x05items\"(\n" +
 	"\vSaveBomResp\x12\x19\n" +
-	"\bbom_name\x18\x01 \x01(\tR\abomName2\x84\x01\n" +
+	"\bbom_name\x18\x01 \x01(\tR\abomName2\xbb\x01\n" +
 	"\n" +
 	"BomService\x12=\n" +
 	"\n" +
-	"GetBomList\x12\x1c.manufacturing.GetBomListReq\x1a\x11.erp.ResponseInfo\x127\n" +
+	"GetBomList\x12\x1c.manufacturing.GetBomListReq\x1a\x11.erp.ResponseInfo\x125\n" +
+	"\x06GetBom\x12\x18.manufacturing.GetBomReq\x1a\x11.erp.ResponseInfo\x127\n" +
 	"\aSaveBom\x12\x19.manufacturing.SaveBomReq\x1a\x11.erp.ResponseInfoB+Z)ttpos-bmp/app/ttpos-erp/api/manufacturingb\x06proto3"
 
 var (
@@ -506,29 +609,34 @@ func file_manufacturing_bom_proto_rawDescGZIP() []byte {
 	return file_manufacturing_bom_proto_rawDescData
 }
 
-var file_manufacturing_bom_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_manufacturing_bom_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_manufacturing_bom_proto_goTypes = []any{
 	(*BomInfo)(nil),          // 0: manufacturing.BomInfo
 	(*BomItem)(nil),          // 1: manufacturing.BomItem
 	(*GetBomListReq)(nil),    // 2: manufacturing.GetBomListReq
 	(*GetBomListResp)(nil),   // 3: manufacturing.GetBomListResp
-	(*SaveBomReq)(nil),       // 4: manufacturing.SaveBomReq
-	(*SaveBomResp)(nil),      // 5: manufacturing.SaveBomResp
-	(*api.ResponseInfo)(nil), // 6: erp.ResponseInfo
+	(*GetBomReq)(nil),        // 4: manufacturing.GetBomReq
+	(*GetBomResp)(nil),       // 5: manufacturing.GetBomResp
+	(*SaveBomReq)(nil),       // 6: manufacturing.SaveBomReq
+	(*SaveBomResp)(nil),      // 7: manufacturing.SaveBomResp
+	(*api.ResponseInfo)(nil), // 8: erp.ResponseInfo
 }
 var file_manufacturing_bom_proto_depIdxs = []int32{
 	1, // 0: manufacturing.BomInfo.items:type_name -> manufacturing.BomItem
 	0, // 1: manufacturing.GetBomListResp.bom_list:type_name -> manufacturing.BomInfo
-	1, // 2: manufacturing.SaveBomReq.items:type_name -> manufacturing.BomItem
-	2, // 3: manufacturing.BomService.GetBomList:input_type -> manufacturing.GetBomListReq
-	4, // 4: manufacturing.BomService.SaveBom:input_type -> manufacturing.SaveBomReq
-	6, // 5: manufacturing.BomService.GetBomList:output_type -> erp.ResponseInfo
-	6, // 6: manufacturing.BomService.SaveBom:output_type -> erp.ResponseInfo
-	5, // [5:7] is the sub-list for method output_type
-	3, // [3:5] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	0, // 2: manufacturing.GetBomResp.bom_info:type_name -> manufacturing.BomInfo
+	1, // 3: manufacturing.SaveBomReq.items:type_name -> manufacturing.BomItem
+	2, // 4: manufacturing.BomService.GetBomList:input_type -> manufacturing.GetBomListReq
+	4, // 5: manufacturing.BomService.GetBom:input_type -> manufacturing.GetBomReq
+	6, // 6: manufacturing.BomService.SaveBom:input_type -> manufacturing.SaveBomReq
+	8, // 7: manufacturing.BomService.GetBomList:output_type -> erp.ResponseInfo
+	8, // 8: manufacturing.BomService.GetBom:output_type -> erp.ResponseInfo
+	8, // 9: manufacturing.BomService.SaveBom:output_type -> erp.ResponseInfo
+	7, // [7:10] is the sub-list for method output_type
+	4, // [4:7] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_manufacturing_bom_proto_init() }
@@ -542,7 +650,7 @@ func file_manufacturing_bom_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_manufacturing_bom_proto_rawDesc), len(file_manufacturing_bom_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -164,11 +164,13 @@ message BomItem {
 
 service ItemService {
   // 获取物品列表
+  // 输入条件如果未包含company 则会返回全量数据，如需要只显示无company 约束的数据，需要自行过滤结果中 company 为空的数据
   // 参数：查询条件
   // 返回：物品列表，最大9999
   rpc GetItemList(item.GetItemListReq) returns (erp.ResponseInfo);
 
   // 获取单位列表
+  // 输入条件如果未包含company 则会返回全量数据，如需要只显示无company 约束的数据，需要自行过滤结果中 company 为空的数据
   // 参数：查询条件
   // 返回：单位列表
   rpc GetUomList(item.GetUomListReq) returns (erp.ResponseInfo);

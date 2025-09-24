@@ -31,11 +31,19 @@ message GetBomListReq {
   string item_code = 3;      // 物品编码，可选
   bool is_active = 4;    //是否激活 ，可选
   bool is_default = 5; //是否默认，可选
-  //  string item_name = 4;      // 物品名称，可选，模糊查询
+  string sub_company_abbr = 6; // 门店公司简称，可选。  sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。
 }
 
 message GetBomListResp {
   repeated BomInfo bom_list = 1; // 物品列表
+}
+
+message GetBomReq {
+  string bom_name = 1; // BOM名称，必填
+}
+
+message GetBomResp {
+  BomInfo bom_info = 1; // BOM信息
 }
 
 
@@ -55,9 +63,15 @@ message SaveBomResp {
 
 service BomService {
   // 获取BOM列表
+  // 输入条件如果未包含company 则会返回全量数据，如需要只显示无company 约束的数据，需要自行过滤结果中 company 为空的数据
   // 参数：查询条件
   // 返回：BOM列表
   rpc GetBomList(GetBomListReq) returns (erp.ResponseInfo);
+
+  // 获取单个BOM
+  // 参数：BOM名称
+  // 返回：BOM详情
+  rpc GetBom(GetBomReq) returns (erp.ResponseInfo);
 
   // 保存BOM
   // 参数：BOM信息
