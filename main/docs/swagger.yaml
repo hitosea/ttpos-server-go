@@ -5578,7 +5578,7 @@ definitions:
         type: integer
       purchase_type:
         description: V2.6  采购类型, 1-外部采购 2-内部采购
-        maximum: 1
+        maximum: 2
         minimum: 0
         type: integer
       supplier_erp_code:
@@ -5676,7 +5676,7 @@ definitions:
         type: integer
       purchase_type:
         description: V2.6 采购类型, 1-外部采购 2-内部采购
-        maximum: 1
+        maximum: 2
         minimum: 0
         type: integer
       receive_time_end:
