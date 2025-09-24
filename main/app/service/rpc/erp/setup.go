@@ -57,12 +57,6 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 	if headquarterAbbr != "" {
 		var headquarter model.CompanySetting
 		s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("erpnext_site_code = ? AND erpnext_company_abbr = ?", initShopReq.SiteCode, initShopReq.HeadquarterAbbr).Scopes(repository.NotDeleted).First(&headquarter)
-		if headquarter.Uuid == 0 {
-			return resp.InitShopResp{}, errors.New("总部不存在")
-		}
-		if headquarter.ErpnextCompanyAbbr == "" {
-			return resp.InitShopResp{}, errors.New("总部未授权erp")
-		}
 		headquarterUuid = headquarter.Uuid
 	}
 
