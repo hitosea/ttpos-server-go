@@ -1327,11 +1327,18 @@ func (h *DeskHandler) OrderPaymentFinish(c *gin.Context) {
 				helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 				return
 			}
-			productNames := make([]string, 0)
+			productList := make([]resp.Product, 0)
 			for _, productInfo := range productInfos {
-				productNames = append(productNames, productInfo.ProductName.GetLocale(ctx.GetLanguage()))
+				productList = append(productList, resp.Product{
+					LocaleName: productInfo.ProductName,
+				})
 			}
-			helper.ErrorWithDetail(c, constant.CodeOrderCheckProductStockZero, fmt.Errorf("%s:%s", i18n.Translate(ctx.GetLanguage(), "以下商品库存不足，请删除后再下单"), strings.Join(productNames, ",")))
+			orderCheckRes := &resp.OrderCheckRes{
+				Products: &resp.CartProductList{
+					List: productList,
+				},
+			}
+			helper.FailWithData(c, constant.CodeOrderCheckProductStockZero, orderCheckRes, nil, i18n.Translate(ctx.GetLanguage(), "以下商品库存不足，请删除后再下单"))
 			return
 		}
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -1378,11 +1385,18 @@ func (h *DeskHandler) OrderFree(c *gin.Context) {
 				helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 				return
 			}
-			productNames := make([]string, 0)
+			productList := make([]resp.Product, 0)
 			for _, productInfo := range productInfos {
-				productNames = append(productNames, productInfo.ProductName.GetLocale(ctx.GetLanguage()))
+				productList = append(productList, resp.Product{
+					LocaleName: productInfo.ProductName,
+				})
 			}
-			helper.ErrorWithDetail(c, constant.CodeOrderCheckProductStockZero, fmt.Errorf("%s:%s", i18n.Translate(ctx.GetLanguage(), "以下商品库存不足，请删除后再下单"), strings.Join(productNames, ",")))
+			orderCheckRes := &resp.OrderCheckRes{
+				Products: &resp.CartProductList{
+					List: productList,
+				},
+			}
+			helper.FailWithData(c, constant.CodeOrderCheckProductStockZero, orderCheckRes, nil, i18n.Translate(ctx.GetLanguage(), "以下商品库存不足，请删除后再下单"))
 			return
 		}
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
