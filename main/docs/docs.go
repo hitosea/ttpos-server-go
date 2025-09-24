@@ -33675,7 +33675,7 @@ const docTemplate = `{
                 "purchase_type": {
                     "description": "V2.6  采购类型, 1-外部采购 2-内部采购",
                     "type": "integer",
-                    "maximum": 1,
+                    "maximum": 2,
                     "minimum": 0
                 },
                 "supplier_erp_code": {
@@ -33799,7 +33799,7 @@ const docTemplate = `{
                 "purchase_type": {
                     "description": "V2.6 采购类型, 1-外部采购 2-内部采购",
                     "type": "integer",
-                    "maximum": 1,
+                    "maximum": 2,
                     "minimum": 0
                 },
                 "receive_time_end": {
