@@ -38,6 +38,14 @@ type GetAttributeListReq struct {
 	AliasName     string `form:"alias_name" json:"alias_name" binding:"required"`         // 属性别名
 }
 
+type GetErpFlavorListReq struct {
+	SiteCode      string `form:"site_code" json:"site_code" binding:"required"`           // 站点编码
+	Branch        string `form:"branch" json:"branch" binding:"required"`                 // 分支名称
+	CompanyAbbr   string `form:"company_abbr" json:"company_abbr" binding:"required"`     // 公司缩写编码
+	AttributeName string `form:"attribute_name" json:"attribute_name" binding:"required"` // 属性名称
+	AliasName     string `form:"alias_name" json:"alias_name" binding:"required"`         // 属性别名
+}
+
 type SyncUomAndAttributeReq struct {
 	SiteCode string `form:"site_code" json:"site_code" binding:"required"` // 站点编码
 }

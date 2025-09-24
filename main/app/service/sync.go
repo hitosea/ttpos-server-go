@@ -102,6 +102,11 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 			logger.Logger.Error("单位同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 		}
 
+		// 3 规格
+		if err := s.productSrv.SyncProductFlavor(ctx); err != nil {
+			logger.Logger.Error("规格同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
+		}
+
 		// TODO 等待erp接口 4.1 属性组
 		// if err := s.productSrv.SyncAttributeGroup(ctx); err != nil {
 		// 	logger.Logger.Error("属性组同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))

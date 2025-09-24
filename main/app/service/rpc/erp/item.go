@@ -393,3 +393,51 @@ func (s *erpSrv) SaveAttribute(ctx context.Context, saveAttributeReq req.SaveAtt
 
 	return nil
 }
+
+// GetFlavorList 获取规格列表
+func (s *erpSrv) GetFlavorList(ctx context.Context, params req.GetErpFlavorListReq) (resp.GetErpFlavorListResp, error) {
+	var listResp resp.GetErpFlavorListResp
+	client, conn, err := NewErpItemClient()
+	if err != nil {
+		return listResp, err
+	}
+	defer conn.Close()
+	req := &item.GetAttributeListReq{
+		Branch:        params.Branch,
+		CompanyAbbr:   params.CompanyAbbr,
+		AttributeName: params.AttributeName,
+		AliasName:     params.AliasName,
+	}
+	result, err := client.GetAttributeList(WithSiteCode(ctx, params.SiteCode), req)
+	if err != nil {
+		return listResp, err
+	}
+
+	if result.GetCode() != "0" || result.Data == nil {
+		logger.Logger.Error("GetFlavorList", zap.String("code", result.GetCode()), zap.String("result_message", result.GetMessage()))
+		return listResp, errors.New(result.GetMessage())
+	}
+	response := &item.GetAttributeListResp{}
+	if err := result.Data.UnmarshalTo(response); err != nil {
+		return listResp, err
+	}
+
+	for _, attribute := range response.AttributeList {
+		valueList := make([]resp.ErpFlavorValueInfo, 0)
+		for _, attributeValue := range attribute.AttributeValueList {
+			valueList = append(valueList, resp.ErpFlavorValueInfo{
+				AttributeValue: attributeValue.AttributeValue,
+				Abbr:           attributeValue.Abbr,
+			})
+		}
+
+		listResp.List = append(listResp.List, resp.ErpFlavorInfo{
+			AttributeName:      attribute.AttributeName,
+			AliasName:          attribute.AliasName,
+			CompanyAbbr:        attribute.CompanyAbbr,
+			Branch:             attribute.Branch,
+			AttributeValueList: valueList,
+		})
+	}
+	return listResp, nil
+}
