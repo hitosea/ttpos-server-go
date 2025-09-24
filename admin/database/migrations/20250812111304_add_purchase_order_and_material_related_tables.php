@@ -113,7 +113,7 @@ class AddPurchaseOrderAndMaterialRelatedTables extends Migrator
                 ->addColumn('uuid', 'biginteger', ['signed' => false,'default' => 0,'comment' => '采购申请ID'])
                 ->addColumn('order_no', 'string', ['limit' => 255, 'default' => '', 'comment' => '单号'])
                 ->addColumn('order_type', 'integer', ['limit' => 10, 'default' => 0, 'comment' => '申请类型, 0-仓库调拨'])
-                ->addColumn('status', 'integer', ['limit' => 10, 'default' => 0, 'comment' => '状态, 0-待提交 1-待审核 2-已通过 3-已驳回 4-部分收货 5-全部收货 6-待总部审核'])
+                ->addColumn('status', 'integer', ['limit' => 10, 'default' => 0, 'comment' => '状态, 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核'])
                 ->addColumn('num', 'decimal', ['precision' => 14, 'scale' => 4, 'default' => 0.0000, 'comment' => '物资数量，每种物品算一个'])
                 ->addColumn('order_time', 'integer', ['signed' => false, 'limit' => 10, 'default' => 0, 'comment' => '单据日期，采购单提交的时间（时间戳）'])
                 ->addColumn('applicant_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '申请人ID'])
