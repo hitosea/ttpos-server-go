@@ -44,6 +44,7 @@ type MaterialDetailResp struct {
 	Status                 int                  `json:"status"`                    // 状态 1-启用 0-停用
 	Valuation              float64              `json:"valuation"`                 // 估值率
 	BarcodeValue           string               `json:"barcode_value"`             // 条形码值
+	InternalCode           string               `json:"internal_code"`             // 内部编码
 	UnitName               string               `json:"unit_name"`                 // 单位名称
 	UnitUuid               uint64               `json:"unit_uuid"`                 // 单位UUID
 	FromUnitUuid           uint64               `json:"from_unit_uuid"`            // 来源单位UUID
