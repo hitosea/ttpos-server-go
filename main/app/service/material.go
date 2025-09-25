@@ -1159,6 +1159,12 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 	if exist, err := materialCategoryRepo.GetMaterialCategoryByName(request.LocaleName.ToJson()); err == nil && exist.Uuid != materialCategory.Uuid {
 		return errors.New("名称已存在")
 	}
+	// 检查物品类别编码是否已存在
+	if request.Code != "" {
+		if exist := materialCategoryRepo.CheckMaterialCategoryCodeExist(request.Code, 0); exist {
+			return errors.New("物品类别编码已存在")
+		}
+	}
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		materialCategoryRepo := repository.NewMaterialRepo(tx)
