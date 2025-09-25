@@ -43,7 +43,7 @@ message ItemInfo {
   string branch = 10; // 分支名称，可选
   string company_abbr = 11; // 公司简称，可选
   string company = 12; // 公司名称，可选
-  string item_specification = 13; // 物品规格，可选 ttpos 传英文过来 多规格商品时必填
+  string item_specification = 13; // 物品规格，可选 ttpos 传过来 多规格商品时必填。 映射到erp上是 item attribute, 这个是产品！设计！的特性！
   repeated UomDetail uoms = 14; // 单位列表，可选
   bool disabled = 15; // 是否禁用，可选
   string classification = 16; // 分类，可选
