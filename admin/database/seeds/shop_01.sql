@@ -888,6 +888,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_material_category` (
     `code` VARCHAR(255) DEFAULT '' COMMENT '原料分类编码',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `sort` INT(10) DEFAULT 0 COMMENT '排序',
+    `headquarter_uuid` bigint(20) unsigned DEFAULT 0 COMMENT '总部Uuid',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
