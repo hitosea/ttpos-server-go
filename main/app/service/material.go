@@ -2142,19 +2142,27 @@ func (s *materialSrv) SyncHeadquarterMaterial(ctx context.Context) error {
 					ConversionRate: uom.ConversionFactor,
 				})
 			}
-			if err := s.AddMaterialByEprItem(copyCtx, req.MaterialAddErpReq{
-				ItemCode:           itemInfo.ItemCode,
-				ItemName:           itemInfo.ItemName,
-				StockUom:           itemInfo.StockUom,
-				Disabled:           itemInfo.Disabled,
-				ValuationRate:      itemInfo.ValuationRate,
-				OpeningStock:       itemInfo.OpeningStock,
-				InternalCode:       itemInfo.InternalCode,
-				Classification:     itemInfo.Classification,
-				ClassificationCode: itemInfo.ClassificationCode,
-				Uoms:               uoms,
-			}); err != nil {
-				return errors.WithMessage(err, "同步总部物品列表失败")
+			existingMaterial, err := repository.NewMaterialRepo(tx).GetMaterialByErpCode(itemInfo.ItemCode)
+			if err != nil {
+				return errors.WithMessage(err, "获取物品详情失败")
+			}
+			if existingMaterial != nil { // 如果物品已存在
+				//  TODO 更新物品
+			} else {
+				if err := s.AddMaterialByEprItem(copyCtx, req.MaterialAddErpReq{
+					ItemCode:           itemInfo.ItemCode,
+					ItemName:           itemInfo.ItemName,
+					StockUom:           itemInfo.StockUom,
+					Disabled:           itemInfo.Disabled,
+					ValuationRate:      itemInfo.ValuationRate,
+					OpeningStock:       itemInfo.OpeningStock,
+					InternalCode:       itemInfo.InternalCode,
+					Classification:     itemInfo.Classification,
+					ClassificationCode: itemInfo.ClassificationCode,
+					Uoms:               uoms,
+				}); err != nil {
+					return errors.WithMessage(err, "同步总部物品列表失败")
+				}
 			}
 		}
 		return nil
