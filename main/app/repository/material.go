@@ -49,6 +49,7 @@ type IMaterialRepo interface {
 	CheckMaterialInternalCodeExist(internalCode string, uuid uint64) bool     // 检查内部编码是否存在
 	CheckMaterialCategoryCodeExist(code string, uuid uint64) bool             // 检查物品类别编码是否存在
 	GetMaterialUuidsByCategoryUuids(categoryUuids []uint64) ([]uint64, error) // 根据分类UUID列表获取物品UUID列表
+	GetMaterialUuidsByKeyword(keyword string) ([]uint64, error)               // 根据关键字获取物品UUID列表
 
 	WithRelatedMaterialList() DBOption
 }
@@ -532,6 +533,14 @@ func (r *MaterialRepoImpl) GetMaterialUuidsByCategoryUuids(categoryUuids []uint6
 	var uuids []uint64
 	if err := r.db.Model(&model.Material{}).Where("category_uuid IN (?)", categoryUuids).Where("delete_time = ?", 0).Pluck("uuid", &uuids).Error; err != nil {
 		return nil, errors.WithMessage(err, "根据分类UUID列表获取物品UUID列表失败")
+	}
+	return uuids, nil
+}
+
+func (r *MaterialRepoImpl) GetMaterialUuidsByKeyword(keyword string) ([]uint64, error) {
+	var uuids []uint64
+	if err := r.db.Model(&model.Material{}).Where("name LIKE ? OR code LIKE ? OR barcode_value LIKE ?", "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%").Where("delete_time = ?", 0).Pluck("uuid", &uuids).Error; err != nil {
+		return nil, errors.WithMessage(err, "根据关键字获取物品UUID列表失败")
 	}
 	return uuids, nil
 }

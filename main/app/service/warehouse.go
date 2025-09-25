@@ -553,8 +553,17 @@ func (s *warehouseSrv) GetWarehouseInOutList(ctx context.Context, req req.GetWar
 	// 构建查询条件
 	opts := []repository.DBOption{}
 	// 物品名称
+	materialUuidsByKeyword := []uint64{}
+	filterByKeyword := false
 	if req.Keyword != "" {
-		opts = append(opts, warehouseInOutLogRepo.WhereMaterialNameLike(req.Keyword))
+		filterByKeyword = true
+		// 从material表模糊查询，获取物品uuid列表
+		materialRepo := repository.NewMaterialRepo(db)
+		materialUuids, err := materialRepo.GetMaterialUuidsByKeyword(req.Keyword)
+		if err != nil {
+			return resp.WarehouseInOutListResp{}, errors.WithMessage(err, "获取物品uuid列表失败")
+		}
+		materialUuidsByKeyword = append(materialUuidsByKeyword, materialUuids...)
 	}
 	// 时间区间
 	if req.StartTime != 0 && req.EndTime != 0 {
@@ -565,15 +574,76 @@ func (s *warehouseSrv) GetWarehouseInOutList(ctx context.Context, req req.GetWar
 		opts = append(opts, warehouseInOutLogRepo.WhereLogType(constant.WarehouseInOutLogTypeToInt(req.Type)))
 	}
 	// 物料分类ID列表
+	materialUuidsByCategory := []uint64{}
+	filterByCategory := false
 	if len(req.MaterialCategoryUuids) > 0 {
+		filterByCategory = true
 		// 查询material表，获取这些分类下的物品uuid列表
 		materialRepo := repository.NewMaterialRepo(db)
 		materialUuids, err := materialRepo.GetMaterialUuidsByCategoryUuids(req.MaterialCategoryUuids)
 		if err != nil {
 			return resp.WarehouseInOutListResp{}, errors.WithMessage(err, "获取物品uuid列表失败")
 		}
-		opts = append(opts, warehouseInOutLogRepo.WhereMaterialUuids(materialUuids))
+		materialUuidsByCategory = append(materialUuidsByCategory, materialUuids...)
 	}
+
+	// 如果两个切片都有值的话，合并两个切片中的重复元素。即将keyword搜索的结果和category搜索的结果合并只取两个集合相交的数据
+
+	if filterByKeyword {
+		if len(materialUuidsByKeyword) == 0 { // 如果keyword搜索的结果为空，则不进行搜索
+			return resp.WarehouseInOutListResp{
+				List: make([]resp.WarehouseInOutResp, 0),
+				Meta: dto.PageResponse{
+					PageNo:   req.PageNo,
+					PageSize: req.PageSize,
+					Total:    0,
+				},
+			}, nil
+		}
+	}
+
+	if filterByCategory {
+		if len(materialUuidsByCategory) == 0 { // 如果category搜索的结果为空，则不进行搜索
+			return resp.WarehouseInOutListResp{
+				List: make([]resp.WarehouseInOutResp, 0),
+				Meta: dto.PageResponse{
+					PageNo:   req.PageNo,
+					PageSize: req.PageSize,
+					Total:    0,
+				},
+			}, nil
+		}
+	}
+	// 如果两个条件都有值，则合并两个条件
+	var filterOpt repository.DBOption
+	if filterByKeyword && filterByCategory && len(materialUuidsByKeyword) > 0 && len(materialUuidsByCategory) > 0 {
+		materialUuids := utils.GetDuplicateElements(materialUuidsByKeyword, materialUuidsByCategory)
+		if len(materialUuids) > 0 {
+			filterOpt = warehouseInOutLogRepo.WhereMaterialUuids(materialUuids)
+		} else {
+			// 没有匹配到任何物品
+			return resp.WarehouseInOutListResp{
+				List: make([]resp.WarehouseInOutResp, 0),
+				Meta: dto.PageResponse{
+					PageNo:   req.PageNo,
+					PageSize: req.PageSize,
+					Total:    0,
+				},
+			}, nil
+		}
+	}
+	// 如果只有keyword条件，则使用keyword条件
+	if filterByKeyword && !filterByCategory && len(materialUuidsByKeyword) > 0 {
+		filterOpt = warehouseInOutLogRepo.WhereMaterialUuids(materialUuidsByKeyword)
+	}
+	// 如果只有category条件，则使用category条件
+	if filterByCategory && !filterByKeyword && len(materialUuidsByCategory) > 0 {
+		filterOpt = warehouseInOutLogRepo.WhereMaterialUuids(materialUuidsByCategory)
+	}
+	if filterOpt == nil {
+		opts = append(opts, filterOpt)
+	}
+
 	// 供应商ID列表
 	if len(req.SupplierUuids) > 0 {
 		opts = append(opts, warehouseInOutLogRepo.WhereSupplierUuids(req.SupplierUuids))
