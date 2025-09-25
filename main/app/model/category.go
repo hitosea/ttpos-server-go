@@ -11,6 +11,7 @@ type ProductCategory struct {
 	CategoryKey           string `gorm:"column:category_key;type:varchar(255);comment:关键字;NOT NULL" json:"category_key"`
 	Sort                  uint   `gorm:"column:sort;type:int(11);default:0;comment:排序;NOT NULL" json:"sort"`
 	Code                  string `gorm:"column:code;type:varchar(255);comment:分类编码;NOT NULL" json:"code"`
+	HeadquarterUuid       uint64 `gorm:"column:headquarter_uuid;type:bigint(20) unsigned;default:0;comment:总部ID;NOT NULL" json:"headquarter_uuid"`
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
 }
