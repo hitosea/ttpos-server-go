@@ -103,6 +103,7 @@ func (s *supplierSrv) GetSupplier(ctx context.Context, req req.SupplierReq) (res
 			Name:          supplier.Name,
 			Code:          supplier.Code,
 			IsHeadquarter: supplier.ErpCode == constant.ErpHeadquartersSupplierCode,
+			IsEditable:    isEditable(ctx, supplier.HeadquarterUuid),
 		},
 		Address:                 supplier.Address,
 		ContactName:             supplier.ContactName,
@@ -177,7 +178,6 @@ func (s *supplierSrv) CreateSupplier(ctx context.Context, createSupplierReq req.
 		ContactPhone: createSupplierReq.ContactPhone,
 		Status:       createSupplierReq.Status,
 		ErpCode:      erpCode,
-		CompanyAbbr:  companySetting.ErpnextCompanyAbbr, // 这个标记是用来后续修改和删除
 	}
 	err = supplierRepo.Create(supplier)
 	if err != nil {
@@ -200,6 +200,10 @@ func (s *supplierSrv) UpdateSupplier(ctx context.Context, updateSupplierReq req.
 		return errors.WithMessage(err, "查询供应商失败")
 	}
 
+	if !isEditable(ctx, supplier.HeadquarterUuid) {
+		return errors.New("供应商不可编辑")
+	}
+
 	// 检查供应商名称是否重复（排除自己）
 	exists, err := supplierRepo.IsNameExists(updateSupplierReq.Name, updateSupplierReq.Uuid)
 	if err != nil {
@@ -220,8 +224,7 @@ func (s *supplierSrv) UpdateSupplier(ctx context.Context, updateSupplierReq req.
 
 	companySetting := ctx.GetCompanySetting()
 	// 调用erp接口，只能修改自己创建的供应商
-	if ctx.GetCompany().IsOpenErp() && supplier.ErpCode != "" &&
-		supplier.CompanyAbbr == companySetting.ErpnextCompanyAbbr && supplier.ErpCode != constant.ErpHeadquartersSupplierCode {
+	if ctx.GetCompany().IsOpenErp() {
 		var branch, companyAbbr string
 		// 总部调用erp接口创建的供应商，不传递 branch、company_abbr
 		// 子店、散户调用erp接口创建的供应商，传递 branch、company_abbr
@@ -247,18 +250,13 @@ func (s *supplierSrv) UpdateSupplier(ctx context.Context, updateSupplierReq req.
 		}
 	}
 
-	// 所有店铺都能修改名称
-	updateData := map[string]any{
-		"name": updateSupplierReq.Name,
-	}
-	// 可以修改自己的供应商、总部可修改“总部-供应商”
-	if supplier.CompanyAbbr == supplier.CompanyAbbr || (companySetting.IsHeadquarter() && supplier.ErpCode == constant.ErpHeadquartersSupplierCode) {
-		updateData["address"] = updateSupplierReq.Address
-		updateData["contact_name"] = updateSupplierReq.ContactName
-		updateData["contact_phone"] = updateSupplierReq.ContactPhone
-		updateData["status"] = updateSupplierReq.Status
-	}
-	err = supplierRepo.Update(supplier.Uuid, updateData)
+	err = supplierRepo.Update(supplier.Uuid, map[string]any{
+		"name":          updateSupplierReq.Name,
+		"address":       updateSupplierReq.Address,
+		"contact_name":  updateSupplierReq.ContactName,
+		"contact_phone": updateSupplierReq.ContactPhone,
+		"status":        updateSupplierReq.Status,
+	})
 	if err != nil {
 		return errors.WithMessage(err, "更新供应商失败")
 	}
@@ -282,10 +280,12 @@ func (s *supplierSrv) DeleteSupplier(ctx context.Context, deleteSupplierReq req.
 	if s.hasRelatedPurchaseOrder(ctx, supplier) {
 		return errors.New("该供应商存在关联的采购订单，无法删除")
 	}
+	if !isEditable(ctx, supplier.HeadquarterUuid) {
+		return errors.New("供应商不可删除")
+	}
 	companySetting := ctx.GetCompanySetting()
 	// 调用erp接口，只能删除自己创建的供应商
-	if ctx.GetCompany().IsOpenErp() && supplier.ErpCode != "" &&
-		supplier.CompanyAbbr == companySetting.ErpnextCompanyAbbr && supplier.ErpCode != constant.ErpHeadquartersSupplierCode {
+	if ctx.GetCompany().IsOpenErp() {
 		err = erp.NewIErpSrv(s.dbm).DeleteSupplier(ctx.GetContext(), req.DeleteSupplierReq{
 			SiteCode: companySetting.ErpnextSiteCode,
 			Name:     supplier.ErpCode,
@@ -403,6 +403,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 		return errors.WithMessage(errors.New("同步供应商失败"), err.Error())
 	}
 
+	supplierHeadquarterMap := make(map[string]uint64)
 	// 如果是子店，获取总部允许子店看到的
 	if companySetting.IsSubShop() {
 		var headquarter model.CompanySetting
@@ -420,6 +421,9 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 		if err != nil {
 			return errors.WithMessage(errors.New("获取总部供应商失败"), err.Error())
 		}
+		for _, supplier := range headquarterSupplierList {
+			supplierHeadquarterMap[supplier.Name] = headquarter.Uuid
+		}
 		supplierList = append(supplierList, headquarterSupplierList...)
 	}
 
@@ -435,18 +439,23 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 	}
 
 	for _, erpSupplier := range supplierList {
+		// 总部不同步“总部-供应商”
+		if erpSupplier.Name == constant.ErpHeadquartersSupplierCode && companySetting.IsHeadquarter() {
+			continue
+		}
 		supplier, _ := supplierMap[erpSupplier.Name]
+		headquarterUuid, _ := supplierHeadquarterMap[erpSupplier.Name]
 		if supplier.Uuid == 0 {
 			db.Model(&model.Supplier{}).Create(&model.Supplier{
-				Name:        erpSupplier.SupplierName,
-				Code:        erpSupplier.Name,
-				Status:      1,
-				CompanyAbbr: erpSupplier.CompanyAbbr,
+				Name:            erpSupplier.SupplierName,
+				Code:            erpSupplier.Name,
+				Status:          1,
+				HeadquarterUuid: headquarterUuid,
 			})
 		} else {
 			db.Model(&model.Supplier{}).Where("uuid = ?", supplier.Uuid).Updates(map[string]any{
-				"name":         erpSupplier.SupplierName,
-				"company_abbr": erpSupplier.CompanyAbbr,
+				"name":             erpSupplier.SupplierName,
+				"headquarter_uuid": headquarterUuid,
 			})
 		}
 	}

@@ -2,8 +2,10 @@ package service
 
 import (
 	"sync"
+	"time"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/websocket"
 
 	"go.uber.org/zap"
 )
@@ -93,6 +95,11 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 		defer func() {
 			syncTaskManager.finishTask(companyUuid)
 			logger.Logger.Info("同步任务完成", zap.Uint64("companyUuid", companyUuid))
+
+			// 推送websocket
+			go websocket.PushClient(company.Uuid, websocket.SourceShop, websocket.SourceAll, websocket.SYNC_DATA, map[string]any{
+				"sync_time": time.Now().Unix(),
+			})
 		}()
 
 		logger.Logger.Info("开始同步任务", zap.Uint64("companyUuid", companyUuid))
@@ -128,17 +135,12 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 			logger.Logger.Error("仓库同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 		}
 
-		// TODO 仅在第一次同步仓库的时候，同步默认仓库库存 10 仓库物品
+		// 10 仓库物品
 		if firstSync {
 			if err := s.warehouseSrv.SyncDefaultWarehouseStock(ctx); err != nil {
 				logger.Logger.Error("默认仓库库存同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 			}
 		}
-
-		// // TODO 推送同步总部数据配置更新
-		// go websocket.PushClient(company.Uuid, websocket.SourceShop, websocket.SourceShop, websocket.UPDATE_CONFIG, map[string]any{
-		// 	"update_time": time.Now().Unix(),
-		// })
 	}(ctx)
 
 	return nil

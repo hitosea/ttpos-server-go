@@ -148,7 +148,7 @@ func (s *erpSrv) AddProductBomCard(ctx context.Context, params ProductBomCardAdd
 	return response, nil
 }
 
-func (s *erpSrv) GetMaterialStockNum(ctx context.Context) (*item.GetItemStockResp, error) {
+func (s *erpSrv) GetMaterialStockNum(ctx context.Context, warehouseErpCode string) ([]*item.ItemStock, error) {
 	company := ctx.GetCompany()
 	companySetting := company.CompanySetting
 
@@ -161,6 +161,8 @@ func (s *erpSrv) GetMaterialStockNum(ctx context.Context) (*item.GetItemStockRes
 	result, err := client.GetItemStock(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.GetItemStockReq{
 		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
 		Branch:      companySetting.ErpnextBranchName,
+		ItemGroup:   item.ItemGroup_RawMaterial,
+		Warehouse:   warehouseErpCode,
 	})
 	if err != nil {
 		return nil, err
@@ -173,5 +175,5 @@ func (s *erpSrv) GetMaterialStockNum(ctx context.Context) (*item.GetItemStockRes
 		return nil, err
 	}
 
-	return response, nil
+	return response.ItemStockList, nil
 }

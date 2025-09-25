@@ -213,7 +213,7 @@ type ProductSauceItem struct {
 	ProductPackageCount int                `json:"product_package_count"` // 关联商品包数量
 	ProductBomCardUuid  uint64             `json:"product_bom_card_uuid"` // 成本卡UUID，0表示没有成本卡
 	ProductBomCardName  dto.LocaleResponse `json:"product_bom_card_name"` // 成本卡名称
-	Editable            bool               `json:"editable"`              // 是否可编辑
+	IsEditable          bool               `json:"is_editable"`           // 是否可编辑
 }
 
 type ProductSauceProductPackage struct {
@@ -230,7 +230,7 @@ type ProductSauceDetail struct {
 	Price           float64                        `json:"price"`            // 商品加料价格
 	LocaleName      dto.LocaleResponse             `json:"locale_name"`      // 商品单位名称
 	ProductPackages ProductSauceProductPackageList `json:"product_packages"` // 商品包列表
-	Editable        bool                           `json:"editable"`         // 是否可编辑
+	IsEditable      bool                           `json:"is_editable"`      // 是否可编辑
 }
 
 // ProductShopCategory 商品类别（商家端）
@@ -268,13 +268,13 @@ type ProductAttributeGroupItem struct {
 	Sort          int                                  `json:"sort"`           // 商品属性分组排序
 	AttributeName string                               `json:"attribute_name"` // 商品属性名称
 	Attributes    []ProductAttributeGroupAttributeItem `json:"attributes"`     // 属性值
-	Editable      bool                                 `json:"editable"`       // 是否可编辑
+	IsEditable    bool                                 `json:"is_editable"`    // 是否可编辑
 }
 
 type ProductAttributeGroupAttributeItem struct {
 	Uuid       uint64             `json:"uuid"`        // 商品属性UUID
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品属性名称
-	Editable   bool               `json:"editable"`    // 是否可编辑
+	IsEditable bool               `json:"is_editable"` // 是否可编辑
 }
 
 type ProductAttributeGroupListResp struct {
@@ -286,7 +286,7 @@ type ProductAttributeGroupDetail struct {
 	Uuid       uint64             `json:"uuid"`        // 商品属性分组UUID
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品属性分组名称
 	Attributes ProductAttributes  `json:"attributes"`  // 商品属性值列表
-	Editable   bool               `json:"editable"`    // 是否可编辑
+	IsEditable bool               `json:"is_editable"` // 是否可编辑
 }
 
 type ProductAttributes struct {
@@ -298,7 +298,7 @@ type ProductAttribute struct {
 	LocaleName      dto.LocaleResponse                 `json:"locale_name"`      // 商品属性名称
 	ProductPackages ProductAttributeProductPackageList `json:"product_packages"` // 关联商品包列表
 	Sort            int                                `json:"sort"`             // 商品属性排序
-	Editable        bool                               `json:"editable"`         // 是否可编辑
+	IsEditable      bool                               `json:"is_editable"`      // 是否可编辑
 }
 
 type ProductAttributeProductPackage struct {
