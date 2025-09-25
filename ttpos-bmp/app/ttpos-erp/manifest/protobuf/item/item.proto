@@ -122,6 +122,8 @@ message ItemStock {
   string warehouse = 4;      // 仓库名称，
   string stock_uom = 5;      // 库存单位，
   double actual_qty = 6;      // 实际库存数量
+  double projected_qty =7 ;  //预估库存
+  double reserved_qty_for_pos = 8 ; //销售保留
 }
 
 
@@ -131,8 +133,7 @@ message GetItemStockReq {
   string item_code = 3;      // 物品编码，可选
   string item_name = 4;      // 物品名称，可选，模糊查询
   ItemGroup item_group = 5;     // 物品分组，可选
-  string warehouse = 6;      // 仓库名称，可选
-  string sub_company_abbr = 7; // 门店公司简称，可选。  sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。
+  string warehouse = 6;      // 仓库名称，可选. 不传的话会取 默认名称的仓库库存 (根据公司和分支名取)
 }
 
 message GetItemStockResp {

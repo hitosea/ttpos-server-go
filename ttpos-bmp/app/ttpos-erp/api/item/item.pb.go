@@ -1025,15 +1025,17 @@ func (x *GetAttributeListResp) GetAttributeList() []*AttributeInfo {
 }
 
 type ItemStock struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，"`                         // 物品编码，
-	ItemName      string                 `protobuf:"bytes,2,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称，"`                         // 物品名称，
-	ItemGroup     ItemGroup              `protobuf:"varint,3,opt,name=item_group,json=itemGroup,proto3,enum=item.ItemGroup" json:"item_group,omitempty" dc:"物品分组，"` // 物品分组，
-	Warehouse     string                 `protobuf:"bytes,4,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库名称，"`                                       // 仓库名称，
-	StockUom      string                 `protobuf:"bytes,5,opt,name=stock_uom,json=stockUom,proto3" json:"stock_uom,omitempty" dc:"库存单位，"`                         // 库存单位，
-	ActualQty     float64                `protobuf:"fixed64,6,opt,name=actual_qty,json=actualQty,proto3" json:"actual_qty,omitempty" dc:"实际库存数量"`                   // 实际库存数量
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	ItemCode          string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，"`                                 // 物品编码，
+	ItemName          string                 `protobuf:"bytes,2,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称，"`                                 // 物品名称，
+	ItemGroup         ItemGroup              `protobuf:"varint,3,opt,name=item_group,json=itemGroup,proto3,enum=item.ItemGroup" json:"item_group,omitempty" dc:"物品分组，"`         // 物品分组，
+	Warehouse         string                 `protobuf:"bytes,4,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库名称，"`                                               // 仓库名称，
+	StockUom          string                 `protobuf:"bytes,5,opt,name=stock_uom,json=stockUom,proto3" json:"stock_uom,omitempty" dc:"库存单位，"`                                 // 库存单位，
+	ActualQty         float64                `protobuf:"fixed64,6,opt,name=actual_qty,json=actualQty,proto3" json:"actual_qty,omitempty" dc:"实际库存数量"`                           // 实际库存数量
+	ProjectedQty      float64                `protobuf:"fixed64,7,opt,name=projected_qty,json=projectedQty,proto3" json:"projected_qty,omitempty" dc:"预估库存"`                    //预估库存
+	ReservedQtyForPos float64                `protobuf:"fixed64,8,opt,name=reserved_qty_for_pos,json=reservedQtyForPos,proto3" json:"reserved_qty_for_pos,omitempty" dc:"销售保留"` //销售保留
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ItemStock) Reset() {
@@ -1108,17 +1110,30 @@ func (x *ItemStock) GetActualQty() float64 {
 	return 0
 }
 
+func (x *ItemStock) GetProjectedQty() float64 {
+	if x != nil {
+		return x.ProjectedQty
+	}
+	return 0
+}
+
+func (x *ItemStock) GetReservedQtyForPos() float64 {
+	if x != nil {
+		return x.ReservedQtyForPos
+	}
+	return 0
+}
+
 type GetItemStockReq struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	CompanyAbbr    string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，必填"`                                                                             // 公司简称，必填
-	Branch         string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，必填"`                                                                                                          // 分支名称，必填
-	ItemCode       string                 `protobuf:"bytes,3,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，可选"`                                                                                      // 物品编码，可选
-	ItemName       string                 `protobuf:"bytes,4,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称，可选，模糊查询"`                                                                                 // 物品名称，可选，模糊查询
-	ItemGroup      ItemGroup              `protobuf:"varint,5,opt,name=item_group,json=itemGroup,proto3,enum=item.ItemGroup" json:"item_group,omitempty" dc:"物品分组，可选"`                                                              // 物品分组，可选
-	Warehouse      string                 `protobuf:"bytes,6,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库名称，可选"`                                                                                                    // 仓库名称，可选
-	SubCompanyAbbr string                 `protobuf:"bytes,7,opt,name=sub_company_abbr,json=subCompanyAbbr,proto3" json:"sub_company_abbr,omitempty" dc:"门店公司简称，可选。  sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。"` // 门店公司简称，可选。  sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CompanyAbbr   string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，必填"`                // 公司简称，必填
+	Branch        string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，必填"`                                             // 分支名称，必填
+	ItemCode      string                 `protobuf:"bytes,3,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，可选"`                         // 物品编码，可选
+	ItemName      string                 `protobuf:"bytes,4,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称，可选，模糊查询"`                    // 物品名称，可选，模糊查询
+	ItemGroup     ItemGroup              `protobuf:"varint,5,opt,name=item_group,json=itemGroup,proto3,enum=item.ItemGroup" json:"item_group,omitempty" dc:"物品分组，可选"` // 物品分组，可选
+	Warehouse     string                 `protobuf:"bytes,6,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库名称，可选. 不传的话会取 默认名称的仓库库存 (根据公司和分支名取)"`         // 仓库名称，可选. 不传的话会取 默认名称的仓库库存 (根据公司和分支名取)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetItemStockReq) Reset() {
@@ -1189,13 +1204,6 @@ func (x *GetItemStockReq) GetItemGroup() ItemGroup {
 func (x *GetItemStockReq) GetWarehouse() string {
 	if x != nil {
 		return x.Warehouse
-	}
-	return ""
-}
-
-func (x *GetItemStockReq) GetSubCompanyAbbr() string {
-	if x != nil {
-		return x.SubCompanyAbbr
 	}
 	return ""
 }
@@ -1870,7 +1878,7 @@ const file_item_item_proto_rawDesc = "" +
 	"\x0fattribute_value\x18\x01 \x01(\tR\x0eattributeValue\x12\x12\n" +
 	"\x04abbr\x18\x02 \x01(\tR\x04abbr\"R\n" +
 	"\x14GetAttributeListResp\x12:\n" +
-	"\x0eattribute_list\x18\x01 \x03(\v2\x13.item.AttributeInfoR\rattributeList\"\xcf\x01\n" +
+	"\x0eattribute_list\x18\x01 \x03(\v2\x13.item.AttributeInfoR\rattributeList\"\xa5\x02\n" +
 	"\tItemStock\x12\x1b\n" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x1b\n" +
 	"\titem_name\x18\x02 \x01(\tR\bitemName\x12.\n" +
@@ -1879,7 +1887,9 @@ const file_item_item_proto_rawDesc = "" +
 	"\twarehouse\x18\x04 \x01(\tR\twarehouse\x12\x1b\n" +
 	"\tstock_uom\x18\x05 \x01(\tR\bstockUom\x12\x1d\n" +
 	"\n" +
-	"actual_qty\x18\x06 \x01(\x01R\tactualQty\"\xfe\x01\n" +
+	"actual_qty\x18\x06 \x01(\x01R\tactualQty\x12#\n" +
+	"\rprojected_qty\x18\a \x01(\x01R\fprojectedQty\x12/\n" +
+	"\x14reserved_qty_for_pos\x18\b \x01(\x01R\x11reservedQtyForPos\"\xd4\x01\n" +
 	"\x0fGetItemStockReq\x12!\n" +
 	"\fcompany_abbr\x18\x01 \x01(\tR\vcompanyAbbr\x12\x16\n" +
 	"\x06branch\x18\x02 \x01(\tR\x06branch\x12\x1b\n" +
@@ -1887,8 +1897,7 @@ const file_item_item_proto_rawDesc = "" +
 	"\titem_name\x18\x04 \x01(\tR\bitemName\x12.\n" +
 	"\n" +
 	"item_group\x18\x05 \x01(\x0e2\x0f.item.ItemGroupR\titemGroup\x12\x1c\n" +
-	"\twarehouse\x18\x06 \x01(\tR\twarehouse\x12(\n" +
-	"\x10sub_company_abbr\x18\a \x01(\tR\x0esubCompanyAbbr\"K\n" +
+	"\twarehouse\x18\x06 \x01(\tR\twarehouse\"K\n" +
 	"\x10GetItemStockResp\x127\n" +
 	"\x0fitem_stock_list\x18\x01 \x03(\v2\x0f.item.ItemStockR\ritemStockList\"d\n" +
 	"\n" +

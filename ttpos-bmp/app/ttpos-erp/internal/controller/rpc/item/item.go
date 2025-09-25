@@ -156,9 +156,9 @@ func (*Controller) GetItemStock(ctx context.Context, req *item.GetItemStockReq) 
 	if req.CompanyAbbr == "" {
 		return rpc.ApiError("公司简称不能为空"), nil
 	}
-	if req.Branch == "" {
-		return rpc.ApiError("分支机构不能为空"), nil
-	}
+	//if req.Branch == "" {
+	//	return rpc.ApiError("分支机构不能为空"), nil
+	//}
 
 	// 调用服务层获取数据
 	dataList, err := service.Item().GetItemStock(ctx, req)
