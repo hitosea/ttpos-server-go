@@ -1182,16 +1182,21 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 					}
 
 					erpSrv.AddMaterial(ctx, req.MaterialAddErpReq{
-						ItemCode:           material.Code,
-						ItemName:           enName,
-						StockUom:           material.Unit.Unit.ErpnextUom,
-						Disabled:           material.Status == false,
-						ValuationRate:      material.Valuation,
-						BarcodeValue:       material.BarcodeValue,
-						Uoms:               unitList,
-						InternalCode:       material.InternalCode,
-						Classification:     getMaterialCategoryName,
-						ClassificationCode: materialCategory.Code,
+						ItemCode:       material.Code,
+						ItemName:       enName,
+						StockUom:       material.Unit.Unit.ErpnextUom,
+						Disabled:       material.Status == false,
+						ValuationRate:  material.Valuation,
+						BarcodeValue:   material.BarcodeValue,
+						Uoms:           unitList,
+						InternalCode:   material.InternalCode,
+						Classification: getMaterialCategoryName,
+						ClassificationCode: func() string {
+							if materialCategory.Code != "" {
+								return materialCategory.Code
+							}
+							return " " // 分类编码为空时，传空格给ErpNext
+						}(),
 					})
 				}
 			}
