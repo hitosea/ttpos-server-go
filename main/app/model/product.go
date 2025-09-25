@@ -39,7 +39,7 @@ type ProductSauce struct {
 	Sort                  int     `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
 	ProductBomCardUuid    uint64  `gorm:"default:0;column:product_bom_card_uuid;comment:'成本卡ID'"`
 	ErpCode               string  `gorm:"default:'';column:erp_code;comment:'ERP编码'"`
-	CompanyAbbr           string  `gorm:"default:'';column:company_abbr;comment:'所属公司简称，如果是自己的company_abbr表示自己创建，其他值表示非自己创建'"`
+	HeadquarterUuid       uint64  `gorm:"default:0;column:headquarter_uuid;comment:'总部Uuid'"`
 
 	MultiLanguageName MultiLanguageName  `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 	SauceMaterials    []*RelatedMaterial `gorm:"foreignKey:related_uuid;references:uuid"`             // 小料的组成材料
@@ -68,7 +68,7 @@ type ProductUnit struct {
 	MultiLanguageNameUuid uint64            `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	Sort                  int               `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
 	ErpnextUom            string            `gorm:"default:'';column:erpnext_uom;comment:'ERPNext UOM'"`
-	CompanyAbbr           string            `gorm:"default:'';column:company_abbr;comment:'所属公司简称，如果是自己的company_abbr表示自己创建，其他值表示非自己创建'"`
+	HeadquarterUuid       uint64            `gorm:"default:0;column:headquarter_uuid;comment:'总部Uuid'"`
 	MultiLanguageName     MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 
 	// ProductPackage里面关联的单位
@@ -91,7 +91,7 @@ type ProductAttributeGroup struct {
 	MultiLanguageNameUuid     uint64             `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	Sort                      int                `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
 	ErpnextAttributeGroupName string             `gorm:"default:'';column:erpnext_attribute_group_name;comment:'ERPNext Attribute Group Name'"`
-	CompanyAbbr               string             `gorm:"default:'';column:company_abbr;comment:'所属公司简称，如果是自己的company_abbr表示自己创建，其他值表示非自己创建'"`
+	HeadquarterUuid           uint64             `gorm:"default:0;column:headquarter_uuid;comment:'总部Uuid'"`
 	MultiLanguageName         MultiLanguageName  `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 	ProductAttributes         []ProductAttribute `gorm:"foreignKey:attribute_group_uuid;references:uuid"`     // 商品属性
 }
@@ -104,7 +104,7 @@ type ProductAttribute struct {
 	AttributeGroupUuid    uint64 `gorm:"default:0;column:attribute_group_uuid;comment:'属性组UUID'"`
 	Sort                  int    `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
 	ErpnextAttributeValue string `gorm:"default:'';column:erpnext_attribute_value;comment:'ERPNext Attribute Value'"`
-	CompanyAbbr           string `gorm:"default:'';column:company_abbr;comment:'所属公司简称，如果是自己的company_abbr表示自己创建，其他值表示非自己创建'"`
+	HeadquarterUuid       uint64 `gorm:"default:0;column:headquarter_uuid;comment:'总部Uuid'"`
 	// 关联ttpos_product_package_attribute，ttpos_product_package_attribute的attribute_uuid等于当前商品属性的uuid
 	ProductPackageAttributes []ProductPackageAttribute `gorm:"foreignKey:attribute_uuid;references:uuid"` // 产品包属性
 

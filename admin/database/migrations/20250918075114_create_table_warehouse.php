@@ -42,6 +42,7 @@ class CreateTableWarehouse extends Migrator
                 ->addColumn('address', 'string', ['limit' => 255, 'null' => false, 'default' => '', 'comment' => '地址'])
                 ->addColumn('is_default', 'integer', ['null' => false, 'default' => 0, 'comment' => '是否默认：0-否；1-是'])
                 ->addColumn('erp_code', 'string', ['limit' => 255, 'null' => false, 'default' => '', 'comment' => '关联erpnext'])
+                ->addColumn('headquarter_uuid', 'biginteger', ['null' => false, 'default' => 0, 'comment' => '总部Uuid'])
                 ->addColumn('create_time', 'integer', ['default' => 0, 'comment' => '创建时间'])
                 ->addColumn('update_time', 'integer', ['default' => 0, 'comment' => '更新时间'])
                 ->addColumn('delete_time', 'integer', ['default' => 0, 'comment' => '删除时间'])
@@ -57,8 +58,8 @@ class CreateTableWarehouse extends Migrator
         if (!$table->hasColumn('erp_code')) {
             $table->addColumn('erp_code', 'string', ['limit' => 255, 'null' => false, 'default' => '', 'comment' => '关联erpnext', 'after' => 'staff_uuid']);
         }
-        if (!$table->hasColumn('company_abbr')) {
-            $table->addColumn('company_abbr', 'string', ['limit' => 255, 'null' => false, 'default' => '', 'comment' => '所属公司简称，如果是自己的company_abbr表示自己创建，其他值表示非自己创建', 'after' => 'erp_code']);
+        if (!$table->hasColumn('headquarter_uuid')) {
+            $table->addColumn('headquarter_uuid', 'biginteger', ['null' => false, 'default' => 0, 'comment' => '总部Uuid']);
         }
         if (!$table->hasColumn('status')) {
             $table->addColumn('status', 'integer', ['null' => false, 'default' => 0, 'comment' => '状态：0-禁用；1-启用', 'after' => 'code']);

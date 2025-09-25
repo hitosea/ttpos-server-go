@@ -13,7 +13,7 @@ type Warehouse struct {
 	Address               string `gorm:"column:address;type:varchar(255);comment:地址;NOT NULL" json:"address"`
 	IsDefault             int    `gorm:"column:is_default;type:int(11);default:0;comment:是否默认：0-否；1-是;NOT NULL" json:"is_default"`
 	ErpCode               string `gorm:"column:erp_code;type:varchar(255);comment:关联erpnext;NOT NULL" json:"erp_code"`
-	CompanyAbbr           string `gorm:"column:company_abbr;type:varchar(255);comment:所属公司简称，如果是自己的company_abbr表示自己创建，其他值表示非自己创建;NOT NULL" json:"company_abbr"`
+	HeadquarterUuid       uint64 `gorm:"column:headquarter_uuid;not null;default:0;comment:'总部Uuid'" json:"headquarter_uuid"`
 
 	MultiLanguageName *MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
 }

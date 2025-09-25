@@ -1543,7 +1543,7 @@ func (s *productSrv) GetProductUnitList(ctx context.Context, req req.ProductUnit
 			Name:                unit.MultiLanguageName.GetNameByLang(language),
 			Sort:                unit.Sort,
 			ProductPackageCount: unit.ProductPackageCount,
-			Editable:            isEditable(ctx, unit.CompanyAbbr),
+			Editable:            isEditable(ctx, unit.HeadquarterUuid),
 		})
 	}
 
@@ -1588,7 +1588,7 @@ func (s *productSrv) GetProductUnit(ctx context.Context, getUnitReq req.ProductU
 		ProductPackages: product_resp.ProductUnitProductPackageList{
 			List: productPackages,
 		},
-		Editable: isEditable(ctx, unit.CompanyAbbr),
+		Editable: isEditable(ctx, unit.HeadquarterUuid),
 	}
 
 	return productUnit, nil
@@ -1596,7 +1596,6 @@ func (s *productSrv) GetProductUnit(ctx context.Context, getUnitReq req.ProductU
 
 // AddProductUnit 添加产品单位
 func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitAddReq) error {
-	companySetting := ctx.GetCompanySetting()
 	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
 	if !addReq.LocaleName.CheckRequiredLocale(storeLanguages) {
 		return errors.New("名称不能为空")
@@ -1638,7 +1637,6 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 			return errors.WithMessage(errors.New("保存名称多语言失败"), err.Error())
 		}
 		productUnit.MultiLanguageNameUuid = multiLanguageName.Uuid
-		productUnit.CompanyAbbr = companySetting.ErpnextCompanyAbbr
 		err = tx.Model(&model.ProductUnit{}).Create(&productUnit).Error
 		if err != nil {
 			return errors.WithMessage(errors.New("保存单位失败"), err.Error())
@@ -1794,7 +1792,7 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 		return errors.New("单位名称不存在")
 	}
 
-	if !isEditable(ctx, productUnit.CompanyAbbr) {
+	if !isEditable(ctx, productUnit.HeadquarterUuid) {
 		return errors.New("单位不可编辑")
 	}
 	// 检查名称是否存在
@@ -1952,7 +1950,7 @@ func (s *productSrv) DeleteProductUnit(ctx context.Context, deleteUnitReq req.Pr
 	if productUnit.MultiLanguageNameUuid == 0 {
 		return errors.New("单位名称不存在")
 	}
-	if !isEditable(ctx, productUnit.CompanyAbbr) {
+	if !isEditable(ctx, productUnit.HeadquarterUuid) {
 		return errors.New("单位不可删除")
 	}
 	// 是否关联商品
@@ -2040,7 +2038,7 @@ func (s *productSrv) GetProductSauceList(ctx context.Context, sauceListReq req.P
 			ProductPackageCount: productSauce.ProductPackageCount,
 			ProductBomCardUuid:  productSauce.ProductBomCardUuid,
 			ProductBomCardName:  productBomCardName,
-			Editable:            isEditable(ctx, productSauce.CompanyAbbr),
+			IsEditable:          isEditable(ctx, productSauce.HeadquarterUuid),
 		})
 	}
 	return product_resp.ProductSauceListResp{
@@ -2084,13 +2082,12 @@ func (s *productSrv) GetProductSauce(ctx context.Context, sauceReq req.ProductSa
 		ProductPackages: product_resp.ProductSauceProductPackageList{
 			List: productPackages,
 		},
-		Editable: isEditable(ctx, productSauce.CompanyAbbr),
+		IsEditable: isEditable(ctx, productSauce.HeadquarterUuid),
 	}, nil
 }
 
 // AddProductSauce 添加商品加料
 func (s *productSrv) AddProductSauce(ctx context.Context, addReq req.ProductSauceAddReq) error {
-	companySetting := ctx.GetCompanySetting()
 	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
 	if !addReq.LocaleName.CheckRequiredLocale(storeLanguages) {
 		return errors.New("名称不能为空")
@@ -2164,7 +2161,6 @@ func (s *productSrv) AddProductSauce(ctx context.Context, addReq req.ProductSauc
 			MultiLanguageNameUuid: multiLanguageName.Uuid,
 			Name:                  addReq.LocaleName.ToJson(),
 			ErpCode:               erpCode,
-			CompanyAbbr:           companySetting.ErpnextCompanyAbbr,
 		}
 		err = tx.Model(&model.ProductSauce{}).Create(&productSauce).Error
 		if err != nil {
@@ -2194,11 +2190,8 @@ func (s *productSrv) AddProductSauce(ctx context.Context, addReq req.ProductSauc
 }
 
 // isEditable 是否可编辑
-func isEditable(ctx context.Context, companyAbbr string) bool {
-	company := ctx.GetCompany()
-	companySetting := ctx.GetCompanySetting()
-	// 未开启erp功能 || 开启了erp功能，且company_abbr = companySetting.ErpnextCompanyAbbr
-	return !company.IsOpenErp() || companyAbbr == companySetting.ErpnextCompanyAbbr
+func isEditable(_ context.Context, headquarterUuid uint64) bool {
+	return headquarterUuid == 0
 }
 
 // EditProductSauce 编辑商品加料
@@ -2234,7 +2227,7 @@ func (s *productSrv) EditProductSauce(ctx context.Context, editReq req.ProductSa
 	if productSauce.MultiLanguageNameUuid == 0 {
 		return errors.New("加料名称不存在")
 	}
-	if !isEditable(ctx, productSauce.CompanyAbbr) {
+	if !isEditable(ctx, productSauce.HeadquarterUuid) {
 		return errors.New("加料不可编辑")
 	}
 
@@ -2329,7 +2322,7 @@ func (s *productSrv) DeleteProductSauce(ctx context.Context, deleteReq req.Produ
 	if productSauce.MultiLanguageNameUuid == 0 {
 		return errors.New("加料名称不存在")
 	}
-	if !isEditable(ctx, productSauce.CompanyAbbr) {
+	if !isEditable(ctx, productSauce.HeadquarterUuid) {
 		return errors.New("加料不可删除")
 	}
 	// bom是否存在
@@ -2439,7 +2432,7 @@ func (s *productSrv) GetProductAttributeGroupList(ctx context.Context, req req.P
 			attributeList = append(attributeList, product_resp.ProductAttributeGroupAttributeItem{
 				Uuid:       productAttribute.Uuid,
 				LocaleName: productAttribute.MultiLanguageName.GetNames(),
-				Editable:   isEditable(ctx, productAttribute.CompanyAbbr),
+				IsEditable: isEditable(ctx, productAttribute.HeadquarterUuid),
 			})
 		}
 		productAttributeGroupListResp = append(productAttributeGroupListResp, product_resp.ProductAttributeGroupItem{
@@ -2448,7 +2441,7 @@ func (s *productSrv) GetProductAttributeGroupList(ctx context.Context, req req.P
 			AttributeName: strings.Join(attributeNames, "、"),
 			Attributes:    attributeList,
 			Sort:          productAttributeGroup.Sort,
-			Editable:      isEditable(ctx, productAttributeGroup.CompanyAbbr),
+			IsEditable:    isEditable(ctx, productAttributeGroup.HeadquarterUuid),
 		})
 	}
 	return product_resp.ProductAttributeGroupListResp{
@@ -2484,7 +2477,7 @@ func (s *productSrv) GetProductAttributeGroup(ctx context.Context, req req.Produ
 	productAttributeGroupResp := product_resp.ProductAttributeGroupDetail{
 		Uuid:       productAttributeGroup.Uuid,
 		LocaleName: productAttributeGroup.MultiLanguageName.GetNames(),
-		Editable:   isEditable(ctx, productAttributeGroup.CompanyAbbr),
+		IsEditable: isEditable(ctx, productAttributeGroup.HeadquarterUuid),
 	}
 
 	productAttributeList := make([]product_resp.ProductAttribute, 0, len(productAttributeGroup.ProductAttributes))
@@ -2502,8 +2495,8 @@ func (s *productSrv) GetProductAttributeGroup(ctx context.Context, req req.Produ
 			ProductPackages: product_resp.ProductAttributeProductPackageList{
 				List: productPackageList,
 			},
-			Sort:     productAttribute.Sort,
-			Editable: isEditable(ctx, productAttribute.CompanyAbbr),
+			Sort:       productAttribute.Sort,
+			IsEditable: isEditable(ctx, productAttribute.HeadquarterUuid),
 		})
 	}
 
@@ -2651,9 +2644,8 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 	db.Model(&model.ProductAttributeGroup{}).Scopes(repository.NotDeleted).Select("ifnull(max(sort), 0)").Scan(&maxSort)
 
 	productAttributeGroup := model.ProductAttributeGroup{
-		Name:        addReq.LocaleName.ToJson(),
-		Sort:        maxSort + 1,
-		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+		Name: addReq.LocaleName.ToJson(),
+		Sort: maxSort + 1,
 	}
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// 保存多语言
@@ -2706,7 +2698,6 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 				MultiLanguageNameUuid: multiLanguageName.Uuid,
 				AttributeGroupUuid:    productAttributeGroup.Uuid,
 				Sort:                  i + 1,
-				CompanyAbbr:           companySetting.ErpnextCompanyAbbr,
 			}
 			err = tx.Model(&model.ProductAttribute{}).Create(&productAttributeModel).Error
 			if err != nil {
@@ -3035,7 +3026,7 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 	if err != nil {
 		return errors.WithMessage(errors.New("属性组不存在"), err.Error())
 	}
-	if !isEditable(ctx, attributeGroup.CompanyAbbr) {
+	if !isEditable(ctx, attributeGroup.HeadquarterUuid) {
 		return errors.New("属性组不可编辑")
 	}
 	// 检查传递的属性值是否存在
@@ -3721,7 +3712,7 @@ func (s *productSrv) DeleteProductAttribute(ctx context.Context, req req.Product
 	if err != nil || productAttribute.ID == 0 {
 		return errors.WithMessage(errors.New("属性值不存在"), err.Error())
 	}
-	if !isEditable(ctx, productAttribute.CompanyAbbr) {
+	if !isEditable(ctx, productAttribute.HeadquarterUuid) {
 		return errors.New("属性值不可删除")
 	}
 
@@ -3803,7 +3794,7 @@ func (s *productSrv) DeleteProductAttributeGroup(ctx context.Context, req req.Pr
 	if len(productAttributeGroup.ProductAttributes) > 0 {
 		return errors.New("该属性组有属性值，不可删除")
 	}
-	if !isEditable(ctx, productAttributeGroup.CompanyAbbr) {
+	if !isEditable(ctx, productAttributeGroup.HeadquarterUuid) {
 		return errors.New("属性组不可删除")
 	}
 
@@ -6292,6 +6283,7 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 	}
 	uomList = append(uomList, selfUomList.List...)
 
+	uomHeadquarterMap := make(map[string]uint64)
 	// 如果是子店，获取总部的
 	if companySetting.IsSubShop() {
 		var headquarter model.CompanySetting
@@ -6300,7 +6292,7 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
-		selfUomList2, err := erp.GetUomList(ctx.GetContext(), req.GetUomListReq{
+		headquarterUomList, err := erp.GetUomList(ctx.GetContext(), req.GetUomListReq{
 			SiteCode:       headquarter.ErpnextSiteCode,
 			CompanyAbbr:    headquarter.ErpnextCompanyAbbr,
 			Branch:         headquarter.ErpnextBranchName,
@@ -6309,7 +6301,10 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 		if err != nil {
 			return errors.WithMessage(err, "获取总部单位列表失败")
 		}
-		uomList = append(uomList, selfUomList2.List...)
+		uomList = append(uomList, headquarterUomList.List...)
+		for _, uom := range headquarterUomList.List {
+			uomHeadquarterMap[uom.UomName] = headquarter.Uuid
+		}
 	}
 
 	var translateItems []utils.TranslateItem
@@ -6341,6 +6336,7 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 	err = db.Transaction(func(tx *gorm.DB) error {
 		for _, uom := range uomList {
 			var localeName dto.LocaleResponse
+			headquarterUuid, _ := uomHeadquarterMap[uom.UomName]
 			if _, ok := multiLanguageMap[uom.UomName]; !ok {
 				localeName = dto.LocaleResponse{
 					EN:   uom.UomName,
@@ -6383,9 +6379,9 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 					return err
 				}
 				err = tx.Model(&model.ProductUnit{}).Where("uuid = ?", unit.Uuid).Updates(map[string]any{
-					"name":         localeName.ToJson(),
-					"erpnext_uom":  uom.UomName,
-					"company_abbr": uom.CompanyAbbr,
+					"name":             localeName.ToJson(),
+					"erpnext_uom":      uom.UomName,
+					"headquarter_uuid": headquarterUuid,
 				}).Error
 				if err != nil {
 					return err
@@ -6400,7 +6396,7 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 					MultiLanguageNameUuid: multiLanguageName.Uuid,
 					Sort:                  unitSort,
 					ErpnextUom:            uom.UomName,
-					CompanyAbbr:           uom.CompanyAbbr,
+					HeadquarterUuid:       headquarterUuid,
 				}
 				err = tx.Model(&model.ProductUnit{}).Create(&productUnit).Error
 				if err != nil {
