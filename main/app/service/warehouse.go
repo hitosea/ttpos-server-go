@@ -566,7 +566,13 @@ func (s *warehouseSrv) GetWarehouseInOutList(ctx context.Context, req req.GetWar
 	}
 	// 物料分类ID列表
 	if len(req.MaterialCategoryUuids) > 0 {
-		opts = append(opts, warehouseInOutLogRepo.WhereMaterialCategoryUuids(req.MaterialCategoryUuids))
+		// 查询material表，获取这些分类下的物品uuid列表
+		materialRepo := repository.NewMaterialRepo(db)
+		materialUuids, err := materialRepo.GetMaterialUuidsByCategoryUuids(req.MaterialCategoryUuids)
+		if err != nil {
+			return resp.WarehouseInOutListResp{}, errors.WithMessage(err, "获取物品uuid列表失败")
+		}
+		opts = append(opts, warehouseInOutLogRepo.WhereMaterialUuids(materialUuids))
 	}
 	// 供应商ID列表
 	if len(req.SupplierUuids) > 0 {

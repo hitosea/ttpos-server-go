@@ -27,6 +27,7 @@ type IWarehouseInOutLogRepo interface {
 	// 条件查询选项
 	WhereWarehouseUuid(warehouseUuid uint64) DBOption
 	WhereMaterialUuid(materialUuid uint64) DBOption
+	WhereMaterialUuids(materialUuids []uint64) DBOption
 	WhereMaterialCategoryUuids(materialCategoryUuids []uint64) DBOption
 	WhereSupplierUuids(supplierUuids []uint64) DBOption
 	WhereOrderNo(orderNo string) DBOption
@@ -85,7 +86,6 @@ func (r *WarehouseInOutLogRepoImpl) GetListWithPagination(pageNo, pageSize int, 
 	// 构建基础查询，包含联表和预加载
 	query := r.db.Model(&model.WarehouseInOutLog{}).
 		Scopes(NotDeleted).
-		Joins("LEFT JOIN ttpos_material m ON m.uuid = ttpos_warehouse_in_out_log.material_uuid").
 		Preload("Material.MultiLanguageName").
 		Preload("Supplier").
 		Preload("Warehouse.MultiLanguageName")
@@ -184,6 +184,13 @@ func (r *WarehouseInOutLogRepoImpl) WhereWarehouseUuid(warehouseUuid uint64) DBO
 func (r *WarehouseInOutLogRepoImpl) WhereMaterialUuid(materialUuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("material_uuid = ?", materialUuid)
+	}
+}
+
+// WhereMaterialUuids 物料UUID列表条件
+func (r *WarehouseInOutLogRepoImpl) WhereMaterialUuids(materialUuids []uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("material_uuid IN ?", materialUuids)
 	}
 }
 

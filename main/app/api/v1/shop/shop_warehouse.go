@@ -221,7 +221,7 @@ func (h *WarehouseHandler) FirstSyncWarehouseItem(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param request body req.GetWarehouseInOutListReq true "获取仓库出入库明细列表请求"
-// @Success 200 {object} dto.Response "成功"
+// @Success 200 {object} dto.Response{data=resp.WarehouseInOutListResp} "成功"
 // @Router /shop/warehouse/in_out/list [get]
 func (h *WarehouseHandler) GetWarehouseInOutList(c *gin.Context) {
 	ctx := helper.GetContext(c)
