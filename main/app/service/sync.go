@@ -124,15 +124,15 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 		// 	logger.Logger.Error("规格同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 		// }
 
-		// TODO 等待erp接口 4.1 属性组
-		// if err := s.productSrv.SyncAttributeGroup(ctx); err != nil {
-		// 	logger.Logger.Error("属性组同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-		// }
+		// 4.1 属性组
+		if err := s.productSrv.SyncAttributeGroup(ctx); err != nil {
+			logger.Logger.Error("属性组同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
+		}
 
-		// TODO 等待erp接口 5.1 加料
-		// if err := s.productSrv.SyncSauce(ctx); err != nil {
-		// 	logger.Logger.Error("加料同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-		// }
+		// 5.1 加料
+		if err := s.productSrv.SyncSauce(ctx); err != nil {
+			logger.Logger.Error("加料同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
+		}
 
 		// 8 供应商
 		if err := s.supplierSrv.SyncSupplier(ctx); err != nil {

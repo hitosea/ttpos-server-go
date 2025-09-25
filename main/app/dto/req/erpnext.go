@@ -31,11 +31,12 @@ type GetUomListReq struct {
 }
 
 type GetAttributeListReq struct {
-	SiteCode      string `form:"site_code" json:"site_code" binding:"required"`           // 站点编码
-	Branch        string `form:"branch" json:"branch" binding:"required"`                 // 分支名称
-	CompanyAbbr   string `form:"company_abbr" json:"company_abbr" binding:"required"`     // 公司缩写编码
-	AttributeName string `form:"attribute_name" json:"attribute_name" binding:"required"` // 属性名称
-	AliasName     string `form:"alias_name" json:"alias_name" binding:"required"`         // 属性别名
+	SiteCode       string `form:"site_code" json:"site_code" binding:"required"`               // 站点编码
+	Branch         string `form:"branch" json:"branch" binding:"required"`                     // 分支名称
+	CompanyAbbr    string `form:"company_abbr" json:"company_abbr" binding:"required"`         // 公司缩写编码
+	AttributeName  string `form:"attribute_name" json:"attribute_name" binding:"required"`     // 属性名称
+	AliasName      string `form:"alias_name" json:"alias_name" binding:"required"`             // 属性别名
+	SubCompanyAbbr string `form:"sub_company_abbr" json:"sub_company_abbr" binding:"required"` // 连锁子店公司简称
 }
 
 type GetErpFlavorListReq struct {
@@ -214,4 +215,11 @@ type GetErpnextSupplierListReq struct {
 }
 
 type GetHeadquarterMaterialListReq struct {
+}
+
+type GetErpSauceListReq struct {
+	SiteCode       string // 站点编码
+	CompanyAbbr    string
+	Branch         string
+	SubCompanyAbbr string // 连锁子店公司简称
 }

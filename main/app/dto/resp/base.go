@@ -282,6 +282,9 @@ type ShopBase struct {
 	IsHeadquarter bool   `json:"is_headquarter"` // 是否是总部
 	ServerVersion string `json:"server_version"` // 服务端版本
 	UpdateTime    int64  `json:"update_time"`    // 更新时间
+
+	SyncStatus   int   `json:"sync_status"`    // 同步erp数据状态: 1同步中，0未同步、同步完成
+	LastSyncTime int64 `json:"last_sync_time"` // 上次同步erp数据完成时间
 }
 
 type ShopProfile struct {

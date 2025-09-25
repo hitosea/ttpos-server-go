@@ -1015,6 +1015,8 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 		UpdateTime:    time.Now().Unix(),
 		ServerVersion: utils.GetVersion(),
 		IsOpenTax:     taxSetting.IsOpen == "1",
+		SyncStatus:    company.SyncStatus,
+		LastSyncTime:  company.LastSyncTime,
 	}, nil
 }
 
