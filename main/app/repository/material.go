@@ -45,9 +45,11 @@ type IMaterialRepo interface {
 
 	CheckMultiLanguageNameExist(localeResponse dto.LocaleResponse) dto.LocaleResponse // 检查多语言名称是否存在
 	GetCategoryUuidByNameOptimized(name string) (uint64, error)
-	CheckBarcodeExist(barcode string, uuid uint64) bool                   // 检查条形码是否存在
-	CheckMaterialInternalCodeExist(internalCode string, uuid uint64) bool // 检查内部编码是否存在
-	CheckMaterialCategoryCodeExist(code string, uuid uint64) bool         // 检查物品类别编码是否存在
+	CheckBarcodeExist(barcode string, uuid uint64) bool                       // 检查条形码是否存在
+	CheckMaterialInternalCodeExist(internalCode string, uuid uint64) bool     // 检查内部编码是否存在
+	CheckMaterialCategoryCodeExist(code string, uuid uint64) bool             // 检查物品类别编码是否存在
+	GetMaterialUuidsByCategoryUuids(categoryUuids []uint64) ([]uint64, error) // 根据分类UUID列表获取物品UUID列表
+	GetMaterialUuidsByKeyword(keyword string) ([]uint64, error)               // 根据关键字获取物品UUID列表
 
 	WithRelatedMaterialList() DBOption
 }
@@ -525,4 +527,20 @@ func (r *MaterialRepoImpl) UpdateAllMaterialWarehouseUuid(warehouseUuid uint64) 
 		return errors.WithMessage(err, "更新所有物品仓库uuid失败")
 	}
 	return nil
+}
+
+func (r *MaterialRepoImpl) GetMaterialUuidsByCategoryUuids(categoryUuids []uint64) ([]uint64, error) {
+	var uuids []uint64
+	if err := r.db.Model(&model.Material{}).Where("category_uuid IN (?)", categoryUuids).Where("delete_time = ?", 0).Pluck("uuid", &uuids).Error; err != nil {
+		return nil, errors.WithMessage(err, "根据分类UUID列表获取物品UUID列表失败")
+	}
+	return uuids, nil
+}
+
+func (r *MaterialRepoImpl) GetMaterialUuidsByKeyword(keyword string) ([]uint64, error) {
+	var uuids []uint64
+	if err := r.db.Model(&model.Material{}).Where("name LIKE ? OR code LIKE ? OR barcode_value LIKE ?", "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%").Where("delete_time = ?", 0).Pluck("uuid", &uuids).Error; err != nil {
+		return nil, errors.WithMessage(err, "根据关键字获取物品UUID列表失败")
+	}
+	return uuids, nil
 }

@@ -25,7 +25,7 @@ type IWarehouseRepo interface {
 	// 条件查询选项
 	WhereNameOrCodeLike(name string) DBOption
 	WhereType(warehouseType string) DBOption
-	WhereCompanyAbbr(companyAbbr string) DBOption
+	WhereHeadquarterUuid(headquarterUuid uint64) DBOption
 	WhereStatus(status int) DBOption
 	OrderByCreateTime(desc bool) DBOption
 	UpdateIsDefault(uuid uint64) error
@@ -213,8 +213,8 @@ func (r *WarehouseRepoImpl) UpdateIsDefault(uuid uint64) error {
 	})
 }
 
-func (r *WarehouseRepoImpl) WhereCompanyAbbr(companyAbbr string) DBOption {
+func (r *WarehouseRepoImpl) WhereHeadquarterUuid(headquarterUuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("company_abbr = ?", companyAbbr)
+		return db.Where("headquarter_uuid = ?", headquarterUuid)
 	}
 }

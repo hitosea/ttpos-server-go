@@ -46,8 +46,8 @@ type StatementOrderInfoData struct {
 	OrderNo                string                    `json:"order_no"`                  // 订单号
 	Remark                 string                    `json:"remark"`                    // 订单备注
 	CashierName            string                    `json:"cashier_name"`              // 收银员名称
-	FinishTime             int64                     `json:"finish_time"`               // 完成时间
-	CreateTime             int64                     `json:"create_time"`               // 创建时间
+	FinishTime             string                    `json:"finish_time"`               // 完成时间
+	CreateTime             string                    `json:"create_time"`               // 创建时间
 	PayTime                string                    `json:"pay_time"`                  // 支付时间
 	Buffets                []StatementBuffetData     `json:"buffets"`                   // 自助餐列表
 	Delays                 []StatementDelayData      `json:"delays"`                    // 加钟列表
@@ -113,6 +113,8 @@ type StatementProductData struct {
 	Attrs        string  `json:"attrs"`
 	Attr         string  `json:"attr"`
 	SauceNames   string  `json:"sauce_names"`
+	IsDelay      bool    `json:"is_delay"`
+	IsBuffet     bool    `json:"is_buffet"`
 	IsGift       bool    `json:"is_gift"`
 	IsPackage    bool    `json:"is_package"`
 	IsSubProduct bool    `json:"is_sub_product"`
@@ -152,20 +154,7 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
 	payMethodUuid uint64,
-) string { // 就餐人数
-
-	// TODO: 临时测试
-	// // 创建复杂的测试模板
-	// templateJSON, err := os.ReadFile("./app/printer/pkg/template_json/statement_order_tmp.json")
-	// if err != nil {
-	// 	fmt.Println("读取 tmp.json 文件失败", err)
-	// 	logger.Logger.Error("读取 tmp.json 文件失败", zap.Error(err))
-	// 	return ""
-	// }
-
-	// // 将 templateJSON 转换为字符串
-	// tmpData = string(templateJSON)
-
+) string {
 	// 订单名称
 	orderName := saleOrder.GetOrderName()
 	// 就餐人数
@@ -173,7 +162,7 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 	// 商品数量
 	productNum := decimal.NewFromFloat(0)
 
-	//
+	// 支付方式
 	var paymentMethodName string
 	var qrCodeUrl string
 	if payMethodUuid != 0 {
@@ -211,43 +200,54 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 		}
 	}
 
+	// 商品列表
+	products := []StatementProductData{}
+
 	// 自助餐顾客类型
-	buffets := []StatementBuffetData{}
 	for _, orderBuffetCustomer := range saleOrder.SaleOrderBuffetCustomerTypes {
 		if orderBuffetCustomer.IsDelete() {
 			continue
 		}
 		productNum = productNum.Add(decimal.NewFromFloat(float64(orderBuffetCustomer.Num)).Round(3))
 		originPrice := orderBuffetCustomer.GetOriginPrice()
-		buffets = append(buffets, StatementBuffetData{
-			Name:     orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNameByLang(t.base.Lang),
-			PriceNum: fmt.Sprintf("%s*%d", t.base.Amount(orderBuffetCustomer.SalePrice), orderBuffetCustomer.Num),
-			Price:    t.base.Amount(originPrice),
-			Num:      orderBuffetCustomer.Num,
-			Subtotal: t.base.Amount(orderBuffetCustomer.TotalPrice),
-			Attrs:    orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-			Attr:     orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+		products = append(products, StatementProductData{
+			Name:         orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNameByLang(t.base.Lang),
+			PriceNum:     fmt.Sprintf("%s*%d", t.base.Amount(orderBuffetCustomer.SalePrice), orderBuffetCustomer.Num),
+			Price:        t.base.Amount(originPrice),
+			Num:          float64(orderBuffetCustomer.Num),
+			Subtotal:     t.base.Amount(orderBuffetCustomer.TotalPrice),
+			Attrs:        orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+			Attr:         orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+			SauceNames:   "",
+			IsBuffet:     true,
+			IsGift:       false,
+			IsPackage:    false,
+			IsSubProduct: false,
 		})
 	}
 
 	// 添加加钟商品
-	delays := []StatementDelayData{}
 	buffetDelayProducts, num := t.base.MergeSaleOrderBuffetDelayProducts(saleOrder)
 	productNum = productNum.Add(decimal.NewFromFloat(num).Round(3))
 	for _, delay := range buffetDelayProducts {
-		delays = append(delays, StatementDelayData{
-			Name:     delay.DelayName,
-			PriceNum: fmt.Sprintf("%s*%d", t.base.Amount(delay.DelayPrice), delay.DelayNum),
-			Price:    t.base.Amount(delay.DelayPrice),
-			Num:      delay.DelayNum,
-			Subtotal: t.base.Amount(delay.DelayTotalPrice),
-			Attrs:    delay.DelayName,
-			Attr:     delay.DelayName,
+		products = append(products, StatementProductData{
+			Name:         delay.DelayName,
+			PriceNum:     fmt.Sprintf("%s*%d", t.base.Amount(delay.DelayPrice), delay.DelayNum),
+			Price:        t.base.Amount(delay.DelayPrice),
+			Num:          float64(delay.DelayNum),
+			Subtotal:     t.base.Amount(delay.DelayTotalPrice),
+			Attrs:        delay.DelayName,
+			Attr:         delay.DelayName,
+			SauceNames:   "",
+			IsDelay:      true,
+			IsBuffet:     false,
+			IsGift:       false,
+			IsPackage:    false,
+			IsSubProduct: false,
 		})
 	}
 
 	// 商品列表
-	products := []StatementProductData{}
 	mergeProducts, num := t.base.MergeSaleOrderProduct(MergeSaleOrderProductOptions{
 		saleBill:   saleBill,
 		saleOrder:  saleOrder,
@@ -358,12 +358,10 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 			OrderNo:     saleOrder.OrderNo,
 			Remark:      saleBill.Remark,
 			CashierName: saleOrder.CashierName,
-			FinishTime:  saleOrder.FinishTime,
-			CreateTime:  saleOrder.CreateTime,
+			FinishTime:  t.base.FormatUnixTimeDefault(saleOrder.FinishTime),
+			CreateTime:  t.base.FormatUnixTimeDefault(saleOrder.CreateTime),
 			PayTime:     t.base.FormatUnixTimeDefault(saleOrder.FinishTime),
 			// 商品
-			Buffets:  buffets,
-			Delays:   delays,
 			Products: products,
 			//
 			ProductNum:    productNum.InexactFloat64(),
@@ -491,7 +489,7 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 		return ""
 	}
 
-	// 解析模板
+	// 解析模板 - 开始计时
 	img, err := parser.Parse()
 	if err != nil {
 		fmt.Println("复杂模板解析失败", err)
@@ -499,11 +497,6 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 		return ""
 	}
 
-	// TODO: 临时测试
-	// img.DebugSetSegmentationHeight(22200)
-	// img.Save("", !t.base.IsSunMi && settingPrinterInfo.IsEnableSound(), 0)
-	// return ""
-
-	//
+	// 保存图片
 	return img.Save("", !t.base.IsSunMi && settingPrinterInfo.IsEnableSound(), 0)
 }

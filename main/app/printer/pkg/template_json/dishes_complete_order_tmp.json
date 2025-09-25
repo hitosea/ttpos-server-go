@@ -1,0 +1,457 @@
+{
+    "metadata": {
+        "name": "dishes_complete_order",
+        "description": "整单打印模版",
+        "paper_width": 80,
+        "version": "1.0",
+        "thousandth": true
+    },
+    "rows": [
+        [
+            {
+                "block_id": "order.serial_no",
+                "block_type": "value",
+                "block_label": {},
+                "block_attr": {
+                    "font_size": 28,
+                    "align": "center",
+                    "font_bold": true,
+                    "dividing_line": false,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 3,
+                    "width": 100
+                }
+            }
+        ],
+        [
+            {
+                "block_id": "order.order_no",
+                "block_type": "label:auto:value",
+                "block_label": {
+                    "zh": "订单号",
+                    "en": "Order No",
+                    "ko": "주문번호",
+                    "my": "အမှာစာနံပါတ်",
+                    "tr": "Sipariş No",
+                    "de": "Bestell-Nr",
+                    "sv": "Beställningsnr",
+                    "ja": "注文番号",
+                    "zhtw": "訂單號",
+                    "th": "หมายเลขคำสั่งซื้อ"
+                },
+                "block_attr": {
+                    "font_size": 20,
+                    "align": "left",
+                    "font_bold": false,
+                    "dividing_line": false,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 0,
+                    "width": 60
+                }
+            }
+        ],
+        [
+            {
+                "block_id": "order.pay_time",
+                "block_type": "label:auto:value",
+                "block_label": {
+                    "zh": "时间",
+                    "en": "Time:",
+                    "ko": "시간",
+                    "my": "အချိန်",
+                    "tr": "Zaman",
+                    "de": "Zeit",
+                    "sv": "Tid",
+                    "ja": "時間",
+                    "zhtw": "時間",
+                    "th": "เวลา"
+                },
+                "block_attr": {
+                    "font_size": 20,
+                    "align": "left",
+                    "font_bold": false,
+                    "dividing_line": false,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 2,
+                    "width": 60
+                }
+            }
+        ],
+        [
+            {
+                "block_id": "title",
+                "block_type": "label",
+                "block_label": {
+                    "zh": "商品",
+                    "en": "Product",
+                    "ko": "상품",
+                    "my": "ကုန်ပစ္စည်းများ",
+                    "tr": "Ürün",
+                    "de": "Produkt",
+                    "sv": "Produkt",
+                    "ja": "商品",
+                    "zhtw": "商品",
+                    "th": "สินค้า"
+                },
+                "block_attr": {
+                    "font_size": 22,
+                    "align": "left",
+                    "font_bold": true,
+                    "line_height": 30,
+                    "dividing_line": true,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 0,
+                    "width": 50
+                }
+            },
+            {
+                "block_id": "title",
+                "block_type": "label",
+                "block_label": {
+                    "zh": "数量",
+                    "en": "Quantity",
+                    "ko": "수량",
+                    "my": "အရေအတွက်",
+                    "tr": "Miktar",
+                    "de": "Menge",
+                    "sv": "Antal",
+                    "ja": "数量",
+                    "zhtw": "數量",
+                    "th": "จำนวน"
+                },
+                "block_attr": {
+                    "font_size": 24,
+                    "align": "right",
+                    "font_bold": true,
+                    "line_height": 30,
+                    "dividing_line": true,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 0,
+                    "width": 50
+                }
+            }
+        ],
+        
+        [
+            {
+                "block_id": "order.buffets",
+                "block_type": "column",
+                "block_label": {},
+                "block_attr": {
+                    "font_size": 18,
+                    "align": "center",
+                    "font_bold": false,
+                    "dividing_line": false,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 0,
+                    "width": 100
+                },
+                "rows": [
+                    [
+                        {
+                            "block_id": "name",
+                            "block_type": "value",
+                            "block_label": {},
+                            "block_attr": {
+                                "font_size": 20,
+                                "align": "left",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 0,
+                                "line_height": 30,
+                                "width": 52
+                            },
+                            "rows": [
+                                [
+                                    {
+                                        "block_id": "attrs",
+                                        "block_type": "label",
+                                        "block_label": "({attrs})",
+                                        "block_attr": {
+                                            "font_size": 18,
+                                            "align": "left",
+                                            "font_bold": false,
+                                            "dividing_line": false,
+                                            "line_height":35,
+                                            "leading_blank_lines": 0,
+                                            "trailing_blank_lines": 1,
+                                            "width": 52
+                                        }
+                                    }
+                                ]
+                            ]
+                        },
+                        {
+                            "block_id": "price_num",
+                            "block_type": "value",
+                            "block_label": {},
+                            "block_attr": {
+                                "font_size": 20,
+                                "align": "center",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 0,
+                                "width": 20
+                            }
+                        },
+                        {
+                            "block_id": "subtotal",
+                            "block_type": "value",
+                            "block_label": {},
+                            "block_attr": {
+                                "font_size": 20,
+                                "align": "right",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 0,
+                                "show_currency_unit": true,
+                                "width": 0
+                            }
+                        }
+                    ]
+                ]
+            }
+        ],
+        [
+            {
+                "block_id": "order.delays",
+                "block_type": "column",
+                "block_label": {},
+                "block_attr": {
+                    "font_size": 18,
+                    "align": "center",
+                    "font_bold": false,
+                    "dividing_line": false,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 0,
+                    "width": 100
+                },
+                "rows": [
+                    [
+                        {
+                            "block_id": "name",
+                            "block_type": "value",
+                            "block_label": {},
+                            "block_attr": {
+                                "font_size": 20,
+                                "align": "left",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 0,
+                                "width": 52
+                            }
+                        },
+                        {
+                            "block_id": "price_num",
+                            "block_type": "value",
+                            "block_label": {},
+                            "block_attr": {
+                                "font_size": 20,
+                                "align": "center",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 0,
+                                "width": 20
+                            }
+                        },
+                        {
+                            "block_id": "subtotal",
+                            "block_type": "value",
+                            "block_label": {},
+                            "block_attr": {
+                                "font_size": 20,
+                                "align": "right",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 0,
+                                "show_currency_unit": true,
+                                "width": 0
+                            }
+                        }
+                    ]
+                ]
+            }
+        ],
+        [
+            {
+                "block_id": "order.products",
+                "block_type": "column",
+                "block_label": {},
+                "block_attr": {
+                    "font_size": 20,
+                    "align": "center",
+                    "font_bold": false,
+                    "dividing_line": true,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 0,
+                    "show_column_title": false,
+                    "width": 100
+                },
+                "rows": [
+                    [
+                        {
+                            "block_id": "name",
+                            "block_type": "value",
+                            "block_expand_labels": [
+                                {
+                                    "text": "--",
+                                    "conditions": [
+                                        {
+                                            "field": "is_sub_product",
+                                            "operator": "not_empty",
+                                            "value": 0
+                                        }
+                                    ]
+                                },
+                                {
+                                    "text": {
+                                        "zh": "(赠) ",
+                                        "en": "(Gift) ",
+                                        "ko": "(증정) ",
+                                        "my": "(လက်ဆောင်) ",
+                                        "tr": "(Hediye) ",
+                                        "de": "(Geschenk) ",
+                                        "sv": "(Gåva) ",
+                                        "ja": "(贈) ",
+                                        "zhtw": "(贈) ",
+                                        "th": "(ของแถม) "
+                                    },
+                                    "conditions": [
+                                        {
+                                            "field": "is_gift",
+                                            "operator": "not_empty",
+                                            "value": 0
+                                        },
+                                        {
+                                            "field": "is_sub_product",
+                                            "operator": "empty",
+                                            "value": 0
+                                        }
+                                    ]
+                                },
+                                {
+                                    "text": {
+                                        "zh": "(打包) ",
+                                        "en": "(Package) ",
+                                        "ko": "(포장) ",
+                                        "my": "(ထုပ်ပိုး) ",
+                                        "tr": "(Paket) ",
+                                        "de": "(Verpackung) ",
+                                        "sv": "(Förpackning) ",
+                                        "ja": "(パッケージ) ",
+                                        "zhtw": "(包裝) ",
+                                        "th": "(บรรจุภัณฑ์) "
+                                    },
+                                    "conditions": [
+                                        {
+                                            "field": "is_package",
+                                            "operator": "not_empty",
+                                            "value": 0
+                                        },
+                                        {
+                                            "field": "is_sub_product",
+                                            "operator": "empty",
+                                            "value": 0
+                                        }
+                                    ]
+                                }
+                            ],
+                            "block_label": {},
+                            "block_attr": {
+                                "font_size": 20,
+                                "align": "left",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 0,
+                                "line_height": 33,
+                                "padding_right": 10,
+                                "width": 52
+                            },
+                            "rows": [
+                                [
+                                    {
+                                        "block_id": "attrs",
+                                        "block_type": "label",
+                                        "block_expand_labels": [
+                                            {
+                                                "text": "   ",
+                                                "conditions": [
+                                                    {
+                                                        "field": "is_sub_product",
+                                                        "operator": "not_empty",
+                                                        "value": 0
+                                                    }
+                                                ]
+                                            }
+                                        ],
+                                        "block_label": "({attrs})",
+                                        "block_attr": {
+                                            "font_size": 18,
+                                            "align": "left",
+                                            "font_bold": false,
+                                            "dividing_line": false,
+                                            "line_height": 35,
+                                            "leading_blank_lines": 0,
+                                            "trailing_blank_lines": 1,
+                                            "width": 52
+                                        },
+                                        "conditions": [
+                                            {
+                                                "field": "attrs",
+                                                "operator": "not_empty",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ]
+                            ]
+                        },
+                        {
+                            "block_id": "price_num",
+                            "block_type": "value",
+                            "block_label": {},
+                            "block_attr": {
+                                "font_size": 20,
+                                "align": "center",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 0,
+                                "width": 24
+                            }
+                        },
+                        {
+                            "block_id": "subtotal",
+                            "block_type": "value",
+                            "block_label": {},
+                            "block_attr": {
+                                "font_size": 20,
+                                "align": "right",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 0,
+                                "show_currency_unit": true,
+                                "width": 0
+                            },
+                            "conditions": [
+                                {
+                                    "field": "is_sub_product",
+                                    "operator": "empty",
+                                    "value": 0
+                                }
+                            ]
+                        }
+                    ]
+                ]
+            }
+        ]
+    ]
+}

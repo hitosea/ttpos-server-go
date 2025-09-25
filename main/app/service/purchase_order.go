@@ -485,7 +485,7 @@ func (s *purchaseOrderSrv) DeletePurchaseOrder(ctx context.Context, req req.Purc
 // SubmitPurchaseOrder 提交采购申请
 func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.PurchaseOrderSubmitReq) error {
 	db := ctx.GetDB()
-	companySetting := ctx.GetCompanySetting()
+	// companySetting := ctx.GetCompanySetting()
 	//
 	return db.Transaction(func(tx *gorm.DB) error {
 		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
@@ -501,19 +501,19 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 		}
 
 		// 检查供应商状态
-		if purchaseOrder.SupplierErpCode != "" {
-			dbs := tx
-			if companySetting.IsSubShop() && purchaseOrder.IsHeadquarterPurchase() {
-				dbs = s.dbm.GetDB(companySetting.HeadquarterUuid)
-			}
-			supplier, err := repository.NewSupplierRepo(dbs).GetByErpCode(purchaseOrder.SupplierErpCode)
-			if err != nil {
-				return errors.WithMessage(err, "查询供应商失败")
-			}
-			if supplier.Status == 0 {
-				return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用")
-			}
-		}
+		// if purchaseOrder.SupplierErpCode != "" {
+		// 	dbs := tx
+		// 	if companySetting.IsSubShop() && purchaseOrder.IsHeadquarterPurchase() {
+		// 		dbs = s.dbm.GetDB(companySetting.HeadquarterUuid)
+		// 	}
+		// 	supplier, err := repository.NewSupplierRepo(dbs).GetByErpCode(purchaseOrder.SupplierErpCode)
+		// 	if err != nil {
+		// 		return errors.WithMessage(err, "查询供应商失败")
+		// 	}
+		// 	if supplier.Status == 0 {
+		// 		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用")
+		// 	}
+		// }
 
 		// 删除物品为0的数据
 		err = purchaseOrderItemRepo.DeleteByPurchaseOrderUuidAndNumIsZero(req.Uuid)
@@ -575,19 +575,19 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 		}
 
 		// 检查供应商状态
-		if purchaseOrder.SupplierErpCode != "" {
-			dbs := tx
-			if companySetting.IsSubShop() && purchaseOrder.IsHeadquarterPurchase() {
-				dbs = s.dbm.GetDB(companySetting.HeadquarterUuid)
-			}
-			supplier, err := repository.NewSupplierRepo(dbs).GetByErpCode(purchaseOrder.SupplierErpCode)
-			if err != nil {
-				return errors.WithMessage(err, "查询供应商失败")
-			}
-			if supplier.Status == 0 {
-				return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用")
-			}
-		}
+		// if purchaseOrder.SupplierErpCode != "" {
+		// 	dbs := tx
+		// 	if companySetting.IsSubShop() && purchaseOrder.IsHeadquarterPurchase() {
+		// 		dbs = s.dbm.GetDB(companySetting.HeadquarterUuid)
+		// 	}
+		// 	supplier, err := repository.NewSupplierRepo(dbs).GetByErpCode(purchaseOrder.SupplierErpCode)
+		// 	if err != nil {
+		// 		return errors.WithMessage(err, "查询供应商失败")
+		// 	}
+		// 	if supplier.Status == 0 {
+		// 		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用")
+		// 	}
+		// }
 
 		oldStatus := purchaseOrder.Status
 		var newStatus int

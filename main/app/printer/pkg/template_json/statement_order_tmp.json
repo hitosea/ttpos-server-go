@@ -505,152 +505,6 @@
         ],
         [
             {
-                "block_id": "order.buffets",
-                "block_type": "column",
-                "block_label": {},
-                "block_attr": {
-                    "font_size": 18,
-                    "align": "center",
-                    "font_bold": false,
-                    "dividing_line": false,
-                    "leading_blank_lines": 0,
-                    "trailing_blank_lines": 0,
-                    "width": 100
-                },
-                "rows": [
-                    [
-                        {
-                            "block_id": "name",
-                            "block_type": "value",
-                            "block_label": {},
-                            "block_attr": {
-                                "font_size": 20,
-                                "align": "left",
-                                "font_bold": false,
-                                "dividing_line": false,
-                                "leading_blank_lines": 0,
-                                "trailing_blank_lines": 0,
-                                "line_height": 30,
-                                "width": 52
-                            },
-                            "rows": [
-                                [
-                                    {
-                                        "block_id": "attrs",
-                                        "block_type": "label",
-                                        "block_label": "({attrs})",
-                                        "block_attr": {
-                                            "font_size": 18,
-                                            "align": "left",
-                                            "font_bold": false,
-                                            "dividing_line": false,
-                                            "line_height":35,
-                                            "leading_blank_lines": 0,
-                                            "trailing_blank_lines": 1,
-                                            "width": 52
-                                        }
-                                    }
-                                ]
-                            ]
-                        },
-                        {
-                            "block_id": "price_num",
-                            "block_type": "value",
-                            "block_label": {},
-                            "block_attr": {
-                                "font_size": 20,
-                                "align": "center",
-                                "font_bold": false,
-                                "dividing_line": false,
-                                "leading_blank_lines": 0,
-                                "trailing_blank_lines": 0,
-                                "width": 20
-                            }
-                        },
-                        {
-                            "block_id": "subtotal",
-                            "block_type": "value",
-                            "block_label": {},
-                            "block_attr": {
-                                "font_size": 20,
-                                "align": "right",
-                                "font_bold": false,
-                                "dividing_line": false,
-                                "leading_blank_lines": 0,
-                                "trailing_blank_lines": 0,
-                                "show_currency_unit": true,
-                                "width": 0
-                            }
-                        }
-                    ]
-                ]
-            }
-        ],
-        [
-            {
-                "block_id": "order.delays",
-                "block_type": "column",
-                "block_label": {},
-                "block_attr": {
-                    "font_size": 18,
-                    "align": "center",
-                    "font_bold": false,
-                    "dividing_line": false,
-                    "leading_blank_lines": 0,
-                    "trailing_blank_lines": 0,
-                    "width": 100
-                },
-                "rows": [
-                    [
-                        {
-                            "block_id": "name",
-                            "block_type": "value",
-                            "block_label": {},
-                            "block_attr": {
-                                "font_size": 20,
-                                "align": "left",
-                                "font_bold": false,
-                                "dividing_line": false,
-                                "leading_blank_lines": 0,
-                                "trailing_blank_lines": 0,
-                                "width": 52
-                            }
-                        },
-                        {
-                            "block_id": "price_num",
-                            "block_type": "value",
-                            "block_label": {},
-                            "block_attr": {
-                                "font_size": 20,
-                                "align": "center",
-                                "font_bold": false,
-                                "dividing_line": false,
-                                "leading_blank_lines": 0,
-                                "trailing_blank_lines": 0,
-                                "width": 20
-                            }
-                        },
-                        {
-                            "block_id": "subtotal",
-                            "block_type": "value",
-                            "block_label": {},
-                            "block_attr": {
-                                "font_size": 20,
-                                "align": "right",
-                                "font_bold": false,
-                                "dividing_line": false,
-                                "leading_blank_lines": 0,
-                                "trailing_blank_lines": 0,
-                                "show_currency_unit": true,
-                                "width": 0
-                            }
-                        }
-                    ]
-                ]
-            }
-        ],
-        [
-            {
                 "block_id": "order.products",
                 "block_type": "column",
                 "block_label": {},
@@ -670,6 +524,16 @@
                             "block_id": "name",
                             "block_type": "value",
                             "block_expand_labels": [
+                                {
+                                    "text": "--",
+                                    "conditions": [
+                                        {
+                                            "field": "is_sub_product",
+                                            "operator": "not_empty",
+                                            "value": 0
+                                        }
+                                    ]
+                                },
                                 {
                                     "text": {
                                         "zh": "(赠) ",
@@ -732,12 +596,13 @@
                                 "leading_blank_lines": 0,
                                 "trailing_blank_lines": 0,
                                 "line_height": 33,
+                                "padding_right": 10,
                                 "width": 52
                             },
                             "rows": [
                                 [
                                     {
-                                        "block_id": "attr",
+                                        "block_id": "attrs",
                                         "block_type": "label",
                                         "block_expand_labels": [
                                             {
@@ -784,7 +649,7 @@
                                 "dividing_line": false,
                                 "leading_blank_lines": 0,
                                 "trailing_blank_lines": 0,
-                                "width": 20
+                                "width": 24
                             }
                         },
                         {
@@ -1695,7 +1560,7 @@
                     "font_bold": true,
                     "dividing_line": false,
                     "leading_blank_lines": 0,
-                    "trailing_blank_lines": 5,
+                    "trailing_blank_lines": 6,
                     "width": 100
                 }
             }

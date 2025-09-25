@@ -12,7 +12,7 @@ import (
 // TestComplexImgTemplate 测试复杂的JSON模板功能
 func TestComplexImgTemplate(t *testing.T) {
 	// 创建复杂的测试模板
-	templateJSON, err := os.ReadFile("../template_json/statement_order_pre_tmp.json")
+	templateJSON, err := os.ReadFile("../template_json/dishes_complete_order_tmp.json")
 	if err != nil {
 		t.Fatalf("读取 tmp.json 文件失败: %v", err)
 	}
@@ -21,7 +21,7 @@ func TestComplexImgTemplate(t *testing.T) {
 	templateJSONStr := string(templateJSON)
 
 	// 从JSON文件读取测试数据
-	testDataBytes, err := os.ReadFile("../template_json/statement_order_data.json")
+	testDataBytes, err := os.ReadFile("../template_json/dishes_data.json")
 	if err != nil {
 		t.Fatalf("读取测试数据文件失败: %v", err)
 	}
