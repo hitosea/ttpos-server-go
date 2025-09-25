@@ -1558,7 +1558,7 @@
                     "font_bold": true,
                     "dividing_line": false,
                     "leading_blank_lines": 0,
-                    "trailing_blank_lines": 5,
+                    "trailing_blank_lines": 6,
                     "width": 100
                 }
             }
