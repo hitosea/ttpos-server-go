@@ -190,9 +190,10 @@ func (s *sItem) SaveItem(ctx context.Context, reqInfo *item.ItemInfo) (res *item
 		return s.updateExistingItem(ctx, req)
 	} else {
 		//创建规格商品
-		if len(req.ItemSpecification) > 0 {
-			//TODO 使用变体创建商品
-		}
+		//TODO 使用变体创建商品
+		//if len(req.ItemSpecification) > 0 {
+		//
+		//}
 		// 创建新物品
 		return s.createNewItem(ctx, req)
 	}
@@ -413,6 +414,8 @@ func (s *sItem) addItemGroupSpecificFields(ctx context.Context, req *item.ItemIn
 		s.addRawMaterialFields(req, newItem)
 	} else if req.ItemGroup == item.ItemGroup_Products {
 		// 商品特定字段
+		//FIXME 后面要去掉的，现在先放着这里
+		newItem["custom_specification"] = req.ItemSpecification
 		newItem["is_stock_item"] = 0
 	} else if req.ItemGroup == item.ItemGroup_Package {
 		// 套餐特定字段
