@@ -495,6 +495,12 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 		// 获取总部ID
 		headquarterUuid := ctx.GetCompanySetting().HeadquarterUuid
 		params.SetHeadquarterUuid(headquarterUuid)
+		// 获取默认仓库ID
+		warehouseUuid, err := repository.NewWarehouseRepo(tx).GetDefaultWarehouse()
+		if err != nil {
+			return errors.WithMessage(err, "获取默认仓库失败")
+		}
+		params.SetWarehouseUuid(warehouseUuid.Uuid)
 		material, _, err := addMaterial(ctx, tx, params)
 		if err != nil {
 			return errors.WithMessage(err)
@@ -674,6 +680,11 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 	headquarterUuid := request.GetHeadquarterUuid()
 	if headquarterUuid != 0 {
 		material.HeadquarterUuid = headquarterUuid
+	}
+	// 设置仓库ID
+	warehouseUuid := request.GetWarehouseUuid()
+	if warehouseUuid != 0 {
+		material.WarehouseUuid = warehouseUuid
 	}
 
 	_, err = materialRepo.CreateMaterial(material)
