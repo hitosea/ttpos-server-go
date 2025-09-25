@@ -10098,16 +10098,17 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 	}
 	// 如果有服务费，则添加一个虚拟商品来记录服务费
 	if saleOrder.ServiceFee > 0 {
-		items = append(items, &selling.PosInvoiceItem{
+		serviceFeeItem := &selling.PosInvoiceItem{
 			ItemCode: constant.PosInvoiceItemCodeServiceFee,
 			Qty:      saleOrder.ServiceFee,
 			Rate:     1,
 			Amount:   saleOrder.ServiceFee,
-		})
-		// taxes = append(taxes, &selling.PosInvoiceTax{
-		// 	TaxAmount:   saleOrder.ServiceFee,
-		// 	Description: "Service Fee", // 服务费
-		// })
+		}
+		// 如果是免单
+		if isFreeOrder {
+			serviceFeeItem.IsFreeItem = true
+		}
+		items = append(items, serviceFeeItem)
 	}
 	// 如果有支付手续费，则添加一个虚拟商品来记录支付手续费
 	if saleOrder.PaymentCommissionFee > 0 {
