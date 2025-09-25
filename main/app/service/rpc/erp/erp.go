@@ -63,6 +63,9 @@ type IErpSrv interface {
 	UpdateWarehouse(ctx context.Context, updateWarehouseReq req.UpdateErpnextWarehouseReq) error                                  // 更新仓库
 	DeleteWarehouse(ctx context.Context, deleteWarehouseReq req.DeleteErpnextWarehouseReq) error                                  // 删除仓库
 	GetWarehouseList(ctx context.Context, getWarehouseListReq req.GetErpnextWarehouseListReq) ([]*warehouse.WarehouseInfo, error) // 获取仓库列表
+
+	// 规格
+	GetFlavorList(ctx context.Context, params req.GetErpFlavorListReq) (resp.GetErpFlavorListResp, error) // 获取规格列表
 }
 type erpSrv struct {
 	dbm *database.DBManager

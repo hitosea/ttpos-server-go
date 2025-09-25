@@ -15,6 +15,8 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/app/tasks"
+	"ttpos-server-go/config"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
@@ -1747,6 +1749,27 @@ func (h *DeskHandler) GetOrderMemberList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetDailySalesOutboundSummary 获取每日销售出库汇总
+// @Summary 获取每日销售出库汇总
+// @Description 获取每日销售出库汇总
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.DailySalesOutboundSummary}
+// @Router /cashier/desk/order/daily_sales_outbound_summary [get]
+func (h *DeskHandler) GetDailySalesOutboundSummary(c *gin.Context) {
+	companyUuid := helper.GetCompanyUuid(c)
+	dbm := database.GetDBManager(config.Database)
+	company, err := repository.NewCompanyRepo(dbm.GetDB(companyUuid)).GetCompany(repository.CommonRepo.WhereByUuid(companyUuid))
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	tasks.NewDailySalesOutboundSummaryTask(dbm, cache.Global).ProcessCompany(&company)
+	helper.Success(c, gin.H{})
+}
+
 // RegisterDeskHandlers 注册收银产品路由
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -1828,5 +1851,6 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/print/invoice", wrapper.OrderPrintInvoice)                                            // 打印发票
 		privateApi.POST("/desk/order/unlock", wrapper.OrderUnlock)                                                         // 订单解锁
 		privateApi.GET("/desk/order/member/list", wrapper.GetOrderMemberList)                                              // 使用会员列表
+		privateApi.GET("/desk/order/daily_sales_outbound_summary", wrapper.GetDailySalesOutboundSummary)                   // 获取每日销售出库汇总
 	}
 }

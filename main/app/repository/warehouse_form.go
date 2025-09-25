@@ -37,6 +37,7 @@ type IWarehouseFormQueryRepo interface {
 	GetWarehouseOutFormItemBySaleBillUuid(saleBillUuid uint64) ([]*model.WarehouseOutFormItem, error)   // 获取该销售账单的所有出库单记录
 	GetWarehouseOutFormItemNotProcessed(saleBillUuid uint64) ([]*model.WarehouseOutFormItem, error)     // 获取该销售账单的所有未减库存的出库单记录
 	GetWarehouseFormItemNotProcessed(saleBillUuid uint64) ([]*model.WarehouseFormItem, error)           // 获取该销售账单的所有未加库存的入库单记录
+	GetValidWarehouseOutFormItem(startTime, endTime int64) ([]*model.WarehouseOutFormItem, error)       // 获取某时间范围内的有效单物品出库记录
 }
 
 type warehouseFormRepoImpl struct {
@@ -282,4 +283,29 @@ func (r *warehouseFormRepoImpl) GenerateWarehouseOutFormNo(timezone string) stri
 	rand := rand.Intn(9000) + 1000
 	code := "OO" + date + "0000" + strconv.Itoa(rand)
 	return code
+}
+
+// 获取某时间范围内的有效单物品出库记录
+func (r *warehouseFormRepoImpl) GetValidWarehouseOutFormItem(startTime, endTime int64) ([]*model.WarehouseOutFormItem, error) {
+	warehouseOutFormItems, err := r.GetWarehouseOutFormItem(
+		func(db *gorm.DB) *gorm.DB {
+			return db.
+				Where("create_time BETWEEN ? AND ?", startTime, endTime). // 时间范围
+				Where("material_uuid > 0").                               // 只统计原材料出库
+				Where("warehouse_uuid <> ?", 0)                           // 只统计有仓库的出库记录
+		},
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "Material",
+			},
+			WithPreload{
+				Query: "Material.Unit",
+			},
+		),
+		CommonRepo.WhereBySoftDelete(),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return warehouseOutFormItems, nil
 }

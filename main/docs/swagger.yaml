@@ -1627,6 +1627,9 @@ definitions:
     type: object
   product_resp.ProductAttribute:
     properties:
+      editable:
+        description: 是否可编辑
+        type: boolean
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -1664,6 +1667,9 @@ definitions:
     type: object
   product_resp.ProductAttributeGroupAttributeItem:
     properties:
+      editable:
+        description: 是否可编辑
+        type: boolean
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -1678,6 +1684,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/product_resp.ProductAttributes'
         description: 商品属性值列表
+      editable:
+        description: 是否可编辑
+        type: boolean
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -1696,6 +1705,9 @@ definitions:
         items:
           $ref: '#/definitions/product_resp.ProductAttributeGroupAttributeItem'
         type: array
+      editable:
+        description: 是否可编辑
+        type: boolean
       name:
         description: 商品属性分组名称
         type: string
@@ -2289,6 +2301,9 @@ definitions:
     type: object
   product_resp.ProductSauceDetail:
     properties:
+      editable:
+        description: 是否可编辑
+        type: boolean
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -2306,6 +2321,9 @@ definitions:
     type: object
   product_resp.ProductSauceItem:
     properties:
+      editable:
+        description: 是否可编辑
+        type: boolean
       name:
         description: 商品加料名称
         type: string
@@ -2584,6 +2602,9 @@ definitions:
     type: object
   product_resp.ProductUnitDetail:
     properties:
+      editable:
+        description: 是否可编辑
+        type: boolean
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -2598,6 +2619,9 @@ definitions:
     type: object
   product_resp.ProductUnitItem:
     properties:
+      editable:
+        description: 是否可编辑
+        type: boolean
       name:
         description: 商品单位名称
         type: string

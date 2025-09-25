@@ -219,6 +219,11 @@ func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 		tasks.NewDelPrintTask(dbm, cache).Execute()
 	})
 
+	// 每小时执行销售出库汇总任务
+	_, _ = c.AddFunc("0 0 * * * *", func() {
+		tasks.NewDailySalesOutboundSummaryTask(dbm, cache).Execute()
+	})
+
 	// 启动定时器
 	c.Start()
 }

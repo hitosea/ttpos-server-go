@@ -104,7 +104,7 @@ func (s *sWarehouse) GetWarehouseList(ctx context.Context, req *warehouse.GetWar
 	filters := s.buildWarehouseListFilters(ctx, req)
 
 	// 查询仓库列表
-	warehouseList, err := s.queryWarehouseList(ctx, filters)
+	warehouseList, err := s.queryWarehouseList(ctx, filters, req)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "查询仓库列表失败")
 	}
@@ -179,7 +179,7 @@ func (s *sWarehouse) buildWarehouseListFilters(ctx context.Context, req *warehou
 }
 
 // queryWarehouseList 执行仓库列表查询
-func (s *sWarehouse) queryWarehouseList(ctx context.Context, filters [][]string) ([]*warehouse.WarehouseInfo, error) {
+func (s *sWarehouse) queryWarehouseList(ctx context.Context, filters [][]string, req *warehouse.GetWarehouseListReq) ([]*warehouse.WarehouseInfo, error) {
 	// 查询仓库列表
 	resp, err := service.Document().List(ctx, &erp.ErpReq{
 		DocType: erp.DocTypeWarehouse,
@@ -212,6 +212,7 @@ func (s *sWarehouse) queryWarehouseList(ctx context.Context, filters [][]string)
 			WarehouseType: data.Get("warehouse_type").String(),
 			AliasName:     data.Get("custom_aliasname").String(),
 			Disabled:      data.Get("disabled").Bool(),
+			CompanyAbbr:   req.CompanyAbbr,
 		}
 		warehouseList = append(warehouseList, warehouseInfo)
 	}

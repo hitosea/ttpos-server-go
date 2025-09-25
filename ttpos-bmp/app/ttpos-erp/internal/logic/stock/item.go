@@ -296,6 +296,13 @@ func (s *sItem) buildUpdateItemData(req *item.ItemInfo) g.Map {
 		itemForUpdate["custom_internal_code"] = req.InternalCode
 	}
 
+	//是否禁售
+	if req.NotForSale {
+		itemForUpdate["custom_not_for_sale"] = 1
+	} else {
+		itemForUpdate["custom_not_for_sale"] = 0
+	}
+
 	return itemForUpdate
 }
 
@@ -325,7 +332,7 @@ func (s *sItem) createNewItem(ctx context.Context, req *item.ItemInfo) (*item.It
 	}
 
 	// 创建物品
-	_, err = service.Document().Create(ctx, "Item", &newItem)
+	_, err = service.Document().Create(ctx, erp.DocTypeItem, &newItem)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建物品失败")
 	}
@@ -364,6 +371,7 @@ func (s *sItem) buildNewItemData(ctx context.Context, req *item.ItemInfo, compan
 		"custom_classification":      req.Classification,
 		"custom_classification_code": req.ClassificationCode,
 		"custom_internal_code":       req.InternalCode,
+		"custom_not_for_sale":        req.NotForSale,
 	}
 
 	// 根据物品分组添加特定字段

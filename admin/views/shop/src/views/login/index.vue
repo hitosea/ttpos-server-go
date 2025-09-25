@@ -293,6 +293,7 @@
       document.removeEventListener('keyup', this.onEnter);
       window.removeEventListener('focus', this.handleFocus);
     },
+    
     methods: {
       onEnter(event) {
         if (event.key === 'Enter' && !this.logining) {
@@ -317,6 +318,7 @@
             UserApi.login(Params, true)
               .then(async (data) => {
                 this.ruleForm.code = '';
+                this.getCode();
                 if (data.code == -102) {
                   _this.logining = false;
                   return;

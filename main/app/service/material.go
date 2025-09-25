@@ -509,7 +509,7 @@ func (s *materialSrv) AddMaterial(ctx context.Context, req req.MaterialAddReq) e
 
 	// 检查物品名称
 	productCheckSrv := NewProductCheckSrv(s.dbm, s.localeSrv, s.settingSrv)
-	if err := productCheckSrv.CheckProductName(ctx, 0, req.LocaleName); err != nil {
+	if err := productCheckSrv.CheckMaterialName(ctx, 0, req.LocaleName); err != nil {
 		return errors.WithMessage(err, "检查物品名称失败")
 	}
 
