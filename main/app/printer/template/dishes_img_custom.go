@@ -30,6 +30,7 @@ func NewDishesImgTemplateCustom(
 	}
 }
 
+// getData 构建订单数据结构体
 func (t *dishesImgTemplateCustom) getData(
 	printer *model.Printer,
 	saleBill model.SaleBill,
