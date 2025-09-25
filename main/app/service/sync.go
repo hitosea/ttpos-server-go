@@ -2,10 +2,8 @@ package service
 
 import (
 	"sync"
-	"time"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/logger"
-	"ttpos-server-go/pkg/websocket"
 
 	"go.uber.org/zap"
 )
@@ -99,20 +97,48 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 
 		logger.Logger.Info("开始同步任务", zap.Uint64("companyUuid", companyUuid))
 
+		// 1 uom
+		if err := s.productSrv.SyncUnit(ctx); err != nil {
+			logger.Logger.Error("单位同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
+		}
+
+		// 3 规格
+		if err := s.productSrv.SyncProductFlavor(ctx); err != nil {
+			logger.Logger.Error("规格同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
+		}
+
+		// TODO 等待erp接口 4.1 属性组
+		// if err := s.productSrv.SyncAttributeGroup(ctx); err != nil {
+		// 	logger.Logger.Error("属性组同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
+		// }
+
+		// TODO 等待erp接口 5.1 加料
+		// if err := s.productSrv.SyncSauce(ctx); err != nil {
+		// 	logger.Logger.Error("加料同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
+		// }
+
 		// 8 供应商
-		if err := s.supplierSrv.Sync(ctx); err != nil {
+		if err := s.supplierSrv.SyncSupplier(ctx); err != nil {
 			logger.Logger.Error("供应商同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 		}
 
 		// 9 仓库
-		if err := s.warehouseSrv.Sync(ctx); err != nil {
+		firstSync, err := s.warehouseSrv.SyncWarehouse(ctx)
+		if err != nil {
 			logger.Logger.Error("仓库同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 		}
 
-		// TODO 推送同步总部数据配置更新
-		go websocket.PushClient(company.Uuid, websocket.SourceShop, websocket.SourceShop, websocket.UPDATE_CONFIG, map[string]any{
-			"update_time": time.Now().Unix(),
-		})
+		// TODO 仅在第一次同步仓库的时候，同步默认仓库库存 10 仓库物品
+		if firstSync {
+			if err := s.warehouseSrv.SyncDefaultWarehouseStock(ctx); err != nil {
+				logger.Logger.Error("默认仓库库存同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
+			}
+		}
+
+		// // TODO 推送同步总部数据配置更新
+		// go websocket.PushClient(company.Uuid, websocket.SourceShop, websocket.SourceShop, websocket.UPDATE_CONFIG, map[string]any{
+		// 	"update_time": time.Now().Unix(),
+		// })
 	}(ctx)
 
 	return nil

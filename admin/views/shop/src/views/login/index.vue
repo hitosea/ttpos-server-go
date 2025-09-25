@@ -318,6 +318,7 @@
             UserApi.login(Params, true)
               .then(async (data) => {
                 this.ruleForm.code = '';
+                this.getCode();
                 if (data.code == -102) {
                   _this.logining = false;
                   return;

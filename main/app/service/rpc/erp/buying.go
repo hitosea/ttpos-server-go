@@ -62,10 +62,11 @@ func (s *erpSrv) ListSuppliers(ctx cc.Context, listSuppliersReq req.GetErpnextSu
 	}
 	defer conn.Close()
 	result, err := client.ListSuppliers(WithSiteCode(context.Background(), listSuppliersReq.SiteCode), &buying.ListSuppliersReq{
-		CompanyAbbr: listSuppliersReq.CompanyAbbr,
-		Branch:      listSuppliersReq.Branch,
-		PageNo:      1,
-		PageSize:    1000,
+		CompanyAbbr:    listSuppliersReq.CompanyAbbr,
+		Branch:         listSuppliersReq.Branch,
+		PageNo:         1,
+		PageSize:       1000,
+		SubCompanyAbbr: listSuppliersReq.SubCompanyAbbr,
 	})
 	if err != nil {
 		return nil, err

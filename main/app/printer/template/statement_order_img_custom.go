@@ -3,7 +3,7 @@ package template
 
 import (
 	"fmt"
-	"os"
+	"strconv"
 	"ttpos-server-go/app/constant"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
@@ -53,63 +53,69 @@ type StatementOrderInfoData struct {
 	Delays                 []StatementDelayData      `json:"delays"`                    // 加钟列表
 	Products               []StatementProductData    `json:"products"`                  // 商品列表
 	ProductNum             float64                   `json:"product_num"`               // 商品数量
-	ProductAmount          float64                   `json:"product_amount"`            // 商品金额
-	ServiceFee             float64                   `json:"service_fee"`               // 服务费
+	ProductAmount          string                    `json:"product_amount"`            // 商品金额
+	ServiceFee             string                    `json:"service_fee"`               // 服务费
 	TaxRate                float64                   `json:"tax_rate"`                  // 税费率
 	TaxFeeType             uint                      `json:"tax_fee_type"`              // 税费类型	0-关闭消费税 1-商品未含税 2-商品已含税
 	IsContainTax           uint                      `json:"is_contain_tax"`            // 是否包含税
-	DiscountFee            float64                   `json:"discount_fee"`              // 折扣金额
-	DiscountRate           float64                   `json:"discount_rate"`             // 折扣率
-	MemberDiscountFee      float64                   `json:"member_discount_fee"`       // 会员折扣金额
+	DiscountFee            string                    `json:"discount_fee"`              // 折扣金额
+	DiscountRate           string                    `json:"discount_rate"`             // 折扣率
+	MemberDiscountFee      string                    `json:"member_discount_fee"`       // 会员折扣金额
 	MemberDiscountRate     float64                   `json:"member_discount_rate"`      // 会员折扣率
 	MemberCardDiscountRate float64                   `json:"member_card_discount_rate"` // 会员卡折扣率
 	MemberPointsDiscount   float64                   `json:"member_points_discount"`    // 会员积分抵扣金额
 	CouponExchangeAmount   float64                   `json:"coupon_exchange_amount"`    // 优惠券抵扣金额
-	CheckOutZeroFee        float64                   `json:"check_out_zero_fee"`        // 结账抹零金额
-	ReturnAmount           float64                   `json:"return_amount"`             // 退款金额
+	CheckOutZeroFee        string                    `json:"check_out_zero_fee"`        // 结账抹零金额
+	ReturnAmount           string                    `json:"return_amount"`             // 退款金额
 	PaymentCommissionFee   float64                   `json:"payment_commission_fee"`    // 支付手续费
-	FreeAmount             float64                   `json:"free_amount"`               // 免单金额
-	ActualReceivePrice     float64                   `json:"actual_receive_price"`      // 实际收款金额
+	FreeAmount             string                    `json:"free_amount"`               // 免单金额
+	ActualReceivePrice     string                    `json:"actual_receive_price"`      // 实际收款金额
 	PaymentMethods         []StatementPaymentMethod  `json:"payment_methods"`           // 支付方式列表
 	PercentageLists        []StatementPercentageData `json:"percentage_lists"`          // 百分比列表
 	IsFree                 bool                      `json:"is_free"`                   // 是否免单
-	MemberRemainingBalance float64                   `json:"member_remaining_balance"`  // 会员剩余余额
+	IsMember               bool                      `json:"is_member"`                 // 是否会员
+	MemberRemainingBalance string                    `json:"member_remaining_balance"`  // 会员剩余余额
 	MemberPoints           float64                   `json:"member_points"`             // 会员积分
 	PaymentName            string                    `json:"payment_name"`              // 支付方式名称
 	PaymentQrcode          string                    `json:"payment_qrcode"`            // 支付方式二维码
+	Barcode                string                    `json:"barcode"`                   // 条形码
 }
 
 // StatementBuffetData 自助餐数据结构体
 type StatementBuffetData struct {
-	Name     string  `json:"name"`
-	PriceNum string  `json:"price_num"`
-	Price    float64 `json:"price"`
-	Num      uint    `json:"num"`
-	Subtotal float64 `json:"subtotal"`
-	Info     string  `json:"info"`
+	Name     string `json:"name"`
+	PriceNum string `json:"price_num"`
+	Price    string `json:"price"`
+	Num      uint   `json:"num"`
+	Subtotal string `json:"subtotal"`
+	Attrs    string `json:"attrs"`
+	Attr     string `json:"attr"`
 }
 
 // StatementDelayData 加钟数据结构体
 type StatementDelayData struct {
-	Name     string  `json:"name"`
-	PriceNum string  `json:"price_num"`
-	Price    float64 `json:"price"`
-	Num      uint    `json:"num"`
-	Info     string  `json:"info"`
-	Subtotal float64 `json:"subtotal"`
+	Name     string `json:"name"`
+	PriceNum string `json:"price_num"`
+	Price    string `json:"price"`
+	Num      uint   `json:"num"`
+	Attrs    string `json:"attrs"`
+	Attr     string `json:"Attr"`
+	Subtotal string `json:"subtotal"`
 }
 
 // StatementProductData 商品数据结构体
 type StatementProductData struct {
 	Name         string  `json:"name"`
 	PriceNum     string  `json:"price_num"`
-	Price        float64 `json:"price"`
+	Price        string  `json:"price"`
 	Num          float64 `json:"num"`
-	Subtotal     float64 `json:"subtotal"`
-	Info         string  `json:"info"`
-	IsGift       uint    `json:"is_gift"`
-	IsPackage    uint    `json:"is_package"`
-	IsSubProduct uint    `json:"is_sub_product"`
+	Subtotal     string  `json:"subtotal"`
+	Attrs        string  `json:"attrs"`
+	Attr         string  `json:"attr"`
+	SauceNames   string  `json:"sauce_names"`
+	IsGift       bool    `json:"is_gift"`
+	IsPackage    bool    `json:"is_package"`
+	IsSubProduct bool    `json:"is_sub_product"`
 }
 
 // StatementPaymentMethod 支付方式数据结构体
@@ -120,8 +126,9 @@ type StatementPaymentMethod struct {
 
 // StatementPercentageData 百分比数据结构体
 type StatementPercentageData struct {
-	Name string `json:"name"`
-	Text string `json:"text"`
+	TaxRate    string `json:"tax_rate"`
+	TaxFee     string `json:"tax_fee"`
+	TotalPrice string `json:"total_price"`
 }
 
 // statementOrderImgTemplateCustom 图片订单打印模板
@@ -146,10 +153,25 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 	saleOrder *model.SaleOrder,
 	payMethodUuid uint64,
 ) string { // 就餐人数
+
+	// TODO: 临时测试
+	// // 创建复杂的测试模板
+	// templateJSON, err := os.ReadFile("./app/printer/pkg/template_json/statement_order_tmp.json")
+	// if err != nil {
+	// 	fmt.Println("读取 tmp.json 文件失败", err)
+	// 	logger.Logger.Error("读取 tmp.json 文件失败", zap.Error(err))
+	// 	return ""
+	// }
+
+	// // 将 templateJSON 转换为字符串
+	// tmpData = string(templateJSON)
+
 	// 订单名称
 	orderName := saleOrder.GetOrderName()
 	// 就餐人数
 	mealNumStr := utils.IfString(saleBill.MealNum > 0, fmt.Sprintf(" (%d%s)", saleBill.MealNum, t.base.Translate("人")), "")
+	// 商品数量
+	productNum := decimal.NewFromFloat(0)
 
 	//
 	var paymentMethodName string
@@ -189,9 +211,6 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 		}
 	}
 
-	// 商品数量
-	productNum := decimal.NewFromFloat(0)
-
 	// 自助餐顾客类型
 	buffets := []StatementBuffetData{}
 	for _, orderBuffetCustomer := range saleOrder.SaleOrderBuffetCustomerTypes {
@@ -203,10 +222,11 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 		buffets = append(buffets, StatementBuffetData{
 			Name:     orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNameByLang(t.base.Lang),
 			PriceNum: fmt.Sprintf("%s*%d", t.base.Amount(orderBuffetCustomer.SalePrice), orderBuffetCustomer.Num),
-			Price:    originPrice,
+			Price:    t.base.Amount(originPrice),
 			Num:      orderBuffetCustomer.Num,
-			Subtotal: orderBuffetCustomer.TotalPrice,
-			Info:     orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+			Subtotal: t.base.Amount(orderBuffetCustomer.TotalPrice),
+			Attrs:    orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+			Attr:     orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 		})
 	}
 
@@ -218,10 +238,11 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 		delays = append(delays, StatementDelayData{
 			Name:     delay.DelayName,
 			PriceNum: fmt.Sprintf("%s*%d", t.base.Amount(delay.DelayPrice), delay.DelayNum),
-			Price:    delay.DelayPrice,
+			Price:    t.base.Amount(delay.DelayPrice),
 			Num:      delay.DelayNum,
-			Subtotal: delay.DelayTotalPrice,
-			Info:     delay.DelayName,
+			Subtotal: t.base.Amount(delay.DelayTotalPrice),
+			Attrs:    delay.DelayName,
+			Attr:     delay.DelayName,
 		})
 	}
 
@@ -230,36 +251,84 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 	mergeProducts, num := t.base.MergeSaleOrderProduct(MergeSaleOrderProductOptions{
 		saleBill:   saleBill,
 		saleOrder:  saleOrder,
-		IsShowSku:  false,
+		IsShowSku:  true,
 		IsShowWrap: true,
 	})
 	productNum = productNum.Add(decimal.NewFromFloat(num).Round(3))
 	for _, product := range mergeProducts {
 		products = append(products, StatementProductData{
-			Name:         product.ProductName,
+			Name:         product.Name,
 			PriceNum:     fmt.Sprintf("%s*%v", t.base.Amount(product.ProductPrice), product.ProductNum),
-			Price:        product.ProductPrice,
+			Price:        t.base.Amount(product.ProductPrice),
 			Num:          product.ProductNum,
-			Subtotal:     product.ProductTotalPrice,
-			Info:         product.ProductName,
-			IsGift:       0,
-			IsPackage:    0,
-			IsSubProduct: 0,
+			Subtotal:     t.base.Amount(product.ProductTotalPrice),
+			Attrs:        product.Attrs,
+			Attr:         product.Attr,
+			SauceNames:   product.SauceNames,
+			IsGift:       product.IsGift,
+			IsPackage:    product.IsWrap,
+			IsSubProduct: product.IsSub,
 		})
 		// 套餐子商品
 		for _, subProduct := range product.SubProducts {
 			products = append(products, StatementProductData{
-				Name:         subProduct.ProductName,
+				Name:         subProduct.Name,
 				PriceNum:     fmt.Sprintf("%v", subProduct.ProductNum),
-				Price:        subProduct.ProductPrice,
+				Price:        t.base.Amount(subProduct.ProductPrice),
 				Num:          subProduct.ProductNum,
-				Subtotal:     subProduct.ProductTotalPrice,
-				Info:         subProduct.ProductName,
-				IsGift:       0,
-				IsPackage:    0,
-				IsSubProduct: 0,
+				Subtotal:     t.base.Amount(subProduct.ProductTotalPrice),
+				Attrs:        subProduct.Attrs,
+				Attr:         subProduct.Attr,
+				SauceNames:   subProduct.SauceNames,
+				IsGift:       false,
+				IsPackage:    false,
+				IsSubProduct: true,
 			})
 		}
+	}
+
+	// 支付方式
+	paymentMethods := []StatementPaymentMethod{}
+	if saleOrder.IsFreeSaleOrder() {
+		paymentMethods = append(paymentMethods, StatementPaymentMethod{
+			Name: t.base.Translate("支付方式"),
+			Text: t.base.Translate("免单"),
+		})
+		paymentMethods = append(paymentMethods, StatementPaymentMethod{
+			Name: t.base.Translate("实收金额"),
+			Text: t.base.Amount(0),
+		})
+	}
+	if len(saleOrder.PaymentOrders) > 0 {
+		for _, paymentOrder := range saleOrder.PaymentOrders {
+			paymentMethods = append(paymentMethods, StatementPaymentMethod{
+				Name: t.base.Translate("支付方式"),
+				Text: paymentOrder.PaymentMethod.GetName(),
+			})
+			paymentMethods = append(paymentMethods, StatementPaymentMethod{
+				Name: t.base.Translate("实收金额"),
+				Text: t.base.Amount(paymentOrder.Amount),
+			})
+			if saleOrder.ChangeAmount > 0 && paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
+				paymentMethods = append(paymentMethods, StatementPaymentMethod{
+					Name: t.base.Translate("找零"),
+					Text: t.base.Amount(saleOrder.ChangeAmount),
+				})
+			}
+		}
+	}
+
+	// 百分比列表
+	percentageLists := []StatementPercentageData{}
+	for _, percentage := range saleOrder.GetPercentageList() {
+		taxRate := percentage["TaxRate"]
+		taxFee, _ := strconv.ParseFloat(percentage["TaxFee"], 64)
+		totalPrice, _ := strconv.ParseFloat(percentage["TotalPrice"], 64)
+		percentageLists = append(percentageLists, StatementPercentageData{
+			TaxRate:    taxRate,
+			TaxFee:     t.base.Amount(taxFee),
+			TotalPrice: t.base.Amount(totalPrice),
+		})
 	}
 
 	// 构建订单数据结构体
@@ -286,58 +355,96 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 					return fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName)
 				}
 			}(),
-			OrderNo:       saleOrder.OrderNo,
-			Remark:        saleBill.Remark,
-			CashierName:   saleOrder.CashierName,
-			FinishTime:    saleOrder.FinishTime,
-			CreateTime:    saleOrder.CreateTime,
-			PayTime:       t.base.FormatUnixTimeDefault(saleOrder.FinishTime),
-			Buffets:       buffets,  // 需要根据实际业务逻辑填充
-			Delays:        delays,   // 需要根据实际业务逻辑填充
-			Products:      products, // 需要根据实际业务逻辑填充
+			OrderNo:     saleOrder.OrderNo,
+			Remark:      saleBill.Remark,
+			CashierName: saleOrder.CashierName,
+			FinishTime:  saleOrder.FinishTime,
+			CreateTime:  saleOrder.CreateTime,
+			PayTime:     t.base.FormatUnixTimeDefault(saleOrder.FinishTime),
+			// 商品
+			Buffets:  buffets,
+			Delays:   delays,
+			Products: products,
+			//
 			ProductNum:    productNum.InexactFloat64(),
-			ProductAmount: saleOrder.ProductAmount,
-			ServiceFee:    saleOrder.ServiceFee,
+			ProductAmount: t.base.Amount(saleOrder.ProductAmount),
+			ServiceFee:    t.base.Amount(saleOrder.ServiceFee),
 			TaxFeeType:    saleBill.SaleBillSetting.TaxFeeType,
 			IsContainTax: func() uint {
-				if saleOrder.TaxFee > 0 && saleBill.SaleBillSetting.TaxFeeType == 2 && (t.base.ConsumptionTax == 1 || t.base.ConsumptionTax == 2) {
+				if saleOrder.TaxFee > 0 && saleBill.SaleBillSetting.TaxFeeType == 1 && (t.base.ConsumptionTax == 1 || t.base.ConsumptionTax == 3) {
 					return 1
 				}
-				if saleOrder.TaxFee > 0 && saleBill.SaleBillSetting.TaxFeeType == 1 && (t.base.ConsumptionTax == 1 || t.base.ConsumptionTax == 3) {
+				if saleOrder.TaxFee > 0 && saleBill.SaleBillSetting.TaxFeeType == 2 && (t.base.ConsumptionTax == 1 || t.base.ConsumptionTax == 2) {
 					return 2
 				}
 				return 0
 			}(),
-			DiscountFee:            saleOrder.CustomDiscountFee,
-			DiscountRate:           saleOrder.CustomDiscountRate,
-			MemberDiscountFee:      saleOrder.MemberDiscountFee,
-			MemberDiscountRate:     saleOrder.MemberDiscountRate,
-			MemberCardDiscountRate: saleOrder.MemberCardDiscountRate,
+			DiscountFee: t.base.Amount(saleOrder.CustomDiscountFee),
+			DiscountRate: func() string {
+				// 计算折扣率：折扣金额 / 原始金额 * 100
+				discountRate := decimal.NewFromFloat(saleOrder.CustomDiscountFee).Div(decimal.NewFromFloat(saleOrder.ProductOriginalAmount)).Mul(decimal.NewFromInt(100))
+				return t.base.Number(discountRate.InexactFloat64())
+			}(),
+			// 会员
+			MemberDiscountFee: t.base.Amount(saleOrder.MemberDiscountFee),
+			MemberDiscountRate: func() float64 {
+				oldGradeEquity := float64(100)
+				gradeEquity := float64(100)
+				if saleOrder.MemberDiscountRate != 0 {
+					gradeEquity = saleOrder.MemberDiscountRate * 100
+					oldGradeEquity = gradeEquity
+				}
+				if t.base.Lang == "zh" || t.base.Lang == "zhtw" {
+					gradeEquity /= 10
+				}
+				if oldGradeEquity != 100 && gradeEquity > 0 {
+					return gradeEquity
+				}
+				return 0
+			}(),
+			MemberCardDiscountRate: func() float64 {
+				oldCardDiscount := float64(100)
+				cardDiscount := float64(100)
+				if saleOrder.MemberCardDiscountRate != 0 {
+					cardDiscount = saleOrder.MemberCardDiscountRate * 100
+					oldCardDiscount = cardDiscount
+				}
+				if t.base.Lang == "zh" || t.base.Lang == "zhtw" {
+					cardDiscount /= 10
+				}
+				if oldCardDiscount != 100 && cardDiscount > 0 {
+					return oldCardDiscount
+				}
+				return 0
+			}(),
 			MemberPointsDiscount: func() float64 {
 				if saleOrder.PayPointsAmount > 0 && saleOrder.PayPoints > 0 {
 					return saleOrder.PayPointsAmount
 				}
 				return 0
 			}(),
+			//
 			CouponExchangeAmount: saleOrder.CalcCouponExchangeAmount(),
-			CheckOutZeroFee:      saleOrder.GetCheckOutZeroFee(),
-			ReturnAmount:         saleOrder.GetReturnAmount(),
+			CheckOutZeroFee:      t.base.Amount(saleOrder.GetCheckOutZeroFee()),
+			ReturnAmount:         t.base.Amount(saleOrder.GetReturnAmount()),
 			PaymentCommissionFee: saleOrder.PaymentCommissionFee,
-			FreeAmount: func() float64 {
+			FreeAmount: func() string {
 				if saleOrder.IsFreeSaleOrder() {
-					return saleOrder.GetAmount()
+					return t.base.Amount(saleOrder.GetAmount())
 				}
-				return 0
+				return "0"
 			}(),
-			ActualReceivePrice: saleOrder.GetPrintReceivablePrice(),
-			PaymentMethods:     []StatementPaymentMethod{},  // 需要根据实际业务逻辑填充
-			PercentageLists:    []StatementPercentageData{}, // 需要根据实际业务逻辑填充
+			ActualReceivePrice: t.base.Amount(saleOrder.GetPrintReceivablePrice()),
+			PaymentMethods:     paymentMethods,
+			PercentageLists:    percentageLists,
 			IsFree:             saleOrder.IsFreeSaleOrder(),
-			MemberRemainingBalance: func() float64 {
+			// 会员
+			IsMember: saleOrder.Member != nil,
+			MemberRemainingBalance: func() string {
 				if saleOrder.Member == nil {
-					return 0
+					return "0"
 				}
-				return saleOrder.GetMemberSurplusBalance()
+				return t.base.Amount(saleOrder.GetMemberSurplusBalance())
 			}(),
 			MemberPoints: func() float64 {
 				if saleOrder.Member == nil {
@@ -353,23 +460,16 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 				// 计算本单获取的积分
 				return saleOrder.GetMemberSurplusPoints(int(saleBill.MealNum), rule)
 			}(),
+			//
 			PaymentName:   paymentMethodName,
 			PaymentQrcode: qrCodeUrl,
+			//
+			Barcode: saleOrder.OrderNo,
 		},
 	}
 
 	// 将结构体转换为map
 	dataMap, _ := utils.StrToMap(utils.ToJsonString(statementData))
-
-	// 创建复杂的测试模板
-	templateJSON, err := os.ReadFile("../template_json/statement_order_tmp.json")
-	if err != nil {
-		logger.Logger.Error("读取 tmp.json 文件失败", zap.Error(err))
-		return ""
-	}
-
-	// 将 templateJSON 转换为字符串
-	tmpData = string(templateJSON)
 
 	// 创建解析器
 	parser, err := pkg.NewImgTemplateParser(pkg.ImgBaseData{
@@ -378,6 +478,7 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 		CurrencyUnitPosition: t.base.CurrencyUnitPosition,
 	}, tmpData, dataMap)
 	if err != nil {
+		fmt.Println("复杂模板创建解析器失败", err)
 		logger.Logger.Error("复杂模板创建解析器失败", zap.Error(err))
 		return ""
 	}
@@ -385,6 +486,7 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 	// 验证模板
 	err = parser.ValidateTemplate()
 	if err != nil {
+		fmt.Println("复杂模板验证失败", err)
 		logger.Logger.Error("复杂模板验证失败", zap.Error(err))
 		return ""
 	}
@@ -392,12 +494,15 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 	// 解析模板
 	img, err := parser.Parse()
 	if err != nil {
+		fmt.Println("复杂模板解析失败", err)
 		logger.Logger.Error("复杂模板解析失败", zap.Error(err))
 		return ""
 	}
 
 	// TODO: 临时测试
-	img.DebugSetSegmentationHeight(22200)
+	// img.DebugSetSegmentationHeight(22200)
+	// img.Save("", !t.base.IsSunMi && settingPrinterInfo.IsEnableSound(), 0)
+	// return ""
 
 	//
 	return img.Save("", !t.base.IsSunMi && settingPrinterInfo.IsEnableSound(), 0)

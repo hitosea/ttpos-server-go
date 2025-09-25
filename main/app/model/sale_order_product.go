@@ -1397,7 +1397,7 @@ func getLocaleResponse(nameList []dto.LocaleResponse, div string) dto.LocaleResp
 	return attributeResultNames
 }
 
-func (model *SaleOrderProduct) GetAttributeNamesByLang(lang string, showSku ...bool) string {
+func (model *SaleOrderProduct) GetAttributeNamesByLangs(lang string, showSku ...bool) (string, string, string) {
 	var flavorName string
 	var sauceNames []string
 	var attributeNames []string
@@ -1411,6 +1411,7 @@ func (model *SaleOrderProduct) GetAttributeNamesByLang(lang string, showSku ...b
 		}
 		if saleOrderProductBom.IsFlavor() {
 			flavorName = saleOrderProductBom.ProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(lang)
+			attributeNames = append(attributeNames, flavorName)
 		} else {
 			sauceName := saleOrderProductBom.ProductBom.ProductSauce.MultiLanguageName.GetNameByLang(lang)
 			sauceNames = append(sauceNames, sauceName)
@@ -1426,18 +1427,21 @@ func (model *SaleOrderProduct) GetAttributeNamesByLang(lang string, showSku ...b
 	}
 	// 根据规格生成字符串。`(规格；属性；小料)`
 	nameList := make([]string, 0)
+
 	// 是否显示sku
-	if isShowSku {
-		nameList = append(nameList, flavorName)
-		if len(attributeNames) > 0 {
-			nameList = append(nameList, attributeNames...)
-		}
+	if isShowSku && len(attributeNames) > 0 {
+		nameList = append(nameList, attributeNames...)
 	}
 	// 小料
 	if len(sauceNames) > 0 {
 		nameList = append(nameList, sauceNames...)
 	}
-	return strings.Join(nameList, ";")
+	return strings.Join(nameList, ";"), strings.Join(attributeNames, ";"), strings.Join(sauceNames, ";")
+}
+
+func (model *SaleOrderProduct) GetAttributeNamesByLang(lang string, showSku ...bool) string {
+	attributeNames, _, _ := model.GetAttributeNamesByLangs(lang, showSku...)
+	return attributeNames
 }
 
 // 点餐时录入的原始数据

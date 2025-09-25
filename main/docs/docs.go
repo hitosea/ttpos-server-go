@@ -27890,6 +27890,10 @@ const docTemplate = `{
         "product_resp.ProductAttribute": {
             "type": "object",
             "properties": {
+                "editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
+                },
                 "locale_name": {
                     "description": "商品属性名称",
                     "allOf": [
@@ -27952,6 +27956,10 @@ const docTemplate = `{
         "product_resp.ProductAttributeGroupAttributeItem": {
             "type": "object",
             "properties": {
+                "editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
+                },
                 "locale_name": {
                     "description": "商品属性名称",
                     "allOf": [
@@ -27976,6 +27984,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/product_resp.ProductAttributes"
                         }
                     ]
+                },
+                "editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
                 },
                 "locale_name": {
                     "description": "商品属性分组名称",
@@ -28004,6 +28016,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/product_resp.ProductAttributeGroupAttributeItem"
                     }
+                },
+                "editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
                 },
                 "name": {
                     "description": "商品属性分组名称",
@@ -28893,6 +28909,10 @@ const docTemplate = `{
         "product_resp.ProductSauceDetail": {
             "type": "object",
             "properties": {
+                "editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
+                },
                 "locale_name": {
                     "description": "商品单位名称",
                     "allOf": [
@@ -28922,6 +28942,10 @@ const docTemplate = `{
         "product_resp.ProductSauceItem": {
             "type": "object",
             "properties": {
+                "editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "商品加料名称",
                     "type": "string"
@@ -29349,6 +29373,10 @@ const docTemplate = `{
         "product_resp.ProductUnitDetail": {
             "type": "object",
             "properties": {
+                "editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
+                },
                 "locale_name": {
                     "description": "商品单位名称",
                     "allOf": [
@@ -29374,6 +29402,10 @@ const docTemplate = `{
         "product_resp.ProductUnitItem": {
             "type": "object",
             "properties": {
+                "editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "商品单位名称",
                     "type": "string"
