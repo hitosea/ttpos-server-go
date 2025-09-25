@@ -203,7 +203,7 @@ func (s *sItem) checkItemExists(ctx context.Context, itemCode string) (bool, err
 	filters := [][]string{{"item_code", "=", itemCode}}
 
 	count, err := service.Doctype().Count(ctx, &erp.ErpReq{
-		DocType: "Item",
+		DocType: erp.DocTypeItem,
 	}, &erp.RequestParams{
 		Filters: filters,
 	})
@@ -222,7 +222,7 @@ func (s *sItem) updateExistingItem(ctx context.Context, req *item.ItemInfo) (*it
 
 	// 执行更新操作
 	_, err := service.Document().Update(ctx, &erp.ErpReq{
-		DocType: "Item",
+		DocType: erp.DocTypeItem,
 		Name:    req.ItemCode,
 	}, &itemForUpdate)
 
@@ -250,6 +250,11 @@ func (s *sItem) buildUpdateItemData(req *item.ItemInfo) g.Map {
 	}
 	//更新估值率 不更新也必须传入此字段，否erp会设置成0
 	itemForUpdate["valuation_rate"] = req.ValuationRate
+
+	//更新默认采购单位
+	if len(req.PurchaseUom) > 0 {
+		itemForUpdate["purchase_uom"] = req.PurchaseUom
+	}
 
 	// 条形码更新
 	//note: ttpos 不更新条形码也必须传入此字段，否erp会删除条形码
@@ -366,6 +371,7 @@ func (s *sItem) buildNewItemData(ctx context.Context, req *item.ItemInfo, compan
 		"item_name":                  req.ItemName,
 		"stock_uom":                  req.StockUom,
 		"item_group":                 utility.ItemGroupToString(req.ItemGroup),
+		"purchase_uom":               req.PurchaseUom,
 		"custom_branch":              req.Branch,
 		"custom_company":             company.CompanyName,
 		"custom_classification":      req.Classification,
@@ -472,6 +478,8 @@ func (s *sItem) buildCreateItemResponse(req *item.ItemInfo, company *company.Com
 			res.StockUom = stockUom
 		}
 	}
+	//处理返回 itemGroup
+	res.ItemGroup = req.ItemGroup
 
 	return res
 }
@@ -479,19 +487,22 @@ func (s *sItem) buildCreateItemResponse(req *item.ItemInfo, company *company.Com
 // generateItemCode 生成物品编码
 func (s *sItem) generateItemCode(ctx context.Context, req *item.ItemInfo) (string, error) {
 	// 根据物品分组生成编码前缀
-	if req.ItemGroup == item.ItemGroup_RawMaterial {
+	switch req.ItemGroup {
+	case item.ItemGroup_RawMaterial:
 		return utility.GenItemCode(consts.ItemCodePrefixRawMaterial), nil
-	}
-
-	// 套餐编码
-	if req.ItemGroup == item.ItemGroup_Package {
+	case item.ItemGroup_Package:
 		return utility.GenItemCode(consts.ItemCodePrefixPackage), nil
+	case item.ItemGroup_PosAttribute:
+		return utility.GenItemCode(consts.ItemCodePrefixPosAttribute), nil
+	default:
+
 	}
 
 	// 商品编码
 	itemCode := utility.GenItemCode(consts.ItemCodePrefixProduct)
 
 	// 处理多规格商品编码
+	//TODO 使用变体处理规格
 	if len(req.ItemSpecification) > 0 {
 		suffix, err := s.generateItemCodeWithTemplate(ctx, req.TemplateItemCode)
 		if err != nil {
@@ -572,13 +583,16 @@ func (s *sItem) GetItemStock(ctx context.Context, req *item.GetItemStockReq) (re
 	filters := gjson.New(g.Map{
 		"company": company.CompanyName,
 	})
-
-	// 从默认仓库查询
-	warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, company.CompanyName, req.Branch)
-	if err != nil {
-		return nil, gerror.Wrapf(err, "获取默认仓库失败")
+	if len(req.Warehouse) > 0 {
+		filters.Set("warehouse", req.Warehouse)
+	} else {
+		// 从默认仓库查询
+		warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, company.CompanyName, req.Branch)
+		if err != nil {
+			return nil, gerror.Wrapf(err, "获取默认仓库失败")
+		}
+		filters.Set("warehouse", warehouse.Name)
 	}
-	filters.Set("warehouse", warehouse.Name)
 
 	// 按物品编码过滤
 	if len(req.ItemCode) > 0 {
@@ -587,7 +601,7 @@ func (s *sItem) GetItemStock(ctx context.Context, req *item.GetItemStockReq) (re
 
 	// 执行库存报表查询
 	resp, err := service.Report().Run(ctx, &erp.ReportParams{
-		ReportName:           "Stock Projected Qty",
+		ReportName:           erp.DocTypeStockProjectedQty,
 		Filters:              filters.String(),
 		IgnorePreparedReport: true,
 	})
@@ -606,14 +620,17 @@ func (s *sItem) GetItemStock(ctx context.Context, req *item.GetItemStockReq) (re
 	stockList := make([]*item.ItemStock, 0, len(dataArray))
 
 	for _, data := range dataArray {
+		//存在数据那条
 		if data.Contains("item_code") {
 			stockList = append(stockList, &item.ItemStock{
-				ItemCode:  data.Get("item_code").String(),
-				ItemName:  data.Get("item_name").String(),
-				ItemGroup: utility.ParseItemGroupFromString(data.Get("item_group").String()),
-				Warehouse: data.Get("warehouse").String(),
-				StockUom:  data.Get("stock_uom").String(),
-				ActualQty: data.Get("actual_qty").Float64(),
+				ItemCode:          data.Get("item_code").String(),
+				ItemName:          data.Get("item_name").String(),
+				ItemGroup:         utility.ParseItemGroupFromString(data.Get("item_group").String()),
+				Warehouse:         data.Get("warehouse").String(),
+				StockUom:          data.Get("stock_uom").String(),
+				ActualQty:         data.Get("actual_qty").Float64(),
+				ProjectedQty:      data.Get("projected_qty").Float64(),
+				ReservedQtyForPos: data.Get("reserved_qty_for_pos").Float64(),
 			})
 		}
 	}
@@ -652,4 +669,54 @@ func (s *sItem) GetItem(ctx context.Context, req *item.GetItemReq) (res *erp.Ite
 	gconv.Structs(j.GetJson("data"), &itemInfo)
 
 	return itemInfo, nil
+}
+
+// SavePosAttribute 保存 POS 系统中的属性物品
+// 参数：ctx 上下文，req 保存属性物品请求
+// 返回：保存后的物品信息，错误信息
+func (s *sItem) SavePosAttribute(ctx context.Context, req *item.SavePosAttributeReq) (res *item.ItemInfo, err error) {
+	// 将 PosSpecItem 转换为 ItemInfo
+	itemInfo := s.convertPosSpecItemToItemInfo(req.Item)
+
+	// 设置属性物品的特定属性
+	itemInfo.ItemGroup = item.ItemGroup_PosAttribute // 属性物品归类为其他
+	itemInfo.StockUom = "Nos"                        // 默认单位为个
+	itemInfo.ValuationRate = 0                       // 属性物品估值率为0
+	itemInfo.IsStockItem = false                     // 属性物品不是库存物品
+
+	// 调用通用的保存物品方法
+	return s.SaveItem(ctx, itemInfo)
+}
+
+// SavePosAddon 保存 POS 系统中的加料物品
+// 参数：ctx 上下文，req 保存加料物品请求
+// 返回：保存后的物品信息，错误信息
+func (s *sItem) SavePosAddon(ctx context.Context, req *item.SavePosAddonReq) (res *item.ItemInfo, err error) {
+	// 将 PosSpecItem 转换为 ItemInfo
+	itemInfo := s.convertPosSpecItemToItemInfo(req.Item)
+
+	// 设置加料物品的特定属性
+	itemInfo.ItemGroup = item.ItemGroup_PosAddon // 加料物品归类为原材料
+	itemInfo.StockUom = "Nos"                    // 默认单位为个
+	itemInfo.ValuationRate = 0                   // 加料物品估值率为0
+	itemInfo.IsStockItem = false                 // 加料物品不是库存物品
+
+	// 调用通用的保存物品方法
+	return s.SaveItem(ctx, itemInfo)
+}
+
+// convertPosSpecItemToItemInfo 将 PosSpecItem 转换为 ItemInfo
+// 参数：posItem POS 特殊物品信息
+// 返回：转换后的物品信息
+func (s *sItem) convertPosSpecItemToItemInfo(posItem *item.PosSpecItem) *item.ItemInfo {
+	return &item.ItemInfo{
+		ItemName:         posItem.ItemName,
+		ItemCode:         posItem.ItemCode,
+		TemplateItemCode: posItem.TemplateItemCode,
+		Branch:           posItem.Branch,
+		CompanyAbbr:      posItem.CompanyAbbr,
+		Disabled:         posItem.Disabled,
+		InternalCode:     posItem.InternalCode,
+		NotForSale:       posItem.NotForSale,
+	}
 }

@@ -26,10 +26,13 @@ const (
 type ItemGroup int32
 
 const (
-	ItemGroup_Others      ItemGroup = 0 // 其他
-	ItemGroup_RawMaterial ItemGroup = 1 // 原材料
-	ItemGroup_Products    ItemGroup = 2 // 商品
-	ItemGroup_Package     ItemGroup = 3 // 套餐
+	ItemGroup_Others         ItemGroup = 0 // 其他
+	ItemGroup_RawMaterial    ItemGroup = 1 // 原材料
+	ItemGroup_Products       ItemGroup = 2 // 商品
+	ItemGroup_Package        ItemGroup = 3 // 套餐
+	ItemGroup_VirtualProduct ItemGroup = 4 // 虚拟产品
+	ItemGroup_PosAttribute   ItemGroup = 5 // pos 系统中特殊的item ，属性/加料
+	ItemGroup_PosAddon       ItemGroup = 6 // pos 系统中特殊的item ，加料
 )
 
 // Enum value maps for ItemGroup.
@@ -39,12 +42,18 @@ var (
 		1: "RawMaterial",
 		2: "Products",
 		3: "Package",
+		4: "VirtualProduct",
+		5: "PosAttribute",
+		6: "PosAddon",
 	}
 	ItemGroup_value = map[string]int32{
-		"Others":      0,
-		"RawMaterial": 1,
-		"Products":    2,
-		"Package":     3,
+		"Others":         0,
+		"RawMaterial":    1,
+		"Products":       2,
+		"Package":        3,
+		"VirtualProduct": 4,
+		"PosAttribute":   5,
+		"PosAddon":       6,
 	}
 )
 
@@ -240,6 +249,7 @@ type ItemInfo struct {
 	ClassificationCode string                 `protobuf:"bytes,17,opt,name=classification_code,json=classificationCode,proto3" json:"classification_code,omitempty" dc:"分类编码，可选"`                                  // 分类编码，可选
 	InternalCode       string                 `protobuf:"bytes,18,opt,name=internal_code,json=internalCode,proto3" json:"internal_code,omitempty" dc:"内部编码，可选"`                                                    // 内部编码，可选
 	NotForSale         bool                   `protobuf:"varint,19,opt,name=not_for_sale,json=notForSale,proto3" json:"not_for_sale,omitempty" dc:"是否禁售，可选"`                                                       //是否禁售，可选
+	PurchaseUom        string                 `protobuf:"bytes,20,opt,name=purchase_uom,json=purchaseUom,proto3" json:"purchase_uom,omitempty" dc:"默认采购单位，可选"`                                                     // 默认采购单位，可选
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -405,6 +415,13 @@ func (x *ItemInfo) GetNotForSale() bool {
 		return x.NotForSale
 	}
 	return false
+}
+
+func (x *ItemInfo) GetPurchaseUom() string {
+	if x != nil {
+		return x.PurchaseUom
+	}
+	return ""
 }
 
 type UomDetail struct {
@@ -1008,15 +1025,17 @@ func (x *GetAttributeListResp) GetAttributeList() []*AttributeInfo {
 }
 
 type ItemStock struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，"`                         // 物品编码，
-	ItemName      string                 `protobuf:"bytes,2,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称，"`                         // 物品名称，
-	ItemGroup     ItemGroup              `protobuf:"varint,3,opt,name=item_group,json=itemGroup,proto3,enum=item.ItemGroup" json:"item_group,omitempty" dc:"物品分组，"` // 物品分组，
-	Warehouse     string                 `protobuf:"bytes,4,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库名称，"`                                       // 仓库名称，
-	StockUom      string                 `protobuf:"bytes,5,opt,name=stock_uom,json=stockUom,proto3" json:"stock_uom,omitempty" dc:"库存单位，"`                         // 库存单位，
-	ActualQty     float64                `protobuf:"fixed64,6,opt,name=actual_qty,json=actualQty,proto3" json:"actual_qty,omitempty" dc:"实际库存数量"`                   // 实际库存数量
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	ItemCode          string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，"`                                 // 物品编码，
+	ItemName          string                 `protobuf:"bytes,2,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称，"`                                 // 物品名称，
+	ItemGroup         ItemGroup              `protobuf:"varint,3,opt,name=item_group,json=itemGroup,proto3,enum=item.ItemGroup" json:"item_group,omitempty" dc:"物品分组，"`         // 物品分组，
+	Warehouse         string                 `protobuf:"bytes,4,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库名称，"`                                               // 仓库名称，
+	StockUom          string                 `protobuf:"bytes,5,opt,name=stock_uom,json=stockUom,proto3" json:"stock_uom,omitempty" dc:"库存单位，"`                                 // 库存单位，
+	ActualQty         float64                `protobuf:"fixed64,6,opt,name=actual_qty,json=actualQty,proto3" json:"actual_qty,omitempty" dc:"实际库存数量"`                           // 实际库存数量
+	ProjectedQty      float64                `protobuf:"fixed64,7,opt,name=projected_qty,json=projectedQty,proto3" json:"projected_qty,omitempty" dc:"预估库存"`                    //预估库存
+	ReservedQtyForPos float64                `protobuf:"fixed64,8,opt,name=reserved_qty_for_pos,json=reservedQtyForPos,proto3" json:"reserved_qty_for_pos,omitempty" dc:"销售保留"` //销售保留
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ItemStock) Reset() {
@@ -1091,17 +1110,30 @@ func (x *ItemStock) GetActualQty() float64 {
 	return 0
 }
 
+func (x *ItemStock) GetProjectedQty() float64 {
+	if x != nil {
+		return x.ProjectedQty
+	}
+	return 0
+}
+
+func (x *ItemStock) GetReservedQtyForPos() float64 {
+	if x != nil {
+		return x.ReservedQtyForPos
+	}
+	return 0
+}
+
 type GetItemStockReq struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	CompanyAbbr    string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，必填"`                                                                             // 公司简称，必填
-	Branch         string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，必填"`                                                                                                          // 分支名称，必填
-	ItemCode       string                 `protobuf:"bytes,3,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，可选"`                                                                                      // 物品编码，可选
-	ItemName       string                 `protobuf:"bytes,4,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称，可选，模糊查询"`                                                                                 // 物品名称，可选，模糊查询
-	ItemGroup      ItemGroup              `protobuf:"varint,5,opt,name=item_group,json=itemGroup,proto3,enum=item.ItemGroup" json:"item_group,omitempty" dc:"物品分组，可选"`                                                              // 物品分组，可选
-	Warehouse      string                 `protobuf:"bytes,6,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库名称，可选"`                                                                                                    // 仓库名称，可选
-	SubCompanyAbbr string                 `protobuf:"bytes,7,opt,name=sub_company_abbr,json=subCompanyAbbr,proto3" json:"sub_company_abbr,omitempty" dc:"门店公司简称，可选。  sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。"` // 门店公司简称，可选。  sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CompanyAbbr   string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，必填"`                // 公司简称，必填
+	Branch        string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，必填"`                                             // 分支名称，必填
+	ItemCode      string                 `protobuf:"bytes,3,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，可选"`                         // 物品编码，可选
+	ItemName      string                 `protobuf:"bytes,4,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称，可选，模糊查询"`                    // 物品名称，可选，模糊查询
+	ItemGroup     ItemGroup              `protobuf:"varint,5,opt,name=item_group,json=itemGroup,proto3,enum=item.ItemGroup" json:"item_group,omitempty" dc:"物品分组，可选"` // 物品分组，可选
+	Warehouse     string                 `protobuf:"bytes,6,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库名称，可选. 不传的话会取 默认名称的仓库库存 (根据公司和分支名取)"`         // 仓库名称，可选. 不传的话会取 默认名称的仓库库存 (根据公司和分支名取)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetItemStockReq) Reset() {
@@ -1172,13 +1204,6 @@ func (x *GetItemStockReq) GetItemGroup() ItemGroup {
 func (x *GetItemStockReq) GetWarehouse() string {
 	if x != nil {
 		return x.Warehouse
-	}
-	return ""
-}
-
-func (x *GetItemStockReq) GetSubCompanyAbbr() string {
-	if x != nil {
-		return x.SubCompanyAbbr
 	}
 	return ""
 }
@@ -1491,6 +1516,283 @@ func (x *BomItem) GetUom() string {
 	return ""
 }
 
+// Pos 系统中特殊的item ，如 属性/加料
+type PosSpecItem struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	ItemName         string                 `protobuf:"bytes,1,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称，必填"`                             // 物品名称，必填
+	ItemCode         string                 `protobuf:"bytes,2,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，可选，修改时传，必填"`                     // 物品编码，可选，修改时传，必填
+	TemplateItemCode string                 `protobuf:"bytes,3,opt,name=template_item_code,json=templateItemCode,proto3" json:"template_item_code,omitempty" dc:"模版物品编码，可选"` // 模版物品编码，可选
+	Branch           string                 `protobuf:"bytes,4,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                 // 分支名称，可选
+	CompanyAbbr      string                 `protobuf:"bytes,5,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                    // 公司简称，可选
+	Disabled         bool                   `protobuf:"varint,6,opt,name=disabled,proto3" json:"disabled,omitempty" dc:"是否禁用，可选"`                                            // 是否禁用，可选
+	InternalCode     string                 `protobuf:"bytes,7,opt,name=internal_code,json=internalCode,proto3" json:"internal_code,omitempty" dc:"内部编码，可选"`                 // 内部编码，可选
+	NotForSale       bool                   `protobuf:"varint,8,opt,name=not_for_sale,json=notForSale,proto3" json:"not_for_sale,omitempty" dc:"是否禁售，可选"`                    //是否禁售，可选
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *PosSpecItem) Reset() {
+	*x = PosSpecItem{}
+	mi := &file_item_item_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PosSpecItem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PosSpecItem) ProtoMessage() {}
+
+func (x *PosSpecItem) ProtoReflect() protoreflect.Message {
+	mi := &file_item_item_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PosSpecItem.ProtoReflect.Descriptor instead.
+func (*PosSpecItem) Descriptor() ([]byte, []int) {
+	return file_item_item_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *PosSpecItem) GetItemName() string {
+	if x != nil {
+		return x.ItemName
+	}
+	return ""
+}
+
+func (x *PosSpecItem) GetItemCode() string {
+	if x != nil {
+		return x.ItemCode
+	}
+	return ""
+}
+
+func (x *PosSpecItem) GetTemplateItemCode() string {
+	if x != nil {
+		return x.TemplateItemCode
+	}
+	return ""
+}
+
+func (x *PosSpecItem) GetBranch() string {
+	if x != nil {
+		return x.Branch
+	}
+	return ""
+}
+
+func (x *PosSpecItem) GetCompanyAbbr() string {
+	if x != nil {
+		return x.CompanyAbbr
+	}
+	return ""
+}
+
+func (x *PosSpecItem) GetDisabled() bool {
+	if x != nil {
+		return x.Disabled
+	}
+	return false
+}
+
+func (x *PosSpecItem) GetInternalCode() string {
+	if x != nil {
+		return x.InternalCode
+	}
+	return ""
+}
+
+func (x *PosSpecItem) GetNotForSale() bool {
+	if x != nil {
+		return x.NotForSale
+	}
+	return false
+}
+
+type SavePosAttributeReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Item          *PosSpecItem           `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty" dc:"属性值， 必填"` //属性值， 必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SavePosAttributeReq) Reset() {
+	*x = SavePosAttributeReq{}
+	mi := &file_item_item_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SavePosAttributeReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SavePosAttributeReq) ProtoMessage() {}
+
+func (x *SavePosAttributeReq) ProtoReflect() protoreflect.Message {
+	mi := &file_item_item_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SavePosAttributeReq.ProtoReflect.Descriptor instead.
+func (*SavePosAttributeReq) Descriptor() ([]byte, []int) {
+	return file_item_item_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *SavePosAttributeReq) GetItem() *PosSpecItem {
+	if x != nil {
+		return x.Item
+	}
+	return nil
+}
+
+type SavePosAttributeResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ItemInfo      *ItemInfo              `protobuf:"bytes,1,opt,name=item_info,json=itemInfo,proto3" json:"item_info,omitempty" dc:"物品信息"` // 物品信息
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SavePosAttributeResp) Reset() {
+	*x = SavePosAttributeResp{}
+	mi := &file_item_item_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SavePosAttributeResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SavePosAttributeResp) ProtoMessage() {}
+
+func (x *SavePosAttributeResp) ProtoReflect() protoreflect.Message {
+	mi := &file_item_item_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SavePosAttributeResp.ProtoReflect.Descriptor instead.
+func (*SavePosAttributeResp) Descriptor() ([]byte, []int) {
+	return file_item_item_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *SavePosAttributeResp) GetItemInfo() *ItemInfo {
+	if x != nil {
+		return x.ItemInfo
+	}
+	return nil
+}
+
+type SavePosAddonReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Item          *PosSpecItem           `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty" dc:"属性值， 必填"` //属性值， 必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SavePosAddonReq) Reset() {
+	*x = SavePosAddonReq{}
+	mi := &file_item_item_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SavePosAddonReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SavePosAddonReq) ProtoMessage() {}
+
+func (x *SavePosAddonReq) ProtoReflect() protoreflect.Message {
+	mi := &file_item_item_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SavePosAddonReq.ProtoReflect.Descriptor instead.
+func (*SavePosAddonReq) Descriptor() ([]byte, []int) {
+	return file_item_item_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *SavePosAddonReq) GetItem() *PosSpecItem {
+	if x != nil {
+		return x.Item
+	}
+	return nil
+}
+
+type SavePosAddonResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ItemInfo      *ItemInfo              `protobuf:"bytes,1,opt,name=item_info,json=itemInfo,proto3" json:"item_info,omitempty" dc:"物品信息"` // 物品信息
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SavePosAddonResp) Reset() {
+	*x = SavePosAddonResp{}
+	mi := &file_item_item_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SavePosAddonResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SavePosAddonResp) ProtoMessage() {}
+
+func (x *SavePosAddonResp) ProtoReflect() protoreflect.Message {
+	mi := &file_item_item_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SavePosAddonResp.ProtoReflect.Descriptor instead.
+func (*SavePosAddonResp) Descriptor() ([]byte, []int) {
+	return file_item_item_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *SavePosAddonResp) GetItemInfo() *ItemInfo {
+	if x != nil {
+		return x.ItemInfo
+	}
+	return nil
+}
+
 var File_item_item_proto protoreflect.FileDescriptor
 
 const file_item_item_proto_rawDesc = "" +
@@ -1507,7 +1809,7 @@ const file_item_item_proto_rawDesc = "" +
 	"\x10item_code_prefix\x18\a \x01(\tR\x0eitemCodePrefix\x12)\n" +
 	"\x10contain_disabled\x18\b \x01(\bR\x0fcontainDisabled\">\n" +
 	"\x0fGetItemListResp\x12+\n" +
-	"\titem_list\x18\x01 \x03(\v2\x0e.item.ItemInfoR\bitemList\"\xae\x05\n" +
+	"\titem_list\x18\x01 \x03(\v2\x0e.item.ItemInfoR\bitemList\"\xd1\x05\n" +
 	"\bItemInfo\x12\x1b\n" +
 	"\titem_name\x18\x01 \x01(\tR\bitemName\x12.\n" +
 	"\n" +
@@ -1530,7 +1832,8 @@ const file_item_item_proto_rawDesc = "" +
 	"\x13classification_code\x18\x11 \x01(\tR\x12classificationCode\x12#\n" +
 	"\rinternal_code\x18\x12 \x01(\tR\finternalCode\x12 \n" +
 	"\fnot_for_sale\x18\x13 \x01(\bR\n" +
-	"notForSale\"J\n" +
+	"notForSale\x12!\n" +
+	"\fpurchase_uom\x18\x14 \x01(\tR\vpurchaseUom\"J\n" +
 	"\tUomDetail\x12\x10\n" +
 	"\x03uom\x18\x01 \x01(\tR\x03uom\x12+\n" +
 	"\x11conversion_factor\x18\x02 \x01(\x01R\x10conversionFactor\"\xae\x01\n" +
@@ -1575,7 +1878,7 @@ const file_item_item_proto_rawDesc = "" +
 	"\x0fattribute_value\x18\x01 \x01(\tR\x0eattributeValue\x12\x12\n" +
 	"\x04abbr\x18\x02 \x01(\tR\x04abbr\"R\n" +
 	"\x14GetAttributeListResp\x12:\n" +
-	"\x0eattribute_list\x18\x01 \x03(\v2\x13.item.AttributeInfoR\rattributeList\"\xcf\x01\n" +
+	"\x0eattribute_list\x18\x01 \x03(\v2\x13.item.AttributeInfoR\rattributeList\"\xa5\x02\n" +
 	"\tItemStock\x12\x1b\n" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x1b\n" +
 	"\titem_name\x18\x02 \x01(\tR\bitemName\x12.\n" +
@@ -1584,7 +1887,9 @@ const file_item_item_proto_rawDesc = "" +
 	"\twarehouse\x18\x04 \x01(\tR\twarehouse\x12\x1b\n" +
 	"\tstock_uom\x18\x05 \x01(\tR\bstockUom\x12\x1d\n" +
 	"\n" +
-	"actual_qty\x18\x06 \x01(\x01R\tactualQty\"\xfe\x01\n" +
+	"actual_qty\x18\x06 \x01(\x01R\tactualQty\x12#\n" +
+	"\rprojected_qty\x18\a \x01(\x01R\fprojectedQty\x12/\n" +
+	"\x14reserved_qty_for_pos\x18\b \x01(\x01R\x11reservedQtyForPos\"\xd4\x01\n" +
 	"\x0fGetItemStockReq\x12!\n" +
 	"\fcompany_abbr\x18\x01 \x01(\tR\vcompanyAbbr\x12\x16\n" +
 	"\x06branch\x18\x02 \x01(\tR\x06branch\x12\x1b\n" +
@@ -1592,8 +1897,7 @@ const file_item_item_proto_rawDesc = "" +
 	"\titem_name\x18\x04 \x01(\tR\bitemName\x12.\n" +
 	"\n" +
 	"item_group\x18\x05 \x01(\x0e2\x0f.item.ItemGroupR\titemGroup\x12\x1c\n" +
-	"\twarehouse\x18\x06 \x01(\tR\twarehouse\x12(\n" +
-	"\x10sub_company_abbr\x18\a \x01(\tR\x0esubCompanyAbbr\"K\n" +
+	"\twarehouse\x18\x06 \x01(\tR\twarehouse\"K\n" +
 	"\x10GetItemStockResp\x127\n" +
 	"\x0fitem_stock_list\x18\x01 \x03(\v2\x0f.item.ItemStockR\ritemStockList\"d\n" +
 	"\n" +
@@ -1616,13 +1920,34 @@ const file_item_item_proto_rawDesc = "" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x1b\n" +
 	"\titem_name\x18\x02 \x01(\tR\bitemName\x12\x10\n" +
 	"\x03qty\x18\x03 \x01(\x01R\x03qty\x12\x10\n" +
-	"\x03uom\x18\x04 \x01(\tR\x03uom*C\n" +
+	"\x03uom\x18\x04 \x01(\tR\x03uom\"\x93\x02\n" +
+	"\vPosSpecItem\x12\x1b\n" +
+	"\titem_name\x18\x01 \x01(\tR\bitemName\x12\x1b\n" +
+	"\titem_code\x18\x02 \x01(\tR\bitemCode\x12,\n" +
+	"\x12template_item_code\x18\x03 \x01(\tR\x10templateItemCode\x12\x16\n" +
+	"\x06branch\x18\x04 \x01(\tR\x06branch\x12!\n" +
+	"\fcompany_abbr\x18\x05 \x01(\tR\vcompanyAbbr\x12\x1a\n" +
+	"\bdisabled\x18\x06 \x01(\bR\bdisabled\x12#\n" +
+	"\rinternal_code\x18\a \x01(\tR\finternalCode\x12 \n" +
+	"\fnot_for_sale\x18\b \x01(\bR\n" +
+	"notForSale\"<\n" +
+	"\x13SavePosAttributeReq\x12%\n" +
+	"\x04item\x18\x01 \x01(\v2\x11.item.PosSpecItemR\x04item\"C\n" +
+	"\x14SavePosAttributeResp\x12+\n" +
+	"\titem_info\x18\x01 \x01(\v2\x0e.item.ItemInfoR\bitemInfo\"8\n" +
+	"\x0fSavePosAddonReq\x12%\n" +
+	"\x04item\x18\x01 \x01(\v2\x11.item.PosSpecItemR\x04item\"?\n" +
+	"\x10SavePosAddonResp\x12+\n" +
+	"\titem_info\x18\x01 \x01(\v2\x0e.item.ItemInfoR\bitemInfo*w\n" +
 	"\tItemGroup\x12\n" +
 	"\n" +
 	"\x06Others\x10\x00\x12\x0f\n" +
 	"\vRawMaterial\x10\x01\x12\f\n" +
 	"\bProducts\x10\x02\x12\v\n" +
-	"\aPackage\x10\x032\xea\x03\n" +
+	"\aPackage\x10\x03\x12\x12\n" +
+	"\x0eVirtualProduct\x10\x04\x12\x10\n" +
+	"\fPosAttribute\x10\x05\x12\f\n" +
+	"\bPosAddon\x10\x062\xe6\x04\n" +
 	"\vItemService\x126\n" +
 	"\vGetItemList\x12\x14.item.GetItemListReq\x1a\x11.erp.ResponseInfo\x124\n" +
 	"\n" +
@@ -1633,7 +1958,9 @@ const file_item_item_proto_rawDesc = "" +
 	"\rSaveAttribute\x12\x13.item.AttributeInfo\x1a\x11.erp.ResponseInfo\x12-\n" +
 	"\bSaveItem\x12\x0e.item.ItemInfo\x1a\x11.erp.ResponseInfo\x128\n" +
 	"\fGetItemStock\x12\x15.item.GetItemStockReq\x1a\x11.erp.ResponseInfo\x12.\n" +
-	"\aGetItem\x12\x10.item.GetItemReq\x1a\x11.erp.ResponseInfoB\"Z ttpos-bmp/app/ttpos-erp/api/itemb\x06proto3"
+	"\aGetItem\x12\x10.item.GetItemReq\x1a\x11.erp.ResponseInfo\x12@\n" +
+	"\x10SavePosAttribute\x12\x19.item.SavePosAttributeReq\x1a\x11.erp.ResponseInfo\x128\n" +
+	"\fSavePosAddon\x12\x15.item.SavePosAddonReq\x1a\x11.erp.ResponseInfoB\"Z ttpos-bmp/app/ttpos-erp/api/itemb\x06proto3"
 
 var (
 	file_item_item_proto_rawDescOnce sync.Once
@@ -1648,7 +1975,7 @@ func file_item_item_proto_rawDescGZIP() []byte {
 }
 
 var file_item_item_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_item_item_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_item_item_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_item_item_proto_goTypes = []any{
 	(ItemGroup)(0),               // 0: item.ItemGroup
 	(*GetItemListReq)(nil),       // 1: item.GetItemListReq
@@ -1671,7 +1998,12 @@ var file_item_item_proto_goTypes = []any{
 	(*GetItemResp)(nil),          // 18: item.GetItemResp
 	(*BomInfo)(nil),              // 19: item.BomInfo
 	(*BomItem)(nil),              // 20: item.BomItem
-	(*api.ResponseInfo)(nil),     // 21: erp.ResponseInfo
+	(*PosSpecItem)(nil),          // 21: item.PosSpecItem
+	(*SavePosAttributeReq)(nil),  // 22: item.SavePosAttributeReq
+	(*SavePosAttributeResp)(nil), // 23: item.SavePosAttributeResp
+	(*SavePosAddonReq)(nil),      // 24: item.SavePosAddonReq
+	(*SavePosAddonResp)(nil),     // 25: item.SavePosAddonResp
+	(*api.ResponseInfo)(nil),     // 26: erp.ResponseInfo
 }
 var file_item_item_proto_depIdxs = []int32{
 	0,  // 0: item.GetItemListReq.item_group:type_name -> item.ItemGroup
@@ -1687,29 +2019,37 @@ var file_item_item_proto_depIdxs = []int32{
 	14, // 10: item.GetItemStockResp.item_stock_list:type_name -> item.ItemStock
 	3,  // 11: item.GetItemResp.item_info:type_name -> item.ItemInfo
 	20, // 12: item.BomInfo.items:type_name -> item.BomItem
-	1,  // 13: item.ItemService.GetItemList:input_type -> item.GetItemListReq
-	5,  // 14: item.ItemService.GetUomList:input_type -> item.GetUomListReq
-	7,  // 15: item.ItemService.GetUom:input_type -> item.GetUomReq
-	9,  // 16: item.ItemService.SaveUom:input_type -> item.UomInfo
-	10, // 17: item.ItemService.GetAttributeList:input_type -> item.GetAttributeListReq
-	11, // 18: item.ItemService.SaveAttribute:input_type -> item.AttributeInfo
-	3,  // 19: item.ItemService.SaveItem:input_type -> item.ItemInfo
-	15, // 20: item.ItemService.GetItemStock:input_type -> item.GetItemStockReq
-	17, // 21: item.ItemService.GetItem:input_type -> item.GetItemReq
-	21, // 22: item.ItemService.GetItemList:output_type -> erp.ResponseInfo
-	21, // 23: item.ItemService.GetUomList:output_type -> erp.ResponseInfo
-	21, // 24: item.ItemService.GetUom:output_type -> erp.ResponseInfo
-	21, // 25: item.ItemService.SaveUom:output_type -> erp.ResponseInfo
-	21, // 26: item.ItemService.GetAttributeList:output_type -> erp.ResponseInfo
-	21, // 27: item.ItemService.SaveAttribute:output_type -> erp.ResponseInfo
-	21, // 28: item.ItemService.SaveItem:output_type -> erp.ResponseInfo
-	21, // 29: item.ItemService.GetItemStock:output_type -> erp.ResponseInfo
-	21, // 30: item.ItemService.GetItem:output_type -> erp.ResponseInfo
-	22, // [22:31] is the sub-list for method output_type
-	13, // [13:22] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	21, // 13: item.SavePosAttributeReq.item:type_name -> item.PosSpecItem
+	3,  // 14: item.SavePosAttributeResp.item_info:type_name -> item.ItemInfo
+	21, // 15: item.SavePosAddonReq.item:type_name -> item.PosSpecItem
+	3,  // 16: item.SavePosAddonResp.item_info:type_name -> item.ItemInfo
+	1,  // 17: item.ItemService.GetItemList:input_type -> item.GetItemListReq
+	5,  // 18: item.ItemService.GetUomList:input_type -> item.GetUomListReq
+	7,  // 19: item.ItemService.GetUom:input_type -> item.GetUomReq
+	9,  // 20: item.ItemService.SaveUom:input_type -> item.UomInfo
+	10, // 21: item.ItemService.GetAttributeList:input_type -> item.GetAttributeListReq
+	11, // 22: item.ItemService.SaveAttribute:input_type -> item.AttributeInfo
+	3,  // 23: item.ItemService.SaveItem:input_type -> item.ItemInfo
+	15, // 24: item.ItemService.GetItemStock:input_type -> item.GetItemStockReq
+	17, // 25: item.ItemService.GetItem:input_type -> item.GetItemReq
+	22, // 26: item.ItemService.SavePosAttribute:input_type -> item.SavePosAttributeReq
+	24, // 27: item.ItemService.SavePosAddon:input_type -> item.SavePosAddonReq
+	26, // 28: item.ItemService.GetItemList:output_type -> erp.ResponseInfo
+	26, // 29: item.ItemService.GetUomList:output_type -> erp.ResponseInfo
+	26, // 30: item.ItemService.GetUom:output_type -> erp.ResponseInfo
+	26, // 31: item.ItemService.SaveUom:output_type -> erp.ResponseInfo
+	26, // 32: item.ItemService.GetAttributeList:output_type -> erp.ResponseInfo
+	26, // 33: item.ItemService.SaveAttribute:output_type -> erp.ResponseInfo
+	26, // 34: item.ItemService.SaveItem:output_type -> erp.ResponseInfo
+	26, // 35: item.ItemService.GetItemStock:output_type -> erp.ResponseInfo
+	26, // 36: item.ItemService.GetItem:output_type -> erp.ResponseInfo
+	26, // 37: item.ItemService.SavePosAttribute:output_type -> erp.ResponseInfo
+	26, // 38: item.ItemService.SavePosAddon:output_type -> erp.ResponseInfo
+	28, // [28:39] is the sub-list for method output_type
+	17, // [17:28] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_item_item_proto_init() }
@@ -1723,7 +2063,7 @@ func file_item_item_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_item_item_proto_rawDesc), len(file_item_item_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   20,
+			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

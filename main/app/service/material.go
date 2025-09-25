@@ -22,6 +22,7 @@ import (
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -317,30 +318,35 @@ func (s *materialSrv) GetMaterialStockDetail(ctx context.Context, req req.Materi
 	if err != nil {
 		return material_resp.MaterialStockDetailResp{}, errors.WithMessage(err, "获取物品库存详情失败")
 	}
-	// mock 假数据
+	// 获取仓库列表
+	warehouseRepo := repository.NewWarehouseItemRepo(s.dbm.GetDB(dbId))
+	warehouseItems, err := warehouseRepo.GetWarehouseItemsByMaterialUuid(material.Uuid)
+	if err != nil {
+		return material_resp.MaterialStockDetailResp{}, errors.WithMessage(err, "获取仓库库存列表失败")
+	}
+
+	warehouseList := []material_resp.Warehouse{}
+	amount := decimal.NewFromFloat(0)
+	for _, warehouseItem := range warehouseItems {
+		localeName := dto.LocaleResponse{}
+		if warehouseItem.Warehouse != nil {
+			localeName = warehouseItem.Warehouse.MultiLanguageName.GetNames()
+		}
+		warehouseList = append(warehouseList, material_resp.Warehouse{
+			Uuid:       warehouseItem.WarehouseUuid,
+			LocaleName: localeName,
+			Num:        warehouseItem.Stock,
+		})
+		amount = amount.Add(decimal.NewFromFloat(warehouseItem.Stock))
+	}
+
 	return material_resp.MaterialStockDetailResp{
 		Uuid:       req.Uuid,
 		LocaleName: material.MultiLanguageName.GetNames(),
 		Code:       material.Code,
 		Warehouses: material_resp.WarehouseList{
-			Amount: 380,
-			List: []material_resp.Warehouse{
-				{
-					Uuid:       req.Uuid,
-					LocaleName: material.MultiLanguageName.GetNames(),
-					Num:        80,
-				},
-				{
-					Uuid:       req.Uuid,
-					LocaleName: material.MultiLanguageName.GetNames(),
-					Num:        100,
-				},
-				{
-					Uuid:       req.Uuid,
-					LocaleName: material.MultiLanguageName.GetNames(),
-					Num:        200,
-				},
-			},
+			Amount: amount.InexactFloat64(),
+			List:   warehouseList,
 		},
 	}, nil
 }
@@ -1182,16 +1188,21 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 					}
 
 					erpSrv.AddMaterial(ctx, req.MaterialAddErpReq{
-						ItemCode:           material.Code,
-						ItemName:           enName,
-						StockUom:           material.Unit.Unit.ErpnextUom,
-						Disabled:           material.Status == false,
-						ValuationRate:      material.Valuation,
-						BarcodeValue:       material.BarcodeValue,
-						Uoms:               unitList,
-						InternalCode:       material.InternalCode,
-						Classification:     getMaterialCategoryName,
-						ClassificationCode: materialCategory.Code,
+						ItemCode:       material.Code,
+						ItemName:       enName,
+						StockUom:       material.Unit.Unit.ErpnextUom,
+						Disabled:       material.Status == false,
+						ValuationRate:  material.Valuation,
+						BarcodeValue:   material.BarcodeValue,
+						Uoms:           unitList,
+						InternalCode:   material.InternalCode,
+						Classification: getMaterialCategoryName,
+						ClassificationCode: func() string {
+							if materialCategory.Code != "" {
+								return materialCategory.Code
+							}
+							return " " // 分类编码为空时，传空格给ErpNext
+						}(),
 					})
 				}
 			}

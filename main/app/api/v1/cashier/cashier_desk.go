@@ -1756,7 +1756,6 @@ func (h *DeskHandler) GetOrderMemberList(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} dto.Response{data=resp.DailySalesOutboundSummary}
 // @Router /cashier/desk/order/daily_sales_outbound_summary [get]
 func (h *DeskHandler) GetDailySalesOutboundSummary(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)

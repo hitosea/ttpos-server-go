@@ -5161,6 +5161,7 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 					Name:         req.LocaleName.ToJson(),
 					InternalCode: req.Package.InternalCode,
 					Price:        packageResult.Price,
+					BarcodeValue: req.Flavors[0].BarcodeValue,
 				},
 			},
 			IsPackage: true,

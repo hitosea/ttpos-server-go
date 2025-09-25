@@ -24,6 +24,9 @@ type IWarehouseItemRepo interface {
 	GetByMaterialCode(materialCode string, opts ...DBOption) ([]model.WarehouseItem, error)
 	GetByWarehouseErpCode(warehouseErpCode string, opts ...DBOption) ([]model.WarehouseItem, error)
 	GetListWithWarehouseInfo(pageNo, pageSize int, opts ...DBOption) ([]model.WarehouseItem, int64, error)
+	// 通过物品UUID获取该物品在各个仓库的库存情况
+	GetWarehouseItems(opts ...DBOption) ([]*model.WarehouseItem, error)
+	GetWarehouseItemsByMaterialUuid(materialUuid uint64) ([]*model.WarehouseItem, error)
 
 	// 库存操作
 	UpdateStock(uuid uint64, stock, reservedStock float64) error
@@ -305,4 +308,26 @@ func (r *WarehouseItemRepoImpl) OrderByStock(desc bool) DBOption {
 		}
 		return db.Order("stock ASC")
 	}
+}
+
+func (r *WarehouseItemRepoImpl) GetWarehouseItems(opts ...DBOption) ([]*model.WarehouseItem, error) {
+	var warehouseItems []*model.WarehouseItem
+	query := r.db.Model(&model.WarehouseItem{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		query = opt(query)
+	}
+	err := query.Find(&warehouseItems).Error
+	return warehouseItems, err
+}
+
+// GetWarehouseItemsByMaterialUuid 通过物品UUID获取该物品在各个仓库的库存情况
+func (r *WarehouseItemRepoImpl) GetWarehouseItemsByMaterialUuid(materialUuid uint64) ([]*model.WarehouseItem, error) {
+	return r.GetWarehouseItems(
+		r.WhereMaterialUuid(materialUuid),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "Warehouse.MultiLanguageName",
+			},
+		),
+	)
 }

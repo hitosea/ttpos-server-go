@@ -26,6 +26,8 @@ const (
 	DocTypeWarehouse         = "Warehouse"
 	DocTypePosPermissionRule = "Pos Permission Rule"
 	DocTypeItemAttribute     = "Item Attribute"
+	//DocTypeStockProjectedQty 预估库存查询
+	DocTypeStockProjectedQty = "Stock Projected Qty"
 )
 
 const (
@@ -44,4 +46,10 @@ const (
 const (
 	//ColumnCustomPermissionRule 自定义权限规则
 	ColumnCustomPermissionRule = "custom_permission_rule"
+)
+
+// 物品组
+const (
+	ItemGroupPosAttribute = "Pos Attribute"
+	ItemGroupPosAddon     = "Pos Addon"
 )
