@@ -8,6 +8,7 @@ import (
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
+	"ttpos-server-go/app/printer/template_struct"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/logger"
@@ -17,121 +18,6 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
-
-// StatementOrderData 订单数据结构体
-type StatementOrderData struct {
-	BrandName string                 `json:"brand_name"`
-	Store     StatementStoreData     `json:"store"`
-	Order     StatementOrderInfoData `json:"order"`
-}
-
-// StatementStoreData 店铺数据结构体
-type StatementStoreData struct {
-	Name             string `json:"name"`               // 店铺名称
-	Address          string `json:"address"`            // 店铺地址
-	Phone            string `json:"phone"`              // 店铺电话
-	Logo             string `json:"logo"`               // 店铺logo
-	Company          string `json:"company"`            // 公司名称
-	CompanyAddr      string `json:"company_addr"`       // 公司地址
-	CompanyPhone     string `json:"company_phone"`      // 公司电话
-	CompanyTaxNumber string `json:"company_tax_number"` // 公司税号
-	CashierSn        string `json:"cashier_sn"`         // 收银员编号
-	PrinterSn        string `json:"printer_sn"`         // 打印机编号
-}
-
-// StatementOrderInfoData 订单信息数据结构体
-type StatementOrderInfoData struct {
-	Status                 uint                      `json:"status"`                    // 订单状态
-	SerialNo               string                    `json:"serial_no"`                 // 桌位编号
-	OrderNo                string                    `json:"order_no"`                  // 订单号
-	Remark                 string                    `json:"remark"`                    // 订单备注
-	CashierName            string                    `json:"cashier_name"`              // 收银员名称
-	FinishTime             string                    `json:"finish_time"`               // 完成时间
-	CreateTime             string                    `json:"create_time"`               // 创建时间
-	PayTime                string                    `json:"pay_time"`                  // 支付时间
-	Buffets                []StatementBuffetData     `json:"buffets"`                   // 自助餐列表
-	Delays                 []StatementDelayData      `json:"delays"`                    // 加钟列表
-	Products               []StatementProductData    `json:"products"`                  // 商品列表
-	ProductNum             float64                   `json:"product_num"`               // 商品数量
-	ProductAmount          string                    `json:"product_amount"`            // 商品金额
-	ServiceFee             string                    `json:"service_fee"`               // 服务费
-	TaxRate                float64                   `json:"tax_rate"`                  // 税费率
-	TaxFeeType             uint                      `json:"tax_fee_type"`              // 税费类型	0-关闭消费税 1-商品未含税 2-商品已含税
-	IsContainTax           uint                      `json:"is_contain_tax"`            // 是否包含税
-	DiscountFee            string                    `json:"discount_fee"`              // 折扣金额
-	DiscountRate           string                    `json:"discount_rate"`             // 折扣率
-	MemberDiscountFee      string                    `json:"member_discount_fee"`       // 会员折扣金额
-	MemberDiscountRate     float64                   `json:"member_discount_rate"`      // 会员折扣率
-	MemberCardDiscountRate float64                   `json:"member_card_discount_rate"` // 会员卡折扣率
-	MemberPointsDiscount   float64                   `json:"member_points_discount"`    // 会员积分抵扣金额
-	CouponExchangeAmount   float64                   `json:"coupon_exchange_amount"`    // 优惠券抵扣金额
-	CheckOutZeroFee        string                    `json:"check_out_zero_fee"`        // 结账抹零金额
-	ReturnAmount           string                    `json:"return_amount"`             // 退款金额
-	PaymentCommissionFee   float64                   `json:"payment_commission_fee"`    // 支付手续费
-	FreeAmount             string                    `json:"free_amount"`               // 免单金额
-	ActualReceivePrice     string                    `json:"actual_receive_price"`      // 实际收款金额
-	PaymentMethods         []StatementPaymentMethod  `json:"payment_methods"`           // 支付方式列表
-	PercentageLists        []StatementPercentageData `json:"percentage_lists"`          // 百分比列表
-	IsFree                 bool                      `json:"is_free"`                   // 是否免单
-	IsMember               bool                      `json:"is_member"`                 // 是否会员
-	MemberRemainingBalance string                    `json:"member_remaining_balance"`  // 会员剩余余额
-	MemberPoints           float64                   `json:"member_points"`             // 会员积分
-	PaymentName            string                    `json:"payment_name"`              // 支付方式名称
-	PaymentQrcode          string                    `json:"payment_qrcode"`            // 支付方式二维码
-	Barcode                string                    `json:"barcode"`                   // 条形码
-}
-
-// StatementBuffetData 自助餐数据结构体
-type StatementBuffetData struct {
-	Name     string `json:"name"`
-	PriceNum string `json:"price_num"`
-	Price    string `json:"price"`
-	Num      uint   `json:"num"`
-	Subtotal string `json:"subtotal"`
-	Attrs    string `json:"attrs"`
-	Attr     string `json:"attr"`
-}
-
-// StatementDelayData 加钟数据结构体
-type StatementDelayData struct {
-	Name     string `json:"name"`
-	PriceNum string `json:"price_num"`
-	Price    string `json:"price"`
-	Num      uint   `json:"num"`
-	Attrs    string `json:"attrs"`
-	Attr     string `json:"Attr"`
-	Subtotal string `json:"subtotal"`
-}
-
-// StatementProductData 商品数据结构体
-type StatementProductData struct {
-	Name         string  `json:"name"`
-	PriceNum     string  `json:"price_num"`
-	Price        string  `json:"price"`
-	Num          float64 `json:"num"`
-	Subtotal     string  `json:"subtotal"`
-	Attrs        string  `json:"attrs"`
-	Attr         string  `json:"attr"`
-	SauceNames   string  `json:"sauce_names"`
-	IsDelay      bool    `json:"is_delay"`
-	IsBuffet     bool    `json:"is_buffet"`
-	IsGift       bool    `json:"is_gift"`
-	IsPackage    bool    `json:"is_package"`
-	IsSubProduct bool    `json:"is_sub_product"`
-}
-
-// StatementPaymentMethod 支付方式数据结构体
-type StatementPaymentMethod struct {
-	Name string `json:"name"`
-	Text string `json:"text"`
-}
-
-// StatementPercentageData 百分比数据结构体
-type StatementPercentageData struct {
-	TaxRate    string `json:"tax_rate"`
-	TaxFee     string `json:"tax_fee"`
-	TotalPrice string `json:"total_price"`
-}
 
 // statementOrderImgTemplateCustom 图片订单打印模板
 type statementOrderImgTemplateCustom struct {
@@ -201,7 +87,7 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 	}
 
 	// 商品列表
-	products := []StatementProductData{}
+	products := []template_struct.StatementProductData{}
 
 	// 自助餐顾客类型
 	for _, orderBuffetCustomer := range saleOrder.SaleOrderBuffetCustomerTypes {
@@ -210,19 +96,20 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 		}
 		productNum = productNum.Add(decimal.NewFromFloat(float64(orderBuffetCustomer.Num)).Round(3))
 		originPrice := orderBuffetCustomer.GetOriginPrice()
-		products = append(products, StatementProductData{
-			Name:         orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNameByLang(t.base.Lang),
-			PriceNum:     fmt.Sprintf("%s*%d", t.base.Amount(orderBuffetCustomer.SalePrice), orderBuffetCustomer.Num),
-			Price:        t.base.Amount(originPrice),
-			Num:          float64(orderBuffetCustomer.Num),
-			Subtotal:     t.base.Amount(orderBuffetCustomer.TotalPrice),
-			Attrs:        orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-			Attr:         orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-			SauceNames:   "",
-			IsBuffet:     true,
-			IsGift:       false,
-			IsPackage:    false,
-			IsSubProduct: false,
+		products = append(products, template_struct.StatementProductData{
+			Name:            orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNameByLang(t.base.Lang),
+			PriceNum:        fmt.Sprintf("%s*%d", t.base.Amount(orderBuffetCustomer.SalePrice), orderBuffetCustomer.Num),
+			Price:           t.base.Amount(originPrice),
+			Num:             float64(orderBuffetCustomer.Num),
+			Subtotal:        t.base.Amount(orderBuffetCustomer.TotalPrice),
+			Attrs:           orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+			Attr:            orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+			SauceNames:      "",
+			IsBuffet:        true,
+			IsBuffetProduct: false,
+			IsGift:          false,
+			IsPackage:       false,
+			IsSubProduct:    false,
 		})
 	}
 
@@ -230,20 +117,21 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 	buffetDelayProducts, num := t.base.MergeSaleOrderBuffetDelayProducts(saleOrder)
 	productNum = productNum.Add(decimal.NewFromFloat(num).Round(3))
 	for _, delay := range buffetDelayProducts {
-		products = append(products, StatementProductData{
-			Name:         delay.DelayName,
-			PriceNum:     fmt.Sprintf("%s*%d", t.base.Amount(delay.DelayPrice), delay.DelayNum),
-			Price:        t.base.Amount(delay.DelayPrice),
-			Num:          float64(delay.DelayNum),
-			Subtotal:     t.base.Amount(delay.DelayTotalPrice),
-			Attrs:        delay.DelayName,
-			Attr:         delay.DelayName,
-			SauceNames:   "",
-			IsDelay:      true,
-			IsBuffet:     false,
-			IsGift:       false,
-			IsPackage:    false,
-			IsSubProduct: false,
+		products = append(products, template_struct.StatementProductData{
+			Name:            delay.DelayName,
+			PriceNum:        fmt.Sprintf("%s*%d", t.base.Amount(delay.DelayPrice), delay.DelayNum),
+			Price:           t.base.Amount(delay.DelayPrice),
+			Num:             float64(delay.DelayNum),
+			Subtotal:        t.base.Amount(delay.DelayTotalPrice),
+			Attrs:           delay.DelayName,
+			Attr:            delay.DelayName,
+			SauceNames:      "",
+			IsDelay:         true,
+			IsBuffet:        false,
+			IsBuffetProduct: false,
+			IsGift:          false,
+			IsPackage:       false,
+			IsSubProduct:    false,
 		})
 	}
 
@@ -256,61 +144,106 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 	})
 	productNum = productNum.Add(decimal.NewFromFloat(num).Round(3))
 	for _, product := range mergeProducts {
-		products = append(products, StatementProductData{
-			Name:         product.Name,
-			PriceNum:     fmt.Sprintf("%s*%v", t.base.Amount(product.ProductPrice), product.ProductNum),
-			Price:        t.base.Amount(product.ProductPrice),
-			Num:          product.ProductNum,
-			Subtotal:     t.base.Amount(product.ProductTotalPrice),
-			Attrs:        product.Attrs,
-			Attr:         product.Attr,
-			SauceNames:   product.SauceNames,
-			IsGift:       product.IsGift,
-			IsPackage:    product.IsWrap,
-			IsSubProduct: product.IsSub,
+		products = append(products, template_struct.StatementProductData{
+			Name:     product.Name,
+			PriceNum: fmt.Sprintf("%s*%v", t.base.Amount(product.ProductPrice), product.ProductNum),
+			Price:    t.base.Amount(product.ProductPrice),
+			Num:      product.ProductNum,
+			Subtotal: t.base.Amount(product.ProductTotalPrice),
+			Attrs:    product.Attrs,
+			Attr:     product.Attr,
+			AttrList: func() []template_struct.StatementProductDataAttrList {
+				attrs := []template_struct.StatementProductDataAttrList{}
+				for _, attr := range product.AttrList {
+					attrs = append(attrs, template_struct.StatementProductDataAttrList{
+						Name: attr,
+						Text: attr,
+					})
+				}
+				return attrs
+			}(),
+			FlavorName: product.FlavorName,
+			SauceList: func() []template_struct.StatementProductDataSauceList {
+				sauces := []template_struct.StatementProductDataSauceList{}
+				for _, sauce := range product.SauceList {
+					sauces = append(sauces, template_struct.StatementProductDataSauceList{
+						Name: sauce,
+						Text: sauce,
+					})
+				}
+				return sauces
+			}(),
+			SauceNames:      product.SauceNames,
+			IsGift:          product.IsGift,
+			IsPackage:       product.IsWrap,
+			IsSubProduct:    product.IsSub,
+			IsBuffetProduct: product.IsBuffetProduct,
+			Remark:          product.Remark,
 		})
 		// 套餐子商品
 		for _, subProduct := range product.SubProducts {
-			products = append(products, StatementProductData{
-				Name:         subProduct.Name,
-				PriceNum:     fmt.Sprintf("%v", subProduct.ProductNum),
-				Price:        t.base.Amount(subProduct.ProductPrice),
-				Num:          subProduct.ProductNum,
-				Subtotal:     t.base.Amount(subProduct.ProductTotalPrice),
-				Attrs:        subProduct.Attrs,
-				Attr:         subProduct.Attr,
-				SauceNames:   subProduct.SauceNames,
-				IsGift:       false,
-				IsPackage:    false,
-				IsSubProduct: true,
+			products = append(products, template_struct.StatementProductData{
+				Name:     subProduct.Name,
+				PriceNum: fmt.Sprintf("%v", subProduct.ProductNum),
+				Price:    t.base.Amount(subProduct.ProductPrice),
+				Num:      subProduct.ProductNum,
+				Subtotal: t.base.Amount(subProduct.ProductTotalPrice),
+				Attrs:    subProduct.Attrs,
+				Attr:     subProduct.Attr,
+				AttrList: func() []template_struct.StatementProductDataAttrList {
+					attrs := []template_struct.StatementProductDataAttrList{}
+					for _, attr := range subProduct.AttrList {
+						attrs = append(attrs, template_struct.StatementProductDataAttrList{
+							Name: attr,
+							Text: attr,
+						})
+					}
+					return attrs
+				}(),
+				SauceList: func() []template_struct.StatementProductDataSauceList {
+					sauces := []template_struct.StatementProductDataSauceList{}
+					for _, sauce := range subProduct.SauceList {
+						sauces = append(sauces, template_struct.StatementProductDataSauceList{
+							Name: sauce,
+							Text: sauce,
+						})
+					}
+					return sauces
+				}(),
+				FlavorName:      subProduct.FlavorName,
+				SauceNames:      subProduct.SauceNames,
+				IsGift:          false,
+				IsPackage:       false,
+				IsSubProduct:    true,
+				IsBuffetProduct: false,
 			})
 		}
 	}
 
 	// 支付方式
-	paymentMethods := []StatementPaymentMethod{}
+	paymentMethods := []template_struct.StatementPaymentMethod{}
 	if saleOrder.IsFreeSaleOrder() {
-		paymentMethods = append(paymentMethods, StatementPaymentMethod{
+		paymentMethods = append(paymentMethods, template_struct.StatementPaymentMethod{
 			Name: t.base.Translate("支付方式"),
 			Text: t.base.Translate("免单"),
 		})
-		paymentMethods = append(paymentMethods, StatementPaymentMethod{
+		paymentMethods = append(paymentMethods, template_struct.StatementPaymentMethod{
 			Name: t.base.Translate("实收金额"),
 			Text: t.base.Amount(0),
 		})
 	}
 	if len(saleOrder.PaymentOrders) > 0 {
 		for _, paymentOrder := range saleOrder.PaymentOrders {
-			paymentMethods = append(paymentMethods, StatementPaymentMethod{
+			paymentMethods = append(paymentMethods, template_struct.StatementPaymentMethod{
 				Name: t.base.Translate("支付方式"),
 				Text: paymentOrder.PaymentMethod.GetName(),
 			})
-			paymentMethods = append(paymentMethods, StatementPaymentMethod{
+			paymentMethods = append(paymentMethods, template_struct.StatementPaymentMethod{
 				Name: t.base.Translate("实收金额"),
 				Text: t.base.Amount(paymentOrder.Amount),
 			})
 			if saleOrder.ChangeAmount > 0 && paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
-				paymentMethods = append(paymentMethods, StatementPaymentMethod{
+				paymentMethods = append(paymentMethods, template_struct.StatementPaymentMethod{
 					Name: t.base.Translate("找零"),
 					Text: t.base.Amount(saleOrder.ChangeAmount),
 				})
@@ -319,12 +252,12 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 	}
 
 	// 百分比列表
-	percentageLists := []StatementPercentageData{}
+	percentageLists := []template_struct.StatementPercentageData{}
 	for _, percentage := range saleOrder.GetPercentageList() {
 		taxRate := percentage["TaxRate"]
 		taxFee, _ := strconv.ParseFloat(percentage["TaxFee"], 64)
 		totalPrice, _ := strconv.ParseFloat(percentage["TotalPrice"], 64)
-		percentageLists = append(percentageLists, StatementPercentageData{
+		percentageLists = append(percentageLists, template_struct.StatementPercentageData{
 			TaxRate:    taxRate,
 			TaxFee:     t.base.Amount(taxFee),
 			TotalPrice: t.base.Amount(totalPrice),
@@ -332,9 +265,9 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 	}
 
 	// 构建订单数据结构体
-	statementData := &StatementOrderData{
+	statementData := &template_struct.StatementOrderData{
 		BrandName: config.Server.BrandName,
-		Store: StatementStoreData{
+		Store: template_struct.StatementStoreData{
 			Name:             t.base.StoreSetting.Name,
 			Address:          t.base.StoreSetting.Address,
 			Phone:            t.base.StoreSetting.Phone,
@@ -346,7 +279,7 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 			CashierSn:        t.base.GetCashierSn(settingPrinterInfo.PrinterCashierDeviceSn),
 			PrinterSn:        settingPrinterInfo.PrinterSn,
 		},
-		Order: StatementOrderInfoData{
+		Order: template_struct.StatementOrderInfoData{
 			Status: saleOrder.Status,
 			SerialNo: func() string {
 				if saleBill.DeskUuid > 0 {
@@ -361,6 +294,7 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 			FinishTime:  t.base.FormatUnixTimeDefault(saleOrder.FinishTime),
 			CreateTime:  t.base.FormatUnixTimeDefault(saleOrder.CreateTime),
 			PayTime:     t.base.FormatUnixTimeDefault(saleOrder.FinishTime),
+			UpdateTime:  t.base.FormatUnixTimeDefault(saleOrder.UpdateTime),
 			// 商品
 			Products: products,
 			//
