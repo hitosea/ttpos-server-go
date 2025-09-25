@@ -357,6 +357,7 @@ func (s *supplierSrv) GetSupplierSelect(ctx context.Context, req req.SupplierSel
 			}
 		}
 		supplierList = append(supplierList, &resp.SupplierSimpleInfo{
+			Uuid: supplier.Uuid,
 			Name: supplier.Name,
 			Code: supplier.ErpCode,
 		})
