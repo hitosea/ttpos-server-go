@@ -6301,9 +6301,9 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
 		selfUomList2, err := erp.GetUomList(ctx.GetContext(), req.GetUomListReq{
-			SiteCode:       headquarter.ErpnextSiteCode,
-			CompanyAbbr:    headquarter.ErpnextCompanyAbbr,
-			Branch:         headquarter.ErpnextBranchName,
+			SiteCode:    headquarter.ErpnextSiteCode,
+			CompanyAbbr: headquarter.ErpnextCompanyAbbr,
+			//Branch:         headquarter.ErpnextBranchName,
 			SubCompanyAbbr: companySetting.ErpnextCompanyAbbr,
 		})
 		if err != nil {
