@@ -58,6 +58,7 @@ type MaterialDetailResp struct {
 	CostUnitLocaleName     dto.LocaleResponse   `json:"cost_unit_locale_name"`     // 成本单位名称
 	CostUnitUuid           uint64               `json:"cost_unit_uuid"`            // 成本单位UUID
 	FromCostUnitUuid       uint64               `json:"from_cost_unit_uuid"`       // 来源成本单位UUID
+	Editable               bool                 `json:"editable"`                  // 是否可编辑
 }
 
 // MaterialStockDetailResp 物品库存详情响应

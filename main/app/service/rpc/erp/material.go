@@ -77,6 +77,37 @@ func (s *erpSrv) AddMaterial(ctx context.Context, params req.MaterialAddErpReq) 
 	return response, nil
 }
 
+// 获取总部的物品列表
+func (s *erpSrv) GetHeadquarterMaterialList(ctx context.Context, params req.GetHeadquarterMaterialListReq) (*item.GetItemListResp, error) {
+	company := ctx.GetCompany()
+	companySetting := company.CompanySetting
+
+	client, conn, err := NewErpItemClient()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	param := &item.GetItemListReq{
+		ItemGroup:      item.ItemGroup_RawMaterial,
+		CompanyAbbr:    companySetting.ErpnextHeadquarterAbbr, // 总部
+		SubCompanyAbbr: companySetting.ErpnextCompanyAbbr,     // 子店
+	}
+	result, err := client.GetItemList(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), param)
+	if err != nil {
+		return nil, err
+	}
+	if result.GetCode() != "0" {
+		return nil, errors.WithMessage(errors.New(result.GetMessage()), "获取总部物品列表失败")
+	}
+	response := &item.GetItemListResp{}
+	if err := result.Data.UnmarshalTo(response); err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
 type ProductBomCardAddErpReq struct {
 	ItemCode string                   `json:"item_code" binding:"required"` // 商品编码
 	Quantity float64                  `json:"quantity" binding:"required"`  // 数量，加工份数

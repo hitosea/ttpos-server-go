@@ -316,12 +316,12 @@ func (h *MaterialHandler) AddMaterial(c *gin.Context) {
 // @Router /shop/material/add/erp [post]
 func (h *MaterialHandler) AddMaterialByErpItem(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	addReq := req.MaterialAddErpReq{}
-	if err := c.ShouldBindJSON(&addReq); err != nil {
-		helper.HandleValidationError(c, err, addReq, dto.PageReqMessage)
-		return
-	}
-	err := h.materialSrv.AddMaterialByEprItem(ctx, addReq)
+	// addReq := req.MaterialAddErpReq{}
+	// if err := c.ShouldBindJSON(&addReq); err != nil {
+	// 	helper.HandleValidationError(c, err, addReq, dto.PageReqMessage)
+	// 	return
+	// }
+	err := h.materialSrv.SyncHeadquarterMaterial(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
