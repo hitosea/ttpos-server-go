@@ -32,6 +32,14 @@ type (
 		// 参数：ctx 上下文，req 包含物品编码和可选的公司、分支信息
 		// 返回：物品详细信息，错误信息
 		GetItem(ctx context.Context, req *item.GetItemReq) (res *erp.Item, err error)
+		// SavePosAttribute 保存 POS 系统中的属性物品
+		// 参数：ctx 上下文，req 保存属性物品请求
+		// 返回：保存后的物品信息，错误信息
+		SavePosAttribute(ctx context.Context, req *item.SavePosAttributeReq) (res *item.ItemInfo, err error)
+		// SavePosAddon 保存 POS 系统中的加料物品
+		// 参数：ctx 上下文，req 保存加料物品请求
+		// 返回：保存后的物品信息，错误信息
+		SavePosAddon(ctx context.Context, req *item.SavePosAddonReq) (res *item.ItemInfo, err error)
 	}
 	IStock interface {
 		// GetUomList 获取单位列表

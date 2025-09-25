@@ -21,14 +21,19 @@ const (
 	ItemGroupRawMaterial ItemGroup = "Raw Material"
 	// ItemGroupProducts 商品
 	ItemGroupProducts ItemGroup = "Products"
+	// ItemGroupPosAttribute Pos系统中特殊的item ，如 属性/加料
+	ItemGroupPosAttribute ItemGroup = "Pos Attribute"
+	// ItemGroupPosAddon Pos系统中特殊的item ，如 加料
+	ItemGroupPosAddon ItemGroup = "Pos Addon"
 	// ItemGroupOthers 其他
 	ItemGroupOthers ItemGroup = ""
 )
 
 const (
-	ItemCodePrefixProduct     = "SP"  //商品前缀
-	ItemCodePrefixRawMaterial = "WPR" //原材料前缀
-	ItemCodePrefixPackage     = "TC"  //套餐前缀
+	ItemCodePrefixProduct      = "SP"  //商品前缀
+	ItemCodePrefixRawMaterial  = "WPR" //原材料前缀
+	ItemCodePrefixPackage      = "TC"  //套餐前缀
+	ItemCodePrefixPosAttribute = "SX"  // 属性前缀
 )
 
 // CustomerName 客户名称
