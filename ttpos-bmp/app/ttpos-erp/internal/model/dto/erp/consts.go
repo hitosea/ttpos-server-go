@@ -45,3 +45,9 @@ const (
 	//ColumnCustomPermissionRule 自定义权限规则
 	ColumnCustomPermissionRule = "custom_permission_rule"
 )
+
+// 物品组
+const (
+	ItemGroupPosAttribute = "Pos Attribute"
+	ItemGroupPosAddon     = "Pos Addon"
+)

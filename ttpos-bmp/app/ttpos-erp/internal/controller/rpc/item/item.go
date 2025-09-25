@@ -204,3 +204,47 @@ func (c *Controller) GetItem(ctx context.Context, req *item.GetItemReq) (*api.Re
 	// 返回成功响应
 	return rpc.ApiSuccessWithData("获取物品信息成功", respItem), nil
 }
+
+// SavePosAttribute 保存 POS 系统中的属性物品
+// 参数：ctx 上下文，req 保存属性物品请求
+// 返回：响应信息和错误
+func (c *Controller) SavePosAttribute(ctx context.Context, req *item.SavePosAttributeReq) (*api.ResponseInfo, error) {
+	// 参数验证
+	if req.Item == nil {
+		return rpc.ApiError("属性物品信息不能为空"), nil
+	}
+	if req.Item.ItemName == "" {
+		return rpc.ApiError("属性物品名称不能为空"), nil
+	}
+
+	// 调用服务层保存数据
+	savedItem, err := service.Item().SavePosAttribute(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	// 返回成功响应
+	return rpc.ApiSuccessWithData("保存属性物品成功", savedItem), nil
+}
+
+// SavePosAddon 保存 POS 系统中的加料物品
+// 参数：ctx 上下文，req 保存加料物品请求
+// 返回：响应信息和错误
+func (c *Controller) SavePosAddon(ctx context.Context, req *item.SavePosAddonReq) (*api.ResponseInfo, error) {
+	// 参数验证
+	if req.Item == nil {
+		return rpc.ApiError("加料物品信息不能为空"), nil
+	}
+	if req.Item.ItemName == "" {
+		return rpc.ApiError("加料物品名称不能为空"), nil
+	}
+
+	// 调用服务层保存数据
+	savedItem, err := service.Item().SavePosAddon(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	// 返回成功响应
+	return rpc.ApiSuccessWithData("保存加料物品成功", savedItem), nil
+}

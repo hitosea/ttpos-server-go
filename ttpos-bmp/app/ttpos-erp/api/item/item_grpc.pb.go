@@ -30,6 +30,8 @@ const (
 	ItemService_SaveItem_FullMethodName         = "/item.ItemService/SaveItem"
 	ItemService_GetItemStock_FullMethodName     = "/item.ItemService/GetItemStock"
 	ItemService_GetItem_FullMethodName          = "/item.ItemService/GetItem"
+	ItemService_SavePosAttribute_FullMethodName = "/item.ItemService/SavePosAttribute"
+	ItemService_SavePosAddon_FullMethodName     = "/item.ItemService/SavePosAddon"
 )
 
 // ItemServiceClient is the client API for ItemService service.
@@ -74,6 +76,10 @@ type ItemServiceClient interface {
 	// 参数：物品编码和可选的公司、分支信息
 	// 返回：物品详细信息
 	GetItem(ctx context.Context, in *GetItemReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 保存 pos 系统中特殊的item ，如 属性/加料
+	SavePosAttribute(ctx context.Context, in *SavePosAttributeReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 保存 pos 系统中特殊的item ，如 加料
+	SavePosAddon(ctx context.Context, in *SavePosAddonReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 }
 
 type itemServiceClient struct {
@@ -174,6 +180,26 @@ func (c *itemServiceClient) GetItem(ctx context.Context, in *GetItemReq, opts ..
 	return out, nil
 }
 
+func (c *itemServiceClient) SavePosAttribute(ctx context.Context, in *SavePosAttributeReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, ItemService_SavePosAttribute_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *itemServiceClient) SavePosAddon(ctx context.Context, in *SavePosAddonReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, ItemService_SavePosAddon_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ItemServiceServer is the server API for ItemService service.
 // All implementations must embed UnimplementedItemServiceServer
 // for forward compatibility.
@@ -216,6 +242,10 @@ type ItemServiceServer interface {
 	// 参数：物品编码和可选的公司、分支信息
 	// 返回：物品详细信息
 	GetItem(context.Context, *GetItemReq) (*api.ResponseInfo, error)
+	// 保存 pos 系统中特殊的item ，如 属性/加料
+	SavePosAttribute(context.Context, *SavePosAttributeReq) (*api.ResponseInfo, error)
+	// 保存 pos 系统中特殊的item ，如 加料
+	SavePosAddon(context.Context, *SavePosAddonReq) (*api.ResponseInfo, error)
 	mustEmbedUnimplementedItemServiceServer()
 }
 
@@ -252,6 +282,12 @@ func (UnimplementedItemServiceServer) GetItemStock(context.Context, *GetItemStoc
 }
 func (UnimplementedItemServiceServer) GetItem(context.Context, *GetItemReq) (*api.ResponseInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetItem not implemented")
+}
+func (UnimplementedItemServiceServer) SavePosAttribute(context.Context, *SavePosAttributeReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SavePosAttribute not implemented")
+}
+func (UnimplementedItemServiceServer) SavePosAddon(context.Context, *SavePosAddonReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SavePosAddon not implemented")
 }
 func (UnimplementedItemServiceServer) mustEmbedUnimplementedItemServiceServer() {}
 func (UnimplementedItemServiceServer) testEmbeddedByValue()                     {}
@@ -436,6 +472,42 @@ func _ItemService_GetItem_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ItemService_SavePosAttribute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SavePosAttributeReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemServiceServer).SavePosAttribute(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ItemService_SavePosAttribute_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemServiceServer).SavePosAttribute(ctx, req.(*SavePosAttributeReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ItemService_SavePosAddon_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SavePosAddonReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemServiceServer).SavePosAddon(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ItemService_SavePosAddon_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemServiceServer).SavePosAddon(ctx, req.(*SavePosAddonReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ItemService_ServiceDesc is the grpc.ServiceDesc for ItemService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -478,6 +550,14 @@ var ItemService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetItem",
 			Handler:    _ItemService_GetItem_Handler,
+		},
+		{
+			MethodName: "SavePosAttribute",
+			Handler:    _ItemService_SavePosAttribute_Handler,
+		},
+		{
+			MethodName: "SavePosAddon",
+			Handler:    _ItemService_SavePosAddon_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
