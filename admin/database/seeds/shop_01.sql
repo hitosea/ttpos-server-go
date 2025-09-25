@@ -1181,6 +1181,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_tax` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '税率ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
     `tax_rate`  DECIMAL(22, 4) NOT NULL DEFAULT 0.0000 COMMENT '税率',
+    `headquarter_uuid` bigint(20) DEFAULT 0 COMMENT '总部Uuid',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
