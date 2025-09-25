@@ -109,6 +109,7 @@ type MaterialAddReq struct {
 	InternalCode     string             `json:"internal_code"`      // 内部编码
 
 	headquarterUuid uint64 // 总部uuid。 内部调用使用，同步总部物品时
+	warehouseUuid   uint64 // 仓库uuid。 内部调用使用，同步总部物品时
 }
 
 func (r *MaterialAddReq) GetHeadquarterUuid() uint64 {
@@ -117,6 +118,14 @@ func (r *MaterialAddReq) GetHeadquarterUuid() uint64 {
 
 func (r *MaterialAddReq) SetHeadquarterUuid(uuid uint64) {
 	r.headquarterUuid = uuid
+}
+
+func (r *MaterialAddReq) GetWarehouseUuid() uint64 {
+	return r.warehouseUuid
+}
+
+func (r *MaterialAddReq) SetWarehouseUuid(uuid uint64) {
+	r.warehouseUuid = uuid
 }
 
 func (r *MaterialAddReq) Validate() error {

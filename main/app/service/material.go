@@ -51,6 +51,7 @@ type IMaterialSrv interface {
 	ImportMaterialList(ctx context.Context, req req.MaterialImportListReq) (material_resp.MaterialImportResp, error)
 	ImportMaterial(ctx context.Context, req req.MaterialImportReq) error
 	GetWarehouseItemsByErpCode(ctx context.Context, warehouseErpCode string, pageNo, pageSize int) ([]model.WarehouseItem, int64, error)
+	SyncHeadquarterMaterial(ctx context.Context) error // 同步总部物品列表
 }
 
 type materialSrv struct {
@@ -307,6 +308,7 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		PurchaseUnitLocaleName: purchaseUnitLocaleName,
 		CostUnitLocaleName:     costUnitLocaleName,
 		UnitLocaleName:         baseUnitLocaleName,
+		Editable:               !material.IsHeadquarter(), // 总部物品不可编辑
 	}, nil
 }
 
@@ -404,8 +406,11 @@ func (s *materialSrv) AddMaterialCategory(ctx context.Context, req req.MaterialC
 }
 
 func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.MaterialAddErpReq) error {
-	dbId := ctx.GetDbId()
-	db := s.dbm.GetDB(dbId)
+	db := ctx.GetDB()
+	if db == nil {
+		dbId := ctx.GetDbId()
+		db = s.dbm.GetDB(dbId)
+	}
 
 	// 调用翻译接口
 	localeName, err := GetMultiLanguageName(ctx, request.ItemName)
@@ -490,6 +495,12 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 		// 获取总部ID
 		headquarterUuid := ctx.GetCompanySetting().HeadquarterUuid
 		params.SetHeadquarterUuid(headquarterUuid)
+		// 获取默认仓库ID
+		warehouseUuid, err := repository.NewWarehouseRepo(tx).GetDefaultWarehouse()
+		if err != nil {
+			return errors.WithMessage(err, "获取默认仓库失败")
+		}
+		params.SetWarehouseUuid(warehouseUuid.Uuid)
 		material, _, err := addMaterial(ctx, tx, params)
 		if err != nil {
 			return errors.WithMessage(err)
@@ -669,6 +680,11 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 	headquarterUuid := request.GetHeadquarterUuid()
 	if headquarterUuid != 0 {
 		material.HeadquarterUuid = headquarterUuid
+	}
+	// 设置仓库ID
+	warehouseUuid := request.GetWarehouseUuid()
+	if warehouseUuid != 0 {
+		material.WarehouseUuid = warehouseUuid
 	}
 
 	_, err = materialRepo.CreateMaterial(material)
@@ -2104,4 +2120,47 @@ func (s *materialSrv) GetWarehouseItemsByErpCode(ctx context.Context, warehouseE
 	}
 
 	return warehouseItems, total, nil
+}
+
+// 同步总部物品列表
+func (s *materialSrv) SyncHeadquarterMaterial(ctx context.Context) error {
+	erpSrv := erp.NewIErpSrv(s.dbm)
+	headquarterMaterialList, err := erpSrv.GetHeadquarterMaterialList(ctx, req.GetHeadquarterMaterialListReq{})
+	if err != nil {
+		return errors.WithMessage(err, "同步总部物品列表失败")
+	}
+
+	db := ctx.GetDB()
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		copyCtx := ctx.Copy()
+		copyCtx.SetDB(tx)
+		for _, itemInfo := range headquarterMaterialList.ItemList {
+			uoms := []req.MaterialUomReq{}
+			for _, uom := range itemInfo.Uoms {
+				uoms = append(uoms, req.MaterialUomReq{
+					Uom:            uom.Uom,
+					ConversionRate: uom.ConversionFactor,
+				})
+			}
+			if err := s.AddMaterialByEprItem(copyCtx, req.MaterialAddErpReq{
+				ItemCode:           itemInfo.ItemCode,
+				ItemName:           itemInfo.ItemName,
+				StockUom:           itemInfo.StockUom,
+				Disabled:           itemInfo.Disabled,
+				ValuationRate:      itemInfo.ValuationRate,
+				OpeningStock:       itemInfo.OpeningStock,
+				InternalCode:       itemInfo.InternalCode,
+				Classification:     itemInfo.Classification,
+				ClassificationCode: itemInfo.ClassificationCode,
+				Uoms:               uoms,
+			}); err != nil {
+				return errors.WithMessage(err, "同步总部物品列表失败")
+			}
+		}
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err)
+	}
+
+	return nil
 }

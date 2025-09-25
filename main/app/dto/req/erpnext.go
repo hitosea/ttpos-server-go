@@ -212,3 +212,6 @@ type GetErpnextSupplierListReq struct {
 	Branch         string
 	SubCompanyAbbr string // 连锁子店公司简称
 }
+
+type GetHeadquarterMaterialListReq struct {
+}

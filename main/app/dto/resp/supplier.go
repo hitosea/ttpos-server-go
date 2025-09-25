@@ -29,6 +29,7 @@ type SupplierDetailResp struct {
 
 // SupplierSimpleInfo 供应商简单信息（用于选择器）
 type SupplierSimpleInfo struct {
+	Uuid uint64 `json:"uuid"` // 供应商UUID
 	Name string `json:"name"` // 供应商名称
 	Code string `json:"code"` // 供应商编码
 }
