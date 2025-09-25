@@ -577,45 +577,7 @@
                                 "line_height": 33,
                                 "padding_right": 10,
                                 "width": 52
-                            },
-                            "rows": [
-                                [
-                                    {
-                                        "block_id": "attrs",
-                                        "block_type": "label",
-                                        "block_expand_labels": [
-                                            {
-                                                "text": "   ",
-                                                "conditions": [
-                                                    {
-                                                        "field": "is_sub_product",
-                                                        "operator": "not_empty",
-                                                        "value": 0
-                                                    }
-                                                ]
-                                            }
-                                        ],
-                                        "block_label": "({attrs})",
-                                        "block_attr": {
-                                            "font_size": 18,
-                                            "align": "left",
-                                            "font_bold": false,
-                                            "dividing_line": false,
-                                            "line_height": 35,
-                                            "leading_blank_lines": 0,
-                                            "trailing_blank_lines": 1,
-                                            "width": 52
-                                        },
-                                        "conditions": [
-                                            {
-                                                "field": "attrs",
-                                                "operator": "not_empty",
-                                                "value": 0
-                                            }
-                                        ]
-                                    }
-                                ]
-                            ]
+                            }
                         },
                         {
                             "block_id": "price_num",
@@ -649,6 +611,42 @@
                                 {
                                     "field": "is_sub_product",
                                     "operator": "empty",
+                                    "value": 0
+                                }
+                            ]
+                        }
+                    ],
+                    [
+                        {
+                            "block_id": "attrs",
+                            "block_type": "label",
+                            "block_expand_labels": [
+                                {
+                                    "text": "   ",
+                                    "conditions": [
+                                        {
+                                            "field": "is_sub_product",
+                                            "operator": "not_empty",
+                                            "value": 0
+                                        }
+                                    ]
+                                }
+                            ],
+                            "block_label": "({attrs})",
+                            "block_attr": {
+                                "font_size": 18,
+                                "align": "left",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "line_height": 35,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 1,
+                                "width": 52
+                            },
+                            "conditions": [
+                                {
+                                    "field": "attrs",
+                                    "operator": "not_empty",
                                     "value": 0
                                 }
                             ]

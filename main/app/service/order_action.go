@@ -55,10 +55,16 @@ func (s *orderSrv) convertToEventOrderProduct(saleOrderProduct *model.SaleOrderP
 		ProductType:           saleOrderProduct.ProductType,
 		ProductAttrList:       saleOrderProduct.GetAttributeNameList(),
 		ProductSauceNamesList: saleOrderProduct.GetSauceNamesList(),
+		Attr:                  saleOrderProduct.GetPureAttributeName(),
+		AttrList:              saleOrderProduct.GetPureAttributeNameList(),
+		FlavorName:            saleOrderProduct.GetFlavorName(),
 		TotalNum:              saleOrderProduct.Num,
 		NumType:               saleOrderProduct.NumType,
 		IsBuffet:              saleOrderProduct.IsBuffet == 1,
 		IsWrap:                saleOrderProduct.CalculateIsWrap(saleBill),
+		IsGift:                saleOrderProduct.IsGiftProduct(),
+		IsPackage:             saleOrderProduct.IsPackageProduct(),
+		IsSubProduct:          saleOrderProduct.IsPackageSubProduct(),
 		Remark:                saleOrderProduct.Remark,
 	}
 

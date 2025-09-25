@@ -43,11 +43,15 @@ func freeSaleOrderEventHandler() {
 					ProductType:           saleOrderProduct.ProductType,
 					ProductAttr:           saleOrderProduct.GetAttributeName(),
 					ProductAttrList:       saleOrderProduct.GetAttributeNameList(),
+					Attr:                  saleOrderProduct.GetPureAttributeName(),
+					AttrList:              saleOrderProduct.GetPureAttributeNameList(),
+					FlavorName:            saleOrderProduct.GetFlavorName(),
 					ProductSauceNamesList: saleOrderProduct.GetSauceNamesList(),
 					TotalNum:              saleOrderProduct.Num,
 					NumType:               saleOrderProduct.NumType,
 					IsBuffet:              saleOrderProduct.IsBuffet == 1,
 					IsWrap:                saleOrderProduct.IsWrapProduct(),
+					IsGift:                saleOrderProduct.IsGiftProduct(),
 					Remark:                saleOrderProduct.Remark,
 				})
 			}
@@ -56,6 +60,7 @@ func freeSaleOrderEventHandler() {
 				printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
 					constant.PrinterProductTypePay,
 					payload.SaleBillUuid,
+					payload.SaleOrderUuid,
 					products,
 				)
 			}

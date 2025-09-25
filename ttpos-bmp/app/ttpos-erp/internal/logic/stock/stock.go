@@ -640,3 +640,6 @@ func (s *sStock) GetItemAttribute(ctx context.Context, attributeName string) (re
 
 	return itemAttribute, nil
 }
+
+//TODO 库存台账
+//func (s *sStock) StockLedger(ctx context.Context)

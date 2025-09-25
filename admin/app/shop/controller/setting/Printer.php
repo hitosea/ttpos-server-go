@@ -70,7 +70,7 @@ class Printer extends Controller
         if ($this->request->isGet()) {
             $cashierList = BindRecord::getCashierList();
             $printerType = PrinterModel::getPrinterTypeList();
-            $lanPrinter = LanPrinterScan::field('ip', 'label')->select();
+            $lanPrinter = LanPrinterScan::field('ip', 'label')->where('status', 1)->select();
             $lanPrinter = array_map(function($item) {
                 return [
                     'value' => $item['ip'],

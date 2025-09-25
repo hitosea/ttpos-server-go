@@ -21,10 +21,16 @@ type OrderProduct struct {
 	ProductAttr           dto.LocaleResponse   `json:"product_attr"`        // 商品属性, 包含规格、属性、小料
 	ProductAttrList       []dto.LocaleResponse `json:"product_attrs"`       // 商品属性, 包含规格、属性、小料
 	ProductSauceNamesList []dto.LocaleResponse `json:"product_sauce_names"` // 商品小料
+	Attr                  dto.LocaleResponse   `json:"attr"`                // 商品属性
+	AttrList              []dto.LocaleResponse `json:"attr_list"`           // 商品属性 - 列表
+	FlavorName            dto.LocaleResponse   `json:"flavor_name"`         // 商品规格
 	TotalNum              float64              `json:"total_num"`           // 总数量
 	NumType               uint                 `json:"num_type"`            // 数量计算方法, 0-整数 1-小数
 	IsBuffet              bool                 `json:"is_buffet"`           // 是否自助餐
 	IsWrap                bool                 `json:"is_wrap"`             // 是否打包
+	IsGift                bool                 `json:"is_gift"`             // 是否赠品
+	IsPackage             bool                 `json:"is_package"`          // 是否套餐
+	IsSubProduct          bool                 `json:"is_sub_product"`      // 是否套餐子商品
 	Remark                string               `json:"remark"`              // 备注
 	SubProducts           []OrderProduct       `json:"sub_products"`        // 套餐子商品
 }

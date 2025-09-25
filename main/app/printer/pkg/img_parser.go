@@ -255,7 +255,9 @@ func (p *ImgTemplateParser) parseRow(
 
 	// 设置前置空行
 	if block.BlockAttr.LeadingBlankLines > 0 {
-		img.LineFeed(block.BlockAttr.LeadingBlankLines, 20)
+		for i := 0; i < block.BlockAttr.LeadingBlankLines; i++ {
+			img.LineFeed(block.BlockAttr.LeadingBlankLines, 12)
+		}
 	}
 
 	// 设置字体样式
@@ -504,7 +506,7 @@ func (p *ImgTemplateParser) getBlockText(block ImgTemplateBlock) string {
 		}
 		if label != "" {
 			// 组合前标签、主标签、值、后标签和扩展标签
-			return p.combineLabelsWithExpand(beforeLabel, fmt.Sprintf("%s %s", label, formatted), afterLabel, expandLabel)
+			return p.combineLabelsWithExpand(beforeLabel, fmt.Sprintf("%s%s", label, formatted), afterLabel, expandLabel)
 		}
 		// 组合前标签、值、后标签和扩展标签
 		return p.combineLabelsWithExpand(beforeLabel, formatted, afterLabel, expandLabel)

@@ -12,119 +12,13 @@
                 "block_type": "value",
                 "block_label": {},
                 "block_attr": {
-                    "font_size": 28,
+                    "font_size": 32,
                     "align": "center",
                     "font_bold": true,
                     "dividing_line": false,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 6,
                     "width": 100
-                }
-            }
-        ],
-        [
-            {
-                "block_id": "order.order_no",
-                "block_type": "label:auto:value",
-                "block_label": {
-                    "zh": "订单号",
-                    "en": "Order No",
-                    "ko": "주문번호",
-                    "my": "အမှာစာနံပါတ်",
-                    "tr": "Sipariş No",
-                    "de": "Bestell-Nr",
-                    "sv": "Beställningsnr",
-                    "ja": "注文番号",
-                    "zhtw": "訂單號",
-                    "th": "หมายเลขคำสั่งซื้อ"
-                },
-                "block_attr": {
-                    "font_size": 20,
-                    "align": "left",
-                    "font_bold": false,
-                    "dividing_line": false,
-                    "leading_blank_lines": 0,
-                    "trailing_blank_lines": 0,
-                    "width": 60
-                }
-            }
-        ],
-        [
-            {
-                "block_id": "order.pay_time",
-                "block_type": "label:auto:value",
-                "block_label": {
-                    "zh": "时间",
-                    "en": "Time:",
-                    "ko": "시간",
-                    "my": "အချိန်",
-                    "tr": "Zaman",
-                    "de": "Zeit",
-                    "sv": "Tid",
-                    "ja": "時間",
-                    "zhtw": "時間",
-                    "th": "เวลา"
-                },
-                "block_attr": {
-                    "font_size": 20,
-                    "align": "left",
-                    "font_bold": false,
-                    "dividing_line": false,
-                    "leading_blank_lines": 0,
-                    "trailing_blank_lines": 2,
-                    "width": 60
-                }
-            }
-        ],
-        [
-            {
-                "block_id": "title",
-                "block_type": "label",
-                "block_label": {
-                    "zh": "商品",
-                    "en": "Product",
-                    "ko": "상품",
-                    "my": "ကုန်ပစ္စည်းများ",
-                    "tr": "Ürün",
-                    "de": "Produkt",
-                    "sv": "Produkt",
-                    "ja": "商品",
-                    "zhtw": "商品",
-                    "th": "สินค้า"
-                },
-                "block_attr": {
-                    "font_size": 22,
-                    "align": "left",
-                    "font_bold": true,
-                    "dividing_line": true,
-                    "leading_blank_lines": 0,
-                    "trailing_blank_lines": 0,
-                    "width": 50
-                }
-            },
-            {
-                "block_id": "title",
-                "block_type": "label",
-                "block_label": {
-                    "zh": "数量",
-                    "en": "Quantity",
-                    "ko": "수량",
-                    "my": "အရေအတွက်",
-                    "tr": "Miktar",
-                    "de": "Menge",
-                    "sv": "Antal",
-                    "ja": "数量",
-                    "zhtw": "數量",
-                    "th": "จำนวน"
-                },
-                "block_attr": {
-                    "font_size": 24,
-                    "align": "right",
-                    "font_bold": true,
-                    "dividing_line": true,
-                    "leading_blank_lines": 0,
-                    "trailing_blank_lines": 0,
-                    "width": 50
                 }
             }
         ],
@@ -139,7 +33,7 @@
                     "font_bold": false,
                     "dividing_line": false,
                     "leading_blank_lines": 0,
-                    "trailing_blank_lines": 15,
+                    "trailing_blank_lines": 0,
                     "show_column_title": false,
                     "width": 100
                 },
@@ -366,7 +260,7 @@
                                 "dividing_line": false,
                                 "line_height": 53,
                                 "leading_blank_lines": 0,
-                                "trailing_blank_lines": 0,
+                                "trailing_blank_lines": 1,
                                 "width": 52
                             },
                             "conditions": [
@@ -379,6 +273,39 @@
                         }
                     ]
                 ]
+            }
+        ],
+        [
+            {
+                "block_id": "blank_line",
+                "block_type": "blank_line",
+                "block_label": {},
+                "block_attr": {
+                    "font_size": 20,
+                    "align": "center",
+                    "font_bold": false,
+                    "dividing_line": true,
+                    "leading_blank_lines": 6,
+                    "trailing_blank_lines": 0,
+                    "width": 100
+                },
+                "conditions": []
+            }
+        ],
+        [
+            {
+                "block_id": "order.update_time",
+                "block_type": "value",
+                "block_label": {},
+                "block_attr": {
+                    "font_size": 20,
+                    "align": "center",
+                    "font_bold": true,
+                    "dividing_line": false,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 10,
+                    "width": 100
+                }
             }
         ]
     ]

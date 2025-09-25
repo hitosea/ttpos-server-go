@@ -57,6 +57,7 @@ func cancelSaleOrderProductEventHandler() {
 				printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
 					constant.PrinterProductTypeBackFood,
 					payload.SaleBillUuid,
+					payload.SaleOrderUuid,
 					[]printer_model.OrderProduct{products},
 				)
 			}()
