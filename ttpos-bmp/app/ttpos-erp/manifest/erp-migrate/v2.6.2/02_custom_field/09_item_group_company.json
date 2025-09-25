@@ -1,0 +1,9 @@
+{
+  "doctype": "DocType",
+  "label": "Company",
+  "fieldname": "custom_company",
+  "fieldtype": "Link",
+  "options": "Company",
+  "insert_after": "custom_branch",
+  "dt": "Item Group"
+}

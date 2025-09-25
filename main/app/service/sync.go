@@ -104,6 +104,16 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 
 		logger.Logger.Info("开始同步任务", zap.Uint64("companyUuid", companyUuid))
 
+		// 01商品分类
+		if err := s.productSrv.SyncProductShopCategory(ctx); err != nil {
+			logger.Logger.Error("商品分类同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
+		}
+
+		// 02商品税类
+		if err := s.productSrv.SyncProductTax(ctx); err != nil {
+			logger.Logger.Error("商品税类同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
+		}
+
 		// 1 uom
 		if err := s.productSrv.SyncUnit(ctx); err != nil {
 			logger.Logger.Error("单位同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))

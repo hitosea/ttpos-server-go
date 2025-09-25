@@ -1,0 +1,8 @@
+{
+  "doctype": "DocType",
+  "label": "Alias Name",
+  "fieldname": "custom_aliasname",
+  "fieldtype": "Data",
+  "insert_after": "custom_company",
+  "dt": "Item Group"
+}
