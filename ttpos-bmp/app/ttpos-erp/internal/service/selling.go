@@ -86,6 +86,17 @@ type (
 		//   - *selling.SavePosInvoiceResp: 保存POS发票响应信息
 		//   - error: 错误信息
 		SavePosInvoice(ctx context.Context, req *selling.SavePosInvoiceReq) (*selling.SavePosInvoiceResp, error)
+		// SavePosInvoiceStep 保存POS发票步骤
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 保存POS发票请求参数
+		//   - openingEntry: POS开帐记录
+		//   - isMaterialItem: 是否为物品发票
+		//
+		// 返回：
+		//   - string: POS发票名称
+		//   - error: 错误信息
+		SavePosInvoiceStep(ctx context.Context, req *selling.SavePosInvoiceReq, openingEntry *erp.POSOpeningEntry, isMaterialItem bool) (string, error)
 		// GetPosOpeningEntry 获取POS开帐记录
 		// 参数：
 		//   - ctx: 上下文对象

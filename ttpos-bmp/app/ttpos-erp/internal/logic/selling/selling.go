@@ -693,7 +693,7 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
 	if len(req.MaterialItems) > 0 {
 		invoiceName, err := s.SavePosInvoiceStep(ctx, req, openingEntry, true)
 		if err != nil {
-			if err := s.CancelPosInvoice(ctx, invoiceName); err != nil {
+			if err = s.CancelPosInvoice(ctx, invoiceName); err != nil {
 				g.Log().Errorf(ctx, "取消物品POS发票失败，发票名称：%s，错误信息：%v", invoiceName, err)
 				//取消失败返回前台的是保存失败的原因
 			}
@@ -703,15 +703,15 @@ func (s *sSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoi
 	}
 	invoiceName, err := s.SavePosInvoiceStep(ctx, req, openingEntry, false)
 	if err != nil {
-		if err := s.CancelPosInvoice(ctx, invoiceName); err != nil {
-			g.Log().Errorf(ctx, "取消商品POS发票失败，发票名称：%s，错误信息：%v", invoiceName, err)
-			//取消失败返回前台的是保存失败的原因
-		}
 		if res.MaterialInvoiceName != "" {
 			if err := s.CancelPosInvoice(ctx, res.MaterialInvoiceName); err != nil {
 				g.Log().Errorf(ctx, "取消物品POS发票失败，发票名称：%s，错误信息：%v", res.MaterialInvoiceName, err)
 				//取消失败返回前台的是保存失败的原因
 			}
+		}
+		if err := s.CancelPosInvoice(ctx, invoiceName); err != nil {
+			g.Log().Errorf(ctx, "取消商品POS发票失败，发票名称：%s，错误信息：%v", invoiceName, err)
+			//取消失败返回前台的是保存失败的原因
 		}
 		return nil, gerror.Wrapf(err, "保存商品POS发票失败")
 	}
