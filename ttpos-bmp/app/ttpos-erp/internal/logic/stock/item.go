@@ -583,13 +583,16 @@ func (s *sItem) GetItemStock(ctx context.Context, req *item.GetItemStockReq) (re
 	filters := gjson.New(g.Map{
 		"company": company.CompanyName,
 	})
-
-	// 从默认仓库查询
-	warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, company.CompanyName, req.Branch)
-	if err != nil {
-		return nil, gerror.Wrapf(err, "获取默认仓库失败")
+	if len(req.Warehouse) > 0 {
+		filters.Set("warehouse", req.Warehouse)
+	} else {
+		// 从默认仓库查询
+		warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, company.CompanyName, req.Branch)
+		if err != nil {
+			return nil, gerror.Wrapf(err, "获取默认仓库失败")
+		}
+		filters.Set("warehouse", warehouse.Name)
 	}
-	filters.Set("warehouse", warehouse.Name)
 
 	// 按物品编码过滤
 	if len(req.ItemCode) > 0 {
@@ -598,7 +601,7 @@ func (s *sItem) GetItemStock(ctx context.Context, req *item.GetItemStockReq) (re
 
 	// 执行库存报表查询
 	resp, err := service.Report().Run(ctx, &erp.ReportParams{
-		ReportName:           "Stock Projected Qty",
+		ReportName:           erp.DocTypeStockProjectedQty,
 		Filters:              filters.String(),
 		IgnorePreparedReport: true,
 	})
@@ -617,14 +620,17 @@ func (s *sItem) GetItemStock(ctx context.Context, req *item.GetItemStockReq) (re
 	stockList := make([]*item.ItemStock, 0, len(dataArray))
 
 	for _, data := range dataArray {
+		//存在数据那条
 		if data.Contains("item_code") {
 			stockList = append(stockList, &item.ItemStock{
-				ItemCode:  data.Get("item_code").String(),
-				ItemName:  data.Get("item_name").String(),
-				ItemGroup: utility.ParseItemGroupFromString(data.Get("item_group").String()),
-				Warehouse: data.Get("warehouse").String(),
-				StockUom:  data.Get("stock_uom").String(),
-				ActualQty: data.Get("actual_qty").Float64(),
+				ItemCode:          data.Get("item_code").String(),
+				ItemName:          data.Get("item_name").String(),
+				ItemGroup:         utility.ParseItemGroupFromString(data.Get("item_group").String()),
+				Warehouse:         data.Get("warehouse").String(),
+				StockUom:          data.Get("stock_uom").String(),
+				ActualQty:         data.Get("actual_qty").Float64(),
+				ProjectedQty:      data.Get("projected_qty").Float64(),
+				ReservedQtyForPos: data.Get("reserved_qty_for_pos").Float64(),
 			})
 		}
 	}

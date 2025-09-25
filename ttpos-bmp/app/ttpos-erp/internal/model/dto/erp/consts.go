@@ -26,6 +26,8 @@ const (
 	DocTypeWarehouse         = "Warehouse"
 	DocTypePosPermissionRule = "Pos Permission Rule"
 	DocTypeItemAttribute     = "Item Attribute"
+	//DocTypeStockProjectedQty 预估库存查询
+	DocTypeStockProjectedQty = "Stock Projected Qty"
 )
 
 const (
