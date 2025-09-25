@@ -8,7 +8,6 @@ import (
 	"math/rand"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -26,9 +25,6 @@ func (w *CustomResponseWriter) Write(data []byte) (int, error) {
 	w.body.Write(data)
 	return w.ResponseWriter.Write(data)
 }
-
-// 全局日志互斥锁，确保请求日志不交叉
-var logMutex sync.Mutex
 
 // generateRequestID 生成请求唯一ID
 func generateRequestID() string {
@@ -182,9 +178,6 @@ func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 		}
 		c.Writer = customWriter
 
-		// 处理请求
-		c.Next()
-
 		// // 请求处理完成后收集响应信息
 		// endTime := time.Now()
 		// duration := endTime.Sub(startTime)
@@ -258,8 +251,8 @@ func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 		logBuffer.WriteString(fmt.Sprintf("================================= 请求结束 =================================\n"))
 
 		// 使用互斥锁确保日志输出不交叉
-		logMutex.Lock()
 		fmt.Print(logBuffer.String())
-		logMutex.Unlock()
+		// 处理请求
+		c.Next()
 	}
 }

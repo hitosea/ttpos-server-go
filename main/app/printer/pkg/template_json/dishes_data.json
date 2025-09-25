@@ -1,7 +1,7 @@
 {
     "brand_name": "TTPOS",
     "store": {
-        "name": "重庆高老九火锅曼谷一号店",
+        "serial_no": "重庆高老九火锅曼谷一号店",
         "address": "1167,17-20 Ratchadaphisek Rd,Din Daeng,Din Daeng,  Bangkok 10400",
         "phone": "025508999212",
         "logo": "./tmp/printer/shop/logo/79d5d080453715c8d1b0fa73801ecca0.png",
@@ -18,8 +18,8 @@
         "order_no": "202509242875625440",
         "remark": "",
         "cashier_name": "wfs@qq.com",
-        "finish_time": "2025-09-24 10:01:37",
-        "create_time": "2025-09-24 10:01:37",
+        "finish_time": 0,
+        "create_time": 1758704497,
         "pay_time": "2025-09-24 10:01:37",
         "products": [
             {
