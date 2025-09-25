@@ -251,6 +251,11 @@ func (s *sItem) buildUpdateItemData(req *item.ItemInfo) g.Map {
 	//更新估值率 不更新也必须传入此字段，否erp会设置成0
 	itemForUpdate["valuation_rate"] = req.ValuationRate
 
+	//更新默认采购单位
+	if len(req.PurchaseUom) > 0 {
+		itemForUpdate["purchase_uom"] = req.PurchaseUom
+	}
+
 	// 条形码更新
 	//note: ttpos 不更新条形码也必须传入此字段，否erp会删除条形码
 	if len(req.Barcode) > 0 {
@@ -366,6 +371,7 @@ func (s *sItem) buildNewItemData(ctx context.Context, req *item.ItemInfo, compan
 		"item_name":                  req.ItemName,
 		"stock_uom":                  req.StockUom,
 		"item_group":                 utility.ItemGroupToString(req.ItemGroup),
+		"purchase_uom":               req.PurchaseUom,
 		"custom_branch":              req.Branch,
 		"custom_company":             company.CompanyName,
 		"custom_classification":      req.Classification,

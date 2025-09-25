@@ -249,6 +249,7 @@ type ItemInfo struct {
 	ClassificationCode string                 `protobuf:"bytes,17,opt,name=classification_code,json=classificationCode,proto3" json:"classification_code,omitempty" dc:"分类编码，可选"`                                  // 分类编码，可选
 	InternalCode       string                 `protobuf:"bytes,18,opt,name=internal_code,json=internalCode,proto3" json:"internal_code,omitempty" dc:"内部编码，可选"`                                                    // 内部编码，可选
 	NotForSale         bool                   `protobuf:"varint,19,opt,name=not_for_sale,json=notForSale,proto3" json:"not_for_sale,omitempty" dc:"是否禁售，可选"`                                                       //是否禁售，可选
+	PurchaseUom        string                 `protobuf:"bytes,20,opt,name=purchase_uom,json=purchaseUom,proto3" json:"purchase_uom,omitempty" dc:"默认采购单位，可选"`                                                     // 默认采购单位，可选
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -414,6 +415,13 @@ func (x *ItemInfo) GetNotForSale() bool {
 		return x.NotForSale
 	}
 	return false
+}
+
+func (x *ItemInfo) GetPurchaseUom() string {
+	if x != nil {
+		return x.PurchaseUom
+	}
+	return ""
 }
 
 type UomDetail struct {
@@ -1503,14 +1511,14 @@ func (x *BomItem) GetUom() string {
 // Pos 系统中特殊的item ，如 属性/加料
 type PosSpecItem struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
-	ItemName         string                 `protobuf:"bytes,1,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称，必填"`                                               // 物品名称，必填
-	ItemCode         string                 `protobuf:"bytes,2,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，可选"`                                               // 物品编码，可选
-	TemplateItemCode string                 `protobuf:"bytes,3,opt,name=template_item_code,json=templateItemCode,proto3" json:"template_item_code,omitempty" dc:"模版物品编码，可选， 多规格商品时必填，传原始物品编码"` // 模版物品编码，可选， 多规格商品时必填，传原始物品编码
-	Branch           string                 `protobuf:"bytes,4,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                                   // 分支名称，可选
-	CompanyAbbr      string                 `protobuf:"bytes,5,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                                      // 公司简称，可选
-	Disabled         bool                   `protobuf:"varint,6,opt,name=disabled,proto3" json:"disabled,omitempty" dc:"是否禁用，可选"`                                                              // 是否禁用，可选
-	InternalCode     string                 `protobuf:"bytes,7,opt,name=internal_code,json=internalCode,proto3" json:"internal_code,omitempty" dc:"内部编码，可选"`                                   // 内部编码，可选
-	NotForSale       bool                   `protobuf:"varint,8,opt,name=not_for_sale,json=notForSale,proto3" json:"not_for_sale,omitempty" dc:"是否禁售，可选"`                                      //是否禁售，可选
+	ItemName         string                 `protobuf:"bytes,1,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称，必填"`                             // 物品名称，必填
+	ItemCode         string                 `protobuf:"bytes,2,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，可选，修改时传，必填"`                     // 物品编码，可选，修改时传，必填
+	TemplateItemCode string                 `protobuf:"bytes,3,opt,name=template_item_code,json=templateItemCode,proto3" json:"template_item_code,omitempty" dc:"模版物品编码，可选"` // 模版物品编码，可选
+	Branch           string                 `protobuf:"bytes,4,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                 // 分支名称，可选
+	CompanyAbbr      string                 `protobuf:"bytes,5,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                    // 公司简称，可选
+	Disabled         bool                   `protobuf:"varint,6,opt,name=disabled,proto3" json:"disabled,omitempty" dc:"是否禁用，可选"`                                            // 是否禁用，可选
+	InternalCode     string                 `protobuf:"bytes,7,opt,name=internal_code,json=internalCode,proto3" json:"internal_code,omitempty" dc:"内部编码，可选"`                 // 内部编码，可选
+	NotForSale       bool                   `protobuf:"varint,8,opt,name=not_for_sale,json=notForSale,proto3" json:"not_for_sale,omitempty" dc:"是否禁售，可选"`                    //是否禁售，可选
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -1793,7 +1801,7 @@ const file_item_item_proto_rawDesc = "" +
 	"\x10item_code_prefix\x18\a \x01(\tR\x0eitemCodePrefix\x12)\n" +
 	"\x10contain_disabled\x18\b \x01(\bR\x0fcontainDisabled\">\n" +
 	"\x0fGetItemListResp\x12+\n" +
-	"\titem_list\x18\x01 \x03(\v2\x0e.item.ItemInfoR\bitemList\"\xae\x05\n" +
+	"\titem_list\x18\x01 \x03(\v2\x0e.item.ItemInfoR\bitemList\"\xd1\x05\n" +
 	"\bItemInfo\x12\x1b\n" +
 	"\titem_name\x18\x01 \x01(\tR\bitemName\x12.\n" +
 	"\n" +
@@ -1816,7 +1824,8 @@ const file_item_item_proto_rawDesc = "" +
 	"\x13classification_code\x18\x11 \x01(\tR\x12classificationCode\x12#\n" +
 	"\rinternal_code\x18\x12 \x01(\tR\finternalCode\x12 \n" +
 	"\fnot_for_sale\x18\x13 \x01(\bR\n" +
-	"notForSale\"J\n" +
+	"notForSale\x12!\n" +
+	"\fpurchase_uom\x18\x14 \x01(\tR\vpurchaseUom\"J\n" +
 	"\tUomDetail\x12\x10\n" +
 	"\x03uom\x18\x01 \x01(\tR\x03uom\x12+\n" +
 	"\x11conversion_factor\x18\x02 \x01(\x01R\x10conversionFactor\"\xae\x01\n" +
