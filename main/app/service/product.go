@@ -5304,7 +5304,7 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 	// 检查商品规格内部编码
 	for _, flavor := range req.Flavors {
 		if flavor.InternalCode != "" {
-			if repository.NewProductRepo(db).CheckProductFlavorInternalCodeExist(flavor.InternalCode, flavor.Uuid) {
+			if repository.NewProductRepo(db).CheckProductFlavorInternalCodeExist(flavor.InternalCode, flavor.BomUuid) {
 				return nil, nil, errors.New("内部编码已存在")
 			}
 		}
