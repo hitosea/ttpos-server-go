@@ -1,5 +1,6 @@
 package consts
 
+var Limit100 = 100
 var Limit999 = 999
 var Limit9999 = 9999
 

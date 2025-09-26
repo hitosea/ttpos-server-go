@@ -51,6 +51,54 @@ message GetMaterialRequestListResp {
   repeated MaterialRequest material_request_list = 1; // 物品申请单列表
 }
 
+// 库存分类账信息
+message StockLedger {
+  string item_code = 1;                 // 物品编码
+  string date = 2;                      // 日期
+  string warehouse = 3;                 // 仓库
+  string posting_date = 4;              // 过账日期
+  string posting_time = 5;              // 过账时间
+  double actual_qty = 6;                // 实际数量
+  double incoming_rate = 7;             // 入库价格
+  double valuation_rate = 8;            // 估值价格
+  string company = 9;                   // 公司
+  string voucher_type = 10;             // 凭证类型
+  double qty_after_transaction = 11;    // 交易后数量
+  double stock_value_difference = 12;   // 库存价值差额
+  string serial_and_batch_bundle = 13;  // 序列号和批次包
+  string voucher_no = 14;               // 凭证编号
+  double stock_value = 15;              // 库存价值
+  string batch_no = 16;                 // 批次号
+  string serial_no = 17;                // 序列号
+  string project = 18;                  // 项目
+  string name = 19;                     // 名称
+  string item_name = 20;                // 物品名称
+  string description = 21;              // 描述
+  string item_group = 22;               // 物品分组
+  string brand = 23;                    // 品牌
+  string stock_uom = 24;                // 库存单位
+  double in_qty = 25;                   // 入库数量
+  double out_qty = 26;                  // 出库数量
+  double in_out_rate = 27;              // 进出库价格
+}
+
+// 获取库存分类账请求
+message GetStockLedgerReq {
+  string company_abbr = 1;              // 公司缩写，必填
+  string from_date = 2;                 // 开始日期，必填
+  string to_date = 3;                   // 结束日期，必填
+  string branch = 4;                    // 分支机构，可选。 未传仓库时，选择默认仓库的时候用
+  string warehouse = 5;                 // 仓库名称，可选
+  string item_code = 6;                 // 物品编码，可选
+  string voucher_no = 7;              // 凭证编号，可选
+  int32 limit = 8;                      // 查询限制数量，可选，默认100
+}
+
+// 获取库存分类账响应
+message GetStockLedgerResp {
+  repeated StockLedger stock_ledger_list = 1; // 库存分类账列表，最大返回1000条，超过1000条时，调整查询条件
+}
+
 service StockService {
   // 保存物品申请单
   // 参数：物品申请单信息
@@ -61,4 +109,9 @@ service StockService {
   // 参数：查询条件
   // 返回：物品申请单列表和分页信息
   rpc GetMaterialRequestList(GetMaterialRequestListReq) returns (erp.ResponseInfo);
+
+  // 获取库存分类账
+  // 参数：查询条件，包含公司、仓库、物品编码等过滤条件
+  // 返回：库存分类账列表
+  rpc GetStockLedger(GetStockLedgerReq) returns (erp.ResponseInfo);
 }
