@@ -137,7 +137,7 @@ func (h *MaterialHandler) AddMaterialCategory(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, nil, "保存成功")
 }
 
 // GetMaterialCategoryList 获取物品类别列表

@@ -184,6 +184,7 @@ func ExecutePrinting(printerIP string, port string, content string) error {
 			// 转换为CP874编码（泰语字符集）
 			encoded, err := encodeTo(segment, "cp874")
 			if err != nil {
+				fmt.Printf("转换为CP874编码出错: %v %v\n", segment, err)
 				return err
 			}
 			conn.Write(encoded)
@@ -197,6 +198,7 @@ func ExecutePrinting(printerIP string, port string, content string) error {
 			// 转换为CP949编码（韩语字符集）
 			encoded, err := encodeTo(segment, "cp949")
 			if err != nil {
+				fmt.Printf("转换为CP949编码出错: %v %v\n", segment, err)
 				return err
 			}
 			conn.Write(encoded)
@@ -210,6 +212,7 @@ func ExecutePrinting(printerIP string, port string, content string) error {
 			// 转换为ISO-8859-9编码（土耳其语字符集）
 			encoded, err := encodeTo(segment, "iso8859-9")
 			if err != nil {
+				fmt.Printf("转换为ISO-8859-9编码出错: %v %v\n", segment, err)
 				return err
 			}
 			conn.Write(encoded)
@@ -220,9 +223,10 @@ func ExecutePrinting(printerIP string, port string, content string) error {
 			if err != nil {
 				return err
 			}
+			encoded, err := BetterEncodeTo(segment, "gbk")
 			// 转换为GBK编码（中文字符集）
-			encoded, err := encodeTo(segment, "gbk")
 			if err != nil {
+				fmt.Printf("转换为GBK编码出错: %v %v\n", segment, err)
 				return err
 			}
 			conn.Write(encoded)
@@ -302,6 +306,11 @@ func hex2bin(hexStr string) string {
 
 	// 返回解码后的字符串
 	return string(decoded)
+}
+
+// Hex2bin 公开的hex2bin函数，用于外部调用
+func Hex2bin(hexStr string) string {
+	return hex2bin(hexStr)
 }
 
 // 生成唯一ID，模拟PHP的uniqid函数
