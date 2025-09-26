@@ -2,6 +2,7 @@ package stock
 
 import (
 	"context"
+	"ttpos-bmp/app/ttpos-erp/api/company"
 	"ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
@@ -641,5 +642,149 @@ func (s *sStock) GetItemAttribute(ctx context.Context, attributeName string) (re
 	return itemAttribute, nil
 }
 
-//TODO 库存台账
-//func (s *sStock) StockLedger(ctx context.Context)
+// GetStockLedger 获取库存分类账信息
+// 根据查询条件过滤并返回库存分类账记录列表
+func (s *sStock) GetStockLedger(ctx context.Context, req *stock.GetStockLedgerReq) (res *stock.GetStockLedgerResp, err error) {
+	// 获取公司信息
+	company, err := s.getCompanyInfo(ctx, req.CompanyAbbr)
+	if err != nil {
+		return nil, err
+	}
+
+	// 查询库存分类账列表
+	stockLedgerList, err := s.queryStockLedgerList(ctx, company.CompanyName, req)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询库存分类账失败")
+	}
+
+	return &stock.GetStockLedgerResp{
+		StockLedgerList: stockLedgerList,
+	}, nil
+}
+
+// getCompanyInfo 获取公司信息
+func (s *sStock) getCompanyInfo(ctx context.Context, companyAbbr string) (*company.CompanyInfo, error) {
+	companyInfo, err := service.Company().GetCompanyWithAbbr(ctx, companyAbbr)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "获取公司信息失败")
+	}
+	return companyInfo, nil
+}
+
+// queryStockLedgerList 执行库存分类账查询
+func (s *sStock) queryStockLedgerList(ctx context.Context, companyName string, req *stock.GetStockLedgerReq) ([]*stock.StockLedger, error) {
+	// 构建查询过滤器
+	filters := gjson.New(g.Map{
+		"company": companyName,
+	})
+
+	// 按仓库过滤
+	if len(req.Warehouse) > 0 {
+		filters.Set("warehouse", req.Warehouse)
+	} else if len(req.Branch) > 0 {
+		// 如果没有指定仓库但指定了分支，获取默认仓库
+		warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, companyName, req.Branch)
+		if err == nil && len(warehouse.Name) > 0 {
+			filters.Set("warehouse", warehouse.Name)
+		}
+	}
+
+	// 按物品编码过滤
+	if len(req.ItemCode) > 0 {
+		filters.Set("item_code", req.ItemCode)
+	}
+
+	// 按凭证编号过滤
+	if len(req.VoucherNo) > 0 {
+		filters.Set("voucher_no", req.VoucherNo)
+	}
+
+	// 按日期范围过滤
+	if len(req.FromDate) > 0 {
+		filters.Set("from_date", req.FromDate)
+	}
+	if len(req.ToDate) > 0 {
+		filters.Set("to_date", req.ToDate)
+	}
+
+	// 设置查询限制
+	if req.Limit > 0 && req.Limit <= 1000 {
+		filters.Set("limit", req.Limit)
+	} else {
+		filters.Set("limit", consts.Limit100)
+	}
+
+	// 执行库存分类账报表查询
+	resp, err := service.Report().Run(ctx, &erp.ReportParams{
+		ReportName:           erp.DocTypeStockLedger,
+		Filters:              filters.String(),
+		IgnorePreparedReport: true,
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询库存分类账报表失败")
+	}
+
+	// 解析响应数据
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析库存分类账响应失败")
+	}
+
+	// 转换为库存分类账列表
+	dataArray := j.GetJsons("message.result")
+	stockLedgerList := make([]*stock.StockLedger, 0, len(dataArray))
+
+	for _, data := range dataArray {
+		// 检查是否存在必要的数据字段
+		if data.Contains("item_code") {
+			// 直接使用StockLedger结构体解析
+			var ledger erp.StockLedger
+			if err := gconv.Struct(data, &ledger); err != nil {
+				g.Log().Warningf(ctx, "解析库存分类账数据失败: %v", err)
+				continue
+			}
+
+			// 转换为API响应格式
+			stockLedger := &stock.StockLedger{
+				ItemCode:             ledger.ItemCode,
+				Date:                 ledger.Date,
+				Warehouse:            ledger.Warehouse,
+				PostingDate:          ledger.PostingDate,
+				PostingTime:          ledger.PostingTime,
+				ActualQty:            ledger.ActualQty,
+				IncomingRate:         ledger.IncomingRate,
+				ValuationRate:        ledger.ValuationRate,
+				Company:              ledger.Company,
+				VoucherType:          ledger.VoucherType,
+				QtyAfterTransaction:  ledger.QtyAfterTransaction,
+				StockValueDifference: ledger.StockValueDifference,
+				SerialAndBatchBundle: s.safeStringValue(ledger.SerialAndBatchBundle),
+				VoucherNo:            ledger.VoucherNo,
+				StockValue:           ledger.StockValue,
+				BatchNo:              s.safeStringValue(ledger.BatchNo),
+				SerialNo:             s.safeStringValue(ledger.SerialNo),
+				Project:              s.safeStringValue(ledger.Project),
+				Name:                 ledger.Name,
+				ItemName:             ledger.ItemName,
+				Description:          ledger.Description,
+				ItemGroup:            ledger.ItemGroup,
+				Brand:                s.safeStringValue(ledger.Brand),
+				StockUom:             ledger.StockUom,
+				InQty:                ledger.InQty,
+				OutQty:               ledger.OutQty,
+				InOutRate:            ledger.InOutRate,
+			}
+			stockLedgerList = append(stockLedgerList, stockLedger)
+		}
+	}
+
+	return stockLedgerList, nil
+}
+
+// safeStringValue 安全地获取指针字符串的值
+func (s *sStock) safeStringValue(ptr *string) string {
+	if ptr == nil {
+		return ""
+	}
+	return *ptr
+}

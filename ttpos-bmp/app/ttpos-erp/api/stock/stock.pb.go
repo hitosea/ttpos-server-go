@@ -447,6 +447,405 @@ func (x *GetMaterialRequestListResp) GetMaterialRequestList() []*MaterialRequest
 	return nil
 }
 
+// 库存分类账信息
+type StockLedger struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	ItemCode             string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码"`                                             // 物品编码
+	Date                 string                 `protobuf:"bytes,2,opt,name=date,proto3" json:"date,omitempty" dc:"日期"`                                                                       // 日期
+	Warehouse            string                 `protobuf:"bytes,3,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库"`                                                             // 仓库
+	PostingDate          string                 `protobuf:"bytes,4,opt,name=posting_date,json=postingDate,proto3" json:"posting_date,omitempty" dc:"过账日期"`                                    // 过账日期
+	PostingTime          string                 `protobuf:"bytes,5,opt,name=posting_time,json=postingTime,proto3" json:"posting_time,omitempty" dc:"过账时间"`                                    // 过账时间
+	ActualQty            float64                `protobuf:"fixed64,6,opt,name=actual_qty,json=actualQty,proto3" json:"actual_qty,omitempty" dc:"实际数量"`                                        // 实际数量
+	IncomingRate         float64                `protobuf:"fixed64,7,opt,name=incoming_rate,json=incomingRate,proto3" json:"incoming_rate,omitempty" dc:"入库价格"`                               // 入库价格
+	ValuationRate        float64                `protobuf:"fixed64,8,opt,name=valuation_rate,json=valuationRate,proto3" json:"valuation_rate,omitempty" dc:"估值价格"`                            // 估值价格
+	Company              string                 `protobuf:"bytes,9,opt,name=company,proto3" json:"company,omitempty" dc:"公司"`                                                                 // 公司
+	VoucherType          string                 `protobuf:"bytes,10,opt,name=voucher_type,json=voucherType,proto3" json:"voucher_type,omitempty" dc:"凭证类型"`                                   // 凭证类型
+	QtyAfterTransaction  float64                `protobuf:"fixed64,11,opt,name=qty_after_transaction,json=qtyAfterTransaction,proto3" json:"qty_after_transaction,omitempty" dc:"交易后数量"`      // 交易后数量
+	StockValueDifference float64                `protobuf:"fixed64,12,opt,name=stock_value_difference,json=stockValueDifference,proto3" json:"stock_value_difference,omitempty" dc:"库存价值差额"`  // 库存价值差额
+	SerialAndBatchBundle string                 `protobuf:"bytes,13,opt,name=serial_and_batch_bundle,json=serialAndBatchBundle,proto3" json:"serial_and_batch_bundle,omitempty" dc:"序列号和批次包"` // 序列号和批次包
+	VoucherNo            string                 `protobuf:"bytes,14,opt,name=voucher_no,json=voucherNo,proto3" json:"voucher_no,omitempty" dc:"凭证编号"`                                         // 凭证编号
+	StockValue           float64                `protobuf:"fixed64,15,opt,name=stock_value,json=stockValue,proto3" json:"stock_value,omitempty" dc:"库存价值"`                                    // 库存价值
+	BatchNo              string                 `protobuf:"bytes,16,opt,name=batch_no,json=batchNo,proto3" json:"batch_no,omitempty" dc:"批次号"`                                                // 批次号
+	SerialNo             string                 `protobuf:"bytes,17,opt,name=serial_no,json=serialNo,proto3" json:"serial_no,omitempty" dc:"序列号"`                                             // 序列号
+	Project              string                 `protobuf:"bytes,18,opt,name=project,proto3" json:"project,omitempty" dc:"项目"`                                                                // 项目
+	Name                 string                 `protobuf:"bytes,19,opt,name=name,proto3" json:"name,omitempty" dc:"名称"`                                                                      // 名称
+	ItemName             string                 `protobuf:"bytes,20,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称"`                                            // 物品名称
+	Description          string                 `protobuf:"bytes,21,opt,name=description,proto3" json:"description,omitempty" dc:"描述"`                                                        // 描述
+	ItemGroup            string                 `protobuf:"bytes,22,opt,name=item_group,json=itemGroup,proto3" json:"item_group,omitempty" dc:"物品分组"`                                         // 物品分组
+	Brand                string                 `protobuf:"bytes,23,opt,name=brand,proto3" json:"brand,omitempty" dc:"品牌"`                                                                    // 品牌
+	StockUom             string                 `protobuf:"bytes,24,opt,name=stock_uom,json=stockUom,proto3" json:"stock_uom,omitempty" dc:"库存单位"`                                            // 库存单位
+	InQty                float64                `protobuf:"fixed64,25,opt,name=in_qty,json=inQty,proto3" json:"in_qty,omitempty" dc:"入库数量"`                                                   // 入库数量
+	OutQty               float64                `protobuf:"fixed64,26,opt,name=out_qty,json=outQty,proto3" json:"out_qty,omitempty" dc:"出库数量"`                                                // 出库数量
+	InOutRate            float64                `protobuf:"fixed64,27,opt,name=in_out_rate,json=inOutRate,proto3" json:"in_out_rate,omitempty" dc:"进出库价格"`                                    // 进出库价格
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *StockLedger) Reset() {
+	*x = StockLedger{}
+	mi := &file_stock_stock_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StockLedger) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StockLedger) ProtoMessage() {}
+
+func (x *StockLedger) ProtoReflect() protoreflect.Message {
+	mi := &file_stock_stock_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StockLedger.ProtoReflect.Descriptor instead.
+func (*StockLedger) Descriptor() ([]byte, []int) {
+	return file_stock_stock_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *StockLedger) GetItemCode() string {
+	if x != nil {
+		return x.ItemCode
+	}
+	return ""
+}
+
+func (x *StockLedger) GetDate() string {
+	if x != nil {
+		return x.Date
+	}
+	return ""
+}
+
+func (x *StockLedger) GetWarehouse() string {
+	if x != nil {
+		return x.Warehouse
+	}
+	return ""
+}
+
+func (x *StockLedger) GetPostingDate() string {
+	if x != nil {
+		return x.PostingDate
+	}
+	return ""
+}
+
+func (x *StockLedger) GetPostingTime() string {
+	if x != nil {
+		return x.PostingTime
+	}
+	return ""
+}
+
+func (x *StockLedger) GetActualQty() float64 {
+	if x != nil {
+		return x.ActualQty
+	}
+	return 0
+}
+
+func (x *StockLedger) GetIncomingRate() float64 {
+	if x != nil {
+		return x.IncomingRate
+	}
+	return 0
+}
+
+func (x *StockLedger) GetValuationRate() float64 {
+	if x != nil {
+		return x.ValuationRate
+	}
+	return 0
+}
+
+func (x *StockLedger) GetCompany() string {
+	if x != nil {
+		return x.Company
+	}
+	return ""
+}
+
+func (x *StockLedger) GetVoucherType() string {
+	if x != nil {
+		return x.VoucherType
+	}
+	return ""
+}
+
+func (x *StockLedger) GetQtyAfterTransaction() float64 {
+	if x != nil {
+		return x.QtyAfterTransaction
+	}
+	return 0
+}
+
+func (x *StockLedger) GetStockValueDifference() float64 {
+	if x != nil {
+		return x.StockValueDifference
+	}
+	return 0
+}
+
+func (x *StockLedger) GetSerialAndBatchBundle() string {
+	if x != nil {
+		return x.SerialAndBatchBundle
+	}
+	return ""
+}
+
+func (x *StockLedger) GetVoucherNo() string {
+	if x != nil {
+		return x.VoucherNo
+	}
+	return ""
+}
+
+func (x *StockLedger) GetStockValue() float64 {
+	if x != nil {
+		return x.StockValue
+	}
+	return 0
+}
+
+func (x *StockLedger) GetBatchNo() string {
+	if x != nil {
+		return x.BatchNo
+	}
+	return ""
+}
+
+func (x *StockLedger) GetSerialNo() string {
+	if x != nil {
+		return x.SerialNo
+	}
+	return ""
+}
+
+func (x *StockLedger) GetProject() string {
+	if x != nil {
+		return x.Project
+	}
+	return ""
+}
+
+func (x *StockLedger) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *StockLedger) GetItemName() string {
+	if x != nil {
+		return x.ItemName
+	}
+	return ""
+}
+
+func (x *StockLedger) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *StockLedger) GetItemGroup() string {
+	if x != nil {
+		return x.ItemGroup
+	}
+	return ""
+}
+
+func (x *StockLedger) GetBrand() string {
+	if x != nil {
+		return x.Brand
+	}
+	return ""
+}
+
+func (x *StockLedger) GetStockUom() string {
+	if x != nil {
+		return x.StockUom
+	}
+	return ""
+}
+
+func (x *StockLedger) GetInQty() float64 {
+	if x != nil {
+		return x.InQty
+	}
+	return 0
+}
+
+func (x *StockLedger) GetOutQty() float64 {
+	if x != nil {
+		return x.OutQty
+	}
+	return 0
+}
+
+func (x *StockLedger) GetInOutRate() float64 {
+	if x != nil {
+		return x.InOutRate
+	}
+	return 0
+}
+
+// 获取库存分类账请求
+type GetStockLedgerReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CompanyAbbr   string                 `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写，必填"` // 公司缩写，必填
+	FromDate      string                 `protobuf:"bytes,2,opt,name=from_date,json=fromDate,proto3" json:"from_date,omitempty" dc:"开始日期，必填"`          // 开始日期，必填
+	ToDate        string                 `protobuf:"bytes,3,opt,name=to_date,json=toDate,proto3" json:"to_date,omitempty" dc:"结束日期，必填"`                // 结束日期，必填
+	Branch        string                 `protobuf:"bytes,4,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支机构，可选。 未传仓库时，选择默认仓库的时候用"`            // 分支机构，可选。 未传仓库时，选择默认仓库的时候用
+	Warehouse     string                 `protobuf:"bytes,5,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库名称，可选"`                        // 仓库名称，可选
+	ItemCode      string                 `protobuf:"bytes,6,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，可选"`          // 物品编码，可选
+	VoucherNo     string                 `protobuf:"bytes,7,opt,name=voucher_no,json=voucherNo,proto3" json:"voucher_no,omitempty" dc:"凭证编号，可选"`       // 凭证编号，可选
+	Limit         int32                  `protobuf:"varint,8,opt,name=limit,proto3" json:"limit,omitempty" dc:"查询限制数量，可选，默认100"`                       // 查询限制数量，可选，默认100
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetStockLedgerReq) Reset() {
+	*x = GetStockLedgerReq{}
+	mi := &file_stock_stock_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetStockLedgerReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetStockLedgerReq) ProtoMessage() {}
+
+func (x *GetStockLedgerReq) ProtoReflect() protoreflect.Message {
+	mi := &file_stock_stock_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetStockLedgerReq.ProtoReflect.Descriptor instead.
+func (*GetStockLedgerReq) Descriptor() ([]byte, []int) {
+	return file_stock_stock_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *GetStockLedgerReq) GetCompanyAbbr() string {
+	if x != nil {
+		return x.CompanyAbbr
+	}
+	return ""
+}
+
+func (x *GetStockLedgerReq) GetFromDate() string {
+	if x != nil {
+		return x.FromDate
+	}
+	return ""
+}
+
+func (x *GetStockLedgerReq) GetToDate() string {
+	if x != nil {
+		return x.ToDate
+	}
+	return ""
+}
+
+func (x *GetStockLedgerReq) GetBranch() string {
+	if x != nil {
+		return x.Branch
+	}
+	return ""
+}
+
+func (x *GetStockLedgerReq) GetWarehouse() string {
+	if x != nil {
+		return x.Warehouse
+	}
+	return ""
+}
+
+func (x *GetStockLedgerReq) GetItemCode() string {
+	if x != nil {
+		return x.ItemCode
+	}
+	return ""
+}
+
+func (x *GetStockLedgerReq) GetVoucherNo() string {
+	if x != nil {
+		return x.VoucherNo
+	}
+	return ""
+}
+
+func (x *GetStockLedgerReq) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+// 获取库存分类账响应
+type GetStockLedgerResp struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	StockLedgerList []*StockLedger         `protobuf:"bytes,1,rep,name=stock_ledger_list,json=stockLedgerList,proto3" json:"stock_ledger_list,omitempty" dc:"库存分类账列表，最大返回1000条，超过1000条时，调整查询条件"` // 库存分类账列表，最大返回1000条，超过1000条时，调整查询条件
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *GetStockLedgerResp) Reset() {
+	*x = GetStockLedgerResp{}
+	mi := &file_stock_stock_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetStockLedgerResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetStockLedgerResp) ProtoMessage() {}
+
+func (x *GetStockLedgerResp) ProtoReflect() protoreflect.Message {
+	mi := &file_stock_stock_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetStockLedgerResp.ProtoReflect.Descriptor instead.
+func (*GetStockLedgerResp) Descriptor() ([]byte, []int) {
+	return file_stock_stock_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *GetStockLedgerResp) GetStockLedgerList() []*StockLedger {
+	if x != nil {
+		return x.StockLedgerList
+	}
+	return nil
+}
+
 var File_stock_stock_proto protoreflect.FileDescriptor
 
 const file_stock_stock_proto_rawDesc = "" +
@@ -485,10 +884,56 @@ const file_stock_stock_proto_rawDesc = "" +
 	"\fcompany_abbr\x18\x01 \x01(\tR\vcompanyAbbr\x12\x16\n" +
 	"\x06branch\x18\x02 \x01(\tR\x06branch\"h\n" +
 	"\x1aGetMaterialRequestListResp\x12J\n" +
-	"\x15material_request_list\x18\x01 \x03(\v2\x16.stock.MaterialRequestR\x13materialRequestList2\xa6\x01\n" +
+	"\x15material_request_list\x18\x01 \x03(\v2\x16.stock.MaterialRequestR\x13materialRequestList\"\xf2\x06\n" +
+	"\vStockLedger\x12\x1b\n" +
+	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x12\n" +
+	"\x04date\x18\x02 \x01(\tR\x04date\x12\x1c\n" +
+	"\twarehouse\x18\x03 \x01(\tR\twarehouse\x12!\n" +
+	"\fposting_date\x18\x04 \x01(\tR\vpostingDate\x12!\n" +
+	"\fposting_time\x18\x05 \x01(\tR\vpostingTime\x12\x1d\n" +
+	"\n" +
+	"actual_qty\x18\x06 \x01(\x01R\tactualQty\x12#\n" +
+	"\rincoming_rate\x18\a \x01(\x01R\fincomingRate\x12%\n" +
+	"\x0evaluation_rate\x18\b \x01(\x01R\rvaluationRate\x12\x18\n" +
+	"\acompany\x18\t \x01(\tR\acompany\x12!\n" +
+	"\fvoucher_type\x18\n" +
+	" \x01(\tR\vvoucherType\x122\n" +
+	"\x15qty_after_transaction\x18\v \x01(\x01R\x13qtyAfterTransaction\x124\n" +
+	"\x16stock_value_difference\x18\f \x01(\x01R\x14stockValueDifference\x125\n" +
+	"\x17serial_and_batch_bundle\x18\r \x01(\tR\x14serialAndBatchBundle\x12\x1d\n" +
+	"\n" +
+	"voucher_no\x18\x0e \x01(\tR\tvoucherNo\x12\x1f\n" +
+	"\vstock_value\x18\x0f \x01(\x01R\n" +
+	"stockValue\x12\x19\n" +
+	"\bbatch_no\x18\x10 \x01(\tR\abatchNo\x12\x1b\n" +
+	"\tserial_no\x18\x11 \x01(\tR\bserialNo\x12\x18\n" +
+	"\aproject\x18\x12 \x01(\tR\aproject\x12\x12\n" +
+	"\x04name\x18\x13 \x01(\tR\x04name\x12\x1b\n" +
+	"\titem_name\x18\x14 \x01(\tR\bitemName\x12 \n" +
+	"\vdescription\x18\x15 \x01(\tR\vdescription\x12\x1d\n" +
+	"\n" +
+	"item_group\x18\x16 \x01(\tR\titemGroup\x12\x14\n" +
+	"\x05brand\x18\x17 \x01(\tR\x05brand\x12\x1b\n" +
+	"\tstock_uom\x18\x18 \x01(\tR\bstockUom\x12\x15\n" +
+	"\x06in_qty\x18\x19 \x01(\x01R\x05inQty\x12\x17\n" +
+	"\aout_qty\x18\x1a \x01(\x01R\x06outQty\x12\x1e\n" +
+	"\vin_out_rate\x18\x1b \x01(\x01R\tinOutRate\"\xf4\x01\n" +
+	"\x11GetStockLedgerReq\x12!\n" +
+	"\fcompany_abbr\x18\x01 \x01(\tR\vcompanyAbbr\x12\x1b\n" +
+	"\tfrom_date\x18\x02 \x01(\tR\bfromDate\x12\x17\n" +
+	"\ato_date\x18\x03 \x01(\tR\x06toDate\x12\x16\n" +
+	"\x06branch\x18\x04 \x01(\tR\x06branch\x12\x1c\n" +
+	"\twarehouse\x18\x05 \x01(\tR\twarehouse\x12\x1b\n" +
+	"\titem_code\x18\x06 \x01(\tR\bitemCode\x12\x1d\n" +
+	"\n" +
+	"voucher_no\x18\a \x01(\tR\tvoucherNo\x12\x14\n" +
+	"\x05limit\x18\b \x01(\x05R\x05limit\"T\n" +
+	"\x12GetStockLedgerResp\x12>\n" +
+	"\x11stock_ledger_list\x18\x01 \x03(\v2\x12.stock.StockLedgerR\x0fstockLedgerList2\xe5\x01\n" +
 	"\fStockService\x12G\n" +
 	"\x13SaveMaterialRequest\x12\x1d.stock.SaveMaterialRequestReq\x1a\x11.erp.ResponseInfo\x12M\n" +
-	"\x16GetMaterialRequestList\x12 .stock.GetMaterialRequestListReq\x1a\x11.erp.ResponseInfoB#Z!ttpos-bmp/app/ttpos-erp/api/stockb\x06proto3"
+	"\x16GetMaterialRequestList\x12 .stock.GetMaterialRequestListReq\x1a\x11.erp.ResponseInfo\x12=\n" +
+	"\x0eGetStockLedger\x12\x18.stock.GetStockLedgerReq\x1a\x11.erp.ResponseInfoB#Z!ttpos-bmp/app/ttpos-erp/api/stockb\x06proto3"
 
 var (
 	file_stock_stock_proto_rawDescOnce sync.Once
@@ -502,7 +947,7 @@ func file_stock_stock_proto_rawDescGZIP() []byte {
 	return file_stock_stock_proto_rawDescData
 }
 
-var file_stock_stock_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_stock_stock_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_stock_stock_proto_goTypes = []any{
 	(*MaterialRequest)(nil),            // 0: stock.MaterialRequest
 	(*MaterialRequestItem)(nil),        // 1: stock.MaterialRequestItem
@@ -510,21 +955,27 @@ var file_stock_stock_proto_goTypes = []any{
 	(*SaveMaterialRequestResp)(nil),    // 3: stock.SaveMaterialRequestResp
 	(*GetMaterialRequestListReq)(nil),  // 4: stock.GetMaterialRequestListReq
 	(*GetMaterialRequestListResp)(nil), // 5: stock.GetMaterialRequestListResp
-	(*api.ResponseInfo)(nil),           // 6: erp.ResponseInfo
+	(*StockLedger)(nil),                // 6: stock.StockLedger
+	(*GetStockLedgerReq)(nil),          // 7: stock.GetStockLedgerReq
+	(*GetStockLedgerResp)(nil),         // 8: stock.GetStockLedgerResp
+	(*api.ResponseInfo)(nil),           // 9: erp.ResponseInfo
 }
 var file_stock_stock_proto_depIdxs = []int32{
 	1, // 0: stock.MaterialRequest.items:type_name -> stock.MaterialRequestItem
 	1, // 1: stock.SaveMaterialRequestReq.items:type_name -> stock.MaterialRequestItem
 	0, // 2: stock.GetMaterialRequestListResp.material_request_list:type_name -> stock.MaterialRequest
-	2, // 3: stock.StockService.SaveMaterialRequest:input_type -> stock.SaveMaterialRequestReq
-	4, // 4: stock.StockService.GetMaterialRequestList:input_type -> stock.GetMaterialRequestListReq
-	6, // 5: stock.StockService.SaveMaterialRequest:output_type -> erp.ResponseInfo
-	6, // 6: stock.StockService.GetMaterialRequestList:output_type -> erp.ResponseInfo
-	5, // [5:7] is the sub-list for method output_type
-	3, // [3:5] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	6, // 3: stock.GetStockLedgerResp.stock_ledger_list:type_name -> stock.StockLedger
+	2, // 4: stock.StockService.SaveMaterialRequest:input_type -> stock.SaveMaterialRequestReq
+	4, // 5: stock.StockService.GetMaterialRequestList:input_type -> stock.GetMaterialRequestListReq
+	7, // 6: stock.StockService.GetStockLedger:input_type -> stock.GetStockLedgerReq
+	9, // 7: stock.StockService.SaveMaterialRequest:output_type -> erp.ResponseInfo
+	9, // 8: stock.StockService.GetMaterialRequestList:output_type -> erp.ResponseInfo
+	9, // 9: stock.StockService.GetStockLedger:output_type -> erp.ResponseInfo
+	7, // [7:10] is the sub-list for method output_type
+	4, // [4:7] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_stock_stock_proto_init() }
@@ -538,7 +989,7 @@ func file_stock_stock_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_stock_stock_proto_rawDesc), len(file_stock_stock_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

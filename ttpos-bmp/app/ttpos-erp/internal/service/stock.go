@@ -88,6 +88,9 @@ type (
 		// 参数：ctx 上下文，attributeName 属性名称
 		// 返回：属性详细信息，错误信息
 		GetItemAttribute(ctx context.Context, attributeName string) (res *erp.ItemAttribute, err error)
+		// GetStockLedger 获取库存分类账信息
+		// 根据查询条件过滤并返回库存分类账记录列表
+		GetStockLedger(ctx context.Context, req *stock.GetStockLedgerReq) (res *stock.GetStockLedgerResp, err error)
 	}
 	IWarehouse interface {
 		// CreateWarehouse 创建仓库

@@ -34,7 +34,7 @@ type IWarehouseSrv interface {
 	GetWarehouseInOutList(ctx context.Context, req req.GetWarehouseInOutListReq) (resp.WarehouseInOutListResp, error) // 出入库明细列表
 	CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error)            // 检查仓库编码是否存在
 
-	SyncWarehouse(ctx context.Context) (bool, error)     // 同步仓库列表
+	SyncWarehouse(ctx context.Context) error             // 同步仓库列表
 	SyncDefaultWarehouseStock(ctx context.Context) error // 同步默认仓库库存
 	FirstSyncWarehouseItem(ctx context.Context) error    // 第一次同步仓库物品库存列表
 }
@@ -677,7 +677,7 @@ func (s *warehouseSrv) GetWarehouseInOutList(ctx context.Context, req req.GetWar
 	}, nil
 }
 
-func (s *warehouseSrv) SyncWarehouse(ctx context.Context) (bool, error) {
+func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 	// 商家数据库
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	var err error
@@ -685,11 +685,11 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) (bool, error) {
 	if company.Uuid == 0 {
 		company, err = repository.NewCompanyRepo(db).GetCompanyInfoByUuid(ctx.GetCompanyUuid())
 		if err != nil {
-			return false, errors.WithMessage(errors.New("同步仓库失败"), err.Error())
+			return errors.WithMessage(errors.New("同步仓库失败"), err.Error())
 		}
 	}
 	if !company.IsOpenErp() {
-		return false, errors.New("公司未授权erp")
+		return errors.New("公司未授权erp")
 	}
 	companySetting := ctx.GetCompanySetting()
 	if companySetting.Uuid == 0 {
@@ -701,7 +701,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) (bool, error) {
 		Branch:      companySetting.ErpnextBranchName,
 	})
 	if err != nil {
-		return false, errors.WithMessage(errors.New("同步仓库失败"), err.Error())
+		return errors.WithMessage(errors.New("同步仓库失败"), err.Error())
 	}
 	warehouseHeadquarterMap := make(map[string]uint64)
 	// 如果是子店，获取总部的
@@ -710,7 +710,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) (bool, error) {
 		saasDb := s.dbm.GetDB(0)
 		err := saasDb.Model(&model.CompanySetting{}).Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
-			return false, errors.WithMessage(errors.New("获取总部公司失败"))
+			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
 		headquarterWarehouseList, err := erp.NewIErpSrv(s.dbm).GetWarehouseList(ctx.GetContext(), req.GetErpnextWarehouseListReq{
 			SiteCode:       headquarter.ErpnextSiteCode,
@@ -719,7 +719,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) (bool, error) {
 			SubCompanyAbbr: companySetting.ErpnextCompanyAbbr,
 		})
 		if err != nil {
-			return false, errors.WithMessage(errors.New("同步仓库失败"), err.Error())
+			return errors.WithMessage(errors.New("同步仓库失败"), err.Error())
 		}
 		warehouseList = append(warehouseList, headquarterWarehouseList...)
 		for _, warehouse := range headquarterWarehouseList {
@@ -737,10 +737,6 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) (bool, error) {
 	}
 	translateClient := utils.NewTranslateClient()
 	multiLanguageMap := translateClient.TranslateWithRetry(ctx.GetContext(), translateItems, 10)
-
-	// 根据是否有数据判断是否首次同步仓库
-	var syncEver int64
-	db.Model(&model.Warehouse{}).Count(&syncEver)
 
 	var warehouses []model.Warehouse
 	db.Model(&model.Warehouse{}).Scopes(repository.NotDeleted).Find(&warehouses)
@@ -806,7 +802,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) (bool, error) {
 				})
 			} else { // 新增
 				var isDefault int
-				if code == constant.NormalWarehouseCode && syncEver == 0 {
+				if code == constant.NormalWarehouseCode && company.LastSyncTime == 0 {
 					isDefault = 1
 				}
 				// 保存多语言
@@ -840,7 +836,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) (bool, error) {
 		return nil
 	})
 
-	return syncEver == 0, err
+	return err
 }
 
 // SyncDefaultWarehouseStock 同步默认仓库库存
