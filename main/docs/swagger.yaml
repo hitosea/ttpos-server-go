@@ -11791,6 +11791,9 @@ definitions:
         type: string
       contact:
         type: string
+      has_item:
+        description: 是否存在物品
+        type: boolean
       is_default:
         type: integer
       is_editable:
@@ -26857,22 +26860,6 @@ paths:
       summary: 获取供应商列表选择器
       tags:
       - 商家端.供应商档案
-  /shop/supplier/sync:
-    get:
-      consumes:
-      - application/json
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 同步供应商
-      tags:
-      - 商家端.供应商档案
   /shop/supplier/update:
     post:
       consumes:
@@ -27020,23 +27007,6 @@ paths:
       summary: 删除仓库
       tags:
       - 商家端.仓库档案
-  /shop/warehouse/first_sync_item:
-    post:
-      consumes:
-      - application/json
-      description: 第一次同步仓库物品库存
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 第一次同步仓库物品库存
-      tags:
-      - 商家端.仓库档案
   /shop/warehouse/headquarter/list:
     get:
       consumes:
@@ -27153,23 +27123,6 @@ paths:
       security:
       - JwtToken: []
       summary: 更新仓库
-      tags:
-      - 商家端.仓库档案
-  /shop/warehouse/sync:
-    post:
-      consumes:
-      - application/json
-      description: 同步仓库列表
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 同步仓库列表
       tags:
       - 商家端.仓库档案
   /shop/warehouse/update:

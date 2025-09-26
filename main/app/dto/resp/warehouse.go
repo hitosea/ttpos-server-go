@@ -14,6 +14,7 @@ type WarehouseResp struct {
 	Address    string             `json:"address"`
 	IsDefault  int                `json:"is_default"`
 	IsEditable bool               `json:"is_editable"` // 是否可编辑
+	HasItem    bool               `json:"has_item"`    // 是否存在物品
 }
 
 // WarehouseListResp 仓库列表响应
