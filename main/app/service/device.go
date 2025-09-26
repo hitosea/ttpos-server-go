@@ -99,6 +99,14 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 			"finally_login_uuid":   addReq.FinallyLoginUuid,
 			"finally_login_time":   finallyLoginTime,
 			"kds_mode":             kdsMode,
+			"is_main": func() int {
+				if addReq.Source == constant.SourceCashier {
+					if !deviceRepo.IsExistCashierMain(constant.SourceCashier) {
+						return 1
+					}
+				}
+				return existsDevice.IsMain
+			}(),
 		})
 		if err != nil {
 			return 0, errors.WithMessage(err, "更新绑定信息失败")
@@ -142,8 +150,7 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		KdsMode:          kdsMode,
 		IsMain: func() int {
 			if addReq.Source == constant.SourceCashier {
-				bindCount := deviceRepo.GetBindCountBySource(constant.SourceCashier)
-				if bindCount == 0 {
+				if !deviceRepo.IsExistCashierMain(constant.SourceCashier) {
 					return 1
 				}
 			}

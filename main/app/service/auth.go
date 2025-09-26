@@ -973,6 +973,7 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 	if err != nil {
 		return shopBase, errors.WithMessage(err)
 	}
+
 	return resp.ShopBase{
 		Username:     staff.Username,
 		ProfileUuid:  staff.Uuid,
@@ -1015,7 +1016,7 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 		UpdateTime:    time.Now().Unix(),
 		ServerVersion: utils.GetVersion(),
 		IsOpenTax:     taxSetting.IsOpen == "1",
-		SyncStatus:    company.SyncStatus,
+		IsSyncing:     slices.Contains(syncTaskManager.getRunningCompanyUuids(), company.Uuid),
 		LastSyncTime:  company.LastSyncTime,
 	}, nil
 }

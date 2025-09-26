@@ -1420,10 +1420,10 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 	}
 
 	// 组合列表源数据
-	monthMap := make(map[string]int64)
-	timeUtil := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
+	saleBillUuids := []uint64{}
 	exportLists := make([]resp.OrderExportInfo, 0)
 	for _, bill := range lists {
+		saleBillUuids = append(saleBillUuids, bill.Uuid)
 		isSplit := len(bill.SaleOrders) > 1
 		// 拆单
 		for index, saleOrder := range bill.SaleOrders {
@@ -1465,10 +1465,6 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 					TotalPrice: saleOrderProduct.GetTotalPrice(),
 				})
 			}
-			// 获取创建时间
-			timeDetail := timeUtil.FormatUnixTimeDetail(saleOrder.CreateTime)
-			month := fmt.Sprintf("%d-%02d", timeDetail.Year, timeDetail.Month)
-			monthMap[month]++
 			//
 			exportLists = append(exportLists, resp.OrderExportInfo{
 				CreateTime:    saleOrder.CreateTime,
@@ -1501,10 +1497,6 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 		// 拆单
 		if isSplit && len(exportLists) > 0 {
 			mainOrder := exportLists[len(exportLists)-1]
-			// 获取创建时间
-			timeDetail := timeUtil.FormatUnixTimeDetail(mainOrder.CreateTime)
-			month := fmt.Sprintf("%d-%02d", timeDetail.Year, timeDetail.Month)
-			monthMap[month]++
 			// 收集当前账单所有会员名称并去重
 			var allMemberNames []string
 			var allMemberUuids []string
@@ -1562,11 +1554,17 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 			exportLists = append(exportLists, mainOrder)
 		}
 	}
+	rankLists, err := orderRepo.GetMonthlyOrderRanks(saleBillUuids)
+	if err != nil {
+		return resp.OrderExportListPaginationResp{}, errors.WithMessage(err)
+	}
 	for i, exportList := range exportLists {
-		timeDetail := timeUtil.FormatUnixTimeDetail(exportList.CreateTime)
-		month := fmt.Sprintf("%d-%02d", timeDetail.Year, timeDetail.Month)
-		monthMap[month]--
-		exportLists[i].OrderID = fmt.Sprintf("OID%d%02d%05d", timeDetail.Year, timeDetail.Month, monthMap[month])
+		result, ok := slice.FindBy(rankLists, func(index int, rankList repository.MonthlyOrderRank) bool {
+			return rankList.OrderNo == exportList.OrderNo
+		})
+		if ok {
+			exportLists[i].OrderID = fmt.Sprintf("OID%s%05d", result.MonthYear, result.MonthlyOrderNumber)
+		}
 	}
 	//
 	return resp.OrderExportListPaginationResp{
