@@ -31,7 +31,7 @@ class AddSyncStatusAndLastSyncTimeToCompany extends Migrator
     {
         $table = $this->table('company');
         if (!$table->hasColumn('last_sync_time')) {
-            $table->addColumn('last_sync_time', 'integer', ['null' => false, 'default' => 0, 'comment' => '上次同步erp数据完成时间', 'after' => 'sync_status'])
+            $table->addColumn('last_sync_time', 'integer', ['null' => false, 'default' => 0, 'comment' => '上次同步erp数据完成时间', 'after' => 'is_enable_erp'])
             ->update();
         }
     }
