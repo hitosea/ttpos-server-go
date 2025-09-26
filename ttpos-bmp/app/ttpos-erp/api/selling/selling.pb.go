@@ -731,6 +731,7 @@ func (x *ClosePosEntryInfo) GetClosePosEntryDetail() []*ClosePosEntryDetail {
 type ClosePosEntryResp struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	ClosePosEntryInfo *ClosePosEntryInfo     `protobuf:"bytes,1,opt,name=close_pos_entry_info,json=closePosEntryInfo,proto3" json:"close_pos_entry_info,omitempty"`
+	AsyncRecordId     string                 `protobuf:"bytes,2,opt,name=async_record_id,json=asyncRecordId,proto3" json:"async_record_id,omitempty" dc:"异步记录ID"` // 异步记录ID
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -770,6 +771,13 @@ func (x *ClosePosEntryResp) GetClosePosEntryInfo() *ClosePosEntryInfo {
 		return x.ClosePosEntryInfo
 	}
 	return nil
+}
+
+func (x *ClosePosEntryResp) GetAsyncRecordId() string {
+	if x != nil {
+		return x.AsyncRecordId
+	}
+	return ""
 }
 
 // SavePosInvoiceReq 保存POS发票请求消息
@@ -1682,9 +1690,10 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x14close_pos_entry_name\x18\x01 \x01(\tR\x11closePosEntryName\x12(\n" +
 	"\x10pos_profile_name\x18\x02 \x01(\tR\x0eposProfileName\x12&\n" +
 	"\x0fperiod_end_date\x18\x03 \x01(\x03R\rperiodEndDate\x12Q\n" +
-	"\x16close_pos_entry_detail\x18\x04 \x03(\v2\x1c.selling.ClosePosEntryDetailR\x13closePosEntryDetail\"`\n" +
+	"\x16close_pos_entry_detail\x18\x04 \x03(\v2\x1c.selling.ClosePosEntryDetailR\x13closePosEntryDetail\"\x88\x01\n" +
 	"\x11ClosePosEntryResp\x12K\n" +
-	"\x14close_pos_entry_info\x18\x01 \x01(\v2\x1a.selling.ClosePosEntryInfoR\x11closePosEntryInfo\"\xb2\x05\n" +
+	"\x14close_pos_entry_info\x18\x01 \x01(\v2\x1a.selling.ClosePosEntryInfoR\x11closePosEntryInfo\x12&\n" +
+	"\x0fasync_record_id\x18\x02 \x01(\tR\rasyncRecordId\"\xb2\x05\n" +
 	"\x11SavePosInvoiceReq\x12\x19\n" +
 	"\border_no\x18\x01 \x01(\tR\aorderNo\x12-\n" +
 	"\x13open_pos_entry_name\x18\x02 \x01(\tR\x10openPosEntryName\x12!\n" +

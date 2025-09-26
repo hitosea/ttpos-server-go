@@ -31,7 +31,7 @@ func init() {
 	service.RegisterAsyncSelling(AsyncSelling)
 }
 
-func (s *sAsyncSelling) AsyncCancelPosInvoice(ctx context.Context, req *selling.CancelPosInvoiceReq) (asyncRecordId string, err error) {
+func (s *sAsyncSelling) CancelPosInvoice(ctx context.Context, req *selling.CancelPosInvoiceReq) (asyncRecordId string, err error) {
 	// 异步模式
 	buf, err := proto.Marshal(req)
 	if err != nil {
@@ -116,7 +116,7 @@ func (s *sAsyncSelling) AsyncCancelPosInvoice(ctx context.Context, req *selling.
 	return gconv.String(recordId), nil
 }
 
-func (*sAsyncSelling) AsyncSavePosInvoice(ctx context.Context, req *selling.SavePosInvoiceReq) (*selling.SavePosInvoiceResp, error) {
+func (*sAsyncSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosInvoiceReq) (*selling.SavePosInvoiceResp, error) {
 	// 异步模式
 	buf, err := proto.Marshal(req)
 	if err != nil {
@@ -230,7 +230,7 @@ func (s *sAsyncSelling) ReturnPosInvoice(ctx context.Context, req *selling.Retur
 			}
 			return
 		}
-		//显示退款
+		//开始退款
 		if receivePosInvoice == nil {
 			respMessage := fmt.Sprintf("退款发票失败，查询原POS记录失败: %v", req)
 			g.Log().Errorf(ctx, respMessage, err)
@@ -278,6 +278,68 @@ func (s *sAsyncSelling) ReturnPosInvoice(ctx context.Context, req *selling.Retur
 	}()
 
 	return &selling.ReturnPosInvoiceResp{
+		AsyncRecordId: gconv.String(recordId),
+	}, nil
+}
+
+func (*sAsyncSelling) ClosePosEntry(ctx context.Context, req *selling.ClosePosEntryReq) (*selling.ClosePosEntryResp, error) {
+	// 异步模式
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		g.Log().Errorf(ctx, "关帐失败，序列化请求参数失败: %v", req)
+		return nil, gerror.Wrapf(err, "关帐失败，序列化请求参数失败: %v", req)
+	}
+	reqMsg := gbase64.EncodeToString(buf)
+	//设置siteCode
+	siteCode := service.Rpc().GetSiteCode(ctx)
+
+	//暂存请求信息
+	recordId, err := dao.ReceiveClosePos.Ctx(ctx).InsertAndGetId(&entity.ReceiveClosePos{
+		Docstatus:        erp.DocstatusDraft,
+		ReqMessage:       reqMsg,
+		SiteCode:         siteCode,
+		PosOpenEntryName: req.PosOpenEntryName,
+		PeriodEndDate:    req.PeriodEndDate,
+	})
+	if err != nil {
+		g.Log().Errorf(ctx, "关帐失败，插入记录失败: %v", err)
+		return nil, gerror.Wrapf(err, "关帐失败，插入记录失败: %v", err)
+	}
+
+	go func() {
+		//设置siteCode
+		ctx := grpcx.Ctx.SetIncoming(gctx.New(), g.Map{
+			consts.ContextSiteCode: siteCode,
+		})
+		closePosDao := dao.ReceiveClosePos.Ctx(ctx).WherePri(recordId)
+		resp, err := service.Selling().ClosePosEntry(ctx, req)
+		if err != nil {
+			g.Log().Errorf(ctx, "关帐失败，异步关帐失败: %v", err)
+			if _, err := closePosDao.Data(do.ReceiveClosePos{
+				RespMessage: fmt.Sprintf("保存发票失败，异步保存发票失败: %v", err),
+			}).Update(); err != nil {
+				g.Log().Errorf(ctx, "保存发票失败，更新日志记录失败: %v", err)
+				return
+			}
+			return
+		}
+		if resp != nil {
+			respBuf, err := proto.Marshal(resp)
+			if err != nil {
+				g.Log().Errorf(ctx, "保存发票失败，序列化响应参数失败: %v", resp)
+				return
+			}
+			if _, err := closePosDao.Data(do.ReceiveClosePos{
+				Docstatus:   erp.DocstatusSubmitted,
+				RespMessage: gbase64.EncodeToString(respBuf),
+			}).Update(); err != nil {
+				g.Log().Errorf(ctx, "保存发票失败，更新日志记录失败: %v", err)
+				return
+			}
+		}
+	}()
+
+	return &selling.ClosePosEntryResp{
 		AsyncRecordId: gconv.String(recordId),
 	}, nil
 }

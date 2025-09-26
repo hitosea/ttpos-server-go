@@ -83,6 +83,7 @@ message ClosePosEntryInfo {
 
 message ClosePosEntryResp {
   ClosePosEntryInfo close_pos_entry_info = 1;
+  string async_record_id = 2; // 异步记录ID
 }
 
 // SavePosInvoiceReq 保存POS发票请求消息

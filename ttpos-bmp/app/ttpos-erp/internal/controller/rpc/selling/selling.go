@@ -168,13 +168,19 @@ func (c *Controller) ClosePosEntry(ctx context.Context, req *selling.ClosePosEnt
 		return rpc.ApiError(err.Error()), nil
 	}
 
-	// 调用服务层创建关帐
-	resp, err := service.Selling().ClosePosEntry(ctx, req)
+	resp, err := service.AsyncSelling().ClosePosEntry(ctx, req)
 	if err != nil {
 		return rpc.ApiError(err.Error()), nil
 	}
-
 	return rpc.ApiSuccessWithData("创建关帐成功", resp), nil
+
+	// 调用服务层创建关帐
+	//resp, err := service.Selling().ClosePosEntry(ctx, req)
+	//if err != nil {
+	//	return rpc.ApiError(err.Error()), nil
+	//}
+	//
+	//return rpc.ApiSuccessWithData("创建关帐成功", resp), nil
 }
 
 // validateClosePosEntryReq 验证关帐请求参数
@@ -220,7 +226,7 @@ func (c *Controller) SavePosInvoice(ctx context.Context, req *selling.SavePosInv
 	}
 
 	// 调用服务层保存发票
-	resp, err := service.AsyncSelling().AsyncSavePosInvoice(ctx, req)
+	resp, err := service.AsyncSelling().SavePosInvoice(ctx, req)
 	//resp, err := service.Selling().SavePosInvoice(ctx, req)
 	if err != nil {
 		return rpc.ApiError(err.Error()), nil
@@ -338,7 +344,7 @@ func (c *Controller) CancelPosInvoice(ctx context.Context, req *selling.CancelPo
 
 	//异步流程
 	if req.OrderNo != "" {
-		asyncRecordId, err := service.AsyncSelling().AsyncCancelPosInvoice(ctx, req)
+		asyncRecordId, err := service.AsyncSelling().CancelPosInvoice(ctx, req)
 		if err != nil {
 			return rpc.ApiError(err.Error()), nil
 		}
