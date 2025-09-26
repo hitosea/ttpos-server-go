@@ -58,14 +58,16 @@ func (s *erpSrv) AddPackage(ctx context.Context, params req.PackageAddErpReq) (*
 	defer conn.Close()
 
 	param := &item.ItemInfo{
-		ItemName:     params.ItemName,
-		ItemGroup:    item.ItemGroup_Package,
-		StockUom:     params.StockUom,
-		ItemCode:     params.ItemCode,
-		Branch:       companySetting.ErpnextBranchName,
-		CompanyAbbr:  companySetting.ErpnextCompanyAbbr,
-		Uoms:         []*item.UomDetail{},
-		InternalCode: params.InternalCode,
+		ItemName:           params.ItemName,
+		ItemGroup:          item.ItemGroup_Package,
+		StockUom:           params.StockUom,
+		ItemCode:           params.ItemCode,
+		Branch:             companySetting.ErpnextBranchName,
+		CompanyAbbr:        companySetting.ErpnextCompanyAbbr,
+		Uoms:               []*item.UomDetail{},
+		InternalCode:       params.InternalCode,
+		Classification:     params.Classification,
+		ClassificationCode: params.ClassificationCode,
 	}
 	result, err := client.SaveItem(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), param)
 	if err != nil {

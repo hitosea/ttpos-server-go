@@ -123,6 +123,7 @@ type IProductQueryRepo interface {
 	PaginateGetProductFlavorList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductFlavor, int64, error) // 分页获取商品规格列表
 	CheckMultiLanguageNameExist(localeResponse dto.LocaleResponse) dto.LocaleResponse                              // 检查多语言名称是否存在
 	CheckBarcodeExist(barcode string, uuid uint64) bool                                                            // 检查条形码是否存在
+	CheckProductFlavorInternalCodeExist(internalCode string, uuid uint64) bool                                     // 检查商品规格内部编码是否存在
 	CheckBarcodeFormat(barcode string) bool                                                                        // 检查条形码格式
 	CheckPrice(price, minPrice, maxPrice float64, places int) bool                                                 // 检查价格范围
 
@@ -1250,6 +1251,19 @@ func (r *productRepo) CheckBarcodeExist(barcode string, uuid uint64) bool {
 		db = db.Where("uuid <> ?", uuid)
 	}
 	return db.First(&model.ProductBom{}).Error == nil
+}
+
+// CheckProductFlavorInternalCodeExist 检查商品规格内部编码是否存在
+func (r *productRepo) CheckProductFlavorInternalCodeExist(internalCode string, uuid uint64) bool {
+	db := r.db.Model(&model.ProductBom{}).
+		Where("delete_time = ?", constant.NotDeleted).
+		Where("internal_code = ?", internalCode).
+		Where("internal_code <> ?", "")
+	if uuid != 0 {
+		db = db.Where("uuid <> ?", uuid)
+	}
+	b := db.First(&model.ProductBom{}).Error == nil
+	return b
 }
 
 // CheckBarcodeFormat 检查条形码格式

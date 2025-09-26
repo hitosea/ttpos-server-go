@@ -645,7 +645,7 @@ func (s *productionSrv) Recovery(ctx context.Context, req req.RecoveryReq) error
 		}
 		// 是否已经传菜
 		if product.Status == constant.ProductionOrderProductStatusFinished {
-			return errors.New("订单商品已传菜")
+			return errors.New("该菜品已传菜，不可恢复！")
 		}
 		if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(req.ProductUuid)}, map[string]any{
 			"make_status": constant.ProductionOrderProductMakeStatusDefault,

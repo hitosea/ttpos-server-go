@@ -3,9 +3,8 @@
 use think\migration\Migrator;
 use think\migration\db\Column;
 
-class AddSyncStatusAndLastSyncTimeToCompany extends Migrator
+class AddHeadquarterUuidToProductBomCard extends Migrator
 {
-    const TARGET='all';
     /**
      * Change Method.
      *
@@ -29,10 +28,10 @@ class AddSyncStatusAndLastSyncTimeToCompany extends Migrator
      */
     public function change()
     {
-        $table = $this->table('company');
-        if (!$table->hasColumn('last_sync_time')) {
-            $table->addColumn('last_sync_time', 'integer', ['null' => false, 'default' => 0, 'comment' => '上次同步erp数据完成时间', 'after' => 'is_enable_erp'])
-            ->update();
+        $table = $this->table('product_bom_card');
+        if (!$table->hasColumn('headquarter_uuid')) {
+            $table->addColumn('headquarter_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '总部Uuid', 'after' => 'is_used']);
         }
+        $table->update();
     }
 }

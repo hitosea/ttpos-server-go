@@ -40,6 +40,7 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
 	payMethodUuid uint64,
+	is58mmPrinter bool,
 ) string {
 	// 订单名称
 	orderName := saleOrder.GetOrderName()
@@ -408,6 +409,7 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 		Language:             t.base.Lang,
 		CurrencyUnit:         t.base.CurrencyUnit,
 		CurrencyUnitPosition: t.base.CurrencyUnitPosition,
+		Is58mmPrinter:        is58mmPrinter,
 	}, tmpData, dataMap)
 	if err != nil {
 		fmt.Println("复杂模板创建解析器失败", err)

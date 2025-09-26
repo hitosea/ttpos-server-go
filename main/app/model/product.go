@@ -834,6 +834,7 @@ type ProductBomCard struct {
 	MultiLanguageNameUuid uint64  `gorm:"column:multi_language_name_uuid;type:bigint(20) unsigned;not null;default:0;comment:多语言名称ID" json:"multi_language_name_uuid"`
 	Num                   float64 `gorm:"column:num;type:decimal(14,4);not null;default:0.0000;comment:加工份数" json:"num"`
 	IsUsed                int     `gorm:"column:is_used;type:int(10);not null;default:0;comment:是否被使用, 0-否 1-是" json:"is_used"`
+	HeadquarterUuid       uint64  `gorm:"column:headquarter_uuid;type:bigint(20) unsigned;not null;default:0;comment:总部ID" json:"headquarter_uuid"`
 
 	// 关联关系
 	MultiLanguageName *MultiLanguageName `gorm:"foreignKey:MultiLanguageNameUuid;references:Uuid" json:"multi_language_name,omitempty"`
@@ -848,6 +849,10 @@ func (ProductBomCard) TableName() string {
 func (model *ProductBomCard) SetNil() {
 	model.MultiLanguageName = nil
 	model.RelatedMaterials = nil
+}
+
+func (model *ProductBomCard) IsHeadquarter() bool {
+	return model.HeadquarterUuid != 0
 }
 
 // 计算预计可生产的产品数量

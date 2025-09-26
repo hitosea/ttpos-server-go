@@ -20,6 +20,7 @@ type IDeviceRepo interface {
 	GetDeviceBrand(opts ...DBOption) string                 // 获取设备品牌
 	GetDeviceSn(opts ...DBOption) string                    // 获取设备sn
 	GetBindCountBySource(source string) uint                // 根据来源获取设备绑定数量
+	IsExistCashierMain(source string) bool                  // 是否存在主设备
 	CreateDevice(device model.Device) (model.Device, error) // 创建设备
 	UpdateDevice(uuid uint64, vars map[string]any) error    // 更新设备
 	GetDeviceList(opts ...DBOption) ([]model.Device, error) // 获取设备列表
@@ -121,6 +122,15 @@ func (r *deviceRepo) GetBindCountBySource(source string) uint {
 	var count int64
 	r.db.Model(&model.Device{}).Scopes(NotDeleted).Where("source = ? AND finally_login_uuid > 0", source).Count(&count)
 	return uint(count)
+}
+
+func (r *deviceRepo) IsExistCashierMain(source string) bool {
+	var count int64
+	r.db.Model(&model.Device{}).Scopes(NotDeleted).Where("source = ? AND is_main = 1", source).Count(&count)
+	if count > 0 {
+		return true
+	}
+	return false
 }
 
 func (r *deviceRepo) UpdateDevice(uuid uint64, vars map[string]interface{}) error {

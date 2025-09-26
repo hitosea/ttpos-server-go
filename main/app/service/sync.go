@@ -52,7 +52,7 @@ func (m *SyncTaskManager) finishTask(companyUuid uint64) {
 // getRunningCompanyUuids 获取当前正在执行同步任务的所有companyUuid
 func (m *SyncTaskManager) getRunningCompanyUuids() []uint64 {
 	var companyUuids []uint64
-	m.runningTasks.Range(func(key, value interface{}) bool {
+	m.runningTasks.Range(func(key, value any) bool {
 		if companyUuid, ok := key.(uint64); ok {
 			companyUuids = append(companyUuids, companyUuid)
 		}
@@ -107,6 +107,7 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 	// 10 仓库物品库存
 
 	go func(ctx context.Context) {
+		isExceptionOccurred := true
 		// 确保任务完成时清理状态
 		defer func() {
 			syncTaskManager.finishTask(companyUuid)
@@ -118,7 +119,8 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 
 			// 推送websocket
 			go websocket.PushClient(company.Uuid, websocket.SourceShop, websocket.SourceAll, websocket.SYNC_DATA, map[string]any{
-				"sync_time": lastSyncTime,
+				"sync_time":             lastSyncTime,
+				"is_exception_occurred": isExceptionOccurred,
 			})
 		}()
 
@@ -145,16 +147,6 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 		// 	logger.Logger.Error("规格同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 		// }
 
-		// 4.1 属性组
-		if err := s.productSrv.SyncAttributeGroup(ctx); err != nil {
-			logger.Logger.Error("属性组同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-		}
-
-		// 5.1 加料
-		if err := s.productSrv.SyncSauce(ctx); err != nil {
-			logger.Logger.Error("加料同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-		}
-
 		// 8 供应商
 		if err := s.supplierSrv.SyncSupplier(ctx); err != nil {
 			logger.Logger.Error("供应商同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
@@ -172,6 +164,8 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 				logger.Logger.Error("默认仓库库存同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 			}
 		}
+
+		isExceptionOccurred = false
 	}(ctx)
 
 	return nil

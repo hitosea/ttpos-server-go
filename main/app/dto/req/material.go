@@ -199,10 +199,12 @@ type ProductAddErpReq struct {
 }
 
 type PackageAddErpReq struct {
-	ItemName     string `json:"item_name" binding:"required"` // 套餐名称, 英文
-	StockUom     string `json:"stock_uom" binding:"required"` // 套餐单位, 英文
-	ItemCode     string `json:"item_code" binding:"required"` // 套餐编码，如果为空，则为新增；如果非空，则为编辑
-	InternalCode string `json:"internal_code" `               // 内部编码
+	ItemName           string `json:"item_name" binding:"required"`           // 套餐名称, 英文
+	StockUom           string `json:"stock_uom" binding:"required"`           // 套餐单位, 英文
+	ItemCode           string `json:"item_code" binding:"required"`           // 套餐编码，如果为空，则为新增；如果非空，则为编辑
+	InternalCode       string `json:"internal_code" `                         // 内部编码
+	Classification     string `json:"classification" binding:"required"`      // 分类
+	ClassificationCode string `json:"classification_code" binding:"required"` // 分类编码
 }
 
 type MaterialUomReq struct {
@@ -304,6 +306,11 @@ type ProductBomCardMaterialReq struct {
 // ProductBomCardDetailReq 规格商品成本卡详情请求
 type ProductBomCardDetailReq struct {
 	Uuid uint64 `form:"uuid" binding:"required"` // 成本卡UUID product_bom_card_uuid
+}
+
+// ErpProductBomCardDetailReq ERP规格商品成本卡详情请求
+type ErpProductBomCardDetailReq struct {
+	BomName string `form:"bom_name"` // 成本卡名称 bom_name
 }
 
 // ProductBomCardUnlinkReq 解除成本卡关联请求
