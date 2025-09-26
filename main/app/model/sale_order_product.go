@@ -1463,13 +1463,12 @@ func (model *SaleOrderProduct) GetAttributeNamesByLangs(lang string, showSku ...
 	}
 	// 根据规格生成字符串。`(规格；属性；小料)`
 	nameList := make([]string, 0)
-
 	// 是否显示sku
-	if isShowSku && len(attributeNames) > 0 {
-		if flavorName != "" {
-			nameList = append(nameList, flavorName)
+	if isShowSku {
+		nameList = append(nameList, flavorName)
+		if len(attributeNames) > 0 {
+			nameList = append(nameList, attributeNames...)
 		}
-		nameList = append(nameList, attributeNames...)
 	}
 	// 小料
 	if len(sauceNames) > 0 {
