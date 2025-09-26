@@ -34,7 +34,7 @@ type IMaterialRepo interface {
 	GetMaterialCategoryByCode(code string) (*model.MaterialCategory, bool, error)
 	GetMaterialCategoryByEnglishName(englishName string) (*model.MaterialCategory, bool, error)
 	UpdateMaterialCategory(materialCategory model.MaterialCategory) error
-	DeleteMaterialCategory(uuid uint64) error
+	DeleteMaterialCategory(uuid uint64, multiLanguageNameUuid uint64) error
 	CreateMaterialCategory(materialCategory model.MaterialCategory) (uint64, error)
 	GetMaterialCategoryList() ([]model.MaterialCategory, error)
 	UpdateMaterialStatusBatch(uuids []uint64, status int) error          // 批量修改物品状态
@@ -484,9 +484,12 @@ func (r *MaterialRepoImpl) UpdateMaterialCategory(materialCategory model.Materia
 	return nil
 }
 
-func (r *MaterialRepoImpl) DeleteMaterialCategory(uuid uint64) error {
+func (r *MaterialRepoImpl) DeleteMaterialCategory(uuid uint64, multiLanguageNameUuid uint64) error {
 	if err := r.db.Model(&model.MaterialCategory{}).Where("uuid = ?", uuid).Update("delete_time", time.Now().Unix()).Error; err != nil {
 		return errors.WithMessage(err, "删除物品类别失败")
+	}
+	if err := r.db.Model(&model.MultiLanguageName{}).Where("uuid = ?", multiLanguageNameUuid).Update("delete_time", time.Now().Unix()).Error; err != nil {
+		return errors.WithMessage(err, "删除多语言名称失败")
 	}
 	return nil
 }

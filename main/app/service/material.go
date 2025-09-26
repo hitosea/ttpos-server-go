@@ -1311,7 +1311,7 @@ func (s *materialSrv) DeleteMaterialCategory(ctx context.Context, req req.Materi
 	if len(materials) > 0 {
 		return errors.New("该类别已经关联了物品，不可删除")
 	}
-	if err := materialCategoryRepo.DeleteMaterialCategory(materialCategory.Uuid); err != nil {
+	if err := materialCategoryRepo.DeleteMaterialCategory(materialCategory.Uuid, materialCategory.MultiLanguageNameUuid); err != nil {
 		return errors.WithMessage(err, "删除物品类别失败")
 	}
 	return nil
