@@ -313,6 +313,14 @@ func (c *Controller) ReturnPosInvoice(ctx context.Context, req *selling.ReturnPo
 	if err := c.validateReturnPosInvoiceReq(req); err != nil {
 		return rpc.ApiError(err.Error()), nil
 	}
+	if req.InvoiceType != 0 {
+		//异步处理退款
+		resp, err := service.AsyncSelling().ReturnPosInvoice(ctx, req)
+		if err != nil {
+			return rpc.ApiError(err.Error()), nil
+		}
+		return rpc.ApiSuccessWithData("异步退款发票成功", resp), nil
+	}
 
 	// 调用服务层退款发票
 	resp, err := service.Selling().ReturnPosInvoice(ctx, req)
@@ -330,11 +338,13 @@ func (c *Controller) CancelPosInvoice(ctx context.Context, req *selling.CancelPo
 
 	//异步流程
 	if req.OrderNo != "" {
-		err := service.AsyncSelling().AsyncCancelPosInvoice(ctx, req)
+		asyncRecordId, err := service.AsyncSelling().AsyncCancelPosInvoice(ctx, req)
 		if err != nil {
 			return rpc.ApiError(err.Error()), nil
 		}
-		return rpc.ApiSuccessWithData("异步取消发票成功", &selling.CancelPosInvoiceResp{}), nil
+		return rpc.ApiSuccessWithData("异步取消发票成功", &selling.CancelPosInvoiceResp{
+			AsyncRecordId: asyncRecordId,
+		}), nil
 	}
 
 	// 调用服务层取消商品发票

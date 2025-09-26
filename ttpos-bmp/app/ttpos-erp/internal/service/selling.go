@@ -8,15 +8,19 @@ package service
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
+	"ttpos-bmp/app/ttpos-erp/internal/model/do"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	dtoSelling "ttpos-bmp/app/ttpos-erp/internal/model/dto/selling"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
+	"ttpos-bmp/app/ttpos-erp/internal/model/entity"
 )
 
 type (
 	IAsyncSelling interface {
-		AsyncCancelPosInvoice(ctx context.Context, req *selling.CancelPosInvoiceReq) error
+		AsyncCancelPosInvoice(ctx context.Context, req *selling.CancelPosInvoiceReq) (asyncRecordId string, err error)
 		AsyncSavePosInvoice(ctx context.Context, req *selling.SavePosInvoiceReq) (*selling.SavePosInvoiceResp, error)
+		ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosInvoiceReq) (*selling.ReturnPosInvoiceResp, error)
+		GetLatestReceivePosInvoice(ctx context.Context, req *do.ReceivePosInvoice) (*entity.ReceivePosInvoice, error)
 	}
 	ISelling interface {
 		// GetPosProfileList 查询POS配置文件列表
