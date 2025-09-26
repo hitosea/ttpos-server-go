@@ -634,6 +634,7 @@ func (s *productSrv) GetProductShopCategoryList(ctx context.Context, req req.Pro
 						IsSpecial:  child.IsSpecial == 1,
 						Sort:       child.Sort,
 						Status:     child.Status,
+						IsEditable: isEditable(ctx, child.HeadquarterUuid),
 						Children: product_resp.ProductShopCategoryListResp{
 							List: make([]product_resp.ProductShopCategory, 0),
 						},
@@ -647,6 +648,7 @@ func (s *productSrv) GetProductShopCategoryList(ctx context.Context, req req.Pro
 				IsSpecial:  category.IsSpecial == 1,
 				Sort:       category.Sort,
 				Status:     category.Status,
+				IsEditable: isEditable(ctx, category.HeadquarterUuid),
 				Children: product_resp.ProductShopCategoryListResp{
 					List: children,
 				},
@@ -725,6 +727,7 @@ func (s *productSrv) GetProductShopCategory(ctx context.Context, req req.Product
 		ProductCount: productCount,
 		ChildCount:   childCount,
 		Code:         productCategory.Code,
+		IsEditable:   isEditable(ctx, productCategory.HeadquarterUuid),
 	}, nil
 }
 
@@ -1388,7 +1391,6 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 			subShopCategory, _ := categoryRepo.GetProductCategory(
 				commonRepo.WhereByUuid(category.Uuid),
 				commonRepo.WhereByHeadquarterUuid(companySetting.HeadquarterUuid),
-				productRepo.WithMultiLanguageName(),
 			)
 			multiLanguageName := model.MultiLanguageName{
 				EnName:   category.MultiLanguageName.EnName,
@@ -1402,6 +1404,15 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 				SvName:   category.MultiLanguageName.SvName,
 			}
 			if subShopCategory == nil {
+				maxSort, err := productRepo.GetProductCategoryMaxSort(
+					commonRepo.WhereBySoftDelete(),
+					productRepo.WhereParentUuid(category.ParentUuid),
+					productRepo.WhereByIsSpecial(utils.IfUint(category.IsSpecial == 1, 1, 0)),
+				)
+				if err != nil {
+					return errors.WithMessage(err, "获取一级分类最大排序失败")
+				}
+				sort := uint(maxSort + 1)
 				multiLanguageNameUuid, err := multiLanguageNameRepo.CreateMultiLanguageName(multiLanguageName)
 				if err != nil {
 					return errors.WithMessage(err, "创建多语言名称失败")
@@ -1417,11 +1428,22 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 					Status:                category.Status,
 					ParentUuid:            category.ParentUuid,
 					IsSpecial:             category.IsSpecial,
-					Sort:                  category.Sort,
+					Sort:                  sort,
 					Code:                  category.Code,
 					HeadquarterUuid:       companySetting.HeadquarterUuid,
 				})
 			} else {
+				changeCode := false // 是否修改了分类编码
+				if category.Code != subShopCategory.Code {
+					changeCode = true
+				}
+				if changeCode {
+					if category.Code != "" {
+						if exist := productRepo.CheckProductCategoryCodeExist(category.Code, category.Uuid); exist {
+							return errors.New("分类编码已存在")
+						}
+					}
+				}
 				err := multiLanguageNameRepo.UpdateMultiLanguageName(subShopCategory.MultiLanguageNameUuid, multiLanguageName)
 				if err != nil {
 					return errors.WithMessage(err, "更新多语言名称失败")
@@ -1431,7 +1453,7 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 						UpdateTime: category.UpdateTime,
 					},
 					Name:                  category.Name,
-					MultiLanguageNameUuid: category.MultiLanguageNameUuid,
+					MultiLanguageNameUuid: subShopCategory.MultiLanguageNameUuid,
 					Status:                category.Status,
 					ParentUuid:            category.ParentUuid,
 					IsSpecial:             category.IsSpecial,
@@ -1441,7 +1463,103 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 				if err != nil {
 					return errors.WithMessage(err, "更新分类失败")
 				}
+				if ctx.GetCompany().IsOpenErp() {
+					if changeCode {
+						// 获取关联的商品。更新商品（某规格）的分类编码、套餐的分类编码
+						productRepo := repository.NewProductRepo(tx)
+						products, err := productRepo.GetProducts(
+							commonRepo.WhereBySoftDelete(),
+							productRepo.WhereCategoryUuid(category.Uuid),
+							repository.CommonRepo.Preload(
+								repository.WithPreload{
+									Query: "ProductBoms",
+								},
+							),
+						)
+						if err != nil {
+							return errors.WithMessage(err, "获取商品失败")
+						}
+						if len(products) > 0 {
+							erpSrv := erp.NewIErpSrv(s.dbm)
+							for _, product := range products {
+								for _, productBom := range product.ProductBoms {
+									productMultiLanguageName := model.NewMultiLanguageName(product.Name)
+									productEnName, err := s.getEnName(ctx, productMultiLanguageName.GetNames())
+									if err != nil {
+										return errors.WithMessage(err, "翻译失败")
+									}
+
+									multiLanguageName := model.NewMultiLanguageName(productBom.Name)
+									enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
+									if err != nil {
+										return errors.WithMessage(err, "翻译失败")
+									}
+									productUnit, errGetUnit := repository.NewProductUnitRepo(tx).GetProductUnit(commonRepo.WhereByUuid(product.UnitUuid))
+									if errGetUnit != nil {
+										return errors.WithMessage(errGetUnit, "获取商品单位失败")
+									}
+
+									localeName := language.JsonToLocaleResponse(category.Name)
+									classification, err := s.getEnName(ctx, *localeName)
+									if err != nil {
+										return errors.WithMessage(err, "翻译失败")
+									}
+									if productBom.IsFlavor() {
+										itemName := fmt.Sprintf("%s-%s", productEnName, enName)
+										if _, err := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
+											ItemName:          itemName,
+											StockUom:          productUnit.ErpnextUom,
+											ItemCode:          productBom.ErpCode,
+											TemplateItemCode:  product.ErpCode,
+											ItemSpecification: enName,
+											Classification:    classification,
+											ClassificationCode: func() string {
+												if category.Code != "" {
+													return category.Code
+												}
+												return " " // 如果分类编码为空，则设置为空
+											}(),
+										}); err != nil {
+											return errors.WithMessage(err, "更新分类编码到erp失败")
+										}
+									}
+									if productBom.IsPackageFlavor() {
+										itemName := fmt.Sprintf("%s-%s", productEnName, enName)
+										if _, err := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
+											ItemName:          itemName,
+											StockUom:          productUnit.ErpnextUom,
+											ItemCode:          productBom.ErpCode,
+											TemplateItemCode:  product.ErpCode,
+											ItemSpecification: enName,
+											Classification:    classification,
+											ClassificationCode: func() string {
+												if category.Code != "" {
+													return category.Code
+												}
+												return " " // 如果分类编码为空，则设置为空
+											}(),
+										}); err != nil {
+											return errors.WithMessage(err, "更新分类编码到erp失败")
+										}
+									}
+								}
+							}
+						}
+					}
+				}
 			}
+		}
+		// 删除普通分类缓存
+		tag := cryptor.Md5String(fmt.Sprintf("category%d%d%d", ctx.GetCompanyUuid(), 1, 1))
+		err = cache.NewTaggedCache(s.cache).TagClear(tag)
+		if err != nil {
+			return err
+		}
+		// 删除特殊分类缓存
+		tag = cryptor.Md5String(fmt.Sprintf("category%d%d%d", ctx.GetCompanyUuid(), 0, 1))
+		err = cache.NewTaggedCache(s.cache).TagClear(tag)
+		if err != nil {
+			return err
 		}
 		return nil
 	})
