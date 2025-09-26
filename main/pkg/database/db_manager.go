@@ -116,6 +116,14 @@ func (m *DBManager) GetDB(index uint64) *gorm.DB {
 	return companyDB
 }
 
+func (m *DBManager) MustGetDB(idx uint64) (*gorm.DB, error) {
+	db := m.GetDB(idx)
+	if db == nil {
+		return nil, fmt.Errorf("db err: %d not found", idx)
+	}
+	return db, nil
+}
+
 func (m *DBManager) GetDBNameList() map[uint64]string {
 	dbNames := make(map[uint64]string)
 	for dbName := range m.dbs {
