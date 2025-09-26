@@ -1588,7 +1588,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse` (
   `status` int(11) NOT NULL DEFAULT 0 COMMENT '仓库状态',
   `contact` varchar(255) NOT NULL DEFAULT '' COMMENT '联系人',
   `phone` varchar(255) NOT NULL DEFAULT '' COMMENT '联系电话',
-  `address` varchar(255) NOT NULL DEFAULT '' COMMENT '地址',
+  `address` varchar(500) NOT NULL DEFAULT '' COMMENT '地址',
   `is_default` int(11) NOT NULL DEFAULT 0 COMMENT '是否默认：0-否；1-是',
   `erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT '关联erpnext',
   `headquarter_uuid` BIGINT DEFAULT 0 COMMENT '总部UUID',

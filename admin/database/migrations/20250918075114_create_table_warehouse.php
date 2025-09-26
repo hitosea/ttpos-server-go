@@ -39,7 +39,7 @@ class CreateTableWarehouse extends Migrator
                 ->addColumn('status', 'integer', ['null' => false, 'default' => 0, 'comment' => '仓库状态'])
                 ->addColumn('contact', 'string', ['limit' => 255, 'null' => false, 'default' => '', 'comment' => '联系人'])
                 ->addColumn('phone', 'string', ['limit' => 255, 'null' => false, 'default' => '', 'comment' => '联系电话'])
-                ->addColumn('address', 'string', ['limit' => 255, 'null' => false, 'default' => '', 'comment' => '地址'])
+                ->addColumn('address', 'string', ['limit' => 500, 'null' => false, 'default' => '', 'comment' => '地址'])
                 ->addColumn('is_default', 'integer', ['null' => false, 'default' => 0, 'comment' => '是否默认：0-否；1-是'])
                 ->addColumn('erp_code', 'string', ['limit' => 255, 'null' => false, 'default' => '', 'comment' => '关联erpnext'])
                 ->addColumn('headquarter_uuid', 'biginteger', ['null' => false, 'default' => 0, 'comment' => '总部Uuid'])

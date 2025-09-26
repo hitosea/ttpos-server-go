@@ -36,7 +36,6 @@ type IWarehouseSrv interface {
 
 	SyncWarehouse(ctx context.Context) error             // 同步仓库列表
 	SyncDefaultWarehouseStock(ctx context.Context) error // 同步默认仓库库存
-	FirstSyncWarehouseItem(ctx context.Context) error    // 第一次同步仓库物品库存列表
 }
 
 // NewWarehouseSrv 创建仓库服务
@@ -75,7 +74,7 @@ func (s *warehouseSrv) GetWarehouseList(ctx context.Context, req req.WarehouseLi
 		opts = append(opts, warehouseRepo.WhereStatus(*req.Status))
 	}
 	// 排序
-	opts = append(opts, warehouseRepo.OrderByCreateTime(true), warehouseRepo.WhereHeadquarterUuid(0))
+	opts = append(opts, warehouseRepo.OrderByUpdateTime(true), warehouseRepo.WhereHeadquarterUuid(0))
 	// 分页查询
 	warehouses, total, err := warehouseRepo.GetListWithPagination(
 		req.PageReq.PageNo,
@@ -280,7 +279,7 @@ func (s *warehouseSrv) UpdateWarehouse(ctx context.Context, updateReq req.Update
 	warehouseRepo := repository.NewWarehouseRepo(db)
 
 	// 检查仓库是否存在
-	existingWarehouse, err := warehouseRepo.GetByUuid(updateReq.Uuid)
+	warehouse, err := warehouseRepo.GetByUuid(updateReq.Uuid)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return errors.New("仓库不存在")
@@ -288,12 +287,16 @@ func (s *warehouseSrv) UpdateWarehouse(ctx context.Context, updateReq req.Update
 		return errors.WithMessage(err, "获取仓库信息失败")
 	}
 
-	if !isEditable(ctx, existingWarehouse.HeadquarterUuid) {
+	if !isEditable(ctx, warehouse.HeadquarterUuid) {
 		return errors.New("仓库不可编辑")
 	}
 
+	if (warehouse.IsDefault == 1 || warehouse.Type == constant.WarehouseTypeTransit) && updateReq.Status == 0 {
+		return errors.New("默认仓库或在途仓库不可禁用")
+	}
+
 	// 检查仓库编码是否已存在（排除当前仓库）
-	exists, err := warehouseRepo.IsCodeExists(updateReq.Code, existingWarehouse.Uuid)
+	exists, err := warehouseRepo.IsCodeExists(updateReq.Code, warehouse.Uuid)
 	if err != nil {
 		return errors.WithMessage(err, "检查仓库编码失败")
 	}
@@ -308,7 +311,7 @@ func (s *warehouseSrv) UpdateWarehouse(ctx context.Context, updateReq req.Update
 		}
 	}
 	exists = checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Uuid:   existingWarehouse.Uuid,
+		Uuid:   warehouse.Uuid,
 		Source: constant.CheckNameSourceCategory,
 		Names:  names,
 	})
@@ -337,7 +340,7 @@ func (s *warehouseSrv) UpdateWarehouse(ctx context.Context, updateReq req.Update
 			return errors.WithMessage(errors.New("翻译失败"), err.Error())
 		}
 		// 更新多语言名称
-		err = tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", existingWarehouse.MultiLanguageNameUuid).Updates(map[string]any{
+		err = tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", warehouse.MultiLanguageNameUuid).Updates(map[string]any{
 			"zh_name":    updateReq.LocaleName.ZH,
 			"th_name":    updateReq.LocaleName.TH,
 			"en_name":    updateReq.LocaleName.EN,
@@ -352,7 +355,7 @@ func (s *warehouseSrv) UpdateWarehouse(ctx context.Context, updateReq req.Update
 			return errors.WithMessage(err, "更新多语言名称失败")
 		}
 		// 更新仓库
-		err = tx.Model(&model.Warehouse{}).Where("uuid = ?", existingWarehouse.Uuid).Updates(updateData).Error
+		err = tx.Model(&model.Warehouse{}).Where("uuid = ?", warehouse.Uuid).Updates(updateData).Error
 		if err != nil {
 			return errors.WithMessage(err, "更新仓库失败")
 		}
@@ -368,7 +371,7 @@ func (s *warehouseSrv) UpdateWarehouse(ctx context.Context, updateReq req.Update
 					Disabled:      updateReq.Status == 0,
 					WarehouseType: typeMap[updateReq.Type],
 				},
-				Name: existingWarehouse.ErpCode,
+				Name: warehouse.ErpCode,
 			})
 			if err != nil {
 				return errors.WithMessage(errors.New("更新仓库失败"), err.Error())
@@ -402,10 +405,11 @@ func (s *warehouseSrv) DeleteWarehouse(ctx context.Context, deleteWarehouseReq r
 	if !isEditable(ctx, existingWarehouse.HeadquarterUuid) {
 		return errors.New("仓库不可删除")
 	}
+	if existingWarehouse.Type == constant.WarehouseTypeTransit {
+		return errors.New("在途仓库不可删除")
+	}
 
-	var existingWarehouseItem int64
-	db.Model(&model.WarehouseItem{}).Where("warehouse_uuid = ?", existingWarehouse.Uuid).Count(&existingWarehouseItem)
-	if existingWarehouseItem > 0 {
+	if existingWarehouse.Items != nil && len(existingWarehouse.Items) > 0 {
 		return errors.New("仓库存在关联的物品，不可删除")
 	}
 
@@ -445,6 +449,7 @@ func (s *warehouseSrv) buildWarehouseResp(ctx context.Context, warehouse model.W
 		Address:    warehouse.Address,
 		IsDefault:  warehouse.IsDefault,
 		IsEditable: isEditable(ctx, warehouse.HeadquarterUuid),
+		HasItem:    warehouse.Items != nil && len(warehouse.Items) > 0,
 	}
 }
 
@@ -539,7 +544,9 @@ func (s *warehouseSrv) SetDefaultWarehouse(ctx context.Context, req req.SetDefau
 	if !isEditable(ctx, warehouse.HeadquarterUuid) {
 		return errors.New("仓库不可设置为默认仓库")
 	}
-
+	if warehouse.Type == constant.WarehouseTypeTransit {
+		return errors.New("在途仓库不可设置为默认仓库")
+	}
 	// 设置默认仓库
 	err = warehouseRepo.UpdateIsDefault(warehouse.Uuid)
 	if err != nil {
@@ -732,7 +739,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 	for _, erpWarehouse := range warehouseList {
 		translateItems = append(translateItems, utils.TranslateItem{
 			Lang:    "en",
-			Content: erpWarehouse.WarehouseName,
+			Content: erpWarehouse.AliasName,
 		})
 	}
 	translateClient := utils.NewTranslateClient()
@@ -749,18 +756,18 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 	err = db.Transaction(func(tx *gorm.DB) error {
 		for _, erpWarehouse := range warehouseList {
 			headquarterUuid, _ := warehouseHeadquarterMap[erpWarehouse.Name]
-			localeName, ok := multiLanguageMap[erpWarehouse.WarehouseName]
+			localeName, ok := multiLanguageMap[erpWarehouse.AliasName]
 			if !ok {
 				localeName = dto.LocaleResponse{
-					ZH:   erpWarehouse.WarehouseName,
-					TH:   erpWarehouse.WarehouseName,
-					EN:   erpWarehouse.WarehouseName,
-					ZHTW: erpWarehouse.WarehouseName,
-					JA:   erpWarehouse.WarehouseName,
-					KO:   erpWarehouse.WarehouseName,
-					MY:   erpWarehouse.WarehouseName,
-					TR:   erpWarehouse.WarehouseName,
-					SV:   erpWarehouse.WarehouseName,
+					ZH:   erpWarehouse.AliasName,
+					TH:   erpWarehouse.AliasName,
+					EN:   erpWarehouse.AliasName,
+					ZHTW: erpWarehouse.AliasName,
+					JA:   erpWarehouse.AliasName,
+					KO:   erpWarehouse.AliasName,
+					MY:   erpWarehouse.AliasName,
+					TR:   erpWarehouse.AliasName,
+					SV:   erpWarehouse.AliasName,
 				}
 			}
 			var status int
@@ -907,51 +914,6 @@ func (s *warehouseSrv) SyncDefaultWarehouseStock(ctx context.Context) error {
 	})
 
 	return err
-}
-
-// FirstSyncWarehouseItem 第一次同步仓库物品库存。将物料表的库存同步到仓库物品库存表
-func (s *warehouseSrv) FirstSyncWarehouseItem(ctx context.Context) error {
-	// 查询material表
-	db := ctx.GetDB()
-	if db == nil {
-		db = s.dbm.GetDB(ctx.GetDbId())
-	}
-	materialRepo := repository.NewMaterialRepo(db)
-	materials, _, err := materialRepo.GetMaterialListWithPagination(1, 9999999999)
-	if err != nil {
-		return errors.WithMessage(err, "查询物料列表失败")
-	}
-	// 查询warehouse表,获取默认仓库
-	warehouseRepo := repository.NewWarehouseRepo(db)
-	warehouse, err := warehouseRepo.GetDefaultWarehouse()
-	if err != nil {
-		return errors.WithMessage(err, "查询仓库列表失败")
-	}
-	// 遍历物料表
-	warehouseItems := []*model.WarehouseItem{}
-	for _, material := range materials {
-		// 创建仓库物品库存
-		warehouseItem := model.WarehouseItem{
-			WarehouseUuid: warehouse.Uuid,
-			MaterialUuid:  material.Uuid,
-			MaterialCode:  material.Code,
-			Stock:         material.StockNum,
-			Valuation:     1.0, // 默认
-		}
-		warehouseItems = append(warehouseItems, &warehouseItem)
-	}
-	// 更新物料表的仓库uuid
-	err = materialRepo.UpdateAllMaterialWarehouseUuid(warehouse.Uuid)
-	if err != nil {
-		return errors.WithMessage(err, "更新物料表的仓库uuid失败")
-	}
-	// 批量创建仓库物品库存
-	warehouseItemRepo := repository.NewWarehouseItemRepo(db)
-	err = warehouseItemRepo.CreateBatch(warehouseItems)
-	if err != nil {
-		return errors.WithMessage(err, "创建仓库物品库存失败")
-	}
-	return nil
 }
 
 func (s *warehouseSrv) CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error) {

@@ -16,4 +16,5 @@ type Warehouse struct {
 	HeadquarterUuid       uint64 `gorm:"column:headquarter_uuid;not null;default:0;comment:'总部Uuid'" json:"headquarter_uuid"`
 
 	MultiLanguageName *MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
+	Items             []*WarehouseItem   `gorm:"foreignKey:warehouse_uuid;references:uuid"`
 }

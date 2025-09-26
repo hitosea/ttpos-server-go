@@ -24172,33 +24172,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/shop/supplier/sync": {
-            "get": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.供应商档案"
-                ],
-                "summary": "同步供应商",
-                "responses": {
-                    "200": {
-                        "description": "成功",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
         "/shop/supplier/update": {
             "post": {
                 "security": [
@@ -24446,34 +24419,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/shop/warehouse/first_sync_item": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "第一次同步仓库物品库存",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.仓库档案"
-                ],
-                "summary": "第一次同步仓库物品库存",
-                "responses": {
-                    "200": {
-                        "description": "成功",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
         "/shop/warehouse/headquarter/list": {
             "get": {
                 "security": [
@@ -24666,34 +24611,6 @@ const docTemplate = `{
                         }
                     }
                 ],
-                "responses": {
-                    "200": {
-                        "description": "成功",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/shop/warehouse/sync": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "同步仓库列表",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.仓库档案"
-                ],
-                "summary": "同步仓库列表",
                 "responses": {
                     "200": {
                         "description": "成功",
@@ -42933,6 +42850,10 @@ const docTemplate = `{
                 },
                 "contact": {
                     "type": "string"
+                },
+                "has_item": {
+                    "description": "是否存在物品",
+                    "type": "boolean"
                 },
                 "is_default": {
                     "type": "integer"
