@@ -306,6 +306,11 @@ type ProductBomCardDetailReq struct {
 	Uuid uint64 `form:"uuid" binding:"required"` // 成本卡UUID product_bom_card_uuid
 }
 
+// ErpProductBomCardDetailReq ERP规格商品成本卡详情请求
+type ErpProductBomCardDetailReq struct {
+	BomName string `form:"bom_name"` // 成本卡名称 bom_name
+}
+
 // ProductBomCardUnlinkReq 解除成本卡关联请求
 type ProductBomCardUnlinkReq struct {
 	RelatedUuid uint64 `json:"related_uuid" binding:"required"` // 关联UUID,给规格商品或加料绑定成本卡。规格商品时，关联UUID为规格商品UUID；加料时，关联UUID为加料UUID

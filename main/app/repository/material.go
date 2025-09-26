@@ -40,6 +40,7 @@ type IMaterialRepo interface {
 	UpdateMaterialStockNum(materials []*model.Material) error            // 更新物品库存数量
 	AddActualSaleNum(materialUuid uint64, saleNum float64) error         // 增加材料销量
 	GetMaterialByErpCode(erpCode string) (*model.Material, error)        // 根据erp_code获取物品
+	GetMaterialDetailByErpCode(erpCode string) (*model.Material, error)  // 根据erp_code获取物品详情
 	UpdateMaterialWarehouseUuid(uuid uint64, warehouseUuid uint64) error // 更新物品仓库uuid
 	UpdateAllMaterialWarehouseUuid(warehouseUuid uint64) error           // 将所有物品的仓库uuid设置为指定仓库uuid
 
@@ -419,6 +420,19 @@ func (r *MaterialRepoImpl) GetMaterialByErpCode(erpCode string) (*model.Material
 		return nil, errors.WithMessage(err, "根据erp_code获取物品失败")
 	}
 	return &material, nil
+}
+
+func (r *MaterialRepoImpl) GetMaterialDetailByErpCode(erpCode string) (*model.Material, error) {
+	// 获取物品
+	material, err := r.GetMaterialByErpCode(erpCode)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取物品失败")
+	}
+	materialDetail, err := r.GetMaterialDetailByUuid(material.Uuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取物品详情失败")
+	}
+	return materialDetail, nil
 }
 
 func (r *MaterialRepoImpl) ClearMaterialInternalCode(uuid uint64) error {

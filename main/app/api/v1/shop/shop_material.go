@@ -623,6 +623,26 @@ func (h *MaterialHandler) SyncMaterialCategory(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// SyncProductBomCard 同步成本卡
+// @Summary 同步成本卡
+// @Description 同步成本卡
+// @Tags 商家端.物品管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/test/product_bom/card/sync [post]
+func (h *MaterialHandler) SyncProductBomCard(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	err := h.materialSrv.SyncProductBomCard(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
 func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -671,5 +691,6 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 
 		privateApi.POST("/material/add/erp", wrapper.AddMaterialByErpItem)            // 从erp同步物品
 		privateApi.POST("/test/material/category/sync", wrapper.SyncMaterialCategory) // 同步物品分类
+		privateApi.POST("/test/product_bom/card/sync", wrapper.SyncProductBomCard)    // 同步成本卡
 	}
 }

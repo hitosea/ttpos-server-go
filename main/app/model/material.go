@@ -1,5 +1,7 @@
 package model
 
+import "ttpos-server-go/app/errors"
+
 // Material 原料信息表 ttpos_material
 type Material struct {
 	BaseModel
@@ -42,6 +44,26 @@ func (model *Material) SetNil() {
 	model.Category = MaterialCategory{}
 	model.NotBaseUnitList = nil
 	model.ImageFile = nil
+}
+
+// 通过uom名获取单位uuid
+func (model *Material) GetUnitUuidByUom(uom string) (uint64, error) {
+	for _, unit := range model.NotBaseUnitList {
+		if unit.Unit.ErpnextUom == uom {
+			return unit.Uuid, nil
+		}
+	}
+	return 0, errors.New("单位不存在")
+}
+
+// 通过uom名获取单位
+func (model *Material) GetUnitByUom(uom string) (*MaterialUnit, error) {
+	for _, unit := range model.NotBaseUnitList {
+		if unit.Unit.ErpnextUom == uom {
+			return unit, nil
+		}
+	}
+	return nil, errors.New("单位不存在")
 }
 
 // 判断该单位是不是该物品的基准单位或非基准单位
