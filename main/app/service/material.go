@@ -1164,7 +1164,7 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 	}
 	// 检查物品类别编码是否已存在
 	if request.Code != "" {
-		if exist := materialCategoryRepo.CheckMaterialCategoryCodeExist(request.Code, 0); exist {
+		if exist := materialCategoryRepo.CheckMaterialCategoryCodeExist(request.Code, request.Uuid); exist {
 			return errors.New("物品类别编码已存在")
 		}
 	}
