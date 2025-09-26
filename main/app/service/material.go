@@ -23,6 +23,7 @@ import (
 
 	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -1179,6 +1180,7 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 	}
 	// 检查物品类别名称是否已存在
 	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
+		Uuid:   request.Uuid,
 		Source: constant.CheckNameSourceMaterialCategory,
 		Names:  names,
 	})
@@ -1202,13 +1204,21 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 		if err = repository.NewMultiLanguageNameRepo(tx).UpdateMultiLanguageName(materialCategory.MultiLanguageNameUuid, materialCategory.MultiLanguageName); err != nil {
 			return errors.WithMessage(err, "更新多语言名称失败")
 		}
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 异步执行同步erp物品，避免阻塞主线程造成前端请求超时
+	go func() {
 		// 如果修改了物品编码，同步更新所有关联了这个分类的erp物品
 		if ctx.GetCompany().IsOpenErp() {
 			if changeCode {
-				materialRepo := repository.NewMaterialRepo(tx)
+				materialRepo := repository.NewMaterialRepo(db)
 				materials, err := materialRepo.GetMaterialByCategoryUuid(materialCategory.Uuid)
 				if err != nil {
-					return errors.WithMessage(err, "获取物品失败")
+					ctx.Log().Error("获取物品失败", zap.Error(err))
+					return
 				}
 				erpSrv := erp.NewIErpSrv(s.dbm)
 				for _, material := range materials {
@@ -1219,7 +1229,8 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 
 					enName, err := GetEnName(ctx, material.MultiLanguageName.GetNames())
 					if err != nil {
-						return errors.WithMessage(err, "翻译失败")
+						ctx.Log().Error("翻译失败", zap.Error(err))
+						return
 					}
 
 					// 旧的非基准单位
@@ -1233,7 +1244,8 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 
 					getMaterialCategoryName, err := GetEnName(ctx, materialCategory.MultiLanguageName.GetNames())
 					if err != nil {
-						return errors.WithMessage(err, "翻译失败")
+						ctx.Log().Error("翻译失败", zap.Error(err))
+						return
 					}
 
 					erpSrv.AddMaterial(ctx, req.MaterialAddErpReq{
@@ -1256,10 +1268,7 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 				}
 			}
 		}
-		return nil
-	}); err != nil {
-		return errors.WithMessage(err)
-	}
+	}()
 	return nil
 }
 
