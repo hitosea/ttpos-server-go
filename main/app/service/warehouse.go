@@ -650,7 +650,7 @@ func (s *warehouseSrv) GetWarehouseInOutList(ctx context.Context, req req.GetWar
 	if filterByCategory && !filterByKeyword && len(materialUuidsByCategory) > 0 {
 		filterOpt = warehouseInOutLogRepo.WhereMaterialUuids(materialUuidsByCategory)
 	}
-	if filterOpt == nil {
+	if filterOpt != nil {
 		opts = append(opts, filterOpt)
 	}
 
