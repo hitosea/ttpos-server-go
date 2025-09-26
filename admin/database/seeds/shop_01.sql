@@ -1627,7 +1627,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_supplier` (
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '供应商名称',
     `code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '编码',
     `status` INT(11) NOT NULL DEFAULT 0 COMMENT '状态：0-禁用；1-启用',
-    `address` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '供应商地址',
+    `address` VARCHAR(500) NOT NULL DEFAULT '' COMMENT '供应商地址',
     `contact_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系人姓名',
     `contact_phone` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系人电话',
     `position` VARCHAR(100) NOT NULL DEFAULT '' COMMENT '职位',

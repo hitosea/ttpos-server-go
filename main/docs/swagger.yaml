@@ -775,6 +775,9 @@ definitions:
       code:
         description: 分类编码
         type: string
+      is_editable:
+        description: 是否可编辑
+        type: boolean
       is_related:
         description: 是否关联了物品
         type: boolean
@@ -823,9 +826,6 @@ definitions:
       cost_unit_uuid:
         description: 成本单位UUID
         type: integer
-      editable:
-        description: 是否可编辑
-        type: boolean
       from_cost_unit_uuid:
         description: 来源成本单位UUID
         type: integer
@@ -838,6 +838,9 @@ definitions:
       internal_code:
         description: 内部编码
         type: string
+      is_editable:
+        description: 是否可编辑
+        type: boolean
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -942,6 +945,9 @@ definitions:
     type: object
   material_resp.ProductBomCardDetailResp:
     properties:
+      is_editable:
+        description: 是否可编辑
+        type: boolean
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -2394,6 +2400,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/product_resp.ProductShopCategoryListResp'
         description: 子级类别
+      is_editable:
+        description: 是否可编辑
+        type: boolean
       is_special:
         description: 是否特色类别
         type: boolean
@@ -2421,6 +2430,9 @@ definitions:
       code:
         description: 分类编码
         type: string
+      is_editable:
+        description: 是否可编辑
+        type: boolean
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -26899,6 +26911,23 @@ paths:
       security:
       - JwtToken: []
       summary: 同步物品分类
+      tags:
+      - 商家端.物品管理
+  /shop/test/product_bom/card/sync:
+    post:
+      consumes:
+      - application/json
+      description: 同步成本卡
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 同步成本卡
       tags:
       - 商家端.物品管理
   /shop/warehouse:

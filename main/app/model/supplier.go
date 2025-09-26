@@ -13,4 +13,7 @@ type Supplier struct {
 	StaffUuid       uint64 `gorm:"default:0;column:staff_uuid;comment:'员工ID, 采购负责人'"`
 	ErpCode         string `gorm:"default:'';column:erp_code;comment:'关联erpnext'"`
 	HeadquarterUuid uint64 `gorm:"default:0;column:headquarter_uuid;comment:'总部Uuid'"`
+
+	// purchase order 表的supplier_erp_code 关联supplier的erp_code
+	PurchaseOrders []*PurchaseOrder `gorm:"foreignKey:SupplierErpCode;references:ErpCode"`
 }

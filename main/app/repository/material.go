@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"database/sql"
 	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -51,6 +52,7 @@ type IMaterialRepo interface {
 	CheckMaterialCategoryCodeExist(code string, uuid uint64) bool             // 检查物品类别编码是否存在
 	GetMaterialUuidsByCategoryUuids(categoryUuids []uint64) ([]uint64, error) // 根据分类UUID列表获取物品UUID列表
 	GetMaterialUuidsByKeyword(keyword string) ([]uint64, error)               // 根据关键字获取物品UUID列表
+	GetMaterialCategoryMaxSort(opts ...DBOption) (int64, error)               // 获取物品类别最大排序
 
 	WithRelatedMaterialList() DBOption
 }
@@ -557,4 +559,14 @@ func (r *MaterialRepoImpl) GetMaterialUuidsByKeyword(keyword string) ([]uint64, 
 		return nil, errors.WithMessage(err, "根据关键字获取物品UUID列表失败")
 	}
 	return uuids, nil
+}
+
+func (r *MaterialRepoImpl) GetMaterialCategoryMaxSort(opts ...DBOption) (int64, error) {
+	var sort sql.NullInt64
+	db := r.db.Model(&model.MaterialCategory{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Select("MAX(sort) as sort").Find(&sort).Error
+	return sort.Int64, errors.WithMessage(err)
 }

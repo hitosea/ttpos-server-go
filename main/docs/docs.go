@@ -24239,6 +24239,34 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/test/product_bom/card/sync": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "同步成本卡",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "同步成本卡",
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/warehouse": {
             "get": {
                 "security": [
@@ -26616,6 +26644,10 @@ const docTemplate = `{
                     "description": "分类编码",
                     "type": "string"
                 },
+                "is_editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
+                },
                 "is_related": {
                     "description": "是否关联了物品",
                     "type": "boolean"
@@ -26688,10 +26720,6 @@ const docTemplate = `{
                     "description": "成本单位UUID",
                     "type": "integer"
                 },
-                "editable": {
-                    "description": "是否可编辑",
-                    "type": "boolean"
-                },
                 "from_cost_unit_uuid": {
                     "description": "来源成本单位UUID",
                     "type": "integer"
@@ -26707,6 +26735,10 @@ const docTemplate = `{
                 "internal_code": {
                     "description": "内部编码",
                     "type": "string"
+                },
+                "is_editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
                 },
                 "locale_name": {
                     "description": "物品名称",
@@ -26873,6 +26905,10 @@ const docTemplate = `{
         "material_resp.ProductBomCardDetailResp": {
             "type": "object",
             "properties": {
+                "is_editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
+                },
                 "locale_name": {
                     "description": "成本卡名称",
                     "allOf": [
@@ -29058,6 +29094,10 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "is_editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
+                },
                 "is_special": {
                     "description": "是否特色类别",
                     "type": "boolean"
@@ -29094,6 +29134,10 @@ const docTemplate = `{
                 "code": {
                     "description": "分类编码",
                     "type": "string"
+                },
+                "is_editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
                 },
                 "locale_name": {
                     "description": "商品类别名称",

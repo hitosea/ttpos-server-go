@@ -11,7 +11,6 @@ import (
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
-	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
 	"gorm.io/gorm"
@@ -77,6 +76,7 @@ func (s *supplierSrv) GetSupplierList(ctx context.Context, req req.SupplierListR
 		if err != nil {
 			continue
 		}
+		supplierInfo.IsEditable = isEditable(ctx, supplier.HeadquarterUuid)
 		supplierList = append(supplierList, supplierInfo)
 	}
 	return resp.SupplierListResp{
@@ -113,10 +113,8 @@ func (s *supplierSrv) GetSupplier(ctx context.Context, req req.SupplierReq) (res
 	}, nil
 }
 
-func (s *supplierSrv) hasRelatedPurchaseOrder(ctx context.Context, supplier *model.Supplier) bool {
-	db := s.dbm.GetDB(ctx.GetDbId())
-	exists, _ := repository.NewPurchaseOrderRepo(db).IsSupplierExists(supplier.ErpCode)
-	return exists
+func (s *supplierSrv) hasRelatedPurchaseOrder(_ context.Context, supplier *model.Supplier) bool {
+	return supplier.PurchaseOrders != nil && len(supplier.PurchaseOrders) > 0
 }
 
 // CreateSupplier 创建供应商
@@ -140,37 +138,22 @@ func (s *supplierSrv) CreateSupplier(ctx context.Context, createSupplierReq req.
 		return errors.New("供应商编码已存在")
 	}
 	var erpCode string
-	companySetting := ctx.GetCompanySetting()
 	// 调用erp接口
 	if ctx.GetCompany().IsOpenErp() {
-		var branch, companyAbbr string
-		// 总部调用erp接口创建的供应商，不传递branch、company_abbr
-		// 子店、散户调用erp接口创建的供应商，传递branch、company_abbr
-		if companySetting.IsHeadquarter() {
-			branch = ""
-			companyAbbr = ""
-		} else {
-			branch = companySetting.ErpnextBranchName
-			companyAbbr = companySetting.ErpnextCompanyAbbr
-		}
+		companySetting := ctx.GetCompanySetting()
 		erpCode, err = erp.NewIErpSrv(s.dbm).CreateSupplier(ctx.GetContext(), req.CreateSupplierReq{
 			SiteCode:     companySetting.ErpnextSiteCode,
 			SupplierName: createSupplierReq.Name,
-			CompanyAbbr:  companyAbbr,
-			Branch:       branch,
+			CompanyAbbr:  companySetting.ErpnextCompanyAbbr,
+			Branch:       companySetting.ErpnextBranchName,
 			Disabled:     createSupplierReq.Status == 0,
 		})
 		if err != nil {
 			return errors.WithMessage(errors.New("创建供应商失败"), err.Error())
 		}
 	}
-	// 生成UUID
-	uuid, _ := utils.GetID()
 	// 创建供应商
-	supplier := &model.Supplier{
-		BaseModel: model.BaseModel{
-			Uuid: uuid,
-		},
+	err = supplierRepo.Create(&model.Supplier{
 		Name:         createSupplierReq.Name,
 		Code:         createSupplierReq.Code,
 		Address:      createSupplierReq.Address,
@@ -178,8 +161,7 @@ func (s *supplierSrv) CreateSupplier(ctx context.Context, createSupplierReq req.
 		ContactPhone: createSupplierReq.ContactPhone,
 		Status:       createSupplierReq.Status,
 		ErpCode:      erpCode,
-	}
-	err = supplierRepo.Create(supplier)
+	})
 	if err != nil {
 		return errors.WithMessage(errors.New("创建供应商失败"), err.Error())
 	}
@@ -222,25 +204,15 @@ func (s *supplierSrv) UpdateSupplier(ctx context.Context, updateSupplierReq req.
 		return errors.New("供应商编码已存在")
 	}
 
-	companySetting := ctx.GetCompanySetting()
 	// 调用erp接口，只能修改自己创建的供应商
 	if ctx.GetCompany().IsOpenErp() {
-		var branch, companyAbbr string
-		// 总部调用erp接口创建的供应商，不传递 branch、company_abbr
-		// 子店、散户调用erp接口创建的供应商，传递 branch、company_abbr
-		if companySetting.IsHeadquarter() {
-			branch = ""
-			companyAbbr = ""
-		} else {
-			branch = companySetting.ErpnextBranchName
-			companyAbbr = companySetting.ErpnextCompanyAbbr
-		}
+		companySetting := ctx.GetCompanySetting()
 		err = erp.NewIErpSrv(s.dbm).UpdateSupplier(ctx.GetContext(), req.UpdateSupplierReq{
 			CreateSupplierReq: req.CreateSupplierReq{
 				SupplierName: updateSupplierReq.Name,
 				SiteCode:     companySetting.ErpnextSiteCode,
-				CompanyAbbr:  companyAbbr,
-				Branch:       branch,
+				CompanyAbbr:  companySetting.ErpnextCompanyAbbr,
+				Branch:       companySetting.ErpnextBranchName,
 				Disabled:     updateSupplierReq.Status == 0,
 			},
 			Name: supplier.ErpCode,
@@ -277,12 +249,13 @@ func (s *supplierSrv) DeleteSupplier(ctx context.Context, deleteSupplierReq req.
 		}
 		return errors.WithMessage(err, "查询供应商失败")
 	}
-	if s.hasRelatedPurchaseOrder(ctx, supplier) {
-		return errors.New("该供应商存在关联的采购订单，无法删除")
-	}
 	if !isEditable(ctx, supplier.HeadquarterUuid) {
 		return errors.New("供应商不可删除")
 	}
+	if s.hasRelatedPurchaseOrder(ctx, supplier) {
+		return errors.New("该供应商存在关联的采购订单，无法删除")
+	}
+
 	companySetting := ctx.GetCompanySetting()
 	// 调用erp接口，只能删除自己创建的供应商
 	if ctx.GetCompany().IsOpenErp() {
@@ -408,7 +381,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 	if companySetting.IsSubShop() {
 		var headquarter model.CompanySetting
 		saasDb := s.dbm.GetDB(0)
-		err := saasDb.Model(&model.CompanySetting{}).Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
+		err := saasDb.Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
