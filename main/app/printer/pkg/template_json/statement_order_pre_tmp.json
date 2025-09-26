@@ -1,7 +1,7 @@
 {
     "metadata": {
-        "name": "statement_order",
-        "description": "结账单模板",
+        "name": "statement_order_pre",
+        "description": "预结账单模板",
         "paper_width": 80,
         "version": "1.0"
     },
@@ -58,15 +58,15 @@
                 "block_type": "label", 
                 "block_label": {
                     "zh": "预结账单",
-                    "en": "INVOICE / RECEIPT",
-                    "ko": "점검",
-                    "my": "ထွက်ခွာသည်",
-                    "tr": "Çıkış yapmak",
-                    "de": "Rechnung",
-                    "sv": "Slutnota",
-                    "ja": "レシート",
-                    "zhtw": "结账单",
-                    "th": "ใบเสร็จรับเงิน"
+                    "en": "Pre-bill",
+                    "ko": "사전 청구",
+                    "my": "ကြိုတင်ငွေတောင်းခံလွှာ",
+                    "tr": "Ön fatura",
+                    "de": "Vorabrechnung",
+                    "sv": "Preliminär nota",
+                    "ja": "事前請求",
+                    "zhtw": "預結賬單",
+                    "th": "เรียกเก็บเงินล่วงหน้า"
                 },
                 "block_attr": {
                     "font_size": 32,
@@ -399,12 +399,12 @@
                 "block_type": "label",
                 "block_label": {
                     "zh": "商品",
-                    "en": "Products",
+                    "en": "Commodity",
                     "ko": "상품",
-                    "my": "ကုန်ပစ္စည်းများ",
-                    "tr": "Ürünler",
-                    "de": "Produkte",
-                    "sv": "Produkter",
+                    "my": "ကုန်စည်",
+                    "tr": "Emtia",
+                    "de": "Produkt",
+                    "sv": "Produkt",
                     "ja": "商品",
                     "zhtw": "商品",
                     "th": "สินค้า"
@@ -518,13 +518,13 @@
                                         "zh": "(赠) ",
                                         "en": "(Gift) ",
                                         "ko": "(증정) ",
-                                        "my": "(လက်ဆောင်) ",
+                                        "my": "(ပေးပာ) ",
                                         "tr": "(Hediye) ",
                                         "de": "(Geschenk) ",
-                                        "sv": "(Gåva) ",
+                                        "sv": "(ge bort) ",
                                         "ja": "(贈) ",
                                         "zhtw": "(贈) ",
-                                        "th": "(ของแถม) "
+                                        "th": "(ของขวัญ) "
                                     },
                                     "conditions": [
                                         {
@@ -542,15 +542,15 @@
                                 {
                                     "text": {
                                         "zh": "(打包) ",
-                                        "en": "(Package) ",
+                                        "en": "(Take away) ",
                                         "ko": "(포장) ",
-                                        "my": "(ထုပ်ပိုး) ",
-                                        "tr": "(Paket) ",
-                                        "de": "(Verpackung) ",
-                                        "sv": "(Förpackning) ",
-                                        "ja": "(パッケージ) ",
-                                        "zhtw": "(包裝) ",
-                                        "th": "(บรรจุภัณฑ์) "
+                                        "my": "(ထုပ်ပိုးသည်) ",
+                                        "tr": "(Paketlemek) ",
+                                        "de": "(Verpacken) ",
+                                        "sv": "(Packa) ",
+                                        "ja": "(包装) ",
+                                        "zhtw": "(打包) ",
+                                        "th": "(บรรจุหีบห่อ) "
                                     },
                                     "conditions": [
                                         {

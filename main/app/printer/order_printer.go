@@ -155,6 +155,7 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 				saleBill,
 				saleOrder,
 				payMethodUuid,
+				p.Is58mmPrinter(),
 			)
 		} else if !p.Is58mmPrinter() {
 			return template.NewStatementOrderImgTemplate(base).GetPrintContent(
