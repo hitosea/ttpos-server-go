@@ -184,10 +184,7 @@ func (s *erpSrv) ClosePosEntry(ctx context.Context, closeEntryReq req.ClosePosEn
 		logger.Logger.Error("ClosePosEntry-UnmarshalTo", zap.Any("err", err))
 		return "", err
 	}
-	if closePosEntryResp.ClosePosEntryInfo == nil {
-		return "", errors.New(result.GetMessage())
-	}
-	return closePosEntryResp.ClosePosEntryInfo.ClosePosEntryName, nil
+	return closePosEntryResp.AsyncRecordId, nil
 }
 
 // SavePosInvoice 保存 Pos Invoice

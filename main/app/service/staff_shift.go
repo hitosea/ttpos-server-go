@@ -324,10 +324,10 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 		incomes, _ := convertor.ToJson(paymentMethodIncomeList)
 		// 更新当班记录
 		currentCashTotal = leaveCash
-		var erpnextClosePosEntryName string
+		var erpnextAsyncRecordId string
 		if needErpClosePos {
 			erpSrv := erp.NewIErpSrv(s.dbm)
-			openPosEntryName, err := erpSrv.ClosePosEntry(ctx.GetContext(), req.ClosePosEntryReq{
+			erpnextAsyncRecordId, err = erpSrv.ClosePosEntry(ctx.GetContext(), req.ClosePosEntryReq{
 				SiteCode:            companySetting.ErpnextSiteCode,
 				PosProfileName:      companySetting.ErpnextPosProfileName,
 				PosOpenEntryName:    shiftLog.ErpnextOpenPosEntryName,
@@ -351,20 +351,19 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 				}
 				return errors.WithMessage(errors.New("交班失败，请重试"), "交班失败")
 			}
-			erpnextClosePosEntryName = openPosEntryName
 		}
 		shiftEndTime := time.Now().Unix()
 		_, err = shiftLogRepo.Update(shiftLog, map[string]any{
-			"status":                       constant.StaffHandedOver,          // 交班状态
-			"current_cash_total":           currentCashTotal.InexactFloat64(), // 当前钱箱现金总计
-			"cash_taken_out":               withdrawCash.InexactFloat64(),     // 取出现金
-			"cash_left":                    currentCashTotal.InexactFloat64(), // 遗留现金
-			"shift_end_time":               shiftEndTime,                      // 交班时间
-			"cash_income":                  cashAmount,                        // 现金收入
-			"incomes":                      incomes,                           // 支付方式收入
-			"total_business":               saleData.TotalSaleAmount,          // 营业额
-			"total_income":                 saleData.TotalReceivedAmount,      // 总收入
-			"erpnext_close_pos_entry_name": erpnextClosePosEntryName,          // erpnext结账名称
+			"status":                  constant.StaffHandedOver,          // 交班状态
+			"current_cash_total":      currentCashTotal.InexactFloat64(), // 当前钱箱现金总计
+			"cash_taken_out":          withdrawCash.InexactFloat64(),     // 取出现金
+			"cash_left":               currentCashTotal.InexactFloat64(), // 遗留现金
+			"shift_end_time":          shiftEndTime,                      // 交班时间
+			"cash_income":             cashAmount,                        // 现金收入
+			"incomes":                 incomes,                           // 支付方式收入
+			"total_business":          saleData.TotalSaleAmount,          // 营业额
+			"total_income":            saleData.TotalReceivedAmount,      // 总收入
+			"erpnext_async_record_id": erpnextAsyncRecordId,              // erpnext异步记录ID
 		})
 		if err != nil {
 			return errors.New("交班失败")
