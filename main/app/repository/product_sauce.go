@@ -12,6 +12,8 @@ type IProductSauceRepo interface {
 	CreateProductSauce(productSauce *model.ProductSauce) error
 	GetSauceByUuid(uuid uint64) (*model.ProductSauce, error)
 	UpdateProductBomCard(uuid uint64, productBomCardUuid uint64) error
+	GetSauceByErpCode(erpCode string) (*model.ProductSauce, error)
+	GetSauceByProductBomCardUuid(productBomCardUuid uint64) (*model.ProductSauce, error)
 }
 
 type productSauceRepoImpl struct {
@@ -80,4 +82,24 @@ func (r *productSauceRepoImpl) UpdateProductBomCard(uuid uint64, productBomCardU
 	return r.db.Model(&model.ProductSauce{}).Where("uuid = ?", uuid).Updates(map[string]interface{}{
 		"product_bom_card_uuid": productBomCardUuid,
 	}).Error
+}
+
+func (r *productSauceRepoImpl) GetSauceByErpCode(erpCode string) (*model.ProductSauce, error) {
+	var productSauce model.ProductSauce
+	if err := r.db.Model(&model.ProductSauce{}).Where("erp_code = ?", erpCode).Where("delete_time = 0").
+		Preload("MultiLanguageName").
+		First(&productSauce).Error; err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return &productSauce, nil
+}
+
+func (r *productSauceRepoImpl) GetSauceByProductBomCardUuid(productBomCardUuid uint64) (*model.ProductSauce, error) {
+	var productSauce model.ProductSauce
+	if err := r.db.Model(&model.ProductSauce{}).Where("product_bom_card_uuid = ?", productBomCardUuid).Where("delete_time = 0").
+		Preload("MultiLanguageName").
+		First(&productSauce).Error; err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return &productSauce, nil
 }

@@ -68,6 +68,7 @@ func (s *erpSrv) UpdateWarehouse(ctx context.Context, updateWarehouseReq req.Upd
 			CompanyAbbr:   updateWarehouseReq.CompanyAbbr,
 			Branch:        updateWarehouseReq.Branch,
 			Disabled:      updateWarehouseReq.Disabled,
+			Name:          updateWarehouseReq.Name,
 		},
 	})
 	if err != nil {

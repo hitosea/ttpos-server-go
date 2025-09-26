@@ -177,3 +177,61 @@ func (s *erpSrv) GetMaterialStockNum(ctx context.Context, warehouseErpCode strin
 
 	return response.ItemStockList, nil
 }
+
+// 获取成本卡列表
+func (s *erpSrv) GetProductBomCardList(ctx context.Context) (*manufacturing.GetBomListResp, error) {
+	company := ctx.GetCompany()
+	companySetting := company.CompanySetting
+
+	client, conn, err := NewErpBomClient()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	result, err := client.GetBomList(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &manufacturing.GetBomListReq{
+		CompanyAbbr:    companySetting.ErpnextHeadquarterAbbr,
+		SubCompanyAbbr: companySetting.ErpnextCompanyAbbr,
+		IsActive:       true,
+		IsDefault:      true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if result.GetCode() != "0" {
+		return nil, errors.WithMessage(errors.New(result.GetMessage()), "获取成本卡列表失败")
+	}
+	response := &manufacturing.GetBomListResp{}
+	if err := result.Data.UnmarshalTo(response); err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+// 获取成本卡详情
+func (s *erpSrv) GetProductBomCardDetail(ctx context.Context, params req.ErpProductBomCardDetailReq) (*manufacturing.GetBomResp, error) {
+	company := ctx.GetCompany()
+	companySetting := company.CompanySetting
+
+	client, conn, err := NewErpBomClient()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	result, err := client.GetBom(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &manufacturing.GetBomReq{
+		BomName: params.BomName,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if result.GetCode() != "0" {
+		return nil, errors.WithMessage(errors.New(result.GetMessage()), "获取成本卡详情失败")
+	}
+	response := &manufacturing.GetBomResp{}
+	if err := result.Data.UnmarshalTo(response); err != nil {
+		return nil, err
+	}
+	return response, nil
+}

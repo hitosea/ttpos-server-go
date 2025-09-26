@@ -11,11 +11,13 @@ import (
 type IProductBomCardRepo interface {
 	IProductBomCardQueryRepo
 	CreateProductBomCard(productBomCard model.ProductBomCard) error
+	CreateProductBomCardForSync(productBomCard model.ProductBomCard) error
 	CreateProductBomCardMaterial(productBomCardMaterial model.RelatedMaterial) error
 	UpdateProductBomCardMaterial(productBomCardMaterial model.RelatedMaterial) error
 	CreateOrUpdateProductBomCardMaterial(productBomCardMaterial model.RelatedMaterial) error
 	UpdateProductBomCardErpCode(uuid uint64, erpCode string) error
 	UpdateProductBomCardIsUsed(uuid uint64, isUsed int) error
+	GetSubShopProductBomCardList(headquarterUuid uint64) ([]*model.ProductBomCard, error) // 获取子店中来自总部的成本卡列表
 }
 
 type IProductBomCardQueryRepo interface {
@@ -74,6 +76,15 @@ func (r *productBomCardRepoImpl) CreateProductBomCard(productBomCard model.Produ
 		return errors.WithMessage(result.Error)
 	}
 
+	return nil
+}
+
+// 创建成本卡(同步erp数据)，同时创建multi_language_name和related_materials
+func (r *productBomCardRepoImpl) CreateProductBomCardForSync(productBomCard model.ProductBomCard) error {
+	result := r.db.Create(&productBomCard)
+	if result.Error != nil {
+		return errors.WithMessage(result.Error)
+	}
 	return nil
 }
 
@@ -175,4 +186,16 @@ func (r *productBomCardRepoImpl) GetProductBomCardByMaterialUuid(materialUuid ui
 		return 0, errors.WithMessage(err)
 	}
 	return productBomCard.Uuid, nil
+}
+
+// 获取子店中来自总部的成本卡列表
+func (r *productBomCardRepoImpl) GetSubShopProductBomCardList(headquarterUuid uint64) ([]*model.ProductBomCard, error) {
+	var productBomCards []*model.ProductBomCard
+	if err := r.db.Model(&model.ProductBomCard{}).
+		Where("headquarter_uuid = ?", headquarterUuid). // 只查询总部成本卡
+		Where("delete_time = 0").Where("is_used = 1").  // 只查询未失效的成本卡
+		Preload("RelatedMaterials").Find(&productBomCards).Error; err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productBomCards, nil
 }
