@@ -386,12 +386,12 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	warehouseSrv := service.NewWarehouseSrv(dbm)
 	supplierSrv := service.NewSupplierSrv(dbm)
 	productSrv := service.NewProductSrv(dbm, service.NewLocaleSrv(), settingSrv, cache)
-
+	materialSrv := service.NewMaterialSrv(dbm, service.NewLocaleSrv(), settingSrv)
 	wrapper := &SettingHandler{
 		settingSrv:    settingSrv,
 		otherSrv:      otherSrv,
 		uploadFileSrv: service.NewUploadFileSrv(dbm),
-		syncSrv:       service.NewSyncSrv(dbm, warehouseSrv, supplierSrv, productSrv),
+		syncSrv:       service.NewSyncSrv(dbm, warehouseSrv, supplierSrv, productSrv, materialSrv),
 	}
 
 	// 需要认证

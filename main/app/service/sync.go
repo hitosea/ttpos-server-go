@@ -22,6 +22,7 @@ type ISyncSrv interface {
 type SyncSrv struct {
 	dbm          *database.DBManager
 	warehouseSrv IWarehouseSrv
+	materialSrv  IMaterialSrv
 	supplierSrv  ISupplierSrv
 	productSrv   IProductSrv
 }
@@ -62,15 +63,16 @@ func (m *SyncTaskManager) getRunningCompanyUuids() []uint64 {
 }
 
 // NewSyncSrv 创建新同步服务
-func NewSyncSrv(dbm *database.DBManager, warehouseSrv IWarehouseSrv, supplierSrv ISupplierSrv, productSrv IProductSrv) ISyncSrv {
-	return NewSyncSrvImpl(dbm, warehouseSrv, supplierSrv, productSrv)
+func NewSyncSrv(dbm *database.DBManager, warehouseSrv IWarehouseSrv, supplierSrv ISupplierSrv, productSrv IProductSrv, materialSrv IMaterialSrv) ISyncSrv {
+	return NewSyncSrvImpl(dbm, warehouseSrv, supplierSrv, productSrv, materialSrv)
 }
 
 // NewSyncSrvImpl 创建新同步服务实现
-func NewSyncSrvImpl(dbm *database.DBManager, warehouseSrv IWarehouseSrv, supplierSrv ISupplierSrv, productSrv IProductSrv) ISyncSrv {
+func NewSyncSrvImpl(dbm *database.DBManager, warehouseSrv IWarehouseSrv, supplierSrv ISupplierSrv, productSrv IProductSrv, materialSrv IMaterialSrv) ISyncSrv {
 	return &SyncSrv{
 		dbm:          dbm,
 		warehouseSrv: warehouseSrv,
+		materialSrv:  materialSrv,
 		supplierSrv:  supplierSrv,
 		productSrv:   productSrv,
 	}
@@ -157,6 +159,21 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 			if err := s.warehouseSrv.SyncDefaultWarehouseStock(ctx); err != nil {
 				logger.Logger.Error("默认仓库库存同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 			}
+		}
+
+		// 11 物品分类
+		if err := s.materialSrv.SyncMaterialCategory(ctx); err != nil {
+			logger.Logger.Error("物品分类同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
+		}
+
+		// 12 物品
+		if err := s.materialSrv.SyncHeadquarterMaterial(ctx); err != nil {
+			logger.Logger.Error("物品同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
+		}
+
+		// 13 成本卡
+		if err := s.materialSrv.SyncProductBomCard(ctx); err != nil {
+			logger.Logger.Error("成本卡同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 		}
 
 		isExceptionOccurred = false
