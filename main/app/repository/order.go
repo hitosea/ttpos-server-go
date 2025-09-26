@@ -2214,12 +2214,12 @@ func (r *orderRepo) GetMonthlyOrderRanks(saleBillUuids []uint64) ([]MonthlyOrder
 		FROM ttpos_sale_order so
 		INNER JOIN (
 			SELECT 
-				DATE_FORMAT(FROM_UNIXTIME(create_time), '%%Y%%m') as month_year,
-				FIRST_VALUE(uuid) OVER (PARTITION BY DATE_FORMAT(FROM_UNIXTIME(create_time), '%%Y%%m') ORDER BY create_time) as first_order_uuid,
-				uuid,
-				ROW_NUMBER() OVER (PARTITION BY DATE_FORMAT(FROM_UNIXTIME(create_time), '%%Y%%m') ORDER BY create_time) as monthly_order_number
-			FROM ttpos_sale_order 
-			WHERE delete_time = 0
+				DATE_FORMAT(FROM_UNIXTIME(ttpos_sale_order.create_time), '%%Y%%m') as month_year,
+				FIRST_VALUE(ttpos_sale_order.uuid) OVER (PARTITION BY DATE_FORMAT(FROM_UNIXTIME(ttpos_sale_order.create_time), '%%Y%%m') ORDER BY ttpos_sale_order.create_time) as first_order_uuid,
+				ttpos_sale_order.uuid,
+				ROW_NUMBER() OVER (PARTITION BY DATE_FORMAT(FROM_UNIXTIME(ttpos_sale_order.create_time), '%%Y%%m') ORDER BY ttpos_sale_order.create_time) as monthly_order_number
+			FROM ttpos_sale_order LEFT JOIN ttpos_sale_bill sb on ttpos_sale_order.sale_bill_uuid = sb.uuid 
+			WHERE ttpos_sale_order.delete_time = 0 AND sb.production_time > 0
 		) t ON so.uuid = t.uuid
 		WHERE so.delete_time = 0 
 			AND so.sale_bill_uuid IN (%s)
