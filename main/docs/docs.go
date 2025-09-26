@@ -41903,6 +41903,10 @@ const docTemplate = `{
                     "description": "税率设置: false-关闭 true-开启",
                     "type": "boolean"
                 },
+                "is_syncing": {
+                    "description": "是否erp数据同步中",
+                    "type": "boolean"
+                },
                 "is_ttpos_site": {
                     "description": "是否散户site",
                     "type": "boolean"
@@ -41937,10 +41941,6 @@ const docTemplate = `{
                 "server_version": {
                     "description": "服务端版本",
                     "type": "string"
-                },
-                "sync_status": {
-                    "description": "同步erp数据状态: 1同步中，0未同步、同步完成",
-                    "type": "integer"
                 },
                 "update_time": {
                     "description": "更新时间",

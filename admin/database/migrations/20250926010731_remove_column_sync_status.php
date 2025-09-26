@@ -3,9 +3,9 @@
 use think\migration\Migrator;
 use think\migration\db\Column;
 
-class AddSyncStatusAndLastSyncTimeToCompany extends Migrator
+class RemoveColumnSyncStatus extends Migrator
 {
-    const TARGET='all';
+    const TARGET = 'all';
     /**
      * Change Method.
      *
@@ -29,10 +29,10 @@ class AddSyncStatusAndLastSyncTimeToCompany extends Migrator
      */
     public function change()
     {
+        // TODO 更新后删除
         $table = $this->table('company');
-        if (!$table->hasColumn('last_sync_time')) {
-            $table->addColumn('last_sync_time', 'integer', ['null' => false, 'default' => 0, 'comment' => '上次同步erp数据完成时间', 'after' => 'sync_status'])
-            ->update();
+        if ($table->hasColumn('sync_status')) {
+            $table->removeColumn('sync_status')->update();
         }
     }
 }
