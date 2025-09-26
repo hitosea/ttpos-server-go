@@ -394,11 +394,20 @@ func (s *materialSrv) AddMaterialCategory(ctx context.Context, request req.Mater
 			return errors.WithMessage(err, "创建多语言名称失败")
 		}
 
+		maxSort, err := materialCategoryRepo.GetMaterialCategoryMaxSort(
+			repository.NewCommonRepo().WhereBySoftDelete(),
+		)
+		if err != nil {
+			return errors.WithMessage(err, "获取一级分类最大排序失败")
+		}
+		sort := uint(maxSort + 1)
+
 		// 创建物品类别
 		materialCategory := model.MaterialCategory{
 			MultiLanguageNameUuid: nameId,
 			Name:                  request.LocaleName.ToJson(),
 			Code:                  request.Code,
+			Sort:                  int(sort),
 		}
 
 		if request.GetUuid() != 0 {
