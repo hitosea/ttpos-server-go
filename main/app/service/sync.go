@@ -107,6 +107,7 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 	// 10 仓库物品库存
 
 	go func(ctx context.Context) {
+		isExceptionOccurred := true
 		// 确保任务完成时清理状态
 		defer func() {
 			syncTaskManager.finishTask(companyUuid)
@@ -118,7 +119,8 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 
 			// 推送websocket
 			go websocket.PushClient(company.Uuid, websocket.SourceShop, websocket.SourceAll, websocket.SYNC_DATA, map[string]any{
-				"sync_time": lastSyncTime,
+				"sync_time":             lastSyncTime,
+				"is_exception_occurred": isExceptionOccurred,
 			})
 		}()
 
@@ -172,6 +174,8 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 				logger.Logger.Error("默认仓库库存同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 			}
 		}
+
+		isExceptionOccurred = false
 	}(ctx)
 
 	return nil

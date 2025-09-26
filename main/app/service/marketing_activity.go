@@ -335,6 +335,10 @@ func (s *marketingActivitySrv) MarketingActivityList(ctx context.Context) (*memb
 					})
 				} else {
 					for _, prize := range marketingActivity.Prizes {
+						// 检查 Coupon 是否为 nil，避免空指针异常
+						if prize.Coupon == nil {
+							continue
+						}
 						prizes = append(prizes, member_resp.MemberMarketingActivityPrizeResp{
 							LocalePrizeName: dto.LocaleResponse{
 								ZH:   prize.Coupon.Name,
