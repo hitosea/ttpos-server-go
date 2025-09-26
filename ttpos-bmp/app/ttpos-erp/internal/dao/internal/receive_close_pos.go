@@ -29,6 +29,7 @@ type ReceiveClosePosColumns struct {
 	UpdatedAt        string // 更新时间
 	ReqMessage       string // 请求数据,base64编码
 	RespMessage      string // 响应数据,base64编码
+	SiteCode         string // erp_site_code, 用来区分调那个租户
 }
 
 // receiveClosePosColumns holds the columns for the table erp_receive_close_pos.
@@ -41,6 +42,7 @@ var receiveClosePosColumns = ReceiveClosePosColumns{
 	UpdatedAt:        "updated_at",
 	ReqMessage:       "req_message",
 	RespMessage:      "resp_message",
+	SiteCode:         "site_code",
 }
 
 // NewReceiveClosePosDao creates and returns a new DAO object for table data access.

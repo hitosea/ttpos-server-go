@@ -83,6 +83,7 @@ message ClosePosEntryInfo {
 
 message ClosePosEntryResp {
   ClosePosEntryInfo close_pos_entry_info = 1;
+  string async_record_id = 2; // 异步记录ID
 }
 
 // SavePosInvoiceReq 保存POS发票请求消息
@@ -145,11 +146,13 @@ message ReturnPosInvoiceReq {
   repeated PosInvoiceItem items = 6;             // 商品项目列表 必填
   repeated PosInvoiceTax taxes = 7;              // 税费列表 必填
   repeated PosInvoicePayment payments = 8;       // 付款列表 必填
+  int64 invoice_type = 9; // 发票类型 1=商品发票 2=原材料发票 异步模式下必填
 }
 
 // ReturnPosInvoiceResp 退款POS发票响应消息
 message ReturnPosInvoiceResp {
   string invoice_name = 1; // 商品发票名称
+  string async_record_id = 2; // 异步记录ID
 }
 
 // CancelPosInvoiceReq 取消POS发票请求消息，反结账时调用
@@ -163,6 +166,7 @@ message CancelPosInvoiceReq {
 message CancelPosInvoiceResp {
   string products_invoice_name = 1; // 商品发票名称
   string material_invoice_name = 2; // 材料发票名称
+  string async_record_id = 3; // 异步记录ID
 }
 
 

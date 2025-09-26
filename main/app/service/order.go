@@ -10309,12 +10309,17 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 				IsFreeItem: true, // 零元商品当作赠菜
 			})
 		} else {
-			items = append(items, &selling.PosInvoiceItem{
+			item := &selling.PosInvoiceItem{
 				ItemCode: product.ErpCode,
 				Qty:      -product.Num,
 				Rate:     product.GetProductPriceNoneTax(taxFee, saleOrderProduct.HasTax()),        // 商品未含税价格（折后）
 				Amount:   -product.GetProductTotalAmountNoneTax(taxFee, saleOrderProduct.HasTax()), // 商品未含税价格（折后）* 数量
-			})
+			}
+			if saleOrderProduct.IsGiftProduct() {
+				item.IsFreeItem = true
+			}
+			items = append(items, item)
+
 		}
 	}
 
