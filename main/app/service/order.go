@@ -1419,6 +1419,12 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 		return resp.OrderExportListPaginationResp{}, errors.WithMessage(err)
 	}
 
+	statusText := map[uint]string{
+		constant.SaleBillStatusPending:  i18n.Translate(language, "待付款"),
+		constant.SaleBillStatusComplete: i18n.Translate(language, "已完成"),
+		constant.SaleBillStatusCanceled: i18n.Translate(language, "已取消"),
+	}
+
 	// 组合列表源数据
 	saleBillUuids := []uint64{}
 	exportLists := make([]resp.OrderExportInfo, 0)
@@ -1473,8 +1479,8 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 				Products:      products,
 				SerialNo:      utils.IfString(isSplit, bill.SerialNo+"-"+strconv.Itoa(index+1), bill.SerialNo),
 				OrderNo:       saleOrder.OrderNo,
-				Status:        saleOrder.Status,
-				StatusText:    utils.IfString(saleOrder.Status == constant.SaleBillStatusPending, i18n.Translate(language, "待付款"), i18n.Translate(language, "已完成")),
+				Status:        bill.Status,
+				StatusText:    statusText[bill.Status],
 				FinishTime:    saleOrder.FinishTime,
 				OrderAmount:   saleOrder.OriginAmount,
 				ServiceFee:    saleOrder.ServiceFee,
@@ -1538,7 +1544,7 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 			mainOrder.SerialNo = bill.SerialNo
 			mainOrder.OrderNo = bill.OrderNo
 			mainOrder.Status = bill.Status
-			mainOrder.StatusText = utils.IfString(bill.Status == constant.SaleBillStatusPending, i18n.Translate(language, "待付款"), i18n.Translate(language, "已完成"))
+			mainOrder.StatusText = statusText[bill.Status]
 			mainOrder.FinishTime = bill.FinishTime
 			mainOrder.OrderAmount = bill.OriginAmount
 			mainOrder.ServiceFee = bill.ServiceFee
