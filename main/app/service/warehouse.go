@@ -707,6 +707,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
 		Branch:      companySetting.ErpnextBranchName,
 	})
+
 	if err != nil {
 		return errors.WithMessage(errors.New("同步仓库失败"), err.Error())
 	}
@@ -715,7 +716,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 	if companySetting.IsSubShop() {
 		var headquarter model.CompanySetting
 		saasDb := s.dbm.GetDB(0)
-		err := saasDb.Model(&model.CompanySetting{}).Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
+		err := saasDb.Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}

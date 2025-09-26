@@ -6642,14 +6642,14 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 	if companySetting.IsSubShop() {
 		var headquarter model.CompanySetting
 		saasDb := s.dbm.GetDB(0)
-		err := saasDb.Model(&model.CompanySetting{}).Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
+		err := saasDb.Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
 		headquarterUomList, err := erp.GetUomList(ctx.GetContext(), req.GetUomListReq{
-			SiteCode:    headquarter.ErpnextSiteCode,
-			CompanyAbbr: headquarter.ErpnextCompanyAbbr,
-			//Branch:         headquarter.ErpnextBranchName,
+			SiteCode:       headquarter.ErpnextSiteCode,
+			CompanyAbbr:    headquarter.ErpnextCompanyAbbr,
+			Branch:         headquarter.ErpnextBranchName,
 			SubCompanyAbbr: companySetting.ErpnextCompanyAbbr,
 		})
 		if err != nil {
@@ -6792,7 +6792,7 @@ func (s *productSrv) SyncSauce(ctx context.Context) error {
 	if companySetting.IsSubShop() {
 		var headquarter model.CompanySetting
 		saasDb := s.dbm.GetDB(0)
-		err := saasDb.Model(&model.CompanySetting{}).Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
+		err := saasDb.Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
@@ -6960,7 +6960,7 @@ func (s *productSrv) SyncAttributeGroup(ctx context.Context) error {
 	if companySetting.IsSubShop() {
 		var headquarter model.CompanySetting
 		saasDb := s.dbm.GetDB(0)
-		err := saasDb.Model(&model.CompanySetting{}).Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
+		err := saasDb.Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
