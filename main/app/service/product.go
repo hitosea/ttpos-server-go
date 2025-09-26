@@ -5727,6 +5727,22 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 				if flavorListResult.IsPackage {
 					// 同步套餐到erp
 					if ctx.GetCompany().IsOpenErp() {
+						// 获取商品包信息
+						productPackage, err := productPackageRepo.GetProductPackage(
+							commonRepo.WhereByUuid(productPackageUuid),
+							commonRepo.Preload(
+								repository.WithPreload{
+									Query: "ProductUnit",
+								},
+								repository.WithPreload{
+									Query: "ProductCategory.MultiLanguageName",
+								},
+							),
+						)
+						if err != nil {
+							return errors.WithMessage(err, "获取商品包失败")
+						}
+
 						multiLanguageName := model.NewMultiLanguageName(flavor.Name)
 						enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
 						if err != nil {
@@ -5738,10 +5754,18 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 						}
 						erpSrv := erp.NewIErpSrv(s.dbm)
 						stockUom := productUnit.ErpnextUom
+						classification := productPackage.ProductCategory.MultiLanguageName.GetNames()
+						getEnClassification, err := s.getEnName(ctx, classification)
+						if err != nil {
+							return errors.WithMessage(err, "翻译失败")
+						}
+
 						params := req.PackageAddErpReq{
-							ItemName:     enName,
-							StockUom:     stockUom,
-							InternalCode: flavorListResult.Flavors[0].InternalCode,
+							ItemName:           enName,
+							StockUom:           stockUom,
+							InternalCode:       flavorListResult.Flavors[0].InternalCode,
+							Classification:     getEnClassification,
+							ClassificationCode: productPackage.ProductCategory.Code,
 						}
 						itemInfo, errErp := erpSrv.AddPackage(ctx, params)
 						if errErp != nil {
@@ -5901,11 +5925,23 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 						if errGetUnit != nil {
 							return errors.WithMessage(errGetUnit, "获取商品单位失败")
 						}
-						productBom, errGetBom := productBomRepo.GetProductBom(commonRepo.WhereByUuid(flavor.BomUuid))
+						productBom, errGetBom := productBomRepo.GetProductBom(
+							commonRepo.WhereByUuid(flavor.BomUuid),
+							commonRepo.Preload(
+								repository.WithPreload{
+									Query: "ProductPackage.ProductCategory.MultiLanguageName",
+								},
+							),
+						)
 						if errGetBom != nil {
 							return errors.WithMessage(errGetBom, "获取商品bom失败")
 						}
 						erpSrv := erp.NewIErpSrv(s.dbm)
+						classification := productBom.ProductPackage.ProductCategory.MultiLanguageName.GetNames()
+						getEnClassification, err := s.getEnName(ctx, classification)
+						if err != nil {
+							return errors.WithMessage(err, "翻译失败")
+						}
 						_, errErp := erpSrv.AddPackage(ctx, req.PackageAddErpReq{
 							ItemName: enName,
 							StockUom: productUnit.ErpnextUom,
@@ -5916,6 +5952,8 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 								}
 								return " " // 内部编码为空时，传空格给ErpNext
 							}(),
+							Classification:     getEnClassification,
+							ClassificationCode: productBom.ProductPackage.ProductCategory.Code,
 						})
 						if errErp != nil {
 							return errors.WithMessage(errErp, "同步套餐到erp失败")
