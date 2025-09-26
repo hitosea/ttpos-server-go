@@ -17,6 +17,7 @@ type ImgBaseData struct {
 	Language             string `json:"language"`               // 语言
 	CurrencyUnit         string `json:"currency_unit"`          // 货币单位
 	CurrencyUnitPosition int    `json:"currency_unit_position"` // 货币单位位置
+	Is58mmPrinter        bool   `json:"is_58mm_printer"`        // 是否58mm打印机
 }
 
 // ImgTemplateMetadata 模板元数据
@@ -123,8 +124,14 @@ func (p *ImgTemplateParser) Parse() (*ImgFont, error) {
 	switch paperWidth {
 	case 80:
 		img = NewImgFont(568, 0, 0) // 80mm纸张
-	default:
+	case 58:
 		img = NewImgFont(384, 50, 0) // 其他规格
+	default:
+		if p.baseData.Is58mmPrinter {
+			img = NewImgFont(384, 50, 0) // 其他规格
+		} else {
+			img = NewImgFont(568, 0, 0) // 80mm纸张
+		}
 	}
 
 	// 设置内边距
