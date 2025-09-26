@@ -5074,6 +5074,14 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 	if err := productCheckSrv.CheckProductUnique(db, req.UnitUuid); err != nil {
 		return errors.WithMessage(err, "检查商品单位失败")
 	}
+	// 检查商品规格内部编码
+	for _, flavor := range req.Flavors {
+		if flavor.InternalCode != "" {
+			if repository.NewProductRepo(db).CheckProductFlavorInternalCodeExist(flavor.InternalCode, flavor.Uuid) {
+				return errors.New("内部编码已存在")
+			}
+		}
+	}
 	// 商品专用检查
 	flavorListResult := CheckProductFlavorResult{}
 	sauceListResult := CheckProductSauceResult{}
@@ -5293,6 +5301,15 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 	if err := productCheckSrv.CheckProductUnique(db, req.UnitUuid); err != nil {
 		return nil, nil, err
 	}
+	// 检查商品规格内部编码
+	for _, flavor := range req.Flavors {
+		if flavor.InternalCode != "" {
+			if repository.NewProductRepo(db).CheckProductFlavorInternalCodeExist(flavor.InternalCode, flavor.Uuid) {
+				return nil, nil, errors.New("内部编码已存在")
+			}
+		}
+	}
+
 	// 商品专用检查
 	flavorListResult := CheckProductFlavorResult{}
 	sauceListResult := CheckProductSauceResult{}
@@ -5845,6 +5862,22 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 				if flavorListResult.IsPackage {
 					// 同步套餐到erp
 					if ctx.GetCompany().IsOpenErp() {
+						// 获取商品包信息
+						productPackage, err := productPackageRepo.GetProductPackage(
+							commonRepo.WhereByUuid(productPackageUuid),
+							commonRepo.Preload(
+								repository.WithPreload{
+									Query: "ProductUnit",
+								},
+								repository.WithPreload{
+									Query: "ProductCategory.MultiLanguageName",
+								},
+							),
+						)
+						if err != nil {
+							return errors.WithMessage(err, "获取商品包失败")
+						}
+
 						multiLanguageName := model.NewMultiLanguageName(flavor.Name)
 						enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
 						if err != nil {
@@ -5856,10 +5889,18 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 						}
 						erpSrv := erp.NewIErpSrv(s.dbm)
 						stockUom := productUnit.ErpnextUom
+						classification := productPackage.ProductCategory.MultiLanguageName.GetNames()
+						getEnClassification, err := s.getEnName(ctx, classification)
+						if err != nil {
+							return errors.WithMessage(err, "翻译失败")
+						}
+
 						params := req.PackageAddErpReq{
-							ItemName:     enName,
-							StockUom:     stockUom,
-							InternalCode: flavorListResult.Flavors[0].InternalCode,
+							ItemName:           enName,
+							StockUom:           stockUom,
+							InternalCode:       flavorListResult.Flavors[0].InternalCode,
+							Classification:     getEnClassification,
+							ClassificationCode: productPackage.ProductCategory.Code,
 						}
 						itemInfo, errErp := erpSrv.AddPackage(ctx, params)
 						if errErp != nil {
@@ -6019,11 +6060,23 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 						if errGetUnit != nil {
 							return errors.WithMessage(errGetUnit, "获取商品单位失败")
 						}
-						productBom, errGetBom := productBomRepo.GetProductBom(commonRepo.WhereByUuid(flavor.BomUuid))
+						productBom, errGetBom := productBomRepo.GetProductBom(
+							commonRepo.WhereByUuid(flavor.BomUuid),
+							commonRepo.Preload(
+								repository.WithPreload{
+									Query: "ProductPackage.ProductCategory.MultiLanguageName",
+								},
+							),
+						)
 						if errGetBom != nil {
 							return errors.WithMessage(errGetBom, "获取商品bom失败")
 						}
 						erpSrv := erp.NewIErpSrv(s.dbm)
+						classification := productBom.ProductPackage.ProductCategory.MultiLanguageName.GetNames()
+						getEnClassification, err := s.getEnName(ctx, classification)
+						if err != nil {
+							return errors.WithMessage(err, "翻译失败")
+						}
 						_, errErp := erpSrv.AddPackage(ctx, req.PackageAddErpReq{
 							ItemName: enName,
 							StockUom: productUnit.ErpnextUom,
@@ -6034,6 +6087,8 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, pro
 								}
 								return " " // 内部编码为空时，传空格给ErpNext
 							}(),
+							Classification:     getEnClassification,
+							ClassificationCode: productBom.ProductPackage.ProductCategory.Code,
 						})
 						if errErp != nil {
 							return errors.WithMessage(errErp, "同步套餐到erp失败")
@@ -6587,14 +6642,14 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 	if companySetting.IsSubShop() {
 		var headquarter model.CompanySetting
 		saasDb := s.dbm.GetDB(0)
-		err := saasDb.Model(&model.CompanySetting{}).Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
+		err := saasDb.Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
 		headquarterUomList, err := erp.GetUomList(ctx.GetContext(), req.GetUomListReq{
-			SiteCode:    headquarter.ErpnextSiteCode,
-			CompanyAbbr: headquarter.ErpnextCompanyAbbr,
-			//Branch:         headquarter.ErpnextBranchName,
+			SiteCode:       headquarter.ErpnextSiteCode,
+			CompanyAbbr:    headquarter.ErpnextCompanyAbbr,
+			Branch:         headquarter.ErpnextBranchName,
 			SubCompanyAbbr: companySetting.ErpnextCompanyAbbr,
 		})
 		if err != nil {
@@ -6737,7 +6792,7 @@ func (s *productSrv) SyncSauce(ctx context.Context) error {
 	if companySetting.IsSubShop() {
 		var headquarter model.CompanySetting
 		saasDb := s.dbm.GetDB(0)
-		err := saasDb.Model(&model.CompanySetting{}).Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
+		err := saasDb.Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
@@ -6905,7 +6960,7 @@ func (s *productSrv) SyncAttributeGroup(ctx context.Context) error {
 	if companySetting.IsSubShop() {
 		var headquarter model.CompanySetting
 		saasDb := s.dbm.GetDB(0)
-		err := saasDb.Model(&model.CompanySetting{}).Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
+		err := saasDb.Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}

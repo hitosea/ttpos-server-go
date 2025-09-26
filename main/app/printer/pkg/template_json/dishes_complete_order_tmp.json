@@ -3,7 +3,8 @@
         "name": "dishes_complete_order",
         "description": "整单打印模版",
         "paper_width": 80,
-        "version": "1.0"
+        "version": "1.0",
+        "thousandth": true
     },
     "rows": [
         [
@@ -17,7 +18,7 @@
                     "font_bold": true,
                     "dividing_line": false,
                     "leading_blank_lines": 0,
-                    "trailing_blank_lines": 6,
+                    "trailing_blank_lines": 3,
                     "width": 100
                 }
             }
@@ -82,10 +83,10 @@
                 "block_type": "label",
                 "block_label": {
                     "zh": "商品",
-                    "en": "Product",
+                    "en": "Commodity",
                     "ko": "상품",
-                    "my": "ကုန်ပစ္စည်းများ",
-                    "tr": "Ürün",
+                    "my": "ကုန်စည်",
+                    "tr": "Emtia",
                     "de": "Produkt",
                     "sv": "Produkt",
                     "ja": "商品",
@@ -96,6 +97,7 @@
                     "font_size": 22,
                     "align": "left",
                     "font_bold": true,
+                    "line_height": 30,
                     "dividing_line": true,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
@@ -109,11 +111,11 @@
                     "zh": "数量",
                     "en": "Quantity",
                     "ko": "수량",
-                    "my": "အရေအတွက်",
-                    "tr": "Miktar",
+                    "my": "ပမား",
+                    "tr": "Miktarı",
                     "de": "Menge",
                     "sv": "Antal",
-                    "ja": "数量",
+                    "ja": "数",
                     "zhtw": "數量",
                     "th": "จำนวน"
                 },
@@ -121,6 +123,7 @@
                     "font_size": 24,
                     "align": "right",
                     "font_bold": true,
+                    "line_height": 30,
                     "dividing_line": true,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
@@ -139,7 +142,7 @@
                     "font_bold": false,
                     "dividing_line": false,
                     "leading_blank_lines": 0,
-                    "trailing_blank_lines": 15,
+                    "trailing_blank_lines": 10,
                     "show_column_title": false,
                     "width": 100
                 },
@@ -152,15 +155,15 @@
                                 {
                                     "text": {
                                         "zh": "自助餐-",
-                                        "en": "Buffet-",
-                                        "ko": "뷔페-",
-                                        "my": "ဘူဖေးစားပွဲ-",
-                                        "tr": "Büfe-",
-                                        "de": "Buffet-",
-                                        "sv": "Buffé-",
-                                        "ja": "ビュッフェ-",
-                                        "zhtw": "自助餐-",
-                                        "th": "บุฟเฟต์-"
+                                        "en": "(Gift) ",
+                                        "ko": "(증정) ",
+                                        "my": "(လက်ဆောင်) ",
+                                        "tr": "(Hediye) ",
+                                        "de": "(Geschenk) ",
+                                        "sv": "(Gåva) ",
+                                        "ja": "(贈) ",
+                                        "zhtw": "(贈) ",
+                                        "th": "(ของแถม) "
                                     },
                                     "conditions": [
                                         {
@@ -176,6 +179,32 @@
                                         {
                                             "field": "is_sub_product",
                                             "operator": "not_empty",
+                                            "value": 0
+                                        }
+                                    ]
+                                },
+                                {
+                                    "text": {
+                                        "zh": "(赠) ",
+                                        "en": "(Gift) ",
+                                        "ko": "(증정) ",
+                                        "my": "(လက်ဆောင်) ",
+                                        "tr": "(Hediye) ",
+                                        "de": "(Geschenk) ",
+                                        "sv": "(Gåva) ",
+                                        "ja": "(贈) ",
+                                        "zhtw": "(贈) ",
+                                        "th": "(ของแถม) "
+                                    },
+                                    "conditions": [
+                                        {
+                                            "field": "is_gift",
+                                            "operator": "not_empty",
+                                            "value": 0
+                                        },
+                                        {
+                                            "field": "is_sub_product",
+                                            "operator": "empty",
                                             "value": 0
                                         }
                                     ]
@@ -209,14 +238,15 @@
                             ],
                             "block_label": {},
                             "block_attr": {
-                                "font_size": 30,
+                                "font_size": 20,
                                 "align": "left",
-                                "font_bold": true,
+                                "font_bold": false,
                                 "dividing_line": false,
-                                "leading_blank_lines": 1,
-                                "trailing_blank_lines": 1,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 0,
+                                "line_height": 33,
                                 "padding_right": 10,
-                                "width": 80
+                                "width": 52
                             }
                         },
                         {
@@ -366,7 +396,7 @@
                                 "dividing_line": false,
                                 "line_height": 53,
                                 "leading_blank_lines": 0,
-                                "trailing_blank_lines": 0,
+                                "trailing_blank_lines": 1,
                                 "width": 52
                             },
                             "conditions": [

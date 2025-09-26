@@ -52,7 +52,7 @@ func (m *SyncTaskManager) finishTask(companyUuid uint64) {
 // getRunningCompanyUuids 获取当前正在执行同步任务的所有companyUuid
 func (m *SyncTaskManager) getRunningCompanyUuids() []uint64 {
 	var companyUuids []uint64
-	m.runningTasks.Range(func(key, value interface{}) bool {
+	m.runningTasks.Range(func(key, value any) bool {
 		if companyUuid, ok := key.(uint64); ok {
 			companyUuids = append(companyUuids, companyUuid)
 		}
@@ -125,7 +125,6 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 		}()
 
 		logger.Logger.Info("开始同步任务", zap.Uint64("companyUuid", companyUuid))
-		time.Sleep(30 * time.Second)
 
 		// 01商品分类
 		if err := s.productSrv.SyncProductShopCategory(ctx); err != nil {
@@ -140,21 +139,6 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 		// 1 uom
 		if err := s.productSrv.SyncUnit(ctx); err != nil {
 			logger.Logger.Error("单位同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-		}
-
-		// TODO 3 规格 2.6.0-3
-		// if err := s.productSrv.SyncProductFlavor(ctx); err != nil {
-		// 	logger.Logger.Error("规格同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-		// }
-
-		// 4.1 属性组
-		if err := s.productSrv.SyncAttributeGroup(ctx); err != nil {
-			logger.Logger.Error("属性组同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-		}
-
-		// 5.1 加料
-		if err := s.productSrv.SyncSauce(ctx); err != nil {
-			logger.Logger.Error("加料同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 		}
 
 		// 8 供应商

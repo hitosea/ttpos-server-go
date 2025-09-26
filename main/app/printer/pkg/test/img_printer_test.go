@@ -6,6 +6,8 @@ import (
 	"os"
 	"testing"
 	"time"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 )
 
@@ -54,9 +56,37 @@ func TestComplexImgTemplate(t *testing.T) {
 	}
 
 	// 保存测试图片
-	img.Save("./tmp/printer/complex_template_test.png", false, 0)
+	printContent := img.Save("./tmp/printer/complex_template_test.png", false, 0)
 
 	fmt.Println("复杂模板测试完成，图片已保存到: ./tmp/printer/complex_template_test.png")
+
+	// 测试发送到打印机（需要配置打印机信息）
+	t.Run("SendToPrinter", func(t *testing.T) {
+		// 注意：这里需要真实的打印机配置才能测试
+		// 如果没有配置打印机，可以跳过这个测试
+		printerConfig := model.PrinterConfigJson{
+			IP:      "192.168.100.235",                  // 替换为实际的打印机IP
+			SN:      "N439254810352",                    // 替换为实际的打印机SN
+			APP_ID:  "d0a273417b0f415895ef1adc1831fa14", // 替换为实际的APP_ID
+			APP_KEY: "58d19a6e080a400daae071dba3779629", // 替换为实际的APP_KEY
+		}
+
+		// 测试商米云打印
+		// err := pkg.PrintSunmiTicket(printerConfig, printContent)
+		// if err != nil {
+		// 	fmt.Printf("商米云打印测试失败（这是正常的，因为没有真实配置）: %v \n", err)
+		// } else {
+		// 	fmt.Printf("商米云打印测试成功 \n")
+		// }
+
+		// 测试局域网打印
+		err = pkg.PrintTicket(printerConfig.IP, "9100", printContent, constant.No) // 0表示文本打印
+		if err != nil {
+			fmt.Printf("局域网打印测试失败（这是正常的，因为没有真实配置）: %v \n", err)
+		} else {
+			fmt.Printf("局域网打印测试成功 \n")
+		}
+	})
 
 	img.Cleanup()
 	//

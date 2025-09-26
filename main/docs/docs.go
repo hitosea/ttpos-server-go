@@ -24172,33 +24172,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/shop/supplier/sync": {
-            "get": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.供应商档案"
-                ],
-                "summary": "同步供应商",
-                "responses": {
-                    "200": {
-                        "description": "成功",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
         "/shop/supplier/update": {
             "post": {
                 "security": [
@@ -24256,6 +24229,34 @@ const docTemplate = `{
                     "商家端.物品管理"
                 ],
                 "summary": "同步物品分类",
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/test/product_bom/card/sync": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "同步成本卡",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "同步成本卡",
                 "responses": {
                     "200": {
                         "description": "成功"
@@ -24436,34 +24437,6 @@ const docTemplate = `{
                         }
                     }
                 ],
-                "responses": {
-                    "200": {
-                        "description": "成功",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/shop/warehouse/first_sync_item": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "第一次同步仓库物品库存",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.仓库档案"
-                ],
-                "summary": "第一次同步仓库物品库存",
                 "responses": {
                     "200": {
                         "description": "成功",
@@ -24666,34 +24639,6 @@ const docTemplate = `{
                         }
                     }
                 ],
-                "responses": {
-                    "200": {
-                        "description": "成功",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/shop/warehouse/sync": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "同步仓库列表",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.仓库档案"
-                ],
-                "summary": "同步仓库列表",
                 "responses": {
                     "200": {
                         "description": "成功",
@@ -26699,6 +26644,10 @@ const docTemplate = `{
                     "description": "分类编码",
                     "type": "string"
                 },
+                "is_editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
+                },
                 "is_related": {
                     "description": "是否关联了物品",
                     "type": "boolean"
@@ -26771,10 +26720,6 @@ const docTemplate = `{
                     "description": "成本单位UUID",
                     "type": "integer"
                 },
-                "editable": {
-                    "description": "是否可编辑",
-                    "type": "boolean"
-                },
                 "from_cost_unit_uuid": {
                     "description": "来源成本单位UUID",
                     "type": "integer"
@@ -26790,6 +26735,10 @@ const docTemplate = `{
                 "internal_code": {
                     "description": "内部编码",
                     "type": "string"
+                },
+                "is_editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
                 },
                 "locale_name": {
                     "description": "物品名称",
@@ -26956,6 +26905,10 @@ const docTemplate = `{
         "material_resp.ProductBomCardDetailResp": {
             "type": "object",
             "properties": {
+                "is_editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
+                },
                 "locale_name": {
                     "description": "成本卡名称",
                     "allOf": [
@@ -29141,6 +29094,10 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "is_editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
+                },
                 "is_special": {
                     "description": "是否特色类别",
                     "type": "boolean"
@@ -29177,6 +29134,10 @@ const docTemplate = `{
                 "code": {
                     "description": "分类编码",
                     "type": "string"
+                },
+                "is_editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
                 },
                 "locale_name": {
                     "description": "商品类别名称",
@@ -42933,6 +42894,10 @@ const docTemplate = `{
                 },
                 "contact": {
                     "type": "string"
+                },
+                "has_item": {
+                    "description": "是否存在物品",
+                    "type": "boolean"
                 },
                 "is_default": {
                     "type": "integer"

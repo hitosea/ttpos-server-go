@@ -60,7 +60,7 @@ func (r *SupplierRepoImpl) Delete(uuid uint64) error {
 // GetByUuid 根据UUID查询供应商
 func (r *SupplierRepoImpl) GetByUuid(uuid uint64, opts ...DBOption) (*model.Supplier, error) {
 	var supplier model.Supplier
-	db := r.db.Model(&model.Supplier{}).Where("uuid = ?", uuid)
+	db := r.db.Model(&model.Supplier{}).Preload("PurchaseOrders").Scopes(NotDeleted).Where("uuid = ?", uuid)
 	db = r.applyOptions(db, opts...)
 	err := db.First(&supplier).Error
 	if err != nil {
@@ -107,7 +107,7 @@ func (r *SupplierRepoImpl) GetListWithPagination(pageNo, pageSize int, opts ...D
 
 	// 分页查询
 	offset := (pageNo - 1) * pageSize
-	err = db.Offset(offset).Limit(pageSize).Find(&suppliers).Error
+	err = db.Preload("PurchaseOrders").Offset(offset).Limit(pageSize).Find(&suppliers).Error
 	if err != nil {
 		return nil, 0, err
 	}

@@ -27,7 +27,7 @@ type IWarehouseRepo interface {
 	WhereType(warehouseType string) DBOption
 	WhereHeadquarterUuid(headquarterUuid uint64) DBOption
 	WhereStatus(status int) DBOption
-	OrderByCreateTime(desc bool) DBOption
+	OrderByUpdateTime(desc bool) DBOption
 	UpdateIsDefault(uuid uint64) error
 }
 
@@ -59,7 +59,7 @@ func (r *WarehouseRepoImpl) Delete(uuid uint64) error {
 // GetByUuid 根据UUID获取仓库
 func (r *WarehouseRepoImpl) GetByUuid(uuid uint64, opts ...DBOption) (*model.Warehouse, error) {
 	var warehouse model.Warehouse
-	query := r.db.Where("uuid = ?", uuid).Preload("MultiLanguageName").Scopes(NotDeleted)
+	query := r.db.Where("uuid = ?", uuid).Preload("MultiLanguageName").Preload("Items").Scopes(NotDeleted)
 	// 应用查询选项
 	for _, opt := range opts {
 		query = opt(query)
@@ -75,7 +75,7 @@ func (r *WarehouseRepoImpl) GetByUuid(uuid uint64, opts ...DBOption) (*model.War
 func (r *WarehouseRepoImpl) GetListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.Warehouse, int64, error) {
 	var warehouses []model.Warehouse
 	var total int64
-	query := r.db.Model(&model.Warehouse{}).Preload("MultiLanguageName").Scopes(NotDeleted).Debug()
+	query := r.db.Model(&model.Warehouse{}).Preload("MultiLanguageName").Preload("Items").Scopes(NotDeleted)
 	// 应用查询选项
 	for _, opt := range opts {
 		query = opt(query)
@@ -188,13 +188,14 @@ func (r *WarehouseRepoImpl) WhereStatus(status int) DBOption {
 	}
 }
 
-// OrderByCreateTime 按创建时间排序
-func (r *WarehouseRepoImpl) OrderByCreateTime(desc bool) DBOption {
+// OrderByUpdateTime 按更新时间排序
+func (r *WarehouseRepoImpl) OrderByUpdateTime(desc bool) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		if desc {
-			return db.Order("create_time DESC")
+			return db.Order("update_time DESC")
+		} else {
+			return db
 		}
-		return db.Order("create_time ASC")
 	}
 }
 

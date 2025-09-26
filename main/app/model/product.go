@@ -851,6 +851,10 @@ func (model *ProductBomCard) SetNil() {
 	model.RelatedMaterials = nil
 }
 
+func (model *ProductBomCard) IsHeadquarter() bool {
+	return model.HeadquarterUuid != 0
+}
+
 // 计算预计可生产的产品数量
 func (model *ProductBomCard) CalculateExpectedProductionNum() float64 {
 	totalExpectedProductionNum := 9999999999.0

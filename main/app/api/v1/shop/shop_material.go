@@ -243,7 +243,7 @@ func (h *MaterialHandler) EditMaterialCategory(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, nil, "保存成功")
 }
 
 // DeleteMaterialCategory 删除物品类别

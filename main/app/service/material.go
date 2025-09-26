@@ -23,6 +23,7 @@ import (
 
 	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -310,7 +311,7 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		PurchaseUnitLocaleName: purchaseUnitLocaleName,
 		CostUnitLocaleName:     costUnitLocaleName,
 		UnitLocaleName:         baseUnitLocaleName,
-		Editable:               !material.IsHeadquarter(), // 总部物品不可编辑
+		IsEditable:             !material.IsHeadquarter(), // 总部物品不可编辑
 	}, nil
 }
 
@@ -356,43 +357,62 @@ func (s *materialSrv) GetMaterialStockDetail(ctx context.Context, req req.Materi
 }
 
 // AddMaterialCategory 创建物品类别
-func (s *materialSrv) AddMaterialCategory(ctx context.Context, req req.MaterialCategoryAddReq) error {
+func (s *materialSrv) AddMaterialCategory(ctx context.Context, request req.MaterialCategoryAddReq) error {
 	dbId := ctx.GetDbId()
 	db := s.dbm.GetDB(dbId)
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		materialCategoryRepo := repository.NewMaterialRepo(tx)
 
+		checkService := NewCheckNameSrv(s.dbm)
+		names := checkService.MakeCheckNameList(ctx, request.LocaleName)
+		for _, name := range names {
+			if !checkService.CheckNameLength(ctx, name.Text, 50) {
+				return errors.New("名称长度不能超过50")
+			}
+		}
 		// 检查物品类别名称是否已存在
-		_, err := materialCategoryRepo.GetMaterialCategoryByName(req.LocaleName.ToJson())
-		if err == nil {
-			return errors.New("物品类别名称已存在")
+		exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
+			Source: constant.CheckNameSourceMaterialCategory,
+			Names:  names,
+		})
+		if exists {
+			return errors.New("名称已存在")
 		}
 
 		// 检查物品类别编码是否已存在
-		if req.Code != "" {
-			if exist := materialCategoryRepo.CheckMaterialCategoryCodeExist(req.Code, 0); exist {
+		if request.Code != "" {
+			if exist := materialCategoryRepo.CheckMaterialCategoryCodeExist(request.Code, 0); exist {
 				return errors.New("物品类别编码已存在")
 			}
 		}
 
 		// 创建多语言名称
 		multiLanguageName := model.MultiLanguageName{}
-		multiLanguageName.InitByLocaleResponse(req.LocaleName)
+		multiLanguageName.InitByLocaleResponse(request.LocaleName)
 		nameId, err := repository.NewMultiLanguageNameRepo(tx).CreateMultiLanguageName(multiLanguageName)
 		if err != nil {
 			return errors.WithMessage(err, "创建多语言名称失败")
 		}
 
+		maxSort, err := materialCategoryRepo.GetMaterialCategoryMaxSort(
+			repository.NewCommonRepo().WhereBySoftDelete(),
+		)
+		if err != nil {
+			return errors.WithMessage(err, "获取一级分类最大排序失败")
+		}
+		sort := uint(maxSort + 1)
+
 		// 创建物品类别
 		materialCategory := model.MaterialCategory{
 			MultiLanguageNameUuid: nameId,
-			Name:                  req.LocaleName.ToJson(),
-			Code:                  req.Code,
+			Name:                  request.LocaleName.ToJson(),
+			Code:                  request.Code,
+			Sort:                  int(sort),
 		}
 
-		if req.GetUuid() != 0 {
-			materialCategory.Uuid = req.GetUuid()
+		if request.GetUuid() != 0 {
+			materialCategory.Uuid = request.GetUuid()
 		}
 
 		_, err = materialCategoryRepo.CreateMaterialCategory(materialCategory)
@@ -1101,6 +1121,7 @@ func (s *materialSrv) GetMaterialCategoryDetail(ctx context.Context, req req.Mat
 		Code:       materialCategory.Code,
 		Sort:       materialCategory.Sort,
 		IsRelated:  len(materials) > 0,
+		IsEditable: !materialCategory.IsHeadquarter(),
 	}, nil
 }
 
@@ -1158,12 +1179,18 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 		}
 	}
 	// 检查物品类别名称是否已存在
-	if exist, err := materialCategoryRepo.GetMaterialCategoryByName(request.LocaleName.ToJson()); err == nil && exist.Uuid != materialCategory.Uuid {
+	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
+		Uuid:   request.Uuid,
+		Source: constant.CheckNameSourceMaterialCategory,
+		Names:  names,
+	})
+	if exists {
 		return errors.New("名称已存在")
 	}
+
 	// 检查物品类别编码是否已存在
 	if request.Code != "" {
-		if exist := materialCategoryRepo.CheckMaterialCategoryCodeExist(request.Code, 0); exist {
+		if exist := materialCategoryRepo.CheckMaterialCategoryCodeExist(request.Code, request.Uuid); exist {
 			return errors.New("物品类别编码已存在")
 		}
 	}
@@ -1177,13 +1204,21 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 		if err = repository.NewMultiLanguageNameRepo(tx).UpdateMultiLanguageName(materialCategory.MultiLanguageNameUuid, materialCategory.MultiLanguageName); err != nil {
 			return errors.WithMessage(err, "更新多语言名称失败")
 		}
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 异步执行同步erp物品，避免阻塞主线程造成前端请求超时
+	go func() {
 		// 如果修改了物品编码，同步更新所有关联了这个分类的erp物品
 		if ctx.GetCompany().IsOpenErp() {
 			if changeCode {
-				materialRepo := repository.NewMaterialRepo(tx)
+				materialRepo := repository.NewMaterialRepo(db)
 				materials, err := materialRepo.GetMaterialByCategoryUuid(materialCategory.Uuid)
 				if err != nil {
-					return errors.WithMessage(err, "获取物品失败")
+					ctx.Log().Error("获取物品失败", zap.Error(err))
+					return
 				}
 				erpSrv := erp.NewIErpSrv(s.dbm)
 				for _, material := range materials {
@@ -1194,7 +1229,8 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 
 					enName, err := GetEnName(ctx, material.MultiLanguageName.GetNames())
 					if err != nil {
-						return errors.WithMessage(err, "翻译失败")
+						ctx.Log().Error("翻译失败", zap.Error(err))
+						return
 					}
 
 					// 旧的非基准单位
@@ -1208,7 +1244,8 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 
 					getMaterialCategoryName, err := GetEnName(ctx, materialCategory.MultiLanguageName.GetNames())
 					if err != nil {
-						return errors.WithMessage(err, "翻译失败")
+						ctx.Log().Error("翻译失败", zap.Error(err))
+						return
 					}
 
 					erpSrv.AddMaterial(ctx, req.MaterialAddErpReq{
@@ -1231,10 +1268,7 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 				}
 			}
 		}
-		return nil
-	}); err != nil {
-		return errors.WithMessage(err)
-	}
+	}()
 	return nil
 }
 
@@ -1685,6 +1719,7 @@ func (s *materialSrv) GetProductBomCardDetail(ctx context.Context, req req.Produ
 		LocaleName: productBomCard.MultiLanguageName.GetNames(),
 		Num:        productBomCard.Num,
 		Materials:  materialList,
+		IsEditable: !productBomCard.IsHeadquarter(),
 	}, nil
 }
 

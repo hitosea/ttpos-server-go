@@ -13,20 +13,15 @@ type SupplierCreateReq struct {
 	Name         string `json:"name" binding:"required,max=150"`          // 供应商名称
 	Code         string `json:"code" binding:"required,max=20"`           // 供应商编码
 	Status       int    `json:"status" binding:"oneof=0 1"`               // 供应商状态:0-禁用；1-启用
-	Address      string `json:"address" binding:"omitempty,max=500"`      // 供应商地址
-	ContactName  string `json:"contact_name" binding:"omitempty,max=100"` // 联系人姓名
 	ContactPhone string `json:"contact_phone" binding:"omitempty,max=20"` // 联系人电话
+	ContactName  string `json:"contact_name" binding:"omitempty,max=100"` // 联系人姓名
+	Address      string `json:"address" binding:"omitempty,max=500"`      // 供应商地址
 }
 
 // SupplierUpdateReq 更新供应商请求
 type SupplierUpdateReq struct {
-	Uuid         uint64 `json:"uuid" binding:"required"`                  // 供应商UUID
-	Name         string `json:"name" binding:"required,max=150"`          // 供应商名称
-	Code         string `json:"code" binding:"required,max=20"`           // 供应商编码
-	Status       int    `json:"status" binding:"oneof=0 1"`               // 供应商状态:0-禁用；1-启用
-	Address      string `json:"address" binding:"omitempty,max=500"`      // 供应商地址
-	ContactName  string `json:"contact_name" binding:"omitempty,max=100"` // 联系人姓名
-	ContactPhone string `json:"contact_phone" binding:"omitempty,max=20"` // 联系人电话
+	SupplierCreateReq
+	Uuid uint64 `json:"uuid" binding:"required"` // 供应商UUID
 }
 
 // SupplierDeleteReq 删除供应商请求
