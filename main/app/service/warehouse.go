@@ -746,10 +746,14 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 	translateClient := utils.NewTranslateClient()
 	multiLanguageMap := translateClient.TranslateWithRetry(ctx.GetContext(), translateItems, 10)
 
+	var existsDefaultWarehouse bool
 	var warehouses []model.Warehouse
 	db.Model(&model.Warehouse{}).Scopes(repository.NotDeleted).Find(&warehouses)
 	warehouseMap := make(map[string]model.Warehouse)
 	for _, warehouse := range warehouses {
+		if warehouse.IsDefault == 1 {
+			existsDefaultWarehouse = true
+		}
 		if warehouse.ErpCode != "" {
 			warehouseMap[warehouse.ErpCode] = warehouse
 		}
@@ -776,9 +780,13 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 				status = 1
 			}
 			var code string
+			var isDefault int
 			if erpWarehouse.CompanyAbbr == companySetting.ErpnextCompanyAbbr {
 				if strings.Contains(erpWarehouse.Name, constant.NormalWarehouseCodeContains) {
 					code = constant.NormalWarehouseCode
+					if !existsDefaultWarehouse {
+						isDefault = 1
+					}
 				} else if strings.Contains(erpWarehouse.Name, constant.TransitWarehouseCodeContains) {
 					code = constant.TransitWarehouseCode
 				}
@@ -807,12 +815,9 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 					"type":             warehouseType,
 					"status":           status,
 					"headquarter_uuid": headquarterUuid,
+					"is_default":       isDefault,
 				})
 			} else { // 新增
-				var isDefault int
-				if code == constant.NormalWarehouseCode && company.LastSyncTime == 0 {
-					isDefault = 1
-				}
 				// 保存多语言
 				multiLanguageName := model.MultiLanguageName{
 					ZhName:   localeName.ZH,
