@@ -391,7 +391,7 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		settingSrv:    settingSrv,
 		otherSrv:      otherSrv,
 		uploadFileSrv: service.NewUploadFileSrv(dbm),
-		syncSrv:       service.NewSyncSrv(warehouseSrv, supplierSrv, productSrv),
+		syncSrv:       service.NewSyncSrv(dbm, warehouseSrv, supplierSrv, productSrv),
 	}
 
 	// 需要认证

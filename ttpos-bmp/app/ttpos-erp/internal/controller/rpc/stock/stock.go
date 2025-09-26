@@ -91,3 +91,28 @@ func (*Controller) GetMaterialRequestList(ctx context.Context, req *stock.GetMat
 	// 返回成功响应
 	return rpc.ApiSuccessWithData("获取物品申请单列表成功", resp), nil
 }
+
+// GetStockLedger 获取库存分类账
+// 参数：ctx 上下文，req 查询条件
+// 返回：库存分类账列表和操作结果
+func (*Controller) GetStockLedger(ctx context.Context, req *stock.GetStockLedgerReq) (*api.ResponseInfo, error) {
+	// 参数验证
+	if len(req.CompanyAbbr) == 0 {
+		return rpc.ApiError("公司简称不能为空"), nil
+	}
+	if len(req.FromDate) == 0 {
+		return rpc.ApiError("开始日期不能为空"), nil
+	}
+	if len(req.ToDate) == 0 {
+		return rpc.ApiError("结束日期不能为空"), nil
+	}
+
+	// 调用服务层获取库存分类账数据
+	resp, err := service.Stock().GetStockLedger(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	// 返回成功响应
+	return rpc.ApiSuccessWithData("获取库存分类账成功", resp), nil
+}

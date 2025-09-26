@@ -422,16 +422,16 @@ func (s *sItem) addItemGroupSpecificFields(ctx context.Context, req *item.ItemIn
 		newItem["is_stock_item"] = 0
 	}
 
-	//将规格通过 Item Attribute 实现
-	if len(req.ItemSpecification) > 0 {
-		newItem["has_variants"] = 1
-		newItem["variant_based_on"] = erp.DocTypeItemAttribute
-		newItem["attributes"] = g.Array{
-			g.Map{
-				"attribute": req.ItemSpecification,
-			},
-		}
-	}
+	//将规格通过 Item Attribute 实现 FIXME 这个阶段先不用变体
+	//if len(req.ItemSpecification) > 0 {
+	//	newItem["has_variants"] = 1
+	//	newItem["variant_based_on"] = erp.DocTypeItemAttribute
+	//	newItem["attributes"] = g.Array{
+	//		g.Map{
+	//			"attribute": req.ItemSpecification,
+	//		},
+	//	}
+	//}
 
 	// 设置默认仓库
 	s.setDefaultWarehouse(ctx, req, company, newItem)

@@ -3,7 +3,10 @@ package service
 import (
 	"sync"
 	"time"
+	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/context"
+	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/websocket"
 
@@ -17,6 +20,7 @@ type ISyncSrv interface {
 
 // SyncSrv同步服务结构体
 type SyncSrv struct {
+	dbm          *database.DBManager
 	warehouseSrv IWarehouseSrv
 	supplierSrv  ISupplierSrv
 	productSrv   IProductSrv
@@ -45,14 +49,27 @@ func (m *SyncTaskManager) finishTask(companyUuid uint64) {
 	m.runningTasks.Delete(companyUuid)
 }
 
+// getRunningCompanyUuids 获取当前正在执行同步任务的所有companyUuid
+func (m *SyncTaskManager) getRunningCompanyUuids() []uint64 {
+	var companyUuids []uint64
+	m.runningTasks.Range(func(key, value interface{}) bool {
+		if companyUuid, ok := key.(uint64); ok {
+			companyUuids = append(companyUuids, companyUuid)
+		}
+		return true
+	})
+	return companyUuids
+}
+
 // NewSyncSrv 创建新同步服务
-func NewSyncSrv(warehouseSrv IWarehouseSrv, supplierSrv ISupplierSrv, productSrv IProductSrv) ISyncSrv {
-	return NewSyncSrvImpl(warehouseSrv, supplierSrv, productSrv)
+func NewSyncSrv(dbm *database.DBManager, warehouseSrv IWarehouseSrv, supplierSrv ISupplierSrv, productSrv IProductSrv) ISyncSrv {
+	return NewSyncSrvImpl(dbm, warehouseSrv, supplierSrv, productSrv)
 }
 
 // NewSyncSrvImpl 创建新同步服务实现
-func NewSyncSrvImpl(warehouseSrv IWarehouseSrv, supplierSrv ISupplierSrv, productSrv IProductSrv) ISyncSrv {
+func NewSyncSrvImpl(dbm *database.DBManager, warehouseSrv IWarehouseSrv, supplierSrv ISupplierSrv, productSrv IProductSrv) ISyncSrv {
 	return &SyncSrv{
+		dbm:          dbm,
 		warehouseSrv: warehouseSrv,
 		supplierSrv:  supplierSrv,
 		productSrv:   productSrv,
@@ -67,8 +84,7 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 
 	// 检查是否已有同步任务在运行
 	if !syncTaskManager.tryStartTask(companyUuid) {
-		logger.Logger.Info("同步任务已在运行，跳过本次同步", zap.Uint64("companyUuid", companyUuid))
-		return nil
+		return errors.New("数据同步中，请稍后再试")
 	}
 
 	// 连锁子店，同步ttpos总部
@@ -91,18 +107,25 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 	// 10 仓库物品库存
 
 	go func(ctx context.Context) {
+		isExceptionOccurred := true
 		// 确保任务完成时清理状态
 		defer func() {
 			syncTaskManager.finishTask(companyUuid)
 			logger.Logger.Info("同步任务完成", zap.Uint64("companyUuid", companyUuid))
 
+			lastSyncTime := time.Now().Unix()
+			s.dbm.GetDB(companyUuid).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
+			s.dbm.GetDB(0).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
+
 			// 推送websocket
 			go websocket.PushClient(company.Uuid, websocket.SourceShop, websocket.SourceAll, websocket.SYNC_DATA, map[string]any{
-				"sync_time": time.Now().Unix(),
+				"sync_time":             lastSyncTime,
+				"is_exception_occurred": isExceptionOccurred,
 			})
 		}()
 
 		logger.Logger.Info("开始同步任务", zap.Uint64("companyUuid", companyUuid))
+		time.Sleep(30 * time.Second)
 
 		// 01商品分类
 		if err := s.productSrv.SyncProductShopCategory(ctx); err != nil {
@@ -124,15 +147,15 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 		// 	logger.Logger.Error("规格同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 		// }
 
-		// TODO 等待erp接口 4.1 属性组
-		// if err := s.productSrv.SyncAttributeGroup(ctx); err != nil {
-		// 	logger.Logger.Error("属性组同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-		// }
+		// 4.1 属性组
+		if err := s.productSrv.SyncAttributeGroup(ctx); err != nil {
+			logger.Logger.Error("属性组同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
+		}
 
-		// TODO 等待erp接口 5.1 加料
-		// if err := s.productSrv.SyncSauce(ctx); err != nil {
-		// 	logger.Logger.Error("加料同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-		// }
+		// 5.1 加料
+		if err := s.productSrv.SyncSauce(ctx); err != nil {
+			logger.Logger.Error("加料同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
+		}
 
 		// 8 供应商
 		if err := s.supplierSrv.SyncSupplier(ctx); err != nil {
@@ -140,17 +163,19 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 		}
 
 		// 9 仓库
-		firstSync, err := s.warehouseSrv.SyncWarehouse(ctx)
+		err := s.warehouseSrv.SyncWarehouse(ctx)
 		if err != nil {
 			logger.Logger.Error("仓库同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 		}
 
-		// 10 仓库物品
-		if firstSync {
+		// 10 仓库物品，仅限首次同步
+		if company.LastSyncTime == 0 {
 			if err := s.warehouseSrv.SyncDefaultWarehouseStock(ctx); err != nil {
 				logger.Logger.Error("默认仓库库存同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 			}
 		}
+
+		isExceptionOccurred = false
 	}(ctx)
 
 	return nil

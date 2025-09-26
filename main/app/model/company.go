@@ -23,6 +23,7 @@ type Company struct {
 	AuthStartTime int64  `gorm:"column:auth_start_time;type:int(10);default:0;comment:授权开始时间（时间戳）;NOT NULL" json:"auth_start_time"`
 	OldCompanyId  int    `gorm:"column:old_company_id;type:int(11);default:0;comment:原商家ID;NOT NULL" json:"old_company_id"`
 	IsEnableErp   int    `gorm:"column:is_enable_erp;type:int(10);default:0;comment:是否启用ERP: 0不启用, 1启用;NOT NULL" json:"is_enable_erp"`
+	LastSyncTime  int64  `gorm:"column:last_sync_time;type:int(10);default:0;comment:上次同步erp数据完成时间;NOT NULL" json:"last_sync_time"`
 
 	CompanySetting *CompanySetting `gorm:"foreignKey:CompanyUuid;references:Uuid" json:"company_setting"`
 }

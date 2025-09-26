@@ -175,7 +175,7 @@ type ProductUnitItem struct {
 	Sort                int    `json:"sort"`                  // 商品单位排序
 	ProductPackageCount int    `json:"product_package_count"` // 关联商品包数量
 	Name                string `json:"name"`                  // 商品单位名称
-	Editable            bool   `json:"editable"`              // 是否可编辑
+	IsEditable          bool   `json:"is_editable"`           // 是否可编辑
 }
 
 // ProductUnitListResp 商品单位列表响应
@@ -197,7 +197,7 @@ type ProductUnitDetail struct {
 	Uuid            uint64                        `json:"uuid"`             // 商品单位UUID
 	LocaleName      dto.LocaleResponse            `json:"locale_name"`      // 商品单位名称
 	ProductPackages ProductUnitProductPackageList `json:"product_packages"` // 商品包列表
-	Editable        bool                          `json:"editable"`         // 是否可编辑
+	IsEditable      bool                          `json:"is_editable"`      // 是否可编辑
 }
 
 type ProductSauceListResp struct {

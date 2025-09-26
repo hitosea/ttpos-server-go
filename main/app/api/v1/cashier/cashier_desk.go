@@ -1777,7 +1777,7 @@ func (h *DeskHandler) GetDailySalesOutboundSummary(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} dto.Response{data=resp.GetHeadquarterMaterialListResp}
+// @Success 200 {object} dto.Response
 // @Router /cashier/desk/order/headquarter_material_list [get]
 func (h *DeskHandler) GetHeadquarterMaterialList(c *gin.Context) {
 	var req req.GetHeadquarterMaterialListReq

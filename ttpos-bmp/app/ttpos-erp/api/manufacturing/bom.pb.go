@@ -32,7 +32,7 @@ type BomInfo struct {
 	Quantity      float64                `protobuf:"fixed64,5,opt,name=quantity,proto3" json:"quantity,omitempty" dc:"数量"`                     // 数量
 	IsActive      bool                   `protobuf:"varint,6,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty" dc:"是否激活"`    // 是否激活
 	IsDefault     bool                   `protobuf:"varint,7,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty" dc:"是否默认"` // 是否默认
-	Items         []*BomItem             `protobuf:"bytes,8,rep,name=items,proto3" json:"items,omitempty" dc:"物品列表"`                           // 物品列表
+	Items         []*BomItem             `protobuf:"bytes,8,rep,name=items,proto3" json:"items,omitempty" dc:"物品列表，列表查询服务不返回该字段，详情查询服务返回该字段"`  // 物品列表，列表查询服务不返回该字段，详情查询服务返回该字段
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

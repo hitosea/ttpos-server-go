@@ -61,17 +61,15 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 	platform := utils.GetPlatform(userAgent)
 
 	db := s.dbm.GetDB(addReq.CompanyUuid)
-	// 获取绑定
 	deviceRepo := repository.NewDeviceRepo(db)
+	// 判断设备绑定上限
+	companySetting := repository.NewCompanySettingRepo(db).Get()
+	if err := s.reachBindLimit(deviceRepo, companySetting, addReq.Source); err != nil {
+		return 0, err
+	}
+	// 获取绑定
 	existsDevice, _ := deviceRepo.GetDeviceAll(deviceRepo.WhereSource(addReq.Source), deviceRepo.WhereSn(addReq.DeviceId))
 	if existsDevice.ID != 0 {
-		// 已软删除设备重新登录，判断设备绑定上限
-		if existsDevice.DeleteTime != 0 {
-			companySetting := repository.NewCompanySettingRepo(db).Get()
-			if err := s.reachBindLimit(deviceRepo, companySetting, addReq.Source); err != nil {
-				return 0, err
-			}
-		}
 		productPrinterUuid := addReq.ProductPrinterUuid
 		if productPrinterUuid == 0 {
 			productPrinterUuid = existsDevice.ProductPrinterUuid
@@ -99,6 +97,14 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 			"finally_login_uuid":   addReq.FinallyLoginUuid,
 			"finally_login_time":   finallyLoginTime,
 			"kds_mode":             kdsMode,
+			"is_main": func() int {
+				if addReq.Source == constant.SourceCashier {
+					if !deviceRepo.IsExistCashierMain(constant.SourceCashier) {
+						return 1
+					}
+				}
+				return existsDevice.IsMain
+			}(),
 		})
 		if err != nil {
 			return 0, errors.WithMessage(err, "更新绑定信息失败")
@@ -111,12 +117,6 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 			}
 		}
 		return existsDevice.Uuid, nil
-	}
-
-	// 判断设备绑定上限
-	companySetting := repository.NewCompanySettingRepo(db).Get()
-	if err := s.reachBindLimit(deviceRepo, companySetting, addReq.Source); err != nil {
-		return 0, err
 	}
 
 	// 绑定品牌，如果自带打印，默认更新收银打印配置
@@ -142,8 +142,7 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		KdsMode:          kdsMode,
 		IsMain: func() int {
 			if addReq.Source == constant.SourceCashier {
-				bindCount := deviceRepo.GetBindCountBySource(constant.SourceCashier)
-				if bindCount == 0 {
+				if !deviceRepo.IsExistCashierMain(constant.SourceCashier) {
 					return 1
 				}
 			}

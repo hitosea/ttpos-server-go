@@ -69,6 +69,9 @@ type IErpSrv interface {
 
 	// 规格
 	GetFlavorList(ctx context.Context, params req.GetErpFlavorListReq) (resp.GetErpFlavorListResp, error) // 获取规格列表
+
+	// 加料
+	GetSauceList(ctx pkgCtx.Context, sourceListReq req.GetErpSauceListReq) ([]*item.ItemInfo, error) // 获取加料列表
 }
 type erpSrv struct {
 	dbm *database.DBManager

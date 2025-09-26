@@ -319,7 +319,7 @@ class BindRecord extends BaseModel
             if ($device['source'] == self::SOURCE_ASSISTANT) {
             }
             // 使用软删除而不是硬删除
-            $device->save(['delete_time' => time()]);
+            $device->save(['delete_time' => time(), 'is_main' => 0]);
             // 提交事务
             $this->commit();
             return true;

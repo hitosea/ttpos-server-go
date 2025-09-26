@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
@@ -62,6 +63,7 @@ type IOrderQueryRepo interface {
 	GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, error)                                                                            // 获取销售账单记录
 	GetSaleBillSaleOrderRecord(saleOrderUuid uint64) (*model.SaleOrder, error)                                                                 // 获取销售账单记录
 	GetInvoiceInfo(saleOrderUuid uint64) (*model.SaleOrderInvoiceInfo, error)                                                                  // 获取订单发票信息
+	GetMonthlyOrderRanks(saleBillUuids []uint64) ([]MonthlyOrderRank, error)                                                                   // 获取订单的月排名信息（基于全表数据）
 }
 
 // orderRepo 订单仓库
@@ -271,6 +273,15 @@ type GetCashierOrderListWithPaginationType struct {
 	Status           int    // 订单状态,-1=全部、0=待支付、1=已支付、2=已取消、3=已完成
 	BillType         int    // 订单类型,-1=全部、0=餐单、1=外卖
 	DiningMethod     int    // 用餐方式,-1=全都、 0-堂食 1-打包
+}
+
+// MonthlyOrderRank 每月订单排名信息
+type MonthlyOrderRank struct {
+	MonthYear          string `json:"month_year"`           // 年-月格式，如 "2024-09"
+	FirstOrderUuid     uint64 `json:"first_order_uuid"`     // 该月的第一条订单ID（基于全表数据）
+	OrderUuid          uint64 `json:"order_uuid"`           // 订单ID
+	OrderNo            string `json:"order_no"`             // 订单编号
+	MonthlyOrderNumber int    `json:"monthly_order_number"` // 该订单在当月是第几条数据（基于全表数据）
 }
 
 func (r *orderRepo) getOrderListDBOption(param GetCashierOrderListWithPaginationType, tz string) DBOption {
@@ -2172,4 +2183,54 @@ func (r *orderRepo) UpdateErpDiscountAmount(saleOrderUuid uint64, erpDiscountAmo
 	return r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Updates(map[string]interface{}{
 		"erp_discount_amount": erpDiscountAmount,
 	}).Error
+}
+
+// GetMonthlyOrderRanks 获取订单的月排名信息（基于全表数据）
+// 结合SQL查询：按月分组，取出每月第一条订单ID（基于全表），和当前订单是这个月的第几条数据（基于全表）
+func (r *orderRepo) GetMonthlyOrderRanks(saleBillUuids []uint64) ([]MonthlyOrderRank, error) {
+	var results []MonthlyOrderRank
+
+	// 如果没有传入saleBillUuids，返回空结果
+	if len(saleBillUuids) == 0 {
+		return results, nil
+	}
+
+	// 构建IN条件
+	saleBillUuidsStr := make([]string, len(saleBillUuids))
+	for i, uuid := range saleBillUuids {
+		saleBillUuidsStr[i] = fmt.Sprintf("%d", uuid)
+	}
+	inClause := strings.Join(saleBillUuidsStr, ",")
+
+	// 构建SQL查询
+	// 基于全表数据计算每个订单在当月的排名和每月第一条订单ID
+	query := fmt.Sprintf(`
+		SELECT 
+			t.month_year,
+			t.first_order_uuid,
+			so.uuid as order_uuid,
+			so.order_no,
+			t.monthly_order_number
+		FROM ttpos_sale_order so
+		INNER JOIN (
+			SELECT 
+				DATE_FORMAT(FROM_UNIXTIME(create_time), '%%Y%%m') as month_year,
+				FIRST_VALUE(uuid) OVER (PARTITION BY DATE_FORMAT(FROM_UNIXTIME(create_time), '%%Y%%m') ORDER BY create_time) as first_order_uuid,
+				uuid,
+				ROW_NUMBER() OVER (PARTITION BY DATE_FORMAT(FROM_UNIXTIME(create_time), '%%Y%%m') ORDER BY create_time) as monthly_order_number
+			FROM ttpos_sale_order 
+			WHERE delete_time = 0
+		) t ON so.uuid = t.uuid
+		WHERE so.delete_time = 0 
+			AND so.sale_bill_uuid IN (%s)
+		ORDER BY t.month_year, t.monthly_order_number
+	`, inClause)
+
+	// 执行原生SQL查询
+	err := r.db.Raw(query).Scan(&results).Error
+	if err != nil {
+		return nil, fmt.Errorf("GetMonthlyOrderRanks: %v", err)
+	}
+
+	return results, nil
 }

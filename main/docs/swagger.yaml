@@ -823,6 +823,9 @@ definitions:
       cost_unit_uuid:
         description: 成本单位UUID
         type: integer
+      editable:
+        description: 是否可编辑
+        type: boolean
       from_cost_unit_uuid:
         description: 来源成本单位UUID
         type: integer
@@ -2602,7 +2605,7 @@ definitions:
     type: object
   product_resp.ProductUnitDetail:
     properties:
-      editable:
+      is_editable:
         description: 是否可编辑
         type: boolean
       locale_name:
@@ -2619,7 +2622,7 @@ definitions:
     type: object
   product_resp.ProductUnitItem:
     properties:
-      editable:
+      is_editable:
         description: 是否可编辑
         type: boolean
       name:
@@ -11102,9 +11105,15 @@ definitions:
       is_open_tax:
         description: '税率设置: false-关闭 true-开启'
         type: boolean
+      is_syncing:
+        description: 是否erp数据同步中
+        type: boolean
       is_ttpos_site:
         description: 是否散户site
         type: boolean
+      last_sync_time:
+        description: 上次同步erp数据完成时间
+        type: integer
       permissions:
         description: 页面权限
         items:
@@ -11388,6 +11397,9 @@ definitions:
       name:
         description: 供应商名称
         type: string
+      uuid:
+        description: 供应商UUID
+        type: integer
     type: object
   resp.SystemSetting:
     properties:
@@ -16016,6 +16028,23 @@ paths:
       security:
       - JwtToken: []
       summary: 免单
+      tags:
+      - 收银端.桌台
+  /cashier/desk/order/headquarter_material_list:
+    get:
+      consumes:
+      - application/json
+      description: 获取总部物品列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取总部物品列表
       tags:
       - 收银端.桌台
   /cashier/desk/order/member/cancel:
@@ -26868,6 +26897,23 @@ paths:
       summary: 更新供应商
       tags:
       - 商家端.供应商档案
+  /shop/test/material/category/sync:
+    post:
+      consumes:
+      - application/json
+      description: 同步物品分类
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 同步物品分类
+      tags:
+      - 商家端.物品管理
   /shop/warehouse:
     get:
       consumes:
