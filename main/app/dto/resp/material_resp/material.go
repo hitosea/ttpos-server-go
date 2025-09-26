@@ -58,7 +58,7 @@ type MaterialDetailResp struct {
 	CostUnitLocaleName     dto.LocaleResponse   `json:"cost_unit_locale_name"`     // 成本单位名称
 	CostUnitUuid           uint64               `json:"cost_unit_uuid"`            // 成本单位UUID
 	FromCostUnitUuid       uint64               `json:"from_cost_unit_uuid"`       // 来源成本单位UUID
-	Editable               bool                 `json:"editable"`                  // 是否可编辑
+	IsEditable             bool                 `json:"is_editable"`               // 是否可编辑
 }
 
 // MaterialStockDetailResp 物品库存详情响应
@@ -109,6 +109,7 @@ type MaterialCategory struct {
 	Code       string             `json:"code"`        // 分类编码
 	Sort       int                `json:"sort"`        // 排序
 	IsRelated  bool               `json:"is_related"`  // 是否关联了物品
+	IsEditable bool               `json:"is_editable"` // 是否可编辑
 }
 
 // MaterialImportUnitListItem 导入物品单位列表项
@@ -129,6 +130,7 @@ type ProductBomCardDetailResp struct {
 	LocaleName dto.LocaleResponse       `json:"locale_name"` // 成本卡名称
 	Num        float64                  `json:"num"`         // 加工份数
 	Materials  []ProductBomCardMaterial `json:"materials"`   // 材料列表
+	IsEditable bool                     `json:"is_editable"` // 是否可编辑
 }
 
 type ProductBomCardMaterial struct {

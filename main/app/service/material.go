@@ -310,7 +310,7 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		PurchaseUnitLocaleName: purchaseUnitLocaleName,
 		CostUnitLocaleName:     costUnitLocaleName,
 		UnitLocaleName:         baseUnitLocaleName,
-		Editable:               !material.IsHeadquarter(), // 总部物品不可编辑
+		IsEditable:             !material.IsHeadquarter(), // 总部物品不可编辑
 	}, nil
 }
 
@@ -1101,6 +1101,7 @@ func (s *materialSrv) GetMaterialCategoryDetail(ctx context.Context, req req.Mat
 		Code:       materialCategory.Code,
 		Sort:       materialCategory.Sort,
 		IsRelated:  len(materials) > 0,
+		IsEditable: !materialCategory.IsHeadquarter(),
 	}, nil
 }
 
@@ -1685,6 +1686,7 @@ func (s *materialSrv) GetProductBomCardDetail(ctx context.Context, req req.Produ
 		LocaleName: productBomCard.MultiLanguageName.GetNames(),
 		Num:        productBomCard.Num,
 		Materials:  materialList,
+		IsEditable: !productBomCard.IsHeadquarter(),
 	}, nil
 }
 
