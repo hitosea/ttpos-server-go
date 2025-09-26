@@ -2210,4 +2210,8 @@ return [
     "WebSocket指定设备推送参数验证失败: %s (错误代码: %s)" => "WebSocket specified device push parameter validation failed: %s (Error code: %s)",
     "WebSocket指定设备推送失败: 设备ID不能为空" => "WebSocket specified device push failed: Device ID cannot be empty",
     "佳博（云打印）" => "Jiaprint (Cloud Printing)",
+    "删除优惠券失败" => "Failed to delete coupon",
+    "该优惠券已关联正在进行的活动，请在活动失效后删除" => "This coupon is linked to an ongoing event. Please delete it after the event ends.",
+    "修改状态失败" => "Failed to change status",
+    "修改状态成功" => "Status changed successfully",
 ];

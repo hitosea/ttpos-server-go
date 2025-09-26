@@ -1,6 +1,7 @@
 package erp
 
 import (
+	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
@@ -108,4 +109,54 @@ func (s *erpSrv) DeleteProduct(ctx context.Context, params req.DeleteProductErpR
 	}
 
 	return nil
+}
+
+// GetSauceList 获取加料
+func (s *erpSrv) GetSauceList(ctx context.Context, sourceListReq req.GetErpSauceListReq) ([]*item.ItemInfo, error) {
+	client, conn, err := NewErpItemClient()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	result, err := client.GetItemList(WithSiteCode(ctx.GetContext(), sourceListReq.SiteCode), &item.GetItemListReq{
+		ItemGroup:      item.ItemGroup_Products,
+		CompanyAbbr:    sourceListReq.CompanyAbbr,
+		Branch:         sourceListReq.Branch,
+		SubCompanyAbbr: sourceListReq.SubCompanyAbbr,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if result.GetCode() != "0" {
+		return nil, errors.WithMessage(errors.New(result.GetMessage()), "获取加料列表失败")
+	}
+	response := &item.GetItemListResp{}
+	if err := result.Data.UnmarshalTo(response); err != nil {
+		return nil, err
+	}
+	var sauceList []*item.ItemInfo
+	// 遍历所有item，判断是否后缀是_00的，且不存在同样前缀_0X的，则认为是加料，
+	// 比如 SP3688441864912897_00，且不存在 SP3688441864912897_XX ，则认为是 SP3688441864912897_00 加料
+	for _, item := range response.ItemList {
+		if !strings.HasSuffix(item.ItemCode, "_00") {
+			continue
+		}
+		itemCodeParts := strings.Split(item.ItemCode, "_")
+		if len(itemCodeParts) != 2 {
+			continue
+		}
+		itemCodePrefix := itemCodeParts[0]
+		hasSamePrefix := false
+		for _, item2 := range response.ItemList {
+			if item2.ItemCode != item.ItemCode && strings.Contains(item2.ItemCode, itemCodePrefix) {
+				hasSamePrefix = true
+				break
+			}
+		}
+		if !hasSamePrefix {
+			sauceList = append(sauceList, item)
+		}
+	}
+	return sauceList, nil
 }

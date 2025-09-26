@@ -189,6 +189,11 @@ func (s *sItem) SaveItem(ctx context.Context, reqInfo *item.ItemInfo) (res *item
 		// 更新现有物品
 		return s.updateExistingItem(ctx, req)
 	} else {
+		//创建规格商品
+		//TODO 使用变体创建商品
+		//if len(req.ItemSpecification) > 0 {
+		//
+		//}
 		// 创建新物品
 		return s.createNewItem(ctx, req)
 	}
@@ -409,12 +414,24 @@ func (s *sItem) addItemGroupSpecificFields(ctx context.Context, req *item.ItemIn
 		s.addRawMaterialFields(req, newItem)
 	} else if req.ItemGroup == item.ItemGroup_Products {
 		// 商品特定字段
+		//FIXME 后面要去掉的，现在先放着这里
 		newItem["custom_specification"] = req.ItemSpecification
 		newItem["is_stock_item"] = 0
 	} else if req.ItemGroup == item.ItemGroup_Package {
 		// 套餐特定字段
 		newItem["is_stock_item"] = 0
 	}
+
+	//将规格通过 Item Attribute 实现 FIXME 这个阶段先不用变体
+	//if len(req.ItemSpecification) > 0 {
+	//	newItem["has_variants"] = 1
+	//	newItem["variant_based_on"] = erp.DocTypeItemAttribute
+	//	newItem["attributes"] = g.Array{
+	//		g.Map{
+	//			"attribute": req.ItemSpecification,
+	//		},
+	//	}
+	//}
 
 	// 设置默认仓库
 	s.setDefaultWarehouse(ctx, req, company, newItem)
@@ -502,8 +519,7 @@ func (s *sItem) generateItemCode(ctx context.Context, req *item.ItemInfo) (strin
 	itemCode := utility.GenItemCode(consts.ItemCodePrefixProduct)
 
 	// 处理多规格商品编码
-	//TODO 使用变体处理规格
-	if len(req.ItemSpecification) > 0 {
+	if len(req.TemplateItemCode) > 0 {
 		suffix, err := s.generateItemCodeWithTemplate(ctx, req.TemplateItemCode)
 		if err != nil {
 			return "", err

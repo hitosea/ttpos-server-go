@@ -29,6 +29,7 @@ func finishMenuEventHandler() {
 				repo.PrintingDishes(
 					constant.PrinterProductTypeOutMenu,
 					payload.SaleBillUuid,
+					payload.SaleOrderUuid,
 					products,
 				)
 			}()

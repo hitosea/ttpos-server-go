@@ -164,3 +164,11 @@ type ItemAttributeValue struct {
 	Parenttype     string `json:"parenttype,omitempty"`      // 父级类型
 	Doctype        string `json:"doctype,omitempty"`         // 文档类型
 }
+
+type ItemGroup struct {
+	ItemGroupName   string `json:"item_group_name"`             // 商品组名称
+	IsGroup         bool   `json:"is_group,omitempty"`          // 是否为商品组
+	ParentItemGroup string `json:"parent_item_group,omitempty"` // 父级商品组
+	CustomCompany   string `json:"custom_company,omitempty"`    // 自定义公司
+	CustomBranch    string `json:"custom_branch,omitempty"`     // 自定义分公司
+}

@@ -14,7 +14,7 @@ message BomInfo {
   double  quantity = 5;      // 数量
   bool is_active = 6;      // 是否激活
   bool is_default = 7;      // 是否默认
-  repeated BomItem items = 8;      // 物品列表
+  repeated BomItem items = 8;      // 物品列表，列表查询服务不返回该字段，详情查询服务返回该字段
 }
 
 message BomItem {

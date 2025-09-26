@@ -2210,4 +2210,8 @@ return [
     "WebSocket指定设备推送参数验证失败: %s (错误代码: %s)" => "WebSocket belirli cihaz itme parametre doğrulaması başarısız: %s (Hata kodu: %s)",
     "WebSocket指定设备推送失败: 设备ID不能为空" => "WebSocket belirli cihaza itme başarısız: Cihaz ID'si boş olamaz",
     "佳博（云打印）" => "Jiaprint (Bulut Yazıcı)",
+    "删除优惠券失败" => "Kupon silinemedi",
+    "该优惠券已关联正在进行的活动，请在活动失效后删除" => "Bu kupon, devam eden bir etkinliğe bağlı. Lütfen etkinlik sona erdikten sonra silin.",
+    "修改状态失败" => "Durum güncellenemedi",
+    "修改状态成功" => "Durum başarıyla güncellendi",
 ];

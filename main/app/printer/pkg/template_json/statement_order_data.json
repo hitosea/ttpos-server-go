@@ -35,7 +35,8 @@
                 "is_buffet": false,
                 "is_gift": false,
                 "is_package": false,
-                "is_sub_product": false
+                "is_sub_product": false,
+                "is_buffet_product": false
             },
             {
                 "name": "苦蕨菜",
@@ -50,7 +51,8 @@
                 "is_buffet": false,
                 "is_gift": false,
                 "is_package": false,
-                "is_sub_product": false
+                "is_sub_product": false,
+                "is_buffet_product": false
             },
             {
                 "name": "套餐01",
@@ -65,7 +67,8 @@
                 "is_buffet": false,
                 "is_gift": false,
                 "is_package": false,
-                "is_sub_product": false
+                "is_sub_product": false,
+                "is_buffet_product": false
             },
             {
                 "name": "空运阳澄湖大闸蟹（3两母）ปูขน(เมีย)",
@@ -80,7 +83,8 @@
                 "is_buffet": false,
                 "is_gift": false,
                 "is_package": false,
-                "is_sub_product": true
+                "is_sub_product": true,
+                "is_buffet_product": false
             },
             {
                 "name": "熟牛蛙（5只）กบต้มสุกชุด5ตัว",
@@ -95,7 +99,8 @@
                 "is_buffet": false,
                 "is_gift": false,
                 "is_package": false,
-                "is_sub_product": true
+                "is_sub_product": true,
+                "is_buffet_product": false
             },
             {
                 "name": "贵州折耳根土豆มันฝรั่งหม่าล่าภูเฮา",
@@ -110,7 +115,8 @@
                 "is_buffet": false,
                 "is_gift": false,
                 "is_package": false,
-                "is_sub_product": true
+                "is_sub_product": true,
+                "is_buffet_product": false
             },
             {
                 "name": "鲜猪筒骨ข้อกระดูกหมู",
@@ -125,7 +131,8 @@
                 "is_buffet": false,
                 "is_gift": false,
                 "is_package": false,
-                "is_sub_product": true
+                "is_sub_product": true,
+                "is_buffet_product": false
             },
             {
                 "name": "长寿面บะหมี่วันเกิด",
@@ -140,7 +147,8 @@
                 "is_buffet": false,
                 "is_gift": false,
                 "is_package": false,
-                "is_sub_product": true
+                "is_sub_product": true,
+                "is_buffet_product": false
             }
         ],
         "product_num": 68,

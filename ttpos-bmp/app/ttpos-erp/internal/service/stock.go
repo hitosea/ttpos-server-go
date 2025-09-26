@@ -41,6 +41,26 @@ type (
 		// 返回：保存后的物品信息，错误信息
 		SavePosAddon(ctx context.Context, req *item.SavePosAddonReq) (res *item.ItemInfo, err error)
 	}
+	IItemGroup interface {
+		// GetItemGroupList 获取物品分组列表
+		// 根据查询条件过滤并返回物品分组信息列表
+		GetItemGroupList(ctx context.Context, req *item.GetItemGroupListReq) (res *item.GetItemGroupListResp, err error)
+		// GetItemGroup 根据分组代码获取单个物品分组信息
+		// 参数：ctx 上下文，req 包含分组代码的请求
+		// 返回：物品分组详细信息，错误信息
+		GetItemGroup(ctx context.Context, req *item.GetItemGroupReq) (res *erp.ItemGroupInfo, err error)
+		// SaveItemGroup 保存物品分组信息
+		// 如果物品分组已存在则更新，否则创建新物品分组
+		SaveItemGroup(ctx context.Context, req *item.SaveItemGroupReq) (res *erp.ItemGroupInfo, err error)
+		// DeleteItemGroup 删除物品分组
+		// 参数：ctx 上下文，req 删除物品分组请求
+		// 返回：错误信息
+		DeleteItemGroup(ctx context.Context, req *item.DeleteItemGroupReq) error
+		// CreateAttributeGroup 创建属性分组
+		CreateAttributeGroup(ctx context.Context, req *item.CreateAttributeGroupReq) (resp *erp.ItemGroupInfo, err error)
+		// CreateAddonGroup 创建加料分组
+		CreateAddonGroup(ctx context.Context, req *item.CreateAddonGroupReq) (resp *erp.ItemGroupInfo, err error)
+	}
 	IStock interface {
 		// GetUomList 获取单位列表
 		// 根据查询条件过滤并返回单位信息列表
@@ -68,6 +88,9 @@ type (
 		// 参数：ctx 上下文，attributeName 属性名称
 		// 返回：属性详细信息，错误信息
 		GetItemAttribute(ctx context.Context, attributeName string) (res *erp.ItemAttribute, err error)
+		// GetStockLedger 获取库存分类账信息
+		// 根据查询条件过滤并返回库存分类账记录列表
+		GetStockLedger(ctx context.Context, req *stock.GetStockLedgerReq) (res *stock.GetStockLedgerResp, err error)
 	}
 	IWarehouse interface {
 		// CreateWarehouse 创建仓库
@@ -92,6 +115,7 @@ type (
 
 var (
 	localItem      IItem
+	localItemGroup IItemGroup
 	localStock     IStock
 	localWarehouse IWarehouse
 )
@@ -105,6 +129,17 @@ func Item() IItem {
 
 func RegisterItem(i IItem) {
 	localItem = i
+}
+
+func ItemGroup() IItemGroup {
+	if localItemGroup == nil {
+		panic("implement not found for interface IItemGroup, forgot register?")
+	}
+	return localItemGroup
+}
+
+func RegisterItemGroup(i IItemGroup) {
+	localItemGroup = i
 }
 
 func Stock() IStock {

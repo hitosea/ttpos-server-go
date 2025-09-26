@@ -3,8 +3,7 @@
         "name": "dishes_complete_order",
         "description": "整单打印模版",
         "paper_width": 80,
-        "version": "1.0",
-        "thousandth": true
+        "version": "1.0"
     },
     "rows": [
         [
@@ -18,7 +17,7 @@
                     "font_bold": true,
                     "dividing_line": false,
                     "leading_blank_lines": 0,
-                    "trailing_blank_lines": 3,
+                    "trailing_blank_lines": 6,
                     "width": 100
                 }
             }
@@ -97,7 +96,6 @@
                     "font_size": 22,
                     "align": "left",
                     "font_bold": true,
-                    "line_height": 30,
                     "dividing_line": true,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
@@ -123,159 +121,11 @@
                     "font_size": 24,
                     "align": "right",
                     "font_bold": true,
-                    "line_height": 30,
                     "dividing_line": true,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
                     "width": 50
                 }
-            }
-        ],
-        
-        [
-            {
-                "block_id": "order.buffets",
-                "block_type": "column",
-                "block_label": {},
-                "block_attr": {
-                    "font_size": 18,
-                    "align": "center",
-                    "font_bold": false,
-                    "dividing_line": false,
-                    "leading_blank_lines": 0,
-                    "trailing_blank_lines": 0,
-                    "width": 100
-                },
-                "rows": [
-                    [
-                        {
-                            "block_id": "name",
-                            "block_type": "value",
-                            "block_label": {},
-                            "block_attr": {
-                                "font_size": 20,
-                                "align": "left",
-                                "font_bold": false,
-                                "dividing_line": false,
-                                "leading_blank_lines": 0,
-                                "trailing_blank_lines": 0,
-                                "line_height": 30,
-                                "width": 52
-                            },
-                            "rows": [
-                                [
-                                    {
-                                        "block_id": "attrs",
-                                        "block_type": "label",
-                                        "block_label": "({attrs})",
-                                        "block_attr": {
-                                            "font_size": 18,
-                                            "align": "left",
-                                            "font_bold": false,
-                                            "dividing_line": false,
-                                            "line_height":35,
-                                            "leading_blank_lines": 0,
-                                            "trailing_blank_lines": 1,
-                                            "width": 52
-                                        }
-                                    }
-                                ]
-                            ]
-                        },
-                        {
-                            "block_id": "price_num",
-                            "block_type": "value",
-                            "block_label": {},
-                            "block_attr": {
-                                "font_size": 20,
-                                "align": "center",
-                                "font_bold": false,
-                                "dividing_line": false,
-                                "leading_blank_lines": 0,
-                                "trailing_blank_lines": 0,
-                                "width": 20
-                            }
-                        },
-                        {
-                            "block_id": "subtotal",
-                            "block_type": "value",
-                            "block_label": {},
-                            "block_attr": {
-                                "font_size": 20,
-                                "align": "right",
-                                "font_bold": false,
-                                "dividing_line": false,
-                                "leading_blank_lines": 0,
-                                "trailing_blank_lines": 0,
-                                "show_currency_unit": true,
-                                "width": 0
-                            }
-                        }
-                    ]
-                ]
-            }
-        ],
-        [
-            {
-                "block_id": "order.delays",
-                "block_type": "column",
-                "block_label": {},
-                "block_attr": {
-                    "font_size": 18,
-                    "align": "center",
-                    "font_bold": false,
-                    "dividing_line": false,
-                    "leading_blank_lines": 0,
-                    "trailing_blank_lines": 0,
-                    "width": 100
-                },
-                "rows": [
-                    [
-                        {
-                            "block_id": "name",
-                            "block_type": "value",
-                            "block_label": {},
-                            "block_attr": {
-                                "font_size": 20,
-                                "align": "left",
-                                "font_bold": false,
-                                "dividing_line": false,
-                                "leading_blank_lines": 0,
-                                "trailing_blank_lines": 0,
-                                "width": 52
-                            }
-                        },
-                        {
-                            "block_id": "price_num",
-                            "block_type": "value",
-                            "block_label": {},
-                            "block_attr": {
-                                "font_size": 20,
-                                "align": "center",
-                                "font_bold": false,
-                                "dividing_line": false,
-                                "leading_blank_lines": 0,
-                                "trailing_blank_lines": 0,
-                                "width": 20
-                            }
-                        },
-                        {
-                            "block_id": "subtotal",
-                            "block_type": "value",
-                            "block_label": {},
-                            "block_attr": {
-                                "font_size": 20,
-                                "align": "right",
-                                "font_bold": false,
-                                "dividing_line": false,
-                                "leading_blank_lines": 0,
-                                "trailing_blank_lines": 0,
-                                "show_currency_unit": true,
-                                "width": 0
-                            }
-                        }
-                    ]
-                ]
             }
         ],
         [
@@ -287,9 +137,9 @@
                     "font_size": 20,
                     "align": "center",
                     "font_bold": false,
-                    "dividing_line": true,
+                    "dividing_line": false,
                     "leading_blank_lines": 0,
-                    "trailing_blank_lines": 0,
+                    "trailing_blank_lines": 15,
                     "show_column_title": false,
                     "width": 100
                 },
@@ -300,37 +150,32 @@
                             "block_type": "value",
                             "block_expand_labels": [
                                 {
-                                    "text": "--",
+                                    "text": {
+                                        "zh": "自助餐-",
+                                        "en": "Buffet-",
+                                        "ko": "뷔페-",
+                                        "my": "ဘူဖေးစားပွဲ-",
+                                        "tr": "Büfe-",
+                                        "de": "Buffet-",
+                                        "sv": "Buffé-",
+                                        "ja": "ビュッフェ-",
+                                        "zhtw": "自助餐-",
+                                        "th": "บุฟเฟต์-"
+                                    },
                                     "conditions": [
                                         {
-                                            "field": "is_sub_product",
+                                            "field": "is_buffet_product",
                                             "operator": "not_empty",
                                             "value": 0
                                         }
                                     ]
                                 },
                                 {
-                                    "text": {
-                                        "zh": "(赠) ",
-                                        "en": "(Gift) ",
-                                        "ko": "(증정) ",
-                                        "my": "(လက်ဆောင်) ",
-                                        "tr": "(Hediye) ",
-                                        "de": "(Geschenk) ",
-                                        "sv": "(Gåva) ",
-                                        "ja": "(贈) ",
-                                        "zhtw": "(贈) ",
-                                        "th": "(ของแถม) "
-                                    },
+                                    "text": "--",
                                     "conditions": [
                                         {
-                                            "field": "is_gift",
-                                            "operator": "not_empty",
-                                            "value": 0
-                                        },
-                                        {
                                             "field": "is_sub_product",
-                                            "operator": "empty",
+                                            "operator": "not_empty",
                                             "value": 0
                                         }
                                     ]
@@ -364,73 +209,20 @@
                             ],
                             "block_label": {},
                             "block_attr": {
-                                "font_size": 20,
+                                "font_size": 30,
                                 "align": "left",
-                                "font_bold": false,
+                                "font_bold": true,
                                 "dividing_line": false,
-                                "leading_blank_lines": 0,
-                                "trailing_blank_lines": 0,
-                                "line_height": 33,
+                                "leading_blank_lines": 1,
+                                "trailing_blank_lines": 1,
                                 "padding_right": 10,
-                                "width": 52
-                            },
-                            "rows": [
-                                [
-                                    {
-                                        "block_id": "attrs",
-                                        "block_type": "label",
-                                        "block_expand_labels": [
-                                            {
-                                                "text": "   ",
-                                                "conditions": [
-                                                    {
-                                                        "field": "is_sub_product",
-                                                        "operator": "not_empty",
-                                                        "value": 0
-                                                    }
-                                                ]
-                                            }
-                                        ],
-                                        "block_label": "({attrs})",
-                                        "block_attr": {
-                                            "font_size": 18,
-                                            "align": "left",
-                                            "font_bold": false,
-                                            "dividing_line": false,
-                                            "line_height": 35,
-                                            "leading_blank_lines": 0,
-                                            "trailing_blank_lines": 1,
-                                            "width": 52
-                                        },
-                                        "conditions": [
-                                            {
-                                                "field": "attrs",
-                                                "operator": "not_empty",
-                                                "value": 0
-                                            }
-                                        ]
-                                    }
-                                ]
-                            ]
-                        },
-                        {
-                            "block_id": "price_num",
-                            "block_type": "value",
-                            "block_label": {},
-                            "block_attr": {
-                                "font_size": 20,
-                                "align": "center",
-                                "font_bold": false,
-                                "dividing_line": false,
-                                "leading_blank_lines": 0,
-                                "trailing_blank_lines": 0,
-                                "width": 24
+                                "width": 80
                             }
                         },
                         {
-                            "block_id": "subtotal",
-                            "block_type": "value",
-                            "block_label": {},
+                            "block_id": "num",
+                            "block_type": "label:value",
+                            "block_label": "x",
                             "block_attr": {
                                 "font_size": 20,
                                 "align": "right",
@@ -438,13 +230,149 @@
                                 "dividing_line": false,
                                 "leading_blank_lines": 0,
                                 "trailing_blank_lines": 0,
-                                "show_currency_unit": true,
                                 "width": 0
+                            }
+                        }
+                    ],
+                    [
+                        {
+                            "block_id": "flavor_name",
+                            "block_type": "value",
+                            "block_expand_labels": [
+                                {
+                                    "text": "   ",
+                                    "conditions": [
+                                        {
+                                            "field": "is_sub_product",
+                                            "operator": "not_empty",
+                                            "value": 0
+                                        }
+                                    ]
+                                }
+                            ],
+                            "block_label": "",
+                            "block_attr": {
+                                "font_size": 18,
+                                "align": "left",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 0,
+                                "width": 52
                             },
                             "conditions": [
                                 {
-                                    "field": "is_sub_product",
-                                    "operator": "empty",
+                                    "field": "flavor_name",
+                                    "operator": "not_empty",
+                                    "value": 0
+                                }
+                            ]
+                        }
+                    ],
+                    [
+                        {
+                            "block_id": "attr",
+                            "block_type": "value",
+                            "block_expand_labels": [
+                                {
+                                    "text": "   ",
+                                    "conditions": [
+                                        {
+                                            "field": "is_sub_product",
+                                            "operator": "not_empty",
+                                            "value": 0
+                                        }
+                                    ]
+                                }
+                            ],
+                            "block_label": "",
+                            "block_attr": {
+                                "font_size": 18,
+                                "align": "left",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 0,
+                                "width": 52
+                            },
+                            "conditions": [
+                                {
+                                    "field": "attr",
+                                    "operator": "not_empty",
+                                    "value": 0
+                                }
+                            ]
+                        }
+                    ],
+                    [
+                        {
+                            "block_id": "sauce_list",
+                            "block_type": "column",
+                            "block_label": "",
+                            "block_attr": {
+                                "font_size": 18,
+                                "align": "left",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 0,
+                                "width": 52
+                            },
+                            "conditions": [
+                                {
+                                    "field": "sauce_list",
+                                    "operator": "not_empty",
+                                    "value": 0
+                                }
+                            ],
+                            "rows": [
+                                [
+                                    {
+                                        "block_id": "name",
+                                        "block_type": "value",
+                                        "block_label": {},
+                                        "block_attr": {
+                                            "font_size": 18,
+                                            "align": "left",
+                                            "font_bold": false,
+                                            "dividing_line": false
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    ],
+                    [
+                        {
+                            "block_id": "remark",
+                            "block_type": "value",
+                            "block_expand_labels": [
+                                {
+                                    "text": "   ",
+                                    "conditions": [
+                                        {
+                                            "field": "is_sub_product",
+                                            "operator": "not_empty",
+                                            "value": 0
+                                        }
+                                    ]
+                                }
+                            ],
+                            "block_label": "",
+                            "block_attr": {
+                                "font_size": 28,
+                                "align": "left",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "line_height": 53,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 0,
+                                "width": 52
+                            },
+                            "conditions": [
+                                {
+                                    "field": "remark",
+                                    "operator": "not_empty",
                                     "value": 0
                                 }
                             ]

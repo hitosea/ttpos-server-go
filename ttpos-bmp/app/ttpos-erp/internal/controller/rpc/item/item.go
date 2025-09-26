@@ -16,9 +16,10 @@ type Controller struct {
 	item.UnimplementedItemServiceServer
 }
 
-// Register 注册物品服务到gRPC服务器
+// Register 注册物品相关服务到gRPC服务器
 func Register(s *grpcx.GrpcServer) {
 	item.RegisterItemServiceServer(s.Server, &Controller{})
+	item.RegisterItemGroupServiceServer(s.Server, &GroupController{})
 }
 
 // GetItemList 获取物品列表

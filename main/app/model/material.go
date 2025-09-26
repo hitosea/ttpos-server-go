@@ -110,6 +110,22 @@ type MaterialCategory struct {
 	Code                  string `gorm:"default:'';column:code;comment:'原料分类编码'"`
 	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称ID'"`
 	Sort                  int    `gorm:"default:0;column:sort;comment:'排序'"`
+	HeadquarterUuid       uint64 `gorm:"default:0;column:headquarter_uuid;comment:'总部Uuid'"`
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
+}
+
+func (model *MaterialCategory) IsHeadquarter() bool {
+	return model.HeadquarterUuid != 0
+}
+
+func (model *MaterialCategory) SetNil() {
+	model.MultiLanguageName = MultiLanguageName{}
+}
+
+// 用总部分类信息更新子公司分类
+func (model *MaterialCategory) UpdateFromHeadquarter(headquarterCategory MaterialCategory) {
+	model.Code = headquarterCategory.Code
+	model.Name = headquarterCategory.Name
+	model.MultiLanguageName.InitByLocaleResponse(headquarterCategory.MultiLanguageName.GetNames())
 }

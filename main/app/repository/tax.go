@@ -12,7 +12,8 @@ import (
 // ITaxRepo 税种
 type ITaxRepo interface {
 	CreateTax(tax model.Tax) error
-	GetTaxCategoryList() ([]model.Tax, error)
+	UpdataTax(data map[string]any, opts ...DBOption) error
+	GetTaxCategoryList(opts ...DBOption) ([]model.Tax, error)
 	GetTaxCategoryUuidByNameOptimized(name string) (uint64, error)
 	GetTaxCategory(opts ...DBOption) (model.Tax, error)
 }
@@ -38,10 +39,23 @@ func (r *TaxRepoImpl) CreateTax(tax model.Tax) error {
 	return nil
 }
 
+// UpdataTax 更新税种
+func (r *TaxRepoImpl) UpdataTax(data map[string]any, opts ...DBOption) error {
+	db := r.db.Model(&model.Tax{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	return db.Updates(data).Error
+}
+
 // GetTaxCategoryList 获取税种列表
-func (r *TaxRepoImpl) GetTaxCategoryList() ([]model.Tax, error) {
+func (r *TaxRepoImpl) GetTaxCategoryList(opts ...DBOption) ([]model.Tax, error) {
 	var taxCategories []model.Tax
-	err := r.db.Model(&model.Tax{}).Where("delete_time = ?", 0).Find(&taxCategories).Error
+	db := r.db.Model(&model.Tax{}).Where("delete_time = ?", 0)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Find(&taxCategories).Error
 	return taxCategories, apperrors.WithMessage(err)
 }
 

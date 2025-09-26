@@ -1,0 +1,108 @@
+// ItemGroup 服务 Protobuf 定义文件
+// 用于定义物品分组相关的 gRPC 服务接口和消息结构
+syntax = "proto3";
+
+import "erp.proto";
+
+package item;
+
+// Go 包路径配置
+option go_package = "ttpos-bmp/app/ttpos-erp/api/item";
+
+// ItemGroup 服务接口定义
+// 提供物品分组管理相关的 gRPC 服务方法
+service ItemGroupService {
+  // 获取物品分组列表
+  // 参数：分页和过滤条件
+  // 返回：物品分组列表
+  rpc GetItemGroupList(GetItemGroupListReq) returns (erp.ResponseInfo);
+  
+  // 根据分组代码获取单个物品分组信息
+  // 参数：分组代码
+  // 返回：物品分组详细信息
+  rpc GetItemGroup(GetItemGroupReq) returns (erp.ResponseInfo);
+  
+  // 保存物品分组信息
+  // 参数：物品分组信息
+  // 返回：保存结果
+  rpc SaveItemGroup(SaveItemGroupReq) returns (erp.ResponseInfo);
+  
+  // 删除物品分组
+  // 参数：分组代码
+  // 返回：删除结果
+  rpc DeleteItemGroup(DeleteItemGroupReq) returns (erp.ResponseInfo);
+
+  // 创建属性分组
+  rpc CreateAttributeGroup(CreateAttributeGroupReq) returns (erp.ResponseInfo);
+
+  // 创建插件分组
+  rpc CreateAddonGroup(CreateAddonGroupReq) returns (erp.ResponseInfo);
+}
+
+// 获取物品分组列表请求消息
+message GetItemGroupListReq {
+  string branch = 1; // 分支名称，可选
+  string company_abbr = 2; // 公司缩写，可选
+  string parent_item_group = 3; // 分组名称查询，可选
+}
+
+// 获取物品分组列表响应消息
+message GetItemGroupListResp {
+  repeated ItemGroupInfo item_group_list = 1; // 物品分组列表
+}
+
+// 获取单个物品分组请求消息
+message GetItemGroupReq {
+  string group_code = 1; // 分组代码，必填
+}
+
+message GetItemGroupResp {
+  ItemGroupInfo item_group_info = 1; // 物品分组信息，必填
+}
+
+// 保存物品分组请求消息
+message SaveItemGroupReq {
+  ItemGroupInfo item_group_info = 1; // 物品分组信息，必填
+}
+
+message SaveItemGroupResp {
+  ItemGroupInfo item_group_info = 1; // 物品分组信息，必填
+}
+
+// 删除物品分组请求消息
+message DeleteItemGroupReq {
+  string item_group_name = 1; // 分组名，必填
+}
+
+// 物品分组信息消息
+message ItemGroupInfo {
+  string item_group_name = 1; // 分组名称，必填
+  string parent_item_group = 2; // 父级分组，可选
+  string company_abbr = 3; // 公司缩写，可选
+  bool is_group = 4; // 是否为分组，可选
+  string branch = 5; // 分支名称，可选
+  string alias_name = 6; // 别名，可选
+}
+
+
+message CreateAttributeGroupReq {
+  string alias_name = 2; // 别名，必填
+  string company_abbr = 3; // 公司缩写，可选
+  string branch = 5; // 分支名称，可选
+}
+
+message CreateAttributeGroupResp {
+  ItemGroupInfo item_group_info = 1; // 物品分组信息，必填
+}
+
+
+
+message CreateAddonGroupReq {
+  string alias_name = 2; // 别名，必填
+  string company_abbr = 3; // 公司缩写，可选
+  string branch = 5; // 分支名称，可选
+}
+
+message CreateAddonGroupResp {
+  ItemGroupInfo item_group_info = 1; // 物品分组信息，必填
+}

@@ -2218,4 +2218,8 @@ return [
     "WebSocket指定设备推送参数验证失败: %s (错误代码: %s)" => "WebSocket-spezifische Geräte-Push-Parameterüberprüfung fehlgeschlagen: %s (Fehlercode: %s)",
     "WebSocket指定设备推送失败: 设备ID不能为空" => "WebSocket-spezifischer Geräte-Push fehlgeschlagen: Geräte-ID darf nicht leer sein",
     "佳博（云打印）" => "Jiaprint (Cloud-Druck)",
+    "删除优惠券失败" => "Löschen des Gutscheins fehlgeschlagen",
+    "该优惠券已关联正在进行的活动，请在活动失效后删除" => "Dieser Gutschein ist mit einer laufenden Aktion verknüpft. Bitte löschen Sie ihn nach Ablauf der Aktion.",
+    "修改状态失败" => "Statusänderung fehlgeschlagen",
+    "修改状态成功" => "Statusänderung erfolgreich",
 ];

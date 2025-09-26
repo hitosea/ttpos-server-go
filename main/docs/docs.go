@@ -5985,6 +5985,34 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/desk/order/headquarter_material_list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取总部物品列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "获取总部物品列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/desk/order/member/cancel": {
             "delete": {
                 "security": [
@@ -24210,6 +24238,34 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/test/material/category/sync": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "同步物品分类",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "同步物品分类",
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/warehouse": {
             "get": {
                 "security": [
@@ -26714,6 +26770,10 @@ const docTemplate = `{
                 "cost_unit_uuid": {
                     "description": "成本单位UUID",
                     "type": "integer"
+                },
+                "editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
                 },
                 "from_cost_unit_uuid": {
                     "description": "来源成本单位UUID",
@@ -29406,7 +29466,7 @@ const docTemplate = `{
         "product_resp.ProductUnitDetail": {
             "type": "object",
             "properties": {
-                "editable": {
+                "is_editable": {
                     "description": "是否可编辑",
                     "type": "boolean"
                 },
@@ -29435,7 +29495,7 @@ const docTemplate = `{
         "product_resp.ProductUnitItem": {
             "type": "object",
             "properties": {
-                "editable": {
+                "is_editable": {
                     "description": "是否可编辑",
                     "type": "boolean"
                 },
@@ -41847,6 +41907,10 @@ const docTemplate = `{
                     "description": "是否散户site",
                     "type": "boolean"
                 },
+                "last_sync_time": {
+                    "description": "上次同步erp数据完成时间",
+                    "type": "integer"
+                },
                 "permissions": {
                     "description": "页面权限",
                     "type": "array",
@@ -41873,6 +41937,10 @@ const docTemplate = `{
                 "server_version": {
                     "description": "服务端版本",
                     "type": "string"
+                },
+                "sync_status": {
+                    "description": "同步erp数据状态: 1同步中，0未同步、同步完成",
+                    "type": "integer"
                 },
                 "update_time": {
                     "description": "更新时间",
@@ -42267,6 +42335,10 @@ const docTemplate = `{
                 "name": {
                     "description": "供应商名称",
                     "type": "string"
+                },
+                "uuid": {
+                    "description": "供应商UUID",
+                    "type": "integer"
                 }
             }
         },

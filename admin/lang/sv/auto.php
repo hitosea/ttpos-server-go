@@ -2210,4 +2210,8 @@ return [
     "WebSocket指定设备推送参数验证失败: %s (错误代码: %s)" => "WebSocket angiven enhet push-parameterverifiering misslyckades: %s (Felkod: %s)",
     "WebSocket指定设备推送失败: 设备ID不能为空" => "WebSocket angiven enhet push misslyckades: Enhets-ID får inte vara tom",
     "佳博（云打印）" => "Jiaprint (Molnutskrift)",
+    "删除优惠券失败" => "Misslyckades med att ta bort kupongen",
+    "该优惠券已关联正在进行的活动，请在活动失效后删除" => "Denna kupong är kopplad till en pågående kampanj. Ta bort den efter att kampanjen har avslutats.",
+    "修改状态失败" => "Misslyckades med att ändra status",
+    "修改状态成功" => "Status ändrades framgångsrikt",
 ];

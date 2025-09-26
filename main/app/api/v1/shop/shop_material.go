@@ -603,6 +603,26 @@ func (h *MaterialHandler) ImportMaterial(c *gin.Context) {
 	helper.Success(c, gin.H{}, "导入成功")
 }
 
+// SyncMaterialCategory 同步物品分类
+// @Summary 同步物品分类
+// @Description 同步物品分类
+// @Tags 商家端.物品管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/test/material/category/sync [post]
+func (h *MaterialHandler) SyncMaterialCategory(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	err := h.materialSrv.SyncMaterialCategory(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
 func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -649,6 +669,7 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		privateApi.POST("/material/import/list", wrapper.ImportMaterialList) // 导入物品列表
 		privateApi.POST("/material/import", wrapper.ImportMaterial)          // 导入物品
 
-		privateApi.POST("/material/add/erp", wrapper.AddMaterialByErpItem) // 从erp同步物品
+		privateApi.POST("/material/add/erp", wrapper.AddMaterialByErpItem)            // 从erp同步物品
+		privateApi.POST("/test/material/category/sync", wrapper.SyncMaterialCategory) // 同步物品分类
 	}
 }

@@ -274,7 +274,7 @@ class MarketingCouponService
         if (!$res) {
             return ['code' => 1, 'msg' => __('删除优惠券失败')];
         }
-        $this->addRecord(MarketingCouponRecord::RecordTypeDelete, $coupon->uuid, $coupon->count, $coupon->count);
+        $this->addRecord(MarketingCouponRecord::RecordTypeDelete, $coupon->uuid, $coupon->count, 0);
     }
 
     /**
@@ -308,7 +308,7 @@ class MarketingCouponService
         foreach ($coupon->prizes as $prize) {
             if ($prize->activity && $prize->activity->status != 2) {
                 $result['can_delete'] = false;
-                $result['msg'] = __('活动未结束，不能删除');
+                $result['msg'] = __('该优惠券已关联正在进行的活动，请在活动失效后删除');
                 break;
             }
         }

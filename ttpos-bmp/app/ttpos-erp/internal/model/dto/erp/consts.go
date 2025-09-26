@@ -28,6 +28,10 @@ const (
 	DocTypeItemAttribute     = "Item Attribute"
 	//DocTypeStockProjectedQty 预估库存查询
 	DocTypeStockProjectedQty = "Stock Projected Qty"
+	DocTypeItemGroup         = "Item Group"
+
+	//DocTypeStockLedger 库存台账查询
+	DocTypeStockLedger = "Stock Ledger"
 )
 
 const (

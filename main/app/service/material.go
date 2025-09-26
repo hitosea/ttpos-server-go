@@ -52,6 +52,7 @@ type IMaterialSrv interface {
 	ImportMaterial(ctx context.Context, req req.MaterialImportReq) error
 	GetWarehouseItemsByErpCode(ctx context.Context, warehouseErpCode string, pageNo, pageSize int) ([]model.WarehouseItem, int64, error)
 	SyncHeadquarterMaterial(ctx context.Context) error // 同步总部物品列表
+	SyncMaterialCategory(ctx context.Context) error    // 同步物品分类
 }
 
 type materialSrv struct {
@@ -1159,6 +1160,12 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 	if exist, err := materialCategoryRepo.GetMaterialCategoryByName(request.LocaleName.ToJson()); err == nil && exist.Uuid != materialCategory.Uuid {
 		return errors.New("名称已存在")
 	}
+	// 检查物品类别编码是否已存在
+	if request.Code != "" {
+		if exist := materialCategoryRepo.CheckMaterialCategoryCodeExist(request.Code, 0); exist {
+			return errors.New("物品类别编码已存在")
+		}
+	}
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		materialCategoryRepo := repository.NewMaterialRepo(tx)
@@ -2142,19 +2149,27 @@ func (s *materialSrv) SyncHeadquarterMaterial(ctx context.Context) error {
 					ConversionRate: uom.ConversionFactor,
 				})
 			}
-			if err := s.AddMaterialByEprItem(copyCtx, req.MaterialAddErpReq{
-				ItemCode:           itemInfo.ItemCode,
-				ItemName:           itemInfo.ItemName,
-				StockUom:           itemInfo.StockUom,
-				Disabled:           itemInfo.Disabled,
-				ValuationRate:      itemInfo.ValuationRate,
-				OpeningStock:       itemInfo.OpeningStock,
-				InternalCode:       itemInfo.InternalCode,
-				Classification:     itemInfo.Classification,
-				ClassificationCode: itemInfo.ClassificationCode,
-				Uoms:               uoms,
-			}); err != nil {
-				return errors.WithMessage(err, "同步总部物品列表失败")
+			existingMaterial, err := repository.NewMaterialRepo(tx).GetMaterialByErpCode(itemInfo.ItemCode)
+			if err != nil {
+				return errors.WithMessage(err, "获取物品详情失败")
+			}
+			if existingMaterial != nil { // 如果物品已存在
+				//  TODO 更新物品
+			} else {
+				if err := s.AddMaterialByEprItem(copyCtx, req.MaterialAddErpReq{
+					ItemCode:           itemInfo.ItemCode,
+					ItemName:           itemInfo.ItemName,
+					StockUom:           itemInfo.StockUom,
+					Disabled:           itemInfo.Disabled,
+					ValuationRate:      itemInfo.ValuationRate,
+					OpeningStock:       itemInfo.OpeningStock,
+					InternalCode:       itemInfo.InternalCode,
+					Classification:     itemInfo.Classification,
+					ClassificationCode: itemInfo.ClassificationCode,
+					Uoms:               uoms,
+				}); err != nil {
+					return errors.WithMessage(err, "同步总部物品列表失败")
+				}
 			}
 		}
 		return nil
@@ -2164,3 +2179,90 @@ func (s *materialSrv) SyncHeadquarterMaterial(ctx context.Context) error {
 
 	return nil
 }
+
+// 同步物品分类
+func (s *materialSrv) SyncMaterialCategory(ctx context.Context) error {
+	// 获取总部company_uuid
+	headquarterUuid := ctx.GetCompanySetting().HeadquarterUuid
+	headquarterDb := s.dbm.GetDB(headquarterUuid)
+	// 获取总部的分类
+	headquarterMaterialCategoryList, err := repository.NewMaterialRepo(headquarterDb).GetMaterialCategoryList()
+	if err != nil {
+		return errors.WithMessage(err, "获取总部分类列表失败")
+	}
+	// 获取子公司的分类
+	subShopDb := s.dbm.GetDB(ctx.GetCompanyUuid())
+	subShopMaterialCategoryList, err := repository.NewMaterialRepo(subShopDb).GetMaterialCategoryList()
+	if err != nil {
+		return errors.WithMessage(err, "获取子公司分类列表失败")
+	}
+
+	headquarterMaterialCategoryMap := make(map[uint64]model.MaterialCategory)
+	for _, category := range headquarterMaterialCategoryList {
+		headquarterMaterialCategoryMap[category.Uuid] = category
+	}
+
+	// 获取子公司分类中的总部物品分类。 更新这些分类
+	headquarterMaterialCategoryInSubShop := s.GetHeadquarterMaterialCategoryInSubShop(ctx, subShopMaterialCategoryList)
+
+	// 获取不在子公司分类中的总部物品分类。新建这些分类
+	headquarterMaterialCategoryNotInSubShop := s.GetHeadquarterMaterialCategoryNotInSubShop(ctx, headquarterMaterialCategoryList, subShopMaterialCategoryList)
+
+	if err := repository.CommonRepo.Transaction(subShopDb, func(tx *gorm.DB) error {
+		for _, category := range headquarterMaterialCategoryInSubShop {
+			if headquarterCategory, ok := headquarterMaterialCategoryMap[category.Uuid]; ok {
+				category.UpdateFromHeadquarter(headquarterCategory) // 用总部分类信息更新子公司分类
+				if err := repository.NewMaterialRepo(tx).UpdateMaterialCategory(category); err != nil {
+					return errors.WithMessage(err, "更新总部物品分类失败")
+				}
+				if err := repository.NewMultiLanguageNameRepo(tx).UpdateMultiLanguageName(category.MultiLanguageNameUuid, category.MultiLanguageName); err != nil {
+					return errors.WithMessage(err, "更新多语言名称失败")
+				}
+			}
+		}
+		for _, category := range headquarterMaterialCategoryNotInSubShop {
+			newCategory := category
+			newCategory.HeadquarterUuid = headquarterUuid
+			newCategory.BaseModel = model.BaseModel{Uuid: category.Uuid}
+			newCategory.MultiLanguageName.BaseModel = model.BaseModel{
+				Uuid: category.MultiLanguageNameUuid,
+			}
+			// 创建物品分类和多语言名称 Create方法会一起创建
+			if _, err := repository.NewMaterialRepo(tx).CreateMaterialCategory(newCategory); err != nil {
+				return errors.WithMessage(err, "创建总部物品分类失败")
+			}
+		}
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// 不在子公司分类中的总部物品分类
+func (s *materialSrv) GetHeadquarterMaterialCategoryNotInSubShop(ctx context.Context, headquarterMaterialCategoryList []model.MaterialCategory, subShopMaterialCategoryList []model.MaterialCategory) []model.MaterialCategory {
+	categoryList := []model.MaterialCategory{}
+	subMaterialCategoryMap := make(map[uint64]model.MaterialCategory)
+	for i, category := range subShopMaterialCategoryList {
+		subMaterialCategoryMap[category.Uuid] = subShopMaterialCategoryList[i]
+	}
+	for i, category := range headquarterMaterialCategoryList {
+		if _, ok := subMaterialCategoryMap[category.Uuid]; !ok {
+			categoryList = append(categoryList, headquarterMaterialCategoryList[i])
+		}
+	}
+	return categoryList
+}
+
+// 获取子公司分类中的总部物品分类
+func (s *materialSrv) GetHeadquarterMaterialCategoryInSubShop(ctx context.Context, subShopMaterialCategoryList []model.MaterialCategory) []model.MaterialCategory {
+	categoryList := []model.MaterialCategory{}
+	for _, category := range subShopMaterialCategoryList {
+		if category.IsHeadquarter() {
+			categoryList = append(categoryList, category)
+		}
+	}
+	return categoryList
+}
+
+// 获取已经删除的

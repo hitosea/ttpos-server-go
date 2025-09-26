@@ -1,5 +1,6 @@
 package consts
 
+var Limit100 = 100
 var Limit999 = 999
 var Limit9999 = 9999
 
@@ -27,13 +28,18 @@ const (
 	ItemGroupPosAddon ItemGroup = "Pos Addon"
 	// ItemGroupOthers 其他
 	ItemGroupOthers ItemGroup = ""
+
+	ItemGroupPrefixPosAttributeGroup = "SX" // 属性前缀
+	ItemGroupPrefixPosAddonGroup     = "JL" // 属性前缀
+
 )
 
 const (
 	ItemCodePrefixProduct      = "SP"  //商品前缀
 	ItemCodePrefixRawMaterial  = "WPR" //原材料前缀
 	ItemCodePrefixPackage      = "TC"  //套餐前缀
-	ItemCodePrefixPosAttribute = "SX"  // 属性前缀
+	ItemCodePrefixPosAttribute = "SXZ" // 属性前缀
+	ItemCodePrefixPosAddon     = "JLZ" // 加料前缀
 )
 
 // CustomerName 客户名称
