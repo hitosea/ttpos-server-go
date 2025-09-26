@@ -29,6 +29,8 @@ type (
 	}
 	IRpc interface {
 		Execute(ctx context.Context, req *erp.ErpReq, params interface{}) (rst *g.Var, err error)
+		// GetSiteCode 获取站点编码
+		GetSiteCode(ctx context.Context) string
 	}
 	IReport interface {
 		Run(ctx context.Context, params *erp.ReportParams) (rst *g.Var, err error)

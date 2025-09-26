@@ -934,6 +934,7 @@ type SavePosInvoiceResp struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
 	ProductsInvoiceName string                 `protobuf:"bytes,1,opt,name=products_invoice_name,json=productsInvoiceName,proto3" json:"products_invoice_name,omitempty" dc:"商品发票名称"`  // 商品发票名称
 	MaterialInvoiceName string                 `protobuf:"bytes,2,opt,name=material_invoice_name,json=materialInvoiceName,proto3" json:"material_invoice_name,omitempty" dc:"原材料发票名称"` // 原材料发票名称
+	AsyncRecordId       string                 `protobuf:"bytes,3,opt,name=async_record_id,json=asyncRecordId,proto3" json:"async_record_id,omitempty" dc:"异步记录ID"`                    // 异步记录ID
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -978,6 +979,13 @@ func (x *SavePosInvoiceResp) GetProductsInvoiceName() string {
 func (x *SavePosInvoiceResp) GetMaterialInvoiceName() string {
 	if x != nil {
 		return x.MaterialInvoiceName
+	}
+	return ""
+}
+
+func (x *SavePosInvoiceResp) GetAsyncRecordId() string {
+	if x != nil {
+		return x.AsyncRecordId
 	}
 	return ""
 }
@@ -1340,6 +1348,8 @@ type CancelPosInvoiceReq struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
 	ProductsInvoiceName string                 `protobuf:"bytes,1,opt,name=products_invoice_name,json=productsInvoiceName,proto3" json:"products_invoice_name,omitempty" dc:"商品销售发票，必填"` // 商品销售发票，必填
 	MaterialInvoiceName string                 `protobuf:"bytes,2,opt,name=material_invoice_name,json=materialInvoiceName,proto3" json:"material_invoice_name,omitempty" dc:"材料销售发票，必填"` // 材料销售发票，必填
+	OrderNo             string                 `protobuf:"bytes,3,opt,name=order_no,json=orderNo,proto3" json:"order_no,omitempty" dc:"订单号，传ttpos的订单号,异步模式下必填"`                          // 订单号，传ttpos的订单号,异步模式下必填
+	OpenPosEntryName    string                 `protobuf:"bytes,4,opt,name=open_pos_entry_name,json=openPosEntryName,proto3" json:"open_pos_entry_name,omitempty" dc:"POS开帐名称,异步模式下必填"`  // POS开帐名称,异步模式下必填
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -1384,6 +1394,20 @@ func (x *CancelPosInvoiceReq) GetProductsInvoiceName() string {
 func (x *CancelPosInvoiceReq) GetMaterialInvoiceName() string {
 	if x != nil {
 		return x.MaterialInvoiceName
+	}
+	return ""
+}
+
+func (x *CancelPosInvoiceReq) GetOrderNo() string {
+	if x != nil {
+		return x.OrderNo
+	}
+	return ""
+}
+
+func (x *CancelPosInvoiceReq) GetOpenPosEntryName() string {
+	if x != nil {
+		return x.OpenPosEntryName
 	}
 	return ""
 }
@@ -1653,10 +1677,11 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x05taxes\x18\f \x03(\v2\x16.selling.PosInvoiceTaxR\x05taxes\x126\n" +
 	"\bpayments\x18\r \x03(\v2\x1a.selling.PosInvoicePaymentR\bpayments\x12A\n" +
 	"\x1damended_products_invoice_name\x18\x0e \x01(\tR\x1aamendedProductsInvoiceName\x12A\n" +
-	"\x1damended_material_invoice_name\x18\x0f \x01(\tR\x1aamendedMaterialInvoiceName\"|\n" +
+	"\x1damended_material_invoice_name\x18\x0f \x01(\tR\x1aamendedMaterialInvoiceName\"\xa4\x01\n" +
 	"\x12SavePosInvoiceResp\x122\n" +
 	"\x15products_invoice_name\x18\x01 \x01(\tR\x13productsInvoiceName\x122\n" +
-	"\x15material_invoice_name\x18\x02 \x01(\tR\x13materialInvoiceName\"\xc1\x01\n" +
+	"\x15material_invoice_name\x18\x02 \x01(\tR\x13materialInvoiceName\x12&\n" +
+	"\x0fasync_record_id\x18\x03 \x01(\tR\rasyncRecordId\"\xc1\x01\n" +
 	"\x0ePosInvoiceItem\x12\x1b\n" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x10\n" +
 	"\x03qty\x18\x02 \x01(\x01R\x03qty\x12\x12\n" +
@@ -1684,10 +1709,12 @@ const file_selling_selling_proto_rawDesc = "" +
 	"\x05taxes\x18\a \x03(\v2\x16.selling.PosInvoiceTaxR\x05taxes\x126\n" +
 	"\bpayments\x18\b \x03(\v2\x1a.selling.PosInvoicePaymentR\bpayments\"9\n" +
 	"\x14ReturnPosInvoiceResp\x12!\n" +
-	"\finvoice_name\x18\x01 \x01(\tR\vinvoiceName\"}\n" +
+	"\finvoice_name\x18\x01 \x01(\tR\vinvoiceName\"\xc7\x01\n" +
 	"\x13CancelPosInvoiceReq\x122\n" +
 	"\x15products_invoice_name\x18\x01 \x01(\tR\x13productsInvoiceName\x122\n" +
-	"\x15material_invoice_name\x18\x02 \x01(\tR\x13materialInvoiceName\"~\n" +
+	"\x15material_invoice_name\x18\x02 \x01(\tR\x13materialInvoiceName\x12\x19\n" +
+	"\border_no\x18\x03 \x01(\tR\aorderNo\x12-\n" +
+	"\x13open_pos_entry_name\x18\x04 \x01(\tR\x10openPosEntryName\"~\n" +
 	"\x14CancelPosInvoiceResp\x122\n" +
 	"\x15products_invoice_name\x18\x01 \x01(\tR\x13productsInvoiceName\x122\n" +
 	"\x15material_invoice_name\x18\x02 \x01(\tR\x13materialInvoiceName\"#\n" +

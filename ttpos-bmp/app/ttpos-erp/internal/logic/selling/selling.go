@@ -8,7 +8,6 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	dtoSelling "ttpos-bmp/app/ttpos-erp/internal/model/dto/selling"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
-
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/v2/encoding/gjson"
@@ -980,8 +979,21 @@ func (s *sSelling) ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosI
 		GrandTotal:    grandTotal,
 		PaidAmount:    grandTotal,
 		//SetPostingTime:    1,
-		Customer: saleInvoice.Customer,
+		Customer:           saleInvoice.Customer,
+		WriteOffAccount:    saleInvoice.WriteOffAccount,
+		WriteOffCostCenter: saleInvoice.WriteOffCostCenter,
 	}
+
+	//totalTaxAndCharges := 0.0
+	//for _, tax := range returnInvoice.Taxes {
+	//	totalTaxAndCharges += tax.TaxAmount
+	//}
+	//returnInvoice.TotalTaxesAndCharges = totalTaxAndCharges
+	//netTotal := 0.0
+	//for _, item := range returnInvoice.Items {
+	//	netTotal += item.Amount
+	//}
+	//returnInvoice.NetTotal = netTotal
 
 	//创建物品销售记录
 	resp, err = service.Document().Create(erpnext.SetFakeUser(ctx, openingEntry.User), erp.DocTypePosInvoice, returnInvoice)
