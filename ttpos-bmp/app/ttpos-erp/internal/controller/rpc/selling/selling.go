@@ -220,7 +220,8 @@ func (c *Controller) SavePosInvoice(ctx context.Context, req *selling.SavePosInv
 	}
 
 	// 调用服务层保存发票
-	resp, err := service.Selling().SavePosInvoice(ctx, req)
+	resp, err := service.AsyncSelling().AsyncSavePosInvoice(ctx, req)
+	//resp, err := service.Selling().SavePosInvoice(ctx, req)
 	if err != nil {
 		return rpc.ApiError(err.Error()), nil
 	}
@@ -327,6 +328,15 @@ func (c *Controller) CancelPosInvoice(ctx context.Context, req *selling.CancelPo
 		return rpc.ApiError(err.Error()), nil
 	}
 
+	//异步流程
+	if req.OrderNo != "" {
+		err := service.AsyncSelling().AsyncCancelPosInvoice(ctx, req)
+		if err != nil {
+			return rpc.ApiError(err.Error()), nil
+		}
+		return rpc.ApiSuccessWithData("异步取消发票成功", &selling.CancelPosInvoiceResp{}), nil
+	}
+
 	// 调用服务层取消商品发票
 	if len(req.ProductsInvoiceName) > 0 {
 		err := service.Selling().CancelPosInvoice(ctx, req.ProductsInvoiceName)
@@ -428,6 +438,15 @@ func (c *Controller) validateReturnPosInvoiceReq(req *selling.ReturnPosInvoiceRe
 func (c *Controller) validateCancelPosInvoiceReq(req *selling.CancelPosInvoiceReq) error {
 	if req == nil {
 		return gerror.New("请求参数不能为空")
+	}
+
+	// 验证订单号
+	if strings.TrimSpace(req.OrderNo) != "" {
+		//异步模式，不再校验其他
+		if strings.TrimSpace(req.OpenPosEntryName) == "" {
+			return gerror.New("POS开帐名称不能为空")
+		}
+		return nil
 	}
 
 	// 验证至少有一个发票名称不为空

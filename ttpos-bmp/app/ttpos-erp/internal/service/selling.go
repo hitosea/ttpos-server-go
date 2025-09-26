@@ -14,6 +14,10 @@ import (
 )
 
 type (
+	IAsyncSelling interface {
+		AsyncCancelPosInvoice(ctx context.Context, req *selling.CancelPosInvoiceReq) error
+		AsyncSavePosInvoice(ctx context.Context, req *selling.SavePosInvoiceReq) (*selling.SavePosInvoiceResp, error)
+	}
 	ISelling interface {
 		// GetPosProfileList 查询POS配置文件列表
 		// 参数：
@@ -145,8 +149,20 @@ type (
 )
 
 var (
-	localSelling ISelling
+	localAsyncSelling IAsyncSelling
+	localSelling      ISelling
 )
+
+func AsyncSelling() IAsyncSelling {
+	if localAsyncSelling == nil {
+		panic("implement not found for interface IAsyncSelling, forgot register?")
+	}
+	return localAsyncSelling
+}
+
+func RegisterAsyncSelling(i IAsyncSelling) {
+	localAsyncSelling = i
+}
 
 func Selling() ISelling {
 	if localSelling == nil {
