@@ -973,6 +973,7 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 	if err != nil {
 		return shopBase, errors.WithMessage(err)
 	}
+
 	return resp.ShopBase{
 		Username:     staff.Username,
 		ProfileUuid:  staff.Uuid,
@@ -1011,9 +1012,12 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 			CompanyName:     storeSetting.Company,
 		},
 		IsTtposSite:   companySetting.IsTtposSite(),
+		IsHeadquarter: companySetting.IsHeadquarter(),
 		UpdateTime:    time.Now().Unix(),
 		ServerVersion: utils.GetVersion(),
 		IsOpenTax:     taxSetting.IsOpen == "1",
+		IsSyncing:     slices.Contains(syncTaskManager.getRunningCompanyUuids(), company.Uuid),
+		LastSyncTime:  company.LastSyncTime,
 	}, nil
 }
 

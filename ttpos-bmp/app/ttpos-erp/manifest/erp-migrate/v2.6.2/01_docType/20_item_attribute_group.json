@@ -1,0 +1,15 @@
+{
+  "module": "Stock",
+  "name": "Item Attribute Group",
+  "custom": 1,
+  "istable": 1,
+  "editable_grid": 1,
+  "fields" : [
+    {
+      "fieldname": "attribute_group",
+      "label": "Pos Attribute Group",
+      "fieldtype": "Link",
+      "options": "Pos Attribute Group"
+    }
+  ]
+}

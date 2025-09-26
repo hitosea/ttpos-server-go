@@ -28,7 +28,7 @@ type Supplier struct {
 	IsTransporter      bool `json:"is_transporter,omitempty"`       // 是否承运商
 	IsInternalSupplier bool `json:"is_internal_supplier,omitempty"` // 是否内部供应商
 	IsFrozen           bool `json:"is_frozen,omitempty"`            // 是否冻结
-	Disabled           bool `json:"disabled,omitempty"`             // 是否禁用
+	Disabled           bool `json:"disabled"`                       // 是否禁用
 	OnHold             bool `json:"on_hold,omitempty"`              // 是否暂停
 
 	// 警告和阻止设置
@@ -48,19 +48,25 @@ type Supplier struct {
 	Accounts    []interface{}           `json:"accounts,omitempty"`     // 账户信息
 	PortalUsers []interface{}           `json:"portal_users,omitempty"` // 门户用户
 	Companies   []AllowedToTransactWith `json:"companies,omitempty"`    // 允许交易的公司
+
+	Company string `json:"custom_company,omitempty"` //所属公司
+	Branch  string `json:"custom_branch,omitempty"`  //所属分支
+
+	CustomPermissionRule []PermissionRule `json:"custom_permission_rule,omitempty"` //自定权限清单 多选表格
+
 }
 
 // AllowedToTransactWith 结构体，表示允许交易的公司
 type AllowedToTransactWith struct {
 	// 基础字段
-	Name       string `json:"name,omitempty" validate:"required"` // 名称
-	Owner      string `json:"owner,omitempty"`                    // 拥有者
-	Creation   string `json:"creation,omitempty"`                 // 创建时间
-	Modified   string `json:"modified,omitempty"`                 // 修改时间
-	ModifiedBy string `json:"modified_by,omitempty"`              // 修改人
-	Docstatus  int    `json:"docstatus,omitempty"`                // 单据状态
-	Idx        int    `json:"idx,omitempty"`                      // 索引
-	Doctype    string `json:"doctype,omitempty"`                  // 单据类型
+	Name       string `json:"name,omitempty"`        // 名称
+	Owner      string `json:"owner,omitempty"`       // 拥有者
+	Creation   string `json:"creation,omitempty"`    // 创建时间
+	Modified   string `json:"modified,omitempty"`    // 修改时间
+	ModifiedBy string `json:"modified_by,omitempty"` // 修改人
+	Docstatus  int    `json:"docstatus,omitempty"`   // 单据状态
+	Idx        int    `json:"idx,omitempty"`         // 索引
+	Doctype    string `json:"doctype,omitempty"`     // 单据类型
 
 	// 公司关联
 	Company     string `json:"company,omitempty" validate:"required"` // 公司

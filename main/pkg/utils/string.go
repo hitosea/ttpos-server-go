@@ -83,3 +83,23 @@ func UnsafeBytesToString(b []byte) string {
 	}
 	return unsafe.String(&b[0], len(b))
 }
+
+// IsValidInternalCode 验证内部编码是否有效
+func IsValidInternalCode(internalCode string) bool {
+	if len(internalCode) < 1 || len(internalCode) > 13 {
+		return false
+	}
+	for _, char := range internalCode {
+		if '0' <= char && char <= '9' {
+			continue
+		}
+		if 'a' <= char && char <= 'z' {
+			continue
+		}
+		if 'A' <= char && char <= 'Z' {
+			continue
+		}
+		return false
+	}
+	return true
+}

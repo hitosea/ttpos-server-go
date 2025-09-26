@@ -9,6 +9,10 @@ import (
 	"io"
 	"net/http"
 	"time"
+	"ttpos-server-go/app/dto"
+	"ttpos-server-go/pkg/logger"
+
+	"go.uber.org/zap"
 )
 
 // TranslateItem 翻译项目结构
@@ -72,6 +76,37 @@ func NewTranslateClientWithTimeout(timeout time.Duration) *TranslateClient {
 	client.Timeout = timeout
 	client.HTTPClient.Timeout = timeout
 	return client
+}
+
+// 批量翻译，如果失败，则重试
+func (tc *TranslateClient) TranslateWithRetry(ctx context.Context, items []TranslateItem, chunkLimit uint) map[string]dto.LocaleResponse {
+	multiLanguageMap := make(map[string]dto.LocaleResponse)
+	for i := 0; i < len(items); i += int(chunkLimit) {
+		translateItems := items[i:min(i+int(chunkLimit), len(items))]
+		res, err := tc.Translate(ctx, translateItems)
+		if err != nil {
+			logger.Logger.Error("TranslateWithRetry-Translate", zap.Any("translateItems", translateItems), zap.Any("err", err))
+			res, err = tc.Translate(ctx, translateItems)
+			if err != nil {
+				logger.Logger.Error("TranslateWithRetry-Translate-retry", zap.Any("translateItems", translateItems), zap.Any("err", err))
+				continue
+			}
+		}
+		for _, item := range res.Data {
+			multiLanguageMap[item.Key] = dto.LocaleResponse{
+				ZH:   item.Zh,
+				TH:   item.Th,
+				EN:   item.En,
+				ZHTW: item.ZhTw,
+				JA:   item.Ja,
+				KO:   item.Ko,
+				MY:   item.My,
+				TR:   item.Tr,
+				SV:   item.Sv,
+			}
+		}
+	}
+	return multiLanguageMap
 }
 
 // Translate 执行翻译请求

@@ -23,25 +23,35 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	ItemService_GetItemList_FullMethodName      = "/item.ItemService/GetItemList"
 	ItemService_GetUomList_FullMethodName       = "/item.ItemService/GetUomList"
+	ItemService_GetUom_FullMethodName           = "/item.ItemService/GetUom"
 	ItemService_SaveUom_FullMethodName          = "/item.ItemService/SaveUom"
 	ItemService_GetAttributeList_FullMethodName = "/item.ItemService/GetAttributeList"
 	ItemService_SaveAttribute_FullMethodName    = "/item.ItemService/SaveAttribute"
 	ItemService_SaveItem_FullMethodName         = "/item.ItemService/SaveItem"
 	ItemService_GetItemStock_FullMethodName     = "/item.ItemService/GetItemStock"
+	ItemService_GetItem_FullMethodName          = "/item.ItemService/GetItem"
+	ItemService_SavePosAttribute_FullMethodName = "/item.ItemService/SavePosAttribute"
+	ItemService_SavePosAddon_FullMethodName     = "/item.ItemService/SavePosAddon"
 )
 
 // ItemServiceClient is the client API for ItemService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ItemServiceClient interface {
-	// 获取商品列表
+	// 获取物品列表
+	// 输入条件如果未包含company 则会返回全量数据，如需要只显示无company 约束的数据，需要自行过滤结果中 company 为空的数据
 	// 参数：查询条件
-	// 返回：商品列表和分页信息
+	// 返回：物品列表，最大9999
 	GetItemList(ctx context.Context, in *GetItemListReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 	// 获取单位列表
+	// 输入条件如果未包含company 则会返回全量数据，如需要只显示无company 约束的数据，需要自行过滤结果中 company 为空的数据
 	// 参数：查询条件
-	// 返回：单位列表和分页信息
+	// 返回：单位列表
 	GetUomList(ctx context.Context, in *GetUomListReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 根据单位名称获取单个单位信息
+	// 参数：单位名称
+	// 返回：单位详细信息
+	GetUom(ctx context.Context, in *GetUomReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 	// 添加单位
 	// 参数：单位信息
 	// 返回：添加结果
@@ -62,6 +72,14 @@ type ItemServiceClient interface {
 	// 参数：查询条件
 	// 返回：商品库存列表
 	GetItemStock(ctx context.Context, in *GetItemStockReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 根据物品编码获取单个物品信息
+	// 参数：物品编码和可选的公司、分支信息
+	// 返回：物品详细信息
+	GetItem(ctx context.Context, in *GetItemReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 保存 pos 系统中特殊的item ，如 属性/加料
+	SavePosAttribute(ctx context.Context, in *SavePosAttributeReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 保存 pos 系统中特殊的item ，如 加料
+	SavePosAddon(ctx context.Context, in *SavePosAddonReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 }
 
 type itemServiceClient struct {
@@ -86,6 +104,16 @@ func (c *itemServiceClient) GetUomList(ctx context.Context, in *GetUomListReq, o
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(api.ResponseInfo)
 	err := c.cc.Invoke(ctx, ItemService_GetUomList_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *itemServiceClient) GetUom(ctx context.Context, in *GetUomReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, ItemService_GetUom_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -142,18 +170,54 @@ func (c *itemServiceClient) GetItemStock(ctx context.Context, in *GetItemStockRe
 	return out, nil
 }
 
+func (c *itemServiceClient) GetItem(ctx context.Context, in *GetItemReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, ItemService_GetItem_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *itemServiceClient) SavePosAttribute(ctx context.Context, in *SavePosAttributeReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, ItemService_SavePosAttribute_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *itemServiceClient) SavePosAddon(ctx context.Context, in *SavePosAddonReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, ItemService_SavePosAddon_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ItemServiceServer is the server API for ItemService service.
 // All implementations must embed UnimplementedItemServiceServer
 // for forward compatibility.
 type ItemServiceServer interface {
-	// 获取商品列表
+	// 获取物品列表
+	// 输入条件如果未包含company 则会返回全量数据，如需要只显示无company 约束的数据，需要自行过滤结果中 company 为空的数据
 	// 参数：查询条件
-	// 返回：商品列表和分页信息
+	// 返回：物品列表，最大9999
 	GetItemList(context.Context, *GetItemListReq) (*api.ResponseInfo, error)
 	// 获取单位列表
+	// 输入条件如果未包含company 则会返回全量数据，如需要只显示无company 约束的数据，需要自行过滤结果中 company 为空的数据
 	// 参数：查询条件
-	// 返回：单位列表和分页信息
+	// 返回：单位列表
 	GetUomList(context.Context, *GetUomListReq) (*api.ResponseInfo, error)
+	// 根据单位名称获取单个单位信息
+	// 参数：单位名称
+	// 返回：单位详细信息
+	GetUom(context.Context, *GetUomReq) (*api.ResponseInfo, error)
 	// 添加单位
 	// 参数：单位信息
 	// 返回：添加结果
@@ -174,6 +238,14 @@ type ItemServiceServer interface {
 	// 参数：查询条件
 	// 返回：商品库存列表
 	GetItemStock(context.Context, *GetItemStockReq) (*api.ResponseInfo, error)
+	// 根据物品编码获取单个物品信息
+	// 参数：物品编码和可选的公司、分支信息
+	// 返回：物品详细信息
+	GetItem(context.Context, *GetItemReq) (*api.ResponseInfo, error)
+	// 保存 pos 系统中特殊的item ，如 属性/加料
+	SavePosAttribute(context.Context, *SavePosAttributeReq) (*api.ResponseInfo, error)
+	// 保存 pos 系统中特殊的item ，如 加料
+	SavePosAddon(context.Context, *SavePosAddonReq) (*api.ResponseInfo, error)
 	mustEmbedUnimplementedItemServiceServer()
 }
 
@@ -190,6 +262,9 @@ func (UnimplementedItemServiceServer) GetItemList(context.Context, *GetItemListR
 func (UnimplementedItemServiceServer) GetUomList(context.Context, *GetUomListReq) (*api.ResponseInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUomList not implemented")
 }
+func (UnimplementedItemServiceServer) GetUom(context.Context, *GetUomReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUom not implemented")
+}
 func (UnimplementedItemServiceServer) SaveUom(context.Context, *UomInfo) (*api.ResponseInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SaveUom not implemented")
 }
@@ -204,6 +279,15 @@ func (UnimplementedItemServiceServer) SaveItem(context.Context, *ItemInfo) (*api
 }
 func (UnimplementedItemServiceServer) GetItemStock(context.Context, *GetItemStockReq) (*api.ResponseInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetItemStock not implemented")
+}
+func (UnimplementedItemServiceServer) GetItem(context.Context, *GetItemReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetItem not implemented")
+}
+func (UnimplementedItemServiceServer) SavePosAttribute(context.Context, *SavePosAttributeReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SavePosAttribute not implemented")
+}
+func (UnimplementedItemServiceServer) SavePosAddon(context.Context, *SavePosAddonReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SavePosAddon not implemented")
 }
 func (UnimplementedItemServiceServer) mustEmbedUnimplementedItemServiceServer() {}
 func (UnimplementedItemServiceServer) testEmbeddedByValue()                     {}
@@ -258,6 +342,24 @@ func _ItemService_GetUomList_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ItemServiceServer).GetUomList(ctx, req.(*GetUomListReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ItemService_GetUom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUomReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemServiceServer).GetUom(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ItemService_GetUom_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemServiceServer).GetUom(ctx, req.(*GetUomReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -352,6 +454,60 @@ func _ItemService_GetItemStock_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ItemService_GetItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetItemReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemServiceServer).GetItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ItemService_GetItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemServiceServer).GetItem(ctx, req.(*GetItemReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ItemService_SavePosAttribute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SavePosAttributeReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemServiceServer).SavePosAttribute(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ItemService_SavePosAttribute_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemServiceServer).SavePosAttribute(ctx, req.(*SavePosAttributeReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ItemService_SavePosAddon_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SavePosAddonReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemServiceServer).SavePosAddon(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ItemService_SavePosAddon_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemServiceServer).SavePosAddon(ctx, req.(*SavePosAddonReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ItemService_ServiceDesc is the grpc.ServiceDesc for ItemService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -366,6 +522,10 @@ var ItemService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUomList",
 			Handler:    _ItemService_GetUomList_Handler,
+		},
+		{
+			MethodName: "GetUom",
+			Handler:    _ItemService_GetUom_Handler,
 		},
 		{
 			MethodName: "SaveUom",
@@ -386,6 +546,18 @@ var ItemService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetItemStock",
 			Handler:    _ItemService_GetItemStock_Handler,
+		},
+		{
+			MethodName: "GetItem",
+			Handler:    _ItemService_GetItem_Handler,
+		},
+		{
+			MethodName: "SavePosAttribute",
+			Handler:    _ItemService_SavePosAttribute_Handler,
+		},
+		{
+			MethodName: "SavePosAddon",
+			Handler:    _ItemService_SavePosAddon_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

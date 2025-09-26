@@ -43,7 +43,7 @@ type ProductSauceReq struct {
 }
 
 type ProductUnitReq struct {
-	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 商品单位UUID
+	Uuid uint64 `form:"uuid" json:"uuid"` // 商品单位UUID
 }
 
 type ProductUnitAddReq struct {
@@ -117,6 +117,7 @@ type ProductShopCategoryAddReq struct {
 	ParentUuid uint64             `json:"parent_uuid"`                    // 父级分类UUID, 一级分类为0, 二级分类为一级分类的uuid
 	LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品分类名称, 多语言
 	Status     int                `json:"status"`                         // 商品分类状态 0-关闭 1-开启
+	Code       string             `json:"code"`                           // 分类编码
 }
 
 // ProductShopCategoryEditReq 商品分类编辑请求
@@ -125,6 +126,7 @@ type ProductShopCategoryEditReq struct {
 	ParentUuid uint64             `json:"parent_uuid"`                    // 父级分类UUID, 一级分类为0, 二级分类为一级分类的uuid
 	LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 商品分类名称, 多语言
 	Status     int                `json:"status"`                         // 商品分类状态 0-关闭 1-开启
+	Code       string             `json:"code"`                           // 分类编码
 }
 
 // ProductShopCategoryDeleteReq 商品分类请求
@@ -287,6 +289,9 @@ func (p *ProductImportReq) GetBarcodeDuplicateRows() []int {
 	barcodeMap := make(map[string]bool)
 	duplicateRows := []int{}
 	for _, item := range p.List {
+		if item.Barcode == "" {
+			continue
+		}
 		if _, ok := barcodeMap[item.Barcode]; ok {
 			duplicateRows = append(duplicateRows, item.Row)
 		}
@@ -390,6 +395,7 @@ type ProductShopAddFlavorReq struct {
 	Uuid         uint64  `json:"uuid"`          // 商品规格UUID
 	Price        float64 `json:"price"`         // 商品规格价格
 	BarcodeValue string  `json:"barcode_value"` // 商品加料条码值, 可选
+	InternalCode string  `json:"internal_code"` // 内部编码
 }
 
 // ProductShopAddTaxReq 商品税类添加请求
@@ -445,8 +451,9 @@ type ProductShopAddDiscountReq struct {
 
 // ProductShopAddPackageReq 商品套餐添加请求
 type ProductShopAddPackageReq struct {
-	Price  float64                         `json:"price"`  // 套餐价格
-	Groups []ProductShopAddPackageGroupReq `json:"groups"` // 套餐分组列表
+	Price        float64                         `json:"price"`         // 套餐价格
+	InternalCode string                          `json:"internal_code"` // 商品套餐内部编码
+	Groups       []ProductShopAddPackageGroupReq `json:"groups"`        // 套餐分组列表
 }
 
 // ProductShopAddPackageGroupReq 套餐分组添加请求
@@ -487,6 +494,7 @@ type ProductShopEditFlavorReq struct {
 	Uuid         uint64  `json:"uuid"`          // 商品规格UUID
 	Price        float64 `json:"price"`         // 商品规格价格
 	BarcodeValue string  `json:"barcode_value"` // 商品加料条码值, 可选
+	InternalCode string  `json:"internal_code"` // 商品规格内部编码
 	BomUuid      uint64  `json:"bom_uuid"`      // 商品BOM UUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID
 	IsDelete     bool    `json:"is_delete"`     // 是否删除, 如果是新增/编辑，则传false，删除时传true
 }
@@ -548,8 +556,9 @@ type ProductShopEditDiscountReq struct {
 
 // ProductShopEditPackageReq 商品套餐添加请求
 type ProductShopEditPackageReq struct {
-	Price  float64                          `json:"price"`  // 套餐价格
-	Groups []ProductShopEditPackageGroupReq `json:"groups"` // 套餐分组列表
+	Price        float64                          `json:"price"`         // 套餐价格
+	InternalCode string                           `json:"internal_code"` // 商品套餐内部编码
+	Groups       []ProductShopEditPackageGroupReq `json:"groups"`        // 套餐分组列表
 }
 
 // ProductShopAddPackageGroupReq 套餐分组添加请求

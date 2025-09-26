@@ -124,7 +124,7 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	payMethodUuid uint64,
 ) string {
 	// 获取打印模板
-	tmp := p.GetPrinterTemplate(uint64(printType))
+	tmp, tmpUuid, tmpData := p.GetPrinterTemplate(uint64(printType))
 
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(
@@ -148,7 +148,15 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 
 	// 图片打印
 	if p.IsImagePrinterMethod() {
-		if !p.Is58mmPrinter() {
+		if tmpUuid > 0 {
+			return template.NewStatementOrderImgTemplateCustom(base).GetPrintContent(
+				settingPrinterInfo,
+				tmpData,
+				saleBill,
+				saleOrder,
+				payMethodUuid,
+			)
+		} else if !p.Is58mmPrinter() {
 			return template.NewStatementOrderImgTemplate(base).GetPrintContent(
 				settingPrinterInfo,
 				printType,
@@ -188,7 +196,6 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, settingPrinterInfo.PrinterType) {
 		return template.NewStatementOrderXprinterTemplate(base).GetPrintContent(
 			settingPrinterInfo,
-			settingPrinterInfo.PrinterType,
 			printType,
 			tmp,
 			saleBill,
@@ -202,7 +209,6 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	if base.IsSunMi {
 		return template.NewStatementOrderSunmiTemplate(base).GetPrintContent(
 			settingPrinterInfo,
-			settingPrinterInfo.PrinterType,
 			printType,
 			tmp,
 			saleBill,

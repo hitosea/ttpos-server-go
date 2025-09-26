@@ -84,12 +84,13 @@ func (p *PackageProductDetail) GetCanEdit() bool {
 
 // ProductFlavor 商品规格
 type ProductFlavor struct {
-	Uuid       uint64             `json:"uuid"`        // 商品规格UUID
-	BomUuid    uint64             `json:"bom_uuid"`    // 商品BOM UUID
-	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品规格名称
-	Price      float64            `json:"price"`       // 商品规格价格
-	StockNum   float64            `json:"stock_num"`   // 商品库存数量
-	Barcode    string             `json:"barcode"`     // 商品码。用于根据扫码枪扫码商品得到商品码在商品列表中搜索到商品
+	Uuid         uint64             `json:"uuid"`          // 商品规格UUID
+	BomUuid      uint64             `json:"bom_uuid"`      // 商品BOM UUID
+	LocaleName   dto.LocaleResponse `json:"locale_name"`   // 商品规格名称
+	Price        float64            `json:"price"`         // 商品规格价格
+	StockNum     float64            `json:"stock_num"`     // 商品库存数量
+	Barcode      string             `json:"barcode"`       // 商品码。用于根据扫码枪扫码商品得到商品码在商品列表中搜索到商品
+	InternalCode string             `json:"internal_code"` // 商品规格内部编码
 }
 
 // ProductSauce 商品小料
@@ -174,6 +175,7 @@ type ProductUnitItem struct {
 	Sort                int    `json:"sort"`                  // 商品单位排序
 	ProductPackageCount int    `json:"product_package_count"` // 关联商品包数量
 	Name                string `json:"name"`                  // 商品单位名称
+	IsEditable          bool   `json:"is_editable"`           // 是否可编辑
 }
 
 // ProductUnitListResp 商品单位列表响应
@@ -195,6 +197,7 @@ type ProductUnitDetail struct {
 	Uuid            uint64                        `json:"uuid"`             // 商品单位UUID
 	LocaleName      dto.LocaleResponse            `json:"locale_name"`      // 商品单位名称
 	ProductPackages ProductUnitProductPackageList `json:"product_packages"` // 商品包列表
+	IsEditable      bool                          `json:"is_editable"`      // 是否可编辑
 }
 
 type ProductSauceListResp struct {
@@ -210,6 +213,7 @@ type ProductSauceItem struct {
 	ProductPackageCount int                `json:"product_package_count"` // 关联商品包数量
 	ProductBomCardUuid  uint64             `json:"product_bom_card_uuid"` // 成本卡UUID，0表示没有成本卡
 	ProductBomCardName  dto.LocaleResponse `json:"product_bom_card_name"` // 成本卡名称
+	IsEditable          bool               `json:"is_editable"`           // 是否可编辑
 }
 
 type ProductSauceProductPackage struct {
@@ -226,6 +230,7 @@ type ProductSauceDetail struct {
 	Price           float64                        `json:"price"`            // 商品加料价格
 	LocaleName      dto.LocaleResponse             `json:"locale_name"`      // 商品单位名称
 	ProductPackages ProductSauceProductPackageList `json:"product_packages"` // 商品包列表
+	IsEditable      bool                           `json:"is_editable"`      // 是否可编辑
 }
 
 // ProductShopCategory 商品类别（商家端）
@@ -254,6 +259,7 @@ type ProductShopCategoryDetailResp struct {
 	Status       int                `json:"status"`        // 商品类别状态 0-关闭 1-开启
 	ProductCount int64              `json:"product_count"` // 商品数量
 	ChildCount   int64              `json:"child_count"`   // 子级数量
+	Code         string             `json:"code"`          // 分类编码
 }
 
 type ProductAttributeGroupItem struct {
@@ -262,11 +268,13 @@ type ProductAttributeGroupItem struct {
 	Sort          int                                  `json:"sort"`           // 商品属性分组排序
 	AttributeName string                               `json:"attribute_name"` // 商品属性名称
 	Attributes    []ProductAttributeGroupAttributeItem `json:"attributes"`     // 属性值
+	IsEditable    bool                                 `json:"is_editable"`    // 是否可编辑
 }
 
 type ProductAttributeGroupAttributeItem struct {
 	Uuid       uint64             `json:"uuid"`        // 商品属性UUID
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品属性名称
+	IsEditable bool               `json:"is_editable"` // 是否可编辑
 }
 
 type ProductAttributeGroupListResp struct {
@@ -278,6 +286,7 @@ type ProductAttributeGroupDetail struct {
 	Uuid       uint64             `json:"uuid"`        // 商品属性分组UUID
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品属性分组名称
 	Attributes ProductAttributes  `json:"attributes"`  // 商品属性值列表
+	IsEditable bool               `json:"is_editable"` // 是否可编辑
 }
 
 type ProductAttributes struct {
@@ -289,6 +298,7 @@ type ProductAttribute struct {
 	LocaleName      dto.LocaleResponse                 `json:"locale_name"`      // 商品属性名称
 	ProductPackages ProductAttributeProductPackageList `json:"product_packages"` // 关联商品包列表
 	Sort            int                                `json:"sort"`             // 商品属性排序
+	IsEditable      bool                               `json:"is_editable"`      // 是否可编辑
 }
 
 type ProductAttributeProductPackage struct {
@@ -350,7 +360,7 @@ type ProductImportListItem struct {
 	CategoryName          string             `json:"category_name" binding:"required"`            // 分类名称
 	ProductUnit           string             `json:"product_unit" binding:"required"`             // 商品单位
 	SpecName              string             `json:"spec_name" binding:"required"`                // 规格名称
-	ProductPrice          string             `json:"product_price" binding:"required"`            // 商品价格
+	ProductPrice          float64            `json:"product_price" binding:"required"`            // 商品价格
 	NumType               int                `json:"num_type" binding:"required"`                 // 数量计算方法, 1-整数 2-小数
 	Barcode               string             `json:"barcode" binding:"required"`                  // 商品条码
 	ProductStatus         int                `json:"product_status" binding:"required"`           // 商品状态, 1-上架 0-下架

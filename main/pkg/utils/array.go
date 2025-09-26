@@ -13,6 +13,21 @@ func RemoveDuplicates[T comparable](strSlice []T) []T {
 	return list
 }
 
+// 获取两个切片中的重复元素
+func GetDuplicateElements[T comparable](slice1 []T, slice2 []T) []T {
+	keys := make(map[T]bool)
+	list := []T{}
+	for _, entry := range slice1 {
+		keys[entry] = true
+	}
+	for _, entry := range slice2 {
+		if _, value := keys[entry]; value {
+			list = append(list, entry)
+		}
+	}
+	return list
+}
+
 // Filter 通用切片过滤方法
 func Filter[T any](slice []T, predicate func(T) bool) []T {
 	result := make([]T, 0)

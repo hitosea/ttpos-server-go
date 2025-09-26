@@ -50,7 +50,12 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		addReq.CompanyUuid == 0 || addReq.DeviceId == "" {
 		return 0, errors.New("来源设备错误")
 	}
-
+	// 判断厨显模式
+	if addReq.Source == constant.SourceKitchen && addReq.KdsMode != nil {
+		if !slices.Contains([]uint{constant.KdsModeDefault, constant.KdsModeMake, constant.KdsModeMakeAndSend}, *addReq.KdsMode) {
+			return 0, errors.New("厨显工作模式错误")
+		}
+	}
 	// 记录 ua 和 平台
 	userAgent := ctx.GetGin().GetHeader("User-Agent") + ";" + ctx.GetGin().GetHeader("platform") // 记录平台
 	platform := utils.GetPlatform(userAgent)
@@ -71,6 +76,10 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		if productPrinterUuid == 0 {
 			productPrinterUuid = existsDevice.ProductPrinterUuid
 		}
+		kdsMode := existsDevice.KdsMode
+		if addReq.KdsMode != nil {
+			kdsMode = *addReq.KdsMode
+		}
 		remark := addReq.Remark
 		if remark == "" {
 			remark = existsDevice.Remark
@@ -89,6 +98,7 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 			"user_agent":           userAgent,
 			"finally_login_uuid":   addReq.FinallyLoginUuid,
 			"finally_login_time":   finallyLoginTime,
+			"kds_mode":             kdsMode,
 		})
 		if err != nil {
 			return 0, errors.WithMessage(err, "更新绑定信息失败")
@@ -116,6 +126,10 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		}
 	}
 
+	kdsMode := uint(0)
+	if addReq.KdsMode != nil {
+		kdsMode = *addReq.KdsMode
+	}
 	device, err := deviceRepo.CreateDevice(model.Device{
 		FinallyLoginUuid: addReq.FinallyLoginUuid,
 		FinallyLoginTime: addReq.FinallyLoginTime,
@@ -125,6 +139,16 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		Brand:            addReq.Brand,
 		Platform:         platform,
 		UserAgent:        userAgent,
+		KdsMode:          kdsMode,
+		IsMain: func() int {
+			if addReq.Source == constant.SourceCashier {
+				bindCount := deviceRepo.GetBindCountBySource(constant.SourceCashier)
+				if bindCount == 0 {
+					return 1
+				}
+			}
+			return 0
+		}(),
 	})
 	if err != nil {
 		return 0, errors.WithMessage(err)

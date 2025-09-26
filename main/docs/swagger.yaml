@@ -772,6 +772,12 @@ definitions:
     type: object
   material_resp.MaterialCategory:
     properties:
+      code:
+        description: 分类编码
+        type: string
+      is_related:
+        description: 是否关联了物品
+        type: boolean
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -779,6 +785,9 @@ definitions:
       name:
         description: 分类名称
         type: string
+      sort:
+        description: 排序
+        type: integer
       uuid:
         description: 分类UUID
         type: integer
@@ -814,6 +823,9 @@ definitions:
       cost_unit_uuid:
         description: 成本单位UUID
         type: integer
+      editable:
+        description: 是否可编辑
+        type: boolean
       from_cost_unit_uuid:
         description: 来源成本单位UUID
         type: integer
@@ -823,6 +835,9 @@ definitions:
       from_unit_uuid:
         description: 来源单位UUID
         type: integer
+      internal_code:
+        description: 内部编码
+        type: string
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -881,6 +896,23 @@ definitions:
         type: array
       meta:
         $ref: '#/definitions/dto.PageResponse'
+    type: object
+  material_resp.MaterialStockDetailResp:
+    properties:
+      code:
+        description: 物品编码
+        type: string
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物品名称
+      uuid:
+        description: 物品UUID
+        type: integer
+      warehouses:
+        allOf:
+        - $ref: '#/definitions/material_resp.WarehouseList'
+        description: 库存列表
     type: object
   material_resp.MaterialUnit:
     properties:
@@ -946,6 +978,29 @@ definitions:
         description: 单位列表, 用于成本卡编辑选择单位
         items:
           $ref: '#/definitions/material_resp.MaterialUnit'
+        type: array
+    type: object
+  material_resp.Warehouse:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 仓库名称
+      num:
+        description: 物品库存数量
+        type: number
+      uuid:
+        description: 仓库UUID
+        type: integer
+    type: object
+  material_resp.WarehouseList:
+    properties:
+      amount:
+        description: 合计库存数
+        type: number
+      list:
+        items:
+          $ref: '#/definitions/material_resp.Warehouse'
         type: array
     type: object
   member_req.CallbackReq:
@@ -1575,6 +1630,9 @@ definitions:
     type: object
   product_resp.ProductAttribute:
     properties:
+      is_editable:
+        description: 是否可编辑
+        type: boolean
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -1612,6 +1670,9 @@ definitions:
     type: object
   product_resp.ProductAttributeGroupAttributeItem:
     properties:
+      is_editable:
+        description: 是否可编辑
+        type: boolean
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -1626,6 +1687,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/product_resp.ProductAttributes'
         description: 商品属性值列表
+      is_editable:
+        description: 是否可编辑
+        type: boolean
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -1644,6 +1708,9 @@ definitions:
         items:
           $ref: '#/definitions/product_resp.ProductAttributeGroupAttributeItem'
         type: array
+      is_editable:
+        description: 是否可编辑
+        type: boolean
       name:
         description: 商品属性分组名称
         type: string
@@ -1852,6 +1919,9 @@ definitions:
       bom_uuid:
         description: 商品BOM UUID
         type: integer
+      internal_code:
+        description: 商品规格内部编码
+        type: string
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -1993,7 +2063,7 @@ definitions:
         type: integer
       product_price:
         description: 商品价格
-        type: string
+        type: number
       product_rating_tax_type:
         description: 堂食税类
         type: string
@@ -2234,6 +2304,9 @@ definitions:
     type: object
   product_resp.ProductSauceDetail:
     properties:
+      is_editable:
+        description: 是否可编辑
+        type: boolean
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -2251,6 +2324,9 @@ definitions:
     type: object
   product_resp.ProductSauceItem:
     properties:
+      is_editable:
+        description: 是否可编辑
+        type: boolean
       name:
         description: 商品加料名称
         type: string
@@ -2342,6 +2418,9 @@ definitions:
       child_count:
         description: 子级数量
         type: integer
+      code:
+        description: 分类编码
+        type: string
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -2526,6 +2605,9 @@ definitions:
     type: object
   product_resp.ProductUnitDetail:
     properties:
+      is_editable:
+        description: 是否可编辑
+        type: boolean
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -2540,6 +2622,9 @@ definitions:
     type: object
   product_resp.ProductUnitItem:
     properties:
+      is_editable:
+        description: 是否可编辑
+        type: boolean
       name:
         description: 商品单位名称
         type: string
@@ -2994,6 +3079,45 @@ definitions:
           $ref: '#/definitions/req.OrderProductAddReq'
         type: array
     type: object
+  req.CreateWarehouseReq:
+    properties:
+      address:
+        description: 地址
+        maxLength: 500
+        type: string
+      code:
+        description: 编码
+        maxLength: 20
+        type: string
+      contact:
+        description: 联系人
+        maxLength: 100
+        type: string
+      name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 名称
+      phone:
+        description: 联系电话
+        maxLength: 20
+        type: string
+      status:
+        description: 状态：0-禁用；1-启用
+        enum:
+        - 0
+        - 1
+        type: integer
+      type:
+        description: 类型：normal-普通；transit-在途
+        enum:
+        - normal
+        - transit
+        type: string
+    required:
+    - code
+    - name
+    - type
+    type: object
   req.DecryptQrCodeReq:
     properties:
       sign:
@@ -3012,6 +3136,14 @@ definitions:
   req.DeleteReturnFoodReasonReq:
     properties:
       uuid:
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.DeleteWarehouseReq:
+    properties:
+      uuid:
+        description: 仓库ID
         type: integer
     required:
     - uuid
@@ -3094,12 +3226,58 @@ definitions:
     required:
     - desk_uuid
     type: object
+  req.FinishReq:
+    properties:
+      mode:
+        description: 模式 0-传菜完成 ; 1-制作完成
+        type: integer
+      product_uuid:
+        description: 送厨商品ID
+        type: integer
+    type: object
   req.GetBindCodeReq:
     properties:
       device_id:
         type: string
     required:
     - device_id
+    type: object
+  req.GetWarehouseInOutListReq:
+    properties:
+      end_time:
+        description: 日期，结束时间
+        type: integer
+      keyword:
+        description: 关键字, 物品名称、物品编码、物品条形码
+        type: string
+      material_category_uuids:
+        description: 物料分类ID列表,多选
+        items:
+          type: integer
+        type: array
+      order_no:
+        description: 单据编号
+        type: string
+      page_no:
+        description: 页码
+        minimum: 1
+        type: integer
+      page_size:
+        description: 每页大小
+        maximum: 1100
+        minimum: 1
+        type: integer
+      start_time:
+        description: 日期，开始时间
+        type: integer
+      supplier_uuids:
+        description: 供应商ID列表,多选
+        items:
+          type: integer
+        type: array
+      type:
+        description: 类型：采购入库-purchase、销售出库-sale、发货出库-delivery
+        type: string
     type: object
   req.InitShopReq:
     properties:
@@ -3109,6 +3287,9 @@ definitions:
       company_uuid:
         description: 公司UUID
         type: integer
+      headquarter_abbr:
+        description: 总部简称
+        type: string
       site_code:
         description: 站点编码
         type: string
@@ -3264,6 +3445,9 @@ definitions:
       brand:
         description: 品牌
         type: string
+      mode:
+        description: 模式 0-默认，传菜模式; 1-制作模式; 2-制作+传菜模式
+        type: integer
       product_printer_uuid:
         description: 商品打印Uuid
         type: integer
@@ -3294,6 +3478,44 @@ definitions:
     - password
     - username
     type: object
+  req.MaterialAddErpReq:
+    properties:
+      barcode_value:
+        description: 条形码值
+        type: string
+      classification:
+        description: 分类
+        type: string
+      classification_code:
+        description: 分类编码
+        type: string
+      disabled:
+        description: 是否禁用
+        type: boolean
+      internal_code:
+        description: 内部编码
+        type: string
+      item_code:
+        description: 物品编码, 如果为空，则为新增；如果非空，则为编辑
+        type: string
+      item_name:
+        description: 物品名称, 英文
+        type: string
+      opening_stock:
+        description: 期初库存
+        type: number
+      stock_uom:
+        description: 基准库存单位, 英文
+        type: string
+      uoms:
+        description: 单位列表
+        items:
+          $ref: '#/definitions/req.MaterialUomReq'
+        type: array
+      valuation_rate:
+        description: 估值率
+        type: number
+    type: object
   req.MaterialAddReq:
     properties:
       barcode_value:
@@ -3308,6 +3530,9 @@ definitions:
       init_stock:
         description: 期初库存
         type: number
+      internal_code:
+        description: 内部编码
+        type: string
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -3332,10 +3557,56 @@ definitions:
     type: object
   req.MaterialCategoryAddReq:
     properties:
+      code:
+        description: 物品类别编码
+        type: string
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 物品类别名称
+    type: object
+  req.MaterialCategoryDeleteReq:
+    properties:
+      uuid:
+        description: 物品类别UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.MaterialCategoryEditReq:
+    properties:
+      code:
+        description: 物品类别编码
+        type: string
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物品类别名称
+      uuid:
+        description: 物品类别UUID
+        type: integer
+    type: object
+  req.MaterialCategorySortItemReq:
+    properties:
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 物品类别UUID
+        type: integer
+    required:
+    - sort
+    - uuid
+    type: object
+  req.MaterialCategorySortReq:
+    properties:
+      list:
+        description: 物品类别列表
+        items:
+          $ref: '#/definitions/req.MaterialCategorySortItemReq'
+        type: array
+    required:
+    - list
     type: object
   req.MaterialEditReq:
     properties:
@@ -3348,6 +3619,9 @@ definitions:
       cost_unit_uuid:
         description: 成本单位UUID
         type: integer
+      internal_code:
+        description: 内部编码
+        type: string
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -3471,6 +3745,15 @@ definitions:
     required:
     - conversion_rate
     - uuid
+    type: object
+  req.MaterialUomReq:
+    properties:
+      conversion_rate:
+        description: 转换率
+        type: number
+      uom:
+        description: 单位, 英文
+        type: string
     type: object
   req.MemberOrderSendAuthCodeReq:
     properties:
@@ -4197,11 +4480,6 @@ definitions:
       related_uuid:
         description: 关联UUID,给规格商品或加料绑定成本卡。规格商品时，关联UUID为规格商品UUID；加料时，关联UUID为加料UUID
         type: integer
-    required:
-    - materials
-    - num
-    - related_type
-    - related_uuid
     type: object
   req.ProductBomCardCopyReq:
     properties:
@@ -4233,6 +4511,9 @@ definitions:
       init_stock:
         description: 期初库存
         type: number
+      internal_code:
+        description: 内部编码
+        type: string
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -4271,8 +4552,6 @@ definitions:
         items:
           $ref: '#/definitions/req.ProductBomCardMaterialReq'
         type: array
-    required:
-    - list
     type: object
   req.ProductBomCardMaterialReq:
     properties:
@@ -4720,6 +4999,9 @@ definitions:
       barcode_value:
         description: 商品加料条码值, 可选
         type: string
+      internal_code:
+        description: 内部编码
+        type: string
       price:
         description: 商品规格价格
         type: number
@@ -4767,6 +5049,9 @@ definitions:
         items:
           $ref: '#/definitions/req.ProductShopAddPackageGroupReq'
         type: array
+      internal_code:
+        description: 商品套餐内部编码
+        type: string
       price:
         description: 套餐价格
         type: number
@@ -4890,6 +5175,9 @@ definitions:
     type: object
   req.ProductShopCategoryAddReq:
     properties:
+      code:
+        description: 分类编码
+        type: string
       is_special:
         description: 是否特殊分类, false-否 true-是
         type: boolean
@@ -4916,6 +5204,9 @@ definitions:
     type: object
   req.ProductShopCategoryEditReq:
     properties:
+      code:
+        description: 分类编码
+        type: string
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -5022,6 +5313,9 @@ definitions:
       bom_uuid:
         description: 商品BOM UUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID
         type: integer
+      internal_code:
+        description: 商品规格内部编码
+        type: string
       is_delete:
         description: 是否删除, 如果是新增/编辑，则传false，删除时传true
         type: boolean
@@ -5087,6 +5381,9 @@ definitions:
         items:
           $ref: '#/definitions/req.ProductShopEditPackageGroupReq'
         type: array
+      internal_code:
+        description: 商品套餐内部编码
+        type: string
       price:
         description: 套餐价格
         type: number
@@ -5266,8 +5563,6 @@ definitions:
       uuid:
         description: 商品单位UUID
         type: integer
-    required:
-    - uuid
     type: object
   req.ProductUnitSortItem:
     properties:
@@ -5330,9 +5625,22 @@ definitions:
         description: 单据日期
         minimum: 0
         type: integer
+      purchase_type:
+        description: V2.6  采购类型, 1-外部采购 2-内部采购
+        maximum: 2
+        minimum: 0
+        type: integer
+      supplier_erp_code:
+        description: V2.6 供应商编码
+        maxLength: 255
+        type: string
       supplier_name:
         description: 供应商名称
         minLength: 1
+        type: string
+      warehouse_erp_code:
+        description: V2.6 仓库编码
+        maxLength: 255
         type: string
     required:
     - items
@@ -5374,10 +5682,38 @@ definitions:
     type: object
   req.PurchaseOrderListReq:
     properties:
+      company_uuid:
+        description: 公司UUID
+        minimum: 1
+        type: integer
+      create_time_end:
+        description: 创建时间结束
+        minimum: 0
+        type: integer
+      create_time_start:
+        description: 创建时间开始
+        minimum: 0
+        type: integer
+      expect_arrival_time_end:
+        description: 期望到货时间结束
+        minimum: 0
+        type: integer
+      expect_arrival_time_start:
+        description: 期望到货时间开始
+        minimum: 0
+        type: integer
       order_no:
         description: 订单编号
         maxLength: 50
         type: string
+      order_time_end:
+        description: 订单时间结束
+        minimum: 0
+        type: integer
+      order_time_start:
+        description: 订单时间开始
+        minimum: 0
+        type: integer
       page_no:
         description: 页码
         minimum: 1
@@ -5387,13 +5723,34 @@ definitions:
         maximum: 1100
         minimum: 1
         type: integer
+      purchase_type:
+        description: V2.6 采购类型, 1-外部采购 2-内部采购
+        maximum: 2
+        minimum: 0
+        type: integer
+      receive_time_end:
+        description: 收货时间结束
+        minimum: 0
+        type: integer
+      receive_time_start:
+        description: 收货时间开始
+        minimum: 0
+        type: integer
       status_in:
-        description: '状态筛选: [0,1,2,3,4], 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)'
+        description: '状态筛选: [0,1,2,3,4], 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核'
         items:
           type: integer
         maxItems: 5
         minItems: 0
         type: array
+      supplier_name:
+        description: 供应商名称
+        maxLength: 100
+        type: string
+      warehouse_erp_code:
+        description: 仓库编码
+        maxLength: 255
+        type: string
     type: object
   req.PurchaseOrderSubmitReq:
     properties:
@@ -5417,6 +5774,10 @@ definitions:
         maxItems: 200
         minItems: 1
         type: array
+      supplier_erp_code:
+        description: V2.6 供应商编码
+        maxLength: 255
+        type: string
       supplier_name:
         description: 供应商名称
         minLength: 1
@@ -5425,6 +5786,10 @@ definitions:
         description: 采购订单ID
         minimum: 1
         type: integer
+      warehouse_erp_code:
+        description: V2.6 仓库编码
+        maxLength: 255
+        type: string
     required:
     - uuid
     type: object
@@ -5444,6 +5809,11 @@ definitions:
         description: 采购订单ID
         minimum: 1
         type: integer
+      receipt_type:
+        description: 收货类型 1-外部收货 2-内部收货
+        maximum: 2
+        minimum: 1
+        type: integer
       receive_time:
         description: 收货时间(时间戳)
         minimum: 0
@@ -5451,6 +5821,7 @@ definitions:
     required:
     - items
     - purchase_order_uuid
+    - receipt_type
     - receive_time
     type: object
   req.PurchaseReceiptItemCreateReq:
@@ -5608,6 +5979,15 @@ definitions:
     - member_uuid
     - recharge_amount
     type: object
+  req.RecoveryReq:
+    properties:
+      mode:
+        description: 模式 0-传菜历史恢复 ; 1-制作历史恢复
+        type: integer
+      product_uuid:
+        description: 送厨商品ID
+        type: integer
+    type: object
   req.RejectH5OrderReq:
     properties:
       h5_order_uuid:
@@ -5642,6 +6022,14 @@ definitions:
         type: number
       recharge:
         type: number
+    type: object
+  req.SetDefaultWarehouseReq:
+    properties:
+      uuid:
+        description: 仓库ID
+        type: integer
+    required:
+    - uuid
     type: object
   req.ShiftDepositReq:
     properties:
@@ -5717,6 +6105,82 @@ definitions:
       withdraw_cash:
         description: '取出金额: 0 - 当前钱箱现金总计'
         type: number
+    type: object
+  req.SupplierCreateReq:
+    properties:
+      address:
+        description: 供应商地址
+        maxLength: 500
+        type: string
+      code:
+        description: 供应商编码
+        maxLength: 20
+        type: string
+      contact_name:
+        description: 联系人姓名
+        maxLength: 100
+        type: string
+      contact_phone:
+        description: 联系人电话
+        maxLength: 20
+        type: string
+      name:
+        description: 供应商名称
+        maxLength: 150
+        type: string
+      status:
+        description: 供应商状态:0-禁用；1-启用
+        enum:
+        - 0
+        - 1
+        type: integer
+    required:
+    - code
+    - name
+    type: object
+  req.SupplierDeleteReq:
+    properties:
+      uuid:
+        description: 供应商UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.SupplierUpdateReq:
+    properties:
+      address:
+        description: 供应商地址
+        maxLength: 500
+        type: string
+      code:
+        description: 供应商编码
+        maxLength: 20
+        type: string
+      contact_name:
+        description: 联系人姓名
+        maxLength: 100
+        type: string
+      contact_phone:
+        description: 联系人电话
+        maxLength: 20
+        type: string
+      name:
+        description: 供应商名称
+        maxLength: 150
+        type: string
+      status:
+        description: 供应商状态:0-禁用；1-启用
+        enum:
+        - 0
+        - 1
+        type: integer
+      uuid:
+        description: 供应商UUID
+        type: integer
+    required:
+    - code
+    - name
+    - uuid
     type: object
   req.TabletOrderCartProductAddReq:
     properties:
@@ -5997,6 +6461,48 @@ definitions:
     - is_show_sold_out
     - member_show_sold_out
     - menu_show_sold_out
+    type: object
+  req.UpdateWarehouseReq:
+    properties:
+      address:
+        description: 地址
+        maxLength: 500
+        type: string
+      code:
+        description: 编码
+        maxLength: 20
+        type: string
+      contact:
+        description: 联系人
+        maxLength: 100
+        type: string
+      name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 名称
+      phone:
+        description: 联系电话
+        maxLength: 20
+        type: string
+      status:
+        description: 状态：0-禁用；1-启用
+        enum:
+        - 0
+        - 1
+        type: integer
+      type:
+        description: 类型：normal-普通；transit-在途
+        enum:
+        - normal
+        - transit
+        type: string
+      uuid:
+        type: integer
+    required:
+    - code
+    - name
+    - type
+    - uuid
     type: object
   req.UsbPrinterReportPrinterData:
     properties:
@@ -6627,6 +7133,12 @@ definitions:
       username:
         description: 收银员账号
         type: string
+    type: object
+  resp.CheckNameCodeExistsResp:
+    properties:
+      exists:
+        description: 是否存在
+        type: boolean
     type: object
   resp.CheckNameItem:
     properties:
@@ -9637,6 +10149,12 @@ definitions:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 送厨商品名称
+      made_time:
+        description: 制作完成时间
+        type: integer
+      make_status:
+        description: 制作状态，0-默认，未制作完成，1-已制作完成，2-已恢复到制作中
+        type: integer
       num:
         description: 送厨商品数量
         type: number
@@ -9692,12 +10210,21 @@ definitions:
     type: object
   resp.PurchaseOrderDetailResp:
     properties:
+      company_name:
+        description: V2.6 公司名称
+        type: string
+      company_uuid:
+        description: V2.6 公司UUID
+        type: integer
       erp_order_no:
         description: ERP申请单编号（采购单号）
         type: string
       expect_arrival_time:
         description: 期望到货日期
         type: integer
+      headquarter_status:
+        description: V2.6 总部状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)
+        type: string
       items:
         description: 采购明细
         items:
@@ -9715,27 +10242,45 @@ definitions:
       order_type:
         description: 申请类型
         type: integer
+      purchase_type:
+        description: V2.6 采购类型 1-外部采购 2-内部采购
+        type: integer
       receipt_progress:
         description: 收货进度（百分比0.00%）前端直接显示
         type: string
       status:
-        description: 状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)
+        description: 状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核
         type: integer
+      supplier_erp_code:
+        description: 供应商编码
+        type: string
       supplier_name:
         description: 供应商名称
         type: string
       uuid:
         description: 采购订单ID
         type: integer
+      warehouse_erp_code:
+        description: V2.6 仓库编码
+        type: string
     type: object
   resp.PurchaseOrderInfo:
     properties:
+      company_name:
+        description: V2.6 公司名称
+        type: string
+      company_uuid:
+        description: V2.6 公司UUID
+        type: integer
       erp_order_no:
         description: ERP申请单编号（采购单号）
         type: string
       expect_arrival_time:
         description: 期望到货日期
         type: integer
+      headquarter_status:
+        description: V2.6 总部状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)
+        type: string
       num:
         description: 物品数量
         type: integer
@@ -9748,18 +10293,27 @@ definitions:
       order_type:
         description: 申请类型
         type: integer
+      purchase_type:
+        description: V2.6 采购类型 1-外部采购 2-内部采购
+        type: integer
       receipt_progress:
         description: 收货进度（百分比0.00%）前端直接显示
         type: string
       status:
-        description: 状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)
+        description: 状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核
         type: integer
+      supplier_erp_code:
+        description: 供应商编码
+        type: string
       supplier_name:
         description: 供应商名称
         type: string
       uuid:
         description: 采购订单ID
         type: integer
+      warehouse_erp_code:
+        description: V2.6 仓库编码
+        type: string
     type: object
   resp.PurchaseOrderItemInfo:
     properties:
@@ -10635,12 +11189,21 @@ definitions:
       device_remark:
         description: 设备备注
         type: string
+      is_headquarter:
+        description: 是否是总部
+        type: boolean
       is_open_tax:
         description: '税率设置: false-关闭 true-开启'
+        type: boolean
+      is_syncing:
+        description: 是否erp数据同步中
         type: boolean
       is_ttpos_site:
         description: 是否散户site
         type: boolean
+      last_sync_time:
+        description: 上次同步erp数据完成时间
+        type: integer
       permissions:
         description: 页面权限
         items:
@@ -10843,6 +11406,72 @@ definitions:
           $ref: '#/definitions/resp.SubProductItem'
         type: array
     type: object
+  resp.SupplierCreateResp:
+    properties:
+      uuid:
+        description: 供应商UUID
+        type: integer
+    type: object
+  resp.SupplierInfo:
+    properties:
+      code:
+        description: 供应商编码
+        type: string
+      is_editable:
+        description: 是否可编辑
+        type: boolean
+      is_headquarter:
+        description: 是否为总部
+        type: boolean
+      name:
+        description: 供应商名称
+        type: string
+      uuid:
+        description: 供应商UUID
+        type: integer
+    type: object
+  resp.SupplierListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.SupplierInfo'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
+  resp.SupplierResp:
+    properties:
+      address:
+        description: 供应商地址
+        type: string
+      code:
+        description: 供应商编码
+        type: string
+      contact_name:
+        description: 联系人姓名
+        type: string
+      contact_phone:
+        description: 联系人电话
+        type: string
+      has_related_purchase_order:
+        description: 是否有关联的采购单
+        type: boolean
+      is_editable:
+        description: 是否可编辑
+        type: boolean
+      is_headquarter:
+        description: 是否为总部
+        type: boolean
+      name:
+        description: 供应商名称
+        type: string
+      status:
+        description: 状态：0-禁用；1-启用
+        type: integer
+      uuid:
+        description: 供应商UUID
+        type: integer
+    type: object
   resp.SupplierSelectResp:
     properties:
       list:
@@ -10852,9 +11481,15 @@ definitions:
     type: object
   resp.SupplierSimpleInfo:
     properties:
+      code:
+        description: 供应商编码
+        type: string
       name:
         description: 供应商名称
         type: string
+      uuid:
+        description: 供应商UUID
+        type: integer
     type: object
   resp.SystemSetting:
     properties:
@@ -11168,6 +11803,99 @@ definitions:
         type: array
       selected_sn:
         type: string
+    type: object
+  resp.WarehouseInOutListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.WarehouseInOutResp'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
+  resp.WarehouseInOutResp:
+    properties:
+      amount:
+        description: 金额
+        type: number
+      date:
+        description: 日期
+        type: string
+      material_barcode:
+        description: 物品条形码
+        type: string
+      material_category_uuid:
+        description: 物料分类ID
+        type: integer
+      material_code:
+        description: 物品编码
+        type: string
+      material_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物品名称
+      material_uuid:
+        description: 物品信息
+        type: integer
+      num:
+        description: 数量
+        type: integer
+      order_no:
+        description: 单据编号
+        type: string
+      supplier_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 供应商名称
+      supplier_uuid:
+        description: 供应商信息
+        type: integer
+      type:
+        description: 类型：采购入库-purchase、销售出库-sale、发货出库-delivery
+        type: string
+      uuid:
+        description: 出入库明细ID
+        type: integer
+      warehouse_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 仓库名称
+      warehouse_uuid:
+        description: 仓库信息
+        type: integer
+    type: object
+  resp.WarehouseListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.WarehouseResp'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
+  resp.WarehouseResp:
+    properties:
+      address:
+        type: string
+      code:
+        type: string
+      contact:
+        type: string
+      is_default:
+        type: integer
+      is_editable:
+        description: 是否可编辑
+        type: boolean
+      local_name:
+        $ref: '#/definitions/dto.LocaleResponse'
+      phone:
+        type: string
+      status:
+        type: integer
+      type:
+        type: string
+      uuid:
+        type: integer
     type: object
   setting.AddClockItem:
     properties:
@@ -11576,6 +12304,9 @@ definitions:
         type: string
       is_open:
         description: 是否开启厨显功能 0关闭 1开启
+        type: string
+      is_smart_kitchen:
+        description: 是否开启智能后厨 0-关闭 1-开启
         type: string
       is_wait_color:
         description: 是否开启等待时长颜色 0-关闭 1-开启
@@ -15374,6 +16105,19 @@ paths:
       summary: 订单检查
       tags:
       - 收银端.桌台
+  /cashier/desk/order/daily_sales_outbound_summary:
+    get:
+      consumes:
+      - application/json
+      description: 获取每日销售出库汇总
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - JwtToken: []
+      summary: 获取每日销售出库汇总
+      tags:
+      - 收银端.桌台
   /cashier/desk/order/discount:
     post:
       consumes:
@@ -15463,6 +16207,23 @@ paths:
       security:
       - JwtToken: []
       summary: 免单
+      tags:
+      - 收银端.桌台
+  /cashier/desk/order/headquarter_material_list:
+    get:
+      consumes:
+      - application/json
+      description: 获取总部物品列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取总部物品列表
       tags:
       - 收银端.桌台
   /cashier/desk/order/member/cancel:
@@ -20785,9 +21546,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: 绑定商品打印
+      description: 绑定商品打印、设置工作模式
       parameters:
-      - description: 绑定商品打印参数
+      - description: 绑定商品打印、设置工作模式参数
         in: body
         name: data
         required: true
@@ -20802,7 +21563,7 @@ paths:
             $ref: '#/definitions/dto.Response'
       security:
       - JwtToken: []
-      summary: 绑定商品打印
+      summary: 绑定商品打印、设置工作模式
       tags:
       - 厨显端.基础信息
   /kitchen/call/processed:
@@ -21035,27 +21796,33 @@ paths:
     post:
       consumes:
       - application/json
-      description: 制作完成
+      description: 完成制作、传菜
       parameters:
-      - description: 送厨商品Uuid参数
+      - description: 完成制作、传菜
         in: body
         name: data
         required: true
         schema:
-          $ref: '#/definitions/req.ProductUuid'
+          $ref: '#/definitions/req.FinishReq'
       produces:
       - application/json
       responses: {}
       security:
       - JwtToken: []
-      summary: 制作完成
+      summary: 完成制作、传菜
       tags:
       - 厨显端.产品
   /kitchen/product/history:
     get:
       consumes:
       - application/json
-      description: 获取上菜历史
+      description: 获取制作完成、传菜完成历史
+      parameters:
+      - description: 模式 0-传菜历史; 1-制作历史
+        in: query
+        name: mode
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -21070,7 +21837,7 @@ paths:
               type: object
       security:
       - JwtToken: []
-      summary: 获取上菜历史
+      summary: 获取制作完成、传菜完成历史
       tags:
       - 厨显端.产品
   /kitchen/product/list_by_category:
@@ -21079,20 +21846,23 @@ paths:
       - application/json
       description: 根据分类获取送厨商品列表
       parameters:
-      - description: 分类Uuid，0-全部
-        in: query
-        name: category_uuid
-        type: integer
       - description: 页码
         in: query
-        minimum: 1
         name: page_no
+        required: true
         type: integer
       - description: 每页大小
         in: query
-        maximum: 1100
-        minimum: 1
         name: page_size
+        required: true
+        type: integer
+      - description: 模式 0-传菜模式; 1-制作模式
+        in: query
+        name: mode
+        type: integer
+      - description: 分类Uuid，0-全部
+        in: query
+        name: category_uuid
         type: integer
       produces:
       - application/json
@@ -21119,14 +21889,17 @@ paths:
       parameters:
       - description: 页码
         in: query
-        minimum: 1
         name: page_no
+        required: true
         type: integer
       - description: 每页大小
         in: query
-        maximum: 1100
-        minimum: 1
         name: page_size
+        required: true
+        type: integer
+      - description: 模式 0-传菜模式; 1-制作模式
+        in: query
+        name: mode
         type: integer
       produces:
       - application/json
@@ -21156,7 +21929,7 @@ paths:
         name: data
         required: true
         schema:
-          $ref: '#/definitions/req.ProductUuid'
+          $ref: '#/definitions/req.RecoveryReq'
       produces:
       - application/json
       responses: {}
@@ -22540,6 +23313,29 @@ paths:
       summary: 检查名称是否存在
       tags:
       - 通用
+  /shop/check_update:
+    get:
+      consumes:
+      - application/json
+      description: 检查更新
+      parameters:
+      - description: 品牌参数
+        in: query
+        name: brand
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 检查更新
+      tags:
+      - 商家端.基础信息
   /shop/login:
     post:
       consumes:
@@ -22613,6 +23409,30 @@ paths:
       summary: 添加物品
       tags:
       - 商家端.物品管理
+  /shop/material/add/erp:
+    post:
+      consumes:
+      - application/json
+      description: 从erp同步物品
+      parameters:
+      - description: 物品添加请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.MaterialAddErpReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 从erp同步物品
+      tags:
+      - 商家端.物品管理
   /shop/material/category/add:
     post:
       consumes:
@@ -22637,6 +23457,79 @@ paths:
       summary: 创建物品类别
       tags:
       - 商家端.物品管理
+  /shop/material/category/delete:
+    post:
+      consumes:
+      - application/json
+      description: 删除物品类别
+      parameters:
+      - description: 物品类别删除请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.MaterialCategoryDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 删除物品类别
+      tags:
+      - 商家端.物品管理
+  /shop/material/category/detail:
+    get:
+      consumes:
+      - application/json
+      description: 获取物品类别详情
+      parameters:
+      - description: 物品类别UUID
+        in: query
+        name: uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/material_resp.MaterialCategory'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取物品类别详情
+      tags:
+      - 商家端.物品管理
+  /shop/material/category/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑物品类别
+      parameters:
+      - description: 物品类别编辑请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.MaterialCategoryEditReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 编辑物品类别
+      tags:
+      - 商家端.物品管理
   /shop/material/category/list:
     get:
       consumes:
@@ -22654,6 +23547,30 @@ paths:
       security:
       - JwtToken: []
       summary: 获取物品类别列表
+      tags:
+      - 商家端.物品管理
+  /shop/material/category/sort:
+    post:
+      consumes:
+      - application/json
+      description: 排序物品类别
+      parameters:
+      - description: 物品类别排序请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.MaterialCategorySortReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 排序物品类别
       tags:
       - 商家端.物品管理
   /shop/material/detail:
@@ -22815,6 +23732,31 @@ paths:
       security:
       - JwtToken: []
       summary: 批量修改物品状态
+      tags:
+      - 商家端.物品管理
+  /shop/material/stock/detail:
+    get:
+      consumes:
+      - application/json
+      description: 查询物品库存详情
+      parameters:
+      - description: 物品UUID
+        in: query
+        name: uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/material_resp.MaterialStockDetailResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 查询物品库存详情
       tags:
       - 商家端.物品管理
   /shop/material/unit/list:
@@ -24916,7 +25858,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 分页获取收货记录列表
+      description: 分页获取收货记录列表，支持按收货时间和创建时间筛选
       parameters:
       - default: 1
         description: 页码
@@ -24932,9 +25874,32 @@ paths:
         in: query
         name: order_no
         type: string
-      - description: 状态
+      - collectionFormat: csv
+        description: 状态筛选
         in: query
-        name: status
+        items:
+          type: integer
+        name: status_in
+        type: array
+      - description: 收货时间开始（时间戳）
+        format: int64
+        in: query
+        name: receive_time_start
+        type: integer
+      - description: 收货时间结束（时间戳）
+        format: int64
+        in: query
+        name: receive_time_end
+        type: integer
+      - description: 创建时间开始（时间戳）
+        format: int64
+        in: query
+        name: create_time_start
+        type: integer
+      - description: 创建时间结束（时间戳）
+        format: int64
+        in: query
+        name: create_time_end
         type: integer
       produces:
       - application/json
@@ -25474,6 +26439,22 @@ paths:
       summary: 保存门店设置
       tags:
       - 商家端.门店设置
+  /shop/setting/sync:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 获取总部最新数据
+      tags:
+      - 商家端.业务设置
   /shop/setting/upload_logo:
     post:
       consumes:
@@ -25948,11 +26929,195 @@ paths:
       summary: 统计班次退款金额
       tags:
       - 商家端.营业数据
+  /shop/supplier:
+    get:
+      consumes:
+      - application/json
+      description: 获取供应商列表，支持名称和编码关键字搜索
+      parameters:
+      - description: 供应商ID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.SupplierResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取供应商
+      tags:
+      - 商家端.供应商档案
+  /shop/supplier/code_exists:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: 供应商编码
+        in: query
+        name: code
+        required: true
+        type: string
+      - description: 供应商UUID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CheckNameCodeExistsResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 检查供应商编码是否存在
+      tags:
+      - 商家端.供应商档案
+  /shop/supplier/create:
+    post:
+      consumes:
+      - application/json
+      description: 创建供应商，包含名称和编码重复性验证
+      parameters:
+      - description: 创建供应商请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/req.SupplierCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.SupplierCreateResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 创建供应商
+      tags:
+      - 商家端.供应商档案
+  /shop/supplier/delete:
+    delete:
+      consumes:
+      - application/json
+      description: 删除供应商
+      parameters:
+      - description: 删除供应商请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/req.SupplierDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除供应商
+      tags:
+      - 商家端.供应商档案
+  /shop/supplier/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取供应商列表，支持名称和编码关键字搜索
+      parameters:
+      - description: 关键字搜索：名称、编码
+        in: query
+        name: keyword
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - default: 20
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.SupplierListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取供应商列表
+      tags:
+      - 商家端.供应商档案
+  /shop/supplier/name_exists:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: 供应商名称
+        in: query
+        name: name
+        required: true
+        type: string
+      - description: 供应商UUID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CheckNameCodeExistsResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 检查供应商名称是否存在
+      tags:
+      - 商家端.供应商档案
   /shop/supplier/select:
     get:
       consumes:
       - application/json
-      description: 获取供应商列表选择器
+      description: 获取供应商列表选择器，支持根据是否外部采购过滤
+      parameters:
+      - description: 采购类型, 1-外部采购 2-内部采购
+        in: query
+        name: purchase_type
+        type: integer
       produces:
       - application/json
       responses:
@@ -25969,7 +27134,346 @@ paths:
       - JwtToken: []
       summary: 获取供应商列表选择器
       tags:
-      - 商家端.供应商管理
+      - 商家端.供应商档案
+  /shop/supplier/sync:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 同步供应商
+      tags:
+      - 商家端.供应商档案
+  /shop/supplier/update:
+    post:
+      consumes:
+      - application/json
+      description: 更新供应商信息，包含名称和编码重复性验证
+      parameters:
+      - description: 更新供应商请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/req.SupplierUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 更新供应商
+      tags:
+      - 商家端.供应商档案
+  /shop/test/material/category/sync:
+    post:
+      consumes:
+      - application/json
+      description: 同步物品分类
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 同步物品分类
+      tags:
+      - 商家端.物品管理
+  /shop/warehouse:
+    get:
+      consumes:
+      - application/json
+      description: 获取仓库
+      parameters:
+      - description: 仓库ID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.WarehouseResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取仓库
+      tags:
+      - 商家端.仓库档案
+  /shop/warehouse/code_exists:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: 仓库编码
+        in: query
+        name: code
+        required: true
+        type: string
+      - description: 仓库UUID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CheckNameCodeExistsResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 检查仓库编码是否存在
+      tags:
+      - 商家端.仓库档案
+  /shop/warehouse/create:
+    post:
+      consumes:
+      - application/json
+      description: 创建新的仓库
+      parameters:
+      - description: 创建仓库请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/req.CreateWarehouseReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 创建仓库
+      tags:
+      - 商家端.仓库档案
+  /shop/warehouse/delete:
+    delete:
+      consumes:
+      - application/json
+      description: 删除仓库
+      parameters:
+      - description: 删除仓库请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeleteWarehouseReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除仓库
+      tags:
+      - 商家端.仓库档案
+  /shop/warehouse/first_sync_item:
+    post:
+      consumes:
+      - application/json
+      description: 第一次同步仓库物品库存
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 第一次同步仓库物品库存
+      tags:
+      - 商家端.仓库档案
+  /shop/warehouse/headquarter/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取仓库列表，支持分页和筛选
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.WarehouseListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取总部仓库列表
+      tags:
+      - 商家端.仓库档案
+  /shop/warehouse/in_out/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取仓库出入库明细列表
+      parameters:
+      - description: 获取仓库出入库明细列表请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/req.GetWarehouseInOutListReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.WarehouseInOutListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取仓库出入库明细列表
+      tags:
+      - 商家端.仓库管理
+  /shop/warehouse/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取仓库列表，支持分页和筛选
+      parameters:
+      - description: 页码，默认1
+        in: query
+        name: page_no
+        type: integer
+      - description: 每页数量，默认20
+        in: query
+        name: page_size
+        type: integer
+      - description: 搜索关键字：仓库编码或名称
+        in: query
+        name: keyword
+        type: string
+      - description: 仓库状态:0-禁用；1-启用
+        in: query
+        name: status
+        type: integer
+      - description: 仓库类型：normal-普通；transit-在途
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.WarehouseListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取仓库列表
+      tags:
+      - 商家端.仓库档案
+  /shop/warehouse/set_default:
+    post:
+      consumes:
+      - application/json
+      description: 更新仓库信息
+      parameters:
+      - description: 设置默认仓库请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/req.SetDefaultWarehouseReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 更新仓库
+      tags:
+      - 商家端.仓库档案
+  /shop/warehouse/sync:
+    post:
+      consumes:
+      - application/json
+      description: 同步仓库列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 同步仓库列表
+      tags:
+      - 商家端.仓库档案
+  /shop/warehouse/update:
+    post:
+      consumes:
+      - application/json
+      description: 更新仓库信息
+      parameters:
+      - description: 更新仓库请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/req.UpdateWarehouseReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 更新仓库
+      tags:
+      - 商家端.仓库档案
   /tablet/base:
     get:
       consumes:

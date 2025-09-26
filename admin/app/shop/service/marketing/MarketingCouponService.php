@@ -2,7 +2,6 @@
 
 namespace app\shop\service\marketing;
 
-use app\common\model\marketing\MarketingActivityRecord;
 use app\common\model\marketing\MarketingCoupon;
 use app\common\model\marketing\MarketingCouponRecord;
 use think\facade\Validate;
@@ -165,11 +164,27 @@ class MarketingCouponService
         if (isset($params['requirement'])) {
             $query->where('requirement', '=', $params['requirement']);
         }
+        // status
+        if (isset($params['status'])) {
+            $query->where('status', '=', $params['status']);
+        }
 
         $page = $params['page'] ?? 1;
         $pageSize = $params['list_rows'] ?? 10;
-        $list = $query->clone(true)->order('sort asc, create_time desc')->page($page, $pageSize)->select();
+        $list = $query->clone(true)->with([
+            'prizes' => function($query) {
+                $query->with([
+                    'activity' => function($query) {
+                        $query->where('delete_time', 0);
+                    }
+                ])->where('prize_type', 1)->where('delete_time', 0);
+            },
+        ])->order('sort asc, create_time desc')->page($page, $pageSize)->select();
         $total = $query->count();
+        foreach ($list as $item) {
+            $result = $this->checkCanDelete($item);
+            $item->can_delete = $result['can_delete'];
+        }
         return [
             'data' => $list,
             'current_page' => $page,
@@ -184,7 +199,7 @@ class MarketingCouponService
      */
     public function getDetail($uuid)
     {
-        $coupon = MarketingCoupon::where('uuid', $uuid)->where('delete_time', 0)->find();
+        $coupon = MarketingCoupon::where('uuid', $uuid)->find();
         if (!$coupon) return null;
         return $coupon->toArray();
     }
@@ -213,6 +228,7 @@ class MarketingCouponService
                     MarketingCouponRecord::RecordTypeActivityDeduction,
                     MarketingCouponRecord::RecordTypeBonus,
                     MarketingCouponRecord::RecordTypeUsed,
+                    MarketingCouponRecord::RecordTypeDelete,
                 ]), function ($query) use ($params) {
                 $query->where('record.type', '=', $params['record_type']);
             });
@@ -229,5 +245,73 @@ class MarketingCouponService
             'total' => $total,
             'last_page' => ceil($total / $pageSize),
         ];
+    }
+
+    /**
+     * 删除优惠券
+     */
+    public function delete($uuid)
+    {
+        $coupon = MarketingCoupon::with([
+            'prizes' => function($query) {
+                $query->with([
+                    'activity' => function($query) {
+                        $query->where('delete_time', 0);
+                    }
+                ])->where('prize_type', 1)->where('delete_time', 0);
+            },
+        ])->where('uuid', $uuid)->find();
+        if (!$coupon) {
+            return ['code' => 1, 'msg' => __('优惠券不存在')];
+        }
+        $result = $this->checkCanDelete($coupon);
+        if (!$result['can_delete']) {
+            return ['code' => 1, 'msg' => __($result['msg'])];
+        }
+        $res = MarketingCoupon::destroy(function($query) use ($uuid) {
+            $query->where('uuid', $uuid);
+        });
+        if (!$res) {
+            return ['code' => 1, 'msg' => __('删除优惠券失败')];
+        }
+        $this->addRecord(MarketingCouponRecord::RecordTypeDelete, $coupon->uuid, $coupon->count, 0);
+    }
+
+    /**
+     * 修改优惠券状态
+     */
+    public function status($uuid, $params)
+    {
+        if (!in_array($params['status'], [0, 1])) {
+            return ['code' => 1, 'msg' => __('状态错误')];
+        }
+        $coupon = MarketingCoupon::where('uuid', $uuid)->find();
+        if (!$coupon) {
+            return ['code' => 1, 'msg' => __('优惠券不存在')];
+        }
+        MarketingCoupon::update(['status' => $params['status']], ['uuid' => $uuid]);
+        return ['code' => 0];
+    }
+
+    /**
+     * 检查优惠券是否可以删除
+     *  - 关联奖品，奖品关联活动，活动状态不为2（已结束）则不能删除
+     *  - 关联会员优惠券，会员优惠券关联销售订单，销售订单状态为1（已结账）则不能删除
+     *  - 关联营销优惠券，营销优惠券关联销售订单，销售订单状态为1（已结账）则不能删除
+     */
+    public function checkCanDelete(MarketingCoupon $coupon)
+    {
+        $result = [
+            'can_delete' => true,
+            'msg' => '',
+        ];
+        foreach ($coupon->prizes as $prize) {
+            if ($prize->activity && $prize->activity->status != 2) {
+                $result['can_delete'] = false;
+                $result['msg'] = __('该优惠券已关联正在进行的活动，请在活动失效后删除');
+                break;
+            }
+        }
+        return $result;
     }
 } 

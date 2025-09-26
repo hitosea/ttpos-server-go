@@ -1,6 +1,6 @@
 {
   "doctype": "DocType",
-  "label": "别名",
+  "label": "AliasName",
   "fieldname": "custom_alias",
   "fieldtype": "Data",
   "insert_after": "attribute_name",

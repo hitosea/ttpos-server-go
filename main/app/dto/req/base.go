@@ -45,6 +45,7 @@ type PaymentMethodListReq struct {
 type KitchenBindReq struct {
 	Brand              string `json:"brand"`                // 品牌
 	ProductPrinterUuid uint64 `json:"product_printer_uuid"` // 商品打印Uuid
+	Mode               *uint  `json:"mode"`                 // 模式 0-默认，传菜模式; 1-制作模式; 2-制作+传菜模式
 	Remark             string `json:"remark"`               // 备注
 }
 

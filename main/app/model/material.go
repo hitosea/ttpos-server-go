@@ -19,7 +19,10 @@ type Material struct {
 	StockNum              float64 `gorm:"default:0;column:stock_num;comment:'库存数量'"`
 	ActualSaleNum         float64 `gorm:"default:0;column:actual_sale_num;comment:'实际销量'"`
 	BarcodeValue          string  `gorm:"default:'';column:barcode_value;comment:'条形码值'"`
+	InternalCode          string  `gorm:"default:'';column:internal_code;comment:'内部编码'"`
 	Status                bool    `gorm:"default:false;column:status;comment:'状态,true上架 false下架'"`
+	HeadquarterUuid       uint64  `gorm:"default:0;column:headquarter_uuid;comment:'总部ID'"`
+	WarehouseUuid         uint64  `gorm:"default:0;column:warehouse_uuid;comment:'默认仓库Uuid，表示该原料的来自哪个仓库'"`
 
 	MultiLanguageName   MultiLanguageName  `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 	Unit                *MaterialUnit      `gorm:"foreignKey:uuid;references:unit_uuid"`                // 基准单位
@@ -49,6 +52,11 @@ func (model *Material) IsUnit(unitUuid uint64) bool {
 		}
 	}
 	return false
+}
+
+// 判断该物品是不是总部物品
+func (model *Material) IsHeadquarter() bool {
+	return model.HeadquarterUuid != 0
 }
 
 // 获取物品的某个单位信息
@@ -99,7 +107,25 @@ func (model *MaterialUnit) SetNil() {
 type MaterialCategory struct {
 	BaseModel
 	Name                  string `gorm:"default:'';column:name;comment:'原料分类名称'"`
+	Code                  string `gorm:"default:'';column:code;comment:'原料分类编码'"`
 	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称ID'"`
+	Sort                  int    `gorm:"default:0;column:sort;comment:'排序'"`
+	HeadquarterUuid       uint64 `gorm:"default:0;column:headquarter_uuid;comment:'总部Uuid'"`
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
+}
+
+func (model *MaterialCategory) IsHeadquarter() bool {
+	return model.HeadquarterUuid != 0
+}
+
+func (model *MaterialCategory) SetNil() {
+	model.MultiLanguageName = MultiLanguageName{}
+}
+
+// 用总部分类信息更新子公司分类
+func (model *MaterialCategory) UpdateFromHeadquarter(headquarterCategory MaterialCategory) {
+	model.Code = headquarterCategory.Code
+	model.Name = headquarterCategory.Name
+	model.MultiLanguageName.InitByLocaleResponse(headquarterCategory.MultiLanguageName.GetNames())
 }

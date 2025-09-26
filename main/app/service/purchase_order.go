@@ -64,7 +64,7 @@ func NewPurchaseOrderSrvImpl(dbm *database.DBManager) IPurchaseOrderSrv {
 
 // GetPurchaseOrderList 获取采购申请列表
 func (s *purchaseOrderSrv) GetPurchaseOrderList(ctx context.Context, req req.PurchaseOrderListReq) (resp.PurchaseOrderListResp, error) {
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := ctx.GetDB()
 	purchaseOrderRepo := repository.NewPurchaseOrderRepo(db)
 
 	// 构建查询选项
@@ -75,9 +75,35 @@ func (s *purchaseOrderSrv) GetPurchaseOrderList(ctx context.Context, req req.Pur
 	if len(req.StatusIn) > 0 {
 		opts = append(opts, purchaseOrderRepo.WhereStatusIn(req.StatusIn))
 	}
+	if req.SupplierName != "" {
+		opts = append(opts, purchaseOrderRepo.WhereSupplierName(req.SupplierName))
+	}
+	if req.WarehouseErpCode != "" {
+		opts = append(opts, purchaseOrderRepo.WhereWarehouseErpCode(req.WarehouseErpCode))
+	}
+	if req.CompanyUuid > 0 {
+		opts = append(opts, purchaseOrderRepo.WhereCompanyUuid(req.CompanyUuid))
+	}
+	if req.CreateTimeStart > 0 || req.CreateTimeEnd > 0 {
+		opts = append(opts, purchaseOrderRepo.WhereCreateTimeRange(req.CreateTimeStart, req.CreateTimeEnd))
+	}
+	if req.OrderTimeStart > 0 || req.OrderTimeEnd > 0 {
+		opts = append(opts, purchaseOrderRepo.WhereOrderTimeRange(req.OrderTimeStart, req.OrderTimeEnd))
+	}
+	if req.ExpectArrivalTimeStart > 0 || req.ExpectArrivalTimeEnd > 0 {
+		opts = append(opts, purchaseOrderRepo.WhereExpectArrivalTimeRange(req.ExpectArrivalTimeStart, req.ExpectArrivalTimeEnd))
+	}
+	if req.ReceiveTimeStart > 0 || req.ReceiveTimeEnd > 0 {
+		opts = append(opts, purchaseOrderRepo.WhereReceiveTimeRange(req.ReceiveTimeStart, req.ReceiveTimeEnd))
+	}
 
 	// 排序
-	opts = append(opts, purchaseOrderRepo.OrderByCreateTime(true))
+	opts = append(opts, purchaseOrderRepo.OrderByOrderTime(true))
+	if req.PurchaseType == 2 {
+		opts = append(opts, purchaseOrderRepo.WherePurchaseType(req.PurchaseType))
+	} else {
+		opts = append(opts, purchaseOrderRepo.WherePurchaseType(1))
+	}
 
 	// WithItems()
 	opts = append(opts, purchaseOrderRepo.WithItems())
@@ -112,7 +138,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderList(ctx context.Context, req req.Pur
 
 // GetPurchaseOrderDetail 获取采购申请详情
 func (s *purchaseOrderSrv) GetPurchaseOrderDetail(ctx context.Context, req req.PurchaseOrderDetailReq) (resp.PurchaseOrderDetailResp, error) {
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := ctx.GetDB()
 	purchaseOrderRepo := repository.NewPurchaseOrderRepo(db)
 
 	// 查询采购申请详情
@@ -154,7 +180,16 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 		return resp.PurchaseOrderCreateResp{}, err
 	}
 
-	db := s.dbm.GetDB(ctx.GetDbId())
+	if ctx.Version(context.GTE, "2.6.0") {
+		if req.SupplierErpCode == "" {
+			return resp.PurchaseOrderCreateResp{}, errors.New("供应商编码不能为空")
+		}
+		if req.PurchaseType == 2 && req.WarehouseErpCode == "" {
+			return resp.PurchaseOrderCreateResp{}, errors.New("仓库编码不能为空")
+		}
+	}
+
+	db := ctx.GetDB()
 
 	var result resp.PurchaseOrderCreateResp
 	err := db.Transaction(func(tx *gorm.DB) error {
@@ -164,12 +199,20 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 		purchaseOrder := &model.PurchaseOrder{
 			OrderNo:           s.generateOrderNo(ctx, db),
 			SupplierName:      req.SupplierName,
+			SupplierErpCode:   utils.IfString(req.SupplierErpCode != "", req.SupplierErpCode, req.SupplierName),
 			Status:            constant.PurchaseOrderStatusDraft, // 待提交状态
 			Num:               float64(len(req.Items)),
 			OrderTime:         req.OrderTime,
 			ExpectArrivalTime: req.ExpectedDeliveryTime,
 			ApplicantUuid:     ctx.GetStaffUuid(),
 			ApplicantName:     ctx.GetStaff().RealName,
+			PurchaseType: func() int {
+				if req.PurchaseType == 2 {
+					return 2
+				}
+				return 1
+			}(),
+			WarehouseErpCode: req.WarehouseErpCode,
 		}
 		err := purchaseOrderRepo.Create(purchaseOrder)
 		if err != nil {
@@ -239,6 +282,10 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 					}
 					return ""
 				}(),
+				Valuation: material.Valuation,
+				TotalPrice: func() float64 {
+					return decimal.NewFromFloat(material.Valuation).Mul(decimal.NewFromFloat(itemReq.Num)).InexactFloat64()
+				}(),
 			}
 			items = append(items, item)
 		}
@@ -273,7 +320,7 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(ctx context.Context, req req.Purc
 		return err
 	}
 
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := ctx.GetDB()
 
 	err := db.Transaction(func(tx *gorm.DB) error {
 		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
@@ -293,10 +340,21 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(ctx context.Context, req req.Purc
 			return errors.New("当前状态不允许编辑")
 		}
 
+		if ctx.Version(context.GTE, "2.6.0") {
+			if req.SupplierErpCode == "" {
+				return errors.New("供应商编码不能为空")
+			}
+			if purchaseOrder.IsHeadquarterPurchase() && req.WarehouseErpCode == "" {
+				return errors.New("仓库编码不能为空")
+			}
+		}
+
 		// 更新采购申请基本信息
 		purchaseOrder.Num = float64(len(req.Items))
 		purchaseOrder.SupplierName = req.SupplierName
+		purchaseOrder.SupplierErpCode = req.SupplierErpCode
 		purchaseOrder.ExpectArrivalTime = req.ExpectedDeliveryTime
+		purchaseOrder.WarehouseErpCode = req.WarehouseErpCode
 		err = purchaseOrderRepo.Update(purchaseOrder)
 		if err != nil {
 			return errors.WithMessage(err, "更新采购申请失败")
@@ -426,7 +484,10 @@ func (s *purchaseOrderSrv) DeletePurchaseOrder(ctx context.Context, req req.Purc
 
 // SubmitPurchaseOrder 提交采购申请
 func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.PurchaseOrderSubmitReq) error {
-	return s.dbm.GetDB(ctx.GetDbId()).Transaction(func(tx *gorm.DB) error {
+	db := ctx.GetDB()
+	// companySetting := ctx.GetCompanySetting()
+	//
+	return db.Transaction(func(tx *gorm.DB) error {
 		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
 		purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(tx)
 
@@ -438,6 +499,21 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 			}
 			return errors.WithMessage(err, "查询采购申请失败")
 		}
+
+		// 检查供应商状态
+		// if purchaseOrder.SupplierErpCode != "" {
+		// 	dbs := tx
+		// 	if companySetting.IsSubShop() && purchaseOrder.IsHeadquarterPurchase() {
+		// 		dbs = s.dbm.GetDB(companySetting.HeadquarterUuid)
+		// 	}
+		// 	supplier, err := repository.NewSupplierRepo(dbs).GetByErpCode(purchaseOrder.SupplierErpCode)
+		// 	if err != nil {
+		// 		return errors.WithMessage(err, "查询供应商失败")
+		// 	}
+		// 	if supplier.Status == 0 {
+		// 		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用")
+		// 	}
+		// }
 
 		// 删除物品为0的数据
 		err = purchaseOrderItemRepo.DeleteByPurchaseOrderUuidAndNumIsZero(req.Uuid)
@@ -478,7 +554,8 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 
 // ApprovePurchaseOrder 审核采购申请
 func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.PurchaseOrderApproveReq) error {
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := ctx.GetDB()
+	companySetting := ctx.GetCompanySetting()
 
 	err := db.Transaction(func(tx *gorm.DB) error {
 		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
@@ -493,9 +570,24 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 		}
 
 		// 检查是否可审核
-		if !purchaseOrder.CanApprove() {
+		if !purchaseOrder.CanApprove() && (companySetting.IsSubShop() || companySetting.IsHeadquarter()) {
 			return errors.New("当前状态不允许审核")
 		}
+
+		// 检查供应商状态
+		// if purchaseOrder.SupplierErpCode != "" {
+		// 	dbs := tx
+		// 	if companySetting.IsSubShop() && purchaseOrder.IsHeadquarterPurchase() {
+		// 		dbs = s.dbm.GetDB(companySetting.HeadquarterUuid)
+		// 	}
+		// 	supplier, err := repository.NewSupplierRepo(dbs).GetByErpCode(purchaseOrder.SupplierErpCode)
+		// 	if err != nil {
+		// 		return errors.WithMessage(err, "查询供应商失败")
+		// 	}
+		// 	if supplier.Status == 0 {
+		// 		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用")
+		// 	}
+		// }
 
 		oldStatus := purchaseOrder.Status
 		var newStatus int
@@ -513,8 +605,17 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 			return errors.New("无效的审核动作")
 		}
 
+		// 更新状态
 		purchaseOrder.Status = newStatus
+		purchaseOrder.HeadquarterStatus = newStatus
 
+		// 更新总部状态
+		if companySetting.IsSubShop() && purchaseOrder.IsHeadquarterPurchase() && newStatus == constant.PurchaseOrderStatusApproved {
+			purchaseOrder.Status = constant.PurchaseOrderStatusHeadquarterPending
+			purchaseOrder.HeadquarterStatus = constant.HeadquarterStatusPending
+		}
+
+		// 更新状态
 		err = purchaseOrderRepo.Update(purchaseOrder)
 		if err != nil {
 			return errors.WithMessage(err, "更新采购申请状态失败")
@@ -526,38 +627,147 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 			return errors.WithMessage(err, "记录操作日志失败")
 		}
 
-		// 调用erp接口
-		if ctx.GetCompany().IsOpenErp() && newStatus == constant.PurchaseOrderStatusApproved {
-			stockItems := make([]*stock.MaterialRequestItem, 0)
-			for _, item := range purchaseOrder.Items {
-				materialUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(item.UnitUuid)
-				if err != nil {
-					return errors.WithMessage(err, "查询物品单位失败")
-				}
-				if materialUnit.Unit == nil {
-					return errors.New("查询物品原始单位失败")
-				}
-				stockItems = append(stockItems, &stock.MaterialRequestItem{
-					ItemCode:     item.MaterialCode,
-					Qty:          item.Num,
-					ScheduleDate: purchaseOrder.ExpectArrivalTime,
-					Uom:          materialUnit.Unit.ErpnextUom,
-				})
+		// 内部采购 子店审核通过 不调用erp接口
+		if purchaseOrder.Status == constant.PurchaseOrderStatusHeadquarterPending {
+			//  ------ 整单复制到总部采购申请 ---------
+			// 获取总部数据库
+			db = s.dbm.GetDB(companySetting.HeadquarterUuid)
+			if db == nil {
+				return errors.New("获取总部数据库失败")
 			}
-			resp, err := erp.NewIErpSrv(s.dbm).CreatePurchaseOrder(ctx, &stock.SaveMaterialRequestReq{
-				TransactionDate: purchaseOrder.OrderTime,
-				RequiredBy:      purchaseOrder.ExpectArrivalTime,
-				Supplier:        purchaseOrder.SupplierName,
-				Items:           stockItems,
+			err = db.Transaction(func(tx *gorm.DB) error {
+				// 整单复制
+				headquarterPurchaseOrder := purchaseOrder
+				headquarterPurchaseOrder.Uuid = func() uint64 {
+					uuid, _ := utils.GetID()
+					return uuid
+				}()
+				headquarterPurchaseOrder.SubUuid = purchaseOrder.Uuid
+				headquarterPurchaseOrder.Status = constant.PurchaseOrderStatusPending
+				headquarterPurchaseOrder.HeadquarterStatus = constant.HeadquarterStatusPending
+				err = repository.NewPurchaseOrderRepo(tx).Create(headquarterPurchaseOrder)
+				if err != nil {
+					return errors.WithMessage(err, "创建总部采购申请失败")
+				}
+
+				// 创建总部采购申请明细
+				var headquarterItems []model.PurchaseOrderItem
+				for _, item := range purchaseOrder.Items {
+					material, err := repository.NewMaterialRepo(tx).GetMaterialByErpCode(item.MaterialCode)
+					if err != nil {
+						return errors.WithMessage(err, "查询总部物品明细失败")
+					}
+					headquarterItem := item
+					headquarterItem.PurchaseOrderUuid = headquarterPurchaseOrder.Uuid
+					headquarterItem.MaterialUuid = material.Uuid
+					headquarterItems = append(headquarterItems, headquarterItem)
+				}
+				err = repository.NewPurchaseOrderItemRepo(tx).CreateBatch(headquarterItems)
+				if err != nil {
+					return errors.WithMessage(err, "创建总部采购申请明细失败")
+				}
+				return nil
 			})
 			if err != nil {
-				return errors.WithMessage(err, "调用erp接口失败")
+				return errors.WithMessage(err, "整单复制到总部采购申请失败")
 			}
+		}
+
+		// 调用erp接口
+		if ctx.GetCompany().IsOpenErp() && purchaseOrder.Status == constant.PurchaseOrderStatusApproved {
+			erpOrderNo := ""
+			if purchaseOrder.IsHeadquarterPurchase() {
+				stockItems := make([]*buying.PurchaseOrderItemInput, 0)
+				for _, item := range purchaseOrder.Items {
+					materialUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(item.UnitUuid)
+					if err != nil {
+						return errors.WithMessage(err, "查询物品单位失败")
+					}
+					if materialUnit.Unit == nil {
+						return errors.New("查询物品原始单位失败")
+					}
+					stockItems = append(stockItems, &buying.PurchaseOrderItemInput{
+						ItemCode: item.MaterialCode,
+						Qty:      item.Num,
+						Uom:      materialUnit.Unit.ErpnextUom,
+					})
+				}
+				// 将时间戳转换为 Y-m-d 格式
+				scheduleDate := ""
+				if purchaseOrder.ExpectArrivalTime > 0 {
+					scheduleDate = time.Unix(purchaseOrder.ExpectArrivalTime, 0).Format("2006-01-02")
+				}
+				erpResp, err := erp.NewIErpSrv(s.dbm).CreatePurchaseOrder(ctx, &buying.CreatePurchaseOrderReq{
+					Supplier:        purchaseOrder.SupplierName,
+					CompanyAbbr:     companySetting.ErpnextCompanyAbbr,
+					ScheduleDate:    scheduleDate,
+					TargetWarehouse: purchaseOrder.WarehouseErpCode,
+					Items:           stockItems,
+				})
+				if err != nil {
+					return errors.WithMessage(err, "调用erp接口失败")
+				}
+				// 获取采购订单号 - 6哥说这里的 "名称就是采购单号"
+				erpOrderNo = erpResp.Name
+
+			} else {
+				stockItems := make([]*stock.MaterialRequestItem, 0)
+				for _, item := range purchaseOrder.Items {
+					materialUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(item.UnitUuid)
+					if err != nil {
+						return errors.WithMessage(err, "查询物品单位失败")
+					}
+					if materialUnit.Unit == nil {
+						return errors.New("查询物品原始单位失败")
+					}
+					stockItems = append(stockItems, &stock.MaterialRequestItem{
+						ItemCode:     item.MaterialCode,
+						Qty:          item.Num,
+						ScheduleDate: purchaseOrder.ExpectArrivalTime,
+						Uom:          materialUnit.Unit.ErpnextUom,
+					})
+				}
+				defaultWarehouse, err := repository.NewWarehouseRepo(db).GetDefaultWarehouse()
+				if err != nil {
+					return errors.WithMessage(err, "获取默认仓库失败")
+				}
+				stockResp, err := erp.NewIErpSrv(s.dbm).SaveMaterialRequest(ctx, &stock.SaveMaterialRequestReq{
+					TransactionDate: purchaseOrder.OrderTime,
+					RequiredBy:      purchaseOrder.ExpectArrivalTime,
+					Supplier:        purchaseOrder.SupplierName,
+					SourceWarehouse: purchaseOrder.WarehouseErpCode,
+					TargetWarehouse: defaultWarehouse.ErpCode,
+					Items:           stockItems,
+				})
+				if err != nil {
+					return errors.WithMessage(err, "调用erp接口失败")
+				}
+				erpOrderNo = stockResp.PurchaseOrder
+			}
+
 			// 更新采购申请单号
-			purchaseOrder.ErpOrderNo = resp.PurchaseOrder
+			purchaseOrder.ErpOrderNo = erpOrderNo
 			err = purchaseOrderRepo.Update(purchaseOrder)
 			if err != nil {
 				return errors.WithMessage(err, "更新采购申请单号失败")
+			}
+
+			//  ------ 同步状态到子商户采购申请 ---------
+			if purchaseOrder.IsHeadquarterPurchase() {
+				subPurchaseOrder, err := purchaseOrderRepo.GetByUuid(purchaseOrder.SubUuid)
+				if err != nil {
+					if err == gorm.ErrRecordNotFound {
+						return errors.New("采购申请不存在")
+					}
+					return errors.WithMessage(err, "查询采购申请失败")
+				}
+				subPurchaseOrder.ErpOrderNo = purchaseOrder.ErpOrderNo
+				subPurchaseOrder.Status = constant.PurchaseOrderStatusApproved
+				subPurchaseOrder.HeadquarterStatus = constant.HeadquarterStatusApproved
+				err = repository.NewPurchaseOrderRepo(s.dbm.GetDB(purchaseOrder.CompanyUuid)).Update(subPurchaseOrder)
+				if err != nil {
+					return errors.WithMessage(err, "更新采购申请单号失败")
+				}
 			}
 		}
 
@@ -573,7 +783,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 
 // CreateReceiptOrder 创建收货单
 func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptCreateReq) (resp.PurchaseReceiptOrderCreateResp, error) {
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := ctx.GetDB()
 
 	// 判断物品明细是否已经停用
 	if req.IsConfirm {
@@ -622,17 +832,32 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 			return errors.New("采购单状态不允许收货")
 		}
 
+		defaultWarehouse, err := repository.NewWarehouseRepo(db).GetDefaultWarehouse()
+		if err != nil {
+			return errors.WithMessage(err, "获取默认仓库失败")
+		}
+
 		// 创建收货单
 		receiptOrder := &model.PurchaseReceiptOrder{
-			OrderNo:           s.generateReceiptNo(ctx, tx),
-			Status:            utils.IfInt(req.IsConfirm, constant.ReceiptOrderStatusReceived, constant.ReceiptOrderStatusPending), // 待收货状态
-			PurchaseOrderUuid: req.PurchaseOrderUuid,
-			PurchaseOrderNo:   purchaseOrder.OrderNo,
-			PurchaseTime:      purchaseOrder.OrderTime,
-			Num:               float64(len(req.Items)),
-			ExpectArrivalTime: purchaseOrder.ExpectArrivalTime,
-			ReceiveTime:       req.ReceiveTime,
-			PurchaseOrder:     *purchaseOrder,
+			OrderNo:                s.generateReceiptNo(ctx, tx),
+			Status:                 utils.IfInt(req.IsConfirm, constant.ReceiptOrderStatusReceived, constant.ReceiptOrderStatusPending), // 待收货状态
+			PurchaseOrderUuid:      req.PurchaseOrderUuid,
+			PurchaseOrderNo:        purchaseOrder.OrderNo,
+			PurchaseTime:           purchaseOrder.OrderTime,
+			Num:                    float64(len(req.Items)),
+			ExpectArrivalTime:      purchaseOrder.ExpectArrivalTime,
+			SupplierName:           purchaseOrder.SupplierName,
+			SupplierErpCode:        purchaseOrder.SupplierErpCode,
+			ReceiveTime:            req.ReceiveTime,
+			PurchaseOrder:          *purchaseOrder,
+			SourceWarehouseErpCode: purchaseOrder.WarehouseErpCode,
+			TargetWarehouseErpCode: defaultWarehouse.ErpCode,
+			ReceiptType: func() int {
+				if req.ReceiptType == 2 {
+					return 2
+				}
+				return 1
+			}(),
 		}
 
 		err = receiptOrderRepo.Create(receiptOrder)
@@ -676,6 +901,8 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 				BaseUnitUuid:          orderItem.BaseUnitUuid,
 				BaseUnitName:          orderItem.BaseUnitName,
 				UnitConversionRate:    orderItem.UnitConversionRate,
+				Valuation:             orderItem.Valuation,
+				TotalPrice:            orderItem.TotalPrice,
 			})
 
 			// 确认收货时，更新采购申请明细的到货数量
@@ -725,7 +952,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 
 // UpdatePurchaseReceiptOrder 更新收货单
 func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req req.PurchaseReceiptOrderUpdateReq) error {
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := ctx.GetDB()
 
 	// 判断物品明细是否已经停用
 	if req.IsConfirm {
@@ -823,6 +1050,8 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 				BaseUnitUuid:          purchaseOrderItem.BaseUnitUuid,
 				BaseUnitName:          purchaseOrderItem.BaseUnitName,
 				UnitConversionRate:    purchaseOrderItem.UnitConversionRate,
+				Valuation:             purchaseOrderItem.Valuation,
+				TotalPrice:            purchaseOrderItem.TotalPrice,
 			})
 
 			// 更新采购申请明细的到货数量
@@ -847,9 +1076,16 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 			return errors.WithMessage(err, "创建收货明细失败")
 		}
 
+		// 获取默认仓库
+		defaultWarehouse, err := repository.NewWarehouseRepo(db).GetDefaultWarehouse()
+		if err != nil {
+			return errors.WithMessage(err, "获取默认仓库失败")
+		}
+
 		// 更新收货单状态
 		receiptOrder.Status = utils.IfInt(req.IsConfirm, constant.ReceiptOrderStatusReceived, constant.ReceiptOrderStatusPending)
 		receiptOrder.ReceiveTime = req.ReceiveTime
+		receiptOrder.TargetWarehouseErpCode = defaultWarehouse.ErpCode // 更新目标仓库ERP编码
 		err = receiptOrderRepo.Update(receiptOrder)
 		if err != nil {
 			return errors.WithMessage(err, "更新收货单状态失败")
@@ -881,7 +1117,7 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 
 // GetReceiptOrderList 获取收货单列表
 func (s *purchaseOrderSrv) GetPurchaseReceiptOrderList(ctx context.Context, req req.PurchaseReceiptOrderListReq) (resp.PurchaseReceiptOrderListResp, error) {
-	receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(s.dbm.GetDB(ctx.GetDbId()))
+	receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(ctx.GetDB())
 
 	// 构建查询选项
 	var opts []repository.DBOption
@@ -890,6 +1126,16 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderList(ctx context.Context, req 
 	}
 	if len(req.StatusIn) > 0 {
 		opts = append(opts, receiptOrderRepo.WhereStatusIn(req.StatusIn))
+	}
+
+	// 收货时间范围查询
+	if req.ReceiveTimeStart > 0 || req.ReceiveTimeEnd > 0 {
+		opts = append(opts, receiptOrderRepo.WhereReceiptTimeRange(int(req.ReceiveTimeStart), int(req.ReceiveTimeEnd)))
+	}
+
+	// 创建时间范围查询
+	if req.CreateTimeStart > 0 || req.CreateTimeEnd > 0 {
+		opts = append(opts, receiptOrderRepo.WhereCreateTimeRange(int(req.CreateTimeStart), int(req.CreateTimeEnd)))
 	}
 
 	// 排序
@@ -924,7 +1170,7 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderList(ctx context.Context, req 
 
 // GetReceiptOrderDetail 获取收货单详情
 func (s *purchaseOrderSrv) GetPurchaseReceiptOrderDetail(ctx context.Context, req req.PurchaseReceiptOrderDetailReq) (resp.PurchaseReceiptOrderDetailResp, error) {
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := ctx.GetDB()
 	receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(db)
 
 	// 查询收货单详情
@@ -1194,9 +1440,7 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 			return errors.WithMessage(err, "获取物料信息失败")
 		}
 		// 更新库存数量
-		material.StockNum = decimal.NewFromFloat(material.StockNum).Add(
-			decimal.NewFromFloat(item.Num).Mul(decimal.NewFromFloat(item.UnitConversionRate).Round(4)),
-		).InexactFloat64()
+		material.StockNum = decimal.NewFromFloat(material.StockNum).Add(decimal.NewFromFloat(item.GetActualNum())).InexactFloat64()
 		err = materialRepo.UpdateMaterial(material)
 		if err != nil {
 			return errors.WithMessage(err, "更新物料库存失败")
@@ -1218,8 +1462,36 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 		}
 	}
 
+	// 记录erp的入库记录
+	err := s.recordErpStockInLog(ctx, db, receiptOrder)
+	if err != nil {
+		return errors.WithMessage(err, "记录ERP入库记录失败")
+	}
+
 	// 调用erp接口
 	if ctx.GetCompany().IsOpenErp() {
+		// 如果是内部采购 - 需要减总部的库存,需要出入库的记录
+		if receiptOrder.IsHeadquarterReceipt() {
+			// 获取公司设置信息
+			companySetting := ctx.GetCompanySetting()
+			if companySetting.HeadquarterUuid == 0 {
+				return errors.New("总部UUID不能为空")
+			}
+
+			// 获取总部数据库
+			headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
+			if headquarterDb == nil {
+				return errors.New("获取总部数据库失败")
+			}
+
+			// 减总部的库存并记录出入库日志
+			err = s.reduceHeadquarterStockAndLog(ctx, headquarterDb, receiptOrder)
+			if err != nil {
+				return errors.WithMessage(err, "处理总部库存失败")
+			}
+		}
+
+		// 调用erp接口
 		erpReq := buying.SavePurchaseReceiptReq{
 			PurchaseOrderName: receiptOrder.PurchaseOrder.ErpOrderNo,
 			Items:             make([]*buying.PurchaseOrderItem, 0),
@@ -1246,6 +1518,133 @@ func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, re
 	}
 
 	return nil
+}
+
+// recordErpStockInLog 记录ERP入库记录
+func (s *purchaseOrderSrv) recordErpStockInLog(ctx context.Context, db *gorm.DB, receiptOrder *model.PurchaseReceiptOrder) error {
+	// 使用事务确保数据一致性
+	return db.Transaction(func(tx *gorm.DB) error {
+		// 获取仓库出入库日志Repository
+		warehouseLogRepo := repository.NewWarehouseInOutLogRepo(tx)
+		warehouseItemRepo := repository.NewWarehouseItemRepo(tx)
+
+		// 获取目标仓库信息（通过ERP编码查找）
+		targetWarehouse, err := repository.NewWarehouseRepo(tx).GetByCode(receiptOrder.TargetWarehouseErpCode)
+		if err != nil {
+			return errors.WithMessage(err, "获取目标仓库信息失败")
+		}
+
+		//
+		supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(receiptOrder.SupplierErpCode)
+		if err != nil {
+			return errors.WithMessage(err, "获取供应商信息失败")
+		}
+
+		// 处理每个收货单明细
+		for _, item := range receiptOrder.Items {
+			actualNum := item.GetActualNum()
+
+			// 查找或创建仓库商品库存记录
+			warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(targetWarehouse.Uuid, item.MaterialUuid)
+			if err != nil && err != gorm.ErrRecordNotFound {
+				return errors.WithMessage(err, "查询仓库商品库存失败")
+			}
+			err = warehouseItemRepo.AddStock(warehouseItem.Uuid, actualNum)
+			if err != nil {
+				return errors.WithMessage(err, "更新仓库商品库存失败")
+			}
+
+			// 记录入库日志
+			warehouseLog := &model.WarehouseInOutLog{
+				LogType:              0, // 入库
+				Scene:                0, // 采购入库
+				WarehouseUuid:        targetWarehouse.Uuid,
+				MaterialUuid:         item.MaterialUuid,
+				MaterialName:         item.MaterialName,
+				MaterialBaseUnitUuid: item.BaseUnitUuid,
+				MaterialBaseUnitName: item.BaseUnitName,
+				Num:                  actualNum,
+				Price:                item.Valuation, // 采购入库价格由ERP系统管理
+				Amount: func() float64 {
+					return decimal.NewFromFloat(item.Valuation).Mul(decimal.NewFromFloat(actualNum)).InexactFloat64()
+				}(),
+				SupplierUuid: supplier.Uuid, // 供应商UUID暂时设为0，后续可通过供应商名称查找
+				OrderNo:      receiptOrder.OrderNo,
+			}
+			err = warehouseLogRepo.Create(warehouseLog)
+			if err != nil {
+				return errors.WithMessage(err, "记录入库日志失败")
+			}
+		}
+
+		return nil
+	})
+}
+
+// reduceHeadquarterStockAndLog 减少总部库存并记录出入库日志
+func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, headquarterDb *gorm.DB, receiptOrder *model.PurchaseReceiptOrder) error {
+	// 使用事务确保数据一致性
+	return headquarterDb.Transaction(func(tx *gorm.DB) error {
+		// 获取仓库商品库存Repository
+		warehouseItemRepo := repository.NewWarehouseItemRepo(tx)
+
+		// 获取仓库出入库日志Repository
+		warehouseLogRepo := repository.NewWarehouseInOutLogRepo(tx)
+
+		// 获取默认仓库
+		targetWarehouse, err := repository.NewWarehouseRepo(tx).GetByCode(receiptOrder.SourceWarehouseErpCode)
+		if err != nil {
+			return errors.WithMessage(err, "获取总部出库仓库信息失败")
+		}
+
+		// 获取供应商信息
+		supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(receiptOrder.SupplierErpCode)
+		if err != nil {
+			return errors.WithMessage(err, "获取供应商信息失败")
+		}
+
+		// 处理每个收货单明细
+		for _, item := range receiptOrder.Items {
+			// 计算实际出库数量（考虑单位转换率）
+			actualNum := item.GetActualNum()
+
+			// 查找或创建仓库商品库存记录
+			warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(targetWarehouse.Uuid, item.MaterialUuid)
+			if err != nil && err != gorm.ErrRecordNotFound {
+				return errors.WithMessage(err, "查询仓库商品库存失败")
+			}
+
+			// 减少库存
+			err = warehouseItemRepo.ReduceStock(warehouseItem.Uuid, actualNum)
+			if err != nil {
+				return errors.WithMessage(err, "减少总部库存失败")
+			}
+			// 记录出库日志
+			warehouseLog := &model.WarehouseInOutLog{
+				LogType:              1, // 出库
+				Scene:                2, // 发货出库
+				WarehouseUuid:        targetWarehouse.Uuid,
+				MaterialUuid:         item.MaterialUuid,
+				MaterialName:         item.MaterialName,
+				MaterialBaseUnitUuid: item.BaseUnitUuid,
+				MaterialBaseUnitName: item.BaseUnitName,
+				Num:                  actualNum,
+				Price:                item.Valuation, // 采购入库价格由ERP系统管理
+				Amount: func() float64 {
+					return decimal.NewFromFloat(item.Valuation).Mul(decimal.NewFromFloat(actualNum)).InexactFloat64()
+				}(),
+				SupplierUuid: supplier.Uuid, // 内部采购无供应商
+				OrderNo:      receiptOrder.OrderNo,
+			}
+
+			err = warehouseLogRepo.Create(warehouseLog)
+			if err != nil {
+				return errors.WithMessage(err, "记录出库日志失败")
+			}
+		}
+
+		return nil
+	})
 }
 
 // updateRelatedMaterialStock 更新规格/加料关联材料库存

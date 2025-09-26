@@ -1,0 +1,82 @@
+{
+  "module": "Stock",
+  "name": "Pos Addon Group",
+  "custom": 1,
+  "autoname": "field:group_code",
+  "naming_rule": "By fieldname",
+  "fields" : [
+    {
+      "fieldname": "group_code",
+      "label": "Group Code",
+      "fieldtype": "Data",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "group_name",
+      "label": "Group Name",
+      "fieldtype": "Data",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "item_group",
+      "label": "Item Group",
+      "fieldtype": "Link",
+      "options": "Item Group",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "is_required",
+      "label": "Required",
+      "fieldtype": "Check"
+    },
+    {
+      "fieldname": "is_active",
+      "label": "Active",
+      "fieldtype": "Check"
+    },
+    {
+      "fieldname": "min_select",
+      "label": "Min Select",
+      "fieldtype": "Int",
+      "reqd": 1
+    },
+    {
+      "fieldname": "max_select",
+      "label": "Max Select",
+      "fieldtype": "Int",
+      "reqd": 1
+    },
+    {
+      "fieldname": "sort_order",
+      "label": "Sort Order",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "addon_list",
+      "label": "Addon List",
+      "fieldtype": "Table",
+      "options": "Pos Addon Option",
+      "reqd": 1
+    }
+  ],
+  "permissions": [
+    {
+      "permlevel": 0,
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1,
+      "import": 0,
+      "share": 1,
+      "print": 1,
+      "email": 1,
+      "if_owner": 0,
+      "select": 1,
+      "doctype": "DocPerm"
+    }
+  ]
+}

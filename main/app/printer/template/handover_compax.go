@@ -6,6 +6,7 @@ import (
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp/business_data_resp"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/pkg/utils"
@@ -29,6 +30,7 @@ func NewHandoverCompaxTemplate(
 
 // GetPrintContent 图片打印
 func (t *handoverCompaxTemplate) GetPrintContent(
+	printerInfo settingResp.PrinterInfo,
 	temp int,
 	log *model.StaffShiftLog,
 	businessData *business_data_resp.BusinessDataAll,
@@ -410,7 +412,7 @@ func (t *handoverCompaxTemplate) GetPrintContent(
 	printer.LineFeed()
 	printer.PrintAndExitPageMode()
 	printer.LineFeed(4)
-	printer.CutPaper(true)
+	printer.CutPaper(printerInfo.IsEnableSound())
 	// 打开钱箱
 	if openMoneybox {
 		printer.AppendText("\x10\x14\x01\x00\x01")

@@ -11,9 +11,11 @@ import (
 type PurchaseOrder struct {
 	BaseModel
 	OrderNo           string  `gorm:"column:order_no;type:varchar(255);not null;default:'';comment:单号" json:"order_no"`
+	SubUuid           uint64  `gorm:"column:sub_uuid;type:bigint(20) unsigned;not null;default:0;comment:子订单UUID" json:"sub_uuid"`
 	ErpOrderNo        string  `gorm:"column:erp_order_no;type:varchar(255);not null;default:'';comment:ERP采购单号" json:"erp_order_no"`
 	OrderType         int     `gorm:"column:order_type;type:int(10);not null;default:0;comment:申请类型, 0-仓库调拨" json:"order_type"`
 	SupplierName      string  `gorm:"column:supplier_name;type:varchar(100);not null;default:'';comment:供应商名称" json:"supplier_name"`
+	SupplierErpCode   string  `gorm:"column:supplier_erp_code;type:varchar(255);not null;default:'';comment:供应商编码" json:"supplier_erp_code"`
 	Status            int     `gorm:"column:status;type:int(10);not null;default:0;comment:状态, 0-待提交 1-待审核 2-已通过 3-已驳回 4-部分收货 5-全部收货" json:"status"`
 	Num               float64 `gorm:"column:num;type:decimal(14,4);not null;default:0.0000;comment:物资数量，每种物品算一个" json:"num"`
 	OrderTime         int64   `gorm:"column:order_time;type:int(10) unsigned;not null;default:0;comment:单据日期，采购单提交的时间（时间戳）" json:"order_time"`
@@ -26,6 +28,11 @@ type PurchaseOrder struct {
 	RejectTime        int64   `gorm:"column:reject_time;type:int(10) unsigned;not null;default:0;comment:驳回时间（时间戳）" json:"reject_time"`
 	FirstReceiveTime  int64   `gorm:"column:first_receive_time;type:int(10) unsigned;not null;default:0;comment:第一次收货时间（时间戳），从\"已通过\"状态变成\"部分收货\"状态的时间" json:"first_receive_time"`
 	FinalReceiveTime  int64   `gorm:"column:final_receive_time;type:int(10) unsigned;not null;default:0;comment:最终收货时间（时间戳），从\"部分收货\"状态变成\"全部收货\"状态的时间" json:"final_receive_time"`
+	PurchaseType      int     `gorm:"column:purchase_type;type:int(10);not null;default:0;comment:采购类型, 1-外部采购 2-内部采购" json:"purchase_type"`
+	WarehouseErpCode  string  `gorm:"column:warehouse_erp_code;type:varchar(255);not null;default:'';comment:仓库编码" json:"warehouse_erp_code"`
+	HeadquarterStatus int     `gorm:"column:headquarter_status;type:int(10);not null;default:0;comment:总部状态：0-待提交 1-待审核 2-已通过 3-已驳回 4-部分收货 5-全部收货" json:"headquarter_status"`
+	CompanyUuid       uint64  `gorm:"column:company_uuid;type:bigint(20) unsigned;not null;default:0;comment:公司UUID-用于识别子商户" json:"company_uuid"`
+	CompanyName       string  `gorm:"column:company_name;type:varchar(255);not null;default:'';comment:公司名称" json:"company_name"`
 
 	// 关联关系
 	Items    []PurchaseOrderItem    `gorm:"foreignKey:PurchaseOrderUuid;references:Uuid" json:"items,omitempty"`
@@ -36,6 +43,11 @@ type PurchaseOrder struct {
 // TableName 指定表名
 func (PurchaseOrder) TableName() string {
 	return "ttpos_purchase_order"
+}
+
+// 是否是总部采购
+func (po *PurchaseOrder) IsHeadquarterPurchase() bool {
+	return po.PurchaseType == 2
 }
 
 func (po *PurchaseOrder) GetReceiptProgress() float64 {
@@ -113,6 +125,8 @@ type PurchaseOrderItem struct {
 	UnitConversionRate float64 `gorm:"column:unit_conversion_rate;type:decimal(12,4);not null;default:1;comment:单位转换率。申请数量*转换率=基准单位申请数量" json:"unit_conversion_rate"`
 	BaseUnitUuid       uint64  `gorm:"column:base_unit_uuid;type:bigint(20) unsigned;not null;default:0;comment:基准单位ID" json:"base_unit_uuid"`
 	BaseUnitName       string  `gorm:"column:base_unit_name;type:text;not null;default:'';comment:基准单位名称JSON, 提交采购时记录后不再修改" json:"base_unit_name"`
+	Valuation          float64 `gorm:"column:valuation;type:decimal(14,2);not null;default:0.00;comment:估值单价" json:"valuation"`
+	TotalPrice         float64 `gorm:"column:total_price;type:decimal(14,2);not null;default:0.00;comment:总价" json:"total_price"`
 
 	// 关联关系
 	PurchaseOrder PurchaseOrder `gorm:"foreignKey:PurchaseOrderUuid;references:Uuid" json:"purchase_order,omitempty"`
@@ -171,16 +185,21 @@ func (PurchaseOrderLog) TableName() string {
 // ReceiptOrder 收货单表 ttpos_purchase_receipt_order
 type PurchaseReceiptOrder struct {
 	BaseModel
-	OrderNo           string  `gorm:"column:order_no;type:varchar(255);not null;default:'';comment:单号" json:"order_no"`
-	ErpOrderNo        string  `gorm:"column:erp_order_no;type:varchar(255);not null;default:'';comment:ERP收货单号" json:"erp_order_no"`
-	Status            int     `gorm:"column:status;type:int(10);not null;default:0;comment:状态, 0-待收货 1-已收货 2-已取消" json:"status"`
-	PurchaseOrderUuid uint64  `gorm:"column:purchase_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:采购申请ID" json:"purchase_order_uuid"`
-	PurchaseOrderNo   string  `gorm:"column:purchase_order_no;type:varchar(255);not null;default:'';comment:采购申请单号" json:"purchase_order_no"`
-	Num               float64 `gorm:"column:num;type:decimal(14,4);not null;default:0.0000;comment:物资数量，每种物品算一个" json:"num"`
-	ExpectArrivalTime int64   `gorm:"column:expect_arrival_time;type:int(10) unsigned;not null;default:0;comment:期望到货日期（时间戳），与采购申请单的期望到货日期一致" json:"expect_arrival_time"`
-	ReceiveTime       int64   `gorm:"column:receive_time;type:int(10) unsigned;not null;default:0;comment:收货时间（时间戳）" json:"receive_time"`
-	CancelTime        int64   `gorm:"column:cancel_time;type:int(10) unsigned;not null;default:0;comment:取消时间（时间戳）" json:"cancel_time"`
-	PurchaseTime      int64   `gorm:"column:purchase_time;type:int(10) unsigned;not null;default:0;comment:采购时间（时间戳）" json:"purchase_time"`
+	OrderNo                string  `gorm:"column:order_no;type:varchar(255);not null;default:'';comment:单号" json:"order_no"`
+	ErpOrderNo             string  `gorm:"column:erp_order_no;type:varchar(255);not null;default:'';comment:ERP收货单号" json:"erp_order_no"`
+	Status                 int     `gorm:"column:status;type:int(10);not null;default:0;comment:状态, 0-待收货 1-已收货 2-已取消" json:"status"`
+	PurchaseOrderUuid      uint64  `gorm:"column:purchase_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:采购申请ID" json:"purchase_order_uuid"`
+	PurchaseOrderNo        string  `gorm:"column:purchase_order_no;type:varchar(255);not null;default:'';comment:采购申请单号" json:"purchase_order_no"`
+	SupplierName           string  `gorm:"column:supplier_name;type:varchar(255);not null;default:'';comment:供应商名称" json:"supplier_name"`
+	SupplierErpCode        string  `gorm:"column:supplier_erp_code;type:varchar(255);not null;default:'';comment:供应商ERP编码" json:"supplier_erp_code"`
+	Num                    float64 `gorm:"column:num;type:decimal(14,4);not null;default:0.0000;comment:物资数量，每种物品算一个" json:"num"`
+	ExpectArrivalTime      int64   `gorm:"column:expect_arrival_time;type:int(10) unsigned;not null;default:0;comment:期望到货日期（时间戳），与采购申请单的期望到货日期一致" json:"expect_arrival_time"`
+	ReceiveTime            int64   `gorm:"column:receive_time;type:int(10) unsigned;not null;default:0;comment:收货时间（时间戳）" json:"receive_time"`
+	CancelTime             int64   `gorm:"column:cancel_time;type:int(10) unsigned;not null;default:0;comment:取消时间（时间戳）" json:"cancel_time"`
+	PurchaseTime           int64   `gorm:"column:purchase_time;type:int(10) unsigned;not null;default:0;comment:采购时间（时间戳）" json:"purchase_time"`
+	ReceiptType            int     `gorm:"column:receipt_type;type:int(10);not null;default:1;comment:收货类型 1-外部收货 2-内部收货" json:"receipt_type"`
+	SourceWarehouseErpCode string  `gorm:"column:source_warehouse_erp_code;type:varchar(255);not null;default:'';comment:源仓库ERP编码" json:"source_warehouse_erp_code"`
+	TargetWarehouseErpCode string  `gorm:"column:target_warehouse_erp_code;type:varchar(255);not null;default:'';comment:目标仓库ERP编码" json:"target_warehouse_erp_code"`
 
 	// 关联关系
 	PurchaseOrder PurchaseOrder              `gorm:"foreignKey:PurchaseOrderUuid;references:Uuid" json:"purchase_order,omitempty"`
@@ -190,6 +209,11 @@ type PurchaseReceiptOrder struct {
 // TableName 指定表名
 func (PurchaseReceiptOrder) TableName() string {
 	return "ttpos_purchase_receipt_order"
+}
+
+// 是否是总部收货
+func (ro *PurchaseReceiptOrder) IsHeadquarterReceipt() bool {
+	return ro.ReceiptType == 2
 }
 
 // GetStatusText 获取状态文本
@@ -216,6 +240,7 @@ func (ro *PurchaseReceiptOrder) GetReceiveDate() time.Time {
 // PurchaseReceiptOrderItem 收货单物品表 ttpos_purchase_receipt_order_item
 type PurchaseReceiptOrderItem struct {
 	BaseModel
+
 	ReceiptOrderUuid      uint64  `gorm:"column:receipt_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:收货单ID;index" json:"receipt_order_uuid"`
 	PurchaseOrderItemUuid uint64  `gorm:"column:purchase_order_item_uuid;type:bigint(20) unsigned;not null;default:0;comment:采购申请物品ID;index" json:"purchase_order_item_uuid"`
 	MaterialCode          string  `gorm:"column:material_code;type:varchar(255);not null;default:'';comment:物品编码, 提交采购时记录后不再修改" json:"material_code"`
@@ -227,6 +252,8 @@ type PurchaseReceiptOrderItem struct {
 	UnitConversionRate    float64 `gorm:"column:unit_conversion_rate;type:decimal(12,4);not null;default:1;comment:单位转换率。收货数量*转换率=基准单位收货数量" json:"unit_conversion_rate"`
 	BaseUnitUuid          uint64  `gorm:"column:base_unit_uuid;type:bigint(20) unsigned;not null;default:0;comment:基准单位ID" json:"base_unit_uuid"`
 	BaseUnitName          string  `gorm:"column:base_unit_name;type:varchar(255);not null;default:'';comment:基准单位名称, 确认收货时记录后不再修改" json:"base_unit_name"`
+	Valuation             float64 `gorm:"column:valuation;type:decimal(14,8);not null;default:0.00;comment:估值单价" json:"valuation"`
+	TotalPrice            float64 `gorm:"column:total_price;type:decimal(14,8);not null;default:0.00;comment:总价" json:"total_price"`
 
 	// 关联关系
 	PurchaseReceiptOrder PurchaseReceiptOrder `gorm:"foreignKey:ReceiptOrderUuid;references:Uuid" json:"purchase_receipt_order,omitempty"`
@@ -234,7 +261,6 @@ type PurchaseReceiptOrderItem struct {
 	Material             *Material            `gorm:"foreignKey:MaterialUuid;references:Uuid" json:"material,omitempty"`
 }
 
-// TableName 指定表名
-func (PurchaseReceiptOrderItem) TableName() string {
-	return "ttpos_purchase_receipt_order_item"
+func (item PurchaseReceiptOrderItem) GetActualNum() float64 {
+	return decimal.NewFromFloat(item.Num).Mul(decimal.NewFromFloat(item.UnitConversionRate).Round(4)).InexactFloat64()
 }

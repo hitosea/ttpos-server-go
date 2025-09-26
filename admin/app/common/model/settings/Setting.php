@@ -1094,6 +1094,7 @@ class Setting extends BaseModel
                     // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
                     'language' => [$defaultLanguage],
                     'default_language' => $defaultLanguage, // 默认语言
+                    'is_smart_kitchen' => '0' // 是否开启智能后厨 0-关闭 1-开启
                 ],
             ],
             SettingEnum::ASSISTANT => [

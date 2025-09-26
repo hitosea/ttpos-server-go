@@ -18,6 +18,9 @@ type ProductFlavor struct {
 	Name                  string `gorm:"default:'';column:name;comment:'名称'"`
 	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	Sort                  int    `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
+	HeadquarterUuid       uint64 `gorm:"default:0;column:headquarter_uuid;comment:'总部UUID'"`
+	ErpnextGroupName      string `gorm:"default:'';column:erpnext_group_name;comment:'ERPNext规格组名称'"`
+	ErpnextValueName      string `gorm:"default:'';column:erpnext_value_name;comment:'ERPNext规格值名称'"`
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 
@@ -36,6 +39,7 @@ type ProductSauce struct {
 	Sort                  int     `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
 	ProductBomCardUuid    uint64  `gorm:"default:0;column:product_bom_card_uuid;comment:'成本卡ID'"`
 	ErpCode               string  `gorm:"default:'';column:erp_code;comment:'ERP编码'"`
+	HeadquarterUuid       uint64  `gorm:"default:0;column:headquarter_uuid;comment:'总部Uuid'"`
 
 	MultiLanguageName MultiLanguageName  `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 	SauceMaterials    []*RelatedMaterial `gorm:"foreignKey:related_uuid;references:uuid"`             // 小料的组成材料
@@ -64,6 +68,7 @@ type ProductUnit struct {
 	MultiLanguageNameUuid uint64            `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	Sort                  int               `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
 	ErpnextUom            string            `gorm:"default:'';column:erpnext_uom;comment:'ERPNext UOM'"`
+	HeadquarterUuid       uint64            `gorm:"default:0;column:headquarter_uuid;comment:'总部Uuid'"`
 	MultiLanguageName     MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 
 	// ProductPackage里面关联的单位
@@ -86,6 +91,7 @@ type ProductAttributeGroup struct {
 	MultiLanguageNameUuid     uint64             `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 	Sort                      int                `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
 	ErpnextAttributeGroupName string             `gorm:"default:'';column:erpnext_attribute_group_name;comment:'ERPNext Attribute Group Name'"`
+	HeadquarterUuid           uint64             `gorm:"default:0;column:headquarter_uuid;comment:'总部Uuid'"`
 	MultiLanguageName         MultiLanguageName  `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 	ProductAttributes         []ProductAttribute `gorm:"foreignKey:attribute_group_uuid;references:uuid"`     // 商品属性
 }
@@ -98,6 +104,7 @@ type ProductAttribute struct {
 	AttributeGroupUuid    uint64 `gorm:"default:0;column:attribute_group_uuid;comment:'属性组UUID'"`
 	Sort                  int    `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
 	ErpnextAttributeValue string `gorm:"default:'';column:erpnext_attribute_value;comment:'ERPNext Attribute Value'"`
+	HeadquarterUuid       uint64 `gorm:"default:0;column:headquarter_uuid;comment:'总部Uuid'"`
 	// 关联ttpos_product_package_attribute，ttpos_product_package_attribute的attribute_uuid等于当前商品属性的uuid
 	ProductPackageAttributes []ProductPackageAttribute `gorm:"foreignKey:attribute_uuid;references:uuid"` // 产品包属性
 
@@ -261,24 +268,26 @@ func (model *ProductPackage) GetRespFlavorList() []product_resp.ProductFlavor {
 		// 商品规格
 		if bom.IsFlavor() && !bom.IsDelete() {
 			flavorList = append(flavorList, product_resp.ProductFlavor{
-				Uuid:       bom.ProductFlavor.Uuid,
-				BomUuid:    bom.Uuid,
-				LocaleName: bom.ProductFlavor.MultiLanguageName.GetNames(),
-				Price:      bom.Price,
-				StockNum:   bom.GetStockNum(),
-				Barcode:    bom.BarcodeValue,
+				Uuid:         bom.ProductFlavor.Uuid,
+				BomUuid:      bom.Uuid,
+				LocaleName:   bom.ProductFlavor.MultiLanguageName.GetNames(),
+				Price:        bom.Price,
+				StockNum:     bom.GetStockNum(),
+				Barcode:      bom.BarcodeValue,
+				InternalCode: bom.InternalCode,
 			})
 		}
 		// 套餐规格
 		if bom.IsPackageFlavor() && !bom.IsDelete() {
 			name := language.JsonToLocaleResponse(bom.Name)
 			flavorList = append(flavorList, product_resp.ProductFlavor{
-				Uuid:       0,
-				BomUuid:    bom.Uuid,
-				LocaleName: *name,
-				Price:      bom.Price,
-				StockNum:   bom.GetStockNum(),
-				Barcode:    bom.BarcodeValue,
+				Uuid:         0,
+				BomUuid:      bom.Uuid,
+				LocaleName:   *name,
+				Price:        bom.Price,
+				StockNum:     bom.GetStockNum(),
+				Barcode:      bom.BarcodeValue,
+				InternalCode: bom.InternalCode,
 			})
 		}
 	}
@@ -499,6 +508,7 @@ type ProductBom struct {
 	StockNum        float64 `gorm:"column:stock_num;type:decimal(12,4);default:0.0000;comment:库存数量;NOT NULL" json:"stock_num"`
 	IsOpenStock     int     `gorm:"column:is_open_stock;type:tinyint(1);default:1;comment:是否开启库存, 0-否 1-是;NOT NULL" json:"is_open_stock"`
 	BarcodeValue    string  `gorm:"column:barcode_value;type:varchar(255);comment:条形码值;NOT NULL" json:"barcode_value"`
+	InternalCode    string  `gorm:"column:internal_code;type:varchar(255);default:'';comment:内部编码;NOT NULL" json:"internal_code"`
 	IsDefaultSelect int     `gorm:"column:is_default_select;type:tinyint(1);default:0;comment:是否默认选择, 0-否 1-是;NOT NULL" json:"is_default_select"`
 	Status          int     `gorm:"column:status;type:tinyint(1);default:0;comment:状态, 0-下架 1-上架. 同步商品包的状态;NOT NULL" json:"status"`
 	IsSoldOut       int     `gorm:"column:is_sold_out;type:tinyint(1);default:0;comment:是否沽清, 0-否 1-是;NOT NULL" json:"is_sold_out"`
@@ -585,7 +595,11 @@ func (model *RelatedMaterial) CalculateExpectedProductionNum() float64 {
 }
 
 func (model *RelatedMaterial) GetExpectedProductionNum() float64 {
-	return model.expectedProductionNum
+	num := model.expectedProductionNum
+	if num <= 0 {
+		num = model.CalculateExpectedProductionNum()
+	}
+	return num
 }
 
 func (model *RelatedMaterial) SetExpectedProductionNum(expectedProductionNum float64) {
@@ -774,6 +788,17 @@ func (model *ProductPackage) GetFlavorProductBom() ProductBom {
 	return ProductBom{}
 }
 
+// GetPackageProductBom 获取商品套餐BOM
+func (model *ProductPackage) GetPackageProductBom() ProductBom {
+	for _, bom := range model.ProductBoms {
+		if bom.IsPackageFlavor() {
+			return bom
+		}
+	}
+
+	return ProductBom{}
+}
+
 // GetSauces 获取商品小料
 func (model *ProductPackage) GetSauces() []ProductSauce {
 	sauces := make([]ProductSauce, 0)
@@ -857,6 +882,7 @@ func (model *ProductBomCard) Copy() *ProductBomCard {
 			BaseUnitUuid:           material.BaseUnitUuid,
 			BaseUnitName:           material.BaseUnitName,
 			BaseUnitConversionRate: material.BaseUnitConversionRate,
+			Material:               material.Material,
 		})
 	}
 

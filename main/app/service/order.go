@@ -109,6 +109,7 @@ type IOrderSrv interface {
 	InstantOrderCartProductCancelGiving(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                                   // 取消赠菜购物车商品
 	InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, bool, error)                                                   // 获取点餐必点方案
 	InstantOrderPaymentInfo(ctx context.Context, saleBill *model.SaleBill, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error) // 获取结账页面信息
+	GetProductNameByItemCode(ctx context.Context, itemCode string, saleOrderUuid uint64) ([]ProductInfo, error)                                                  // 通过itemCode获取订单中库存不足的商品名称
 	OrderPaymentCoupon(ctx context.Context, req req.InstantOrderPaymentCouponReq) (*resp.InstantOrderPaymentInfoResp, error)
 	OrderPaymentPoints(ctx context.Context, req req.InstantOrderPaymentPointsReq) (*resp.InstantOrderPaymentInfoResp, error)                                                          // 设置订单的抵扣积分数量
 	InstantOrderPaymentQrcode(ctx context.Context, req req.InstantOrderPaymentQrcodeReq) (*resp.InstantOrderPaymentQrcodeInfoResp, error)                                             // 获取支付二维码
@@ -1419,11 +1420,14 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 	}
 
 	// 组合列表源数据
+	monthMap := make(map[string]int64)
+	timeUtil := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
 	exportLists := make([]resp.OrderExportInfo, 0)
 	for _, bill := range lists {
 		isSplit := len(bill.SaleOrders) > 1
 		// 拆单
 		for index, saleOrder := range bill.SaleOrders {
+
 			var products []*resp.OrderExportInfoProduct
 			// 添加自助餐顾客
 			for _, orderBuffetCustomer := range saleOrder.SaleOrderBuffetCustomerTypes {
@@ -1461,8 +1465,13 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 					TotalPrice: saleOrderProduct.GetTotalPrice(),
 				})
 			}
+			// 获取创建时间
+			timeDetail := timeUtil.FormatUnixTimeDetail(saleOrder.CreateTime)
+			month := fmt.Sprintf("%d-%02d", timeDetail.Year, timeDetail.Month)
+			monthMap[month]++
 			//
 			exportLists = append(exportLists, resp.OrderExportInfo{
+				CreateTime:    saleOrder.CreateTime,
 				BillUuid:      bill.Uuid,
 				BillType:      utils.IfString(bill.IsInstantBill(), i18n.Translate(language, "点餐订单"), i18n.Translate(language, "桌台订单")),
 				Products:      products,
@@ -1492,6 +1501,10 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 		// 拆单
 		if isSplit && len(exportLists) > 0 {
 			mainOrder := exportLists[len(exportLists)-1]
+			// 获取创建时间
+			timeDetail := timeUtil.FormatUnixTimeDetail(mainOrder.CreateTime)
+			month := fmt.Sprintf("%d-%02d", timeDetail.Year, timeDetail.Month)
+			monthMap[month]++
 			// 收集当前账单所有会员名称并去重
 			var allMemberNames []string
 			var allMemberUuids []string
@@ -1548,6 +1561,12 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 			mainOrder.CashierName = bill.CashierName
 			exportLists = append(exportLists, mainOrder)
 		}
+	}
+	for i, exportList := range exportLists {
+		timeDetail := timeUtil.FormatUnixTimeDetail(exportList.CreateTime)
+		month := fmt.Sprintf("%d-%02d", timeDetail.Year, timeDetail.Month)
+		monthMap[month]--
+		exportLists[i].OrderID = fmt.Sprintf("OID%d%02d%05d", timeDetail.Year, timeDetail.Month, monthMap[month])
 	}
 	//
 	return resp.OrderExportListPaginationResp{
@@ -7230,6 +7249,7 @@ func (s *orderSrv) getDecreaseStockList(ctx context.Context, cookingDeductSaleOr
 					if num := productBomMaterial.GetDecreaseNum(cookingDeductSaleOrderProduct.Num); num > 0 {
 						productBomMaterials = append(productBomMaterials, &model.ProductBomMaterials{
 							MaterialUuid:  productBomMaterial.MaterialUuid,
+							WarehouseUuid: productBomMaterial.Material.WarehouseUuid,
 							Num:           num,
 							SaleOrderUuid: cookingDeductSaleOrderProduct.SaleOrderUuid,
 						})
@@ -7253,8 +7273,9 @@ func (s *orderSrv) getDecreaseStockList(ctx context.Context, cookingDeductSaleOr
 					}
 					if num := material.GetDecreaseNum(cookingDeductSaleOrderProduct.Num); num > 0 {
 						productBomMaterials = append(productBomMaterials, &model.ProductBomMaterials{
-							MaterialUuid: material.MaterialUuid,
-							Num:          num,
+							MaterialUuid:  material.MaterialUuid,
+							WarehouseUuid: material.Material.WarehouseUuid,
+							Num:           num,
 						})
 					}
 				}
@@ -8815,7 +8836,10 @@ func (s *orderSrv) GetValidMemberCouponList(ctx context.Context, memberUuid uint
 		couponMap := make(map[string][]*model.MemberCoupon, 0)
 
 		for _, coupon := range memberCouponList {
-
+			// 过滤掉已经被禁用的营销优惠券
+			if coupon.MarketingCoupon.Status == 0 { // 0禁用 1开启
+				continue
+			}
 			startTime := timezone.FormatUnixTime(coupon.StartTime, layout)
 			endTime := timezone.FormatUnixTime(coupon.EndTime, layout)
 			key := fmt.Sprintf("%d_%s_%s_%s_%s", coupon.CouponUuid, startTime, endTime, coupon.DayStartTime, coupon.DayEndTime)
@@ -9215,6 +9239,60 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 	}
 
 	return infoResp, nil
+}
+
+type ProductInfo struct {
+	ProductName dto.LocaleResponse
+}
+
+// 通过itemCode获取订单中库存不足的商品名称
+func (s *orderSrv) GetProductNameByItemCode(ctx context.Context, itemCode string, saleOrderUuid uint64) ([]ProductInfo, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 获取物品
+	material, err := repository.NewMaterialRepo(db).GetMaterialByErpCode(itemCode)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	// 获取成本卡uuid列表
+	productBomCardUuids, err := repository.NewRelatedMaterialRepo(db).GetProductBomCardUuidsByMaterialUuid(material.Uuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	// 通过成本卡uuid列表获取product_bom列表
+	productBomUuids, err := repository.NewProductBomRepo(db).GetFlavorProductBomUuidsByCardUuids(productBomCardUuids)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	// 通过product_bom uuid列表查询sale_order_product_bom表获取sale_order_product_uuid列表
+	saleOrderProductUuids, err := repository.NewSaleOrderProductRepo(db).GetSaleOrderProductUuidsByProductBomUuids(saleOrderUuid, productBomUuids)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	// 获取商品信息
+	products, err := repository.NewSaleOrderProductRepo(db).GetSaleOrderProductBySaleOrderProductUuids(saleOrderProductUuids)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	productInfos := make([]ProductInfo, 0)
+	for _, product := range products {
+		localeName := product.GetNameAndFlavorName()
+		// 如果商品包没有多语言名称，则查询数据库获取
+		if product.MultiLanguageName.IsNullName() {
+			uuid := product.MultiLanguageNameUuid
+			names, err := repository.NewMultiLanguageNameRepositoryImpl(db).GetMultiLanguageNameByUuid(uuid)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
+			bom, _ := repository.NewProductPackageRepo(db).GetProductPackageBaseInfoByBomUuid(product.SaleOrderProductBoms[0].ProductBomUuid)
+			localeName = product.GetNameAndFlavorNameFrom(bom, &names)
+		}
+		productInfos = append(productInfos, ProductInfo{
+			ProductName: localeName,
+		})
+	}
+
+	return productInfos, nil
 }
 
 // OrderPaymentCoupon 使用优惠券 或 取消优惠券
@@ -10032,17 +10110,32 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 			Description: "Tax", // 消费税
 		})
 	}
+	// 如果有服务费，则添加一个虚拟商品来记录服务费
 	if saleOrder.ServiceFee > 0 {
-		taxes = append(taxes, &selling.PosInvoiceTax{
-			TaxAmount:   saleOrder.ServiceFee,
-			Description: "Service Fee", // 服务费
-		})
+		serviceFeeItem := &selling.PosInvoiceItem{
+			ItemCode: constant.PosInvoiceItemCodeServiceFee,
+			Qty:      saleOrder.ServiceFee,
+			Rate:     1,
+			Amount:   saleOrder.ServiceFee,
+		}
+		// 如果是免单
+		if isFreeOrder {
+			serviceFeeItem.IsFreeItem = true
+		}
+		items = append(items, serviceFeeItem)
 	}
+	// 如果有支付手续费，则添加一个虚拟商品来记录支付手续费
 	if saleOrder.PaymentCommissionFee > 0 {
-		taxes = append(taxes, &selling.PosInvoiceTax{
-			TaxAmount:   saleOrder.PaymentCommissionFee,
-			Description: "Payment Processing Fee", // 支付手续费
+		items = append(items, &selling.PosInvoiceItem{
+			ItemCode: constant.PosInvoiceItemCodePaymentProcessingFee,
+			Qty:      saleOrder.PaymentCommissionFee,
+			Rate:     1,
+			Amount:   saleOrder.PaymentCommissionFee,
 		})
+		// taxes = append(taxes, &selling.PosInvoiceTax{
+		// 	TaxAmount:   saleOrder.PaymentCommissionFee,
+		// 	Description: "Payment Processing Fee", // 支付手续费
+		// })
 	}
 
 	// 整单改价 - Whole Order Price Adjustment
@@ -10114,6 +10207,9 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 			}
 		}
 		for _, payment := range saleOrder.PaymentOrders {
+			if payment.IsDelete() {
+				continue
+			}
 			var modeOfPayment string
 			if method, ok := methodMap[payment.PaymentMethod.Code]; ok {
 				modeOfPayment = method
@@ -10150,6 +10246,14 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 	}
 	response, err := erpSrv.SavePosInvoice(ctx, param)
 	if err != nil {
+		erpSrv := erp.NewIErpSrv(s.dbm)
+		getPosInvoiceErrorResp, err := erpSrv.ParseSavePosInvoiceError(err)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		if getPosInvoiceErrorResp.ErrorScene == constant.ErpItemStockNotEnough {
+			return nil, errors.WithMessage(errors.New("物品库存不足," + getPosInvoiceErrorResp.ItemCode))
+		}
 		return nil, errors.WithMessage(err)
 	}
 	return response, nil
@@ -10235,35 +10339,59 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 	// 如果是部分退款，则需要添加服务费(从各个saleOrderProduct中累计的按比例收取的服务费)
 	if returnType == constant.ReturnOrderRefundTypePart {
 		if totalServiceFee.GreaterThan(decimal.NewFromFloat(0)) {
-			taxes = append(taxes, &selling.PosInvoiceTax{
-				TaxAmount:   -totalServiceFee.InexactFloat64(),
-				Description: "Service Fee", // 服务费
+			items = append(items, &selling.PosInvoiceItem{
+				ItemCode: constant.PosInvoiceItemCodeServiceFee,
+				Qty:      -totalServiceFee.InexactFloat64(),
+				Rate:     1,
+				Amount:   -totalServiceFee.InexactFloat64(),
 			})
+			// taxes = append(taxes, &selling.PosInvoiceTax{
+			// 	TaxAmount:   -totalServiceFee.InexactFloat64(),
+			// 	Description: "Service Fee", // 服务费
+			// })
 		}
 	}
 	// 如果是整单退款，则退支付手续费、固定服务费
 	if returnType == constant.ReturnOrderRefundTypeTotal {
 		if saleOrder.PaymentCommissionFee > 0 { // 有支付手续费，才退
-			taxes = append(taxes, &selling.PosInvoiceTax{
-				TaxAmount:   -saleOrder.PaymentCommissionFee,
-				Description: "Payment Processing Fee", // 支付手续费
+			items = append(items, &selling.PosInvoiceItem{
+				ItemCode: constant.PosInvoiceItemCodePaymentProcessingFee,
+				Qty:      -saleOrder.PaymentCommissionFee,
+				Rate:     1,
+				Amount:   -saleOrder.PaymentCommissionFee,
 			})
+			// taxes = append(taxes, &selling.PosInvoiceTax{
+			// 	TaxAmount:   -saleOrder.PaymentCommissionFee,
+			// 	Description: "Payment Processing Fee", // 支付手续费
+			// })
 		}
 		//如果是固定服务费
 		if saleOrder.IsFixedServiceFee() {
 			if saleOrder.ServiceFee > 0 { // 有固定服务费，才退
-				taxes = append(taxes, &selling.PosInvoiceTax{
-					TaxAmount:   -saleOrder.ServiceFee,
-					Description: "Service Fee", // 固定服务费
+				items = append(items, &selling.PosInvoiceItem{
+					ItemCode: constant.PosInvoiceItemCodeServiceFee,
+					Qty:      -saleOrder.ServiceFee,
+					Rate:     1,
+					Amount:   -saleOrder.ServiceFee,
 				})
+				// taxes = append(taxes, &selling.PosInvoiceTax{
+				// 	TaxAmount:   -saleOrder.ServiceFee,
+				// 	Description: "Service Fee", // 固定服务费
+				// })
 			}
 		} else {
 			// 按比例收取服务费
 			if totalServiceFee.GreaterThan(decimal.NewFromFloat(0)) {
-				taxes = append(taxes, &selling.PosInvoiceTax{
-					TaxAmount:   -totalServiceFee.InexactFloat64(),
-					Description: "Service Fee", // 服务费(按比例收取)
+				items = append(items, &selling.PosInvoiceItem{
+					ItemCode: constant.PosInvoiceItemCodeServiceFee,
+					Qty:      -totalServiceFee.InexactFloat64(),
+					Rate:     1,
+					Amount:   -totalServiceFee.InexactFloat64(),
 				})
+				// taxes = append(taxes, &selling.PosInvoiceTax{
+				// 	TaxAmount:   -totalServiceFee.InexactFloat64(),
+				// 	Description: "Service Fee", // 服务费(按比例收取)
+				// })
 			}
 		}
 

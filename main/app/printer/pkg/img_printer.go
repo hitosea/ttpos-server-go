@@ -926,6 +926,12 @@ func (i *ImgFont) SetSegmentationHeight(height int) *ImgFont {
 	return i
 }
 
+// SetSegmentationHeight 设置分割高度
+func (i *ImgFont) DebugSetSegmentationHeight(height int) *ImgFont {
+	i.SegmentationHeight = height
+	return i
+}
+
 // AppendPartingline 添加文本行
 func (i *ImgFont) AppendPartingline(text string, fixedWidth int, deviationWidth float64) *ImgFont {
 	// 确定起始高度，如果总高度为0则使用行高
@@ -1376,6 +1382,7 @@ type appendSplitlineOptions struct {
 	isLineFeed bool
 	lineHeight int
 	fontWeight int
+	fontSize   int
 }
 
 // DefaultAppendSplitLineOptions 返回默认的 AppendSplitline 选项
@@ -1384,6 +1391,7 @@ func DefaultAppendSplitLineOptions() appendSplitlineOptions {
 		isLineFeed: false,
 		lineHeight: 0,
 		fontWeight: 1,
+		fontSize:   20,
 	}
 }
 
@@ -1421,8 +1429,14 @@ func (i *ImgFont) AppendSplitLine(opts ...AppendSplitlineOption) *ImgFont {
 	// 保存原始字体粗细
 	originalFontWeight := i.FontWeight
 
+	// 保存原始字体大小
+	originalFontSize := i.FontSize
+
 	// 设置分割线的字体粗细
 	i.SetFontWeight(options.fontWeight)
+
+	// 设置分割线的字体大小
+	i.SetFontSize(options.fontSize)
 
 	// 根据图像宽度添加分割线
 	if i.ImageWidth == 567 || i.ImageWidth == 568 {
@@ -1442,6 +1456,9 @@ func (i *ImgFont) AppendSplitLine(opts ...AppendSplitlineOption) *ImgFont {
 
 	// 恢复原始字体粗细
 	i.SetFontWeight(originalFontWeight)
+
+	// 恢复原始字体大小
+	i.SetFontSize(originalFontSize)
 
 	return i
 }

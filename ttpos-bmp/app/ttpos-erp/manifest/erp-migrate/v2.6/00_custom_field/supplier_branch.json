@@ -1,0 +1,9 @@
+{
+  "doctype": "DocType",
+  "label": "Branch",
+  "fieldtype": "Link",
+  "fieldname": "custom_branch",
+  "options": "Branch",
+  "insert_after": "supplier_name",
+  "dt": "Supplier"
+}

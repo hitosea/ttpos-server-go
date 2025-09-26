@@ -111,6 +111,7 @@
     loading.value = true;
     MarketingApi.activityCouponList({
       name: form.name,
+      status: 1,
       page: curPage.value,
       list_rows: pageSize.value,
     })

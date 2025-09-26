@@ -18,6 +18,7 @@ import (
 
 // AuthHandler 认证鉴权控制器
 type SettingHandler struct {
+	syncSrv       service.ISyncSrv
 	settingSrv    setting.ISrv
 	otherSrv      service.IOtherSrv
 	uploadFileSrv service.IUploadFileSrv
@@ -354,6 +355,23 @@ func (h *SettingHandler) UploadLogo(c *gin.Context) {
 	helper.Success(c, uploadFileResp)
 }
 
+// Sync 获取总部最新数据
+// @Summary 获取总部最新数据
+// @Tags 商家端.业务设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response
+// @Router /shop/setting/sync [post]
+func (h *SettingHandler) Sync(c *gin.Context) {
+	err := h.syncSrv.Sync(helper.GetContext(c))
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -365,11 +383,15 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 	otherSrv := service.NewOtherSrv(dbm, cache, settingSrv)
+	warehouseSrv := service.NewWarehouseSrv(dbm)
+	supplierSrv := service.NewSupplierSrv(dbm)
+	productSrv := service.NewProductSrv(dbm, service.NewLocaleSrv(), settingSrv, cache)
 
 	wrapper := &SettingHandler{
 		settingSrv:    settingSrv,
 		otherSrv:      otherSrv,
 		uploadFileSrv: service.NewUploadFileSrv(dbm),
+		syncSrv:       service.NewSyncSrv(dbm, warehouseSrv, supplierSrv, productSrv),
 	}
 
 	// 需要认证
@@ -391,7 +413,7 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/setting/menu_qrcode", wrapper.GetMenuQrcode) // 获取电子菜单二维码
 		// 会员端二维码
 		privateApi.GET("/setting/member_qrcode", wrapper.GetMemberQrcode) // 获取会员端二维码
-
-		privateApi.POST("/setting/upload_logo", wrapper.UploadLogo) // 上传logo
+		privateApi.POST("/setting/upload_logo", wrapper.UploadLogo)       // 上传logo
+		privateApi.POST("/setting/sync", wrapper.Sync)                    // 获取总部最新数据
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-bmp/app/ttpos-erp/api/warehouse"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
 )
 
@@ -27,6 +28,38 @@ type (
 		// GetItemStock 获取物品库存信息
 		// 根据公司简称、分支机构和物品编码查询库存信息
 		GetItemStock(ctx context.Context, req *item.GetItemStockReq) (res *item.GetItemStockResp, err error)
+		// GetItem 根据物品编码获取单个物品信息
+		// 参数：ctx 上下文，req 包含物品编码和可选的公司、分支信息
+		// 返回：物品详细信息，错误信息
+		GetItem(ctx context.Context, req *item.GetItemReq) (res *erp.Item, err error)
+		// SavePosAttribute 保存 POS 系统中的属性物品
+		// 参数：ctx 上下文，req 保存属性物品请求
+		// 返回：保存后的物品信息，错误信息
+		SavePosAttribute(ctx context.Context, req *item.SavePosAttributeReq) (res *item.ItemInfo, err error)
+		// SavePosAddon 保存 POS 系统中的加料物品
+		// 参数：ctx 上下文，req 保存加料物品请求
+		// 返回：保存后的物品信息，错误信息
+		SavePosAddon(ctx context.Context, req *item.SavePosAddonReq) (res *item.ItemInfo, err error)
+	}
+	IItemGroup interface {
+		// GetItemGroupList 获取物品分组列表
+		// 根据查询条件过滤并返回物品分组信息列表
+		GetItemGroupList(ctx context.Context, req *item.GetItemGroupListReq) (res *item.GetItemGroupListResp, err error)
+		// GetItemGroup 根据分组代码获取单个物品分组信息
+		// 参数：ctx 上下文，req 包含分组代码的请求
+		// 返回：物品分组详细信息，错误信息
+		GetItemGroup(ctx context.Context, req *item.GetItemGroupReq) (res *erp.ItemGroupInfo, err error)
+		// SaveItemGroup 保存物品分组信息
+		// 如果物品分组已存在则更新，否则创建新物品分组
+		SaveItemGroup(ctx context.Context, req *item.SaveItemGroupReq) (res *erp.ItemGroupInfo, err error)
+		// DeleteItemGroup 删除物品分组
+		// 参数：ctx 上下文，req 删除物品分组请求
+		// 返回：错误信息
+		DeleteItemGroup(ctx context.Context, req *item.DeleteItemGroupReq) error
+		// CreateAttributeGroup 创建属性分组
+		CreateAttributeGroup(ctx context.Context, req *item.CreateAttributeGroupReq) (resp *erp.ItemGroupInfo, err error)
+		// CreateAddonGroup 创建加料分组
+		CreateAddonGroup(ctx context.Context, req *item.CreateAddonGroupReq) (resp *erp.ItemGroupInfo, err error)
 	}
 	IStock interface {
 		// GetUomList 获取单位列表
@@ -47,6 +80,17 @@ type (
 		CreateMaterialRequest(ctx context.Context, req *stock.SaveMaterialRequestReq) (res *stock.SaveMaterialRequestResp, err error)
 		// GetMaterialRequestList 获取物料请求列表
 		GetMaterialRequestList(ctx context.Context, req *stock.GetMaterialRequestListReq) (res *stock.GetMaterialRequestListResp, err error)
+		// GetUom 根据单位名称获取单个单位详细信息
+		// 参数：ctx 上下文，req 包含单位名称
+		// 返回：单位详细信息，错误信息
+		GetUom(ctx context.Context, req *item.GetUomReq) (res *erp.UOM, err error)
+		// GetItemAttribute 根据属性名称获取单个属性详细信息
+		// 参数：ctx 上下文，attributeName 属性名称
+		// 返回：属性详细信息，错误信息
+		GetItemAttribute(ctx context.Context, attributeName string) (res *erp.ItemAttribute, err error)
+		// GetStockLedger 获取库存分类账信息
+		// 根据查询条件过滤并返回库存分类账记录列表
+		GetStockLedger(ctx context.Context, req *stock.GetStockLedgerReq) (res *stock.GetStockLedgerResp, err error)
 	}
 	IWarehouse interface {
 		// CreateWarehouse 创建仓库
@@ -57,11 +101,21 @@ type (
 		// 根据查询条件过滤并返回仓库信息列表
 		GetWarehouseList(ctx context.Context, req *warehouse.GetWarehouseListReq) (res *warehouse.GetWarehouseListResp, err error)
 		GetDefaultWarehouse(ctx context.Context, company string, branch string) (res *warehouse.WarehouseInfo, err error)
+		// GetWarehouse 获取单个仓库详情
+		// 根据仓库名称获取仓库详细信息
+		GetWarehouse(ctx context.Context, req *warehouse.GetWarehouseReq) (res *warehouse.GetWarehouseResp, err error)
+		// UpdateWarehouse 更新仓库信息
+		// 根据仓库名称更新仓库的相关信息
+		UpdateWarehouse(ctx context.Context, req *warehouse.UpdateWarehouseReq) (res *warehouse.UpdateWarehouseResp, err error)
+		// DeleteWarehouse 删除仓库
+		// 根据仓库名称删除指定仓库
+		DeleteWarehouse(ctx context.Context, req *warehouse.DeleteWarehouseReq) (res *warehouse.DeleteWarehouseResp, err error)
 	}
 )
 
 var (
 	localItem      IItem
+	localItemGroup IItemGroup
 	localStock     IStock
 	localWarehouse IWarehouse
 )
@@ -75,6 +129,17 @@ func Item() IItem {
 
 func RegisterItem(i IItem) {
 	localItem = i
+}
+
+func ItemGroup() IItemGroup {
+	if localItemGroup == nil {
+		panic("implement not found for interface IItemGroup, forgot register?")
+	}
+	return localItemGroup
+}
+
+func RegisterItemGroup(i IItemGroup) {
+	localItemGroup = i
 }
 
 func Stock() IStock {

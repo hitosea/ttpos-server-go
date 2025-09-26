@@ -27,6 +27,7 @@ class CardRecord extends CardRecordModel
                 ->join('member u', 'u.uuid=r.member_uuid')
                 ->join('member_card_type c', 'c.uuid=r.member_card_type_uuid')
                 ->where('r.delete_time', '=', 0)
+                ->where('u.delete_time', '=', 0)
                 ->order(['r.create_time' => 'desc']);
 
         if (isset($data['card_name']) && $data['card_name'] != '') {

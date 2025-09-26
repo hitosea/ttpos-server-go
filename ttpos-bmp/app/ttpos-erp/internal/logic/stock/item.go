@@ -45,7 +45,7 @@ func (s *sItem) GetItemList(ctx context.Context, req *item.GetItemListReq) (res 
 	filters := s.buildItemListFilters(ctx, req)
 
 	// 查询物品列表
-	itemList, err := s.queryItemList(ctx, filters)
+	itemList, err := s.queryItemList(ctx, filters, req)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "查询物品列表失败")
 	}
@@ -61,12 +61,12 @@ func (s *sItem) buildItemListFilters(ctx context.Context, req *item.GetItemListR
 
 	// 按分支机构过滤
 	if len(req.Branch) > 0 {
-		filters = append(filters, g.ArrayStr{"custom_branch", "like", "%" + req.Branch + "%"})
+		filters = append(filters, g.ArrayStr{"custom_branch", "=", req.Branch})
 	}
 
 	// 按物品名称过滤
 	if len(req.ItemName) > 0 {
-		filters = append(filters, g.ArrayStr{"name", "like", "%" + req.ItemName + "%"})
+		filters = append(filters, g.ArrayStr{"name", "=", req.ItemName})
 	}
 
 	// 按物品分组过滤
@@ -95,7 +95,7 @@ func (s *sItem) buildItemListFilters(ctx context.Context, req *item.GetItemListR
 	if len(req.CompanyAbbr) > 0 {
 		companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
 		if err == nil && len(companyName) > 0 {
-			filters = append(filters, []string{"custom_company", "like", companyName})
+			filters = append(filters, []string{"custom_company", "=", companyName})
 		}
 	}
 
@@ -107,13 +107,13 @@ func (s *sItem) buildItemListFilters(ctx context.Context, req *item.GetItemListR
 }
 
 // queryItemList 执行物品列表查询
-func (s *sItem) queryItemList(ctx context.Context, filters [][]string) ([]*item.ItemInfo, error) {
+func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item.GetItemListReq) ([]*item.ItemInfo, error) {
 	resp, err := service.Document().List(ctx, &erp.ErpReq{
-		DocType: "Item",
+		DocType: erp.DocTypeItem,
 	}, &erp.RequestParams{
 		Fields:  g.ArrayStr{"item_name", "item_code", "item_group", "custom_branch", "disabled", "custom_company", "custom_specification", "stock_uom"},
 		Filters: filters,
-		Limit:   consts.Limit999,
+		Limit:   consts.Limit9999,
 	})
 
 	if err != nil {
@@ -129,8 +129,33 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string) ([]*item.
 	// 转换为物品信息列表
 	dataArray := j.GetJsons("data")
 	itemList := make([]*item.ItemInfo, 0, len(dataArray))
+	subCompanyName := ""
+	if len(req.SubCompanyAbbr) > 0 {
+		subCompanyName, err = service.Company().GetCompanyNameWithAbbr(ctx, req.SubCompanyAbbr)
+		if err != nil {
+			return nil, gerror.Wrapf(err, "获取子公司名称失败,companyAbbr:%s", req.SubCompanyAbbr)
+		}
+	}
 
 	for _, data := range dataArray {
+		//获取当前item 的所有 Item Permission List 判断是否有权限使用, 列表查询目前不支持 表格字段查询，只能每次遍历物品查询 对应的 custom_permission_rule
+		if len(req.SubCompanyAbbr) > 0 {
+			itemInfo, err := s.GetItem(ctx, &item.GetItemReq{
+				ItemCode: data.Get("item_code").String(),
+			})
+			if err != nil {
+				g.Log().Errorf(ctx, "获取物品信息失败,itemCode:%s,err:%v", data.Get("item_code").String(), err)
+				continue // 获取物品信息失败，跳过该物品
+			}
+			hasPermission, err := service.Permission().CheckPermission(ctx, itemInfo.CustomPermissionRule, subCompanyName)
+			if err != nil {
+				g.Log().Errorf(ctx, "检查物品权限失败,itemCode:%s,err:%v", data.Get("item_code").String(), err)
+				continue // 检查权限失败，跳过该物品
+			}
+			if !hasPermission {
+				continue // 当前公司无权限，跳过该物品
+			}
+		}
 		itemList = append(itemList, &item.ItemInfo{
 			Branch:    data.Get("custom_branch").String(),
 			Company:   data.Get("custom_company").String(),
@@ -164,6 +189,11 @@ func (s *sItem) SaveItem(ctx context.Context, reqInfo *item.ItemInfo) (res *item
 		// 更新现有物品
 		return s.updateExistingItem(ctx, req)
 	} else {
+		//创建规格商品
+		//TODO 使用变体创建商品
+		//if len(req.ItemSpecification) > 0 {
+		//
+		//}
 		// 创建新物品
 		return s.createNewItem(ctx, req)
 	}
@@ -178,7 +208,7 @@ func (s *sItem) checkItemExists(ctx context.Context, itemCode string) (bool, err
 	filters := [][]string{{"item_code", "=", itemCode}}
 
 	count, err := service.Doctype().Count(ctx, &erp.ErpReq{
-		DocType: "Item",
+		DocType: erp.DocTypeItem,
 	}, &erp.RequestParams{
 		Filters: filters,
 	})
@@ -197,7 +227,7 @@ func (s *sItem) updateExistingItem(ctx context.Context, req *item.ItemInfo) (*it
 
 	// 执行更新操作
 	_, err := service.Document().Update(ctx, &erp.ErpReq{
-		DocType: "Item",
+		DocType: erp.DocTypeItem,
 		Name:    req.ItemCode,
 	}, &itemForUpdate)
 
@@ -225,6 +255,11 @@ func (s *sItem) buildUpdateItemData(req *item.ItemInfo) g.Map {
 	}
 	//更新估值率 不更新也必须传入此字段，否erp会设置成0
 	itemForUpdate["valuation_rate"] = req.ValuationRate
+
+	//更新默认采购单位
+	if len(req.PurchaseUom) > 0 {
+		itemForUpdate["purchase_uom"] = req.PurchaseUom
+	}
 
 	// 条形码更新
 	//note: ttpos 不更新条形码也必须传入此字段，否erp会删除条形码
@@ -271,6 +306,13 @@ func (s *sItem) buildUpdateItemData(req *item.ItemInfo) g.Map {
 		itemForUpdate["custom_internal_code"] = req.InternalCode
 	}
 
+	//是否禁售
+	if req.NotForSale {
+		itemForUpdate["custom_not_for_sale"] = 1
+	} else {
+		itemForUpdate["custom_not_for_sale"] = 0
+	}
+
 	return itemForUpdate
 }
 
@@ -294,10 +336,23 @@ func (s *sItem) createNewItem(ctx context.Context, req *item.ItemInfo) (*item.It
 		return nil, err
 	}
 
+	//创建禁用物品时，erpnext无法直接创建禁用物品。先创建一个启用的物品，再修改为禁用状态
+	if req.Disabled {
+		newItem["disabled"] = 0
+	}
+
 	// 创建物品
-	_, err = service.Document().Create(ctx, "Item", &newItem)
+	_, err = service.Document().Create(ctx, erp.DocTypeItem, &newItem)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建物品失败")
+	}
+
+	if req.Disabled {
+		newItem["disabled"] = 1
+		service.Document().Update(ctx, &erp.ErpReq{
+			DocType: erp.DocTypeItem,
+			Name:    itemCode,
+		}, &newItem)
 	}
 
 	// 转换并返回结果
@@ -321,11 +376,13 @@ func (s *sItem) buildNewItemData(ctx context.Context, req *item.ItemInfo, compan
 		"item_name":                  req.ItemName,
 		"stock_uom":                  req.StockUom,
 		"item_group":                 utility.ItemGroupToString(req.ItemGroup),
+		"purchase_uom":               req.PurchaseUom,
 		"custom_branch":              req.Branch,
 		"custom_company":             company.CompanyName,
 		"custom_classification":      req.Classification,
 		"custom_classification_code": req.ClassificationCode,
 		"custom_internal_code":       req.InternalCode,
+		"custom_not_for_sale":        req.NotForSale,
 	}
 
 	// 根据物品分组添加特定字段
@@ -357,12 +414,24 @@ func (s *sItem) addItemGroupSpecificFields(ctx context.Context, req *item.ItemIn
 		s.addRawMaterialFields(req, newItem)
 	} else if req.ItemGroup == item.ItemGroup_Products {
 		// 商品特定字段
+		//FIXME 后面要去掉的，现在先放着这里
 		newItem["custom_specification"] = req.ItemSpecification
 		newItem["is_stock_item"] = 0
 	} else if req.ItemGroup == item.ItemGroup_Package {
 		// 套餐特定字段
 		newItem["is_stock_item"] = 0
 	}
+
+	//将规格通过 Item Attribute 实现 FIXME 这个阶段先不用变体
+	//if len(req.ItemSpecification) > 0 {
+	//	newItem["has_variants"] = 1
+	//	newItem["variant_based_on"] = erp.DocTypeItemAttribute
+	//	newItem["attributes"] = g.Array{
+	//		g.Map{
+	//			"attribute": req.ItemSpecification,
+	//		},
+	//	}
+	//}
 
 	// 设置默认仓库
 	s.setDefaultWarehouse(ctx, req, company, newItem)
@@ -426,6 +495,8 @@ func (s *sItem) buildCreateItemResponse(req *item.ItemInfo, company *company.Com
 			res.StockUom = stockUom
 		}
 	}
+	//处理返回 itemGroup
+	res.ItemGroup = req.ItemGroup
 
 	return res
 }
@@ -433,20 +504,22 @@ func (s *sItem) buildCreateItemResponse(req *item.ItemInfo, company *company.Com
 // generateItemCode 生成物品编码
 func (s *sItem) generateItemCode(ctx context.Context, req *item.ItemInfo) (string, error) {
 	// 根据物品分组生成编码前缀
-	if req.ItemGroup == item.ItemGroup_RawMaterial {
+	switch req.ItemGroup {
+	case item.ItemGroup_RawMaterial:
 		return utility.GenItemCode(consts.ItemCodePrefixRawMaterial), nil
-	}
-
-	// 套餐编码
-	if req.ItemGroup == item.ItemGroup_Package {
+	case item.ItemGroup_Package:
 		return utility.GenItemCode(consts.ItemCodePrefixPackage), nil
+	case item.ItemGroup_PosAttribute:
+		return utility.GenItemCode(consts.ItemCodePrefixPosAttribute), nil
+	default:
+
 	}
 
 	// 商品编码
 	itemCode := utility.GenItemCode(consts.ItemCodePrefixProduct)
 
 	// 处理多规格商品编码
-	if len(req.ItemSpecification) > 0 {
+	if len(req.TemplateItemCode) > 0 {
 		suffix, err := s.generateItemCodeWithTemplate(ctx, req.TemplateItemCode)
 		if err != nil {
 			return "", err
@@ -526,13 +599,16 @@ func (s *sItem) GetItemStock(ctx context.Context, req *item.GetItemStockReq) (re
 	filters := gjson.New(g.Map{
 		"company": company.CompanyName,
 	})
-
-	// 从默认仓库查询
-	warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, company.CompanyName, req.Branch)
-	if err != nil {
-		return nil, gerror.Wrapf(err, "获取默认仓库失败")
+	if len(req.Warehouse) > 0 {
+		filters.Set("warehouse", req.Warehouse)
+	} else {
+		// 从默认仓库查询
+		warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, company.CompanyName, req.Branch)
+		if err != nil {
+			return nil, gerror.Wrapf(err, "获取默认仓库失败")
+		}
+		filters.Set("warehouse", warehouse.Name)
 	}
-	filters.Set("warehouse", warehouse.Name)
 
 	// 按物品编码过滤
 	if len(req.ItemCode) > 0 {
@@ -541,7 +617,7 @@ func (s *sItem) GetItemStock(ctx context.Context, req *item.GetItemStockReq) (re
 
 	// 执行库存报表查询
 	resp, err := service.Report().Run(ctx, &erp.ReportParams{
-		ReportName:           "Stock Projected Qty",
+		ReportName:           erp.DocTypeStockProjectedQty,
 		Filters:              filters.String(),
 		IgnorePreparedReport: true,
 	})
@@ -560,14 +636,17 @@ func (s *sItem) GetItemStock(ctx context.Context, req *item.GetItemStockReq) (re
 	stockList := make([]*item.ItemStock, 0, len(dataArray))
 
 	for _, data := range dataArray {
+		//存在数据那条
 		if data.Contains("item_code") {
 			stockList = append(stockList, &item.ItemStock{
-				ItemCode:  data.Get("item_code").String(),
-				ItemName:  data.Get("item_name").String(),
-				ItemGroup: utility.ParseItemGroupFromString(data.Get("item_group").String()),
-				Warehouse: data.Get("warehouse").String(),
-				StockUom:  data.Get("stock_uom").String(),
-				ActualQty: data.Get("actual_qty").Float64(),
+				ItemCode:          data.Get("item_code").String(),
+				ItemName:          data.Get("item_name").String(),
+				ItemGroup:         utility.ParseItemGroupFromString(data.Get("item_group").String()),
+				Warehouse:         data.Get("warehouse").String(),
+				StockUom:          data.Get("stock_uom").String(),
+				ActualQty:         data.Get("actual_qty").Float64(),
+				ProjectedQty:      data.Get("projected_qty").Float64(),
+				ReservedQtyForPos: data.Get("reserved_qty_for_pos").Float64(),
 			})
 		}
 	}
@@ -576,4 +655,84 @@ func (s *sItem) GetItemStock(ctx context.Context, req *item.GetItemStockReq) (re
 	return &item.GetItemStockResp{
 		ItemStockList: stockList,
 	}, nil
+}
+
+// GetItem 根据物品编码获取单个物品信息
+// 参数：ctx 上下文，req 包含物品编码和可选的公司、分支信息
+// 返回：物品详细信息，错误信息
+func (s *sItem) GetItem(ctx context.Context, req *item.GetItemReq) (res *erp.Item, err error) {
+	// 参数验证
+	if len(req.ItemCode) == 0 {
+		return nil, gerror.New("物品编码不能为空")
+	}
+
+	// 查询物品信息
+	resp, err := service.Document().Get(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeItem,
+		Name:    req.ItemCode,
+	}, nil)
+
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询物品信息失败")
+	}
+
+	// 解析响应数据
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析物品信息响应失败")
+	}
+	itemInfo := &erp.Item{}
+	gconv.Structs(j.GetJson("data"), &itemInfo)
+
+	return itemInfo, nil
+}
+
+// SavePosAttribute 保存 POS 系统中的属性物品
+// 参数：ctx 上下文，req 保存属性物品请求
+// 返回：保存后的物品信息，错误信息
+func (s *sItem) SavePosAttribute(ctx context.Context, req *item.SavePosAttributeReq) (res *item.ItemInfo, err error) {
+	// 将 PosSpecItem 转换为 ItemInfo
+	itemInfo := s.convertPosSpecItemToItemInfo(req.Item)
+
+	// 设置属性物品的特定属性
+	itemInfo.ItemGroup = item.ItemGroup_PosAttribute // 属性物品归类为其他
+	itemInfo.StockUom = "Nos"                        // 默认单位为个
+	itemInfo.ValuationRate = 0                       // 属性物品估值率为0
+	itemInfo.IsStockItem = false                     // 属性物品不是库存物品
+
+	// 调用通用的保存物品方法
+	return s.SaveItem(ctx, itemInfo)
+}
+
+// SavePosAddon 保存 POS 系统中的加料物品
+// 参数：ctx 上下文，req 保存加料物品请求
+// 返回：保存后的物品信息，错误信息
+func (s *sItem) SavePosAddon(ctx context.Context, req *item.SavePosAddonReq) (res *item.ItemInfo, err error) {
+	// 将 PosSpecItem 转换为 ItemInfo
+	itemInfo := s.convertPosSpecItemToItemInfo(req.Item)
+
+	// 设置加料物品的特定属性
+	itemInfo.ItemGroup = item.ItemGroup_PosAddon // 加料物品归类为原材料
+	itemInfo.StockUom = "Nos"                    // 默认单位为个
+	itemInfo.ValuationRate = 0                   // 加料物品估值率为0
+	itemInfo.IsStockItem = false                 // 加料物品不是库存物品
+
+	// 调用通用的保存物品方法
+	return s.SaveItem(ctx, itemInfo)
+}
+
+// convertPosSpecItemToItemInfo 将 PosSpecItem 转换为 ItemInfo
+// 参数：posItem POS 特殊物品信息
+// 返回：转换后的物品信息
+func (s *sItem) convertPosSpecItemToItemInfo(posItem *item.PosSpecItem) *item.ItemInfo {
+	return &item.ItemInfo{
+		ItemName:         posItem.ItemName,
+		ItemCode:         posItem.ItemCode,
+		TemplateItemCode: posItem.TemplateItemCode,
+		Branch:           posItem.Branch,
+		CompanyAbbr:      posItem.CompanyAbbr,
+		Disabled:         posItem.Disabled,
+		InternalCode:     posItem.InternalCode,
+		NotForSale:       posItem.NotForSale,
+	}
 }

@@ -21,13 +21,45 @@ message GetWarehouseListResp {
 
 // 仓库信息
 message WarehouseInfo {
-  string warehouse_name = 1; // 仓库名称,可选
-  string name = 2; // 仓库名称 全称
-  string company = 3; // 公司名称
+  string warehouse_name = 1; // 仓库显示名称,可选
+  string name = 2; // 仓库名称全称，带 abbr 后缀，主键
+  string company = 3; // 公司名称，可选显示用
   string company_abbr = 4; // 公司简称,必填
   string branch = 5; // 分支名称，可选
   string alias_name = 6; // 仓库别名
   string warehouse_type = 7; // 仓库类型
+  bool disabled = 8 ; //是否禁用，必填，否则默认会启用仓库
+}
+
+// 获取仓库详情请求消息
+message GetWarehouseReq {
+  string name = 1; // 仓库名称，必填
+}
+
+// 获取仓库详情响应消息
+message GetWarehouseResp {
+  WarehouseInfo warehouse = 1; // 仓库详细信息
+}
+
+// 更新仓库请求消息
+message UpdateWarehouseReq {
+  WarehouseInfo warehouse = 1; // 仓库更新信息，必填
+}
+
+// 更新仓库响应消息
+message UpdateWarehouseResp {
+  WarehouseInfo warehouse = 1; // 更新后的仓库信息
+}
+
+// 删除仓库请求消息
+message DeleteWarehouseReq {
+  string name = 1; // 仓库名称，必填
+}
+
+// 删除仓库响应消息
+message DeleteWarehouseResp {
+  bool success = 1; // 删除是否成功
+  string message = 2; // 结果消息
 }
 
 
@@ -35,7 +67,17 @@ message WarehouseInfo {
 service WarehouseService {
   // 创建仓库
   rpc CreateWarehouse(WarehouseInfo) returns (erp.ResponseInfo);
-  //查询仓库列表
+  
+  // 获取仓库详情
+  rpc GetWarehouse(GetWarehouseReq) returns (erp.ResponseInfo);
+  
+  // 更新仓库
+  rpc UpdateWarehouse(UpdateWarehouseReq) returns (erp.ResponseInfo);
+  
+  // 删除仓库
+  rpc DeleteWarehouse(DeleteWarehouseReq) returns (erp.ResponseInfo);
+  
+  // 查询仓库列表
   rpc GetWarehouseList(GetWarehouseListReq) returns (erp.ResponseInfo);
 }
 

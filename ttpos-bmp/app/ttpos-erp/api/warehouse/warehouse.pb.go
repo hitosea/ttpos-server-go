@@ -164,13 +164,14 @@ func (x *GetWarehouseListResp) GetWarehouseList() []*WarehouseInfo {
 // 仓库信息
 type WarehouseInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	WarehouseName string                 `protobuf:"bytes,1,opt,name=warehouse_name,json=warehouseName,proto3" json:"warehouse_name,omitempty" dc:"仓库名称,可选"` // 仓库名称,可选
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty" dc:"仓库名称 全称"`                                        // 仓库名称 全称
-	Company       string                 `protobuf:"bytes,3,opt,name=company,proto3" json:"company,omitempty" dc:"公司名称"`                                     // 公司名称
-	CompanyAbbr   string                 `protobuf:"bytes,4,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称,必填"`       // 公司简称,必填
-	Branch        string                 `protobuf:"bytes,5,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                    // 分支名称，可选
-	AliasName     string                 `protobuf:"bytes,6,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"仓库别名"`                // 仓库别名
-	WarehouseType string                 `protobuf:"bytes,7,opt,name=warehouse_type,json=warehouseType,proto3" json:"warehouse_type,omitempty" dc:"仓库类型"`    // 仓库类型
+	WarehouseName string                 `protobuf:"bytes,1,opt,name=warehouse_name,json=warehouseName,proto3" json:"warehouse_name,omitempty" dc:"仓库显示名称,可选"` // 仓库显示名称,可选
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty" dc:"仓库名称全称，带 abbr 后缀，主键"`                              // 仓库名称全称，带 abbr 后缀，主键
+	Company       string                 `protobuf:"bytes,3,opt,name=company,proto3" json:"company,omitempty" dc:"公司名称，可选显示用"`                                 // 公司名称，可选显示用
+	CompanyAbbr   string                 `protobuf:"bytes,4,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称,必填"`         // 公司简称,必填
+	Branch        string                 `protobuf:"bytes,5,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                      // 分支名称，可选
+	AliasName     string                 `protobuf:"bytes,6,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"仓库别名"`                  // 仓库别名
+	WarehouseType string                 `protobuf:"bytes,7,opt,name=warehouse_type,json=warehouseType,proto3" json:"warehouse_type,omitempty" dc:"仓库类型"`      // 仓库类型
+	Disabled      bool                   `protobuf:"varint,8,opt,name=disabled,proto3" json:"disabled,omitempty" dc:"是否禁用，必填，否则默认会启用仓库"`                       //是否禁用，必填，否则默认会启用仓库
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -254,6 +255,291 @@ func (x *WarehouseInfo) GetWarehouseType() string {
 	return ""
 }
 
+func (x *WarehouseInfo) GetDisabled() bool {
+	if x != nil {
+		return x.Disabled
+	}
+	return false
+}
+
+// 获取仓库详情请求消息
+type GetWarehouseReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty" dc:"仓库名称，必填"` // 仓库名称，必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetWarehouseReq) Reset() {
+	*x = GetWarehouseReq{}
+	mi := &file_warehouse_warehouse_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetWarehouseReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetWarehouseReq) ProtoMessage() {}
+
+func (x *GetWarehouseReq) ProtoReflect() protoreflect.Message {
+	mi := &file_warehouse_warehouse_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetWarehouseReq.ProtoReflect.Descriptor instead.
+func (*GetWarehouseReq) Descriptor() ([]byte, []int) {
+	return file_warehouse_warehouse_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *GetWarehouseReq) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+// 获取仓库详情响应消息
+type GetWarehouseResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Warehouse     *WarehouseInfo         `protobuf:"bytes,1,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库详细信息"` // 仓库详细信息
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetWarehouseResp) Reset() {
+	*x = GetWarehouseResp{}
+	mi := &file_warehouse_warehouse_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetWarehouseResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetWarehouseResp) ProtoMessage() {}
+
+func (x *GetWarehouseResp) ProtoReflect() protoreflect.Message {
+	mi := &file_warehouse_warehouse_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetWarehouseResp.ProtoReflect.Descriptor instead.
+func (*GetWarehouseResp) Descriptor() ([]byte, []int) {
+	return file_warehouse_warehouse_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetWarehouseResp) GetWarehouse() *WarehouseInfo {
+	if x != nil {
+		return x.Warehouse
+	}
+	return nil
+}
+
+// 更新仓库请求消息
+type UpdateWarehouseReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Warehouse     *WarehouseInfo         `protobuf:"bytes,1,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"仓库更新信息，必填"` // 仓库更新信息，必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateWarehouseReq) Reset() {
+	*x = UpdateWarehouseReq{}
+	mi := &file_warehouse_warehouse_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateWarehouseReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateWarehouseReq) ProtoMessage() {}
+
+func (x *UpdateWarehouseReq) ProtoReflect() protoreflect.Message {
+	mi := &file_warehouse_warehouse_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateWarehouseReq.ProtoReflect.Descriptor instead.
+func (*UpdateWarehouseReq) Descriptor() ([]byte, []int) {
+	return file_warehouse_warehouse_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *UpdateWarehouseReq) GetWarehouse() *WarehouseInfo {
+	if x != nil {
+		return x.Warehouse
+	}
+	return nil
+}
+
+// 更新仓库响应消息
+type UpdateWarehouseResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Warehouse     *WarehouseInfo         `protobuf:"bytes,1,opt,name=warehouse,proto3" json:"warehouse,omitempty" dc:"更新后的仓库信息"` // 更新后的仓库信息
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateWarehouseResp) Reset() {
+	*x = UpdateWarehouseResp{}
+	mi := &file_warehouse_warehouse_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateWarehouseResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateWarehouseResp) ProtoMessage() {}
+
+func (x *UpdateWarehouseResp) ProtoReflect() protoreflect.Message {
+	mi := &file_warehouse_warehouse_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateWarehouseResp.ProtoReflect.Descriptor instead.
+func (*UpdateWarehouseResp) Descriptor() ([]byte, []int) {
+	return file_warehouse_warehouse_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *UpdateWarehouseResp) GetWarehouse() *WarehouseInfo {
+	if x != nil {
+		return x.Warehouse
+	}
+	return nil
+}
+
+// 删除仓库请求消息
+type DeleteWarehouseReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty" dc:"仓库名称，必填"` // 仓库名称，必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteWarehouseReq) Reset() {
+	*x = DeleteWarehouseReq{}
+	mi := &file_warehouse_warehouse_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteWarehouseReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteWarehouseReq) ProtoMessage() {}
+
+func (x *DeleteWarehouseReq) ProtoReflect() protoreflect.Message {
+	mi := &file_warehouse_warehouse_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteWarehouseReq.ProtoReflect.Descriptor instead.
+func (*DeleteWarehouseReq) Descriptor() ([]byte, []int) {
+	return file_warehouse_warehouse_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *DeleteWarehouseReq) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+// 删除仓库响应消息
+type DeleteWarehouseResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty" dc:"删除是否成功"` // 删除是否成功
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty" dc:"结果消息"`    // 结果消息
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteWarehouseResp) Reset() {
+	*x = DeleteWarehouseResp{}
+	mi := &file_warehouse_warehouse_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteWarehouseResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteWarehouseResp) ProtoMessage() {}
+
+func (x *DeleteWarehouseResp) ProtoReflect() protoreflect.Message {
+	mi := &file_warehouse_warehouse_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteWarehouseResp.ProtoReflect.Descriptor instead.
+func (*DeleteWarehouseResp) Descriptor() ([]byte, []int) {
+	return file_warehouse_warehouse_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *DeleteWarehouseResp) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *DeleteWarehouseResp) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 var File_warehouse_warehouse_proto protoreflect.FileDescriptor
 
 const file_warehouse_warehouse_proto_rawDesc = "" +
@@ -269,7 +555,7 @@ const file_warehouse_warehouse_proto_rawDesc = "" +
 	"alias_name\x18\x06 \x01(\tR\taliasName\x12%\n" +
 	"\x0ewarehouse_type\x18\a \x01(\tR\rwarehouseType\"W\n" +
 	"\x14GetWarehouseListResp\x12?\n" +
-	"\x0ewarehouse_list\x18\x01 \x03(\v2\x18.warehouse.WarehouseInfoR\rwarehouseList\"\xe5\x01\n" +
+	"\x0ewarehouse_list\x18\x01 \x03(\v2\x18.warehouse.WarehouseInfoR\rwarehouseList\"\x81\x02\n" +
 	"\rWarehouseInfo\x12%\n" +
 	"\x0ewarehouse_name\x18\x01 \x01(\tR\rwarehouseName\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
@@ -278,9 +564,26 @@ const file_warehouse_warehouse_proto_rawDesc = "" +
 	"\x06branch\x18\x05 \x01(\tR\x06branch\x12\x1d\n" +
 	"\n" +
 	"alias_name\x18\x06 \x01(\tR\taliasName\x12%\n" +
-	"\x0ewarehouse_type\x18\a \x01(\tR\rwarehouseType2\x99\x01\n" +
+	"\x0ewarehouse_type\x18\a \x01(\tR\rwarehouseType\x12\x1a\n" +
+	"\bdisabled\x18\b \x01(\bR\bdisabled\"%\n" +
+	"\x0fGetWarehouseReq\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"J\n" +
+	"\x10GetWarehouseResp\x126\n" +
+	"\twarehouse\x18\x01 \x01(\v2\x18.warehouse.WarehouseInfoR\twarehouse\"L\n" +
+	"\x12UpdateWarehouseReq\x126\n" +
+	"\twarehouse\x18\x01 \x01(\v2\x18.warehouse.WarehouseInfoR\twarehouse\"M\n" +
+	"\x13UpdateWarehouseResp\x126\n" +
+	"\twarehouse\x18\x01 \x01(\v2\x18.warehouse.WarehouseInfoR\twarehouse\"(\n" +
+	"\x12DeleteWarehouseReq\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"I\n" +
+	"\x13DeleteWarehouseResp\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage2\xe2\x02\n" +
 	"\x10WarehouseService\x12>\n" +
-	"\x0fCreateWarehouse\x12\x18.warehouse.WarehouseInfo\x1a\x11.erp.ResponseInfo\x12E\n" +
+	"\x0fCreateWarehouse\x12\x18.warehouse.WarehouseInfo\x1a\x11.erp.ResponseInfo\x12=\n" +
+	"\fGetWarehouse\x12\x1a.warehouse.GetWarehouseReq\x1a\x11.erp.ResponseInfo\x12C\n" +
+	"\x0fUpdateWarehouse\x12\x1d.warehouse.UpdateWarehouseReq\x1a\x11.erp.ResponseInfo\x12C\n" +
+	"\x0fDeleteWarehouse\x12\x1d.warehouse.DeleteWarehouseReq\x1a\x11.erp.ResponseInfo\x12E\n" +
 	"\x10GetWarehouseList\x12\x1e.warehouse.GetWarehouseListReq\x1a\x11.erp.ResponseInfoB'Z%ttpos-bmp/app/ttpos-erp/api/warehouseb\x06proto3"
 
 var (
@@ -295,24 +598,39 @@ func file_warehouse_warehouse_proto_rawDescGZIP() []byte {
 	return file_warehouse_warehouse_proto_rawDescData
 }
 
-var file_warehouse_warehouse_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_warehouse_warehouse_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_warehouse_warehouse_proto_goTypes = []any{
 	(*GetWarehouseListReq)(nil),  // 0: warehouse.GetWarehouseListReq
 	(*GetWarehouseListResp)(nil), // 1: warehouse.GetWarehouseListResp
 	(*WarehouseInfo)(nil),        // 2: warehouse.WarehouseInfo
-	(*api.ResponseInfo)(nil),     // 3: erp.ResponseInfo
+	(*GetWarehouseReq)(nil),      // 3: warehouse.GetWarehouseReq
+	(*GetWarehouseResp)(nil),     // 4: warehouse.GetWarehouseResp
+	(*UpdateWarehouseReq)(nil),   // 5: warehouse.UpdateWarehouseReq
+	(*UpdateWarehouseResp)(nil),  // 6: warehouse.UpdateWarehouseResp
+	(*DeleteWarehouseReq)(nil),   // 7: warehouse.DeleteWarehouseReq
+	(*DeleteWarehouseResp)(nil),  // 8: warehouse.DeleteWarehouseResp
+	(*api.ResponseInfo)(nil),     // 9: erp.ResponseInfo
 }
 var file_warehouse_warehouse_proto_depIdxs = []int32{
 	2, // 0: warehouse.GetWarehouseListResp.warehouse_list:type_name -> warehouse.WarehouseInfo
-	2, // 1: warehouse.WarehouseService.CreateWarehouse:input_type -> warehouse.WarehouseInfo
-	0, // 2: warehouse.WarehouseService.GetWarehouseList:input_type -> warehouse.GetWarehouseListReq
-	3, // 3: warehouse.WarehouseService.CreateWarehouse:output_type -> erp.ResponseInfo
-	3, // 4: warehouse.WarehouseService.GetWarehouseList:output_type -> erp.ResponseInfo
-	3, // [3:5] is the sub-list for method output_type
-	1, // [1:3] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	2, // 1: warehouse.GetWarehouseResp.warehouse:type_name -> warehouse.WarehouseInfo
+	2, // 2: warehouse.UpdateWarehouseReq.warehouse:type_name -> warehouse.WarehouseInfo
+	2, // 3: warehouse.UpdateWarehouseResp.warehouse:type_name -> warehouse.WarehouseInfo
+	2, // 4: warehouse.WarehouseService.CreateWarehouse:input_type -> warehouse.WarehouseInfo
+	3, // 5: warehouse.WarehouseService.GetWarehouse:input_type -> warehouse.GetWarehouseReq
+	5, // 6: warehouse.WarehouseService.UpdateWarehouse:input_type -> warehouse.UpdateWarehouseReq
+	7, // 7: warehouse.WarehouseService.DeleteWarehouse:input_type -> warehouse.DeleteWarehouseReq
+	0, // 8: warehouse.WarehouseService.GetWarehouseList:input_type -> warehouse.GetWarehouseListReq
+	9, // 9: warehouse.WarehouseService.CreateWarehouse:output_type -> erp.ResponseInfo
+	9, // 10: warehouse.WarehouseService.GetWarehouse:output_type -> erp.ResponseInfo
+	9, // 11: warehouse.WarehouseService.UpdateWarehouse:output_type -> erp.ResponseInfo
+	9, // 12: warehouse.WarehouseService.DeleteWarehouse:output_type -> erp.ResponseInfo
+	9, // 13: warehouse.WarehouseService.GetWarehouseList:output_type -> erp.ResponseInfo
+	9, // [9:14] is the sub-list for method output_type
+	4, // [4:9] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_warehouse_warehouse_proto_init() }
@@ -326,7 +644,7 @@ func file_warehouse_warehouse_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_warehouse_warehouse_proto_rawDesc), len(file_warehouse_warehouse_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

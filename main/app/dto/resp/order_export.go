@@ -31,6 +31,8 @@ type OrderExportInfo struct {
 	PayTypeName   string                    `json:"pay_type_name"`  // 支付类型名称
 	DiningMethod  uint                      `json:"dining_method"`  // 用餐方式
 	CashierName   string                    `json:"cashier_name"`   // 收银员名称
+	CreateTime    int64                     `json:"create_time"`    // 创建时间
+	OrderID       string                    `json:"order_id"`       // 订单id
 }
 
 type OrderExportMeta struct {

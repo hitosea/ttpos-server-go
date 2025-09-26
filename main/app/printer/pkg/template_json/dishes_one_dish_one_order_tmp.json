@@ -1,0 +1,312 @@
+{
+    "metadata": {
+        "name": "dishes_complete_order",
+        "description": "整单打印模版",
+        "paper_width": 80,
+        "version": "1.0"
+    },
+    "rows": [
+        [
+            {
+                "block_id": "order.serial_no",
+                "block_type": "value",
+                "block_label": {},
+                "block_attr": {
+                    "font_size": 32,
+                    "align": "center",
+                    "font_bold": true,
+                    "dividing_line": false,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 6,
+                    "width": 100
+                }
+            }
+        ],
+        [
+            {
+                "block_id": "order.products",
+                "block_type": "column",
+                "block_label": {},
+                "block_attr": {
+                    "font_size": 20,
+                    "align": "center",
+                    "font_bold": false,
+                    "dividing_line": false,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 0,
+                    "show_column_title": false,
+                    "width": 100
+                },
+                "rows": [
+                    [
+                        {
+                            "block_id": "name",
+                            "block_type": "value",
+                            "block_expand_labels": [
+                                {
+                                    "text": {
+                                        "zh": "自助餐-",
+                                        "en": "Buffet-",
+                                        "ko": "뷔페-",
+                                        "my": "ဘူဖေးစားပွဲ-",
+                                        "tr": "Büfe-",
+                                        "de": "Buffet-",
+                                        "sv": "Buffé-",
+                                        "ja": "ビュッフェ-",
+                                        "zhtw": "自助餐-",
+                                        "th": "บุฟเฟต์-"
+                                    },
+                                    "conditions": [
+                                        {
+                                            "field": "is_buffet_product",
+                                            "operator": "not_empty",
+                                            "value": 0
+                                        }
+                                    ]
+                                },
+                                {
+                                    "text": "--",
+                                    "conditions": [
+                                        {
+                                            "field": "is_sub_product",
+                                            "operator": "not_empty",
+                                            "value": 0
+                                        }
+                                    ]
+                                },
+                                {
+                                    "text": {
+                                        "zh": "(打包) ",
+                                        "en": "(Package) ",
+                                        "ko": "(포장) ",
+                                        "my": "(ထုပ်ပိုး) ",
+                                        "tr": "(Paket) ",
+                                        "de": "(Verpackung) ",
+                                        "sv": "(Förpackning) ",
+                                        "ja": "(パッケージ) ",
+                                        "zhtw": "(包裝) ",
+                                        "th": "(บรรจุภัณฑ์) "
+                                    },
+                                    "conditions": [
+                                        {
+                                            "field": "is_package",
+                                            "operator": "not_empty",
+                                            "value": 0
+                                        },
+                                        {
+                                            "field": "is_sub_product",
+                                            "operator": "empty",
+                                            "value": 0
+                                        }
+                                    ]
+                                }
+                            ],
+                            "block_label": {},
+                            "block_attr": {
+                                "font_size": 30,
+                                "align": "left",
+                                "font_bold": true,
+                                "dividing_line": false,
+                                "leading_blank_lines": 1,
+                                "trailing_blank_lines": 1,
+                                "padding_right": 10,
+                                "width": 80
+                            }
+                        },
+                        {
+                            "block_id": "num",
+                            "block_type": "label:value",
+                            "block_label": "x",
+                            "block_attr": {
+                                "font_size": 20,
+                                "align": "right",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 0,
+                                "width": 0
+                            }
+                        }
+                    ],
+                    [
+                        {
+                            "block_id": "flavor_name",
+                            "block_type": "value",
+                            "block_expand_labels": [
+                                {
+                                    "text": "   ",
+                                    "conditions": [
+                                        {
+                                            "field": "is_sub_product",
+                                            "operator": "not_empty",
+                                            "value": 0
+                                        }
+                                    ]
+                                }
+                            ],
+                            "block_label": "",
+                            "block_attr": {
+                                "font_size": 18,
+                                "align": "left",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 0,
+                                "width": 52
+                            },
+                            "conditions": [
+                                {
+                                    "field": "flavor_name",
+                                    "operator": "not_empty",
+                                    "value": 0
+                                }
+                            ]
+                        }
+                    ],
+                    [
+                        {
+                            "block_id": "attr",
+                            "block_type": "value",
+                            "block_expand_labels": [
+                                {
+                                    "text": "   ",
+                                    "conditions": [
+                                        {
+                                            "field": "is_sub_product",
+                                            "operator": "not_empty",
+                                            "value": 0
+                                        }
+                                    ]
+                                }
+                            ],
+                            "block_label": "",
+                            "block_attr": {
+                                "font_size": 18,
+                                "align": "left",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 0,
+                                "width": 52
+                            },
+                            "conditions": [
+                                {
+                                    "field": "attr",
+                                    "operator": "not_empty",
+                                    "value": 0
+                                }
+                            ]
+                        }
+                    ],
+                    [
+                        {
+                            "block_id": "sauce_list",
+                            "block_type": "column",
+                            "block_label": "",
+                            "block_attr": {
+                                "font_size": 18,
+                                "align": "left",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 0,
+                                "width": 52
+                            },
+                            "conditions": [
+                                {
+                                    "field": "sauce_list",
+                                    "operator": "not_empty",
+                                    "value": 0
+                                }
+                            ],
+                            "rows": [
+                                [
+                                    {
+                                        "block_id": "name",
+                                        "block_type": "value",
+                                        "block_label": {},
+                                        "block_attr": {
+                                            "font_size": 18,
+                                            "align": "left",
+                                            "font_bold": false,
+                                            "dividing_line": false
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    ],
+                    [
+                        {
+                            "block_id": "remark",
+                            "block_type": "value",
+                            "block_expand_labels": [
+                                {
+                                    "text": "   ",
+                                    "conditions": [
+                                        {
+                                            "field": "is_sub_product",
+                                            "operator": "not_empty",
+                                            "value": 0
+                                        }
+                                    ]
+                                }
+                            ],
+                            "block_label": "",
+                            "block_attr": {
+                                "font_size": 28,
+                                "align": "left",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "line_height": 53,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 1,
+                                "width": 52
+                            },
+                            "conditions": [
+                                {
+                                    "field": "remark",
+                                    "operator": "not_empty",
+                                    "value": 0
+                                }
+                            ]
+                        }
+                    ]
+                ]
+            }
+        ],
+        [
+            {
+                "block_id": "blank_line",
+                "block_type": "blank_line",
+                "block_label": {},
+                "block_attr": {
+                    "font_size": 20,
+                    "align": "center",
+                    "font_bold": false,
+                    "dividing_line": true,
+                    "leading_blank_lines": 6,
+                    "trailing_blank_lines": 0,
+                    "width": 100
+                },
+                "conditions": []
+            }
+        ],
+        [
+            {
+                "block_id": "order.update_time",
+                "block_type": "value",
+                "block_label": {},
+                "block_attr": {
+                    "font_size": 20,
+                    "align": "center",
+                    "font_bold": true,
+                    "dividing_line": false,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 10,
+                    "width": 100
+                }
+            }
+        ]
+    ]
+}

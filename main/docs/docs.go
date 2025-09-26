@@ -5953,6 +5953,27 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/desk/order/daily_sales_outbound_summary": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取每日销售出库汇总",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "获取每日销售出库汇总",
+                "responses": {}
+            }
+        },
         "/cashier/desk/order/discount": {
             "post": {
                 "security": [
@@ -6107,6 +6128,34 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/desk/order/headquarter_material_list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取总部物品列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "获取总部物品列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -15190,7 +15239,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "绑定商品打印",
+                "description": "绑定商品打印、设置工作模式",
                 "consumes": [
                     "application/json"
                 ],
@@ -15200,10 +15249,10 @@ const docTemplate = `{
                 "tags": [
                     "厨显端.基础信息"
                 ],
-                "summary": "绑定商品打印",
+                "summary": "绑定商品打印、设置工作模式",
                 "parameters": [
                     {
-                        "description": "绑定商品打印参数",
+                        "description": "绑定商品打印、设置工作模式参数",
                         "name": "data",
                         "in": "body",
                         "required": true,
@@ -15608,7 +15657,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "制作完成",
+                "description": "完成制作、传菜",
                 "consumes": [
                     "application/json"
                 ],
@@ -15618,15 +15667,15 @@ const docTemplate = `{
                 "tags": [
                     "厨显端.产品"
                 ],
-                "summary": "制作完成",
+                "summary": "完成制作、传菜",
                 "parameters": [
                     {
-                        "description": "送厨商品Uuid参数",
+                        "description": "完成制作、传菜",
                         "name": "data",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/req.ProductUuid"
+                            "$ref": "#/definitions/req.FinishReq"
                         }
                     }
                 ],
@@ -15640,7 +15689,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "获取上菜历史",
+                "description": "获取制作完成、传菜完成历史",
                 "consumes": [
                     "application/json"
                 ],
@@ -15650,7 +15699,16 @@ const docTemplate = `{
                 "tags": [
                     "厨显端.产品"
                 ],
-                "summary": "获取上菜历史",
+                "summary": "获取制作完成、传菜完成历史",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "模式 0-传菜历史; 1-制作历史",
+                        "name": "mode",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -15694,23 +15752,28 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "分类Uuid，0-全部",
-                        "name": "category_uuid",
-                        "in": "query"
-                    },
-                    {
-                        "minimum": 1,
-                        "type": "integer",
                         "description": "页码",
                         "name": "page_no",
-                        "in": "query"
+                        "in": "query",
+                        "required": true
                     },
                     {
-                        "maximum": 1100,
-                        "minimum": 1,
                         "type": "integer",
                         "description": "每页大小",
                         "name": "page_size",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "模式 0-传菜模式; 1-制作模式",
+                        "name": "mode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "分类Uuid，0-全部",
+                        "name": "category_uuid",
                         "in": "query"
                     }
                 ],
@@ -15756,18 +15819,23 @@ const docTemplate = `{
                 "summary": "根据订单获取送厨商品列表",
                 "parameters": [
                     {
-                        "minimum": 1,
                         "type": "integer",
                         "description": "页码",
                         "name": "page_no",
-                        "in": "query"
+                        "in": "query",
+                        "required": true
                     },
                     {
-                        "maximum": 1100,
-                        "minimum": 1,
                         "type": "integer",
                         "description": "每页大小",
                         "name": "page_size",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "模式 0-传菜模式; 1-制作模式",
+                        "name": "mode",
                         "in": "query"
                     }
                 ],
@@ -15818,7 +15886,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/req.ProductUuid"
+                            "$ref": "#/definitions/req.RecoveryReq"
                         }
                     }
                 ],
@@ -18129,6 +18197,43 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/check_update": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "检查更新",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.基础信息"
+                ],
+                "summary": "检查更新",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "品牌参数",
+                        "name": "brand",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/login": {
             "post": {
                 "description": "登录",
@@ -18249,6 +18354,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/material/add/erp": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "从erp同步物品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "从erp同步物品",
+                "parameters": [
+                    {
+                        "description": "物品添加请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.MaterialAddErpReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/material/category/add": {
             "post": {
                 "security": [
@@ -18288,6 +18432,124 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/material/category/delete": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除物品类别",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "删除物品类别",
+                "parameters": [
+                    {
+                        "description": "物品类别删除请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.MaterialCategoryDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/material/category/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取物品类别详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "获取物品类别详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "物品类别UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/material_resp.MaterialCategory"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/material/category/edit": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "编辑物品类别",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "编辑物品类别",
+                "parameters": [
+                    {
+                        "description": "物品类别编辑请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.MaterialCategoryEditReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/material/category/list": {
             "get": {
                 "security": [
@@ -18312,6 +18574,45 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/material_resp.MaterialCategoryListResp"
                         }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/material/category/sort": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "排序物品类别",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "排序物品类别",
+                "parameters": [
+                    {
+                        "description": "物品类别排序请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.MaterialCategorySortReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
                     },
                     "400": {
                         "description": "错误请求"
@@ -18571,6 +18872,46 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/material/stock/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "查询物品库存详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "查询物品库存详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "物品UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/material_resp.MaterialStockDetailResp"
+                        }
                     },
                     "400": {
                         "description": "错误请求"
@@ -21984,7 +22325,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "分页获取收货记录列表",
+                "description": "分页获取收货记录列表，支持按收货时间和创建时间筛选",
                 "consumes": [
                     "application/json"
                 ],
@@ -22017,9 +22358,41 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "状态筛选",
+                        "name": "status_in",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
-                        "description": "状态",
-                        "name": "status",
+                        "format": "int64",
+                        "description": "收货时间开始（时间戳）",
+                        "name": "receive_time_start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "收货时间结束（时间戳）",
+                        "name": "receive_time_end",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "创建时间开始（时间戳）",
+                        "name": "create_time_start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "创建时间结束（时间戳）",
+                        "name": "create_time_end",
                         "in": "query"
                     }
                 ],
@@ -22906,6 +23279,33 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/setting/sync": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.业务设置"
+                ],
+                "summary": "获取总部最新数据",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/setting/upload_logo": {
             "post": {
                 "security": [
@@ -23726,14 +24126,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/shop/supplier/select": {
+        "/shop/supplier": {
             "get": {
                 "security": [
                     {
                         "JwtToken": []
                     }
                 ],
-                "description": "获取供应商列表选择器",
+                "description": "获取供应商列表，支持名称和编码关键字搜索",
                 "consumes": [
                     "application/json"
                 ],
@@ -23741,9 +24141,325 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.供应商管理"
+                    "商家端.供应商档案"
+                ],
+                "summary": "获取供应商",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "供应商ID",
+                        "name": "uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.SupplierResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/supplier/code_exists": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.供应商档案"
+                ],
+                "summary": "检查供应商编码是否存在",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "供应商编码",
+                        "name": "code",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "供应商UUID",
+                        "name": "uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CheckNameCodeExistsResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/supplier/create": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "创建供应商，包含名称和编码重复性验证",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.供应商档案"
+                ],
+                "summary": "创建供应商",
+                "parameters": [
+                    {
+                        "description": "创建供应商请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.SupplierCreateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.SupplierCreateResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/supplier/delete": {
+            "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除供应商",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.供应商档案"
+                ],
+                "summary": "删除供应商",
+                "parameters": [
+                    {
+                        "description": "删除供应商请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.SupplierDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/supplier/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取供应商列表，支持名称和编码关键字搜索",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.供应商档案"
+                ],
+                "summary": "获取供应商列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "关键字搜索：名称、编码",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "每页数量",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.SupplierListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/supplier/name_exists": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.供应商档案"
+                ],
+                "summary": "检查供应商名称是否存在",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "供应商名称",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "供应商UUID",
+                        "name": "uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CheckNameCodeExistsResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/supplier/select": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取供应商列表选择器，支持根据是否外部采购过滤",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.供应商档案"
                 ],
                 "summary": "获取供应商列表选择器",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "采购类型, 1-外部采购 2-内部采购",
+                        "name": "purchase_type",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "成功",
@@ -23761,6 +24477,577 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/supplier/sync": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.供应商档案"
+                ],
+                "summary": "同步供应商",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/supplier/update": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "更新供应商信息，包含名称和编码重复性验证",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.供应商档案"
+                ],
+                "summary": "更新供应商",
+                "parameters": [
+                    {
+                        "description": "更新供应商请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.SupplierUpdateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/test/material/category/sync": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "同步物品分类",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.物品管理"
+                ],
+                "summary": "同步物品分类",
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/warehouse": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取仓库",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.仓库档案"
+                ],
+                "summary": "获取仓库",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "仓库ID",
+                        "name": "uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.WarehouseResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/warehouse/code_exists": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.仓库档案"
+                ],
+                "summary": "检查仓库编码是否存在",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "仓库编码",
+                        "name": "code",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "仓库UUID",
+                        "name": "uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CheckNameCodeExistsResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/warehouse/create": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "创建新的仓库",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.仓库档案"
+                ],
+                "summary": "创建仓库",
+                "parameters": [
+                    {
+                        "description": "创建仓库请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.CreateWarehouseReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/warehouse/delete": {
+            "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除仓库",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.仓库档案"
+                ],
+                "summary": "删除仓库",
+                "parameters": [
+                    {
+                        "description": "删除仓库请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.DeleteWarehouseReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/warehouse/first_sync_item": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "第一次同步仓库物品库存",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.仓库档案"
+                ],
+                "summary": "第一次同步仓库物品库存",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/warehouse/headquarter/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取仓库列表，支持分页和筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.仓库档案"
+                ],
+                "summary": "获取总部仓库列表",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.WarehouseListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/warehouse/in_out/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取仓库出入库明细列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.仓库管理"
+                ],
+                "summary": "获取仓库出入库明细列表",
+                "parameters": [
+                    {
+                        "description": "获取仓库出入库明细列表请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.GetWarehouseInOutListReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.WarehouseInOutListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/warehouse/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取仓库列表，支持分页和筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.仓库档案"
+                ],
+                "summary": "获取仓库列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码，默认1",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量，默认20",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "搜索关键字：仓库编码或名称",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "仓库状态:0-禁用；1-启用",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "仓库类型：normal-普通；transit-在途",
+                        "name": "type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.WarehouseListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/warehouse/set_default": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "更新仓库信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.仓库档案"
+                ],
+                "summary": "更新仓库",
+                "parameters": [
+                    {
+                        "description": "设置默认仓库请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.SetDefaultWarehouseReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/warehouse/sync": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "同步仓库列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.仓库档案"
+                ],
+                "summary": "同步仓库列表",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/warehouse/update": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "更新仓库信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.仓库档案"
+                ],
+                "summary": "更新仓库",
+                "parameters": [
+                    {
+                        "description": "更新仓库请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.UpdateWarehouseReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -25718,6 +27005,14 @@ const docTemplate = `{
         "material_resp.MaterialCategory": {
             "type": "object",
             "properties": {
+                "code": {
+                    "description": "分类编码",
+                    "type": "string"
+                },
+                "is_related": {
+                    "description": "是否关联了物品",
+                    "type": "boolean"
+                },
                 "locale_name": {
                     "description": "分类名称",
                     "allOf": [
@@ -25729,6 +27024,10 @@ const docTemplate = `{
                 "name": {
                     "description": "分类名称",
                     "type": "string"
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
                 },
                 "uuid": {
                     "description": "分类UUID",
@@ -25782,6 +27081,10 @@ const docTemplate = `{
                     "description": "成本单位UUID",
                     "type": "integer"
                 },
+                "editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
+                },
                 "from_cost_unit_uuid": {
                     "description": "来源成本单位UUID",
                     "type": "integer"
@@ -25793,6 +27096,10 @@ const docTemplate = `{
                 "from_unit_uuid": {
                     "description": "来源单位UUID",
                     "type": "integer"
+                },
+                "internal_code": {
+                    "description": "内部编码",
+                    "type": "string"
                 },
                 "locale_name": {
                     "description": "物品名称",
@@ -25884,6 +27191,35 @@ const docTemplate = `{
                 },
                 "meta": {
                     "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "material_resp.MaterialStockDetailResp": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "物品编码",
+                    "type": "string"
+                },
+                "locale_name": {
+                    "description": "物品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "uuid": {
+                    "description": "物品UUID",
+                    "type": "integer"
+                },
+                "warehouses": {
+                    "description": "库存列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/material_resp.WarehouseList"
+                        }
+                    ]
                 }
             }
         },
@@ -25987,6 +27323,42 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/material_resp.MaterialUnit"
+                    }
+                }
+            }
+        },
+        "material_resp.Warehouse": {
+            "type": "object",
+            "properties": {
+                "locale_name": {
+                    "description": "仓库名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "num": {
+                    "description": "物品库存数量",
+                    "type": "number"
+                },
+                "uuid": {
+                    "description": "仓库UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "material_resp.WarehouseList": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "合计库存数",
+                    "type": "number"
+                },
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/material_resp.Warehouse"
                     }
                 }
             }
@@ -26921,6 +28293,10 @@ const docTemplate = `{
         "product_resp.ProductAttribute": {
             "type": "object",
             "properties": {
+                "is_editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
+                },
                 "locale_name": {
                     "description": "商品属性名称",
                     "allOf": [
@@ -26983,6 +28359,10 @@ const docTemplate = `{
         "product_resp.ProductAttributeGroupAttributeItem": {
             "type": "object",
             "properties": {
+                "is_editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
+                },
                 "locale_name": {
                     "description": "商品属性名称",
                     "allOf": [
@@ -27007,6 +28387,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/product_resp.ProductAttributes"
                         }
                     ]
+                },
+                "is_editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
                 },
                 "locale_name": {
                     "description": "商品属性分组名称",
@@ -27035,6 +28419,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/product_resp.ProductAttributeGroupAttributeItem"
                     }
+                },
+                "is_editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
                 },
                 "name": {
                     "description": "商品属性分组名称",
@@ -27350,6 +28738,10 @@ const docTemplate = `{
                     "description": "商品BOM UUID",
                     "type": "integer"
                 },
+                "internal_code": {
+                    "description": "商品规格内部编码",
+                    "type": "string"
+                },
                 "locale_name": {
                     "description": "商品规格名称",
                     "allOf": [
@@ -27577,7 +28969,7 @@ const docTemplate = `{
                 },
                 "product_price": {
                     "description": "商品价格",
-                    "type": "string"
+                    "type": "number"
                 },
                 "product_rating_tax_type": {
                     "description": "堂食税类",
@@ -27920,6 +29312,10 @@ const docTemplate = `{
         "product_resp.ProductSauceDetail": {
             "type": "object",
             "properties": {
+                "is_editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
+                },
                 "locale_name": {
                     "description": "商品单位名称",
                     "allOf": [
@@ -27949,6 +29345,10 @@ const docTemplate = `{
         "product_resp.ProductSauceItem": {
             "type": "object",
             "properties": {
+                "is_editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "商品加料名称",
                     "type": "string"
@@ -28083,6 +29483,10 @@ const docTemplate = `{
                 "child_count": {
                     "description": "子级数量",
                     "type": "integer"
+                },
+                "code": {
+                    "description": "分类编码",
+                    "type": "string"
                 },
                 "locale_name": {
                     "description": "商品类别名称",
@@ -28372,6 +29776,10 @@ const docTemplate = `{
         "product_resp.ProductUnitDetail": {
             "type": "object",
             "properties": {
+                "is_editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
+                },
                 "locale_name": {
                     "description": "商品单位名称",
                     "allOf": [
@@ -28397,6 +29805,10 @@ const docTemplate = `{
         "product_resp.ProductUnitItem": {
             "type": "object",
             "properties": {
+                "is_editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "商品单位名称",
                     "type": "string"
@@ -29038,6 +30450,60 @@ const docTemplate = `{
                 }
             }
         },
+        "req.CreateWarehouseReq": {
+            "type": "object",
+            "required": [
+                "code",
+                "name",
+                "type"
+            ],
+            "properties": {
+                "address": {
+                    "description": "地址",
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "code": {
+                    "description": "编码",
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "contact": {
+                    "description": "联系人",
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "name": {
+                    "description": "名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "phone": {
+                    "description": "联系电话",
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "status": {
+                    "description": "状态：0-禁用；1-启用",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                },
+                "type": {
+                    "description": "类型：normal-普通；transit-在途",
+                    "type": "string",
+                    "enum": [
+                        "normal",
+                        "transit"
+                    ]
+                }
+            }
+        },
         "req.DecryptQrCodeReq": {
             "type": "object",
             "required": [
@@ -29068,6 +30534,18 @@ const docTemplate = `{
             ],
             "properties": {
                 "uuid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "req.DeleteWarehouseReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "仓库ID",
                     "type": "integer"
                 }
             }
@@ -29191,6 +30669,19 @@ const docTemplate = `{
                 }
             }
         },
+        "req.FinishReq": {
+            "type": "object",
+            "properties": {
+                "mode": {
+                    "description": "模式 0-传菜完成 ; 1-制作完成",
+                    "type": "integer"
+                },
+                "product_uuid": {
+                    "description": "送厨商品ID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.GetBindCodeReq": {
             "type": "object",
             "required": [
@@ -29198,6 +30689,56 @@ const docTemplate = `{
             ],
             "properties": {
                 "device_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "req.GetWarehouseInOutListReq": {
+            "type": "object",
+            "properties": {
+                "end_time": {
+                    "description": "日期，结束时间",
+                    "type": "integer"
+                },
+                "keyword": {
+                    "description": "关键字, 物品名称、物品编码、物品条形码",
+                    "type": "string"
+                },
+                "material_category_uuids": {
+                    "description": "物料分类ID列表,多选",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "order_no": {
+                    "description": "单据编号",
+                    "type": "string"
+                },
+                "page_no": {
+                    "description": "页码",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "page_size": {
+                    "description": "每页大小",
+                    "type": "integer",
+                    "maximum": 1100,
+                    "minimum": 1
+                },
+                "start_time": {
+                    "description": "日期，开始时间",
+                    "type": "integer"
+                },
+                "supplier_uuids": {
+                    "description": "供应商ID列表,多选",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "type": {
+                    "description": "类型：采购入库-purchase、销售出库-sale、发货出库-delivery",
                     "type": "string"
                 }
             }
@@ -29217,6 +30758,10 @@ const docTemplate = `{
                 "company_uuid": {
                     "description": "公司UUID",
                     "type": "integer"
+                },
+                "headquarter_abbr": {
+                    "description": "总部简称",
+                    "type": "string"
                 },
                 "site_code": {
                     "description": "站点编码",
@@ -29433,6 +30978,10 @@ const docTemplate = `{
                     "description": "品牌",
                     "type": "string"
                 },
+                "mode": {
+                    "description": "模式 0-默认，传菜模式; 1-制作模式; 2-制作+传菜模式",
+                    "type": "integer"
+                },
                 "product_printer_uuid": {
                     "description": "商品打印Uuid",
                     "type": "integer"
@@ -29474,6 +31023,58 @@ const docTemplate = `{
                 }
             }
         },
+        "req.MaterialAddErpReq": {
+            "type": "object",
+            "properties": {
+                "barcode_value": {
+                    "description": "条形码值",
+                    "type": "string"
+                },
+                "classification": {
+                    "description": "分类",
+                    "type": "string"
+                },
+                "classification_code": {
+                    "description": "分类编码",
+                    "type": "string"
+                },
+                "disabled": {
+                    "description": "是否禁用",
+                    "type": "boolean"
+                },
+                "internal_code": {
+                    "description": "内部编码",
+                    "type": "string"
+                },
+                "item_code": {
+                    "description": "物品编码, 如果为空，则为新增；如果非空，则为编辑",
+                    "type": "string"
+                },
+                "item_name": {
+                    "description": "物品名称, 英文",
+                    "type": "string"
+                },
+                "opening_stock": {
+                    "description": "期初库存",
+                    "type": "number"
+                },
+                "stock_uom": {
+                    "description": "基准库存单位, 英文",
+                    "type": "string"
+                },
+                "uoms": {
+                    "description": "单位列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.MaterialUomReq"
+                    }
+                },
+                "valuation_rate": {
+                    "description": "估值率",
+                    "type": "number"
+                }
+            }
+        },
         "req.MaterialAddReq": {
             "type": "object",
             "properties": {
@@ -29492,6 +31093,10 @@ const docTemplate = `{
                 "init_stock": {
                     "description": "期初库存",
                     "type": "number"
+                },
+                "internal_code": {
+                    "description": "内部编码",
+                    "type": "string"
                 },
                 "locale_name": {
                     "description": "物品名称",
@@ -29529,6 +31134,10 @@ const docTemplate = `{
         "req.MaterialCategoryAddReq": {
             "type": "object",
             "properties": {
+                "code": {
+                    "description": "物品类别编码",
+                    "type": "string"
+                },
                 "locale_name": {
                     "description": "物品类别名称",
                     "allOf": [
@@ -29536,6 +31145,71 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.LocaleResponse"
                         }
                     ]
+                }
+            }
+        },
+        "req.MaterialCategoryDeleteReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "物品类别UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.MaterialCategoryEditReq": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "物品类别编码",
+                    "type": "string"
+                },
+                "locale_name": {
+                    "description": "物品类别名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "uuid": {
+                    "description": "物品类别UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.MaterialCategorySortItemReq": {
+            "type": "object",
+            "required": [
+                "sort",
+                "uuid"
+            ],
+            "properties": {
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "物品类别UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.MaterialCategorySortReq": {
+            "type": "object",
+            "required": [
+                "list"
+            ],
+            "properties": {
+                "list": {
+                    "description": "物品类别列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.MaterialCategorySortItemReq"
+                    }
                 }
             }
         },
@@ -29553,6 +31227,10 @@ const docTemplate = `{
                 "cost_unit_uuid": {
                     "description": "成本单位UUID",
                     "type": "integer"
+                },
+                "internal_code": {
+                    "description": "内部编码",
+                    "type": "string"
                 },
                 "locale_name": {
                     "description": "物品名称",
@@ -29733,6 +31411,19 @@ const docTemplate = `{
                 "uuid": {
                     "description": "单位UUID",
                     "type": "integer"
+                }
+            }
+        },
+        "req.MaterialUomReq": {
+            "type": "object",
+            "properties": {
+                "conversion_rate": {
+                    "description": "转换率",
+                    "type": "number"
+                },
+                "uom": {
+                    "description": "单位, 英文",
+                    "type": "string"
                 }
             }
         },
@@ -30752,12 +32443,6 @@ const docTemplate = `{
         },
         "req.ProductBomCardAddReq": {
             "type": "object",
-            "required": [
-                "materials",
-                "num",
-                "related_type",
-                "related_uuid"
-            ],
             "properties": {
                 "materials": {
                     "description": "材料列表",
@@ -30826,6 +32511,10 @@ const docTemplate = `{
                     "description": "期初库存",
                     "type": "number"
                 },
+                "internal_code": {
+                    "description": "内部编码",
+                    "type": "string"
+                },
                 "locale_name": {
                     "description": "物品名称",
                     "allOf": [
@@ -30869,9 +32558,6 @@ const docTemplate = `{
         },
         "req.ProductBomCardMaterialListReq": {
             "type": "object",
-            "required": [
-                "list"
-            ],
             "properties": {
                 "list": {
                     "description": "材料列表",
@@ -31522,6 +33208,10 @@ const docTemplate = `{
                     "description": "商品加料条码值, 可选",
                     "type": "string"
                 },
+                "internal_code": {
+                    "description": "内部编码",
+                    "type": "string"
+                },
                 "price": {
                     "description": "商品规格价格",
                     "type": "number"
@@ -31591,6 +33281,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/req.ProductShopAddPackageGroupReq"
                     }
+                },
+                "internal_code": {
+                    "description": "商品套餐内部编码",
+                    "type": "string"
                 },
                 "price": {
                     "description": "套餐价格",
@@ -31782,6 +33476,10 @@ const docTemplate = `{
                 "locale_name"
             ],
             "properties": {
+                "code": {
+                    "description": "分类编码",
+                    "type": "string"
+                },
                 "is_special": {
                     "description": "是否特殊分类, false-否 true-是",
                     "type": "boolean"
@@ -31823,6 +33521,10 @@ const docTemplate = `{
                 "uuid"
             ],
             "properties": {
+                "code": {
+                    "description": "分类编码",
+                    "type": "string"
+                },
                 "locale_name": {
                     "description": "商品分类名称, 多语言",
                     "allOf": [
@@ -31973,6 +33675,10 @@ const docTemplate = `{
                     "description": "商品BOM UUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID",
                     "type": "integer"
                 },
+                "internal_code": {
+                    "description": "商品规格内部编码",
+                    "type": "string"
+                },
                 "is_delete": {
                     "description": "是否删除, 如果是新增/编辑，则传false，删除时传true",
                     "type": "boolean"
@@ -32066,6 +33772,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/req.ProductShopEditPackageGroupReq"
                     }
+                },
+                "internal_code": {
+                    "description": "商品套餐内部编码",
+                    "type": "string"
                 },
                 "price": {
                     "description": "套餐价格",
@@ -32333,9 +34043,6 @@ const docTemplate = `{
         },
         "req.ProductUnitReq": {
             "type": "object",
-            "required": [
-                "uuid"
-            ],
             "properties": {
                 "uuid": {
                     "description": "商品单位UUID",
@@ -32433,10 +34140,26 @@ const docTemplate = `{
                     "type": "integer",
                     "minimum": 0
                 },
+                "purchase_type": {
+                    "description": "V2.6  采购类型, 1-外部采购 2-内部采购",
+                    "type": "integer",
+                    "maximum": 2,
+                    "minimum": 0
+                },
+                "supplier_erp_code": {
+                    "description": "V2.6 供应商编码",
+                    "type": "string",
+                    "maxLength": 255
+                },
                 "supplier_name": {
                     "description": "供应商名称",
                     "type": "string",
                     "minLength": 1
+                },
+                "warehouse_erp_code": {
+                    "description": "V2.6 仓库编码",
+                    "type": "string",
+                    "maxLength": 255
                 }
             }
         },
@@ -32490,10 +34213,45 @@ const docTemplate = `{
         "req.PurchaseOrderListReq": {
             "type": "object",
             "properties": {
+                "company_uuid": {
+                    "description": "公司UUID",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "create_time_end": {
+                    "description": "创建时间结束",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "create_time_start": {
+                    "description": "创建时间开始",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "expect_arrival_time_end": {
+                    "description": "期望到货时间结束",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "expect_arrival_time_start": {
+                    "description": "期望到货时间开始",
+                    "type": "integer",
+                    "minimum": 0
+                },
                 "order_no": {
                     "description": "订单编号",
                     "type": "string",
                     "maxLength": 50
+                },
+                "order_time_end": {
+                    "description": "订单时间结束",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "order_time_start": {
+                    "description": "订单时间开始",
+                    "type": "integer",
+                    "minimum": 0
                 },
                 "page_no": {
                     "description": "页码",
@@ -32506,14 +34264,40 @@ const docTemplate = `{
                     "maximum": 1100,
                     "minimum": 1
                 },
+                "purchase_type": {
+                    "description": "V2.6 采购类型, 1-外部采购 2-内部采购",
+                    "type": "integer",
+                    "maximum": 2,
+                    "minimum": 0
+                },
+                "receive_time_end": {
+                    "description": "收货时间结束",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "receive_time_start": {
+                    "description": "收货时间开始",
+                    "type": "integer",
+                    "minimum": 0
+                },
                 "status_in": {
-                    "description": "状态筛选: [0,1,2,3,4], 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)",
+                    "description": "状态筛选: [0,1,2,3,4], 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核",
                     "type": "array",
                     "maxItems": 5,
                     "minItems": 0,
                     "items": {
                         "type": "integer"
                     }
+                },
+                "supplier_name": {
+                    "description": "供应商名称",
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "warehouse_erp_code": {
+                    "description": "仓库编码",
+                    "type": "string",
+                    "maxLength": 255
                 }
             }
         },
@@ -32550,6 +34334,11 @@ const docTemplate = `{
                         "$ref": "#/definitions/req.PurchaseOrderItemUpdateReq"
                     }
                 },
+                "supplier_erp_code": {
+                    "description": "V2.6 供应商编码",
+                    "type": "string",
+                    "maxLength": 255
+                },
                 "supplier_name": {
                     "description": "供应商名称",
                     "type": "string",
@@ -32559,6 +34348,11 @@ const docTemplate = `{
                     "description": "采购订单ID",
                     "type": "integer",
                     "minimum": 1
+                },
+                "warehouse_erp_code": {
+                    "description": "V2.6 仓库编码",
+                    "type": "string",
+                    "maxLength": 255
                 }
             }
         },
@@ -32567,6 +34361,7 @@ const docTemplate = `{
             "required": [
                 "items",
                 "purchase_order_uuid",
+                "receipt_type",
                 "receive_time"
             ],
             "properties": {
@@ -32586,6 +34381,12 @@ const docTemplate = `{
                 "purchase_order_uuid": {
                     "description": "采购订单ID",
                     "type": "integer",
+                    "minimum": 1
+                },
+                "receipt_type": {
+                    "description": "收货类型 1-外部收货 2-内部收货",
+                    "type": "integer",
+                    "maximum": 2,
                     "minimum": 1
                 },
                 "receive_time": {
@@ -32808,6 +34609,19 @@ const docTemplate = `{
                 }
             }
         },
+        "req.RecoveryReq": {
+            "type": "object",
+            "properties": {
+                "mode": {
+                    "description": "模式 0-传菜历史恢复 ; 1-制作历史恢复",
+                    "type": "integer"
+                },
+                "product_uuid": {
+                    "description": "送厨商品ID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.RejectH5OrderReq": {
             "type": "object",
             "properties": {
@@ -32858,6 +34672,18 @@ const docTemplate = `{
                 },
                 "recharge": {
                     "type": "number"
+                }
+            }
+        },
+        "req.SetDefaultWarehouseReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "仓库ID",
+                    "type": "integer"
                 }
             }
         },
@@ -32966,6 +34792,107 @@ const docTemplate = `{
                 "withdraw_cash": {
                     "description": "取出金额: 0 - 当前钱箱现金总计",
                     "type": "number"
+                }
+            }
+        },
+        "req.SupplierCreateReq": {
+            "type": "object",
+            "required": [
+                "code",
+                "name"
+            ],
+            "properties": {
+                "address": {
+                    "description": "供应商地址",
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "code": {
+                    "description": "供应商编码",
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "contact_name": {
+                    "description": "联系人姓名",
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "contact_phone": {
+                    "description": "联系人电话",
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "name": {
+                    "description": "供应商名称",
+                    "type": "string",
+                    "maxLength": 150
+                },
+                "status": {
+                    "description": "供应商状态:0-禁用；1-启用",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                }
+            }
+        },
+        "req.SupplierDeleteReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "供应商UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.SupplierUpdateReq": {
+            "type": "object",
+            "required": [
+                "code",
+                "name",
+                "uuid"
+            ],
+            "properties": {
+                "address": {
+                    "description": "供应商地址",
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "code": {
+                    "description": "供应商编码",
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "contact_name": {
+                    "description": "联系人姓名",
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "contact_phone": {
+                    "description": "联系人电话",
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "name": {
+                    "description": "供应商名称",
+                    "type": "string",
+                    "maxLength": 150
+                },
+                "status": {
+                    "description": "供应商状态:0-禁用；1-启用",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                },
+                "uuid": {
+                    "description": "供应商UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -33340,6 +35267,64 @@ const docTemplate = `{
                         0,
                         1
                     ]
+                }
+            }
+        },
+        "req.UpdateWarehouseReq": {
+            "type": "object",
+            "required": [
+                "code",
+                "name",
+                "type",
+                "uuid"
+            ],
+            "properties": {
+                "address": {
+                    "description": "地址",
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "code": {
+                    "description": "编码",
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "contact": {
+                    "description": "联系人",
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "name": {
+                    "description": "名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "phone": {
+                    "description": "联系电话",
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "status": {
+                    "description": "状态：0-禁用；1-启用",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                },
+                "type": {
+                    "description": "类型：normal-普通；transit-在途",
+                    "type": "string",
+                    "enum": [
+                        "normal",
+                        "transit"
+                    ]
+                },
+                "uuid": {
+                    "type": "integer"
                 }
             }
         },
@@ -34303,6 +36288,15 @@ const docTemplate = `{
                 "username": {
                     "description": "收银员账号",
                     "type": "string"
+                }
+            }
+        },
+        "resp.CheckNameCodeExistsResp": {
+            "type": "object",
+            "properties": {
+                "exists": {
+                    "description": "是否存在",
+                    "type": "boolean"
                 }
             }
         },
@@ -38819,6 +40813,14 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "made_time": {
+                    "description": "制作完成时间",
+                    "type": "integer"
+                },
+                "make_status": {
+                    "description": "制作状态，0-默认，未制作完成，1-已制作完成，2-已恢复到制作中",
+                    "type": "integer"
+                },
                 "num": {
                     "description": "送厨商品数量",
                     "type": "number"
@@ -38905,6 +40907,14 @@ const docTemplate = `{
         "resp.PurchaseOrderDetailResp": {
             "type": "object",
             "properties": {
+                "company_name": {
+                    "description": "V2.6 公司名称",
+                    "type": "string"
+                },
+                "company_uuid": {
+                    "description": "V2.6 公司UUID",
+                    "type": "integer"
+                },
                 "erp_order_no": {
                     "description": "ERP申请单编号（采购单号）",
                     "type": "string"
@@ -38912,6 +40922,10 @@ const docTemplate = `{
                 "expect_arrival_time": {
                     "description": "期望到货日期",
                     "type": "integer"
+                },
+                "headquarter_status": {
+                    "description": "V2.6 总部状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)",
+                    "type": "string"
                 },
                 "items": {
                     "description": "采购明细",
@@ -38936,13 +40950,21 @@ const docTemplate = `{
                     "description": "申请类型",
                     "type": "integer"
                 },
+                "purchase_type": {
+                    "description": "V2.6 采购类型 1-外部采购 2-内部采购",
+                    "type": "integer"
+                },
                 "receipt_progress": {
                     "description": "收货进度（百分比0.00%）前端直接显示",
                     "type": "string"
                 },
                 "status": {
-                    "description": "状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)",
+                    "description": "状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核",
                     "type": "integer"
+                },
+                "supplier_erp_code": {
+                    "description": "供应商编码",
+                    "type": "string"
                 },
                 "supplier_name": {
                     "description": "供应商名称",
@@ -38951,12 +40973,24 @@ const docTemplate = `{
                 "uuid": {
                     "description": "采购订单ID",
                     "type": "integer"
+                },
+                "warehouse_erp_code": {
+                    "description": "V2.6 仓库编码",
+                    "type": "string"
                 }
             }
         },
         "resp.PurchaseOrderInfo": {
             "type": "object",
             "properties": {
+                "company_name": {
+                    "description": "V2.6 公司名称",
+                    "type": "string"
+                },
+                "company_uuid": {
+                    "description": "V2.6 公司UUID",
+                    "type": "integer"
+                },
                 "erp_order_no": {
                     "description": "ERP申请单编号（采购单号）",
                     "type": "string"
@@ -38964,6 +40998,10 @@ const docTemplate = `{
                 "expect_arrival_time": {
                     "description": "期望到货日期",
                     "type": "integer"
+                },
+                "headquarter_status": {
+                    "description": "V2.6 总部状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)",
+                    "type": "string"
                 },
                 "num": {
                     "description": "物品数量",
@@ -38981,13 +41019,21 @@ const docTemplate = `{
                     "description": "申请类型",
                     "type": "integer"
                 },
+                "purchase_type": {
+                    "description": "V2.6 采购类型 1-外部采购 2-内部采购",
+                    "type": "integer"
+                },
                 "receipt_progress": {
                     "description": "收货进度（百分比0.00%）前端直接显示",
                     "type": "string"
                 },
                 "status": {
-                    "description": "状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)",
+                    "description": "状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成) 5-待总部审核",
                     "type": "integer"
+                },
+                "supplier_erp_code": {
+                    "description": "供应商编码",
+                    "type": "string"
                 },
                 "supplier_name": {
                     "description": "供应商名称",
@@ -38996,6 +41042,10 @@ const docTemplate = `{
                 "uuid": {
                     "description": "采购订单ID",
                     "type": "integer"
+                },
+                "warehouse_erp_code": {
+                    "description": "V2.6 仓库编码",
+                    "type": "string"
                 }
             }
         },
@@ -40294,13 +42344,25 @@ const docTemplate = `{
                     "description": "设备备注",
                     "type": "string"
                 },
+                "is_headquarter": {
+                    "description": "是否是总部",
+                    "type": "boolean"
+                },
                 "is_open_tax": {
                     "description": "税率设置: false-关闭 true-开启",
+                    "type": "boolean"
+                },
+                "is_syncing": {
+                    "description": "是否erp数据同步中",
                     "type": "boolean"
                 },
                 "is_ttpos_site": {
                     "description": "是否散户site",
                     "type": "boolean"
+                },
+                "last_sync_time": {
+                    "description": "上次同步erp数据完成时间",
+                    "type": "integer"
                 },
                 "permissions": {
                     "description": "页面权限",
@@ -40608,6 +42670,99 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.SupplierCreateResp": {
+            "type": "object",
+            "properties": {
+                "uuid": {
+                    "description": "供应商UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.SupplierInfo": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "供应商编码",
+                    "type": "string"
+                },
+                "is_editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
+                },
+                "is_headquarter": {
+                    "description": "是否为总部",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "供应商名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "供应商UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.SupplierListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.SupplierInfo"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "resp.SupplierResp": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "description": "供应商地址",
+                    "type": "string"
+                },
+                "code": {
+                    "description": "供应商编码",
+                    "type": "string"
+                },
+                "contact_name": {
+                    "description": "联系人姓名",
+                    "type": "string"
+                },
+                "contact_phone": {
+                    "description": "联系人电话",
+                    "type": "string"
+                },
+                "has_related_purchase_order": {
+                    "description": "是否有关联的采购单",
+                    "type": "boolean"
+                },
+                "is_editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
+                },
+                "is_headquarter": {
+                    "description": "是否为总部",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "供应商名称",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "状态：0-禁用；1-启用",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "供应商UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "resp.SupplierSelectResp": {
             "type": "object",
             "properties": {
@@ -40622,9 +42777,17 @@ const docTemplate = `{
         "resp.SupplierSimpleInfo": {
             "type": "object",
             "properties": {
+                "code": {
+                    "description": "供应商编码",
+                    "type": "string"
+                },
                 "name": {
                     "description": "供应商名称",
                     "type": "string"
+                },
+                "uuid": {
+                    "description": "供应商UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -41100,6 +43263,147 @@ const docTemplate = `{
                 },
                 "selected_sn": {
                     "type": "string"
+                }
+            }
+        },
+        "resp.WarehouseInOutListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.WarehouseInOutResp"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "resp.WarehouseInOutResp": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "金额",
+                    "type": "number"
+                },
+                "date": {
+                    "description": "日期",
+                    "type": "string"
+                },
+                "material_barcode": {
+                    "description": "物品条形码",
+                    "type": "string"
+                },
+                "material_category_uuid": {
+                    "description": "物料分类ID",
+                    "type": "integer"
+                },
+                "material_code": {
+                    "description": "物品编码",
+                    "type": "string"
+                },
+                "material_name": {
+                    "description": "物品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "material_uuid": {
+                    "description": "物品信息",
+                    "type": "integer"
+                },
+                "num": {
+                    "description": "数量",
+                    "type": "integer"
+                },
+                "order_no": {
+                    "description": "单据编号",
+                    "type": "string"
+                },
+                "supplier_name": {
+                    "description": "供应商名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "supplier_uuid": {
+                    "description": "供应商信息",
+                    "type": "integer"
+                },
+                "type": {
+                    "description": "类型：采购入库-purchase、销售出库-sale、发货出库-delivery",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "出入库明细ID",
+                    "type": "integer"
+                },
+                "warehouse_name": {
+                    "description": "仓库名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "warehouse_uuid": {
+                    "description": "仓库信息",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.WarehouseListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.WarehouseResp"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "resp.WarehouseResp": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "code": {
+                    "type": "string"
+                },
+                "contact": {
+                    "type": "string"
+                },
+                "is_default": {
+                    "type": "integer"
+                },
+                "is_editable": {
+                    "description": "是否可编辑",
+                    "type": "boolean"
+                },
+                "local_name": {
+                    "$ref": "#/definitions/dto.LocaleResponse"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "integer"
                 }
             }
         },
@@ -41683,6 +43987,10 @@ const docTemplate = `{
                 },
                 "is_open": {
                     "description": "是否开启厨显功能 0关闭 1开启",
+                    "type": "string"
+                },
+                "is_smart_kitchen": {
+                    "description": "是否开启智能后厨 0-关闭 1-开启",
                     "type": "string"
                 },
                 "is_wait_color": {

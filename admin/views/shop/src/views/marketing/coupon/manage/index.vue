@@ -1,9 +1,4 @@
 <template>
-  <!--
-          
-          时间：2019-10-25
-          描述：会员-用户列表
-      -->
   <div class="user">
     <!--搜索表单-->
     <div class="common-search-wrap flex">
@@ -47,10 +42,16 @@
           <el-table-column prop="valid_date" :label="$t('有效日期')"> </el-table-column>
           <el-table-column prop="valid_day_time_range" :label="$t('适用时间')"> </el-table-column>
           <el-table-column prop="count" :label="$t('数量（张）')"> </el-table-column>
+          <el-table-column prop="status" :label="$t('状态')">
+            <template #default="scope">
+              <el-switch v-model="scope.row.status" :active-value="1" :inactive-value="0" @click="changeStatus(scope.row)" />
+            </template>
+          </el-table-column>
           <el-table-column prop="create_time" :label="$t('添加時間')"> </el-table-column>
-          <el-table-column fixed="right" :label="$t('操作')" width="80">
+          <el-table-column fixed="right" :label="$t('操作')" width="160">
             <template #default="scope">
               <el-button v-auth="'/marketing/coupon/edit'" @click="editClick(scope.row)" type="primary" link size="small">{{ $t('编辑') }}</el-button>
+              <el-button @click="deleteClick(scope.row)" type="primary" link size="small">{{ $t('删除') }}</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -78,6 +79,7 @@
   import { ref, reactive, onMounted, getCurrentInstance } from 'vue';
   import MarketingApi from '@/api/marketing.js';
   import AddEdit from './dialog/addEdit.vue';
+import { message } from '@/utils/message';
 
   // 获取全局属性
   const { proxy } = getCurrentInstance();
@@ -155,6 +157,48 @@
     title.value = $t('编辑优惠券');
     editData.value = item;
     open_addEdit.value = true;
+  };
+
+  const deleteClick = (item) => {
+    ElMessageBox.confirm($t('确定删除该优惠券吗？'), $t('提示'), {
+      confirmButtonText: $t('确定'),
+      cancelButtonText: $t('取消'),
+      type: 'warning',
+    }).then(() => {
+      let params = {
+        uuid: item.uuid,
+      };
+      loading.value = true;
+      MarketingApi.couponDelete(params, true)
+        .then((res) => {
+          getTableList();
+        })
+        .catch((error) => {
+          console.log(error);
+        })
+        .finally(() => {
+          loading.value = false;
+        });
+    });
+  };
+
+  const changeStatus = (item) => {
+    let params = {
+      uuid: item.uuid,
+      status: item.status == 0 ? 0 : 1,
+    };
+    loading.value = true;
+    MarketingApi.couponStatus(params, true)
+      .then((res) => {
+        getTableList();
+        message.success(res.msg);
+      })
+      .catch((error) => {
+        console.log(error);
+      })
+      .finally(() => {
+        loading.value = false;
+      });
   };
 
   // 生命周期

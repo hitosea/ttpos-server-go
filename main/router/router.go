@@ -68,7 +68,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterPurchaseHandlers(shopGroup, dbm, cache)  // 采购
 			shop.RegisterSupplierHandlers(shopGroup, dbm, cache)  // 供应商
 			shop.RegisterCallBoardHandlers(shopGroup, dbm, cache) // 叫号展示
-
+			shop.RegisterWarehouseHandlers(shopGroup, dbm, cache) // 仓库管理
 		}
 		// 收银端
 		cashierGroup := apiV1.Group("/cashier")

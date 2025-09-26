@@ -1,0 +1,9 @@
+{
+  "doctype": "DocType",
+  "label": "Company",
+  "fieldtype": "Link",
+  "fieldname": "custom_company",
+  "options": "Company",
+  "insert_after": "supplier_name",
+  "dt": "Supplier"
+}

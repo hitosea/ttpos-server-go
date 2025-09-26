@@ -99,7 +99,7 @@ func (t *dishesImgTemplate) CompleteOrder(
 	//
 	img.LineFeed(3, 110)
 	//
-	return img.SetSegmentationHeight(200).Save("", !t.base.IsSunMi, 0)
+	return img.SetSegmentationHeight(200).Save("", !t.base.IsSunMi && printerItem.Printer.IsEnableSound(), 0)
 }
 
 // OneDishOneOrder 一菜一单模版
@@ -371,7 +371,7 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 	img.SetTextLineHeight(30)
 	img.LineFeed(4)
 	//
-	return img.SetSegmentationHeight(200).Save("", !t.base.IsSunMi, 0)
+	return img.SetSegmentationHeight(200).Save("", !t.base.IsSunMi && printerItem.Printer.IsEnableSound(), 0)
 }
 
 // ReturnMenuTemplate 退菜单模版
@@ -554,12 +554,13 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 	// 换行
 	img.LineFeed(3)
 	//
-	return img.SetSegmentationHeight(200).Save("", !t.base.IsSunMi, 0)
+	return img.SetSegmentationHeight(200).Save("", !t.base.IsSunMi && printerItem.Printer.IsEnableSound(), 0)
 }
 
 // OutMenuTemplate 出菜单模版
 func (t *dishesImgTemplate) OutMenuTemplate(
 	tmp int,
+	printer model.Printer,
 	order model.SaleBill,
 	products printer_model.Products,
 	finishedTime int64,
@@ -692,5 +693,5 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 	// 换行
 	img.LineFeed(3)
 	//
-	return img.SetSegmentationHeight(200).Save("", !t.base.IsSunMi, 0)
+	return img.SetSegmentationHeight(200).Save("", !t.base.IsSunMi && printer.IsEnableSound(), 0)
 }

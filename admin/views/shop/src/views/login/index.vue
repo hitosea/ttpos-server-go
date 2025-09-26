@@ -293,6 +293,7 @@
       document.removeEventListener('keyup', this.onEnter);
       window.removeEventListener('focus', this.handleFocus);
     },
+    
     methods: {
       onEnter(event) {
         if (event.key === 'Enter' && !this.logining) {
@@ -316,6 +317,8 @@
             /*调用登录接口*/
             UserApi.login(Params, true)
               .then(async (data) => {
+                this.ruleForm.code = '';
+                this.getCode();
                 if (data.code == -102) {
                   _this.logining = false;
                   return;
@@ -361,6 +364,7 @@
                 //接口调用方法统一处理
                 console.error('登录接口调用失败:', error);
                 this.getCode();
+                this.ruleForm.code = '';
                 _this.logining = false;
               });
           }

@@ -18,6 +18,10 @@ func ParseItemGroupFromString(itemGroupStr string) item.ItemGroup {
 		return item.ItemGroup_Products
 	case string(consts.ItemGroupRawMaterial):
 		return item.ItemGroup_RawMaterial
+	case string(consts.ItemGroupPosAttribute):
+		return item.ItemGroup_PosAttribute
+	case string(consts.ItemGroupPosAddon):
+		return item.ItemGroup_PosAddon
 	default:
 		return item.ItemGroup_Others
 	}
@@ -32,6 +36,10 @@ func ItemGroupToString(itemGroup item.ItemGroup) string {
 		return string(consts.ItemGroupProducts)
 	case item.ItemGroup_RawMaterial:
 		return string(consts.ItemGroupRawMaterial)
+	case item.ItemGroup_PosAttribute:
+		return string(consts.ItemGroupPosAttribute)
+	case item.ItemGroup_PosAddon:
+		return string(consts.ItemGroupPosAddon)
 	default:
 		return ""
 	}

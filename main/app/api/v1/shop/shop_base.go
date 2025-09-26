@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
@@ -127,6 +128,26 @@ func (h *BaseHandler) GetBase(c *gin.Context) {
 	helper.Success(c, info)
 }
 
+// CheckUpdate 检查更新
+// @Summary 检查更新
+// @Description 检查更新
+// @Tags 商家端.基础信息
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param brand query string true "品牌参数"
+// @Success 200 {object} dto.Response
+// @Router /shop/check_update [get]
+func (h *BaseHandler) CheckUpdate(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	updateInfo, err := h.settingSrv.CheckUpdate(ctx, constant.AppTypeShop, c.Query("brand"), i18n.GetAcceptLanguage(c))
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, updateInfo)
+}
+
 // RegisterOrderHandlers 注册商家订单路由
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -160,6 +181,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/shift", wrapper.SubmitShift)
 		privateApi.POST("/sms/member-recharge", wrapper.SendMemberRechargeSMS)
 
-		privateApi.GET("/base", wrapper.GetBase) // 获取基础信息
+		privateApi.GET("/base", wrapper.GetBase)             // 获取基础信息
+		privateApi.GET("/check_update", wrapper.CheckUpdate) // 检查更新
 	}
 }

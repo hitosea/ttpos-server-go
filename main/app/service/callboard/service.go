@@ -221,19 +221,23 @@ func (s *callBoardService) BindDevice(ctx context.Context, companyUuid uint64, r
 		return err
 	}
 	if device.Uuid != 0 && device.DeleteTime == 0 {
-		return tterrors.New("设备已绑定")
+		bindInfo, _ := s.mustGetBindInfoFromCache(deviceId)
+		if bindInfo.CompanyUuid != 0 {
+			return tterrors.New("设备已绑定")
+		}
+	} else {
+		// 写入数据库用于前端逻辑
+		device.DeviceId = deviceId
+		device.Source = "call_board"
+		device.CreateTime = time.Now().Unix()
+		device.UpdateTime = time.Now().Unix()
+		device.DeleteTime = 0
+		device, err = repo.CreateDevice(device)
+		if err != nil {
+			return tterrors.New("创建设备失败")
+		}
 	}
 
-	// 写入数据库用于前端逻辑
-	device.DeviceId = deviceId
-	device.Source = "call_board"
-	device.CreateTime = time.Now().Unix()
-	device.UpdateTime = time.Now().Unix()
-	device.DeleteTime = 0
-	device, err = repo.CreateDevice(device)
-	if err != nil {
-		return tterrors.New("创建设备失败")
-	}
 	// 展示端不走db，直接走缓存
 	deviceKey := cachekey.GetBindedDeviceKey(deviceId)
 	err = s.getRedisClient().HMSet(

@@ -1,6 +1,6 @@
 {
   "doctype": "DocType",
-  "label": "公司",
+  "label": "Company",
   "fieldname": "custom_company",
   "fieldtype": "Link",
   "options": "Company",

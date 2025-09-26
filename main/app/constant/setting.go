@@ -49,3 +49,9 @@ const (
 	RuleTypePaymentAmount = 0 // 按付款金额比例赠送
 	RuleTypeDesk          = 1 // 按桌台人数赠送
 )
+
+const (
+	KdsModeDefault     uint = 0 // 默认，传菜模式
+	KdsModeMake        uint = 1 // 制作模式
+	KdsModeMakeAndSend uint = 2 // 制作+传菜模式
+)

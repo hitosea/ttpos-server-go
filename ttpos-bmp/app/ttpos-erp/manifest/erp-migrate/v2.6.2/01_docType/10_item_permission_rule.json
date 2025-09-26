@@ -1,0 +1,15 @@
+{
+  "module": "Stock",
+  "name": "Item Permission Rule",
+  "custom": 1,
+  "istable": 1,
+  "editable_grid": 1,
+  "fields" : [
+    {
+      "fieldname": "permission_rule",
+      "label": "Pos Permission Rule",
+      "fieldtype": "Link",
+      "options": "Pos Permission Rule"
+    }
+  ]
+}

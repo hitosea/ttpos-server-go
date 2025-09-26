@@ -154,6 +154,7 @@ func (r *MarketingCouponRepo) GetCoupons(opts ...DBOption) ([]*model.MarketingCo
 // GetValidCouponList 获取商家还可用的none类型优惠卷（所有人可用的）
 func (r *MarketingCouponRepo) GetValidCouponList() ([]*model.MarketingCoupon, error) {
 	coupons, err := r.GetCoupons(
+		CommonRepo.WhereByStatus(1),                                   // 已启用
 		CommonRepo.WhereBySoftDelete(),                                // 未删除
 		CommonRepo.WhereByCountGtZero(),                               // 优惠券数量大于0
 		CommonRepo.WhereByRequirement(constant.CouponRequirementNone), // 任何人可用

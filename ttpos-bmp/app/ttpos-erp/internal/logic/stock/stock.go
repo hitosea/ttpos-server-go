@@ -2,6 +2,7 @@ package stock
 
 import (
 	"context"
+	"ttpos-bmp/app/ttpos-erp/api/company"
 	"ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
@@ -12,6 +13,7 @@ import (
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
+	"github.com/gogf/gf/v2/util/gconv"
 )
 
 var (
@@ -31,7 +33,7 @@ func (s *sStock) GetUomList(ctx context.Context, req *item.GetUomListReq) (res *
 	filters := s.buildUomListFilters(ctx, req)
 
 	// 查询单位列表
-	uomList, err := s.queryUomList(ctx, filters)
+	uomList, err := s.queryUomList(ctx, filters, req)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "查询单位列表失败")
 	}
@@ -75,7 +77,7 @@ func (s *sStock) buildUomListFilters(ctx context.Context, req *item.GetUomListRe
 }
 
 // queryUomList 执行单位列表查询
-func (s *sStock) queryUomList(ctx context.Context, filters [][]string) ([]*item.UomInfo, error) {
+func (s *sStock) queryUomList(ctx context.Context, filters [][]string, req *item.GetUomListReq) ([]*item.UomInfo, error) {
 	resp, err := service.Document().List(ctx, &erp.ErpReq{
 		DocType: "UOM",
 	}, &erp.RequestParams{
@@ -98,7 +100,32 @@ func (s *sStock) queryUomList(ctx context.Context, filters [][]string) ([]*item.
 	uomList := make([]*item.UomInfo, 0)
 	dataArray := j.GetJsons("data")
 
+	subCompanyName := ""
+	if len(req.SubCompanyAbbr) > 0 {
+		subCompanyName, err = service.Company().GetCompanyNameWithAbbr(ctx, req.SubCompanyAbbr)
+		if err != nil {
+			return nil, gerror.Wrapf(err, "获取子公司名称失败,companyAbbr:%s", req.SubCompanyAbbr)
+		}
+	}
 	for _, uom := range dataArray {
+		//获取当前item 的所有 Item Permission List 判断是否有权限使用, 列表查询目前不支持 表格字段查询，只能每次遍历物品查询 对应的 custom_permission_rule
+		if len(req.SubCompanyAbbr) > 0 {
+			uomInfo, err := s.GetUom(ctx, &item.GetUomReq{
+				UomName: uom.Get("name").String(),
+			})
+			if err != nil {
+				g.Log().Errorf(ctx, "获取单位信息失败,uomName:%s,err:%v", uom.Get("name").String(), err)
+				continue // 获取单位信息失败，跳过该单位
+			}
+			hasPermission, err := service.Permission().CheckPermission(ctx, uomInfo.CustomPermissionRule, subCompanyName)
+			if err != nil {
+				g.Log().Errorf(ctx, "检查单位权限失败,uomName:%s,err:%v", uom.Get("name").String(), err)
+				continue // 检查权限失败，跳过该单位
+			}
+			if !hasPermission {
+				continue // 当前子公司无权限，跳过该单位
+			}
+		}
 		uomInfo := &item.UomInfo{
 			UomName:           uom.Get("name").String(),
 			AliasName:         uom.Get("custom_alias").String(),
@@ -200,7 +227,7 @@ func (s *sStock) GetAttributeList(ctx context.Context, req *item.GetAttributeLis
 	filters := s.buildAttributeListFilters(ctx, req)
 
 	// 查询属性列表
-	attributeList, err := s.queryAttributeList(ctx, filters)
+	attributeList, err := s.queryAttributeList(ctx, filters, req)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "查询属性列表失败")
 	}
@@ -241,9 +268,9 @@ func (s *sStock) buildAttributeListFilters(ctx context.Context, req *item.GetAtt
 }
 
 // queryAttributeList 执行属性列表查询
-func (s *sStock) queryAttributeList(ctx context.Context, filters [][]string) ([]*item.AttributeInfo, error) {
+func (s *sStock) queryAttributeList(ctx context.Context, filters [][]string, req *item.GetAttributeListReq) ([]*item.AttributeInfo, error) {
 	resp, err := service.Document().List(ctx, &erp.ErpReq{
-		DocType: "Item Attribute",
+		DocType: erp.DocTypeItemAttribute,
 	}, &erp.RequestParams{
 		Fields:  g.ArrayStr{"name", "attribute_name", "custom_alias", "custom_company", "custom_branch"},
 		Filters: filters,
@@ -264,12 +291,37 @@ func (s *sStock) queryAttributeList(ctx context.Context, filters [][]string) ([]
 	attributeList := make([]*item.AttributeInfo, 0)
 	dataArray := j.GetJsons("data")
 
+	subCompanyName := ""
+	if len(req.SubCompanyAbbr) > 0 {
+		subCompanyName, err = service.Company().GetCompanyNameWithAbbr(ctx, req.SubCompanyAbbr)
+		if err != nil {
+			return nil, gerror.Wrapf(err, "获取子公司名称失败,companyAbbr:%s", req.SubCompanyAbbr)
+		}
+	}
+
 	for _, attribute := range dataArray {
+		// 查询attribute中的 permission_rule
+		if len(req.SubCompanyAbbr) > 0 {
+			attr, err := s.GetItemAttribute(ctx, attribute.Get("name").String())
+			if err != nil {
+				g.Log().Errorf(ctx, "获取物品属性失败,attribute:%s,err:%v", attribute.Get("name").String(), err)
+				continue // 获取物品属性失败，跳过
+			}
+			hasPermission, err := service.Permission().CheckPermission(ctx, attr.CustomPermissionRule, subCompanyName)
+			if err != nil {
+				g.Log().Errorf(ctx, "检查物品权限失败,attribute:%s,err:%v", attribute.Get("name").String(), err)
+				continue // 检查权限失败，跳过
+			}
+			if !hasPermission {
+				continue // 当前公司无权限，跳过该
+			}
+		}
 		attributeInfo := &item.AttributeInfo{
 			AttributeName: attribute.Get("name").String(),
 			AliasName:     attribute.Get("custom_alias").String(),
 			Company:       attribute.Get("custom_company").String(),
 			Branch:        attribute.Get("custom_branch").String(),
+			CompanyAbbr:   req.CompanyAbbr,
 		}
 
 		// 获取属性值列表
@@ -291,7 +343,7 @@ func (s *sStock) GetAttributeValuesList(ctx context.Context, attributeName strin
 	}
 
 	resp, err := service.Document().Get(ctx, &erp.ErpReq{
-		DocType: "Item Attribute",
+		DocType: erp.DocTypeItemAttribute,
 		Name:    attributeName,
 	}, nil)
 
@@ -353,7 +405,7 @@ func (s *sStock) checkAttributeExists(ctx context.Context, attributeName string)
 	filters := [][]string{{"attribute_name", "=", attributeName}}
 
 	count, err := service.Doctype().Count(ctx, &erp.ErpReq{
-		DocType: "Item Attribute",
+		DocType: erp.DocTypeItemAttribute,
 	}, &erp.RequestParams{
 		Filters: filters,
 	})
@@ -381,7 +433,7 @@ func (s *sStock) updateExistingAttribute(ctx context.Context, req *item.Attribut
 		})
 	}
 	_, err := service.Document().Update(ctx, &erp.ErpReq{
-		DocType: "Item Attribute",
+		DocType: erp.DocTypeItemAttribute,
 		Name:    req.AttributeName,
 	}, itemAttribute)
 
@@ -407,7 +459,7 @@ func (s *sStock) createNewAttribute(ctx context.Context, req *item.AttributeInfo
 			Abbr:           value.Abbr,
 		})
 	}
-	_, err := service.Document().Create(ctx, "Item Attribute", itemAttribute)
+	_, err := service.Document().Create(ctx, erp.DocTypeItemAttribute, itemAttribute)
 
 	if err != nil {
 		return gerror.Wrapf(err, "创建属性失败")
@@ -422,9 +474,18 @@ func (s *sStock) CreateMaterialRequest(ctx context.Context, req *stock.SaveMater
 	if err != nil {
 		return nil, err
 	}
-	warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, companyName.CompanyName, req.Branch)
-	if err != nil {
-		return nil, err
+	//设置默认到货仓
+	var (
+		targetWarehouseName string
+	)
+	if req.TargetWarehouse == "" {
+		warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, companyName.CompanyName, req.Branch)
+		if err != nil {
+			return nil, err
+		}
+		targetWarehouseName = warehouse.Name
+	} else {
+		targetWarehouseName = req.TargetWarehouse
 	}
 
 	data := g.MapStrAny{
@@ -446,11 +507,11 @@ func (s *sStock) CreateMaterialRequest(ctx context.Context, req *stock.SaveMater
 			"qty":           item.Qty,
 			"uom":           item.Uom,
 			"schedule_date": service.Setup().MustGetLocalDateTime(ctx, gtime.New(req.RequiredBy)).Format("Y-m-d"),
-			"warehouse":     warehouse.Name,
+			"warehouse":     targetWarehouseName,
 		})
 	}
 	data["items"] = itemList
-	resp, err := service.Document().Create(ctx, "Material Request", &data)
+	resp, err := service.Document().Create(ctx, erp.DocTypeMaterialRequest, &data)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建物料请求失败")
 	}
@@ -461,7 +522,7 @@ func (s *sStock) CreateMaterialRequest(ctx context.Context, req *stock.SaveMater
 	if j.Contains("data") {
 		//创建后提交
 		//提交采购订单
-		_, err = service.Document().ChangeDocStatus(ctx, "Material Request", j.Get("data.name").String(), 1)
+		_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeMaterialRequest, j.Get("data.name").String(), erp.DocstatusSubmitted)
 		if err != nil {
 			return nil, gerror.Wrapf(err, "提交物料请求失败")
 		}
@@ -515,4 +576,215 @@ func (s *sStock) GetMaterialRequestList(ctx context.Context, req *stock.GetMater
 		})
 	}
 	return
+}
+
+// GetUom 根据单位名称获取单个单位详细信息
+// 参数：ctx 上下文，req 包含单位名称
+// 返回：单位详细信息，错误信息
+func (s *sStock) GetUom(ctx context.Context, req *item.GetUomReq) (res *erp.UOM, err error) {
+	// 参数验证
+	if len(req.UomName) == 0 {
+		return nil, gerror.New("单位名称不能为空")
+	}
+
+	// 查询单位信息
+	resp, err := service.Document().Get(ctx, &erp.ErpReq{
+		DocType: "UOM",
+		Name:    req.UomName,
+	}, nil)
+
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询单位信息失败")
+	}
+
+	// 解析响应数据
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析单位信息响应失败")
+	}
+
+	// 转换为单位信息结构体
+	uomInfo := &erp.UOM{}
+	gconv.Structs(j.GetJson("data"), &uomInfo)
+
+	return uomInfo, nil
+}
+
+// GetItemAttribute 根据属性名称获取单个属性详细信息
+// 参数：ctx 上下文，attributeName 属性名称
+// 返回：属性详细信息，错误信息
+func (s *sStock) GetItemAttribute(ctx context.Context, attributeName string) (res *erp.ItemAttribute, err error) {
+	// 参数验证
+	if len(attributeName) == 0 {
+		return nil, gerror.New("属性名称不能为空")
+	}
+
+	// 查询属性信息
+	resp, err := service.Document().Get(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeItemAttribute,
+		Name:    attributeName,
+	}, nil)
+
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询属性信息失败")
+	}
+
+	// 解析响应数据
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析属性信息响应失败")
+	}
+
+	// 转换为属性信息结构体
+	itemAttribute := &erp.ItemAttribute{}
+	gconv.Structs(j.GetJson("data"), &itemAttribute)
+
+	return itemAttribute, nil
+}
+
+// GetStockLedger 获取库存分类账信息
+// 根据查询条件过滤并返回库存分类账记录列表
+func (s *sStock) GetStockLedger(ctx context.Context, req *stock.GetStockLedgerReq) (res *stock.GetStockLedgerResp, err error) {
+	// 获取公司信息
+	company, err := s.getCompanyInfo(ctx, req.CompanyAbbr)
+	if err != nil {
+		return nil, err
+	}
+
+	// 查询库存分类账列表
+	stockLedgerList, err := s.queryStockLedgerList(ctx, company.CompanyName, req)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询库存分类账失败")
+	}
+
+	return &stock.GetStockLedgerResp{
+		StockLedgerList: stockLedgerList,
+	}, nil
+}
+
+// getCompanyInfo 获取公司信息
+func (s *sStock) getCompanyInfo(ctx context.Context, companyAbbr string) (*company.CompanyInfo, error) {
+	companyInfo, err := service.Company().GetCompanyWithAbbr(ctx, companyAbbr)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "获取公司信息失败")
+	}
+	return companyInfo, nil
+}
+
+// queryStockLedgerList 执行库存分类账查询
+func (s *sStock) queryStockLedgerList(ctx context.Context, companyName string, req *stock.GetStockLedgerReq) ([]*stock.StockLedger, error) {
+	// 构建查询过滤器
+	filters := gjson.New(g.Map{
+		"company": companyName,
+	})
+
+	// 按仓库过滤
+	if len(req.Warehouse) > 0 {
+		filters.Set("warehouse", req.Warehouse)
+	} else if len(req.Branch) > 0 {
+		// 如果没有指定仓库但指定了分支，获取默认仓库
+		warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, companyName, req.Branch)
+		if err == nil && len(warehouse.Name) > 0 {
+			filters.Set("warehouse", warehouse.Name)
+		}
+	}
+
+	// 按物品编码过滤
+	if len(req.ItemCode) > 0 {
+		filters.Set("item_code", req.ItemCode)
+	}
+
+	// 按凭证编号过滤
+	if len(req.VoucherNo) > 0 {
+		filters.Set("voucher_no", req.VoucherNo)
+	}
+
+	// 按日期范围过滤
+	if len(req.FromDate) > 0 {
+		filters.Set("from_date", req.FromDate)
+	}
+	if len(req.ToDate) > 0 {
+		filters.Set("to_date", req.ToDate)
+	}
+
+	// 设置查询限制
+	if req.Limit > 0 && req.Limit <= 1000 {
+		filters.Set("limit", req.Limit)
+	} else {
+		filters.Set("limit", consts.Limit100)
+	}
+
+	// 执行库存分类账报表查询
+	resp, err := service.Report().Run(ctx, &erp.ReportParams{
+		ReportName:           erp.DocTypeStockLedger,
+		Filters:              filters.String(),
+		IgnorePreparedReport: true,
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询库存分类账报表失败")
+	}
+
+	// 解析响应数据
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析库存分类账响应失败")
+	}
+
+	// 转换为库存分类账列表
+	dataArray := j.GetJsons("message.result")
+	stockLedgerList := make([]*stock.StockLedger, 0, len(dataArray))
+
+	for _, data := range dataArray {
+		// 检查是否存在必要的数据字段
+		if data.Contains("item_code") {
+			// 直接使用StockLedger结构体解析
+			var ledger erp.StockLedger
+			if err := gconv.Struct(data, &ledger); err != nil {
+				g.Log().Warningf(ctx, "解析库存分类账数据失败: %v", err)
+				continue
+			}
+
+			// 转换为API响应格式
+			stockLedger := &stock.StockLedger{
+				ItemCode:             ledger.ItemCode,
+				Date:                 ledger.Date,
+				Warehouse:            ledger.Warehouse,
+				PostingDate:          ledger.PostingDate,
+				PostingTime:          ledger.PostingTime,
+				ActualQty:            ledger.ActualQty,
+				IncomingRate:         ledger.IncomingRate,
+				ValuationRate:        ledger.ValuationRate,
+				Company:              ledger.Company,
+				VoucherType:          ledger.VoucherType,
+				QtyAfterTransaction:  ledger.QtyAfterTransaction,
+				StockValueDifference: ledger.StockValueDifference,
+				SerialAndBatchBundle: s.safeStringValue(ledger.SerialAndBatchBundle),
+				VoucherNo:            ledger.VoucherNo,
+				StockValue:           ledger.StockValue,
+				BatchNo:              s.safeStringValue(ledger.BatchNo),
+				SerialNo:             s.safeStringValue(ledger.SerialNo),
+				Project:              s.safeStringValue(ledger.Project),
+				Name:                 ledger.Name,
+				ItemName:             ledger.ItemName,
+				Description:          ledger.Description,
+				ItemGroup:            ledger.ItemGroup,
+				Brand:                s.safeStringValue(ledger.Brand),
+				StockUom:             ledger.StockUom,
+				InQty:                ledger.InQty,
+				OutQty:               ledger.OutQty,
+				InOutRate:            ledger.InOutRate,
+			}
+			stockLedgerList = append(stockLedgerList, stockLedger)
+		}
+	}
+
+	return stockLedgerList, nil
+}
+
+// safeStringValue 安全地获取指针字符串的值
+func (s *sStock) safeStringValue(ptr *string) string {
+	if ptr == nil {
+		return ""
+	}
+	return *ptr
 }

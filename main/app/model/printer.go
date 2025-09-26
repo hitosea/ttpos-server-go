@@ -21,8 +21,17 @@ type Printer struct {
 	PrintMethod       int    `gorm:"column:print_method;type:tinyint(2);default:0;comment:打印方式,1-文本打印,2-图片打印;NOT NULL" json:"print_method"`
 	Width             int    `gorm:"column:width;type:int(11) unsigned;default:80;comment:纸张宽度（mm）;NOT NULL" json:"width"`
 	EnableStatusCheck int    `gorm:"column:enable_status_check;type:tinyint(1);default:1;comment:是否启用状态检查,0-关闭,1-开启;NOT NULL" json:"enable_status_check"`
+	EnableSound       int    `gorm:"column:enable_sound;type:tinyint(1);default:1;comment:是否启用打印提示音,0-关闭,1-开启;NOT NULL" json:"enable_sound"`
 
 	PrinterType *PrinterType `gorm:"foreignKey:PrinterTypeUuid;references:Uuid"` // 关联 printer_type
+}
+
+// 是否启用打印提示音
+func (model *Printer) IsEnableSound() bool {
+	if model == nil {
+		return false
+	}
+	return model.EnableSound == 1
 }
 
 // 是否usb打印机

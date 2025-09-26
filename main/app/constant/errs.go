@@ -99,6 +99,11 @@ const (
 	CodeMaterialDisabled                 = -803 // 物品已停用，您可启用物品后再进行收货
 )
 
+// 采购订单业务错误码
+const (
+	CodePurchaseOrderSupplierDisabled = -901 // 供应商已禁用
+)
+
 type ParseCodeOrderCheckOption struct {
 	IsH5     bool // 是否是h5端的文案
 	IsTablet bool // 是否是平板端的文案

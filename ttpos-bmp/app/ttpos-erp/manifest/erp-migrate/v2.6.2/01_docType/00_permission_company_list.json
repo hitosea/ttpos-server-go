@@ -1,0 +1,15 @@
+{
+  "module": "Core",
+  "name": "Permission Company List",
+  "custom": 1,
+  "istable": 1,
+  "editable_grid": 1,
+  "fields" : [
+    {
+      "fieldname": "company",
+      "label": "Company",
+      "fieldtype": "Link",
+      "options": "Company"
+    }
+  ]
+}

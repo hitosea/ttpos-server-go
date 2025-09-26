@@ -46,6 +46,28 @@ type AttributeValueInfo struct {
 	Abbr           string `json:"abbr"`            // 属性值缩写
 }
 
+type GetErpFlavorListResp struct {
+	List []ErpFlavorInfo `json:"list"`
+}
+
+type ErpFlavorInfo struct {
+	AttributeName      string               `json:"attribute_name"`
+	AliasName          string               `json:"alias_name"`           // 属性别名
+	CompanyAbbr        string               `json:"company_abbr"`         // 公司缩写编码
+	Branch             string               `json:"branch"`               // 分支名称
+	AttributeValueList []ErpFlavorValueInfo `json:"attribute_value_list"` // 属性值列表
+}
+
+type ErpFlavorValueInfo struct {
+	AttributeValue string `json:"attribute_value"` // 属性值
+	Abbr           string `json:"abbr"`            // 属性值缩写
+}
+
+type GetPosInvoiceErrorResp struct {
+	ErrorScene string `json:"error_scene"` // 错误场景
+	ItemCode   string `json:"item_code"`   // 物品编码
+}
+
 type GetPosProfileListResp struct {
 	List []PosProfileInfo `json:"list"`
 }

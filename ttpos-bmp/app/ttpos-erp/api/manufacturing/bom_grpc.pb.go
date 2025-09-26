@@ -22,6 +22,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	BomService_GetBomList_FullMethodName = "/manufacturing.BomService/GetBomList"
+	BomService_GetBom_FullMethodName     = "/manufacturing.BomService/GetBom"
 	BomService_SaveBom_FullMethodName    = "/manufacturing.BomService/SaveBom"
 )
 
@@ -30,9 +31,14 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type BomServiceClient interface {
 	// 获取BOM列表
+	// 输入条件如果未包含company 则会返回全量数据，如需要只显示无company 约束的数据，需要自行过滤结果中 company 为空的数据
 	// 参数：查询条件
 	// 返回：BOM列表
 	GetBomList(ctx context.Context, in *GetBomListReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 获取单个BOM
+	// 参数：BOM名称
+	// 返回：BOM详情
+	GetBom(ctx context.Context, in *GetBomReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 	// 保存BOM
 	// 参数：BOM信息
 	// 返回：操作结果
@@ -57,6 +63,16 @@ func (c *bomServiceClient) GetBomList(ctx context.Context, in *GetBomListReq, op
 	return out, nil
 }
 
+func (c *bomServiceClient) GetBom(ctx context.Context, in *GetBomReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, BomService_GetBom_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *bomServiceClient) SaveBom(ctx context.Context, in *SaveBomReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(api.ResponseInfo)
@@ -72,9 +88,14 @@ func (c *bomServiceClient) SaveBom(ctx context.Context, in *SaveBomReq, opts ...
 // for forward compatibility.
 type BomServiceServer interface {
 	// 获取BOM列表
+	// 输入条件如果未包含company 则会返回全量数据，如需要只显示无company 约束的数据，需要自行过滤结果中 company 为空的数据
 	// 参数：查询条件
 	// 返回：BOM列表
 	GetBomList(context.Context, *GetBomListReq) (*api.ResponseInfo, error)
+	// 获取单个BOM
+	// 参数：BOM名称
+	// 返回：BOM详情
+	GetBom(context.Context, *GetBomReq) (*api.ResponseInfo, error)
 	// 保存BOM
 	// 参数：BOM信息
 	// 返回：操作结果
@@ -91,6 +112,9 @@ type UnimplementedBomServiceServer struct{}
 
 func (UnimplementedBomServiceServer) GetBomList(context.Context, *GetBomListReq) (*api.ResponseInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBomList not implemented")
+}
+func (UnimplementedBomServiceServer) GetBom(context.Context, *GetBomReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBom not implemented")
 }
 func (UnimplementedBomServiceServer) SaveBom(context.Context, *SaveBomReq) (*api.ResponseInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SaveBom not implemented")
@@ -134,6 +158,24 @@ func _BomService_GetBomList_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BomService_GetBom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBomReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BomServiceServer).GetBom(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BomService_GetBom_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BomServiceServer).GetBom(ctx, req.(*GetBomReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _BomService_SaveBom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SaveBomReq)
 	if err := dec(in); err != nil {
@@ -162,6 +204,10 @@ var BomService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetBomList",
 			Handler:    _BomService_GetBomList_Handler,
+		},
+		{
+			MethodName: "GetBom",
+			Handler:    _BomService_GetBom_Handler,
 		},
 		{
 			MethodName: "SaveBom",

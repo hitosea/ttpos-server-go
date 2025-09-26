@@ -18,7 +18,6 @@ define update_env_and_run
 		echo '\nREDIS_CLUSTER_ANNOUNCE_IP=$(LOCAL_IP)' >> .env; \
 	fi;
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d
-	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh mysql open
 	@make start-http-debug-proxy
 endef
 

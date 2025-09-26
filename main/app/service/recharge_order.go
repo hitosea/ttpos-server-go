@@ -7,6 +7,7 @@ import (
 	"slices"
 	"sort"
 	"time"
+	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -15,6 +16,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/cache"
@@ -474,10 +476,13 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 
 	chargeDue := s.getChargeDue(order.PaymentOrders)
 	// 更新充值订单
+	paymentTime := time.Now().Unix()
+	amount := s.getRechargeOrderAmount(order.PaymentOrders) // 应收金额
+	order.Amount = amount
 	updates := map[string]any{
-		"amount":            s.getRechargeOrderAmount(order.PaymentOrders), // 应收金额
-		"status":            constant.RechargeOrderStatusPaid,              // 状态,0-pending待支付 1-paid已支付 2-canceled已取消 3-exp已过期
-		"payment_time":      time.Now().Unix(),
+		"amount":            amount,
+		"status":            constant.RechargeOrderStatusPaid, // 状态,0-pending待支付 1-paid已支付 2-canceled已取消 3-exp已过期
+		"payment_time":      paymentTime,
 		"charge_due":        chargeDue,                                                                        // 找零
 		"balance":           member.GetBalanceAll(),                                                           // 充值前会员余额
 		"balance_recharged": utils.DecimalAdd(member.GetBalanceAll(), order.RechargeAmount, order.GiftAmount), // 充值后会员余额
@@ -544,6 +549,22 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 			return errors.WithMessage(err)
 		}
 
+		// 保存发票到erp
+		company := ctx.GetCompany()
+		companySetting := ctx.GetCompanySetting()
+		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
+			order.PaymentTime = paymentTime
+			invoiceResp, err := s.SavePosInvoice(ctx, &order, tx)
+			if err != nil {
+				return errors.WithMessage(err)
+			}
+			// TODO: 要是“更新充值订单的商品发票名称”失败，事务回滚后用户重新确认充值订单，会导致ERP系统中该笔订单有两个发票
+			order.ErpProductsInvoiceName = invoiceResp.ProductsInvoiceName
+			// 更新充值订单的商品发票名称
+			if err := repository.NewMemberRechargeOrderRepo(tx).UpdateErpProductsInvoiceName(order.Uuid, order.ErpProductsInvoiceName); err != nil {
+				return errors.WithMessage(err)
+			}
+		}
 		return nil
 	})
 	if err != nil {
@@ -626,6 +647,195 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 	}()
 
 	return s.confirmRechargeOrderResp(companyUuid, order.Uuid), nil
+}
+
+// 保存发票到erp
+func (s *rechargeOrderSrv) SavePosInvoice(ctx context.Context, memberRechargeOrder *model.MemberRechargeOrder, db *gorm.DB) (*selling.SavePosInvoiceResp, error) {
+	companySetting := ctx.GetCompanySetting()
+
+	staff := ctx.GetStaff()
+	shiftLogRepo := repository.NewShiftLogRepo(db)
+	shiftLog, err := shiftLogRepo.GetShiftLog(
+		repository.CommonRepo.WhereByStaffUuid(staff.Uuid),
+		repository.CommonRepo.WhereByShiftNo(staff.DutyNo),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if shiftLog.IsHandedOver() {
+		return nil, errors.New("当前班次已交班，无法保存发票")
+	}
+
+	// 订单商品列表
+	items := make([]*selling.PosInvoiceItem, 0)
+
+	items = append(items, &selling.PosInvoiceItem{
+		ItemCode: constant.PosInvoiceItemCodeMembershipRecharge,
+		Qty:      memberRechargeOrder.RechargeAmount,
+		Rate:     1,
+		Amount:   memberRechargeOrder.RechargeAmount,
+	})
+	// 如果有支付手续费，则添加一个虚拟商品来记录支付手续费
+	commissionFee := memberRechargeOrder.GetCommissionFee()
+	if commissionFee > 0 {
+		items = append(items, &selling.PosInvoiceItem{
+			ItemCode: constant.PosInvoiceItemCodePaymentProcessingFee,
+			Qty:      commissionFee,
+			Rate:     1,
+			Amount:   commissionFee,
+		})
+	}
+
+	payments := make([]*selling.PosInvoicePayment, 0)
+
+	// 获取所有支付方式
+	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
+	paymentMethods := paymentMethodRepo.GetPaymentMethodList(paymentMethodRepo.WhereStatus(constant.PaymentMethodStatusEnable))
+	methodMap := make(map[int]string)
+	for _, paymentMethod := range paymentMethods {
+		if paymentMethod.ErpnextPayment != "" {
+			methodMap[paymentMethod.Code] = paymentMethod.ErpnextPayment
+		}
+	}
+	for _, payment := range memberRechargeOrder.PaymentOrders {
+		if payment.IsDelete() {
+			continue
+		}
+		var modeOfPayment string
+		if method, ok := methodMap[payment.PaymentMethod.Code]; ok {
+			modeOfPayment = method
+		} else {
+			// modeOfPayment =  "Cash" // 其他支付方式，默认现金支付
+			return nil, errors.WithMessage(errors.New("不支持的支付方式"))
+		}
+		payments = append(payments, &selling.PosInvoicePayment{
+			ModeOfPayment: modeOfPayment,
+			Amount:        payment.Amount,
+		})
+	}
+
+	customerUuid := fmt.Sprintf("%d", memberRechargeOrder.MemberUuid)
+	if customerUuid == "0" {
+		customerUuid = ""
+	}
+	erpSrv := erp.NewIErpSrv(s.dbm)
+	param := req.SavePosInvoiceReq{
+		SiteCode:         companySetting.ErpnextSiteCode,
+		OrderNo:          memberRechargeOrder.OrderNo,
+		OpenPosEntryName: shiftLog.ErpnextOpenPosEntryName,
+		PostingDatetime:  memberRechargeOrder.PaymentTime,
+		CustomerUuid:     customerUuid,
+		Items:            items,    // 订单商品列表
+		Payments:         payments, // 订单付款列表
+	}
+	if memberRechargeOrder.IsErpReverseSettle() {
+		param.AmendedProductsInvoiceName = memberRechargeOrder.ErpProductsInvoiceName
+	}
+	response, err := erpSrv.SavePosInvoice(ctx, param)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return response, nil
+}
+
+// 退款发票到erp
+func (s *rechargeOrderSrv) ReturnPosInvoice(ctx context.Context, memberRechargeOrder *model.MemberRechargeOrder, returnOrder *model.ReturnOrder, db *gorm.DB, returnType uint) (*selling.ReturnPosInvoiceResp, error) {
+	companySetting := ctx.GetCompanySetting()
+
+	staff := ctx.GetStaff()
+	shiftLogRepo := repository.NewShiftLogRepo(db)
+	shiftLog, err := shiftLogRepo.GetShiftLog(
+		repository.CommonRepo.WhereByStaffUuid(staff.Uuid),
+		repository.CommonRepo.WhereByShiftNo(staff.DutyNo),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if shiftLog.IsHandedOver() {
+		return nil, errors.New("当前班次已交班，无法保存发票")
+	}
+
+	//服务费 - Service Fee - item code: VP001
+	//会员充值 - Membership Recharge- item code: VP002
+	//配送费 - Delivery Fee- item code: VP003
+	//支付手续费 - Payment Processing Fee- item code: VP004
+	// 订单商品列表
+	items := make([]*selling.PosInvoiceItem, 0)
+	remainingAmount := memberRechargeOrder.GetRemainingAmount() // 剩余的充值金额
+	if remainingAmount > 0 && returnOrder.RefundAmount > remainingAmount {
+		// 当“剩余的充值金额”小于退款金额时，将剩余的充值金额作为商品退款
+		items = append(items, &selling.PosInvoiceItem{
+			ItemCode: constant.PosInvoiceItemCodeMembershipRecharge, // 会员充值
+			Qty:      -remainingAmount,
+			Rate:     1,
+			Amount:   -remainingAmount,
+		})
+		// 剩余的退款金额，作为支付手续费，添加一个虚拟商品来记录退款的支付手续费
+		commissionFee := decimal.NewFromFloat(returnOrder.RefundAmount).Sub(decimal.NewFromFloat(remainingAmount)).Round(2).InexactFloat64()
+		items = append(items, &selling.PosInvoiceItem{
+			ItemCode: constant.PosInvoiceItemCodePaymentProcessingFee, // 支付手续费
+			Qty:      -commissionFee,
+			Rate:     1,
+			Amount:   -commissionFee,
+		})
+	} else if remainingAmount > 0 && returnOrder.RefundAmount <= remainingAmount {
+		// 当“剩余的充值金额”大于等于退款金额时，将退款金额作为商品退款
+		items = append(items, &selling.PosInvoiceItem{
+			ItemCode: constant.PosInvoiceItemCodeMembershipRecharge, // 会员充值
+			Qty:      -returnOrder.RefundAmount,
+			Rate:     1,
+			Amount:   -returnOrder.RefundAmount,
+		})
+	} else if remainingAmount <= 0 && returnOrder.RefundAmount > 0 {
+		// 当“剩余的充值金额”小于等于0时，还要继续退款时，退的是手续费
+		items = append(items, &selling.PosInvoiceItem{
+			ItemCode: constant.PosInvoiceItemCodePaymentProcessingFee, // 支付手续费
+			Qty:      -returnOrder.RefundAmount,
+			Rate:     1,
+			Amount:   -returnOrder.RefundAmount,
+		})
+	}
+
+	// 获取所有支付方式
+	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
+	paymentMethods := paymentMethodRepo.GetPaymentMethodList(paymentMethodRepo.WhereStatus(constant.PaymentMethodStatusEnable))
+	methodMap := make(map[int]string)
+	for _, paymentMethod := range paymentMethods {
+		if paymentMethod.ErpnextPayment != "" {
+			methodMap[paymentMethod.Code] = paymentMethod.ErpnextPayment
+		}
+	}
+	payments := make([]*selling.PosInvoicePayment, 0)
+	for _, payment := range returnOrder.ReturnOrderAmounts {
+		var modeOfPayment string
+		if method, ok := methodMap[payment.PaymentMethod.Code]; ok {
+			modeOfPayment = method
+		} else {
+			// modeOfPayment =  "Cash" // 其他支付方式，默认现金支付
+			return nil, errors.WithMessage(errors.New("不支持的支付方式"))
+		}
+		payments = append(payments, &selling.PosInvoicePayment{
+			ModeOfPayment: modeOfPayment,
+			Amount:        -payment.Amount,
+		})
+	}
+
+	erpSrv := erp.NewIErpSrv(s.dbm)
+	param := req.ReturnPosInvoiceReq{
+		SiteCode:         companySetting.ErpnextSiteCode,
+		OrderNo:          memberRechargeOrder.OrderNo,
+		OpenPosEntryName: shiftLog.ErpnextOpenPosEntryName,
+		PostingDatetime:  returnOrder.CreateTime, // 退款单时间
+		CompanyAbbr:      companySetting.ErpnextCompanyAbbr,
+		InvoiceName:      memberRechargeOrder.ErpProductsInvoiceName, // 发票名称
+		Items:            items,                                      // 订单退款商品列表
+		Payments:         payments,                                   // 订单退款列表
+	}
+	response, err := erpSrv.ReturnPosInvoice(ctx, param)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return response, nil
 }
 
 // 确认充值订单
@@ -1275,6 +1485,18 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 			return errors.WithMessage(errors.ErrInternal)
 		}
 
+		// 在ERP取消发票
+		company := ctx.GetCompany()
+		companySetting := ctx.GetCompanySetting()
+		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
+			erpSrv := erp.NewIErpSrv(s.dbm)
+			err := erpSrv.CancelPosInvoice(ctx, req.CancelPosInvoiceReq{
+				ProductsInvoiceName: order.ErpProductsInvoiceName,
+			})
+			if err != nil {
+				return errors.WithMessage(err)
+			}
+		}
 		return nil
 	})
 
@@ -1524,6 +1746,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 				id, _ := utils.GetID()
 				return id
 			}(),
+			CreateTime: time.Now().Unix(),
 		},
 		RelatedOrderType:   constant.ReturnOrderRelatedOrderTypeRechargeOrder,
 		RelatedOrderUuid:   order.Uuid,
@@ -1671,6 +1894,19 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 				Scene:     constant.CashBoxLogSceneRefund,
 				OrderUuid: returnOrder.Uuid,
 			}); err != nil {
+				return errors.WithMessage(err)
+			}
+		}
+		// 退款发票到erp
+		company := ctx.GetCompany()
+		companySetting := ctx.GetCompanySetting()
+		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
+			res, err := s.ReturnPosInvoice(ctx, &order, &returnOrder, tx, refundReq.RefundType)
+			if err != nil {
+				return errors.WithMessage(err)
+			}
+			returnOrder.ErpInvoiceName = res.InvoiceName
+			if err := repository.NewReturnOrderRepo(tx).UpdateReturnOrderRecordErpInvoiceName(returnOrder.Uuid, returnOrder.ErpInvoiceName); err != nil {
 				return errors.WithMessage(err)
 			}
 		}

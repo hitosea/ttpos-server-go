@@ -1,0 +1,9 @@
+{
+  "doctype": "DocType",
+  "label": "Pos Attribute Group",
+  "fieldname": "custom_pos_attribute_group",
+  "fieldtype": "Table",
+  "options": "Item Attribute Group",
+  "insert_after": "item_group",
+  "dt": "Item"
+}

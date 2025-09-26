@@ -12,7 +12,7 @@ bin/*
 /docker/rabbitmq/mnesia
 /docker/php/job.log
 /docker/php/inotify.log
-
+__debug_*
 
 /vendor/
 /node_modules/

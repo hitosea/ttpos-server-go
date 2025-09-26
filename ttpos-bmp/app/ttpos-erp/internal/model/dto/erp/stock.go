@@ -107,3 +107,54 @@ const (
 	// DefaultMaterialRequestSeries 默认申请单命名序列
 	DefaultMaterialRequestSeries = "MAT-MR-.YYYY.-"
 )
+
+// StockLedger 库存分类账结构体，记录库存变动明细
+type StockLedger struct {
+	ItemCode             string  `json:"item_code,omitempty"`               // 物品编码
+	Date                 string  `json:"date,omitempty"`                    // 日期
+	Warehouse            string  `json:"warehouse,omitempty"`               // 仓库
+	PostingDate          string  `json:"posting_date,omitempty"`            // 过账日期
+	PostingTime          string  `json:"posting_time,omitempty"`            // 过账时间
+	ActualQty            float64 `json:"actual_qty,omitempty"`              // 实际数量
+	IncomingRate         float64 `json:"incoming_rate,omitempty"`           // 入库价格
+	ValuationRate        float64 `json:"valuation_rate,omitempty"`          // 估值价格
+	Company              string  `json:"company,omitempty"`                 // 公司
+	VoucherType          string  `json:"voucher_type,omitempty"`            // 凭证类型
+	QtyAfterTransaction  float64 `json:"qty_after_transaction,omitempty"`   // 交易后数量
+	StockValueDifference float64 `json:"stock_value_difference,omitempty"`  // 库存价值差额
+	SerialAndBatchBundle *string `json:"serial_and_batch_bundle,omitempty"` // 序列号和批次包
+	VoucherNo            string  `json:"voucher_no,omitempty"`              // 凭证编号
+	StockValue           float64 `json:"stock_value,omitempty"`             // 库存价值
+	BatchNo              *string `json:"batch_no,omitempty"`                // 批次号
+	SerialNo             *string `json:"serial_no,omitempty"`               // 序列号
+	Project              *string `json:"project,omitempty"`                 // 项目
+	Name                 string  `json:"name,omitempty"`                    // 名称
+	ItemName             string  `json:"item_name,omitempty"`               // 物品名称
+	Description          string  `json:"description,omitempty"`             // 描述
+	ItemGroup            string  `json:"item_group,omitempty"`              // 物品分组
+	Brand                *string `json:"brand,omitempty"`                   // 品牌
+	StockUom             string  `json:"stock_uom,omitempty"`               // 库存单位
+	InQty                float64 `json:"in_qty,omitempty"`                  // 入库数量
+	OutQty               float64 `json:"out_qty,omitempty"`                 // 出库数量
+	InOutRate            float64 `json:"in_out_rate,omitempty"`             // 进出库价格
+}
+
+// UOM 结构体，表示计量单位信息
+type UOM struct {
+	Name              string `json:"name,omitempty"`                 // 单位名称
+	Owner             string `json:"owner,omitempty"`                // 拥有者
+	Creation          string `json:"creation,omitempty"`             // 创建时间
+	Modified          string `json:"modified,omitempty"`             // 修改时间
+	ModifiedBy        string `json:"modified_by,omitempty"`          // 修改人
+	Docstatus         int    `json:"docstatus,omitempty"`            // 单据状态
+	Idx               int    `json:"idx,omitempty"`                  // 索引
+	UomName           string `json:"uom_name,omitempty"`             // 单位名称
+	MustBeWholeNumber int    `json:"must_be_whole_number,omitempty"` // 是否必须为整数
+	Enabled           int    `json:"enabled,omitempty"`              // 是否启用
+	Doctype           string `json:"doctype,omitempty"`              // 单据类型
+	// 自定义字段
+	CustomAlias          string           `json:"custom_alias,omitempty"`           // 自定义别名
+	CustomCompany        string           `json:"custom_company,omitempty"`         // 自定义公司
+	CustomBranch         string           `json:"custom_branch,omitempty"`          // 自定义分支
+	CustomPermissionRule []PermissionRule `json:"custom_permission_rule,omitempty"` // 自定义权限规则
+}

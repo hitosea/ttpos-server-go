@@ -47,18 +47,20 @@ func (s *erpSrv) AddMaterial(ctx context.Context, params req.MaterialAddErpReq) 
 	}
 
 	param := &item.ItemInfo{
-		ItemCode:      params.ItemCode,
-		ItemName:      params.ItemName,
-		ItemGroup:     item.ItemGroup_RawMaterial,
-		StockUom:      params.StockUom,
-		ValuationRate: params.ValuationRate,
-		OpeningStock:  params.OpeningStock,
-		IsStockItem:   true,
-		Disabled:      params.Disabled,
-		Barcode:       params.BarcodeValue,
-		Branch:        companySetting.ErpnextBranchName,
-		CompanyAbbr:   companySetting.ErpnextCompanyAbbr,
-		Uoms:          unitList,
+		ItemCode:           params.ItemCode,
+		ItemName:           params.ItemName,
+		ItemGroup:          item.ItemGroup_RawMaterial,
+		StockUom:           params.StockUom,
+		ValuationRate:      params.ValuationRate,
+		OpeningStock:       params.OpeningStock,
+		IsStockItem:        true,
+		Disabled:           params.Disabled,
+		Branch:             companySetting.ErpnextBranchName,
+		CompanyAbbr:        companySetting.ErpnextCompanyAbbr,
+		Uoms:               unitList,
+		InternalCode:       params.InternalCode,
+		Classification:     params.Classification,
+		ClassificationCode: params.ClassificationCode,
 	}
 	result, err := client.SaveItem(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), param)
 	if err != nil {
@@ -68,6 +70,37 @@ func (s *erpSrv) AddMaterial(ctx context.Context, params req.MaterialAddErpReq) 
 		return nil, errors.WithMessage(errors.New(result.GetMessage()), "同步物品到erp失败")
 	}
 	response := &item.ItemInfo{}
+	if err := result.Data.UnmarshalTo(response); err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+// 获取总部的物品列表
+func (s *erpSrv) GetHeadquarterMaterialList(ctx context.Context, params req.GetHeadquarterMaterialListReq) (*item.GetItemListResp, error) {
+	company := ctx.GetCompany()
+	companySetting := company.CompanySetting
+
+	client, conn, err := NewErpItemClient()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	param := &item.GetItemListReq{
+		ItemGroup:      item.ItemGroup_RawMaterial,
+		CompanyAbbr:    companySetting.ErpnextHeadquarterAbbr, // 总部
+		SubCompanyAbbr: companySetting.ErpnextCompanyAbbr,     // 子店
+	}
+	result, err := client.GetItemList(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), param)
+	if err != nil {
+		return nil, err
+	}
+	if result.GetCode() != "0" {
+		return nil, errors.WithMessage(errors.New(result.GetMessage()), "获取总部物品列表失败")
+	}
+	response := &item.GetItemListResp{}
 	if err := result.Data.UnmarshalTo(response); err != nil {
 		return nil, err
 	}
@@ -115,7 +148,7 @@ func (s *erpSrv) AddProductBomCard(ctx context.Context, params ProductBomCardAdd
 	return response, nil
 }
 
-func (s *erpSrv) GetMaterialStockNum(ctx context.Context) (*item.GetItemStockResp, error) {
+func (s *erpSrv) GetMaterialStockNum(ctx context.Context, warehouseErpCode string) ([]*item.ItemStock, error) {
 	company := ctx.GetCompany()
 	companySetting := company.CompanySetting
 
@@ -128,6 +161,8 @@ func (s *erpSrv) GetMaterialStockNum(ctx context.Context) (*item.GetItemStockRes
 	result, err := client.GetItemStock(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.GetItemStockReq{
 		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
 		Branch:      companySetting.ErpnextBranchName,
+		ItemGroup:   item.ItemGroup_RawMaterial,
+		Warehouse:   warehouseErpCode,
 	})
 	if err != nil {
 		return nil, err
@@ -140,5 +175,5 @@ func (s *erpSrv) GetMaterialStockNum(ctx context.Context) (*item.GetItemStockRes
 		return nil, err
 	}
 
-	return response, nil
+	return response.ItemStockList, nil
 }

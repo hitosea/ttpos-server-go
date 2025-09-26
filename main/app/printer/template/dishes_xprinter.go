@@ -408,7 +408,7 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 	// 打印并退出页面模式
 	printer.PrintAndExitPageMode()
 	printer.LineFeed(4)
-	printer.CutPaper(true)
+	printer.CutPaper(printerItem.Printer.IsEnableSound())
 
 	// 返回打印数据
 	return printer.GetOrderData()
@@ -761,7 +761,7 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 	// 打印并退出页面模式
 	printer.PrintAndExitPageMode()
 	printer.LineFeed(6)
-	printer.CutPaper(false)
+	printer.CutPaper(printerItem.Printer.IsEnableSound())
 
 	// 返回打印结果
 	return printer.GetOrderData()
@@ -1020,7 +1020,7 @@ func (t *dishesXprinterTemplate) ReturnMenuTemplate(
 	// 打印并退出页面模式
 	printer.PrintAndExitPageMode()
 	printer.LineFeed(6)
-	printer.CutPaper(true)
+	printer.CutPaper(printerItem.Printer.IsEnableSound())
 
 	// 返回打印数据
 	return printer.GetOrderData()
@@ -1230,7 +1230,7 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 	// 打印并退出页面模式
 	printer.PrintAndExitPageMode()
 	printer.LineFeed(6)
-	printer.CutPaper(true)
+	printer.CutPaper(mdPrinter.IsEnableSound())
 
 	// 返回打印数据
 	return printer.GetOrderData()

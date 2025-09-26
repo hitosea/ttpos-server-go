@@ -279,8 +279,12 @@ type ShopBase struct {
 
 	// 是否散户site
 	IsTtposSite   bool   `json:"is_ttpos_site"`  // 是否是TTPOS站点(散户site)，能登录新商家后台的必须授权erpnext，除了site_code="1"，其他都是连锁店模式，连锁店模式不能修改 单位和属性
+	IsHeadquarter bool   `json:"is_headquarter"` // 是否是总部
 	ServerVersion string `json:"server_version"` // 服务端版本
 	UpdateTime    int64  `json:"update_time"`    // 更新时间
+
+	IsSyncing    bool  `json:"is_syncing"`     // 是否erp数据同步中
+	LastSyncTime int64 `json:"last_sync_time"` // 上次同步erp数据完成时间
 }
 
 type ShopProfile struct {

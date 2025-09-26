@@ -1,0 +1,8 @@
+{
+  "doctype": "DocType",
+  "label": "Reference Code",
+  "fieldname": "custom_ref_code",
+  "fieldtype": "Data",
+  "insert_after": "abbr",
+  "dt": "Company"
+}

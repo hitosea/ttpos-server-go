@@ -13,6 +13,7 @@ type KitchenResp struct {
 	LanguageList    []dto.LanguageItem `json:"language_list"`    // 语言列表
 	Language        []string           `json:"language"`         // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
 	DefaultLanguage string             `json:"default_language"` // 默认语言
+	IsSmartKitchen  string             `json:"is_smart_kitchen"` // 是否开启智能后厨 0-关闭 1-开启
 }
 
 // Kitchen 厨显设置

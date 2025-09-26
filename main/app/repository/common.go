@@ -107,6 +107,8 @@ type ICommonRepo interface {
 	WhereByDutyNo(dutyNo string) DBOption                                                     // 根据班次编号查询
 	WhereByShiftLogUuid(shiftLogUuid uint64) DBOption                                         // 根据交班记录UUID查询
 	WhereByAction(action string) DBOption                                                     // 根据操作查询
+	WhereByCode(code string) DBOption                                                         // 根据编码查询
+	WhereByErpnextUom(erpnextUom string) DBOption                                             // 根据erpnext单位查询
 	WhereByOperatorUuid(operatorUuid uint64) DBOption                                         // 根据操作员UUID查询
 	WhereByIsVisitor(isVisitor uint) DBOption                                                 // 根据是否访客查询
 	WhereByProductAttributeGroupUuid(productAttributeGroupUuid uint64) DBOption               // 根据产品属性组UUID查询
@@ -143,6 +145,10 @@ type ICommonRepo interface {
 	WhereLike(field string, keyword string) DBOption                                          // 根据字段模糊查询
 	WhereByCategoryUuid(categoryUuid uint64) DBOption                                         // 根据分类UUID查询
 	WhereByCategoryUuids(categoryUuids []uint64) DBOption                                     // 根据分类UUID列表查询
+	WhereByHeadquarterUuid(headquarterUuid uint64) DBOption                                   // 根据总部UUID查询
+	WhereByErpnextGroupName(groupName string) DBOption                                        // 根据erpnext规格组名称查询
+	WhereByErpnextValueName(valueName string) DBOption                                        // 根据erpnext规格值名称查询
+	WhereByCategoryKey(categoryKey string) DBOption                                           // 根据分类关键字查询
 	DBOption(opt DBOption) func(*gorm.DB) *gorm.DB                                            // 将DBOption转为func(*gorm.DB) *gorm.DB
 	Transaction(db *gorm.DB, fn func(tx *gorm.DB) error) error                                // 事务
 }
@@ -633,6 +639,30 @@ func (r *commonRepo) WhereByCategoryUuids(categoryUuids []uint64) DBOption {
 	}
 }
 
+func (r *commonRepo) WhereByHeadquarterUuid(headquarterUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("headquarter_uuid = ?", headquarterUuid)
+	}
+}
+
+func (r *commonRepo) WhereByErpnextGroupName(groupName string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("erpnext_group_name = ?", groupName)
+	}
+}
+
+func (r *commonRepo) WhereByErpnextValueName(valueName string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("erpnext_value_name = ?", valueName)
+	}
+}
+
+func (r *commonRepo) WhereByCategoryKey(categoryKey string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("category_key = ?", categoryKey)
+	}
+}
+
 // SortWithID 根据ID排序
 func (r *commonRepo) SortWithID(order string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
@@ -829,5 +859,19 @@ func (r *commonRepo) WhereByProductPackageAttributeGroupUuid(productPackageAttri
 func (r *commonRepo) WhereByAttributeUuid(attributeUuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("attribute_uuid = ?", attributeUuid)
+	}
+}
+
+// WhereByCode 根据编码查询
+func (r *commonRepo) WhereByCode(code string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("code = ?", code)
+	}
+}
+
+// WhereByErpnextUom 根据erpnext单位查询
+func (r *commonRepo) WhereByErpnextUom(erpnextUom string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("erpnext_uom = ?", erpnextUom)
 	}
 }
