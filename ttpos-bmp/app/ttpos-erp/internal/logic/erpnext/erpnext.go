@@ -37,6 +37,16 @@ func (s *sRpc) Execute(ctx context.Context, req *erp.ErpReq, params interface{})
 	return
 }
 
+// GetSiteCode 获取站点编码
+func (*sRpc) GetSiteCode(ctx context.Context) string {
+	m := grpcx.Ctx.IncomingMap(ctx)
+	if m.Contains(consts.ContextSiteCode) {
+		return m.GetVar(consts.ContextSiteCode).String()
+	}
+	//默认返回UAT
+	return consts.SiteCodeUat
+}
+
 func getRpcUrlWithName(req *erp.ErpReq) (url string) {
 	url = fmt.Sprintf("%s/%s", rpcApiUrl, req.DocType)
 	return

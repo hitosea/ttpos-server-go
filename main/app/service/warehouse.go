@@ -1,6 +1,8 @@
 package service
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -650,7 +652,7 @@ func (s *warehouseSrv) GetWarehouseInOutList(ctx context.Context, req req.GetWar
 	if filterByCategory && !filterByKeyword && len(materialUuidsByCategory) > 0 {
 		filterOpt = warehouseInOutLogRepo.WhereMaterialUuids(materialUuidsByCategory)
 	}
-	if filterOpt == nil {
+	if filterOpt != nil {
 		opts = append(opts, filterOpt)
 	}
 
@@ -748,6 +750,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 
 	var existsDefaultWarehouse bool
 	var warehouses []model.Warehouse
+	var warehouseCodes []string
 	db.Model(&model.Warehouse{}).Scopes(repository.NotDeleted).Find(&warehouses)
 	warehouseMap := make(map[string]model.Warehouse)
 	for _, warehouse := range warehouses {
@@ -757,6 +760,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 		if warehouse.ErpCode != "" {
 			warehouseMap[warehouse.ErpCode] = warehouse
 		}
+		warehouseCodes = append(warehouseCodes, warehouse.Code)
 	}
 	err = db.Transaction(func(tx *gorm.DB) error {
 		for _, erpWarehouse := range warehouseList {
@@ -791,6 +795,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 					code = constant.TransitWarehouseCode
 				}
 			}
+
 			var warehouseType string
 			if erpWarehouse.WarehouseType == constant.ErpWarehouseTypeNormal1 || erpWarehouse.WarehouseType == constant.ErpWarehouseTypeNormal2 {
 				warehouseType = constant.WarehouseTypeNormal
@@ -834,6 +839,22 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 				if err != nil {
 					return errors.WithMessage(err, "创建多语言名称失败")
 				}
+				// 处理code
+				if code == "" && headquarterUuid == 0 {
+					// 遍历warehouseCodes，获取以WH开头的最大数字
+					maxCode := 2
+					for _, warehouseCode := range warehouseCodes {
+						if after, ok0 := strings.CutPrefix(warehouseCode, "WH"); ok0 {
+							codeInt, _ := strconv.Atoi(after)
+							if codeInt > maxCode {
+								maxCode = codeInt
+							}
+						}
+					}
+					code = fmt.Sprintf("WH%02d", maxCode+1)
+					warehouseCodes = append(warehouseCodes, code)
+				}
+
 				tx.Model(&model.Warehouse{}).Create(&model.Warehouse{
 					Name:                  localeName.ToJson(),
 					MultiLanguageNameUuid: multiLanguageName.Uuid,

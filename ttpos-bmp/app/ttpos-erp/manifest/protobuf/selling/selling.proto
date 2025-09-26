@@ -108,6 +108,7 @@ message SavePosInvoiceReq {
 message SavePosInvoiceResp {
   string products_invoice_name = 1; // 商品发票名称
   string material_invoice_name = 2; // 原材料发票名称
+  string async_record_id = 3; // 异步记录ID
 }
 
 // PosInvoiceItem POS发票商品项目
@@ -155,6 +156,8 @@ message ReturnPosInvoiceResp {
 message CancelPosInvoiceReq {
   string products_invoice_name = 1;                         // 商品销售发票，必填
   string material_invoice_name = 2;                         // 材料销售发票，必填
+  string order_no = 3; // 订单号，传ttpos的订单号,异步模式下必填
+  string open_pos_entry_name = 4; // POS开帐名称,异步模式下必填
 }
 
 message CancelPosInvoiceResp {
