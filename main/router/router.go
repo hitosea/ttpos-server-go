@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"ttpos-server-go/app/api/v1/admin"
 	"ttpos-server-go/app/api/v1/assistant"
+	"ttpos-server-go/app/api/v1/callboard"
 	"ttpos-server-go/app/api/v1/cashier"
 	"ttpos-server-go/app/api/v1/h5"
 	"ttpos-server-go/app/api/v1/kitchen"
@@ -66,6 +67,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterMiscHandlers(shopGroup, dbm, cache)      // 杂项
 			shop.RegisterPurchaseHandlers(shopGroup, dbm, cache)  // 采购
 			shop.RegisterSupplierHandlers(shopGroup, dbm, cache)  // 供应商
+			shop.RegisterCallBoardHandlers(shopGroup, dbm, cache) // 叫号展示
 			shop.RegisterWarehouseHandlers(shopGroup, dbm, cache) // 仓库管理
 		}
 		// 收银端
@@ -142,5 +144,10 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			member.RegisterMemberCallbackHandlers(memberGroup, dbm, cache)
 		}
 
+		// 叫号展示设备端
+		callBoardGroup := apiV1.Group("/callboard")
+		{
+			callboard.RegisterHandlers(callBoardGroup, dbm, cache)
+		}
 	}
 }
