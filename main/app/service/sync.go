@@ -116,8 +116,11 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 			logger.Logger.Info("同步任务完成", zap.Uint64("companyUuid", companyUuid))
 
 			lastSyncTime := time.Now().Unix()
-			s.dbm.GetDB(companyUuid).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
-			s.dbm.GetDB(0).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
+			// 未报错才记录上次同步完成时间
+			if !isExceptionOccurred {
+				s.dbm.GetDB(companyUuid).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
+				s.dbm.GetDB(0).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
+			}
 
 			// 推送websocket
 			go websocket.PushClient(company.Uuid, websocket.SourceShop, websocket.SourceAll, websocket.SYNC_DATA, map[string]any{
