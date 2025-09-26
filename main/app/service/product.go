@@ -5074,6 +5074,14 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 	if err := productCheckSrv.CheckProductUnique(db, req.UnitUuid); err != nil {
 		return errors.WithMessage(err, "检查商品单位失败")
 	}
+	// 检查商品规格内部编码
+	for _, flavor := range req.Flavors {
+		if flavor.InternalCode != "" {
+			if repository.NewProductRepo(db).CheckProductFlavorInternalCodeExist(flavor.InternalCode, flavor.Uuid) {
+				return errors.New("内部编码已存在")
+			}
+		}
+	}
 	// 商品专用检查
 	flavorListResult := CheckProductFlavorResult{}
 	sauceListResult := CheckProductSauceResult{}
@@ -5293,6 +5301,15 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 	if err := productCheckSrv.CheckProductUnique(db, req.UnitUuid); err != nil {
 		return nil, nil, err
 	}
+	// 检查商品规格内部编码
+	for _, flavor := range req.Flavors {
+		if flavor.InternalCode != "" {
+			if repository.NewProductRepo(db).CheckProductFlavorInternalCodeExist(flavor.InternalCode, flavor.Uuid) {
+				return nil, nil, errors.New("内部编码已存在")
+			}
+		}
+	}
+
 	// 商品专用检查
 	flavorListResult := CheckProductFlavorResult{}
 	sauceListResult := CheckProductSauceResult{}
