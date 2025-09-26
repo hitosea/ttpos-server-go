@@ -356,29 +356,39 @@ func (s *materialSrv) GetMaterialStockDetail(ctx context.Context, req req.Materi
 }
 
 // AddMaterialCategory 创建物品类别
-func (s *materialSrv) AddMaterialCategory(ctx context.Context, req req.MaterialCategoryAddReq) error {
+func (s *materialSrv) AddMaterialCategory(ctx context.Context, request req.MaterialCategoryAddReq) error {
 	dbId := ctx.GetDbId()
 	db := s.dbm.GetDB(dbId)
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		materialCategoryRepo := repository.NewMaterialRepo(tx)
 
+		checkService := NewCheckNameSrv(s.dbm)
+		names := checkService.MakeCheckNameList(ctx, request.LocaleName)
+		for _, name := range names {
+			if !checkService.CheckNameLength(ctx, name.Text, 50) {
+				return errors.New("名称长度不能超过50")
+			}
+		}
 		// 检查物品类别名称是否已存在
-		_, err := materialCategoryRepo.GetMaterialCategoryByName(req.LocaleName.ToJson())
-		if err == nil {
-			return errors.New("物品类别名称已存在")
+		exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
+			Source: constant.CheckNameSourceMaterialCategory,
+			Names:  names,
+		})
+		if exists {
+			return errors.New("名称已存在")
 		}
 
 		// 检查物品类别编码是否已存在
-		if req.Code != "" {
-			if exist := materialCategoryRepo.CheckMaterialCategoryCodeExist(req.Code, 0); exist {
+		if request.Code != "" {
+			if exist := materialCategoryRepo.CheckMaterialCategoryCodeExist(request.Code, 0); exist {
 				return errors.New("物品类别编码已存在")
 			}
 		}
 
 		// 创建多语言名称
 		multiLanguageName := model.MultiLanguageName{}
-		multiLanguageName.InitByLocaleResponse(req.LocaleName)
+		multiLanguageName.InitByLocaleResponse(request.LocaleName)
 		nameId, err := repository.NewMultiLanguageNameRepo(tx).CreateMultiLanguageName(multiLanguageName)
 		if err != nil {
 			return errors.WithMessage(err, "创建多语言名称失败")
@@ -387,12 +397,12 @@ func (s *materialSrv) AddMaterialCategory(ctx context.Context, req req.MaterialC
 		// 创建物品类别
 		materialCategory := model.MaterialCategory{
 			MultiLanguageNameUuid: nameId,
-			Name:                  req.LocaleName.ToJson(),
-			Code:                  req.Code,
+			Name:                  request.LocaleName.ToJson(),
+			Code:                  request.Code,
 		}
 
-		if req.GetUuid() != 0 {
-			materialCategory.Uuid = req.GetUuid()
+		if request.GetUuid() != 0 {
+			materialCategory.Uuid = request.GetUuid()
 		}
 
 		_, err = materialCategoryRepo.CreateMaterialCategory(materialCategory)
@@ -1159,9 +1169,14 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 		}
 	}
 	// 检查物品类别名称是否已存在
-	if exist, err := materialCategoryRepo.GetMaterialCategoryByName(request.LocaleName.ToJson()); err == nil && exist.Uuid != materialCategory.Uuid {
+	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
+		Source: constant.CheckNameSourceMaterialCategory,
+		Names:  names,
+	})
+	if exists {
 		return errors.New("名称已存在")
 	}
+
 	// 检查物品类别编码是否已存在
 	if request.Code != "" {
 		if exist := materialCategoryRepo.CheckMaterialCategoryCodeExist(request.Code, request.Uuid); exist {
