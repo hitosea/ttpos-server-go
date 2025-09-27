@@ -506,6 +506,9 @@ definitions:
     type: object
   business_data_resp.BusinessDataProduct:
     properties:
+      batch_range:
+        description: 批次号
+        type: string
       opening_hours:
         description: 营业时间
         type: string

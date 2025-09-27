@@ -26561,6 +26561,10 @@ const docTemplate = `{
         "business_data_resp.BusinessDataProduct": {
             "type": "object",
             "properties": {
+                "batch_range": {
+                    "description": "批次号",
+                    "type": "string"
+                },
                 "opening_hours": {
                     "description": "营业时间",
                     "type": "string"

@@ -77,6 +77,7 @@ func (s *supplierSrv) GetSupplierList(ctx context.Context, req req.SupplierListR
 			continue
 		}
 		supplierInfo.IsEditable = isEditable(ctx, supplier.HeadquarterUuid)
+		supplierInfo.IsHeadquarter = supplier.ErpCode == constant.ErpHeadquartersSupplierCode
 		supplierList = append(supplierList, supplierInfo)
 	}
 	return resp.SupplierListResp{
@@ -421,7 +422,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 		if supplier.Uuid == 0 {
 			db.Model(&model.Supplier{}).Create(&model.Supplier{
 				Name:            erpSupplier.SupplierName,
-				Code:            erpSupplier.Name,
+				ErpCode:         erpSupplier.Name,
 				Status:          1,
 				HeadquarterUuid: headquarterUuid,
 			})
