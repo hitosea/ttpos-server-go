@@ -23,7 +23,7 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 	printType int, // 打印类型 1-预结账单 2-结账单 11-外送单
 	saleBill *model.SaleBill,
 	saleOrderUuid uint64,
-	FirstExecution int,
+	firstExecution int,
 	payMethodUuid uint64,
 ) (*resp.PrinterData, error) {
 
@@ -87,7 +87,7 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 		DataType:        printType,
 		Data:            printContent,
 		Type:            1,
-		FirstExecution:  FirstExecution,
+		FirstExecution:  firstExecution,
 		Copies:          settingPrinterInfo.Copies,
 	}, "")
 	if err != nil {

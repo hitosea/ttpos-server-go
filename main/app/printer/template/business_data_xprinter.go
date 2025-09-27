@@ -131,6 +131,12 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 		}
 		printer.AppendText(t.base.PrintText(t.base.Translate("实收金额"), "", t.base.GetPriceAndUnit(businessData.ProductCategory.TotalReceivedPrice), width))
 	} else if businessData.Product != nil {
+		// 批次号
+		if businessData.Product.BatchRange != "" {
+			printer.SetAlignment(pkg.AlignLeft)
+			printer.AppendText(t.base.Translate("数量") + "：" + businessData.Product.BatchRange)
+			printer.LineFeed(2)
+		}
 		// 按商品
 		printer.SetPrintModes(true, false, false)
 		printer.AppendText(t.base.PrintText(t.base.Translate("商品名称"), t.base.Translate("销量"), t.base.Translate("小计"), width, 26))

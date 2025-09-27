@@ -22,7 +22,7 @@ import (
 func (p *PrinterRepoImpl) PrintingHandoverOrder(
 	log *model.StaffShiftLog,
 	businessData *business_data_resp.BusinessDataAll,
-	FirstExecution int,
+	firstExecution int,
 	openMoneybox bool,
 	deviceSnId ...string,
 ) (*resp.PrinterData, error) {
@@ -77,7 +77,7 @@ func (p *PrinterRepoImpl) PrintingHandoverOrder(
 		DataType:        constant.PrinterTemplateHandoverSheet,
 		Data:            printContent,
 		Type:            1,
-		FirstExecution:  FirstExecution,
+		FirstExecution:  firstExecution,
 		Copies:          settingPrinterInfo.Copies,
 	}, "")
 	if err != nil {

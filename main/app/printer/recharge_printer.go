@@ -20,7 +20,7 @@ import (
  */
 func (p *PrinterRepoImpl) PrintingRechargeOrder(
 	order model.MemberRechargeOrder,
-	FirstExecution int,
+	firstExecution int,
 ) (*resp.PrinterData, error) {
 	deviceSn := p.ctx.GetDeviceSn()
 
@@ -64,7 +64,7 @@ func (p *PrinterRepoImpl) PrintingRechargeOrder(
 		DataType:        constant.PrinterTemplateRecharge,
 		Data:            printContent,
 		Type:            1,
-		FirstExecution:  FirstExecution,
+		FirstExecution:  firstExecution,
 		Copies:          settingPrinterInfo.Copies,
 	}, "")
 	if err != nil {
