@@ -133,6 +133,7 @@ type SavePosInvoiceReq struct {
 type CancelPosInvoiceReq struct {
 	ProductsInvoiceName string `form:"products_invoice_name" json:"products_invoice_name" binding:"required"` // 商品销售发票
 	MaterialInvoiceName string `form:"material_invoice_name" json:"material_invoice_name" binding:"required"` // 材料销售发票
+	OpenPosEntryName    string `form:"open_pos_entry_name" json:"open_pos_entry_name" binding:"required"`     // 开账名称
 }
 
 type ReturnPosInvoiceReq struct {

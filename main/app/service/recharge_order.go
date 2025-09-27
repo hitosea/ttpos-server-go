@@ -1489,9 +1489,22 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 		company := ctx.GetCompany()
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
+			staff := ctx.GetStaff()
+			shiftLogRepo := repository.NewShiftLogRepo(db)
+			shiftLog, err := shiftLogRepo.GetShiftLog(
+				repository.CommonRepo.WhereByStaffUuid(staff.Uuid),
+				repository.CommonRepo.WhereByShiftNo(staff.DutyNo),
+			)
+			if err != nil {
+				return errors.WithMessage(err)
+			}
+			if shiftLog.IsHandedOver() {
+				return errors.New("当前班次已交班，无法保存发票")
+			}
 			erpSrv := erp.NewIErpSrv(s.dbm)
-			err := erpSrv.CancelPosInvoice(ctx, req.CancelPosInvoiceReq{
+			err = erpSrv.CancelPosInvoice(ctx, req.CancelPosInvoiceReq{
 				ProductsInvoiceName: order.ErpProductsInvoiceName,
+				OpenPosEntryName:    shiftLog.ErpnextOpenPosEntryName,
 			})
 			if err != nil {
 				return errors.WithMessage(err)
