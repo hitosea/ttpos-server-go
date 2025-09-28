@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 
 	"google.golang.org/grpc"
@@ -89,8 +90,12 @@ func (s *erpSrv) GetHeadquarterMaterialList(ctx context.Context, params req.GetH
 	}
 	defer conn.Close()
 
+	// 获取总部的公司设置
+	headquarterShopCompanySetting := repository.NewCompanySettingRepo(s.dbm.GetDB(companySetting.HeadquarterUuid)).Get()
+
 	param := &item.GetItemListReq{
 		ItemGroup:      item.ItemGroup_RawMaterial,
+		Branch:         headquarterShopCompanySetting.ErpnextBranchName,
 		CompanyAbbr:    companySetting.ErpnextHeadquarterAbbr, // 总部
 		SubCompanyAbbr: companySetting.ErpnextCompanyAbbr,     // 子店
 	}
