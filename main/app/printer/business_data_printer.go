@@ -22,18 +22,11 @@ func (p *PrinterRepoImpl) PrintingBusinessData(
 	businessData *template.PrintingBusinessData,
 	startTime int64,
 	endTime int64,
-	deviceSnId ...string,
+	firstExecution int,
 ) (*resp.PrinterData, error) {
-	var deviceSn string
-	// 设备sn
-	if len(deviceSnId) > 0 {
-		deviceSn = deviceSnId[0]
-	} else {
-		deviceSn = p.ctx.GetDeviceSn()
-	}
 
 	// 获取打印设置
-	settingPrinterInfo, err := p.setting.GetPrinterInfo(p.ctx, p.printerSetting, deviceSn)
+	settingPrinterInfo, err := p.setting.GetPrinterInfo(p.ctx, p.printerSetting, p.ctx.GetDeviceSn())
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取打印设置失败")
 	}
@@ -75,7 +68,7 @@ func (p *PrinterRepoImpl) PrintingBusinessData(
 		DataType:        constant.PrinterTemplateBusiness,
 		Data:            printContent,
 		Type:            1,
-		FirstExecution:  1,
+		FirstExecution:  firstExecution,
 		Copies:          settingPrinterInfo.Copies,
 	}, "")
 	if err != nil {

@@ -128,6 +128,16 @@ func (*sAsyncSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosIn
 	//设置siteCode
 	siteCode := service.Rpc().GetSiteCode(ctx)
 
+	//检查是否已存在
+	count, err := dao.ReceivePosInvoice.Ctx(ctx).Count(dao.ReceivePosInvoice.Columns().OrderNo, req.OrderNo)
+	if err != nil {
+		g.Log().Errorf(ctx, "保存发票失败，查询记录失败: %v", err)
+		return nil, gerror.Wrapf(err, "保存发票失败，查询记录失败: %v", err)
+	}
+	if count > 0 {
+		return nil, gerror.New("订单发票已存在,请勿重复下单")
+	}
+
 	//暂存请求信息
 	recordId, err := dao.ReceivePosInvoice.Ctx(ctx).InsertAndGetId(&entity.ReceivePosInvoice{
 		OrderNo:          req.OrderNo,

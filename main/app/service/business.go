@@ -82,6 +82,8 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 	// 设置语言
 	ctx.SetLanguage(printerSetting.DefaultLanguage)
 
+	var printerData *resp.PrinterData
+
 	// Initialize the pointer to avoid nil dereference
 	reqPrinterData := &template.PrintingBusinessData{}
 	// 获取参数
@@ -249,31 +251,73 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 	}
 
 	if printerReq.StatisticsType == 3 {
-		reqPrinterData.Product = &business_data_resp.BusinessDataProduct{
-			Products: func() []business_data_resp.Product {
-				productList := s.statisticsSrv.CountProduct(ctx, CountReq{
-					QueryStartTime: int64(printerParam.QueryStartTime),
-					QueryEndTime:   int64(printerParam.QueryEndTime),
-					CategoryType:   printerParam.CategoryType,
-				})
-				list := make([]business_data_resp.Product, 0, len(productList))
-				for _, product := range productList {
-					list = append(list, business_data_resp.Product{
-						Name:     product.ProductName,
-						SalesNum: product.SaleNum,
-						Price:    product.SalePrice,
-						Subtotal: product.SaleAmount,
-					})
-				}
-				return list
-			}(),
+		productList := s.statisticsSrv.CountProduct(ctx, CountReq{
+			QueryStartTime: int64(printerParam.QueryStartTime),
+			QueryEndTime:   int64(printerParam.QueryEndTime),
+			CategoryType:   printerParam.CategoryType,
+		})
+		// 将产品列表分成每100条一组，每组记录批次号
+		const batchSize = 100
+		type ProductBatch struct {
+			BatchRange string                       `json:"batch_range"` // 批次范围 (如: "1-100", "101-200")
+			Products   []business_data_resp.Product `json:"products"`    // 该批次的商品列表
 		}
-	}
-
-	// 打印
-	printerData, err := printer.NewPrinterRepo(ctx).PrintingBusinessData(reqPrinterData, int64(printerParam.QueryStartTime), int64(printerParam.QueryEndTime))
-	if err != nil {
-		return nil, errors.WithMessage(err)
+		var batches []ProductBatch
+		for i := 0; i < len(productList); i += batchSize {
+			end := i + batchSize
+			if end > len(productList) {
+				end = len(productList)
+			}
+			// 生成批次范围（从1开始计数）
+			batchStart := i + 1
+			batchEnd := end
+			batchRange := fmt.Sprintf("%d-%d", batchStart, batchEnd)
+			// 处理当前批次的产品数据
+			batchProducts := make([]business_data_resp.Product, 0, end-i)
+			for _, product := range productList[i:end] {
+				batchProducts = append(batchProducts, business_data_resp.Product{
+					Name:     product.ProductName,
+					SalesNum: product.SaleNum,
+					Price:    product.SalePrice,
+					Subtotal: product.SaleAmount,
+				})
+			}
+			// 添加到批次列表
+			batches = append(batches, ProductBatch{
+				BatchRange: batchRange,
+				Products:   batchProducts,
+			})
+		}
+		for i, v := range batches {
+			reqPrinterData.Product = &business_data_resp.BusinessDataProduct{
+				Products:   v.Products,
+				BatchRange: utils.IfString(len(batches) > 1, v.BatchRange, ""),
+			}
+			// 打印
+			printerContent, err := printer.NewPrinterRepo(ctx).PrintingBusinessData(
+				reqPrinterData,
+				int64(printerParam.QueryStartTime),
+				int64(printerParam.QueryEndTime),
+				utils.IfInt(i == 0, 1, 0),
+			)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
+			if i == 0 {
+				printerData = printerContent
+			}
+		}
+	} else {
+		// 打印
+		printerData, err = printer.NewPrinterRepo(ctx).PrintingBusinessData(
+			reqPrinterData,
+			int64(printerParam.QueryStartTime),
+			int64(printerParam.QueryEndTime),
+			1,
+		)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
 	}
 
 	return printerData, nil

@@ -136,6 +136,14 @@ func (t *businessDataSunmiTemplate) GetPrintContent(
 		printer.PrintInColumns(t.base.Translate("实收金额"), t.base.GetPriceAndUnit(businessData.ProductCategory.TotalReceivedPrice))
 		printer.LineFeed(1)
 	} else if businessData.Product != nil {
+		// 批次号
+		if businessData.Product.BatchRange != "" {
+			printer.SetAlignment(pkg.AlignLeft)
+			printer.AppendText(t.base.Translate("数量") + "：" + businessData.Product.BatchRange)
+			printer.SetLineSpacing(utils.IfInt(isOneself, 25, 40))
+			printer.LineFeed(1)
+			printer.SetLineSpacing(45)
+		}
 		// 按商品
 		printer.SetupColumns(
 			[]int{300, pkg.AlignLeft, 0},

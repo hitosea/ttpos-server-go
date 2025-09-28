@@ -142,6 +142,7 @@ type BusinessDataProductCategory struct {
 type BusinessDataProduct struct {
 	Products     []Product `json:"products"`      // 商品列表
 	OpeningHours string    `json:"opening_hours"` // 营业时间
+	BatchRange   string    `json:"batch_range"`   // 批次号
 }
 
 // 营业数据 - 按区域

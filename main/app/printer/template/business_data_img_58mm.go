@@ -132,6 +132,12 @@ func (t *businessDataImgTemplate58mm) GetPrintContent58mm(
 		)
 		img.SetTextLineHeight(50)
 	} else if businessData.Product != nil {
+		// 批次号
+		if businessData.Product.BatchRange != "" {
+			img.SetAlignment(pkg.AlignLeft)
+			img.AppendText(t.base.Translate("数量") + "：" + businessData.Product.BatchRange)
+			img.LineFeed(1, 70)
+		}
 		// 按商品
 		img.SetTextLineHeight(50)
 		img.PrintInColumns(
