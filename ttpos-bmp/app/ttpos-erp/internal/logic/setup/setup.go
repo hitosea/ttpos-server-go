@@ -187,7 +187,7 @@ func (s *sSetup) CreateDefaultPosProfile(ctx context.Context, req *setup.CreateD
 		Payments:           g.ArrayStr{"Cash", "Balance", "Free Meal"},
 		Currency:           "THB", // 泰铢
 		WriteOffAccount:    "Sales - " + req.CompanyAbbr,
-		WriteOffLimit:      1.00,
+		WriteOffLimit:      100000.00, //销账约束
 		WriteOffCostCenter: "Main - " + req.CompanyAbbr,
 	}
 	if len(req.Cashiers) > 0 {
