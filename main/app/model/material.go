@@ -46,6 +46,14 @@ func (model *Material) SetNil() {
 	model.ImageFile = nil
 }
 
+// GetValuation
+func (model *Material) GetValuation() float64 {
+	if model.Valuation != 0 {
+		return model.Valuation
+	}
+	return 1
+}
+
 // 通过uom名获取单位uuid
 func (model *Material) GetUnitUuidByUom(uom string) (uint64, error) {
 	for _, unit := range model.NotBaseUnitList {

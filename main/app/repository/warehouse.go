@@ -26,6 +26,7 @@ type IWarehouseRepo interface {
 	WhereNameOrCodeLike(name string) DBOption
 	WhereType(warehouseType string) DBOption
 	WhereHeadquarterUuid(headquarterUuid uint64) DBOption
+	WhereIsHeadquarter(isHeadquarter bool) DBOption
 	WhereStatus(status int) DBOption
 	OrderByUpdateTime(desc bool) DBOption
 	UpdateIsDefault(uuid uint64) error
@@ -185,6 +186,16 @@ func (r *WarehouseRepoImpl) WhereType(warehouseType string) DBOption {
 func (r *WarehouseRepoImpl) WhereStatus(status int) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("status = ?", status)
+	}
+}
+
+// WhereIsHeadquarter 是否总部条件
+func (r *WarehouseRepoImpl) WhereIsHeadquarter(isHeadquarter bool) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if isHeadquarter {
+			return db.Where("headquarter_uuid != 0")
+		}
+		return db.Where("headquarter_uuid = 0")
 	}
 }
 

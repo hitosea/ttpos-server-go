@@ -15,12 +15,10 @@ import (
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
-	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/jinzhu/copier"
-	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -75,8 +73,14 @@ func (s *warehouseSrv) GetWarehouseList(ctx context.Context, req req.WarehouseLi
 	if req.Status != nil && slice.Contain([]int{0, 1}, *req.Status) {
 		opts = append(opts, warehouseRepo.WhereStatus(*req.Status))
 	}
+	// 是否总部筛选
+	if req.IsHeadquarter != 0 {
+		opts = append(opts, warehouseRepo.WhereIsHeadquarter(req.IsHeadquarter == 1))
+	} else {
+		opts = append(opts, warehouseRepo.WhereHeadquarterUuid(0))
+	}
 	// 排序
-	opts = append(opts, warehouseRepo.OrderByUpdateTime(true), warehouseRepo.WhereHeadquarterUuid(0))
+	opts = append(opts, warehouseRepo.OrderByUpdateTime(true))
 	// 分页查询
 	warehouses, total, err := warehouseRepo.GetListWithPagination(
 		req.PageReq.PageNo,
@@ -104,54 +108,15 @@ func (s *warehouseSrv) GetWarehouseList(ctx context.Context, req req.WarehouseLi
 
 // GetHeadquarterWarehouseList 获取总部仓库列表
 func (s *warehouseSrv) GetHeadquarterWarehouseList(ctx context.Context) (resp.WarehouseListResp, error) {
-	// 获取总部公司
-	headquarterUuid := ctx.GetCompanySetting().HeadquarterUuid
-	db := s.dbm.GetDB(headquarterUuid)
-	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(headquarterUuid)
-	if err != nil {
-		logger.Logger.Error("获取总部公司数据失败", zap.Error(err))
-		return resp.WarehouseListResp{}, errors.WithMessage(errors.New("获取总部公司数据失败"), err.Error())
-	}
-
-	// 获取总部仓库列表
-	companySetting := company.CompanySetting
-	warehouseList, err := erp.NewIErpSrv(s.dbm).GetWarehouseList(ctx.GetContext(), req.GetErpnextWarehouseListReq{
-		SiteCode:    companySetting.ErpnextSiteCode,
-		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
-		Branch:      companySetting.ErpnextBranchName,
-	})
-	if err != nil {
-		return resp.WarehouseListResp{}, errors.WithMessage(errors.New("获取erp仓库失败"), err.Error())
-	}
-
-	// 转换 warehouseList 为 resp.WarehouseResp 格式
-	warehouseRespList := make([]resp.WarehouseResp, 0, len(warehouseList))
-	for _, warehouse := range warehouseList {
-		warehouseResp := resp.WarehouseResp{
-			LocalName: dto.LocaleResponse{
-				ZH:   warehouse.WarehouseName, // 使用仓库显示名称作为中文名称
-				EN:   warehouse.WarehouseName, // 使用仓库全称作为英文名称
-				TH:   warehouse.WarehouseName, // 使用仓库全称作为泰文名称
-				ZHTW: warehouse.WarehouseName, // 使用仓库全称作为粤文名称
-				JA:   warehouse.WarehouseName, // 使用仓库全称作为日文名称
-				KO:   warehouse.WarehouseName, // 使用仓库全称作为韩文名称
-				MY:   warehouse.WarehouseName, // 使用仓库全称作为缅文名称
-				TR:   warehouse.WarehouseName, // 使用仓库全称作为土耳其文名称
-				SV:   warehouse.WarehouseName, // 使用仓库全称作为瑞典文名称
-			},
-			Code: warehouse.Name, // 使用仓库全称作为编码
-		}
-		warehouseRespList = append(warehouseRespList, warehouseResp)
-	}
-
-	return resp.WarehouseListResp{
-		List: warehouseRespList,
-		Meta: dto.PageResponse{
+	return s.GetWarehouseList(ctx, req.WarehouseListReq{
+		PageReq: dto.PageReq{
 			PageNo:   1,
-			PageSize: len(warehouseRespList),
-			Total:    int64(len(warehouseRespList)),
+			PageSize: 999,
 		},
-	}, nil
+		Type:          "normal",
+		Status:        &[]int{1}[0],
+		IsHeadquarter: 1,
+	})
 }
 
 // GetWarehouse 获取仓库
