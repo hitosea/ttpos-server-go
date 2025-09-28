@@ -2185,7 +2185,7 @@ func (s *materialSrv) ImportMaterial(ctx context.Context, reqs req.MaterialImpor
 		}
 	}
 	if len(errorMessages) > 0 {
-		return errors.New(i18n.Translate(language, "商品导入失败") + ": " + strings.Join(errorMessages, "; "))
+		return errors.New(i18n.Translate(language, "物品导入失败") + ": " + strings.Join(errorMessages, "; "))
 	}
 
 	return nil
@@ -2243,7 +2243,7 @@ func (s *materialSrv) SyncHeadquarterMaterial(ctx context.Context) error {
 				})
 			}
 			existingMaterial, err := repository.NewMaterialRepo(tx).GetMaterialByErpCode(itemInfo.ItemCode)
-			if err != nil {
+			if err != nil && !strings.Contains(err.Error(), "record not found") {
 				return errors.WithMessage(err, "获取物品详情失败")
 			}
 			if existingMaterial != nil { // 如果物品已存在
