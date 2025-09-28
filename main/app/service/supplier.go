@@ -377,7 +377,10 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 		return errors.WithMessage(errors.New("同步供应商失败"), err.Error())
 	}
 
+	// 供应商 erp_code 和商家总部 uuid 映射
 	supplierHeadquarterMap := make(map[string]uint64)
+	// 总部供应商 ttpos erp_code 和 model.Supplier 的映射
+	headquarterSupplierMap := make(map[string]model.Supplier)
 	// 如果是子店，获取总部允许子店看到的
 	if companySetting.IsSubShop() {
 		var headquarter model.CompanySetting
@@ -399,6 +402,14 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 			supplierHeadquarterMap[supplier.Name] = headquarter.Uuid
 		}
 		supplierList = append(supplierList, headquarterSupplierList...)
+		var headquarterSuppliers []model.Supplier
+		s.dbm.GetDB(headquarter.Uuid).Model(&model.Supplier{}).Scopes(repository.NotDeleted).Find(&headquarterSuppliers)
+		for _, supplier := range headquarterSuppliers {
+			if supplier.ErpCode == "" {
+				continue
+			}
+			headquarterSupplierMap[supplier.ErpCode] = supplier
+		}
 	}
 
 	var suppliers []model.Supplier
@@ -423,7 +434,13 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 		if erpSupplier.Name == constant.ErpHeadquartersSupplierCode {
 			headquarterCode = "SP001"
 		} else {
-			headquarterCode = supplier.Code
+			headquarterSupplier, _ := headquarterSupplierMap[erpSupplier.Name]
+			// 如果是总部供应商，获取ttpos总部供应商编码
+			if headquarterSupplier.Uuid != 0 {
+				headquarterCode = headquarterSupplier.Code
+			} else {
+				headquarterCode = supplier.Code
+			}
 		}
 		// 默认为启用
 		status := 1
