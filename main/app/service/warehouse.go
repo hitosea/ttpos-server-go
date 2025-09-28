@@ -168,11 +168,6 @@ func (s *warehouseSrv) GetWarehouse(ctx context.Context, req req.WarehouseReq) (
 // CreateWarehouse 创建仓库
 func (s *warehouseSrv) CreateWarehouse(ctx context.Context, addReq req.CreateWarehouseReq) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
-	var syncEver int64
-	db.Model(&model.Warehouse{}).Count(&syncEver)
-	if syncEver == 0 {
-		return errors.New("仓库未同步")
-	}
 	warehouseRepo := repository.NewWarehouseRepo(db)
 	// 检查仓库编码是否已存在
 	exists, err := warehouseRepo.IsCodeExists(addReq.Code, 0)
@@ -779,12 +774,13 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 					SV:   erpWarehouse.AliasName,
 				}
 			}
+			warehouse := warehouseMap[erpWarehouse.Name]
 			var status int
 			if !erpWarehouse.Disabled {
 				status = 1
 			}
 			var code string
-			var isDefault int
+			isDefault := warehouse.IsDefault
 			if erpWarehouse.CompanyAbbr == companySetting.ErpnextCompanyAbbr {
 				if strings.Contains(erpWarehouse.Name, constant.NormalWarehouseCodeContains) {
 					code = constant.NormalWarehouseCode
@@ -802,7 +798,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 			} else if erpWarehouse.WarehouseType == constant.ErpWarehouseTypeTransit {
 				warehouseType = constant.WarehouseTypeTransit
 			}
-			warehouse := warehouseMap[erpWarehouse.Name]
+
 			if warehouse.Uuid > 0 { // 如果存在，则更新
 				tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", warehouse.MultiLanguageNameUuid).Updates(map[string]any{
 					"zh_name":    localeName.ZH,
