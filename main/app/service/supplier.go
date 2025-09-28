@@ -317,7 +317,7 @@ func (s *supplierSrv) GetSupplierSelect(ctx context.Context, req req.SupplierSel
 	}
 
 	// 转换响应格式
-	var supplierList []*resp.SupplierSimpleInfo
+	supplierList := make([]*resp.SupplierSimpleInfo, 0)
 	for _, supplier := range suppliers {
 		// 外部采购 去掉总部
 		if req.PurchaseType == 1 {
