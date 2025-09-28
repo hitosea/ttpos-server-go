@@ -1,0 +1,9 @@
+{
+  "doctype": "DocType",
+  "label": "POS Opening Entry",
+  "fieldtype": "Link",
+  "fieldname": "custom_pos_opening_entry",
+  "options": "POS Opening Entry",
+  "insert_after": "pos_profile",
+  "dt": "POS Invoice"
+}

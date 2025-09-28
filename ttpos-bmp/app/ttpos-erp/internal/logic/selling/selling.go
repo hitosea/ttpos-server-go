@@ -505,10 +505,11 @@ func (s *sSelling) ClosePosEntry(ctx context.Context, req *selling.ClosePosEntry
 	// 获取期间发票
 	invoices, err := s.GetPosInvoiceList(ctx, &dtoSelling.GetPosInvoiceListReq{
 		PosProfile: openEntry.PosProfile,
-		StartDate:  openEntry.PeriodStartDate,
-		EndDate:    service.Setup().MustGetLocalDateTime(ctx, gtime.New(req.PeriodEndDate)).Format("Y-m-d H:i:s"),
-		User:       openEntry.User,
-		Docstatus:  erp.DocstatusSubmitted,
+		//StartDate:  openEntry.PeriodStartDate,
+		//EndDate:    service.Setup().MustGetLocalDateTime(ctx, gtime.New(req.PeriodEndDate)).Format("Y-m-d H:i:s"),
+		User:                  openEntry.User,
+		Docstatus:             erp.DocstatusSubmitted,
+		CustomPosOpeningEntry: req.PosOpenEntryName,
 	})
 	if err != nil {
 		return nil, gerror.Wrapf(err, "获取期间发票失败")
@@ -642,16 +643,19 @@ func (s *sSelling) IsProfileOpening(ctx context.Context, posProfile, user string
 //   - []dtoSelling.SimplePosInvoice: POS发票列表
 //   - error: 错误信息
 func (s *sSelling) GetPosInvoiceList(ctx context.Context, req *dtoSelling.GetPosInvoiceListReq) ([]dtoSelling.SimplePosInvoice, error) {
+	filters := make([][]string, 0)
+	filters = append(filters, []string{"pos_profile", "=", req.PosProfile})
+	filters = append(filters, []string{"owner", "=", req.User})
+	filters = append(filters, []string{"docstatus", "=", req.Docstatus})
+	if req.CustomPosOpeningEntry != "" {
+		filters = append(filters, []string{"custom_pos_opening_entry", "=", req.CustomPosOpeningEntry})
+	}
 	resp, err := service.Document().List(ctx, &erp.ErpReq{
 		DocType: erp.DocTypePosInvoice,
 	}, &erp.RequestParams{
-		Fields: g.ArrayStr{"name", "posting_date", "customer", "grand_total", "is_return", "return_against"},
-		Filters: [][]string{{"pos_profile", "=", req.PosProfile},
-			{"owner", "=", req.User},
-			{"creation", ">=", req.StartDate}, {"creation", "<=", req.EndDate},
-			{"docstatus", "=", req.Docstatus}},
-		LimitStart: 0,
-		Limit:      consts.Limit9999,
+		Fields:  g.ArrayStr{"name", "posting_date", "customer", "grand_total", "is_return", "return_against"},
+		Filters: filters,
+		Limit:   consts.Limit9999,
 	})
 	if err != nil {
 		return nil, gerror.Wrapf(err, "查询POS发票列表失败")
@@ -784,15 +788,16 @@ func (s *sSelling) buildPosInvoice(ctx context.Context, req *selling.SavePosInvo
 	//postingDatetime := service.Setup().MustGetLocalDateTime(ctx, gtime.New(req.PostingDatetime))
 
 	posInvoice := &erp.POSInvoice{
-		PosProfile:        openingEntry.PosProfile,
-		Company:           openingEntry.Company,
-		PostingDate:       postingDatetime.Format(DateFormat),
-		PostingTime:       postingDatetime.Format(TimeFormat),
-		Currency:          req.Currency,
-		PriceListCurrency: req.PriceListCurrency,
-		UpdateStock:       req.UpdateStock, // 更新库存
-		CustomerOrder:     req.OrderNo,
-		SetPostingTime:    1,
+		PosProfile:            openingEntry.PosProfile,
+		Company:               openingEntry.Company,
+		PostingDate:           postingDatetime.Format(DateFormat),
+		PostingTime:           postingDatetime.Format(TimeFormat),
+		Currency:              req.Currency,
+		PriceListCurrency:     req.PriceListCurrency,
+		UpdateStock:           req.UpdateStock, // 更新库存
+		CustomerOrder:         req.OrderNo,
+		SetPostingTime:        1,
+		CustomPosOpeningEntry: req.OpenPosEntryName,
 	}
 
 	// 设置客户信息
@@ -983,6 +988,8 @@ func (s *sSelling) ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosI
 		Customer:           saleInvoice.Customer,
 		WriteOffAccount:    saleInvoice.WriteOffAccount,
 		WriteOffCostCenter: saleInvoice.WriteOffCostCenter,
+
+		CustomPosOpeningEntry: req.OpenPosEntryName,
 	}
 
 	//totalTaxAndCharges := 0.0
