@@ -741,17 +741,21 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 			if purchaseOrder.IsHeadquarterPurchase() {
 				stockItems := make([]*buying.PurchaseOrderItemInput, 0)
 				for _, item := range purchaseOrder.Items {
-					materialUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(item.UnitUuid)
-					if err != nil {
-						return errors.WithMessage(err, "查询物品单位失败")
-					}
-					if materialUnit.Unit == nil {
-						return errors.New("查询物品原始单位失败")
+					erpnextUom := item.ErpnextUom
+					if erpnextUom == "" {
+						materialUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(item.UnitUuid)
+						if err != nil {
+							return errors.WithMessage(err, "查询物品单位失败")
+						}
+						if materialUnit.Unit == nil {
+							return errors.New("查询物品原始单位失败")
+						}
+						erpnextUom = materialUnit.Unit.ErpnextUom
 					}
 					stockItems = append(stockItems, &buying.PurchaseOrderItemInput{
 						ItemCode: item.MaterialCode,
 						Qty:      item.Num,
-						Uom:      materialUnit.Unit.ErpnextUom,
+						Uom:      erpnextUom,
 					})
 				}
 				// 将时间戳转换为 Y-m-d 格式
@@ -775,18 +779,22 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 			} else {
 				stockItems := make([]*stock.MaterialRequestItem, 0)
 				for _, item := range purchaseOrder.Items {
-					materialUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(item.UnitUuid)
-					if err != nil {
-						return errors.WithMessage(err, "查询物品单位失败")
-					}
-					if materialUnit.Unit == nil {
-						return errors.New("查询物品原始单位失败")
+					erpnextUom := item.ErpnextUom
+					if erpnextUom == "" {
+						materialUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(item.UnitUuid)
+						if err != nil {
+							return errors.WithMessage(err, "查询物品单位失败")
+						}
+						if materialUnit.Unit == nil {
+							return errors.New("查询物品原始单位失败")
+						}
+						erpnextUom = materialUnit.Unit.ErpnextUom
 					}
 					stockItems = append(stockItems, &stock.MaterialRequestItem{
 						ItemCode:     item.MaterialCode,
 						Qty:          item.Num,
 						ScheduleDate: purchaseOrder.ExpectArrivalTime,
-						Uom:          materialUnit.Unit.ErpnextUom,
+						Uom:          erpnextUom,
 					})
 				}
 				defaultWarehouse, err := repository.NewWarehouseRepo(db).GetDefaultWarehouse()
