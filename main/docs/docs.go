@@ -31018,6 +31018,10 @@ const docTemplate = `{
                     "description": "期初库存",
                     "type": "number"
                 },
+                "purchase_uom": {
+                    "description": "采购单位, 英文",
+                    "type": "string"
+                },
                 "stock_uom": {
                     "description": "基准库存单位, 英文",
                     "type": "string"
