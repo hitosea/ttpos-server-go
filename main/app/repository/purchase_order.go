@@ -42,6 +42,7 @@ type IPurchaseOrderRepo interface {
 	WhereWarehouseErpCode(warehouseErpCode string) DBOption
 	WhereCompanyUuid(companyUuid uint64) DBOption
 	WithItems() DBOption
+	WithWarehouse() DBOption
 	WithLogs() DBOption
 	WithReceipts() DBOption
 	OrderByCreateTime(desc bool) DBOption
@@ -290,6 +291,15 @@ func (r *PurchaseOrderRepoImpl) WhereReceiveTimeRange(start, end int) DBOption {
 func (r *PurchaseOrderRepoImpl) WithItems() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("Items", func(db *gorm.DB) *gorm.DB {
+			return db.Order("create_time ASC")
+		})
+	}
+}
+
+// WithWarehouse 预加载仓库
+func (r *PurchaseOrderRepoImpl) WithWarehouse() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Warehouse", func(db *gorm.DB) *gorm.DB {
 			return db.Order("create_time ASC")
 		})
 	}
