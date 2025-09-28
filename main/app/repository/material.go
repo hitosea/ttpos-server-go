@@ -525,7 +525,7 @@ func (r *MaterialRepoImpl) GetMaterialCategoryByCode(code string) (*model.Materi
 func (r *MaterialRepoImpl) GetMaterialCategoryByEnglishName(englishName string) (*model.MaterialCategory, bool, error) {
 	var materialCategory model.MaterialCategory
 	// materialCategory表join multi_language_name表，where multi_language_name.en_name = englishName
-	if err := r.db.Model(&model.MaterialCategory{}).Joins("MultiLanguageName").Where("multi_language_name.en_name = ?", englishName).Where("material_category.delete_time = ?", 0).First(&materialCategory).Error; err != nil {
+	if err := r.db.Model(&model.MaterialCategory{}).Joins("MultiLanguageName").Where("MultiLanguageName.en_name = ?", englishName).Where("ttpos_material_category.delete_time = ?", 0).First(&materialCategory).Error; err != nil {
 		if strings.Contains(err.Error(), "record not found") {
 			return nil, false, nil
 		}

@@ -673,7 +673,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 				return nil
 			})
 			if err != nil {
-				return errors.WithMessage(err, "整单复制到总部采购申请失败")
+				return errors.WithMessage(err)
 			}
 		}
 
