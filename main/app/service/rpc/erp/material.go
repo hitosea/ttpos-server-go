@@ -61,6 +61,7 @@ func (s *erpSrv) AddMaterial(ctx context.Context, params req.MaterialAddErpReq) 
 		InternalCode:       params.InternalCode,
 		Classification:     params.Classification,
 		ClassificationCode: params.ClassificationCode,
+		PurchaseUom:        params.PurchaseUom,
 	}
 	result, err := client.SaveItem(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), param)
 	if err != nil {
