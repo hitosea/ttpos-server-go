@@ -479,7 +479,7 @@ func (s *sSetup) initDocumentsFromDir(ctx context.Context, config DocumentInitCo
 			// 调用service.Document.Create创建文档
 			if _, err := service.Document().Create(ctx, config.DocType, docData); err != nil {
 				g.Log().Error(ctx, fmt.Sprintf("创建%s失败", config.ItemName), err, g.Map{"file": path, "data": docData})
-				return gerror.Wrapf(err, "创建%s失败: %s", config.ItemName, path)
+				//return gerror.Wrapf(err, "创建%s失败: %s", config.ItemName, path)
 			}
 
 			g.Log().Infof(ctx, "%s创建成功: %s", config.ItemName, path)
@@ -537,7 +537,7 @@ func (s *sSetup) InitErpDocTypeWithDirname(ctx context.Context, dirBase string) 
 		// 处理单个目录，记录错误但不中断其他目录的处理
 		if err := s.initDocumentsFromDir(ctx, config); err != nil {
 			g.Log().Errorf(ctx, "初始化%s失败: %v", config.ItemName, err)
-			return gerror.Wrapf(err, "初始化%s失败", config.ItemName)
+			//return gerror.Wrapf(err, "初始化%s失败", config.ItemName)
 		}
 	}
 
