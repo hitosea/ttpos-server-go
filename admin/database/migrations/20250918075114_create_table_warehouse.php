@@ -65,7 +65,10 @@ class CreateTableWarehouse extends Migrator
             $table->addColumn('status', 'integer', ['null' => false, 'default' => 0, 'comment' => '状态：0-禁用；1-启用', 'after' => 'code']);
         }
         if ($table->hasColumn('name')) {
-            $table->changeColumn('name', 'string', ['limit' => 255, 'null' => false, 'default' => '', 'comment' => '供应商名称', 'after' => 'uuid']);
+            $table->changeColumn('name', 'text', ['comment' => '供应商名称', 'after' => 'uuid']);
+        }
+        if (!$table->hasColumn('multi_language_name_uuid')) {
+            $table->addColumn('multi_language_name_uuid', 'biginteger', ['default' => 0, 'comment' => '多语言名称UUID']);
         }
         if ($table->hasColumn('contact_name')) {
             $table->changeColumn('contact_name', 'string', ['limit' => 255, 'null' => false, 'default' => '', 'comment' => '联系人姓名']);
