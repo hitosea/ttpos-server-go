@@ -167,7 +167,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 	// 转换为响应格式
 	var materialList []material_resp.Material
 	for _, material := range materials {
-		if material.InitStock == 0 {
+		if material.InitStock == 0 && material.HeadquarterUuid == 0 {
 			continue // 过滤掉非移动管理端添加的物品
 		}
 		unitList := []material_resp.MaterialUnit{}
