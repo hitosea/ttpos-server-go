@@ -77,6 +77,7 @@ func NewPurchaseOrderRepo(db *gorm.DB) IPurchaseOrderRepo {
 
 // Create 创建采购订单
 func (r *PurchaseOrderRepoImpl) Create(purchaseOrder *model.PurchaseOrder) error {
+	purchaseOrder.SetNil()
 	return r.db.Create(purchaseOrder).Error
 }
 

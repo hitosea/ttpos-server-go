@@ -683,8 +683,8 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 			return errors.WithMessage(err, "记录操作日志失败")
 		}
 
-		// 总部采购 驳回时，更新子店采购申请状态
-		if purchaseOrder.IsHeadquarterPurchase() && purchaseOrder.Status == constant.PurchaseOrderStatusRejected {
+		// 内部采购 - 总部驳回时，更新子店采购申请状态
+		if companySetting.IsHeadquarter() && purchaseOrder.IsHeadquarterPurchase() && purchaseOrder.Status == constant.PurchaseOrderStatusRejected {
 			// 获取子店数据库
 			subDb := s.dbm.GetDB(purchaseOrder.CompanyUuid)
 			if subDb == nil {
@@ -708,7 +708,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 		}
 
 		// 内部采购 子店审核通过 不调用erp接口
-		if purchaseOrder.IsHeadquarterPurchase() && purchaseOrder.Status == constant.PurchaseOrderStatusHeadquarterPending {
+		if companySetting.IsSubShop() && purchaseOrder.IsHeadquarterPurchase() && purchaseOrder.Status == constant.PurchaseOrderStatusHeadquarterPending {
 			//  ------ 整单复制到总部采购申请 ---------
 			// 获取总部数据库
 			db = s.dbm.GetDB(companySetting.HeadquarterUuid)
@@ -718,17 +718,24 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 			err = db.Transaction(func(tx *gorm.DB) error {
 				// 整单复制
 				subUuid := purchaseOrder.Uuid
-				headquarterPurchaseOrder := purchaseOrder
+				headquarterPurchaseOrder := model.PurchaseOrder{}
+				err = copier.Copy(&headquarterPurchaseOrder, purchaseOrder)
+				if err != nil {
+					return errors.WithMessage(err, "复制总部物品明细失败")
+				}
+				// 只重置主键字段，确保GORM执行INSERT而不是UPDATE
+				headquarterPurchaseOrder.BaseModel.ID = 0 // 重置主键，告诉GORM这是新记录
 				headquarterPurchaseOrder.BaseModel.Uuid = func() uint64 {
 					uuid, _ := utils.GetID()
 					return uuid
 				}()
+				// 保留时间戳字段的原始值
 				headquarterPurchaseOrder.CompanyUuid = ctx.GetCompanyUuid()
 				headquarterPurchaseOrder.CompanyName = ctx.GetCompany().Name
 				headquarterPurchaseOrder.SubUuid = subUuid
 				headquarterPurchaseOrder.Status = constant.PurchaseOrderStatusPending
 				headquarterPurchaseOrder.HeadquarterStatus = constant.HeadquarterStatusPending
-				err = repository.NewPurchaseOrderRepo(tx).Create(headquarterPurchaseOrder)
+				err = repository.NewPurchaseOrderRepo(tx).Create(&headquarterPurchaseOrder)
 				if err != nil {
 					return errors.WithMessage(err, "创建总部采购申请失败")
 				}
@@ -736,16 +743,22 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 				// 创建总部采购申请明细
 				var headquarterItems []model.PurchaseOrderItem
 				for _, item := range purchaseOrder.Items {
+					headquarterItem := model.PurchaseOrderItem{}
+					err = copier.Copy(&headquarterItem, item)
+					if err != nil {
+						return errors.WithMessage(err, "复制总部物品明细失败")
+					}
 					material, err := repository.NewMaterialRepo(tx).GetMaterialByErpCode(item.MaterialCode)
 					if err != nil {
 						return errors.WithMessage(err, "查询总部物品明细失败")
 					}
-
-					headquarterItem := item
-					headquarterItem.BaseModel.ID = 0
-					headquarterItem.BaseModel.Uuid = 0
+					// 只重置主键字段，确保GORM执行INSERT而不是UPDATE
+					headquarterItem.BaseModel.ID = 0   // 重置主键，告诉GORM这是新记录
+					headquarterItem.BaseModel.Uuid = 0 // 重置Uuid，会在BeforeCreate中自动生成新的
+					// 保留时间戳字段的原始值
 					headquarterItem.PurchaseOrderUuid = headquarterPurchaseOrder.Uuid
 					headquarterItem.MaterialUuid = material.Uuid
+					headquarterItem.Material = nil
 					headquarterItems = append(headquarterItems, headquarterItem)
 				}
 				err = repository.NewPurchaseOrderItemRepo(tx).CreateBatch(headquarterItems)

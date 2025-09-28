@@ -47,6 +47,14 @@ func (PurchaseOrder) TableName() string {
 	return "ttpos_purchase_order"
 }
 
+// SetNil 设置为空
+func (po *PurchaseOrder) SetNil() {
+	po.Items = nil
+	po.Logs = nil
+	po.Receipts = nil
+	po.Warehouse = nil
+}
+
 // 是否是总部采购
 func (po *PurchaseOrder) IsHeadquarterPurchase() bool {
 	return po.PurchaseType == 2
@@ -140,6 +148,12 @@ type PurchaseOrderItem struct {
 // TableName 指定表名
 func (PurchaseOrderItem) TableName() string {
 	return "ttpos_purchase_order_item"
+}
+
+// SetNil 设置为空
+func (poi *PurchaseOrderItem) SetNil() {
+	poi.PurchaseOrder = PurchaseOrder{}
+	poi.Material = nil
 }
 
 // GetCompletionRate 获取到货完成率
