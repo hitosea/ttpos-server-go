@@ -1546,8 +1546,25 @@ func (s *purchaseOrderSrv) recordErpStockInLog(ctx context.Context, db *gorm.DB,
 
 			// 查找或创建仓库商品库存记录
 			warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(targetWarehouse.Uuid, item.MaterialUuid)
-			if err != nil && err != gorm.ErrRecordNotFound {
-				return errors.WithMessage(err, "查询仓库商品库存失败")
+			if err != nil {
+				if err == gorm.ErrRecordNotFound {
+					// 没有找到记录时创建新记录
+					newWarehouseItem := &model.WarehouseItem{
+						WarehouseUuid: targetWarehouse.Uuid,
+						MaterialUuid:  item.MaterialUuid,
+						MaterialCode:  item.MaterialCode,
+						Stock:         0,
+						ReservedStock: 0,
+						Valuation:     1,
+					}
+					err = warehouseItemRepo.Create(newWarehouseItem)
+					if err != nil {
+						return errors.WithMessage(err, "创建仓库商品库存记录失败")
+					}
+					warehouseItem = newWarehouseItem
+				} else {
+					return errors.WithMessage(err, "查询仓库商品库存失败")
+				}
 			}
 			err = warehouseItemRepo.AddStock(warehouseItem.Uuid, actualNum)
 			if err != nil {
@@ -1610,8 +1627,25 @@ func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, hea
 
 			// 查找或创建仓库商品库存记录
 			warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(targetWarehouse.Uuid, item.MaterialUuid)
-			if err != nil && err != gorm.ErrRecordNotFound {
-				return errors.WithMessage(err, "查询仓库商品库存失败")
+			if err != nil {
+				if err == gorm.ErrRecordNotFound {
+					// 没有找到记录时创建新记录
+					newWarehouseItem := &model.WarehouseItem{
+						WarehouseUuid: targetWarehouse.Uuid,
+						MaterialUuid:  item.MaterialUuid,
+						MaterialCode:  item.MaterialCode,
+						Stock:         0,
+						ReservedStock: 0,
+						Valuation:     1,
+					}
+					err = warehouseItemRepo.Create(newWarehouseItem)
+					if err != nil {
+						return errors.WithMessage(err, "创建仓库商品库存记录失败")
+					}
+					warehouseItem = newWarehouseItem
+				} else {
+					return errors.WithMessage(err, "查询仓库商品库存失败")
+				}
 			}
 
 			// 减少库存
