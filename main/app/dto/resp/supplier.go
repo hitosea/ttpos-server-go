@@ -4,11 +4,11 @@ import "ttpos-server-go/app/dto"
 
 // SupplierInfo 供应商信息
 type SupplierInfo struct {
-	Uuid          uint64             `json:"uuid"`           // 供应商UUID
-	LocaleName    dto.LocaleResponse `json:"locale_name"`    // 供应商名称多语言
-	Code          string             `json:"code"`           // 供应商编码
-	IsHeadquarter bool               `json:"is_headquarter"` // 是否为总部
-	IsEditable    bool               `json:"is_editable"`    // 是否可编辑
+	Uuid          uint64 `json:"uuid"`           // 供应商UUID
+	Name          string `json:"name"`           // 供应商名称
+	Code          string `json:"code"`           // 供应商编码
+	IsHeadquarter bool   `json:"is_headquarter"` // 是否为总部
+	IsEditable    bool   `json:"is_editable"`    // 是否可编辑
 }
 
 // SupplierListResp 供应商列表响应

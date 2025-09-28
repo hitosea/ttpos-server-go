@@ -739,7 +739,7 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 
 	// 获取采购单位
 	var purchaseUom string
-	purchaseUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(request.PurchaseUnitUuid)
+	purchaseUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(material.PurchaseUnitUuid)
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "获取采购单位失败")
 	}
@@ -971,7 +971,7 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 
 			// 获取采购单位
 			var purchaseUom string
-			purchaseUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(request.PurchaseUnitUuid)
+			purchaseUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(material.PurchaseUnitUuid)
 			if err != nil {
 				return errors.WithMessage(err, "获取采购单位失败")
 			}
