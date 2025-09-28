@@ -90,17 +90,15 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			return db.Where("name LIKE ? OR code LIKE ? OR barcode_value LIKE ?", "%"+req.Keyword+"%", "%"+req.Keyword+"%", "%"+req.Keyword+"%")
 		}))
 	}
+
 	// WarehouseErpCode 根据仓库ERP编码过滤
 	// FIXME: 没有看到产品说按仓库，现在只先按是否同步物品进行
 	if req.WarehouseErpCode != "" {
 		dbOptions = append(dbOptions, commonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
 			return db.Where("headquarter_uuid > ?", 0)
 		}))
-	} else {
-		dbOptions = append(dbOptions, commonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
-			return db.Where("headquarter_uuid = ?", 0)
-		}))
 	}
+
 	if len(req.CategoryUuids) > 0 {
 		dbOptions = append(dbOptions, commonRepo.WhereByCategoryUuids(req.CategoryUuids))
 	}
