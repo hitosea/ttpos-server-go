@@ -22,6 +22,9 @@ message SupplierInfo {
   string represents_company = 3; // 供应商代表公司
   string branch = 4; // 分支
   string company = 5; //所属公司
+  string contact_name = 6; // 联系人姓名
+  string contact_phone = 7; // 联系号码
+  string address = 8 ; // 地址
 }
 
 // 创建供应商请求消息
@@ -103,6 +106,9 @@ message SupplierData {
   bool is_internal_supplier = 10; // 是否内部供应商
   bool disabled = 11; // 是否禁用
 
+  string contact_name = 12; // 联系人姓名
+  string contact_phone = 13; // 联系号码
+  string address = 14 ; // 地址
 }
 
 

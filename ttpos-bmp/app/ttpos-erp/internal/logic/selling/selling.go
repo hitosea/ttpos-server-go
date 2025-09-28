@@ -989,6 +989,7 @@ func (s *sSelling) ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosI
 		WriteOffAccount:    saleInvoice.WriteOffAccount,
 		WriteOffCostCenter: saleInvoice.WriteOffCostCenter,
 
+		//UpdateBilledAmountInSalesOrder: 1,
 		CustomPosOpeningEntry: req.OpenPosEntryName,
 	}
 

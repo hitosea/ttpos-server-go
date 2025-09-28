@@ -118,6 +118,9 @@ type SupplierInfo struct {
 	RepresentsCompany string                 `protobuf:"bytes,3,opt,name=represents_company,json=representsCompany,proto3" json:"represents_company,omitempty" dc:"供应商代表公司"` // 供应商代表公司
 	Branch            string                 `protobuf:"bytes,4,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支"`                                                     // 分支
 	Company           string                 `protobuf:"bytes,5,opt,name=company,proto3" json:"company,omitempty" dc:"所属公司"`                                                 //所属公司
+	ContactName       string                 `protobuf:"bytes,6,opt,name=contact_name,json=contactName,proto3" json:"contact_name,omitempty" dc:"联系人姓名"`                     // 联系人姓名
+	ContactPhone      string                 `protobuf:"bytes,7,opt,name=contact_phone,json=contactPhone,proto3" json:"contact_phone,omitempty" dc:"联系号码"`                   // 联系号码
+	Address           string                 `protobuf:"bytes,8,opt,name=address,proto3" json:"address,omitempty" dc:"地址"`                                                   // 地址
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -183,6 +186,27 @@ func (x *SupplierInfo) GetBranch() string {
 func (x *SupplierInfo) GetCompany() string {
 	if x != nil {
 		return x.Company
+	}
+	return ""
+}
+
+func (x *SupplierInfo) GetContactName() string {
+	if x != nil {
+		return x.ContactName
+	}
+	return ""
+}
+
+func (x *SupplierInfo) GetContactPhone() string {
+	if x != nil {
+		return x.ContactPhone
+	}
+	return ""
+}
+
+func (x *SupplierInfo) GetAddress() string {
+	if x != nil {
+		return x.Address
 	}
 	return ""
 }
@@ -731,9 +755,12 @@ type SupplierData struct {
 	SupplierType      string `protobuf:"bytes,7,opt,name=supplier_type,json=supplierType,proto3" json:"supplier_type,omitempty" dc:"供应商类型，默认 Company, Individual, Partnership"` // 供应商类型，默认 Company, Individual, Partnership
 	RepresentsCompany string `protobuf:"bytes,8,opt,name=represents_company,json=representsCompany,proto3" json:"represents_company,omitempty" dc:"代表公司"`                       // 代表公司
 	// 状态标识
-	IsTransporter      bool `protobuf:"varint,9,opt,name=is_transporter,json=isTransporter,proto3" json:"is_transporter,omitempty" dc:"状态标识是否承运商"`                 // 是否承运商
-	IsInternalSupplier bool `protobuf:"varint,10,opt,name=is_internal_supplier,json=isInternalSupplier,proto3" json:"is_internal_supplier,omitempty" dc:"是否内部供应商"` // 是否内部供应商
-	Disabled           bool `protobuf:"varint,11,opt,name=disabled,proto3" json:"disabled,omitempty" dc:"是否禁用"`                                                    // 是否禁用
+	IsTransporter      bool   `protobuf:"varint,9,opt,name=is_transporter,json=isTransporter,proto3" json:"is_transporter,omitempty" dc:"状态标识是否承运商"`                 // 是否承运商
+	IsInternalSupplier bool   `protobuf:"varint,10,opt,name=is_internal_supplier,json=isInternalSupplier,proto3" json:"is_internal_supplier,omitempty" dc:"是否内部供应商"` // 是否内部供应商
+	Disabled           bool   `protobuf:"varint,11,opt,name=disabled,proto3" json:"disabled,omitempty" dc:"是否禁用"`                                                    // 是否禁用
+	ContactName        string `protobuf:"bytes,12,opt,name=contact_name,json=contactName,proto3" json:"contact_name,omitempty" dc:"联系人姓名"`                           // 联系人姓名
+	ContactPhone       string `protobuf:"bytes,13,opt,name=contact_phone,json=contactPhone,proto3" json:"contact_phone,omitempty" dc:"联系号码"`                         // 联系号码
+	Address            string `protobuf:"bytes,14,opt,name=address,proto3" json:"address,omitempty" dc:"地址"`                                                         // 地址
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -843,6 +870,27 @@ func (x *SupplierData) GetDisabled() bool {
 		return x.Disabled
 	}
 	return false
+}
+
+func (x *SupplierData) GetContactName() string {
+	if x != nil {
+		return x.ContactName
+	}
+	return ""
+}
+
+func (x *SupplierData) GetContactPhone() string {
+	if x != nil {
+		return x.ContactPhone
+	}
+	return ""
+}
+
+func (x *SupplierData) GetAddress() string {
+	if x != nil {
+		return x.Address
+	}
+	return ""
 }
 
 type GetPurchaseOrderReq struct {
@@ -2055,13 +2103,16 @@ const file_buying_buying_proto_rawDesc = "" +
 	"\x12GetSupplierListReq\x12!\n" +
 	"\fcompany_abbr\x18\x01 \x01(\tR\vcompanyAbbr\"P\n" +
 	"\x13GetSupplierListResp\x129\n" +
-	"\rsupplier_list\x18\x01 \x03(\v2\x14.buying.SupplierInfoR\fsupplierList\"\xa8\x01\n" +
+	"\rsupplier_list\x18\x01 \x03(\v2\x14.buying.SupplierInfoR\fsupplierList\"\x8a\x02\n" +
 	"\fSupplierInfo\x12#\n" +
 	"\rsupplier_name\x18\x01 \x01(\tR\fsupplierName\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12-\n" +
 	"\x12represents_company\x18\x03 \x01(\tR\x11representsCompany\x12\x16\n" +
 	"\x06branch\x18\x04 \x01(\tR\x06branch\x12\x18\n" +
-	"\acompany\x18\x05 \x01(\tR\acompany\"E\n" +
+	"\acompany\x18\x05 \x01(\tR\acompany\x12!\n" +
+	"\fcontact_name\x18\x06 \x01(\tR\vcontactName\x12#\n" +
+	"\rcontact_phone\x18\a \x01(\tR\fcontactPhone\x12\x18\n" +
+	"\aaddress\x18\b \x01(\tR\aaddress\"E\n" +
 	"\x11CreateSupplierReq\x120\n" +
 	"\bsupplier\x18\x01 \x01(\v2\x14.buying.SupplierDataR\bsupplier\"F\n" +
 	"\x12CreateSupplierResp\x120\n" +
@@ -2092,7 +2143,7 @@ const file_buying_buying_proto_rawDesc = "" +
 	" \x01(\x05R\bpageSize\x12(\n" +
 	"\x10sub_company_abbr\x18\v \x01(\tR\x0esubCompanyAbbr\"G\n" +
 	"\x11ListSuppliersResp\x122\n" +
-	"\tsuppliers\x18\x01 \x03(\v2\x14.buying.SupplierDataR\tsuppliers\"\xff\x02\n" +
+	"\tsuppliers\x18\x01 \x03(\v2\x14.buying.SupplierDataR\tsuppliers\"\xe1\x03\n" +
 	"\fSupplierData\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12#\n" +
 	"\rsupplier_name\x18\x05 \x01(\tR\fsupplierName\x12!\n" +
@@ -2105,7 +2156,10 @@ const file_buying_buying_proto_rawDesc = "" +
 	"\x0eis_transporter\x18\t \x01(\bR\risTransporter\x120\n" +
 	"\x14is_internal_supplier\x18\n" +
 	" \x01(\bR\x12isInternalSupplier\x12\x1a\n" +
-	"\bdisabled\x18\v \x01(\bR\bdisabled\"E\n" +
+	"\bdisabled\x18\v \x01(\bR\bdisabled\x12!\n" +
+	"\fcontact_name\x18\f \x01(\tR\vcontactName\x12#\n" +
+	"\rcontact_phone\x18\r \x01(\tR\fcontactPhone\x12\x18\n" +
+	"\aaddress\x18\x0e \x01(\tR\aaddress\"E\n" +
 	"\x13GetPurchaseOrderReq\x12.\n" +
 	"\x13purchase_order_name\x18\x01 \x01(\tR\x11purchaseOrderName\"X\n" +
 	"\x14GetPurchaseOrderResp\x12@\n" +

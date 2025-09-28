@@ -232,6 +232,39 @@ func (s *sSupplier) CreateSupplier(ctx context.Context, req *buying.CreateSuppli
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析创建供应商响应失败")
 	}
+	//
+	//links := make([]*crm.DynamicLinkInfo, 0)
+	//links = append(links, &crm.DynamicLinkInfo{
+	//	LinkDoctype: erp.DocTypeSupplier,
+	//	LinkName:    req.Supplier.SupplierName,
+	//})
+	//
+	////如果有联系人、联系地址、联系号码
+	//if req.Supplier.Address != "" {
+	//
+	//	_, err := service.Crm().CreateAddress(ctx, &crm.CreateAddressReq{
+	//		AddressTitle: req.Supplier.ContactName,
+	//		AddressType:  "Current",
+	//		AddressLine1: req.Supplier.Address,
+	//		Country:      req.Supplier.Country,
+	//		City:         req.Supplier.Country, //暂时用这个字段
+	//		Links:        links,
+	//	})
+	//	if err != nil {
+	//		return nil, gerror.Wrapf(err, "创建供应商地址失败")
+	//	}
+	//}
+	//
+	//if req.Supplier.ContactName != "" || req.Supplier.ContactPhone != "" {
+	//	_, err := service.Crm().CreateContact(ctx, &crm.CreateContactReq{
+	//		FirstName: req.Supplier.ContactName,
+	//		Phone:     req.Supplier.ContactPhone,
+	//		Links:     links,
+	//	})
+	//	if err != nil {
+	//		return nil, gerror.Wrapf(err, "创建供应商地址失败")
+	//	}
+	//}
 
 	g.Log().Info(ctx, "供应商创建成功", g.Map{
 		"supplier_name": req.Supplier.SupplierName,
