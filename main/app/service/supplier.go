@@ -11,7 +11,6 @@ import (
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
-	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
 	"gorm.io/gorm"
@@ -25,6 +24,7 @@ type ISupplierSrv interface {
 	DeleteSupplier(ctx context.Context, req req.SupplierDeleteReq) error                                   // 删除供应商
 	GetSupplierSelect(ctx context.Context, req req.SupplierSelectReq) (resp.SupplierSelectResp, error)     // 获取供应商选择器列表
 	GetSupplier(ctx context.Context, req req.SupplierReq) (resp.SupplierResp, error)                       // 获取供应商
+	CheckNameExists(ctx context.Context, req req.CheckNameExistsReq) (resp.CheckNameCodeExistsResp, error) // 检查名称是否存在
 	CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error) // 检查编码是否存在
 
 	SyncSupplier(ctx context.Context) error // 同步供应商
@@ -76,11 +76,6 @@ func (s *supplierSrv) GetSupplierList(ctx context.Context, req req.SupplierListR
 		if err != nil {
 			continue
 		}
-		var localeName dto.LocaleResponse
-		if supplier.MultiLanguageName != nil {
-			localeName = supplier.MultiLanguageName.GetNames()
-		}
-		supplierInfo.LocaleName = localeName
 		supplierInfo.IsEditable = isEditable(ctx, supplier.HeadquarterUuid)
 		supplierInfo.IsHeadquarter = supplier.ErpCode == constant.ErpHeadquartersSupplierCode
 		supplierList = append(supplierList, supplierInfo)
@@ -103,15 +98,10 @@ func (s *supplierSrv) GetSupplier(ctx context.Context, req req.SupplierReq) (res
 	if err != nil {
 		return resp.SupplierResp{}, errors.WithMessage(err, "获取供应商失败")
 	}
-
-	var localeName dto.LocaleResponse
-	if supplier.MultiLanguageName != nil {
-		localeName = supplier.MultiLanguageName.GetNames()
-	}
 	return resp.SupplierResp{
 		SupplierInfo: &resp.SupplierInfo{
 			Uuid:          supplier.Uuid,
-			LocaleName:    localeName,
+			Name:          supplier.Name,
 			Code:          supplier.Code,
 			IsHeadquarter: supplier.ErpCode == constant.ErpHeadquartersSupplierCode,
 			IsEditable:    isEditable(ctx, supplier.HeadquarterUuid),
@@ -132,19 +122,13 @@ func (s *supplierSrv) hasRelatedPurchaseOrder(_ context.Context, supplier *model
 func (s *supplierSrv) CreateSupplier(ctx context.Context, createSupplierReq req.SupplierCreateReq) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	supplierRepo := repository.NewSupplierRepo(db)
-	checkService := NewCheckNameSrv(s.dbm)
-	names := checkService.MakeCheckNameList(ctx, createSupplierReq.LocaleName)
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Source: constant.CheckNameSourceUnit,
-		Names:  names,
-	})
+	// 检查供应商名称是否重复
+	exists, err := supplierRepo.IsNameExists(createSupplierReq.Name, 0)
+	if err != nil {
+		return errors.WithMessage(err, "检查供应商名称失败")
+	}
 	if exists {
 		return errors.New("供应商名称已存在")
-	}
-	for _, name := range names {
-		if !checkService.CheckNameLength(ctx, name.Text, 150) {
-			return errors.New("供应商名称长度不能超过150")
-		}
 	}
 	// 检查供应商编码是否重复
 	codeExists, err := supplierRepo.IsCodeExists(createSupplierReq.Code, 0)
@@ -157,14 +141,10 @@ func (s *supplierSrv) CreateSupplier(ctx context.Context, createSupplierReq req.
 	var erpCode string
 	// 调用erp接口
 	if ctx.GetCompany().IsOpenErp() {
-		enName, err := GetEnName(ctx, createSupplierReq.LocaleName)
-		if err != nil {
-			return errors.WithMessage(errors.New("翻译失败"), err.Error())
-		}
 		companySetting := ctx.GetCompanySetting()
 		erpCode, err = erp.NewIErpSrv(s.dbm).CreateSupplier(ctx.GetContext(), req.CreateSupplierReq{
 			SiteCode:     companySetting.ErpnextSiteCode,
-			SupplierName: enName,
+			SupplierName: createSupplierReq.Name,
 			CompanyAbbr:  companySetting.ErpnextCompanyAbbr,
 			Branch:       companySetting.ErpnextBranchName,
 			Disabled:     createSupplierReq.Status == 0,
@@ -173,40 +153,20 @@ func (s *supplierSrv) CreateSupplier(ctx context.Context, createSupplierReq req.
 			return errors.WithMessage(errors.New("创建供应商失败"), err.Error())
 		}
 	}
-	err = db.Transaction(func(tx *gorm.DB) error {
-		multiLanguageName := model.MultiLanguageName{
-			EnName:   createSupplierReq.LocaleName.EN,
-			ZhName:   createSupplierReq.LocaleName.ZH,
-			ThName:   createSupplierReq.LocaleName.TH,
-			MyName:   createSupplierReq.LocaleName.MY,
-			JaName:   createSupplierReq.LocaleName.JA,
-			KoName:   createSupplierReq.LocaleName.KO,
-			TrName:   createSupplierReq.LocaleName.TR,
-			SvName:   createSupplierReq.LocaleName.SV,
-			ZhTwName: createSupplierReq.LocaleName.ZHTW,
-		}
-		err := tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
-		if err != nil {
-			return errors.WithMessage(errors.New("创建多语言名称失败"), err.Error())
-		}
-		// 创建供应商
-		err = tx.Model(&model.Supplier{}).Create(&model.Supplier{
-			Name:                  createSupplierReq.LocaleName.ToJson(),
-			MultiLanguageNameUuid: multiLanguageName.Uuid,
-			Code:                  createSupplierReq.Code,
-			Address:               createSupplierReq.Address,
-			ContactName:           createSupplierReq.ContactName,
-			ContactPhone:          createSupplierReq.ContactPhone,
-			Status:                createSupplierReq.Status,
-			ErpCode:               erpCode,
-		}).Error
-		if err != nil {
-			return errors.WithMessage(errors.New("创建供应商失败"), err.Error())
-		}
-		return nil
+	// 创建供应商
+	err = supplierRepo.Create(&model.Supplier{
+		Name:         createSupplierReq.Name,
+		Code:         createSupplierReq.Code,
+		Address:      createSupplierReq.Address,
+		ContactName:  createSupplierReq.ContactName,
+		ContactPhone: createSupplierReq.ContactPhone,
+		Status:       createSupplierReq.Status,
+		ErpCode:      erpCode,
 	})
-
-	return err
+	if err != nil {
+		return errors.WithMessage(errors.New("创建供应商失败"), err.Error())
+	}
+	return nil
 }
 
 // UpdateSupplier 更新供应商
@@ -227,21 +187,15 @@ func (s *supplierSrv) UpdateSupplier(ctx context.Context, updateSupplierReq req.
 		return errors.New("供应商不可编辑")
 	}
 
-	checkService := NewCheckNameSrv(s.dbm)
-	names := checkService.MakeCheckNameList(ctx, updateSupplierReq.LocaleName)
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Uuid:   supplier.Uuid,
-		Source: constant.CheckNameSourceUnit,
-		Names:  names,
-	})
+	// 检查供应商名称是否重复（排除自己）
+	exists, err := supplierRepo.IsNameExists(updateSupplierReq.Name, updateSupplierReq.Uuid)
+	if err != nil {
+		return errors.WithMessage(err, "检查供应商名称失败")
+	}
 	if exists {
 		return errors.New("供应商名称已存在")
 	}
-	for _, name := range names {
-		if !checkService.CheckNameLength(ctx, name.Text, 150) {
-			return errors.New("供应商名称长度不能超过150")
-		}
-	}
+
 	// 检查供应商编码是否重复（排除自己）
 	codeExists, err := supplierRepo.IsCodeExists(updateSupplierReq.Code, updateSupplierReq.Uuid)
 	if err != nil {
@@ -253,14 +207,10 @@ func (s *supplierSrv) UpdateSupplier(ctx context.Context, updateSupplierReq req.
 
 	// 调用erp接口，只能修改自己创建的供应商
 	if ctx.GetCompany().IsOpenErp() {
-		enName, err := GetEnName(ctx, updateSupplierReq.LocaleName)
-		if err != nil {
-			return errors.WithMessage(errors.New("翻译失败"), err.Error())
-		}
 		companySetting := ctx.GetCompanySetting()
 		err = erp.NewIErpSrv(s.dbm).UpdateSupplier(ctx.GetContext(), req.UpdateSupplierReq{
 			CreateSupplierReq: req.CreateSupplierReq{
-				SupplierName: enName,
+				SupplierName: updateSupplierReq.Name,
 				SiteCode:     companySetting.ErpnextSiteCode,
 				CompanyAbbr:  companySetting.ErpnextCompanyAbbr,
 				Branch:       companySetting.ErpnextBranchName,
@@ -272,34 +222,19 @@ func (s *supplierSrv) UpdateSupplier(ctx context.Context, updateSupplierReq req.
 			return errors.WithMessage(errors.New("更新供应商失败"), err.Error())
 		}
 	}
-	err = db.Transaction(func(tx *gorm.DB) error {
-		err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", supplier.MultiLanguageNameUuid).Updates(map[string]any{
-			"zh_name":    updateSupplierReq.LocaleName.ZH,
-			"th_name":    updateSupplierReq.LocaleName.TH,
-			"en_name":    updateSupplierReq.LocaleName.EN,
-			"zh_tw_name": updateSupplierReq.LocaleName.ZHTW,
-			"ja_name":    updateSupplierReq.LocaleName.JA,
-			"ko_name":    updateSupplierReq.LocaleName.KO,
-			"my_name":    updateSupplierReq.LocaleName.MY,
-			"tr_name":    updateSupplierReq.LocaleName.TR,
-			"sv_name":    updateSupplierReq.LocaleName.SV,
-		}).Error
-		if err != nil {
-			return errors.WithMessage(err, "更新多语言名称失败")
-		}
-		err = tx.Model(&model.Supplier{}).Where("uuid = ?", supplier.Uuid).Updates(map[string]any{
-			"name":          updateSupplierReq.LocaleName.ToJson(),
-			"address":       updateSupplierReq.Address,
-			"contact_name":  updateSupplierReq.ContactName,
-			"contact_phone": updateSupplierReq.ContactPhone,
-			"status":        updateSupplierReq.Status,
-		}).Error
-		if err != nil {
-			return errors.WithMessage(err, "更新供应商失败")
-		}
-		return nil
+
+	err = supplierRepo.Update(supplier.Uuid, map[string]any{
+		"name":          updateSupplierReq.Name,
+		"address":       updateSupplierReq.Address,
+		"contact_name":  updateSupplierReq.ContactName,
+		"contact_phone": updateSupplierReq.ContactPhone,
+		"status":        updateSupplierReq.Status,
 	})
-	return err
+	if err != nil {
+		return errors.WithMessage(err, "更新供应商失败")
+	}
+
+	return nil
 }
 
 // DeleteSupplier 删除供应商
@@ -407,6 +342,16 @@ func (s *supplierSrv) GetSupplierSelect(ctx context.Context, req req.SupplierSel
 	}, nil
 }
 
+func (s *supplierSrv) CheckNameExists(ctx context.Context, req req.CheckNameExistsReq) (resp.CheckNameCodeExistsResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	supplierRepo := repository.NewSupplierRepo(db)
+	exists, err := supplierRepo.IsNameExists(req.Name, req.Uuid)
+	if err != nil {
+		return resp.CheckNameCodeExistsResp{}, errors.WithMessage(err, "检查名称是否存在失败")
+	}
+	return resp.CheckNameCodeExistsResp{Exists: exists}, nil
+}
+
 func (s *supplierSrv) CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	supplierRepo := repository.NewSupplierRepo(db)
@@ -456,17 +401,6 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 		supplierList = append(supplierList, headquarterSupplierList...)
 	}
 
-	// 翻译供应商名称
-	var translateItems []utils.TranslateItem
-	for _, erpSupplier := range supplierList {
-		translateItems = append(translateItems, utils.TranslateItem{
-			Lang:    "en",
-			Content: erpSupplier.SupplierName,
-		})
-	}
-	translateClient := utils.NewTranslateClient()
-	multiLanguageMap := translateClient.TranslateWithRetry(ctx.GetContext(), translateItems, 10)
-
 	var suppliers []model.Supplier
 	db.Model(&model.Supplier{}).Scopes(repository.NotDeleted).Find(&suppliers)
 
@@ -478,77 +412,26 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 		supplierMap[supplier.ErpCode] = supplier
 	}
 
-	err = db.Transaction(func(tx *gorm.DB) error {
-		for _, erpSupplier := range supplierList {
-
-			// 总部不同步“总部-供应商”
-			if erpSupplier.Name == constant.ErpHeadquartersSupplierCode && companySetting.IsHeadquarter() {
-				continue
-			}
-
-			var headquarterCode string
-			if erpSupplier.Name == constant.ErpHeadquartersSupplierCode {
-				headquarterCode = "SP001"
-			}
-
-			localeName, ok := multiLanguageMap[erpSupplier.SupplierName]
-			if !ok {
-				localeName = dto.LocaleResponse{
-					EN:   erpSupplier.SupplierName,
-					ZH:   erpSupplier.SupplierName,
-					TH:   erpSupplier.SupplierName,
-					MY:   erpSupplier.SupplierName,
-					JA:   erpSupplier.SupplierName,
-					KO:   erpSupplier.SupplierName,
-					TR:   erpSupplier.SupplierName,
-					SV:   erpSupplier.SupplierName,
-					ZHTW: erpSupplier.SupplierName,
-				}
-			}
-			supplier, _ := supplierMap[erpSupplier.Name]
-			headquarterUuid, _ := supplierHeadquarterMap[erpSupplier.Name]
-			if supplier.Uuid == 0 { // 添加
-				multiLanguageName := model.MultiLanguageName{
-					EnName:   localeName.EN,
-					ZhName:   localeName.ZH,
-					ThName:   localeName.TH,
-					MyName:   localeName.MY,
-					JaName:   localeName.JA,
-					KoName:   localeName.KO,
-					TrName:   localeName.TR,
-					SvName:   localeName.SV,
-					ZhTwName: localeName.ZHTW,
-				}
-				tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName)
-				tx.Model(&model.Supplier{}).Create(&model.Supplier{
-					Name:                  multiLanguageName.ToJson(),
-					MultiLanguageNameUuid: multiLanguageName.Uuid,
-					ErpCode:               erpSupplier.Name,
-					Status:                1,
-					HeadquarterUuid:       headquarterUuid,
-					Code:                  headquarterCode,
-				})
-			} else { // 编辑
-				tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", supplier.MultiLanguageNameUuid).Updates(map[string]any{
-					"zh_name":    localeName.ZH,
-					"th_name":    localeName.TH,
-					"en_name":    localeName.EN,
-					"zh_tw_name": localeName.ZHTW,
-					"ja_name":    localeName.JA,
-					"ko_name":    localeName.KO,
-					"my_name":    localeName.MY,
-					"tr_name":    localeName.TR,
-					"sv_name":    localeName.SV,
-				})
-				tx.Model(&model.Supplier{}).Where("uuid = ?", supplier.Uuid).Updates(map[string]any{
-					"name":             erpSupplier.SupplierName,
-					"headquarter_uuid": headquarterUuid,
-					"code":             headquarterCode,
-				})
-			}
+	for _, erpSupplier := range supplierList {
+		// 总部不同步“总部-供应商”
+		if erpSupplier.Name == constant.ErpHeadquartersSupplierCode && companySetting.IsHeadquarter() {
+			continue
 		}
-		return nil
-	})
-
-	return err
+		supplier, _ := supplierMap[erpSupplier.Name]
+		headquarterUuid, _ := supplierHeadquarterMap[erpSupplier.Name]
+		if supplier.Uuid == 0 {
+			db.Model(&model.Supplier{}).Create(&model.Supplier{
+				Name:            erpSupplier.SupplierName,
+				ErpCode:         erpSupplier.Name,
+				Status:          1,
+				HeadquarterUuid: headquarterUuid,
+			})
+		} else {
+			db.Model(&model.Supplier{}).Where("uuid = ?", supplier.Uuid).Updates(map[string]any{
+				"name":             erpSupplier.SupplierName,
+				"headquarter_uuid": headquarterUuid,
+			})
+		}
+	}
+	return nil
 }

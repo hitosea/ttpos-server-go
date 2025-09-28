@@ -24375,6 +24375,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/supplier/name_exists": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.供应商档案"
+                ],
+                "summary": "检查供应商名称是否存在",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "供应商名称",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "供应商UUID",
+                        "name": "uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CheckNameCodeExistsResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/supplier/select": {
             "get": {
                 "security": [
@@ -34705,7 +34759,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "code",
-                "locale_name"
+                "name"
             ],
             "properties": {
                 "address": {
@@ -34728,13 +34782,10 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 20
                 },
-                "locale_name": {
+                "name": {
                     "description": "供应商名称",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.LocaleResponse"
-                        }
-                    ]
+                    "type": "string",
+                    "maxLength": 150
                 },
                 "status": {
                     "description": "供应商状态:0-禁用；1-启用",
@@ -34762,7 +34813,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "code",
-                "locale_name",
+                "name",
                 "uuid"
             ],
             "properties": {
@@ -34786,13 +34837,10 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 20
                 },
-                "locale_name": {
+                "name": {
                     "description": "供应商名称",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.LocaleResponse"
-                        }
-                    ]
+                    "type": "string",
+                    "maxLength": 150
                 },
                 "status": {
                     "description": "供应商状态:0-禁用；1-启用",
@@ -42606,13 +42654,9 @@ const docTemplate = `{
                     "description": "是否为总部",
                     "type": "boolean"
                 },
-                "locale_name": {
-                    "description": "供应商名称多语言",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.LocaleResponse"
-                        }
-                    ]
+                "name": {
+                    "description": "供应商名称",
+                    "type": "string"
                 },
                 "uuid": {
                     "description": "供应商UUID",
@@ -42665,13 +42709,9 @@ const docTemplate = `{
                     "description": "是否为总部",
                     "type": "boolean"
                 },
-                "locale_name": {
-                    "description": "供应商名称多语言",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.LocaleResponse"
-                        }
-                    ]
+                "name": {
+                    "description": "供应商名称",
+                    "type": "string"
                 },
                 "status": {
                     "description": "状态：0-禁用；1-启用",
