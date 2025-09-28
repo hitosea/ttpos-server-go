@@ -282,9 +282,9 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 					}
 					return ""
 				}(),
-				Valuation: material.Valuation,
+				Valuation: material.GetValuation(),
 				TotalPrice: func() float64 {
-					return decimal.NewFromFloat(material.Valuation).Mul(decimal.NewFromFloat(itemReq.Num)).InexactFloat64()
+					return decimal.NewFromFloat(material.GetValuation()).Mul(decimal.NewFromFloat(itemReq.Num)).InexactFloat64()
 				}(),
 			}
 			items = append(items, item)
@@ -421,6 +421,10 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(ctx context.Context, req req.Purc
 						return material.Unit.Name
 					}
 					return ""
+				}(),
+				Valuation: material.GetValuation(),
+				TotalPrice: func() float64 {
+					return decimal.NewFromFloat(material.GetValuation()).Mul(decimal.NewFromFloat(itemReq.Num)).InexactFloat64()
 				}(),
 			}
 			items = append(items, item)
