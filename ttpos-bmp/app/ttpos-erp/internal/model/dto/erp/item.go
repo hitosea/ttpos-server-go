@@ -70,6 +70,7 @@ type Item struct {
 	Attributes                       []interface{}         `json:"attributes,omitempty"`                          // 属性
 	SupplierItems                    []interface{}         `json:"supplier_items,omitempty"`                      // 供应商商品
 	VariantOf                        string                `json:"variant_of,omitempty"`                          // 变体依据商品编码
+	PurchaseUom                      string                `json:"purchase_uom,omitempty"`                        // 采购单位
 
 	CustomerItems []interface{} `json:"customer_items,omitempty"` // 客户商品
 	//自定义字段

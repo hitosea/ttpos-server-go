@@ -1529,7 +1529,7 @@ func (s *purchaseOrderSrv) recordErpStockInLog(ctx context.Context, db *gorm.DB,
 		warehouseItemRepo := repository.NewWarehouseItemRepo(tx)
 
 		// 获取目标仓库信息（通过ERP编码查找）
-		targetWarehouse, err := repository.NewWarehouseRepo(tx).GetByCode(receiptOrder.TargetWarehouseErpCode)
+		targetWarehouse, err := repository.NewWarehouseRepo(tx).GetByErpCode(receiptOrder.TargetWarehouseErpCode)
 		if err != nil {
 			return errors.WithMessage(err, "获取目标仓库信息失败")
 		}
@@ -1592,7 +1592,7 @@ func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, hea
 		warehouseLogRepo := repository.NewWarehouseInOutLogRepo(tx)
 
 		// 获取默认仓库
-		targetWarehouse, err := repository.NewWarehouseRepo(tx).GetByCode(receiptOrder.SourceWarehouseErpCode)
+		targetWarehouse, err := repository.NewWarehouseRepo(tx).GetByErpCode(receiptOrder.SourceWarehouseErpCode)
 		if err != nil {
 			return errors.WithMessage(err, "获取总部出库仓库信息失败")
 		}

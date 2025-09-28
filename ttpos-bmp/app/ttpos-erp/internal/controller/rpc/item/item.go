@@ -186,6 +186,13 @@ func (c *Controller) GetItem(ctx context.Context, req *item.GetItemReq) (*api.Re
 		return rpc.ApiError(err.Error()), nil
 	}
 
+	uomDetails := make([]*item.UomDetail, 0, len(itemInfo.Uoms))
+	for _, uom := range itemInfo.Uoms {
+		uomDetails = append(uomDetails, &item.UomDetail{
+			Uom:              uom.Uom,
+			ConversionFactor: uom.ConversionFactor,
+		})
+	}
 	// 将 itemInfo 的值赋给 respItem
 	respItem := &item.ItemInfo{
 		ItemName:           itemInfo.ItemName,
@@ -200,6 +207,8 @@ func (c *Controller) GetItem(ctx context.Context, req *item.GetItemReq) (*api.Re
 		Classification:     itemInfo.Classification,
 		ClassificationCode: itemInfo.ClassificationCode,
 		InternalCode:       itemInfo.CustomInternalCode,
+		PurchaseUom:        itemInfo.PurchaseUom,
+		Uoms:               uomDetails,
 	}
 
 	// 返回成功响应

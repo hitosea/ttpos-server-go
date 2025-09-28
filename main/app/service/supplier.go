@@ -418,18 +418,33 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 			continue
 		}
 		supplier, _ := supplierMap[erpSupplier.Name]
+		var headquarterCode string
+		// NOTE 总部-供应商编码固定为SP001
+		if erpSupplier.Name == constant.ErpHeadquartersSupplierCode {
+			headquarterCode = "SP001"
+		} else {
+			headquarterCode = supplier.Code
+		}
+		// 默认为启用
+		status := 1
+		if erpSupplier.Disabled {
+			status = 0
+		}
 		headquarterUuid, _ := supplierHeadquarterMap[erpSupplier.Name]
 		if supplier.Uuid == 0 {
 			db.Model(&model.Supplier{}).Create(&model.Supplier{
 				Name:            erpSupplier.SupplierName,
 				ErpCode:         erpSupplier.Name,
-				Status:          1,
+				Status:          status,
 				HeadquarterUuid: headquarterUuid,
+				Code:            headquarterCode,
 			})
 		} else {
 			db.Model(&model.Supplier{}).Where("uuid = ?", supplier.Uuid).Updates(map[string]any{
 				"name":             erpSupplier.SupplierName,
 				"headquarter_uuid": headquarterUuid,
+				"code":             headquarterCode,
+				"status":           status,
 			})
 		}
 	}

@@ -131,12 +131,14 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 
 		logger.Logger.Info("开始同步任务", zap.Uint64("companyUuid", companyUuid))
 
+		logger.Logger.Info("开始同步商品分类", zap.Uint64("companyUuid", companyUuid))
 		// 01 商品分类
 		if err := s.productSrv.SyncProductShopCategory(ctx); err != nil {
 			logger.Logger.Error("商品分类同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 			isExceptionOccurred = true || isExceptionOccurred
 		}
 
+		logger.Logger.Info("开始同步物品分类", zap.Uint64("companyUuid", companyUuid))
 		// 02 物品分类
 		if err := s.materialSrv.SyncMaterialCategory(ctx); err != nil {
 			logger.Logger.Error("物品分类同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
@@ -144,18 +146,21 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 		}
 
 		// 03 商品税类
+		logger.Logger.Info("开始同步商品税类", zap.Uint64("companyUuid", companyUuid))
 		if err := s.productSrv.SyncProductTax(ctx); err != nil {
 			logger.Logger.Error("商品税类同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 			isExceptionOccurred = true || isExceptionOccurred
 		}
 
 		// 1 uom
+		logger.Logger.Info("开始同步单位", zap.Uint64("companyUuid", companyUuid))
 		if err := s.productSrv.SyncUnit(ctx); err != nil {
 			logger.Logger.Error("单位同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 			isExceptionOccurred = true || isExceptionOccurred
 		}
 
 		// 9 仓库
+		logger.Logger.Info("开始同步仓库", zap.Uint64("companyUuid", companyUuid))
 		err := s.warehouseSrv.SyncWarehouse(ctx)
 		if err != nil {
 			logger.Logger.Error("仓库同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
@@ -163,6 +168,7 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 		}
 
 		// 2 物品
+		logger.Logger.Info("开始同步物品", zap.Uint64("companyUuid", companyUuid))
 		if err := s.materialSrv.SyncHeadquarterMaterial(ctx); err != nil {
 			logger.Logger.Error("物品同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 			isExceptionOccurred = true || isExceptionOccurred
@@ -170,12 +176,14 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 
 		// 3,4,5,6 暂不同步
 
+		logger.Logger.Info("开始同步成本卡", zap.Uint64("companyUuid", companyUuid))
 		// 7 成本卡
 		if err := s.materialSrv.SyncProductBomCard(ctx); err != nil {
 			logger.Logger.Error("成本卡同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 			isExceptionOccurred = true || isExceptionOccurred
 		}
 
+		logger.Logger.Info("开始同步供应商", zap.Uint64("companyUuid", companyUuid))
 		// 8 供应商
 		if err := s.supplierSrv.SyncSupplier(ctx); err != nil {
 			logger.Logger.Error("供应商同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
@@ -184,6 +192,7 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 
 		// 10 仓库物品，仅限首次同步
 		if company.LastSyncTime == 0 {
+			logger.Logger.Info("开始同步默认仓库库存", zap.Uint64("companyUuid", companyUuid))
 			if err := s.warehouseSrv.SyncDefaultWarehouseStock(ctx); err != nil {
 				logger.Logger.Error("默认仓库库存同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 				isExceptionOccurred = true || isExceptionOccurred

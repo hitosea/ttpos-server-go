@@ -359,7 +359,7 @@ func (p *PrinterRepoImpl) getPrintProductOneContent(
 
 	// 图片打印
 	if p.IsImagePrinterMethod(true) {
-		if tmpInfo.Uuid > 0 {
+		if tmpInfo.TmpUuid > 0 {
 			return template.NewDishesImgTemplateCustom(base).GetOneDishOneOrderPrintContent(
 				productPrinter,
 				printerItem.Printer,
