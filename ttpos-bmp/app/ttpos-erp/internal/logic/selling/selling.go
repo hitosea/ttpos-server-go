@@ -379,12 +379,12 @@ func (s *sSelling) parsePosProfileResponse(resp *g.Var) (*erp.POSProfile, error)
 func (s *sSelling) OpenPosEntry(ctx context.Context, req *selling.OpenPosEntryReq) (*selling.OpenPosEntryResp, error) {
 	// 检查POS配置文件是否已开帐
 	// opening, err := s.IsProfileOpening(ctx, req.PosProfileName, req.CashierEmail)
-	if err != nil {
-		return nil, gerror.Wrapf(err, "查询POS配置文件是否开帐失败")
-	}
+	//if err != nil {
+	//	return nil, gerror.Wrapf(err, "查询POS配置文件是否开帐失败")
+	//}
 	//新的异步模式下，不再约束已开账检查
 	// if opening {
-		// return nil, gerror.New("POS配置文件已开帐")
+	// return nil, gerror.New("POS配置文件已开帐")
 	// }
 
 	// 获取公司名称
