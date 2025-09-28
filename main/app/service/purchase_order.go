@@ -1148,14 +1148,14 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderList(ctx context.Context, req 
 	}
 
 	// 转换响应数据
-	var listResp []resp.PurchaseReceiptOrderInfo
+	listResp := make([]*resp.PurchaseReceiptOrderInfo, 0)
 	for _, receipt := range receipts {
 		receiptInfo := resp.PurchaseReceiptOrderInfo{}
 		err := copier.Copy(&receiptInfo, &receipt)
 		if err != nil {
 			continue
 		}
-		listResp = append(listResp, receiptInfo)
+		listResp = append(listResp, &receiptInfo)
 	}
 
 	return resp.PurchaseReceiptOrderListResp{
