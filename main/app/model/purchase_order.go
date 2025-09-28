@@ -216,6 +216,14 @@ func (ro *PurchaseReceiptOrder) IsHeadquarterReceipt() bool {
 	return ro.ReceiptType == 2
 }
 
+// GetSupplierErpCode 获取供应商ERP编码
+func (ro *PurchaseReceiptOrder) GetSupplierErpCode() string {
+	if ro.SupplierErpCode == "" {
+		return ro.SupplierName
+	}
+	return ro.SupplierErpCode
+}
+
 // GetStatusText 获取状态文本
 func (ro *PurchaseReceiptOrder) GetStatusText() string {
 	statusMap := map[int]string{

@@ -648,6 +648,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 					return uuid
 				}()
 				headquarterPurchaseOrder.CompanyUuid = ctx.GetCompanyUuid()
+				headquarterPurchaseOrder.CompanyName = ctx.GetCompany().Name
 				headquarterPurchaseOrder.SubUuid = subUuid
 				headquarterPurchaseOrder.Status = constant.PurchaseOrderStatusPending
 				headquarterPurchaseOrder.HeadquarterStatus = constant.HeadquarterStatusPending
@@ -1544,7 +1545,7 @@ func (s *purchaseOrderSrv) recordErpStockInLog(ctx context.Context, db *gorm.DB,
 		}
 
 		//
-		supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(receiptOrder.SupplierErpCode)
+		supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(receiptOrder.GetSupplierErpCode())
 		if err != nil {
 			return errors.WithMessage(err, "获取供应商信息失败")
 		}
@@ -1624,7 +1625,7 @@ func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, hea
 		}
 
 		// 获取供应商信息
-		supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(receiptOrder.SupplierErpCode)
+		supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(receiptOrder.GetSupplierErpCode())
 		if err != nil {
 			return errors.WithMessage(err, "获取供应商信息失败")
 		}
