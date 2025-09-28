@@ -138,15 +138,15 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 	}
 
 	for _, data := range dataArray {
+		itemInfo, err := s.GetItem(ctx, &item.GetItemReq{
+			ItemCode: data.Get("item_code").String(),
+		})
+		if err != nil {
+			g.Log().Errorf(ctx, "获取物品信息失败,itemCode:%s,err:%v", data.Get("item_code").String(), err)
+			continue // 获取物品信息失败，跳过该物品
+		}
 		//获取当前item 的所有 Item Permission List 判断是否有权限使用, 列表查询目前不支持 表格字段查询，只能每次遍历物品查询 对应的 custom_permission_rule
 		if len(req.SubCompanyAbbr) > 0 {
-			itemInfo, err := s.GetItem(ctx, &item.GetItemReq{
-				ItemCode: data.Get("item_code").String(),
-			})
-			if err != nil {
-				g.Log().Errorf(ctx, "获取物品信息失败,itemCode:%s,err:%v", data.Get("item_code").String(), err)
-				continue // 获取物品信息失败，跳过该物品
-			}
 			hasPermission, err := service.Permission().CheckPermission(ctx, itemInfo.CustomPermissionRule, subCompanyName)
 			if err != nil {
 				g.Log().Errorf(ctx, "检查物品权限失败,itemCode:%s,err:%v", data.Get("item_code").String(), err)
@@ -156,14 +156,23 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 				continue // 当前公司无权限，跳过该物品
 			}
 		}
+		uomDetails := make([]*item.UomDetail, 0, len(itemInfo.Uoms))
+		for _, uom := range itemInfo.Uoms {
+			uomDetails = append(uomDetails, &item.UomDetail{
+				Uom:              uom.Uom,
+				ConversionFactor: uom.ConversionFactor,
+			})
+		}
 		itemList = append(itemList, &item.ItemInfo{
-			Branch:    data.Get("custom_branch").String(),
-			Company:   data.Get("custom_company").String(),
-			ItemName:  data.Get("item_name").String(),
-			ItemCode:  data.Get("item_code").String(),
-			ItemGroup: utility.ParseItemGroupFromString(data.Get("item_group").String()),
-			StockUom:  data.Get("stock_uom").String(),
-			Disabled:  data.Get("disabled").Bool(),
+			Branch:      data.Get("custom_branch").String(),
+			Company:     data.Get("custom_company").String(),
+			ItemName:    data.Get("item_name").String(),
+			ItemCode:    data.Get("item_code").String(),
+			ItemGroup:   utility.ParseItemGroupFromString(data.Get("item_group").String()),
+			StockUom:    data.Get("stock_uom").String(),
+			Disabled:    data.Get("disabled").Bool(),
+			PurchaseUom: itemInfo.PurchaseUom,
+			Uoms:        uomDetails,
 		})
 	}
 
