@@ -26,6 +26,20 @@ import (
 	"gorm.io/gorm"
 )
 
+// HeadquarterUpdateInfo 总部更新信息结构
+type HeadquarterUpdateInfo struct {
+	DB            *gorm.DB                          // 总部数据库连接
+	PurchaseOrder *model.PurchaseOrder              // 总部采购订单
+	ItemRepo      repository.IPurchaseOrderItemRepo // 总部采购明细Repository
+	ItemsToUpdate []HeadquarterItemUpdate           // 需要更新的明细信息
+}
+
+// HeadquarterItemUpdate 需要更新的总部明细信息
+type HeadquarterItemUpdate struct {
+	MaterialCode  string  // 物料编码
+	NewArrivalNum float64 // 新的到货数量
+}
+
 // IPurchaseOrderSrv 采购申请服务接口
 type IPurchaseOrderSrv interface {
 	// 采购申请管理
@@ -946,6 +960,16 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 			return errors.New("采购单状态不允许收货")
 		}
 
+		// 总部相关信息预处理
+		var headquarterInfo *HeadquarterUpdateInfo
+		if req.IsConfirm && purchaseOrder.IsHeadquarterPurchase() {
+			hqInfo, err := s.initHeadquarterInfo(ctx, purchaseOrder)
+			if err != nil {
+				return err
+			}
+			headquarterInfo = hqInfo
+		}
+
 		defaultWarehouse, err := repository.NewWarehouseRepo(db).GetDefaultWarehouse()
 		if err != nil {
 			return errors.WithMessage(err, "获取默认仓库失败")
@@ -969,7 +993,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 			TargetWarehouseErpCode: defaultWarehouse.ErpCode,
 			TargetWarehouseName:    defaultWarehouse.Name,
 			ReceiptType: func() int {
-				if req.ReceiptType == 2 {
+				if purchaseOrder.PurchaseType == 2 {
 					return 2
 				}
 				return 1
@@ -1030,6 +1054,14 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 				if err != nil {
 					return errors.WithMessage(err, "更新采购申请明细失败")
 				}
+
+				// 收集需要更新的总部采购明细信息
+				if headquarterInfo != nil {
+					headquarterInfo.ItemsToUpdate = append(headquarterInfo.ItemsToUpdate, HeadquarterItemUpdate{
+						MaterialCode:  orderItem.MaterialCode,
+						NewArrivalNum: newArrivalNum,
+					})
+				}
 			}
 		}
 
@@ -1041,6 +1073,14 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 
 		// 更新收货单明细
 		receiptOrder.Items = receiptItems
+
+		// 批量更新总部采购申请明细
+		if headquarterInfo != nil && len(headquarterInfo.ItemsToUpdate) > 0 {
+			err = s.batchUpdateHeadquarterItems(headquarterInfo)
+			if err != nil {
+				return err
+			}
+		}
 
 		// 检查收货单是否完成
 		if receiptOrder.Status == constant.ReceiptOrderStatusReceived {
@@ -1126,6 +1166,16 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 			receiptOrder.PurchaseOrder = *purchaseOrder
 		}
 
+		// 总部相关信息预处理
+		var headquarterInfo *HeadquarterUpdateInfo
+		if req.IsConfirm && purchaseOrder != nil && purchaseOrder.IsHeadquarterPurchase() {
+			hqInfo, err := s.initHeadquarterInfo(ctx, purchaseOrder)
+			if err != nil {
+				return err
+			}
+			headquarterInfo = hqInfo
+		}
+
 		// 重新创建收货明细并更新采购申请明细的到货数量
 		var receiptItems []model.PurchaseReceiptOrderItem
 		for _, itemReq := range req.Items {
@@ -1176,10 +1226,19 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 
 			// 更新采购申请明细的到货数量
 			if req.IsConfirm {
+				// 更新采购申请明细的到货数量
 				purchaseOrderItem.ArrivalNum = newArrivalNum
 				err = purchaseOrderItemRepo.Update(purchaseOrderItem)
 				if err != nil {
 					return errors.WithMessage(err, "更新采购申请明细失败")
+				}
+
+				// 收集需要更新的总部采购明细信息
+				if headquarterInfo != nil {
+					headquarterInfo.ItemsToUpdate = append(headquarterInfo.ItemsToUpdate, HeadquarterItemUpdate{
+						MaterialCode:  purchaseOrderItem.MaterialCode,
+						NewArrivalNum: newArrivalNum,
+					})
 				}
 			}
 		}
@@ -1211,6 +1270,14 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 			return errors.WithMessage(err, "更新收货单状态失败")
 		}
 		receiptOrder.Items = receiptItems
+
+		// 批量更新总部采购申请明细
+		if headquarterInfo != nil && len(headquarterInfo.ItemsToUpdate) > 0 {
+			err = s.batchUpdateHeadquarterItems(headquarterInfo)
+			if err != nil {
+				return err
+			}
+		}
 
 		// 检查收货单是否完成
 		if receiptOrder.Status == constant.ReceiptOrderStatusReceived {
@@ -1654,15 +1721,12 @@ func (s *purchaseOrderSrv) recordErpStockInLog(ctx context.Context, db *gorm.DB,
 			return errors.WithMessage(err, "获取目标仓库信息失败")
 		}
 
-		//
-		supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(receiptOrder.GetSupplierErpCode())
-		if err != nil {
-			return errors.WithMessage(err, "获取供应商信息失败")
-		}
-
 		// 处理每个收货单明细
 		for _, item := range receiptOrder.Items {
 			actualNum := item.GetActualNum()
+			if actualNum <= 0 {
+				continue
+			}
 
 			// 查找或创建仓库商品库存记录
 			warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(targetWarehouse.Uuid, item.MaterialUuid)
@@ -1705,8 +1769,14 @@ func (s *purchaseOrderSrv) recordErpStockInLog(ctx context.Context, db *gorm.DB,
 				Amount: func() float64 {
 					return decimal.NewFromFloat(item.Valuation).Mul(decimal.NewFromFloat(actualNum)).InexactFloat64()
 				}(),
-				SupplierUuid: supplier.Uuid, // 供应商UUID暂时设为0，后续可通过供应商名称查找
-				OrderNo:      receiptOrder.OrderNo,
+				SupplierUuid: func() uint64 {
+					supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(receiptOrder.GetSupplierErpCode())
+					if err != nil {
+						return 0
+					}
+					return supplier.Uuid
+				}(),
+				OrderNo: receiptOrder.OrderNo,
 			}
 			err = warehouseLogRepo.Create(warehouseLog)
 			if err != nil {
@@ -1734,16 +1804,13 @@ func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, hea
 			return errors.WithMessage(err, "获取总部出库仓库信息失败")
 		}
 
-		// 获取供应商信息
-		supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(receiptOrder.GetSupplierErpCode())
-		if err != nil {
-			return errors.WithMessage(err, "获取供应商信息失败")
-		}
-
 		// 处理每个收货单明细
 		for _, item := range receiptOrder.Items {
 			// 计算实际出库数量（考虑单位转换率）
 			actualNum := item.GetActualNum()
+			if actualNum <= 0 {
+				continue
+			}
 
 			// 查找或创建仓库商品库存记录
 			warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(targetWarehouse.Uuid, item.MaterialUuid)
@@ -1775,10 +1842,16 @@ func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, hea
 			}
 			// 记录出库日志
 			warehouseLog := &model.WarehouseInOutLog{
-				LogType:              1, // 出库
-				Scene:                2, // 发货出库
-				WarehouseUuid:        targetWarehouse.Uuid,
-				MaterialUuid:         item.MaterialUuid,
+				LogType:       1, // 出库
+				Scene:         2, // 发货出库
+				WarehouseUuid: targetWarehouse.Uuid,
+				MaterialUuid: func() uint64 {
+					material, err := repository.NewMaterialRepo(tx).GetMaterialByErpCode(item.MaterialCode)
+					if err != nil {
+						return 0
+					}
+					return material.Uuid
+				}(),
 				MaterialName:         item.MaterialName,
 				MaterialBaseUnitUuid: item.BaseUnitUuid,
 				MaterialBaseUnitName: item.BaseUnitName,
@@ -1787,8 +1860,7 @@ func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, hea
 				Amount: func() float64 {
 					return decimal.NewFromFloat(item.Valuation).Mul(decimal.NewFromFloat(actualNum)).InexactFloat64()
 				}(),
-				SupplierUuid: supplier.Uuid, // 内部采购无供应商
-				OrderNo:      receiptOrder.OrderNo,
+				OrderNo: receiptOrder.OrderNo,
 			}
 
 			err = warehouseLogRepo.Create(warehouseLog)
@@ -1852,4 +1924,54 @@ func (s *purchaseOrderSrv) updateRelatedMaterialStock(db *gorm.DB, relatedMateri
 
 		return nil
 	})
+}
+
+// initHeadquarterInfo 初始化总部信息
+func (s *purchaseOrderSrv) initHeadquarterInfo(ctx context.Context, purchaseOrder *model.PurchaseOrder) (*HeadquarterUpdateInfo, error) {
+	// 获取公司设置
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.HeadquarterUuid == 0 {
+		return nil, errors.New("总部UUID不能为空")
+	}
+
+	// 获取总部数据库连接
+	headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
+	if headquarterDb == nil {
+		return nil, errors.New("获取总部数据库失败")
+	}
+
+	// 获取总部采购订单
+	headquarterPurchaseOrder, err := repository.NewPurchaseOrderRepo(headquarterDb).GetBySubUuid(purchaseOrder.Uuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取总部采购申请失败")
+	}
+
+	return &HeadquarterUpdateInfo{
+		DB:            headquarterDb,
+		PurchaseOrder: headquarterPurchaseOrder,
+		ItemRepo:      repository.NewPurchaseOrderItemRepo(headquarterDb),
+		ItemsToUpdate: make([]HeadquarterItemUpdate, 0),
+	}, nil
+}
+
+// batchUpdateHeadquarterItems 批量更新总部采购申请明细
+func (s *purchaseOrderSrv) batchUpdateHeadquarterItems(info *HeadquarterUpdateInfo) error {
+	for _, itemUpdate := range info.ItemsToUpdate {
+		// 获取总部采购申请明细
+		headquarterItem, err := info.ItemRepo.GetByPurchaseOrderUuidAndMaterialCode(info.PurchaseOrder.Uuid, itemUpdate.MaterialCode)
+		if err != nil {
+			// 如果找不到对应的明细，记录警告但不中断流程
+			// 这种情况可能是数据不一致导致的，但不应该影响主流程
+			continue
+		}
+
+		// 更新到货数量
+		headquarterItem.ArrivalNum = itemUpdate.NewArrivalNum
+		err = info.ItemRepo.Update(headquarterItem)
+		if err != nil {
+			return errors.WithMessage(err, fmt.Sprintf("更新总部采购申请明细失败，物料编码：%s", itemUpdate.MaterialCode))
+		}
+	}
+
+	return nil
 }
