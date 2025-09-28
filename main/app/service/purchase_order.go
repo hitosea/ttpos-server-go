@@ -142,7 +142,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(ctx context.Context, req req.P
 	purchaseOrderRepo := repository.NewPurchaseOrderRepo(db)
 
 	// 查询采购申请详情
-	purchaseOrder, err := purchaseOrderRepo.GetByUuid(req.Uuid, purchaseOrderRepo.WithItems())
+	purchaseOrder, err := purchaseOrderRepo.GetByUuid(req.Uuid, purchaseOrderRepo.WithItems(), purchaseOrderRepo.WithWarehouse())
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return resp.PurchaseOrderDetailResp{}, errors.New("采购申请不存在")
@@ -156,6 +156,14 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(ctx context.Context, req req.P
 	if err != nil {
 		return resp.PurchaseOrderDetailResp{}, errors.WithMessage(err, "数据转换失败")
 	}
+
+	// 转换仓库名称
+	detailResp.WarehouseName = func() dto.LocaleResponse {
+		if purchaseOrder.Warehouse != nil {
+			return *language.JsonToLocaleResponse(purchaseOrder.Warehouse.Name)
+		}
+		return detailResp.WarehouseName
+	}()
 
 	// 初始化数组字段，确保返回空数组而不是null
 	detailResp.Items = make([]resp.PurchaseOrderItemInfo, 0)
@@ -213,6 +221,16 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 				return 1
 			}(),
 			WarehouseErpCode: req.WarehouseErpCode,
+			WarehouseName: func() string {
+				if req.WarehouseErpCode != "" {
+					warehouse, err := repository.NewWarehouseRepo(tx).GetByErpCode(req.WarehouseErpCode)
+					if err != nil {
+						return ""
+					}
+					return warehouse.Name
+				}
+				return ""
+			}(),
 		}
 		err := purchaseOrderRepo.Create(purchaseOrder)
 		if err != nil {
@@ -355,6 +373,16 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(ctx context.Context, req req.Purc
 		purchaseOrder.SupplierErpCode = req.SupplierErpCode
 		purchaseOrder.ExpectArrivalTime = req.ExpectedDeliveryTime
 		purchaseOrder.WarehouseErpCode = req.WarehouseErpCode
+		purchaseOrder.WarehouseName = func() string {
+			if req.WarehouseErpCode != "" {
+				warehouse, err := repository.NewWarehouseRepo(tx).GetByErpCode(req.WarehouseErpCode)
+				if err != nil {
+					return ""
+				}
+				return warehouse.Name
+			}
+			return ""
+		}()
 		err = purchaseOrderRepo.Update(purchaseOrder)
 		if err != nil {
 			return errors.WithMessage(err, "更新采购申请失败")
@@ -648,6 +676,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 					return uuid
 				}()
 				headquarterPurchaseOrder.CompanyUuid = ctx.GetCompanyUuid()
+				headquarterPurchaseOrder.CompanyName = ctx.GetCompany().Name
 				headquarterPurchaseOrder.SubUuid = subUuid
 				headquarterPurchaseOrder.Status = constant.PurchaseOrderStatusPending
 				headquarterPurchaseOrder.HeadquarterStatus = constant.HeadquarterStatusPending
@@ -860,7 +889,9 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 			ReceiveTime:            req.ReceiveTime,
 			PurchaseOrder:          *purchaseOrder,
 			SourceWarehouseErpCode: purchaseOrder.WarehouseErpCode,
+			SourceWarehouseName:    purchaseOrder.WarehouseName,
 			TargetWarehouseErpCode: defaultWarehouse.ErpCode,
+			TargetWarehouseName:    defaultWarehouse.Name,
 			ReceiptType: func() int {
 				if req.ReceiptType == 2 {
 					return 2
@@ -1544,7 +1575,7 @@ func (s *purchaseOrderSrv) recordErpStockInLog(ctx context.Context, db *gorm.DB,
 		}
 
 		//
-		supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(receiptOrder.SupplierErpCode)
+		supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(receiptOrder.GetSupplierErpCode())
 		if err != nil {
 			return errors.WithMessage(err, "获取供应商信息失败")
 		}
@@ -1624,7 +1655,7 @@ func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, hea
 		}
 
 		// 获取供应商信息
-		supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(receiptOrder.SupplierErpCode)
+		supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(receiptOrder.GetSupplierErpCode())
 		if err != nil {
 			return errors.WithMessage(err, "获取供应商信息失败")
 		}

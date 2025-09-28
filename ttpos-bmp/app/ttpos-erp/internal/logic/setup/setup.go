@@ -187,7 +187,7 @@ func (s *sSetup) CreateDefaultPosProfile(ctx context.Context, req *setup.CreateD
 		Payments:           g.ArrayStr{"Cash", "Balance", "Free Meal"},
 		Currency:           "THB", // 泰铢
 		WriteOffAccount:    "Sales - " + req.CompanyAbbr,
-		WriteOffLimit:      1.00,
+		WriteOffLimit:      100000.00, //销账约束
 		WriteOffCostCenter: "Main - " + req.CompanyAbbr,
 	}
 	if len(req.Cashiers) > 0 {
@@ -479,7 +479,7 @@ func (s *sSetup) initDocumentsFromDir(ctx context.Context, config DocumentInitCo
 			// 调用service.Document.Create创建文档
 			if _, err := service.Document().Create(ctx, config.DocType, docData); err != nil {
 				g.Log().Error(ctx, fmt.Sprintf("创建%s失败", config.ItemName), err, g.Map{"file": path, "data": docData})
-				return gerror.Wrapf(err, "创建%s失败: %s", config.ItemName, path)
+				//return gerror.Wrapf(err, "创建%s失败: %s", config.ItemName, path)
 			}
 
 			g.Log().Infof(ctx, "%s创建成功: %s", config.ItemName, path)
@@ -537,7 +537,7 @@ func (s *sSetup) InitErpDocTypeWithDirname(ctx context.Context, dirBase string) 
 		// 处理单个目录，记录错误但不中断其他目录的处理
 		if err := s.initDocumentsFromDir(ctx, config); err != nil {
 			g.Log().Errorf(ctx, "初始化%s失败: %v", config.ItemName, err)
-			return gerror.Wrapf(err, "初始化%s失败", config.ItemName)
+			//return gerror.Wrapf(err, "初始化%s失败", config.ItemName)
 		}
 	}
 

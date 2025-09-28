@@ -1,4 +1,7 @@
 {
   "supplier_name" : "Headquarters - Supplier",
-  "supplier_type" : "Company"
+  "supplier_type" : "Company",
+  "custom_company" : "CFG",
+  "custom_branch": "Wallace Burger（CFG）",
+  "is_internal_supplier": 1
 }
