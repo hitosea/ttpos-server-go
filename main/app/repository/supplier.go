@@ -60,7 +60,7 @@ func (r *SupplierRepoImpl) Delete(uuid uint64) error {
 // GetByUuid 根据UUID查询供应商
 func (r *SupplierRepoImpl) GetByUuid(uuid uint64, opts ...DBOption) (*model.Supplier, error) {
 	var supplier model.Supplier
-	db := r.db.Model(&model.Supplier{}).Preload("PurchaseOrders").Scopes(NotDeleted).Where("uuid = ?", uuid)
+	db := r.db.Model(&model.Supplier{}).Preload("PurchaseOrders").Preload("MultiLanguageName").Scopes(NotDeleted).Where("uuid = ?", uuid)
 	db = r.applyOptions(db, opts...)
 	err := db.First(&supplier).Error
 	if err != nil {
@@ -96,7 +96,7 @@ func (r *SupplierRepoImpl) GetListWithPagination(pageNo, pageSize int, opts ...D
 	var total int64
 
 	// 构建基础查询
-	db := r.db.Model(&model.Supplier{}).Scopes(NotDeleted)
+	db := r.db.Model(&model.Supplier{}).Preload("MultiLanguageName").Scopes(NotDeleted)
 	db = r.applyOptions(db, opts...)
 
 	// 获取总数

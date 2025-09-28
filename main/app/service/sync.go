@@ -155,6 +155,13 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 			isExceptionOccurred = true || isExceptionOccurred
 		}
 
+		// 9 仓库
+		err := s.warehouseSrv.SyncWarehouse(ctx)
+		if err != nil {
+			logger.Logger.Error("仓库同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
+			isExceptionOccurred = true || isExceptionOccurred
+		}
+
 		// 2 物品
 		if err := s.materialSrv.SyncHeadquarterMaterial(ctx); err != nil {
 			logger.Logger.Error("物品同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
@@ -172,13 +179,6 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 		// 8 供应商
 		if err := s.supplierSrv.SyncSupplier(ctx); err != nil {
 			logger.Logger.Error("供应商同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-			isExceptionOccurred = true || isExceptionOccurred
-		}
-
-		// 9 仓库
-		err := s.warehouseSrv.SyncWarehouse(ctx)
-		if err != nil {
-			logger.Logger.Error("仓库同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 			isExceptionOccurred = true || isExceptionOccurred
 		}
 

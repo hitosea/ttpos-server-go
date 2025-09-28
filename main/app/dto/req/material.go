@@ -184,6 +184,7 @@ type MaterialAddErpReq struct {
 	Classification     string           `json:"classification" `      // 分类
 	ClassificationCode string           `json:"classification_code" ` // 分类编码
 	Uoms               []MaterialUomReq `json:"uoms" `                // 单位列表
+	PurchaseUom        string           `json:"purchase_uom" `        // 采购单位, 英文
 }
 
 type ProductAddErpReq struct {

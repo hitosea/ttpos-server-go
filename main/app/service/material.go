@@ -736,6 +736,17 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "翻译失败")
 	}
+
+	// 获取采购单位
+	var purchaseUom string
+	purchaseUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(request.PurchaseUnitUuid)
+	if err != nil {
+		return nil, nil, errors.WithMessage(err, "获取采购单位失败")
+	}
+	if purchaseUnit.Unit != nil {
+		purchaseUom = purchaseUnit.Unit.ErpnextUom
+	}
+
 	materialAddErpReq := &req.MaterialAddErpReq{
 		ItemName:           getEnName,
 		StockUom:           productUnit.ErpnextUom,
@@ -747,6 +758,7 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 		InternalCode:       request.InternalCode,
 		Classification:     getMaterialCategoryName,
 		ClassificationCode: materialCategory.Code,
+		PurchaseUom:        purchaseUom,
 	}
 
 	return &material, materialAddErpReq, nil
@@ -957,6 +969,16 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 				return errors.WithMessage(err, "翻译失败")
 			}
 
+			// 获取采购单位
+			var purchaseUom string
+			purchaseUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(request.PurchaseUnitUuid)
+			if err != nil {
+				return errors.WithMessage(err, "获取采购单位失败")
+			}
+			if purchaseUnit.Unit != nil {
+				purchaseUom = purchaseUnit.Unit.ErpnextUom
+			}
+
 			_, errErp := erpSrv.AddMaterial(ctx, req.MaterialAddErpReq{
 				ItemCode:      existingMaterial.Code,
 				ItemName:      enName,
@@ -973,6 +995,7 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 				}(),
 				Classification:     getMaterialCategoryName,
 				ClassificationCode: materialCategory.Code,
+				PurchaseUom:        purchaseUom,
 			})
 			if errErp != nil {
 				return errors.WithMessage(errErp)
@@ -1050,6 +1073,16 @@ func (s *materialSrv) UpdateMaterialStatusBatch(ctx context.Context, request req
 					})
 				}
 
+				// 获取采购单位
+				var purchaseUom string
+				purchaseUnit, err := repository.NewMaterialUnitRepo(db).GetMaterialUnitsByUuid(existingMaterial.PurchaseUnitUuid)
+				if err != nil {
+					return errors.WithMessage(err, "获取采购单位失败")
+				}
+				if purchaseUnit.Unit != nil {
+					purchaseUom = purchaseUnit.Unit.ErpnextUom
+				}
+
 				_, errErp := erpSrv.AddMaterial(ctx, req.MaterialAddErpReq{
 					ItemCode:      existingMaterial.Code,
 					ItemName:      enName,
@@ -1059,6 +1092,7 @@ func (s *materialSrv) UpdateMaterialStatusBatch(ctx context.Context, request req
 					BarcodeValue:  existingMaterial.BarcodeValue,
 					Uoms:          unitList,
 					InternalCode:  existingMaterial.InternalCode,
+					PurchaseUom:   purchaseUom,
 				})
 				if errErp != nil {
 					return errors.WithMessage(errErp)
@@ -1248,6 +1282,17 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 						return
 					}
 
+					// 获取采购单位
+					var purchaseUom string
+					purchaseUnit, err := repository.NewMaterialUnitRepo(db).GetMaterialUnitsByUuid(material.PurchaseUnitUuid)
+					if err != nil {
+						ctx.Log().Error("获取采购单位失败", zap.Error(err))
+						return
+					}
+					if purchaseUnit.Unit != nil {
+						purchaseUom = purchaseUnit.Unit.ErpnextUom
+					}
+
 					erpSrv.AddMaterial(ctx, req.MaterialAddErpReq{
 						ItemCode:       material.Code,
 						ItemName:       enName,
@@ -1264,6 +1309,7 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 							}
 							return " " // 分类编码为空时，传空格给ErpNext
 						}(),
+						PurchaseUom: purchaseUom,
 					})
 				}
 			}
