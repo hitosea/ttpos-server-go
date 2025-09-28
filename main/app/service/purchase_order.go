@@ -824,7 +824,12 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 
 			//  ------ 同步状态到子商户采购申请 ---------
 			if purchaseOrder.IsHeadquarterPurchase() {
-				subPurchaseOrder, err := purchaseOrderRepo.GetByUuid(purchaseOrder.SubUuid)
+				// 获取总部数据库
+				subDb := s.dbm.GetDB(purchaseOrder.CompanyUuid)
+				if subDb == nil {
+					return errors.New("获取子店数据库失败")
+				}
+				subPurchaseOrder, err := repository.NewPurchaseOrderRepo(subDb).GetByUuid(purchaseOrder.SubUuid)
 				if err != nil {
 					if err == gorm.ErrRecordNotFound {
 						return errors.New("采购申请不存在")
@@ -834,7 +839,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 				subPurchaseOrder.ErpOrderNo = purchaseOrder.ErpOrderNo
 				subPurchaseOrder.Status = constant.PurchaseOrderStatusApproved
 				subPurchaseOrder.HeadquarterStatus = constant.HeadquarterStatusApproved
-				err = repository.NewPurchaseOrderRepo(s.dbm.GetDB(purchaseOrder.CompanyUuid)).Update(subPurchaseOrder)
+				err = repository.NewPurchaseOrderRepo(subDb).Update(subPurchaseOrder)
 				if err != nil {
 					return errors.WithMessage(err, "更新采购申请单号失败")
 				}
