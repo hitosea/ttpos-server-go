@@ -144,7 +144,7 @@
         <TimePicker v-model="form.opening_hours" @update:modelValue="updateOpeningHours" />
       </el-form-item>
       <el-form-item for="no_click" :label="$t('起始流水号')" prop="start_serial_no" :rules="[{ required: true, message: '' }]" class="start-serial-no">
-        <el-input v-model="form.start_serial_no" :placeholder="$t('请输入起始流水号')" class="max-w400" @input="form.start_serial_no = form.start_serial_no.replace(/[^a-zA-Z0-9]/g, '')" />
+        <el-input v-model="form.start_serial_no" :placeholder="$t('请输入起始流水号')" class="max-w400" @input="form.start_serial_no = form.start_serial_no.replace(/[^0-9]/g, '')" />
       </el-form-item>
     </el-form>
     <!--提交-->
