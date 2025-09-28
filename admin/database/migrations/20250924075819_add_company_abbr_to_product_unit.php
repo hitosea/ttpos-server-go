@@ -28,11 +28,6 @@ class AddCompanyAbbrToProductUnit extends Migrator
      */
     public function change()
     {
-        $table = $this->table('warehouse');
-        if (!$table->hasColumn('headquarter_uuid')) {
-            $table->addColumn('headquarter_uuid', 'biginteger', ['null' => false, 'default' => 0, 'comment' => '总部Uuid', 'after' => 'erp_code'])
-                ->update();
-        }
         $table = $this->table('product_unit');
         if (!$table->hasColumn('headquarter_uuid')) {
             $table->addColumn('headquarter_uuid', 'biginteger', ['null' => false, 'default' => 0, 'comment' => '总部Uuid', 'after' => 'erpnext_uom'])
