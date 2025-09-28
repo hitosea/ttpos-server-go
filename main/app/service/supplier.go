@@ -257,12 +257,17 @@ func (s *supplierSrv) DeleteSupplier(ctx context.Context, deleteSupplierReq req.
 		return errors.New("该供应商存在关联的采购订单，无法删除")
 	}
 
-	companySetting := ctx.GetCompanySetting()
-	// 调用erp接口，只能删除自己创建的供应商
+	// 调用erp接口，只能删除自己创建的供应商(标记禁用)
 	if ctx.GetCompany().IsOpenErp() {
-		err = erp.NewIErpSrv(s.dbm).DeleteSupplier(ctx.GetContext(), req.DeleteSupplierReq{
-			SiteCode: companySetting.ErpnextSiteCode,
-			Name:     supplier.ErpCode,
+		companySetting := ctx.GetCompanySetting()
+		err = erp.NewIErpSrv(s.dbm).UpdateSupplier(ctx.GetContext(), req.UpdateSupplierReq{
+			CreateSupplierReq: req.CreateSupplierReq{
+				SiteCode:    companySetting.ErpnextSiteCode,
+				CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+				Branch:      companySetting.ErpnextBranchName,
+				Disabled:    true,
+			},
+			Name: supplier.ErpCode,
 		})
 		if err != nil {
 			return errors.WithMessage(errors.New("删除供应商失败"), err.Error())

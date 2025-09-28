@@ -683,8 +683,30 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 			return errors.WithMessage(err, "记录操作日志失败")
 		}
 
+		// 总部采购 驳回时，更新子店采购申请状态
+		if purchaseOrder.IsHeadquarterPurchase() && purchaseOrder.Status == constant.PurchaseOrderStatusRejected {
+			// 获取子店数据库
+			subDb := s.dbm.GetDB(purchaseOrder.CompanyUuid)
+			if subDb == nil {
+				return errors.New("获取子店数据库失败")
+			}
+			subPurchaseOrder, err := repository.NewPurchaseOrderRepo(subDb).GetByUuid(purchaseOrder.SubUuid)
+			if err != nil {
+				if err == gorm.ErrRecordNotFound {
+					return errors.New("采购申请不存在")
+				}
+				return errors.WithMessage(err, "查询采购申请失败")
+			}
+			subPurchaseOrder.Status = constant.PurchaseOrderStatusRejected
+			subPurchaseOrder.HeadquarterStatus = constant.HeadquarterStatusRejected
+			err = repository.NewPurchaseOrderRepo(subDb).Update(subPurchaseOrder)
+			if err != nil {
+				return errors.WithMessage(err, "更新采购申请单号失败")
+			}
+		}
+
 		// 内部采购 子店审核通过 不调用erp接口
-		if purchaseOrder.Status == constant.PurchaseOrderStatusHeadquarterPending {
+		if purchaseOrder.IsHeadquarterPurchase() && purchaseOrder.Status == constant.PurchaseOrderStatusHeadquarterPending {
 			//  ------ 整单复制到总部采购申请 ---------
 			// 获取总部数据库
 			db = s.dbm.GetDB(companySetting.HeadquarterUuid)
@@ -733,6 +755,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 			if err != nil {
 				return errors.WithMessage(err)
 			}
+			return nil
 		}
 
 		// 调用erp接口
