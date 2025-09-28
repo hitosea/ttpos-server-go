@@ -245,8 +245,8 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 		materialRepo := base.NewMaterialRepo(db)
 		materialList, err := materialRepo.GetMaterialByUuids(
 			materialUuids,
-			materialRepo.WithPreload("Unit"),
-			materialRepo.WithPreload("PurchaseUnit"),
+			materialRepo.WithPreload("Unit.Unit"),
+			materialRepo.WithPreload("PurchaseUnit.Unit"),
 		)
 		if err != nil {
 			return errors.WithMessage(err, "查询物品失败")
@@ -282,6 +282,12 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 					}
 					return ""
 				}(),
+				ErpnextUom: func() string {
+					if material.PurchaseUnit != nil {
+						return material.PurchaseUnit.Unit.ErpnextUom
+					}
+					return ""
+				}(),
 				UnitConversionRate: func() float64 {
 					if material.PurchaseUnit != nil {
 						return material.PurchaseUnit.ConversionRate
@@ -293,6 +299,12 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 						return material.Unit.UnitUuid
 					}
 					return 0
+				}(),
+				BaseErpnextUom: func() string {
+					if material.Unit != nil {
+						return material.Unit.Unit.ErpnextUom
+					}
+					return ""
 				}(),
 				BaseUnitName: func() string {
 					if material.Unit != nil {
@@ -395,8 +407,8 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(ctx context.Context, req req.Purc
 		materialRepo := base.NewMaterialRepo(db)
 		materialList, err := materialRepo.GetMaterialByUuids(
 			materialUuids,
-			materialRepo.WithPreload("Unit"),
-			materialRepo.WithPreload("PurchaseUnit"),
+			materialRepo.WithPreload("Unit.Unit"),
+			materialRepo.WithPreload("PurchaseUnit.Unit"),
 		)
 		if err != nil {
 			return errors.WithMessage(err, "查询物品失败")
@@ -432,6 +444,12 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(ctx context.Context, req req.Purc
 					}
 					return ""
 				}(),
+				ErpnextUom: func() string {
+					if material.PurchaseUnit != nil {
+						return material.PurchaseUnit.Unit.ErpnextUom
+					}
+					return ""
+				}(),
 				UnitConversionRate: func() float64 {
 					if material.PurchaseUnit != nil {
 						return material.PurchaseUnit.ConversionRate
@@ -443,6 +461,12 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(ctx context.Context, req req.Purc
 						return material.Unit.UnitUuid
 					}
 					return 0
+				}(),
+				BaseErpnextUom: func() string {
+					if material.Unit != nil {
+						return material.Unit.Unit.ErpnextUom
+					}
+					return ""
 				}(),
 				BaseUnitName: func() string {
 					if material.Unit != nil {
@@ -941,6 +965,8 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 				BaseUnitUuid:          orderItem.BaseUnitUuid,
 				BaseUnitName:          orderItem.BaseUnitName,
 				UnitConversionRate:    orderItem.UnitConversionRate,
+				ErpnextUom:            orderItem.ErpnextUom,
+				BaseErpnextUom:        orderItem.BaseErpnextUom,
 				Valuation:             orderItem.Valuation,
 				TotalPrice:            orderItem.TotalPrice,
 			})
@@ -1090,6 +1116,8 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 				BaseUnitUuid:          purchaseOrderItem.BaseUnitUuid,
 				BaseUnitName:          purchaseOrderItem.BaseUnitName,
 				UnitConversionRate:    purchaseOrderItem.UnitConversionRate,
+				ErpnextUom:            purchaseOrderItem.ErpnextUom,
+				BaseErpnextUom:        purchaseOrderItem.BaseErpnextUom,
 				Valuation:             purchaseOrderItem.Valuation,
 				TotalPrice:            purchaseOrderItem.TotalPrice,
 			})
