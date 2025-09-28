@@ -699,10 +699,12 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 			}
 			subPurchaseOrder.Status = constant.PurchaseOrderStatusRejected
 			subPurchaseOrder.HeadquarterStatus = constant.HeadquarterStatusRejected
+			subPurchaseOrder.RejectTime = purchaseOrder.RejectTime
 			err = repository.NewPurchaseOrderRepo(subDb).Update(subPurchaseOrder)
 			if err != nil {
 				return errors.WithMessage(err, "更新采购申请单号失败")
 			}
+			return nil
 		}
 
 		// 内部采购 子店审核通过 不调用erp接口
@@ -862,6 +864,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 				subPurchaseOrder.ErpOrderNo = purchaseOrder.ErpOrderNo
 				subPurchaseOrder.Status = constant.PurchaseOrderStatusApproved
 				subPurchaseOrder.HeadquarterStatus = constant.HeadquarterStatusApproved
+				subPurchaseOrder.PassTime = purchaseOrder.PassTime
 				err = repository.NewPurchaseOrderRepo(subDb).Update(subPurchaseOrder)
 				if err != nil {
 					return errors.WithMessage(err, "更新采购申请单号失败")
