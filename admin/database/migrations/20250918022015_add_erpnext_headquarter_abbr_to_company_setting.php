@@ -43,11 +43,20 @@ class AddErpnextHeadquarterAbbrToCompanySetting extends Migrator
         $db = Db::connect(Db::getConfig('default'), true);
         // 查询erpnext_site是否存在
         $erpnextSite = $db->name('setting')->where('key', 'erpnext_site')->find();
+        $values = '[{"name":"TTPOS","code":"1","headquarter_abbr":""},{"name":"华莱士","code":"2","headquarter_abbr":""},{"name":"UAT","code":"0","headquarter_abbr":""},{"name":"Wallace","code":"4","headquarter_abbr":"CFG"}]';
         if ($erpnextSite) {
-            $db->name('setting')->where('key', 'erpnext_site')->update(['values' => '[{"name":"TTPOS","code":"1","headquarter_abbr":""},{"name":"华莱士","code":"2","headquarter_abbr":"CFG"},{"name":"UAT","code":"0","headquarter_abbr":""}]']);
+            $db->name('setting')->where('key', 'erpnext_site')->update(['values' => $values]);
         }
-        // 只处理华莱士site
+        // 只处理CFG，默认site_code = 4
         $headquarterAbbr = 'CFG';
+        $headquarterSite = '4';
+        $sites = json_decode($values, true);
+        foreach ($sites as $site) {
+            if ($site['headquarter_abbr'] == $headquarterAbbr) {
+                $headquarterSite = $site['code'];
+                break;
+            }
+        }
         // 从saas获取总部
         $host = Env::get('DB_HOST');
         $port = Env::get('DB_PORT');
@@ -56,11 +65,11 @@ class AddErpnextHeadquarterAbbrToCompanySetting extends Migrator
         $dsn = "mysql:host={$host};port={$port}";
         $pdo = new PDO($dsn, $username, $password);
         // 将sql结果映射为数组
-        $headquarter = $pdo->query("SELECT * FROM saas.ttpos_company_setting WHERE erpnext_site_code = '2' AND erpnext_company_abbr = '{$headquarterAbbr}'")->fetch(PDO::FETCH_ASSOC);
+        $headquarter = $pdo->query("SELECT * FROM saas.ttpos_company_setting WHERE erpnext_site_code = '{$headquarterSite}' AND erpnext_company_abbr = '{$headquarterAbbr}'")->fetch(PDO::FETCH_ASSOC);
         $headquarterUuid = 0;
         if ($headquarter !== false) {
             $headquarterUuid = $headquarter['uuid'];
         }
-        $db->name('company_setting')->where('erpnext_site_code', '2')->update(['erpnext_headquarter_abbr' => $headquarterAbbr, 'headquarter_uuid' => $headquarterUuid]);
+        $db->name('company_setting')->where('erpnext_site_code', $headquarterSite)->update(['erpnext_headquarter_abbr' => $headquarterAbbr, 'headquarter_uuid' => $headquarterUuid]);
     }
 }

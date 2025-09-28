@@ -22,10 +22,9 @@ type UpdateWarehouseReq struct {
 // WarehouseListReq 仓库列表请求
 type WarehouseListReq struct {
 	dto.PageReq
-	Keyword       string `json:"keyword" form:"keyword"`               // 关键字
-	Type          string `json:"type" form:"type"`                     // 类型：normal-普通；transit-在途
-	Status        *int   `json:"status" form:"status"`                 // 状态：0-禁用；1-启用
-	IsHeadquarter int    `json:"is_headquarter" form:"is_headquarter"` // 是否总部：0-全部；1-总部；2-非总部
+	Keyword string `json:"keyword" form:"keyword"` // 关键字
+	Type    string `json:"type" form:"type"`       // 类型：normal-普通；transit-在途
+	Status  *int   `json:"status" form:"status"`   // 状态：0-禁用；1-启用
 }
 
 // GetWarehouseInOutListReq 获取仓库出入库明细列表请求

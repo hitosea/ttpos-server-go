@@ -24,15 +24,15 @@ import (
 
 // IWarehouseSrv 仓库服务接口
 type IWarehouseSrv interface {
-	GetWarehouseList(ctx context.Context, req req.WarehouseListReq) (resp.WarehouseListResp, error)                   // 仓库列表
-	GetHeadquarterWarehouseList(ctx context.Context) (resp.WarehouseListResp, error)                                  // 总部仓库列表
-	CreateWarehouse(ctx context.Context, addReq req.CreateWarehouseReq) error                                         // 创建仓库
-	UpdateWarehouse(ctx context.Context, req req.UpdateWarehouseReq) error                                            // 更新仓库
-	DeleteWarehouse(ctx context.Context, req req.DeleteWarehouseReq) error                                            // 删除仓库
-	SetDefaultWarehouse(ctx context.Context, req req.SetDefaultWarehouseReq) error                                    // 设置默认仓库
-	GetWarehouse(ctx context.Context, req req.WarehouseReq) (resp.WarehouseResp, error)                               // 获取仓库
-	GetWarehouseInOutList(ctx context.Context, req req.GetWarehouseInOutListReq) (resp.WarehouseInOutListResp, error) // 出入库明细列表
-	CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error)            // 检查仓库编码是否存在
+	GetWarehouseList(ctx context.Context, req req.WarehouseListReq, isHeadquarters ...bool) (resp.WarehouseListResp, error) // 仓库列表
+	GetHeadquarterWarehouseList(ctx context.Context) (resp.WarehouseListResp, error)                                        // 总部仓库列表
+	CreateWarehouse(ctx context.Context, addReq req.CreateWarehouseReq) error                                               // 创建仓库
+	UpdateWarehouse(ctx context.Context, req req.UpdateWarehouseReq) error                                                  // 更新仓库
+	DeleteWarehouse(ctx context.Context, req req.DeleteWarehouseReq) error                                                  // 删除仓库
+	SetDefaultWarehouse(ctx context.Context, req req.SetDefaultWarehouseReq) error                                          // 设置默认仓库
+	GetWarehouse(ctx context.Context, req req.WarehouseReq) (resp.WarehouseResp, error)                                     // 获取仓库
+	GetWarehouseInOutList(ctx context.Context, req req.GetWarehouseInOutListReq) (resp.WarehouseInOutListResp, error)       // 出入库明细列表
+	CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error)                  // 检查仓库编码是否存在
 
 	SyncWarehouse(ctx context.Context) error             // 同步仓库列表
 	SyncDefaultWarehouseStock(ctx context.Context) error // 同步默认仓库库存
@@ -56,7 +56,12 @@ func NewWarehouseSrvImpl(dbm *database.DBManager) IWarehouseSrv {
 }
 
 // GetWarehouseList 获取仓库列表
-func (s *warehouseSrv) GetWarehouseList(ctx context.Context, req req.WarehouseListReq) (resp.WarehouseListResp, error) {
+func (s *warehouseSrv) GetWarehouseList(ctx context.Context, req req.WarehouseListReq, isHeadquarters ...bool) (resp.WarehouseListResp, error) {
+	isHeadquarter := false
+	if len(isHeadquarters) > 0 {
+		isHeadquarter = isHeadquarters[0]
+	}
+
 	db := s.dbm.GetDB(ctx.GetDbId())
 	warehouseRepo := repository.NewWarehouseRepo(db)
 	// 构建查询选项
@@ -74,8 +79,8 @@ func (s *warehouseSrv) GetWarehouseList(ctx context.Context, req req.WarehouseLi
 		opts = append(opts, warehouseRepo.WhereStatus(*req.Status))
 	}
 	// 是否总部筛选
-	if req.IsHeadquarter != 0 {
-		opts = append(opts, warehouseRepo.WhereIsHeadquarter(req.IsHeadquarter == 1))
+	if isHeadquarter {
+		opts = append(opts, warehouseRepo.WhereIsHeadquarter(isHeadquarter))
 	} else {
 		opts = append(opts, warehouseRepo.WhereHeadquarterUuid(0))
 	}
@@ -93,7 +98,7 @@ func (s *warehouseSrv) GetWarehouseList(ctx context.Context, req req.WarehouseLi
 	// 构建响应数据
 	warehouseList := make([]resp.WarehouseResp, 0, len(warehouses))
 	for _, warehouse := range warehouses {
-		warehouseList = append(warehouseList, s.buildWarehouseResp(ctx, warehouse))
+		warehouseList = append(warehouseList, s.buildWarehouseResp(ctx, warehouse, isHeadquarter))
 	}
 
 	return resp.WarehouseListResp{
@@ -113,10 +118,9 @@ func (s *warehouseSrv) GetHeadquarterWarehouseList(ctx context.Context) (resp.Wa
 			PageNo:   1,
 			PageSize: 999,
 		},
-		Type:          "normal",
-		Status:        &[]int{1}[0],
-		IsHeadquarter: 1,
-	})
+		Type:   "normal",
+		Status: &[]int{1}[0],
+	}, true)
 }
 
 // GetWarehouse 获取仓库
@@ -127,7 +131,7 @@ func (s *warehouseSrv) GetWarehouse(ctx context.Context, req req.WarehouseReq) (
 	if err != nil {
 		return resp.WarehouseResp{}, errors.WithMessage(err, "获取仓库失败")
 	}
-	return s.buildWarehouseResp(ctx, *warehouse), nil
+	return s.buildWarehouseResp(ctx, *warehouse, false), nil
 }
 
 // CreateWarehouse 创建仓库
@@ -395,16 +399,21 @@ func (s *warehouseSrv) DeleteWarehouse(ctx context.Context, deleteWarehouseReq r
 }
 
 // buildWarehouseResp 构建仓库响应
-func (s *warehouseSrv) buildWarehouseResp(ctx context.Context, warehouse model.Warehouse) resp.WarehouseResp {
+func (s *warehouseSrv) buildWarehouseResp(ctx context.Context, warehouse model.Warehouse, isHeadquarter bool) resp.WarehouseResp {
 	var localName dto.LocaleResponse
 	if warehouse.MultiLanguageName != nil {
 		localName = warehouse.MultiLanguageName.GetNames()
 	}
 	return resp.WarehouseResp{
-		Uuid:       warehouse.Uuid,
-		LocalName:  localName,
-		Type:       warehouse.Type,
-		Code:       warehouse.Code,
+		Uuid:      warehouse.Uuid,
+		LocalName: localName,
+		Type:      warehouse.Type,
+		Code: func() string {
+			if isHeadquarter {
+				return warehouse.ErpCode
+			}
+			return warehouse.Code
+		}(),
 		Status:     warehouse.Status,
 		Contact:    warehouse.Contact,
 		Phone:      warehouse.Phone,

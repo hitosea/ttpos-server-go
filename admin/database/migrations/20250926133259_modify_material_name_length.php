@@ -1,11 +1,12 @@
 <?php
+/**
+ * 修改原料表name字段长度为1000
+ */
 
 use think\migration\Migrator;
-use think\migration\db\Column;
 
-class RemoveColumnSyncStatus extends Migrator
+class ModifyMaterialNameLength extends Migrator
 {
-    const TARGET = 'all';
     /**
      * Change Method.
      *
@@ -29,10 +30,16 @@ class RemoveColumnSyncStatus extends Migrator
      */
     public function change()
     {
-        // TODO 更新后删除
-        $table = $this->table('company');
-        if ($table->hasColumn('sync_status')) {
-            $table->removeColumn('sync_status')->update();
+        // 检查表是否存在
+        if ($this->hasTable('material')) {
+            $table = $this->table('material');
+            
+            // 检查字段是否存在
+            if ($table->hasColumn('name')) {
+                // 修改name字段长度为1000
+                $table->changeColumn('name', 'string', ['limit' => 1000, 'default' => '', 'comment' => '原料名称']);
+                $table->update();
+            }
         }
     }
 }

@@ -641,12 +641,14 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 			}
 			err = db.Transaction(func(tx *gorm.DB) error {
 				// 整单复制
+				subUuid := purchaseOrder.Uuid
 				headquarterPurchaseOrder := purchaseOrder
-				headquarterPurchaseOrder.Uuid = func() uint64 {
+				headquarterPurchaseOrder.BaseModel.Uuid = func() uint64 {
 					uuid, _ := utils.GetID()
 					return uuid
 				}()
-				headquarterPurchaseOrder.SubUuid = purchaseOrder.Uuid
+				headquarterPurchaseOrder.CompanyUuid = ctx.GetCompanyUuid()
+				headquarterPurchaseOrder.SubUuid = subUuid
 				headquarterPurchaseOrder.Status = constant.PurchaseOrderStatusPending
 				headquarterPurchaseOrder.HeadquarterStatus = constant.HeadquarterStatusPending
 				err = repository.NewPurchaseOrderRepo(tx).Create(headquarterPurchaseOrder)
@@ -661,7 +663,10 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 					if err != nil {
 						return errors.WithMessage(err, "查询总部物品明细失败")
 					}
+
 					headquarterItem := item
+					headquarterItem.BaseModel.ID = 0
+					headquarterItem.BaseModel.Uuid = 0
 					headquarterItem.PurchaseOrderUuid = headquarterPurchaseOrder.Uuid
 					headquarterItem.MaterialUuid = material.Uuid
 					headquarterItems = append(headquarterItems, headquarterItem)
@@ -673,7 +678,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 				return nil
 			})
 			if err != nil {
-				return errors.WithMessage(err, "整单复制到总部采购申请失败")
+				return errors.WithMessage(err)
 			}
 		}
 

@@ -167,7 +167,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 	// 转换为响应格式
 	var materialList []material_resp.Material
 	for _, material := range materials {
-		if material.InitStock == 0 {
+		if material.InitStock == 0 && material.HeadquarterUuid == 0 {
 			continue // 过滤掉非移动管理端添加的物品
 		}
 		unitList := []material_resp.MaterialUnit{}
@@ -444,7 +444,7 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 	productUnitRepo := repository.NewProductRepo(db)
 	productUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.StockUom)
 	if err != nil {
-		return errors.WithMessage(err, "获取单位信息失败")
+		return errors.WithMessage(err, fmt.Sprintf("获取单位信息失败: %s", request.StockUom))
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
@@ -454,19 +454,19 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 		materialCategoryRepo := repository.NewMaterialRepo(tx)
 		materialCategory, exists, err := materialCategoryRepo.GetMaterialCategoryByCode(request.ClassificationCode)
 		if err != nil {
-			return errors.WithMessage(err, "获取物品分类失败")
+			return errors.WithMessage(err, fmt.Sprintf("获取物品分类失败: %s", request.ClassificationCode))
 		}
 		materialCategoryUuid := uint64(0)
 		if !exists { // 如果物品分类不存在，则创建物品分类
 			materialCategory, exists, err = materialCategoryRepo.GetMaterialCategoryByEnglishName(request.Classification) // 根据英文名称获取物品分类
 			if err != nil {
-				return errors.WithMessage(err, "获取物品分类失败")
+				return errors.WithMessage(err, fmt.Sprintf("获取物品分类失败: %s", request.Classification))
 			}
 			if !exists {
 				// 调用翻译接口
 				categoryLocaleName, err := GetMultiLanguageName(ctx, request.Classification)
 				if err != nil {
-					return errors.WithMessage(err, "翻译失败")
+					return errors.WithMessage(err, fmt.Sprintf("翻译失败: %s", request.Classification))
 				}
 				addReq := req.MaterialCategoryAddReq{
 					LocaleName: *categoryLocaleName,
@@ -488,7 +488,7 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 			// 查询单位信息
 			productUnit, err := productUnitRepo.GetProductUnitByErpnextUom(unit.Uom)
 			if err != nil {
-				return errors.WithMessage(err, "获取单位信息失败")
+				return errors.WithMessage(err, fmt.Sprintf("获取单位信息失败: %s", unit.Uom))
 			}
 			unitList = append(unitList, req.MaterialUnitReq{
 				Uuid:           productUnit.Uuid,
