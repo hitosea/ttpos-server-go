@@ -2300,10 +2300,7 @@ func (s *productSrv) GetProductSauceList(ctx context.Context, sauceListReq req.P
 	for _, productSauce := range productSauceList {
 		var productBomCardName dto.LocaleResponse
 		if productSauce.ProductBomCardUuid > 0 {
-			productBomCardName, err = repository.NewProductBomCardRepo(db).GetProductBomCardName(productSauce.ProductBomCardUuid)
-			if err != nil {
-				return product_resp.ProductSauceListResp{}, errors.WithMessage(errors.New("获取成本卡名称失败"), err.Error())
-			}
+			productBomCardName, _ = repository.NewProductBomCardRepo(db).GetProductBomCardName(productSauce.ProductBomCardUuid)
 		}
 		productSauceListResp = append(productSauceListResp, product_resp.ProductSauceItem{
 			Uuid:                productSauce.Uuid,
@@ -4668,10 +4665,7 @@ func (s *productSrv) GetProductSingleList(ctx context.Context, req req.ProductSi
 			if productBom.IsFlavor() {
 				var productBomCardName dto.LocaleResponse
 				if productBom.ProductBomCardUuid > 0 {
-					productBomCardName, err = repository.NewProductBomCardRepo(db).GetProductBomCardName(productBom.ProductBomCardUuid)
-					if err != nil {
-						return nil, errors.WithMessage(err, "获取成本卡失败")
-					}
+					productBomCardName, _ = repository.NewProductBomCardRepo(db).GetProductBomCardName(productBom.ProductBomCardUuid)
 				}
 				productItem := product_resp.ProductSingleListItemResp{
 					Uuid:               productBom.Uuid,
