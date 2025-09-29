@@ -176,12 +176,12 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 
 		// 3,4,5,6 暂不同步
 
-		logger.Logger.Info("开始同步成本卡", zap.Uint64("companyUuid", companyUuid))
-		// 7 成本卡
-		if err := s.materialSrv.SyncProductBomCard(ctx); err != nil {
-			logger.Logger.Error("成本卡同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-			isExceptionOccurred = true || isExceptionOccurred
-		}
+		// logger.Logger.Info("开始同步成本卡", zap.Uint64("companyUuid", companyUuid))
+		// // 7 成本卡
+		// if err := s.materialSrv.SyncProductBomCard(ctx); err != nil {
+		// 	logger.Logger.Error("成本卡同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
+		// 	isExceptionOccurred = true || isExceptionOccurred
+		// }
 
 		logger.Logger.Info("开始同步供应商", zap.Uint64("companyUuid", companyUuid))
 		// 8 供应商
