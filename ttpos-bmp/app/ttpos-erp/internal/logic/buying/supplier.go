@@ -217,6 +217,13 @@ func (s *sSupplier) CreateSupplier(ctx context.Context, req *buying.CreateSuppli
 	// 构建供应商数据
 	supplierData := s.buildSupplierData(ctx, req.Supplier)
 
+	if supplierData.CustomAliasName == "" {
+		supplierData.CustomAliasName = req.Supplier.SupplierName
+	}
+	//创建时，使用别名来组装供应商名称
+	supplierData.Name = supplierData.CustomAliasName + " - " + req.Supplier.CompanyAbbr
+	supplierData.SupplierName = supplierData.CustomAliasName + " - " + req.Supplier.CompanyAbbr
+
 	// 调用ERP接口创建供应商
 	resp, err := service.Document().Create(ctx, erp.DocTypeSupplier, supplierData)
 	if err != nil {
@@ -408,7 +415,7 @@ func (s *sSupplier) ListSuppliers(ctx context.Context, req *buying.ListSuppliers
 
 	// 构建请求参数
 	params := &erp.RequestParams{
-		Fields:  g.ArrayStr{"name", "supplier_name", "country", "supplier_type", "disabled", "represents_company", "is_transporter", "is_internal_supplier", "custom_company", "custom_branch"},
+		Fields:  g.ArrayStr{"name", "supplier_name", "country", "supplier_type", "disabled", "represents_company", "is_transporter", "is_internal_supplier", "custom_company", "custom_branch", "custom_alias_name"},
 		Filters: filters,
 	}
 
@@ -480,6 +487,7 @@ func (s *sSupplier) ListSuppliers(ctx context.Context, req *buying.ListSuppliers
 			IsTransporter:      data.Get("is_transporter").Bool(),
 			IsInternalSupplier: data.Get("is_internal_supplier").Bool(),
 			Disabled:           data.Get("disabled").Bool(),
+			AliasName:          data.Get("custom_alias_name").String(),
 		})
 	}
 	return &buying.ListSuppliersResp{
@@ -545,6 +553,8 @@ func (s *sSupplier) buildSupplierData(ctx context.Context, supplier *buying.Supp
 
 		Company: companyName,
 		Branch:  supplier.GetBranch(),
+
+		CustomAliasName: supplier.GetAliasName(),
 	}
 }
 
@@ -602,7 +612,7 @@ func (s *sSupplier) parseCreateSupplierResponse(data []byte) (*buying.SupplierDa
 	jsonData := gjson.New(data)
 
 	// 解析供应商数据
-	supplierData := jsonData.Get("data")
+	supplierData := jsonData.GetJson("data")
 	if supplierData.IsNil() {
 		return nil, gerror.New("响应数据为空")
 	}
@@ -612,6 +622,7 @@ func (s *sSupplier) parseCreateSupplierResponse(data []byte) (*buying.SupplierDa
 		return nil, gerror.Wrapf(err, "解析供应商数据失败")
 	}
 
+	supplier.AliasName = supplierData.Get("custom_alias_name").String()
 	return &supplier, nil
 }
 
