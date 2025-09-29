@@ -68,7 +68,7 @@ type IMaterialSrv interface {
 	AddMaterial(ctx context.Context, req req.MaterialAddReq) error
 	AddMaterialByEprItem(ctx context.Context, request req.MaterialAddErpReq, isSyncSubShop bool) error
 	EditMaterial(ctx context.Context, req req.MaterialEditReq) error
-	UpdateMaterialByEprItem(ctx context.Context, request req.MaterialEditErpReq) error
+	UpdateMaterialByEprItem(ctx context.Context, request req.MaterialEditErpReq, isSyncSubShop bool) error
 	DeleteMaterial(ctx context.Context, req req.MaterialDeleteReq) error
 	UpdateMaterialStatusBatch(ctx context.Context, req req.MaterialStatusReq) error
 	AddMaterialCategory(ctx context.Context, req req.MaterialCategoryAddReq) error
@@ -483,6 +483,19 @@ func (s *materialSrv) AddMaterialCategory(ctx context.Context, request req.Mater
 }
 
 func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.MaterialAddErpReq, isSyncSubShop bool) error {
+	// erp上没有的，子店从本地总部获取
+	barcodeValue := ""
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.IsSubShop() && !isSyncSubShop {
+		headquarterDB := s.dbm.GetDB(companySetting.HeadquarterUuid)
+		materialRepo := repository.NewMaterialRepo(headquarterDB)
+		material, _ := materialRepo.GetMaterialByErpCode(request.ItemCode)
+		if material != nil {
+			barcodeValue = material.BarcodeValue
+		}
+	}
+
+	// 切换为当前数据库
 	db := ctx.GetDB()
 	if db == nil {
 		dbId := ctx.GetDbId()
@@ -572,7 +585,7 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 			}(),
 			Valuation:        request.ValuationRate,
 			InitStock:        100000,
-			BarcodeValue:     request.BarcodeValue,
+			BarcodeValue:     barcodeValue,
 			UnitUuid:         productUnit.Uuid,
 			UnitList:         unitList,
 			PurchaseUnitUuid: purchaseUnit.Uuid,
@@ -1083,7 +1096,18 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 	return nil
 }
 
-func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.MaterialEditErpReq) error {
+func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.MaterialEditErpReq, isSyncSubShop bool) error {
+	barcodeValue := ""
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.IsSubShop() && !isSyncSubShop {
+		headquarterDB := s.dbm.GetDB(companySetting.HeadquarterUuid)
+		materialRepo := repository.NewMaterialRepo(headquarterDB)
+		material, _ := materialRepo.GetMaterialByErpCode(request.ItemCode)
+		if material != nil {
+			barcodeValue = material.BarcodeValue
+		}
+	}
+
 	db := ctx.GetDB()
 	if db == nil {
 		dbId := ctx.GetDbId()
@@ -1100,7 +1124,7 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 
 		updateData := map[string]any{
 			"valuation":     request.ValuationRate, // 估值率
-			"barcode_value": request.BarcodeValue,  // 条形码值
+			"barcode_value": barcodeValue,          // 条形码值
 			"internal_code": request.InternalCode,  // 内部编码
 			"status": func() bool { // 状态: 0 停用 1 启用
 				if request.Disabled {
@@ -2573,7 +2597,7 @@ func (s *materialSrv) SyncHeadquarterMaterial(ctx context.Context) error {
 					ClassificationCode: itemInfo.ClassificationCode,
 					Uoms:               uoms,
 					PurchaseUom:        itemInfo.PurchaseUom,
-				}); err != nil {
+				}, false); err != nil {
 					return errors.WithMessage(err, "同步总部物品列表失败")
 				}
 			} else {
@@ -2649,7 +2673,7 @@ func (s *materialSrv) SyncSubShopMaterial(ctx context.Context) error {
 					ClassificationCode: itemInfo.ClassificationCode,
 					Uoms:               uoms,
 					PurchaseUom:        itemInfo.PurchaseUom,
-				}); err != nil {
+				}, true); err != nil {
 					logger.Logger.Error("同步子店物品列表失败-01", zap.Error(err))
 					// return errors.WithMessage(err, "同步子店物品列表失败")
 				}
