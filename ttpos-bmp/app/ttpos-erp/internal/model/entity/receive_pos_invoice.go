@@ -19,4 +19,6 @@ type ReceivePosInvoice struct {
 	ProductsInvoiceName string `json:"productsInvoiceName" orm:"products_invoice_name" description:"商品销售发票"`                   // 商品销售发票
 	MaterialInvoiceName string `json:"materialInvoiceName" orm:"material_invoice_name" description:"物品销售发票"`                   // 物品销售发票
 	SiteCode            string `json:"siteCode"            orm:"site_code"             description:"erp_site_code, 用来区分调那个租户"` // erp_site_code, 用来区分调那个租户
+	ReqBody             string `json:"reqBody"             orm:"req_body"              description:"请求文本，如果能转换"`               // 请求文本，如果能转换
+	RespBody            string `json:"respBody"            orm:"resp_body"             description:"响应文本，如果能转换"`               // 响应文本，如果能转换
 }

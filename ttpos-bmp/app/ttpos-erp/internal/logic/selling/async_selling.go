@@ -16,6 +16,7 @@ import (
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
+	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
 	"google.golang.org/protobuf/proto"
 )
@@ -50,6 +51,8 @@ func (s *sAsyncSelling) CancelPosInvoice(ctx context.Context, req *selling.Cance
 		Docstatus:        erp.DocstatusDraft,
 		ReqMessage:       reqMsg,
 		SiteCode:         siteCode,
+		ReqBody:          req.String(),
+		CreatedAt:        int(gtime.Now().Timestamp()),
 	})
 
 	go func() {
@@ -68,7 +71,7 @@ func (s *sAsyncSelling) CancelPosInvoice(ctx context.Context, req *selling.Cance
 			respMessage := fmt.Sprintf("取消发票失败，查询原POS记录失败: %v", req)
 			g.Log().Errorf(ctx, respMessage, err)
 			if _, err := cancelDao.Data(do.ReceiveCancelPosInvoice{
-				RespMessage: respMessage,
+				RespBody: respMessage,
 			}).Update(); err != nil {
 				g.Log().Errorf(ctx, "取消发票失败，更新日志记录失败: %v", err)
 				return
@@ -83,7 +86,7 @@ func (s *sAsyncSelling) CancelPosInvoice(ctx context.Context, req *selling.Cance
 					respMessage := fmt.Sprintf("取消商品发票[%s]失败", receivePosInvoice.ProductsInvoiceName)
 					g.Log().Errorf(ctx, respMessage, err)
 					if _, err := cancelDao.Data(do.ReceiveCancelPosInvoice{
-						RespMessage: respMessage,
+						RespBody: respMessage,
 					}).Update(); err != nil {
 						g.Log().Errorf(ctx, "取消发票失败，更新日志记录失败: %v", err)
 						return
@@ -97,7 +100,7 @@ func (s *sAsyncSelling) CancelPosInvoice(ctx context.Context, req *selling.Cance
 					respMessage := fmt.Sprintf("取消材料发票[%s]失败", receivePosInvoice.ProductsInvoiceName)
 					g.Log().Errorf(ctx, respMessage, err)
 					if _, err := cancelDao.Data(do.ReceiveCancelPosInvoice{
-						RespMessage: respMessage,
+						RespBody: respMessage,
 					}).Update(); err != nil {
 						g.Log().Errorf(ctx, "取消材料发票失败，更新日志记录失败: %v", err)
 						return
@@ -147,6 +150,8 @@ func (*sAsyncSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosIn
 		SiteCode:         siteCode,
 		Branch:           req.Branch,
 		PostingDatetime:  req.PostingDatetime,
+		ReqBody:          req.String(),
+		CreatedAt:        int(gtime.Now().Timestamp()),
 	})
 	if err != nil {
 		g.Log().Errorf(ctx, "保存发票失败，插入记录失败: %v", err)
@@ -164,7 +169,7 @@ func (*sAsyncSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosIn
 		if err != nil {
 			g.Log().Errorf(ctx, "保存发票失败，异步保存发票失败: %v", err)
 			if _, err := posInvoiceDao.Data(do.ReceivePosInvoice{
-				RespMessage: fmt.Sprintf("保存发票失败，异步保存发票失败: %v", err),
+				RespBody: fmt.Sprintf("保存发票失败，异步保存发票失败: %v", err),
 			}).Update(); err != nil {
 				g.Log().Errorf(ctx, "保存发票失败，更新日志记录失败: %v", err)
 				return
@@ -182,6 +187,7 @@ func (*sAsyncSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosIn
 				ProductsInvoiceName: resp.ProductsInvoiceName,
 				MaterialInvoiceName: resp.MaterialInvoiceName,
 				RespMessage:         gbase64.EncodeToString(respBuf),
+				RespBody:            resp.String(),
 			}).Update(); err != nil {
 				g.Log().Errorf(ctx, "保存发票失败，更新日志记录失败: %v", err)
 				return
@@ -213,6 +219,8 @@ func (s *sAsyncSelling) ReturnPosInvoice(ctx context.Context, req *selling.Retur
 		Docstatus:        erp.DocstatusDraft,
 		ReqMessage:       reqMsg,
 		SiteCode:         siteCode,
+		ReqBody:          req.String(),
+		CreatedAt:        int(gtime.Now().Timestamp()),
 	})
 	if err != nil {
 		g.Log().Errorf(ctx, "保存退款发票失败，插入记录失败: %v", err)
@@ -233,7 +241,7 @@ func (s *sAsyncSelling) ReturnPosInvoice(ctx context.Context, req *selling.Retur
 			respMessage := fmt.Sprintf("退款发票失败，查询原POS记录失败: %v", req)
 			g.Log().Errorf(ctx, respMessage, err)
 			if _, err := returnDao.Data(do.ReceiveReturnPosInvoice{
-				RespMessage: respMessage,
+				RespBody: respMessage,
 			}).Update(); err != nil {
 				g.Log().Errorf(ctx, "退款发票失败，更新日志记录失败: %v", err)
 				return
@@ -245,7 +253,7 @@ func (s *sAsyncSelling) ReturnPosInvoice(ctx context.Context, req *selling.Retur
 			respMessage := fmt.Sprintf("退款发票失败，查询原POS记录失败: %v", req)
 			g.Log().Errorf(ctx, respMessage, err)
 			if _, err := returnDao.Data(do.ReceiveReturnPosInvoice{
-				RespMessage: respMessage,
+				RespBody: respMessage,
 			}).Update(); err != nil {
 				g.Log().Errorf(ctx, "退款发票失败，更新日志记录失败: %v", err)
 				return
@@ -263,7 +271,7 @@ func (s *sAsyncSelling) ReturnPosInvoice(ctx context.Context, req *selling.Retur
 			if err != nil {
 				g.Log().Errorf(ctx, "保存发票失败，异步保存发票失败: %v", err)
 				if _, err := returnDao.Data(do.ReceiveReturnPosInvoice{
-					RespMessage: fmt.Sprintf("保存发票失败，异步保存发票失败: %v", err),
+					RespBody: fmt.Sprintf("保存发票失败，异步保存发票失败: %v", err),
 				}).Update(); err != nil {
 					g.Log().Errorf(ctx, "保存发票失败，更新日志记录失败: %v", err)
 					return
@@ -279,6 +287,7 @@ func (s *sAsyncSelling) ReturnPosInvoice(ctx context.Context, req *selling.Retur
 				if _, err := returnDao.Data(do.ReceiveReturnPosInvoice{
 					Docstatus:   erp.DocstatusSubmitted,
 					RespMessage: gbase64.EncodeToString(respBuf),
+					RespBody:    resp.String(),
 				}).Update(); err != nil {
 					g.Log().Errorf(ctx, "保存发票失败，更新日志记录失败: %v", err)
 					return
@@ -310,6 +319,8 @@ func (*sAsyncSelling) ClosePosEntry(ctx context.Context, req *selling.ClosePosEn
 		SiteCode:         siteCode,
 		PosOpenEntryName: req.PosOpenEntryName,
 		PeriodEndDate:    req.PeriodEndDate,
+		ReqBody:          req.String(),
+		CreatedAt:        int(gtime.Now().Timestamp()),
 	})
 	if err != nil {
 		g.Log().Errorf(ctx, "关帐失败，插入记录失败: %v", err)
@@ -326,7 +337,7 @@ func (*sAsyncSelling) ClosePosEntry(ctx context.Context, req *selling.ClosePosEn
 		if err != nil {
 			g.Log().Errorf(ctx, "关帐失败，异步关帐失败: %v", err)
 			if _, err := closePosDao.Data(do.ReceiveClosePos{
-				RespMessage: fmt.Sprintf("保存发票失败，异步保存发票失败: %v", err),
+				RespBody: fmt.Sprintf("保存发票失败，异步保存发票失败: %v", err),
 			}).Update(); err != nil {
 				g.Log().Errorf(ctx, "保存发票失败，更新日志记录失败: %v", err)
 				return
@@ -342,6 +353,7 @@ func (*sAsyncSelling) ClosePosEntry(ctx context.Context, req *selling.ClosePosEn
 			if _, err := closePosDao.Data(do.ReceiveClosePos{
 				Docstatus:   erp.DocstatusSubmitted,
 				RespMessage: gbase64.EncodeToString(respBuf),
+				RespBody:    resp.String(),
 			}).Update(); err != nil {
 				g.Log().Errorf(ctx, "保存发票失败，更新日志记录失败: %v", err)
 				return

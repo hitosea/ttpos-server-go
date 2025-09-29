@@ -5,7 +5,7 @@ import "ttpos-server-go/app/errors"
 // Material 原料信息表 ttpos_material
 type Material struct {
 	BaseModel
-	Name                  string  `gorm:"default:'';column:name;comment:'原料名称'"`
+	Name                  string  `gorm:"type:text;default:'';column:name;comment:'原料名称'"`
 	Code                  string  `gorm:"default:'';column:code;comment:'原料编码'"`
 	Valuation             float64 `gorm:"type:decimal(12,2);default:0;column:valuation;comment:'估值率'"`
 	InitStock             float64 `gorm:"type:decimal(14,4);default:0.0000;column:init_stock;comment:'期初库存'"`

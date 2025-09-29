@@ -34,6 +34,8 @@ type ReceivePosInvoiceColumns struct {
 	ProductsInvoiceName string // 商品销售发票
 	MaterialInvoiceName string // 物品销售发票
 	SiteCode            string // erp_site_code, 用来区分调那个租户
+	ReqBody             string // 请求文本，如果能转换
+	RespBody            string // 响应文本，如果能转换
 }
 
 // receivePosInvoiceColumns holds the columns for the table erp_receive_pos_invoice.
@@ -51,6 +53,8 @@ var receivePosInvoiceColumns = ReceivePosInvoiceColumns{
 	ProductsInvoiceName: "products_invoice_name",
 	MaterialInvoiceName: "material_invoice_name",
 	SiteCode:            "site_code",
+	ReqBody:             "req_body",
+	RespBody:            "resp_body",
 }
 
 // NewReceivePosInvoiceDao creates and returns a new DAO object for table data access.

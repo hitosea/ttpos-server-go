@@ -32,6 +32,8 @@ type ReceiveReturnPosInvoiceColumns struct {
 	ReqMessage       string // 请求数据,base64编码
 	RespMessage      string // 响应数据,base64编码
 	SiteCode         string // erp_site_code, 用来区分调那个租户
+	ReqBody          string // 请求文本，如果能转换
+	RespBody         string // 响应文本，如果能转换
 }
 
 // receiveReturnPosInvoiceColumns holds the columns for the table erp_receive_return_pos_invoice.
@@ -47,6 +49,8 @@ var receiveReturnPosInvoiceColumns = ReceiveReturnPosInvoiceColumns{
 	ReqMessage:       "req_message",
 	RespMessage:      "resp_message",
 	SiteCode:         "site_code",
+	ReqBody:          "req_body",
+	RespBody:         "resp_body",
 }
 
 // NewReceiveReturnPosInvoiceDao creates and returns a new DAO object for table data access.
