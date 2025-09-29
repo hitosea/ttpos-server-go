@@ -792,7 +792,53 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 		// 调用erp接口
 		if ctx.GetCompany().IsOpenErp() && purchaseOrder.Status == constant.PurchaseOrderStatusApproved {
 			erpOrderNo := ""
-			if !purchaseOrder.IsHeadquarterPurchase() {
+			if purchaseOrder.IsHeadquarterPurchase() {
+				stockItems := make([]*stock.MaterialRequestItem, 0)
+				for _, item := range purchaseOrder.Items {
+					erpnextUom := item.ErpnextUom
+					if erpnextUom == "" {
+						materialUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(item.UnitUuid)
+						if err != nil {
+							return errors.WithMessage(err, "查询物品单位失败")
+						}
+						if materialUnit.Unit == nil {
+							return errors.New("查询物品原始单位失败")
+						}
+						erpnextUom = materialUnit.Unit.ErpnextUom
+					}
+					stockItems = append(stockItems, &stock.MaterialRequestItem{
+						ItemCode:     item.MaterialCode,
+						Qty:          item.Num,
+						ScheduleDate: purchaseOrder.ExpectArrivalTime,
+						Uom:          erpnextUom,
+					})
+				}
+				defaultWarehouse, err := repository.NewWarehouseRepo(db).GetDefaultWarehouse()
+				if err != nil {
+					return errors.WithMessage(err, "获取默认仓库失败")
+				}
+				// 获取公司设置
+				companySetting := repository.NewCompanySettingRepo(s.dbm.GetDB(purchaseOrder.CompanyUuid)).Get()
+				// 调用erp接口
+				stockResp, err := erp.NewIErpSrv(s.dbm).SaveMaterialRequest(ctx, companySetting, &stock.SaveMaterialRequestReq{
+					TransactionDate: purchaseOrder.OrderTime,
+					RequiredBy:      purchaseOrder.ExpectArrivalTime,
+					Supplier: func() string {
+						if purchaseOrder.SupplierErpCode != "" {
+							return purchaseOrder.SupplierErpCode
+						}
+						return purchaseOrder.SupplierName
+					}(),
+					SourceWarehouse: purchaseOrder.WarehouseErpCode,
+					TargetWarehouse: defaultWarehouse.ErpCode,
+					Items:           stockItems,
+				})
+				if err != nil {
+					return errors.WithMessage(err, "调用erp接口失败")
+				}
+				erpOrderNo = stockResp.PurchaseOrder
+
+			} else {
 				stockItems := make([]*buying.PurchaseOrderItemInput, 0)
 				for _, item := range purchaseOrder.Items {
 					erpnextUom := item.ErpnextUom
@@ -834,49 +880,6 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 				}
 				// 获取采购订单号 - 6哥说这里的 "名称就是采购单号"
 				erpOrderNo = erpResp.Name
-
-			} else {
-				stockItems := make([]*stock.MaterialRequestItem, 0)
-				for _, item := range purchaseOrder.Items {
-					erpnextUom := item.ErpnextUom
-					if erpnextUom == "" {
-						materialUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(item.UnitUuid)
-						if err != nil {
-							return errors.WithMessage(err, "查询物品单位失败")
-						}
-						if materialUnit.Unit == nil {
-							return errors.New("查询物品原始单位失败")
-						}
-						erpnextUom = materialUnit.Unit.ErpnextUom
-					}
-					stockItems = append(stockItems, &stock.MaterialRequestItem{
-						ItemCode:     item.MaterialCode,
-						Qty:          item.Num,
-						ScheduleDate: purchaseOrder.ExpectArrivalTime,
-						Uom:          erpnextUom,
-					})
-				}
-				defaultWarehouse, err := repository.NewWarehouseRepo(db).GetDefaultWarehouse()
-				if err != nil {
-					return errors.WithMessage(err, "获取默认仓库失败")
-				}
-				stockResp, err := erp.NewIErpSrv(s.dbm).SaveMaterialRequest(ctx, &stock.SaveMaterialRequestReq{
-					TransactionDate: purchaseOrder.OrderTime,
-					RequiredBy:      purchaseOrder.ExpectArrivalTime,
-					Supplier: func() string {
-						if purchaseOrder.SupplierErpCode != "" {
-							return purchaseOrder.SupplierErpCode
-						}
-						return purchaseOrder.SupplierName
-					}(),
-					SourceWarehouse: purchaseOrder.WarehouseErpCode,
-					TargetWarehouse: defaultWarehouse.ErpCode,
-					Items:           stockItems,
-				})
-				if err != nil {
-					return errors.WithMessage(err, "调用erp接口失败")
-				}
-				erpOrderNo = stockResp.PurchaseOrder
 			}
 
 			// 更新采购申请单号

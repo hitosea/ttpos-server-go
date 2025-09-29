@@ -5,6 +5,7 @@ import (
 	"errors"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-server-go/app/cloud"
+	"ttpos-server-go/app/model"
 	cc "ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/logger"
 
@@ -21,14 +22,13 @@ func NewErpStockClient() (stock.StockServiceClient, *grpc.ClientConn, error) {
 }
 
 // SaveMaterialRequestReq 保存物品申请单请求
-func (s *erpSrv) SaveMaterialRequest(ctx cc.Context, createPurchaseOrderReq *stock.SaveMaterialRequestReq) (*stock.SaveMaterialRequestResp, error) {
+func (s *erpSrv) SaveMaterialRequest(ctx cc.Context, companySetting model.CompanySetting, createPurchaseOrderReq *stock.SaveMaterialRequestReq) (*stock.SaveMaterialRequestResp, error) {
 	client, conn, err := NewErpStockClient()
 	if err != nil {
 		return &stock.SaveMaterialRequestResp{}, err
 	}
 	defer conn.Close()
 
-	companySetting := ctx.GetCompany().CompanySetting
 	createPurchaseOrderReq.CompanyAbbr = companySetting.ErpnextCompanyAbbr
 	createPurchaseOrderReq.Branch = companySetting.ErpnextBranchName
 

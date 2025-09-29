@@ -41,7 +41,7 @@ func (s *erpSrv) GetSupplierList(ctx pkgCtx.Context) (*buying.GetSupplierListRes
 	}
 	if result.Code != "0" {
 		logger.Logger.Error("GetSupplierList-GetSupplierList", zap.Any("err", err))
-		return &buying.GetSupplierListResp{}, errors.New("调用erp接口失败 - 20001")
+		return &buying.GetSupplierListResp{}, errors.New("调用erp接口失败-20001-" + result.GetMessage())
 	}
 	if result.Data != nil {
 		var resp buying.GetSupplierListResp
@@ -73,7 +73,7 @@ func (s *erpSrv) ListSuppliers(ctx cc.Context, listSuppliersReq req.GetErpnextSu
 	}
 	if result.Code != "0" {
 		logger.Logger.Error("ListSuppliers-ListSuppliers", zap.Any("err", err))
-		return nil, errors.New("调用erp接口失败 - 20002")
+		return nil, errors.New("调用erp接口失败-20002-" + result.GetMessage())
 	}
 	if result.Data != nil {
 		var resp buying.ListSuppliersResp
@@ -102,7 +102,7 @@ func (s *erpSrv) SavePurchaseReceipt(ctx pkgCtx.Context, savePurchaseReceiptReq 
 	}
 	if result.Code != "0" {
 		logger.Logger.Error("SavePurchaseReceipt-SavePurchaseReceipt", zap.Any("err", err))
-		return &buying.SavePurchaseReceiptResp{}, errors.New("调用erp接口失败 - 20003")
+		return &buying.SavePurchaseReceiptResp{}, errors.New("调用erp接口失败-2003-" + result.GetMessage())
 	}
 	if result.Data != nil {
 		var resp buying.SavePurchaseReceiptResp
@@ -232,7 +232,7 @@ func (s *erpSrv) CreatePurchaseOrder(ctx cc.Context, createPurchaseOrderReq *buy
 	}
 	if result.Code != "0" {
 		logger.Logger.Error("CreatePurchaseOrder-CreatePurchaseOrder", zap.Any("err", err))
-		return &buying.CreatePurchaseOrderResp{}, errors.New("调用erp接口失败 - 001")
+		return &buying.CreatePurchaseOrderResp{}, errors.New("调用erp接口失败-10001-" + result.GetMessage())
 	}
 	if result.Data != nil {
 		var resp buying.CreatePurchaseOrderResp
