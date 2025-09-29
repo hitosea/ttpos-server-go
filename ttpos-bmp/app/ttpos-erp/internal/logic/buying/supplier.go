@@ -155,7 +155,7 @@ func (s *sSupplier) AddSupplerTransactCompany(ctx context.Context, req *dto.AddS
 	//创建默认内部销售客户
 	if countCustomer == 0 {
 		if _, err = service.Selling().CreateCustomer(ctx, &erp.Customer{
-			Name:               customerName,
+			CustomerName:       customerName,
 			CustomerType:       "Company",
 			IsInternalCustomer: 1,
 			RepresentsCompany:  companyName,

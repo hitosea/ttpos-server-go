@@ -558,6 +558,16 @@ func (s *warehouseSrv) GetWarehouseInOutList(ctx context.Context, req req.GetWar
 	}
 	// 时间区间
 	if req.StartTime != 0 && req.EndTime != 0 {
+		// 判断前端传来的是毫秒时间戳，还是秒时间戳
+		if req.StartTime > 10000000000 {
+			req.StartTime = req.StartTime / 1000
+		}
+		if req.EndTime > 10000000000 {
+			req.EndTime = req.EndTime / 1000
+		}
+		if req.StartTime > req.EndTime {
+			return resp.WarehouseInOutListResp{}, errors.New("开始时间不能大于结束时间")
+		}
 		opts = append(opts, warehouseInOutLogRepo.WhereCreateTimeBetween(int(req.StartTime), int(req.EndTime)))
 	}
 	// 类型

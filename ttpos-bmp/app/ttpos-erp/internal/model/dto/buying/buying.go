@@ -17,3 +17,9 @@ type AddSupplerTransactCompanyReq struct {
 	Supplier        string `json:"supplier"`
 	WithCompanyAbbr string `json:"companyAbbr"`
 }
+
+type CreateDeliveryNoteFromInnerSaleOrderReq struct {
+	SourceName      string `json:"source_name,omitempty"`
+	SourceWarehouse string `json:"source_warehouse,omitempty"`
+	TargetWarehouse string `json:"target_warehouse,omitempty"`
+}
