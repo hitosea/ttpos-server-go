@@ -765,6 +765,8 @@ func (s *productSrv) SortProductShopCategory(ctx context.Context, req req.Produc
 
 // AddProductShopCategory 添加产品分类
 func (s *productSrv) AddProductShopCategory(ctx context.Context, addReq req.ProductShopCategoryAddReq) error {
+	// 大写编码
+	addReq.Code = strings.ToUpper(addReq.Code)
 	db := s.dbm.GetDB(ctx.GetDbId())
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(db)
@@ -869,6 +871,8 @@ func (s *productSrv) AddProductShopCategory(ctx context.Context, addReq req.Prod
 
 // EditProductShopCategory 编辑产品分类
 func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.ProductShopCategoryEditReq) error {
+	// 大写编码
+	editReq.Code = strings.ToUpper(editReq.Code)
 	db := s.dbm.GetDB(ctx.GetDbId())
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(db)
@@ -5048,9 +5052,12 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 		return errors.WithMessage(err, "检查商品单位失败")
 	}
 	// 检查商品规格内部编码
-	for _, flavor := range req.Flavors {
+	for idx, flavor := range req.Flavors {
 		if flavor.InternalCode != "" {
-			if repository.NewProductRepo(db).CheckProductFlavorInternalCodeExist(flavor.InternalCode, flavor.Uuid) {
+			// 大写编码
+			internalCode := strings.ToUpper(flavor.InternalCode)
+			req.Flavors[idx].InternalCode = internalCode
+			if repository.NewProductRepo(db).CheckProductFlavorInternalCodeExist(internalCode, flavor.Uuid) {
 				return errors.New("内部编码已存在")
 			}
 		}
@@ -5280,8 +5287,11 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 		return nil, nil, err
 	}
 	// 检查商品规格内部编码
-	for _, flavor := range req.Flavors {
+	for idx, flavor := range req.Flavors {
 		if flavor.InternalCode != "" {
+			// 大写编码
+			internalCode := strings.ToUpper(flavor.InternalCode)
+			req.Flavors[idx].InternalCode = internalCode
 			if repository.NewProductRepo(db).CheckProductFlavorInternalCodeExist(flavor.InternalCode, flavor.BomUuid) {
 				return nil, nil, errors.New("内部编码已存在")
 			}

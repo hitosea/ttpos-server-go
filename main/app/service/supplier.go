@@ -1,6 +1,7 @@
 package service
 
 import (
+	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -120,6 +121,8 @@ func (s *supplierSrv) hasRelatedPurchaseOrder(_ context.Context, supplier *model
 
 // CreateSupplier 创建供应商
 func (s *supplierSrv) CreateSupplier(ctx context.Context, createSupplierReq req.SupplierCreateReq) error {
+	// 大写编码
+	createSupplierReq.Code = strings.ToUpper(createSupplierReq.Code)
 	db := s.dbm.GetDB(ctx.GetDbId())
 	supplierRepo := repository.NewSupplierRepo(db)
 	// 检查供应商名称是否重复
@@ -171,6 +174,8 @@ func (s *supplierSrv) CreateSupplier(ctx context.Context, createSupplierReq req.
 
 // UpdateSupplier 更新供应商
 func (s *supplierSrv) UpdateSupplier(ctx context.Context, updateSupplierReq req.SupplierUpdateReq) error {
+	// 大写编码
+	updateSupplierReq.Code = strings.ToUpper(updateSupplierReq.Code)
 	db := s.dbm.GetDB(ctx.GetDbId())
 	supplierRepo := repository.NewSupplierRepo(db)
 

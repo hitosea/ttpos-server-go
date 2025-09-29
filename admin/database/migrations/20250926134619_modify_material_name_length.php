@@ -97,5 +97,17 @@ class ModifyMaterialNameLength extends Migrator
                 $table->update();
             }
         }
+
+        if ($this->hasTable('warehouse_in_out_log')) {
+            $table = $this->table('warehouse_in_out_log');
+            
+            // 检查字段是否存在
+            if ($table->hasColumn('material_base_unit_name')) {
+                // 修改material_base_unit_name字段为text类型
+                $table->changeColumn('material_base_unit_name', 'text', ['comment' => '物品基准单位名称']);
+                $table->update();
+            }
+        }
+        
     }
 }

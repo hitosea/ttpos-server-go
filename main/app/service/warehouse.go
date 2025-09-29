@@ -136,6 +136,8 @@ func (s *warehouseSrv) GetWarehouse(ctx context.Context, req req.WarehouseReq) (
 
 // CreateWarehouse 创建仓库
 func (s *warehouseSrv) CreateWarehouse(ctx context.Context, addReq req.CreateWarehouseReq) error {
+	// 大写编码
+	addReq.Code = strings.ToUpper(addReq.Code)
 	db := s.dbm.GetDB(ctx.GetDbId())
 	warehouseRepo := repository.NewWarehouseRepo(db)
 	// 检查仓库编码是否已存在
@@ -241,6 +243,8 @@ func (s *warehouseSrv) CreateWarehouse(ctx context.Context, addReq req.CreateWar
 
 // UpdateWarehouse 更新仓库
 func (s *warehouseSrv) UpdateWarehouse(ctx context.Context, updateReq req.UpdateWarehouseReq) error {
+	// 大写编码
+	updateReq.Code = strings.ToUpper(updateReq.Code)
 	db := s.dbm.GetDB(ctx.GetDbId())
 	warehouseRepo := repository.NewWarehouseRepo(db)
 
@@ -469,7 +473,7 @@ func (s *warehouseSrv) buildWarehouseInOutResp(log model.WarehouseInOutLog) resp
 
 	// 转换类型
 	typeStr := ""
-	switch log.LogType {
+	switch log.Scene {
 	case 0:
 		typeStr = "purchase"
 	case 1:
