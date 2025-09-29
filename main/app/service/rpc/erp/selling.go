@@ -307,6 +307,7 @@ func (s *erpSrv) ReturnPosInvoice(ctx pkgCtx.Context, returnPosInvoiceReq req.Re
 		Items:            returnPosInvoiceReq.Items,
 		Taxes:            returnPosInvoiceReq.Taxes,
 		Payments:         returnPosInvoiceReq.Payments,
+		InvoiceType:      1,
 	}
 	res, err := client.ReturnPosInvoice(WithSiteCode(ctx.GetContext(), returnPosInvoiceReq.SiteCode), params)
 	if err != nil {

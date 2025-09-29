@@ -119,7 +119,7 @@ func (model *Material) GetImage(baseUrl string) string {
 // MaterialUnit 原料单位表 ttpos_material_unit
 type MaterialUnit struct {
 	BaseModel
-	Name           string  `gorm:"default:'';column:name;comment:'原料单位名称'"`
+	Name           string  `gorm:"type:text;default:'';column:name;comment:'原料单位名称'"`
 	UnitUuid       uint64  `gorm:"default:0;column:unit_uuid;comment:'单位ID'"` // 商品单位ID
 	ConversionRate float64 `gorm:"type:decimal(12,4);default:1;column:conversion_rate;comment:'转换率'"`
 	FromUnitUuid   uint64  `gorm:"default:0;column:from_unit_uuid;comment:'来源单位ID. 来源单位为克，则转换率为1000，该原料单位为千克'"`
@@ -136,7 +136,7 @@ func (model *MaterialUnit) SetNil() {
 // MaterialCategory 原料分类表 ttpos_material_category
 type MaterialCategory struct {
 	BaseModel
-	Name                  string `gorm:"default:'';column:name;comment:'原料分类名称'"`
+	Name                  string `gorm:"type:text;default:'';column:name;comment:'原料分类名称'"`
 	Code                  string `gorm:"default:'';column:code;comment:'原料分类编码'"`
 	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称ID'"`
 	Sort                  int    `gorm:"default:0;column:sort;comment:'排序'"`

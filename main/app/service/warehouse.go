@@ -379,11 +379,17 @@ func (s *warehouseSrv) DeleteWarehouse(ctx context.Context, deleteWarehouseReq r
 		return errors.New("仓库存在关联的物品，不可删除")
 	}
 
-	companySetting := ctx.GetCompanySetting()
-	if ctx.GetCompany().IsOpenErp() && existingWarehouse.ErpCode != "" {
-		err = erp.NewIErpSrv(s.dbm).DeleteWarehouse(ctx.GetContext(), req.DeleteErpnextWarehouseReq{
-			SiteCode: companySetting.ErpnextSiteCode,
-			Name:     existingWarehouse.ErpCode,
+	if ctx.GetCompany().IsOpenErp() {
+		companySetting := ctx.GetCompanySetting()
+		// 删除标记为erp禁用
+		err = erp.NewIErpSrv(s.dbm).UpdateWarehouse(ctx.GetContext(), req.UpdateErpnextWarehouseReq{
+			CreateErpnextWarehouseReq: req.CreateErpnextWarehouseReq{
+				SiteCode:    companySetting.ErpnextSiteCode,
+				CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+				Branch:      companySetting.ErpnextBranchName,
+				Disabled:    true,
+			},
+			Name: existingWarehouse.ErpCode,
 		})
 		if err != nil && !strings.Contains(err.Error(), "not found") {
 			return errors.WithMessage(errors.New("删除仓库失败"), err.Error())

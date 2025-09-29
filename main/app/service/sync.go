@@ -172,10 +172,15 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 			isExceptionOccurred = true || isExceptionOccurred
 		}
 
-		// 2 物品
+		// 2-1 总部物品
 		logger.Logger.Info("开始同步物品", zap.Uint64("companyUuid", companyUuid))
 		if err := s.materialSrv.SyncHeadquarterMaterial(ctx); err != nil {
 			logger.Logger.Error("物品同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
+			isExceptionOccurred = true || isExceptionOccurred
+		}
+		// 2-2 子店物品
+		if err := s.materialSrv.SyncSubShopMaterial(ctx); err != nil {
+			logger.Logger.Error("物品同步子店失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 			isExceptionOccurred = true || isExceptionOccurred
 		}
 
