@@ -18,6 +18,7 @@ type (
 		CreatePurchaseFromMq(ctx context.Context, req *dto.CreatePurchaseFromMqReq) (res *erp.PurchaseOrder, err error)
 		// CreateInnerSaleOrderFromPurchaseOrder 创建内部销售订单
 		CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req *dto.CreateInnerSaleOrderFromPurchaseOrderReq) (res *erp.SaleOrder, err error)
+		CreateDeliveryNoteFromInnerSaleOrder(ctx context.Context, req *dto.CreateDeliveryNoteFromInnerSaleOrderReq) (res *erp.DeliveryNote, err error)
 		// GetPurchaseOrder 获取采购订单
 		GetPurchaseOrder(ctx context.Context, req *buying.GetPurchaseOrderReq) (*erp.PurchaseOrder, error)
 		// CreatePurchaseReceiptFromOrder 创建采购收货订单

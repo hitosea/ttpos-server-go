@@ -130,6 +130,43 @@ func (*sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req *
 	return salesOrder, nil
 }
 
+func (*sBuying) CreateDeliveryNoteFromInnerSaleOrder(ctx context.Context, req *dto.CreateDeliveryNoteFromInnerSaleOrderReq) (res *erp.DeliveryNote, err error) {
+	resp, err := service.Rpc().Execute(ctx, &erp.ErpReq{
+		Method: erp.ApiMethodMakeMappedDoc,
+	}, g.MapStrStr{
+		"method":      "erpnext.selling.doctype.sales_order.sales_order.make_delivery_note",
+		"source_name": req.SourceName,
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建内部销售订单失败")
+	}
+
+	// 解析响应数据
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析发货单响应失败")
+	}
+	deliveryNote := &erp.DeliveryNote{}
+	j.Get("data").Scan(&deliveryNote)
+
+	deliveryNote.SetWarehouse = req.SourceWarehouse
+	deliveryNote.SetTargetWarehouse = req.TargetWarehouse
+	deliveryNote.Docstatus = gconv.Int(erp.DocstatusSubmitted)
+	//创建发货单
+	resp, err = service.Document().Create(ctx, erp.DocTypeDeliveryNote, deliveryNote)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建发货单失败")
+	}
+	j.Get("data").Scan(&deliveryNote)
+
+	// 提交发货单
+	//_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeDeliveryNote, deliveryNote.Name, erp.DocstatusSubmitted)
+	//if err != nil {
+	//	return nil, gerror.Wrapf(err, "提交发货单失败")
+	//}
+	return nil, nil
+}
+
 // GetPurchaseOrder 获取采购订单
 func (*sBuying) GetPurchaseOrder(ctx context.Context, req *buying.GetPurchaseOrderReq) (*erp.PurchaseOrder, error) {
 

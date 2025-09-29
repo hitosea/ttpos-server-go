@@ -65,12 +65,23 @@ func (*Controller) SaveMaterialRequest(ctx context.Context, req *stock.SaveMater
 		}
 		resp.PurchaseOrder = purchaseOrder.Name
 
-		if _, err = service.Buying().CreateInnerSaleOrderFromPurchaseOrder(ctx, &dto.CreateInnerSaleOrderFromPurchaseOrderReq{
-			SourceName:   purchaseOrder.Name,
-			DeliveryDate: requiredBy,
+		saleOrder := &erp.SaleOrder{}
+		if saleOrder, err = service.Buying().CreateInnerSaleOrderFromPurchaseOrder(ctx, &dto.CreateInnerSaleOrderFromPurchaseOrderReq{
+			SourceName:      purchaseOrder.Name,
+			DeliveryDate:    requiredBy,
+			SourceWarehouse: req.SourceWarehouse,
 		}); err != nil {
 			return rpc.ApiError(err.Error()), nil
 		}
+
+		//直接创建发货单，后续接入物流方
+
+		service.Buying().CreateDeliveryNoteFromInnerSaleOrder(ctx, &dto.CreateDeliveryNoteFromInnerSaleOrderReq{
+			SourceName:      saleOrder.Name,
+			SourceWarehouse: req.SourceWarehouse,
+			//TargetWarehouse: "", // TODO 取在途仓
+		})
+
 	}
 	// 返回成功响应
 	return rpc.ApiSuccessWithData("保存物品申请单成功", resp), nil
