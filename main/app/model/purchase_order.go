@@ -10,30 +10,32 @@ import (
 // PurchaseOrder 采购申请表 ttpos_purchase_order
 type PurchaseOrder struct {
 	BaseModel
-	OrderNo           string  `gorm:"column:order_no;type:varchar(255);not null;default:'';comment:单号" json:"order_no"`
-	SubUuid           uint64  `gorm:"column:sub_uuid;type:bigint(20) unsigned;not null;default:0;comment:子订单UUID" json:"sub_uuid"`
-	ErpOrderNo        string  `gorm:"column:erp_order_no;type:varchar(255);not null;default:'';comment:ERP采购单号" json:"erp_order_no"`
-	OrderType         int     `gorm:"column:order_type;type:int(10);not null;default:0;comment:申请类型, 0-仓库调拨" json:"order_type"`
-	SupplierName      string  `gorm:"column:supplier_name;type:varchar(100);not null;default:'';comment:供应商名称" json:"supplier_name"`
-	SupplierErpCode   string  `gorm:"column:supplier_erp_code;type:varchar(255);not null;default:'';comment:供应商编码" json:"supplier_erp_code"`
-	Status            int     `gorm:"column:status;type:int(10);not null;default:0;comment:状态, 0-待提交 1-待审核 2-已通过 3-已驳回 4-部分收货 5-全部收货" json:"status"`
-	Num               float64 `gorm:"column:num;type:decimal(14,4);not null;default:0.0000;comment:物资数量，每种物品算一个" json:"num"`
-	OrderTime         int64   `gorm:"column:order_time;type:int(10) unsigned;not null;default:0;comment:单据日期，采购单提交的时间（时间戳）" json:"order_time"`
-	ApplicantUuid     uint64  `gorm:"column:applicant_uuid;type:bigint(20) unsigned;not null;default:0;comment:申请人ID" json:"applicant_uuid"`
-	ApplicantName     string  `gorm:"column:applicant_name;type:varchar(255);not null;default:'';comment:申请人姓名" json:"applicant_name"`
-	ApproverUuid      uint64  `gorm:"column:approver_uuid;type:bigint(20) unsigned;not null;default:0;comment:审批人ID" json:"approver_uuid"`
-	ApproverName      string  `gorm:"column:approver_name;type:varchar(255);not null;default:'';comment:审批人姓名" json:"approver_name"`
-	ExpectArrivalTime int64   `gorm:"column:expect_arrival_time;type:int(10) unsigned;not null;default:0;comment:期望到货日期（时间戳）" json:"expect_arrival_time"`
-	PassTime          int64   `gorm:"column:pass_time;type:int(10) unsigned;not null;default:0;comment:通过时间（时间戳）" json:"pass_time"`
-	RejectTime        int64   `gorm:"column:reject_time;type:int(10) unsigned;not null;default:0;comment:驳回时间（时间戳）" json:"reject_time"`
-	FirstReceiveTime  int64   `gorm:"column:first_receive_time;type:int(10) unsigned;not null;default:0;comment:第一次收货时间（时间戳），从\"已通过\"状态变成\"部分收货\"状态的时间" json:"first_receive_time"`
-	FinalReceiveTime  int64   `gorm:"column:final_receive_time;type:int(10) unsigned;not null;default:0;comment:最终收货时间（时间戳），从\"部分收货\"状态变成\"全部收货\"状态的时间" json:"final_receive_time"`
-	PurchaseType      int     `gorm:"column:purchase_type;type:int(10);not null;default:0;comment:采购类型, 1-外部采购 2-内部采购" json:"purchase_type"`
-	WarehouseErpCode  string  `gorm:"column:warehouse_erp_code;type:varchar(255);not null;default:'';comment:仓库编码" json:"warehouse_erp_code"`
-	WarehouseName     string  `gorm:"column:warehouse_name;type:text;comment:仓库名称" json:"warehouse_name"`
-	HeadquarterStatus int     `gorm:"column:headquarter_status;type:int(10);not null;default:0;comment:总部状态：0-待提交 1-待审核 2-已通过 3-已驳回 4-部分收货 5-全部收货" json:"headquarter_status"`
-	CompanyUuid       uint64  `gorm:"column:company_uuid;type:bigint(20) unsigned;not null;default:0;comment:公司UUID-用于识别子商户" json:"company_uuid"`
-	CompanyName       string  `gorm:"column:company_name;type:varchar(255);not null;default:'';comment:公司名称" json:"company_name"`
+	OrderNo                 string  `gorm:"column:order_no;type:varchar(255);not null;default:'';comment:单号" json:"order_no"`
+	SubUuid                 uint64  `gorm:"column:sub_uuid;type:bigint(20) unsigned;not null;default:0;comment:子订单UUID" json:"sub_uuid"`
+	ErpOrderNo              string  `gorm:"column:erp_order_no;type:varchar(255);not null;default:'';comment:ERP采购单号" json:"erp_order_no"`
+	OrderType               int     `gorm:"column:order_type;type:int(10);not null;default:0;comment:申请类型, 0-仓库调拨" json:"order_type"`
+	SupplierName            string  `gorm:"column:supplier_name;type:varchar(100);not null;default:'';comment:供应商名称" json:"supplier_name"`
+	SupplierErpCode         string  `gorm:"column:supplier_erp_code;type:varchar(255);not null;default:'';comment:供应商编码" json:"supplier_erp_code"`
+	Status                  int     `gorm:"column:status;type:int(10);not null;default:0;comment:状态, 0-待提交 1-待审核 2-已通过 3-已驳回 4-部分收货 5-全部收货" json:"status"`
+	Num                     float64 `gorm:"column:num;type:decimal(14,4);not null;default:0.0000;comment:物资数量，每种物品算一个" json:"num"`
+	OrderTime               int64   `gorm:"column:order_time;type:int(10) unsigned;not null;default:0;comment:单据日期，采购单提交的时间（时间戳）" json:"order_time"`
+	ApplicantUuid           uint64  `gorm:"column:applicant_uuid;type:bigint(20) unsigned;not null;default:0;comment:申请人ID" json:"applicant_uuid"`
+	ApplicantName           string  `gorm:"column:applicant_name;type:varchar(255);not null;default:'';comment:申请人姓名" json:"applicant_name"`
+	ApproverUuid            uint64  `gorm:"column:approver_uuid;type:bigint(20) unsigned;not null;default:0;comment:审批人ID" json:"approver_uuid"`
+	ApproverName            string  `gorm:"column:approver_name;type:varchar(255);not null;default:'';comment:审批人姓名" json:"approver_name"`
+	ExpectArrivalTime       int64   `gorm:"column:expect_arrival_time;type:int(10) unsigned;not null;default:0;comment:期望到货日期（时间戳）" json:"expect_arrival_time"`
+	PassTime                int64   `gorm:"column:pass_time;type:int(10) unsigned;not null;default:0;comment:通过时间（时间戳）" json:"pass_time"`
+	RejectTime              int64   `gorm:"column:reject_time;type:int(10) unsigned;not null;default:0;comment:驳回时间（时间戳）" json:"reject_time"`
+	FirstReceiveTime        int64   `gorm:"column:first_receive_time;type:int(10) unsigned;not null;default:0;comment:第一次收货时间（时间戳），从\"已通过\"状态变成\"部分收货\"状态的时间" json:"first_receive_time"`
+	FinalReceiveTime        int64   `gorm:"column:final_receive_time;type:int(10) unsigned;not null;default:0;comment:最终收货时间（时间戳），从\"部分收货\"状态变成\"全部收货\"状态的时间" json:"final_receive_time"`
+	PurchaseType            int     `gorm:"column:purchase_type;type:int(10);not null;default:0;comment:采购类型, 1-外部采购 2-内部采购" json:"purchase_type"`
+	WarehouseErpCode        string  `gorm:"column:warehouse_erp_code;type:varchar(255);not null;default:'';comment:仓库编码" json:"warehouse_erp_code"`
+	WarehouseName           string  `gorm:"column:warehouse_name;type:text;comment:仓库名称" json:"warehouse_name"`
+	HeadquarterStatus       int     `gorm:"column:headquarter_status;type:int(10);not null;default:0;comment:总部状态：0-待提交 1-待审核 2-已通过 3-已驳回 4-部分收货 5-全部收货" json:"headquarter_status"`
+	CompanyUuid             uint64  `gorm:"column:company_uuid;type:bigint(20) unsigned;not null;default:0;comment:公司UUID-用于识别子商户" json:"company_uuid"`
+	CompanyName             string  `gorm:"column:company_name;type:varchar(255);not null;default:'';comment:公司名称" json:"company_name"`
+	DefaultWarehouseErpCode string  `gorm:"column:default_warehouse_erp_code;type:varchar(255);not null;default:'';comment:默认仓库ERP编码" json:"default_warehouse_erp_code"`
+	DefaultWarehouseName    string  `gorm:"column:default_warehouse_name;type:text;comment:默认仓库名称" json:"default_warehouse_name"`
 
 	// 关联关系
 	Items     []PurchaseOrderItem    `gorm:"foreignKey:PurchaseOrderUuid;references:Uuid" json:"items,omitempty"`
