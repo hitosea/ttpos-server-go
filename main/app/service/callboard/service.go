@@ -128,7 +128,7 @@ func (s *callBoardService) GetBindInfo(ctx context.Context, req req.GetBindInfoR
 
 // GetQueueData 获取队列数据
 func (s *callBoardService) GetQueueData(ctx context.Context, companyUuid uint64, req req.GetQueueDataReq) (*resp.QueueDataResp, error) {
-	bindInfo, err := s.mustGetBindInfoFromCache(req.DeviceId)
+	bindInfo, err := s.mustGetCompanyDeviceBindInfo(companyUuid, req.DeviceId)
 	if err != nil {
 		return nil, err
 	}
@@ -392,6 +392,23 @@ func (s *callBoardService) clearPendingDevice(ctx context.Context, deviceId stri
 	return nil
 }
 
+func (s *callBoardService) mustGetCompanyDeviceBindInfo(companyUuid uint64, deviceId string) (bindInfo DeviceBindInfo, err error) {
+	bindInfo, err = s.mustGetBindInfoFromCache(deviceId)
+	if err != nil {
+		return bindInfo, err
+	}
+	settingRepo := repository.NewSettingRepo(s.dbm.GetDB(companyUuid))
+	settingData := settingRepo.GetByKey(constant.SettingStore)
+	if settingData.Key == "" {
+		logger.Logger.Error("商家设置不存在或获取失败", zap.Uint64("companyUuid", companyUuid))
+		return bindInfo, nil
+	}
+	storeSetting := dtosetting.Store{}
+	_ = json.Unmarshal([]byte(settingData.Values), &storeSetting)
+	bindInfo.Lang1, bindInfo.Lang2 = checkAndFixLangs(storeSetting.Language, bindInfo.Lang1, bindInfo.Lang2)
+	return bindInfo, nil
+}
+
 func (s *callBoardService) mustGetBindInfoFromCache(deviceId string) (bindInfo DeviceBindInfo, err error) {
 	cmd := s.getRedisClient().HGetAll(context.Background(), cachekey.GetBindedDeviceKey(deviceId))
 	if err := cmd.Err(); err != nil {
@@ -434,7 +451,7 @@ func (s *callBoardService) handleCallBoardLanguageChangeEvent(msg event.CallBoar
 			logger.Logger.Error("获取绑定信息失败", zap.Uint64("companyUuid", msg.CompanyUuid), zap.String("deviceId", dev.DeviceId))
 			continue
 		}
-		lang1, lang2 := findToUpdateLangs(storeSetting.Language, bindInfo.Lang1, bindInfo.Lang2)
+		lang1, lang2 := checkAndFixLangs(storeSetting.Language, bindInfo.Lang1, bindInfo.Lang2)
 		if lang1 == bindInfo.Lang1 && lang2 == bindInfo.Lang2 {
 			continue
 		}
@@ -450,7 +467,7 @@ func (s *callBoardService) handleCallBoardLanguageChangeEvent(msg event.CallBoar
 	}
 }
 
-func findToUpdateLangs(langList []dto.LanguageItem, targetLang1 string, targetLang2 string) (lang1 string, lang2 string) {
+func checkAndFixLangs(langList []dto.LanguageItem, targetLang1 string, targetLang2 string) (lang1 string, lang2 string) {
 	toUpdateLangs := make([]string, 0, 2)
 	for _, lang := range langList {
 		if len(toUpdateLangs) == 2 {
