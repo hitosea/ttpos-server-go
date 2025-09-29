@@ -38,7 +38,7 @@ func (s *erpSrv) SaveMaterialRequest(ctx cc.Context, companySetting model.Compan
 	}
 	if result.Code != "0" {
 		logger.Logger.Error("SaveMaterialRequest-SaveMaterialRequest", zap.Any("err", err))
-		return &stock.SaveMaterialRequestResp{}, errors.New("调用erp接口失败 - 001")
+		return &stock.SaveMaterialRequestResp{}, errors.New("调用erp接口失败-1001-" + result.GetMessage())
 	}
 	if result.Data != nil {
 		var resp stock.SaveMaterialRequestResp
