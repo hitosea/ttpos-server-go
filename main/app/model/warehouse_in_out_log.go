@@ -9,7 +9,7 @@ type WarehouseInOutLog struct {
 	MaterialUuid         uint64  `json:"material_uuid" gorm:"type:bigint;default:0;comment:物品ID"`
 	MaterialName         string  `json:"material_name" gorm:"type:text;default:'';comment:物品名称JSON,记录当时物品名称"`
 	MaterialBaseUnitUuid uint64  `json:"material_base_unit_uuid" gorm:"type:bigint;default:0;comment:物品基准单位ID"`
-	MaterialBaseUnitName string  `json:"material_base_unit_name" gorm:"type:varchar(255);default:'';comment:物品基准单位名称"`
+	MaterialBaseUnitName string  `json:"material_base_unit_name" gorm:"type:text;default:'';comment:物品基准单位名称"`
 	Num                  float64 `json:"num" gorm:"type:decimal(22,4);default:0;comment:数量"`
 	Price                float64 `json:"price" gorm:"type:decimal(22,4);default:0;comment:单价，物品基准单位单价"`
 	Amount               float64 `json:"amount" gorm:"type:decimal(22,4);default:0;comment:金额,单价*数量"`
