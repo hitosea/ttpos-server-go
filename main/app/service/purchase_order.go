@@ -577,7 +577,6 @@ func (s *purchaseOrderSrv) DeletePurchaseOrder(ctx context.Context, req req.Purc
 // SubmitPurchaseOrder 提交采购申请
 func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.PurchaseOrderSubmitReq) error {
 	db := ctx.GetDB()
-	companySetting := ctx.GetCompanySetting()
 	//
 	return db.Transaction(func(tx *gorm.DB) error {
 		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
