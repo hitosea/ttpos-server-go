@@ -524,7 +524,7 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 				return 1
 			}(),
 			Valuation:        request.ValuationRate,
-			InitStock:        request.OpeningStock,
+			InitStock:        100000,
 			BarcodeValue:     request.BarcodeValue,
 			UnitUuid:         productUnit.Uuid,
 			UnitList:         unitList,

@@ -818,7 +818,12 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 					scheduleDate = time.Unix(purchaseOrder.ExpectArrivalTime, 0).Format("2006-01-02")
 				}
 				erpResp, err := erp.NewIErpSrv(s.dbm).CreatePurchaseOrder(ctx, &buying.CreatePurchaseOrderReq{
-					Supplier:        purchaseOrder.SupplierName,
+					Supplier: func() string {
+						if purchaseOrder.SupplierErpCode != "" {
+							return purchaseOrder.SupplierErpCode
+						}
+						return purchaseOrder.SupplierName
+					}(),
 					CompanyAbbr:     companySetting.ErpnextCompanyAbbr,
 					ScheduleDate:    scheduleDate,
 					TargetWarehouse: purchaseOrder.WarehouseErpCode,
@@ -858,7 +863,12 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 				stockResp, err := erp.NewIErpSrv(s.dbm).SaveMaterialRequest(ctx, &stock.SaveMaterialRequestReq{
 					TransactionDate: purchaseOrder.OrderTime,
 					RequiredBy:      purchaseOrder.ExpectArrivalTime,
-					Supplier:        purchaseOrder.SupplierName,
+					Supplier: func() string {
+						if purchaseOrder.SupplierErpCode != "" {
+							return purchaseOrder.SupplierErpCode
+						}
+						return purchaseOrder.SupplierName
+					}(),
 					SourceWarehouse: purchaseOrder.WarehouseErpCode,
 					TargetWarehouse: defaultWarehouse.ErpCode,
 					Items:           stockItems,
