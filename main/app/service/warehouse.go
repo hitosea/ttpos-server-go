@@ -473,7 +473,7 @@ func (s *warehouseSrv) buildWarehouseInOutResp(log model.WarehouseInOutLog) resp
 
 	// 转换类型
 	typeStr := ""
-	switch log.LogType {
+	switch log.Scene {
 	case 0:
 		typeStr = "purchase"
 	case 1:
