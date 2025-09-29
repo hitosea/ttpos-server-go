@@ -2256,8 +2256,10 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 		}
 	}
 	// 部分退款
+	isPartReturn := false // 部分退款时，如果有赠菜，先不传给erp
 	if len(req.Products) > 0 {
 		returnType = constant.ReturnOrderRefundTypePart
+		isPartReturn = true
 		// 获取退款商品列表
 		saleOrderProductUuids := make([]uint64, 0)
 		for _, product := range req.Products {
@@ -2515,7 +2517,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 		company := ctx.GetCompany()
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
-			res, err := s.ReturnPosInvoice(ctx, saleOrder, returnOrder, db, returnType)
+			res, err := s.ReturnPosInvoice(ctx, saleOrder, returnOrder, db, returnType, isPartReturn)
 			if err != nil {
 				return errors.WithMessage(err)
 			}
@@ -10277,7 +10279,7 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 }
 
 // 退款发票到erp
-func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOrder, returnOrder *model.ReturnOrder, db *gorm.DB, returnType int) (*selling.ReturnPosInvoiceResp, error) {
+func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOrder, returnOrder *model.ReturnOrder, db *gorm.DB, returnType int, isPartReturn bool) (*selling.ReturnPosInvoiceResp, error) {
 	companySetting := ctx.GetCompanySetting()
 
 	staff := ctx.GetStaff()
@@ -10301,6 +10303,9 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 		saleOrderProduct, _, _ := saleOrder.GetSaleOrderProduct(product.SaleOrderProductUuid)
 		if saleOrderProduct.IsPackageSubProduct() {
 			continue // 跳过子商品，因为在套餐商品中已经录入了子商品
+		}
+		if isPartReturn && saleOrderProduct.IsGiftProduct() {
+			continue // 部分退款时，如果有赠菜，先不传给erp
 		}
 		if saleOrderProduct.IsPackageProduct() {
 			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
