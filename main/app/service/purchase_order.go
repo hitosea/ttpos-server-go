@@ -593,14 +593,14 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 		}
 
 		// 检查供应商状态
-		if purchaseOrder.SupplierErpCode != "" {
+		if purchaseOrder.SupplierErpCode != "" && purchaseOrder.SupplierErpCode != constant.ErpHeadquartersSupplierCode {
 			dbs := tx
 			if companySetting.IsHeadquarter() && purchaseOrder.IsHeadquarterPurchase() {
 				dbs = s.dbm.GetDB(companySetting.HeadquarterUuid)
 			}
 			supplier, err := repository.NewSupplierRepo(dbs).GetByErpCode(purchaseOrder.SupplierErpCode)
 			if err != nil {
-				return errors.WithMessage(err, "供应商已禁用，请修改供应商状态")
+				return errors.WithMessage(err, "供应商不存在,请先同步供应商数据")
 			}
 			if supplier.Status == 0 {
 				return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用，请修改供应商状态")
@@ -667,14 +667,14 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 		}
 
 		// 检查供应商状态
-		if purchaseOrder.SupplierErpCode != "" {
+		if purchaseOrder.SupplierErpCode != "" && purchaseOrder.SupplierErpCode != constant.ErpHeadquartersSupplierCode {
 			dbs := tx
 			if companySetting.IsHeadquarter() && purchaseOrder.IsHeadquarterPurchase() {
 				dbs = s.dbm.GetDB(companySetting.HeadquarterUuid)
 			}
 			supplier, err := repository.NewSupplierRepo(dbs).GetByErpCode(purchaseOrder.SupplierErpCode)
 			if err != nil {
-				return errors.WithMessage(err, "供应商已禁用，请修改供应商状态")
+				return errors.WithMessage(err, "供应商不存在,请先同步供应商数据")
 			}
 			if supplier.Status == 0 {
 				return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用，请修改供应商状态")

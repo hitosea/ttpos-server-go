@@ -1142,7 +1142,7 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 		// 同步物品分类
 		materialCategory, exists, err := materialRepo.GetMaterialCategoryByCode(request.ClassificationCode)
 		if !exists || err != nil {
-			return errors.WithMessage(err, "物品分类不存在")
+			return errors.WithMessage(err, "物品分类不存在："+request.ClassificationCode)
 		}
 		if material.CategoryUuid != materialCategory.Uuid {
 			updateData["category_uuid"] = materialCategory.Uuid
@@ -1151,13 +1151,13 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 		// 基准单位
 		stockUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.StockUom)
 		if err != nil {
-			return errors.WithMessage(err, "基准单位不存在")
+			return errors.WithMessage(err, "基准单位不存在："+request.StockUom)
 		}
 
 		// 采购单位
 		purchaseUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.PurchaseUom)
 		if err != nil {
-			return errors.WithMessage(err, "采购单位不存在")
+			return errors.WithMessage(err, "采购单位不存在："+request.PurchaseUom)
 		}
 
 		// 同步单位
@@ -2650,7 +2650,8 @@ func (s *materialSrv) SyncSubShopMaterial(ctx context.Context) error {
 					Uoms:               uoms,
 					PurchaseUom:        itemInfo.PurchaseUom,
 				}); err != nil {
-					return errors.WithMessage(err, "同步子店物品列表失败")
+					logger.Logger.Error("同步子店物品列表失败-01", zap.Error(err))
+					// return errors.WithMessage(err, "同步子店物品列表失败")
 				}
 			} else {
 				if err := s.AddMaterialByEprItem(copyCtx, req.MaterialAddErpReq{
@@ -2666,7 +2667,8 @@ func (s *materialSrv) SyncSubShopMaterial(ctx context.Context) error {
 					StockUom:           itemInfo.StockUom,
 					PurchaseUom:        itemInfo.PurchaseUom,
 				}, true); err != nil {
-					return errors.WithMessage(err, "同步子店物品列表失败")
+					logger.Logger.Error("同步子店物品列表失败-02", zap.Error(err))
+					// return errors.WithMessage(err, "同步子店物品列表失败")
 				}
 			}
 		}
