@@ -24,4 +24,6 @@ type ReceivePosInvoice struct {
 	ProductsInvoiceName interface{} // 商品销售发票
 	MaterialInvoiceName interface{} // 物品销售发票
 	SiteCode            interface{} // erp_site_code, 用来区分调那个租户
+	ReqBody             interface{} // 请求文本，如果能转换
+	RespBody            interface{} // 响应文本，如果能转换
 }

@@ -23,4 +23,6 @@ type ReceiveReturnPosInvoice struct {
 	ReqMessage       interface{} // 请求数据,base64编码
 	RespMessage      interface{} // 响应数据,base64编码
 	SiteCode         interface{} // erp_site_code, 用来区分调那个租户
+	ReqBody          interface{} // 请求文本，如果能转换
+	RespBody         interface{} // 响应文本，如果能转换
 }
