@@ -15,7 +15,6 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/logger"
-	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
 
 	"github.com/jinzhu/copier"
@@ -572,11 +571,12 @@ func (s *productionSrv) Finish(ctx context.Context, req req.FinishReq) error {
 		}
 		event.NewSystemBus().PublishFinishMenuEvent(event.FinishMenuPayload{
 			BasePayload: event.BasePayload{
-				Ctx:           ctx,
-				CompanyUuid:   ctx.GetCompanyUuid(),
-				Source:        ctx.GetSource(),
-				SaleBillUuid:  product.SaleBillUuid,
-				SaleOrderUuid: product.SaleOrderProductUuid,
+				Ctx:                 ctx,
+				CompanyUuid:         ctx.GetCompanyUuid(),
+				ProductionOrderUuid: product.ProductionOrderUuid,
+				Source:              ctx.GetSource(),
+				SaleBillUuid:        product.SaleBillUuid,
+				SaleOrderUuid:       product.SaleOrderProductUuid,
 			},
 			FinishedTime: finishedTime,
 			Products: event.Products{
@@ -602,13 +602,6 @@ func (s *productionSrv) Finish(ctx context.Context, req req.FinishReq) error {
 			},
 		})
 	}()
-
-	// 通知叫号系统
-	utils.SafeGo(func() {
-		event.NewSystemBus().PublishCallBoardChangeEvent(event.CallBoardChangeEvent{
-			CompanyUuid: ctx.GetCompanyUuid(),
-		})
-	})
 
 	// 完成制作后，推送更新厨显
 	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
@@ -680,13 +673,6 @@ func (s *productionSrv) Recovery(ctx context.Context, req req.RecoveryReq) error
 		return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
 	}
 
-	// 通知叫号系统
-	utils.SafeGo(func() {
-		event.NewSystemBus().PublishCallBoardChangeEvent(event.CallBoardChangeEvent{
-			CompanyUuid: ctx.GetCompanyUuid(),
-		})
-	})
-
 	// 恢复制作后，推送更新厨显
 	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
 		"update_time": time.Now().Unix(),
@@ -715,13 +701,6 @@ func (s *productionSrv) ConfirmReturn(ctx context.Context, productUuid uint64) e
 	}); err != nil {
 		return errors.ErrInternal
 	}
-
-	// 通知叫号系统
-	utils.SafeGo(func() {
-		event.NewSystemBus().PublishCallBoardChangeEvent(event.CallBoardChangeEvent{
-			CompanyUuid: ctx.GetCompanyUuid(),
-		})
-	})
 
 	// 恢复制作后，推送更新厨显
 	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
@@ -760,13 +739,6 @@ func (s *productionSrv) ConfirmReturnAll(ctx context.Context, saleBillUuid uint6
 	if err != nil {
 		return errors.ErrInternal
 	}
-
-	// 通知叫号系统
-	utils.SafeGo(func() {
-		event.NewSystemBus().PublishCallBoardChangeEvent(event.CallBoardChangeEvent{
-			CompanyUuid: ctx.GetCompanyUuid(),
-		})
-	})
 
 	// 恢复制作后，推送更新厨显
 	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{

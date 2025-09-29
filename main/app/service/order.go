@@ -2131,13 +2131,6 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 		})
 	}()
 
-	// 通知叫号系统
-	utils.SafeGo(func() {
-		s.bus.PublishCallBoardChangeEvent(event.CallBoardChangeEvent{
-			CompanyUuid: ctx.GetCompanyUuid(),
-		})
-	})
-
 	// 成功后，推送到厨显端更新订单
 	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
 		"update_time": time.Now().Unix(),
@@ -7720,13 +7713,6 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			CancelSaleOrderProductProduct: convertToEventOrderProduct(returnSaleOrderProduct, false),
 		})
 	}()
-
-	// 通知叫号系统
-	utils.SafeGo(func() {
-		s.bus.PublishCallBoardChangeEvent(event.CallBoardChangeEvent{
-			CompanyUuid: ctx.GetCompanyUuid(),
-		})
-	})
 
 	// 送厨成功后，推送更新订单
 	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{

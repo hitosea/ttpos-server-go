@@ -13,7 +13,7 @@ type GetBindInfoReq struct {
 // GetQueueDataReq 获取队列数据请求
 type GetQueueDataReq struct {
 	DeviceId   string `form:"device_id" binding:"required"`
-	Limit      int    `form:"limit" binding:"required"`
+	Limit      int64  `form:"limit" binding:"required"`
 	UpdateTime int64  `form:"update_time"`
 	// Timestamp  int64  `form:"timestamp" binding:"required"`
 	// Sign       string `form:"sign" binding:"required"`

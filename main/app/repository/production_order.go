@@ -26,13 +26,14 @@ type IProductionOrderRepo interface {
 	WhereProductFirstCategoryUuidIn(uuids []uint64) DBOption  // 生产商品分类Uuid条件
 	WhereProductNumGT0() DBOption                             // 送厨商品数量大于0
 
-	SaleBillUuidOpt() DBOption                                // 历史上菜条件
-	WithSaleOrderProductAll() DBOption                        // 关联销售订单商品
-	WithProductCategory() DBOption                            // 关联商品分类
-	WithProductCategoryMultiLanguageName() DBOption           // 关联商品分类多语言
-	UpdateProduct(opts []DBOption, vars map[string]any) error // 更新送厨商品
-	UpdateOrder(opts []DBOption, vars map[string]any) error   // 更新送厨单
-	IsProductionFinished(productionUuid uint64) (bool, error) // 检查生产订单是否完成
+	SaleBillUuidOpt() DBOption                                            // 历史上菜条件
+	WithSaleOrderProductAll() DBOption                                    // 关联销售订单商品
+	WithProductCategory() DBOption                                        // 关联商品分类
+	WithProductCategoryMultiLanguageName() DBOption                       // 关联商品分类多语言
+	UpdateProduct(opts []DBOption, vars map[string]any) error             // 更新送厨商品
+	UpdateOrder(opts []DBOption, vars map[string]any) error               // 更新送厨单
+	IsProductionFinished(productionUuid uint64) (bool, error)             // 检查生产订单是否完成
+	IsProductionFinishedBySaleBillUuid(saleBillUuid uint64) (bool, error) // 检查销售账单下所有生产订单是否完成
 }
 
 // IProductionOrderQueryRepo 生产订单查询仓库接口
@@ -356,4 +357,13 @@ func (r *productionRepo) IsProductionFinished(productionUuid uint64) (bool, erro
 		return false, errors.WithMessage(err)
 	}
 	return count == 0, nil
+}
+
+// IsProductionFinishedBySaleBillUuid 检查销售账单下所有生产订单是否完成
+func (r *productionRepo) IsProductionFinishedBySaleBillUuid(saleBillUuid uint64) (bool, error) {
+	// 获取已叫production
+	var count int64
+	err := r.db.Model(&model.ProductionOrderProduct{}).Where("sale_bill_uuid = ? AND status < ?",
+		saleBillUuid, constant.ProductionOrderProductStatusFinished).Count(&count).Error
+	return count == 0, errors.WithMessage(err)
 }

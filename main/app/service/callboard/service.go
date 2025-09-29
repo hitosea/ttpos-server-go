@@ -4,7 +4,10 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"fmt"
 	"math/big"
+	"strconv"
+	"strings"
 	"time"
 
 	"ttpos-server-go/app/constant"
@@ -25,6 +28,12 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
+)
+
+const (
+	_ActionPushToPreparingQueue = iota
+	_ActionPushToPreparedQueue
+	_ActionRemoveFromQueue
 )
 
 type ICallBoardService interface {
@@ -49,8 +58,54 @@ func NewCallBoardService(dbm *database.DBManager, cache cache.Cache) ICallBoardS
 		clearPendingScript: redis.NewScript(LuaScriptClearPendingDevice),
 		bus:                event.NewSystemBus(),
 	}
-	srv.bus.SubscribeCallBoardChangeEvent(srv.handleCallBoardChangeEvent)
-	srv.bus.SubscribeCallBoardLanguageChangeEvent(srv.handleCallBoardLanguageChangeEvent)
+
+	// 订阅处理结账事件
+	srv.bus.SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
+		err := srv.handleSaleBillEvent(payload.CompanyUuid, payload.SaleBillUuid, _ActionPushToPreparingQueue)
+		if err != nil {
+			logger.Logger.Error("callboard srv handleSaleBillEvent failed", zap.Error(err))
+		}
+	})
+
+	// 订阅处理整单取消事件
+	srv.bus.SubscribeCancelOrderEvent(func(payload event.CancelOrderPayload) {
+		err := srv.handleSaleBillEvent(payload.CompanyUuid, payload.SaleBillUuid, _ActionRemoveFromQueue)
+		if err != nil {
+			logger.Logger.Error("callboard srv handleSaleBillEvent failed", zap.Error(err))
+		}
+	})
+
+	// 订阅处理整单退款事件
+	srv.bus.SubscribeReturnOrderEvent(func(payload event.ReturnOrderPayload) {
+		err := srv.handleSaleBillEvent(payload.CompanyUuid, payload.SaleBillUuid, _ActionRemoveFromQueue)
+		if err != nil {
+			logger.Logger.Error("callboard srv handleSaleBillEvent failed", zap.Error(err))
+		}
+	})
+
+	// 订阅处理整单反结账事件
+	srv.bus.SubscribeOrderReverseSettleEvent(func(payload event.OrderReverseSettlePayload) {
+		err := srv.handleSaleBillEvent(payload.CompanyUuid, payload.SaleBillUuid, _ActionRemoveFromQueue)
+		if err != nil {
+			logger.Logger.Error("callboard srv handleSaleBillEvent failed", zap.Error(err))
+		}
+	})
+
+	// 订阅处理整单免单事件
+	srv.bus.SubscribeFreeSaleOrderEvent(func(payload event.FreeSaleOrderPayload) {
+		err := srv.handleSaleBillEvent(payload.CompanyUuid, payload.SaleBillUuid, _ActionPushToPreparingQueue)
+		if err != nil {
+			logger.Logger.Error("callboard srv handleSaleBillEvent failed", zap.Error(err))
+		}
+	})
+
+	// 订阅处理整单完成制作事件
+	srv.bus.SubscribeFinishMenuEvent(func(payload event.FinishMenuPayload) {
+		err := srv.handleProductionOrderCookingEvent(payload.CompanyUuid, payload.SaleBillUuid)
+		if err != nil {
+			logger.Logger.Error("callboard srv handleProductionOrderCookingEvent failed", zap.Error(err))
+		}
+	})
 	return srv
 }
 
@@ -132,72 +187,22 @@ func (s *callBoardService) GetQueueData(ctx context.Context, companyUuid uint64,
 	if err != nil {
 		return nil, err
 	}
-	updateTime, _ := s.getRedisClient().Get(ctx, cachekey.GetCallBoardChangeKey(companyUuid)).Int64()
-	if updateTime <= req.UpdateTime && updateTime != 0 {
-		// 数据没有变化，直接返回空数据
-		return &resp.QueueDataResp{
-			Lang1:          bindInfo.Lang1,
-			Lang2:          bindInfo.Lang2,
-			UpdateTime:     updateTime,
-			PreparingQueue: make([]string, 0),
-			PreparedQueue:  make([]string, 0),
-		}, nil
-	}
-
-	productRepo := repository.NewProductRepo(s.dbm.GetDB(companyUuid))
-	// 获取制作中的
-	preparingList, err := productRepo.GetLatestProductsByStatus(req.Limit, constant.ProductionOrderProductStatusCooking)
+	preparingQueue, err := s.getCallBoardQueue(cachekey.GetPreparingQueueKey(companyUuid), req.Limit, bindInfo.CreateTime)
 	if err != nil {
 		return nil, err
 	}
-	// 获取制作完成的
-	preparedList, err := productRepo.GetLatestProductsByStatus(req.Limit, constant.ProductionOrderProductStatusFinished)
+	preparedQueue, err := s.getCallBoardQueue(cachekey.GetPreparedQueueKey(companyUuid), req.Limit, bindInfo.CreateTime)
 	if err != nil {
 		return nil, err
 	}
 
-	// 查询所有涉及的销售账单
-	saleBillUuids := make([]uint64, 0, len(preparingList)+len(preparedList))
-	for _, prd := range preparingList {
-		saleBillUuids = append(saleBillUuids, prd.SaleBillUuid)
-	}
-	for _, prd := range preparedList {
-		saleBillUuids = append(saleBillUuids, prd.SaleBillUuid)
-	}
-	saleBillRepo := repository.NewSaleBillRepo(s.dbm.GetDB(companyUuid))
-	saleBills, err := saleBillRepo.GetSaleBillList(func(db *gorm.DB) *gorm.DB {
-		return db.Select("uuid,serial_no").Where("uuid IN (?)", saleBillUuids)
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// 获取销售账单的流水号
-	serialNoMap := make(map[uint64]string)
-	for _, saleBill := range saleBills {
-		serialNoMap[saleBill.Uuid] = saleBill.SerialNo
-	}
-
-	resp := resp.QueueDataResp{
+	return &resp.QueueDataResp{
 		Lang1:          bindInfo.Lang1,
 		Lang2:          bindInfo.Lang2,
 		UpdateTime:     time.Now().Unix(),
-		PreparingQueue: make([]string, 0, len(preparingList)),
-		PreparedQueue:  make([]string, 0, len(preparedList)),
-	}
-	s.cache.Set(cachekey.GetCallBoardChangeKey(companyUuid), time.Now().Unix(), time.Minute*1)
-
-	// 按照最初的逆序返回
-	for i := len(preparingList) - 1; i >= 0; i-- {
-		preparing := preparingList[i]
-		resp.PreparingQueue = append(resp.PreparingQueue, serialNoMap[preparing.SaleBillUuid])
-	}
-	for i := len(preparedList) - 1; i >= 0; i-- {
-		prepared := preparedList[i]
-		resp.PreparedQueue = append(resp.PreparedQueue, serialNoMap[prepared.SaleBillUuid])
-	}
-
-	return &resp, nil
+		PreparingQueue: preparingQueue,
+		PreparedQueue:  preparedQueue,
+	}, nil
 }
 
 // BindDevice 绑定设备
@@ -247,6 +252,7 @@ func (s *callBoardService) BindDevice(ctx context.Context, companyUuid uint64, r
 		"device_secret", deviceSecret,
 		"lang1", req.Lang1,
 		"lang2", req.Lang2,
+		"create_time", time.Now().Unix(),
 	).Err()
 	if err != nil {
 		return err
@@ -357,12 +363,8 @@ func (s *callBoardService) setBindCodeByLua(ctx context.Context, deviceId string
 	return code, expireTime, nil
 }
 
-func (s *callBoardService) handleCallBoardChangeEvent(msg event.CallBoardChangeEvent) {
-	// 更新叫号展示变化信息
-	s.cache.Set(cachekey.GetCallBoardChangeKey(msg.CompanyUuid), time.Now().Unix(), time.Minute*5)
-}
-
 type DeviceBindInfo struct {
+	CreateTime   int64  `redis:"create_time"`
 	CompanyUuid  uint64 `redis:"company_uuid"`
 	DeviceSecret string `redis:"device_secret"`
 	Lang1        string `redis:"lang1"`
@@ -392,11 +394,37 @@ func (s *callBoardService) clearPendingDevice(ctx context.Context, deviceId stri
 	return nil
 }
 
+type _Setting struct {
+	Key    string `json:"key"`
+	Values string `json:"values"`
+}
+
 func (s *callBoardService) mustGetCompanyDeviceBindInfo(companyUuid uint64, deviceId string) (bindInfo DeviceBindInfo, err error) {
 	bindInfo, err = s.mustGetBindInfoFromCache(deviceId)
 	if err != nil {
 		return bindInfo, err
 	}
+
+	{
+		// 从缓存中获取最新的语言设置
+		compSettKey := cachekey.GetCompanySettingKey(companyUuid)
+		res, _ := s.cache.Get(compSettKey)
+		jsonStr, _ := res.(string)
+		latestLangs := make([]_Setting, 0)
+		_ = json.Unmarshal([]byte(jsonStr), &latestLangs)
+		for _, lang := range latestLangs {
+			if lang.Key != constant.SettingStore {
+				continue
+			}
+			storeSetting := dtosetting.Store{}
+			_ = json.Unmarshal([]byte(lang.Values), &storeSetting)
+			if len(storeSetting.Language) > 0 {
+				bindInfo.Lang1, bindInfo.Lang2 = checkAndFixLangs(storeSetting.Language, bindInfo.Lang1, bindInfo.Lang2)
+				return bindInfo, nil
+			}
+		}
+	}
+
 	settingRepo := repository.NewSettingRepo(s.dbm.GetDB(companyUuid))
 	settingData := settingRepo.GetByKey(constant.SettingStore)
 	if settingData.Key == "" {
@@ -425,48 +453,6 @@ func (s *callBoardService) mustGetBindInfoFromCache(deviceId string) (bindInfo D
 	return bindInfo, nil
 }
 
-func (s *callBoardService) handleCallBoardLanguageChangeEvent(msg event.CallBoardLanguageChangeEvent) {
-	// 从数据库读取
-	settingRepo := repository.NewSettingRepo(s.dbm.GetDB(msg.CompanyUuid))
-	settingData := settingRepo.GetByKey(constant.SettingStore)
-	if settingData.Key == "" {
-		logger.Logger.Error("商家设置不存在", zap.Uint64("companyUuid", msg.CompanyUuid))
-		return
-	}
-	storeSetting := dtosetting.Store{}
-	_ = json.Unmarshal([]byte(settingData.Values), &storeSetting)
-	if len(storeSetting.Language) == 0 {
-		logger.Logger.Error("商家语言信息为空", zap.Uint64("companyUuid", msg.CompanyUuid))
-		return
-	}
-	devRepo := repository.NewDeviceRepo(s.dbm.GetDB(msg.CompanyUuid))
-	devices, err := devRepo.GetDeviceList(devRepo.WhereSource("call_board"))
-	if err != nil {
-		logger.Logger.Error("获取设备列表失败", zap.Uint64("companyUuid", msg.CompanyUuid))
-		return
-	}
-	for _, dev := range devices {
-		bindInfo, err := s.mustGetBindInfoFromCache(dev.DeviceId)
-		if err != nil {
-			logger.Logger.Error("获取绑定信息失败", zap.Uint64("companyUuid", msg.CompanyUuid), zap.String("deviceId", dev.DeviceId))
-			continue
-		}
-		lang1, lang2 := checkAndFixLangs(storeSetting.Language, bindInfo.Lang1, bindInfo.Lang2)
-		if lang1 == bindInfo.Lang1 && lang2 == bindInfo.Lang2 {
-			continue
-		}
-		err = s.getRedisClient().HMSet(
-			context.Background(),
-			cachekey.GetBindedDeviceKey(dev.DeviceId),
-			"lang1", lang1,
-			"lang2", lang2,
-		).Err()
-		if err != nil {
-			logger.Logger.Error("更新叫号语言信息失败", zap.Uint64("companyUuid", msg.CompanyUuid), zap.String("deviceId", dev.DeviceId))
-		}
-	}
-}
-
 func checkAndFixLangs(langList []dto.LanguageItem, targetLang1 string, targetLang2 string) (lang1 string, lang2 string) {
 	toUpdateLangs := make([]string, 0, 2)
 	for _, lang := range langList {
@@ -489,4 +475,128 @@ func checkAndFixLangs(langList []dto.LanguageItem, targetLang1 string, targetLan
 		toUpdateLangs = append(toUpdateLangs, "")
 	}
 	return toUpdateLangs[0], toUpdateLangs[1]
+}
+
+func (s *callBoardService) handleSaleBillEvent(companyUuid uint64, saleBillUuid uint64, action int) error {
+	saleBillRepo := repository.NewSaleBillRepo(s.dbm.GetDB(companyUuid))
+	saleBill, err := saleBillRepo.GetSaleBillByUuid(saleBillUuid)
+	if err != nil {
+		return err
+	}
+	member := formatQueueMember(saleBill.Uuid, saleBill.SerialNo)
+
+	// 不是点餐账单，不处理
+	if saleBill.BillType != constant.SaleBillTypeInstant {
+		return nil
+	}
+	if action == _ActionRemoveFromQueue {
+		return s.removeMemberFromQueues(member, cachekey.GetPreparingQueueKey(companyUuid), cachekey.GetPreparedQueueKey(companyUuid))
+	}
+	if action == _ActionPushToPreparingQueue {
+		return s.pushToPreparingQueue(companyUuid, member, saleBill.CreateTime)
+	}
+	if action == _ActionPushToPreparedQueue {
+		return s.pushToPreparedQueue(companyUuid, member, saleBill.CreateTime)
+	}
+	return nil
+}
+
+func (s *callBoardService) handleProductionOrderCookingEvent(companyUuid uint64, saleBillUuid uint64) error {
+	db := s.dbm.GetDB(companyUuid)
+	// 获取销售账单信息
+	saleBillRepo := repository.NewSaleBillRepo(db)
+	saleBill, err := saleBillRepo.GetSaleBillByUuid(saleBillUuid)
+	if err != nil {
+		return err
+	}
+
+	// 是否已完成制作
+	finished, err := repository.NewProductionRepo(db).IsProductionFinishedBySaleBillUuid(saleBillUuid)
+	if err != nil {
+		return err
+	}
+	member := formatQueueMember(saleBillUuid, saleBill.SerialNo)
+	if finished {
+		return s.pushToPreparedQueue(companyUuid, member, saleBill.CreateTime)
+	}
+	return s.pushToPreparingQueue(companyUuid, member, saleBill.CreateTime)
+}
+
+// 获取制作中的队列
+func (s *callBoardService) getCallBoardQueue(queueKey string, limit int64, minScore int64) ([]string, error) {
+	opt := &redis.ZRangeBy{
+		Min:    strconv.FormatInt(minScore, 10),
+		Max:    "+inf",
+		Offset: 0,
+		Count:  limit,
+	}
+	results, err := s.getRedisClient().ZRevRangeByScoreWithScores(context.Background(), queueKey, opt).Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return []string{}, nil // 队列不存在，返回空列表
+		}
+		return nil, err
+	}
+	serialNoList := make([]string, 0, len(results))
+	for _, result := range results {
+		str := result.Member.(string)
+		list := strings.Split(str, ":") // uuid:serialNo
+		if len(list) == 2 {
+			serialNoList = append(serialNoList, list[1]) // serialNo
+		}
+	}
+	return serialNoList, nil
+}
+
+// 添加到制作中队列
+func (s *callBoardService) pushToPreparingQueue(companyUuid uint64, member string, score int64) error {
+	ctx := context.Background()
+	_, err := s.getRedisClient().TxPipelined(ctx, func(p redis.Pipeliner) error {
+		p.ZAdd(ctx, cachekey.GetPreparingQueueKey(companyUuid), redis.Z{
+			Score:  float64(score),
+			Member: member,
+		})
+		p.ZRem(ctx, cachekey.GetPreparedQueueKey(companyUuid), member)
+		return nil
+	})
+	return err
+}
+
+// 添加到制作完成队列
+func (s *callBoardService) pushToPreparedQueue(companyUuid uint64, member string, score int64) error {
+	ctx := context.Background()
+	_, err := s.getRedisClient().TxPipelined(ctx, func(p redis.Pipeliner) error {
+		p.ZRem(ctx, cachekey.GetPreparingQueueKey(companyUuid), member)
+		p.ZAdd(ctx, cachekey.GetPreparedQueueKey(companyUuid), redis.Z{
+			Score:  float64(score),
+			Member: member,
+		})
+		return nil
+	})
+	return err
+}
+
+// 从多个队列中移除成员
+func (s *callBoardService) removeMemberFromQueues(member string, queueKeyList ...string) error {
+	ctx := context.Background()
+	if len(queueKeyList) == 0 {
+		return nil
+	}
+	if len(queueKeyList) == 1 {
+		return s.getRedisClient().ZRem(ctx, queueKeyList[0], member).Err()
+	}
+	_, err := s.getRedisClient().TxPipelined(ctx, func(p redis.Pipeliner) error {
+		for _, key := range queueKeyList {
+			p.ZRem(ctx, key, member)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func formatQueueMember(uuid uint64, serialNo string) string {
+	return fmt.Sprintf("%d:%s", uuid, serialNo)
 }
