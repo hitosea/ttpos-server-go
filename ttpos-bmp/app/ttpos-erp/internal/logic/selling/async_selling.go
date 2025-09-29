@@ -9,7 +9,9 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/model/do"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/model/entity"
+	"ttpos-bmp/app/ttpos-erp/internal/model/mq"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
+	"ttpos-bmp/internal/pkg/queue"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/encoding/gbase64"
@@ -158,42 +160,11 @@ func (*sAsyncSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosIn
 		return nil, gerror.Wrapf(err, "保存发票失败，插入记录失败: %v", err)
 	}
 
-	//异步保存发票
-	go func() {
-		//设置siteCode
-		ctx := grpcx.Ctx.SetIncoming(gctx.New(), g.Map{
-			consts.ContextSiteCode: siteCode,
-		})
-		posInvoiceDao := dao.ReceivePosInvoice.Ctx(ctx).WherePri(recordId)
-		resp, err := service.Selling().SavePosInvoice(ctx, req)
-		if err != nil {
-			g.Log().Errorf(ctx, "保存发票失败，异步保存发票失败: %v", err)
-			if _, err := posInvoiceDao.Data(do.ReceivePosInvoice{
-				RespBody: fmt.Sprintf("保存发票失败，异步保存发票失败: %v", err),
-			}).Update(); err != nil {
-				g.Log().Errorf(ctx, "保存发票失败，更新日志记录失败: %v", err)
-				return
-			}
-			return
-		}
-		if resp != nil {
-			respBuf, err := proto.Marshal(resp)
-			if err != nil {
-				g.Log().Errorf(ctx, "保存发票失败，序列化响应参数失败: %v", resp)
-				return
-			}
-			if _, err := posInvoiceDao.Data(do.ReceivePosInvoice{
-				Docstatus:           erp.DocstatusSubmitted,
-				ProductsInvoiceName: resp.ProductsInvoiceName,
-				MaterialInvoiceName: resp.MaterialInvoiceName,
-				RespMessage:         gbase64.EncodeToString(respBuf),
-				RespBody:            resp.String(),
-			}).Update(); err != nil {
-				g.Log().Errorf(ctx, "保存发票失败，更新日志记录失败: %v", err)
-				return
-			}
-		}
-	}()
+	//发送消息
+	queue.Push(string(consts.TopicSavePosInvoice), &mq.AsyncSellingMsg{
+		RecordId: recordId,
+		MsgType:  mq.MsgTypeSavePosInvoice,
+	})
 
 	return &selling.SavePosInvoiceResp{
 		AsyncRecordId: gconv.String(recordId),

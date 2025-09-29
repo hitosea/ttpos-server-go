@@ -13,6 +13,7 @@ import (
 	dtoSelling "ttpos-bmp/app/ttpos-erp/internal/model/dto/selling"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
 	"ttpos-bmp/app/ttpos-erp/internal/model/entity"
+	"ttpos-bmp/internal/pkg/queue"
 )
 
 type (
@@ -151,11 +152,17 @@ type (
 		//   - 获取支付方式列表
 		GetModeOfPaymentList(ctx context.Context, req *selling.GetModeOfPaymentListReq) (*selling.GetModeOfPaymentListResp, error)
 	}
+	ISavePosInvoiceConsumer interface {
+		GetTopic() string
+		GetConcurrency() int
+		Handle(ctx context.Context, mqMsg queue.MqMsg) (err error)
+	}
 )
 
 var (
-	localAsyncSelling IAsyncSelling
-	localSelling      ISelling
+	localAsyncSelling           IAsyncSelling
+	localSelling                ISelling
+	localSavePosInvoiceConsumer ISavePosInvoiceConsumer
 )
 
 func AsyncSelling() IAsyncSelling {
@@ -178,4 +185,15 @@ func Selling() ISelling {
 
 func RegisterSelling(i ISelling) {
 	localSelling = i
+}
+
+func SavePosInvoiceConsumer() ISavePosInvoiceConsumer {
+	if localSavePosInvoiceConsumer == nil {
+		panic("implement not found for interface ISavePosInvoiceConsumer, forgot register?")
+	}
+	return localSavePosInvoiceConsumer
+}
+
+func RegisterSavePosInvoiceConsumer(i ISavePosInvoiceConsumer) {
+	localSavePosInvoiceConsumer = i
 }
