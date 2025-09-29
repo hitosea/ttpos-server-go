@@ -204,7 +204,7 @@ func (r *WarehouseInOutLogRepoImpl) WhereMaterialCategoryUuids(materialCategoryU
 // WhereOrderNo 单据编号条件
 func (r *WarehouseInOutLogRepoImpl) WhereOrderNo(orderNo string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("order_no = ?", orderNo)
+		return db.Where("order_no like ?", "%"+orderNo+"%")
 	}
 }
 
