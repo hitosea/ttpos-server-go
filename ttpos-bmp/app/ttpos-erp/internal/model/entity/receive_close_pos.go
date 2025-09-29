@@ -15,4 +15,6 @@ type ReceiveClosePos struct {
 	ReqMessage       string `json:"reqMessage"       orm:"req_message"         description:"请求数据,base64编码"`            // 请求数据,base64编码
 	RespMessage      string `json:"respMessage"      orm:"resp_message"        description:"响应数据,base64编码"`            // 响应数据,base64编码
 	SiteCode         string `json:"siteCode"         orm:"site_code"           description:"erp_site_code, 用来区分调那个租户"` // erp_site_code, 用来区分调那个租户
+	ReqBody          string `json:"reqBody"          orm:"req_body"            description:"请求文本，如果能转换"`               // 请求文本，如果能转换
+	RespBody         string `json:"respBody"         orm:"resp_body"           description:"响应文本，如果能转换"`               // 响应文本，如果能转换
 }

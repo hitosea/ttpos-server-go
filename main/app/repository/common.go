@@ -151,6 +151,7 @@ type ICommonRepo interface {
 	WhereByErpnextValueName(valueName string) DBOption                                        // 根据erpnext规格值名称查询
 	WhereByCategoryKey(categoryKey string) DBOption                                           // 根据分类关键字查询
 	WhereByMaterialUuid(materialUuid uint64) DBOption                                         // 根据原料UUID查询
+	WhereByUuidNotIn(uuids []uint64) DBOption                                                 // 根据UUID列表查询
 	DBOption(opt DBOption) func(*gorm.DB) *gorm.DB                                            // 将DBOption转为func(*gorm.DB) *gorm.DB
 	Transaction(db *gorm.DB, fn func(tx *gorm.DB) error) error                                // 事务
 }
@@ -676,6 +677,13 @@ func (r *commonRepo) WhereByCategoryKey(categoryKey string) DBOption {
 func (r *commonRepo) WhereByMaterialUuid(materialUuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("material_uuid = ?", materialUuid)
+	}
+}
+
+// WhereByUuidNotIn 根据UUID列表查询
+func (r *commonRepo) WhereByUuidNotIn(uuids []uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid NOT IN (?)", uuids)
 	}
 }
 

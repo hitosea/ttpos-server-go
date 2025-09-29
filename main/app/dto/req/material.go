@@ -189,7 +189,7 @@ type MaterialAddErpReq struct {
 }
 
 type MaterialEditErpReq struct {
-	Uuid               uint64           `json:"material_uuid" `       // 物品UUID
+	Uuid               uint64           `json:"uuid" `                // 物品UUID
 	ItemCode           string           `json:"item_code" `           // 物品编码, 如果为空，则为新增；如果非空，则为编辑
 	ItemName           string           `json:"item_name" `           // 物品名称, 英文
 	StockUom           string           `json:"stock_uom" `           // 基准库存单位, 英文
