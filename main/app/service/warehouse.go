@@ -71,7 +71,7 @@ func (s *warehouseSrv) GetWarehouseList(ctx context.Context, req req.WarehouseLi
 		opts = append(opts, warehouseRepo.WhereNameOrCodeLike(req.Keyword))
 	}
 	// 类型筛选
-	if req.Type != "" {
+	if req.Type != "" && slice.Contain([]string{"normal", "transit"}, req.Type) {
 		opts = append(opts, warehouseRepo.WhereType(req.Type))
 	}
 	// 状态筛选

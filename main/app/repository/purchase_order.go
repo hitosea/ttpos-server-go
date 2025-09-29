@@ -15,6 +15,7 @@ type IPurchaseOrderRepo interface {
 	Update(purchaseOrder *model.PurchaseOrder) error
 	Delete(uuid uint64) error
 	GetByUuid(uuid uint64, opts ...DBOption) (*model.PurchaseOrder, error)
+	GetBySubUuid(subUuid uint64, opts ...DBOption) (*model.PurchaseOrder, error)
 	GetByOrderNo(orderNo string, opts ...DBOption) (*model.PurchaseOrder, error)
 
 	// 查询操作
@@ -77,6 +78,7 @@ func NewPurchaseOrderRepo(db *gorm.DB) IPurchaseOrderRepo {
 
 // Create 创建采购订单
 func (r *PurchaseOrderRepoImpl) Create(purchaseOrder *model.PurchaseOrder) error {
+	purchaseOrder.SetNil()
 	return r.db.Create(purchaseOrder).Error
 }
 
@@ -95,6 +97,17 @@ func (r *PurchaseOrderRepoImpl) GetByUuid(uuid uint64, opts ...DBOption) (*model
 	var purchaseOrder model.PurchaseOrder
 	db := r.applyOptions(r.db, opts...)
 	err := db.Model(&model.PurchaseOrder{}).Where("uuid = ?", uuid).Where("delete_time = ?", constant.NotDeleted).First(&purchaseOrder).Error
+	if err != nil {
+		return nil, err
+	}
+	return &purchaseOrder, nil
+}
+
+// GetBySubUuid 根据子订单UUID获取采购订单
+func (r *PurchaseOrderRepoImpl) GetBySubUuid(subUuid uint64, opts ...DBOption) (*model.PurchaseOrder, error) {
+	var purchaseOrder model.PurchaseOrder
+	db := r.applyOptions(r.db, opts...)
+	err := db.Model(&model.PurchaseOrder{}).Where("sub_uuid = ?", subUuid).Where("delete_time = ?", constant.NotDeleted).First(&purchaseOrder).Error
 	if err != nil {
 		return nil, err
 	}

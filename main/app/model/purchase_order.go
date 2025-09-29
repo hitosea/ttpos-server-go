@@ -47,6 +47,14 @@ func (PurchaseOrder) TableName() string {
 	return "ttpos_purchase_order"
 }
 
+// SetNil 设置为空
+func (po *PurchaseOrder) SetNil() {
+	po.Items = nil
+	po.Logs = nil
+	po.Receipts = nil
+	po.Warehouse = nil
+}
+
 // 是否是总部采购
 func (po *PurchaseOrder) IsHeadquarterPurchase() bool {
 	return po.PurchaseType == 2
@@ -129,6 +137,8 @@ type PurchaseOrderItem struct {
 	BaseUnitName       string  `gorm:"column:base_unit_name;type:text;not null;default:'';comment:基准单位名称JSON, 提交采购时记录后不再修改" json:"base_unit_name"`
 	Valuation          float64 `gorm:"column:valuation;type:decimal(14,2);not null;default:0.00;comment:估值单价" json:"valuation"`
 	TotalPrice         float64 `gorm:"column:total_price;type:decimal(14,2);not null;default:0.00;comment:总价" json:"total_price"`
+	ErpnextUom         string  `gorm:"column:erpnext_uom;type:varchar(255);not null;default:'';comment:ERPNext单位" json:"erpnext_uom"`
+	BaseErpnextUom     string  `gorm:"column:base_erpnext_uom;type:varchar(255);not null;default:'';comment:ERPNext基准单位" json:"base_erpnext_uom"`
 
 	// 关联关系
 	PurchaseOrder PurchaseOrder `gorm:"foreignKey:PurchaseOrderUuid;references:Uuid" json:"purchase_order,omitempty"`
@@ -138,6 +148,12 @@ type PurchaseOrderItem struct {
 // TableName 指定表名
 func (PurchaseOrderItem) TableName() string {
 	return "ttpos_purchase_order_item"
+}
+
+// SetNil 设置为空
+func (poi *PurchaseOrderItem) SetNil() {
+	poi.PurchaseOrder = PurchaseOrder{}
+	poi.Material = nil
 }
 
 // GetCompletionRate 获取到货完成率
@@ -266,6 +282,8 @@ type PurchaseReceiptOrderItem struct {
 	BaseUnitName          string  `gorm:"column:base_unit_name;type:varchar(255);not null;default:'';comment:基准单位名称, 确认收货时记录后不再修改" json:"base_unit_name"`
 	Valuation             float64 `gorm:"column:valuation;type:decimal(14,8);not null;default:0.00;comment:估值单价" json:"valuation"`
 	TotalPrice            float64 `gorm:"column:total_price;type:decimal(14,8);not null;default:0.00;comment:总价" json:"total_price"`
+	ErpnextUom            string  `gorm:"column:erpnext_uom;type:varchar(255);not null;default:'';comment:ERPNext单位" json:"erpnext_uom"`
+	BaseErpnextUom        string  `gorm:"column:base_erpnext_uom;type:varchar(255);not null;default:'';comment:ERPNext基准单位" json:"base_erpnext_uom"`
 
 	// 关联关系
 	PurchaseReceiptOrder PurchaseReceiptOrder `gorm:"foreignKey:ReceiptOrderUuid;references:Uuid" json:"purchase_receipt_order,omitempty"`

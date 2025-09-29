@@ -40889,7 +40889,7 @@ const docTemplate = `{
                 },
                 "headquarter_status": {
                     "description": "V2.6 总部状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)",
-                    "type": "string"
+                    "type": "integer"
                 },
                 "items": {
                     "description": "采购明细",
@@ -40941,6 +40941,14 @@ const docTemplate = `{
                 "warehouse_erp_code": {
                     "description": "V2.6 仓库编码",
                     "type": "string"
+                },
+                "warehouse_name": {
+                    "description": "V2.6 仓库名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
                 }
             }
         },
@@ -40965,7 +40973,7 @@ const docTemplate = `{
                 },
                 "headquarter_status": {
                     "description": "V2.6 总部状态 0-待提交 1-待审核 2-已通过 3-已驳回 4-全部收货(完成)",
-                    "type": "string"
+                    "type": "integer"
                 },
                 "num": {
                     "description": "物品数量",
@@ -41010,6 +41018,14 @@ const docTemplate = `{
                 "warehouse_erp_code": {
                     "description": "V2.6 仓库编码",
                     "type": "string"
+                },
+                "warehouse_name": {
+                    "description": "V2.6 仓库名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
                 }
             }
         },

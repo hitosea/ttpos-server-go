@@ -36,8 +36,8 @@ class ModifyMaterialNameLength extends Migrator
             
             // 检查字段是否存在
             if ($table->hasColumn('name')) {
-                // 修改name字段长度为1000
-                $table->changeColumn('name', 'string', ['limit' => 1000, 'default' => '', 'comment' => '原料名称']);
+                // 修改name字段为text类型
+                $table->changeColumn('name', 'text', ['comment' => '原料名称']);
                 $table->update();
             }
         }
