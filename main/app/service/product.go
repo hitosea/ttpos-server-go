@@ -2878,16 +2878,6 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 	if exists {
 		return errors.New("属性组名称已存在")
 	}
-	for _, productAttribute := range addReq.ProductAttributes {
-		names := checkService.MakeCheckNameList(ctx, productAttribute.LocaleName)
-		exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-			Source: constant.CheckNameSourceAttribute,
-			Names:  names,
-		})
-		if exists {
-			return errors.New("属性值名称已存在")
-		}
-	}
 
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
@@ -3274,17 +3264,6 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 	})
 	if exists {
 		return errors.New("属性组名称已存在")
-	}
-	for _, attribute := range editReq.ProductAttributes {
-		names := checkService.MakeCheckNameList(ctx, attribute.LocaleName)
-		exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-			Uuid:   attribute.Uuid,
-			Source: constant.CheckNameSourceAttribute,
-			Names:  names,
-		})
-		if exists {
-			return errors.New("属性值名称已存在")
-		}
 	}
 
 	db := s.dbm.GetDB(ctx.GetDbId())

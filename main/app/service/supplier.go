@@ -429,6 +429,10 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 	}
 
 	for _, erpSupplier := range supplierList {
+		name := erpSupplier.AliasName
+		if name == "" {
+			name = erpSupplier.SupplierName
+		}
 		// 总部不同步“总部-供应商”
 		if erpSupplier.Name == constant.ErpHeadquartersSupplierCode && companySetting.IsHeadquarter() {
 			continue
@@ -455,7 +459,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 		headquarterUuid, _ := supplierHeadquarterMap[erpSupplier.Name]
 		if supplier.Uuid == 0 {
 			db.Model(&model.Supplier{}).Create(&model.Supplier{
-				Name:            erpSupplier.SupplierName,
+				Name:            name,
 				ErpCode:         erpSupplier.Name,
 				Status:          status,
 				HeadquarterUuid: headquarterUuid,
@@ -463,7 +467,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 			})
 		} else {
 			db.Model(&model.Supplier{}).Where("uuid = ?", supplier.Uuid).Updates(map[string]any{
-				"name":             erpSupplier.SupplierName,
+				"name":             name,
 				"headquarter_uuid": headquarterUuid,
 				"code":             headquarterCode,
 				"status":           status,

@@ -213,11 +213,18 @@ func (r *WarehouseRepoImpl) OrderByUpdateTime(desc bool) DBOption {
 // UpdateIsDefault 更新是否默认
 func (r *WarehouseRepoImpl) UpdateIsDefault(uuid uint64) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		err := tx.Model(&model.Warehouse{}).Where("id > 0").Update("is_default", 0).Error
+		updateTime := time.Now().Unix()
+		err := tx.Model(&model.Warehouse{}).Where("is_default = ?", 1).Updates(map[string]any{
+			"is_default":  0,
+			"update_time": updateTime - 1,
+		}).Error
 		if err != nil {
 			return err
 		}
-		err = tx.Model(&model.Warehouse{}).Where("uuid = ?", uuid).Update("is_default", 1).Error
+		err = tx.Model(&model.Warehouse{}).Where("uuid = ?", uuid).Updates(map[string]any{
+			"is_default":  1,
+			"update_time": updateTime,
+		}).Error
 		if err != nil {
 			return err
 		}

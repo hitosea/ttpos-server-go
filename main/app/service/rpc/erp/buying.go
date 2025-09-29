@@ -129,6 +129,7 @@ func (s *erpSrv) CreateSupplier(ctx context.Context, createSupplierReq req.Creat
 			CompanyAbbr:  createSupplierReq.CompanyAbbr,  // 总部在移动管理端创建供应商时不需要传
 			Branch:       createSupplierReq.Branch,       // 总部在移动管理端创建供应商时不需要传
 			Disabled:     createSupplierReq.Disabled,     // 是否禁用
+			AliasName:    createSupplierReq.SupplierName, // 别名名称
 		},
 	})
 	if err != nil {
@@ -164,6 +165,7 @@ func (s *erpSrv) UpdateSupplier(ctx context.Context, updateSupplierReq req.Updat
 			CompanyAbbr:  updateSupplierReq.CompanyAbbr,
 			Branch:       updateSupplierReq.Branch,
 			Disabled:     updateSupplierReq.Disabled,
+			AliasName:    updateSupplierReq.SupplierName,
 		},
 	})
 	if err != nil {
