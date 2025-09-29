@@ -229,6 +229,7 @@ func (s *supplierSrv) UpdateSupplier(ctx context.Context, updateSupplierReq req.
 	}
 
 	err = supplierRepo.Update(supplier.Uuid, map[string]any{
+		"code":          updateSupplierReq.Code,
 		"name":          updateSupplierReq.Name,
 		"address":       updateSupplierReq.Address,
 		"contact_name":  updateSupplierReq.ContactName,

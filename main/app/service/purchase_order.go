@@ -813,12 +813,14 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 						Uom:          erpnextUom,
 					})
 				}
-				defaultWarehouse, err := repository.NewWarehouseRepo(db).GetDefaultWarehouse()
+				// 获取公司数据库
+				subDb := s.dbm.GetDB(purchaseOrder.CompanyUuid)
+				// 获取公司设置
+				companySetting := repository.NewCompanySettingRepo(subDb).Get()
+				defaultWarehouse, err := repository.NewWarehouseRepo(subDb).GetDefaultWarehouse()
 				if err != nil {
 					return errors.WithMessage(err, "获取默认仓库失败")
 				}
-				// 获取公司设置
-				companySetting := repository.NewCompanySettingRepo(s.dbm.GetDB(purchaseOrder.CompanyUuid)).Get()
 				// 调用erp接口
 				stockResp, err := erp.NewIErpSrv(s.dbm).SaveMaterialRequest(ctx, companySetting, &stock.SaveMaterialRequestReq{
 					TransactionDate: purchaseOrder.OrderTime,

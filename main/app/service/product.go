@@ -1941,12 +1941,11 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 			}
 			erpUom := company.Name + "-" + enName
 			err = erp.NewIErpSrv(s.dbm).SaveUom(ctx.GetContext(), req.SaveUomReq{
-				SiteCode:          companySetting.ErpnextSiteCode,
-				CompanyAbbr:       companySetting.ErpnextCompanyAbbr,
-				Branch:            companySetting.ErpnextBranchName,
-				UomName:           erpUom,
-				AliasName:         enName,
-				MustBeWholeNumber: true,
+				SiteCode:    companySetting.ErpnextSiteCode,
+				CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+				Branch:      companySetting.ErpnextBranchName,
+				UomName:     erpUom,
+				AliasName:   enName,
 			})
 			if err != nil {
 				return errors.WithMessage(errors.New("同步单位到erp失败"), err.Error())
@@ -2198,12 +2197,11 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 			return errors.WithMessage(errors.New("翻译失败"), err.Error())
 		}
 		err = erp.NewIErpSrv(s.dbm).SaveUom(ctx.GetContext(), req.SaveUomReq{
-			SiteCode:          companySetting.ErpnextSiteCode,
-			CompanyAbbr:       companySetting.ErpnextCompanyAbbr,
-			Branch:            companySetting.ErpnextBranchName,
-			UomName:           productUnit.ErpnextUom,
-			AliasName:         enName,
-			MustBeWholeNumber: true,
+			SiteCode:    companySetting.ErpnextSiteCode,
+			CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+			Branch:      companySetting.ErpnextBranchName,
+			UomName:     productUnit.ErpnextUom,
+			AliasName:   enName,
 		})
 		if err != nil {
 			return errors.WithMessage(errors.New("同步单位到erp失败"), err.Error())
