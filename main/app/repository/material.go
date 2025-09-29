@@ -475,7 +475,7 @@ func (r *MaterialRepoImpl) ClearMaterialInternalCode(uuid uint64) error {
 func (r *MaterialRepoImpl) CheckMaterialInternalCodeExist(internalCode string, uuid uint64) bool {
 	db := r.db.Model(&model.Material{}).
 		Where("delete_time = ?", constant.NotDeleted).
-		Where("internal_code COLLATE utf8mb4_bin = ?", internalCode).
+		Where("internal_code = ?", internalCode).
 		Where("internal_code <> ?", "")
 	if uuid != 0 {
 		db = db.Where("uuid <> ?", uuid)
@@ -494,7 +494,7 @@ func (r *MaterialRepoImpl) GetMaterialCategoryByUuid(uuid uint64) (*model.Materi
 func (r *MaterialRepoImpl) CheckMaterialCategoryCodeExist(code string, uuid uint64) bool {
 	db := r.db.Model(&model.MaterialCategory{}).
 		Where("delete_time = ?", constant.NotDeleted).
-		Where("code COLLATE utf8mb4_bin = ?", code).
+		Where("code = ?", code).
 		Where("code <> ?", "")
 	if uuid != 0 {
 		db = db.Where("uuid <> ?", uuid)

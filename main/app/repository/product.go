@@ -1257,7 +1257,7 @@ func (r *productRepo) CheckBarcodeExist(barcode string, uuid uint64) bool {
 func (r *productRepo) CheckProductFlavorInternalCodeExist(internalCode string, uuid uint64) bool {
 	db := r.db.Model(&model.ProductBom{}).
 		Where("delete_time = ?", constant.NotDeleted).
-		Where("internal_code COLLATE utf8mb4_bin = ?", internalCode).
+		Where("internal_code = ?", internalCode).
 		Where("internal_code <> ?", "")
 	if uuid != 0 {
 		db = db.Where("uuid <> ?", uuid)
@@ -1421,7 +1421,7 @@ func (r *productRepo) GetLatestProductsByStatus(limit int, status uint) ([]model
 }
 
 func (r *productRepo) CheckProductCategoryCodeExist(code string, uuid uint64) bool {
-	db := r.db.Model(&model.ProductCategory{}).Where("delete_time = ?", constant.NotDeleted).Where("code COLLATE utf8mb4_bin = ?", code)
+	db := r.db.Model(&model.ProductCategory{}).Where("delete_time = ?", constant.NotDeleted).Where("code = ?", code)
 	if uuid != 0 {
 		db = db.Where("uuid <> ?", uuid)
 	}
