@@ -2430,6 +2430,7 @@ func (s *materialSrv) ImportMaterial(ctx context.Context, reqs req.MaterialImpor
 
 		totalCount := len(reqs.List)
 		progressData := MaterialImportProgressData{
+			Time:    time.Now().Unix(),
 			Status:  MaterialImportStatusStart,
 			Total:   totalCount,
 			Current: 0,
@@ -2439,6 +2440,7 @@ func (s *materialSrv) ImportMaterial(ctx context.Context, reqs req.MaterialImpor
 		}
 
 		// 推送开始导入进度
+		time.Sleep(300 * time.Millisecond)
 		s.pushMaterialImportProgress(companyUuid, deviceSn, progressData)
 
 		totalItems := len(reqs.List)
@@ -2492,6 +2494,9 @@ func (s *materialSrv) ImportMaterial(ctx context.Context, reqs req.MaterialImpor
 			progressData.Error = fmt.Sprintf("导入成功，共处理%d条物品", progressData.Success)
 		}
 
+		// 延迟500毫秒
+		time.Sleep(500 * time.Millisecond)
+		progressData.Time = time.Now().Unix()
 		s.pushMaterialImportProgress(companyUuid, deviceSn, progressData)
 	}()
 
