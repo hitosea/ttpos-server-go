@@ -223,8 +223,13 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 			return errors.WithMessage(err, "获取默认仓库失败")
 		}
 		// 创建采购申请
+		prefix := "CSSQ"
+		if req.PurchaseType == 2 {
+			prefix = "TPHY"
+		}
+		//
 		purchaseOrder := &model.PurchaseOrder{
-			OrderNo:           s.generateOrderNo(ctx, db),
+			OrderNo:           s.generateOrderNo(ctx, db, prefix),
 			SupplierName:      req.SupplierName,
 			SupplierErpCode:   utils.IfString(req.SupplierErpCode != "", req.SupplierErpCode, req.SupplierName),
 			Status:            constant.PurchaseOrderStatusDraft, // 待提交状态
@@ -1444,9 +1449,7 @@ func (s *purchaseOrderSrv) CancelPurchaseReceiptOrder(ctx context.Context, req r
 
 // generateOrderNo 生成采购申请订单编号
 // 格式：CSSQ+年月日+0000自增序列号
-func (s *purchaseOrderSrv) generateOrderNo(ctx context.Context, db *gorm.DB) string {
-	// 固定前缀
-	prefix := "CSSQ"
+func (s *purchaseOrderSrv) generateOrderNo(ctx context.Context, db *gorm.DB, prefix string) string {
 	// 年月日部分
 	datePart := time.Now().Format("20060102")
 
