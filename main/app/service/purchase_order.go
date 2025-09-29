@@ -865,6 +865,12 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 				if purchaseOrder.ExpectArrivalTime > 0 {
 					scheduleDate = time.Unix(purchaseOrder.ExpectArrivalTime, 0).Format("2006-01-02")
 				}
+				// 获取默认仓库
+				defaultWarehouse, err := repository.NewWarehouseRepo(tx).GetDefaultWarehouse()
+				if err != nil {
+					return errors.WithMessage(err, "获取默认仓库失败")
+				}
+				//
 				erpResp, err := erp.NewIErpSrv(s.dbm).CreatePurchaseOrder(ctx, &buying.CreatePurchaseOrderReq{
 					Supplier: func() string {
 						if purchaseOrder.SupplierErpCode != "" {
@@ -874,7 +880,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 					}(),
 					CompanyAbbr:     companySetting.ErpnextCompanyAbbr,
 					ScheduleDate:    scheduleDate,
-					TargetWarehouse: purchaseOrder.WarehouseErpCode,
+					TargetWarehouse: defaultWarehouse.ErpCode,
 					Items:           stockItems,
 				})
 				if err != nil {

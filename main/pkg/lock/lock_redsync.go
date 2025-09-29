@@ -98,6 +98,12 @@ func (d *RedSyncLock) LockUuid(uuid uint64) {
 	}
 }
 
+// TryLockUuid 非阻塞尝试获取uuid锁
+func (d *RedSyncLock) TryLockUuid(uuid uint64) bool {
+	err := d.getUuidLock(uuid).Lock()
+	return err == nil
+}
+
 // UnlockUuid 解锁uuid
 func (d *RedSyncLock) UnlockUuid(uuid uint64) {
 	unlock, err := d.getUuidLock(uuid).Unlock()

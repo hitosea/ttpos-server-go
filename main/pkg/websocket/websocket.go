@@ -59,6 +59,10 @@ const (
 	UPDATE_MEMBER_SALE_ORDER = "update_member_sale_order"
 	// 移动管理端获取最新数据 data= {"sync_time": 1742971471}
 	SYNC_DATA = "sync_data"
+	// 导入商品 data= {"time": 1742971471, "status": "finish", "error": ""}
+	IMPORT_PRODUCT = "import_product"
+	// 导入物品 data= {"time": 1742971471, "status": "finish", "error": ""}
+	IMPORT_MATERIAL = "import_material"
 )
 
 // Push sends a POST request to the WebSocket server with specific parameters.

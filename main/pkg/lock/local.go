@@ -24,6 +24,11 @@ func (d *LocalLock) LockUuid(uuid uint64) {
 	d.getUuidLock(uuid).Lock()
 }
 
+// TryLockUuid 非阻塞尝试获取uuid锁
+func (d *LocalLock) TryLockUuid(uuid uint64) bool {
+	return d.getUuidLock(uuid).TryLock()
+}
+
 // UnlockUuid 解锁uuid
 func (d *LocalLock) UnlockUuid(uuid uint64) {
 	d.getUuidLock(uuid).Unlock()

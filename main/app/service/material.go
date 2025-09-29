@@ -21,7 +21,10 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/language"
+	"ttpos-server-go/pkg/lock"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
+	"ttpos-server-go/pkg/websocket"
 
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/jinzhu/copier"
@@ -29,6 +32,33 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
+
+// 物品导入状态常量
+const (
+	MaterialImportStatusStart      = "start"      // 开始导入
+	MaterialImportStatusProcessing = "processing" // 正在处理
+	MaterialImportStatusFinish     = "finish"     // 导入完成
+	MaterialImportStatusError      = "error"      // 导入失败
+)
+
+// MaterialImportProgressData 物品导入进度数据结构
+type MaterialImportProgressData struct {
+	Time     int64                       `json:"time"`     // 时间戳
+	Status   string                      `json:"status"`   // 状态：start|processing|finish|error
+	Progress int                         `json:"progress"` // 进度百分比 (0-100)
+	Total    int                         `json:"total"`    // 总数量
+	Current  int                         `json:"current"`  // 当前处理数量
+	Success  int                         `json:"success"`  // 成功数量
+	Failed   int                         `json:"failed"`   // 失败数量
+	Error    string                      `json:"error"`    // 总体错误信息
+	Errors   []MaterialImportErrorDetail `json:"errors"`   // 详细错误列表
+}
+
+// MaterialImportErrorDetail 物品导入错误详情
+type MaterialImportErrorDetail struct {
+	Row     int    `json:"row"`     // 行号
+	Message string `json:"message"` // 错误信息
+}
 
 // IMaterialSrv 物品服务接口
 type IMaterialSrv interface {
@@ -65,7 +95,8 @@ type IMaterialSrv interface {
 type materialSrv struct {
 	dbm        *database.DBManager // 数据库管理器
 	localeSrv  ILocaleSrv          // 多语言名称服务
-	settingSrv setting.ISrv
+	settingSrv setting.ISrv        // 设置服务
+	systemLock lock.Lock           // 系统锁
 }
 
 func NewMaterialSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv) IMaterialSrv {
@@ -77,7 +108,24 @@ func NewMaterialSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSr
 		dbm:        dbm,
 		localeSrv:  localeSrv,
 		settingSrv: settingSrv,
+		systemLock: lock.NewSystemLock(),
 	}
+}
+
+// pushMaterialImportProgress 推送物品导入进度到前端
+func (s *materialSrv) pushMaterialImportProgress(companyUuid uint64, deviceSn string, data MaterialImportProgressData) {
+	data.Time = time.Now().Unix()
+	go websocket.PushClient(companyUuid, websocket.SourceShop, deviceSn, websocket.IMPORT_MATERIAL, map[string]any{
+		"time":     data.Time,
+		"status":   data.Status,
+		"progress": data.Progress,
+		"total":    data.Total,
+		"current":  data.Current,
+		"success":  data.Success,
+		"failed":   data.Failed,
+		"error":    data.Error,
+		"errors":   data.Errors,
+	})
 }
 
 // GetMaterialList 获取物品列表
@@ -2335,14 +2383,35 @@ func (s *materialSrv) ImportMaterialList(ctx context.Context, reqs req.MaterialI
 
 // ImportMaterial 导入物品
 func (s *materialSrv) ImportMaterial(ctx context.Context, reqs req.MaterialImportReq) error {
+	companyUuid := ctx.GetCompanyUuid()
+	deviceSn := ctx.GetDeviceSn()
 	db := s.dbm.GetDB(ctx.GetDbId())
 	language := ctx.GetLanguage()
+
+	// 用信道锁 禁止并发导入 - 按公司UUID加锁确保同一公司的物品导入操作不会并发执行
+	if !s.systemLock.TryLockUuid(companyUuid) {
+		return errors.New(i18n.Translate(language, "当前公司正在进行物品导入，请稍后再试"))
+	}
 
 	// 处理条码：过滤空格、非数字字符，截取13位
 	for i := range reqs.List {
 		reqs.List[i].BarcodeValue = utils.ProcessBarcode(reqs.List[i].BarcodeValue)
 	}
 
+	// 验证条形码是否重复
+	barcodeDuplicateMap := make(map[string][]int)
+	for _, item := range reqs.List {
+		if item.BarcodeValue != "" {
+			barcodeDuplicateMap[item.BarcodeValue] = append(barcodeDuplicateMap[item.BarcodeValue], item.Row)
+		}
+	}
+	for barcode, rows := range barcodeDuplicateMap {
+		if len(rows) > 1 {
+			return errors.New(i18n.Translate(language, "条码") + "[" + barcode + "]" + i18n.Translate(language, "在行") + fmt.Sprintf("%v", rows) + i18n.Translate(language, "中重复"))
+		}
+	}
+
+	// 预验证阶段 - 检查物品名称和条形码是否已存在
 	for _, item := range reqs.List {
 		// 验证是否已经存在
 		materialNameIsExist := repository.NewMaterialRepo(db).CheckMultiLanguageNameExist(item.LocaleName)
@@ -2355,28 +2424,76 @@ func (s *materialSrv) ImportMaterial(ctx context.Context, reqs req.MaterialImpor
 		}
 	}
 
-	// 错误提示
-	errorMessages := make([]string, 0)
-	for _, item := range reqs.List {
-		tmp := req.MaterialAddReq{
-			LocaleName:       item.LocaleName,
-			CategoryUuid:     item.CategoryUuid,
-			UnitUuid:         item.UnitUuid,
-			Status:           item.Status,
-			Valuation:        item.Valuation,
-			InitStock:        item.InitStock,
-			BarcodeValue:     item.BarcodeValue,
-			PurchaseUnitUuid: item.UnitUuid,
-			CostUnitUuid:     item.UnitUuid,
+	// 异步导入
+	go func() {
+		defer s.systemLock.UnlockUuid(companyUuid)
+
+		totalCount := len(reqs.List)
+		progressData := MaterialImportProgressData{
+			Status:  MaterialImportStatusStart,
+			Total:   totalCount,
+			Current: 0,
+			Success: 0,
+			Failed:  0,
+			Errors:  make([]MaterialImportErrorDetail, 0),
 		}
-		err := s.AddMaterial(ctx, tmp)
-		if err != nil {
-			errorMessages = append(errorMessages, fmt.Sprintf("行[%d]: %s", item.Row, err.Error()))
+
+		// 推送开始导入进度
+		s.pushMaterialImportProgress(companyUuid, deviceSn, progressData)
+
+		totalItems := len(reqs.List)
+		currentIndex := 0
+
+		for _, item := range reqs.List {
+			currentIndex++
+			progressData.Current = currentIndex
+			progressData.Progress = 30 + int(float64(currentIndex)/float64(totalItems)*70) // 导入占70%进度，从30%开始
+
+			// 添加物品
+			tmp := req.MaterialAddReq{
+				LocaleName:       item.LocaleName,
+				CategoryUuid:     item.CategoryUuid,
+				UnitUuid:         item.UnitUuid,
+				Status:           item.Status,
+				Valuation:        item.Valuation,
+				InitStock:        item.InitStock,
+				BarcodeValue:     item.BarcodeValue,
+				PurchaseUnitUuid: item.UnitUuid,
+				CostUnitUuid:     item.UnitUuid,
+			}
+			err := s.AddMaterial(ctx, tmp)
+			if err != nil {
+				progressData.Failed++
+				progressData.Errors = append(progressData.Errors, MaterialImportErrorDetail{
+					Row:     item.Row,
+					Message: err.Error(),
+				})
+				logger.Logger.Error("导入物品失败",
+					zap.Int("row", item.Row),
+					zap.Error(err),
+					zap.Uint64("companyUuid", companyUuid))
+			} else {
+				progressData.Success++
+			}
+
+			// 推送导入进度
+			if currentIndex%5 == 0 || currentIndex == totalItems { // 每5条或最后一条推送进度
+				s.pushMaterialImportProgress(companyUuid, deviceSn, progressData)
+			}
 		}
-	}
-	if len(errorMessages) > 0 {
-		return errors.New(i18n.Translate(language, "物品导入失败") + ": " + strings.Join(errorMessages, "; "))
-	}
+
+		// 推送最终结果
+		progressData.Progress = 100
+		if progressData.Failed > 0 {
+			progressData.Status = MaterialImportStatusError
+			progressData.Error = fmt.Sprintf("导入完成，成功%d条，失败%d条", progressData.Success, progressData.Failed)
+		} else {
+			progressData.Status = MaterialImportStatusFinish
+			progressData.Error = fmt.Sprintf("导入成功，共处理%d条物品", progressData.Success)
+		}
+
+		s.pushMaterialImportProgress(companyUuid, deviceSn, progressData)
+	}()
 
 	return nil
 }
