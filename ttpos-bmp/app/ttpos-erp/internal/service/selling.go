@@ -150,6 +150,43 @@ type (
 		// 功能：
 		//   - 获取支付方式列表
 		GetModeOfPaymentList(ctx context.Context, req *selling.GetModeOfPaymentListReq) (*selling.GetModeOfPaymentListResp, error)
+		// CountCustomer 统计客户数量
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - filter: 客户过滤条件，可选
+		//
+		// 返回：
+		//   - int: 客户数量
+		//   - error: 错误信息
+		CountCustomer(ctx context.Context, filter *erp.Customer) (int, error)
+		// CreateCustomer 创建客户
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 客户信息
+		//
+		// 返回：
+		//   - *erp.Customer: 创建后的客户信息
+		//   - error: 错误信息
+		CreateCustomer(ctx context.Context, req *erp.Customer) (*erp.Customer, error)
+		// UpdateCustomer 更新客户
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - name: 客户名称
+		//   - req: 更新的客户信息
+		//
+		// 返回：
+		//   - *erp.Customer: 更新后的客户信息
+		//   - error: 错误信息
+		UpdateCustomer(ctx context.Context, name string, req *erp.Customer) (*erp.Customer, error)
+		// GetCustomer 获取客户信息
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - name: 客户名称
+		//
+		// 返回：
+		//   - *erp.Customer: 客户信息
+		//   - error: 错误信息
+		GetCustomer(ctx context.Context, name string) (*erp.Customer, error)
 	}
 )
 

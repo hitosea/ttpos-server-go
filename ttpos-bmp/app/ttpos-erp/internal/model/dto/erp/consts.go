@@ -31,6 +31,7 @@ const (
 	DocTypeContact           = "Contact"
 	DocTypeAddress           = "Address"
 	DocTypeItemGroup         = "Item Group"
+	DocTypeCustomer          = "Customer"
 
 	//DocTypeStockLedger 库存台账查询
 	DocTypeStockLedger = "Stock Ledger"
