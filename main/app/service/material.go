@@ -505,7 +505,7 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 	// 获取采购单位
 	purchaseUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.PurchaseUom)
 	if err != nil {
-		return errors.WithMessage(err, fmt.Sprintf("采购单位不存在: %s", request.PurchaseUom))
+		return errors.WithMessage(err, fmt.Sprintf("采购单位不存在: %s %s", request.ItemCode, request.PurchaseUom))
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
@@ -1151,13 +1151,13 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 		// 基准单位
 		stockUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.StockUom)
 		if err != nil {
-			return errors.WithMessage(err, "基准单位不存在："+request.StockUom)
+			return errors.WithMessage(err, fmt.Sprintf("基准单位不存在：%s %s", request.ItemCode, request.StockUom))
 		}
 
 		// 采购单位
 		purchaseUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.PurchaseUom)
 		if err != nil {
-			return errors.WithMessage(err, "采购单位不存在："+request.PurchaseUom)
+			return errors.WithMessage(err, fmt.Sprintf("采购单位不存在: %s %s", request.ItemCode, request.PurchaseUom))
 		}
 
 		// 同步单位
