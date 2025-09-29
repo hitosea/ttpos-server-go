@@ -132,8 +132,6 @@ type IProductQueryRepo interface {
 	GetProductShopMaxSort(opts ...DBOption) (int64, error)                                                        // 获取商品最大排序
 
 	BatchUpdateSort(table any, sorts map[uint64]int) error // 批量更新排序
-
-	GetLatestProductsByStatus(limit int, status uint) ([]model.ProductionOrderProduct, error) // 获取最新制作状态生产订单商品,目前只返回sale_bill_uuid
 }
 
 // productRepo 商品仓库
@@ -1388,36 +1386,6 @@ func (r *productRepo) GetProductFlavorList(opts ...DBOption) ([]model.ProductFla
 	}
 	err := db.Order("sort asc, create_time asc").Find(&flavors).Error
 	return flavors, errors.WithMessage(err)
-}
-
-// GetLatestDistinctProductsByStatus 获取最新制作中的生产订单商品
-func (r *productRepo) GetLatestProductsByStatus(limit int, status uint) ([]model.ProductionOrderProduct, error) {
-	if status == constant.ProductionOrderProductStatusCooking {
-		cookingList := []model.ProductionOrderProduct{} // 制作中的production
-		err := r.db.Model(&model.ProductionOrderProduct{}).
-			Select("sale_bill_uuid,MIN(create_time) AS create_time").
-			Where("status = ?", constant.ProductionOrderProductStatusCooking).
-			Where("delete_time = 0").
-			Group("sale_bill_uuid").
-			Order("create_time DESC").
-			Limit(limit).
-			Find(&cookingList).Error
-		return cookingList, errors.WithMessage(err)
-
-	} else if status == constant.ProductionOrderProductStatusFinished {
-		// 获取已叫production
-		finishedList := []model.ProductionOrderProduct{} // 已叫production
-		err := r.db.Model(&model.ProductionOrderProduct{}).
-			Select("sale_bill_uuid, MAX(finished_time) AS finished_time").
-			Where("delete_time = 0").
-			Group("sale_bill_uuid").Having("MIN(status) = ?", constant.ProductionOrderProductStatusFinished).
-			Having("MAX(status) = ?", constant.ProductionOrderProductStatusFinished).
-			Order("finished_time DESC").
-			Limit(limit).
-			Find(&finishedList).Error
-		return finishedList, errors.WithMessage(err)
-	}
-	panic("not implemented")
 }
 
 func (r *productRepo) CheckProductCategoryCodeExist(code string, uuid uint64) bool {

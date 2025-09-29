@@ -107,12 +107,6 @@ const (
 	// =============================================================================
 	EventStatisticsSale   EventName = "Event_Statistics_Sale"   // 统计销售事件
 	EventStatisticsMember EventName = "Event_Statistics_Member" // 统计会员事件
-
-	// =============================================================================
-	// 叫号板事件
-	// =============================================================================
-	EventCallBoardChange         EventName = "Event_Call_Board_Change"          // 叫号板变化事件
-	EventCallBoardLanguageChange EventName = "Event_Call_Board_Language_Change" // 叫号板语言变化事件
 )
 
 // systemEventBus 是 SystemEventBus 的单例实例，用于全局访问。
