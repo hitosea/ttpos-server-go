@@ -1,0 +1,4 @@
+save-pos-invoice
+item-sync
+erp-item-change
+erp-doc-change

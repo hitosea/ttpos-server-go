@@ -41,6 +41,7 @@ mid:
 	@set -o allexport; \
 	. ../.env && docker compose -p ttpos-bmp-mid -f ./docker-compose.mid.yml up -d ;\
 	set +o allexport;
+	@make update-topic
 
 # 启动中间件及中台应用服务
 .PHONY: run
@@ -113,3 +114,8 @@ erp.migrate:
 	@echo "📁 迁移目录: $(DIR_BASE)"
 	@cd app/ttpos-erp && gf run main.go --args "migrate --siteCode $(SITE_CODE) --dirBase $(DIR_BASE)"
 	@echo "✅ ERP数据迁移执行完成!"
+
+# 更新所有topic
+.PHONY: update-topic
+update-topic:
+	@./hack/update_topic.sh

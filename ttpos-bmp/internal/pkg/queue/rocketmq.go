@@ -365,14 +365,12 @@ func RegisterRocketMqProducer() (mqIns *RocketMq, err error) {
 
 // RegisterRocketMqConsumer 注册rocketmq消费者
 func RegisterRocketMqConsumer() (mqIns *RocketMq, err error) {
-	if rocketManager.Consumer != nil {
-		return rocketManager.Consumer, nil
-	}
-
 	rocketManager.cMutex.Lock()
 	defer rocketManager.cMutex.Unlock()
 	SetRLogLevel()
-
+	if rocketManager.Consumer != nil {
+		return rocketManager.Consumer, nil
+	}
 	// 利用生产者检查一下连通性
 	if _, err = RegisterRocketMqProducer(); err != nil {
 		return nil, err
