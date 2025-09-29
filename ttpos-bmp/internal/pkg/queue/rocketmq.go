@@ -29,6 +29,7 @@ type RocketManager struct {
 	Consumer *RocketMq
 	pMutex   sync.Mutex
 	cMutex   sync.Mutex
+	started  bool
 	goPool   *grpool.Pool
 }
 
@@ -61,9 +62,10 @@ func setRocketCloseEvent() {
 			}
 			Logger().Debug(ctx, "rocketmq consumer close...")
 		}
+		rocketManager.started = false
 
 		for rocketManager.goPool != nil && rocketManager.goPool.Size() != 0 {
-			Logger().Debugf(ctx, "waiting for eocketmq consumer to complete execution[%v][%v]...", rocketManager.goPool.Size(), rocketManager.goPool.Jobs())
+			Logger().Debugf(ctx, "waiting for rocketmq consumer to complete execution[%v][%v]...", rocketManager.goPool.Size(), rocketManager.goPool.Jobs())
 			time.Sleep(time.Second)
 		}
 	})
@@ -274,11 +276,14 @@ func (r *RocketMq) Subscribe(ctx context.Context, topic string, handler func(ctx
 		return gerror.Wrapf(err, "RocketMQ订阅主题失败 [%s]", topic)
 	}
 
-	// 启动消费者
-	if err = r.consumerIns.Start(); err != nil {
-		// 失败时取消订阅
-		_ = r.consumerIns.Unsubscribe(topic)
-		return gerror.Wrapf(err, "RocketMQ启动消费者失败 [%s]", topic)
+	// 启动消费者，只在首次订阅时启动
+	if !rocketManager.started {
+		if err = r.consumerIns.Start(); err != nil {
+			// 失败时取消订阅
+			_ = r.consumerIns.Unsubscribe(topic)
+			return gerror.Wrapf(err, "RocketMQ启动消费者失败 [%s]", topic)
+		}
+		rocketManager.started = true
 	}
 
 	Logger().Infof(ctx, "RocketMQ消费者订阅成功 [%s]", topic)
@@ -395,6 +400,7 @@ func RegisterRocketMqConsumer() (mqIns *RocketMq, err error) {
 	rocketManager.goPool = grpool.New(5)
 
 	rocketManager.Consumer = mqIns
+	rocketManager.started = false
 	return rocketManager.Consumer, nil
 }
 
