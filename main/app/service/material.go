@@ -505,7 +505,7 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 	// 获取采购单位
 	purchaseUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.PurchaseUom)
 	if err != nil {
-		return errors.WithMessage(err, fmt.Sprintf("采购单位不存在: %s", request.PurchaseUom))
+		return errors.WithMessage(err, fmt.Sprintf("采购单位不存在: %s %s", request.ItemCode, request.PurchaseUom))
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
@@ -1142,7 +1142,7 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 		// 同步物品分类
 		materialCategory, exists, err := materialRepo.GetMaterialCategoryByCode(request.ClassificationCode)
 		if !exists || err != nil {
-			return errors.WithMessage(err, "物品分类不存在")
+			return errors.WithMessage(err, "物品分类不存在："+request.ClassificationCode)
 		}
 		if material.CategoryUuid != materialCategory.Uuid {
 			updateData["category_uuid"] = materialCategory.Uuid
@@ -1151,13 +1151,13 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 		// 基准单位
 		stockUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.StockUom)
 		if err != nil {
-			return errors.WithMessage(err, "基准单位不存在")
+			return errors.WithMessage(err, fmt.Sprintf("基准单位不存在：%s %s", request.ItemCode, request.StockUom))
 		}
 
 		// 采购单位
 		purchaseUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.PurchaseUom)
 		if err != nil {
-			return errors.WithMessage(err, "采购单位不存在")
+			return errors.WithMessage(err, fmt.Sprintf("采购单位不存在: %s %s", request.ItemCode, request.PurchaseUom))
 		}
 
 		// 同步单位
@@ -2430,6 +2430,7 @@ func (s *materialSrv) ImportMaterial(ctx context.Context, reqs req.MaterialImpor
 
 		totalCount := len(reqs.List)
 		progressData := MaterialImportProgressData{
+			Time:    time.Now().Unix(),
 			Status:  MaterialImportStatusStart,
 			Total:   totalCount,
 			Current: 0,
@@ -2439,6 +2440,7 @@ func (s *materialSrv) ImportMaterial(ctx context.Context, reqs req.MaterialImpor
 		}
 
 		// 推送开始导入进度
+		time.Sleep(300 * time.Millisecond)
 		s.pushMaterialImportProgress(companyUuid, deviceSn, progressData)
 
 		totalItems := len(reqs.List)
@@ -2492,6 +2494,9 @@ func (s *materialSrv) ImportMaterial(ctx context.Context, reqs req.MaterialImpor
 			progressData.Error = fmt.Sprintf("导入成功，共处理%d条物品", progressData.Success)
 		}
 
+		// 延迟500毫秒
+		time.Sleep(500 * time.Millisecond)
+		progressData.Time = time.Now().Unix()
 		s.pushMaterialImportProgress(companyUuid, deviceSn, progressData)
 	}()
 
@@ -2645,7 +2650,8 @@ func (s *materialSrv) SyncSubShopMaterial(ctx context.Context) error {
 					Uoms:               uoms,
 					PurchaseUom:        itemInfo.PurchaseUom,
 				}); err != nil {
-					return errors.WithMessage(err, "同步子店物品列表失败")
+					logger.Logger.Error("同步子店物品列表失败-01", zap.Error(err))
+					// return errors.WithMessage(err, "同步子店物品列表失败")
 				}
 			} else {
 				if err := s.AddMaterialByEprItem(copyCtx, req.MaterialAddErpReq{
@@ -2661,7 +2667,8 @@ func (s *materialSrv) SyncSubShopMaterial(ctx context.Context) error {
 					StockUom:           itemInfo.StockUom,
 					PurchaseUom:        itemInfo.PurchaseUom,
 				}, true); err != nil {
-					return errors.WithMessage(err, "同步子店物品列表失败")
+					logger.Logger.Error("同步子店物品列表失败-02", zap.Error(err))
+					// return errors.WithMessage(err, "同步子店物品列表失败")
 				}
 			}
 		}

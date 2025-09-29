@@ -4652,6 +4652,7 @@ func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportRe
 
 		totalCount := len(lists)
 		progressData := ImportProgressData{
+			Time:    time.Now().Unix(),
 			Status:  ImportStatusStart,
 			Total:   totalCount,
 			Current: 0,
@@ -4661,6 +4662,7 @@ func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportRe
 		}
 
 		// 实际导入阶段
+		time.Sleep(300 * time.Millisecond)
 		s.pushImportProgress(companyUuid, deviceSn, progressData)
 
 		// 重置进度数据
@@ -4709,6 +4711,9 @@ func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportRe
 			progressData.Error = fmt.Sprintf("导入成功，共处理%d条商品", progressData.Success)
 		}
 
+		// 延迟500毫秒
+		time.Sleep(500 * time.Millisecond)
+		progressData.Time = time.Now().Unix()
 		s.pushImportProgress(companyUuid, deviceSn, progressData)
 	}()
 

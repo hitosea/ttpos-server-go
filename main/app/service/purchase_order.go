@@ -577,7 +577,6 @@ func (s *purchaseOrderSrv) DeletePurchaseOrder(ctx context.Context, req req.Purc
 // SubmitPurchaseOrder 提交采购申请
 func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.PurchaseOrderSubmitReq) error {
 	db := ctx.GetDB()
-	companySetting := ctx.GetCompanySetting()
 	//
 	return db.Transaction(func(tx *gorm.DB) error {
 		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
@@ -593,14 +592,10 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 		}
 
 		// 检查供应商状态
-		if purchaseOrder.SupplierErpCode != "" {
-			dbs := tx
-			if companySetting.IsHeadquarter() && purchaseOrder.IsHeadquarterPurchase() {
-				dbs = s.dbm.GetDB(companySetting.HeadquarterUuid)
-			}
-			supplier, err := repository.NewSupplierRepo(dbs).GetByErpCode(purchaseOrder.SupplierErpCode)
+		if purchaseOrder.SupplierErpCode != "" && purchaseOrder.SupplierErpCode != constant.ErpHeadquartersSupplierCode {
+			supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(purchaseOrder.SupplierErpCode)
 			if err != nil {
-				return errors.WithMessage(err, "供应商已禁用，请修改供应商状态")
+				return errors.WithMessage(err, "供应商不存在,请先同步供应商数据")
 			}
 			if supplier.Status == 0 {
 				return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用，请修改供应商状态")
@@ -667,14 +662,10 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 		}
 
 		// 检查供应商状态
-		if purchaseOrder.SupplierErpCode != "" {
-			dbs := tx
-			if companySetting.IsHeadquarter() && purchaseOrder.IsHeadquarterPurchase() {
-				dbs = s.dbm.GetDB(companySetting.HeadquarterUuid)
-			}
-			supplier, err := repository.NewSupplierRepo(dbs).GetByErpCode(purchaseOrder.SupplierErpCode)
+		if purchaseOrder.SupplierErpCode != "" && purchaseOrder.SupplierErpCode != constant.ErpHeadquartersSupplierCode {
+			supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(purchaseOrder.SupplierErpCode)
 			if err != nil {
-				return errors.WithMessage(err, "供应商已禁用，请修改供应商状态")
+				return errors.WithMessage(err, "供应商不存在,请先同步供应商数据")
 			}
 			if supplier.Status == 0 {
 				return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用，请修改供应商状态")
@@ -837,6 +828,9 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 				}
 				// 获取公司数据库
 				subDb := s.dbm.GetDB(purchaseOrder.CompanyUuid)
+				if subDb == nil {
+					return errors.New("获取子店数据库失败01")
+				}
 				// 获取公司设置
 				companySetting := repository.NewCompanySettingRepo(subDb).Get()
 				// 调用erp接口
@@ -915,7 +909,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 				// 获取总部数据库
 				subDb := s.dbm.GetDB(purchaseOrder.CompanyUuid)
 				if subDb == nil {
-					return errors.New("获取子店数据库失败")
+					return errors.New("获取子店数据库失败02")
 				}
 				subPurchaseOrder, err := repository.NewPurchaseOrderRepo(subDb).GetByUuid(purchaseOrder.SubUuid)
 				if err != nil {

@@ -3,6 +3,7 @@ package erp
 import (
 	"context"
 	"errors"
+	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/dto/req"
@@ -232,6 +233,9 @@ func (s *erpSrv) CreatePurchaseOrder(ctx cc.Context, createPurchaseOrderReq *buy
 	}
 	if result.Code != "0" {
 		logger.Logger.Error("CreatePurchaseOrder-CreatePurchaseOrder", zap.Any("err", err))
+		if strings.Contains(result.GetMessage(), "Supplier") && strings.Contains(result.GetMessage(), "is disabled") {
+			return &buying.CreatePurchaseOrderResp{}, errors.New("供应商已禁用，请修改供应商状态")
+		}
 		return &buying.CreatePurchaseOrderResp{}, errors.New("调用erp接口失败-10001-" + result.GetMessage())
 	}
 	if result.Data != nil {

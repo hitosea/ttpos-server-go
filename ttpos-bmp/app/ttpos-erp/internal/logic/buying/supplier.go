@@ -133,6 +133,37 @@ func (s *sSupplier) AddSupplerTransactCompany(ctx context.Context, req *dto.AddS
 		return gerror.New("公司缩写编码不能为空")
 	}
 
+	// 根据公司缩写获取公司名称
+	companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.WithCompanyAbbr)
+	if err != nil {
+		g.Log().Error(ctx, "查询公司名称失败", g.Map{
+			"company_abbr": req.WithCompanyAbbr,
+			"error":        err,
+		})
+		return gerror.Wrapf(err, "查询公司名称失败")
+	}
+
+	countCustomer := 0
+	customerName := companyName + " - " + req.WithCompanyAbbr
+	if countCustomer, err = service.Selling().CountCustomer(ctx, &erp.Customer{
+		RepresentsCompany: companyName,
+		CustomerType:      "Company",
+	}); err != nil {
+		return gerror.Wrapf(err, "查询内部客户失败")
+	}
+
+	//创建默认内部销售客户
+	if countCustomer == 0 {
+		if _, err = service.Selling().CreateCustomer(ctx, &erp.Customer{
+			Name:               customerName,
+			CustomerType:       "Company",
+			IsInternalCustomer: 1,
+			RepresentsCompany:  companyName,
+		}); err != nil {
+			return gerror.Wrapf(err, "创建内部客户失败")
+		}
+	}
+
 	// 获取供应商信息
 	supplier, err := s.GetSupplier(ctx, &buying.GetSupplierReq{
 		Name: req.Supplier,
@@ -148,16 +179,6 @@ func (s *sSupplier) AddSupplerTransactCompany(ctx context.Context, req *dto.AddS
 	// 验证是否为内部供应商
 	if !supplier.IsInternalSupplier {
 		return gerror.New("非内部供应商，不能添加关联公司")
-	}
-
-	// 根据公司缩写获取公司名称
-	companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.WithCompanyAbbr)
-	if err != nil {
-		g.Log().Error(ctx, "查询公司名称失败", g.Map{
-			"company_abbr": req.WithCompanyAbbr,
-			"error":        err,
-		})
-		return gerror.Wrapf(err, "查询公司名称失败")
 	}
 
 	// 检查公司是否已存在

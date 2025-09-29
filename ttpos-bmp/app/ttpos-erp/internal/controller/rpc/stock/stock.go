@@ -65,11 +65,10 @@ func (*Controller) SaveMaterialRequest(ctx context.Context, req *stock.SaveMater
 		}
 		resp.PurchaseOrder = purchaseOrder.Name
 
-		service.Buying().CreateInnerSaleOrderFromPurchaseOrder(ctx, &dto.CreateInnerSaleOrderFromPurchaseOrderReq{
+		if _, err = service.Buying().CreateInnerSaleOrderFromPurchaseOrder(ctx, &dto.CreateInnerSaleOrderFromPurchaseOrderReq{
 			SourceName:   purchaseOrder.Name,
 			DeliveryDate: requiredBy,
-		})
-		if err != nil {
+		}); err != nil {
 			return rpc.ApiError(err.Error()), nil
 		}
 	}

@@ -493,7 +493,7 @@ func (s *warehouseSrv) buildWarehouseInOutResp(log model.WarehouseInOutLog) resp
 		OrderNo: log.OrderNo,
 		Type:    typeStr,
 		Date:    date,
-		Num:     int(log.Num), // 转换为整数显示
+		Num:     log.Num,
 		Amount:  log.Amount,
 		// 物品信息
 		MaterialUuid:         log.MaterialUuid,
