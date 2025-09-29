@@ -897,6 +897,10 @@ func (s *warehouseSrv) SyncDefaultWarehouseStock(ctx context.Context) error {
 			}
 			// 首次同步默认仓库物品库存，固定100000
 			stock.ActualQty = 100000
+			// 更新物品库存
+			if err := tx.Model(&model.Material{}).Where("uuid = ?", material.Uuid).Update("stock_num", stock.ActualQty).Error; err != nil {
+				return errors.WithMessage(err, "更新物品库存失败")
+			}
 
 			// 添加或修改仓库物品库存
 			if warehouseItem, ok := warehouseItemMap[stock.ItemCode]; ok {
