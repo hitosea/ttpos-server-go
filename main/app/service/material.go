@@ -362,6 +362,8 @@ func (s *materialSrv) GetMaterialStockDetail(ctx context.Context, req req.Materi
 
 // AddMaterialCategory 创建物品类别
 func (s *materialSrv) AddMaterialCategory(ctx context.Context, request req.MaterialCategoryAddReq) error {
+	// 大写编码
+	request.Code = strings.ToUpper(request.Code)
 	dbId := ctx.GetDbId()
 	db := s.dbm.GetDB(dbId)
 
@@ -563,6 +565,8 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 
 // AddMaterial 添加物品
 func (s *materialSrv) AddMaterial(ctx context.Context, req req.MaterialAddReq) error {
+	// 大写编码
+	req.InternalCode = strings.ToUpper(req.InternalCode)
 	dbId := ctx.GetDbId()
 	db := s.dbm.GetDB(dbId)
 
@@ -786,6 +790,8 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 
 // EditMaterial 编辑物品
 func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEditReq) error {
+	// 大写编码
+	request.InternalCode = strings.ToUpper(request.InternalCode)
 	// 验证请求参数
 	if err := request.Validate(); err != nil {
 		return errors.WithMessage(err)
@@ -1370,6 +1376,8 @@ func (s *materialSrv) SortMaterialCategory(ctx context.Context, req req.Material
 }
 
 func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.MaterialCategoryEditReq) error {
+	// 大写编码
+	request.Code = strings.ToUpper(request.Code)
 	db := s.dbm.GetDB(ctx.GetDbId())
 	materialCategoryRepo := repository.NewMaterialRepo(db)
 	materialCategory, err := materialCategoryRepo.GetMaterialCategoryByUuid(request.Uuid)
