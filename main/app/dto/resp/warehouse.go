@@ -35,7 +35,7 @@ type WarehouseInOutResp struct {
 	OrderNo string  `json:"order_no"` // 单据编号
 	Type    string  `json:"type"`     // 类型：采购入库-purchase、销售出库-sale、发货出库-delivery
 	Date    string  `json:"date"`     // 日期
-	Num     int     `json:"num"`      // 数量
+	Num     float64 `json:"num"`      // 数量
 	Amount  float64 `json:"amount"`   // 金额
 	// 物品信息
 	MaterialUuid         uint64             `json:"material_uuid"`          // 物品ID
