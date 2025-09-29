@@ -16,6 +16,7 @@ import (
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
+	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
 	"google.golang.org/protobuf/proto"
 )
@@ -51,6 +52,7 @@ func (s *sAsyncSelling) CancelPosInvoice(ctx context.Context, req *selling.Cance
 		ReqMessage:       reqMsg,
 		SiteCode:         siteCode,
 		ReqBody:          req.String(),
+		CreatedAt:        int(gtime.Now().Timestamp()),
 	})
 
 	go func() {
@@ -149,6 +151,7 @@ func (*sAsyncSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosIn
 		Branch:           req.Branch,
 		PostingDatetime:  req.PostingDatetime,
 		ReqBody:          req.String(),
+		CreatedAt:        int(gtime.Now().Timestamp()),
 	})
 	if err != nil {
 		g.Log().Errorf(ctx, "保存发票失败，插入记录失败: %v", err)
@@ -217,6 +220,7 @@ func (s *sAsyncSelling) ReturnPosInvoice(ctx context.Context, req *selling.Retur
 		ReqMessage:       reqMsg,
 		SiteCode:         siteCode,
 		ReqBody:          req.String(),
+		CreatedAt:        int(gtime.Now().Timestamp()),
 	})
 	if err != nil {
 		g.Log().Errorf(ctx, "保存退款发票失败，插入记录失败: %v", err)
@@ -316,6 +320,7 @@ func (*sAsyncSelling) ClosePosEntry(ctx context.Context, req *selling.ClosePosEn
 		PosOpenEntryName: req.PosOpenEntryName,
 		PeriodEndDate:    req.PeriodEndDate,
 		ReqBody:          req.String(),
+		CreatedAt:        int(gtime.Now().Timestamp()),
 	})
 	if err != nil {
 		g.Log().Errorf(ctx, "关帐失败，插入记录失败: %v", err)
