@@ -415,7 +415,7 @@ func (s *sSupplier) ListSuppliers(ctx context.Context, req *buying.ListSuppliers
 
 	// 构建请求参数
 	params := &erp.RequestParams{
-		Fields:  g.ArrayStr{"name", "supplier_name", "country", "supplier_type", "disabled", "represents_company", "is_transporter", "is_internal_supplier", "custom_company", "custom_branch", "custom_alias_name"},
+		Fields:  g.ArrayStr{"name", "supplier_name", "country", "supplier_type", "disabled", "represents_company", "is_transporter", "is_internal_supplier", "custom_company", "custom_branch", "custom_aliasname"},
 		Filters: filters,
 	}
 
@@ -487,7 +487,7 @@ func (s *sSupplier) ListSuppliers(ctx context.Context, req *buying.ListSuppliers
 			IsTransporter:      data.Get("is_transporter").Bool(),
 			IsInternalSupplier: data.Get("is_internal_supplier").Bool(),
 			Disabled:           data.Get("disabled").Bool(),
-			AliasName:          data.Get("custom_alias_name").String(),
+			AliasName:          data.Get("custom_aliasname").String(),
 		})
 	}
 	return &buying.ListSuppliersResp{
@@ -622,7 +622,7 @@ func (s *sSupplier) parseCreateSupplierResponse(data []byte) (*buying.SupplierDa
 		return nil, gerror.Wrapf(err, "解析供应商数据失败")
 	}
 
-	supplier.AliasName = supplierData.Get("custom_alias_name").String()
+	supplier.AliasName = supplierData.Get("custom_aliasname").String()
 	return &supplier, nil
 }
 
