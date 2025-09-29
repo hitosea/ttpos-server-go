@@ -938,6 +938,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_order` (
     `headquarter_status` INT(10) NOT NULL DEFAULT 0 COMMENT '总部状态：0-待提交 1-待审核 2-已通过 3-已驳回 4-部分收货 5-全部收货',
     `company_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '公司UUID-用于识别子商户',
     `company_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '公司名称',
+    `default_warehouse_erp_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '默认仓库ERP编码',
+    `default_warehouse_name` TEXT COMMENT '默认仓库名称',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

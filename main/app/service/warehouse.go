@@ -151,8 +151,8 @@ func (s *warehouseSrv) CreateWarehouse(ctx context.Context, addReq req.CreateWar
 	checkService := NewCheckNameSrv(s.dbm)
 	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
 	for _, name := range names {
-		if !checkService.CheckNameLength(ctx, name.Text, 150) {
-			return errors.New("仓库名称长度不能超过150")
+		if !checkService.CheckNameLength(ctx, name.Text, 140) {
+			return errors.New("仓库名称长度不能超过140")
 		}
 	}
 	exists = checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
@@ -276,8 +276,8 @@ func (s *warehouseSrv) UpdateWarehouse(ctx context.Context, updateReq req.Update
 	checkService := NewCheckNameSrv(s.dbm)
 	names := checkService.MakeCheckNameList(ctx, updateReq.LocaleName)
 	for _, name := range names {
-		if !checkService.CheckNameLength(ctx, name.Text, 150) {
-			return errors.New("仓库名称长度不能超过150")
+		if !checkService.CheckNameLength(ctx, name.Text, 140) {
+			return errors.New("仓库名称长度不能超过140")
 		}
 	}
 	exists = checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
