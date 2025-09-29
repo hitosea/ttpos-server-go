@@ -41,5 +41,16 @@ class ModifyMaterialNameLength extends Migrator
                 $table->update();
             }
         }
+
+        if ($this->hasTable('material_unit')) {
+            $table = $this->table('material_unit');
+            
+            // 检查字段是否存在
+            if ($table->hasColumn('name')) {
+                // 修改name字段为text类型
+                $table->changeColumn('name', 'text', ['comment' => '原料单位名称']);
+                $table->update();
+            }
+        }
     }
 }
