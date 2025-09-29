@@ -2300,10 +2300,7 @@ func (s *productSrv) GetProductSauceList(ctx context.Context, sauceListReq req.P
 	for _, productSauce := range productSauceList {
 		var productBomCardName dto.LocaleResponse
 		if productSauce.ProductBomCardUuid > 0 {
-			productBomCardName, err = repository.NewProductBomCardRepo(db).GetProductBomCardName(productSauce.ProductBomCardUuid)
-			if err != nil {
-				return product_resp.ProductSauceListResp{}, errors.WithMessage(errors.New("获取成本卡名称失败"), err.Error())
-			}
+			productBomCardName, _ = repository.NewProductBomCardRepo(db).GetProductBomCardName(productSauce.ProductBomCardUuid)
 		}
 		productSauceListResp = append(productSauceListResp, product_resp.ProductSauceItem{
 			Uuid:                productSauce.Uuid,
@@ -2881,16 +2878,6 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 	if exists {
 		return errors.New("属性组名称已存在")
 	}
-	for _, productAttribute := range addReq.ProductAttributes {
-		names := checkService.MakeCheckNameList(ctx, productAttribute.LocaleName)
-		exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-			Source: constant.CheckNameSourceAttribute,
-			Names:  names,
-		})
-		if exists {
-			return errors.New("属性值名称已存在")
-		}
-	}
 
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
@@ -3277,17 +3264,6 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 	})
 	if exists {
 		return errors.New("属性组名称已存在")
-	}
-	for _, attribute := range editReq.ProductAttributes {
-		names := checkService.MakeCheckNameList(ctx, attribute.LocaleName)
-		exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-			Uuid:   attribute.Uuid,
-			Source: constant.CheckNameSourceAttribute,
-			Names:  names,
-		})
-		if exists {
-			return errors.New("属性值名称已存在")
-		}
 	}
 
 	db := s.dbm.GetDB(ctx.GetDbId())
@@ -4668,10 +4644,7 @@ func (s *productSrv) GetProductSingleList(ctx context.Context, req req.ProductSi
 			if productBom.IsFlavor() {
 				var productBomCardName dto.LocaleResponse
 				if productBom.ProductBomCardUuid > 0 {
-					productBomCardName, err = repository.NewProductBomCardRepo(db).GetProductBomCardName(productBom.ProductBomCardUuid)
-					if err != nil {
-						return nil, errors.WithMessage(err, "获取成本卡失败")
-					}
+					productBomCardName, _ = repository.NewProductBomCardRepo(db).GetProductBomCardName(productBom.ProductBomCardUuid)
 				}
 				productItem := product_resp.ProductSingleListItemResp{
 					Uuid:               productBom.Uuid,
