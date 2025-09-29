@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 	"ttpos-bmp/app/ttpos-erp/api/manufacturing"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -21,6 +22,7 @@ import (
 	"ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/duke-git/lancet/v2/slice"
 	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
@@ -1044,7 +1046,7 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 		materialRepo := repository.NewMaterialRepo(tx)
 		multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
 		productUnitRepo := repository.NewProductUnitRepo(tx)
-		materialCategoryRepo := repository.NewMaterialRepo(tx)
+		materialUnitRepo := repository.NewMaterialUnitRepo(tx)
 
 		updateData := map[string]any{
 			"valuation":     request.ValuationRate, // 估值率
@@ -1088,8 +1090,8 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 		}
 
 		// 同步物品分类
-		materialCategory, _ := materialCategoryRepo.GetMaterialDetailByErpCode(request.ClassificationCode)
-		if materialCategory == nil {
+		materialCategory, exists, err := materialRepo.GetMaterialCategoryByCode(request.ClassificationCode)
+		if !exists || err != nil {
 			return errors.WithMessage(err, "获取物品分类失败")
 		}
 		if material.CategoryUuid != materialCategory.Uuid {
@@ -1102,7 +1104,14 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 			return errors.WithMessage(err, "获取基准单位失败")
 		}
 
+		// 采购单位
+		purchaseUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.PurchaseUom)
+		if err != nil {
+			return errors.WithMessage(err, "获取采购单位失败")
+		}
+
 		// 同步单位
+		saveUnitUuids := []uint64{}
 		for _, uom := range request.Uoms {
 			productUnit, _ := productUnitRepo.GetProductUnitByErpnextUom(uom.Uom)
 			if productUnit == nil {
@@ -1111,9 +1120,64 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 
 			if productUnit.Uuid == stockUnit.Uuid {
 				// 基准单位
-
+				err := materialUnitRepo.UpdateMaterialUnit(map[string]any{
+					"name":      productUnit.Name,
+					"unit_uuid": productUnit.Uuid,
+				}, commonRepo.WhereByUuid(material.Unit.Uuid))
+				if err != nil {
+					return errors.WithMessage(err, "更新基准单位失败")
+				}
+				saveUnitUuids = append(saveUnitUuids, material.Unit.Uuid)
+				if productUnit.Uuid == purchaseUnit.Uuid {
+					updateData["purchase_unit_uuid"] = material.Unit.Uuid
+				}
 			} else {
 				// 非基准单位
+				existUnit, exist := slice.FindBy(material.NotBaseUnitList, func(index int, item *model.MaterialUnit) bool {
+					return item.UnitUuid == productUnit.Uuid
+				})
+				if exist {
+					err := materialUnitRepo.UpdateMaterialUnit(map[string]any{
+						"name":            productUnit.Name,
+						"conversion_rate": uom.ConversionRate,
+					}, commonRepo.WhereByUuid(existUnit.Uuid))
+					if err != nil {
+						return errors.WithMessage(err, "更新非基准单位失败")
+					}
+					saveUnitUuids = append(saveUnitUuids, existUnit.Uuid)
+					if productUnit.Uuid == purchaseUnit.Uuid {
+						updateData["purchase_unit_uuid"] = existUnit.Uuid
+					}
+				} else {
+					uuid, err := materialUnitRepo.CreateMaterialUnit(model.MaterialUnit{
+						Name:           productUnit.Name,
+						UnitUuid:       productUnit.Uuid,
+						ConversionRate: uom.ConversionRate,
+						FromUnitUuid:   material.Unit.Uuid,
+						MaterialUuid:   material.Uuid,
+					})
+					if err != nil {
+						return errors.WithMessage(err, "创建非基准单位失败")
+					}
+					saveUnitUuids = append(saveUnitUuids, uuid)
+					if productUnit.Uuid == purchaseUnit.Uuid {
+						updateData["purchase_unit_uuid"] = uuid
+					}
+				}
+			}
+		}
+
+		if len(saveUnitUuids) > 0 {
+			err := materialUnitRepo.UpdateMaterialUnit(
+				map[string]any{
+					"delete_time": time.Now().Unix(),
+				},
+				commonRepo.WhereByUuidNotIn(saveUnitUuids),
+				commonRepo.WhereBySoftDelete(),
+				commonRepo.WhereByMaterialUuid(material.Uuid),
+			)
+			if err != nil {
+				return errors.WithMessage(err, "删除非基准单位失败")
 			}
 		}
 

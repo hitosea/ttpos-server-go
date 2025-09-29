@@ -15,6 +15,7 @@ type IMaterialUnitRepo interface {
 	GetMaterialUnitsByUuid(uuid uint64, opts ...DBOption) (model.MaterialUnit, error)
 	GetMaterialUnitList(opts ...DBOption) ([]*model.MaterialUnit, error)
 	CreateMaterialUnit(materialUnit model.MaterialUnit) (uint64, error)
+	UpdateMaterialUnit(data map[string]any, opts ...DBOption) error
 	GetMaterialUnitListByBaseUnitUuid(baseUnitUuid uint64) ([]*model.MaterialUnit, error)
 }
 
@@ -68,6 +69,15 @@ func (r *MaterialUnitRepoImpl) CreateMaterialUnit(materialUnit model.MaterialUni
 		return 0, errors.WithMessage(err, "创建原料单位失败")
 	}
 	return materialUnit.Uuid, nil
+}
+
+// UpdateMaterialUnit 更新原料单位
+func (r *MaterialUnitRepoImpl) UpdateMaterialUnit(data map[string]any, opts ...DBOption) error {
+	db := r.db.Model(&model.MaterialUnit{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	return db.Updates(data).Error
 }
 
 func (r *MaterialUnitRepoImpl) GetMaterialUnitList(opts ...DBOption) ([]*model.MaterialUnit, error) {
