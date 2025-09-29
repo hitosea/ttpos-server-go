@@ -5152,6 +5152,11 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 			sauceListResult.Status = req.Status
 		}
 	} else {
+		if req.Package.InternalCode != "" {
+			if repository.NewProductRepo(db).CheckProductFlavorInternalCodeExist(req.Package.InternalCode, 0) {
+				return errors.New("内部编码已存在")
+			}
+		}
 		// 添加套餐
 		var groups []CheckProductPackageGroupParam
 		for _, group := range req.Package.Groups {
