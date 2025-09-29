@@ -58,6 +58,7 @@ type IErpSrv interface {
 	AddPackage(ctx pkgCtx.Context, params req.PackageAddErpReq) (*item.ItemInfo, error)                                     // 添加套餐
 	GetMaterialStockNum(ctx pkgCtx.Context, warehouseErpCode string) ([]*item.ItemStock, error)                             // 获取仓库物品库存数量
 	GetHeadquarterMaterialList(ctx pkgCtx.Context, params req.GetHeadquarterMaterialListReq) (*item.GetItemListResp, error) // 获取总部物品列表
+	GetSubShopMaterialList(ctx pkgCtx.Context) (*item.GetItemListResp, error)                                               // 获取子公司物品列表
 	GetProductBomCardList(ctx pkgCtx.Context) (*manufacturing.GetBomListResp, error)                                        // 获取成本卡列表
 	GetProductBomCardDetail(ctx pkgCtx.Context, params req.ErpProductBomCardDetailReq) (*manufacturing.GetBomResp, error)   // 获取成本卡详情
 

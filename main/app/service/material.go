@@ -35,7 +35,7 @@ type IMaterialSrv interface {
 	GetMaterialDetail(ctx context.Context, req req.MaterialDetailReq) (material_resp.MaterialDetailResp, error)
 	GetMaterialStockDetail(ctx context.Context, req req.MaterialStockDetailReq) (material_resp.MaterialStockDetailResp, error)
 	AddMaterial(ctx context.Context, req req.MaterialAddReq) error
-	AddMaterialByEprItem(ctx context.Context, request req.MaterialAddErpReq) error
+	AddMaterialByEprItem(ctx context.Context, request req.MaterialAddErpReq, isSyncSubShop bool) error
 	EditMaterial(ctx context.Context, req req.MaterialEditReq) error
 	UpdateMaterialByEprItem(ctx context.Context, request req.MaterialEditErpReq) error
 	DeleteMaterial(ctx context.Context, req req.MaterialDeleteReq) error
@@ -56,6 +56,7 @@ type IMaterialSrv interface {
 	ImportMaterial(ctx context.Context, req req.MaterialImportReq) error
 	GetWarehouseItemsByErpCode(ctx context.Context, warehouseErpCode string, pageNo, pageSize int) ([]model.WarehouseItem, int64, error)
 	SyncHeadquarterMaterial(ctx context.Context) error // 同步总部物品列表
+	SyncSubShopMaterial(ctx context.Context) error     // 同步子店物品列表
 	SyncMaterialCategory(ctx context.Context) error    // 同步物品分类
 	SyncProductBomCard(ctx context.Context) error      // 同步成本卡
 }
@@ -434,7 +435,7 @@ func (s *materialSrv) AddMaterialCategory(ctx context.Context, request req.Mater
 	return nil
 }
 
-func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.MaterialAddErpReq) error {
+func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.MaterialAddErpReq, isSyncSubShop bool) error {
 	db := ctx.GetDB()
 	if db == nil {
 		dbId := ctx.GetDbId()
@@ -465,7 +466,7 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		productUnitRepo := repository.NewProductRepo(tx)
 
-		// 获取物品分类信息: TODO ClassificationCode 和 Classification ERP未返回
+		// 获取物品分类信息
 		materialCategoryRepo := repository.NewMaterialRepo(tx)
 		materialCategory, exists, err := materialCategoryRepo.GetMaterialCategoryByCode(request.ClassificationCode)
 		if err != nil {
@@ -536,7 +537,7 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 		// 获取总部ID
 		companySetting := ctx.GetCompanySetting()
 		var headquarterUuid uint64
-		if companySetting.IsSubShop() {
+		if companySetting.IsSubShop() && !isSyncSubShop {
 			headquarterUuid = companySetting.HeadquarterUuid
 		}
 		params.SetHeadquarterUuid(headquarterUuid)
@@ -2459,8 +2460,84 @@ func (s *materialSrv) SyncHeadquarterMaterial(ctx context.Context) error {
 					Uoms:               uoms,
 					StockUom:           itemInfo.StockUom,
 					PurchaseUom:        itemInfo.PurchaseUom,
-				}); err != nil {
+				}, false); err != nil {
 					return errors.WithMessage(err, "同步总部物品列表失败")
+				}
+			}
+		}
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err)
+	}
+
+	return nil
+}
+
+// 同步子店物品列表
+func (s *materialSrv) SyncSubShopMaterial(ctx context.Context) error {
+	company := ctx.GetCompany()
+	companySetting := ctx.GetCompanySetting()
+	if !company.IsOpenErp() {
+		return nil
+	}
+	if !companySetting.IsSubShop() {
+		return nil
+	}
+	erpSrv := erp.NewIErpSrv(s.dbm)
+	subShopMaterialList, err := erpSrv.GetSubShopMaterialList(ctx)
+	if err != nil {
+		return errors.WithMessage(err, "同步子店物品列表失败")
+	}
+
+	db := ctx.GetDB()
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		copyCtx := ctx.Copy()
+		copyCtx.SetDB(tx)
+		for _, itemInfo := range subShopMaterialList.ItemList {
+			uoms := []req.MaterialUomReq{}
+			for _, uom := range itemInfo.Uoms {
+				uoms = append(uoms, req.MaterialUomReq{
+					Uom:            uom.Uom,
+					ConversionRate: uom.ConversionFactor,
+				})
+			}
+			existingMaterial := repository.NewMaterialRepo(tx).GetMaterial(
+				repository.CommonRepo.WhereBySoftDelete(),
+				repository.CommonRepo.WhereByErpCode(itemInfo.ItemCode),
+			)
+
+			if existingMaterial.Uuid != 0 { // 如果物品已存在
+				if err := s.UpdateMaterialByEprItem(copyCtx, req.MaterialEditErpReq{
+					Uuid:               existingMaterial.Uuid,
+					ItemCode:           itemInfo.ItemCode,
+					ItemName:           itemInfo.ItemName,
+					StockUom:           itemInfo.StockUom,
+					Disabled:           itemInfo.Disabled,
+					ValuationRate:      itemInfo.ValuationRate,
+					OpeningStock:       itemInfo.OpeningStock,
+					InternalCode:       itemInfo.InternalCode,
+					Classification:     itemInfo.Classification,
+					ClassificationCode: itemInfo.ClassificationCode,
+					Uoms:               uoms,
+					PurchaseUom:        itemInfo.PurchaseUom,
+				}); err != nil {
+					return errors.WithMessage(err, "同步子店物品列表失败")
+				}
+			} else {
+				if err := s.AddMaterialByEprItem(copyCtx, req.MaterialAddErpReq{
+					ItemCode:           itemInfo.ItemCode,
+					ItemName:           itemInfo.ItemName,
+					Disabled:           itemInfo.Disabled,
+					ValuationRate:      itemInfo.ValuationRate,
+					OpeningStock:       itemInfo.OpeningStock,
+					InternalCode:       itemInfo.InternalCode,
+					Classification:     itemInfo.Classification,
+					ClassificationCode: itemInfo.ClassificationCode,
+					Uoms:               uoms,
+					StockUom:           itemInfo.StockUom,
+					PurchaseUom:        itemInfo.PurchaseUom,
+				}, true); err != nil {
+					return errors.WithMessage(err, "同步子店物品列表失败")
 				}
 			}
 		}
