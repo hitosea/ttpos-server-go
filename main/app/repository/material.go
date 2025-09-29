@@ -15,6 +15,7 @@ import (
 // IMaterialRepo 物品仓库接口
 type IMaterialRepo interface {
 	GetMaterialListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.Material, int64, error)
+	GetMaterial(opts ...DBOption) model.Material
 	GetMaterialByUuid(uuid uint64, opts ...DBOption) (model.Material, error)
 	GetMaterialByUuids(uuids []uint64, opts ...DBOption) ([]*model.Material, error)
 	GetMaterialByCategoryUuid(categoryUuid uint64) ([]*model.Material, error)
@@ -23,6 +24,7 @@ type IMaterialRepo interface {
 	CreateMaterial(material model.Material) (uint64, error)
 	UpdateMaterialCode(uuid uint64, code string) error
 	UpdateMaterial(material model.Material) error
+	UpdateMaterialData(data map[string]any, opts ...DBOption) error
 	UpdateMaterialStatus(uuid uint64, status bool) error
 	ClearMaterialBarcodeValue(uuid uint64) error // 清空物品条形码值
 	ClearMaterialValuation(uuid uint64) error    // 清空物品估值率
@@ -102,6 +104,20 @@ func (r *MaterialRepoImpl) GetMaterialListWithPagination(pageNo, pageSize int, o
 	}
 
 	return materials, total, nil
+}
+
+// GetMaterial 根据查询选项获取物品
+func (r *MaterialRepoImpl) GetMaterial(opts ...DBOption) model.Material {
+	var material model.Material
+
+	query := r.db
+	for _, opt := range opts {
+		query = opt(query)
+	}
+
+	query.Find(&material).Limit(1)
+
+	return material
 }
 
 // GetMaterialByUuid 根据UUID获取物品详情
@@ -231,6 +247,18 @@ func (r *MaterialRepoImpl) UpdateMaterialCode(uuid uint64, code string) error {
 func (r *MaterialRepoImpl) UpdateMaterial(material model.Material) error {
 	if err := r.db.Model(&model.Material{}).Where("uuid = ?", material.Uuid).Updates(material).Error; err != nil {
 		return errors.WithMessage(err, "更新物品失败")
+	}
+	return nil
+}
+
+// UpdateMaterialData 更新物品数据
+func (r *MaterialRepoImpl) UpdateMaterialData(data map[string]any, opts ...DBOption) error {
+	db := r.db.Model(&model.Material{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	if err := db.Updates(data).Error; err != nil {
+		return errors.WithMessage(err, "更新物品数据失败")
 	}
 	return nil
 }

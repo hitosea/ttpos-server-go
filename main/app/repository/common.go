@@ -77,6 +77,7 @@ type ICommonRepo interface {
 	WhereByIsShowH5(isShow uint) DBOption                                                     // 根据是否显示H5端查询
 	WhereByIsShowMember(isShow uint) DBOption                                                 // 根据是否显示会员端查询
 	WhereBySoftDelete() DBOption                                                              // 根据软删除查询
+	WhereByErpCode(erpCode string) DBOption                                                   // 根据erp_code查询
 	WhereByProductBomUuid(productBomUuid uint64) DBOption                                     // 根据产品bom UUID查询
 	WhereByNotPackageSubProduct() DBOption                                                    // 根据不是套餐子商品查询
 	WhereByNoSelectingTimeout() DBOption                                                      // 根据选购超时查询
@@ -149,6 +150,7 @@ type ICommonRepo interface {
 	WhereByErpnextGroupName(groupName string) DBOption                                        // 根据erpnext规格组名称查询
 	WhereByErpnextValueName(valueName string) DBOption                                        // 根据erpnext规格值名称查询
 	WhereByCategoryKey(categoryKey string) DBOption                                           // 根据分类关键字查询
+	WhereByMaterialUuid(materialUuid uint64) DBOption                                         // 根据原料UUID查询
 	DBOption(opt DBOption) func(*gorm.DB) *gorm.DB                                            // 将DBOption转为func(*gorm.DB) *gorm.DB
 	Transaction(db *gorm.DB, fn func(tx *gorm.DB) error) error                                // 事务
 }
@@ -320,6 +322,13 @@ func (r *commonRepo) WhereByIsShowMember(isShow uint) DBOption {
 func (r *commonRepo) WhereBySoftDelete() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where(fmt.Sprintf("delete_time = %d", constant.NotDeleted))
+	}
+}
+
+// WhereByErpCode 根据erp_code查询
+func (r *commonRepo) WhereByErpCode(erpCode string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("code = ?", erpCode)
 	}
 }
 
@@ -660,6 +669,13 @@ func (r *commonRepo) WhereByErpnextValueName(valueName string) DBOption {
 func (r *commonRepo) WhereByCategoryKey(categoryKey string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("category_key = ?", categoryKey)
+	}
+}
+
+// WhereByMaterialUuid 根据原料UUID查询
+func (r *commonRepo) WhereByMaterialUuid(materialUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("material_uuid = ?", materialUuid)
 	}
 }
 
