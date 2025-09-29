@@ -25,6 +25,7 @@ message SupplierInfo {
   string contact_name = 6; // 联系人姓名
   string contact_phone = 7; // 联系号码
   string address = 8 ; // 地址
+  string alias_name = 9; // 别名名称 ，对外显示的名称
 }
 
 // 创建供应商请求消息
@@ -90,13 +91,13 @@ message ListSuppliersResp {
 // 供应商数据结构
 message SupplierData {
   // 基础字段
-  string name = 1; // 主键不可修改
+  string name = 1; // 主键不可修改 创建的时候传别名。生成后返回 alias_name + ' - ' + company_abbr
 
   // 供应商信息
-  string supplier_name = 5; // 供应商名称，必填
-  string company_abbr =2 ; // 公司缩写
-  string company =3 ; //公司
-  string branch = 4 ; //分支
+  string supplier_name = 2; // 供应商名称，必填
+  string company_abbr =3 ; // 公司缩写
+  string company =4 ; //公司
+  string branch = 5 ; //分支
   string country = 6; // 国家
   string supplier_type = 7; // 供应商类型，默认 Company, Individual, Partnership
   string represents_company = 8; // 代表公司
@@ -109,6 +110,7 @@ message SupplierData {
   string contact_name = 12; // 联系人姓名
   string contact_phone = 13; // 联系号码
   string address = 14 ; // 地址
+  string alias_name = 15; // 别名名称 ，对外显示的名称
 }
 
 

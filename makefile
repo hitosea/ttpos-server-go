@@ -124,3 +124,8 @@ add-ver:
 # 执行think命令
 think:
 	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh think $(filter-out $@,$(MAKECMDGOALS)) 
+
+# 监听今天的日志
+log:
+	@echo "🔍 监听今天的日志..."
+	tail -f -n 500 ./main/log/$$(date +%Y-%m-%d).log

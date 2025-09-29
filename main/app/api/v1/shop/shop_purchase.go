@@ -182,7 +182,7 @@ func (h *PurchaseHandler) SubmitPurchaseOrder(c *gin.Context) {
 		return
 	}
 
-	helper.Success(c, gin.H{})
+	helper.Success(c, gin.H{}, "提交成功")
 }
 
 // ApprovePurchaseOrder 审核采购订单

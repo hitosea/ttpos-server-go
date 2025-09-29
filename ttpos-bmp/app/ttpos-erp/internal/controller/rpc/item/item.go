@@ -209,6 +209,7 @@ func (c *Controller) GetItem(ctx context.Context, req *item.GetItemReq) (*api.Re
 		InternalCode:       itemInfo.CustomInternalCode,
 		PurchaseUom:        itemInfo.PurchaseUom,
 		Uoms:               uomDetails,
+		OpeningStock:       itemInfo.OpeningStock,
 	}
 
 	// 返回成功响应

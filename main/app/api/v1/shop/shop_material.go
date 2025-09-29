@@ -353,7 +353,7 @@ func (h *MaterialHandler) EditMaterial(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "保存成功")
 }
 
 // UpdateMaterialStatusBatch 批量修改物品状态

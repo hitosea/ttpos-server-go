@@ -121,6 +121,7 @@ type SupplierInfo struct {
 	ContactName       string                 `protobuf:"bytes,6,opt,name=contact_name,json=contactName,proto3" json:"contact_name,omitempty" dc:"联系人姓名"`                     // 联系人姓名
 	ContactPhone      string                 `protobuf:"bytes,7,opt,name=contact_phone,json=contactPhone,proto3" json:"contact_phone,omitempty" dc:"联系号码"`                   // 联系号码
 	Address           string                 `protobuf:"bytes,8,opt,name=address,proto3" json:"address,omitempty" dc:"地址"`                                                   // 地址
+	AliasName         string                 `protobuf:"bytes,9,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"别名名称 ，对外显示的名称"`                   // 别名名称 ，对外显示的名称
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -207,6 +208,13 @@ func (x *SupplierInfo) GetContactPhone() string {
 func (x *SupplierInfo) GetAddress() string {
 	if x != nil {
 		return x.Address
+	}
+	return ""
+}
+
+func (x *SupplierInfo) GetAliasName() string {
+	if x != nil {
+		return x.AliasName
 	}
 	return ""
 }
@@ -745,12 +753,12 @@ func (x *ListSuppliersResp) GetSuppliers() []*SupplierData {
 type SupplierData struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 基础字段
-	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty" dc:"基础字段主键不可修改"` // 主键不可修改
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty" dc:"基础字段主键不可修改 创建的时候传别名。生成后返回 alias_name + ' - ' + company_abbr"` // 主键不可修改 创建的时候传别名。生成后返回 alias_name + ' - ' + company_abbr
 	// 供应商信息
-	SupplierName      string `protobuf:"bytes,5,opt,name=supplier_name,json=supplierName,proto3" json:"supplier_name,omitempty" dc:"供应商信息供应商名称，必填"`                             // 供应商名称，必填
-	CompanyAbbr       string `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写"`                                         // 公司缩写
-	Company           string `protobuf:"bytes,3,opt,name=company,proto3" json:"company,omitempty" dc:"公司"`                                                                      //公司
-	Branch            string `protobuf:"bytes,4,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支"`                                                                        //分支
+	SupplierName      string `protobuf:"bytes,2,opt,name=supplier_name,json=supplierName,proto3" json:"supplier_name,omitempty" dc:"供应商信息供应商名称，必填"`                             // 供应商名称，必填
+	CompanyAbbr       string `protobuf:"bytes,3,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写"`                                         // 公司缩写
+	Company           string `protobuf:"bytes,4,opt,name=company,proto3" json:"company,omitempty" dc:"公司"`                                                                      //公司
+	Branch            string `protobuf:"bytes,5,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支"`                                                                        //分支
 	Country           string `protobuf:"bytes,6,opt,name=country,proto3" json:"country,omitempty" dc:"国家"`                                                                      // 国家
 	SupplierType      string `protobuf:"bytes,7,opt,name=supplier_type,json=supplierType,proto3" json:"supplier_type,omitempty" dc:"供应商类型，默认 Company, Individual, Partnership"` // 供应商类型，默认 Company, Individual, Partnership
 	RepresentsCompany string `protobuf:"bytes,8,opt,name=represents_company,json=representsCompany,proto3" json:"represents_company,omitempty" dc:"代表公司"`                       // 代表公司
@@ -761,6 +769,7 @@ type SupplierData struct {
 	ContactName        string `protobuf:"bytes,12,opt,name=contact_name,json=contactName,proto3" json:"contact_name,omitempty" dc:"联系人姓名"`                           // 联系人姓名
 	ContactPhone       string `protobuf:"bytes,13,opt,name=contact_phone,json=contactPhone,proto3" json:"contact_phone,omitempty" dc:"联系号码"`                         // 联系号码
 	Address            string `protobuf:"bytes,14,opt,name=address,proto3" json:"address,omitempty" dc:"地址"`                                                         // 地址
+	AliasName          string `protobuf:"bytes,15,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"别名名称 ，对外显示的名称"`                         // 别名名称 ，对外显示的名称
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -889,6 +898,13 @@ func (x *SupplierData) GetContactPhone() string {
 func (x *SupplierData) GetAddress() string {
 	if x != nil {
 		return x.Address
+	}
+	return ""
+}
+
+func (x *SupplierData) GetAliasName() string {
+	if x != nil {
+		return x.AliasName
 	}
 	return ""
 }
@@ -2103,7 +2119,7 @@ const file_buying_buying_proto_rawDesc = "" +
 	"\x12GetSupplierListReq\x12!\n" +
 	"\fcompany_abbr\x18\x01 \x01(\tR\vcompanyAbbr\"P\n" +
 	"\x13GetSupplierListResp\x129\n" +
-	"\rsupplier_list\x18\x01 \x03(\v2\x14.buying.SupplierInfoR\fsupplierList\"\x8a\x02\n" +
+	"\rsupplier_list\x18\x01 \x03(\v2\x14.buying.SupplierInfoR\fsupplierList\"\xa9\x02\n" +
 	"\fSupplierInfo\x12#\n" +
 	"\rsupplier_name\x18\x01 \x01(\tR\fsupplierName\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12-\n" +
@@ -2112,7 +2128,9 @@ const file_buying_buying_proto_rawDesc = "" +
 	"\acompany\x18\x05 \x01(\tR\acompany\x12!\n" +
 	"\fcontact_name\x18\x06 \x01(\tR\vcontactName\x12#\n" +
 	"\rcontact_phone\x18\a \x01(\tR\fcontactPhone\x12\x18\n" +
-	"\aaddress\x18\b \x01(\tR\aaddress\"E\n" +
+	"\aaddress\x18\b \x01(\tR\aaddress\x12\x1d\n" +
+	"\n" +
+	"alias_name\x18\t \x01(\tR\taliasName\"E\n" +
 	"\x11CreateSupplierReq\x120\n" +
 	"\bsupplier\x18\x01 \x01(\v2\x14.buying.SupplierDataR\bsupplier\"F\n" +
 	"\x12CreateSupplierResp\x120\n" +
@@ -2143,13 +2161,13 @@ const file_buying_buying_proto_rawDesc = "" +
 	" \x01(\x05R\bpageSize\x12(\n" +
 	"\x10sub_company_abbr\x18\v \x01(\tR\x0esubCompanyAbbr\"G\n" +
 	"\x11ListSuppliersResp\x122\n" +
-	"\tsuppliers\x18\x01 \x03(\v2\x14.buying.SupplierDataR\tsuppliers\"\xe1\x03\n" +
+	"\tsuppliers\x18\x01 \x03(\v2\x14.buying.SupplierDataR\tsuppliers\"\x80\x04\n" +
 	"\fSupplierData\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12#\n" +
-	"\rsupplier_name\x18\x05 \x01(\tR\fsupplierName\x12!\n" +
-	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12\x18\n" +
-	"\acompany\x18\x03 \x01(\tR\acompany\x12\x16\n" +
-	"\x06branch\x18\x04 \x01(\tR\x06branch\x12\x18\n" +
+	"\rsupplier_name\x18\x02 \x01(\tR\fsupplierName\x12!\n" +
+	"\fcompany_abbr\x18\x03 \x01(\tR\vcompanyAbbr\x12\x18\n" +
+	"\acompany\x18\x04 \x01(\tR\acompany\x12\x16\n" +
+	"\x06branch\x18\x05 \x01(\tR\x06branch\x12\x18\n" +
 	"\acountry\x18\x06 \x01(\tR\acountry\x12#\n" +
 	"\rsupplier_type\x18\a \x01(\tR\fsupplierType\x12-\n" +
 	"\x12represents_company\x18\b \x01(\tR\x11representsCompany\x12%\n" +
@@ -2159,7 +2177,9 @@ const file_buying_buying_proto_rawDesc = "" +
 	"\bdisabled\x18\v \x01(\bR\bdisabled\x12!\n" +
 	"\fcontact_name\x18\f \x01(\tR\vcontactName\x12#\n" +
 	"\rcontact_phone\x18\r \x01(\tR\fcontactPhone\x12\x18\n" +
-	"\aaddress\x18\x0e \x01(\tR\aaddress\"E\n" +
+	"\aaddress\x18\x0e \x01(\tR\aaddress\x12\x1d\n" +
+	"\n" +
+	"alias_name\x18\x0f \x01(\tR\taliasName\"E\n" +
 	"\x13GetPurchaseOrderReq\x12.\n" +
 	"\x13purchase_order_name\x18\x01 \x01(\tR\x11purchaseOrderName\"X\n" +
 	"\x14GetPurchaseOrderResp\x12@\n" +

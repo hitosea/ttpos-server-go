@@ -164,15 +164,20 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 			})
 		}
 		itemList = append(itemList, &item.ItemInfo{
-			Branch:      data.Get("custom_branch").String(),
-			Company:     data.Get("custom_company").String(),
-			ItemName:    data.Get("item_name").String(),
-			ItemCode:    data.Get("item_code").String(),
-			ItemGroup:   utility.ParseItemGroupFromString(data.Get("item_group").String()),
-			StockUom:    data.Get("stock_uom").String(),
-			Disabled:    data.Get("disabled").Bool(),
-			PurchaseUom: itemInfo.PurchaseUom,
-			Uoms:        uomDetails,
+			Branch:             data.Get("custom_branch").String(),
+			Company:            data.Get("custom_company").String(),
+			ItemName:           data.Get("item_name").String(),
+			ItemCode:           data.Get("item_code").String(),
+			ItemGroup:          utility.ParseItemGroupFromString(data.Get("item_group").String()),
+			StockUom:           data.Get("stock_uom").String(),
+			Disabled:           data.Get("disabled").Bool(),
+			PurchaseUom:        itemInfo.PurchaseUom,
+			Uoms:               uomDetails,
+			Classification:     itemInfo.Classification,
+			ClassificationCode: itemInfo.ClassificationCode,
+			InternalCode:       itemInfo.CustomInternalCode,
+			ValuationRate:      itemInfo.ValuationRate,
+			OpeningStock:       itemInfo.OpeningStock,
 		})
 	}
 
