@@ -28,6 +28,7 @@ type ISupplierRepo interface {
 	OrderByName(desc bool) DBOption
 	WhereNotDeleted() DBOption
 	WhereErpCodeExists() DBOption
+	WhereStatus(status int) DBOption
 }
 
 // SupplierRepoImpl 供应商Repository实现
@@ -177,6 +178,13 @@ func (r *SupplierRepoImpl) WhereErpCodeExists() DBOption {
 func (r *SupplierRepoImpl) WhereNotDeleted() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("delete_time = ?", 0)
+	}
+}
+
+// WhereStatus 状态条件
+func (r *SupplierRepoImpl) WhereStatus(status int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("status = ?", status)
 	}
 }
 

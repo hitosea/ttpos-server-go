@@ -315,6 +315,7 @@ func (s *supplierSrv) GetSupplierSelect(ctx context.Context, req req.SupplierSel
 	opts := []repository.DBOption{
 		supplierRepo.OrderByName(false), // 按名称升序排序
 		supplierRepo.WhereNotDeleted(),
+		supplierRepo.WhereStatus(1),
 	}
 
 	// 如果公司开启了erp，则查询erp供应商

@@ -25,8 +25,10 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/language"
+	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
+	"ttpos-server-go/pkg/websocket"
 
 	"github.com/duke-git/lancet/v2/convertor"
 	"github.com/duke-git/lancet/v2/cryptor"
@@ -36,6 +38,49 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
+
+// 导入状态常量
+const (
+	ImportStatusStart      = "start"      // 开始导入
+	ImportStatusProcessing = "processing" // 正在处理
+	ImportStatusFinish     = "finish"     // 导入完成
+	ImportStatusError      = "error"      // 导入失败
+)
+
+// ImportProgressData 导入进度数据结构
+type ImportProgressData struct {
+	Time     int64               `json:"time"`     // 时间戳
+	Status   string              `json:"status"`   // 状态：start|processing|finish|error
+	Progress int                 `json:"progress"` // 进度百分比 (0-100)
+	Total    int                 `json:"total"`    // 总数量
+	Current  int                 `json:"current"`  // 当前处理数量
+	Success  int                 `json:"success"`  // 成功数量
+	Failed   int                 `json:"failed"`   // 失败数量
+	Error    string              `json:"error"`    // 总体错误信息
+	Errors   []ImportErrorDetail `json:"errors"`   // 详细错误列表
+}
+
+// ImportErrorDetail 导入错误详情
+type ImportErrorDetail struct {
+	Row     int    `json:"row"`     // 行号
+	Message string `json:"message"` // 错误信息
+}
+
+// pushImportProgress 推送导入进度到前端
+func (s *productSrv) pushImportProgress(companyUuid uint64, deviceSn string, data ImportProgressData) {
+	data.Time = time.Now().Unix()
+	go websocket.PushClient(companyUuid, websocket.SourceShop, deviceSn, websocket.IMPORT_PRODUCT, map[string]any{
+		"time":     data.Time,
+		"status":   data.Status,
+		"progress": data.Progress,
+		"total":    data.Total,
+		"current":  data.Current,
+		"success":  data.Success,
+		"failed":   data.Failed,
+		"error":    data.Error,
+		"errors":   data.Errors,
+	})
+}
 
 // IProductSrv 定义产品服务接口
 type IProductSrv interface {
@@ -115,6 +160,7 @@ type productSrv struct {
 	localeSrv  ILocaleSrv          // 多语言名称服务
 	settingSrv setting.ISrv        // 设置服务
 	cache      cache.Cache         // 缓存
+	systemLock lock.Lock           // 系统锁
 }
 
 func NewProductSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, cache cache.Cache) IProductSrv {
@@ -127,6 +173,7 @@ func NewProductSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv
 		localeSrv:  localeSrv,
 		settingSrv: settingSrv,
 		cache:      cache,
+		systemLock: lock.NewSystemLock(),
 	}
 }
 
@@ -4521,8 +4568,15 @@ func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImpor
 
 // ImportProduct 导入商品
 func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportReq) error {
+	companyUuid := ctx.GetCompanyUuid()
+	deviceSn := ctx.GetDeviceSn()
 	db := s.dbm.GetDB(ctx.GetDbId())
 	language := ctx.GetLanguage()
+
+	// 用信道锁 禁止并发导入 - 按公司UUID加锁确保同一公司的商品导入操作不会并发执行
+	if !s.systemLock.TryLockUuid(companyUuid) {
+		return errors.New(i18n.Translate(language, "当前公司正在进行商品导入，请稍后再试"))
+	}
 
 	// 验证条形码是否重复
 	duplicateRows := reqs.GetBarcodeDuplicateRows()
@@ -4530,6 +4584,7 @@ func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportRe
 		return errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(duplicateRows[0]) + "]: " + i18n.Translate(language, "商品条码不能重复"))
 	}
 
+	// 预验证阶段 - 检查商品名称和条形码是否已存在
 	for _, item := range reqs.List {
 		// 验证是否已经存在
 		productNameIsExist := repository.NewProductRepo(db).CheckMultiLanguageNameExist(item.LocaleName)
@@ -4591,17 +4646,71 @@ func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportRe
 		}
 	}
 
-	// 错误提示
-	errorMessages := make([]string, 0)
-	for _, item := range lists {
-		err := s.AddProductShop(ctx, item)
-		if err != nil {
-			errorMessages = append(errorMessages, fmt.Sprintf("行[%d]: %s", item.Row, err.Error()))
+	// 异步导入
+	go func() {
+		defer s.systemLock.UnlockUuid(companyUuid)
+
+		totalCount := len(lists)
+		progressData := ImportProgressData{
+			Status:  ImportStatusStart,
+			Total:   totalCount,
+			Current: 0,
+			Success: 0,
+			Failed:  0,
+			Errors:  make([]ImportErrorDetail, 0),
 		}
-	}
-	if len(errorMessages) > 0 {
-		return errors.New(i18n.Translate(language, "商品导入失败") + ": " + strings.Join(errorMessages, "; "))
-	}
+
+		// 实际导入阶段
+		s.pushImportProgress(companyUuid, deviceSn, progressData)
+
+		// 重置进度数据
+		progressData.Current = 0
+		progressData.Success = 0
+		progressData.Failed = 0
+		progressData.Errors = make([]ImportErrorDetail, 0) // 重置错误列表，只保留导入阶段的错误
+		progressData.Status = ImportStatusProcessing
+
+		totalItems := len(lists)
+		currentIndex := 0
+
+		for _, item := range lists {
+			currentIndex++
+			progressData.Current = currentIndex
+			progressData.Progress = 30 + int(float64(currentIndex)/float64(totalItems)*70) // 导入占70%进度，从30%开始
+
+			err := s.AddProductShop(ctx, item)
+			if err != nil {
+				progressData.Failed++
+				progressData.Errors = append(progressData.Errors, ImportErrorDetail{
+					Row:     item.Row,
+					Message: err.Error(),
+				})
+				logger.Logger.Error("导入商品失败",
+					zap.Int("row", item.Row),
+					zap.Error(err),
+					zap.Uint64("companyUuid", companyUuid))
+			} else {
+				progressData.Success++
+			}
+
+			// 推送导入进度
+			if currentIndex%5 == 0 || currentIndex == totalItems { // 每5条或最后一条推送进度
+				s.pushImportProgress(companyUuid, deviceSn, progressData)
+			}
+		}
+
+		// 推送最终结果
+		progressData.Progress = 100
+		if progressData.Failed > 0 {
+			progressData.Status = ImportStatusError
+			progressData.Error = fmt.Sprintf("导入完成，成功%d条，失败%d条", progressData.Success, progressData.Failed)
+		} else {
+			progressData.Status = ImportStatusFinish
+			progressData.Error = fmt.Sprintf("导入成功，共处理%d条商品", progressData.Success)
+		}
+
+		s.pushImportProgress(companyUuid, deviceSn, progressData)
+	}()
 
 	return nil
 }
