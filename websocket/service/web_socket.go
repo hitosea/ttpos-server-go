@@ -290,7 +290,7 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) *ConnectionInf
 		return nil
 	}
 
-	// 允许一个设备最多存在两个连接，超过则清空之前的连接
+	// 允许一个设备最多存在三个连接，超过则清空之前的连接
 	// 计算当前设备的连接数量
 	connCount := 0
 
@@ -307,8 +307,8 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) *ConnectionInf
 		return true
 	})
 
-	// 如果连接数量大于等于2，则清空之前的连接
-	if connCount >= 2 {
+	// 如果连接数量大于等于3，则清空之前的连接
+	if connCount >= 3 {
 		WsClients.Range(func(key, value interface{}) bool {
 			if conn, ok := value.(ConnectionInfo); ok {
 				if conn.CompanyUuid == claims.CompanyUuid &&
