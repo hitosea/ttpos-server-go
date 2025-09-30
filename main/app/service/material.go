@@ -487,6 +487,7 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 	barcodeValue := ""
 	companySetting := ctx.GetCompanySetting()
 	if companySetting.IsSubShop() && !isSyncSubShop {
+		// 如果当前是子店，并且是子店同步总店
 		headquarterDB := s.dbm.GetDB(companySetting.HeadquarterUuid)
 		materialRepo := repository.NewMaterialRepo(headquarterDB)
 		material, _ := materialRepo.GetMaterialByErpCode(request.ItemCode)
@@ -528,32 +529,10 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 		materialCategoryRepo := repository.NewMaterialRepo(tx)
 		materialCategory, exists, err := materialCategoryRepo.GetMaterialCategoryByCode(request.ClassificationCode)
 		if err != nil {
-			return errors.WithMessage(err, fmt.Sprintf("物品分类不存在: %s", request.ClassificationCode))
+			return errors.WithMessage(err, fmt.Sprintf("获取物品分类失败: %s", request.ClassificationCode))
 		}
-		materialCategoryUuid := uint64(0)
-		if !exists { // 如果物品分类不存在，则创建物品分类
-			materialCategory, exists, err = materialCategoryRepo.GetMaterialCategoryByEnglishName(request.Classification) // 根据英文名称获取物品分类
-			if err != nil {
-				return errors.WithMessage(err, fmt.Sprintf("物品分类不存在: %s", request.Classification))
-			}
-			if !exists {
-				// 调用翻译接口
-				categoryLocaleName, err := GetMultiLanguageName(ctx, request.Classification)
-				if err != nil {
-					return errors.WithMessage(err, fmt.Sprintf("翻译失败: %s", request.Classification))
-				}
-				addReq := req.MaterialCategoryAddReq{
-					LocaleName: *categoryLocaleName,
-					Code:       request.ClassificationCode,
-				}
-				// 生成uuid
-				materialCategoryUuid, _ = utils.GetID()
-				addReq.SetUuid(materialCategoryUuid)
-				s.AddMaterialCategory(ctx, addReq)
-			} else {
-				materialCategoryUuid = materialCategory.Uuid
-			}
-		} else {
+		var materialCategoryUuid uint64 = 1
+		if exists {
 			materialCategoryUuid = materialCategory.Uuid
 		}
 
@@ -1100,6 +1079,7 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 	barcodeValue := ""
 	companySetting := ctx.GetCompanySetting()
 	if companySetting.IsSubShop() && !isSyncSubShop {
+		// 如果当前是子店，并且是子店同步总店
 		headquarterDB := s.dbm.GetDB(companySetting.HeadquarterUuid)
 		materialRepo := repository.NewMaterialRepo(headquarterDB)
 		material, _ := materialRepo.GetMaterialByErpCode(request.ItemCode)
@@ -1126,12 +1106,6 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 			"valuation":     request.ValuationRate, // 估值率
 			"barcode_value": barcodeValue,          // 条形码值
 			"internal_code": request.InternalCode,  // 内部编码
-			"status": func() bool { // 状态: 0 停用 1 启用
-				if request.Disabled {
-					return false
-				}
-				return true
-			}(),
 		}
 
 		// 同步多语言名称
@@ -1164,13 +1138,17 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 		}
 
 		// 同步物品分类
-		materialCategory, exists, err := materialRepo.GetMaterialCategoryByCode(request.ClassificationCode)
-		if !exists || err != nil {
-			return errors.WithMessage(err, "物品分类不存在："+request.ClassificationCode)
+		var materialCategoryUuid uint64 = 1
+		if request.ClassificationCode != "" {
+			materialCategory, exists, err := materialRepo.GetMaterialCategoryByCode(request.ClassificationCode)
+			if err != nil {
+				return errors.WithMessage(err, "获取物品分类失败："+request.ClassificationCode)
+			}
+			if exists {
+				materialCategoryUuid = materialCategory.Uuid
+			}
 		}
-		if material.CategoryUuid != materialCategory.Uuid {
-			updateData["category_uuid"] = materialCategory.Uuid
-		}
+		updateData["category_uuid"] = materialCategoryUuid
 
 		// 基准单位
 		stockUnit, err := productUnitRepo.GetProductUnitByErpnextUom(request.StockUom)

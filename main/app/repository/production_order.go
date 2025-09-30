@@ -32,7 +32,6 @@ type IProductionOrderRepo interface {
 	WithProductCategoryMultiLanguageName() DBOption                       // 关联商品分类多语言
 	UpdateProduct(opts []DBOption, vars map[string]any) error             // 更新送厨商品
 	UpdateOrder(opts []DBOption, vars map[string]any) error               // 更新送厨单
-	IsProductionFinished(productionUuid uint64) (bool, error)             // 检查生产订单是否完成
 	IsProductionFinishedBySaleBillUuid(saleBillUuid uint64) (bool, error) // 检查销售账单下所有生产订单是否完成
 }
 
@@ -344,19 +343,6 @@ func (r *productionRepo) GetProductsByPackageUuid(packageUuid uint64) ([]model.P
 	}
 
 	return productionOrderProducts, nil
-}
-
-// IsProductionFinished 检查生产单是否完成（所有子商品都完成制作才算完成）
-func (r *productionRepo) IsProductionFinished(productionUuid uint64) (bool, error) {
-	var count int64
-	err := r.db.Model(model.Product{}).Where("production_order_uuid = ?", productionUuid).
-		Where("delete_time = 0").
-		Where("finished_time = 0 OR `status` != ?", constant.ProductionOrderProductStatusFinished).
-		Count(&count).Error
-	if err != nil {
-		return false, errors.WithMessage(err)
-	}
-	return count == 0, nil
 }
 
 // IsProductionFinishedBySaleBillUuid 检查销售账单下所有生产订单是否完成

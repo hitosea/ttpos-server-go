@@ -273,7 +273,7 @@ func (s *callBoardService) GetDeviceList(ctx context.Context, companyUuid uint64
 
 	list := make([]resp.DeviceItem, 0, len(devices))
 	for _, device := range devices {
-		bindInfo, _ := s.mustGetBindInfoFromCache(device.DeviceId)
+		bindInfo, _ := s.mustGetCompanyDeviceBindInfo(companyUuid, device.DeviceId)
 		list = append(list, resp.DeviceItem{
 			Uuid:     device.Uuid,
 			DeviceId: device.DeviceId,
