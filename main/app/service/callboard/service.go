@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -483,7 +484,7 @@ func (s *callBoardService) handleSaleBillEvent(companyUuid uint64, saleBillUuid 
 	if err != nil {
 		return err
 	}
-	member := formatQueueMember(saleBill.Uuid, saleBill.SerialNo)
+	member := formatQueueMember(saleBill.Uuid, saleBill.SerialNo, saleBill.CreateTime)
 
 	// 不是点餐账单，不处理
 	if saleBill.BillType != constant.SaleBillTypeInstant {
@@ -496,7 +497,7 @@ func (s *callBoardService) handleSaleBillEvent(companyUuid uint64, saleBillUuid 
 		return s.pushToPreparingQueue(companyUuid, member, saleBill.CreateTime)
 	}
 	if action == _ActionPushToPreparedQueue {
-		return s.pushToPreparedQueue(companyUuid, member, saleBill.CreateTime)
+		return s.pushToPreparedQueue(companyUuid, member, time.Now().Unix())
 	}
 	return nil
 }
@@ -513,20 +514,19 @@ func (s *callBoardService) handleProductionOrderCookingEvent(companyUuid uint64,
 	if saleBill.BillType != constant.SaleBillTypeInstant {
 		return nil
 	}
-
+	member := formatQueueMember(saleBillUuid, saleBill.SerialNo, saleBill.CreateTime)
 	// 是否已完成制作
 	finished, err := repository.NewProductionRepo(db).IsProductionFinishedBySaleBillUuid(saleBillUuid)
 	if err != nil {
 		return err
 	}
-	member := formatQueueMember(saleBillUuid, saleBill.SerialNo)
-	if finished {
-		return s.pushToPreparedQueue(companyUuid, member, saleBill.CreateTime)
+	if !finished {
+		return nil
 	}
-	return s.pushToPreparingQueue(companyUuid, member, saleBill.CreateTime)
+	return s.pushToPreparedQueue(companyUuid, member, time.Now().Unix())
 }
 
-// 获取制作中的队列
+// 获取叫号队列
 func (s *callBoardService) getCallBoardQueue(queueKey string, limit int64, minScore int64) ([]string, error) {
 	opt := &redis.ZRangeBy{
 		Min:    strconv.FormatInt(minScore, 10),
@@ -541,13 +541,27 @@ func (s *callBoardService) getCallBoardQueue(queueKey string, limit int64, minSc
 		}
 		return nil, err
 	}
-	serialNoList := make([]string, 0, len(results))
+
+	// 收集所有有效的队列成员
+	queueMembers := make([]queueMember, 0, len(results))
 	for _, result := range results {
-		str := result.Member.(string)
-		list := strings.Split(str, ":") // uuid:serialNo
-		if len(list) == 2 {
-			serialNoList = append(serialNoList, list[1]) // serialNo
+		str, _ := result.Member.(string)
+		mem, ok := parseQueueMember(str)
+		if !ok {
+			continue
 		}
+		queueMembers = append(queueMembers, mem)
+	}
+
+	// 按照 CreateTime 从小到大排序
+	sort.Slice(queueMembers, func(i, j int) bool {
+		return queueMembers[i].CreateTime < queueMembers[j].CreateTime
+	})
+
+	// 提取排序后的 SerialNo
+	serialNoList := make([]string, 0, len(queueMembers))
+	for _, member := range queueMembers {
+		serialNoList = append(serialNoList, member.SerialNo)
 	}
 	return serialNoList, nil
 }
@@ -601,6 +615,27 @@ func (s *callBoardService) removeMemberFromQueues(member string, queueKeyList ..
 	return nil
 }
 
-func formatQueueMember(uuid uint64, serialNo string) string {
-	return fmt.Sprintf("%d:%s", uuid, serialNo)
+func formatQueueMember(uuid uint64, serialNo string, createTime int64) string {
+	return fmt.Sprintf("%d:%s:%d", uuid, serialNo, createTime)
+}
+
+type queueMember struct {
+	Uuid       uint64
+	SerialNo   string
+	CreateTime int64
+}
+
+func parseQueueMember(member string) (queueMember, bool) {
+	list := strings.Split(member, ":")
+	if len(list) != 3 {
+		return queueMember{}, false
+	}
+	uuid, _ := strconv.ParseUint(list[0], 10, 64)
+	serialNo := list[1]
+	createTime, _ := strconv.ParseInt(list[2], 10, 64)
+	return queueMember{
+		Uuid:       uuid,
+		SerialNo:   serialNo,
+		CreateTime: createTime,
+	}, true
 }

@@ -666,6 +666,11 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 			return errors.WithMessage(err, "重新查询采购申请失败")
 		}
 
+		// 检查采购申请明细
+		if len(purchaseOrder.Items) == 0 {
+			return errors.New("申请物品数量不能为0")
+		}
+
 		// 过滤掉数量为0的项目后重新计算数量
 		validItems := make([]model.PurchaseOrderItem, 0)
 		for _, item := range purchaseOrder.Items {
@@ -916,6 +921,12 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 					})
 				}
 
+				// 获取子公司数据库
+				subDb := s.dbm.GetDB(purchaseOrder.CompanyUuid)
+				if subDb == nil {
+					return errors.New("获取子店数据库失败01")
+				}
+
 				// 如果是内部采购 - 需要减总部的库存,需要出入库的记录
 				{
 					// 添加物料库存
@@ -949,17 +960,12 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 						}
 					}
 					// 减总部的库存并记录出入库日志
-					err := s.reduceHeadquarterStockAndLog(ctx, tx, purchaseOrder)
+					err := s.reduceHeadquarterStockAndLog(ctx, subDb, tx, purchaseOrder)
 					if err != nil {
 						return errors.WithMessage(err, "处理总部库存失败")
 					}
 				}
 
-				// 获取子公司数据库
-				subDb := s.dbm.GetDB(purchaseOrder.CompanyUuid)
-				if subDb == nil {
-					return errors.New("获取子店数据库失败01")
-				}
 				// 获取公司设置
 				companySetting := repository.NewCompanySettingRepo(subDb).Get()
 				// 调用erp接口
@@ -1269,16 +1275,9 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 				}
 			}
 			// 添加物料库存
-			if purchaseOrder.IsHeadquarterPurchase() {
-				err = s.updateMaterialStock(ctx, tx, headquarterInfo.DB, receiptOrder)
-				if err != nil {
-					return err
-				}
-			} else {
-				err = s.updateMaterialStock(ctx, tx, nil, receiptOrder)
-				if err != nil {
-					return err
-				}
+			err = s.updateMaterialStock(ctx, tx, receiptOrder)
+			if err != nil {
+				return err
 			}
 		}
 
@@ -1474,16 +1473,9 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 				}
 			}
 			// 添加物料库存
-			if purchaseOrder.IsHeadquarterPurchase() {
-				err = s.updateMaterialStock(ctx, tx, headquarterInfo.DB, receiptOrder)
-				if err != nil {
-					return err
-				}
-			} else {
-				err = s.updateMaterialStock(ctx, tx, nil, receiptOrder)
-				if err != nil {
-					return err
-				}
+			err = s.updateMaterialStock(ctx, tx, receiptOrder)
+			if err != nil {
+				return err
 			}
 		}
 
@@ -1811,7 +1803,7 @@ func (s *purchaseOrderSrv) checkAndUpdatePurchaseOrderStatus(ctx context.Context
 }
 
 // updateMaterialStock 更新物料库存
-func (s *purchaseOrderSrv) updateMaterialStock(ctx context.Context, db *gorm.DB, headquarterDb *gorm.DB, receiptOrder *model.PurchaseReceiptOrder) error {
+func (s *purchaseOrderSrv) updateMaterialStock(ctx context.Context, db *gorm.DB, receiptOrder *model.PurchaseReceiptOrder) error {
 	if receiptOrder.Status != constant.ReceiptOrderStatusReceived {
 		return nil
 	}
@@ -1856,21 +1848,17 @@ func (s *purchaseOrderSrv) updateMaterialStock(ctx context.Context, db *gorm.DB,
 	}
 
 	// 更新在途仓库库存
-	if headquarterDb != nil {
-		transitWarehouse, _ := repository.NewWarehouseRepo(headquarterDb).GetTransitWarehouse()
+	if receiptOrder.IsHeadquarterReceipt() {
+		transitWarehouse, _ := repository.NewWarehouseRepo(db).GetTransitWarehouse()
 		if transitWarehouse != nil {
-			warehouseItemRepo := repository.NewWarehouseItemRepo(headquarterDb)
+			warehouseItemRepo := repository.NewWarehouseItemRepo(db)
 			for _, item := range receiptOrder.Items {
 				actualNum := item.GetActualNum()
 				if actualNum <= 0 {
 					continue
 				}
 				// 获取物料信息
-				material, err := repository.NewMaterialRepo(headquarterDb).GetMaterialByErpCode(item.MaterialCode)
-				if err != nil {
-					continue
-				}
-				warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(transitWarehouse.Uuid, material.Uuid)
+				warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(transitWarehouse.Uuid, item.MaterialUuid)
 				if err != nil {
 					continue
 				}
@@ -1997,7 +1985,7 @@ func (s *purchaseOrderSrv) recordErpStockInLog(ctx context.Context, db *gorm.DB,
 }
 
 // reduceHeadquarterStockAndLog 减少总部库存并记录出入库日志
-func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, headquarterDb *gorm.DB, purchaseOrder *model.PurchaseOrder) error {
+func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, subDb, headquarterDb *gorm.DB, purchaseOrder *model.PurchaseOrder) error {
 	// 使用事务确保数据一致性
 	return headquarterDb.Transaction(func(tx *gorm.DB) error {
 		// 获取仓库商品库存Repository
@@ -2013,7 +2001,7 @@ func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, hea
 		}
 
 		// 添加到在途仓库
-		transitWarehouse, _ := repository.NewWarehouseRepo(tx).GetTransitWarehouse()
+		transitWarehouse, _ := repository.NewWarehouseRepo(subDb).GetTransitWarehouse()
 
 		// purchaseOrder
 		for _, item := range purchaseOrder.Items {
@@ -2096,25 +2084,30 @@ func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, hea
 
 			// 添加到在途仓库
 			if transitWarehouse != nil {
-				warehouseItem, err = warehouseItemRepo.GetByWarehouseAndMaterial(transitWarehouse.Uuid, materialUuid)
+				// 获取物料信息
+				material, err := repository.NewMaterialRepo(subDb).GetMaterialByErpCode(item.MaterialCode)
+				if err != nil {
+					continue
+				}
+				warehouseItem, err = repository.NewWarehouseItemRepo(subDb).GetByWarehouseAndMaterial(transitWarehouse.Uuid, material.Uuid)
 				if err != nil {
 					if err == gorm.ErrRecordNotFound {
 						// 没有找到记录时创建新记录
 						newWarehouseItem := &model.WarehouseItem{
 							WarehouseUuid: transitWarehouse.Uuid,
-							MaterialUuid:  materialUuid,
+							MaterialUuid:  material.Uuid,
 							MaterialCode:  item.MaterialCode,
 							Stock:         0,
 							Valuation:     item.Valuation,
 						}
-						err = warehouseItemRepo.Create(newWarehouseItem)
+						err = repository.NewWarehouseItemRepo(subDb).Create(newWarehouseItem)
 						if err != nil {
 							return errors.WithMessage(err, "创建仓库商品库存记录失败")
 						}
 						warehouseItem = newWarehouseItem
 					}
 				}
-				err = warehouseItemRepo.AddStock(warehouseItem.Uuid, actualNum)
+				err = repository.NewWarehouseItemRepo(subDb).AddStock(warehouseItem.Uuid, actualNum)
 				if err != nil {
 					return errors.WithMessage(err, "减少总部库存失败")
 				}
