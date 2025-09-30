@@ -99,9 +99,8 @@ func (d *RedSyncLock) LockUuid(uuid uint64) {
 }
 
 // TryLockUuid 非阻塞尝试获取uuid锁
-func (d *RedSyncLock) TryLockUuid(uuid uint64) bool {
-	err := d.getUuidLock(uuid).Lock()
-	return err == nil
+func (d *RedSyncLock) TryLockUuid(uuid string) bool {
+	return d.getUuidLockString(uuid).TryLock() == nil
 }
 
 // UnlockUuid 解锁uuid
@@ -122,6 +121,52 @@ func (d *RedSyncLock) UnlockUuid(uuid uint64) {
 // ClearUuidLock 在uuid对应的资源完成或删除后，清除uuid锁
 func (d *RedSyncLock) ClearUuidLock(uuid uint64) {
 	unlock, err := d.getUuidLock(uuid).Unlock()
+	if err != nil {
+		panic(err)
+	}
+	if !unlock {
+		panic("unlock failed")
+	}
+}
+
+// 获取字符串锁
+func (d *RedSyncLock) getUuidLockString(uuid string) *redsync.Mutex {
+	if cached, ok := d.uuidLock.Load(uuid); ok {
+		return cached.(*redsync.Mutex)
+	}
+	// 设置锁过期时间为15分钟，确保长时间操作不会因锁过期而失效
+	mutex := d.rs.NewMutex(uuid, redsync.WithExpiry(15*time.Minute))
+	actual, _ := d.uuidLock.LoadOrStore(uuid, mutex)
+	return actual.(*redsync.Mutex)
+}
+
+// LockUuidString 锁定uuid
+func (d *RedSyncLock) LockUuidString(uuid string) {
+	err := d.getUuidLockString(uuid).Lock()
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+// TryLockUuidString 非阻塞尝试获取uuid锁
+func (d *RedSyncLock) TryLockUuidString(uuid string) bool {
+	return d.getUuidLockString(uuid).TryLock() == nil
+}
+
+// UnlockUuidString 解锁uuid
+func (d *RedSyncLock) UnlockUuidString(uuid string) {
+	unlock, err := d.getUuidLockString(uuid).Unlock()
+	if err != nil {
+		panic(err)
+	}
+	if !unlock {
+		panic("unlock failed")
+	}
+}
+
+// ClearUuidLockString 在uuid对应的资源完成或删除后，清除uuid锁
+func (d *RedSyncLock) ClearUuidLockString(uuid string) {
+	unlock, err := d.getUuidLockString(uuid).Unlock()
 	if err != nil {
 		panic(err)
 	}
