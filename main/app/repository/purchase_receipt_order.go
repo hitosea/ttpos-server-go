@@ -33,6 +33,7 @@ type IPurchaseReceiptOrderRepo interface {
 	WhereQualityStatus(qualityStatus int) DBOption
 	WhereReceiptTimeRange(start, end int) DBOption
 	WhereCreateTimeRange(start, end int) DBOption
+	WhereReceiptType(receiptType int) DBOption
 	WhereStatusIn(statusIn []int) DBOption
 	WithItems() DBOption
 	OrderByReceiptTime(desc bool) DBOption
@@ -217,6 +218,13 @@ func (r *PurchaseReceiptOrderRepoImpl) WhereCreateTimeRange(start, end int) DBOp
 			db = db.Where("create_time <= ?", end)
 		}
 		return db
+	}
+}
+
+// WhereReceiptType 收货类型条件
+func (r *PurchaseReceiptOrderRepoImpl) WhereReceiptType(receiptType int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("receipt_type = ?", receiptType)
 	}
 }
 

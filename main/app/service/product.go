@@ -6763,9 +6763,13 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 
 	var translateItems []utils.TranslateItem
 	for _, uom := range uomList {
+		translateName := uom.UomName
+		if uom.AliasName != "" {
+			translateName = uom.AliasName
+		}
 		translateItems = append(translateItems, utils.TranslateItem{
 			Lang:    "en",
-			Content: uom.UomName,
+			Content: translateName,
 		})
 	}
 
@@ -6789,22 +6793,26 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		for _, uom := range uomList {
+			translateName := uom.UomName
+			if uom.AliasName != "" {
+				translateName = uom.AliasName
+			}
 			var localeName dto.LocaleResponse
 			headquarterUuid, _ := uomHeadquarterMap[uom.UomName]
-			if _, ok := multiLanguageMap[uom.UomName]; !ok {
+			if _, ok := multiLanguageMap[translateName]; !ok {
 				localeName = dto.LocaleResponse{
-					EN:   uom.UomName,
-					ZH:   uom.UomName,
-					TH:   uom.UomName,
-					MY:   uom.UomName,
-					JA:   uom.UomName,
-					KO:   uom.UomName,
-					TR:   uom.UomName,
-					SV:   uom.UomName,
-					ZHTW: uom.UomName,
+					EN:   translateName,
+					ZH:   translateName,
+					TH:   translateName,
+					MY:   translateName,
+					JA:   translateName,
+					KO:   translateName,
+					TR:   translateName,
+					SV:   translateName,
+					ZHTW: translateName,
 				}
 			} else {
-				localeName = multiLanguageMap[uom.UomName]
+				localeName = multiLanguageMap[translateName]
 			}
 			multiLanguageName := model.MultiLanguageName{
 				EnName:   localeName.EN,
