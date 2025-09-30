@@ -3380,7 +3380,8 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 				err := erpSrv.CancelPosInvoice(ctx, req.CancelPosInvoiceReq{
 					ProductsInvoiceName: saleOrder.ErpProductsInvoiceName,
 					MaterialInvoiceName: saleOrder.ErpMaterialInvoiceName,
-					OpenPosEntryName:    shiftLog.ErpnextOpenPosEntryName,
+					OpenPosEntryName:    shiftLog.ErpnextOpenPosEntryName, //异步模式必填
+					OrderNo:             saleOrder.OrderNo,                //异步模式必填
 				})
 				if err != nil {
 					return errors.WithMessage(err)

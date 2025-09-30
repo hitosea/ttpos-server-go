@@ -131,9 +131,11 @@ type SavePosInvoiceReq struct {
 }
 
 type CancelPosInvoiceReq struct {
-	ProductsInvoiceName string `form:"products_invoice_name" json:"products_invoice_name" binding:"required"` // 商品销售发票
-	MaterialInvoiceName string `form:"material_invoice_name" json:"material_invoice_name" binding:"required"` // 材料销售发票
-	OpenPosEntryName    string `form:"open_pos_entry_name" json:"open_pos_entry_name" binding:"required"`     // 开账名称
+	ProductsInvoiceName string `form:"products_invoice_name" json:"products_invoice_name" ` // 商品销售发票  同步模式填
+	MaterialInvoiceName string `form:"material_invoice_name" json:"material_invoice_name" ` // 材料销售发票 同步模式填
+	OpenPosEntryName    string `form:"open_pos_entry_name" json:"open_pos_entry_name"`      // 开账名称,异步模式必填
+	OrderNo             string `form:"order_no" json:"order_no"`                            // 销售订单号,异步模式必填
+
 }
 
 type ReturnPosInvoiceReq struct {

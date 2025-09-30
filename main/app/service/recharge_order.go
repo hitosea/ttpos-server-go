@@ -1505,6 +1505,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 			err = erpSrv.CancelPosInvoice(ctx, req.CancelPosInvoiceReq{
 				ProductsInvoiceName: order.ErpProductsInvoiceName,
 				OpenPosEntryName:    shiftLog.ErpnextOpenPosEntryName,
+				OrderNo:             order.OrderNo, //异步模式必填
 			})
 			if err != nil {
 				return errors.WithMessage(err)
