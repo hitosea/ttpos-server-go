@@ -2692,59 +2692,62 @@ func (s *materialSrv) SyncSubShopMaterial(ctx context.Context) error {
 
 // 同步物品分类
 func (s *materialSrv) SyncMaterialCategory(ctx context.Context) error {
-	// 获取总部company_uuid
-	headquarterUuid := ctx.GetCompanySetting().HeadquarterUuid
-	headquarterDb := s.dbm.GetDB(headquarterUuid)
-	// 获取总部的分类
-	headquarterMaterialCategoryList, err := repository.NewMaterialRepo(headquarterDb).GetMaterialCategoryList()
-	if err != nil {
-		return errors.WithMessage(err, "获取总部分类列表失败")
-	}
-	// 获取子公司的分类
-	subShopDb := s.dbm.GetDB(ctx.GetCompanyUuid())
-	subShopMaterialCategoryList, err := repository.NewMaterialRepo(subShopDb).GetMaterialCategoryList()
-	if err != nil {
-		return errors.WithMessage(err, "获取子公司分类列表失败")
-	}
-
-	headquarterMaterialCategoryMap := make(map[uint64]model.MaterialCategory)
-	for _, category := range headquarterMaterialCategoryList {
-		headquarterMaterialCategoryMap[category.Uuid] = category
-	}
-
-	// 获取子公司分类中的总部物品分类。 更新这些分类
-	headquarterMaterialCategoryInSubShop := s.GetHeadquarterMaterialCategoryInSubShop(ctx, subShopMaterialCategoryList)
-
-	// 获取不在子公司分类中的总部物品分类。新建这些分类
-	headquarterMaterialCategoryNotInSubShop := s.GetHeadquarterMaterialCategoryNotInSubShop(ctx, headquarterMaterialCategoryList, subShopMaterialCategoryList)
-
-	if err := repository.CommonRepo.Transaction(subShopDb, func(tx *gorm.DB) error {
-		for _, category := range headquarterMaterialCategoryInSubShop {
-			if headquarterCategory, ok := headquarterMaterialCategoryMap[category.Uuid]; ok {
-				category.UpdateFromHeadquarter(headquarterCategory) // 用总部分类信息更新子公司分类
-				if err := repository.NewMaterialRepo(tx).UpdateMaterialCategory(category); err != nil {
-					return errors.WithMessage(err, "更新总部物品分类失败")
-				}
-				if err := repository.NewMultiLanguageNameRepo(tx).UpdateMultiLanguageName(category.MultiLanguageNameUuid, category.MultiLanguageName); err != nil {
-					return errors.WithMessage(err, "更新多语言名称失败")
-				}
-			}
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.IsSubShop() {
+		// 获取总部company_uuid
+		headquarterUuid := companySetting.HeadquarterUuid
+		headquarterDb := s.dbm.GetDB(headquarterUuid)
+		// 获取总部的分类
+		headquarterMaterialCategoryList, err := repository.NewMaterialRepo(headquarterDb).GetMaterialCategoryList()
+		if err != nil {
+			return errors.WithMessage(err, "获取总部分类列表失败")
 		}
-		for _, category := range headquarterMaterialCategoryNotInSubShop {
-			newCategory := category
-			newCategory.HeadquarterUuid = headquarterUuid
-			newCategory.BaseModel = model.BaseModel{Uuid: category.Uuid}
-			newCategory.MultiLanguageName.BaseModel = model.BaseModel{
-				Uuid: category.MultiLanguageNameUuid,
-			}
-			// 创建物品分类和多语言名称 Create方法会一起创建
-			if _, err := repository.NewMaterialRepo(tx).CreateMaterialCategory(newCategory); err != nil {
-				return errors.WithMessage(err, "创建总部物品分类失败")
-			}
+		// 获取子公司的分类
+		subShopDb := s.dbm.GetDB(ctx.GetCompanyUuid())
+		subShopMaterialCategoryList, err := repository.NewMaterialRepo(subShopDb).GetMaterialCategoryList()
+		if err != nil {
+			return errors.WithMessage(err, "获取子公司分类列表失败")
 		}
-		return nil
-	}); err != nil {
-		return errors.WithMessage(err)
+
+		headquarterMaterialCategoryMap := make(map[uint64]model.MaterialCategory)
+		for _, category := range headquarterMaterialCategoryList {
+			headquarterMaterialCategoryMap[category.Uuid] = category
+		}
+
+		// 获取子公司分类中的总部物品分类。 更新这些分类
+		headquarterMaterialCategoryInSubShop := s.GetHeadquarterMaterialCategoryInSubShop(ctx, subShopMaterialCategoryList)
+
+		// 获取不在子公司分类中的总部物品分类。新建这些分类
+		headquarterMaterialCategoryNotInSubShop := s.GetHeadquarterMaterialCategoryNotInSubShop(ctx, headquarterMaterialCategoryList, subShopMaterialCategoryList)
+
+		if err := repository.CommonRepo.Transaction(subShopDb, func(tx *gorm.DB) error {
+			for _, category := range headquarterMaterialCategoryInSubShop {
+				if headquarterCategory, ok := headquarterMaterialCategoryMap[category.Uuid]; ok {
+					category.UpdateFromHeadquarter(headquarterCategory) // 用总部分类信息更新子公司分类
+					if err := repository.NewMaterialRepo(tx).UpdateMaterialCategory(category); err != nil {
+						return errors.WithMessage(err, "更新总部物品分类失败")
+					}
+					if err := repository.NewMultiLanguageNameRepo(tx).UpdateMultiLanguageName(category.MultiLanguageNameUuid, category.MultiLanguageName); err != nil {
+						return errors.WithMessage(err, "更新多语言名称失败")
+					}
+				}
+			}
+			for _, category := range headquarterMaterialCategoryNotInSubShop {
+				newCategory := category
+				newCategory.HeadquarterUuid = headquarterUuid
+				newCategory.BaseModel = model.BaseModel{Uuid: category.Uuid}
+				newCategory.MultiLanguageName.BaseModel = model.BaseModel{
+					Uuid: category.MultiLanguageNameUuid,
+				}
+				// 创建物品分类和多语言名称 Create方法会一起创建
+				if _, err := repository.NewMaterialRepo(tx).CreateMaterialCategory(newCategory); err != nil {
+					return errors.WithMessage(err, "创建总部物品分类失败")
+				}
+			}
+			return nil
+		}); err != nil {
+			return errors.WithMessage(err)
+		}
 	}
 	return nil
 }
