@@ -1109,12 +1109,21 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 
 		// 检查收货单是否完成
 		if receiptOrder.Status == constant.ReceiptOrderStatusReceived {
+			// 更新采购单状态
 			err = s.checkAndUpdatePurchaseOrderStatus(ctx, tx, req.PurchaseOrderUuid)
 			if err != nil {
 				return err
 			}
+			// 更新总部采购单状态
+			if purchaseOrder.IsHeadquarterPurchase() {
+				// 更新总部采购单状态
+				err = s.checkAndUpdatePurchaseOrderStatus(ctx, headquarterInfo.DB, headquarterInfo.PurchaseOrder.Uuid)
+				if err != nil {
+					return err
+				}
+			}
 			// 添加物料库存
-			err = s.addMaterialStock(ctx, tx, receiptOrder)
+			err = s.updateMaterialStock(ctx, tx, headquarterInfo.DB, receiptOrder)
 			if err != nil {
 				return err
 			}
@@ -1299,12 +1308,20 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 
 		// 检查收货单是否完成
 		if receiptOrder.Status == constant.ReceiptOrderStatusReceived {
+			// 更新采购单状态
 			err = s.checkAndUpdatePurchaseOrderStatus(ctx, tx, receiptOrder.PurchaseOrderUuid)
 			if err != nil {
 				return err
 			}
+			// 更新总部采购单状态
+			if purchaseOrder.IsHeadquarterPurchase() {
+				err = s.checkAndUpdatePurchaseOrderStatus(ctx, headquarterInfo.DB, headquarterInfo.PurchaseOrder.Uuid)
+				if err != nil {
+					return err
+				}
+			}
 			// 添加物料库存
-			err = s.addMaterialStock(ctx, tx, receiptOrder)
+			err = s.updateMaterialStock(ctx, tx, headquarterInfo.DB, receiptOrder)
 			if err != nil {
 				return err
 			}
@@ -1633,72 +1650,94 @@ func (s *purchaseOrderSrv) checkAndUpdatePurchaseOrderStatus(ctx context.Context
 	return nil
 }
 
-// addMaterialStock 添加物料库存
-func (s *purchaseOrderSrv) addMaterialStock(ctx context.Context, db *gorm.DB, receiptOrder *model.PurchaseReceiptOrder) error {
+// updateMaterialStock 更新物料库存
+func (s *purchaseOrderSrv) updateMaterialStock(ctx context.Context, db *gorm.DB, headquarterDb *gorm.DB, receiptOrder *model.PurchaseReceiptOrder) error {
 	if receiptOrder.Status != constant.ReceiptOrderStatusReceived {
 		return nil
 	}
 
 	// 添加物料库存
-	materialRepo := repository.NewMaterialRepo(db)
-	for _, item := range receiptOrder.Items {
-		// 获取物料信息
-		material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid, materialRepo.WithRelatedMaterialList())
-		if err != nil {
-			return errors.WithMessage(err, "获取物料信息失败")
-		}
-		// 更新库存数量
-		material.StockNum = decimal.NewFromFloat(material.StockNum).Add(decimal.NewFromFloat(item.GetActualNum())).InexactFloat64()
-		err = materialRepo.UpdateMaterial(material)
-		if err != nil {
-			return errors.WithMessage(err, "更新物料库存失败")
-		}
-		//
-		relatedMaterialUuids := make([]uint64, 0)
-		for _, relatedMaterial := range material.RelatedMaterialList {
-			if relatedMaterial.IsDelete() {
-				continue
+	{
+		materialRepo := repository.NewMaterialRepo(db)
+		for _, item := range receiptOrder.Items {
+			// 获取物料信息
+			material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid, materialRepo.WithRelatedMaterialList())
+			if err != nil {
+				return errors.WithMessage(err, "获取物料信息失败")
 			}
-			if relatedMaterial.IsUsed == 0 {
-				continue
+			// 更新库存数量
+			material.StockNum = decimal.NewFromFloat(material.StockNum).Add(decimal.NewFromFloat(item.GetActualNum())).InexactFloat64()
+			err = materialRepo.UpdateMaterial(material)
+			if err != nil {
+				return errors.WithMessage(err, "更新物料库存失败")
 			}
-			relatedMaterialUuids = append(relatedMaterialUuids, relatedMaterial.Uuid)
+			// 更新规格/加料关联材料库存
+			relatedMaterialUuids := make([]uint64, 0)
+			for _, relatedMaterial := range material.RelatedMaterialList {
+				if relatedMaterial.IsDelete() {
+					continue
+				}
+				if relatedMaterial.IsUsed == 0 {
+					continue
+				}
+				relatedMaterialUuids = append(relatedMaterialUuids, relatedMaterial.Uuid)
+			}
+			err = s.updateRelatedMaterialStock(db, relatedMaterialUuids)
+			if err != nil {
+				return errors.WithMessage(err, "更新规格/加料关联材料库存失败")
+			}
 		}
-		err = s.updateRelatedMaterialStock(db, relatedMaterialUuids)
+
+		// 记录erp的入库记录
+		err := s.recordErpStockInLog(ctx, db, receiptOrder)
 		if err != nil {
-			return errors.WithMessage(err, "更新规格/加料关联材料库存失败")
+			return errors.WithMessage(err, "记录ERP入库记录失败")
 		}
 	}
 
-	// 记录erp的入库记录
-	err := s.recordErpStockInLog(ctx, db, receiptOrder)
-	if err != nil {
-		return errors.WithMessage(err, "记录ERP入库记录失败")
-	}
-
-	// 调用erp接口
-	if ctx.GetCompany().IsOpenErp() {
-		// 如果是内部采购 - 需要减总部的库存,需要出入库的记录
-		if receiptOrder.IsHeadquarterReceipt() {
-			// 获取公司设置信息
-			companySetting := ctx.GetCompanySetting()
-			if companySetting.HeadquarterUuid == 0 {
-				return errors.New("总部UUID不能为空")
+	// 如果是内部采购 - 需要减总部的库存,需要出入库的记录
+	{
+		if receiptOrder.IsHeadquarterReceipt() && headquarterDb != nil {
+			// 添加物料库存
+			materialRepo := repository.NewMaterialRepo(headquarterDb)
+			for _, item := range receiptOrder.Items {
+				// 获取物料信息
+				material, err := materialRepo.GetMaterialByErpCode(item.MaterialCode)
+				if err != nil {
+					return errors.WithMessage(err, "获取物料信息失败")
+				}
+				// 更新库存数量
+				material.StockNum = decimal.NewFromFloat(material.StockNum).Sub(decimal.NewFromFloat(item.GetActualNum())).InexactFloat64()
+				err = materialRepo.UpdateMaterial(*material)
+				if err != nil {
+					return errors.WithMessage(err, "更新物料库存失败")
+				}
+				// 更新规格/加料关联材料库存
+				relatedMaterialUuids := make([]uint64, 0)
+				for _, relatedMaterial := range material.RelatedMaterialList {
+					if relatedMaterial.IsDelete() {
+						continue
+					}
+					if relatedMaterial.IsUsed == 0 {
+						continue
+					}
+					relatedMaterialUuids = append(relatedMaterialUuids, relatedMaterial.Uuid)
+				}
+				err = s.updateRelatedMaterialStock(headquarterDb, relatedMaterialUuids)
+				if err != nil {
+					return errors.WithMessage(err, "更新规格/加料关联材料库存失败")
+				}
 			}
-
-			// 获取总部数据库
-			headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
-			if headquarterDb == nil {
-				return errors.New("获取总部数据库失败")
-			}
-
 			// 减总部的库存并记录出入库日志
-			err = s.reduceHeadquarterStockAndLog(ctx, headquarterDb, receiptOrder)
+			err := s.reduceHeadquarterStockAndLog(ctx, headquarterDb, receiptOrder)
 			if err != nil {
 				return errors.WithMessage(err, "处理总部库存失败")
 			}
 		}
+	}
 
+	// 调用erp接口
+	if ctx.GetCompany().IsOpenErp() {
 		// 调用erp接口
 		erpReq := buying.SavePurchaseReceiptReq{
 			PurchaseOrderName: receiptOrder.PurchaseOrder.ErpOrderNo,
@@ -1758,7 +1797,7 @@ func (s *purchaseOrderSrv) recordErpStockInLog(ctx context.Context, db *gorm.DB,
 						WarehouseUuid: targetWarehouse.Uuid,
 						MaterialUuid:  item.MaterialUuid,
 						MaterialCode:  item.MaterialCode,
-						Stock:         0,
+						Stock:         100000.00,
 						ReservedStock: 0,
 						Valuation:     1,
 					}
@@ -1832,17 +1871,24 @@ func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, hea
 			if actualNum <= 0 {
 				continue
 			}
-
+			// 获取物料UUID
+			materialUuid := func() uint64 {
+				material, err := repository.NewMaterialRepo(tx).GetMaterialByErpCode(item.MaterialCode)
+				if err != nil {
+					return 0
+				}
+				return material.Uuid
+			}()
 			// 查找或创建仓库商品库存记录
-			warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(targetWarehouse.Uuid, item.MaterialUuid)
+			warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(targetWarehouse.Uuid, materialUuid)
 			if err != nil {
 				if err == gorm.ErrRecordNotFound {
 					// 没有找到记录时创建新记录
 					newWarehouseItem := &model.WarehouseItem{
 						WarehouseUuid: targetWarehouse.Uuid,
-						MaterialUuid:  item.MaterialUuid,
+						MaterialUuid:  materialUuid,
 						MaterialCode:  item.MaterialCode,
-						Stock:         0,
+						Stock:         100000.00,
 						ReservedStock: 0,
 						Valuation:     1,
 					}
