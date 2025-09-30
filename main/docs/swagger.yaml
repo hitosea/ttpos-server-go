@@ -5772,6 +5772,9 @@ definitions:
     type: object
   req.PurchaseOrderSubmitReq:
     properties:
+      is_confirm:
+        description: 是否确认提交（移除禁用物品）
+        type: boolean
       uuid:
         description: 采购订单ID
         minimum: 1
@@ -11868,6 +11871,9 @@ definitions:
         type: number
       order_no:
         description: 单据编号
+        type: string
+      supplier_erp_code:
+        description: 供应商ERP编码
         type: string
       supplier_name:
         allOf:

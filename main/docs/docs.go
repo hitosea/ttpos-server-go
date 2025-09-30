@@ -34271,6 +34271,10 @@ const docTemplate = `{
                 "uuid"
             ],
             "properties": {
+                "is_confirm": {
+                    "description": "是否确认提交（移除禁用物品）",
+                    "type": "boolean"
+                },
                 "uuid": {
                     "description": "采购订单ID",
                     "type": "integer",
@@ -43301,6 +43305,10 @@ const docTemplate = `{
                 },
                 "order_no": {
                     "description": "单据编号",
+                    "type": "string"
+                },
+                "supplier_erp_code": {
+                    "description": "供应商ERP编码",
                     "type": "string"
                 },
                 "supplier_name": {

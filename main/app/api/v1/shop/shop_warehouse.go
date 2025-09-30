@@ -119,7 +119,7 @@ func (h *WarehouseHandler) CreateWarehouse(c *gin.Context) {
 		return
 	}
 
-	helper.Success(c, gin.H{})
+	helper.Success(c, gin.H{}, "保存成功")
 }
 
 // UpdateWarehouse 更新仓库
@@ -147,7 +147,7 @@ func (h *WarehouseHandler) UpdateWarehouse(c *gin.Context) {
 		return
 	}
 
-	helper.Success(c, gin.H{})
+	helper.Success(c, gin.H{}, "保存成功")
 }
 
 // SetDefaultWarehouse 设置默认仓库
