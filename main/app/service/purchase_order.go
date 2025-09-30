@@ -666,6 +666,11 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 			return errors.WithMessage(err, "重新查询采购申请失败")
 		}
 
+		// 检查采购申请明细
+		if len(purchaseOrder.Items) == 0 {
+			return errors.New("采购申请明细不能为空")
+		}
+
 		// 过滤掉数量为0的项目后重新计算数量
 		validItems := make([]model.PurchaseOrderItem, 0)
 		for _, item := range purchaseOrder.Items {
