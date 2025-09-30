@@ -94,11 +94,10 @@ func (s *erpSrv) GetHeadquarterMaterialList(ctx context.Context, params req.GetH
 	headquarterShopCompanySetting := repository.NewCompanySettingRepo(s.dbm.GetDB(companySetting.HeadquarterUuid)).Get()
 
 	param := &item.GetItemListReq{
-		ItemGroup:       item.ItemGroup_RawMaterial,
-		Branch:          headquarterShopCompanySetting.ErpnextBranchName,
-		CompanyAbbr:     companySetting.ErpnextHeadquarterAbbr, // 总部
-		SubCompanyAbbr:  companySetting.ErpnextCompanyAbbr,     // 子店
-		ContainDisabled: true,
+		ItemGroup:      item.ItemGroup_RawMaterial,
+		Branch:         headquarterShopCompanySetting.ErpnextBranchName,
+		CompanyAbbr:    companySetting.ErpnextHeadquarterAbbr, // 总部
+		SubCompanyAbbr: companySetting.ErpnextCompanyAbbr,     // 子店
 	}
 	result, err := client.GetItemList(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), param)
 	if err != nil {
@@ -127,10 +126,9 @@ func (s *erpSrv) GetSubShopMaterialList(ctx context.Context) (*item.GetItemListR
 	defer conn.Close()
 
 	param := &item.GetItemListReq{
-		ItemGroup:       item.ItemGroup_RawMaterial,
-		Branch:          companySetting.ErpnextBranchName,
-		CompanyAbbr:     companySetting.ErpnextCompanyAbbr, // 总部
-		ContainDisabled: true,
+		ItemGroup:   item.ItemGroup_RawMaterial,
+		Branch:      companySetting.ErpnextBranchName,
+		CompanyAbbr: companySetting.ErpnextCompanyAbbr, // 总部
 	}
 	result, err := client.GetItemList(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), param)
 	if err != nil {
