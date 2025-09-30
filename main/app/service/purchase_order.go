@@ -1867,14 +1867,16 @@ func (s *purchaseOrderSrv) updateMaterialStock(ctx context.Context, db *gorm.DB,
 				}
 				// 获取物料信息
 				material, err := repository.NewMaterialRepo(headquarterDb).GetMaterialByErpCode(item.MaterialCode)
-				if err == nil {
-					warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(transitWarehouse.Uuid, material.Uuid)
-					if err == nil {
-						err = warehouseItemRepo.ReduceStock(warehouseItem.Uuid, actualNum)
-						if err != nil {
-							return errors.WithMessage(err, "减少在途仓库库存失败")
-						}
-					}
+				if err != nil {
+					continue
+				}
+				warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(transitWarehouse.Uuid, material.Uuid)
+				if err != nil {
+					continue
+				}
+				err = warehouseItemRepo.ReduceStock(warehouseItem.Uuid, actualNum)
+				if err != nil {
+					return errors.WithMessage(err, "减少在途仓库库存失败")
 				}
 			}
 		}
