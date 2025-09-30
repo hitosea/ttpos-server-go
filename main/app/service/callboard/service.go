@@ -534,14 +534,13 @@ func (s *callBoardService) getCallBoardQueue(queueKey string, limit int64, minSc
 		Offset: 0,
 		Count:  limit,
 	}
-	results, err := s.getRedisClient().ZRangeByScoreWithScores(context.Background(), queueKey, opt).Result()
+	results, err := s.getRedisClient().ZRevRangeByScoreWithScores(context.Background(), queueKey, opt).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			return []string{}, nil // 队列不存在，返回空列表
 		}
 		return nil, err
 	}
-
 	// 收集所有有效的队列成员
 	queueMembers := make([]queueMember, 0, len(results))
 	for _, result := range results {
