@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 	"ttpos-server-go/app/constant"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/pkg/utils"
 
@@ -28,11 +29,12 @@ func NewBusinessDataSunmiTemplate(
 
 // GetPrintContent 获取内容
 func (t *businessDataSunmiTemplate) GetPrintContent(
-	printerType string,
+	printerInfo settingResp.PrinterInfo,
 	businessData *PrintingBusinessData,
 	startTime int64,
 	endTime int64,
 ) string {
+	printerType := printerInfo.PrinterType
 	// 店铺设置
 	companySetting, _ := t.base.Setting.GetCompanySetting(t.base.Ctx)
 	paymentSetting, _ := t.base.Setting.GetPaymentSetting(t.base.Ctx, companySetting)
@@ -134,6 +136,14 @@ func (t *businessDataSunmiTemplate) GetPrintContent(
 		printer.PrintInColumns(t.base.Translate("实收金额"), t.base.GetPriceAndUnit(businessData.ProductCategory.TotalReceivedPrice))
 		printer.LineFeed(1)
 	} else if businessData.Product != nil {
+		// 批次号
+		if businessData.Product.BatchRange != "" {
+			printer.SetAlignment(pkg.AlignLeft)
+			printer.AppendText(t.base.Translate("数量") + "：" + businessData.Product.BatchRange)
+			printer.SetLineSpacing(utils.IfInt(isOneself, 25, 40))
+			printer.LineFeed(1)
+			printer.SetLineSpacing(45)
+		}
 		// 按商品
 		printer.SetupColumns(
 			[]int{300, pkg.AlignLeft, 0},

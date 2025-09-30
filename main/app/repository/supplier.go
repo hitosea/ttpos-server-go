@@ -11,27 +11,24 @@ import (
 type ISupplierRepo interface {
 	// 基础操作
 	Create(supplier *model.Supplier) error
-	Update(supplier *model.Supplier) error
+	Update(uuid uint64, data map[string]any) error
 	Delete(uuid uint64) error
 	GetByUuid(uuid uint64, opts ...DBOption) (*model.Supplier, error)
-	GetByName(name string, opts ...DBOption) (*model.Supplier, error)
+	GetByErpCode(erpCode string, opts ...DBOption) (*model.Supplier, error)
 
 	// 查询操作
 	GetList(opts ...DBOption) ([]model.Supplier, error)
 	GetListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.Supplier, int64, error)
-	Count(opts ...DBOption) (int64, error)
 	IsNameExists(name string, excludeUuid uint64) (bool, error)
+	IsCodeExists(code string, excludeUuid uint64) (bool, error)
 
 	// 条件查询选项
-	WhereUuid(uuid uint64) DBOption
-	WhereName(name string) DBOption
-	WhereNameLike(name string) DBOption
-	WhereContactName(contactName string) DBOption
-	WhereContactNameLike(contactName string) DBOption
-	WhereStaffUuid(staffUuid uint64) DBOption
-	WhereNotDeleted() DBOption
+	WhereNameOrCodeLike(name string) DBOption
 	OrderByCreateTime(desc bool) DBOption
 	OrderByName(desc bool) DBOption
+	WhereNotDeleted() DBOption
+	WhereErpCodeExists() DBOption
+	WhereStatus(status int) DBOption
 }
 
 // SupplierRepoImpl 供应商Repository实现
@@ -50,8 +47,8 @@ func (r *SupplierRepoImpl) Create(supplier *model.Supplier) error {
 }
 
 // Update 更新供应商
-func (r *SupplierRepoImpl) Update(supplier *model.Supplier) error {
-	return r.db.Model(supplier).Where("uuid = ?", supplier.Uuid).Updates(supplier).Error
+func (r *SupplierRepoImpl) Update(uuid uint64, data map[string]any) error {
+	return r.db.Model(&model.Supplier{}).Where("uuid = ?", uuid).Updates(data).Error
 }
 
 // Delete 软删除供应商
@@ -64,7 +61,7 @@ func (r *SupplierRepoImpl) Delete(uuid uint64) error {
 // GetByUuid 根据UUID查询供应商
 func (r *SupplierRepoImpl) GetByUuid(uuid uint64, opts ...DBOption) (*model.Supplier, error) {
 	var supplier model.Supplier
-	db := r.db.Model(&model.Supplier{}).Where("uuid = ?", uuid)
+	db := r.db.Model(&model.Supplier{}).Preload("PurchaseOrders").Scopes(NotDeleted).Where("uuid = ?", uuid)
 	db = r.applyOptions(db, opts...)
 	err := db.First(&supplier).Error
 	if err != nil {
@@ -73,10 +70,10 @@ func (r *SupplierRepoImpl) GetByUuid(uuid uint64, opts ...DBOption) (*model.Supp
 	return &supplier, nil
 }
 
-// GetByName 根据名称查询供应商
-func (r *SupplierRepoImpl) GetByName(name string, opts ...DBOption) (*model.Supplier, error) {
+// GetByErpCode 根据ERP编码查询供应商
+func (r *SupplierRepoImpl) GetByErpCode(erpCode string, opts ...DBOption) (*model.Supplier, error) {
 	var supplier model.Supplier
-	db := r.db.Model(&model.Supplier{}).Where("name = ?", name)
+	db := r.db.Model(&model.Supplier{}).Where("erp_code = ?", erpCode)
 	db = r.applyOptions(db, opts...)
 	err := db.First(&supplier).Error
 	if err != nil {
@@ -100,7 +97,7 @@ func (r *SupplierRepoImpl) GetListWithPagination(pageNo, pageSize int, opts ...D
 	var total int64
 
 	// 构建基础查询
-	db := r.db.Model(&model.Supplier{})
+	db := r.db.Model(&model.Supplier{}).Scopes(NotDeleted)
 	db = r.applyOptions(db, opts...)
 
 	// 获取总数
@@ -111,7 +108,7 @@ func (r *SupplierRepoImpl) GetListWithPagination(pageNo, pageSize int, opts ...D
 
 	// 分页查询
 	offset := (pageNo - 1) * pageSize
-	err = db.Offset(offset).Limit(pageSize).Find(&suppliers).Error
+	err = db.Preload("PurchaseOrders").Offset(offset).Limit(pageSize).Find(&suppliers).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -119,20 +116,28 @@ func (r *SupplierRepoImpl) GetListWithPagination(pageNo, pageSize int, opts ...D
 	return suppliers, total, nil
 }
 
-// Count 统计供应商数量
-func (r *SupplierRepoImpl) Count(opts ...DBOption) (int64, error) {
-	var count int64
-	db := r.db.Model(&model.Supplier{})
-	db = r.applyOptions(db, opts...)
-	err := db.Count(&count).Error
-	return count, err
-}
-
 // IsNameExists 检查供应商名称是否存在
 func (r *SupplierRepoImpl) IsNameExists(name string, excludeUuid uint64) (bool, error) {
 	var count int64
 	query := r.db.Model(&model.Supplier{}).
 		Where("name = ? AND delete_time = ?", name, 0)
+
+	if excludeUuid != 0 {
+		query = query.Where("uuid != ?", excludeUuid)
+	}
+
+	err := query.Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+// IsCodeExists 检查供应商编码是否存在
+func (r *SupplierRepoImpl) IsCodeExists(code string, excludeUuid uint64) (bool, error) {
+	var count int64
+	query := r.db.Model(&model.Supplier{}).
+		Where("code = ? AND delete_time = ?", code, 0)
 
 	if excludeUuid != 0 {
 		query = query.Where("uuid != ?", excludeUuid)
@@ -155,45 +160,17 @@ func (r *SupplierRepoImpl) applyOptions(db *gorm.DB, opts ...DBOption) *gorm.DB 
 
 // 查询选项实现
 
-// WhereUuid UUID条件
-func (r *SupplierRepoImpl) WhereUuid(uuid uint64) DBOption {
-	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("uuid = ?", uuid)
-	}
-}
-
-// WhereName 名称精确匹配条件
-func (r *SupplierRepoImpl) WhereName(name string) DBOption {
-	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("name = ?", name)
-	}
-}
-
 // WhereNameLike 名称模糊匹配条件
-func (r *SupplierRepoImpl) WhereNameLike(name string) DBOption {
+func (r *SupplierRepoImpl) WhereNameOrCodeLike(name string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("name LIKE ?", "%"+name+"%")
+		return db.Where("name LIKE ? OR code LIKE ?", "%"+name+"%", "%"+name+"%")
 	}
 }
 
-// WhereContactName 联系人姓名精确匹配条件
-func (r *SupplierRepoImpl) WhereContactName(contactName string) DBOption {
+// WhereErpCodeExists 存在erp_code条件
+func (r *SupplierRepoImpl) WhereErpCodeExists() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("contact_name = ?", contactName)
-	}
-}
-
-// WhereContactNameLike 联系人姓名模糊匹配条件
-func (r *SupplierRepoImpl) WhereContactNameLike(contactName string) DBOption {
-	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("contact_name LIKE ?", "%"+contactName+"%")
-	}
-}
-
-// WhereStaffUuid 采购负责人条件
-func (r *SupplierRepoImpl) WhereStaffUuid(staffUuid uint64) DBOption {
-	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("staff_uuid = ?", staffUuid)
+		return db.Where("erp_code != ?", "")
 	}
 }
 
@@ -201,6 +178,13 @@ func (r *SupplierRepoImpl) WhereStaffUuid(staffUuid uint64) DBOption {
 func (r *SupplierRepoImpl) WhereNotDeleted() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("delete_time = ?", 0)
+	}
+}
+
+// WhereStatus 状态条件
+func (r *SupplierRepoImpl) WhereStatus(status int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("status = ?", status)
 	}
 }
 

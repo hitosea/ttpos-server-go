@@ -18,7 +18,6 @@ define update_env_and_run
 		echo '\nREDIS_CLUSTER_ANNOUNCE_IP=$(LOCAL_IP)' >> .env; \
 	fi;
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d
-	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh mysql open
 	@make start-http-debug-proxy
 endef
 
@@ -80,6 +79,10 @@ help:
 	@echo "🧹 清理命令"
 	@printf "\033[0m"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "redis-clear-data-node-conf" "清空Redis集群配置数据"
+	@echo ""
+	@printf "\033[1;32m"
+	@echo "🔍 日志命令"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "log" "监听今天的日志"
 	@echo ""
 	@printf "\033[1;35m"
 	@echo ""

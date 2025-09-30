@@ -13,6 +13,8 @@ import (
 // IProductCategoryRepo 商品类别
 type IProductCategoryRepo interface {
 	CreateProductCategory(productCategory model.ProductCategory) (uint64, error)
+	UpdateProductCategory(id uint, productCategory model.ProductCategory) error
+	GetProductCategory(opts ...DBOption) (*model.ProductCategory, error)
 }
 
 func NewProductCategoryRepo(db *gorm.DB) IProductCategoryRepo {
@@ -82,6 +84,10 @@ func (s *CategoryRepositoryService) CreateCategory(params req.CreateCategoryRequ
 	return id, nil
 }
 
+func (s *CategoryRepositoryService) UpdateProductCategory(uuid uint64, productCategory model.ProductCategory) error {
+	return s.db.Model(&model.ProductCategory{}).Where("uuid = ?", uuid).Updates(productCategory).Error
+}
+
 // GetCategoryUuidByNameOptimized 支持分级分类路径查询 (例如: "主分类/子分类")
 func (s *CategoryRepositoryService) GetCategoryUuidByNameOptimized(name string) (uint64, error) {
 	var categories []model.ProductCategory
@@ -130,4 +136,17 @@ func (s *CategoryRepositoryService) findCategoryByName(categories []model.Produc
 	}
 
 	return 0, nil
+}
+
+func (r *ProductCategoryRepoImpl) GetProductCategory(opts ...DBOption) (*model.ProductCategory, error) {
+	var productCategory model.ProductCategory
+	db := r.db.Model(&model.ProductCategory{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.First(&productCategory).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return &productCategory, nil
 }

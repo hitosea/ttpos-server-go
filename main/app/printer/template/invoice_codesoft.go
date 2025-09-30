@@ -29,7 +29,6 @@ func NewInvoiceCodesoftTemplate(
 // invoiceCodesoftTemplate 获取打印内容
 func (t *invoiceCodesoftTemplate) GetPrintContent(
 	settingPrinterInfo settingResp.PrinterInfo,
-	printerType string,
 	tmpInfo model.PrinterTemplate,
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
@@ -292,7 +291,7 @@ func (t *invoiceCodesoftTemplate) GetPrintContent(
 	// Print and exit page mode
 	printer.PrintAndExitPageMode()
 	printer.LineFeed(4)
-	printer.CutPaper(true)
+	printer.CutPaper(settingPrinterInfo.IsEnableSound())
 
 	// 返回打印数据
 	return printer.GetOrderData()

@@ -3,6 +3,7 @@ package template
 
 import (
 	"ttpos-server-go/app/constant"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/pkg/utils"
@@ -24,6 +25,7 @@ func NewRechargeImgTemplate(
 
 // ImgPrint 图片打印
 func (t *rechargeImgTemplate) GetPrintContent(
+	settingPrinterInfo settingResp.PrinterInfo,
 	order model.MemberRechargeOrder,
 ) string {
 	// 日历
@@ -126,5 +128,5 @@ func (t *rechargeImgTemplate) GetPrintContent(
 	img.LineFeed(2)
 	img.LineFeed(1, 20)
 	//
-	return img.Save("", !t.base.IsSunMi, 0)
+	return img.Save("", !t.base.IsSunMi && settingPrinterInfo.IsEnableSound(), 0)
 }

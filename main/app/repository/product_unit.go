@@ -11,7 +11,9 @@ import (
 type IProductUnitRepo interface {
 	// 基础CRUD操作
 	GetProductUnit(opts ...DBOption) (*model.ProductUnit, error)
+	GetProductUnitByErpnextUom(erpnextUom string) (*model.ProductUnit, error)
 	GetProductUnitList(opts ...DBOption) ([]*model.ProductUnit, error)
+	WhereByUuids(uuids []uint64) DBOption
 }
 
 // NewMaterialUnitRepo 创建新的原料单位仓库
@@ -44,6 +46,17 @@ func (r *ProductUnitRepoImpl) GetProductUnit(opts ...DBOption) (*model.ProductUn
 	return &productUnit, nil
 }
 
+func (r *ProductUnitRepoImpl) GetProductUnitByErpnextUom(erpnextUom string) (*model.ProductUnit, error) {
+	var productUnit model.ProductUnit
+
+	query := r.db.Model(&model.ProductUnit{}).Where("delete_time = ?", 0).Where("erpnext_uom = ?", erpnextUom)
+	if err := query.First(&productUnit).Error; err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return &productUnit, nil
+}
+
 func (r *ProductUnitRepoImpl) GetProductUnitList(opts ...DBOption) ([]*model.ProductUnit, error) {
 	var productUnits []*model.ProductUnit
 
@@ -58,4 +71,10 @@ func (r *ProductUnitRepoImpl) GetProductUnitList(opts ...DBOption) ([]*model.Pro
 	}
 
 	return productUnits, nil
+}
+
+func (r *ProductUnitRepoImpl) WhereByUuids(uuids []uint64) DBOption {
+	return func(query *gorm.DB) *gorm.DB {
+		return query.Where("uuid IN (?)", uuids)
+	}
 }

@@ -10,10 +10,12 @@ import (
 // IMaterialUnitRepo 原料单位仓库接口
 type IMaterialUnitRepo interface {
 	// 基础CRUD操作
+	GetMaterialUnit(opts ...DBOption) model.MaterialUnit
 	GetMaterialUnitByUuid(uuid uint64, opts ...DBOption) (model.MaterialUnit, error)
 	GetMaterialUnitsByUuid(uuid uint64, opts ...DBOption) (model.MaterialUnit, error)
 	GetMaterialUnitList(opts ...DBOption) ([]*model.MaterialUnit, error)
 	CreateMaterialUnit(materialUnit model.MaterialUnit) (uint64, error)
+	UpdateMaterialUnit(data map[string]any, opts ...DBOption) error
 	GetMaterialUnitListByBaseUnitUuid(baseUnitUuid uint64) ([]*model.MaterialUnit, error)
 }
 
@@ -29,6 +31,17 @@ func NewMaterialUnitRepoImpl(db *gorm.DB) *MaterialUnitRepoImpl {
 
 type MaterialUnitRepoImpl struct {
 	db *gorm.DB // 数据库连接
+}
+
+// GetMaterialUnit 获取原料单位
+func (r *MaterialUnitRepoImpl) GetMaterialUnit(opts ...DBOption) model.MaterialUnit {
+	var materialUnit model.MaterialUnit
+	query := r.db
+	for _, opt := range opts {
+		query = opt(query)
+	}
+	query.Find(&materialUnit).Limit(1)
+	return materialUnit
 }
 
 // GetMaterialUnitByUuid 根据UUID获取原料单位详情
@@ -56,6 +69,15 @@ func (r *MaterialUnitRepoImpl) CreateMaterialUnit(materialUnit model.MaterialUni
 		return 0, errors.WithMessage(err, "创建原料单位失败")
 	}
 	return materialUnit.Uuid, nil
+}
+
+// UpdateMaterialUnit 更新原料单位
+func (r *MaterialUnitRepoImpl) UpdateMaterialUnit(data map[string]any, opts ...DBOption) error {
+	db := r.db.Model(&model.MaterialUnit{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	return db.Updates(data).Error
 }
 
 func (r *MaterialUnitRepoImpl) GetMaterialUnitList(opts ...DBOption) ([]*model.MaterialUnit, error) {

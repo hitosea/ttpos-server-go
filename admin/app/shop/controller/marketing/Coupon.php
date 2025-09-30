@@ -5,13 +5,10 @@ namespace app\shop\controller\marketing;
 use app\shop\service\marketing\MarketingCouponService;
 use think\App;
 use think\Request;
-use Endroid\QrCode\QrCode;
 use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
 use app\common\enum\http\StatusCode;
-use Endroid\QrCode\Writer\PngWriter;
 use app\common\exception\BaseException;
-use app\shop\service\marketing\MarketingActivityService;
 
 /**
  * 优惠券
@@ -50,6 +47,8 @@ class Coupon extends Controller
      *      @Apidoc\Returned("valid_day_time_range", type="string", desc="适用时间"),
      *      @Apidoc\Returned("count", type="integer", desc="数量"),
      *      @Apidoc\Returned("create_time", type="integer", desc="添加时间"),
+     *      @Apidoc\Returned("status", type="integer", desc="状态 1 开启 0 禁用"),
+     *      @Apidoc\Returned("can_delete", type="boolean", desc="是否可以删除 true 可以 false 不可以"),
      * })
      */
     public function list(Request $request)
@@ -138,7 +137,7 @@ class Coupon extends Controller
      * @Apidoc\Returned("list", type="array", desc="优惠券记录列表", children={
      *      @Apidoc\Returned("coupon_name", type="string", desc="优惠券名称"),
      *      @Apidoc\Returned("serial_no", type="string", desc="记录编号"),
-     *      @Apidoc\Returned("record_type", type="string", desc="记录类型：1-首次添加、2-调整添加、3-调整扣减、4-活动扣减、5、奖励领取（冻结）、6、核销扣减"),
+     *      @Apidoc\Returned("record_type", type="string", desc="记录类型：1-首次添加、2-调整添加、3-调整扣减、4-活动扣减、5、奖励领取（冻结）、6、核销扣减、7、删除优惠券"),
      *      @Apidoc\Returned("create_time", type="integer", desc="时间"),
      *      @Apidoc\Returned("coupon_count", type="integer", desc="数量"),
      *      @Apidoc\Returned("left_count", type="integer", desc="剩余有效张数"),
@@ -149,5 +148,40 @@ class Coupon extends Controller
         $params = $request->get();
         $list = $this->service->getRecord($params);
         return $this->renderSuccess('', compact('list'));
+    }
+
+    /**
+     * @Apidoc\Title("删除优惠券")
+     * @Apidoc\Method ("POST")
+     * @Apidoc\Url ("/index.php/shop/marketing.coupon/delete")
+     * @Apidoc\Param("uuid", type="string", require=true, desc="优惠券uuid")
+     * @Apidoc\Returned()
+     */
+    public function delete(Request $request)
+    {
+        $params = $request->post();
+        $result = $this->service->delete($params['uuid']);
+        if (isset($result['code']) && $result['code'] !== 0) {
+            return $this->renderError($result['msg'] ?? '删除失败');
+        }
+        return $this->renderSuccess('删除成功', $result);
+    }
+
+    /**
+     * @Apidoc\Title("修改优惠券状态")
+     * @Apidoc\Method ("POST")
+     * @Apidoc\Url ("/index.php/shop/marketing.coupon/status")
+     * @Apidoc\Param("uuid", type="string", require=true, desc="优惠券uuid")
+     * @Apidoc\Param("status", type="integer", require=true, desc="状态 1 开启 0 禁用")
+     * @Apidoc\Returned()
+     */
+    public function status(Request $request)
+    {
+        $params = $request->post();
+        $result = $this->service->status($params['uuid'], $params);
+        if (isset($result['code']) && $result['code'] !== 0) {
+            return $this->renderError($result['msg'] ?? '修改状态失败');
+        }
+        return $this->renderSuccess('修改状态成功', $result);
     }
 } 

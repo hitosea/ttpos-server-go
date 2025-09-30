@@ -4,6 +4,7 @@ import (
 	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/service"
@@ -21,18 +22,11 @@ func (p *PrinterRepoImpl) PrintingBusinessData(
 	businessData *template.PrintingBusinessData,
 	startTime int64,
 	endTime int64,
-	deviceSnId ...string,
+	firstExecution int,
 ) (*resp.PrinterData, error) {
-	var deviceSn string
-	// 设备sn
-	if len(deviceSnId) > 0 {
-		deviceSn = deviceSnId[0]
-	} else {
-		deviceSn = p.ctx.GetDeviceSn()
-	}
 
 	// 获取打印设置
-	settingPrinterInfo, err := p.setting.GetPrinterInfo(p.ctx, p.printerSetting, deviceSn)
+	settingPrinterInfo, err := p.setting.GetPrinterInfo(p.ctx, p.printerSetting, p.ctx.GetDeviceSn())
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取打印设置失败")
 	}
@@ -57,7 +51,7 @@ func (p *PrinterRepoImpl) PrintingBusinessData(
 	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
 
 	// 获取打印内容
-	printContent := p.getPrintingBusinessDataContent(settingPrinterInfo.PrinterType, businessData, startTime, endTime)
+	printContent := p.getPrintingBusinessDataContent(settingPrinterInfo, businessData, startTime, endTime)
 	if printContent == "" {
 		return nil, errors.New("获取打印内容失败")
 	}
@@ -74,7 +68,7 @@ func (p *PrinterRepoImpl) PrintingBusinessData(
 		DataType:        constant.PrinterTemplateBusiness,
 		Data:            printContent,
 		Type:            1,
-		FirstExecution:  1,
+		FirstExecution:  firstExecution,
 		Copies:          settingPrinterInfo.Copies,
 	}, "")
 	if err != nil {
@@ -104,11 +98,13 @@ func (p *PrinterRepoImpl) PrintingBusinessData(
 
 // 构建订单打印的内容
 func (p *PrinterRepoImpl) getPrintingBusinessDataContent(
-	printerType string, // 打印机类型
+	printerInfo settingResp.PrinterInfo, // 打印机类型
 	businessData *template.PrintingBusinessData,
 	startTime int64,
 	endTime int64,
 ) string {
+	printerType := printerInfo.PrinterType
+
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(
 		p.ctx,
@@ -132,10 +128,10 @@ func (p *PrinterRepoImpl) getPrintingBusinessDataContent(
 	// 图片打印
 	if p.IsImagePrinterMethod() {
 		if !p.Is58mmPrinter() {
-			return template.NewBusinessDataImgTemplate(base).GetPrintContent(businessData, startTime, endTime)
+			return template.NewBusinessDataImgTemplate(base).GetPrintContent(printerInfo, businessData, startTime, endTime)
 		} else {
 			// 调用58mm模板
-			return template.NewBusinessDataImgTemplate58mm(base).GetPrintContent58mm(businessData, startTime, endTime)
+			return template.NewBusinessDataImgTemplate58mm(base).GetPrintContent58mm(printerInfo, businessData, startTime, endTime)
 		}
 	}
 
@@ -144,7 +140,7 @@ func (p *PrinterRepoImpl) getPrintingBusinessDataContent(
 	 */
 	if base.IsSunMi {
 		return template.NewBusinessDataSunmiTemplate(base).GetPrintContent(
-			printerType,
+			printerInfo,
 			businessData,
 			startTime,
 			endTime,
@@ -163,7 +159,7 @@ func (p *PrinterRepoImpl) getPrintingBusinessDataContent(
 		constant.BrandA11510P,
 	}, printerType) {
 		return template.NewBusinessDataXprinterTemplate(base).GetPrintContent(
-			printerType,
+			printerInfo,
 			businessData,
 			startTime,
 			endTime,

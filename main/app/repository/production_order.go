@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
@@ -15,6 +16,8 @@ type IProductionOrderRepo interface {
 	WhereUuid(uuid uint64) DBOption                           // Uuid 条件
 	WhereProductPackageUuidIn(uuids []uint64) DBOption        // 商品ID条件
 	WhereProductFinishedTime(finishedTime int64) DBOption     // 生产商品完成时间条件
+	WhereProductMadeTime(madeTime int64) DBOption             // 生产商品制作时间条件
+	WhereProductMakeStatus(finishStatus []uint) DBOption      // 制作状态
 	WhereProductUuid(uuid uint64) DBOption                    // 生产商品Uuid条件
 	WhereSaleOrderProductUuid(uuid uint64) DBOption           // 生产商品销售订单uuid条件
 	WhereSaleBillUuidIn(uuids []uint64) DBOption              // 销售账单uuid条件
@@ -23,12 +26,13 @@ type IProductionOrderRepo interface {
 	WhereProductFirstCategoryUuidIn(uuids []uint64) DBOption  // 生产商品分类Uuid条件
 	WhereProductNumGT0() DBOption                             // 送厨商品数量大于0
 
-	SaleBillUuidOpt() DBOption                                // 历史上菜条件
-	WithSaleOrderProductAll() DBOption                        // 关联销售订单商品
-	WithProductCategory() DBOption                            // 关联商品分类
-	WithProductCategoryMultiLanguageName() DBOption           // 关联商品分类多语言
-	UpdateProduct(opts []DBOption, vars map[string]any) error // 更新送厨商品
-	UpdateOrder(opts []DBOption, vars map[string]any) error   // 更新送厨单
+	SaleBillUuidOpt() DBOption                                            // 历史上菜条件
+	WithSaleOrderProductAll() DBOption                                    // 关联销售订单商品
+	WithProductCategory() DBOption                                        // 关联商品分类
+	WithProductCategoryMultiLanguageName() DBOption                       // 关联商品分类多语言
+	UpdateProduct(opts []DBOption, vars map[string]any) error             // 更新送厨商品
+	UpdateOrder(opts []DBOption, vars map[string]any) error               // 更新送厨单
+	IsProductionFinishedBySaleBillUuid(saleBillUuid uint64) (bool, error) // 检查销售账单下所有生产订单是否完成
 }
 
 // IProductionOrderQueryRepo 生产订单查询仓库接口
@@ -36,7 +40,7 @@ type IProductionOrderQueryRepo interface {
 	GetProductionOrder(opts ...DBOption) (*model.ProductionOrder, error)                                                          // 获取生产订单
 	GetProduct(opts ...DBOption) (*model.ProductionOrderProduct, error)                                                           // 获取生产订单商品
 	GetLimitedProducts(column string, pageNo, pageSize int, opts ...DBOption) ([]model.ProductionOrderProduct, int64, error)      // 分页获取账单ID、分类ID
-	GetLimitedHistoryProducts(opts ...DBOption) ([]model.ProductionOrderProduct, error)                                           // 历史获取销售账单Uuid
+	GetLimitedHistoryProducts(orderField string, opts ...DBOption) ([]model.ProductionOrderProduct, error)                        // 历史获取销售账单Uuid
 	GetProducts(limit int, orderBy string, statusOpt DBOption, opts ...DBOption) (float64, []model.ProductionOrderProduct, error) // 获取生产订单商品
 
 	GetProductsByPackageUuid(packageUuid uint64) ([]model.ProductionOrderProduct, error) // 根据套餐uuid获取套餐下所有子商品
@@ -89,12 +93,18 @@ func (r *productionRepo) GetProduct(opts ...DBOption) (*model.ProductionOrderPro
 const (
 	CreateTimeAsc    string = "create_time asc"
 	FinishedTimeDesc string = "finished_time desc"
+	MadeTimeDesc     string = "made_time desc"
 )
 
 func (r *productionRepo) GetProducts(limit int, orderBy string, statusOpt DBOption, opts ...DBOption) (float64, []model.ProductionOrderProduct, error) {
 	var productionOrderProducts []model.ProductionOrderProduct
 	db := r.db.Model(&model.ProductionOrderProduct{}).Scopes(NotDeleted)
-	db = statusOpt(db).Session(&gorm.Session{})
+	if statusOpt != nil {
+		db = statusOpt(db).Session(&gorm.Session{})
+	} else {
+		db = db.Session(&gorm.Session{})
+	}
+
 	var total float64
 	// 统计商品数量总和
 	db.Select("IFNULL(SUM(num), 0) as total").Scan(&total)
@@ -155,14 +165,14 @@ func (r *productionRepo) GetLimitedProducts(column string, pageNo, pageSize int,
 }
 
 // GetLimitedHistoryProducts 历史获取销售账单Uuid
-func (r *productionRepo) GetLimitedHistoryProducts(opts ...DBOption) ([]model.ProductionOrderProduct, error) {
+func (r *productionRepo) GetLimitedHistoryProducts(orderField string, opts ...DBOption) ([]model.ProductionOrderProduct, error) {
 	var productionOrderProducts []model.ProductionOrderProduct
 	db := r.db.Model(&model.ProductionOrderProduct{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}
 
-	err := db.Model(&model.ProductionOrderProduct{}).Select("sale_bill_uuid, MAX(finished_time) as finished_time").Group("sale_bill_uuid").Order("finished_time desc").Find(&productionOrderProducts).Error
+	err := db.Model(&model.ProductionOrderProduct{}).Select(fmt.Sprintf("sale_bill_uuid, MAX(%s) as finished_time", orderField)).Group("sale_bill_uuid").Order(orderField + " desc").Find(&productionOrderProducts).Error
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -201,6 +211,20 @@ func (r *productionRepo) WhereProductPackageUuidIn(uuids []uint64) DBOption {
 func (r *productionRepo) WhereProductFinishedTime(finishedTime int64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("finished_time > ?", finishedTime)
+	}
+}
+
+// WhereProductMadeTime 生产商品制作时间条件
+func (r *productionRepo) WhereProductMadeTime(madeTime int64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("made_time > ?", madeTime)
+	}
+}
+
+// WhereProductMakeStatus 制作状态条件
+func (r *productionRepo) WhereProductMakeStatus(makeStatus []uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("make_status in (?)", makeStatus)
 	}
 }
 
@@ -319,4 +343,13 @@ func (r *productionRepo) GetProductsByPackageUuid(packageUuid uint64) ([]model.P
 	}
 
 	return productionOrderProducts, nil
+}
+
+// IsProductionFinishedBySaleBillUuid 检查销售账单下所有生产订单是否完成
+func (r *productionRepo) IsProductionFinishedBySaleBillUuid(saleBillUuid uint64) (bool, error) {
+	// 获取已叫production
+	var count int64
+	err := r.db.Model(&model.ProductionOrderProduct{}).Where("sale_bill_uuid = ? AND status < ?",
+		saleBillUuid, constant.ProductionOrderProductStatusFinished).Count(&count).Error
+	return count == 0, errors.WithMessage(err)
 }

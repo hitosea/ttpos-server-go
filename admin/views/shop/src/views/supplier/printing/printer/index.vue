@@ -22,7 +22,6 @@
             </template>
           </el-table-column>
           <el-table-column prop="printer_type.text" :label="$t('打印机类型')"></el-table-column>
-          <el-table-column prop="sort" :label="$t('排序')"></el-table-column>
           <el-table-column prop="create_time" :label="$t('添加时间')"></el-table-column>
           <el-table-column fixed="right" :label="$t('操作')" width="120">
             <template #default="scope">

@@ -262,7 +262,7 @@ func (t *invoiceCompaxTemplate) GetPrintContent(
 	// Print and exit page mode
 	printer.PrintAndExitPageMode()
 	printer.LineFeed(4)
-	printer.CutPaper(true)
+	printer.CutPaper(settingPrinterInfo.IsEnableSound())
 
 	// 返回打印数据
 	return printer.GetOrderData()

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"ttpos-server-go/config"
 )
 
 // 源类型
@@ -56,10 +57,16 @@ const (
 	UPDATE_SELECTED_PRINTER = "update_selected_printer"
 	// 更新会员订单 data = {"update_time": 1742971471, "status": 1, "member_sale_order_uuid": 1, "type": "update | delete"}
 	UPDATE_MEMBER_SALE_ORDER = "update_member_sale_order"
+	// 移动管理端获取最新数据 data= {"sync_time": 1742971471}
+	SYNC_DATA = "sync_data"
+	// 导入商品 data= {"time": 1742971471, "status": "finish", "error": ""}
+	IMPORT_PRODUCT = "import_product"
+	// 导入物品 data= {"time": 1742971471, "status": "finish", "error": ""}
+	IMPORT_MATERIAL = "import_material"
 )
 
 // Push sends a POST request to the WebSocket server with specific parameters.
-func PushClient(company_uuid uint64, source_client, device_id, message_type string, data map[string]interface{}) error {
+func PushClient(company_uuid uint64, source_client, device_id, message_type string, data map[string]any) error {
 	var jsonData []byte
 	// 计算包含关键参数的MD5值
 	if message_type == UPDATE_ORDER {
@@ -126,6 +133,7 @@ func PushClient(company_uuid uint64, source_client, device_id, message_type stri
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-KEY", config.JWT.Secret)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)

@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 	"ttpos-server-go/app/constant"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/pkg/utils"
 
@@ -28,6 +29,7 @@ func NewBusinessDataImgTemplate(
 
 // GetPrintContent 获取内容
 func (t *businessDataImgTemplate) GetPrintContent(
+	printerInfo settingResp.PrinterInfo,
 	businessData *PrintingBusinessData,
 	startTime int64,
 	endTime int64,
@@ -126,6 +128,12 @@ func (t *businessDataImgTemplate) GetPrintContent(
 		)
 		img.SetTextLineHeight(40)
 	} else if businessData.Product != nil {
+		// 批次号
+		if businessData.Product.BatchRange != "" {
+			img.SetAlignment(pkg.AlignLeft)
+			img.AppendText(t.base.Translate("数量") + "：" + businessData.Product.BatchRange)
+			img.LineFeed(1, 70)
+		}
 		// 按商品
 		img.SetTextLineHeight(40)
 		img.PrintInColumns(
@@ -393,5 +401,5 @@ func (t *businessDataImgTemplate) GetPrintContent(
 	//
 	img.LineFeed(2)
 	//
-	return img.Save("", !t.base.IsSunMi, 0)
+	return img.Save("", !t.base.IsSunMi && printerInfo.IsEnableSound(), 0)
 }

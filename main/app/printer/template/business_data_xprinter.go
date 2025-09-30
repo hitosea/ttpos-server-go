@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 	"ttpos-server-go/app/constant"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/pkg/utils"
 
@@ -28,11 +29,12 @@ func NewBusinessDataXprinterTemplate(
 
 // GetPrintContent 获取内容
 func (t *businessDataXprinterTemplate) GetPrintContent(
-	printerType string,
+	printerInfo settingResp.PrinterInfo,
 	businessData *PrintingBusinessData,
 	startTime int64,
 	endTime int64,
 ) string {
+	printerType := printerInfo.PrinterType
 	// 店铺设置
 	companySetting, _ := t.base.Setting.GetCompanySetting(t.base.Ctx)
 	paymentSetting, _ := t.base.Setting.GetPaymentSetting(t.base.Ctx, companySetting)
@@ -129,6 +131,12 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 		}
 		printer.AppendText(t.base.PrintText(t.base.Translate("实收金额"), "", t.base.GetPriceAndUnit(businessData.ProductCategory.TotalReceivedPrice), width))
 	} else if businessData.Product != nil {
+		// 批次号
+		if businessData.Product.BatchRange != "" {
+			printer.SetAlignment(pkg.AlignLeft)
+			printer.AppendText(t.base.Translate("数量") + "：" + businessData.Product.BatchRange)
+			printer.LineFeed(2)
+		}
 		// 按商品
 		printer.SetPrintModes(true, false, false)
 		printer.AppendText(t.base.PrintText(t.base.Translate("商品名称"), t.base.Translate("销量"), t.base.Translate("小计"), width, 26))
@@ -307,7 +315,7 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 	// Print and exit page mode
 	printer.PrintAndExitPageMode()
 	printer.LineFeed(4)
-	printer.CutPaper(true)
+	printer.CutPaper(printerInfo.IsEnableSound())
 	//
 	return printer.GetOrderData()
 }

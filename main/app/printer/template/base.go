@@ -60,10 +60,23 @@ type MergeSaleOrderBuffetDelayProducts struct {
 // MergeSaleOrderProduct 合并销售订单商品数据
 type MergeSaleOrderProduct struct {
 	ProductName       string                  `json:"product_name"`
-	ProductPrice      float64                 `json:"product_price"`
-	ProductNum        float64                 `json:"product_num"`
-	ProductTotalPrice float64                 `json:"product_total_price"`
-	SubProducts       []MergeSaleOrderProduct `json:"sub_products"`
+	ProductPrice      float64                 `json:"product_price"`       // 商品价格
+	ProductNum        float64                 `json:"product_num"`         // 商品数量
+	ProductTotalPrice float64                 `json:"product_total_price"` // 商品总价
+	SubProducts       []MergeSaleOrderProduct `json:"sub_products"`        // 套餐子商品
+	//
+	Name            string   `json:"name"`              // 商品名称
+	Attrs           string   `json:"attrs"`             // 商品属性-全部-包含小料-规格
+	Attr            string   `json:"attr"`              // 商品属性
+	AttrList        []string `json:"attr_list"`         // 商品属性列表
+	FlavorName      string   `json:"flavor_name"`       // 商品规格
+	SauceNames      string   `json:"sauce_names"`       // 商品小料
+	SauceList       []string `json:"sauce_list"`        // 商品小料列表
+	IsSub           bool     `json:"is_sub"`            // 套餐子商品
+	IsWrap          bool     `json:"is_wrap"`           // 打包
+	IsGift          bool     `json:"is_gift"`           // 赠品
+	IsBuffetProduct bool     `json:"is_buffet_product"` // 自助餐商品
+	Remark          string   `json:"remark"`            // 备注
 }
 
 // printerTemplate 模板基类
@@ -537,7 +550,7 @@ func (p *printerTemplate) MergeSaleOrderProduct(options MergeSaleOrderProductOpt
 		}
 
 		// 商品名称
-		productAttr := item.GetAttributeNamesByLang(p.Lang, options.IsShowSku)
+		productAttr, attrList, flavorName, sauceNames := item.GetAttributeNamesByLangs(p.Lang, options.IsShowSku)
 		productName := utils.IfString(item.IsPackageSubProduct(), "--", "") + wrap + gift + item.MultiLanguageName.GetNameByLang(p.Lang)
 		if productAttr != "" {
 			productName = productName + "\n" + utils.IfString(item.IsPackageSubProduct(), "  ", "") + "(" + productAttr + ")"
@@ -561,6 +574,19 @@ func (p *printerTemplate) MergeSaleOrderProduct(options MergeSaleOrderProductOpt
 				ProductNum:        item.Num,
 				ProductTotalPrice: productTotalPrice,
 				SubProducts:       subProducts,
+				//
+				Name:            item.MultiLanguageName.GetNameByLang(p.Lang),
+				Attrs:           productAttr,
+				Attr:            strings.Join(attrList, " "),
+				AttrList:        attrList,
+				FlavorName:      flavorName,
+				SauceList:       sauceNames,
+				SauceNames:      strings.Join(sauceNames, " "),
+				IsSub:           item.IsPackageSubProduct(),
+				IsWrap:          item.IsWrapProduct(),
+				IsGift:          item.IsGiftProduct(),
+				IsBuffetProduct: item.IsBuffetProduct(),
+				Remark:          item.Remark,
 			}
 			// 记录key首次出现的顺序
 			keyOrder = append(keyOrder, key)

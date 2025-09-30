@@ -28,12 +28,12 @@ import (
 
 // PPrinterRepo 打印
 type PPrinterRepo interface {
-	PrintingDishes(printType int, saleBillUuid uint64, products printer_model.Products) bool
-	PrintingStatementOrder(printType int, saleBill *model.SaleBill, saleOrderUuid uint64, FirstExecution int, payMethodUuid uint64) (*resp.PrinterData, error)
+	PrintingDishes(printType int, saleBillUuid uint64, saleOrderUuid uint64, products printer_model.Products) bool
+	PrintingStatementOrder(printType int, saleBill *model.SaleBill, saleOrderUuid uint64, firstExecution int, payMethodUuid uint64) (*resp.PrinterData, error)
 	PrintingInvoice(saleBill *model.SaleBill, saleOrderUuid uint64, firstExecution int) (*resp.PrinterData, error)
-	PrintingRechargeOrder(order model.MemberRechargeOrder, FirstExecution int) (*resp.PrinterData, error)
-	PrintingHandoverOrder(log *model.StaffShiftLog, businessData *business_data_resp.BusinessDataAll, FirstExecution int, openMoneybox bool, deviceSnId ...string) (*resp.PrinterData, error)
-	PrintingBusinessData(businessData *template.PrintingBusinessData, startTime int64, endTime int64, deviceSnId ...string) (*resp.PrinterData, error)
+	PrintingRechargeOrder(order model.MemberRechargeOrder, firstExecution int) (*resp.PrinterData, error)
+	PrintingHandoverOrder(log *model.StaffShiftLog, businessData *business_data_resp.BusinessDataAll, firstExecution int, openMoneybox bool, deviceSnId ...string) (*resp.PrinterData, error)
+	PrintingBusinessData(businessData *template.PrintingBusinessData, startTime int64, endTime int64, firstExecution int) (*resp.PrinterData, error)
 	PrintingTakeoutOrder(memberSaleOrder *model.MemberSaleOrder, saleBill *model.SaleBill, saleOrderUuid uint64) (*resp.PrinterData, error)
 	SetFinishedTime(finishedTime int64) // 设置完成时间
 	GetFinishedTime() int64             // 获取完成时间
@@ -102,15 +102,15 @@ func NewPrinterRepo(ctx context.Context, langs ...string) PPrinterRepo {
 }
 
 // 获取打印机模板
-func (p *PrinterRepoImpl) GetPrinterTemplate(id uint64) int {
+func (p *PrinterRepoImpl) GetPrinterTemplate(id uint64) (int, uint64, string) {
 	// 获取打印机模板
 	db := p.dbm.GetDB(p.ctx.GetCompanyUuid())
 	printerTemplateRepo, err := repository.NewPrinterTemplateRepo(db).GetPrinterTemplateInfo(id)
 	if err != nil {
 		logger.Logger.Error("获取打印机模板失败", zap.Error(err))
-		return 1
+		return 1, 0, ""
 	}
-	return printerTemplateRepo.Template
+	return printerTemplateRepo.Template, printerTemplateRepo.TmpUuid, printerTemplateRepo.TmpData
 }
 
 // 获取打印机模板详情

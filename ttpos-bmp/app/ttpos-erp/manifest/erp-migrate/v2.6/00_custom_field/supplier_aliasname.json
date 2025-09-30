@@ -1,0 +1,8 @@
+{
+  "doctype": "DocType",
+  "label": "Alias Name",
+  "fieldtype": "Data",
+  "fieldname": "custom_aliasname",
+  "insert_after": "supplier_name",
+  "dt": "Supplier"
+}

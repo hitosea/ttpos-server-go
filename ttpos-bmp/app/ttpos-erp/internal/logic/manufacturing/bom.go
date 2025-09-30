@@ -3,11 +3,14 @@ package manufacturing
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/manufacturing"
+	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/util/gconv"
 )
 
 var (
@@ -33,17 +36,18 @@ func (s *sBom) GetBomList(ctx context.Context, req *manufacturing.GetBomListReq)
 
 	// 调用ERP接口获取BOM列表
 	resp, err := service.Document().List(ctx, &erp.ErpReq{
-		DocType: "BOM",
+		DocType: erp.DocTypeBom,
 	}, &erp.RequestParams{
 		Fields:  []string{"name", "item", "uom", "quantity", "is_active", "is_default"},
 		Filters: filters,
+		Limit:   consts.Limit9999,
 	})
 	if err != nil {
 		return nil, gerror.Wrapf(err, "获取BOM列表失败")
 	}
 
 	// 解析响应数据并构建BOM列表
-	bomList, err := s.parseBomListResponse(ctx, resp.Bytes())
+	bomList, err := s.parseBomListResponse(ctx, resp.Bytes(), req)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析BOM列表响应失败")
 	}
@@ -51,6 +55,36 @@ func (s *sBom) GetBomList(ctx context.Context, req *manufacturing.GetBomListReq)
 	return &manufacturing.GetBomListResp{
 		BomList: bomList,
 	}, nil
+}
+
+// GetBom 根据BOM名称获取单个BOM详细信息
+// 参数：ctx 上下文，req 包含BOM名称
+// 返回：BOM详细信息，错误信息
+func (s *sBom) GetBom(ctx context.Context, req *manufacturing.GetBomReq) (res *erp.Bom, err error) {
+	// 参数验证
+	if len(req.BomName) == 0 {
+		return nil, gerror.New("BOM名称不能为空")
+	}
+
+	// 查询BOM信息
+	resp, err := service.Document().Get(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeBom,
+		Name:    req.BomName,
+	}, nil)
+
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询BOM信息失败")
+	}
+
+	// 解析响应数据
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return nil, gerror.Wrapf(err, "解析BOM信息响应失败")
+	}
+	bomInfo := &erp.Bom{}
+	gconv.Structs(j.GetJson("data"), &bomInfo)
+
+	return bomInfo, nil
 }
 
 // buildBomListFilters 构建BOM列表查询过滤条件
@@ -94,7 +128,7 @@ func (s *sBom) buildBomListFilters(ctx context.Context, req *manufacturing.GetBo
 // parseBomListResponse 解析BOM列表响应数据
 // 参数：ctx 上下文，responseData 响应数据字节数组
 // 返回：BOM信息列表，错误信息
-func (s *sBom) parseBomListResponse(ctx context.Context, responseData []byte) ([]*manufacturing.BomInfo, error) {
+func (s *sBom) parseBomListResponse(ctx context.Context, responseData []byte, req *manufacturing.GetBomListReq) ([]*manufacturing.BomInfo, error) {
 	// 解析JSON响应
 	j, err := gjson.DecodeToJson(responseData)
 	if err != nil {
@@ -105,8 +139,35 @@ func (s *sBom) parseBomListResponse(ctx context.Context, responseData []byte) ([
 	dataArray := j.GetJsons("data")
 	bomList := make([]*manufacturing.BomInfo, 0, len(dataArray))
 
+	subCompanyName := ""
+	if len(req.SubCompanyAbbr) > 0 {
+		subCompanyName, err = service.Company().GetCompanyNameWithAbbr(ctx, req.SubCompanyAbbr)
+		if err != nil {
+			return nil, gerror.Wrapf(err, "获取子公司名称失败,companyAbbr:%s", req.SubCompanyAbbr)
+		}
+	}
+
 	// 遍历数据数组，构建BOM信息列表
 	for _, item := range dataArray {
+		//获取当前BOM 的所有 Permission List 判断是否有权限使用, 列表查询目前不支持 表格字段查询，只能每次遍历BOM查询 对应的 custom_permission_rule
+		if len(req.SubCompanyAbbr) > 0 {
+			bomInfo, err := s.GetBom(ctx, &manufacturing.GetBomReq{
+				BomName: item.Get("name").String(),
+			})
+			if err != nil {
+				g.Log().Errorf(ctx, "获取BOM信息失败,bomName:%s,err:%v", item.Get("name").String(), err)
+				continue // 获取BOM信息失败，跳过该BOM
+			}
+			hasPermission, err := service.Permission().CheckPermission(ctx, bomInfo.CustomPermissionRule, subCompanyName)
+			if err != nil {
+				g.Log().Errorf(ctx, "检查BOM权限失败,bomName:%s,err:%v", item.Get("name").String(), err)
+				continue // 检查权限失败，跳过该BOM
+			}
+			if !hasPermission {
+				continue // 当前子公司无权限，跳过该BOM
+			}
+		}
+
 		bomInfo := &manufacturing.BomInfo{
 			ItemCode:  item.Get("item").String(),
 			BomName:   item.Get("name").String(),
@@ -114,6 +175,7 @@ func (s *sBom) parseBomListResponse(ctx context.Context, responseData []byte) ([
 			Quantity:  item.Get("quantity").Float64(),
 			IsActive:  item.Get("is_active").Bool(),
 			IsDefault: item.Get("is_default").Bool(),
+			Company:   req.CompanyAbbr,
 		}
 		bomList = append(bomList, bomInfo)
 	}
@@ -147,7 +209,7 @@ func (s *sBom) SaveBom(ctx context.Context, req *manufacturing.SaveBomReq) (res 
 	}
 
 	//创建后是草稿状态，提交BOM
-	_, err = service.Document().ChangeDocStatus(ctx, "BOM", bomName, 1)
+	_, err = service.Document().ChangeDocStatus(ctx, "BOM", bomName, erp.DocstatusSubmitted)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "提交BOM失败")
 	}

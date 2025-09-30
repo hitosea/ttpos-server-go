@@ -37,6 +37,7 @@ func sentCookingEventHandler() {
 				printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
 					constant.PrinterProductTypeKitchen,
 					payload.SaleBillUuid,
+					payload.SaleOrderUuid,
 					products,
 				)
 			}()

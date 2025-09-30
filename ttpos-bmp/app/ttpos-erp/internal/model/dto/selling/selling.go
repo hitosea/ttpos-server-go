@@ -7,6 +7,8 @@ type GetPosInvoiceListReq struct {
 	User       string `json:"user,omitempty"`
 	Docstatus  string `json:"docstatus,omitempty"` //文档状态
 	IsReturn   string `json:"is_return,omitempty"` //是否退款
+
+	CustomPosOpeningEntry string `json:"custom_pos_opening_entry,omitempty"` // 自定义POS开帐分录
 }
 
 // SimplePosInvoice 结构体定义

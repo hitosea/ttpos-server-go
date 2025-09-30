@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -24,32 +25,69 @@ import (
 type IProductionSrv interface {
 	GetProductListByOrder(ctx context.Context, req req.ProductionListReq) (resp.ProductionListWithPagination, error)              // 根据订单获取送厨商品
 	GetProductListByCategory(ctx context.Context, req req.ProductionListByCategoryReq) (resp.ProductionListWithPagination, error) // 根据分类获取送厨商品
-	GetHistory(ctx context.Context) (resp.ProductionHistory, error)                                                               // 获取上菜历史
-	Finish(ctx context.Context, productionUuid uint64) error                                                                      // 完成制作
-	Recovery(ctx context.Context, productionUuid uint64) error                                                                    // 恢复制作
+	GetHistory(ctx context.Context, req req.HistoryReq) (resp.ProductionHistory, error)                                           // 获取制作完成、传菜完成历史
+	Finish(ctx context.Context, req req.FinishReq) error                                                                          // 完成制作、传菜
+	Recovery(ctx context.Context, req req.RecoveryReq) error                                                                      // 恢复制作
 	ConfirmReturn(ctx context.Context, productUuid uint64) error                                                                  // 厨显端确认退菜
 	ConfirmReturnAll(ctx context.Context, saleBillUuid uint64) error                                                              // 厨显端确认退菜整单
 }
 
 // productionSrv 收银服务结构体
 type productionSrv struct {
-	dbm *database.DBManager // 数据库管理器
+	dbm        *database.DBManager // 数据库管理器
+	settingSrv setting.ISrv
 }
 
 // NewProductionSrv 创建新的收银产品类别服务
-func NewProductionSrv(dbm *database.DBManager) IProductionSrv {
-	return NewProductionSrvImpl(dbm)
+func NewProductionSrv(dbm *database.DBManager, settingSrv setting.ISrv) IProductionSrv {
+	return NewProductionSrvImpl(dbm, settingSrv)
 }
 
 // NewProductionSrvImpl 创建新的收银服务实现
-func NewProductionSrvImpl(dbm *database.DBManager) IProductionSrv {
+func NewProductionSrvImpl(dbm *database.DBManager, settingSrv setting.ISrv) IProductionSrv {
 	return &productionSrv{
-		dbm: dbm,
+		dbm:        dbm,
+		settingSrv: settingSrv,
 	}
+}
+
+func (s *productionSrv) getMode(ctx context.Context, reqMode uint) (*uint, error) {
+	var mode *uint = nil
+	kitchenSetting, err := s.settingSrv.GetKitchenSetting(ctx, ctx.GetCompanySetting(), nil)
+	if err != nil {
+		return mode, errors.WithMessage(errors.New("获取厨显设置失败"), err.Error())
+	}
+	if kitchenSetting.IsSmartKitchen == "1" {
+		deviceRepo := repository.NewDeviceRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+		device, err := deviceRepo.GetDevice(deviceRepo.WhereSn(ctx.GetDeviceSn()), deviceRepo.WhereSource(ctx.GetSource()))
+		if err != nil {
+			return nil, errors.WithMessage(errors.New("获取设备信息失败"), err.Error())
+		}
+		switch device.KdsMode {
+		case constant.KdsModeDefault: // 单传菜模式，只接受 req.Mode = 0
+			if reqMode != 0 {
+				return nil, errors.WithMessage(errors.New("本机不支持查看待制作的菜品"))
+			}
+		case constant.KdsModeMake: // 仅制作模式，只接受 req.Mode = 1
+			if reqMode != 1 {
+				return nil, errors.WithMessage(errors.New("本机不支持查看待传菜的菜品"))
+			}
+		case constant.KdsModeMakeAndSend: // 制作+传菜模式，只接受 req.Mode = 1 or req.Mode = 0
+			if reqMode != 1 && reqMode != 0 {
+				return nil, errors.WithMessage(errors.New("本机不支持查看当前状态的菜品"))
+			}
+		}
+		mode = &reqMode
+	}
+	return mode, nil
 }
 
 // GetProductListByOrder 根据订单获取送厨商品
 func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.ProductionListReq) (resp.ProductionListWithPagination, error) {
+	mode, err := s.getMode(ctx, req.Mode)
+	if err != nil {
+		return resp.ProductionListWithPagination{}, err
+	}
 	productPackageUuids, saleBillUuids, emptyRes, err := s.getProductPackageUuidsAndSaleBillUuids(ctx)
 	if err != nil || len(productPackageUuids) == 0 {
 		return emptyRes, err
@@ -59,17 +97,23 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 	productPackageUuidOpt := productionRepo.WhereProductPackageUuidIn(productPackageUuids)
 	saleBillUuidOpt := productionRepo.WhereSaleBillUuidIn(saleBillUuids)
 
-	opts := []repository.DBOption{
+	limitedProductOpts := []repository.DBOption{
 		statusOpt,
 		productPackageUuidOpt,
 		saleBillUuidOpt,
 	}
+	if mode != nil && *mode == 1 { // 制作模式，只显示未制作完成和已恢复到制作中的商品
+		limitedProductOpts = append(limitedProductOpts, productionRepo.WhereProductMakeStatus([]uint{
+			constant.ProductionOrderProductMakeStatusDefault,
+			constant.ProductionOrderProductMakeStatusRecovery,
+		}))
+	}
 	// 2.4.0 版本之前，只显示大于0的商品
 	if !ctx.Version(context.GTE, "2.4.0") {
-		opts = append(opts, productionRepo.WhereProductNumGT0())
+		limitedProductOpts = append(limitedProductOpts, productionRepo.WhereProductNumGT0())
 	}
 
-	limitedProducts, total, err := productionRepo.GetLimitedProducts(constant.ProductionOrderProductColumnSaleBill, req.PageNo, req.PageSize, opts...)
+	limitedProducts, total, err := productionRepo.GetLimitedProducts(constant.ProductionOrderProductColumnSaleBill, req.PageNo, req.PageSize, limitedProductOpts...)
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.ErrInternal
 	}
@@ -77,26 +121,32 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 	for _, limitedProduct := range limitedProducts {
 		uuids = append(uuids, limitedProduct.SaleBillUuid)
 	}
-	opts2 := []repository.DBOption{
+	productOpts := []repository.DBOption{
 		productPackageUuidOpt,
 		saleBillUuidOpt,
 		productionRepo.WhereSaleBillUuidIn(uuids),
 	}
+	if mode != nil && *mode == 1 { // 制作模式，只显示未制作完成和已恢复到制作中的商品
+		productOpts = append(productOpts, productionRepo.WhereProductMakeStatus([]uint{
+			constant.ProductionOrderProductMakeStatusDefault,
+			constant.ProductionOrderProductMakeStatusRecovery,
+		}))
+	}
 	// 2.4.0 版本之前，只显示大于0的商品
 	if !ctx.Version(context.GTE, "2.4.0") {
-		opts2 = append(opts2, productionRepo.WhereProductNumGT0())
+		productOpts = append(productOpts, productionRepo.WhereProductNumGT0())
 	}
-	sendKitchenNum, products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc, statusOpt, opts2...)
+	sendKitchenNum, products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc, statusOpt, productOpts...)
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.ErrInternal
 	}
-	finishedList, err := s.getLatestFinishedList(productionRepo, productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusFinished), productPackageUuidOpt, saleBillUuidOpt)
+	finishedList, err := s.getFinishedList(productionRepo, mode, productPackageUuidOpt, saleBillUuidOpt)
 	if err != nil {
-		return resp.ProductionListWithPagination{}, errors.ErrInternal
+		return resp.ProductionListWithPagination{}, err
 	}
 	return resp.ProductionListWithPagination{
 		SendKitchenNum: sendKitchenNum,
-		List:           s.groupByOrder(ctx, limitedProducts, products),
+		List:           s.groupByOrder(ctx, limitedProducts, products, nil),
 		FinishedList:   finishedList,
 		Meta: dto.PageResponse{
 			PageNo:   req.PageNo,
@@ -150,6 +200,10 @@ func (s *productionSrv) getProductPackageUuidsAndSaleBillUuids(ctx context.Conte
 
 // GetProductListByCategory 根据订单获取送厨商品
 func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.ProductionListByCategoryReq) (resp.ProductionListWithPagination, error) {
+	mode, err := s.getMode(ctx, req.Mode)
+	if err != nil {
+		return resp.ProductionListWithPagination{}, err
+	}
 	productPackageUuids, saleBillUuids, emptyRes, err := s.getProductPackageUuidsAndSaleBillUuids(ctx)
 	if err != nil || len(productPackageUuids) == 0 {
 		return emptyRes, err
@@ -159,19 +213,25 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 	statusOpt := productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusCooking)
 	productPackageUuidOpt := productionRepo.WhereProductPackageUuidIn(productPackageUuids)
 	saleBillUuidOpt := productionRepo.WhereSaleBillUuidIn(saleBillUuids)
-	dbOptions := []repository.DBOption{
+	limitedProductOpts := []repository.DBOption{
 		statusOpt,
 		productPackageUuidOpt,
 		saleBillUuidOpt,
 	}
+	if mode != nil && *mode == 1 { // 制作模式，只显示未制作完成和已恢复到制作中的商品
+		limitedProductOpts = append(limitedProductOpts, productionRepo.WhereProductMakeStatus([]uint{
+			constant.ProductionOrderProductMakeStatusDefault,
+			constant.ProductionOrderProductMakeStatusRecovery,
+		}))
+	}
 	// 2.4.0 版本之前，只显示大于0的商品
 	if !ctx.Version(context.GTE, "2.4.0") {
-		dbOptions = append(dbOptions, productionRepo.WhereProductNumGT0())
+		limitedProductOpts = append(limitedProductOpts, productionRepo.WhereProductNumGT0())
 	}
 	if req.CategoryUuid != 0 {
-		dbOptions = append(dbOptions, productionRepo.WhereProductFirstCategoryUuidIn([]uint64{req.CategoryUuid}))
+		limitedProductOpts = append(limitedProductOpts, productionRepo.WhereProductFirstCategoryUuidIn([]uint64{req.CategoryUuid}))
 	}
-	limitedProducts, total, err := productionRepo.GetLimitedProducts(constant.ProductionOrderProductColumnCategory, req.PageNo, req.PageSize, dbOptions...)
+	limitedProducts, total, err := productionRepo.GetLimitedProducts(constant.ProductionOrderProductColumnCategory, req.PageNo, req.PageSize, limitedProductOpts...)
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.WithMessage(errors.ErrInternal)
 	}
@@ -179,19 +239,24 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 	for _, product := range limitedProducts {
 		uuids = append(uuids, product.FirstCategoryUuid)
 	}
-
-	dbOptions2 := []repository.DBOption{
+	productOpts := []repository.DBOption{
 		productPackageUuidOpt,
 		saleBillUuidOpt,
 		productionRepo.WhereProductFirstCategoryUuidIn(uuids),
 		productionRepo.WithProductCategory(),
 		productionRepo.WithProductCategoryMultiLanguageName(),
 	}
+	if mode != nil && *mode == 1 { // 制作模式，只显示未制作完成和已恢复到制作中的商品
+		productOpts = append(productOpts, productionRepo.WhereProductMakeStatus([]uint{
+			constant.ProductionOrderProductMakeStatusDefault,
+			constant.ProductionOrderProductMakeStatusRecovery,
+		}))
+	}
 	// 2.4.0 版本之前，只显示大于0的商品
 	if !ctx.Version(context.GTE, "2.4.0") {
-		dbOptions2 = append(dbOptions2, productionRepo.WhereProductNumGT0())
+		productOpts = append(productOpts, productionRepo.WhereProductNumGT0())
 	}
-	sendKitchenNum, products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc, statusOpt, dbOptions2...)
+	sendKitchenNum, products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc, statusOpt, productOpts...)
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.WithMessage(errors.ErrInternal)
 	}
@@ -227,9 +292,9 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 		}
 		groups = append(groups, group)
 	}
-	finishedList, err := s.getLatestFinishedList(productionRepo, productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusFinished), productPackageUuidOpt, saleBillUuidOpt)
+	finishedList, err := s.getFinishedList(productionRepo, mode, productPackageUuidOpt, saleBillUuidOpt)
 	if err != nil {
-		return resp.ProductionListWithPagination{}, errors.WithMessage(errors.ErrInternal)
+		return resp.ProductionListWithPagination{}, err
 	}
 	return resp.ProductionListWithPagination{
 		SendKitchenNum: sendKitchenNum,
@@ -243,9 +308,40 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 	}, nil
 }
 
+// getFinishedList 获取最近上菜历史
+func (s *productionSrv) getFinishedList(productionRepo repository.IProductionOrderRepo, mode *uint, opts ...repository.DBOption) (resp.ProductionList, error) {
+	var finishStatusOpt repository.DBOption = nil
+	var orderBy string = repository.FinishedTimeDesc
+	if mode != nil {
+		switch *mode {
+		case constant.KdsModeMake: // 制作模式，只显示已制作完成的商品
+			opts = append(opts, productionRepo.WhereProductMakeStatus([]uint{constant.ProductionOrderProductMakeStatusFinished}))
+			orderBy = repository.MadeTimeDesc
+		case constant.KdsModeDefault: // 传菜模式
+			finishStatusOpt = productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusFinished)
+		}
+	} else {
+		finishStatusOpt = productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusFinished)
+	}
+	finishedList, err := s.getLatestFinishedList(productionRepo, orderBy, finishStatusOpt, opts...)
+	if err != nil {
+		errMsg := "获取最近上菜历史失败"
+		if mode != nil {
+			switch *mode {
+			case constant.KdsModeMake:
+				errMsg = "获取最近制作历史失败"
+			case constant.KdsModeDefault:
+				errMsg = "获取最近上菜历史失败"
+			}
+		}
+		return resp.ProductionList{}, errors.WithMessage(errors.New(errMsg), err.Error())
+	}
+	return finishedList, nil
+}
+
 // 最近上菜历史
-func (s *productionSrv) getLatestFinishedList(productionRepo repository.IProductionOrderRepo, statusOpt repository.DBOption, opts ...repository.DBOption) (resp.ProductionList, error) {
-	_, products, err := productionRepo.GetProducts(3, repository.FinishedTimeDesc, statusOpt, opts...)
+func (s *productionSrv) getLatestFinishedList(productionRepo repository.IProductionOrderRepo, orderBy string, statusOpt repository.DBOption, opts ...repository.DBOption) (resp.ProductionList, error) {
+	_, products, err := productionRepo.GetProducts(3, orderBy, statusOpt, opts...)
 	if err != nil {
 		return resp.ProductionList{}, errors.ErrInternal
 	}
@@ -263,32 +359,49 @@ func (s *productionSrv) getLatestFinishedList(productionRepo repository.IProduct
 	}, nil
 }
 
-// GetHistory 获取上菜历史
-func (s *productionSrv) GetHistory(ctx context.Context) (resp.ProductionHistory, error) {
-	// 获取过去24小时内的上菜历史，按照上菜时间倒序
+// GetHistory 获取制作完成、传菜完成历史
+func (s *productionSrv) GetHistory(ctx context.Context, req req.HistoryReq) (resp.ProductionHistory, error) {
+	// 获取过去24小时内的制作、传菜历史，按照制作、传菜时间倒序
 	productionRepo := repository.NewProductionRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
-	statusOpt := productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusFinished)
-	finishedTimeOpt := productionRepo.WhereProductFinishedTime(time.Now().Add(-1 * time.Hour * 24).Unix())
-	limitProducts, err := productionRepo.GetLimitedHistoryProducts(statusOpt, finishedTimeOpt)
+
+	mode, err := s.getMode(ctx, req.Mode)
+	if err != nil {
+		return resp.ProductionHistory{}, err
+	}
+
+	var statusOpt, finishedTimeOpt repository.DBOption
+	var limitedOrderField, productsOrderBy string
+
+	if mode != nil && *mode == constant.KdsModeMake {
+		statusOpt = productionRepo.WhereProductMakeStatus([]uint{constant.ProductionOrderProductMakeStatusFinished})
+		finishedTimeOpt = productionRepo.WhereProductMadeTime(time.Now().Add(-1 * time.Hour * 24).Unix())
+		limitedOrderField = "made_time"
+		productsOrderBy = repository.MadeTimeDesc
+	} else {
+		statusOpt = productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusFinished)
+		finishedTimeOpt = productionRepo.WhereProductFinishedTime(time.Now().Add(-1 * time.Hour * 24).Unix())
+		limitedOrderField = "finished_time"
+		productsOrderBy = repository.FinishedTimeDesc
+	}
+
+	limitProducts, err := productionRepo.GetLimitedHistoryProducts(limitedOrderField, statusOpt, finishedTimeOpt)
 	if err != nil {
 		return resp.ProductionHistory{}, errors.WithMessage(errors.ErrInternal)
 	}
-
-	_, products, err := productionRepo.GetProducts(0, repository.FinishedTimeDesc, statusOpt,
-		finishedTimeOpt, productionRepo.SaleBillUuidOpt())
+	_, products, err := productionRepo.GetProducts(0, productsOrderBy, statusOpt, finishedTimeOpt, productionRepo.SaleBillUuidOpt())
 	if err != nil {
 		return resp.ProductionHistory{}, errors.WithMessage(errors.ErrInternal)
 	}
-
 	return resp.ProductionHistory{
-		List: s.groupByOrder(ctx, limitProducts, products),
+		List: s.groupByOrder(ctx, limitProducts, products, mode),
 	}, nil
 }
 
 // 根据销售账单分组
-func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.ProductionOrderProduct, products []model.ProductionOrderProduct) []resp.ProductionGroup {
+func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.ProductionOrderProduct, products []model.ProductionOrderProduct, mode *uint) []resp.ProductionGroup {
 	groups := make([]resp.ProductionGroup, 0, len(limitProducts))
 	language := ctx.GetLanguage()
+	modeMake := mode != nil && *mode == constant.KdsModeMake
 	for _, paginatedProduct := range limitProducts {
 		var group resp.ProductionGroup
 		items := make([]resp.ProductionItem, 0) // 生产单商品列表
@@ -320,6 +433,9 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 			}
 			if product.SaleOrderProduct.IsPackageSubProduct() && item.Remark != "" {
 				item.Remark = i18n.Translate(language, "套餐备注：") + item.Remark
+			}
+			if modeMake {
+				item.FinishedTime = product.MadeTime
 			}
 			item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
 			item.ProductAttributeNames = product.SaleOrderProduct.GetAttributeName()
@@ -380,11 +496,11 @@ func (s *productionSrv) updatePackageProduct(tx *gorm.DB, saleOrderProductUuid u
 }
 
 // Finish 完成制作
-func (s *productionSrv) Finish(ctx context.Context, productUuid uint64) error {
+func (s *productionSrv) Finish(ctx context.Context, req req.FinishReq) error {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	productionRepo := repository.NewProductionRepo(db)
 	product, _ := productionRepo.GetProduct(
-		productionRepo.WhereProductUuid(productUuid),
+		productionRepo.WhereProductUuid(req.ProductUuid),
 		productionRepo.WithSaleOrderProductAll(),
 	)
 	if product.Uuid == 0 {
@@ -397,11 +513,43 @@ func (s *productionSrv) Finish(ctx context.Context, productUuid uint64) error {
 		return errors.New("订单商品数量为0")
 	}
 
+	mode, err := s.getMode(ctx, req.Mode)
+	if err != nil {
+		return err
+	}
+
+	// 制作模式页面，双击完成制作
+	if mode != nil {
+		switch *mode {
+		case constant.KdsModeMake: // 制作模式
+			if product.MakeStatus == constant.ProductionOrderProductMakeStatusFinished {
+				return errors.New("订单商品已制作完成")
+			}
+			if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(req.ProductUuid)}, map[string]any{
+				"make_status": constant.ProductionOrderProductMakeStatusFinished,
+				"made_time":   time.Now().Unix(),
+			}); err != nil {
+				return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
+			}
+			// 完成制作后，推送更新厨显
+			go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
+				"update_time": time.Now().Unix(),
+			})
+			return nil
+		case constant.KdsModeDefault: // 传菜模式
+			if product.MakeStatus != constant.ProductionOrderProductMakeStatusFinished {
+				return errors.New("订单商品未制作完成")
+			}
+		default:
+			return errors.New("不支持的工作模式")
+		}
+	}
+
 	finishedTime := time.Now().Unix()
 
-	err := db.Transaction(func(tx *gorm.DB) error {
+	err = db.Transaction(func(tx *gorm.DB) error {
 		productionRepo := repository.NewProductionRepo(tx)
-		if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(productUuid)}, map[string]any{
+		if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(req.ProductUuid)}, map[string]any{
 			"status":        constant.ProductionOrderProductStatusFinished,
 			"finished_time": finishedTime,
 		}); err != nil {
@@ -423,11 +571,12 @@ func (s *productionSrv) Finish(ctx context.Context, productUuid uint64) error {
 		}
 		event.NewSystemBus().PublishFinishMenuEvent(event.FinishMenuPayload{
 			BasePayload: event.BasePayload{
-				Ctx:           ctx,
-				CompanyUuid:   ctx.GetCompanyUuid(),
-				Source:        ctx.GetSource(),
-				SaleBillUuid:  product.SaleBillUuid,
-				SaleOrderUuid: product.SaleOrderProductUuid,
+				Ctx:                 ctx,
+				CompanyUuid:         ctx.GetCompanyUuid(),
+				ProductionOrderUuid: product.ProductionOrderUuid,
+				Source:              ctx.GetSource(),
+				SaleBillUuid:        product.SaleBillUuid,
+				SaleOrderUuid:       product.SaleOrderProductUuid,
 			},
 			FinishedTime: finishedTime,
 			Products: event.Products{
@@ -453,6 +602,7 @@ func (s *productionSrv) Finish(ctx context.Context, productUuid uint64) error {
 			},
 		})
 	}()
+
 	// 完成制作后，推送更新厨显
 	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
 		"update_time": time.Now().Unix(),
@@ -468,20 +618,47 @@ func (s *productionSrv) Finish(ctx context.Context, productUuid uint64) error {
 }
 
 // Recovery 恢复制作
-func (s *productionSrv) Recovery(ctx context.Context, productUuid uint64) error {
+func (s *productionSrv) Recovery(ctx context.Context, req req.RecoveryReq) error {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	productionRepo := repository.NewProductionRepo(db)
-	product, _ := productionRepo.GetProduct(productionRepo.WhereProductUuid(productUuid))
+	product, _ := productionRepo.GetProduct(productionRepo.WhereProductUuid(req.ProductUuid))
 	if product.Uuid == 0 {
 		return errors.New("订单商品不存在")
 	}
+
+	mode, err := s.getMode(ctx, req.Mode)
+	if err != nil {
+		return err
+	}
+
+	if mode != nil && *mode == constant.KdsModeMake {
+		// 是否已制作完成
+		if product.MakeStatus != constant.ProductionOrderProductMakeStatusFinished {
+			return errors.New("订单商品未制作完成")
+		}
+		// 是否已经传菜
+		if product.Status == constant.ProductionOrderProductStatusFinished {
+			return errors.New("该菜品已传菜，不可恢复！")
+		}
+		if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(req.ProductUuid)}, map[string]any{
+			"make_status": constant.ProductionOrderProductMakeStatusDefault,
+			"made_time":   0,
+		}); err != nil {
+			return errors.WithMessage(errors.New("恢复送厨单商品制作状态失败"), err.Error())
+		}
+		// 恢复制作后，推送更新厨显
+		go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
+			"update_time": time.Now().Unix(),
+		})
+		return nil
+	}
+
 	if product.Status != constant.ProductionOrderProductStatusFinished {
 		return errors.New("订单商品未完成")
 	}
-
-	err := db.Transaction(func(tx *gorm.DB) error {
+	err = db.Transaction(func(tx *gorm.DB) error {
 		productionRepo := repository.NewProductionRepo(tx)
-		if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(productUuid)}, map[string]any{
+		if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(req.ProductUuid)}, map[string]any{
 			"status":        constant.ProductionOrderProductStatusCooking,
 			"finished_time": 0,
 		}); err != nil {
@@ -524,6 +701,7 @@ func (s *productionSrv) ConfirmReturn(ctx context.Context, productUuid uint64) e
 	}); err != nil {
 		return errors.ErrInternal
 	}
+
 	// 恢复制作后，推送更新厨显
 	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
 		"update_time": time.Now().Unix(),

@@ -171,6 +171,7 @@ func (s *Srv) getSettingByKey(ctx context.Context, key string) model.Setting {
 			if err != nil {
 				return defaultSetting
 			}
+			defer res.GetBody().Close()
 			bodyBytes, _ := res.GetBodyAsByte()
 			var base Base
 			if err := json.Unmarshal(bodyBytes, &base); err != nil {
@@ -415,6 +416,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		printerSn              string
 		printerWidth           int = 80 // 默认80mm打印机
 		enableStatusCheck      int = 0  // 是否启用状态检查
+		enableSound            int = 0  // 是否启用打印提示音
 	)
 
 	// 收银机开启
@@ -459,6 +461,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 			printMethod = int(printer.PrintMethod)
 			printerWidth = printer.Width
 			enableStatusCheck = printer.EnableStatusCheck
+			enableSound = printer.EnableSound
 		} else if printerId != "0" && printerId != "" {
 			// 收银机内置的打印机
 			printerCashierDeviceSn = printerId
@@ -491,6 +494,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		PrinterSn:              printerSn,
 		PrinterWidth:           printerWidth,
 		EnableStatusCheck:      enableStatusCheck,
+		EnableSound:            enableSound,
 	}, nil
 }
 
@@ -1326,7 +1330,7 @@ func (s *Srv) CheckUpdate(ctx context.Context, appType int, brand string, langua
 	url := fmt.Sprintf("%s/api/admin/client.client/getNewVersion?type=%d&brand=%s&language=%s", viper.GetString("CLOUD_PLATFORM_HOST"), appType, brand, language)
 	res, err := gohttp.NewRequest().Post(url)
 	if err != nil {
-		return resp.UpdateInfo{}, errors.New("获取最新版本信息失败")
+		return resp.UpdateInfo{}, errors.WithMessage(errors.New("获取最新版本信息失败"), err.Error())
 	}
 	bodyBytes, _ := res.GetBodyAsByte()
 	var updateData UpdateData

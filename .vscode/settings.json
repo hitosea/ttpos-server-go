@@ -50,5 +50,5 @@
     // ===== 保存时自动运行 =====
     "go.buildOnSave": "workspace",
     "go.formatOnSave": true,
-    "go.lintOnSave": "workspace"
+    "go.lintOnSave": "workspace",
   }

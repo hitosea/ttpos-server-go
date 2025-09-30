@@ -58,6 +58,8 @@ services:
       - ./docker/mysql/permissions.sh:/etc/mysql/permissions.sh
       - ./docker/mysql/create_saas.sh:/etc/mysql/create_saas.sh
       - ./docker/mysql/init.d:/docker-entrypoint-initdb.d/
+    ports:
+      - "${DB_PORT_OPEN:-}:3306"
     environment:
       MARIADB_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
       MARIADB_DATABASE: "${DB_DATABASE}"

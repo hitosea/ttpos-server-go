@@ -25,10 +25,12 @@ type (
 		Delete(ctx context.Context, req *erp.ErpReq) (rst *g.Var, err error)
 		Copy(ctx context.Context, req *erp.ErpReq) (rst *g.Var, err error)
 		Execute(ctx context.Context, req *erp.ErpReq, params interface{}) (rst *g.Var, err error)
-		ChangeDocStatus(ctx context.Context, doctype string, name string, docstatus int) (rst *g.Var, err error)
+		ChangeDocStatus(ctx context.Context, doctype string, name string, docstatus string) (rst *g.Var, err error)
 	}
 	IRpc interface {
 		Execute(ctx context.Context, req *erp.ErpReq, params interface{}) (rst *g.Var, err error)
+		// GetSiteCode 获取站点编码
+		GetSiteCode(ctx context.Context) string
 	}
 	IReport interface {
 		Run(ctx context.Context, params *erp.ReportParams) (rst *g.Var, err error)

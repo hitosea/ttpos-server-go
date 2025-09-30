@@ -23,6 +23,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	StockService_SaveMaterialRequest_FullMethodName    = "/stock.StockService/SaveMaterialRequest"
 	StockService_GetMaterialRequestList_FullMethodName = "/stock.StockService/GetMaterialRequestList"
+	StockService_GetStockLedger_FullMethodName         = "/stock.StockService/GetStockLedger"
 )
 
 // StockServiceClient is the client API for StockService service.
@@ -37,6 +38,10 @@ type StockServiceClient interface {
 	// 参数：查询条件
 	// 返回：物品申请单列表和分页信息
 	GetMaterialRequestList(ctx context.Context, in *GetMaterialRequestListReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 获取库存分类账
+	// 参数：查询条件，包含公司、仓库、物品编码等过滤条件
+	// 返回：库存分类账列表
+	GetStockLedger(ctx context.Context, in *GetStockLedgerReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 }
 
 type stockServiceClient struct {
@@ -67,6 +72,16 @@ func (c *stockServiceClient) GetMaterialRequestList(ctx context.Context, in *Get
 	return out, nil
 }
 
+func (c *stockServiceClient) GetStockLedger(ctx context.Context, in *GetStockLedgerReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, StockService_GetStockLedger_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // StockServiceServer is the server API for StockService service.
 // All implementations must embed UnimplementedStockServiceServer
 // for forward compatibility.
@@ -79,6 +94,10 @@ type StockServiceServer interface {
 	// 参数：查询条件
 	// 返回：物品申请单列表和分页信息
 	GetMaterialRequestList(context.Context, *GetMaterialRequestListReq) (*api.ResponseInfo, error)
+	// 获取库存分类账
+	// 参数：查询条件，包含公司、仓库、物品编码等过滤条件
+	// 返回：库存分类账列表
+	GetStockLedger(context.Context, *GetStockLedgerReq) (*api.ResponseInfo, error)
 	mustEmbedUnimplementedStockServiceServer()
 }
 
@@ -94,6 +113,9 @@ func (UnimplementedStockServiceServer) SaveMaterialRequest(context.Context, *Sav
 }
 func (UnimplementedStockServiceServer) GetMaterialRequestList(context.Context, *GetMaterialRequestListReq) (*api.ResponseInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetMaterialRequestList not implemented")
+}
+func (UnimplementedStockServiceServer) GetStockLedger(context.Context, *GetStockLedgerReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetStockLedger not implemented")
 }
 func (UnimplementedStockServiceServer) mustEmbedUnimplementedStockServiceServer() {}
 func (UnimplementedStockServiceServer) testEmbeddedByValue()                      {}
@@ -152,6 +174,24 @@ func _StockService_GetMaterialRequestList_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _StockService_GetStockLedger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetStockLedgerReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StockServiceServer).GetStockLedger(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StockService_GetStockLedger_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StockServiceServer).GetStockLedger(ctx, req.(*GetStockLedgerReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // StockService_ServiceDesc is the grpc.ServiceDesc for StockService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -166,6 +206,10 @@ var StockService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetMaterialRequestList",
 			Handler:    _StockService_GetMaterialRequestList_Handler,
+		},
+		{
+			MethodName: "GetStockLedger",
+			Handler:    _StockService_GetStockLedger_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -10,6 +10,7 @@ import (
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/util/gconv"
 )
 
 type Controller struct {
@@ -20,7 +21,7 @@ func Register(s *grpcx.GrpcServer) {
 	buying.RegisterBuyingServiceServer(s.Server, &Controller{})
 }
 
-// GetSupplierList 获取供应商列表
+// GetSupplierList 获取供应商列表,只返回内部供应商列表
 // 参数：ctx 上下文，req 获取供应商列表请求
 // 返回：响应信息和错误
 func (c *Controller) GetSupplierList(ctx context.Context, req *buying.GetSupplierListReq) (*api.ResponseInfo, error) {
@@ -30,7 +31,7 @@ func (c *Controller) GetSupplierList(ctx context.Context, req *buying.GetSupplie
 	}
 
 	// 调用服务层获取数据
-	resp, err := service.Buying().GetSupplierList(ctx, req)
+	resp, err := service.Supplier().GetInnerSupplierList(ctx, req)
 	if err != nil {
 		return rpc.ApiError(err.Error()), nil
 	}
@@ -153,4 +154,84 @@ func (c *Controller) validateSavePurchaseReceiptReq(req *buying.SavePurchaseRece
 	}
 
 	return nil
+}
+
+func (*Controller) CreateSupplier(ctx context.Context, req *buying.CreateSupplierReq) (*api.ResponseInfo, error) {
+	resp, err := service.Supplier().CreateSupplier(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccessWithData("创建供应商成功", resp), nil
+}
+
+func (*Controller) GetSupplier(ctx context.Context, req *buying.GetSupplierReq) (*api.ResponseInfo, error) {
+	resp, err := service.Supplier().GetSupplier(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	supplier := &buying.SupplierData{}
+	gconv.Scan(resp, &supplier)
+	return rpc.ApiSuccessWithData("获取供应商成功", &buying.GetSupplierResp{
+		Supplier: supplier,
+	}), nil
+}
+
+func (*Controller) UpdateSupplier(ctx context.Context, req *buying.UpdateSupplierReq) (*api.ResponseInfo, error) {
+	resp, err := service.Supplier().UpdateSupplier(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccessWithData("更新供应商成功", resp), nil
+}
+
+func (*Controller) DeleteSupplier(ctx context.Context, req *buying.DeleteSupplierReq) (*api.ResponseInfo, error) {
+	resp, err := service.Supplier().DeleteSupplier(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccessWithData("删除供应商成功", resp), nil
+}
+
+func (*Controller) ListSuppliers(ctx context.Context, req *buying.ListSuppliersReq) (*api.ResponseInfo, error) {
+	resp, err := service.Supplier().ListSuppliers(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccessWithData("获取供应商列表成功", resp), nil
+}
+
+// GetPurchaseOrderList 获取采购订单列表
+func (*Controller) GetPurchaseOrderList(ctx context.Context, req *buying.GetPurchaseOrderListReq) (*api.ResponseInfo, error) {
+	resp, err := service.Buying().GetPurchaseOrderList(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccessWithData("获取采购订单列表成功", resp), nil
+}
+
+// GetPurchaseOrderCount 获取采购订单数量
+func (*Controller) GetPurchaseOrderCount(ctx context.Context, req *buying.GetPurchaseOrderCountReq) (*api.ResponseInfo, error) {
+	resp, err := service.Buying().GetPurchaseOrderCount(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccessWithData("获取采购订单数量成功", resp), nil
+}
+
+// CreatePurchaseOrder 创建采购订单
+func (*Controller) CreatePurchaseOrder(ctx context.Context, req *buying.CreatePurchaseOrderReq) (*api.ResponseInfo, error) {
+	resp, err := service.Buying().CreatePurchaseOrder(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccessWithData("创建采购订单成功", resp), nil
+}
+
+// UpdatePurchaseOrder 更新采购订单
+func (*Controller) UpdatePurchaseOrder(ctx context.Context, req *buying.UpdatePurchaseOrderReq) (*api.ResponseInfo, error) {
+	resp, err := service.Buying().UpdatePurchaseOrder(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccessWithData("更新采购订单成功", resp), nil
 }

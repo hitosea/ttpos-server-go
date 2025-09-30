@@ -22,6 +22,9 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	WarehouseService_CreateWarehouse_FullMethodName  = "/warehouse.WarehouseService/CreateWarehouse"
+	WarehouseService_GetWarehouse_FullMethodName     = "/warehouse.WarehouseService/GetWarehouse"
+	WarehouseService_UpdateWarehouse_FullMethodName  = "/warehouse.WarehouseService/UpdateWarehouse"
+	WarehouseService_DeleteWarehouse_FullMethodName  = "/warehouse.WarehouseService/DeleteWarehouse"
 	WarehouseService_GetWarehouseList_FullMethodName = "/warehouse.WarehouseService/GetWarehouseList"
 )
 
@@ -33,6 +36,12 @@ const (
 type WarehouseServiceClient interface {
 	// 创建仓库
 	CreateWarehouse(ctx context.Context, in *WarehouseInfo, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 获取仓库详情
+	GetWarehouse(ctx context.Context, in *GetWarehouseReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 更新仓库
+	UpdateWarehouse(ctx context.Context, in *UpdateWarehouseReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 删除仓库
+	DeleteWarehouse(ctx context.Context, in *DeleteWarehouseReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 	// 查询仓库列表
 	GetWarehouseList(ctx context.Context, in *GetWarehouseListReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 }
@@ -49,6 +58,36 @@ func (c *warehouseServiceClient) CreateWarehouse(ctx context.Context, in *Wareho
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(api.ResponseInfo)
 	err := c.cc.Invoke(ctx, WarehouseService_CreateWarehouse_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *warehouseServiceClient) GetWarehouse(ctx context.Context, in *GetWarehouseReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, WarehouseService_GetWarehouse_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *warehouseServiceClient) UpdateWarehouse(ctx context.Context, in *UpdateWarehouseReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, WarehouseService_UpdateWarehouse_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *warehouseServiceClient) DeleteWarehouse(ctx context.Context, in *DeleteWarehouseReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, WarehouseService_DeleteWarehouse_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -73,6 +112,12 @@ func (c *warehouseServiceClient) GetWarehouseList(ctx context.Context, in *GetWa
 type WarehouseServiceServer interface {
 	// 创建仓库
 	CreateWarehouse(context.Context, *WarehouseInfo) (*api.ResponseInfo, error)
+	// 获取仓库详情
+	GetWarehouse(context.Context, *GetWarehouseReq) (*api.ResponseInfo, error)
+	// 更新仓库
+	UpdateWarehouse(context.Context, *UpdateWarehouseReq) (*api.ResponseInfo, error)
+	// 删除仓库
+	DeleteWarehouse(context.Context, *DeleteWarehouseReq) (*api.ResponseInfo, error)
 	// 查询仓库列表
 	GetWarehouseList(context.Context, *GetWarehouseListReq) (*api.ResponseInfo, error)
 	mustEmbedUnimplementedWarehouseServiceServer()
@@ -87,6 +132,15 @@ type UnimplementedWarehouseServiceServer struct{}
 
 func (UnimplementedWarehouseServiceServer) CreateWarehouse(context.Context, *WarehouseInfo) (*api.ResponseInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateWarehouse not implemented")
+}
+func (UnimplementedWarehouseServiceServer) GetWarehouse(context.Context, *GetWarehouseReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetWarehouse not implemented")
+}
+func (UnimplementedWarehouseServiceServer) UpdateWarehouse(context.Context, *UpdateWarehouseReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateWarehouse not implemented")
+}
+func (UnimplementedWarehouseServiceServer) DeleteWarehouse(context.Context, *DeleteWarehouseReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteWarehouse not implemented")
 }
 func (UnimplementedWarehouseServiceServer) GetWarehouseList(context.Context, *GetWarehouseListReq) (*api.ResponseInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetWarehouseList not implemented")
@@ -130,6 +184,60 @@ func _WarehouseService_CreateWarehouse_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _WarehouseService_GetWarehouse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWarehouseReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WarehouseServiceServer).GetWarehouse(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WarehouseService_GetWarehouse_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WarehouseServiceServer).GetWarehouse(ctx, req.(*GetWarehouseReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WarehouseService_UpdateWarehouse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateWarehouseReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WarehouseServiceServer).UpdateWarehouse(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WarehouseService_UpdateWarehouse_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WarehouseServiceServer).UpdateWarehouse(ctx, req.(*UpdateWarehouseReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _WarehouseService_DeleteWarehouse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteWarehouseReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WarehouseServiceServer).DeleteWarehouse(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WarehouseService_DeleteWarehouse_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WarehouseServiceServer).DeleteWarehouse(ctx, req.(*DeleteWarehouseReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _WarehouseService_GetWarehouseList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetWarehouseListReq)
 	if err := dec(in); err != nil {
@@ -158,6 +266,18 @@ var WarehouseService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateWarehouse",
 			Handler:    _WarehouseService_CreateWarehouse_Handler,
+		},
+		{
+			MethodName: "GetWarehouse",
+			Handler:    _WarehouseService_GetWarehouse_Handler,
+		},
+		{
+			MethodName: "UpdateWarehouse",
+			Handler:    _WarehouseService_UpdateWarehouse_Handler,
+		},
+		{
+			MethodName: "DeleteWarehouse",
+			Handler:    _WarehouseService_DeleteWarehouse_Handler,
 		},
 		{
 			MethodName: "GetWarehouseList",

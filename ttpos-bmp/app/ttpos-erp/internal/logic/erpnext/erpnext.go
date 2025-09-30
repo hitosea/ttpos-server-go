@@ -37,6 +37,16 @@ func (s *sRpc) Execute(ctx context.Context, req *erp.ErpReq, params interface{})
 	return
 }
 
+// GetSiteCode 获取站点编码
+func (*sRpc) GetSiteCode(ctx context.Context) string {
+	m := grpcx.Ctx.IncomingMap(ctx)
+	if m.Contains(consts.ContextSiteCode) {
+		return m.GetVar(consts.ContextSiteCode).String()
+	}
+	//默认返回UAT
+	return consts.SiteCodeUat
+}
+
 func getRpcUrlWithName(req *erp.ErpReq) (url string) {
 	url = fmt.Sprintf("%s/%s", rpcApiUrl, req.DocType)
 	return
@@ -82,15 +92,15 @@ func GetClient(ctx context.Context) *gclient.Client {
 
 func detectError(resp *gvar.Var) error {
 	if resp == nil || resp.IsEmpty() {
-		return gerror.New("调用erpnext接口返回空")
+		return gerror.New("调用erp接口返回空")
 	} else {
 		if j, err := gjson.DecodeToJson(resp); err == nil {
 			if j.Contains("exc_type") {
-				g.Log().Errorf(gctx.GetInitCtx(), "调用erpnext接口返回异常: %v", j)
-				return gerror.Newf("调用erpnext接口返回异常,exc_type:%s,exception:%s", j.Get("exc_type").String(), j.Get("exception").String())
+				g.Log().Errorf(gctx.GetInitCtx(), "调用erp接口返回异常: %v", j)
+				return gerror.Newf("调用erp接口返回异常,exc_type:%s,exception:%s", j.Get("exc_type").String(), j.Get("exception").String())
 			}
 			if j.Contains("errors") {
-				g.Log().Errorf(gctx.GetInitCtx(), "调用erpnext接口返回异常: %v", j)
+				g.Log().Errorf(gctx.GetInitCtx(), "调用erp接口返回异常: %v", j)
 				errMsgList := make([]string, 0)
 				for _, errItem := range j.GetJsons("errors") {
 					if errItem.Contains("message") {
@@ -99,11 +109,11 @@ func detectError(resp *gvar.Var) error {
 						errMsgList = append(errMsgList, errItem.Get("exception").String())
 					}
 				}
-				return gerror.Newf("调用erpnext接口返回异常,error:%s", strings.Join(errMsgList, ";"))
+				return gerror.Newf("调用erp接口返回异常,error:%s", strings.Join(errMsgList, ";"))
 			}
 		} else {
-			g.Log().Errorf(gctx.GetInitCtx(), "调用erpnext接口返回解析异常: %v", err)
-			return gerror.Wrapf(err, "调用erpnext接口返回解析异常")
+			g.Log().Errorf(gctx.GetInitCtx(), "调用erp接口返回解析异常: %v", err)
+			return gerror.Wrapf(err, "调用erp接口返回解析异常")
 		}
 	}
 

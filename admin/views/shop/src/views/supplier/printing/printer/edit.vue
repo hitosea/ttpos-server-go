@@ -136,13 +136,8 @@
         <el-input v-model="form.sn"></el-input>
       </el-form-item>
 
-      <!-- 排序、打印联数、纸张宽度、状态检查合并为一行 -->
+      <!-- 打印联数、纸张宽度、状态检查、打印提示音为一行 -->
       <el-row :gutter="20">
-        <el-col :span="6">
-          <el-form-item for="no_click" :label="$t('排序')" prop="sort" :rules="[{ required: true, message: $t('接近0，排序等级越高') }]">
-            <el-input-number :controls="false" :min="0" :max="999" :placeholder="$t('接近0，排序等级越高')" v-model.number="form.sort" autocomplete="off" style="width: 100%"></el-input-number>
-          </el-form-item>
-        </el-col>
         <el-col :span="6">
           <el-form-item for="no_click" :label="$t('打印联数')" prop="print_times" :rules="[{ required: true, message: $t('请输入打印联数') }]">
             <el-input-number
@@ -167,12 +162,25 @@
           </el-form-item>
         </el-col>
         <el-col :span="6">
-          <el-form-item for="no_click" :label="$t('状态检查')" prop="enable_status_check">
-            <div style="text-align: center;">
+          <el-form-item for="no_click" :label="$t('状态检查')" prop="enable_status_check" style="text-align: center;">
+            <div style="text-align: center; width: 100%;">
               <el-switch
                 v-model="form.enable_status_check"
                 :active-value="1"
                 :inactive-value="0"
+                style="margin: 0 auto;"
+              />
+            </div>
+          </el-form-item>
+        </el-col>
+        <el-col :span="6">
+          <el-form-item for="no_click" :label="$t('打印提示音')" prop="enable_sound" style="text-align: center;">
+            <div style="text-align: center; width: 100%;">
+              <el-switch
+                v-model="form.enable_sound"
+                :active-value="1"
+                :inactive-value="0"
+                style="margin: 0 auto;"
               />
             </div>
           </el-form-item>
@@ -229,6 +237,7 @@
           print_times: 1,
           width: 80, // 纸张宽度，默认80mm
           enable_status_check: 1, // 是否启用状态检查，默认开启
+          enable_sound: 1, // 是否启用打印提示音，默认开启
           sn: '',
           FEI_E_YUN: {
             USER: '',
@@ -295,6 +304,7 @@
             self.form.print_times = detail.print_times;
             self.form.width = detail.width || 80; // 纸张宽度
             self.form.enable_status_check = detail.enable_status_check !== undefined ? detail.enable_status_check : 1; // 状态检查
+            self.form.enable_sound = detail.enable_sound !== undefined ? detail.enable_sound : 1; // 打印提示音
             self.form.source_device_sn = detail.source_device_sn;
             self.form.print_method = detail.print_method || '';
             if (detail.printer_type.value == 'FEI_E_YUN') {

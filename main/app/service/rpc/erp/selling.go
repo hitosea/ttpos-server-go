@@ -2,7 +2,9 @@ package erp
 
 import (
 	"context"
+	"regexp"
 	"slices"
+	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/constant"
@@ -182,10 +184,7 @@ func (s *erpSrv) ClosePosEntry(ctx context.Context, closeEntryReq req.ClosePosEn
 		logger.Logger.Error("ClosePosEntry-UnmarshalTo", zap.Any("err", err))
 		return "", err
 	}
-	if closePosEntryResp.ClosePosEntryInfo == nil {
-		return "", errors.New(result.GetMessage())
-	}
-	return closePosEntryResp.ClosePosEntryInfo.ClosePosEntryName, nil
+	return closePosEntryResp.AsyncRecordId, nil
 }
 
 // SavePosInvoice 保存 Pos Invoice
@@ -238,6 +237,34 @@ func (s *erpSrv) SavePosInvoice(ctx pkgCtx.Context, savePosInvoiceReq req.SavePo
 	return nil, errors.WithMessage(errors.New("保存POS发票异常, data为空"))
 }
 
+// 解析SavePosInvoice接口返回到错误信息
+func (s *erpSrv) ParseSavePosInvoiceError(err error) (*resp.GetPosInvoiceErrorResp, error) {
+	// 解析 “调用erpnext接口返回异常,error:Row #1: Item Code: <strong>WPR3685375438618625</strong> is not available under warehouse <strong>散户商家-Normal-Default - xs1</strong>.”
+	// 提取出Item Code
+	if strings.Contains(err.Error(), "Item Code: <strong>") && strings.Contains(err.Error(), "is not available under warehouse") {
+		itemCode := ""
+		re := regexp.MustCompile(`Item Code: <strong>(WPR\d+)</strong>`)
+		matches := re.FindStringSubmatch(err.Error())
+		if len(matches) > 1 {
+			itemCode = matches[1]
+		}
+		return &resp.GetPosInvoiceErrorResp{ErrorScene: constant.ErpItemStockNotEnough, ItemCode: itemCode}, nil
+	}
+
+	// 解析“Stock quantity not enough for Item Code: <strong>WPR3685375438618625</strong> under warehouse <strong>散户商家-Normal-Default - xs1</strong>.”
+	if strings.Contains(err.Error(), "Stock quantity not enough for Item Code") {
+		itemCode := ""
+		re := regexp.MustCompile(`Item Code: <strong>(WPR\d+)</strong>`)
+		matches := re.FindStringSubmatch(err.Error())
+		if len(matches) > 1 {
+			itemCode = matches[1]
+		}
+		return &resp.GetPosInvoiceErrorResp{ErrorScene: constant.ErpItemStockNotEnough, ItemCode: itemCode}, nil
+	}
+
+	return nil, errors.WithMessage(err)
+}
+
 func (s *erpSrv) CancelPosInvoice(ctx pkgCtx.Context, cancelPosInvoiceReq req.CancelPosInvoiceReq) error {
 	companySetting := ctx.GetCompanySetting()
 
@@ -250,6 +277,8 @@ func (s *erpSrv) CancelPosInvoice(ctx pkgCtx.Context, cancelPosInvoiceReq req.Ca
 	params := &selling.CancelPosInvoiceReq{
 		ProductsInvoiceName: cancelPosInvoiceReq.ProductsInvoiceName,
 		MaterialInvoiceName: cancelPosInvoiceReq.MaterialInvoiceName,
+		OpenPosEntryName:    cancelPosInvoiceReq.OpenPosEntryName,
+		OrderNo:             cancelPosInvoiceReq.OrderNo,
 	}
 	res, err := client.CancelPosInvoice(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), params)
 	if err != nil {
@@ -279,6 +308,7 @@ func (s *erpSrv) ReturnPosInvoice(ctx pkgCtx.Context, returnPosInvoiceReq req.Re
 		Items:            returnPosInvoiceReq.Items,
 		Taxes:            returnPosInvoiceReq.Taxes,
 		Payments:         returnPosInvoiceReq.Payments,
+		InvoiceType:      1,
 	}
 	res, err := client.ReturnPosInvoice(WithSiteCode(ctx.GetContext(), returnPosInvoiceReq.SiteCode), params)
 	if err != nil {
@@ -364,7 +394,8 @@ func (s *erpSrv) AddPaymentMethod(ctx pkgCtx.Context, addPaymentMethodReq req.Ad
 	}
 	// 判断支付方式名称是否已经存在
 	var exists int64
-	db.Model(&model.PaymentMethod{}).Where("name = ? or erpnext_payment = ?", addPaymentMethodReq.Name, addPaymentMethodReq.ErpnextPayment).Scopes(repository.NotDeleted).Count(&exists)
+	db.Model(&model.PaymentMethod{}).Where("(payment_name = ? and source = ?) or erpnext_payment = ?",
+		addPaymentMethodReq.Name, constant.PaymentMethodSourceDefault, addPaymentMethodReq.ErpnextPayment).Scopes(repository.NotDeleted).Count(&exists)
 	if exists > 0 {
 		return errors.WithMessage(errors.New("支付方式已存在"))
 	}

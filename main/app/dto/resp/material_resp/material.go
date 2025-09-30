@@ -44,6 +44,7 @@ type MaterialDetailResp struct {
 	Status                 int                  `json:"status"`                    // 状态 1-启用 0-停用
 	Valuation              float64              `json:"valuation"`                 // 估值率
 	BarcodeValue           string               `json:"barcode_value"`             // 条形码值
+	InternalCode           string               `json:"internal_code"`             // 内部编码
 	UnitName               string               `json:"unit_name"`                 // 单位名称
 	UnitUuid               uint64               `json:"unit_uuid"`                 // 单位UUID
 	FromUnitUuid           uint64               `json:"from_unit_uuid"`            // 来源单位UUID
@@ -57,6 +58,28 @@ type MaterialDetailResp struct {
 	CostUnitLocaleName     dto.LocaleResponse   `json:"cost_unit_locale_name"`     // 成本单位名称
 	CostUnitUuid           uint64               `json:"cost_unit_uuid"`            // 成本单位UUID
 	FromCostUnitUuid       uint64               `json:"from_cost_unit_uuid"`       // 来源成本单位UUID
+	IsEditable             bool                 `json:"is_editable"`               // 是否可编辑
+}
+
+// MaterialStockDetailResp 物品库存详情响应
+type MaterialStockDetailResp struct {
+	Uuid       uint64             `json:"uuid"`        // 物品UUID
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 物品名称
+	Code       string             `json:"code"`        // 物品编码
+	Warehouses WarehouseList      `json:"warehouses"`  // 库存列表
+}
+
+// WarehouseList 仓库列表
+type WarehouseList struct {
+	Amount float64     `json:"amount"` // 合计库存数
+	List   []Warehouse `json:"list"`
+}
+
+// Warehouse 仓库
+type Warehouse struct {
+	Uuid       uint64             `json:"uuid"`        // 仓库UUID
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 仓库名称
+	Num        float64            `json:"num"`         // 物品库存数量
 }
 
 // MaterialUnitListResp 物品单位列表响应
@@ -83,6 +106,10 @@ type MaterialCategory struct {
 	Uuid       uint64             `json:"uuid"`        // 分类UUID
 	Name       string             `json:"name"`        // 分类名称
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 分类名称
+	Code       string             `json:"code"`        // 分类编码
+	Sort       int                `json:"sort"`        // 排序
+	IsRelated  bool               `json:"is_related"`  // 是否关联了物品
+	IsEditable bool               `json:"is_editable"` // 是否可编辑
 }
 
 // MaterialImportUnitListItem 导入物品单位列表项
@@ -103,6 +130,7 @@ type ProductBomCardDetailResp struct {
 	LocaleName dto.LocaleResponse       `json:"locale_name"` // 成本卡名称
 	Num        float64                  `json:"num"`         // 加工份数
 	Materials  []ProductBomCardMaterial `json:"materials"`   // 材料列表
+	IsEditable bool                     `json:"is_editable"` // 是否可编辑
 }
 
 type ProductBomCardMaterial struct {

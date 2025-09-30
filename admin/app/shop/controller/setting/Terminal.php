@@ -465,6 +465,7 @@ class Terminal extends Controller
      * @Apidoc\Url ("/index.php/shop/setting.Terminal/kitchen")
      * @Apidoc\Param("is_open", type="int", require=true, default=0, desc="是否开启厨显功能 0关闭 1开启（v1.0.4）")
      * @Apidoc\Param("is_come_dish", type="int", require=true, default=0, desc="来菜提醒 0-关闭 1-开启（v1.0.5）")
+     * @Apidoc\Param("is_smart_kitchen", type="int", require=true, default=0, desc="智能后厨 0-关闭 1-开启（v2.6.0）")
      * @Apidoc\Param("is_call_service", type="int", require=true, default=0, desc="顾客呼叫提醒 0-关闭 1-开启（v1.0.5）")
      * @Apidoc\Param("server", type="array", require=true, desc="厨显服务器连接")
      * @Apidoc\Param("is_wait_color", type="int", require=true, default=0, desc="是否开启等待颜色 0-关闭 1-开启")
@@ -502,6 +503,7 @@ class Terminal extends Controller
             'language' => $data['language'] ?? [], // 常用语言
             'default_language' => $data['default_language'] ?? 'en', // 默认语言
             'bind_list' => $data['bind_list'] ?? [],
+            'is_smart_kitchen' => $data['is_smart_kitchen'] ?? 0, // 智能后厨 0-关闭 1-开启
         ];
         $shop_supplier_id = $this->store['user']['shop_supplier_id'];
         if ($model->edit(SettingEnum::KITCHEN, $arr, $shop_supplier_id)) {

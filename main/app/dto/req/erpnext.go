@@ -15,20 +15,31 @@ type ErpnextSitePosProfileReq struct {
 }
 
 type InitShopReq struct {
-	SiteCode    string `form:"site_code" json:"site_code" binding:"required"`       // 站点编码
-	CompanyAbbr string `form:"company_abbr" json:"company_abbr" binding:"required"` // 公司缩写编码
-	CompanyUuid uint64 `form:"company_uuid" json:"company_uuid" binding:"required"` // 公司UUID
+	SiteCode        string `form:"site_code" json:"site_code" binding:"required"`       // 站点编码
+	CompanyAbbr     string `form:"company_abbr" json:"company_abbr" binding:"required"` // 公司缩写编码
+	CompanyUuid     uint64 `form:"company_uuid" json:"company_uuid" binding:"required"` // 公司UUID
+	HeadquarterAbbr string `form:"headquarter_abbr" json:"headquarter_abbr"`            // 总部简称
 }
 
 type GetUomListReq struct {
-	SiteCode    string `form:"site_code" json:"site_code" binding:"required"`       // 站点编码
-	Branch      string `form:"branch" json:"branch" binding:"required"`             // 分支名称
-	CompanyAbbr string `form:"company_abbr" json:"company_abbr" binding:"required"` // 公司缩写编码
-	UomName     string `form:"uom_name" json:"uom_name" binding:"required"`         // 单位名称
-	AliasName   string `form:"alias_name" json:"alias_name" binding:"required"`     // 单位别名
+	SiteCode       string `form:"site_code" json:"site_code" binding:"required"`               // 站点编码
+	Branch         string `form:"branch" json:"branch" binding:"required"`                     // 分支名称
+	CompanyAbbr    string `form:"company_abbr" json:"company_abbr" binding:"required"`         // 公司缩写编码
+	UomName        string `form:"uom_name" json:"uom_name" binding:"required"`                 // 单位名称
+	AliasName      string `form:"alias_name" json:"alias_name" binding:"required"`             // 单位别名
+	SubCompanyAbbr string `form:"sub_company_abbr" json:"sub_company_abbr" binding:"required"` // 连锁子店公司简称
 }
 
 type GetAttributeListReq struct {
+	SiteCode       string `form:"site_code" json:"site_code" binding:"required"`               // 站点编码
+	Branch         string `form:"branch" json:"branch" binding:"required"`                     // 分支名称
+	CompanyAbbr    string `form:"company_abbr" json:"company_abbr" binding:"required"`         // 公司缩写编码
+	AttributeName  string `form:"attribute_name" json:"attribute_name" binding:"required"`     // 属性名称
+	AliasName      string `form:"alias_name" json:"alias_name" binding:"required"`             // 属性别名
+	SubCompanyAbbr string `form:"sub_company_abbr" json:"sub_company_abbr" binding:"required"` // 连锁子店公司简称
+}
+
+type GetErpFlavorListReq struct {
 	SiteCode      string `form:"site_code" json:"site_code" binding:"required"`           // 站点编码
 	Branch        string `form:"branch" json:"branch" binding:"required"`                 // 分支名称
 	CompanyAbbr   string `form:"company_abbr" json:"company_abbr" binding:"required"`     // 公司缩写编码
@@ -120,8 +131,11 @@ type SavePosInvoiceReq struct {
 }
 
 type CancelPosInvoiceReq struct {
-	ProductsInvoiceName string `form:"products_invoice_name" json:"products_invoice_name" binding:"required"` // 商品销售发票
-	MaterialInvoiceName string `form:"material_invoice_name" json:"material_invoice_name" binding:"required"` // 材料销售发票
+	ProductsInvoiceName string `form:"products_invoice_name" json:"products_invoice_name" ` // 商品销售发票  同步模式填
+	MaterialInvoiceName string `form:"material_invoice_name" json:"material_invoice_name" ` // 材料销售发票 同步模式填
+	OpenPosEntryName    string `form:"open_pos_entry_name" json:"open_pos_entry_name"`      // 开账名称,异步模式必填
+	OrderNo             string `form:"order_no" json:"order_no"`                            // 销售订单号,异步模式必填
+
 }
 
 type ReturnPosInvoiceReq struct {
@@ -149,4 +163,66 @@ type AddPaymentMethodReq struct {
 	Status             *int     `json:"status" binding:"required"`          // 状态: 0-禁用 1-启用
 	CheckoutShow       []string `json:"checkout_show"`                      // 结账显示，可选cashier、assistant
 	MemberRechargeShow []string `json:"member_recharge_show"`               // 会员充值显示，可选cashier
+}
+
+type CreateSupplierReq struct {
+	SiteCode     string
+	SupplierName string // 供应商名称
+	CompanyAbbr  string // 公司缩写编码
+	Branch       string // 分支
+	Disabled     bool   // 是否禁用
+}
+
+type UpdateSupplierReq struct {
+	CreateSupplierReq
+	Name string // 供应商erp_code
+}
+
+type DeleteSupplierReq struct {
+	Name     string // 供应商erp_code
+	SiteCode string // 站点编码
+}
+
+type CreateErpnextWarehouseReq struct {
+	SiteCode      string // 站点编码
+	WarehouseName string // 仓库名称
+	AliasName     string // 别名
+	CompanyAbbr   string // 公司简称
+	Branch        string // 分支
+	Disabled      bool   // 是否禁用
+	WarehouseType string // 仓库类型
+}
+
+type UpdateErpnextWarehouseReq struct {
+	CreateErpnextWarehouseReq
+	Name string // erp_Code
+}
+
+type DeleteErpnextWarehouseReq struct {
+	SiteCode string // 站点编码
+	Name     string // erp_code
+}
+
+type GetErpnextWarehouseListReq struct {
+	SiteCode       string // 站点编码
+	CompanyAbbr    string
+	Branch         string
+	SubCompanyAbbr string // 连锁子店公司简称
+}
+
+type GetErpnextSupplierListReq struct {
+	SiteCode       string // 站点编码
+	CompanyAbbr    string
+	Branch         string
+	SubCompanyAbbr string // 连锁子店公司简称
+}
+
+type GetHeadquarterMaterialListReq struct {
+}
+
+type GetErpSauceListReq struct {
+	SiteCode       string // 站点编码
+	CompanyAbbr    string
+	Branch         string
+	SubCompanyAbbr string // 连锁子店公司简称
 }

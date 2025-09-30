@@ -559,7 +559,7 @@ func (model *SaleOrder) CalcCouponExchangeAmount() float64 {
 	if len(model.Coupons) == 0 {
 		return 0 // 未使用优惠券，则抵扣金额为0
 	}
-	coupon := model.Coupons[0]
+	coupon := model.Coupons[0] // 只取第一个优惠券，目前只能使用一个优惠券
 	if coupon.IsDelete() {
 		return 0 // 优惠券已删除，则抵扣金额为0
 	}

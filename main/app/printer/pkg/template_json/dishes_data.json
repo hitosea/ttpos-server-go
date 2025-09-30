@@ -1,0 +1,131 @@
+{
+    "brand_name": "TTPOS",
+    "store": {
+        "name": "重庆高老九火锅曼谷一号店",
+        "address": "1167,17-20 Ratchadaphisek Rd,Din Daeng,Din Daeng,  Bangkok 10400",
+        "phone": "025508999212",
+        "logo": "",
+        "company": "",
+        "company_addr": "1167,17-20 Ratchadaphisek Rd,Din Daeng,Din Daeng,  Bangkok 10400",
+        "company_phone": "025508999212",
+        "company_tax_number": "",
+        "cashier_sn": "",
+        "printer_sn": ""
+    },
+    "order": {
+        "status": 0,
+        "serial_no": "桌号: A5 (1人)",
+        "order_no": "202509252185102915",
+        "remark": "",
+        "cashier_name": "wfs@qq.com",
+        "finish_time": "",
+        "create_time": "2025/09/25 18:28:56",
+        "update_time": "2025/09/25 18:28:56",
+        "pay_time": "",
+        "buffets": null,
+        "delays": null,
+        "products": [
+            {
+                "name": "十三香小龙虾（1kg）",
+                "price_num": "1*1",
+                "price": "1",
+                "num": "1211121",
+                "subtotal": "1",
+                "remark": "",
+                "attrs": "份;冰;香菜;洋葱",
+                "attr": "冰",
+                "attr_list": [
+                    {
+                        "name": "冰",
+                        "text": "冰"
+                    }
+                ],
+                "flavor_name": "份",
+                "sauce_list": [
+                    {
+                        "name": "香菜",
+                        "text": "香菜"
+                    },
+                    {
+                        "name": "洋葱",
+                        "text": "洋葱"
+                    }
+                ],
+                "sauce_names": "香菜;洋葱",
+                "is_delay": false,
+                "is_buffet": false,
+                "is_buffet_product": false,
+                "is_gift": false,
+                "is_package": false,
+                "is_sub_product": false
+            },
+            {
+                "name": "美味小龙虾（1公斤）",
+                "price_num": "1*1",
+                "price": "1",
+                "num": 1,
+                "subtotal": "1",
+                "remark": "",
+                "attrs": "大份จานใหญ่",
+                "attr": "",
+                "attr_list": [],
+                "flavor_name": "大份จานใหญ่",
+                "sauce_list": [],
+                "sauce_names": "",
+                "is_delay": false,
+                "is_buffet": false,
+                "is_buffet_product": false,
+                "is_gift": false,
+                "is_package": false,
+                "is_sub_product": false
+            },
+            {
+                "name": "苦蕨菜",
+                "price_num": "1*1",
+                "price": "1",
+                "num": 1,
+                "subtotal": "1",
+                "remark": "",
+                "attrs": "份",
+                "attr": "",
+                "attr_list": [],
+                "flavor_name": "份",
+                "sauce_list": [],
+                "sauce_names": "",
+                "is_delay": false,
+                "is_buffet": false,
+                "is_buffet_product": false,
+                "is_gift": false,
+                "is_package": false,
+                "is_sub_product": false
+            }
+        ],
+        "product_num": 0,
+        "product_amount": "29,297.01",
+        "service_fee": "0",
+        "tax_rate": 0,
+        "tax_fee_type": 2,
+        "is_contain_tax": 2,
+        "discount_fee": "0.01",
+        "discount_rate": "0",
+        "member_discount_fee": "0",
+        "member_discount_rate": 0,
+        "member_card_discount_rate": 0,
+        "member_points_discount": 0,
+        "coupon_exchange_amount": 0,
+        "check_out_zero_fee": "0",
+        "return_amount": "0",
+        "payment_commission_fee": 0,
+        "free_amount": "0",
+        "actual_receive_price": "29,297",
+        "payment_methods": [],
+        "percentage_lists": [],
+        "is_free": false,
+        "is_member": false,
+        "member_remaining_balance": "0",
+        "member_points": 0,
+        "payment_name": "",
+        "payment_qrcode": "",
+        "barcode": "202509252185102915"
+    }
+}

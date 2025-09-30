@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"regexp"
 	"strings"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
@@ -13,7 +14,10 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/app/tasks"
+	"ttpos-server-go/config"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
@@ -1313,6 +1317,33 @@ func (h *DeskHandler) OrderPaymentFinish(c *gin.Context) {
 			helper.ErrorWithData(c, constant.CodeCouponInvalid, res, fmt.Errorf("%s", i18n.Translate(ctx.GetLanguage(), "优惠券信息变化，请重新确认。")))
 			return
 		}
+		if strings.Contains(err.Error(), "物品库存不足") {
+			ctx.Log().Error("桌台销售订单的付款结账失败", zap.Any("err", err))
+			itemCode := ""
+			re := regexp.MustCompile(`物品库存不足,(WPR\d+)`)
+			matches := re.FindStringSubmatch(err.Error())
+			if len(matches) > 1 {
+				itemCode = matches[1]
+			}
+			productInfos, err := h.orderSrv.GetProductNameByItemCode(ctx, itemCode, params.SaleOrderUuid)
+			if err != nil {
+				helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+				return
+			}
+			productList := make([]resp.Product, 0)
+			for _, productInfo := range productInfos {
+				productList = append(productList, resp.Product{
+					LocaleName: productInfo.ProductName,
+				})
+			}
+			orderCheckRes := &resp.OrderCheckRes{
+				Products: &resp.CartProductList{
+					List: productList,
+				},
+			}
+			helper.FailWithData(c, constant.CodeOrderCheckProductStockZero, orderCheckRes, nil, i18n.Translate(ctx.GetLanguage(), "以下商品库存不足，请删除后再下单"))
+			return
+		}
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
@@ -1344,6 +1375,33 @@ func (h *DeskHandler) OrderFree(c *gin.Context) {
 	// 桌台免单
 	res, err := h.orderSrv.InstantOrderFree(ctx, params)
 	if err != nil {
+		if strings.Contains(err.Error(), "物品库存不足") {
+			ctx.Log().Error("桌台销售订单的付款结账失败", zap.Any("err", err))
+			itemCode := ""
+			re := regexp.MustCompile(`物品库存不足,(WPR\d+)`)
+			matches := re.FindStringSubmatch(err.Error())
+			if len(matches) > 1 {
+				itemCode = matches[1]
+			}
+			productInfos, err := h.orderSrv.GetProductNameByItemCode(ctx, itemCode, params.SaleOrderUuid)
+			if err != nil {
+				helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+				return
+			}
+			productList := make([]resp.Product, 0)
+			for _, productInfo := range productInfos {
+				productList = append(productList, resp.Product{
+					LocaleName: productInfo.ProductName,
+				})
+			}
+			orderCheckRes := &resp.OrderCheckRes{
+				Products: &resp.CartProductList{
+					List: productList,
+				},
+			}
+			helper.FailWithData(c, constant.CodeOrderCheckProductStockZero, orderCheckRes, nil, i18n.Translate(ctx.GetLanguage(), "以下商品库存不足，请删除后再下单"))
+			return
+		}
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
@@ -1692,6 +1750,51 @@ func (h *DeskHandler) GetOrderMemberList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetDailySalesOutboundSummary 获取每日销售出库汇总
+// @Summary 获取每日销售出库汇总
+// @Description 获取每日销售出库汇总
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Router /cashier/desk/order/daily_sales_outbound_summary [get]
+func (h *DeskHandler) GetDailySalesOutboundSummary(c *gin.Context) {
+	companyUuid := helper.GetCompanyUuid(c)
+	dbm := database.GetDBManager(config.Database)
+	company, err := repository.NewCompanyRepo(dbm.GetDB(companyUuid)).GetCompany(repository.CommonRepo.WhereByUuid(companyUuid))
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	tasks.NewDailySalesOutboundSummaryTask(dbm, cache.Global).ProcessCompany(&company)
+	helper.Success(c, gin.H{})
+}
+
+// GetHeadquarterMaterialList 获取总部物品列表
+// @Summary 获取总部物品列表
+// @Description 获取总部物品列表
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response
+// @Router /cashier/desk/order/headquarter_material_list [get]
+func (h *DeskHandler) GetHeadquarterMaterialList(c *gin.Context) {
+	var req req.GetHeadquarterMaterialListReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	erpSrv := erp.NewIErpSrv(database.GetDBManager(config.Database))
+	res, err := erpSrv.GetHeadquarterMaterialList(ctx, req)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
 // RegisterDeskHandlers 注册收银产品路由
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -1773,5 +1876,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/print/invoice", wrapper.OrderPrintInvoice)                                            // 打印发票
 		privateApi.POST("/desk/order/unlock", wrapper.OrderUnlock)                                                         // 订单解锁
 		privateApi.GET("/desk/order/member/list", wrapper.GetOrderMemberList)                                              // 使用会员列表
+		privateApi.GET("/desk/order/daily_sales_outbound_summary", wrapper.GetDailySalesOutboundSummary)                   // 获取每日销售出库汇总
+		privateApi.GET("/desk/order/headquarter_material_list", wrapper.GetHeadquarterMaterialList)                        // 获取总部物品列表
 	}
 }

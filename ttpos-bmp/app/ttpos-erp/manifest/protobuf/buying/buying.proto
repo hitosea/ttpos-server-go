@@ -18,7 +18,99 @@ message GetSupplierListResp {
 
 message SupplierInfo {
   string supplier_name = 1; // 供应商名称
-  string represents_company = 2; // 供应商代表公司
+  string name = 2; // 供应商主键
+  string represents_company = 3; // 供应商代表公司
+  string branch = 4; // 分支
+  string company = 5; //所属公司
+  string contact_name = 6; // 联系人姓名
+  string contact_phone = 7; // 联系号码
+  string address = 8 ; // 地址
+  string alias_name = 9; // 别名名称 ，对外显示的名称
+}
+
+// 创建供应商请求消息
+message CreateSupplierReq {
+  SupplierData supplier = 1; // 供应商信息，必填
+}
+
+// 创建供应商响应消息
+message CreateSupplierResp {
+  SupplierData supplier = 1; // 创建的供应商信息
+}
+
+// 获取供应商请求消息
+message GetSupplierReq {
+  string name = 1; // 供应商主键，必填
+}
+
+// 获取供应商响应消息
+message GetSupplierResp {
+  SupplierData supplier = 1; // 供应商详细信息
+}
+
+// 更新供应商请求消息
+message UpdateSupplierReq {
+  SupplierData supplier = 1; // 供应商更新信息，必填
+}
+
+// 更新供应商响应消息
+message UpdateSupplierResp {
+  SupplierData supplier = 1; // 更新后的供应商信息
+}
+
+// 删除供应商请求消息
+message DeleteSupplierReq {
+  string name = 1; // 供应商主键，必填
+}
+
+// 删除供应商响应消息
+message DeleteSupplierResp {
+  bool success = 1; // 删除是否成功
+  string message = 2; // 结果消息
+}
+
+// 获取供应商列表请求消息
+message ListSuppliersReq {
+  string name = 1; //供应商主键，可选
+  string supplier_name = 2; // 供应商名称过滤，可选
+  string country = 3; // 国家过滤，可选
+  string supplier_type = 4; // 供应商类型过滤，可选 Company, Individual, Partnership
+  string branch = 6; // 分支过滤，可选
+  string company_abbr = 7; //所属公司
+  string company = 8; //所属公司
+  int32 page_no = 9; // 页码，从1开始
+  int32 page_size = 10; // 每页数量
+  string sub_company_abbr = 11; // 门店公司简称，可选。 sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。
+}
+
+// 获取供应商列表响应消息
+message ListSuppliersResp {
+  repeated SupplierData suppliers = 1; // 供应商列表
+}
+
+// 供应商数据结构
+message SupplierData {
+  // 基础字段
+  string name = 1; // 主键不可修改 创建的时候传别名。生成后返回 alias_name + ' - ' + company_abbr
+
+  // 供应商信息
+  string supplier_name = 2; // 供应商名称，必填
+  string company_abbr =3 ; // 公司缩写
+  string company =4 ; //公司
+  string branch = 5 ; //分支
+  string country = 6; // 国家
+  string supplier_type = 7; // 供应商类型，默认 Company, Individual, Partnership
+  string represents_company = 8; // 代表公司
+
+  // 状态标识
+  bool is_transporter = 9; // 是否承运商
+  bool is_internal_supplier = 10; // 是否内部供应商
+  bool disabled = 11; // 是否禁用
+
+  string contact_name = 12; // 联系人姓名
+  string contact_phone = 13; // 联系号码
+  string address = 14 ; // 地址
+  string alias_name = 15; // 别名名称 ，对外显示的名称
 }
 
 
@@ -67,11 +159,126 @@ message SavePurchaseReceiptResp {
   PurchaseReceiptInfo purchase_receipt = 1; // 采购订单信息
 }
 
+// 获取采购订单列表请求消息
+message GetPurchaseOrderListReq {
+  string supplier = 1; // 供应商过滤，可选
+  string company_abbr = 2; // 公司缩写过滤，可选
+  string from_date = 3; // 开始日期过滤Y-m-d，可选
+  string to_date = 4; // 结束日期过滤Y-m-d，可选
+  int32 page_no = 5; // 页码，从1开始
+  int32 page_size = 6; // 每页数量
+}
+
+// 获取采购订单列表响应消息
+message GetPurchaseOrderListResp {
+  repeated PurchaseOrderListItem purchase_orders = 1; // 采购订单列表
+  int32 total_count = 2; // 总数量
+}
+
+// 采购订单列表项
+message PurchaseOrderListItem {
+  string name = 1; // 采购订单名称
+  string supplier = 2; // 供应商
+  string company = 3; // 公司
+  double grand_total = 4; // 总金额
+  string status = 5; // 状态
+  string transaction_date = 6; // Y-m-d 交易日期
+  string schedule_date = 7; // Y-m-d 计划日期
+  double per_received = 8; // 已接收百分比
+  double per_billed = 9; // 已开票百分比
+  string currency = 10; // 货币
+}
+
+// 获取采购订单数量请求消息
+message GetPurchaseOrderCountReq {
+  string supplier = 1; // 供应商过滤，可选
+  string company_abbr = 2; // 公司缩写过滤，可选
+  string status = 3; // 状态过滤，可选
+  string from_date = 4; // 开始日期过滤 Y-m-d，可选
+  string to_date = 5; // 结束日期过滤 Y-m-d，可选
+}
+
+// 获取采购订单数量响应消息
+message GetPurchaseOrderCountResp {
+  int32 count = 1; // 采购订单数量
+}
+
+// 创建采购订单请求消息，外部采购
+message CreatePurchaseOrderReq {
+  string supplier = 1; // 供应商，必填
+  string company_abbr = 2; // 公司缩写，必填
+  string schedule_date = 3; // 计划日期 Y-m-d，必填
+  string target_warehouse = 4 ; //目标仓库，必填
+  string currency = 5; // 货币，可选，默认THB
+  repeated PurchaseOrderItemInput items = 6; // 采购订单项目列表，必填
+  string remarks = 7; // 备注，可选
+}
+
+// 采购订单项目输入
+message PurchaseOrderItemInput {
+  string item_code = 1; // 物品编码，必填
+  double qty = 2; // 数量，必填
+  double rate = 3; // 单价，可选
+  string uom = 4; // 单位，可选
+//  string warehouse = 5; // 仓库，可选
+}
+
+// 创建采购订单响应消息
+message CreatePurchaseOrderResp {
+  string name = 1; // 采购订单名称
+  string status = 2; // 状态
+  double grand_total = 3; // 总金额
+}
+
+// 更新采购订单请求消息
+message UpdatePurchaseOrderReq {
+  string name = 1; // 采购订单名称，必填
+  string supplier = 2; // 供应商，可选
+  string transaction_date = 3; // 交易日期 Y-m-d，可选
+  string schedule_date = 4; // 计划日期 Y-m-d，可选
+  string target_warehouse = 5 ; //目标仓库，可选
+  repeated PurchaseOrderItemInput items = 6; // 采购订单项目列表，可选
+  string remarks = 7; // 备注，可选
+}
+
+// 更新采购订单响应消息
+message UpdatePurchaseOrderResp {
+  string name = 1; // 采购订单名称
+  string status = 2; // 状态
+  double grand_total = 3; // 总金额
+}
+
 service BuyingService {
-  // 获取供应商列表
+  // 获取内部供应商列表
   // 参数：公司缩写编码
   // 返回：供应商列表
   rpc GetSupplierList(GetSupplierListReq) returns (erp.ResponseInfo);
+
+  // 创建供应商
+  // 参数：供应商信息
+  // 返回：创建结果
+  rpc CreateSupplier(CreateSupplierReq) returns (erp.ResponseInfo);
+
+  // 获取供应商详情
+  // 参数：供应商名称
+  // 返回：供应商详细信息
+  rpc GetSupplier(GetSupplierReq) returns (erp.ResponseInfo);
+
+  // 更新供应商
+  // 参数：供应商更新信息
+  // 返回：更新结果
+  rpc UpdateSupplier(UpdateSupplierReq) returns (erp.ResponseInfo);
+
+  // 删除供应商
+  // 参数：供应商名称
+  // 返回：删除结果
+  rpc DeleteSupplier(DeleteSupplierReq) returns (erp.ResponseInfo);
+
+  // 获取供应商列表
+  // 输入条件如果未包含company 则会返回全量数据，如需要只显示无company 约束的数据，需要自行过滤结果中 company 为空的数据
+  // 参数：过滤条件和分页参数
+  // 返回：供应商列表
+  rpc ListSuppliers(ListSuppliersReq) returns (erp.ResponseInfo);
 
   // 获取采购订单
   // 参数：采购订单名称
@@ -82,4 +289,24 @@ service BuyingService {
   // 参数：采购收货单信息
   // 返回：操作结果
   rpc SavePurchaseReceipt(SavePurchaseReceiptReq) returns (erp.ResponseInfo);
+
+  // 获取采购订单列表
+  // 参数：查询条件和分页参数
+  // 返回：采购订单列表
+  rpc GetPurchaseOrderList(GetPurchaseOrderListReq) returns (erp.ResponseInfo);
+
+  // 获取采购订单数量
+  // 参数：查询条件
+  // 返回：采购订单数量
+  rpc GetPurchaseOrderCount(GetPurchaseOrderCountReq) returns (erp.ResponseInfo);
+
+  // 创建采购订单
+  // 参数：采购订单创建信息
+  // 返回：创建结果
+  rpc CreatePurchaseOrder(CreatePurchaseOrderReq) returns (erp.ResponseInfo);
+
+  // 更新采购订单
+  // 参数：采购订单更新信息
+  // 返回：更新结果
+  rpc UpdatePurchaseOrder(UpdatePurchaseOrderReq) returns (erp.ResponseInfo);
 }

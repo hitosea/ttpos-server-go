@@ -324,6 +324,7 @@ class PayType extends BaseModel
         $LianLian_enable = (bool)PaymentService::checkSignSalt($shop_supplier_id);
         $filter = [
             'payment_name' => $name,
+            'source' => self::SOURCE_DEFAULT, // v.2.6.0 35257 渠道提供方不一样，支付方式跟支付名称可以相同
         ];
         if (!is_null($id) && $id != 0) {
             $filter[] = ['id', '<>', $id];

@@ -10,24 +10,25 @@ import (
 )
 
 type TimeUtil interface {
-	Now() time.Time                                              // 获取当前时间
-	NowUnix() int64                                              // 获取当前时间戳,10位，1739283862
-	NowUnixMilli() int64                                         // 获取当前时间戳（毫秒）13位，1739283862825
-	NowUnixMicro() int64                                         // 获取当前时间戳（微秒）,16位，1739283862825531
-	TodayStartEnd() (time.Time, time.Time)                       // 获取今天的开始时间和结束时间
-	YesterdayStartEnd() (time.Time, time.Time)                   // 获取昨天的开始时间和结束时间
-	WeekStartEnd() (time.Time, time.Time)                        // 获取本周的开始时间和结束时间
-	MonthStartEnd() (time.Time, time.Time)                       // 获取本月的开始时间和结束时间
-	TodayStartEndUnix() (int64, int64)                           // 获取今天的开始时间和结束时间戳
-	YesterdayStartEndUnix() (int64, int64)                       // 获取昨天的开始时间和结束时间戳
-	WeekStartEndUnix() (int64, int64)                            // 获取本周的开始时间和结束时间戳
-	MonthStartEndUnix() (int64, int64)                           // 获取本月的开始时间和结束时间戳
-	FormatUnixTime(timestamp int64, layout string) string        // 将时间戳转换为指定格式的时间字符串
-	FormatUnixTimeDefault(timestamp int64) string                // 将时间戳转换为默认格式(2006-01-02 15:04:05)的时间字符串
-	FormatUnixTimeWithSlash(timestamp int64) string              // 将时间戳转换为默认格式(2006/01/02 15:04:05)的时间字符串
-	GetTimeRange(dayType DayType) (int64, int64, error)          // 订单列表：今天、昨天、本周搜索时间范围
-	FormatTimeToUnix(timeStr string) (int64, error)              // 2025-04-30转为时间戳
-	OpeningHoursStartEndUnix(openingHours string) (int64, int64) // 营业时间开始和结束时间戳
+	Now() time.Time                                                                                   // 获取当前时间
+	NowUnix() int64                                                                                   // 获取当前时间戳,10位，1739283862
+	NowUnixMilli() int64                                                                              // 获取当前时间戳（毫秒）13位，1739283862825
+	NowUnixMicro() int64                                                                              // 获取当前时间戳（微秒）,16位，1739283862825531
+	TodayStartEnd() (time.Time, time.Time)                                                            // 获取今天的开始时间和结束时间
+	YesterdayStartEnd() (time.Time, time.Time)                                                        // 获取昨天的开始时间和结束时间
+	WeekStartEnd() (time.Time, time.Time)                                                             // 获取本周的开始时间和结束时间
+	MonthStartEnd() (time.Time, time.Time)                                                            // 获取本月的开始时间和结束时间
+	TodayStartEndUnix() (int64, int64)                                                                // 获取今天的开始时间和结束时间戳
+	YesterdayStartEndUnix() (int64, int64)                                                            // 获取昨天的开始时间和结束时间戳
+	WeekStartEndUnix() (int64, int64)                                                                 // 获取本周的开始时间和结束时间戳
+	MonthStartEndUnix() (int64, int64)                                                                // 获取本月的开始时间和结束时间戳
+	FormatUnixTime(timestamp int64, layout string) string                                             // 将时间戳转换为指定格式的时间字符串
+	FormatUnixTimeDefault(timestamp int64) string                                                     // 将时间戳转换为默认格式(2006-01-02 15:04:05)的时间字符串
+	FormatUnixTimeWithSlash(timestamp int64) string                                                   // 将时间戳转换为默认格式(2006/01/02 15:04:05)的时间字符串
+	FormatUnixTimeDetail(timestamp int64) TimeDetail                                                  // 获取时间详情
+	GetTimeRange(dayType DayType) (int64, int64, error)                                               // 订单列表：今天、昨天、本周搜索时间范围
+	FormatTimeToUnix(timeStr string) (int64, error)                                                   // 2025-04-30转为时间戳
+	OpeningHoursStartEndUnix(openingHours string, opts ...func(o *OpeningHoursOption)) (int64, int64) // 营业时间开始和结束时间戳
 }
 
 type Timezone string
@@ -156,6 +157,33 @@ func (t Timezone) FormatUnixTimeWithSlash(timestamp int64) string {
 	return t.FormatUnixTime(timestamp, "2006/01/02 15:04:05")
 }
 
+type TimeDetail struct {
+	Year   int
+	Month  int
+	Day    int
+	Hour   int
+	Minute int
+	Second int
+}
+
+// FormatUnixTimeDetail 将Unix时间戳转换为时间详情
+func (t Timezone) FormatUnixTimeDetail(timestamp int64) TimeDetail {
+	timezone := string(t)
+	loc, err := time.LoadLocation(timezone)
+	if err != nil {
+		loc = time.Local
+	}
+	tm := time.Unix(timestamp, 0).In(loc)
+	return TimeDetail{
+		Year:   tm.Year(),
+		Month:  int(tm.Month()),
+		Day:    tm.Day(),
+		Hour:   tm.Hour(),
+		Minute: tm.Minute(),
+		Second: tm.Second(),
+	}
+}
+
 // GetTimeRange 订单列表：今天、昨天、本周搜索时间范围
 func (t Timezone) GetTimeRange(dayType DayType) (int64, int64, error) {
 	// 加载时区
@@ -199,8 +227,22 @@ func (t Timezone) FormatTimeToUnix(timeStr string) (int64, error) {
 	return time.Unix(), nil
 }
 
+type OpeningHoursOption struct {
+	Type int // 1: 没跨天时直接返回当天的开始和结束时间戳
+}
+
+func WithOpeningHoursType(typ int) func(o *OpeningHoursOption) {
+	return func(o *OpeningHoursOption) {
+		o.Type = typ
+	}
+}
+
 // OpeningHoursStartEndUnix 营业时间开始和结束时间戳
-func (t Timezone) OpeningHoursStartEndUnix(openingHours string) (int64, int64) {
+func (t Timezone) OpeningHoursStartEndUnix(openingHours string, opts ...func(o *OpeningHoursOption)) (int64, int64) {
+	option := &OpeningHoursOption{}
+	for _, opt := range opts {
+		opt(option)
+	}
 	loc, err := time.LoadLocation(string(t))
 	if err != nil {
 		loc = time.Local
@@ -264,6 +306,11 @@ func (t Timezone) OpeningHoursStartEndUnix(openingHours string) (int64, int64) {
 		yesterday := today.AddDate(0, 0, -1)
 		startTime = time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), startHour, startMin, 0, 0, loc)
 		endTime = time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), endHour, endMin, 0, 0, loc)
+		// 如果类型为1，则显示今天的营业时间
+		if option.Type == 1 {
+			startTime = time.Date(today.Year(), today.Month(), today.Day(), startHour, startMin, 0, 0, loc)
+			endTime = time.Date(today.Year(), today.Month(), today.Day(), endHour, endMin, 0, 0, loc)
+		}
 	} else {
 		yesterday := today.AddDate(0, 0, -1)
 		startTime = time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), startHour, startMin, 0, 0, loc)

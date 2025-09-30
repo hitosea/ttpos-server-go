@@ -102,6 +102,7 @@ type WarehouseOutFormItem struct {
 	RevokeTime  int64   `gorm:"column:revoke_time;type:int(10);default:0;comment:撤销时间(时间戳)"`
 	// 关联uuid
 	WarehouseOutFormUuid uint64 `gorm:"column:warehouse_out_form_uuid;type:bigint(20) unsigned;default:0;comment:出库单uuid"`
+	WarehouseUuid        uint64 `gorm:"column:warehouse_uuid;type:bigint(20) unsigned;default:0;comment:仓库uuid，出库的仓库"`
 	ProductBomUuid       uint64 `gorm:"column:product_bom_uuid;type:bigint(20) unsigned;default:0;comment:商品BOM表uuid, 规格商品或小料"`
 	PackageUuid          uint64 `gorm:"column:package_uuid;type:bigint(20) unsigned;default:0;comment:套餐uuid，只有套餐子商品才有这个字段，用于不增加子商品销量"`
 	MaterialUuid         uint64 `gorm:"column:material_uuid;type:bigint(20) unsigned;default:0;comment:材料uuid，原材料"`
@@ -139,6 +140,7 @@ type Product struct {
 
 type ProductBomMaterials struct {
 	MaterialUuid  uint64  `json:"material_uuid"`
+	WarehouseUuid uint64  `json:"warehouse_uuid"`
 	Num           float64 `json:"num"`
 	SaleOrderUuid uint64  `json:"sale_order_uuid"` // 销售订单uuid
 }
@@ -209,6 +211,7 @@ func NewWarehouseOutForm(list ProductList, isCheckout bool, saleBillUuid uint64,
 		items = append(items, &WarehouseOutFormItem{
 			WarehouseOutFormUuid: form.Uuid,
 			MaterialUuid:         material.MaterialUuid,
+			WarehouseUuid:        material.WarehouseUuid,
 			Num:                  material.Num,
 			Scene:                constant.WarehouseOutFormSceneSales, // 销售出库
 			Status:               status,

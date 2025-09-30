@@ -1,6 +1,7 @@
 package printer_tasks
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"slices"
@@ -159,8 +160,22 @@ func (t *printerTask) ExecutePrinter(companyUuid uint64, printerLog model.Printe
 	// 递归执行
 	if printerLog.Status == 1 && printerLog.Num < 3 {
 		go func() {
-			time.Sleep(3 * time.Second)
-			t.ExecutePrinter(companyUuid, printerLog)
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("打印任务panic: %v", r)
+				}
+			}()
+
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			select {
+			case <-time.After(3 * time.Second):
+				t.ExecutePrinter(companyUuid, printerLog)
+			case <-ctx.Done():
+				log.Printf("打印任务超时，取消重试")
+				return
+			}
 		}()
 	}
 }

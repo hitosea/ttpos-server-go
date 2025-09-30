@@ -29,7 +29,7 @@ func NewErpSetupClient() (setup.SetupServiceClient, *grpc.ClientConn, error) {
 func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.InitShopResp, error) {
 	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(0))
 	// 判断是否已经有店铺
-	companySetting, _ := companySettingRepo.GetOne(companySettingRepo.WhereErpnextCompanyAbbr(initShopReq.CompanyAbbr))
+	companySetting, _ := companySettingRepo.GetOne(companySettingRepo.WhereErpnextCompanyAbbr(initShopReq.CompanyAbbr), companySettingRepo.WhereSiteCode(initShopReq.SiteCode))
 	if companySetting.Uuid != 0 {
 		return resp.InitShopResp{}, errors.New("所属erpnext公司已授权其他商家")
 	}
@@ -46,6 +46,18 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 	staff, _ := staffRepo.GetStaff(staffRepo.WhereIsSuper(1))
 	if staff.Uuid == 0 {
 		return resp.InitShopResp{}, errors.New("商家超管不存在")
+	}
+
+	var headquarterUuid uint64
+	headquarterAbbr := initShopReq.HeadquarterAbbr
+	if initShopReq.SiteCode != "1" && headquarterAbbr == "" {
+		return resp.InitShopResp{}, errors.New("连锁店总部未设置")
+	}
+	// 连锁店-总部关联处理
+	if headquarterAbbr != "" {
+		var headquarter model.CompanySetting
+		s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("erpnext_site_code = ? AND erpnext_company_abbr = ?", initShopReq.SiteCode, initShopReq.HeadquarterAbbr).Scopes(repository.NotDeleted).First(&headquarter)
+		headquarterUuid = headquarter.Uuid
 	}
 
 	client, conn, err := NewErpSetupClient()
@@ -82,6 +94,8 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		"erpnext_branch_name":      response.BranchName,
 		"erpnext_pos_profile_name": response.PosProfile,
 		"erpnext_admin_email":      response.AdminEmail,
+		"erpnext_headquarter_abbr": headquarterAbbr,
+		"headquarter_uuid":         headquarterUuid,
 	})
 
 	// 更新商家库
@@ -94,6 +108,8 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		"erpnext_branch_name":      response.BranchName,
 		"erpnext_pos_profile_name": response.PosProfile,
 		"erpnext_admin_email":      response.AdminEmail,
+		"erpnext_headquarter_abbr": headquarterAbbr,
+		"headquarter_uuid":         headquarterUuid,
 	})
 
 	// 自动同步了支付方式，cash, balance, lianlian(wechat, alipay, qr_promptpay)

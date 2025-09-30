@@ -30,12 +30,13 @@ func NewStatementOrderXprinterTemplate(
 // GetPrintnrContent 获取打印内容
 func (t *statementOrderXprinterTemplate) GetPrintContent(
 	settingPrinterInfo settingResp.PrinterInfo,
-	printerType string,
 	printType int,
 	temp int,
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
 ) string {
+	printerType := settingPrinterInfo.PrinterType
+	//
 	name := t.base.Translate("人")
 	// 店铺设置
 	company := t.base.StoreSetting.Company
@@ -640,7 +641,7 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 	printer.LineFeed()
 	printer.PrintAndExitPageMode()
 	printer.LineFeed(6)
-	printer.CutPaper(true)
+	printer.CutPaper(settingPrinterInfo.IsEnableSound())
 
 	// 返回打印数据
 	return printer.GetOrderData()

@@ -61,6 +61,7 @@ class Printer extends Controller
      * @Apidoc\Param("print_times", type="int", require=true, default=0, desc="打印联数")
      * @Apidoc\Param("width", type="int", require=false, default=80, desc="纸张宽度（mm）")
      * @Apidoc\Param("enable_status_check", type="int", require=false, default=0, desc="是否启用状态检查 0-关闭 1-开启")
+     * @Apidoc\Param("enable_sound", type="int", require=false, default=1, desc="是否启用打印提示音 0-关闭 1-开启")
      * @Apidoc\Param("sort", type="int", require=true, default=0, desc="排序")
      * @Apidoc\Returned()
      */
@@ -69,7 +70,7 @@ class Printer extends Controller
         if ($this->request->isGet()) {
             $cashierList = BindRecord::getCashierList();
             $printerType = PrinterModel::getPrinterTypeList();
-            $lanPrinter = LanPrinterScan::field('ip', 'label')->select();
+            $lanPrinter = LanPrinterScan::field('ip', 'label')->where('status', 1)->select();
             $lanPrinter = array_map(function($item) {
                 return [
                     'value' => $item['ip'],
@@ -129,6 +130,7 @@ class Printer extends Controller
      * @Apidoc\Param("print_times", type="int", require=true, default=0, desc="打印联数")
      * @Apidoc\Param("width", type="int", require=false, default=80, desc="纸张宽度（mm）")
      * @Apidoc\Param("enable_status_check", type="int", require=false, default=0, desc="是否启用状态检查 0-关闭 1-开启")
+     * @Apidoc\Param("enable_sound", type="int", require=false, default=1, desc="是否启用打印提示音 0-关闭 1-开启")
      * @Apidoc\Param("sort", type="int", require=true, default=0, desc="排序")
      * @Apidoc\Returned()
      */

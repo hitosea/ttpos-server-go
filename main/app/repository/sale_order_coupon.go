@@ -9,10 +9,11 @@ import (
 )
 
 type ISaleOrderCouponRepo interface {
-	CreateSaleOrderCoupon(saleOrderCoupon model.SaleOrderCoupon) error // 创建销售订单优惠券
-	UpdateSaleOrderCoupon(saleOrderCoupon model.SaleOrderCoupon) error // 更新销售订单优惠券 更换优惠券或删除优惠券
-	UpdateSaleOrderMemberDiscountCancel(saleOrderUuid uint64) error    // 当订单取消会员时，删除销售订单中已经选中的会员优惠券
-	UpdateSaleOrderCouponCancelAll(saleOrderUuid uint64) error         // 删除销售订单中所有优惠券
+	CreateSaleOrderCoupon(saleOrderCoupon model.SaleOrderCoupon) error            // 创建销售订单优惠券
+	UpdateSaleOrderCoupon(saleOrderCoupon model.SaleOrderCoupon) error            // 更新销售订单优惠券 更换优惠券或删除优惠券
+	UpdateSaleOrderMemberDiscountCancel(saleOrderUuid uint64) error               // 当订单取消会员时，删除销售订单中已经选中的会员优惠券
+	UpdateSaleOrderCouponCancelAll(saleOrderUuid uint64) error                    // 删除销售订单中所有优惠券
+	UpdateSaleOrderCouponAmount(saleOrderUuid uint64, couponAmount float64) error // 更新销售订单优惠券抵扣金额
 }
 
 func NewSaleOrderCouponRepo(db *gorm.DB) ISaleOrderCouponRepo {
@@ -54,6 +55,14 @@ func (r *saleOrderCouponRepo) UpdateSaleOrderMemberDiscountCancel(saleOrderUuid 
 // 软删除已经选中的会员优惠券
 func (r *saleOrderCouponRepo) UpdateSaleOrderCouponCancelAll(saleOrderUuid uint64) error {
 	if err := r.db.Model(&model.SaleOrderCoupon{}).Where("sale_order_uuid = ?", saleOrderUuid).Update("delete_time", time.Now().Unix()).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+// 更新销售订单优惠券抵扣金额
+func (r *saleOrderCouponRepo) UpdateSaleOrderCouponAmount(saleOrderUuid uint64, couponAmount float64) error {
+	if err := r.db.Model(&model.SaleOrderCoupon{}).Where("sale_order_uuid = ?", saleOrderUuid).Update("coupon_amount", couponAmount).Error; err != nil {
 		return err
 	}
 	return nil

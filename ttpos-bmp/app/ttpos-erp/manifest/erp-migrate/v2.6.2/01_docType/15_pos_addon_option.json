@@ -1,0 +1,42 @@
+{
+  "module": "Stock",
+  "name": "Pos Addon Option",
+  "custom": 1,
+  "istable": 1,
+  "editable_grid": 1,
+  "fields" : [{
+    "fieldname": "item",
+    "label": "Item",
+    "fieldtype": "Link",
+    "options": "Item",
+    "reqd": 1,
+    "in_list_view": 1
+  },
+    {
+      "fieldname": "addon_name",
+      "label": "Addon Name",
+      "fieldtype": "Data",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "is_default",
+      "label": "Default",
+      "fieldtype": "Check"
+    },
+    {
+      "fieldname": "Quantity",
+      "label": "quantity",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "sort_order",
+      "label": "Sort Order",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "notes",
+      "label": "Notes",
+      "fieldtype": "Small Text"
+    }
+  ]
+}

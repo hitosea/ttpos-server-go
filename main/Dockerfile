@@ -49,6 +49,9 @@ RUN apt-get update && apt-get install -y ca-certificates curl golang
 RUN apt-get clean && apt-get autoclean && apt-get autoremove --yes \
 && rm -rf /var/lib/{apt,dpkg,cache,log}/
 
+RUN apt-get clean && apt-get autoclean && apt-get autoremove --yes \
+&& rm -rf /var/lib/{apt,dpkg,cache,log}/
+
 # 设置工作目录
 WORKDIR /var/www
 

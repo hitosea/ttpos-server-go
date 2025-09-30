@@ -4,6 +4,7 @@ import (
 	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/service"
@@ -19,7 +20,7 @@ import (
  */
 func (p *PrinterRepoImpl) PrintingRechargeOrder(
 	order model.MemberRechargeOrder,
-	FirstExecution int,
+	firstExecution int,
 ) (*resp.PrinterData, error) {
 	deviceSn := p.ctx.GetDeviceSn()
 
@@ -46,7 +47,7 @@ func (p *PrinterRepoImpl) PrintingRechargeOrder(
 	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
 
 	// 获取打印内容
-	printContent := p.getPrintingRechargeOrderContent(settingPrinterInfo.PrinterType, order)
+	printContent := p.getPrintingRechargeOrderContent(settingPrinterInfo, order)
 	if printContent == "" {
 		return nil, errors.New("获取打印内容失败")
 	}
@@ -63,7 +64,7 @@ func (p *PrinterRepoImpl) PrintingRechargeOrder(
 		DataType:        constant.PrinterTemplateRecharge,
 		Data:            printContent,
 		Type:            1,
-		FirstExecution:  FirstExecution,
+		FirstExecution:  firstExecution,
 		Copies:          settingPrinterInfo.Copies,
 	}, "")
 	if err != nil {
@@ -93,9 +94,10 @@ func (p *PrinterRepoImpl) PrintingRechargeOrder(
 
 // 构建订单打印的内容
 func (p *PrinterRepoImpl) getPrintingRechargeOrderContent(
-	printerType string,
+	settingPrinterInfo settingResp.PrinterInfo,
 	order model.MemberRechargeOrder,
 ) string {
+	printerType := settingPrinterInfo.PrinterType
 
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(
@@ -119,24 +121,21 @@ func (p *PrinterRepoImpl) getPrintingRechargeOrderContent(
 
 	// 图片打印
 	if p.IsImagePrinterMethod() {
-		return template.NewRechargeImgTemplate(base).GetPrintContent(order)
+		return template.NewRechargeImgTemplate(base).GetPrintContent(settingPrinterInfo, order)
 	}
 
 	/* *
 	* Compax 收银打印机 80mm 自带
 	 */
 	if printerType == constant.PrinterTypeCashierCompax {
-		return template.NewRechargeCompaxTemplate(base).GetPrintContent(order)
+		return template.NewRechargeCompaxTemplate(base).GetPrintContent(settingPrinterInfo, order)
 	}
 
 	/* *
 	 * 芯烨打印机
 	 */
 	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
-		return template.NewRechargeXPrinterTemplate(base).GetPrintContent(
-			printerType,
-			order,
-		)
+		return template.NewRechargeXPrinterTemplate(base).GetPrintContent(settingPrinterInfo, order)
 	}
 
 	/* *
@@ -144,7 +143,7 @@ func (p *PrinterRepoImpl) getPrintingRechargeOrderContent(
 	 */
 	if base.IsSunMi {
 		return template.NewRechargeSunmiTemplate(base).GetPrintContent(
-			printerType,
+			settingPrinterInfo,
 			order,
 		)
 	}
@@ -153,7 +152,7 @@ func (p *PrinterRepoImpl) getPrintingRechargeOrderContent(
 	* CODESOFT 打印机
 	 */
 	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi, constant.PrinterTypeGpCloud}, printerType) {
-		return template.NewRechargeCodesoftTemplate(base).GetPrintContent(order)
+		return template.NewRechargeCodesoftTemplate(base).GetPrintContent(settingPrinterInfo, order)
 	}
 
 	return ""

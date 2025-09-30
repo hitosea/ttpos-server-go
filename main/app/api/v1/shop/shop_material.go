@@ -83,6 +83,32 @@ func (h *MaterialHandler) GetMaterialDetail(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetMaterialStockDetail 查询物品库存详情
+// @Summary 查询物品库存详情
+// @Description 查询物品库存详情
+// @Tags 商家端.物品管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param uuid query string true "物品UUID"
+// @Success 200 {object} material_resp.MaterialStockDetailResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/material/stock/detail [get]
+func (h *MaterialHandler) GetMaterialStockDetail(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	stockDetailReq := req.MaterialStockDetailReq{}
+	if err := c.ShouldBindQuery(&stockDetailReq); err != nil {
+		helper.HandleValidationError(c, err, stockDetailReq, dto.PageReqMessage)
+		return
+	}
+	res, err := h.materialSrv.GetMaterialStockDetail(ctx, stockDetailReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
 // AddMaterialCategory 创建物品类别
 // @Summary 创建物品类别
 // @Description 创建物品类别
@@ -111,7 +137,7 @@ func (h *MaterialHandler) AddMaterialCategory(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, nil, "保存成功")
 }
 
 // GetMaterialCategoryList 获取物品类别列表
@@ -138,6 +164,112 @@ func (h *MaterialHandler) GetMaterialCategoryList(c *gin.Context) {
 		return
 	}
 	helper.Success(c, res)
+}
+
+// GetMaterialCategoryDetail 获取物品类别详情
+// @Summary 获取物品类别详情
+// @Description 获取物品类别详情
+// @Tags 商家端.物品管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param uuid query string true "物品类别UUID"
+// @Success 200 {object} material_resp.MaterialCategory "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/material/category/detail [get]
+func (h *MaterialHandler) GetMaterialCategoryDetail(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	detailReq := req.MaterialCategoryDetailReq{}
+	if err := c.ShouldBindQuery(&detailReq); err != nil {
+		helper.HandleValidationError(c, err, detailReq, dto.PageReqMessage)
+		return
+	}
+	res, err := h.materialSrv.GetMaterialCategoryDetail(ctx, detailReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
+// SortMaterialCategory 排序物品类别
+// @Summary 排序物品类别
+// @Description 排序物品类别
+// @Tags 商家端.物品管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.MaterialCategorySortReq true "物品类别排序请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/material/category/sort [post]
+func (h *MaterialHandler) SortMaterialCategory(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	sortReq := req.MaterialCategorySortReq{}
+
+	if err := c.ShouldBindJSON(&sortReq); err != nil {
+		helper.HandleValidationError(c, err, sortReq, dto.PageReqMessage)
+		return
+	}
+	err := h.materialSrv.SortMaterialCategory(ctx, sortReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// EditMaterialCategory 编辑物品类别
+// @Summary 编辑物品类别
+// @Description 编辑物品类别
+// @Tags 商家端.物品管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.MaterialCategoryEditReq true "物品类别编辑请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/material/category/edit [post]
+func (h *MaterialHandler) EditMaterialCategory(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	editReq := req.MaterialCategoryEditReq{}
+
+	if err := c.ShouldBindJSON(&editReq); err != nil {
+		helper.HandleValidationError(c, err, editReq, dto.PageReqMessage)
+		return
+	}
+	err := h.materialSrv.EditMaterialCategory(ctx, editReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil, "保存成功")
+}
+
+// DeleteMaterialCategory 删除物品类别
+// @Summary 删除物品类别
+// @Description 删除物品类别
+// @Tags 商家端.物品管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.MaterialCategoryDeleteReq true "物品类别删除请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/material/category/delete [post]
+func (h *MaterialHandler) DeleteMaterialCategory(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	editReq := req.MaterialCategoryDeleteReq{}
+	if err := c.ShouldBindJSON(&editReq); err != nil {
+		helper.HandleValidationError(c, err, editReq, dto.PageReqMessage)
+		return
+	}
+	err := h.materialSrv.DeleteMaterialCategory(ctx, editReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
 }
 
 // AddMaterial 添加物品
@@ -171,6 +303,32 @@ func (h *MaterialHandler) AddMaterial(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// AddMaterialByErpItem 从erp同步物品
+// @Summary 从erp同步物品
+// @Description 从erp同步物品
+// @Tags 商家端.物品管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.MaterialAddErpReq true "物品添加请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/material/add/erp [post]
+func (h *MaterialHandler) AddMaterialByErpItem(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// addReq := req.MaterialAddErpReq{}
+	// if err := c.ShouldBindJSON(&addReq); err != nil {
+	// 	helper.HandleValidationError(c, err, addReq, dto.PageReqMessage)
+	// 	return
+	// }
+	err := h.materialSrv.SyncHeadquarterMaterial(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
 // EditMaterial 编辑物品
 // @Summary 编辑物品
 // @Description 编辑物品
@@ -195,7 +353,7 @@ func (h *MaterialHandler) EditMaterial(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "保存成功")
 }
 
 // UpdateMaterialStatusBatch 批量修改物品状态
@@ -445,6 +603,46 @@ func (h *MaterialHandler) ImportMaterial(c *gin.Context) {
 	helper.Success(c, gin.H{}, "导入成功")
 }
 
+// SyncMaterialCategory 同步物品分类
+// @Summary 同步物品分类
+// @Description 同步物品分类
+// @Tags 商家端.物品管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/test/material/category/sync [post]
+func (h *MaterialHandler) SyncMaterialCategory(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	err := h.materialSrv.SyncMaterialCategory(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// SyncProductBomCard 同步成本卡
+// @Summary 同步成本卡
+// @Description 同步成本卡
+// @Tags 商家端.物品管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/test/product_bom/card/sync [post]
+func (h *MaterialHandler) SyncProductBomCard(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	err := h.materialSrv.SyncProductBomCard(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
 func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -468,14 +666,19 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/material/list", wrapper.GetMaterialList)                    // 获取物品列表
-		privateApi.GET("/material/detail", wrapper.GetMaterialDetail)                // 获取物品详情
-		privateApi.POST("/material/category/add", wrapper.AddMaterialCategory)       // 创建物品类别
-		privateApi.GET("/material/category/list", wrapper.GetMaterialCategoryList)   // 获取物品类别列表
-		privateApi.POST("/material/add", wrapper.AddMaterial)                        // 添加物品
-		privateApi.POST("/material/edit", wrapper.EditMaterial)                      // 编辑物品
-		privateApi.POST("/material/status/batch", wrapper.UpdateMaterialStatusBatch) // 批量修改物品状态
-		privateApi.GET("/material/unit/list", wrapper.GetMaterialUnitList)           // 获取物品的单位列表
+		privateApi.GET("/material/list", wrapper.GetMaterialList)                      // 获取物品列表
+		privateApi.GET("/material/detail", wrapper.GetMaterialDetail)                  // 获取物品详情
+		privateApi.GET("/material/stock/detail", wrapper.GetMaterialStockDetail)       // 查询物品库存详情
+		privateApi.POST("/material/category/add", wrapper.AddMaterialCategory)         // 创建物品类别
+		privateApi.GET("/material/category/list", wrapper.GetMaterialCategoryList)     // 获取物品类别列表
+		privateApi.GET("/material/category/detail", wrapper.GetMaterialCategoryDetail) // 获取物品类别详情
+		privateApi.POST("/material/category/sort", wrapper.SortMaterialCategory)       // 排序物品类别
+		privateApi.POST("/material/category/edit", wrapper.EditMaterialCategory)       // 编辑物品类别
+		privateApi.POST("/material/category/delete", wrapper.DeleteMaterialCategory)   // 删除物品类别
+		privateApi.POST("/material/add", wrapper.AddMaterial)                          // 添加物品
+		privateApi.POST("/material/edit", wrapper.EditMaterial)                        // 编辑物品
+		privateApi.POST("/material/status/batch", wrapper.UpdateMaterialStatusBatch)   // 批量修改物品状态
+		privateApi.GET("/material/unit/list", wrapper.GetMaterialUnitList)             // 获取物品的单位列表
 
 		privateApi.POST("/product_bom/card/add", wrapper.AddProductBomCard)         // 添加成本卡
 		privateApi.GET("/product_bom/card/detail", wrapper.GetProductBomCardDetail) // 规格商品成本卡详情
@@ -485,5 +688,9 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 
 		privateApi.POST("/material/import/list", wrapper.ImportMaterialList) // 导入物品列表
 		privateApi.POST("/material/import", wrapper.ImportMaterial)          // 导入物品
+
+		privateApi.POST("/material/add/erp", wrapper.AddMaterialByErpItem)            // 从erp同步物品
+		privateApi.POST("/test/material/category/sync", wrapper.SyncMaterialCategory) // 同步物品分类
+		privateApi.POST("/test/product_bom/card/sync", wrapper.SyncProductBomCard)    // 同步成本卡
 	}
 }

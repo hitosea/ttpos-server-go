@@ -27,7 +27,10 @@ type IProductBomQueryRepo interface {
 	GetFlavorProductBomByUuid(uuid uint64) (*model.ProductBom, error)
 	GetSauceProductBomByUuid(uuid uint64) (*model.ProductBom, error) // 获取小料商品信息
 	GetSauceProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error)
+	GetFlavorProductBomUuidsByCardUuids(uuids []uint64) ([]uint64, error) // 通过成本卡uuid列表获取规格商品uuid列表
 	GetProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error)
+	GetProductBomByItemCode(itemCode string) (*model.ProductBom, error)
+	GetProductBomByProductBomCardUuid(productBomCardUuid uint64) (*model.ProductBom, error) // 通过成本卡uuid获取商品信息
 
 	WhereProductSauceUuid(uuid uint64) DBOption // 查询条件 商品加料UUID
 }
@@ -272,4 +275,36 @@ func (r *productBomRepoImpl) SubActualSaleNum(productBomUuid uint64, saleNum flo
 		return errors.WithMessage(err)
 	}
 	return nil
+}
+
+// 通过成本卡uuid列表获取规格商品列表
+func (r *productBomRepoImpl) GetFlavorProductBomUuidsByCardUuids(uuids []uint64) ([]uint64, error) {
+	var productBomUuids []uint64
+	err := r.db.Model(&model.ProductBom{}).Where("product_bom_card_uuid IN ?", uuids).Where("delete_time = 0").Pluck("uuid", &productBomUuids).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productBomUuids, nil
+}
+
+// 根据商品编码获取商品信息
+func (r *productBomRepoImpl) GetProductBomByItemCode(itemCode string) (*model.ProductBom, error) {
+	var productBom model.ProductBom
+	err := r.db.Model(&model.ProductBom{}).Where("erp_code = ?", itemCode).Where("delete_time = 0").
+		Preload("ProductPackage.MultiLanguageName").
+		First(&productBom).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return &productBom, nil
+}
+
+func (r *productBomRepoImpl) GetProductBomByProductBomCardUuid(productBomCardUuid uint64) (*model.ProductBom, error) {
+	var productBom model.ProductBom
+	err := r.db.Model(&model.ProductBom{}).Where("product_bom_card_uuid = ?", productBomCardUuid).Where("delete_time = 0").
+		First(&productBom).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return &productBom, nil
 }

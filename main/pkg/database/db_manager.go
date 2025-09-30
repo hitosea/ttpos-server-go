@@ -85,6 +85,10 @@ func (m *DBManager) GetDB(index uint64) *gorm.DB {
 		if time.Since(m.lastCheck[index]) > m.checkInterval {
 			if sqlDB, err := db.DB(); err == nil {
 				if err := sqlDB.Ping(); err != nil {
+					// 先关闭现有连接
+					if closeErr := sqlDB.Close(); closeErr != nil {
+						log.Printf("关闭失效连接失败: %v", closeErr)
+					}
 					// 连接失效，删除并重建
 					delete(m.dbs, index)
 					delete(m.lastCheck, index)
@@ -110,6 +114,14 @@ func (m *DBManager) GetDB(index uint64) *gorm.DB {
 	m.dbs[index] = companyDB
 	m.lastCheck[index] = time.Now() // 记录检查时间
 	return companyDB
+}
+
+func (m *DBManager) MustGetDB(idx uint64) (*gorm.DB, error) {
+	db := m.GetDB(idx)
+	if db == nil {
+		return nil, fmt.Errorf("db err: %d not found", idx)
+	}
+	return db, nil
 }
 
 func (m *DBManager) GetDBNameList() map[uint64]string {

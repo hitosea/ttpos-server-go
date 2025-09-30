@@ -50,26 +50,33 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		addReq.CompanyUuid == 0 || addReq.DeviceId == "" {
 		return 0, errors.New("来源设备错误")
 	}
-
+	// 判断厨显模式
+	if addReq.Source == constant.SourceKitchen && addReq.KdsMode != nil {
+		if !slices.Contains([]uint{constant.KdsModeDefault, constant.KdsModeMake, constant.KdsModeMakeAndSend}, *addReq.KdsMode) {
+			return 0, errors.New("厨显工作模式错误")
+		}
+	}
 	// 记录 ua 和 平台
 	userAgent := ctx.GetGin().GetHeader("User-Agent") + ";" + ctx.GetGin().GetHeader("platform") // 记录平台
 	platform := utils.GetPlatform(userAgent)
 
 	db := s.dbm.GetDB(addReq.CompanyUuid)
-	// 获取绑定
 	deviceRepo := repository.NewDeviceRepo(db)
+	// 判断设备绑定上限
+	companySetting := repository.NewCompanySettingRepo(db).Get()
+	if err := s.reachBindLimit(deviceRepo, companySetting, addReq.Source); err != nil {
+		return 0, err
+	}
+	// 获取绑定
 	existsDevice, _ := deviceRepo.GetDeviceAll(deviceRepo.WhereSource(addReq.Source), deviceRepo.WhereSn(addReq.DeviceId))
 	if existsDevice.ID != 0 {
-		// 已软删除设备重新登录，判断设备绑定上限
-		if existsDevice.DeleteTime != 0 {
-			companySetting := repository.NewCompanySettingRepo(db).Get()
-			if err := s.reachBindLimit(deviceRepo, companySetting, addReq.Source); err != nil {
-				return 0, err
-			}
-		}
 		productPrinterUuid := addReq.ProductPrinterUuid
 		if productPrinterUuid == 0 {
 			productPrinterUuid = existsDevice.ProductPrinterUuid
+		}
+		kdsMode := existsDevice.KdsMode
+		if addReq.KdsMode != nil {
+			kdsMode = *addReq.KdsMode
 		}
 		remark := addReq.Remark
 		if remark == "" {
@@ -89,6 +96,15 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 			"user_agent":           userAgent,
 			"finally_login_uuid":   addReq.FinallyLoginUuid,
 			"finally_login_time":   finallyLoginTime,
+			"kds_mode":             kdsMode,
+			"is_main": func() int {
+				if addReq.Source == constant.SourceCashier {
+					if !deviceRepo.IsExistCashierMain(constant.SourceCashier) {
+						return 1
+					}
+				}
+				return existsDevice.IsMain
+			}(),
 		})
 		if err != nil {
 			return 0, errors.WithMessage(err, "更新绑定信息失败")
@@ -103,12 +119,6 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		return existsDevice.Uuid, nil
 	}
 
-	// 判断设备绑定上限
-	companySetting := repository.NewCompanySettingRepo(db).Get()
-	if err := s.reachBindLimit(deviceRepo, companySetting, addReq.Source); err != nil {
-		return 0, err
-	}
-
 	// 绑定品牌，如果自带打印，默认更新收银打印配置
 	if addReq.Source == constant.SourceCashier && slices.Contains(constant.BrandsPrints, addReq.Brand) {
 		if err := s.bindPrinter(ctx, addReq.DeviceId); err != nil {
@@ -116,6 +126,10 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		}
 	}
 
+	kdsMode := uint(0)
+	if addReq.KdsMode != nil {
+		kdsMode = *addReq.KdsMode
+	}
 	device, err := deviceRepo.CreateDevice(model.Device{
 		FinallyLoginUuid: addReq.FinallyLoginUuid,
 		FinallyLoginTime: addReq.FinallyLoginTime,
@@ -125,6 +139,15 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		Brand:            addReq.Brand,
 		Platform:         platform,
 		UserAgent:        userAgent,
+		KdsMode:          kdsMode,
+		IsMain: func() int {
+			if addReq.Source == constant.SourceCashier {
+				if !deviceRepo.IsExistCashierMain(constant.SourceCashier) {
+					return 1
+				}
+			}
+			return 0
+		}(),
 	})
 	if err != nil {
 		return 0, errors.WithMessage(err)

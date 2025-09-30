@@ -82,13 +82,16 @@ type IProductRepo interface {
 
 // IProductQueryRepo 商品查询仓库接口
 type IProductQueryRepo interface {
+	CheckProductCategoryCodeExist(code string, uuid uint64) bool                                                    // 检查分类编码是否已存在
 	GetProductListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductPackage, int64, error) // 分页获取商品列表
 	GetProductPackageListByUuids(uuids []uint64) ([]model.ProductPackage, error)                                    // 通过uuid列表获取商品列表
 	GetProductCategoryList(opts ...DBOption) ([]model.ProductCategory, error)                                       // 获取产品类别列表
 	GetProductCategory(opts ...DBOption) (model.ProductCategory, error)                                             // 获取产品分类详情
 	GetProductCategoryCount(opts ...DBOption) (int64, error)                                                        // 获取产品分类数量
+	GetMaterialCategoryCount(opts ...DBOption) (int64, error)                                                       // 获取物品分类数量
 	GetProductCategoryMaxSort(opts ...DBOption) (int64, error)                                                      // 获取产品分类最大排序
 	GetProduct(opts ...DBOption) (model.ProductPackage, error)                                                      // 获取商品详情
+	GetProducts(opts ...DBOption) ([]*model.ProductPackage, error)                                                  // 获取商品列表
 	GetProductDetail(uuid uint64) (*model.ProductPackage, error)                                                    // 获取商品详情
 	GetProductCount(opts ...DBOption) (int64, error)                                                                // 获取商品数量
 	GetProductFlavor(opts ...DBOption) (model.ProductFlavor, error)                                                 // 获取商品口味详情
@@ -103,6 +106,7 @@ type IProductQueryRepo interface {
 	GetProductUnit(opts ...DBOption) (model.ProductUnit, error)                                                // 获取产品单位详情
 	GetProductUnitCount(opts ...DBOption) (int64, error)                                                       // 获取产品单位数量
 	GetProductUnitByUnitUuid(unitUuid uint64) (*model.ProductUnit, error)                                      // 获取产品单位详情
+	GetProductUnitByErpnextUom(erpnextUom string) (*model.ProductUnit, error)                                  // 根据erpnext单位获取产品单位详情
 
 	PaginateGetProductSauceList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductSauce, int64, error) // 分页获取商品加料列表
 	GetProductSauceList(opts ...DBOption) ([]model.ProductSauce, error)                                          // 获取商品加料列表
@@ -119,6 +123,7 @@ type IProductQueryRepo interface {
 	PaginateGetProductFlavorList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductFlavor, int64, error) // 分页获取商品规格列表
 	CheckMultiLanguageNameExist(localeResponse dto.LocaleResponse) dto.LocaleResponse                              // 检查多语言名称是否存在
 	CheckBarcodeExist(barcode string, uuid uint64) bool                                                            // 检查条形码是否存在
+	CheckProductFlavorInternalCodeExist(internalCode string, uuid uint64) bool                                     // 检查商品规格内部编码是否存在
 	CheckBarcodeFormat(barcode string) bool                                                                        // 检查条形码格式
 	CheckPrice(price, minPrice, maxPrice float64, places int) bool                                                 // 检查价格范围
 
@@ -327,6 +332,16 @@ func (r *productRepo) GetProductCategoryCount(opts ...DBOption) (int64, error) {
 	return total, errors.WithMessage(err)
 }
 
+func (r *productRepo) GetMaterialCategoryCount(opts ...DBOption) (int64, error) {
+	var total int64
+	db := r.db.Model(&model.MaterialCategory{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Count(&total).Error
+	return total, errors.WithMessage(err)
+}
+
 // GetProductCategoryMaxSort 获取产品分类最大排序
 func (r *productRepo) GetProductCategoryMaxSort(opts ...DBOption) (int64, error) {
 	var sort sql.NullInt64
@@ -363,6 +378,20 @@ func (r *productRepo) GetProduct(opts ...DBOption) (model.ProductPackage, error)
 	err := db.First(&product).Error
 
 	return product, errors.WithMessage(err)
+}
+
+func (r *productRepo) GetProducts(opts ...DBOption) ([]*model.ProductPackage, error) {
+	var products []*model.ProductPackage
+
+	db := r.db.Model(&model.ProductPackage{})
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	err := db.Find(&products).Error
+
+	return products, errors.WithMessage(err)
 }
 
 // GetProductDetail 获取商品详情
@@ -1222,6 +1251,19 @@ func (r *productRepo) CheckBarcodeExist(barcode string, uuid uint64) bool {
 	return db.First(&model.ProductBom{}).Error == nil
 }
 
+// CheckProductFlavorInternalCodeExist 检查商品规格内部编码是否存在
+func (r *productRepo) CheckProductFlavorInternalCodeExist(internalCode string, uuid uint64) bool {
+	db := r.db.Model(&model.ProductBom{}).
+		Where("delete_time = ?", constant.NotDeleted).
+		Where("internal_code = ?", internalCode).
+		Where("internal_code <> ?", "")
+	if uuid != 0 {
+		db = db.Where("uuid <> ?", uuid)
+	}
+	b := db.First(&model.ProductBom{}).Error == nil
+	return b
+}
+
 // CheckBarcodeFormat 检查条形码格式
 func (r *productRepo) CheckBarcodeFormat(barcode string) bool {
 	return regexp.MustCompile(`^[0-9]{1,13}$`).MatchString(barcode)
@@ -1320,7 +1362,7 @@ func (r *productRepo) BatchUpdateSort(table any, sorts map[uint64]int) error {
 	// 根据传入的模型类型确定错误消息
 	var errorMessage string
 	switch table.(type) {
-	case *model.ProductUnit, *model.ProductAttributeGroup, *model.ProductAttribute, *model.ProductSauce, *model.ProductFlavor, *model.ProductCategory:
+	case *model.ProductUnit, *model.ProductAttributeGroup, *model.ProductAttribute, *model.ProductSauce, *model.ProductFlavor, *model.ProductCategory, *model.MaterialCategory:
 		// 无需处理
 	default:
 		return errors.New("更新排序失败")
@@ -1344,4 +1386,23 @@ func (r *productRepo) GetProductFlavorList(opts ...DBOption) ([]model.ProductFla
 	}
 	err := db.Order("sort asc, create_time asc").Find(&flavors).Error
 	return flavors, errors.WithMessage(err)
+}
+
+func (r *productRepo) CheckProductCategoryCodeExist(code string, uuid uint64) bool {
+	db := r.db.Model(&model.ProductCategory{}).Where("delete_time = ?", constant.NotDeleted).Where("code = ?", code)
+	if uuid != 0 {
+		db = db.Where("uuid <> ?", uuid)
+	}
+	return db.First(&model.ProductCategory{}).Error == nil
+}
+
+func (r *productRepo) GetProductUnitByErpnextUom(erpnextUom string) (*model.ProductUnit, error) {
+	productUnit, err := r.GetProductUnit(
+		CommonRepo.WhereByErpnextUom(erpnextUom),
+		CommonRepo.WhereBySoftDelete(),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return &productUnit, nil
 }

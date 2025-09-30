@@ -610,7 +610,7 @@
             img_name: item[5] || '', // 图片名称
             product_stock: item[6] || '', // 库存数量
             barcode: item[7] || '', // 商品条码
-            product_price: item[8] || '', // 商品价格
+            product_price: item[8] || 0, // 商品价格
             product_status: item[9], // 商品状态
             product_ratin_tax_type: item[10] || '', // 堂食税类
             product_takeout_tax_type: item[11] || '', // 外带税类

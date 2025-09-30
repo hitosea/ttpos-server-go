@@ -663,6 +663,9 @@ func (s *memberSrv) GetMemberCouponList(ctx context.Context, couponListReq membe
 	// 转换为响应对象
 	respMemberCoupons := make([]member_resp.Coupon, 0)
 	for _, memberCoupon := range coupons {
+		if couponListReq.IsHistory != 1 && memberCoupon.MarketingCoupon != nil && memberCoupon.MarketingCoupon.Status == 0 {
+			continue
+		}
 		var respMemberCoupon member_resp.Coupon
 		copier.Copy(&respMemberCoupon, memberCoupon)
 		if memberCoupon.DayStartTime == "00:00" && memberCoupon.DayEndTime == "23:59" {

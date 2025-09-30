@@ -15,7 +15,9 @@ type IPurchaseOrderItemRepo interface {
 	Delete(uuid uint64) error
 	DeleteByPurchaseOrderUuid(purchaseOrderUuid uint64) error
 	DeleteByPurchaseOrderUuidAndNumIsZero(purchaseOrderUuid uint64) error
+	DeleteByPurchaseOrderUuidAndMaterialUuids(purchaseOrderUuid uint64, materialUuids []uint64) error
 	GetByUuid(uuid uint64) (*model.PurchaseOrderItem, error)
+	GetByPurchaseOrderUuidAndMaterialCode(subUuid uint64, materialCode string) (*model.PurchaseOrderItem, error)
 
 	// 查询操作
 	GetByPurchaseOrderUuid(purchaseOrderUuid uint64, opts ...DBOption) ([]model.PurchaseOrderItem, error)
@@ -78,6 +80,14 @@ func (r *PurchaseOrderItemRepoImpl) DeleteByPurchaseOrderUuidAndNumIsZero(purcha
 	return r.db.Where("purchase_order_uuid = ?", purchaseOrderUuid).Where("num = 0").Delete(&model.PurchaseOrderItem{}).Error
 }
 
+// DeleteByPurchaseOrderUuidAndMaterialUuids 根据采购订单UUID和物品UUID删除明细
+func (r *PurchaseOrderItemRepoImpl) DeleteByPurchaseOrderUuidAndMaterialUuids(purchaseOrderUuid uint64, materialUuids []uint64) error {
+	if len(materialUuids) == 0 {
+		return nil
+	}
+	return r.db.Where("purchase_order_uuid = ?", purchaseOrderUuid).Where("material_uuid IN ?", materialUuids).Delete(&model.PurchaseOrderItem{}).Error
+}
+
 // GetByUuid 根据UUID获取采购订单明细
 func (r *PurchaseOrderItemRepoImpl) GetByUuid(uuid uint64) (*model.PurchaseOrderItem, error) {
 	var item model.PurchaseOrderItem
@@ -86,6 +96,13 @@ func (r *PurchaseOrderItemRepoImpl) GetByUuid(uuid uint64) (*model.PurchaseOrder
 		return nil, err
 	}
 	return &item, nil
+}
+
+// GetByPurchaseOrderUuidAndMaterialCode 根据采购订单UUID和物料编码获取采购订单明细
+func (r *PurchaseOrderItemRepoImpl) GetByPurchaseOrderUuidAndMaterialCode(purchaseOrderUuid uint64, materialCode string) (*model.PurchaseOrderItem, error) {
+	var item model.PurchaseOrderItem
+	err := r.db.Where("purchase_order_uuid = ?", purchaseOrderUuid).Where("material_code = ?", materialCode).First(&item).Error
+	return &item, err
 }
 
 // GetByPurchaseOrderUuid 根据采购订单UUID获取明细列表

@@ -6,16 +6,22 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"sort"
 	"strings"
+	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-bmp/app/ttpos-erp/api/setup"
+	"ttpos-bmp/app/ttpos-erp/api/warehouse"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/dao"
 	"ttpos-bmp/app/ttpos-erp/internal/model/do"
+	dto "ttpos-bmp/app/ttpos-erp/internal/model/dto/buying"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	setup2 "ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 	"ttpos-bmp/utility"
 
+	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -30,6 +36,19 @@ type sSetup struct{}
 
 func init() {
 	service.RegisterSetup(Setup)
+}
+
+// pruneNumericPrefix 删除目录名称中的数字前缀
+// 例如: "00_custom_fields" -> "custom_fields"
+// 参数：
+//   - dirName: 原始目录名称
+//
+// 返回：
+//   - string: 处理后的目录名称
+func (s *sSetup) pruneNumericPrefix(dirName string) string {
+	// 匹配以数字开头，后跟下划线的模式，如 "00_", "1_", "123_"
+	re := regexp.MustCompile(`^\d+_`)
+	return re.ReplaceAllString(dirName, "")
 }
 
 // CreateBranch 创建分店
@@ -54,26 +73,34 @@ func (s *sSetup) CreateBranch(ctx context.Context, req *setup.InitShopReq) (bran
 		g.Log().Error(ctx, "查询分支失败", err)
 		return "", gerror.Wrap(err, "查询分支失败")
 	}
-	if count > 0 {
-		return "", gerror.New("店铺已初始化，不能重复初始化")
-	}
-	// 获取公司信息
-	company, err := service.Company().GetCompanyWithAbbr(ctx, req.CompanyAbbr)
-	if err != nil {
-		g.Log().Error(ctx, "获取公司信息失败", err)
-		return "", gerror.Wrap(err, "获取公司信息失败")
-	}
 
-	// 创建分支
-	branchPayload := g.Map{
-		"branch":         req.ShopName,
-		"custom_company": company.CompanyName,
-	}
+	if count == 0 {
+		// 获取公司信息
+		company, err := service.Company().GetCompanyWithAbbr(ctx, req.CompanyAbbr)
+		if err != nil {
+			g.Log().Error(ctx, "获取公司信息失败", err)
+			return "", gerror.Wrap(err, "获取公司信息失败")
+		}
 
-	if _, err := service.Document().Create(ctx, erp.DocTypeBranch, branchPayload); err != nil {
-		g.Log().Error(ctx, "创建分支失败", err)
-		return "", gerror.Wrapf(err, "创建分支失败")
+		// 创建分支
+		branchPayload := g.Map{
+			"branch":         req.ShopName,
+			"custom_company": company.CompanyName,
+		}
+
+		if _, err := service.Document().Create(ctx, erp.DocTypeBranch, branchPayload); err != nil {
+			g.Log().Error(ctx, "创建分支失败", err)
+			return "", gerror.Wrapf(err, "创建分支失败")
+		}
 	}
+	//默认忽略已存在，如果不行再改这里
+	//else {
+	//
+	//	// 店铺已存在，根据ignoreExists参数判断是否忽略
+	//	//if !ignoreExists {
+	//	//	return "", gerror.New("店铺已初始化，不能重复初始化")
+	//	//}
+	//}
 
 	return req.ShopName, nil
 }
@@ -127,6 +154,18 @@ func (s *sSetup) CreateUser(ctx context.Context, req *setup2.CreateUserInp) erro
 //   - posProfileName: POS配置文件名称
 //   - err: 错误信息
 func (s *sSetup) CreateDefaultPosProfile(ctx context.Context, req *setup.CreateDefaultPosProfileReq) (posProfileName string, err error) {
+
+	posProfileList, err := service.Selling().GetPosProfileList(ctx, &selling.PosProfileReq{
+		Name: req.Name,
+	})
+	if err != nil {
+		g.Log().Error(ctx, "获取POS配置文件列表失败", err)
+		return "", gerror.Wrap(err, "获取POS配置文件列表失败")
+	}
+	if len(posProfileList.ProfileList) > 0 {
+		g.Log().Info(ctx, "POS配置文件已存在，无需创建", req.Name)
+		return req.Name, nil
+	}
 	// 获取公司名称
 	companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
 	if err != nil {
@@ -148,7 +187,7 @@ func (s *sSetup) CreateDefaultPosProfile(ctx context.Context, req *setup.CreateD
 		Payments:           g.ArrayStr{"Cash", "Balance", "Free Meal"},
 		Currency:           "THB", // 泰铢
 		WriteOffAccount:    "Sales - " + req.CompanyAbbr,
-		WriteOffLimit:      1.00,
+		WriteOffLimit:      100000.00, //销账约束
 		WriteOffCostCenter: "Main - " + req.CompanyAbbr,
 	}
 	if len(req.Cashiers) > 0 {
@@ -182,73 +221,94 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *se
 		adminEmail = fmt.Sprintf("%s@ttpos-user.com", req.AdminUuid)
 	)
 
-	cashierCount, err := dao.ShopCashier.Ctx(ctx).Count(dao.ShopCashier.Columns().ShopUuid, req.ShopUuid)
-	if err != nil {
-		return nil, gerror.Wrapf(err, "查询门店收银账户失败")
-	}
-	if cashierCount > 0 {
-		return nil, gerror.New("收银员已初始化，不能重复初始化")
-	}
-
 	// 创建分支
 	branchName, err = s.CreateBranch(ctx, req)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建店铺失败")
 	}
 
-	// 创建默认用户
-	err = s.CreateUser(ctx, &setup2.CreateUserInp{
-		UserEmail: adminEmail,
-		FirstName: req.ShopName,
-		AdminUuid: req.AdminUuid,
-		ShopUuid:  req.ShopUuid,
-	})
+	cashierCount, err := dao.ShopCashier.Ctx(ctx).Count(dao.ShopCashier.Columns().ShopUuid, req.ShopUuid)
 	if err != nil {
-		return nil, gerror.Wrapf(err, "创建用户失败")
+		return nil, gerror.Wrapf(err, "查询门店收银账户失败")
+	}
+	if cashierCount > 0 {
+		g.Log().Infof(ctx, "收银员已初始化,%s", req.ShopUuid)
+		//return nil, gerror.New("收银员已初始化，不能重复初始化")
 	}
 
-	// 获取用户的API_KEY/API_SECRET
-	apiKey, apiSecret, err := s.GetUserApiKeySecret(ctx, adminEmail)
-	if err != nil {
-		return nil, gerror.Wrapf(err, "获取用户API_KEY/API_SECRET失败")
-	}
+	if cashierCount == 0 {
+		// 创建默认用户
+		err = s.CreateUser(ctx, &setup2.CreateUserInp{
+			UserEmail: adminEmail,
+			FirstName: req.ShopName,
+			AdminUuid: req.AdminUuid,
+			ShopUuid:  req.ShopUuid,
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "创建用户失败")
+		}
 
-	// 记录门店管理员关联关系，记录api_key/api_secret
-	_, err = dao.ShopCashier.Ctx(ctx).Insert(&do.ShopCashier{
-		ShopUuid:     req.ShopUuid,
-		AdminUuid:    req.AdminUuid,
-		CashierEmail: adminEmail,
-		ApiKey:       apiKey,
-		ApiSecret:    apiSecret,
-		CompanyAbbr:  req.CompanyAbbr,
-		Branch:       branchName,
-	})
-	if err != nil {
-		return nil, gerror.Wrapf(err, "创建门店管理员关联关系失败")
+		// 获取用户的API_KEY/API_SECRET
+		apiKey, apiSecret, err := s.GetUserApiKeySecret(ctx, adminEmail)
+		if err != nil {
+			return nil, gerror.Wrapf(err, "获取用户API_KEY/API_SECRET失败")
+		}
+
+		// 记录门店管理员关联关系，记录api_key/api_secret
+		_, err = dao.ShopCashier.Ctx(ctx).Insert(&do.ShopCashier{
+			ShopUuid:     req.ShopUuid,
+			AdminUuid:    req.AdminUuid,
+			CashierEmail: adminEmail,
+			ApiKey:       apiKey,
+			ApiSecret:    apiSecret,
+			CompanyAbbr:  req.CompanyAbbr,
+			Branch:       branchName,
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "创建门店管理员关联关系失败")
+		}
 	}
 
 	// 创建默认仓库
-	_, err = service.Warehouse().CreateWarehouse(ctx, &setup2.CreateWarehouseInp{
+	warehouseList, err := service.Warehouse().GetWarehouseList(ctx, &warehouse.GetWarehouseListReq{
 		Branch:      branchName,
-		WhType:      "Normal",
+		CompanyAbbr: req.CompanyAbbr,
 		AliasName:   "Default",
-		CompanyAbbr: req.CompanyAbbr,
 	})
 	if err != nil {
-		return nil, gerror.Wrapf(err, "创建默认仓库失败")
+		return nil, gerror.Wrapf(err, "获取仓库列表失败")
 	}
-
+	if len(warehouseList.WarehouseList) == 0 {
+		_, err = service.Warehouse().CreateWarehouse(ctx, &setup2.CreateWarehouseInp{
+			Branch:      branchName,
+			WhType:      "Normal",
+			AliasName:   "Default",
+			CompanyAbbr: req.CompanyAbbr,
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "创建默认仓库失败")
+		}
+	}
 	// 创建在途仓
-	_, err = service.Warehouse().CreateWarehouse(ctx, &setup2.CreateWarehouseInp{
+	warehouseList, err = service.Warehouse().GetWarehouseList(ctx, &warehouse.GetWarehouseListReq{
 		Branch:      branchName,
-		WhType:      "Transit",
-		AliasName:   "Transit",
 		CompanyAbbr: req.CompanyAbbr,
+		AliasName:   "Transit",
 	})
 	if err != nil {
-		return nil, gerror.Wrapf(err, "创建在途仓失败")
+		return nil, gerror.Wrapf(err, "获取仓库列表失败")
 	}
-
+	if len(warehouseList.WarehouseList) == 0 {
+		_, err = service.Warehouse().CreateWarehouse(ctx, &setup2.CreateWarehouseInp{
+			Branch:      branchName,
+			WhType:      "Transit",
+			AliasName:   "Transit",
+			CompanyAbbr: req.CompanyAbbr,
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "创建在途仓失败")
+		}
+	}
 	// 创建默认的Cash，Balance，Free Meal账号关联
 	if err = s.createPaymentAccounts(ctx, req.CompanyAbbr); err != nil {
 		return nil, gerror.Wrapf(err, "创建支付方式账号关联失败")
@@ -267,6 +327,19 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *se
 	})
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建默认pos profile失败")
+	}
+
+	//FIXME 目前除了 ttpos site 其他都是连锁
+	ctxMap := grpcx.Ctx.IncomingMap(ctx)
+	if ctxMap.Contains(consts.ContextSiteCode) && ctxMap.Get(consts.ContextSiteCode) != consts.SiteCodeTtpos {
+		//连锁店模式下，将本公司增加至总店供应商内部交易对象
+		err = service.Supplier().AddSupplerTransactCompany(ctx, &dto.AddSupplerTransactCompanyReq{
+			Supplier:        erp.HeadquartersSupplier,
+			WithCompanyAbbr: req.CompanyAbbr,
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "添加供应商内部交易对象失败")
+		}
 	}
 
 	return &setup.InitShopResp{
@@ -406,7 +479,7 @@ func (s *sSetup) initDocumentsFromDir(ctx context.Context, config DocumentInitCo
 			// 调用service.Document.Create创建文档
 			if _, err := service.Document().Create(ctx, config.DocType, docData); err != nil {
 				g.Log().Error(ctx, fmt.Sprintf("创建%s失败", config.ItemName), err, g.Map{"file": path, "data": docData})
-				return gerror.Wrapf(err, "创建%s失败: %s", config.ItemName, path)
+				//return gerror.Wrapf(err, "创建%s失败: %s", config.ItemName, path)
 			}
 
 			g.Log().Infof(ctx, "%s创建成功: %s", config.ItemName, path)
@@ -429,25 +502,46 @@ func (s *sSetup) InitErpDocTypeWithDirname(ctx context.Context, dirBase string) 
 		return gerror.Newf("%s目录不存在", dirBase)
 	}
 	g.Log().Infof(ctx, "开始初始化%s", dirBase)
+
+	// 读取目录中的所有文件
 	files, err := os.ReadDir(dirBase)
 	if err != nil {
 		return gerror.Wrapf(err, "读取目录失败")
 	}
+
+	// 过滤出目录并按名称排序
+	var dirs []string
 	for _, file := range files {
 		if file.IsDir() {
-			config := DocumentInitConfig{
-				DirBase:  dirBase,
-				DirName:  file.Name(),
-				DocType:  utility.ConvertToTitleCase(file.Name()),
-				ItemName: utility.ConvertToTitleCase(file.Name()),
-			}
-			g.Log().Infof(ctx, "开始初始化%s，目录: %s", config.ItemName, file.Name())
-			s.initDocumentsFromDir(ctx, config)
+			dirs = append(dirs, file.Name())
 		}
 	}
-	if err != nil {
-		return gerror.Wrapf(err, "初始化%s失败", dirBase)
+
+	// 按照目录名称进行排序
+	sort.Strings(dirs)
+
+	// 按照排序后的顺序处理每个目录
+	for _, dirName := range dirs {
+		// 删除数字前缀（如 "00_"）
+		prunedDirName := s.pruneNumericPrefix(dirName)
+		g.Log().Infof(ctx, "处理目录: %s -> %s", dirName, prunedDirName)
+
+		config := DocumentInitConfig{
+			DirBase:  dirBase,
+			DirName:  dirName, // 保持原始目录名称用于文件路径
+			DocType:  utility.ConvertToTitleCase(prunedDirName),
+			ItemName: utility.ConvertToTitleCase(prunedDirName),
+		}
+		g.Log().Infof(ctx, "开始初始化%s，目录: %s", config.ItemName, prunedDirName)
+
+		// 处理单个目录，记录错误但不中断其他目录的处理
+		if err := s.initDocumentsFromDir(ctx, config); err != nil {
+			g.Log().Errorf(ctx, "初始化%s失败: %v", config.ItemName, err)
+			//return gerror.Wrapf(err, "初始化%s失败", config.ItemName)
+		}
 	}
+
+	g.Log().Infof(ctx, "所有目录初始化完成")
 	return nil
 }
 

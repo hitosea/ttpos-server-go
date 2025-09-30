@@ -15,6 +15,7 @@ type IPurchaseOrderRepo interface {
 	Update(purchaseOrder *model.PurchaseOrder) error
 	Delete(uuid uint64) error
 	GetByUuid(uuid uint64, opts ...DBOption) (*model.PurchaseOrder, error)
+	GetBySubUuid(subUuid uint64, opts ...DBOption) (*model.PurchaseOrder, error)
 	GetByOrderNo(orderNo string, opts ...DBOption) (*model.PurchaseOrder, error)
 
 	// 查询操作
@@ -30,14 +31,24 @@ type IPurchaseOrderRepo interface {
 	WhereStatusIn(statusIn []int) DBOption
 	WherePriority(priority int) DBOption
 	WhereSupplierUuid(supplierUuid uint64) DBOption
+	WhereSupplierName(supplierName string) DBOption
 	WhereApplicantUuid(applicantUuid uint64) DBOption
 	WhereApproverUuid(approverUuid uint64) DBOption
 	WhereCreateTimeRange(start, end int) DBOption
 	WhereDeliveryTimeRange(start, end int) DBOption
+	WhereOrderTimeRange(start, end int) DBOption
+	WhereExpectArrivalTimeRange(start, end int) DBOption
+	WhereReceiveTimeRange(start, end int) DBOption
+	WherePurchaseType(purchaseType int) DBOption
+	WhereWarehouseErpCode(warehouseErpCode string) DBOption
+	WhereCompanyUuid(companyUuid uint64) DBOption
 	WithItems() DBOption
+	WithWarehouse() DBOption
 	WithLogs() DBOption
 	WithReceipts() DBOption
 	OrderByCreateTime(desc bool) DBOption
+	OrderByOrderTime(desc bool) DBOption
+
 	OrderByStatus() DBOption
 	OrderByPriority() DBOption
 
@@ -50,6 +61,9 @@ type IPurchaseOrderRepo interface {
 
 	// 获取今天最新的采购申请
 	GetLatestOrderToday() (*model.PurchaseOrder, error)
+
+	// 判断供应商是否存在
+	IsSupplierExists(supplierErpCode string) (bool, error)
 }
 
 // PurchaseOrderRepoImpl 采购订单Repository实现
@@ -64,6 +78,7 @@ func NewPurchaseOrderRepo(db *gorm.DB) IPurchaseOrderRepo {
 
 // Create 创建采购订单
 func (r *PurchaseOrderRepoImpl) Create(purchaseOrder *model.PurchaseOrder) error {
+	purchaseOrder.SetNil()
 	return r.db.Create(purchaseOrder).Error
 }
 
@@ -82,6 +97,17 @@ func (r *PurchaseOrderRepoImpl) GetByUuid(uuid uint64, opts ...DBOption) (*model
 	var purchaseOrder model.PurchaseOrder
 	db := r.applyOptions(r.db, opts...)
 	err := db.Model(&model.PurchaseOrder{}).Where("uuid = ?", uuid).Where("delete_time = ?", constant.NotDeleted).First(&purchaseOrder).Error
+	if err != nil {
+		return nil, err
+	}
+	return &purchaseOrder, nil
+}
+
+// GetBySubUuid 根据子订单UUID获取采购订单
+func (r *PurchaseOrderRepoImpl) GetBySubUuid(subUuid uint64, opts ...DBOption) (*model.PurchaseOrder, error) {
+	var purchaseOrder model.PurchaseOrder
+	db := r.applyOptions(r.db, opts...)
+	err := db.Model(&model.PurchaseOrder{}).Where("sub_uuid = ?", subUuid).Where("delete_time = ?", constant.NotDeleted).First(&purchaseOrder).Error
 	if err != nil {
 		return nil, err
 	}
@@ -202,6 +228,13 @@ func (r *PurchaseOrderRepoImpl) WhereApproverUuid(approverUuid uint64) DBOption 
 	}
 }
 
+// WhereSupplierName 供应商名称条件
+func (r *PurchaseOrderRepoImpl) WhereSupplierName(supplierName string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("supplier_name LIKE ?", "%"+supplierName+"%")
+	}
+}
+
 // WhereCreateTimeRange 创建时间范围条件
 func (r *PurchaseOrderRepoImpl) WhereCreateTimeRange(start, end int) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
@@ -228,10 +261,58 @@ func (r *PurchaseOrderRepoImpl) WhereDeliveryTimeRange(start, end int) DBOption 
 	}
 }
 
+// WhereOrderTimeRange 订单时间范围条件
+func (r *PurchaseOrderRepoImpl) WhereOrderTimeRange(start, end int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if start > 0 {
+			db = db.Where("order_time >= ?", start)
+		}
+		if end > 0 {
+			db = db.Where("order_time <= ?", end)
+		}
+		return db
+	}
+}
+
+// WhereExpectArrivalTimeRange 期望到货时间范围条件
+func (r *PurchaseOrderRepoImpl) WhereExpectArrivalTimeRange(start, end int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if start > 0 {
+			db = db.Where("expect_arrival_time >= ?", start)
+		}
+		if end > 0 {
+			db = db.Where("expect_arrival_time <= ?", end)
+		}
+		return db
+	}
+}
+
+// WhereReceiveTimeRange 收货时间范围条件
+func (r *PurchaseOrderRepoImpl) WhereReceiveTimeRange(start, end int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if start > 0 {
+			db = db.Where("final_receive_time >= ?", start)
+		}
+		if end > 0 {
+			db = db.Where("final_receive_time <= ?", end)
+		}
+		return db
+	}
+}
+
 // WithItems 预加载明细
 func (r *PurchaseOrderRepoImpl) WithItems() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("Items", func(db *gorm.DB) *gorm.DB {
+			return db.Order("create_time ASC")
+		})
+	}
+}
+
+// WithWarehouse 预加载仓库
+func (r *PurchaseOrderRepoImpl) WithWarehouse() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Warehouse", func(db *gorm.DB) *gorm.DB {
 			return db.Order("create_time ASC")
 		})
 	}
@@ -262,6 +343,37 @@ func (r *PurchaseOrderRepoImpl) OrderByCreateTime(desc bool) DBOption {
 			return db.Order("create_time DESC")
 		}
 		return db.Order("create_time ASC")
+	}
+}
+
+// OrderByOrderTime 按订单时间排序
+func (r *PurchaseOrderRepoImpl) OrderByOrderTime(desc bool) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if desc {
+			return db.Order("order_time DESC")
+		}
+		return db.Order("order_time ASC")
+	}
+}
+
+// WherePurchaseType 按采购类型条件
+func (r *PurchaseOrderRepoImpl) WherePurchaseType(purchaseType int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("purchase_type = ?", purchaseType)
+	}
+}
+
+// WhereWarehouseErpCode 仓库编码条件
+func (r *PurchaseOrderRepoImpl) WhereWarehouseErpCode(warehouseErpCode string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("warehouse_erp_code = ?", warehouseErpCode)
+	}
+}
+
+// WhereCompanyUuid 公司UUID条件
+func (r *PurchaseOrderRepoImpl) WhereCompanyUuid(companyUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("company_uuid = ?", companyUuid)
 	}
 }
 
@@ -417,4 +529,13 @@ func (r *PurchaseOrderRepoImpl) applyOptions(db *gorm.DB, opts ...DBOption) *gor
 		db = opt(db)
 	}
 	return db
+}
+
+func (r *PurchaseOrderRepoImpl) IsSupplierExists(supplierErpCode string) (bool, error) {
+	var count int64
+	err := r.db.Model(&model.PurchaseOrder{}).Where("supplier_erp_code = ?", supplierErpCode).Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }

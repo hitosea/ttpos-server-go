@@ -236,3 +236,10 @@ const (
 	RankTypeSaleNum    = 1 // 按销售数量
 	RankTypeSaleAmount = 2 // 按销售金额
 )
+
+const (
+	PosInvoiceItemCodeServiceFee           = "VP001" // 服务费
+	PosInvoiceItemCodeMembershipRecharge   = "VP002" // 会员充值
+	PosInvoiceItemCodeDeliveryFee          = "VP003" // 配送费
+	PosInvoiceItemCodePaymentProcessingFee = "VP004" // 支付手续费
+)

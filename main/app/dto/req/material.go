@@ -3,16 +3,33 @@ package req
 import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/pkg/utils"
 )
 
 // MaterialCategoryAddReq 创建物品类别请求
 type MaterialCategoryAddReq struct {
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 物品类别名称
+	Code       string             `json:"code"`        // 物品类别编码
+
+	uuid uint64 `json:"uuid"` // 物品类别UUID。用于内部方法调用时
+}
+
+func (r *MaterialCategoryAddReq) GetUuid() uint64 {
+	return r.uuid
+}
+
+func (r *MaterialCategoryAddReq) SetUuid(uuid uint64) {
+	r.uuid = uuid
 }
 
 func (r *MaterialCategoryAddReq) Validate() error {
 	if r.LocaleName.IsNull() {
 		return errors.WithMessage(errors.New("名称不能为空"))
+	}
+	if r.Code != "" {
+		if !utils.IsValidInternalCode(r.Code) {
+			return errors.WithMessage(errors.New("编码长度应为1-13位，可输入纯数字/纯字母/数字+字母"))
+		}
 	}
 	return nil
 }
@@ -21,12 +38,29 @@ func (r *MaterialCategoryAddReq) Validate() error {
 type MaterialCategoryListReq struct {
 }
 
+// MaterialCategoryDetailReq 获取物品类别详情请求
+type MaterialCategoryDetailReq struct {
+	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 物品类别UUID
+}
+
+// MaterialCategorySortReq 物品类别排序请求
+type MaterialCategorySortReq struct {
+	List []MaterialCategorySortItemReq `json:"list" binding:"required,dive"` // 物品类别列表
+}
+
+type MaterialCategorySortItemReq struct {
+	Uuid uint64 `json:"uuid" binding:"required"` // 物品类别UUID
+	Sort int    `json:"sort" binding:"required"` // 排序
+}
+
 // MaterialListReq 物品列表查询
 type MaterialListReq struct {
-	dto.PageReq            // 分页参数
-	Keyword       string   `form:"keyword" json:"keyword"`               // 关键字
-	Status        int      `form:"status" json:"status"`                 // 状态，0-全部 1-启用 2-停用
-	CategoryUuids []uint64 `form:"category_uuids" json:"category_uuids"` // 分类UUID列表,多选时
+	dto.PageReq               // 分页参数
+	Keyword          string   `form:"keyword" json:"keyword"`                       // 关键字
+	Status           int      `form:"status" json:"status"`                         // 状态，0-全部 1-启用 2-停用
+	CategoryUuids    []uint64 `form:"category_uuids" json:"category_uuids"`         // 分类UUID列表,多选时
+	WarehouseErpCode string   `form:"warehouse_erp_code" json:"warehouse_erp_code"` // 仓库编码
+	PurchaseType     int      `form:"purchase_type" json:"purchase_type"`           // 采购类型，0-全部 1-门店 2-总部
 }
 
 func (r *MaterialListReq) GetCategoryUuids() []uint64 {
@@ -44,6 +78,23 @@ type MaterialDetailReq struct {
 	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 物品UUID
 }
 
+// MaterialStockDetailReq 物品库存详情查询
+type MaterialStockDetailReq struct {
+	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 物品UUID
+}
+
+// MaterialCategoryDeleteReq 删除物品类别请求
+type MaterialCategoryDeleteReq struct {
+	Uuid uint64 `json:"uuid" binding:"required"` // 物品类别UUID
+}
+
+// MaterialCategoryEditReq 编辑物品类别请求
+type MaterialCategoryEditReq struct {
+	Uuid       uint64             `json:"uuid"`        // 物品类别UUID
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 物品类别名称
+	Code       string             `json:"code"`        // 物品类别编码
+}
+
 // MaterialAddReq 添加物品请求
 type MaterialAddReq struct {
 	LocaleName       dto.LocaleResponse `json:"locale_name"`        // 物品名称
@@ -56,6 +107,26 @@ type MaterialAddReq struct {
 	UnitList         []MaterialUnitReq  `json:"unit_list"`          // 单位列表
 	PurchaseUnitUuid uint64             `json:"purchase_unit_uuid"` // 采购单位UUID
 	CostUnitUuid     uint64             `json:"cost_unit_uuid"`     // 成本单位UUID
+	InternalCode     string             `json:"internal_code"`      // 内部编码
+
+	headquarterUuid uint64 // 总部uuid。 内部调用使用，同步总部物品时
+	warehouseUuid   uint64 // 仓库uuid。 内部调用使用，同步总部物品时
+}
+
+func (r *MaterialAddReq) GetHeadquarterUuid() uint64 {
+	return r.headquarterUuid
+}
+
+func (r *MaterialAddReq) SetHeadquarterUuid(uuid uint64) {
+	r.headquarterUuid = uuid
+}
+
+func (r *MaterialAddReq) GetWarehouseUuid() uint64 {
+	return r.warehouseUuid
+}
+
+func (r *MaterialAddReq) SetWarehouseUuid(uuid uint64) {
+	r.warehouseUuid = uuid
 }
 
 func (r *MaterialAddReq) Validate() error {
@@ -93,38 +164,70 @@ func (r *MaterialAddReq) Validate() error {
 	if r.InitStock <= 0 {
 		return errors.WithMessage(errors.New("期初库存需大于零"))
 	}
+	// 非必填，门店唯一，1-13位（可输入纯数字/纯字母/数字+字母）
+	if r.InternalCode != "" {
+		if !utils.IsValidInternalCode(r.InternalCode) {
+			return errors.WithMessage(errors.New("内部编码长度应为1-13位，可输入纯数字/纯字母/数字+字母"))
+		}
+	}
 	return nil
 }
 
 type MaterialAddErpReq struct {
-	ItemCode      string           `json:"item_code" binding:"required"`      // 物品编码, 如果为空，则为新增；如果非空，则为编辑
-	ItemName      string           `json:"item_name" binding:"required"`      // 物品名称, 英文
-	StockUom      string           `json:"stock_uom" binding:"required"`      // 基准库存单位, 英文
-	Disabled      bool             `json:"disabled" binding:"required"`       // 是否禁用
-	BarcodeValue  string           `json:"barcode_value" binding:"required"`  // 条形码值
-	ValuationRate float64          `json:"valuation_rate" binding:"required"` // 估值率
-	OpeningStock  float64          `json:"opening_stock" binding:"required"`  // 期初库存
-	Uoms          []MaterialUomReq `json:"uoms" binding:"required,dive"`      // 单位列表
+	ItemCode           string           `json:"item_code" `           // 物品编码, 如果为空，则为新增；如果非空，则为编辑
+	ItemName           string           `json:"item_name" `           // 物品名称, 英文
+	StockUom           string           `json:"stock_uom" `           // 基准库存单位, 英文
+	Disabled           bool             `json:"disabled" `            // 是否禁用
+	BarcodeValue       string           `json:"barcode_value" `       // 条形码值
+	ValuationRate      float64          `json:"valuation_rate" `      // 估值率
+	OpeningStock       float64          `json:"opening_stock" `       // 期初库存
+	InternalCode       string           `json:"internal_code" `       // 内部编码
+	Classification     string           `json:"classification" `      // 分类
+	ClassificationCode string           `json:"classification_code" ` // 分类编码
+	Uoms               []MaterialUomReq `json:"uoms" `                // 单位列表
+	PurchaseUom        string           `json:"purchase_uom" `        // 采购单位, 英文
+}
+
+type MaterialEditErpReq struct {
+	Uuid               uint64           `json:"uuid" `                // 物品UUID
+	ItemCode           string           `json:"item_code" `           // 物品编码, 如果为空，则为新增；如果非空，则为编辑
+	ItemName           string           `json:"item_name" `           // 物品名称, 英文
+	StockUom           string           `json:"stock_uom" `           // 基准库存单位, 英文
+	Disabled           bool             `json:"disabled" `            // 是否禁用
+	BarcodeValue       string           `json:"barcode_value" `       // 条形码值
+	ValuationRate      float64          `json:"valuation_rate" `      // 估值率
+	OpeningStock       float64          `json:"opening_stock" `       // 期初库存
+	InternalCode       string           `json:"internal_code" `       // 内部编码
+	Classification     string           `json:"classification" `      // 分类
+	ClassificationCode string           `json:"classification_code" ` // 分类编码
+	Uoms               []MaterialUomReq `json:"uoms" `                // 单位列表
+	PurchaseUom        string           `json:"purchase_uom" `        // 采购单位, 英文
 }
 
 type ProductAddErpReq struct {
-	ItemName          string `json:"item_name" binding:"required"`          // 商品名称, 英文
-	StockUom          string `json:"stock_uom" binding:"required"`          // 商品单位, 英文
-	ItemCode          string `json:"item_code" binding:"required"`          // 商品编码，如果为空，则为新增；如果非空，则为编辑
-	TemplateItemCode  string `json:"template_item_code" binding:"required"` // 模版商品编码
-	ItemSpecification string `json:"item_specification" binding:"required"` // 商品规格
-	BarcodeValue      string `json:"barcode_value" binding:"required"`      // 条形码值
+	ItemName           string `json:"item_name" binding:"required"`           // 商品名称, 英文
+	StockUom           string `json:"stock_uom" binding:"required"`           // 商品单位, 英文
+	ItemCode           string `json:"item_code" binding:"required"`           // 商品编码，如果为空，则为新增；如果非空，则为编辑
+	TemplateItemCode   string `json:"template_item_code" binding:"required"`  // 模版商品编码
+	ItemSpecification  string `json:"item_specification" binding:"required"`  // 商品规格
+	BarcodeValue       string `json:"barcode_value" binding:"required"`       // 条形码值
+	Classification     string `json:"classification" binding:"required"`      // 分类
+	ClassificationCode string `json:"classification_code" binding:"required"` // 分类编码
+	InternalCode       string `json:"internal_code" `                         // 内部编码
 }
 
 type PackageAddErpReq struct {
-	ItemName string `json:"item_name" binding:"required"` // 套餐名称, 英文
-	StockUom string `json:"stock_uom" binding:"required"` // 套餐单位, 英文
-	ItemCode string `json:"item_code" binding:"required"` // 套餐编码，如果为空，则为新增；如果非空，则为编辑
+	ItemName           string `json:"item_name" binding:"required"`           // 套餐名称, 英文
+	StockUom           string `json:"stock_uom" binding:"required"`           // 套餐单位, 英文
+	ItemCode           string `json:"item_code" binding:"required"`           // 套餐编码，如果为空，则为新增；如果非空，则为编辑
+	InternalCode       string `json:"internal_code" `                         // 内部编码
+	Classification     string `json:"classification" binding:"required"`      // 分类
+	ClassificationCode string `json:"classification_code" binding:"required"` // 分类编码
 }
 
 type MaterialUomReq struct {
-	Uom            string  `json:"uom" binding:"required"`                   // 单位, 英文
-	ConversionRate float64 `json:"conversion_rate" binding:"required,min=0"` // 转换率
+	Uom            string  `json:"uom" `             // 单位, 英文
+	ConversionRate float64 `json:"conversion_rate" ` // 转换率
 }
 
 // MaterialUnitReq 物品单位请求
@@ -144,6 +247,7 @@ type MaterialEditReq struct {
 	UnitList         []MaterialUnitReq  `json:"unit_list"`          // 单位列表,新增的非基准单位
 	PurchaseUnitUuid uint64             `json:"purchase_unit_uuid"` // 采购单位UUID
 	CostUnitUuid     uint64             `json:"cost_unit_uuid"`     // 成本单位UUID
+	InternalCode     string             `json:"internal_code"`      // 内部编码
 }
 
 func (r *MaterialEditReq) Validate() error {
@@ -172,6 +276,12 @@ func (r *MaterialEditReq) Validate() error {
 			if char < '0' || char > '9' {
 				return errors.WithMessage(errors.New("条形码只能包含数字"))
 			}
+		}
+	}
+	// 非必填，门店唯一，1-13位（可输入纯数字/纯字母/数字+字母）
+	if r.InternalCode != "" {
+		if !utils.IsValidInternalCode(r.InternalCode) {
+			return errors.WithMessage(errors.New("内部编码长度应为1-13位，可输入纯数字/纯字母/数字+字母"))
 		}
 	}
 	return nil
@@ -214,6 +324,11 @@ type ProductBomCardMaterialReq struct {
 // ProductBomCardDetailReq 规格商品成本卡详情请求
 type ProductBomCardDetailReq struct {
 	Uuid uint64 `form:"uuid" binding:"required"` // 成本卡UUID product_bom_card_uuid
+}
+
+// ErpProductBomCardDetailReq ERP规格商品成本卡详情请求
+type ErpProductBomCardDetailReq struct {
+	BomName string `form:"bom_name"` // 成本卡名称 bom_name
 }
 
 // ProductBomCardUnlinkReq 解除成本卡关联请求

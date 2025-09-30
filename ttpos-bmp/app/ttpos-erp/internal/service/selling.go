@@ -8,12 +8,21 @@ package service
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
+	"ttpos-bmp/app/ttpos-erp/internal/model/do"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	dtoSelling "ttpos-bmp/app/ttpos-erp/internal/model/dto/selling"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
+	"ttpos-bmp/app/ttpos-erp/internal/model/entity"
 )
 
 type (
+	IAsyncSelling interface {
+		CancelPosInvoice(ctx context.Context, req *selling.CancelPosInvoiceReq) (asyncRecordId string, err error)
+		SavePosInvoice(ctx context.Context, req *selling.SavePosInvoiceReq) (*selling.SavePosInvoiceResp, error)
+		ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosInvoiceReq) (*selling.ReturnPosInvoiceResp, error)
+		ClosePosEntry(ctx context.Context, req *selling.ClosePosEntryReq) (*selling.ClosePosEntryResp, error)
+		GetLatestReceivePosInvoice(ctx context.Context, req *do.ReceivePosInvoice) (*entity.ReceivePosInvoice, error)
+	}
 	ISelling interface {
 		// GetPosProfileList 查询POS配置文件列表
 		// 参数：
@@ -86,6 +95,17 @@ type (
 		//   - *selling.SavePosInvoiceResp: 保存POS发票响应信息
 		//   - error: 错误信息
 		SavePosInvoice(ctx context.Context, req *selling.SavePosInvoiceReq) (*selling.SavePosInvoiceResp, error)
+		// SavePosInvoiceStep 保存POS发票步骤
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 保存POS发票请求参数
+		//   - openingEntry: POS开帐记录
+		//   - isMaterialItem: 是否为物品发票
+		//
+		// 返回：
+		//   - string: POS发票名称
+		//   - error: 错误信息
+		SavePosInvoiceStep(ctx context.Context, req *selling.SavePosInvoiceReq, openingEntry *erp.POSOpeningEntry, isMaterialItem bool) (string, error)
 		// GetPosOpeningEntry 获取POS开帐记录
 		// 参数：
 		//   - ctx: 上下文对象
@@ -130,12 +150,61 @@ type (
 		// 功能：
 		//   - 获取支付方式列表
 		GetModeOfPaymentList(ctx context.Context, req *selling.GetModeOfPaymentListReq) (*selling.GetModeOfPaymentListResp, error)
+		// CountCustomer 统计客户数量
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - filter: 客户过滤条件，可选
+		//
+		// 返回：
+		//   - int: 客户数量
+		//   - error: 错误信息
+		CountCustomer(ctx context.Context, filter *erp.Customer) (int, error)
+		// CreateCustomer 创建客户
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - req: 客户信息
+		//
+		// 返回：
+		//   - *erp.Customer: 创建后的客户信息
+		//   - error: 错误信息
+		CreateCustomer(ctx context.Context, req *erp.Customer) (*erp.Customer, error)
+		// UpdateCustomer 更新客户
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - name: 客户名称
+		//   - req: 更新的客户信息
+		//
+		// 返回：
+		//   - *erp.Customer: 更新后的客户信息
+		//   - error: 错误信息
+		UpdateCustomer(ctx context.Context, name string, req *erp.Customer) (*erp.Customer, error)
+		// GetCustomer 获取客户信息
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - name: 客户名称
+		//
+		// 返回：
+		//   - *erp.Customer: 客户信息
+		//   - error: 错误信息
+		GetCustomer(ctx context.Context, name string) (*erp.Customer, error)
 	}
 )
 
 var (
-	localSelling ISelling
+	localAsyncSelling IAsyncSelling
+	localSelling      ISelling
 )
+
+func AsyncSelling() IAsyncSelling {
+	if localAsyncSelling == nil {
+		panic("implement not found for interface IAsyncSelling, forgot register?")
+	}
+	return localAsyncSelling
+}
+
+func RegisterAsyncSelling(i IAsyncSelling) {
+	localAsyncSelling = i
+}
 
 func Selling() ISelling {
 	if localSelling == nil {

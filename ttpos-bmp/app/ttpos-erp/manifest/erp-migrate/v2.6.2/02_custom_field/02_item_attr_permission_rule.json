@@ -1,0 +1,9 @@
+{
+  "doctype": "DocType",
+  "label": "Permission Rule",
+  "fieldname": "custom_permission_rule",
+  "fieldtype": "Table MultiSelect",
+  "options": "Item Attr Permission Rule",
+  "insert_after": "custom_company",
+  "dt": "Item Attribute"
+}

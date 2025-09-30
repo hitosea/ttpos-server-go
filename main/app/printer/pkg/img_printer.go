@@ -38,7 +38,7 @@ import (
 // 图片创建控制器 - 控制NewImgFont的并发
 var (
 	imgFontSemaphore     chan struct{} // 信号量通道
-	maxImgFontConcurrent = 200         // 最大并发数
+	maxImgFontConcurrent = 150         // 最大并发数
 	imgFontMutex         sync.RWMutex  // 读写锁
 	activeImgFontCount   = 0           // 当前活跃数量
 )
@@ -200,6 +200,21 @@ func (gfm *GlobalFontManager) PreloadCommonFonts() {
 	gfm.mutex.Unlock()
 }
 
+func (gfm *GlobalFontManager) GetMemoryUsage() (int64, map[string]int) {
+	gfm.mutex.RLock()
+	defer gfm.mutex.RUnlock()
+	stats := map[string]int{
+		"font_count":         len(gfm.fonts),
+		"width_cache_count":  len(gfm.widths),
+		"access_cache_count": len(gfm.widthAccess),
+	}
+	// 粗略估算内存使用量
+	estimatedMemory := int64(len(gfm.fonts)*3*1024*1024 +
+		len(gfm.widths)*60 +
+		len(gfm.widthAccess)*65)
+	return estimatedMemory, stats
+}
+
 // ImgFont 类用于生成图像并添加文本
 type ImgFont struct {
 	// 图像对象
@@ -354,11 +369,16 @@ func GetImgFontStatus() map[string]interface{} {
 	imgFontMutex.RLock()
 	defer imgFontMutex.RUnlock()
 
+	memoryUsage, stats := globalFontManager.GetMemoryUsage()
 	return map[string]interface{}{
-		"max_concurrent":   maxImgFontConcurrent,
-		"active_count":     activeImgFontCount,
-		"available":        maxImgFontConcurrent - activeImgFontCount,
-		"semaphore_length": len(imgFontSemaphore),
+		"max_concurrent":     maxImgFontConcurrent,
+		"active_count":       activeImgFontCount,
+		"available":          maxImgFontConcurrent - activeImgFontCount,
+		"semaphore_length":   len(imgFontSemaphore),
+		"font_count":         stats["font_count"],
+		"width_cache_count":  stats["width_cache_count"],
+		"access_cache_count": stats["access_cache_count"],
+		"memory_usage":       memoryUsage,
 	}
 }
 
@@ -906,6 +926,12 @@ func (i *ImgFont) SetSegmentationHeight(height int) *ImgFont {
 	return i
 }
 
+// SetSegmentationHeight 设置分割高度
+func (i *ImgFont) DebugSetSegmentationHeight(height int) *ImgFont {
+	i.SegmentationHeight = height
+	return i
+}
+
 // AppendPartingline 添加文本行
 func (i *ImgFont) AppendPartingline(text string, fixedWidth int, deviationWidth float64) *ImgFont {
 	// 确定起始高度，如果总高度为0则使用行高
@@ -1043,7 +1069,9 @@ func (i *ImgFont) AppendImg(imgPath string, size int, isRoundness bool, topHeigh
 			}
 		}
 
+		srcImg = nil
 		srcImg = resizedImg
+		resized = nil
 	}
 
 	// 处理圆角
@@ -1078,6 +1106,7 @@ func (i *ImgFont) AppendImg(imgPath string, size int, isRoundness bool, topHeigh
 		roundedImg := image.NewRGBA(image.Rect(0, 0, width, height))
 		draw.DrawMask(roundedImg, roundedImg.Bounds(), srcImg, image.Point{}, mask, image.Point{}, draw.Over)
 		srcImg = roundedImg
+		mask = nil
 	}
 
 	// 计算图片位置 (水平居中)
@@ -1103,6 +1132,9 @@ func (i *ImgFont) AppendImg(imgPath string, size int, isRoundness bool, topHeigh
 
 	// 添加换行
 	i.LineFeed(1)
+
+	//
+	srcImg = nil
 
 	return i
 }
@@ -1350,6 +1382,7 @@ type appendSplitlineOptions struct {
 	isLineFeed bool
 	lineHeight int
 	fontWeight int
+	fontSize   int
 }
 
 // DefaultAppendSplitLineOptions 返回默认的 AppendSplitline 选项
@@ -1358,6 +1391,7 @@ func DefaultAppendSplitLineOptions() appendSplitlineOptions {
 		isLineFeed: false,
 		lineHeight: 0,
 		fontWeight: 1,
+		fontSize:   20,
 	}
 }
 
@@ -1395,8 +1429,14 @@ func (i *ImgFont) AppendSplitLine(opts ...AppendSplitlineOption) *ImgFont {
 	// 保存原始字体粗细
 	originalFontWeight := i.FontWeight
 
+	// 保存原始字体大小
+	originalFontSize := i.FontSize
+
 	// 设置分割线的字体粗细
 	i.SetFontWeight(options.fontWeight)
+
+	// 设置分割线的字体大小
+	i.SetFontSize(options.fontSize)
 
 	// 根据图像宽度添加分割线
 	if i.ImageWidth == 567 || i.ImageWidth == 568 {
@@ -1416,6 +1456,9 @@ func (i *ImgFont) AppendSplitLine(opts ...AppendSplitlineOption) *ImgFont {
 
 	// 恢复原始字体粗细
 	i.SetFontWeight(originalFontWeight)
+
+	// 恢复原始字体大小
+	i.SetFontSize(originalFontSize)
 
 	return i
 }
@@ -1728,6 +1771,10 @@ func (i *ImgFont) Save(imageSrc string, reminderSound bool, openMoneybox int) st
 		// 生成打印数据
 		printData := string([]byte{29, 118, 48, 0}) + i.GetBytesFromBitMap(rotatedImage)
 		data = append(data, printData)
+
+		// 加快释放
+		croppedImage = nil
+		rotatedImage = nil
 	}
 
 	// 合并打印数据

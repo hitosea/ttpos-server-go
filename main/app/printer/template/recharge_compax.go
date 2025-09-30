@@ -3,6 +3,7 @@ package template
 
 import (
 	"ttpos-server-go/app/constant"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/pkg/utils"
@@ -24,6 +25,7 @@ func NewRechargeCompaxTemplate(
 
 // GetPrintContent 获取打印内容
 func (t *rechargeCompaxTemplate) GetPrintContent(
+	settingPrinterInfo settingResp.PrinterInfo,
 	order model.MemberRechargeOrder,
 ) string {
 	// 日历
@@ -90,7 +92,7 @@ func (t *rechargeCompaxTemplate) GetPrintContent(
 	printer.LineFeed()
 	printer.PrintAndExitPageMode()
 	printer.LineFeed(5)
-	printer.CutPaper(true)
+	printer.CutPaper(settingPrinterInfo.IsEnableSound())
 
 	//
 	return printer.GetOrderData()

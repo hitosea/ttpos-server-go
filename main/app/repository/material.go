@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"database/sql"
 	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -14,28 +15,46 @@ import (
 // IMaterialRepo 物品仓库接口
 type IMaterialRepo interface {
 	GetMaterialListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.Material, int64, error)
+	GetMaterial(opts ...DBOption) model.Material
 	GetMaterialByUuid(uuid uint64, opts ...DBOption) (model.Material, error)
 	GetMaterialByUuids(uuids []uint64, opts ...DBOption) ([]*model.Material, error)
+	GetMaterialByCategoryUuid(categoryUuid uint64) ([]*model.Material, error)
 	GetMaterialDetailByUuids(uuids []uint64) ([]*model.Material, error)
 	GetMaterialDetailByUuid(uuid uint64) (*model.Material, error)
 	CreateMaterial(material model.Material) (uint64, error)
 	UpdateMaterialCode(uuid uint64, code string) error
 	UpdateMaterial(material model.Material) error
+	UpdateMaterialData(data map[string]any, opts ...DBOption) error
 	UpdateMaterialStatus(uuid uint64, status bool) error
 	ClearMaterialBarcodeValue(uuid uint64) error // 清空物品条形码值
 	ClearMaterialValuation(uuid uint64) error    // 清空物品估值率
+	ClearMaterialInternalCode(uuid uint64) error // 清空物品内部编码
 	DeleteMaterial(uuid uint64) error
+	GetMaterialCategory(opts ...DBOption) (*model.MaterialCategory, error)
 	GetMaterialCategoryByName(name string) (*model.MaterialCategory, error)
+	GetMaterialCategoryByUuid(uuid uint64) (*model.MaterialCategory, error)
+	GetMaterialCategoryByCode(code string) (*model.MaterialCategory, bool, error)
+	GetMaterialCategoryByEnglishName(englishName string) (*model.MaterialCategory, bool, error)
+	UpdateMaterialCategory(materialCategory model.MaterialCategory) error
+	DeleteMaterialCategory(uuid uint64, multiLanguageNameUuid uint64) error
 	CreateMaterialCategory(materialCategory model.MaterialCategory) (uint64, error)
 	GetMaterialCategoryList() ([]model.MaterialCategory, error)
-	UpdateMaterialStatusBatch(uuids []uint64, status int) error   // 批量修改物品状态
-	UpdateMaterialStockNum(materials []*model.Material) error     // 更新物品库存数量
-	AddActualSaleNum(materialUuid uint64, saleNum float64) error  // 增加材料销量
-	GetMaterialByErpCode(erpCode string) (*model.Material, error) // 根据erp_code获取物品
+	UpdateMaterialStatusBatch(uuids []uint64, status int) error          // 批量修改物品状态
+	UpdateMaterialStockNum(materials []*model.Material) error            // 更新物品库存数量
+	AddActualSaleNum(materialUuid uint64, saleNum float64) error         // 增加材料销量
+	GetMaterialByErpCode(erpCode string) (*model.Material, error)        // 根据erp_code获取物品
+	GetMaterialDetailByErpCode(erpCode string) (*model.Material, error)  // 根据erp_code获取物品详情
+	UpdateMaterialWarehouseUuid(uuid uint64, warehouseUuid uint64) error // 更新物品仓库uuid
+	UpdateAllMaterialWarehouseUuid(warehouseUuid uint64) error           // 将所有物品的仓库uuid设置为指定仓库uuid
 
 	CheckMultiLanguageNameExist(localeResponse dto.LocaleResponse) dto.LocaleResponse // 检查多语言名称是否存在
 	GetCategoryUuidByNameOptimized(name string) (uint64, error)
-	CheckBarcodeExist(barcode string, uuid uint64) bool // 检查条形码是否存在
+	CheckBarcodeExist(barcode string, uuid uint64) bool                       // 检查条形码是否存在
+	CheckMaterialInternalCodeExist(internalCode string, uuid uint64) bool     // 检查内部编码是否存在
+	CheckMaterialCategoryCodeExist(code string, uuid uint64) bool             // 检查物品类别编码是否存在
+	GetMaterialUuidsByCategoryUuids(categoryUuids []uint64) ([]uint64, error) // 根据分类UUID列表获取物品UUID列表
+	GetMaterialUuidsByKeyword(keyword string) ([]uint64, error)               // 根据关键字获取物品UUID列表
+	GetMaterialCategoryMaxSort(opts ...DBOption) (int64, error)               // 获取物品类别最大排序
 
 	WithRelatedMaterialList() DBOption
 }
@@ -87,6 +106,20 @@ func (r *MaterialRepoImpl) GetMaterialListWithPagination(pageNo, pageSize int, o
 	return materials, total, nil
 }
 
+// GetMaterial 根据查询选项获取物品
+func (r *MaterialRepoImpl) GetMaterial(opts ...DBOption) model.Material {
+	var material model.Material
+
+	query := r.db
+	for _, opt := range opts {
+		query = opt(query)
+	}
+
+	query.Find(&material).Limit(1)
+
+	return material
+}
+
 // GetMaterialByUuid 根据UUID获取物品详情
 func (r *MaterialRepoImpl) GetMaterialByUuid(uuid uint64, opts ...DBOption) (model.Material, error) {
 	var material model.Material
@@ -120,6 +153,18 @@ func (r *MaterialRepoImpl) GetMaterialByUuids(uuids []uint64, opts ...DBOption) 
 		return nil, errors.WithMessage(err, "查询物品详情失败")
 	}
 
+	return materials, nil
+}
+
+func (r *MaterialRepoImpl) GetMaterialByCategoryUuid(categoryUuid uint64) ([]*model.Material, error) {
+	var materials []*model.Material
+	if err := r.db.Model(&model.Material{}).
+		Preload("NotBaseUnitList.Unit").
+		Preload("Unit.Unit").
+		Preload("MultiLanguageName").
+		Where("category_uuid = ?", categoryUuid).Where("delete_time = ?", 0).Find(&materials).Error; err != nil {
+		return nil, errors.WithMessage(err, "查询物品失败")
+	}
 	return materials, nil
 }
 
@@ -206,6 +251,18 @@ func (r *MaterialRepoImpl) UpdateMaterial(material model.Material) error {
 	return nil
 }
 
+// UpdateMaterialData 更新物品数据
+func (r *MaterialRepoImpl) UpdateMaterialData(data map[string]any, opts ...DBOption) error {
+	db := r.db.Model(&model.Material{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	if err := db.Updates(data).Error; err != nil {
+		return errors.WithMessage(err, "更新物品数据失败")
+	}
+	return nil
+}
+
 // 关闭物品状态
 func (r *MaterialRepoImpl) UpdateMaterialStatus(uuid uint64, status bool) error {
 	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("status", status).Error; err != nil {
@@ -244,7 +301,7 @@ func (r *MaterialRepoImpl) CreateMaterialCategory(materialCategory model.Materia
 func (r *MaterialRepoImpl) GetMaterialCategoryList() ([]model.MaterialCategory, error) {
 	var materialCategories []model.MaterialCategory
 
-	if err := r.db.Model(&model.MaterialCategory{}).Where("delete_time = ?", 0).Preload("MultiLanguageName").Order("create_time ASC").Find(&materialCategories).Error; err != nil {
+	if err := r.db.Model(&model.MaterialCategory{}).Where("delete_time = ?", 0).Preload("MultiLanguageName").Order("sort ASC").Find(&materialCategories).Error; err != nil {
 		return nil, errors.WithMessage(err, "获取物品类别列表失败")
 	}
 
@@ -356,11 +413,24 @@ func (r *MaterialRepoImpl) CheckMultiLanguageNameExist(localeResponse dto.Locale
 }
 
 func (r *MaterialRepoImpl) GetCategoryUuidByNameOptimized(name string) (uint64, error) {
-	var category model.MaterialCategory
-	if err := r.db.Model(&model.MaterialCategory{}).Where("name = ?", name).First(&category).Error; err != nil {
-		return 0, errors.WithMessage(err, "根据名称查询物品类别失败")
+	var categorys []model.MaterialCategory
+	err := r.db.Model(&model.MaterialCategory{}).Preload("MultiLanguageName").Where("delete_time = ?", 0).Find(&categorys).Error
+	if err != nil {
+		return 0, errors.WithMessage(err)
 	}
-	return category.Uuid, nil
+	// 在内存中查找匹配的商品规格
+	for _, category := range categorys {
+		// 然后检查多语言字段
+		if category.MultiLanguageName.Uuid != 0 {
+			names := category.MultiLanguageName.GetNames()
+			if names.ZH == name || names.ZHTW == name || names.EN == name ||
+				names.TH == name || names.MY == name || names.JA == name ||
+				names.KO == name || names.TR == name || names.SV == name {
+				return category.Uuid, nil
+			}
+		}
+	}
+	return 0, nil
 }
 
 func (r *MaterialRepoImpl) CheckBarcodeExist(barcode string, uuid uint64) bool {
@@ -380,4 +450,154 @@ func (r *MaterialRepoImpl) GetMaterialByErpCode(erpCode string) (*model.Material
 		return nil, errors.WithMessage(err, "根据erp_code获取物品失败")
 	}
 	return &material, nil
+}
+
+func (r *MaterialRepoImpl) GetMaterialDetailByErpCode(erpCode string) (*model.Material, error) {
+	// 获取物品
+	material, err := r.GetMaterialByErpCode(erpCode)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取物品失败")
+	}
+	materialDetail, err := r.GetMaterialDetailByUuid(material.Uuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取物品详情失败")
+	}
+	return materialDetail, nil
+}
+
+func (r *MaterialRepoImpl) ClearMaterialInternalCode(uuid uint64) error {
+	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("internal_code", "").Error; err != nil {
+		return errors.WithMessage(err, "清空物品内部编码失败")
+	}
+	return nil
+}
+
+func (r *MaterialRepoImpl) CheckMaterialInternalCodeExist(internalCode string, uuid uint64) bool {
+	db := r.db.Model(&model.Material{}).
+		Where("delete_time = ?", constant.NotDeleted).
+		Where("internal_code = ?", internalCode).
+		Where("internal_code <> ?", "")
+	if uuid != 0 {
+		db = db.Where("uuid <> ?", uuid)
+	}
+	return db.First(&model.Material{}).Error == nil
+}
+
+func (r *MaterialRepoImpl) GetMaterialCategoryByUuid(uuid uint64) (*model.MaterialCategory, error) {
+	var materialCategory model.MaterialCategory
+	if err := r.db.Model(&model.MaterialCategory{}).Preload("MultiLanguageName").Where("uuid = ?", uuid).First(&materialCategory).Error; err != nil {
+		return nil, errors.WithMessage(err, "根据UUID获取物品分类失败")
+	}
+	return &materialCategory, nil
+}
+
+func (r *MaterialRepoImpl) CheckMaterialCategoryCodeExist(code string, uuid uint64) bool {
+	db := r.db.Model(&model.MaterialCategory{}).
+		Where("delete_time = ?", constant.NotDeleted).
+		Where("code = ?", code).
+		Where("code <> ?", "")
+	if uuid != 0 {
+		db = db.Where("uuid <> ?", uuid)
+	}
+	return db.First(&model.MaterialCategory{}).Error == nil
+}
+
+func (r *MaterialRepoImpl) UpdateMaterialCategory(materialCategory model.MaterialCategory) error {
+	if err := r.db.Model(&model.MaterialCategory{}).Where("uuid = ?", materialCategory.Uuid).Updates(map[string]any{
+		"name": materialCategory.Name,
+		"code": materialCategory.Code,
+	}).Error; err != nil {
+		return errors.WithMessage(err, "更新物品类别失败")
+	}
+	return nil
+}
+
+func (r *MaterialRepoImpl) DeleteMaterialCategory(uuid uint64, multiLanguageNameUuid uint64) error {
+	if err := r.db.Model(&model.MaterialCategory{}).Where("uuid = ?", uuid).Update("delete_time", time.Now().Unix()).Error; err != nil {
+		return errors.WithMessage(err, "删除物品类别失败")
+	}
+	if err := r.db.Model(&model.MultiLanguageName{}).Where("uuid = ?", multiLanguageNameUuid).Update("delete_time", time.Now().Unix()).Error; err != nil {
+		return errors.WithMessage(err, "删除多语言名称失败")
+	}
+	return nil
+}
+
+func (r *MaterialRepoImpl) GetMaterialCategory(opts ...DBOption) (*model.MaterialCategory, error) {
+	var materialCategory model.MaterialCategory
+	db := r.db.Model(&model.MaterialCategory{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	if err := db.First(&materialCategory).Error; err != nil {
+		return nil, errors.WithMessage(err, "根据条件获取物品分类失败")
+	}
+	return &materialCategory, nil
+}
+
+// 根据编码获取物品分类
+func (r *MaterialRepoImpl) GetMaterialCategoryByCode(code string) (*model.MaterialCategory, bool, error) {
+	materialCategory, err := r.GetMaterialCategory(
+		CommonRepo.WhereByCode(code),
+		CommonRepo.WhereBySoftDelete(),
+	)
+	if err != nil {
+		if strings.Contains(err.Error(), "record not found") {
+			return nil, false, nil
+		}
+		return nil, false, errors.WithMessage(err, "根据编码获取物品分类失败")
+	}
+	return materialCategory, true, nil
+}
+
+// 根据英文名称获取物品分类
+func (r *MaterialRepoImpl) GetMaterialCategoryByEnglishName(englishName string) (*model.MaterialCategory, bool, error) {
+	var materialCategory model.MaterialCategory
+	// materialCategory表join multi_language_name表，where multi_language_name.en_name = englishName
+	if err := r.db.Model(&model.MaterialCategory{}).Joins("MultiLanguageName").Where("MultiLanguageName.en_name = ?", englishName).Where("ttpos_material_category.delete_time = ?", 0).First(&materialCategory).Error; err != nil {
+		if strings.Contains(err.Error(), "record not found") {
+			return nil, false, nil
+		}
+		return nil, false, errors.WithMessage(err, "根据英文名称获取物品分类失败")
+	}
+	return &materialCategory, true, nil
+}
+
+func (r *MaterialRepoImpl) UpdateMaterialWarehouseUuid(uuid uint64, warehouseUuid uint64) error {
+	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("warehouse_uuid", warehouseUuid).Error; err != nil {
+		return errors.WithMessage(err, "更新物品仓库uuid失败")
+	}
+	return nil
+}
+
+func (r *MaterialRepoImpl) UpdateAllMaterialWarehouseUuid(warehouseUuid uint64) error {
+	if err := r.db.Model(&model.Material{}).Where("delete_time = ?", 0).Update("warehouse_uuid", warehouseUuid).Error; err != nil {
+		return errors.WithMessage(err, "更新所有物品仓库uuid失败")
+	}
+	return nil
+}
+
+func (r *MaterialRepoImpl) GetMaterialUuidsByCategoryUuids(categoryUuids []uint64) ([]uint64, error) {
+	var uuids []uint64
+	if err := r.db.Model(&model.Material{}).Where("category_uuid IN (?)", categoryUuids).Where("delete_time = ?", 0).Pluck("uuid", &uuids).Error; err != nil {
+		return nil, errors.WithMessage(err, "根据分类UUID列表获取物品UUID列表失败")
+	}
+	return uuids, nil
+}
+
+func (r *MaterialRepoImpl) GetMaterialUuidsByKeyword(keyword string) ([]uint64, error) {
+	var uuids []uint64
+	if err := r.db.Model(&model.Material{}).Where("name LIKE ? OR code LIKE ? OR barcode_value LIKE ?", "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%").Where("delete_time = ?", 0).Pluck("uuid", &uuids).Error; err != nil {
+		return nil, errors.WithMessage(err, "根据关键字获取物品UUID列表失败")
+	}
+	return uuids, nil
+}
+
+func (r *MaterialRepoImpl) GetMaterialCategoryMaxSort(opts ...DBOption) (int64, error) {
+	var sort sql.NullInt64
+	db := r.db.Model(&model.MaterialCategory{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Select("MAX(sort) as sort").Find(&sort).Error
+	return sort.Int64, errors.WithMessage(err)
 }
