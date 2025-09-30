@@ -37,7 +37,7 @@ class AddWarehouseNameToPurchaseTables extends Migrator
             
             // 检查字段是否不存在
             if (!$table->hasColumn('warehouse_name')) {
-                $table->addColumn('warehouse_name', 'text', ['comment' => '仓库名称', 'after' => 'warehouse_erp_code']);
+                $table->addColumn('warehouse_name', 'text', ['comment' => '仓库名称', 'after' => 'warehouse_erp_code' , 'after' => "warehouse_erp_code"]);
                 $table->update();
             }
         }
