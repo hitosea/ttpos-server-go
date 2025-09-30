@@ -158,6 +158,10 @@ func (poi *PurchaseOrderItem) SetNil() {
 	poi.Material = nil
 }
 
+func (item PurchaseOrderItem) GetActualNum() float64 {
+	return decimal.NewFromFloat(item.Num).Mul(decimal.NewFromFloat(item.UnitConversionRate).Round(4)).InexactFloat64()
+}
+
 // GetCompletionRate 获取到货完成率
 func (poi *PurchaseOrderItem) GetCompletionRate() float64 {
 	if poi.Num == 0 {
