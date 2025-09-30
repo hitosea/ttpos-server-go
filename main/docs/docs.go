@@ -43297,7 +43297,7 @@ const docTemplate = `{
                 },
                 "num": {
                     "description": "数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "order_no": {
                     "description": "单据编号",
