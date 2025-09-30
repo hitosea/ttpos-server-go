@@ -2041,7 +2041,7 @@ func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, hea
 				Amount: func() float64 {
 					return decimal.NewFromFloat(item.Valuation).Mul(decimal.NewFromFloat(actualNum)).InexactFloat64()
 				}(),
-				OrderNo: receiptOrder.OrderNo,
+				OrderNo: receiptOrder.PurchaseOrderNo,
 				SupplierUuid: func() uint64 {
 					supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(receiptOrder.GetSupplierErpCode())
 					if err != nil {

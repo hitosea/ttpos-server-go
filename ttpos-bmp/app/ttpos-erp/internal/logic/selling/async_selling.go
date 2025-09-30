@@ -66,6 +66,7 @@ func (s *sAsyncSelling) CancelPosInvoice(ctx context.Context, req *selling.Cance
 		receivePosInvoice, err := s.GetLatestReceivePosInvoice(ctx, &do.ReceivePosInvoice{
 			OrderNo:          req.OrderNo,
 			OpenPosEntryName: req.OpenPosEntryName,
+			Docstatus:        erp.DocstatusSubmitted, // 取已提交的记录来取消
 		})
 		if err != nil {
 			respMessage := fmt.Sprintf("取消发票失败，查询原POS记录失败: %v", req)
@@ -107,6 +108,12 @@ func (s *sAsyncSelling) CancelPosInvoice(ctx context.Context, req *selling.Cance
 					}
 				}
 			}
+			if _, err := dao.ReceivePosInvoice.Ctx(ctx).WherePri(receivePosInvoice.Id).Data(do.ReceivePosInvoice{
+				Docstatus: erp.DocstatusCancelled,
+			}).Update(); err != nil {
+				g.Log().Errorf(ctx, "取消发票失败，更新原下单发票日志记录失败: %v", err)
+				return
+			}
 			if _, err := cancelDao.Data(do.ReceiveCancelPosInvoice{
 				Docstatus: erp.DocstatusSubmitted,
 			}).Update(); err != nil {
@@ -132,7 +139,10 @@ func (*sAsyncSelling) SavePosInvoice(ctx context.Context, req *selling.SavePosIn
 	siteCode := service.Rpc().GetSiteCode(ctx)
 
 	//检查是否已存在
-	count, err := dao.ReceivePosInvoice.Ctx(ctx).Count(dao.ReceivePosInvoice.Columns().OrderNo, req.OrderNo)
+	count, err := dao.ReceivePosInvoice.Ctx(ctx).Count(&do.ReceivePosInvoice{
+		OrderNo:   req.OrderNo,
+		Docstatus: erp.DocstatusSubmitted,
+	})
 	if err != nil {
 		g.Log().Errorf(ctx, "保存发票失败，查询记录失败: %v", err)
 		return nil, gerror.Wrapf(err, "保存发票失败，查询记录失败: %v", err)
