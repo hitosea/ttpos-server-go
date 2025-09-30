@@ -95,7 +95,7 @@ func (h *SupplierHandler) CreateSupplier(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{})
+	helper.Success(c, gin.H{}, "保存成功")
 }
 
 // UpdateSupplier 更新供应商
@@ -120,7 +120,7 @@ func (h *SupplierHandler) UpdateSupplier(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "保存成功")
 }
 
 // DeleteSupplier 删除供应商

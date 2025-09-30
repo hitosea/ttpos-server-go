@@ -445,18 +445,21 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 			continue
 		}
 		supplier, _ := supplierMap[erpSupplier.Name]
-		var headquarterCode string
+		headquarterSupplier, _ := headquarterSupplierMap[erpSupplier.Name]
+
+		address := supplier.Address
+		contactName := supplier.ContactName
+		contactPhone := supplier.ContactPhone
+		code := supplier.Code
+		if headquarterSupplier.Uuid != 0 {
+			address = headquarterSupplier.Address
+			contactName = headquarterSupplier.ContactName
+			contactPhone = headquarterSupplier.ContactPhone
+			code = headquarterSupplier.Code
+		}
 		// NOTE 总部-供应商编码固定为SP001
 		if erpSupplier.Name == constant.ErpHeadquartersSupplierCode {
-			headquarterCode = "SP001"
-		} else {
-			headquarterSupplier, _ := headquarterSupplierMap[erpSupplier.Name]
-			// 如果是总部供应商，获取ttpos总部供应商编码
-			if headquarterSupplier.Uuid != 0 {
-				headquarterCode = headquarterSupplier.Code
-			} else {
-				headquarterCode = supplier.Code
-			}
+			code = "SP001"
 		}
 		// 默认为启用
 		status := 1
@@ -467,17 +470,23 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 		if supplier.Uuid == 0 {
 			db.Model(&model.Supplier{}).Create(&model.Supplier{
 				Name:            name,
+				Address:         address,
+				ContactName:     contactName,
+				ContactPhone:    contactPhone,
 				ErpCode:         erpSupplier.Name,
 				Status:          status,
 				HeadquarterUuid: headquarterUuid,
-				Code:            headquarterCode,
+				Code:            code,
 			})
 		} else {
 			db.Model(&model.Supplier{}).Where("uuid = ?", supplier.Uuid).Updates(map[string]any{
 				"name":             name,
 				"headquarter_uuid": headquarterUuid,
-				"code":             headquarterCode,
+				"code":             code,
 				"status":           status,
+				"address":          address,
+				"contact_name":     contactName,
+				"contact_phone":    contactPhone,
 			})
 		}
 	}
