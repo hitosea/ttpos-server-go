@@ -1338,6 +1338,11 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderList(ctx context.Context, req 
 		opts = append(opts, receiptOrderRepo.WhereReceiptTimeRange(int(req.ReceiveTimeStart), int(req.ReceiveTimeEnd)))
 	}
 
+	// 收货类型查询
+	if req.ReceiptType > 0 {
+		opts = append(opts, receiptOrderRepo.WhereReceiptType(req.ReceiptType))
+	}
+
 	// 创建时间范围查询
 	if req.CreateTimeStart > 0 || req.CreateTimeEnd > 0 {
 		opts = append(opts, receiptOrderRepo.WhereCreateTimeRange(int(req.CreateTimeStart), int(req.CreateTimeEnd)))
