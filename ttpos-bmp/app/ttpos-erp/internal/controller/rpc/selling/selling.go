@@ -470,22 +470,6 @@ func (c *Controller) validateCancelPosInvoiceReq(req *selling.CancelPosInvoiceRe
 		return gerror.New("商品销售发票名称和材料销售发票名称不能同时为空")
 	}
 
-	// 验证商品销售发票名称格式（如果提供）
-	if strings.TrimSpace(req.ProductsInvoiceName) != "" {
-		if len(req.ProductsInvoiceName) > 255 {
-			return gerror.New("商品销售发票名称长度不能超过255个字符")
-		}
-		// 可以添加更多格式验证，比如发票名称的格式规则
-	}
-
-	// 验证材料销售发票名称格式（如果提供）
-	if strings.TrimSpace(req.MaterialInvoiceName) != "" {
-		if len(req.MaterialInvoiceName) > 255 {
-			return gerror.New("材料销售发票名称长度不能超过255个字符")
-		}
-		// 可以添加更多格式验证，比如发票名称的格式规则
-	}
-
 	return nil
 }
 
