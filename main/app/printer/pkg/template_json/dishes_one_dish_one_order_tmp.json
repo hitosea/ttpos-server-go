@@ -1,7 +1,7 @@
 {
     "metadata": {
-        "name": "dishes_complete_order",
-        "description": "整单打印模版",
+        "name": "dishes_one_dish_one_order",
+        "description": "一菜一单打印模版",
         "paper_width": 80,
         "version": "1.0"
     },
