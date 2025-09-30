@@ -703,6 +703,8 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 		return errors.WithMessage(errors.New("同步仓库失败"), err.Error())
 	}
 	warehouseHeadquarterMap := make(map[string]uint64)
+	// 总部仓库 erp_code 和 model.Warehouse 的映射
+	headquarterWarehouseMap := make(map[string]model.Warehouse)
 	// 如果是子店，获取总部的
 	if companySetting.IsSubShop() {
 		var headquarter model.CompanySetting
@@ -724,6 +726,13 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 		for _, warehouse := range headquarterWarehouseList {
 			warehouseHeadquarterMap[warehouse.Name] = headquarter.Uuid
 		}
+		var headquarterWarehouses []model.Warehouse
+		s.dbm.GetDB(headquarter.Uuid).Model(&model.Warehouse{}).Scopes(repository.NotDeleted).Find(&headquarterWarehouses)
+		for _, headquarterWarehouse := range headquarterWarehouses {
+			if headquarterWarehouse.ErpCode != "" {
+				headquarterWarehouseMap[headquarterWarehouse.ErpCode] = headquarterWarehouse
+			}
+		}
 	}
 
 	// 翻译仓库名称
@@ -741,6 +750,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 	var warehouses []model.Warehouse
 	var warehouseCodes []string
 	db.Model(&model.Warehouse{}).Scopes(repository.NotDeleted).Find(&warehouses)
+	// 本店仓库 erp_code 和 model.Warehouse 的映射
 	warehouseMap := make(map[string]model.Warehouse)
 	for _, warehouse := range warehouses {
 		if warehouse.IsDefault == 1 {
@@ -768,7 +778,19 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 					SV:   erpWarehouse.AliasName,
 				}
 			}
+
 			warehouse := warehouseMap[erpWarehouse.Name]
+			headquarterWarehouse := headquarterWarehouseMap[erpWarehouse.Name]
+
+			contact := warehouse.Contact
+			phone := warehouse.Phone
+			address := warehouse.Address
+			if headquarterWarehouse.Uuid > 0 {
+				contact = headquarterWarehouse.Contact
+				phone = headquarterWarehouse.Phone
+				address = headquarterWarehouse.Address
+			}
+
 			var status int
 			if !erpWarehouse.Disabled {
 				status = 1
@@ -811,6 +833,9 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 					"status":           status,
 					"headquarter_uuid": headquarterUuid,
 					"is_default":       isDefault,
+					"contact":          contact,
+					"phone":            phone,
+					"address":          address,
 				})
 			} else { // 新增
 				// 保存多语言
@@ -854,6 +879,9 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 					IsDefault:             isDefault,
 					ErpCode:               erpWarehouse.Name,
 					HeadquarterUuid:       headquarterUuid,
+					Contact:               contact,
+					Phone:                 phone,
+					Address:               address,
 				})
 			}
 		}
