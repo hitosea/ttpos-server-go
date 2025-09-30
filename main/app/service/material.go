@@ -2395,10 +2395,12 @@ func (s *materialSrv) ImportMaterial(ctx context.Context, reqs req.MaterialImpor
 	deviceSn := ctx.GetDeviceSn()
 	db := s.dbm.GetDB(ctx.GetDbId())
 	language := ctx.GetLanguage()
+	// 生成锁的key
+	lockKey := fmt.Sprintf("%d_v1_import_material", companyUuid)
 
 	// 用信道锁 禁止并发导入 - 按公司UUID加锁确保同一公司的物品导入操作不会并发执行
-	if !s.systemLock.TryLockUuid(companyUuid) {
-		return errors.New(i18n.Translate(language, "当前公司正在进行物品导入，请稍后再试"))
+	if !s.systemLock.TryLockUuidString(lockKey) {
+		return nil
 	}
 
 	// 处理条码：过滤空格、非数字字符，截取13位
@@ -2415,6 +2417,7 @@ func (s *materialSrv) ImportMaterial(ctx context.Context, reqs req.MaterialImpor
 	}
 	for barcode, rows := range barcodeDuplicateMap {
 		if len(rows) > 1 {
+			s.systemLock.UnlockUuidString(lockKey)
 			return errors.New(i18n.Translate(language, "条码") + "[" + barcode + "]" + i18n.Translate(language, "在行") + fmt.Sprintf("%v", rows) + i18n.Translate(language, "中重复"))
 		}
 	}
@@ -2424,17 +2427,19 @@ func (s *materialSrv) ImportMaterial(ctx context.Context, reqs req.MaterialImpor
 		// 验证是否已经存在
 		materialNameIsExist := repository.NewMaterialRepo(db).CheckMultiLanguageNameExist(item.LocaleName)
 		if !materialNameIsExist.IsNull() {
+			s.systemLock.UnlockUuidString(lockKey)
 			return errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "物品名称已存在"))
 		}
 		// 验证条形码存在性检查
 		if repository.NewMaterialRepo(db).CheckBarcodeExist(item.BarcodeValue, 0) {
+			s.systemLock.UnlockUuidString(lockKey)
 			return errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "物品条码已存在"))
 		}
 	}
 
 	// 异步导入
 	go func() {
-		defer s.systemLock.UnlockUuid(companyUuid)
+		defer s.systemLock.UnlockUuidString(lockKey)
 
 		totalCount := len(reqs.List)
 		progressData := MaterialImportProgressData{

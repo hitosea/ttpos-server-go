@@ -8,9 +8,13 @@ const (
 
 type Lock interface {
 	LockUuid(uuid uint64)
-	TryLockUuid(uuid uint64) bool // 非阻塞尝试获取锁，返回是否成功获取
 	UnlockUuid(uuid uint64)
 	ClearUuidLock(uuid uint64)
+	// 字符串锁
+	LockUuidString(uuid string)
+	TryLockUuidString(uuid string) bool // 非阻塞尝试获取锁，返回是否成功获取
+	UnlockUuidString(uuid string)
+	ClearUuidLockString(uuid string)
 }
 
 var systemLock Lock

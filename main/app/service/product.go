@@ -4572,15 +4572,18 @@ func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportRe
 	deviceSn := ctx.GetDeviceSn()
 	db := s.dbm.GetDB(ctx.GetDbId())
 	language := ctx.GetLanguage()
+	// 生成锁的key
+	lockKey := fmt.Sprintf("%d_v02_import_product", companyUuid)
 
 	// 用信道锁 禁止并发导入 - 按公司UUID加锁确保同一公司的商品导入操作不会并发执行
-	if !s.systemLock.TryLockUuid(companyUuid) {
-		return errors.New(i18n.Translate(language, "当前公司正在进行商品导入，请稍后再试"))
+	if !s.systemLock.TryLockUuidString(lockKey) {
+		return nil
 	}
 
 	// 验证条形码是否重复
 	duplicateRows := reqs.GetBarcodeDuplicateRows()
 	if len(duplicateRows) > 0 {
+		s.systemLock.UnlockUuidString(lockKey)
 		return errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(duplicateRows[0]) + "]: " + i18n.Translate(language, "商品条码不能重复"))
 	}
 
@@ -4589,10 +4592,12 @@ func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportRe
 		// 验证是否已经存在
 		productNameIsExist := repository.NewProductRepo(db).CheckMultiLanguageNameExist(item.LocaleName)
 		if !productNameIsExist.IsNull() {
+			s.systemLock.UnlockUuidString(lockKey)
 			return errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "商品名称已存在"))
 		}
 		// 验证条形码存在性检查
 		if repository.NewProductRepo(db).CheckBarcodeExist(item.Barcode, 0) {
+			s.systemLock.UnlockUuidString(lockKey)
 			return errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "商品条码已存在"))
 		}
 	}
@@ -4648,7 +4653,7 @@ func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportRe
 
 	// 异步导入
 	go func() {
-		defer s.systemLock.UnlockUuid(companyUuid)
+		defer s.systemLock.UnlockUuidString(lockKey)
 
 		totalCount := len(lists)
 		progressData := ImportProgressData{
