@@ -668,7 +668,7 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 
 		// 检查采购申请明细
 		if len(purchaseOrder.Items) == 0 {
-			return errors.New("采购申请明细不能为空")
+			return errors.New("申请物品数量不能为0")
 		}
 
 		// 过滤掉数量为0的项目后重新计算数量
