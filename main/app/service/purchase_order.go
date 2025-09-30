@@ -1123,9 +1123,16 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 				}
 			}
 			// 添加物料库存
-			err = s.updateMaterialStock(ctx, tx, headquarterInfo.DB, receiptOrder)
-			if err != nil {
-				return err
+			if purchaseOrder.IsHeadquarterPurchase() {
+				err = s.updateMaterialStock(ctx, tx, headquarterInfo.DB, receiptOrder)
+				if err != nil {
+					return err
+				}
+			} else {
+				err = s.updateMaterialStock(ctx, tx, nil, receiptOrder)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
