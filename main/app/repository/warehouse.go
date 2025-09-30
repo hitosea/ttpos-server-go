@@ -19,6 +19,7 @@ type IWarehouseRepo interface {
 	GetListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.Warehouse, int64, error)
 	IsCodeExists(code string, excludeUuid uint64) (bool, error)
 	GetDefaultWarehouse() (*model.Warehouse, error)
+	GetTransitWarehouse() (*model.Warehouse, error)
 	GetByCode(code string, opts ...DBOption) (*model.Warehouse, error)
 	GetByErpCode(erpCode string, opts ...DBOption) (*model.Warehouse, error)
 
@@ -130,6 +131,13 @@ func (r *WarehouseRepoImpl) IsNameExists(name string, excludeUuid uint64) (bool,
 func (r *WarehouseRepoImpl) GetDefaultWarehouse() (*model.Warehouse, error) {
 	var warehouse model.Warehouse
 	err := r.db.Model(&model.Warehouse{}).Where("is_default = 1").First(&warehouse).Error
+	return &warehouse, err
+}
+
+// GetTransitWarehouse 获取中转仓库
+func (r *WarehouseRepoImpl) GetTransitWarehouse() (*model.Warehouse, error) {
+	var warehouse model.Warehouse
+	err := r.db.Model(&model.Warehouse{}).Where("type = 'transit'").First(&warehouse).Error
 	return &warehouse, err
 }
 
