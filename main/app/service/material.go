@@ -1106,6 +1106,12 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 			"valuation":     request.ValuationRate, // 估值率
 			"barcode_value": barcodeValue,          // 条形码值
 			"internal_code": request.InternalCode,  // 内部编码
+			"status": func() int {
+				if request.Disabled {
+					return 0
+				}
+				return 1
+			}(),
 		}
 
 		// 同步多语言名称
@@ -2576,7 +2582,8 @@ func (s *materialSrv) SyncHeadquarterMaterial(ctx context.Context) error {
 					Uoms:               uoms,
 					PurchaseUom:        itemInfo.PurchaseUom,
 				}, false); err != nil {
-					return errors.WithMessage(err, "同步总部物品列表失败")
+					logger.Logger.Error("同步总部物品列表失败-01", zap.Error(err))
+					// return errors.WithMessage(err, "同步总部物品列表失败")
 				}
 			} else {
 				if err := s.AddMaterialByEprItem(copyCtx, req.MaterialAddErpReq{
@@ -2592,7 +2599,8 @@ func (s *materialSrv) SyncHeadquarterMaterial(ctx context.Context) error {
 					StockUom:           itemInfo.StockUom,
 					PurchaseUom:        itemInfo.PurchaseUom,
 				}, false); err != nil {
-					return errors.WithMessage(err, "同步总部物品列表失败")
+					logger.Logger.Error("同步总部物品列表失败-02", zap.Error(err))
+					// return errors.WithMessage(err, "同步总部物品列表失败")
 				}
 			}
 		}
