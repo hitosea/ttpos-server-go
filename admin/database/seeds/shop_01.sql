@@ -1622,6 +1622,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_in_out_log` (
     `price` DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '单价，物品基准单位单价',
     `amount` DECIMAL(22, 4) NOT NULL DEFAULT 0 COMMENT '金额,单价*数量',
     `supplier_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '供应商ID',
+    `supplier_erp_code` VARCHAR(500) NOT NULL DEFAULT '' COMMENT '供应商ERP编码',
+    `supplier_name` TEXT COMMENT '供应商名称',
     `order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '单据编号',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',

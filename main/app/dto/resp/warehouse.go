@@ -44,8 +44,9 @@ type WarehouseInOutResp struct {
 	MaterialBarcode      string             `json:"material_barcode"`       // 物品条形码
 	MaterialCategoryUuid uint64             `json:"material_category_uuid"` // 物料分类ID
 	// 供应商信息
-	SupplierUuid uint64             `json:"supplier_uuid"` // 供应商ID
-	SupplierName dto.LocaleResponse `json:"supplier_name"` // 供应商名称
+	SupplierUuid    uint64             `json:"supplier_uuid"`     // 供应商ID
+	SupplierErpCode string             `json:"supplier_erp_code"` // 供应商ERP编码
+	SupplierName    dto.LocaleResponse `json:"supplier_name"`     // 供应商名称
 	// 仓库信息
 	WarehouseUuid uint64             `json:"warehouse_uuid"` // 仓库ID
 	WarehouseName dto.LocaleResponse `json:"warehouse_name"` // 仓库名称

@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
@@ -602,10 +603,67 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 			}
 		}
 
+		// 检查物品状态，如果有禁用的物品则提示用户
+		if !req.IsConfirm {
+			materialRepo := repository.NewMaterialRepo(tx)
+			var disabledMaterials []string
+			for _, item := range purchaseOrder.Items {
+				if item.Num > 0 {
+					material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid)
+					if err != nil || material.Status == false {
+						materialName := language.JsonToLocaleResponse(item.MaterialName).GetLocale(ctx.GetLanguage())
+						disabledMaterials = append(disabledMaterials, materialName)
+					}
+				}
+			}
+			// 如果有禁用的物品，返回提示信息
+			if len(disabledMaterials) > 0 {
+				materialNames := ""
+				for i, name := range disabledMaterials {
+					if i > 0 {
+						materialNames += "、"
+					}
+					materialNames += name
+				}
+				return errors.NewWithCodeAndData(
+					constant.CodeMaterialDisabled,
+					disabledMaterials,
+					fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 的状态已关闭。\n\n提交后将移除该物品，是否继续提交？"), materialNames),
+				)
+			}
+		}
+
 		// 删除物品为0的数据
 		err = purchaseOrderItemRepo.DeleteByPurchaseOrderUuidAndNumIsZero(req.Uuid)
 		if err != nil {
 			return errors.WithMessage(err, "删除采购申请明细失败")
+		}
+
+		// 如果用户确认提交，删除禁用的物品
+		if req.IsConfirm {
+			materialRepo := repository.NewMaterialRepo(tx)
+			var disabledMaterialUuids []uint64
+			for _, item := range purchaseOrder.Items {
+				if item.Num > 0 {
+					material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid)
+					if err != nil || material.Status == false {
+						disabledMaterialUuids = append(disabledMaterialUuids, item.MaterialUuid)
+					}
+				}
+			}
+			// 删除禁用的物品记录
+			if len(disabledMaterialUuids) > 0 {
+				err = purchaseOrderItemRepo.DeleteByPurchaseOrderUuidAndMaterialUuids(req.Uuid, disabledMaterialUuids)
+				if err != nil {
+					return errors.WithMessage(err, "删除禁用物品失败")
+				}
+			}
+		}
+
+		// 重新查询采购申请以获取最新的物品列表
+		purchaseOrder, err = purchaseOrderRepo.GetByUuid(req.Uuid, purchaseOrderRepo.WithItems())
+		if err != nil {
+			return errors.WithMessage(err, "重新查询采购申请失败")
 		}
 
 		// 过滤掉数量为0的项目后重新计算数量
@@ -669,6 +727,37 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 			}
 			if supplier.Status == 0 {
 				return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用，请修改供应商状态")
+			}
+		}
+
+		// 检查物品状态，如果有禁用的物品则提示用户
+		if req.Action == "approve" {
+			materialRepo := repository.NewMaterialRepo(tx)
+			var disabledMaterials []string
+			for _, item := range purchaseOrder.Items {
+				if item.Num > 0 {
+					material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid)
+					// 判断物品是否禁用（status为false表示下架/禁用）
+					if err != nil || material.Status == false {
+						materialName := language.JsonToLocaleResponse(item.MaterialName).GetLocale(ctx.GetLanguage())
+						disabledMaterials = append(disabledMaterials, materialName)
+					}
+				}
+			}
+			// 如果有禁用的物品，返回提示信息
+			if len(disabledMaterials) > 0 {
+				materialNames := ""
+				for i, name := range disabledMaterials {
+					if i > 0 {
+						materialNames += "、"
+					}
+					materialNames += name
+				}
+				return errors.NewWithCodeAndData(
+					constant.CodeMaterialDisabled,
+					disabledMaterials,
+					fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 的状态已关闭。\n\n请修改物品状态"), materialNames),
+				)
 			}
 		}
 
@@ -848,6 +937,14 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 					Items:           stockItems,
 				})
 				if err != nil {
+					// 检查供应商状态
+					if strings.Contains(err.Error(), "Supplier") && strings.Contains(err.Error(), "is disabled") {
+						return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用，请修改供应商状态")
+					}
+					// 检查物品状态
+					if strings.Contains(err.Error(), "Item") && strings.Contains(err.Error(), "is disabled") {
+						return errors.NewWithCode(constant.CodeMaterialDisabled, "物品已禁用，请修改物品状态")
+					}
 					return errors.WithMessage(err, "调用erp接口失败")
 				}
 				erpOrderNo = stockResp.PurchaseOrder
@@ -891,6 +988,14 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 					Items:           stockItems,
 				})
 				if err != nil {
+					// 检查供应商状态
+					if strings.Contains(err.Error(), "Supplier") && strings.Contains(err.Error(), "is disabled") {
+						return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用，请修改供应商状态")
+					}
+					// 检查物品状态
+					if strings.Contains(err.Error(), "Item") && strings.Contains(err.Error(), "is disabled") {
+						return errors.NewWithCode(constant.CodeMaterialDisabled, "物品已禁用，请修改物品状态")
+					}
 					return errors.WithMessage(err, "调用erp接口失败")
 				}
 				// 获取采购订单号 - 6哥说这里的 "名称就是采购单号"
@@ -1843,7 +1948,9 @@ func (s *purchaseOrderSrv) recordErpStockInLog(ctx context.Context, db *gorm.DB,
 					}
 					return supplier.Uuid
 				}(),
-				OrderNo: receiptOrder.OrderNo,
+				SupplierErpCode: receiptOrder.GetSupplierErpCode(),
+				SupplierName:    receiptOrder.SupplierName,
+				OrderNo:         receiptOrder.OrderNo,
 			}
 			err = warehouseLogRepo.Create(warehouseLog)
 			if err != nil {
@@ -1935,6 +2042,15 @@ func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, hea
 					return decimal.NewFromFloat(item.Valuation).Mul(decimal.NewFromFloat(actualNum)).InexactFloat64()
 				}(),
 				OrderNo: receiptOrder.OrderNo,
+				SupplierUuid: func() uint64 {
+					supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(receiptOrder.GetSupplierErpCode())
+					if err != nil {
+						return 0
+					}
+					return supplier.Uuid
+				}(),
+				SupplierErpCode: receiptOrder.GetSupplierErpCode(),
+				SupplierName:    receiptOrder.SupplierName,
 			}
 
 			err = warehouseLogRepo.Create(warehouseLog)

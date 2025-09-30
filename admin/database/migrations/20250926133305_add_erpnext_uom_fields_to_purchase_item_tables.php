@@ -37,12 +37,12 @@ class AddErpnextUomFieldsToPurchaseItemTables extends Migrator
             
             // 检查字段是否不存在
             if (!$table->hasColumn('erpnext_uom')) {
-                $table->addColumn('erpnext_uom', 'string', ['limit' => 255, 'default' => '', 'comment' => 'ERPNext单位']);
+                $table->addColumn('erpnext_uom', 'string', ['limit' => 255, 'default' => '', 'comment' => 'ERPNext单位', 'after' => 'material_uuid']);
                 $table->update();
             }
             
             if (!$table->hasColumn('base_erpnext_uom')) {
-                $table->addColumn('base_erpnext_uom', 'string', ['limit' => 255, 'default' => '', 'comment' => 'ERPNext基准单位']);
+                $table->addColumn('base_erpnext_uom', 'string', ['limit' => 255, 'default' => '', 'comment' => 'ERPNext基准单位', 'after' => 'erpnext_uom']);
                 $table->update();
             }
         }
@@ -53,12 +53,12 @@ class AddErpnextUomFieldsToPurchaseItemTables extends Migrator
             
             // 检查字段是否不存在
             if (!$table->hasColumn('erpnext_uom')) {
-                $table->addColumn('erpnext_uom', 'string', ['limit' => 255, 'default' => '', 'comment' => 'ERPNext单位']);
+                $table->addColumn('erpnext_uom', 'string', ['limit' => 255, 'default' => '', 'comment' => 'ERPNext单位', 'after' => 'material_uuid']);
                 $table->update();
             }
             
             if (!$table->hasColumn('base_erpnext_uom')) {
-                $table->addColumn('base_erpnext_uom', 'string', ['limit' => 255, 'default' => '', 'comment' => 'ERPNext基准单位']);
+                $table->addColumn('base_erpnext_uom', 'string', ['limit' => 255, 'default' => '', 'comment' => 'ERPNext基准单位', 'after' => 'erpnext_uom']);
                 $table->update();
             }
         }

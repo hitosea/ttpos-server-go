@@ -14,6 +14,8 @@ type WarehouseInOutLog struct {
 	Price                float64 `json:"price" gorm:"type:decimal(22,4);default:0;comment:单价，物品基准单位单价"`
 	Amount               float64 `json:"amount" gorm:"type:decimal(22,4);default:0;comment:金额,单价*数量"`
 	SupplierUuid         uint64  `json:"supplier_uuid" gorm:"type:bigint;default:0;comment:供应商ID"`
+	SupplierErpCode      string  `json:"supplier_erp_code" gorm:"type:varchar(500);default:'';comment:供应商ERP编码"`
+	SupplierName         string  `json:"supplier_name" gorm:"type:text;comment:供应商名称"`
 	OrderNo              string  `json:"order_no" gorm:"type:varchar(255);default:'';comment:单据编号"`
 
 	// 关联模型

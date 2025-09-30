@@ -463,6 +463,18 @@ func (s *warehouseSrv) buildWarehouseInOutResp(log model.WarehouseInOutLog) resp
 			TR:   log.Supplier.Name,
 			SV:   log.Supplier.Name,
 		}
+	} else {
+		supplierName = dto.LocaleResponse{
+			ZH:   log.SupplierName,
+			EN:   log.SupplierName,
+			TH:   log.SupplierName,
+			ZHTW: log.SupplierName,
+			JA:   log.SupplierName,
+			KO:   log.SupplierName,
+			MY:   log.SupplierName,
+			TR:   log.SupplierName,
+			SV:   log.SupplierName,
+		}
 	}
 
 	// 获取仓库信息
@@ -502,8 +514,9 @@ func (s *warehouseSrv) buildWarehouseInOutResp(log model.WarehouseInOutLog) resp
 		MaterialBarcode:      materialBarcode,
 		MaterialCategoryUuid: materialCategoryUuid,
 		// 供应商信息
-		SupplierUuid: log.SupplierUuid,
-		SupplierName: supplierName,
+		SupplierUuid:    log.SupplierUuid,
+		SupplierErpCode: log.SupplierErpCode,
+		SupplierName:    supplierName,
 		// 仓库信息
 		WarehouseUuid: log.WarehouseUuid,
 		WarehouseName: warehouseName,

@@ -3,7 +3,6 @@ package erp
 import (
 	"context"
 	"errors"
-	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/model"
@@ -39,9 +38,6 @@ func (s *erpSrv) SaveMaterialRequest(ctx cc.Context, companySetting model.Compan
 	}
 	if result.Code != "0" {
 		logger.Logger.Error("SaveMaterialRequest-SaveMaterialRequest", zap.Any("err", err))
-		if strings.Contains(result.GetMessage(), "Supplier") && strings.Contains(result.GetMessage(), "is disabled") {
-			return &stock.SaveMaterialRequestResp{}, errors.New("供应商已禁用，请修改供应商状态")
-		}
 		return &stock.SaveMaterialRequestResp{}, errors.New("调用erp接口失败-1001-" + result.GetMessage())
 	}
 	if result.Data != nil {

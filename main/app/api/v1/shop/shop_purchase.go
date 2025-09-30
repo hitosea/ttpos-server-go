@@ -1,6 +1,7 @@
 package shop
 
 import (
+	builtinerrors "errors"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -178,7 +179,15 @@ func (h *PurchaseHandler) SubmitPurchaseOrder(c *gin.Context) {
 
 	err := h.purchaseOrderSrv.SubmitPurchaseOrder(ctx, statusReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		var appErr errors.AppError
+		if builtinerrors.As(err, &appErr) {
+			code := appErr.GetCode()
+			if code == constant.CodeMaterialDisabled { // 物品已禁用，请修改物品状态
+				helper.ErrorWithData(c, code, appErr.GetData(), err)
+				return
+			}
+		}
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
 
@@ -206,6 +215,14 @@ func (h *PurchaseHandler) ApprovePurchaseOrder(c *gin.Context) {
 
 	err := h.purchaseOrderSrv.ApprovePurchaseOrder(ctx, approveReq)
 	if err != nil {
+		var appErr errors.AppError
+		if builtinerrors.As(err, &appErr) {
+			code := appErr.GetCode()
+			if code == constant.CodeMaterialDisabled { // 物品已禁用，请修改物品状态
+				helper.ErrorWithData(c, code, appErr.GetData(), err)
+				return
+			}
+		}
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
