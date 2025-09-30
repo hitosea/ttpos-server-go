@@ -509,6 +509,10 @@ func (s *callBoardService) handleProductionOrderCookingEvent(companyUuid uint64,
 	if err != nil {
 		return err
 	}
+	// 不是点餐账单，不处理
+	if saleBill.BillType != constant.SaleBillTypeInstant {
+		return nil
+	}
 
 	// 是否已完成制作
 	finished, err := repository.NewProductionRepo(db).IsProductionFinishedBySaleBillUuid(saleBillUuid)
@@ -530,7 +534,7 @@ func (s *callBoardService) getCallBoardQueue(queueKey string, limit int64, minSc
 		Offset: 0,
 		Count:  limit,
 	}
-	results, err := s.getRedisClient().ZRevRangeByScoreWithScores(context.Background(), queueKey, opt).Result()
+	results, err := s.getRedisClient().ZRangeByScoreWithScores(context.Background(), queueKey, opt).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			return []string{}, nil // 队列不存在，返回空列表

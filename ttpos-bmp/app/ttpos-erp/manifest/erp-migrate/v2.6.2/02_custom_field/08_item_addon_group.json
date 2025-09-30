@@ -4,6 +4,6 @@
   "fieldname": "custom_pos_addon_group",
   "fieldtype": "Table",
   "options": "Item Addon Group",
-  "insert_after": "custom_pos_addon_group",
+  "insert_after": "custom_pos_attribute_group",
   "dt": "Item"
 }
