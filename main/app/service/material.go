@@ -1200,7 +1200,6 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 					err := materialUnitRepo.UpdateMaterialUnit(map[string]any{
 						"name":            productUnit.Name,
 						"conversion_rate": uom.ConversionRate,
-						"is_default":      0,
 					}, commonRepo.WhereByUuid(existUnit.Uuid))
 					if err != nil {
 						return errors.WithMessage(err, "更新非基准单位失败")
