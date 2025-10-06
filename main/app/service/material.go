@@ -604,8 +604,8 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 
 // AddMaterial 添加物品
 func (s *materialSrv) AddMaterial(ctx context.Context, req req.MaterialAddReq) error {
-	// 大写编码
-	req.InternalCode = strings.ToUpper(req.InternalCode)
+	// 去除两端空格，大写编码
+	req.InternalCode = strings.ToUpper(strings.TrimSpace(req.InternalCode))
 	dbId := ctx.GetDbId()
 	db := s.dbm.GetDB(dbId)
 
@@ -829,8 +829,8 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 
 // EditMaterial 编辑物品
 func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEditReq) error {
-	// 大写编码
-	request.InternalCode = strings.ToUpper(request.InternalCode)
+	// 去除两端空格，大写编码
+	request.InternalCode = strings.ToUpper(strings.TrimSpace(request.InternalCode))
 	// 验证请求参数
 	if err := request.Validate(); err != nil {
 		return errors.WithMessage(err)
