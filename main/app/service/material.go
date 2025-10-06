@@ -1179,8 +1179,10 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 			if productUnit.Uuid == stockUnit.Uuid {
 				// 基准单位
 				err := materialUnitRepo.UpdateMaterialUnit(map[string]any{
-					"name":      productUnit.Name,
-					"unit_uuid": productUnit.Uuid,
+					"name":        productUnit.Name,
+					"unit_uuid":   productUnit.Uuid,
+					"is_default":  1,
+					"delete_time": 0,
 				}, commonRepo.WhereByUuid(material.Unit.Uuid))
 				if err != nil {
 					return errors.WithMessage(err, "更新基准单位失败")
@@ -1192,12 +1194,13 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 			} else {
 				// 非基准单位
 				existUnit, exist := slice.FindBy(material.NotBaseUnitList, func(index int, item *model.MaterialUnit) bool {
-					return item.UnitUuid == productUnit.Uuid
+					return item.UnitUuid == productUnit.Uuid && item.DeleteTime == 0
 				})
 				if exist {
 					err := materialUnitRepo.UpdateMaterialUnit(map[string]any{
 						"name":            productUnit.Name,
 						"conversion_rate": uom.ConversionRate,
+						"is_default":      0,
 					}, commonRepo.WhereByUuid(existUnit.Uuid))
 					if err != nil {
 						return errors.WithMessage(err, "更新非基准单位失败")
