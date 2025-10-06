@@ -2081,7 +2081,18 @@ func GetMultiLanguageName(ctx context.Context, enName string) (*dto.LocaleRespon
 		},
 	})
 	if err != nil {
-		return nil, errors.WithMessage(errors.New("翻译失败"), err.Error())
+		return &dto.LocaleResponse{
+			EN:   enName,
+			ZH:   enName,
+			TH:   enName,
+			ZHTW: enName,
+			JA:   enName,
+			KO:   enName,
+			MY:   enName,
+			TR:   enName,
+			SV:   enName,
+		}, nil
+		// return nil, errors.WithMessage(errors.New("翻译失败"), err.Error())
 	}
 	return &dto.LocaleResponse{
 		EN:   res.Data[0].En,
