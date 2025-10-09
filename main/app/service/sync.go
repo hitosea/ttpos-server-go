@@ -97,15 +97,15 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 
 	// 连锁子店和总部、散户
 
-	// 1 uom
-	// 2 物品
-	// 3 规格
-	// 4 属性
-	// 5 加料
-	// 6 商品
-	// 7 成本卡
-	// 8 供应商
-	// 9 仓库
+	// 1 单位
+	// 2 仓库
+	// 3 物品
+	// 4 规格
+	// 5 属性
+	// 6 加料
+	// 7 商品
+	// 8 成本卡
+	// 9 供应商
 	// 10 仓库物品库存
 
 	go func(ctx context.Context) {
@@ -157,14 +157,14 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 			isExceptionOccurred = true || isExceptionOccurred
 		}
 
-		// 1 uom
+		// 1 单位
 		logger.Logger.Info("开始同步单位", zap.Uint64("companyUuid", companyUuid))
 		if err := s.productSrv.SyncUnit(ctx); err != nil {
 			logger.Logger.Error("单位同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 			isExceptionOccurred = true || isExceptionOccurred
 		}
 
-		// 9 仓库
+		// 2 仓库
 		logger.Logger.Info("开始同步仓库", zap.Uint64("companyUuid", companyUuid))
 		err := s.warehouseSrv.SyncWarehouse(ctx)
 		if err != nil {
@@ -172,28 +172,28 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 			isExceptionOccurred = true || isExceptionOccurred
 		}
 
-		// 2-1 总部物品
+		// 3-1 总部物品
 		logger.Logger.Info("开始同步物品", zap.Uint64("companyUuid", companyUuid))
 		if err := s.materialSrv.SyncHeadquarterMaterial(ctx); err != nil {
 			logger.Logger.Error("物品同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 			isExceptionOccurred = true || isExceptionOccurred
 		}
-		// 2-2 子店物品
+		// 3-2 子店物品
 		if err := s.materialSrv.SyncSubShopMaterial(ctx); err != nil {
 			logger.Logger.Error("物品同步子店失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 			isExceptionOccurred = true || isExceptionOccurred
 		}
 
-		// 3,4,5,6,7 暂不同步
+		// 4,5,6,7,8 暂不同步
 
 		logger.Logger.Info("开始同步供应商", zap.Uint64("companyUuid", companyUuid))
-		// 8 供应商
+		// 9 供应商
 		if err := s.supplierSrv.SyncSupplier(ctx); err != nil {
 			logger.Logger.Error("供应商同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
 			isExceptionOccurred = true || isExceptionOccurred
 		}
 
-		// 10 仓库物品，仅限首次同步
+		// 10 仓库物品，仅限首次同步，同步后更新last_sync_time
 		if company.LastSyncTime == 0 {
 			logger.Logger.Info("开始同步默认仓库库存", zap.Uint64("companyUuid", companyUuid))
 			if err := s.warehouseSrv.SyncDefaultWarehouseStock(ctx); err != nil {

@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/rpc/erp"
+	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
@@ -39,17 +40,18 @@ type IWarehouseSrv interface {
 }
 
 // NewWarehouseSrv 创建仓库服务
-func NewWarehouseSrv(dbm *database.DBManager) IWarehouseSrv {
-	return NewWarehouseSrvImpl(dbm)
+func NewWarehouseSrv(dbm *database.DBManager, settingSrv setting.ISrv) IWarehouseSrv {
+	return NewWarehouseSrvImpl(dbm, settingSrv)
 }
 
 // warehouseSrv 仓库服务实现
 type warehouseSrv struct {
-	dbm *database.DBManager
+	dbm        *database.DBManager
+	settingSrv setting.ISrv
 }
 
 // NewWarehouseSrvImpl 创建仓库服务实现
-func NewWarehouseSrvImpl(dbm *database.DBManager) IWarehouseSrv {
+func NewWarehouseSrvImpl(dbm *database.DBManager, settingSrv setting.ISrv) IWarehouseSrv {
 	return &warehouseSrv{
 		dbm: dbm,
 	}
@@ -187,7 +189,7 @@ func (s *warehouseSrv) CreateWarehouse(ctx context.Context, addReq req.CreateWar
 		"transit": "Transit",
 	}
 	err = db.Transaction(func(tx *gorm.DB) error {
-		warehouseName, err := GetEnName(ctx, addReq.LocaleName)
+		warehouseName, err := GetEnName(ctx, s.settingSrv, addReq.LocaleName)
 		if err != nil {
 			return errors.WithMessage(errors.New("翻译失败"), err.Error())
 		}
@@ -305,7 +307,7 @@ func (s *warehouseSrv) UpdateWarehouse(ctx context.Context, updateReq req.Update
 		"transit": "Transit",
 	}
 	err = db.Transaction(func(tx *gorm.DB) error {
-		warehouseName, err := GetEnName(ctx, updateReq.LocaleName)
+		warehouseName, err := GetEnName(ctx, s.settingSrv, updateReq.LocaleName)
 		if err != nil {
 			return errors.WithMessage(errors.New("翻译失败"), err.Error())
 		}
