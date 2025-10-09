@@ -745,11 +745,9 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 			warehouseHeadquarterMap[warehouse.Name] = headquarter.Uuid
 		}
 		var headquarterWarehouses []model.Warehouse
-		s.dbm.GetDB(headquarter.Uuid).Model(&model.Warehouse{}).Scopes(repository.NotDeleted).Find(&headquarterWarehouses)
+		s.dbm.GetDB(headquarter.Uuid).Model(&model.Warehouse{}).Where("erp_code != ''").Find(&headquarterWarehouses)
 		for _, headquarterWarehouse := range headquarterWarehouses {
-			if headquarterWarehouse.ErpCode != "" {
-				headquarterWarehouseMap[headquarterWarehouse.ErpCode] = headquarterWarehouse
-			}
+			headquarterWarehouseMap[headquarterWarehouse.ErpCode] = headquarterWarehouse
 		}
 	}
 
@@ -781,7 +779,12 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 	}
 	err = db.Transaction(func(tx *gorm.DB) error {
 		for _, erpWarehouse := range warehouseList {
-			headquarterUuid, _ := warehouseHeadquarterMap[erpWarehouse.Name]
+			headquarterWarehouse := headquarterWarehouseMap[erpWarehouse.Name]
+			// 如果总部仓库已删除，则也要标记本店数据库中的总部仓库为删除
+			if headquarterWarehouse.Uuid > 0 && headquarterWarehouse.DeleteTime != 0 {
+				tx.Model(&model.Warehouse{}).Where("erp_code = ?", erpWarehouse.Name).Update("delete_time", headquarterWarehouse.DeleteTime)
+				continue
+			}
 			localeName, ok := multiLanguageMap[erpWarehouse.AliasName]
 			if !ok {
 				localeName = dto.LocaleResponse{
@@ -797,9 +800,9 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 				}
 			}
 
-			warehouse := warehouseMap[erpWarehouse.Name]
-			headquarterWarehouse := headquarterWarehouseMap[erpWarehouse.Name]
+			headquarterUuid := warehouseHeadquarterMap[erpWarehouse.Name]
 
+			warehouse := warehouseMap[erpWarehouse.Name]
 			contact := warehouse.Contact
 			phone := warehouse.Phone
 			address := warehouse.Address
