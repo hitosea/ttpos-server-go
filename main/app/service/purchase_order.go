@@ -20,10 +20,12 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/language"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -126,7 +128,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderList(ctx context.Context, req req.Pur
 	// 查询数据
 	purchaseOrders, total, err := purchaseOrderRepo.GetListWithPagination(req.PageNo, req.PageSize, opts...)
 	if err != nil {
-		return resp.PurchaseOrderListResp{}, errors.WithMessage(err, "查询采购申请列表失败")
+		return resp.PurchaseOrderListResp{}, errors.WithMessage(errors.New("查询采购申请列表失败"), err.Error())
 	}
 
 	// 转换响应数据
@@ -162,14 +164,14 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(ctx context.Context, req req.P
 		if err == gorm.ErrRecordNotFound {
 			return resp.PurchaseOrderDetailResp{}, errors.New("采购申请不存在")
 		}
-		return resp.PurchaseOrderDetailResp{}, errors.WithMessage(err, "查询采购申请详情失败")
+		return resp.PurchaseOrderDetailResp{}, errors.WithMessage(errors.New("查询采购申请详情失败"), err.Error())
 	}
 
 	// 转换响应数据
 	var detailResp resp.PurchaseOrderDetailResp
 	err = copier.Copy(&detailResp, purchaseOrder)
 	if err != nil {
-		return resp.PurchaseOrderDetailResp{}, errors.WithMessage(err, "数据转换失败")
+		return resp.PurchaseOrderDetailResp{}, errors.WithMessage(errors.New("数据转换失败"), err.Error())
 	}
 
 	// 转换仓库名称
@@ -221,7 +223,7 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 		//
 		defaultWarehouse, err := repository.NewWarehouseRepo(tx).GetDefaultWarehouse()
 		if err != nil {
-			return errors.WithMessage(err, "获取默认仓库失败")
+			return errors.WithMessage(errors.New("获取默认仓库失败"), err.Error())
 		}
 		// 创建采购申请
 		prefix := "CSSQ"
@@ -271,7 +273,7 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 		}
 		err = purchaseOrderRepo.Create(purchaseOrder)
 		if err != nil {
-			return errors.WithMessage(err, "创建采购申请失败")
+			return errors.WithMessage(errors.New("创建采购申请失败"), err.Error())
 		}
 
 		materialUuids := make([]uint64, 0)
@@ -286,7 +288,7 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 			materialRepo.WithPreload("PurchaseUnit.Unit"),
 		)
 		if err != nil {
-			return errors.WithMessage(err, "查询物品失败")
+			return errors.WithMessage(errors.New("查询物品失败"), err.Error())
 		}
 
 		// 将切片转换为map，方便后续查找
@@ -359,7 +361,7 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(ctx context.Context, req req.Purc
 
 		err = purchaseOrderItemRepo.CreateBatch(items)
 		if err != nil {
-			return errors.WithMessage(err, "创建采购申请明细失败")
+			return errors.WithMessage(errors.New("创建采购申请明细失败"), err.Error())
 		}
 
 		// 记录操作日志
@@ -399,7 +401,7 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(ctx context.Context, req req.Purc
 			if err == gorm.ErrRecordNotFound {
 				return errors.New("采购申请不存在")
 			}
-			return errors.WithMessage(err, "查询采购申请失败")
+			return errors.WithMessage(errors.New("查询采购申请失败"), err.Error())
 		}
 
 		// 检查是否可编辑
@@ -434,7 +436,7 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(ctx context.Context, req req.Purc
 		}()
 		err = purchaseOrderRepo.Update(purchaseOrder)
 		if err != nil {
-			return errors.WithMessage(err, "更新采购申请失败")
+			return errors.WithMessage(errors.New("更新采购申请失败"), err.Error())
 		}
 
 		materialUuids := make([]uint64, 0)
@@ -448,7 +450,7 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(ctx context.Context, req req.Purc
 			materialRepo.WithPreload("PurchaseUnit.Unit"),
 		)
 		if err != nil {
-			return errors.WithMessage(err, "查询物品失败")
+			return errors.WithMessage(errors.New("查询物品失败"), err.Error())
 		}
 
 		// 将切片转换为map，方便后续查找
@@ -522,13 +524,13 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(ctx context.Context, req req.Purc
 		// 先删除所有现有明细项
 		err = purchaseOrderItemRepo.DeleteByPurchaseOrderUuid(req.Uuid)
 		if err != nil {
-			return errors.WithMessage(err, "删除采购申请明细失败")
+			return errors.WithMessage(errors.New("删除采购申请明细失败"), err.Error())
 		}
 
 		// 批量创建采购申请明细
 		err = purchaseOrderItemRepo.CreateBatch(items)
 		if err != nil {
-			return errors.WithMessage(err, "创建采购申请明细失败")
+			return errors.WithMessage(errors.New("创建采购申请明细失败"), err.Error())
 		}
 
 		// 记录操作日志
@@ -558,7 +560,7 @@ func (s *purchaseOrderSrv) DeletePurchaseOrder(ctx context.Context, req req.Purc
 		if err == gorm.ErrRecordNotFound {
 			return errors.New("采购申请不存在")
 		}
-		return errors.WithMessage(err, "查询采购申请失败")
+		return errors.WithMessage(errors.New("查询采购申请失败"), err.Error())
 	}
 
 	// 检查是否可删除（只有待提交和已驳回状态可以删除）
@@ -569,7 +571,7 @@ func (s *purchaseOrderSrv) DeletePurchaseOrder(ctx context.Context, req req.Purc
 	// 删除采购申请（软删除）
 	err = purchaseOrderRepo.Delete(req.Uuid)
 	if err != nil {
-		return errors.WithMessage(err, "删除采购申请失败")
+		return errors.WithMessage(errors.New("删除采购申请失败"), err.Error())
 	}
 
 	return nil
@@ -589,14 +591,14 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 			if err == gorm.ErrRecordNotFound {
 				return errors.New("采购申请不存在")
 			}
-			return errors.WithMessage(err, "查询采购申请失败")
+			return errors.WithMessage(errors.New("查询采购申请失败"), err.Error())
 		}
 
 		// 检查供应商状态
 		if purchaseOrder.SupplierErpCode != "" && purchaseOrder.SupplierErpCode != constant.ErpHeadquartersSupplierCode {
 			supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(purchaseOrder.SupplierErpCode)
 			if err != nil {
-				return errors.WithMessage(err, "供应商不存在,请先同步供应商数据")
+				return errors.WithMessage(errors.New("供应商不存在,请先同步供应商数据"), err.Error())
 			}
 			if supplier.Status == 0 {
 				return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用，请修改供应商状态")
@@ -636,7 +638,7 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 		// 删除物品为0的数据
 		err = purchaseOrderItemRepo.DeleteByPurchaseOrderUuidAndNumIsZero(req.Uuid)
 		if err != nil {
-			return errors.WithMessage(err, "删除采购申请明细失败")
+			return errors.WithMessage(errors.New("删除采购申请明细失败"), err.Error())
 		}
 
 		// 如果用户确认提交，删除禁用的物品
@@ -655,7 +657,7 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 			if len(disabledMaterialUuids) > 0 {
 				err = purchaseOrderItemRepo.DeleteByPurchaseOrderUuidAndMaterialUuids(req.Uuid, disabledMaterialUuids)
 				if err != nil {
-					return errors.WithMessage(err, "删除禁用物品失败")
+					return errors.WithMessage(errors.New("删除禁用物品失败"), err.Error())
 				}
 			}
 		}
@@ -663,7 +665,7 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 		// 重新查询采购申请以获取最新的物品列表
 		purchaseOrder, err = purchaseOrderRepo.GetByUuid(req.Uuid, purchaseOrderRepo.WithItems())
 		if err != nil {
-			return errors.WithMessage(err, "重新查询采购申请失败")
+			return errors.WithMessage(errors.New("重新查询采购申请失败"), err.Error())
 		}
 
 		// 检查采购申请明细
@@ -688,7 +690,7 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(ctx context.Context, req req.Purc
 
 		err = purchaseOrderRepo.Update(purchaseOrder)
 		if err != nil {
-			return errors.WithMessage(err, "更新采购申请状态失败")
+			return errors.WithMessage(errors.New("更新采购申请状态失败"), err.Error())
 		}
 
 		// 记录操作日志
@@ -728,7 +730,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 		if purchaseOrder.SupplierErpCode != "" && purchaseOrder.SupplierErpCode != constant.ErpHeadquartersSupplierCode {
 			supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(purchaseOrder.SupplierErpCode)
 			if err != nil {
-				return errors.WithMessage(err, "供应商不存在,请先同步供应商数据")
+				return errors.WithMessage(errors.New("供应商不存在,请先同步供应商数据"), err.Error())
 			}
 			if supplier.Status == 0 {
 				return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用，请修改供应商状态")
@@ -797,13 +799,13 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 		// 更新状态
 		err = purchaseOrderRepo.Update(purchaseOrder)
 		if err != nil {
-			return errors.WithMessage(err, "更新采购申请状态失败")
+			return errors.WithMessage(errors.New("更新采购申请状态失败"), err.Error())
 		}
 
 		// 记录操作日志
 		err = s.createPurchaseOrderLog(tx, req.Uuid, ctx, req.Action, actionDesc, oldStatus, newStatus, "")
 		if err != nil {
-			return errors.WithMessage(err, "记录操作日志失败")
+			return errors.WithMessage(errors.New("记录操作日志失败"), err.Error())
 		}
 
 		// 内部采购 - 总部驳回时，更新子店采购申请状态
@@ -818,14 +820,14 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 				if err == gorm.ErrRecordNotFound {
 					return errors.New("采购申请不存在")
 				}
-				return errors.WithMessage(err, "查询采购申请失败")
+				return errors.WithMessage(errors.New("查询采购申请失败"), err.Error())
 			}
 			subPurchaseOrder.Status = constant.PurchaseOrderStatusRejected
 			subPurchaseOrder.HeadquarterStatus = constant.HeadquarterStatusRejected
 			subPurchaseOrder.RejectTime = purchaseOrder.RejectTime
 			err = repository.NewPurchaseOrderRepo(subDb).Update(subPurchaseOrder)
 			if err != nil {
-				return errors.WithMessage(err, "更新采购申请单号失败")
+				return errors.WithMessage(errors.New("更新采购申请单号失败"), err.Error())
 			}
 			return nil
 		}
@@ -844,7 +846,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 				headquarterPurchaseOrder := model.PurchaseOrder{}
 				err = copier.Copy(&headquarterPurchaseOrder, purchaseOrder)
 				if err != nil {
-					return errors.WithMessage(err, "复制总部物品明细失败")
+					return errors.WithMessage(errors.New("复制总部物品明细失败"), err.Error())
 				}
 				// 只重置主键字段，确保GORM执行INSERT而不是UPDATE
 				headquarterPurchaseOrder.BaseModel.ID = 0 // 重置主键，告诉GORM这是新记录
@@ -860,7 +862,8 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 				headquarterPurchaseOrder.HeadquarterStatus = constant.HeadquarterStatusPending
 				err = repository.NewPurchaseOrderRepo(tx).Create(&headquarterPurchaseOrder)
 				if err != nil {
-					return errors.WithMessage(err, "创建总部采购申请失败")
+					logger.Logger.Error("创建总部采购申请失败", zap.Error(err))
+					return errors.WithMessage(errors.New("创建总部采购申请失败"), err.Error())
 				}
 
 				// 创建总部采购申请明细
@@ -869,11 +872,13 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 					headquarterItem := model.PurchaseOrderItem{}
 					err = copier.Copy(&headquarterItem, item)
 					if err != nil {
-						return errors.WithMessage(err, "复制总部物品明细失败")
+						logger.Logger.Error("复制总部物品明细失败", zap.Error(err), zap.String("物料编码", item.MaterialCode))
+						return errors.WithMessage(errors.New("复制总部物品明细失败"), err.Error())
 					}
 					material, err := repository.NewMaterialRepo(tx).GetMaterialByErpCode(item.MaterialCode)
 					if err != nil {
-						return errors.WithMessage(err, "查询总部物品明细失败")
+						logger.Logger.Error("总部不存在该物料", zap.String("物料编码", item.MaterialCode), zap.Error(err))
+						return errors.New(fmt.Sprintf("总部不存在该物料，物料编码：%s", item.MaterialCode))
 					}
 					// 只重置主键字段，确保GORM执行INSERT而不是UPDATE
 					headquarterItem.BaseModel.ID = 0   // 重置主键，告诉GORM这是新记录
@@ -886,12 +891,14 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 				}
 				err = repository.NewPurchaseOrderItemRepo(tx).CreateBatch(headquarterItems)
 				if err != nil {
-					return errors.WithMessage(err, "创建总部采购申请明细失败")
+					logger.Logger.Error("创建总部采购申请明细失败", zap.Error(err))
+					return errors.WithMessage(errors.New("创建总部采购申请明细失败"), err.Error())
 				}
 				return nil
 			})
 			if err != nil {
-				return errors.WithMessage(err)
+				logger.Logger.Error("复制总部采购申请失败", zap.Error(err))
+				return errors.New(err.Error())
 			}
 			return nil
 		}
@@ -906,7 +913,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 					if erpnextUom == "" {
 						materialUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(item.UnitUuid)
 						if err != nil {
-							return errors.WithMessage(err, "查询物品单位失败")
+							return errors.WithMessage(errors.New("查询物品单位失败"), err.Error())
 						}
 						if materialUnit.Unit == nil {
 							return errors.New("查询物品原始单位失败")
@@ -935,17 +942,16 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 						// 获取物料信息
 						material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid)
 						if err != nil {
-							return errors.WithMessage(err, "获取物料信息失败")
+							return errors.WithMessage(errors.New("获取物料信息失败"), err.Error())
 						}
 						// 更新库存数量
 						material.StockNum = decimal.NewFromFloat(material.StockNum).Sub(decimal.NewFromFloat(item.GetActualNum())).InexactFloat64()
 						if material.StockNum < 0 {
-							material.StockNum = 0
-							return errors.WithMessage(err, "更新物料库存失败")
+							return errors.New(fmt.Sprintf("物料库存不足，物料编码：%s", item.MaterialCode))
 						}
 						err = materialRepo.UpdateMaterial(material)
 						if err != nil {
-							return errors.WithMessage(err, "更新物料库存失败")
+							return errors.WithMessage(errors.New("更新物料库存失败"), err.Error())
 						}
 						// 更新规格/加料关联材料库存
 						relatedMaterialUuids := make([]uint64, 0)
@@ -960,13 +966,13 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 						}
 						err = s.updateRelatedMaterialStock(tx, relatedMaterialUuids)
 						if err != nil {
-							return errors.WithMessage(err, "更新规格/加料关联材料库存失败")
+							return errors.WithMessage(errors.New("更新规格/加料关联材料库存失败"), err.Error())
 						}
 					}
 					// 减总部的库存并记录出入库日志
 					err := s.reduceHeadquarterStockAndLog(ctx, subDb, tx, purchaseOrder)
 					if err != nil {
-						return errors.WithMessage(err, "处理总部库存失败")
+						return errors.WithMessage(errors.New("处理总部库存失败"), err.Error())
 					}
 				}
 
@@ -995,7 +1001,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 					if strings.Contains(err.Error(), "Item") && strings.Contains(err.Error(), "is disabled") {
 						return errors.NewWithCode(constant.CodeMaterialDisabled, "物品已禁用，请修改物品状态")
 					}
-					return errors.WithMessage(err, "调用erp接口失败")
+					return errors.WithMessage(errors.New("调用erp接口失败"), err.Error())
 				}
 				erpOrderNo = stockResp.PurchaseOrder
 
@@ -1006,7 +1012,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 					if erpnextUom == "" {
 						materialUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(item.UnitUuid)
 						if err != nil {
-							return errors.WithMessage(err, "查询物品单位失败")
+							return errors.WithMessage(errors.New("查询物品单位失败"), err.Error())
 						}
 						if materialUnit.Unit == nil {
 							return errors.New("查询物品原始单位失败")
@@ -1046,7 +1052,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 					if strings.Contains(err.Error(), "Item") && strings.Contains(err.Error(), "is disabled") {
 						return errors.NewWithCode(constant.CodeMaterialDisabled, "物品已禁用，请修改物品状态")
 					}
-					return errors.WithMessage(err, "调用erp接口失败")
+					return errors.WithMessage(errors.New("调用erp接口失败"), err.Error())
 				}
 				// 获取采购订单号 - 6哥说这里的 "名称就是采购单号"
 				erpOrderNo = erpResp.Name
@@ -1057,7 +1063,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 			purchaseOrder.ErpOrderNo = erpOrderNo
 			err = purchaseOrderRepo.Update(purchaseOrder)
 			if err != nil {
-				return errors.WithMessage(err, "更新采购申请单号失败")
+				return errors.WithMessage(errors.New("更新采购申请单号失败"), err.Error())
 			}
 
 			//  ------ 同步状态到子商户采购申请 ---------
@@ -1072,7 +1078,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 					if err == gorm.ErrRecordNotFound {
 						return errors.New("采购申请不存在")
 					}
-					return errors.WithMessage(err, "查询采购申请失败")
+					return errors.WithMessage(errors.New("查询采购申请失败"), err.Error())
 				}
 				subPurchaseOrder.ErpOrderNo = purchaseOrder.ErpOrderNo
 				subPurchaseOrder.Status = constant.PurchaseOrderStatusApproved
@@ -1080,7 +1086,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 				subPurchaseOrder.PassTime = purchaseOrder.PassTime
 				err = repository.NewPurchaseOrderRepo(subDb).Update(subPurchaseOrder)
 				if err != nil {
-					return errors.WithMessage(err, "更新采购申请单号失败")
+					return errors.WithMessage(errors.New("更新采购申请单号失败"), err.Error())
 				}
 			}
 		}
@@ -1192,7 +1198,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 			// 查询采购申请明细
 			orderItem, err := purchaseOrderItemRepo.GetByUuid(itemReq.PurchaseOrderItemUuid)
 			if err != nil {
-				return errors.WithMessage(err, "查询采购申请明细失败")
+				return errors.WithMessage(errors.New("查询采购申请明细失败"), err.Error())
 			}
 
 			// 更新采购申请明细的到货数量
@@ -1233,7 +1239,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 				orderItem.ArrivalNum = newArrivalNum
 				err = purchaseOrderItemRepo.Update(orderItem)
 				if err != nil {
-					return errors.WithMessage(err, "更新采购申请明细失败")
+					return errors.WithMessage(errors.New("更新采购申请明细失败"), err.Error())
 				}
 
 				// 收集需要更新的总部采购明细信息
@@ -1249,7 +1255,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 		// 批量创建收货明细
 		err = receiptOrderItemRepo.CreateBatch(receiptItems)
 		if err != nil {
-			return errors.WithMessage(err, "创建收货明细失败")
+			return errors.WithMessage(errors.New("创建收货明细失败"), err.Error())
 		}
 
 		// 更新收货单明细
@@ -1308,11 +1314,11 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 		for _, item := range req.Items {
 			purchaseOrderItem, err := repository.NewPurchaseOrderItemRepo(db).GetByUuid(item.PurchaseOrderItemUuid)
 			if err != nil {
-				return errors.WithMessage(err, "查询采购申请明细失败")
+				return errors.WithMessage(errors.New("查询采购申请明细失败"), err.Error())
 			}
 			material, err := repository.NewMaterialRepo(db).GetMaterialByUuid(purchaseOrderItem.MaterialUuid)
 			if err != nil {
-				return errors.WithMessage(err, "查询物品明细失败")
+				return errors.WithMessage(errors.New("查询物品明细失败"), err.Error())
 			}
 			// 判断物品是否停用
 			if material.Status == false {
@@ -1372,13 +1378,13 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 			// 查询收货单明细
 			receiptOrderItem, err := receiptOrderItemRepo.GetByUuid(itemReq.Uuid)
 			if err != nil {
-				return errors.WithMessage(err, "查询收货单明细失败")
+				return errors.WithMessage(errors.New("查询收货单明细失败"), err.Error())
 			}
 
 			// 查询采购申请明细
 			purchaseOrderItem, err := purchaseOrderItemRepo.GetByUuid(receiptOrderItem.PurchaseOrderItemUuid)
 			if err != nil {
-				return errors.WithMessage(err, "查询采购申请明细失败")
+				return errors.WithMessage(errors.New("查询采购申请明细失败"), err.Error())
 			}
 
 			// 计算新的到货数量
@@ -1420,7 +1426,7 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 				purchaseOrderItem.ArrivalNum = newArrivalNum
 				err = purchaseOrderItemRepo.Update(purchaseOrderItem)
 				if err != nil {
-					return errors.WithMessage(err, "更新采购申请明细失败")
+					return errors.WithMessage(errors.New("更新采购申请明细失败"), err.Error())
 				}
 
 				// 收集需要更新的总部采购明细信息
@@ -1436,13 +1442,13 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 		// 删除所有现有收货明细
 		err = receiptOrderItemRepo.DeleteByReceiptOrderUuid(receiptOrder.Uuid)
 		if err != nil {
-			return errors.WithMessage(err, "删除收货明细失败")
+			return errors.WithMessage(errors.New("删除收货明细失败"), err.Error())
 		}
 
 		// 批量创建收货明细
 		err = receiptOrderItemRepo.CreateBatch(receiptItems)
 		if err != nil {
-			return errors.WithMessage(err, "创建收货明细失败")
+			return errors.WithMessage(errors.New("创建收货明细失败"), err.Error())
 		}
 
 		// 更新收货单状态
@@ -1450,7 +1456,7 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 		receiptOrder.ReceiveTime = req.ReceiveTime
 		err = receiptOrderRepo.Update(receiptOrder)
 		if err != nil {
-			return errors.WithMessage(err, "更新收货单状态失败")
+			return errors.WithMessage(errors.New("更新收货单状态失败"), err.Error())
 		}
 		receiptOrder.Items = receiptItems
 
@@ -1527,7 +1533,7 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderList(ctx context.Context, req 
 	// 查询数据
 	receipts, total, err := receiptOrderRepo.GetListWithPagination(req.PageNo, req.PageSize, opts...)
 	if err != nil {
-		return resp.PurchaseReceiptOrderListResp{}, errors.WithMessage(err, "查询收货单列表失败")
+		return resp.PurchaseReceiptOrderListResp{}, errors.WithMessage(errors.New("查询收货单列表失败"), err.Error())
 	}
 
 	// 转换响应数据
@@ -1562,14 +1568,14 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderDetail(ctx context.Context, re
 		if err == gorm.ErrRecordNotFound {
 			return resp.PurchaseReceiptOrderDetailResp{}, errors.New("收货单不存在")
 		}
-		return resp.PurchaseReceiptOrderDetailResp{}, errors.WithMessage(err, "查询收货单详情失败")
+		return resp.PurchaseReceiptOrderDetailResp{}, errors.WithMessage(errors.New("查询收货单详情失败"), err.Error())
 	}
 
 	// 转换响应数据
 	var detailResp resp.PurchaseReceiptOrderDetailResp
 	err = copier.Copy(&detailResp, receipt)
 	if err != nil {
-		return resp.PurchaseReceiptOrderDetailResp{}, errors.WithMessage(err, "数据转换失败")
+		return resp.PurchaseReceiptOrderDetailResp{}, errors.WithMessage(errors.New("数据转换失败"), err.Error())
 	}
 
 	// 转换收货明细数据
@@ -1578,7 +1584,7 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderDetail(ctx context.Context, re
 		itemInfo := resp.PurchaseReceiptItemInfo{}
 		err = copier.Copy(&itemInfo, &item)
 		if err != nil {
-			return resp.PurchaseReceiptOrderDetailResp{}, errors.WithMessage(err, "数据转换失败")
+			return resp.PurchaseReceiptOrderDetailResp{}, errors.WithMessage(errors.New("数据转换失败"), err.Error())
 		}
 		itemInfo.LocaleName = *language.JsonToLocaleResponse(item.MaterialName)
 		itemInfo.PurchaseNum = item.PurchaseOrderItem.Num
@@ -1600,7 +1606,7 @@ func (s *purchaseOrderSrv) CancelPurchaseReceiptOrder(ctx context.Context, req r
 	// 查询收货单
 	receiptOrder, err := receiptOrderRepo.GetByUuid(req.Uuid)
 	if err != nil {
-		return errors.WithMessage(err, "收货单不存在")
+		return errors.WithMessage(errors.New("收货单不存在"), err.Error())
 	}
 
 	// 检查收货单状态
@@ -1613,14 +1619,14 @@ func (s *purchaseOrderSrv) CancelPurchaseReceiptOrder(ctx context.Context, req r
 	receiptOrder.CancelTime = time.Now().Unix()
 	err = receiptOrderRepo.Update(receiptOrder)
 	if err != nil {
-		return errors.WithMessage(err, "取消收货单失败")
+		return errors.WithMessage(errors.New("取消收货单失败"), err.Error())
 	}
 
 	return nil
 }
 
 // generateOrderNo 生成采购申请订单编号
-// 格式：CSSQ+年月日+0000自增序列号
+// 格式：no+年月日+0000自增序列号
 func (s *purchaseOrderSrv) generateOrderNo(ctx context.Context, db *gorm.DB, prefix string) string {
 	// 年月日部分
 	datePart := time.Now().Format("20060102")
@@ -1631,7 +1637,7 @@ func (s *purchaseOrderSrv) generateOrderNo(ctx context.Context, db *gorm.DB, pre
 		return ""
 	}
 
-	// 组装订单编号：CSSH+年月日+0000自增序列号
+	// 组装订单编号：no+年月日+0000自增序列号
 	orderNo := prefix + datePart + serialNo
 
 	return orderNo
@@ -1645,7 +1651,7 @@ func (s *purchaseOrderSrv) generatePurchaseOrderSerialNo(ctx context.Context, db
 	// 获取今天最新的采购申请
 	latestOrder, err := purchaseOrderRepo.GetLatestOrderToday()
 	if err != nil && err != gorm.ErrRecordNotFound {
-		return "", errors.WithMessage(err, "获取最新采购申请失败")
+		return "", errors.WithMessage(errors.New("获取最新采购申请失败"), err.Error())
 	}
 
 	// 如果没有查询到今天的采购申请，则设置为0001
@@ -1702,7 +1708,7 @@ func (s *purchaseOrderSrv) generateReceiptOrderSerialNo(ctx context.Context, db 
 	// 获取今天最新的收货单
 	latestReceipt, err := receiptOrderRepo.GetLatestReceiptToday()
 	if err != nil && err != gorm.ErrRecordNotFound {
-		return "", errors.WithMessage(err, "获取最新收货单失败")
+		return "", errors.WithMessage(errors.New("获取最新收货单失败"), err.Error())
 	}
 
 	// 如果没有查询到今天的收货单，则设置为0001
@@ -1819,13 +1825,13 @@ func (s *purchaseOrderSrv) updateMaterialStock(ctx context.Context, db *gorm.DB,
 			// 获取物料信息
 			material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid, materialRepo.WithRelatedMaterialList())
 			if err != nil {
-				return errors.WithMessage(err, "获取物料信息失败")
+				return errors.WithMessage(errors.New("获取物料信息失败"), err.Error())
 			}
 			// 更新库存数量
 			material.StockNum = decimal.NewFromFloat(material.StockNum).Add(decimal.NewFromFloat(item.GetActualNum())).InexactFloat64()
 			err = materialRepo.UpdateMaterial(material)
 			if err != nil {
-				return errors.WithMessage(err, "更新物料库存失败")
+				return errors.WithMessage(errors.New("更新物料库存失败"), err.Error())
 			}
 			// 更新规格/加料关联材料库存
 			relatedMaterialUuids := make([]uint64, 0)
@@ -1840,14 +1846,14 @@ func (s *purchaseOrderSrv) updateMaterialStock(ctx context.Context, db *gorm.DB,
 			}
 			err = s.updateRelatedMaterialStock(db, relatedMaterialUuids)
 			if err != nil {
-				return errors.WithMessage(err, "更新规格/加料关联材料库存失败")
+				return errors.WithMessage(errors.New("更新规格/加料关联材料库存失败"), err.Error())
 			}
 		}
 
 		// 记录erp的入库记录
 		err := s.recordErpStockInLog(ctx, db, receiptOrder)
 		if err != nil {
-			return errors.WithMessage(err, "记录ERP入库记录失败")
+			return errors.WithMessage(errors.New("记录ERP入库记录失败"), err.Error())
 		}
 	}
 
@@ -1868,7 +1874,7 @@ func (s *purchaseOrderSrv) updateMaterialStock(ctx context.Context, db *gorm.DB,
 				}
 				err = warehouseItemRepo.ReduceStock(warehouseItem.Uuid, actualNum)
 				if err != nil {
-					return errors.WithMessage(err, "减少在途仓库库存失败")
+					return errors.WithMessage(errors.New("减少在途仓库库存失败"), err.Error())
 				}
 			}
 		}
@@ -1898,7 +1904,7 @@ func (s *purchaseOrderSrv) updateMaterialStock(ctx context.Context, db *gorm.DB,
 		receiptOrder.ErpOrderNo = resp.PurchaseReceipt.PurchaseReceiptName
 		err = repository.NewPurchaseReceiptOrderRepo(db).Update(receiptOrder)
 		if err != nil {
-			return errors.WithMessage(err, "更新收货单号失败")
+			return errors.WithMessage(errors.New("更新收货单号失败"), err.Error())
 		}
 	}
 
@@ -1916,7 +1922,7 @@ func (s *purchaseOrderSrv) recordErpStockInLog(ctx context.Context, db *gorm.DB,
 		// 获取目标仓库信息（通过ERP编码查找）
 		targetWarehouse, err := repository.NewWarehouseRepo(tx).GetByErpCode(receiptOrder.TargetWarehouseErpCode)
 		if err != nil {
-			return errors.WithMessage(err, "获取目标仓库信息失败")
+			return errors.WithMessage(errors.New("获取目标仓库信息失败"), err.Error())
 		}
 
 		// 处理每个收货单明细
@@ -1941,16 +1947,16 @@ func (s *purchaseOrderSrv) recordErpStockInLog(ctx context.Context, db *gorm.DB,
 					}
 					err = warehouseItemRepo.Create(newWarehouseItem)
 					if err != nil {
-						return errors.WithMessage(err, "创建仓库商品库存记录失败")
+						return errors.WithMessage(errors.New("创建仓库商品库存记录失败"), err.Error())
 					}
 					warehouseItem = newWarehouseItem
 				} else {
-					return errors.WithMessage(err, "查询仓库商品库存失败")
+					return errors.WithMessage(errors.New("查询仓库商品库存失败"), err.Error())
 				}
 			}
 			err = warehouseItemRepo.AddStock(warehouseItem.Uuid, actualNum)
 			if err != nil {
-				return errors.WithMessage(err, "更新仓库商品库存失败")
+				return errors.WithMessage(errors.New("更新仓库商品库存失败"), err.Error())
 			}
 
 			// 记录入库日志
@@ -1984,7 +1990,7 @@ func (s *purchaseOrderSrv) recordErpStockInLog(ctx context.Context, db *gorm.DB,
 			}
 			err = warehouseLogRepo.Create(warehouseLog)
 			if err != nil {
-				return errors.WithMessage(err, "记录入库日志失败")
+				return errors.WithMessage(errors.New("记录入库日志失败"), err.Error())
 			}
 		}
 
@@ -2052,7 +2058,7 @@ func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, sub
 			// 减少库存
 			err = warehouseItemRepo.ReduceStock(warehouseItem.Uuid, actualNum)
 			if err != nil {
-				return errors.WithMessage(err, "减少总部库存失败")
+				return errors.WithMessage(errors.New("减少总部库存失败"), err.Error())
 			}
 
 			// 记录出库日志
@@ -2091,7 +2097,7 @@ func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, sub
 			}
 			err = warehouseLogRepo.Create(warehouseLog)
 			if err != nil {
-				return errors.WithMessage(err, "记录出库日志失败")
+				return errors.WithMessage(errors.New("记录出库日志失败"), err.Error())
 			}
 
 			// 添加到在途仓库
@@ -2114,14 +2120,14 @@ func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, sub
 						}
 						err = repository.NewWarehouseItemRepo(subDb).Create(newWarehouseItem)
 						if err != nil {
-							return errors.WithMessage(err, "创建仓库商品库存记录失败")
+							return errors.WithMessage(errors.New("创建仓库商品库存记录失败"), err.Error())
 						}
 						warehouseItem = newWarehouseItem
 					}
 				}
 				err = repository.NewWarehouseItemRepo(subDb).AddStock(warehouseItem.Uuid, actualNum)
 				if err != nil {
-					return errors.WithMessage(err, "减少总部库存失败")
+					return errors.WithMessage(errors.New("减少总部库存失败"), err.Error())
 				}
 			}
 		}
@@ -2176,7 +2182,7 @@ func (s *purchaseOrderSrv) updateRelatedMaterialStock(db *gorm.DB, relatedMateri
 		// 执行SQL更新
 		err := tx.Exec(sql, relatedMaterialUuids, relatedMaterialUuids).Error
 		if err != nil {
-			return errors.WithMessage(err, "更新规格/加料关联材料库存失败")
+			return errors.WithMessage(errors.New("更新规格/加料关联材料库存失败"), err.Error())
 		}
 
 		return nil
@@ -2200,7 +2206,7 @@ func (s *purchaseOrderSrv) initHeadquarterInfo(ctx context.Context, purchaseOrde
 	// 获取总部采购订单
 	headquarterPurchaseOrder, err := repository.NewPurchaseOrderRepo(headquarterDb).GetBySubUuid(purchaseOrder.Uuid)
 	if err != nil {
-		return nil, errors.WithMessage(err, "获取总部采购申请失败")
+		return nil, errors.WithMessage(errors.New("获取总部采购申请失败"), err.Error())
 	}
 
 	return &HeadquarterUpdateInfo{
@@ -2226,7 +2232,7 @@ func (s *purchaseOrderSrv) batchUpdateHeadquarterItems(info *HeadquarterUpdateIn
 		headquarterItem.ArrivalNum = itemUpdate.NewArrivalNum
 		err = info.ItemRepo.Update(headquarterItem)
 		if err != nil {
-			return errors.WithMessage(err, fmt.Sprintf("更新总部采购申请明细失败，物料编码：%s", itemUpdate.MaterialCode))
+			return errors.WithMessage(errors.New(fmt.Sprintf("更新总部采购申请明细失败，物料编码：%s", itemUpdate.MaterialCode)), err.Error())
 		}
 	}
 

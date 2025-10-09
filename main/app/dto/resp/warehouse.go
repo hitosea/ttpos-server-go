@@ -55,3 +55,15 @@ type WarehouseInOutResp struct {
 	OtherOrgType uint64 `json:"other_org_type"` // 对方机构类型
 	OtherOrgName string `json:"other_org_name"` // 对方机构名称
 }
+
+// OtherOrgListResp 对方机构列表响应
+type OtherOrgListResp struct {
+	List []OtherOrgResp `json:"list"`
+}
+
+// OtherOrgResp 对方机构响应
+type OtherOrgResp struct {
+	Name          string `json:"name"`           // 对方机构名称
+	Code          string `json:"code"`           // 对方机构编码
+	IsHeadquarter bool   `json:"is_headquarter"` // 是否总部机构：0-否；1-是
+}

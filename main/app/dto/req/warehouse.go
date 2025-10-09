@@ -37,6 +37,7 @@ type GetWarehouseInOutListReq struct {
 	MaterialCategoryUuids []uint64 `json:"material_category_uuids" form:"material_category_uuids"` // 物料分类ID列表,多选
 	SupplierUuids         []uint64 `json:"supplier_uuids" form:"supplier_uuids"`                   // 供应商ID列表,多选
 	OrderNo               string   `json:"order_no" form:"order_no"`                               // 单据编号
+	OrgCodes              []string `json:"org_codes" form:"org_codes"`                             // 对方机构Code列表,多选
 }
 
 // DeleteWarehouseReq 删除仓库请求

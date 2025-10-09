@@ -30,6 +30,8 @@ type IWarehouseInOutLogRepo interface {
 	WhereMaterialUuids(materialUuids []uint64) DBOption
 	WhereMaterialCategoryUuids(materialCategoryUuids []uint64) DBOption
 	WhereSupplierUuids(supplierUuids []uint64) DBOption
+	WhereSupplierErpCodesOrCompanyUuids(supplierErpCodes []string, companyUuids []uint64) DBOption
+	WhereCompanyUuid(companyUuid uint64) DBOption
 	WhereOrderNo(orderNo string) DBOption
 	WhereLogType(logType int) DBOption
 	WhereScene(scene int) DBOption
@@ -263,4 +265,25 @@ func (r *WarehouseInOutLogRepoImpl) GetWarehouseInOutLogs(opts ...DBOption) ([]*
 	}
 	err := query.Find(&warehouseLogs).Error
 	return warehouseLogs, err
+}
+
+// WhereCompanyUuid 公司UUID条件
+func (r *WarehouseInOutLogRepoImpl) WhereCompanyUuid(companyUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("company_uuid = ?", companyUuid)
+	}
+}
+
+// WhereSupplierErpCodesOrCompanyUuids 供应商erp编码或公司UUID列表条件
+func (r *WarehouseInOutLogRepoImpl) WhereSupplierErpCodesOrCompanyUuids(supplierErpCodes []string, companyUuids []uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("(supplier_erp_code IN ? OR (other_org_uuid IN ? and other_org_type = 1))", supplierErpCodes, companyUuids)
+	}
+}
+
+// WhereSupplierErpCode 供应商erp编码条件
+func (r *WarehouseInOutLogRepoImpl) WhereSupplierErpCode(supplierErpCode string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("supplier_erp_code = ?", supplierErpCode)
+	}
 }

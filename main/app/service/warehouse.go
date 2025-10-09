@@ -34,6 +34,7 @@ type IWarehouseSrv interface {
 	GetWarehouse(ctx context.Context, req req.WarehouseReq) (resp.WarehouseResp, error)                                     // 获取仓库
 	GetWarehouseInOutList(ctx context.Context, req req.GetWarehouseInOutListReq) (resp.WarehouseInOutListResp, error)       // 出入库明细列表
 	CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error)                  // 检查仓库编码是否存在
+	GetOtherOrgList(ctx context.Context) (resp.OtherOrgListResp, error)                                                     // 对方机构列表
 
 	SyncWarehouse(ctx context.Context) error             // 同步仓库列表
 	SyncDefaultWarehouseStock(ctx context.Context) error // 同步默认仓库库存
@@ -56,6 +57,12 @@ func NewWarehouseSrvImpl(dbm *database.DBManager, settingSrv setting.ISrv) IWare
 		dbm: dbm,
 	}
 }
+
+// OtherOrgCode 对方机构编码
+const (
+	OtherOrgCodeSupplierErpCode = "supplier-erp-code"
+	OtherOrgCodeCompanyUuid     = "company-uuid"
+)
 
 // GetWarehouseList 获取仓库列表
 func (s *warehouseSrv) GetWarehouseList(ctx context.Context, req req.WarehouseListReq, isHeadquarters ...bool) (resp.WarehouseListResp, error) {
@@ -671,6 +678,27 @@ func (s *warehouseSrv) GetWarehouseInOutList(ctx context.Context, req req.GetWar
 	if req.OrderNo != "" {
 		opts = append(opts, warehouseInOutLogRepo.WhereOrderNo(req.OrderNo))
 	}
+	// 对方机构Code列表
+	if len(req.OrgCodes) > 0 {
+		supplierErpCodes := []string{}
+		companyUuids := []uint64{}
+		for _, orgCode := range req.OrgCodes {
+			orgCodeArr := strings.Split(orgCode, ":")
+			if len(orgCodeArr) < 2 {
+				continue
+			}
+			if orgCodeArr[0] == OtherOrgCodeSupplierErpCode {
+				supplierErpCodes = append(supplierErpCodes, orgCodeArr[1])
+			} else if orgCodeArr[0] == OtherOrgCodeCompanyUuid {
+				if companyUuid, err := strconv.ParseUint(orgCodeArr[1], 10, 64); err == nil {
+					companyUuids = append(companyUuids, companyUuid)
+				}
+			}
+		}
+		if len(supplierErpCodes) > 0 || len(companyUuids) > 0 {
+			opts = append(opts, warehouseInOutLogRepo.WhereSupplierErpCodesOrCompanyUuids(supplierErpCodes, companyUuids))
+		}
+	}
 
 	warehouseInOutLogs, total, err := warehouseInOutLogRepo.GetListWithPagination(req.PageNo, req.PageSize, opts...)
 	if err != nil {
@@ -984,6 +1012,7 @@ func (s *warehouseSrv) SyncDefaultWarehouseStock(ctx context.Context) error {
 	return err
 }
 
+// CheckCodeExists 检查仓库编码是否存在
 func (s *warehouseSrv) CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	warehouseRepo := repository.NewWarehouseRepo(db)
@@ -992,4 +1021,45 @@ func (s *warehouseSrv) CheckCodeExists(ctx context.Context, req req.CheckCodeExi
 		return resp.CheckNameCodeExistsResp{}, errors.WithMessage(err, "检查仓库编码是否存在失败")
 	}
 	return resp.CheckNameCodeExistsResp{Exists: exists}, nil
+}
+
+// GetOtherOrgList 获取对方机构列表
+func (s *warehouseSrv) GetOtherOrgList(ctx context.Context) (resp.OtherOrgListResp, error) {
+	db := ctx.GetDB()
+	companySetting := ctx.GetCompanySetting()
+	supplierRepo := repository.NewSupplierRepo(db)
+
+	// 获取供应商列表
+	suppliers, err := supplierRepo.GetList(
+		supplierRepo.OrderByCreateTime(true),
+		supplierRepo.WhereNotDeleted(),
+	)
+	if err != nil {
+		return resp.OtherOrgListResp{}, errors.WithMessage(err, "获取对方机构列表失败")
+	}
+	otherOrgs := make([]resp.OtherOrgResp, 0, len(suppliers))
+	for _, supplier := range suppliers {
+		otherOrgs = append(otherOrgs, resp.OtherOrgResp{
+			Name:          supplier.Name,
+			Code:          fmt.Sprintf("%s:%s", OtherOrgCodeSupplierErpCode, supplier.ErpCode), // 供应商erp编码前缀
+			IsHeadquarter: supplier.HeadquarterUuid > 0,                                        // 供应商是否总部机构
+		})
+	}
+
+	//
+	if companySetting.IsHeadquarter() {
+		// 获取公司列表
+		companies, err := repository.NewCompanyRepo(s.dbm.GetDB(0)).GetListByHeadquarterUuid(ctx.GetCompanyUuid())
+		if err != nil {
+			return resp.OtherOrgListResp{}, errors.WithMessage(err, "获取公司列表失败")
+		}
+		for _, company := range companies {
+			otherOrgs = append(otherOrgs, resp.OtherOrgResp{
+				Name: company.Name,
+				Code: fmt.Sprintf("%s:%s", OtherOrgCodeCompanyUuid, strconv.FormatUint(company.Uuid, 10)), // 公司uuid前缀
+			})
+		}
+	}
+
+	return resp.OtherOrgListResp{List: otherOrgs}, nil
 }
