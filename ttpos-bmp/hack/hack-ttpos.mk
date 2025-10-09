@@ -79,6 +79,7 @@ migrate:
 	#@cd app/ttpos-manager  && make db_up.docker
 	#@cd app/ttpos-shop  && make db_up.docker
 	@cd app/ttpos-erp  && make db_up.docker
+	@make update-topic
 
 
 # 替换本地IP， 开发用
