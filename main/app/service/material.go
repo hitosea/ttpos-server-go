@@ -604,8 +604,8 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 
 // AddMaterial 添加物品
 func (s *materialSrv) AddMaterial(ctx context.Context, req req.MaterialAddReq) error {
-	// 大写编码
-	req.InternalCode = strings.ToUpper(req.InternalCode)
+	// 去除两端空格，大写编码
+	req.InternalCode = strings.ToUpper(strings.TrimSpace(req.InternalCode))
 	dbId := ctx.GetDbId()
 	db := s.dbm.GetDB(dbId)
 
@@ -829,8 +829,8 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 
 // EditMaterial 编辑物品
 func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEditReq) error {
-	// 大写编码
-	request.InternalCode = strings.ToUpper(request.InternalCode)
+	// 去除两端空格，大写编码
+	request.InternalCode = strings.ToUpper(strings.TrimSpace(request.InternalCode))
 	// 验证请求参数
 	if err := request.Validate(); err != nil {
 		return errors.WithMessage(err)
@@ -1179,8 +1179,10 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 			if productUnit.Uuid == stockUnit.Uuid {
 				// 基准单位
 				err := materialUnitRepo.UpdateMaterialUnit(map[string]any{
-					"name":      productUnit.Name,
-					"unit_uuid": productUnit.Uuid,
+					"name":        productUnit.Name,
+					"unit_uuid":   productUnit.Uuid,
+					"is_default":  1,
+					"delete_time": 0,
 				}, commonRepo.WhereByUuid(material.Unit.Uuid))
 				if err != nil {
 					return errors.WithMessage(err, "更新基准单位失败")
@@ -1192,7 +1194,7 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 			} else {
 				// 非基准单位
 				existUnit, exist := slice.FindBy(material.NotBaseUnitList, func(index int, item *model.MaterialUnit) bool {
-					return item.UnitUuid == productUnit.Uuid
+					return item.UnitUuid == productUnit.Uuid && item.DeleteTime == 0
 				})
 				if exist {
 					err := materialUnitRepo.UpdateMaterialUnit(map[string]any{
