@@ -996,7 +996,7 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 
 		if ctx.GetCompany().IsOpenErp() {
 			erpSrv := erp.NewIErpSrv(s.dbm)
-			enName, err := GetEnName(ctx, s.settingSrv, existingMaterial.MultiLanguageName.GetNames())
+			enName, err := GetEnName(ctx, s.settingSrv, request.LocaleName)
 			if err != nil {
 				return errors.WithMessage(err, "翻译失败")
 			}
