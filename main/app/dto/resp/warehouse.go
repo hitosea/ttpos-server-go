@@ -50,4 +50,8 @@ type WarehouseInOutResp struct {
 	// 仓库信息
 	WarehouseUuid uint64             `json:"warehouse_uuid"` // 仓库ID
 	WarehouseName dto.LocaleResponse `json:"warehouse_name"` // 仓库名称
+	// 对方机构
+	OtherOrgUuid uint64 `json:"other_org_uuid"` // 对方机构ID
+	OtherOrgType uint64 `json:"other_org_type"` // 对方机构类型
+	OtherOrgName string `json:"other_org_name"` // 对方机构名称
 }

@@ -520,6 +520,9 @@ func (s *warehouseSrv) buildWarehouseInOutResp(log model.WarehouseInOutLog) resp
 		// 仓库信息
 		WarehouseUuid: log.WarehouseUuid,
 		WarehouseName: warehouseName,
+		// 对方机构
+		OtherOrgType: log.OtherOrgType,
+		OtherOrgName: log.OtherOrgName,
 	}
 }
 

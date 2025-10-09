@@ -17,6 +17,9 @@ type WarehouseInOutLog struct {
 	SupplierErpCode      string  `json:"supplier_erp_code" gorm:"type:varchar(500);default:'';comment:供应商ERP编码"`
 	SupplierName         string  `json:"supplier_name" gorm:"type:text;comment:供应商名称"`
 	OrderNo              string  `json:"order_no" gorm:"type:varchar(255);default:'';comment:单据编号"`
+	OtherOrgUuid         uint64  `json:"other_org_uuid" gorm:"type:bigint;default:0;comment:对方机构ID"`
+	OtherOrgType         uint64  `json:"other_org_type" gorm:"type:bigint;default:0;comment:对方机构类型 0:供应商 1:客户"`
+	OtherOrgName         string  `json:"other_org_name" gorm:"type:text;comment:对方机构名称"`
 
 	// 关联模型
 	Material  *Material  `gorm:"foreignKey:MaterialUuid;references:Uuid" json:"material,omitempty"`

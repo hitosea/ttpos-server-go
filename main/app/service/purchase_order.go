@@ -939,6 +939,10 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 						}
 						// 更新库存数量
 						material.StockNum = decimal.NewFromFloat(material.StockNum).Sub(decimal.NewFromFloat(item.GetActualNum())).InexactFloat64()
+						if material.StockNum < 0 {
+							material.StockNum = 0
+							return errors.WithMessage(err, "更新物料库存失败")
+						}
 						err = materialRepo.UpdateMaterial(material)
 						if err != nil {
 							return errors.WithMessage(err, "更新物料库存失败")
@@ -1950,6 +1954,13 @@ func (s *purchaseOrderSrv) recordErpStockInLog(ctx context.Context, db *gorm.DB,
 			}
 
 			// 记录入库日志
+			supplierUuid := func() uint64 {
+				supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(receiptOrder.GetSupplierErpCode())
+				if err != nil {
+					return 0
+				}
+				return supplier.Uuid
+			}()
 			warehouseLog := &model.WarehouseInOutLog{
 				LogType:              0, // 入库
 				Scene:                0, // 采购入库
@@ -1963,16 +1974,13 @@ func (s *purchaseOrderSrv) recordErpStockInLog(ctx context.Context, db *gorm.DB,
 				Amount: func() float64 {
 					return decimal.NewFromFloat(item.Valuation).Mul(decimal.NewFromFloat(actualNum)).InexactFloat64()
 				}(),
-				SupplierUuid: func() uint64 {
-					supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(receiptOrder.GetSupplierErpCode())
-					if err != nil {
-						return 0
-					}
-					return supplier.Uuid
-				}(),
+				SupplierUuid:    supplierUuid,
 				SupplierErpCode: receiptOrder.GetSupplierErpCode(),
 				SupplierName:    receiptOrder.SupplierName,
 				OrderNo:         receiptOrder.OrderNo,
+				OtherOrgUuid:    supplierUuid,
+				OtherOrgType:    0,
+				OtherOrgName:    receiptOrder.SupplierName,
 			}
 			err = warehouseLogRepo.Create(warehouseLog)
 			if err != nil {
@@ -2046,6 +2054,7 @@ func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, sub
 			if err != nil {
 				return errors.WithMessage(err, "减少总部库存失败")
 			}
+
 			// 记录出库日志
 			warehouseLog := &model.WarehouseInOutLog{
 				LogType:       1, // 出库
@@ -2076,6 +2085,9 @@ func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, sub
 				}(),
 				SupplierErpCode: purchaseOrder.SupplierErpCode,
 				SupplierName:    purchaseOrder.SupplierName,
+				OtherOrgUuid:    purchaseOrder.CompanyUuid,
+				OtherOrgType:    1,
+				OtherOrgName:    purchaseOrder.CompanyName,
 			}
 			err = warehouseLogRepo.Create(warehouseLog)
 			if err != nil {
