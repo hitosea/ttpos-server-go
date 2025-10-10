@@ -2808,6 +2808,7 @@
   "物品类别编辑请求": "Anfrage zur Bearbeitung der Artikelkategorie",
   "物品编辑请求": "Anfrage zur Artikelbearbeitung",
   "物品被禁用，无法交班": "Artikel ist deaktiviert und kann nicht übergeben werden",
+  "物料库存不足，物料编码：%s": "Materialbestand unzureichend, Materialcode: %s",
   "特色分类不能修改为二级分类": "Spezialkategorie kann nicht in Unterkategorie geändert werden",
   "特色分类不能有一级分类": "Spezielle Kategorien dürfen keine Kategorien der ersten Ebene haben",
   "状态": "Status",
