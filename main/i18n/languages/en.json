@@ -2808,6 +2808,7 @@
   "物品类别编辑请求": "Item category edit request",
   "物品编辑请求": "Item edit request",
   "物品被禁用，无法交班": "Item is disabled and cannot be handed over",
+  "物料库存不足，物料编码：%s": "Insufficient material stock, material code: %s",
   "特色分类不能修改为二级分类": "Featured category cannot be changed to a subcategory",
   "特色分类不能有一级分类": "Featured categories cannot have first-level categories",
   "状态": "Status",

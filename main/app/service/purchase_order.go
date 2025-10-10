@@ -947,7 +947,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 						// 更新库存数量
 						material.StockNum = decimal.NewFromFloat(material.StockNum).Sub(decimal.NewFromFloat(item.GetConversionRateNum())).InexactFloat64()
 						if material.StockNum < 0 {
-							return errors.New(fmt.Sprintf("物料库存不足，物料编码：%s", item.MaterialCode))
+							return errors.New(fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物料库存不足，物料编码：%s"), item.MaterialCode))
 						}
 						err = materialRepo.UpdateMaterial(material)
 						if err != nil {
