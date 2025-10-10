@@ -158,7 +158,7 @@ func (poi *PurchaseOrderItem) SetNil() {
 	poi.Material = nil
 }
 
-func (item PurchaseOrderItem) GetActualNum() float64 {
+func (item PurchaseOrderItem) GetConversionRateNum() float64 {
 	return decimal.NewFromFloat(item.Num).Mul(decimal.NewFromFloat(item.UnitConversionRate).Round(4)).InexactFloat64()
 }
 

@@ -945,7 +945,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 							return errors.WithMessage(errors.New("获取物料信息失败"), err.Error())
 						}
 						// 更新库存数量
-						material.StockNum = decimal.NewFromFloat(material.StockNum).Sub(decimal.NewFromFloat(item.GetActualNum())).InexactFloat64()
+						material.StockNum = decimal.NewFromFloat(material.StockNum).Sub(decimal.NewFromFloat(item.GetConversionRateNum())).InexactFloat64()
 						if material.StockNum < 0 {
 							return errors.New(fmt.Sprintf("物料库存不足，物料编码：%s", item.MaterialCode))
 						}
@@ -2020,7 +2020,7 @@ func (s *purchaseOrderSrv) reduceHeadquarterStockAndLog(ctx context.Context, sub
 		// purchaseOrder
 		for _, item := range purchaseOrder.Items {
 			// 计算实际出库数量（考虑单位转换率）
-			actualNum := item.GetActualNum()
+			actualNum := item.GetConversionRateNum()
 			if actualNum <= 0 {
 				continue
 			}
