@@ -878,7 +878,7 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(ctx context.Context, req req.Pur
 					material, err := repository.NewMaterialRepo(tx).GetMaterialByErpCode(item.MaterialCode)
 					if err != nil {
 						logger.Logger.Error("总部不存在该物料", zap.String("物料编码", item.MaterialCode), zap.Error(err))
-						return errors.New(fmt.Sprintf("总部不存在该物料，物料编码：%s", item.MaterialCode))
+						return errors.New(fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "总部不存在该物料，物料编码：%s"), item.MaterialCode))
 					}
 					// 只重置主键字段，确保GORM执行INSERT而不是UPDATE
 					headquarterItem.BaseModel.ID = 0   // 重置主键，告诉GORM这是新记录
@@ -1263,7 +1263,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(ctx context.Context, req r
 
 		// 批量更新总部采购申请明细
 		if headquarterInfo != nil && len(headquarterInfo.ItemsToUpdate) > 0 {
-			err = s.batchUpdateHeadquarterItems(headquarterInfo)
+			err = s.batchUpdateHeadquarterItems(ctx, headquarterInfo)
 			if err != nil {
 				return err
 			}
@@ -1462,7 +1462,7 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(ctx context.Context, req r
 
 		// 批量更新总部采购申请明细
 		if headquarterInfo != nil && len(headquarterInfo.ItemsToUpdate) > 0 {
-			err = s.batchUpdateHeadquarterItems(headquarterInfo)
+			err = s.batchUpdateHeadquarterItems(ctx, headquarterInfo)
 			if err != nil {
 				return err
 			}
@@ -2218,7 +2218,7 @@ func (s *purchaseOrderSrv) initHeadquarterInfo(ctx context.Context, purchaseOrde
 }
 
 // batchUpdateHeadquarterItems 批量更新总部采购申请明细
-func (s *purchaseOrderSrv) batchUpdateHeadquarterItems(info *HeadquarterUpdateInfo) error {
+func (s *purchaseOrderSrv) batchUpdateHeadquarterItems(ctx context.Context, info *HeadquarterUpdateInfo) error {
 	for _, itemUpdate := range info.ItemsToUpdate {
 		// 获取总部采购申请明细
 		headquarterItem, err := info.ItemRepo.GetByPurchaseOrderUuidAndMaterialCode(info.PurchaseOrder.Uuid, itemUpdate.MaterialCode)
@@ -2232,7 +2232,7 @@ func (s *purchaseOrderSrv) batchUpdateHeadquarterItems(info *HeadquarterUpdateIn
 		headquarterItem.ArrivalNum = itemUpdate.NewArrivalNum
 		err = info.ItemRepo.Update(headquarterItem)
 		if err != nil {
-			return errors.WithMessage(errors.New(fmt.Sprintf("更新总部采购申请明细失败，物料编码：%s", itemUpdate.MaterialCode)), err.Error())
+			return errors.WithMessage(errors.New(fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "更新总部采购申请明细失败，物料编码：%s"), itemUpdate.MaterialCode)), err.Error())
 		}
 	}
 
