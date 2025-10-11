@@ -532,7 +532,7 @@ func (s *purchaseReceiptOrderSrv) updateMaterialStock(
 			// 获取物料信息
 			material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid, materialRepo.WithRelatedMaterialList())
 			if err != nil {
-				return errors.WithMessage(errors.New("获取物料信息失败"), err.Error())
+				return errors.WithMessage(errors.New("获取物品信息失败"), err.Error())
 			}
 			// 更新库存数量
 			material.StockNum = decimal.NewFromFloat(material.StockNum).

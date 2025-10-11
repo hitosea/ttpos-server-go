@@ -859,21 +859,24 @@ func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 			// 获取物料信息
 			material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid)
 			if err != nil {
-				return "", errors.WithMessage(errors.New("获取物料信息失败"), err.Error())
+				return "", errors.WithMessage(errors.New("获取物品信息失败"), err.Error())
 			}
+			//
+			stockNum := material.StockNum
+			conversionRateNum := item.GetConversionRateNum()
 			// 更新库存数量
 			material.StockNum = decimal.NewFromFloat(material.StockNum).
-				Sub(decimal.NewFromFloat(item.GetConversionRateNum())).
+				Sub(decimal.NewFromFloat(conversionRateNum)).
 				InexactFloat64()
 			if material.StockNum < 0 {
 				return "", errors.New(fmt.Sprintf(
-					i18n.Translate(ctx.GetLanguage(), "物料库存不足，物料编码：%s"),
+					i18n.Translate(ctx.GetLanguage(), "物品库存不足，物品编码：%s"),
 					item.MaterialCode,
-				))
+				) + fmt.Sprintf("  (%v / %v)", stockNum, conversionRateNum))
 			}
 			err = materialRepo.UpdateMaterial(material)
 			if err != nil {
-				return "", errors.WithMessage(errors.New("更新物料库存失败"), err.Error())
+				return "", errors.WithMessage(errors.New("更新物品库存失败"), err.Error())
 			}
 
 			// 更新规格/加料关联材料库存
