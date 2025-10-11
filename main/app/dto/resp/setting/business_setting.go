@@ -38,6 +38,11 @@ type ShopBusiness struct {
 	ReturnFoodReasonCount int `json:"return_food_reason_count"` // 退菜原因数量
 }
 
+// 是否开启了分批送厨商品
+func (resp *Business) OpenIsBatch() bool {
+	return resp.IsBatch == "1"
+}
+
 func (resp *Business) IsAutoClearDesk() bool {
 	return resp.NoClearTable == constant.AutoClearTable
 }

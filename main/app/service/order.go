@@ -5643,6 +5643,12 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		CustomDiscountRate:     params.SaleOrder.CustomDiscountRate,
 	}
 
+	// 获取门店业务设置
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
 	saleOrderProducts := make([]*model.SaleOrderProduct, 0)
@@ -5802,6 +5808,14 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			Attribute:     attributes,
 			IsAcceptOrder: uint(isAcceptOrder),
 			Remark:        product.Remark,
+			IsBatch: func() uint8 {
+				if businessSetting.OpenIsBatch() {
+					if productPackage.IsBatchBool() {
+						return 1
+					}
+				}
+				return 0
+			}(),
 		}, &productPackage, product.Operation)
 
 		// 设置必点信息

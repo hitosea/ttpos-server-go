@@ -1513,6 +1513,7 @@ type DefaultSaleOrderProduct struct {
 	PackageGroupUuid        uint64  // 套餐分组uuid
 	ProductType             uint8   // 商品类型
 	PackageSubProductParams string  // 套餐子商品参数
+	IsBatch                 uint8   // 是否是分批商品 0-否 1-是
 }
 
 func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *ProductPackage, operation string) *SaleOrderProduct {
@@ -1560,6 +1561,7 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 		PackageGroupUuid:           def.PackageGroupUuid,
 		ProductType:                def.ProductType,
 		PackageSubProductParams:    def.PackageSubProductParams,
+		IsBatch:                    def.IsBatch,
 	}
 	// 套餐子商品，设置单位数量
 	if def.ProductType == constant.ProductTypePackageSubProduct {

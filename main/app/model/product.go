@@ -223,6 +223,11 @@ func (model *ProductPackage) SetNil() {
 	model.ImageFile = File{}
 }
 
+// 是否是分批商品
+func (model *ProductPackage) IsBatchBool() bool {
+	return model.IsBatch == 1
+}
+
 // 是否套餐
 func (model *ProductPackage) IsPackage() bool {
 	return model.ProductType == constant.ProductTypePackage
