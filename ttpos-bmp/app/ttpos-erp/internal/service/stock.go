@@ -40,6 +40,10 @@ type (
 		// 参数：ctx 上下文，req 保存加料物品请求
 		// 返回：保存后的物品信息，错误信息
 		SavePosAddon(ctx context.Context, req *item.SavePosAddonReq) (res *item.ItemInfo, err error)
+		// CreateSingleVariantItem 创建多规格商品的单个规格商品
+		// 参数：ctx 上下文，req 物品信息，code 物品编码
+		// 返回：创建结果
+		CreateSingleVariantItem(ctx context.Context, req *erp.CreateSingleVariantItemReq, templateItemInfo *item.ItemInfo) (string, error)
 	}
 	IItemGroup interface {
 		// GetItemGroupList 获取物品分组列表

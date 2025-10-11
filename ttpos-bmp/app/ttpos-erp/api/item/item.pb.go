@@ -250,6 +250,8 @@ type ItemInfo struct {
 	InternalCode       string                 `protobuf:"bytes,18,opt,name=internal_code,json=internalCode,proto3" json:"internal_code,omitempty" dc:"内部编码，可选"`                                                                           // 内部编码，可选
 	NotForSale         bool                   `protobuf:"varint,19,opt,name=not_for_sale,json=notForSale,proto3" json:"not_for_sale,omitempty" dc:"是否禁售，可选"`                                                                              //是否禁售，可选
 	PurchaseUom        string                 `protobuf:"bytes,20,opt,name=purchase_uom,json=purchaseUom,proto3" json:"purchase_uom,omitempty" dc:"默认采购单位，可选"`                                                                            // 默认采购单位，可选
+	HasVariants        bool                   `protobuf:"varint,21,opt,name=has_variants,json=hasVariants,proto3" json:"has_variants,omitempty" dc:"是否包含变体参数，可选。 多规格商品时必填。"`                                                              // 是否包含变体参数，可选。 多规格商品时必填。
+	Attributes         []*AttributeInfo       `protobuf:"bytes,22,rep,name=attributes,proto3" json:"attributes,omitempty" dc:"变体参数列表，可选。 多规格商品时必填。"`                                                                                      // 变体参数列表，可选。 多规格商品时必填。
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -422,6 +424,20 @@ func (x *ItemInfo) GetPurchaseUom() string {
 		return x.PurchaseUom
 	}
 	return ""
+}
+
+func (x *ItemInfo) GetHasVariants() bool {
+	if x != nil {
+		return x.HasVariants
+	}
+	return false
+}
+
+func (x *ItemInfo) GetAttributes() []*AttributeInfo {
+	if x != nil {
+		return x.Attributes
+	}
+	return nil
 }
 
 type UomDetail struct {
@@ -846,12 +862,12 @@ func (x *GetAttributeListReq) GetSubCompanyAbbr() string {
 
 type AttributeInfo struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
-	AttributeName      string                 `protobuf:"bytes,1,opt,name=attribute_name,json=attributeName,proto3" json:"attribute_name,omitempty" dc:"属性名称，必填"`                // 属性名称，必填
-	Branch             string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                   // 分支名称，可选
-	Company            string                 `protobuf:"bytes,3,opt,name=company,proto3" json:"company,omitempty" dc:"公司名称，可选"`                                                 // 公司名称，可选
-	CompanyAbbr        string                 `protobuf:"bytes,4,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                      // 公司简称，可选
-	AliasName          string                 `protobuf:"bytes,5,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"属性别名，可选"`                            // 属性别名，可选
-	AttributeValueList []*AttributeValueInfo  `protobuf:"bytes,6,rep,name=attribute_value_list,json=attributeValueList,proto3" json:"attribute_value_list,omitempty" dc:"属性值列表"` // 属性值列表
+	AttributeName      string                 `protobuf:"bytes,1,opt,name=attribute_name,json=attributeName,proto3" json:"attribute_name,omitempty" dc:"属性名称，必填"`                   // 属性名称，必填
+	Branch             string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                      // 分支名称，可选
+	Company            string                 `protobuf:"bytes,3,opt,name=company,proto3" json:"company,omitempty" dc:"公司名称，可选"`                                                    // 公司名称，可选
+	CompanyAbbr        string                 `protobuf:"bytes,4,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                         // 公司简称，可选
+	AliasName          string                 `protobuf:"bytes,5,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"属性别名，可选"`                               // 属性别名，可选
+	AttributeValueList []*AttributeValueInfo  `protobuf:"bytes,6,rep,name=attribute_value_list,json=attributeValueList,proto3" json:"attribute_value_list,omitempty" dc:"属性值列表,可选"` // 属性值列表,可选
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -929,11 +945,13 @@ func (x *AttributeInfo) GetAttributeValueList() []*AttributeValueInfo {
 }
 
 type AttributeValueInfo struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	AttributeValue string                 `protobuf:"bytes,1,opt,name=attribute_value,json=attributeValue,proto3" json:"attribute_value,omitempty" dc:"属性值，必填"` // 属性值，必填
-	Abbr           string                 `protobuf:"bytes,2,opt,name=abbr,proto3" json:"abbr,omitempty" dc:"属性缩写，必填"`                                          // 属性缩写，必填
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	AttributeValue          string                 `protobuf:"bytes,1,opt,name=attribute_value,json=attributeValue,proto3" json:"attribute_value,omitempty" dc:"属性值，必填"`                                                          // 属性值，必填
+	VariantItemInternalCode string                 `protobuf:"bytes,2,opt,name=variant_item_internal_code,json=variantItemInternalCode,proto3" json:"variant_item_internal_code,omitempty" dc:"变体物品内部编码，可选。 创建时才有值更新到有规格商品的内部编码"` // 变体物品内部编码，可选。 创建时才有值更新到有规格商品的内部编码
+	Abbr                    string                 `protobuf:"bytes,3,opt,name=abbr,proto3" json:"abbr,omitempty" dc:"属性缩写，必填"`                                                                                                   // 属性缩写，必填
+	ItemCode                string                 `protobuf:"bytes,4,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"多规格物品编码，可选"`                                                                        // 多规格物品编码，可选
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *AttributeValueInfo) Reset() {
@@ -973,9 +991,23 @@ func (x *AttributeValueInfo) GetAttributeValue() string {
 	return ""
 }
 
+func (x *AttributeValueInfo) GetVariantItemInternalCode() string {
+	if x != nil {
+		return x.VariantItemInternalCode
+	}
+	return ""
+}
+
 func (x *AttributeValueInfo) GetAbbr() string {
 	if x != nil {
 		return x.Abbr
+	}
+	return ""
+}
+
+func (x *AttributeValueInfo) GetItemCode() string {
+	if x != nil {
+		return x.ItemCode
 	}
 	return ""
 }
@@ -1809,7 +1841,7 @@ const file_item_item_proto_rawDesc = "" +
 	"\x10item_code_prefix\x18\a \x01(\tR\x0eitemCodePrefix\x12)\n" +
 	"\x10contain_disabled\x18\b \x01(\bR\x0fcontainDisabled\">\n" +
 	"\x0fGetItemListResp\x12+\n" +
-	"\titem_list\x18\x01 \x03(\v2\x0e.item.ItemInfoR\bitemList\"\xd1\x05\n" +
+	"\titem_list\x18\x01 \x03(\v2\x0e.item.ItemInfoR\bitemList\"\xa9\x06\n" +
 	"\bItemInfo\x12\x1b\n" +
 	"\titem_name\x18\x01 \x01(\tR\bitemName\x12.\n" +
 	"\n" +
@@ -1833,7 +1865,11 @@ const file_item_item_proto_rawDesc = "" +
 	"\rinternal_code\x18\x12 \x01(\tR\finternalCode\x12 \n" +
 	"\fnot_for_sale\x18\x13 \x01(\bR\n" +
 	"notForSale\x12!\n" +
-	"\fpurchase_uom\x18\x14 \x01(\tR\vpurchaseUom\"J\n" +
+	"\fpurchase_uom\x18\x14 \x01(\tR\vpurchaseUom\x12!\n" +
+	"\fhas_variants\x18\x15 \x01(\bR\vhasVariants\x123\n" +
+	"\n" +
+	"attributes\x18\x16 \x03(\v2\x13.item.AttributeInfoR\n" +
+	"attributes\"J\n" +
 	"\tUomDetail\x12\x10\n" +
 	"\x03uom\x18\x01 \x01(\tR\x03uom\x12+\n" +
 	"\x11conversion_factor\x18\x02 \x01(\x01R\x10conversionFactor\"\xae\x01\n" +
@@ -1873,10 +1909,12 @@ const file_item_item_proto_rawDesc = "" +
 	"\fcompany_abbr\x18\x04 \x01(\tR\vcompanyAbbr\x12\x1d\n" +
 	"\n" +
 	"alias_name\x18\x05 \x01(\tR\taliasName\x12J\n" +
-	"\x14attribute_value_list\x18\x06 \x03(\v2\x18.item.AttributeValueInfoR\x12attributeValueList\"Q\n" +
+	"\x14attribute_value_list\x18\x06 \x03(\v2\x18.item.AttributeValueInfoR\x12attributeValueList\"\xab\x01\n" +
 	"\x12AttributeValueInfo\x12'\n" +
-	"\x0fattribute_value\x18\x01 \x01(\tR\x0eattributeValue\x12\x12\n" +
-	"\x04abbr\x18\x02 \x01(\tR\x04abbr\"R\n" +
+	"\x0fattribute_value\x18\x01 \x01(\tR\x0eattributeValue\x12;\n" +
+	"\x1avariant_item_internal_code\x18\x02 \x01(\tR\x17variantItemInternalCode\x12\x12\n" +
+	"\x04abbr\x18\x03 \x01(\tR\x04abbr\x12\x1b\n" +
+	"\titem_code\x18\x04 \x01(\tR\bitemCode\"R\n" +
 	"\x14GetAttributeListResp\x12:\n" +
 	"\x0eattribute_list\x18\x01 \x03(\v2\x13.item.AttributeInfoR\rattributeList\"\xa5\x02\n" +
 	"\tItemStock\x12\x1b\n" +
@@ -2010,46 +2048,47 @@ var file_item_item_proto_depIdxs = []int32{
 	3,  // 1: item.GetItemListResp.item_list:type_name -> item.ItemInfo
 	0,  // 2: item.ItemInfo.item_group:type_name -> item.ItemGroup
 	4,  // 3: item.ItemInfo.uoms:type_name -> item.UomDetail
-	9,  // 4: item.GetUomListResp.uom_list:type_name -> item.UomInfo
-	9,  // 5: item.GetUomResp.uom_info:type_name -> item.UomInfo
-	12, // 6: item.AttributeInfo.attribute_value_list:type_name -> item.AttributeValueInfo
-	11, // 7: item.GetAttributeListResp.attribute_list:type_name -> item.AttributeInfo
-	0,  // 8: item.ItemStock.item_group:type_name -> item.ItemGroup
-	0,  // 9: item.GetItemStockReq.item_group:type_name -> item.ItemGroup
-	14, // 10: item.GetItemStockResp.item_stock_list:type_name -> item.ItemStock
-	3,  // 11: item.GetItemResp.item_info:type_name -> item.ItemInfo
-	20, // 12: item.BomInfo.items:type_name -> item.BomItem
-	21, // 13: item.SavePosAttributeReq.item:type_name -> item.PosSpecItem
-	3,  // 14: item.SavePosAttributeResp.item_info:type_name -> item.ItemInfo
-	21, // 15: item.SavePosAddonReq.item:type_name -> item.PosSpecItem
-	3,  // 16: item.SavePosAddonResp.item_info:type_name -> item.ItemInfo
-	1,  // 17: item.ItemService.GetItemList:input_type -> item.GetItemListReq
-	5,  // 18: item.ItemService.GetUomList:input_type -> item.GetUomListReq
-	7,  // 19: item.ItemService.GetUom:input_type -> item.GetUomReq
-	9,  // 20: item.ItemService.SaveUom:input_type -> item.UomInfo
-	10, // 21: item.ItemService.GetAttributeList:input_type -> item.GetAttributeListReq
-	11, // 22: item.ItemService.SaveAttribute:input_type -> item.AttributeInfo
-	3,  // 23: item.ItemService.SaveItem:input_type -> item.ItemInfo
-	15, // 24: item.ItemService.GetItemStock:input_type -> item.GetItemStockReq
-	17, // 25: item.ItemService.GetItem:input_type -> item.GetItemReq
-	22, // 26: item.ItemService.SavePosAttribute:input_type -> item.SavePosAttributeReq
-	24, // 27: item.ItemService.SavePosAddon:input_type -> item.SavePosAddonReq
-	26, // 28: item.ItemService.GetItemList:output_type -> erp.ResponseInfo
-	26, // 29: item.ItemService.GetUomList:output_type -> erp.ResponseInfo
-	26, // 30: item.ItemService.GetUom:output_type -> erp.ResponseInfo
-	26, // 31: item.ItemService.SaveUom:output_type -> erp.ResponseInfo
-	26, // 32: item.ItemService.GetAttributeList:output_type -> erp.ResponseInfo
-	26, // 33: item.ItemService.SaveAttribute:output_type -> erp.ResponseInfo
-	26, // 34: item.ItemService.SaveItem:output_type -> erp.ResponseInfo
-	26, // 35: item.ItemService.GetItemStock:output_type -> erp.ResponseInfo
-	26, // 36: item.ItemService.GetItem:output_type -> erp.ResponseInfo
-	26, // 37: item.ItemService.SavePosAttribute:output_type -> erp.ResponseInfo
-	26, // 38: item.ItemService.SavePosAddon:output_type -> erp.ResponseInfo
-	28, // [28:39] is the sub-list for method output_type
-	17, // [17:28] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	11, // 4: item.ItemInfo.attributes:type_name -> item.AttributeInfo
+	9,  // 5: item.GetUomListResp.uom_list:type_name -> item.UomInfo
+	9,  // 6: item.GetUomResp.uom_info:type_name -> item.UomInfo
+	12, // 7: item.AttributeInfo.attribute_value_list:type_name -> item.AttributeValueInfo
+	11, // 8: item.GetAttributeListResp.attribute_list:type_name -> item.AttributeInfo
+	0,  // 9: item.ItemStock.item_group:type_name -> item.ItemGroup
+	0,  // 10: item.GetItemStockReq.item_group:type_name -> item.ItemGroup
+	14, // 11: item.GetItemStockResp.item_stock_list:type_name -> item.ItemStock
+	3,  // 12: item.GetItemResp.item_info:type_name -> item.ItemInfo
+	20, // 13: item.BomInfo.items:type_name -> item.BomItem
+	21, // 14: item.SavePosAttributeReq.item:type_name -> item.PosSpecItem
+	3,  // 15: item.SavePosAttributeResp.item_info:type_name -> item.ItemInfo
+	21, // 16: item.SavePosAddonReq.item:type_name -> item.PosSpecItem
+	3,  // 17: item.SavePosAddonResp.item_info:type_name -> item.ItemInfo
+	1,  // 18: item.ItemService.GetItemList:input_type -> item.GetItemListReq
+	5,  // 19: item.ItemService.GetUomList:input_type -> item.GetUomListReq
+	7,  // 20: item.ItemService.GetUom:input_type -> item.GetUomReq
+	9,  // 21: item.ItemService.SaveUom:input_type -> item.UomInfo
+	10, // 22: item.ItemService.GetAttributeList:input_type -> item.GetAttributeListReq
+	11, // 23: item.ItemService.SaveAttribute:input_type -> item.AttributeInfo
+	3,  // 24: item.ItemService.SaveItem:input_type -> item.ItemInfo
+	15, // 25: item.ItemService.GetItemStock:input_type -> item.GetItemStockReq
+	17, // 26: item.ItemService.GetItem:input_type -> item.GetItemReq
+	22, // 27: item.ItemService.SavePosAttribute:input_type -> item.SavePosAttributeReq
+	24, // 28: item.ItemService.SavePosAddon:input_type -> item.SavePosAddonReq
+	26, // 29: item.ItemService.GetItemList:output_type -> erp.ResponseInfo
+	26, // 30: item.ItemService.GetUomList:output_type -> erp.ResponseInfo
+	26, // 31: item.ItemService.GetUom:output_type -> erp.ResponseInfo
+	26, // 32: item.ItemService.SaveUom:output_type -> erp.ResponseInfo
+	26, // 33: item.ItemService.GetAttributeList:output_type -> erp.ResponseInfo
+	26, // 34: item.ItemService.SaveAttribute:output_type -> erp.ResponseInfo
+	26, // 35: item.ItemService.SaveItem:output_type -> erp.ResponseInfo
+	26, // 36: item.ItemService.GetItemStock:output_type -> erp.ResponseInfo
+	26, // 37: item.ItemService.GetItem:output_type -> erp.ResponseInfo
+	26, // 38: item.ItemService.SavePosAttribute:output_type -> erp.ResponseInfo
+	26, // 39: item.ItemService.SavePosAddon:output_type -> erp.ResponseInfo
+	29, // [29:40] is the sub-list for method output_type
+	18, // [18:29] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_item_item_proto_init() }

@@ -180,7 +180,7 @@ const (
 // 商品打印状态
 const (
 	ProductPrinterStatusOpen  = 1 // 开启
-	ProductPrinterStatusClose = 2 // 关闭
+	ProductPrinterStatusClose = 0 // 关闭
 )
 
 const (

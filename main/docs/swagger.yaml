@@ -10234,6 +10234,9 @@ definitions:
       name:
         description: 商品打印机名称
         type: string
+      status:
+        description: 商品打印机状态
+        type: integer
       uuid:
         description: 商品打印机uuid
         type: integer
@@ -26021,6 +26024,28 @@ paths:
       summary: 解除成本卡关联
       tags:
       - 商家端.物品管理
+  /shop/product_printer_list:
+    get:
+      consumes:
+      - application/json
+      description: 获取打印档口列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ProductPrinterList'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取打印档口列表
+      tags:
+      - 商家端.商品
   /shop/purchase/order/approve:
     post:
       consumes:

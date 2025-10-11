@@ -90,8 +90,9 @@ type KitchenBase struct {
 }
 
 type ProductPrinter struct {
-	Uuid uint64 `json:"uuid"` // 商品打印机uuid
-	Name string `json:"name"` // 商品打印机名称
+	Uuid   uint64 `json:"uuid"`   // 商品打印机uuid
+	Name   string `json:"name"`   // 商品打印机名称
+	Status int    `json:"status"` // 商品打印机状态
 }
 
 type ProductPrinterList struct {

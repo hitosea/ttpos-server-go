@@ -193,6 +193,13 @@ func (c *Controller) GetItem(ctx context.Context, req *item.GetItemReq) (*api.Re
 			ConversionFactor: uom.ConversionFactor,
 		})
 	}
+	attrList := make([]*item.AttributeInfo, 0, len(itemInfo.Attributes))
+	for _, attr := range itemInfo.Attributes {
+		attrList = append(attrList, &item.AttributeInfo{
+			AttributeName: attr.CustomAttributeName,
+		})
+	}
+
 	// 将 itemInfo 的值赋给 respItem
 	respItem := &item.ItemInfo{
 		ItemName:           itemInfo.ItemName,
@@ -204,12 +211,13 @@ func (c *Controller) GetItem(ctx context.Context, req *item.GetItemReq) (*api.Re
 		Company:            itemInfo.CustomCompany,
 		ItemSpecification:  itemInfo.CustomSpecification,
 		Disabled:           itemInfo.Disabled == 1,
-		Classification:     itemInfo.Classification,
-		ClassificationCode: itemInfo.ClassificationCode,
+		Classification:     itemInfo.CustomClassification,
+		ClassificationCode: itemInfo.CustomClassificationCode,
 		InternalCode:       itemInfo.CustomInternalCode,
 		PurchaseUom:        itemInfo.PurchaseUom,
 		Uoms:               uomDetails,
 		OpeningStock:       itemInfo.OpeningStock,
+		Attributes:         attrList,
 	}
 
 	// 返回成功响应

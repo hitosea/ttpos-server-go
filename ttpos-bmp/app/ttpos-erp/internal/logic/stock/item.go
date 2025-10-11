@@ -173,8 +173,8 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 			Disabled:           data.Get("disabled").Bool(),
 			PurchaseUom:        itemInfo.PurchaseUom,
 			Uoms:               uomDetails,
-			Classification:     itemInfo.Classification,
-			ClassificationCode: itemInfo.ClassificationCode,
+			Classification:     itemInfo.CustomClassification,
+			ClassificationCode: itemInfo.CustomClassificationCode,
 			InternalCode:       itemInfo.CustomInternalCode,
 			ValuationRate:      itemInfo.ValuationRate,
 			OpeningStock:       itemInfo.OpeningStock,
@@ -203,11 +203,6 @@ func (s *sItem) SaveItem(ctx context.Context, reqInfo *item.ItemInfo) (res *item
 		// 更新现有物品
 		return s.updateExistingItem(ctx, req)
 	} else {
-		//创建规格商品
-		//TODO 使用变体创建商品
-		//if len(req.ItemSpecification) > 0 {
-		//
-		//}
 		// 创建新物品
 		return s.createNewItem(ctx, req)
 	}
@@ -361,6 +356,7 @@ func (s *sItem) createNewItem(ctx context.Context, req *item.ItemInfo) (*item.It
 		return nil, gerror.Wrapf(err, "创建物品失败")
 	}
 
+	//创建禁用物品时，erpnext无法直接创建禁用物品。先创建一个启用的物品，再修改为禁用状态
 	if req.Disabled {
 		newItem["disabled"] = 1
 		service.Document().Update(ctx, &erp.ErpReq{
@@ -370,7 +366,48 @@ func (s *sItem) createNewItem(ctx context.Context, req *item.ItemInfo) (*item.It
 	}
 
 	// 转换并返回结果
-	return s.buildCreateItemResponse(req, company, newItem), nil
+	respItem := s.buildCreateItemResponse(req, company, newItem)
+
+	respAttributes := make([]*item.AttributeInfo, 0, len(req.Attributes))
+
+	//多规格商品，创建时如果包含了属性值，则同步创建规格商品
+	if req.HasVariants {
+		if len(req.Attributes) > 0 {
+			for _, attr := range req.Attributes {
+				respAttr := &item.AttributeInfo{
+					AttributeName: attr.AttributeName,
+				}
+				respAttr.AttributeValueList = make([]*item.AttributeValueInfo, 0, len(attr.AttributeValueList))
+
+				//生成所有规格的变体请求数据 , 目前先支持一组规格属性，后续再考虑多组规格的情况
+				for _, attrValue := range attr.AttributeValueList {
+					// 将每种属性名称和属性值的组合添加到itemVarList中
+					variant := map[string]string{
+						attr.AttributeName: attrValue.AttributeValue,
+					}
+					multiSpecItemCode, err := s.CreateSingleVariantItem(ctx, &erp.CreateSingleVariantItemReq{
+						TemplateItem: itemCode,
+						ItemCode:     attrValue.ItemCode,
+						Args:         variant,
+						InternalCode: attrValue.VariantItemInternalCode,
+						Company:      company.CompanyName,
+					}, req)
+					if err != nil {
+						return nil, gerror.Wrapf(err, "创建对规格物品失败")
+					}
+					respAttr.AttributeValueList = append(respAttr.AttributeValueList, &item.AttributeValueInfo{
+						AttributeValue:          attrValue.AttributeValue,
+						ItemCode:                multiSpecItemCode,
+						VariantItemInternalCode: attrValue.VariantItemInternalCode,
+						Abbr:                    attrValue.Abbr,
+					})
+				}
+				respAttributes = append(respAttributes, respAttr)
+			}
+			respItem.Attributes = respAttributes
+		}
+	}
+	return respItem, nil
 }
 
 // getCompanyInfo 获取公司信息
@@ -397,6 +434,7 @@ func (s *sItem) buildNewItemData(ctx context.Context, req *item.ItemInfo, compan
 		"custom_classification_code": req.ClassificationCode,
 		"custom_internal_code":       req.InternalCode,
 		"custom_not_for_sale":        req.NotForSale,
+		"has_variants":               req.HasVariants,
 	}
 
 	// 根据物品分组添加特定字段
@@ -416,6 +454,19 @@ func (s *sItem) buildNewItemData(ctx context.Context, req *item.ItemInfo, compan
 	} else {
 		//启用
 		newItem["disabled"] = 0
+	}
+
+	//使用变体创建商品
+	if req.HasVariants {
+		// 变体参数设置
+		newItem["variant_based_on"] = erp.DocTypeItemAttribute
+		attributes := make([]g.Map, 0, len(req.Attributes))
+		for _, attr := range req.Attributes {
+			attributes = append(attributes, g.Map{
+				"attribute": attr.AttributeName,
+			})
+		}
+		newItem["attributes"] = attributes
 	}
 
 	return newItem, nil
@@ -749,4 +800,52 @@ func (s *sItem) convertPosSpecItemToItemInfo(posItem *item.PosSpecItem) *item.It
 		InternalCode:     posItem.InternalCode,
 		NotForSale:       posItem.NotForSale,
 	}
+}
+
+// CreateSingleVariantItem 创建多规格商品的单个规格商品
+// 参数：ctx 上下文，req 物品信息，code 物品编码
+// 返回：创建结果
+func (s *sItem) CreateSingleVariantItem(ctx context.Context, req *erp.CreateSingleVariantItemReq, templateItemInfo *item.ItemInfo) (string, error) {
+	var itemCode string
+	resp, err := service.Rpc().Execute(ctx, &erp.ErpReq{
+		Method: erp.ApiMethodCreateVariantItem,
+	}, g.Map{
+		"item": req.TemplateItem,
+		"args": gjson.MustEncodeString(req.Args),
+	})
+	if err != nil {
+		return itemCode, gerror.Wrapf(err, "创建物品规格失败")
+	}
+	// 解析结果
+	j, err := gjson.DecodeToJson(resp.Bytes())
+	if err != nil {
+		return itemCode, gerror.Wrapf(err, "解析创建物品规格失败")
+	}
+	itemInfo := &erp.Item{}
+	j.GetJson("data").Scan(&itemInfo)
+	itemInfo.CustomInternalCode = req.InternalCode
+	itemInfo.IsStockItem = 0
+
+	if len(req.ItemCode) > 0 {
+		itemCode = req.ItemCode
+	} else {
+		itemCode, err = s.generateItemCodeWithTemplate(ctx, req.TemplateItem)
+		if err != nil {
+			return itemCode, gerror.Wrapf(err, "生成多规格商品编码失败")
+		}
+	}
+	itemInfo.ItemCode = itemCode
+
+	//填充特殊自动
+	itemInfo.CustomBranch = templateItemInfo.Branch
+	itemInfo.CustomClassification = templateItemInfo.Classification
+	itemInfo.CustomClassificationCode = templateItemInfo.ClassificationCode
+	itemInfo.CustomCompany = req.Company
+
+	// 创建物品
+	_, err = service.Document().Create(ctx, erp.DocTypeItem, &itemInfo)
+	if err != nil {
+		return itemCode, gerror.Wrapf(err, "创建物品失败")
+	}
+	return itemCode, nil
 }
