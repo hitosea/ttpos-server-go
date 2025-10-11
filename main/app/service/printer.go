@@ -43,17 +43,25 @@ func NewPrinterSrvImpl(dbm *database.DBManager, cache cache.Cache) IPrinterSrv {
 // GetProductPrinterList 获取打印档口列表
 func (s *printerSrv) GetProductPrinterList(ctx context.Context) (resp.ProductPrinterList, error) {
 	productPrinterRepo := repository.NewProductPrinterRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
-	printers, err := productPrinterRepo.GetProductPrinters(productPrinterRepo.WhereStatus(constant.ProductPrinterStatusOpen))
+	// 如果不是商家端，则只查询开启的打印档口
+	opts := []repository.DBOption{}
+	if ctx.GetSource() != constant.SourceShop {
+		opts = append(opts, productPrinterRepo.WhereStatus(constant.ProductPrinterStatusOpen))
+	}
+	// 查询打印档口列表
+	printers, err := productPrinterRepo.GetProductPrinters()
 	if err != nil {
 		return resp.ProductPrinterList{List: make([]resp.ProductPrinter, 0)}, errors.ErrInternal
 	}
 	productPrinters := make([]resp.ProductPrinter, 0, len(printers))
 	for _, printer := range printers {
 		productPrinters = append(productPrinters, resp.ProductPrinter{
-			Uuid: printer.Uuid,
-			Name: printer.Name,
+			Uuid:   printer.Uuid,
+			Name:   printer.Name,
+			Status: printer.Status,
 		})
 	}
+	// 返回打印档口列表
 	return resp.ProductPrinterList{List: productPrinters}, nil
 }
 

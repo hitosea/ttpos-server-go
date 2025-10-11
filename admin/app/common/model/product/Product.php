@@ -2,26 +2,27 @@
 
 namespace app\common\model\product;
 
-use app\common\service\websocket\Websocket;
-
 use think\facade\Db;
+
 use think\facade\Env;
-use app\common\library\helper;
 use app\common\model\app\App;
+use app\common\library\helper;
 use app\common\model\BaseModel;
-use app\common\model\buffet\BuffetProduct;
+use think\model\concern\SoftDelete;
 use app\common\model\erp\ErpSupplier;
 use app\common\model\file\UploadFile;
+use app\common\model\product\Material;
 use app\common\model\order\OrderBuffet;
 use app\common\model\order\OrderProduct;
 use app\common\model\product\ProductFeed;
+use app\common\model\buffet\BuffetProduct;
+use app\common\service\websocket\Websocket;
 use app\common\model\erp\ErpInventoryRecord;
+use app\common\model\store\MultiLanguageName;
 use app\common\model\order\OrderSchemeProduct;
+use app\common\model\supplier\PrintingProduct;
 use app\common\model\product\ProductSkuMaterial;
 use app\common\model\product\ProductFeedMaterial;
-use app\common\model\product\Material;
-use app\common\model\store\MultiLanguageName;
-use think\model\concern\SoftDelete;
 
 /**
  * 商品模型
@@ -438,6 +439,14 @@ class Product extends BaseModel
     public function productPackageGroup()
     {
         return $this->hasMany(ProductPackageGroup::class, 'product_package_uuid', 'uuid');
+    }
+
+    /**
+     * 关联商品打印机表
+     */
+    public function productPrinters()
+    {
+        return $this->hasMany(PrintingProduct::class, 'product_package_uuid', 'uuid');
     }
 
 
@@ -1370,6 +1379,9 @@ class Product extends BaseModel
                     ])->order('sort', 'asc');
                 }
             ],
+            'productPrinters' => function ($q) {
+                $q->field('product_package_uuid,product_printer_uuid,uuid')->with('printerBindNameAndStatus');
+            },
         ])->where('p.uuid', '=', $product_id)->find();
         if (empty($model)) {
             return $model;

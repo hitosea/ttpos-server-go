@@ -22127,6 +22127,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/product_printer_list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取打印档口列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品"
+                ],
+                "summary": "获取打印档口列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ProductPrinterList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/purchase/order/approve": {
             "post": {
                 "security": [
@@ -41231,6 +41271,10 @@ const docTemplate = `{
                 "name": {
                     "description": "商品打印机名称",
                     "type": "string"
+                },
+                "status": {
+                    "description": "商品打印机状态",
+                    "type": "integer"
                 },
                 "uuid": {
                     "description": "商品打印机uuid",

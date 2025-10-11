@@ -6,12 +6,13 @@ use help\StringHelp;
 use help\ValidateHelp;
 use app\shop\service\CheckService;
 use app\common\model\file\UploadFile;
+use app\shop\model\product\ProductBom;
 use app\common\model\store\MultiLanguageName;
+use app\common\model\supplier\PrintingProduct;
 use app\common\model\product\Product as ProductModel;
 use app\common\model\Product\Material as MaterialModel;
 use app\common\model\product\ProductPackageGroup as ProductPackageGroupModel;
 use app\common\model\product\ProductPackageGroupItem as ProductPackageGroupItemModel;
-use app\shop\model\product\ProductBom;
 
 /**
  * 商品模型
@@ -294,6 +295,9 @@ class Product extends ProductModel
             // 套餐商品组
             if ($isPackage) {
                 ProductPackageGroupModel::addPackageGroup($data, $this);
+            } else if (isset($data['product_printer_uuids']) && !empty($data['product_printer_uuids'])) {
+                // 新增商品包关联打印机
+                PrintingProduct::createProductPackagePrinter($this['product_id'], $data['product_printer_uuids']);
             }
 
             $this->commit();
@@ -626,6 +630,10 @@ class Product extends ProductModel
                             ProductBom::where('product_package_uuid', $package->uuid)->update(['status' => 0]);
                         }
                     }
+                }
+                // 新增商品包关联打印机
+                if (isset($data['product_printer_uuids']) && !empty($data['product_printer_uuids'])) {
+                    PrintingProduct::createProductPackagePrinter($this['product_id'], $data['product_printer_uuids']);
                 }
             }
             return true;

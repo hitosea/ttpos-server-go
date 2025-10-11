@@ -468,6 +468,12 @@ type ProductPackageSubProduct struct {
 	Price            float64            `json:"price"`              // 套餐子商品价格
 }
 
+type ProductPrinter struct {
+	Uuid   uint64 `json:"uuid"`   // 商品打印机uuid
+	Name   string `json:"name"`   // 商品打印机名称
+	Status int    `json:"status"` // 商品打印机状态
+}
+
 type ProductPackageSubProductList struct {
 	List []ProductPackageSubProduct `json:"list"`
 }
@@ -480,6 +486,10 @@ type ProductPackageSubProductGroup struct {
 
 type ProductPackageSubProductGroupList struct {
 	List []ProductPackageSubProductGroup `json:"list"`
+}
+
+type ProductPrinterList struct {
+	List []ProductPrinter `json:"list"`
 }
 
 // ProductDetailResp 商品详情响应
@@ -497,6 +507,7 @@ type ProductDetailResp struct {
 	Sauces                  ProductSauceList                  `json:"sauces"`                     // 商品小料列表
 	AttributeGroups         ProductAttributeGroupList         `json:"attribute_groups"`           // 商品属性组列表
 	PackageSubProductGroups ProductPackageSubProductGroupList `json:"package_sub_product_groups"` // 套餐子商品分组列表
+	ProductPrinters         ProductPrinterList                `json:"product_printers"`           // 商品打印机列表
 
 	TakeoutTaxUuid uint64 `json:"takeout_tax_uuid"` // 外带税类UUID
 	TakeoutTaxName string `json:"takeout_tax_name"` // 外带税类名称

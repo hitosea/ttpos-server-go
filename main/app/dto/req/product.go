@@ -372,22 +372,23 @@ type ProductShopStatusReq struct {
 
 // ProductShopAddReq 商品添加请求
 type ProductShopAddReq struct {
-	Type            int                               `json:"type"`              // 商品类型 0-商品 1-套餐
-	LocaleName      dto.LocaleResponse                `json:"locale_name"`       // 商品名称
-	CategoryUuid    uint64                            `json:"category_uuid"`     // 商品分类UUID
-	UnitUuid        uint64                            `json:"unit_uuid"`         // 商品单位UUID
-	Flavors         []ProductShopAddFlavorReq         `json:"flavors"`           // 商品规格列表
-	Tax             ProductShopAddTaxReq              `json:"tax"`               // 商品税类
-	Status          int                               `json:"status"`            // 商品状态 0-下架 1-上架
-	ImageFileUuid   uint64                            `json:"image_file_uuid"`   // 商品图片文件UUID
-	NumType         int                               `json:"num_type"`          // 数量计算方法 0-整数 1-小数
-	Attributes      []ProductShopAddAttributeGroupReq `json:"attributes"`        // 商品属性列表
-	Sauce           ProductShopAddSauceReq            `json:"sauce"`             // 商品加料列表
-	DeductStockType int                               `json:"deduct_stock_type"` // 库存计算方式 0-付款减库存 1-下单减库存
-	Show            ProductShopAddShowReq             `json:"show"`              // 商品显示设置
-	Discount        ProductShopAddDiscountReq         `json:"discount"`          // 商品折扣设置
-	Package         ProductShopAddPackageReq          `json:"package"`           // 商品套餐
-	Row             int                               `json:"row"`               // 行号
+	Type                int                               `json:"type"`                  // 商品类型 0-商品 1-套餐
+	LocaleName          dto.LocaleResponse                `json:"locale_name"`           // 商品名称
+	CategoryUuid        uint64                            `json:"category_uuid"`         // 商品分类UUID
+	UnitUuid            uint64                            `json:"unit_uuid"`             // 商品单位UUID
+	Flavors             []ProductShopAddFlavorReq         `json:"flavors"`               // 商品规格列表
+	Tax                 ProductShopAddTaxReq              `json:"tax"`                   // 商品税类
+	Status              int                               `json:"status"`                // 商品状态 0-下架 1-上架
+	ImageFileUuid       uint64                            `json:"image_file_uuid"`       // 商品图片文件UUID
+	NumType             int                               `json:"num_type"`              // 数量计算方法 0-整数 1-小数
+	Attributes          []ProductShopAddAttributeGroupReq `json:"attributes"`            // 商品属性列表
+	Sauce               ProductShopAddSauceReq            `json:"sauce"`                 // 商品加料列表
+	DeductStockType     int                               `json:"deduct_stock_type"`     // 库存计算方式 0-付款减库存 1-下单减库存
+	Show                ProductShopAddShowReq             `json:"show"`                  // 商品显示设置
+	Discount            ProductShopAddDiscountReq         `json:"discount"`              // 商品折扣设置
+	Package             ProductShopAddPackageReq          `json:"package"`               // 商品套餐
+	Row                 int                               `json:"row"`                   // 行号
+	ProductPrinterUuids []uint64                          `json:"product_printer_uuids"` // 商品打印机列表
 }
 
 // ProductShopAddFlavorReq 商品规格添加请求
@@ -471,22 +472,23 @@ type ProductShopAddPackageGroupProductReq struct {
 
 // ProductShopEditReq 商品编辑请求
 type ProductShopEditReq struct {
-	Uuid            uint64                             `json:"uuid"`              // 商品UUID
-	Type            int                                `json:"type"`              // 商品类型 0-商品 1-套餐
-	LocaleName      dto.LocaleResponse                 `json:"locale_name"`       // 商品名称
-	CategoryUuid    uint64                             `json:"category_uuid"`     // 商品分类UUID
-	UnitUuid        uint64                             `json:"unit_uuid"`         // 商品单位UUID
-	Flavors         []ProductShopEditFlavorReq         `json:"flavors"`           // 商品规格列表
-	Tax             ProductShopEditTaxReq              `json:"tax"`               // 商品税类
-	Status          int                                `json:"status"`            // 商品状态 0-下架 1-上架
-	ImageFileUuid   uint64                             `json:"image_file_uuid"`   // 商品图片文件UUID
-	NumType         int                                `json:"num_type"`          // 数量计算方法 0-整数 1-小数
-	Attributes      []ProductShopEditAttributeGroupReq `json:"attributes"`        // 商品属性列表
-	Sauce           ProductShopEditSauceReq            `json:"sauce"`             // 商品加料列表
-	DeductStockType int                                `json:"deduct_stock_type"` // 库存计算方式 0-付款减库存 1-下单减库存
-	Show            ProductShopEditShowReq             `json:"show"`              // 商品显示设置
-	Discount        ProductShopEditDiscountReq         `json:"discount"`          // 商品折扣设置
-	Package         ProductShopEditPackageReq          `json:"package"`           // 商品套餐
+	Uuid                uint64                             `json:"uuid"`                  // 商品UUID
+	Type                int                                `json:"type"`                  // 商品类型 0-商品 1-套餐
+	LocaleName          dto.LocaleResponse                 `json:"locale_name"`           // 商品名称
+	CategoryUuid        uint64                             `json:"category_uuid"`         // 商品分类UUID
+	UnitUuid            uint64                             `json:"unit_uuid"`             // 商品单位UUID
+	Flavors             []ProductShopEditFlavorReq         `json:"flavors"`               // 商品规格列表
+	Tax                 ProductShopEditTaxReq              `json:"tax"`                   // 商品税类
+	Status              int                                `json:"status"`                // 商品状态 0-下架 1-上架
+	ImageFileUuid       uint64                             `json:"image_file_uuid"`       // 商品图片文件UUID
+	NumType             int                                `json:"num_type"`              // 数量计算方法 0-整数 1-小数
+	Attributes          []ProductShopEditAttributeGroupReq `json:"attributes"`            // 商品属性列表
+	Sauce               ProductShopEditSauceReq            `json:"sauce"`                 // 商品加料列表
+	DeductStockType     int                                `json:"deduct_stock_type"`     // 库存计算方式 0-付款减库存 1-下单减库存
+	Show                ProductShopEditShowReq             `json:"show"`                  // 商品显示设置
+	Discount            ProductShopEditDiscountReq         `json:"discount"`              // 商品折扣设置
+	Package             ProductShopEditPackageReq          `json:"package"`               // 商品套餐
+	ProductPrinterUuids []uint64                           `json:"product_printer_uuids"` // 商品打印机列表
 }
 
 // ProductShopAddFlavorReq 商品规格添加请求

@@ -5048,6 +5048,11 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 		return nil, errors.WithMessage(err, "获取商品失败")
 	}
 
+	productPrinterList, err := repository.NewProductPrinterRepo(db).GetProductPrintersByProductPackageUuid(productPackage.Uuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取商品打印机列表失败")
+	}
+
 	productDetailResp := product_resp.ProductDetailResp{
 		ProductType:  productPackage.ProductType,
 		Uuid:         productPackage.Uuid,
@@ -5095,6 +5100,19 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 		},
 		PackageSubProductGroups: product_resp.ProductPackageSubProductGroupList{
 			List: productPackage.GetRespPackageSubProductGroupList(),
+		},
+		ProductPrinters: product_resp.ProductPrinterList{
+			List: func() []product_resp.ProductPrinter {
+				printers := make([]product_resp.ProductPrinter, 0, len(productPrinterList))
+				for _, productPrinter := range productPrinterList {
+					printers = append(printers, product_resp.ProductPrinter{
+						Uuid:   productPrinter.Uuid,
+						Name:   productPrinter.Name,
+						Status: productPrinter.Status,
+					})
+				}
+				return printers
+			}(),
 		},
 	}
 
@@ -5199,6 +5217,10 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 	// 检查商品单位
 	if err := productCheckSrv.CheckProductUnique(db, req.UnitUuid); err != nil {
 		return errors.WithMessage(err, "检查商品单位失败")
+	}
+	// 检查商品打印机
+	if err := productCheckSrv.CheckProductPrinter(ctx, db, req.ProductPrinterUuids); err != nil {
+		return errors.WithMessage(err, "检查商品打印机失败")
 	}
 	// 检查商品规格内部编码
 	for idx, flavor := range req.Flavors {
@@ -5396,6 +5418,12 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 			err = s.SaveProductPackageGroup(tx, packageResult.Groups, productPackageUuid)
 			if err != nil {
 				return err
+			}
+		} else if ctx.Version(context.GTE, "2.7.0") {
+			// 新增商品包关联打印机
+			err = repository.NewProductPrinterRepo(tx).CreateProductPackagePrinter(productPackageUuid, req.ProductPrinterUuids)
+			if err != nil {
+				return errors.WithMessage(err, "保存商品包关联打印机失败")
 			}
 		}
 
@@ -5655,6 +5683,10 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 	if err := productCheckSrv.CheckProductOverallDiscount(req.Discount.IsEnableOverallDiscount); err != nil {
 		return nil, nil, err
 	}
+	// 商品打印机
+	if err := productCheckSrv.CheckProductPrinter(ctx, db, req.ProductPrinterUuids); err != nil {
+		return nil, nil, err
+	}
 
 	// 编辑商品
 	err := db.Transaction(func(tx *gorm.DB) error {
@@ -5715,6 +5747,14 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 							return errors.WithMessage(err, "修改商品套餐组商品状态失败")
 						}
 					}
+				}
+			}
+
+			// 新增商品包关联打印机
+			if ctx.Version(context.GTE, "2.7.0") {
+				err = repository.NewProductPrinterRepo(tx).CreateProductPackagePrinter(productPackageUuid, req.ProductPrinterUuids)
+				if err != nil {
+					return errors.WithMessage(err, "保存商品包关联打印机失败")
 				}
 			}
 		}
