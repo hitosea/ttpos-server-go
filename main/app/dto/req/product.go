@@ -594,3 +594,41 @@ type ProductShopChangePriceItemReq struct {
 	Uuid  uint64  `json:"uuid"`  // 商品BOM UUID
 	Price float64 `json:"price"` // 商品价格
 }
+
+// ProductBatchTypeListReq 分批类型列表查询请求
+type BatchTagListReq struct {
+}
+
+// ProductBatchTypeReq 分批类型详情请求
+type BatchTagReq struct {
+	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 分批类型UUID
+}
+
+// ProductBatchTypeAddReq 分批类型添加请求
+type BatchTagAddReq struct {
+	LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 分批类型名称，多语言
+	Color      string             `json:"color" binding:"required"`       // 颜色值，如#FF0000
+}
+
+// ProductBatchTypeEditReq 分批类型编辑请求
+type BatchTagEditReq struct {
+	Uuid       uint64             `json:"uuid" binding:"required"`        // 分批类型UUID
+	LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 分批类型名称，多语言
+	Color      string             `json:"color" binding:"required"`       // 颜色值，如#FF0000
+}
+
+// ProductBatchTypeDeleteReq 分批类型删除请求
+type BatchTagDeleteReq struct {
+	Uuid uint64 `json:"uuid" binding:"required"` // 分批类型UUID
+}
+
+// ProductBatchTypeSortItem 分批类型排序项
+type BatchTagSortItem struct {
+	Uuid uint64 `json:"uuid" binding:"required"` // 分批类型UUID
+	Sort int    `json:"sort" binding:"required"` // 排序
+}
+
+// ProductBatchTypeSortReq 分批类型排序请求
+type BatchTagSortReq struct {
+	List []BatchTagSortItem `json:"list"` // 分批类型排序列表
+}

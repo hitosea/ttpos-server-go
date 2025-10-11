@@ -244,6 +244,9 @@ func (s *Srv) getDefaultBusiness(language string) setting.Business {
 		OpeningHours:       "",       // 营业时间 00:00-23:59
 		DeliveryPriceRatio: 100,      // 外送商品价格和商品原价比例
 		StartSerialNo:      "0001",   // 开始序列号
+		IsBatch:            "0",      // 是否是分批商品 0-否 1-是
+		BatchProductNum:    0,        // 分批商品数量
+		BatchTagNum:        0,        // 分批类型数量
 	}
 
 }

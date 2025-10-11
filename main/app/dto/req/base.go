@@ -118,4 +118,5 @@ type UpdateBusinessSetting struct {
 	OpeningHours          string `json:"opening_hours" binding:"required,opening_hours"`           // 营业时间格式正则验证：HH:MM-HH:MM
 	DeliveryPriceRatio    uint   `json:"delivery_price_ratio" binding:"required,gte=1,lte=300"`    // 外送商品价格和商品原价比例. 取值范围1-300， 表示原价的1%到300%
 	StartSerialNo         string `json:"start_serial_no" binding:"required"`                       // 开始序列号
+	IsBatch               string `json:"is_batch" binding:"required,oneof=0 1"`                    // 是否是分批商品 0-否 1-是
 }

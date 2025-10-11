@@ -147,6 +147,15 @@ type IProductSrv interface {
 	SaveProductPackageAttribute(tx *gorm.DB, param []CheckProductAttributeGroupParam, productPackageUuid uint64) error                                                                                                                      // 保存商品属性
 	SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProductPackageGroupResult, productPackageUuid uint64) error                                                                                                                       // 保存商品套餐组
 
+	// 分批类型管理
+	GetBatchTagList(ctx context.Context, req req.BatchTagListReq) (*product_resp.ProductBatchTypeList, error) // 获取分批类型列表
+	GetBatchTag(ctx context.Context, req req.BatchTagReq) (*product_resp.ProductBatchTypeDetail, error)       // 获取分批类型详情
+	AddBatchTag(ctx context.Context, req req.BatchTagAddReq) error                                            // 添加分批类型
+	EditBatchTag(ctx context.Context, req req.BatchTagEditReq) error                                          // 编辑分批类型
+	DeleteBatchTag(ctx context.Context, req req.BatchTagDeleteReq) error                                      // 删除分批类型
+	SortBatchTag(ctx context.Context, req req.BatchTagSortReq) error                                          // 排序分批类型
+	GetBatchTagColorUsage(ctx context.Context) (*product_resp.BatchTagColorUsageList, error)                  // 获取色块被选择情况
+
 	SyncProductShopCategory(ctx context.Context) error // 同步产品分类
 	SyncProductTax(ctx context.Context) error          // 同步商品税类
 	SyncUnit(ctx context.Context) error                // 获取总部最新单位数据
@@ -7308,4 +7317,194 @@ func (s *productSrv) SyncAttributeGroup(ctx context.Context) error {
 		return nil
 	})
 	return err
+}
+
+// GetProductBatchTypeList 获取分批类型列表
+func (s *productSrv) GetBatchTagList(ctx context.Context, req req.BatchTagListReq) (*product_resp.ProductBatchTypeList, error) {
+	batchTagRepo := repository.NewBatchTagRepo(s.dbm.GetDB(ctx.GetDbId()))
+	batchTags, err := batchTagRepo.GetBatchTagList()
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取分批类型列表失败")
+	}
+
+	// 转换为响应格式
+	list := make([]product_resp.ProductBatchType, len(batchTags))
+	for i, batchType := range batchTags {
+		list[i] = product_resp.ProductBatchType{
+			Uuid:       batchType.Uuid,
+			LocaleName: batchType.MultiLanguageName.GetNames(),
+			Color:      batchType.Color,
+			Sort:       batchType.Sort,
+		}
+	}
+
+	return &product_resp.ProductBatchTypeList{
+		List: list,
+	}, nil
+}
+
+// GetBatchTag 获取分批类型详情
+func (s *productSrv) GetBatchTag(ctx context.Context, req req.BatchTagReq) (*product_resp.ProductBatchTypeDetail, error) {
+	batchTagRepo := repository.NewBatchTagRepo(s.dbm.GetDB(ctx.GetDbId()))
+	batchTag, err := batchTagRepo.GetBatchTagInfo(req.Uuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取分批类型详情失败")
+	}
+
+	return &product_resp.ProductBatchTypeDetail{
+		Uuid:       batchTag.Uuid,
+		LocaleName: batchTag.MultiLanguageName.GetNames(),
+		Color:      batchTag.Color,
+		Sort:       batchTag.Sort,
+	}, nil
+}
+
+// AddProductBatchType 添加分批类型
+func (s *productSrv) AddBatchTag(ctx context.Context, req req.BatchTagAddReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		batchTagRepo := repository.NewBatchTagRepo(tx)
+		// 检查颜色是否已被使用
+		if batchTagRepo.CheckColorExists(req.Color, 0) {
+			return errors.New("该颜色已被其他分批类型使用")
+		}
+
+		// 获取下一个排序值
+		maxSort, err := batchTagRepo.GetMaxSort()
+		if err != nil {
+			return errors.WithMessage(err, "获取当前最大的排序值失败")
+		}
+		nextSort := maxSort + 1
+
+		// 创建多语言名称
+		multiLanguageName := model.MultiLanguageName{}
+		multiLanguageName.InitByLocaleResponse(req.LocaleName)
+		multiLanguageNameUuid, err := repository.NewMultiLanguageNameRepo(tx).CreateMultiLanguageName(multiLanguageName)
+		if err != nil {
+			return errors.WithMessage(err, "创建多语言名称失败")
+		}
+
+		// 创建分批类型
+		batchTag := model.BatchTag{
+			Name:                  req.LocaleName.ToJson(),
+			MultiLanguageNameUuid: multiLanguageNameUuid,
+			Color:                 req.Color,
+			Sort:                  nextSort,
+		}
+
+		err = batchTagRepo.CreateBatchTag(batchTag)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err, "添加分批类型失败")
+	}
+
+	return nil
+}
+
+// EditProductBatchType 编辑分批类型
+func (s *productSrv) EditBatchTag(ctx context.Context, req req.BatchTagEditReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		batchTagRepo := repository.NewBatchTagRepo(tx)
+		batchTag, err := batchTagRepo.GetBatchTagInfo(req.Uuid)
+		if err != nil {
+			return errors.WithMessage(err, "获取分批类型详情失败")
+		}
+
+		// 检查颜色是否已被其他分批类型使用（排除自己）
+		if batchTagRepo.CheckColorExists(req.Color, req.Uuid) {
+			return errors.New("该颜色已被其他分批类型使用")
+		}
+
+		// 更新多语言名称
+		batchTag.MultiLanguageName.InitByLocaleResponse(req.LocaleName)
+		repository.NewMultiLanguageNameRepo(tx).UpdateMultiLanguageName(batchTag.MultiLanguageNameUuid, *batchTag.MultiLanguageName)
+
+		// 更新分批类型
+		batchTag.Color = req.Color
+		batchTag.Name = req.LocaleName.ToJson()
+		err = batchTagRepo.UpdateBatchTag(*batchTag)
+		if err != nil {
+			return errors.WithMessage(err, "更新分批类型失败")
+		}
+
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err, "编辑分批类型失败")
+	}
+
+	return nil
+}
+
+// DeleteProductBatchType 删除分批类型
+func (s *productSrv) DeleteBatchTag(ctx context.Context, req req.BatchTagDeleteReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	batchTagRepo := repository.NewBatchTagRepo(db)
+	batchTag, err := batchTagRepo.GetBatchTag(repository.CommonRepo.WhereByUuid(req.Uuid), repository.CommonRepo.WhereBySoftDelete())
+	if err != nil {
+		return errors.WithMessage(err, "获取分批类型详情失败")
+	}
+
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		batchTagRepo := repository.NewBatchTagRepo(tx)
+		// 删除分批类型
+		err := batchTagRepo.DeleteBatchTag(req.Uuid)
+		if err != nil {
+			return errors.WithMessage(err, "删除分批类型失败")
+		}
+		// 删除多语言名称
+		err = repository.NewMultiLanguageNameRepo(tx).DeleteMultiLanguageName(batchTag.MultiLanguageNameUuid)
+		if err != nil {
+			return errors.WithMessage(err, "删除名称多语言失败")
+		}
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err, "删除分批类型失败")
+	}
+
+	return nil
+}
+
+// SortProductBatchType 排序分批类型
+func (s *productSrv) SortBatchTag(ctx context.Context, req req.BatchTagSortReq) error {
+	sorts := make(map[uint64]int)
+	for _, item := range req.List {
+		sorts[item.Uuid] = item.Sort
+	}
+
+	productRepo := repository.NewProductRepo(s.dbm.GetDB(ctx.GetDbId()))
+	err := productRepo.BatchUpdateSort(&model.BatchTag{}, sorts)
+	if err != nil {
+		return errors.WithMessage(errors.New("排序分批类型失败"), err.Error())
+	}
+
+	return nil
+}
+
+// GetBatchTagColorUsage 获取色块被选择情况
+func (s *productSrv) GetBatchTagColorUsage(ctx context.Context) (*product_resp.BatchTagColorUsageList, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	batchTagRepo := repository.NewBatchTagRepo(db)
+	batchTags, err := batchTagRepo.GetBatchTagList()
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取分批类型列表失败")
+	}
+
+	colorUsageMap := make([]product_resp.BatchTagColorUsage, len(batchTags))
+	for i, batchTag := range batchTags {
+		colorUsageMap[i] = product_resp.BatchTagColorUsage{
+			Color:        batchTag.Color,
+			IsUsed:       true,
+			UsedBy:       batchTag.Name,
+			BatchTagUuid: batchTag.Uuid,
+		}
+	}
+	return &product_resp.BatchTagColorUsageList{
+		List: colorUsageMap,
+	}, nil
 }

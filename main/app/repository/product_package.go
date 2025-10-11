@@ -21,6 +21,7 @@ type IProductPackageQueryRepo interface {
 	GetProductPackageBoms(productPackageUuid uint64) (*model.ProductPackage, error) // 获取商品包的库存信息
 	GetProductPackageBaseInfoByBomUuid(flavorBomUuid uint64) (*model.ProductBom, error)
 	GetProductPackageListByUuids(uuids []uint64) ([]*model.ProductPackage, error)
+	GetProductPackageBatchTagCount() (int64, error) // 获取分批商品数量
 }
 
 type productPackageRepoImpl struct {
@@ -182,4 +183,14 @@ func (r *productPackageRepoImpl) SubActualSaleNum(productPackageUuid uint64, sal
 		return errors.WithMessage(err)
 	}
 	return nil
+}
+
+// GetProductPackageBatchTagCount 获取分批商品数量
+func (r *productPackageRepoImpl) GetProductPackageBatchTagCount() (int64, error) {
+	var count int64
+	err := r.db.Model(&model.ProductPackage{}).Where("is_batch <> ?", 0).Where("delete_time = ?", 0).Count(&count).Error
+	if err != nil {
+		return 0, errors.WithMessage(err)
+	}
+	return count, nil
 }
