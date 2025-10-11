@@ -57,7 +57,7 @@ func (po *PurchaseOrder) SetNil() {
 	po.Warehouse = nil
 }
 
-// 是否是总部采购
+// 是否是向总部采购
 func (po *PurchaseOrder) IsHeadquarterPurchase() bool {
 	return po.PurchaseType == 2
 }

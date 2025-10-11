@@ -152,11 +152,6 @@ class Spec extends BaseModel
      */
     public function isUseWithProduct($spec_id)
     {
-        // TODO 兼容 兼容旧数据，先删除产品已删除的关联数据
-        // ProductSku::where('product_id', 'in', function ($query) {
-        //     $query->name('product')->field('product_id');
-        // })->delete();
-        // return ProductSku::where('spec_sku_id', 'in', $spec_id)->count() > 0;
         return false;
     }
 
