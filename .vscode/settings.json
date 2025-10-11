@@ -1,0 +1,53 @@
+{
+    "search.exclude": {
+      "**/.next": true,
+      "**/dist": true,
+      "**/node_modules": false,
+      "**/node_modules/**": true,
+      "**/vendor": true
+    },
+
+    // ===== Todo Tree 插件配置 =====
+    "todo-tree.general.statusBar": "total",
+    "todo-tree.general.automaticGitRefreshInterval": 5,
+    "todo-tree.general.periodicRefreshInterval": 1,
+    "todo-tree.general.showActivityBarBadge": true,
+    "todo-tree.general.tags": ["BUG", "NOTE", "FIXME", "TODO", "HACK"],
+    "todo-tree.highlights.useColourScheme": true,
+    "todo-tree.tree.expanded": true,
+    "todo-tree.tree.groupedByTag": true,
+    "todo-tree.tree.showCountsInTree": true,
+    "todo-tree.tree.tagsOnly": false,
+    "todo-tree.tree.disableCompactFolders": true,
+    "todo-tree.tree.scanMode": "workspace only",
+    "todo-tree.tree.buttons.export": true,
+
+    // ===== 文件排除显示 =====
+    "files.exclude": {
+      "**/trans/**/*test.go": true
+    },
+
+    // ===== 拼写检查 =====
+    "cSpell.words": [
+      "ttpos",
+      "zhtw",
+      "eventbus", "gormio", "shopspring", "gorm",  "cryptor",
+      "tinyint", "varchar", "lianlian",
+      "Sunmi", "Xprinter", "Compax", "Codesoft", "Printnr",
+      "Qrcode", "Wechat", "jinzhu", "Boms",
+      "ขอบคุณที่แวะมาหากัน", "สนับสนุนโดย",
+      "Ziyaretiniz", "için", "teşekkür", "ederiz",
+      "mağaza", "tarafından", "Sistem", "iptal",
+      "destek", "sağlar", "ကုန်စည်", "ပမာဏ", "gonic",
+      "delayqueue", "skootar", "repassword", "Phinx", "biginteger", "Erpnext",
+      "IFNULL", "CSSQ", "TPHY",  "CSSH", "SHRK", "CSSH"
+    ],
+
+    // ===== Go语言配置 =====
+    "gopls": {
+      "ui.diagnostic.staticcheck": false,   // 禁用静态分析检查
+    },
+
+    // ===== 保存时自动运行 =====
+    "go.lintOnSave": "workspace",
+  }
