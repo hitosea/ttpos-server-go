@@ -12,6 +12,8 @@ type Material struct {
 	ErpCode          string             `json:"erp_code"`           // erp编码
 	BarcodeValue     string             `json:"barcode_value"`      // 条形码值
 	Num              float64            `json:"num"`                // 库存数量
+	AvailableNum     float64            `json:"available_num"`      // 可用库存数量
+	TransitNum       float64            `json:"transit_num"`        // 在途库存数量
 	CategoryUuid     uint64             `json:"category_uuid"`      // 分类UUID
 	Image            string             `json:"image"`              // 图片
 	Status           int                `json:"status"`             // 状态 1-启用 0-停用

@@ -18,3 +18,7 @@ type Warehouse struct {
 	MultiLanguageName *MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
 	Items             []*WarehouseItem   `gorm:"foreignKey:warehouse_uuid;references:uuid"`
 }
+
+func (w Warehouse) IsTransit() bool {
+	return w.Type == "transit"
+}

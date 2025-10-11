@@ -146,12 +146,10 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 
 	// WarehouseErpCode 根据仓库ERP编码过滤
 	// FIXME: 没有看到产品说按仓库，现在只先按是否同步物品进行
-	if req.PurchaseType != 0 {
-		if req.PurchaseType == 2 {
-			dbOptions = append(dbOptions, commonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
-				return db.Where("headquarter_uuid > ?", 0)
-			}))
-		}
+	if req.PurchaseType == 2 {
+		dbOptions = append(dbOptions, commonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+			return db.Where("headquarter_uuid > ?", 0)
+		}))
 	}
 
 	if len(req.CategoryUuids) > 0 {
@@ -177,6 +175,9 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		repository.WithPreload{
 			Query: "NotBaseUnitList.Unit.MultiLanguageName",
 		},
+		repository.WithPreload{
+			Query: "WarehouseItem.Warehouse",
+		},
 	))
 
 	// 获取物品列表
@@ -189,33 +190,6 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 	if err != nil {
 		return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(err, "获取物品列表失败")
 	}
-
-	// TODO 暂时关闭，不需要同步erp库存数量。
-	// 如果开启了ERP，则获取库存数量
-	// if ctx.GetCompany().IsOpenErp() {
-	// 	erpSrv := erp.NewIErpSrv(s.dbm)
-	// 	erpStockNum, err := erpSrv.GetMaterialStockNum(ctx)
-	// 	if err != nil {
-	// 		// TODO 考虑是否告警给运维
-	// 		ctx.Log().Warn("获取erp物品库存数量失败", zap.Error(err))
-	// 	} else {
-	// 		updateMaterial := []*model.Material{}
-	// 		for i, material := range materials {
-	// 			for _, itemStock := range erpStockNum.ItemStockList {
-	// 				if itemStock.ItemCode == material.Code {
-	// 					materials[i].StockNum = itemStock.ActualQty
-	// 					updateMaterial = append(updateMaterial, &materials[i])
-	// 				}
-	// 			}
-	// 		}
-	// 		if len(updateMaterial) > 0 {
-	// 			if err := materialRepo.UpdateMaterialStockNum(updateMaterial); err != nil {
-	// 				// TODO 考虑是否告警给运维
-	// 				ctx.Log().Warn("同步erp物品库存数量到本地失败", zap.Error(err))
-	// 			}
-	// 		}
-	// 	}
-	// }
 
 	// 转换为响应格式
 	var materialList []material_resp.Material
@@ -245,13 +219,31 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		if baseUnit != nil {
 			baseUnitLocaleName = *language.JsonToLocaleResponse(baseUnit.Name)
 		}
+
+		// 库存数量、可用库存数量、在途库存数量
+		num := decimal.NewFromFloat(0)
+		availableNum := decimal.NewFromFloat(0)
+		transitNum := decimal.NewFromFloat(0)
+		for _, warehouseItem := range material.WarehouseItem {
+			if warehouseItem.Warehouse != nil {
+				if warehouseItem.Warehouse.IsTransit() {
+					transitNum = transitNum.Add(decimal.NewFromFloat(warehouseItem.Stock))
+				} else {
+					availableNum = availableNum.Add(decimal.NewFromFloat(warehouseItem.Stock))
+				}
+			}
+		}
+
+		// 响应格式
 		respMaterial := material_resp.Material{
 			Uuid:         material.Uuid,
 			Name:         material.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 			LocaleName:   material.MultiLanguageName.GetNames(),
 			ErpCode:      material.Code,
 			BarcodeValue: material.BarcodeValue,
-			Num:          material.StockNum,
+			Num:          num.Add(availableNum).Add(transitNum).InexactFloat64(),
+			AvailableNum: availableNum.InexactFloat64(),
+			TransitNum:   transitNum.InexactFloat64(),
 			CategoryUuid: material.CategoryUuid,
 			Image:        material.GetImage(utils.GetBaseURL(ctx.GetGin().Request)),
 			Status: func() int {
