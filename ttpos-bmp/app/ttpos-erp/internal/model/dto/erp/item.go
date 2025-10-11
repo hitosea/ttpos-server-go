@@ -16,7 +16,7 @@ type Item struct {
 	StockUom                         string                `json:"stock_uom,omitempty"`                           // 库存计量单位
 	Disabled                         int                   `json:"disabled,omitempty"`                            // 是否禁用
 	AllowAlternativeItem             int                   `json:"allow_alternative_item,omitempty"`              // 是否允许替代商品
-	IsStockItem                      int                   `json:"is_stock_item,omitempty"`                       // 是否库存商品
+	IsStockItem                      int                   `json:"is_stock_item"`                                 // 是否库存商品
 	HasVariants                      int                   `json:"has_variants,omitempty"`                        // 是否有变体
 	OpeningStock                     float64               `json:"opening_stock,omitempty"`                       // 期初库存
 	ValuationRate                    float64               `json:"valuation_rate,omitempty"`                      // 计价单价
@@ -67,21 +67,21 @@ type Item struct {
 	Taxes                            []interface{}         `json:"taxes,omitempty"`                               // 税费
 	Uoms                             []UomConversionDetail `json:"uoms,omitempty"`                                // 计量单位换算明细
 	ItemDefaults                     []ItemDefault         `json:"item_defaults,omitempty"`                       // 商品默认配置
-	Attributes                       []interface{}         `json:"attributes,omitempty"`                          // 属性
+	Attributes                       []ItemAttribute       `json:"attributes,omitempty"`                          // 属性
 	SupplierItems                    []interface{}         `json:"supplier_items,omitempty"`                      // 供应商商品
 	VariantOf                        string                `json:"variant_of,omitempty"`                          // 变体依据商品编码
 	PurchaseUom                      string                `json:"purchase_uom,omitempty"`                        // 采购单位
 
 	CustomerItems []interface{} `json:"customer_items,omitempty"` // 客户商品
 	//自定义字段
-	CustomCompany        string           `json:"custom_company,omitempty"`       // 自定义公司
-	CustomBranch         string           `json:"custom_branch,omitempty"`        // 自定义分公司
-	CustomSpecification  string           `json:"custom_specification,omitempty"` // 自定义规格
-	Classification       string           `json:"custom_classification,omitempty"`
-	ClassificationCode   string           `json:"custom_classification_code,omitempty"`
-	CustomInternalCode   string           `json:"custom_internal_code,omitempty"`
-	CustomPermissionRule []PermissionRule `json:"custom_permission_rule,omitempty"` //自定权限清单 多选表格
-	CustomNotForSale     bool             `json:"custom_not_for_sale,omitempty"`    //是否禁售
+	CustomCompany            string           `json:"custom_company,omitempty"`       // 自定义公司
+	CustomBranch             string           `json:"custom_branch,omitempty"`        // 自定义分公司
+	CustomSpecification      string           `json:"custom_specification,omitempty"` // 自定义规格
+	CustomClassification     string           `json:"custom_classification,omitempty"`
+	CustomClassificationCode string           `json:"custom_classification_code,omitempty"`
+	CustomInternalCode       string           `json:"custom_internal_code,omitempty"`
+	CustomPermissionRule     []PermissionRule `json:"custom_permission_rule,omitempty"` //自定权限清单 多选表格
+	CustomNotForSale         bool             `json:"custom_not_for_sale,omitempty"`    //是否禁售
 }
 
 type BarCode struct {
@@ -146,6 +146,7 @@ type ItemAttribute struct {
 	CustomBranch         string           `json:"custom_branch,omitempty"`          // 自定义分公司
 	CustomAlias          string           `json:"custom_alias,omitempty"`           // 自定义别名
 	CustomPermissionRule []PermissionRule `json:"custom_permission_rule,omitempty"` //自定权限清单 多选表格
+	CustomAttributeName  string           `json:"attribute,omitempty"`              //属性名，单独查询商品时才有
 }
 
 // ItemAttributeValue 结构体定义
@@ -172,4 +173,14 @@ type ItemGroup struct {
 	ParentItemGroup string `json:"parent_item_group,omitempty"` // 父级商品组
 	CustomCompany   string `json:"custom_company,omitempty"`    // 自定义公司
 	CustomBranch    string `json:"custom_branch,omitempty"`     // 自定义分公司
+}
+
+// CreateSingleVariantItemReq 创建多规格商品的单个规格商品请求参数
+// Item 商品编码 itemCode
+type CreateSingleVariantItemReq struct {
+	TemplateItem string            `json:"template_item"` // 模版商品编码
+	ItemCode     string            `json:"item_code"`     // 商品编码
+	Args         map[string]string `json:"args"`          // 属性值映射
+	InternalCode string            `json:"internal_code"` //规格商品内部编码
+	Company      string            `json:"company"`       // 公司
 }
