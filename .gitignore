@@ -32,7 +32,6 @@ __debug_*
 
 # IDE 和编辑器文件
 .idea/
-.vscode/
 *.swp
 *.swo
 *~
