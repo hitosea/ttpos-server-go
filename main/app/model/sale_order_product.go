@@ -677,6 +677,13 @@ func (model *SaleOrderProduct) SetCooking(productionOrderUuid uint64) {
 	model.SetUpdate()                         // 标记该model需要更新
 }
 
+// 设置商品状态为送厨状态，分批商品的二阶段：已送厨。 一阶段是预送厨
+func (model *SaleOrderProduct) SetCookingBatch(batchTagUuid uint64, batchTime int64) {
+	model.BatchTagUuid = batchTagUuid
+	model.BatchTime = batchTime
+	model.SetUpdate() // 标记该model需要更新
+}
+
 // 结账检查
 func (model *SaleOrderProduct) CheckOutProduct() (int, string) {
 	// 检查商品是否删除、下架、库存是否充足、价格变动

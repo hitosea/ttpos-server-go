@@ -88,6 +88,9 @@ type SaleBill struct {
 	// 2.5.0 版本新增字段， 反结账次数
 	ReverseSettleCount uint `gorm:"column:reverse_settle_count;type:int(11);default:0;comment:反结账次数" json:"reverse_settle_count"`
 
+	// 分批类型颜色
+	BatchTagColor string `gorm:"column:batch_tag_color;type:varchar(255);default:'';comment:分批类型颜色" json:"batch_tag_color"`
+
 	// 关联模型
 	SaleOrders      []*SaleOrder      `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 	H5OrderProducts []*H5OrderProduct `gorm:"foreignKey:SaleBillUuid;references:uuid"`
@@ -123,6 +126,38 @@ func (model *SaleBill) GetSaleOrderProductPreCooking() []*SaleOrderProduct {
 		}
 	}
 	return preCookingSaleOrderProducts
+}
+
+// 获取分批送厨的商品
+func (model *SaleBill) GetSaleOrderProductBatchCooking() []*SaleOrderProduct {
+	batchCookingSaleOrderProducts := make([]*SaleOrderProduct, 0)
+	for _, saleOrder := range model.SaleOrders {
+		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+			if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || saleOrderProduct.IsUnAcceptOrderBool() {
+				continue
+			}
+			if saleOrderProduct.IsBatchBool() {
+				batchCookingSaleOrderProducts = append(batchCookingSaleOrderProducts, saleOrderProduct)
+			}
+		}
+	}
+	return batchCookingSaleOrderProducts
+}
+
+// 获取分批送厨的商品,指定saleOrderUuids
+func (model *SaleBill) GetSaleOrderProductBatchCookingBySaleOrderUuid(saleOrderProductUuids []uint64) []*SaleOrderProduct {
+	batchCookingSaleOrderProducts := model.GetSaleOrderProductBatchCooking()
+	uuidMap := make(map[uint64]bool)
+	for _, saleOrderProductUuid := range saleOrderProductUuids {
+		uuidMap[saleOrderProductUuid] = true
+	}
+
+	for _, saleOrderProduct := range batchCookingSaleOrderProducts {
+		if uuidMap[saleOrderProduct.SaleOrderUuid] {
+			batchCookingSaleOrderProducts = append(batchCookingSaleOrderProducts, saleOrderProduct)
+		}
+	}
+	return batchCookingSaleOrderProducts
 }
 
 // 结束SaleBill和SaleOrder的生命周期。相当于用餐订单结账完成。

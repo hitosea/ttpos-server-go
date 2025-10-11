@@ -255,3 +255,14 @@ func (r *InstantOrderPaymentQrcodeReq) Validate() error {
 type OrderGetOrderMemberListReq struct {
 	SaleBillUuid uint64 `form:"sale_bill_uuid"` // 销售账单UUID, 必填
 }
+
+type GetOrderCartProductBatchCookingListReq struct {
+	SaleBillUuid uint64 `form:"sale_bill_uuid"` // 销售账单UUID, 必填
+}
+
+type OrderCartProductBatchCookingReq struct {
+	SaleBillUuid          uint64   `json:"sale_bill_uuid"`           // 销售账单UUID, 必填
+	SaleOrderUuid         uint64   `json:"sale_order_uuid"`          // 销售订单UUID, 必填
+	SaleOrderProductUuids []uint64 `json:"sale_order_product_uuids"` // 销售订单商品UUID列表, 必填
+	BatchTagUuid          uint64   `json:"batch_tag_uuid"`           // 分批类型UUID, 必填
+}

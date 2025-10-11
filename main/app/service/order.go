@@ -149,6 +149,9 @@ type IOrderSrv interface {
 
 	GetOrderMemberList(ctx context.Context, saleBillUuid uint64) (resp.InstantOrderMemberList, error)                       // 获取订单会员列表
 	GetProductPackageDetail(ctx context.Context, req req.GetProductPackageDetailReq) (*resp.ProductPackageDetailRes, error) // 获取商品选购详情
+
+	GetOrderCartProductBatchCookingList(ctx context.Context, req req.GetOrderCartProductBatchCookingListReq) (*resp.OrderCartProductBatchCookingRes, error) // 获取分批送厨弹框的销售订单商品列表
+	OrderCartProductBatchCooking(ctx context.Context, req req.OrderCartProductBatchCookingReq) (*resp.ShopCart, error)                                      // 分批送厨
 }
 
 // orderSrv 订单服务结构
@@ -13619,4 +13622,117 @@ func (s *orderSrv) GetProductPackageDetail(ctx context.Context, req req.GetProdu
 	}
 
 	return &resp.ProductPackageDetailRes{List: productPackageDetailList}, nil
+}
+
+func (s *orderSrv) GetOrderCartProductBatchCookingList(ctx context.Context, req req.GetOrderCartProductBatchCookingListReq) (*resp.OrderCartProductBatchCookingRes, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 获取销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errors.WithMessage(errSaleBill)
+	}
+
+	batchCookingSaleOrderProducts := saleBill.GetSaleOrderProductBatchCooking()
+
+	batchCookingSaleOrderProductsList := make([]resp.OrderCartProductBatchCooking, 0)
+	for _, saleOrderProduct := range batchCookingSaleOrderProducts {
+		baseURL := utils.GetBaseURL(ctx.GetGin().Request)
+		batchCookingSaleOrderProductsList = append(batchCookingSaleOrderProductsList, resp.OrderCartProductBatchCooking{
+			Uuid:                saleOrderProduct.Uuid,
+			LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
+			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
+			Image:               saleOrderProduct.ImageFile.GetUrl(baseURL),
+			BatchTagUuid:        saleOrderProduct.BatchTagUuid,
+			BatchTime:           saleOrderProduct.BatchTime,
+			SendKitchenTime:     saleOrderProduct.SendKitchenTime,
+			CreateTime:          saleOrderProduct.CreateTime,
+		})
+	}
+
+	tagMap := make(map[uint64]int)
+	for _, batchCookingSaleOrderProduct := range batchCookingSaleOrderProducts {
+		tagMap[batchCookingSaleOrderProduct.BatchTagUuid]++
+	}
+
+	// 获取分批类型列表
+	batchTags, errBatchTags := repository.NewBatchTagRepo(db).GetBatchTagList()
+	if errBatchTags != nil {
+		return nil, errors.WithMessage(errBatchTags)
+	}
+	batchCookingSaleOrderProductsTags := make([]resp.OrderCartProductBatchCookingTag, 0)
+	for _, batchTag := range batchTags {
+		batchCookingSaleOrderProductsTags = append(batchCookingSaleOrderProductsTags, resp.OrderCartProductBatchCookingTag{
+			Uuid:       batchTag.Uuid,
+			LocaleName: batchTag.MultiLanguageName.GetNames(),
+			Color:      batchTag.Color,
+			Sort:       uint(batchTag.Sort),
+			Count:      uint(tagMap[batchTag.Uuid]),
+		})
+	}
+
+	// 排序
+	batchCookingSaleOrderProductsList = sortBatchCookingSaleOrderProducts(batchCookingSaleOrderProductsList)
+
+	return &resp.OrderCartProductBatchCookingRes{List: batchCookingSaleOrderProductsList, Tags: batchCookingSaleOrderProductsTags}, nil
+}
+
+// 排序分批送厨弹出的商品列表。根据送厨时间分组，后送厨的排在前面。同一组内，下单时间早的排在前面。
+func sortBatchCookingSaleOrderProducts(batchCookingSaleOrderProducts []resp.OrderCartProductBatchCooking) []resp.OrderCartProductBatchCooking {
+	sort.Slice(batchCookingSaleOrderProducts, func(i, j int) bool {
+		if batchCookingSaleOrderProducts[i].SendKitchenTime == batchCookingSaleOrderProducts[j].SendKitchenTime { // 同一组内，下单时间早的排在前面。
+			return batchCookingSaleOrderProducts[i].CreateTime < batchCookingSaleOrderProducts[j].CreateTime
+		}
+		// 不同组内，后送厨的排在前面。
+		return batchCookingSaleOrderProducts[i].SendKitchenTime > batchCookingSaleOrderProducts[j].SendKitchenTime
+	})
+	return batchCookingSaleOrderProducts
+}
+
+// 分批送厨
+func (s *orderSrv) OrderCartProductBatchCooking(ctx context.Context, req req.OrderCartProductBatchCookingReq) (*resp.ShopCart, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 获取销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errors.WithMessage(errSaleBill)
+	}
+
+	batchTag, errBatchTag := repository.NewBatchTagRepo(db).GetBatchTag(repository.CommonRepo.WhereByUuid(req.BatchTagUuid), repository.CommonRepo.WhereBySoftDelete())
+	if errBatchTag != nil {
+		return nil, errors.WithMessage(errBatchTag)
+	}
+
+	// 获取saleBill中的分批商品
+	saleBillProducts := saleBill.GetSaleOrderProductBatchCookingBySaleOrderUuid(req.SaleOrderProductUuids)
+
+	// 标记分批送厨
+	batchTime := time.Now().Unix()
+	for _, saleBillProduct := range saleBillProducts {
+		saleBillProduct.SetCookingBatch(req.BatchTagUuid, batchTime)
+	}
+
+	// 将product_order_product中的分批商品标记为已送厨
+	productionOrderProducts := make([]*model.ProductionOrderProduct, 0)
+	for _, productionOrderProduct := range productionOrderProducts {
+		productionOrderProduct.BatchTagUuid = req.BatchTagUuid
+		productionOrderProduct.BatchTime = batchTime
+		productionOrderProduct.SetUpdate()
+	}
+
+	// 更新saleBill中的最新分批类型的颜色。（每次分批送厨后，都改变一次）
+	saleBill.BatchTagColor = batchTag.Color
+
+	// if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+	// 	if err := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProductList(saleBillProducts); err != nil {
+	// 		return errors.WithMessage(err)
+	// 	}
+	// 	if err := repository.NewProductionOrderProductRepo(tx).UpdateProductionOrderProductList(productionOrderProducts); err != nil {
+	// 		return errors.WithMessage(err)
+	// 	}
+	// 	return nil
+	// }); err != nil {
+	// 	return nil, errors.WithMessage(err)
+	// }
+
+	return nil, nil
 }

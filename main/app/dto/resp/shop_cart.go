@@ -278,3 +278,27 @@ type ProductPackageDetail struct {
 type ProductPackageDetailRes struct {
 	List []ProductPackageDetail `json:"list"` // 数据
 }
+
+type OrderCartProductBatchCookingRes struct {
+	List []OrderCartProductBatchCooking    `json:"list"` // 数据
+	Tags []OrderCartProductBatchCookingTag `json:"tags"` // 分批类型列表
+}
+
+type OrderCartProductBatchCooking struct {
+	Uuid                uint64             `json:"uuid"`                  // 商品uuid sale_order_product_uuid
+	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品名称
+	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
+	Image               string             `json:"image"`                 // 商品图片URL
+	BatchTagUuid        uint64             `json:"batch_tag_uuid"`        // 分批类型uuid, 如果已经进行分批送厨，则不为0
+	BatchTime           int64              `json:"batch_time"`            // 分批送厨时间，如果已经进行分批送厨，则不为0
+	SendKitchenTime     int64              `json:"send_kitchen_time"`     // 送厨时间. 预送厨的时间。用于排序
+	CreateTime          int64              `json:"create_time"`           // 下单时间。用于排序
+}
+
+type OrderCartProductBatchCookingTag struct {
+	Uuid       uint64             `json:"uuid"`        // 分批类型uuid
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 分批类型名称，多语言
+	Color      string             `json:"color"`       // 分批类型颜色，如 #FF0000
+	Sort       uint               `json:"sort"`        // 排序
+	Count      uint               `json:"count"`       // 商品数量
+}
