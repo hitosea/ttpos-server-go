@@ -26,7 +26,7 @@ type BatchProductHandler struct {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} product_resp.ProductBatchTypeList "成功"
+// @Success 200 {object} product_resp.BatchTagList "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /shop/batch/tag/list [get]
 func (h *BatchProductHandler) GetBatchTagList(c *gin.Context) {
@@ -53,7 +53,7 @@ func (h *BatchProductHandler) GetBatchTagList(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param uuid query string false "分批类型UUID"
-// @Success 200 {object} product_resp.ProductBatchTypeDetail "成功"
+// @Success 200 {object} product_resp.BatchTagDetail "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /shop/batch/tag [get]
 func (h *BatchProductHandler) GetBatchTag(c *gin.Context) {
@@ -78,7 +78,7 @@ func (h *BatchProductHandler) GetBatchTag(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param data body req.ProductBatchTypeAddReq true "分批类型添加请求"
+// @Param data body req.BatchTagAddReq true "分批类型添加请求"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /shop/batch/tag/add [post]
@@ -104,7 +104,7 @@ func (h *BatchProductHandler) AddBatchTag(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param data body req.ProductBatchTypeEditReq true "分批类型编辑请求"
+// @Param data body req.BatchTagEditReq true "分批类型编辑请求"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /shop/batch/tag/edit [post]
@@ -130,7 +130,7 @@ func (h *BatchProductHandler) EditBatchTag(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param data body req.ProductBatchTypeDeleteReq true "分批类型删除请求"
+// @Param data body req.BatchTagDeleteReq true "分批类型删除请求"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /shop/batch/tag [delete]
@@ -156,7 +156,7 @@ func (h *BatchProductHandler) DeleteBatchTag(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param data body req.ProductBatchTypeSortReq true "分批类型排序请求"
+// @Param data body req.BatchTagSortReq true "分批类型排序请求"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /shop/batch/tag/sort [post]
@@ -182,8 +182,7 @@ func (h *BatchProductHandler) SortBatchTag(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param data body req.ProductBatchTypeColorUsageReq true "色块使用情况请求"
-// @Success 200 {object} []product_resp.ProductBatchTypeColorUsage "成功"
+// @Success 200 {object} []product_resp.BatchTagColorUsageList "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /shop/batch/tag/color_usage [post]
 func (h *BatchProductHandler) GetBatchTagColorUsage(c *gin.Context) {
@@ -204,7 +203,7 @@ func (h *BatchProductHandler) GetBatchTagColorUsage(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param data body req.ProductBatchTypeSaveReq true "分批商品保存请求"
+// @Param data body req.SaveBatchProductReq true "分批商品保存请求"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /shop/batch/product/save [post]

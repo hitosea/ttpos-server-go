@@ -17948,6 +17948,303 @@
                 }
             }
         },
+        "/shop/batch/product/save": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "保存分批商品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.分批商品"
+                ],
+                "summary": "保存分批商品",
+                "parameters": [
+                    {
+                        "description": "分批商品保存请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.SaveBatchProductReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/batch/tag": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取分批类型详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.分批类型"
+                ],
+                "summary": "获取分批类型详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "分批类型UUID",
+                        "name": "uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.BatchTagDetail"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除分批类型",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.分批类型"
+                ],
+                "summary": "删除分批类型",
+                "parameters": [
+                    {
+                        "description": "分批类型删除请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.BatchTagDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/batch/tag/add": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "添加分批类型",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.分批类型"
+                ],
+                "summary": "添加分批类型",
+                "parameters": [
+                    {
+                        "description": "分批类型添加请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.BatchTagAddReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/batch/tag/color_usage": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取色块被选择情况",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.分批类型"
+                ],
+                "summary": "获取色块被选择情况",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/product_resp.BatchTagColorUsageList"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/batch/tag/edit": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "编辑分批类型",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.分批类型"
+                ],
+                "summary": "编辑分批类型",
+                "parameters": [
+                    {
+                        "description": "分批类型编辑请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.BatchTagEditReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/batch/tag/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取分批类型列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.分批类型"
+                ],
+                "summary": "获取分批类型列表",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.BatchTagList"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/batch/tag/sort": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "排序分批类型",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.分批类型"
+                ],
+                "summary": "排序分批类型",
+                "parameters": [
+                    {
+                        "description": "分批类型排序请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.BatchTagSortReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/callboard/device": {
             "delete": {
                 "security": [
@@ -26954,6 +27251,10 @@
         "material_resp.Material": {
             "type": "object",
             "properties": {
+                "available_num": {
+                    "description": "可用库存数量",
+                    "type": "number"
+                },
                 "barcode_value": {
                     "description": "条形码值",
                     "type": "string"
@@ -27021,6 +27322,10 @@
                 "status": {
                     "description": "状态 1-启用 0-停用",
                     "type": "integer"
+                },
+                "transit_num": {
+                    "description": "在途库存数量",
+                    "type": "number"
                 },
                 "unit_list": {
                     "description": "单位列表",
@@ -28226,6 +28531,99 @@
                 "uuid": {
                     "description": "会员UUID",
                     "type": "integer"
+                }
+            }
+        },
+        "product_resp.BatchTag": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "description": "颜色值，如#FF0000",
+                    "type": "string"
+                },
+                "locale_name": {
+                    "description": "分批类型名称，多语言",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "sort": {
+                    "description": "排序，数字越小越靠前",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "分批类型UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "product_resp.BatchTagColorUsage": {
+            "type": "object",
+            "properties": {
+                "batch_tag_uuid": {
+                    "description": "分批类型UUID",
+                    "type": "integer"
+                },
+                "color": {
+                    "description": "颜色值",
+                    "type": "string"
+                },
+                "is_used": {
+                    "description": "是否已被使用",
+                    "type": "boolean"
+                },
+                "used_by": {
+                    "description": "被使用的分批类型名称（如果被使用的话）",
+                    "type": "string"
+                }
+            }
+        },
+        "product_resp.BatchTagColorUsageList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product_resp.BatchTagColorUsage"
+                    }
+                }
+            }
+        },
+        "product_resp.BatchTagDetail": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "description": "颜色值，如#FF0000",
+                    "type": "string"
+                },
+                "locale_name": {
+                    "description": "分批类型名称，多语言",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "sort": {
+                    "description": "排序，数字越小越靠前",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "分批类型UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "product_resp.BatchTagList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product_resp.BatchTag"
+                    }
                 }
             }
         },
@@ -29500,6 +29898,10 @@
         "product_resp.ProductShopCategory": {
             "type": "object",
             "properties": {
+                "category_key": {
+                    "description": "商品类别关键字",
+                    "type": "string"
+                },
                 "children": {
                     "description": "子级类别",
                     "allOf": [
@@ -29541,6 +29943,10 @@
         "product_resp.ProductShopCategoryDetailResp": {
             "type": "object",
             "properties": {
+                "category_key": {
+                    "description": "商品类别关键字",
+                    "type": "string"
+                },
                 "child_count": {
                     "description": "子级数量",
                     "type": "integer"
@@ -30143,6 +30549,94 @@
                 },
                 "text": {
                     "type": "string"
+                }
+            }
+        },
+        "req.BatchTagAddReq": {
+            "type": "object",
+            "required": [
+                "color",
+                "locale_name"
+            ],
+            "properties": {
+                "color": {
+                    "description": "颜色值，如#FF0000",
+                    "type": "string"
+                },
+                "locale_name": {
+                    "description": "分批类型名称，多语言",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                }
+            }
+        },
+        "req.BatchTagDeleteReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "分批类型UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.BatchTagEditReq": {
+            "type": "object",
+            "required": [
+                "color",
+                "locale_name",
+                "uuid"
+            ],
+            "properties": {
+                "color": {
+                    "description": "颜色值，如#FF0000",
+                    "type": "string"
+                },
+                "locale_name": {
+                    "description": "分批类型名称，多语言",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "uuid": {
+                    "description": "分批类型UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.BatchTagSortItem": {
+            "type": "object",
+            "required": [
+                "sort",
+                "uuid"
+            ],
+            "properties": {
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "分批类型UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.BatchTagSortReq": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "分批类型排序列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.BatchTagSortItem"
+                    }
                 }
             }
         },
@@ -34672,6 +35166,21 @@
                 }
             }
         },
+        "req.SaveBatchProductReq": {
+            "type": "object",
+            "required": [
+                "uuids"
+            ],
+            "properties": {
+                "uuids": {
+                    "description": "分批商品UUID列表, product_package_uuids",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
         "req.SendMemberRechargeSMS": {
             "type": "object",
             "properties": {
@@ -35026,6 +35535,7 @@
                 "dish_card_style",
                 "free_method",
                 "gift_method",
+                "is_batch",
                 "is_invoice",
                 "is_need_password",
                 "no_clear_table",
@@ -35080,6 +35590,14 @@
                     "enum": [
                         "10",
                         "20"
+                    ]
+                },
+                "is_batch": {
+                    "description": "是否是分批商品 0-否 1-是",
+                    "type": "string",
+                    "enum": [
+                        "0",
+                        "1"
                     ]
                 },
                 "is_invoice": {
@@ -43652,6 +44170,17 @@
         "setting.Business": {
             "type": "object",
             "properties": {
+                "batch_product_uuids": {
+                    "description": "分批商品UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "batch_tag_num": {
+                    "description": "分批类型数量",
+                    "type": "integer"
+                },
                 "checkout_zeroing_method": {
                     "description": "结账自动抹零方式: 0-实款实收 1-抹分 2-抹角 5-抹元. // 5-抹元为5是为了全局唯一，各个数字有不重复的抹零定义",
                     "type": "string"
@@ -43700,6 +44229,10 @@
                     "items": {
                         "$ref": "#/definitions/setting.GiftMethodItem"
                     }
+                },
+                "is_batch": {
+                    "description": "分批商品相关",
+                    "type": "string"
                 },
                 "is_invoice": {
                     "description": "开票信息 0-不需要填写 1-需要填写",
@@ -44260,6 +44793,17 @@
         "setting.ShopBusiness": {
             "type": "object",
             "properties": {
+                "batch_product_uuids": {
+                    "description": "分批商品UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "batch_tag_num": {
+                    "description": "分批类型数量",
+                    "type": "integer"
+                },
                 "checkout_zeroing_method": {
                     "description": "结账自动抹零方式: 0-实款实收 1-抹分 2-抹角 5-抹元. // 5-抹元为5是为了全局唯一，各个数字有不重复的抹零定义",
                     "type": "string"
@@ -44312,6 +44856,10 @@
                     "items": {
                         "$ref": "#/definitions/setting.GiftMethodItem"
                     }
+                },
+                "is_batch": {
+                    "description": "分批商品相关",
+                    "type": "string"
                 },
                 "is_invoice": {
                     "description": "开票信息 0-不需要填写 1-需要填写",

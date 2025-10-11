@@ -148,14 +148,14 @@ type IProductSrv interface {
 	SaveProductPackageGroup(tx *gorm.DB, groupList []CheckProductPackageGroupResult, productPackageUuid uint64) error                                                                                                                       // 保存商品套餐组
 
 	// 分批类型管理
-	GetBatchTagList(ctx context.Context, req req.BatchTagListReq) (*product_resp.ProductBatchTypeList, error) // 获取分批类型列表
-	GetBatchTag(ctx context.Context, req req.BatchTagReq) (*product_resp.ProductBatchTypeDetail, error)       // 获取分批类型详情
-	AddBatchTag(ctx context.Context, req req.BatchTagAddReq) error                                            // 添加分批类型
-	EditBatchTag(ctx context.Context, req req.BatchTagEditReq) error                                          // 编辑分批类型
-	DeleteBatchTag(ctx context.Context, req req.BatchTagDeleteReq) error                                      // 删除分批类型
-	SortBatchTag(ctx context.Context, req req.BatchTagSortReq) error                                          // 排序分批类型
-	GetBatchTagColorUsage(ctx context.Context) (*product_resp.BatchTagColorUsageList, error)                  // 获取色块被选择情况
-	SaveBatchProduct(ctx context.Context, req req.SaveBatchProductReq) error                                  // 保存分批商品
+	GetBatchTagList(ctx context.Context, req req.BatchTagListReq) (*product_resp.BatchTagList, error) // 获取分批类型列表
+	GetBatchTag(ctx context.Context, req req.BatchTagReq) (*product_resp.BatchTagDetail, error)       // 获取分批类型详情
+	AddBatchTag(ctx context.Context, req req.BatchTagAddReq) error                                    // 添加分批类型
+	EditBatchTag(ctx context.Context, req req.BatchTagEditReq) error                                  // 编辑分批类型
+	DeleteBatchTag(ctx context.Context, req req.BatchTagDeleteReq) error                              // 删除分批类型
+	SortBatchTag(ctx context.Context, req req.BatchTagSortReq) error                                  // 排序分批类型
+	GetBatchTagColorUsage(ctx context.Context) (*product_resp.BatchTagColorUsageList, error)          // 获取色块被选择情况
+	SaveBatchProduct(ctx context.Context, req req.SaveBatchProductReq) error                          // 保存分批商品
 
 	SyncProductShopCategory(ctx context.Context) error // 同步产品分类
 	SyncProductTax(ctx context.Context) error          // 同步商品税类
@@ -7321,7 +7321,7 @@ func (s *productSrv) SyncAttributeGroup(ctx context.Context) error {
 }
 
 // GetProductBatchTypeList 获取分批类型列表
-func (s *productSrv) GetBatchTagList(ctx context.Context, req req.BatchTagListReq) (*product_resp.ProductBatchTypeList, error) {
+func (s *productSrv) GetBatchTagList(ctx context.Context, req req.BatchTagListReq) (*product_resp.BatchTagList, error) {
 	batchTagRepo := repository.NewBatchTagRepo(s.dbm.GetDB(ctx.GetDbId()))
 	batchTags, err := batchTagRepo.GetBatchTagList()
 	if err != nil {
@@ -7329,9 +7329,9 @@ func (s *productSrv) GetBatchTagList(ctx context.Context, req req.BatchTagListRe
 	}
 
 	// 转换为响应格式
-	list := make([]product_resp.ProductBatchType, len(batchTags))
+	list := make([]product_resp.BatchTag, len(batchTags))
 	for i, batchType := range batchTags {
-		list[i] = product_resp.ProductBatchType{
+		list[i] = product_resp.BatchTag{
 			Uuid:       batchType.Uuid,
 			LocaleName: batchType.MultiLanguageName.GetNames(),
 			Color:      batchType.Color,
@@ -7339,20 +7339,20 @@ func (s *productSrv) GetBatchTagList(ctx context.Context, req req.BatchTagListRe
 		}
 	}
 
-	return &product_resp.ProductBatchTypeList{
+	return &product_resp.BatchTagList{
 		List: list,
 	}, nil
 }
 
 // GetBatchTag 获取分批类型详情
-func (s *productSrv) GetBatchTag(ctx context.Context, req req.BatchTagReq) (*product_resp.ProductBatchTypeDetail, error) {
+func (s *productSrv) GetBatchTag(ctx context.Context, req req.BatchTagReq) (*product_resp.BatchTagDetail, error) {
 	batchTagRepo := repository.NewBatchTagRepo(s.dbm.GetDB(ctx.GetDbId()))
 	batchTag, err := batchTagRepo.GetBatchTagInfo(req.Uuid)
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取分批类型详情失败")
 	}
 
-	return &product_resp.ProductBatchTypeDetail{
+	return &product_resp.BatchTagDetail{
 		Uuid:       batchTag.Uuid,
 		LocaleName: batchTag.MultiLanguageName.GetNames(),
 		Color:      batchTag.Color,

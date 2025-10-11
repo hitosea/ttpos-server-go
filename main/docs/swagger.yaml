@@ -709,6 +709,9 @@ definitions:
     type: object
   material_resp.Material:
     properties:
+      available_num:
+        description: 可用库存数量
+        type: number
       barcode_value:
         description: 条形码值
         type: string
@@ -754,6 +757,9 @@ definitions:
       status:
         description: 状态 1-启用 0-停用
         type: integer
+      transit_num:
+        description: 在途库存数量
+        type: number
       unit_list:
         description: 单位列表
         items:
@@ -1563,6 +1569,67 @@ definitions:
       uuid:
         description: 会员UUID
         type: integer
+    type: object
+  product_resp.BatchTag:
+    properties:
+      color:
+        description: 颜色值，如#FF0000
+        type: string
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 分批类型名称，多语言
+      sort:
+        description: 排序，数字越小越靠前
+        type: integer
+      uuid:
+        description: 分批类型UUID
+        type: integer
+    type: object
+  product_resp.BatchTagColorUsage:
+    properties:
+      batch_tag_uuid:
+        description: 分批类型UUID
+        type: integer
+      color:
+        description: 颜色值
+        type: string
+      is_used:
+        description: 是否已被使用
+        type: boolean
+      used_by:
+        description: 被使用的分批类型名称（如果被使用的话）
+        type: string
+    type: object
+  product_resp.BatchTagColorUsageList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.BatchTagColorUsage'
+        type: array
+    type: object
+  product_resp.BatchTagDetail:
+    properties:
+      color:
+        description: 颜色值，如#FF0000
+        type: string
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 分批类型名称，多语言
+      sort:
+        description: 排序，数字越小越靠前
+        type: integer
+      uuid:
+        description: 分批类型UUID
+        type: integer
+    type: object
+  product_resp.BatchTagList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.BatchTag'
+        type: array
     type: object
   product_resp.PackageProductDetail:
     properties:
@@ -2399,6 +2466,9 @@ definitions:
     type: object
   product_resp.ProductShopCategory:
     properties:
+      category_key:
+        description: 商品类别关键字
+        type: string
       children:
         allOf:
         - $ref: '#/definitions/product_resp.ProductShopCategoryListResp'
@@ -2427,6 +2497,9 @@ definitions:
     type: object
   product_resp.ProductShopCategoryDetailResp:
     properties:
+      category_key:
+        description: 商品类别关键字
+        type: string
       child_count:
         description: 子级数量
         type: integer
@@ -2830,6 +2903,64 @@ definitions:
         type: string
       text:
         type: string
+    type: object
+  req.BatchTagAddReq:
+    properties:
+      color:
+        description: 颜色值，如#FF0000
+        type: string
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 分批类型名称，多语言
+    required:
+    - color
+    - locale_name
+    type: object
+  req.BatchTagDeleteReq:
+    properties:
+      uuid:
+        description: 分批类型UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.BatchTagEditReq:
+    properties:
+      color:
+        description: 颜色值，如#FF0000
+        type: string
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 分批类型名称，多语言
+      uuid:
+        description: 分批类型UUID
+        type: integer
+    required:
+    - color
+    - locale_name
+    - uuid
+    type: object
+  req.BatchTagSortItem:
+    properties:
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 分批类型UUID
+        type: integer
+    required:
+    - sort
+    - uuid
+    type: object
+  req.BatchTagSortReq:
+    properties:
+      list:
+        description: 分批类型排序列表
+        items:
+          $ref: '#/definitions/req.BatchTagSortItem'
+        type: array
     type: object
   req.BindCashierReq:
     properties:
@@ -5990,6 +6121,16 @@ definitions:
         description: 销售账单Uuid
         type: integer
     type: object
+  req.SaveBatchProductReq:
+    properties:
+      uuids:
+        description: 分批商品UUID列表, product_package_uuids
+        items:
+          type: integer
+        type: array
+    required:
+    - uuids
+    type: object
   req.SendMemberRechargeSMS:
     properties:
       balance:
@@ -6273,6 +6414,12 @@ definitions:
         - "10"
         - "20"
         type: string
+      is_batch:
+        description: 是否是分批商品 0-否 1-是
+        enum:
+        - "0"
+        - "1"
+        type: string
       is_invoice:
         description: '开票信息: 0-不需要填写 1-需要填写'
         enum:
@@ -6313,6 +6460,7 @@ definitions:
     - dish_card_style
     - free_method
     - gift_method
+    - is_batch
     - is_invoice
     - is_need_password
     - no_clear_table
@@ -12035,6 +12183,14 @@ definitions:
     type: object
   setting.Business:
     properties:
+      batch_product_uuids:
+        description: 分批商品UUID列表
+        items:
+          type: integer
+        type: array
+      batch_tag_num:
+        description: 分批类型数量
+        type: integer
       checkout_zeroing_method:
         description: '结账自动抹零方式: 0-实款实收 1-抹分 2-抹角 5-抹元. // 5-抹元为5是为了全局唯一，各个数字有不重复的抹零定义'
         type: string
@@ -12071,6 +12227,9 @@ definitions:
         items:
           $ref: '#/definitions/setting.GiftMethodItem'
         type: array
+      is_batch:
+        description: 分批商品相关
+        type: string
       is_invoice:
         description: 开票信息 0-不需要填写 1-需要填写
         type: string
@@ -12460,6 +12619,14 @@ definitions:
     type: object
   setting.ShopBusiness:
     properties:
+      batch_product_uuids:
+        description: 分批商品UUID列表
+        items:
+          type: integer
+        type: array
+      batch_tag_num:
+        description: 分批类型数量
+        type: integer
       checkout_zeroing_method:
         description: '结账自动抹零方式: 0-实款实收 1-抹分 2-抹角 5-抹元. // 5-抹元为5是为了全局唯一，各个数字有不重复的抹零定义'
         type: string
@@ -12499,6 +12666,9 @@ definitions:
         items:
           $ref: '#/definitions/setting.GiftMethodItem'
         type: array
+      is_batch:
+        description: 分批商品相关
+        type: string
       is_invoice:
         description: 开票信息 0-不需要填写 1-需要填写
         type: string
@@ -23195,6 +23365,189 @@ paths:
       summary: 基本信息
       tags:
       - 商家端.基础信息
+  /shop/batch/product/save:
+    post:
+      consumes:
+      - application/json
+      description: 保存分批商品
+      parameters:
+      - description: 分批商品保存请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.SaveBatchProductReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 保存分批商品
+      tags:
+      - 商家端.分批商品
+  /shop/batch/tag:
+    delete:
+      consumes:
+      - application/json
+      description: 删除分批类型
+      parameters:
+      - description: 分批类型删除请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.BatchTagDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 删除分批类型
+      tags:
+      - 商家端.分批类型
+    get:
+      consumes:
+      - application/json
+      description: 获取分批类型详情
+      parameters:
+      - description: 分批类型UUID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.BatchTagDetail'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取分批类型详情
+      tags:
+      - 商家端.分批类型
+  /shop/batch/tag/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加分批类型
+      parameters:
+      - description: 分批类型添加请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.BatchTagAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 添加分批类型
+      tags:
+      - 商家端.分批类型
+  /shop/batch/tag/color_usage:
+    post:
+      consumes:
+      - application/json
+      description: 获取色块被选择情况
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            items:
+              $ref: '#/definitions/product_resp.BatchTagColorUsageList'
+            type: array
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取色块被选择情况
+      tags:
+      - 商家端.分批类型
+  /shop/batch/tag/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑分批类型
+      parameters:
+      - description: 分批类型编辑请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.BatchTagEditReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 编辑分批类型
+      tags:
+      - 商家端.分批类型
+  /shop/batch/tag/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取分批类型列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.BatchTagList'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取分批类型列表
+      tags:
+      - 商家端.分批类型
+  /shop/batch/tag/sort:
+    post:
+      consumes:
+      - application/json
+      description: 排序分批类型
+      parameters:
+      - description: 分批类型排序请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.BatchTagSortReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 排序分批类型
+      tags:
+      - 商家端.分批类型
   /shop/callboard/device:
     delete:
       consumes:
