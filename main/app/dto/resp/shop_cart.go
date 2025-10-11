@@ -197,6 +197,8 @@ type Product struct {
 	ProductType         uint               `json:"product_type"`          // 商品类型 0-商品 1-套餐
 	PackageProductList  PackageProductList `json:"package_product_list"`  // 套餐商品列表
 	CanEdit             bool               `json:"can_edit"`              // 是否可以编辑
+	ShowBatchTag        bool               `json:"show_batch_tag"`        // 是否显示分批类型
+	BatchTagName        dto.LocaleResponse `json:"batch_tag_name"`        // 分批类型名称
 	// 后端使用，前端不返回
 	CreateTime         int64   `json:"-"` // 创建时间（点餐助手未送厨）
 	SendKitchenTime    int64   `json:"-"` // 送厨时间

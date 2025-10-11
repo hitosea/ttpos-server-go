@@ -124,6 +124,7 @@ type SaleOrderProduct struct {
 	ProductionOrderProduct     *ProductionOrderProduct      `gorm:"foreignKey:SaleOrderProductUuid;references:uuid"`
 	H5Order                    *H5Order                     `gorm:"foreignKey:H5OrderUuid;references:uuid"`
 	ProductMustPlan            *ProductMustPlan             `gorm:"foreignKey:MustPlanUuid;references:uuid"`
+	BatchTag                   *BatchTag                    `gorm:"foreignKey:BatchTagUuid;references:uuid"`
 
 	// 内部字段
 	operation        string `gorm:"-"` // 操作类型。add: 加购，sub: 减购
@@ -133,6 +134,26 @@ type SaleOrderProduct struct {
 // IsCookingDeductStock 判断商品是否是下单减库存
 func (model *SaleOrderProduct) IsCookingDeductStock() bool {
 	return model.DeductStockType == constant.ProductPackageDeductStockTypeCooking
+}
+
+// 是否是分批商品
+func (model *SaleOrderProduct) IsBatchBool() bool {
+	return model.IsBatch == 1
+}
+
+// 是否在购物车中显示分批类型标签。 如果商品是分批商品，且有分批类型，则显示分批类型标签
+func (model *SaleOrderProduct) IsShowBatchTag(openIsBatch bool) bool {
+	if !openIsBatch { // 如果未开启分批商品，则不显示分批类型标签
+		return false
+	}
+	return model.IsBatchBool() && model.BatchTagUuid != 0
+}
+
+// 分批商品的送厨状态有两个阶段：阶段1-预送厨 阶段2-已送厨
+// 是否处于预送厨阶段
+func (model *SaleOrderProduct) IsPreCooking() bool {
+	// status是已送厨，不能再操作商品，只能退菜。且没有被标记分批类型，所以是预送厨阶段
+	return model.Status == constant.SaleOrderProductStatusCooking && model.BatchTagUuid == 0
 }
 
 // 获取商品的原材料

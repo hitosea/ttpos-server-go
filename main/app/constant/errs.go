@@ -52,6 +52,7 @@ const (
 	CodeOrderCheckProductUnCooking = -206 // 有商品未送厨
 	// 关闭桌台检查
 	CodeOrderCheckProductCooking = -207 // 有商品已送厨
+	CodeOrderCheckProductBatch   = -209 // 有商品是分批商品，请前去送厨。弹出分批送厨弹窗
 	CodeOrderCheckSplit          = -210 // 订单已经拆单，请前去收银机操作
 
 	CodeH5OrderTimeLimit = -231 // h5订单时间限制

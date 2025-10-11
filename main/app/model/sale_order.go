@@ -613,7 +613,7 @@ func (model *SaleOrder) GetDelayProductList() []resp.Product {
 }
 
 // 获取销售订单的商品列表
-func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []resp.Product {
+func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool, openIsBatch bool) []resp.Product {
 	productList := make([]resp.Product, 0)
 	for _, saleOrderProduct := range model.SaleOrderProducts {
 		// 套餐子商品不返回
@@ -687,7 +687,9 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []res
 			PackageProductList: resp.PackageProductList{
 				List: packageProductList,
 			},
-			CanEdit: saleOrderProduct.IsCanEdit(),
+			CanEdit:      saleOrderProduct.IsCanEdit(),
+			ShowBatchTag: saleOrderProduct.IsShowBatchTag(openIsBatch),
+			BatchTagName: saleOrderProduct.BatchTag.MultiLanguageName.GetNames(),
 		}
 		if saleOrderProduct.ProductionOrderProduct != nil {
 			if saleOrderProduct.ProductionOrderProduct.Status == constant.ProductionOrderProductStatusFinished {

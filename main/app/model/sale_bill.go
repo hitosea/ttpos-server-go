@@ -109,6 +109,22 @@ func (model *SaleBill) SetCanceled() {
 	// 未完整逻辑。部分逻辑还在service中处理。
 }
 
+// 获取预送厨的商品
+func (model *SaleBill) GetSaleOrderProductPreCooking() []*SaleOrderProduct {
+	preCookingSaleOrderProducts := make([]*SaleOrderProduct, 0)
+	for _, saleOrder := range model.SaleOrders {
+		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+			if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || saleOrderProduct.IsUnAcceptOrderBool() {
+				continue
+			}
+			if saleOrderProduct.IsBatchBool() && saleOrderProduct.IsPreCooking() {
+				preCookingSaleOrderProducts = append(preCookingSaleOrderProducts, saleOrderProduct)
+			}
+		}
+	}
+	return preCookingSaleOrderProducts
+}
+
 // 结束SaleBill和SaleOrder的生命周期。相当于用餐订单结账完成。
 func (model *SaleBill) EndSaleBillAndSaleOrder(dutyNo string, cashierUuid uint64, cashierName string) {
 	model.SetFinishSaleBill(dutyNo, cashierUuid, cashierName)

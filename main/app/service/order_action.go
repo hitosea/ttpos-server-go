@@ -25,11 +25,18 @@ type ActionCookingOption struct {
 	CalcAndSaveSaleBill      bool
 	SelectedMustPlanProducts *ro.MustPlanProductInfo // 桌台已经选择的必点商品。使用场景仅用于平板加购并送厨时，将新加购的商品构建为该对象
 	OnlyCheckCooking         bool                    // 是否是仅检查送厨，不进行实际送厨。场景：助手端开启下单校验高级密码时，先检查送厨，再实际送厨。检查送厨时不进行实际送厨
+	IsBatch                  bool                    // 是否是分批商品 。 收银机点击送厨、助手端点击送厨时，是true。如果不是这个场景，需要将未送厨和预送厨的商品都修改is_batch为0
 }
 
 func withCalcAndSaveSaleBill() func(option *ActionCookingOption) {
 	return func(option *ActionCookingOption) {
 		option.CalcAndSaveSaleBill = true
+	}
+}
+
+func WithIsBatch() func(option *ActionCookingOption) {
+	return func(option *ActionCookingOption) {
+		option.IsBatch = true
 	}
 }
 
@@ -157,6 +164,23 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		// 修改商品状态为已送厨
 		for _, product := range unCookingSaleOrderProducts {
 			product.SetCooking(productionOrder.Uuid)
+		}
+
+		// 如果不是收银机点击送厨、助手端点击送厨时，需要将未送厨和预送厨的商品都修改is_batch为0
+		notBatch := !option.IsBatch
+		if ignoreMust { // 只有点击结账时弹出是否送厨并点击送厨时，会忽略必点，这个情况下，需要都修改is_batch为0
+			notBatch = true
+		}
+		if notBatch {
+			// 遍历所有未送厨的商品，将is_batch为0
+			for _, product := range unCookingSaleOrderProducts {
+				product.IsBatch = 0
+			}
+			// 遍历所有预送厨的商品，将is_batch为0
+			preCookingSaleOrderProducts := saleBill.GetSaleOrderProductPreCooking()
+			for _, product := range preCookingSaleOrderProducts {
+				product.IsBatch = 0
+			}
 		}
 
 		// 修改账单状态为已送厨
