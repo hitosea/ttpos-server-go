@@ -198,6 +198,9 @@ type ProductPackage struct {
 	OpenDiscount        uint  `gorm:"default:0;column:open_discount;comment:'是否开启会员折扣, 0-否 1-是'"`
 	OpenOverallDiscount uint  `gorm:"default:1;column:open_overall_discount;comment:'是否开启整单折扣, 0-否 1-是'"`
 
+	// 分批相关
+	IsBatch uint8 `gorm:"default:0;column:is_batch;comment:'是否是分批商品, 0-否 1-是'"`
+
 	MultiLanguageName             MultiLanguageName              `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`  // 多语言名称
 	ProductUnit                   ProductUnit                    `gorm:"foreignKey:unit_uuid;references:uuid" json:"-"`        // 单位
 	ProductBoms                   []ProductBom                   `gorm:"foreignKey:product_package_uuid;references:uuid"`      // BOM
@@ -933,4 +936,19 @@ type MaterialItem struct {
 	UnitConversionRate float64 `json:"unit_conversion_rate"` // 单位转换率
 	BaseUnitUuid       uint64  `json:"base_unit_uuid"`       // 基准单位ID
 	BaseUnitName       string  `json:"base_unit_name"`       // 基准单位名称JSON
+}
+
+// BatchTag 分批类型表,定义分批类型的相关信息 ttpos_batch_tag
+type BatchTag struct {
+	BaseModel
+	Name                  string `gorm:"default:'';column:name;comment:'名称'"`
+	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
+	Color                 string `gorm:"default:'';column:color;comment:'颜色值，如#FF0000'"`
+	Sort                  int    `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
+
+	MultiLanguageName *MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
+}
+
+func (model *BatchTag) SetNil() {
+	model.MultiLanguageName = nil
 }

@@ -555,6 +555,26 @@ func (s *Srv) GetBusinessSetting(ctx context.Context) (setting.Business, error) 
 	if len(defaultBusiness.FreeMethodList) == 0 {
 		defaultBusiness.FreeMethodList = make([]setting.FreeMethodItem, 0)
 	}
+
+	// 分批商品相关
+	{
+		db := s.dbm.GetDB(ctx.GetCompanyUuid())
+		// 分批商品数量
+		productPackageRepo := repository.NewProductPackageRepo(db)
+		batchProductNum, err := productPackageRepo.GetProductPackageBatchTagCount()
+		if err != nil {
+			return business, errors.WithMessage(err)
+		}
+		defaultBusiness.BatchProductNum = uint(batchProductNum)
+
+		// 分批类型数量
+		batchTagNum, err := repository.NewBatchTagRepo(db).GetBatchTagCount()
+		if err != nil {
+			return business, errors.WithMessage(err)
+		}
+		defaultBusiness.BatchTagNum = uint(batchTagNum)
+	}
+
 	return defaultBusiness, nil
 }
 

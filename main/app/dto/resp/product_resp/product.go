@@ -82,6 +82,40 @@ func (p *PackageProductDetail) GetCanEdit() bool {
 	return true
 }
 
+// ProductBatchType 分批类型
+type ProductBatchType struct {
+	Uuid       uint64             `json:"uuid"`        // 分批类型UUID
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 分批类型名称，多语言
+	Color      string             `json:"color"`       // 颜色值，如#FF0000
+	Sort       int                `json:"sort"`        // 排序，数字越小越靠前
+}
+
+// ProductBatchTypeList 分批类型列表
+type ProductBatchTypeList struct {
+	List []ProductBatchType `json:"list"`
+}
+
+// ProductBatchTypeDetail 分批类型详情
+type ProductBatchTypeDetail struct {
+	Uuid       uint64             `json:"uuid"`        // 分批类型UUID
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 分批类型名称，多语言
+	Color      string             `json:"color"`       // 颜色值，如#FF0000
+	Sort       int                `json:"sort"`        // 排序，数字越小越靠前
+}
+
+// BatchTagList 分批类型列表
+type BatchTagColorUsageList struct {
+	List []BatchTagColorUsage `json:"list"`
+}
+
+// BatchTagColorUsage 色块被选择情况
+type BatchTagColorUsage struct {
+	Color        string `json:"color"`          // 颜色值
+	IsUsed       bool   `json:"is_used"`        // 是否已被使用
+	UsedBy       string `json:"used_by"`        // 被使用的分批类型名称（如果被使用的话）
+	BatchTagUuid uint64 `json:"batch_tag_uuid"` // 分批类型UUID
+}
+
 // ProductFlavor 商品规格
 type ProductFlavor struct {
 	Uuid         uint64             `json:"uuid"`          // 商品规格UUID
