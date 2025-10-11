@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/setup"
+	"ttpos-bmp/app/ttpos-erp/api/warehouse"
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -84,6 +86,29 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		return resp.InitShopResp{}, err
 	}
 
+	// 获取初始化创建的仓库
+	warehouseClient, conn, err := NewErpWarehouseClient()
+	if err != nil {
+		return resp.InitShopResp{}, err
+	}
+	defer conn.Close()
+	warehouseListReq := &warehouse.GetWarehouseListReq{
+		CompanyAbbr: initShopReq.CompanyAbbr,
+		Branch:      response.BranchName,
+	}
+	warehouseResult, err := warehouseClient.GetWarehouseList(WithSiteCode(context.Background(), initShopReq.SiteCode), warehouseListReq)
+	if err != nil {
+		return resp.InitShopResp{}, err
+	}
+	if warehouseResult.GetCode() != "0" || warehouseResult.Data == nil {
+		logger.Logger.Error("InitShop-GetWarehouseList", zap.Any("err", err), zap.String("code", warehouseResult.GetCode()), zap.String("result_message", warehouseResult.GetMessage()))
+		return resp.InitShopResp{}, errors.New("初始化失败")
+	}
+	warehouseList := &warehouse.GetWarehouseListResp{}
+	if err := warehouseResult.Data.UnmarshalTo(warehouseList); err != nil {
+		return resp.InitShopResp{}, err
+	}
+
 	// 更新saas库
 	s.dbm.GetDB(0).Model(&model.Company{}).Where("uuid = ?", company.Uuid).Updates(map[string]any{
 		"is_enable_erp": 1,
@@ -111,6 +136,25 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		"erpnext_headquarter_abbr": headquarterAbbr,
 		"headquarter_uuid":         headquarterUuid,
 	})
+
+	// 修改ttpos仓库erp_code
+	var warehouses []model.Warehouse
+	s.dbm.GetDB(company.Uuid).Model(&model.Warehouse{}).Scopes(repository.NotDeleted).Find(&warehouses)
+	erpWarehouseNameMap := make(map[string]string)
+	for _, erpWarehouse := range warehouseList.WarehouseList {
+		if strings.Contains(erpWarehouse.Name, constant.NormalWarehouseCodeContains) {
+			erpWarehouseNameMap[constant.NormalWarehouseCodeContains] = erpWarehouse.Name
+		} else if strings.Contains(erpWarehouse.Name, constant.TransitWarehouseCodeContains) {
+			erpWarehouseNameMap[constant.TransitWarehouseCodeContains] = erpWarehouse.Name
+		}
+	}
+	for _, warehouse := range warehouses {
+		if warehouse.IsDefault == 1 {
+			s.dbm.GetDB(company.Uuid).Model(&model.Warehouse{}).Where("uuid = ?", warehouse.Uuid).Update("erp_code", erpWarehouseNameMap[constant.NormalWarehouseCodeContains])
+		} else if warehouse.Type == "transit" {
+			s.dbm.GetDB(company.Uuid).Model(&model.Warehouse{}).Where("uuid = ?", warehouse.Uuid).Update("erp_code", erpWarehouseNameMap[constant.TransitWarehouseCodeContains])
+		}
+	}
 
 	// 自动同步了支付方式，cash, balance, lianlian(wechat, alipay, qr_promptpay)
 	repository.NewPaymentMethodRepo(s.dbm.GetDB(company.Uuid)).InitErpnextPayment(map[int]string{

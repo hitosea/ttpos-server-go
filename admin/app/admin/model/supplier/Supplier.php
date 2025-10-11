@@ -162,8 +162,136 @@ class Supplier extends SupplierModel
         // 同步设置
         $this->synchronousSetting($this, 'initShopBaseData');
 
+        // 新建默认仓库
+        $this->createDefaultWarehouse($pdo, $prefix);
+
         //
         return true;
+    }
+
+    /**
+     * 创建默认仓库
+     */
+    private function createDefaultWarehouse($pdo, $prefix)
+    {
+        // 定义默认仓和在途仓的多语言名称
+        $defaultWarehouseNames = [
+            'en' => 'Default',
+            'zh' => 'Default',
+            'zhtw' => 'Default',
+            'th' => 'Default',
+            'my' => 'Default',
+            'ja' => 'Default',
+            'ko' => 'Default',
+            'tr' => 'Default',
+            'sv' => 'Default',
+        ];
+        
+        $transitWarehouseNames = [
+            'en' => 'Transit',
+            'zh' => 'Transit',
+            'zhtw' => 'Transit',
+            'th' => 'Transit',
+            'my' => 'Transit',
+            'ja' => 'Transit',
+            'ko' => 'Transit',
+            'tr' => 'Transit',
+            'sv' => 'Transit',
+        ];
+        
+        // 生成多语言UUID
+        $defaultNameUuid = createUuid();
+        $transitNameUuid = createUuid();
+        
+        // 创建多语言记录数据
+        $multiLanguageRecords = [
+            [
+                'uuid' => $defaultNameUuid,
+                'en_name' => $defaultWarehouseNames['en'],
+                'zh_name' => $defaultWarehouseNames['zh'],
+                'zh_tw_name' => $defaultWarehouseNames['zhtw'],
+                'th_name' => $defaultWarehouseNames['th'],
+                'my_name' => $defaultWarehouseNames['my'],
+                'ja_name' => $defaultWarehouseNames['ja'],
+                'ko_name' => $defaultWarehouseNames['ko'],
+                'tr_name' => $defaultWarehouseNames['tr'],
+                'sv_name' => $defaultWarehouseNames['sv'],
+                'create_time' => time(),
+                'update_time' => time(),
+                'delete_time' => 0,
+            ],
+            [
+                'uuid' => $transitNameUuid,
+                'en_name' => $transitWarehouseNames['en'],
+                'zh_name' => $transitWarehouseNames['zh'],
+                'zh_tw_name' => $transitWarehouseNames['zhtw'],
+                'th_name' => $transitWarehouseNames['th'],
+                'my_name' => $transitWarehouseNames['my'],
+                'ja_name' => $transitWarehouseNames['ja'],
+                'ko_name' => $transitWarehouseNames['ko'],
+                'tr_name' => $transitWarehouseNames['tr'],
+                'sv_name' => $transitWarehouseNames['sv'],
+                'create_time' => time(),
+                'update_time' => time(),
+                'delete_time' => 0,
+            ],
+        ];
+        
+        // 插入多语言记录
+        foreach ($multiLanguageRecords as $multiLanguageRecord) {
+            $pdo->exec($this->getInsertSql($prefix . 'multi_language_name', $multiLanguageRecord, [
+                'uuid', 'en_name', 'zh_name', 'zh_tw_name', 'th_name', 'my_name',
+                'ja_name', 'ko_name', 'tr_name', 'sv_name',
+                'create_time', 'update_time', 'delete_time'
+            ]));
+        }
+        
+        // 创建仓库记录
+        $warehouses = [
+            [
+                'uuid' => createUuid(),
+                'name' => json_encode($defaultWarehouseNames),
+                'multi_language_name_uuid' => $defaultNameUuid,
+                'type' => 'normal',
+                'code' => 'WH01',
+                'status' => 1,
+                'contact' => '',
+                'phone' => '',
+                'address' => '',
+                'is_default' => 1,
+                'erp_code' => '',
+                'headquarter_uuid' => 0,
+                'create_time' => time(),
+                'update_time' => time(),
+                'delete_time' => 0,
+            ],
+            [
+                'uuid' => createUuid(),
+                'name' => json_encode($transitWarehouseNames),
+                'multi_language_name_uuid' => $transitNameUuid,
+                'type' => 'transit',
+                'code' => 'WH02',
+                'status' => 1,
+                'contact' => '',
+                'phone' => '',
+                'address' => '',
+                'is_default' => 0,
+                'erp_code' => '',
+                'headquarter_uuid' => 0,
+                'create_time' => time(),
+                'update_time' => time(),
+                'delete_time' => 0,
+            ],
+        ];
+        
+        // 插入仓库数据
+        foreach ($warehouses as $warehouse) {
+            $pdo->exec($this->getInsertSql($prefix . 'warehouse', $warehouse, [
+                'uuid', 'name', 'multi_language_name_uuid', 'type', 'code', 'status',
+                'contact', 'phone', 'address', 'is_default', 'erp_code', 'headquarter_uuid',
+                'create_time', 'update_time', 'delete_time'
+            ]));
+        }
     }
 
     /**
