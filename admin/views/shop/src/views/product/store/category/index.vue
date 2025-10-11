@@ -35,7 +35,7 @@
           <el-table-column prop="sort" :label="$t('状态')">
             <template #default="scope">
               <el-switch
-                :disabled="!proxy.$filter.isAuth('/product/store/category/state') || scope.row.is_button == 1"
+                :disabled="!proxy.$filter.isAuth('/product/store/category/state')"
                 v-model="scope.row.status"
                 :active-value="1"
                 :inactive-value="0"
