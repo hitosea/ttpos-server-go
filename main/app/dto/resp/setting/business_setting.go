@@ -27,9 +27,9 @@ type Business struct {
 	DeliveryPriceRatio        uint                        `json:"delivery_price_ratio"`         // 外送商品价格和商品原价比例. 取值范围1-300， 表示原价的1%到300%
 	StartSerialNo             string                      `json:"start_serial_no"`              // 开始序列号
 	// 分批商品相关
-	IsBatch         string `json:"is_batch"`          // 是否是分批商品 0-否 1-是
-	BatchProductNum uint   `json:"batch_product_num"` // 分批商品数量
-	BatchTagNum     uint   `json:"batch_tag_num"`     // 分批类型数量
+	IsBatch           string   `json:"is_batch"`            // 是否是分批商品 0-否 1-是
+	BatchProductUuids []uint64 `json:"batch_product_uuids"` // 分批商品UUID列表
+	BatchTagNum       uint     `json:"batch_tag_num"`       // 分批类型数量
 }
 
 type ShopBusiness struct {

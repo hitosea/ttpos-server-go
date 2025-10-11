@@ -632,3 +632,8 @@ type BatchTagSortItem struct {
 type BatchTagSortReq struct {
 	List []BatchTagSortItem `json:"list"` // 分批类型排序列表
 }
+
+// ProductBatchTypeSaveReq 分批商品保存请求
+type SaveBatchProductReq struct {
+	Uuids []uint64 `json:"uuids" binding:"required"` // 分批商品UUID列表, product_package_uuids
+}

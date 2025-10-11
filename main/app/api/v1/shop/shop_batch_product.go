@@ -28,7 +28,7 @@ type BatchProductHandler struct {
 // @Security JwtToken
 // @Success 200 {object} product_resp.ProductBatchTypeList "成功"
 // @Failure 400 {object} nil "错误请求"
-// @Router /shop/batch_tag/list [get]
+// @Router /shop/batch/tag/list [get]
 func (h *BatchProductHandler) GetBatchTagList(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	listReq := req.BatchTagListReq{}
@@ -55,7 +55,7 @@ func (h *BatchProductHandler) GetBatchTagList(c *gin.Context) {
 // @Param uuid query string false "分批类型UUID"
 // @Success 200 {object} product_resp.ProductBatchTypeDetail "成功"
 // @Failure 400 {object} nil "错误请求"
-// @Router /shop/batch_tag [get]
+// @Router /shop/batch/tag [get]
 func (h *BatchProductHandler) GetBatchTag(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	detailReq := req.BatchTagReq{}
@@ -81,7 +81,7 @@ func (h *BatchProductHandler) GetBatchTag(c *gin.Context) {
 // @Param data body req.ProductBatchTypeAddReq true "分批类型添加请求"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
-// @Router /shop/batch_tag/add [post]
+// @Router /shop/batch/tag/add [post]
 func (h *BatchProductHandler) AddBatchTag(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	addReq := req.BatchTagAddReq{}
@@ -107,7 +107,7 @@ func (h *BatchProductHandler) AddBatchTag(c *gin.Context) {
 // @Param data body req.ProductBatchTypeEditReq true "分批类型编辑请求"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
-// @Router /shop/batch_tag/edit [post]
+// @Router /shop/batch/tag/edit [post]
 func (h *BatchProductHandler) EditBatchTag(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	editReq := req.BatchTagEditReq{}
@@ -133,7 +133,7 @@ func (h *BatchProductHandler) EditBatchTag(c *gin.Context) {
 // @Param data body req.ProductBatchTypeDeleteReq true "分批类型删除请求"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
-// @Router /shop/batch_tag [delete]
+// @Router /shop/batch/tag [delete]
 func (h *BatchProductHandler) DeleteBatchTag(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	deleteReq := req.BatchTagDeleteReq{}
@@ -159,7 +159,7 @@ func (h *BatchProductHandler) DeleteBatchTag(c *gin.Context) {
 // @Param data body req.ProductBatchTypeSortReq true "分批类型排序请求"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
-// @Router /shop/batch_tag/sort [post]
+// @Router /shop/batch/tag/sort [post]
 func (h *BatchProductHandler) SortBatchTag(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	sortReq := req.BatchTagSortReq{}
@@ -185,7 +185,7 @@ func (h *BatchProductHandler) SortBatchTag(c *gin.Context) {
 // @Param data body req.ProductBatchTypeColorUsageReq true "色块使用情况请求"
 // @Success 200 {object} []product_resp.ProductBatchTypeColorUsage "成功"
 // @Failure 400 {object} nil "错误请求"
-// @Router /shop/batch_tag/color_usage [post]
+// @Router /shop/batch/tag/color_usage [post]
 func (h *BatchProductHandler) GetBatchTagColorUsage(c *gin.Context) {
 	ctx := helper.GetContext(c)
 
@@ -195,6 +195,32 @@ func (h *BatchProductHandler) GetBatchTagColorUsage(c *gin.Context) {
 		return
 	}
 	helper.Success(c, res)
+}
+
+// SaveBatchProduct 保存分批商品
+// @Summary 保存分批商品
+// @Description 保存分批商品
+// @Tags 商家端.分批商品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductBatchTypeSaveReq true "分批商品保存请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/batch/product/save [post]
+func (h *BatchProductHandler) SaveBatchProduct(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	saveReq := req.SaveBatchProductReq{}
+	if err := c.ShouldBindJSON(&saveReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	err := h.productSrv.SaveBatchProduct(ctx, saveReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil, "保存成功")
 }
 
 func RegisterBatchProductHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
@@ -222,12 +248,13 @@ func RegisterBatchProductHandlers(router gin.IRouter, dbm *database.DBManager, c
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		// 分批类型相关接口
-		privateApi.GET("/batch_tag/list", batchHandler.GetBatchTagList)               // 获取分批类型列表
-		privateApi.GET("/batch_tag", batchHandler.GetBatchTag)                        // 获取分批类型详情
-		privateApi.POST("/batch_tag/add", batchHandler.AddBatchTag)                   // 添加分批类型
-		privateApi.POST("/batch_tag/edit", batchHandler.EditBatchTag)                 // 编辑分批类型
-		privateApi.DELETE("/batch_tag", batchHandler.DeleteBatchTag)                  // 删除分批类型
-		privateApi.POST("/batch_tag/sort", batchHandler.SortBatchTag)                 // 排序分批类型
-		privateApi.POST("/batch_tag/color_usage", batchHandler.GetBatchTagColorUsage) // 获取色块被选择情况
+		privateApi.GET("/batch/tag/list", batchHandler.GetBatchTagList)               // 获取分批类型列表
+		privateApi.GET("/batch/tag", batchHandler.GetBatchTag)                        // 获取分批类型详情
+		privateApi.POST("/batch/tag/add", batchHandler.AddBatchTag)                   // 添加分批类型
+		privateApi.POST("/batch/tag/edit", batchHandler.EditBatchTag)                 // 编辑分批类型
+		privateApi.DELETE("/batch/tag", batchHandler.DeleteBatchTag)                  // 删除分批类型
+		privateApi.POST("/batch/tag/sort", batchHandler.SortBatchTag)                 // 排序分批类型
+		privateApi.POST("/batch/tag/color_usage", batchHandler.GetBatchTagColorUsage) // 获取色块被选择情况
+		privateApi.POST("/batch/product/save", batchHandler.SaveBatchProduct)         // 保存分批商品
 	}
 }

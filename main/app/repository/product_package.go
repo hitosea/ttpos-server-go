@@ -21,7 +21,8 @@ type IProductPackageQueryRepo interface {
 	GetProductPackageBoms(productPackageUuid uint64) (*model.ProductPackage, error) // 获取商品包的库存信息
 	GetProductPackageBaseInfoByBomUuid(flavorBomUuid uint64) (*model.ProductBom, error)
 	GetProductPackageListByUuids(uuids []uint64) ([]*model.ProductPackage, error)
-	GetProductPackageBatchTagCount() (int64, error) // 获取分批商品数量
+	GetProductPackageBatchTagCount() ([]uint64, error) // 获取分批商品数量
+	SetProductPackageBatch(uuids []uint64) error       // 将is_batch设置为1
 }
 
 type productPackageRepoImpl struct {
@@ -186,11 +187,20 @@ func (r *productPackageRepoImpl) SubActualSaleNum(productPackageUuid uint64, sal
 }
 
 // GetProductPackageBatchTagCount 获取分批商品数量
-func (r *productPackageRepoImpl) GetProductPackageBatchTagCount() (int64, error) {
-	var count int64
-	err := r.db.Model(&model.ProductPackage{}).Where("is_batch <> ?", 0).Where("delete_time = ?", 0).Count(&count).Error
+func (r *productPackageRepoImpl) GetProductPackageBatchTagCount() ([]uint64, error) {
+	var productPackageBatchTagCounts []uint64
+	err := r.db.Model(&model.ProductPackage{}).Where("is_batch <> ?", 0).Where("delete_time = ?", 0).Select("uuid").Scan(&productPackageBatchTagCounts).Error
 	if err != nil {
-		return 0, errors.WithMessage(err)
+		return nil, errors.WithMessage(err)
 	}
-	return count, nil
+	return productPackageBatchTagCounts, nil
+}
+
+// 根据uuids将is_batch设置为1
+func (r *productPackageRepoImpl) SetProductPackageBatch(uuids []uint64) error {
+	err := r.db.Model(&model.ProductPackage{}).Where("uuid IN ?", uuids).Updates(map[string]any{"is_batch": 1}).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
 }

@@ -155,6 +155,7 @@ type IProductSrv interface {
 	DeleteBatchTag(ctx context.Context, req req.BatchTagDeleteReq) error                                      // 删除分批类型
 	SortBatchTag(ctx context.Context, req req.BatchTagSortReq) error                                          // 排序分批类型
 	GetBatchTagColorUsage(ctx context.Context) (*product_resp.BatchTagColorUsageList, error)                  // 获取色块被选择情况
+	SaveBatchProduct(ctx context.Context, req req.SaveBatchProductReq) error                                  // 保存分批商品
 
 	SyncProductShopCategory(ctx context.Context) error // 同步产品分类
 	SyncProductTax(ctx context.Context) error          // 同步商品税类
@@ -7507,4 +7508,15 @@ func (s *productSrv) GetBatchTagColorUsage(ctx context.Context) (*product_resp.B
 	return &product_resp.BatchTagColorUsageList{
 		List: colorUsageMap,
 	}, nil
+}
+
+// SaveBatchProduct 保存分批商品
+func (s *productSrv) SaveBatchProduct(ctx context.Context, req req.SaveBatchProductReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	productPackageRepo := repository.NewProductPackageRepo(db)
+	err := productPackageRepo.SetProductPackageBatch(req.Uuids)
+	if err != nil {
+		return errors.WithMessage(err, "保存分批商品失败")
+	}
+	return nil
 }

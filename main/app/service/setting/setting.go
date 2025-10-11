@@ -561,11 +561,11 @@ func (s *Srv) GetBusinessSetting(ctx context.Context) (setting.Business, error) 
 		db := s.dbm.GetDB(ctx.GetCompanyUuid())
 		// 分批商品数量
 		productPackageRepo := repository.NewProductPackageRepo(db)
-		batchProductNum, err := productPackageRepo.GetProductPackageBatchTagCount()
+		batchProductUuids, err := productPackageRepo.GetProductPackageBatchTagCount()
 		if err != nil {
 			return business, errors.WithMessage(err)
 		}
-		defaultBusiness.BatchProductNum = uint(batchProductNum)
+		defaultBusiness.BatchProductUuids = batchProductUuids
 
 		// 分批类型数量
 		batchTagNum, err := repository.NewBatchTagRepo(db).GetBatchTagCount()
