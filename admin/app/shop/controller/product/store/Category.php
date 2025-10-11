@@ -145,6 +145,7 @@ class Category extends Controller
      * @Apidoc\Method ("POST")
      * @Apidoc\Url("/index.php/shop/product.store.category/set")
      * @Apidoc\Param("category_id", type="int", require=true, desc="分类id")
+     * @Apidoc\Param("status", type="int", require=true, desc="状态: 0-禁用 1-启用")
      * @Apidoc\Returned()
      */
     public function set($category_id)

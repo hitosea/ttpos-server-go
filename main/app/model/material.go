@@ -34,6 +34,7 @@ type Material struct {
 	NotBaseUnitList     []*MaterialUnit    `gorm:"foreignKey:material_uuid;references:uuid"`            // 非基准单位列表
 	ImageFile           *File              `gorm:"foreignKey:image_uuid;references:uuid"`               // 图片
 	RelatedMaterialList []*RelatedMaterial `gorm:"foreignKey:material_uuid;references:uuid"`            // 规格/加料关联材料
+	WarehouseItem       []*WarehouseItem   `gorm:"foreignKey:material_uuid;references:uuid"`            // 仓库物品库存
 }
 
 func (model *Material) SetNil() {

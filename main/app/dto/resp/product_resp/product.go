@@ -269,14 +269,15 @@ type ProductSauceDetail struct {
 
 // ProductShopCategory 商品类别（商家端）
 type ProductShopCategory struct {
-	Uuid       uint64                      `json:"uuid"`        // 商品类别UUID
-	Name       string                      `json:"name"`        // 商品类别名称
-	ParentUuid uint64                      `json:"parent_uuid"` // 父级类别UUID
-	IsSpecial  bool                        `json:"is_special"`  // 是否特色类别
-	Sort       uint                        `json:"sort"`        // 商品类别排序
-	Status     int                         `json:"status"`      // 商品类别状态 0-关闭 1-开启
-	IsEditable bool                        `json:"is_editable"` // 是否可编辑
-	Children   ProductShopCategoryListResp `json:"children"`    // 子级类别
+	Uuid        uint64                      `json:"uuid"`         // 商品类别UUID
+	Name        string                      `json:"name"`         // 商品类别名称
+	ParentUuid  uint64                      `json:"parent_uuid"`  // 父级类别UUID
+	IsSpecial   bool                        `json:"is_special"`   // 是否特色类别
+	Sort        uint                        `json:"sort"`         // 商品类别排序
+	Status      int                         `json:"status"`       // 商品类别状态 0-关闭 1-开启
+	IsEditable  bool                        `json:"is_editable"`  // 是否可编辑
+	CategoryKey string                      `json:"category_key"` // 商品类别关键字
+	Children    ProductShopCategoryListResp `json:"children"`     // 子级类别
 }
 
 // ProductShopCategoryListResp 商品类别列表响应（商家端）
@@ -296,6 +297,7 @@ type ProductShopCategoryDetailResp struct {
 	ChildCount   int64              `json:"child_count"`   // 子级数量
 	Code         string             `json:"code"`          // 分类编码
 	IsEditable   bool               `json:"is_editable"`   // 是否可编辑
+	CategoryKey  string             `json:"category_key"`  // 商品类别关键字
 }
 
 type ProductAttributeGroupItem struct {
