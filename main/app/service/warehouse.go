@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/rpc/erp"
+	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
@@ -33,27 +34,35 @@ type IWarehouseSrv interface {
 	GetWarehouse(ctx context.Context, req req.WarehouseReq) (resp.WarehouseResp, error)                                     // 获取仓库
 	GetWarehouseInOutList(ctx context.Context, req req.GetWarehouseInOutListReq) (resp.WarehouseInOutListResp, error)       // 出入库明细列表
 	CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error)                  // 检查仓库编码是否存在
+	GetOtherOrgList(ctx context.Context) (resp.OtherOrgListResp, error)                                                     // 对方机构列表
 
 	SyncWarehouse(ctx context.Context) error             // 同步仓库列表
 	SyncDefaultWarehouseStock(ctx context.Context) error // 同步默认仓库库存
 }
 
 // NewWarehouseSrv 创建仓库服务
-func NewWarehouseSrv(dbm *database.DBManager) IWarehouseSrv {
-	return NewWarehouseSrvImpl(dbm)
+func NewWarehouseSrv(dbm *database.DBManager, settingSrv setting.ISrv) IWarehouseSrv {
+	return NewWarehouseSrvImpl(dbm, settingSrv)
 }
 
 // warehouseSrv 仓库服务实现
 type warehouseSrv struct {
-	dbm *database.DBManager
+	dbm        *database.DBManager
+	settingSrv setting.ISrv
 }
 
 // NewWarehouseSrvImpl 创建仓库服务实现
-func NewWarehouseSrvImpl(dbm *database.DBManager) IWarehouseSrv {
+func NewWarehouseSrvImpl(dbm *database.DBManager, settingSrv setting.ISrv) IWarehouseSrv {
 	return &warehouseSrv{
 		dbm: dbm,
 	}
 }
+
+// OtherOrgCode 对方机构编码
+const (
+	OtherOrgCodeSupplierErpCode = "supplier-erp-code"
+	OtherOrgCodeCompanyUuid     = "company-uuid"
+)
 
 // GetWarehouseList 获取仓库列表
 func (s *warehouseSrv) GetWarehouseList(ctx context.Context, req req.WarehouseListReq, isHeadquarters ...bool) (resp.WarehouseListResp, error) {
@@ -187,7 +196,7 @@ func (s *warehouseSrv) CreateWarehouse(ctx context.Context, addReq req.CreateWar
 		"transit": "Transit",
 	}
 	err = db.Transaction(func(tx *gorm.DB) error {
-		warehouseName, err := GetEnName(ctx, addReq.LocaleName)
+		warehouseName, err := GetEnName(ctx, s.settingSrv, addReq.LocaleName)
 		if err != nil {
 			return errors.WithMessage(errors.New("翻译失败"), err.Error())
 		}
@@ -305,7 +314,7 @@ func (s *warehouseSrv) UpdateWarehouse(ctx context.Context, updateReq req.Update
 		"transit": "Transit",
 	}
 	err = db.Transaction(func(tx *gorm.DB) error {
-		warehouseName, err := GetEnName(ctx, updateReq.LocaleName)
+		warehouseName, err := GetEnName(ctx, s.settingSrv, updateReq.LocaleName)
 		if err != nil {
 			return errors.WithMessage(errors.New("翻译失败"), err.Error())
 		}
@@ -520,6 +529,9 @@ func (s *warehouseSrv) buildWarehouseInOutResp(log model.WarehouseInOutLog) resp
 		// 仓库信息
 		WarehouseUuid: log.WarehouseUuid,
 		WarehouseName: warehouseName,
+		// 对方机构
+		OtherOrgType: log.OtherOrgType,
+		OtherOrgName: log.OtherOrgName,
 	}
 }
 
@@ -666,6 +678,27 @@ func (s *warehouseSrv) GetWarehouseInOutList(ctx context.Context, req req.GetWar
 	if req.OrderNo != "" {
 		opts = append(opts, warehouseInOutLogRepo.WhereOrderNo(req.OrderNo))
 	}
+	// 对方机构Code列表
+	if len(req.OrgCodes) > 0 {
+		supplierErpCodes := []string{}
+		companyUuids := []uint64{}
+		for _, orgCode := range req.OrgCodes {
+			orgCodeArr := strings.Split(orgCode, ":")
+			if len(orgCodeArr) < 2 {
+				continue
+			}
+			if orgCodeArr[0] == OtherOrgCodeSupplierErpCode {
+				supplierErpCodes = append(supplierErpCodes, orgCodeArr[1])
+			} else if orgCodeArr[0] == OtherOrgCodeCompanyUuid {
+				if companyUuid, err := strconv.ParseUint(orgCodeArr[1], 10, 64); err == nil {
+					companyUuids = append(companyUuids, companyUuid)
+				}
+			}
+		}
+		if len(supplierErpCodes) > 0 || len(companyUuids) > 0 {
+			opts = append(opts, warehouseInOutLogRepo.WhereSupplierErpCodesOrCompanyUuids(supplierErpCodes, companyUuids))
+		}
+	}
 
 	warehouseInOutLogs, total, err := warehouseInOutLogRepo.GetListWithPagination(req.PageNo, req.PageSize, opts...)
 	if err != nil {
@@ -740,11 +773,9 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 			warehouseHeadquarterMap[warehouse.Name] = headquarter.Uuid
 		}
 		var headquarterWarehouses []model.Warehouse
-		s.dbm.GetDB(headquarter.Uuid).Model(&model.Warehouse{}).Scopes(repository.NotDeleted).Find(&headquarterWarehouses)
+		s.dbm.GetDB(headquarter.Uuid).Model(&model.Warehouse{}).Where("erp_code != ''").Find(&headquarterWarehouses)
 		for _, headquarterWarehouse := range headquarterWarehouses {
-			if headquarterWarehouse.ErpCode != "" {
-				headquarterWarehouseMap[headquarterWarehouse.ErpCode] = headquarterWarehouse
-			}
+			headquarterWarehouseMap[headquarterWarehouse.ErpCode] = headquarterWarehouse
 		}
 	}
 
@@ -776,7 +807,12 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 	}
 	err = db.Transaction(func(tx *gorm.DB) error {
 		for _, erpWarehouse := range warehouseList {
-			headquarterUuid, _ := warehouseHeadquarterMap[erpWarehouse.Name]
+			headquarterWarehouse := headquarterWarehouseMap[erpWarehouse.Name]
+			// 如果总部仓库已删除，则也要标记本店数据库中的总部仓库为删除
+			if headquarterWarehouse.Uuid > 0 && headquarterWarehouse.DeleteTime != 0 {
+				tx.Model(&model.Warehouse{}).Where("erp_code = ?", erpWarehouse.Name).Update("delete_time", headquarterWarehouse.DeleteTime)
+				continue
+			}
 			localeName, ok := multiLanguageMap[erpWarehouse.AliasName]
 			if !ok {
 				localeName = dto.LocaleResponse{
@@ -792,9 +828,9 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 				}
 			}
 
-			warehouse := warehouseMap[erpWarehouse.Name]
-			headquarterWarehouse := headquarterWarehouseMap[erpWarehouse.Name]
+			headquarterUuid := warehouseHeadquarterMap[erpWarehouse.Name]
 
+			warehouse := warehouseMap[erpWarehouse.Name]
 			contact := warehouse.Contact
 			phone := warehouse.Phone
 			address := warehouse.Address
@@ -976,6 +1012,7 @@ func (s *warehouseSrv) SyncDefaultWarehouseStock(ctx context.Context) error {
 	return err
 }
 
+// CheckCodeExists 检查仓库编码是否存在
 func (s *warehouseSrv) CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	warehouseRepo := repository.NewWarehouseRepo(db)
@@ -984,4 +1021,45 @@ func (s *warehouseSrv) CheckCodeExists(ctx context.Context, req req.CheckCodeExi
 		return resp.CheckNameCodeExistsResp{}, errors.WithMessage(err, "检查仓库编码是否存在失败")
 	}
 	return resp.CheckNameCodeExistsResp{Exists: exists}, nil
+}
+
+// GetOtherOrgList 获取对方机构列表
+func (s *warehouseSrv) GetOtherOrgList(ctx context.Context) (resp.OtherOrgListResp, error) {
+	db := ctx.GetDB()
+	companySetting := ctx.GetCompanySetting()
+	supplierRepo := repository.NewSupplierRepo(db)
+
+	// 获取供应商列表
+	suppliers, err := supplierRepo.GetList(
+		supplierRepo.OrderByCreateTime(true),
+		supplierRepo.WhereNotDeleted(),
+	)
+	if err != nil {
+		return resp.OtherOrgListResp{}, errors.WithMessage(err, "获取对方机构列表失败")
+	}
+	otherOrgs := make([]resp.OtherOrgResp, 0, len(suppliers))
+	for _, supplier := range suppliers {
+		otherOrgs = append(otherOrgs, resp.OtherOrgResp{
+			Name:          supplier.Name,
+			Code:          fmt.Sprintf("%s:%s", OtherOrgCodeSupplierErpCode, supplier.ErpCode), // 供应商erp编码前缀
+			IsHeadquarter: supplier.HeadquarterUuid > 0,                                        // 供应商是否总部机构
+		})
+	}
+
+	//
+	if companySetting.IsHeadquarter() {
+		// 获取公司列表
+		companies, err := repository.NewCompanyRepo(s.dbm.GetDB(0)).GetListByHeadquarterUuid(ctx.GetCompanyUuid())
+		if err != nil {
+			return resp.OtherOrgListResp{}, errors.WithMessage(err, "获取公司列表失败")
+		}
+		for _, company := range companies {
+			otherOrgs = append(otherOrgs, resp.OtherOrgResp{
+				Name: company.Name,
+				Code: fmt.Sprintf("%s:%s", OtherOrgCodeCompanyUuid, strconv.FormatUint(company.Uuid, 10)), // 公司uuid前缀
+			})
+		}
+	}
+
+	return resp.OtherOrgListResp{List: otherOrgs}, nil
 }

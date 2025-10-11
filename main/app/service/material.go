@@ -584,7 +584,7 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 			return errors.WithMessage(err, "默认仓库不存在")
 		}
 		params.SetWarehouseUuid(warehouseUuid.Uuid)
-		material, _, err := addMaterial(ctx, tx, params)
+		material, _, err := addMaterial(ctx, tx, s.settingSrv, params)
 		if err != nil {
 			return errors.WithMessage(err)
 		}
@@ -616,7 +616,7 @@ func (s *materialSrv) AddMaterial(ctx context.Context, req req.MaterialAddReq) e
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-		material, materialAddErpReq, err := addMaterial(ctx, tx, req)
+		material, materialAddErpReq, err := addMaterial(ctx, tx, s.settingSrv, req)
 		if err != nil {
 			return errors.WithMessage(err)
 		}
@@ -647,7 +647,7 @@ func (s *materialSrv) AddMaterial(ctx context.Context, req req.MaterialAddReq) e
 	return nil
 }
 
-func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (*model.Material, *req.MaterialAddErpReq, error) {
+func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, request req.MaterialAddReq) (*model.Material, *req.MaterialAddErpReq, error) {
 	// 非基准单位不能重复
 	requestUnitList := make(map[uint64]bool)
 	for _, unit := range request.UnitList {
@@ -784,7 +784,7 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 		}
 	}
 
-	getEnName, err := GetEnName(ctx, request.LocaleName)
+	getEnName, err := GetEnName(ctx, settingSrv, request.LocaleName)
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "翻译失败")
 	}
@@ -795,7 +795,7 @@ func addMaterial(ctx context.Context, tx *gorm.DB, request req.MaterialAddReq) (
 		return nil, nil, errors.WithMessage(err, "获取物品分类失败")
 	}
 
-	getMaterialCategoryName, err := GetEnName(ctx, materialCategory.MultiLanguageName.GetNames())
+	getMaterialCategoryName, err := GetEnName(ctx, settingSrv, materialCategory.MultiLanguageName.GetNames())
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "翻译失败")
 	}
@@ -996,7 +996,7 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 
 		if ctx.GetCompany().IsOpenErp() {
 			erpSrv := erp.NewIErpSrv(s.dbm)
-			enName, err := GetEnName(ctx, existingMaterial.MultiLanguageName.GetNames())
+			enName, err := GetEnName(ctx, s.settingSrv, request.LocaleName)
 			if err != nil {
 				return errors.WithMessage(err, "翻译失败")
 			}
@@ -1029,7 +1029,7 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 				return errors.WithMessage(err, "获取物品分类失败")
 			}
 			materialCategoryName := language.JsonToLocaleResponse(materialCategory.MultiLanguageName.ToJson())
-			getMaterialCategoryName, err := GetEnName(ctx, *materialCategoryName)
+			getMaterialCategoryName, err := GetEnName(ctx, s.settingSrv, *materialCategoryName)
 			if err != nil {
 				return errors.WithMessage(err, "翻译失败")
 			}
@@ -1305,7 +1305,7 @@ func (s *materialSrv) UpdateMaterialStatusBatch(ctx context.Context, request req
 					continue
 				}
 
-				enName, err := GetEnName(ctx, existingMaterial.MultiLanguageName.GetNames())
+				enName, err := GetEnName(ctx, s.settingSrv, existingMaterial.MultiLanguageName.GetNames())
 				if err != nil {
 					return errors.WithMessage(err, "翻译失败")
 				}
@@ -1509,7 +1509,7 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 						continue
 					}
 
-					enName, err := GetEnName(ctx, material.MultiLanguageName.GetNames())
+					enName, err := GetEnName(ctx, s.settingSrv, material.MultiLanguageName.GetNames())
 					if err != nil {
 						ctx.Log().Error("翻译失败", zap.Error(err))
 						return
@@ -1524,7 +1524,7 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 						})
 					}
 
-					getMaterialCategoryName, err := GetEnName(ctx, materialCategory.MultiLanguageName.GetNames())
+					getMaterialCategoryName, err := GetEnName(ctx, s.settingSrv, materialCategory.MultiLanguageName.GetNames())
 					if err != nil {
 						ctx.Log().Error("翻译失败", zap.Error(err))
 						return
@@ -1735,7 +1735,7 @@ func (s *materialSrv) addSauceBomCard(ctx context.Context, req req.ProductBomCar
 				erpnextUom := material.GetUnitErpnextUom()
 				// 兼容开发阶段产生的脏数据
 				if erpnextUom == "" {
-					enName, err := GetEnName(ctx, unitName.GetNames())
+					enName, err := GetEnName(ctx, s.settingSrv, unitName.GetNames())
 					if err != nil {
 						return errors.WithMessage(err, "翻译失败")
 					}
@@ -1887,7 +1887,7 @@ func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomC
 				erpnextUom := material.GetUnitErpnextUom()
 				// 兼容开发阶段产生的脏数据
 				if erpnextUom == "" {
-					enName, err := GetEnName(ctx, unitName.GetNames())
+					enName, err := GetEnName(ctx, s.settingSrv, unitName.GetNames())
 					if err != nil {
 						return errors.WithMessage(err, "翻译失败")
 					}
@@ -2184,7 +2184,7 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		// 创建物品
-		material, materialAddErpReq, err := addMaterial(ctx, db, req.MaterialAddReq)
+		material, materialAddErpReq, err := addMaterial(ctx, db, s.settingSrv, req.MaterialAddReq)
 		if err != nil {
 			return errors.WithMessage(err)
 		}
@@ -2273,7 +2273,7 @@ func (s *materialSrv) ImportProductBomCard(ctx context.Context, req req.ProductB
 				erpnextUom := material.GetUnitErpnextUom()
 				if erpnextUom == "" {
 					unitName := model.NewMultiLanguageName(material.UnitName)
-					enName, err := GetEnName(ctx, unitName.GetNames())
+					enName, err := GetEnName(ctx, s.settingSrv, unitName.GetNames())
 					if err != nil {
 						return errors.WithMessage(err, "翻译失败")
 					}

@@ -2049,16 +2049,22 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 }
 
 func (s *productSrv) getEnName(ctx context.Context, locale dto.LocaleResponse) (string, error) {
-	return GetEnName(ctx, locale)
+	return GetEnName(ctx, s.settingSrv, locale)
 }
 
-func GetEnName(ctx context.Context, locale dto.LocaleResponse) (string, error) {
+func GetEnName(ctx context.Context, settingSrv setting.ISrv, locale dto.LocaleResponse) (string, error) {
 	enName := locale.EN
 	if enName != "" {
 		return enName, nil
 	}
-	companySetting := ctx.GetCompanySetting()
-	defaultLanguage := companySetting.GetDefaultLanguage()
+	storeSetting, err := settingSrv.GetStoreSetting(ctx)
+	if err != nil {
+		return "", errors.WithMessage(errors.New("获取门店设置失败"), err.Error())
+	}
+	if len(storeSetting.Language) == 0 {
+		return "", errors.New("门店未设置默认语言")
+	}
+	defaultLanguage := storeSetting.Language[0].Name
 	res, err := utils.NewTranslateClient().Translate(ctx.GetContext(), []utils.TranslateItem{
 		{
 			Lang:    defaultLanguage,

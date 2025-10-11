@@ -20,6 +20,26 @@ type WarehouseHandler struct {
 	warehouseSrv service.IWarehouseSrv
 }
 
+// GetWarehouseList 获取对方机构列表
+// @Summary 获取对方机构列表
+// @Description 获取对方机构列表
+// @Tags 商家端.仓库档案
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.OtherOrgListResp} "成功"
+// @Router /shop/warehouse/org/list [get]
+func (h *WarehouseHandler) GetOtherOrgList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	result, err := h.warehouseSrv.GetOtherOrgList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, result)
+}
+
 // GetWarehouseList 获取仓库列表
 // @Summary 获取仓库列表
 // @Description 获取仓库列表，支持分页和筛选
@@ -182,7 +202,7 @@ func (h *WarehouseHandler) SetDefaultWarehouse(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param request body req.GetWarehouseInOutListReq true "获取仓库出入库明细列表请求"
+// @Param request query req.GetWarehouseInOutListReq true "获取仓库出入库明细列表请求"
 // @Success 200 {object} dto.Response{data=resp.WarehouseInOutListResp} "成功"
 // @Router /shop/warehouse/in_out/list [get]
 func (h *WarehouseHandler) GetWarehouseInOutList(c *gin.Context) {
@@ -261,7 +281,7 @@ func RegisterWarehouseHandlers(router gin.IRouter, dbm *database.DBManager, cach
 	statisticsSrv := service.NewStatisticsSrv()
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
-	warehouseSrv := service.NewWarehouseSrv(dbm)
+	warehouseSrv := service.NewWarehouseSrv(dbm, settingSrv)
 
 	// 初始化控制器
 	warehouseHandler := &WarehouseHandler{
@@ -282,5 +302,7 @@ func RegisterWarehouseHandlers(router gin.IRouter, dbm *database.DBManager, cach
 		privateApi.GET("/warehouse/code_exists", warehouseHandler.CheckCodeExists)                  // 检查仓库编码是否存在
 
 		privateApi.GET("/warehouse/in_out/list", warehouseHandler.GetWarehouseInOutList) // 出入库明细列表
+
+		privateApi.GET("/warehouse/org/list", warehouseHandler.GetOtherOrgList) // 对方机构列表
 	}
 }

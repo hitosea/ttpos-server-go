@@ -66,6 +66,7 @@ message ClosePosEntryReq {
   string pos_open_entry_name = 1; // 开帐名称,必填
   int64 period_end_date = 2; // 结账时间,必填
   repeated ClosePosEntryDetail close_pos_entry_detail = 3; // 关帐详情,必填
+  int64 invoice_count = 4; // 发票数量,包含退款单数，不包含取消的单数
 }
 
 message ClosePosEntryDetail {
