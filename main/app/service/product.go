@@ -639,7 +639,6 @@ func (s *productSrv) GetProductShopCategoryList(ctx context.Context, req req.Pro
 	// 查询/关联
 	opts := []repository.DBOption{
 		productRepo.WithMultiLanguageName(),
-		productRepo.WhereCategoryKey(""),
 		commonRepo.WhereBySoftDelete(),
 		commonRepo.SortWithIsSpecial("DESC"),
 		commonRepo.SortWithSort("ASC"),
@@ -675,13 +674,14 @@ func (s *productSrv) GetProductShopCategoryList(ctx context.Context, req req.Pro
 			for _, child := range categories {
 				if child.ParentUuid != 0 && child.ParentUuid == category.Uuid {
 					children = append(children, product_resp.ProductShopCategory{
-						Uuid:       child.Uuid,
-						Name:       child.MultiLanguageName.GetNameByLang(language),
-						ParentUuid: child.ParentUuid,
-						IsSpecial:  child.IsSpecial == 1,
-						Sort:       child.Sort,
-						Status:     child.Status,
-						IsEditable: isEditable(ctx, child.HeadquarterUuid),
+						Uuid:        child.Uuid,
+						Name:        child.MultiLanguageName.GetNameByLang(language),
+						ParentUuid:  child.ParentUuid,
+						IsSpecial:   child.IsSpecial == 1,
+						Sort:        child.Sort,
+						Status:      child.Status,
+						IsEditable:  isEditable(ctx, child.HeadquarterUuid),
+						CategoryKey: child.CategoryKey,
 						Children: product_resp.ProductShopCategoryListResp{
 							List: make([]product_resp.ProductShopCategory, 0),
 						},
@@ -689,13 +689,14 @@ func (s *productSrv) GetProductShopCategoryList(ctx context.Context, req req.Pro
 				}
 			}
 			list = append(list, product_resp.ProductShopCategory{
-				Uuid:       category.Uuid,
-				Name:       category.MultiLanguageName.GetNameByLang(language),
-				ParentUuid: category.ParentUuid,
-				IsSpecial:  category.IsSpecial == 1,
-				Sort:       category.Sort,
-				Status:     category.Status,
-				IsEditable: isEditable(ctx, category.HeadquarterUuid),
+				Uuid:        category.Uuid,
+				Name:        category.MultiLanguageName.GetNameByLang(language),
+				ParentUuid:  category.ParentUuid,
+				IsSpecial:   category.IsSpecial == 1,
+				Sort:        category.Sort,
+				Status:      category.Status,
+				IsEditable:  isEditable(ctx, category.HeadquarterUuid),
+				CategoryKey: category.CategoryKey,
 				Children: product_resp.ProductShopCategoryListResp{
 					List: children,
 				},
@@ -775,6 +776,7 @@ func (s *productSrv) GetProductShopCategory(ctx context.Context, req req.Product
 		ChildCount:   childCount,
 		Code:         productCategory.Code,
 		IsEditable:   isEditable(ctx, productCategory.HeadquarterUuid),
+		CategoryKey:  productCategory.CategoryKey,
 	}, nil
 }
 
@@ -1328,6 +1330,9 @@ func (s *productSrv) DeleteProductShopCategory(ctx context.Context, deleteReq re
 	)
 	if productCategory.Uuid == 0 || err != nil {
 		return errors.New("分类不存在")
+	}
+	if productCategory.CategoryKey == "all" {
+		return errors.New("不可删除的分类")
 	}
 	opts := []repository.DBOption{
 		commonRepo.WhereBySoftDelete(),
