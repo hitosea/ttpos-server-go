@@ -373,7 +373,7 @@ func (h *purchaseOrderHelper) recordErpStockInLog(
 						WarehouseUuid: targetWarehouse.Uuid,
 						MaterialUuid:  item.MaterialUuid,
 						MaterialCode:  item.MaterialCode,
-						Stock:         100000.00,
+						Stock:         0,
 						ReservedStock: 0,
 						Valuation:     1,
 					}
