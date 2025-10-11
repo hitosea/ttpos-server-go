@@ -84,7 +84,7 @@ func NewRedSyncLock(rs *redsync.Redsync) *RedSyncLock {
 
 // 获取uuid锁
 func (d *RedSyncLock) getUuidLock(uuid uint64) *redsync.Mutex {
-	mutex := d.rs.NewMutex(fmt.Sprintf("%d", uuid))
+	mutex := d.rs.NewMutex(fmt.Sprintf("%d", uuid), redsync.WithExpiry(3*time.Minute))
 	actual, _ := d.uuidLock.LoadOrStore(uuid, mutex)
 	return actual.(*redsync.Mutex)
 }
