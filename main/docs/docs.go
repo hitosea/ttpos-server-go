@@ -5125,6 +5125,84 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/desk/order/cart/batch/cooking": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取分批送厨弹框的销售订单商品列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "获取分批送厨弹框的销售订单商品列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.OrderCartProductBatchCooking"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "分批送厨弹框的销售订单商品列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "分批送厨弹框的销售订单商品列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.OrderCartProductBatchCooking"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/desk/order/cart/cooking": {
             "post": {
                 "security": [
@@ -39532,6 +39610,51 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.OrderCartProductBatchCooking": {
+            "type": "object",
+            "properties": {
+                "batch_tag_uuid": {
+                    "description": "分批类型uuid, 如果已经进行分批送厨，则不为0",
+                    "type": "integer"
+                },
+                "batch_time": {
+                    "description": "分批送厨时间，如果已经进行分批送厨，则不为0",
+                    "type": "integer"
+                },
+                "create_time": {
+                    "description": "下单时间。用于排序",
+                    "type": "integer"
+                },
+                "image": {
+                    "description": "商品图片URL",
+                    "type": "string"
+                },
+                "locale_attribute_name": {
+                    "description": "商品属性",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "locale_name": {
+                    "description": "商品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "send_kitchen_time": {
+                    "description": "送厨时间. 预送厨的时间。用于排序",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "商品uuid sale_order_product_uuid",
+                    "type": "integer"
+                }
+            }
+        },
         "resp.OrderCheckRes": {
             "type": "object",
             "properties": {
@@ -40890,6 +41013,14 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "batch_tag_name": {
+                    "description": "分批类型名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
                 "can_change_num": {
                     "description": "顾客可修改必点数量",
                     "type": "boolean"
@@ -40981,6 +41112,10 @@ const docTemplate = `{
                 "remark": {
                     "description": "备注",
                     "type": "string"
+                },
+                "show_batch_tag": {
+                    "description": "是否显示分批类型",
+                    "type": "boolean"
                 },
                 "status": {
                     "description": "0: 未送厨 1:已送厨 2:制作完成（出餐）",

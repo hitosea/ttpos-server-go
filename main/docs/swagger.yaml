@@ -9029,6 +9029,35 @@ definitions:
           type: integer
         type: array
     type: object
+  resp.OrderCartProductBatchCooking:
+    properties:
+      batch_tag_uuid:
+        description: 分批类型uuid, 如果已经进行分批送厨，则不为0
+        type: integer
+      batch_time:
+        description: 分批送厨时间，如果已经进行分批送厨，则不为0
+        type: integer
+      create_time:
+        description: 下单时间。用于排序
+        type: integer
+      image:
+        description: 商品图片URL
+        type: string
+      locale_attribute_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称
+      send_kitchen_time:
+        description: 送厨时间. 预送厨的时间。用于排序
+        type: integer
+      uuid:
+        description: 商品uuid sale_order_product_uuid
+        type: integer
+    type: object
   resp.OrderCheckRes:
     properties:
       product_must_plans:
@@ -9977,6 +10006,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.AboutBuffet'
         description: 自助餐信息
+      batch_tag_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 分批类型名称
       can_change_num:
         description: 顾客可修改必点数量
         type: boolean
@@ -10040,6 +10073,9 @@ definitions:
       remark:
         description: 备注
         type: string
+      show_batch_tag:
+        description: 是否显示分批类型
+        type: boolean
       status:
         description: '0: 未送厨 1:已送厨 2:制作完成（出餐）'
         type: integer
@@ -15821,6 +15857,49 @@ paths:
       security:
       - JwtToken: []
       summary: 取消桌台订单
+      tags:
+      - 收银端.桌台
+  /cashier/desk/order/cart/batch/cooking:
+    get:
+      consumes:
+      - application/json
+      description: 获取分批送厨弹框的销售订单商品列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderCartProductBatchCooking'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取分批送厨弹框的销售订单商品列表
+      tags:
+      - 收银端.桌台
+    post:
+      consumes:
+      - application/json
+      description: 分批送厨弹框的销售订单商品列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderCartProductBatchCooking'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 分批送厨弹框的销售订单商品列表
       tags:
       - 收银端.桌台
   /cashier/desk/order/cart/cooking:
