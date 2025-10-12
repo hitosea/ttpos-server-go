@@ -2808,6 +2808,7 @@
   "物品类别编辑请求": "Redigeringsförfrågan för artikelkategori",
   "物品编辑请求": "Begäran om artikelredigering",
   "物品被禁用，无法交班": "Varan är inaktiverad och kan inte överlämnas",
+  "物料库存不足，物料编码：%s": "Otillräckligt materiallager, materialkod: %s",
   "特色分类不能修改为二级分类": "Särskild kategori kan inte ändras till underkategori",
   "特色分类不能有一级分类": "Särskilda kategorier kan inte ha förstahandskategorier",
   "状态": "Status",

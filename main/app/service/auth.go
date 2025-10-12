@@ -1006,7 +1006,7 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 			Phone:           storeSetting.Phone,
 			TaxNumber:       storeSetting.TaxNumber,
 			TimeZoneList:    storeSetting.TimeZoneList,
-			DefaultLanguage: companySetting.GetDefaultLanguage(),
+			DefaultLanguage: storeSetting.Language[0].Name,
 			LanguageList:    storeSetting.Language,
 			Language:        companySetting.GetLanguages(),
 			CompanyName:     storeSetting.Company,

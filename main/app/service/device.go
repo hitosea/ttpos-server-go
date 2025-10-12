@@ -64,7 +64,7 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 	deviceRepo := repository.NewDeviceRepo(db)
 	// 判断设备绑定上限
 	companySetting := repository.NewCompanySettingRepo(db).Get()
-	if err := s.reachBindLimit(deviceRepo, companySetting, addReq.Source); err != nil {
+	if err := s.reachBindLimit(deviceRepo, companySetting, addReq.Source, addReq.DeviceId); err != nil {
 		return 0, err
 	}
 	// 获取绑定
@@ -156,7 +156,7 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 }
 
 // 检查绑定上限
-func (s *deviceSrv) reachBindLimit(deviceRepo repository.IDeviceRepo, companySetting model.CompanySetting, reqSource string) error {
+func (s *deviceSrv) reachBindLimit(deviceRepo repository.IDeviceRepo, companySetting model.CompanySetting, reqSource, deviceId string) error {
 	type Source struct {
 		Name      string
 		Limit     uint
@@ -172,7 +172,7 @@ func (s *deviceSrv) reachBindLimit(deviceRepo repository.IDeviceRepo, companySet
 		if sourceName != reqSource {
 			continue
 		}
-		if deviceRepo.GetBindCountBySource(sourceName) >= source.Limit {
+		if deviceRepo.GetBindCountBySource(sourceName, deviceId) >= source.Limit {
 			return errors.NewWithCode(source.ErrorCode, source.Name+"登录设备已达上限，请在其他设备上退出登录或联系销售代表")
 		}
 	}

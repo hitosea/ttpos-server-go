@@ -2808,6 +2808,7 @@
   "物品类别编辑请求": "Ürün kategorisi düzenleme isteği",
   "物品编辑请求": "Ürün düzenleme isteği",
   "物品被禁用，无法交班": "Ürün devre dışı bırakıldı, vardiya devri yapılamıyor",
+  "物料库存不足，物料编码：%s": "Malzeme stoğu yetersiz, malzeme kodu: %s",
   "特色分类不能修改为二级分类": "Özel kategori, alt kategoriye dönüştürülemez",
   "特色分类不能有一级分类": "Özel kategoriler birinci seviye kategoriye sahip olamaz",
   "状态": "Durum",
