@@ -26,13 +26,14 @@ type IProductionOrderRepo interface {
 	WhereProductFirstCategoryUuidIn(uuids []uint64) DBOption  // 生产商品分类Uuid条件
 	WhereProductNumGT0() DBOption                             // 送厨商品数量大于0
 
-	SaleBillUuidOpt() DBOption                                            // 历史上菜条件
-	WithSaleOrderProductAll() DBOption                                    // 关联销售订单商品
-	WithProductCategory() DBOption                                        // 关联商品分类
-	WithProductCategoryMultiLanguageName() DBOption                       // 关联商品分类多语言
-	UpdateProduct(opts []DBOption, vars map[string]any) error             // 更新送厨商品
-	UpdateOrder(opts []DBOption, vars map[string]any) error               // 更新送厨单
-	IsProductionFinishedBySaleBillUuid(saleBillUuid uint64) (bool, error) // 检查销售账单下所有生产订单是否完成
+	SaleBillUuidOpt() DBOption                                                                                                                            // 历史上菜条件
+	WithSaleOrderProductAll() DBOption                                                                                                                    // 关联销售订单商品
+	WithProductCategory() DBOption                                                                                                                        // 关联商品分类
+	WithProductCategoryMultiLanguageName() DBOption                                                                                                       // 关联商品分类多语言
+	UpdateProduct(opts []DBOption, vars map[string]any) error                                                                                             // 更新送厨商品
+	UpdateOrder(opts []DBOption, vars map[string]any) error                                                                                               // 更新送厨单
+	IsProductionFinishedBySaleBillUuid(saleBillUuid uint64) (bool, error)                                                                                 // 检查销售账单下所有生产订单是否完成
+	UpdateProductionOrderProductBatchTimeAndBatchTagUuid(saleBillUuid uint64, saleOrderProductUuids []uint64, batchTime int64, batchTagUuid uint64) error // 通过sale_bill_uuid和sale_order_product_uuid更新生产订单商品的batch_time、batch_tag_uuid
 }
 
 // IProductionOrderQueryRepo 生产订单查询仓库接口
@@ -352,4 +353,10 @@ func (r *productionRepo) IsProductionFinishedBySaleBillUuid(saleBillUuid uint64)
 	err := r.db.Model(&model.ProductionOrderProduct{}).Where("sale_bill_uuid = ? AND status < ?",
 		saleBillUuid, constant.ProductionOrderProductStatusFinished).Count(&count).Error
 	return count == 0, errors.WithMessage(err)
+}
+
+// 通过sale_bill_uuid和sale_order_product_uuid更新生产订单商品的batch_time、batch_tag_uuid
+func (r *productionRepo) UpdateProductionOrderProductBatchTimeAndBatchTagUuid(saleBillUuid uint64, saleOrderProductUuids []uint64, batchTime int64, batchTagUuid uint64) error {
+	return r.db.Model(&model.ProductionOrderProduct{}).Where("sale_bill_uuid = ? AND sale_order_product_uuid in (?)", saleBillUuid, saleOrderProductUuids).
+		Update("batch_time", batchTime).Update("batch_tag_uuid", batchTagUuid).Error
 }

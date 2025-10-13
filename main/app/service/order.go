@@ -13697,11 +13697,6 @@ func (s *orderSrv) OrderCartProductBatchCooking(ctx context.Context, req req.Ord
 		return nil, errors.WithMessage(errSaleBill)
 	}
 
-	//batchTag, errBatchTag := repository.NewBatchTagRepo(db).GetBatchTag(repository.CommonRepo.WhereByUuid(req.BatchTagUuid), repository.CommonRepo.WhereBySoftDelete())
-	//if errBatchTag != nil {
-	//	return nil, errors.WithMessage(errBatchTag)
-	//}
-
 	// 获取saleBill中的分批商品
 	saleBillProducts := saleBill.GetSaleOrderProductBatchCookingBySaleOrderUuid(req.SaleOrderProductUuids)
 
@@ -13711,28 +13706,31 @@ func (s *orderSrv) OrderCartProductBatchCooking(ctx context.Context, req req.Ord
 		saleBillProduct.SetCookingBatch(req.BatchTagUuid, batchTime)
 	}
 
-	// 将product_order_product中的分批商品标记为已送厨
-	productionOrderProducts := make([]*model.ProductionOrderProduct, 0)
-	for _, productionOrderProduct := range productionOrderProducts {
-		productionOrderProduct.BatchTagUuid = req.BatchTagUuid
-		productionOrderProduct.BatchTime = batchTime
-		productionOrderProduct.SetUpdate()
-	}
-
 	// 更新saleBill中的最新分批类型的颜色。（每次分批送厨后，都改变一次）
 	saleBill.BatchTagUuid = req.BatchTagUuid
 
-	// if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-	// 	if err := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProductList(saleBillProducts); err != nil {
-	// 		return errors.WithMessage(err)
-	// 	}
-	// 	if err := repository.NewProductionOrderProductRepo(tx).UpdateProductionOrderProductList(productionOrderProducts); err != nil {
-	// 		return errors.WithMessage(err)
-	// 	}
-	// 	return nil
-	// }); err != nil {
-	// 	return nil, errors.WithMessage(err)
-	// }
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		// 更新销售订单商品状态从预送厨变为已送厨
+		if err := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProductList(saleBillProducts); err != nil {
+			return errors.WithMessage(err)
+		}
+		// 更新送厨单商品的batch_time、batch_tag_uuid
+		// 将product_order_product中的分批商品标记为已送厨
+		if err := repository.NewProductionRepo(tx).UpdateProductionOrderProductBatchTimeAndBatchTagUuid(req.SaleBillUuid, req.SaleOrderProductUuids, batchTime, req.BatchTagUuid); err != nil {
+			return errors.WithMessage(err)
+		}
+		// 更新销售账单中的分批类型UUID
+		if err := repository.NewSaleBillRepo(tx).UpdateSaleBillBatchTagUuid(req.SaleBillUuid, req.BatchTagUuid); err != nil {
+			return errors.WithMessage(err)
+		}
+		return nil
+	}); err != nil {
+		return nil, errors.WithMessage(err)
+	}
 
-	return nil, nil
+	shopCart, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return shopCart, nil
 }
