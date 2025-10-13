@@ -93,10 +93,7 @@ class Printing extends BaseModel
      */
     public static function onAfterWrite()
     {
-        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, 0), null);
-        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, 1), null);
-        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, -1), null);
-        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, -2), null);
+        self::clearProductPrinterListCache(self::$app_id);
     }
 
     /**
@@ -104,10 +101,7 @@ class Printing extends BaseModel
      */
     public static function onAfterDelete()
     {
-        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, 0), null);
-        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, 1), null);
-        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, -1), null);
-        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, -2), null);
+        self::clearProductPrinterListCache(self::$app_id);
     }
 
     /**
@@ -254,5 +248,16 @@ class Printing extends BaseModel
             $filter[] = ['id', '<>', $id];
         }
         return static::where($filter)->value('id') ? true : false;
+    }
+
+    /**
+     * 删除商品打印机列表缓存
+     */
+    public static function clearProductPrinterListCache($appid)
+    {
+        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", $appid, 0), null);
+        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", $appid, 1), null);
+        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", $appid, -1), null);
+        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", $appid, -2), null);
     }
 }

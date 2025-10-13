@@ -35,7 +35,7 @@ type IProductCheckSrv interface {
 	CheckProductMemberDiscount(isEnableMemberDiscount int) error                                                                // 检查商品会员折扣
 	CheckProductOverallDiscount(isEnableOverallDiscount int) error                                                              // 检查商品整单折扣
 	CheckProductPackage(ctx context.Context, db *gorm.DB, param CheckProductPackageParam) (*CheckProductPackageResult, error)   // 检查商品套餐
-	CheckProductPrinter(ctx context.Context, db *gorm.DB, productPrinterUuids []uint64) error                                   // 检查商品打印机
+	CheckProductPrinter(ctx context.Context, db *gorm.DB, productPackageUuid uint64, productPrinterUuids []uint64) error        // 检查商品打印机
 }
 
 // productCheckSrv 产品检查服务结构
@@ -694,7 +694,7 @@ func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, 
 	}, nil
 }
 
-func (s *productCheckSrv) CheckProductPrinter(ctx context.Context, db *gorm.DB, productPrinterUuids []uint64) error {
+func (s *productCheckSrv) CheckProductPrinter(ctx context.Context, db *gorm.DB, productPackageUuid uint64, productPrinterUuids []uint64) error {
 	productPrinterRepo := repository.NewProductPrinterRepo(db)
 	// 如果商品打印机列表为空，则直接返回
 	if len(productPrinterUuids) == 0 {
@@ -703,19 +703,38 @@ func (s *productCheckSrv) CheckProductPrinter(ctx context.Context, db *gorm.DB, 
 	// 获取商品打印机列表
 	productPrinterList, err := productPrinterRepo.GetProductPrinters()
 	if err != nil {
-		return errors.WithMessage(err, "获取商品打印机列表失败")
+		return errors.New("获取商品打印机列表失败")
 	}
 
 	// 将商品打印机列表转换为UUID列表，方便查找
+	printProductSelect := 0
 	existingPrinterUuids := make([]uint64, 0, len(productPrinterList))
 	for _, productPrinter := range productPrinterList {
 		existingPrinterUuids = append(existingPrinterUuids, productPrinter.Uuid)
+		// 获取打印商品选择
+		if slices.Contains(productPrinterUuids, productPrinter.Uuid) && productPrinter.PrintProductSelect == 1 {
+			printProductSelect = productPrinter.PrintProductSelect
+		}
 	}
 
 	// 判断 productPrinterUuids 中的每个UUID是否都在数据库中存在
 	for _, productPrinterUuid := range productPrinterUuids {
 		if !slices.Contains(existingPrinterUuids, productPrinterUuid) {
 			return errors.New("商品打印档口不存在")
+		}
+	}
+
+	// 判断 productPackageUuid 是否在商品包列表中
+	if printProductSelect != 0 {
+		productPackage, err := repository.NewProductPackageRepo(db).GetProductPackage(repository.CommonRepo.WhereByUuid(productPackageUuid))
+		if err != nil {
+			return errors.New("获取商品包失败")
+		}
+		if productPackage.ID == 0 {
+			return errors.New("商品包不存在")
+		}
+		if productPackage.PrinterTagUuid == 0 {
+			return errors.New("未设置打印标签")
 		}
 	}
 

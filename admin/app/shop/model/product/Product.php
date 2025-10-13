@@ -7,6 +7,7 @@ use help\ValidateHelp;
 use app\shop\service\CheckService;
 use app\common\model\file\UploadFile;
 use app\shop\model\product\ProductBom;
+use app\common\model\supplier\Printing;
 use app\common\model\store\MultiLanguageName;
 use app\common\model\supplier\PrintingProduct;
 use app\common\model\product\Product as ProductModel;
@@ -296,10 +297,17 @@ class Product extends ProductModel
             if ($isPackage) {
                 ProductPackageGroupModel::addPackageGroup($data, $this);
             } else if (isset($data['product_printer_uuids']) && !empty($data['product_printer_uuids'])) {
+                // 验证商品打印机
+                if ($data['printer_tag_uuid'] == 0) {
+                    $isExistPrintProductSelect = Printing::where('uuid', 'in', $data['product_printer_uuids'])->where('print_product_select', 1)->count();
+                    if ($isExistPrintProductSelect) {
+                        $this->error = '未设置打印标签';
+                        return false;
+                    }
+                }
                 // 新增商品包关联打印机
                 PrintingProduct::createProductPackagePrinter($this['product_id'], $data['product_printer_uuids']);
             }
-
             $this->commit();
             return true;
         } catch (\Exception $e) {
@@ -633,6 +641,15 @@ class Product extends ProductModel
                 }
                 // 新增商品包关联打印机
                 if (isset($data['product_printer_uuids']) && !empty($data['product_printer_uuids'])) {
+                    // 验证商品打印机
+                    if ($this->printer_tag_uuid == 0) {
+                        $isExistPrintProductSelect = Printing::where('uuid', 'in', $data['product_printer_uuids'])->where('print_product_select', 1)->count();
+                        if ($isExistPrintProductSelect) {
+                            $this->error = '未设置打印标签';
+                            return false;
+                        }
+                    }
+                    // 新增商品包关联打印机
                     PrintingProduct::createProductPackagePrinter($this['product_id'], $data['product_printer_uuids']);
                 }
             }

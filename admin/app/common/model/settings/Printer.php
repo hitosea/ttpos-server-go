@@ -6,6 +6,7 @@ use think\facade\Cache;
 use app\common\model\BaseModel;
 use think\model\concern\SoftDelete;
 use app\common\model\shop\BindRecord;
+use app\common\model\supplier\Printing;
 use app\common\enum\settings\SettingEnum;
 use app\common\model\supplier\PrintingItem;
 
@@ -32,10 +33,7 @@ class Printer extends BaseModel
      */
     public static function onAfterWrite()
     {
-        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, 0), null);
-        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, 1), null);
-        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, -1), null);
-        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, -2), null);
+        Printing::clearProductPrinterListCache(self::$app_id);
     }
 
     /**
@@ -43,10 +41,7 @@ class Printer extends BaseModel
      */
     public static function onAfterDelete()
     {
-        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, 0), null);
-        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, 1), null);
-        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, -1), null);
-        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, -2), null);
+        Printing::clearProductPrinterListCache(self::$app_id);
     }
     
     /**

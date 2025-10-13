@@ -35,6 +35,7 @@ type PPrinterRepo interface {
 	PrintingHandoverOrder(log *model.StaffShiftLog, businessData *business_data_resp.BusinessDataAll, firstExecution int, openMoneybox bool, deviceSnId ...string) (*resp.PrinterData, error)
 	PrintingBusinessData(businessData *template.PrintingBusinessData, startTime int64, endTime int64, firstExecution int) (*resp.PrinterData, error)
 	PrintingTakeoutOrder(memberSaleOrder *model.MemberSaleOrder, saleBill *model.SaleBill, saleOrderUuid uint64) (*resp.PrinterData, error)
+	DeleteProductPrinterListCache()     // 删除商品打印机列表缓存
 	SetFinishedTime(finishedTime int64) // 设置完成时间
 	GetFinishedTime() int64             // 获取完成时间
 	SetPrinterWidth(printerWidth int)   // 设置打印机宽度
@@ -128,7 +129,7 @@ func (p *PrinterRepoImpl) GetPrinterTemplateInfo(id uint64) model.PrinterTemplat
 // 获取商品打印机列表
 func (p *PrinterRepoImpl) getProductPrinterList(widthPrintMode int) ([]model.ProductPrinter, error) {
 	// 构建缓存键
-	cacheKey := fmt.Sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", p.ctx.GetCompanyUuid(), widthPrintMode)
+	cacheKey := constant.GetRedisKeyProductPrinterListV2(p.ctx.GetCompanyUuid(), widthPrintMode)
 
 	// 尝试从缓存获取
 	if cachedData, found := p.cache.Get(cacheKey); found {
@@ -336,4 +337,19 @@ func removeDuplicateProductPrinterItems(items []*model.ProductPrinterItem) []*mo
 		}
 	}
 	return result
+}
+
+// 删除商品打印机列表缓存
+func (p *PrinterRepoImpl) DeleteProductPrinterListCache() {
+	if p.cache == nil {
+		return
+	}
+	companyUuid := p.ctx.GetCompanyUuid()
+	if companyUuid == 0 {
+		return
+	}
+	p.cache.Del(constant.GetRedisKeyProductPrinterListV2(companyUuid, 0))
+	p.cache.Del(constant.GetRedisKeyProductPrinterListV2(companyUuid, 1))
+	p.cache.Del(constant.GetRedisKeyProductPrinterListV2(companyUuid, -1))
+	p.cache.Del(constant.GetRedisKeyProductPrinterListV2(companyUuid, -2))
 }

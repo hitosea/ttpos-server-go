@@ -16,6 +16,7 @@ import (
 	"ttpos-server-go/app/dto/resp/product_resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/service/rpc/erp"
@@ -5218,10 +5219,6 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 	if err := productCheckSrv.CheckProductUnique(db, req.UnitUuid); err != nil {
 		return errors.WithMessage(err, "检查商品单位失败")
 	}
-	// 检查商品打印机
-	if err := productCheckSrv.CheckProductPrinter(ctx, db, req.ProductPrinterUuids); err != nil {
-		return errors.WithMessage(err, "检查商品打印机失败")
-	}
 	// 检查商品规格内部编码
 	for idx, flavor := range req.Flavors {
 		if flavor.InternalCode != "" {
@@ -5420,11 +5417,17 @@ func (s *productSrv) AddProductShop(ctx context.Context, req req.ProductShopAddR
 				return err
 			}
 		} else if ctx.Version(context.GTE, "2.7.0") {
+			// 检查商品打印机
+			if err := productCheckSrv.CheckProductPrinter(ctx, db, productPackageUuid, req.ProductPrinterUuids); err != nil {
+				return errors.WithMessage(err)
+			}
 			// 新增商品包关联打印机
 			err = repository.NewProductPrinterRepo(tx).CreateProductPackagePrinter(productPackageUuid, req.ProductPrinterUuids)
 			if err != nil {
 				return errors.WithMessage(err, "保存商品包关联打印机失败")
 			}
+			// 删除商品打印机列表缓存
+			printer.NewPrinterRepo(ctx).DeleteProductPrinterListCache()
 		}
 
 		return nil
@@ -5683,10 +5686,6 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 	if err := productCheckSrv.CheckProductOverallDiscount(req.Discount.IsEnableOverallDiscount); err != nil {
 		return nil, nil, err
 	}
-	// 商品打印机
-	if err := productCheckSrv.CheckProductPrinter(ctx, db, req.ProductPrinterUuids); err != nil {
-		return nil, nil, err
-	}
 
 	// 编辑商品
 	err := db.Transaction(func(tx *gorm.DB) error {
@@ -5752,10 +5751,17 @@ func (s *productSrv) EditProductShop(ctx context.Context, req req.ProductShopEdi
 
 			// 新增商品包关联打印机
 			if ctx.Version(context.GTE, "2.7.0") {
+				// 商品打印机
+				if err := productCheckSrv.CheckProductPrinter(ctx, db, productPackageUuid, req.ProductPrinterUuids); err != nil {
+					return errors.WithMessage(err)
+				}
+				// 新增商品包关联打印机
 				err = repository.NewProductPrinterRepo(tx).CreateProductPackagePrinter(productPackageUuid, req.ProductPrinterUuids)
 				if err != nil {
 					return errors.WithMessage(err, "保存商品包关联打印机失败")
 				}
+				// 删除商品打印机列表缓存
+				printer.NewPrinterRepo(ctx).DeleteProductPrinterListCache()
 			}
 		}
 
