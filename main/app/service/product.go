@@ -7448,6 +7448,10 @@ func (s *productSrv) GetBatchTagList(ctx context.Context, req req.BatchTagListRe
 		}
 	}
 
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].Sort < list[j].Sort
+	})
+
 	return &product_resp.BatchTagList{
 		List: list,
 	}, nil
