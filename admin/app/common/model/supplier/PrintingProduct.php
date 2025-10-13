@@ -39,6 +39,9 @@ class PrintingProduct extends BaseModel
     // 创建商品包关联打印机（先删除旧关联，再批量插入新关联）
     public function CreateProductPackagePrinter($productPackageUuid, $productPrinterUuids) : bool {
         self::where('product_package_uuid', $productPackageUuid)->delete();
+        // 删除商品打印机列表缓存
+        Printing::clearProductPrinterListCache(self::$app_id);
+        // 
         if (empty($productPrinterUuids)) {
             return false;
         }
@@ -48,6 +51,7 @@ class PrintingProduct extends BaseModel
                 'product_printer_uuid' => $productPrinterUuid,
             ]);
         }
+        // 
         return true;
     }
 
