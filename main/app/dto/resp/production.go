@@ -29,6 +29,13 @@ type ProductionItem struct {
 	IsSaleBillDeleted     bool               `json:"is_sale_bill_deleted"`    // 销售账单是否已删除
 	MakeStatus            uint               `json:"make_status"`             // 制作状态，0-默认，未制作完成，1-已制作完成，2-已恢复到制作中
 	MadeTime              int64              `json:"made_time"`               // 制作完成时间
+	BatchTag              *BatchTagInfo      `json:"batch_tag"`               // 分批类型
+}
+
+type BatchTagInfo struct {
+	Uuid       uint64             `json:"uuid"`        // 分批类型UUID
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 分批类型名称，多语言
+	Color      string             `json:"color"`       // 颜色值，如#FF0000
 }
 
 // ProductionListWithPagination 商品列表响应

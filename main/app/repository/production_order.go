@@ -114,6 +114,7 @@ func (r *productionRepo) GetProducts(limit int, orderBy string, statusOpt DBOpti
 		db = opt(db)
 	}
 	db.Preload("SaleBill").
+		Preload("BatchTag.MultiLanguageName").
 		Preload("SaleOrderProduct").
 		Preload("SaleOrderProduct.MultiLanguageName").
 		Preload("SaleOrderProduct.SaleOrderProductBoms", NotDeleted).

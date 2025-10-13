@@ -43,6 +43,17 @@ type ProductionOrderProduct struct {
 	SaleOrderProduct         SaleOrderProduct           `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid" json:"sale_order_product"`
 	SaleBill                 SaleBill                   `gorm:"foreignKey:SaleBillUuid;references:Uuid" json:"sale_bill"`
 	ProductCategory          ProductCategory            `gorm:"foreignKey:FirstCategoryUuid;references:Uuid" json:"product_category"`
+	BatchTag                 *BatchTag                  `gorm:"foreignKey:BatchTagUuid;references:Uuid" json:"batch_tag"`
+}
+
+// 是否是分批商品
+func (p *ProductionOrderProduct) IsBatchBool() bool {
+	return p.IsBatch == 1
+}
+
+// 是否处于预送厨阶段
+func (p *ProductionOrderProduct) IsPreCooking() bool {
+	return p.BatchTagUuid == 0
 }
 
 // 获取生产单商品的打包状态：0-堂食、1-打包

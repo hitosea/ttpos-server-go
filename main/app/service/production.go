@@ -406,6 +406,17 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 		var group resp.ProductionGroup
 		items := make([]resp.ProductionItem, 0) // 生产单商品列表
 		for _, product := range products {
+			// 获取门店业务设置
+			businessSetting, errGet := s.settingSrv.GetBusinessSetting(ctx)
+			if errGet != nil {
+				return nil
+			}
+			if businessSetting.OpenIsBatch() {
+				// 如果开启了分批送厨， 如果商品是分批商品，且处于预送厨阶段，则不显示
+				if product.IsBatchBool() && product.IsPreCooking() {
+					continue
+				}
+			}
 			if paginatedProduct.SaleBillUuid != product.SaleBillUuid {
 				continue
 			}
@@ -431,6 +442,12 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 			if err != nil {
 				logger.Logger.Error("copier error", zap.Error(err))
 			}
+
+			// 如果商品是分批商品，则以分批送厨的时间为正式的送厨时间
+			if product.IsBatchBool() {
+				item.CreateTime = product.BatchTime
+			}
+
 			if product.SaleOrderProduct.IsPackageSubProduct() && item.Remark != "" {
 				item.Remark = i18n.Translate(language, "套餐备注：") + item.Remark
 			}
@@ -442,6 +459,21 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 			item.SerialNo = product.SaleBill.SerialNo
 			item.DiningMethod = product.GetWrapStatus()                                                                            // 订单商品的打包状态
 			item.IsSaleBillDeleted = product.SaleBill.DeleteTime > 0 || product.SaleBill.Status == constant.SaleBillStatusCanceled // 是否已经整单取消
+			item.BatchTag = func() *resp.BatchTagInfo {
+				// 获取门店业务设置
+				businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+				if err != nil {
+					return nil
+				}
+				if businessSetting.OpenIsBatch() {
+					return &resp.BatchTagInfo{
+						Uuid:       product.BatchTagUuid,
+						LocaleName: product.BatchTag.MultiLanguageName.GetNames(),
+						Color:      product.BatchTag.Color,
+					}
+				}
+				return nil
+			}()
 			items = append(items, item)
 		}
 		if group.LocaleName == nil {
