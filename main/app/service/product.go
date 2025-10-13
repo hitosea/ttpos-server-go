@@ -1542,11 +1542,7 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 						products, err := productRepo.GetProducts(
 							commonRepo.WhereBySoftDelete(),
 							productRepo.WhereCategoryUuid(category.Uuid),
-							repository.CommonRepo.Preload(
-								repository.WithPreload{
-									Query: "ProductBoms",
-								},
-							),
+							productRepo.WithProductBoms(commonRepo.WhereBySoftDelete()),
 						)
 						if err != nil {
 							return errors.WithMessage(err, "获取商品失败")
@@ -3180,8 +3176,10 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 	err = db.Transaction(func(tx *gorm.DB) error {
 		commonRepo := repository.NewCommonRepo()
 		productRepo := repository.NewProductRepo(tx)
+		productFlavorRepo := repository.NewProductFlavorRepo(tx)
 		warehouseFormRepo := repository.NewWarehouseFormRepo(tx)
 		warehouseMonthlyFormRepo := repository.NewWarehouseMonthlyFormRepo(tx)
+		multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
 		// 保存多语言名称
 		multiLanguageName := model.MultiLanguageName{
 			ZhName:   addReq.LocaleName.ZH,
@@ -3194,19 +3192,19 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 			TrName:   addReq.LocaleName.TR,
 			SvName:   addReq.LocaleName.SV,
 		}
-		err := tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
+		multiLanguageNameUuid, err := multiLanguageNameRepo.CreateMultiLanguageName(multiLanguageName)
 		if err != nil {
-			return err
+			return errors.WithMessage(err, "保存多语言名称失败")
 		}
 		// 保存产品规格
 		productFlavor := model.ProductFlavor{
 			Name:                  addReq.LocaleName.ToJson(),
-			MultiLanguageNameUuid: multiLanguageName.Uuid,
+			MultiLanguageNameUuid: multiLanguageNameUuid,
 			Sort:                  sort,
 		}
-		err = tx.Model(&model.ProductFlavor{}).Create(&productFlavor).Error
+		err = productFlavorRepo.CreateProductFlavor(productFlavor)
 		if err != nil {
-			return err
+			return errors.WithMessage(err, "保存规格失败")
 		}
 		// 保存规格名称到erp
 		if company.IsOpenErp() {
@@ -3345,13 +3343,22 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 func (s *productSrv) UpdateProductFlavorErp(ctx context.Context, tx *gorm.DB) error {
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(tx)
+	productFlavorRepo := repository.NewProductFlavorRepo(tx)
 	flavorList, err := productRepo.GetProductFlavorList([]repository.DBOption{
 		commonRepo.WhereBySoftDelete(),
 		commonRepo.WhereByHeadquarterUuid(0),
-		productRepo.WithMultiLanguageName(),
+		productRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
 	}...)
 	if err != nil {
 		return errors.WithMessage(err, "获取规格列表失败")
+	}
+	companySetting := ctx.GetCompanySetting()
+	groupName := fmt.Sprintf("%s-Specifications", companySetting.ErpnextCompanyAbbr)
+	maxErpnextValueNo, err := productRepo.GetProductFlavorMaxErpnextValueNo(
+		commonRepo.WhereByHeadquarterUuid(0),
+	)
+	if err != nil {
+		return errors.WithMessage(err, "获取最大erpnext规格值编号失败")
 	}
 	valueList := make([]req.SaveErpFlavorValueReq, 0, len(flavorList))
 	for _, flavor := range flavorList {
@@ -3359,13 +3366,30 @@ func (s *productSrv) UpdateProductFlavorErp(ctx context.Context, tx *gorm.DB) er
 		if err != nil {
 			return errors.WithMessage(err, "翻译失败")
 		}
-		valueList = append(valueList, req.SaveErpFlavorValueReq{
-			ValueName:      enName,
-			ValueAliasName: enName,
-		})
+		if flavor.ErpnextValueNo == 0 {
+			maxErpnextValueNo += 1
+			valueName := fmt.Sprintf("%s-%s-%s", companySetting.ErpnextCompanyAbbr, enName, fmt.Sprintf("%04d", maxErpnextValueNo))
+			err = productFlavorRepo.UpdateProductFlavorErpnextValueNo(map[string]any{
+				"erpnext_group_name": groupName,
+				"erpnext_value_name": valueName,
+				"erpnext_alias_name": enName,
+				"erpnext_value_no":   maxErpnextValueNo,
+			}, commonRepo.WhereByUuid(flavor.Uuid))
+			if err != nil {
+				return errors.WithMessage(err, "更新erpnext规格值编号失败")
+			}
+			valueList = append(valueList, req.SaveErpFlavorValueReq{
+				ValueName:      valueName,
+				ValueAliasName: enName,
+			})
+		} else {
+			valueList = append(valueList, req.SaveErpFlavorValueReq{
+				ValueName:      flavor.ErpnextValueName,
+				ValueAliasName: flavor.ErpnextAliasName,
+			})
+		}
 	}
-	companySetting := ctx.GetCompanySetting()
-	groupName := fmt.Sprintf("%s-Specifications", companySetting.ErpnextCompanyAbbr)
+
 	erpSrv := erp.NewIErpSrv(s.dbm)
 	err = erpSrv.SaveFlavor(ctx.GetContext(), req.SaveErpFlavorReq{
 		SiteCode:       companySetting.ErpnextSiteCode,
@@ -4407,156 +4431,179 @@ func (s *productSrv) SyncProductFlavor(ctx context.Context) error {
 		return errors.New("公司未授权erp")
 	}
 
-	var (
-		GetFlavorListErr error
-		ListResp         resp.GetErpFlavorListResp
-		HeadquarterUuid  uint64
-	)
-	if companySetting.IsHeadquarter() || companySetting.IsTtposSite() {
-		logger.Logger.Info("IsHeadquarter-IsTtposSite")
-		params := req.GetErpFlavorListReq{
-			SiteCode:    companySetting.ErpnextSiteCode,
-			CompanyAbbr: companySetting.ErpnextCompanyAbbr,
-		}
-		ListResp, GetFlavorListErr = erp.NewIErpSrv(s.dbm).GetFlavorList(ctx.GetContext(), params)
-		if GetFlavorListErr != nil {
-			logger.Logger.Error("SyncProductFlavor-GetFlavorList", zap.Any("params", params), zap.Any("err", GetFlavorListErr))
-			return GetFlavorListErr
-		}
-	}
-	if companySetting.IsSubShop() {
-		HeadquarterUuid = companySetting.HeadquarterUuid
-		// 同步总部规格
-		params := req.GetErpFlavorListReq{
-			SiteCode:    companySetting.ErpnextSiteCode,
-			CompanyAbbr: companySetting.ErpnextHeadquarterAbbr,
-		}
-		var headquarterListResp resp.GetErpFlavorListResp
-		headquarterListResp, GetFlavorListErr = erp.NewIErpSrv(s.dbm).GetFlavorList(ctx.GetContext(), params)
-		if GetFlavorListErr != nil {
-			logger.Logger.Error("SyncProductFlavor-GetFlavorList", zap.Any("params", params), zap.Any("err", GetFlavorListErr))
-			return GetFlavorListErr
-		}
-		ListResp.List = append(ListResp.List, headquarterListResp.List...)
-		// 同步子店规格
-		params = req.GetErpFlavorListReq{
-			SiteCode:    companySetting.ErpnextSiteCode,
-			CompanyAbbr: companySetting.ErpnextCompanyAbbr,
-		}
-		var subShopListResp resp.GetErpFlavorListResp
-		subShopListResp, GetFlavorListErr = erp.NewIErpSrv(s.dbm).GetFlavorList(ctx.GetContext(), params)
-		if GetFlavorListErr != nil {
-			logger.Logger.Error("SyncProductFlavor-GetFlavorList", zap.Any("params", params), zap.Any("err", GetFlavorListErr))
-			return GetFlavorListErr
-		}
-		ListResp.List = append(ListResp.List, subShopListResp.List...)
+	// 同步erp规格到本地
+	_, err := erp.NewIErpSrv(s.dbm).GetFlavorList(ctx.GetContext(), req.GetErpFlavorListReq{
+		SiteCode:    companySetting.ErpnextSiteCode,
+		Branch:      companySetting.ErpnextBranchName,
+		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+	})
+	if err != nil {
+		return errors.WithMessage(err, "获取erp规格列表失败")
 	}
 
-	if len(ListResp.List) == 0 {
-		return nil
-	}
+	db := s.dbm.GetDB(ctx.GetDbId())
 
-	translateClient := utils.NewTranslateClient()
-	translateItems := make([]utils.TranslateItem, 0, len(ListResp.List))
-	for _, erpFlavorList := range ListResp.List {
-		for _, erpFlavor := range erpFlavorList.AttributeValueList {
-			translateItems = append(translateItems, utils.TranslateItem{
-				Lang:    "en",
-				Content: erpFlavor.AttributeValue,
-			})
-		}
-	}
-	multiLanguageMap := translateClient.TranslateWithRetry(ctx.GetContext(), translateItems, 20)
+	err = db.Transaction(func(tx *gorm.DB) error {
 
-	err := s.dbm.GetDB(ctx.GetDbId()).Transaction(func(tx *gorm.DB) error {
-		commonRepo := repository.NewCommonRepo()
-		productRepo := repository.NewProductRepo(tx)
-		maxSort, _ := productRepo.GetProductFlavorMaxSort(
-			commonRepo.WhereBySoftDelete(),
-		)
-		for _, erpFlavorList := range ListResp.List {
-			for _, erpFlavor := range erpFlavorList.AttributeValueList {
-				productFlavor, _ := productRepo.GetProductFlavor(
-					commonRepo.WhereByHeadquarterUuid(HeadquarterUuid),
-					commonRepo.WhereByErpnextGroupName(erpFlavorList.AttributeName),
-					commonRepo.WhereByErpnextValueName(erpFlavor.Abbr),
-				)
-				localeName, ok := multiLanguageMap[erpFlavor.AttributeValue]
-				if !ok {
-					localeName = dto.LocaleResponse{
-						ZH:   erpFlavor.AttributeValue,
-						TH:   erpFlavor.AttributeValue,
-						EN:   erpFlavor.AttributeValue,
-						ZHTW: erpFlavor.AttributeValue,
-						JA:   erpFlavor.AttributeValue,
-						KO:   erpFlavor.AttributeValue,
-						MY:   erpFlavor.AttributeValue,
-						TR:   erpFlavor.AttributeValue,
-						SV:   erpFlavor.AttributeValue,
-					}
-				}
-				if productFlavor.Uuid == 0 {
-					// 保存多语言
-					multiLanguageName := model.MultiLanguageName{
-						ZhName:   localeName.ZH,
-						ThName:   localeName.TH,
-						EnName:   localeName.EN,
-						ZhTwName: localeName.ZHTW,
-						JaName:   localeName.JA,
-						KoName:   localeName.KO,
-						MyName:   localeName.MY,
-						TrName:   localeName.TR,
-						SvName:   localeName.SV,
-					}
-					err := tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
-					if err != nil {
-						return errors.WithMessage(err, "创建多语言名称失败")
-					}
-					maxSort++
-					newProductFlavor := model.ProductFlavor{
-						Name:                  localeName.ToJson(),
-						MultiLanguageNameUuid: multiLanguageName.Uuid,
-						Sort:                  int(maxSort),
-						HeadquarterUuid:       HeadquarterUuid,
-						ErpnextGroupName:      erpFlavorList.AttributeName,
-						ErpnextValueName:      erpFlavor.Abbr,
-					}
-					err = tx.Model(&model.ProductFlavor{}).Create(&newProductFlavor).Error
-					if err != nil {
-						return errors.WithMessage(err, "创建规格失败")
-					}
-				} else {
-					// 更新多语言名称
-					err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productFlavor.MultiLanguageNameUuid).Updates(map[string]any{
-						"zh_name":    localeName.ZH,
-						"th_name":    localeName.TH,
-						"en_name":    localeName.EN,
-						"zh_tw_name": localeName.ZHTW,
-						"ja_name":    localeName.JA,
-						"ko_name":    localeName.KO,
-						"my_name":    localeName.MY,
-						"tr_name":    localeName.TR,
-						"sv_name":    localeName.SV,
-					}).Error
-					if err != nil {
-						return err
-					}
-					// 更新商品规格
-					err = tx.Model(&model.ProductFlavor{}).Where("uuid = ?", productFlavor.Uuid).Updates(map[string]any{
-						"name": localeName.ToJson(),
-					}).Error
-					if err != nil {
-						return err
-					}
-				}
-			}
-		}
 		return nil
 	})
 
 	if err != nil {
-		return err
+		return errors.WithMessage(err, "同步erp规格到本地失败")
 	}
+
+	// 同步总店规格到子店
+
+	// var (
+	// 	GetFlavorListErr error
+	// 	ListResp         resp.GetErpFlavorListResp
+	// 	HeadquarterUuid  uint64
+	// )
+	// if companySetting.IsHeadquarter() || companySetting.IsTtposSite() {
+	// 	logger.Logger.Info("IsHeadquarter-IsTtposSite")
+	// 	params := req.GetErpFlavorListReq{
+	// 		SiteCode:    companySetting.ErpnextSiteCode,
+	// 		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+	// 	}
+	// 	ListResp, GetFlavorListErr = erp.NewIErpSrv(s.dbm).GetFlavorList(ctx.GetContext(), params)
+	// 	if GetFlavorListErr != nil {
+	// 		logger.Logger.Error("SyncProductFlavor-GetFlavorList", zap.Any("params", params), zap.Any("err", GetFlavorListErr))
+	// 		return GetFlavorListErr
+	// 	}
+	// }
+	// if companySetting.IsSubShop() {
+	// 	HeadquarterUuid = companySetting.HeadquarterUuid
+	// 	// 同步总部规格
+	// 	params := req.GetErpFlavorListReq{
+	// 		SiteCode:    companySetting.ErpnextSiteCode,
+	// 		CompanyAbbr: companySetting.ErpnextHeadquarterAbbr,
+	// 	}
+	// 	var headquarterListResp resp.GetErpFlavorListResp
+	// 	headquarterListResp, GetFlavorListErr = erp.NewIErpSrv(s.dbm).GetFlavorList(ctx.GetContext(), params)
+	// 	if GetFlavorListErr != nil {
+	// 		logger.Logger.Error("SyncProductFlavor-GetFlavorList", zap.Any("params", params), zap.Any("err", GetFlavorListErr))
+	// 		return GetFlavorListErr
+	// 	}
+	// 	ListResp.List = append(ListResp.List, headquarterListResp.List...)
+	// 	// 同步子店规格
+	// 	params = req.GetErpFlavorListReq{
+	// 		SiteCode:    companySetting.ErpnextSiteCode,
+	// 		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+	// 	}
+	// 	var subShopListResp resp.GetErpFlavorListResp
+	// 	subShopListResp, GetFlavorListErr = erp.NewIErpSrv(s.dbm).GetFlavorList(ctx.GetContext(), params)
+	// 	if GetFlavorListErr != nil {
+	// 		logger.Logger.Error("SyncProductFlavor-GetFlavorList", zap.Any("params", params), zap.Any("err", GetFlavorListErr))
+	// 		return GetFlavorListErr
+	// 	}
+	// 	ListResp.List = append(ListResp.List, subShopListResp.List...)
+	// }
+
+	// if len(ListResp.List) == 0 {
+	// 	return nil
+	// }
+
+	// translateClient := utils.NewTranslateClient()
+	// translateItems := make([]utils.TranslateItem, 0, len(ListResp.List))
+	// for _, erpFlavorList := range ListResp.List {
+	// 	for _, erpFlavor := range erpFlavorList.AttributeValueList {
+	// 		translateItems = append(translateItems, utils.TranslateItem{
+	// 			Lang:    "en",
+	// 			Content: erpFlavor.AttributeValue,
+	// 		})
+	// 	}
+	// }
+	// multiLanguageMap := translateClient.TranslateWithRetry(ctx.GetContext(), translateItems, 20)
+
+	// err := s.dbm.GetDB(ctx.GetDbId()).Transaction(func(tx *gorm.DB) error {
+	// 	commonRepo := repository.NewCommonRepo()
+	// 	productRepo := repository.NewProductRepo(tx)
+	// 	maxSort, _ := productRepo.GetProductFlavorMaxSort(
+	// 		commonRepo.WhereBySoftDelete(),
+	// 	)
+	// 	for _, erpFlavorList := range ListResp.List {
+	// 		for _, erpFlavor := range erpFlavorList.AttributeValueList {
+	// 			productFlavor, _ := productRepo.GetProductFlavor(
+	// 				commonRepo.WhereByHeadquarterUuid(HeadquarterUuid),
+	// 				commonRepo.WhereByErpnextGroupName(erpFlavorList.AttributeName),
+	// 				commonRepo.WhereByErpnextValueName(erpFlavor.Abbr),
+	// 			)
+	// 			localeName, ok := multiLanguageMap[erpFlavor.AttributeValue]
+	// 			if !ok {
+	// 				localeName = dto.LocaleResponse{
+	// 					ZH:   erpFlavor.AttributeValue,
+	// 					TH:   erpFlavor.AttributeValue,
+	// 					EN:   erpFlavor.AttributeValue,
+	// 					ZHTW: erpFlavor.AttributeValue,
+	// 					JA:   erpFlavor.AttributeValue,
+	// 					KO:   erpFlavor.AttributeValue,
+	// 					MY:   erpFlavor.AttributeValue,
+	// 					TR:   erpFlavor.AttributeValue,
+	// 					SV:   erpFlavor.AttributeValue,
+	// 				}
+	// 			}
+	// 			if productFlavor.Uuid == 0 {
+	// 				// 保存多语言
+	// 				multiLanguageName := model.MultiLanguageName{
+	// 					ZhName:   localeName.ZH,
+	// 					ThName:   localeName.TH,
+	// 					EnName:   localeName.EN,
+	// 					ZhTwName: localeName.ZHTW,
+	// 					JaName:   localeName.JA,
+	// 					KoName:   localeName.KO,
+	// 					MyName:   localeName.MY,
+	// 					TrName:   localeName.TR,
+	// 					SvName:   localeName.SV,
+	// 				}
+	// 				err := tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
+	// 				if err != nil {
+	// 					return errors.WithMessage(err, "创建多语言名称失败")
+	// 				}
+	// 				maxSort++
+	// 				newProductFlavor := model.ProductFlavor{
+	// 					Name:                  localeName.ToJson(),
+	// 					MultiLanguageNameUuid: multiLanguageName.Uuid,
+	// 					Sort:                  int(maxSort),
+	// 					HeadquarterUuid:       HeadquarterUuid,
+	// 					ErpnextGroupName:      erpFlavorList.AttributeName,
+	// 					ErpnextValueName:      erpFlavor.Abbr,
+	// 				}
+	// 				err = tx.Model(&model.ProductFlavor{}).Create(&newProductFlavor).Error
+	// 				if err != nil {
+	// 					return errors.WithMessage(err, "创建规格失败")
+	// 				}
+	// 			} else {
+	// 				// 更新多语言名称
+	// 				err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productFlavor.MultiLanguageNameUuid).Updates(map[string]any{
+	// 					"zh_name":    localeName.ZH,
+	// 					"th_name":    localeName.TH,
+	// 					"en_name":    localeName.EN,
+	// 					"zh_tw_name": localeName.ZHTW,
+	// 					"ja_name":    localeName.JA,
+	// 					"ko_name":    localeName.KO,
+	// 					"my_name":    localeName.MY,
+	// 					"tr_name":    localeName.TR,
+	// 					"sv_name":    localeName.SV,
+	// 				}).Error
+	// 				if err != nil {
+	// 					return err
+	// 				}
+	// 				// 更新商品规格
+	// 				err = tx.Model(&model.ProductFlavor{}).Where("uuid = ?", productFlavor.Uuid).Updates(map[string]any{
+	// 					"name": localeName.ToJson(),
+	// 				}).Error
+	// 				if err != nil {
+	// 					return err
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// 	return nil
+	// })
+
+	// if err != nil {
+	// 	return err
+	// }
 
 	return nil
 }
