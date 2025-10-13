@@ -1375,7 +1375,7 @@ func (r *productRepo) BatchUpdateSort(table any, sorts map[uint64]int) error {
 	// 根据传入的模型类型确定错误消息
 	var errorMessage string
 	switch table.(type) {
-	case *model.ProductUnit, *model.ProductAttributeGroup, *model.ProductAttribute, *model.ProductSauce, *model.ProductFlavor, *model.ProductCategory, *model.MaterialCategory:
+	case *model.ProductUnit, *model.ProductAttributeGroup, *model.ProductAttribute, *model.ProductSauce, *model.ProductFlavor, *model.ProductCategory, *model.MaterialCategory, *model.BatchTag:
 		// 无需处理
 	default:
 		return errors.New("更新排序失败")
