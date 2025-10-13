@@ -98,6 +98,7 @@ const (
 	CodeProductDeleteCanNotDeletePackage = -801 // 商品已关联套餐，无法删除，请先修改套餐
 	CodeProductEditCanNotDeletePackage   = -802 // 商品规格已关联套餐，无法删除，请先修改套餐
 	CodeMaterialDisabled                 = -803 // 物品已停用，您可启用物品后再进行收货
+	CodeWarehouseStockNotEnough          = -804 // 物品库存不足
 )
 
 // 采购订单业务错误码

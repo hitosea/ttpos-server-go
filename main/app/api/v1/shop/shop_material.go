@@ -653,6 +653,7 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 	statisticsSrv := service.NewStatisticsSrv()
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
+	translateSrv := service.NewTranslateSrv(dbm, cache)
 
 	// 创建物品处理程序
 	wrapper := MaterialHandler{
@@ -660,6 +661,7 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 			dbm,                    // 数据库管理器
 			service.NewLocaleSrv(), // 多语言服务
 			settingSrv,
+			translateSrv,
 		),
 	}
 

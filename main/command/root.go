@@ -12,6 +12,7 @@ import (
 	"time"
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/queue"
+	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/tasks"
 	"ttpos-server-go/config"
 	"ttpos-server-go/docs"
@@ -222,6 +223,11 @@ func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 	// 每小时执行销售出库汇总任务
 	_, _ = c.AddFunc("0 0 * * * *", func() {
 		tasks.NewDailySalesOutboundSummaryTask(dbm, cache).Execute()
+	})
+
+	// 每分钟执行翻译任务
+	_, _ = c.AddFunc("0 * * * * *", func() {
+		service.NewTranslateSrv(dbm, cache).TranslateAll()
 	})
 
 	// 启动定时器

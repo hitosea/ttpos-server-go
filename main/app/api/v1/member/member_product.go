@@ -148,8 +148,9 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	statisticsSrv := service.NewStatisticsSrv()
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
+	translateSrv := service.NewTranslateSrv(dbm, cache)
 	// 初始化处理器
-	productSrv := service.NewProductSrv(dbm, service.NewLocaleSrv(), settingSrv, cache)
+	productSrv := service.NewProductSrv(dbm, service.NewLocaleSrv(), settingSrv, cache, translateSrv)
 	wrapper := &ProductHandler{
 		productSrv: productSrv,
 	}

@@ -733,6 +733,7 @@ func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache
 	statisticsSrv := service.NewStatisticsSrv()
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
+	translateSrv := service.NewTranslateSrv(dbm, cache)
 	localeSrv := service.NewLocaleSrv()
 	mustPlanSrv := service.NewMustPlanSrv(dbm)
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
@@ -741,7 +742,7 @@ func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache
 	deskSrv := service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv, mustPlanSrv)
 	buffetSrv := service.NewBuffetSrv(dbm)
 	h5Srv := service.NewH5Srv(dbm, deskSrv, orderSrv, buffetSrv, settingSrv)
-	productService := service.NewProductSrv(dbm, localeSrv, settingSrv, cache)
+	productService := service.NewProductSrv(dbm, localeSrv, settingSrv, cache, translateSrv)
 	callSrv := service.NewCallSrv(dbm)
 	// 初始化处理器
 	wrapper := Handler{

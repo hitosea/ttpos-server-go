@@ -17,7 +17,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
-	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -525,46 +524,10 @@ func (s *purchaseReceiptOrderSrv) updateMaterialStock(
 		return nil
 	}
 
-	// 添加物料库存
-	{
-		materialRepo := repository.NewMaterialRepo(db)
-		for _, item := range receiptOrder.Items {
-			// 获取物料信息
-			material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid, materialRepo.WithRelatedMaterialList())
-			if err != nil {
-				return errors.WithMessage(errors.New("获取物品信息失败"), err.Error())
-			}
-			// 更新库存数量
-			material.StockNum = decimal.NewFromFloat(material.StockNum).
-				Add(decimal.NewFromFloat(item.GetActualNum())).
-				InexactFloat64()
-			err = materialRepo.UpdateMaterial(material)
-			if err != nil {
-				return errors.WithMessage(errors.New("更新物料库存失败"), err.Error())
-			}
-
-			// 更新规格/加料关联材料库存
-			relatedMaterialUuids := make([]uint64, 0)
-			for _, relatedMaterial := range material.RelatedMaterialList {
-				if relatedMaterial.IsDelete() {
-					continue
-				}
-				if relatedMaterial.IsUsed == 0 {
-					continue
-				}
-				relatedMaterialUuids = append(relatedMaterialUuids, relatedMaterial.Uuid)
-			}
-			err = s.helper.updateRelatedMaterialStock(db, relatedMaterialUuids)
-			if err != nil {
-				return errors.WithMessage(errors.New("更新规格/加料关联材料库存失败"), err.Error())
-			}
-		}
-
-		// 记录erp的入库记录
-		err := s.helper.recordErpStockInLog(db, receiptOrder)
-		if err != nil {
-			return errors.WithMessage(errors.New("记录ERP入库记录失败"), err.Error())
-		}
+	// 记录erp的入库记录
+	err := s.helper.recordErpStockInLog(db, receiptOrder)
+	if err != nil {
+		return errors.WithMessage(errors.New("记录ERP入库记录失败"), err.Error())
 	}
 
 	// 更新在途仓库库存

@@ -50,6 +50,7 @@ func IfFloat64(is bool, trueVal, falseVal float64) float64 {
 	return falseVal
 }
 
+// 三元
 func IfSlice(is bool, trueVal, falseVal []dto.LocaleResponse) []dto.LocaleResponse {
 	if is {
 		return trueVal
