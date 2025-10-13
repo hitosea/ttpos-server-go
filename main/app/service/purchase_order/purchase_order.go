@@ -13,7 +13,6 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
-	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
@@ -23,7 +22,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
-	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -853,52 +851,9 @@ func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 	}
 
 	// 减总部库存并记录出入库日志
-	{
-		// 添加物料库存
-		materialRepo := repository.NewMaterialRepo(tx)
-		for _, item := range purchaseOrder.Items {
-			// 获取物料信息
-			material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid)
-			if err != nil {
-				return "", errors.WithMessage(errors.New("获取物品信息失败"), err.Error())
-			}
-			//
-			stockNum := material.GetStockNum()
-			conversionRateNum := item.GetConversionRateNum()
-			// 更新库存数量
-			latestStockNum := decimal.NewFromFloat(material.GetStockNum()).
-				Sub(decimal.NewFromFloat(conversionRateNum)).
-				InexactFloat64()
-			if latestStockNum < 0 {
-				return "", errors.New(fmt.Sprintf(
-					i18n.Translate(ctx.GetLanguage(), "物品库存不足，物品编码：%s"),
-					item.MaterialCode,
-				) + fmt.Sprintf("  (%v / %v)", stockNum, conversionRateNum))
-			}
-			err = base.NewMaterialRepo(tx).UpdateMaterialsStockNum(material.Uuid, material.WarehouseUuid, latestStockNum)
-			if err != nil {
-				return "", errors.WithMessage(errors.New("更新物品库存失败"), err.Error())
-			}
-
-			// 更新规格/加料关联材料库存
-			relatedMaterialUuids := make([]uint64, 0)
-			for _, relatedMaterial := range material.RelatedMaterialList {
-				if relatedMaterial.IsDelete() || relatedMaterial.IsUsed == 0 {
-					continue
-				}
-				relatedMaterialUuids = append(relatedMaterialUuids, relatedMaterial.Uuid)
-			}
-			err = s.helper.updateRelatedMaterialStock(tx, relatedMaterialUuids)
-			if err != nil {
-				return "", errors.WithMessage(errors.New("更新规格/加料关联材料库存失败"), err.Error())
-			}
-		}
-
-		// 减总部库存并记录出入库日志
-		err := s.helper.reduceHeadquarterStockAndLog(subDb, tx, purchaseOrder)
-		if err != nil {
-			return "", errors.WithMessage(errors.New("处理总部库存失败"), err.Error())
-		}
+	err := s.helper.reduceHeadquarterStockAndLog(ctx, subDb, tx, purchaseOrder)
+	if err != nil {
+		return "", err
 	}
 
 	// 获取子公司设置

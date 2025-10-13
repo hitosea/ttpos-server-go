@@ -219,7 +219,7 @@ func (h *PurchaseHandler) ApprovePurchaseOrder(c *gin.Context) {
 		var appErr errors.AppError
 		if builtinerrors.As(err, &appErr) {
 			code := appErr.GetCode()
-			if code == constant.CodeMaterialDisabled { // 物品已禁用，请修改物品状态
+			if code == constant.CodeMaterialDisabled || code == constant.CodeWarehouseStockNotEnough { // 物品已禁用，请修改物品状态
 				helper.ErrorWithData(c, code, appErr.GetData(), err)
 				return
 			}

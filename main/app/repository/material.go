@@ -449,7 +449,7 @@ func (r *MaterialRepoImpl) CheckBarcodeExist(barcode string, uuid uint64) bool {
 
 func (r *MaterialRepoImpl) GetMaterialByErpCode(erpCode string) (*model.Material, error) {
 	var material model.Material
-	if err := r.db.Model(&model.Material{}).Preload("MultiLanguageName").Where("code = ?", erpCode).First(&material).Error; err != nil {
+	if err := r.db.Model(&model.Material{}).Preload("MultiLanguageName").Where("code = ? and code <> ''", erpCode).First(&material).Error; err != nil {
 		return nil, errors.WithMessage(err, "根据erp_code获取物品失败")
 	}
 	return &material, nil
