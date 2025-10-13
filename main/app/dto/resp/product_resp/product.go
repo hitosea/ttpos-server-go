@@ -457,6 +457,7 @@ type ProductSingleListItemResp struct {
 	CategoryUuid       uint64             `json:"category_uuid"`         // 商品分类UUID
 	ProductBomCardUuid uint64             `json:"product_bom_card_uuid"` // 成本卡UUID，0表示没有成本卡
 	ProductBomCardName dto.LocaleResponse `json:"product_bom_card_name"` // 成本卡名称
+	InternalCode       string             `json:"internal_code"`         // 内部编码. 规格商品的内部编码
 }
 
 type ProductPackageSubProduct struct {
