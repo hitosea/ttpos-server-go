@@ -184,7 +184,7 @@ func (h *BatchProductHandler) SortBatchTag(c *gin.Context) {
 // @Security JwtToken
 // @Success 200 {object} []product_resp.BatchTagColorUsageList "成功"
 // @Failure 400 {object} nil "错误请求"
-// @Router /shop/batch/tag/color_usage [post]
+// @Router /shop/batch/tag/color_usage [get]
 func (h *BatchProductHandler) GetBatchTagColorUsage(c *gin.Context) {
 	ctx := helper.GetContext(c)
 
@@ -247,13 +247,13 @@ func RegisterBatchProductHandlers(router gin.IRouter, dbm *database.DBManager, c
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		// 分批类型相关接口
-		privateApi.GET("/batch/tag/list", batchHandler.GetBatchTagList)               // 获取分批类型列表
-		privateApi.GET("/batch/tag", batchHandler.GetBatchTag)                        // 获取分批类型详情
-		privateApi.POST("/batch/tag/add", batchHandler.AddBatchTag)                   // 添加分批类型
-		privateApi.POST("/batch/tag/edit", batchHandler.EditBatchTag)                 // 编辑分批类型
-		privateApi.DELETE("/batch/tag", batchHandler.DeleteBatchTag)                  // 删除分批类型
-		privateApi.POST("/batch/tag/sort", batchHandler.SortBatchTag)                 // 排序分批类型
-		privateApi.POST("/batch/tag/color_usage", batchHandler.GetBatchTagColorUsage) // 获取色块被选择情况
-		privateApi.POST("/batch/product/save", batchHandler.SaveBatchProduct)         // 保存分批商品
+		privateApi.GET("/batch/tag/list", batchHandler.GetBatchTagList)              // 获取分批类型列表
+		privateApi.GET("/batch/tag", batchHandler.GetBatchTag)                       // 获取分批类型详情
+		privateApi.POST("/batch/tag/add", batchHandler.AddBatchTag)                  // 添加分批类型
+		privateApi.POST("/batch/tag/edit", batchHandler.EditBatchTag)                // 编辑分批类型
+		privateApi.DELETE("/batch/tag", batchHandler.DeleteBatchTag)                 // 删除分批类型
+		privateApi.POST("/batch/tag/sort", batchHandler.SortBatchTag)                // 排序分批类型
+		privateApi.GET("/batch/tag/color_usage", batchHandler.GetBatchTagColorUsage) // 获取色块被选择情况
+		privateApi.POST("/batch/product/save", batchHandler.SaveBatchProduct)        // 保存分批商品
 	}
 }

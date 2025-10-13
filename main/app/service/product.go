@@ -7536,15 +7536,56 @@ func (s *productSrv) GetBatchTagColorUsage(ctx context.Context) (*product_resp.B
 		return nil, errors.WithMessage(err, "获取分批类型列表失败")
 	}
 
-	colorUsageMap := make([]product_resp.BatchTagColorUsage, len(batchTags))
-	for i, batchTag := range batchTags {
-		colorUsageMap[i] = product_resp.BatchTagColorUsage{
-			Color:        batchTag.Color,
-			IsUsed:       true,
-			UsedBy:       batchTag.Name,
-			BatchTagUuid: batchTag.Uuid,
+	// #FF585B
+	// #FC0169
+	// #FF9900
+	// #BC3BBB
+	// #7A55D4
+	// #97B92D
+	// #006E5E
+	// #C18000
+	// #8C5A3F
+	settingRepo := repository.NewSettingRepo(s.dbm.GetDB(ctx.GetDbId()))
+	settingData := settingRepo.GetByKey(constant.SettingBatchColor)
+	if settingData.Key == "" {
+		logger.Logger.Error("商家设置不存在或获取失败", zap.Uint64("companyUuid", ctx.GetDbId()))
+		return nil, errors.WithMessage(errors.New("商家设置不存在或获取失败"), "商家设置不存在或获取失败")
+	}
+	// settingData.Values是json格式，需要转换为[]string。 json数组格式示例：["#FF585B", "#FC0169", "#FF9900", "#BC3BBB", "#7A55D4", "#97B92D", "#006E5E", "#C18000", "#8C5A3F"]
+	colors := make([]string, 0)
+	err = json.Unmarshal([]byte(settingData.Values), &colors)
+	if err != nil {
+		return nil, errors.WithMessage(err, "转换商家设置失败")
+	} else if len(colors) == 0 {
+		return nil, errors.WithMessage(errors.New("没有设置分批类型颜色"), "没有设置分批类型颜色")
+	}
+
+	// 将batchTags转换为map
+	batchTagMap := make(map[string]*model.BatchTag)
+	for _, batchTag := range batchTags {
+		batchTagMap[batchTag.Color] = batchTag
+	}
+
+	colorUsageMap := make([]product_resp.BatchTagColorUsage, len(colors))
+	for i, color := range colors {
+		batchTag, ok := batchTagMap[color]
+		if ok {
+			colorUsageMap[i] = product_resp.BatchTagColorUsage{
+				Color:        color,
+				IsUsed:       true,
+				UsedBy:       batchTag.Name,
+				BatchTagUuid: batchTag.Uuid,
+			}
+		} else {
+			colorUsageMap[i] = product_resp.BatchTagColorUsage{
+				Color:        color,
+				IsUsed:       false,
+				UsedBy:       "",
+				BatchTagUuid: 0,
+			}
 		}
 	}
+
 	return &product_resp.BatchTagColorUsageList{
 		List: colorUsageMap,
 	}, nil

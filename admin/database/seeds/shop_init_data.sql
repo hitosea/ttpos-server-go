@@ -28,6 +28,14 @@ INSERT INTO `ttpos_buffet_customer_type` (`id`, `uuid`, `name`, `create_time`, `
 COMMIT;
 
 -- ----------------------------
+-- Records of ttpos_setting
+-- ----------------------------
+BEGIN;
+INSERT INTO `ttpos_setting` (`key`, `describe`, `values`, `create_time`, `update_time`) VALUES ('batch_color', '分批类型颜色', '["#FF585B", "#FC0169", "#FF9900", "#BC3BBB", "#7A55D4", "#97B92D", "#006E5E", "#C18000", "#8C5A3F"]', @nowTime, @nowTime);
+COMMIT;
+
+
+-- ----------------------------
 -- Records of ttpos_member_level
 -- ----------------------------
 BEGIN;
