@@ -10124,13 +10124,25 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 				IsFreeItem: true, // 零元商品当作赠菜
 			})
 		} else {
-			items = append(items, &selling.PosInvoiceItem{
-				ItemCode:   erpCode,
-				Qty:        product.Num,
-				Rate:       product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
-				Amount:     product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
-				IsFreeItem: isFreeOrder,
-			})
+			if product.IsPackageProduct() { // 套餐主商品不添加到发票
+				packageName := language.JsonToLocaleResponse(product.Name) // 套餐名称
+				items = append(items, &selling.PosInvoiceItem{
+					ItemCode:    "TC001",
+					Qty:         product.Num,
+					Rate:        product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
+					Amount:      product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
+					Description: packageName.EN,                            // 套餐子商品描述
+					IsFreeItem:  false,
+				})
+			} else {
+				items = append(items, &selling.PosInvoiceItem{
+					ItemCode:   erpCode,
+					Qty:        product.Num,
+					Rate:       product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
+					Amount:     product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
+					IsFreeItem: isFreeOrder,
+				})
+			}
 		}
 		// 如果有小料，则需要添加小料
 		sauceBoms := product.GetSauceSaleOrderProductBom()
