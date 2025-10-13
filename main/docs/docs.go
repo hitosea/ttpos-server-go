@@ -31441,7 +31441,7 @@ const docTemplate = `{
         "req.GetOrderCartProductBatchCookingListReq": {
             "type": "object",
             "properties": {
-                "sale_bill_uuid": {
+                "saleBillUuid": {
                     "description": "销售账单UUID, 必填",
                     "type": "integer"
                 }
