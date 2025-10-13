@@ -109,7 +109,7 @@ func (r *BatchTagRepoImpl) CreateBatchTag(batchTag model.BatchTag) error {
 // 获取当前最大的排序值
 func (r *BatchTagRepoImpl) GetMaxSort() (int, error) {
 	var maxSort int
-	err := r.db.Model(&model.BatchTag{}).Select("MAX(sort)").Scan(&maxSort).Error
+	err := r.db.Model(&model.BatchTag{}).Select("ifnull(max(sort), 0)").Scan(&maxSort).Error
 	if err != nil {
 		return 0, errors.WithMessage(err)
 	}
