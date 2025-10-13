@@ -1802,6 +1802,7 @@ func (h *DeskHandler) GetHeadquarterMaterialList(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @param data body req.GetOrderCartProductBatchCookingListReq true "获取分批送厨弹框的销售订单商品列表"
 // @Success 200 {object} dto.Response{data=resp.OrderCartProductBatchCookingRes}
 // @Router /cashier/desk/order/cart/batch/cooking [get]
 func (h *DeskHandler) OrderCartProductBatchCookingList(c *gin.Context) {
@@ -1829,6 +1830,7 @@ func (h *DeskHandler) OrderCartProductBatchCookingList(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @param data body req.OrderCartProductBatchCookingReq true "分批送厨弹框的销售订单商品列表"
 // @Success 200 {object} dto.Response{data=resp.OrderCartProductBatchCooking}
 // @Router /cashier/desk/order/cart/batch/cooking [post]
 func (h *DeskHandler) OrderCartProductBatchCooking(c *gin.Context) {

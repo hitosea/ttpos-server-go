@@ -5143,6 +5143,17 @@ const docTemplate = `{
                     "收银端.桌台"
                 ],
                 "summary": "获取分批送厨弹框的销售订单商品列表",
+                "parameters": [
+                    {
+                        "description": "获取分批送厨弹框的销售订单商品列表",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.GetOrderCartProductBatchCookingListReq"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -5181,6 +5192,17 @@ const docTemplate = `{
                     "收银端.桌台"
                 ],
                 "summary": "分批送厨弹框的销售订单商品列表",
+                "parameters": [
+                    {
+                        "description": "分批送厨弹框的销售订单商品列表",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderCartProductBatchCookingReq"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -27411,6 +27433,10 @@ const docTemplate = `{
                     "description": "图片",
                     "type": "string"
                 },
+                "internal_code": {
+                    "description": "内部编码",
+                    "type": "string"
+                },
                 "locale_name": {
                     "description": "物品名称",
                     "allOf": [
@@ -30070,6 +30096,10 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "code": {
+                    "description": "商品类别编码",
+                    "type": "string"
+                },
                 "is_editable": {
                     "description": "是否可编辑",
                     "type": "boolean"
@@ -30335,6 +30365,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.LocaleResponse"
                         }
                     ]
+                },
+                "internal_code": {
+                    "description": "内部编码. 规格商品的内部编码",
+                    "type": "string"
                 },
                 "locale_name": {
                     "description": "商品名称",
@@ -31412,6 +31446,15 @@ const docTemplate = `{
                 }
             }
         },
+        "req.GetOrderCartProductBatchCookingListReq": {
+            "type": "object",
+            "properties": {
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID, 必填",
+                    "type": "integer"
+                }
+            }
+        },
         "req.InitShopReq": {
             "type": "object",
             "required": [
@@ -32227,6 +32270,30 @@ const docTemplate = `{
                     "items": {
                         "type": "integer"
                     }
+                }
+            }
+        },
+        "req.OrderCartProductBatchCookingReq": {
+            "type": "object",
+            "properties": {
+                "batch_tag_uuid": {
+                    "description": "分批类型UUID, 必填",
+                    "type": "integer"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID, 必填",
+                    "type": "integer"
+                },
+                "sale_order_product_uuids": {
+                    "description": "销售订单商品UUID列表, 必填",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID, 必填",
+                    "type": "integer"
                 }
             }
         },
