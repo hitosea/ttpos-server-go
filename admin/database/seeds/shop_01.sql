@@ -65,6 +65,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `is_kitchen_confirm` INT(10) NOT NULL DEFAULT 0 COMMENT '厨显是否确认退菜，确认后不在厨显端显示已经整单取消的菜品,0:未确认,1:已确认',
     `reverse_settle_count` INT(10) NOT NULL DEFAULT 0 COMMENT '反结账次数',
 
+    `batch_tag_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '分批类型UUID',
+
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳),开台时间',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

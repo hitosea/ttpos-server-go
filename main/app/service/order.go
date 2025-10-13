@@ -13697,10 +13697,10 @@ func (s *orderSrv) OrderCartProductBatchCooking(ctx context.Context, req req.Ord
 		return nil, errors.WithMessage(errSaleBill)
 	}
 
-	batchTag, errBatchTag := repository.NewBatchTagRepo(db).GetBatchTag(repository.CommonRepo.WhereByUuid(req.BatchTagUuid), repository.CommonRepo.WhereBySoftDelete())
-	if errBatchTag != nil {
-		return nil, errors.WithMessage(errBatchTag)
-	}
+	//batchTag, errBatchTag := repository.NewBatchTagRepo(db).GetBatchTag(repository.CommonRepo.WhereByUuid(req.BatchTagUuid), repository.CommonRepo.WhereBySoftDelete())
+	//if errBatchTag != nil {
+	//	return nil, errors.WithMessage(errBatchTag)
+	//}
 
 	// 获取saleBill中的分批商品
 	saleBillProducts := saleBill.GetSaleOrderProductBatchCookingBySaleOrderUuid(req.SaleOrderProductUuids)
@@ -13720,7 +13720,7 @@ func (s *orderSrv) OrderCartProductBatchCooking(ctx context.Context, req req.Ord
 	}
 
 	// 更新saleBill中的最新分批类型的颜色。（每次分批送厨后，都改变一次）
-	saleBill.BatchTagColor = batchTag.Color
+	saleBill.BatchTagUuid = req.BatchTagUuid
 
 	// if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 	// 	if err := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProductList(saleBillProducts); err != nil {

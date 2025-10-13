@@ -89,7 +89,7 @@ type SaleBill struct {
 	ReverseSettleCount uint `gorm:"column:reverse_settle_count;type:int(11);default:0;comment:反结账次数" json:"reverse_settle_count"`
 
 	// 分批类型颜色
-	BatchTagColor string `gorm:"column:batch_tag_color;type:varchar(255);default:'';comment:分批类型颜色" json:"batch_tag_color"`
+	BatchTagUuid uint64 `gorm:"column:batch_tag_uuid;type:bigint(20);default:0;comment:分批类型UUID" json:"batch_tag_uuid"`
 
 	// 关联模型
 	SaleOrders      []*SaleOrder      `gorm:"foreignKey:SaleBillUuid;references:uuid"`
