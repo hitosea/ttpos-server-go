@@ -29,4 +29,5 @@ const (
 	CheckNameSourceMaterialCategory = "material_category"
 	CheckNameSourceMaterialUnit     = "material_unit"
 	CheckNameSourceWarehouse        = "warehouse"
+	CheckNameSourceBatchTag         = "batch_tag"
 )
