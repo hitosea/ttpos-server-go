@@ -81,6 +81,7 @@ func (r *deskRepo) GetClientDeskList(source string, status, isBuffet, pageNo, pa
 	query := r.db.Model(&model.Desk{}).
 		Joins(fmt.Sprintf("LEFT JOIN %ssale_bill ON %sdesk.sale_bill_uuid = %ssale_bill.uuid", tablePrefix, tablePrefix, tablePrefix)).
 		Preload("SaleBill").
+		Preload("SaleBill.BatchTag").
 		Preload("SaleBill.SaleOrders", func(db *gorm.DB) *gorm.DB {
 			return db.Scopes(NotDeleted).Order("create_time asc")
 		}).

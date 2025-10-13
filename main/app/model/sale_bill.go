@@ -99,6 +99,7 @@ type SaleBill struct {
 	Desk            *Desk             `gorm:"foreignKey:DeskUuid;references:uuid"`
 	BuffetPackage1  *BuffetPackage    `gorm:"foreignKey:BuffetPackage1Uuid;references:uuid"`
 	BuffetPackage2  *BuffetPackage    `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
+	BatchTag        *BatchTag         `gorm:"foreignKey:BatchTagUuid;references:uuid"`
 }
 
 // 是否是“已取消”状态

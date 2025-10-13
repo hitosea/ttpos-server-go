@@ -47,7 +47,14 @@ func (r *BatchTagRepoImpl) GetBatchTags(opts ...DBOption) ([]*model.BatchTag, er
 }
 
 func (r *BatchTagRepoImpl) GetBatchTagList() ([]*model.BatchTag, error) {
-	opts := []DBOption{NotDeleted}
+	opts := []DBOption{
+		NotDeleted,
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "MultiLanguageName",
+			},
+		),
+	}
 	list, err := r.GetBatchTags(opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err)
