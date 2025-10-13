@@ -42,15 +42,15 @@ func (payload *SentCookingPrePayload) ToJsonString() string {
 	return utils.ToJson(payload)
 }
 
-// SentCookingHandler 送厨事件处理器
+// SentCookingHandler 预送厨事件处理器
 type SentCookingPreHandler func(msg SentCookingPrePayload)
 
-// PublishSentCookingEvent 发布送厨事件
+// PublishSentCookingPreEvent 发布预送厨事件
 func (system *SystemEventBus) PublishSentCookingPreEvent(msg SentCookingPrePayload) {
 	system.bus.Publish(eventbus.Event{Name: string(EventSentCookingPre), Payload: msg})
 }
 
-// SubscribeSentCookingEvent 订阅送厨事件
+// SubscribeSentCookingPreEvent 订阅预送厨事件
 func (system *SystemEventBus) SubscribeSentCookingPreEvent(handler SentCookingPreHandler) {
 	system.bus.Subscribe(string(EventSentCookingPre), func(event eventbus.Event) {
 		msg := event.Payload.(SentCookingPrePayload)
