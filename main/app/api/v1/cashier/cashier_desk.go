@@ -1802,7 +1802,7 @@ func (h *DeskHandler) GetHeadquarterMaterialList(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} dto.Response{data=resp.OrderCartProductBatchCooking}
+// @Success 200 {object} dto.Response{data=resp.OrderCartProductBatchCookingRes}
 // @Router /cashier/desk/order/cart/batch/cooking [get]
 func (h *DeskHandler) OrderCartProductBatchCookingList(c *gin.Context) {
 	ctx := helper.GetContext(c)
