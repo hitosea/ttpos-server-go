@@ -53,6 +53,32 @@ func WithOnlyCheckCooking() func(option *ActionCookingOption) {
 }
 
 // 转换器
+func (s *orderSrv) convertToEventOrderProductPre(saleOrderProduct *model.SaleOrderProduct, saleBill *model.SaleBill) event.OrderProductPre {
+	orderProduct := event.OrderProductPre{
+		OrderProductId:        saleOrderProduct.Uuid,
+		ProductId:             saleOrderProduct.ProductPackageUuid,
+		ProductName:           saleOrderProduct.MultiLanguageName.GetNames(),
+		ProductAttr:           saleOrderProduct.GetAttributeName(),
+		ProductType:           saleOrderProduct.ProductType,
+		ProductAttrList:       saleOrderProduct.GetAttributeNameList(),
+		ProductSauceNamesList: saleOrderProduct.GetSauceNamesList(),
+		Attr:                  saleOrderProduct.GetPureAttributeName(),
+		AttrList:              saleOrderProduct.GetPureAttributeNameList(),
+		FlavorName:            saleOrderProduct.GetFlavorName(),
+		TotalNum:              saleOrderProduct.Num,
+		NumType:               saleOrderProduct.NumType,
+		IsBuffet:              saleOrderProduct.IsBuffet == 1,
+		IsWrap:                saleOrderProduct.CalculateIsWrap(saleBill),
+		IsGift:                saleOrderProduct.IsGiftProduct(),
+		IsPackage:             saleOrderProduct.IsPackageProduct(),
+		IsSubProduct:          saleOrderProduct.IsPackageSubProduct(),
+		Remark:                saleOrderProduct.Remark,
+	}
+
+	return orderProduct
+}
+
+// 转换器
 func (s *orderSrv) convertToEventOrderProduct(saleOrderProduct *model.SaleOrderProduct, saleBill *model.SaleBill, saleOrder *model.SaleOrder) event.OrderProduct {
 	orderProduct := event.OrderProduct{
 		OrderProductId:        saleOrderProduct.Uuid,
@@ -301,6 +327,10 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 				for _, unCookingSaleOrderProduct := range unCookingSaleOrderProducts {
 					// 套餐子商品不显示送厨记录
 					if unCookingSaleOrderProduct.IsPackageSubProduct() {
+						continue
+					}
+					// 分批商品不显示送厨记录
+					if unCookingSaleOrderProduct.IsBatchBool() {
 						continue
 					}
 					products = append(products, s.convertToEventOrderProduct(

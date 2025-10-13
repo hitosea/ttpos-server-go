@@ -66,8 +66,9 @@ const (
 	// =============================================================================
 	// 厨房操作事件
 	// =============================================================================
-	EventSentCooking EventName = "Event_Sent_Cooking" // 送厨事件
-	EventFinishMenu  EventName = "Event_Finish_Menu"  // 完成制作事件
+	EventSentCooking    EventName = "Event_Sent_Cooking"     // 送厨事件
+	EventSentCookingPre EventName = "Event_Sent_Cooking_Pre" // 预送厨事件
+	EventFinishMenu     EventName = "Event_Finish_Menu"      // 完成制作事件
 
 	// =============================================================================
 	// 打包相关事件

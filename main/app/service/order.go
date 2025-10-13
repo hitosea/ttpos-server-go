@@ -13728,6 +13728,27 @@ func (s *orderSrv) OrderCartProductBatchCooking(ctx context.Context, req req.Ord
 		return nil, errors.WithMessage(err)
 	}
 
+	// 发起“预送厨”操作的事件
+	go s.bus.PublishSentCookingPreEvent(event.SentCookingPrePayload{
+		BasePayload: event.BasePayload{ // 预送厨
+			Ctx:          ctx,
+			CompanyUuid:  ctx.GetCompanyUuid(),
+			Source:       ctx.GetSource(),
+			SaleBillUuid: saleBill.Uuid,
+			OperatorUuid: int64(ctx.GetStaffUuid()),
+		},
+		Products: func() event.ProductsPre {
+			products := make(event.ProductsPre, 0)
+			for _, unCookingSaleOrderProduct := range saleBillProducts {
+				products = append(products, s.convertToEventOrderProductPre(
+					unCookingSaleOrderProduct,
+					saleBill,
+				))
+			}
+			return products
+		}(),
+	})
+
 	shopCart, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
