@@ -816,7 +816,9 @@ func (h *DeskHandler) OrderCartProductCooking(c *gin.Context) {
 		return
 	}
 	// 返回结果
-	helper.Success(c, res)
+	code := res.GetCode()
+	helper.FailWithData(c, code, res, nil, constant.ParseCodeOrderCheck(code))
+	// helper.Success(c, res)
 }
 
 // OrderCartProductReturning 退菜购物车商品

@@ -5134,6 +5134,20 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		if productMustPlanList != nil {
 			shopCartInfo.MustPlans = productMustPlanList
 		}
+
+		// 判断是否需要弹出分批送厨弹窗。只有收银机和助手端需要判断
+		if ctx.GetSource() == constant.SourceAssistant || ctx.GetSource() == constant.SourceCashier {
+			// 获取门店业务设置
+			businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
+			if businessSetting.OpenIsBatch() {
+				if shopCart.SaleBill.IsNeedBatchSendCooking() {
+					shopCartInfo.SetCode(constant.CodeOrderCheckProductBatch)
+				}
+			}
+		}
 	}
 	return shopCartInfo, nil
 }

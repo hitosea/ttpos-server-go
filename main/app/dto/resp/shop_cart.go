@@ -46,6 +46,16 @@ type ShopCart struct {
 	UpdateTime    int64                `json:"update_time"`          // 更新时间
 
 	Product *product_resp.Product `json:"product,omitempty"` // 商品信息。 当加购商品时商品价格变化时，返回最新的商品信息
+
+	// 是否返回code状态码为-209
+	code int `json:"code,omitempty"` // 状态码。 当code为-209时，前端会弹出分批送厨弹窗
+}
+
+func (res *ShopCart) SetCode(code int) {
+	res.code = code
+}
+func (res *ShopCart) GetCode() int {
+	return res.code
 }
 
 // H5CartSendProduct 扫码h5购物车已下单品
