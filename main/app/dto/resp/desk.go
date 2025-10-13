@@ -26,6 +26,7 @@ type Desk struct {
 	IsDisabled             bool    `json:"-"`                          // 是否被禁用
 	DefaultPeopleNum       uint    `json:"default_people_num"`         // 默认人数
 	IsOpenDefaultPeopleNum bool    `json:"is_open_default_people_num"` // 是否开启默认人数
+	BatchTagColor          string  `json:"batch_tag_color"`            // 桌台分批类型的颜色
 }
 
 type DeskNo struct {
@@ -40,6 +41,17 @@ type DeskExtra struct {
 	OccupyWaitNum      uint  `json:"occupy_wait_num"`       // 桌台待清台数量
 	TotalNum           uint  `json:"total_num"`             // 桌台总计数量
 	UpdateTime         int64 `json:"update_time"`           // 更新时间
+
+	// 分批信息
+	BatchTags []BatchTagRes `json:"batch_tags"`
+}
+
+type BatchTagRes struct {
+	Uuid       uint64             `json:"uuid"`        // 分批类型的uuid
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 分批类型的名称
+	Color      string             `json:"color"`       // 分批类型的颜色
+	Sort       int                `json:"sort"`        // 分批类型的排序
+	Count      uint               `json:"count"`       // 桌台分批类型的数量
 }
 
 type DeskRegion struct {

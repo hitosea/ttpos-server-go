@@ -21321,6 +21321,46 @@
                 }
             }
         },
+        "/shop/product/printer_list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取打印档口列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品"
+                ],
+                "summary": "获取打印档口列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ProductPrinterList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/product/sauce": {
             "get": {
                 "security": [
@@ -22195,46 +22235,6 @@
                     },
                     "400": {
                         "description": "错误请求"
-                    }
-                }
-            }
-        },
-        "/shop/product_printer_list": {
-            "get": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "获取打印档口列表",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.商品"
-                ],
-                "summary": "获取打印档口列表",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.ProductPrinterList"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
                     }
                 }
             }
@@ -29246,6 +29246,14 @@
                     "description": "商品价格,套餐的价格",
                     "type": "number"
                 },
+                "product_printers": {
+                    "description": "商品打印机列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/product_resp.ProductPrinterList"
+                        }
+                    ]
+                },
                 "product_type": {
                     "description": "商品类型 0-商品 1-套餐",
                     "type": "integer"
@@ -29845,6 +29853,34 @@
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/product_resp.ProductPackageSubProduct"
+                    }
+                }
+            }
+        },
+        "product_resp.ProductPrinter": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "商品打印机名称",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "商品打印机状态",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "商品打印机uuid",
+                    "type": "integer"
+                }
+            }
+        },
+        "product_resp.ProductPrinterList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product_resp.ProductPrinter"
                     }
                 }
             }
@@ -33980,6 +34016,13 @@
                         }
                     ]
                 },
+                "product_printer_uuids": {
+                    "description": "商品打印机列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "row": {
                     "description": "行号",
                     "type": "integer"
@@ -34470,6 +34513,13 @@
                             "$ref": "#/definitions/req.ProductShopEditPackageReq"
                         }
                     ]
+                },
+                "product_printer_uuids": {
+                    "description": "商品打印机列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 },
                 "sauce": {
                     "description": "商品加料列表",
@@ -36382,6 +36432,35 @@
                 }
             }
         },
+        "resp.BatchTagRes": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "description": "分批类型的颜色",
+                    "type": "string"
+                },
+                "count": {
+                    "description": "桌台分批类型的数量",
+                    "type": "integer"
+                },
+                "locale_name": {
+                    "description": "分批类型的名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "sort": {
+                    "description": "分批类型的排序",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "分批类型的uuid",
+                    "type": "integer"
+                }
+            }
+        },
         "resp.BillLists": {
             "type": "object",
             "properties": {
@@ -37209,6 +37288,10 @@
         "resp.Desk": {
             "type": "object",
             "properties": {
+                "batch_tag_color": {
+                    "description": "桌台分批类型的颜色",
+                    "type": "string"
+                },
                 "customer_count": {
                     "description": "桌台人数",
                     "type": "integer"
@@ -37306,6 +37389,13 @@
                 "available_num": {
                     "description": "桌台可用数量",
                     "type": "integer"
+                },
+                "batch_tags": {
+                    "description": "分批信息",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.BatchTagRes"
+                    }
                 },
                 "lock_num": {
                     "description": "桌台锁定数量",
