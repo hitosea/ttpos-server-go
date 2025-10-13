@@ -184,7 +184,14 @@ func (s *SyncSrv) Sync(ctx context.Context) error {
 			isExceptionOccurred = true || isExceptionOccurred
 		}
 
-		// 4,5,6,7,8 暂不同步
+		// 4 规格
+		logger.Logger.Info("开始同步规格", zap.Uint64("companyUuid", companyUuid))
+		if err := s.productSrv.SyncProductFlavor(ctx); err != nil {
+			logger.Logger.Error("规格同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
+			isExceptionOccurred = true || isExceptionOccurred
+		}
+
+		// 5,6,7,8 暂不同步
 
 		logger.Logger.Info("开始同步供应商", zap.Uint64("companyUuid", companyUuid))
 		// 9 供应商
