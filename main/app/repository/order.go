@@ -1936,16 +1936,16 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64, opts ...GetSaleBillA
 				},
 			},
 			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.FlavorMaterials.Material",
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.FlavorMaterials.Material.WarehouseItems",
 			},
 			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.SauceMaterials.Material",
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.SauceMaterials.Material.WarehouseItems",
 			},
 			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.ProductBomCard.RelatedMaterials.Material",
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.ProductBomCard.RelatedMaterials.Material.WarehouseItems",
 			},
 			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductBomCard.RelatedMaterials.Material",
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductBomCard.RelatedMaterials.Material.WarehouseItems",
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.BatchTag",

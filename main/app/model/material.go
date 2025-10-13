@@ -34,7 +34,7 @@ type Material struct {
 	NotBaseUnitList     []*MaterialUnit    `gorm:"foreignKey:material_uuid;references:uuid"`            // 非基准单位列表
 	ImageFile           *File              `gorm:"foreignKey:image_uuid;references:uuid"`               // 图片
 	RelatedMaterialList []*RelatedMaterial `gorm:"foreignKey:material_uuid;references:uuid"`            // 规格/加料关联材料
-	WarehouseItem       []*WarehouseItem   `gorm:"foreignKey:material_uuid;references:uuid"`            // 仓库物品库存
+	WarehouseItems      []*WarehouseItem   `gorm:"foreignKey:material_uuid;references:uuid"`            // 仓库物品库存
 }
 
 func (model *Material) SetNil() {
@@ -49,7 +49,7 @@ func (model *Material) SetNil() {
 
 // GetStockNum 获取库存数量。获取物品在默认仓库中的库存数量
 func (model *Material) GetStockNum() float64 {
-	for _, warehouseItem := range model.WarehouseItem {
+	for _, warehouseItem := range model.WarehouseItems {
 		if warehouseItem.WarehouseUuid == model.WarehouseUuid {
 			return warehouseItem.Stock
 		}

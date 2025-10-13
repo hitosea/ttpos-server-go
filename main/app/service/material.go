@@ -224,7 +224,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		num := decimal.NewFromFloat(0)
 		availableNum := decimal.NewFromFloat(0)
 		transitNum := decimal.NewFromFloat(0)
-		for _, warehouseItem := range material.WarehouseItem {
+		for _, warehouseItem := range material.WarehouseItems {
 			if warehouseItem.Warehouse != nil {
 				if warehouseItem.Warehouse.IsTransit() {
 					transitNum = transitNum.Add(decimal.NewFromFloat(warehouseItem.Stock))

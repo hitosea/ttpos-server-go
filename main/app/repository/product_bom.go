@@ -109,7 +109,7 @@ func (r *productBomRepoImpl) GetFlavorProductBomByUuid(uuid uint64) (*model.Prod
 				},
 			},
 			WithPreload{
-				Query: "FlavorMaterials.Material",
+				Query: "FlavorMaterials.Material.WarehouseItems",
 			},
 			WithPreload{
 				Query: "ProductPackage.MultiLanguageName",
@@ -118,10 +118,10 @@ func (r *productBomRepoImpl) GetFlavorProductBomByUuid(uuid uint64) (*model.Prod
 				Query: "ProductPackage.ProductUnit",
 			},
 			WithPreload{
-				Query: "ProductBomCard.RelatedMaterials.Material",
+				Query: "ProductBomCard.RelatedMaterials.Material.WarehouseItems",
 			},
 			WithPreload{
-				Query: "ProductSauce.ProductBomCard.RelatedMaterials.Material",
+				Query: "ProductSauce.ProductBomCard.RelatedMaterials.Material.WarehouseItems",
 			},
 		),
 	)
@@ -154,7 +154,7 @@ func (r *productBomRepoImpl) GetSauceProductBomsByUuids(uuids []uint64) ([]*mode
 				Query: "ProductSauce.MultiLanguageName",
 			},
 			WithPreload{
-				Query: "ProductSauce.SauceMaterials.Material",
+				Query: "ProductSauce.SauceMaterials.Material.WarehouseItems",
 			},
 		),
 	)

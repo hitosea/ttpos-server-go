@@ -189,6 +189,9 @@ func (r *MaterialRepoImpl) GetMaterialDetailByUuid(uuid uint64) (*model.Material
 			WithPreload{
 				Query: "NotBaseUnitList.Unit.MultiLanguageName",
 			},
+			WithPreload{
+				Query: "WarehouseItems",
+			},
 		),
 	)
 	if err != nil {
