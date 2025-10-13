@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
@@ -862,19 +863,19 @@ func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 				return "", errors.WithMessage(errors.New("获取物品信息失败"), err.Error())
 			}
 			//
-			stockNum := material.StockNum
+			stockNum := material.GetStockNum()
 			conversionRateNum := item.GetConversionRateNum()
 			// 更新库存数量
-			material.StockNum = decimal.NewFromFloat(material.StockNum).
+			latestStockNum := decimal.NewFromFloat(material.GetStockNum()).
 				Sub(decimal.NewFromFloat(conversionRateNum)).
 				InexactFloat64()
-			if material.StockNum < 0 {
+			if latestStockNum < 0 {
 				return "", errors.New(fmt.Sprintf(
 					i18n.Translate(ctx.GetLanguage(), "物品库存不足，物品编码：%s"),
 					item.MaterialCode,
 				) + fmt.Sprintf("  (%v / %v)", stockNum, conversionRateNum))
 			}
-			err = materialRepo.UpdateMaterial(material)
+			err = base.NewMaterialRepo(tx).UpdateMaterialsStockNum(material.Uuid, material.WarehouseUuid, latestStockNum)
 			if err != nil {
 				return "", errors.WithMessage(errors.New("更新物品库存失败"), err.Error())
 			}

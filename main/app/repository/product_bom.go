@@ -174,22 +174,6 @@ func (r *productBomRepoImpl) GetProductBomsByUuids(uuids []uint64) ([]*model.Pro
 	return productBoms, nil
 }
 
-// UpdateProductBomStockNum 更新规格商品或小料的库存数量
-func (r *productBomRepoImpl) UpdateProductBomStockNum(warehouseOutFormItems []*model.WarehouseOutFormItem) error {
-	for _, warehouseOutFormItem := range warehouseOutFormItems {
-		if warehouseOutFormItem.IsProductBom() {
-			if err := r.db.Model(&model.ProductBom{}).Where("uuid = ?", warehouseOutFormItem.ProductBomUuid).Update("stock_num", warehouseOutFormItem.ProductBom.StockNum).Error; err != nil {
-				return err
-			}
-		} else if warehouseOutFormItem.IsMaterial() {
-			if err := r.db.Model(&model.Material{}).Where("uuid = ?", warehouseOutFormItem.MaterialUuid).Update("stock_num", warehouseOutFormItem.Material.StockNum).Error; err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 func (r *productBomRepoImpl) UpdateProductBoms(productBoms []*model.ProductBom) error {
 	if len(productBoms) == 0 {
 		return nil

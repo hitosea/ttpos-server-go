@@ -81,23 +81,27 @@ func AddStock(db *gorm.DB, saleBillUuid uint64) {
 		return
 	}
 	productBoms := make(map[uint64]*model.ProductBom)
-	materials := make(map[uint64]*model.Material)
+	type StockNum struct {
+		MaterialUuid  uint64
+		WarehouseUuid uint64
+		AddStockNum   float64
+	}
+	materials := make(map[uint64]*StockNum)
 	for _, warehouseFormItem := range warehouseFormItems {
 		if warehouseFormItem.IsProductBom() {
 			productBoms[warehouseFormItem.ProductBomUuid] = warehouseFormItem.ProductBom
 			productBoms[warehouseFormItem.ProductBomUuid].StockNum += warehouseFormItem.Num
 		} else if warehouseFormItem.IsMaterial() {
-			materials[warehouseFormItem.MaterialUuid] = warehouseFormItem.Material
-			materials[warehouseFormItem.MaterialUuid].StockNum += warehouseFormItem.Num
+			materials[warehouseFormItem.MaterialUuid] = &StockNum{
+				MaterialUuid:  warehouseFormItem.MaterialUuid,
+				WarehouseUuid: warehouseFormItem.Material.WarehouseUuid,
+				AddStockNum:   warehouseFormItem.Num,
+			}
 		}
 	}
 	productBomsList := make([]*model.ProductBom, 0)
-	materialsList := make([]*model.Material, 0)
 	for _, productBom := range productBoms {
 		productBomsList = append(productBomsList, productBom)
-	}
-	for _, material := range materials {
-		materialsList = append(materialsList, material)
 	}
 	// 更新库存
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
@@ -107,8 +111,11 @@ func AddStock(db *gorm.DB, saleBillUuid uint64) {
 		if err := repository.NewProductBomRepo(tx).UpdateProductBoms(productBomsList); err != nil {
 			return err
 		}
-		if err := base.NewMaterialRepo(db).UpdateMaterials(materialsList); err != nil {
-			return err
+		// 更新仓库物品库存。
+		for _, material := range materials {
+			if err := base.NewMaterialRepo(tx).UpdateMaterialsStockNum(material.MaterialUuid, material.WarehouseUuid, material.AddStockNum); err != nil {
+				return err
+			}
 		}
 		return nil
 	}); err != nil {

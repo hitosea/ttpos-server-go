@@ -587,7 +587,7 @@ func (model *RelatedMaterial) SetNil() {
 
 // 计算预计可生产的产品数量。材料库存数量 / 材料用量
 func (model *RelatedMaterial) CalculateExpectedProductionNum() float64 {
-	materialStockNum := model.Material.StockNum // 材料库存数量，单位：基准单位
+	materialStockNum := model.Material.GetStockNum() // 材料库存数量，单位：基准单位
 	if materialStockNum <= 0 {
 		return 0
 	}
@@ -678,7 +678,8 @@ func (model *ProductBom) IsStockShortageWithMaterial(productNum float64) bool {
 			if material.IsDelete() {
 				continue
 			}
-			if material.Material.StockNum < material.GetDecreaseNum(productNum) {
+			materialStockNum := material.Material.GetStockNum()
+			if materialStockNum < material.GetDecreaseNum(productNum) {
 				return true
 			}
 		}
@@ -686,7 +687,8 @@ func (model *ProductBom) IsStockShortageWithMaterial(productNum float64) bool {
 	// 如果是关联材料的小料，则检查关联材料的库存
 	if model.IsSauce() {
 		for _, material := range model.ProductSauce.SauceMaterials {
-			if material.Material.StockNum < material.GetDecreaseNum(productNum) {
+			materialStockNum := material.Material.GetStockNum()
+			if materialStockNum < material.GetDecreaseNum(productNum) {
 				return true
 			}
 		}

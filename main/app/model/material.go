@@ -2,7 +2,7 @@ package model
 
 import "ttpos-server-go/app/errors"
 
-// Material 原料信息表 ttpos_material
+// Material 原料信息表 `ttpos_material`
 type Material struct {
 	BaseModel
 	Name                  string  `gorm:"type:text;default:'';column:name;comment:'原料名称'"`
@@ -45,6 +45,16 @@ func (model *Material) SetNil() {
 	model.Category = MaterialCategory{}
 	model.NotBaseUnitList = nil
 	model.ImageFile = nil
+}
+
+// GetStockNum 获取库存数量。获取物品在默认仓库中的库存数量
+func (model *Material) GetStockNum() float64 {
+	for _, warehouseItem := range model.WarehouseItem {
+		if warehouseItem.WarehouseUuid == model.WarehouseUuid {
+			return warehouseItem.Stock
+		}
+	}
+	return 0
 }
 
 // GetValuation

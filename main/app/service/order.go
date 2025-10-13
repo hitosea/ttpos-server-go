@@ -5514,7 +5514,8 @@ func GetSauceInfo(ctx context.Context, db *gorm.DB, sauceProductBomUuidList []ui
 			// 检查加料材料库存是否充足
 			if len(bom.ProductSauce.SauceMaterials) > 0 {
 				for _, sauceMaterial := range bom.ProductSauce.SauceMaterials {
-					if sauceMaterial.Material.StockNum < sauceMaterial.GetDecreaseNum(productNum) {
+					materialStockNum := sauceMaterial.Material.GetStockNum()
+					if materialStockNum < sauceMaterial.GetDecreaseNum(productNum) {
 						return nil, errors.WithMessage(fmt.Errorf("%s %s", sauceName, i18n.Translate(ctx.GetLanguage(), "加料材料库存不足")))
 					}
 				}
@@ -5691,7 +5692,8 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				if flavorMaterial.IsDelete() {
 					continue
 				}
-				if flavorMaterial.Material.StockNum < flavorMaterial.GetDecreaseNum(product.Num) {
+				materialStockNum := flavorMaterial.Material.GetStockNum()
+				if materialStockNum < flavorMaterial.GetDecreaseNum(product.Num) {
 					return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "材料库存不足")))
 				}
 			}
@@ -5734,7 +5736,8 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				// 检查加料材料库存是否充足
 				if len(bom.ProductSauce.SauceMaterials) > 0 {
 					for _, sauceMaterial := range bom.ProductSauce.SauceMaterials {
-						if sauceMaterial.Material.StockNum < sauceMaterial.GetDecreaseNum(product.Num) {
+						materialStockNum := sauceMaterial.Material.GetStockNum()
+						if materialStockNum < sauceMaterial.GetDecreaseNum(product.Num) {
 							return nil, errors.WithMessage(fmt.Errorf("%s %s", sauceName, i18n.Translate(ctx.GetLanguage(), "加料材料库存不足")))
 						}
 					}
@@ -6093,7 +6096,8 @@ func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, 
 			if flavorMaterial.IsDelete() {
 				continue
 			}
-			if flavorMaterial.Material.StockNum < flavorMaterial.GetDecreaseNum(product.Num) {
+			materialStockNum := flavorMaterial.Material.GetStockNum()
+			if materialStockNum < flavorMaterial.GetDecreaseNum(product.Num) {
 				return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "材料库存不足")))
 			}
 		}
