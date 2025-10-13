@@ -11,7 +11,6 @@ type IProductBomRepo interface {
 	IProductBomQueryRepo
 	CreateProductBom(productBom model.ProductBom) (*model.ProductBom, error)
 	UpdateProductBom(data map[string]any, opts ...DBOption) error
-	UpdateProductBomStockNum(warehouseOutFormItems []*model.WarehouseOutFormItem) error            // 更新规格商品或小料的库存数量
 	UpdateProductBoms(productBoms []*model.ProductBom) error                                       // 更新ProductBom
 	CreateProductBoms(productBoms []model.ProductBom) error                                        // 创建ProductBom
 	UpdateProductBomCard(productBomUuid uint64, productBomCardUuid uint64, stockNum float64) error // 更新规格商品的成本卡
