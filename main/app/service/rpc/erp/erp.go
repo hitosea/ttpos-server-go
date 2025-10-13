@@ -70,6 +70,7 @@ type IErpSrv interface {
 	GetWarehouseList(ctx context.Context, getWarehouseListReq req.GetErpnextWarehouseListReq) ([]*warehouse.WarehouseInfo, error) // 获取仓库列表
 
 	// 规格
+	SaveFlavor(ctx context.Context, params req.SaveErpFlavorReq) error                                    // 保存规格
 	GetFlavorList(ctx context.Context, params req.GetErpFlavorListReq) (resp.GetErpFlavorListResp, error) // 获取规格列表
 
 	// 加料

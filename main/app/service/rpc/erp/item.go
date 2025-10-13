@@ -394,6 +394,41 @@ func (s *erpSrv) SaveAttribute(ctx context.Context, saveAttributeReq req.SaveAtt
 	return nil
 }
 
+// 保存规格
+func (s *erpSrv) SaveFlavor(ctx context.Context, params req.SaveErpFlavorReq) error {
+	client, conn, err := NewErpItemClient()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	// 保存规格值
+	valueList := make([]*item.AttributeValueInfo, 0)
+	for _, value := range params.ValueList {
+		valueList = append(valueList, &item.AttributeValueInfo{
+			AttributeValue: value.ValueName,
+			Abbr:           value.ValueAliasName,
+		})
+	}
+
+	// 保存规格组
+	result, err := client.SaveAttribute(WithSiteCode(ctx, params.SiteCode), &item.AttributeInfo{
+		AttributeName:      params.GroupName,
+		Branch:             params.Branch,
+		CompanyAbbr:        params.CompanyAbbr,
+		AliasName:          params.GroupAliasName,
+		AttributeValueList: valueList,
+	})
+	if err != nil {
+		return err
+	}
+	if result.GetCode() != "0" {
+		return errors.New(result.GetMessage())
+	}
+
+	return nil
+}
+
 // GetFlavorList 获取规格列表
 func (s *erpSrv) GetFlavorList(ctx context.Context, params req.GetErpFlavorListReq) (resp.GetErpFlavorListResp, error) {
 	var listResp resp.GetErpFlavorListResp
