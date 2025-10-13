@@ -389,39 +389,20 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 		return errors.WithMessage(errors.New("同步供应商失败"), err.Error())
 	}
 
-	// 供应商 erp_code 和商家总部 uuid 映射
-	supplierHeadquarterMap := make(map[string]uint64)
-	// 总部供应商 ttpos erp_code 和 model.Supplier 的映射
-	headquarterSupplierMap := make(map[string]model.Supplier)
-	// 如果是子店，获取总部允许子店看到的
+	var headquarterSuppliers []model.Supplier
 	if companySetting.IsSubShop() {
 		var headquarter model.CompanySetting
-		saasDb := s.dbm.GetDB(0)
-		err := saasDb.Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
+		err := s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
-		headquarterSupplierList, err := erp.NewIErpSrv(s.dbm).ListSuppliers(ctx, req.GetErpnextSupplierListReq{
-			SiteCode:       headquarter.ErpnextSiteCode,
-			CompanyAbbr:    headquarter.ErpnextCompanyAbbr,
-			Branch:         headquarter.ErpnextBranchName,
-			SubCompanyAbbr: companySetting.ErpnextCompanyAbbr,
+		s.dbm.GetDB(headquarter.Uuid).Model(&model.Supplier{}).Find(&headquarterSuppliers)
+		headquarterSuppliers = append(headquarterSuppliers, model.Supplier{
+			Name:    constant.ErpHeadquartersSupplierCode,
+			ErpCode: constant.ErpHeadquartersSupplierCode,
+			Status:  1,                                 // TODO 这个状态是什么
+			Code:    constant.HeadquartersSupplierCode, // NOTE 总部-供应商编码固定为SP001
 		})
-		if err != nil {
-			return errors.WithMessage(errors.New("获取总部供应商失败"), err.Error())
-		}
-		for _, supplier := range headquarterSupplierList {
-			supplierHeadquarterMap[supplier.Name] = headquarter.Uuid
-		}
-		supplierList = append(supplierList, headquarterSupplierList...)
-		var headquarterSuppliers []model.Supplier
-		s.dbm.GetDB(headquarter.Uuid).Model(&model.Supplier{}).Scopes(repository.NotDeleted).Find(&headquarterSuppliers)
-		for _, supplier := range headquarterSuppliers {
-			if supplier.ErpCode == "" {
-				continue
-			}
-			headquarterSupplierMap[supplier.ErpCode] = supplier
-		}
 	}
 
 	var suppliers []model.Supplier
@@ -435,60 +416,77 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 		supplierMap[supplier.ErpCode] = supplier
 	}
 
-	for _, erpSupplier := range supplierList {
-		name := erpSupplier.AliasName
-		if name == "" {
-			name = erpSupplier.SupplierName
-		}
-		// 总部不同步“总部-供应商”
-		if erpSupplier.Name == constant.ErpHeadquartersSupplierCode && companySetting.IsHeadquarter() {
-			continue
-		}
-		supplier, _ := supplierMap[erpSupplier.Name]
-		headquarterSupplier, _ := headquarterSupplierMap[erpSupplier.Name]
+	err = db.Transaction(func(tx *gorm.DB) error {
+		for _, erpSupplier := range supplierList {
+			name := erpSupplier.AliasName
+			if name == "" {
+				name = erpSupplier.SupplierName
+			}
+			// 总部不同步“总部-供应商”
+			if erpSupplier.Name == constant.ErpHeadquartersSupplierCode && companySetting.IsHeadquarter() {
+				continue
+			}
+			supplier, _ := supplierMap[erpSupplier.Name]
+			address := supplier.Address
+			contactName := supplier.ContactName
+			contactPhone := supplier.ContactPhone
+			code := supplier.Code
 
-		address := supplier.Address
-		contactName := supplier.ContactName
-		contactPhone := supplier.ContactPhone
-		code := supplier.Code
-		if headquarterSupplier.Uuid != 0 {
-			address = headquarterSupplier.Address
-			contactName = headquarterSupplier.ContactName
-			contactPhone = headquarterSupplier.ContactPhone
-			code = headquarterSupplier.Code
+			// 默认为启用
+			status := 1
+			if erpSupplier.Disabled {
+				status = 0
+			}
+			if supplier.Uuid == 0 {
+				tx.Model(&model.Supplier{}).Create(&model.Supplier{
+					Name:         name,
+					Address:      address,
+					ContactName:  contactName,
+					ContactPhone: contactPhone,
+					ErpCode:      erpSupplier.Name,
+					Status:       status,
+					Code:         code,
+				})
+			} else {
+				tx.Model(&model.Supplier{}).Where("uuid = ?", supplier.Uuid).Updates(map[string]any{
+					"name":          name,
+					"code":          code,
+					"status":        status,
+					"address":       address,
+					"contact_name":  contactName,
+					"contact_phone": contactPhone,
+				})
+			}
 		}
-		// NOTE 总部-供应商编码固定为SP001
-		if erpSupplier.Name == constant.ErpHeadquartersSupplierCode {
-			code = "SP001"
+		if len(headquarterSuppliers) > 0 {
+			tx.Where("headquarter_uuid > 0").Delete(&model.Supplier{})
+			var insertingHeadquarterSuppliers []model.Supplier
+			for _, headquarterSupplier := range headquarterSuppliers {
+				insertingHeadquarterSuppliers = append(insertingHeadquarterSuppliers, model.Supplier{
+					BaseModel: model.BaseModel{
+						Uuid:       headquarterSupplier.Uuid,
+						CreateTime: headquarterSupplier.CreateTime,
+						UpdateTime: headquarterSupplier.UpdateTime,
+						DeleteTime: headquarterSupplier.DeleteTime,
+					},
+					Name:            headquarterSupplier.Name,
+					Code:            headquarterSupplier.Code,
+					Status:          headquarterSupplier.Status,
+					Address:         headquarterSupplier.Address,
+					ContactName:     headquarterSupplier.ContactName,
+					ContactPhone:    headquarterSupplier.ContactPhone,
+					Position:        headquarterSupplier.Position,
+					StaffUuid:       headquarterSupplier.StaffUuid,
+					ErpCode:         headquarterSupplier.ErpCode,
+					HeadquarterUuid: companySetting.HeadquarterUuid,
+				})
+			}
+			if len(insertingHeadquarterSuppliers) > 0 {
+				tx.Model(&model.Supplier{}).Create(&insertingHeadquarterSuppliers)
+			}
 		}
-		// 默认为启用
-		status := 1
-		if erpSupplier.Disabled {
-			status = 0
-		}
-		headquarterUuid, _ := supplierHeadquarterMap[erpSupplier.Name]
-		if supplier.Uuid == 0 {
-			db.Model(&model.Supplier{}).Create(&model.Supplier{
-				Name:            name,
-				Address:         address,
-				ContactName:     contactName,
-				ContactPhone:    contactPhone,
-				ErpCode:         erpSupplier.Name,
-				Status:          status,
-				HeadquarterUuid: headquarterUuid,
-				Code:            code,
-			})
-		} else {
-			db.Model(&model.Supplier{}).Where("uuid = ?", supplier.Uuid).Updates(map[string]any{
-				"name":             name,
-				"headquarter_uuid": headquarterUuid,
-				"code":             code,
-				"status":           status,
-				"address":          address,
-				"contact_name":     contactName,
-				"contact_phone":    contactPhone,
-			})
-		}
-	}
-	return nil
+		return nil
+	})
+
+	return err
 }
