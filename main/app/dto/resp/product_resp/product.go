@@ -271,6 +271,7 @@ type ProductSauceDetail struct {
 type ProductShopCategory struct {
 	Uuid        uint64                      `json:"uuid"`         // 商品类别UUID
 	Name        string                      `json:"name"`         // 商品类别名称
+	Code        string                      `json:"code"`         // 商品类别编码
 	ParentUuid  uint64                      `json:"parent_uuid"`  // 父级类别UUID
 	IsSpecial   bool                        `json:"is_special"`   // 是否特色类别
 	Sort        uint                        `json:"sort"`         // 商品类别排序

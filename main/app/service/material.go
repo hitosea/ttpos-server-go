@@ -240,6 +240,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			Name:         material.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 			LocaleName:   material.MultiLanguageName.GetNames(),
 			ErpCode:      material.Code,
+			InternalCode: material.InternalCode,
 			BarcodeValue: material.BarcodeValue,
 			Num:          num.Add(availableNum).Add(transitNum).InexactFloat64(),
 			AvailableNum: availableNum.InexactFloat64(),

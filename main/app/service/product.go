@@ -688,6 +688,7 @@ func (s *productSrv) GetProductShopCategoryList(ctx context.Context, req req.Pro
 					children = append(children, product_resp.ProductShopCategory{
 						Uuid:        child.Uuid,
 						Name:        child.MultiLanguageName.GetNameByLang(language),
+						Code:        child.Code,
 						ParentUuid:  child.ParentUuid,
 						IsSpecial:   child.IsSpecial == 1,
 						Sort:        child.Sort,
@@ -703,6 +704,7 @@ func (s *productSrv) GetProductShopCategoryList(ctx context.Context, req req.Pro
 			list = append(list, product_resp.ProductShopCategory{
 				Uuid:        category.Uuid,
 				Name:        category.MultiLanguageName.GetNameByLang(language),
+				Code:        category.Code,
 				ParentUuid:  category.ParentUuid,
 				IsSpecial:   category.IsSpecial == 1,
 				Sort:        category.Sort,
