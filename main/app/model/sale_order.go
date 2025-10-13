@@ -689,7 +689,12 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool, openI
 			},
 			CanEdit:      saleOrderProduct.IsCanEdit(),
 			ShowBatchTag: saleOrderProduct.IsShowBatchTag(openIsBatch),
-			BatchTagName: saleOrderProduct.BatchTag.MultiLanguageName.GetNames(),
+			BatchTagName: func() dto.LocaleResponse {
+				if saleOrderProduct.BatchTag != nil {
+					return saleOrderProduct.BatchTag.MultiLanguageName.GetNames()
+				}
+				return dto.LocaleResponse{}
+			}(),
 		}
 		if saleOrderProduct.ProductionOrderProduct != nil {
 			if saleOrderProduct.ProductionOrderProduct.Status == constant.ProductionOrderProductStatusFinished {

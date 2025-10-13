@@ -823,6 +823,11 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 					),
 					CommonRepo.Preload(
 						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.BatchTag.MultiLanguageName",
+						},
+					),
+					CommonRepo.Preload(
+						WithPreload{
 							Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetPackage.MultiLanguageName",
 						},
 						WithPreload{
@@ -940,6 +945,11 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 							Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.MultiLanguageName",
 						},
 					),
+					CommonRepo.Preload(
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.BatchTag.MultiLanguageName",
+						},
+					),
 				)
 				if errDesk != nil {
 					return nil, errors.WithMessage(errDesk)
@@ -1054,6 +1064,11 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 				CommonRepo.Preload(
 					WithPreload{
 						Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.MultiLanguageName",
+					},
+				),
+				CommonRepo.Preload(
+					WithPreload{
+						Query: "SaleOrders.SaleOrderProducts.BatchTag.MultiLanguageName",
 					},
 				),
 			)
