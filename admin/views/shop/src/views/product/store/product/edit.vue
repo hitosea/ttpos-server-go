@@ -128,6 +128,7 @@
     single_select_list: [],
     many_select_list: [[]],
     ing_select_list: [[]],
+    productPrinterList: [],
   });
 
   // 模型数据
@@ -193,6 +194,7 @@
         product_list: [],
       },
     ],
+    product_printer_uuid: [],
   });
 
   const oldForm = ref({});
@@ -301,6 +303,11 @@
             if (form.many_select_list[0].length > 0) {
               form.single_select_list = JSON.parse(JSON.stringify(form.many_select_list[0]));
             }
+            form.productPrinterList = res.data.productPrinterList;
+            form.model.product_printer_uuid = [];
+            (res.data.model.productPrinters || []).map((item) => {
+              form.model.product_printer_uuid.push(item.product_printer_uuid);
+            });
           }
         });
 
