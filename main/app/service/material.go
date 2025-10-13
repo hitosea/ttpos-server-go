@@ -93,22 +93,24 @@ type IMaterialSrv interface {
 }
 
 type materialSrv struct {
-	dbm        *database.DBManager // 数据库管理器
-	localeSrv  ILocaleSrv          // 多语言名称服务
-	settingSrv setting.ISrv        // 设置服务
-	systemLock lock.Lock           // 系统锁
+	dbm          *database.DBManager // 数据库管理器
+	translateSrv ITranslateSrv       // 翻译服务
+	localeSrv    ILocaleSrv          // 多语言名称服务
+	settingSrv   setting.ISrv        // 设置服务
+	systemLock   lock.Lock           // 系统锁
 }
 
-func NewMaterialSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv) IMaterialSrv {
-	return NewMaterialSrvImpl(dbm, localeSrv, settingSrv)
+func NewMaterialSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, translateSrv ITranslateSrv) IMaterialSrv {
+	return NewMaterialSrvImpl(dbm, localeSrv, settingSrv, translateSrv)
 }
 
-func NewMaterialSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv) IMaterialSrv {
+func NewMaterialSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, translateSrv ITranslateSrv) IMaterialSrv {
 	return &materialSrv{
-		dbm:        dbm,
-		localeSrv:  localeSrv,
-		settingSrv: settingSrv,
-		systemLock: lock.NewSystemLock(),
+		dbm:          dbm,
+		translateSrv: translateSrv,
+		localeSrv:    localeSrv,
+		settingSrv:   settingSrv,
+		systemLock:   lock.NewSystemLock(),
 	}
 }
 
@@ -959,6 +961,9 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 		if err != nil {
 			return errors.WithMessage(err, "更新物品失败")
 		}
+
+		// 物品 - 将多语言名称uuid从待翻译集合中删除
+		s.translateSrv.RemoveMultiLanguageNameUuidFromSet(ctx.GetCompanyUuid(), existingMaterial.MultiLanguageNameUuid)
 
 		if request.Status == 0 {
 			err = materialRepo.UpdateMaterialStatus(request.Uuid, false)

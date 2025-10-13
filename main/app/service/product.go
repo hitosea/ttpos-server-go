@@ -168,24 +168,26 @@ type IProductSrv interface {
 }
 
 type productSrv struct {
-	dbm        *database.DBManager // 数据库管理器
-	localeSrv  ILocaleSrv          // 多语言名称服务
-	settingSrv setting.ISrv        // 设置服务
-	cache      cache.Cache         // 缓存
-	systemLock lock.Lock           // 系统锁
+	dbm          *database.DBManager // 数据库管理器
+	localeSrv    ILocaleSrv          // 多语言名称服务
+	settingSrv   setting.ISrv        // 设置服务
+	cache        cache.Cache         // 缓存
+	translateSrv ITranslateSrv       // 翻译服务
+	systemLock   lock.Lock           // 系统锁
 }
 
-func NewProductSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, cache cache.Cache) IProductSrv {
-	return NewProductSrvImpl(dbm, localeSrv, settingSrv, cache)
+func NewProductSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, cache cache.Cache, translateSrv ITranslateSrv) IProductSrv {
+	return NewProductSrvImpl(dbm, localeSrv, settingSrv, cache, translateSrv)
 }
 
-func NewProductSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, cache cache.Cache) IProductSrv {
+func NewProductSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, cache cache.Cache, translateSrv ITranslateSrv) IProductSrv {
 	return &productSrv{
-		dbm:        dbm,
-		localeSrv:  localeSrv,
-		settingSrv: settingSrv,
-		cache:      cache,
-		systemLock: lock.NewSystemLock(),
+		dbm:          dbm,
+		localeSrv:    localeSrv,
+		settingSrv:   settingSrv,
+		cache:        cache,
+		translateSrv: translateSrv,
+		systemLock:   lock.NewSystemLock(),
 	}
 }
 
@@ -2273,6 +2275,11 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 		return nil
 	})
 
+	if err == nil {
+		// 单位 - 将多语言名称uuid从待翻译集合中删除
+		s.translateSrv.RemoveMultiLanguageNameUuidFromSet(ctx.GetCompanyUuid(), productUnit.MultiLanguageNameUuid)
+	}
+
 	// 开启了ERP，并且是TTPOS站点，同步到ERPNext
 	if company.IsOpenErp() {
 		enName, err := s.getEnName(ctx, editUnitReq.LocaleName)
@@ -2661,6 +2668,10 @@ func (s *productSrv) EditProductSauce(ctx context.Context, editReq req.ProductSa
 		}
 		return nil
 	})
+	if err == nil {
+		// 加料 - 将多语言名称uuid从待翻译集合中删除
+		s.translateSrv.RemoveMultiLanguageNameUuidFromSet(ctx.GetCompanyUuid(), productSauce.MultiLanguageNameUuid)
+	}
 	return err
 }
 
@@ -3404,6 +3415,7 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
 
+	var manualTranslatedUuids []uint64
 	// 检查属性组是否存在
 	attributeGroup, err := productRepo.GetProductAttributeGroup(
 		productRepo.WhereUuid(editReq.Uuid),
@@ -3412,6 +3424,7 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 	if err != nil {
 		return errors.WithMessage(errors.New("属性组不存在"), err.Error())
 	}
+	manualTranslatedUuids = append(manualTranslatedUuids, attributeGroup.MultiLanguageNameUuid)
 	if !isEditable(ctx, attributeGroup.HeadquarterUuid) {
 		return errors.New("属性组不可编辑")
 	}
@@ -3436,6 +3449,7 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 	// 要删掉的属性值
 	var deletingAttributeUuids []uint64
 	for _, attribute := range attributeGroup.ProductAttributes {
+		manualTranslatedUuids = append(manualTranslatedUuids, attribute.MultiLanguageNameUuid)
 		if !slices.Contains(attributeUuids, attribute.Uuid) {
 			deletingAttributeUuids = append(deletingAttributeUuids, attribute.Uuid)
 		}
@@ -3654,6 +3668,9 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 	})
 	if err != nil {
 		return errors.WithMessage(errors.New("保存属性组失败"), err.Error())
+	} else {
+		// 属性（组） - 将多语言名称uuid从待翻译集合中删除
+		s.translateSrv.RemoveMultiLanguageNameUuidFromSet(ctx.GetCompanyUuid(), manualTranslatedUuids...)
 	}
 
 	company := ctx.GetCompany()
@@ -3811,6 +3828,7 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 		return errors.NewWithReplace("套餐【%s】已使用此规格，不可删除", []string{strings.Join(packageNames, "、")})
 	}
 
+	var manualTranslatedUuid uint64
 	err := db.Transaction(func(tx *gorm.DB) error {
 		commonRepo := repository.NewCommonRepo()
 		productRepo := repository.NewProductRepo(tx)
@@ -3824,7 +3842,7 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 		if err != nil || flavor.ID == 0 {
 			return errors.WithMessage(err, "获取商品规格详情失败")
 		}
-
+		manualTranslatedUuid = flavor.MultiLanguageNameUuid
 		// 更新多语言名称
 		err = tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", flavor.MultiLanguageNameUuid).Updates(map[string]any{
 			"zh_name":    editReq.LocaleName.ZH,
@@ -4078,6 +4096,9 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 	if err != nil {
 		logger.Logger.Error("编辑商品规格失败", zap.Any("func", "EditProductFlavor"), zap.Any("params", editReq), zap.Error(err))
 		return errors.WithMessage(err, "编辑商品规格失败")
+	} else {
+		// 规格 - 将多语言名称uuid从待翻译集合中删除
+		s.translateSrv.RemoveMultiLanguageNameUuidFromSet(ctx.GetCompanyUuid(), manualTranslatedUuid)
 	}
 
 	return nil
@@ -5896,6 +5917,8 @@ func (s *productSrv) EditProductPackage(ctx context.Context, tx *gorm.DB, req re
 	if err != nil {
 		return nil, errors.WithMessage(err, "保存商品包失败")
 	}
+	// 商品 - 将多语言名称uuid从待翻译集合中删除
+	s.translateSrv.RemoveMultiLanguageNameUuidFromSet(ctx.GetCompanyUuid(), productPackage.MultiLanguageNameUuid) // 商品
 
 	return &AddProductPackageRes{
 		Uuid:    req.Uuid,

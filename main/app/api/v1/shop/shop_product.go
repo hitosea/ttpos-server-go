@@ -1270,6 +1270,7 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	statisticsSrv := service.NewStatisticsSrv()
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
+	translateSrv := service.NewTranslateSrv(dbm, cache)
 
 	// 创建收银产品处理程序
 	wrapper := ProductHandler{
@@ -1278,6 +1279,7 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 			service.NewLocaleSrv(), // 多语言服务
 			settingSrv,             // 设置服务
 			cache,
+			translateSrv,
 		),
 		uploadFileSrv: service.NewUploadFileSrv(dbm),
 		pinterSrv:     service.NewPrinterSrv(dbm, cache),
