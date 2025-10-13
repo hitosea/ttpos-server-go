@@ -126,6 +126,7 @@ type IProductSrv interface {
 	EditProductFlavor(ctx context.Context, req req.ProductFlavorEditReq) error                                          // 编辑商品规格
 	DeleteProductFlavor(ctx context.Context, req req.ProductFlavorDeleteReq) error                                      // 删除商品规格
 	SortProductFlavor(ctx context.Context, req req.ProductFlavorSortReq) error                                          // 排序商品规格
+	UpdateProductFlavorErp(ctx context.Context, tx *gorm.DB) error                                                      // 更新商品规格到erp
 
 	// 导入商品
 	ImportProductList(ctx context.Context, req req.ProductImportListReq) (product_resp.ProductImportResp, error) // 导入商品列表
@@ -3161,6 +3162,8 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 	}
 	sort := int(maxSort + 1)
 
+	company := ctx.GetCompany()
+
 	err = db.Transaction(func(tx *gorm.DB) error {
 		commonRepo := repository.NewCommonRepo()
 		productRepo := repository.NewProductRepo(tx)
@@ -3192,6 +3195,13 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 		if err != nil {
 			return err
 		}
+		// 保存规格名称到erp
+		if company.IsOpenErp() {
+			err = s.UpdateProductFlavorErp(ctx, tx)
+			if err != nil {
+				return errors.WithMessage(err, "更新规格到erp失败")
+			}
+		}
 
 		var productBoms []model.ProductBom
 		if len(addReq.List) > 0 {
@@ -3216,7 +3226,7 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 
 				// 同步新增商品到erp
 				erpCode := ""
-				if ctx.GetCompany().IsOpenErp() {
+				if company.IsOpenErp() {
 					productMultiLanguageName := model.NewMultiLanguageName(productPackage.Name)
 					productEnName, err := s.getEnName(ctx, productMultiLanguageName.GetNames())
 					if err != nil {
@@ -3313,6 +3323,47 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 	if err != nil {
 		logger.Logger.Error("添加商品规格失败", zap.Any("func", "AddProductFlavor"), zap.Any("params", addReq), zap.Error(err))
 		return errors.WithMessage(err, "添加商品规格失败")
+	}
+
+	return nil
+}
+
+// UpdateProductFlavorErp 更新商品规格到erp
+func (s *productSrv) UpdateProductFlavorErp(ctx context.Context, tx *gorm.DB) error {
+	commonRepo := repository.NewCommonRepo()
+	productRepo := repository.NewProductRepo(tx)
+	flavorList, err := productRepo.GetProductFlavorList([]repository.DBOption{
+		commonRepo.WhereBySoftDelete(),
+		commonRepo.WhereByHeadquarterUuid(0),
+		productRepo.WithMultiLanguageName(),
+	}...)
+	if err != nil {
+		return errors.WithMessage(err, "获取规格列表失败")
+	}
+	valueList := make([]req.SaveErpFlavorValueReq, 0, len(flavorList))
+	for _, flavor := range flavorList {
+		enName, err := s.getEnName(ctx, flavor.MultiLanguageName.GetNames())
+		if err != nil {
+			return errors.WithMessage(err, "翻译失败")
+		}
+		valueList = append(valueList, req.SaveErpFlavorValueReq{
+			ValueName:      enName,
+			ValueAliasName: enName,
+		})
+	}
+	companySetting := ctx.GetCompanySetting()
+	groupName := fmt.Sprintf("%s-Specifications", companySetting.ErpnextCompanyAbbr)
+	erpSrv := erp.NewIErpSrv(s.dbm)
+	err = erpSrv.SaveFlavor(ctx.GetContext(), req.SaveErpFlavorReq{
+		SiteCode:       companySetting.ErpnextSiteCode,
+		GroupName:      groupName,
+		GroupAliasName: groupName,
+		Branch:         companySetting.ErpnextBranchName,
+		CompanyAbbr:    companySetting.ErpnextCompanyAbbr,
+		ValueList:      valueList,
+	})
+	if err != nil {
+		return errors.WithMessage(err, "同步规格到erp失败")
 	}
 
 	return nil
@@ -3747,40 +3798,6 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 						}
 					}
 				}
-				// 删除商品规格的item
-				if ctx.GetCompany().IsOpenErp() {
-					// 获取商品包信息
-					productPackageRepo := repository.NewProductPackageRepo(db)
-					productPackage, err := productPackageRepo.GetProductPackage(
-						commonRepo.WhereByUuid(productPackage.Uuid),
-						commonRepo.Preload(
-							repository.WithPreload{
-								Query: "ProductUnit",
-							},
-						),
-					)
-					if err != nil {
-						return errors.WithMessage(err, "获取商品包失败")
-					}
-
-					languageName := model.NewMultiLanguageName(productBom.Name)
-					enName, err := s.getEnName(ctx, languageName.GetNames())
-					if err != nil {
-						return errors.WithMessage(err, "翻译失败")
-					}
-					erpSrv := erp.NewIErpSrv(s.dbm)
-					if err := erpSrv.DeleteProduct(ctx, req.DeleteProductErpReq{
-						Items: []req.DeleteProductErpItemReq{
-							{
-								ItemCode: productBom.ErpCode,
-								ItemName: enName,
-								StockUom: productPackage.ProductUnit.ErpnextUom,
-							},
-						},
-					}); err != nil {
-						return errors.WithMessage(err, "删除商品规格的item失败")
-					}
-				}
 			}
 		}
 	}
@@ -3829,7 +3846,17 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 			return err
 		}
 
-		setting, err := s.settingSrv.GetCompanySetting(ctx)
+		company := ctx.GetCompany()
+		companySetting, err := s.settingSrv.GetCompanySetting(ctx)
+		if err != nil {
+			return errors.WithMessage(err, "获取公司设置失败")
+		}
+		if company.IsOpenErp() {
+			err = s.UpdateProductFlavorErp(ctx, tx)
+			if err != nil {
+				return errors.WithMessage(err, "更新规格到erp失败")
+			}
+		}
 
 		// 更新关联商品包
 		for _, item := range editReq.List {
@@ -3837,6 +3864,8 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 				productBom, _ := productRepo.GetProductBom(
 					commonRepo.WhereBySoftDelete(),
 					commonRepo.WhereByUuid(item.BomUuid),
+					productRepo.WithProductPackage(commonRepo.WhereBySoftDelete()),
+					productRepo.WithProductPackageProductUnit(commonRepo.WhereBySoftDelete()),
 				)
 				if productBom.ID == 0 {
 					return errors.New("商品bom不存在")
@@ -3848,14 +3877,34 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 				if err != nil {
 					return err
 				}
-				if setting.SaleStock == 1 {
+				// 删除商品规格的item
+				if company.IsOpenErp() {
+					languageName := model.NewMultiLanguageName(productBom.Name)
+					enName, err := s.getEnName(ctx, languageName.GetNames())
+					if err != nil {
+						return errors.WithMessage(err, "翻译失败")
+					}
+					erpSrv := erp.NewIErpSrv(s.dbm)
+					if err := erpSrv.DeleteProduct(ctx, req.DeleteProductErpReq{
+						Items: []req.DeleteProductErpItemReq{
+							{
+								ItemCode: productBom.ErpCode,
+								ItemName: enName,
+								StockUom: productBom.ProductPackage.ProductUnit.ErpnextUom,
+							},
+						},
+					}); err != nil {
+						return errors.WithMessage(err, "删除商品规格的item失败")
+					}
+				}
+				if companySetting.SaleStock == 1 {
 					// 删除出库
 					outFormUuid, _ := utils.GetID()
 					warehouseForm := model.WarehouseOutForm{
 						BaseModel: model.BaseModel{
 							Uuid: outFormUuid,
 						},
-						FormNo:       warehouseFormRepo.GenerateWarehouseOutFormNo(setting.Timezone),
+						FormNo:       warehouseFormRepo.GenerateWarehouseOutFormNo(companySetting.Timezone),
 						Scene:        constant.WarehouseOutFormSceneDelete,
 						Status:       constant.WarehouseOutFormStatusSuccess,
 						OperatorUuid: ctx.GetStaffUuid(),
@@ -3890,7 +3939,7 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 				if item.BomUuid == 0 {
 					// 同步新增商品到erp
 					erpCode := ""
-					if ctx.GetCompany().IsOpenErp() {
+					if company.IsOpenErp() {
 						productMultiLanguageName := model.NewMultiLanguageName(productPackage.Name)
 						productEnName, err := s.getEnName(ctx, productMultiLanguageName.GetNames())
 						if err != nil {
@@ -3944,12 +3993,11 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 					if err != nil {
 						return err
 					}
-					setting, err := s.settingSrv.GetCompanySetting(ctx)
 					// 开启库存管理
-					if setting.SaleStock == 1 {
+					if companySetting.SaleStock == 1 {
 						// 添加入库
 						warehouseForm := model.WarehouseForm{
-							FormNo:         warehouseFormRepo.GenerateWarehouseFormNo(setting.Timezone),
+							FormNo:         warehouseFormRepo.GenerateWarehouseFormNo(companySetting.Timezone),
 							Scene:          constant.WarehouseFormSceneAddStock,
 							Num:            99999999,
 							ProductBomUuid: uuid,
@@ -3961,8 +4009,8 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 						}
 						// 添加月初库存记录
 						warehouseMonthlyProductBomForm := model.WarehouseMonthlyProductBomForm{
-							Year:           utils.SetTimezone(setting.Timezone).Now().Year(),
-							Month:          int(utils.SetTimezone(setting.Timezone).Now().Month()),
+							Year:           utils.SetTimezone(companySetting.Timezone).Now().Year(),
+							Month:          int(utils.SetTimezone(companySetting.Timezone).Now().Month()),
 							Scene:          constant.WarehouseMonthlyFormSceneStart,
 							ProductBomUuid: uuid,
 							Stock:          99999999,
@@ -3974,7 +4022,7 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 					}
 				} else {
 					// 同步更新商品到erp
-					if ctx.GetCompany().IsOpenErp() {
+					if company.IsOpenErp() {
 						productMultiLanguageName := model.NewMultiLanguageName(productPackage.Name)
 						productEnName, err := s.getEnName(ctx, productMultiLanguageName.GetNames())
 						if err != nil {
@@ -4190,6 +4238,9 @@ func (s *productSrv) DeleteProductFlavor(ctx context.Context, deleteReq req.Prod
 		return errors.New("该规格已经关联了商品，不可删除")
 	}
 
+	// 获取公司
+	company := ctx.GetCompany()
+
 	db.Transaction(func(tx *gorm.DB) error {
 		// 软删除商品规格
 		err = tx.Model(&model.ProductFlavor{}).Where("uuid = ?", productFlavor.Uuid).Updates(map[string]any{
@@ -4216,6 +4267,15 @@ func (s *productSrv) DeleteProductFlavor(ctx context.Context, deleteReq req.Prod
 		if err != nil {
 			return errors.WithMessage(errors.New("重新排序规格失败"), err.Error())
 		}
+
+		// 同步规格到erp
+		if company.IsOpenErp() {
+			err = s.UpdateProductFlavorErp(ctx, tx)
+			if err != nil {
+				return errors.WithMessage(err, "更新规格到erp失败")
+			}
+		}
+
 		return nil
 	})
 	if err != nil {

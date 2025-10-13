@@ -38,6 +38,7 @@ type IProductRepo interface {
 	WithTakeoutTax() DBOption                                                                     // 预加载外卖税
 
 	WithProductPackage(opts ...DBOption) DBOption                                                           // 沽清 预加载产品
+	WithProductPackageProductUnit(opts ...DBOption) DBOption                                                // 沽清 预加载产品包产品单位
 	WithProductPackageMultiLanguageName(opts ...DBOption) DBOption                                          // 沽清 预加载产品多语言
 	WithProductPackageProductBom(opts ...DBOption) DBOption                                                 // 沽清 预加载产品包关联的商品规格
 	WithProductFlavor() DBOption                                                                            // 沽清 预加载规格名称
@@ -660,6 +661,18 @@ func (r *productRepo) WithProductCategory() DBOption {
 func (r *productRepo) WithProductPackage(opts ...DBOption) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("ProductPackage", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
+	}
+}
+
+// WithProductPackageProductUnit 预加载产品包产品单位
+func (r *productRepo) WithProductPackageProductUnit(opts ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductPackage.ProductUnit", func(db *gorm.DB) *gorm.DB {
 			for _, opt := range opts {
 				db = opt(db)
 			}
