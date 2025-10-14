@@ -684,6 +684,11 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	}
 	// 构建销售订单
 	saleOrder := model.NewSaleOrder(ctx.GetDeviceSn(), saleBill.Uuid, saleBill.OrderNo, *saleBillSetting)
+	staffShiftLog, err := GetCurrentStaffShiftLog(db, staff.Uuid)
+	if err != nil {
+		return resp.CreateDeskOrderResp{}, errors.WithMessage(err)
+	}
+	saleOrder.StaffShiftLogUuid = staffShiftLog.Uuid
 
 	// 获取自助餐信息
 	buffetList, err := repository.NewBuffetRepo(db).GetBuffetListByUuids(req.BuffetUuids)
