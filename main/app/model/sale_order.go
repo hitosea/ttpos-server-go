@@ -695,6 +695,12 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool, openI
 				}
 				return dto.LocaleResponse{}
 			}(),
+			BatchTagColor: func() string {
+				if saleOrderProduct.BatchTag != nil {
+					return saleOrderProduct.BatchTag.Color
+				}
+				return ""
+			}(),
 		}
 		if saleOrderProduct.ProductionOrderProduct != nil {
 			if saleOrderProduct.ProductionOrderProduct.Status == constant.ProductionOrderProductStatusFinished {
