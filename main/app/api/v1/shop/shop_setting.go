@@ -71,7 +71,7 @@ func (h *SettingHandler) SaveBusinessSetting(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	helper.Success(c, "保存成功")
+	helper.Success(c, "保存成功", "保存成功")
 }
 
 // GetBusinessSetting 获取业务设置
