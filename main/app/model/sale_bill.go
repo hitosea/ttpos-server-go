@@ -156,12 +156,13 @@ func (model *SaleBill) GetSaleOrderProductBatchCookingBySaleOrderUuid(saleOrderP
 		uuidMap[saleOrderProductUuid] = true
 	}
 
+	products := make([]*SaleOrderProduct, 0)
 	for _, saleOrderProduct := range batchCookingSaleOrderProducts {
-		if uuidMap[saleOrderProduct.SaleOrderUuid] {
-			batchCookingSaleOrderProducts = append(batchCookingSaleOrderProducts, saleOrderProduct)
+		if uuidMap[saleOrderProduct.Uuid] {
+			products = append(products, saleOrderProduct)
 		}
 	}
-	return batchCookingSaleOrderProducts
+	return products
 }
 
 // 结束SaleBill和SaleOrder的生命周期。相当于用餐订单结账完成。
