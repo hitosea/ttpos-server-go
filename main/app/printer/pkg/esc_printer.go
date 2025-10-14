@@ -130,6 +130,9 @@ func (p *Printers) httpPost(path string, body map[string]interface{}) (map[strin
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true, // 禁用证书验证
 		},
+		TLSHandshakeTimeout:   10 * time.Second, // TLS握手超时
+		ResponseHeaderTimeout: 15 * time.Second, // 响应头超时
+		ExpectContinueTimeout: 1 * time.Second,  // Expect: 100-continue超时：1秒
 	}
 	client := &http.Client{Transport: transport}
 	resp, err := client.Do(req)
