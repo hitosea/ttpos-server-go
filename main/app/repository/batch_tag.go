@@ -120,9 +120,9 @@ func (r *BatchTagRepoImpl) GetMaxSort() (int, error) {
 func (r *BatchTagRepoImpl) CheckColorExists(color string, uuid uint64) bool {
 	var exists uint64
 	if uuid != 0 {
-		r.db.Model(&model.BatchTag{}).Where("color = ? AND uuid != ?", color, uuid).Select("uuid").Scan(&exists)
+		r.db.Model(&model.BatchTag{}).Where("color = ? AND uuid != ? AND delete_time = 0", color, uuid).Select("uuid").Scan(&exists)
 	} else {
-		r.db.Model(&model.BatchTag{}).Where("color = ?", color).Select("uuid").Scan(&exists)
+		r.db.Model(&model.BatchTag{}).Where("color = ? AND delete_time = 0", color).Select("uuid").Scan(&exists)
 	}
 	return exists > 0
 }
