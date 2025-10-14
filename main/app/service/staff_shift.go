@@ -333,6 +333,7 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 				PosOpenEntryName:    shiftLog.ErpnextOpenPosEntryName,
 				PeriodEndDate:       time.Now().Unix(),
 				ClosePosEntryDetail: closePosEntryDetail,
+				InvoiceCount:        s.CountInvoiceCount(ctx, shiftLog.Uuid),
 			})
 			if err != nil {
 				ctx.Log().Info("ClosePosEntry", zap.String("msg", err.Error()))
@@ -446,6 +447,18 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 		logger.Logger.Error("cache shiftSubmitInfo error", zap.Error(err))
 	}
 	return &shiftSubmitInfo, nil
+}
+
+// 统计当班期间发票数量。包括退款单数，不包含取消的单数
+func (s *staffShiftSrv) CountInvoiceCount(ctx context.Context, shiftLogUuid uint64) int64 {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	// 查询当前班次中，所有完成结账的sale_order数量
+	saleOrderCount := int64(0)
+	db.Model(&model.SaleOrder{}).Where("staff_shift_log_uuid = ? and delete_time = 0 and status = ?", shiftLogUuid, constant.SaleOrderStatusFinish).Count(&saleOrderCount)
+	// 查询当前班次中，所有return_order数量
+	returnOrderCount := int64(0)
+	db.Model(&model.ReturnOrder{}).Where("staff_shift_log_uuid = ? and delete_time = 0", shiftLogUuid).Count(&returnOrderCount)
+	return returnOrderCount + saleOrderCount
 }
 
 // GetCashierReport 获取报备信息

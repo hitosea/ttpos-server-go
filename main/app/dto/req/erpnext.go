@@ -127,6 +127,7 @@ type ClosePosEntryReq struct {
 	PosOpenEntryName    string                `form:"pos_open_entry_name" json:"pos_open_entry_name" binding:"required"`       // 开账名称
 	PeriodEndDate       int64                 `form:"period_end_date" json:"period_end_date" binding:"required"`               // 结束日期
 	ClosePosEntryDetail []ClosePosEntryDetail `form:"close_pos_entry_detail" json:"close_pos_entry_detail" binding:"required"` // 关账详情
+	InvoiceCount        int64                 `form:"invoice_count" json:"invoice_count" binding:"required"`                   // 发票数量,包含退款单数，不包含取消的单数
 }
 
 type ClosePosEntryDetail struct {
