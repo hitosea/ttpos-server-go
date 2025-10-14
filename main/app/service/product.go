@@ -2463,21 +2463,23 @@ func (s *productSrv) AddProductSauce(ctx context.Context, addReq req.ProductSauc
 		return errors.New("名称已存在")
 	}
 
-	productRepo := repository.NewProductRepo(db)
-	// 检查商品是否存在
-	productPackages, err := productRepo.GetProductPackageListByUuids(addReq.ProductPackageUuids)
-	if err != nil {
-		return errors.WithMessage(errors.New("商品不存在"), err.Error())
-	}
-	if len(productPackages) != len(addReq.ProductPackageUuids) {
-		return errors.New("商品不存在")
+	if len(addReq.ProductPackageUuids) > 0 {
+		productRepo := repository.NewProductRepo(db)
+		// 检查商品是否存在
+		productPackages, err := productRepo.GetProductPackageListByUuids(addReq.ProductPackageUuids)
+		if err != nil {
+			return errors.WithMessage(errors.New("商品不存在"), err.Error())
+		}
+		if len(productPackages) != len(addReq.ProductPackageUuids) {
+			return errors.New("商品不存在")
+		}
 	}
 
 	// 获取当前最大的排序值
 	var maxSort int
 	db.Model(&model.ProductSauce{}).Scopes(repository.NotDeleted).Select("ifnull(max(sort), 0)").Scan(&maxSort)
 
-	err = db.Transaction(func(tx *gorm.DB) error {
+	err := db.Transaction(func(tx *gorm.DB) error {
 		// 保存多语言名称
 		multiLanguageName := model.MultiLanguageName{
 			ZhName:   addReq.LocaleName.ZH,
@@ -2496,6 +2498,7 @@ func (s *productSrv) AddProductSauce(ctx context.Context, addReq req.ProductSauc
 		}
 
 		// 同步新增加料到erp
+		// v2.7 加料暂时不需要处理（本任务不从ERP同步属性跟加料以及TTPOS添加修改之后不同步到ERP，子店同步时，从ttpos的总部获取数据）
 		erpCode := ""
 		if ctx.GetCompany().IsOpenErp() {
 			multiLanguageName := model.NewMultiLanguageName(addReq.LocaleName.ToJson())
@@ -3096,6 +3099,7 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 
 	company := ctx.GetCompany()
 	// 开启了ERP，并且是TTPOS站点，同步到ERPNext
+	// v2.7 本任务不从ERP同步属性跟加料以及TTPOS添加修改之后不同步到ERP，子店同步时，从ttpos的总部获取数据
 	if company.IsOpenErp() {
 		attributeValueList := []req.SaveAttributeValueReq{}
 		uuidErpValueNameMap := make(map[uint64]string)
@@ -3699,6 +3703,7 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 
 	company := ctx.GetCompany()
 	// 开启了ERP，并且是TTPOS站点，同步到ERPNext
+	// v2.7 本任务不从ERP同步属性跟加料以及TTPOS添加修改之后不同步到ERP，子店同步时，从ttpos的总部获取数据
 	if company.IsOpenErp() {
 		var valueList []req.SaveAttributeValueReq
 		uuidErpValueNameMap := make(map[uint64]string)
@@ -7127,165 +7132,78 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 
 // SyncSauce 同步加料
 func (s *productSrv) SyncSauce(ctx context.Context) error {
-	company := ctx.GetCompany()
-	if !company.IsOpenErp() {
+	// v2.7 加料暂时不需要处理（本任务不从ERP同步属性跟加料以及TTPOS添加修改之后不同步到ERP，子店同步时，从ttpos的总部获取数据）
+	companySetting := ctx.GetCompanySetting()
+	if !companySetting.IsSubShop() {
 		return nil
 	}
-
-	companySetting := ctx.GetCompanySetting()
-	db := s.dbm.GetDB(ctx.GetCompanyUuid())
-
-	// 获取商家自己的
-	erp := erp.NewIErpSrv(s.dbm)
-	sauceList, err := erp.GetSauceList(ctx, req.GetErpSauceListReq{
-		SiteCode:    companySetting.ErpnextSiteCode,
-		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
-		Branch:      companySetting.ErpnextBranchName,
-	})
-	if err != nil {
-		return errors.WithMessage(err, "获取单位列表失败")
+	var headquarter model.CompanySetting
+	err := s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
+	if err != nil || headquarter.Uuid == 0 {
+		return errors.WithMessage(errors.New("获取总部公司失败"))
 	}
+	var headquarterSauces []model.ProductSauce
+	s.dbm.GetDB(headquarter.Uuid).Model(&model.ProductSauce{}).Preload("MultiLanguageName").Find(&headquarterSauces)
 
-	sauceHeadquarterMap := make(map[string]uint64)
-	headquarterSauceMap := make(map[string]model.ProductSauce)
-	// 如果是子店，获取总部的
-	if companySetting.IsSubShop() {
-		var headquarter model.CompanySetting
-		saasDb := s.dbm.GetDB(0)
-		err := saasDb.Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
-		if err != nil || headquarter.Uuid == 0 {
-			return errors.WithMessage(errors.New("获取总部公司失败"))
-		}
-		headquarterSauceList, err := erp.GetSauceList(ctx, req.GetErpSauceListReq{
-			SiteCode:       headquarter.ErpnextSiteCode,
-			CompanyAbbr:    headquarter.ErpnextCompanyAbbr,
-			Branch:         headquarter.ErpnextBranchName,
-			SubCompanyAbbr: companySetting.ErpnextCompanyAbbr,
+	if len(headquarterSauces) > 0 {
+		err := s.dbm.GetDB(companySetting.CompanyUuid).Transaction(func(tx *gorm.DB) error {
+			var insertingMultiLanguageNames []model.MultiLanguageName
+			var insertingProductSauce []model.ProductSauce
+			for _, headquarterSauce := range headquarterSauces {
+				if headquarterSauce.MultiLanguageName.Uuid == 0 {
+					continue
+				}
+				insertingMultiLanguageNames = append(insertingMultiLanguageNames, model.MultiLanguageName{
+					BaseModel: model.BaseModel{
+						Uuid:       headquarterSauce.MultiLanguageName.Uuid,
+						CreateTime: headquarterSauce.MultiLanguageName.CreateTime,
+						UpdateTime: headquarterSauce.MultiLanguageName.UpdateTime,
+						DeleteTime: headquarterSauce.MultiLanguageName.DeleteTime,
+					},
+					EnName:   headquarterSauce.MultiLanguageName.EnName,
+					ZhName:   headquarterSauce.MultiLanguageName.ZhName,
+					ThName:   headquarterSauce.MultiLanguageName.ThName,
+					MyName:   headquarterSauce.MultiLanguageName.MyName,
+					JaName:   headquarterSauce.MultiLanguageName.JaName,
+					KoName:   headquarterSauce.MultiLanguageName.KoName,
+					TrName:   headquarterSauce.MultiLanguageName.TrName,
+					SvName:   headquarterSauce.MultiLanguageName.SvName,
+					ZhTwName: headquarterSauce.MultiLanguageName.ZhTwName,
+				})
+				insertingProductSauce = append(insertingProductSauce, model.ProductSauce{
+					BaseModel: model.BaseModel{
+						Uuid:       headquarterSauce.Uuid,
+						CreateTime: headquarterSauce.CreateTime,
+						UpdateTime: headquarterSauce.UpdateTime,
+						DeleteTime: headquarterSauce.DeleteTime,
+					},
+					Name:                  headquarterSauce.MultiLanguageName.ToJson(),
+					Price:                 headquarterSauce.Price,
+					MultiLanguageNameUuid: headquarterSauce.MultiLanguageName.Uuid,
+					Sort:                  headquarterSauce.Sort,
+					ProductBomCardUuid:    headquarterSauce.ProductBomCardUuid, // 同步的成本卡Uuid
+					ErpCode:               headquarterSauce.ErpCode,
+					HeadquarterUuid:       headquarter.Uuid,
+				})
+			}
+			if len(insertingMultiLanguageNames) > 0 {
+				err := tx.Model(&model.MultiLanguageName{}).Create(&insertingMultiLanguageNames).Error
+				if err != nil {
+					return err
+				}
+			}
+			if len(insertingProductSauce) > 0 {
+				err := tx.Model(&model.ProductSauce{}).Create(&insertingProductSauce).Error
+				if err != nil {
+					return err
+				}
+			}
+			return nil
 		})
 		if err != nil {
-			return errors.WithMessage(err, "获取总部单位列表失败")
-		}
-		sauceList = append(sauceList, headquarterSauceList...)
-		for _, sauce := range headquarterSauceList {
-			sauceHeadquarterMap[sauce.ItemCode] = headquarter.Uuid
-		}
-
-		var headquarterSauces []model.ProductSauce
-		s.dbm.GetDB(headquarter.Uuid).Model(&model.ProductSauce{}).Scopes(repository.NotDeleted).Find(&headquarterSauces)
-		for _, headquarterSauce := range headquarterSauces {
-			headquarterSauceMap[headquarterSauce.ErpCode] = headquarterSauce
+			return errors.WithMessage(errors.New("同步总部加料失败"), err.Error())
 		}
 	}
-
-	var translateItems []utils.TranslateItem
-	for _, sauce := range sauceList {
-		translateItems = append(translateItems, utils.TranslateItem{
-			Lang:    "en",
-			Content: sauce.ItemName,
-		})
-	}
-
-	var sauces []model.ProductSauce
-	db.Model(&model.ProductSauce{}).Scopes(repository.NotDeleted).Find(&sauces)
-	sauceMap := make(map[string]model.ProductSauce)
-
-	for _, sauce := range sauces {
-		if sauce.ErpCode == "" {
-			continue
-		}
-		sauceMap[sauce.ErpCode] = sauce
-	}
-
-	multiLanguageMap := utils.NewTranslateClient().TranslateWithRetry(ctx.GetContext(), translateItems, 10)
-
-	adddeff, _ := json.Marshal(multiLanguageMap)
-	fmt.Println("++++")
-	fmt.Println(string(adddeff))
-	fmt.Println("++++")
-
-	// 获取单位最大的排序
-	var sauceSort int
-	db.Model(&model.ProductSauce{}).Select("ifnull(MAX(sort), 0)").Scan(&sauceSort)
-	sauceSort++
-
-	err = db.Transaction(func(tx *gorm.DB) error {
-		for _, erpSauce := range sauceList {
-			var localeName dto.LocaleResponse
-			headquarterUuid, _ := sauceHeadquarterMap[erpSauce.ItemCode]
-			if _, ok := multiLanguageMap[erpSauce.ItemName]; !ok {
-				localeName = dto.LocaleResponse{
-					EN:   erpSauce.ItemName,
-					ZH:   erpSauce.ItemName,
-					TH:   erpSauce.ItemName,
-					MY:   erpSauce.ItemName,
-					JA:   erpSauce.ItemName,
-					KO:   erpSauce.ItemName,
-					TR:   erpSauce.ItemName,
-					SV:   erpSauce.ItemName,
-					ZHTW: erpSauce.ItemName,
-				}
-			} else {
-				localeName = multiLanguageMap[erpSauce.ItemName]
-			}
-			multiLanguageName := model.MultiLanguageName{
-				EnName:   localeName.EN,
-				ZhName:   localeName.ZH,
-				ThName:   localeName.TH,
-				MyName:   localeName.MY,
-				JaName:   localeName.JA,
-				KoName:   localeName.KO,
-				TrName:   localeName.TR,
-				SvName:   localeName.SV,
-				ZhTwName: localeName.ZHTW,
-			}
-			sauce, ok := sauceMap[erpSauce.ItemCode]
-			if ok { // 更新
-				err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", sauce.MultiLanguageNameUuid).Updates(map[string]any{
-					"zh_name":    localeName.ZH,
-					"th_name":    localeName.TH,
-					"en_name":    localeName.EN,
-					"zh_tw_name": localeName.ZHTW,
-					"ja_name":    localeName.JA,
-					"ko_name":    localeName.KO,
-					"my_name":    localeName.MY,
-					"tr_name":    localeName.TR,
-					"sv_name":    localeName.SV,
-				}).Error
-				if err != nil {
-					return err
-				}
-				err = tx.Model(&model.ProductSauce{}).Where("uuid = ?", sauce.Uuid).Updates(map[string]any{
-					"name":             localeName.ToJson(),
-					"erp_code":         erpSauce.ItemCode,
-					"headquarter_uuid": headquarterUuid,
-				}).Error
-				if err != nil {
-					return err
-				}
-			} else { // 创建
-				err := tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
-				if err != nil {
-					return err
-				}
-				// 如果是总部同步的，price从总部获取
-				headquarterSauce, _ := headquarterSauceMap[erpSauce.ItemCode]
-				productSauce := model.ProductSauce{
-					Name:                  localeName.ToJson(),
-					MultiLanguageNameUuid: multiLanguageName.Uuid,
-					Sort:                  sauceSort,
-					ErpCode:               erpSauce.ItemCode,
-					Price:                 headquarterSauce.Price,
-					HeadquarterUuid:       headquarterUuid,
-				}
-				err = tx.Model(&model.ProductSauce{}).Create(&productSauce).Error
-				if err != nil {
-					return err
-				}
-				sauceSort++
-			}
-		}
-		return nil
-	})
 
 	return err
 
@@ -7293,246 +7211,122 @@ func (s *productSrv) SyncSauce(ctx context.Context) error {
 
 // SyncAttributeGroup 同步属性组、属性
 func (s *productSrv) SyncAttributeGroup(ctx context.Context) error {
-	company := ctx.GetCompany()
-	if !company.IsOpenErp() {
+	companySetting := ctx.GetCompanySetting()
+	// v2.7 本任务不从ERP同步属性跟加料以及TTPOS添加修改之后不同步到ERP，子店同步时，从ttpos的总部获取数据
+	if !companySetting.IsSubShop() {
 		return nil
 	}
-
-	companySetting := ctx.GetCompanySetting()
-	db := s.dbm.GetDB(ctx.GetCompanyUuid())
-
-	var erpAttributeGroups []resp.AttributeInfo
-	// 获取商家自己的
-	erp := erp.NewIErpSrv(s.dbm)
-	attributeList, err := erp.GetAttributeList(ctx.GetContext(), req.GetAttributeListReq{
-		SiteCode:    companySetting.ErpnextSiteCode,
-		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
-		Branch:      companySetting.ErpnextBranchName,
-	})
-	if err != nil {
-		return errors.WithMessage(err, "获取单位列表失败")
+	var headquarter model.CompanySetting
+	err := s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
+	if err != nil || headquarter.Uuid == 0 {
+		return errors.WithMessage(errors.New("获取总部公司失败"))
 	}
 
-	erpAttributeGroups = append(erpAttributeGroups, attributeList.List...)
+	var headquarterAttributeGroups []model.ProductAttributeGroup
+	s.dbm.GetDB(headquarter.Uuid).Model(&model.ProductAttributeGroup{}).Preload("MultiLanguageName").Preload("ProductAttributes").Preload("ProductAttributes.MultiLanguageName").Find(&headquarterAttributeGroups)
 
-	attributeHeadquarterMap := make(map[string]uint64)
-	// 如果是子店，获取总部的
-	if companySetting.IsSubShop() {
-		var headquarter model.CompanySetting
-		saasDb := s.dbm.GetDB(0)
-		err := saasDb.Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
-		if err != nil || headquarter.Uuid == 0 {
-			return errors.WithMessage(errors.New("获取总部公司失败"))
-		}
-		headquarterAttributeList, err := erp.GetAttributeList(ctx.GetContext(), req.GetAttributeListReq{
-			SiteCode:       headquarter.ErpnextSiteCode,
-			CompanyAbbr:    headquarter.ErpnextCompanyAbbr,
-			Branch:         headquarter.ErpnextBranchName,
-			SubCompanyAbbr: companySetting.ErpnextCompanyAbbr,
-		})
-		if err != nil {
-			return errors.WithMessage(err, "获取总部单位列表失败")
-		}
-		erpAttributeGroups = append(erpAttributeGroups, headquarterAttributeList.List...)
-		for _, erpAttributeGroup := range headquarterAttributeList.List {
-			attributeHeadquarterMap[erpAttributeGroup.AttributeName] = headquarter.Uuid
-		}
-	}
-
-	var translateItems []utils.TranslateItem
-	for _, erpAttributeGroup := range erpAttributeGroups {
-		translateItems = append(translateItems, utils.TranslateItem{
-			Lang:    "en",
-			Content: erpAttributeGroup.AliasName,
-		})
-		for _, erpAttribute := range erpAttributeGroup.AttributeValueList {
-			translateItems = append(translateItems, utils.TranslateItem{
-				Lang:    "en",
-				Content: erpAttribute.Abbr,
-			})
-		}
-	}
-
-	var attributeGroups []model.ProductAttributeGroup
-	db.Model(&model.ProductAttributeGroup{}).Preload("ProductAttributes").Scopes(repository.NotDeleted).Find(&attributeGroups)
-
-	attributeGroupMap := make(map[string]model.ProductAttributeGroup)
-	for _, attributeGroup := range attributeGroups {
-		if attributeGroup.ErpnextAttributeGroupName == "" {
-			continue
-		}
-		attributeGroupMap[attributeGroup.ErpnextAttributeGroupName] = attributeGroup
-	}
-
-	multiLanguageMap := utils.NewTranslateClient().TranslateWithRetry(ctx.GetContext(), translateItems, 10)
-
-	// 获取单位最大的排序
-	var attributeGroupSort int
-	db.Model(&model.ProductAttributeGroup{}).Select("ifnull(MAX(sort), 0)").Scan(&attributeGroupSort)
-	attributeGroupSort++
-
-	err = db.Transaction(func(tx *gorm.DB) error {
-		for _, erpAttributeGroup := range erpAttributeGroups {
-			var localeName dto.LocaleResponse
-			headquarterUuid, _ := attributeHeadquarterMap[erpAttributeGroup.AttributeName]
-			if _, ok := multiLanguageMap[erpAttributeGroup.AliasName]; !ok {
-				localeName = dto.LocaleResponse{
-					EN:   erpAttributeGroup.AliasName,
-					ZH:   erpAttributeGroup.AliasName,
-					TH:   erpAttributeGroup.AliasName,
-					MY:   erpAttributeGroup.AliasName,
-					JA:   erpAttributeGroup.AliasName,
-					KO:   erpAttributeGroup.AliasName,
-					TR:   erpAttributeGroup.AliasName,
-					SV:   erpAttributeGroup.AliasName,
-					ZHTW: erpAttributeGroup.AliasName,
-				}
-			} else {
-				localeName = multiLanguageMap[erpAttributeGroup.AliasName]
-			}
-
-			attributeGroup, ok := attributeGroupMap[erpAttributeGroup.AttributeName]
-			if ok { // 更新
-				err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", attributeGroup.MultiLanguageNameUuid).Updates(map[string]any{
-					"zh_name":    localeName.ZH,
-					"th_name":    localeName.TH,
-					"en_name":    localeName.EN,
-					"zh_tw_name": localeName.ZHTW,
-					"ja_name":    localeName.JA,
-					"ko_name":    localeName.KO,
-					"my_name":    localeName.MY,
-					"tr_name":    localeName.TR,
-					"sv_name":    localeName.SV,
-				}).Error
-				if err != nil {
-					return err
-				}
-				err = tx.Model(&model.ProductAttributeGroup{}).Where("uuid = ?", attributeGroup.Uuid).Updates(map[string]any{
-					"name":                         localeName.ToJson(),
-					"erpnext_attribute_group_name": erpAttributeGroup.AttributeName,
-					"headquarter_uuid":             headquarterUuid,
-				}).Error
-				if err != nil {
-					return err
-				}
-			} else { // 创建
-				multiLanguageName := model.MultiLanguageName{
-					EnName:   localeName.EN,
-					ZhName:   localeName.ZH,
-					ThName:   localeName.TH,
-					MyName:   localeName.MY,
-					JaName:   localeName.JA,
-					KoName:   localeName.KO,
-					TrName:   localeName.TR,
-					SvName:   localeName.SV,
-					ZhTwName: localeName.ZHTW,
-				}
-				err := tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
-				if err != nil {
-					return err
-				}
-				attributeGroup = model.ProductAttributeGroup{
-					Name:                      localeName.ToJson(),
-					MultiLanguageNameUuid:     multiLanguageName.Uuid,
-					Sort:                      attributeGroupSort,
-					ErpnextAttributeGroupName: erpAttributeGroup.AttributeName,
-					HeadquarterUuid:           headquarterUuid,
-				}
-				err = tx.Model(&model.ProductAttributeGroup{}).Create(&attributeGroup).Error
-				if err != nil {
-					return err
-				}
-				attributeGroupSort++
-			}
-
-			// 属性值处理
-			var attributeSort int
-			db.Model(&model.ProductAttribute{}).Where("attribute_group_uuid = ?", attributeGroup.Uuid).Select("ifnull(MAX(sort), 0)").Scan(&attributeSort)
-			attributeSort++
-
-			attributeMap := make(map[string]model.ProductAttribute)
-			for _, attribute := range attributeGroup.ProductAttributes {
-				if attribute.ErpnextAttributeValue == "" {
+	if len(headquarterAttributeGroups) > 0 {
+		err := s.dbm.GetDB(companySetting.CompanyUuid).Transaction(func(tx *gorm.DB) error {
+			var insertingMultiLanguageNames []model.MultiLanguageName
+			var insertingProductAttributeGroups []model.ProductAttributeGroup
+			var insertingProductAttributes []model.ProductAttribute
+			for _, headquarterAttributeGroup := range headquarterAttributeGroups {
+				if headquarterAttributeGroup.MultiLanguageName.Uuid == 0 {
 					continue
 				}
-				attributeMap[attribute.ErpnextAttributeValue] = attribute
-			}
-			for _, erpAttribute := range erpAttributeGroup.AttributeValueList {
-				if _, ok := multiLanguageMap[erpAttribute.Abbr]; !ok {
-					localeName = dto.LocaleResponse{
-						EN:   erpAttribute.Abbr,
-						ZH:   erpAttribute.Abbr,
-						TH:   erpAttribute.Abbr,
-						MY:   erpAttribute.Abbr,
-						JA:   erpAttribute.Abbr,
-						KO:   erpAttribute.Abbr,
-						TR:   erpAttribute.Abbr,
-						SV:   erpAttribute.Abbr,
-						ZHTW: erpAttribute.Abbr,
+				insertingMultiLanguageNames = append(insertingMultiLanguageNames, model.MultiLanguageName{
+					BaseModel: model.BaseModel{
+						Uuid:       headquarterAttributeGroup.MultiLanguageName.Uuid,
+						CreateTime: headquarterAttributeGroup.MultiLanguageName.CreateTime,
+						UpdateTime: headquarterAttributeGroup.MultiLanguageName.UpdateTime,
+						DeleteTime: headquarterAttributeGroup.MultiLanguageName.DeleteTime,
+					},
+					EnName:   headquarterAttributeGroup.MultiLanguageName.EnName,
+					ZhName:   headquarterAttributeGroup.MultiLanguageName.ZhName,
+					ThName:   headquarterAttributeGroup.MultiLanguageName.ThName,
+					MyName:   headquarterAttributeGroup.MultiLanguageName.MyName,
+					JaName:   headquarterAttributeGroup.MultiLanguageName.JaName,
+					KoName:   headquarterAttributeGroup.MultiLanguageName.KoName,
+					TrName:   headquarterAttributeGroup.MultiLanguageName.TrName,
+					SvName:   headquarterAttributeGroup.MultiLanguageName.SvName,
+					ZhTwName: headquarterAttributeGroup.MultiLanguageName.ZhTwName,
+				})
+				insertingProductAttributeGroups = append(insertingProductAttributeGroups, model.ProductAttributeGroup{
+					BaseModel: model.BaseModel{
+						Uuid:       headquarterAttributeGroup.Uuid,
+						CreateTime: headquarterAttributeGroup.CreateTime,
+						UpdateTime: headquarterAttributeGroup.UpdateTime,
+						DeleteTime: headquarterAttributeGroup.DeleteTime,
+					},
+					Name:                      headquarterAttributeGroup.MultiLanguageName.ToJson(),
+					MultiLanguageNameUuid:     headquarterAttributeGroup.MultiLanguageName.Uuid,
+					Sort:                      headquarterAttributeGroup.Sort,
+					ErpnextAttributeGroupName: headquarterAttributeGroup.ErpnextAttributeGroupName,
+					HeadquarterUuid:           headquarter.Uuid,
+				})
+				for _, headquarterProductAttribute := range headquarterAttributeGroup.ProductAttributes {
+					if headquarterProductAttribute.MultiLanguageName.Uuid == 0 {
+						continue
 					}
-				} else {
-					localeName = multiLanguageMap[erpAttribute.Abbr]
-				}
-
-				attribute, ok := attributeMap[erpAttribute.AttributeValue]
-				if ok { // 更新
-					err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", attribute.MultiLanguageNameUuid).Updates(map[string]any{
-						"zh_name":    localeName.ZH,
-						"th_name":    localeName.TH,
-						"en_name":    localeName.EN,
-						"zh_tw_name": localeName.ZHTW,
-						"ja_name":    localeName.JA,
-						"ko_name":    localeName.KO,
-						"my_name":    localeName.MY,
-						"tr_name":    localeName.TR,
-						"sv_name":    localeName.SV,
-					}).Error
-					if err != nil {
-						return err
-					}
-					err = tx.Model(&model.ProductAttribute{}).Where("uuid = ?", attribute.Uuid).Updates(map[string]any{
-						"name":                    localeName.ToJson(),
-						"erpnext_attribute_value": erpAttribute.AttributeValue,
-						"headquarter_uuid":        headquarterUuid,
-					}).Error
-					if err != nil {
-						return err
-					}
-				} else { // 新增
-					multiLanguageName := model.MultiLanguageName{
-						EnName:   localeName.EN,
-						ZhName:   localeName.ZH,
-						ThName:   localeName.TH,
-						MyName:   localeName.MY,
-						JaName:   localeName.JA,
-						KoName:   localeName.KO,
-						TrName:   localeName.TR,
-						SvName:   localeName.SV,
-						ZhTwName: localeName.ZHTW,
-					}
-					err := tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
-					if err != nil {
-						return err
-					}
-					attribute = model.ProductAttribute{
-						Name:                  localeName.ToJson(),
-						MultiLanguageNameUuid: multiLanguageName.Uuid,
-						Sort:                  attributeSort,
-						ErpnextAttributeValue: erpAttribute.AttributeValue,
-						HeadquarterUuid:       headquarterUuid,
-						AttributeGroupUuid:    attributeGroup.Uuid,
-					}
-					err = tx.Model(&model.ProductAttribute{}).Create(&attribute).Error
-					if err != nil {
-						return err
-					}
-					attributeSort++
+					insertingMultiLanguageNames = append(insertingMultiLanguageNames, model.MultiLanguageName{
+						BaseModel: model.BaseModel{
+							Uuid:       headquarterProductAttribute.MultiLanguageName.Uuid,
+							CreateTime: headquarterProductAttribute.MultiLanguageName.CreateTime,
+							UpdateTime: headquarterProductAttribute.MultiLanguageName.UpdateTime,
+							DeleteTime: headquarterProductAttribute.MultiLanguageName.DeleteTime,
+						},
+						EnName:   headquarterProductAttribute.MultiLanguageName.EnName,
+						ZhName:   headquarterProductAttribute.MultiLanguageName.ZhName,
+						ThName:   headquarterProductAttribute.MultiLanguageName.ThName,
+						MyName:   headquarterProductAttribute.MultiLanguageName.MyName,
+						JaName:   headquarterProductAttribute.MultiLanguageName.JaName,
+						KoName:   headquarterProductAttribute.MultiLanguageName.KoName,
+						TrName:   headquarterProductAttribute.MultiLanguageName.TrName,
+						SvName:   headquarterProductAttribute.MultiLanguageName.SvName,
+						ZhTwName: headquarterProductAttribute.MultiLanguageName.ZhTwName,
+					})
+					insertingProductAttributes = append(insertingProductAttributes, model.ProductAttribute{
+						BaseModel: model.BaseModel{
+							Uuid:       headquarterProductAttribute.Uuid,
+							CreateTime: headquarterProductAttribute.CreateTime,
+							UpdateTime: headquarterProductAttribute.UpdateTime,
+							DeleteTime: headquarterProductAttribute.DeleteTime,
+						},
+						Name:                  headquarterProductAttribute.MultiLanguageName.ToJson(),
+						MultiLanguageNameUuid: headquarterProductAttribute.MultiLanguageName.Uuid,
+						AttributeGroupUuid:    headquarterProductAttribute.AttributeGroupUuid,
+						Sort:                  headquarterProductAttribute.Sort,
+						ErpnextAttributeValue: headquarterProductAttribute.ErpnextAttributeValue,
+						HeadquarterUuid:       headquarter.Uuid,
+					})
 				}
 			}
+			if len(insertingMultiLanguageNames) > 0 {
+				err := tx.Model(&model.MultiLanguageName{}).Create(&insertingMultiLanguageNames).Error
+				if err != nil {
+					return err
+				}
+			}
+			if len(insertingProductAttributeGroups) > 0 {
+				err := tx.Model(&model.ProductAttributeGroup{}).Create(&insertingProductAttributeGroups).Error
+				if err != nil {
+					return err
+				}
+			}
+			if len(insertingProductAttributes) > 0 {
+				err := tx.Model(&model.ProductAttribute{}).Create(&insertingProductAttributes).Error
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			return errors.WithMessage(errors.New("同步总部属性组失败"), err.Error())
 		}
-		return nil
-	})
-	return err
+	}
+
+	return nil
 }
 
 // GetProductBatchTypeList 获取分批类型列表

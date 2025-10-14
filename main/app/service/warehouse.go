@@ -758,8 +758,8 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 
 	// 子店，获取总部ttpos仓库
 	var headquarterWarehouses []model.Warehouse
+	var headquarter model.CompanySetting
 	if companySetting.IsSubShop() {
-		var headquarter model.CompanySetting
 		err := s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
@@ -904,7 +904,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 					Contact:               headquarterWarehouse.Contact,
 					Phone:                 headquarterWarehouse.Phone,
 					Address:               headquarterWarehouse.Address,
-					HeadquarterUuid:       companySetting.HeadquarterUuid,
+					HeadquarterUuid:       headquarter.Uuid,
 				})
 
 				insertingMultiLanguageNames = append(insertingMultiLanguageNames, model.MultiLanguageName{

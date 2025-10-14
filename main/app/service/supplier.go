@@ -395,8 +395,8 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 	}
 
 	var headquarterSuppliers []model.Supplier
+	var headquarter model.CompanySetting
 	if companySetting.IsSubShop() {
-		var headquarter model.CompanySetting
 		err := s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
@@ -477,7 +477,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 					Position:        headquarterSupplier.Position,
 					StaffUuid:       headquarterSupplier.StaffUuid,
 					ErpCode:         headquarterSupplier.ErpCode,
-					HeadquarterUuid: companySetting.HeadquarterUuid,
+					HeadquarterUuid: headquarter.Uuid,
 				})
 			}
 			if len(insertingHeadquarterSuppliers) > 0 {
