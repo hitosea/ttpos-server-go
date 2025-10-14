@@ -6051,10 +6051,26 @@ func (s *productSrv) AddProductPackage(ctx context.Context, tx *gorm.DB, request
 				return nil, errors.WithMessage(errGetUnit, "获取商品单位失败")
 			}
 
+			flavorUuids := make([]uint64, 0, len(request.Flavors))
+			for _, v := range request.Flavors {
+				flavorUuids = append(flavorUuids, v.Uuid)
+			}
+			flavorList, err := repository.NewProductFlavorRepo(tx).GetProductFlavorList(flavorUuids...)
+			if err != nil {
+				return nil, errors.WithMessage(err, "获取商品规格失败")
+			}
+			var flavors []req.Flavor
+			for _, v := range flavorList {
+				flavors = append(flavors, req.Flavor{
+					Name:  v.ErpnextGroupName,
+					Value: v.ErpnextValueName,
+				})
+			}
 			erpSrv := erp.NewIErpSrv(s.dbm)
 			itemInfo, errErp := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
 				ItemName: enName,
 				StockUom: productUnit.ErpnextUom,
+				Flavors:  flavors,
 			})
 			if errErp != nil {
 				return nil, errors.WithMessage(errErp, "同步商品到erp失败")
