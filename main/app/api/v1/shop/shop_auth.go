@@ -50,9 +50,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	claims, _ := auth.ParseToken(loginResp.Token, config.JWT.Secret)
 	h.staffLoginLogSrv.Add(ctx, claims.StaffUuid, loginReq.Username, c.ClientIP(), "登录成功")
 
-	helper.Success(c, resp.LoginResp{
-		Token:        loginResp.Token,
-		RefreshToken: loginResp.RefreshToken,
+	helper.Success(c, resp.ShopLoginResp{
+		Token:              loginResp.Token,
+		RefreshToken:       loginResp.RefreshToken,
+		NeedChangePassword: loginResp.NeedChangePassword,
 	})
 }
 
