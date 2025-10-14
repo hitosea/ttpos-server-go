@@ -2330,7 +2330,7 @@ func (s *productSrv) DeleteProductUnit(ctx context.Context, deleteUnitReq req.Pr
 				Branch:      companySetting.ErpnextBranchName,
 				UomName:     productUnit.ErpnextUom,
 			})
-			if err != nil {
+			if err != nil && !strings.Contains(err.Error(), "not found") {
 				return errors.WithMessage(errors.New("删除单位失败"), err.Error())
 			}
 		}

@@ -271,18 +271,13 @@ func (s *supplierSrv) DeleteSupplier(ctx context.Context, deleteSupplierReq req.
 	}
 
 	// 调用erp接口，只能删除自己创建的供应商(标记禁用)
-	if ctx.GetCompany().IsOpenErp() {
+	if ctx.GetCompany().IsOpenErp() && supplier.ErpCode != "" {
 		companySetting := ctx.GetCompanySetting()
-		err = erp.NewIErpSrv(s.dbm).UpdateSupplier(ctx.GetContext(), req.UpdateSupplierReq{
-			CreateSupplierReq: req.CreateSupplierReq{
-				SiteCode:    companySetting.ErpnextSiteCode,
-				CompanyAbbr: companySetting.ErpnextCompanyAbbr,
-				Branch:      companySetting.ErpnextBranchName,
-				Disabled:    true,
-			},
-			Name: supplier.ErpCode,
+		err = erp.NewIErpSrv(s.dbm).DeleteSupplier(ctx.GetContext(), req.DeleteSupplierReq{
+			SiteCode: companySetting.ErpnextSiteCode,
+			Name:     supplier.ErpCode,
 		})
-		if err != nil {
+		if err != nil && !strings.Contains(err.Error(), "not found") {
 			return errors.WithMessage(errors.New("删除供应商失败"), err.Error())
 		}
 	}
