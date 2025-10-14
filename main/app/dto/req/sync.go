@@ -4,7 +4,8 @@ import "ttpos-server-go/app/dto"
 
 // SyncReq 同步请求
 type SyncReq struct {
-	TaskUuid uint64 `json:"task_uuid" form:"task_uuid"` // 任务UUID，如果传递则重新执行该任务
+	TaskUuid      uint64 `json:"task_uuid" form:"task_uuid"`             // 任务UUID，如果传递则重新执行该任务
+	IsSyncExecute bool   `json:"is_sync_execute" form:"is_sync_execute"` // 是否同步执行
 }
 
 // SyncTaskListReq 同步任务列表请求

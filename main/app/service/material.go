@@ -1131,7 +1131,7 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 		for _, uom := range request.Uoms {
 			productUnit, _ := productUnitRepo.GetProductUnitByErpnextUom(uom.Uom)
 			if productUnit == nil {
-				return errors.WithMessage(errors.New("单位不存在"), uom.Uom)
+				return errors.WithMessage(errors.New(fmt.Sprintf("采购单位不存在: %s %s", request.ItemCode, uom.Uom)))
 			}
 
 			if productUnit.Uuid == stockUnit.Uuid {

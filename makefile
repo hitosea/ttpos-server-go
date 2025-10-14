@@ -101,6 +101,10 @@ translate:
 migrate-data:
 	cd main && go run ./main.go migrate-data
 
+# 同步ERP数据
+sync-erp-data:
+	cd main && go run ./main.go sync-erp-data
+
 # 统计数据重跑
 statistics-re:
 	cd main && go run ./main.go statistics-re $(ARGS)
