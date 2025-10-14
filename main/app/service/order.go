@@ -13756,6 +13756,10 @@ func sortBatchCookingSaleOrderProducts(batchCookingSaleOrderProducts []resp.Orde
 // 分批送厨
 func (s *orderSrv) OrderCartProductBatchCooking(ctx context.Context, req req.OrderCartProductBatchCookingReq) (*resp.ShopCart, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
+	// 验证参数
+	if err := req.Validate(); err != nil {
+		return nil, errors.WithMessage(err)
+	}
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {

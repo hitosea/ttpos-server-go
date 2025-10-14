@@ -266,3 +266,19 @@ type OrderCartProductBatchCookingReq struct {
 	SaleOrderProductUuids []uint64 `json:"sale_order_product_uuids"` // 销售订单商品UUID列表, 必填
 	BatchTagUuid          uint64   `json:"batch_tag_uuid"`           // 分批类型UUID, 必填
 }
+
+func (r *OrderCartProductBatchCookingReq) Validate() error {
+	if r.SaleBillUuid == 0 {
+		return errors.New("销售账单UUID不能为空")
+	}
+	if r.SaleOrderUuid == 0 {
+		return errors.New("销售订单UUID不能为空")
+	}
+	if len(r.SaleOrderProductUuids) == 0 {
+		return errors.New("销售订单商品UUID列表不能为空")
+	}
+	if r.BatchTagUuid == 0 {
+		return errors.New("分批类型UUID不能为空")
+	}
+	return nil
+}

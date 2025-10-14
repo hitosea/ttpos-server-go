@@ -147,6 +147,9 @@ func (model *SaleBill) GetSaleOrderProductBatchCooking() []*SaleOrderProduct {
 
 // 获取分批送厨的商品,指定saleOrderUuids
 func (model *SaleBill) GetSaleOrderProductBatchCookingBySaleOrderUuid(saleOrderProductUuids []uint64) []*SaleOrderProduct {
+	if len(saleOrderProductUuids) == 0 {
+		return make([]*SaleOrderProduct, 0)
+	}
 	batchCookingSaleOrderProducts := model.GetSaleOrderProductBatchCooking()
 	uuidMap := make(map[uint64]bool)
 	for _, saleOrderProductUuid := range saleOrderProductUuids {
