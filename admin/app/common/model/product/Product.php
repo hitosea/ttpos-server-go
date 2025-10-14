@@ -1428,9 +1428,9 @@ class Product extends BaseModel
                         'material_id' => $relatedMaterial['material_uuid'],
                         'material_num' => $relatedMaterial['num'],
                         'materialProduct' => [
-                            'product_name_text' => $relatedMaterial['material']['product_name_text'],
-                            'product_unit_text' => $relatedMaterial['material']['unit']['unit_name_text'],
-                            'product_material_stock' => $relatedMaterial['material']['stock_num'],
+                            'product_name_text' => $relatedMaterial['material']['product_name_text'] ?? '',
+                            'product_unit_text' => $relatedMaterial['material']['unit']['unit_name_text'] ?? '',
+                            'product_material_stock' => $relatedMaterial['material']['stock_num'] ?? 0,
                         ],
                     ];
                 }
