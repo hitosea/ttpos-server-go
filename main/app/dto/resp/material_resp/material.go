@@ -171,3 +171,13 @@ type MaterialImportResp struct {
 	CategoryList []MaterialCategory           `json:"category_list" binding:"required"`  // 分类列表
 	UnitList     []MaterialImportUnitListItem `json:"unit_list" binding:"required,dive"` // 单位列表
 }
+
+type MaterialConsumptionListResp struct {
+	List []MaterialConsumption `json:"list"`
+}
+
+type MaterialConsumption struct {
+	MaterialUuid uint64  `json:"material_uuid"` // 物品UUID
+	MaterialCode string  `json:"material_code"` // 物品编码
+	Consumption  float64 `json:"consumption"`   // 消耗量
+}

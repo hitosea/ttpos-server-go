@@ -89,6 +89,8 @@ type IMaterialSrv interface {
 	SyncMaterialCategory(ctx context.Context) error // 同步物品分类
 	SyncMaterial(ctx context.Context) error         // 同步物品
 	SyncProductBomCard(ctx context.Context) error   // 同步成本卡
+
+	GetWarehouseItemConsumption(ctx context.Context, warehouseUuid uint64) (material_resp.MaterialConsumptionListResp, error) // 获取仓库物品消耗量
 }
 
 type materialSrv struct {
@@ -3212,4 +3214,9 @@ func (s *materialSrv) disableProductBomCard(ctx context.Context, db *gorm.DB, pr
 		return errors.WithMessage(err, "创建成本卡日志失败")
 	}
 	return nil
+}
+
+// GetWarehouseItemConsumption 获取仓库物品消耗量
+func (s *materialSrv) GetWarehouseItemConsumption(ctx context.Context, warehouseUuid uint64) (material_resp.MaterialConsumptionListResp, error) {
+	return material_resp.MaterialConsumptionListResp{}, nil
 }

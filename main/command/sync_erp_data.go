@@ -147,10 +147,10 @@ var syncErpDataCmd = &cobra.Command{
 		localeSrv := service.NewLocaleSrv()
 		settingSrv := setting.NewSrv(dbm, cache)
 		translateSrv := service.NewTranslateSrv(dbm, cache)
-		warehouseSrv := service.NewWarehouseSrv(dbm, settingSrv, translateSrv)
 		supplierSrv := service.NewSupplierSrv(dbm)
 		productSrv := service.NewProductSrv(dbm, localeSrv, settingSrv, cache, translateSrv)
 		materialSrv := service.NewMaterialSrv(dbm, localeSrv, settingSrv, translateSrv)
+		warehouseSrv := service.NewWarehouseSrv(dbm, settingSrv, materialSrv, translateSrv)
 		syncSrv := service.NewSyncSrv(dbm, warehouseSrv, supplierSrv, productSrv, materialSrv)
 
 		// 设置上下文

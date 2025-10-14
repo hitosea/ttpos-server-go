@@ -282,7 +282,8 @@ func RegisterWarehouseHandlers(router gin.IRouter, dbm *database.DBManager, cach
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 	translateSrv := service.NewTranslateSrv(dbm, cache)
-	warehouseSrv := service.NewWarehouseSrv(dbm, settingSrv, translateSrv)
+	materialSrv := service.NewMaterialSrv(dbm, service.NewLocaleSrv(), settingSrv, translateSrv)
+	warehouseSrv := service.NewWarehouseSrv(dbm, settingSrv, materialSrv, translateSrv)
 
 	// 初始化控制器
 	warehouseHandler := &WarehouseHandler{

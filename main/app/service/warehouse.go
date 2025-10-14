@@ -44,22 +44,24 @@ type IWarehouseSrv interface {
 }
 
 // NewWarehouseSrv 创建仓库服务
-func NewWarehouseSrv(dbm *database.DBManager, settingSrv setting.ISrv, translateSrv ITranslateSrv) IWarehouseSrv {
-	return NewWarehouseSrvImpl(dbm, settingSrv, translateSrv)
+func NewWarehouseSrv(dbm *database.DBManager, settingSrv setting.ISrv, materialSrv IMaterialSrv, translateSrv ITranslateSrv) IWarehouseSrv {
+	return NewWarehouseSrvImpl(dbm, settingSrv, materialSrv, translateSrv)
 }
 
 // warehouseSrv 仓库服务实现
 type warehouseSrv struct {
 	dbm          *database.DBManager
 	settingSrv   setting.ISrv
+	materialSrv  IMaterialSrv
 	translateSrv ITranslateSrv
 }
 
 // NewWarehouseSrvImpl 创建仓库服务实现
-func NewWarehouseSrvImpl(dbm *database.DBManager, settingSrv setting.ISrv, translateSrv ITranslateSrv) IWarehouseSrv {
+func NewWarehouseSrvImpl(dbm *database.DBManager, settingSrv setting.ISrv, materialSrv IMaterialSrv, translateSrv ITranslateSrv) IWarehouseSrv {
 	return &warehouseSrv{
 		dbm:          dbm,
 		settingSrv:   settingSrv,
+		materialSrv:  materialSrv,
 		translateSrv: translateSrv,
 	}
 }
@@ -982,14 +984,22 @@ func (s *warehouseSrv) SyncWarehouseItemStock(ctx context.Context) error {
 			warehouseItemMap[warehouseItem.MaterialCode] = warehouseItem
 		}
 
+		materialConsumption, err := s.materialSrv.GetWarehouseItemConsumption(ctx, warehouse.Uuid)
+		if err != nil {
+			return errors.WithMessage(err, "获取仓库物品消耗量失败")
+		}
+		var materialConsumptionMap map[string]float64
+		for _, consumption := range materialConsumption.List {
+			materialConsumptionMap[consumption.MaterialCode] = consumption.Consumption
+		}
+
 		for _, stock := range stockList {
 			material, ok := materialMap[stock.ItemCode]
 			if !ok {
 				continue
 			}
-
-			// TODO 仓库物品库存的计算
-			stockNum := stock.ActualQty
+			// 仓库物品库存的计算，可能为负数
+			stockNum := stock.ActualQty - materialConsumptionMap[stock.ItemCode]
 
 			// 添加或修改仓库物品库存
 			if warehouseItem, ok := warehouseItemMap[stock.ItemCode]; ok {

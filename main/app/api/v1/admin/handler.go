@@ -158,9 +158,10 @@ func (h *Handler) AddPaymentMethod(c *gin.Context) {
 func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	settingSrv := setting.NewSrv(dbm, cache)
 	translateSrv := service.NewTranslateSrv(dbm, cache)
+	materialSrv := service.NewMaterialSrv(dbm, service.NewLocaleSrv(), settingSrv, translateSrv)
 	wrapper := &Handler{
 		dbm:          dbm,
-		warehouseSrv: service.NewWarehouseSrv(dbm, settingSrv, translateSrv),
+		warehouseSrv: service.NewWarehouseSrv(dbm, settingSrv, materialSrv, translateSrv),
 	}
 	router.GET("/erpnext/site/company", middleware.Internal(), wrapper.GetErpnextSiteCompany)
 	router.POST("/erpnext/shop/init", middleware.Internal(), wrapper.InitShop)

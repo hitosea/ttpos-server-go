@@ -441,10 +441,10 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 	otherSrv := service.NewOtherSrv(dbm, cache, settingSrv)
 	translateSrv := service.NewTranslateSrv(dbm, cache)
-	warehouseSrv := service.NewWarehouseSrv(dbm, settingSrv, translateSrv)
 	supplierSrv := service.NewSupplierSrv(dbm)
 	productSrv := service.NewProductSrv(dbm, service.NewLocaleSrv(), settingSrv, cache, translateSrv)
 	materialSrv := service.NewMaterialSrv(dbm, service.NewLocaleSrv(), settingSrv, translateSrv)
+	warehouseSrv := service.NewWarehouseSrv(dbm, settingSrv, materialSrv, translateSrv)
 	wrapper := &SettingHandler{
 		settingSrv:    settingSrv,
 		otherSrv:      otherSrv,
