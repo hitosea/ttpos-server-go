@@ -1851,6 +1851,17 @@ func (s *Srv) EditBusinessSetting(ctx context.Context, businessSettingReq req.Up
 	businessSetting.GiftMethodList = []setting.GiftMethodItem{}
 	businessSetting.FreeMethodList = []setting.FreeMethodItem{}
 
+	// is_batch为“1”时，必须至少有一个分批类型
+	if businessSetting.IsBatch == "1" {
+		batchTagNum, err := repository.NewBatchTagRepo(s.dbm.GetDB(companyUuid)).GetBatchTagCount()
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+		if batchTagNum == 0 {
+			return errors.New("开启分批送厨商品时，必须至少有一个分批类型")
+		}
+	}
+
 	// 覆盖oldBusinessSetting
 	copier.CopyWithOption(&oldBusinessSetting, businessSetting, copier.Option{IgnoreEmpty: true})
 	// 保存设置到 business_setting 表
