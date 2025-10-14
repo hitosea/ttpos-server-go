@@ -589,7 +589,8 @@ func (r *MaterialRepoImpl) GetMaterialUuidsByCategoryUuids(categoryUuids []uint6
 
 func (r *MaterialRepoImpl) GetMaterialUuidsByKeyword(keyword string) ([]uint64, error) {
 	var uuids []uint64
-	if err := r.db.Model(&model.Material{}).Where("name LIKE ? OR code LIKE ? OR barcode_value LIKE ?", "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%").Where("delete_time = ?", 0).Pluck("uuid", &uuids).Error; err != nil {
+	if err := r.db.Model(&model.Material{}).Where("name LIKE ? OR code LIKE ? OR barcode_value LIKE ? OR internal_code LIKE ?",
+		"%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%").Where("delete_time = ?", 0).Pluck("uuid", &uuids).Error; err != nil {
 		return nil, errors.WithMessage(err, "根据关键字获取物品UUID列表失败")
 	}
 	return uuids, nil

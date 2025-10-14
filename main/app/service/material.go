@@ -142,7 +142,8 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 	// 根据名称、编码、条码模糊查询
 	if req.Keyword != "" {
 		dbOptions = append(dbOptions, commonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
-			return db.Where("name LIKE ? OR code LIKE ? OR barcode_value LIKE ?", "%"+req.Keyword+"%", "%"+req.Keyword+"%", "%"+req.Keyword+"%")
+			return db.Where("name LIKE ? OR code LIKE ? OR barcode_value LIKE ? OR internal_code LIKE ?",
+				"%"+req.Keyword+"%", "%"+req.Keyword+"%", "%"+req.Keyword+"%", "%"+req.Keyword+"%")
 		}))
 	}
 
