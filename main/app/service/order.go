@@ -30,7 +30,6 @@ import (
 	"ttpos-server-go/app/service/rpc/takeout"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
-	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
@@ -166,7 +165,6 @@ type orderSrv struct {
 	paymentMethodSrv IPaymentMethodSrv
 	memberSrv        IMemberSrv
 	cashBoxSrv       ICashBoxSrv
-	staffShiftSrv    IStaffShiftSrv
 	smsSrv           ISmsSrv
 }
 
@@ -182,12 +180,11 @@ func WithSmsSrv(dbm *database.DBManager) func(option *ISrvOption) {
 
 // NewOrderSrv 创建订单服务实例
 func NewOrderSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv, memberSrv IMemberSrv, cashBoxSrv ICashBoxSrv, opts ...func(option *ISrvOption)) IOrderSrv {
-	staffShiftSrv := NewStaffShiftSrv(cache.NewCache(cache.Redis, cache.Config{}), dbm, cashBoxSrv, NewStatisticsSrv())
-	return NewOrderSrvImpl(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, staffShiftSrv, opts...)
+	return NewOrderSrvImpl(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, opts...)
 }
 
 // NewOrderSrvImpl 创建订单服务实例实现
-func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv, memberSrv IMemberSrv, cashBoxSrv ICashBoxSrv, staffShiftSrv IStaffShiftSrv, opts ...func(option *ISrvOption)) IOrderSrv {
+func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv, memberSrv IMemberSrv, cashBoxSrv ICashBoxSrv, opts ...func(option *ISrvOption)) IOrderSrv {
 	option := &ISrvOption{}
 	for _, opt := range opts {
 		opt(option)
@@ -202,7 +199,6 @@ func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv s
 		paymentMethodSrv: paymentMethodSrv,
 		memberSrv:        memberSrv,
 		cashBoxSrv:       cashBoxSrv,
-		staffShiftSrv:    staffShiftSrv,
 		smsSrv:           option.SmsSrv,
 	}
 }
@@ -2350,7 +2346,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	// 获取当前员工班次信息
 	var staffShiftLogUuid uint64
 	if ctx.GetStaffUuid() != 0 {
-		staffShiftLog, err := s.staffShiftSrv.GetCurrentStaffShiftLog(ctx, ctx.GetStaffUuid())
+		staffShiftLog, err := GetCurrentStaffShiftLog(db, ctx.GetStaffUuid())
 		if err == nil {
 			staffShiftLogUuid = staffShiftLog.Uuid
 		}
@@ -2742,6 +2738,29 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	}
 
 	return nil, 0
+}
+
+// GetCurrentStaffShiftLog 获取当前员工班次信息
+func GetCurrentStaffShiftLog(db *gorm.DB, staffUuid uint64) (*model.StaffShiftLog, error) {
+	shiftLogRepo := repository.NewShiftLogRepo(db)
+
+	// 查询当前员工未交班的班次记录
+	shiftLog, err := shiftLogRepo.GetShiftLog(
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("staff_uuid = ?", staffUuid)
+		},
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("status = ?", constant.StaffNotHandedOver)
+		},
+	)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.New("员工当前没有进行中的班次")
+		}
+		return nil, errors.WithMessage(err)
+	}
+
+	return &shiftLog, nil
 }
 
 // ReReturnOrder 重新退款
