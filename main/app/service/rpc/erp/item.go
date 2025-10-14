@@ -360,6 +360,17 @@ func (s *erpSrv) SaveUom(ctx context.Context, saveUomReq req.SaveUomReq) error {
 	return nil
 }
 
+func (s *erpSrv) DeleteUom(ctx context.Context, deleteUomReq req.DeleteUomReq) error {
+	_, conn, err := NewErpItemClient()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	// TODO 调用erp接口删除单位
+	return nil
+}
+
 // SaveAttribute 保存属性组
 func (s *erpSrv) SaveAttribute(ctx context.Context, saveAttributeReq req.SaveAttributeReq) error {
 	client, conn, err := NewErpItemClient()

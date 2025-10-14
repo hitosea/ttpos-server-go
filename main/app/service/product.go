@@ -12,7 +12,6 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
-	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/dto/resp/product_resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -1955,7 +1954,7 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 	}
 	// 获取当前最大的排序值
 	var maxSort int
-	db.Model(&model.ProductUnit{}).Scopes(repository.NotDeleted).Select("ifnull(max(sort), 0)").Scan(&maxSort)
+	db.Model(&model.ProductUnit{}).Scopes(repository.NotDeleted, repository.ExcludeHeadquarter).Select("ifnull(max(sort), 0)").Scan(&maxSort)
 
 	// 保存产品单位
 	productUnit := model.ProductUnit{
@@ -2321,6 +2320,20 @@ func (s *productSrv) DeleteProductUnit(ctx context.Context, deleteUnitReq req.Pr
 		return errors.New("该单位下存在商品，不允许删除")
 	}
 	err = db.Transaction(func(tx *gorm.DB) error {
+		company := ctx.GetCompany()
+		companySetting := ctx.GetCompanySetting()
+		// 开启了ERP，并且是TTPOS站点，同步到ERPNext
+		if company.IsOpenErp() && productUnit.ErpnextUom != "" {
+			err = erp.NewIErpSrv(s.dbm).DeleteUom(ctx.GetContext(), req.DeleteUomReq{
+				SiteCode:    companySetting.ErpnextSiteCode,
+				CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+				Branch:      companySetting.ErpnextBranchName,
+				UomName:     productUnit.ErpnextUom,
+			})
+			if err != nil {
+				return errors.WithMessage(errors.New("删除单位失败"), err.Error())
+			}
+		}
 		// 删除产品单位
 		err := tx.Model(&model.ProductUnit{}).Where("uuid = ?", deleteUnitReq.Uuid).Update("delete_time", time.Now().Unix()).Error
 		if err != nil {
@@ -2477,7 +2490,7 @@ func (s *productSrv) AddProductSauce(ctx context.Context, addReq req.ProductSauc
 
 	// 获取当前最大的排序值
 	var maxSort int
-	db.Model(&model.ProductSauce{}).Scopes(repository.NotDeleted).Select("ifnull(max(sort), 0)").Scan(&maxSort)
+	db.Model(&model.ProductSauce{}).Scopes(repository.NotDeleted, repository.ExcludeHeadquarter).Select("ifnull(max(sort), 0)").Scan(&maxSort)
 
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// 保存多语言名称
@@ -2998,7 +3011,7 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 
 	// 获取当前最大的排序值
 	var maxSort int
-	db.Model(&model.ProductAttributeGroup{}).Scopes(repository.NotDeleted).Select("ifnull(max(sort), 0)").Scan(&maxSort)
+	db.Model(&model.ProductAttributeGroup{}).Scopes(repository.NotDeleted, repository.ExcludeHeadquarter).Select("ifnull(max(sort), 0)").Scan(&maxSort)
 
 	productAttributeGroup := model.ProductAttributeGroup{
 		Name: addReq.LocaleName.ToJson(),
@@ -6975,16 +6988,15 @@ func (s *productSrv) ProductShopChangePrice(ctx context.Context, req req.Product
 func (s *productSrv) SyncUnit(ctx context.Context) error {
 	company := ctx.GetCompany()
 	if !company.IsOpenErp() {
-		return nil
+		return errors.New("公司未开启erp")
 	}
 
 	companySetting := ctx.GetCompanySetting()
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 
-	uomList := make([]resp.UomInfo, 0)
-	// 获取商家自己的
+	// 子店获取erp单位列表
 	erp := erp.NewIErpSrv(s.dbm)
-	selfUomList, err := erp.GetUomList(ctx.GetContext(), req.GetUomListReq{
+	uomList, err := erp.GetUomList(ctx.GetContext(), req.GetUomListReq{
 		SiteCode:    companySetting.ErpnextSiteCode,
 		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
 		Branch:      companySetting.ErpnextBranchName,
@@ -6992,146 +7004,153 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 	if err != nil {
 		return errors.WithMessage(err, "获取单位列表失败")
 	}
-	uomList = append(uomList, selfUomList.List...)
+	var uomNames []string
+	for _, uom := range uomList.List {
+		uomNames = append(uomNames, uom.UomName)
+	}
 
-	uomHeadquarterMap := make(map[string]uint64)
-	// 如果是子店，获取总部的
+	// 子店获取总部单位
+	var headquarter model.CompanySetting
+	var headquarterUnits []model.ProductUnit
 	if companySetting.IsSubShop() {
-		var headquarter model.CompanySetting
-		saasDb := s.dbm.GetDB(0)
-		err := saasDb.Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
+		err := s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
-		headquarterUomList, err := erp.GetUomList(ctx.GetContext(), req.GetUomListReq{
-			SiteCode:       headquarter.ErpnextSiteCode,
-			CompanyAbbr:    headquarter.ErpnextCompanyAbbr,
-			Branch:         headquarter.ErpnextBranchName,
-			SubCompanyAbbr: companySetting.ErpnextCompanyAbbr,
-		})
-		if err != nil {
-			return errors.WithMessage(err, "获取总部单位列表失败")
-		}
-		uomList = append(uomList, headquarterUomList.List...)
-		for _, uom := range headquarterUomList.List {
-			uomHeadquarterMap[uom.UomName] = headquarter.Uuid
-		}
+		s.dbm.GetDB(headquarter.Uuid).Model(&model.ProductUnit{}).Preload("MultiLanguageName").Find(&headquarterUnits)
 	}
 
-	var translateItems []utils.TranslateItem
-	for _, uom := range uomList {
-		translateName := uom.UomName
-		if uom.AliasName != "" {
-			translateName = uom.AliasName
-		}
-		translateItems = append(translateItems, utils.TranslateItem{
-			Lang:    "en",
-			Content: translateName,
-		})
-	}
-
+	// 子店ttpos已有单位 和 要标记删除的单位
 	var units []model.ProductUnit
-	db.Model(&model.ProductUnit{}).Scopes(repository.NotDeleted).Find(&units)
+	var deletingUnitUuids []uint64
 	unitMap := make(map[string]model.ProductUnit)
-
+	db.Model(&model.ProductUnit{}).Scopes(repository.NotDeleted, repository.ExcludeHeadquarter).Where("erpnext_uom != ''").Find(&units)
 	for _, unit := range units {
-		if unit.ErpnextUom == "" {
-			continue
+		if !slices.Contains(uomNames, unit.ErpnextUom) {
+			deletingUnitUuids = append(deletingUnitUuids, unit.Uuid)
 		}
 		unitMap[unit.ErpnextUom] = unit
 	}
 
-	multiLanguageMap := utils.NewTranslateClient().TranslateWithRetry(ctx.GetContext(), translateItems, 10)
-
-	// 获取单位最大的排序
+	// 子店ttpos单位最大的排序
 	var unitSort int
-	db.Model(&model.ProductUnit{}).Select("ifnull(MAX(sort), 0)").Scan(&unitSort)
+	db.Model(&model.ProductUnit{}).Scopes(repository.NotDeleted, repository.ExcludeHeadquarter).Select("ifnull(MAX(sort), 0)").Scan(&unitSort)
 	unitSort++
 
+	var multiLanguageNameUuids []uint64
 	err = db.Transaction(func(tx *gorm.DB) error {
-		for _, uom := range uomList {
+		// 删除不在erp单位列表中的单位
+		if len(deletingUnitUuids) > 0 {
+			err := tx.Model(&model.ProductUnit{}).Where("uuid IN (?)", deletingUnitUuids).Update("delete_time", time.Now().Unix()).Error
+			if err != nil {
+				return errors.WithMessage(errors.New("erp已删除单位，标记删除ttpos单位失败"), err.Error())
+			}
+		}
+		var insertingProductUnits []model.ProductUnit
+		for _, uom := range uomList.List {
 			translateName := uom.UomName
 			if uom.AliasName != "" {
 				translateName = uom.AliasName
 			}
-			var localeName dto.LocaleResponse
-			headquarterUuid, _ := uomHeadquarterMap[uom.UomName]
-			if _, ok := multiLanguageMap[translateName]; !ok {
-				localeName = dto.LocaleResponse{
-					EN:   translateName,
-					ZH:   translateName,
-					TH:   translateName,
-					MY:   translateName,
-					JA:   translateName,
-					KO:   translateName,
-					TR:   translateName,
-					SV:   translateName,
-					ZHTW: translateName,
-				}
-			} else {
-				localeName = multiLanguageMap[translateName]
-			}
 			multiLanguageName := model.MultiLanguageName{
-				EnName:   localeName.EN,
-				ZhName:   localeName.ZH,
-				ThName:   localeName.TH,
-				MyName:   localeName.MY,
-				JaName:   localeName.JA,
-				KoName:   localeName.KO,
-				TrName:   localeName.TR,
-				SvName:   localeName.SV,
-				ZhTwName: localeName.ZHTW,
+				EnName:   translateName,
+				ZhName:   translateName,
+				ThName:   translateName,
+				MyName:   translateName,
+				JaName:   translateName,
+				KoName:   translateName,
+				TrName:   translateName,
+				SvName:   translateName,
+				ZhTwName: translateName,
 			}
-			if unit, ok := unitMap[uom.UomName]; ok { // 更新
-				err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", unitMap[uom.UomName].MultiLanguageNameUuid).Updates(map[string]any{
-					"zh_name":    localeName.ZH,
-					"th_name":    localeName.TH,
-					"en_name":    localeName.EN,
-					"zh_tw_name": localeName.ZHTW,
-					"ja_name":    localeName.JA,
-					"ko_name":    localeName.KO,
-					"my_name":    localeName.MY,
-					"tr_name":    localeName.TR,
-					"sv_name":    localeName.SV,
-				}).Error
-				if err != nil {
-					return err
-				}
-				err = tx.Model(&model.ProductUnit{}).Where("uuid = ?", unit.Uuid).Updates(map[string]any{
-					"name":             localeName.ToJson(),
-					"erpnext_uom":      uom.UomName,
-					"headquarter_uuid": headquarterUuid,
-				}).Error
-				if err != nil {
-					return err
-				}
-			} else { // 创建
+			if _, ok := unitMap[uom.UomName]; !ok {
+				// 不存在则新建
 				err := tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
 				if err != nil {
 					return err
 				}
-				productUnit := model.ProductUnit{
-					Name:                  localeName.ToJson(),
+				insertingProductUnits = append(insertingProductUnits, model.ProductUnit{
+					Name:                  multiLanguageName.ToJson(),
 					MultiLanguageNameUuid: multiLanguageName.Uuid,
 					Sort:                  unitSort,
 					ErpnextUom:            uom.UomName,
-					HeadquarterUuid:       headquarterUuid,
+				})
+				multiLanguageNameUuids = append(multiLanguageNameUuids, multiLanguageName.Uuid)
+				unitSort++
+			}
+		}
+		// 同步总部ttpos单位
+		if len(headquarterUnits) > 0 {
+			// 删除多语言
+			tx.Where("uuid IN (?)", tx.Model(&model.ProductUnit{}).Where("headquarter_uuid > 0").Select("multi_language_name_uuid")).Delete(&model.MultiLanguageName{})
+			// 删除仓库
+			tx.Where("headquarter_uuid > 0").Delete(&model.ProductUnit{})
+
+			var insertingMultiLanguageNames []model.MultiLanguageName
+			for _, headquarterUnit := range headquarterUnits {
+				if headquarterUnit.MultiLanguageName.Uuid == 0 {
+					continue
 				}
-				err = tx.Model(&model.ProductUnit{}).Create(&productUnit).Error
+				insertingMultiLanguageNames = append(insertingMultiLanguageNames, model.MultiLanguageName{
+					BaseModel: model.BaseModel{
+						Uuid:       headquarterUnit.MultiLanguageName.Uuid,
+						CreateTime: headquarterUnit.MultiLanguageName.CreateTime,
+						UpdateTime: headquarterUnit.MultiLanguageName.UpdateTime,
+						DeleteTime: headquarterUnit.MultiLanguageName.DeleteTime,
+					},
+					EnName:   headquarterUnit.MultiLanguageName.EnName,
+					ZhName:   headquarterUnit.MultiLanguageName.ZhName,
+					ThName:   headquarterUnit.MultiLanguageName.ThName,
+					MyName:   headquarterUnit.MultiLanguageName.MyName,
+					JaName:   headquarterUnit.MultiLanguageName.JaName,
+					KoName:   headquarterUnit.MultiLanguageName.KoName,
+					TrName:   headquarterUnit.MultiLanguageName.TrName,
+					SvName:   headquarterUnit.MultiLanguageName.SvName,
+					ZhTwName: headquarterUnit.MultiLanguageName.ZhTwName,
+				})
+				insertingProductUnits = append(insertingProductUnits, model.ProductUnit{
+					BaseModel: model.BaseModel{
+						Uuid:       headquarterUnit.Uuid,
+						CreateTime: headquarterUnit.CreateTime,
+						UpdateTime: headquarterUnit.UpdateTime,
+						DeleteTime: headquarterUnit.DeleteTime,
+					},
+					Name:                  headquarterUnit.MultiLanguageName.ToJson(),
+					MultiLanguageNameUuid: headquarterUnit.MultiLanguageName.Uuid,
+					Sort:                  headquarterUnit.Sort,
+					ErpnextUom:            headquarterUnit.ErpnextUom,
+					HeadquarterUuid:       headquarter.Uuid,
+				})
+			}
+			if len(insertingMultiLanguageNames) > 0 {
+				err := tx.Model(&model.MultiLanguageName{}).Create(&insertingMultiLanguageNames).Error
 				if err != nil {
 					return err
 				}
-				unitSort++
+			}
+		}
+		if len(insertingProductUnits) > 0 {
+			err := tx.Model(&model.ProductUnit{}).Create(&insertingProductUnits).Error
+			if err != nil {
+				return err
 			}
 		}
 		return nil
 	})
-
+	if len(multiLanguageNameUuids) > 0 {
+		if err := s.translateSrv.AddMultiLanguageNameUuidToSet(ctx.GetCompanyUuid(), multiLanguageNameUuids...); err != nil {
+			logger.Logger.Error("单位同步添加多语言uuid到待翻译集合中失败", zap.Error(err), zap.Any("multiLanguageNameUuids", multiLanguageNameUuids))
+		}
+	}
 	return err
 }
 
 // SyncSauce 同步加料
 func (s *productSrv) SyncSauce(ctx context.Context) error {
+	company := ctx.GetCompany()
+	if !company.IsOpenErp() {
+		return errors.New("公司未开启erp")
+	}
 	// v2.7 加料暂时不需要处理（本任务不从ERP同步属性跟加料以及TTPOS添加修改之后不同步到ERP，子店同步时，从ttpos的总部获取数据）
 	companySetting := ctx.GetCompanySetting()
 	if !companySetting.IsSubShop() {
@@ -7147,6 +7166,11 @@ func (s *productSrv) SyncSauce(ctx context.Context) error {
 
 	if len(headquarterSauces) > 0 {
 		err := s.dbm.GetDB(companySetting.CompanyUuid).Transaction(func(tx *gorm.DB) error {
+			// 删除多语言
+			tx.Where("uuid IN (?)", tx.Model(&model.ProductSauce{}).Where("headquarter_uuid > 0").Select("multi_language_name_uuid")).Delete(&model.MultiLanguageName{})
+			// 删除加料
+			tx.Where("headquarter_uuid > 0").Delete(&model.ProductSauce{})
+
 			var insertingMultiLanguageNames []model.MultiLanguageName
 			var insertingProductSauce []model.ProductSauce
 			for _, headquarterSauce := range headquarterSauces {
@@ -7211,6 +7235,10 @@ func (s *productSrv) SyncSauce(ctx context.Context) error {
 
 // SyncAttributeGroup 同步属性组、属性
 func (s *productSrv) SyncAttributeGroup(ctx context.Context) error {
+	company := ctx.GetCompany()
+	if !company.IsOpenErp() {
+		return errors.New("公司未开启erp")
+	}
 	companySetting := ctx.GetCompanySetting()
 	// v2.7 本任务不从ERP同步属性跟加料以及TTPOS添加修改之后不同步到ERP，子店同步时，从ttpos的总部获取数据
 	if !companySetting.IsSubShop() {
@@ -7227,6 +7255,15 @@ func (s *productSrv) SyncAttributeGroup(ctx context.Context) error {
 
 	if len(headquarterAttributeGroups) > 0 {
 		err := s.dbm.GetDB(companySetting.CompanyUuid).Transaction(func(tx *gorm.DB) error {
+			// 删除属性组多语言
+			tx.Where("uuid IN (?)", tx.Model(&model.ProductAttributeGroup{}).Where("headquarter_uuid > 0").Select("multi_language_name_uuid")).Delete(&model.MultiLanguageName{})
+			// 删除属性值多语言
+			tx.Where("uuid IN (?)", tx.Model(&model.ProductAttribute{}).Where("headquarter_uuid > 0").Select("multi_language_name_uuid")).Delete(&model.MultiLanguageName{})
+			// 删除属性值
+			tx.Where("attribute_group_uuid IN (?)", tx.Model(&model.ProductAttributeGroup{}).Where("headquarter_uuid > 0").Select("uuid")).Delete(&model.ProductAttribute{})
+			// 删除属性组
+			tx.Where("headquarter_uuid > 0").Delete(&model.ProductAttributeGroup{})
+
 			var insertingMultiLanguageNames []model.MultiLanguageName
 			var insertingProductAttributeGroups []model.ProductAttributeGroup
 			var insertingProductAttributes []model.ProductAttribute

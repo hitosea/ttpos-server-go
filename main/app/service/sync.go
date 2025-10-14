@@ -79,6 +79,7 @@ func NewSyncSrvImpl(dbm *database.DBManager, warehouseSrv IWarehouseSrv, supplie
 }
 
 // Sync 同步
+// TODO 记录同步失败原因到数据库
 func (s *SyncSrv) Sync(ctx context.Context) error {
 
 	company := ctx.GetCompany()

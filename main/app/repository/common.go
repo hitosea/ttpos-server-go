@@ -16,7 +16,7 @@ type DBOption func(*gorm.DB) *gorm.DB
 // WithPreload 预加载
 type WithPreload struct {
 	Query string
-	Args  []interface{}
+	Args  []any
 }
 
 // getCompanyUuid 从数据库名称中提取公司UUID
@@ -37,6 +37,11 @@ func GetCompanyUuid(db *gorm.DB) uint64 {
 // NotDeleted 筛选未被删除的
 func NotDeleted(db *gorm.DB) *gorm.DB {
 	return db.Where("delete_time = ?", constant.NotDeleted)
+}
+
+// ExcludeHeadquarter 过滤总部数据
+func ExcludeHeadquarter(db *gorm.DB) *gorm.DB {
+	return db.Where("headquarter_uuid = 0")
 }
 
 func Like(keyword string) string {
