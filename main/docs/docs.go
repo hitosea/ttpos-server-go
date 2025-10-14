@@ -18951,45 +18951,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/shop/material/add/erp": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "从erp同步物品",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.物品管理"
-                ],
-                "summary": "从erp同步物品",
-                "parameters": [
-                    {
-                        "description": "物品添加请求",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.MaterialAddErpReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
         "/shop/material/category/add": {
             "post": {
                 "security": [
@@ -32058,62 +32019,6 @@ const docTemplate = `{
                 }
             }
         },
-        "req.MaterialAddErpReq": {
-            "type": "object",
-            "properties": {
-                "barcode_value": {
-                    "description": "条形码值",
-                    "type": "string"
-                },
-                "classification": {
-                    "description": "分类",
-                    "type": "string"
-                },
-                "classification_code": {
-                    "description": "分类编码",
-                    "type": "string"
-                },
-                "disabled": {
-                    "description": "是否禁用",
-                    "type": "boolean"
-                },
-                "internal_code": {
-                    "description": "内部编码",
-                    "type": "string"
-                },
-                "item_code": {
-                    "description": "物品编码, 如果为空，则为新增；如果非空，则为编辑",
-                    "type": "string"
-                },
-                "item_name": {
-                    "description": "物品名称, 英文",
-                    "type": "string"
-                },
-                "opening_stock": {
-                    "description": "期初库存",
-                    "type": "number"
-                },
-                "purchase_uom": {
-                    "description": "采购单位, 英文",
-                    "type": "string"
-                },
-                "stock_uom": {
-                    "description": "基准库存单位, 英文",
-                    "type": "string"
-                },
-                "uoms": {
-                    "description": "单位列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/req.MaterialUomReq"
-                    }
-                },
-                "valuation_rate": {
-                    "description": "估值率",
-                    "type": "number"
-                }
-            }
-        },
         "req.MaterialAddReq": {
             "type": "object",
             "properties": {
@@ -32450,19 +32355,6 @@ const docTemplate = `{
                 "uuid": {
                     "description": "单位UUID",
                     "type": "integer"
-                }
-            }
-        },
-        "req.MaterialUomReq": {
-            "type": "object",
-            "properties": {
-                "conversion_rate": {
-                    "description": "转换率",
-                    "type": "number"
-                },
-                "uom": {
-                    "description": "单位, 英文",
-                    "type": "string"
                 }
             }
         },

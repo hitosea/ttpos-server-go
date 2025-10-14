@@ -22,6 +22,7 @@ type IWarehouseRepo interface {
 	GetTransitWarehouse() (*model.Warehouse, error)
 	GetByCode(code string, opts ...DBOption) (*model.Warehouse, error)
 	GetByErpCode(erpCode string, opts ...DBOption) (*model.Warehouse, error)
+	Get(opts ...DBOption) ([]model.Warehouse, error)
 
 	// 条件查询选项
 	WhereNameOrCodeLike(name string) DBOption
@@ -244,4 +245,14 @@ func (r *WarehouseRepoImpl) WhereHeadquarterUuid(headquarterUuid uint64) DBOptio
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("headquarter_uuid = ?", headquarterUuid)
 	}
+}
+
+func (r *WarehouseRepoImpl) Get(opts ...DBOption) ([]model.Warehouse, error) {
+	var warehouses []model.Warehouse
+	query := r.db.Model(&model.Warehouse{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		query = opt(query)
+	}
+	err := query.Find(&warehouses).Error
+	return warehouses, err
 }

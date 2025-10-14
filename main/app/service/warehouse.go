@@ -39,8 +39,8 @@ type IWarehouseSrv interface {
 	CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error)                  // 检查仓库编码是否存在
 	GetOtherOrgList(ctx context.Context) (resp.OtherOrgListResp, error)                                                     // 对方机构列表
 
-	SyncWarehouse(ctx context.Context) error             // 同步仓库列表
-	SyncDefaultWarehouseStock(ctx context.Context) error // 同步默认仓库库存
+	SyncWarehouse(ctx context.Context) error          // 同步仓库列表
+	SyncWarehouseItemStock(ctx context.Context) error // 同步仓库物品库存
 }
 
 // NewWarehouseSrv 创建仓库服务
@@ -952,74 +952,74 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 	return err
 }
 
-// SyncDefaultWarehouseStock 同步默认仓库库存
-func (s *warehouseSrv) SyncDefaultWarehouseStock(ctx context.Context) error {
-	var warehouse *model.Warehouse
+// SyncWarehouseItemStock 同步仓库物品库存
+func (s *warehouseSrv) SyncWarehouseItemStock(ctx context.Context) error {
+	company := ctx.GetCompany()
+	if !company.IsOpenErp() {
+		return errors.New("公司未开启erp")
+	}
+
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	warehouseRepo := repository.NewWarehouseRepo(db)
-	warehouse, err := warehouseRepo.GetDefaultWarehouse()
+	warehouses, err := warehouseRepo.Get(repository.ExcludeHeadquarter)
 	if err != nil {
 		return errors.WithMessage(err, "查询仓库列表失败")
-	}
-	stockList, err := erp.NewIErpSrv(s.dbm).GetMaterialStockNum(ctx, warehouse.ErpCode)
-	if err != nil {
-		return errors.WithMessage(err, "获取仓库物品库存数量失败")
 	}
 
 	// 获取所有material
 	var materials []model.Material
-	db.Model(&model.Material{}).Scopes(repository.NotDeleted).Find(&materials)
+	db.Model(&model.Material{}).Where("code != ''").Find(&materials)
 	materialMap := make(map[string]model.Material)
 	for _, material := range materials {
-		if material.Code == "" {
-			continue
-		}
 		materialMap[material.Code] = material
 	}
 
-	// 仓库内物品
-	var warehouseItems []model.WarehouseItem
-	db.Model(&model.WarehouseItem{}).Where("warehouse_uuid = ?", warehouse.Uuid).Scopes(repository.NotDeleted).Find(&warehouseItems)
-	warehouseItemMap := make(map[string]model.WarehouseItem)
-	for _, warehouseItem := range warehouseItems {
-		if warehouseItem.MaterialCode == "" {
-			continue
+	var insertingWarehouseItems []model.WarehouseItem
+	for _, warehouse := range warehouses {
+		stockList, err := erp.NewIErpSrv(s.dbm).GetMaterialStockNum(ctx, warehouse.ErpCode)
+		if err != nil {
+			return errors.WithMessage(err, "获取仓库物品库存数量失败")
 		}
-		warehouseItemMap[warehouseItem.MaterialCode] = warehouseItem
-	}
+		// 仓库内物品
+		var warehouseItems []model.WarehouseItem
+		db.Model(&model.WarehouseItem{}).Where("warehouse_uuid = ? AND material_code != ''", warehouse.Uuid).Scopes(repository.NotDeleted).Find(&warehouseItems)
+		warehouseItemMap := make(map[string]model.WarehouseItem)
+		for _, warehouseItem := range warehouseItems {
+			warehouseItemMap[warehouseItem.MaterialCode] = warehouseItem
+		}
 
-	err = db.Transaction(func(tx *gorm.DB) error {
 		for _, stock := range stockList {
 			material, ok := materialMap[stock.ItemCode]
 			if !ok {
 				continue
 			}
-			// 首次同步默认仓库物品库存，固定100000
-			stock.ActualQty = 100000
-			// 更新物品库存
-			if err := tx.Model(&model.Material{}).Where("uuid = ?", material.Uuid).Update("stock_num", stock.ActualQty).Error; err != nil {
-				return errors.WithMessage(err, "更新物品库存失败")
-			}
+
+			// TODO 仓库物品库存的计算
+			stockNum := stock.ActualQty
 
 			// 添加或修改仓库物品库存
 			if warehouseItem, ok := warehouseItemMap[stock.ItemCode]; ok {
-				if err := tx.Model(&model.WarehouseItem{}).Where("uuid = ?", warehouseItem.Uuid).Update("stock", stock.ActualQty).Error; err != nil {
+				if err := db.Model(&model.WarehouseItem{}).Where("uuid = ?", warehouseItem.Uuid).Update("stock", stockNum).Error; err != nil {
 					return errors.WithMessage(err, "更新仓库物品库存失败")
 				}
 			} else {
-				if err := tx.Model(&model.WarehouseItem{}).Create(&model.WarehouseItem{
+				insertingWarehouseItems = append(insertingWarehouseItems, model.WarehouseItem{
 					WarehouseUuid: warehouse.Uuid,
 					MaterialUuid:  material.Uuid,
 					MaterialCode:  material.Code,
-					Stock:         stock.ActualQty,
+					Stock:         stockNum,
 					Valuation:     1.0, // 默认
-				}).Error; err != nil {
-					return errors.WithMessage(err, "创建仓库物品库存失败")
-				}
+				})
 			}
 		}
-		return nil
-	})
+	}
+
+	if len(insertingWarehouseItems) > 0 {
+		err = db.Model(&model.WarehouseItem{}).Create(&insertingWarehouseItems).Error
+		if err != nil {
+			return errors.WithMessage(err, "创建仓库物品库存失败")
+		}
+	}
 
 	return err
 }
