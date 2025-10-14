@@ -222,8 +222,15 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		if err != nil {
 			return nil, errors.WithMessage(err, "s.GetProductDecreaseStockList failed")
 		}
+		staffShiftLogUuid := uint64(0)
+		staffShiftLog, err := GetCurrentStaffShiftLog(db, ctx.GetStaffUuid())
+		if err != nil {
+			return nil, errors.WithMessage(err, "GetCurrentStaffShiftLog failed")
+		} else {
+			staffShiftLogUuid = staffShiftLog.Uuid
+		}
 		// 构建出库单
-		warehouseOutForms = model.NewWarehouseOutForm(decreaseStockList, false, saleBill.Uuid, ctx.GetStaffUuid())
+		warehouseOutForms = model.NewWarehouseOutForm(decreaseStockList, false, saleBill.Uuid, ctx.GetStaffUuid(), staffShiftLogUuid)
 	}
 
 	ctx.Log().Debug("准备开始更新")

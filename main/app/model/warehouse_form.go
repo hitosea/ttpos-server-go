@@ -109,6 +109,7 @@ type WarehouseOutFormItem struct {
 	SaleOrderProductUuid uint64 `gorm:"column:sale_order_product_uuid;type:bigint(20) unsigned;default:0;comment:销售订单商品uuid,用于结账完成时判断订单的每个商品是否都已有对应的出库记录"`
 	SaleOrderUuid        uint64 `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;default:0;comment:销售订单uuid,用于结账完成时判断订单的每个商品是否都已有对应的出库记录"`
 	SaleBillUuid         uint64 `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;default:0;comment:销售账单uuid,用于结账完成时判断订单的每个商品是否都已有对应的出库记录"`
+	StaffShiftLogUuid    uint64 `gorm:"column:staff_shift_log_uuid;type:bigint(20) unsigned;default:0;comment:员工交班记录ID"`
 
 	// 关联模型
 	ProductBom *ProductBom `gorm:"foreignKey:ProductBomUuid;references:Uuid"` // 出库的规格商品或小料
@@ -165,7 +166,7 @@ func (p ProductList) GetProductBomMaterials() []*ProductBomMaterials {
 // 使用场景：
 // 1. 送厨时，下单减库存，创建出库单
 // 2. 结账时，判断订单的每个商品是否都已有对应的出库记录，如果没有，则创建出库单
-func NewWarehouseOutForm(list ProductList, isCheckout bool, saleBillUuid uint64, staffUuid uint64) []*WarehouseOutForm {
+func NewWarehouseOutForm(list ProductList, isCheckout bool, saleBillUuid uint64, staffUuid uint64, staffShiftLogUuid uint64) []*WarehouseOutForm {
 	newForm := func() *WarehouseOutForm {
 		uuid, _ := utils.GetID()
 		form := &WarehouseOutForm{BaseModel: BaseModel{Uuid: uuid}}
@@ -191,6 +192,7 @@ func NewWarehouseOutForm(list ProductList, isCheckout bool, saleBillUuid uint64,
 			WarehouseOutFormUuid: form.Uuid,
 			ProductBomUuid:       item.ProductBomUuid,
 			PackageUuid:          item.PackageUuid,
+			StaffShiftLogUuid:    staffShiftLogUuid,
 			Num:                  item.Num,
 			Scene:                constant.WarehouseOutFormSceneSales, // 销售出库
 			Status:               status,

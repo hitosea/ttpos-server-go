@@ -3540,7 +3540,11 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 		if err != nil {
 			return errors.WithMessage(err)
 		}
-		warehouseOutForms = model.NewWarehouseOutForm(productList, false, saleBill.Uuid, ctx.GetStaffUuid())
+		staffShiftLog, err := GetCurrentStaffShiftLog(db, ctx.GetStaffUuid())
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+		warehouseOutForms = model.NewWarehouseOutForm(productList, false, saleBill.Uuid, ctx.GetStaffUuid(), staffShiftLog.Uuid)
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
@@ -10989,8 +10993,17 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 			logger.Logger.Error("出库失败 - 02", zap.Error(err))
 			return
 		}
+
+		staffShiftLogUuid := uint64(0)
+		staffShiftLog, err := GetCurrentStaffShiftLog(db, ctx.GetStaffUuid())
+		if err != nil {
+			logger.Logger.Error("出库失败 - 02.1", zap.Error(err))
+		} else {
+			staffShiftLogUuid = staffShiftLog.Uuid
+		}
 		// 构建出库单
-		warehouseOutForms := model.NewWarehouseOutForm(decreaseStockList, true, request.SaleBillUuid, ctx.GetStaffUuid())
+
+		warehouseOutForms := model.NewWarehouseOutForm(decreaseStockList, true, request.SaleBillUuid, ctx.GetStaffUuid(), staffShiftLogUuid)
 		if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 			for _, warehouseOutForm := range warehouseOutForms {
 				if len(warehouseOutForm.WarehouseOutFormItems) > 0 {
