@@ -3218,5 +3218,72 @@ func (s *materialSrv) disableProductBomCard(ctx context.Context, db *gorm.DB, pr
 
 // GetWarehouseItemConsumption 获取仓库物品消耗量
 func (s *materialSrv) GetWarehouseItemConsumption(ctx context.Context, warehouseUuid uint64) (material_resp.MaterialConsumptionListResp, error) {
-	return material_resp.MaterialConsumptionListResp{}, nil
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	// 查询当前未交班的班次列表
+	staffShiftLogList, err := repository.NewShiftLogRepo(db).GetShiftLogList(
+		repository.CommonRepo.WhereByStatus(uint(constant.StaffNotHandedOver)),
+	)
+	if err != nil {
+		return material_resp.MaterialConsumptionListResp{}, errors.WithMessage(err, "获取当前未交班的班次列表失败")
+	}
+	staffShiftLogUuids := make([]uint64, 0)
+	for _, staffShiftLog := range staffShiftLogList {
+		staffShiftLogUuids = append(staffShiftLogUuids, staffShiftLog.Uuid)
+	}
+	// 查询这些班次中指定仓库下的物品消耗量
+	itemLogs, err := repository.NewWarehouseInOutLogRepo(db).GetWarehouseInOutLogList(
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("warehouse_uuid = ? AND scene = ?", warehouseUuid, 0) // 场景为0，表示销售出库
+		},
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("staff_shift_log_uuid IN ?", staffShiftLogUuids)
+		},
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("revoke_time = 0 AND material_uuid != 0") // 未撤销且物品uuid不为0, 获取有效的物品出库记录
+		},
+	)
+	if err != nil {
+		return material_resp.MaterialConsumptionListResp{}, errors.WithMessage(err, "获取仓库物品消耗量失败")
+	}
+
+	// 将物品消耗量合并
+	itemLogsMap := make(map[uint64]material_resp.MaterialConsumption)
+	for _, itemLog := range itemLogs {
+		if material, ok := itemLogsMap[itemLog.MaterialUuid]; ok {
+			material.Consumption = decimal.NewFromFloat(material.Consumption).Add(decimal.NewFromFloat(itemLog.Num)).Round(4).InexactFloat64()
+		} else {
+			itemLogsMap[itemLog.MaterialUuid] = material_resp.MaterialConsumption{
+				MaterialUuid: itemLog.MaterialUuid,
+				Consumption:  itemLog.Num,
+			}
+		}
+	}
+
+	// 获取物品列表
+	materialUuids := make([]uint64, 0)
+	for _, material := range itemLogsMap {
+		materialUuids = append(materialUuids, material.MaterialUuid)
+	}
+	materialList, err := repository.NewMaterialRepo(db).GetMaterialByUuids(materialUuids)
+	if err != nil {
+		return material_resp.MaterialConsumptionListResp{}, errors.WithMessage(err, "获取物品列表失败")
+	}
+	materialMap := make(map[uint64]*model.Material)
+	for _, material := range materialList {
+		materialMap[material.Uuid] = material
+	}
+
+	// 将物品消耗量与物品信息合并
+	materialConsumptionList := make([]material_resp.MaterialConsumption, 0)
+	for _, itemLog := range itemLogsMap {
+		materialConsumptionList = append(materialConsumptionList, material_resp.MaterialConsumption{
+			MaterialUuid: itemLog.MaterialUuid,
+			MaterialCode: materialMap[itemLog.MaterialUuid].Code,
+			Consumption:  itemLog.Consumption,
+		})
+	}
+
+	return material_resp.MaterialConsumptionListResp{
+		List: materialConsumptionList,
+	}, nil
 }

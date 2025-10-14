@@ -2,6 +2,7 @@ package repository
 
 import (
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -17,6 +18,7 @@ type IWarehouseInOutLogRepo interface {
 
 	// 查询操作
 	GetListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.WarehouseInOutLog, int64, error)
+	GetWarehouseInOutLogList(opts ...DBOption) ([]model.WarehouseInOutLog, error)
 	GetWarehouseInOutLogs(opts ...DBOption) ([]*model.WarehouseInOutLog, error)
 	GetByWarehouseUuid(warehouseUuid uint64, opts ...DBOption) ([]model.WarehouseInOutLog, error)
 	GetByMaterialUuid(materialUuid uint64, opts ...DBOption) ([]model.WarehouseInOutLog, error)
@@ -286,4 +288,19 @@ func (r *WarehouseInOutLogRepoImpl) WhereSupplierErpCode(supplierErpCode string)
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("supplier_erp_code = ?", supplierErpCode)
 	}
+}
+
+// GetWarehouseInOutLogList 获取仓库出入库日志列表
+func (r *WarehouseInOutLogRepoImpl) GetWarehouseInOutLogList(opts ...DBOption) ([]model.WarehouseInOutLog, error) {
+	var warehouseLogs []model.WarehouseInOutLog
+	query := r.db.Model(&model.WarehouseInOutLog{}).Scopes(NotDeleted)
+	// 应用查询选项
+	for _, opt := range opts {
+		query = opt(query)
+	}
+	err := query.Find(&warehouseLogs).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return warehouseLogs, nil
 }

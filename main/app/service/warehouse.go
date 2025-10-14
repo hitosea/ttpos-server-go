@@ -988,7 +988,7 @@ func (s *warehouseSrv) SyncWarehouseItemStock(ctx context.Context) error {
 		if err != nil {
 			return errors.WithMessage(err, "获取仓库物品消耗量失败")
 		}
-		var materialConsumptionMap map[string]float64
+		materialConsumptionMap := make(map[string]float64)
 		for _, consumption := range materialConsumption.List {
 			materialConsumptionMap[consumption.MaterialCode] = consumption.Consumption
 		}
