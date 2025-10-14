@@ -21,6 +21,8 @@ type ProductFlavor struct {
 	HeadquarterUuid       uint64 `gorm:"default:0;column:headquarter_uuid;comment:'总部UUID'"`
 	ErpnextGroupName      string `gorm:"default:'';column:erpnext_group_name;comment:'ERPNext规格组名称'"`
 	ErpnextValueName      string `gorm:"default:'';column:erpnext_value_name;comment:'ERPNext规格值名称'"`
+	ErpnextAliasName      string `gorm:"default:'';column:erpnext_alias_name;comment:'ERPNext规格值别名'"`
+	ErpnextValueNo        int    `gorm:"default:0;column:erpnext_value_no;comment:'ERPNext规格值编号'"`
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 

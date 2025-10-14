@@ -99,6 +99,7 @@ type IProductQueryRepo interface {
 	GetProductFlavorList(opts ...DBOption) ([]model.ProductFlavor, error)                                           // 获取商品口味列表
 	GetProductFlavorCount(opts ...DBOption) (int64, error)                                                          // 获取商品规格数量
 	GetProductFlavorMaxSort(opts ...DBOption) (int64, error)                                                        // 获取商品规格最大排序
+	GetProductFlavorMaxErpnextValueNo(opts ...DBOption) (int64, error)                                              // 获取商品规格最大erpnext规格值编号
 	GetProductBom(opts ...DBOption) (model.ProductBom, error)                                                       // 获取商品BOM详情
 	GetProductBomCount(opts ...DBOption) (int64, error)                                                             // 获取商品BOM数量
 
@@ -505,6 +506,17 @@ func (r *productRepo) GetProductFlavorMaxSort(opts ...DBOption) (int64, error) {
 	}
 	err := db.Select("MAX(sort) as sort").Find(&sort).Error
 	return sort.Int64, errors.WithMessage(err)
+}
+
+// GetProductFlavorMaxErpnextValueNo 获取商品规格最大erpnext规格值编号
+func (r *productRepo) GetProductFlavorMaxErpnextValueNo(opts ...DBOption) (int64, error) {
+	var erpnextValueNo sql.NullInt64
+	db := r.db.Model(&model.ProductFlavor{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Select("MAX(erpnext_value_no) as erpnext_value_no").Find(&erpnextValueNo).Error
+	return erpnextValueNo.Int64, errors.WithMessage(err)
 }
 
 // GetProductBom 获取商品BOM

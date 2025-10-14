@@ -1177,6 +1177,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_flavor` (
     `headquarter_uuid` BIGINT DEFAULT 0 COMMENT '总部UUID',
     `erpnext_group_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext规格组名称',
     `erpnext_value_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext规格值名称',
+    `erpnext_alias_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext规格值别名',
+    `erpnext_value_no` INT(11) NOT NULL DEFAULT 0 COMMENT 'ERPNext规格值编号',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
