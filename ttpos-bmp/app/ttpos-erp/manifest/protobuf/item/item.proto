@@ -59,8 +59,8 @@ message ItemInfo {
 }
 
 message ItemAttribute {
-  string attribute_name = 1; //属性名称
-  string attribute_value = 2; //属性值
+  string attribute_name = 1; //属性名称, 必填
+  string attribute_value = 2; //属性值, 必填
   string item_internal_code = 3; // 变体物品内部编码，可选。 创建时才有值更新到有规格商品的内部编码
   string item_code = 4; // 多规格物品编码，可选。 调用新增接口才有返回值
 }
@@ -192,6 +192,17 @@ message PosSpecItem {
   string item_group_name =9; //分组名称
 }
 
+
+message  CreateSingleVariantItemReq {
+  string variants_of = 1; //变体商品模版,必填
+  repeated ItemAttribute attributes = 2; // 变体参数列表，必填。
+  string internal_code =3 ; //变体商品内部编码，可选
+}
+
+message CreateSingleVariantItemResp {
+  string item_code = 1; // 物品编码
+}
+
 message SavePosAttributeReq {
     PosSpecItem item = 1; //属性值， 必填
 }
@@ -289,4 +300,7 @@ service ItemService {
 
   // 保存 pos 系统中特殊的item ，如 加料
   rpc SavePosAddon(item.SavePosAddonReq) returns (erp.ResponseInfo);
+
+  //CreateSingleVariantItem 创建变体商品
+  rpc CreateSingleVariantItem(item.CreateSingleVariantItemReq) returns (erp.ResponseInfo);
 }

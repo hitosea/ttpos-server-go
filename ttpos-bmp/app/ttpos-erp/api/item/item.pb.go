@@ -466,8 +466,8 @@ func (x *ItemInfo) GetItemGroupName() string {
 
 type ItemAttribute struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
-	AttributeName    string                 `protobuf:"bytes,1,opt,name=attribute_name,json=attributeName,proto3" json:"attribute_name,omitempty"`
-	AttributeValue   string                 `protobuf:"bytes,2,opt,name=attribute_value,json=attributeValue,proto3" json:"attribute_value,omitempty"`
+	AttributeName    string                 `protobuf:"bytes,1,opt,name=attribute_name,json=attributeName,proto3" json:"attribute_name,omitempty" dc:"属性名称, 必填"`                                    //属性名称, 必填
+	AttributeValue   string                 `protobuf:"bytes,2,opt,name=attribute_value,json=attributeValue,proto3" json:"attribute_value,omitempty" dc:"属性值, 必填"`                                  //属性值, 必填
 	ItemInternalCode string                 `protobuf:"bytes,3,opt,name=item_internal_code,json=itemInternalCode,proto3" json:"item_internal_code,omitempty" dc:"变体物品内部编码，可选。 创建时才有值更新到有规格商品的内部编码"` // 变体物品内部编码，可选。 创建时才有值更新到有规格商品的内部编码
 	ItemCode         string                 `protobuf:"bytes,4,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"多规格物品编码，可选。 调用新增接口才有返回值"`                                    // 多规格物品编码，可选。 调用新增接口才有返回值
 	unknownFields    protoimpl.UnknownFields
@@ -1733,6 +1733,110 @@ func (x *PosSpecItem) GetItemGroupName() string {
 	return ""
 }
 
+type CreateSingleVariantItemReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	VariantsOf    string                 `protobuf:"bytes,1,opt,name=variants_of,json=variantsOf,proto3" json:"variants_of,omitempty" dc:"变体商品模版,必填"`         //变体商品模版,必填
+	Attributes    []*ItemAttribute       `protobuf:"bytes,2,rep,name=attributes,proto3" json:"attributes,omitempty" dc:"变体参数列表，必填。"`                          // 变体参数列表，必填。
+	InternalCode  string                 `protobuf:"bytes,3,opt,name=internal_code,json=internalCode,proto3" json:"internal_code,omitempty" dc:"变体商品内部编码，可选"` //变体商品内部编码，可选
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateSingleVariantItemReq) Reset() {
+	*x = CreateSingleVariantItemReq{}
+	mi := &file_item_item_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateSingleVariantItemReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateSingleVariantItemReq) ProtoMessage() {}
+
+func (x *CreateSingleVariantItemReq) ProtoReflect() protoreflect.Message {
+	mi := &file_item_item_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateSingleVariantItemReq.ProtoReflect.Descriptor instead.
+func (*CreateSingleVariantItemReq) Descriptor() ([]byte, []int) {
+	return file_item_item_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *CreateSingleVariantItemReq) GetVariantsOf() string {
+	if x != nil {
+		return x.VariantsOf
+	}
+	return ""
+}
+
+func (x *CreateSingleVariantItemReq) GetAttributes() []*ItemAttribute {
+	if x != nil {
+		return x.Attributes
+	}
+	return nil
+}
+
+func (x *CreateSingleVariantItemReq) GetInternalCode() string {
+	if x != nil {
+		return x.InternalCode
+	}
+	return ""
+}
+
+type CreateSingleVariantItemResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码"` // 物品编码
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateSingleVariantItemResp) Reset() {
+	*x = CreateSingleVariantItemResp{}
+	mi := &file_item_item_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateSingleVariantItemResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateSingleVariantItemResp) ProtoMessage() {}
+
+func (x *CreateSingleVariantItemResp) ProtoReflect() protoreflect.Message {
+	mi := &file_item_item_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateSingleVariantItemResp.ProtoReflect.Descriptor instead.
+func (*CreateSingleVariantItemResp) Descriptor() ([]byte, []int) {
+	return file_item_item_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *CreateSingleVariantItemResp) GetItemCode() string {
+	if x != nil {
+		return x.ItemCode
+	}
+	return ""
+}
+
 type SavePosAttributeReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Item          *PosSpecItem           `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty" dc:"属性值， 必填"` //属性值， 必填
@@ -1742,7 +1846,7 @@ type SavePosAttributeReq struct {
 
 func (x *SavePosAttributeReq) Reset() {
 	*x = SavePosAttributeReq{}
-	mi := &file_item_item_proto_msgTypes[22]
+	mi := &file_item_item_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1754,7 +1858,7 @@ func (x *SavePosAttributeReq) String() string {
 func (*SavePosAttributeReq) ProtoMessage() {}
 
 func (x *SavePosAttributeReq) ProtoReflect() protoreflect.Message {
-	mi := &file_item_item_proto_msgTypes[22]
+	mi := &file_item_item_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1767,7 +1871,7 @@ func (x *SavePosAttributeReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SavePosAttributeReq.ProtoReflect.Descriptor instead.
 func (*SavePosAttributeReq) Descriptor() ([]byte, []int) {
-	return file_item_item_proto_rawDescGZIP(), []int{22}
+	return file_item_item_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *SavePosAttributeReq) GetItem() *PosSpecItem {
@@ -1786,7 +1890,7 @@ type SavePosAttributeResp struct {
 
 func (x *SavePosAttributeResp) Reset() {
 	*x = SavePosAttributeResp{}
-	mi := &file_item_item_proto_msgTypes[23]
+	mi := &file_item_item_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1798,7 +1902,7 @@ func (x *SavePosAttributeResp) String() string {
 func (*SavePosAttributeResp) ProtoMessage() {}
 
 func (x *SavePosAttributeResp) ProtoReflect() protoreflect.Message {
-	mi := &file_item_item_proto_msgTypes[23]
+	mi := &file_item_item_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1811,7 +1915,7 @@ func (x *SavePosAttributeResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SavePosAttributeResp.ProtoReflect.Descriptor instead.
 func (*SavePosAttributeResp) Descriptor() ([]byte, []int) {
-	return file_item_item_proto_rawDescGZIP(), []int{23}
+	return file_item_item_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *SavePosAttributeResp) GetItemInfo() *ItemInfo {
@@ -1830,7 +1934,7 @@ type SavePosAddonReq struct {
 
 func (x *SavePosAddonReq) Reset() {
 	*x = SavePosAddonReq{}
-	mi := &file_item_item_proto_msgTypes[24]
+	mi := &file_item_item_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1842,7 +1946,7 @@ func (x *SavePosAddonReq) String() string {
 func (*SavePosAddonReq) ProtoMessage() {}
 
 func (x *SavePosAddonReq) ProtoReflect() protoreflect.Message {
-	mi := &file_item_item_proto_msgTypes[24]
+	mi := &file_item_item_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1855,7 +1959,7 @@ func (x *SavePosAddonReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SavePosAddonReq.ProtoReflect.Descriptor instead.
 func (*SavePosAddonReq) Descriptor() ([]byte, []int) {
-	return file_item_item_proto_rawDescGZIP(), []int{24}
+	return file_item_item_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *SavePosAddonReq) GetItem() *PosSpecItem {
@@ -1874,7 +1978,7 @@ type SavePosAddonResp struct {
 
 func (x *SavePosAddonResp) Reset() {
 	*x = SavePosAddonResp{}
-	mi := &file_item_item_proto_msgTypes[25]
+	mi := &file_item_item_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1886,7 +1990,7 @@ func (x *SavePosAddonResp) String() string {
 func (*SavePosAddonResp) ProtoMessage() {}
 
 func (x *SavePosAddonResp) ProtoReflect() protoreflect.Message {
-	mi := &file_item_item_proto_msgTypes[25]
+	mi := &file_item_item_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1899,7 +2003,7 @@ func (x *SavePosAddonResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SavePosAddonResp.ProtoReflect.Descriptor instead.
 func (*SavePosAddonResp) Descriptor() ([]byte, []int) {
-	return file_item_item_proto_rawDescGZIP(), []int{25}
+	return file_item_item_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *SavePosAddonResp) GetItemInfo() *ItemInfo {
@@ -1918,7 +2022,7 @@ type DeleteUomReq struct {
 
 func (x *DeleteUomReq) Reset() {
 	*x = DeleteUomReq{}
-	mi := &file_item_item_proto_msgTypes[26]
+	mi := &file_item_item_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1930,7 +2034,7 @@ func (x *DeleteUomReq) String() string {
 func (*DeleteUomReq) ProtoMessage() {}
 
 func (x *DeleteUomReq) ProtoReflect() protoreflect.Message {
-	mi := &file_item_item_proto_msgTypes[26]
+	mi := &file_item_item_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1943,7 +2047,7 @@ func (x *DeleteUomReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteUomReq.ProtoReflect.Descriptor instead.
 func (*DeleteUomReq) Descriptor() ([]byte, []int) {
-	return file_item_item_proto_rawDescGZIP(), []int{26}
+	return file_item_item_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *DeleteUomReq) GetUom() string {
@@ -1962,7 +2066,7 @@ type DeleteUomResp struct {
 
 func (x *DeleteUomResp) Reset() {
 	*x = DeleteUomResp{}
-	mi := &file_item_item_proto_msgTypes[27]
+	mi := &file_item_item_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1974,7 +2078,7 @@ func (x *DeleteUomResp) String() string {
 func (*DeleteUomResp) ProtoMessage() {}
 
 func (x *DeleteUomResp) ProtoReflect() protoreflect.Message {
-	mi := &file_item_item_proto_msgTypes[27]
+	mi := &file_item_item_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1987,7 +2091,7 @@ func (x *DeleteUomResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteUomResp.ProtoReflect.Descriptor instead.
 func (*DeleteUomResp) Descriptor() ([]byte, []int) {
-	return file_item_item_proto_rawDescGZIP(), []int{27}
+	return file_item_item_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *DeleteUomResp) GetUom() string {
@@ -2006,7 +2110,7 @@ type DeleteItemReq struct {
 
 func (x *DeleteItemReq) Reset() {
 	*x = DeleteItemReq{}
-	mi := &file_item_item_proto_msgTypes[28]
+	mi := &file_item_item_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2018,7 +2122,7 @@ func (x *DeleteItemReq) String() string {
 func (*DeleteItemReq) ProtoMessage() {}
 
 func (x *DeleteItemReq) ProtoReflect() protoreflect.Message {
-	mi := &file_item_item_proto_msgTypes[28]
+	mi := &file_item_item_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2031,7 +2135,7 @@ func (x *DeleteItemReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteItemReq.ProtoReflect.Descriptor instead.
 func (*DeleteItemReq) Descriptor() ([]byte, []int) {
-	return file_item_item_proto_rawDescGZIP(), []int{28}
+	return file_item_item_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *DeleteItemReq) GetItemCode() string {
@@ -2050,7 +2154,7 @@ type DeleteItemResp struct {
 
 func (x *DeleteItemResp) Reset() {
 	*x = DeleteItemResp{}
-	mi := &file_item_item_proto_msgTypes[29]
+	mi := &file_item_item_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2062,7 +2166,7 @@ func (x *DeleteItemResp) String() string {
 func (*DeleteItemResp) ProtoMessage() {}
 
 func (x *DeleteItemResp) ProtoReflect() protoreflect.Message {
-	mi := &file_item_item_proto_msgTypes[29]
+	mi := &file_item_item_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2075,7 +2179,7 @@ func (x *DeleteItemResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteItemResp.ProtoReflect.Descriptor instead.
 func (*DeleteItemResp) Descriptor() ([]byte, []int) {
-	return file_item_item_proto_rawDescGZIP(), []int{29}
+	return file_item_item_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *DeleteItemResp) GetItemCode() string {
@@ -2237,7 +2341,16 @@ const file_item_item_proto_rawDesc = "" +
 	"\rinternal_code\x18\a \x01(\tR\finternalCode\x12 \n" +
 	"\fnot_for_sale\x18\b \x01(\bR\n" +
 	"notForSale\x12&\n" +
-	"\x0fitem_group_name\x18\t \x01(\tR\ritemGroupName\"<\n" +
+	"\x0fitem_group_name\x18\t \x01(\tR\ritemGroupName\"\x97\x01\n" +
+	"\x1aCreateSingleVariantItemReq\x12\x1f\n" +
+	"\vvariants_of\x18\x01 \x01(\tR\n" +
+	"variantsOf\x123\n" +
+	"\n" +
+	"attributes\x18\x02 \x03(\v2\x13.item.ItemAttributeR\n" +
+	"attributes\x12#\n" +
+	"\rinternal_code\x18\x03 \x01(\tR\finternalCode\":\n" +
+	"\x1bCreateSingleVariantItemResp\x12\x1b\n" +
+	"\titem_code\x18\x01 \x01(\tR\bitemCode\"<\n" +
 	"\x13SavePosAttributeReq\x12%\n" +
 	"\x04item\x18\x01 \x01(\v2\x11.item.PosSpecItemR\x04item\"C\n" +
 	"\x14SavePosAttributeResp\x12+\n" +
@@ -2262,7 +2375,7 @@ const file_item_item_proto_rawDesc = "" +
 	"\aPackage\x10\x03\x12\x12\n" +
 	"\x0eVirtualProduct\x10\x04\x12\x10\n" +
 	"\fPosAttribute\x10\x05\x12\f\n" +
-	"\bPosAddon\x10\x062\xd0\x05\n" +
+	"\bPosAddon\x10\x062\xa0\x06\n" +
 	"\vItemService\x126\n" +
 	"\vGetItemList\x12\x14.item.GetItemListReq\x1a\x11.erp.ResponseInfo\x124\n" +
 	"\n" +
@@ -2278,7 +2391,8 @@ const file_item_item_proto_rawDesc = "" +
 	"\n" +
 	"DeleteItem\x12\x13.item.DeleteItemReq\x1a\x11.erp.ResponseInfo\x12@\n" +
 	"\x10SavePosAttribute\x12\x19.item.SavePosAttributeReq\x1a\x11.erp.ResponseInfo\x128\n" +
-	"\fSavePosAddon\x12\x15.item.SavePosAddonReq\x1a\x11.erp.ResponseInfoB\"Z ttpos-bmp/app/ttpos-erp/api/itemb\x06proto3"
+	"\fSavePosAddon\x12\x15.item.SavePosAddonReq\x1a\x11.erp.ResponseInfo\x12N\n" +
+	"\x17CreateSingleVariantItem\x12 .item.CreateSingleVariantItemReq\x1a\x11.erp.ResponseInfoB\"Z ttpos-bmp/app/ttpos-erp/api/itemb\x06proto3"
 
 var (
 	file_item_item_proto_rawDescOnce sync.Once
@@ -2293,40 +2407,42 @@ func file_item_item_proto_rawDescGZIP() []byte {
 }
 
 var file_item_item_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_item_item_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
+var file_item_item_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
 var file_item_item_proto_goTypes = []any{
-	(ItemGroup)(0),               // 0: item.ItemGroup
-	(*GetItemListReq)(nil),       // 1: item.GetItemListReq
-	(*GetItemListResp)(nil),      // 2: item.GetItemListResp
-	(*ItemInfo)(nil),             // 3: item.ItemInfo
-	(*ItemAttribute)(nil),        // 4: item.ItemAttribute
-	(*UomDetail)(nil),            // 5: item.UomDetail
-	(*GetUomListReq)(nil),        // 6: item.GetUomListReq
-	(*GetUomListResp)(nil),       // 7: item.GetUomListResp
-	(*GetUomReq)(nil),            // 8: item.GetUomReq
-	(*GetUomResp)(nil),           // 9: item.GetUomResp
-	(*UomInfo)(nil),              // 10: item.UomInfo
-	(*GetAttributeListReq)(nil),  // 11: item.GetAttributeListReq
-	(*AttributeInfo)(nil),        // 12: item.AttributeInfo
-	(*AttributeValueInfo)(nil),   // 13: item.AttributeValueInfo
-	(*GetAttributeListResp)(nil), // 14: item.GetAttributeListResp
-	(*ItemStock)(nil),            // 15: item.ItemStock
-	(*GetItemStockReq)(nil),      // 16: item.GetItemStockReq
-	(*GetItemStockResp)(nil),     // 17: item.GetItemStockResp
-	(*GetItemReq)(nil),           // 18: item.GetItemReq
-	(*GetItemResp)(nil),          // 19: item.GetItemResp
-	(*BomInfo)(nil),              // 20: item.BomInfo
-	(*BomItem)(nil),              // 21: item.BomItem
-	(*PosSpecItem)(nil),          // 22: item.PosSpecItem
-	(*SavePosAttributeReq)(nil),  // 23: item.SavePosAttributeReq
-	(*SavePosAttributeResp)(nil), // 24: item.SavePosAttributeResp
-	(*SavePosAddonReq)(nil),      // 25: item.SavePosAddonReq
-	(*SavePosAddonResp)(nil),     // 26: item.SavePosAddonResp
-	(*DeleteUomReq)(nil),         // 27: item.DeleteUomReq
-	(*DeleteUomResp)(nil),        // 28: item.DeleteUomResp
-	(*DeleteItemReq)(nil),        // 29: item.DeleteItemReq
-	(*DeleteItemResp)(nil),       // 30: item.DeleteItemResp
-	(*api.ResponseInfo)(nil),     // 31: erp.ResponseInfo
+	(ItemGroup)(0),                      // 0: item.ItemGroup
+	(*GetItemListReq)(nil),              // 1: item.GetItemListReq
+	(*GetItemListResp)(nil),             // 2: item.GetItemListResp
+	(*ItemInfo)(nil),                    // 3: item.ItemInfo
+	(*ItemAttribute)(nil),               // 4: item.ItemAttribute
+	(*UomDetail)(nil),                   // 5: item.UomDetail
+	(*GetUomListReq)(nil),               // 6: item.GetUomListReq
+	(*GetUomListResp)(nil),              // 7: item.GetUomListResp
+	(*GetUomReq)(nil),                   // 8: item.GetUomReq
+	(*GetUomResp)(nil),                  // 9: item.GetUomResp
+	(*UomInfo)(nil),                     // 10: item.UomInfo
+	(*GetAttributeListReq)(nil),         // 11: item.GetAttributeListReq
+	(*AttributeInfo)(nil),               // 12: item.AttributeInfo
+	(*AttributeValueInfo)(nil),          // 13: item.AttributeValueInfo
+	(*GetAttributeListResp)(nil),        // 14: item.GetAttributeListResp
+	(*ItemStock)(nil),                   // 15: item.ItemStock
+	(*GetItemStockReq)(nil),             // 16: item.GetItemStockReq
+	(*GetItemStockResp)(nil),            // 17: item.GetItemStockResp
+	(*GetItemReq)(nil),                  // 18: item.GetItemReq
+	(*GetItemResp)(nil),                 // 19: item.GetItemResp
+	(*BomInfo)(nil),                     // 20: item.BomInfo
+	(*BomItem)(nil),                     // 21: item.BomItem
+	(*PosSpecItem)(nil),                 // 22: item.PosSpecItem
+	(*CreateSingleVariantItemReq)(nil),  // 23: item.CreateSingleVariantItemReq
+	(*CreateSingleVariantItemResp)(nil), // 24: item.CreateSingleVariantItemResp
+	(*SavePosAttributeReq)(nil),         // 25: item.SavePosAttributeReq
+	(*SavePosAttributeResp)(nil),        // 26: item.SavePosAttributeResp
+	(*SavePosAddonReq)(nil),             // 27: item.SavePosAddonReq
+	(*SavePosAddonResp)(nil),            // 28: item.SavePosAddonResp
+	(*DeleteUomReq)(nil),                // 29: item.DeleteUomReq
+	(*DeleteUomResp)(nil),               // 30: item.DeleteUomResp
+	(*DeleteItemReq)(nil),               // 31: item.DeleteItemReq
+	(*DeleteItemResp)(nil),              // 32: item.DeleteItemResp
+	(*api.ResponseInfo)(nil),            // 33: erp.ResponseInfo
 }
 var file_item_item_proto_depIdxs = []int32{
 	0,  // 0: item.GetItemListReq.item_group:type_name -> item.ItemGroup
@@ -2343,41 +2459,44 @@ var file_item_item_proto_depIdxs = []int32{
 	15, // 11: item.GetItemStockResp.item_stock_list:type_name -> item.ItemStock
 	3,  // 12: item.GetItemResp.item_info:type_name -> item.ItemInfo
 	21, // 13: item.BomInfo.items:type_name -> item.BomItem
-	22, // 14: item.SavePosAttributeReq.item:type_name -> item.PosSpecItem
-	3,  // 15: item.SavePosAttributeResp.item_info:type_name -> item.ItemInfo
-	22, // 16: item.SavePosAddonReq.item:type_name -> item.PosSpecItem
-	3,  // 17: item.SavePosAddonResp.item_info:type_name -> item.ItemInfo
-	1,  // 18: item.ItemService.GetItemList:input_type -> item.GetItemListReq
-	6,  // 19: item.ItemService.GetUomList:input_type -> item.GetUomListReq
-	8,  // 20: item.ItemService.GetUom:input_type -> item.GetUomReq
-	10, // 21: item.ItemService.SaveUom:input_type -> item.UomInfo
-	27, // 22: item.ItemService.DeleteUom:input_type -> item.DeleteUomReq
-	11, // 23: item.ItemService.GetAttributeList:input_type -> item.GetAttributeListReq
-	12, // 24: item.ItemService.SaveAttribute:input_type -> item.AttributeInfo
-	3,  // 25: item.ItemService.SaveItem:input_type -> item.ItemInfo
-	16, // 26: item.ItemService.GetItemStock:input_type -> item.GetItemStockReq
-	18, // 27: item.ItemService.GetItem:input_type -> item.GetItemReq
-	29, // 28: item.ItemService.DeleteItem:input_type -> item.DeleteItemReq
-	23, // 29: item.ItemService.SavePosAttribute:input_type -> item.SavePosAttributeReq
-	25, // 30: item.ItemService.SavePosAddon:input_type -> item.SavePosAddonReq
-	31, // 31: item.ItemService.GetItemList:output_type -> erp.ResponseInfo
-	31, // 32: item.ItemService.GetUomList:output_type -> erp.ResponseInfo
-	31, // 33: item.ItemService.GetUom:output_type -> erp.ResponseInfo
-	31, // 34: item.ItemService.SaveUom:output_type -> erp.ResponseInfo
-	31, // 35: item.ItemService.DeleteUom:output_type -> erp.ResponseInfo
-	31, // 36: item.ItemService.GetAttributeList:output_type -> erp.ResponseInfo
-	31, // 37: item.ItemService.SaveAttribute:output_type -> erp.ResponseInfo
-	31, // 38: item.ItemService.SaveItem:output_type -> erp.ResponseInfo
-	31, // 39: item.ItemService.GetItemStock:output_type -> erp.ResponseInfo
-	31, // 40: item.ItemService.GetItem:output_type -> erp.ResponseInfo
-	31, // 41: item.ItemService.DeleteItem:output_type -> erp.ResponseInfo
-	31, // 42: item.ItemService.SavePosAttribute:output_type -> erp.ResponseInfo
-	31, // 43: item.ItemService.SavePosAddon:output_type -> erp.ResponseInfo
-	31, // [31:44] is the sub-list for method output_type
-	18, // [18:31] is the sub-list for method input_type
-	18, // [18:18] is the sub-list for extension type_name
-	18, // [18:18] is the sub-list for extension extendee
-	0,  // [0:18] is the sub-list for field type_name
+	4,  // 14: item.CreateSingleVariantItemReq.attributes:type_name -> item.ItemAttribute
+	22, // 15: item.SavePosAttributeReq.item:type_name -> item.PosSpecItem
+	3,  // 16: item.SavePosAttributeResp.item_info:type_name -> item.ItemInfo
+	22, // 17: item.SavePosAddonReq.item:type_name -> item.PosSpecItem
+	3,  // 18: item.SavePosAddonResp.item_info:type_name -> item.ItemInfo
+	1,  // 19: item.ItemService.GetItemList:input_type -> item.GetItemListReq
+	6,  // 20: item.ItemService.GetUomList:input_type -> item.GetUomListReq
+	8,  // 21: item.ItemService.GetUom:input_type -> item.GetUomReq
+	10, // 22: item.ItemService.SaveUom:input_type -> item.UomInfo
+	29, // 23: item.ItemService.DeleteUom:input_type -> item.DeleteUomReq
+	11, // 24: item.ItemService.GetAttributeList:input_type -> item.GetAttributeListReq
+	12, // 25: item.ItemService.SaveAttribute:input_type -> item.AttributeInfo
+	3,  // 26: item.ItemService.SaveItem:input_type -> item.ItemInfo
+	16, // 27: item.ItemService.GetItemStock:input_type -> item.GetItemStockReq
+	18, // 28: item.ItemService.GetItem:input_type -> item.GetItemReq
+	31, // 29: item.ItemService.DeleteItem:input_type -> item.DeleteItemReq
+	25, // 30: item.ItemService.SavePosAttribute:input_type -> item.SavePosAttributeReq
+	27, // 31: item.ItemService.SavePosAddon:input_type -> item.SavePosAddonReq
+	23, // 32: item.ItemService.CreateSingleVariantItem:input_type -> item.CreateSingleVariantItemReq
+	33, // 33: item.ItemService.GetItemList:output_type -> erp.ResponseInfo
+	33, // 34: item.ItemService.GetUomList:output_type -> erp.ResponseInfo
+	33, // 35: item.ItemService.GetUom:output_type -> erp.ResponseInfo
+	33, // 36: item.ItemService.SaveUom:output_type -> erp.ResponseInfo
+	33, // 37: item.ItemService.DeleteUom:output_type -> erp.ResponseInfo
+	33, // 38: item.ItemService.GetAttributeList:output_type -> erp.ResponseInfo
+	33, // 39: item.ItemService.SaveAttribute:output_type -> erp.ResponseInfo
+	33, // 40: item.ItemService.SaveItem:output_type -> erp.ResponseInfo
+	33, // 41: item.ItemService.GetItemStock:output_type -> erp.ResponseInfo
+	33, // 42: item.ItemService.GetItem:output_type -> erp.ResponseInfo
+	33, // 43: item.ItemService.DeleteItem:output_type -> erp.ResponseInfo
+	33, // 44: item.ItemService.SavePosAttribute:output_type -> erp.ResponseInfo
+	33, // 45: item.ItemService.SavePosAddon:output_type -> erp.ResponseInfo
+	33, // 46: item.ItemService.CreateSingleVariantItem:output_type -> erp.ResponseInfo
+	33, // [33:47] is the sub-list for method output_type
+	19, // [19:33] is the sub-list for method input_type
+	19, // [19:19] is the sub-list for extension type_name
+	19, // [19:19] is the sub-list for extension extendee
+	0,  // [0:19] is the sub-list for field type_name
 }
 
 func init() { file_item_item_proto_init() }
@@ -2391,7 +2510,7 @@ func file_item_item_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_item_item_proto_rawDesc), len(file_item_item_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   30,
+			NumMessages:   32,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

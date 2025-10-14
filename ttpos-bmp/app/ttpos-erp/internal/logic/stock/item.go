@@ -251,6 +251,7 @@ func (s *sItem) checkItemExists(ctx context.Context, itemCode string) (bool, err
 }
 
 // updateExistingItem 更新现有物品
+// 更新不处理变体，通过单独的接口处理
 func (s *sItem) updateExistingItem(ctx context.Context, req *item.ItemInfo) (*item.ItemInfo, error) {
 	// 构建更新数据
 	itemForUpdate := s.buildUpdateItemData(req)
@@ -410,7 +411,6 @@ func (s *sItem) createNewItem(ctx context.Context, req *item.ItemInfo) (*item.It
 					TemplateItem: itemCode,
 					Args:         variant,
 					InternalCode: attr.ItemInternalCode,
-					Company:      company.CompanyName,
 				}, req)
 				if err != nil {
 					return nil, gerror.Wrapf(err, "创建对规格物品失败")
@@ -858,7 +858,7 @@ func (s *sItem) CreateSingleVariantItem(ctx context.Context, req *erp.CreateSing
 	itemInfo.CustomBranch = templateItemInfo.Branch
 	itemInfo.CustomClassification = templateItemInfo.Classification
 	itemInfo.CustomClassificationCode = templateItemInfo.ClassificationCode
-	itemInfo.CustomCompany = req.Company
+	itemInfo.CustomCompany = templateItemInfo.Company
 
 	// 创建物品
 	_, err = service.Document().Create(ctx, erp.DocTypeItem, &itemInfo)
