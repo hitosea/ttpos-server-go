@@ -47,7 +47,7 @@ func PrintSunmiTicket(config model.PrinterConfigJson, content string) error {
 
 		// 判断code
 		switch code {
-		case 1, 100001:
+		case 1, 200, 100001:
 			return nil
 		case 20000:
 			return fmt.Errorf("网关校验缺少必要参数")
