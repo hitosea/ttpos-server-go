@@ -459,20 +459,22 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 			item.SerialNo = product.SaleBill.SerialNo
 			item.DiningMethod = product.GetWrapStatus()                                                                            // 订单商品的打包状态
 			item.IsSaleBillDeleted = product.SaleBill.DeleteTime > 0 || product.SaleBill.Status == constant.SaleBillStatusCanceled // 是否已经整单取消
-			item.BatchTag = func() *resp.BatchTagInfo {
+			item.BatchTag = func() resp.BatchTagInfo {
 				// 获取门店业务设置
 				businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
 				if err != nil {
-					return nil
+					return resp.BatchTagInfo{}
 				}
 				if businessSetting.OpenIsBatch() {
-					return &resp.BatchTagInfo{
-						Uuid:       product.BatchTagUuid,
-						LocaleName: product.BatchTag.MultiLanguageName.GetNames(),
-						Color:      product.BatchTag.Color,
+					if product.IsBatchBool() && product.BatchTag != nil {
+						return resp.BatchTagInfo{
+							Uuid:       product.BatchTagUuid,
+							LocaleName: product.BatchTag.MultiLanguageName.GetNames(),
+							Color:      product.BatchTag.Color,
+						}
 					}
 				}
-				return nil
+				return resp.BatchTagInfo{}
 			}()
 			items = append(items, item)
 		}
