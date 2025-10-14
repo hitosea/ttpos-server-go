@@ -20,6 +20,7 @@ func sentCookingPreEventHandler() {
 			if len(payload.Products) == 0 {
 				return
 			}
+			//
 			go func() {
 				products := printer_model.Products{}
 				copier.Copy(&products, payload.Products)

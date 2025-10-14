@@ -6372,6 +6372,12 @@ definitions:
     - name
     - uuid
     type: object
+  req.SyncReq:
+    properties:
+      task_uuid:
+        description: 任务UUID，如果传递则重新执行该任务
+        type: integer
+    type: object
   req.TabletOrderCartProductAddReq:
     properties:
       ignore_must:
@@ -11845,6 +11851,116 @@ definitions:
         type: string
       uuid:
         description: 供应商UUID
+        type: integer
+    type: object
+  resp.SyncResp:
+    properties:
+      message:
+        description: 提示消息
+        type: string
+      task_uuid:
+        description: 任务UUID
+        type: integer
+    type: object
+  resp.SyncTaskDetailResp:
+    properties:
+      create_time:
+        description: 创建时间
+        type: integer
+      duration:
+        description: 执行时长（秒）
+        type: integer
+      end_time:
+        description: 结束时间
+        type: integer
+      fail_count:
+        description: 失败任务数
+        type: integer
+      items:
+        description: 任务明细
+        items:
+          $ref: '#/definitions/resp.SyncTaskItemResp'
+        type: array
+      start_time:
+        description: 开始时间
+        type: integer
+      status:
+        description: '同步状态: 0-进行中, 1-已完成, 2-失败'
+        type: integer
+      success_count:
+        description: 成功任务数
+        type: integer
+      total_count:
+        description: 总任务数
+        type: integer
+      uuid:
+        description: UUID
+        type: integer
+    type: object
+  resp.SyncTaskItemResp:
+    properties:
+      duration:
+        description: 执行时长（秒）
+        type: integer
+      end_time:
+        description: 结束时间
+        type: integer
+      error_message:
+        description: 错误消息
+        type: string
+      start_time:
+        description: 开始时间
+        type: integer
+      status:
+        description: '任务状态: 0-待执行, 1-执行中, 2-已完成, 3-失败'
+        type: integer
+      task_name:
+        description: 任务名称
+        type: string
+      task_type:
+        description: 任务类型
+        type: string
+      uuid:
+        description: UUID
+        type: integer
+    type: object
+  resp.SyncTaskListPaginationResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.SyncTaskListResp'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
+  resp.SyncTaskListResp:
+    properties:
+      create_time:
+        description: 创建时间
+        type: integer
+      duration:
+        description: 执行时长（秒）
+        type: integer
+      end_time:
+        description: 结束时间
+        type: integer
+      fail_count:
+        description: 失败任务数
+        type: integer
+      start_time:
+        description: 开始时间
+        type: integer
+      status:
+        description: '同步状态: 0-进行中, 1-已完成, 2-失败'
+        type: integer
+      success_count:
+        description: 成功任务数
+        type: integer
+      total_count:
+        description: 总任务数
+        type: integer
+      uuid:
+        description: UUID
         type: integer
     type: object
   resp.SystemSetting:
@@ -27207,16 +27323,90 @@ paths:
     post:
       consumes:
       - application/json
+      parameters:
+      - description: 同步请求参数
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/req.SyncReq'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.Response'
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.SyncResp'
+              type: object
       security:
       - JwtToken: []
       summary: 获取总部最新数据
+      tags:
+      - 商家端.业务设置
+  /shop/setting/sync_task/detail:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: 任务UUID
+        in: query
+        name: task_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.SyncTaskDetailResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取同步任务详情
+      tags:
+      - 商家端.业务设置
+  /shop/setting/sync_task/list:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - default: 20
+        description: 每页大小
+        in: query
+        name: page_size
+        type: integer
+      - description: '同步状态: 0-进行中, 1-已完成, 2-失败'
+        in: query
+        name: status
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.SyncTaskListPaginationResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取同步任务列表
       tags:
       - 商家端.业务设置
   /shop/setting/upload_logo:

@@ -345,7 +345,7 @@ func (s *warehouseSrv) UpdateWarehouse(ctx context.Context, updateReq req.Update
 			return errors.WithMessage(err, "更新仓库失败")
 		}
 
-		if ctx.GetCompany().IsOpenErp() {
+		if ctx.GetCompany().IsOpenErp() && warehouse.ErpCode != "" {
 			err = erp.NewIErpSrv(s.dbm).UpdateWarehouse(ctx.GetContext(), req.UpdateErpnextWarehouseReq{
 				CreateErpnextWarehouseReq: req.CreateErpnextWarehouseReq{
 					SiteCode:      companySetting.ErpnextSiteCode,

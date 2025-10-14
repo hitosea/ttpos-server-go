@@ -218,7 +218,7 @@ func (s *supplierSrv) UpdateSupplier(ctx context.Context, updateSupplierReq req.
 	}
 
 	// 调用erp接口，只能修改自己创建的供应商
-	if ctx.GetCompany().IsOpenErp() {
+	if ctx.GetCompany().IsOpenErp() && supplier.ErpCode != "" {
 		companySetting := ctx.GetCompanySetting()
 		err = erp.NewIErpSrv(s.dbm).UpdateSupplier(ctx.GetContext(), req.UpdateSupplierReq{
 			CreateSupplierReq: req.CreateSupplierReq{

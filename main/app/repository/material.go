@@ -16,12 +16,15 @@ import (
 type IMaterialRepo interface {
 	GetMaterialListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.Material, int64, error)
 	GetMaterial(opts ...DBOption) model.Material
+	GetMaterialList(opts ...DBOption) []model.Material
+	GetMaterialUuids(opts ...DBOption) []uint64
 	GetMaterialByUuid(uuid uint64, opts ...DBOption) (model.Material, error)
 	GetMaterialByUuids(uuids []uint64, opts ...DBOption) ([]*model.Material, error)
 	GetMaterialByCategoryUuid(categoryUuid uint64) ([]*model.Material, error)
 	GetMaterialDetailByUuids(uuids []uint64) ([]*model.Material, error)
 	GetMaterialDetailByUuid(uuid uint64) (*model.Material, error)
 	CreateMaterial(material model.Material) (uint64, error)
+	CreateMaterialList(materials []model.Material) error
 	UpdateMaterialCode(uuid uint64, code string) error
 	UpdateMaterial(material model.Material) error
 	UpdateMaterialData(data map[string]any, opts ...DBOption) error
@@ -56,7 +59,12 @@ type IMaterialRepo interface {
 	GetMaterialUuidsByKeyword(keyword string) ([]uint64, error)               // 根据关键字获取物品UUID列表
 	GetMaterialCategoryMaxSort(opts ...DBOption) (int64, error)               // 获取物品类别最大排序
 
+	DestroyMaterial(opts ...DBOption) error     // 销毁物品
+	DestroyMaterialUnit(opts ...DBOption) error // 销毁物品单位
+
 	WithRelatedMaterialList() DBOption
+	WithMultiLanguageName(opts ...DBOption) DBOption
+	WithNotBaseUnitList(opts ...DBOption) DBOption
 }
 
 // NewMaterialRepo 创建新的物品仓库
@@ -76,6 +84,28 @@ type MaterialRepoImpl struct {
 func (r *MaterialRepoImpl) WithRelatedMaterialList() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("RelatedMaterialList")
+	}
+}
+
+func (r *MaterialRepoImpl) WithMultiLanguageName(opts ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("MultiLanguageName", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
+	}
+}
+
+func (r *MaterialRepoImpl) WithNotBaseUnitList(opts ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("NotBaseUnitList", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
 	}
 }
 
@@ -118,6 +148,29 @@ func (r *MaterialRepoImpl) GetMaterial(opts ...DBOption) model.Material {
 	query.Find(&material).Limit(1)
 
 	return material
+}
+
+// GetMaterialList 根据查询选项获取物品列表
+func (r *MaterialRepoImpl) GetMaterialList(opts ...DBOption) []model.Material {
+	var materials []model.Material
+	query := r.db
+	for _, opt := range opts {
+		query = opt(query)
+	}
+	query.Find(&materials)
+
+	return materials
+}
+
+// GetMaterialUuids 根据查询选项获取物品UUID列表
+func (r *MaterialRepoImpl) GetMaterialUuids(opts ...DBOption) []uint64 {
+	var uuids []uint64
+	query := r.db
+	for _, opt := range opts {
+		query = opt(query)
+	}
+	query.Pluck("uuid", &uuids)
+	return uuids
 }
 
 // GetMaterialByUuid 根据UUID获取物品详情
@@ -237,6 +290,14 @@ func (r *MaterialRepoImpl) CreateMaterial(material model.Material) (uint64, erro
 		return 0, errors.WithMessage(err, "创建物品失败")
 	}
 	return material.Uuid, nil
+}
+
+// CreateMaterialList 创建物品列表
+func (r *MaterialRepoImpl) CreateMaterialList(materials []model.Material) error {
+	if err := r.db.Create(&materials).Error; err != nil {
+		return errors.WithMessage(err, "创建物品列表失败")
+	}
+	return nil
 }
 
 func (r *MaterialRepoImpl) UpdateMaterialCode(uuid uint64, code string) error {
@@ -604,4 +665,24 @@ func (r *MaterialRepoImpl) GetMaterialCategoryMaxSort(opts ...DBOption) (int64, 
 	}
 	err := db.Select("MAX(sort) as sort").Find(&sort).Error
 	return sort.Int64, errors.WithMessage(err)
+}
+
+// 销毁物品
+func (r *MaterialRepoImpl) DestroyMaterial(opts ...DBOption) error {
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	return db.Delete(&model.Material{}).Error
+}
+
+// 销毁物品单位
+func (r *MaterialRepoImpl) DestroyMaterialUnit(opts ...DBOption) error {
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	return db.Delete(&model.MaterialUnit{}).Error
 }

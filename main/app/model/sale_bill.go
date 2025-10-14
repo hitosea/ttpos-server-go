@@ -158,7 +158,7 @@ func (model *SaleBill) GetSaleOrderProductBatchCookingBySaleOrderUuid(saleOrderP
 
 	products := make([]*SaleOrderProduct, 0)
 	for _, saleOrderProduct := range batchCookingSaleOrderProducts {
-		if uuidMap[saleOrderProduct.Uuid] {
+		if uuidMap[saleOrderProduct.Uuid] && saleOrderProduct.BatchTagUuid == 0 {
 			products = append(products, saleOrderProduct)
 		}
 	}

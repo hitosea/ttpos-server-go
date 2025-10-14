@@ -361,13 +361,21 @@ func (s *erpSrv) SaveUom(ctx context.Context, saveUomReq req.SaveUomReq) error {
 }
 
 func (s *erpSrv) DeleteUom(ctx context.Context, deleteUomReq req.DeleteUomReq) error {
-	_, conn, err := NewErpItemClient()
+	client, conn, err := NewErpItemClient()
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
 
-	// TODO 调用erp接口删除单位
+	result, err := client.DeleteUom(WithSiteCode(context.TODO(), deleteUomReq.SiteCode), &item.DeleteUomReq{
+		Uom: deleteUomReq.UomName,
+	})
+	if err != nil {
+		return err
+	}
+	if result.GetCode() != "0" {
+		return errors.New(result.GetMessage())
+	}
 	return nil
 }
 
