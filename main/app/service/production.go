@@ -484,6 +484,10 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 		group.ProductionList = resp.ProductionList{
 			List: items,
 		}
+		// 如果没有子商品，则不显示
+		if len(group.ProductionList.List) == 0 {
+			continue
+		}
 		groups = append(groups, group)
 	}
 
