@@ -40,7 +40,6 @@ class AddProductBatchTagTable extends Migrator
                 ->addColumn('update_time', 'integer', ['default' => 0, 'comment' => '更新时间(时间戳)'])
                 ->addColumn('delete_time', 'integer', ['default' => 0, 'comment' => '删除时间(时间戳)'])
                 ->addIndex(['uuid'], ['unique' => true, 'name' => 'unique_uuid'])
-                ->addIndex(['color'], ['unique' => true, 'name' => 'unique_color'])
                 ->create();
         }
     }
