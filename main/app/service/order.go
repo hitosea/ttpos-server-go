@@ -10075,7 +10075,7 @@ func (s *orderSrv) VerifyCoupon(ctx context.Context, saleOrder *model.SaleOrder,
 }
 
 // 保存发票到erp
-func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrder, db *gorm.DB) (*selling.SavePosInvoiceResp, error) {
+func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrder, saleBill *model.SaleBill, db *gorm.DB) (*selling.SavePosInvoiceResp, error) {
 	companySetting := ctx.GetCompanySetting()
 
 	staff := ctx.GetStaff()
@@ -10094,6 +10094,35 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 	// 订单商品列表
 	items := make([]*selling.PosInvoiceItem, 0)
 	isFreeOrder := saleOrder.IsFreeSaleOrder()
+	// for _, product := range saleOrder.SaleOrderBuffetCustomerTypes {
+	// 	// 自助餐名称
+	// 	buffetName := product.BuffetPackage.MultiLanguageName.EnName
+	// 	items = append(items, &selling.PosInvoiceItem{
+	// 		ItemCode:    "ZZC001",
+	// 		Qty:         float64(product.Num),
+	// 		Rate:        product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
+	// 		Amount:      product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
+	// 		Description: fmt.Sprintf("%s-%s", buffetName, product.Name),
+	// 	})
+	// }
+	// for _, product := range saleOrder.SaleOrderBuffetDelayProducts {
+	// 	buffetName := product.BuffetPackage.MultiLanguageName.EnName
+	// 	items = append(items, &selling.PosInvoiceItem{
+	// 		ItemCode:    "ZZC001",
+	// 		Qty:         float64(product.Num),
+	// 		Rate:        product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
+	// 		Amount:      product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
+	// 		Description: fmt.Sprintf("%s-%s", buffetName, product.Name),
+	// 	})
+	// }
+	// for _, product := range saleOrder.SaleOrderBuffetDelayProducts {
+	// 	items = append(items, &selling.PosInvoiceItem{
+	// 		ItemCode: "ZZC001",
+	// 		Qty:      float64(product.Num),
+	// 		Rate:     product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
+	// 		Amount:   product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
+	// 	})
+	// }
 	for _, product := range saleOrder.SaleOrderProducts {
 		// 如果商品已删除，则跳过
 		if product.IsDelete() || product.IsCancelProduct() {
@@ -10860,7 +10889,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 		company := ctx.GetCompany()
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
-			res, err := s.SavePosInvoice(ctx, saleOrder, db)
+			res, err := s.SavePosInvoice(ctx, saleOrder, saleBill, db)
 			if err != nil {
 				return errors.WithMessage(err)
 			}
@@ -11154,7 +11183,7 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 		company := ctx.GetCompany()
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
-			res, err := s.SavePosInvoice(ctx, saleOrder, db)
+			res, err := s.SavePosInvoice(ctx, saleOrder, saleBill, db)
 			if err != nil {
 				return errors.WithMessage(err)
 			}
