@@ -113,7 +113,7 @@
 
     <!--打印档口-->
     <el-form-item for="no_click" :label="$t('打印档口：')" v-if="form.model.type == 10">
-      <el-select v-model="form.model.product_printer_uuid" clearable multiple class="max-w460" size="default" :placeholder="$t('请选择打印档口')">
+      <el-select v-model="form.model.product_printer_uuids" clearable multiple class="max-w460" size="default" :placeholder="$t('请选择打印档口')">
         <template v-for="item in form.productPrinterList" :key="item.uuid">
           <el-option :value="item.uuid" :label="item.name"></el-option>
         </template>

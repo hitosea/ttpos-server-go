@@ -141,7 +141,7 @@
           product_list: [],
         },
       ],
-      product_printer_uuid: [],
+      product_printer_uuids: [],
     },
     category: [],
     feed: [],
