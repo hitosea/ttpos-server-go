@@ -2275,24 +2275,6 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 		s.translateSrv.RemoveMultiLanguageNameUuidFromSet(ctx.GetCompanyUuid(), productUnit.MultiLanguageNameUuid)
 	}
 
-	// 开启了ERP，并且是TTPOS站点，同步到ERPNext
-	if company.IsOpenErp() && productUnit.ErpnextUom != "" {
-		enName, err := s.getEnName(ctx, editUnitReq.LocaleName)
-		if err != nil {
-			return errors.WithMessage(errors.New("翻译失败"), err.Error())
-		}
-		err = erp.NewIErpSrv(s.dbm).SaveUom(ctx.GetContext(), req.SaveUomReq{
-			SiteCode:    companySetting.ErpnextSiteCode,
-			CompanyAbbr: companySetting.ErpnextCompanyAbbr,
-			Branch:      companySetting.ErpnextBranchName,
-			UomName:     productUnit.ErpnextUom,
-			AliasName:   enName,
-		})
-		if err != nil {
-			return errors.WithMessage(errors.New("同步单位到erp失败"), err.Error())
-		}
-	}
-
 	return err
 }
 

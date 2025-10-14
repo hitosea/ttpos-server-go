@@ -349,8 +349,6 @@ func (s *warehouseSrv) UpdateWarehouse(ctx context.Context, updateReq req.Update
 			err = erp.NewIErpSrv(s.dbm).UpdateWarehouse(ctx.GetContext(), req.UpdateErpnextWarehouseReq{
 				CreateErpnextWarehouseReq: req.CreateErpnextWarehouseReq{
 					SiteCode:      companySetting.ErpnextSiteCode,
-					WarehouseName: warehouseName,
-					AliasName:     warehouseName,
 					CompanyAbbr:   companySetting.ErpnextCompanyAbbr,
 					Branch:        companySetting.ErpnextBranchName,
 					Disabled:      updateReq.Status == 0,

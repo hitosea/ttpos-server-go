@@ -222,11 +222,10 @@ func (s *supplierSrv) UpdateSupplier(ctx context.Context, updateSupplierReq req.
 		companySetting := ctx.GetCompanySetting()
 		err = erp.NewIErpSrv(s.dbm).UpdateSupplier(ctx.GetContext(), req.UpdateSupplierReq{
 			CreateSupplierReq: req.CreateSupplierReq{
-				SupplierName: updateSupplierReq.Name,
-				SiteCode:     companySetting.ErpnextSiteCode,
-				CompanyAbbr:  companySetting.ErpnextCompanyAbbr,
-				Branch:       companySetting.ErpnextBranchName,
-				Disabled:     updateSupplierReq.Status == 0,
+				SiteCode:    companySetting.ErpnextSiteCode,
+				CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+				Branch:      companySetting.ErpnextBranchName,
+				Disabled:    updateSupplierReq.Status == 0,
 			},
 			Name: supplier.ErpCode,
 		})
