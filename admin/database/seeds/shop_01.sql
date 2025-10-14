@@ -2986,4 +2986,44 @@ CREATE TABLE `ttpos_warehouse_item` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='仓库商品库存表';
 
+-- 同步任务表
+CREATE TABLE IF NOT EXISTS `ttpos_sync_task` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT '同步任务UUID',
+  `status` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '同步状态: 0-进行中, 1-已完成, 2-失败',
+  `total_count` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '总任务数',
+  `success_count` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '成功任务数',
+  `fail_count` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '失败任务数',
+  `start_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '开始时间',
+  `end_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '结束时间',
+  `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_status` (`status`),
+  KEY `idx_create_time` (`create_time`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='同步任务表';
+
+-- 同步任务明细表
+CREATE TABLE IF NOT EXISTS `ttpos_sync_task_item` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT '同步任务明细UUID',
+  `sync_task_uuid` bigint NOT NULL DEFAULT 0 COMMENT '同步任务UUID',
+  `task_type` varchar(50) NOT NULL DEFAULT '' COMMENT '任务类型: product_category-商品分类, material_category-物品分类, tax-税类, unit-单位, warehouse-仓库, material-物品, flavor-规格, attribute-属性, sauce-加料, product-商品, bom_card-成本卡, supplier-供应商, warehouse_stock-仓库物品库存',
+  `task_name` varchar(100) NOT NULL DEFAULT '' COMMENT '任务名称',
+  `status` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '任务状态: 0-待执行, 1-执行中, 2-已完成, 3-失败',
+  `error_message` text COMMENT '错误消息',
+  `start_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '开始时间',
+  `end_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '结束时间',
+  `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_sync_task_uuid` (`sync_task_uuid`),
+  KEY `idx_task_type` (`task_type`),
+  KEY `idx_status` (`status`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='同步任务明细表';
+
 SET FOREIGN_KEY_CHECKS = 1;

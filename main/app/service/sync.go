@@ -3,8 +3,13 @@ package service
 import (
 	"sync"
 	"time"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
@@ -15,7 +20,16 @@ import (
 
 // ISyncSrv同步服务接口
 type ISyncSrv interface {
-	Sync(context.Context) error // 同步
+	Sync(ctx context.Context, syncReq req.SyncReq) (resp.SyncResp, error)                                  // 同步
+	GetTaskList(ctx context.Context, listReq req.SyncTaskListReq) (resp.SyncTaskListPaginationResp, error) // 获取同步任务列表
+	GetTaskDetail(ctx context.Context, detailReq req.SyncTaskDetailReq) (resp.SyncTaskDetailResp, error)   // 获取同步任务详情
+}
+
+// syncTaskConfig 同步任务配置
+type syncTaskConfig struct {
+	TaskType string
+	TaskName string
+	Executor func(context.Context) error
 }
 
 // SyncSrv同步服务结构体
@@ -79,156 +93,368 @@ func NewSyncSrvImpl(dbm *database.DBManager, warehouseSrv IWarehouseSrv, supplie
 }
 
 // Sync 同步
-// TODO 记录同步失败原因到数据库
-func (s *SyncSrv) Sync(ctx context.Context) error {
-
+func (s *SyncSrv) Sync(ctx context.Context, syncReq req.SyncReq) (resp.SyncResp, error) {
 	company := ctx.GetCompany()
 	companyUuid := company.Uuid
 
 	// 检查是否已有同步任务在运行
 	if !syncTaskManager.tryStartTask(companyUuid) {
-		return errors.New("数据同步中，请稍后再试")
+		return resp.SyncResp{}, errors.New("数据同步中，请稍后再试")
 	}
 
-	// 连锁子店，同步ttpos总部
+	// 实例化repo（同步任务表在公司库）
+	syncTaskRepo := repository.NewSyncTaskRepo(s.dbm.GetDB(companyUuid))
 
-	// 01商品分类
-	// 02物品分类
-	// 03税类
+	var syncTask *model.SyncTask
+	var retryMode bool          // 是否为重试模式
+	var retryTaskTypes []string // 需要重试的任务类型
 
-	// 连锁子店和总部、散户
-
-	// 1 单位
-	// 2 仓库
-	// 3 物品
-	// 4 规格
-	// 5 属性
-	// 6 加料
-	// 7 商品
-	// 8 成本卡
-	// 9 供应商
-	// 10 仓库物品库存
-
-	go func(ctx context.Context) {
-		var isExceptionOccurred bool
-		// 确保任务完成时清理状态
-		defer func() {
-			if r := recover(); r != nil {
-				logger.Logger.Error("同步任务发生panic", zap.Uint64("companyUuid", companyUuid), zap.Any("panic", r))
-				isExceptionOccurred = true
-			}
-
-			syncTaskManager.finishTask(companyUuid)
-			logger.Logger.Info("同步任务完成", zap.Uint64("companyUuid", companyUuid))
-
-			lastSyncTime := time.Now().Unix()
-			// 未报错才记录上次同步完成时间
-			if !isExceptionOccurred {
-				s.dbm.GetDB(companyUuid).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
-				s.dbm.GetDB(0).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
-			}
-
-			// 推送websocket
-			go websocket.PushClient(company.Uuid, websocket.SourceShop, websocket.SourceAll, websocket.SYNC_DATA, map[string]any{
-				"sync_time":             lastSyncTime,
-				"is_exception_occurred": isExceptionOccurred,
-			})
-		}()
-
-		logger.Logger.Info("开始同步任务", zap.Uint64("companyUuid", companyUuid))
-
-		logger.Logger.Info("开始同步商品分类", zap.Uint64("companyUuid", companyUuid))
-		// 01 商品分类
-		if err := s.productSrv.SyncProductShopCategory(ctx); err != nil {
-			logger.Logger.Error("商品分类同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-			isExceptionOccurred = true || isExceptionOccurred
-		}
-
-		logger.Logger.Info("开始同步物品分类", zap.Uint64("companyUuid", companyUuid))
-		// 02 物品分类
-		if err := s.materialSrv.SyncMaterialCategory(ctx); err != nil {
-			logger.Logger.Error("物品分类同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-			isExceptionOccurred = true || isExceptionOccurred
-		}
-
-		// 03 商品税类
-		logger.Logger.Info("开始同步商品税类", zap.Uint64("companyUuid", companyUuid))
-		if err := s.productSrv.SyncProductTax(ctx); err != nil {
-			logger.Logger.Error("商品税类同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-			isExceptionOccurred = true || isExceptionOccurred
-		}
-
-		// 1 单位
-		logger.Logger.Info("开始同步单位", zap.Uint64("companyUuid", companyUuid))
-		if err := s.productSrv.SyncUnit(ctx); err != nil {
-			logger.Logger.Error("单位同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-			isExceptionOccurred = true || isExceptionOccurred
-		}
-
-		// 2 仓库
-		logger.Logger.Info("开始同步仓库", zap.Uint64("companyUuid", companyUuid))
-		err := s.warehouseSrv.SyncWarehouse(ctx)
+	// 如果传递了任务UUID，则为重试模式
+	if syncReq.TaskUuid > 0 {
+		retryMode = true
+		// 查询原任务
+		existTask, err := syncTaskRepo.GetByUuid(syncReq.TaskUuid, syncTaskRepo.PreloadItems())
 		if err != nil {
-			logger.Logger.Error("仓库同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-			isExceptionOccurred = true || isExceptionOccurred
+			syncTaskManager.finishTask(companyUuid)
+			return resp.SyncResp{}, errors.WithMessage(err, "查询同步任务失败")
 		}
 
-		// 3-1 总部物品
-		logger.Logger.Info("开始同步物品", zap.Uint64("companyUuid", companyUuid))
-		if err := s.materialSrv.SyncHeadquarterMaterial(ctx); err != nil {
-			logger.Logger.Error("物品同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-			isExceptionOccurred = true || isExceptionOccurred
-		}
-		// 3-2 子店物品
-		if err := s.materialSrv.SyncSubShopMaterial(ctx); err != nil {
-			logger.Logger.Error("物品同步子店失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-			isExceptionOccurred = true || isExceptionOccurred
+		// 获取失败的任务类型
+		for _, item := range existTask.Items {
+			if item.Status == constant.SyncTaskItemStatusFailed {
+				retryTaskTypes = append(retryTaskTypes, item.TaskType)
+			}
 		}
 
-		// 4 规格
-		logger.Logger.Info("开始同步规格", zap.Uint64("companyUuid", companyUuid))
-		if err := s.productSrv.SyncProductFlavor(ctx); err != nil {
-			logger.Logger.Error("规格同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-			isExceptionOccurred = true || isExceptionOccurred
+		if len(retryTaskTypes) == 0 {
+			syncTaskManager.finishTask(companyUuid)
+			return resp.SyncResp{}, errors.New("没有需要重试的任务")
 		}
 
-		// 5 属性
-		logger.Logger.Info("开始同步属性", zap.Uint64("companyUuid", companyUuid))
-		if err := s.productSrv.SyncAttributeGroup(ctx); err != nil {
-			logger.Logger.Error("属性同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-			isExceptionOccurred = true || isExceptionOccurred
+		syncTask = existTask
+	} else {
+		// 创建新的同步任务
+		syncTask = &model.SyncTask{
+			Status:       constant.SyncTaskStatusRunning,
+			TotalCount:   12, // TODO 总共12个子任务（商品暂未实现）
+			SuccessCount: 0,
+			FailCount:    0,
+			StartTime:    time.Now().Unix(),
 		}
 
-		// 6 加料
-		logger.Logger.Info("开始同步加料", zap.Uint64("companyUuid", companyUuid))
-		if err := s.productSrv.SyncSauce(ctx); err != nil {
-			logger.Logger.Error("加料同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-			isExceptionOccurred = true || isExceptionOccurred
+		if err := syncTaskRepo.Create(syncTask); err != nil {
+			syncTaskManager.finishTask(companyUuid)
+			return resp.SyncResp{}, errors.WithMessage(err, "创建同步任务失败")
+		}
+	}
+
+	// 定义所有同步任务配置
+
+	allTasks := []syncTaskConfig{
+		{constant.SyncTaskTypeProductCategory, constant.SyncTaskTypeNames[constant.SyncTaskTypeProductCategory], s.productSrv.SyncProductShopCategory},
+		{constant.SyncTaskTypeMaterialCategory, constant.SyncTaskTypeNames[constant.SyncTaskTypeMaterialCategory], s.materialSrv.SyncMaterialCategory},
+		{constant.SyncTaskTypeTax, constant.SyncTaskTypeNames[constant.SyncTaskTypeTax], s.productSrv.SyncProductTax},
+		{constant.SyncTaskTypeUnit, constant.SyncTaskTypeNames[constant.SyncTaskTypeUnit], s.productSrv.SyncUnit},
+		{constant.SyncTaskTypeWarehouse, constant.SyncTaskTypeNames[constant.SyncTaskTypeWarehouse], s.warehouseSrv.SyncWarehouse},
+		{constant.SyncTaskTypeMaterial, constant.SyncTaskTypeNames[constant.SyncTaskTypeMaterial], func(ctx context.Context) error {
+			// 物品同步包含总部和子店
+			if err := s.materialSrv.SyncHeadquarterMaterial(ctx); err != nil {
+				return err
+			}
+			return s.materialSrv.SyncSubShopMaterial(ctx)
+		}},
+		{constant.SyncTaskTypeFlavor, constant.SyncTaskTypeNames[constant.SyncTaskTypeFlavor], s.productSrv.SyncProductFlavor},
+		{constant.SyncTaskTypeAttribute, constant.SyncTaskTypeNames[constant.SyncTaskTypeAttribute], s.productSrv.SyncAttributeGroup},
+		{constant.SyncTaskTypeSauce, constant.SyncTaskTypeNames[constant.SyncTaskTypeSauce], s.productSrv.SyncSauce},
+		// TODO: 7 商品
+		{constant.SyncTaskTypeBomCard, constant.SyncTaskTypeNames[constant.SyncTaskTypeBomCard], s.materialSrv.SyncProductBomCard},
+		{constant.SyncTaskTypeSupplier, constant.SyncTaskTypeNames[constant.SyncTaskTypeSupplier], s.supplierSrv.SyncSupplier},
+		{constant.SyncTaskTypeWarehouseStock, constant.SyncTaskTypeNames[constant.SyncTaskTypeWarehouseStock], s.warehouseSrv.SyncDefaultWarehouseStock},
+	}
+
+	// 启动异步同步任务
+	go s.executeSync(ctx, syncTask, allTasks, retryMode, retryTaskTypes)
+
+	message := "数据同步已启动"
+	if retryMode {
+		message = "重试同步任务已启动"
+	}
+
+	return resp.SyncResp{
+		TaskUuid: syncTask.Uuid,
+		Message:  message,
+	}, nil
+}
+
+// executeSync 执行同步任务
+func (s *SyncSrv) executeSync(ctx context.Context, syncTask *model.SyncTask, allTasks []syncTaskConfig, retryMode bool, retryTaskTypes []string) {
+	company := ctx.GetCompany()
+	companyUuid := company.Uuid
+
+	// 实例化repo（同步任务表在公司库）
+	syncTaskRepo := repository.NewSyncTaskRepo(s.dbm.GetDB(companyUuid))
+
+	var successCount uint32
+	var failCount uint32
+
+	// 确保任务完成时清理状态
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Logger.Error("同步任务发生panic", zap.Uint64("companyUuid", companyUuid), zap.Any("panic", r))
+			// 更新任务状态为失败
+			syncTaskRepo.Update(syncTask.Uuid, map[string]any{
+				"status":   constant.SyncTaskStatusFailed,
+				"end_time": time.Now().Unix(),
+			})
 		}
 
-		// TODO 7 商品
-		// TODO 8 成本卡
-		logger.Logger.Info("开始同步成本卡", zap.Uint64("companyUuid", companyUuid))
-		if err := s.materialSrv.SyncProductBomCard(ctx); err != nil {
-			logger.Logger.Error("成本卡同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-			isExceptionOccurred = true || isExceptionOccurred
+		syncTaskManager.finishTask(companyUuid)
+		logger.Logger.Info("同步任务完成", zap.Uint64("companyUuid", companyUuid),
+			zap.Uint32("successCount", successCount),
+			zap.Uint32("failCount", failCount))
+
+		// 推送websocket
+		go websocket.PushClient(company.Uuid, websocket.SourceShop, websocket.SourceAll, websocket.SYNC_DATA, map[string]any{
+			"task_uuid":      syncTask.Uuid,
+			"status":         syncTask.Status,
+			"total_count":    syncTask.TotalCount,
+			"success_count":  successCount,
+			"fail_count":     failCount,
+			"last_sync_time": time.Now().Unix(),
+		})
+	}()
+
+	logger.Logger.Info("开始执行同步任务", zap.Uint64("companyUuid", companyUuid), zap.Uint64("taskUuid", syncTask.Uuid))
+
+	// 如果是重试模式，只执行失败的任务
+	tasksToExecute := allTasks
+	if retryMode {
+		tasksToExecute = []syncTaskConfig{}
+		for _, task := range allTasks {
+			for _, retryType := range retryTaskTypes {
+				if task.TaskType == retryType {
+					tasksToExecute = append(tasksToExecute, task)
+					break
+				}
+			}
+		}
+	}
+
+	// 执行每个子任务
+	for _, taskCfg := range tasksToExecute {
+		s.executeSyncTask(ctx, syncTask.Uuid, taskCfg, &successCount, &failCount, retryMode)
+	}
+
+	// 更新主任务状态
+	endTime := time.Now().Unix()
+	finalStatus := constant.SyncTaskStatusSuccess
+	if failCount > 0 {
+		finalStatus = constant.SyncTaskStatusFailed
+	}
+
+	err := syncTaskRepo.Update(syncTask.Uuid, map[string]any{
+		"status":        finalStatus,
+		"success_count": successCount,
+		"fail_count":    failCount,
+		"end_time":      endTime,
+	})
+	if err != nil {
+		logger.Logger.Error("更新同步任务状态失败", zap.Error(err))
+	}
+
+	// 更新公司的最后同步时间
+	if finalStatus == constant.SyncTaskStatusSuccess {
+		s.dbm.GetDB(companyUuid).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", endTime)
+		s.dbm.GetDB(0).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", endTime)
+	}
+}
+
+// executeSyncTask 执行单个同步任务
+func (s *SyncSrv) executeSyncTask(ctx context.Context, syncTaskUuid uint64, taskCfg syncTaskConfig, successCount, failCount *uint32, retryMode bool) {
+	// 实例化repo（同步任务表在公司库）
+	syncTaskItemRepo := repository.NewSyncTaskItemRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+
+	var taskItem *model.SyncTaskItem
+
+	// 如果是重试模式，查找已存在的任务项并更新
+	if retryMode {
+		items, err := syncTaskItemRepo.GetList(
+			syncTaskItemRepo.WhereSyncTaskUuid(syncTaskUuid),
+			syncTaskItemRepo.WhereTaskType(taskCfg.TaskType),
+		)
+		if err == nil && len(items) > 0 {
+			taskItem = &items[0]
+			// 重置任务项状态
+			syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
+				"status":        constant.SyncTaskItemStatusRunning,
+				"error_message": "",
+				"start_time":    time.Now().Unix(),
+				"end_time":      0,
+			})
+		}
+	}
+
+	// 如果不是重试或找不到已有任务项，创建新任务项
+	if taskItem == nil {
+		taskItem = &model.SyncTaskItem{
+			SyncTaskUuid: syncTaskUuid,
+			TaskType:     taskCfg.TaskType,
+			TaskName:     taskCfg.TaskName,
+			Status:       constant.SyncTaskItemStatusRunning,
+			StartTime:    time.Now().Unix(),
 		}
 
-		logger.Logger.Info("开始同步供应商", zap.Uint64("companyUuid", companyUuid))
-		// 9 供应商
-		if err := s.supplierSrv.SyncSupplier(ctx); err != nil {
-			logger.Logger.Error("供应商同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-			isExceptionOccurred = true || isExceptionOccurred
+		if err := syncTaskItemRepo.Create(taskItem); err != nil {
+			logger.Logger.Error("创建同步任务明细失败", zap.String("taskType", taskCfg.TaskType), zap.Error(err))
+			return
 		}
+	}
 
-		// TODO 10 仓库物品库存
-		logger.Logger.Info("开始同步仓库物品库存", zap.Uint64("companyUuid", companyUuid))
-		if err := s.warehouseSrv.SyncDefaultWarehouseStock(ctx); err != nil {
-			logger.Logger.Error("默认仓库库存同步失败", zap.Uint64("companyUuid", companyUuid), zap.Error(err))
-			isExceptionOccurred = true || isExceptionOccurred
-		}
+	logger.Logger.Info("开始同步", zap.String("taskName", taskCfg.TaskName))
 
-	}(ctx)
+	// 执行同步任务
+	err := taskCfg.Executor(ctx)
+	endTime := time.Now().Unix()
 
-	return nil
+	if err != nil {
+		// 任务失败
+		logger.Logger.Error("同步失败", zap.String("taskName", taskCfg.TaskName), zap.Error(err))
+		*failCount++
+
+		syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
+			"status":        constant.SyncTaskItemStatusFailed,
+			"error_message": err.Error(),
+			"end_time":      endTime,
+		})
+	} else {
+		// 任务成功
+		logger.Logger.Info("同步成功", zap.String("taskName", taskCfg.TaskName))
+		*successCount++
+
+		syncTaskItemRepo.Update(taskItem.Uuid, map[string]any{
+			"status":        constant.SyncTaskItemStatusSuccess,
+			"error_message": "",
+			"end_time":      endTime,
+		})
+	}
+}
+
+// GetTaskList 获取同步任务列表
+func (s *SyncSrv) GetTaskList(ctx context.Context, listReq req.SyncTaskListReq) (resp.SyncTaskListPaginationResp, error) {
+	companyUuid := ctx.GetCompanyUuid()
+
+	// 实例化repo（同步任务表在公司库）
+	syncTaskRepo := repository.NewSyncTaskRepo(s.dbm.GetDB(companyUuid))
+
+	// 构建查询选项
+	opts := []repository.DBOption{
+		syncTaskRepo.OrderByCreateTime(true),
+	}
+
+	if listReq.Status != nil {
+		opts = append(opts, syncTaskRepo.WhereStatus(*listReq.Status))
+	}
+
+	// 分页查询
+	tasks, total, err := syncTaskRepo.GetListWithPagination(listReq.PageReq.PageNo, listReq.PageReq.PageSize, opts...)
+	if err != nil {
+		return resp.SyncTaskListPaginationResp{}, errors.WithMessage(err, "查询同步任务列表失败")
+	}
+
+	// 转换为响应格式
+	list := make([]resp.SyncTaskListResp, 0, len(tasks))
+	for _, task := range tasks {
+		list = append(list, convertToSyncTaskListResp(task))
+	}
+
+	return resp.SyncTaskListPaginationResp{
+		List: list,
+		Meta: dto.PageResponse{
+			PageNo:   listReq.PageReq.PageNo,
+			PageSize: listReq.PageReq.PageSize,
+			Total:    total,
+		},
+	}, nil
+}
+
+// GetTaskDetail 获取同步任务详情
+func (s *SyncSrv) GetTaskDetail(ctx context.Context, detailReq req.SyncTaskDetailReq) (resp.SyncTaskDetailResp, error) {
+	companyUuid := ctx.GetCompanyUuid()
+
+	// 实例化repo（同步任务表在公司库）
+	syncTaskRepo := repository.NewSyncTaskRepo(s.dbm.GetDB(companyUuid))
+
+	// 查询任务
+	task, err := syncTaskRepo.GetByUuid(detailReq.TaskUuid, syncTaskRepo.PreloadItems())
+	if err != nil {
+		return resp.SyncTaskDetailResp{}, errors.WithMessage(err, "查询同步任务失败")
+	}
+
+	// 转换为响应格式
+	return convertToSyncTaskDetailResp(*task), nil
+}
+
+// convertToSyncTaskItemResp 转换为同步任务明细响应
+func convertToSyncTaskItemResp(item model.SyncTaskItem) resp.SyncTaskItemResp {
+	duration := int64(0)
+	if item.EndTime > 0 && item.StartTime > 0 {
+		duration = item.EndTime - item.StartTime
+	}
+
+	return resp.SyncTaskItemResp{
+		Uuid:         item.Uuid,
+		TaskType:     item.TaskType,
+		TaskName:     item.TaskName,
+		Status:       item.Status,
+		ErrorMessage: item.ErrorMessage,
+		StartTime:    item.StartTime,
+		EndTime:      item.EndTime,
+		Duration:     duration,
+	}
+}
+
+// convertToSyncTaskDetailResp 转换为同步任务详情响应
+func convertToSyncTaskDetailResp(task model.SyncTask) resp.SyncTaskDetailResp {
+	duration := int64(0)
+	if task.EndTime > 0 && task.StartTime > 0 {
+		duration = task.EndTime - task.StartTime
+	}
+
+	items := make([]resp.SyncTaskItemResp, 0, len(task.Items))
+	for _, item := range task.Items {
+		items = append(items, convertToSyncTaskItemResp(item))
+	}
+
+	return resp.SyncTaskDetailResp{
+		Uuid:         task.Uuid,
+		Status:       task.Status,
+		TotalCount:   task.TotalCount,
+		SuccessCount: task.SuccessCount,
+		FailCount:    task.FailCount,
+		StartTime:    task.StartTime,
+		EndTime:      task.EndTime,
+		Duration:     duration,
+		CreateTime:   task.CreateTime,
+		Items:        items,
+	}
+}
+
+// convertToSyncTaskListResp 转换为同步任务列表响应
+func convertToSyncTaskListResp(task model.SyncTask) resp.SyncTaskListResp {
+	duration := int64(0)
+	if task.EndTime > 0 && task.StartTime > 0 {
+		duration = task.EndTime - task.StartTime
+	}
+
+	return resp.SyncTaskListResp{
+		Uuid:         task.Uuid,
+		Status:       task.Status,
+		TotalCount:   task.TotalCount,
+		SuccessCount: task.SuccessCount,
+		FailCount:    task.FailCount,
+		StartTime:    task.StartTime,
+		EndTime:      task.EndTime,
+		Duration:     duration,
+		CreateTime:   task.CreateTime,
+	}
 }

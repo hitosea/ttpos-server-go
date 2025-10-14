@@ -2276,7 +2276,7 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 	}
 
 	// 开启了ERP，并且是TTPOS站点，同步到ERPNext
-	if company.IsOpenErp() {
+	if company.IsOpenErp() && productUnit.ErpnextUom != "" {
 		enName, err := s.getEnName(ctx, editUnitReq.LocaleName)
 		if err != nil {
 			return errors.WithMessage(errors.New("翻译失败"), err.Error())

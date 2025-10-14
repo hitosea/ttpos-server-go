@@ -360,16 +360,73 @@ func (h *SettingHandler) UploadLogo(c *gin.Context) {
 // @Tags 商家端.业务设置
 // @Accept json
 // @Produce json
+// @Param request body req.SyncReq false "同步请求参数"
 // @Security JwtToken
-// @Success 200 {object} dto.Response
+// @Success 200 {object} dto.Response{data=resp.SyncResp}
 // @Router /shop/setting/sync [post]
 func (h *SettingHandler) Sync(c *gin.Context) {
-	err := h.syncSrv.Sync(helper.GetContext(c))
+	var syncReq req.SyncReq
+	if err := c.ShouldBindJSON(&syncReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	result, err := h.syncSrv.Sync(helper.GetContext(c), syncReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	helper.Success(c, gin.H{})
+	helper.Success(c, result)
+}
+
+// GetSyncTaskList 获取同步任务列表
+// @Summary 获取同步任务列表
+// @Tags 商家端.业务设置
+// @Accept json
+// @Produce json
+// @Param page_no query int false "页码" default(1)
+// @Param page_size query int false "每页大小" default(20)
+// @Param status query int false "同步状态: 0-进行中, 1-已完成, 2-失败"
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.SyncTaskListPaginationResp}
+// @Router /shop/setting/sync_task/list [get]
+func (h *SettingHandler) GetSyncTaskList(c *gin.Context) {
+	var listReq req.SyncTaskListReq
+	if err := c.ShouldBindQuery(&listReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	result, err := h.syncSrv.GetTaskList(helper.GetContext(c), listReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, result)
+}
+
+// GetSyncTaskDetail 获取同步任务详情
+// @Summary 获取同步任务详情
+// @Tags 商家端.业务设置
+// @Accept json
+// @Produce json
+// @Param task_uuid query int true "任务UUID"
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.SyncTaskDetailResp}
+// @Router /shop/setting/sync_task/detail [get]
+func (h *SettingHandler) GetSyncTaskDetail(c *gin.Context) {
+	var detailReq req.SyncTaskDetailReq
+	if err := c.ShouldBindQuery(&detailReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	result, err := h.syncSrv.GetTaskDetail(helper.GetContext(c), detailReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, result)
 }
 
 func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
@@ -413,8 +470,10 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		// 电子菜单二维码
 		privateApi.GET("/setting/menu_qrcode", wrapper.GetMenuQrcode) // 获取电子菜单二维码
 		// 会员端二维码
-		privateApi.GET("/setting/member_qrcode", wrapper.GetMemberQrcode) // 获取会员端二维码
-		privateApi.POST("/setting/upload_logo", wrapper.UploadLogo)       // 上传logo
-		privateApi.POST("/setting/sync", wrapper.Sync)                    // 获取总部最新数据
+		privateApi.GET("/setting/member_qrcode", wrapper.GetMemberQrcode)      // 获取会员端二维码
+		privateApi.POST("/setting/upload_logo", wrapper.UploadLogo)            // 上传logo
+		privateApi.POST("/setting/sync", wrapper.Sync)                         // 获取总部最新数据
+		privateApi.GET("/setting/sync_task/list", wrapper.GetSyncTaskList)     // 获取同步任务列表
+		privateApi.GET("/setting/sync_task/detail", wrapper.GetSyncTaskDetail) // 获取同步任务详情
 	}
 }

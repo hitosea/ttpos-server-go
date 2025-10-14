@@ -23928,11 +23928,142 @@ const docTemplate = `{
                     "商家端.业务设置"
                 ],
                 "summary": "获取总部最新数据",
+                "parameters": [
+                    {
+                        "description": "同步请求参数",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/req.SyncReq"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dto.Response"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.SyncResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/setting/sync_task/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.业务设置"
+                ],
+                "summary": "获取同步任务详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "任务UUID",
+                        "name": "task_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.SyncTaskDetailResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/setting/sync_task/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.业务设置"
+                ],
+                "summary": "获取同步任务列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "每页大小",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "同步状态: 0-进行中, 1-已完成, 2-失败",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.SyncTaskListPaginationResp"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -35861,6 +35992,15 @@ const docTemplate = `{
                 }
             }
         },
+        "req.SyncReq": {
+            "type": "object",
+            "properties": {
+                "task_uuid": {
+                    "description": "任务UUID，如果传递则重新执行该任务",
+                    "type": "integer"
+                }
+            }
+        },
         "req.TabletOrderCartProductAddReq": {
             "type": "object",
             "required": [
@@ -44007,6 +44147,159 @@ const docTemplate = `{
                 },
                 "uuid": {
                     "description": "供应商UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.SyncResp": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "description": "提示消息",
+                    "type": "string"
+                },
+                "task_uuid": {
+                    "description": "任务UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.SyncTaskDetailResp": {
+            "type": "object",
+            "properties": {
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "duration": {
+                    "description": "执行时长（秒）",
+                    "type": "integer"
+                },
+                "end_time": {
+                    "description": "结束时间",
+                    "type": "integer"
+                },
+                "fail_count": {
+                    "description": "失败任务数",
+                    "type": "integer"
+                },
+                "items": {
+                    "description": "任务明细",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.SyncTaskItemResp"
+                    }
+                },
+                "start_time": {
+                    "description": "开始时间",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "同步状态: 0-进行中, 1-已完成, 2-失败",
+                    "type": "integer"
+                },
+                "success_count": {
+                    "description": "成功任务数",
+                    "type": "integer"
+                },
+                "total_count": {
+                    "description": "总任务数",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.SyncTaskItemResp": {
+            "type": "object",
+            "properties": {
+                "duration": {
+                    "description": "执行时长（秒）",
+                    "type": "integer"
+                },
+                "end_time": {
+                    "description": "结束时间",
+                    "type": "integer"
+                },
+                "error_message": {
+                    "description": "错误消息",
+                    "type": "string"
+                },
+                "start_time": {
+                    "description": "开始时间",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "任务状态: 0-待执行, 1-执行中, 2-已完成, 3-失败",
+                    "type": "integer"
+                },
+                "task_name": {
+                    "description": "任务名称",
+                    "type": "string"
+                },
+                "task_type": {
+                    "description": "任务类型",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.SyncTaskListPaginationResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.SyncTaskListResp"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "resp.SyncTaskListResp": {
+            "type": "object",
+            "properties": {
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "duration": {
+                    "description": "执行时长（秒）",
+                    "type": "integer"
+                },
+                "end_time": {
+                    "description": "结束时间",
+                    "type": "integer"
+                },
+                "fail_count": {
+                    "description": "失败任务数",
+                    "type": "integer"
+                },
+                "start_time": {
+                    "description": "开始时间",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "同步状态: 0-进行中, 1-已完成, 2-失败",
+                    "type": "integer"
+                },
+                "success_count": {
+                    "description": "成功任务数",
+                    "type": "integer"
+                },
+                "total_count": {
+                    "description": "总任务数",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "UUID",
                     "type": "integer"
                 }
             }
