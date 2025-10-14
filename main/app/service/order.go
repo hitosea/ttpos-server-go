@@ -13671,11 +13671,17 @@ func (s *orderSrv) GetOrderCartProductBatchCookingList(ctx context.Context, req 
 			Uuid:                saleOrderProduct.Uuid,
 			LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
 			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
-			Image:               saleOrderProduct.ImageFile.GetUrl(baseURL),
-			BatchTagUuid:        saleOrderProduct.BatchTagUuid,
-			BatchTime:           saleOrderProduct.BatchTime,
-			SendKitchenTime:     saleOrderProduct.SendKitchenTime,
-			CreateTime:          saleOrderProduct.CreateTime,
+			Image: func() string {
+				if saleOrderProduct.ImageFile != nil {
+					url := saleOrderProduct.ImageFile.GetUrl(baseURL)
+					return url
+				}
+				return ""
+			}(),
+			BatchTagUuid:    saleOrderProduct.BatchTagUuid,
+			BatchTime:       saleOrderProduct.BatchTime,
+			SendKitchenTime: saleOrderProduct.SendKitchenTime,
+			CreateTime:      saleOrderProduct.CreateTime,
 		})
 	}
 
