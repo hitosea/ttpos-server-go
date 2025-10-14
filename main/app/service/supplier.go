@@ -58,6 +58,11 @@ func (s *supplierSrv) GetSupplierList(ctx context.Context, req req.SupplierListR
 	if req.Keyword != "" {
 		opts = append(opts, supplierRepo.WhereNameOrCodeLike(req.Keyword))
 	}
+	companySetting := ctx.GetCompanySetting()
+	// 总部过滤掉“总部-供应商”
+	if companySetting.IsHeadquarter() {
+		opts = append(opts, supplierRepo.WhereErpCodeNot(constant.ErpHeadquartersSupplierCode))
+	}
 	// 排序
 	opts = append(opts, supplierRepo.OrderByCreateTime(true))
 	// 分页查询
@@ -320,7 +325,7 @@ func (s *supplierSrv) GetSupplierSelect(ctx context.Context, req req.SupplierSel
 
 	// 如果公司开启了erp，则查询erp供应商
 	if ctx.GetCompany().IsOpenErp() {
-		opts = append(opts, supplierRepo.WhereErpCodeExists())
+		opts = append(opts, supplierRepo.WhereErpCodeNot(""))
 	}
 
 	suppliers, err := supplierRepo.GetList(opts...)
@@ -390,19 +395,13 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 	}
 
 	var headquarterSuppliers []model.Supplier
+	var headquarter model.CompanySetting
 	if companySetting.IsSubShop() {
-		var headquarter model.CompanySetting
 		err := s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
 		s.dbm.GetDB(headquarter.Uuid).Model(&model.Supplier{}).Find(&headquarterSuppliers)
-		headquarterSuppliers = append(headquarterSuppliers, model.Supplier{
-			Name:    constant.ErpHeadquartersSupplierCode,
-			ErpCode: constant.ErpHeadquartersSupplierCode,
-			Status:  1,                                 // TODO 这个状态是什么
-			Code:    constant.HeadquartersSupplierCode, // NOTE 总部-供应商编码固定为SP001
-		})
 	}
 
 	var suppliers []model.Supplier
@@ -422,15 +421,15 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 			if name == "" {
 				name = erpSupplier.SupplierName
 			}
-			// 总部不同步“总部-供应商”
-			if erpSupplier.Name == constant.ErpHeadquartersSupplierCode && companySetting.IsHeadquarter() {
-				continue
-			}
 			supplier, _ := supplierMap[erpSupplier.Name]
 			address := supplier.Address
 			contactName := supplier.ContactName
 			contactPhone := supplier.ContactPhone
 			code := supplier.Code
+			// “总部-供应商”固定code SP001
+			if erpSupplier.Name == constant.ErpHeadquartersSupplierCode {
+				code = constant.HeadquartersSupplierCode
+			}
 
 			// 默认为启用
 			status := 1
@@ -478,7 +477,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 					Position:        headquarterSupplier.Position,
 					StaffUuid:       headquarterSupplier.StaffUuid,
 					ErpCode:         headquarterSupplier.ErpCode,
-					HeadquarterUuid: companySetting.HeadquarterUuid,
+					HeadquarterUuid: headquarter.Uuid,
 				})
 			}
 			if len(insertingHeadquarterSuppliers) > 0 {

@@ -27,7 +27,7 @@ type ISupplierRepo interface {
 	OrderByCreateTime(desc bool) DBOption
 	OrderByName(desc bool) DBOption
 	WhereNotDeleted() DBOption
-	WhereErpCodeExists() DBOption
+	WhereErpCodeNot(erpCode string) DBOption
 	WhereStatus(status int) DBOption
 }
 
@@ -168,9 +168,9 @@ func (r *SupplierRepoImpl) WhereNameOrCodeLike(name string) DBOption {
 }
 
 // WhereErpCodeExists 存在erp_code条件
-func (r *SupplierRepoImpl) WhereErpCodeExists() DBOption {
+func (r *SupplierRepoImpl) WhereErpCodeNot(erpCode string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("erp_code != ?", "")
+		return db.Where("erp_code != ?", erpCode)
 	}
 }
 

@@ -194,7 +194,7 @@
         product_list: [],
       },
     ],
-    product_printer_uuid: [],
+    product_printer_uuids: [],
   });
 
   const oldForm = ref({});
@@ -304,9 +304,9 @@
               form.single_select_list = JSON.parse(JSON.stringify(form.many_select_list[0]));
             }
             form.productPrinterList = res.data.productPrinterList;
-            form.model.product_printer_uuid = [];
+            form.model.product_printer_uuids = [];
             (res.data.model.productPrinters || []).map((item) => {
-              form.model.product_printer_uuid.push(item.product_printer_uuid);
+              form.model.product_printer_uuids.push(item.product_printer_uuid);
             });
           }
         });
