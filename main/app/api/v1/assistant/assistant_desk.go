@@ -741,8 +741,10 @@ func (h *DeskHandler) OrderCartProductCooking(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	// 返回结果
-	helper.Success(c, res)
+	// 返回结果	// 返回结果
+	code := shopCart.GetCode()
+	helper.FailWithData(c, code, res, nil, constant.ParseCodeOrderCheck(code))
+	// helper.Success(c, res)
 }
 
 // ChangeDesk 处理切换桌台
