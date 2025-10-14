@@ -2786,6 +2786,7 @@ func (s *materialSrv) GetHeadquarterMaterialCategoryInSubShop(ctx context.Contex
 
 // 同步成本卡
 func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
+	companySetting := ctx.GetCompanySetting()
 	erpBoms := []*manufacturing.BomInfo{} // erp成本卡列表
 	erpSrv := erp.NewIErpSrv(s.dbm)
 	productBomCardList, err := erpSrv.GetProductBomCardList(ctx) // erp成本卡列表,但这个接口没有物品列表信息
@@ -2833,6 +2834,51 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
 		return nil
 	}); err != nil {
 		return errors.WithMessage(err)
+	}
+
+	// 从ttpos总店同步
+	if companySetting.IsSubShop() {
+		headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
+		commonRepo := repository.NewCommonRepo()
+		productBomCardList, err := repository.NewProductBomCardRepo(headquarterDb).GetProductBomCardList(
+			commonRepo.WhereBySoftDelete(),
+		)
+		if err != nil {
+			return errors.WithMessage(err, "获取总部成本卡列表失败")
+		}
+
+		if err := repository.CommonRepo.Transaction(headquarterDb, func(tx *gorm.DB) error {
+			// 删除所有总部的成本卡。
+			tx.Model(&model.ProductBomCard{}).Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Delete(&model.ProductBomCard{})
+			productBomCardUuids := []uint64{}
+			for _, productBomCard := range productBomCardList {
+				productBomCardUuids = append(productBomCardUuids, productBomCard.Uuid)
+			}
+			tx.Model(&model.RelatedMaterial{}).Where("related_uuid IN (?)", productBomCardUuids).Delete(&model.RelatedMaterial{})
+
+			for _, productBomCard := range productBomCardList {
+				// 创建成本卡
+				productBomCard.BaseModel = model.BaseModel{
+					Uuid: productBomCard.Uuid,
+				}
+				productBomCard.HeadquarterUuid = companySetting.HeadquarterUuid
+				if err := repository.NewProductBomCardRepo(tx).CreateProductBomCard(*productBomCard); err != nil {
+					return errors.WithMessage(err, "创建成本卡失败")
+				}
+				// 创建成本卡材料
+				for _, material := range productBomCard.RelatedMaterials {
+					material.BaseModel = model.BaseModel{
+						Uuid: material.Uuid,
+					}
+					if err := repository.NewProductBomCardRepo(tx).CreateProductBomCardMaterial(*material); err != nil {
+						return errors.WithMessage(err, "创建成本卡材料失败")
+					}
+				}
+			}
+			return nil
+		}); err != nil {
+			return errors.WithMessage(err)
+		}
 	}
 	return nil
 }

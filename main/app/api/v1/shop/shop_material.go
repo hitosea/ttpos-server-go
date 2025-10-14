@@ -634,13 +634,13 @@ func (h *MaterialHandler) SyncMaterialCategory(c *gin.Context) {
 // @Failure 400 {object} nil "错误请求"
 // @Router /shop/test/product_bom/card/sync [post]
 func (h *MaterialHandler) SyncProductBomCard(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	err := h.materialSrv.SyncProductBomCard(ctx)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	helper.Success(c, nil)
+	// ctx := helper.GetContext(c)
+	// err := h.materialSrv.SyncProductBomCard(ctx)
+	// if err != nil {
+	// 	helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+	// 	return
+	// }
+	// helper.Success(c, nil)
 }
 
 func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
