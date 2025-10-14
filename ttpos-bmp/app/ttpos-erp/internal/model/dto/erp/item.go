@@ -183,5 +183,4 @@ type CreateSingleVariantItemReq struct {
 	ItemCode     string            `json:"item_code"`     // 商品编码
 	Args         map[string]string `json:"args"`          // 属性值映射
 	InternalCode string            `json:"internal_code"` //规格商品内部编码
-	Company      string            `json:"company"`       // 公司
 }

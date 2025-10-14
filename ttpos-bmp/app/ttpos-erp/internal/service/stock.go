@@ -68,6 +68,9 @@ type (
 		// 返回：物品属性分组响应，错误信息
 		SaveAttributeGroup(ctx context.Context, req *item.SaveAttributeGroupReq) (*item.SaveAttributeGroupResp, error)
 		DeleteAttributeGroup(ctx context.Context, req *item.DeleteAttributeGroupReq) (*item.DeleteAttributeGroupReq, error)
+		// SaveAddonGroup 保存加料组
+		// 关联门店时，每个门店都会自动创建一个加料组,
+		SaveAddonGroup(ctx context.Context, req *item.SaveAddonGroupReq) (*item.SaveAddonGroupResp, error)
 	}
 	IStock interface {
 		// GetAttributeList 获取属性列表

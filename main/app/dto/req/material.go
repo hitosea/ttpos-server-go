@@ -205,15 +205,21 @@ type MaterialEditErpReq struct {
 }
 
 type ProductAddErpReq struct {
-	ItemName           string `json:"item_name" binding:"required"`           // 商品名称, 英文
-	StockUom           string `json:"stock_uom" binding:"required"`           // 商品单位, 英文
-	ItemCode           string `json:"item_code" binding:"required"`           // 商品编码，如果为空，则为新增；如果非空，则为编辑
-	TemplateItemCode   string `json:"template_item_code" binding:"required"`  // 模版商品编码
-	ItemSpecification  string `json:"item_specification" binding:"required"`  // 商品规格
-	BarcodeValue       string `json:"barcode_value" binding:"required"`       // 条形码值
-	Classification     string `json:"classification" binding:"required"`      // 分类
-	ClassificationCode string `json:"classification_code" binding:"required"` // 分类编码
-	InternalCode       string `json:"internal_code" `                         // 内部编码
+	ItemName           string   `json:"item_name" binding:"required"`           // 商品名称, 英文
+	StockUom           string   `json:"stock_uom" binding:"required"`           // 商品单位, 英文
+	ItemCode           string   `json:"item_code" binding:"required"`           // 商品编码，如果为空，则为新增；如果非空，则为编辑
+	TemplateItemCode   string   `json:"template_item_code" binding:"required"`  // 模版商品编码
+	ItemSpecification  string   `json:"item_specification" binding:"required"`  // 商品规格
+	BarcodeValue       string   `json:"barcode_value" binding:"required"`       // 条形码值
+	Classification     string   `json:"classification" binding:"required"`      // 分类
+	ClassificationCode string   `json:"classification_code" binding:"required"` // 分类编码
+	InternalCode       string   `json:"internal_code" `                         // 内部编码
+	Flavors            []Flavor `json:"flavors" `                               // 规格列表
+}
+
+type Flavor struct {
+	Name  string
+	Value string
 }
 
 type PackageAddErpReq struct {

@@ -11,11 +11,12 @@ import (
 
 // IProductFlavorRepo 定义商品规格仓库接口
 type IProductFlavorRepo interface {
-	GetProductFlavor(opts ...DBOption) (model.ProductFlavor, error)  // 查询单个商品规格
-	WithMultiLanguageName() DBOption                                 // 预加载多语言名称
-	CreateProductFlavor(productFlavor model.ProductFlavor) error     // 创建商品规格
-	UpdateProductFlavor(data map[string]any, opts ...DBOption) error // 更新商品规格
-	DeleteProductFlavor(opts ...DBOption) error                      // 删除商品规格
+	GetProductFlavor(opts ...DBOption) (model.ProductFlavor, error)      // 查询单个商品规格
+	WithMultiLanguageName() DBOption                                     // 预加载多语言名称
+	CreateProductFlavor(productFlavor model.ProductFlavor) error         // 创建商品规格
+	UpdateProductFlavor(data map[string]any, opts ...DBOption) error     // 更新商品规格
+	DeleteProductFlavor(opts ...DBOption) error                          // 删除商品规格
+	GetProductFlavorList(uuids ...uint64) ([]model.ProductFlavor, error) // 获取商品规格列表
 }
 
 // ProductFlavorRepo 定义商品规格仓库结构
@@ -80,4 +81,12 @@ func (r *ProductFlavorRepo) DeleteProductFlavor(opts ...DBOption) error {
 	}
 	err := db.Model(&model.ProductFlavor{}).Update("delete_time", time.Now().Unix()).Error
 	return errors.WithMessage(err)
+}
+
+// GetProductFlavorList 获取商品规格列表
+func (r *ProductFlavorRepo) GetProductFlavorList(uuids ...uint64) ([]model.ProductFlavor, error) {
+	var flavors []model.ProductFlavor
+	db := r.db.Model(&model.ProductFlavor{}).Where("delete_time = ?", 0).Where("uuid IN (?)", uuids)
+	err := db.Find(&flavors).Error
+	return flavors, errors.WithMessage(err)
 }

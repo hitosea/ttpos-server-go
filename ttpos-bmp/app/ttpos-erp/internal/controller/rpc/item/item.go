@@ -2,6 +2,7 @@ package item
 
 import (
 	"context"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 
 	"ttpos-bmp/app/ttpos-erp/api"
 	"ttpos-bmp/app/ttpos-erp/api/item"
@@ -202,10 +203,11 @@ func (c *Controller) GetItem(ctx context.Context, req *item.GetItemReq) (*api.Re
 	}
 
 	// 转换属性列表数据结构：从内部模型转换为protobuf响应模型
-	attrList := make([]*item.AttributeInfo, 0, len(itemInfo.Attributes))
+	attrList := make([]*item.ItemAttribute, 0, len(itemInfo.Attributes))
 	for _, attr := range itemInfo.Attributes {
-		attrList = append(attrList, &item.AttributeInfo{
-			AttributeName: attr.CustomAttributeName, // 属性名称
+		attrList = append(attrList, &item.ItemAttribute{
+			AttributeName:  attr.CustomAttributeName,  // 属性名称
+			AttributeValue: attr.CustomAttributeValue, // 属性值
 		})
 	}
 
@@ -304,4 +306,35 @@ func (*Controller) DeleteUom(ctx context.Context, req *item.DeleteUomReq) (*api.
 	}
 	// 返回成功响应
 	return rpc.ApiSuccessWithData("删除单位成功", resp), nil
+}
+
+func (*Controller) CreateSingleVariantItem(ctx context.Context, req *item.CreateSingleVariantItemReq) (*api.ResponseInfo, error) {
+	// 获取基准商品
+	itemInfo, err := service.Item().GetItem(ctx, &item.GetItemReq{
+		ItemCode: req.VariantsOf,
+	})
+	if err != nil {
+		return rpc.ApiError("创建单规格商品失败，获取基准商品失败"), nil
+	}
+	variant := make(map[string]string, len(req.Attributes))
+	for _, attr := range req.Attributes {
+		// 将每种属性名称和属性值的组合添加到itemVarList中
+		variant[attr.AttributeName] = attr.AttributeValue
+	}
+	multiSpecItemCode, err := service.Item().CreateSingleVariantItem(ctx, &erp.CreateSingleVariantItemReq{
+		TemplateItem: req.VariantsOf,
+		Args:         variant,
+		InternalCode: req.InternalCode,
+	}, &item.ItemInfo{
+		ClassificationCode: itemInfo.CustomClassificationCode,
+		Classification:     itemInfo.CustomClassification,
+		Company:            itemInfo.CustomCompany,
+		Branch:             itemInfo.CustomBranch,
+	})
+	if err != nil {
+		return rpc.ApiError("创建单规格商品失败"), nil
+	}
+	return rpc.ApiSuccessWithData("创建成功", &item.CreateSingleVariantItemResp{
+		ItemCode: multiSpecItemCode,
+	}), nil
 }

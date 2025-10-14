@@ -19,6 +19,14 @@ func (s *erpSrv) AddProduct(ctx context.Context, params req.ProductAddErpReq) (*
 	}
 	defer conn.Close()
 
+	attributes := make([]*item.ItemAttribute, len(params.Flavors))
+	for _, v := range params.Flavors {
+		attributes = append(attributes, &item.ItemAttribute{
+			AttributeName:  v.Name,
+			AttributeValue: v.Value,
+		})
+	}
+
 	result, err := client.SaveItem(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.ItemInfo{
 		ItemName:           params.ItemName,
 		ItemGroup:          item.ItemGroup_Products,
@@ -31,6 +39,8 @@ func (s *erpSrv) AddProduct(ctx context.Context, params req.ProductAddErpReq) (*
 		Classification:     params.Classification,
 		ClassificationCode: params.ClassificationCode,
 		InternalCode:       params.InternalCode,
+		HasVariants:        len(params.Flavors) > 0,
+		Attributes:         attributes,
 	})
 	if err != nil {
 		return nil, err

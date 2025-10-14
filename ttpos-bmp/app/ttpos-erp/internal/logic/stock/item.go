@@ -71,10 +71,17 @@ func (s *sItem) buildItemListFilters(ctx context.Context, req *item.GetItemListR
 
 	// 按物品分组过滤
 	if req.ItemGroup != item.ItemGroup_Others {
-		itemGroupStr := utility.ItemGroupToString(req.ItemGroup)
-		if len(itemGroupStr) > 0 {
-			filters = append(filters, g.ArrayStr{"item_group", "=", itemGroupStr})
+		if req.ItemGroup == item.ItemGroup_PosAddon || req.ItemGroup == item.ItemGroup_PosAttribute {
+			if len(req.ItemGroupName) > 0 {
+				filters = append(filters, g.ArrayStr{"item_group", "=", req.ItemGroupName})
+			}
+		} else {
+			itemGroupStr := utility.ItemGroupToString(req.ItemGroup)
+			if len(itemGroupStr) > 0 {
+				filters = append(filters, g.ArrayStr{"item_group", "=", itemGroupStr})
+			}
 		}
+
 		//特殊处理套餐包
 		if req.ItemGroup == item.ItemGroup_Package {
 			filters = append(filters, []string{"item_code", "like", consts.ItemCodePrefixPackage + "%"})
@@ -103,6 +110,11 @@ func (s *sItem) buildItemListFilters(ctx context.Context, req *item.GetItemListR
 	if !req.ContainDisabled {
 		filters = append(filters, []string{"disabled", "!=", "1"})
 	}
+	//根据变体查询
+	if req.VariantOf != "" {
+		filters = append(filters, []string{"variant_of", "=", req.VariantOf})
+	}
+
 	return filters
 }
 
@@ -163,6 +175,14 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 				ConversionFactor: uom.ConversionFactor,
 			})
 		}
+		// 转换属性列表数据结构：从内部模型转换为protobuf响应模型
+		attrList := make([]*item.ItemAttribute, 0, len(itemInfo.Attributes))
+		for _, attr := range itemInfo.Attributes {
+			attrList = append(attrList, &item.ItemAttribute{
+				AttributeName:  attr.CustomAttributeName, // 属性名称
+				AttributeValue: attr.CustomAttributeValue,
+			})
+		}
 		itemList = append(itemList, &item.ItemInfo{
 			Branch:             data.Get("custom_branch").String(),
 			Company:            data.Get("custom_company").String(),
@@ -178,6 +198,7 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 			InternalCode:       itemInfo.CustomInternalCode,
 			ValuationRate:      itemInfo.ValuationRate,
 			OpeningStock:       itemInfo.OpeningStock,
+			Attributes:         attrList,
 		})
 	}
 
@@ -230,6 +251,7 @@ func (s *sItem) checkItemExists(ctx context.Context, itemCode string) (bool, err
 }
 
 // updateExistingItem 更新现有物品
+// 更新不处理变体，通过单独的接口处理
 func (s *sItem) updateExistingItem(ctx context.Context, req *item.ItemInfo) (*item.ItemInfo, error) {
 	// 构建更新数据
 	itemForUpdate := s.buildUpdateItemData(req)
@@ -322,6 +344,13 @@ func (s *sItem) buildUpdateItemData(req *item.ItemInfo) g.Map {
 		itemForUpdate["custom_not_for_sale"] = 0
 	}
 
+	// 属性和加料特殊处理
+	if req.ItemGroup == item.ItemGroup_PosAttribute || req.ItemGroup == item.ItemGroup_PosAddon {
+		if req.ItemGroupName != "" {
+			itemForUpdate["item_group"] = req.ItemGroupName
+		}
+	}
+
 	return itemForUpdate
 }
 
@@ -368,41 +397,31 @@ func (s *sItem) createNewItem(ctx context.Context, req *item.ItemInfo) (*item.It
 	// 转换并返回结果
 	respItem := s.buildCreateItemResponse(req, company, newItem)
 
-	respAttributes := make([]*item.AttributeInfo, 0, len(req.Attributes))
+	respAttributes := make([]*item.ItemAttribute, 0, len(req.Attributes))
 
 	//多规格商品，创建时如果包含了属性值，则同步创建规格商品
 	if req.HasVariants {
 		if len(req.Attributes) > 0 {
 			for _, attr := range req.Attributes {
-				respAttr := &item.AttributeInfo{
-					AttributeName: attr.AttributeName,
+				// 将每种属性名称和属性值的组合添加到itemVarList中
+				variant := map[string]string{
+					attr.AttributeName: attr.AttributeValue,
 				}
-				respAttr.AttributeValueList = make([]*item.AttributeValueInfo, 0, len(attr.AttributeValueList))
+				multiSpecItemCode, err := s.CreateSingleVariantItem(ctx, &erp.CreateSingleVariantItemReq{
+					TemplateItem: itemCode,
+					Args:         variant,
+					InternalCode: attr.ItemInternalCode,
+				}, req)
+				if err != nil {
+					return nil, gerror.Wrapf(err, "创建对规格物品失败")
+				}
 
-				//生成所有规格的变体请求数据 , 目前先支持一组规格属性，后续再考虑多组规格的情况
-				for _, attrValue := range attr.AttributeValueList {
-					// 将每种属性名称和属性值的组合添加到itemVarList中
-					variant := map[string]string{
-						attr.AttributeName: attrValue.AttributeValue,
-					}
-					multiSpecItemCode, err := s.CreateSingleVariantItem(ctx, &erp.CreateSingleVariantItemReq{
-						TemplateItem: itemCode,
-						ItemCode:     attrValue.ItemCode,
-						Args:         variant,
-						InternalCode: attrValue.VariantItemInternalCode,
-						Company:      company.CompanyName,
-					}, req)
-					if err != nil {
-						return nil, gerror.Wrapf(err, "创建对规格物品失败")
-					}
-					respAttr.AttributeValueList = append(respAttr.AttributeValueList, &item.AttributeValueInfo{
-						AttributeValue:          attrValue.AttributeValue,
-						ItemCode:                multiSpecItemCode,
-						VariantItemInternalCode: attrValue.VariantItemInternalCode,
-						Abbr:                    attrValue.Abbr,
-					})
-				}
-				respAttributes = append(respAttributes, respAttr)
+				respAttributes = append(respAttributes, &item.ItemAttribute{
+					AttributeName:    attr.AttributeName,
+					AttributeValue:   attr.AttributeValue,
+					ItemInternalCode: attr.ItemInternalCode,
+					ItemCode:         multiSpecItemCode,
+				})
 			}
 			respItem.Attributes = respAttributes
 		}
@@ -489,7 +508,7 @@ func (s *sItem) addItemGroupSpecificFields(ctx context.Context, req *item.ItemIn
 	// 属性和加料特殊处理
 	if req.ItemGroup == item.ItemGroup_PosAttribute || req.ItemGroup == item.ItemGroup_PosAddon {
 		if req.ItemGroupName != "" {
-			newItem["item_group_name"] = req.ItemGroupName
+			newItem["item_group"] = req.ItemGroupName
 		}
 	}
 
@@ -775,10 +794,11 @@ func (s *sItem) SavePosAddon(ctx context.Context, req *item.SavePosAddonReq) (re
 	itemInfo := s.convertPosSpecItemToItemInfo(req.Item)
 
 	// 设置加料物品的特定属性
-	itemInfo.ItemGroup = item.ItemGroup_PosAddon // 加料物品归类为原材料
-	itemInfo.StockUom = "Nos"                    // 默认单位为个
-	itemInfo.ValuationRate = 0                   // 加料物品估值率为0
-	itemInfo.IsStockItem = false                 // 加料物品不是库存物品
+	itemInfo.ItemGroup = item.ItemGroup_PosAddon    // 加料物品归类为原材料
+	itemInfo.StockUom = "Nos"                       // 默认单位为个
+	itemInfo.ValuationRate = 0                      // 加料物品估值率为0
+	itemInfo.IsStockItem = false                    // 加料物品不是库存物品
+	itemInfo.ItemGroupName = req.Item.ItemGroupName // 加料物品分组名称,实际名称
 
 	// 调用通用的保存物品方法
 	return s.SaveItem(ctx, itemInfo)
@@ -838,7 +858,7 @@ func (s *sItem) CreateSingleVariantItem(ctx context.Context, req *erp.CreateSing
 	itemInfo.CustomBranch = templateItemInfo.Branch
 	itemInfo.CustomClassification = templateItemInfo.Classification
 	itemInfo.CustomClassificationCode = templateItemInfo.ClassificationCode
-	itemInfo.CustomCompany = req.Company
+	itemInfo.CustomCompany = templateItemInfo.Company
 
 	// 创建物品
 	_, err = service.Document().Create(ctx, erp.DocTypeItem, &itemInfo)

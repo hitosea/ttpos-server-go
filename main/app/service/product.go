@@ -2131,8 +2131,6 @@ func GetMultiLanguageName(ctx context.Context, enName string) (*dto.LocaleRespon
 
 // EditProductUnit 编辑产品单位
 func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.ProductUnitEditReq) error {
-	company := ctx.GetCompany()
-	companySetting := ctx.GetCompanySetting()
 	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
 	if !editUnitReq.LocaleName.CheckRequiredLocale(storeLanguages) {
 		return errors.New("名称不能为空")
@@ -2273,24 +2271,6 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 	if err == nil {
 		// 单位 - 将多语言名称uuid从待翻译集合中删除
 		s.translateSrv.RemoveMultiLanguageNameUuidFromSet(ctx.GetCompanyUuid(), productUnit.MultiLanguageNameUuid)
-	}
-
-	// 开启了ERP，并且是TTPOS站点，同步到ERPNext
-	if company.IsOpenErp() && productUnit.ErpnextUom != "" {
-		enName, err := s.getEnName(ctx, editUnitReq.LocaleName)
-		if err != nil {
-			return errors.WithMessage(errors.New("翻译失败"), err.Error())
-		}
-		err = erp.NewIErpSrv(s.dbm).SaveUom(ctx.GetContext(), req.SaveUomReq{
-			SiteCode:    companySetting.ErpnextSiteCode,
-			CompanyAbbr: companySetting.ErpnextCompanyAbbr,
-			Branch:      companySetting.ErpnextBranchName,
-			UomName:     productUnit.ErpnextUom,
-			AliasName:   enName,
-		})
-		if err != nil {
-			return errors.WithMessage(errors.New("同步单位到erp失败"), err.Error())
-		}
 	}
 
 	return err
@@ -6071,10 +6051,26 @@ func (s *productSrv) AddProductPackage(ctx context.Context, tx *gorm.DB, request
 				return nil, errors.WithMessage(errGetUnit, "获取商品单位失败")
 			}
 
+			flavorUuids := make([]uint64, 0, len(request.Flavors))
+			for _, v := range request.Flavors {
+				flavorUuids = append(flavorUuids, v.Uuid)
+			}
+			flavorList, err := repository.NewProductFlavorRepo(tx).GetProductFlavorList(flavorUuids...)
+			if err != nil {
+				return nil, errors.WithMessage(err, "获取商品规格失败")
+			}
+			var flavors []req.Flavor
+			for _, v := range flavorList {
+				flavors = append(flavors, req.Flavor{
+					Name:  v.ErpnextGroupName,
+					Value: v.ErpnextValueName,
+				})
+			}
 			erpSrv := erp.NewIErpSrv(s.dbm)
 			itemInfo, errErp := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
 				ItemName: enName,
 				StockUom: productUnit.ErpnextUom,
+				Flavors:  flavors,
 			})
 			if errErp != nil {
 				return nil, errors.WithMessage(errErp, "同步商品到erp失败")

@@ -167,7 +167,11 @@ func (s *SyncSrv) Sync(ctx context.Context, syncReq req.SyncReq) (resp.SyncResp,
 	}
 
 	// 启动异步同步任务
-	go s.executeSync(ctx, syncTask, allTasks, retryMode, retryTaskTypes)
+	if syncReq.IsSyncExecute {
+		s.executeSync(ctx, syncTask, allTasks, retryMode, retryTaskTypes)
+	} else {
+		go s.executeSync(ctx, syncTask, allTasks, retryMode, retryTaskTypes)
+	}
 
 	message := "数据同步已启动"
 	if retryMode {
