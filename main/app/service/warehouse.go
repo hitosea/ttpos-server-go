@@ -320,10 +320,6 @@ func (s *warehouseSrv) UpdateWarehouse(ctx context.Context, updateReq req.Update
 		"transit": "Transit",
 	}
 	err = db.Transaction(func(tx *gorm.DB) error {
-		warehouseName, err := GetEnName(ctx, s.settingSrv, updateReq.LocaleName)
-		if err != nil {
-			return errors.WithMessage(errors.New("翻译失败"), err.Error())
-		}
 		// 更新多语言名称
 		err = tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", warehouse.MultiLanguageNameUuid).Updates(map[string]any{
 			"zh_name":    updateReq.LocaleName.ZH,

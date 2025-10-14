@@ -35887,6 +35887,10 @@ const docTemplate = `{
         "req.SyncReq": {
             "type": "object",
             "properties": {
+                "is_sync_execute": {
+                    "description": "是否同步执行",
+                    "type": "boolean"
+                },
                 "task_uuid": {
                     "description": "任务UUID，如果传递则重新执行该任务",
                     "type": "integer"
