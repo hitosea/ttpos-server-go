@@ -85,6 +85,13 @@ type SaveUomReq struct {
 	MustBeWholeNumber bool   `form:"must_be_whole_number" json:"must_be_whole_number" binding:"required"` // 是否必须为整数
 }
 
+type DeleteUomReq struct {
+	SiteCode    string `form:"site_code" json:"site_code" binding:"required"`       // 站点编码
+	CompanyAbbr string `form:"company_abbr" json:"company_abbr" binding:"required"` // 公司缩写编码
+	Branch      string `form:"branch" json:"branch" binding:"required"`             // 分支名称
+	UomName     string `form:"uom_name" json:"uom_name" binding:"required"`         // 单位名称
+}
+
 type SaveAttributeValueReq struct {
 	AttributeValue string `form:"attribute_value" json:"attribute_value" binding:"required"` // 属性值
 	Abbr           string `form:"abbr" json:"abbr" binding:"required"`                       // 属性别名

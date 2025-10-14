@@ -1,7 +1,9 @@
 package service
 
 import (
+	"slices"
 	"strings"
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -380,12 +382,13 @@ func (s *supplierSrv) CheckCodeExists(ctx context.Context, req req.CheckCodeExis
 }
 
 func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
-	if !ctx.GetCompany().IsOpenErp() {
-		return errors.New("公司未授权erp")
+	company := ctx.GetCompany()
+	if !company.IsOpenErp() {
+		return errors.New("公司未开启erp")
 	}
 	companySetting := ctx.GetCompanySetting()
-	db := s.dbm.GetDB(ctx.GetDbId())
-	supplierList, err := erp.NewIErpSrv(s.dbm).ListSuppliers(ctx, req.GetErpnextSupplierListReq{
+	// 本店erp供应商列表
+	erpSuppliers, err := erp.NewIErpSrv(s.dbm).ListSuppliers(ctx, req.GetErpnextSupplierListReq{
 		SiteCode:    companySetting.ErpnextSiteCode,
 		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
 		Branch:      companySetting.ErpnextBranchName,
@@ -393,30 +396,47 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 	if err != nil {
 		return errors.WithMessage(errors.New("同步供应商失败"), err.Error())
 	}
+	var supplierErpCodes []string
+	for _, erpSupplier := range erpSuppliers {
+		supplierErpCodes = append(supplierErpCodes, erpSupplier.Name)
+	}
 
+	// 总部ttpos供应商
 	var headquarterSuppliers []model.Supplier
 	var headquarter model.CompanySetting
 	if companySetting.IsSubShop() {
-		err := s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
+		err := s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
 		s.dbm.GetDB(headquarter.Uuid).Model(&model.Supplier{}).Find(&headquarterSuppliers)
 	}
 
+	// 本店ttpos供应商
 	var suppliers []model.Supplier
-	db.Model(&model.Supplier{}).Scopes(repository.NotDeleted).Find(&suppliers)
-
+	// 待删除的供应商uuid列表
+	var deletingSupplierUuids []uint64
 	supplierMap := make(map[string]model.Supplier)
+	db := s.dbm.GetDB(companySetting.CompanyUuid)
+	db.Model(&model.Supplier{}).Scopes(repository.NotDeleted, repository.ExcludeHeadquarter).Where("erp_code != ''").Find(&suppliers)
 	for _, supplier := range suppliers {
-		if supplier.ErpCode == "" {
-			continue
+		if !slices.Contains(supplierErpCodes, supplier.ErpCode) {
+			deletingSupplierUuids = append(deletingSupplierUuids, supplier.Uuid)
 		}
 		supplierMap[supplier.ErpCode] = supplier
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-		for _, erpSupplier := range supplierList {
+		if len(deletingSupplierUuids) > 0 {
+			err := tx.Model(&model.Supplier{}).Where("uuid IN (?)", deletingSupplierUuids).Update("delete_time", time.Now().Unix()).Error
+			if err != nil {
+				return errors.WithMessage(err, "erp已删除供应商，标记删除ttpos供应商失败")
+			}
+		}
+
+		var insertingHeadquarterSuppliers []model.Supplier
+
+		for _, erpSupplier := range erpSuppliers {
 			name := erpSupplier.AliasName
 			if name == "" {
 				name = erpSupplier.SupplierName
@@ -430,14 +450,13 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 			if erpSupplier.Name == constant.ErpHeadquartersSupplierCode {
 				code = constant.HeadquartersSupplierCode
 			}
-
 			// 默认为启用
 			status := 1
 			if erpSupplier.Disabled {
 				status = 0
 			}
-			if supplier.Uuid == 0 {
-				tx.Model(&model.Supplier{}).Create(&model.Supplier{
+			if supplier.Uuid == 0 { // 新建供应商
+				insertingHeadquarterSuppliers = append(insertingHeadquarterSuppliers, model.Supplier{
 					Name:         name,
 					Address:      address,
 					ContactName:  contactName,
@@ -446,7 +465,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 					Status:       status,
 					Code:         code,
 				})
-			} else {
+			} else { // 更新供应商
 				tx.Model(&model.Supplier{}).Where("uuid = ?", supplier.Uuid).Updates(map[string]any{
 					"name":          name,
 					"code":          code,
@@ -459,7 +478,6 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 		}
 		if len(headquarterSuppliers) > 0 {
 			tx.Where("headquarter_uuid > 0").Delete(&model.Supplier{})
-			var insertingHeadquarterSuppliers []model.Supplier
 			for _, headquarterSupplier := range headquarterSuppliers {
 				insertingHeadquarterSuppliers = append(insertingHeadquarterSuppliers, model.Supplier{
 					BaseModel: model.BaseModel{
@@ -480,9 +498,9 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 					HeadquarterUuid: headquarter.Uuid,
 				})
 			}
-			if len(insertingHeadquarterSuppliers) > 0 {
-				tx.Model(&model.Supplier{}).Create(&insertingHeadquarterSuppliers)
-			}
+		}
+		if len(insertingHeadquarterSuppliers) > 0 {
+			tx.Model(&model.Supplier{}).Create(&insertingHeadquarterSuppliers)
 		}
 		return nil
 	})

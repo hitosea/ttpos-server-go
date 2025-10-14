@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -729,36 +730,29 @@ func (s *warehouseSrv) GetWarehouseInOutList(ctx context.Context, req req.GetWar
 }
 
 func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
-	// 商家数据库
-	db := s.dbm.GetDB(ctx.GetCompanyUuid())
-	var err error
 	company := ctx.GetCompany()
-	if company.Uuid == 0 {
-		company, err = repository.NewCompanyRepo(db).GetCompanyInfoByUuid(ctx.GetCompanyUuid())
-		if err != nil {
-			return errors.WithMessage(errors.New("同步仓库失败"), err.Error())
-		}
-	}
 	if !company.IsOpenErp() {
-		return errors.New("公司未授权erp")
+		return errors.New("公司未开启erp")
 	}
+
+	// 本店获取erp仓库列表
 	companySetting := ctx.GetCompanySetting()
-	if companySetting.Uuid == 0 {
-		companySetting = repository.NewCompanySettingRepo(db).Get()
-	}
+	var warehouseErpCodes []string
 	warehouseList, err := erp.NewIErpSrv(s.dbm).GetWarehouseList(ctx.GetContext(), req.GetErpnextWarehouseListReq{
 		SiteCode:    companySetting.ErpnextSiteCode,
 		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
 		Branch:      companySetting.ErpnextBranchName,
 	})
-
 	if err != nil {
 		return errors.WithMessage(errors.New("同步仓库失败"), err.Error())
 	}
+	for _, warehouse := range warehouseList {
+		warehouseErpCodes = append(warehouseErpCodes, warehouse.Name)
+	}
 
-	// 子店，获取总部ttpos仓库
-	var headquarterWarehouses []model.Warehouse
+	// 子店获取总部ttpos仓库
 	var headquarter model.CompanySetting
+	var headquarterWarehouses []model.Warehouse
 	if companySetting.IsSubShop() {
 		err := s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
@@ -767,24 +761,40 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 		s.dbm.GetDB(headquarter.Uuid).Model(&model.Warehouse{}).Preload("MultiLanguageName").Find(&headquarterWarehouses)
 	}
 
-	var existsDefaultWarehouse bool
+	// 本店ttpos仓库
+	db := s.dbm.GetDB(companySetting.CompanyUuid)
 	var warehouses []model.Warehouse
+	// 是否存在默认仓库
+	var existsDefaultWarehouse bool
+	// ttpos 仓库编码列表
 	var warehouseCodes []string
-	db.Model(&model.Warehouse{}).Scopes(repository.NotDeleted).Find(&warehouses)
+	// 待删除的仓库uuid列表
+	var deletingWarehouseUuids []uint64
 	// 本店仓库 erp_code 和 model.Warehouse 的映射
 	warehouseMap := make(map[string]model.Warehouse)
+	db.Model(&model.Warehouse{}).Scopes(repository.NotDeleted, repository.ExcludeHeadquarter).Where("erp_code != ''").Find(&warehouses)
 	for _, warehouse := range warehouses {
 		if warehouse.IsDefault == 1 {
 			existsDefaultWarehouse = true
 		}
-		if warehouse.ErpCode != "" {
-			warehouseMap[warehouse.ErpCode] = warehouse
+		if !slices.Contains(warehouseErpCodes, warehouse.ErpCode) {
+			deletingWarehouseUuids = append(deletingWarehouseUuids, warehouse.Uuid)
 		}
+		warehouseMap[warehouse.ErpCode] = warehouse
 		warehouseCodes = append(warehouseCodes, warehouse.Code)
 	}
 
+	// 待翻译多语言Uuid
 	var multiLanguageNameUuids []uint64
+
 	err = db.Transaction(func(tx *gorm.DB) error {
+		if len(deletingWarehouseUuids) > 0 {
+			err = tx.Model(&model.Warehouse{}).Where("uuid IN (?)", deletingWarehouseUuids).Update("delete_time", time.Now().Unix()).Error
+			if err != nil {
+				return errors.WithMessage(errors.New("erp已删除仓库，标记删除ttpos仓库失败"), err.Error())
+			}
+		}
+		var insertingWarehouses []model.Warehouse
 		for _, erpWarehouse := range warehouseList {
 			warehouse := warehouseMap[erpWarehouse.Name]
 			contact := warehouse.Contact
@@ -814,7 +824,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 				warehouseType = constant.WarehouseTypeTransit
 			}
 
-			if warehouse.Uuid > 0 { // 如果存在，则更新
+			if warehouse.Uuid != 0 { // 如果存在，则更新
 				db.Model(&model.Warehouse{}).Where("uuid = ?", warehouse.Uuid).Updates(map[string]any{
 					"type":       warehouseType,
 					"status":     status,
@@ -838,7 +848,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 				}
 				err = tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
 				if err != nil {
-					return errors.WithMessage(err, "创建多语言名称失败")
+					return errors.WithMessage(errors.New("创建多语言名称失败"), err.Error())
 				}
 				// 处理code
 				if code == "" {
@@ -856,7 +866,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 					warehouseCodes = append(warehouseCodes, code)
 				}
 				localeName := multiLanguageName.GetNames()
-				tx.Model(&model.Warehouse{}).Create(&model.Warehouse{
+				insertingWarehouses = append(insertingWarehouses, model.Warehouse{
 					Name:                  localeName.ToJson(),
 					MultiLanguageNameUuid: multiLanguageName.Uuid,
 					Type:                  warehouseType,
@@ -876,11 +886,9 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 			// 删除多语言
 			tx.Where("uuid IN (?)", tx.Model(&model.Warehouse{}).Where("headquarter_uuid > 0").Select("multi_language_name_uuid")).Delete(&model.MultiLanguageName{})
 			// 删除仓库
-			tx.Where("uuid IN (?)", tx.Model(&model.Warehouse{}).Where("headquarter_uuid > 0").Select("uuid")).Delete(&model.Warehouse{})
+			tx.Where("headquarter_uuid > 0").Delete(&model.Warehouse{})
 
-			var insertingWarehouses []model.Warehouse
 			var insertingMultiLanguageNames []model.MultiLanguageName
-
 			for _, headquarterWarehouse := range headquarterWarehouses {
 				// 未关联上多语言，直接跳过
 				if headquarterWarehouse.MultiLanguageName == nil {
@@ -906,7 +914,6 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 					Address:               headquarterWarehouse.Address,
 					HeadquarterUuid:       headquarter.Uuid,
 				})
-
 				insertingMultiLanguageNames = append(insertingMultiLanguageNames, model.MultiLanguageName{
 					BaseModel: model.BaseModel{
 						Uuid:       headquarterWarehouse.MultiLanguageNameUuid,
@@ -925,17 +932,17 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 					SvName:   headquarterWarehouse.MultiLanguageName.SvName,
 				})
 			}
-			if len(insertingWarehouses) > 0 {
-				err = tx.Model(&model.Warehouse{}).Create(&insertingWarehouses).Error
-				if err != nil {
-					return errors.WithMessage(err, "同步总部仓库失败")
-				}
-			}
 			if len(insertingMultiLanguageNames) > 0 {
 				err = tx.Model(&model.MultiLanguageName{}).Create(&insertingMultiLanguageNames).Error
 				if err != nil {
 					return errors.WithMessage(err, "同步总店仓库多语言名称失败")
 				}
+			}
+		}
+		if len(insertingWarehouses) > 0 {
+			err = tx.Model(&model.Warehouse{}).Create(&insertingWarehouses).Error
+			if err != nil {
+				return errors.WithMessage(err, "同步子店erp仓库或总部仓库失败")
 			}
 		}
 		return nil
@@ -944,7 +951,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 	// 添加多语言uuid到待翻译集合中
 	if len(multiLanguageNameUuids) > 0 {
 		if err := s.translateSrv.AddMultiLanguageNameUuidToSet(ctx.GetCompanyUuid(), multiLanguageNameUuids...); err != nil {
-			logger.Logger.Error("仓库同步添加多语言uuid到待翻译集合中失败", zap.Error(err))
+			logger.Logger.Error("仓库同步添加多语言uuid到待翻译集合中失败", zap.Error(err), zap.Any("multiLanguageNameUuids", multiLanguageNameUuids))
 		}
 	}
 	return err

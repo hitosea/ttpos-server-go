@@ -30,6 +30,7 @@ type IErpSrv interface {
 	OpenPosEntry(ctx context.Context, openEntryReq req.OpenPosEntryReq) (string, error)
 	ClosePosEntry(ctx context.Context, closeEntryReq req.ClosePosEntryReq) (string, error)
 	SaveUom(ctx context.Context, saveUomReq req.SaveUomReq) error
+	DeleteUom(ctx context.Context, deleteUomReq req.DeleteUomReq) error
 	SaveAttribute(ctx context.Context, saveAttributeReq req.SaveAttributeReq) error
 	SavePosInvoice(ctx pkgCtx.Context, savePosInvoiceReq req.SavePosInvoiceReq) (*selling.SavePosInvoiceResp, error)
 	ParseSavePosInvoiceError(err error) (*resp.GetPosInvoiceErrorResp, error)
