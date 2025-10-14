@@ -227,7 +227,7 @@ func (s *sBom) buildBomData(req *manufacturing.SaveBomReq, companyName string) *
 		Item:      req.ItemCode,
 		Company:   companyName,
 		Uom:       req.Uom,
-		Quantity:  float64(req.Quantity),
+		Quantity:  req.Quantity,
 		IsActive:  req.IsActive,
 		IsDefault: req.IsDefault,
 		Items:     make([]erp.BomItem, 0, len(req.Items)), // 预分配容量以提高性能
