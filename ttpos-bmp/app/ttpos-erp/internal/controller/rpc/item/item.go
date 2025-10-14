@@ -202,10 +202,11 @@ func (c *Controller) GetItem(ctx context.Context, req *item.GetItemReq) (*api.Re
 	}
 
 	// 转换属性列表数据结构：从内部模型转换为protobuf响应模型
-	attrList := make([]*item.AttributeInfo, 0, len(itemInfo.Attributes))
+	attrList := make([]*item.ItemAttribute, 0, len(itemInfo.Attributes))
 	for _, attr := range itemInfo.Attributes {
-		attrList = append(attrList, &item.AttributeInfo{
-			AttributeName: attr.CustomAttributeName, // 属性名称
+		attrList = append(attrList, &item.ItemAttribute{
+			AttributeName:  attr.CustomAttributeName,  // 属性名称
+			AttributeValue: attr.CustomAttributeValue, // 属性值
 		})
 	}
 

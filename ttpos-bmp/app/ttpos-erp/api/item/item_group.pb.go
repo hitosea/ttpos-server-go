@@ -701,14 +701,14 @@ func (x *SaveAttributeGroupResp) GetAttributeGroupInfo() *AttributeGroupInfo {
 }
 
 type AddonGroupInfo struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	AliasName         string                 `protobuf:"bytes,1,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"别名，必填"`                               // 别名，必填
-	CompanyAbbr       string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写，可选"`                       // 公司缩写，可选
-	Branch            string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                    // 分支名称，可选
-	GroupName         string                 `protobuf:"bytes,4,opt,name=group_name,json=groupName,proto3" json:"group_name,omitempty" dc:"分组名称，修改时必填"`                          // 分组名称，修改时必填
-	AttributeItemList []*AddonItemInfo       `protobuf:"bytes,5,rep,name=attribute_item_list,json=attributeItemList,proto3" json:"attribute_item_list,omitempty" dc:"属性物品列表，必填"` // 属性物品列表，必填
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// string alias_name = 1; // 别名，必填
+	CompanyAbbr   string           `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"string alias_name = 1; // 别名，必填公司缩写，可选"` // 公司缩写，可选
+	Branch        string           `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                             // 分支名称，可选
+	GroupName     string           `protobuf:"bytes,3,opt,name=group_name,json=groupName,proto3" json:"group_name,omitempty" dc:"分组名称，修改时必填"`                                   // 分组名称，修改时必填
+	AddonItemList []*AddonItemInfo `protobuf:"bytes,4,rep,name=addon_item_list,json=addonItemList,proto3" json:"addon_item_list,omitempty" dc:"加料物品列表，必填"`                      // 加料物品列表，必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AddonGroupInfo) Reset() {
@@ -741,13 +741,6 @@ func (*AddonGroupInfo) Descriptor() ([]byte, []int) {
 	return file_item_item_group_proto_rawDescGZIP(), []int{13}
 }
 
-func (x *AddonGroupInfo) GetAliasName() string {
-	if x != nil {
-		return x.AliasName
-	}
-	return ""
-}
-
 func (x *AddonGroupInfo) GetCompanyAbbr() string {
 	if x != nil {
 		return x.CompanyAbbr
@@ -769,9 +762,9 @@ func (x *AddonGroupInfo) GetGroupName() string {
 	return ""
 }
 
-func (x *AddonGroupInfo) GetAttributeItemList() []*AddonItemInfo {
+func (x *AddonGroupInfo) GetAddonItemList() []*AddonItemInfo {
 	if x != nil {
-		return x.AttributeItemList
+		return x.AddonItemList
 	}
 	return nil
 }
@@ -964,15 +957,13 @@ const file_item_item_group_proto_rawDesc = "" +
 	"\n" +
 	"group_name\x18\x01 \x01(\tR\tgroupName\"d\n" +
 	"\x16SaveAttributeGroupResp\x12J\n" +
-	"\x14attribute_group_info\x18\x01 \x01(\v2\x18.item.AttributeGroupInfoR\x12attributeGroupInfo\"\xce\x01\n" +
-	"\x0eAddonGroupInfo\x12\x1d\n" +
+	"\x14attribute_group_info\x18\x01 \x01(\v2\x18.item.AttributeGroupInfoR\x12attributeGroupInfo\"\xa7\x01\n" +
+	"\x0eAddonGroupInfo\x12!\n" +
+	"\fcompany_abbr\x18\x01 \x01(\tR\vcompanyAbbr\x12\x16\n" +
+	"\x06branch\x18\x02 \x01(\tR\x06branch\x12\x1d\n" +
 	"\n" +
-	"alias_name\x18\x01 \x01(\tR\taliasName\x12!\n" +
-	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12\x16\n" +
-	"\x06branch\x18\x03 \x01(\tR\x06branch\x12\x1d\n" +
-	"\n" +
-	"group_name\x18\x04 \x01(\tR\tgroupName\x12C\n" +
-	"\x13attribute_item_list\x18\x05 \x03(\v2\x13.item.AddonItemInfoR\x11attributeItemList\"K\n" +
+	"group_name\x18\x03 \x01(\tR\tgroupName\x12;\n" +
+	"\x0faddon_item_list\x18\x04 \x03(\v2\x13.item.AddonItemInfoR\raddonItemList\"K\n" +
 	"\rAddonItemInfo\x12\x1b\n" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x1d\n" +
 	"\n" +
@@ -1031,7 +1022,7 @@ var file_item_item_group_proto_depIdxs = []int32{
 	9,  // 4: item.AttributeGroupInfo.attribute_item_list:type_name -> item.AttributeItemInfo
 	8,  // 5: item.SaveAttributeGroupReq.attribute_group_info:type_name -> item.AttributeGroupInfo
 	8,  // 6: item.SaveAttributeGroupResp.attribute_group_info:type_name -> item.AttributeGroupInfo
-	14, // 7: item.AddonGroupInfo.attribute_item_list:type_name -> item.AddonItemInfo
+	14, // 7: item.AddonGroupInfo.addon_item_list:type_name -> item.AddonItemInfo
 	13, // 8: item.SaveAddonGroupReq.addon_group_info:type_name -> item.AddonGroupInfo
 	13, // 9: item.SaveAddonGroupResp.addon_group_info:type_name -> item.AddonGroupInfo
 	0,  // 10: item.ItemGroupService.GetItemGroupList:input_type -> item.GetItemGroupListReq

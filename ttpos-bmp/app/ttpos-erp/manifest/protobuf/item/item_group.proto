@@ -116,11 +116,11 @@ message SaveAttributeGroupResp {
 }
 
 message AddonGroupInfo {
-  string alias_name = 1; // 别名，必填
-  string company_abbr = 2; // 公司缩写，可选
-  string branch = 3; // 分支名称，可选
-  string group_name = 4; // 分组名称，修改时必填
-  repeated AddonItemInfo attribute_item_list = 5; // 属性物品列表，必填
+//  string alias_name = 1; // 别名，必填
+  string company_abbr = 1; // 公司缩写，可选
+  string branch = 2; // 分支名称，可选
+  string group_name = 3; // 分组名称，修改时必填
+  repeated AddonItemInfo addon_item_list = 4; // 加料物品列表，必填
 }
 
 message AddonItemInfo {

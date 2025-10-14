@@ -7,9 +7,6 @@ import (
 	"ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
-
-	"github.com/gogf/gf/v2/errors/gcode"
-	"github.com/gogf/gf/v2/errors/gerror"
 )
 
 // GroupController ItemGroupController 物品分组服务控制器
@@ -133,10 +130,25 @@ func (*GroupController) SaveAttributeGroup(ctx context.Context, req *item.SaveAt
 	return rpc.ApiSuccessWithData("保存物品属性分组成功", resp), nil
 }
 
-func (*GroupController) DeleteAttributeGroup(context.Context, *item.DeleteAttributeGroupReq) (*api.ResponseInfo, error) {
-	return nil, gerror.NewCode(gcode.CodeNotImplemented)
+func (*GroupController) DeleteAttributeGroup(ctx context.Context, req *item.DeleteAttributeGroupReq) (*api.ResponseInfo, error) {
+	// 参数验证
+	if req == nil || req.GroupName == "" {
+		return rpc.ApiError("请求参数不能为空"), nil
+	}
+	resp, err := service.ItemGroup().DeleteAttributeGroup(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccessWithData("删除物品属性分组成功", resp), nil
 }
 
-func (*GroupController) SaveAddonGroup(context.Context, *item.SaveAddonGroupReq) (*api.ResponseInfo, error) {
-	return nil, gerror.NewCode(gcode.CodeNotImplemented)
+func (*GroupController) SaveAddonGroup(ctx context.Context, req *item.SaveAddonGroupReq) (*api.ResponseInfo, error) {
+	if req == nil || req.AddonGroupInfo == nil {
+		return rpc.ApiError("请求参数不能为空"), nil
+	}
+	resp, err := service.ItemGroup().SaveAddonGroup(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccessWithData("更新物品加料分组成功", resp), nil
 }
