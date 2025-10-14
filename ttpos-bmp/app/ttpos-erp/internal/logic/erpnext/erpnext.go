@@ -103,13 +103,16 @@ func detectError(resp *gvar.Var) error {
 				g.Log().Errorf(gctx.GetInitCtx(), "调用erp接口返回异常: %v", j)
 				errMsgList := make([]string, 0)
 				for _, errItem := range j.GetJsons("errors") {
+					if errItem.Contains("type") {
+						errMsgList = append(errMsgList, errItem.Get("type").String())
+					}
 					if errItem.Contains("message") {
 						errMsgList = append(errMsgList, errItem.Get("message").String())
 					} else {
 						errMsgList = append(errMsgList, errItem.Get("exception").String())
 					}
 				}
-				return gerror.Newf("调用erp接口返回异常,error:%s", strings.Join(errMsgList, ";"))
+				return gerror.Newf("调用erp接口返回异常:%s", strings.Join(errMsgList, ";"))
 			}
 		} else {
 			g.Log().Errorf(gctx.GetInitCtx(), "调用erp接口返回解析异常: %v", err)

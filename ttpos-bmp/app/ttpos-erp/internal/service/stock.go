@@ -44,6 +44,9 @@ type (
 		// 参数：ctx 上下文，req 物品信息，code 物品编码
 		// 返回：创建结果
 		CreateSingleVariantItem(ctx context.Context, req *erp.CreateSingleVariantItemReq, templateItemInfo *item.ItemInfo) (string, error)
+		// DeleteItem 删除物品
+		// 删除模板商品时，变体商品都会被移除
+		DeleteItem(ctx context.Context, req *item.DeleteItemReq) (*item.DeleteItemResp, error)
 	}
 	IItemGroup interface {
 		// GetItemGroupList 获取物品分组列表
@@ -60,18 +63,13 @@ type (
 		// 参数：ctx 上下文，req 删除物品分组请求
 		// 返回：错误信息
 		DeleteItemGroup(ctx context.Context, req *item.DeleteItemGroupReq) error
-		// CreateAttributeGroup 创建属性分组
-		CreateAttributeGroup(ctx context.Context, req *item.CreateAttributeGroupReq) (resp *erp.ItemGroupInfo, err error)
-		// CreateAddonGroup 创建加料分组
-		CreateAddonGroup(ctx context.Context, req *item.CreateAddonGroupReq) (resp *erp.ItemGroupInfo, err error)
+		// SaveAttributeGroup 保存物品属性分组
+		// 参数：ctx 上下文，req 保存物品属性分组请求
+		// 返回：物品属性分组响应，错误信息
+		SaveAttributeGroup(ctx context.Context, req *item.SaveAttributeGroupReq) (*item.SaveAttributeGroupResp, error)
+		DeleteAttributeGroup(ctx context.Context, req *item.DeleteAttributeGroupReq) (*item.DeleteAttributeGroupReq, error)
 	}
 	IStock interface {
-		// GetUomList 获取单位列表
-		// 根据查询条件过滤并返回单位信息列表
-		GetUomList(ctx context.Context, req *item.GetUomListReq) (res *item.GetUomListResp, err error)
-		// SaveUom 保存单位信息
-		// 如果单位已存在则更新，否则创建新单位
-		SaveUom(ctx context.Context, req *item.UomInfo) error
 		// GetAttributeList 获取属性列表
 		// 根据查询条件过滤并返回属性信息列表
 		GetAttributeList(ctx context.Context, req *item.GetAttributeListReq) (res *item.GetAttributeListResp, err error)
@@ -84,10 +82,6 @@ type (
 		CreateMaterialRequest(ctx context.Context, req *stock.SaveMaterialRequestReq) (res *stock.SaveMaterialRequestResp, err error)
 		// GetMaterialRequestList 获取物料请求列表
 		GetMaterialRequestList(ctx context.Context, req *stock.GetMaterialRequestListReq) (res *stock.GetMaterialRequestListResp, err error)
-		// GetUom 根据单位名称获取单个单位详细信息
-		// 参数：ctx 上下文，req 包含单位名称
-		// 返回：单位详细信息，错误信息
-		GetUom(ctx context.Context, req *item.GetUomReq) (res *erp.UOM, err error)
 		// GetItemAttribute 根据属性名称获取单个属性详细信息
 		// 参数：ctx 上下文，attributeName 属性名称
 		// 返回：属性详细信息，错误信息
@@ -95,6 +89,19 @@ type (
 		// GetStockLedger 获取库存分类账信息
 		// 根据查询条件过滤并返回库存分类账记录列表
 		GetStockLedger(ctx context.Context, req *stock.GetStockLedgerReq) (res *stock.GetStockLedgerResp, err error)
+	}
+	IUom interface {
+		DeleteUom(ctx context.Context, req *item.DeleteUomReq) (*item.DeleteUomResp, error)
+		// SaveUom 保存单位信息
+		// 如果单位已存在则更新，否则创建新单位
+		SaveUom(ctx context.Context, req *item.UomInfo) error
+		// GetUomList 获取单位列表
+		// 根据查询条件过滤并返回单位信息列表
+		GetUomList(ctx context.Context, req *item.GetUomListReq) (res *item.GetUomListResp, err error)
+		// GetUom 根据单位名称获取单个单位详细信息
+		// 参数：ctx 上下文，req 包含单位名称
+		// 返回：单位详细信息，错误信息
+		GetUom(ctx context.Context, req *item.GetUomReq) (res *erp.UOM, err error)
 	}
 	IWarehouse interface {
 		// CreateWarehouse 创建仓库
@@ -121,6 +128,7 @@ var (
 	localItem      IItem
 	localItemGroup IItemGroup
 	localStock     IStock
+	localUom       IUom
 	localWarehouse IWarehouse
 )
 
@@ -155,6 +163,17 @@ func Stock() IStock {
 
 func RegisterStock(i IStock) {
 	localStock = i
+}
+
+func Uom() IUom {
+	if localUom == nil {
+		panic("implement not found for interface IUom, forgot register?")
+	}
+	return localUom
+}
+
+func RegisterUom(i IUom) {
+	localUom = i
 }
 
 func Warehouse() IWarehouse {

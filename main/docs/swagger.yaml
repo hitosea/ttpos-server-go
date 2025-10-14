@@ -11616,6 +11616,17 @@ definitions:
         description: 更新时间
         type: integer
     type: object
+  resp.ShopLoginResp:
+    properties:
+      need_change_password:
+        description: 是否需要修改密码，首次登录移动管理端需要修改密码
+        type: boolean
+      refresh_token:
+        description: 刷新token，用于重新获取token
+        type: string
+      token:
+        type: string
+    type: object
   resp.ShopProfile:
     properties:
       address:
@@ -24099,7 +24110,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.LoginResp'
+                  $ref: '#/definitions/resp.ShopLoginResp'
               type: object
       summary: 登录
       tags:

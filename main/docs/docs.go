@@ -18874,7 +18874,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.LoginResp"
+                                            "$ref": "#/definitions/resp.ShopLoginResp"
                                         }
                                     }
                                 }
@@ -43670,6 +43670,22 @@ const docTemplate = `{
                 "update_time": {
                     "description": "更新时间",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.ShopLoginResp": {
+            "type": "object",
+            "properties": {
+                "need_change_password": {
+                    "description": "是否需要修改密码，首次登录移动管理端需要修改密码",
+                    "type": "boolean"
+                },
+                "refresh_token": {
+                    "description": "刷新token，用于重新获取token",
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
                 }
             }
         },

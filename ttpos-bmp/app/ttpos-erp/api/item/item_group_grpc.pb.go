@@ -28,8 +28,9 @@ const (
 	ItemGroupService_GetItemGroup_FullMethodName         = "/item.ItemGroupService/GetItemGroup"
 	ItemGroupService_SaveItemGroup_FullMethodName        = "/item.ItemGroupService/SaveItemGroup"
 	ItemGroupService_DeleteItemGroup_FullMethodName      = "/item.ItemGroupService/DeleteItemGroup"
-	ItemGroupService_CreateAttributeGroup_FullMethodName = "/item.ItemGroupService/CreateAttributeGroup"
-	ItemGroupService_CreateAddonGroup_FullMethodName     = "/item.ItemGroupService/CreateAddonGroup"
+	ItemGroupService_SaveAttributeGroup_FullMethodName   = "/item.ItemGroupService/SaveAttributeGroup"
+	ItemGroupService_DeleteAttributeGroup_FullMethodName = "/item.ItemGroupService/DeleteAttributeGroup"
+	ItemGroupService_SaveAddonGroup_FullMethodName       = "/item.ItemGroupService/SaveAddonGroup"
 )
 
 // ItemGroupServiceClient is the client API for ItemGroupService service.
@@ -55,10 +56,12 @@ type ItemGroupServiceClient interface {
 	// 参数：分组代码
 	// 返回：删除结果
 	DeleteItemGroup(ctx context.Context, in *DeleteItemGroupReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
-	// 创建属性分组
-	CreateAttributeGroup(ctx context.Context, in *CreateAttributeGroupReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
-	// 创建插件分组
-	CreateAddonGroup(ctx context.Context, in *CreateAddonGroupReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 保存属性分组
+	SaveAttributeGroup(ctx context.Context, in *SaveAttributeGroupReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 删除属性分组
+	DeleteAttributeGroup(ctx context.Context, in *DeleteAttributeGroupReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 保存加料分组, 没有删除接口，预留后续用，目前默认每个门店只有一个自己门店的加料分组
+	SaveAddonGroup(ctx context.Context, in *SaveAddonGroupReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 }
 
 type itemGroupServiceClient struct {
@@ -109,20 +112,30 @@ func (c *itemGroupServiceClient) DeleteItemGroup(ctx context.Context, in *Delete
 	return out, nil
 }
 
-func (c *itemGroupServiceClient) CreateAttributeGroup(ctx context.Context, in *CreateAttributeGroupReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+func (c *itemGroupServiceClient) SaveAttributeGroup(ctx context.Context, in *SaveAttributeGroupReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(api.ResponseInfo)
-	err := c.cc.Invoke(ctx, ItemGroupService_CreateAttributeGroup_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, ItemGroupService_SaveAttributeGroup_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *itemGroupServiceClient) CreateAddonGroup(ctx context.Context, in *CreateAddonGroupReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+func (c *itemGroupServiceClient) DeleteAttributeGroup(ctx context.Context, in *DeleteAttributeGroupReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(api.ResponseInfo)
-	err := c.cc.Invoke(ctx, ItemGroupService_CreateAddonGroup_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, ItemGroupService_DeleteAttributeGroup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *itemGroupServiceClient) SaveAddonGroup(ctx context.Context, in *SaveAddonGroupReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, ItemGroupService_SaveAddonGroup_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -152,10 +165,12 @@ type ItemGroupServiceServer interface {
 	// 参数：分组代码
 	// 返回：删除结果
 	DeleteItemGroup(context.Context, *DeleteItemGroupReq) (*api.ResponseInfo, error)
-	// 创建属性分组
-	CreateAttributeGroup(context.Context, *CreateAttributeGroupReq) (*api.ResponseInfo, error)
-	// 创建插件分组
-	CreateAddonGroup(context.Context, *CreateAddonGroupReq) (*api.ResponseInfo, error)
+	// 保存属性分组
+	SaveAttributeGroup(context.Context, *SaveAttributeGroupReq) (*api.ResponseInfo, error)
+	// 删除属性分组
+	DeleteAttributeGroup(context.Context, *DeleteAttributeGroupReq) (*api.ResponseInfo, error)
+	// 保存加料分组, 没有删除接口，预留后续用，目前默认每个门店只有一个自己门店的加料分组
+	SaveAddonGroup(context.Context, *SaveAddonGroupReq) (*api.ResponseInfo, error)
 	mustEmbedUnimplementedItemGroupServiceServer()
 }
 
@@ -178,11 +193,14 @@ func (UnimplementedItemGroupServiceServer) SaveItemGroup(context.Context, *SaveI
 func (UnimplementedItemGroupServiceServer) DeleteItemGroup(context.Context, *DeleteItemGroupReq) (*api.ResponseInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteItemGroup not implemented")
 }
-func (UnimplementedItemGroupServiceServer) CreateAttributeGroup(context.Context, *CreateAttributeGroupReq) (*api.ResponseInfo, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateAttributeGroup not implemented")
+func (UnimplementedItemGroupServiceServer) SaveAttributeGroup(context.Context, *SaveAttributeGroupReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SaveAttributeGroup not implemented")
 }
-func (UnimplementedItemGroupServiceServer) CreateAddonGroup(context.Context, *CreateAddonGroupReq) (*api.ResponseInfo, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateAddonGroup not implemented")
+func (UnimplementedItemGroupServiceServer) DeleteAttributeGroup(context.Context, *DeleteAttributeGroupReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteAttributeGroup not implemented")
+}
+func (UnimplementedItemGroupServiceServer) SaveAddonGroup(context.Context, *SaveAddonGroupReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SaveAddonGroup not implemented")
 }
 func (UnimplementedItemGroupServiceServer) mustEmbedUnimplementedItemGroupServiceServer() {}
 func (UnimplementedItemGroupServiceServer) testEmbeddedByValue()                          {}
@@ -277,38 +295,56 @@ func _ItemGroupService_DeleteItemGroup_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ItemGroupService_CreateAttributeGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateAttributeGroupReq)
+func _ItemGroupService_SaveAttributeGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveAttributeGroupReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ItemGroupServiceServer).CreateAttributeGroup(ctx, in)
+		return srv.(ItemGroupServiceServer).SaveAttributeGroup(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ItemGroupService_CreateAttributeGroup_FullMethodName,
+		FullMethod: ItemGroupService_SaveAttributeGroup_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ItemGroupServiceServer).CreateAttributeGroup(ctx, req.(*CreateAttributeGroupReq))
+		return srv.(ItemGroupServiceServer).SaveAttributeGroup(ctx, req.(*SaveAttributeGroupReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ItemGroupService_CreateAddonGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateAddonGroupReq)
+func _ItemGroupService_DeleteAttributeGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteAttributeGroupReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ItemGroupServiceServer).CreateAddonGroup(ctx, in)
+		return srv.(ItemGroupServiceServer).DeleteAttributeGroup(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ItemGroupService_CreateAddonGroup_FullMethodName,
+		FullMethod: ItemGroupService_DeleteAttributeGroup_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ItemGroupServiceServer).CreateAddonGroup(ctx, req.(*CreateAddonGroupReq))
+		return srv.(ItemGroupServiceServer).DeleteAttributeGroup(ctx, req.(*DeleteAttributeGroupReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ItemGroupService_SaveAddonGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveAddonGroupReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ItemGroupServiceServer).SaveAddonGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ItemGroupService_SaveAddonGroup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ItemGroupServiceServer).SaveAddonGroup(ctx, req.(*SaveAddonGroupReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -337,12 +373,16 @@ var ItemGroupService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ItemGroupService_DeleteItemGroup_Handler,
 		},
 		{
-			MethodName: "CreateAttributeGroup",
-			Handler:    _ItemGroupService_CreateAttributeGroup_Handler,
+			MethodName: "SaveAttributeGroup",
+			Handler:    _ItemGroupService_SaveAttributeGroup_Handler,
 		},
 		{
-			MethodName: "CreateAddonGroup",
-			Handler:    _ItemGroupService_CreateAddonGroup_Handler,
+			MethodName: "DeleteAttributeGroup",
+			Handler:    _ItemGroupService_DeleteAttributeGroup_Handler,
+		},
+		{
+			MethodName: "SaveAddonGroup",
+			Handler:    _ItemGroupService_SaveAddonGroup_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

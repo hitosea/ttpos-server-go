@@ -440,29 +440,31 @@ func (x *ItemGroupInfo) GetAliasName() string {
 	return ""
 }
 
-type CreateAttributeGroupReq struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AliasName     string                 `protobuf:"bytes,2,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"别名，必填"`         // 别名，必填
-	CompanyAbbr   string                 `protobuf:"bytes,3,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写，可选"` // 公司缩写，可选
-	Branch        string                 `protobuf:"bytes,5,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                              // 分支名称，可选
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+type AttributeGroupInfo struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	AliasName         string                 `protobuf:"bytes,1,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"别名，必填"`                               // 别名，必填
+	CompanyAbbr       string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写，可选"`                       // 公司缩写，可选
+	Branch            string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                    // 分支名称，可选
+	GroupName         string                 `protobuf:"bytes,4,opt,name=group_name,json=groupName,proto3" json:"group_name,omitempty" dc:"分组名称，修改时必填"`                          // 分组名称，修改时必填
+	AttributeItemList []*AttributeItemInfo   `protobuf:"bytes,5,rep,name=attribute_item_list,json=attributeItemList,proto3" json:"attribute_item_list,omitempty" dc:"属性物品列表，必填"` // 属性物品列表，必填
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
-func (x *CreateAttributeGroupReq) Reset() {
-	*x = CreateAttributeGroupReq{}
+func (x *AttributeGroupInfo) Reset() {
+	*x = AttributeGroupInfo{}
 	mi := &file_item_item_group_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CreateAttributeGroupReq) String() string {
+func (x *AttributeGroupInfo) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CreateAttributeGroupReq) ProtoMessage() {}
+func (*AttributeGroupInfo) ProtoMessage() {}
 
-func (x *CreateAttributeGroupReq) ProtoReflect() protoreflect.Message {
+func (x *AttributeGroupInfo) ProtoReflect() protoreflect.Message {
 	mi := &file_item_item_group_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -474,100 +476,69 @@ func (x *CreateAttributeGroupReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CreateAttributeGroupReq.ProtoReflect.Descriptor instead.
-func (*CreateAttributeGroupReq) Descriptor() ([]byte, []int) {
+// Deprecated: Use AttributeGroupInfo.ProtoReflect.Descriptor instead.
+func (*AttributeGroupInfo) Descriptor() ([]byte, []int) {
 	return file_item_item_group_proto_rawDescGZIP(), []int{8}
 }
 
-func (x *CreateAttributeGroupReq) GetAliasName() string {
+func (x *AttributeGroupInfo) GetAliasName() string {
 	if x != nil {
 		return x.AliasName
 	}
 	return ""
 }
 
-func (x *CreateAttributeGroupReq) GetCompanyAbbr() string {
+func (x *AttributeGroupInfo) GetCompanyAbbr() string {
 	if x != nil {
 		return x.CompanyAbbr
 	}
 	return ""
 }
 
-func (x *CreateAttributeGroupReq) GetBranch() string {
+func (x *AttributeGroupInfo) GetBranch() string {
 	if x != nil {
 		return x.Branch
 	}
 	return ""
 }
 
-type CreateAttributeGroupResp struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ItemGroupInfo *ItemGroupInfo         `protobuf:"bytes,1,opt,name=item_group_info,json=itemGroupInfo,proto3" json:"item_group_info,omitempty" dc:"物品分组信息，必填"` // 物品分组信息，必填
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CreateAttributeGroupResp) Reset() {
-	*x = CreateAttributeGroupResp{}
-	mi := &file_item_item_group_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreateAttributeGroupResp) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateAttributeGroupResp) ProtoMessage() {}
-
-func (x *CreateAttributeGroupResp) ProtoReflect() protoreflect.Message {
-	mi := &file_item_item_group_proto_msgTypes[9]
+func (x *AttributeGroupInfo) GetGroupName() string {
 	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
+		return x.GroupName
 	}
-	return mi.MessageOf(x)
+	return ""
 }
 
-// Deprecated: Use CreateAttributeGroupResp.ProtoReflect.Descriptor instead.
-func (*CreateAttributeGroupResp) Descriptor() ([]byte, []int) {
-	return file_item_item_group_proto_rawDescGZIP(), []int{9}
-}
-
-func (x *CreateAttributeGroupResp) GetItemGroupInfo() *ItemGroupInfo {
+func (x *AttributeGroupInfo) GetAttributeItemList() []*AttributeItemInfo {
 	if x != nil {
-		return x.ItemGroupInfo
+		return x.AttributeItemList
 	}
 	return nil
 }
 
-type CreateAddonGroupReq struct {
+type AttributeItemInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	AliasName     string                 `protobuf:"bytes,2,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"别名，必填"`         // 别名，必填
-	CompanyAbbr   string                 `protobuf:"bytes,3,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写，可选"` // 公司缩写，可选
-	Branch        string                 `protobuf:"bytes,5,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                              // 分支名称，可选
+	AliasName     string                 `protobuf:"bytes,1,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"物品别名，必填"` // 物品别名，必填
+	ItemCode      string                 `protobuf:"bytes,2,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，创建时必填"` // 物品编码，创建时必填
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *CreateAddonGroupReq) Reset() {
-	*x = CreateAddonGroupReq{}
-	mi := &file_item_item_group_proto_msgTypes[10]
+func (x *AttributeItemInfo) Reset() {
+	*x = AttributeItemInfo{}
+	mi := &file_item_item_group_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CreateAddonGroupReq) String() string {
+func (x *AttributeItemInfo) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CreateAddonGroupReq) ProtoMessage() {}
+func (*AttributeItemInfo) ProtoMessage() {}
 
-func (x *CreateAddonGroupReq) ProtoReflect() protoreflect.Message {
-	mi := &file_item_item_group_proto_msgTypes[10]
+func (x *AttributeItemInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_item_item_group_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -578,53 +549,90 @@ func (x *CreateAddonGroupReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CreateAddonGroupReq.ProtoReflect.Descriptor instead.
-func (*CreateAddonGroupReq) Descriptor() ([]byte, []int) {
-	return file_item_item_group_proto_rawDescGZIP(), []int{10}
+// Deprecated: Use AttributeItemInfo.ProtoReflect.Descriptor instead.
+func (*AttributeItemInfo) Descriptor() ([]byte, []int) {
+	return file_item_item_group_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *CreateAddonGroupReq) GetAliasName() string {
+func (x *AttributeItemInfo) GetAliasName() string {
 	if x != nil {
 		return x.AliasName
 	}
 	return ""
 }
 
-func (x *CreateAddonGroupReq) GetCompanyAbbr() string {
+func (x *AttributeItemInfo) GetItemCode() string {
 	if x != nil {
-		return x.CompanyAbbr
+		return x.ItemCode
 	}
 	return ""
 }
 
-func (x *CreateAddonGroupReq) GetBranch() string {
-	if x != nil {
-		return x.Branch
-	}
-	return ""
+type SaveAttributeGroupReq struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	AttributeGroupInfo *AttributeGroupInfo    `protobuf:"bytes,1,opt,name=attribute_group_info,json=attributeGroupInfo,proto3" json:"attribute_group_info,omitempty" dc:"属性分组信息，必填"` // 属性分组信息，必填
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
-type CreateAddonGroupResp struct {
+func (x *SaveAttributeGroupReq) Reset() {
+	*x = SaveAttributeGroupReq{}
+	mi := &file_item_item_group_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveAttributeGroupReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveAttributeGroupReq) ProtoMessage() {}
+
+func (x *SaveAttributeGroupReq) ProtoReflect() protoreflect.Message {
+	mi := &file_item_item_group_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveAttributeGroupReq.ProtoReflect.Descriptor instead.
+func (*SaveAttributeGroupReq) Descriptor() ([]byte, []int) {
+	return file_item_item_group_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *SaveAttributeGroupReq) GetAttributeGroupInfo() *AttributeGroupInfo {
+	if x != nil {
+		return x.AttributeGroupInfo
+	}
+	return nil
+}
+
+type DeleteAttributeGroupReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ItemGroupInfo *ItemGroupInfo         `protobuf:"bytes,1,opt,name=item_group_info,json=itemGroupInfo,proto3" json:"item_group_info,omitempty" dc:"物品分组信息，必填"` // 物品分组信息，必填
+	GroupName     string                 `protobuf:"bytes,1,opt,name=group_name,json=groupName,proto3" json:"group_name,omitempty" dc:"分组名称，必填"` // 分组名称，必填
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *CreateAddonGroupResp) Reset() {
-	*x = CreateAddonGroupResp{}
+func (x *DeleteAttributeGroupReq) Reset() {
+	*x = DeleteAttributeGroupReq{}
 	mi := &file_item_item_group_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CreateAddonGroupResp) String() string {
+func (x *DeleteAttributeGroupReq) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CreateAddonGroupResp) ProtoMessage() {}
+func (*DeleteAttributeGroupReq) ProtoMessage() {}
 
-func (x *CreateAddonGroupResp) ProtoReflect() protoreflect.Message {
+func (x *DeleteAttributeGroupReq) ProtoReflect() protoreflect.Message {
 	mi := &file_item_item_group_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -636,14 +644,274 @@ func (x *CreateAddonGroupResp) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CreateAddonGroupResp.ProtoReflect.Descriptor instead.
-func (*CreateAddonGroupResp) Descriptor() ([]byte, []int) {
+// Deprecated: Use DeleteAttributeGroupReq.ProtoReflect.Descriptor instead.
+func (*DeleteAttributeGroupReq) Descriptor() ([]byte, []int) {
 	return file_item_item_group_proto_rawDescGZIP(), []int{11}
 }
 
-func (x *CreateAddonGroupResp) GetItemGroupInfo() *ItemGroupInfo {
+func (x *DeleteAttributeGroupReq) GetGroupName() string {
 	if x != nil {
-		return x.ItemGroupInfo
+		return x.GroupName
+	}
+	return ""
+}
+
+type SaveAttributeGroupResp struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	AttributeGroupInfo *AttributeGroupInfo    `protobuf:"bytes,1,opt,name=attribute_group_info,json=attributeGroupInfo,proto3" json:"attribute_group_info,omitempty" dc:"属性分组信息，必填"` // 属性分组信息，必填
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *SaveAttributeGroupResp) Reset() {
+	*x = SaveAttributeGroupResp{}
+	mi := &file_item_item_group_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveAttributeGroupResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveAttributeGroupResp) ProtoMessage() {}
+
+func (x *SaveAttributeGroupResp) ProtoReflect() protoreflect.Message {
+	mi := &file_item_item_group_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveAttributeGroupResp.ProtoReflect.Descriptor instead.
+func (*SaveAttributeGroupResp) Descriptor() ([]byte, []int) {
+	return file_item_item_group_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *SaveAttributeGroupResp) GetAttributeGroupInfo() *AttributeGroupInfo {
+	if x != nil {
+		return x.AttributeGroupInfo
+	}
+	return nil
+}
+
+type AddonGroupInfo struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	AliasName         string                 `protobuf:"bytes,1,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"别名，必填"`                               // 别名，必填
+	CompanyAbbr       string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写，可选"`                       // 公司缩写，可选
+	Branch            string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                    // 分支名称，可选
+	GroupName         string                 `protobuf:"bytes,4,opt,name=group_name,json=groupName,proto3" json:"group_name,omitempty" dc:"分组名称，修改时必填"`                          // 分组名称，修改时必填
+	AttributeItemList []*AddonItemInfo       `protobuf:"bytes,5,rep,name=attribute_item_list,json=attributeItemList,proto3" json:"attribute_item_list,omitempty" dc:"属性物品列表，必填"` // 属性物品列表，必填
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *AddonGroupInfo) Reset() {
+	*x = AddonGroupInfo{}
+	mi := &file_item_item_group_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddonGroupInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddonGroupInfo) ProtoMessage() {}
+
+func (x *AddonGroupInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_item_item_group_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddonGroupInfo.ProtoReflect.Descriptor instead.
+func (*AddonGroupInfo) Descriptor() ([]byte, []int) {
+	return file_item_item_group_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *AddonGroupInfo) GetAliasName() string {
+	if x != nil {
+		return x.AliasName
+	}
+	return ""
+}
+
+func (x *AddonGroupInfo) GetCompanyAbbr() string {
+	if x != nil {
+		return x.CompanyAbbr
+	}
+	return ""
+}
+
+func (x *AddonGroupInfo) GetBranch() string {
+	if x != nil {
+		return x.Branch
+	}
+	return ""
+}
+
+func (x *AddonGroupInfo) GetGroupName() string {
+	if x != nil {
+		return x.GroupName
+	}
+	return ""
+}
+
+func (x *AddonGroupInfo) GetAttributeItemList() []*AddonItemInfo {
+	if x != nil {
+		return x.AttributeItemList
+	}
+	return nil
+}
+
+type AddonItemInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，必填"`    // 物品编码，必填
+	AliasName     string                 `protobuf:"bytes,2,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty" dc:"物品别名，必填"` // 物品别名，必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddonItemInfo) Reset() {
+	*x = AddonItemInfo{}
+	mi := &file_item_item_group_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddonItemInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddonItemInfo) ProtoMessage() {}
+
+func (x *AddonItemInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_item_item_group_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddonItemInfo.ProtoReflect.Descriptor instead.
+func (*AddonItemInfo) Descriptor() ([]byte, []int) {
+	return file_item_item_group_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *AddonItemInfo) GetItemCode() string {
+	if x != nil {
+		return x.ItemCode
+	}
+	return ""
+}
+
+func (x *AddonItemInfo) GetAliasName() string {
+	if x != nil {
+		return x.AliasName
+	}
+	return ""
+}
+
+type SaveAddonGroupReq struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	AddonGroupInfo *AddonGroupInfo        `protobuf:"bytes,1,opt,name=addon_group_info,json=addonGroupInfo,proto3" json:"addon_group_info,omitempty" dc:"加料分组信息，必填"` // 加料分组信息，必填
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *SaveAddonGroupReq) Reset() {
+	*x = SaveAddonGroupReq{}
+	mi := &file_item_item_group_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveAddonGroupReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveAddonGroupReq) ProtoMessage() {}
+
+func (x *SaveAddonGroupReq) ProtoReflect() protoreflect.Message {
+	mi := &file_item_item_group_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveAddonGroupReq.ProtoReflect.Descriptor instead.
+func (*SaveAddonGroupReq) Descriptor() ([]byte, []int) {
+	return file_item_item_group_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *SaveAddonGroupReq) GetAddonGroupInfo() *AddonGroupInfo {
+	if x != nil {
+		return x.AddonGroupInfo
+	}
+	return nil
+}
+
+type SaveAddonGroupResp struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	AddonGroupInfo *AddonGroupInfo        `protobuf:"bytes,1,opt,name=addon_group_info,json=addonGroupInfo,proto3" json:"addon_group_info,omitempty" dc:"加料分组信息，必填"` // 加料分组信息，必填
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *SaveAddonGroupResp) Reset() {
+	*x = SaveAddonGroupResp{}
+	mi := &file_item_item_group_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveAddonGroupResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveAddonGroupResp) ProtoMessage() {}
+
+func (x *SaveAddonGroupResp) ProtoReflect() protoreflect.Message {
+	mi := &file_item_item_group_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveAddonGroupResp.ProtoReflect.Descriptor instead.
+func (*SaveAddonGroupResp) Descriptor() ([]byte, []int) {
+	return file_item_item_group_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *SaveAddonGroupResp) GetAddonGroupInfo() *AddonGroupInfo {
+	if x != nil {
+		return x.AddonGroupInfo
 	}
 	return nil
 }
@@ -677,28 +945,50 @@ const file_item_item_group_proto_rawDesc = "" +
 	"\bis_group\x18\x04 \x01(\bR\aisGroup\x12\x16\n" +
 	"\x06branch\x18\x05 \x01(\tR\x06branch\x12\x1d\n" +
 	"\n" +
-	"alias_name\x18\x06 \x01(\tR\taliasName\"s\n" +
-	"\x17CreateAttributeGroupReq\x12\x1d\n" +
+	"alias_name\x18\x06 \x01(\tR\taliasName\"\xd6\x01\n" +
+	"\x12AttributeGroupInfo\x12\x1d\n" +
 	"\n" +
-	"alias_name\x18\x02 \x01(\tR\taliasName\x12!\n" +
-	"\fcompany_abbr\x18\x03 \x01(\tR\vcompanyAbbr\x12\x16\n" +
-	"\x06branch\x18\x05 \x01(\tR\x06branch\"W\n" +
-	"\x18CreateAttributeGroupResp\x12;\n" +
-	"\x0fitem_group_info\x18\x01 \x01(\v2\x13.item.ItemGroupInfoR\ritemGroupInfo\"o\n" +
-	"\x13CreateAddonGroupReq\x12\x1d\n" +
+	"alias_name\x18\x01 \x01(\tR\taliasName\x12!\n" +
+	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12\x16\n" +
+	"\x06branch\x18\x03 \x01(\tR\x06branch\x12\x1d\n" +
 	"\n" +
-	"alias_name\x18\x02 \x01(\tR\taliasName\x12!\n" +
-	"\fcompany_abbr\x18\x03 \x01(\tR\vcompanyAbbr\x12\x16\n" +
-	"\x06branch\x18\x05 \x01(\tR\x06branch\"S\n" +
-	"\x14CreateAddonGroupResp\x12;\n" +
-	"\x0fitem_group_info\x18\x01 \x01(\v2\x13.item.ItemGroupInfoR\ritemGroupInfo2\x96\x03\n" +
+	"group_name\x18\x04 \x01(\tR\tgroupName\x12G\n" +
+	"\x13attribute_item_list\x18\x05 \x03(\v2\x17.item.AttributeItemInfoR\x11attributeItemList\"O\n" +
+	"\x11AttributeItemInfo\x12\x1d\n" +
+	"\n" +
+	"alias_name\x18\x01 \x01(\tR\taliasName\x12\x1b\n" +
+	"\titem_code\x18\x02 \x01(\tR\bitemCode\"c\n" +
+	"\x15SaveAttributeGroupReq\x12J\n" +
+	"\x14attribute_group_info\x18\x01 \x01(\v2\x18.item.AttributeGroupInfoR\x12attributeGroupInfo\"8\n" +
+	"\x17DeleteAttributeGroupReq\x12\x1d\n" +
+	"\n" +
+	"group_name\x18\x01 \x01(\tR\tgroupName\"d\n" +
+	"\x16SaveAttributeGroupResp\x12J\n" +
+	"\x14attribute_group_info\x18\x01 \x01(\v2\x18.item.AttributeGroupInfoR\x12attributeGroupInfo\"\xce\x01\n" +
+	"\x0eAddonGroupInfo\x12\x1d\n" +
+	"\n" +
+	"alias_name\x18\x01 \x01(\tR\taliasName\x12!\n" +
+	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12\x16\n" +
+	"\x06branch\x18\x03 \x01(\tR\x06branch\x12\x1d\n" +
+	"\n" +
+	"group_name\x18\x04 \x01(\tR\tgroupName\x12C\n" +
+	"\x13attribute_item_list\x18\x05 \x03(\v2\x13.item.AddonItemInfoR\x11attributeItemList\"K\n" +
+	"\rAddonItemInfo\x12\x1b\n" +
+	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x1d\n" +
+	"\n" +
+	"alias_name\x18\x02 \x01(\tR\taliasName\"S\n" +
+	"\x11SaveAddonGroupReq\x12>\n" +
+	"\x10addon_group_info\x18\x01 \x01(\v2\x14.item.AddonGroupInfoR\x0eaddonGroupInfo\"T\n" +
+	"\x12SaveAddonGroupResp\x12>\n" +
+	"\x10addon_group_info\x18\x01 \x01(\v2\x14.item.AddonGroupInfoR\x0eaddonGroupInfo2\xd8\x03\n" +
 	"\x10ItemGroupService\x12@\n" +
 	"\x10GetItemGroupList\x12\x19.item.GetItemGroupListReq\x1a\x11.erp.ResponseInfo\x128\n" +
 	"\fGetItemGroup\x12\x15.item.GetItemGroupReq\x1a\x11.erp.ResponseInfo\x12:\n" +
 	"\rSaveItemGroup\x12\x16.item.SaveItemGroupReq\x1a\x11.erp.ResponseInfo\x12>\n" +
-	"\x0fDeleteItemGroup\x12\x18.item.DeleteItemGroupReq\x1a\x11.erp.ResponseInfo\x12H\n" +
-	"\x14CreateAttributeGroup\x12\x1d.item.CreateAttributeGroupReq\x1a\x11.erp.ResponseInfo\x12@\n" +
-	"\x10CreateAddonGroup\x12\x19.item.CreateAddonGroupReq\x1a\x11.erp.ResponseInfoB\"Z ttpos-bmp/app/ttpos-erp/api/itemb\x06proto3"
+	"\x0fDeleteItemGroup\x12\x18.item.DeleteItemGroupReq\x1a\x11.erp.ResponseInfo\x12D\n" +
+	"\x12SaveAttributeGroup\x12\x1b.item.SaveAttributeGroupReq\x1a\x11.erp.ResponseInfo\x12H\n" +
+	"\x14DeleteAttributeGroup\x12\x1d.item.DeleteAttributeGroupReq\x1a\x11.erp.ResponseInfo\x12<\n" +
+	"\x0eSaveAddonGroup\x12\x17.item.SaveAddonGroupReq\x1a\x11.erp.ResponseInfoB\"Z ttpos-bmp/app/ttpos-erp/api/itemb\x06proto3"
 
 var (
 	file_item_item_group_proto_rawDescOnce sync.Once
@@ -712,46 +1002,57 @@ func file_item_item_group_proto_rawDescGZIP() []byte {
 	return file_item_item_group_proto_rawDescData
 }
 
-var file_item_item_group_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_item_item_group_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_item_item_group_proto_goTypes = []any{
-	(*GetItemGroupListReq)(nil),      // 0: item.GetItemGroupListReq
-	(*GetItemGroupListResp)(nil),     // 1: item.GetItemGroupListResp
-	(*GetItemGroupReq)(nil),          // 2: item.GetItemGroupReq
-	(*GetItemGroupResp)(nil),         // 3: item.GetItemGroupResp
-	(*SaveItemGroupReq)(nil),         // 4: item.SaveItemGroupReq
-	(*SaveItemGroupResp)(nil),        // 5: item.SaveItemGroupResp
-	(*DeleteItemGroupReq)(nil),       // 6: item.DeleteItemGroupReq
-	(*ItemGroupInfo)(nil),            // 7: item.ItemGroupInfo
-	(*CreateAttributeGroupReq)(nil),  // 8: item.CreateAttributeGroupReq
-	(*CreateAttributeGroupResp)(nil), // 9: item.CreateAttributeGroupResp
-	(*CreateAddonGroupReq)(nil),      // 10: item.CreateAddonGroupReq
-	(*CreateAddonGroupResp)(nil),     // 11: item.CreateAddonGroupResp
-	(*api.ResponseInfo)(nil),         // 12: erp.ResponseInfo
+	(*GetItemGroupListReq)(nil),     // 0: item.GetItemGroupListReq
+	(*GetItemGroupListResp)(nil),    // 1: item.GetItemGroupListResp
+	(*GetItemGroupReq)(nil),         // 2: item.GetItemGroupReq
+	(*GetItemGroupResp)(nil),        // 3: item.GetItemGroupResp
+	(*SaveItemGroupReq)(nil),        // 4: item.SaveItemGroupReq
+	(*SaveItemGroupResp)(nil),       // 5: item.SaveItemGroupResp
+	(*DeleteItemGroupReq)(nil),      // 6: item.DeleteItemGroupReq
+	(*ItemGroupInfo)(nil),           // 7: item.ItemGroupInfo
+	(*AttributeGroupInfo)(nil),      // 8: item.AttributeGroupInfo
+	(*AttributeItemInfo)(nil),       // 9: item.AttributeItemInfo
+	(*SaveAttributeGroupReq)(nil),   // 10: item.SaveAttributeGroupReq
+	(*DeleteAttributeGroupReq)(nil), // 11: item.DeleteAttributeGroupReq
+	(*SaveAttributeGroupResp)(nil),  // 12: item.SaveAttributeGroupResp
+	(*AddonGroupInfo)(nil),          // 13: item.AddonGroupInfo
+	(*AddonItemInfo)(nil),           // 14: item.AddonItemInfo
+	(*SaveAddonGroupReq)(nil),       // 15: item.SaveAddonGroupReq
+	(*SaveAddonGroupResp)(nil),      // 16: item.SaveAddonGroupResp
+	(*api.ResponseInfo)(nil),        // 17: erp.ResponseInfo
 }
 var file_item_item_group_proto_depIdxs = []int32{
 	7,  // 0: item.GetItemGroupListResp.item_group_list:type_name -> item.ItemGroupInfo
 	7,  // 1: item.GetItemGroupResp.item_group_info:type_name -> item.ItemGroupInfo
 	7,  // 2: item.SaveItemGroupReq.item_group_info:type_name -> item.ItemGroupInfo
 	7,  // 3: item.SaveItemGroupResp.item_group_info:type_name -> item.ItemGroupInfo
-	7,  // 4: item.CreateAttributeGroupResp.item_group_info:type_name -> item.ItemGroupInfo
-	7,  // 5: item.CreateAddonGroupResp.item_group_info:type_name -> item.ItemGroupInfo
-	0,  // 6: item.ItemGroupService.GetItemGroupList:input_type -> item.GetItemGroupListReq
-	2,  // 7: item.ItemGroupService.GetItemGroup:input_type -> item.GetItemGroupReq
-	4,  // 8: item.ItemGroupService.SaveItemGroup:input_type -> item.SaveItemGroupReq
-	6,  // 9: item.ItemGroupService.DeleteItemGroup:input_type -> item.DeleteItemGroupReq
-	8,  // 10: item.ItemGroupService.CreateAttributeGroup:input_type -> item.CreateAttributeGroupReq
-	10, // 11: item.ItemGroupService.CreateAddonGroup:input_type -> item.CreateAddonGroupReq
-	12, // 12: item.ItemGroupService.GetItemGroupList:output_type -> erp.ResponseInfo
-	12, // 13: item.ItemGroupService.GetItemGroup:output_type -> erp.ResponseInfo
-	12, // 14: item.ItemGroupService.SaveItemGroup:output_type -> erp.ResponseInfo
-	12, // 15: item.ItemGroupService.DeleteItemGroup:output_type -> erp.ResponseInfo
-	12, // 16: item.ItemGroupService.CreateAttributeGroup:output_type -> erp.ResponseInfo
-	12, // 17: item.ItemGroupService.CreateAddonGroup:output_type -> erp.ResponseInfo
-	12, // [12:18] is the sub-list for method output_type
-	6,  // [6:12] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	9,  // 4: item.AttributeGroupInfo.attribute_item_list:type_name -> item.AttributeItemInfo
+	8,  // 5: item.SaveAttributeGroupReq.attribute_group_info:type_name -> item.AttributeGroupInfo
+	8,  // 6: item.SaveAttributeGroupResp.attribute_group_info:type_name -> item.AttributeGroupInfo
+	14, // 7: item.AddonGroupInfo.attribute_item_list:type_name -> item.AddonItemInfo
+	13, // 8: item.SaveAddonGroupReq.addon_group_info:type_name -> item.AddonGroupInfo
+	13, // 9: item.SaveAddonGroupResp.addon_group_info:type_name -> item.AddonGroupInfo
+	0,  // 10: item.ItemGroupService.GetItemGroupList:input_type -> item.GetItemGroupListReq
+	2,  // 11: item.ItemGroupService.GetItemGroup:input_type -> item.GetItemGroupReq
+	4,  // 12: item.ItemGroupService.SaveItemGroup:input_type -> item.SaveItemGroupReq
+	6,  // 13: item.ItemGroupService.DeleteItemGroup:input_type -> item.DeleteItemGroupReq
+	10, // 14: item.ItemGroupService.SaveAttributeGroup:input_type -> item.SaveAttributeGroupReq
+	11, // 15: item.ItemGroupService.DeleteAttributeGroup:input_type -> item.DeleteAttributeGroupReq
+	15, // 16: item.ItemGroupService.SaveAddonGroup:input_type -> item.SaveAddonGroupReq
+	17, // 17: item.ItemGroupService.GetItemGroupList:output_type -> erp.ResponseInfo
+	17, // 18: item.ItemGroupService.GetItemGroup:output_type -> erp.ResponseInfo
+	17, // 19: item.ItemGroupService.SaveItemGroup:output_type -> erp.ResponseInfo
+	17, // 20: item.ItemGroupService.DeleteItemGroup:output_type -> erp.ResponseInfo
+	17, // 21: item.ItemGroupService.SaveAttributeGroup:output_type -> erp.ResponseInfo
+	17, // 22: item.ItemGroupService.DeleteAttributeGroup:output_type -> erp.ResponseInfo
+	17, // 23: item.ItemGroupService.SaveAddonGroup:output_type -> erp.ResponseInfo
+	17, // [17:24] is the sub-list for method output_type
+	10, // [10:17] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_item_item_group_proto_init() }
@@ -765,7 +1066,7 @@ func file_item_item_group_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_item_item_group_proto_rawDesc), len(file_item_item_group_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

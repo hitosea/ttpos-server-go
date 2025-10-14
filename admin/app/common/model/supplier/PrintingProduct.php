@@ -8,6 +8,8 @@ use think\model\concern\SoftDelete;
 
 class PrintingProduct extends BaseModel
 {
+    use SoftDelete;
+
     protected $name = 'product_printer_product_item';
     protected $pk = 'id';
     protected $deleteTime = 'delete_time';
@@ -36,13 +38,14 @@ class PrintingProduct extends BaseModel
 
     // 创建商品包关联打印机（先删除旧关联，再批量插入新关联）
     public static function CreateProductPackagePrinter($productPackageUuid, $productPrinterUuids) : bool {
-        self::where('product_package_uuid', $productPackageUuid)->delete();
+        self::where('product_package_uuid', $productPackageUuid)->withTrashed()->delete();
         // 删除商品打印机列表缓存
         Printing::clearProductPrinterListCache(self::$app_id);
         // 
         if (empty($productPrinterUuids)) {
             return false;
         }
+        $productPrinterUuids = array_unique($productPrinterUuids);
         foreach ($productPrinterUuids as $productPrinterUuid) {
             self::create([
                 'product_package_uuid' => $productPackageUuid,

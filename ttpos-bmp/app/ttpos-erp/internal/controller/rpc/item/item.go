@@ -67,7 +67,7 @@ func (c *Controller) SaveItem(ctx context.Context, req *item.ItemInfo) (*api.Res
 // 返回：响应信息和错误
 func (c *Controller) GetUomList(ctx context.Context, req *item.GetUomListReq) (*api.ResponseInfo, error) {
 	// 调用服务层获取数据
-	dataList, err := service.Stock().GetUomList(ctx, req)
+	dataList, err := service.Uom().GetUomList(ctx, req)
 	if err != nil {
 		return rpc.ApiError(err.Error()), nil
 	}
@@ -86,7 +86,7 @@ func (c *Controller) GetUom(ctx context.Context, req *item.GetUomReq) (*api.Resp
 	}
 
 	// 调用服务层获取数据
-	uomInfo, err := service.Stock().GetUom(ctx, req)
+	uomInfo, err := service.Uom().GetUom(ctx, req)
 	if err != nil {
 		return rpc.ApiError(err.Error()), nil
 	}
@@ -113,7 +113,7 @@ func (*Controller) SaveUom(ctx context.Context, req *item.UomInfo) (*api.Respons
 	}
 
 	// 调用服务层保存数据
-	err := service.Stock().SaveUom(ctx, req)
+	err := service.Uom().SaveUom(ctx, req)
 	if err != nil {
 		return rpc.ApiError(err.Error()), nil
 	}
@@ -172,55 +172,65 @@ func (*Controller) GetItemStock(ctx context.Context, req *item.GetItemStockReq) 
 }
 
 // GetItem 根据物品编码获取单个物品信息
-// 参数：ctx 上下文，req 包含物品编码和可选的公司、分支信息
-// 返回：响应信息和错误
+// 参数：
+//
+//	ctx - 请求上下文，包含认证信息和调用链追踪
+//	req - 获取物品请求，包含物品编码和可选的公司、分支信息
+//
+// 返回：
+//
+//	封装了物品详细信息的响应对象和可能的错误
 func (c *Controller) GetItem(ctx context.Context, req *item.GetItemReq) (*api.ResponseInfo, error) {
-	// 参数验证
+	// 参数验证：确保物品编码不为空
 	if req.ItemCode == "" {
 		return rpc.ApiError("物品编码不能为空"), nil
 	}
 
-	// 调用服务层获取数据
+	// 调用服务层获取物品的完整信息
 	itemInfo, err := service.Item().GetItem(ctx, req)
 	if err != nil {
 		return rpc.ApiError(err.Error()), nil
 	}
 
+	// 转换单位列表数据结构：从内部模型转换为protobuf响应模型
 	uomDetails := make([]*item.UomDetail, 0, len(itemInfo.Uoms))
 	for _, uom := range itemInfo.Uoms {
 		uomDetails = append(uomDetails, &item.UomDetail{
-			Uom:              uom.Uom,
-			ConversionFactor: uom.ConversionFactor,
+			Uom:              uom.Uom,              // 单位名称
+			ConversionFactor: uom.ConversionFactor, // 转换因子
 		})
 	}
+
+	// 转换属性列表数据结构：从内部模型转换为protobuf响应模型
 	attrList := make([]*item.AttributeInfo, 0, len(itemInfo.Attributes))
 	for _, attr := range itemInfo.Attributes {
 		attrList = append(attrList, &item.AttributeInfo{
-			AttributeName: attr.CustomAttributeName,
+			AttributeName: attr.CustomAttributeName, // 属性名称
 		})
 	}
 
-	// 将 itemInfo 的值赋给 respItem
+	// 构建最终的物品信息响应对象
+	// 将内部itemInfo模型的各个字段映射到protobuf响应模型中
 	respItem := &item.ItemInfo{
-		ItemName:           itemInfo.ItemName,
-		StockUom:           itemInfo.StockUom,
-		ItemCode:           itemInfo.ItemCode,
-		ValuationRate:      itemInfo.ValuationRate,
-		IsStockItem:        itemInfo.IsStockItem == 1,
-		Branch:             itemInfo.CustomBranch,
-		Company:            itemInfo.CustomCompany,
-		ItemSpecification:  itemInfo.CustomSpecification,
-		Disabled:           itemInfo.Disabled == 1,
-		Classification:     itemInfo.CustomClassification,
-		ClassificationCode: itemInfo.CustomClassificationCode,
-		InternalCode:       itemInfo.CustomInternalCode,
-		PurchaseUom:        itemInfo.PurchaseUom,
-		Uoms:               uomDetails,
-		OpeningStock:       itemInfo.OpeningStock,
-		Attributes:         attrList,
+		ItemName:           itemInfo.ItemName,                 // 物品名称
+		StockUom:           itemInfo.StockUom,                 // 库存单位
+		ItemCode:           itemInfo.ItemCode,                 // 物品编码
+		ValuationRate:      itemInfo.ValuationRate,            // 估价率
+		IsStockItem:        itemInfo.IsStockItem == 1,         // 是否为库存物品（数值型转布尔型）
+		Branch:             itemInfo.CustomBranch,             // 分支机构
+		Company:            itemInfo.CustomCompany,            // 公司
+		ItemSpecification:  itemInfo.CustomSpecification,      // 物品规格
+		Disabled:           itemInfo.Disabled == 1,            // 是否禁用（数值型转布尔型）
+		Classification:     itemInfo.CustomClassification,     // 分类
+		ClassificationCode: itemInfo.CustomClassificationCode, // 分类编码
+		InternalCode:       itemInfo.CustomInternalCode,       // 内部编码
+		PurchaseUom:        itemInfo.PurchaseUom,              // 采购单位
+		Uoms:               uomDetails,                        // 单位列表（已转换）
+		OpeningStock:       itemInfo.OpeningStock,             // 期初库存
+		Attributes:         attrList,                          // 属性列表（已转换）
 	}
 
-	// 返回成功响应
+	// 返回成功响应，包含转换后的物品详细信息
 	return rpc.ApiSuccessWithData("获取物品信息成功", respItem), nil
 }
 
@@ -266,4 +276,32 @@ func (c *Controller) SavePosAddon(ctx context.Context, req *item.SavePosAddonReq
 
 	// 返回成功响应
 	return rpc.ApiSuccessWithData("保存加料物品成功", savedItem), nil
+}
+
+func (*Controller) DeleteItem(ctx context.Context, req *item.DeleteItemReq) (*api.ResponseInfo, error) {
+	// 参数验证
+	if req.ItemCode == "" {
+		return rpc.ApiError("物品编码不能为空"), nil
+	}
+	// 调用服务层删除数据
+	resp, err := service.Item().DeleteItem(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	// 返回成功响应
+	return rpc.ApiSuccessWithData("删除物品成功", resp), nil
+}
+
+func (*Controller) DeleteUom(ctx context.Context, req *item.DeleteUomReq) (*api.ResponseInfo, error) {
+	// 参数验证
+	if req.Uom == "" {
+		return rpc.ApiError("单位编码不能为空"), nil
+	}
+	// 调用服务层删除数据
+	resp, err := service.Uom().DeleteUom(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	// 返回成功响应
+	return rpc.ApiSuccessWithData("删除单位成功", resp), nil
 }

@@ -486,17 +486,12 @@ func (s *sItem) addItemGroupSpecificFields(ctx context.Context, req *item.ItemIn
 		// 套餐特定字段
 		newItem["is_stock_item"] = 0
 	}
-
-	//将规格通过 Item Attribute 实现 FIXME 这个阶段先不用变体
-	//if len(req.ItemSpecification) > 0 {
-	//	newItem["has_variants"] = 1
-	//	newItem["variant_based_on"] = erp.DocTypeItemAttribute
-	//	newItem["attributes"] = g.Array{
-	//		g.Map{
-	//			"attribute": req.ItemSpecification,
-	//		},
-	//	}
-	//}
+	// 属性和加料特殊处理
+	if req.ItemGroup == item.ItemGroup_PosAttribute || req.ItemGroup == item.ItemGroup_PosAddon {
+		if req.ItemGroupName != "" {
+			newItem["item_group_name"] = req.ItemGroupName
+		}
+	}
 
 	// 设置默认仓库
 	s.setDefaultWarehouse(ctx, req, company, newItem)
@@ -576,6 +571,8 @@ func (s *sItem) generateItemCode(ctx context.Context, req *item.ItemInfo) (strin
 		return utility.GenItemCode(consts.ItemCodePrefixPackage), nil
 	case item.ItemGroup_PosAttribute:
 		return utility.GenItemCode(consts.ItemCodePrefixPosAttribute), nil
+	case item.ItemGroup_PosAddon:
+		return utility.GenItemCode(consts.ItemCodePrefixPosAddon), nil
 	default:
 
 	}
@@ -760,10 +757,11 @@ func (s *sItem) SavePosAttribute(ctx context.Context, req *item.SavePosAttribute
 	itemInfo := s.convertPosSpecItemToItemInfo(req.Item)
 
 	// 设置属性物品的特定属性
-	itemInfo.ItemGroup = item.ItemGroup_PosAttribute // 属性物品归类为其他
+	itemInfo.ItemGroup = item.ItemGroup_PosAttribute // 属性物品归类
 	itemInfo.StockUom = "Nos"                        // 默认单位为个
 	itemInfo.ValuationRate = 0                       // 属性物品估值率为0
 	itemInfo.IsStockItem = false                     // 属性物品不是库存物品
+	itemInfo.ItemGroupName = req.Item.ItemGroupName  // 属性物品分组名称,实际名称
 
 	// 调用通用的保存物品方法
 	return s.SaveItem(ctx, itemInfo)
@@ -826,14 +824,14 @@ func (s *sItem) CreateSingleVariantItem(ctx context.Context, req *erp.CreateSing
 	itemInfo.CustomInternalCode = req.InternalCode
 	itemInfo.IsStockItem = 0
 
-	if len(req.ItemCode) > 0 {
-		itemCode = req.ItemCode
-	} else {
-		itemCode, err = s.generateItemCodeWithTemplate(ctx, req.TemplateItem)
-		if err != nil {
-			return itemCode, gerror.Wrapf(err, "生成多规格商品编码失败")
-		}
+	//if len(req.ItemCode) > 0 {
+	//	itemCode = req.ItemCode
+	//} else {
+	itemCode, err = s.generateItemCodeWithTemplate(ctx, req.TemplateItem)
+	if err != nil {
+		return itemCode, gerror.Wrapf(err, "生成多规格商品编码失败")
 	}
+	//}
 	itemInfo.ItemCode = itemCode
 
 	//填充特殊自动
@@ -848,4 +846,18 @@ func (s *sItem) CreateSingleVariantItem(ctx context.Context, req *erp.CreateSing
 		return itemCode, gerror.Wrapf(err, "创建物品失败")
 	}
 	return itemCode, nil
+}
+
+// DeleteItem 删除物品
+// 删除模板商品时，变体商品都会被移除
+func (s *sItem) DeleteItem(ctx context.Context, req *item.DeleteItemReq) (*item.DeleteItemResp, error) {
+	_, err := service.Document().Delete(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeItem,
+		Name:    req.ItemCode,
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "删除物品失败")
+	}
+
+	return &item.DeleteItemResp{ItemCode: req.ItemCode}, nil
 }

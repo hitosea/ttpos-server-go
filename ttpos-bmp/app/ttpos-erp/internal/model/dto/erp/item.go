@@ -147,6 +147,7 @@ type ItemAttribute struct {
 	CustomAlias          string           `json:"custom_alias,omitempty"`           // 自定义别名
 	CustomPermissionRule []PermissionRule `json:"custom_permission_rule,omitempty"` //自定权限清单 多选表格
 	CustomAttributeName  string           `json:"attribute,omitempty"`              //属性名，单独查询商品时才有
+	CustomAttributeValue string           `json:"attribute_value,omitempty"`        //属性值，单独查询商品时才有
 }
 
 // ItemAttributeValue 结构体定义

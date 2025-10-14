@@ -38,6 +38,8 @@ const (
 
 	//DocTypeStockLedger 库存台账查询
 	DocTypeStockLedger = "Stock Ledger"
+	//DocTypeUom 商品单位
+	DocTypeUom = "UOM"
 )
 
 const (

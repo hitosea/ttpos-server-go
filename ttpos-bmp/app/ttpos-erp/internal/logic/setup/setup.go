@@ -84,8 +84,9 @@ func (s *sSetup) CreateBranch(ctx context.Context, req *setup.InitShopReq) (bran
 
 		// 创建分支
 		branchPayload := g.Map{
-			"branch":         req.ShopName,
-			"custom_company": company.CompanyName,
+			"branch":          req.ShopName,
+			"custom_company":  company.CompanyName,
+			"custom_shopuuid": req.ShopUuid,
 		}
 
 		if _, err := service.Document().Create(ctx, erp.DocTypeBranch, branchPayload); err != nil {

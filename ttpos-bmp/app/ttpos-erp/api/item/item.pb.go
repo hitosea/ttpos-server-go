@@ -31,7 +31,7 @@ const (
 	ItemGroup_Products       ItemGroup = 2 // 商品
 	ItemGroup_Package        ItemGroup = 3 // 套餐
 	ItemGroup_VirtualProduct ItemGroup = 4 // 虚拟产品
-	ItemGroup_PosAttribute   ItemGroup = 5 // pos 系统中特殊的item ，属性/加料
+	ItemGroup_PosAttribute   ItemGroup = 5 // pos 系统中特殊的item ，属性
 	ItemGroup_PosAddon       ItemGroup = 6 // pos 系统中特殊的item ，加料
 )
 
@@ -94,6 +94,7 @@ type GetItemListReq struct {
 	ItemCode        string                 `protobuf:"bytes,6,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，可选"`                                                                                         // 物品编码，可选
 	ItemCodePrefix  string                 `protobuf:"bytes,7,opt,name=item_code_prefix,json=itemCodePrefix,proto3" json:"item_code_prefix,omitempty" dc:"物品编码前缀，可选"`                                                                   // 物品编码前缀，可选
 	ContainDisabled bool                   `protobuf:"varint,8,opt,name=contain_disabled,json=containDisabled,proto3" json:"contain_disabled,omitempty" dc:"是否包含禁用状态，可选，默认只取有效"`                                                        // 是否包含禁用状态，可选，默认只取有效
+	ItemGroupName   string                 `protobuf:"bytes,23,opt,name=item_group_name,json=itemGroupName,proto3" json:"item_group_name,omitempty" dc:"物品分组名称，可选,  PosAttribute 属性/PosAddon 加料 时必填"`                                   // 物品分组名称，可选,  PosAttribute 属性/PosAddon 加料 时必填
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -184,6 +185,13 @@ func (x *GetItemListReq) GetContainDisabled() bool {
 	return false
 }
 
+func (x *GetItemListReq) GetItemGroupName() string {
+	if x != nil {
+		return x.ItemGroupName
+	}
+	return ""
+}
+
 type GetItemListResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ItemList      []*ItemInfo            `protobuf:"bytes,1,rep,name=item_list,json=itemList,proto3" json:"item_list,omitempty" dc:"物品列表"` // 物品列表
@@ -230,28 +238,29 @@ func (x *GetItemListResp) GetItemList() []*ItemInfo {
 
 type ItemInfo struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
-	ItemName           string                 `protobuf:"bytes,1,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称，必填"`                                                                                        // 物品名称，必填
-	ItemGroup          ItemGroup              `protobuf:"varint,2,opt,name=item_group,json=itemGroup,proto3,enum=item.ItemGroup" json:"item_group,omitempty" dc:"物品分组，必填 Products 商品/Raw Material 原材料/Package 套餐"`                        // 物品分组，必填 Products 商品/Raw Material 原材料/Package 套餐
-	StockUom           string                 `protobuf:"bytes,3,opt,name=stock_uom,json=stockUom,proto3" json:"stock_uom,omitempty" dc:"库存单位，必填 ttpos 传英文过来"`                                                                            // 库存单位，必填 ttpos 传英文过来
-	ItemCode           string                 `protobuf:"bytes,4,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，可选"`                                                                                        // 物品编码，可选
-	ValuationRate      float64                `protobuf:"fixed64,5,opt,name=valuation_rate,json=valuationRate,proto3" json:"valuation_rate,omitempty" dc:"估值率，必填"`                                                                        // 估值率，必填
-	Barcode            string                 `protobuf:"bytes,6,opt,name=barcode,proto3" json:"barcode,omitempty" dc:"条码，可选"`                                                                                                            // 条码，可选
-	OpeningStock       float64                `protobuf:"fixed64,7,opt,name=opening_stock,json=openingStock,proto3" json:"opening_stock,omitempty" dc:"期初库存，可选"`                                                                          // 期初库存，可选
-	IsStockItem        bool                   `protobuf:"varint,8,opt,name=is_stock_item,json=isStockItem,proto3" json:"is_stock_item,omitempty" dc:"是否库存物品，可选"`                                                                          // 是否库存物品，可选
-	TemplateItemCode   string                 `protobuf:"bytes,9,opt,name=template_item_code,json=templateItemCode,proto3" json:"template_item_code,omitempty" dc:"模版物品编码，可选， 多规格商品时必填，传原始物品编码"`                                          // 模版物品编码，可选， 多规格商品时必填，传原始物品编码
-	Branch             string                 `protobuf:"bytes,10,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                                                                           // 分支名称，可选
-	CompanyAbbr        string                 `protobuf:"bytes,11,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                                                                              // 公司简称，可选
-	Company            string                 `protobuf:"bytes,12,opt,name=company,proto3" json:"company,omitempty" dc:"公司名称，可选"`                                                                                                         // 公司名称，可选
-	ItemSpecification  string                 `protobuf:"bytes,13,opt,name=item_specification,json=itemSpecification,proto3" json:"item_specification,omitempty" dc:"物品规格，可选 ttpos 传过来 多规格商品时必填。 映射到erp上是 item attribute, 这个是产品！设计！的特性！"` // 物品规格，可选 ttpos 传过来 多规格商品时必填。 映射到erp上是 item attribute, 这个是产品！设计！的特性！
-	Uoms               []*UomDetail           `protobuf:"bytes,14,rep,name=uoms,proto3" json:"uoms,omitempty" dc:"单位列表，可选"`                                                                                                               // 单位列表，可选
-	Disabled           bool                   `protobuf:"varint,15,opt,name=disabled,proto3" json:"disabled,omitempty" dc:"是否禁用，可选"`                                                                                                      // 是否禁用，可选
-	Classification     string                 `protobuf:"bytes,16,opt,name=classification,proto3" json:"classification,omitempty" dc:"分类，可选"`                                                                                             // 分类，可选
-	ClassificationCode string                 `protobuf:"bytes,17,opt,name=classification_code,json=classificationCode,proto3" json:"classification_code,omitempty" dc:"分类编码，可选"`                                                         // 分类编码，可选
-	InternalCode       string                 `protobuf:"bytes,18,opt,name=internal_code,json=internalCode,proto3" json:"internal_code,omitempty" dc:"内部编码，可选"`                                                                           // 内部编码，可选
-	NotForSale         bool                   `protobuf:"varint,19,opt,name=not_for_sale,json=notForSale,proto3" json:"not_for_sale,omitempty" dc:"是否禁售，可选"`                                                                              //是否禁售，可选
-	PurchaseUom        string                 `protobuf:"bytes,20,opt,name=purchase_uom,json=purchaseUom,proto3" json:"purchase_uom,omitempty" dc:"默认采购单位，可选"`                                                                            // 默认采购单位，可选
-	HasVariants        bool                   `protobuf:"varint,21,opt,name=has_variants,json=hasVariants,proto3" json:"has_variants,omitempty" dc:"是否包含变体参数，可选。 多规格商品时必填。"`                                                              // 是否包含变体参数，可选。 多规格商品时必填。
-	Attributes         []*AttributeInfo       `protobuf:"bytes,22,rep,name=attributes,proto3" json:"attributes,omitempty" dc:"变体参数列表，可选。 多规格商品时必填。"`                                                                                      // 变体参数列表，可选。 多规格商品时必填。
+	ItemName           string                 `protobuf:"bytes,1,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称，必填"`                                                                                                                    // 物品名称，必填
+	ItemGroup          ItemGroup              `protobuf:"varint,2,opt,name=item_group,json=itemGroup,proto3,enum=item.ItemGroup" json:"item_group,omitempty" dc:"物品分组，必填 Products 商品/Raw Material 原材料/Package 套餐/Virtual Product 虚拟产品 / PosAttribute 属性/PosAddon 加料"` // 物品分组，必填 Products 商品/Raw Material 原材料/Package 套餐/Virtual Product 虚拟产品 / PosAttribute 属性/PosAddon 加料
+	StockUom           string                 `protobuf:"bytes,3,opt,name=stock_uom,json=stockUom,proto3" json:"stock_uom,omitempty" dc:"库存单位，必填 ttpos 传英文过来"`                                                                                                        // 库存单位，必填 ttpos 传英文过来
+	ItemCode           string                 `protobuf:"bytes,4,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，可选"`                                                                                                                    // 物品编码，可选
+	ValuationRate      float64                `protobuf:"fixed64,5,opt,name=valuation_rate,json=valuationRate,proto3" json:"valuation_rate,omitempty" dc:"估值率，必填"`                                                                                                    // 估值率，必填
+	Barcode            string                 `protobuf:"bytes,6,opt,name=barcode,proto3" json:"barcode,omitempty" dc:"条码，可选"`                                                                                                                                        // 条码，可选
+	OpeningStock       float64                `protobuf:"fixed64,7,opt,name=opening_stock,json=openingStock,proto3" json:"opening_stock,omitempty" dc:"期初库存，可选"`                                                                                                      // 期初库存，可选
+	IsStockItem        bool                   `protobuf:"varint,8,opt,name=is_stock_item,json=isStockItem,proto3" json:"is_stock_item,omitempty" dc:"是否库存物品，可选"`                                                                                                      // 是否库存物品，可选
+	TemplateItemCode   string                 `protobuf:"bytes,9,opt,name=template_item_code,json=templateItemCode,proto3" json:"template_item_code,omitempty" dc:"模版物品编码，可选， 多规格商品时必填，传原始物品编码"`                                                                      // 模版物品编码，可选， 多规格商品时必填，传原始物品编码
+	Branch             string                 `protobuf:"bytes,10,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支名称，可选"`                                                                                                                                       // 分支名称，可选
+	CompanyAbbr        string                 `protobuf:"bytes,11,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司简称，可选"`                                                                                                          // 公司简称，可选
+	Company            string                 `protobuf:"bytes,12,opt,name=company,proto3" json:"company,omitempty" dc:"公司名称，可选"`                                                                                                                                     // 公司名称，可选
+	ItemSpecification  string                 `protobuf:"bytes,13,opt,name=item_specification,json=itemSpecification,proto3" json:"item_specification,omitempty" dc:"物品规格，可选 ttpos 传过来 多规格商品时必填。 映射到erp上是 item attribute, 这个是产品！设计！的特性！"`                             // 物品规格，可选 ttpos 传过来 多规格商品时必填。 映射到erp上是 item attribute, 这个是产品！设计！的特性！
+	Uoms               []*UomDetail           `protobuf:"bytes,14,rep,name=uoms,proto3" json:"uoms,omitempty" dc:"单位列表，可选"`                                                                                                                                           // 单位列表，可选
+	Disabled           bool                   `protobuf:"varint,15,opt,name=disabled,proto3" json:"disabled,omitempty" dc:"是否禁用，可选"`                                                                                                                                  // 是否禁用，可选
+	Classification     string                 `protobuf:"bytes,16,opt,name=classification,proto3" json:"classification,omitempty" dc:"分类，可选"`                                                                                                                         // 分类，可选
+	ClassificationCode string                 `protobuf:"bytes,17,opt,name=classification_code,json=classificationCode,proto3" json:"classification_code,omitempty" dc:"分类编码，可选"`                                                                                     // 分类编码，可选
+	InternalCode       string                 `protobuf:"bytes,18,opt,name=internal_code,json=internalCode,proto3" json:"internal_code,omitempty" dc:"内部编码，可选"`                                                                                                       // 内部编码，可选
+	NotForSale         bool                   `protobuf:"varint,19,opt,name=not_for_sale,json=notForSale,proto3" json:"not_for_sale,omitempty" dc:"是否禁售，可选"`                                                                                                          //是否禁售，可选
+	PurchaseUom        string                 `protobuf:"bytes,20,opt,name=purchase_uom,json=purchaseUom,proto3" json:"purchase_uom,omitempty" dc:"默认采购单位，可选"`                                                                                                        // 默认采购单位，可选
+	HasVariants        bool                   `protobuf:"varint,21,opt,name=has_variants,json=hasVariants,proto3" json:"has_variants,omitempty" dc:"是否包含变体参数，可选。 多规格商品时必填。"`                                                                                          // 是否包含变体参数，可选。 多规格商品时必填。
+	Attributes         []*AttributeInfo       `protobuf:"bytes,22,rep,name=attributes,proto3" json:"attributes,omitempty" dc:"变体参数列表，可选。 多规格商品时必填。"`                                                                                                                  // 变体参数列表，可选。 多规格商品时必填。
+	ItemGroupName      string                 `protobuf:"bytes,23,opt,name=item_group_name,json=itemGroupName,proto3" json:"item_group_name,omitempty" dc:"物品分组名称，可选,  PosAttribute 属性/PosAddon 加料 时必填"`                                                              // 物品分组名称，可选,  PosAttribute 属性/PosAddon 加料 时必填
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -438,6 +447,13 @@ func (x *ItemInfo) GetAttributes() []*AttributeInfo {
 		return x.Attributes
 	}
 	return nil
+}
+
+func (x *ItemInfo) GetItemGroupName() string {
+	if x != nil {
+		return x.ItemGroupName
+	}
+	return ""
 }
 
 type UomDetail struct {
@@ -949,7 +965,7 @@ type AttributeValueInfo struct {
 	AttributeValue          string                 `protobuf:"bytes,1,opt,name=attribute_value,json=attributeValue,proto3" json:"attribute_value,omitempty" dc:"属性值，必填"`                                                          // 属性值，必填
 	VariantItemInternalCode string                 `protobuf:"bytes,2,opt,name=variant_item_internal_code,json=variantItemInternalCode,proto3" json:"variant_item_internal_code,omitempty" dc:"变体物品内部编码，可选。 创建时才有值更新到有规格商品的内部编码"` // 变体物品内部编码，可选。 创建时才有值更新到有规格商品的内部编码
 	Abbr                    string                 `protobuf:"bytes,3,opt,name=abbr,proto3" json:"abbr,omitempty" dc:"属性缩写，必填"`                                                                                                   // 属性缩写，必填
-	ItemCode                string                 `protobuf:"bytes,4,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"多规格物品编码，可选"`                                                                        // 多规格物品编码，可选
+	ItemCode                string                 `protobuf:"bytes,4,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"多规格物品编码，可选。 调用新增接口才有返回值"`                                                           // 多规格物品编码，可选。 调用新增接口才有返回值
 	unknownFields           protoimpl.UnknownFields
 	sizeCache               protoimpl.SizeCache
 }
@@ -1559,6 +1575,7 @@ type PosSpecItem struct {
 	Disabled         bool                   `protobuf:"varint,6,opt,name=disabled,proto3" json:"disabled,omitempty" dc:"是否禁用，可选"`                                            // 是否禁用，可选
 	InternalCode     string                 `protobuf:"bytes,7,opt,name=internal_code,json=internalCode,proto3" json:"internal_code,omitempty" dc:"内部编码，可选"`                 // 内部编码，可选
 	NotForSale       bool                   `protobuf:"varint,8,opt,name=not_for_sale,json=notForSale,proto3" json:"not_for_sale,omitempty" dc:"是否禁售，可选"`                    //是否禁售，可选
+	ItemGroupName    string                 `protobuf:"bytes,9,opt,name=item_group_name,json=itemGroupName,proto3" json:"item_group_name,omitempty" dc:"分组名称"`               //分组名称
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -1647,6 +1664,13 @@ func (x *PosSpecItem) GetNotForSale() bool {
 		return x.NotForSale
 	}
 	return false
+}
+
+func (x *PosSpecItem) GetItemGroupName() string {
+	if x != nil {
+		return x.ItemGroupName
+	}
+	return ""
 }
 
 type SavePosAttributeReq struct {
@@ -1825,11 +1849,187 @@ func (x *SavePosAddonResp) GetItemInfo() *ItemInfo {
 	return nil
 }
 
+type DeleteUomReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Uom           string                 `protobuf:"bytes,1,opt,name=uom,proto3" json:"uom,omitempty" dc:"单位名称，必填"` // 单位名称，必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteUomReq) Reset() {
+	*x = DeleteUomReq{}
+	mi := &file_item_item_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteUomReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteUomReq) ProtoMessage() {}
+
+func (x *DeleteUomReq) ProtoReflect() protoreflect.Message {
+	mi := &file_item_item_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteUomReq.ProtoReflect.Descriptor instead.
+func (*DeleteUomReq) Descriptor() ([]byte, []int) {
+	return file_item_item_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *DeleteUomReq) GetUom() string {
+	if x != nil {
+		return x.Uom
+	}
+	return ""
+}
+
+type DeleteUomResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Uom           string                 `protobuf:"bytes,1,opt,name=uom,proto3" json:"uom,omitempty" dc:"单位名称"` // 单位名称
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteUomResp) Reset() {
+	*x = DeleteUomResp{}
+	mi := &file_item_item_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteUomResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteUomResp) ProtoMessage() {}
+
+func (x *DeleteUomResp) ProtoReflect() protoreflect.Message {
+	mi := &file_item_item_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteUomResp.ProtoReflect.Descriptor instead.
+func (*DeleteUomResp) Descriptor() ([]byte, []int) {
+	return file_item_item_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *DeleteUomResp) GetUom() string {
+	if x != nil {
+		return x.Uom
+	}
+	return ""
+}
+
+type DeleteItemReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，必填"` //物品编码，必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteItemReq) Reset() {
+	*x = DeleteItemReq{}
+	mi := &file_item_item_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteItemReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteItemReq) ProtoMessage() {}
+
+func (x *DeleteItemReq) ProtoReflect() protoreflect.Message {
+	mi := &file_item_item_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteItemReq.ProtoReflect.Descriptor instead.
+func (*DeleteItemReq) Descriptor() ([]byte, []int) {
+	return file_item_item_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *DeleteItemReq) GetItemCode() string {
+	if x != nil {
+		return x.ItemCode
+	}
+	return ""
+}
+
+type DeleteItemResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，必填"` //物品编码，必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteItemResp) Reset() {
+	*x = DeleteItemResp{}
+	mi := &file_item_item_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteItemResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteItemResp) ProtoMessage() {}
+
+func (x *DeleteItemResp) ProtoReflect() protoreflect.Message {
+	mi := &file_item_item_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteItemResp.ProtoReflect.Descriptor instead.
+func (*DeleteItemResp) Descriptor() ([]byte, []int) {
+	return file_item_item_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *DeleteItemResp) GetItemCode() string {
+	if x != nil {
+		return x.ItemCode
+	}
+	return ""
+}
+
 var File_item_item_proto protoreflect.FileDescriptor
 
 const file_item_item_proto_rawDesc = "" +
 	"\n" +
-	"\x0fitem/item.proto\x12\x04item\x1a\terp.proto\"\xb4\x02\n" +
+	"\x0fitem/item.proto\x12\x04item\x1a\terp.proto\"\xdc\x02\n" +
 	"\x0eGetItemListReq\x12.\n" +
 	"\n" +
 	"item_group\x18\x01 \x01(\x0e2\x0f.item.ItemGroupR\titemGroup\x12\x1b\n" +
@@ -1839,9 +2039,10 @@ const file_item_item_proto_rawDesc = "" +
 	"\x10sub_company_abbr\x18\x05 \x01(\tR\x0esubCompanyAbbr\x12\x1b\n" +
 	"\titem_code\x18\x06 \x01(\tR\bitemCode\x12(\n" +
 	"\x10item_code_prefix\x18\a \x01(\tR\x0eitemCodePrefix\x12)\n" +
-	"\x10contain_disabled\x18\b \x01(\bR\x0fcontainDisabled\">\n" +
+	"\x10contain_disabled\x18\b \x01(\bR\x0fcontainDisabled\x12&\n" +
+	"\x0fitem_group_name\x18\x17 \x01(\tR\ritemGroupName\">\n" +
 	"\x0fGetItemListResp\x12+\n" +
-	"\titem_list\x18\x01 \x03(\v2\x0e.item.ItemInfoR\bitemList\"\xa9\x06\n" +
+	"\titem_list\x18\x01 \x03(\v2\x0e.item.ItemInfoR\bitemList\"\xd1\x06\n" +
 	"\bItemInfo\x12\x1b\n" +
 	"\titem_name\x18\x01 \x01(\tR\bitemName\x12.\n" +
 	"\n" +
@@ -1869,7 +2070,8 @@ const file_item_item_proto_rawDesc = "" +
 	"\fhas_variants\x18\x15 \x01(\bR\vhasVariants\x123\n" +
 	"\n" +
 	"attributes\x18\x16 \x03(\v2\x13.item.AttributeInfoR\n" +
-	"attributes\"J\n" +
+	"attributes\x12&\n" +
+	"\x0fitem_group_name\x18\x17 \x01(\tR\ritemGroupName\"J\n" +
 	"\tUomDetail\x12\x10\n" +
 	"\x03uom\x18\x01 \x01(\tR\x03uom\x12+\n" +
 	"\x11conversion_factor\x18\x02 \x01(\x01R\x10conversionFactor\"\xae\x01\n" +
@@ -1958,7 +2160,7 @@ const file_item_item_proto_rawDesc = "" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x1b\n" +
 	"\titem_name\x18\x02 \x01(\tR\bitemName\x12\x10\n" +
 	"\x03qty\x18\x03 \x01(\x01R\x03qty\x12\x10\n" +
-	"\x03uom\x18\x04 \x01(\tR\x03uom\"\x93\x02\n" +
+	"\x03uom\x18\x04 \x01(\tR\x03uom\"\xbb\x02\n" +
 	"\vPosSpecItem\x12\x1b\n" +
 	"\titem_name\x18\x01 \x01(\tR\bitemName\x12\x1b\n" +
 	"\titem_code\x18\x02 \x01(\tR\bitemCode\x12,\n" +
@@ -1968,7 +2170,8 @@ const file_item_item_proto_rawDesc = "" +
 	"\bdisabled\x18\x06 \x01(\bR\bdisabled\x12#\n" +
 	"\rinternal_code\x18\a \x01(\tR\finternalCode\x12 \n" +
 	"\fnot_for_sale\x18\b \x01(\bR\n" +
-	"notForSale\"<\n" +
+	"notForSale\x12&\n" +
+	"\x0fitem_group_name\x18\t \x01(\tR\ritemGroupName\"<\n" +
 	"\x13SavePosAttributeReq\x12%\n" +
 	"\x04item\x18\x01 \x01(\v2\x11.item.PosSpecItemR\x04item\"C\n" +
 	"\x14SavePosAttributeResp\x12+\n" +
@@ -1976,7 +2179,15 @@ const file_item_item_proto_rawDesc = "" +
 	"\x0fSavePosAddonReq\x12%\n" +
 	"\x04item\x18\x01 \x01(\v2\x11.item.PosSpecItemR\x04item\"?\n" +
 	"\x10SavePosAddonResp\x12+\n" +
-	"\titem_info\x18\x01 \x01(\v2\x0e.item.ItemInfoR\bitemInfo*w\n" +
+	"\titem_info\x18\x01 \x01(\v2\x0e.item.ItemInfoR\bitemInfo\" \n" +
+	"\fDeleteUomReq\x12\x10\n" +
+	"\x03uom\x18\x01 \x01(\tR\x03uom\"!\n" +
+	"\rDeleteUomResp\x12\x10\n" +
+	"\x03uom\x18\x01 \x01(\tR\x03uom\",\n" +
+	"\rDeleteItemReq\x12\x1b\n" +
+	"\titem_code\x18\x01 \x01(\tR\bitemCode\"-\n" +
+	"\x0eDeleteItemResp\x12\x1b\n" +
+	"\titem_code\x18\x01 \x01(\tR\bitemCode*w\n" +
 	"\tItemGroup\x12\n" +
 	"\n" +
 	"\x06Others\x10\x00\x12\x0f\n" +
@@ -1985,18 +2196,21 @@ const file_item_item_proto_rawDesc = "" +
 	"\aPackage\x10\x03\x12\x12\n" +
 	"\x0eVirtualProduct\x10\x04\x12\x10\n" +
 	"\fPosAttribute\x10\x05\x12\f\n" +
-	"\bPosAddon\x10\x062\xe6\x04\n" +
+	"\bPosAddon\x10\x062\xd0\x05\n" +
 	"\vItemService\x126\n" +
 	"\vGetItemList\x12\x14.item.GetItemListReq\x1a\x11.erp.ResponseInfo\x124\n" +
 	"\n" +
 	"GetUomList\x12\x13.item.GetUomListReq\x1a\x11.erp.ResponseInfo\x12,\n" +
 	"\x06GetUom\x12\x0f.item.GetUomReq\x1a\x11.erp.ResponseInfo\x12+\n" +
-	"\aSaveUom\x12\r.item.UomInfo\x1a\x11.erp.ResponseInfo\x12@\n" +
+	"\aSaveUom\x12\r.item.UomInfo\x1a\x11.erp.ResponseInfo\x122\n" +
+	"\tDeleteUom\x12\x12.item.DeleteUomReq\x1a\x11.erp.ResponseInfo\x12@\n" +
 	"\x10GetAttributeList\x12\x19.item.GetAttributeListReq\x1a\x11.erp.ResponseInfo\x127\n" +
 	"\rSaveAttribute\x12\x13.item.AttributeInfo\x1a\x11.erp.ResponseInfo\x12-\n" +
 	"\bSaveItem\x12\x0e.item.ItemInfo\x1a\x11.erp.ResponseInfo\x128\n" +
 	"\fGetItemStock\x12\x15.item.GetItemStockReq\x1a\x11.erp.ResponseInfo\x12.\n" +
-	"\aGetItem\x12\x10.item.GetItemReq\x1a\x11.erp.ResponseInfo\x12@\n" +
+	"\aGetItem\x12\x10.item.GetItemReq\x1a\x11.erp.ResponseInfo\x124\n" +
+	"\n" +
+	"DeleteItem\x12\x13.item.DeleteItemReq\x1a\x11.erp.ResponseInfo\x12@\n" +
 	"\x10SavePosAttribute\x12\x19.item.SavePosAttributeReq\x1a\x11.erp.ResponseInfo\x128\n" +
 	"\fSavePosAddon\x12\x15.item.SavePosAddonReq\x1a\x11.erp.ResponseInfoB\"Z ttpos-bmp/app/ttpos-erp/api/itemb\x06proto3"
 
@@ -2013,7 +2227,7 @@ func file_item_item_proto_rawDescGZIP() []byte {
 }
 
 var file_item_item_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_item_item_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
+var file_item_item_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
 var file_item_item_proto_goTypes = []any{
 	(ItemGroup)(0),               // 0: item.ItemGroup
 	(*GetItemListReq)(nil),       // 1: item.GetItemListReq
@@ -2041,7 +2255,11 @@ var file_item_item_proto_goTypes = []any{
 	(*SavePosAttributeResp)(nil), // 23: item.SavePosAttributeResp
 	(*SavePosAddonReq)(nil),      // 24: item.SavePosAddonReq
 	(*SavePosAddonResp)(nil),     // 25: item.SavePosAddonResp
-	(*api.ResponseInfo)(nil),     // 26: erp.ResponseInfo
+	(*DeleteUomReq)(nil),         // 26: item.DeleteUomReq
+	(*DeleteUomResp)(nil),        // 27: item.DeleteUomResp
+	(*DeleteItemReq)(nil),        // 28: item.DeleteItemReq
+	(*DeleteItemResp)(nil),       // 29: item.DeleteItemResp
+	(*api.ResponseInfo)(nil),     // 30: erp.ResponseInfo
 }
 var file_item_item_proto_depIdxs = []int32{
 	0,  // 0: item.GetItemListReq.item_group:type_name -> item.ItemGroup
@@ -2066,26 +2284,30 @@ var file_item_item_proto_depIdxs = []int32{
 	5,  // 19: item.ItemService.GetUomList:input_type -> item.GetUomListReq
 	7,  // 20: item.ItemService.GetUom:input_type -> item.GetUomReq
 	9,  // 21: item.ItemService.SaveUom:input_type -> item.UomInfo
-	10, // 22: item.ItemService.GetAttributeList:input_type -> item.GetAttributeListReq
-	11, // 23: item.ItemService.SaveAttribute:input_type -> item.AttributeInfo
-	3,  // 24: item.ItemService.SaveItem:input_type -> item.ItemInfo
-	15, // 25: item.ItemService.GetItemStock:input_type -> item.GetItemStockReq
-	17, // 26: item.ItemService.GetItem:input_type -> item.GetItemReq
-	22, // 27: item.ItemService.SavePosAttribute:input_type -> item.SavePosAttributeReq
-	24, // 28: item.ItemService.SavePosAddon:input_type -> item.SavePosAddonReq
-	26, // 29: item.ItemService.GetItemList:output_type -> erp.ResponseInfo
-	26, // 30: item.ItemService.GetUomList:output_type -> erp.ResponseInfo
-	26, // 31: item.ItemService.GetUom:output_type -> erp.ResponseInfo
-	26, // 32: item.ItemService.SaveUom:output_type -> erp.ResponseInfo
-	26, // 33: item.ItemService.GetAttributeList:output_type -> erp.ResponseInfo
-	26, // 34: item.ItemService.SaveAttribute:output_type -> erp.ResponseInfo
-	26, // 35: item.ItemService.SaveItem:output_type -> erp.ResponseInfo
-	26, // 36: item.ItemService.GetItemStock:output_type -> erp.ResponseInfo
-	26, // 37: item.ItemService.GetItem:output_type -> erp.ResponseInfo
-	26, // 38: item.ItemService.SavePosAttribute:output_type -> erp.ResponseInfo
-	26, // 39: item.ItemService.SavePosAddon:output_type -> erp.ResponseInfo
-	29, // [29:40] is the sub-list for method output_type
-	18, // [18:29] is the sub-list for method input_type
+	26, // 22: item.ItemService.DeleteUom:input_type -> item.DeleteUomReq
+	10, // 23: item.ItemService.GetAttributeList:input_type -> item.GetAttributeListReq
+	11, // 24: item.ItemService.SaveAttribute:input_type -> item.AttributeInfo
+	3,  // 25: item.ItemService.SaveItem:input_type -> item.ItemInfo
+	15, // 26: item.ItemService.GetItemStock:input_type -> item.GetItemStockReq
+	17, // 27: item.ItemService.GetItem:input_type -> item.GetItemReq
+	28, // 28: item.ItemService.DeleteItem:input_type -> item.DeleteItemReq
+	22, // 29: item.ItemService.SavePosAttribute:input_type -> item.SavePosAttributeReq
+	24, // 30: item.ItemService.SavePosAddon:input_type -> item.SavePosAddonReq
+	30, // 31: item.ItemService.GetItemList:output_type -> erp.ResponseInfo
+	30, // 32: item.ItemService.GetUomList:output_type -> erp.ResponseInfo
+	30, // 33: item.ItemService.GetUom:output_type -> erp.ResponseInfo
+	30, // 34: item.ItemService.SaveUom:output_type -> erp.ResponseInfo
+	30, // 35: item.ItemService.DeleteUom:output_type -> erp.ResponseInfo
+	30, // 36: item.ItemService.GetAttributeList:output_type -> erp.ResponseInfo
+	30, // 37: item.ItemService.SaveAttribute:output_type -> erp.ResponseInfo
+	30, // 38: item.ItemService.SaveItem:output_type -> erp.ResponseInfo
+	30, // 39: item.ItemService.GetItemStock:output_type -> erp.ResponseInfo
+	30, // 40: item.ItemService.GetItem:output_type -> erp.ResponseInfo
+	30, // 41: item.ItemService.DeleteItem:output_type -> erp.ResponseInfo
+	30, // 42: item.ItemService.SavePosAttribute:output_type -> erp.ResponseInfo
+	30, // 43: item.ItemService.SavePosAddon:output_type -> erp.ResponseInfo
+	31, // [31:44] is the sub-list for method output_type
+	18, // [18:31] is the sub-list for method input_type
 	18, // [18:18] is the sub-list for extension type_name
 	18, // [18:18] is the sub-list for extension extendee
 	0,  // [0:18] is the sub-list for field type_name
@@ -2102,7 +2324,7 @@ func file_item_item_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_item_item_proto_rawDesc), len(file_item_item_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   25,
+			NumMessages:   29,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
