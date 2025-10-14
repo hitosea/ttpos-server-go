@@ -164,6 +164,7 @@ type IProductSrv interface {
 	SyncProductFlavor(ctx context.Context) error       // 同步商品规格
 	SyncSauce(ctx context.Context) error               // 获取总部最新加料数据
 	SyncAttributeGroup(ctx context.Context) error      // 获取总部最新属性组数据
+	SyncProduct(ctx context.Context) error             // 同步商品
 }
 
 type productSrv struct {
@@ -7357,6 +7358,16 @@ func (s *productSrv) SyncAttributeGroup(ctx context.Context) error {
 		if err != nil {
 			return errors.WithMessage(errors.New("同步总部属性组失败"), err.Error())
 		}
+	}
+
+	return nil
+}
+
+// SyncProduct 同步商品
+func (s *productSrv) SyncProduct(ctx context.Context) error {
+	company := ctx.GetCompany()
+	if !company.IsOpenErp() {
+		return errors.New("公司未开启erp")
 	}
 
 	return nil

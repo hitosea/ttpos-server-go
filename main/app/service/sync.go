@@ -136,7 +136,7 @@ func (s *SyncSrv) Sync(ctx context.Context, syncReq req.SyncReq) (resp.SyncResp,
 		// 创建新的同步任务
 		syncTask = &model.SyncTask{
 			Status:       constant.SyncTaskStatusRunning,
-			TotalCount:   12, // TODO 总共12个子任务（商品暂未实现）
+			TotalCount:   13, // 总共13个子任务
 			SuccessCount: 0,
 			FailCount:    0,
 			StartTime:    time.Now().Unix(),
@@ -160,7 +160,7 @@ func (s *SyncSrv) Sync(ctx context.Context, syncReq req.SyncReq) (resp.SyncResp,
 		{constant.SyncTaskTypeFlavor, constant.SyncTaskTypeNames[constant.SyncTaskTypeFlavor], s.productSrv.SyncProductFlavor},
 		{constant.SyncTaskTypeAttribute, constant.SyncTaskTypeNames[constant.SyncTaskTypeAttribute], s.productSrv.SyncAttributeGroup},
 		{constant.SyncTaskTypeSauce, constant.SyncTaskTypeNames[constant.SyncTaskTypeSauce], s.productSrv.SyncSauce},
-		// TODO: 7 商品
+		{constant.SyncTaskTypeProduct, constant.SyncTaskTypeNames[constant.SyncTaskTypeProduct], s.productSrv.SyncProduct},
 		{constant.SyncTaskTypeBomCard, constant.SyncTaskTypeNames[constant.SyncTaskTypeBomCard], s.materialSrv.SyncProductBomCard},
 		{constant.SyncTaskTypeSupplier, constant.SyncTaskTypeNames[constant.SyncTaskTypeSupplier], s.supplierSrv.SyncSupplier},
 		{constant.SyncTaskTypeWarehouseStock, constant.SyncTaskTypeNames[constant.SyncTaskTypeWarehouseStock], s.warehouseSrv.SyncWarehouseItemStock},
