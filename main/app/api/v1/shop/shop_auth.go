@@ -30,7 +30,7 @@ type AuthHandler struct {
 // @Produce json
 // @Param X-SIGN header string true "验证码sign"
 // @param data body req.LoginReq true "登录参数"
-// @Success 200 {object} dto.Response{data=resp.LoginResp}
+// @Success 200 {object} dto.Response{data=resp.ShopLoginResp}
 // @Router /shop/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	ctx := helper.GetContext(c)
