@@ -30,6 +30,7 @@ import (
 	"ttpos-server-go/app/service/rpc/takeout"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
@@ -165,6 +166,7 @@ type orderSrv struct {
 	paymentMethodSrv IPaymentMethodSrv
 	memberSrv        IMemberSrv
 	cashBoxSrv       ICashBoxSrv
+	staffShiftSrv    IStaffShiftSrv
 	smsSrv           ISmsSrv
 }
 
@@ -180,11 +182,12 @@ func WithSmsSrv(dbm *database.DBManager) func(option *ISrvOption) {
 
 // NewOrderSrv 创建订单服务实例
 func NewOrderSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv, memberSrv IMemberSrv, cashBoxSrv ICashBoxSrv, opts ...func(option *ISrvOption)) IOrderSrv {
-	return NewOrderSrvImpl(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, opts...)
+	staffShiftSrv := NewStaffShiftSrv(cache.NewCache(cache.Redis, cache.Config{}), dbm, cashBoxSrv, NewStatisticsSrv())
+	return NewOrderSrvImpl(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, staffShiftSrv, opts...)
 }
 
 // NewOrderSrvImpl 创建订单服务实例实现
-func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv, memberSrv IMemberSrv, cashBoxSrv ICashBoxSrv, opts ...func(option *ISrvOption)) IOrderSrv {
+func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv, memberSrv IMemberSrv, cashBoxSrv ICashBoxSrv, staffShiftSrv IStaffShiftSrv, opts ...func(option *ISrvOption)) IOrderSrv {
 	option := &ISrvOption{}
 	for _, opt := range opts {
 		opt(option)
@@ -199,6 +202,7 @@ func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv s
 		paymentMethodSrv: paymentMethodSrv,
 		memberSrv:        memberSrv,
 		cashBoxSrv:       cashBoxSrv,
+		staffShiftSrv:    staffShiftSrv,
 		smsSrv:           option.SmsSrv,
 	}
 }
@@ -393,6 +397,25 @@ func createSaleOrder(ctx context.Context, db *gorm.DB, saleBillSetting *model.Sa
 	// 设置收银员信息
 	staff := ctx.GetStaff()
 	saleOrderObj.SetCashier(staff.Uuid, staff.GetUserName())
+
+	// 设置员工班次信息
+	if staff.Uuid != 0 {
+		// 获取当前员工班次信息
+		staffShiftLog, err := repository.NewShiftLogRepo(db).GetShiftLog(
+			func(db *gorm.DB) *gorm.DB {
+				return db.Where("staff_uuid = ?", staff.Uuid)
+			},
+			func(db *gorm.DB) *gorm.DB {
+				return db.Where("status = ?", constant.StaffNotHandedOver)
+			},
+		)
+		if err == nil {
+			// 班次信息存在，记录班次UUID
+			saleOrderObj.StaffShiftLogUuid = staffShiftLog.Uuid
+		}
+		// 如果班次不存在，不影响订单创建，继续执行
+	}
+
 	// 设置会员折扣
 	if ctx.GetMemberUuid() != 0 {
 		member, err := repository.NewMemberRepo(db).GetMemberByUuid(ctx.GetMemberUuid())
@@ -2324,8 +2347,17 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	// 可退的会员消费金额
 	canReturnMemberConsumptionAmount := saleOrder.GetCanReturnMemberConsumptionAmount()
 
+	// 获取当前员工班次信息
+	var staffShiftLogUuid uint64
+	if ctx.GetStaffUuid() != 0 {
+		staffShiftLog, err := s.staffShiftSrv.GetCurrentStaffShiftLog(ctx, ctx.GetStaffUuid())
+		if err == nil {
+			staffShiftLogUuid = staffShiftLog.Uuid
+		}
+	}
+
 	// 创建退款单
-	returnOrder, err := saleOrder.NewReturnOrder(ctx.GetScene(), deliveryFee, ctx.GetStaff().DutyNo, ctx.GetLanguage(), saleOrderProducts, saleOrderBuffetCustomerTypes, saleOrderBuffetDelayProducts, numMap, returnType, canReturnAmount)
+	returnOrder, err := saleOrder.NewReturnOrder(ctx.GetScene(), deliveryFee, ctx.GetStaff().DutyNo, ctx.GetLanguage(), saleOrderProducts, saleOrderBuffetCustomerTypes, saleOrderBuffetDelayProducts, numMap, returnType, canReturnAmount, staffShiftLogUuid)
 	if err != nil {
 		return errors.WithMessage(err), constant.CodeFail
 	}

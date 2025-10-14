@@ -44,6 +44,7 @@ type IStaffShiftSrv interface {
 	ShiftDeposit(ctx context.Context, req req.ShiftDepositReq) error
 	ShiftPrinter(ctx context.Context, req req.ShiftPrinterReq, firstExecution int, openMoneybox bool, staffs ...model.Staff) (*resp.PrinterData, error)
 	CreateShiftSnapshot(ctx context.Context, shiftLog model.StaffShiftLog) error
+	GetCurrentStaffShiftLog(ctx context.Context, staffUuid uint64) (*model.StaffShiftLog, error) // 获取当前员工班次信息
 }
 
 func NewStaffShiftSrv(cache cache.Cache, dbm *database.DBManager, cashBoxSrv ICashBoxSrv, statisticsSrv IStatisticsSrv) IStaffShiftSrv {
@@ -1042,4 +1043,29 @@ func (s *staffShiftSrv) CreateShiftSnapshot(ctx context.Context, shiftLog model.
 	}
 
 	return nil
+}
+
+// GetCurrentStaffShiftLog 获取当前员工班次信息
+func (s *staffShiftSrv) GetCurrentStaffShiftLog(ctx context.Context, staffUuid uint64) (*model.StaffShiftLog, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	shiftLogRepo := repository.NewShiftLogRepo(db)
+
+	// 查询当前员工未交班的班次记录
+	shiftLog, err := shiftLogRepo.GetShiftLog(
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("staff_uuid = ?", staffUuid)
+		},
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("status = ?", constant.StaffNotHandedOver)
+		},
+	)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.New("员工当前没有进行中的班次")
+		}
+		return nil, errors.WithMessage(err)
+	}
+
+	return &shiftLog, nil
 }

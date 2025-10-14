@@ -18,6 +18,7 @@ type ReturnOrder struct {
 	AccountNo           string  `gorm:"column:account_no;type:varchar(255);comment:账号 - 当存在QR PromptPay的时候需要传;NOT NULL" json:"account_no"`
 	AccountName         string  `gorm:"column:account_name;type:varchar(255);comment:账户名称 - 当存在QR PromptPay的时候需要传;NOT NULL" json:"account_name"`
 	DutyNo              string  `gorm:"column:duty_no;type:varchar(255);comment:当班编号;NOT NULL" json:"duty_no"`
+	StaffShiftLogUuid   uint64  `gorm:"column:staff_shift_log_uuid;type:bigint(20) unsigned;default:0;comment:员工班次记录ID;NOT NULL" json:"staff_shift_log_uuid"`
 
 	// erp相关
 	ErpInvoiceName string `gorm:"column:erp_invoice_name;type:varchar(255);comment:发票名称;NOT NULL" json:"erp_invoice_name"`

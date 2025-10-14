@@ -29,9 +29,10 @@ type SaleOrder struct {
 	DeviceId    string `gorm:"column:device_id;type:varchar(255);default:'';comment:设备ID,用于标识订单来源设备.来源h5时，device_id为h5" json:"device_id"`
 
 	// 关联ID字段
-	ConsumerUuid uint64 `gorm:"column:consumer_uuid;type:bigint(20);default:0;comment:消费者ID" json:"consumer_uuid"`
-	CashierUuid  uint64 `gorm:"column:cashier_uuid;type:bigint(20);default:0;comment:收银员ID" json:"cashier_uuid"`
-	SaleBillUuid uint64 `gorm:"column:sale_bill_uuid;type:bigint(20);default:0;comment:销售账单ID" json:"sale_bill_uuid"`
+	ConsumerUuid      uint64 `gorm:"column:consumer_uuid;type:bigint(20);default:0;comment:消费者ID" json:"consumer_uuid"`
+	CashierUuid       uint64 `gorm:"column:cashier_uuid;type:bigint(20);default:0;comment:收银员ID" json:"cashier_uuid"`
+	SaleBillUuid      uint64 `gorm:"column:sale_bill_uuid;type:bigint(20);default:0;comment:销售账单ID" json:"sale_bill_uuid"`
+	StaffShiftLogUuid uint64 `gorm:"column:staff_shift_log_uuid;type:bigint(20);default:0;comment:员工班次记录ID" json:"staff_shift_log_uuid"`
 
 	// 商品金额相关字段
 	ProductAmount         float64 `gorm:"column:product_amount;type:decimal(12,2);default:0;comment:商品金额" json:"product_amount"`
@@ -816,7 +817,7 @@ func (model *SaleOrder) NewReverseSettleExchangeMemberPointLog(points float64) *
 }
 
 // 创建退货单
-func (model *SaleOrder) NewReturnOrder(scene string, deliveryFee float64, dutyNo string, lang string, saleOrderProducts []*SaleOrderProduct, buffetCustomers []*SaleOrderBuffetCustomerType, buffetDelays []*SaleOrderBuffetDelayProduct, numMap map[uint64]float64, returnType int, canReturnAmount float64) (*ReturnOrder, error) {
+func (model *SaleOrder) NewReturnOrder(scene string, deliveryFee float64, dutyNo string, lang string, saleOrderProducts []*SaleOrderProduct, buffetCustomers []*SaleOrderBuffetCustomerType, buffetDelays []*SaleOrderBuffetDelayProduct, numMap map[uint64]float64, returnType int, canReturnAmount float64, staffShiftLogUuid uint64) (*ReturnOrder, error) {
 	returnOrderUuid, _ := utils.GetID()
 
 	// 如果退款类型为整单退款，则退款金额=订单最终应收金额-已退款金额
@@ -989,6 +990,7 @@ func (model *SaleOrder) NewReturnOrder(scene string, deliveryFee float64, dutyNo
 		ReturnOrderAmounts:  returnOrderAmounts,
 		ReturnOrderProducts: returnOrderProducts,
 		DutyNo:              dutyNo,
+		StaffShiftLogUuid:   staffShiftLogUuid,
 	}, nil
 }
 

@@ -134,6 +134,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `consumer_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '消费者ID',
     `cashier_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '收银员ID',
     `sale_bill_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '销售账单ID',
+    `staff_shift_log_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '员工交班记录ID',
     `finish_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '完成时间(时间戳),结账时间',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -2416,6 +2417,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_return_order` (
     `account_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '账号 - 当存在QR PromptPay的时候需要传',
     `account_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '账户名称 - 当存在QR PromptPay的时候需要传',
     `duty_no` varchar(255) NOT NULL DEFAULT '' COMMENT '当班编号',
+    `staff_shift_log_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '员工交班记录ID',
     -- erp相关
     `erp_invoice_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '发票名称',
 
@@ -2474,6 +2476,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_refund_order` (
     `status` INT(11) NOT NULL DEFAULT 0 COMMENT '退款状态',
     -- erp相关
     `erp_invoice_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '发票名称',
+
+    `staff_shift_log_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '员工交班记录ID',
 
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
