@@ -12,13 +12,15 @@ import (
 type IProductPackageGroupRepo interface {
 	IProductPackageGroupQueryRepo
 	IProductPackageGroupPreloadRepo
-	CreateProductPackageGroup(productPackageGroup *model.ProductPackageGroup) error // 创建商品套餐组
-	UpdateProductPackageGroup(data map[string]any, opts ...DBOption) error          // 更新商品套餐组
-	DeleteProductPackageGroup(opts ...DBOption) error                               // 删除商品套餐组
+	CreateProductPackageGroup(productPackageGroup *model.ProductPackageGroup) error    // 创建商品套餐组
+	CreateProductPackageGroups(productPackageGroups []model.ProductPackageGroup) error // 创建商品套餐组
+	UpdateProductPackageGroup(data map[string]any, opts ...DBOption) error             // 更新商品套餐组
+	DeleteProductPackageGroup(opts ...DBOption) error                                  // 删除商品套餐组
 
-	CreateProductPackageGroupItem(productPackageGroupItem *model.ProductPackageGroupItem) error // 创建商品套餐组商品
-	UpdateProductPackageGroupItem(data map[string]any, opts ...DBOption) error                  // 更新商品套餐组商品
-	DeleteProductPackageGroupItem(opts ...DBOption) error                                       // 删除商品套餐组商品
+	CreateProductPackageGroupItem(productPackageGroupItem *model.ProductPackageGroupItem) error    // 创建商品套餐组商品
+	CreateProductPackageGroupItems(productPackageGroupItems []model.ProductPackageGroupItem) error // 创建商品套餐组商品
+	UpdateProductPackageGroupItem(data map[string]any, opts ...DBOption) error                     // 更新商品套餐组商品
+	DeleteProductPackageGroupItem(opts ...DBOption) error                                          // 删除商品套餐组商品
 }
 
 // IProductPackageGroupQueryRepo 商品套餐组查询仓库接口
@@ -51,6 +53,11 @@ func (r *productPackageGroupRepoImpl) CreateProductPackageGroup(productPackageGr
 	return r.db.Create(productPackageGroup).Error
 }
 
+// CreateProductPackageGroups 创建商品套餐组
+func (r *productPackageGroupRepoImpl) CreateProductPackageGroups(productPackageGroups []model.ProductPackageGroup) error {
+	return r.db.Create(productPackageGroups).Error
+}
+
 // UpdateProductPackageGroup 更新商品套餐组
 func (r *productPackageGroupRepoImpl) UpdateProductPackageGroup(data map[string]any, opts ...DBOption) error {
 	db := r.db
@@ -76,6 +83,11 @@ func (r *productPackageGroupRepoImpl) DeleteProductPackageGroup(opts ...DBOption
 // CreateProductPackageGroupItem 创建商品套餐组商品
 func (r *productPackageGroupRepoImpl) CreateProductPackageGroupItem(productPackageGroupItem *model.ProductPackageGroupItem) error {
 	return r.db.Create(productPackageGroupItem).Error
+}
+
+// CreateProductPackageGroupItems 创建商品套餐组商品
+func (r *productPackageGroupRepoImpl) CreateProductPackageGroupItems(productPackageGroupItems []model.ProductPackageGroupItem) error {
+	return r.db.Create(productPackageGroupItems).Error
 }
 
 // UpdateProductPackageGroupItem 更新商品套餐组商品

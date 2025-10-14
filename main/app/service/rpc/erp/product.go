@@ -172,3 +172,43 @@ func (s *erpSrv) GetSauceList(ctx context.Context, sourceListReq req.GetErpSauce
 	}
 	return sauceList, nil
 }
+
+// 获取商品列表请求参数
+type GetErpProductListReq struct {
+	SiteCode        string `json:"site_code"`
+	Branch          string `json:"branch"`
+	CompanyAbbr     string `json:"company_abbr"`
+	ContainDisabled bool   `json:"contain_disabled"`
+	VariantOf       string `json:"variant_of"`
+}
+
+// 获取商品列表
+func (s *erpSrv) GetProductList(ctx context.Context, params GetErpProductListReq) (*item.GetItemListResp, error) {
+	client, conn, err := NewErpItemClient()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	param := &item.GetItemListReq{
+		ItemGroup:       item.ItemGroup_Products,
+		Branch:          params.Branch,
+		CompanyAbbr:     params.CompanyAbbr,
+		ContainDisabled: params.ContainDisabled,
+		VariantOf:       params.VariantOf,
+	}
+
+	result, err := client.GetItemList(WithSiteCode(ctx.GetContext(), params.SiteCode), param)
+	if err != nil {
+		return nil, err
+	}
+	if result.GetCode() != "0" {
+		return nil, errors.WithMessage(errors.New(result.GetMessage()), "获取商品列表失败")
+	}
+	response := &item.GetItemListResp{}
+	if err := result.Data.UnmarshalTo(response); err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
