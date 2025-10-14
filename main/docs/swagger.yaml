@@ -3625,47 +3625,6 @@ definitions:
     - password
     - username
     type: object
-  req.MaterialAddErpReq:
-    properties:
-      barcode_value:
-        description: 条形码值
-        type: string
-      classification:
-        description: 分类
-        type: string
-      classification_code:
-        description: 分类编码
-        type: string
-      disabled:
-        description: 是否禁用
-        type: boolean
-      internal_code:
-        description: 内部编码
-        type: string
-      item_code:
-        description: 物品编码, 如果为空，则为新增；如果非空，则为编辑
-        type: string
-      item_name:
-        description: 物品名称, 英文
-        type: string
-      opening_stock:
-        description: 期初库存
-        type: number
-      purchase_uom:
-        description: 采购单位, 英文
-        type: string
-      stock_uom:
-        description: 基准库存单位, 英文
-        type: string
-      uoms:
-        description: 单位列表
-        items:
-          $ref: '#/definitions/req.MaterialUomReq'
-        type: array
-      valuation_rate:
-        description: 估值率
-        type: number
-    type: object
   req.MaterialAddReq:
     properties:
       barcode_value:
@@ -3895,15 +3854,6 @@ definitions:
     required:
     - conversion_rate
     - uuid
-    type: object
-  req.MaterialUomReq:
-    properties:
-      conversion_rate:
-        description: 转换率
-        type: number
-      uom:
-        description: 单位, 英文
-        type: string
     type: object
   req.MemberOrderSendAuthCodeReq:
     properties:
@@ -24270,30 +24220,6 @@ paths:
       security:
       - JwtToken: []
       summary: 添加物品
-      tags:
-      - 商家端.物品管理
-  /shop/material/add/erp:
-    post:
-      consumes:
-      - application/json
-      description: 从erp同步物品
-      parameters:
-      - description: 物品添加请求
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.MaterialAddErpReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-        "400":
-          description: 错误请求
-      security:
-      - JwtToken: []
-      summary: 从erp同步物品
       tags:
       - 商家端.物品管理
   /shop/material/category/add:
