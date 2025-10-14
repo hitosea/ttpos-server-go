@@ -7,6 +7,9 @@ import (
 	"ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-erp/internal/controller/rpc"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
+
+	"github.com/gogf/gf/v2/errors/gcode"
+	"github.com/gogf/gf/v2/errors/gerror"
 )
 
 // GroupController ItemGroupController 物品分组服务控制器
@@ -117,47 +120,23 @@ func (c *GroupController) DeleteItemGroup(ctx context.Context, req *item.DeleteI
 	return rpc.ApiSuccess("删除物品分组成功"), nil
 }
 
-func (c *GroupController) CreateAttributeGroup(ctx context.Context, req *item.CreateAttributeGroupReq) (*api.ResponseInfo, error) {
+func (*GroupController) SaveAttributeGroup(ctx context.Context, req *item.SaveAttributeGroupReq) (*api.ResponseInfo, error) {
 	// 参数验证
-	if req == nil || req.AliasName == "" {
-		return rpc.ApiError("分组别名不能为空"), nil
+	if req == nil || req.AttributeGroupInfo == nil {
+		return rpc.ApiError("请求参数不能为空"), nil
 	}
 
-	// 调用服务层创建属性分组
-	resp, err := service.ItemGroup().CreateAttributeGroup(ctx, req)
+	resp, err := service.ItemGroup().SaveAttributeGroup(ctx, req)
 	if err != nil {
 		return rpc.ApiError(err.Error()), nil
 	}
-	// 转换为 protobuf 类型
-	pbSavedItemGroup := &item.ItemGroupInfo{
-		ItemGroupName:   resp.ItemGroupName,
-		ParentItemGroup: resp.ParentItemGroup,
-		IsGroup:         resp.IsGroup,
-		Branch:          resp.Branch,
-		CompanyAbbr:     req.CompanyAbbr,
-	}
-	// 返回成功响应
-	return rpc.ApiSuccessWithData("创建属性分组成功", pbSavedItemGroup), nil
+	return rpc.ApiSuccessWithData("保存物品属性分组成功", resp), nil
 }
 
-func (c *GroupController) CreateAddonGroup(ctx context.Context, req *item.CreateAddonGroupReq) (*api.ResponseInfo, error) {
-	// 参数验证
-	if req == nil || req.AliasName == "" {
-		return rpc.ApiError("分组别名不能为空"), nil
-	}
-	// 调用服务层创建加料分组
-	resp, err := service.ItemGroup().CreateAddonGroup(ctx, req)
-	if err != nil {
-		return rpc.ApiError(err.Error()), nil
-	}
-	// 转换为 protobuf 类型
-	pbSavedItemGroup := &item.ItemGroupInfo{
-		ItemGroupName:   resp.ItemGroupName,
-		ParentItemGroup: resp.ParentItemGroup,
-		IsGroup:         resp.IsGroup,
-		Branch:          resp.Branch,
-		CompanyAbbr:     req.CompanyAbbr,
-	}
-	// 返回成功响应
-	return rpc.ApiSuccessWithData("创建加料分组成功", pbSavedItemGroup), nil
+func (*GroupController) DeleteAttributeGroup(context.Context, *item.DeleteAttributeGroupReq) (*api.ResponseInfo, error) {
+	return nil, gerror.NewCode(gcode.CodeNotImplemented)
+}
+
+func (*GroupController) SaveAddonGroup(context.Context, *item.SaveAddonGroupReq) (*api.ResponseInfo, error) {
+	return nil, gerror.NewCode(gcode.CodeNotImplemented)
 }
