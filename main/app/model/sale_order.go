@@ -688,6 +688,7 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool, openI
 				List: packageProductList,
 			},
 			CanEdit:      saleOrderProduct.IsCanEdit(),
+			IsBatch:      saleOrderProduct.IsBatchBool(),
 			ShowBatchTag: saleOrderProduct.IsShowBatchTag(openIsBatch),
 			BatchTagName: func() dto.LocaleResponse {
 				if saleOrderProduct.BatchTag != nil {
