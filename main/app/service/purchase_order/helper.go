@@ -218,7 +218,7 @@ func (h *purchaseOrderHelper) updateRelatedMaterialStock(db *gorm.DB, relatedMat
 
 	// 使用事务确保数据一致性
 	return db.Transaction(func(tx *gorm.DB) error {
-		// 构建复杂SQL查询来更新产品BOM的库存数量
+		// 构建复杂SQL查询来按成本卡更新产品BOM的库存数量
 		sql := `
 			UPDATE ttpos_product_bom AS pb 
 			JOIN (
@@ -227,21 +227,22 @@ func (h *purchaseOrderHelper) updateRelatedMaterialStock(db *gorm.DB, relatedMat
 					LEAST(IFNULL(
 						FLOOR(
 							MIN(
-								m.stock_num / (rm.num * rm.base_unit_conversion_rate)
+								wi.stock / rm.num
 							)
 						)
 					, 0), 99999999) AS min_stock_num
 				FROM ttpos_related_material AS rm
-				JOIN ttpos_material AS m ON rm.material_uuid = m.uuid
+				JOIN ttpos_warehouse_item AS wi ON rm.material_uuid = wi.material_uuid
+				JOIN ttpos_warehouse AS w ON wi.warehouse_uuid = w.uuid
 				WHERE rm.uuid IN (?) 
 				  AND rm.delete_time = 0 
 				  AND rm.unit_uuid > 0
+				  AND w.is_default = 1
 				GROUP BY rm.related_uuid
 			) AS sub ON pb.product_bom_card_uuid = sub.related_uuid
 			SET pb.stock_num = sub.min_stock_num
 			WHERE pb.product_bom_card_uuid IN (
-				SELECT 
-					DISTINCT related_uuid 
+				SELECT DISTINCT related_uuid 
 				FROM ttpos_related_material 
 				WHERE uuid IN (?) 
 				AND delete_time = 0 

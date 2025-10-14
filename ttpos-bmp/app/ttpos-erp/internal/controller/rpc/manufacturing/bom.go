@@ -161,9 +161,9 @@ func (s *Controller) validateBomItem(item *manufacturing.BomItem, index int) err
 	}
 
 	// 比率必须大于0
-	if item.Rate <= 0 {
-		return gerror.Newf("第%d个BOM物品的比率必须大于0", index)
-	}
+	//if item.Rate <= 0 {
+	//	return gerror.Newf("第%d个BOM物品的比率必须大于0", index)
+	//}
 
 	// 数量必须大于0
 	if item.Qty <= 0 {
