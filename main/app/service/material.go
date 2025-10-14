@@ -178,7 +178,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			Query: "NotBaseUnitList.Unit.MultiLanguageName",
 		},
 		repository.WithPreload{
-			Query: "WarehouseItem.Warehouse",
+			Query: "WarehouseItems.Warehouse",
 		},
 	))
 
