@@ -21,8 +21,10 @@ type IProductPackageQueryRepo interface {
 	GetProductPackageBoms(productPackageUuid uint64) (*model.ProductPackage, error) // 获取商品包的库存信息
 	GetProductPackageBaseInfoByBomUuid(flavorBomUuid uint64) (*model.ProductBom, error)
 	GetProductPackageListByUuids(uuids []uint64) ([]*model.ProductPackage, error)
-	GetProductPackageBatchTagCount() ([]uint64, error) // 获取分批商品数量
-	SetProductPackageBatch(uuids []uint64) error       // 将is_batch设置为1
+	GetProductPackageBatchTagCount() ([]uint64, error)                                                    // 获取分批商品数量
+	SetProductPackageBatch(uuids []uint64, isBatch uint) error                                            // 将is_batch设置为1或0
+	GetProductPackageListByUuidsAndIsBatch(uuids []uint64, isBatch uint) ([]*model.ProductPackage, error) // 根据uuid列表和is_batch查询商品包列表
+	GetProductPackageListByIsBatch(isBatch uint) ([]*model.ProductPackage, error)                         // 根据is_batch查询商品包列表
 }
 
 type productPackageRepoImpl struct {
@@ -196,11 +198,31 @@ func (r *productPackageRepoImpl) GetProductPackageBatchTagCount() ([]uint64, err
 	return productPackageBatchTagCounts, nil
 }
 
-// 根据uuids将is_batch设置为1
-func (r *productPackageRepoImpl) SetProductPackageBatch(uuids []uint64) error {
-	err := r.db.Model(&model.ProductPackage{}).Where("uuid IN ?", uuids).Updates(map[string]any{"is_batch": 1}).Error
+// 根据uuids将is_batch设置为1或0
+func (r *productPackageRepoImpl) SetProductPackageBatch(uuids []uint64, isBatch uint) error {
+	err := r.db.Model(&model.ProductPackage{}).Where("uuid IN ?", uuids).Updates(map[string]any{"is_batch": isBatch}).Error
 	if err != nil {
 		return errors.WithMessage(err)
 	}
 	return nil
+}
+
+// 根据uuid列表和is_batch查询商品包列表
+func (r *productPackageRepoImpl) GetProductPackageListByUuidsAndIsBatch(uuids []uint64, isBatch uint) ([]*model.ProductPackage, error) {
+	var productPackages []*model.ProductPackage
+	err := r.db.Model(&model.ProductPackage{}).Where("uuid IN ?", uuids).Where("is_batch = ?", isBatch).Where("delete_time = ?", 0).Find(&productPackages).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productPackages, nil
+}
+
+// 根据is_batch查询商品包列表
+func (r *productPackageRepoImpl) GetProductPackageListByIsBatch(isBatch uint) ([]*model.ProductPackage, error) {
+	var productPackages []*model.ProductPackage
+	err := r.db.Model(&model.ProductPackage{}).Where("is_batch = ?", isBatch).Where("delete_time = ?", 0).Find(&productPackages).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productPackages, nil
 }

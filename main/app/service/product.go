@@ -7774,9 +7774,49 @@ func (s *productSrv) GetBatchTagColorUsage(ctx context.Context) (*product_resp.B
 func (s *productSrv) SaveBatchProduct(ctx context.Context, req req.SaveBatchProductReq) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productPackageRepo := repository.NewProductPackageRepo(db)
-	err := productPackageRepo.SetProductPackageBatch(req.Uuids)
+	// 查询出所选商品中还没有是分批商品的商品包
+	productPackages, err := productPackageRepo.GetProductPackageListByUuidsAndIsBatch(req.Uuids, 0)
 	if err != nil {
-		return errors.WithMessage(err, "保存分批商品失败")
+		return errors.WithMessage(err, "查询商品包失败")
+	}
+	// 查询所有已经是分批商品的商品包
+	productPackagesBatch, err := productPackageRepo.GetProductPackageListByIsBatch(1)
+	if err != nil {
+		return errors.WithMessage(err, "查询商品包失败")
+	}
+	batchUuids := make(map[uint64]bool) // 已经是分批商品的商品包uuid列表
+	for _, productPackage := range productPackagesBatch {
+		batchUuids[productPackage.Uuid] = true
+	}
+	requestUuids := make(map[uint64]bool) // 请求的商品包uuid列表
+	for _, uuid := range req.Uuids {
+		requestUuids[uuid] = true
+	}
+	uuids := make([]uint64, 0) // 需要变为分批商品的。 不是分批商品 --> 分批商品
+	for _, productPackage := range productPackages {
+		uuids = append(uuids, productPackage.Uuid)
+	}
+	// 需要变成非分批商品的。 分批商品 --> 非分批商品.
+	nonBatchUuids := make([]uint64, 0)
+	for _, productPackage := range productPackagesBatch {
+		if !requestUuids[productPackage.Uuid] {
+			nonBatchUuids = append(nonBatchUuids, productPackage.Uuid)
+		}
+	}
+
+	// 将这些商品包设置为分批商品
+	if len(uuids) > 0 {
+		err = productPackageRepo.SetProductPackageBatch(uuids, 1)
+		if err != nil {
+			return errors.WithMessage(err, "保存分批商品失败")
+		}
+	}
+	// 将这些商品包设置为非分批商品
+	if len(nonBatchUuids) > 0 {
+		err = productPackageRepo.SetProductPackageBatch(nonBatchUuids, 0)
+		if err != nil {
+			return errors.WithMessage(err, "保存非分批商品失败")
+		}
 	}
 	return nil
 }
