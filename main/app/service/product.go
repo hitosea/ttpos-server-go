@@ -7212,30 +7212,30 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 			if err != nil {
 				return errors.WithMessage(errors.New("获取商品规格列表失败"), err.Error())
 			}
-			unit, _ := productUnitRepo.GetProductUnit(
+			unit, err := productUnitRepo.GetProductUnit(
 				commonRepo.WhereBySoftDelete(),
 				commonRepo.WhereByErpCode(erpProduct.StockUom),
 				commonRepo.WhereByHeadquarterUuid(0),
 			)
-			if unit.Uuid == 0 {
+			if err != nil || unit.Uuid == 0 {
 				return errors.WithMessage(errors.New("商品单位不存在"), erpProduct.StockUom)
 			}
 			var categoryUuid uint64
-			category, _ := productCategoryRepo.GetProductCategory(
+			category, err := productCategoryRepo.GetProductCategory(
 				commonRepo.WhereBySoftDelete(),
 				commonRepo.WhereByCode(erpProduct.ClassificationCode),
 				commonRepo.WhereByHeadquarterUuid(0),
 			)
-			if category.Uuid > 0 {
+			if err == nil && category.Uuid > 0 {
 				categoryUuid = category.Uuid
 			}
-			existsProductPackage, _ := productPackageRepo.GetProductPackage(
+			existsProductPackage, err := productPackageRepo.GetProductPackage(
 				commonRepo.WhereBySoftDelete(),
 				commonRepo.WhereByErpnextUom(erpProduct.ItemCode),
 				commonRepo.WhereByHeadquarterUuid(0),
 				productPackageRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
 			)
-			if existsProductPackage.Uuid == 0 {
+			if err != nil || existsProductPackage.Uuid == 0 {
 				enName := strings.SplitN(erpProduct.ItemName, "-", 2)[0]
 				lang := model.MultiLanguageName{
 					EnName:   enName,
@@ -7277,12 +7277,12 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 				}
 				for _, erpProductVariant := range erpProductVariants.ItemList {
 					for _, attribute := range erpProductVariant.Attributes {
-						flavor, _ := productFlavorRepo.GetProductFlavor(
+						flavor, err := productFlavorRepo.GetProductFlavor(
 							commonRepo.WhereBySoftDelete(),
 							commonRepo.WhereByErpnextValueName(attribute.AttributeValue),
 							commonRepo.WhereByHeadquarterUuid(0),
 						)
-						if flavor.Uuid == 0 {
+						if err != nil || flavor.Uuid == 0 {
 							return errors.WithMessage(errors.New("商品规格不存在"), attribute.AttributeValue)
 						}
 						productBom := model.ProductBom{
@@ -7315,19 +7315,19 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 				}
 				for _, erpProductVariant := range erpProductVariants.ItemList {
 					for _, attribute := range erpProductVariant.Attributes {
-						flavor, _ := productFlavorRepo.GetProductFlavor(
+						flavor, err := productFlavorRepo.GetProductFlavor(
 							commonRepo.WhereBySoftDelete(),
 							commonRepo.WhereByErpnextValueName(attribute.AttributeValue),
 							commonRepo.WhereByHeadquarterUuid(0),
 						)
-						if flavor.Uuid == 0 {
+						if err != nil || flavor.Uuid == 0 {
 							return errors.WithMessage(errors.New("商品规格不存在"), attribute.AttributeValue)
 						}
-						existsProductBom, _ := productBomRepo.GetProductBom(
+						existsProductBom, err := productBomRepo.GetProductBom(
 							commonRepo.WhereBySoftDelete(),
 							commonRepo.WhereByErpCode(erpProductVariant.ItemCode),
 						)
-						if existsProductBom.Uuid == 0 {
+						if err != nil || existsProductBom.Uuid == 0 {
 							productBom := model.ProductBom{
 								Name:               existsProductPackage.MultiLanguageName.ToJson(),
 								ErpCode:            erpProductVariant.ItemCode,
