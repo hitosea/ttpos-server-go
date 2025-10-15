@@ -6292,34 +6292,6 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 					"is_open_stock":        1,
 				}
 
-				// 同步商品到erp
-				if ctx.GetCompany().IsOpenErp() {
-					productBom, errGetBom := productBomRepo.GetProductBom(commonRepo.WhereByUuid(flavor.BomUuid))
-					if errGetBom != nil {
-						return errors.WithMessage(errGetBom, "获取商品bom失败")
-					}
-					erpSrv := erp.NewIErpSrv(s.dbm)
-					if errErp := erpSrv.DeleteProductBom(ctx, req.DeleteProductBomErpReq{
-						ItemCode: productBom.ErpCode,
-					}); errErp != nil {
-						return errors.WithMessage(errErp, "删除商品bom到erp失败")
-					}
-					itemInfo, errErp := erpSrv.AddProductBom(ctx, req.ProductBomAddErpReq{
-						VariantsOf:   params.TemplateItemCode,
-						InternalCode: flavor.InternalCode,
-						Flavors: []req.Flavor{
-							{
-								Name:  flavor.ErpnextGroupName,
-								Value: flavor.ErpnextValueName,
-							},
-						},
-					})
-					if errErp != nil {
-						return errors.WithMessage(errErp, "同步商品bom到erp失败")
-					}
-					updateData["erp_code"] = itemInfo.ItemCode
-				}
-
 				err = productBomRepo.UpdateProductBom(updateData, commonRepo.WhereByUuid(flavor.BomUuid))
 				if err != nil {
 					return errors.WithMessage(err, "更新商品bom失败")

@@ -204,9 +204,25 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		unitList := []material_resp.MaterialUnit{}
 		for _, unit := range material.NotBaseUnitList {
 			unitList = append(unitList, material_resp.MaterialUnit{
-				Uuid:           unit.Uuid,
-				Name:           unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-				LocaleName:     unit.Unit.MultiLanguageName.GetNames(),
+				Uuid: unit.Uuid,
+				Name: func() string {
+					if unit.Unit == nil {
+						return ""
+					}
+					if unit.Unit.MultiLanguageName == (model.MultiLanguageName{}) {
+						return ""
+					}
+					return unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+				}(),
+				LocaleName: func() dto.LocaleResponse {
+					if unit.Unit == nil {
+						return dto.LocaleResponse{}
+					}
+					if unit.Unit.MultiLanguageName == (model.MultiLanguageName{}) {
+						return dto.LocaleResponse{}
+					}
+					return unit.Unit.MultiLanguageName.GetNames()
+				}(),
 				ConversionRate: unit.ConversionRate,
 			})
 		}
