@@ -16,11 +16,13 @@ type IProductPackageGroupRepo interface {
 	CreateProductPackageGroups(productPackageGroups []model.ProductPackageGroup) error // 创建商品套餐组
 	UpdateProductPackageGroup(data map[string]any, opts ...DBOption) error             // 更新商品套餐组
 	DeleteProductPackageGroup(opts ...DBOption) error                                  // 删除商品套餐组
+	DestroyProductPackageGroup(opts ...DBOption) error                                 // 销毁商品套餐组
 
 	CreateProductPackageGroupItem(productPackageGroupItem *model.ProductPackageGroupItem) error    // 创建商品套餐组商品
 	CreateProductPackageGroupItems(productPackageGroupItems []model.ProductPackageGroupItem) error // 创建商品套餐组商品
 	UpdateProductPackageGroupItem(data map[string]any, opts ...DBOption) error                     // 更新商品套餐组商品
 	DeleteProductPackageGroupItem(opts ...DBOption) error                                          // 删除商品套餐组商品
+	DestroyProductPackageGroupItem(opts ...DBOption) error                                         // 销毁商品套餐组商品
 }
 
 // IProductPackageGroupQueryRepo 商品套餐组查询仓库接口
@@ -80,6 +82,15 @@ func (r *productPackageGroupRepoImpl) DeleteProductPackageGroup(opts ...DBOption
 	return db.Model(&model.ProductPackageGroup{}).Update("delete_time", time.Now().Unix()).Error
 }
 
+// DestroyProductPackageGroup 销毁商品套餐组
+func (r *productPackageGroupRepoImpl) DestroyProductPackageGroup(opts ...DBOption) error {
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	return db.Delete(&model.ProductPackageGroup{}).Error
+}
+
 // CreateProductPackageGroupItem 创建商品套餐组商品
 func (r *productPackageGroupRepoImpl) CreateProductPackageGroupItem(productPackageGroupItem *model.ProductPackageGroupItem) error {
 	return r.db.Create(productPackageGroupItem).Error
@@ -110,6 +121,15 @@ func (r *productPackageGroupRepoImpl) DeleteProductPackageGroupItem(opts ...DBOp
 	}
 
 	return db.Model(&model.ProductPackageGroupItem{}).Update("delete_time", time.Now().Unix()).Error
+}
+
+// DestroyProductPackageGroupItem 销毁商品套餐组商品
+func (r *productPackageGroupRepoImpl) DestroyProductPackageGroupItem(opts ...DBOption) error {
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	return db.Delete(&model.ProductPackageGroupItem{}).Error
 }
 
 // GetProductPackageGroup 获取商品套餐组

@@ -7589,7 +7589,7 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 	if companySetting.IsSubShop() {
 		headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
 		productPackageRepo := repository.NewProductPackageRepo(headquarterDb)
-		productPackageList, err := productPackageRepo.GetProductPackageList(
+		headProductPackageList, err := productPackageRepo.GetProductPackageList(
 			commonRepo.WhereBySoftDelete(),
 			commonRepo.WhereByHeadquarterUuid(0),
 			productPackageRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
@@ -7603,6 +7603,7 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 		if err != nil {
 			return errors.WithMessage(err, "获取总部商品包列表失败")
 		}
+		// 需要保存的商品包、多语言名称、商品bom、商品包属性组、商品包属性、商品套餐组、商品套餐商品
 		newProductPackageList := make([]model.ProductPackage, 0)
 		newMultiLanguageNameList := make([]model.MultiLanguageName, 0)
 		newProductBomList := make([]model.ProductBom, 0)
@@ -7610,7 +7611,7 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 		newProductPackageAttributeList := make([]model.ProductPackageAttribute, 0)
 		newProductPackageGroupList := make([]model.ProductPackageGroup, 0)
 		newProductPackageGroupItemList := make([]model.ProductPackageGroupItem, 0)
-		for _, productPackage := range productPackageList {
+		for _, productPackage := range headProductPackageList {
 			time := time.Now().Unix()
 			newProductPackageList = append(newProductPackageList, model.ProductPackage{
 				BaseModel:             model.BaseModel{Uuid: productPackage.Uuid, CreateTime: time, UpdateTime: time},
@@ -7736,6 +7737,94 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 			productPackageAttributeRepo := repository.NewProductPackageAttributeRepo(tx)
 			productPackageGroupRepo := repository.NewProductPackageGroupRepo(tx)
 			multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
+
+			// 需要保存的商品包、多语言名称、商品bom、商品包属性组、商品包属性、商品套餐组、商品套餐商品
+			delProductPackageUuid := make([]uint64, 0)
+			delMultiLanguageNameUuid := make([]uint64, 0)
+			delProductBomUuid := make([]uint64, 0)
+			delProductPackageAttributeGroupUuid := make([]uint64, 0)
+			delProductPackageAttributeUuid := make([]uint64, 0)
+			delProductPackageGroupUuid := make([]uint64, 0)
+			delProductPackageGroupItemUuid := make([]uint64, 0)
+
+			subProductPackageList, err := productPackageRepo.GetProductPackageList(
+				commonRepo.WhereBySoftDelete(),
+				commonRepo.WhereByHeadquarterUuid(companySetting.HeadquarterUuid),
+				productPackageRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
+				productPackageRepo.WithProductBoms(commonRepo.WhereBySoftDelete()),
+				productPackageRepo.WithProductPackageAttributeGroups(commonRepo.WhereBySoftDelete()),
+				productPackageRepo.WithProductPackageAttributeGroupAttributes(commonRepo.WhereBySoftDelete()),
+				productPackageRepo.WithProductPackageGroups(commonRepo.WhereBySoftDelete()),
+				productPackageRepo.WithProductPackageGroupItems(commonRepo.WhereBySoftDelete()),
+				productPackageRepo.WithProductPackageGroupMultiLanguageName(commonRepo.WhereBySoftDelete()),
+			)
+			if err != nil {
+				return errors.WithMessage(err, "获取子店商品列表失败")
+			}
+			for _, productPackage := range subProductPackageList {
+				delProductPackageUuid = append(delProductPackageUuid, productPackage.Uuid)
+				delMultiLanguageNameUuid = append(delMultiLanguageNameUuid, productPackage.MultiLanguageNameUuid)
+				for _, productBom := range productPackage.ProductBoms {
+					delProductBomUuid = append(delProductBomUuid, productBom.Uuid)
+				}
+				for _, productPackageAttributeGroup := range productPackage.ProductPackageAttributeGroups {
+					delProductPackageAttributeGroupUuid = append(delProductPackageAttributeGroupUuid, productPackageAttributeGroup.Uuid)
+					for _, productPackageAttribute := range productPackageAttributeGroup.ProductPackageAttributes {
+						delProductPackageAttributeUuid = append(delProductPackageAttributeUuid, productPackageAttribute.Uuid)
+					}
+				}
+				for _, productPackageGroup := range productPackage.ProductPackageGroups {
+					delProductPackageGroupUuid = append(delProductPackageGroupUuid, productPackageGroup.Uuid)
+					for _, productPackageGroupItem := range productPackageGroup.ProductPackageGroupItems {
+						delProductPackageGroupItemUuid = append(delProductPackageGroupItemUuid, productPackageGroupItem.Uuid)
+					}
+					delMultiLanguageNameUuid = append(delMultiLanguageNameUuid, productPackageGroup.MultiLanguageNameUuid)
+				}
+			}
+
+			if len(delProductPackageUuid) > 0 {
+				err = productPackageRepo.DestroyProductPackage(commonRepo.WhereInUuids(delProductPackageUuid))
+				if err != nil {
+					return errors.WithMessage(err, "销毁商品包失败")
+				}
+			}
+			if len(delMultiLanguageNameUuid) > 0 {
+				err = multiLanguageNameRepo.DestroyMultiLanguageName(commonRepo.WhereInUuids(delMultiLanguageNameUuid))
+				if err != nil {
+					return errors.WithMessage(err, "销毁多语言名称失败")
+				}
+			}
+			if len(delProductBomUuid) > 0 {
+				err = productBomRepo.DestroyProductBom(commonRepo.WhereInUuids(delProductBomUuid))
+				if err != nil {
+					return errors.WithMessage(err, "销毁商品bom失败")
+				}
+			}
+			if len(delProductPackageAttributeGroupUuid) > 0 {
+				err = productPackageAttributeGroupRepo.DestroyProductPackageAttributeGroup(commonRepo.WhereInUuids(delProductPackageAttributeGroupUuid))
+				if err != nil {
+					return errors.WithMessage(err, "销毁商品包属性组失败")
+				}
+			}
+			if len(delProductPackageAttributeUuid) > 0 {
+				err = productPackageAttributeRepo.DestroyProductPackageAttribute(commonRepo.WhereInUuids(delProductPackageAttributeUuid))
+				if err != nil {
+					return errors.WithMessage(err, "销毁商品包属性失败")
+				}
+			}
+			if len(delProductPackageGroupUuid) > 0 {
+				err = productPackageGroupRepo.DestroyProductPackageGroup(commonRepo.WhereInUuids(delProductPackageGroupUuid))
+				if err != nil {
+					return errors.WithMessage(err, "销毁商品包组失败")
+				}
+			}
+			if len(delProductPackageGroupItemUuid) > 0 {
+				err = productPackageGroupRepo.DestroyProductPackageGroupItem(commonRepo.WhereInUuids(delProductPackageGroupItemUuid))
+				if err != nil {
+					return errors.WithMessage(err, "销毁商品包组商品失败")
+				}
+			}
+
 			if len(newProductPackageList) > 0 {
 				err = productPackageRepo.CreateProductPackages(newProductPackageList)
 				if err != nil {

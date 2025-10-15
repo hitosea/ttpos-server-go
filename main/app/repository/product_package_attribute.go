@@ -15,6 +15,7 @@ type IProductPackageAttributeRepo interface {
 	CreateProductPackageAttributes(productPackageAttributes []model.ProductPackageAttribute) error
 	DeleteProductPackageAttribute(opts ...DBOption) error
 	UpdateProductPackageAttribute(data map[string]any, opts ...DBOption) error
+	DestroyProductPackageAttribute(opts ...DBOption) error
 
 	GetProductPackageAttributeGroupCount(attributeUuid uint64) ([]model.ProductPackageAttributeGroupCount, error)
 }
@@ -111,6 +112,15 @@ func (r *productPackageAttributeRepoImpl) UpdateProductPackageAttribute(data map
 	}
 
 	return db.Model(&model.ProductPackageAttribute{}).Updates(data).Error
+}
+
+// DestroyProductPackageAttribute 销毁商品包属性
+func (r *productPackageAttributeRepoImpl) DestroyProductPackageAttribute(opts ...DBOption) error {
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	return db.Delete(&model.ProductPackageAttribute{}).Error
 }
 
 func (r *productPackageAttributeRepoImpl) GetProductPackageAttributeGroupCount(attributeUuid uint64) ([]model.ProductPackageAttributeGroupCount, error) {
