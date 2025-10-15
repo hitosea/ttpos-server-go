@@ -365,13 +365,7 @@ func (h *SettingHandler) UploadLogo(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.SyncResp}
 // @Router /shop/setting/sync [post]
 func (h *SettingHandler) Sync(c *gin.Context) {
-	var syncReq req.SyncReq
-	if err := c.ShouldBindJSON(&syncReq); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
-		return
-	}
-
-	result, err := h.syncSrv.Sync(helper.GetContext(c), syncReq)
+	result, err := h.syncSrv.Sync(helper.GetContext(c), req.SyncReq{})
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
