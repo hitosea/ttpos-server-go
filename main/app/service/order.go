@@ -7439,23 +7439,46 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 
 	// 获取未送厨的商品列表
 	unCookingSaleOrderProducts := saleBill.GetSaleOrderProductUnCooking()
-	if len(unCookingSaleOrderProducts) == 0 && len(h5OrderProductUnAccept) == 0 {
-		// 没有未送厨商品时，判断是否需要弹出分批送厨弹窗。只有收银机和助手端需要判断
-		if ctx.GetSource() == constant.SourceAssistant || ctx.GetSource() == constant.SourceCashier {
-			// 获取门店业务设置
-			businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
-			if err != nil {
-				return nil, nil, errors.WithMessage(err)
+	nonNeedBatchSendCooking := false
+	// 没有未送厨商品时，判断是否需要弹出分批送厨弹窗。只有收银机和助手端需要判断
+	if ctx.GetSource() == constant.SourceAssistant || ctx.GetSource() == constant.SourceCashier {
+		// 获取门店业务设置
+		businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+		if err != nil {
+			return nil, nil, errors.WithMessage(err)
+		}
+		if businessSetting.OpenIsBatch() {
+			if saleBill.IsNeedBatchSendCooking() {
+				nonNeedBatchSendCooking = true
 			}
-			if businessSetting.OpenIsBatch() {
-				if saleBill.IsNeedBatchSendCooking() {
-					return nil, &resp.OrderCheckServiceRes{
-						Code: constant.CodeOrderCheckProductBatch,
-					}, nil
+		}
+	}
+
+	if len(unCookingSaleOrderProducts) == 0 && len(h5OrderProductUnAccept) == 0 && !nonNeedBatchSendCooking {
+		return nil, nil, errors.New("没有未送厨的商品")
+	} else if len(unCookingSaleOrderProducts) == 0 && len(h5OrderProductUnAccept) == 0 && nonNeedBatchSendCooking {
+		if !req.IgnoreMust { // 如果不是在结账检查时送厨，才返回-209，否则直接不分批送厨而是使用正常送厨
+			return nil, &resp.OrderCheckServiceRes{
+				Code: constant.CodeOrderCheckProductBatch,
+			}, nil
+		} else {
+			// 获取预送厨的商品
+			preCookingSaleOrderProducts := saleBill.GetSaleOrderProductPreCooking()
+			if len(preCookingSaleOrderProducts) > 0 {
+				nonBathchUuids := make([]uint64, 0) // 预送厨的商品uuid列表
+				for _, saleOrderProduct := range preCookingSaleOrderProducts {
+					saleOrderProduct.IsBatch = 0
+					nonBathchUuids = append(nonBathchUuids, saleOrderProduct.Uuid)
+				}
+				if len(nonBathchUuids) > 0 {
+					// 将未送厨和预送厨的商品编辑未分批商品
+					db := s.dbm.GetDB(ctx.GetDbId())
+					if err := db.Model(&model.SaleOrderProduct{}).Where("uuid IN (?)", nonBathchUuids).Update("is_batch", 0).Error; err != nil {
+						return nil, nil, errors.WithMessage(err)
+					}
 				}
 			}
 		}
-		return nil, nil, errors.New("没有未送厨的商品")
 	}
 
 	// 获取某个h5订单的已下单但未接单的商品
@@ -12498,6 +12521,31 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 			OrderCheckRes: resp.OrderCheckRes{Products: &resp.CartProductList{List: products}},
 		}
 		return res, nil
+	} else {
+		products := make([]resp.Product, 0)
+		// 获取预送厨的商品
+		preCookingSaleOrderProducts := saleBill.GetSaleOrderProductPreCooking()
+		for _, product := range preCookingSaleOrderProducts {
+			products = append(products, resp.Product{
+				Uuid:          product.Uuid,
+				LocaleName:    product.GetNameAndFlavorName(),
+				Num:           product.Num,
+				SalePrice:     product.SalePrice,
+				DiscountPrice: product.DiscountFee,
+				Status:        int(product.Status),
+				Remark:        product.Remark,
+				IsMust:        product.IsMustProduct(),
+				IsGift:        product.IsGiftProduct(),
+				IsCancel:      product.IsCancelProduct(),
+			})
+		}
+		if len(products) > 0 {
+			res := &resp.OrderCheckServiceRes{
+				Code:          constant.CodeOrderCheckProductUnCooking,
+				OrderCheckRes: resp.OrderCheckRes{Products: &resp.CartProductList{List: products}},
+			}
+			return res, nil
+		}
 	}
 
 	return nil, nil

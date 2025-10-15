@@ -133,6 +133,8 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 	}
 	saleOrderUuid := unCookingSaleOrderProducts[0].SaleOrderUuid
 
+	noBatchProductUuids := make([]uint64, 0)
+
 	// 送厨相关
 	{
 		// 获取所有商品,用于检查限购
@@ -201,11 +203,13 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 			// 遍历所有未送厨的商品，将is_batch为0
 			for _, product := range unCookingSaleOrderProducts {
 				product.IsBatch = 0
+				noBatchProductUuids = append(noBatchProductUuids, product.Uuid)
 			}
 			// 遍历所有预送厨的商品，将is_batch为0
 			preCookingSaleOrderProducts := saleBill.GetSaleOrderProductPreCooking()
 			for _, product := range preCookingSaleOrderProducts {
 				product.IsBatch = 0
+				noBatchProductUuids = append(noBatchProductUuids, product.Uuid)
 			}
 		}
 
@@ -235,6 +239,12 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 
 	ctx.Log().Debug("准备开始更新")
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		// 将未送厨和预送厨的商品编辑未分批商品
+		if len(noBatchProductUuids) > 0 {
+			if err := tx.Model(&model.SaleOrderProduct{}).Where("uuid IN (?)", noBatchProductUuids).Update("is_batch", 0).Error; err != nil {
+				return errors.WithMessage(err)
+			}
+		}
 		// 计算账单. 只有加购并送厨时，才计算账单
 		if option.CalcAndSaveSaleBill {
 			// 注意要先执行CalcAndSaveSaleBill，因为saleOrder中可能有要新建的商品
