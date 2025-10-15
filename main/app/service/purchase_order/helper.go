@@ -2,6 +2,7 @@ package purchase_order
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -625,4 +626,56 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 
 		return nil
 	})
+}
+
+// extractName 从错误信息中提取供应商名称
+func (h *purchaseOrderHelper) extractName(name, errorMsg string) string {
+	// 使用正则表达式匹配 "Supplier" 和 "is disabled" 之间的值
+	re := regexp.MustCompile(name + `\s+(.+?)\s+is\s+disabled`)
+	matches := re.FindStringSubmatch(errorMsg)
+	if len(matches) > 1 {
+		supplierInfo := strings.TrimSpace(matches[1])
+		// 如果包含编码#名称格式，提取名称部分
+		if strings.Contains(supplierInfo, "#") {
+			parts := strings.SplitN(supplierInfo, "#", 2)
+			if len(parts) == 2 {
+				return parts[1] // 返回供应商名称
+			}
+		}
+		return supplierInfo
+	}
+	return ""
+}
+
+// handleErpError 处理ERP错误
+func (h *purchaseOrderHelper) handleErpError(err error) error {
+	// 检查供应商状态
+	if strings.Contains(err.Error(), "Supplier") && strings.Contains(err.Error(), "is disabled") {
+		// 提取供应商名称
+		supplierName := h.extractName("Supplier", err.Error())
+		if supplierName != "" {
+			return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, fmt.Sprintf("供应商 %s 已禁用，请修改供应商状态", supplierName))
+		}
+		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用，请修改供应商状态")
+	}
+	// 检查物品状态
+	if strings.Contains(err.Error(), "Item") && strings.Contains(err.Error(), "is disabled") {
+		// 提取物品名称
+		itemName := h.extractName("Item", err.Error())
+		if itemName != "" {
+			return errors.NewWithCode(constant.CodeMaterialDisabled, fmt.Sprintf("物品 %s 已禁用，请修改物品状态", itemName))
+		}
+		return errors.NewWithCode(constant.CodeMaterialDisabled, "物品已禁用，请修改物品状态")
+	}
+	// 检查仓库状态
+	if strings.Contains(err.Error(), "Warehouse") && strings.Contains(err.Error(), "is disabled") {
+		// 提取仓库名称
+		warehouseName := h.extractName("Warehouse", err.Error())
+		if warehouseName != "" {
+			return errors.NewWithCode(constant.CodeMaterialDisabled, fmt.Sprintf("仓库 %s 已禁用，请修改仓库状态", warehouseName))
+		}
+		return errors.NewWithCode(constant.CodeMaterialDisabled, "仓库已禁用，请修改仓库状态")
+	}
+
+	return errors.WithMessage(errors.New("调用erp接口失败: "+err.Error()), err.Error())
 }

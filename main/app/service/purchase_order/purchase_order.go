@@ -2,7 +2,6 @@ package purchase_order
 
 import (
 	"fmt"
-	"strings"
 	"time"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
@@ -889,7 +888,7 @@ func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 		Items:           stockItems,
 	})
 	if err != nil {
-		return "", s.handleErpError(err)
+		return "", s.helper.handleErpError(err)
 	}
 
 	return stockResp.PurchaseOrder, nil
@@ -943,7 +942,7 @@ func (s *purchaseOrderSrv) handleExternalPurchaseErp(
 		Items:           stockItems,
 	})
 	if err != nil {
-		return "", s.handleErpError(err)
+		return "", s.helper.handleErpError(err)
 	}
 
 	return erpResp.Name, nil
@@ -978,25 +977,16 @@ func (s *purchaseOrderSrv) syncToSubShop(purchaseOrder *model.PurchaseOrder) err
 	return nil
 }
 
-// handleErpError 处理ERP错误
-func (s *purchaseOrderSrv) handleErpError(err error) error {
-	// 检查供应商状态
-	if strings.Contains(err.Error(), "Supplier") && strings.Contains(err.Error(), "is disabled") {
-		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用，请修改供应商状态")
-	}
-	// 检查物品状态
-	if strings.Contains(err.Error(), "Item") && strings.Contains(err.Error(), "is disabled") {
-		return errors.NewWithCode(constant.CodeMaterialDisabled, "物品已禁用，请修改物品状态")
-	}
-	return errors.WithMessage(errors.New("调用erp接口失败"), err.Error())
-}
-
 // 收货单相关方法委托给receiptSrv
 func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(
 	ctx context.Context,
 	req req.PurchaseReceiptCreateReq,
 ) (resp.PurchaseReceiptOrderCreateResp, error) {
-	return s.receiptSrv.CreatePurchaseReceiptOrder(ctx, req)
+	result, err := s.receiptSrv.CreatePurchaseReceiptOrder(ctx, req)
+	if err != nil {
+		return resp.PurchaseReceiptOrderCreateResp{}, s.helper.handleErpError(err)
+	}
+	return result, nil
 }
 
 // 更新收货单
@@ -1004,7 +994,11 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(
 	ctx context.Context,
 	req req.PurchaseReceiptOrderUpdateReq,
 ) error {
-	return s.receiptSrv.UpdatePurchaseReceiptOrder(ctx, req)
+	err := s.receiptSrv.UpdatePurchaseReceiptOrder(ctx, req)
+	if err != nil {
+		return s.helper.handleErpError(err)
+	}
+	return nil
 }
 
 // 获取收货单列表
