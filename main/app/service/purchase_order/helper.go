@@ -665,20 +665,20 @@ func (h *purchaseOrderHelper) handleErpError(ctx context.Context, err error) err
 		// 提取物品名称
 		itemName := h.extractName("Item", "is disabled", err.Error())
 		if itemName != "" {
-			return errors.NewWithCode(constant.CodeFail, fmt.Sprintf(
+			return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, fmt.Sprintf(
 				i18n.Translate(ctx.GetLanguage(), "ERP中物品 %s 已禁用，请修改物品状态"), itemName),
 			)
 		}
-		return errors.NewWithCode(constant.CodeFail, "ERP中有物品已禁用，请修改物品状态")
+		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "ERP中有物品已禁用，请修改物品状态")
 	}
 	// 检查仓库状态
 	if strings.Contains(err.Error(), "Warehouse") && strings.Contains(err.Error(), "is disabled") {
 		// 提取仓库名称
 		warehouseName := h.extractName("Warehouse", "is disabled", err.Error())
 		if warehouseName != "" {
-			return errors.NewWithCode(constant.CodeMaterialDisabled, fmt.Sprintf("ERP中仓库 %s 已禁用，请修改仓库状态", warehouseName))
+			return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, fmt.Sprintf("ERP中仓库 %s 已禁用，请修改仓库状态", warehouseName))
 		}
-		return errors.NewWithCode(constant.CodeMaterialDisabled, "ERP中仓库已禁用，请修改仓库状态")
+		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "ERP中仓库已禁用，请修改仓库状态")
 	}
 	// 检查采购数量
 	if strings.Contains(err.Error(), "cannot be less than minimum order qty") {
@@ -686,19 +686,19 @@ func (h *purchaseOrderHelper) handleErpError(ctx context.Context, err error) err
 		if itemName != "" {
 			num := h.extractName("minimum order qty", "(defined in Item).", err.Error())
 			if num != "" {
-				return errors.NewWithCode(constant.CodeFail,
+				return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled,
 					itemName+" "+i18n.Translate(ctx.GetLanguage(), "采购数量不能小于ERP中设置的最小采购数量")+" "+num,
 				)
 			}
-			return errors.NewWithCode(constant.CodeFail,
+			return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled,
 				itemName+" "+i18n.Translate(ctx.GetLanguage(), "采购数量不能小于ERP中设置的最小采购数量"),
 			)
 		}
-		return errors.NewWithCode(constant.CodeFail, "采购数量不能小于ERP中设置的最小采购数量")
+		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "采购数量不能小于ERP中设置的最小采购数量")
 	}
 	// before Transaction Date
 	if strings.Contains(err.Error(), "before Transaction Date") {
-		return errors.NewWithCode(constant.CodeFail, i18n.Translate(ctx.GetLanguage(), "期望到货日期不能小于今天"))
+		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, i18n.Translate(ctx.GetLanguage(), "期望到货日期不能小于今天"))
 	}
 
 	return err
