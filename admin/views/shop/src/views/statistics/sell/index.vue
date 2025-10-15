@@ -16,8 +16,10 @@
             <el-date-picker
               size="small"
               v-model="searchForm.date"
-              type="daterange"
-              value-format="YYYY-MM-DD"
+              type="datetimerange"
+              format="YYYY-MM-DD HH:mm"
+              value-format="YYYY-MM-DD HH:mm"
+              time-format="HH:mm"
               range-separator="~"
               :start-placeholder="$t('开始日期')"
               :end-placeholder="$t('结束日期')"
