@@ -99,6 +99,7 @@ func (s *orderSrv) convertToEventOrderProduct(saleOrderProduct *model.SaleOrderP
 		IsPackage:             saleOrderProduct.IsPackageProduct(),
 		IsSubProduct:          saleOrderProduct.IsPackageSubProduct(),
 		Remark:                saleOrderProduct.Remark,
+		IsBatch:               saleOrderProduct.IsBatchBool(),
 	}
 
 	// 如果是套餐主商品，添加子商品
@@ -344,10 +345,6 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 				for _, unCookingSaleOrderProduct := range unCookingSaleOrderProducts {
 					// 套餐子商品不显示送厨记录
 					if unCookingSaleOrderProduct.IsPackageSubProduct() {
-						continue
-					}
-					// 分批商品不显示送厨记录
-					if unCookingSaleOrderProduct.IsBatchBool() {
 						continue
 					}
 					products = append(products, s.convertToEventOrderProduct(

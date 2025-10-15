@@ -31,6 +31,17 @@ func sentCookingEventHandler() {
 			if len(payload.Products) == 0 {
 				return
 			}
+
+			// 分批商品不打印送厨
+			products := make([]event.OrderProduct, 0)
+			for _, unCookingSaleOrderProduct := range payload.Products {
+				if unCookingSaleOrderProduct.IsBatch {
+					continue
+				}
+				products = append(products, unCookingSaleOrderProduct)
+			}
+			payload.Products = products
+
 			go func() {
 				products := printer_model.Products{}
 				copier.Copy(&products, payload.Products)
