@@ -108,6 +108,8 @@ func (r *productPrinterRepo) GetProductionSaleBillUuid(productPrinterUuid uint64
 	if len(deskUuids) != 0 {
 		query = query.Where("desk_uuid in (?)", deskUuids)
 	}
+	// 排除仅有is_batch=1（分批商品）且batch_time=0的sale_bill_uuid
+	query = query.Where("uuid in (?)", r.db.Model(&model.ProductionOrderProduct{}).Select("sale_bill_uuid").Where("is_batch = 0 OR batch_time > 0").Group("sale_bill_uuid"))
 	err := query.Pluck("uuid", &uuids).Error
 	if err != nil {
 		return nil, err

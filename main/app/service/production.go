@@ -228,9 +228,20 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 	if !ctx.Version(context.GTE, "2.4.0") {
 		limitedProductOpts = append(limitedProductOpts, productionRepo.WhereProductNumGT0())
 	}
-	if req.CategoryUuid != 0 {
-		limitedProductOpts = append(limitedProductOpts, productionRepo.WhereProductFirstCategoryUuidIn([]uint64{req.CategoryUuid}))
+	var firstCategoryUuids []uint64
+	if req.CategoryUuid != 0 { // 指定分类Uuid
+		firstCategoryUuids = append(firstCategoryUuids, req.CategoryUuid)
+	} else {
+		// 未传递分类Uuid，则获取所有排除仅有is_batch=1（分批商品）且batch_time=0的first_category_uuid
+		firstCategoryUuids, err = productionRepo.GetProductionOrderProductFirstCategoryUuid()
+		if err != nil {
+			return resp.ProductionListWithPagination{}, errors.WithMessage(errors.ErrInternal)
+		}
 	}
+	if len(firstCategoryUuids) > 0 {
+		limitedProductOpts = append(limitedProductOpts, productionRepo.WhereProductFirstCategoryUuidIn(firstCategoryUuids))
+	}
+
 	limitedProducts, total, err := productionRepo.GetLimitedProducts(constant.ProductionOrderProductColumnCategory, req.PageNo, req.PageSize, limitedProductOpts...)
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.WithMessage(errors.ErrInternal)
