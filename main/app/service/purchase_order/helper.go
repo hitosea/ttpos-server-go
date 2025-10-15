@@ -689,5 +689,5 @@ func (h *purchaseOrderHelper) handleErpError(ctx context.Context, err error) err
 		return errors.NewWithCode(constant.CodeFail, i18n.Translate(ctx.GetLanguage(), "期望到货日期不能小于今天"))
 	}
 
-	return errors.WithMessage(errors.New(i18n.Translate(ctx.GetLanguage(), "调用erp接口失败: ")+err.Error()), err.Error())
+	return err
 }

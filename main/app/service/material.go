@@ -557,6 +557,7 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 		productUnitRepo := repository.NewProductRepo(tx)
 
 		// 获取物品分类信息
+		commonRepo := repository.NewCommonRepo()
 		materialCategoryRepo := repository.NewMaterialRepo(tx)
 		materialCategory, exists, err := materialCategoryRepo.GetMaterialCategoryByCode(request.ClassificationCode)
 		if err != nil {
@@ -619,11 +620,15 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 		if err != nil {
 			return errors.WithMessage(err)
 		}
-		// 更新物品编码
+		// 更新物品数据, 根据NotForSale判断是否删除
 		materialRepo := repository.NewMaterialRepo(tx)
-		err = materialRepo.UpdateMaterialCode(material.Uuid, request.ItemCode)
+		updateData := map[string]any{"code": request.ItemCode, "delete_time": 0}
+		if request.NotForSale {
+			updateData["delete_time"] = time.Now().Unix()
+		}
+		err = materialRepo.UpdateMaterialData(updateData, commonRepo.WhereByUuid(material.Uuid))
 		if err != nil {
-			return errors.WithMessage(err, "更新物品编码失败")
+			return errors.WithMessage(err, "更新物品数据失败")
 		}
 		return nil
 	}); err != nil {
@@ -1262,6 +1267,11 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 
 		if !slices.Contains(saveUnitUuids, material.CostUnitUuid) {
 			updateData["cost_unit_uuid"] = 0
+		}
+
+		// 根据NotForSale判断是否删除
+		if request.NotForSale && material.DeleteTime == 0 {
+			updateData["delete_time"] = time.Now().Unix()
 		}
 
 		return materialRepo.UpdateMaterialData(updateData, commonRepo.WhereByUuid(material.Uuid))
@@ -2679,7 +2689,6 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 	err = db.Transaction(func(tx *gorm.DB) error {
 		commonRepo := repository.NewCommonRepo()
 		materialRepo := repository.NewMaterialRepo(tx)
-		matertialUnitRepo := repository.NewMaterialUnitRepo(tx)
 		copyCtx := ctx.Copy()
 		copyCtx.SetDB(tx)
 		for _, itemInfo := range materialList.ItemList {
@@ -2691,7 +2700,6 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 				})
 			}
 			existingMaterial := materialRepo.GetMaterial(
-				commonRepo.WhereBySoftDelete(),
 				commonRepo.WhereByErpCode(itemInfo.ItemCode),
 			)
 			if existingMaterial.Uuid != 0 { // 如果物品已存在
@@ -2708,6 +2716,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 					ClassificationCode: itemInfo.ClassificationCode,
 					Uoms:               uoms,
 					PurchaseUom:        itemInfo.PurchaseUom,
+					NotForSale:         itemInfo.NotForSale,
 				}); err != nil {
 					logger.Logger.Error("同步erp物品列表失败-01", zap.Error(err))
 				}
@@ -2725,6 +2734,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 					Uoms:               uoms,
 					StockUom:           itemInfo.StockUom,
 					PurchaseUom:        itemInfo.PurchaseUom,
+					NotForSale:         itemInfo.NotForSale,
 				})
 				if err != nil {
 					logger.Logger.Error("同步erp物品列表失败-02", zap.Error(err))
@@ -2732,23 +2742,6 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 					saveMaterialUuids = append(saveMaterialUuids, material.Uuid)
 					multiLanguageNameUuids = append(multiLanguageNameUuids, material.MultiLanguageNameUuid)
 				}
-			}
-		}
-
-		if len(saveMaterialUuids) > 0 {
-			delMaterialUuids := materialRepo.GetMaterialUuids(
-				commonRepo.WhereByHeadquarterUuid(0),
-				commonRepo.WhereByUuidNotIn(saveMaterialUuids),
-				commonRepo.WhereBySoftDelete(),
-			)
-			if len(delMaterialUuids) > 0 {
-				deleteTime := time.Now().Unix()
-				materialRepo.UpdateMaterialData(map[string]any{
-					"delete_time": deleteTime,
-				}, commonRepo.WhereInUuids(delMaterialUuids))
-				matertialUnitRepo.UpdateMaterialUnit(map[string]any{
-					"delete_time": deleteTime,
-				}, commonRepo.WhereInMaterialUuids(delMaterialUuids))
 			}
 		}
 
