@@ -1262,6 +1262,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package` (
     `open_overall_discount` INT(10) NOT NULL DEFAULT 1 COMMENT '是否开启整单折扣: 0否 1是',
     `actual_sale_num` DECIMAL(22, 4) NOT NULL DEFAULT 0.0000 COMMENT '实际销量。每次卖出时,实际销量增加',
     `is_batch` INT(10) NOT NULL DEFAULT 0 COMMENT '是否是分批商品, 0-否 1-是',
+    `headquarter_uuid` BIGINT DEFAULT 0 COMMENT '总部UUID',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
