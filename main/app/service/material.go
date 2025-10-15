@@ -622,9 +622,11 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 		}
 		// 更新物品数据, 根据NotForSale判断是否删除
 		materialRepo := repository.NewMaterialRepo(tx)
-		updateData := map[string]any{"code": request.ItemCode, "delete_time": 0}
+		updateData := map[string]any{"code": request.ItemCode}
 		if request.NotForSale {
 			updateData["delete_time"] = time.Now().Unix()
+		} else {
+			updateData["delete_time"] = 0
 		}
 		err = materialRepo.UpdateMaterialData(updateData, commonRepo.WhereByUuid(material.Uuid))
 		if err != nil {
@@ -1269,9 +1271,11 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 			updateData["cost_unit_uuid"] = 0
 		}
 
-		// 根据NotForSale判断是否删除
+		// 根据NotForSale设置删除时间，物品下架时设置为当前时间，上架时重置为0
 		if request.NotForSale && material.DeleteTime == 0 {
 			updateData["delete_time"] = time.Now().Unix()
+		} else if !request.NotForSale {
+			updateData["delete_time"] = 0
 		}
 
 		return materialRepo.UpdateMaterialData(updateData, commonRepo.WhereByUuid(material.Uuid))

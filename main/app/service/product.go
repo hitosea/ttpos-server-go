@@ -7171,14 +7171,11 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 		return errors.WithMessage(err, "同步erp商品失败")
 	}
 
-	var saveProductPackageUuids []uint64
 	var multiLanguageNameUuids []uint64
 	db := ctx.GetDB()
 	commonRepo := repository.NewCommonRepo()
-	productPackageRepo := repository.NewProductPackageRepo(db)
 	for _, erpProduct := range erpProducts.ItemList {
 		err = db.Transaction(func(tx *gorm.DB) error {
-			var saveProductBomUuids []uint64
 			commonRepo := repository.NewCommonRepo()
 			productRepo := repository.NewProductRepo(tx)
 			productPackageRepo := repository.NewProductPackageRepo(tx)
@@ -7218,7 +7215,6 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 				categoryUuid = category.Uuid
 			}
 			existsProductPackage, err := productPackageRepo.GetProductPackage(
-				commonRepo.WhereBySoftDelete(),
 				commonRepo.WhereByErpnextUom(erpProduct.ItemCode),
 				commonRepo.WhereByHeadquarterUuid(0),
 				productPackageRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
@@ -7242,7 +7238,12 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 				}
 				multiLanguageNameUuids = append(multiLanguageNameUuids, multiLanguageNameUuid)
 				maxSort += 1
+				var deleteTime int64 = 0
+				if erpProduct.NotForSale {
+					deleteTime = time.Now().Unix()
+				}
 				productPackage := model.ProductPackage{
+					BaseModel:             model.BaseModel{DeleteTime: deleteTime},
 					Name:                  lang.ToJson(),
 					ErpCode:               erpProduct.ItemCode,
 					MultiLanguageNameUuid: multiLanguageNameUuid,
@@ -7273,13 +7274,18 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 						if err != nil || flavor.Uuid == 0 {
 							return errors.WithMessage(errors.New("商品规格不存在"), attribute.AttributeValue)
 						}
+						var deleteTime int64 = 0
+						if erpProductVariant.NotForSale {
+							deleteTime = time.Now().Unix()
+						}
 						productBom := model.ProductBom{
+							BaseModel:          model.BaseModel{DeleteTime: deleteTime},
 							Name:               lang.ToJson(),
 							ErpCode:            erpProductVariant.ItemCode,
 							StockNum:           erpProductVariant.OpeningStock,
 							BarcodeValue:       erpProductVariant.Barcode,
 							InternalCode:       erpProductVariant.InternalCode,
-							Status:             utils.IfInt(erpProductVariant.Disabled, constant.ProductStatusOffSale, constant.ProductStatusOnSale),
+							Status:             utils.IfInt(erpProduct.Disabled, constant.ProductStatusOffSale, constant.ProductStatusOnSale),
 							ProductFlavorUuid:  flavor.Uuid,
 							ProductPackageUuid: productPackage.Uuid,
 						}
@@ -7287,15 +7293,18 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 						if err != nil {
 							return errors.WithMessage(err, "创建商品bom失败")
 						}
-						saveProductBomUuids = append(saveProductBomUuids, productBom.Uuid)
 					}
 				}
-				saveProductPackageUuids = append(saveProductPackageUuids, productPackage.Uuid)
 			} else {
 				updateData := map[string]any{
 					"unit_uuid":     unit.Uuid,
 					"category_uuid": categoryUuid,
 					"status":        utils.IfInt(erpProduct.Disabled, constant.ProductStatusOffSale, constant.ProductStatusOnSale),
+				}
+				if erpProduct.NotForSale && existsProductPackage.DeleteTime == 0 {
+					updateData["delete_time"] = time.Now().Unix()
+				} else if !erpProduct.NotForSale {
+					updateData["delete_time"] = 0
 				}
 				err = productPackageRepo.UpdateProductPackage(updateData, commonRepo.WhereByUuid(existsProductPackage.Uuid))
 				if err != nil {
@@ -7312,17 +7321,21 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 							return errors.WithMessage(errors.New("商品规格不存在"), attribute.AttributeValue)
 						}
 						existsProductBom, err := productBomRepo.GetProductBom(
-							commonRepo.WhereBySoftDelete(),
 							commonRepo.WhereByErpCode(erpProductVariant.ItemCode),
 						)
 						if err != nil || existsProductBom.Uuid == 0 {
+							var deleteTime int64 = 0
+							if erpProductVariant.NotForSale {
+								deleteTime = time.Now().Unix()
+							}
 							productBom := model.ProductBom{
+								BaseModel:          model.BaseModel{DeleteTime: deleteTime},
 								Name:               existsProductPackage.MultiLanguageName.ToJson(),
 								ErpCode:            erpProductVariant.ItemCode,
 								StockNum:           erpProductVariant.OpeningStock,
 								BarcodeValue:       erpProductVariant.Barcode,
 								InternalCode:       erpProductVariant.InternalCode,
-								Status:             utils.IfInt(erpProductVariant.Disabled, constant.ProductStatusOffSale, constant.ProductStatusOnSale),
+								Status:             utils.IfInt(erpProduct.Disabled, constant.ProductStatusOffSale, constant.ProductStatusOnSale),
 								ProductFlavorUuid:  flavor.Uuid,
 								ProductPackageUuid: existsProductPackage.Uuid,
 							}
@@ -7330,31 +7343,24 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 							if err != nil {
 								return errors.WithMessage(err, "创建商品bom失败")
 							}
-							saveProductBomUuids = append(saveProductBomUuids, productBom.Uuid)
 						} else {
 							updateData := map[string]any{
 								"stock_num":     erpProductVariant.OpeningStock,
 								"barcode_value": erpProductVariant.Barcode,
 								"status":        utils.IfInt(erpProductVariant.Disabled, constant.ProductStatusOffSale, constant.ProductStatusOnSale),
 							}
+							if erpProductVariant.NotForSale && existsProductBom.DeleteTime == 0 {
+								updateData["delete_time"] = time.Now().Unix()
+							} else if !erpProductVariant.NotForSale {
+								updateData["delete_time"] = 0
+							}
 							err = productBomRepo.UpdateProductBom(updateData, commonRepo.WhereByUuid(existsProductBom.Uuid))
 							if err != nil {
 								return errors.WithMessage(err, "更新商品bom失败")
 							}
-							saveProductBomUuids = append(saveProductBomUuids, existsProductBom.Uuid)
 						}
-
 					}
 				}
-				saveProductPackageUuids = append(saveProductPackageUuids, existsProductPackage.Uuid)
-			}
-			if len(saveProductBomUuids) > 0 {
-				productBomRepo.UpdateProductBom(
-					map[string]any{"delete_time": time.Now().Unix()},
-					commonRepo.WhereByUuidNotIn(saveProductBomUuids),
-					commonRepo.WhereBySoftDelete(),
-					commonRepo.WhereByProductPackageUuid(existsProductPackage.Uuid),
-				)
 			}
 
 			return nil
@@ -7362,15 +7368,6 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 		if err != nil {
 			logger.Logger.Error("同步erp商品失败", zap.Any("code", erpProduct.ItemCode), zap.Error(err))
 		}
-	}
-
-	if len(saveProductPackageUuids) > 0 {
-		productPackageRepo.UpdateProductPackage(
-			map[string]any{"delete_time": time.Now().Unix()},
-			commonRepo.WhereByUuidNotIn(saveProductPackageUuids),
-			commonRepo.WhereBySoftDelete(),
-			commonRepo.WhereByHeadquarterUuid(0),
-		)
 	}
 
 	// 同步总店商品到子店
