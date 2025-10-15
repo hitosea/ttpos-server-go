@@ -17,6 +17,7 @@ type IProductBomRepo interface {
 	GetProductBomCardByUuid(productBomUuid uint64) (*model.ProductBomCard, error)                  // 获取成本卡
 	AddActualSaleNum(productBomUuid uint64, saleNum float64) error                                 // 增加实际销量
 	SubActualSaleNum(productBomUuid uint64, saleNum float64) error                                 // 减少实际销量
+	DestroyProductBom(opts ...DBOption) error
 }
 
 // IProductBomQueryRepo 定义仓库查询接口
@@ -258,6 +259,15 @@ func (r *productBomRepoImpl) SubActualSaleNum(productBomUuid uint64, saleNum flo
 		return errors.WithMessage(err)
 	}
 	return nil
+}
+
+// DestroyProductBom 销毁商品bom
+func (r *productBomRepoImpl) DestroyProductBom(opts ...DBOption) error {
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	return db.Delete(&model.ProductBom{}).Error
 }
 
 // 通过成本卡uuid列表获取规格商品列表

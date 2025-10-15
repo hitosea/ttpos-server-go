@@ -14,6 +14,7 @@ type IProductPackageRepo interface {
 	UpdateProductPackage(data map[string]any, opts ...DBOption) error
 	AddActualSaleNum(productPackageUuid uint64, saleNum float64) error
 	SubActualSaleNum(productPackageUuid uint64, saleNum float64) error
+	DestroyProductPackage(opts ...DBOption) error
 }
 
 type IProductPackageQueryRepo interface {
@@ -199,6 +200,15 @@ func (r *productPackageRepoImpl) SubActualSaleNum(productPackageUuid uint64, sal
 		return errors.WithMessage(err)
 	}
 	return nil
+}
+
+// DestroyProductPackage 销毁商品包
+func (r *productPackageRepoImpl) DestroyProductPackage(opts ...DBOption) error {
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	return db.Delete(&model.ProductPackage{}).Error
 }
 
 // GetProductPackageBatchTagCount 获取分批商品数量

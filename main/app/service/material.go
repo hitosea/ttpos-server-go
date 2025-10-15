@@ -2702,7 +2702,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 		headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
 		commonRepo := repository.NewCommonRepo()
 		materialRepo := repository.NewMaterialRepo(headquarterDb)
-		materialList := materialRepo.GetMaterialList(
+		headMaterialList := materialRepo.GetMaterialList(
 			commonRepo.WhereByHeadquarterUuid(0),
 			commonRepo.WhereBySoftDelete(),
 			materialRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
@@ -2720,12 +2720,29 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 
 			time := time.Now().Unix()
 
+			// 需要删除的物品、物品单位、多语言名称
+			delMaterialUuids := []uint64{}
+			delMaterialUnitUuids := []uint64{}
 			delMultiLanguageNameUuids := []uint64{}
+			subMaterialList := materialRepo.GetMaterialList(
+				commonRepo.WhereByHeadquarterUuid(companySetting.HeadquarterUuid),
+				commonRepo.WhereBySoftDelete(),
+				materialRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
+				materialRepo.WithNotBaseUnitList(commonRepo.WhereBySoftDelete()),
+			)
+			for _, material := range subMaterialList {
+				delMaterialUuids = append(delMaterialUuids, material.Uuid)
+				for _, materialUnit := range material.NotBaseUnitList {
+					delMaterialUnitUuids = append(delMaterialUnitUuids, materialUnit.Uuid)
+				}
+				delMultiLanguageNameUuids = append(delMultiLanguageNameUuids, material.MultiLanguageNameUuid)
+			}
+
+			// 需要保存的物品、物品单位、多语言名称
 			addMaterialList := []model.Material{}
 			addMaterialUnitList := []model.MaterialUnit{}
 			addMultiLanguageNameList := []model.MultiLanguageName{}
-			for _, material := range materialList {
-				delMultiLanguageNameUuids = append(delMultiLanguageNameUuids, material.MultiLanguageNameUuid)
+			for _, material := range headMaterialList {
 				addMaterialList = append(addMaterialList, model.Material{
 					BaseModel:             model.BaseModel{Uuid: material.Uuid, CreateTime: time, UpdateTime: time},
 					Name:                  material.Name,
@@ -2774,11 +2791,11 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 				})
 			}
 			// 删除子店中所有总部物品，然后新增总部物品
-			err := materialRepo.DestroyMaterial(commonRepo.WhereByHeadquarterUuid(companySetting.HeadquarterUuid))
+			err := materialRepo.DestroyMaterial(commonRepo.WhereInUuids(delMaterialUuids))
 			if err != nil {
 				return errors.WithMessage(err, "销毁总部物品失败")
 			}
-			err = materialRepo.DestroyMaterialUnit(commonRepo.WhereByHeadquarterUuid(companySetting.HeadquarterUuid))
+			err = materialRepo.DestroyMaterialUnit(commonRepo.WhereInUuids(delMaterialUnitUuids))
 			if err != nil {
 				return errors.WithMessage(err, "销毁总部物品单位失败")
 			}
