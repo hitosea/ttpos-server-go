@@ -398,35 +398,36 @@ func (s *sItem) createNewItem(ctx context.Context, req *item.ItemInfo) (*item.It
 	// 转换并返回结果
 	respItem := s.buildCreateItemResponse(req, company, newItem)
 
-	respAttributes := make([]*item.ItemAttribute, 0, len(req.Attributes))
+	//不再自动创建规格商品，使用单独的创建接口
+	//respAttributes := make([]*item.ItemAttribute, 0, len(req.Attributes))
 
 	//多规格商品，创建时如果包含了属性值，则同步创建规格商品
-	if req.HasVariants {
-		if len(req.Attributes) > 0 {
-			for _, attr := range req.Attributes {
-				// 将每种属性名称和属性值的组合添加到itemVarList中
-				variant := map[string]string{
-					attr.AttributeName: attr.AttributeValue,
-				}
-				multiSpecItemCode, err := s.CreateSingleVariantItem(ctx, &erp.CreateSingleVariantItemReq{
-					TemplateItem: itemCode,
-					Args:         variant,
-					InternalCode: attr.ItemInternalCode,
-				}, req)
-				if err != nil {
-					return nil, gerror.Wrapf(err, "创建对规格物品失败")
-				}
-
-				respAttributes = append(respAttributes, &item.ItemAttribute{
-					AttributeName:    attr.AttributeName,
-					AttributeValue:   attr.AttributeValue,
-					ItemInternalCode: attr.ItemInternalCode,
-					ItemCode:         multiSpecItemCode,
-				})
-			}
-			respItem.Attributes = respAttributes
-		}
-	}
+	//if req.HasVariants {
+	//	if len(req.Attributes) > 0 {
+	//		for _, attr := range req.Attributes {
+	//			// 将每种属性名称和属性值的组合添加到itemVarList中
+	//			variant := map[string]string{
+	//				attr.AttributeName: attr.AttributeValue,
+	//			}
+	//			multiSpecItemCode, err := s.CreateSingleVariantItem(ctx, &erp.CreateSingleVariantItemReq{
+	//				TemplateItem: itemCode,
+	//				Args:         variant,
+	//				InternalCode: attr.ItemInternalCode,
+	//			}, req)
+	//			if err != nil {
+	//				return nil, gerror.Wrapf(err, "创建对规格物品失败")
+	//			}
+	//
+	//			respAttributes = append(respAttributes, &item.ItemAttribute{
+	//				AttributeName:    attr.AttributeName,
+	//				AttributeValue:   attr.AttributeValue,
+	//				ItemInternalCode: attr.ItemInternalCode,
+	//				ItemCode:         multiSpecItemCode,
+	//			})
+	//		}
+	//		respItem.Attributes = respAttributes
+	//	}
+	//}
 	return respItem, nil
 }
 
@@ -583,6 +584,14 @@ func (s *sItem) buildCreateItemResponse(req *item.ItemInfo, company *company.Com
 	}
 	//处理返回 itemGroup
 	res.ItemGroup = req.ItemGroup
+
+	//特殊处理规格
+	res.Attributes = make([]*item.ItemAttribute, 0, len(req.Attributes))
+	for _, attr := range req.Attributes {
+		res.Attributes = append(res.Attributes, &item.ItemAttribute{
+			AttributeName: attr.AttributeName,
+		})
+	}
 
 	return res
 }
