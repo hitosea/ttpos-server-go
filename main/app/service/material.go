@@ -2959,6 +2959,14 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
 		commonRepo := repository.NewCommonRepo()
 		productBomCardList, err := repository.NewProductBomCardRepo(headquarterDb).GetProductBomCardList(
 			commonRepo.WhereBySoftDelete(),
+			commonRepo.Preload(
+				repository.WithPreload{
+					Query: "MultiLanguageName",
+				},
+				repository.WithPreload{
+					Query: "RelatedMaterials",
+				},
+			),
 		)
 		if err != nil {
 			return errors.WithMessage(err, "获取总部成本卡列表失败")
@@ -2981,6 +2989,11 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
 				productBomCard.HeadquarterUuid = companySetting.HeadquarterUuid
 				if err := repository.NewProductBomCardRepo(tx).CreateProductBomCard(*productBomCard); err != nil {
 					return errors.WithMessage(err, "创建成本卡失败")
+				}
+				// 创建多语言
+				productBomCard.MultiLanguageName.BaseModel = model.BaseModel{Uuid: productBomCard.MultiLanguageNameUuid}
+				if _, err := repository.NewMultiLanguageNameRepo(tx).CreateMultiLanguageName(*productBomCard.MultiLanguageName); err != nil {
+					return errors.WithMessage(err, "创建多语言名称失败")
 				}
 				// 创建成本卡材料
 				for _, material := range productBomCard.RelatedMaterials {
