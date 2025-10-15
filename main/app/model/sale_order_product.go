@@ -857,6 +857,11 @@ func (model *SaleOrderProduct) SetNil() {
 	model.ReturnOrderProducts = nil
 	model.ProductPackage = nil
 	model.SaleBill = nil
+	model.CancelReasons = nil
+	model.ProductionOrderProduct = nil
+	model.H5Order = nil
+	model.ProductMustPlan = nil
+	model.BatchTag = nil
 }
 
 // 复制销售订单商品
