@@ -7819,6 +7819,19 @@ func (s *productSrv) DeleteBatchTag(ctx context.Context, req req.BatchTagDeleteR
 		return errors.WithMessage(err, "获取分批类型详情失败")
 	}
 
+	// 查询分批类型是否被使用. sale_bill中是否被使用、正在进行中的订单中是否有商品正在使用
+	// 查询所有正在进行中的订单
+	var saleBillUuids []uint64
+	db.Model(&model.SaleBill{}).Where("status = ?", constant.SaleBillStatusPending).Where("delete_time = ?", 0).Where("batch_tag_uuid <> ?", 0).Select("uuid").Scan(&saleBillUuids)
+	if len(saleBillUuids) > 0 {
+		return errors.WithMessage(errors.New("分批类型正在被使用"), "分批类型正在被使用")
+	}
+	var count int64
+	db.Model(&model.SaleOrderProduct{}).Where("sale_bill_uuid in (?) AND batch_tag_uuid = ?", saleBillUuids, req.Uuid).Where("delete_time = ?", 0).Count(&count)
+	if count > 0 {
+		return errors.WithMessage(errors.New("分批类型正在被使用"), "分批类型正在被使用")
+	}
+
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		batchTagRepo := repository.NewBatchTagRepo(tx)
 		// 删除分批类型
