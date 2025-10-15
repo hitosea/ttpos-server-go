@@ -12,6 +12,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/utility"
 	"ttpos-bmp/internal/pkg/queue"
 
+	"github.com/gogf/gf/v2/container/garray"
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -480,10 +481,16 @@ func (s *sItem) buildNewItemData(ctx context.Context, req *item.ItemInfo, compan
 		// 变体参数设置
 		newItem["variant_based_on"] = erp.DocTypeItemAttribute
 		attributes := make([]g.Map, 0, len(req.Attributes))
+		addedAttr := garray.NewStrArray()
 		for _, attr := range req.Attributes {
+			if addedAttr.Contains(attr.AttributeName) {
+				//跳过已添加
+				continue
+			}
 			attributes = append(attributes, g.Map{
 				"attribute": attr.AttributeName,
 			})
+			addedAttr.Append(attr.AttributeName)
 		}
 		newItem["attributes"] = attributes
 	}
