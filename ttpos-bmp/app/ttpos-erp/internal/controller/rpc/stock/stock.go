@@ -86,12 +86,14 @@ func (*Controller) SaveMaterialRequest(ctx context.Context, req *stock.SaveMater
 
 		//直接创建发货单，后续接入物流方
 
-		service.Buying().CreateDeliveryNoteFromInnerSaleOrder(ctx, &dto.CreateDeliveryNoteFromInnerSaleOrderReq{
+		_, err = service.Buying().CreateDeliveryNoteFromInnerSaleOrder(ctx, &dto.CreateDeliveryNoteFromInnerSaleOrderReq{
 			SourceName:      saleOrder.Name,
 			SourceWarehouse: req.SourceWarehouse,
 			//TargetWarehouse: "", // TODO 取在途仓
 		})
-
+		if err != nil {
+			return rpc.ApiError(err.Error()), nil
+		}
 	}
 	// 返回成功响应
 	return rpc.ApiSuccessWithData("保存物品申请单成功", resp), nil
