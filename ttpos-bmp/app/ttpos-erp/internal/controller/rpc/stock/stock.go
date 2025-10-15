@@ -10,6 +10,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 )
 
@@ -61,6 +62,15 @@ func (*Controller) SaveMaterialRequest(ctx context.Context, req *stock.SaveMater
 			TargetWarehouse: req.TargetWarehouse,
 		})
 		if err != nil {
+			//需要回退之前创建的采购申请
+			g.Log().Warningf(ctx, "创建采购订单失败，回退之前创建的材料申请:%s\n %v", resp.MaterialRequestName, err)
+			_, err2 := service.Document().Delete(ctx, &erp.ErpReq{
+				DocType: erp.DocTypeMaterialRequest,
+				Name:    resp.MaterialRequestName,
+			})
+			if err2 != nil {
+				g.Log().Warningf(ctx, "回退之前创建的材料申请失败:%s\n %v", resp.MaterialRequestName, err2)
+			}
 			return rpc.ApiError(err.Error()), nil
 		}
 		resp.PurchaseOrder = purchaseOrder.Name
@@ -76,12 +86,14 @@ func (*Controller) SaveMaterialRequest(ctx context.Context, req *stock.SaveMater
 
 		//直接创建发货单，后续接入物流方
 
-		service.Buying().CreateDeliveryNoteFromInnerSaleOrder(ctx, &dto.CreateDeliveryNoteFromInnerSaleOrderReq{
+		_, err = service.Buying().CreateDeliveryNoteFromInnerSaleOrder(ctx, &dto.CreateDeliveryNoteFromInnerSaleOrderReq{
 			SourceName:      saleOrder.Name,
 			SourceWarehouse: req.SourceWarehouse,
 			//TargetWarehouse: "", // TODO 取在途仓
 		})
-
+		if err != nil {
+			return rpc.ApiError(err.Error()), nil
+		}
 	}
 	// 返回成功响应
 	return rpc.ApiSuccessWithData("保存物品申请单成功", resp), nil
