@@ -46,6 +46,7 @@ class CreateSyncTaskTable extends Migrator
                   ->addColumn('total_count', 'integer', ['signed' => false, 'default' => 0, 'comment' => '总任务数'])
                   ->addColumn('success_count', 'integer', ['signed' => false, 'default' => 0, 'comment' => '成功任务数'])
                   ->addColumn('fail_count', 'integer', ['signed' => false, 'default' => 0, 'comment' => '失败任务数'])
+                  ->addColumn('panic', 'text', ['null' => true, 'comment' => 'panic错误信息']) 
                   ->addColumn('start_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '开始时间'])
                   ->addColumn('end_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '结束时间'])
                   ->addColumn('create_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '创建时间'])

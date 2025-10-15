@@ -3001,6 +3001,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sync_task` (
   `total_count` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '总任务数',
   `success_count` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '成功任务数',
   `fail_count` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '失败任务数',
+  `panic` text COMMENT 'panic错误信息',
   `start_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '开始时间',
   `end_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '结束时间',
   `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
