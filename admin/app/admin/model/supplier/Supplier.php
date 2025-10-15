@@ -174,6 +174,13 @@ class Supplier extends SupplierModel
      */
     private function createDefaultWarehouse($pdo, $prefix)
     {
+        // 判断是否存在默认仓库和在途仓
+        $defaultWarehouse = $pdo->query("SELECT uuid FROM {$prefix}warehouse WHERE type = 'normal' AND is_default = 1 AND delete_time = 0 LIMIT 1")->fetch(\PDO::FETCH_ASSOC);
+        $transitWarehouse = $pdo->query("SELECT uuid FROM {$prefix}warehouse WHERE type = 'transit' AND delete_time = 0 LIMIT 1")->fetch(\PDO::FETCH_ASSOC);
+        if ($defaultWarehouse && $transitWarehouse) {
+            return;
+        }
+
         // 定义默认仓和在途仓的多语言名称
         $defaultWarehouseNames = [
             'en' => 'Default',
@@ -186,7 +193,6 @@ class Supplier extends SupplierModel
             'tr' => 'Default',
             'sv' => 'Default',
         ];
-        
         $transitWarehouseNames = [
             'en' => 'Transit',
             'zh' => 'Transit',
@@ -198,14 +204,14 @@ class Supplier extends SupplierModel
             'tr' => 'Transit',
             'sv' => 'Transit',
         ];
-        
+
         // 生成多语言UUID
         $defaultNameUuid = createUuid();
         $transitNameUuid = createUuid();
-        
-        // 创建多语言记录数据
-        $multiLanguageRecords = [
-            [
+
+        $multiLanguageRecords = [];
+        if (!$defaultWarehouse) {
+            $multiLanguageRecords[] = [
                 'uuid' => $defaultNameUuid,
                 'en_name' => $defaultWarehouseNames['en'],
                 'zh_name' => $defaultWarehouseNames['zh'],
@@ -219,8 +225,10 @@ class Supplier extends SupplierModel
                 'create_time' => time(),
                 'update_time' => time(),
                 'delete_time' => 0,
-            ],
-            [
+            ];
+        }
+        if (!$transitWarehouse) {
+            $multiLanguageRecords[] = [
                 'uuid' => $transitNameUuid,
                 'en_name' => $transitWarehouseNames['en'],
                 'zh_name' => $transitWarehouseNames['zh'],
@@ -234,21 +242,31 @@ class Supplier extends SupplierModel
                 'create_time' => time(),
                 'update_time' => time(),
                 'delete_time' => 0,
-            ],
-        ];
-        
+            ];
+        }
+
         // 插入多语言记录
         foreach ($multiLanguageRecords as $multiLanguageRecord) {
             $pdo->exec($this->getInsertSql($prefix . 'multi_language_name', $multiLanguageRecord, [
-                'uuid', 'en_name', 'zh_name', 'zh_tw_name', 'th_name', 'my_name',
-                'ja_name', 'ko_name', 'tr_name', 'sv_name',
-                'create_time', 'update_time', 'delete_time'
+                'uuid',
+                'en_name',
+                'zh_name',
+                'zh_tw_name',
+                'th_name',
+                'my_name',
+                'ja_name',
+                'ko_name',
+                'tr_name',
+                'sv_name',
+                'create_time',
+                'update_time',
+                'delete_time'
             ]));
         }
-        
-        // 创建仓库记录
-        $warehouses = [
-            [
+
+        $warehouses = [];
+        if (!$defaultWarehouse) {
+            $warehouses[] = [
                 'uuid' => createUuid(),
                 'name' => json_encode($defaultWarehouseNames),
                 'multi_language_name_uuid' => $defaultNameUuid,
@@ -264,8 +282,11 @@ class Supplier extends SupplierModel
                 'create_time' => time(),
                 'update_time' => time(),
                 'delete_time' => 0,
-            ],
-            [
+            ];
+        }
+
+        if (!$transitWarehouse) {
+            $warehouses[] = [
                 'uuid' => createUuid(),
                 'name' => json_encode($transitWarehouseNames),
                 'multi_language_name_uuid' => $transitNameUuid,
@@ -281,15 +302,28 @@ class Supplier extends SupplierModel
                 'create_time' => time(),
                 'update_time' => time(),
                 'delete_time' => 0,
-            ],
-        ];
-        
+            ];
+        }
+
+
         // 插入仓库数据
         foreach ($warehouses as $warehouse) {
             $pdo->exec($this->getInsertSql($prefix . 'warehouse', $warehouse, [
-                'uuid', 'name', 'multi_language_name_uuid', 'type', 'code', 'status',
-                'contact', 'phone', 'address', 'is_default', 'erp_code', 'headquarter_uuid',
-                'create_time', 'update_time', 'delete_time'
+                'uuid',
+                'name',
+                'multi_language_name_uuid',
+                'type',
+                'code',
+                'status',
+                'contact',
+                'phone',
+                'address',
+                'is_default',
+                'erp_code',
+                'headquarter_uuid',
+                'create_time',
+                'update_time',
+                'delete_time'
             ]));
         }
     }
@@ -408,8 +442,19 @@ class Supplier extends SupplierModel
         ];
         foreach ($paymentMethodList as $paymentMethodItem) {
             $pdo->exec($this->getInsertSql($prefix . 'payment_method', $paymentMethodItem, [
-                'uuid', 'name', 'code', 'payment_name', 'source', 'is_show_cashier', 'is_show_assistant',
-                'is_show_member_recharge', 'status', 'sort', 'default_img', 'create_time', 'update_time',
+                'uuid',
+                'name',
+                'code',
+                'payment_name',
+                'source',
+                'is_show_cashier',
+                'is_show_assistant',
+                'is_show_member_recharge',
+                'status',
+                'sort',
+                'default_img',
+                'create_time',
+                'update_time',
             ]));
         }
     }
