@@ -1658,7 +1658,6 @@ func (s *productSrv) SyncProductTax(ctx context.Context) error {
 			subShopTax, _ := taxRepo.GetTaxCategory(
 				commonRepo.WhereByUuid(tax.Uuid),
 				commonRepo.WhereByHeadquarterUuid(companySetting.HeadquarterUuid),
-				commonRepo.WhereBySoftDelete(),
 			)
 			if subShopTax.Uuid == 0 {
 				err = taxRepo.CreateTax(model.Tax{
@@ -1677,8 +1676,9 @@ func (s *productSrv) SyncProductTax(ctx context.Context) error {
 			} else {
 				taxRepo.UpdataTax(
 					map[string]any{
-						"name":     tax.Name,
-						"tax_rate": tax.TaxRate,
+						"name":        tax.Name,
+						"tax_rate":    tax.TaxRate,
+						"delete_time": constant.NotDeleted,
 					},
 					commonRepo.WhereByUuid(subShopTax.Uuid),
 				)
@@ -4449,7 +4449,6 @@ func (s *productSrv) SyncProductFlavor(ctx context.Context) error {
 		// 同步erp规格到本地
 		maxSort, _ := productRepo.GetProductFlavorMaxSort(
 			commonRepo.WhereByHeadquarterUuid(0),
-			commonRepo.WhereBySoftDelete(),
 		)
 		for _, erpFlavor := range erpFlavorList.List {
 			for _, erpFlavorValue := range erpFlavor.AttributeValueList {
@@ -4508,6 +4507,7 @@ func (s *productSrv) SyncProductFlavor(ctx context.Context) error {
 					err = productFlavorRepo.UpdateProductFlavor(map[string]any{
 						"erpnext_group_name": erpFlavor.AttributeName,
 						"erpnext_alias_name": erpFlavorValue.Abbr,
+						"delete_time":        constant.NotDeleted,
 					}, commonRepo.WhereByUuid(existsFlavor.Uuid))
 					if err != nil {
 						return errors.WithMessage(err, "更新规格到本地失败")
@@ -4557,15 +4557,16 @@ func (s *productSrv) SyncProductFlavor(ctx context.Context) error {
 			productFlavorRepo := repository.NewProductFlavorRepo(tx)
 			multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
 
-			maxSort, _ := productRepo.GetProductFlavorMaxSort(
-				commonRepo.WhereBySoftDelete(),
-			)
+			maxSort, err := productRepo.GetProductFlavorMaxSort()
+			if err != nil {
+				maxSort = 0
+			}
+
 			for _, flavor := range flavorList {
-				existsFlavor, _ := productFlavorRepo.GetProductFlavor(
-					commonRepo.WhereBySoftDelete(),
+				existsFlavor, err := productFlavorRepo.GetProductFlavor(
 					commonRepo.WhereByErpnextValueName(flavor.ErpnextValueName),
 				)
-				if existsFlavor.Uuid == 0 {
+				if err != nil || existsFlavor.Uuid == 0 {
 					// 新增
 					maxSort += 1
 					mutilLanguageName := model.MultiLanguageName{
@@ -4603,6 +4604,7 @@ func (s *productSrv) SyncProductFlavor(ctx context.Context) error {
 					err = productFlavorRepo.UpdateProductFlavor(map[string]any{
 						"erpnext_group_name": flavor.ErpnextGroupName,
 						"erpnext_alias_name": flavor.ErpnextAliasName,
+						"delete_time":        constant.NotDeleted,
 					}, commonRepo.WhereByUuid(existsFlavor.Uuid))
 					if err != nil {
 						return errors.WithMessage(err, "更新规格到本地失败")
