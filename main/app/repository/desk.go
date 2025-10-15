@@ -189,7 +189,7 @@ func (r *deskRepo) GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, e
 		db = opt(db)
 	}
 
-	result := db.Preload("SaleBill").Preload("SaleBill.SaleOrders", func(db *gorm.DB) *gorm.DB {
+	result := db.Preload("SaleBill").Preload("SaleBill.BatchTag").Preload("SaleBill.SaleOrders", func(db *gorm.DB) *gorm.DB {
 		return db.Scopes(NotDeleted).Order("create_time asc")
 	}).First(&desk)
 	if result.Error != nil {

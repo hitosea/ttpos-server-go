@@ -1,6 +1,8 @@
 package service
 
 import (
+	"fmt"
+	"slices"
 	"sync"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -196,13 +198,16 @@ func (s *SyncSrv) executeSync(ctx context.Context, syncTask *model.SyncTask, all
 
 	// 确保任务完成时清理状态
 	defer func() {
+		panicOccurred := false
 		if r := recover(); r != nil {
 			logger.Logger.Error("同步任务发生panic", zap.Uint64("companyUuid", companyUuid), zap.Any("panic", r))
 			// 更新任务状态为失败
 			syncTaskRepo.Update(syncTask.Uuid, map[string]any{
 				"status":   constant.SyncTaskStatusFailed,
+				"panic":    fmt.Sprintf("%v", r),
 				"end_time": time.Now().Unix(),
 			})
+			panicOccurred = true
 		}
 
 		syncTaskManager.finishTask(companyUuid)
@@ -210,14 +215,17 @@ func (s *SyncSrv) executeSync(ctx context.Context, syncTask *model.SyncTask, all
 			zap.Uint32("successCount", successCount),
 			zap.Uint32("failCount", failCount))
 
+		lastSyncTime := time.Now().Unix()
+		// 未报错才记录上次同步完成时间
+		if failCount == 0 && !panicOccurred {
+			s.dbm.GetDB(companyUuid).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
+			s.dbm.GetDB(0).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
+		}
 		// 推送websocket
 		go websocket.PushClient(company.Uuid, websocket.SourceShop, websocket.SourceAll, websocket.SYNC_DATA, map[string]any{
-			"task_uuid":      syncTask.Uuid,
-			"status":         syncTask.Status,
-			"total_count":    syncTask.TotalCount,
-			"success_count":  successCount,
-			"fail_count":     failCount,
-			"last_sync_time": time.Now().Unix(),
+			"task_uuid":             syncTask.Uuid,
+			"is_exception_occurred": failCount > 0 || panicOccurred,
+			"sync_time":             time.Now().Unix(),
 		})
 	}()
 
@@ -228,11 +236,8 @@ func (s *SyncSrv) executeSync(ctx context.Context, syncTask *model.SyncTask, all
 	if retryMode {
 		tasksToExecute = []syncTaskConfig{}
 		for _, task := range allTasks {
-			for _, retryType := range retryTaskTypes {
-				if task.TaskType == retryType {
-					tasksToExecute = append(tasksToExecute, task)
-					break
-				}
+			if slices.Contains(retryTaskTypes, task.TaskType) {
+				tasksToExecute = append(tasksToExecute, task)
 			}
 		}
 	}

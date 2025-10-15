@@ -7,6 +7,7 @@ type SyncTask struct {
 	TotalCount   uint32 `gorm:"column:total_count;type:int(10);default:0;comment:总任务数;NOT NULL" json:"total_count"`
 	SuccessCount uint32 `gorm:"column:success_count;type:int(10);default:0;comment:成功任务数;NOT NULL" json:"success_count"`
 	FailCount    uint32 `gorm:"column:fail_count;type:int(10);default:0;comment:失败任务数;NOT NULL" json:"fail_count"`
+	Panic        string `gorm:"column:panic;type:text;comment:panic错误信息" json:"panic"`
 	StartTime    int64  `gorm:"column:start_time;type:int(10);default:0;comment:开始时间;NOT NULL" json:"start_time"`
 	EndTime      int64  `gorm:"column:end_time;type:int(10);default:0;comment:结束时间;NOT NULL" json:"end_time"`
 
