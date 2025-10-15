@@ -204,17 +204,6 @@ func gracefulShutdown(srv *http.Server) {
 func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 	c := cron.New(cron.WithSeconds())
 
-	// 1秒检查打印
-	// _, _ = c.AddFunc("*/1 * * * * *", func() {
-	// 	printer_tasks.NewPrinterTask(dbm, cache).Execute()
-	// })
-
-	// NOTE: 舍弃5分钟自动切换
-	// 1分钟检查Usb打印是否在线
-	// _, _ = c.AddFunc("0 */2 * * * *", func() {
-	// 	tasks.NewUsbPrintTask(dbm, cache).Execute()
-	// })
-
 	// 删除7天前的打印日志
 	_, _ = c.AddFunc("0 6 * * *", func() {
 		tasks.NewDelPrintTask(dbm, cache).Execute()
