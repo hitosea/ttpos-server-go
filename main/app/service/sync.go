@@ -198,7 +198,7 @@ func (s *SyncSrv) executeSync(ctx context.Context, syncTask *model.SyncTask, all
 
 	// 确保任务完成时清理状态
 	defer func() {
-		panicOccurred := false
+		var isPanicOccurred bool
 		if r := recover(); r != nil {
 			logger.Logger.Error("同步任务发生panic", zap.Uint64("companyUuid", companyUuid), zap.Any("panic", r))
 			// 更新任务状态为失败
@@ -207,8 +207,11 @@ func (s *SyncSrv) executeSync(ctx context.Context, syncTask *model.SyncTask, all
 				"panic":    fmt.Sprintf("%v", r),
 				"end_time": time.Now().Unix(),
 			})
-			panicOccurred = true
+			isPanicOccurred = true
 		}
+
+		// 发生异常，包括失败和panic
+		isExceptionOccurred := failCount > 0 || isPanicOccurred
 
 		syncTaskManager.finishTask(companyUuid)
 		logger.Logger.Info("同步任务完成", zap.Uint64("companyUuid", companyUuid),
@@ -217,14 +220,14 @@ func (s *SyncSrv) executeSync(ctx context.Context, syncTask *model.SyncTask, all
 
 		lastSyncTime := time.Now().Unix()
 		// 未报错才记录上次同步完成时间
-		if failCount == 0 && !panicOccurred {
+		if !isExceptionOccurred {
 			s.dbm.GetDB(companyUuid).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
 			s.dbm.GetDB(0).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
 		}
 		// 推送websocket
 		go websocket.PushClient(company.Uuid, websocket.SourceShop, websocket.SourceAll, websocket.SYNC_DATA, map[string]any{
 			"task_uuid":             syncTask.Uuid,
-			"is_exception_occurred": failCount > 0 || panicOccurred,
+			"is_exception_occurred": isExceptionOccurred,
 			"sync_time":             time.Now().Unix(),
 		})
 	}()
