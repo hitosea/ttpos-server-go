@@ -7389,6 +7389,7 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 			return errors.WithMessage(err, "获取总部商品包列表失败")
 		}
 		// 需要保存的商品包、多语言名称、商品bom、商品包属性组、商品包属性、商品套餐组、商品套餐商品
+		delMultiLanguageNameUuid := make([]uint64, 0)
 		newProductPackageList := make([]model.ProductPackage, 0)
 		newMultiLanguageNameList := make([]model.MultiLanguageName, 0)
 		newProductBomList := make([]model.ProductBom, 0)
@@ -7446,6 +7447,7 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 				TrName:    productPackage.MultiLanguageName.TrName,
 				SvName:    productPackage.MultiLanguageName.SvName,
 			})
+			delMultiLanguageNameUuid = append(delMultiLanguageNameUuid, productPackage.MultiLanguageName.Uuid)
 			for _, productBom := range productPackage.ProductBoms {
 				newProductBomList = append(newProductBomList, model.ProductBom{
 					BaseModel:          model.BaseModel{Uuid: productBom.Uuid, CreateTime: time, UpdateTime: time},
@@ -7512,6 +7514,7 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 					TrName:    productPackageGroup.MultiLanguageName.TrName,
 					SvName:    productPackageGroup.MultiLanguageName.SvName,
 				})
+				delMultiLanguageNameUuid = append(delMultiLanguageNameUuid, productPackageGroup.MultiLanguageName.Uuid)
 			}
 		}
 		db := s.dbm.GetDB(companySetting.CompanyUuid)
@@ -7525,7 +7528,6 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 
 			// 需要保存的商品包、多语言名称、商品bom、商品包属性组、商品包属性、商品套餐组、商品套餐商品
 			delProductPackageUuid := make([]uint64, 0)
-			delMultiLanguageNameUuid := make([]uint64, 0)
 			delProductBomUuid := make([]uint64, 0)
 			delProductPackageAttributeGroupUuid := make([]uint64, 0)
 			delProductPackageAttributeUuid := make([]uint64, 0)
