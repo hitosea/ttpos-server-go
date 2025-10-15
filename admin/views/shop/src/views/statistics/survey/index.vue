@@ -172,7 +172,10 @@
       };
     },
     async mounted() {
-      this.searchForm.date = [dayjs(), dayjs()];
+      const today = new Date();
+      const startOfDay = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')} 00:00`;
+      const endOfDay = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')} 23:59`;
+      this.searchForm.date = [startOfDay, endOfDay];
       await this.$nextTick();
       /*获取列表*/
       this.getParams();
