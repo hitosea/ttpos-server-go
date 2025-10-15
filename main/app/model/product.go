@@ -203,6 +203,9 @@ type ProductPackage struct {
 	// 分批相关
 	IsBatch uint8 `gorm:"default:0;column:is_batch;comment:'是否是分批商品, 0-否 1-是'"`
 
+	// 总部UUID
+	HeadquarterUuid uint64 `gorm:"default:0;column:headquarter_uuid;comment:'总部UUID'"`
+
 	MultiLanguageName             MultiLanguageName              `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`  // 多语言名称
 	ProductUnit                   ProductUnit                    `gorm:"foreignKey:unit_uuid;references:uuid" json:"-"`        // 单位
 	ProductBoms                   []ProductBom                   `gorm:"foreignKey:product_package_uuid;references:uuid"`      // BOM

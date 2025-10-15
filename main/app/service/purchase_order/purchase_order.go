@@ -235,6 +235,12 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(
 			}
 		}
 
+		// 设置期望到货时间，如果为空则默认为2035-12-31
+		expectArrivalTime := req.ExpectedDeliveryTime
+		if expectArrivalTime == 0 {
+			expectArrivalTime = 2082672000 // 2035-12-31的时间戳
+		}
+
 		// 创建采购申请
 		purchaseOrder := &model.PurchaseOrder{
 			OrderNo:           orderNo,
@@ -243,7 +249,7 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(
 			Status:            constant.PurchaseOrderStatusDraft,
 			Num:               float64(len(req.Items)),
 			OrderTime:         req.OrderTime,
-			ExpectArrivalTime: req.ExpectedDeliveryTime,
+			ExpectArrivalTime: expectArrivalTime,
 			ApplicantUuid:     ctx.GetStaffUuid(),
 			ApplicantName:     ctx.GetStaff().RealName,
 			PurchaseType:      utils.IfInt(req.PurchaseType == 2, 2, 1),
@@ -356,11 +362,17 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(
 			}
 		}
 
+		// 设置期望到货时间，如果为空则默认为2035-12-31
+		expectArrivalTime := req.ExpectedDeliveryTime
+		if expectArrivalTime == 0 {
+			expectArrivalTime = 2082672000 // 2035-12-31的时间戳
+		}
+
 		// 更新采购申请基本信息
 		purchaseOrder.Num = float64(len(req.Items))
 		purchaseOrder.SupplierName = req.SupplierName
 		purchaseOrder.SupplierErpCode = req.SupplierErpCode
-		purchaseOrder.ExpectArrivalTime = req.ExpectedDeliveryTime
+		purchaseOrder.ExpectArrivalTime = expectArrivalTime
 		purchaseOrder.WarehouseErpCode = req.WarehouseErpCode
 		purchaseOrder.WarehouseName = warehouseName
 
