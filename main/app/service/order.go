@@ -684,11 +684,17 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	}
 	// 构建销售订单
 	saleOrder := model.NewSaleOrder(ctx.GetDeviceSn(), saleBill.Uuid, saleBill.OrderNo, *saleBillSetting)
-	staffShiftLog, err := GetCurrentStaffShiftLog(db, staff.Uuid)
-	if err != nil {
-		return resp.CreateDeskOrderResp{}, errors.WithMessage(err)
+	staffShiftLogUuid := uint64(0)
+	{
+		staffShiftLog, err := GetCurrentStaffShiftLog(db, staff.Uuid)
+		if err != nil {
+			logger.Logger.Error("获取当前员工班次信息失败", zap.Error(err))
+		} else {
+			staffShiftLogUuid = staffShiftLog.Uuid
+		}
 	}
-	saleOrder.StaffShiftLogUuid = staffShiftLog.Uuid
+
+	saleOrder.StaffShiftLogUuid = staffShiftLogUuid
 
 	// 获取自助餐信息
 	buffetList, err := repository.NewBuffetRepo(db).GetBuffetListByUuids(req.BuffetUuids)
