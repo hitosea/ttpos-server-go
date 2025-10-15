@@ -217,6 +217,16 @@ type ProductAddErpReq struct {
 	Flavors            []Flavor `json:"flavors" `                               // 规格列表
 }
 
+type ProductBomAddErpReq struct {
+	VariantsOf   string   `json:"variants_of" binding:"required"` // 变体商品模版
+	InternalCode string   `json:"internal_code" `                 // 内部编码
+	Flavors      []Flavor `json:"flavors" `                       // 规格列表
+}
+
+type DeleteProductBomErpReq struct {
+	ItemCode string `json:"item_code"`
+}
+
 type Flavor struct {
 	Name  string
 	Value string

@@ -2288,6 +2288,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_device` (
     `platform` INT(10) DEFAULT 0 COMMENT '平台,0-Web-网页, 1-Android-安卓, 2-iPhone-苹果, 3-Mobile-移动端',
     `user_agent` LONGTEXT COMMENT '请求头信息',
     `kds_mode` INT(10) DEFAULT 0 COMMENT '厨显端模式 0-默认，传菜模式; 1-制作模式; 2-制作+传菜模式',
+    `version` VARCHAR(50) DEFAULT '' COMMENT '客户端版本号',
     -- 收银加密配置
     `cash_sign` VARCHAR(255) DEFAULT '' COMMENT '收银终端标识',
     `cash_box_id` VARCHAR(255) DEFAULT '' COMMENT '现金箱ID',

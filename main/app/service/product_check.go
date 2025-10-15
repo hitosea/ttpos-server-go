@@ -170,13 +170,15 @@ type CheckProductFlavorResult struct {
 }
 
 type CheckProductFlavorItemResult struct {
-	Uuid         uint64  `json:"uuid"`          // 商品规格UUID
-	Name         string  `json:"name"`          // 商品规格名称
-	BarcodeValue string  `json:"barcode_value"` // 商品规格条码值
-	InternalCode string  `json:"internal_code"` // 商品规格内部编码
-	Price        float64 `json:"price"`         // 商品规格价格
-	BomUuid      uint64  `json:"bom_uuid"`      // 商品bomUUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID
-	IsDelete     bool    `json:"is_delete"`     // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Uuid             uint64  `json:"uuid"`               // 商品规格UUID
+	Name             string  `json:"name"`               // 商品规格名称
+	BarcodeValue     string  `json:"barcode_value"`      // 商品规格条码值
+	InternalCode     string  `json:"internal_code"`      // 商品规格内部编码
+	Price            float64 `json:"price"`              // 商品规格价格
+	BomUuid          uint64  `json:"bom_uuid"`           // 商品bomUUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID
+	IsDelete         bool    `json:"is_delete"`          // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	ErpnextGroupName string  `json:"erpnext_group_name"` // ERPNext规格组名称
+	ErpnextValueName string  `json:"erpnext_value_name"` // ERPNext规格值名称
 }
 
 func (s *productCheckSrv) CheckProductFlavor(db *gorm.DB, flavors []CheckProductFlavorParam) (*CheckProductFlavorResult, error) {
@@ -247,13 +249,15 @@ func (s *productCheckSrv) CheckProductFlavor(db *gorm.DB, flavors []CheckProduct
 			}
 		}
 		flavorResults = append(flavorResults, CheckProductFlavorItemResult{
-			Uuid:         flavorReq.Uuid,
-			Name:         flavor.Name,
-			BarcodeValue: flavorReq.BarcodeValue,
-			InternalCode: flavorReq.InternalCode,
-			Price:        flavorReq.Price,
-			BomUuid:      flavorReq.BomUuid,
-			IsDelete:     flavorReq.IsDelete,
+			Uuid:             flavorReq.Uuid,
+			Name:             flavor.Name,
+			BarcodeValue:     flavorReq.BarcodeValue,
+			InternalCode:     flavorReq.InternalCode,
+			Price:            flavorReq.Price,
+			BomUuid:          flavorReq.BomUuid,
+			IsDelete:         flavorReq.IsDelete,
+			ErpnextGroupName: flavor.ErpnextGroupName,
+			ErpnextValueName: flavor.ErpnextValueName,
 		})
 		if !isDelete {
 			flavorCount++
