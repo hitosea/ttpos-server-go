@@ -629,9 +629,9 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 }
 
 // extractName 从错误信息中提取供应商名称
-func (h *purchaseOrderHelper) extractName(name, errorMsg string) string {
+func (h *purchaseOrderHelper) extractName(name, after, errorMsg string) string {
 	// 使用正则表达式匹配 "Supplier" 和 "is disabled" 之间的值
-	re := regexp.MustCompile(name + `\s+(.+?)\s+is\s+disabled`)
+	re := regexp.MustCompile(name + `\s+(.+?)\s+` + after)
 	matches := re.FindStringSubmatch(errorMsg)
 	if len(matches) > 1 {
 		supplierInfo := strings.TrimSpace(matches[1])
@@ -652,37 +652,49 @@ func (h *purchaseOrderHelper) handleErpError(ctx context.Context, err error) err
 	// 检查供应商状态
 	if strings.Contains(err.Error(), "Supplier") && strings.Contains(err.Error(), "is disabled") {
 		// 提取供应商名称
-		supplierName := h.extractName("Supplier", err.Error())
+		supplierName := h.extractName("Supplier", "is disabled", err.Error())
 		if supplierName != "" {
 			return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, fmt.Sprintf(
-				i18n.Translate(ctx.GetLanguage(), "供应商 %s 已禁用，请修改供应商状态"), supplierName),
+				i18n.Translate(ctx.GetLanguage(), "ERP中供应商 %s 已禁用，请修改供应商状态"), supplierName),
 			)
 		}
-		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用，请修改供应商状态")
+		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "ERP中供应商已禁用，请修改供应商状态")
 	}
 	// 检查物品状态
 	if strings.Contains(err.Error(), "Item") && strings.Contains(err.Error(), "is disabled") {
 		// 提取物品名称
-		itemName := h.extractName("Item", err.Error())
+		itemName := h.extractName("Item", "is disabled", err.Error())
 		if itemName != "" {
-			return errors.NewWithCode(constant.CodeMaterialDisabled, fmt.Sprintf(
-				i18n.Translate(ctx.GetLanguage(), "物品 %s 已禁用，请修改物品状态"), itemName),
+			return errors.NewWithCode(constant.CodeFail, fmt.Sprintf(
+				i18n.Translate(ctx.GetLanguage(), "ERP中物品 %s 已禁用，请修改物品状态"), itemName),
 			)
 		}
-		return errors.NewWithCode(constant.CodeMaterialDisabled, "物品已禁用，请修改物品状态")
+		return errors.NewWithCode(constant.CodeFail, "ERP中有物品已禁用，请修改物品状态")
 	}
 	// 检查仓库状态
 	if strings.Contains(err.Error(), "Warehouse") && strings.Contains(err.Error(), "is disabled") {
 		// 提取仓库名称
-		warehouseName := h.extractName("Warehouse", err.Error())
+		warehouseName := h.extractName("Warehouse", "is disabled", err.Error())
 		if warehouseName != "" {
-			return errors.NewWithCode(constant.CodeMaterialDisabled, fmt.Sprintf("仓库 %s 已禁用，请修改仓库状态", warehouseName))
+			return errors.NewWithCode(constant.CodeMaterialDisabled, fmt.Sprintf("ERP中仓库 %s 已禁用，请修改仓库状态", warehouseName))
 		}
-		return errors.NewWithCode(constant.CodeMaterialDisabled, "仓库已禁用，请修改仓库状态")
+		return errors.NewWithCode(constant.CodeMaterialDisabled, "ERP中仓库已禁用，请修改仓库状态")
 	}
 	// 检查采购数量
 	if strings.Contains(err.Error(), "cannot be less than minimum order qty") {
-		return errors.NewWithCode(constant.CodeFail, "采购数量不能小于最小采购数量")
+		itemName := h.extractName("Item", ":Ordered qty", err.Error())
+		if itemName != "" {
+			num := h.extractName("minimum order qty", "(defined in Item).", err.Error())
+			if num != "" {
+				return errors.NewWithCode(constant.CodeFail,
+					itemName+" "+i18n.Translate(ctx.GetLanguage(), "采购数量不能小于ERP中设置的最小采购数量")+" "+num,
+				)
+			}
+			return errors.NewWithCode(constant.CodeFail,
+				itemName+" "+i18n.Translate(ctx.GetLanguage(), "采购数量不能小于ERP中设置的最小采购数量"),
+			)
+		}
+		return errors.NewWithCode(constant.CodeFail, "采购数量不能小于ERP中设置的最小采购数量")
 	}
 	// before Transaction Date
 	if strings.Contains(err.Error(), "before Transaction Date") {
