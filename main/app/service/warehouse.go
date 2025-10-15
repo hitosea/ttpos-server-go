@@ -596,7 +596,11 @@ func (s *warehouseSrv) GetWarehouseInOutList(ctx context.Context, req req.GetWar
 	}
 	// 类型
 	if req.Type != "" {
-		opts = append(opts, warehouseInOutLogRepo.WhereLogType(constant.WarehouseInOutLogTypeToInt(req.Type)))
+		logTypes := []int{}
+		for _, typ := range strings.Split(req.Type, ",") {
+			logTypes = append(logTypes, constant.WarehouseInOutLogTypeToInt(typ))
+		}
+		opts = append(opts, warehouseInOutLogRepo.WhereSceneIn(logTypes))
 	}
 	// 物料分类ID列表
 	materialUuidsByCategory := []uint64{}
