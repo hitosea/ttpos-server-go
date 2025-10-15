@@ -533,24 +533,25 @@ func (s *purchaseReceiptOrderSrv) updateMaterialStock(
 	}
 
 	// 更新在途仓库库存
-	if receiptOrder.IsHeadquarterReceipt() {
-		transitWarehouse, _ := repository.NewWarehouseRepo(db).GetTransitWarehouse()
-		if transitWarehouse != nil {
-			warehouseItemRepo := repository.NewWarehouseItemRepo(db)
-			for _, item := range receiptOrder.Items {
-				actualNum := item.GetActualNum()
-				if actualNum <= 0 {
-					continue
-				}
-				// 获取物料信息
-				warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(transitWarehouse.Uuid, item.MaterialUuid)
-				if err != nil {
-					continue
-				}
-				err = warehouseItemRepo.ReduceStock(warehouseItem.Uuid, actualNum)
-				if err != nil {
-					return errors.WithMessage(errors.New("减少在途仓库库存失败"), err.Error())
-				}
+	transitWarehouse, _ := repository.NewWarehouseRepo(db).GetTransitWarehouse()
+	if transitWarehouse != nil {
+		warehouseItemRepo := repository.NewWarehouseItemRepo(db)
+		for _, item := range receiptOrder.Items {
+			actualNum := item.GetActualNum()
+			if actualNum <= 0 {
+				continue
+			}
+			// 获取物料信息
+			warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(transitWarehouse.Uuid, item.MaterialUuid)
+			if err != nil || warehouseItem == nil {
+				continue
+			}
+			if warehouseItem.Stock < actualNum {
+				continue
+			}
+			err = warehouseItemRepo.ReduceStock(warehouseItem.Uuid, actualNum)
+			if err != nil {
+				return errors.WithMessage(errors.New("减少在途仓库库存失败"), err.Error())
 			}
 		}
 	}

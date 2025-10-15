@@ -901,9 +901,18 @@ func (s *purchaseOrderSrv) handleExternalPurchaseErp(
 	companySetting *model.CompanySetting,
 	purchaseOrder *model.PurchaseOrder,
 ) (string, error) {
+	// 获取在途仓库
+	transitWarehouse, _ := repository.NewWarehouseRepo(tx).GetTransitWarehouse()
+
 	// 构建采购订单项
 	stockItems := make([]*buying.PurchaseOrderItemInput, 0, len(purchaseOrder.Items))
 	for _, item := range purchaseOrder.Items {
+		//
+		actualNum := item.GetConversionRateNum()
+		if actualNum <= 0 {
+			continue
+		}
+		//
 		erpnextUom := item.ErpnextUom
 		if erpnextUom == "" {
 			materialUnit, err := repository.NewMaterialUnitRepo(tx).GetMaterialUnitsByUuid(item.UnitUuid)
@@ -920,6 +929,35 @@ func (s *purchaseOrderSrv) handleExternalPurchaseErp(
 			Qty:      item.Num,
 			Uom:      erpnextUom,
 		})
+
+		// 添加到本店的在途仓库
+		if transitWarehouse != nil {
+			warehouseItem, err := repository.NewWarehouseItemRepo(tx).GetByWarehouseAndMaterial(
+				transitWarehouse.Uuid,
+				item.MaterialUuid,
+			)
+			if err != nil {
+				if err == gorm.ErrRecordNotFound {
+					// 没有找到记录时创建新记录
+					newWarehouseItem := &model.WarehouseItem{
+						WarehouseUuid: transitWarehouse.Uuid,
+						MaterialUuid:  item.MaterialUuid,
+						MaterialCode:  item.MaterialCode,
+						Stock:         0,
+						Valuation:     item.Valuation,
+					}
+					err = repository.NewWarehouseItemRepo(tx).Create(newWarehouseItem)
+					if err != nil {
+						return "", errors.WithMessage(errors.New("创建仓库商品库存记录失败"), err.Error())
+					}
+					warehouseItem = newWarehouseItem
+				}
+			}
+			err = repository.NewWarehouseItemRepo(tx).AddStock(warehouseItem.Uuid, actualNum)
+			if err != nil {
+				return "", errors.WithMessage(errors.New("增加在途仓库库存失败"), err.Error())
+			}
+		}
 	}
 
 	// 将时间戳转换为 Y-m-d 格式
