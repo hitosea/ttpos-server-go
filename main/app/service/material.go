@@ -2964,7 +2964,7 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
 			return errors.WithMessage(err, "获取总部成本卡列表失败")
 		}
 
-		if err := repository.CommonRepo.Transaction(headquarterDb, func(tx *gorm.DB) error {
+		if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 			// 删除所有总部的成本卡。
 			tx.Model(&model.ProductBomCard{}).Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Delete(&model.ProductBomCard{})
 			productBomCardUuids := []uint64{}

@@ -265,10 +265,10 @@ func (s *erpSrv) GetProductBomCardList(ctx context.Context) (*manufacturing.GetB
 	defer conn.Close()
 
 	result, err := client.GetBomList(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &manufacturing.GetBomListReq{
-		CompanyAbbr:    companySetting.ErpnextHeadquarterAbbr,
-		SubCompanyAbbr: companySetting.ErpnextCompanyAbbr,
-		IsActive:       true,
-		IsDefault:      true,
+		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+		//SubCompanyAbbr: companySetting.ErpnextCompanyAbbr,
+		IsActive:  true,
+		IsDefault: true,
 	})
 	if err != nil {
 		return nil, err
