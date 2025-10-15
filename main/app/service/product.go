@@ -7829,7 +7829,7 @@ func (s *productSrv) DeleteBatchTag(ctx context.Context, req req.BatchTagDeleteR
 	var count int64
 	db.Model(&model.SaleOrderProduct{}).Where("sale_bill_uuid in (?) AND batch_tag_uuid = ?", saleBillUuids, req.Uuid).Where("delete_time = ?", 0).Count(&count)
 	if count > 0 {
-		return errors.WithMessage(errors.New("分批类型正在被使用"), "分批类型正在被使用")
+		return errors.WithMessage(errors.New("该分批类型正在使用，无法删除"), "分批类型正在被使用")
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
