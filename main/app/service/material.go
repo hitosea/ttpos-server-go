@@ -274,15 +274,37 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				return 0
 			}(),
 			UnitName: func() string {
-				if material.Unit != nil {
+				if material.Unit != nil && material.Unit.Unit != nil && material.Unit.Unit.MultiLanguageName != (model.MultiLanguageName{}) {
 					return material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
 				}
 				return ""
 			}(),
-			UnitUuid:               material.UnitUuid,
-			PurchaseUnitName:       material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-			PurchaseUnitUuid:       material.PurchaseUnitUuid,
-			CostUnitName:           material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			UnitUuid: material.UnitUuid,
+			PurchaseUnitName: func() string {
+				if material.PurchaseUnit == nil {
+					return ""
+				}
+				if material.PurchaseUnit.Unit == nil {
+					return ""
+				}
+				if material.PurchaseUnit.Unit.MultiLanguageName == (model.MultiLanguageName{}) {
+					return ""
+				}
+				return material.PurchaseUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+			}(),
+			PurchaseUnitUuid: material.PurchaseUnitUuid,
+			CostUnitName: func() string {
+				if material.CostUnit == nil {
+					return ""
+				}
+				if material.CostUnit.Unit == nil {
+					return ""
+				}
+				if material.CostUnit.Unit.MultiLanguageName == (model.MultiLanguageName{}) {
+					return ""
+				}
+				return material.CostUnit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+			}(),
 			CostUnitUuid:           material.CostUnitUuid,
 			PurchaseUnitLocaleName: purchaseUnitLocaleName,
 			CostUnitLocaleName:     costUnitLocaleName,
