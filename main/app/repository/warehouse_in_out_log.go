@@ -36,7 +36,9 @@ type IWarehouseInOutLogRepo interface {
 	WhereCompanyUuid(companyUuid uint64) DBOption
 	WhereOrderNo(orderNo string) DBOption
 	WhereLogType(logType int) DBOption
+	WhereLogTypeIn(logTypes []int) DBOption
 	WhereScene(scene int) DBOption
+	WhereSceneIn(scenes []int) DBOption
 	WhereCreateTimeBetween(startTime, endTime int) DBOption
 	WhereMaterialNameLike(keyword string) DBOption // 根据物品名称模糊查询
 	OrderByCreateTime(desc bool) DBOption
@@ -219,10 +221,24 @@ func (r *WarehouseInOutLogRepoImpl) WhereLogType(logType int) DBOption {
 	}
 }
 
+// WhereLogTypeIn 日志类型列表条件
+func (r *WarehouseInOutLogRepoImpl) WhereLogTypeIn(logTypes []int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("log_type IN ?", logTypes)
+	}
+}
+
 // WhereScene 场景条件
 func (r *WarehouseInOutLogRepoImpl) WhereScene(scene int) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("scene = ?", scene)
+	}
+}
+
+// WhereSceneIn 场景列表条件
+func (r *WarehouseInOutLogRepoImpl) WhereSceneIn(scenes []int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("scene IN ?", scenes)
 	}
 }
 
