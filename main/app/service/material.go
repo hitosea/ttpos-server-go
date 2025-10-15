@@ -2937,7 +2937,12 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
 		needDisable := needCreateProductBomCardList.DisableBoms // 这些成本卡来自两种场景：1. 总部为已经添加成本卡的商品删除成本卡
 		for _, bom := range needCreate {
 			if err := s.createProductBomCardByErpBom(ctx, tx, bom); err != nil {
-				return errors.WithMessage(err, "创建成本卡失败")
+				if strings.Contains(err.Error(), "物品或加料不存在") {
+					logger.Logger.Error("同步成本卡时，创建成本卡失败，物品或加料不存在", zap.String("bom_name", bom.BomName), zap.Any("bom", bom))
+					continue
+				} else {
+					return errors.WithMessage(err, "创建成本卡失败")
+				}
 			}
 		}
 		for _, bomCard := range needDisable {
