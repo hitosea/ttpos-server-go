@@ -648,13 +648,15 @@ func (h *purchaseOrderHelper) extractName(name, errorMsg string) string {
 }
 
 // handleErpError 处理ERP错误
-func (h *purchaseOrderHelper) handleErpError(err error) error {
+func (h *purchaseOrderHelper) handleErpError(ctx context.Context, err error) error {
 	// 检查供应商状态
 	if strings.Contains(err.Error(), "Supplier") && strings.Contains(err.Error(), "is disabled") {
 		// 提取供应商名称
 		supplierName := h.extractName("Supplier", err.Error())
 		if supplierName != "" {
-			return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, fmt.Sprintf("供应商 %s 已禁用，请修改供应商状态", supplierName))
+			return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, fmt.Sprintf(
+				i18n.Translate(ctx.GetLanguage(), "供应商 %s 已禁用，请修改供应商状态"), supplierName),
+			)
 		}
 		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用，请修改供应商状态")
 	}
@@ -663,7 +665,9 @@ func (h *purchaseOrderHelper) handleErpError(err error) error {
 		// 提取物品名称
 		itemName := h.extractName("Item", err.Error())
 		if itemName != "" {
-			return errors.NewWithCode(constant.CodeMaterialDisabled, fmt.Sprintf("物品 %s 已禁用，请修改物品状态", itemName))
+			return errors.NewWithCode(constant.CodeMaterialDisabled, fmt.Sprintf(
+				i18n.Translate(ctx.GetLanguage(), "物品 %s 已禁用，请修改物品状态"), itemName),
+			)
 		}
 		return errors.NewWithCode(constant.CodeMaterialDisabled, "物品已禁用，请修改物品状态")
 	}
@@ -676,6 +680,14 @@ func (h *purchaseOrderHelper) handleErpError(err error) error {
 		}
 		return errors.NewWithCode(constant.CodeMaterialDisabled, "仓库已禁用，请修改仓库状态")
 	}
+	// 检查采购数量
+	if strings.Contains(err.Error(), "cannot be less than minimum order qty") {
+		return errors.NewWithCode(constant.CodeFail, "采购数量不能小于最小采购数量")
+	}
+	// before Transaction Date
+	if strings.Contains(err.Error(), "before Transaction Date") {
+		return errors.NewWithCode(constant.CodeFail, i18n.Translate(ctx.GetLanguage(), "期望到货日期不能小于今天"))
+	}
 
-	return errors.WithMessage(errors.New("调用erp接口失败: "+err.Error()), err.Error())
+	return errors.WithMessage(errors.New(i18n.Translate(ctx.GetLanguage(), "调用erp接口失败: ")+err.Error()), err.Error())
 }

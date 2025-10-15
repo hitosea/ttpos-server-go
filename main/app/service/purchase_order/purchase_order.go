@@ -888,7 +888,7 @@ func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 		Items:           stockItems,
 	})
 	if err != nil {
-		return "", s.helper.handleErpError(err)
+		return "", s.helper.handleErpError(ctx, err)
 	}
 
 	return stockResp.PurchaseOrder, nil
@@ -942,7 +942,7 @@ func (s *purchaseOrderSrv) handleExternalPurchaseErp(
 		Items:           stockItems,
 	})
 	if err != nil {
-		return "", s.helper.handleErpError(err)
+		return "", s.helper.handleErpError(ctx, err)
 	}
 
 	return erpResp.Name, nil
@@ -984,7 +984,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(
 ) (resp.PurchaseReceiptOrderCreateResp, error) {
 	result, err := s.receiptSrv.CreatePurchaseReceiptOrder(ctx, req)
 	if err != nil {
-		return resp.PurchaseReceiptOrderCreateResp{}, s.helper.handleErpError(err)
+		return resp.PurchaseReceiptOrderCreateResp{}, s.helper.handleErpError(ctx, err)
 	}
 	return result, nil
 }
@@ -996,7 +996,7 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(
 ) error {
 	err := s.receiptSrv.UpdatePurchaseReceiptOrder(ctx, req)
 	if err != nil {
-		return s.helper.handleErpError(err)
+		return s.helper.handleErpError(ctx, err)
 	}
 	return nil
 }
