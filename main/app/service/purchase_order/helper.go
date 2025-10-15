@@ -13,8 +13,10 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/language"
+	"ttpos-server-go/pkg/logger"
 
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -323,6 +325,7 @@ func (h *purchaseOrderHelper) batchUpdateHeadquarterItems(
 		)
 		if err != nil {
 			// 如果找不到对应的明细，记录警告但不中断流程
+			logger.Logger.Info("更新总部采购申请明细失败", zap.String("物料编码", itemUpdate.MaterialCode), zap.Error(err))
 			continue
 		}
 
@@ -508,6 +511,8 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 				} else {
 					return errors.WithMessage(err, "查询仓库商品库存失败")
 				}
+				// 如果查询失败，跳过后续处理
+				continue
 			} else if warehouseItem.Stock < actualNum {
 				errMaterialsList = append(errMaterialsList, materialName.GetLocale(lang))
 			}

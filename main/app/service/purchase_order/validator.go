@@ -70,12 +70,12 @@ func (v *purchaseOrderValidator) validateReceiptMaterialStatus(
 	for _, itemUuid := range itemUuids {
 		purchaseOrderItem, err := purchaseOrderItemRepo.GetByUuid(itemUuid)
 		if err != nil {
-			return errors.WithMessage(err, "查询采购申请明细失败")
+			return errors.WithMessage(errors.New("查询采购申请明细失败"), err.Error())
 		}
 
 		material, err := materialRepo.GetMaterialByUuid(purchaseOrderItem.MaterialUuid)
 		if err != nil {
-			return errors.WithMessage(err, "查询物品明细失败")
+			return errors.WithMessage(errors.New("查询物品明细失败"), err.Error())
 		}
 
 		// 判断物品是否停用
