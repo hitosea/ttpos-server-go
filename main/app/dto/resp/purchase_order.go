@@ -137,8 +137,9 @@ type PurchaseReceiptOrderCreateResp struct {
 
 // PurchaseReceiptOrderListResp 收货单列表响应
 type PurchaseReceiptOrderListResp struct {
-	List []*PurchaseReceiptOrderInfo `json:"list"` // 收货单列表
-	Meta dto.PageResponse            `json:"meta"` // 分页信息
+	PurchaseOrderList []*PurchaseOrderInfo        `json:"purchase_order_list"` // 采购单列表
+	List              []*PurchaseReceiptOrderInfo `json:"list"`                // 收货单列表
+	Meta              dto.PageResponse            `json:"meta"`                // 分页信息
 }
 
 // PurchaseReceiptOrderInfo 收货单信息

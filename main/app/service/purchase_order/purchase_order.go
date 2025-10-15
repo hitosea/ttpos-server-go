@@ -105,6 +105,9 @@ func (s *purchaseOrderSrv) GetPurchaseOrderList(
 	if req.ReceiveTimeStart > 0 || req.ReceiveTimeEnd > 0 {
 		opts = append(opts, purchaseOrderRepo.WhereReceiveTimeRange(req.ReceiveTimeStart, req.ReceiveTimeEnd))
 	}
+	if len(req.UuidIn) > 0 {
+		opts = append(opts, purchaseOrderRepo.WhereUuidIn(req.UuidIn))
+	}
 
 	// 采购类型
 	purchaseType := utils.IfInt(req.PurchaseType == 2, 2, 1)
@@ -996,6 +999,7 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(
 	return s.receiptSrv.CreatePurchaseReceiptOrder(ctx, req)
 }
 
+// 更新收货单
 func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(
 	ctx context.Context,
 	req req.PurchaseReceiptOrderUpdateReq,
@@ -1003,13 +1007,142 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(
 	return s.receiptSrv.UpdatePurchaseReceiptOrder(ctx, req)
 }
 
+// 获取收货单列表
 func (s *purchaseOrderSrv) GetPurchaseReceiptOrderList(
 	ctx context.Context,
-	req req.PurchaseReceiptOrderListReq,
+	reqs req.PurchaseReceiptOrderListReq,
 ) (resp.PurchaseReceiptOrderListResp, error) {
-	return s.receiptSrv.GetPurchaseReceiptOrderList(ctx, req)
+
+	if ctx.Version(context.LT, "2.7.0") {
+		return s.receiptSrv.GetPurchaseReceiptOrderList(ctx, reqs)
+	}
+
+	// 定义查询结果结构
+	type QueryResult struct {
+		Uuid         uint64 `json:"uuid"`
+		OrderNo      string `json:"order_no"`
+		ErpOrderNo   string `json:"erp_order_no"`
+		CreateTime   int64  `json:"create_time"`
+		PurchaseType int    `json:"purchase_type"`
+		Type         int    `json:"type"` // 1-收货单 2-采购单
+		ReceiveTime  int64  `json:"receive_time"`
+	}
+
+	var results []QueryResult
+	var total int64
+
+	// 构建查询条件
+	orderNoPattern := "%" + reqs.OrderNo + "%"
+
+	// 时间格式兼容处理函数：前端传毫秒时间戳，数据库存秒时间戳
+	convertTimestamp := func(timestamp int64) int64 {
+		if timestamp <= 0 {
+			return 0
+		}
+		// 如果是13位毫秒时间戳，转换为10位秒时间戳
+		if timestamp > 9999999999 {
+			return timestamp / 1000
+		}
+		return timestamp
+	}
+
+	// 处理时间字段
+	receiveTimeStart := convertTimestamp(reqs.ReceiptTimeStart)
+	receiveTimeEnd := convertTimestamp(reqs.ReceiptTimeEnd)
+
+	// 联合查询
+	sql := `
+		SELECT * FROM (
+			SELECT uuid, order_no, erp_order_no, create_time, purchase_type, 0 as receive_time, 2 as type FROM ttpos_purchase_order
+			WHERE status = ?
+			UNION ALL
+			SELECT uuid, order_no, erp_order_no, create_time, receipt_type as purchase_type, receive_time, 1 as type FROM ttpos_purchase_receipt_order
+		) t 
+		WHERE t.purchase_type = ?
+		AND (t.order_no LIKE ? OR t.erp_order_no LIKE ?)
+	`
+	// 添加收货时间过滤条件
+	if receiveTimeStart > 0 && receiveTimeEnd > 0 {
+		sql += fmt.Sprintf(" AND (t.receive_time >= %d AND t.receive_time <= %d)", receiveTimeStart, receiveTimeEnd)
+	}
+
+	// 状态筛选
+	status := constant.PurchaseOrderStatusApproved
+	if len(reqs.StatusIn) > 0 && reqs.StatusIn[0] != 0 {
+		status = -1
+	}
+
+	// 先查询总数
+	countSql := fmt.Sprintf(`SELECT CO2UNT(*) FROM (%s) t`, sql)
+	err := ctx.GetDB().Raw(countSql, status, reqs.ReceiptType, orderNoPattern, orderNoPattern).Scan(&total).Error
+	if err != nil {
+		return resp.PurchaseReceiptOrderListResp{}, errors.WithMessage(errors.New("查询总数失败"), err.Error())
+	}
+
+	// 执行分页查询
+	err = ctx.GetDB().Raw(sql+" LIMIT ? OFFSET ?", status, reqs.ReceiptType, orderNoPattern, orderNoPattern, reqs.PageReq.PageSize, reqs.PageSize*(reqs.PageReq.PageNo-1)).Scan(&results).Error
+	if err != nil {
+		return resp.PurchaseReceiptOrderListResp{}, errors.WithMessage(errors.New("查询列表失败"), err.Error())
+	}
+
+	// 分别处理采购单和收货单
+	var purchaseOrderUuids []uint64
+	var receiptOrderUuids []uint64
+	for _, result := range results {
+		if result.Type == 2 { // 采购单
+			purchaseOrderUuids = append(purchaseOrderUuids, result.Uuid)
+		} else if result.Type == 1 { // 收货单
+			receiptOrderUuids = append(receiptOrderUuids, result.Uuid)
+		}
+	}
+
+	// 构建响应数据
+	response := resp.PurchaseReceiptOrderListResp{
+		PurchaseOrderList: []*resp.PurchaseOrderInfo{},
+		List:              []*resp.PurchaseReceiptOrderInfo{},
+		Meta: dto.PageResponse{
+			PageNo:   reqs.PageReq.PageNo,
+			PageSize: reqs.PageReq.PageSize,
+			Total:    total,
+		},
+	}
+
+	// 如果有采购单，获取采购单详情
+	if len(purchaseOrderUuids) > 0 {
+		purchaseOrderList, err := s.GetPurchaseOrderList(ctx, req.PurchaseOrderListReq{
+			UuidIn:       purchaseOrderUuids,
+			PurchaseType: reqs.ReceiptType,
+			PageReq: dto.PageReq{
+				PageNo:   1,
+				PageSize: len(purchaseOrderUuids),
+			},
+		})
+		if err != nil {
+			return resp.PurchaseReceiptOrderListResp{}, errors.WithMessage(errors.New("查询采购单列表失败"), err.Error())
+		}
+		response.PurchaseOrderList = purchaseOrderList.List
+	}
+
+	// 如果有收货单，获取收货单详情
+	if len(receiptOrderUuids) > 0 {
+		receiptOrderList, err := s.receiptSrv.GetPurchaseReceiptOrderList(ctx, req.PurchaseReceiptOrderListReq{
+			UuidIn:      receiptOrderUuids,
+			ReceiptType: reqs.ReceiptType,
+			PageReq: dto.PageReq{
+				PageNo:   1,
+				PageSize: len(receiptOrderUuids),
+			},
+		})
+		if err != nil {
+			return resp.PurchaseReceiptOrderListResp{}, errors.WithMessage(errors.New("查询收货单列表失败"), err.Error())
+		}
+		response.List = receiptOrderList.List
+	}
+
+	return response, nil
 }
 
+// 获取收货单详情
 func (s *purchaseOrderSrv) GetPurchaseReceiptOrderDetail(
 	ctx context.Context,
 	req req.PurchaseReceiptOrderDetailReq,
@@ -1017,6 +1150,7 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderDetail(
 	return s.receiptSrv.GetPurchaseReceiptOrderDetail(ctx, req)
 }
 
+// 取消收货单
 func (s *purchaseOrderSrv) CancelPurchaseReceiptOrder(
 	ctx context.Context,
 	req req.PurchaseReceiptOrderCancelReq,

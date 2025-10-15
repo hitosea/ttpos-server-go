@@ -391,33 +391,35 @@ func (s *purchaseReceiptOrderSrv) UpdatePurchaseReceiptOrder(
 // GetPurchaseReceiptOrderList 获取收货单列表
 func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderList(
 	ctx context.Context,
-	req req.PurchaseReceiptOrderListReq,
+	reqs req.PurchaseReceiptOrderListReq,
 ) (resp.PurchaseReceiptOrderListResp, error) {
 	receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(ctx.GetDB())
 
 	// 构建查询选项
 	var opts []repository.DBOption
-	if req.OrderNo != "" {
-		opts = append(opts, receiptOrderRepo.WhereReceiptNo(req.OrderNo))
+	if reqs.OrderNo != "" {
+		opts = append(opts, receiptOrderRepo.WhereReceiptNo(reqs.OrderNo))
 	}
-	if len(req.StatusIn) > 0 {
-		opts = append(opts, receiptOrderRepo.WhereStatusIn(req.StatusIn))
+	if len(reqs.StatusIn) > 0 {
+		opts = append(opts, receiptOrderRepo.WhereStatusIn(reqs.StatusIn))
 	}
-	if req.ReceiveTimeStart > 0 || req.ReceiveTimeEnd > 0 {
-		opts = append(opts, receiptOrderRepo.WhereReceiptTimeRange(int(req.ReceiveTimeStart), int(req.ReceiveTimeEnd)))
+	if reqs.ReceiptTimeStart > 0 || reqs.ReceiptTimeEnd > 0 {
+		opts = append(opts, receiptOrderRepo.WhereReceiptTimeRange(int(reqs.ReceiptTimeStart), int(reqs.ReceiptTimeEnd)))
 	}
-	if req.ReceiptType > 0 {
-		opts = append(opts, receiptOrderRepo.WhereReceiptType(req.ReceiptType))
+	if reqs.ReceiptType > 0 {
+		opts = append(opts, receiptOrderRepo.WhereReceiptType(reqs.ReceiptType))
 	}
-	if req.CreateTimeStart > 0 || req.CreateTimeEnd > 0 {
-		opts = append(opts, receiptOrderRepo.WhereCreateTimeRange(int(req.CreateTimeStart), int(req.CreateTimeEnd)))
+	if reqs.CreateTimeStart > 0 || reqs.CreateTimeEnd > 0 {
+		opts = append(opts, receiptOrderRepo.WhereCreateTimeRange(int(reqs.CreateTimeStart), int(reqs.CreateTimeEnd)))
 	}
-
+	if len(reqs.UuidIn) > 0 {
+		opts = append(opts, receiptOrderRepo.WhereUuidIn(reqs.UuidIn))
+	}
 	// 排序
 	opts = append(opts, receiptOrderRepo.OrderByCreateTime(true))
 
 	// 查询数据
-	receipts, total, err := receiptOrderRepo.GetListWithPagination(req.PageNo, req.PageSize, opts...)
+	receipts, total, err := receiptOrderRepo.GetListWithPagination(reqs.PageNo, reqs.PageSize, opts...)
 	if err != nil {
 		return resp.PurchaseReceiptOrderListResp{}, errors.WithMessage(errors.New("查询收货单列表失败"), err.Error())
 	}
@@ -435,8 +437,8 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderList(
 	return resp.PurchaseReceiptOrderListResp{
 		List: listResp,
 		Meta: dto.PageResponse{
-			PageNo:   req.PageNo,
-			PageSize: req.PageSize,
+			PageNo:   reqs.PageNo,
+			PageSize: reqs.PageSize,
 			Total:    total,
 		},
 	}, nil
