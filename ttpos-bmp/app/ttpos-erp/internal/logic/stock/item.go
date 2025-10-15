@@ -561,37 +561,12 @@ func (s *sItem) setDefaultWarehouse(ctx context.Context, req *item.ItemInfo, com
 
 // buildCreateItemResponse 构建创建物品响应
 func (s *sItem) buildCreateItemResponse(req *item.ItemInfo, company *company.CompanyInfo, newItem g.Map) *item.ItemInfo {
-	res := &item.ItemInfo{
-		Barcode:           req.Barcode,
-		Branch:            req.Branch,
-		Company:           company.CompanyName,
-		CompanyAbbr:       company.CompanyAbbr,
-		ItemSpecification: req.ItemSpecification,
+	res := &item.ItemInfo{}
+	gconv.Scan(req, res)
+	if itemCode, ok := newItem["item_code"].(string); ok {
+		res.ItemCode = itemCode
 	}
-
-	// 尝试扫描新物品数据到响应结构
-	if err := gconv.Scan(newItem, res); err != nil {
-		// 如果扫描失败，至少返回基本信息
-		if itemCode, ok := newItem["item_code"].(string); ok {
-			res.ItemCode = itemCode
-		}
-		if itemName, ok := newItem["item_name"].(string); ok {
-			res.ItemName = itemName
-		}
-		if stockUom, ok := newItem["stock_uom"].(string); ok {
-			res.StockUom = stockUom
-		}
-	}
-	//处理返回 itemGroup
-	res.ItemGroup = req.ItemGroup
-
-	//特殊处理规格
-	res.Attributes = make([]*item.ItemAttribute, 0, len(req.Attributes))
-	for _, attr := range req.Attributes {
-		res.Attributes = append(res.Attributes, &item.ItemAttribute{
-			AttributeName: attr.AttributeName,
-		})
-	}
+	res.Company = company.CompanyName
 
 	return res
 }
