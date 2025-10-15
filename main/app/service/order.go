@@ -7764,6 +7764,19 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 
 	// 新建一个销售订单商品，该商品数量为移动数量
 	if errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		// 如果退菜商品还关联着分批标签，则解除
+		if returnSaleOrderProduct.IsBatchBool() {
+			returnSaleOrderProduct.BatchTagUuid = 0 // 手动置0，否则可能又被updateSaleOrderProduct方法更新回非零值
+			returnSaleOrderProduct.BatchTime = 0
+			returnSaleOrderProduct.IsBatch = 0
+			if err := tx.Model(&model.SaleOrderProduct{}).Where("uuid = ?", returnSaleOrderProduct.Uuid).Updates(map[string]any{
+				"batch_tag_uuid": 0,
+				"batch_time":     0,
+				"is_batch":       0,
+			}).Error; err != nil {
+				return errors.WithMessage(err)
+			}
+		}
 		// 创建退菜记录
 		if len(returnFoodReasonList) > 0 {
 			if err := repository.NewSaleOrderProductReasonRepo(tx).CreateSaleOrderProductReasons(returnFoodReasonList); err != nil {
