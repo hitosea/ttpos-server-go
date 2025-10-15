@@ -743,6 +743,23 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 		})
 	}
 
+	warehouseUuid := request.GetWarehouseUuid()
+	if warehouseUuid == 0 {
+		// 获取默认仓库ID
+		warehouse, err := repository.NewWarehouseRepo(tx).GetDefaultWarehouse()
+		if err != nil {
+			return nil, nil, errors.WithMessage(err, "默认仓库不存在")
+		}
+		warehouseUuid = warehouse.Uuid
+	}
+	warehouseItem := model.WarehouseItem{
+		WarehouseUuid: warehouseUuid,
+		MaterialUuid:  materialUuid,
+		MaterialCode:  "",
+		Stock:         request.InitStock,
+		Valuation:     request.Valuation,
+	}
+
 	// 创建物品
 	material := model.Material{
 		BaseModel: model.BaseModel{
@@ -776,7 +793,6 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 		material.HeadquarterUuid = headquarterUuid
 	}
 	// 设置仓库ID
-	warehouseUuid := request.GetWarehouseUuid()
 	if warehouseUuid != 0 {
 		material.WarehouseUuid = warehouseUuid
 	}
@@ -784,6 +800,11 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 	_, err = materialRepo.CreateMaterial(material)
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "创建物品失败")
+	}
+
+	err = repository.NewWarehouseItemRepo(tx).Create(&warehouseItem)
+	if err != nil {
+		return nil, nil, errors.WithMessage(err, "创建仓库商品库存记录失败")
 	}
 
 	for _, unit := range notBaseUnitList {
