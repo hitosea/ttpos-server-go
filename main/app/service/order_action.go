@@ -245,6 +245,9 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 			if err := tx.Model(&model.SaleOrderProduct{}).Where("uuid IN (?)", noBatchProductUuids).Update("is_batch", 0).Error; err != nil {
 				return errors.WithMessage(err)
 			}
+			if err := tx.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid IN (?)", noBatchProductUuids).Update("is_batch", 0).Error; err != nil {
+				return errors.WithMessage(err)
+			}
 		}
 		// 计算账单. 只有加购并送厨时，才计算账单
 		if option.CalcAndSaveSaleBill {

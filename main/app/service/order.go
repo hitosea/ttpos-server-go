@@ -7471,9 +7471,13 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 					nonBathchUuids = append(nonBathchUuids, saleOrderProduct.Uuid)
 				}
 				if len(nonBathchUuids) > 0 {
-					// 将未送厨和预送厨的商品编辑未分批商品
+					// 将预送厨的商品变为未分批商品
 					db := s.dbm.GetDB(ctx.GetDbId())
 					if err := db.Model(&model.SaleOrderProduct{}).Where("uuid IN (?)", nonBathchUuids).Update("is_batch", 0).Error; err != nil {
+						return nil, nil, errors.WithMessage(err)
+					}
+					// 将预送厨的生产单商品变为未分批商品
+					if err := db.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid IN (?)", nonBathchUuids).Update("create_time", time.Now().Unix()).Update("is_batch", 0).Error; err != nil {
 						return nil, nil, errors.WithMessage(err)
 					}
 				}
