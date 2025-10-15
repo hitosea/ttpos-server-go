@@ -85,6 +85,9 @@ func (r *ProductFlavorRepo) DeleteProductFlavor(opts ...DBOption) error {
 
 // GetProductFlavorList 获取商品规格列表
 func (r *ProductFlavorRepo) GetProductFlavorList(uuids ...uint64) ([]model.ProductFlavor, error) {
+	if len(uuids) == 0 {
+		return []model.ProductFlavor{}, nil
+	}
 	var flavors []model.ProductFlavor
 	db := r.db.Model(&model.ProductFlavor{}).Where("delete_time = ?", 0).Where("uuid IN (?)", uuids)
 	err := db.Find(&flavors).Error
