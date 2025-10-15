@@ -767,7 +767,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 	var deletingWarehouseUuids []uint64
 	// 本店仓库 erp_code 和 model.Warehouse 的映射
 	warehouseMap := make(map[string]model.Warehouse)
-	db.Model(&model.Warehouse{}).Scopes(repository.NotDeleted, repository.ExcludeHeadquarter).Where("erp_code != ''").Find(&warehouses)
+	db.Model(&model.Warehouse{}).Scopes(repository.ExcludeHeadquarter).Where("erp_code != ''").Find(&warehouses)
 	for _, warehouse := range warehouses {
 		if warehouse.IsDefault == 1 {
 			existsDefaultWarehouse = true
@@ -821,12 +821,13 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 
 			if warehouse.Uuid != 0 { // 如果存在，则更新
 				db.Model(&model.Warehouse{}).Where("uuid = ?", warehouse.Uuid).Updates(map[string]any{
-					"type":       warehouseType,
-					"status":     status,
-					"is_default": isDefault,
-					"contact":    contact,
-					"phone":      phone,
-					"address":    address,
+					"type":        warehouseType,
+					"status":      status,
+					"is_default":  isDefault,
+					"contact":     contact,
+					"phone":       phone,
+					"address":     address,
+					"delete_time": constant.NotDeleted,
 				})
 			} else { // 新增
 				// 全部语言默认为erp返回的名称，应该是英文名称
@@ -876,6 +877,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 				multiLanguageNameUuids = append(multiLanguageNameUuids, multiLanguageName.Uuid)
 			}
 		}
+
 		// 同步ttpos总店数据
 		if len(headquarterWarehouses) > 0 {
 			// 删除多语言
