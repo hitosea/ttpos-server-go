@@ -19,11 +19,11 @@ func (s *erpSrv) AddProduct(ctx context.Context, params req.ProductAddErpReq) (*
 	}
 	defer conn.Close()
 
-	attributes := make([]*item.ItemAttribute, len(params.Flavors))
+	var attributes []*item.ItemAttribute
 	for _, v := range params.Flavors {
 		attributes = append(attributes, &item.ItemAttribute{
 			AttributeName:  v.Name,
-			AttributeValue: v.Value,
+			AttributeValue: "",
 		})
 	}
 
@@ -54,6 +54,70 @@ func (s *erpSrv) AddProduct(ctx context.Context, params req.ProductAddErpReq) (*
 	}
 
 	return response, nil
+}
+
+// 添加商品bom到erp
+func (s *erpSrv) AddProductBom(ctx context.Context, params req.ProductBomAddErpReq) (*item.CreateSingleVariantItemResp, error) {
+	company := ctx.GetCompany()
+	companySetting := company.CompanySetting
+
+	client, conn, err := NewErpItemClient()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	var attributes []*item.ItemAttribute
+	for _, v := range params.Flavors {
+		attributes = append(attributes, &item.ItemAttribute{
+			AttributeName:  v.Name,
+			AttributeValue: v.Value,
+		})
+	}
+
+	result, err := client.CreateSingleVariantItem(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.CreateSingleVariantItemReq{
+		VariantsOf:   params.VariantsOf,
+		Attributes:   attributes,
+		InternalCode: params.InternalCode,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	if result.GetCode() != "0" {
+		return nil, errors.WithMessage(errors.New(result.GetMessage()), "同步商品bom到erp失败")
+	}
+	response := &item.CreateSingleVariantItemResp{}
+	if err := result.Data.UnmarshalTo(response); err != nil {
+		return nil, err
+	}
+
+	return response, nil
+
+}
+
+func (s *erpSrv) DeleteProductBom(ctx context.Context, params req.DeleteProductBomErpReq) error {
+	company := ctx.GetCompany()
+	companySetting := company.CompanySetting
+
+	client, conn, err := NewErpItemClient()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	result, err := client.DeleteItem(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.DeleteItemReq{
+		ItemCode: params.ItemCode,
+	})
+
+	if err != nil {
+		return err
+	}
+	if result.GetCode() != "0" {
+		return errors.WithMessage(errors.New(result.GetMessage()), "删除商品bom到erp失败")
+	}
+
+	return nil
 }
 
 // 更新套餐到erp

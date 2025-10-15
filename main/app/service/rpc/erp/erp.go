@@ -57,6 +57,8 @@ type IErpSrv interface {
 	AddProductBomCard(ctx pkgCtx.Context, params ProductBomCardAddErpReq) (*manufacturing.SaveBomResp, error)               // 添加成本卡
 	AddProduct(ctx pkgCtx.Context, params req.ProductAddErpReq) (*item.ItemInfo, error)                                     // 添加商品
 	DeleteProduct(ctx pkgCtx.Context, params req.DeleteProductErpReq) error                                                 // 删除商品。删除所有规格和商品模版
+	AddProductBom(ctx pkgCtx.Context, params req.ProductBomAddErpReq) (*item.CreateSingleVariantItemResp, error)            // 添加套餐bom
+	DeleteProductBom(ctx pkgCtx.Context, params req.DeleteProductBomErpReq) error                                           // 删除套餐bom
 	AddPackage(ctx pkgCtx.Context, params req.PackageAddErpReq) (*item.ItemInfo, error)                                     // 添加套餐
 	GetMaterialStockNum(ctx pkgCtx.Context, warehouseErpCode string) ([]*item.ItemStock, error)                             // 获取仓库物品库存数量
 	GetHeadquarterMaterialList(ctx pkgCtx.Context, params req.GetHeadquarterMaterialListReq) (*item.GetItemListResp, error) // 获取总部物品列表
