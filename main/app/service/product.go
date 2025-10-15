@@ -4486,7 +4486,8 @@ func (s *productSrv) SyncProductFlavor(ctx context.Context) error {
 					no = strings.TrimLeft(no, "0")
 					noInt, err := strconv.Atoi(no)
 					if err != nil {
-						return errors.WithMessage(err, "转换no失败")
+						// 转换no失败，跳过
+						continue
 					}
 					newProductFlavor := model.ProductFlavor{
 						Name:                  mutilLanguageName.ToJson(),
