@@ -304,6 +304,9 @@ func (r *MaterialRepoImpl) UpdateMaterialCode(uuid uint64, code string) error {
 	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("code", code).Error; err != nil {
 		return errors.WithMessage(err, "更新物品编码失败")
 	}
+	if err := r.db.Model(&model.WarehouseItem{}).Where("material_uuid = ?", uuid).Update("material_code", code).Error; err != nil {
+		return errors.WithMessage(err, "更新仓库商品库存记录失败")
+	}
 	return nil
 }
 
