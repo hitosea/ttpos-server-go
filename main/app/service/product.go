@@ -6794,7 +6794,7 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 	var units []model.ProductUnit
 	var deletingUnitUuids []uint64
 	unitMap := make(map[string]model.ProductUnit)
-	db.Model(&model.ProductUnit{}).Scopes(repository.NotDeleted, repository.ExcludeHeadquarter).Where("erpnext_uom != ''").Find(&units)
+	db.Model(&model.ProductUnit{}).Scopes(repository.ExcludeHeadquarter).Where("erpnext_uom != ''").Find(&units)
 	for _, unit := range units {
 		if !slices.Contains(uomNames, unit.ErpnextUom) {
 			deletingUnitUuids = append(deletingUnitUuids, unit.Uuid)
@@ -6807,6 +6807,9 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 	db.Model(&model.ProductUnit{}).Scopes(repository.NotDeleted, repository.ExcludeHeadquarter).Select("ifnull(MAX(sort), 0)").Scan(&unitSort)
 	unitSort++
 
+	// 要恢复的单位Uuid
+	var recoveringUnitUuids []uint64
+	// 要翻译的多语言Uuid
 	var multiLanguageNameUuids []uint64
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 删除不在erp单位列表中的单位
@@ -6816,6 +6819,7 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 				return errors.WithMessage(errors.New("erp已删除单位，标记删除ttpos单位失败"), err.Error())
 			}
 		}
+		// 要添加的单位
 		var insertingProductUnits []model.ProductUnit
 		for _, uom := range uomList.List {
 			translateName := uom.UomName
@@ -6833,7 +6837,7 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 				SvName:   translateName,
 				ZhTwName: translateName,
 			}
-			if _, ok := unitMap[uom.UomName]; !ok {
+			if unit, ok := unitMap[uom.UomName]; !ok {
 				// 不存在则新建
 				err := tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName).Error
 				if err != nil {
@@ -6847,6 +6851,8 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 				})
 				multiLanguageNameUuids = append(multiLanguageNameUuids, multiLanguageName.Uuid)
 				unitSort++
+			} else if unit.DeleteTime > 0 { // 但是被标记为删除，需要恢复为被删除
+				recoveringUnitUuids = append(recoveringUnitUuids, unit.Uuid)
 			}
 		}
 		// 同步总部ttpos单位
@@ -6901,6 +6907,13 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 		}
 		if len(insertingProductUnits) > 0 {
 			err := tx.Model(&model.ProductUnit{}).Create(&insertingProductUnits).Error
+			if err != nil {
+				return err
+			}
+		}
+		// 恢复为未删除
+		if len(recoveringUnitUuids) > 0 {
+			err := tx.Model(&model.ProductUnit{}).Where("uuid IN (?)", recoveringUnitUuids).Update("delete_time", 0).Error
 			if err != nil {
 				return err
 			}

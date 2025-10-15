@@ -412,7 +412,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 	var deletingSupplierUuids []uint64
 	supplierMap := make(map[string]model.Supplier)
 	db := s.dbm.GetDB(companySetting.CompanyUuid)
-	db.Model(&model.Supplier{}).Scopes(repository.NotDeleted, repository.ExcludeHeadquarter).Where("erp_code != ''").Find(&suppliers)
+	db.Model(&model.Supplier{}).Scopes(repository.ExcludeHeadquarter).Where("erp_code != ''").Find(&suppliers)
 	for _, supplier := range suppliers {
 		if !slices.Contains(supplierErpCodes, supplier.ErpCode) {
 			deletingSupplierUuids = append(deletingSupplierUuids, supplier.Uuid)
@@ -467,6 +467,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 					"address":       address,
 					"contact_name":  contactName,
 					"contact_phone": contactPhone,
+					"delete_time":   0, // 恢复为未删除
 				})
 			}
 		}
