@@ -1073,7 +1073,7 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderList(
 	}
 
 	// 先查询总数
-	countSql := fmt.Sprintf(`SELECT CO2UNT(*) FROM (%s) t`, sql)
+	countSql := fmt.Sprintf(`SELECT COUNT(*) FROM (%s) t`, sql)
 	err := ctx.GetDB().Raw(countSql, status, reqs.ReceiptType, orderNoPattern, orderNoPattern).Scan(&total).Error
 	if err != nil {
 		return resp.PurchaseReceiptOrderListResp{}, errors.WithMessage(errors.New("查询总数失败"), err.Error())

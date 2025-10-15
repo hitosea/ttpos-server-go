@@ -77,6 +77,7 @@ type Context interface {
 	GetRemoteIp() string                      // 获取客户端IP
 	GetCache() cache.Cache                    // 获取缓存
 	Version(op Operator, version string) bool // 比较版本
+	GetVersion() string                       // 获取客户端版本号
 	Log() *zap.Logger                         // 获取日志实例
 }
 
@@ -349,6 +350,10 @@ func (c *ContextImpl) NoLock() bool {
 
 func (c *ContextImpl) AddLock() {
 	c.hasLock = true
+}
+
+func (c *ContextImpl) GetVersion() string {
+	return c.cc.GetHeader("Client-Version")
 }
 
 func (c *ContextImpl) Log() *zap.Logger {

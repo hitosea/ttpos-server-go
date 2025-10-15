@@ -97,6 +97,7 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 			"finally_login_uuid":   addReq.FinallyLoginUuid,
 			"finally_login_time":   finallyLoginTime,
 			"kds_mode":             kdsMode,
+			"version":              ctx.GetVersion(),
 			"is_main": func() int {
 				if addReq.Source == constant.SourceCashier {
 					if !deviceRepo.IsExistCashierMain(constant.SourceCashier) {
@@ -140,6 +141,7 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		Platform:         platform,
 		UserAgent:        userAgent,
 		KdsMode:          kdsMode,
+		Version:          ctx.GetVersion(),
 		IsMain: func() int {
 			if addReq.Source == constant.SourceCashier {
 				if !deviceRepo.IsExistCashierMain(constant.SourceCashier) {
