@@ -1057,6 +1057,7 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderList(
 			WHERE status = ?
 			UNION ALL
 			SELECT uuid, order_no, erp_order_no, create_time, receipt_type as purchase_type, receive_time, 1 as type FROM ttpos_purchase_receipt_order
+			WHERE status in (?)
 		) t 
 		WHERE t.purchase_type = ?
 		AND (t.order_no LIKE ? OR t.erp_order_no LIKE ?)
@@ -1072,15 +1073,20 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderList(
 		status = -1
 	}
 
+	// 状态筛选
+	if len(reqs.StatusIn) == 0 {
+		reqs.StatusIn = []int{0, 1, 2}
+	}
+
 	// 先查询总数
 	countSql := fmt.Sprintf(`SELECT COUNT(*) FROM (%s) t`, sql)
-	err := ctx.GetDB().Raw(countSql, status, reqs.ReceiptType, orderNoPattern, orderNoPattern).Scan(&total).Error
+	err := ctx.GetDB().Raw(countSql, status, reqs.StatusIn, reqs.ReceiptType, orderNoPattern, orderNoPattern).Scan(&total).Error
 	if err != nil {
 		return resp.PurchaseReceiptOrderListResp{}, errors.WithMessage(errors.New("查询总数失败"), err.Error())
 	}
 
 	// 执行分页查询
-	err = ctx.GetDB().Raw(sql+" LIMIT ? OFFSET ?", status, reqs.ReceiptType, orderNoPattern, orderNoPattern, reqs.PageReq.PageSize, reqs.PageSize*(reqs.PageReq.PageNo-1)).Scan(&results).Error
+	err = ctx.GetDB().Raw(sql+" LIMIT ? OFFSET ?", status, reqs.StatusIn, reqs.ReceiptType, orderNoPattern, orderNoPattern, reqs.PageReq.PageSize, reqs.PageSize*(reqs.PageReq.PageNo-1)).Scan(&results).Error
 	if err != nil {
 		return resp.PurchaseReceiptOrderListResp{}, errors.WithMessage(errors.New("查询列表失败"), err.Error())
 	}

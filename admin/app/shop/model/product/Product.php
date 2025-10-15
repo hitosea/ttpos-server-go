@@ -296,7 +296,7 @@ class Product extends ProductModel
             // 套餐商品组
             if ($isPackage) {
                 ProductPackageGroupModel::addPackageGroup($data, $this);
-            } else if (isset($data['product_printer_uuids']) && !empty($data['product_printer_uuids'])) {
+            } else if (isset($data['product_printer_uuids'])) {
                 // 验证商品打印机
                 if ($data['printer_tag_uuid'] == 0) {
                     $isExistPrintProductSelect = Printing::where('uuid', 'in', $data['product_printer_uuids'])->where('print_product_select', 1)->count();
@@ -640,7 +640,7 @@ class Product extends ProductModel
                     }
                 }
                 // 新增商品包关联打印机
-                if (isset($data['product_printer_uuids']) && !empty($data['product_printer_uuids'])) {
+                if (isset($data['product_printer_uuids'])) {
                     // 验证商品打印机
                     if ($this->printer_tag_uuid == 0) {
                         $isExistPrintProductSelect = Printing::where('uuid', 'in', $data['product_printer_uuids'])->where('print_product_select', 1)->count();
