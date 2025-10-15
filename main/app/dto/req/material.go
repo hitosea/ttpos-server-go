@@ -177,7 +177,8 @@ type MaterialAddErpReq struct {
 	ItemCode           string           `json:"item_code" `           // 物品编码, 如果为空，则为新增；如果非空，则为编辑
 	ItemName           string           `json:"item_name" `           // 物品名称, 英文
 	StockUom           string           `json:"stock_uom" `           // 基准库存单位, 英文
-	Disabled           bool             `json:"disabled" `            // 是否禁用
+	Disabled           bool             `json:"disabled" `            // 是否禁用-对应ttpos的启用/禁用
+	NotForSale         bool             `json:"not_for_sale" `        // 是否禁售-对应ttpos的删除
 	BarcodeValue       string           `json:"barcode_value" `       // 条形码值
 	ValuationRate      float64          `json:"valuation_rate" `      // 估值率
 	OpeningStock       float64          `json:"opening_stock" `       // 期初库存
@@ -193,7 +194,7 @@ type MaterialEditErpReq struct {
 	ItemCode           string           `json:"item_code" `           // 物品编码, 如果为空，则为新增；如果非空，则为编辑
 	ItemName           string           `json:"item_name" `           // 物品名称, 英文
 	StockUom           string           `json:"stock_uom" `           // 基准库存单位, 英文
-	Disabled           bool             `json:"disabled" `            // 是否禁用
+	Disabled           bool             `json:"disabled" `            // 是否禁用-对应ttpos的启用/禁用
 	BarcodeValue       string           `json:"barcode_value" `       // 条形码值
 	ValuationRate      float64          `json:"valuation_rate" `      // 估值率
 	OpeningStock       float64          `json:"opening_stock" `       // 期初库存
@@ -202,6 +203,7 @@ type MaterialEditErpReq struct {
 	ClassificationCode string           `json:"classification_code" ` // 分类编码
 	Uoms               []MaterialUomReq `json:"uoms" `                // 单位列表
 	PurchaseUom        string           `json:"purchase_uom" `        // 采购单位, 英文
+	NotForSale         bool             `json:"not_for_sale" `        // 是否禁售-对应ttpos的删除
 }
 
 type ProductAddErpReq struct {
