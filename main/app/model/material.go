@@ -1,6 +1,8 @@
 package model
 
-import "ttpos-server-go/app/errors"
+import (
+	"ttpos-server-go/app/errors"
+)
 
 // Material 原料信息表 `ttpos_material`
 type Material struct {

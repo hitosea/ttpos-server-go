@@ -640,15 +640,14 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(
 			return errors.New("当前状态不允许审核")
 		}
 
-		// 检查供应商状态
-		if err := s.validator.validateSupplierStatus(tx, purchaseOrder.SupplierErpCode); err != nil {
-			return err
-		}
-
 		// 审核通过时检查物品状态
 		if req.Action == "approve" {
 			_, err := s.validator.validateMaterialStatus(ctx, tx, purchaseOrder.Items, false)
 			if err != nil {
+				return err
+			}
+			// 检查供应商状态
+			if err := s.validator.validateSupplierStatus(tx, purchaseOrder.SupplierErpCode); err != nil {
 				return err
 			}
 		}
