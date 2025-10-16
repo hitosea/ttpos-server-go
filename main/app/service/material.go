@@ -2989,6 +2989,10 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
 			tx.Model(&model.RelatedMaterial{}).Where("related_uuid IN (?)", productBomCardUuids).Delete(&model.RelatedMaterial{})
 
 			for _, productBomCard := range productBomCardList {
+				// 过滤掉数据不完整的成本卡。如无多语言名称
+				if productBomCard.MultiLanguageName == nil {
+					continue
+				}
 				// 创建成本卡
 				productBomCard.BaseModel = model.BaseModel{
 					Uuid: productBomCard.Uuid,
@@ -2999,7 +3003,7 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
 				}
 				// 创建多语言
 				productBomCard.MultiLanguageName.BaseModel = model.BaseModel{Uuid: productBomCard.MultiLanguageNameUuid}
-				if _, err := repository.NewMultiLanguageNameRepo(tx).CreateMultiLanguageName(*productBomCard.MultiLanguageName); err != nil {
+				if _, err := repository.NewMultiLanguageNameRepo(tx).CreateMultiLanguageNameDUPLICATE(*productBomCard.MultiLanguageName); err != nil {
 					return errors.WithMessage(err, "创建多语言名称失败")
 				}
 				// 创建成本卡材料
