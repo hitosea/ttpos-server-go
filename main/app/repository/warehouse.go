@@ -236,7 +236,7 @@ func (r *WarehouseRepoImpl) UpdateIsDefault(uuid uint64) error {
 			return err
 		}
 		// 更新所有物品的仓库uuid
-		if err := tx.Model(&model.Material{}).Update("warehouse_uuid", uuid).Error; err != nil {
+		if err := tx.Model(&model.Material{}).Where("id > 0").Update("warehouse_uuid", uuid).Error; err != nil {
 			return err
 		}
 		return nil

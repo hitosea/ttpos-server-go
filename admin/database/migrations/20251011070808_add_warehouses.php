@@ -190,7 +190,7 @@ class AddWarehouses extends Migrator
         }
 
         // 更新 ttpos_material 的warehouse_uuid 为$defaultWarehouseUuid
-        $pdo->exec("UPDATE {$prefix}material SET warehouse_uuid = {$defaultWarehouseUuid}");
+        $pdo->exec("UPDATE {$prefix}material SET warehouse_uuid = {$defaultWarehouseUuid} WHERE id > 0");
     }
 
     /**

@@ -948,7 +948,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 		// 更新所有物品的warehouse_uuid为默认仓库Uuid
 		var defaultWarehouse model.Warehouse
 		tx.Model(&model.Warehouse{}).Where("erp_code = ?", defaultWarehouseErpCode).Scopes(repository.NotDeleted).Find(&defaultWarehouse)
-		if err := tx.Model(&model.Material{}).Update("warehouse_uuid", defaultWarehouse.Uuid).Error; err != nil {
+		if err := tx.Model(&model.Material{}).Where("id > 0").Update("warehouse_uuid", defaultWarehouse.Uuid).Error; err != nil {
 			return errors.WithMessage(errors.New("更新所有物品的warehouse_uuid为默认仓库Uuid失败"), err.Error())
 		}
 		return nil

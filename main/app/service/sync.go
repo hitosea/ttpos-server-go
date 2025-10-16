@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"runtime/debug"
 	"slices"
 	"sync"
 	"time"
@@ -200,11 +201,13 @@ func (s *SyncSrv) executeSync(ctx context.Context, syncTask *model.SyncTask, all
 	defer func() {
 		var isPanicOccurred bool
 		if r := recover(); r != nil {
-			logger.Logger.Error("同步任务发生panic", zap.Uint64("companyUuid", companyUuid), zap.Any("panic", r))
+			// 获取堆栈
+			stack := string(debug.Stack())
+			logger.Logger.Error("同步任务发生panic", zap.Uint64("companyUuid", companyUuid), zap.Any("panic", r), zap.String("stack", stack))
 			// 更新任务状态为失败
 			syncTaskRepo.Update(syncTask.Uuid, map[string]any{
 				"status":   constant.SyncTaskStatusFailed,
-				"panic":    fmt.Sprintf("%v", r),
+				"panic":    fmt.Sprintf("%v: %s", r, stack),
 				"end_time": time.Now().Unix(),
 			})
 			isPanicOccurred = true
