@@ -128,6 +128,7 @@ func (s *SyncSrv) Sync(ctx context.Context, syncReq req.SyncReq) (resp.SyncResp,
 		{constant.SyncTaskTypeSupplier, constant.SyncTaskTypeNames[constant.SyncTaskTypeSupplier], s.supplierSrv.SyncSupplier},
 		{constant.SyncTaskTypeWarehouseStock, constant.SyncTaskTypeNames[constant.SyncTaskTypeWarehouseStock], s.warehouseSrv.SyncWarehouseItemStock},
 		{constant.SyncTaskTypeProductStock, constant.SyncTaskTypeNames[constant.SyncTaskTypeProductStock], s.productSrv.SyncProductStockByBomCard},
+		{constant.SyncTaskTypePackageImage, constant.SyncTaskTypeNames[constant.SyncTaskTypePackageImage], s.productSrv.SyncProductPackageImage},
 	}
 
 	// 如果传递了任务UUID，则为重试模式

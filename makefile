@@ -137,3 +137,7 @@ think:
 log:
 	@echo "🔍 监听今天的日志..."
 	tail -f -n 500 ./main/log/$$(date +%Y-%m-%d).log
+
+# 添加物品库存
+add-item-stock:
+	cd main && go run ./main.go add-item-stock
