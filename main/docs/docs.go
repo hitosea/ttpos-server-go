@@ -29498,6 +29498,10 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "headquarter_uuid": {
+                    "description": "总部UUID,0表示不是总部商品",
+                    "type": "integer"
+                },
                 "image": {
                     "description": "商品图片。",
                     "type": "string"
