@@ -5285,6 +5285,7 @@ func (s *productSrv) GetProductDetail(ctx context.Context, req req.ProductDetail
 				return printers
 			}(),
 		},
+		HeadquarterUuid: productPackage.HeadquarterUuid,
 	}
 
 	return &productDetailResp, nil

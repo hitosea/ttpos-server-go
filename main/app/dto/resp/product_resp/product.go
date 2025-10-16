@@ -537,6 +537,8 @@ type ProductDetailResp struct {
 
 	SauceRequired     bool `json:"sauce_required"`      // 是否必选小料 1-是 0-否
 	SauceMaxSelection uint `json:"sauce_max_selection"` // 小料最大选择数量
+
+	HeadquarterUuid uint64 `json:"headquarter_uuid"` // 总部UUID,0表示不是总部商品
 }
 
 // ProductListResp 商品列表响应
