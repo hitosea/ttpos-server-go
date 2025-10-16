@@ -217,6 +217,35 @@ func checkoutSaleOrderEventHandler() {
 			payload.Ctx.SetDB(db)
 			HandleAddMaterialSalesVolume(payload)
 		})
+
+		// 结账订单后，统计订单原料用量。
+		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
+			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+			payload.Ctx.SetDB(db)
+
+			saleOrder := payload.SaleBill.GetSaleOrder(payload.SaleOrderUuid)
+			if saleOrder == nil {
+				return
+			}
+			materialStocks := saleOrder.GetValidSaleOrderProductMaterialList()
+			saleOrderMaterials := make([]*model.SaleOrderMaterial, 0)
+			for _, materialStock := range materialStocks {
+				saleOrderMaterials = append(saleOrderMaterials, &model.SaleOrderMaterial{
+					BaseModel: model.BaseModel{
+						CreateTime: saleOrder.FinishTime, // 原料使用时间=销售订单完成时间
+					},
+					SaleOrderUuid:     saleOrder.Uuid,
+					SaleBillUuid:      payload.SaleBillUuid,
+					MaterialUuid:      materialStock.MaterialUuid,
+					Num:               materialStock.StockNum,
+					StaffShiftLogUuid: saleOrder.StaffShiftLogUuid,
+				})
+			}
+			if err := repository.NewSaleOrderMaterialRepo(db).BatchInsertSaleOrderMaterial(saleOrderMaterials); err != nil {
+				logger.Logger.Error("HandleAddMaterialSalesVolume process, BatchInsertSaleOrderMaterial failed", zap.Any("saleOrderMaterials", saleOrderMaterials), zap.Error(err))
+				return
+			}
+		})
 	})
 }
 

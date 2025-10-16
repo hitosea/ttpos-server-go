@@ -192,7 +192,7 @@ func (r *productBomCardRepoImpl) GetProductBomCardByMaterialUuid(materialUuid ui
 func (r *productBomCardRepoImpl) GetSubShopProductBomCardList(headquarterUuid uint64) ([]*model.ProductBomCard, error) {
 	var productBomCards []*model.ProductBomCard
 	if err := r.db.Model(&model.ProductBomCard{}).
-		Where("headquarter_uuid = 0"). // 只查询本店的成本卡
+		Where("headquarter_uuid = 0").                 // 只查询本店的成本卡
 		Where("delete_time = 0").Where("is_used = 1"). // 只查询未失效的成本卡
 		Preload("RelatedMaterials").Find(&productBomCards).Error; err != nil {
 		return nil, errors.WithMessage(err)

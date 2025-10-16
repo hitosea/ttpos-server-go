@@ -3125,6 +3125,10 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		// 删除销售订单原料
+		if err := repository.NewSaleOrderMaterialRepo(db).DeleteSaleOrderMaterial(saleBill.Uuid); err != nil {
+			return errors.WithMessage(err)
+		}
 		// 如果销售订单是免单，删除免单原因
 		for _, saleOrder := range saleBill.SaleOrders {
 			if saleOrder.IsFreeSaleOrder() {

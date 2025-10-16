@@ -123,6 +123,70 @@ func (model *SaleOrder) CalcCouponAmount() float64 {
 	return couponAmount.Round(2).InexactFloat64()
 }
 
+// 获取订单中有效售出的商品
+func (model *SaleOrder) GetValidSaleOrderProductList() []*SaleOrderProduct {
+	products := make([]*SaleOrderProduct, 0)
+	for _, saleOrderProduct := range model.SaleOrderProducts {
+		// 删除商品、取消商品、未送厨商品、套餐商品、未接单商品不统计
+		if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || !saleOrderProduct.IsSendKitchen() || saleOrderProduct.IsPackageProduct() || saleOrderProduct.IsUnAcceptOrderBool() {
+			continue
+		}
+		products = append(products, saleOrderProduct)
+	}
+	return products
+}
+
+type MaterialStock struct {
+	MaterialUuid uint64
+	StockNum     float64
+}
+
+// 获取订单中有效售出的商品的材料用量
+func (model *SaleOrder) GetValidSaleOrderProductMaterialList() []*MaterialStock {
+	materialStocks := make(map[uint64]*MaterialStock)
+	saleOrderProducts := model.GetValidSaleOrderProductList()
+	for _, saleOrderProduct := range saleOrderProducts {
+		for _, saleOrderProductBom := range saleOrderProduct.SaleOrderProductBoms {
+			if saleOrderProductBom.IsFlavor() {
+				card := saleOrderProductBom.ProductBom.ProductBomCard
+				for _, relatedMaterial := range card.RelatedMaterials {
+					num := relatedMaterial.GetDecreaseNum(saleOrderProduct.Num) // 某个商品（sale_order_product）的材料消耗量（单位为基准单位）
+					materialStock := materialStocks[relatedMaterial.MaterialUuid]
+					if _, ok := materialStocks[relatedMaterial.MaterialUuid]; ok {
+						materialStock.StockNum = decimal.NewFromFloat(materialStock.StockNum).Add(decimal.NewFromFloat(num)).Round(4).InexactFloat64()
+					} else {
+						materialStock = &MaterialStock{
+							MaterialUuid: relatedMaterial.MaterialUuid,
+							StockNum:     num,
+						}
+						materialStocks[relatedMaterial.MaterialUuid] = materialStock
+					}
+				}
+			} else if saleOrderProductBom.IsSauce() {
+				card := saleOrderProductBom.ProductBom.ProductSauce.ProductBomCard
+				for _, relatedMaterial := range card.RelatedMaterials {
+					num := relatedMaterial.GetDecreaseNum(saleOrderProduct.Num) // 某个商品（sale_order_product）的材料消耗量（单位为基准单位）
+					if materialStock, ok := materialStocks[relatedMaterial.MaterialUuid]; ok {
+						materialStock.StockNum = decimal.NewFromFloat(materialStock.StockNum).Add(decimal.NewFromFloat(num)).Round(4).InexactFloat64()
+					} else {
+						materialStock = &MaterialStock{
+							MaterialUuid: relatedMaterial.MaterialUuid,
+							StockNum:     num,
+						}
+						materialStocks[relatedMaterial.MaterialUuid] = materialStock
+					}
+				}
+			}
+		}
+	}
+
+	materialStocksList := make([]*MaterialStock, 0)
+	for _, materialStock := range materialStocks {
+		materialStocksList = append(materialStocksList, materialStock)
+	}
+	return materialStocksList
+}
+
 // 获取订单应收优惠金额。整单改价、订单抹零、结账抹零、优惠券抵扣、积分抵扣，以上总共的优惠金额（正常是负数，有时候是正数）
 func (model *SaleOrder) GetErpDiscountAmount() float64 {
 	customAmount := model.GetErpCustomAmount() // 整单改价后会有的金额。改价前的差额
