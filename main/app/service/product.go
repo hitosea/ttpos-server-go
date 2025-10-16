@@ -3374,9 +3374,9 @@ func (s *productSrv) UpdateProductFlavorErp(ctx context.Context, tx *gorm.DB) er
 		SiteCode:       companySetting.ErpnextSiteCode,
 		GroupName:      groupName,
 		GroupAliasName: groupName,
-		Branch:         companySetting.ErpnextBranchName,
-		CompanyAbbr:    companySetting.ErpnextCompanyAbbr,
-		ValueList:      valueList,
+		// Branch:         companySetting.ErpnextBranchName,
+		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+		ValueList:   valueList,
 	})
 	if err != nil {
 		return errors.WithMessage(err, "同步规格到erp失败")
@@ -4413,8 +4413,8 @@ func (s *productSrv) SyncProductFlavor(ctx context.Context) error {
 
 	// 获取erp规格列表
 	erpFlavorList, err := erp.NewIErpSrv(s.dbm).GetFlavorList(ctx.GetContext(), req.GetErpFlavorListReq{
-		SiteCode:    companySetting.ErpnextSiteCode,
-		Branch:      companySetting.ErpnextBranchName,
+		SiteCode: companySetting.ErpnextSiteCode,
+		// Branch:      companySetting.ErpnextBranchName,
 		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
 	})
 	if err != nil {
@@ -4436,6 +4436,10 @@ func (s *productSrv) SyncProductFlavor(ctx context.Context) error {
 			commonRepo.WhereByHeadquarterUuid(0),
 		)
 		for _, erpFlavor := range erpFlavorList.List {
+			// 仅同步本店abbr-Specifications规格
+			if erpFlavor.AttributeName != companySetting.ErpnextCompanyAbbr+"-Specifications" {
+				continue
+			}
 			for _, erpFlavorValue := range erpFlavor.AttributeValueList {
 				existsFlavor, _ := productFlavorRepo.GetProductFlavor(
 					commonRepo.WhereBySoftDelete(),
@@ -4499,18 +4503,6 @@ func (s *productSrv) SyncProductFlavor(ctx context.Context) error {
 					}
 					saveProductFlavorUuids = append(saveProductFlavorUuids, existsFlavor.Uuid)
 				}
-			}
-		}
-
-		// 删除不在erp规格列表中的规格
-		if len(saveProductFlavorUuids) > 0 {
-			err = productFlavorRepo.DeleteProductFlavor(
-				commonRepo.WhereByUuidNotIn(saveProductFlavorUuids),
-				commonRepo.WhereBySoftDelete(),
-				commonRepo.WhereByHeadquarterUuid(0),
-			)
-			if err != nil {
-				return errors.WithMessage(err, "删除不在erp规格列表中的规格失败")
 			}
 		}
 

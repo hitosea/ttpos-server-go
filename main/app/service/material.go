@@ -1164,9 +1164,9 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 		}
 
 		// 同步多语言名称
-		material, err := materialRepo.GetMaterialDetailByUuid(request.Uuid)
+		material, err := materialRepo.GetMaterialDetailContainsDeletedByUuid(request.Uuid)
 		if err != nil {
-			return errors.WithMessage(err, "物品不存在")
+			return errors.WithMessage(err, "物品不存在:"+strconv.FormatUint(request.Uuid, 10))
 		}
 
 		// 同步物品分类

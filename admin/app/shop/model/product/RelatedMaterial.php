@@ -84,7 +84,7 @@ class RelatedMaterial extends RelatedMaterialModel
                     JOIN {$prefix}warehouse_item AS m ON rms.material_uuid = m.material_uuid
                     JOIN {$prefix}warehouse AS w ON m.warehouse_uuid = w.uuid
                     WHERE rms.uuid IN ({$relatedMaterialUuidList})
-                    AND w.is_default = 1
+                    AND (w.is_default = 1 AND w.headquarter_uuid = 0)
                     GROUP BY rms.uuid
                 ) AS sub ON rm.uuid = sub.related_uuid
                 SET rm.stock_num = sub.min_stock_num
