@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -14,6 +15,7 @@ type IPurchaseOrderItemRepo interface {
 	Update(item *model.PurchaseOrderItem) error
 	Delete(uuid uint64) error
 	DeleteByPurchaseOrderUuid(purchaseOrderUuid uint64) error
+	GetNotReceivedQuantityByMaterialUuid(materialUuid uint64) (int64, error)
 	DeleteByPurchaseOrderUuidAndNumIsZero(purchaseOrderUuid uint64) error
 	DeleteByPurchaseOrderUuidAndMaterialUuids(purchaseOrderUuid uint64, materialUuids []uint64) error
 	GetByUuid(uuid uint64) (*model.PurchaseOrderItem, error)
@@ -207,4 +209,16 @@ func (r *PurchaseOrderItemRepoImpl) applyOptions(db *gorm.DB, opts ...DBOption) 
 		db = opt(db)
 	}
 	return db
+}
+
+// GetNotReceivedQuantityByMaterialUuid 根据物料UUID获取未收货数量
+func (r *PurchaseOrderItemRepoImpl) GetNotReceivedQuantityByMaterialUuid(materialUuid uint64) (int64, error) {
+	var count int64
+	db := r.db.Model(&model.PurchaseOrderItem{}).Session(&gorm.Session{})
+	result := db.Where("material_uuid = ?", materialUuid).Where("num > arrival_num").Count(&count)
+	err := result.Error
+	if err != nil {
+		return 0, fmt.Errorf("GetNotReceivedQuantityByMaterialUuid: %v", err)
+	}
+	return count, nil
 }

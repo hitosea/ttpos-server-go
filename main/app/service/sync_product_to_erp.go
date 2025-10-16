@@ -157,7 +157,7 @@ func (s *SyncProductToErpSrv) Sync(ctx context.Context) error {
 					return errors.WithMessage(err, "获取商品包失败")
 				}
 
-				multiLanguageName := model.NewMultiLanguageName(bom.ProductFlavor.Name)
+				multiLanguageName := model.NewMultiLanguageName(productPackage.Name)
 				enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
 				if err != nil {
 					return errors.WithMessage(err, "翻译失败")

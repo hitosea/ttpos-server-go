@@ -512,9 +512,11 @@ func (s *sItem) addItemGroupSpecificFields(ctx context.Context, req *item.ItemIn
 		//FIXME 后面要去掉的，现在先放着这里
 		newItem["custom_specification"] = req.ItemSpecification
 		newItem["is_stock_item"] = 0
+		newItem["item_group"] = string(consts.ItemGroupProducts)
 	} else if req.ItemGroup == item.ItemGroup_Package {
 		// 套餐特定字段
 		newItem["is_stock_item"] = 0
+		newItem["item_group"] = string(consts.ItemGroupProducts)
 	}
 	// 属性和加料特殊处理
 	if req.ItemGroup == item.ItemGroup_PosAttribute || req.ItemGroup == item.ItemGroup_PosAddon {

@@ -39,6 +39,7 @@ type IWarehouseInOutLogRepo interface {
 	WhereLogTypeIn(logTypes []int) DBOption
 	WhereScene(scene int) DBOption
 	WhereSceneIn(scenes []int) DBOption
+	WhereSceneNotIn(scenes []int) DBOption
 	WhereCreateTimeBetween(startTime, endTime int) DBOption
 	WhereMaterialNameLike(keyword string) DBOption // 根据物品名称模糊查询
 	OrderByCreateTime(desc bool) DBOption
@@ -239,6 +240,13 @@ func (r *WarehouseInOutLogRepoImpl) WhereScene(scene int) DBOption {
 func (r *WarehouseInOutLogRepoImpl) WhereSceneIn(scenes []int) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("scene IN ?", scenes)
+	}
+}
+
+// WhereSceneNotIn 场景列表条件
+func (r *WarehouseInOutLogRepoImpl) WhereSceneNotIn(scenes []int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("scene NOT IN ?", scenes)
 	}
 }
 
