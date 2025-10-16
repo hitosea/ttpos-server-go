@@ -13835,9 +13835,10 @@ func (s *orderSrv) GetOrderCartProductBatchCookingList(ctx context.Context, req 
 	for _, saleOrderProduct := range batchCookingSaleOrderProducts {
 		baseURL := utils.GetBaseURL(ctx.GetGin().Request)
 		batchCookingSaleOrderProductsList = append(batchCookingSaleOrderProductsList, resp.OrderCartProductBatchCooking{
-			Uuid:                saleOrderProduct.Uuid,
-			LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
-			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
+			Uuid:       saleOrderProduct.Uuid,
+			LocaleName: saleOrderProduct.MultiLanguageName.GetNames(),
+			// LocaleAttributeName: saleOrderProduct.GetAttributeName(),
+			LocaleAttributeName: saleOrderProduct.GetFlavorName(),
 			Image: func() string {
 				if saleOrderProduct.ImageFile != nil {
 					url := saleOrderProduct.ImageFile.GetUrl(baseURL)

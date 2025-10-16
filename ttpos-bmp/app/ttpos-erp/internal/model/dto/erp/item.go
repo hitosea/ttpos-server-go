@@ -81,7 +81,7 @@ type Item struct {
 	CustomClassificationCode string           `json:"custom_classification_code,omitempty"`
 	CustomInternalCode       string           `json:"custom_internal_code,omitempty"`
 	CustomPermissionRule     []PermissionRule `json:"custom_permission_rule,omitempty"` //自定权限清单 多选表格
-	CustomNotForSale         bool             `json:"custom_not_for_sale,omitempty"`    //是否禁售
+	CustomNotForSale         bool             `json:"custom_not_for_sale"`              //是否禁售
 }
 
 type BarCode struct {
