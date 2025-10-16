@@ -940,7 +940,7 @@ class Product extends BaseModel
                 '0 as product_sort',
                 'c1.multi_language_name_uuid as category_multi_language_name_uuid', 
                 !$enableErp ? 'c2.multi_language_name_uuid as category_parent_multi_language_name_uuid' : '0 as category_parent_multi_language_name_uuid', 
-                'm.stock_num as product_stock',
+                'wi.stock as product_stock',
                 '0 as product_price',
                 '20 as type', 
                 'c1.uuid as category_uuid',
@@ -968,6 +968,7 @@ class Product extends BaseModel
             $materialSqlBuilder
                 ->leftJoin('file', 'm.image_uuid = file.uuid')
                 ->leftJoin('related_material rm', 'm.uuid = rm.material_uuid AND rm.delete_time = 0')
+                ->leftJoin('warehouse_item wi', 'm.uuid = wi.material_uuid AND wi.warehouse_uuid = (SELECT uuid FROM ttpos_warehouse WHERE type = "normal" AND is_default = 1 LIMIT 1)')
                 ->group('m.uuid')
                 ->order('m.id', 'desc');
 
