@@ -2947,7 +2947,12 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
 		}
 		for _, bomCard := range needDisable {
 			if err := s.disableProductBomCard(ctx, tx, bomCard); err != nil {
-				return errors.WithMessage(err, "失效成本卡失败")
+				if strings.Contains(err.Error(), "物品或加料不存在") {
+					logger.Logger.Error("同步成本卡时，失效成本卡失败，物品或加料不存在", zap.String("bom_name", bomCard.Name), zap.Any("bom_card", bomCard))
+					continue
+				} else {
+					return errors.WithMessage(err, "失效成本卡失败")
+				}
 			}
 		}
 		return nil
@@ -3061,11 +3066,11 @@ func (s *materialSrv) getObjectByItemCode(ctx context.Context, itemCode string, 
 
 // 根据成本卡uuid查询本地ttpos数据库，判断该item_code是商品还是加料，并返回商品或加料信息
 func (s *materialSrv) getObjectByProductBomCardUuid(ctx context.Context, productBomCardUuid uint64, tx *gorm.DB) (*ObjectByItemCodeResp, error) {
-	// 查询物品
+	// 查询商品
 	productBom, err := repository.NewProductBomRepo(tx).GetProductBomByProductBomCardUuid(productBomCardUuid)
 	if err != nil {
 		if !strings.Contains(err.Error(), "record not found") {
-			return nil, errors.WithMessage(err, "获取物品失败")
+			return nil, errors.WithMessage(err, "获取商品失败")
 		}
 	}
 	if productBom == nil {
@@ -3077,7 +3082,7 @@ func (s *materialSrv) getObjectByProductBomCardUuid(ctx context.Context, product
 			}
 		}
 		if sauce == nil {
-			return nil, errors.WithMessage(errors.New("物品或加料不存在"), "物品或加料不存在")
+			return nil, errors.WithMessage(errors.New("商品或加料不存在"), "商品或加料不存在")
 		} else {
 			return &ObjectByItemCodeResp{
 				RelatedUuid:  sauce.Uuid,
@@ -3256,11 +3261,11 @@ func (s *materialSrv) createProductBomCardByErpBom(ctx context.Context, db *gorm
 }
 
 func (s *materialSrv) disableProductBomCard(ctx context.Context, db *gorm.DB, productBomCard *model.ProductBomCard) error {
-	objectByItemCodeResp, err := s.getObjectByProductBomCardUuid(ctx, productBomCard.Uuid, db) // 获取物品或加料
+	objectByItemCodeResp, err := s.getObjectByProductBomCardUuid(ctx, productBomCard.Uuid, db) // 获取商品或加料
 	if err != nil {
-		return errors.WithMessage(err, "获取物品或加料失败")
+		return errors.WithMessage(err, "获取商品或加料失败")
 	}
-	relatedUuid := objectByItemCodeResp.RelatedUuid // 物品或加料的uuid
+	relatedUuid := objectByItemCodeResp.RelatedUuid // 商品或加料的uuid
 	relatedType := objectByItemCodeResp.RelatedType // 关联的类型。1:商品，2:加料
 
 	// 修改旧的成本卡为未使用
