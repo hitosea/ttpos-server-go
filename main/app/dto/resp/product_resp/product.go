@@ -370,6 +370,7 @@ type ProductFlavorDetailResp struct {
 	LocaleName          dto.LocaleResponse                  `json:"locale_name"`           // 商品规格名称
 	ProductPackageCount int                                 `json:"product_package_count"` // 关联商品包数量
 	ProductPackageList  ProductFlavorProductPackageListResp `json:"product_package_list"`  // 关联商品包列表
+	HeadquarterUuid     uint64                              `json:"headquarter_uuid"`      // 总部UUID,0表示不是总部商品
 }
 
 // ProductFlavorProductPackage 商品规格关联商品包

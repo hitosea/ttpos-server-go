@@ -2945,6 +2945,7 @@ func (s *productSrv) GetProductFlavor(ctx context.Context, flavorReq req.Product
 		ProductPackageList: product_resp.ProductFlavorProductPackageListResp{
 			List: productPackages,
 		},
+		HeadquarterUuid: productFlavor.HeadquarterUuid,
 	}, nil
 }
 
