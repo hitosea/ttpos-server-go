@@ -1680,6 +1680,11 @@ func (s *materialSrv) addSauceBomCard(ctx context.Context, req req.ProductBomCar
 	if err != nil {
 		return errors.WithMessage(err, "获取小料失败")
 	}
+
+	if sauce.HeadquarterUuid != 0 {
+		return errors.New("无法为总部小料添加成本卡")
+	}
+
 	productBomCardName := sauce.MultiLanguageName.GetNames()
 
 	nameUuid, _ := utils.GetID()
@@ -1828,6 +1833,10 @@ func (s *materialSrv) addProductBomCard(ctx context.Context, req req.ProductBomC
 		return errors.WithMessage(err, "获取商品规格失败")
 	}
 	productBomCardName := productBom.ProductPackage.MultiLanguageName.GetNames()
+
+	if productBom.ProductPackage.HeadquarterUuid != 0 {
+		return errors.New("无法为总部商品添加成本卡")
+	}
 
 	nameUuid, _ := utils.GetID()
 	cardUuid, _ := utils.GetID()

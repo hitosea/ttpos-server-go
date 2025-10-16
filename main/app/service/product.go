@@ -4971,6 +4971,7 @@ func (s *productSrv) GetProductSingleList(ctx context.Context, req req.ProductSi
 					CategoryUuid:       productPackage.CategoryUuid,
 					ProductBomCardUuid: productBom.ProductBomCardUuid,
 					ProductBomCardName: productBomCardName,
+					HeadquarterUuid:    productPackage.HeadquarterUuid,
 				}
 				productList = append(productList, productItem)
 			}
