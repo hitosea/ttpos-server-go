@@ -68,7 +68,7 @@ func (model *Material) GetValuation() float64 {
 // 通过uom名获取单位uuid
 func (model *Material) GetUnitUuidByUom(uom string) (uint64, error) {
 	for _, unit := range model.NotBaseUnitList {
-		if unit.Unit.ErpnextUom == uom {
+		if unit.Unit != nil && unit.Unit.ErpnextUom == uom {
 			return unit.Uuid, nil
 		}
 	}
