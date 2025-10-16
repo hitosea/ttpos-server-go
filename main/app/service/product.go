@@ -2898,6 +2898,7 @@ func (s *productSrv) GetProductFlavorList(ctx context.Context, req req.ProductFl
 			Name:                productFlavor.MultiLanguageName.GetNameByLang(language),
 			Sort:                productFlavor.Sort,
 			ProductPackageCount: productFlavor.ProductPackageCount,
+			HeadquarterUuid:     productFlavor.HeadquarterUuid,
 		})
 	}
 	return product_resp.ProductFlavorListResp{
@@ -4276,7 +4277,9 @@ func (s *productSrv) DeleteProductFlavor(ctx context.Context, deleteReq req.Prod
 	if err != nil {
 		return errors.WithMessage(errors.New("获取规格详情失败"), err.Error())
 	}
-
+	if productFlavor.HeadquarterUuid != 0 {
+		return errors.New("无法删除总部商品规格")
+	}
 	// 判断商品规格是否关联了商品
 	productBomCount, _ := productRepo.GetProductBomCount(
 		commonRepo.WhereByProductFlavorUuid(productFlavor.Uuid),

@@ -361,6 +361,7 @@ type ProductFlavorItemResp struct {
 	Name                string `json:"name"`                  // 商品规格名称
 	Sort                int    `json:"sort"`                  // 商品规格排序
 	ProductPackageCount int    `json:"product_package_count"` // 关联商品包数量
+	HeadquarterUuid     uint64 `json:"headquarter_uuid"`      // 总部UUID,0表示不是总部商品
 }
 
 // ProductFlavorDetailResp 商品规格详情
