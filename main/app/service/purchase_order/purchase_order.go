@@ -190,7 +190,12 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 		itemInfo.LocaleName = *language.JsonToLocaleResponse(item.MaterialName)
 		itemInfo.LocaleUnitName = *language.JsonToLocaleResponse(item.UnitName)
 		itemInfo.LocaleBaseUnitName = *language.JsonToLocaleResponse(item.BaseUnitName)
-		itemInfo.InternalCode = item.Material.InternalCode
+		itemInfo.InternalCode = func(item model.PurchaseOrderItem) string {
+			if item.Material == nil {
+				return ""
+			}
+			return item.Material.InternalCode
+		}(item)
 		detailResp.Items = append(detailResp.Items, itemInfo)
 	}
 
