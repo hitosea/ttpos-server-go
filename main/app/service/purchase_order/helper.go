@@ -15,6 +15,7 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
@@ -26,9 +27,9 @@ type purchaseOrderHelper struct{}
 
 // generateOrderNo 生成采购申请订单编号
 // 格式：prefix+年月日+0000自增序列号
-func (h *purchaseOrderHelper) generateOrderNo(db *gorm.DB, prefix string) string {
+func (h *purchaseOrderHelper) generateOrderNo(db *gorm.DB, prefix string, timezone string) string {
 	// 年月日部分
-	datePart := time.Now().Format("20060102")
+	datePart := utils.SetTimezone(timezone).Now().Format("20060102")
 
 	// 生成自增序列号
 	serialNo, err := h.generatePurchaseOrderSerialNo(db)
@@ -76,11 +77,11 @@ func (h *purchaseOrderHelper) generatePurchaseOrderSerialNo(db *gorm.DB) (string
 
 // generateReceiptNo 生成收货单号
 // 格式：SHRK+年月日+0000自增序列号
-func (h *purchaseOrderHelper) generateReceiptNo(db *gorm.DB) string {
+func (h *purchaseOrderHelper) generateReceiptNo(db *gorm.DB, timezone string) string {
 	// 固定前缀
 	prefix := "SHRK"
 	// 年月日部分
-	datePart := time.Now().Format("20060102")
+	datePart := utils.SetTimezone(timezone).Now().Format("20060102")
 
 	// 生成自增序列号
 	serialNo, err := h.generateReceiptOrderSerialNo(db)
