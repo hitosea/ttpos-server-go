@@ -829,7 +829,7 @@ func (model *SaleOrderProduct) memberDiscountChanged() bool {
 
 // 商品是否享受整单折扣发生变动
 func (model *SaleOrderProduct) overallDiscountChanged() bool {
-	latestOpenOverallDiscount := model.ProductPackage.OpenOverallDiscount
+	latestOpenOverallDiscount := *model.ProductPackage.OpenOverallDiscount
 	return latestOpenOverallDiscount != model.OpenOverallDiscount
 }
 
@@ -1581,7 +1581,7 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 		MemberDiscountRate:         def.MemberDiscountRate,
 		MemberCardDiscountRate:     def.MemberCardDiscountRate,
 		CustomDiscountRate:         def.CustomDiscountRate,
-		OpenOverallDiscount:        productPackage.OpenOverallDiscount,
+		OpenOverallDiscount:        *productPackage.OpenOverallDiscount,
 		DeductStockType:            def.DeductStockType,
 		MultiLanguageNameUuid:      def.MultiLanguageNameUuid,
 		ImageFileUuid:              def.ImageFileUuid,

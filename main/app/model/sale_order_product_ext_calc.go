@@ -185,7 +185,7 @@ func (model *SaleOrderProduct) calcSaleOrderProduct(serviceFeeRate float64, taxF
 func (model *SaleOrderProduct) calcLastestSaleOrderProduct(serviceFeeRate float64, taxFeeType int, serviceFeeType int, options ...func(option *CalcOption)) SaleOrderProductCalc {
 	// 设置最新的商品会员折扣设置，即是否开启会员折扣
 	model.OpenMemberDiscount = model.ProductPackage.OpenDiscount
-	model.OpenOverallDiscount = model.ProductPackage.OpenOverallDiscount
+	model.OpenOverallDiscount = *model.ProductPackage.OpenOverallDiscount
 
 	calc := SaleOrderProductCalc{}
 	// 开始计算

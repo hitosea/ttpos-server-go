@@ -198,7 +198,7 @@ type ProductPackage struct {
 	SauceRequired       uint8 `gorm:"default:0;column:sauce_required;comment:'是否必选小料, 0-否 1-是'"`
 	SauceMaxSelection   uint  `gorm:"default:0;column:sauce_max_selection;comment:'小料最大选择数量'"`
 	OpenDiscount        uint  `gorm:"default:0;column:open_discount;comment:'是否开启会员折扣, 0-否 1-是'"`
-	OpenOverallDiscount uint  `gorm:"default:1;column:open_overall_discount;comment:'是否开启整单折扣, 0-否 1-是'"`
+	OpenOverallDiscount *uint `gorm:"default:1;column:open_overall_discount;comment:'是否开启整单折扣, 0-否 1-是'"`
 
 	// 分批相关
 	IsBatch uint8 `gorm:"default:0;column:is_batch;comment:'是否是分批商品, 0-否 1-是'"`
@@ -272,7 +272,7 @@ func (model *ProductPackage) GetOpenDiscount() bool {
 }
 
 func (model *ProductPackage) GetOpenOverallDiscount() bool {
-	return model.OpenOverallDiscount == 1
+	return *model.OpenOverallDiscount == 1
 }
 
 func (model *ProductPackage) GetRespFlavorList() []product_resp.ProductFlavor {
