@@ -2570,6 +2570,9 @@ definitions:
     type: object
   product_resp.ProductShopListItemFlavorItemResp:
     properties:
+      internal_code:
+        description: 商品Bom内部编码
+        type: string
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -10692,6 +10695,9 @@ definitions:
         type: number
       base_unit_name:
         description: 基准单位名称
+        type: string
+      internal_code:
+        description: 商品Bom内部编码
         type: string
       locale_base_unit_name:
         allOf:

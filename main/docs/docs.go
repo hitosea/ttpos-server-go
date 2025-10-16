@@ -30481,6 +30481,10 @@ const docTemplate = `{
         "product_resp.ProductShopListItemFlavorItemResp": {
             "type": "object",
             "properties": {
+                "internal_code": {
+                    "description": "商品Bom内部编码",
+                    "type": "string"
+                },
                 "locale_name": {
                     "description": "商品Bom名称",
                     "allOf": [
@@ -42400,6 +42404,10 @@ const docTemplate = `{
                 },
                 "base_unit_name": {
                     "description": "基准单位名称",
+                    "type": "string"
+                },
+                "internal_code": {
+                    "description": "商品Bom内部编码",
                     "type": "string"
                 },
                 "locale_base_unit_name": {

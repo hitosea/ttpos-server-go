@@ -25,6 +25,7 @@ type IProductionOrderRepo interface {
 	WhereSource(source string) DBOption                       // 来源条件
 	WhereProductFirstCategoryUuidIn(uuids []uint64) DBOption  // 生产商品分类Uuid条件
 	WhereProductNumGT0() DBOption                             // 送厨商品数量大于0
+	WhereIsNotBatchOrBatchTimeGT0() DBOption                  // 非分批商品、或者分批已送厨商品
 
 	SaleBillUuidOpt() DBOption                                                                                                                            // 历史上菜条件
 	WithSaleOrderProductAll() DBOption                                                                                                                    // 关联销售订单商品
@@ -45,9 +46,6 @@ type IProductionOrderQueryRepo interface {
 	GetProducts(limit int, orderBy string, statusOpt DBOption, opts ...DBOption) (float64, []model.ProductionOrderProduct, error) // 获取生产订单商品
 
 	GetProductsByPackageUuid(packageUuid uint64) ([]model.ProductionOrderProduct, error) // 根据套餐uuid获取套餐下所有子商品
-
-	// 获取 排除仅有is_batch=1（分批商品）且batch_time=0的first_category_uuid
-	GetProductionOrderProductFirstCategoryUuid() ([]uint64, error)
 }
 
 type productionRepo struct {
@@ -365,12 +363,9 @@ func (r *productionRepo) UpdateProductionOrderProductBatchTimeAndBatchTagUuid(sa
 		Update("batch_time", batchTime).Update("batch_tag_uuid", batchTagUuid).Error
 }
 
-// 获取 排除仅有is_batch=1（分批商品）且batch_time=0的first_category_uuid
-func (r *productionRepo) GetProductionOrderProductFirstCategoryUuid() ([]uint64, error) {
-	var firstCategoryUuids []uint64
-	err := r.db.Model(&model.ProductionOrderProduct{}).Where("is_batch = 0 OR batch_time > 0").Select("first_category_uuid").Group("first_category_uuid").Find(&firstCategoryUuids).Error
-	if err != nil {
-		return nil, err
+// 非分批商品、或者分批已送厨商品
+func (r *productionRepo) WhereIsNotBatchOrBatchTimeGT0() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_batch = 0 OR batch_time > 0")
 	}
-	return firstCategoryUuids, nil
 }
