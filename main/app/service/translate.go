@@ -109,6 +109,12 @@ func (s *TranslateSrv) Translate(companyUuid uint64) error {
 		}
 		translateTaskManager.finishTask(companyUuid)
 		logger.Logger.Info("翻译完成", zap.Uint64("companyUuid", companyUuid))
+
+		// 检测是否有剩余未翻译的，继续翻译
+		multiLanguageNameUuids, _ = s.getRedisClient().SMembers(context.Background(), cacheKey).Result()
+		if len(multiLanguageNameUuids) > 0 {
+			s.Translate(companyUuid)
+		}
 	}()
 
 	logger.Logger.Info("开始翻译任务", zap.Uint64("companyUuid", companyUuid))
@@ -120,14 +126,19 @@ func (s *TranslateSrv) Translate(companyUuid uint64) error {
 	// 根据Uuid分批获取多语言数据，每次获取100条
 	db.Model(&model.MultiLanguageName{}).Scopes(repository.NotDeleted).Where("uuid in (?) AND en_name != ''", multiLanguageNameUuids).FindInBatches(&multiLanguageNames, 100, func(tx *gorm.DB, batch int) error {
 		var translateItems []utils.TranslateItem
+
+		var uuidList []uint64
 		for _, multiLanguageName := range multiLanguageNames {
 			translateItems = append(translateItems, utils.TranslateItem{
 				Lang:    "en",
 				Content: multiLanguageName.EnName,
 			})
+			uuidList = append(uuidList, multiLanguageName.Uuid)
 		}
+		logger.Logger.Info("Translate-TranslateWithRetry", zap.Any("translateItems", translateItems), zap.Any("uuidList", uuidList))
 		// 每次翻译20条
 		multiLanguageMap := translateClient.TranslateWithRetry(context.Background(), translateItems, 20)
+		logger.Logger.Info("Translate-TranslateWithRetry-multiLanguageMap", zap.Any("multiLanguageMap", multiLanguageMap))
 		// 重新获取集合，用于判断是否已经【手动】翻译过
 		multiLanguageNameUuids, err = s.getRedisClient().SMembers(context.Background(), cacheKey).Result()
 		if err != nil {
@@ -177,11 +188,6 @@ func (s *TranslateSrv) Translate(companyUuid uint64) error {
 		}
 	}
 
-	// 检测是否有剩余未翻译的，继续翻译
-	multiLanguageNameUuids, _ = s.getRedisClient().SMembers(context.Background(), cacheKey).Result()
-	if len(multiLanguageNameUuids) > 0 {
-		s.Translate(companyUuid)
-	}
 	return nil
 }
 
