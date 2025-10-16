@@ -29,6 +29,7 @@ type UpdateProductReq struct {
 	NotForSale    bool                   `protobuf:"varint,2,opt,name=not_for_sale,json=notForSale,proto3" json:"not_for_sale,omitempty" dc:"是否禁售，可选"`     //是否禁售，可选
 	InternalCode  string                 `protobuf:"bytes,3,opt,name=internal_code,json=internalCode,proto3" json:"internal_code,omitempty" dc:"内部编码, 可选"` //内部编码, 可选
 	Disabled      bool                   `protobuf:"varint,4,opt,name=disabled,proto3" json:"disabled,omitempty" dc:"是否禁用，可选"`                             //是否禁用，可选
+	Attributes    []*ProductAttribute    `protobuf:"bytes,5,rep,name=attributes,proto3" json:"attributes,omitempty" dc:"更新规格值"`                            //更新规格值
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -91,19 +92,79 @@ func (x *UpdateProductReq) GetDisabled() bool {
 	return false
 }
 
+func (x *UpdateProductReq) GetAttributes() []*ProductAttribute {
+	if x != nil {
+		return x.Attributes
+	}
+	return nil
+}
+
+type ProductAttribute struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Attribute      string                 `protobuf:"bytes,1,opt,name=attribute,proto3" json:"attribute,omitempty" dc:"属性名称, 必填"`                                //属性名称, 必填
+	AttributeValue string                 `protobuf:"bytes,2,opt,name=attribute_value,json=attributeValue,proto3" json:"attribute_value,omitempty" dc:"属性值, 必填"` //属性值, 必填
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ProductAttribute) Reset() {
+	*x = ProductAttribute{}
+	mi := &file_item_product_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProductAttribute) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProductAttribute) ProtoMessage() {}
+
+func (x *ProductAttribute) ProtoReflect() protoreflect.Message {
+	mi := &file_item_product_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProductAttribute.ProtoReflect.Descriptor instead.
+func (*ProductAttribute) Descriptor() ([]byte, []int) {
+	return file_item_product_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ProductAttribute) GetAttribute() string {
+	if x != nil {
+		return x.Attribute
+	}
+	return ""
+}
+
+func (x *ProductAttribute) GetAttributeValue() string {
+	if x != nil {
+		return x.AttributeValue
+	}
+	return ""
+}
+
 type UpdateProductResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，必填"`              // 物品编码，必填
 	NotForSale    bool                   `protobuf:"varint,2,opt,name=not_for_sale,json=notForSale,proto3" json:"not_for_sale,omitempty" dc:"是否禁售，可选"`     //是否禁售，可选
 	InternalCode  string                 `protobuf:"bytes,3,opt,name=internal_code,json=internalCode,proto3" json:"internal_code,omitempty" dc:"内部编码, 可选"` //内部编码, 可选
 	Disabled      bool                   `protobuf:"varint,4,opt,name=disabled,proto3" json:"disabled,omitempty" dc:"是否禁用，可选"`                             //是否禁用，可选
+	Attributes    []*ProductAttribute    `protobuf:"bytes,5,rep,name=attributes,proto3" json:"attributes,omitempty" dc:"规格值"`                              //规格值
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateProductResp) Reset() {
 	*x = UpdateProductResp{}
-	mi := &file_item_product_proto_msgTypes[1]
+	mi := &file_item_product_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -115,7 +176,7 @@ func (x *UpdateProductResp) String() string {
 func (*UpdateProductResp) ProtoMessage() {}
 
 func (x *UpdateProductResp) ProtoReflect() protoreflect.Message {
-	mi := &file_item_product_proto_msgTypes[1]
+	mi := &file_item_product_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -128,7 +189,7 @@ func (x *UpdateProductResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateProductResp.ProtoReflect.Descriptor instead.
 func (*UpdateProductResp) Descriptor() ([]byte, []int) {
-	return file_item_product_proto_rawDescGZIP(), []int{1}
+	return file_item_product_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *UpdateProductResp) GetItemCode() string {
@@ -159,23 +220,39 @@ func (x *UpdateProductResp) GetDisabled() bool {
 	return false
 }
 
+func (x *UpdateProductResp) GetAttributes() []*ProductAttribute {
+	if x != nil {
+		return x.Attributes
+	}
+	return nil
+}
+
 var File_item_product_proto protoreflect.FileDescriptor
 
 const file_item_product_proto_rawDesc = "" +
 	"\n" +
-	"\x12item/product.proto\x12\x04item\x1a\terp.proto\x1a\x0fitem/item.proto\"\x92\x01\n" +
+	"\x12item/product.proto\x12\x04item\x1a\terp.proto\"\xca\x01\n" +
 	"\x10UpdateProductReq\x12\x1b\n" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12 \n" +
 	"\fnot_for_sale\x18\x02 \x01(\bR\n" +
 	"notForSale\x12#\n" +
 	"\rinternal_code\x18\x03 \x01(\tR\finternalCode\x12\x1a\n" +
-	"\bdisabled\x18\x04 \x01(\bR\bdisabled\"\x93\x01\n" +
+	"\bdisabled\x18\x04 \x01(\bR\bdisabled\x126\n" +
+	"\n" +
+	"attributes\x18\x05 \x03(\v2\x16.item.ProductAttributeR\n" +
+	"attributes\"Y\n" +
+	"\x10ProductAttribute\x12\x1c\n" +
+	"\tattribute\x18\x01 \x01(\tR\tattribute\x12'\n" +
+	"\x0fattribute_value\x18\x02 \x01(\tR\x0eattributeValue\"\xcb\x01\n" +
 	"\x11UpdateProductResp\x12\x1b\n" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12 \n" +
 	"\fnot_for_sale\x18\x02 \x01(\bR\n" +
 	"notForSale\x12#\n" +
 	"\rinternal_code\x18\x03 \x01(\tR\finternalCode\x12\x1a\n" +
-	"\bdisabled\x18\x04 \x01(\bR\bdisabled2L\n" +
+	"\bdisabled\x18\x04 \x01(\bR\bdisabled\x126\n" +
+	"\n" +
+	"attributes\x18\x05 \x03(\v2\x16.item.ProductAttributeR\n" +
+	"attributes2L\n" +
 	"\x0eProductService\x12:\n" +
 	"\rUpdateProduct\x12\x16.item.UpdateProductReq\x1a\x11.erp.ResponseInfoB\"Z ttpos-bmp/app/ttpos-erp/api/itemb\x06proto3"
 
@@ -191,20 +268,23 @@ func file_item_product_proto_rawDescGZIP() []byte {
 	return file_item_product_proto_rawDescData
 }
 
-var file_item_product_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_item_product_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_item_product_proto_goTypes = []any{
 	(*UpdateProductReq)(nil),  // 0: item.UpdateProductReq
-	(*UpdateProductResp)(nil), // 1: item.UpdateProductResp
-	(*api.ResponseInfo)(nil),  // 2: erp.ResponseInfo
+	(*ProductAttribute)(nil),  // 1: item.ProductAttribute
+	(*UpdateProductResp)(nil), // 2: item.UpdateProductResp
+	(*api.ResponseInfo)(nil),  // 3: erp.ResponseInfo
 }
 var file_item_product_proto_depIdxs = []int32{
-	0, // 0: item.ProductService.UpdateProduct:input_type -> item.UpdateProductReq
-	2, // 1: item.ProductService.UpdateProduct:output_type -> erp.ResponseInfo
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	1, // 0: item.UpdateProductReq.attributes:type_name -> item.ProductAttribute
+	1, // 1: item.UpdateProductResp.attributes:type_name -> item.ProductAttribute
+	0, // 2: item.ProductService.UpdateProduct:input_type -> item.UpdateProductReq
+	3, // 3: item.ProductService.UpdateProduct:output_type -> erp.ResponseInfo
+	3, // [3:4] is the sub-list for method output_type
+	2, // [2:3] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_item_product_proto_init() }
@@ -212,14 +292,13 @@ func file_item_product_proto_init() {
 	if File_item_product_proto != nil {
 		return
 	}
-	file_item_item_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_item_product_proto_rawDesc), len(file_item_product_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

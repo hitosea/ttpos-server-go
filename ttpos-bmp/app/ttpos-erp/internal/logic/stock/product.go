@@ -21,14 +21,26 @@ func init() {
 }
 
 func (s *sProduct) UpdateProduct(ctx context.Context, req *item.UpdateProductReq) (*item.UpdateProductResp, error) {
-	_, err := service.Document().Update(ctx, &erp.ErpReq{
-		DocType: erp.DocTypeItem,
-		Name:    req.ItemCode,
-	}, &erp.Item{
+	itemInfo := &erp.Item{
 		CustomNotForSale:   req.NotForSale,
 		CustomInternalCode: req.InternalCode,
 		Disabled:           req.Disabled,
-	})
+	}
+
+	if len(req.Attributes) > 0 {
+		attributes := make([]erp.ItemVariantAttribute, 0)
+		for _, attr := range req.Attributes {
+			attributes = append(attributes, erp.ItemVariantAttribute{
+				Attribute:      attr.Attribute,
+				AttributeValue: attr.AttributeValue,
+			})
+		}
+		itemInfo.Attributes = attributes
+	}
+	_, err := service.Document().Update(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeItem,
+		Name:    req.ItemCode,
+	}, itemInfo)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "更新商品信息失败")
 	}

@@ -1,7 +1,6 @@
 syntax = "proto3";
 
 import "erp.proto";
-import "item/item.proto";
 
 package item;
 
@@ -14,6 +13,13 @@ message UpdateProductReq {
   bool not_for_sale = 2; //是否禁售，可选
   string internal_code = 3 ; //内部编码, 可选
   bool disabled =4 ; //是否禁用，可选
+  repeated ProductAttribute attributes = 5; //更新规格值
+}
+
+
+message ProductAttribute {
+    string attribute = 1; //属性名称, 必填
+    string attribute_value = 2; //属性值, 必填
 }
 
 message UpdateProductResp {
@@ -21,6 +27,7 @@ message UpdateProductResp {
   bool not_for_sale = 2; //是否禁售，可选
   string internal_code = 3 ; //内部编码, 可选
   bool disabled =4 ; //是否禁用，可选
+  repeated ProductAttribute attributes = 5; //规格值
 }
 
 
