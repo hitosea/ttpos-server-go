@@ -760,9 +760,9 @@ func (h *purchaseOrderHelper) AddToTransitWarehouse(
 		Scene:                20, // 在途入库
 		WarehouseUuid:        transitWarehouse.Uuid,
 		MaterialUuid:         item.MaterialUuid,
-		MaterialName:         language.JsonToLocaleResponse(item.MaterialName).EN,
+		MaterialName:         item.MaterialName,
 		MaterialBaseUnitUuid: item.BaseUnitUuid,
-		MaterialBaseUnitName: language.JsonToLocaleResponse(item.BaseUnitName).EN,
+		MaterialBaseUnitName: item.BaseUnitName,
 		Num:                  actualNum,
 		Price:                item.Valuation,
 		Amount: decimal.NewFromFloat(item.Valuation).

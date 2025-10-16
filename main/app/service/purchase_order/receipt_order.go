@@ -552,6 +552,7 @@ func (s *purchaseReceiptOrderSrv) updateMaterialStock(
 	transitWarehouse, _ := repository.NewWarehouseRepo(db).GetTransitWarehouse()
 	if transitWarehouse != nil {
 		warehouseItemRepo := repository.NewWarehouseItemRepo(db)
+		warehouseLogRepo := repository.NewWarehouseInOutLogRepo(db)
 		for _, item := range receiptOrder.Items {
 			actualNum := item.GetActualNum()
 			if actualNum <= 0 {
@@ -565,6 +566,7 @@ func (s *purchaseReceiptOrderSrv) updateMaterialStock(
 			if warehouseItem.Stock < actualNum {
 				actualNum = warehouseItem.Stock
 			}
+			// 减少在途仓库库存
 			err = warehouseItemRepo.ReduceStock(warehouseItem.Uuid, actualNum)
 			if err != nil {
 				return errors.WithMessage(errors.New("减少在途仓库库存失败"), err.Error())
@@ -575,9 +577,9 @@ func (s *purchaseReceiptOrderSrv) updateMaterialStock(
 				Scene:                21, // 在途出库
 				WarehouseUuid:        transitWarehouse.Uuid,
 				MaterialUuid:         item.MaterialUuid,
-				MaterialName:         language.JsonToLocaleResponse(item.MaterialName).EN,
+				MaterialName:         item.MaterialName,
 				MaterialBaseUnitUuid: item.BaseUnitUuid,
-				MaterialBaseUnitName: language.JsonToLocaleResponse(item.BaseUnitName).EN,
+				MaterialBaseUnitName: item.BaseUnitName,
 				Num:                  actualNum,
 				Price:                item.Valuation,
 				Amount: decimal.NewFromFloat(item.Valuation).
@@ -591,7 +593,7 @@ func (s *purchaseReceiptOrderSrv) updateMaterialStock(
 				OtherOrgType:    0,
 				OtherOrgName:    receiptOrder.SupplierName,
 			}
-			err = repository.NewWarehouseInOutLogRepo(db).Create(warehouseLog)
+			err = warehouseLogRepo.Create(warehouseLog)
 			if err != nil {
 				return errors.WithMessage(errors.New("记录在途仓出库日志失败"), err.Error())
 			}
