@@ -7400,7 +7400,7 @@ func (s *orderSrv) getDecreaseStockList(ctx context.Context, cookingDeductSaleOr
 				}
 			}
 			// 获取规格商品的出库数量
-			if int(cookingDeductSaleOrderProduct.Num) > 0 {
+			if cookingDeductSaleOrderProduct.Num > 0 {
 				list = append(list, &model.Product{
 					ProductBomUuid:       saleOrderProductBom.ProductBomUuid,
 					PackageUuid:          cookingDeductSaleOrderProduct.PackageUuid,
