@@ -2,6 +2,7 @@ package purchase_order
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
@@ -17,6 +18,7 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/language"
+	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
@@ -50,6 +52,7 @@ type purchaseOrderSrv struct {
 	validator  *purchaseOrderValidator
 	helper     *purchaseOrderHelper
 	receiptSrv *purchaseReceiptOrderSrv
+	lock       lock.Lock
 }
 
 // NewPurchaseOrderSrv 创建采购申请服务
@@ -64,6 +67,7 @@ func NewPurchaseOrderSrvImpl(dbm *database.DBManager) IPurchaseOrderSrv {
 		validator:  &purchaseOrderValidator{},
 		helper:     &purchaseOrderHelper{},
 		receiptSrv: newPurchaseReceiptOrderSrv(dbm),
+		lock:       lock.NewSystemLock(),
 	}
 }
 
@@ -197,6 +201,11 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(
 	ctx context.Context,
 	req req.PurchaseOrderCreateReq,
 ) (resp.PurchaseOrderCreateResp, error) {
+	// 加锁
+	s.lock.LockUuidString(req.SupplierErpCode + strconv.FormatInt(req.OrderTime, 10))
+	defer s.lock.UnlockUuidString(req.SupplierErpCode + strconv.FormatInt(req.OrderTime, 10))
+
+	// 验证请求
 	if err := req.Validate(); err != nil {
 		return resp.PurchaseOrderCreateResp{}, err
 	}
@@ -321,6 +330,10 @@ func (s *purchaseOrderSrv) UpdatePurchaseOrder(
 	ctx context.Context,
 	req req.PurchaseOrderUpdateReq,
 ) error {
+	// 加锁
+	s.lock.LockUuid(req.Uuid)
+	defer s.lock.UnlockUuid(req.Uuid)
+
 	if err := req.Validate(); err != nil {
 		return err
 	}
@@ -431,6 +444,10 @@ func (s *purchaseOrderSrv) DeletePurchaseOrder(
 	ctx context.Context,
 	req req.PurchaseOrderDeleteReq,
 ) error {
+	// 加锁
+	s.lock.LockUuid(req.Uuid)
+	defer s.lock.UnlockUuid(req.Uuid)
+
 	db := s.dbm.GetDB(ctx.GetDbId())
 	purchaseOrderRepo := repository.NewPurchaseOrderRepo(db)
 
@@ -462,6 +479,10 @@ func (s *purchaseOrderSrv) SubmitPurchaseOrder(
 	ctx context.Context,
 	req req.PurchaseOrderSubmitReq,
 ) error {
+	// 加锁
+	s.lock.LockUuid(req.Uuid)
+	defer s.lock.UnlockUuid(req.Uuid)
+
 	db := ctx.GetDB()
 
 	return db.Transaction(func(tx *gorm.DB) error {
@@ -589,6 +610,10 @@ func (s *purchaseOrderSrv) ApprovePurchaseOrder(
 	ctx context.Context,
 	req req.PurchaseOrderApproveReq,
 ) error {
+	// 加锁
+	s.lock.LockUuid(req.Uuid)
+	defer s.lock.UnlockUuid(req.Uuid)
+
 	db := ctx.GetDB()
 	companySetting := ctx.GetCompanySetting()
 
@@ -932,30 +957,9 @@ func (s *purchaseOrderSrv) handleExternalPurchaseErp(
 
 		// 添加到本店的在途仓库
 		if transitWarehouse != nil {
-			warehouseItem, err := repository.NewWarehouseItemRepo(tx).GetByWarehouseAndMaterial(
-				transitWarehouse.Uuid,
-				item.MaterialUuid,
-			)
+			err := s.helper.AddToTransitWarehouse(tx, transitWarehouse, item.MaterialUuid, item.MaterialCode, item.Valuation, actualNum)
 			if err != nil {
-				if err == gorm.ErrRecordNotFound {
-					// 没有找到记录时创建新记录
-					newWarehouseItem := &model.WarehouseItem{
-						WarehouseUuid: transitWarehouse.Uuid,
-						MaterialUuid:  item.MaterialUuid,
-						MaterialCode:  item.MaterialCode,
-						Stock:         0,
-						Valuation:     item.Valuation,
-					}
-					err = repository.NewWarehouseItemRepo(tx).Create(newWarehouseItem)
-					if err != nil {
-						return "", errors.WithMessage(errors.New("创建仓库商品库存记录失败"), err.Error())
-					}
-					warehouseItem = newWarehouseItem
-				}
-			}
-			err = repository.NewWarehouseItemRepo(tx).AddStock(warehouseItem.Uuid, actualNum)
-			if err != nil {
-				return "", errors.WithMessage(errors.New("增加在途仓库库存失败"), err.Error())
+				return "", err
 			}
 		}
 	}
@@ -1020,6 +1024,10 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(
 	ctx context.Context,
 	req req.PurchaseReceiptCreateReq,
 ) (resp.PurchaseReceiptOrderCreateResp, error) {
+	// 加锁
+	s.lock.LockUuid(req.PurchaseOrderUuid)
+	defer s.lock.UnlockUuid(req.PurchaseOrderUuid)
+	// 创建收货单
 	result, err := s.receiptSrv.CreatePurchaseReceiptOrder(ctx, req)
 	if err != nil {
 		return resp.PurchaseReceiptOrderCreateResp{}, s.helper.handleErpError(ctx, err)
@@ -1032,6 +1040,10 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(
 	ctx context.Context,
 	req req.PurchaseReceiptOrderUpdateReq,
 ) error {
+	// 加锁
+	s.lock.LockUuid(req.Uuid)
+	defer s.lock.UnlockUuid(req.Uuid)
+
 	err := s.receiptSrv.UpdatePurchaseReceiptOrder(ctx, req)
 	if err != nil {
 		return s.helper.handleErpError(ctx, err)
@@ -1044,7 +1056,6 @@ func (s *purchaseOrderSrv) GetPurchaseReceiptOrderList(
 	ctx context.Context,
 	reqs req.PurchaseReceiptOrderListReq,
 ) (resp.PurchaseReceiptOrderListResp, error) {
-
 	if ctx.Version(context.LT, "2.7.0") {
 		return s.receiptSrv.GetPurchaseReceiptOrderList(ctx, reqs)
 	}
@@ -1193,5 +1204,9 @@ func (s *purchaseOrderSrv) CancelPurchaseReceiptOrder(
 	ctx context.Context,
 	req req.PurchaseReceiptOrderCancelReq,
 ) error {
+	// 加锁
+	s.lock.LockUuid(req.Uuid)
+	defer s.lock.UnlockUuid(req.Uuid)
+
 	return s.receiptSrv.CancelPurchaseReceiptOrder(ctx, req)
 }
