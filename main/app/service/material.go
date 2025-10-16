@@ -2080,6 +2080,10 @@ func (s *materialSrv) unlinkSauceBomCard(ctx context.Context, req req.ProductBom
 		return errors.WithMessage(err, "获取小料失败")
 	}
 
+	if sauce.HeadquarterUuid != 0 {
+		return errors.New("无法删除总部小料的成本卡")
+	}
+
 	productBomCardLog, err := newProductBomCardLog(ctx, 0, 0, "", req.RelatedUuid, sauce.MultiLanguageName.ToJson(), nil, constant.ProductBomCardLogOperationTypeDelete)
 	if err != nil {
 		return errors.WithMessage(err, "创建成本卡日志失败")
