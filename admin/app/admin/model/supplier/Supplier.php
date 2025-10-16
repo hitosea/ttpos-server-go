@@ -183,26 +183,26 @@ class Supplier extends SupplierModel
 
         // 定义默认仓和在途仓的多语言名称
         $defaultWarehouseNames = [
-            'en' => 'Default',
-            'zh' => 'Default',
-            'zhtw' => 'Default',
-            'th' => 'Default',
-            'my' => 'Default',
-            'ja' => 'Default',
-            'ko' => 'Default',
-            'tr' => 'Default',
-            'sv' => 'Default',
+            'en' => "Default warehouse",
+            'zh' => "默认仓库",
+            'zhtw' => "默認倉庫",
+            'th' => "คลังสินค้าเบื้องต้น",
+            'my' => "ပုံမှန်ဂိုဒေါင်",
+            'ja' => "デフォルトの倉庫",
+            'ko' => "기본 창고",
+            'tr' => "Varsayılan depo",
+            'sv' => "Standardlager",
         ];
         $transitWarehouseNames = [
-            'en' => 'Transit',
-            'zh' => 'Transit',
-            'zhtw' => 'Transit',
-            'th' => 'Transit',
-            'my' => 'Transit',
-            'ja' => 'Transit',
-            'ko' => 'Transit',
-            'tr' => 'Transit',
-            'sv' => 'Transit',
+            'en' => "Transit Warehouse",
+            'zh' => "在途仓库",
+            'zhtw' => "在途倉庫",
+            'th' => "คลังสินค้าระหว่างทาง",
+            'my' => "လမ်းခရီးရှိဂိုဒေါင်",
+            'ja' => "輸送中の倉庫",
+            'ko' => "운송 중 창고",
+            'tr' => "Yoldaki depo",
+            'sv' => "Transitlager",
         ];
 
         // 生成多语言UUID
