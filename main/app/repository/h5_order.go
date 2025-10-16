@@ -253,6 +253,12 @@ func (r *H5OrderRepoImpl) GetH5OrderDetail(h5OrderUuid uint64, isNeedAudit bool)
 			WithPreload{
 				Query: "SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.SauceMaterials",
 			},
+			WithPreload{
+				Query: "SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.ProductBomCard.RelatedMaterials.Material.WarehouseItems",
+			},
+			WithPreload{
+				Query: "SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductBomCard.RelatedMaterials.Material.WarehouseItems",
+			},
 			// =================end 为了送厨检查 =================
 		),
 	)
