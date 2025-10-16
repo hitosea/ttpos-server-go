@@ -22,9 +22,8 @@ func init() {
 
 func (s *sProduct) UpdateProduct(ctx context.Context, req *item.UpdateProductReq) (*item.UpdateProductResp, error) {
 	itemInfo := &erp.Item{
-		CustomNotForSale:   req.NotForSale,
-		CustomInternalCode: req.InternalCode,
-		Disabled:           req.Disabled,
+		CustomNotForSale: req.NotForSale,
+		Disabled:         req.Disabled,
 	}
 
 	if len(req.Attributes) > 0 {
@@ -37,6 +36,11 @@ func (s *sProduct) UpdateProduct(ctx context.Context, req *item.UpdateProductReq
 		}
 		itemInfo.Attributes = attributes
 	}
+
+	if len(req.InternalCode) > 0 {
+		itemInfo.CustomInternalCode = req.InternalCode
+	}
+
 	_, err := service.Document().Update(ctx, &erp.ErpReq{
 		DocType: erp.DocTypeItem,
 		Name:    req.ItemCode,
