@@ -2947,8 +2947,8 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
 		}
 		for _, bomCard := range needDisable {
 			if err := s.disableProductBomCard(ctx, tx, bomCard); err != nil {
-				if strings.Contains(err.Error(), "物品或加料不存在") {
-					logger.Logger.Error("同步成本卡时，失效成本卡失败，物品或加料不存在", zap.String("bom_name", bomCard.Name), zap.Any("bom_card", bomCard))
+				if strings.Contains(err.Error(), "获取商品或加料失败") {
+					logger.Logger.Error("同步成本卡时，失效成本卡失败，商品或加料不存在", zap.String("bom_name", bomCard.Name), zap.Any("bom_card", bomCard))
 					continue
 				} else {
 					return errors.WithMessage(err, "失效成本卡失败")
