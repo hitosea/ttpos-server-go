@@ -609,8 +609,20 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 
 // extractName 从错误信息中提取供应商名称
 func (h *purchaseOrderHelper) extractName(name, after, errorMsg string) string {
-	// 使用正则表达式匹配 "Supplier" 和 "is disabled" 之间的值
-	re := regexp.MustCompile(name + `\s+(.+?)\s+` + after)
+	// 转义正则表达式中的特殊字符
+	escapedName := regexp.QuoteMeta(name)
+	escapedAfter := regexp.QuoteMeta(after)
+
+	// 使用正则表达式匹配，支持HTML标签和普通文本
+	var re *regexp.Regexp
+	if strings.Contains(name, "<") || strings.Contains(after, "<") {
+		// HTML标签模式：不要求空格分隔
+		re = regexp.MustCompile(escapedName + `(.+?)` + escapedAfter)
+	} else {
+		// 普通文本模式：要求空格分隔
+		re = regexp.MustCompile(escapedName + `\s+(.+?)\s+` + escapedAfter)
+	}
+
 	matches := re.FindStringSubmatch(errorMsg)
 	if len(matches) > 1 {
 		supplierInfo := strings.TrimSpace(matches[1])
@@ -678,6 +690,17 @@ func (h *purchaseOrderHelper) handleErpError(ctx context.Context, err error) err
 	// before Transaction Date
 	if strings.Contains(err.Error(), "before Transaction Date") {
 		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, i18n.Translate(ctx.GetLanguage(), "期望到货日期不能小于今天"))
+	}
+	// 检查期望到货日期
+	if strings.Contains(err.Error(), "Must be Whole Number") {
+		itemName := h.extractName("UOM<strong>", "</strong>", err.Error())
+		if itemName != "" {
+			return errors.NewWithCode(
+				constant.CodePurchaseOrderSupplierDisabled,
+				fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "单位 %s 只能使用整数"), itemName),
+			)
+		}
+		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "单位只能使用整数")
 	}
 
 	return err
