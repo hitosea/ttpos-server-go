@@ -26,10 +26,9 @@ func init() {
 }
 
 var (
-	warehouseErpCode string
-	warehouseId      uint64
-	materialCode     string
-	actualNum        float64
+	warehouseId  uint64
+	materialCode string
+	actualNum    float64
 )
 
 // 添加物品库存
