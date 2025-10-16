@@ -563,7 +563,7 @@ func (s *purchaseReceiptOrderSrv) updateMaterialStock(
 				continue
 			}
 			if warehouseItem.Stock < actualNum {
-				continue
+				actualNum = warehouseItem.Stock
 			}
 			err = warehouseItemRepo.ReduceStock(warehouseItem.Uuid, actualNum)
 			if err != nil {
