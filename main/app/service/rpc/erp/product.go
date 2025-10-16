@@ -289,13 +289,21 @@ func (s *erpSrv) GetProductList(ctx context.Context, params GetErpProductListReq
 	return response, nil
 }
 
-type SetProductForSaleReq struct {
-	ItemCode   string `json:"item_code"`
-	NotForSale bool   `json:"not_for_sale"`
+type UpdateProductReq struct {
+	ItemCode     string                `json:"item_code"`
+	NotForSale   bool                  `json:"not_for_sale"`
+	InternalCode string                `json:"internal_code"`
+	Disabled     bool                  `json:"disabled"`
+	Attributes   []UpdateProductFlavor `json:"attributes"`
+}
+
+type UpdateProductFlavor struct {
+	Name  string
+	Value string
 }
 
 // 设置商品是否禁售
-func (s *erpSrv) SetProductForSale(ctx context.Context, params SetProductForSaleReq) error {
+func (s *erpSrv) UpdateProduct(ctx context.Context, params UpdateProductReq) error {
 	company := ctx.GetCompany()
 	companySetting := company.CompanySetting
 
@@ -305,9 +313,20 @@ func (s *erpSrv) SetProductForSale(ctx context.Context, params SetProductForSale
 	}
 	defer conn.Close()
 
+	var attributes []*item.ProductAttribute
+	for _, v := range params.Attributes {
+		attributes = append(attributes, &item.ProductAttribute{
+			Attribute:      v.Name,
+			AttributeValue: v.Value,
+		})
+	}
+
 	result, err := client.UpdateProduct(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.UpdateProductReq{
-		ItemCode:   params.ItemCode,
-		NotForSale: params.NotForSale,
+		ItemCode:     params.ItemCode,
+		NotForSale:   params.NotForSale,
+		InternalCode: params.InternalCode,
+		Disabled:     params.Disabled,
+		Attributes:   attributes,
 	})
 	if err != nil {
 		return err

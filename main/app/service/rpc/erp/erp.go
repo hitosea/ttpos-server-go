@@ -82,7 +82,7 @@ type IErpSrv interface {
 
 	// 商品
 	GetProductList(ctx pkgCtx.Context, params GetErpProductListReq) (*item.GetItemListResp, error) // 获取商品列表
-	SetProductForSale(ctx pkgCtx.Context, params SetProductForSaleReq) error                       // 设置商品是否禁售
+	UpdateProduct(ctx pkgCtx.Context, params UpdateProductReq) error                               // 更新商品
 }
 type erpSrv struct {
 	dbm *database.DBManager
