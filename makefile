@@ -101,6 +101,10 @@ translate:
 migrate-data:
 	cd main && go run ./main.go migrate-data
 
+# 重新同步本地产品数据ERP
+resync-product-data-to-erp:
+	cd main && go run ./main.go resync-product-data-to-erp
+
 # 同步ERP数据
 sync-erp-data:
 	cd main && go run ./main.go sync-erp-data
