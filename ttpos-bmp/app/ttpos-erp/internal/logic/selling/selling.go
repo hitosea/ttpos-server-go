@@ -738,6 +738,9 @@ func (s *sSelling) SavePosInvoiceStep(ctx context.Context, req *selling.SavePosI
 	posInvoice := s.buildPosInvoice(ctx, req, openingEntry)
 	if isMaterialItem {
 		posInvoice.Items = s.buildInvoiceItems(req.MaterialItems)
+		//物品无税费
+		posInvoice.Taxes = nil
+		posInvoice.UpdateStock = req.UpdateStock // 更新库存
 	}
 	//反结账后重新结账
 	if len(req.AmendedProductsInvoiceName) > 0 {
@@ -786,7 +789,7 @@ func (s *sSelling) buildPosInvoice(ctx context.Context, req *selling.SavePosInvo
 		PostingTime:           postingDatetime.Format(TimeFormat),
 		Currency:              req.Currency,
 		PriceListCurrency:     req.PriceListCurrency,
-		UpdateStock:           req.UpdateStock, // 更新库存
+		UpdateStock:           0, // 更新库存
 		CustomerOrder:         req.OrderNo,
 		SetPostingTime:        1,
 		CustomPosOpeningEntry: req.OpenPosEntryName,
