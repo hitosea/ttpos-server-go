@@ -14,6 +14,7 @@ import (
 	"ttpos-server-go/app/repository/ro"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/websocket"
 
 	"github.com/shopspring/decimal"
@@ -228,11 +229,26 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 			return nil, errors.WithMessage(err, "s.GetProductDecreaseStockList failed")
 		}
 		staffShiftLogUuid := uint64(0)
-		staffShiftLog, err := GetCurrentStaffShiftLog(db, ctx.GetStaffUuid())
-		if err != nil {
-			return nil, errors.WithMessage(err, "GetCurrentStaffShiftLog failed")
+		staffUuid := ctx.GetStaffUuid()
+		if staffUuid > 0 {
+			staffShiftLog, err := GetCurrentStaffShiftLog(db, staffUuid)
+			if err != nil {
+				return nil, errors.WithMessage(err, "GetCurrentStaffShiftLog failed")
+			} else {
+				staffShiftLogUuid = staffShiftLog.Uuid
+			}
 		} else {
-			staffShiftLogUuid = staffShiftLog.Uuid
+			// 查询当前未交班的班次列表
+			staffShiftLogList, err := repository.NewShiftLogRepo(db).GetShiftLogList(
+				repository.CommonRepo.WhereByStatus(uint(constant.StaffNotHandedOver)),
+			)
+			if err != nil {
+				logger.Logger.Error("获取当前未交班的班次列表失败", zap.Uint64("staffUuid", staffUuid), zap.Error(err))
+			} else {
+				if len(staffShiftLogList) > 0 {
+					staffShiftLogUuid = staffShiftLogList[0].Uuid // 取第一个未交班的班次作为出库的班次
+				}
+			}
 		}
 		// 构建出库单
 		warehouseOutForms = model.NewWarehouseOutForm(decreaseStockList, false, saleBill.Uuid, ctx.GetStaffUuid(), staffShiftLogUuid)
