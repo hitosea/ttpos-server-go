@@ -1288,20 +1288,40 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, request req.ProductS
 		// 将商品模板和规格禁售
 		if ctx.GetCompany().IsOpenErp() {
 			erpSrv := erp.NewIErpSrv(s.dbm)
-			if err := erpSrv.SetProductForSale(ctx, erp.SetProductForSaleReq{
-				ItemCode:   product.ErpCode,
-				NotForSale: true,
-			}); err != nil {
-				return errors.WithMessage(err, "设置商品模板禁售失败")
-			}
-			for _, productBom := range product.ProductBoms {
-				if productBom.IsFlavor() {
-					if err := erpSrv.SetProductForSale(ctx, erp.SetProductForSaleReq{
-						ItemCode:   productBom.ErpCode,
-						NotForSale: true,
-					}); err != nil {
-						return errors.WithMessage(err, "设置商品规格禁售失败")
+			if !product.IsPackage() {
+				if err := erpSrv.SetProductForSale(ctx, erp.SetProductForSaleReq{
+					ItemCode:   product.ErpCode,
+					NotForSale: true,
+				}); err != nil {
+					return errors.WithMessage(err, "设置商品模板禁售失败")
+				}
+				for _, productBom := range product.ProductBoms {
+					if productBom.IsFlavor() {
+						if err := erpSrv.SetProductForSale(ctx, erp.SetProductForSaleReq{
+							ItemCode:   productBom.ErpCode,
+							NotForSale: true,
+						}); err != nil {
+							return errors.WithMessage(err, "设置商品规格禁售失败")
+						}
 					}
+				}
+			} else {
+				items := []req.DeleteProductErpItemReq{}
+				multiLanguageName := model.NewMultiLanguageName(product.Name)
+				enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
+				if err != nil {
+					return errors.WithMessage(err, "翻译失败")
+				}
+				erpCode := product.GetPackageProductBom().ErpCode
+				items = append(items, req.DeleteProductErpItemReq{
+					ItemCode: erpCode,
+					ItemName: enName,
+					StockUom: product.ProductUnit.ErpnextUom,
+				})
+				if err := erpSrv.DeleteProduct(ctx, req.DeleteProductErpReq{
+					Items: items,
+				}); err != nil {
+					return errors.WithMessage(err, "删除商品到erp失败")
 				}
 			}
 		}
