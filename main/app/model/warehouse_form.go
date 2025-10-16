@@ -214,6 +214,7 @@ func NewWarehouseOutForm(list ProductList, isCheckout bool, saleBillUuid uint64,
 			WarehouseOutFormUuid: form.Uuid,
 			MaterialUuid:         material.MaterialUuid,
 			WarehouseUuid:        material.WarehouseUuid,
+			StaffShiftLogUuid:    staffShiftLogUuid,
 			Num:                  material.Num,
 			Scene:                constant.WarehouseOutFormSceneSales, // 销售出库
 			Status:               status,
