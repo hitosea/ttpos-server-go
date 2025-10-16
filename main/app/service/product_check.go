@@ -732,7 +732,7 @@ func (s *productCheckSrv) CheckProductPrinter(ctx context.Context, db *gorm.DB, 
 	if printProductSelect != 0 {
 		productPackage, err := repository.NewProductPackageRepo(db).GetProductPackage(repository.CommonRepo.WhereByUuid(productPackageUuid))
 		if err != nil {
-			return errors.New("获取商品包失败")
+			return errors.New("未设置打印标签")
 		}
 		if productPackage.ID == 0 {
 			return errors.New("商品包不存在")
