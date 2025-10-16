@@ -305,7 +305,7 @@ func (s *erpSrv) SetProductForSale(ctx context.Context, params SetProductForSale
 	}
 	defer conn.Close()
 
-	result, err := client.SetProductForSale(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.SetProductForSaleReq{
+	result, err := client.UpdateProduct(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.UpdateProductReq{
 		ItemCode:   params.ItemCode,
 		NotForSale: params.NotForSale,
 	})
