@@ -137,8 +137,9 @@ func (model *SaleOrder) GetValidSaleOrderProductList() []*SaleOrderProduct {
 }
 
 type MaterialStock struct {
-	MaterialUuid uint64
-	StockNum     float64
+	MaterialUuid  uint64
+	WarehouseUuid uint64
+	StockNum      float64
 }
 
 // 获取订单中有效售出的商品的材料用量
@@ -156,8 +157,9 @@ func (model *SaleOrder) GetValidSaleOrderProductMaterialList() []*MaterialStock 
 						materialStock.StockNum = decimal.NewFromFloat(materialStock.StockNum).Add(decimal.NewFromFloat(num)).Round(4).InexactFloat64()
 					} else {
 						materialStock = &MaterialStock{
-							MaterialUuid: relatedMaterial.MaterialUuid,
-							StockNum:     num,
+							MaterialUuid:  relatedMaterial.MaterialUuid,
+							WarehouseUuid: relatedMaterial.Material.WarehouseUuid,
+							StockNum:      num,
 						}
 						materialStocks[relatedMaterial.MaterialUuid] = materialStock
 					}
@@ -170,8 +172,9 @@ func (model *SaleOrder) GetValidSaleOrderProductMaterialList() []*MaterialStock 
 						materialStock.StockNum = decimal.NewFromFloat(materialStock.StockNum).Add(decimal.NewFromFloat(num)).Round(4).InexactFloat64()
 					} else {
 						materialStock = &MaterialStock{
-							MaterialUuid: relatedMaterial.MaterialUuid,
-							StockNum:     num,
+							MaterialUuid:  relatedMaterial.MaterialUuid,
+							WarehouseUuid: relatedMaterial.Material.WarehouseUuid,
+							StockNum:      num,
 						}
 						materialStocks[relatedMaterial.MaterialUuid] = materialStock
 					}

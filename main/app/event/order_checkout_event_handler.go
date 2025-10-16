@@ -237,6 +237,7 @@ func checkoutSaleOrderEventHandler() {
 					SaleOrderUuid:     saleOrder.Uuid,
 					SaleBillUuid:      payload.SaleBillUuid,
 					MaterialUuid:      materialStock.MaterialUuid,
+					WarehouseUuid:     materialStock.WarehouseUuid,
 					Num:               materialStock.StockNum,
 					StaffShiftLogUuid: saleOrder.StaffShiftLogUuid,
 				})
