@@ -51,7 +51,7 @@ func (s *sSelling) CreateCustomer(ctx context.Context, req *erp.Customer) (*erp.
 		return nil, gerror.Wrapf(err, "创建客户失败")
 	}
 
-	return s.parseCustomerResponse(resp.Bytes())
+	return s.parseCustomerResponse(resp.MustToJson())
 }
 
 // UpdateCustomer 更新客户
@@ -103,7 +103,7 @@ func (s *sSelling) GetCustomer(ctx context.Context, name string) (*erp.Customer,
 		return nil, gerror.Wrapf(err, "查询客户失败")
 	}
 
-	return s.parseCustomerResponse(resp.Bytes())
+	return s.parseCustomerResponse(resp.MustToJson())
 }
 
 // validateCustomer 校验客户信息

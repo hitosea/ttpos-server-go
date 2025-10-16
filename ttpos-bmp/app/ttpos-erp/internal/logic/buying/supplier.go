@@ -70,7 +70,7 @@ func (s *sSupplier) GetInnerSupplierList(ctx context.Context, req *buying.GetSup
 	}
 
 	// 解析供应商列表
-	supplierList, err := s.parseInnerSupplierListResponse(resp.Bytes())
+	supplierList, err := s.parseInnerSupplierListResponse(resp.MustToJson())
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析供应商列表响应失败")
 	}
@@ -256,7 +256,7 @@ func (s *sSupplier) CreateSupplier(ctx context.Context, req *buying.CreateSuppli
 	}
 
 	// 解析响应数据
-	result, err := s.parseCreateSupplierResponse(resp.Bytes())
+	result, err := s.parseCreateSupplierResponse(resp.MustToJson())
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析创建供应商响应失败")
 	}
@@ -328,7 +328,7 @@ func (s *sSupplier) GetSupplier(ctx context.Context, req *buying.GetSupplierReq)
 	}
 
 	// 解析响应数据
-	supplier, err := s.parseGetSupplierResponse(resp.Bytes())
+	supplier, err := s.parseGetSupplierResponse(resp.MustToJson())
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析获取供应商响应失败")
 	}
@@ -371,7 +371,7 @@ func (s *sSupplier) UpdateSupplier(ctx context.Context, req *buying.UpdateSuppli
 	}
 
 	// 解析响应数据
-	result, err := s.parseUpdateSupplierResponse(resp.Bytes())
+	result, err := s.parseUpdateSupplierResponse(resp.MustToJson())
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析更新供应商响应失败")
 	}
@@ -461,7 +461,7 @@ func (s *sSupplier) ListSuppliers(ctx context.Context, req *buying.ListSuppliers
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析物品列表响应失败")
 	}

@@ -5,7 +5,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
-	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/encoding/gjson"
 )
 
 var (
@@ -20,8 +20,8 @@ func init() {
 	service.RegisterReport(Report)
 }
 
-func (s *sReport) Run(ctx context.Context, params *erp.ReportParams) (rst *g.Var, err error) {
-	rst = GetClient(ctx).GetVar(ctx, reportApiUrl, params)
-	err = detectError(rst)
+func (s *sReport) Run(ctx context.Context, params *erp.ReportParams) (rst *gjson.Json, err error) {
+	resp := GetClient(ctx).GetVar(ctx, reportApiUrl, params)
+	rst, err = detectError(resp)
 	return
 }

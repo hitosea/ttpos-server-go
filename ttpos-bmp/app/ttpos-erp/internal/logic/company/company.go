@@ -7,7 +7,6 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
-	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 )
@@ -57,7 +56,7 @@ func (s *sCompany) GetCompanyList(ctx context.Context, req *company.GetCompanyLi
 		// 错误处理，返回错误信息
 		return nil, err
 	}
-	if j, err := gjson.DecodeToJson(erpCompanyList.Bytes()); err == nil {
+	if j := erpCompanyList; !j.IsNil() {
 		// 遍历j.Get("data") 返回的数组字段，设置到 CompanyList 中
 		companyList := make([]*company.CompanyInfo, 0)
 		dataArray := j.GetJsons("data")
@@ -77,9 +76,6 @@ func (s *sCompany) GetCompanyList(ctx context.Context, req *company.GetCompanyLi
 		res = &company.GetCompanyListResp{
 			CompanyList: companyList,
 		}
-
-	} else {
-		g.Log().Error(ctx, "解析公司列表失败", err)
 	}
 	return
 }

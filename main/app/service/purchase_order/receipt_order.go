@@ -480,7 +480,12 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderDetail(
 		itemInfo.ArrivalNum = item.Num
 		itemInfo.LocaleUnitName = *language.JsonToLocaleResponse(item.UnitName)
 		itemInfo.LocaleBaseUnitName = *language.JsonToLocaleResponse(item.BaseUnitName)
-		itemInfo.InternalCode = item.Material.InternalCode
+		itemInfo.InternalCode = func(item model.PurchaseReceiptOrderItem) string {
+			if item.Material == nil {
+				return ""
+			}
+			return item.Material.InternalCode
+		}(item)
 		detailResp.Items = append(detailResp.Items, itemInfo)
 	}
 

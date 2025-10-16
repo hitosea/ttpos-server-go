@@ -42,6 +42,9 @@ func (s *sItem) SyncDelay() {
 // GetItemList 获取物品列表
 // 根据查询条件过滤并返回物品信息列表
 func (s *sItem) GetItemList(ctx context.Context, req *item.GetItemListReq) (res *item.GetItemListResp, err error) {
+	if (req.ItemGroup == item.ItemGroup_PosAttribute || req.ItemGroup == item.ItemGroup_PosAddon) && len(req.ItemGroupName) == 0 {
+		return nil, gerror.New("物品分组ItemGroupName不能为空")
+	}
 	// 构建查询过滤器
 	filters := s.buildItemListFilters(ctx, req)
 
@@ -134,10 +137,7 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析物品列表响应失败")
-	}
+	j := resp
 
 	// 转换为物品信息列表
 	dataArray := j.GetJsons("data")
@@ -184,6 +184,8 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 				AttributeValue: attr.CustomAttributeValue,
 			})
 		}
+		itemGroupCodeName := data.Get("item_group").String()
+
 		itemList = append(itemList, &item.ItemInfo{
 			Branch:             data.Get("custom_branch").String(),
 			Company:            data.Get("custom_company").String(),
@@ -200,6 +202,7 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 			ValuationRate:      itemInfo.ValuationRate,
 			OpeningStock:       itemInfo.OpeningStock,
 			Attributes:         attrList,
+			ItemGroupName:      itemGroupCodeName,
 		})
 	}
 
@@ -698,10 +701,7 @@ func (s *sItem) GetItemStock(ctx context.Context, req *item.GetItemStockReq) (re
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析物品库存响应失败")
-	}
+	j := resp
 
 	// 转换为物品库存列表
 	dataArray := j.GetJsons("message.result")
@@ -749,10 +749,7 @@ func (s *sItem) GetItem(ctx context.Context, req *item.GetItemReq) (res *erp.Ite
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析物品信息响应失败")
-	}
+	j := resp
 	itemInfo := &erp.Item{}
 	gconv.Structs(j.GetJson("data"), &itemInfo)
 
@@ -826,10 +823,7 @@ func (s *sItem) CreateSingleVariantItem(ctx context.Context, req *erp.CreateSing
 		return itemCode, gerror.Wrapf(err, "创建物品规格失败")
 	}
 	// 解析结果
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return itemCode, gerror.Wrapf(err, "解析创建物品规格失败")
-	}
+	j := resp
 	itemInfo := &erp.Item{}
 	j.GetJson("data").Scan(&itemInfo)
 	itemInfo.CustomInternalCode = req.InternalCode

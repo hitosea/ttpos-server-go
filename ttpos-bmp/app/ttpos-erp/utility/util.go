@@ -5,6 +5,8 @@ import (
 	"ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/utility/uuid"
+
+	"github.com/gogf/gf/v2/text/gstr"
 )
 
 func GenItemCode(prefix string) string {
@@ -13,6 +15,15 @@ func GenItemCode(prefix string) string {
 
 // ParseItemGroupFromString  从字符串解析物品分组枚举
 func ParseItemGroupFromString(itemGroupStr string) item.ItemGroup {
+
+	//特殊处理属性组和加料组
+	if gstr.Pos(itemGroupStr, consts.ItemGroupPrefixPosAttributeGroup) > -1 {
+		return item.ItemGroup_PosAttribute
+	}
+	if gstr.Pos(itemGroupStr, consts.ItemGroupPrefixPosAddonGroup) > -1 {
+		return item.ItemGroup_PosAddon
+	}
+
 	switch itemGroupStr {
 	case string(consts.ItemGroupProducts):
 		return item.ItemGroup_Products

@@ -31,9 +31,9 @@ func init() {
 	service.RegisterRpc(Rpc)
 }
 
-func (s *sRpc) Execute(ctx context.Context, req *erp.ErpReq, params interface{}) (rst *g.Var, err error) {
-	rst = GetClient(ctx).PostVar(ctx, fmt.Sprintf("%s%s", getRpcUrlWithName(req), req.Method), params)
-	err = detectError(rst)
+func (s *sRpc) Execute(ctx context.Context, req *erp.ErpReq, params interface{}) (rst *gjson.Json, err error) {
+	resp := GetClient(ctx).PostVar(ctx, fmt.Sprintf("%s%s", getRpcUrlWithName(req), req.Method), params)
+	rst, err = detectError(resp)
 	return
 }
 
@@ -90,14 +90,14 @@ func GetClient(ctx context.Context) *gclient.Client {
 	return c
 }
 
-func detectError(resp *gvar.Var) error {
+func detectError(resp *gvar.Var) (*gjson.Json, error) {
 	if resp == nil || resp.IsEmpty() {
-		return gerror.New("调用erp接口返回空")
+		return nil, gerror.New("调用erp接口返回空")
 	} else {
 		if j, err := gjson.DecodeToJson(resp); err == nil {
 			if j.Contains("exc_type") {
 				g.Log().Errorf(gctx.GetInitCtx(), "调用erp接口返回异常: %v", j)
-				return gerror.Newf("调用erp接口返回异常,exc_type:%s,exception:%s", j.Get("exc_type").String(), j.Get("exception").String())
+				return nil, gerror.Newf("调用erp接口返回异常,exc_type:%s,exception:%s", j.Get("exc_type").String(), j.Get("exception").String())
 			}
 			if j.Contains("errors") {
 				g.Log().Errorf(gctx.GetInitCtx(), "调用erp接口返回异常: %v", j)
@@ -112,15 +112,15 @@ func detectError(resp *gvar.Var) error {
 						errMsgList = append(errMsgList, errItem.Get("exception").String())
 					}
 				}
-				return gerror.Newf("调用erp接口返回异常:%s", strings.Join(errMsgList, ";"))
+				return nil, gerror.Newf("调用erp接口返回异常:%s", strings.Join(errMsgList, ";"))
 			}
+			// 成功时返回解析后的JSON数据
+			return j, nil
 		} else {
 			g.Log().Errorf(gctx.GetInitCtx(), "调用erp接口返回解析异常: %v", err)
-			return gerror.Wrapf(err, "调用erp接口返回解析异常")
+			return nil, gerror.Wrapf(err, "调用erp接口返回解析异常")
 		}
 	}
-
-	return nil
 }
 
 func SetFakeUser(ctx context.Context, userEmail string) context.Context {

@@ -88,10 +88,7 @@ func (s *sStock) queryAttributeList(ctx context.Context, filters [][]string, req
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析属性列表响应失败")
-	}
+	j := resp
 
 	// 转换为属性信息列表
 	attributeList := make([]*item.AttributeInfo, 0)
@@ -158,10 +155,7 @@ func (s *sStock) GetAttributeValuesList(ctx context.Context, attributeName strin
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析属性值响应失败")
-	}
+	j := resp
 
 	// 转换为属性值信息列表
 	attributeValueList := make([]*item.AttributeValueInfo, 0)
@@ -321,10 +315,7 @@ func (s *sStock) CreateMaterialRequest(ctx context.Context, req *stock.SaveMater
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建物料请求失败")
 	}
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, err
-	}
+	j := resp
 	if j.Contains("data") {
 		//创建后提交
 		//提交采购订单
@@ -365,10 +356,7 @@ func (s *sStock) GetMaterialRequestList(ctx context.Context, req *stock.GetMater
 	if err != nil {
 		return nil, gerror.Wrapf(err, "查询物料请求列表失败")
 	}
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, err
-	}
+	j := resp
 	res = &stock.GetMaterialRequestListResp{
 		MaterialRequestList: make([]*stock.MaterialRequest, 0),
 	}
@@ -404,10 +392,7 @@ func (s *sStock) GetItemAttribute(ctx context.Context, attributeName string) (re
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析属性信息响应失败")
-	}
+	j := resp
 
 	// 转换为属性信息结构体
 	itemAttribute := &erp.ItemAttribute{}
@@ -499,10 +484,7 @@ func (s *sStock) queryStockLedgerList(ctx context.Context, companyName string, r
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析库存分类账响应失败")
-	}
+	j := resp
 
 	// 转换为库存分类账列表
 	dataArray := j.GetJsons("message.result")

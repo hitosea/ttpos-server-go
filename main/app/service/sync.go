@@ -201,12 +201,13 @@ func (s *SyncSrv) executeSync(ctx context.Context, syncTask *model.SyncTask, all
 	defer func() {
 		var isPanicOccurred bool
 		if r := recover(); r != nil {
-			// 记录panic信息，增加堆栈
-			logger.Logger.Error("同步任务发生panic", zap.Uint64("companyUuid", companyUuid), zap.Any("panic", r), zap.String("stack", string(debug.Stack())))
+			// 获取堆栈
+			stack := string(debug.Stack())
+			logger.Logger.Error("同步任务发生panic", zap.Uint64("companyUuid", companyUuid), zap.Any("panic", r), zap.String("stack", stack))
 			// 更新任务状态为失败
 			syncTaskRepo.Update(syncTask.Uuid, map[string]any{
 				"status":   constant.SyncTaskStatusFailed,
-				"panic":    fmt.Sprintf("%v", r),
+				"panic":    fmt.Sprintf("%v: %s", r, stack),
 				"end_time": time.Now().Unix(),
 			})
 			isPanicOccurred = true

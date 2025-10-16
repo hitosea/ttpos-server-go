@@ -790,6 +790,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 			}
 		}
 		var insertingWarehouses []model.Warehouse
+		var defaultWarehouseErpCode string
 		for _, erpWarehouse := range warehouseList {
 			warehouse := warehouseMap[erpWarehouse.Name]
 			contact := warehouse.Contact
@@ -801,15 +802,17 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 			}
 			var code string
 			isDefault := warehouse.IsDefault
-			if erpWarehouse.CompanyAbbr == companySetting.ErpnextCompanyAbbr {
-				if strings.Contains(erpWarehouse.Name, constant.NormalWarehouseCodeContains) {
-					code = constant.NormalWarehouseCode
-					if !existsDefaultWarehouse {
-						isDefault = 1
-					}
-				} else if strings.Contains(erpWarehouse.Name, constant.TransitWarehouseCodeContains) {
-					code = constant.TransitWarehouseCode
+			if strings.Contains(erpWarehouse.Name, constant.NormalWarehouseCodeContains) {
+				code = constant.NormalWarehouseCode
+				if !existsDefaultWarehouse {
+					isDefault = 1
 				}
+			} else if strings.Contains(erpWarehouse.Name, constant.TransitWarehouseCodeContains) {
+				code = constant.TransitWarehouseCode
+			}
+			// 默认仓库erp_code
+			if isDefault == 1 {
+				defaultWarehouseErpCode = erpWarehouse.Name
 			}
 
 			var warehouseType string
@@ -941,6 +944,12 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 			if err != nil {
 				return errors.WithMessage(err, "同步子店erp仓库或总部仓库失败")
 			}
+		}
+		// 更新所有物品的warehouse_uuid为默认仓库Uuid
+		var defaultWarehouse model.Warehouse
+		tx.Model(&model.Warehouse{}).Where("erp_code = ?", defaultWarehouseErpCode).Scopes(repository.NotDeleted).Find(&defaultWarehouse)
+		if err := tx.Model(&model.Material{}).Where("id > 0").Update("warehouse_uuid", defaultWarehouse.Uuid).Error; err != nil {
+			return errors.WithMessage(errors.New("更新所有物品的warehouse_uuid为默认仓库Uuid失败"), err.Error())
 		}
 		return nil
 	})

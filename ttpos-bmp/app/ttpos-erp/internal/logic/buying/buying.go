@@ -7,7 +7,6 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
-	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/util/gconv"
@@ -38,12 +37,12 @@ func (s *sBuying) CreatePurchaseFromMq(ctx context.Context, req *dto.CreatePurch
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析采购订单响应失败")
 	}
 	purchaseOrder := &erp.PurchaseOrder{}
-	j.Get("data").Scan(purchaseOrder)
+	j.GetJson("data").Scan(purchaseOrder)
 	//修改货币类型
 	purchaseOrder.Currency = purchaseOrder.PriceListCurrency
 	purchaseOrder.Supplier = req.Supplier
@@ -57,10 +56,7 @@ func (s *sBuying) CreatePurchaseFromMq(ctx context.Context, req *dto.CreatePurch
 	}
 
 	// 解析响应数据
-	j, err = gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析采购订单响应失败")
-	}
+	j = resp
 	res = &erp.PurchaseOrder{}
 	gconv.Scan(purchaseOrder, res)
 	res.Name = j.Get("data.name").String()
@@ -86,12 +82,12 @@ func (*sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req *
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析采购订单响应失败")
 	}
 	salesOrder := &erp.SaleOrder{}
-	j.Get("data").Scan(salesOrder)
+	j.GetJson("data").Scan(salesOrder)
 	// 发货时间
 	salesOrder.DeliveryDate = req.DeliveryDate
 	for _, item := range salesOrder.Items {
@@ -116,11 +112,8 @@ func (*sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req *
 	}
 
 	// 解析响应数据
-	j, err = gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析内部销售订单响应失败")
-	}
-	j.Get("data").Scan(salesOrder)
+	j = resp
+	j.GetJson("data").Scan(salesOrder)
 
 	// 提交订单
 	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeSaleOrder, salesOrder.Name, erp.DocstatusSubmitted)
@@ -142,12 +135,12 @@ func (*sBuying) CreateDeliveryNoteFromInnerSaleOrder(ctx context.Context, req *d
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析发货单响应失败")
 	}
 	deliveryNote := &erp.DeliveryNote{}
-	j.Get("data").Scan(&deliveryNote)
+	j.GetJson("data").Scan(&deliveryNote)
 
 	deliveryNote.SetWarehouse = req.SourceWarehouse
 	deliveryNote.SetTargetWarehouse = req.TargetWarehouse
@@ -157,7 +150,7 @@ func (*sBuying) CreateDeliveryNoteFromInnerSaleOrder(ctx context.Context, req *d
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建发货单失败")
 	}
-	j.Get("data").Scan(&deliveryNote)
+	j.GetJson("data").Scan(&deliveryNote)
 
 	// 提交发货单
 	//_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeDeliveryNote, deliveryNote.Name, erp.DocstatusSubmitted)
@@ -179,11 +172,11 @@ func (*sBuying) GetPurchaseOrder(ctx context.Context, req *buying.GetPurchaseOrd
 	}
 	purchaseOrder := &erp.PurchaseOrder{}
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析采购订单响应失败")
 	}
-	j.Get("data").Scan(purchaseOrder)
+	j.GetJson("data").Scan(purchaseOrder)
 	return purchaseOrder, nil
 }
 
@@ -200,13 +193,13 @@ func (*sBuying) CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析采购订单响应失败")
 	}
 
 	receipt := &erp.PurchaseReceipt{}
-	j.Get("data").Scan(receipt)
+	j.GetJson("data").Scan(receipt)
 
 	//根据入参调整item
 	receiptItems := make([]erp.PurchaseReceiptItem, 0)
@@ -228,11 +221,8 @@ func (*sBuying) CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.
 	}
 
 	// 解析响应数据
-	j, err = gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析采购收货订单响应失败")
-	}
-	j.Get("data").Scan(receipt)
+	j = resp
+	j.GetJson("data").Scan(receipt)
 
 	// 提交订单
 	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePurchaseReceipt, receipt.Name, erp.DocstatusSubmitted)
@@ -282,7 +272,7 @@ func (s *sBuying) GetPurchaseOrderList(ctx context.Context, req *buying.GetPurch
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析采购订单列表响应失败")
 	}
