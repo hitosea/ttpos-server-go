@@ -1290,17 +1290,20 @@ func (s *productSrv) DeleteProductShop(ctx context.Context, request req.ProductS
 		if ctx.GetCompany().IsOpenErp() {
 			erpSrv := erp.NewIErpSrv(s.dbm)
 			if !product.IsPackage() {
-				if err := erpSrv.SetProductForSale(ctx, erp.SetProductForSaleReq{
+				if err := erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
 					ItemCode:   product.ErpCode,
 					NotForSale: true,
+					Disabled:   product.Status == constant.ProductStatusOffSale,
 				}); err != nil {
 					return errors.WithMessage(err, "设置商品模板禁售失败")
 				}
 				for _, productBom := range product.ProductBoms {
 					if productBom.IsFlavor() {
-						if err := erpSrv.SetProductForSale(ctx, erp.SetProductForSaleReq{
-							ItemCode:   productBom.ErpCode,
-							NotForSale: true,
+						if err := erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
+							ItemCode:     productBom.ErpCode,
+							NotForSale:   true,
+							InternalCode: productBom.InternalCode,
+							Disabled:     product.Status == constant.ProductStatusOffSale,
 						}); err != nil {
 							return errors.WithMessage(err, "设置商品规格禁售失败")
 						}
@@ -6218,7 +6221,7 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 					return errors.WithMessage(err, "获取商品bom失败")
 				}
 				erpSrv := erp.NewIErpSrv(s.dbm)
-				if errErp := erpSrv.SetProductForSale(ctx, erp.SetProductForSaleReq{
+				if errErp := erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
 					ItemCode:   productBom.ErpCode,
 					NotForSale: true,
 				}); errErp != nil {
@@ -6227,6 +6230,8 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 			}
 		} else {
 			if flavor.BomUuid == 0 {
+				var isAdd bool
+				var flavorUuid uint64
 				erpCode := ""
 				if params.FlavorListResult.IsPackage {
 					// 同步套餐到erp
@@ -6280,42 +6285,89 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 				} else {
 					// 同步商品到erp
 					if ctx.GetCompany().IsOpenErp() {
-						// 获取商品包信息
 						erpSrv := erp.NewIErpSrv(s.dbm)
-						itemInfo, errErp := erpSrv.AddProductBom(ctx, req.ProductBomAddErpReq{
-							VariantsOf:   params.TemplateItemCode,
-							InternalCode: flavor.InternalCode,
-							Flavors: []req.Flavor{
-								{
-									Name:  flavor.ErpnextGroupName,
-									Value: flavor.ErpnextValueName,
-								},
-							},
-						})
-						if errErp != nil {
-							return errors.WithMessage(errErp, "同步商品bom到erp失败")
+						bom, err := productBomRepo.GetProductBom(
+							commonRepo.WhereByProductPackageUuid(params.ProductPackageUuid),
+							commonRepo.WhereByProductFlavorUuid(flavor.Uuid),
+						)
+						if err != nil || bom.Uuid == 0 {
+							isAdd = true
 						}
-						erpCode = itemInfo.ItemCode
+						if isAdd {
+							// 获取商品包信息
+							itemInfo, errErp := erpSrv.AddProductBom(ctx, req.ProductBomAddErpReq{
+								VariantsOf:   params.TemplateItemCode,
+								InternalCode: flavor.InternalCode,
+								Flavors: []req.Flavor{
+									{
+										Name:  flavor.ErpnextGroupName,
+										Value: flavor.ErpnextValueName,
+									},
+								},
+							})
+							if errErp != nil {
+								return errors.WithMessage(errErp, "同步商品bom到erp失败")
+							}
+							erpCode = itemInfo.ItemCode
+						} else {
+							errErp := erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
+								ItemCode:     bom.ErpCode,
+								InternalCode: flavor.InternalCode,
+								Disabled:     bom.Status == constant.ProductStatusOffSale,
+								Attributes: []erp.UpdateProductFlavor{
+									{
+										Name:  flavor.ErpnextGroupName,
+										Value: flavor.ErpnextValueName,
+									},
+								},
+							})
+							if errErp != nil {
+								return errors.WithMessage(errErp, "更新商品bom到erp失败")
+							}
+							erpCode = bom.ErpCode
+							flavorUuid = bom.Uuid
+						}
+
 					}
 				}
-				flavorUuid, _ := utils.GetID()
-				_, err := productBomRepo.CreateProductBom(model.ProductBom{
-					BaseModel: model.BaseModel{
-						Uuid: flavorUuid,
-					},
-					Price:              flavor.Price,
-					Name:               flavor.Name,
-					ErpCode:            erpCode,
-					ProductFlavorUuid:  flavor.Uuid,
-					ProductPackageUuid: params.ProductPackageUuid,
-					StockNum:           params.FlavorListResult.StockNum,
-					BarcodeValue:       flavor.BarcodeValue,
-					InternalCode:       flavor.InternalCode,
-					Status:             params.FlavorListResult.Status,
-					IsOpenStock:        1,
-				})
-				if err != nil {
-					return errors.WithMessage(err, "保存商品bom失败")
+
+				if isAdd {
+					flavorUuid, _ = utils.GetID()
+					_, err := productBomRepo.CreateProductBom(model.ProductBom{
+						BaseModel: model.BaseModel{
+							Uuid: flavorUuid,
+						},
+						Price:              flavor.Price,
+						Name:               flavor.Name,
+						ErpCode:            erpCode,
+						ProductFlavorUuid:  flavor.Uuid,
+						ProductPackageUuid: params.ProductPackageUuid,
+						StockNum:           params.FlavorListResult.StockNum,
+						BarcodeValue:       flavor.BarcodeValue,
+						InternalCode:       flavor.InternalCode,
+						Status:             params.FlavorListResult.Status,
+						IsOpenStock:        1,
+					})
+					if err != nil {
+						return errors.WithMessage(err, "保存商品bom失败")
+					}
+				} else {
+					err = productBomRepo.UpdateProductBom(map[string]any{
+						"price":                flavor.Price,
+						"name":                 flavor.Name,
+						"erp_code":             erpCode,
+						"product_flavor_uuid":  flavor.Uuid,
+						"product_package_uuid": params.ProductPackageUuid,
+						"stock_num":            params.FlavorListResult.StockNum,
+						"barcode_value":        flavor.BarcodeValue,
+						"internal_code":        flavor.InternalCode,
+						"status":               params.FlavorListResult.Status,
+						"is_open_stock":        1,
+						"delete_time":          0,
+					}, commonRepo.WhereByUuid(flavorUuid))
+					if err != nil {
+						return errors.WithMessage(err, "更新商品bom失败")
+					}
 				}
 				// 开启库存管理
 				if setting.SaleStock == 1 {
