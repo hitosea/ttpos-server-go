@@ -248,7 +248,7 @@ func (r *H5OrderRepoImpl) GetH5OrderDetail(h5OrderUuid uint64, isNeedAudit bool)
 				Query: "SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.MultiLanguageName",
 			},
 			WithPreload{
-				Query: "SaleOrderProducts.SaleOrderProductBoms.ProductBom.FlavorMaterials",
+				Query: "SaleOrderProducts.SaleOrderProductBoms.ProductBom.FlavorMaterials.Material",
 			},
 			WithPreload{
 				Query: "SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.SauceMaterials",
