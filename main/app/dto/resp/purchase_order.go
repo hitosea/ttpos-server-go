@@ -48,6 +48,7 @@ type PurchaseOrderItemInfo struct {
 	UnitConversionRate float64            `json:"unit_conversion_rate"`  // 基准单位转换率
 	BaseUnitName       string             `json:"base_unit_name"`        // 基准单位名称
 	LocaleBaseUnitName dto.LocaleResponse `json:"locale_base_unit_name"` // 基准单位名称
+	InternalCode       string             `json:"internal_code"`         // 内部编码
 }
 
 // PurchaseOrderLogInfo 采购订单操作日志信息

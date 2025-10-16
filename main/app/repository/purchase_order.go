@@ -311,7 +311,7 @@ func (r *PurchaseOrderRepoImpl) WhereUuidIn(uuidIn []uint64) DBOption {
 // WithItems 预加载明细
 func (r *PurchaseOrderRepoImpl) WithItems() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("Items", func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Items.Material", func(db *gorm.DB) *gorm.DB {
 			return db.Order("create_time ASC")
 		})
 	}
