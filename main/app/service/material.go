@@ -2919,7 +2919,7 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
 
 	db := ctx.GetDB()
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-		// 获取子店中来自总部的成本卡列表
+		// 获取ttpos的成本卡列表
 		headquarterProductBomCardList, err := repository.NewProductBomCardRepo(tx).GetSubShopProductBomCardList(ctx.GetCompanySetting().HeadquarterUuid)
 		if err != nil {
 			return errors.WithMessage(err, "获取子店中来自总部的成本卡列表失败")
@@ -2931,10 +2931,10 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
 		}
 		needCreateProductBomCardList := s.getNeedCreateProductBomCardList(headquarterProductBomCardMap, erpBoms)
 
-		// 需要新建的成本卡列表。总部有，而子店没有时
-		needCreate := needCreateProductBomCardList.CreateBoms // 这些成本卡来自两种场景：1. 总部未还没有成本卡的商品添加成本卡；2. 总部为已经添加成本卡的商品修改成本卡
-		// 需要失效的成本卡列表。总部没有，而子店有时
-		needDisable := needCreateProductBomCardList.DisableBoms // 这些成本卡来自两种场景：1. 总部为已经添加成本卡的商品删除成本卡
+		// 需要新建的成本卡列表。erpnext有，而ttpos没有时
+		needCreate := needCreateProductBomCardList.CreateBoms // 这些成本卡来自两种场景：1. erpnext为还没有成本卡的商品添加成本卡；2. erpnext为已经添加成本卡的商品修改成本卡
+		// 需要失效的成本卡列表。erpnext没有，而ttpos有时
+		needDisable := needCreateProductBomCardList.DisableBoms // 这些成本卡来自1种场景：1. erpnext为已经添加成本卡的商品删除成本卡
 		for _, bom := range needCreate {
 			if err := s.createProductBomCardByErpBom(ctx, tx, bom); err != nil {
 				if strings.Contains(err.Error(), "物品或加料不存在") || strings.Contains(err.Error(), "单位不存在") {
@@ -3117,16 +3117,16 @@ func (s *materialSrv) getNeedCreateProductBomCardList(headquarterProductBomCardM
 	exsitProductBomCardList := []*model.ProductBomCard{}
 	for _, bom := range erpBoms {
 		if _, ok := headquarterProductBomCardMap[bom.ItemCode]; !ok {
-			// 需要新建的成本卡。总部有，而子店没有
+			// 需要新建的成本卡。erpnext有，而ttpos没有
 			createBoms = append(createBoms, bom)
 		} else {
-			// 总部有，子店也有。无需处理
+			// erpnext有，ttpos也有。无需处理
 			exsitProductBomCardList = append(exsitProductBomCardList, headquarterProductBomCardMap[bom.ItemCode])
 			delete(headquarterProductBomCardMap, bom.ItemCode)
 		}
 	}
 
-	// 需要失效的成本卡。总部没有，而子店有时
+	// 需要失效的成本卡。erpnext没有，而ttpos有时
 	disableBoms := []*model.ProductBomCard{}
 	for _, productBomCard := range headquarterProductBomCardMap {
 		disableBoms = append(disableBoms, productBomCard)
