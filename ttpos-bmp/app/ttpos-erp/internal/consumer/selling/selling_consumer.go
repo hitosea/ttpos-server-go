@@ -266,6 +266,13 @@ func (*CancelPosInvoice) Handle(ctx context.Context, mqMsg queue.MqMsg) (err err
 				}
 			}
 		}
+		//更新原下单发票记录
+		_, err = dao.ReceivePosInvoice.Ctx(ctx).WherePri(receivePosInvoice.Id).Update(do.ReceivePosInvoice{
+			Docstatus: erp.DocstatusCancelled,
+		})
+		if err != nil {
+			return gerror.Wrapf(err, "取消发票失败，更新原下单发票记录失败")
+		}
 		if _, err := cancelDao.Data(do.ReceiveCancelPosInvoice{
 			Docstatus: erp.DocstatusSubmitted,
 		}).Update(); err != nil {
