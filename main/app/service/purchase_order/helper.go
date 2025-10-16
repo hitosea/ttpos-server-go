@@ -695,9 +695,9 @@ func (h *purchaseOrderHelper) handleErpError(ctx context.Context, err error) err
 	if strings.Contains(err.Error(), "before Transaction Date") {
 		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, i18n.Translate(ctx.GetLanguage(), "期望到货日期不能小于今天"))
 	}
-	// 检查期望到货日期
+	// 检查单位是否为整数
 	if strings.Contains(err.Error(), "Must be Whole Number") {
-		itemName := h.extractName("UOM<strong>", "</strong>", err.Error())
+		itemName := h.extractName("UOM <strong>", "</strong>", err.Error())
 		if itemName != "" {
 			return errors.NewWithCode(
 				constant.CodePurchaseOrderSupplierDisabled,
