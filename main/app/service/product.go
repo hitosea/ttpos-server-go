@@ -2928,7 +2928,7 @@ func (s *productSrv) GetProductFlavor(ctx context.Context, flavorReq req.Product
 
 // AddProductAttributeGroup 添加商品属性组
 func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.ProductAttributeGroupAddReq) error {
-	companySetting := ctx.GetCompanySetting()
+	// companySetting := ctx.GetCompanySetting()
 	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
 	if !addReq.LocaleName.CheckRequiredLocale(storeLanguages) {
 		return errors.New("属性组名称不能为空")
@@ -3072,53 +3072,53 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 		return errors.WithMessage(errors.New("添加属性组失败"), err.Error())
 	}
 
-	company := ctx.GetCompany()
+	// company := ctx.GetCompany()
 	// 开启了ERP，并且是TTPOS站点，同步到ERPNext
 	// v2.7 本任务不从ERP同步属性跟加料以及TTPOS添加修改之后不同步到ERP，子店同步时，从ttpos的总部获取数据
-	if company.IsOpenErp() {
-		attributeValueList := []req.SaveAttributeValueReq{}
-		uuidErpValueNameMap := make(map[uint64]string)
-		for attributeUuid, locale := range uuidLocaleMap {
-			enValueName, err := s.getEnName(ctx, locale)
-			if err != nil {
-				return errors.WithMessage(errors.New("翻译失败"), err.Error())
-			}
-			erpValueName := company.Name + "-" + enValueName
-			uuidErpValueNameMap[attributeUuid] = erpValueName
-			attributeValueList = append(attributeValueList, req.SaveAttributeValueReq{
-				AttributeValue: erpValueName,
-				Abbr:           enValueName,
-			})
-		}
-		enGroupName, err := s.getEnName(ctx, addReq.LocaleName)
-		if err != nil {
-			return errors.WithMessage(errors.New("翻译失败"), err.Error())
-		}
-		erpGroupName := company.Name + "-" + enGroupName
-		err = erp.NewIErpSrv(s.dbm).SaveAttribute(ctx.GetContext(), req.SaveAttributeReq{
-			SiteCode:           companySetting.ErpnextSiteCode,
-			CompanyAbbr:        companySetting.ErpnextCompanyAbbr,
-			Branch:             companySetting.ErpnextBranchName,
-			AttributeName:      erpGroupName,
-			AliasName:          enGroupName,
-			AttributeValueList: attributeValueList,
-		})
-		if err != nil {
-			return errors.WithMessage(errors.New("同步属性组到erp失败"), err.Error())
-		}
-		// 保存属性组 erpnext_attribute_group_name
-		err = db.Model(&model.ProductAttributeGroup{}).Where("uuid = ?", productAttributeGroup.Uuid).Update("erpnext_attribute_group_name", erpGroupName).Error
-		if err != nil {
-			return errors.WithMessage(errors.New("保存erp属性组失败"), err.Error())
-		}
-		// 保存属性值 erpnext_attribute_value
-		for attributeUuid, erpValueName := range uuidErpValueNameMap {
-			err = db.Model(&model.ProductAttribute{}).Where("uuid = ?", attributeUuid).Update("erpnext_attribute_value", erpValueName).Error
-			if err != nil {
-				return errors.WithMessage(errors.New("保存erp属性值失败"), err.Error())
-			}
-		}
-	}
+	// if company.IsOpenErp() {
+	// 	attributeValueList := []req.SaveAttributeValueReq{}
+	// 	uuidErpValueNameMap := make(map[uint64]string)
+	// 	for attributeUuid, locale := range uuidLocaleMap {
+	// 		enValueName, err := s.getEnName(ctx, locale)
+	// 		if err != nil {
+	// 			return errors.WithMessage(errors.New("翻译失败"), err.Error())
+	// 		}
+	// 		erpValueName := company.Name + "-" + enValueName
+	// 		uuidErpValueNameMap[attributeUuid] = erpValueName
+	// 		attributeValueList = append(attributeValueList, req.SaveAttributeValueReq{
+	// 			AttributeValue: erpValueName,
+	// 			Abbr:           enValueName,
+	// 		})
+	// 	}
+	// 	enGroupName, err := s.getEnName(ctx, addReq.LocaleName)
+	// 	if err != nil {
+	// 		return errors.WithMessage(errors.New("翻译失败"), err.Error())
+	// 	}
+	// 	erpGroupName := company.Name + "-" + enGroupName
+	// 	err = erp.NewIErpSrv(s.dbm).SaveAttribute(ctx.GetContext(), req.SaveAttributeReq{
+	// 		SiteCode:           companySetting.ErpnextSiteCode,
+	// 		CompanyAbbr:        companySetting.ErpnextCompanyAbbr,
+	// 		Branch:             companySetting.ErpnextBranchName,
+	// 		AttributeName:      erpGroupName,
+	// 		AliasName:          enGroupName,
+	// 		AttributeValueList: attributeValueList,
+	// 	})
+	// 	if err != nil {
+	// 		return errors.WithMessage(errors.New("同步属性组到erp失败"), err.Error())
+	// 	}
+	// 	// 保存属性组 erpnext_attribute_group_name
+	// 	err = db.Model(&model.ProductAttributeGroup{}).Where("uuid = ?", productAttributeGroup.Uuid).Update("erpnext_attribute_group_name", erpGroupName).Error
+	// 	if err != nil {
+	// 		return errors.WithMessage(errors.New("保存erp属性组失败"), err.Error())
+	// 	}
+	// 	// 保存属性值 erpnext_attribute_value
+	// 	for attributeUuid, erpValueName := range uuidErpValueNameMap {
+	// 		err = db.Model(&model.ProductAttribute{}).Where("uuid = ?", attributeUuid).Update("erpnext_attribute_value", erpValueName).Error
+	// 		if err != nil {
+	// 			return errors.WithMessage(errors.New("保存erp属性值失败"), err.Error())
+	// 		}
+	// 	}
+	// }
 
 	return nil
 }
@@ -3387,7 +3387,7 @@ func (s *productSrv) UpdateProductFlavorErp(ctx context.Context, tx *gorm.DB) er
 
 // EditProductAttributeGroup 编辑商品属性组
 func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.ProductAttributeGroupEditReq) error {
-	companySetting := ctx.GetCompanySetting()
+	// companySetting := ctx.GetCompanySetting()
 	var relatedProductUuid bool
 	// 检查多语言
 	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
@@ -3676,53 +3676,53 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 		s.translateSrv.RemoveMultiLanguageNameUuidFromSet(ctx.GetCompanyUuid(), manualTranslatedUuids...)
 	}
 
-	company := ctx.GetCompany()
+	// company := ctx.GetCompany()
 	// 开启了ERP，并且是TTPOS站点，同步到ERPNext
 	// v2.7 本任务不从ERP同步属性跟加料以及TTPOS添加修改之后不同步到ERP，子店同步时，从ttpos的总部获取数据
-	if company.IsOpenErp() {
-		var valueList []req.SaveAttributeValueReq
-		uuidErpValueNameMap := make(map[uint64]string)
-		// 构建 valueList
-		for uuid, locale := range uuidLocaleMap {
-			enValueName, err := s.getEnName(ctx, locale)
-			if err != nil {
-				return errors.WithMessage(errors.New("翻译失败"), err.Error())
-			}
-			var erpValueName string
-			if v, ok := uuidAttributeMap[uuid]; !ok || v.ErpnextAttributeValue == "" { // 新增属性值，或erpnext_attribute_value为空
-				erpValueName = company.Name + "-" + enValueName
-				uuidErpValueNameMap[uuid] = erpValueName
-			} else { // 已存在属性值，且erpnext_attribute_value不为空，则使用旧值
-				erpValueName = v.ErpnextAttributeValue
-			}
-			valueList = append(valueList, req.SaveAttributeValueReq{
-				AttributeValue: erpValueName,
-				Abbr:           enValueName, // 总是获取最新别名
-			})
-		}
-		// 新属性组别名
-		enGroupName, err := s.getEnName(ctx, editReq.LocaleName)
-		if err != nil {
-			return errors.WithMessage(errors.New("翻译失败"), err.Error())
-		}
-		err = erp.NewIErpSrv(s.dbm).SaveAttribute(ctx.GetContext(), req.SaveAttributeReq{
-			SiteCode:           companySetting.ErpnextSiteCode,
-			CompanyAbbr:        companySetting.ErpnextCompanyAbbr,
-			Branch:             companySetting.ErpnextBranchName,
-			AttributeName:      attributeGroup.ErpnextAttributeGroupName,
-			AliasName:          enGroupName,
-			AttributeValueList: valueList,
-		})
-		if err != nil {
-			return errors.WithMessage(errors.New("同步属性值到erp失败"), err.Error())
-		}
-		for uuid, erpValueName := range uuidErpValueNameMap {
-			err = db.Model(&model.ProductAttribute{}).Where("uuid = ?", uuid).Update("erpnext_attribute_value", erpValueName).Error
-			if err != nil {
-				return errors.WithMessage(errors.New("保存erp属性值失败"), err.Error())
-			}
-		}
-	}
+	// if company.IsOpenErp() {
+	// 	var valueList []req.SaveAttributeValueReq
+	// 	uuidErpValueNameMap := make(map[uint64]string)
+	// 	// 构建 valueList
+	// 	for uuid, locale := range uuidLocaleMap {
+	// 		enValueName, err := s.getEnName(ctx, locale)
+	// 		if err != nil {
+	// 			return errors.WithMessage(errors.New("翻译失败"), err.Error())
+	// 		}
+	// 		var erpValueName string
+	// 		if v, ok := uuidAttributeMap[uuid]; !ok || v.ErpnextAttributeValue == "" { // 新增属性值，或erpnext_attribute_value为空
+	// 			erpValueName = company.Name + "-" + enValueName
+	// 			uuidErpValueNameMap[uuid] = erpValueName
+	// 		} else { // 已存在属性值，且erpnext_attribute_value不为空，则使用旧值
+	// 			erpValueName = v.ErpnextAttributeValue
+	// 		}
+	// 		valueList = append(valueList, req.SaveAttributeValueReq{
+	// 			AttributeValue: erpValueName,
+	// 			Abbr:           enValueName, // 总是获取最新别名
+	// 		})
+	// 	}
+	// 	// 新属性组别名
+	// 	enGroupName, err := s.getEnName(ctx, editReq.LocaleName)
+	// 	if err != nil {
+	// 		return errors.WithMessage(errors.New("翻译失败"), err.Error())
+	// 	}
+	// 	err = erp.NewIErpSrv(s.dbm).SaveAttribute(ctx.GetContext(), req.SaveAttributeReq{
+	// 		SiteCode:           companySetting.ErpnextSiteCode,
+	// 		CompanyAbbr:        companySetting.ErpnextCompanyAbbr,
+	// 		Branch:             companySetting.ErpnextBranchName,
+	// 		AttributeName:      attributeGroup.ErpnextAttributeGroupName,
+	// 		AliasName:          enGroupName,
+	// 		AttributeValueList: valueList,
+	// 	})
+	// 	if err != nil {
+	// 		return errors.WithMessage(errors.New("同步属性值到erp失败"), err.Error())
+	// 	}
+	// 	for uuid, erpValueName := range uuidErpValueNameMap {
+	// 		err = db.Model(&model.ProductAttribute{}).Where("uuid = ?", uuid).Update("erpnext_attribute_value", erpValueName).Error
+	// 		if err != nil {
+	// 			return errors.WithMessage(errors.New("保存erp属性值失败"), err.Error())
+	// 		}
+	// 	}
+	// }
 
 	return err
 }

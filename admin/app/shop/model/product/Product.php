@@ -298,7 +298,7 @@ class Product extends ProductModel
                 ProductPackageGroupModel::addPackageGroup($data, $this);
             } else if (isset($data['product_printer_uuids'])) {
                 // 验证商品打印机
-                if ($data['printer_tag_uuid'] == 0) {
+                if (empty($data['printer_tag_uuid'])) {
                     $isExistPrintProductSelect = Printing::where('uuid', 'in', $data['product_printer_uuids'])->where('print_product_select', 1)->count();
                     if ($isExistPrintProductSelect) {
                         $this->error = '未设置打印标签';

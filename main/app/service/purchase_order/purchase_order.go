@@ -241,7 +241,7 @@ func (s *purchaseOrderSrv) CreatePurchaseOrder(
 
 		// 生成订单编号
 		prefix := utils.IfString(req.PurchaseType == 2, "TPHY", "CSSQ")
-		orderNo := s.helper.generateOrderNo(tx, prefix)
+		orderNo := s.helper.generateOrderNo(tx, prefix, ctx.GetCompanySetting().Timezone)
 
 		// 获取仓库名称
 		warehouseName := ""

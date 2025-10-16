@@ -83,7 +83,7 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 
 		// 创建收货单
 		receiptOrder := &model.PurchaseReceiptOrder{
-			OrderNo:                s.helper.generateReceiptNo(tx),
+			OrderNo:                s.helper.generateReceiptNo(tx, ctx.GetCompanySetting().Timezone),
 			Status:                 utils.IfInt(req.IsConfirm, constant.ReceiptOrderStatusReceived, constant.ReceiptOrderStatusPending),
 			PurchaseOrderUuid:      req.PurchaseOrderUuid,
 			PurchaseOrderNo:        purchaseOrder.OrderNo,
