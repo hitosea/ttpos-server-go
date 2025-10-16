@@ -166,6 +166,7 @@ type IProductSrv interface {
 	SyncAttributeGroup(ctx context.Context) error        // 获取总部最新属性组数据
 	SyncProduct(ctx context.Context) error               // 同步商品
 	SyncProductStockByBomCard(ctx context.Context) error // 计算所有关联成本卡的商品的库存
+	SyncProductPackageImage(ctx context.Context) error   // 同步商品包图片
 }
 
 type productSrv struct {
@@ -8098,4 +8099,90 @@ func (s *productSrv) SyncProductStockByBomCard(ctx context.Context) error {
 		return errors.WithMessage(err, "计算商品库存失败")
 	}
 	return nil
+}
+
+// SyncProductPackageImage 同步商品包图片
+func (s *productSrv) SyncProductPackageImage(ctx context.Context) error {
+	company := ctx.GetCompany()
+	if !company.IsOpenErp() {
+		return errors.New("公司未开启erp")
+	}
+	companySetting := ctx.GetCompanySetting()
+	if !companySetting.IsSubShop() {
+		return nil
+	}
+	var files []model.File
+	var fileGroups []model.FileGroup
+	headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
+	fileUuidQuery := headquarterDb.Model(&model.ProductPackage{}).Where("image_file_uuid > 0").Select("image_file_uuid")
+	err := headquarterDb.Model(&model.File{}).Where("uuid in (?)", fileUuidQuery).Find(&files).Error
+	if err != nil {
+		return errors.WithMessage(errors.New("查询文件失败"), err.Error())
+	}
+	fileGroupUuidQuery := headquarterDb.Model(&model.File{}).Where("uuid in (?)", fileUuidQuery).Where("group_uuid > 0").Select("group_uuid")
+	err = headquarterDb.Model(&model.FileGroup{}).Where("uuid in (?)", fileGroupUuidQuery).Find(&fileGroups).Error
+	if err != nil {
+		return errors.WithMessage(err, "查询文件分组失败")
+	}
+	var newFiles []model.File
+	var newFileGroups []model.FileGroup
+	for _, file := range files {
+		newFiles = append(newFiles, model.File{
+			BaseModel: model.BaseModel{
+				Uuid:       file.Uuid,
+				CreateTime: file.CreateTime,
+				UpdateTime: file.UpdateTime,
+				DeleteTime: file.DeleteTime,
+			},
+			Storage:         file.Storage,
+			GroupUuid:       file.GroupUuid,
+			HeadquarterUuid: companySetting.HeadquarterUuid,
+			FileUrl:         file.FileUrl,
+			SaveName:        file.SaveName,
+			FileName:        file.FileName,
+			FileSize:        file.FileSize,
+			FileType:        file.FileType,
+			RealName:        file.RealName,
+			UrlParam:        file.UrlParam,
+			IndexFileName:   file.IndexFileName,
+			Extension:       file.Extension,
+			IsUser:          file.IsUser,
+			IsRecycle:       file.IsRecycle,
+		})
+	}
+	for _, fileGroup := range fileGroups {
+		newFileGroups = append(newFileGroups, model.FileGroup{
+			BaseModel: model.BaseModel{
+				Uuid:       fileGroup.Uuid,
+				CreateTime: fileGroup.CreateTime,
+				UpdateTime: fileGroup.UpdateTime,
+				DeleteTime: fileGroup.DeleteTime,
+			},
+			GroupType:       fileGroup.GroupType,
+			GroupName:       fileGroup.GroupName,
+			Sort:            fileGroup.Sort,
+			HeadquarterUuid: companySetting.HeadquarterUuid,
+		})
+	}
+	// 删除后迁移
+	err = s.dbm.GetDB(companySetting.CompanyUuid).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Delete(&model.File{}).Error; err != nil {
+			return errors.WithMessage(errors.New("删除总部文件失败"), err.Error())
+		}
+		if err := tx.Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Delete(&model.FileGroup{}).Error; err != nil {
+			return errors.WithMessage(errors.New("删除总部文件分组失败"), err.Error())
+		}
+		if len(newFiles) > 0 {
+			if err := tx.Create(&newFiles).Error; err != nil {
+				return errors.WithMessage(errors.New("同步总部文件失败"), err.Error())
+			}
+		}
+		if len(newFileGroups) > 0 {
+			if err := tx.Create(&newFileGroups).Error; err != nil {
+				return errors.WithMessage(errors.New("同步总部分组失败"), err.Error())
+			}
+		}
+		return nil
+	})
+	return err
 }

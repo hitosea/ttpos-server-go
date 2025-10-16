@@ -31,6 +31,7 @@ const (
 	SyncTaskTypeBomCard          = "bom_card"          // 成本卡
 	SyncTaskTypeSupplier         = "supplier"          // 供应商
 	SyncTaskTypeWarehouseStock   = "warehouse_stock"   // 仓库物品库存
+	SyncTaskTypePackageImage     = "package_image"     // 商品图片
 )
 
 // SyncTaskTypeNames 任务类型名称映射
@@ -49,4 +50,5 @@ var SyncTaskTypeNames = map[string]string{
 	SyncTaskTypeBomCard:          "成本卡",
 	SyncTaskTypeSupplier:         "供应商",
 	SyncTaskTypeWarehouseStock:   "仓库物品库存",
+	SyncTaskTypePackageImage:     "商品图片",
 }

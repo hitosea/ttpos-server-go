@@ -29664,6 +29664,10 @@ const docTemplate = `{
         "product_resp.ProductFlavorDetailResp": {
             "type": "object",
             "properties": {
+                "headquarter_uuid": {
+                    "description": "总部UUID,0表示不是总部商品",
+                    "type": "integer"
+                },
                 "locale_name": {
                     "description": "商品规格名称",
                     "allOf": [
@@ -29693,6 +29697,10 @@ const docTemplate = `{
         "product_resp.ProductFlavorItemResp": {
             "type": "object",
             "properties": {
+                "headquarter_uuid": {
+                    "description": "总部UUID,0表示不是总部商品",
+                    "type": "integer"
+                },
                 "name": {
                     "description": "商品规格名称",
                     "type": "string"
@@ -30653,6 +30661,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.LocaleResponse"
                         }
                     ]
+                },
+                "headquarter_uuid": {
+                    "description": "总部UUID,0表示不是总部商品",
+                    "type": "integer"
                 },
                 "internal_code": {
                     "description": "内部编码. 规格商品的内部编码",
