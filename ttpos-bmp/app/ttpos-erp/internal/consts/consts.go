@@ -21,13 +21,13 @@ const (
 	// ItemGroupRawMaterial 原材料
 	ItemGroupRawMaterial ItemGroup = "Raw Material"
 	// ItemGroupProducts 商品
-	ItemGroupProducts ItemGroup = "Products"
+	ItemGroupProducts ItemGroup = "CFG Products" // 2.7版本后使用 CFG Products 这个名字
 	// ItemGroupPosAttribute Pos系统中特殊的item ，如 属性/加料
 	ItemGroupPosAttribute ItemGroup = "Pos Attribute"
 	// ItemGroupPosAddon Pos系统中特殊的item ，如 加料
 	ItemGroupPosAddon ItemGroup = "Pos Addon"
 	// ItemGroupOthers 其他
-	ItemGroupOthers ItemGroup = ""
+	ItemGroupOthers ItemGroup = "Others"
 
 	ItemGroupPrefixPosAttributeGroup = "SXG" // 属性前缀
 	ItemGroupPrefixPosAddonGroup     = "JLG" // 属性前缀
