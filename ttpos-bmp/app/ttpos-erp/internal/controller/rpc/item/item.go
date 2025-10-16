@@ -207,8 +207,8 @@ func (c *Controller) GetItem(ctx context.Context, req *item.GetItemReq) (*api.Re
 	attrList := make([]*item.ItemAttribute, 0, len(itemInfo.Attributes))
 	for _, attr := range itemInfo.Attributes {
 		attrList = append(attrList, &item.ItemAttribute{
-			AttributeName:  attr.CustomAttributeName,  // 属性名称
-			AttributeValue: attr.CustomAttributeValue, // 属性值
+			AttributeName:  attr.Attribute,      // 属性名称
+			AttributeValue: attr.AttributeValue, // 属性值
 		})
 	}
 
@@ -223,7 +223,7 @@ func (c *Controller) GetItem(ctx context.Context, req *item.GetItemReq) (*api.Re
 		Branch:             itemInfo.CustomBranch,             // 分支机构
 		Company:            itemInfo.CustomCompany,            // 公司
 		ItemSpecification:  itemInfo.CustomSpecification,      // 物品规格
-		Disabled:           itemInfo.Disabled == 1,            // 是否禁用（数值型转布尔型）
+		Disabled:           itemInfo.Disabled,                 // 是否禁用（数值型转布尔型）
 		Classification:     itemInfo.CustomClassification,     // 分类
 		ClassificationCode: itemInfo.CustomClassificationCode, // 分类编码
 		InternalCode:       itemInfo.CustomInternalCode,       // 内部编码

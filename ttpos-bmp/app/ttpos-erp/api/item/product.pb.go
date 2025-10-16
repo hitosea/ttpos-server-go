@@ -23,28 +23,30 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type SetProductForSaleReq struct {
+type UpdateProductReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，必填"`          // 物品编码，必填
-	NotForSale    bool                   `protobuf:"varint,2,opt,name=not_for_sale,json=notForSale,proto3" json:"not_for_sale,omitempty" dc:"是否禁售，可选"` //是否禁售，可选
+	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，必填"`              // 物品编码，必填
+	NotForSale    bool                   `protobuf:"varint,2,opt,name=not_for_sale,json=notForSale,proto3" json:"not_for_sale,omitempty" dc:"是否禁售，可选"`     //是否禁售，可选
+	InternalCode  string                 `protobuf:"bytes,3,opt,name=internal_code,json=internalCode,proto3" json:"internal_code,omitempty" dc:"内部编码, 可选"` //内部编码, 可选
+	Disabled      bool                   `protobuf:"varint,4,opt,name=disabled,proto3" json:"disabled,omitempty" dc:"是否禁用，可选"`                             //是否禁用，可选
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SetProductForSaleReq) Reset() {
-	*x = SetProductForSaleReq{}
+func (x *UpdateProductReq) Reset() {
+	*x = UpdateProductReq{}
 	mi := &file_item_product_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SetProductForSaleReq) String() string {
+func (x *UpdateProductReq) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SetProductForSaleReq) ProtoMessage() {}
+func (*UpdateProductReq) ProtoMessage() {}
 
-func (x *SetProductForSaleReq) ProtoReflect() protoreflect.Message {
+func (x *UpdateProductReq) ProtoReflect() protoreflect.Message {
 	mi := &file_item_product_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -56,47 +58,63 @@ func (x *SetProductForSaleReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SetProductForSaleReq.ProtoReflect.Descriptor instead.
-func (*SetProductForSaleReq) Descriptor() ([]byte, []int) {
+// Deprecated: Use UpdateProductReq.ProtoReflect.Descriptor instead.
+func (*UpdateProductReq) Descriptor() ([]byte, []int) {
 	return file_item_product_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *SetProductForSaleReq) GetItemCode() string {
+func (x *UpdateProductReq) GetItemCode() string {
 	if x != nil {
 		return x.ItemCode
 	}
 	return ""
 }
 
-func (x *SetProductForSaleReq) GetNotForSale() bool {
+func (x *UpdateProductReq) GetNotForSale() bool {
 	if x != nil {
 		return x.NotForSale
 	}
 	return false
 }
 
-type SetProductForSaleResp struct {
+func (x *UpdateProductReq) GetInternalCode() string {
+	if x != nil {
+		return x.InternalCode
+	}
+	return ""
+}
+
+func (x *UpdateProductReq) GetDisabled() bool {
+	if x != nil {
+		return x.Disabled
+	}
+	return false
+}
+
+type UpdateProductResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，必填"`          // 物品编码，必填
-	NotForSale    bool                   `protobuf:"varint,2,opt,name=not_for_sale,json=notForSale,proto3" json:"not_for_sale,omitempty" dc:"是否禁售，可选"` //是否禁售，可选
+	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码，必填"`              // 物品编码，必填
+	NotForSale    bool                   `protobuf:"varint,2,opt,name=not_for_sale,json=notForSale,proto3" json:"not_for_sale,omitempty" dc:"是否禁售，可选"`     //是否禁售，可选
+	InternalCode  string                 `protobuf:"bytes,3,opt,name=internal_code,json=internalCode,proto3" json:"internal_code,omitempty" dc:"内部编码, 可选"` //内部编码, 可选
+	Disabled      bool                   `protobuf:"varint,4,opt,name=disabled,proto3" json:"disabled,omitempty" dc:"是否禁用，可选"`                             //是否禁用，可选
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SetProductForSaleResp) Reset() {
-	*x = SetProductForSaleResp{}
+func (x *UpdateProductResp) Reset() {
+	*x = UpdateProductResp{}
 	mi := &file_item_product_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SetProductForSaleResp) String() string {
+func (x *UpdateProductResp) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SetProductForSaleResp) ProtoMessage() {}
+func (*UpdateProductResp) ProtoMessage() {}
 
-func (x *SetProductForSaleResp) ProtoReflect() protoreflect.Message {
+func (x *UpdateProductResp) ProtoReflect() protoreflect.Message {
 	mi := &file_item_product_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -108,21 +126,35 @@ func (x *SetProductForSaleResp) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SetProductForSaleResp.ProtoReflect.Descriptor instead.
-func (*SetProductForSaleResp) Descriptor() ([]byte, []int) {
+// Deprecated: Use UpdateProductResp.ProtoReflect.Descriptor instead.
+func (*UpdateProductResp) Descriptor() ([]byte, []int) {
 	return file_item_product_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *SetProductForSaleResp) GetItemCode() string {
+func (x *UpdateProductResp) GetItemCode() string {
 	if x != nil {
 		return x.ItemCode
 	}
 	return ""
 }
 
-func (x *SetProductForSaleResp) GetNotForSale() bool {
+func (x *UpdateProductResp) GetNotForSale() bool {
 	if x != nil {
 		return x.NotForSale
+	}
+	return false
+}
+
+func (x *UpdateProductResp) GetInternalCode() string {
+	if x != nil {
+		return x.InternalCode
+	}
+	return ""
+}
+
+func (x *UpdateProductResp) GetDisabled() bool {
+	if x != nil {
+		return x.Disabled
 	}
 	return false
 }
@@ -131,17 +163,21 @@ var File_item_product_proto protoreflect.FileDescriptor
 
 const file_item_product_proto_rawDesc = "" +
 	"\n" +
-	"\x12item/product.proto\x12\x04item\x1a\terp.proto\"U\n" +
-	"\x14SetProductForSaleReq\x12\x1b\n" +
+	"\x12item/product.proto\x12\x04item\x1a\terp.proto\x1a\x0fitem/item.proto\"\x92\x01\n" +
+	"\x10UpdateProductReq\x12\x1b\n" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12 \n" +
 	"\fnot_for_sale\x18\x02 \x01(\bR\n" +
-	"notForSale\"V\n" +
-	"\x15SetProductForSaleResp\x12\x1b\n" +
+	"notForSale\x12#\n" +
+	"\rinternal_code\x18\x03 \x01(\tR\finternalCode\x12\x1a\n" +
+	"\bdisabled\x18\x04 \x01(\bR\bdisabled\"\x93\x01\n" +
+	"\x11UpdateProductResp\x12\x1b\n" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12 \n" +
 	"\fnot_for_sale\x18\x02 \x01(\bR\n" +
-	"notForSale2T\n" +
-	"\x0eProductService\x12B\n" +
-	"\x11SetProductForSale\x12\x1a.item.SetProductForSaleReq\x1a\x11.erp.ResponseInfoB\"Z ttpos-bmp/app/ttpos-erp/api/itemb\x06proto3"
+	"notForSale\x12#\n" +
+	"\rinternal_code\x18\x03 \x01(\tR\finternalCode\x12\x1a\n" +
+	"\bdisabled\x18\x04 \x01(\bR\bdisabled2L\n" +
+	"\x0eProductService\x12:\n" +
+	"\rUpdateProduct\x12\x16.item.UpdateProductReq\x1a\x11.erp.ResponseInfoB\"Z ttpos-bmp/app/ttpos-erp/api/itemb\x06proto3"
 
 var (
 	file_item_product_proto_rawDescOnce sync.Once
@@ -157,13 +193,13 @@ func file_item_product_proto_rawDescGZIP() []byte {
 
 var file_item_product_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_item_product_proto_goTypes = []any{
-	(*SetProductForSaleReq)(nil),  // 0: item.SetProductForSaleReq
-	(*SetProductForSaleResp)(nil), // 1: item.SetProductForSaleResp
-	(*api.ResponseInfo)(nil),      // 2: erp.ResponseInfo
+	(*UpdateProductReq)(nil),  // 0: item.UpdateProductReq
+	(*UpdateProductResp)(nil), // 1: item.UpdateProductResp
+	(*api.ResponseInfo)(nil),  // 2: erp.ResponseInfo
 }
 var file_item_product_proto_depIdxs = []int32{
-	0, // 0: item.ProductService.SetProductForSale:input_type -> item.SetProductForSaleReq
-	2, // 1: item.ProductService.SetProductForSale:output_type -> erp.ResponseInfo
+	0, // 0: item.ProductService.UpdateProduct:input_type -> item.UpdateProductReq
+	2, // 1: item.ProductService.UpdateProduct:output_type -> erp.ResponseInfo
 	1, // [1:2] is the sub-list for method output_type
 	0, // [0:1] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
@@ -176,6 +212,7 @@ func file_item_product_proto_init() {
 	if File_item_product_proto != nil {
 		return
 	}
+	file_item_item_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

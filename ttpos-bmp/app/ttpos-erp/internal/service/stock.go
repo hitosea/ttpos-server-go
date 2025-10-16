@@ -73,7 +73,7 @@ type (
 		SaveAddonGroup(ctx context.Context, req *item.SaveAddonGroupReq) (*item.SaveAddonGroupResp, error)
 	}
 	IProduct interface {
-		SetProductForSale(ctx context.Context, req *item.SetProductForSaleReq) (*item.SetProductForSaleResp, error)
+		UpdateProduct(ctx context.Context, req *item.UpdateProductReq) (*item.UpdateProductResp, error)
 	}
 	IStock interface {
 		// GetAttributeList 获取属性列表

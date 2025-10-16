@@ -21,7 +21,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ProductService_SetProductForSale_FullMethodName = "/item.ProductService/SetProductForSale"
+	ProductService_UpdateProduct_FullMethodName = "/item.ProductService/UpdateProduct"
 )
 
 // ProductServiceClient is the client API for ProductService service.
@@ -31,7 +31,7 @@ type ProductServiceClient interface {
 	// 设置物品是否禁售
 	// 参数：物品编码和是否禁售标志
 	// 返回：设置结果
-	SetProductForSale(ctx context.Context, in *SetProductForSaleReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	UpdateProduct(ctx context.Context, in *UpdateProductReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 }
 
 type productServiceClient struct {
@@ -42,10 +42,10 @@ func NewProductServiceClient(cc grpc.ClientConnInterface) ProductServiceClient {
 	return &productServiceClient{cc}
 }
 
-func (c *productServiceClient) SetProductForSale(ctx context.Context, in *SetProductForSaleReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+func (c *productServiceClient) UpdateProduct(ctx context.Context, in *UpdateProductReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(api.ResponseInfo)
-	err := c.cc.Invoke(ctx, ProductService_SetProductForSale_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, ProductService_UpdateProduct_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ type ProductServiceServer interface {
 	// 设置物品是否禁售
 	// 参数：物品编码和是否禁售标志
 	// 返回：设置结果
-	SetProductForSale(context.Context, *SetProductForSaleReq) (*api.ResponseInfo, error)
+	UpdateProduct(context.Context, *UpdateProductReq) (*api.ResponseInfo, error)
 	mustEmbedUnimplementedProductServiceServer()
 }
 
@@ -70,8 +70,8 @@ type ProductServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedProductServiceServer struct{}
 
-func (UnimplementedProductServiceServer) SetProductForSale(context.Context, *SetProductForSaleReq) (*api.ResponseInfo, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SetProductForSale not implemented")
+func (UnimplementedProductServiceServer) UpdateProduct(context.Context, *UpdateProductReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateProduct not implemented")
 }
 func (UnimplementedProductServiceServer) mustEmbedUnimplementedProductServiceServer() {}
 func (UnimplementedProductServiceServer) testEmbeddedByValue()                        {}
@@ -94,20 +94,20 @@ func RegisterProductServiceServer(s grpc.ServiceRegistrar, srv ProductServiceSer
 	s.RegisterService(&ProductService_ServiceDesc, srv)
 }
 
-func _ProductService_SetProductForSale_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SetProductForSaleReq)
+func _ProductService_UpdateProduct_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateProductReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ProductServiceServer).SetProductForSale(ctx, in)
+		return srv.(ProductServiceServer).UpdateProduct(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ProductService_SetProductForSale_FullMethodName,
+		FullMethod: ProductService_UpdateProduct_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ProductServiceServer).SetProductForSale(ctx, req.(*SetProductForSaleReq))
+		return srv.(ProductServiceServer).UpdateProduct(ctx, req.(*UpdateProductReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -120,8 +120,8 @@ var ProductService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ProductServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "SetProductForSale",
-			Handler:    _ProductService_SetProductForSale_Handler,
+			MethodName: "UpdateProduct",
+			Handler:    _ProductService_UpdateProduct_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

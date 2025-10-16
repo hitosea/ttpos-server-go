@@ -14,7 +14,7 @@ type ProductController struct {
 	item.UnimplementedProductServiceServer
 }
 
-func (*ProductController) SetProductForSale(ctx context.Context, req *item.SetProductForSaleReq) (*api.ResponseInfo, error) {
+func (*ProductController) UpdateProduct(ctx context.Context, req *item.UpdateProductReq) (*api.ResponseInfo, error) {
 	// 参数验证
 	if req == nil {
 		return nil, gerror.New("请求参数不能为空")
@@ -22,10 +22,10 @@ func (*ProductController) SetProductForSale(ctx context.Context, req *item.SetPr
 	if req.ItemCode == "" {
 		return nil, gerror.New("物品编码不能为空")
 	}
-	resp, err := service.Product().SetProductForSale(ctx, req)
+	resp, err := service.Product().UpdateProduct(ctx, req)
 	if err != nil {
-		return nil, gerror.Wrapf(err, "更新物品禁售状态失败")
+		return nil, gerror.Wrapf(err, "更新商品信息失败")
 	}
 
-	return rpc.ApiSuccessWithData("更新物品禁售状态成功", resp), nil
+	return rpc.ApiSuccessWithData("更新商品信息成功", resp), nil
 }
