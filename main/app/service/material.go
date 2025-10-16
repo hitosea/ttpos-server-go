@@ -3116,13 +3116,14 @@ func (s *materialSrv) getNeedCreateProductBomCardList(headquarterProductBomCardM
 	createBoms := []*manufacturing.BomInfo{}
 	exsitProductBomCardList := []*model.ProductBomCard{}
 	for _, bom := range erpBoms {
-		if _, ok := headquarterProductBomCardMap[bom.ItemCode]; !ok {
+		key := bom.BomName
+		if _, ok := headquarterProductBomCardMap[key]; !ok {
 			// 需要新建的成本卡。erpnext有，而ttpos没有
 			createBoms = append(createBoms, bom)
 		} else {
 			// erpnext有，ttpos也有。无需处理
-			exsitProductBomCardList = append(exsitProductBomCardList, headquarterProductBomCardMap[bom.ItemCode])
-			delete(headquarterProductBomCardMap, bom.ItemCode)
+			exsitProductBomCardList = append(exsitProductBomCardList, headquarterProductBomCardMap[key])
+			delete(headquarterProductBomCardMap, key)
 		}
 	}
 
