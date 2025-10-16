@@ -180,8 +180,8 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 		attrList := make([]*item.ItemAttribute, 0, len(itemInfo.Attributes))
 		for _, attr := range itemInfo.Attributes {
 			attrList = append(attrList, &item.ItemAttribute{
-				AttributeName:  attr.CustomAttributeName, // 属性名称
-				AttributeValue: attr.CustomAttributeValue,
+				AttributeName:  attr.Attribute, // 属性名称
+				AttributeValue: attr.AttributeValue,
 			})
 		}
 		itemGroupCodeName := data.Get("item_group").String()

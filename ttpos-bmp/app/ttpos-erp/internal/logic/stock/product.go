@@ -20,18 +20,22 @@ func init() {
 	service.RegisterProduct(Product)
 }
 
-func (s *sProduct) SetProductForSale(ctx context.Context, req *item.SetProductForSaleReq) (*item.SetProductForSaleResp, error) {
+func (s *sProduct) UpdateProduct(ctx context.Context, req *item.UpdateProductReq) (*item.UpdateProductResp, error) {
 	_, err := service.Document().Update(ctx, &erp.ErpReq{
 		DocType: erp.DocTypeItem,
 		Name:    req.ItemCode,
 	}, &erp.Item{
-		CustomNotForSale: req.NotForSale,
+		CustomNotForSale:   req.NotForSale,
+		CustomInternalCode: req.InternalCode,
+		Disabled:           req.Disabled,
 	})
 	if err != nil {
-		return nil, gerror.Wrapf(err, "更新物品禁售状态失败")
+		return nil, gerror.Wrapf(err, "更新商品信息失败")
 	}
-	return &item.SetProductForSaleResp{
-		ItemCode:   req.ItemCode,
-		NotForSale: req.NotForSale,
+	return &item.UpdateProductResp{
+		ItemCode:     req.ItemCode,
+		NotForSale:   req.NotForSale,
+		InternalCode: req.InternalCode,
+		Disabled:     req.Disabled,
 	}, nil
 }
