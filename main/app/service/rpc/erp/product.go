@@ -3,10 +3,22 @@ package erp
 import (
 	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/item"
+	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/context"
+
+	"google.golang.org/grpc"
 )
+
+// 获取商品服务客户端
+func NewErpProductClient() (item.ProductServiceClient, *grpc.ClientConn, error) {
+	conn, err := cloud.GetRpcConnWithName(cloud.ErpServiceName)
+	if err != nil {
+		return nil, nil, err
+	}
+	return item.NewProductServiceClient(conn), conn, nil
+}
 
 // 添加商品到erp
 func (s *erpSrv) AddProduct(ctx context.Context, params req.ProductAddErpReq) (*item.ItemInfo, error) {
@@ -275,4 +287,34 @@ func (s *erpSrv) GetProductList(ctx context.Context, params GetErpProductListReq
 	}
 
 	return response, nil
+}
+
+type SetProductForSaleReq struct {
+	ItemCode   string `json:"item_code"`
+	NotForSale bool   `json:"not_for_sale"`
+}
+
+// 设置商品是否禁售
+func (s *erpSrv) SetProductForSale(ctx context.Context, params SetProductForSaleReq) error {
+	company := ctx.GetCompany()
+	companySetting := company.CompanySetting
+
+	client, conn, err := NewErpProductClient()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	result, err := client.SetProductForSale(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.SetProductForSaleReq{
+		ItemCode:   params.ItemCode,
+		NotForSale: params.NotForSale,
+	})
+	if err != nil {
+		return err
+	}
+	if result.GetCode() != "0" {
+		return errors.WithMessage(errors.New(result.GetMessage()), "设置商品是否禁售失败")
+	}
+
+	return nil
 }
