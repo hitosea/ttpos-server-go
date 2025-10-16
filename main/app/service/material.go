@@ -2114,6 +2114,10 @@ func (s *materialSrv) unlinkProductBomCard(ctx context.Context, req req.ProductB
 		return errors.WithMessage(err, "获取商品规格失败")
 	}
 
+	if productBom.ProductPackage.HeadquarterUuid != 0 {
+		return errors.New("无法删除总部商品的成本卡")
+	}
+
 	productBomCardLog, err := newProductBomCardLog(ctx, 0, 0, "", req.RelatedUuid, productBom.ProductPackage.MultiLanguageName.ToJson(), nil, constant.ProductBomCardLogOperationTypeDelete)
 	if err != nil {
 		return errors.WithMessage(err, "创建成本卡日志失败")
@@ -2926,6 +2930,11 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
 		erpBoms = append(erpBoms, bomResp.BomInfo)
 	}
 
+	erpBomsMap := make(map[string]*manufacturing.BomInfo)
+	for _, bom := range erpBoms {
+		erpBomsMap[bom.BomName] = bom
+	}
+
 	db := ctx.GetDB()
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 获取ttpos的成本卡列表
@@ -2944,6 +2953,31 @@ func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
 		needCreate := needCreateProductBomCardList.CreateBoms // 这些成本卡来自两种场景：1. erpnext为还没有成本卡的商品添加成本卡；2. erpnext为已经添加成本卡的商品修改成本卡
 		// 需要失效的成本卡列表。erpnext没有，而ttpos有时
 		needDisable := needCreateProductBomCardList.DisableBoms // 这些成本卡来自1种场景：1. erpnext为已经添加成本卡的商品删除成本卡
+		// 已经存在的成本卡列表。erpnext有，而ttpos也有
+		existingProductBomCardList := needCreateProductBomCardList.ExsitProductBomCardList
+		for _, bomCard := range existingProductBomCardList {
+			if bom, ok := erpBomsMap[bomCard.ErpCode]; ok {
+				itemCode := bom.ItemCode                                              // 商品、小料的erpnext编码
+				objectByItemCodeResp, err := s.getObjectByItemCode(ctx, itemCode, tx) // 获取物品或加料
+				if err != nil {
+					logger.Logger.Error("同步成本卡时，获取物品或加料失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard))
+					continue
+				}
+				if objectByItemCodeResp.RelatedType == constant.ProductBomCardRelatedTypeFlavor { // 规格商品
+					// 更新product_bom表的成本卡uuid
+					if err := tx.Model(&model.ProductBom{}).Where("uuid = ?", objectByItemCodeResp.ProductBom.Uuid).Update("product_bom_card_uuid", bomCard.Uuid).Error; err != nil {
+						logger.Logger.Error("同步成本卡时，更新product_bom表的成本卡uuid失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard))
+						continue
+					}
+				} else if objectByItemCodeResp.RelatedType == constant.ProductBomCardRelatedTypeSauce { // 小料
+					// 更新product_sauce表的成本卡uuid
+					if err := tx.Model(&model.ProductSauce{}).Where("uuid = ?", objectByItemCodeResp.ProductSauce.Uuid).Update("product_bom_card_uuid", bomCard.Uuid).Error; err != nil {
+						logger.Logger.Error("同步成本卡时，更新product_sauce表的成本卡uuid失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard))
+						continue
+					}
+				}
+			}
+		}
 		for _, bom := range needCreate {
 			if err := s.createProductBomCardByErpBom(ctx, tx, bom); err != nil {
 				if strings.Contains(err.Error(), "物品或加料不存在") || strings.Contains(err.Error(), "单位不存在") {
