@@ -3399,6 +3399,7 @@ func (s *materialSrv) GetWarehouseItemConsumption(ctx context.Context, warehouse
 	for _, itemLog := range itemLogs {
 		if material, ok := itemLogsMap[itemLog.MaterialUuid]; ok {
 			material.Consumption = decimal.NewFromFloat(material.Consumption).Add(decimal.NewFromFloat(itemLog.Num)).Round(4).InexactFloat64()
+			itemLogsMap[itemLog.MaterialUuid] = material
 		} else {
 			itemLogsMap[itemLog.MaterialUuid] = material_resp.MaterialConsumption{
 				MaterialUuid: itemLog.MaterialUuid,
