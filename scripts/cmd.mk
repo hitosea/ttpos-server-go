@@ -62,6 +62,7 @@ help:
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "sync-erp-data" "同步ERP数据"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "resync-product-data-to-erp" "重新同步本地产品数据ERP"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "check-db-host-open-mysql" "检查DB_HOST并开启MySQL端口"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "add-item-stock" "添加物品库存"
 	@echo ""
 	@printf "\033[1;32m"
 	@echo "🔐 系统管理命令"

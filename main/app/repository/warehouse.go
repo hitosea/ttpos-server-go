@@ -13,6 +13,7 @@ type IWarehouseRepo interface {
 	Create(warehouse *model.Warehouse) error
 	Update(warehouse *model.Warehouse) error
 	Delete(uuid uint64) error
+	GetById(id uint64, opts ...DBOption) (*model.Warehouse, error)
 	GetByUuid(uuid uint64, opts ...DBOption) (*model.Warehouse, error)
 
 	// 查询操作
@@ -57,6 +58,21 @@ func (r *WarehouseRepoImpl) Update(warehouse *model.Warehouse) error {
 // Delete 删除仓库（软删除）
 func (r *WarehouseRepoImpl) Delete(uuid uint64) error {
 	return r.db.Model(&model.Warehouse{}).Where("uuid = ?", uuid).Update("delete_time", time.Now().Unix()).Error
+}
+
+// GetById 根据ID获取仓库
+func (r *WarehouseRepoImpl) GetById(id uint64, opts ...DBOption) (*model.Warehouse, error) {
+	var warehouse model.Warehouse
+	query := r.db.Where("id = ?", id).Preload("MultiLanguageName").Preload("Items").Scopes(NotDeleted)
+	// 应用查询选项
+	for _, opt := range opts {
+		query = opt(query)
+	}
+	err := query.First(&warehouse).Error
+	if err != nil {
+		return nil, err
+	}
+	return &warehouse, nil
 }
 
 // GetByUuid 根据UUID获取仓库
