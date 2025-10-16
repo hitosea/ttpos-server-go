@@ -9,38 +9,38 @@ import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 
-	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/encoding/gjson"
 )
 
 type (
 	IDoctype interface {
-		Meta(ctx context.Context, req *erp.ErpReq) (rst *g.Var, err error)
+		Meta(ctx context.Context, req *erp.ErpReq) (rst *gjson.Json, err error)
 		Count(ctx context.Context, req *erp.ErpReq, params *erp.RequestParams) (int, error)
 	}
 	IDocument interface {
-		List(ctx context.Context, req *erp.ErpReq, params *erp.RequestParams) (rst *g.Var, err error)
-		Get(ctx context.Context, req *erp.ErpReq, params *erp.RequestParams) (rst *g.Var, err error)
-		Create(ctx context.Context, docType string, data interface{}) (rst *g.Var, err error)
-		Update(ctx context.Context, req *erp.ErpReq, data interface{}) (rst *g.Var, err error)
-		Delete(ctx context.Context, req *erp.ErpReq) (rst *g.Var, err error)
-		Copy(ctx context.Context, req *erp.ErpReq) (rst *g.Var, err error)
-		Execute(ctx context.Context, req *erp.ErpReq, params interface{}) (rst *g.Var, err error)
-		ChangeDocStatus(ctx context.Context, doctype string, name string, docstatus string) (rst *g.Var, err error)
+		List(ctx context.Context, req *erp.ErpReq, params *erp.RequestParams) (rst *gjson.Json, err error)
+		Get(ctx context.Context, req *erp.ErpReq, params *erp.RequestParams) (rst *gjson.Json, err error)
+		Create(ctx context.Context, docType string, data interface{}) (rst *gjson.Json, err error)
+		Update(ctx context.Context, req *erp.ErpReq, data interface{}) (rst *gjson.Json, err error)
+		Delete(ctx context.Context, req *erp.ErpReq) (rst *gjson.Json, err error)
+		Copy(ctx context.Context, req *erp.ErpReq) (rst *gjson.Json, err error)
+		Execute(ctx context.Context, req *erp.ErpReq, params interface{}) (rst *gjson.Json, err error)
+		ChangeDocStatus(ctx context.Context, doctype string, name string, docstatus string) (rst *gjson.Json, err error)
 	}
 	IRpc interface {
-		Execute(ctx context.Context, req *erp.ErpReq, params interface{}) (rst *g.Var, err error)
+		Execute(ctx context.Context, req *erp.ErpReq, params interface{}) (rst *gjson.Json, err error)
 		// GetSiteCode 获取站点编码
 		GetSiteCode(ctx context.Context) string
 	}
 	IReport interface {
-		Run(ctx context.Context, params *erp.ReportParams) (rst *g.Var, err error)
+		Run(ctx context.Context, params *erp.ReportParams) (rst *gjson.Json, err error)
 	}
 	IResource interface {
-		List(ctx context.Context, docType string, params *erp.RequestParams) (rst *g.Var, err error)
-		Get(ctx context.Context, docType string, name string, params *erp.RequestParams) (rst *g.Var, err error)
-		Post(ctx context.Context, docType string, params *erp.RequestParams) (rst *g.Var, err error)
-		Put(ctx context.Context, docType string, params *erp.RequestParams) (rst *g.Var, err error)
-		Delete(ctx context.Context, docType string, params *erp.RequestParams) (rst *g.Var, err error)
+		List(ctx context.Context, docType string, params *erp.RequestParams) (rst *gjson.Json, err error)
+		Get(ctx context.Context, docType string, name string, params *erp.RequestParams) (rst *gjson.Json, err error)
+		Post(ctx context.Context, docType string, params *erp.RequestParams) (rst *gjson.Json, err error)
+		Put(ctx context.Context, docType string, params *erp.RequestParams) (rst *gjson.Json, err error)
+		Delete(ctx context.Context, docType string, params *erp.RequestParams) (rst *gjson.Json, err error)
 	}
 )
 

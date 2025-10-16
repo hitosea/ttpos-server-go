@@ -10,7 +10,6 @@ import (
 	"ttpos-bmp/app/ttpos-erp/utility"
 
 	"github.com/gogf/gf/v2/container/gmap"
-	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/util/gconv"
@@ -83,10 +82,7 @@ func (s *sItemGroup) queryItemGroupList(ctx context.Context, filters [][]string,
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析物品分组列表响应失败")
-	}
+	j := resp
 
 	// 转换为物品分组信息列表
 	dataArray := j.GetJsons("data")
@@ -126,10 +122,7 @@ func (s *sItemGroup) GetItemGroup(ctx context.Context, req *item.GetItemGroupReq
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析物品分组信息响应失败")
-	}
+	j := resp
 
 	itemGroupInfo := &erp.ItemGroupInfo{}
 	if err := gconv.Structs(j.GetJson("data"), &itemGroupInfo); err != nil {

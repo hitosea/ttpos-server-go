@@ -6,7 +6,6 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
-	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 )
@@ -44,7 +43,7 @@ func (s *sBuying) CreatePurchaseOrder(ctx context.Context, req *buying.CreatePur
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析创建采购订单响应失败")
 	}
@@ -92,7 +91,7 @@ func (s *sBuying) UpdatePurchaseOrder(ctx context.Context, req *buying.UpdatePur
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析更新采购订单响应失败")
 	}

@@ -7,7 +7,6 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
-	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/util/gconv"
@@ -180,10 +179,7 @@ func (s *sUom) queryUomList(ctx context.Context, filters [][]string, req *item.G
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析单位列表响应失败")
-	}
+	j := resp
 
 	// 转换为单位信息列表
 	uomList := make([]*item.UomInfo, 0)
@@ -248,10 +244,7 @@ func (s *sUom) GetUom(ctx context.Context, req *item.GetUomReq) (res *erp.UOM, e
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析单位信息响应失败")
-	}
+	j := resp
 
 	// 转换为单位信息结构体
 	uomInfo := &erp.UOM{}

@@ -113,11 +113,8 @@ func (s *sSelling) buildPosProfileFilters(ctx context.Context, req *selling.PosP
 // 返回：
 //   - *selling.PosProfileListResp: 解析后的响应数据
 //   - error: 错误信息
-func (s *sSelling) parsePosProfileListResponse(list *g.Var) (*selling.PosProfileListResp, error) {
-	j, err := gjson.DecodeToJson(list.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析POS配置文件列表响应失败")
-	}
+func (s *sSelling) parsePosProfileListResponse(list *gjson.Json) (*selling.PosProfileListResp, error) {
+	j := list
 
 	// 遍历响应数据，构建结果列表
 	dataList := make([]*selling.PosProfile, 0)
@@ -219,7 +216,7 @@ func (s *sSelling) getModeOfPayment(ctx context.Context, paymentType string) (*e
 	}
 
 	modePayment := &erp.ModeOfPayment{}
-	j.Get("data").Scan(&modePayment)
+	j.GetJson("data").Scan(&modePayment)
 	return modePayment, nil
 }
 
@@ -357,14 +354,11 @@ func (s *sSelling) buildPosProfilePaymentMethods(payments []string) []erp.POSPay
 // 返回：
 //   - *erp.POSProfile: 解析后的POS配置文件
 //   - error: 错误信息
-func (s *sSelling) parsePosProfileResponse(resp *g.Var) (*erp.POSProfile, error) {
+func (s *sSelling) parsePosProfileResponse(resp *gjson.Json) (*erp.POSProfile, error) {
 	posProfile := &erp.POSProfile{}
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析POS配置文件失败")
-	}
+	j := resp
 
-	j.Get("data").Scan(posProfile)
+	j.GetJson("data").Scan(posProfile)
 	return posProfile, nil
 }
 
@@ -468,14 +462,11 @@ func (s *sSelling) buildOpeningEntryRequest(req *selling.OpenPosEntryReq, compan
 // 返回：
 //   - *erp.POSOpeningEntry: 解析后的开帐信息
 //   - error: 错误信息
-func (s *sSelling) parseOpeningEntryResponse(resp *g.Var) (*erp.POSOpeningEntry, error) {
+func (s *sSelling) parseOpeningEntryResponse(resp *gjson.Json) (*erp.POSOpeningEntry, error) {
 	res := &erp.POSOpeningEntry{}
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析开帐响应失败")
-	}
+	j := resp
 
-	gconv.Scan(j.Get("data"), res)
+	gconv.Scan(j.GetJson("data"), res)
 	return res, nil
 }
 
@@ -607,14 +598,11 @@ func (s *sSelling) buildPosTransactions(invoices []dtoSelling.SimplePosInvoice) 
 // 返回：
 //   - *erp.POSCloseEntry: 解析后的关帐信息
 //   - error: 错误信息
-func (s *sSelling) parseClosingEntryResponse(resp *g.Var) (*erp.POSCloseEntry, error) {
+func (s *sSelling) parseClosingEntryResponse(resp *gjson.Json) (*erp.POSCloseEntry, error) {
 	res := &erp.POSCloseEntry{}
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析关帐响应失败")
-	}
+	j := resp
 
-	gconv.Scan(j.Get("data"), res)
+	gconv.Scan(j.GetJson("data"), res)
 	return res, nil
 }
 
@@ -667,7 +655,7 @@ func (s *sSelling) GetPosInvoiceList(ctx context.Context, req *dtoSelling.GetPos
 
 	// 解析响应数据
 	res := make([]dtoSelling.SimplePosInvoice, 0)
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析POS发票列表响应失败")
 	}
@@ -764,7 +752,7 @@ func (s *sSelling) SavePosInvoiceStep(ctx context.Context, req *selling.SavePosI
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return InvoiceName, gerror.Wrapf(err, "解析POS发票响应失败")
 	}
@@ -897,7 +885,7 @@ func (s *sSelling) GetPosOpeningEntry(ctx context.Context, name string) (*erp.PO
 
 	// 解析响应数据
 	res := &erp.POSOpeningEntry{}
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析POS开帐记录响应失败")
 	}
@@ -953,13 +941,13 @@ func (s *sSelling) ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosI
 		return nil, gerror.Wrapf(err, "创建销售退款订单失败")
 	}
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析销售退款订单响应失败")
 	}
 	saleInvoice := &erp.POSInvoice{}
 	// 解析响应数据
-	err = j.Get("data").Scan(saleInvoice)
+	err = j.GetJson("data").Scan(saleInvoice)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析原销售订单响应失败")
 	}
@@ -1014,10 +1002,7 @@ func (s *sSelling) ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosI
 		return nil, gerror.Wrapf(err, "创建销售退款订单发票失败")
 	}
 	// 解析响应数据
-	j, err = gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析销售退款订单发票响应失败")
-	}
+	j = resp
 
 	res := &selling.ReturnPosInvoiceResp{
 		InvoiceName: j.Get("data.name").String(),
@@ -1102,12 +1087,12 @@ func (*sSelling) GetModeOfPaymentList(ctx context.Context, req *selling.GetModeO
 		return nil, gerror.Wrapf(err, "获取支付方式列表失败")
 	}
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析支付方式列表响应失败")
 	}
 	var modeOfPaymentList []*selling.ModeOfPayment
-	j.Get("data").Scan(&modeOfPaymentList)
+	j.GetJson("data").Scan(&modeOfPaymentList)
 	return &selling.GetModeOfPaymentListResp{
 		ModeOfPaymentList: modeOfPaymentList,
 	}, nil

@@ -2,14 +2,12 @@ package crm
 
 import (
 	"context"
+	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
 	"ttpos-bmp/app/ttpos-erp/api/crm"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
-
-	"github.com/gogf/gf/v2/encoding/gjson"
-	"github.com/gogf/gf/v2/errors/gerror"
-	"github.com/gogf/gf/v2/frame/g"
 )
 
 // ==================== Contact CRUD 方法 ====================
@@ -67,7 +65,7 @@ func (s *sCrm) CreateContact(ctx context.Context, req *crm.CreateContactReq) (re
 	}
 
 	// 解析响应获取创建的联系人名称
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析创建联系人响应失败")
 	}
@@ -171,7 +169,7 @@ func (s *sCrm) queryContactList(ctx context.Context, filters [][]string, req *cr
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析联系人列表响应失败")
 	}
@@ -210,7 +208,7 @@ func (s *sCrm) queryContactDetail(ctx context.Context, name string) (*crm.Contac
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析联系人详情响应失败")
 	}

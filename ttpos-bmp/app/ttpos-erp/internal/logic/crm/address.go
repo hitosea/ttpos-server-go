@@ -2,14 +2,12 @@ package crm
 
 import (
 	"context"
+	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
 	"ttpos-bmp/app/ttpos-erp/api/crm"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
-
-	"github.com/gogf/gf/v2/encoding/gjson"
-	"github.com/gogf/gf/v2/errors/gerror"
-	"github.com/gogf/gf/v2/frame/g"
 )
 
 // ==================== Address CRUD 方法 ====================
@@ -67,7 +65,7 @@ func (s *sCrm) CreateAddress(ctx context.Context, req *crm.CreateAddressReq) (re
 	}
 
 	// 解析响应获取创建的地址名称
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析创建地址响应失败")
 	}
@@ -169,7 +167,7 @@ func (s *sCrm) queryAddressList(ctx context.Context, filters [][]string, req *cr
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析地址列表响应失败")
 	}
@@ -207,7 +205,7 @@ func (s *sCrm) queryAddressDetail(ctx context.Context, name string) (*crm.Addres
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析地址详情响应失败")
 	}

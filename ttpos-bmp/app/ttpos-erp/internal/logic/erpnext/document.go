@@ -6,7 +6,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
-	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/encoding/gjson"
 )
 
 const (
@@ -22,49 +22,49 @@ func init() {
 	service.RegisterDocument(Document)
 }
 
-func (s *sDocument) List(ctx context.Context, req *erp.ErpReq, params *erp.RequestParams) (rst *g.Var, err error) {
-	rst = GetClient(ctx).GetVar(ctx, getDocumentUrl(ctx, req.DocType), params)
-	err = detectError(rst)
+func (s *sDocument) List(ctx context.Context, req *erp.ErpReq, params *erp.RequestParams) (rst *gjson.Json, err error) {
+	resp := GetClient(ctx).GetVar(ctx, getDocumentUrl(ctx, req.DocType), params)
+	rst, err = detectError(resp)
 	return
 }
 
-func (s *sDocument) Get(ctx context.Context, req *erp.ErpReq, params *erp.RequestParams) (rst *g.Var, err error) {
-	rst = GetClient(ctx).GetVar(ctx, getDocumentUrlWithName(ctx, req), params)
-	err = detectError(rst)
+func (s *sDocument) Get(ctx context.Context, req *erp.ErpReq, params *erp.RequestParams) (rst *gjson.Json, err error) {
+	resp := GetClient(ctx).GetVar(ctx, getDocumentUrlWithName(ctx, req), params)
+	rst, err = detectError(resp)
 	return
 }
 
-func (s *sDocument) Create(ctx context.Context, docType string, data interface{}) (rst *g.Var, err error) {
-	rst = GetClient(ctx).ContentJson().PostVar(ctx, getDocumentUrl(ctx, docType), data)
-	err = detectError(rst)
+func (s *sDocument) Create(ctx context.Context, docType string, data interface{}) (rst *gjson.Json, err error) {
+	resp := GetClient(ctx).ContentJson().PostVar(ctx, getDocumentUrl(ctx, docType), data)
+	rst, err = detectError(resp)
 	return
 }
 
-func (s *sDocument) Update(ctx context.Context, req *erp.ErpReq, data interface{}) (rst *g.Var, err error) {
-	rst = GetClient(ctx).ContentJson().PutVar(ctx, getDocumentUrlWithName(ctx, req), data)
-	err = detectError(rst)
+func (s *sDocument) Update(ctx context.Context, req *erp.ErpReq, data interface{}) (rst *gjson.Json, err error) {
+	resp := GetClient(ctx).ContentJson().PutVar(ctx, getDocumentUrlWithName(ctx, req), data)
+	rst, err = detectError(resp)
 	return
 }
 
-func (s *sDocument) Delete(ctx context.Context, req *erp.ErpReq) (rst *g.Var, err error) {
-	rst = GetClient(ctx).DeleteVar(ctx, getDocumentUrlWithName(ctx, req))
-	err = detectError(rst)
+func (s *sDocument) Delete(ctx context.Context, req *erp.ErpReq) (rst *gjson.Json, err error) {
+	resp := GetClient(ctx).DeleteVar(ctx, getDocumentUrlWithName(ctx, req))
+	rst, err = detectError(resp)
 	return
 }
 
-func (s *sDocument) Copy(ctx context.Context, req *erp.ErpReq) (rst *g.Var, err error) {
-	rst = GetClient(ctx).GetVar(ctx, fmt.Sprintf("%scopy", getDocumentUrlWithName(ctx, req)))
-	err = detectError(rst)
+func (s *sDocument) Copy(ctx context.Context, req *erp.ErpReq) (rst *gjson.Json, err error) {
+	resp := GetClient(ctx).GetVar(ctx, fmt.Sprintf("%scopy", getDocumentUrlWithName(ctx, req)))
+	rst, err = detectError(resp)
 	return
 }
 
-func (s *sDocument) Execute(ctx context.Context, req *erp.ErpReq, params interface{}) (rst *g.Var, err error) {
-	rst = GetClient(ctx).GetVar(ctx, fmt.Sprintf("%smethod/%s", getDocumentUrlWithName(ctx, req), req.Method), params)
-	err = detectError(rst)
+func (s *sDocument) Execute(ctx context.Context, req *erp.ErpReq, params interface{}) (rst *gjson.Json, err error) {
+	resp := GetClient(ctx).GetVar(ctx, fmt.Sprintf("%smethod/%s", getDocumentUrlWithName(ctx, req), req.Method), params)
+	rst, err = detectError(resp)
 	return
 }
 
-func (s *sDocument) ChangeDocStatus(ctx context.Context, doctype string, name string, docstatus string) (rst *g.Var, err error) {
+func (s *sDocument) ChangeDocStatus(ctx context.Context, doctype string, name string, docstatus string) (rst *gjson.Json, err error) {
 	rst, err = s.Update(ctx, &erp.ErpReq{
 		DocType: doctype,
 		Name:    name,

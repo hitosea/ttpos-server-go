@@ -134,10 +134,7 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析物品列表响应失败")
-	}
+	j := resp
 
 	// 转换为物品信息列表
 	dataArray := j.GetJsons("data")
@@ -698,10 +695,7 @@ func (s *sItem) GetItemStock(ctx context.Context, req *item.GetItemStockReq) (re
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析物品库存响应失败")
-	}
+	j := resp
 
 	// 转换为物品库存列表
 	dataArray := j.GetJsons("message.result")
@@ -749,10 +743,7 @@ func (s *sItem) GetItem(ctx context.Context, req *item.GetItemReq) (res *erp.Ite
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析物品信息响应失败")
-	}
+	j := resp
 	itemInfo := &erp.Item{}
 	gconv.Structs(j.GetJson("data"), &itemInfo)
 
@@ -826,10 +817,7 @@ func (s *sItem) CreateSingleVariantItem(ctx context.Context, req *erp.CreateSing
 		return itemCode, gerror.Wrapf(err, "创建物品规格失败")
 	}
 	// 解析结果
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return itemCode, gerror.Wrapf(err, "解析创建物品规格失败")
-	}
+	j := resp
 	itemInfo := &erp.Item{}
 	j.GetJson("data").Scan(&itemInfo)
 	itemInfo.CustomInternalCode = req.InternalCode
