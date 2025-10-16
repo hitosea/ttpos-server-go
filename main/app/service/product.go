@@ -4578,6 +4578,7 @@ func (s *productSrv) SyncProductFlavor(ctx context.Context) error {
 				TrName:    flavor.MultiLanguageName.TrName,
 				SvName:    flavor.MultiLanguageName.SvName,
 			})
+			delFlavorUuids = append(delFlavorUuids, flavor.Uuid)
 			delMultiLanguageNameUuids = append(delMultiLanguageNameUuids, flavor.MultiLanguageName.Uuid)
 		}
 
