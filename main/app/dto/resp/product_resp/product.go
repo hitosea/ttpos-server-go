@@ -577,9 +577,10 @@ type ProductShopListItemFlavorListResp struct {
 }
 
 type ProductShopListItemFlavorItemResp struct {
-	Uuid       uint64             `json:"uuid"`        // 商品Bom uuid
-	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品Bom名称
-	Price      float64            `json:"price"`       // 商品Bom价格
+	Uuid         uint64             `json:"uuid"`          // 商品Bom uuid
+	LocaleName   dto.LocaleResponse `json:"locale_name"`   // 商品Bom名称
+	Price        float64            `json:"price"`         // 商品Bom价格
+	InternalCode string             `json:"internal_code"` // 商品Bom内部编码
 }
 
 // ProductTaxListResp 商品税类列表响应

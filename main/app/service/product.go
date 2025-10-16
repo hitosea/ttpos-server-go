@@ -5090,9 +5090,10 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 						specStockNum = productBom.StockNum
 					}
 					flavors = append(flavors, product_resp.ProductShopListItemFlavorItemResp{
-						Uuid:       productBom.Uuid,
-						LocaleName: productBom.ProductFlavor.MultiLanguageName.GetNames(),
-						Price:      productBom.Price,
+						Uuid:         productBom.Uuid,
+						LocaleName:   productBom.ProductFlavor.MultiLanguageName.GetNames(),
+						Price:        productBom.Price,
+						InternalCode: productBom.InternalCode,
 					})
 				}
 				// 商品-加料
