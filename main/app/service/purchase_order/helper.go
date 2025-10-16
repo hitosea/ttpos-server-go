@@ -534,6 +534,15 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 			)
 		}
 
+		// 获取供应商ID
+		supplierUuid := func() uint64 {
+			supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(purchaseOrder.SupplierErpCode)
+			if err != nil {
+				return 0
+			}
+			return supplier.Uuid
+		}()
+
 		// 减少库存
 		for warehouseItemUuid, item := range updateMaterialsMap {
 			actualNum := item.GetConversionRateNum()
@@ -571,14 +580,8 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 				Amount: decimal.NewFromFloat(item.Valuation).
 					Mul(decimal.NewFromFloat(actualNum)).
 					InexactFloat64(),
-				OrderNo: purchaseOrder.OrderNo,
-				SupplierUuid: func() uint64 {
-					supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(purchaseOrder.SupplierErpCode)
-					if err != nil {
-						return 0
-					}
-					return supplier.Uuid
-				}(),
+				OrderNo:         purchaseOrder.OrderNo,
+				SupplierUuid:    supplierUuid,
 				SupplierErpCode: purchaseOrder.SupplierErpCode,
 				SupplierName:    purchaseOrder.SupplierName,
 				OtherOrgUuid:    purchaseOrder.CompanyUuid,
@@ -596,7 +599,8 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 				if err != nil {
 					continue
 				}
-				err = h.AddToTransitWarehouse(subDb, transitWarehouse, material.Uuid, item.MaterialCode, item.Valuation, actualNum)
+				item.MaterialUuid = material.Uuid
+				err = h.AddToTransitWarehouse(subDb, transitWarehouse, purchaseOrder, supplierUuid, &item, actualNum)
 				if err != nil {
 					return errors.WithMessage(errors.New("添加到在途仓库失败"), err.Error())
 				}
@@ -707,24 +711,34 @@ func (h *purchaseOrderHelper) handleErpError(ctx context.Context, err error) err
 }
 
 // addToTransitWarehouse 添加到在途仓库
-func (h *purchaseOrderHelper) AddToTransitWarehouse(tx *gorm.DB, transitWarehouse *model.Warehouse, materialUuid uint64, materialCode string, valuation float64, actualNum float64) error {
+func (h *purchaseOrderHelper) AddToTransitWarehouse(
+	tx *gorm.DB,
+	transitWarehouse *model.Warehouse,
+	purchaseOrder *model.PurchaseOrder,
+	supplierUuid uint64,
+	item *model.PurchaseOrderItem,
+	actualNum float64,
+) error {
 	// 添加到本店的在途仓库
 	if transitWarehouse == nil {
 		return nil
 	}
+	// 获取在途仓库出入库日志Repository
+	warehouseLogRepo := repository.NewWarehouseInOutLogRepo(tx)
+	// 获取在途仓库库存
 	warehouseItem, err := repository.NewWarehouseItemRepo(tx).GetByWarehouseAndMaterial(
 		transitWarehouse.Uuid,
-		materialUuid,
+		item.MaterialUuid,
 	)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			// 没有找到记录时创建新记录
 			newWarehouseItem := &model.WarehouseItem{
 				WarehouseUuid: transitWarehouse.Uuid,
-				MaterialUuid:  materialUuid,
-				MaterialCode:  materialCode,
+				MaterialUuid:  item.MaterialUuid,
+				MaterialCode:  item.MaterialCode,
 				Stock:         0,
-				Valuation:     valuation,
+				Valuation:     item.Valuation,
 			}
 			err = repository.NewWarehouseItemRepo(tx).Create(newWarehouseItem)
 			if err != nil {
@@ -740,5 +754,32 @@ func (h *purchaseOrderHelper) AddToTransitWarehouse(tx *gorm.DB, transitWarehous
 	if err != nil {
 		return errors.WithMessage(errors.New("增加在途仓库库存失败"), err.Error())
 	}
+	// 记录在途仓出库日志
+	warehouseLog := &model.WarehouseInOutLog{
+		LogType:              1,  // 入库
+		Scene:                20, // 在途入库
+		WarehouseUuid:        transitWarehouse.Uuid,
+		MaterialUuid:         item.MaterialUuid,
+		MaterialName:         language.JsonToLocaleResponse(item.MaterialName).EN,
+		MaterialBaseUnitUuid: item.BaseUnitUuid,
+		MaterialBaseUnitName: language.JsonToLocaleResponse(item.BaseUnitName).EN,
+		Num:                  actualNum,
+		Price:                item.Valuation,
+		Amount: decimal.NewFromFloat(item.Valuation).
+			Mul(decimal.NewFromFloat(actualNum)).
+			InexactFloat64(),
+		SupplierUuid:    supplierUuid,
+		SupplierErpCode: purchaseOrder.SupplierErpCode,
+		SupplierName:    purchaseOrder.SupplierName,
+		OrderNo:         purchaseOrder.OrderNo,
+		OtherOrgUuid:    purchaseOrder.CompanyUuid,
+		OtherOrgType:    0,
+		OtherOrgName:    purchaseOrder.CompanyName,
+	}
+	err = warehouseLogRepo.Create(warehouseLog)
+	if err != nil {
+		return errors.WithMessage(errors.New("记录入库日志失败"), err.Error())
+	}
+
 	return nil
 }

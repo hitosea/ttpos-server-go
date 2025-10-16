@@ -703,6 +703,10 @@ func (s *warehouseSrv) GetWarehouseInOutList(ctx context.Context, req req.GetWar
 		}
 	}
 
+	// 排除在途仓的记录
+	opts = append(opts, warehouseInOutLogRepo.WhereSceneNotIn([]int{20, 21}))
+
+	// 获取列表
 	warehouseInOutLogs, total, err := warehouseInOutLogRepo.GetListWithPagination(req.PageNo, req.PageSize, opts...)
 	if err != nil {
 		return resp.WarehouseInOutListResp{}, errors.WithMessage(err, "获取仓库出入库明细列表失败")

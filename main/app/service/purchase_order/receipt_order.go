@@ -17,6 +17,7 @@ import (
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -538,6 +539,15 @@ func (s *purchaseReceiptOrderSrv) updateMaterialStock(
 		return errors.WithMessage(errors.New("记录ERP入库记录失败"), err.Error())
 	}
 
+	// 获取供应商ID
+	supplierUuid := func() uint64 {
+		supplier, err := repository.NewSupplierRepo(db).GetByErpCode(receiptOrder.GetSupplierErpCode())
+		if err != nil {
+			return 0
+		}
+		return supplier.Uuid
+	}()
+
 	// 更新在途仓库库存
 	transitWarehouse, _ := repository.NewWarehouseRepo(db).GetTransitWarehouse()
 	if transitWarehouse != nil {
@@ -558,6 +568,32 @@ func (s *purchaseReceiptOrderSrv) updateMaterialStock(
 			err = warehouseItemRepo.ReduceStock(warehouseItem.Uuid, actualNum)
 			if err != nil {
 				return errors.WithMessage(errors.New("减少在途仓库库存失败"), err.Error())
+			}
+			// 记录在途仓出库日志
+			warehouseLog := &model.WarehouseInOutLog{
+				LogType:              0,  // 出库
+				Scene:                21, // 在途出库
+				WarehouseUuid:        transitWarehouse.Uuid,
+				MaterialUuid:         item.MaterialUuid,
+				MaterialName:         language.JsonToLocaleResponse(item.MaterialName).EN,
+				MaterialBaseUnitUuid: item.BaseUnitUuid,
+				MaterialBaseUnitName: language.JsonToLocaleResponse(item.BaseUnitName).EN,
+				Num:                  actualNum,
+				Price:                item.Valuation,
+				Amount: decimal.NewFromFloat(item.Valuation).
+					Mul(decimal.NewFromFloat(actualNum)).
+					InexactFloat64(),
+				SupplierUuid:    supplierUuid,
+				SupplierErpCode: receiptOrder.GetSupplierErpCode(),
+				SupplierName:    receiptOrder.SupplierName,
+				OrderNo:         receiptOrder.OrderNo,
+				OtherOrgUuid:    supplierUuid,
+				OtherOrgType:    0,
+				OtherOrgName:    receiptOrder.SupplierName,
+			}
+			err = repository.NewWarehouseInOutLogRepo(db).Create(warehouseLog)
+			if err != nil {
+				return errors.WithMessage(errors.New("记录在途仓出库日志失败"), err.Error())
 			}
 		}
 	}

@@ -934,11 +934,18 @@ func (s *purchaseOrderSrv) handleExternalPurchaseErp(
 ) (string, error) {
 	// 获取在途仓库
 	transitWarehouse, _ := repository.NewWarehouseRepo(tx).GetTransitWarehouse()
-
+	// 获取供应商ID
+	supplierUuid := func() uint64 {
+		supplier, err := repository.NewSupplierRepo(tx).GetByErpCode(purchaseOrder.SupplierErpCode)
+		if err != nil {
+			return 0
+		}
+		return supplier.Uuid
+	}()
 	// 构建采购订单项
 	stockItems := make([]*buying.PurchaseOrderItemInput, 0, len(purchaseOrder.Items))
 	for _, item := range purchaseOrder.Items {
-		//
+		// 获取实际数量
 		actualNum := item.GetConversionRateNum()
 		if actualNum <= 0 {
 			continue
@@ -963,7 +970,7 @@ func (s *purchaseOrderSrv) handleExternalPurchaseErp(
 
 		// 添加到本店的在途仓库
 		if transitWarehouse != nil {
-			err := s.helper.AddToTransitWarehouse(tx, transitWarehouse, item.MaterialUuid, item.MaterialCode, item.Valuation, actualNum)
+			err := s.helper.AddToTransitWarehouse(tx, transitWarehouse, purchaseOrder, supplierUuid, &item, actualNum)
 			if err != nil {
 				return "", err
 			}
