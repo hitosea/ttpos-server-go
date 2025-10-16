@@ -246,7 +246,7 @@ func (r *PurchaseReceiptOrderRepoImpl) WhereUuidIn(uuidIn []uint64) DBOption {
 // WithItems 预加载收货明细
 func (r *PurchaseReceiptOrderRepoImpl) WithItems() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("Items.PurchaseOrderItem")
+		return db.Preload("Items.PurchaseOrderItem").Preload("Items.Material")
 	}
 }
 
