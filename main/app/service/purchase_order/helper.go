@@ -630,13 +630,13 @@ func (h *purchaseOrderHelper) handleErpError(ctx context.Context, err error) err
 	// 检查供应商状态
 	if strings.Contains(err.Error(), "Supplier") && strings.Contains(err.Error(), "is disabled") {
 		// 提取供应商名称
-		supplierName := h.extractName("Supplier", "is disabled", err.Error())
-		if supplierName != "" {
-			return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, fmt.Sprintf(
-				i18n.Translate(ctx.GetLanguage(), "ERP中供应商 %s 已禁用，请修改供应商状态"), supplierName),
-			)
-		}
-		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "ERP中供应商已禁用，请修改供应商状态")
+		// supplierName := h.extractName("Supplier", "is disabled", err.Error())
+		// if supplierName != "" {
+		// 	return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, fmt.Sprintf(
+		// 		i18n.Translate(ctx.GetLanguage(), "ERP中供应商 %s 已禁用，请修改供应商状态"), supplierName),
+		// 	)
+		// }
+		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "供应商已禁用，请修改供应商状态")
 	}
 	// 检查物品状态
 	if strings.Contains(err.Error(), "Item") && strings.Contains(err.Error(), "is disabled") {
