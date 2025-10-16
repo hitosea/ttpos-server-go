@@ -42312,6 +42312,10 @@ const docTemplate = `{
                     "description": "基准单位名称",
                     "type": "string"
                 },
+                "internal_code": {
+                    "description": "内部编码",
+                    "type": "string"
+                },
                 "locale_base_unit_name": {
                     "description": "基准单位名称",
                     "allOf": [

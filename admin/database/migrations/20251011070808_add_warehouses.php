@@ -188,6 +188,9 @@ class AddWarehouses extends Migrator
                 $updateCount++;
             }
         }
+
+        // 更新 ttpos_material 的warehouse_uuid 为$defaultWarehouseUuid
+        $pdo->exec("UPDATE {$prefix}material SET warehouse_uuid = {$defaultWarehouseUuid}");
     }
 
     /**

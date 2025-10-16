@@ -223,18 +223,20 @@ func (r *WarehouseRepoImpl) OrderByUpdateTime(desc bool) DBOption {
 func (r *WarehouseRepoImpl) UpdateIsDefault(uuid uint64) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		updateTime := time.Now().Unix()
-		err := tx.Model(&model.Warehouse{}).Where("is_default = ?", 1).Updates(map[string]any{
+		if err := tx.Model(&model.Warehouse{}).Where("is_default = ?", 1).Updates(map[string]any{
 			"is_default":  0,
 			"update_time": updateTime - 1,
-		}).Error
-		if err != nil {
+		}).Error; err != nil {
 			return err
 		}
-		err = tx.Model(&model.Warehouse{}).Where("uuid = ?", uuid).Updates(map[string]any{
+		if err := tx.Model(&model.Warehouse{}).Where("uuid = ?", uuid).Updates(map[string]any{
 			"is_default":  1,
 			"update_time": updateTime,
-		}).Error
-		if err != nil {
+		}).Error; err != nil {
+			return err
+		}
+		// 更新所有物品的仓库uuid
+		if err := tx.Model(&model.Material{}).Update("warehouse_uuid", uuid).Error; err != nil {
 			return err
 		}
 		return nil
