@@ -63,7 +63,7 @@
       <numInput
         :min="0"
         :max="99999999"
-        :disabled="form.single_select_list.length > 0"
+        :disabled="form.single_select_list.length > 0 || erp_is_open == 1"
         :placeholder="$t('请填写库存数量')"
         v-model="form.model.sku[0].material_stock"
         class="max-w460"

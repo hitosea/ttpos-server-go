@@ -81,7 +81,7 @@
                 ]"
               >
                 <numInput
-                  :disabled="scope.row.material.length > 0"
+                  :disabled="scope.row.material.length > 0 || erp_is_open == 1"
                   :min="0"
                   :max="99999999"
                   :precision="2"
@@ -149,9 +149,13 @@
           <el-table-column v-if="baseSale == '1'" :label="$t('材料')" minWidth="330">
             <template #default="scope">
               <el-form-item for="no_click" label="" style="margin-bottom: 0">
-                <el-button type="primary" :disabled="erp_is_open == 1" :style="form.many_select_list[scope.$index].length > 0 ? 'margin-top: 16px;' : ''" @click="addMaterials(scope.$index)">{{
-                  $t('添加材料')
-                }}</el-button>
+                <el-button
+                  type="primary"
+                  :disabled="erp_is_open == 1"
+                  :style="form.many_select_list[scope.$index].length > 0 ? 'margin-top: 16px;' : ''"
+                  @click="addMaterials(scope.$index)"
+                  >{{ $t('添加材料') }}</el-button
+                >
               </el-form-item>
               <div class="materials-one" label="" v-for="(item, index) in form.many_select_list[scope.$index]">
                 <el-form-item for="no_click" label="" class="max-w230">
@@ -171,7 +175,14 @@
                     },
                   ]"
                 >
-                  <el-input-number :min="0" :max="999" :controls="false" v-model="form.model.sku[scope.$index].material[index].material_num" :placeholder="$t('请输入数量')" :disabled="erp_is_open == 1">
+                  <el-input-number
+                    :min="0"
+                    :max="999"
+                    :controls="false"
+                    v-model="form.model.sku[scope.$index].material[index].material_num"
+                    :placeholder="$t('请输入数量')"
+                    :disabled="erp_is_open == 1"
+                  >
                   </el-input-number>
                 </el-form-item>
                 <span class="mt--16">{{ item.product_unit_text }}</span>
@@ -184,7 +195,9 @@
           <el-table-column label="" fixed="right" width="100">
             <template #default="scope">
               <el-form-item label="" style="margin-bottom: 0">
-                <el-button type="primary" :disabled="form.model.sku.length <= 1 || scope.row.is_package_used == 1" link @click="deleteAttr(scope.$index)">{{ $t('删除') }}</el-button>
+                <el-button type="primary" :disabled="form.model.sku.length <= 1 || scope.row.is_package_used == 1" link @click="deleteAttr(scope.$index)">{{
+                  $t('删除')
+                }}</el-button>
               </el-form-item>
             </template>
           </el-table-column>
