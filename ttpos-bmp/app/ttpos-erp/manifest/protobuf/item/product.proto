@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+import "erp.proto";
+
+package item;
+
+// Go 包路径配置
+option go_package = "ttpos-bmp/app/ttpos-erp/api/item";
+
+
+message SetProductForSaleReq {
+  string item_code = 1; // 物品编码，必填
+  bool not_for_sale = 2; //是否禁售，可选
+}
+
+message SetProductForSaleResp {
+  string item_code = 1; // 物品编码，必填
+  bool not_for_sale = 2; //是否禁售，可选
+}
+
+
+service ProductService {
+  // 设置物品是否禁售
+  // 参数：物品编码和是否禁售标志
+  // 返回：设置结果
+  rpc SetProductForSale(SetProductForSaleReq) returns (erp.ResponseInfo);
+}

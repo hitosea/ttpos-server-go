@@ -72,6 +72,9 @@ type (
 		// 关联门店时，每个门店都会自动创建一个加料组,
 		SaveAddonGroup(ctx context.Context, req *item.SaveAddonGroupReq) (*item.SaveAddonGroupResp, error)
 	}
+	IProduct interface {
+		SetProductForSale(ctx context.Context, req *item.SetProductForSaleReq) (*item.SetProductForSaleResp, error)
+	}
 	IStock interface {
 		// GetAttributeList 获取属性列表
 		// 根据查询条件过滤并返回属性信息列表
@@ -130,6 +133,7 @@ type (
 var (
 	localItem      IItem
 	localItemGroup IItemGroup
+	localProduct   IProduct
 	localStock     IStock
 	localUom       IUom
 	localWarehouse IWarehouse
@@ -155,6 +159,17 @@ func ItemGroup() IItemGroup {
 
 func RegisterItemGroup(i IItemGroup) {
 	localItemGroup = i
+}
+
+func Product() IProduct {
+	if localProduct == nil {
+		panic("implement not found for interface IProduct, forgot register?")
+	}
+	return localProduct
+}
+
+func RegisterProduct(i IProduct) {
+	localProduct = i
 }
 
 func Stock() IStock {
