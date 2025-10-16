@@ -31,8 +31,8 @@ type IProductBomQueryRepo interface {
 	GetProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error)
 	GetProductBomByItemCode(itemCode string) (*model.ProductBom, error)
 	GetProductBomByProductBomCardUuid(productBomCardUuid uint64) (*model.ProductBom, error) // 通过成本卡uuid获取商品信息
-
-	WhereProductSauceUuid(uuid uint64) DBOption // 查询条件 商品加料UUID
+	GetProductBomsByHasCard() ([]*model.ProductBom, error)                                  // 获取有成本卡的product_bom
+	WhereProductSauceUuid(uuid uint64) DBOption                                             // 查询条件 商品加料UUID
 }
 
 type productBomRepoImpl struct {
@@ -300,4 +300,15 @@ func (r *productBomRepoImpl) GetProductBomByProductBomCardUuid(productBomCardUui
 		return nil, errors.WithMessage(err)
 	}
 	return &productBom, nil
+}
+
+func (r *productBomRepoImpl) GetProductBomsByHasCard() ([]*model.ProductBom, error) {
+	var productBoms []*model.ProductBom
+	err := r.db.Model(&model.ProductBom{}).Where("product_bom_card_uuid <> 0").Where("delete_time = 0").
+		Preload("ProductBomCard.RelatedMaterials.Material.WarehouseItems").
+		Find(&productBoms).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productBoms, nil
 }

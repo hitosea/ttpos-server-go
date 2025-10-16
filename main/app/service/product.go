@@ -158,13 +158,14 @@ type IProductSrv interface {
 	GetBatchTagColorUsage(ctx context.Context) (*product_resp.BatchTagColorUsageList, error)          // 获取色块被选择情况
 	SaveBatchProduct(ctx context.Context, req req.SaveBatchProductReq) error                          // 保存分批商品
 
-	SyncProductShopCategory(ctx context.Context) error // 同步产品分类
-	SyncProductTax(ctx context.Context) error          // 同步商品税类
-	SyncUnit(ctx context.Context) error                // 获取总部最新单位数据
-	SyncProductFlavor(ctx context.Context) error       // 同步商品规格
-	SyncSauce(ctx context.Context) error               // 获取总部最新加料数据
-	SyncAttributeGroup(ctx context.Context) error      // 获取总部最新属性组数据
-	SyncProduct(ctx context.Context) error             // 同步商品
+	SyncProductShopCategory(ctx context.Context) error   // 同步产品分类
+	SyncProductTax(ctx context.Context) error            // 同步商品税类
+	SyncUnit(ctx context.Context) error                  // 获取总部最新单位数据
+	SyncProductFlavor(ctx context.Context) error         // 同步商品规格
+	SyncSauce(ctx context.Context) error                 // 获取总部最新加料数据
+	SyncAttributeGroup(ctx context.Context) error        // 获取总部最新属性组数据
+	SyncProduct(ctx context.Context) error               // 同步商品
+	SyncProductStockByBomCard(ctx context.Context) error // 计算所有关联成本卡的商品的库存
 }
 
 type productSrv struct {
@@ -7942,6 +7943,29 @@ func (s *productSrv) SaveBatchProduct(ctx context.Context, req req.SaveBatchProd
 		if err != nil {
 			return errors.WithMessage(err, "保存非分批商品失败")
 		}
+	}
+	return nil
+}
+
+func (s *productSrv) SyncProductStockByBomCard(ctx context.Context) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	productBomRepo := repository.NewProductBomRepo(db)
+	productBomList, err := productBomRepo.GetProductBomsByHasCard()
+	if err != nil {
+		return errors.WithMessage(err, "获取有成本卡商品列表失败")
+	}
+	err = repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		for _, productBom := range productBomList {
+			productBomCard := productBom.ProductBomCard
+			expectedProductionNum := productBomCard.CalculateExpectedProductionNum()
+			if err := repository.NewProductBomRepo(tx).UpdateProductBomCard(productBom.Uuid, productBomCard.Uuid, expectedProductionNum); err != nil {
+				return errors.WithMessage(err, "更新商品库存失败")
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return errors.WithMessage(err, "计算商品库存失败")
 	}
 	return nil
 }

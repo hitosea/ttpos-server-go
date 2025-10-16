@@ -27,6 +27,7 @@ const (
 	SyncTaskTypeAttribute        = "attribute"         // 属性
 	SyncTaskTypeSauce            = "sauce"             // 加料
 	SyncTaskTypeProduct          = "product"           // 商品
+	SyncTaskTypeProductStock     = "product_stock"     // 商品库存
 	SyncTaskTypeBomCard          = "bom_card"          // 成本卡
 	SyncTaskTypeSupplier         = "supplier"          // 供应商
 	SyncTaskTypeWarehouseStock   = "warehouse_stock"   // 仓库物品库存
@@ -44,6 +45,7 @@ var SyncTaskTypeNames = map[string]string{
 	SyncTaskTypeAttribute:        "属性",
 	SyncTaskTypeSauce:            "加料",
 	SyncTaskTypeProduct:          "商品",
+	SyncTaskTypeProductStock:     "商品库存",
 	SyncTaskTypeBomCard:          "成本卡",
 	SyncTaskTypeSupplier:         "供应商",
 	SyncTaskTypeWarehouseStock:   "仓库物品库存",
