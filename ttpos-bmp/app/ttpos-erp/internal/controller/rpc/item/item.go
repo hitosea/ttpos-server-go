@@ -21,6 +21,7 @@ type Controller struct {
 func Register(s *grpcx.GrpcServer) {
 	item.RegisterItemServiceServer(s.Server, &Controller{})
 	item.RegisterItemGroupServiceServer(s.Server, &GroupController{})
+	item.RegisterProductServiceServer(s.Server, &ProductController{})
 }
 
 // GetItemList 获取物品列表
