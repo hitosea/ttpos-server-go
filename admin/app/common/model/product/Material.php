@@ -316,15 +316,6 @@ class Material extends BaseModel
         return Db::transaction(function () use($data, $product_name, $imageIds) {
             // 查询默认仓库
             $defaultWarehouse = ErpWarehouse::where('type', 'normal')->where('is_default', 1)->find();
-            if ($defaultWarehouse) {
-                $warehouseItem = new ErpWarehouseItem();
-                $warehouseItem->save([
-                    'warehouse_uuid' => $defaultWarehouse['uuid'],
-                    'material_uuid' => $this['uuid'],
-                    'material_code' => $this['code'],
-                    'stock' => $data['sku'][0]['material_stock'] ?? 0,
-                ]);
-            }
             $data['name'] = $product_name;
             $data['multi_language_name_uuid'] = (new MultiLanguageName)->saveNames($product_name);
             $data['category_uuid'] = $data['category_id'] ?? 0;
@@ -341,6 +332,17 @@ class Material extends BaseModel
             // 保存材料
             if (!$this->save($data)) {
                 return false;
+            }
+
+            
+            if ($defaultWarehouse) {
+                $warehouseItem = new ErpWarehouseItem();
+                $warehouseItem->save([
+                    'warehouse_uuid' => $defaultWarehouse['uuid'],
+                    'material_uuid' => $this['uuid'],
+                    'material_code' => $this['code'],
+                    'stock' => $data['sku'][0]['material_stock'] ?? 0,
+                ]);
             }
 
             $hasInventoryAuth = (new Product())->hasInventoryAuth();
