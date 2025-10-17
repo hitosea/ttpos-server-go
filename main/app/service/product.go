@@ -366,12 +366,17 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 				})
 			}
 
-			list = append(list, product_resp.Product{
-				Uuid:                product.Uuid,
-				Image:               image,
-				LocaleName:          product.MultiLanguageName.GetNames(),
-				Unit:                unit,
-				Price:               flavors[0].Price,
+			packageItem := product_resp.Product{
+				Uuid:       product.Uuid,
+				Image:      image,
+				LocaleName: product.MultiLanguageName.GetNames(),
+				Unit:       unit,
+				Price: func() float64 {
+					if len(flavors) > 0 {
+						return flavors[0].Price
+					}
+					return 999999.5
+				}(),
 				LimitNum:            product.LimitNum,
 				CategoryUuid:        product.CategoryUuid,
 				SpecialCategoryUuid: product.SpecialCategoryUuid,
@@ -391,7 +396,13 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 				PackageGroupList: &product_resp.ProductPackageGroupList{
 					List: packageGroupList,
 				},
-			})
+			}
+			if len(flavors) > 0 {
+				packageItem.Price = flavors[0].Price
+				list = append(list, packageItem)
+			} else {
+				logger.Logger.Error("套餐没有规格，无法显示价格", zap.String("name", product.MultiLanguageName.GetNames().EN), zap.Any("product", product))
+			}
 		} else {
 			flavors := make([]product_resp.ProductFlavor, 0, len(product.ProductBoms))                                   // 商品规格
 			sauces := make([]product_resp.ProductSauce, 0, len(product.ProductBoms))                                     // 商品小料
