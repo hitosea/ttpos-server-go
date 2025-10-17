@@ -1563,6 +1563,7 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 						products, err := productRepo.GetProducts(
 							commonRepo.WhereBySoftDelete(),
 							productRepo.WhereCategoryUuid(category.Uuid),
+							commonRepo.WhereByHeadquarterUuid(0), // 只查询子店自己的商品
 							productRepo.WithProductBoms(commonRepo.WhereBySoftDelete()),
 						)
 						if err != nil {
