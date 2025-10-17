@@ -7806,39 +7806,57 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 				}
 			}
 			if len(newProductBomList) > 0 {
-				err = productBomRepo.CreateProductBoms(newProductBomList)
-				if err != nil {
-					return errors.WithMessage(err, "创建商品bom失败")
+				for _, v := range newProductBomList {
+					_, err = productBomRepo.CreateProductBom(v)
+					if err != nil {
+						logger.Logger.Error("创建商品bom失败", zap.Error(err))
+						// return errors.WithMessage(err, "创建商品bom失败")
+					}
 				}
 			}
 			if len(newProductPackageAttributeGroupList) > 0 {
-				err = productPackageAttributeGroupRepo.CreateProductPackageAttributeGroups(newProductPackageAttributeGroupList)
-				if err != nil {
-					return errors.WithMessage(err, "创建商品包属性组失败")
+				for _, v := range newProductPackageAttributeGroupList {
+					err = productPackageAttributeGroupRepo.CreateProductPackageAttributeGroups([]model.ProductPackageAttributeGroup{v})
+					if err != nil {
+						logger.Logger.Error("创建商品包属性组失败", zap.Error(err))
+						// return errors.WithMessage(err, "创建商品包属性组失败")
+					}
 				}
 			}
 			if len(newProductPackageAttributeList) > 0 {
-				err = productPackageAttributeRepo.CreateProductPackageAttributes(newProductPackageAttributeList)
-				if err != nil {
-					return errors.WithMessage(err, "创建商品包属性失败")
+				for _, v := range newProductPackageAttributeList {
+					err = productPackageAttributeRepo.CreateProductPackageAttributes([]model.ProductPackageAttribute{v})
+					if err != nil {
+						logger.Logger.Error("创建商品包属性失败", zap.Error(err))
+						// return errors.WithMessage(err, "创建商品包属性失败")
+					}
 				}
 			}
 			if len(newProductPackageGroupList) > 0 {
-				err = productPackageGroupRepo.CreateProductPackageGroups(newProductPackageGroupList)
-				if err != nil {
-					return errors.WithMessage(err, "创建商品包组失败")
+				for _, v := range newProductPackageGroupList {
+					err = productPackageGroupRepo.CreateProductPackageGroups([]model.ProductPackageGroup{v})
+					if err != nil {
+						logger.Logger.Error("创建商品包组失败", zap.Error(err))
+						// return errors.WithMessage(err, "创建商品包组失败")
+					}
 				}
 			}
 			if len(newProductPackageGroupItemList) > 0 {
-				err = productPackageGroupRepo.CreateProductPackageGroupItems(newProductPackageGroupItemList)
-				if err != nil {
-					return errors.WithMessage(err, "创建商品包组商品失败")
+				for _, v := range newProductPackageGroupItemList {
+					err = productPackageGroupRepo.CreateProductPackageGroupItems([]model.ProductPackageGroupItem{v})
+					if err != nil {
+						logger.Logger.Error("创建商品包组商品失败", zap.Error(err))
+						// return errors.WithMessage(err, "创建商品包组商品失败")
+					}
 				}
 			}
 			if len(newMultiLanguageNameList) > 0 {
-				err = multiLanguageNameRepo.CreateMultiLanguageNameList(newMultiLanguageNameList)
-				if err != nil {
-					return errors.WithMessage(err, "创建多语言名称失败")
+				for _, v := range newMultiLanguageNameList {
+					_, err = multiLanguageNameRepo.CreateMultiLanguageName(v)
+					if err != nil {
+						logger.Logger.Error("创建多语言名称失败", zap.Error(err))
+						// return errors.WithMessage(err, "创建多语言名称失败")
+					}
 				}
 			}
 			return nil
