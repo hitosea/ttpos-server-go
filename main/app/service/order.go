@@ -10259,13 +10259,25 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 		erpCode := productBom.ProductBom.ErpCode
 		// 是否是赠菜
 		if product.IsGiftProduct() {
-			items = append(items, &selling.PosInvoiceItem{
-				ItemCode:   erpCode,
-				Qty:        product.Num,
-				Rate:       product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
-				Amount:     product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
-				IsFreeItem: true,                                      // 赠菜
-			})
+			if product.IsPackageProduct() {
+				packageName := language.JsonToLocaleResponse(product.Name) // 套餐名称
+				items = append(items, &selling.PosInvoiceItem{
+					ItemCode:    "TC001",
+					Qty:         product.Num,
+					Rate:        product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
+					Amount:      product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
+					Description: packageName.EN,                            // 套餐子商品描述
+					IsFreeItem:  true,
+				})
+			} else {
+				items = append(items, &selling.PosInvoiceItem{
+					ItemCode:   erpCode,
+					Qty:        product.Num,
+					Rate:       product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
+					Amount:     product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
+					IsFreeItem: true,                                      // 赠菜
+				})
+			}
 		} else if product.SalePrice == 0 { // 当商品是0元商品时，可能是通过商品改价为0或原本售价就是0
 			items = append(items, &selling.PosInvoiceItem{
 				ItemCode:   erpCode,
