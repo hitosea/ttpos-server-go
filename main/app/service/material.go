@@ -697,17 +697,25 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 	}
 
 	// 检查条形码唯一性
-	if request.BarcodeValue != "" && !request.GetIsSync() {
+	if request.BarcodeValue != "" {
 		materialRepo := repository.NewMaterialRepo(tx)
 		if materialRepo.CheckBarcodeExist(request.BarcodeValue, 0) {
-			return nil, nil, errors.WithMessage(errors.New("条形码已存在，请使用其他条形码"))
+			if request.GetIsSync() {
+				logger.Logger.Error("同步物品时，条形码已存在，但已同步物品，忽略检查唯一性", zap.String("barcode", request.BarcodeValue), zap.Any("request", request))
+			} else {
+				return nil, nil, errors.WithMessage(errors.New("条形码已存在，请使用其他条形码"))
+			}
 		}
 	}
 	// 检查内部编码唯一性
-	if request.InternalCode != "" && !request.GetIsSync() {
+	if request.InternalCode != "" {
 		materialRepo := repository.NewMaterialRepo(tx)
 		if materialRepo.CheckMaterialInternalCodeExist(request.InternalCode, 0) {
-			return nil, nil, errors.WithMessage(errors.New("内部编码已存在，请使用其他内部编码"), request.InternalCode)
+			if request.GetIsSync() {
+				logger.Logger.Error("同步物品时，内部编码已存在，但已同步物品，忽略检查唯一性", zap.String("internal_code", request.InternalCode), zap.Any("request", request))
+			} else {
+				return nil, nil, errors.WithMessage(errors.New("内部编码已存在，请使用其他内部编码"), request.InternalCode)
+			}
 		}
 	}
 
