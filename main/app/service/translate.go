@@ -232,8 +232,8 @@ func (s *TranslateSrv) getRedisClient() redis.UniversalClient {
 }
 
 func (s *TranslateSrv) TranslateAll() error {
-	// redis获取所有 s.cachePrefix 开头的key，并查询set是否为空，不为空则翻译
-	keys, err := s.getRedisClient().Keys(context.Background(), s.cacheKeyPrefix+"*").Result()
+	// 使用封装方法，支持集群和单机模式
+	keys, err := cache.ScanRedisKeysDefault(context.Background(), s.getRedisClient(), s.cacheKeyPrefix+"*")
 	if err != nil {
 		logger.Logger.Error("Translate-Redis-Keys", zap.Any("err", err))
 		return err

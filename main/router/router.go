@@ -2,6 +2,9 @@ package router
 
 import (
 	"net/http"
+	"slices"
+	"strconv"
+	"strings"
 	"ttpos-server-go/app/api/v1/admin"
 	"ttpos-server-go/app/api/v1/assistant"
 	"ttpos-server-go/app/api/v1/callboard"
@@ -14,6 +17,7 @@ import (
 	"ttpos-server-go/app/api/v1/shop"
 	"ttpos-server-go/app/api/v1/tablet"
 	_ "ttpos-server-go/app/event" // 注册事件
+	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/rpc"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
@@ -32,6 +36,25 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		rpc.TestEstimateDistance()
 		c.String(http.StatusOK, "Success")
 	})
+	r.GET("api/add_multi_language_name_uuid", func(c *gin.Context) {
+		uuids := strings.Split(c.Query("uuids"), ",")
+		var uuidUint64s []uint64
+		for _, uuid := range uuids {
+			uuidUint64, _ := strconv.ParseUint(strings.TrimSpace(uuid), 10, 64)
+			if uuidUint64 > 0 && !slices.Contains(uuidUint64s, uuidUint64) {
+				uuidUint64s = append(uuidUint64s, uuidUint64)
+			}
+		}
+		companyUuid, _ := strconv.ParseUint(c.Query("company_uuid"), 10, 64)
+		if companyUuid > 0 && len(uuidUint64s) > 0 && dbm.GetDB(companyUuid) != nil {
+			translateSrv := service.NewTranslateSrv(dbm, cache)
+			translateSrv.AddMultiLanguageNameUuidToSet(companyUuid, uuidUint64s...)
+		} else {
+			c.String(http.StatusBadRequest, "参数错误")
+		}
+		c.String(http.StatusOK, "ok")
+	})
+
 	apiV1 := r.Group("api/v1")
 	{
 		adminGroup := apiV1.Group("/admin")
