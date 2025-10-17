@@ -1490,10 +1490,7 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 					TrName:   category.MultiLanguageName.TrName,
 					SvName:   category.MultiLanguageName.SvName,
 				}
-				_, err = multiLanguageNameRepo.CreateMultiLanguageName(multiLanguageName)
-				if err != nil {
-					return errors.WithMessage(err, "创建多语言名称失败")
-				}
+				multiLanguageNameRepo.CreateMultiLanguageName(multiLanguageName)
 				maxSort, err := productRepo.GetProductCategoryMaxSort(
 					commonRepo.WhereBySoftDelete(),
 					productRepo.WhereParentUuid(category.ParentUuid),
@@ -1532,20 +1529,6 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 							return errors.New("分类编码已存在")
 						}
 					}
-				}
-				err := multiLanguageNameRepo.UpdateMultiLanguageName(subShopCategory.MultiLanguageNameUuid, model.MultiLanguageName{
-					EnName:   category.MultiLanguageName.EnName,
-					ZhName:   category.MultiLanguageName.ZhName,
-					ZhTwName: category.MultiLanguageName.ZhTwName,
-					ThName:   category.MultiLanguageName.ThName,
-					MyName:   category.MultiLanguageName.MyName,
-					JaName:   category.MultiLanguageName.JaName,
-					KoName:   category.MultiLanguageName.KoName,
-					TrName:   category.MultiLanguageName.TrName,
-					SvName:   category.MultiLanguageName.SvName,
-				})
-				if err != nil {
-					return errors.WithMessage(err, "更新多语言名称失败")
 				}
 				err = categoryRepo.UpdateProductCategory(subShopCategory.ID, model.ProductCategory{
 					BaseModel: model.BaseModel{
@@ -6996,6 +6979,10 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 	var recoveringUnitUuids []uint64
 	// 要翻译的多语言Uuid
 	var multiLanguageNameUuids []uint64
+	// 已存在的多语言Uuid
+	var existsMultiLanguageUuids []uint64
+	db.Model(&model.MultiLanguageName{}).Pluck("uuid", &existsMultiLanguageUuids)
+
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 删除不在erp单位列表中的单位
 		if len(deletingUnitUuids) > 0 {
@@ -7042,14 +7029,12 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 		}
 		// 同步总部ttpos单位
 		if len(headquarterUnits) > 0 {
-			// 删除多语言
-			tx.Where("uuid IN (?)", tx.Model(&model.ProductUnit{}).Where("headquarter_uuid > 0").Select("multi_language_name_uuid")).Delete(&model.MultiLanguageName{})
 			// 删除仓库
 			tx.Where("headquarter_uuid > 0").Delete(&model.ProductUnit{})
 
 			var insertingMultiLanguageNames []model.MultiLanguageName
 			for _, headquarterUnit := range headquarterUnits {
-				if headquarterUnit.MultiLanguageName.Uuid == 0 {
+				if headquarterUnit.MultiLanguageName.Uuid == 0 || slices.Contains(existsMultiLanguageUuids, headquarterUnit.MultiLanguageName.Uuid) {
 					continue
 				}
 				insertingMultiLanguageNames = append(insertingMultiLanguageNames, model.MultiLanguageName{
@@ -7221,22 +7206,19 @@ func (s *productSrv) SyncAttributeGroup(ctx context.Context) error {
 	var headquarterAttributeGroups []model.ProductAttributeGroup
 	s.dbm.GetDB(headquarter.Uuid).Model(&model.ProductAttributeGroup{}).Preload("MultiLanguageName").Preload("ProductAttributes").Preload("ProductAttributes.MultiLanguageName").Find(&headquarterAttributeGroups)
 
+	var existsMultiLanguageUuids []uint64
+	s.dbm.GetDB(companySetting.CompanyUuid).Model(&model.MultiLanguageName{}).Pluck("uuid", &existsMultiLanguageUuids)
 	if len(headquarterAttributeGroups) > 0 {
 		err := s.dbm.GetDB(companySetting.CompanyUuid).Transaction(func(tx *gorm.DB) error {
-			// 删除属性组多语言
-			tx.Where("uuid IN (?)", tx.Model(&model.ProductAttributeGroup{}).Where("headquarter_uuid > 0").Select("multi_language_name_uuid")).Delete(&model.MultiLanguageName{})
-			// 删除属性值多语言
-			tx.Where("uuid IN (?)", tx.Model(&model.ProductAttribute{}).Where("headquarter_uuid > 0").Select("multi_language_name_uuid")).Delete(&model.MultiLanguageName{})
 			// 删除属性值
 			tx.Where("attribute_group_uuid IN (?)", tx.Model(&model.ProductAttributeGroup{}).Where("headquarter_uuid > 0").Select("uuid")).Delete(&model.ProductAttribute{})
 			// 删除属性组
 			tx.Where("headquarter_uuid > 0").Delete(&model.ProductAttributeGroup{})
-
 			var insertingMultiLanguageNames []model.MultiLanguageName
 			var insertingProductAttributeGroups []model.ProductAttributeGroup
 			var insertingProductAttributes []model.ProductAttribute
 			for _, headquarterAttributeGroup := range headquarterAttributeGroups {
-				if headquarterAttributeGroup.MultiLanguageName.Uuid == 0 {
+				if headquarterAttributeGroup.MultiLanguageName.Uuid == 0 || slices.Contains(existsMultiLanguageUuids, headquarterAttributeGroup.MultiLanguageName.Uuid) {
 					continue
 				}
 				insertingMultiLanguageNames = append(insertingMultiLanguageNames, model.MultiLanguageName{
