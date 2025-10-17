@@ -2792,7 +2792,6 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 			addMaterialList := []model.Material{}
 			addMaterialUnitList := []model.MaterialUnit{}
 			headMaterialMaterialUuids := []uint64{}
-			addMultiLanguageNameList := []model.MultiLanguageName{}
 			for _, material := range headMaterialList {
 				headMaterialMaterialUuids = append(headMaterialMaterialUuids, material.Uuid)
 				// 判断该物品是否已经存在
@@ -2817,6 +2816,18 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 					if err := materialRepo.UpdateMaterial(existingMaterial); err != nil {
 						return errors.WithMessage(err, "更新物品失败")
 					}
+					multiLanguageNameRepo.UpdateMultiLanguageName(existingMaterial.MultiLanguageNameUuid, model.MultiLanguageName{
+						BaseModel: model.BaseModel{Uuid: existingMaterial.MultiLanguageNameUuid, CreateTime: time, UpdateTime: time},
+						EnName:    material.MultiLanguageName.EnName,
+						ZhName:    material.MultiLanguageName.ZhName,
+						ZhTwName:  material.MultiLanguageName.ZhTwName,
+						ThName:    material.MultiLanguageName.ThName,
+						MyName:    material.MultiLanguageName.MyName,
+						JaName:    material.MultiLanguageName.JaName,
+						KoName:    material.MultiLanguageName.KoName,
+						TrName:    material.MultiLanguageName.TrName,
+						SvName:    material.MultiLanguageName.SvName,
+					})
 				} else {
 					// 新增物品
 					addMaterialList = append(addMaterialList, model.Material{
@@ -2853,7 +2864,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 							MaterialUuid:   material.Uuid,
 						})
 					}
-					addMultiLanguageNameList = append(addMultiLanguageNameList, model.MultiLanguageName{
+					multiLanguageNameRepo.CreateMultiLanguageName(model.MultiLanguageName{
 						BaseModel: model.BaseModel{Uuid: material.MultiLanguageNameUuid, CreateTime: time, UpdateTime: time},
 						EnName:    material.MultiLanguageName.EnName,
 						ZhName:    material.MultiLanguageName.ZhName,
@@ -2879,13 +2890,6 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 				err := materialUnitRepo.CreateMaterialUnitList(addMaterialUnitList)
 				if err != nil {
 					return errors.WithMessage(err, "创建总部物品单位失败")
-				}
-			}
-			// 新增多语言名称
-			if len(addMultiLanguageNameList) > 0 {
-				err := multiLanguageNameRepo.CreateMultiLanguageNameList(addMultiLanguageNameList)
-				if err != nil {
-					return errors.WithMessage(err, "创建总部多语言名称失败")
 				}
 			}
 			return nil
