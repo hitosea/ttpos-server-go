@@ -7381,7 +7381,7 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 				commonRepo.WhereByHeadquarterUuid(0),
 			)
 			if err != nil || unit.Uuid == 0 {
-				return errors.WithMessage(errors.New("商品单位不存在"), erpProduct.StockUom)
+				return errors.WithMessage(errors.New("商品单位不存在: "+erpProduct.StockUom), err.Error())
 			}
 			var categoryUuid uint64
 			category, err := productCategoryRepo.GetProductCategory(
