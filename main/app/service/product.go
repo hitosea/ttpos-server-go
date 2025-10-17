@@ -2728,23 +2728,13 @@ func (s *productSrv) DeleteProductSauce(ctx context.Context, deleteReq req.Produ
 
 		// 同步删除加料到erp
 		if ctx.GetCompany().IsOpenErp() {
-			multiLanguageName := model.NewMultiLanguageName(productSauce.Name)
-			enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
-			if err != nil {
-				return errors.WithMessage(err, "翻译失败")
-			}
 			erpSrv := erp.NewIErpSrv(s.dbm)
-			errErp := erpSrv.DeleteProduct(ctx, req.DeleteProductErpReq{
-				Items: []req.DeleteProductErpItemReq{
-					{
-						ItemCode: productSauce.ErpCode,
-						ItemName: enName,
-						StockUom: "Nos",
-					},
-				},
+			errErp := erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
+				ItemCode:   productSauce.ErpCode,
+				NotForSale: true,
 			})
 			if errErp != nil {
-				return errors.WithMessage(errErp, "同步新增加料到erp失败")
+				return errors.WithMessage(errErp, "同步删除加料到erp失败")
 			}
 		}
 		return nil
@@ -5308,6 +5298,7 @@ func (s *productSrv) ProductShopStatus(ctx context.Context, req req.ProductShopS
 	productPackage, err := productRepo.GetProduct(
 		commonRepo.WhereBySoftDelete(),
 		productRepo.WhereUuid(req.Uuid),
+		productRepo.WithProductBoms(commonRepo.WhereBySoftDelete()),
 	)
 	if err != nil {
 		return errors.WithMessage(err, "获取商品失败")
@@ -5364,7 +5355,31 @@ func (s *productSrv) ProductShopStatus(ctx context.Context, req req.ProductShopS
 					}
 				}
 			}
-
+		}
+		company := ctx.GetCompany()
+		if company.IsOpenErp() {
+			erpSrv := erp.NewIErpSrv(s.dbm)
+			if !productPackage.IsPackage() {
+				// 禁用商品模板
+				err = erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
+					ItemCode: productPackage.ErpCode,
+					Disabled: *req.Status == 0,
+				})
+				if err != nil {
+					return errors.WithMessage(err, "同步商品模板到erp失败")
+				}
+			}
+			for _, productBom := range productPackage.ProductBoms {
+				if productBom.IsFlavor() || productBom.IsPackageFlavor() {
+					err = erpSrv.UpdateProduct(ctx, erp.UpdateProductReq{
+						ItemCode: productBom.ErpCode,
+						Disabled: *req.Status == 0,
+					})
+					if err != nil {
+						return errors.WithMessage(err, "同步商品bom到erp失败")
+					}
+				}
+			}
 		}
 
 		return nil
