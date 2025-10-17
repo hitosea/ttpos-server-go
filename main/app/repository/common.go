@@ -152,6 +152,7 @@ type ICommonRepo interface {
 	WhereByCategoryUuid(categoryUuid uint64) DBOption                                         // 根据分类UUID查询
 	WhereByCategoryUuids(categoryUuids []uint64) DBOption                                     // 根据分类UUID列表查询
 	WhereByHeadquarterUuid(headquarterUuid uint64) DBOption                                   // 根据总部UUID查询
+	WhereIsHeadquarter() DBOption                                                             // 是否是总部
 	WhereByErpnextGroupName(groupName string) DBOption                                        // 根据erpnext规格组名称查询
 	WhereByErpnextValueName(valueName string) DBOption                                        // 根据erpnext规格值名称查询
 	WhereByCategoryKey(categoryKey string) DBOption                                           // 根据分类关键字查询
@@ -658,6 +659,12 @@ func (r *commonRepo) WhereByCategoryUuids(categoryUuids []uint64) DBOption {
 func (r *commonRepo) WhereByHeadquarterUuid(headquarterUuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("headquarter_uuid = ?", headquarterUuid)
+	}
+}
+
+func (r *commonRepo) WhereIsHeadquarter() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("headquarter_uuid <> ?", 0)
 	}
 }
 

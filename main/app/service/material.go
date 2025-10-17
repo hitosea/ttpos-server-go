@@ -2798,7 +2798,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 			delMaterialUnitUuids := []uint64{}
 			delMultiLanguageNameUuids := []uint64{}
 			subMaterialList := materialRepo.GetMaterialList(
-				commonRepo.WhereByHeadquarterUuid(companySetting.HeadquarterUuid),
+				commonRepo.WhereIsHeadquarter(),
 				commonRepo.WhereBySoftDelete(),
 				materialRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
 				materialRepo.WithNotBaseUnitList(commonRepo.WhereBySoftDelete()),
