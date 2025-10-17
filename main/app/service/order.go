@@ -10264,18 +10264,18 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 				items = append(items, &selling.PosInvoiceItem{
 					ItemCode:    "TC001",
 					Qty:         product.Num,
-					Rate:        product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
-					Amount:      product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
-					Description: packageName.EN,                            // 套餐子商品描述
+					Rate:        0,              // 商品未含税价格（折后）
+					Amount:      0,              // 商品未含税价格（折后）* 数量
+					Description: packageName.EN, // 套餐子商品描述
 					IsFreeItem:  true,
 				})
 			} else {
 				items = append(items, &selling.PosInvoiceItem{
 					ItemCode:   erpCode,
 					Qty:        product.Num,
-					Rate:       product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
-					Amount:     product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
-					IsFreeItem: true,                                      // 赠菜
+					Rate:       0,    // 商品未含税价格（折后）
+					Amount:     0,    // 商品未含税价格（折后）* 数量
+					IsFreeItem: true, // 赠菜
 				})
 			}
 		} else if product.SalePrice == 0 { // 当商品是0元商品时，可能是通过商品改价为0或原本售价就是0
@@ -10298,13 +10298,18 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 					IsFreeItem:  false,
 				})
 			} else {
-				items = append(items, &selling.PosInvoiceItem{
+				item := &selling.PosInvoiceItem{
 					ItemCode:   erpCode,
 					Qty:        product.Num,
 					Rate:       product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
 					Amount:     product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
 					IsFreeItem: isFreeOrder,
-				})
+				}
+				if isFreeOrder {
+					item.Rate = 0
+					item.Amount = 0
+				}
+				items = append(items, item)
 			}
 		}
 		// 如果有小料，则需要添加小料
