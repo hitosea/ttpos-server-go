@@ -203,6 +203,7 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 			OpeningStock:       itemInfo.OpeningStock,
 			Attributes:         attrList,
 			ItemGroupName:      itemGroupCodeName,
+			VariantOf:          itemInfo.VariantOf,
 		})
 	}
 

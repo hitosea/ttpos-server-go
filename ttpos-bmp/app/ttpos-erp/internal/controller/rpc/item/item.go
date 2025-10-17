@@ -231,6 +231,7 @@ func (c *Controller) GetItem(ctx context.Context, req *item.GetItemReq) (*api.Re
 		Uoms:               uomDetails,                        // 单位列表（已转换）
 		OpeningStock:       itemInfo.OpeningStock,             // 期初库存
 		Attributes:         attrList,                          // 属性列表（已转换）
+		VariantOf:          itemInfo.VariantOf,                //变体模板
 	}
 
 	// 返回成功响应，包含转换后的物品详细信息

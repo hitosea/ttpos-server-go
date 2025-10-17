@@ -269,6 +269,7 @@ type ItemInfo struct {
 	HasVariants        bool                   `protobuf:"varint,21,opt,name=has_variants,json=hasVariants,proto3" json:"has_variants,omitempty" dc:"是否包含变体参数，可选。 多规格商品时必填。"`                                                                                          // 是否包含变体参数，可选。 多规格商品时必填。
 	Attributes         []*ItemAttribute       `protobuf:"bytes,22,rep,name=attributes,proto3" json:"attributes,omitempty" dc:"变体参数列表，可选。 多规格商品时必填。"`                                                                                                                  // 变体参数列表，可选。 多规格商品时必填。
 	ItemGroupName      string                 `protobuf:"bytes,23,opt,name=item_group_name,json=itemGroupName,proto3" json:"item_group_name,omitempty" dc:"物品分组名称，可选,  PosAttribute 属性/PosAddon 加料 时必填"`                                                              // 物品分组名称，可选,  PosAttribute 属性/PosAddon 加料 时必填
+	VariantOf          string                 `protobuf:"bytes,24,opt,name=variant_of,json=variantOf,proto3" json:"variant_of,omitempty" dc:"变体物品编码，可选。 多规格商品时填。"`                                                                                                    // 变体物品编码，可选。 多规格商品时填。
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -460,6 +461,13 @@ func (x *ItemInfo) GetAttributes() []*ItemAttribute {
 func (x *ItemInfo) GetItemGroupName() string {
 	if x != nil {
 		return x.ItemGroupName
+	}
+	return ""
+}
+
+func (x *ItemInfo) GetVariantOf() string {
+	if x != nil {
+		return x.VariantOf
 	}
 	return ""
 }
@@ -2209,7 +2217,7 @@ const file_item_item_proto_rawDesc = "" +
 	"variant_of\x18\n" +
 	" \x01(\tR\tvariantOf\">\n" +
 	"\x0fGetItemListResp\x12+\n" +
-	"\titem_list\x18\x01 \x03(\v2\x0e.item.ItemInfoR\bitemList\"\xd1\x06\n" +
+	"\titem_list\x18\x01 \x03(\v2\x0e.item.ItemInfoR\bitemList\"\xf0\x06\n" +
 	"\bItemInfo\x12\x1b\n" +
 	"\titem_name\x18\x01 \x01(\tR\bitemName\x12.\n" +
 	"\n" +
@@ -2238,7 +2246,9 @@ const file_item_item_proto_rawDesc = "" +
 	"\n" +
 	"attributes\x18\x16 \x03(\v2\x13.item.ItemAttributeR\n" +
 	"attributes\x12&\n" +
-	"\x0fitem_group_name\x18\x17 \x01(\tR\ritemGroupName\"\xaa\x01\n" +
+	"\x0fitem_group_name\x18\x17 \x01(\tR\ritemGroupName\x12\x1d\n" +
+	"\n" +
+	"variant_of\x18\x18 \x01(\tR\tvariantOf\"\xaa\x01\n" +
 	"\rItemAttribute\x12%\n" +
 	"\x0eattribute_name\x18\x01 \x01(\tR\rattributeName\x12'\n" +
 	"\x0fattribute_value\x18\x02 \x01(\tR\x0eattributeValue\x12,\n" +
