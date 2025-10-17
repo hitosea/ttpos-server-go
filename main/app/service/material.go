@@ -2703,7 +2703,6 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 		return errors.WithMessage(err, "获取物品列表失败")
 	}
 
-	var saveMaterialUuids []uint64
 	var multiLanguageNameUuids []uint64
 
 	db := ctx.GetDB()
@@ -2741,7 +2740,6 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 				}); err != nil {
 					logger.Logger.Error("同步erp物品列表失败-01", zap.Error(err))
 				}
-				saveMaterialUuids = append(saveMaterialUuids, existingMaterial.Uuid)
 			} else {
 				material, err := s.AddMaterialByEprItem(copyCtx, req.MaterialAddErpReq{
 					ItemCode:           itemInfo.ItemCode,
@@ -2760,7 +2758,6 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 				if err != nil {
 					logger.Logger.Error("同步erp物品列表失败-02", zap.Error(err))
 				} else {
-					saveMaterialUuids = append(saveMaterialUuids, material.Uuid)
 					multiLanguageNameUuids = append(multiLanguageNameUuids, material.MultiLanguageNameUuid)
 				}
 			}
@@ -2771,13 +2768,11 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 
 	// 从总部同步物品到子店
 	if companySetting.IsSubShop() {
-		saveMaterialUuids = []uint64{}
 		headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
 		commonRepo := repository.NewCommonRepo()
 		materialRepo := repository.NewMaterialRepo(headquarterDb)
 		headMaterialList := materialRepo.GetMaterialList(
 			commonRepo.WhereByHeadquarterUuid(0),
-			commonRepo.WhereBySoftDelete(),
 			materialRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
 			materialRepo.WithNotBaseUnitList(commonRepo.WhereBySoftDelete()),
 		)
@@ -2793,103 +2788,100 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 
 			time := time.Now().Unix()
 
-			// 需要删除的物品、物品单位、多语言名称
-			delMaterialUuids := []uint64{}
-			delMaterialUnitUuids := []uint64{}
-			delMultiLanguageNameUuids := []uint64{}
-			subMaterialList := materialRepo.GetMaterialList(
-				commonRepo.WhereIsHeadquarter(),
-				commonRepo.WhereBySoftDelete(),
-				materialRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
-				materialRepo.WithNotBaseUnitList(commonRepo.WhereBySoftDelete()),
-			)
-			for _, material := range subMaterialList {
-				delMaterialUuids = append(delMaterialUuids, material.Uuid)
-				for _, materialUnit := range material.NotBaseUnitList {
-					delMaterialUnitUuids = append(delMaterialUnitUuids, materialUnit.Uuid)
-				}
-				delMultiLanguageNameUuids = append(delMultiLanguageNameUuids, material.MultiLanguageNameUuid)
-			}
-
 			// 需要保存的物品、物品单位、多语言名称
 			addMaterialList := []model.Material{}
 			addMaterialUnitList := []model.MaterialUnit{}
+			headMaterialMaterialUuids := []uint64{}
 			addMultiLanguageNameList := []model.MultiLanguageName{}
 			for _, material := range headMaterialList {
-				addMaterialList = append(addMaterialList, model.Material{
-					BaseModel:             model.BaseModel{Uuid: material.Uuid, CreateTime: time, UpdateTime: time},
-					Name:                  material.Name,
-					Code:                  material.Code,
-					Valuation:             material.Valuation,
-					InitStock:             material.InitStock,
-					MultiLanguageNameUuid: material.MultiLanguageNameUuid,
-					CategoryUuid:          material.CategoryUuid,
-					SupplierUuid:          material.SupplierUuid,
-					ImageUuid:             material.ImageUuid,
-					ImageName:             material.ImageName,
-					UnitUuid:              material.UnitUuid,
-					PurchaseUnitUuid:      material.PurchaseUnitUuid,
-					CostUnitUuid:          material.CostUnitUuid,
-					Price:                 material.Price,
-					StockNum:              material.StockNum,
-					ActualSaleNum:         material.ActualSaleNum,
-					BarcodeValue:          material.BarcodeValue,
-					InternalCode:          material.InternalCode,
-					Status:                material.Status,
-					HeadquarterUuid:       companySetting.HeadquarterUuid,
-					WarehouseUuid:         material.WarehouseUuid,
-				})
-				for _, unit := range material.NotBaseUnitList {
-					addMaterialUnitList = append(addMaterialUnitList, model.MaterialUnit{
-						BaseModel:      model.BaseModel{Uuid: unit.Uuid, CreateTime: time, UpdateTime: time},
-						Name:           unit.Name,
-						UnitUuid:       unit.UnitUuid,
-						ConversionRate: unit.ConversionRate,
-						FromUnitUuid:   unit.FromUnitUuid,
-						IsDefault:      unit.IsDefault,
-						MaterialUuid:   material.Uuid,
+				headMaterialMaterialUuids = append(headMaterialMaterialUuids, material.Uuid)
+				// 判断该物品是否已经存在
+				existingMaterial := materialRepo.GetMaterial(commonRepo.WhereByErpCode(material.Code))
+				if existingMaterial.Uuid != 0 {
+					// 更新物品
+					existingMaterial.BaseModel = model.BaseModel{
+						DeleteTime: material.DeleteTime,
+						UpdateTime: material.UpdateTime,
+						CreateTime: material.CreateTime,
+					}
+					existingMaterial.ImageUuid = material.ImageUuid
+					existingMaterial.ImageName = material.ImageName
+					existingMaterial.UnitUuid = material.UnitUuid
+					existingMaterial.PurchaseUnitUuid = material.PurchaseUnitUuid
+					existingMaterial.CostUnitUuid = material.CostUnitUuid
+					existingMaterial.Valuation = material.Valuation
+					existingMaterial.Price = material.Price
+					existingMaterial.BarcodeValue = material.BarcodeValue
+					existingMaterial.InternalCode = material.InternalCode
+					existingMaterial.Status = material.Status
+					if err := materialRepo.UpdateMaterial(existingMaterial); err != nil {
+						return errors.WithMessage(err, "更新物品失败")
+					}
+				} else {
+					// 新增物品
+					addMaterialList = append(addMaterialList, model.Material{
+						BaseModel:             model.BaseModel{Uuid: material.Uuid, CreateTime: time, UpdateTime: time},
+						Name:                  material.Name,
+						Code:                  material.Code,
+						Valuation:             material.Valuation,
+						InitStock:             material.InitStock,
+						MultiLanguageNameUuid: material.MultiLanguageNameUuid,
+						CategoryUuid:          material.CategoryUuid,
+						SupplierUuid:          material.SupplierUuid,
+						ImageUuid:             material.ImageUuid,
+						ImageName:             material.ImageName,
+						UnitUuid:              material.UnitUuid,
+						PurchaseUnitUuid:      material.PurchaseUnitUuid,
+						CostUnitUuid:          material.CostUnitUuid,
+						Price:                 material.Price,
+						StockNum:              material.StockNum,
+						ActualSaleNum:         material.ActualSaleNum,
+						BarcodeValue:          material.BarcodeValue,
+						InternalCode:          material.InternalCode,
+						Status:                material.Status,
+						HeadquarterUuid:       companySetting.HeadquarterUuid,
+						WarehouseUuid:         material.WarehouseUuid,
+					})
+					for _, unit := range material.NotBaseUnitList {
+						addMaterialUnitList = append(addMaterialUnitList, model.MaterialUnit{
+							BaseModel:      model.BaseModel{Uuid: unit.Uuid, CreateTime: time, UpdateTime: time},
+							Name:           unit.Name,
+							UnitUuid:       unit.UnitUuid,
+							ConversionRate: unit.ConversionRate,
+							FromUnitUuid:   unit.FromUnitUuid,
+							IsDefault:      unit.IsDefault,
+							MaterialUuid:   material.Uuid,
+						})
+					}
+					addMultiLanguageNameList = append(addMultiLanguageNameList, model.MultiLanguageName{
+						BaseModel: model.BaseModel{Uuid: material.MultiLanguageNameUuid, CreateTime: time, UpdateTime: time},
+						EnName:    material.MultiLanguageName.EnName,
+						ZhName:    material.MultiLanguageName.ZhName,
+						ZhTwName:  material.MultiLanguageName.ZhTwName,
+						ThName:    material.MultiLanguageName.ThName,
+						MyName:    material.MultiLanguageName.MyName,
+						JaName:    material.MultiLanguageName.JaName,
+						KoName:    material.MultiLanguageName.KoName,
+						TrName:    material.MultiLanguageName.TrName,
+						SvName:    material.MultiLanguageName.SvName,
 					})
 				}
-				addMultiLanguageNameList = append(addMultiLanguageNameList, model.MultiLanguageName{
-					BaseModel: model.BaseModel{Uuid: material.MultiLanguageNameUuid, CreateTime: time, UpdateTime: time},
-					EnName:    material.MultiLanguageName.EnName,
-					ZhName:    material.MultiLanguageName.ZhName,
-					ZhTwName:  material.MultiLanguageName.ZhTwName,
-					ThName:    material.MultiLanguageName.ThName,
-					MyName:    material.MultiLanguageName.MyName,
-					JaName:    material.MultiLanguageName.JaName,
-					KoName:    material.MultiLanguageName.KoName,
-					TrName:    material.MultiLanguageName.TrName,
-					SvName:    material.MultiLanguageName.SvName,
-				})
 			}
-			// 删除子店中所有总部物品，然后新增总部物品
-			err := materialRepo.DestroyMaterial(commonRepo.WhereInUuids(delMaterialUuids))
-			if err != nil {
-				return errors.WithMessage(err, "销毁总部物品失败")
-			}
-			err = materialRepo.DestroyMaterialUnit(commonRepo.WhereInUuids(delMaterialUnitUuids))
-			if err != nil {
-				return errors.WithMessage(err, "销毁总部物品单位失败")
-			}
-			if len(delMultiLanguageNameUuids) > 0 {
-				err := multiLanguageNameRepo.DestroyMultiLanguageName(commonRepo.WhereInUuids(delMultiLanguageNameUuids))
-				if err != nil {
-					return errors.WithMessage(err, "销毁总部多语言名称失败")
-				}
-			}
+			// 新增物品
 			if len(addMaterialList) > 0 {
 				err := materialRepo.CreateMaterialList(addMaterialList)
 				if err != nil {
 					return errors.WithMessage(err, "创建总部物品失败")
 				}
 			}
+			// 新增物品单位
 			if len(addMaterialUnitList) > 0 {
 				err := materialUnitRepo.CreateMaterialUnitList(addMaterialUnitList)
 				if err != nil {
 					return errors.WithMessage(err, "创建总部物品单位失败")
 				}
 			}
+			// 新增多语言名称
 			if len(addMultiLanguageNameList) > 0 {
 				err := multiLanguageNameRepo.CreateMultiLanguageNameList(addMultiLanguageNameList)
 				if err != nil {
