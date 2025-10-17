@@ -81,13 +81,13 @@ func NewTranslateSrvImpl(dbm *database.DBManager, cache cache.Cache) ITranslateS
 	return &TranslateSrv{
 		dbm:            dbm,
 		cache:          cache,
-		cacheKeyPrefix: "translate:company_uuid:%d",
+		cacheKeyPrefix: "translate:company_uuid",
 	}
 }
 
 // Translate 翻译
 func (s *TranslateSrv) Translate(companyUuid uint64) error {
-	cacheKey := fmt.Sprintf(s.cacheKeyPrefix, companyUuid)
+	cacheKey := fmt.Sprintf("%s:%d", s.cacheKeyPrefix, companyUuid)
 	// 检查是否已有翻译任务在运行
 	if !translateTaskManager.tryStartTask(companyUuid) {
 		return errors.New("翻译中，请稍后再试")
@@ -192,7 +192,7 @@ func (s *TranslateSrv) AddMultiLanguageNameUuidToSet(companyUuid uint64, multiLa
 		return nil
 	}
 
-	cacheKey := fmt.Sprintf(s.cacheKeyPrefix, companyUuid)
+	cacheKey := fmt.Sprintf("%s:%d", s.cacheKeyPrefix, companyUuid)
 
 	// 将 []uint64 转换为 []interface{}
 	members := make([]any, len(multiLanguageNameUuids))
@@ -202,6 +202,7 @@ func (s *TranslateSrv) AddMultiLanguageNameUuidToSet(companyUuid uint64, multiLa
 
 	err := s.getRedisClient().SAdd(context.Background(), cacheKey, members...).Err()
 	if err != nil {
+		logger.Logger.Error("添加多语言uuid到待翻译集合失败", zap.Error(err))
 		return errors.WithMessage(errors.New("添加多语言uuid到待翻译集合失败"), err.Error())
 	}
 	if err := s.Translate(companyUuid); err != nil {
@@ -212,7 +213,7 @@ func (s *TranslateSrv) AddMultiLanguageNameUuidToSet(companyUuid uint64, multiLa
 
 // RemoveMultiLanguageNameUuidFromSet 从set中删除多语言uuid
 func (s *TranslateSrv) RemoveMultiLanguageNameUuidFromSet(companyUuid uint64, multiLanguageNameUuids ...uint64) error {
-	cacheKey := fmt.Sprintf(s.cacheKeyPrefix, companyUuid)
+	cacheKey := fmt.Sprintf("%s:%d", s.cacheKeyPrefix, companyUuid)
 	// 将 []uint64 转换为 []interface{}
 	members := make([]any, len(multiLanguageNameUuids))
 	for i, uuid := range multiLanguageNameUuids {
@@ -239,7 +240,7 @@ func (s *TranslateSrv) TranslateAll() error {
 	}
 
 	for _, key := range keys {
-		companyUuid, err := strconv.ParseUint(strings.TrimPrefix(key, s.cacheKeyPrefix), 10, 64)
+		companyUuid, err := strconv.ParseUint(strings.TrimPrefix(key, s.cacheKeyPrefix+":"), 10, 64)
 		if err != nil {
 			logger.Logger.Error("Translate-Redis-SMembers", zap.Any("err", err))
 			continue
