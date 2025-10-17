@@ -6253,6 +6253,7 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 				var flavorUuid uint64
 				erpCode := ""
 				if params.FlavorListResult.IsPackage {
+					isAdd = true
 					// 同步套餐到erp
 					if ctx.GetCompany().IsOpenErp() {
 						// 获取商品包信息
