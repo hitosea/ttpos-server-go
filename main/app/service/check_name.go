@@ -79,19 +79,9 @@ func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.Che
 			}
 		case constant.CheckNameSourceProductPackageGroup:
 			{
-				var count int64
-				query := db.Model(&model.ProductPackageGroup{}).
-					Joins("JOIN ttpos_multi_language_name ON ttpos_product_package_group.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
-					Where("ttpos_multi_language_name.delete_time = 0")
-				if checkNameReq.Uuid != 0 {
-					query = query.Where("ttpos_product_package_group.uuid != ?", checkNameReq.Uuid)
-				}
-				query.Count(&count)
-
 				result = append(result, resp.CheckNameItem{
 					Lang:      name.Lang,
-					TextExist: count > 0,
+					TextExist: false,
 				})
 			}
 

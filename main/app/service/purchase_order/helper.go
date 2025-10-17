@@ -756,7 +756,7 @@ func (h *purchaseOrderHelper) AddToTransitWarehouse(
 	}
 	// 记录在途仓出库日志
 	warehouseLog := &model.WarehouseInOutLog{
-		LogType:              1,  // 入库
+		LogType:              0,  // 入库
 		Scene:                20, // 在途入库
 		WarehouseUuid:        transitWarehouse.Uuid,
 		MaterialUuid:         item.MaterialUuid,
