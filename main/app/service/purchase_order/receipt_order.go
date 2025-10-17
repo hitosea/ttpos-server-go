@@ -573,7 +573,7 @@ func (s *purchaseReceiptOrderSrv) updateMaterialStock(
 			}
 			// 记录在途仓出库日志
 			warehouseLog := &model.WarehouseInOutLog{
-				LogType:              0,  // 出库
+				LogType:              1,  // 出库
 				Scene:                21, // 在途出库
 				WarehouseUuid:        transitWarehouse.Uuid,
 				MaterialUuid:         item.MaterialUuid,
