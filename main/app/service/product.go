@@ -1455,7 +1455,8 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 		commonRepo.WhereByCategoryKey(""),
 		commonRepo.WhereBySoftDelete(),
 		commonRepo.SortWithSort("ASC"),
-		productRepo.WithMultiLanguageName(),
+		commonRepo.WhereByHeadquarterUuid(0),
+		productRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
 	)
 	if err != nil {
 		return errors.WithMessage(err, "获取总部产品分类失败")
@@ -1466,22 +1467,33 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 		categoryRepo := repository.NewProductCategoryRepo(tx)
 		multiLanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
 		for _, category := range categories {
-			subShopCategory, _ := categoryRepo.GetProductCategory(
+			subShopCategory, err := categoryRepo.GetProductCategory(
 				commonRepo.WhereByUuid(category.Uuid),
 				commonRepo.WhereByHeadquarterUuid(companySetting.HeadquarterUuid),
+				commonRepo.WhereBySoftDelete(),
 			)
-			multiLanguageName := model.MultiLanguageName{
-				EnName:   category.MultiLanguageName.EnName,
-				ZhName:   category.MultiLanguageName.ZhName,
-				ZhTwName: category.MultiLanguageName.ZhTwName,
-				ThName:   category.MultiLanguageName.ThName,
-				MyName:   category.MultiLanguageName.MyName,
-				JaName:   category.MultiLanguageName.JaName,
-				KoName:   category.MultiLanguageName.KoName,
-				TrName:   category.MultiLanguageName.TrName,
-				SvName:   category.MultiLanguageName.SvName,
-			}
-			if subShopCategory == nil {
+			if err != nil || subShopCategory.Uuid == 0 {
+				time := time.Now().Unix()
+				multiLanguageName := model.MultiLanguageName{
+					BaseModel: model.BaseModel{
+						Uuid:       category.MultiLanguageName.Uuid,
+						CreateTime: time,
+						UpdateTime: time,
+					},
+					EnName:   category.MultiLanguageName.EnName,
+					ZhName:   category.MultiLanguageName.ZhName,
+					ZhTwName: category.MultiLanguageName.ZhTwName,
+					ThName:   category.MultiLanguageName.ThName,
+					MyName:   category.MultiLanguageName.MyName,
+					JaName:   category.MultiLanguageName.JaName,
+					KoName:   category.MultiLanguageName.KoName,
+					TrName:   category.MultiLanguageName.TrName,
+					SvName:   category.MultiLanguageName.SvName,
+				}
+				_, err = multiLanguageNameRepo.CreateMultiLanguageName(multiLanguageName)
+				if err != nil {
+					return errors.WithMessage(err, "创建多语言名称失败")
+				}
 				maxSort, err := productRepo.GetProductCategoryMaxSort(
 					commonRepo.WhereBySoftDelete(),
 					productRepo.WhereParentUuid(category.ParentUuid),
@@ -1491,18 +1503,14 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 					return errors.WithMessage(err, "获取一级分类最大排序失败")
 				}
 				sort := uint(maxSort + 1)
-				multiLanguageNameUuid, err := multiLanguageNameRepo.CreateMultiLanguageName(multiLanguageName)
-				if err != nil {
-					return errors.WithMessage(err, "创建多语言名称失败")
-				}
-				categoryRepo.CreateProductCategory(model.ProductCategory{
+				_, err = categoryRepo.CreateProductCategory(model.ProductCategory{
 					BaseModel: model.BaseModel{
 						Uuid:       category.Uuid,
 						CreateTime: category.CreateTime,
 						UpdateTime: category.UpdateTime,
 					},
 					Name:                  category.Name,
-					MultiLanguageNameUuid: multiLanguageNameUuid,
+					MultiLanguageNameUuid: category.MultiLanguageName.Uuid,
 					Status:                category.Status,
 					ParentUuid:            category.ParentUuid,
 					IsSpecial:             category.IsSpecial,
@@ -1510,6 +1518,9 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 					Code:                  category.Code,
 					HeadquarterUuid:       companySetting.HeadquarterUuid,
 				})
+				if err != nil {
+					return errors.WithMessage(err, "创建分类失败")
+				}
 			} else {
 				changeCode := false // 是否修改了分类编码
 				if category.Code != subShopCategory.Code {
@@ -1522,7 +1533,17 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 						}
 					}
 				}
-				err := multiLanguageNameRepo.UpdateMultiLanguageName(subShopCategory.MultiLanguageNameUuid, multiLanguageName)
+				err := multiLanguageNameRepo.UpdateMultiLanguageName(subShopCategory.MultiLanguageNameUuid, model.MultiLanguageName{
+					EnName:   category.MultiLanguageName.EnName,
+					ZhName:   category.MultiLanguageName.ZhName,
+					ZhTwName: category.MultiLanguageName.ZhTwName,
+					ThName:   category.MultiLanguageName.ThName,
+					MyName:   category.MultiLanguageName.MyName,
+					JaName:   category.MultiLanguageName.JaName,
+					KoName:   category.MultiLanguageName.KoName,
+					TrName:   category.MultiLanguageName.TrName,
+					SvName:   category.MultiLanguageName.SvName,
+				})
 				if err != nil {
 					return errors.WithMessage(err, "更新多语言名称失败")
 				}

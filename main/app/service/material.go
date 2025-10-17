@@ -2917,158 +2917,159 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 
 // 同步成本卡
 func (s *materialSrv) SyncProductBomCard(ctx context.Context) error {
-	companySetting := ctx.GetCompanySetting()
-	erpBoms := []*manufacturing.BomInfo{} // erp成本卡列表
-	erpSrv := erp.NewIErpSrv(s.dbm)
-	productBomCardList, err := erpSrv.GetProductBomCardList(ctx) // erp成本卡列表,但这个接口没有物品列表信息
-	if err != nil {
-		return errors.WithMessage(err, "获取erp成本卡列表失败")
-	}
-	for _, bom := range productBomCardList.BomList {
-		bomResp, err := erpSrv.GetProductBomCardDetail(ctx, req.ErpProductBomCardDetailReq{ // 单个成本卡的详情，包括了物品信息
-			BomName: bom.BomName,
-		})
-		if err != nil {
-			return errors.WithMessage(err, "获取erp成本卡详情失败")
-		}
-		erpBoms = append(erpBoms, bomResp.BomInfo)
-	}
-
-	erpBomsMap := make(map[string]*manufacturing.BomInfo)
-	for _, bom := range erpBoms {
-		erpBomsMap[bom.BomName] = bom
-	}
-
-	db := ctx.GetDB()
-	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-		// 获取ttpos的成本卡列表
-		headquarterProductBomCardList, err := repository.NewProductBomCardRepo(tx).GetSubShopProductBomCardList(ctx.GetCompanySetting().HeadquarterUuid)
-		if err != nil {
-			return errors.WithMessage(err, "获取子店中来自总部的成本卡列表失败")
-		}
-		headquarterProductBomCardMap := make(map[string]*model.ProductBomCard)
-		for i, bom := range headquarterProductBomCardList {
-			key := bom.ErpCode
-			headquarterProductBomCardMap[key] = headquarterProductBomCardList[i]
-		}
-		needCreateProductBomCardList := s.getNeedCreateProductBomCardList(headquarterProductBomCardMap, erpBoms)
-
-		// 需要新建的成本卡列表。erpnext有，而ttpos没有时
-		needCreate := needCreateProductBomCardList.CreateBoms // 这些成本卡来自两种场景：1. erpnext为还没有成本卡的商品添加成本卡；2. erpnext为已经添加成本卡的商品修改成本卡
-		// 需要失效的成本卡列表。erpnext没有，而ttpos有时
-		needDisable := needCreateProductBomCardList.DisableBoms // 这些成本卡来自1种场景：1. erpnext为已经添加成本卡的商品删除成本卡
-		// 已经存在的成本卡列表。erpnext有，而ttpos也有
-		existingProductBomCardList := needCreateProductBomCardList.ExsitProductBomCardList
-		for _, bomCard := range existingProductBomCardList {
-			if bom, ok := erpBomsMap[bomCard.ErpCode]; ok {
-				itemCode := bom.ItemCode                                              // 商品、小料的erpnext编码
-				objectByItemCodeResp, err := s.getObjectByItemCode(ctx, itemCode, tx) // 获取物品或加料
-				if err != nil {
-					logger.Logger.Error("同步成本卡时，获取物品或加料失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard))
-					continue
-				}
-				if objectByItemCodeResp.RelatedType == constant.ProductBomCardRelatedTypeFlavor { // 规格商品
-					// 更新product_bom表的成本卡uuid
-					if err := tx.Model(&model.ProductBom{}).Where("uuid = ?", objectByItemCodeResp.ProductBom.Uuid).Update("product_bom_card_uuid", bomCard.Uuid).Error; err != nil {
-						logger.Logger.Error("同步成本卡时，更新product_bom表的成本卡uuid失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard))
-						continue
-					}
-				} else if objectByItemCodeResp.RelatedType == constant.ProductBomCardRelatedTypeSauce { // 小料
-					// 更新product_sauce表的成本卡uuid
-					if err := tx.Model(&model.ProductSauce{}).Where("uuid = ?", objectByItemCodeResp.ProductSauce.Uuid).Update("product_bom_card_uuid", bomCard.Uuid).Error; err != nil {
-						logger.Logger.Error("同步成本卡时，更新product_sauce表的成本卡uuid失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard))
-						continue
-					}
-				}
-			}
-		}
-		for _, bom := range needCreate {
-			if err := s.createProductBomCardByErpBom(ctx, tx, bom); err != nil {
-				if strings.Contains(err.Error(), "物品或加料不存在") || strings.Contains(err.Error(), "单位不存在") {
-					logger.Logger.Error("同步成本卡时，创建成本卡失败，物品或加料或物料单位不存在", zap.String("bom_name", bom.BomName), zap.Any("bom", bom))
-					continue
-				} else {
-					return errors.WithMessage(err, "创建成本卡失败")
-				}
-			}
-		}
-		for _, bomCard := range needDisable {
-			if err := s.disableProductBomCard(ctx, tx, bomCard); err != nil {
-				if strings.Contains(err.Error(), "获取商品或加料失败") {
-					logger.Logger.Error("同步成本卡时，失效成本卡失败，商品或加料不存在", zap.String("bom_name", bomCard.Name), zap.Any("bom_card", bomCard))
-					continue
-				} else {
-					return errors.WithMessage(err, "失效成本卡失败")
-				}
-			}
-		}
-		return nil
-	}); err != nil {
-		return errors.WithMessage(err)
-	}
-
-	// 从ttpos总店同步
-	if companySetting.IsSubShop() {
-		headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
-		commonRepo := repository.NewCommonRepo()
-		productBomCardList, err := repository.NewProductBomCardRepo(headquarterDb).GetProductBomCardList(
-			commonRepo.WhereBySoftDelete(),
-			commonRepo.Preload(
-				repository.WithPreload{
-					Query: "MultiLanguageName",
-				},
-				repository.WithPreload{
-					Query: "RelatedMaterials",
-				},
-			),
-		)
-		if err != nil {
-			return errors.WithMessage(err, "获取总部成本卡列表失败")
-		}
-
-		if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-			// 删除所有总部的成本卡。
-			tx.Model(&model.ProductBomCard{}).Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Delete(&model.ProductBomCard{})
-			productBomCardUuids := []uint64{}
-			for _, productBomCard := range productBomCardList {
-				productBomCardUuids = append(productBomCardUuids, productBomCard.Uuid)
-			}
-			tx.Model(&model.RelatedMaterial{}).Where("related_uuid IN (?)", productBomCardUuids).Delete(&model.RelatedMaterial{})
-
-			for _, productBomCard := range productBomCardList {
-				// 过滤掉数据不完整的成本卡。如无多语言名称
-				if productBomCard.MultiLanguageName == nil {
-					continue
-				}
-				// 创建成本卡
-				productBomCard.BaseModel = model.BaseModel{
-					Uuid: productBomCard.Uuid,
-				}
-				productBomCard.HeadquarterUuid = companySetting.HeadquarterUuid
-				if err := repository.NewProductBomCardRepo(tx).CreateProductBomCard(*productBomCard); err != nil {
-					return errors.WithMessage(err, "创建成本卡失败")
-				}
-				// 创建多语言
-				productBomCard.MultiLanguageName.BaseModel = model.BaseModel{Uuid: productBomCard.MultiLanguageNameUuid}
-				if _, err := repository.NewMultiLanguageNameRepo(tx).CreateMultiLanguageNameDUPLICATE(*productBomCard.MultiLanguageName); err != nil {
-					return errors.WithMessage(err, "创建多语言名称失败")
-				}
-				// 创建成本卡材料
-				for _, material := range productBomCard.RelatedMaterials {
-					material.BaseModel = model.BaseModel{
-						Uuid: material.Uuid,
-					}
-					if err := repository.NewProductBomCardRepo(tx).CreateProductBomCardMaterial(*material); err != nil {
-						return errors.WithMessage(err, "创建成本卡材料失败")
-					}
-				}
-			}
-			return nil
-		}); err != nil {
-			return errors.WithMessage(err)
-		}
-	}
 	return nil
+	// companySetting := ctx.GetCompanySetting()
+	// erpBoms := []*manufacturing.BomInfo{} // erp成本卡列表
+	// erpSrv := erp.NewIErpSrv(s.dbm)
+	// productBomCardList, err := erpSrv.GetProductBomCardList(ctx) // erp成本卡列表,但这个接口没有物品列表信息
+	// if err != nil {
+	// 	return errors.WithMessage(err, "获取erp成本卡列表失败")
+	// }
+	// for _, bom := range productBomCardList.BomList {
+	// 	bomResp, err := erpSrv.GetProductBomCardDetail(ctx, req.ErpProductBomCardDetailReq{ // 单个成本卡的详情，包括了物品信息
+	// 		BomName: bom.BomName,
+	// 	})
+	// 	if err != nil {
+	// 		return errors.WithMessage(err, "获取erp成本卡详情失败")
+	// 	}
+	// 	erpBoms = append(erpBoms, bomResp.BomInfo)
+	// }
+
+	// erpBomsMap := make(map[string]*manufacturing.BomInfo)
+	// for _, bom := range erpBoms {
+	// 	erpBomsMap[bom.BomName] = bom
+	// }
+
+	// db := ctx.GetDB()
+	// if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+	// 	// 获取ttpos的成本卡列表
+	// 	headquarterProductBomCardList, err := repository.NewProductBomCardRepo(tx).GetSubShopProductBomCardList(ctx.GetCompanySetting().HeadquarterUuid)
+	// 	if err != nil {
+	// 		return errors.WithMessage(err, "获取子店中来自总部的成本卡列表失败")
+	// 	}
+	// 	headquarterProductBomCardMap := make(map[string]*model.ProductBomCard)
+	// 	for i, bom := range headquarterProductBomCardList {
+	// 		key := bom.ErpCode
+	// 		headquarterProductBomCardMap[key] = headquarterProductBomCardList[i]
+	// 	}
+	// 	needCreateProductBomCardList := s.getNeedCreateProductBomCardList(headquarterProductBomCardMap, erpBoms)
+
+	// 	// 需要新建的成本卡列表。erpnext有，而ttpos没有时
+	// 	needCreate := needCreateProductBomCardList.CreateBoms // 这些成本卡来自两种场景：1. erpnext为还没有成本卡的商品添加成本卡；2. erpnext为已经添加成本卡的商品修改成本卡
+	// 	// 需要失效的成本卡列表。erpnext没有，而ttpos有时
+	// 	needDisable := needCreateProductBomCardList.DisableBoms // 这些成本卡来自1种场景：1. erpnext为已经添加成本卡的商品删除成本卡
+	// 	// 已经存在的成本卡列表。erpnext有，而ttpos也有
+	// 	existingProductBomCardList := needCreateProductBomCardList.ExsitProductBomCardList
+	// 	for _, bomCard := range existingProductBomCardList {
+	// 		if bom, ok := erpBomsMap[bomCard.ErpCode]; ok {
+	// 			itemCode := bom.ItemCode                                              // 商品、小料的erpnext编码
+	// 			objectByItemCodeResp, err := s.getObjectByItemCode(ctx, itemCode, tx) // 获取物品或加料
+	// 			if err != nil {
+	// 				logger.Logger.Error("同步成本卡时，获取物品或加料失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard))
+	// 				continue
+	// 			}
+	// 			if objectByItemCodeResp.RelatedType == constant.ProductBomCardRelatedTypeFlavor { // 规格商品
+	// 				// 更新product_bom表的成本卡uuid
+	// 				if err := tx.Model(&model.ProductBom{}).Where("uuid = ?", objectByItemCodeResp.ProductBom.Uuid).Update("product_bom_card_uuid", bomCard.Uuid).Error; err != nil {
+	// 					logger.Logger.Error("同步成本卡时，更新product_bom表的成本卡uuid失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard))
+	// 					continue
+	// 				}
+	// 			} else if objectByItemCodeResp.RelatedType == constant.ProductBomCardRelatedTypeSauce { // 小料
+	// 				// 更新product_sauce表的成本卡uuid
+	// 				if err := tx.Model(&model.ProductSauce{}).Where("uuid = ?", objectByItemCodeResp.ProductSauce.Uuid).Update("product_bom_card_uuid", bomCard.Uuid).Error; err != nil {
+	// 					logger.Logger.Error("同步成本卡时，更新product_sauce表的成本卡uuid失败", zap.String("bom_name", bomCard.Name), zap.Error(err), zap.Any("bom_card", bomCard))
+	// 					continue
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// 	for _, bom := range needCreate {
+	// 		if err := s.createProductBomCardByErpBom(ctx, tx, bom); err != nil {
+	// 			if strings.Contains(err.Error(), "物品或加料不存在") || strings.Contains(err.Error(), "单位不存在") {
+	// 				logger.Logger.Error("同步成本卡时，创建成本卡失败，物品或加料或物料单位不存在", zap.String("bom_name", bom.BomName), zap.Any("bom", bom))
+	// 				continue
+	// 			} else {
+	// 				return errors.WithMessage(err, "创建成本卡失败")
+	// 			}
+	// 		}
+	// 	}
+	// 	for _, bomCard := range needDisable {
+	// 		if err := s.disableProductBomCard(ctx, tx, bomCard); err != nil {
+	// 			if strings.Contains(err.Error(), "获取商品或加料失败") {
+	// 				logger.Logger.Error("同步成本卡时，失效成本卡失败，商品或加料不存在", zap.String("bom_name", bomCard.Name), zap.Any("bom_card", bomCard))
+	// 				continue
+	// 			} else {
+	// 				return errors.WithMessage(err, "失效成本卡失败")
+	// 			}
+	// 		}
+	// 	}
+	// 	return nil
+	// }); err != nil {
+	// 	return errors.WithMessage(err)
+	// }
+
+	// // 从ttpos总店同步
+	// if companySetting.IsSubShop() {
+	// 	headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
+	// 	commonRepo := repository.NewCommonRepo()
+	// 	productBomCardList, err := repository.NewProductBomCardRepo(headquarterDb).GetProductBomCardList(
+	// 		commonRepo.WhereBySoftDelete(),
+	// 		commonRepo.Preload(
+	// 			repository.WithPreload{
+	// 				Query: "MultiLanguageName",
+	// 			},
+	// 			repository.WithPreload{
+	// 				Query: "RelatedMaterials",
+	// 			},
+	// 		),
+	// 	)
+	// 	if err != nil {
+	// 		return errors.WithMessage(err, "获取总部成本卡列表失败")
+	// 	}
+
+	// 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+	// 		// 删除所有总部的成本卡。
+	// 		tx.Model(&model.ProductBomCard{}).Where("headquarter_uuid = ?", companySetting.HeadquarterUuid).Delete(&model.ProductBomCard{})
+	// 		productBomCardUuids := []uint64{}
+	// 		for _, productBomCard := range productBomCardList {
+	// 			productBomCardUuids = append(productBomCardUuids, productBomCard.Uuid)
+	// 		}
+	// 		tx.Model(&model.RelatedMaterial{}).Where("related_uuid IN (?)", productBomCardUuids).Delete(&model.RelatedMaterial{})
+
+	// 		for _, productBomCard := range productBomCardList {
+	// 			// 过滤掉数据不完整的成本卡。如无多语言名称
+	// 			if productBomCard.MultiLanguageName == nil {
+	// 				continue
+	// 			}
+	// 			// 创建成本卡
+	// 			productBomCard.BaseModel = model.BaseModel{
+	// 				Uuid: productBomCard.Uuid,
+	// 			}
+	// 			productBomCard.HeadquarterUuid = companySetting.HeadquarterUuid
+	// 			if err := repository.NewProductBomCardRepo(tx).CreateProductBomCard(*productBomCard); err != nil {
+	// 				return errors.WithMessage(err, "创建成本卡失败")
+	// 			}
+	// 			// 创建多语言
+	// 			productBomCard.MultiLanguageName.BaseModel = model.BaseModel{Uuid: productBomCard.MultiLanguageNameUuid}
+	// 			if _, err := repository.NewMultiLanguageNameRepo(tx).CreateMultiLanguageNameDUPLICATE(*productBomCard.MultiLanguageName); err != nil {
+	// 				return errors.WithMessage(err, "创建多语言名称失败")
+	// 			}
+	// 			// 创建成本卡材料
+	// 			for _, material := range productBomCard.RelatedMaterials {
+	// 				material.BaseModel = model.BaseModel{
+	// 					Uuid: material.Uuid,
+	// 				}
+	// 				if err := repository.NewProductBomCardRepo(tx).CreateProductBomCardMaterial(*material); err != nil {
+	// 					return errors.WithMessage(err, "创建成本卡材料失败")
+	// 				}
+	// 			}
+	// 		}
+	// 		return nil
+	// 	}); err != nil {
+	// 		return errors.WithMessage(err)
+	// 	}
+	// }
+	// return nil
 }
 
 type ObjectByItemCodeResp struct {
