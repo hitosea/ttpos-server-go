@@ -2806,6 +2806,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 					existingMaterial.ImageUuid = material.ImageUuid
 					existingMaterial.ImageName = material.ImageName
 					existingMaterial.UnitUuid = material.UnitUuid
+					existingMaterial.HeadquarterUuid = companySetting.HeadquarterUuid
 					existingMaterial.PurchaseUnitUuid = material.PurchaseUnitUuid
 					existingMaterial.CostUnitUuid = material.CostUnitUuid
 					existingMaterial.Valuation = material.Valuation
