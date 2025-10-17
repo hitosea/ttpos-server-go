@@ -7376,9 +7376,7 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 				return errors.WithMessage(errors.New("获取商品规格列表失败"), err.Error())
 			}
 			unit, err := productUnitRepo.GetProductUnit(
-				commonRepo.WhereBySoftDelete(),
-				commonRepo.WhereByErpCode(erpProduct.StockUom),
-				commonRepo.WhereByHeadquarterUuid(0),
+				productUnitRepo.WhereByErpnextUom(erpProduct.StockUom),
 			)
 			if err != nil || unit.Uuid == 0 {
 				return errors.WithMessage(errors.New("商品单位不存在: "+erpProduct.StockUom), err.Error())
@@ -7387,7 +7385,6 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 			category, err := productCategoryRepo.GetProductCategory(
 				commonRepo.WhereBySoftDelete(),
 				commonRepo.WhereByCode(erpProduct.ClassificationCode),
-				commonRepo.WhereByHeadquarterUuid(0),
 			)
 			if err == nil && category.Uuid > 0 {
 				categoryUuid = category.Uuid
