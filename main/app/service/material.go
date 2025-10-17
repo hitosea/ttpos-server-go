@@ -616,6 +616,7 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 			return errors.WithMessage(err, "默认仓库不存在")
 		}
 		params.SetWarehouseUuid(warehouseUuid.Uuid)
+		params.SetIsSync(true) // 从总店同步物品到本地，忽略检查内部编码唯一性
 		material, _, err = addMaterial(ctx, tx, s.settingSrv, params)
 		if err != nil {
 			return errors.WithMessage(err)
@@ -696,17 +697,17 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 	}
 
 	// 检查条形码唯一性
-	if request.BarcodeValue != "" {
+	if request.BarcodeValue != "" && !request.GetIsSync() {
 		materialRepo := repository.NewMaterialRepo(tx)
 		if materialRepo.CheckBarcodeExist(request.BarcodeValue, 0) {
 			return nil, nil, errors.WithMessage(errors.New("条形码已存在，请使用其他条形码"))
 		}
 	}
 	// 检查内部编码唯一性
-	if request.InternalCode != "" {
+	if request.InternalCode != "" && !request.GetIsSync() {
 		materialRepo := repository.NewMaterialRepo(tx)
 		if materialRepo.CheckMaterialInternalCodeExist(request.InternalCode, 0) {
-			return nil, nil, errors.WithMessage(errors.New("内部编码已存在，请使用其他内部编码"))
+			return nil, nil, errors.WithMessage(errors.New("内部编码已存在，请使用其他内部编码"), request.InternalCode)
 		}
 	}
 

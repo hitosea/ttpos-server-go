@@ -111,6 +111,15 @@ type MaterialAddReq struct {
 
 	headquarterUuid uint64 // 总部uuid。 内部调用使用，同步总部物品时
 	warehouseUuid   uint64 // 仓库uuid。 内部调用使用，同步总部物品时
+	isSync          bool   // 是否从总店同步物品到本地。是，则忽略检查内部编码唯一性
+}
+
+func (r *MaterialAddReq) GetIsSync() bool {
+	return r.isSync
+}
+
+func (r *MaterialAddReq) SetIsSync(isSync bool) {
+	r.isSync = isSync
 }
 
 func (r *MaterialAddReq) GetHeadquarterUuid() uint64 {
