@@ -7049,26 +7049,25 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 
 			var insertingMultiLanguageNames []model.MultiLanguageName
 			for _, headquarterUnit := range headquarterUnits {
-				if headquarterUnit.MultiLanguageName.Uuid == 0 || slices.Contains(existsMultiLanguageUuids, headquarterUnit.MultiLanguageName.Uuid) {
-					continue
+				if headquarterUnit.MultiLanguageName.Uuid != 0 && !slices.Contains(existsMultiLanguageUuids, headquarterUnit.MultiLanguageName.Uuid) {
+					insertingMultiLanguageNames = append(insertingMultiLanguageNames, model.MultiLanguageName{
+						BaseModel: model.BaseModel{
+							Uuid:       headquarterUnit.MultiLanguageName.Uuid,
+							CreateTime: headquarterUnit.MultiLanguageName.CreateTime,
+							UpdateTime: headquarterUnit.MultiLanguageName.UpdateTime,
+							DeleteTime: headquarterUnit.MultiLanguageName.DeleteTime,
+						},
+						EnName:   headquarterUnit.MultiLanguageName.EnName,
+						ZhName:   headquarterUnit.MultiLanguageName.ZhName,
+						ThName:   headquarterUnit.MultiLanguageName.ThName,
+						MyName:   headquarterUnit.MultiLanguageName.MyName,
+						JaName:   headquarterUnit.MultiLanguageName.JaName,
+						KoName:   headquarterUnit.MultiLanguageName.KoName,
+						TrName:   headquarterUnit.MultiLanguageName.TrName,
+						SvName:   headquarterUnit.MultiLanguageName.SvName,
+						ZhTwName: headquarterUnit.MultiLanguageName.ZhTwName,
+					})
 				}
-				insertingMultiLanguageNames = append(insertingMultiLanguageNames, model.MultiLanguageName{
-					BaseModel: model.BaseModel{
-						Uuid:       headquarterUnit.MultiLanguageName.Uuid,
-						CreateTime: headquarterUnit.MultiLanguageName.CreateTime,
-						UpdateTime: headquarterUnit.MultiLanguageName.UpdateTime,
-						DeleteTime: headquarterUnit.MultiLanguageName.DeleteTime,
-					},
-					EnName:   headquarterUnit.MultiLanguageName.EnName,
-					ZhName:   headquarterUnit.MultiLanguageName.ZhName,
-					ThName:   headquarterUnit.MultiLanguageName.ThName,
-					MyName:   headquarterUnit.MultiLanguageName.MyName,
-					JaName:   headquarterUnit.MultiLanguageName.JaName,
-					KoName:   headquarterUnit.MultiLanguageName.KoName,
-					TrName:   headquarterUnit.MultiLanguageName.TrName,
-					SvName:   headquarterUnit.MultiLanguageName.SvName,
-					ZhTwName: headquarterUnit.MultiLanguageName.ZhTwName,
-				})
 				insertingProductUnits = append(insertingProductUnits, model.ProductUnit{
 					BaseModel: model.BaseModel{
 						Uuid:       headquarterUnit.Uuid,
@@ -7233,26 +7232,25 @@ func (s *productSrv) SyncAttributeGroup(ctx context.Context) error {
 			var insertingProductAttributeGroups []model.ProductAttributeGroup
 			var insertingProductAttributes []model.ProductAttribute
 			for _, headquarterAttributeGroup := range headquarterAttributeGroups {
-				if headquarterAttributeGroup.MultiLanguageName.Uuid == 0 || slices.Contains(existsMultiLanguageUuids, headquarterAttributeGroup.MultiLanguageName.Uuid) {
-					continue
+				if headquarterAttributeGroup.MultiLanguageName.Uuid != 0 && !slices.Contains(existsMultiLanguageUuids, headquarterAttributeGroup.MultiLanguageName.Uuid) {
+					insertingMultiLanguageNames = append(insertingMultiLanguageNames, model.MultiLanguageName{
+						BaseModel: model.BaseModel{
+							Uuid:       headquarterAttributeGroup.MultiLanguageName.Uuid,
+							CreateTime: headquarterAttributeGroup.MultiLanguageName.CreateTime,
+							UpdateTime: headquarterAttributeGroup.MultiLanguageName.UpdateTime,
+							DeleteTime: headquarterAttributeGroup.MultiLanguageName.DeleteTime,
+						},
+						EnName:   headquarterAttributeGroup.MultiLanguageName.EnName,
+						ZhName:   headquarterAttributeGroup.MultiLanguageName.ZhName,
+						ThName:   headquarterAttributeGroup.MultiLanguageName.ThName,
+						MyName:   headquarterAttributeGroup.MultiLanguageName.MyName,
+						JaName:   headquarterAttributeGroup.MultiLanguageName.JaName,
+						KoName:   headquarterAttributeGroup.MultiLanguageName.KoName,
+						TrName:   headquarterAttributeGroup.MultiLanguageName.TrName,
+						SvName:   headquarterAttributeGroup.MultiLanguageName.SvName,
+						ZhTwName: headquarterAttributeGroup.MultiLanguageName.ZhTwName,
+					})
 				}
-				insertingMultiLanguageNames = append(insertingMultiLanguageNames, model.MultiLanguageName{
-					BaseModel: model.BaseModel{
-						Uuid:       headquarterAttributeGroup.MultiLanguageName.Uuid,
-						CreateTime: headquarterAttributeGroup.MultiLanguageName.CreateTime,
-						UpdateTime: headquarterAttributeGroup.MultiLanguageName.UpdateTime,
-						DeleteTime: headquarterAttributeGroup.MultiLanguageName.DeleteTime,
-					},
-					EnName:   headquarterAttributeGroup.MultiLanguageName.EnName,
-					ZhName:   headquarterAttributeGroup.MultiLanguageName.ZhName,
-					ThName:   headquarterAttributeGroup.MultiLanguageName.ThName,
-					MyName:   headquarterAttributeGroup.MultiLanguageName.MyName,
-					JaName:   headquarterAttributeGroup.MultiLanguageName.JaName,
-					KoName:   headquarterAttributeGroup.MultiLanguageName.KoName,
-					TrName:   headquarterAttributeGroup.MultiLanguageName.TrName,
-					SvName:   headquarterAttributeGroup.MultiLanguageName.SvName,
-					ZhTwName: headquarterAttributeGroup.MultiLanguageName.ZhTwName,
-				})
 				insertingProductAttributeGroups = append(insertingProductAttributeGroups, model.ProductAttributeGroup{
 					BaseModel: model.BaseModel{
 						Uuid:       headquarterAttributeGroup.Uuid,
@@ -7267,26 +7265,25 @@ func (s *productSrv) SyncAttributeGroup(ctx context.Context) error {
 					HeadquarterUuid:           headquarter.Uuid,
 				})
 				for _, headquarterProductAttribute := range headquarterAttributeGroup.ProductAttributes {
-					if headquarterProductAttribute.MultiLanguageName.Uuid == 0 {
-						continue
+					if headquarterProductAttribute.MultiLanguageName.Uuid != 0 && !slices.Contains(existsMultiLanguageUuids, headquarterProductAttribute.MultiLanguageName.Uuid) {
+						insertingMultiLanguageNames = append(insertingMultiLanguageNames, model.MultiLanguageName{
+							BaseModel: model.BaseModel{
+								Uuid:       headquarterProductAttribute.MultiLanguageName.Uuid,
+								CreateTime: headquarterProductAttribute.MultiLanguageName.CreateTime,
+								UpdateTime: headquarterProductAttribute.MultiLanguageName.UpdateTime,
+								DeleteTime: headquarterProductAttribute.MultiLanguageName.DeleteTime,
+							},
+							EnName:   headquarterProductAttribute.MultiLanguageName.EnName,
+							ZhName:   headquarterProductAttribute.MultiLanguageName.ZhName,
+							ThName:   headquarterProductAttribute.MultiLanguageName.ThName,
+							MyName:   headquarterProductAttribute.MultiLanguageName.MyName,
+							JaName:   headquarterProductAttribute.MultiLanguageName.JaName,
+							KoName:   headquarterProductAttribute.MultiLanguageName.KoName,
+							TrName:   headquarterProductAttribute.MultiLanguageName.TrName,
+							SvName:   headquarterProductAttribute.MultiLanguageName.SvName,
+							ZhTwName: headquarterProductAttribute.MultiLanguageName.ZhTwName,
+						})
 					}
-					insertingMultiLanguageNames = append(insertingMultiLanguageNames, model.MultiLanguageName{
-						BaseModel: model.BaseModel{
-							Uuid:       headquarterProductAttribute.MultiLanguageName.Uuid,
-							CreateTime: headquarterProductAttribute.MultiLanguageName.CreateTime,
-							UpdateTime: headquarterProductAttribute.MultiLanguageName.UpdateTime,
-							DeleteTime: headquarterProductAttribute.MultiLanguageName.DeleteTime,
-						},
-						EnName:   headquarterProductAttribute.MultiLanguageName.EnName,
-						ZhName:   headquarterProductAttribute.MultiLanguageName.ZhName,
-						ThName:   headquarterProductAttribute.MultiLanguageName.ThName,
-						MyName:   headquarterProductAttribute.MultiLanguageName.MyName,
-						JaName:   headquarterProductAttribute.MultiLanguageName.JaName,
-						KoName:   headquarterProductAttribute.MultiLanguageName.KoName,
-						TrName:   headquarterProductAttribute.MultiLanguageName.TrName,
-						SvName:   headquarterProductAttribute.MultiLanguageName.SvName,
-						ZhTwName: headquarterProductAttribute.MultiLanguageName.ZhTwName,
-					})
 					insertingProductAttributes = append(insertingProductAttributes, model.ProductAttribute{
 						BaseModel: model.BaseModel{
 							Uuid:       headquarterProductAttribute.Uuid,

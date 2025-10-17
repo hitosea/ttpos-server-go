@@ -109,12 +109,6 @@ func (s *TranslateSrv) Translate(companyUuid uint64) error {
 		}
 		translateTaskManager.finishTask(companyUuid)
 		logger.Logger.Info("翻译完成", zap.Uint64("companyUuid", companyUuid))
-
-		// 检测是否有剩余未翻译的，继续翻译
-		multiLanguageNameUuids, _ = s.getRedisClient().SMembers(context.Background(), cacheKey).Result()
-		if len(multiLanguageNameUuids) > 0 {
-			s.Translate(companyUuid)
-		}
 	}()
 
 	logger.Logger.Info("开始翻译任务", zap.Uint64("companyUuid", companyUuid))
