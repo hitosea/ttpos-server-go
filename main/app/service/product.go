@@ -7459,7 +7459,7 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 							commonRepo.WhereByHeadquarterUuid(0),
 						)
 						if err != nil || flavor.Uuid == 0 {
-							return errors.WithMessage(errors.New("商品规格不存在"), attribute.AttributeValue)
+							return errors.WithMessage(errors.New("商品规格不存在:"+attribute.AttributeValue), err.Error())
 						}
 						var deleteTime int64 = 0
 						if erpProductVariant.NotForSale {
@@ -7502,7 +7502,6 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 						flavor, err := productFlavorRepo.GetProductFlavor(
 							commonRepo.WhereBySoftDelete(),
 							commonRepo.WhereByErpnextValueName(attribute.AttributeValue),
-							commonRepo.WhereByHeadquarterUuid(0),
 						)
 						if err != nil || flavor.Uuid == 0 {
 							return errors.WithMessage(errors.New("商品规格不存在"), attribute.AttributeValue)
