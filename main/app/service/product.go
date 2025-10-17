@@ -8157,6 +8157,10 @@ func (s *productSrv) SyncProductStockByBomCard(ctx context.Context) error {
 	err = repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		for _, productBom := range productBomList {
 			productBomCard := productBom.ProductBomCard
+			if productBomCard == nil {
+				logger.Logger.Error("商品规格没有成本卡无法重新计算商品库存", zap.Uint64("productBomUuid", productBom.Uuid), zap.Any("productBom", productBom))
+				continue
+			}
 			expectedProductionNum := productBomCard.CalculateExpectedProductionNum()
 			if err := repository.NewProductBomRepo(tx).UpdateProductBomCard(productBom.Uuid, productBomCard.Uuid, expectedProductionNum); err != nil {
 				return errors.WithMessage(err, "更新商品库存失败")
