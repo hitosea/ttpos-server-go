@@ -7404,13 +7404,16 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 					continue
 				}
 				var categoryUuid uint64
-				category, err := productCategoryRepo.GetProductCategory(
-					commonRepo.WhereByCategoryKey(""),
-					commonRepo.WhereBySoftDelete(),
-					commonRepo.WhereByCode(erpProduct.ClassificationCode),
-				)
-				if err == nil && category.Uuid > 0 {
-					categoryUuid = category.Uuid
+				if erpProduct.ClassificationCode != "" {
+					category, err := productCategoryRepo.GetProductCategory(
+						commonRepo.WhereByCategoryKey(""),
+						commonRepo.WhereBySoftDelete(),
+						commonRepo.WhereByCode(erpProduct.ClassificationCode),
+						commonRepo.WhereByHeadquarterUuid(0),
+					)
+					if err == nil && category.Uuid > 0 {
+						categoryUuid = category.Uuid
+					}
 				}
 				existsProductPackage, err := productPackageRepo.GetProductPackage(
 					commonRepo.WhereByProductPackageErpCode(erpProduct.ItemCode),
