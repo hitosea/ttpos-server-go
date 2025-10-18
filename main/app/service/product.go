@@ -7405,6 +7405,7 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 				}
 				var categoryUuid uint64
 				category, err := productCategoryRepo.GetProductCategory(
+					commonRepo.WhereByCategoryKey(""),
 					commonRepo.WhereBySoftDelete(),
 					commonRepo.WhereByCode(erpProduct.ClassificationCode),
 				)
@@ -7467,9 +7468,8 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 					}
 				} else {
 					updateData := map[string]any{
-						"unit_uuid":     unit.Uuid,
-						"category_uuid": categoryUuid,
-						"status":        status,
+						"unit_uuid": unit.Uuid,
+						"status":    status,
 					}
 					if erpProduct.NotForSale && existsProductPackage.DeleteTime == 0 {
 						updateData["delete_time"] = time.Now().Unix()
