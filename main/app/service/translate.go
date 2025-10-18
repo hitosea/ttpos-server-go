@@ -205,9 +205,11 @@ func (s *TranslateSrv) AddMultiLanguageNameUuidToSet(companyUuid uint64, multiLa
 		logger.Logger.Error("添加多语言uuid到待翻译集合失败", zap.Error(err))
 		return errors.WithMessage(errors.New("添加多语言uuid到待翻译集合失败"), err.Error())
 	}
-	if err := s.Translate(companyUuid); err != nil {
-		logger.Logger.Error("Translate-Redis-Translate", zap.Any("err", err))
-	}
+	go func(companyUuid uint64) {
+		if err := s.Translate(companyUuid); err != nil {
+			logger.Logger.Error("Translate-Redis-Translate", zap.Any("err", err))
+		}
+	}(companyUuid)
 	return nil
 }
 
