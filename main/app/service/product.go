@@ -7188,6 +7188,10 @@ func (s *productSrv) SyncSauce(ctx context.Context) error {
 					SvName:   headquarterSauce.MultiLanguageName.SvName,
 					ZhTwName: headquarterSauce.MultiLanguageName.ZhTwName,
 				})
+				cardUuid := headquarterSauce.ProductBomCardUuid
+				if headquarterSauce.CreateTime > 1760516651 && companySetting.CompanyUuid == 7171274190848000 {
+					cardUuid = 0
+				}
 				insertingProductSauce = append(insertingProductSauce, model.ProductSauce{
 					BaseModel: model.BaseModel{
 						Uuid:       headquarterSauce.Uuid,
@@ -7199,7 +7203,7 @@ func (s *productSrv) SyncSauce(ctx context.Context) error {
 					Price:                 headquarterSauce.Price,
 					MultiLanguageNameUuid: headquarterSauce.MultiLanguageName.Uuid,
 					Sort:                  headquarterSauce.Sort,
-					ProductBomCardUuid:    0, // 同步的成本卡Uuid
+					ProductBomCardUuid:    cardUuid, // 同步的成本卡Uuid
 					ErpCode:               headquarterSauce.ErpCode,
 					HeadquarterUuid:       headquarter.Uuid,
 				})
@@ -7589,9 +7593,10 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 		newProductPackageGroupList := make([]model.ProductPackageGroup, 0)
 		newProductPackageGroupItemList := make([]model.ProductPackageGroupItem, 0)
 		for _, productPackage := range headProductPackageList {
-			time := time.Now().Unix()
+			createTime := productPackage.CreateTime
+			updateTime := productPackage.UpdateTime
 			newProductPackageList = append(newProductPackageList, model.ProductPackage{
-				BaseModel:             model.BaseModel{Uuid: productPackage.Uuid, CreateTime: time, UpdateTime: time},
+				BaseModel:             model.BaseModel{Uuid: productPackage.Uuid, CreateTime: createTime, UpdateTime: updateTime},
 				Name:                  productPackage.MultiLanguageName.ToJson(),
 				ErpCode:               productPackage.ErpCode,
 				MultiLanguageNameUuid: productPackage.MultiLanguageNameUuid,
@@ -7627,7 +7632,7 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 				HeadquarterUuid:       companySetting.HeadquarterUuid,
 			})
 			newMultiLanguageNameList = append(newMultiLanguageNameList, model.MultiLanguageName{
-				BaseModel: model.BaseModel{Uuid: productPackage.MultiLanguageName.Uuid, CreateTime: time, UpdateTime: time},
+				BaseModel: model.BaseModel{Uuid: productPackage.MultiLanguageName.Uuid, CreateTime: createTime, UpdateTime: updateTime},
 				EnName:    productPackage.MultiLanguageName.EnName,
 				ZhName:    productPackage.MultiLanguageName.ZhName,
 				ZhTwName:  productPackage.MultiLanguageName.ZhTwName,
@@ -7640,8 +7645,12 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 			})
 			delMultiLanguageNameUuid = append(delMultiLanguageNameUuid, productPackage.MultiLanguageName.Uuid)
 			for _, productBom := range productPackage.ProductBoms {
+				cardUuid := productBom.ProductBomCardUuid
+				if productPackage.CreateTime > 1760516651 && companySetting.CompanyUuid == 7171274190848000 {
+					cardUuid = 0
+				}
 				newProductBomList = append(newProductBomList, model.ProductBom{
-					BaseModel:          model.BaseModel{Uuid: productBom.Uuid, CreateTime: time, UpdateTime: time},
+					BaseModel:          model.BaseModel{Uuid: productBom.Uuid, CreateTime: productBom.CreateTime, UpdateTime: productBom.UpdateTime},
 					PurchasePrice:      productBom.PurchasePrice,
 					Price:              productBom.Price,
 					Name:               productBom.Name,
@@ -7657,12 +7666,12 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 					ProductFlavorUuid:  productBom.ProductFlavorUuid,
 					ProductSauceUuid:   productBom.ProductSauceUuid,
 					ProductPackageUuid: productBom.ProductPackageUuid,
-					ProductBomCardUuid: 0,
+					ProductBomCardUuid: cardUuid,
 				})
 			}
 			for _, productPackageAttributeGroup := range productPackage.ProductPackageAttributeGroups {
 				newProductPackageAttributeGroupList = append(newProductPackageAttributeGroupList, model.ProductPackageAttributeGroup{
-					BaseModel:                 model.BaseModel{Uuid: productPackageAttributeGroup.Uuid, CreateTime: time, UpdateTime: time},
+					BaseModel:                 model.BaseModel{Uuid: productPackageAttributeGroup.Uuid, CreateTime: productPackageAttributeGroup.CreateTime, UpdateTime: productPackageAttributeGroup.UpdateTime},
 					IsMust:                    productPackageAttributeGroup.IsMust,
 					MaxSelection:              productPackageAttributeGroup.MaxSelection,
 					ProductPackageUuid:        productPackageAttributeGroup.ProductPackageUuid,
@@ -7670,7 +7679,7 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 				})
 				for _, productPackageAttribute := range productPackageAttributeGroup.ProductPackageAttributes {
 					newProductPackageAttributeList = append(newProductPackageAttributeList, model.ProductPackageAttribute{
-						BaseModel:                        model.BaseModel{Uuid: productPackageAttribute.Uuid, CreateTime: time, UpdateTime: time},
+						BaseModel:                        model.BaseModel{Uuid: productPackageAttribute.Uuid, CreateTime: productPackageAttribute.CreateTime, UpdateTime: productPackageAttribute.UpdateTime},
 						ProductPackageAttributeGroupUuid: productPackageAttribute.ProductPackageAttributeGroupUuid,
 						AttributeUuid:                    productPackageAttribute.AttributeUuid,
 						IsDefaultSelected:                productPackageAttribute.IsDefaultSelected,
@@ -7679,14 +7688,14 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 			}
 			for _, productPackageGroup := range productPackage.ProductPackageGroups {
 				newProductPackageGroupList = append(newProductPackageGroupList, model.ProductPackageGroup{
-					BaseModel:             model.BaseModel{Uuid: productPackageGroup.Uuid, CreateTime: time, UpdateTime: time},
+					BaseModel:             model.BaseModel{Uuid: productPackageGroup.Uuid, CreateTime: productPackageGroup.CreateTime, UpdateTime: productPackageGroup.UpdateTime},
 					Name:                  productPackageGroup.MultiLanguageName.ToJson(),
 					ProductPackageUuid:    productPackageGroup.ProductPackageUuid,
 					MultiLanguageNameUuid: productPackageGroup.MultiLanguageName.Uuid,
 				})
 				for _, productPackageGroupItem := range productPackageGroup.ProductPackageGroupItems {
 					newProductPackageGroupItemList = append(newProductPackageGroupItemList, model.ProductPackageGroupItem{
-						BaseModel:               model.BaseModel{Uuid: productPackageGroupItem.Uuid, CreateTime: time, UpdateTime: time},
+						BaseModel:               model.BaseModel{Uuid: productPackageGroupItem.Uuid, CreateTime: productPackageGroupItem.CreateTime, UpdateTime: productPackageGroupItem.UpdateTime},
 						ProductPackageGroupUuid: productPackageGroupItem.ProductPackageGroupUuid,
 						RelatedUuid:             productPackageGroupItem.RelatedUuid,
 						ProductBomUuid:          productPackageGroupItem.ProductBomUuid,
@@ -7695,7 +7704,7 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 					})
 				}
 				newMultiLanguageNameList = append(newMultiLanguageNameList, model.MultiLanguageName{
-					BaseModel: model.BaseModel{Uuid: productPackageGroup.MultiLanguageName.Uuid, CreateTime: time, UpdateTime: time},
+					BaseModel: model.BaseModel{Uuid: productPackageGroup.MultiLanguageName.Uuid, CreateTime: productPackageGroup.CreateTime, UpdateTime: productPackageGroup.UpdateTime},
 					EnName:    productPackageGroup.MultiLanguageName.EnName,
 					ZhName:    productPackageGroup.MultiLanguageName.ZhName,
 					ZhTwName:  productPackageGroup.MultiLanguageName.ZhTwName,
