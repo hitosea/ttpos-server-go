@@ -1172,7 +1172,6 @@ func (s *materialSrv) UpdateMaterialByEprItem(ctx context.Context, request req.M
 			}(),
 		}
 
-		// 同步多语言名称
 		material, err := materialRepo.GetMaterialDetailContainsDeletedByUuid(request.Uuid)
 		if err != nil {
 			return errors.WithMessage(err, "物品不存在:"+strconv.FormatUint(request.Uuid, 10))
@@ -2718,6 +2717,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 	err = db.Transaction(func(tx *gorm.DB) error {
 		commonRepo := repository.NewCommonRepo()
 		materialRepo := repository.NewMaterialRepo(tx)
+		multilanguageNameRepo := repository.NewMultiLanguageNameRepo(tx)
 		copyCtx := ctx.Copy()
 		copyCtx.SetDB(tx)
 		for _, itemInfo := range materialList.ItemList {
@@ -2730,6 +2730,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 			}
 			existingMaterial := materialRepo.GetMaterial(
 				commonRepo.WhereByErpCode(itemInfo.ItemCode),
+				materialRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
 			)
 			if existingMaterial.Uuid != 0 { // 如果物品已存在
 				if err := s.UpdateMaterialByEprItem(copyCtx, req.MaterialEditErpReq{
@@ -2748,6 +2749,35 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 					NotForSale:         itemInfo.NotForSale,
 				}); err != nil {
 					logger.Logger.Error("同步erp物品列表失败-01", zap.Error(err))
+				}
+				// 添加多语言uuid到待翻译集合中
+				if existingMaterial.MultiLanguageNameUuid == 0 || existingMaterial.MultiLanguageName.Uuid == 0 {
+					newMultiLanguageName := model.MultiLanguageName{
+						EnName:   itemInfo.ItemName,
+						ZhName:   itemInfo.ItemName,
+						ZhTwName: itemInfo.ItemName,
+						ThName:   itemInfo.ItemName,
+						MyName:   itemInfo.ItemName,
+						JaName:   itemInfo.ItemName,
+						KoName:   itemInfo.ItemName,
+						TrName:   itemInfo.ItemName,
+						SvName:   itemInfo.ItemName,
+					}
+					nameUuid, err := multilanguageNameRepo.CreateMultiLanguageName(newMultiLanguageName)
+					if err != nil {
+						logger.Logger.Error("同步erp物品-更新物品-创建多语言失败", zap.String("itemCode", itemInfo.ItemCode), zap.Error(err))
+					} else {
+						err = materialRepo.UpdateMaterialData(map[string]any{"multi_language_name_uuid": nameUuid}, commonRepo.WhereByUuid(existingMaterial.Uuid))
+						if err != nil {
+							logger.Logger.Error("同步erp物品-更新物品-更新多语言UUID", zap.String("itemCode", itemInfo.ItemCode), zap.Error(err))
+						} else {
+							multiLanguageNameUuids = append(multiLanguageNameUuids, nameUuid)
+						}
+					}
+				} else if existingMaterial.MultiLanguageName.Uuid != 0 {
+					if existingMaterial.MultiLanguageName.EnName == "" {
+						multiLanguageNameUuids = append(multiLanguageNameUuids, existingMaterial.MultiLanguageName.Uuid)
+					}
 				}
 			} else {
 				material, err := s.AddMaterialByEprItem(copyCtx, req.MaterialAddErpReq{
