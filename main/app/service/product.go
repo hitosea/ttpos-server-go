@@ -7199,7 +7199,7 @@ func (s *productSrv) SyncSauce(ctx context.Context) error {
 					Price:                 headquarterSauce.Price,
 					MultiLanguageNameUuid: headquarterSauce.MultiLanguageName.Uuid,
 					Sort:                  headquarterSauce.Sort,
-					ProductBomCardUuid:    headquarterSauce.ProductBomCardUuid, // 同步的成本卡Uuid
+					ProductBomCardUuid:    0, // 同步的成本卡Uuid
 					ErpCode:               headquarterSauce.ErpCode,
 					HeadquarterUuid:       headquarter.Uuid,
 				})
@@ -7657,7 +7657,7 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 					ProductFlavorUuid:  productBom.ProductFlavorUuid,
 					ProductSauceUuid:   productBom.ProductSauceUuid,
 					ProductPackageUuid: productBom.ProductPackageUuid,
-					ProductBomCardUuid: productBom.ProductBomCardUuid,
+					ProductBomCardUuid: 0,
 				})
 			}
 			for _, productPackageAttributeGroup := range productPackage.ProductPackageAttributeGroups {
