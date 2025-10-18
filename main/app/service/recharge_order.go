@@ -62,6 +62,7 @@ type rechargeOrderSrv struct {
 	cashBoxSrv       ICashBoxSrv
 	memberSrv        IMemberSrv
 	smsSrv           ISmsSrv
+	lock             lock.Lock
 }
 
 func NewRechargeOrderSrv(dbm *database.DBManager, cache cache.Cache, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, memberSrv IMemberSrv, smsSrv ISmsSrv) IRechargeOrderSrv {
@@ -78,6 +79,7 @@ func NewRechargeOrderSrvImpl(dbm *database.DBManager, cache cache.Cache, payment
 		cashBoxSrv:       cashBoxSrv,
 		memberSrv:        memberSrv,
 		smsSrv:           smsSrv,
+		lock:             lock.NewSystemLock(),
 	}
 }
 
@@ -443,6 +445,11 @@ func (s *rechargeOrderSrv) sumPaymentAmountExcludeCash(paymentOrders []model.Pay
 
 // ConfirmRechargeOrder 确认充值订单
 func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq req.ConfirmRechargeOrder) (resp.ConfirmRechargeOrder, error) {
+	if ctx.NoLock() {
+		s.lock.LockUuid(confirmReq.RechargeOrderUuid)
+		defer s.lock.UnlockUuid(confirmReq.RechargeOrderUuid)
+		ctx.AddLock()
+	}
 	var confirmResp resp.ConfirmRechargeOrder
 
 	companyUuid := ctx.GetCompanyUuid()
