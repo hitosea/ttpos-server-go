@@ -83,6 +83,7 @@ type ICommonRepo interface {
 	WhereByIsShowMember(isShow uint) DBOption                                                 // 根据是否显示会员端查询
 	WhereBySoftDelete() DBOption                                                              // 根据软删除查询
 	WhereByErpCode(erpCode string) DBOption                                                   // 根据erp_code查询
+	WhereByProductPackageErpCode(productPackageErpCode string) DBOption                       // 根据产品包erp_code查询
 	WhereByProductBomUuid(productBomUuid uint64) DBOption                                     // 根据产品bom UUID查询
 	WhereByNotPackageSubProduct() DBOption                                                    // 根据不是套餐子商品查询
 	WhereByNoSelectingTimeout() DBOption                                                      // 根据选购超时查询
@@ -337,6 +338,13 @@ func (r *commonRepo) WhereBySoftDelete() DBOption {
 func (r *commonRepo) WhereByErpCode(erpCode string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("code = ?", erpCode)
+	}
+}
+
+// WhereByProductPackageErpCode 根据产品包erp_code查询
+func (r *commonRepo) WhereByProductPackageErpCode(productPackageErpCode string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("erp_code = ?", productPackageErpCode)
 	}
 }
 

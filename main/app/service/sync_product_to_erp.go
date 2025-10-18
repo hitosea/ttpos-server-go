@@ -90,6 +90,8 @@ func (s *SyncProductToErpSrv) Sync(ctx context.Context) error {
 		productPackageRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
 		productPackageRepo.WithProductBoms(commonRepo.WhereBySoftDelete()),
 		productPackageRepo.WithProductBomsProductFlavor(commonRepo.WhereBySoftDelete()),
+		productPackageRepo.WithProductCategory(commonRepo.WhereBySoftDelete()),
+		productPackageRepo.WithProductCategoryMultiLanguageName(commonRepo.WhereBySoftDelete()),
 	)
 	if err != nil {
 		return errors.WithMessage(err, "获取总部商品包列表失败")
@@ -99,11 +101,20 @@ func (s *SyncProductToErpSrv) Sync(ctx context.Context) error {
 	for _, productPackage := range productPackageList {
 		erpSrv := erp.NewIErpSrv(s.dbm)
 		var productErpCode string
+		classification := productPackage.ProductCategory.MultiLanguageName.GetNames()
+		getEnClassification, err := s.getEnName(ctx, classification)
+		if err != nil {
+			return errors.WithMessage(err, "翻译失败")
+		}
 		if !productPackage.IsPackage() {
 			multiLanguageName := model.NewMultiLanguageName(productPackage.MultiLanguageName.ToJson())
 			enName, err := s.getEnName(ctx, multiLanguageName.GetNames())
 			if err != nil {
 				return errors.WithMessage(err, "翻译失败")
+			}
+			productCategory, errGetCategory := repository.NewProductCategoryRepo(tx).GetProductCategory(commonRepo.WhereByUuid(productPackage.CategoryUuid))
+			if errGetCategory != nil {
+				return errors.WithMessage(errGetCategory, "获取商品分类失败")
 			}
 			productUnit, errGetUnit := repository.NewProductUnitRepo(tx).GetProductUnit(commonRepo.WhereByUuid(productPackage.UnitUuid))
 			if errGetUnit != nil {
@@ -125,9 +136,11 @@ func (s *SyncProductToErpSrv) Sync(ctx context.Context) error {
 				})
 			}
 			itemInfo, errErp := erpSrv.AddProduct(ctx, req.ProductAddErpReq{
-				ItemName: enName,
-				StockUom: productUnit.ErpnextUom,
-				Flavors:  flavors,
+				ItemName:           enName,
+				StockUom:           productUnit.ErpnextUom,
+				Classification:     getEnClassification,
+				ClassificationCode: productCategory.Code,
+				Flavors:            flavors,
 			})
 			if errErp != nil {
 				return errors.WithMessage(errErp, "同步商品到erp失败")
@@ -167,11 +180,6 @@ func (s *SyncProductToErpSrv) Sync(ctx context.Context) error {
 					return errors.WithMessage(errGetUnit, "获取商品单位失败")
 				}
 				stockUom := productUnit.ErpnextUom
-				classification := productPackage.ProductCategory.MultiLanguageName.GetNames()
-				getEnClassification, err := s.getEnName(ctx, classification)
-				if err != nil {
-					return errors.WithMessage(err, "翻译失败")
-				}
 
 				params := req.PackageAddErpReq{
 					ItemName:           enName,
