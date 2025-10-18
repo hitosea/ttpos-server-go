@@ -219,6 +219,7 @@ func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 
 	// 每分钟执行翻译任务
 	_, _ = c.AddFunc("0 * * * * *", func() {
+		logger.Logger.Info("开始执行翻译任务")
 		service.NewTranslateSrv(dbm, cache).TranslateAll()
 	})
 

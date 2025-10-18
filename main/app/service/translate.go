@@ -111,7 +111,7 @@ func (s *TranslateSrv) Translate(companyUuid uint64) error {
 		logger.Logger.Info("翻译完成", zap.Uint64("companyUuid", companyUuid))
 	}()
 
-	logger.Logger.Info("开始翻译任务", zap.Uint64("companyUuid", companyUuid))
+	logger.Logger.Info("开始翻译任务", zap.Uint64("companyUuid", companyUuid), zap.Any("multiLanguageNameUuids", multiLanguageNameUuids))
 
 	db := s.dbm.GetDB(companyUuid)
 	translateClient := utils.NewTranslateClient()
@@ -241,25 +241,31 @@ func (s *TranslateSrv) TranslateAll() error {
 		return err
 	}
 
+	var uniqueKeys []string
 	for _, key := range keys {
+		if slices.Contains(uniqueKeys, key) {
+			continue
+		} else {
+			uniqueKeys = append(uniqueKeys, key)
+		}
 		companyUuid, err := strconv.ParseUint(strings.TrimPrefix(key, s.cacheKeyPrefix+":"), 10, 64)
 		if err != nil {
-			logger.Logger.Error("Translate-Redis-SMembers", zap.Any("err", err))
+			logger.Logger.Error("Translate-Redis-SMembers", zap.Any("err", err), zap.String("key", key))
 			continue
 		}
 		multiLanguageNameUuids, err := s.getRedisClient().SMembers(context.Background(), key).Result()
 		if err != nil {
-			logger.Logger.Error("Translate-Redis-Translate", zap.Any("err", err))
+			logger.Logger.Error("Translate-Redis-Translate", zap.Any("err", err), zap.String("key", key))
 			continue
 		}
 		if len(multiLanguageNameUuids) > 0 {
 			go func() {
 				if err := s.Translate(companyUuid); err != nil {
-					logger.Logger.Error("Translate-Redis-Translate-go", zap.Any("err", err))
+					logger.Logger.Info("Translate-Redis-Translate-go", zap.Uint64("companyUuid", companyUuid), zap.Any("err", err), zap.String("key", key))
 				}
 			}()
 		} else {
-			logger.Logger.Info("Translate-Redis-Translate-no-data", zap.Uint64("companyUuid", companyUuid))
+			logger.Logger.Info("Translate-Redis-Translate-no-data", zap.Uint64("companyUuid", companyUuid), zap.String("key", key))
 		}
 	}
 	return nil
