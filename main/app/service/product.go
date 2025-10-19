@@ -7566,9 +7566,11 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 
 	// 同步总店商品到子店
 	if companySetting.IsSubShop() {
+		db := s.dbm.GetDB(companySetting.CompanyUuid)
 		commonRepo := repository.NewCommonRepo()
 		headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
 		productPackageRepo := repository.NewProductPackageRepo(headquarterDb)
+		subProductPackageRepo := repository.NewProductPackageRepo(db)
 		headProductPackageList, err := productPackageRepo.GetProductPackageList(
 			commonRepo.WhereBySoftDelete(),
 			commonRepo.WhereByHeadquarterUuid(0),
@@ -7593,8 +7595,22 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 		newProductPackageGroupList := make([]model.ProductPackageGroup, 0)
 		newProductPackageGroupItemList := make([]model.ProductPackageGroupItem, 0)
 		for _, productPackage := range headProductPackageList {
+			// 创建时间和更新时间
 			createTime := productPackage.CreateTime
 			updateTime := productPackage.UpdateTime
+			// 获取商品包的实际销量, 如果子店存在该商品包且创建时间相同，则使用子店的实际销量 或者 创建时间小于等于1760516651且公司uuid等于7171274190848000，则使用总店的实际销量
+			actualSaleNum := float64(0)
+			// 查询子店是否存在该商品包
+			existsProductPackage, err := subProductPackageRepo.GetProductPackage(
+				commonRepo.WhereByUuid(productPackage.Uuid),
+				commonRepo.WhereIsHeadquarter(),
+			)
+			if err == nil && existsProductPackage.Uuid > 0 && existsProductPackage.CreateTime == createTime {
+				actualSaleNum = existsProductPackage.ActualSaleNum
+			} else if productPackage.CreateTime <= 1760516651 && companySetting.CompanyUuid == 7171274190848000 {
+				actualSaleNum = productPackage.ActualSaleNum
+			}
+			// 创建商品包
 			newProductPackageList = append(newProductPackageList, model.ProductPackage{
 				BaseModel:             model.BaseModel{Uuid: productPackage.Uuid, CreateTime: createTime, UpdateTime: updateTime},
 				Name:                  productPackage.MultiLanguageName.ToJson(),
@@ -7621,7 +7637,7 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 				Sort:                  productPackage.Sort,
 				LimitNum:              productPackage.LimitNum,
 				Describe:              productPackage.Describe,
-				ActualSaleNum:         productPackage.ActualSaleNum,
+				ActualSaleNum:         actualSaleNum,
 				Price:                 productPackage.Price,
 				ProductType:           productPackage.ProductType,
 				SauceRequired:         productPackage.SauceRequired,
@@ -7718,7 +7734,7 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 				delMultiLanguageNameUuid = append(delMultiLanguageNameUuid, productPackageGroup.MultiLanguageName.Uuid)
 			}
 		}
-		db := s.dbm.GetDB(companySetting.CompanyUuid)
+		// 执行同步总店商品到子店
 		err = db.Transaction(func(tx *gorm.DB) error {
 			productPackageRepo := repository.NewProductPackageRepo(tx)
 			productBomRepo := repository.NewProductBomRepo(tx)
