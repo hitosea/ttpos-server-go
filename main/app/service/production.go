@@ -113,6 +113,8 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 		limitedProductOpts = append(limitedProductOpts, productionRepo.WhereProductNumGT0())
 	}
 
+	// 非分批商品、或者分批已送厨商品
+	limitedProductOpts = append(limitedProductOpts, productionRepo.WhereIsNotBatchOrBatchTimeGT0())
 	limitedProducts, total, err := productionRepo.GetLimitedProducts(constant.ProductionOrderProductColumnSaleBill, req.PageNo, req.PageSize, limitedProductOpts...)
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.ErrInternal
@@ -228,9 +230,12 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 	if !ctx.Version(context.GTE, "2.4.0") {
 		limitedProductOpts = append(limitedProductOpts, productionRepo.WhereProductNumGT0())
 	}
-	if req.CategoryUuid != 0 {
+
+	if req.CategoryUuid != 0 { // 指定分类Uuid
 		limitedProductOpts = append(limitedProductOpts, productionRepo.WhereProductFirstCategoryUuidIn([]uint64{req.CategoryUuid}))
 	}
+	// 非分批商品、或者分批已送厨商品
+	limitedProductOpts = append(limitedProductOpts, productionRepo.WhereIsNotBatchOrBatchTimeGT0())
 	limitedProducts, total, err := productionRepo.GetLimitedProducts(constant.ProductionOrderProductColumnCategory, req.PageNo, req.PageSize, limitedProductOpts...)
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.WithMessage(errors.ErrInternal)
@@ -265,6 +270,17 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 		var group resp.ProductionGroup
 		items := make([]resp.ProductionItem, 0)
 		for _, product := range products {
+			// 获取门店业务设置
+			businessSetting, errGet := s.settingSrv.GetBusinessSetting(ctx)
+			if errGet != nil {
+				return resp.ProductionListWithPagination{}, errors.WithMessage(errors.ErrInternal)
+			}
+			if businessSetting.OpenIsBatch() {
+				// 如果开启了分批送厨， 如果商品是分批商品，且处于预送厨阶段，则不显示
+				if product.IsBatchBool() && product.IsPreCooking() {
+					continue
+				}
+			}
 			if paginatedProduct.FirstCategoryUuid != product.FirstCategoryUuid {
 				continue
 			}
@@ -274,6 +290,12 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 			}
 			var item resp.ProductionItem
 			copier.Copy(&item, product)
+
+			// 如果商品是分批商品，则以分批送厨的时间为正式的送厨时间
+			if product.IsBatchBool() {
+				item.CreateTime = product.BatchTime
+			}
+
 			if product.SaleOrderProduct.IsPackageSubProduct() && item.Remark != "" {
 				item.Remark = i18n.Translate(language, "套餐备注：") + item.Remark
 			}
@@ -282,6 +304,23 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 			item.SerialNo = product.SaleBill.SerialNo
 			item.DiningMethod = product.GetWrapStatus()                                                                            // 订单商品的打包状态
 			item.IsSaleBillDeleted = product.SaleBill.DeleteTime > 0 || product.SaleBill.Status == constant.SaleBillStatusCanceled // 是否已经整单取消
+			item.BatchTag = func() resp.BatchTagInfo {
+				// 获取门店业务设置
+				businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+				if err != nil {
+					return resp.BatchTagInfo{}
+				}
+				if businessSetting.OpenIsBatch() {
+					if product.IsBatchBool() && product.BatchTag != nil {
+						return resp.BatchTagInfo{
+							Uuid:       product.BatchTagUuid,
+							LocaleName: product.BatchTag.MultiLanguageName.GetNames(),
+							Color:      product.BatchTag.Color,
+						}
+					}
+				}
+				return resp.BatchTagInfo{}
+			}()
 			items = append(items, item)
 		}
 		if group.LocaleName == nil {
@@ -406,6 +445,17 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 		var group resp.ProductionGroup
 		items := make([]resp.ProductionItem, 0) // 生产单商品列表
 		for _, product := range products {
+			// 获取门店业务设置
+			businessSetting, errGet := s.settingSrv.GetBusinessSetting(ctx)
+			if errGet != nil {
+				return nil
+			}
+			if businessSetting.OpenIsBatch() {
+				// 如果开启了分批送厨， 如果商品是分批商品，且处于预送厨阶段，则不显示
+				if product.IsBatchBool() && product.IsPreCooking() {
+					continue
+				}
+			}
 			if paginatedProduct.SaleBillUuid != product.SaleBillUuid {
 				continue
 			}
@@ -431,6 +481,12 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 			if err != nil {
 				logger.Logger.Error("copier error", zap.Error(err))
 			}
+
+			// 如果商品是分批商品，则以分批送厨的时间为正式的送厨时间
+			if product.IsBatchBool() {
+				item.CreateTime = product.BatchTime
+			}
+
 			if product.SaleOrderProduct.IsPackageSubProduct() && item.Remark != "" {
 				item.Remark = i18n.Translate(language, "套餐备注：") + item.Remark
 			}
@@ -442,6 +498,23 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 			item.SerialNo = product.SaleBill.SerialNo
 			item.DiningMethod = product.GetWrapStatus()                                                                            // 订单商品的打包状态
 			item.IsSaleBillDeleted = product.SaleBill.DeleteTime > 0 || product.SaleBill.Status == constant.SaleBillStatusCanceled // 是否已经整单取消
+			item.BatchTag = func() resp.BatchTagInfo {
+				// 获取门店业务设置
+				businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+				if err != nil {
+					return resp.BatchTagInfo{}
+				}
+				if businessSetting.OpenIsBatch() {
+					if product.IsBatchBool() && product.BatchTag != nil {
+						return resp.BatchTagInfo{
+							Uuid:       product.BatchTagUuid,
+							LocaleName: product.BatchTag.MultiLanguageName.GetNames(),
+							Color:      product.BatchTag.Color,
+						}
+					}
+				}
+				return resp.BatchTagInfo{}
+			}()
 			items = append(items, item)
 		}
 		if group.LocaleName == nil {
@@ -449,6 +522,10 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 		}
 		group.ProductionList = resp.ProductionList{
 			List: items,
+		}
+		// 如果没有子商品，则不显示
+		if len(group.ProductionList.List) == 0 {
+			continue
 		}
 		groups = append(groups, group)
 	}

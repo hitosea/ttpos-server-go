@@ -169,6 +169,7 @@ func (s *erpSrv) ClosePosEntry(ctx context.Context, closeEntryReq req.ClosePosEn
 		PosOpenEntryName:    closeEntryReq.PosOpenEntryName,
 		PeriodEndDate:       closeEntryReq.PeriodEndDate,
 		ClosePosEntryDetail: closePosEntryDetail,
+		InvoiceCount:        closeEntryReq.InvoiceCount,
 	}
 	result, err := client.ClosePosEntry(WithSiteCode(ctx, closeEntryReq.SiteCode), closePosEntryReq)
 	if err != nil {

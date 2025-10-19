@@ -21,6 +21,8 @@ type ProductFlavor struct {
 	HeadquarterUuid       uint64 `gorm:"default:0;column:headquarter_uuid;comment:'总部UUID'"`
 	ErpnextGroupName      string `gorm:"default:'';column:erpnext_group_name;comment:'ERPNext规格组名称'"`
 	ErpnextValueName      string `gorm:"default:'';column:erpnext_value_name;comment:'ERPNext规格值名称'"`
+	ErpnextAliasName      string `gorm:"default:'';column:erpnext_alias_name;comment:'ERPNext规格值别名'"`
+	ErpnextValueNo        int    `gorm:"default:0;column:erpnext_value_no;comment:'ERPNext规格值编号'"`
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 
@@ -196,7 +198,13 @@ type ProductPackage struct {
 	SauceRequired       uint8 `gorm:"default:0;column:sauce_required;comment:'是否必选小料, 0-否 1-是'"`
 	SauceMaxSelection   uint  `gorm:"default:0;column:sauce_max_selection;comment:'小料最大选择数量'"`
 	OpenDiscount        uint  `gorm:"default:0;column:open_discount;comment:'是否开启会员折扣, 0-否 1-是'"`
-	OpenOverallDiscount uint  `gorm:"default:1;column:open_overall_discount;comment:'是否开启整单折扣, 0-否 1-是'"`
+	OpenOverallDiscount *uint `gorm:"default:1;column:open_overall_discount;comment:'是否开启整单折扣, 0-否 1-是'"`
+
+	// 分批相关
+	IsBatch uint8 `gorm:"default:0;column:is_batch;comment:'是否是分批商品, 0-否 1-是'"`
+
+	// 总部UUID
+	HeadquarterUuid uint64 `gorm:"default:0;column:headquarter_uuid;comment:'总部UUID'"`
 
 	MultiLanguageName             MultiLanguageName              `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`  // 多语言名称
 	ProductUnit                   ProductUnit                    `gorm:"foreignKey:unit_uuid;references:uuid" json:"-"`        // 单位
@@ -218,6 +226,11 @@ func (model *ProductPackage) SetNil() {
 	model.TakeoutTax = Tax{}
 	model.ProductCategory = ProductCategory{}
 	model.ImageFile = File{}
+}
+
+// 是否是分批商品
+func (model *ProductPackage) IsBatchBool() bool {
+	return model.IsBatch == 1
 }
 
 // 是否套餐
@@ -259,7 +272,7 @@ func (model *ProductPackage) GetOpenDiscount() bool {
 }
 
 func (model *ProductPackage) GetOpenOverallDiscount() bool {
-	return model.OpenOverallDiscount == 1
+	return *model.OpenOverallDiscount == 1
 }
 
 func (model *ProductPackage) GetRespFlavorList() []product_resp.ProductFlavor {
@@ -579,7 +592,7 @@ func (model *RelatedMaterial) SetNil() {
 
 // 计算预计可生产的产品数量。材料库存数量 / 材料用量
 func (model *RelatedMaterial) CalculateExpectedProductionNum() float64 {
-	materialStockNum := model.Material.StockNum // 材料库存数量，单位：基准单位
+	materialStockNum := model.Material.GetStockNum() // 材料库存数量，单位：基准单位
 	if materialStockNum <= 0 {
 		return 0
 	}
@@ -670,7 +683,8 @@ func (model *ProductBom) IsStockShortageWithMaterial(productNum float64) bool {
 			if material.IsDelete() {
 				continue
 			}
-			if material.Material.StockNum < material.GetDecreaseNum(productNum) {
+			materialStockNum := material.Material.GetStockNum()
+			if materialStockNum < material.GetDecreaseNum(productNum) {
 				return true
 			}
 		}
@@ -678,7 +692,8 @@ func (model *ProductBom) IsStockShortageWithMaterial(productNum float64) bool {
 	// 如果是关联材料的小料，则检查关联材料的库存
 	if model.IsSauce() {
 		for _, material := range model.ProductSauce.SauceMaterials {
-			if material.Material.StockNum < material.GetDecreaseNum(productNum) {
+			materialStockNum := material.Material.GetStockNum()
+			if materialStockNum < material.GetDecreaseNum(productNum) {
 				return true
 			}
 		}
@@ -933,4 +948,19 @@ type MaterialItem struct {
 	UnitConversionRate float64 `json:"unit_conversion_rate"` // 单位转换率
 	BaseUnitUuid       uint64  `json:"base_unit_uuid"`       // 基准单位ID
 	BaseUnitName       string  `json:"base_unit_name"`       // 基准单位名称JSON
+}
+
+// BatchTag 分批类型表,定义分批类型的相关信息 ttpos_batch_tag
+type BatchTag struct {
+	BaseModel
+	Name                  string `gorm:"default:'';column:name;comment:'名称'"`
+	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
+	Color                 string `gorm:"default:'';column:color;comment:'颜色值，如#FF0000'"`
+	Sort                  int    `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
+
+	MultiLanguageName *MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
+}
+
+func (model *BatchTag) SetNil() {
+	model.MultiLanguageName = nil
 }

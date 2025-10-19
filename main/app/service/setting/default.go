@@ -233,17 +233,20 @@ func (s *Srv) getDefaultBusiness(language string) setting.Business {
 			Key:  "20",
 			Name: i18n.Translate(language, "不计入总销售额、优惠折扣、服务费、税费"),
 		}}, // 免单计算方式列表
-		FreeMethod:         "10",     // 免单计算方式，10-计入总销售额、优惠折扣、服务费、税费 20-不计入总销售额、优惠折扣、服务费、税费
-		DiscountMethod:     "10",     // 折扣计算方式 10-按百分比 20-直接减免
-		QrCode:             "123456", // 电子菜单二维码校验失效值，6位数数字
-		NoClearTable:       "0",      // 结账后不清台 0-清台 1-不清台
-		IsNeedPassword:     "1",      // 取消订单/退菜 0-无需密码 1-需要密码
-		DishCardStyle:      "0",      // 菜品卡片样式 0-无图模式 1-图片模式
-		DishCardStyleTime:  "0",      // 菜品卡片样式最后更新时间
-		IsInvoice:          "0",      // 开票信息 0-不需要填写 1-需要填写
-		OpeningHours:       "",       // 营业时间 00:00-23:59
-		DeliveryPriceRatio: 100,      // 外送商品价格和商品原价比例
-		StartSerialNo:      "0001",   // 开始序列号
+		FreeMethod:         "10",       // 免单计算方式，10-计入总销售额、优惠折扣、服务费、税费 20-不计入总销售额、优惠折扣、服务费、税费
+		DiscountMethod:     "10",       // 折扣计算方式 10-按百分比 20-直接减免
+		QrCode:             "123456",   // 电子菜单二维码校验失效值，6位数数字
+		NoClearTable:       "0",        // 结账后不清台 0-清台 1-不清台
+		IsNeedPassword:     "1",        // 取消订单/退菜 0-无需密码 1-需要密码
+		DishCardStyle:      "0",        // 菜品卡片样式 0-无图模式 1-图片模式
+		DishCardStyleTime:  "0",        // 菜品卡片样式最后更新时间
+		IsInvoice:          "0",        // 开票信息 0-不需要填写 1-需要填写
+		OpeningHours:       "",         // 营业时间 00:00-23:59
+		DeliveryPriceRatio: 100,        // 外送商品价格和商品原价比例
+		StartSerialNo:      "0001",     // 开始序列号
+		IsBatch:            "0",        // 是否是分批商品 0-否 1-是
+		BatchProductUuids:  []uint64{}, // 分批商品UUID列表
+		BatchTagNum:        0,          // 分批类型数量
 	}
 
 }

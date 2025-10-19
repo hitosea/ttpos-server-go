@@ -816,7 +816,9 @@ func (h *DeskHandler) OrderCartProductCooking(c *gin.Context) {
 		return
 	}
 	// 返回结果
-	helper.Success(c, res)
+	code := res.GetCode()
+	helper.FailWithData(c, code, res, nil, constant.ParseCodeOrderCheck(code))
+	// helper.Success(c, res)
 }
 
 // OrderCartProductReturning 退菜购物车商品
@@ -1795,6 +1797,62 @@ func (h *DeskHandler) GetHeadquarterMaterialList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderCartProductBatchCooking 获取分批送厨弹框的销售订单商品列表
+// @Summary 获取分批送厨弹框的销售订单商品列表
+// @Description 获取分批送厨弹框的销售订单商品列表
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.GetOrderCartProductBatchCookingListReq true "获取分批送厨弹框的销售订单商品列表"
+// @Success 200 {object} dto.Response{data=resp.OrderCartProductBatchCookingRes}
+// @Router /cashier/desk/order/cart/batch/cooking [get]
+func (h *DeskHandler) OrderCartProductBatchCookingList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.GetOrderCartProductBatchCookingListReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	// 获取分批送厨弹框的销售订单商品列表
+	res, err := h.orderSrv.GetOrderCartProductBatchCookingList(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderCartProductBatchCooking 分批送厨弹框的销售订单商品列表
+// @Summary 分批送厨弹框的销售订单商品列表
+// @Description 分批送厨弹框的销售订单商品列表
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderCartProductBatchCookingReq true "分批送厨弹框的销售订单商品列表"
+// @Success 200 {object} dto.Response{data=resp.OrderCartProductBatchCooking}
+// @Router /cashier/desk/order/cart/batch/cooking [post]
+func (h *DeskHandler) OrderCartProductBatchCooking(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartProductBatchCookingReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	// 分批送厨弹框的销售订单商品列表
+	res, err := h.orderSrv.OrderCartProductBatchCooking(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // RegisterDeskHandlers 注册收银产品路由
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -1878,5 +1936,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/order/member/list", wrapper.GetOrderMemberList)                                              // 使用会员列表
 		privateApi.GET("/desk/order/daily_sales_outbound_summary", wrapper.GetDailySalesOutboundSummary)                   // 获取每日销售出库汇总
 		privateApi.GET("/desk/order/headquarter_material_list", wrapper.GetHeadquarterMaterialList)                        // 获取总部物品列表
+		privateApi.GET("/desk/order/cart/batch/cooking", wrapper.OrderCartProductBatchCookingList)                         // 获取分批送厨弹框的销售订单商品列表
+		privateApi.POST("/desk/order/cart/batch/cooking", wrapper.OrderCartProductBatchCooking)                            // 分批送厨
 	}
 }

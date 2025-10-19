@@ -47,7 +47,7 @@ func (s *sBom) GetBomList(ctx context.Context, req *manufacturing.GetBomListReq)
 	}
 
 	// 解析响应数据并构建BOM列表
-	bomList, err := s.parseBomListResponse(ctx, resp.Bytes(), req)
+	bomList, err := s.parseBomListResponse(ctx, resp.MustToJson(), req)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析BOM列表响应失败")
 	}
@@ -77,7 +77,7 @@ func (s *sBom) GetBom(ctx context.Context, req *manufacturing.GetBomReq) (res *e
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析BOM信息响应失败")
 	}
@@ -203,7 +203,7 @@ func (s *sBom) SaveBom(ctx context.Context, req *manufacturing.SaveBomReq) (res 
 	}
 
 	// 解析创建BOM的响应结果
-	bomName, err := s.parseSaveBomResponse(ctx, resp.Bytes())
+	bomName, err := s.parseSaveBomResponse(ctx, resp.MustToJson())
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析保存BOM响应失败")
 	}
@@ -227,7 +227,7 @@ func (s *sBom) buildBomData(req *manufacturing.SaveBomReq, companyName string) *
 		Item:      req.ItemCode,
 		Company:   companyName,
 		Uom:       req.Uom,
-		Quantity:  float64(req.Quantity),
+		Quantity:  req.Quantity,
 		IsActive:  req.IsActive,
 		IsDefault: req.IsDefault,
 		Items:     make([]erp.BomItem, 0, len(req.Items)), // 预分配容量以提高性能

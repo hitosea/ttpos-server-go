@@ -372,22 +372,23 @@ type ProductShopStatusReq struct {
 
 // ProductShopAddReq 商品添加请求
 type ProductShopAddReq struct {
-	Type            int                               `json:"type"`              // 商品类型 0-商品 1-套餐
-	LocaleName      dto.LocaleResponse                `json:"locale_name"`       // 商品名称
-	CategoryUuid    uint64                            `json:"category_uuid"`     // 商品分类UUID
-	UnitUuid        uint64                            `json:"unit_uuid"`         // 商品单位UUID
-	Flavors         []ProductShopAddFlavorReq         `json:"flavors"`           // 商品规格列表
-	Tax             ProductShopAddTaxReq              `json:"tax"`               // 商品税类
-	Status          int                               `json:"status"`            // 商品状态 0-下架 1-上架
-	ImageFileUuid   uint64                            `json:"image_file_uuid"`   // 商品图片文件UUID
-	NumType         int                               `json:"num_type"`          // 数量计算方法 0-整数 1-小数
-	Attributes      []ProductShopAddAttributeGroupReq `json:"attributes"`        // 商品属性列表
-	Sauce           ProductShopAddSauceReq            `json:"sauce"`             // 商品加料列表
-	DeductStockType int                               `json:"deduct_stock_type"` // 库存计算方式 0-付款减库存 1-下单减库存
-	Show            ProductShopAddShowReq             `json:"show"`              // 商品显示设置
-	Discount        ProductShopAddDiscountReq         `json:"discount"`          // 商品折扣设置
-	Package         ProductShopAddPackageReq          `json:"package"`           // 商品套餐
-	Row             int                               `json:"row"`               // 行号
+	Type                int                               `json:"type"`                  // 商品类型 0-商品 1-套餐
+	LocaleName          dto.LocaleResponse                `json:"locale_name"`           // 商品名称
+	CategoryUuid        uint64                            `json:"category_uuid"`         // 商品分类UUID
+	UnitUuid            uint64                            `json:"unit_uuid"`             // 商品单位UUID
+	Flavors             []ProductShopAddFlavorReq         `json:"flavors"`               // 商品规格列表
+	Tax                 ProductShopAddTaxReq              `json:"tax"`                   // 商品税类
+	Status              int                               `json:"status"`                // 商品状态 0-下架 1-上架
+	ImageFileUuid       uint64                            `json:"image_file_uuid"`       // 商品图片文件UUID
+	NumType             int                               `json:"num_type"`              // 数量计算方法 0-整数 1-小数
+	Attributes          []ProductShopAddAttributeGroupReq `json:"attributes"`            // 商品属性列表
+	Sauce               ProductShopAddSauceReq            `json:"sauce"`                 // 商品加料列表
+	DeductStockType     int                               `json:"deduct_stock_type"`     // 库存计算方式 0-付款减库存 1-下单减库存
+	Show                ProductShopAddShowReq             `json:"show"`                  // 商品显示设置
+	Discount            ProductShopAddDiscountReq         `json:"discount"`              // 商品折扣设置
+	Package             ProductShopAddPackageReq          `json:"package"`               // 商品套餐
+	Row                 int                               `json:"row"`                   // 行号
+	ProductPrinterUuids []uint64                          `json:"product_printer_uuids"` // 商品打印机列表
 }
 
 // ProductShopAddFlavorReq 商品规格添加请求
@@ -471,22 +472,23 @@ type ProductShopAddPackageGroupProductReq struct {
 
 // ProductShopEditReq 商品编辑请求
 type ProductShopEditReq struct {
-	Uuid            uint64                             `json:"uuid"`              // 商品UUID
-	Type            int                                `json:"type"`              // 商品类型 0-商品 1-套餐
-	LocaleName      dto.LocaleResponse                 `json:"locale_name"`       // 商品名称
-	CategoryUuid    uint64                             `json:"category_uuid"`     // 商品分类UUID
-	UnitUuid        uint64                             `json:"unit_uuid"`         // 商品单位UUID
-	Flavors         []ProductShopEditFlavorReq         `json:"flavors"`           // 商品规格列表
-	Tax             ProductShopEditTaxReq              `json:"tax"`               // 商品税类
-	Status          int                                `json:"status"`            // 商品状态 0-下架 1-上架
-	ImageFileUuid   uint64                             `json:"image_file_uuid"`   // 商品图片文件UUID
-	NumType         int                                `json:"num_type"`          // 数量计算方法 0-整数 1-小数
-	Attributes      []ProductShopEditAttributeGroupReq `json:"attributes"`        // 商品属性列表
-	Sauce           ProductShopEditSauceReq            `json:"sauce"`             // 商品加料列表
-	DeductStockType int                                `json:"deduct_stock_type"` // 库存计算方式 0-付款减库存 1-下单减库存
-	Show            ProductShopEditShowReq             `json:"show"`              // 商品显示设置
-	Discount        ProductShopEditDiscountReq         `json:"discount"`          // 商品折扣设置
-	Package         ProductShopEditPackageReq          `json:"package"`           // 商品套餐
+	Uuid                uint64                             `json:"uuid"`                  // 商品UUID
+	Type                int                                `json:"type"`                  // 商品类型 0-商品 1-套餐
+	LocaleName          dto.LocaleResponse                 `json:"locale_name"`           // 商品名称
+	CategoryUuid        uint64                             `json:"category_uuid"`         // 商品分类UUID
+	UnitUuid            uint64                             `json:"unit_uuid"`             // 商品单位UUID
+	Flavors             []ProductShopEditFlavorReq         `json:"flavors"`               // 商品规格列表
+	Tax                 ProductShopEditTaxReq              `json:"tax"`                   // 商品税类
+	Status              int                                `json:"status"`                // 商品状态 0-下架 1-上架
+	ImageFileUuid       uint64                             `json:"image_file_uuid"`       // 商品图片文件UUID
+	NumType             int                                `json:"num_type"`              // 数量计算方法 0-整数 1-小数
+	Attributes          []ProductShopEditAttributeGroupReq `json:"attributes"`            // 商品属性列表
+	Sauce               ProductShopEditSauceReq            `json:"sauce"`                 // 商品加料列表
+	DeductStockType     int                                `json:"deduct_stock_type"`     // 库存计算方式 0-付款减库存 1-下单减库存
+	Show                ProductShopEditShowReq             `json:"show"`                  // 商品显示设置
+	Discount            ProductShopEditDiscountReq         `json:"discount"`              // 商品折扣设置
+	Package             ProductShopEditPackageReq          `json:"package"`               // 商品套餐
+	ProductPrinterUuids []uint64                           `json:"product_printer_uuids"` // 商品打印机列表
 }
 
 // ProductShopAddFlavorReq 商品规格添加请求
@@ -593,4 +595,47 @@ type ProductShopChangePriceReq struct {
 type ProductShopChangePriceItemReq struct {
 	Uuid  uint64  `json:"uuid"`  // 商品BOM UUID
 	Price float64 `json:"price"` // 商品价格
+}
+
+// ProductBatchTypeListReq 分批类型列表查询请求
+type BatchTagListReq struct {
+}
+
+// ProductBatchTypeReq 分批类型详情请求
+type BatchTagReq struct {
+	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 分批类型UUID
+}
+
+// ProductBatchTypeAddReq 分批类型添加请求
+type BatchTagAddReq struct {
+	LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 分批类型名称，多语言
+	Color      string             `json:"color" binding:"required"`       // 颜色值，如#FF0000
+}
+
+// ProductBatchTypeEditReq 分批类型编辑请求
+type BatchTagEditReq struct {
+	Uuid       uint64             `json:"uuid" binding:"required"`        // 分批类型UUID
+	LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 分批类型名称，多语言
+	Color      string             `json:"color" binding:"required"`       // 颜色值，如#FF0000
+}
+
+// ProductBatchTypeDeleteReq 分批类型删除请求
+type BatchTagDeleteReq struct {
+	Uuid uint64 `json:"uuid" binding:"required"` // 分批类型UUID
+}
+
+// ProductBatchTypeSortItem 分批类型排序项
+type BatchTagSortItem struct {
+	Uuid uint64 `json:"uuid" binding:"required"` // 分批类型UUID
+	Sort int    `json:"sort" binding:"required"` // 排序
+}
+
+// ProductBatchTypeSortReq 分批类型排序请求
+type BatchTagSortReq struct {
+	List []BatchTagSortItem `json:"list"` // 分批类型排序列表
+}
+
+// ProductBatchTypeSaveReq 分批商品保存请求
+type SaveBatchProductReq struct {
+	Uuids []uint64 `json:"uuids" binding:"required"` // 分批商品UUID列表, product_package_uuids
 }

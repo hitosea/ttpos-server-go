@@ -3,10 +3,22 @@ package erp
 import (
 	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/item"
+	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/context"
+
+	"google.golang.org/grpc"
 )
+
+// 获取商品服务客户端
+func NewErpProductClient() (item.ProductServiceClient, *grpc.ClientConn, error) {
+	conn, err := cloud.GetRpcConnWithName(cloud.ErpServiceName)
+	if err != nil {
+		return nil, nil, err
+	}
+	return item.NewProductServiceClient(conn), conn, nil
+}
 
 // 添加商品到erp
 func (s *erpSrv) AddProduct(ctx context.Context, params req.ProductAddErpReq) (*item.ItemInfo, error) {
@@ -18,6 +30,14 @@ func (s *erpSrv) AddProduct(ctx context.Context, params req.ProductAddErpReq) (*
 		return nil, err
 	}
 	defer conn.Close()
+
+	var attributes []*item.ItemAttribute
+	for _, v := range params.Flavors {
+		attributes = append(attributes, &item.ItemAttribute{
+			AttributeName:  v.Name,
+			AttributeValue: "",
+		})
+	}
 
 	result, err := client.SaveItem(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.ItemInfo{
 		ItemName:           params.ItemName,
@@ -31,6 +51,8 @@ func (s *erpSrv) AddProduct(ctx context.Context, params req.ProductAddErpReq) (*
 		Classification:     params.Classification,
 		ClassificationCode: params.ClassificationCode,
 		InternalCode:       params.InternalCode,
+		HasVariants:        len(params.Flavors) > 0,
+		Attributes:         attributes,
 	})
 	if err != nil {
 		return nil, err
@@ -44,6 +66,70 @@ func (s *erpSrv) AddProduct(ctx context.Context, params req.ProductAddErpReq) (*
 	}
 
 	return response, nil
+}
+
+// 添加商品bom到erp
+func (s *erpSrv) AddProductBom(ctx context.Context, params req.ProductBomAddErpReq) (*item.CreateSingleVariantItemResp, error) {
+	company := ctx.GetCompany()
+	companySetting := company.CompanySetting
+
+	client, conn, err := NewErpItemClient()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	var attributes []*item.ItemAttribute
+	for _, v := range params.Flavors {
+		attributes = append(attributes, &item.ItemAttribute{
+			AttributeName:  v.Name,
+			AttributeValue: v.Value,
+		})
+	}
+
+	result, err := client.CreateSingleVariantItem(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.CreateSingleVariantItemReq{
+		VariantsOf:   params.VariantsOf,
+		Attributes:   attributes,
+		InternalCode: params.InternalCode,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	if result.GetCode() != "0" {
+		return nil, errors.WithMessage(errors.New(result.GetMessage()), "同步商品bom到erp失败")
+	}
+	response := &item.CreateSingleVariantItemResp{}
+	if err := result.Data.UnmarshalTo(response); err != nil {
+		return nil, err
+	}
+
+	return response, nil
+
+}
+
+func (s *erpSrv) DeleteProductBom(ctx context.Context, params req.DeleteProductBomErpReq) error {
+	company := ctx.GetCompany()
+	companySetting := company.CompanySetting
+
+	client, conn, err := NewErpItemClient()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	result, err := client.DeleteItem(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.DeleteItemReq{
+		ItemCode: params.ItemCode,
+	})
+
+	if err != nil {
+		return err
+	}
+	if result.GetCode() != "0" {
+		return errors.WithMessage(errors.New(result.GetMessage()), "删除商品bom到erp失败")
+	}
+
+	return nil
 }
 
 // 更新套餐到erp
@@ -161,4 +247,93 @@ func (s *erpSrv) GetSauceList(ctx context.Context, sourceListReq req.GetErpSauce
 		}
 	}
 	return sauceList, nil
+}
+
+// 获取商品列表请求参数
+type GetErpProductListReq struct {
+	SiteCode        string `json:"site_code"`
+	Branch          string `json:"branch"`
+	CompanyAbbr     string `json:"company_abbr"`
+	ContainDisabled bool   `json:"contain_disabled"`
+	VariantOf       string `json:"variant_of"`
+}
+
+// 获取商品列表
+func (s *erpSrv) GetProductList(ctx context.Context, params GetErpProductListReq) (*item.GetItemListResp, error) {
+	client, conn, err := NewErpItemClient()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	param := &item.GetItemListReq{
+		ItemGroup:       item.ItemGroup_Products,
+		Branch:          params.Branch,
+		CompanyAbbr:     params.CompanyAbbr,
+		ContainDisabled: params.ContainDisabled,
+		VariantOf:       params.VariantOf,
+	}
+
+	result, err := client.GetItemList(WithSiteCode(ctx.GetContext(), params.SiteCode), param)
+	if err != nil {
+		return nil, err
+	}
+	if result.GetCode() != "0" {
+		return nil, errors.WithMessage(errors.New(result.GetMessage()), "获取商品列表失败")
+	}
+	response := &item.GetItemListResp{}
+	if err := result.Data.UnmarshalTo(response); err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+type UpdateProductReq struct {
+	ItemCode     string                `json:"item_code"`
+	NotForSale   bool                  `json:"not_for_sale"`
+	InternalCode string                `json:"internal_code"`
+	Disabled     bool                  `json:"disabled"`
+	Attributes   []UpdateProductFlavor `json:"attributes"`
+}
+
+type UpdateProductFlavor struct {
+	Name  string
+	Value string
+}
+
+// 设置商品是否禁售
+func (s *erpSrv) UpdateProduct(ctx context.Context, params UpdateProductReq) error {
+	company := ctx.GetCompany()
+	companySetting := company.CompanySetting
+
+	client, conn, err := NewErpProductClient()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	var attributes []*item.ProductAttribute
+	for _, v := range params.Attributes {
+		attributes = append(attributes, &item.ProductAttribute{
+			Attribute:      v.Name,
+			AttributeValue: v.Value,
+		})
+	}
+
+	result, err := client.UpdateProduct(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &item.UpdateProductReq{
+		ItemCode:     params.ItemCode,
+		NotForSale:   params.NotForSale,
+		InternalCode: params.InternalCode,
+		Disabled:     params.Disabled,
+		Attributes:   attributes,
+	})
+	if err != nil {
+		return err
+	}
+	if result.GetCode() != "0" {
+		return errors.WithMessage(errors.New(result.GetMessage()), "设置商品是否禁售失败")
+	}
+
+	return nil
 }

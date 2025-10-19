@@ -6,6 +6,8 @@ const (
 	ApiSaveCancel = "frappe.desk.form.save.cancel"
 	//ApiIsDocumentAmend 记录是否已修订
 	ApiIsDocumentAmend = "frappe.client.is_document_amended"
+	//ApiMethodCreateVariantItem 创建单规格Item
+	ApiMethodCreateVariantItem = "erpnext.controllers.item_variant.create_variant"
 )
 
 // 文档类型
@@ -36,6 +38,8 @@ const (
 
 	//DocTypeStockLedger 库存台账查询
 	DocTypeStockLedger = "Stock Ledger"
+	//DocTypeUom 商品单位
+	DocTypeUom = "UOM"
 )
 
 const (

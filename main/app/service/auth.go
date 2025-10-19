@@ -270,6 +270,7 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 		Token:               token,
 		RefreshToken:        refreshToken,
 		CashierIsFirstLogin: isFirstLogin,
+		NeedChangePassword:  staff.PasswordChangeCount == 0,
 	}, nil
 }
 
@@ -1037,6 +1038,8 @@ func (s *authSrv) ChangePassword(ctx context.Context, changePasswordReq req.Chan
 	}
 	staff.Password = utils.EncryptPassword(changePasswordReq.NewPassword)
 	return staffRepo.Update(staff.Uuid, map[string]any{
-		"password": staff.Password,
+		"password":              staff.Password,
+		"password_change_count": staff.PasswordChangeCount + 1,
+		"password_change_time":  time.Now().Unix(),
 	})
 }

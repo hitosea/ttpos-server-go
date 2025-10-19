@@ -16,12 +16,16 @@ import (
 type IMaterialRepo interface {
 	GetMaterialListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.Material, int64, error)
 	GetMaterial(opts ...DBOption) model.Material
+	GetMaterialList(opts ...DBOption) []model.Material
+	GetMaterialUuids(opts ...DBOption) []uint64
 	GetMaterialByUuid(uuid uint64, opts ...DBOption) (model.Material, error)
 	GetMaterialByUuids(uuids []uint64, opts ...DBOption) ([]*model.Material, error)
 	GetMaterialByCategoryUuid(categoryUuid uint64) ([]*model.Material, error)
 	GetMaterialDetailByUuids(uuids []uint64) ([]*model.Material, error)
 	GetMaterialDetailByUuid(uuid uint64) (*model.Material, error)
+	GetMaterialDetailContainsDeletedByUuid(uuid uint64) (*model.Material, error)
 	CreateMaterial(material model.Material) (uint64, error)
+	CreateMaterialList(materials []model.Material) error
 	UpdateMaterialCode(uuid uint64, code string) error
 	UpdateMaterial(material model.Material) error
 	UpdateMaterialData(data map[string]any, opts ...DBOption) error
@@ -56,7 +60,12 @@ type IMaterialRepo interface {
 	GetMaterialUuidsByKeyword(keyword string) ([]uint64, error)               // 根据关键字获取物品UUID列表
 	GetMaterialCategoryMaxSort(opts ...DBOption) (int64, error)               // 获取物品类别最大排序
 
+	DestroyMaterial(opts ...DBOption) error     // 销毁物品
+	DestroyMaterialUnit(opts ...DBOption) error // 销毁物品单位
+
 	WithRelatedMaterialList() DBOption
+	WithMultiLanguageName(opts ...DBOption) DBOption
+	WithNotBaseUnitList(opts ...DBOption) DBOption
 }
 
 // NewMaterialRepo 创建新的物品仓库
@@ -76,6 +85,28 @@ type MaterialRepoImpl struct {
 func (r *MaterialRepoImpl) WithRelatedMaterialList() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("RelatedMaterialList")
+	}
+}
+
+func (r *MaterialRepoImpl) WithMultiLanguageName(opts ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("MultiLanguageName", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
+	}
+}
+
+func (r *MaterialRepoImpl) WithNotBaseUnitList(opts ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("NotBaseUnitList", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
 	}
 }
 
@@ -120,11 +151,52 @@ func (r *MaterialRepoImpl) GetMaterial(opts ...DBOption) model.Material {
 	return material
 }
 
+// GetMaterialList 根据查询选项获取物品列表
+func (r *MaterialRepoImpl) GetMaterialList(opts ...DBOption) []model.Material {
+	var materials []model.Material
+	query := r.db
+	for _, opt := range opts {
+		query = opt(query)
+	}
+	query.Find(&materials)
+
+	return materials
+}
+
+// GetMaterialUuids 根据查询选项获取物品UUID列表
+func (r *MaterialRepoImpl) GetMaterialUuids(opts ...DBOption) []uint64 {
+	var uuids []uint64
+	query := r.db
+	for _, opt := range opts {
+		query = opt(query)
+	}
+	query.Pluck("uuid", &uuids)
+	return uuids
+}
+
 // GetMaterialByUuid 根据UUID获取物品详情
 func (r *MaterialRepoImpl) GetMaterialByUuid(uuid uint64, opts ...DBOption) (model.Material, error) {
 	var material model.Material
 
 	query := r.db.Model(&model.Material{}).Where("uuid = ? AND delete_time = ?", uuid, 0)
+
+	// 应用查询选项
+	for _, opt := range opts {
+		query = opt(query)
+	}
+
+	if err := query.First(&material).Error; err != nil {
+		return model.Material{}, errors.WithMessage(err, "查询物品详情失败")
+	}
+
+	return material, nil
+}
+
+// GetMaterialByUuid 根据UUID获取物品详情
+func (r *MaterialRepoImpl) GetMaterialContainsDeletedByUuid(uuid uint64, opts ...DBOption) (model.Material, error) {
+	var material model.Material
+
+	query := r.db.Model(&model.Material{}).Where("uuid = ?", uuid)
 
 	// 应用查询选项
 	for _, opt := range opts {
@@ -189,6 +261,41 @@ func (r *MaterialRepoImpl) GetMaterialDetailByUuid(uuid uint64) (*model.Material
 			WithPreload{
 				Query: "NotBaseUnitList.Unit.MultiLanguageName",
 			},
+			WithPreload{
+				Query: "WarehouseItems",
+			},
+		),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询物品详情失败")
+	}
+	return &material, nil
+}
+
+func (r *MaterialRepoImpl) GetMaterialDetailContainsDeletedByUuid(uuid uint64) (*model.Material, error) {
+	material, err := r.GetMaterialContainsDeletedByUuid(uuid,
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "MultiLanguageName",
+			},
+			WithPreload{
+				Query: "Category.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "Unit.Unit.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "PurchaseUnit.Unit.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "CostUnit.Unit.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "NotBaseUnitList.Unit.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "WarehouseItems",
+			},
 		),
 	)
 	if err != nil {
@@ -236,9 +343,20 @@ func (r *MaterialRepoImpl) CreateMaterial(material model.Material) (uint64, erro
 	return material.Uuid, nil
 }
 
+// CreateMaterialList 创建物品列表
+func (r *MaterialRepoImpl) CreateMaterialList(materials []model.Material) error {
+	if err := r.db.Create(&materials).Error; err != nil {
+		return errors.WithMessage(err, "创建物品列表失败")
+	}
+	return nil
+}
+
 func (r *MaterialRepoImpl) UpdateMaterialCode(uuid uint64, code string) error {
 	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("code", code).Error; err != nil {
 		return errors.WithMessage(err, "更新物品编码失败")
+	}
+	if err := r.db.Model(&model.WarehouseItem{}).Where("material_uuid = ?", uuid).Update("material_code", code).Error; err != nil {
+		return errors.WithMessage(err, "更新仓库商品库存记录失败")
 	}
 	return nil
 }
@@ -446,7 +564,7 @@ func (r *MaterialRepoImpl) CheckBarcodeExist(barcode string, uuid uint64) bool {
 
 func (r *MaterialRepoImpl) GetMaterialByErpCode(erpCode string) (*model.Material, error) {
 	var material model.Material
-	if err := r.db.Model(&model.Material{}).Preload("MultiLanguageName").Where("code = ?", erpCode).First(&material).Error; err != nil {
+	if err := r.db.Model(&model.Material{}).Preload("MultiLanguageName").Where("code = ? and code <> ''", erpCode).First(&material).Error; err != nil {
 		return nil, errors.WithMessage(err, "根据erp_code获取物品失败")
 	}
 	return &material, nil
@@ -586,7 +704,8 @@ func (r *MaterialRepoImpl) GetMaterialUuidsByCategoryUuids(categoryUuids []uint6
 
 func (r *MaterialRepoImpl) GetMaterialUuidsByKeyword(keyword string) ([]uint64, error) {
 	var uuids []uint64
-	if err := r.db.Model(&model.Material{}).Where("name LIKE ? OR code LIKE ? OR barcode_value LIKE ?", "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%").Where("delete_time = ?", 0).Pluck("uuid", &uuids).Error; err != nil {
+	if err := r.db.Model(&model.Material{}).Where("name LIKE ? OR code LIKE ? OR barcode_value LIKE ? OR internal_code LIKE ?",
+		"%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%").Where("delete_time = ?", 0).Pluck("uuid", &uuids).Error; err != nil {
 		return nil, errors.WithMessage(err, "根据关键字获取物品UUID列表失败")
 	}
 	return uuids, nil
@@ -600,4 +719,24 @@ func (r *MaterialRepoImpl) GetMaterialCategoryMaxSort(opts ...DBOption) (int64, 
 	}
 	err := db.Select("MAX(sort) as sort").Find(&sort).Error
 	return sort.Int64, errors.WithMessage(err)
+}
+
+// 销毁物品
+func (r *MaterialRepoImpl) DestroyMaterial(opts ...DBOption) error {
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	return db.Delete(&model.Material{}).Error
+}
+
+// 销毁物品单位
+func (r *MaterialRepoImpl) DestroyMaterialUnit(opts ...DBOption) error {
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	return db.Delete(&model.MaterialUnit{}).Error
 }

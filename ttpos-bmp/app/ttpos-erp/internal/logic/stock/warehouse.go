@@ -9,7 +9,6 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/setup"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
-	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 )
@@ -194,10 +193,7 @@ func (s *sWarehouse) queryWarehouseList(ctx context.Context, filters [][]string,
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析仓库列表响应失败")
-	}
+	j := resp
 
 	// 转换为仓库信息列表
 	warehouseList := make([]*warehouse.WarehouseInfo, 0)
@@ -343,10 +339,7 @@ func (s *sWarehouse) queryWarehouseDetail(ctx context.Context, warehouseName str
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析仓库详情响应失败")
-	}
+	j := resp
 
 	dataJson := j.GetJson("data")
 	if dataJson == nil {

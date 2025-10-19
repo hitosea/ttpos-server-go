@@ -9,7 +9,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 	"ttpos-bmp/app/ttpos-erp/utility"
 
-	"github.com/gogf/gf/v2/encoding/gjson"
+	"github.com/gogf/gf/v2/container/gmap"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/util/gconv"
@@ -82,10 +82,7 @@ func (s *sItemGroup) queryItemGroupList(ctx context.Context, filters [][]string,
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析物品分组列表响应失败")
-	}
+	j := resp
 
 	// 转换为物品分组信息列表
 	dataArray := j.GetJsons("data")
@@ -125,10 +122,7 @@ func (s *sItemGroup) GetItemGroup(ctx context.Context, req *item.GetItemGroupReq
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析物品分组信息响应失败")
-	}
+	j := resp
 
 	itemGroupInfo := &erp.ItemGroupInfo{}
 	if err := gconv.Structs(j.GetJson("data"), &itemGroupInfo); err != nil {
@@ -231,6 +225,8 @@ func (s *sItemGroup) buildUpdateItemGroupData(itemGroupInfo *erp.ItemGroupInfo) 
 	// 是否为分组
 	itemGroupForUpdate["is_group"] = itemGroupInfo.IsGroup
 
+	itemGroupForUpdate["custom_aliasname"] = itemGroupInfo.AliasName
+
 	return itemGroupForUpdate
 }
 
@@ -293,6 +289,8 @@ func (s *sItemGroup) buildNewItemGroupData(ctx context.Context, itemGroupInfo *e
 	if company != nil {
 		newItemGroup["custom_company"] = company.CompanyName
 	}
+	//设置别名
+	newItemGroup["custom_aliasname"] = reqInfo.AliasName
 
 	return newItemGroup, nil
 }
@@ -411,52 +409,233 @@ func (s *sItemGroup) checkItemGroupHasItems(ctx context.Context, groupName strin
 	return count > 0, nil
 }
 
-// CreateAttributeGroup 创建属性分组
-func (s *sItemGroup) CreateAttributeGroup(ctx context.Context, req *item.CreateAttributeGroupReq) (resp *erp.ItemGroupInfo, err error) {
-	// 参数验证
-	if len(req.AliasName) == 0 {
-		return nil, gerror.New("分组名称不能为空")
+// SaveAttributeGroup 保存物品属性分组
+// 参数：ctx 上下文，req 保存物品属性分组请求
+// 返回：物品属性分组响应，错误信息
+func (s *sItemGroup) SaveAttributeGroup(ctx context.Context, req *item.SaveAttributeGroupReq) (*item.SaveAttributeGroupResp, error) {
+	var (
+		itemGroupInfo *erp.ItemGroupInfo
+		err           error
+		attrItemList  []*item.AttributeItemInfo
+	)
+	attrItemList = make([]*item.AttributeItemInfo, 0)
+
+	//创建分组
+	if req.AttributeGroupInfo.GroupName == "" {
+		itemGroupInfo, err = s.SaveItemGroup(ctx, &item.SaveItemGroupReq{
+			ItemGroupInfo: &item.ItemGroupInfo{
+				ItemGroupName:   utility.GenItemCode(consts.ItemGroupPrefixPosAttributeGroup),
+				ParentItemGroup: string(consts.ItemGroupPosAttribute),
+				Branch:          req.AttributeGroupInfo.Branch,
+				AliasName:       req.AttributeGroupInfo.AliasName,
+				CompanyAbbr:     req.AttributeGroupInfo.CompanyAbbr,
+			},
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "创建物品属性分组失败")
+		}
+	} else {
+		//更新 属性组信息
+		itemGroupInfo, err = s.SaveItemGroup(ctx, &item.SaveItemGroupReq{
+			ItemGroupInfo: &item.ItemGroupInfo{
+				ItemGroupName:   req.AttributeGroupInfo.GroupName,
+				ParentItemGroup: string(consts.ItemGroupPosAttribute),
+				Branch:          req.AttributeGroupInfo.Branch,
+				AliasName:       req.AttributeGroupInfo.AliasName,
+				CompanyAbbr:     req.AttributeGroupInfo.CompanyAbbr,
+			},
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "更新物品属性分组失败")
+		}
+		// 将req.AttributeGroupInfo.AttributeItemList  转换成map
+		attributeItemMap := gmap.NewHashMap()
+		for _, attributeItem := range req.AttributeGroupInfo.AttributeItemList {
+			attributeItemMap.Set(attributeItem.ItemCode, attributeItem)
+		}
+
+		//查询属性组下的所有属性值
+		itemListResp, err := service.Item().GetItemList(ctx, &item.GetItemListReq{
+			ItemGroup:     item.ItemGroup_PosAttribute,
+			ItemGroupName: req.AttributeGroupInfo.GroupName,
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "查询物品属性值失败")
+		}
+		for _, itemInfo := range itemListResp.ItemList {
+			if !attributeItemMap.Contains(itemInfo.ItemCode) {
+				//删除
+				_, err := service.Document().Delete(ctx, &erp.ErpReq{
+					DocType: erp.DocTypeItem,
+					Name:    itemInfo.ItemCode,
+				})
+				if err != nil {
+					return nil, gerror.Wrapf(err, "删除物品属性值失败")
+				}
+			}
+		}
+	}
+	//更新属性值
+	for _, attrItemInfo := range req.AttributeGroupInfo.AttributeItemList {
+		//更新
+		respItem, err := service.Item().SavePosAttribute(ctx, &item.SavePosAttributeReq{
+			Item: &item.PosSpecItem{
+				ItemCode: attrItemInfo.ItemCode,
+				ItemName: attrItemInfo.AliasName,
+			},
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "更新物品属性值失败")
+		}
+		//获取生成的 item code
+		attrItemList = append(attrItemList, &item.AttributeItemInfo{
+			AliasName: attrItemInfo.AliasName,
+			ItemCode:  respItem.ItemCode,
+		})
 	}
 
-	itemGroupInfo := &item.ItemGroupInfo{
-		ItemGroupName:   utility.GenItemCode(consts.ItemGroupPrefixPosAttributeGroup),
-		AliasName:       req.AliasName,
-		ParentItemGroup: string(consts.ItemGroupPosAttribute),
-		Branch:          req.Branch,
-		CompanyAbbr:     req.CompanyAbbr,
-	}
-
-	// 保存物品分组
-	if resp, err = s.SaveItemGroup(ctx, &item.SaveItemGroupReq{
-		ItemGroupInfo: itemGroupInfo,
-	}); err != nil {
-		return nil, gerror.Wrapf(err, "保存物品分组失败")
-	}
-
-	return resp, nil
+	return &item.SaveAttributeGroupResp{
+		AttributeGroupInfo: &item.AttributeGroupInfo{
+			AliasName:         req.AttributeGroupInfo.AliasName,
+			CompanyAbbr:       req.AttributeGroupInfo.CompanyAbbr,
+			Branch:            req.AttributeGroupInfo.Branch,
+			GroupName:         itemGroupInfo.ItemGroupName,
+			AttributeItemList: attrItemList,
+		},
+	}, nil
 }
 
-// CreateAddonGroup 创建加料分组
-func (s *sItemGroup) CreateAddonGroup(ctx context.Context, req *item.CreateAddonGroupReq) (resp *erp.ItemGroupInfo, err error) {
-	// 参数验证
-	if len(req.AliasName) == 0 {
-		return nil, gerror.New("分组名称不能为空")
+func (s *sItemGroup) DeleteAttributeGroup(ctx context.Context, req *item.DeleteAttributeGroupReq) (*item.DeleteAttributeGroupReq, error) {
+	//删除组下所有商品
+	//查询属性组下的所有属性值
+	itemListResp, err := service.Item().GetItemList(ctx, &item.GetItemListReq{
+		ItemGroup:     item.ItemGroup_PosAttribute,
+		ItemGroupName: req.GroupName,
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询物品属性值失败")
 	}
+	for _, itemInfo := range itemListResp.ItemList {
+		_, err := service.Document().Delete(ctx, &erp.ErpReq{
+			DocType: erp.DocTypeItem,
+			Name:    itemInfo.ItemCode,
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "删除物品属性值失败")
+		}
+	}
+	service.Document().Delete(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeItemGroup,
+		Name:    req.GroupName,
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "删除物品属性分组失败")
+	}
+	return &item.DeleteAttributeGroupReq{
+		GroupName: req.GroupName,
+	}, nil
+}
 
-	itemGroupInfo := &item.ItemGroupInfo{
-		ItemGroupName:   utility.GenItemCode(consts.ItemGroupPrefixPosAddonGroup),
-		AliasName:       req.AliasName,
+// SaveAddonGroup 保存加料组
+// 关联门店时，每个门店都会自动创建一个加料组,
+func (s *sItemGroup) SaveAddonGroup(ctx context.Context, req *item.SaveAddonGroupReq) (*item.SaveAddonGroupResp, error) {
+	var (
+		addonList     = make([]*item.AddonItemInfo, 0)
+		itemGroupInfo = &erp.ItemGroupInfo{}
+	)
+	//获取当前公司，分支加料组
+	itemGroupInfoList, err := service.ItemGroup().GetItemGroupList(ctx, &item.GetItemGroupListReq{
+		Branch:          req.AddonGroupInfo.Branch,
+		CompanyAbbr:     req.AddonGroupInfo.CompanyAbbr,
 		ParentItemGroup: string(consts.ItemGroupPosAddon),
-		Branch:          req.Branch,
-		CompanyAbbr:     req.CompanyAbbr,
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询加料分组失败")
+	}
+	if len(itemGroupInfoList.ItemGroupList) == 0 {
+		//return nil, gerror.Wrapf(err, "当前门店加料分组不存在")
+		g.Log().Warning(ctx, "当前门店加料分组不存在,自动创建")
+		req.AddonGroupInfo.GroupName = utility.GenItemCode(consts.ItemGroupPrefixPosAddonGroup)
+		itemGroupInfo, err = service.ItemGroup().SaveItemGroup(ctx, &item.SaveItemGroupReq{
+			ItemGroupInfo: &item.ItemGroupInfo{
+				ItemGroupName:   req.AddonGroupInfo.GroupName,
+				ParentItemGroup: string(consts.ItemGroupPosAddon),
+				Branch:          req.AddonGroupInfo.Branch,
+				CompanyAbbr:     req.AddonGroupInfo.CompanyAbbr,
+			},
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "创建默认加料分组失败")
+		}
+	} else {
+		// 调用服务层保存数据
+		itemGroupInfo, err = service.ItemGroup().SaveItemGroup(ctx, &item.SaveItemGroupReq{
+			ItemGroupInfo: &item.ItemGroupInfo{
+				ItemGroupName:   req.AddonGroupInfo.GroupName,
+				ParentItemGroup: string(consts.ItemGroupPosAddon),
+				Branch:          req.AddonGroupInfo.Branch,
+				CompanyAbbr:     req.AddonGroupInfo.CompanyAbbr,
+			},
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "修改加料分组失败")
+		}
+
+		// 将req.AttributeGroupInfo.AttributeItemList  转换成map
+		addonItemMap := gmap.NewHashMap()
+		for _, attributeItem := range req.AddonGroupInfo.AddonItemList {
+			addonItemMap.Set(attributeItem.ItemCode, attributeItem)
+		}
+		//查询加料组下的所有加料值
+		itemListResp, err := service.Item().GetItemList(ctx, &item.GetItemListReq{
+			ItemGroup:     item.ItemGroup_PosAddon,
+			ItemGroupName: req.AddonGroupInfo.GroupName,
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "查询物品属性值失败")
+		}
+		//删除不要加料
+		for _, itemInfo := range itemListResp.ItemList {
+			if !addonItemMap.Contains(itemInfo.ItemCode) {
+				//删除
+				_, err := service.Document().Delete(ctx, &erp.ErpReq{
+					DocType: erp.DocTypeItem,
+					Name:    itemInfo.ItemCode,
+				})
+				if err != nil {
+					return nil, gerror.Wrapf(err, "删除物品属性值失败")
+				}
+			}
+		}
 	}
 
-	// 保存物品分组
-	if resp, err = s.SaveItemGroup(ctx, &item.SaveItemGroupReq{
-		ItemGroupInfo: itemGroupInfo,
-	}); err != nil {
-		return nil, gerror.Wrapf(err, "保存物品分组失败")
+	for _, addonInfo := range req.AddonGroupInfo.AddonItemList {
+		//更新保存还要的
+		respAddon, err := service.Item().SavePosAddon(ctx, &item.SavePosAddonReq{
+			Item: &item.PosSpecItem{
+				ItemName:      addonInfo.AliasName,
+				ItemCode:      addonInfo.ItemCode,
+				Branch:        itemGroupInfo.Branch,
+				CompanyAbbr:   req.AddonGroupInfo.CompanyAbbr,
+				ItemGroupName: itemGroupInfo.ItemGroupName,
+			},
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "更新物品属性值失败")
+		}
+		//获取生成的 item code
+		addonList = append(addonList, &item.AddonItemInfo{
+			AliasName: addonInfo.AliasName,
+			ItemCode:  respAddon.ItemCode,
+		})
 	}
 
-	return resp, nil
+	return &item.SaveAddonGroupResp{
+		AddonGroupInfo: &item.AddonGroupInfo{
+			CompanyAbbr:   req.AddonGroupInfo.CompanyAbbr,
+			Branch:        req.AddonGroupInfo.Branch,
+			GroupName:     itemGroupInfo.ItemGroupName,
+			AddonItemList: addonList,
+		},
+	}, nil
 }

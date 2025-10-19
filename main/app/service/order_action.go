@@ -14,6 +14,7 @@ import (
 	"ttpos-server-go/app/repository/ro"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/websocket"
 
 	"github.com/shopspring/decimal"
@@ -25,11 +26,18 @@ type ActionCookingOption struct {
 	CalcAndSaveSaleBill      bool
 	SelectedMustPlanProducts *ro.MustPlanProductInfo // 桌台已经选择的必点商品。使用场景仅用于平板加购并送厨时，将新加购的商品构建为该对象
 	OnlyCheckCooking         bool                    // 是否是仅检查送厨，不进行实际送厨。场景：助手端开启下单校验高级密码时，先检查送厨，再实际送厨。检查送厨时不进行实际送厨
+	IsBatch                  bool                    // 是否是分批商品 。 收银机点击送厨、助手端点击送厨时，是true。如果不是这个场景，需要将未送厨和预送厨的商品都修改is_batch为0
 }
 
 func withCalcAndSaveSaleBill() func(option *ActionCookingOption) {
 	return func(option *ActionCookingOption) {
 		option.CalcAndSaveSaleBill = true
+	}
+}
+
+func WithIsBatch() func(option *ActionCookingOption) {
+	return func(option *ActionCookingOption) {
+		option.IsBatch = true
 	}
 }
 
@@ -43,6 +51,32 @@ func WithOnlyCheckCooking() func(option *ActionCookingOption) {
 	return func(option *ActionCookingOption) {
 		option.OnlyCheckCooking = true
 	}
+}
+
+// 转换器
+func (s *orderSrv) convertToEventOrderProductPre(saleOrderProduct *model.SaleOrderProduct, saleBill *model.SaleBill) event.OrderProductPre {
+	orderProduct := event.OrderProductPre{
+		OrderProductId:        saleOrderProduct.Uuid,
+		ProductId:             saleOrderProduct.ProductPackageUuid,
+		ProductName:           saleOrderProduct.MultiLanguageName.GetNames(),
+		ProductAttr:           saleOrderProduct.GetAttributeName(),
+		ProductType:           saleOrderProduct.ProductType,
+		ProductAttrList:       saleOrderProduct.GetAttributeNameList(),
+		ProductSauceNamesList: saleOrderProduct.GetSauceNamesList(),
+		Attr:                  saleOrderProduct.GetPureAttributeName(),
+		AttrList:              saleOrderProduct.GetPureAttributeNameList(),
+		FlavorName:            saleOrderProduct.GetFlavorName(),
+		TotalNum:              saleOrderProduct.Num,
+		NumType:               saleOrderProduct.NumType,
+		IsBuffet:              saleOrderProduct.IsBuffet == 1,
+		IsWrap:                saleOrderProduct.CalculateIsWrap(saleBill),
+		IsGift:                saleOrderProduct.IsGiftProduct(),
+		IsPackage:             saleOrderProduct.IsPackageProduct(),
+		IsSubProduct:          saleOrderProduct.IsPackageSubProduct(),
+		Remark:                saleOrderProduct.Remark,
+	}
+
+	return orderProduct
 }
 
 // 转换器
@@ -66,6 +100,7 @@ func (s *orderSrv) convertToEventOrderProduct(saleOrderProduct *model.SaleOrderP
 		IsPackage:             saleOrderProduct.IsPackageProduct(),
 		IsSubProduct:          saleOrderProduct.IsPackageSubProduct(),
 		Remark:                saleOrderProduct.Remark,
+		IsBatch:               saleOrderProduct.IsBatchBool(),
 	}
 
 	// 如果是套餐主商品，添加子商品
@@ -99,6 +134,8 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		return nil, errors.New("没有未送厨的商品")
 	}
 	saleOrderUuid := unCookingSaleOrderProducts[0].SaleOrderUuid
+
+	noBatchProductUuids := make([]uint64, 0)
 
 	// 送厨相关
 	{
@@ -159,6 +196,25 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 			product.SetCooking(productionOrder.Uuid)
 		}
 
+		// 如果不是收银机点击送厨、助手端点击送厨时，需要将未送厨和预送厨的商品都修改is_batch为0
+		notBatch := !option.IsBatch
+		if ignoreMust { // 只有点击结账时弹出是否送厨并点击送厨时，会忽略必点，这个情况下，需要都修改is_batch为0
+			notBatch = true
+		}
+		if notBatch {
+			// 遍历所有未送厨的商品，将is_batch为0
+			for _, product := range unCookingSaleOrderProducts {
+				product.IsBatch = 0
+				noBatchProductUuids = append(noBatchProductUuids, product.Uuid)
+			}
+			// 遍历所有预送厨的商品，将is_batch为0
+			preCookingSaleOrderProducts := saleBill.GetSaleOrderProductPreCooking()
+			for _, product := range preCookingSaleOrderProducts {
+				product.IsBatch = 0
+				noBatchProductUuids = append(noBatchProductUuids, product.Uuid)
+			}
+		}
+
 		// 修改账单状态为已送厨
 		if !saleBill.IsCookingStatus() {
 			saleBill.SetCookingStatus()
@@ -172,8 +228,30 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		if err != nil {
 			return nil, errors.WithMessage(err, "s.GetProductDecreaseStockList failed")
 		}
+		staffShiftLogUuid := uint64(0)
+		staffUuid := ctx.GetStaffUuid()
+		if staffUuid > 0 {
+			staffShiftLog, err := GetCurrentStaffShiftLog(db, staffUuid)
+			if err != nil {
+				return nil, errors.WithMessage(err, "GetCurrentStaffShiftLog failed")
+			} else {
+				staffShiftLogUuid = staffShiftLog.Uuid
+			}
+		} else {
+			// 查询当前未交班的班次列表
+			staffShiftLogList, err := repository.NewShiftLogRepo(db).GetShiftLogList(
+				repository.CommonRepo.WhereByStatus(uint(constant.StaffNotHandedOver)),
+			)
+			if err != nil {
+				logger.Logger.Error("获取当前未交班的班次列表失败", zap.Uint64("staffUuid", staffUuid), zap.Error(err))
+			} else {
+				if len(staffShiftLogList) > 0 {
+					staffShiftLogUuid = staffShiftLogList[0].Uuid // 取第一个未交班的班次作为出库的班次
+				}
+			}
+		}
 		// 构建出库单
-		warehouseOutForms = model.NewWarehouseOutForm(decreaseStockList, false, saleBill.Uuid, ctx.GetStaffUuid())
+		warehouseOutForms = model.NewWarehouseOutForm(decreaseStockList, false, saleBill.Uuid, ctx.GetStaffUuid(), staffShiftLogUuid)
 	}
 
 	ctx.Log().Debug("准备开始更新")
@@ -228,6 +306,16 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 					}
 				}
 			}
+		}
+		// 将未送厨和预送厨的商品编辑未分批商品
+		if len(noBatchProductUuids) > 0 {
+			if err := tx.Model(&model.SaleOrderProduct{}).Where("uuid IN (?)", noBatchProductUuids).Update("is_batch", 0).Error; err != nil {
+				return errors.WithMessage(err)
+			}
+			if err := tx.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid IN (?)", noBatchProductUuids).Update("is_batch", 0).Error; err != nil {
+				return errors.WithMessage(err)
+			}
+
 		}
 		return nil
 	}); err != nil {

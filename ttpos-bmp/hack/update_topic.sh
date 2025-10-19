@@ -1,0 +1,101 @@
+#!/bin/bash
+
+# RocketMQ Topic 更新脚本
+# 读取 .env 文件中的配置，比较现有 topic 与 manifest/topics.txt 中的差异，并创建缺失的 topic
+
+set -e
+
+# 脚本所在目录
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# 读取 .env 文件
+ENV_FILE="$PROJECT_ROOT/.env"
+if [ ! -f "$ENV_FILE" ]; then
+    echo "错误: .env 文件不存在: $ENV_FILE"
+    echo "请创建 .env 文件并配置以下变量:"
+    echo "ROCKETMQ_NAME_SRV_ADDR=127.0.0.1:9876"
+    echo "ROCKETMQ_BROKER_ADDR=127.0.0.1:10911"
+    exit 1
+fi
+
+# 加载环境变量
+source "$ENV_FILE"
+
+# 检查必需的环境变量
+if [ -z "$ROCKETMQ_NAME_SRV_ADDR" ]; then
+    echo "错误: ROCKETMQ_NAME_SRV_ADDR 环境变量未设置"
+    exit 1
+fi
+
+if [ -z "$ROCKETMQ_BROKER_ADDR" ]; then
+    echo "错误: ROCKETMQ_BROKER_ADDR 环境变量未设置"
+    exit 1
+fi
+
+# topics.txt 文件路径
+TOPICS_FILE="$PROJECT_ROOT/manifest/topics.txt"
+if [ ! -f "$TOPICS_FILE" ]; then
+    echo "错误: topics.txt 文件不存在: $TOPICS_FILE"
+    exit 1
+fi
+
+echo "开始检查和更新 RocketMQ Topics..."
+echo "NameServer 地址: $ROCKETMQ_NAME_SRV_ADDR"
+echo "Broker 地址: $ROCKETMQ_BROKER_ADDR"
+
+# 获取现有的 topic 列表
+echo "正在获取现有 topic 列表..."
+EXISTING_TOPICS=$(docker run --rm apache/rocketmq:5.3.2 ./mqadmin topicList -n "$ROCKETMQ_NAME_SRV_ADDR" 2>/dev/null | grep -v "^#" | grep -v "^$" | awk '{print $1}' | sort)
+
+if [ $? -ne 0 ]; then
+    echo "错误: 无法获取现有 topic 列表，请检查 RocketMQ 服务是否正常运行"
+    exit 1
+fi
+
+echo "现有 topics:"
+echo "$EXISTING_TOPICS"
+echo ""
+
+# 读取需要的 topic 列表
+echo "需要的 topics (来自 $TOPICS_FILE):"
+REQUIRED_TOPICS=$(cat "$TOPICS_FILE" | grep -v "^#" | grep -v "^$" | sort)
+echo "$REQUIRED_TOPICS"
+echo ""
+
+# 比较并创建缺失的 topic
+MISSING_TOPICS=""
+while IFS= read -r topic; do
+    if [ -n "$topic" ]; then
+        if ! echo "$EXISTING_TOPICS" | grep -q "^$topic$"; then
+            MISSING_TOPICS="$MISSING_TOPICS$topic\n"
+        fi
+    fi
+done <<< "$REQUIRED_TOPICS"
+
+if [ -z "$MISSING_TOPICS" ]; then
+    echo "所有 topics 都已存在，无需创建新的 topic"
+else
+    echo "发现缺失的 topics，开始创建:"
+    echo -e "$MISSING_TOPICS"
+    
+    while IFS= read -r topic; do
+        if [ -n "$topic" ]; then
+            echo "正在创建 topic: $topic"
+            docker run --rm apache/rocketmq:5.3.2 ./mqadmin updateTopic \
+                -n "$ROCKETMQ_NAME_SRV_ADDR" \
+                -t "$topic" \
+                -c DefaultCluster
+            
+            if [ $? -eq 0 ]; then
+                echo "✓ 成功创建 topic: $topic"
+            else
+                echo "✗ 创建 topic 失败: $topic"
+            fi
+        fi
+    done <<< "$(echo -e "$MISSING_TOPICS")"
+fi
+
+echo ""
+echo "Topic 更新完成!"
+

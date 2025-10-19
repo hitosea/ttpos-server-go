@@ -104,6 +104,24 @@ func (model *SaleBill) GetSaleOrderProductUnCooking() []*SaleOrderProduct {
 	return unCookingSaleOrderProducts
 }
 
+// 判断是否需要弹出分批送厨弹窗。有分批商品且未标记分批类型时，需要弹出分批送厨弹窗
+func (model *SaleBill) IsNeedBatchSendCooking() bool {
+	saleOrderProducts := make([]*SaleOrderProduct, 0)
+	// 获取未标记分批类型的分批商品
+	for _, saleOrder := range model.SaleOrders {
+		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+			if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || saleOrderProduct.IsUnAcceptOrderBool() {
+				// 删除、取消、未接单的商品不参与判断
+				continue
+			}
+			if saleOrderProduct.IsBatchBool() && saleOrderProduct.IsPreCooking() {
+				saleOrderProducts = append(saleOrderProducts, saleOrderProduct)
+			}
+		}
+	}
+	return len(saleOrderProducts) > 0
+}
+
 func FilterPaymentDeductStockProduct(products []*SaleOrderProduct) []*SaleOrderProduct {
 	list := make([]*SaleOrderProduct, 0)
 	for _, product := range products {

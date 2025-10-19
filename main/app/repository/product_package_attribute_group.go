@@ -14,6 +14,7 @@ type IProductPackageAttributeGroupRepo interface {
 	CreateProductPackageAttributeGroups(productPackageAttributeGroups []model.ProductPackageAttributeGroup) error
 	DeleteProductPackageAttributeGroup(opts ...DBOption) error
 	UpdateProductPackageAttributeGroup(data map[string]any, opts ...DBOption) error
+	DestroyProductPackageAttributeGroup(opts ...DBOption) error
 }
 
 type productPackageAttributeGroupRepoImpl struct {
@@ -93,4 +94,13 @@ func (r *productPackageAttributeGroupRepoImpl) UpdateProductPackageAttributeGrou
 	}
 
 	return db.Model(&model.ProductPackageAttributeGroup{}).Updates(data).Error
+}
+
+// DestroyProductPackageAttributeGroup 销毁商品包属性组
+func (r *productPackageAttributeGroupRepoImpl) DestroyProductPackageAttributeGroup(opts ...DBOption) error {
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	return db.Delete(&model.ProductPackageAttributeGroup{}).Error
 }

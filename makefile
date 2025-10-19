@@ -101,6 +101,14 @@ translate:
 migrate-data:
 	cd main && go run ./main.go migrate-data
 
+# 重新同步本地产品数据ERP
+resync-product-data-to-erp:
+	cd main && go run ./main.go resync-product-data-to-erp
+
+# 同步ERP数据
+sync-erp-data:
+	cd main && go run ./main.go sync-erp-data
+
 # 统计数据重跑
 statistics-re:
 	cd main && go run ./main.go statistics-re $(ARGS)
@@ -129,3 +137,7 @@ think:
 log:
 	@echo "🔍 监听今天的日志..."
 	tail -f -n 500 ./main/log/$$(date +%Y-%m-%d).log
+
+# 添加物品库存
+add-item-stock:
+	cd main && go run ./main.go add-item-stock

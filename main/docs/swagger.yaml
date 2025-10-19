@@ -709,6 +709,9 @@ definitions:
     type: object
   material_resp.Material:
     properties:
+      available_num:
+        description: 可用库存数量
+        type: number
       barcode_value:
         description: 条形码值
         type: string
@@ -730,6 +733,9 @@ definitions:
         type: string
       image:
         description: 图片
+        type: string
+      internal_code:
+        description: 内部编码
         type: string
       locale_name:
         allOf:
@@ -754,6 +760,9 @@ definitions:
       status:
         description: 状态 1-启用 0-停用
         type: integer
+      transit_num:
+        description: 在途库存数量
+        type: number
       unit_list:
         description: 单位列表
         items:
@@ -1564,6 +1573,67 @@ definitions:
         description: 会员UUID
         type: integer
     type: object
+  product_resp.BatchTag:
+    properties:
+      color:
+        description: 颜色值，如#FF0000
+        type: string
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 分批类型名称，多语言
+      sort:
+        description: 排序，数字越小越靠前
+        type: integer
+      uuid:
+        description: 分批类型UUID
+        type: integer
+    type: object
+  product_resp.BatchTagColorUsage:
+    properties:
+      batch_tag_uuid:
+        description: 分批类型UUID
+        type: integer
+      color:
+        description: 颜色值
+        type: string
+      is_used:
+        description: 是否已被使用
+        type: boolean
+      used_by:
+        description: 被使用的分批类型名称（如果被使用的话）
+        type: string
+    type: object
+  product_resp.BatchTagColorUsageList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.BatchTagColorUsage'
+        type: array
+    type: object
+  product_resp.BatchTagDetail:
+    properties:
+      color:
+        description: 颜色值，如#FF0000
+        type: string
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 分批类型名称，多语言
+      sort:
+        description: 排序，数字越小越靠前
+        type: integer
+      uuid:
+        description: 分批类型UUID
+        type: integer
+    type: object
+  product_resp.BatchTagList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.BatchTag'
+        type: array
+    type: object
   product_resp.PackageProductDetail:
     properties:
       can_edit:
@@ -1838,6 +1908,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/product_resp.ProductFlavorList'
         description: 商品规格列表
+      headquarter_uuid:
+        description: 总部UUID,0表示不是总部商品
+        type: integer
       image:
         description: 商品图片。
         type: string
@@ -1882,6 +1955,10 @@ definitions:
       price:
         description: 商品价格,套餐的价格
         type: number
+      product_printers:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductPrinterList'
+        description: 商品打印机列表
       product_type:
         description: 商品类型 0-商品 1-套餐
         type: integer
@@ -1947,6 +2024,9 @@ definitions:
     type: object
   product_resp.ProductFlavorDetailResp:
     properties:
+      headquarter_uuid:
+        description: 总部UUID,0表示不是总部商品
+        type: integer
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -1964,6 +2044,9 @@ definitions:
     type: object
   product_resp.ProductFlavorItemResp:
     properties:
+      headquarter_uuid:
+        description: 总部UUID,0表示不是总部商品
+        type: integer
       name:
         description: 商品规格名称
         type: string
@@ -2289,6 +2372,25 @@ definitions:
           $ref: '#/definitions/product_resp.ProductPackageSubProduct'
         type: array
     type: object
+  product_resp.ProductPrinter:
+    properties:
+      name:
+        description: 商品打印机名称
+        type: string
+      status:
+        description: 商品打印机状态
+        type: integer
+      uuid:
+        description: 商品打印机uuid
+        type: integer
+    type: object
+  product_resp.ProductPrinterList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductPrinter'
+        type: array
+    type: object
   product_resp.ProductSauce:
     properties:
       bom_uuid:
@@ -2399,10 +2501,16 @@ definitions:
     type: object
   product_resp.ProductShopCategory:
     properties:
+      category_key:
+        description: 商品类别关键字
+        type: string
       children:
         allOf:
         - $ref: '#/definitions/product_resp.ProductShopCategoryListResp'
         description: 子级类别
+      code:
+        description: 商品类别编码
+        type: string
       is_editable:
         description: 是否可编辑
         type: boolean
@@ -2427,6 +2535,9 @@ definitions:
     type: object
   product_resp.ProductShopCategoryDetailResp:
     properties:
+      category_key:
+        description: 商品类别关键字
+        type: string
       child_count:
         description: 子级数量
         type: integer
@@ -2468,6 +2579,9 @@ definitions:
     type: object
   product_resp.ProductShopListItemFlavorItemResp:
     properties:
+      internal_code:
+        description: 商品Bom内部编码
+        type: string
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -2575,6 +2689,12 @@ definitions:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 商品规格名称
+      headquarter_uuid:
+        description: 总部UUID,0表示不是总部商品
+        type: integer
+      internal_code:
+        description: 内部编码. 规格商品的内部编码
+        type: string
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -2830,6 +2950,64 @@ definitions:
         type: string
       text:
         type: string
+    type: object
+  req.BatchTagAddReq:
+    properties:
+      color:
+        description: 颜色值，如#FF0000
+        type: string
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 分批类型名称，多语言
+    required:
+    - color
+    - locale_name
+    type: object
+  req.BatchTagDeleteReq:
+    properties:
+      uuid:
+        description: 分批类型UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.BatchTagEditReq:
+    properties:
+      color:
+        description: 颜色值，如#FF0000
+        type: string
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 分批类型名称，多语言
+      uuid:
+        description: 分批类型UUID
+        type: integer
+    required:
+    - color
+    - locale_name
+    - uuid
+    type: object
+  req.BatchTagSortItem:
+    properties:
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 分批类型UUID
+        type: integer
+    required:
+    - sort
+    - uuid
+    type: object
+  req.BatchTagSortReq:
+    properties:
+      list:
+        description: 分批类型排序列表
+        items:
+          $ref: '#/definitions/req.BatchTagSortItem'
+        type: array
     type: object
   req.BindCashierReq:
     properties:
@@ -3252,47 +3430,16 @@ definitions:
     type: object
   req.GetBindCodeReq:
     properties:
-      device_id:
+      deviceId:
         type: string
     required:
-    - device_id
+    - deviceId
     type: object
-  req.GetWarehouseInOutListReq:
+  req.GetOrderCartProductBatchCookingListReq:
     properties:
-      end_time:
-        description: 日期，结束时间
+      saleBillUuid:
+        description: 销售账单UUID, 必填
         type: integer
-      keyword:
-        description: 关键字, 物品名称、物品编码、物品条形码
-        type: string
-      material_category_uuids:
-        description: 物料分类ID列表,多选
-        items:
-          type: integer
-        type: array
-      order_no:
-        description: 单据编号
-        type: string
-      page_no:
-        description: 页码
-        minimum: 1
-        type: integer
-      page_size:
-        description: 每页大小
-        maximum: 1100
-        minimum: 1
-        type: integer
-      start_time:
-        description: 日期，开始时间
-        type: integer
-      supplier_uuids:
-        description: 供应商ID列表,多选
-        items:
-          type: integer
-        type: array
-      type:
-        description: 类型：采购入库-purchase、销售出库-sale、发货出库-delivery
-        type: string
     type: object
   req.InitShopReq:
     properties:
@@ -3492,47 +3639,6 @@ definitions:
     - device_id
     - password
     - username
-    type: object
-  req.MaterialAddErpReq:
-    properties:
-      barcode_value:
-        description: 条形码值
-        type: string
-      classification:
-        description: 分类
-        type: string
-      classification_code:
-        description: 分类编码
-        type: string
-      disabled:
-        description: 是否禁用
-        type: boolean
-      internal_code:
-        description: 内部编码
-        type: string
-      item_code:
-        description: 物品编码, 如果为空，则为新增；如果非空，则为编辑
-        type: string
-      item_name:
-        description: 物品名称, 英文
-        type: string
-      opening_stock:
-        description: 期初库存
-        type: number
-      purchase_uom:
-        description: 采购单位, 英文
-        type: string
-      stock_uom:
-        description: 基准库存单位, 英文
-        type: string
-      uoms:
-        description: 单位列表
-        items:
-          $ref: '#/definitions/req.MaterialUomReq'
-        type: array
-      valuation_rate:
-        description: 估值率
-        type: number
     type: object
   req.MaterialAddReq:
     properties:
@@ -3764,15 +3870,6 @@ definitions:
     - conversion_rate
     - uuid
     type: object
-  req.MaterialUomReq:
-    properties:
-      conversion_rate:
-        description: 转换率
-        type: number
-      uom:
-        description: 单位, 英文
-        type: string
-    type: object
   req.MemberOrderSendAuthCodeReq:
     properties:
       member_sale_order_uuid:
@@ -3864,6 +3961,23 @@ definitions:
         items:
           type: integer
         type: array
+    type: object
+  req.OrderCartProductBatchCookingReq:
+    properties:
+      batch_tag_uuid:
+        description: 分批类型UUID, 必填
+        type: integer
+      sale_bill_uuid:
+        description: 销售账单UUID, 必填
+        type: integer
+      sale_order_product_uuids:
+        description: 销售订单商品UUID列表, 必填
+        items:
+          type: integer
+        type: array
+      sale_order_uuid:
+        description: 销售订单UUID, 必填
+        type: integer
     type: object
   req.OrderCartProductChangeDeskReq:
     properties:
@@ -5110,6 +5224,11 @@ definitions:
         allOf:
         - $ref: '#/definitions/req.ProductShopAddPackageReq'
         description: 商品套餐
+      product_printer_uuids:
+        description: 商品打印机列表
+        items:
+          type: integer
+        type: array
       row:
         description: 行号
         type: integer
@@ -5442,6 +5561,11 @@ definitions:
         allOf:
         - $ref: '#/definitions/req.ProductShopEditPackageReq'
         description: 商品套餐
+      product_printer_uuids:
+        description: 商品打印机列表
+        items:
+          type: integer
+        type: array
       sauce:
         allOf:
         - $ref: '#/definitions/req.ProductShopEditSauceReq'
@@ -5765,6 +5889,12 @@ definitions:
         description: 供应商名称
         maxLength: 100
         type: string
+      uuid_in:
+        description: 采购订单ID
+        items:
+          type: integer
+        minItems: 1
+        type: array
       warehouse_erp_code:
         description: 仓库编码
         maxLength: 255
@@ -6027,6 +6157,16 @@ definitions:
         description: 销售账单Uuid
         type: integer
     type: object
+  req.SaveBatchProductReq:
+    properties:
+      uuids:
+        description: 分批商品UUID列表, product_package_uuids
+        items:
+          type: integer
+        type: array
+    required:
+    - uuids
+    type: object
   req.SendMemberRechargeSMS:
     properties:
       balance:
@@ -6203,6 +6343,15 @@ definitions:
     - name
     - uuid
     type: object
+  req.SyncReq:
+    properties:
+      is_sync_execute:
+        description: 是否同步执行
+        type: boolean
+      task_uuid:
+        description: 任务UUID，如果传递则重新执行该任务
+        type: integer
+    type: object
   req.TabletOrderCartProductAddReq:
     properties:
       ignore_must:
@@ -6310,6 +6459,12 @@ definitions:
         - "10"
         - "20"
         type: string
+      is_batch:
+        description: 是否是分批商品 0-否 1-是
+        enum:
+        - "0"
+        - "1"
+        type: string
       is_invoice:
         description: '开票信息: 0-不需要填写 1-需要填写'
         enum:
@@ -6350,6 +6505,7 @@ definitions:
     - dish_card_style
     - free_method
     - gift_method
+    - is_batch
     - is_invoice
     - is_need_password
     - no_clear_table
@@ -6782,6 +6938,38 @@ definitions:
         items:
           $ref: '#/definitions/resp.Attribute'
         type: array
+    type: object
+  resp.BatchTagInfo:
+    properties:
+      color:
+        description: 颜色值，如#FF0000
+        type: string
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 分批类型名称，多语言
+      uuid:
+        description: 分批类型UUID
+        type: integer
+    type: object
+  resp.BatchTagRes:
+    properties:
+      color:
+        description: 分批类型的颜色
+        type: string
+      count:
+        description: 桌台分批类型的数量
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 分批类型的名称
+      sort:
+        description: 分批类型的排序
+        type: integer
+      uuid:
+        description: 分批类型的uuid
+        type: integer
     type: object
   resp.BillLists:
     properties:
@@ -7336,6 +7524,9 @@ definitions:
     type: object
   resp.Desk:
     properties:
+      batch_tag_color:
+        description: 桌台分批类型的颜色
+        type: string
       customer_count:
         description: 桌台人数
         type: integer
@@ -7408,6 +7599,11 @@ definitions:
       available_num:
         description: 桌台可用数量
         type: integer
+      batch_tags:
+        description: 分批信息
+        items:
+          $ref: '#/definitions/resp.BatchTagRes'
+        type: array
       lock_num:
         description: 桌台锁定数量
         type: integer
@@ -8918,6 +9114,67 @@ definitions:
           type: integer
         type: array
     type: object
+  resp.OrderCartProductBatchCooking:
+    properties:
+      batch_tag_uuid:
+        description: 分批类型uuid, 如果已经进行分批送厨，则不为0
+        type: integer
+      batch_time:
+        description: 分批送厨时间，如果已经进行分批送厨，则不为0
+        type: integer
+      create_time:
+        description: 下单时间。用于排序
+        type: integer
+      image:
+        description: 商品图片URL
+        type: string
+      locale_attribute_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称
+      send_kitchen_time:
+        description: 送厨时间. 预送厨的时间。用于排序
+        type: integer
+      uuid:
+        description: 商品uuid sale_order_product_uuid
+        type: integer
+    type: object
+  resp.OrderCartProductBatchCookingRes:
+    properties:
+      list:
+        description: 数据
+        items:
+          $ref: '#/definitions/resp.OrderCartProductBatchCooking'
+        type: array
+      tags:
+        description: 分批类型列表
+        items:
+          $ref: '#/definitions/resp.OrderCartProductBatchCookingTag'
+        type: array
+    type: object
+  resp.OrderCartProductBatchCookingTag:
+    properties:
+      color:
+        description: '分批类型颜色，如 #FF0000'
+        type: string
+      count:
+        description: 商品数量
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 分批类型名称，多语言
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 分批类型uuid
+        type: integer
+    type: object
   resp.OrderCheckRes:
     properties:
       product_must_plans:
@@ -9478,6 +9735,25 @@ definitions:
         description: 销售账单UUID
         type: integer
     type: object
+  resp.OtherOrgListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.OtherOrgResp'
+        type: array
+    type: object
+  resp.OtherOrgResp:
+    properties:
+      code:
+        description: 对方机构编码
+        type: string
+      is_headquarter:
+        description: 是否总部机构：0-否；1-是
+        type: boolean
+      name:
+        description: 对方机构名称
+        type: string
+    type: object
   resp.PackageProduct:
     properties:
       locale_attribute_name:
@@ -9847,6 +10123,13 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.AboutBuffet'
         description: 自助餐信息
+      batch_tag_color:
+        description: 分批类型颜色
+        type: string
+      batch_tag_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 分批类型名称
       can_change_num:
         description: 顾客可修改必点数量
         type: boolean
@@ -9859,6 +10142,9 @@ definitions:
       finished_num:
         description: 制作完成数量
         type: number
+      is_batch:
+        description: 是否是分批商品
+        type: boolean
       is_buffet:
         description: 是否是自助餐
         type: boolean
@@ -9910,6 +10196,9 @@ definitions:
       remark:
         description: 备注
         type: string
+      show_batch_tag:
+        description: 是否显示分批类型
+        type: boolean
       status:
         description: '0: 未送厨 1:已送厨 2:制作完成（出餐）'
         type: integer
@@ -10068,6 +10357,9 @@ definitions:
       name:
         description: 商品打印机名称
         type: string
+      status:
+        description: 商品打印机状态
+        type: integer
       uuid:
         description: 商品打印机uuid
         type: integer
@@ -10151,6 +10443,10 @@ definitions:
     type: object
   resp.ProductionItem:
     properties:
+      batch_tag:
+        allOf:
+        - $ref: '#/definitions/resp.BatchTagInfo'
+        description: 分批类型
       create_time:
         description: 送厨时间
         type: integer
@@ -10352,6 +10648,9 @@ definitions:
       base_unit_name:
         description: 基准单位名称
         type: string
+      internal_code:
+        description: 内部编码
+        type: string
       locale_base_unit_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -10411,6 +10710,9 @@ definitions:
         type: number
       base_unit_name:
         description: 基准单位名称
+        type: string
+      internal_code:
+        description: 商品Bom内部编码
         type: string
       locale_base_unit_name:
         allOf:
@@ -10543,6 +10845,11 @@ definitions:
         allOf:
         - $ref: '#/definitions/dto.PageResponse'
         description: 分页信息
+      purchase_order_list:
+        description: 采购单列表
+        items:
+          $ref: '#/definitions/resp.PurchaseOrderInfo'
+        type: array
     type: object
   resp.QueueDataResp:
     properties:
@@ -11300,6 +11607,17 @@ definitions:
         description: 更新时间
         type: integer
     type: object
+  resp.ShopLoginResp:
+    properties:
+      need_change_password:
+        description: 是否需要修改密码，首次登录移动管理端需要修改密码
+        type: boolean
+      refresh_token:
+        description: 刷新token，用于重新获取token
+        type: string
+      token:
+        type: string
+    type: object
   resp.ShopProfile:
     properties:
       address:
@@ -11518,6 +11836,116 @@ definitions:
         type: string
       uuid:
         description: 供应商UUID
+        type: integer
+    type: object
+  resp.SyncResp:
+    properties:
+      message:
+        description: 提示消息
+        type: string
+      task_uuid:
+        description: 任务UUID
+        type: integer
+    type: object
+  resp.SyncTaskDetailResp:
+    properties:
+      create_time:
+        description: 创建时间
+        type: integer
+      duration:
+        description: 执行时长（秒）
+        type: integer
+      end_time:
+        description: 结束时间
+        type: integer
+      fail_count:
+        description: 失败任务数
+        type: integer
+      items:
+        description: 任务明细
+        items:
+          $ref: '#/definitions/resp.SyncTaskItemResp'
+        type: array
+      start_time:
+        description: 开始时间
+        type: integer
+      status:
+        description: '同步状态: 0-进行中, 1-已完成, 2-失败'
+        type: integer
+      success_count:
+        description: 成功任务数
+        type: integer
+      total_count:
+        description: 总任务数
+        type: integer
+      uuid:
+        description: UUID
+        type: integer
+    type: object
+  resp.SyncTaskItemResp:
+    properties:
+      duration:
+        description: 执行时长（秒）
+        type: integer
+      end_time:
+        description: 结束时间
+        type: integer
+      error_message:
+        description: 错误消息
+        type: string
+      start_time:
+        description: 开始时间
+        type: integer
+      status:
+        description: '任务状态: 0-待执行, 1-执行中, 2-已完成, 3-失败'
+        type: integer
+      task_name:
+        description: 任务名称
+        type: string
+      task_type:
+        description: 任务类型
+        type: string
+      uuid:
+        description: UUID
+        type: integer
+    type: object
+  resp.SyncTaskListPaginationResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.SyncTaskListResp'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
+  resp.SyncTaskListResp:
+    properties:
+      create_time:
+        description: 创建时间
+        type: integer
+      duration:
+        description: 执行时长（秒）
+        type: integer
+      end_time:
+        description: 结束时间
+        type: integer
+      fail_count:
+        description: 失败任务数
+        type: integer
+      start_time:
+        description: 开始时间
+        type: integer
+      status:
+        description: '同步状态: 0-进行中, 1-已完成, 2-失败'
+        type: integer
+      success_count:
+        description: 成功任务数
+        type: integer
+      total_count:
+        description: 总任务数
+        type: integer
+      uuid:
+        description: UUID
         type: integer
     type: object
   resp.SystemSetting:
@@ -11872,6 +12300,15 @@ definitions:
       order_no:
         description: 单据编号
         type: string
+      other_org_name:
+        description: 对方机构名称
+        type: string
+      other_org_type:
+        description: 对方机构类型
+        type: integer
+      other_org_uuid:
+        description: 对方机构
+        type: integer
       supplier_erp_code:
         description: 供应商ERP编码
         type: string
@@ -12044,6 +12481,14 @@ definitions:
     type: object
   setting.Business:
     properties:
+      batch_product_uuids:
+        description: 分批商品UUID列表
+        items:
+          type: integer
+        type: array
+      batch_tag_num:
+        description: 分批类型数量
+        type: integer
       checkout_zeroing_method:
         description: '结账自动抹零方式: 0-实款实收 1-抹分 2-抹角 5-抹元. // 5-抹元为5是为了全局唯一，各个数字有不重复的抹零定义'
         type: string
@@ -12080,6 +12525,9 @@ definitions:
         items:
           $ref: '#/definitions/setting.GiftMethodItem'
         type: array
+      is_batch:
+        description: 分批商品相关
+        type: string
       is_invoice:
         description: 开票信息 0-不需要填写 1-需要填写
         type: string
@@ -12469,6 +12917,14 @@ definitions:
     type: object
   setting.ShopBusiness:
     properties:
+      batch_product_uuids:
+        description: 分批商品UUID列表
+        items:
+          type: integer
+        type: array
+      batch_tag_num:
+        description: 分批类型数量
+        type: integer
       checkout_zeroing_method:
         description: '结账自动抹零方式: 0-实款实收 1-抹分 2-抹角 5-抹元. // 5-抹元为5是为了全局唯一，各个数字有不重复的抹零定义'
         type: string
@@ -12508,6 +12964,9 @@ definitions:
         items:
           $ref: '#/definitions/setting.GiftMethodItem'
         type: array
+      is_batch:
+        description: 分批商品相关
+        type: string
       is_invoice:
         description: 开票信息 0-不需要填写 1-需要填写
         type: string
@@ -13072,7 +13531,7 @@ paths:
       parameters:
       - description: '是否是自助餐: -1=全都、0=否、1=是'
         in: query
-        name: is_buffet
+        name: isBuffet
         type: integer
       - description: 页码
         in: query
@@ -13226,7 +13685,7 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json
@@ -13275,6 +13734,63 @@ paths:
       security:
       - JwtToken: []
       summary: 处理取消桌台订单（助手端清台）
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/cart/batch/cooking:
+    get:
+      consumes:
+      - application/json
+      description: 获取分批送厨弹框的销售订单商品列表
+      parameters:
+      - description: 获取分批送厨弹框的销售订单商品列表
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.GetOrderCartProductBatchCookingListReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderCartProductBatchCookingRes'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取分批送厨弹框的销售订单商品列表
+      tags:
+      - 点餐助手端.桌台
+    post:
+      consumes:
+      - application/json
+      description: 分批送厨弹框的销售订单商品列表
+      parameters:
+      - description: 分批送厨弹框的销售订单商品列表
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductBatchCookingReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderCartProductBatchCooking'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 分批送厨弹框的销售订单商品列表
       tags:
       - 点餐助手端.桌台
   /assistant/desk/order/cart/cooking:
@@ -13470,19 +13986,19 @@ paths:
       parameters:
       - description: 商品类型 0-商品 1-套餐
         in: query
-        name: product_type
+        name: productType
         type: integer
       - description: 销售账单ID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       - description: 销售订单商品ID
         in: query
-        name: sale_order_product_uuid
+        name: saleOrderProductUuid
         type: integer
       - description: 销售订单ID
         in: query
-        name: sale_order_uuid
+        name: saleOrderUuid
         type: integer
       produces:
       - application/json
@@ -14743,11 +15259,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: desk_uuid
+        name: deskUuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json
@@ -15456,7 +15972,7 @@ paths:
       parameters:
       - description: '是否是自助餐: -1=全都、0=否、1=是'
         in: query
-        name: is_buffet
+        name: isBuffet
         type: integer
       - description: 页码
         in: query
@@ -15607,7 +16123,7 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json
@@ -15660,6 +16176,63 @@ paths:
       security:
       - JwtToken: []
       summary: 取消桌台订单
+      tags:
+      - 收银端.桌台
+  /cashier/desk/order/cart/batch/cooking:
+    get:
+      consumes:
+      - application/json
+      description: 获取分批送厨弹框的销售订单商品列表
+      parameters:
+      - description: 获取分批送厨弹框的销售订单商品列表
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.GetOrderCartProductBatchCookingListReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderCartProductBatchCookingRes'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取分批送厨弹框的销售订单商品列表
+      tags:
+      - 收银端.桌台
+    post:
+      consumes:
+      - application/json
+      description: 分批送厨弹框的销售订单商品列表
+      parameters:
+      - description: 分批送厨弹框的销售订单商品列表
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductBatchCookingReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderCartProductBatchCooking'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 分批送厨弹框的销售订单商品列表
       tags:
       - 收银端.桌台
   /cashier/desk/order/cart/cooking:
@@ -15858,19 +16431,19 @@ paths:
       parameters:
       - description: 商品类型 0-商品 1-套餐
         in: query
-        name: product_type
+        name: productType
         type: integer
       - description: 销售账单ID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       - description: 销售订单商品ID
         in: query
-        name: sale_order_product_uuid
+        name: saleOrderProductUuid
         type: integer
       - description: 销售订单ID
         in: query
-        name: sale_order_uuid
+        name: saleOrderUuid
         type: integer
       produces:
       - application/json
@@ -17163,6 +17736,63 @@ paths:
       summary: 取消点餐订单
       tags:
       - 收银端.点餐
+  /cashier/instant/order/cart/batch/cooking:
+    get:
+      consumes:
+      - application/json
+      description: 获取分批送厨弹框的销售订单商品列表
+      parameters:
+      - description: 获取分批送厨弹框的销售订单商品列表
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.GetOrderCartProductBatchCookingListReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderCartProductBatchCookingRes'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取分批送厨弹框的销售订单商品列表
+      tags:
+      - 收银端.点餐
+    post:
+      consumes:
+      - application/json
+      description: 分批送厨弹框的销售订单商品列表
+      parameters:
+      - description: 分批送厨弹框的销售订单商品列表
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductBatchCookingReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderCartProductBatchCooking'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 分批送厨弹框的销售订单商品列表
+      tags:
+      - 收银端.点餐
   /cashier/instant/order/cart/cooking:
     post:
       consumes:
@@ -17319,19 +17949,19 @@ paths:
       parameters:
       - description: 商品类型 0-商品 1-套餐
         in: query
-        name: product_type
+        name: productType
         type: integer
       - description: 销售账单ID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       - description: 销售订单商品ID
         in: query
-        name: sale_order_product_uuid
+        name: saleOrderProductUuid
         type: integer
       - description: 销售订单ID
         in: query
-        name: sale_order_uuid
+        name: saleOrderUuid
         type: integer
       produces:
       - application/json
@@ -18720,15 +19350,15 @@ paths:
       parameters:
       - description: 支付金额, 必填
         in: query
-        name: payment_amount
+        name: paymentAmount
         type: number
       - description: 支付方式UUID, 必填
         in: query
-        name: payment_method_uuid
+        name: paymentMethodUuid
         type: integer
       - description: 充值订单UUID, 必填
         in: query
-        name: recharge_order_uuid
+        name: rechargeOrderUuid
         type: integer
       produces:
       - application/json
@@ -19559,11 +20189,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: desk_uuid
+        name: deskUuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json
@@ -19583,27 +20213,27 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: bill_type
+        name: billType
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: date_type
+        name: dateType
         type: integer
       - description: 用餐方式, -1=全都、 0-堂食 1-打包
         in: query
-        name: dining_method
+        name: diningMethod
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enable_create_time
+        name: enableCreateTime
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enable_pay_time
+        name: enablePayTime
         type: boolean
       - description: 订单编号
         in: query
-        name: order_no
+        name: orderNo
         type: string
       - description: 页码
         in: query
@@ -19618,11 +20248,11 @@ paths:
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: query_end_time
+        name: queryEndTime
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: query_start_time
+        name: queryStartTime
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -19650,27 +20280,27 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: bill_type
+        name: billType
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: date_type
+        name: dateType
         type: integer
       - description: 用餐方式, -1=全都、 0-堂食 1-打包
         in: query
-        name: dining_method
+        name: diningMethod
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enable_create_time
+        name: enableCreateTime
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enable_pay_time
+        name: enablePayTime
         type: boolean
       - description: 订单编号
         in: query
-        name: order_no
+        name: orderNo
         type: string
       - description: 页码
         in: query
@@ -19685,11 +20315,11 @@ paths:
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: query_end_time
+        name: queryEndTime
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: query_start_time
+        name: queryStartTime
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -19799,11 +20429,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       - description: 销售订单UUID。退款都是针对子单进行退款
         in: query
-        name: sale_order_uuid
+        name: saleOrderUuid
         type: integer
       produces:
       - application/json
@@ -19855,7 +20485,7 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json
@@ -19975,7 +20605,7 @@ paths:
       parameters:
       - description: 数据类型 (打印类型), -1=全都、.....
         in: query
-        name: data_type
+        name: dataType
         type: integer
       - description: 页码
         in: query
@@ -19990,15 +20620,15 @@ paths:
         type: integer
       - description: 打印机UUID
         in: query
-        name: printer_uuid
+        name: printerUuid
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: query_end_time
+        name: queryEndTime
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: query_start_time
+        name: queryStartTime
         type: integer
       - description: 状态, -1=全都、0=失败, 1=成功, 2=补打成功, 3=补打失败
         in: query
@@ -21135,7 +21765,7 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json
@@ -21164,19 +21794,19 @@ paths:
       parameters:
       - description: 商品类型 0-商品 1-套餐
         in: query
-        name: product_type
+        name: productType
         type: integer
       - description: 销售账单ID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       - description: 销售订单商品ID
         in: query
-        name: sale_order_product_uuid
+        name: saleOrderProductUuid
         type: integer
       - description: 销售订单ID
         in: query
-        name: sale_order_uuid
+        name: saleOrderUuid
         type: integer
       produces:
       - application/json
@@ -21495,15 +22125,15 @@ paths:
       parameters:
       - description: 商品包uuid
         in: query
-        name: product_package_uuid
+        name: productPackageUuid
         type: integer
       - description: 销售账单ID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       - description: 销售订单ID
         in: query
-        name: sale_order_uuid
+        name: saleOrderUuid
         type: integer
       produces:
       - application/json
@@ -22597,7 +23227,7 @@ paths:
       parameters:
       - description: 会员端销售订单UUID
         in: query
-        name: member_sale_order_uuid
+        name: memberSaleOrderUuid
         required: true
         type: integer
       produces:
@@ -22686,12 +23316,12 @@ paths:
       parameters:
       - description: 会员端销售订单UUID
         in: query
-        name: member_sale_order_uuid
+        name: memberSaleOrderUuid
         required: true
         type: integer
       - description: 支付方式UUID - 如果为0，则使用订单的支付方式, 否则使用指定的支付方式
         in: query
-        name: payment_method_uuid
+        name: paymentMethodUuid
         type: integer
       produces:
       - application/json
@@ -22812,7 +23442,7 @@ paths:
       parameters:
       - description: 会员ID
         in: query
-        name: member_uuid
+        name: memberUuid
         type: integer
       - description: 页码
         in: query
@@ -23204,6 +23834,189 @@ paths:
       summary: 基本信息
       tags:
       - 商家端.基础信息
+  /shop/batch/product/save:
+    post:
+      consumes:
+      - application/json
+      description: 保存分批商品
+      parameters:
+      - description: 分批商品保存请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.SaveBatchProductReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 保存分批商品
+      tags:
+      - 商家端.分批商品
+  /shop/batch/tag:
+    delete:
+      consumes:
+      - application/json
+      description: 删除分批类型
+      parameters:
+      - description: 分批类型删除请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.BatchTagDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 删除分批类型
+      tags:
+      - 商家端.分批类型
+    get:
+      consumes:
+      - application/json
+      description: 获取分批类型详情
+      parameters:
+      - description: 分批类型UUID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.BatchTagDetail'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取分批类型详情
+      tags:
+      - 商家端.分批类型
+  /shop/batch/tag/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加分批类型
+      parameters:
+      - description: 分批类型添加请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.BatchTagAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 添加分批类型
+      tags:
+      - 商家端.分批类型
+  /shop/batch/tag/color_usage:
+    get:
+      consumes:
+      - application/json
+      description: 获取色块被选择情况
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            items:
+              $ref: '#/definitions/product_resp.BatchTagColorUsageList'
+            type: array
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取色块被选择情况
+      tags:
+      - 商家端.分批类型
+  /shop/batch/tag/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑分批类型
+      parameters:
+      - description: 分批类型编辑请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.BatchTagEditReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 编辑分批类型
+      tags:
+      - 商家端.分批类型
+  /shop/batch/tag/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取分批类型列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.BatchTagList'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取分批类型列表
+      tags:
+      - 商家端.分批类型
+  /shop/batch/tag/sort:
+    post:
+      consumes:
+      - application/json
+      description: 排序分批类型
+      parameters:
+      - description: 分批类型排序请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.BatchTagSortReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 排序分批类型
+      tags:
+      - 商家端.分批类型
   /shop/callboard/device:
     delete:
       consumes:
@@ -23398,7 +24211,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.LoginResp'
+                  $ref: '#/definitions/resp.ShopLoginResp'
               type: object
       summary: 登录
       tags:
@@ -23442,30 +24255,6 @@ paths:
       security:
       - JwtToken: []
       summary: 添加物品
-      tags:
-      - 商家端.物品管理
-  /shop/material/add/erp:
-    post:
-      consumes:
-      - application/json
-      description: 从erp同步物品
-      parameters:
-      - description: 物品添加请求
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.MaterialAddErpReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-        "400":
-          description: 错误请求
-      security:
-      - JwtToken: []
-      summary: 从erp同步物品
       tags:
       - 商家端.物品管理
   /shop/material/category/add:
@@ -24099,27 +24888,27 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: bill_type
+        name: billType
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: date_type
+        name: dateType
         type: integer
       - description: 用餐方式, -1=全都、 0-堂食 1-打包
         in: query
-        name: dining_method
+        name: diningMethod
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enable_create_time
+        name: enableCreateTime
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enable_pay_time
+        name: enablePayTime
         type: boolean
       - description: 订单编号
         in: query
-        name: order_no
+        name: orderNo
         type: string
       - description: 页码
         in: query
@@ -24134,11 +24923,11 @@ paths:
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: query_end_time
+        name: queryEndTime
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: query_start_time
+        name: queryStartTime
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -24194,11 +24983,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: desk_uuid
+        name: deskUuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json
@@ -24218,27 +25007,27 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: bill_type
+        name: billType
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: date_type
+        name: dateType
         type: integer
       - description: 用餐方式, -1=全都、 0-堂食 1-打包
         in: query
-        name: dining_method
+        name: diningMethod
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enable_create_time
+        name: enableCreateTime
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enable_pay_time
+        name: enablePayTime
         type: boolean
       - description: 订单编号
         in: query
-        name: order_no
+        name: orderNo
         type: string
       - description: 页码
         in: query
@@ -24253,11 +25042,11 @@ paths:
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: query_end_time
+        name: queryEndTime
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: query_start_time
+        name: queryStartTime
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -24328,11 +25117,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       - description: 销售订单UUID。退款都是针对子单进行退款
         in: query
-        name: sale_order_uuid
+        name: saleOrderUuid
         type: integer
       produces:
       - application/json
@@ -25011,7 +25800,7 @@ paths:
       parameters:
       - description: 商品分类UUID（可选）
         in: query
-        name: category_uuid
+        name: categoryUuid
         type: string
       - description: 搜索商品名称（可选）
         in: query
@@ -25052,6 +25841,28 @@ paths:
       security:
       - JwtToken: []
       summary: 获取商品列表
+      tags:
+      - 商家端.商品
+  /shop/product/printer_list:
+    get:
+      consumes:
+      - application/json
+      description: 获取打印档口列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ProductPrinterList'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取打印档口列表
       tags:
       - 商家端.商品
   /shop/product/sauce:
@@ -25209,7 +26020,7 @@ paths:
       parameters:
       - description: 商品分类UUID, 可选
         in: query
-        name: category_uuid
+        name: categoryUuid
         type: integer
       - description: 搜索关键词, 可选
         in: query
@@ -25909,30 +26720,25 @@ paths:
         in: query
         name: order_no
         type: string
-      - collectionFormat: csv
-        description: 状态筛选
+      - description: 状态筛选
         in: query
         items:
           type: integer
         name: status_in
         type: array
       - description: 收货时间开始（时间戳）
-        format: int64
         in: query
         name: receive_time_start
         type: integer
       - description: 收货时间结束（时间戳）
-        format: int64
         in: query
         name: receive_time_end
         type: integer
       - description: 创建时间开始（时间戳）
-        format: int64
         in: query
         name: create_time_start
         type: integer
       - description: 创建时间结束（时间戳）
-        format: int64
         in: query
         name: create_time_end
         type: integer
@@ -26478,16 +27284,90 @@ paths:
     post:
       consumes:
       - application/json
+      parameters:
+      - description: 同步请求参数
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/req.SyncReq'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.Response'
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.SyncResp'
+              type: object
       security:
       - JwtToken: []
       summary: 获取总部最新数据
+      tags:
+      - 商家端.业务设置
+  /shop/setting/sync_task/detail:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: 任务UUID
+        in: query
+        name: task_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.SyncTaskDetailResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取同步任务详情
+      tags:
+      - 商家端.业务设置
+  /shop/setting/sync_task/list:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - default: 20
+        description: 每页大小
+        in: query
+        name: page_size
+        type: integer
+      - description: '同步状态: 0-进行中, 1-已完成, 2-失败'
+        in: query
+        name: status
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.SyncTaskListPaginationResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取同步任务列表
       tags:
       - 商家端.业务设置
   /shop/setting/upload_logo:
@@ -27362,12 +28242,55 @@ paths:
       - application/json
       description: 获取仓库出入库明细列表
       parameters:
-      - description: 获取仓库出入库明细列表请求
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/req.GetWarehouseInOutListReq'
+      - description: 日期，结束时间
+        in: query
+        name: end_time
+        type: integer
+      - description: 关键字, 物品名称、物品编码、物品条形码
+        in: query
+        name: keyword
+        type: string
+      - description: 物料分类ID列表,多选
+        in: query
+        items:
+          type: integer
+        name: material_category_uuids
+        type: array
+      - description: 单据编号
+        in: query
+        name: order_no
+        type: string
+      - description: 对方机构Code列表,多选
+        in: query
+        items:
+          type: string
+        name: org_codes
+        type: array
+      - description: 页码
+        in: query
+        minimum: 1
+        name: page_no
+        type: integer
+      - description: 每页大小
+        in: query
+        maximum: 1100
+        minimum: 1
+        name: page_size
+        type: integer
+      - description: 日期，开始时间
+        in: query
+        name: start_time
+        type: integer
+      - description: 供应商ID列表,多选
+        in: query
+        items:
+          type: integer
+        name: supplier_uuids
+        type: array
+      - description: 类型：采购入库-purchase、销售出库-sale、发货出库-delivery
+        in: query
+        name: type
+        type: string
       produces:
       - application/json
       responses:
@@ -27426,6 +28349,28 @@ paths:
       security:
       - JwtToken: []
       summary: 获取仓库列表
+      tags:
+      - 商家端.仓库档案
+  /shop/warehouse/org/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取对方机构列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OtherOrgListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取对方机构列表
       tags:
       - 商家端.仓库档案
   /shop/warehouse/set_default:
@@ -27615,7 +28560,7 @@ paths:
       parameters:
       - description: '是否是自助餐: -1=全都、0=否、1=是'
         in: query
-        name: is_buffet
+        name: isBuffet
         type: integer
       - description: 页码
         in: query
@@ -27682,7 +28627,7 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: sale_bill_uuid
+        name: saleBillUuid
         type: integer
       produces:
       - application/json

@@ -88,6 +88,9 @@ type SaleBill struct {
 	// 2.5.0 版本新增字段， 反结账次数
 	ReverseSettleCount uint `gorm:"column:reverse_settle_count;type:int(11);default:0;comment:反结账次数" json:"reverse_settle_count"`
 
+	// 分批类型颜色
+	BatchTagUuid uint64 `gorm:"column:batch_tag_uuid;type:bigint(20);default:0;comment:分批类型UUID" json:"batch_tag_uuid"`
+
 	// 关联模型
 	SaleOrders      []*SaleOrder      `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 	H5OrderProducts []*H5OrderProduct `gorm:"foreignKey:SaleBillUuid;references:uuid"`
@@ -96,6 +99,7 @@ type SaleBill struct {
 	Desk            *Desk             `gorm:"foreignKey:DeskUuid;references:uuid"`
 	BuffetPackage1  *BuffetPackage    `gorm:"foreignKey:BuffetPackage1Uuid;references:uuid"`
 	BuffetPackage2  *BuffetPackage    `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
+	BatchTag        *BatchTag         `gorm:"foreignKey:BatchTagUuid;references:uuid"`
 }
 
 // 是否是“已取消”状态
@@ -107,6 +111,58 @@ func (model *SaleBill) IsCanceled() bool {
 func (model *SaleBill) SetCanceled() {
 	model.Status = constant.SaleBillStatusCanceled
 	// 未完整逻辑。部分逻辑还在service中处理。
+}
+
+// 获取预送厨的商品
+func (model *SaleBill) GetSaleOrderProductPreCooking() []*SaleOrderProduct {
+	preCookingSaleOrderProducts := make([]*SaleOrderProduct, 0)
+	for _, saleOrder := range model.SaleOrders {
+		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+			if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || saleOrderProduct.IsUnAcceptOrderBool() {
+				continue
+			}
+			if saleOrderProduct.IsBatchBool() && saleOrderProduct.IsPreCooking() {
+				preCookingSaleOrderProducts = append(preCookingSaleOrderProducts, saleOrderProduct)
+			}
+		}
+	}
+	return preCookingSaleOrderProducts
+}
+
+// 获取分批送厨的商品
+func (model *SaleBill) GetSaleOrderProductBatchCooking() []*SaleOrderProduct {
+	batchCookingSaleOrderProducts := make([]*SaleOrderProduct, 0)
+	for _, saleOrder := range model.SaleOrders {
+		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+			if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || saleOrderProduct.IsUnAcceptOrderBool() {
+				continue
+			}
+			if saleOrderProduct.IsBatchBool() {
+				batchCookingSaleOrderProducts = append(batchCookingSaleOrderProducts, saleOrderProduct)
+			}
+		}
+	}
+	return batchCookingSaleOrderProducts
+}
+
+// 获取分批送厨的商品,指定saleOrderUuids
+func (model *SaleBill) GetSaleOrderProductBatchCookingBySaleOrderUuid(saleOrderProductUuids []uint64) []*SaleOrderProduct {
+	if len(saleOrderProductUuids) == 0 {
+		return make([]*SaleOrderProduct, 0)
+	}
+	batchCookingSaleOrderProducts := model.GetSaleOrderProductBatchCooking()
+	uuidMap := make(map[uint64]bool)
+	for _, saleOrderProductUuid := range saleOrderProductUuids {
+		uuidMap[saleOrderProductUuid] = true
+	}
+
+	products := make([]*SaleOrderProduct, 0)
+	for _, saleOrderProduct := range batchCookingSaleOrderProducts {
+		if uuidMap[saleOrderProduct.Uuid] && saleOrderProduct.BatchTagUuid == 0 {
+			products = append(products, saleOrderProduct)
+		}
+	}
+	return products
 }
 
 // 结束SaleBill和SaleOrder的生命周期。相当于用餐订单结账完成。

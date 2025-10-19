@@ -35,6 +35,7 @@ type IPurchaseReceiptOrderRepo interface {
 	WhereCreateTimeRange(start, end int) DBOption
 	WhereReceiptType(receiptType int) DBOption
 	WhereStatusIn(statusIn []int) DBOption
+	WhereUuidIn(uuidIn []uint64) DBOption
 	WithItems() DBOption
 	OrderByReceiptTime(desc bool) DBOption
 	OrderByCreateTime(desc bool) DBOption
@@ -168,7 +169,7 @@ func (r *PurchaseReceiptOrderRepoImpl) WhereUuid(uuid uint64) DBOption {
 func (r *PurchaseReceiptOrderRepoImpl) WhereReceiptNo(receiptNo string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		if receiptNo != "" {
-			return db.Where("order_no LIKE ?", "%"+receiptNo+"%")
+			return db.Where("(order_no LIKE ? OR erp_order_no LIKE ?)", "%"+receiptNo+"%", "%"+receiptNo+"%")
 		}
 		return db
 	}
@@ -235,10 +236,17 @@ func (r *PurchaseReceiptOrderRepoImpl) WhereStatusIn(statusIn []int) DBOption {
 	}
 }
 
+// WhereUuidIn 收货单ID条件
+func (r *PurchaseReceiptOrderRepoImpl) WhereUuidIn(uuidIn []uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid IN (?)", uuidIn)
+	}
+}
+
 // WithItems 预加载收货明细
 func (r *PurchaseReceiptOrderRepoImpl) WithItems() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("Items.PurchaseOrderItem")
+		return db.Preload("Items.PurchaseOrderItem").Preload("Items.Material")
 	}
 }
 

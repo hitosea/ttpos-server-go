@@ -34,10 +34,26 @@ type ProductionOrderProduct struct {
 	MakeStatus            int     `gorm:"column:make_status;type:tinyint(1);default:0;comment:制作状态 0-默认，未制作完成，1-已制作完成，2-已恢复到制作中;NOT NULL" json:"make_status"`
 	MadeTime              int64   `gorm:"column:made_time;type:int(10) unsigned;default:0;comment:制作完成时间(时间戳);NOT NULL" json:"made_time"`
 
+	// 分批相关
+	BatchTagUuid uint64 `gorm:"column:batch_tag_uuid;type:bigint(20) unsigned;default:0;comment:分批类型UUID;NOT NULL" json:"batch_tag_uuid"`
+	BatchTime    int64  `gorm:"column:batch_time;type:int(10) unsigned;default:0;comment:分批时间(时间戳)，表示该商品实际送厨到厨房的时间;NOT NULL" json:"batch_time"`
+	IsBatch      uint8  `gorm:"column:is_batch;type:tinyint(1);default:0;comment:是否是分批商品, 0-否 1-是;NOT NULL" json:"is_batch"`
+
 	ProductionOrderMaterials []*ProductionOrderMaterial `gorm:"foreignKey:ProductionOrderProductUuid;references:Uuid" json:"production_order_materials"`
 	SaleOrderProduct         SaleOrderProduct           `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid" json:"sale_order_product"`
 	SaleBill                 SaleBill                   `gorm:"foreignKey:SaleBillUuid;references:Uuid" json:"sale_bill"`
 	ProductCategory          ProductCategory            `gorm:"foreignKey:FirstCategoryUuid;references:Uuid" json:"product_category"`
+	BatchTag                 *BatchTag                  `gorm:"foreignKey:BatchTagUuid;references:Uuid" json:"batch_tag"`
+}
+
+// 是否是分批商品
+func (p *ProductionOrderProduct) IsBatchBool() bool {
+	return p.IsBatch == 1
+}
+
+// 是否处于预送厨阶段
+func (p *ProductionOrderProduct) IsPreCooking() bool {
+	return p.BatchTagUuid == 0
 }
 
 // 获取生产单商品的打包状态：0-堂食、1-打包

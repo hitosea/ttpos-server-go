@@ -16,7 +16,7 @@ type DBOption func(*gorm.DB) *gorm.DB
 // WithPreload 预加载
 type WithPreload struct {
 	Query string
-	Args  []interface{}
+	Args  []any
 }
 
 // getCompanyUuid 从数据库名称中提取公司UUID
@@ -37,6 +37,11 @@ func GetCompanyUuid(db *gorm.DB) uint64 {
 // NotDeleted 筛选未被删除的
 func NotDeleted(db *gorm.DB) *gorm.DB {
 	return db.Where("delete_time = ?", constant.NotDeleted)
+}
+
+// ExcludeHeadquarter 过滤总部数据
+func ExcludeHeadquarter(db *gorm.DB) *gorm.DB {
+	return db.Where("headquarter_uuid = 0")
 }
 
 func Like(keyword string) string {
@@ -78,6 +83,7 @@ type ICommonRepo interface {
 	WhereByIsShowMember(isShow uint) DBOption                                                 // 根据是否显示会员端查询
 	WhereBySoftDelete() DBOption                                                              // 根据软删除查询
 	WhereByErpCode(erpCode string) DBOption                                                   // 根据erp_code查询
+	WhereByProductPackageErpCode(productPackageErpCode string) DBOption                       // 根据产品包erp_code查询
 	WhereByProductBomUuid(productBomUuid uint64) DBOption                                     // 根据产品bom UUID查询
 	WhereByNotPackageSubProduct() DBOption                                                    // 根据不是套餐子商品查询
 	WhereByNoSelectingTimeout() DBOption                                                      // 根据选购超时查询
@@ -147,10 +153,12 @@ type ICommonRepo interface {
 	WhereByCategoryUuid(categoryUuid uint64) DBOption                                         // 根据分类UUID查询
 	WhereByCategoryUuids(categoryUuids []uint64) DBOption                                     // 根据分类UUID列表查询
 	WhereByHeadquarterUuid(headquarterUuid uint64) DBOption                                   // 根据总部UUID查询
+	WhereIsHeadquarter() DBOption                                                             // 是否是总部
 	WhereByErpnextGroupName(groupName string) DBOption                                        // 根据erpnext规格组名称查询
 	WhereByErpnextValueName(valueName string) DBOption                                        // 根据erpnext规格值名称查询
 	WhereByCategoryKey(categoryKey string) DBOption                                           // 根据分类关键字查询
 	WhereByMaterialUuid(materialUuid uint64) DBOption                                         // 根据原料UUID查询
+	WhereInMaterialUuids(materialUuids []uint64) DBOption                                     // 根据原料UUID列表查询
 	WhereByUuidNotIn(uuids []uint64) DBOption                                                 // 根据UUID列表查询
 	DBOption(opt DBOption) func(*gorm.DB) *gorm.DB                                            // 将DBOption转为func(*gorm.DB) *gorm.DB
 	Transaction(db *gorm.DB, fn func(tx *gorm.DB) error) error                                // 事务
@@ -330,6 +338,13 @@ func (r *commonRepo) WhereBySoftDelete() DBOption {
 func (r *commonRepo) WhereByErpCode(erpCode string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("code = ?", erpCode)
+	}
+}
+
+// WhereByProductPackageErpCode 根据产品包erp_code查询
+func (r *commonRepo) WhereByProductPackageErpCode(productPackageErpCode string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("erp_code = ?", productPackageErpCode)
 	}
 }
 
@@ -655,6 +670,12 @@ func (r *commonRepo) WhereByHeadquarterUuid(headquarterUuid uint64) DBOption {
 	}
 }
 
+func (r *commonRepo) WhereIsHeadquarter() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("headquarter_uuid <> ?", 0)
+	}
+}
+
 func (r *commonRepo) WhereByErpnextGroupName(groupName string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("erpnext_group_name = ?", groupName)
@@ -677,6 +698,13 @@ func (r *commonRepo) WhereByCategoryKey(categoryKey string) DBOption {
 func (r *commonRepo) WhereByMaterialUuid(materialUuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("material_uuid = ?", materialUuid)
+	}
+}
+
+// WhereInMaterialUuids 根据原料UUID列表查询
+func (r *commonRepo) WhereInMaterialUuids(materialUuids []uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("material_uuid IN (?)", materialUuids)
 	}
 }
 

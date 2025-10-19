@@ -30,7 +30,7 @@ type AuthHandler struct {
 // @Produce json
 // @Param X-SIGN header string true "验证码sign"
 // @param data body req.LoginReq true "登录参数"
-// @Success 200 {object} dto.Response{data=resp.LoginResp}
+// @Success 200 {object} dto.Response{data=resp.ShopLoginResp}
 // @Router /shop/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -50,9 +50,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	claims, _ := auth.ParseToken(loginResp.Token, config.JWT.Secret)
 	h.staffLoginLogSrv.Add(ctx, claims.StaffUuid, loginReq.Username, c.ClientIP(), "登录成功")
 
-	helper.Success(c, resp.LoginResp{
-		Token:        loginResp.Token,
-		RefreshToken: loginResp.RefreshToken,
+	helper.Success(c, resp.ShopLoginResp{
+		Token:              loginResp.Token,
+		RefreshToken:       loginResp.RefreshToken,
+		NeedChangePassword: loginResp.NeedChangePassword,
 	})
 }
 

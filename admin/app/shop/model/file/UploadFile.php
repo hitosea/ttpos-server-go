@@ -23,6 +23,6 @@ class UploadFile extends UploadFileModel
      */
     public function moveGroup($group_id, $fileIds)
     {
-        return $this->where('uuid', 'in', $fileIds)->update(compact('group_id'));
+        return $this->where('uuid', 'in', $fileIds)->update(['group_uuid' => $group_id]);
     }
 }

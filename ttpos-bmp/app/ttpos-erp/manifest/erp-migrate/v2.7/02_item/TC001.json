@@ -2,5 +2,6 @@
   "item_name": "Set Meal",
   "item_code": "TC001",
   "item_group": "Products",
-  "stock_uom": "Nos"
+  "stock_uom": "Nos",
+  "is_stock_item": false
 }

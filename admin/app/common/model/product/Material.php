@@ -10,6 +10,8 @@ use app\common\model\erp\ErpMonthlyMaterialStatistics;
 use app\common\model\erp\ErpSupplier;
 use app\common\model\erp\ErpWarehouseForm;
 use app\common\model\erp\ErpWarehouseOutForm;
+use app\common\model\erp\ErpWarehouse;
+use app\common\model\erp\ErpWarehouseItem;
 use app\shop\service\CheckService;
 use app\common\model\file\UploadFile;
 use app\common\model\product\RelatedMaterial as ProductRelatedMaterial;
@@ -191,6 +193,14 @@ class Material extends BaseModel
     }
 
     /**
+     * 关联仓库物品库存
+     */
+    public function warehouseItems()
+    {
+        return $this->hasMany(ErpWarehouseItem::class, 'material_uuid', 'uuid');
+    }
+
+    /**
      * 详情
      */
     public static function detail($id, $enableErp = false)
@@ -200,6 +210,9 @@ class Material extends BaseModel
             'MultiLanguageName',
             'relatedMaterial',
             'unit',
+            'warehouseItems' => function ($query) {
+                $query->with('warehouse');
+            },
         ];
         if ($enableErp) {
             $with = [
@@ -213,6 +226,15 @@ class Material extends BaseModel
         }
         $material = (new static())->with($with)->where('uuid', '=', $id)->find();
         if ($material) {
+            // 材料库存
+            $materialStock = 0;
+            foreach ($material->warehouseItems as $warehouseItem) {
+                if ($warehouseItem->warehouse && $warehouseItem->warehouse['type'] == 'normal' && $warehouseItem->warehouse['is_default'] == 1) {
+                    $materialStock = $warehouseItem->stock;
+                    break;
+                }
+            }
+            $material->stock_num = $materialStock;
             // 材料图片
             $image = $material->image ? [ $material->image ] : [];
             $material->image = $image;
@@ -292,6 +314,8 @@ class Material extends BaseModel
         $data = $this->sanitizeProductData($data);
         //
         return Db::transaction(function () use($data, $product_name, $imageIds) {
+            // 查询默认仓库
+            $defaultWarehouse = ErpWarehouse::where('type', 'normal')->where('is_default', 1)->find();
             $data['name'] = $product_name;
             $data['multi_language_name_uuid'] = (new MultiLanguageName)->saveNames($product_name);
             $data['category_uuid'] = $data['category_id'] ?? 0;
@@ -303,10 +327,22 @@ class Material extends BaseModel
             $data['stock_num'] = $data['sku'][0]['material_stock'] ?? 0; // 库存数量
             $data['barcode_value'] = $data['sku'][0]['barcode'] ?? ''; // 条形码值
             $data['status'] = $data['product_status'] == 10 ? 1 : 0; // 状态, 1-上架 0-下架
+            $data['warehouse_uuid'] = $defaultWarehouse['uuid'] ?? 0;
 
             // 保存材料
             if (!$this->save($data)) {
                 return false;
+            }
+
+            
+            if ($defaultWarehouse) {
+                $warehouseItem = new ErpWarehouseItem();
+                $warehouseItem->save([
+                    'warehouse_uuid' => $defaultWarehouse['uuid'],
+                    'material_uuid' => $this['uuid'],
+                    'material_code' => $this['code'],
+                    'stock' => $data['sku'][0]['material_stock'] ?? 0,
+                ]);
             }
 
             $hasInventoryAuth = (new Product())->hasInventoryAuth();
@@ -374,6 +410,12 @@ class Material extends BaseModel
         //
 
         return Db::transaction(function () use ($data, $product_name, $imageIds, $enableErp) {
+            // 更新仓库物品库存
+            $warehouseUuid = 0;
+            $defaultWarehouse = ErpWarehouse::where('type', 'normal')->where('is_default', 1)->find();
+            if ($defaultWarehouse) {
+                $warehouseUuid = $defaultWarehouse['uuid'];
+            }
             if (!$enableErp) {
                 $data['name'] = $product_name;
                 $data['multi_language_name_uuid'] = (new MultiLanguageName)->saveNames($product_name, $this['multi_language_name_uuid']);
@@ -386,6 +428,7 @@ class Material extends BaseModel
                 $data['stock_num'] = $data['sku'][0]['material_stock'] ?? 0; // 库存数量
                 $data['barcode_value'] = $data['sku'][0]['barcode'] ?? ''; // 条形码值
                 $data['status'] = $data['product_status'] == 10 ? 1 : 0; // 状态, 1-上架 0-下架
+                $data['warehouse_uuid'] = $warehouseUuid;
                 $oldStockNum = floatval($this->stock_num); // 旧库存
                 $newStockNum = floatval($data['stock_num']); // 新库存
                 if(!$this->save($data)) {
@@ -397,11 +440,29 @@ class Material extends BaseModel
                     'price' => $data['sku'][0]['purchase_price'] ?? 0,
                     'stock_num' => $data['sku'][0]['material_stock'] ?? 0, // 库存数量
                     'stock_remark' => $data['stock_remark'] ?? '',
+                    'warehouse_uuid' => $warehouseUuid,
                 ];
                 $oldStockNum = floatval($this->stock_num); // 旧库存
                 $newStockNum = floatval($data['stock_num']); // 新库存
                 if(!self::update($data, ['id' => $this['id']])) {
                     return false;
+                }
+            }
+
+            if ($warehouseUuid) {
+                $warehouseItem = ErpWarehouseItem::where('material_uuid', '=', $this['uuid'])->where('warehouse_uuid', '=', $warehouseUuid)->find();
+                if (!$warehouseItem) {
+                    $warehouseItem = new ErpWarehouseItem();
+                    $warehouseItem->save([
+                        'warehouse_uuid' => $warehouseUuid,
+                        'material_uuid' => $this['uuid'],
+                        'material_code' => $this['code'],
+                        'stock' => $data['sku'][0]['material_stock'] ?? 0,
+                    ]);
+                } else {
+                    $warehouseItem->save([
+                        'stock' => $data['sku'][0]['material_stock'] ?? 0,
+                    ]);
                 }
             }
 

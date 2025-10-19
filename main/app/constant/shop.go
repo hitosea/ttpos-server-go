@@ -18,15 +18,17 @@ var Languages = []LanguageItem{
 }
 
 const (
-	CheckNameSourceUnit             = "unit"
-	CheckNameSourceProduct          = "product"
-	CheckNameSourceCategory         = "category"
-	CheckNameSourceSauce            = "sauce"
-	CheckNameSourceAttribute        = "attribute"
-	CheckNameSourceAttributeGroup   = "attribute_group"
-	CheckNameSourceFlavor           = "flavor"
-	CheckNameSourceMaterial         = "material"
-	CheckNameSourceMaterialCategory = "material_category"
-	CheckNameSourceMaterialUnit     = "material_unit"
-	CheckNameSourceWarehouse        = "warehouse"
+	CheckNameSourceUnit                = "unit"
+	CheckNameSourceProduct             = "product"
+	CheckNameSourceProductPackageGroup = "product_package_group" // 商品套餐组
+	CheckNameSourceCategory            = "category"
+	CheckNameSourceSauce               = "sauce"
+	CheckNameSourceAttribute           = "attribute"
+	CheckNameSourceAttributeGroup      = "attribute_group"
+	CheckNameSourceFlavor              = "flavor"
+	CheckNameSourceMaterial            = "material"
+	CheckNameSourceMaterialCategory    = "material_category"
+	CheckNameSourceMaterialUnit        = "material_unit"
+	CheckNameSourceWarehouse           = "warehouse"
+	CheckNameSourceBatchTag            = "batch_tag"
 )

@@ -38,6 +38,7 @@ type IProductRepo interface {
 	WithTakeoutTax() DBOption                                                                     // 预加载外卖税
 
 	WithProductPackage(opts ...DBOption) DBOption                                                           // 沽清 预加载产品
+	WithProductPackageProductUnit(opts ...DBOption) DBOption                                                // 沽清 预加载产品包产品单位
 	WithProductPackageMultiLanguageName(opts ...DBOption) DBOption                                          // 沽清 预加载产品多语言
 	WithProductPackageProductBom(opts ...DBOption) DBOption                                                 // 沽清 预加载产品包关联的商品规格
 	WithProductFlavor() DBOption                                                                            // 沽清 预加载规格名称
@@ -98,6 +99,7 @@ type IProductQueryRepo interface {
 	GetProductFlavorList(opts ...DBOption) ([]model.ProductFlavor, error)                                           // 获取商品口味列表
 	GetProductFlavorCount(opts ...DBOption) (int64, error)                                                          // 获取商品规格数量
 	GetProductFlavorMaxSort(opts ...DBOption) (int64, error)                                                        // 获取商品规格最大排序
+	GetProductFlavorMaxErpnextValueNo(opts ...DBOption) (int64, error)                                              // 获取商品规格最大erpnext规格值编号
 	GetProductBom(opts ...DBOption) (model.ProductBom, error)                                                       // 获取商品BOM详情
 	GetProductBomCount(opts ...DBOption) (int64, error)                                                             // 获取商品BOM数量
 
@@ -506,6 +508,17 @@ func (r *productRepo) GetProductFlavorMaxSort(opts ...DBOption) (int64, error) {
 	return sort.Int64, errors.WithMessage(err)
 }
 
+// GetProductFlavorMaxErpnextValueNo 获取商品规格最大erpnext规格值编号
+func (r *productRepo) GetProductFlavorMaxErpnextValueNo(opts ...DBOption) (int64, error) {
+	var erpnextValueNo sql.NullInt64
+	db := r.db.Model(&model.ProductFlavor{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Select("MAX(erpnext_value_no) as erpnext_value_no").Find(&erpnextValueNo).Error
+	return erpnextValueNo.Int64, errors.WithMessage(err)
+}
+
 // GetProductBom 获取商品BOM
 func (r *productRepo) GetProductBom(opts ...DBOption) (model.ProductBom, error) {
 	var productBom model.ProductBom
@@ -660,6 +673,18 @@ func (r *productRepo) WithProductCategory() DBOption {
 func (r *productRepo) WithProductPackage(opts ...DBOption) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("ProductPackage", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
+	}
+}
+
+// WithProductPackageProductUnit 预加载产品包产品单位
+func (r *productRepo) WithProductPackageProductUnit(opts ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductPackage.ProductUnit", func(db *gorm.DB) *gorm.DB {
 			for _, opt := range opts {
 				db = opt(db)
 			}
@@ -1362,7 +1387,7 @@ func (r *productRepo) BatchUpdateSort(table any, sorts map[uint64]int) error {
 	// 根据传入的模型类型确定错误消息
 	var errorMessage string
 	switch table.(type) {
-	case *model.ProductUnit, *model.ProductAttributeGroup, *model.ProductAttribute, *model.ProductSauce, *model.ProductFlavor, *model.ProductCategory, *model.MaterialCategory:
+	case *model.ProductUnit, *model.ProductAttributeGroup, *model.ProductAttribute, *model.ProductSauce, *model.ProductFlavor, *model.ProductCategory, *model.MaterialCategory, *model.BatchTag:
 		// 无需处理
 	default:
 		return errors.New("更新排序失败")

@@ -14,6 +14,7 @@ type IProductUnitRepo interface {
 	GetProductUnitByErpnextUom(erpnextUom string) (*model.ProductUnit, error)
 	GetProductUnitList(opts ...DBOption) ([]*model.ProductUnit, error)
 	WhereByUuids(uuids []uint64) DBOption
+	WhereByErpnextUom(erpnextUom string) DBOption
 }
 
 // NewMaterialUnitRepo 创建新的原料单位仓库
@@ -76,5 +77,11 @@ func (r *ProductUnitRepoImpl) GetProductUnitList(opts ...DBOption) ([]*model.Pro
 func (r *ProductUnitRepoImpl) WhereByUuids(uuids []uint64) DBOption {
 	return func(query *gorm.DB) *gorm.DB {
 		return query.Where("uuid IN (?)", uuids)
+	}
+}
+
+func (r *ProductUnitRepoImpl) WhereByErpnextUom(erpnextUom string) DBOption {
+	return func(query *gorm.DB) *gorm.DB {
+		return query.Where("erpnext_uom = ?", erpnextUom)
 	}
 }

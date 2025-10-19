@@ -46,6 +46,16 @@ type ShopCart struct {
 	UpdateTime    int64                `json:"update_time"`          // 更新时间
 
 	Product *product_resp.Product `json:"product,omitempty"` // 商品信息。 当加购商品时商品价格变化时，返回最新的商品信息
+
+	// 是否返回code状态码为-209
+	code int `json:"code,omitempty"` // 状态码。 当code为-209时，前端会弹出分批送厨弹窗
+}
+
+func (res *ShopCart) SetCode(code int) {
+	res.code = code
+}
+func (res *ShopCart) GetCode() int {
+	return res.code
 }
 
 // H5CartSendProduct 扫码h5购物车已下单品
@@ -197,6 +207,10 @@ type Product struct {
 	ProductType         uint               `json:"product_type"`          // 商品类型 0-商品 1-套餐
 	PackageProductList  PackageProductList `json:"package_product_list"`  // 套餐商品列表
 	CanEdit             bool               `json:"can_edit"`              // 是否可以编辑
+	IsBatch             bool               `json:"is_batch"`              // 是否是分批商品
+	ShowBatchTag        bool               `json:"show_batch_tag"`        // 是否显示分批类型
+	BatchTagName        dto.LocaleResponse `json:"batch_tag_name"`        // 分批类型名称
+	BatchTagColor       string             `json:"batch_tag_color"`       // 分批类型颜色
 	// 后端使用，前端不返回
 	CreateTime         int64   `json:"-"` // 创建时间（点餐助手未送厨）
 	SendKitchenTime    int64   `json:"-"` // 送厨时间
@@ -275,4 +289,28 @@ type ProductPackageDetail struct {
 
 type ProductPackageDetailRes struct {
 	List []ProductPackageDetail `json:"list"` // 数据
+}
+
+type OrderCartProductBatchCookingRes struct {
+	List []OrderCartProductBatchCooking    `json:"list"` // 数据
+	Tags []OrderCartProductBatchCookingTag `json:"tags"` // 分批类型列表
+}
+
+type OrderCartProductBatchCooking struct {
+	Uuid                uint64             `json:"uuid"`                  // 商品uuid sale_order_product_uuid
+	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品名称
+	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
+	Image               string             `json:"image"`                 // 商品图片URL
+	BatchTagUuid        uint64             `json:"batch_tag_uuid"`        // 分批类型uuid, 如果已经进行分批送厨，则不为0
+	BatchTime           int64              `json:"batch_time"`            // 分批送厨时间，如果已经进行分批送厨，则不为0
+	SendKitchenTime     int64              `json:"send_kitchen_time"`     // 送厨时间. 预送厨的时间。用于排序
+	CreateTime          int64              `json:"create_time"`           // 下单时间。用于排序
+}
+
+type OrderCartProductBatchCookingTag struct {
+	Uuid       uint64             `json:"uuid"`        // 分批类型uuid
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 分批类型名称，多语言
+	Color      string             `json:"color"`       // 分批类型颜色，如 #FF0000
+	Sort       uint               `json:"sort"`        // 排序
+	Count      uint               `json:"count"`       // 商品数量
 }

@@ -13,6 +13,7 @@ type IWarehouseRepo interface {
 	Create(warehouse *model.Warehouse) error
 	Update(warehouse *model.Warehouse) error
 	Delete(uuid uint64) error
+	GetById(id uint64, opts ...DBOption) (*model.Warehouse, error)
 	GetByUuid(uuid uint64, opts ...DBOption) (*model.Warehouse, error)
 
 	// 查询操作
@@ -22,6 +23,7 @@ type IWarehouseRepo interface {
 	GetTransitWarehouse() (*model.Warehouse, error)
 	GetByCode(code string, opts ...DBOption) (*model.Warehouse, error)
 	GetByErpCode(erpCode string, opts ...DBOption) (*model.Warehouse, error)
+	Get(opts ...DBOption) ([]model.Warehouse, error)
 
 	// 条件查询选项
 	WhereNameOrCodeLike(name string) DBOption
@@ -56,6 +58,21 @@ func (r *WarehouseRepoImpl) Update(warehouse *model.Warehouse) error {
 // Delete 删除仓库（软删除）
 func (r *WarehouseRepoImpl) Delete(uuid uint64) error {
 	return r.db.Model(&model.Warehouse{}).Where("uuid = ?", uuid).Update("delete_time", time.Now().Unix()).Error
+}
+
+// GetById 根据ID获取仓库
+func (r *WarehouseRepoImpl) GetById(id uint64, opts ...DBOption) (*model.Warehouse, error) {
+	var warehouse model.Warehouse
+	query := r.db.Where("id = ?", id).Preload("MultiLanguageName").Preload("Items").Scopes(NotDeleted)
+	// 应用查询选项
+	for _, opt := range opts {
+		query = opt(query)
+	}
+	err := query.First(&warehouse).Error
+	if err != nil {
+		return nil, err
+	}
+	return &warehouse, nil
 }
 
 // GetByUuid 根据UUID获取仓库
@@ -222,18 +239,20 @@ func (r *WarehouseRepoImpl) OrderByUpdateTime(desc bool) DBOption {
 func (r *WarehouseRepoImpl) UpdateIsDefault(uuid uint64) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		updateTime := time.Now().Unix()
-		err := tx.Model(&model.Warehouse{}).Where("is_default = ?", 1).Updates(map[string]any{
+		if err := tx.Model(&model.Warehouse{}).Where("is_default = ?", 1).Updates(map[string]any{
 			"is_default":  0,
 			"update_time": updateTime - 1,
-		}).Error
-		if err != nil {
+		}).Error; err != nil {
 			return err
 		}
-		err = tx.Model(&model.Warehouse{}).Where("uuid = ?", uuid).Updates(map[string]any{
+		if err := tx.Model(&model.Warehouse{}).Where("uuid = ?", uuid).Updates(map[string]any{
 			"is_default":  1,
 			"update_time": updateTime,
-		}).Error
-		if err != nil {
+		}).Error; err != nil {
+			return err
+		}
+		// 更新所有物品的仓库uuid
+		if err := tx.Model(&model.Material{}).Where("id > 0").Update("warehouse_uuid", uuid).Error; err != nil {
 			return err
 		}
 		return nil
@@ -244,4 +263,14 @@ func (r *WarehouseRepoImpl) WhereHeadquarterUuid(headquarterUuid uint64) DBOptio
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("headquarter_uuid = ?", headquarterUuid)
 	}
+}
+
+func (r *WarehouseRepoImpl) Get(opts ...DBOption) ([]model.Warehouse, error) {
+	var warehouses []model.Warehouse
+	query := r.db.Model(&model.Warehouse{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		query = opt(query)
+	}
+	err := query.Find(&warehouses).Error
+	return warehouses, err
 }

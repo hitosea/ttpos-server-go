@@ -213,5 +213,11 @@ func (model *Desk) GetDeskResp() resp.Desk {
 		IsDisabled:             model.IsDisable == constant.DeskDisable,
 		DefaultPeopleNum:       model.DefaultPeopleNum,
 		IsOpenDefaultPeopleNum: model.IsOpenDefaultPeopleNum == constant.Yes,
+		BatchTagColor: func() string {
+			if model.SaleBill != nil && model.SaleBill.BatchTag != nil {
+				return model.SaleBill.BatchTag.Color
+			}
+			return ""
+		}(),
 	}
 }

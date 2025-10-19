@@ -149,6 +149,9 @@ type IOrderSrv interface {
 
 	GetOrderMemberList(ctx context.Context, saleBillUuid uint64) (resp.InstantOrderMemberList, error)                       // 获取订单会员列表
 	GetProductPackageDetail(ctx context.Context, req req.GetProductPackageDetailReq) (*resp.ProductPackageDetailRes, error) // 获取商品选购详情
+
+	GetOrderCartProductBatchCookingList(ctx context.Context, req req.GetOrderCartProductBatchCookingListReq) (*resp.OrderCartProductBatchCookingRes, error) // 获取分批送厨弹框的销售订单商品列表
+	OrderCartProductBatchCooking(ctx context.Context, req req.OrderCartProductBatchCookingReq) (*resp.ShopCart, error)                                      // 分批送厨
 }
 
 // orderSrv 订单服务结构
@@ -390,6 +393,25 @@ func createSaleOrder(ctx context.Context, db *gorm.DB, saleBillSetting *model.Sa
 	// 设置收银员信息
 	staff := ctx.GetStaff()
 	saleOrderObj.SetCashier(staff.Uuid, staff.GetUserName())
+
+	// 设置员工班次信息
+	if staff.Uuid != 0 {
+		// 获取当前员工班次信息
+		staffShiftLog, err := repository.NewShiftLogRepo(db).GetShiftLog(
+			func(db *gorm.DB) *gorm.DB {
+				return db.Where("staff_uuid = ?", staff.Uuid)
+			},
+			func(db *gorm.DB) *gorm.DB {
+				return db.Where("status = ?", constant.StaffNotHandedOver)
+			},
+		)
+		if err == nil {
+			// 班次信息存在，记录班次UUID
+			saleOrderObj.StaffShiftLogUuid = staffShiftLog.Uuid
+		}
+		// 如果班次不存在，不影响订单创建，继续执行
+	}
+
 	// 设置会员折扣
 	if ctx.GetMemberUuid() != 0 {
 		member, err := repository.NewMemberRepo(db).GetMemberByUuid(ctx.GetMemberUuid())
@@ -662,6 +684,17 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	}
 	// 构建销售订单
 	saleOrder := model.NewSaleOrder(ctx.GetDeviceSn(), saleBill.Uuid, saleBill.OrderNo, *saleBillSetting)
+	staffShiftLogUuid := uint64(0)
+	{
+		staffShiftLog, err := GetCurrentStaffShiftLog(db, staff.Uuid)
+		if err != nil {
+			logger.Logger.Error("获取当前员工班次信息失败", zap.Error(err))
+		} else {
+			staffShiftLogUuid = staffShiftLog.Uuid
+		}
+	}
+
+	saleOrder.StaffShiftLogUuid = staffShiftLogUuid
 
 	// 获取自助餐信息
 	buffetList, err := repository.NewBuffetRepo(db).GetBuffetListByUuids(req.BuffetUuids)
@@ -2321,8 +2354,17 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	// 可退的会员消费金额
 	canReturnMemberConsumptionAmount := saleOrder.GetCanReturnMemberConsumptionAmount()
 
+	// 获取当前员工班次信息
+	var staffShiftLogUuid uint64
+	if ctx.GetStaffUuid() != 0 {
+		staffShiftLog, err := GetCurrentStaffShiftLog(db, ctx.GetStaffUuid())
+		if err == nil {
+			staffShiftLogUuid = staffShiftLog.Uuid
+		}
+	}
+
 	// 创建退款单
-	returnOrder, err := saleOrder.NewReturnOrder(ctx.GetScene(), deliveryFee, ctx.GetStaff().DutyNo, ctx.GetLanguage(), saleOrderProducts, saleOrderBuffetCustomerTypes, saleOrderBuffetDelayProducts, numMap, returnType, canReturnAmount)
+	returnOrder, err := saleOrder.NewReturnOrder(ctx.GetScene(), deliveryFee, ctx.GetStaff().DutyNo, ctx.GetLanguage(), saleOrderProducts, saleOrderBuffetCustomerTypes, saleOrderBuffetDelayProducts, numMap, returnType, canReturnAmount, staffShiftLogUuid)
 	if err != nil {
 		return errors.WithMessage(err), constant.CodeFail
 	}
@@ -2709,6 +2751,29 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	return nil, 0
 }
 
+// GetCurrentStaffShiftLog 获取当前员工班次信息
+func GetCurrentStaffShiftLog(db *gorm.DB, staffUuid uint64) (*model.StaffShiftLog, error) {
+	shiftLogRepo := repository.NewShiftLogRepo(db)
+
+	// 查询当前员工未交班的班次记录
+	shiftLog, err := shiftLogRepo.GetShiftLog(
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("staff_uuid = ?", staffUuid)
+		},
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("status = ?", constant.StaffNotHandedOver)
+		},
+	)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.New("员工当前没有进行中的班次")
+		}
+		return nil, errors.WithMessage(err)
+	}
+
+	return &shiftLog, nil
+}
+
 // ReReturnOrder 重新退款
 func (s *orderSrv) ReReturnOrder(ctx context.Context, req req.OrderReReturnReq) (error, int) {
 	// 禁止并发操作
@@ -3060,6 +3125,10 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, request req.OrderReverseSe
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		// 删除销售订单原料
+		if err := repository.NewSaleOrderMaterialRepo(db).DeleteSaleOrderMaterial(saleBill.Uuid); err != nil {
+			return errors.WithMessage(err)
+		}
 		// 如果销售订单是免单，删除免单原因
 		for _, saleOrder := range saleBill.SaleOrders {
 			if saleOrder.IsFreeSaleOrder() {
@@ -3481,7 +3550,11 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 		if err != nil {
 			return errors.WithMessage(err)
 		}
-		warehouseOutForms = model.NewWarehouseOutForm(productList, false, saleBill.Uuid, ctx.GetStaffUuid())
+		staffShiftLog, err := GetCurrentStaffShiftLog(db, ctx.GetStaffUuid())
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+		warehouseOutForms = model.NewWarehouseOutForm(productList, false, saleBill.Uuid, ctx.GetStaffUuid(), staffShiftLog.Uuid)
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
@@ -4989,7 +5062,12 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 
 		// 添加正常商品
 		{
-			products := saleOrder.GetProductList(option.UnorderedH5Product == repository.OrderedH5ProductWithReject)
+			// 获取门店业务设置
+			businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
+			products := saleOrder.GetProductList(option.UnorderedH5Product == repository.OrderedH5ProductWithReject, businessSetting.OpenIsBatch())
 			productList = append(productList, products...)
 		}
 
@@ -5125,6 +5203,20 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		// 如果要显示必点信息
 		if productMustPlanList != nil {
 			shopCartInfo.MustPlans = productMustPlanList
+		}
+
+		// 判断是否需要弹出分批送厨弹窗。只有收银机和助手端需要判断
+		if ctx.GetSource() == constant.SourceAssistant || ctx.GetSource() == constant.SourceCashier {
+			// 获取门店业务设置
+			businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
+			if businessSetting.OpenIsBatch() {
+				if shopCart.SaleBill.IsNeedBatchSendCooking() {
+					shopCartInfo.SetCode(constant.CodeOrderCheckProductBatch)
+				}
+			}
 		}
 	}
 	return shopCartInfo, nil
@@ -5506,7 +5598,8 @@ func GetSauceInfo(ctx context.Context, db *gorm.DB, sauceProductBomUuidList []ui
 			// 检查加料材料库存是否充足
 			if len(bom.ProductSauce.SauceMaterials) > 0 {
 				for _, sauceMaterial := range bom.ProductSauce.SauceMaterials {
-					if sauceMaterial.Material.StockNum < sauceMaterial.GetDecreaseNum(productNum) {
+					materialStockNum := sauceMaterial.Material.GetStockNum()
+					if materialStockNum < sauceMaterial.GetDecreaseNum(productNum) {
 						return nil, errors.WithMessage(fmt.Errorf("%s %s", sauceName, i18n.Translate(ctx.GetLanguage(), "加料材料库存不足")))
 					}
 				}
@@ -5643,6 +5736,12 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		CustomDiscountRate:     params.SaleOrder.CustomDiscountRate,
 	}
 
+	// 获取门店业务设置
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
 	saleOrderProducts := make([]*model.SaleOrderProduct, 0)
@@ -5677,7 +5776,8 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				if flavorMaterial.IsDelete() {
 					continue
 				}
-				if flavorMaterial.Material.StockNum < flavorMaterial.GetDecreaseNum(product.Num) {
+				materialStockNum := flavorMaterial.Material.GetStockNum()
+				if materialStockNum < flavorMaterial.GetDecreaseNum(product.Num) {
 					return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "材料库存不足")))
 				}
 			}
@@ -5720,7 +5820,8 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				// 检查加料材料库存是否充足
 				if len(bom.ProductSauce.SauceMaterials) > 0 {
 					for _, sauceMaterial := range bom.ProductSauce.SauceMaterials {
-						if sauceMaterial.Material.StockNum < sauceMaterial.GetDecreaseNum(product.Num) {
+						materialStockNum := sauceMaterial.Material.GetStockNum()
+						if materialStockNum < sauceMaterial.GetDecreaseNum(product.Num) {
 							return nil, errors.WithMessage(fmt.Errorf("%s %s", sauceName, i18n.Translate(ctx.GetLanguage(), "加料材料库存不足")))
 						}
 					}
@@ -5802,6 +5903,14 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			Attribute:     attributes,
 			IsAcceptOrder: uint(isAcceptOrder),
 			Remark:        product.Remark,
+			IsBatch: func() uint8 {
+				if businessSetting.OpenIsBatch() {
+					if productPackage.IsBatchBool() {
+						return 1
+					}
+				}
+				return 0
+			}(),
 		}, &productPackage, product.Operation)
 
 		// 设置必点信息
@@ -6071,7 +6180,8 @@ func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, 
 			if flavorMaterial.IsDelete() {
 				continue
 			}
-			if flavorMaterial.Material.StockNum < flavorMaterial.GetDecreaseNum(product.Num) {
+			materialStockNum := flavorMaterial.Material.GetStockNum()
+			if materialStockNum < flavorMaterial.GetDecreaseNum(product.Num) {
 				return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "材料库存不足")))
 			}
 		}
@@ -7294,7 +7404,7 @@ func (s *orderSrv) getDecreaseStockList(ctx context.Context, cookingDeductSaleOr
 				}
 			}
 			// 获取规格商品的出库数量
-			if int(cookingDeductSaleOrderProduct.Num) > 0 {
+			if cookingDeductSaleOrderProduct.Num > 0 {
 				list = append(list, &model.Product{
 					ProductBomUuid:       saleOrderProductBom.ProductBomUuid,
 					PackageUuid:          cookingDeductSaleOrderProduct.PackageUuid,
@@ -7339,8 +7449,50 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 
 	// 获取未送厨的商品列表
 	unCookingSaleOrderProducts := saleBill.GetSaleOrderProductUnCooking()
-	if len(unCookingSaleOrderProducts) == 0 && len(h5OrderProductUnAccept) == 0 {
+	nonNeedBatchSendCooking := false
+	// 没有未送厨商品时，判断是否需要弹出分批送厨弹窗。只有收银机和助手端需要判断
+	if ctx.GetSource() == constant.SourceAssistant || ctx.GetSource() == constant.SourceCashier {
+		// 获取门店业务设置
+		businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+		if err != nil {
+			return nil, nil, errors.WithMessage(err)
+		}
+		if businessSetting.OpenIsBatch() {
+			if saleBill.IsNeedBatchSendCooking() {
+				nonNeedBatchSendCooking = true
+			}
+		}
+	}
+
+	if len(unCookingSaleOrderProducts) == 0 && len(h5OrderProductUnAccept) == 0 && !nonNeedBatchSendCooking {
 		return nil, nil, errors.New("没有未送厨的商品")
+	} else if len(unCookingSaleOrderProducts) == 0 && len(h5OrderProductUnAccept) == 0 && nonNeedBatchSendCooking {
+		if !req.IgnoreMust { // 如果不是在结账检查时送厨，才返回-209，否则直接不分批送厨而是使用正常送厨
+			return nil, &resp.OrderCheckServiceRes{
+				Code: constant.CodeOrderCheckProductBatch,
+			}, nil
+		} else {
+			// 获取预送厨的商品
+			preCookingSaleOrderProducts := saleBill.GetSaleOrderProductPreCooking()
+			if len(preCookingSaleOrderProducts) > 0 {
+				nonBathchUuids := make([]uint64, 0) // 预送厨的商品uuid列表
+				for _, saleOrderProduct := range preCookingSaleOrderProducts {
+					saleOrderProduct.IsBatch = 0
+					nonBathchUuids = append(nonBathchUuids, saleOrderProduct.Uuid)
+				}
+				if len(nonBathchUuids) > 0 {
+					// 将预送厨的商品变为未分批商品
+					db := s.dbm.GetDB(ctx.GetDbId())
+					if err := db.Model(&model.SaleOrderProduct{}).Where("uuid IN (?)", nonBathchUuids).Update("is_batch", 0).Error; err != nil {
+						return nil, nil, errors.WithMessage(err)
+					}
+					// 将预送厨的生产单商品变为未分批商品
+					if err := db.Model(&model.ProductionOrderProduct{}).Where("sale_order_product_uuid IN (?)", nonBathchUuids).Update("create_time", time.Now().Unix()).Update("is_batch", 0).Error; err != nil {
+						return nil, nil, errors.WithMessage(err)
+					}
+				}
+			}
+		}
 	}
 
 	// 获取某个h5订单的已下单但未接单的商品
@@ -7362,7 +7514,7 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 		if ctx.GetSource() == constant.SourceAssistant && req.IsCheckCooking {
 			checkServiceRes, err = s.ActionCooking(ctx, req.IgnoreMust, saleBill, unCookingSaleOrderProducts, 0, false, WithOnlyCheckCooking()) // 购物车送厨检查
 		} else {
-			checkServiceRes, err = s.ActionCooking(ctx, req.IgnoreMust, saleBill, unCookingSaleOrderProducts, 0, false) // 购物车送厨商品
+			checkServiceRes, err = s.ActionCooking(ctx, req.IgnoreMust, saleBill, unCookingSaleOrderProducts, 0, false, WithIsBatch()) // 购物车送厨商品
 		}
 		if err != nil {
 			return nil, nil, err
@@ -7409,6 +7561,14 @@ func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid, deskUu
 			// TODO 植焕
 			//HasMaterial:              unCookingSaleOrderProduct,
 			ProductionOrderMaterials: unCookingSaleOrderProduct.GetMaterialBom(), // 获取这个商品各个材料的用量
+			IsBatch: func() uint8 {
+				if unCookingSaleOrderProduct.IsBatchBool() {
+					// 如果是结账送厨时，标记为不是分批商品
+
+					return 1
+				}
+				return 0
+			}(),
 		}
 		productionOrderProducts = append(productionOrderProducts, &productionOrderProduct)
 	}
@@ -7614,6 +7774,17 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 
 	// 新建一个销售订单商品，该商品数量为移动数量
 	if errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		// 如果退菜商品还关联着分批标签，则解除
+		if returnSaleOrderProduct.IsBatchBool() {
+			returnSaleOrderProduct.BatchTagUuid = 0 // 手动置0，否则可能又被updateSaleOrderProduct方法更新回非零值
+			returnSaleOrderProduct.BatchTime = 0
+			if err := tx.Model(&model.SaleOrderProduct{}).Where("uuid = ?", returnSaleOrderProduct.Uuid).Updates(map[string]any{
+				"batch_tag_uuid": 0,
+				"batch_time":     0,
+			}).Error; err != nil {
+				return errors.WithMessage(err)
+			}
+		}
 		// 创建退菜记录
 		if len(returnFoodReasonList) > 0 {
 			if err := repository.NewSaleOrderProductReasonRepo(tx).CreateSaleOrderProductReasons(returnFoodReasonList); err != nil {
@@ -10012,7 +10183,7 @@ func (s *orderSrv) VerifyCoupon(ctx context.Context, saleOrder *model.SaleOrder,
 }
 
 // 保存发票到erp
-func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrder, db *gorm.DB) (*selling.SavePosInvoiceResp, error) {
+func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrder, saleBill *model.SaleBill, db *gorm.DB) (*selling.SavePosInvoiceResp, error) {
 	companySetting := ctx.GetCompanySetting()
 
 	staff := ctx.GetStaff()
@@ -10031,6 +10202,35 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 	// 订单商品列表
 	items := make([]*selling.PosInvoiceItem, 0)
 	isFreeOrder := saleOrder.IsFreeSaleOrder()
+	// for _, product := range saleOrder.SaleOrderBuffetCustomerTypes {
+	// 	// 自助餐名称
+	// 	buffetName := product.BuffetPackage.MultiLanguageName.EnName
+	// 	items = append(items, &selling.PosInvoiceItem{
+	// 		ItemCode:    "ZZC001",
+	// 		Qty:         float64(product.Num),
+	// 		Rate:        product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
+	// 		Amount:      product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
+	// 		Description: fmt.Sprintf("%s-%s", buffetName, product.Name),
+	// 	})
+	// }
+	// for _, product := range saleOrder.SaleOrderBuffetDelayProducts {
+	// 	buffetName := product.BuffetPackage.MultiLanguageName.EnName
+	// 	items = append(items, &selling.PosInvoiceItem{
+	// 		ItemCode:    "ZZC001",
+	// 		Qty:         float64(product.Num),
+	// 		Rate:        product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
+	// 		Amount:      product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
+	// 		Description: fmt.Sprintf("%s-%s", buffetName, product.Name),
+	// 	})
+	// }
+	// for _, product := range saleOrder.SaleOrderBuffetDelayProducts {
+	// 	items = append(items, &selling.PosInvoiceItem{
+	// 		ItemCode: "ZZC001",
+	// 		Qty:      float64(product.Num),
+	// 		Rate:     product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
+	// 		Amount:   product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
+	// 	})
+	// }
 	for _, product := range saleOrder.SaleOrderProducts {
 		// 如果商品已删除，则跳过
 		if product.IsDelete() || product.IsCancelProduct() {
@@ -10059,13 +10259,25 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 		erpCode := productBom.ProductBom.ErpCode
 		// 是否是赠菜
 		if product.IsGiftProduct() {
-			items = append(items, &selling.PosInvoiceItem{
-				ItemCode:   erpCode,
-				Qty:        product.Num,
-				Rate:       product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
-				Amount:     product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
-				IsFreeItem: true,                                      // 赠菜
-			})
+			if product.IsPackageProduct() {
+				packageName := language.JsonToLocaleResponse(product.Name) // 套餐名称
+				items = append(items, &selling.PosInvoiceItem{
+					ItemCode:    "TC001",
+					Qty:         product.Num,
+					Rate:        0,              // 商品未含税价格（折后）
+					Amount:      0,              // 商品未含税价格（折后）* 数量
+					Description: packageName.EN, // 套餐子商品描述
+					IsFreeItem:  true,
+				})
+			} else {
+				items = append(items, &selling.PosInvoiceItem{
+					ItemCode:   erpCode,
+					Qty:        product.Num,
+					Rate:       0,    // 商品未含税价格（折后）
+					Amount:     0,    // 商品未含税价格（折后）* 数量
+					IsFreeItem: true, // 赠菜
+				})
+			}
 		} else if product.SalePrice == 0 { // 当商品是0元商品时，可能是通过商品改价为0或原本售价就是0
 			items = append(items, &selling.PosInvoiceItem{
 				ItemCode:   erpCode,
@@ -10075,13 +10287,30 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 				IsFreeItem: true, // 零元商品当作赠菜
 			})
 		} else {
-			items = append(items, &selling.PosInvoiceItem{
-				ItemCode:   erpCode,
-				Qty:        product.Num,
-				Rate:       product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
-				Amount:     product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
-				IsFreeItem: isFreeOrder,
-			})
+			if product.IsPackageProduct() { // 套餐主商品不添加到发票
+				packageName := language.JsonToLocaleResponse(product.Name) // 套餐名称
+				items = append(items, &selling.PosInvoiceItem{
+					ItemCode:    "TC001",
+					Qty:         product.Num,
+					Rate:        product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
+					Amount:      product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
+					Description: packageName.EN,                            // 套餐子商品描述
+					IsFreeItem:  false,
+				})
+			} else {
+				item := &selling.PosInvoiceItem{
+					ItemCode:   erpCode,
+					Qty:        product.Num,
+					Rate:       product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
+					Amount:     product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
+					IsFreeItem: isFreeOrder,
+				}
+				if isFreeOrder {
+					item.Rate = 0
+					item.Amount = 0
+				}
+				items = append(items, item)
+			}
 		}
 		// 如果有小料，则需要添加小料
 		sauceBoms := product.GetSauceSaleOrderProductBom()
@@ -10785,7 +11014,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 		company := ctx.GetCompany()
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
-			res, err := s.SavePosInvoice(ctx, saleOrder, db)
+			res, err := s.SavePosInvoice(ctx, saleOrder, saleBill, db)
 			if err != nil {
 				return errors.WithMessage(err)
 			}
@@ -10829,8 +11058,17 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 			logger.Logger.Error("出库失败 - 02", zap.Error(err))
 			return
 		}
+
+		staffShiftLogUuid := uint64(0)
+		staffShiftLog, err := GetCurrentStaffShiftLog(db, ctx.GetStaffUuid())
+		if err != nil {
+			logger.Logger.Error("出库失败 - 02.1", zap.Error(err))
+		} else {
+			staffShiftLogUuid = staffShiftLog.Uuid
+		}
 		// 构建出库单
-		warehouseOutForms := model.NewWarehouseOutForm(decreaseStockList, true, request.SaleBillUuid, ctx.GetStaffUuid())
+
+		warehouseOutForms := model.NewWarehouseOutForm(decreaseStockList, true, request.SaleBillUuid, ctx.GetStaffUuid(), staffShiftLogUuid)
 		if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 			for _, warehouseOutForm := range warehouseOutForms {
 				if len(warehouseOutForm.WarehouseOutFormItems) > 0 {
@@ -11079,7 +11317,7 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 		company := ctx.GetCompany()
 		companySetting := ctx.GetCompanySetting()
 		if company.IsOpenErpPhase3() && companySetting.ErpnextSiteCode != "" {
-			res, err := s.SavePosInvoice(ctx, saleOrder, db)
+			res, err := s.SavePosInvoice(ctx, saleOrder, saleBill, db)
 			if err != nil {
 				return errors.WithMessage(err)
 			}
@@ -12302,11 +12540,54 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 				IsCancel:      product.IsCancelProduct(),
 			})
 		}
+
+		// 获取预送厨的商品
+		preCookingSaleOrderProducts := saleBill.GetSaleOrderProductPreCooking()
+		for _, product := range preCookingSaleOrderProducts {
+			products = append(products, resp.Product{
+				Uuid:          product.Uuid,
+				LocaleName:    product.GetNameAndFlavorName(),
+				Num:           product.Num,
+				SalePrice:     product.SalePrice,
+				DiscountPrice: product.DiscountFee,
+				Status:        int(product.Status),
+				Remark:        product.Remark,
+				IsMust:        product.IsMustProduct(),
+				IsGift:        product.IsGiftProduct(),
+				IsCancel:      product.IsCancelProduct(),
+			})
+		}
+
 		res := &resp.OrderCheckServiceRes{
 			Code:          constant.CodeOrderCheckProductUnCooking,
 			OrderCheckRes: resp.OrderCheckRes{Products: &resp.CartProductList{List: products}},
 		}
 		return res, nil
+	} else {
+		products := make([]resp.Product, 0)
+		// 获取预送厨的商品
+		preCookingSaleOrderProducts := saleBill.GetSaleOrderProductPreCooking()
+		for _, product := range preCookingSaleOrderProducts {
+			products = append(products, resp.Product{
+				Uuid:          product.Uuid,
+				LocaleName:    product.GetNameAndFlavorName(),
+				Num:           product.Num,
+				SalePrice:     product.SalePrice,
+				DiscountPrice: product.DiscountFee,
+				Status:        int(product.Status),
+				Remark:        product.Remark,
+				IsMust:        product.IsMustProduct(),
+				IsGift:        product.IsGiftProduct(),
+				IsCancel:      product.IsCancelProduct(),
+			})
+		}
+		if len(products) > 0 {
+			res := &resp.OrderCheckServiceRes{
+				Code:          constant.CodeOrderCheckProductUnCooking,
+				OrderCheckRes: resp.OrderCheckRes{Products: &resp.CartProductList{List: products}},
+			}
+			return res, nil
+		}
 	}
 
 	return nil, nil
@@ -13559,4 +13840,148 @@ func (s *orderSrv) GetProductPackageDetail(ctx context.Context, req req.GetProdu
 	}
 
 	return &resp.ProductPackageDetailRes{List: productPackageDetailList}, nil
+}
+
+func (s *orderSrv) GetOrderCartProductBatchCookingList(ctx context.Context, req req.GetOrderCartProductBatchCookingListReq) (*resp.OrderCartProductBatchCookingRes, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 获取销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errors.WithMessage(errSaleBill)
+	}
+
+	batchCookingSaleOrderProducts := saleBill.GetSaleOrderProductBatchCooking()
+
+	batchCookingSaleOrderProductsList := make([]resp.OrderCartProductBatchCooking, 0)
+	for _, saleOrderProduct := range batchCookingSaleOrderProducts {
+		baseURL := utils.GetBaseURL(ctx.GetGin().Request)
+		batchCookingSaleOrderProductsList = append(batchCookingSaleOrderProductsList, resp.OrderCartProductBatchCooking{
+			Uuid:       saleOrderProduct.Uuid,
+			LocaleName: saleOrderProduct.MultiLanguageName.GetNames(),
+			// LocaleAttributeName: saleOrderProduct.GetAttributeName(),
+			LocaleAttributeName: saleOrderProduct.GetFlavorName(),
+			Image: func() string {
+				if saleOrderProduct.ImageFile != nil {
+					url := saleOrderProduct.ImageFile.GetUrl(baseURL)
+					return url
+				}
+				return ""
+			}(),
+			BatchTagUuid:    saleOrderProduct.BatchTagUuid,
+			BatchTime:       saleOrderProduct.BatchTime,
+			SendKitchenTime: saleOrderProduct.SendKitchenTime,
+			CreateTime:      saleOrderProduct.CreateTime,
+		})
+	}
+
+	tagMap := make(map[uint64]int)
+	for _, batchCookingSaleOrderProduct := range batchCookingSaleOrderProducts {
+		tagMap[batchCookingSaleOrderProduct.BatchTagUuid]++
+	}
+
+	// 获取分批类型列表
+	batchTags, errBatchTags := repository.NewBatchTagRepo(db).GetBatchTagList()
+	if errBatchTags != nil {
+		return nil, errors.WithMessage(errBatchTags)
+	}
+	batchCookingSaleOrderProductsTags := make([]resp.OrderCartProductBatchCookingTag, 0)
+	for _, batchTag := range batchTags {
+		batchCookingSaleOrderProductsTags = append(batchCookingSaleOrderProductsTags, resp.OrderCartProductBatchCookingTag{
+			Uuid:       batchTag.Uuid,
+			LocaleName: batchTag.MultiLanguageName.GetNames(),
+			Color:      batchTag.Color,
+			Sort:       uint(batchTag.Sort),
+			Count:      uint(tagMap[batchTag.Uuid]),
+		})
+	}
+
+	// 排序
+	batchCookingSaleOrderProductsList = sortBatchCookingSaleOrderProducts(batchCookingSaleOrderProductsList)
+
+	return &resp.OrderCartProductBatchCookingRes{List: batchCookingSaleOrderProductsList, Tags: batchCookingSaleOrderProductsTags}, nil
+}
+
+// 排序分批送厨弹出的商品列表。根据送厨时间分组，后送厨的排在前面。同一组内，下单时间早的排在前面。
+func sortBatchCookingSaleOrderProducts(batchCookingSaleOrderProducts []resp.OrderCartProductBatchCooking) []resp.OrderCartProductBatchCooking {
+	sort.Slice(batchCookingSaleOrderProducts, func(i, j int) bool {
+		if batchCookingSaleOrderProducts[i].SendKitchenTime == batchCookingSaleOrderProducts[j].SendKitchenTime { // 同一组内，下单时间早的排在前面。
+			return batchCookingSaleOrderProducts[i].CreateTime < batchCookingSaleOrderProducts[j].CreateTime
+		}
+		// 不同组内，后送厨的排在前面。
+		return batchCookingSaleOrderProducts[i].SendKitchenTime > batchCookingSaleOrderProducts[j].SendKitchenTime
+	})
+	return batchCookingSaleOrderProducts
+}
+
+// 分批送厨
+func (s *orderSrv) OrderCartProductBatchCooking(ctx context.Context, req req.OrderCartProductBatchCookingReq) (*resp.ShopCart, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 验证参数
+	if err := req.Validate(); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	// 获取销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errors.WithMessage(errSaleBill)
+	}
+
+	// 获取saleBill中的分批商品
+	saleBillProducts := saleBill.GetSaleOrderProductBatchCookingBySaleOrderUuid(req.SaleOrderProductUuids)
+
+	// 标记分批送厨
+	batchTime := time.Now().Unix()
+	for _, saleBillProduct := range saleBillProducts {
+		saleBillProduct.SetCookingBatch(req.BatchTagUuid, batchTime)
+	}
+
+	// 更新saleBill中的最新分批类型的颜色。（每次分批送厨后，都改变一次）
+	saleBill.BatchTagUuid = req.BatchTagUuid
+
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		// 更新销售订单商品状态从预送厨变为已送厨
+		if err := repository.NewSaleOrderProductRepo(tx).UpdateSaleOrderProductList(saleBillProducts); err != nil {
+			return errors.WithMessage(err)
+		}
+		// 更新送厨单商品的batch_time、batch_tag_uuid
+		// 将product_order_product中的分批商品标记为已送厨
+		if err := repository.NewProductionRepo(tx).UpdateProductionOrderProductBatchTimeAndBatchTagUuid(req.SaleBillUuid, req.SaleOrderProductUuids, batchTime, req.BatchTagUuid); err != nil {
+			return errors.WithMessage(err)
+		}
+		// 更新销售账单中的分批类型UUID
+		if err := repository.NewSaleBillRepo(tx).UpdateSaleBillBatchTagUuid(req.SaleBillUuid, req.BatchTagUuid); err != nil {
+			return errors.WithMessage(err)
+		}
+		return nil
+	}); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 发起“预送厨”操作的事件
+	go s.bus.PublishSentCookingPreEvent(event.SentCookingPrePayload{
+		BasePayload: event.BasePayload{ // 送厨
+			Ctx:           ctx,
+			CompanyUuid:   ctx.GetCompanyUuid(),
+			Source:        ctx.GetSource(),
+			SaleBillUuid:  saleBill.Uuid,
+			SaleOrderUuid: req.SaleOrderUuid,
+			OperatorUuid:  int64(ctx.GetStaffUuid()),
+		},
+		Products: func() event.ProductsPre {
+			products := make(event.ProductsPre, 0)
+			for _, unCookingSaleOrderProduct := range saleBillProducts {
+				products = append(products, s.convertToEventOrderProductPre(
+					unCookingSaleOrderProduct,
+					saleBill,
+				))
+			}
+			return products
+		}(),
+	})
+
+	shopCart, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return shopCart, nil
 }

@@ -2,26 +2,27 @@
 
 namespace app\common\model\product;
 
-use app\common\service\websocket\Websocket;
-
 use think\facade\Db;
+
 use think\facade\Env;
-use app\common\library\helper;
 use app\common\model\app\App;
+use app\common\library\helper;
 use app\common\model\BaseModel;
-use app\common\model\buffet\BuffetProduct;
+use think\model\concern\SoftDelete;
 use app\common\model\erp\ErpSupplier;
 use app\common\model\file\UploadFile;
+use app\common\model\product\Material;
 use app\common\model\order\OrderBuffet;
 use app\common\model\order\OrderProduct;
 use app\common\model\product\ProductFeed;
+use app\common\model\buffet\BuffetProduct;
+use app\common\service\websocket\Websocket;
 use app\common\model\erp\ErpInventoryRecord;
+use app\common\model\store\MultiLanguageName;
 use app\common\model\order\OrderSchemeProduct;
+use app\common\model\supplier\PrintingProduct;
 use app\common\model\product\ProductSkuMaterial;
 use app\common\model\product\ProductFeedMaterial;
-use app\common\model\product\Material;
-use app\common\model\store\MultiLanguageName;
-use think\model\concern\SoftDelete;
 
 /**
  * 商品模型
@@ -438,6 +439,14 @@ class Product extends BaseModel
     public function productPackageGroup()
     {
         return $this->hasMany(ProductPackageGroup::class, 'product_package_uuid', 'uuid');
+    }
+
+    /**
+     * 关联商品打印机表
+     */
+    public function productPrinters()
+    {
+        return $this->hasMany(PrintingProduct::class, 'product_package_uuid', 'uuid');
     }
 
 
@@ -931,7 +940,7 @@ class Product extends BaseModel
                 '0 as product_sort',
                 'c1.multi_language_name_uuid as category_multi_language_name_uuid', 
                 !$enableErp ? 'c2.multi_language_name_uuid as category_parent_multi_language_name_uuid' : '0 as category_parent_multi_language_name_uuid', 
-                'm.stock_num as product_stock',
+                'wi.stock as product_stock',
                 '0 as product_price',
                 '20 as type', 
                 'c1.uuid as category_uuid',
@@ -959,6 +968,7 @@ class Product extends BaseModel
             $materialSqlBuilder
                 ->leftJoin('file', 'm.image_uuid = file.uuid')
                 ->leftJoin('related_material rm', 'm.uuid = rm.material_uuid AND rm.delete_time = 0')
+                ->leftJoin('warehouse_item wi', 'm.uuid = wi.material_uuid AND wi.warehouse_uuid = (SELECT uuid FROM ttpos_warehouse WHERE type = "normal" AND is_default = 1 LIMIT 1)')
                 ->group('m.uuid')
                 ->order('m.id', 'desc');
 
@@ -1370,6 +1380,9 @@ class Product extends BaseModel
                     ])->order('sort', 'asc');
                 }
             ],
+            'productPrinters' => function ($q) {
+                $q->field('product_package_uuid,product_printer_uuid,uuid')->with('printerBindNameAndStatus');
+            },
         ])->where('p.uuid', '=', $product_id)->find();
         if (empty($model)) {
             return $model;
@@ -1416,9 +1429,9 @@ class Product extends BaseModel
                         'material_id' => $relatedMaterial['material_uuid'],
                         'material_num' => $relatedMaterial['num'],
                         'materialProduct' => [
-                            'product_name_text' => $relatedMaterial['material']['product_name_text'],
-                            'product_unit_text' => $relatedMaterial['material']['unit']['unit_name_text'],
-                            'product_material_stock' => $relatedMaterial['material']['stock_num'],
+                            'product_name_text' => $relatedMaterial['material']['product_name_text'] ?? '',
+                            'product_unit_text' => $relatedMaterial['material']['unit']['unit_name_text'] ?? '',
+                            'product_material_stock' => $relatedMaterial['material']['stock_num'] ?? 0,
                         ],
                     ];
                 }

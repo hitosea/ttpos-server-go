@@ -48,6 +48,7 @@ type PurchaseOrderItemInfo struct {
 	UnitConversionRate float64            `json:"unit_conversion_rate"`  // 基准单位转换率
 	BaseUnitName       string             `json:"base_unit_name"`        // 基准单位名称
 	LocaleBaseUnitName dto.LocaleResponse `json:"locale_base_unit_name"` // 基准单位名称
+	InternalCode       string             `json:"internal_code"`         // 内部编码
 }
 
 // PurchaseOrderLogInfo 采购订单操作日志信息
@@ -137,8 +138,9 @@ type PurchaseReceiptOrderCreateResp struct {
 
 // PurchaseReceiptOrderListResp 收货单列表响应
 type PurchaseReceiptOrderListResp struct {
-	List []*PurchaseReceiptOrderInfo `json:"list"` // 收货单列表
-	Meta dto.PageResponse            `json:"meta"` // 分页信息
+	PurchaseOrderList []*PurchaseOrderInfo        `json:"purchase_order_list"` // 采购单列表
+	List              []*PurchaseReceiptOrderInfo `json:"list"`                // 收货单列表
+	Meta              dto.PageResponse            `json:"meta"`                // 分页信息
 }
 
 // PurchaseReceiptOrderInfo 收货单信息
@@ -172,6 +174,7 @@ type PurchaseReceiptItemInfo struct {
 	UnitConversionRate    float64            `json:"unit_conversion_rate"`     // 基准单位转换率
 	BaseUnitName          string             `json:"base_unit_name"`           // 基准单位名称
 	LocaleBaseUnitName    dto.LocaleResponse `json:"locale_base_unit_name"`    // 基准单位名称
+	InternalCode          string             `json:"internal_code"`            // 商品Bom内部编码
 }
 
 // PurchaseReceiptOrderDetailResp 收货单详情响应

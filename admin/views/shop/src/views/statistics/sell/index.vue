@@ -16,8 +16,10 @@
             <el-date-picker
               size="small"
               v-model="searchForm.date"
-              type="daterange"
-              value-format="YYYY-MM-DD"
+              type="datetimerange"
+              format="YYYY-MM-DD HH:mm"
+              value-format="YYYY-MM-DD HH:mm"
+              time-format="HH:mm"
               range-separator="~"
               :start-placeholder="$t('开始日期')"
               :end-placeholder="$t('结束日期')"
@@ -259,6 +261,10 @@
   };
 
   onMounted(() => {
+    const today = new Date();
+    const startOfDay = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')} 00:00`;
+    const endOfDay = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')} 23:59`;
+    searchForm.value.date = [startOfDay, endOfDay];
     getData();
   });
 </script>

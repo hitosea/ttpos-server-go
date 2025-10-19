@@ -90,8 +90,9 @@ type KitchenBase struct {
 }
 
 type ProductPrinter struct {
-	Uuid uint64 `json:"uuid"` // 商品打印机uuid
-	Name string `json:"name"` // 商品打印机名称
+	Uuid   uint64 `json:"uuid"`   // 商品打印机uuid
+	Name   string `json:"name"`   // 商品打印机名称
+	Status int    `json:"status"` // 商品打印机状态
 }
 
 type ProductPrinterList struct {
@@ -160,6 +161,12 @@ type LoginResp struct {
 	Token               string `json:"token"`
 	RefreshToken        string `json:"refresh_token"` // 刷新token，用于重新获取token
 	CashierIsFirstLogin bool   `json:"-"`
+	NeedChangePassword  bool   `json:"-"` // 是否需要修改密码，首次登录移动管理端需要修改密码
+}
+type ShopLoginResp struct {
+	Token              string `json:"token"`
+	RefreshToken       string `json:"refresh_token"`        // 刷新token，用于重新获取token
+	NeedChangePassword bool   `json:"need_change_password"` // 是否需要修改密码，首次登录移动管理端需要修改密码
 }
 
 type CashierLoginResp struct {

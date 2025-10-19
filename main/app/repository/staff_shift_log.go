@@ -14,6 +14,7 @@ type IShiftLogRepo interface {
 	Create(shiftLog model.StaffShiftLog) (model.StaffShiftLog, error)
 	CreateSnapshot(shiftLogSnapshot model.StaffShiftSnapshot) (model.StaffShiftSnapshot, error)
 	GetShiftLog(opts ...DBOption) (model.StaffShiftLog, error)
+	GetShiftLogList(opts ...DBOption) ([]model.StaffShiftLog, error)
 	Update(shiftLog model.StaffShiftLog, updates map[string]interface{}) (model.StaffShiftLog, error)
 	GetSnapshot(opts ...DBOption) (model.StaffShiftSnapshot, error)
 }
@@ -87,4 +88,18 @@ func (r *ShiftLogRepo) GetSnapshot(opts ...DBOption) (model.StaffShiftSnapshot, 
 
 	err := db.First(&snapshot).Error
 	return snapshot, errors.WithMessage(err)
+}
+
+// GetShiftLogList 获取班次列表
+func (r *ShiftLogRepo) GetShiftLogList(opts ...DBOption) ([]model.StaffShiftLog, error) {
+	var logs []model.StaffShiftLog
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Find(&logs).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return logs, nil
 }

@@ -2,6 +2,7 @@
 
 namespace app\shop\service;
 
+use app\shop\model\supplier\Printing;
 use app\shop\model\user\Grade as GradeModel;
 use app\shop\model\product\Feed as FeedModel;
 use app\shop\model\product\Spec as SpecModel;
@@ -38,10 +39,10 @@ class ProductService extends BaseProductService
         // 会员等级列表
         $gradeList = GradeModel::getUsableList();
         // 平台分销规则
-        // DOTO 暂时用不到分销, 先注释掉节省查询时间
-        // $basicSetting = AgentSetting::getItem('basic');
         $basicSetting = [];
+        // 打印机
+        $productPrinterList = (new Printing)->field('uuid,name,status')->select();
         //
-        return compact('attribute', 'feed', 'unit', 'spec', 'special', 'category', 'gradeList', 'basicSetting', 'labelList');
+        return compact('attribute', 'feed', 'unit', 'spec', 'special', 'category', 'gradeList', 'basicSetting', 'labelList', 'productPrinterList');
     }
 }

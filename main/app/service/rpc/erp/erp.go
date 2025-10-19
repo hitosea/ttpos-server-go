@@ -30,6 +30,7 @@ type IErpSrv interface {
 	OpenPosEntry(ctx context.Context, openEntryReq req.OpenPosEntryReq) (string, error)
 	ClosePosEntry(ctx context.Context, closeEntryReq req.ClosePosEntryReq) (string, error)
 	SaveUom(ctx context.Context, saveUomReq req.SaveUomReq) error
+	DeleteUom(ctx context.Context, deleteUomReq req.DeleteUomReq) error
 	SaveAttribute(ctx context.Context, saveAttributeReq req.SaveAttributeReq) error
 	SavePosInvoice(ctx pkgCtx.Context, savePosInvoiceReq req.SavePosInvoiceReq) (*selling.SavePosInvoiceResp, error)
 	ParseSavePosInvoiceError(err error) (*resp.GetPosInvoiceErrorResp, error)
@@ -56,10 +57,13 @@ type IErpSrv interface {
 	AddProductBomCard(ctx pkgCtx.Context, params ProductBomCardAddErpReq) (*manufacturing.SaveBomResp, error)               // 添加成本卡
 	AddProduct(ctx pkgCtx.Context, params req.ProductAddErpReq) (*item.ItemInfo, error)                                     // 添加商品
 	DeleteProduct(ctx pkgCtx.Context, params req.DeleteProductErpReq) error                                                 // 删除商品。删除所有规格和商品模版
+	AddProductBom(ctx pkgCtx.Context, params req.ProductBomAddErpReq) (*item.CreateSingleVariantItemResp, error)            // 添加套餐bom
+	DeleteProductBom(ctx pkgCtx.Context, params req.DeleteProductBomErpReq) error                                           // 删除套餐bom
 	AddPackage(ctx pkgCtx.Context, params req.PackageAddErpReq) (*item.ItemInfo, error)                                     // 添加套餐
 	GetMaterialStockNum(ctx pkgCtx.Context, warehouseErpCode string) ([]*item.ItemStock, error)                             // 获取仓库物品库存数量
 	GetHeadquarterMaterialList(ctx pkgCtx.Context, params req.GetHeadquarterMaterialListReq) (*item.GetItemListResp, error) // 获取总部物品列表
 	GetSubShopMaterialList(ctx pkgCtx.Context) (*item.GetItemListResp, error)                                               // 获取子公司物品列表
+	GetMaterialList(ctx pkgCtx.Context, params GetMaterialListReq) (*item.GetItemListResp, error)                           // 获取物品列表
 	GetProductBomCardList(ctx pkgCtx.Context) (*manufacturing.GetBomListResp, error)                                        // 获取成本卡列表
 	GetProductBomCardDetail(ctx pkgCtx.Context, params req.ErpProductBomCardDetailReq) (*manufacturing.GetBomResp, error)   // 获取成本卡详情
 
@@ -70,10 +74,15 @@ type IErpSrv interface {
 	GetWarehouseList(ctx context.Context, getWarehouseListReq req.GetErpnextWarehouseListReq) ([]*warehouse.WarehouseInfo, error) // 获取仓库列表
 
 	// 规格
+	SaveFlavor(ctx context.Context, params req.SaveErpFlavorReq) error                                    // 保存规格
 	GetFlavorList(ctx context.Context, params req.GetErpFlavorListReq) (resp.GetErpFlavorListResp, error) // 获取规格列表
 
 	// 加料
 	GetSauceList(ctx pkgCtx.Context, sourceListReq req.GetErpSauceListReq) ([]*item.ItemInfo, error) // 获取加料列表
+
+	// 商品
+	GetProductList(ctx pkgCtx.Context, params GetErpProductListReq) (*item.GetItemListResp, error) // 获取商品列表
+	UpdateProduct(ctx pkgCtx.Context, params UpdateProductReq) error                               // 更新商品
 }
 type erpSrv struct {
 	dbm *database.DBManager

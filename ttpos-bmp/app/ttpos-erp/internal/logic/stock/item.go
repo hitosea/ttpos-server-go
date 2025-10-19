@@ -12,6 +12,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/utility"
 	"ttpos-bmp/internal/pkg/queue"
 
+	"github.com/gogf/gf/v2/container/garray"
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -41,6 +42,9 @@ func (s *sItem) SyncDelay() {
 // GetItemList 获取物品列表
 // 根据查询条件过滤并返回物品信息列表
 func (s *sItem) GetItemList(ctx context.Context, req *item.GetItemListReq) (res *item.GetItemListResp, err error) {
+	if (req.ItemGroup == item.ItemGroup_PosAttribute || req.ItemGroup == item.ItemGroup_PosAddon) && len(req.ItemGroupName) == 0 {
+		return nil, gerror.New("物品分组ItemGroupName不能为空")
+	}
 	// 构建查询过滤器
 	filters := s.buildItemListFilters(ctx, req)
 
@@ -71,10 +75,17 @@ func (s *sItem) buildItemListFilters(ctx context.Context, req *item.GetItemListR
 
 	// 按物品分组过滤
 	if req.ItemGroup != item.ItemGroup_Others {
-		itemGroupStr := utility.ItemGroupToString(req.ItemGroup)
-		if len(itemGroupStr) > 0 {
-			filters = append(filters, g.ArrayStr{"item_group", "=", itemGroupStr})
+		if req.ItemGroup == item.ItemGroup_PosAddon || req.ItemGroup == item.ItemGroup_PosAttribute {
+			if len(req.ItemGroupName) > 0 {
+				filters = append(filters, g.ArrayStr{"item_group", "=", req.ItemGroupName})
+			}
+		} else {
+			itemGroupStr := utility.ItemGroupToString(req.ItemGroup)
+			if len(itemGroupStr) > 0 {
+				filters = append(filters, g.ArrayStr{"item_group", "=", itemGroupStr})
+			}
 		}
+
 		//特殊处理套餐包
 		if req.ItemGroup == item.ItemGroup_Package {
 			filters = append(filters, []string{"item_code", "like", consts.ItemCodePrefixPackage + "%"})
@@ -103,6 +114,11 @@ func (s *sItem) buildItemListFilters(ctx context.Context, req *item.GetItemListR
 	if !req.ContainDisabled {
 		filters = append(filters, []string{"disabled", "!=", "1"})
 	}
+	//根据变体查询
+	if req.VariantOf != "" {
+		filters = append(filters, []string{"variant_of", "=", req.VariantOf})
+	}
+
 	return filters
 }
 
@@ -121,10 +137,7 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析物品列表响应失败")
-	}
+	j := resp
 
 	// 转换为物品信息列表
 	dataArray := j.GetJsons("data")
@@ -163,6 +176,16 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 				ConversionFactor: uom.ConversionFactor,
 			})
 		}
+		// 转换属性列表数据结构：从内部模型转换为protobuf响应模型
+		attrList := make([]*item.ItemAttribute, 0, len(itemInfo.Attributes))
+		for _, attr := range itemInfo.Attributes {
+			attrList = append(attrList, &item.ItemAttribute{
+				AttributeName:  attr.Attribute, // 属性名称
+				AttributeValue: attr.AttributeValue,
+			})
+		}
+		itemGroupCodeName := data.Get("item_group").String()
+
 		itemList = append(itemList, &item.ItemInfo{
 			Branch:             data.Get("custom_branch").String(),
 			Company:            data.Get("custom_company").String(),
@@ -173,11 +196,14 @@ func (s *sItem) queryItemList(ctx context.Context, filters [][]string, req *item
 			Disabled:           data.Get("disabled").Bool(),
 			PurchaseUom:        itemInfo.PurchaseUom,
 			Uoms:               uomDetails,
-			Classification:     itemInfo.Classification,
-			ClassificationCode: itemInfo.ClassificationCode,
+			Classification:     itemInfo.CustomClassification,
+			ClassificationCode: itemInfo.CustomClassificationCode,
 			InternalCode:       itemInfo.CustomInternalCode,
 			ValuationRate:      itemInfo.ValuationRate,
 			OpeningStock:       itemInfo.OpeningStock,
+			Attributes:         attrList,
+			ItemGroupName:      itemGroupCodeName,
+			VariantOf:          itemInfo.VariantOf,
 		})
 	}
 
@@ -203,11 +229,6 @@ func (s *sItem) SaveItem(ctx context.Context, reqInfo *item.ItemInfo) (res *item
 		// 更新现有物品
 		return s.updateExistingItem(ctx, req)
 	} else {
-		//创建规格商品
-		//TODO 使用变体创建商品
-		//if len(req.ItemSpecification) > 0 {
-		//
-		//}
 		// 创建新物品
 		return s.createNewItem(ctx, req)
 	}
@@ -235,6 +256,7 @@ func (s *sItem) checkItemExists(ctx context.Context, itemCode string) (bool, err
 }
 
 // updateExistingItem 更新现有物品
+// 更新不处理变体，通过单独的接口处理
 func (s *sItem) updateExistingItem(ctx context.Context, req *item.ItemInfo) (*item.ItemInfo, error) {
 	// 构建更新数据
 	itemForUpdate := s.buildUpdateItemData(req)
@@ -327,6 +349,13 @@ func (s *sItem) buildUpdateItemData(req *item.ItemInfo) g.Map {
 		itemForUpdate["custom_not_for_sale"] = 0
 	}
 
+	// 属性和加料特殊处理
+	if req.ItemGroup == item.ItemGroup_PosAttribute || req.ItemGroup == item.ItemGroup_PosAddon {
+		if req.ItemGroupName != "" {
+			itemForUpdate["item_group"] = req.ItemGroupName
+		}
+	}
+
 	return itemForUpdate
 }
 
@@ -361,6 +390,7 @@ func (s *sItem) createNewItem(ctx context.Context, req *item.ItemInfo) (*item.It
 		return nil, gerror.Wrapf(err, "创建物品失败")
 	}
 
+	//创建禁用物品时，erpnext无法直接创建禁用物品。先创建一个启用的物品，再修改为禁用状态
 	if req.Disabled {
 		newItem["disabled"] = 1
 		service.Document().Update(ctx, &erp.ErpReq{
@@ -370,7 +400,39 @@ func (s *sItem) createNewItem(ctx context.Context, req *item.ItemInfo) (*item.It
 	}
 
 	// 转换并返回结果
-	return s.buildCreateItemResponse(req, company, newItem), nil
+	respItem := s.buildCreateItemResponse(req, company, newItem)
+
+	//不再自动创建规格商品，使用单独的创建接口
+	//respAttributes := make([]*item.ItemAttribute, 0, len(req.Attributes))
+
+	//多规格商品，创建时如果包含了属性值，则同步创建规格商品
+	//if req.HasVariants {
+	//	if len(req.Attributes) > 0 {
+	//		for _, attr := range req.Attributes {
+	//			// 将每种属性名称和属性值的组合添加到itemVarList中
+	//			variant := map[string]string{
+	//				attr.AttributeName: attr.AttributeValue,
+	//			}
+	//			multiSpecItemCode, err := s.CreateSingleVariantItem(ctx, &erp.CreateSingleVariantItemReq{
+	//				TemplateItem: itemCode,
+	//				Args:         variant,
+	//				InternalCode: attr.ItemInternalCode,
+	//			}, req)
+	//			if err != nil {
+	//				return nil, gerror.Wrapf(err, "创建对规格物品失败")
+	//			}
+	//
+	//			respAttributes = append(respAttributes, &item.ItemAttribute{
+	//				AttributeName:    attr.AttributeName,
+	//				AttributeValue:   attr.AttributeValue,
+	//				ItemInternalCode: attr.ItemInternalCode,
+	//				ItemCode:         multiSpecItemCode,
+	//			})
+	//		}
+	//		respItem.Attributes = respAttributes
+	//	}
+	//}
+	return respItem, nil
 }
 
 // getCompanyInfo 获取公司信息
@@ -397,6 +459,7 @@ func (s *sItem) buildNewItemData(ctx context.Context, req *item.ItemInfo, compan
 		"custom_classification_code": req.ClassificationCode,
 		"custom_internal_code":       req.InternalCode,
 		"custom_not_for_sale":        req.NotForSale,
+		"has_variants":               req.HasVariants,
 	}
 
 	// 根据物品分组添加特定字段
@@ -418,6 +481,25 @@ func (s *sItem) buildNewItemData(ctx context.Context, req *item.ItemInfo, compan
 		newItem["disabled"] = 0
 	}
 
+	//使用变体创建商品
+	if req.HasVariants {
+		// 变体参数设置
+		newItem["variant_based_on"] = erp.DocTypeItemAttribute
+		attributes := make([]g.Map, 0, len(req.Attributes))
+		addedAttr := garray.NewStrArray()
+		for _, attr := range req.Attributes {
+			if addedAttr.Contains(attr.AttributeName) {
+				//跳过已添加
+				continue
+			}
+			attributes = append(attributes, g.Map{
+				"attribute": attr.AttributeName,
+			})
+			addedAttr.Append(attr.AttributeName)
+		}
+		newItem["attributes"] = attributes
+	}
+
 	return newItem, nil
 }
 
@@ -431,21 +513,18 @@ func (s *sItem) addItemGroupSpecificFields(ctx context.Context, req *item.ItemIn
 		//FIXME 后面要去掉的，现在先放着这里
 		newItem["custom_specification"] = req.ItemSpecification
 		newItem["is_stock_item"] = 0
+		newItem["item_group"] = string(consts.ItemGroupProducts)
 	} else if req.ItemGroup == item.ItemGroup_Package {
 		// 套餐特定字段
 		newItem["is_stock_item"] = 0
+		newItem["item_group"] = string(consts.ItemGroupProducts)
 	}
-
-	//将规格通过 Item Attribute 实现 FIXME 这个阶段先不用变体
-	//if len(req.ItemSpecification) > 0 {
-	//	newItem["has_variants"] = 1
-	//	newItem["variant_based_on"] = erp.DocTypeItemAttribute
-	//	newItem["attributes"] = g.Array{
-	//		g.Map{
-	//			"attribute": req.ItemSpecification,
-	//		},
-	//	}
-	//}
+	// 属性和加料特殊处理
+	if req.ItemGroup == item.ItemGroup_PosAttribute || req.ItemGroup == item.ItemGroup_PosAddon {
+		if req.ItemGroupName != "" {
+			newItem["item_group"] = req.ItemGroupName
+		}
+	}
 
 	// 设置默认仓库
 	s.setDefaultWarehouse(ctx, req, company, newItem)
@@ -488,29 +567,12 @@ func (s *sItem) setDefaultWarehouse(ctx context.Context, req *item.ItemInfo, com
 
 // buildCreateItemResponse 构建创建物品响应
 func (s *sItem) buildCreateItemResponse(req *item.ItemInfo, company *company.CompanyInfo, newItem g.Map) *item.ItemInfo {
-	res := &item.ItemInfo{
-		Barcode:           req.Barcode,
-		Branch:            req.Branch,
-		Company:           company.CompanyName,
-		CompanyAbbr:       company.CompanyAbbr,
-		ItemSpecification: req.ItemSpecification,
+	res := &item.ItemInfo{}
+	gconv.Scan(req, res)
+	if itemCode, ok := newItem["item_code"].(string); ok {
+		res.ItemCode = itemCode
 	}
-
-	// 尝试扫描新物品数据到响应结构
-	if err := gconv.Scan(newItem, res); err != nil {
-		// 如果扫描失败，至少返回基本信息
-		if itemCode, ok := newItem["item_code"].(string); ok {
-			res.ItemCode = itemCode
-		}
-		if itemName, ok := newItem["item_name"].(string); ok {
-			res.ItemName = itemName
-		}
-		if stockUom, ok := newItem["stock_uom"].(string); ok {
-			res.StockUom = stockUom
-		}
-	}
-	//处理返回 itemGroup
-	res.ItemGroup = req.ItemGroup
+	res.Company = company.CompanyName
 
 	return res
 }
@@ -525,6 +587,8 @@ func (s *sItem) generateItemCode(ctx context.Context, req *item.ItemInfo) (strin
 		return utility.GenItemCode(consts.ItemCodePrefixPackage), nil
 	case item.ItemGroup_PosAttribute:
 		return utility.GenItemCode(consts.ItemCodePrefixPosAttribute), nil
+	case item.ItemGroup_PosAddon:
+		return utility.GenItemCode(consts.ItemCodePrefixPosAddon), nil
 	default:
 
 	}
@@ -640,10 +704,7 @@ func (s *sItem) GetItemStock(ctx context.Context, req *item.GetItemStockReq) (re
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析物品库存响应失败")
-	}
+	j := resp
 
 	// 转换为物品库存列表
 	dataArray := j.GetJsons("message.result")
@@ -691,10 +752,7 @@ func (s *sItem) GetItem(ctx context.Context, req *item.GetItemReq) (res *erp.Ite
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析物品信息响应失败")
-	}
+	j := resp
 	itemInfo := &erp.Item{}
 	gconv.Structs(j.GetJson("data"), &itemInfo)
 
@@ -709,10 +767,11 @@ func (s *sItem) SavePosAttribute(ctx context.Context, req *item.SavePosAttribute
 	itemInfo := s.convertPosSpecItemToItemInfo(req.Item)
 
 	// 设置属性物品的特定属性
-	itemInfo.ItemGroup = item.ItemGroup_PosAttribute // 属性物品归类为其他
+	itemInfo.ItemGroup = item.ItemGroup_PosAttribute // 属性物品归类
 	itemInfo.StockUom = "Nos"                        // 默认单位为个
 	itemInfo.ValuationRate = 0                       // 属性物品估值率为0
 	itemInfo.IsStockItem = false                     // 属性物品不是库存物品
+	itemInfo.ItemGroupName = req.Item.ItemGroupName  // 属性物品分组名称,实际名称
 
 	// 调用通用的保存物品方法
 	return s.SaveItem(ctx, itemInfo)
@@ -726,10 +785,11 @@ func (s *sItem) SavePosAddon(ctx context.Context, req *item.SavePosAddonReq) (re
 	itemInfo := s.convertPosSpecItemToItemInfo(req.Item)
 
 	// 设置加料物品的特定属性
-	itemInfo.ItemGroup = item.ItemGroup_PosAddon // 加料物品归类为原材料
-	itemInfo.StockUom = "Nos"                    // 默认单位为个
-	itemInfo.ValuationRate = 0                   // 加料物品估值率为0
-	itemInfo.IsStockItem = false                 // 加料物品不是库存物品
+	itemInfo.ItemGroup = item.ItemGroup_PosAddon    // 加料物品归类为原材料
+	itemInfo.StockUom = "Nos"                       // 默认单位为个
+	itemInfo.ValuationRate = 0                      // 加料物品估值率为0
+	itemInfo.IsStockItem = false                    // 加料物品不是库存物品
+	itemInfo.ItemGroupName = req.Item.ItemGroupName // 加料物品分组名称,实际名称
 
 	// 调用通用的保存物品方法
 	return s.SaveItem(ctx, itemInfo)
@@ -749,4 +809,63 @@ func (s *sItem) convertPosSpecItemToItemInfo(posItem *item.PosSpecItem) *item.It
 		InternalCode:     posItem.InternalCode,
 		NotForSale:       posItem.NotForSale,
 	}
+}
+
+// CreateSingleVariantItem 创建多规格商品的单个规格商品
+// 参数：ctx 上下文，req 物品信息，code 物品编码
+// 返回：创建结果
+func (s *sItem) CreateSingleVariantItem(ctx context.Context, req *erp.CreateSingleVariantItemReq, templateItemInfo *item.ItemInfo) (string, error) {
+	var itemCode string
+	resp, err := service.Rpc().Execute(ctx, &erp.ErpReq{
+		Method: erp.ApiMethodCreateVariantItem,
+	}, g.Map{
+		"item": req.TemplateItem,
+		"args": gjson.MustEncodeString(req.Args),
+	})
+	if err != nil {
+		return itemCode, gerror.Wrapf(err, "创建物品规格失败")
+	}
+	// 解析结果
+	j := resp
+	itemInfo := &erp.Item{}
+	j.GetJson("data").Scan(&itemInfo)
+	itemInfo.CustomInternalCode = req.InternalCode
+	itemInfo.IsStockItem = 0
+
+	//if len(req.ItemCode) > 0 {
+	//	itemCode = req.ItemCode
+	//} else {
+	itemCode, err = s.generateItemCodeWithTemplate(ctx, req.TemplateItem)
+	if err != nil {
+		return itemCode, gerror.Wrapf(err, "生成多规格商品编码失败")
+	}
+	//}
+	itemInfo.ItemCode = itemCode
+
+	//填充特殊自动
+	itemInfo.CustomBranch = templateItemInfo.Branch
+	itemInfo.CustomClassification = templateItemInfo.Classification
+	itemInfo.CustomClassificationCode = templateItemInfo.ClassificationCode
+	itemInfo.CustomCompany = templateItemInfo.Company
+
+	// 创建物品
+	_, err = service.Document().Create(ctx, erp.DocTypeItem, &itemInfo)
+	if err != nil {
+		return itemCode, gerror.Wrapf(err, "创建物品失败")
+	}
+	return itemCode, nil
+}
+
+// DeleteItem 删除物品
+// 删除模板商品时，变体商品都会被移除
+func (s *sItem) DeleteItem(ctx context.Context, req *item.DeleteItemReq) (*item.DeleteItemResp, error) {
+	_, err := service.Document().Delete(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeItem,
+		Name:    req.ItemCode,
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "删除物品失败")
+	}
+
+	return &item.DeleteItemResp{ItemCode: req.ItemCode}, nil
 }

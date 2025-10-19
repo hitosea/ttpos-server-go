@@ -8,6 +8,7 @@ import (
 	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
@@ -15,6 +16,8 @@ import (
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/trans/handler"
+
+	ttposContext "ttpos-server-go/pkg/context"
 
 	"github.com/duke-git/lancet/v2/cryptor"
 	"github.com/redis/go-redis/v9"
@@ -358,13 +361,16 @@ func clearCache(companyUuid uint64) error {
 				c.Del(ctx, "tag:"+cryptor.Md5String(fmt.Sprintf("category%d11", companyUuid)))
 			}
 		}
+
+		// 删除设置缓存
 		c.Del(ctx, fmt.Sprintf("setting:company_id:%d", companyUuid))
 		c.Del(ctx, "tag:"+cryptor.Md5String("common_get_settingLanguages"))
 		c.Del(ctx, "sync_setting_"+constant.SettingCloudBasic)
-		c.Del(ctx, fmt.Sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", companyUuid, 0))
-		c.Del(ctx, fmt.Sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", companyUuid, 1))
-		c.Del(ctx, fmt.Sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", companyUuid, -1))
-		c.Del(ctx, fmt.Sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", companyUuid, -2))
+
+		// 删除商品打印机列表缓存
+		ctxs := ttposContext.NewContext()
+		ctxs.SetCompanyUuid(companyUuid)
+		printer.NewPrinterRepo(ctxs).DeleteProductPrinterListCache()
 	}
 
 	if client != nil {

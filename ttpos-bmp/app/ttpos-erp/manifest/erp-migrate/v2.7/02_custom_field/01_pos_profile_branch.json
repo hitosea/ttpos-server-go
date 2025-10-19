@@ -1,0 +1,9 @@
+{
+  "doctype": "DocType",
+  "label": "Branch",
+  "fieldname": "branch",
+  "fieldtype": "Link",
+  "options": "Branch",
+  "insert_after": "project",
+  "dt": "POS Profile"
+}

@@ -57,7 +57,7 @@ func (po *PurchaseOrder) SetNil() {
 	po.Warehouse = nil
 }
 
-// 是否是总部采购
+// 是否是向总部采购
 func (po *PurchaseOrder) IsHeadquarterPurchase() bool {
 	return po.PurchaseType == 2
 }
@@ -158,7 +158,7 @@ func (poi *PurchaseOrderItem) SetNil() {
 	poi.Material = nil
 }
 
-func (item PurchaseOrderItem) GetActualNum() float64 {
+func (item PurchaseOrderItem) GetConversionRateNum() float64 {
 	return decimal.NewFromFloat(item.Num).Mul(decimal.NewFromFloat(item.UnitConversionRate).Round(4)).InexactFloat64()
 }
 

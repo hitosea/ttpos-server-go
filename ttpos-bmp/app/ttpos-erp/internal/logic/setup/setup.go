@@ -22,7 +22,6 @@ import (
 	"ttpos-bmp/utility"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
-	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
@@ -84,8 +83,9 @@ func (s *sSetup) CreateBranch(ctx context.Context, req *setup.InitShopReq) (bran
 
 		// 创建分支
 		branchPayload := g.Map{
-			"branch":         req.ShopName,
-			"custom_company": company.CompanyName,
+			"branch":          req.ShopName,
+			"custom_company":  company.CompanyName,
+			"custom_shopuuid": req.ShopUuid,
 		}
 
 		if _, err := service.Document().Create(ctx, erp.DocTypeBranch, branchPayload); err != nil {
@@ -399,7 +399,7 @@ func (s *sSetup) GetUserApiKeySecret(ctx context.Context, userEmail string) (api
 	}
 
 	// 解析响应数据获取API密钥
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return "", "", gerror.Wrapf(err, "解析生成API密钥响应失败")
 	}
@@ -415,10 +415,7 @@ func (s *sSetup) GetUserApiKeySecret(ctx context.Context, userEmail string) (api
 	}
 
 	// 解析响应数据获取API密钥
-	j, err = gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		return "", "", gerror.Wrapf(err, "解析用户信息响应失败")
-	}
+	j = resp
 	apiKey = j.Get("data.api_key").String()
 
 	return apiKey, apiSecret, nil

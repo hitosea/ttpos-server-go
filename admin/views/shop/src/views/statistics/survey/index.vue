@@ -9,8 +9,10 @@
             <el-date-picker
               size="small"
               v-model="searchForm.date"
-              type="daterange"
-              value-format="YYYY-MM-DD"
+              type="datetimerange"
+              format="YYYY-MM-DD HH:mm"
+              value-format="YYYY-MM-DD HH:mm"
+              time-format="HH:mm"
               range-separator="~"
               :start-placeholder="$t('开始日期')"
               :end-placeholder="$t('结束日期')"
@@ -52,7 +54,7 @@
         :value="this.$formatPrice(detail.received_price || 0)"
       ></dataBox>
 
-      <dataBox :title="$t('商品数量')" :content="$t('所售卖的商品数量，仅计算普通商品及自助餐（不包括自助餐加钟）')" :value="(detail.product_num || 0)"></dataBox>
+      <dataBox :title="$t('商品数量')" :content="$t('所售卖的商品数量，仅计算普通商品及自助餐（不包括自助餐加钟）')" :value="detail.product_num || 0"></dataBox>
 
       <dataBox
         v-if="is_open_member == '1'"
@@ -170,7 +172,10 @@
       };
     },
     async mounted() {
-      this.searchForm.date = [dayjs(), dayjs()];
+      const today = new Date();
+      const startOfDay = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')} 00:00`;
+      const endOfDay = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')} 23:59`;
+      this.searchForm.date = [startOfDay, endOfDay];
       await this.$nextTick();
       /*获取列表*/
       this.getParams();
@@ -313,5 +318,4 @@
     min-width: calc(25% - 12px);
     max-width: calc(25% - 8px);
   }
-
 </style>

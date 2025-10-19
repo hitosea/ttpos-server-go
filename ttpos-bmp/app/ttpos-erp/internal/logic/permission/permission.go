@@ -2,14 +2,12 @@ package permission
 
 import (
 	"context"
-	"strings"
-	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
-	"ttpos-bmp/app/ttpos-erp/internal/service"
-
-	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/util/gconv"
+	"strings"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
+	"ttpos-bmp/app/ttpos-erp/internal/service"
 )
 
 var Permission = new(sPermission)
@@ -80,7 +78,7 @@ func (s *sPermission) queryPermissionRuleList(ctx context.Context, filters [][]s
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析权限规则列表响应失败")
 	}
@@ -124,7 +122,7 @@ func (s *sPermission) getPermissionCompanyList(ctx context.Context, parentName s
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析公司列表响应失败")
 	}
@@ -169,7 +167,7 @@ func (s *sPermission) GetPosPermissionRule(ctx context.Context, ruleCode string)
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析权限规则详情响应失败")
 	}
@@ -198,7 +196,7 @@ func (s *sPermission) CreatePosPermissionRule(ctx context.Context, req *erp.PosP
 	}
 
 	// 解析创建结果
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析创建权限规则响应失败")
 	}
@@ -248,7 +246,7 @@ func (s *sPermission) UpdatePosPermissionRule(ctx context.Context, req *erp.PosP
 	}
 
 	// 解析更新结果
-	j, err := gjson.DecodeToJson(resp.Bytes())
+	j := resp
 	if err != nil {
 		return nil, gerror.Wrapf(err, "解析更新权限规则响应失败")
 	}

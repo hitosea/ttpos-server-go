@@ -19,7 +19,7 @@ message BomInfo {
 
 message BomItem {
   string item_code = 1;      // 物品编码
-  double rate = 2;      // 物品名称
+  double rate = 2;      // 物品价格
   double qty = 3;      // 物品数量
   string uom = 4;      // 物品单位
 }

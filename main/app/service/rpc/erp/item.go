@@ -360,6 +360,25 @@ func (s *erpSrv) SaveUom(ctx context.Context, saveUomReq req.SaveUomReq) error {
 	return nil
 }
 
+func (s *erpSrv) DeleteUom(ctx context.Context, deleteUomReq req.DeleteUomReq) error {
+	client, conn, err := NewErpItemClient()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	result, err := client.DeleteUom(WithSiteCode(context.TODO(), deleteUomReq.SiteCode), &item.DeleteUomReq{
+		Uom: deleteUomReq.UomName,
+	})
+	if err != nil {
+		return err
+	}
+	if result.GetCode() != "0" {
+		return errors.New(result.GetMessage())
+	}
+	return nil
+}
+
 // SaveAttribute 保存属性组
 func (s *erpSrv) SaveAttribute(ctx context.Context, saveAttributeReq req.SaveAttributeReq) error {
 	client, conn, err := NewErpItemClient()
@@ -388,6 +407,41 @@ func (s *erpSrv) SaveAttribute(ctx context.Context, saveAttributeReq req.SaveAtt
 		return err
 	}
 	if result.Code != "0" {
+		return errors.New(result.GetMessage())
+	}
+
+	return nil
+}
+
+// 保存规格
+func (s *erpSrv) SaveFlavor(ctx context.Context, params req.SaveErpFlavorReq) error {
+	client, conn, err := NewErpItemClient()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	// 保存规格值
+	valueList := make([]*item.AttributeValueInfo, 0)
+	for _, value := range params.ValueList {
+		valueList = append(valueList, &item.AttributeValueInfo{
+			AttributeValue: value.ValueName,
+			Abbr:           value.ValueAliasName,
+		})
+	}
+
+	// 保存规格组
+	result, err := client.SaveAttribute(WithSiteCode(ctx, params.SiteCode), &item.AttributeInfo{
+		AttributeName:      params.GroupName,
+		Branch:             params.Branch,
+		CompanyAbbr:        params.CompanyAbbr,
+		AliasName:          params.GroupAliasName,
+		AttributeValueList: valueList,
+	})
+	if err != nil {
+		return err
+	}
+	if result.GetCode() != "0" {
 		return errors.New(result.GetMessage())
 	}
 

@@ -9,4 +9,9 @@ const (
 	TopicDocChange Topic = "erp-doc-change"
 	//TopicItemChange 物品变更
 	TopicItemChange Topic = "erp-item-change"
+
+	TopicSavePosInvoice   = Topic("save-pos-invoice")
+	TopicReturnPosInvoice = Topic("return-pos-invoice")
+	TopicCancelPosInvoice = Topic("cancel-pos-invoice")
+	TopicClosePosEntry    = Topic("close-pos-entry")
 )

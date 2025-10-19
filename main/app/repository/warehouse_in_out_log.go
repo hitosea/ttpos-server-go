@@ -2,6 +2,7 @@ package repository
 
 import (
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -17,6 +18,7 @@ type IWarehouseInOutLogRepo interface {
 
 	// 查询操作
 	GetListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.WarehouseInOutLog, int64, error)
+	GetWarehouseInOutLogList(opts ...DBOption) ([]model.WarehouseInOutLog, error)
 	GetWarehouseInOutLogs(opts ...DBOption) ([]*model.WarehouseInOutLog, error)
 	GetByWarehouseUuid(warehouseUuid uint64, opts ...DBOption) ([]model.WarehouseInOutLog, error)
 	GetByMaterialUuid(materialUuid uint64, opts ...DBOption) ([]model.WarehouseInOutLog, error)
@@ -30,9 +32,14 @@ type IWarehouseInOutLogRepo interface {
 	WhereMaterialUuids(materialUuids []uint64) DBOption
 	WhereMaterialCategoryUuids(materialCategoryUuids []uint64) DBOption
 	WhereSupplierUuids(supplierUuids []uint64) DBOption
+	WhereSupplierErpCodesOrCompanyUuids(supplierErpCodes []string, companyUuids []uint64) DBOption
+	WhereCompanyUuid(companyUuid uint64) DBOption
 	WhereOrderNo(orderNo string) DBOption
 	WhereLogType(logType int) DBOption
+	WhereLogTypeIn(logTypes []int) DBOption
 	WhereScene(scene int) DBOption
+	WhereSceneIn(scenes []int) DBOption
+	WhereSceneNotIn(scenes []int) DBOption
 	WhereCreateTimeBetween(startTime, endTime int) DBOption
 	WhereMaterialNameLike(keyword string) DBOption // 根据物品名称模糊查询
 	OrderByCreateTime(desc bool) DBOption
@@ -215,10 +222,31 @@ func (r *WarehouseInOutLogRepoImpl) WhereLogType(logType int) DBOption {
 	}
 }
 
+// WhereLogTypeIn 日志类型列表条件
+func (r *WarehouseInOutLogRepoImpl) WhereLogTypeIn(logTypes []int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("log_type IN ?", logTypes)
+	}
+}
+
 // WhereScene 场景条件
 func (r *WarehouseInOutLogRepoImpl) WhereScene(scene int) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("scene = ?", scene)
+	}
+}
+
+// WhereSceneIn 场景列表条件
+func (r *WarehouseInOutLogRepoImpl) WhereSceneIn(scenes []int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("scene IN ?", scenes)
+	}
+}
+
+// WhereSceneNotIn 场景列表条件
+func (r *WarehouseInOutLogRepoImpl) WhereSceneNotIn(scenes []int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("scene NOT IN ?", scenes)
 	}
 }
 
@@ -263,4 +291,40 @@ func (r *WarehouseInOutLogRepoImpl) GetWarehouseInOutLogs(opts ...DBOption) ([]*
 	}
 	err := query.Find(&warehouseLogs).Error
 	return warehouseLogs, err
+}
+
+// WhereCompanyUuid 公司UUID条件
+func (r *WarehouseInOutLogRepoImpl) WhereCompanyUuid(companyUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("company_uuid = ?", companyUuid)
+	}
+}
+
+// WhereSupplierErpCodesOrCompanyUuids 供应商erp编码或公司UUID列表条件
+func (r *WarehouseInOutLogRepoImpl) WhereSupplierErpCodesOrCompanyUuids(supplierErpCodes []string, companyUuids []uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("(supplier_erp_code IN ? OR (other_org_uuid IN ? and other_org_type = 1))", supplierErpCodes, companyUuids)
+	}
+}
+
+// WhereSupplierErpCode 供应商erp编码条件
+func (r *WarehouseInOutLogRepoImpl) WhereSupplierErpCode(supplierErpCode string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("supplier_erp_code = ?", supplierErpCode)
+	}
+}
+
+// GetWarehouseInOutLogList 获取仓库出入库日志列表
+func (r *WarehouseInOutLogRepoImpl) GetWarehouseInOutLogList(opts ...DBOption) ([]model.WarehouseInOutLog, error) {
+	var warehouseLogs []model.WarehouseInOutLog
+	query := r.db.Model(&model.WarehouseInOutLog{}).Scopes(NotDeleted)
+	// 应用查询选项
+	for _, opt := range opts {
+		query = opt(query)
+	}
+	err := query.Find(&warehouseLogs).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return warehouseLogs, nil
 }

@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/service/purchase_order"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
@@ -18,7 +19,7 @@ import (
 // PurchaseHandler 采购控制器
 type PurchaseHandler struct {
 	authSrv          service.IAuthSrv
-	purchaseOrderSrv service.IPurchaseOrderSrv
+	purchaseOrderSrv purchase_order.IPurchaseOrderSrv
 }
 
 // GetPurchaseOrderList 获取采购订单列表
@@ -218,7 +219,7 @@ func (h *PurchaseHandler) ApprovePurchaseOrder(c *gin.Context) {
 		var appErr errors.AppError
 		if builtinerrors.As(err, &appErr) {
 			code := appErr.GetCode()
-			if code == constant.CodeMaterialDisabled { // 物品已禁用，请修改物品状态
+			if code == constant.CodeMaterialDisabled || code == constant.CodeWarehouseStockNotEnough { // 物品已禁用，请修改物品状态
 				helper.ErrorWithData(c, code, appErr.GetData(), err)
 				return
 			}
@@ -389,7 +390,7 @@ func RegisterPurchaseHandlers(router gin.IRouter, dbm *database.DBManager, cache
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 
 	// 采购服务
-	purchaseOrderSrv := service.NewPurchaseOrderSrv(dbm)
+	purchaseOrderSrv := purchase_order.NewPurchaseOrderSrv(dbm)
 
 	wrapper := &PurchaseHandler{
 		authSrv:          authSrv,

@@ -272,7 +272,7 @@ class Setting extends BaseModel
         // 处理商家信息图片路径
         if (isset($userData['store']['values']['logoUrl']) && !empty($userData['store']['values']['logoUrl'])) {
             $userData['store']['values']['logoUrl'] = ImgHelp::addImageDomain($userData['store']['values']['logoUrl']);
-        } 
+        }
         // 总权限 - 不开启自助餐 -（v1.1.1需要兼容初始化设置没有键值，但是商家端默认是开启的情况）
         $licenses = request()->licenses;
         if (($licenses['is_open_buffet'] ?? 0) == 0) {
@@ -1255,6 +1255,9 @@ class Setting extends BaseModel
                     'opening_hours' => '',
                     // 外送商品价格比例
                     'delivery_price_ratio' => 100,
+                    'is_batch' => '0', // 是否是分批商品 0-否 1-是
+                    'batch_product_uuids' => [], // 分批商品UUID列表
+                    'batch_tag_num' => 0  // 分批类型数量
                 ],
             ],
         ];

@@ -1,8 +1,10 @@
 package model
 
-import "ttpos-server-go/app/errors"
+import (
+	"ttpos-server-go/app/errors"
+)
 
-// Material 原料信息表 ttpos_material
+// Material 原料信息表 `ttpos_material`
 type Material struct {
 	BaseModel
 	Name                  string  `gorm:"type:text;default:'';column:name;comment:'原料名称'"`
@@ -34,6 +36,7 @@ type Material struct {
 	NotBaseUnitList     []*MaterialUnit    `gorm:"foreignKey:material_uuid;references:uuid"`            // 非基准单位列表
 	ImageFile           *File              `gorm:"foreignKey:image_uuid;references:uuid"`               // 图片
 	RelatedMaterialList []*RelatedMaterial `gorm:"foreignKey:material_uuid;references:uuid"`            // 规格/加料关联材料
+	WarehouseItems      []*WarehouseItem   `gorm:"foreignKey:material_uuid;references:uuid"`            // 仓库物品库存
 }
 
 func (model *Material) SetNil() {
@@ -44,6 +47,16 @@ func (model *Material) SetNil() {
 	model.Category = MaterialCategory{}
 	model.NotBaseUnitList = nil
 	model.ImageFile = nil
+}
+
+// GetStockNum 获取库存数量。获取物品在默认仓库中的库存数量
+func (model *Material) GetStockNum() float64 {
+	for _, warehouseItem := range model.WarehouseItems {
+		if warehouseItem.WarehouseUuid == model.WarehouseUuid {
+			return warehouseItem.Stock
+		}
+	}
+	return 0
 }
 
 // GetValuation
@@ -57,7 +70,7 @@ func (model *Material) GetValuation() float64 {
 // 通过uom名获取单位uuid
 func (model *Material) GetUnitUuidByUom(uom string) (uint64, error) {
 	for _, unit := range model.NotBaseUnitList {
-		if unit.Unit.ErpnextUom == uom {
+		if unit.Unit != nil && unit.Unit.ErpnextUom == uom {
 			return unit.Uuid, nil
 		}
 	}

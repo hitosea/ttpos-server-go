@@ -14,6 +14,10 @@ type IProductSauceRepo interface {
 	UpdateProductBomCard(uuid uint64, productBomCardUuid uint64) error
 	GetSauceByErpCode(erpCode string) (*model.ProductSauce, error)
 	GetSauceByProductBomCardUuid(productBomCardUuid uint64) (*model.ProductSauce, error)
+	GetProductSauceList(opts ...DBOption) []model.ProductSauce
+	UpdateProductSauce(data map[string]any, opts ...DBOption) error
+
+	WithMultiLanguageName(opts ...DBOption) DBOption
 }
 
 type productSauceRepoImpl struct {
@@ -102,4 +106,33 @@ func (r *productSauceRepoImpl) GetSauceByProductBomCardUuid(productBomCardUuid u
 		return nil, errors.WithMessage(err)
 	}
 	return &productSauce, nil
+}
+
+func (r *productSauceRepoImpl) GetProductSauceList(opts ...DBOption) []model.ProductSauce {
+	var sauceList []model.ProductSauce
+	db := r.db.Model(&model.ProductSauce{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	db.Find(&sauceList)
+	return sauceList
+}
+
+func (r *productSauceRepoImpl) UpdateProductSauce(data map[string]any, opts ...DBOption) error {
+	db := r.db.Model(&model.ProductSauce{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	return db.Updates(data).Error
+}
+
+func (r *productSauceRepoImpl) WithMultiLanguageName(opts ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("MultiLanguageName", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
+	}
 }

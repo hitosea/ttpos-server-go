@@ -290,9 +290,11 @@ func (r *warehouseFormRepoImpl) GetValidWarehouseOutFormItem(startTime, endTime 
 	warehouseOutFormItems, err := r.GetWarehouseOutFormItem(
 		func(db *gorm.DB) *gorm.DB {
 			return db.
-				Where("create_time BETWEEN ? AND ?", startTime, endTime). // 时间范围
-				Where("material_uuid > 0").                               // 只统计原材料出库
-				Where("warehouse_uuid <> ?", 0)                           // 只统计有仓库的出库记录
+				Where("create_time BETWEEN ? AND ?", startTime, endTime).        // 时间范围
+				Where("status = ?", constant.WarehouseOutFormItemStatusSuccess). // 只统计已出库的记录
+				Where("revoke_time = 0").                                        // 只统计未撤销的记录
+				Where("material_uuid > 0").                                      // 只统计原材料出库
+				Where("warehouse_uuid <> ?", 0)                                  // 只统计有仓库的出库记录
 		},
 		CommonRepo.Preload(
 			WithPreload{

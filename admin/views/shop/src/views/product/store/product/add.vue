@@ -141,6 +141,7 @@
           product_list: [],
         },
       ],
+      product_printer_uuids: [],
     },
     category: [],
     feed: [],
@@ -157,6 +158,7 @@
     single_select_list: [],
     many_select_list: [[]],
     ing_select_list: [[]],
+    productPrinterList: [],
   });
 
   // 模板引用

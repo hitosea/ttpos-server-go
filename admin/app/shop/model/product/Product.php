@@ -6,12 +6,14 @@ use help\StringHelp;
 use help\ValidateHelp;
 use app\shop\service\CheckService;
 use app\common\model\file\UploadFile;
+use app\shop\model\product\ProductBom;
+use app\common\model\supplier\Printing;
 use app\common\model\store\MultiLanguageName;
+use app\common\model\supplier\PrintingProduct;
 use app\common\model\product\Product as ProductModel;
 use app\common\model\Product\Material as MaterialModel;
 use app\common\model\product\ProductPackageGroup as ProductPackageGroupModel;
 use app\common\model\product\ProductPackageGroupItem as ProductPackageGroupItemModel;
-use app\shop\model\product\ProductBom;
 
 /**
  * 商品模型
@@ -294,8 +296,18 @@ class Product extends ProductModel
             // 套餐商品组
             if ($isPackage) {
                 ProductPackageGroupModel::addPackageGroup($data, $this);
+            } else if (isset($data['product_printer_uuids'])) {
+                // 验证商品打印机
+                if (empty($data['printer_tag_uuid'])) {
+                    $isExistPrintProductSelect = Printing::where('uuid', 'in', $data['product_printer_uuids'])->where('print_product_select', 1)->count();
+                    if ($isExistPrintProductSelect) {
+                        $this->error = '未设置打印标签';
+                        return false;
+                    }
+                }
+                // 新增商品包关联打印机
+                PrintingProduct::createProductPackagePrinter($this['product_id'], $data['product_printer_uuids']);
             }
-
             $this->commit();
             return true;
         } catch (\Exception $e) {
@@ -626,6 +638,19 @@ class Product extends ProductModel
                             ProductBom::where('product_package_uuid', $package->uuid)->update(['status' => 0]);
                         }
                     }
+                }
+                // 新增商品包关联打印机
+                if (isset($data['product_printer_uuids'])) {
+                    // 验证商品打印机
+                    if ($this->printer_tag_uuid == 0) {
+                        $isExistPrintProductSelect = Printing::where('uuid', 'in', $data['product_printer_uuids'])->where('print_product_select', 1)->count();
+                        if ($isExistPrintProductSelect) {
+                            $this->error = '未设置打印标签';
+                            return false;
+                        }
+                    }
+                    // 新增商品包关联打印机
+                    PrintingProduct::createProductPackagePrinter($this['product_id'], $data['product_printer_uuids']);
                 }
             }
             return true;

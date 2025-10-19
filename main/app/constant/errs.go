@@ -52,6 +52,7 @@ const (
 	CodeOrderCheckProductUnCooking = -206 // 有商品未送厨
 	// 关闭桌台检查
 	CodeOrderCheckProductCooking = -207 // 有商品已送厨
+	CodeOrderCheckProductBatch   = -209 // 有商品是分批商品，请前去送厨。弹出分批送厨弹窗
 	CodeOrderCheckSplit          = -210 // 订单已经拆单，请前去收银机操作
 
 	CodeH5OrderTimeLimit = -231 // h5订单时间限制
@@ -97,6 +98,7 @@ const (
 	CodeProductDeleteCanNotDeletePackage = -801 // 商品已关联套餐，无法删除，请先修改套餐
 	CodeProductEditCanNotDeletePackage   = -802 // 商品规格已关联套餐，无法删除，请先修改套餐
 	CodeMaterialDisabled                 = -803 // 物品已停用，您可启用物品后再进行收货
+	CodeWarehouseStockNotEnough          = -804 // 物品库存不足
 )
 
 // 采购订单业务错误码

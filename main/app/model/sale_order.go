@@ -29,9 +29,10 @@ type SaleOrder struct {
 	DeviceId    string `gorm:"column:device_id;type:varchar(255);default:'';comment:设备ID,用于标识订单来源设备.来源h5时，device_id为h5" json:"device_id"`
 
 	// 关联ID字段
-	ConsumerUuid uint64 `gorm:"column:consumer_uuid;type:bigint(20);default:0;comment:消费者ID" json:"consumer_uuid"`
-	CashierUuid  uint64 `gorm:"column:cashier_uuid;type:bigint(20);default:0;comment:收银员ID" json:"cashier_uuid"`
-	SaleBillUuid uint64 `gorm:"column:sale_bill_uuid;type:bigint(20);default:0;comment:销售账单ID" json:"sale_bill_uuid"`
+	ConsumerUuid      uint64 `gorm:"column:consumer_uuid;type:bigint(20);default:0;comment:消费者ID" json:"consumer_uuid"`
+	CashierUuid       uint64 `gorm:"column:cashier_uuid;type:bigint(20);default:0;comment:收银员ID" json:"cashier_uuid"`
+	SaleBillUuid      uint64 `gorm:"column:sale_bill_uuid;type:bigint(20);default:0;comment:销售账单ID" json:"sale_bill_uuid"`
+	StaffShiftLogUuid uint64 `gorm:"column:staff_shift_log_uuid;type:bigint(20);default:0;comment:员工班次记录ID" json:"staff_shift_log_uuid"`
 
 	// 商品金额相关字段
 	ProductAmount         float64 `gorm:"column:product_amount;type:decimal(12,2);default:0;comment:商品金额" json:"product_amount"`
@@ -120,6 +121,70 @@ func (model *SaleOrder) CalcCouponAmount() float64 {
 		couponAmount = couponAmount.Add(decimal.NewFromFloat(coupon.CouponAmount))
 	}
 	return couponAmount.Round(2).InexactFloat64()
+}
+
+// 获取订单中有效售出的商品
+func (model *SaleOrder) GetValidSaleOrderProductList() []*SaleOrderProduct {
+	products := make([]*SaleOrderProduct, 0)
+	for _, saleOrderProduct := range model.SaleOrderProducts {
+		// 删除商品、取消商品、未送厨商品、套餐商品、未接单商品不统计
+		if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || !saleOrderProduct.IsSendKitchen() || saleOrderProduct.IsPackageProduct() || saleOrderProduct.IsUnAcceptOrderBool() {
+			continue
+		}
+		products = append(products, saleOrderProduct)
+	}
+	return products
+}
+
+type MaterialStock struct {
+	MaterialUuid uint64
+	StockNum     float64
+}
+
+// 获取订单中有效售出的商品的材料用量
+func (model *SaleOrder) GetValidSaleOrderProductMaterialList() []*MaterialStock {
+	materialStocks := make(map[uint64]*MaterialStock)
+	saleOrderProducts := model.GetValidSaleOrderProductList()
+	for _, saleOrderProduct := range saleOrderProducts {
+		for _, saleOrderProductBom := range saleOrderProduct.SaleOrderProductBoms {
+			if saleOrderProductBom.IsFlavor() {
+				card := saleOrderProductBom.ProductBom.ProductBomCard
+				for _, relatedMaterial := range card.RelatedMaterials {
+					num := relatedMaterial.GetDecreaseNum(saleOrderProduct.Num) // 某个商品（sale_order_product）的材料消耗量（单位为基准单位）
+					materialStock := materialStocks[relatedMaterial.MaterialUuid]
+					if _, ok := materialStocks[relatedMaterial.MaterialUuid]; ok {
+						materialStock.StockNum = decimal.NewFromFloat(materialStock.StockNum).Add(decimal.NewFromFloat(num)).Round(4).InexactFloat64()
+					} else {
+						materialStock = &MaterialStock{
+							MaterialUuid: relatedMaterial.MaterialUuid,
+							StockNum:     num,
+						}
+						materialStocks[relatedMaterial.MaterialUuid] = materialStock
+					}
+				}
+			} else if saleOrderProductBom.IsSauce() {
+				card := saleOrderProductBom.ProductBom.ProductSauce.ProductBomCard
+				for _, relatedMaterial := range card.RelatedMaterials {
+					num := relatedMaterial.GetDecreaseNum(saleOrderProduct.Num) // 某个商品（sale_order_product）的材料消耗量（单位为基准单位）
+					if materialStock, ok := materialStocks[relatedMaterial.MaterialUuid]; ok {
+						materialStock.StockNum = decimal.NewFromFloat(materialStock.StockNum).Add(decimal.NewFromFloat(num)).Round(4).InexactFloat64()
+					} else {
+						materialStock = &MaterialStock{
+							MaterialUuid: relatedMaterial.MaterialUuid,
+							StockNum:     num,
+						}
+						materialStocks[relatedMaterial.MaterialUuid] = materialStock
+					}
+				}
+			}
+		}
+	}
+
+	materialStocksList := make([]*MaterialStock, 0)
+	for _, materialStock := range materialStocks {
+		materialStocksList = append(materialStocksList, materialStock)
+	}
+	return materialStocksList
 }
 
 // 获取订单应收优惠金额。整单改价、订单抹零、结账抹零、优惠券抵扣、积分抵扣，以上总共的优惠金额（正常是负数，有时候是正数）
@@ -613,7 +678,7 @@ func (model *SaleOrder) GetDelayProductList() []resp.Product {
 }
 
 // 获取销售订单的商品列表
-func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []resp.Product {
+func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool, openIsBatch bool) []resp.Product {
 	productList := make([]resp.Product, 0)
 	for _, saleOrderProduct := range model.SaleOrderProducts {
 		// 套餐子商品不返回
@@ -687,7 +752,21 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []res
 			PackageProductList: resp.PackageProductList{
 				List: packageProductList,
 			},
-			CanEdit: saleOrderProduct.IsCanEdit(),
+			CanEdit:      saleOrderProduct.IsCanEdit(),
+			IsBatch:      saleOrderProduct.IsBatchBool(),
+			ShowBatchTag: saleOrderProduct.IsShowBatchTag(openIsBatch),
+			BatchTagName: func() dto.LocaleResponse {
+				if saleOrderProduct.BatchTag != nil {
+					return saleOrderProduct.BatchTag.MultiLanguageName.GetNames()
+				}
+				return dto.LocaleResponse{}
+			}(),
+			BatchTagColor: func() string {
+				if saleOrderProduct.BatchTag != nil {
+					return saleOrderProduct.BatchTag.Color
+				}
+				return ""
+			}(),
 		}
 		if saleOrderProduct.ProductionOrderProduct != nil {
 			if saleOrderProduct.ProductionOrderProduct.Status == constant.ProductionOrderProductStatusFinished {
@@ -802,7 +881,7 @@ func (model *SaleOrder) NewReverseSettleExchangeMemberPointLog(points float64) *
 }
 
 // 创建退货单
-func (model *SaleOrder) NewReturnOrder(scene string, deliveryFee float64, dutyNo string, lang string, saleOrderProducts []*SaleOrderProduct, buffetCustomers []*SaleOrderBuffetCustomerType, buffetDelays []*SaleOrderBuffetDelayProduct, numMap map[uint64]float64, returnType int, canReturnAmount float64) (*ReturnOrder, error) {
+func (model *SaleOrder) NewReturnOrder(scene string, deliveryFee float64, dutyNo string, lang string, saleOrderProducts []*SaleOrderProduct, buffetCustomers []*SaleOrderBuffetCustomerType, buffetDelays []*SaleOrderBuffetDelayProduct, numMap map[uint64]float64, returnType int, canReturnAmount float64, staffShiftLogUuid uint64) (*ReturnOrder, error) {
 	returnOrderUuid, _ := utils.GetID()
 
 	// 如果退款类型为整单退款，则退款金额=订单最终应收金额-已退款金额
@@ -975,6 +1054,7 @@ func (model *SaleOrder) NewReturnOrder(scene string, deliveryFee float64, dutyNo
 		ReturnOrderAmounts:  returnOrderAmounts,
 		ReturnOrderProducts: returnOrderProducts,
 		DutyNo:              dutyNo,
+		StaffShiftLogUuid:   staffShiftLogUuid,
 	}, nil
 }
 

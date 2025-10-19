@@ -31,6 +31,17 @@ func sentCookingEventHandler() {
 			if len(payload.Products) == 0 {
 				return
 			}
+
+			// 分批商品不打印送厨
+			products := make([]event.OrderProduct, 0)
+			for _, unCookingSaleOrderProduct := range payload.Products {
+				if unCookingSaleOrderProduct.IsBatch {
+					continue
+				}
+				products = append(products, unCookingSaleOrderProduct)
+			}
+			payload.Products = products
+
 			go func() {
 				products := printer_model.Products{}
 				copier.Copy(&products, payload.Products)
@@ -87,7 +98,12 @@ func ReduceStock(db *gorm.DB, saleBillUuid uint64) {
 
 	ProductBoms := make(map[uint64]*model.ProductBom)
 	ProducttPackages := make(map[uint64]*model.ProductPackage)
-	Materials := make(map[uint64]*model.Material)
+	type StockNum struct {
+		MaterialUuid   uint64
+		WarehouseUuid  uint64
+		ReduceStockNum float64
+	}
+	Materials := make(map[uint64]*StockNum)
 	for _, warehouseOutFormItem := range warehouseOutFormItems {
 		warehouseOutFormItem.ReduceStock = constant.WarehouseOutFormItemReduceStockSuccess
 		if warehouseOutFormItem.IsProductBom() { // ProductBom包含规格和小料
@@ -104,21 +120,20 @@ func ReduceStock(db *gorm.DB, saleBillUuid uint64) {
 			}
 		} else if warehouseOutFormItem.IsMaterial() {
 			if Materials[warehouseOutFormItem.MaterialUuid] == nil {
-				Materials[warehouseOutFormItem.MaterialUuid] = warehouseOutFormItem.Material
+				Materials[warehouseOutFormItem.MaterialUuid] = &StockNum{
+					MaterialUuid:   warehouseOutFormItem.MaterialUuid,
+					WarehouseUuid:  warehouseOutFormItem.Material.WarehouseUuid,
+					ReduceStockNum: 0,
+				}
 			}
-			Materials[warehouseOutFormItem.MaterialUuid].StockNum -= warehouseOutFormItem.Num
-			// Materials[warehouseOutFormItem.MaterialUuid].ActualSaleNum += warehouseOutFormItem.Num // TODO 考虑怎么跟商品一起增加实际销量
+			Materials[warehouseOutFormItem.MaterialUuid].ReduceStockNum += warehouseOutFormItem.Num
 		}
 	}
 
 	ProductBomsList := make([]*model.ProductBom, 0)
-	MaterialsList := make([]*model.Material, 0)
 	ProductPackagesList := make([]*model.ProductPackage, 0)
 	for _, productBom := range ProductBoms {
 		ProductBomsList = append(ProductBomsList, productBom)
-	}
-	for _, material := range Materials {
-		MaterialsList = append(MaterialsList, material)
 	}
 	for _, productPackage := range ProducttPackages {
 		ProductPackagesList = append(ProductPackagesList, productPackage)
@@ -133,9 +148,11 @@ func ReduceStock(db *gorm.DB, saleBillUuid uint64) {
 			logger.Logger.Error("SubscribeSentCookingEvent process, UpdateProductBomStockNum failed", zap.Any("saleBillUuid", saleBillUuid), zap.Error(err))
 			return err
 		}
-		if err := base.NewMaterialRepo(tx).UpdateMaterials(MaterialsList); err != nil {
-			logger.Logger.Error("SubscribeSentCookingEvent process, UpdateMaterialStockNum failed", zap.Any("saleBillUuid", saleBillUuid), zap.Error(err))
-			return err
+		for _, material := range Materials {
+			if err := base.NewMaterialRepo(tx).UpdateMaterialsStockNum(material.MaterialUuid, material.WarehouseUuid, -material.ReduceStockNum); err != nil {
+				logger.Logger.Error("SubscribeSentCookingEvent process, UpdateMaterialsStockNum failed", zap.Any("saleBillUuid", saleBillUuid), zap.Error(err))
+				return err
+			}
 		}
 
 		// 更新product_package的actual_sale_num字段

@@ -18,4 +18,5 @@ type Device struct {
 	Platform           int    `gorm:"column:platform;type:tinyint(1);default:0;comment:平台,0-Web-网页, 1-Android-安卓, 2-iPhone-苹果, 3-Mobile-移动端" json:"platform"`
 	UserAgent          string `gorm:"column:user_agent;type:longtext;comment:请求头信息" json:"user_agent"`
 	KdsMode            uint   `gorm:"column:kds_mode;type:tinyint(1);default:0;comment:厨显端模式 0-默认，传菜模式; 1-制作模式; 2-制作+传菜模式" json:"kds_mode"`
+	Version            string `gorm:"column:version;type:varchar(50);default:'';comment:客户端版本号" json:"version"`
 }

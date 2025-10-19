@@ -63,6 +63,7 @@ func (s *erpSrv) AddMaterial(ctx context.Context, params req.MaterialAddErpReq) 
 		Classification:     params.Classification,
 		ClassificationCode: params.ClassificationCode,
 		PurchaseUom:        params.PurchaseUom,
+		NotForSale:         params.NotForSale,
 	}
 	result, err := client.SaveItem(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), param)
 	if err != nil {
@@ -136,6 +137,44 @@ func (s *erpSrv) GetSubShopMaterialList(ctx context.Context) (*item.GetItemListR
 	}
 	if result.GetCode() != "0" {
 		return nil, errors.WithMessage(errors.New(result.GetMessage()), "获取总部物品列表失败")
+	}
+	response := &item.GetItemListResp{}
+	if err := result.Data.UnmarshalTo(response); err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+// 获取物品列表请求参数
+type GetMaterialListReq struct {
+	SiteCode        string `json:"site_code"`
+	Branch          string `json:"branch"`
+	CompanyAbbr     string `json:"company_abbr"`
+	ContainDisabled bool   `json:"contain_disabled"`
+}
+
+// 获取物品列表
+func (s *erpSrv) GetMaterialList(ctx context.Context, params GetMaterialListReq) (*item.GetItemListResp, error) {
+	client, conn, err := NewErpItemClient()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	param := &item.GetItemListReq{
+		ItemGroup:       item.ItemGroup_RawMaterial,
+		Branch:          params.Branch,
+		CompanyAbbr:     params.CompanyAbbr,
+		ContainDisabled: params.ContainDisabled,
+	}
+
+	result, err := client.GetItemList(WithSiteCode(ctx.GetContext(), params.SiteCode), param)
+	if err != nil {
+		return nil, err
+	}
+	if result.GetCode() != "0" {
+		return nil, errors.WithMessage(errors.New(result.GetMessage()), "获取物品列表失败")
 	}
 	response := &item.GetItemListResp{}
 	if err := result.Data.UnmarshalTo(response); err != nil {
@@ -227,10 +266,10 @@ func (s *erpSrv) GetProductBomCardList(ctx context.Context) (*manufacturing.GetB
 	defer conn.Close()
 
 	result, err := client.GetBomList(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), &manufacturing.GetBomListReq{
-		CompanyAbbr:    companySetting.ErpnextHeadquarterAbbr,
-		SubCompanyAbbr: companySetting.ErpnextCompanyAbbr,
-		IsActive:       true,
-		IsDefault:      true,
+		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+		//SubCompanyAbbr: companySetting.ErpnextCompanyAbbr,
+		IsActive:  true,
+		IsDefault: true,
 	})
 	if err != nil {
 		return nil, err

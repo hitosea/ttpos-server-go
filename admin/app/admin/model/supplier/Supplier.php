@@ -162,8 +162,170 @@ class Supplier extends SupplierModel
         // 同步设置
         $this->synchronousSetting($this, 'initShopBaseData');
 
+        // 新建默认仓库
+        $this->createDefaultWarehouse($pdo, $prefix);
+
         //
         return true;
+    }
+
+    /**
+     * 创建默认仓库
+     */
+    private function createDefaultWarehouse($pdo, $prefix)
+    {
+        // 判断是否存在默认仓库和在途仓
+        $defaultWarehouse = $pdo->query("SELECT uuid FROM {$prefix}warehouse WHERE type = 'normal' AND is_default = 1 AND delete_time = 0 LIMIT 1")->fetch(\PDO::FETCH_ASSOC);
+        $transitWarehouse = $pdo->query("SELECT uuid FROM {$prefix}warehouse WHERE type = 'transit' AND delete_time = 0 LIMIT 1")->fetch(\PDO::FETCH_ASSOC);
+        if ($defaultWarehouse && $transitWarehouse) {
+            return;
+        }
+
+        // 定义默认仓和在途仓的多语言名称
+        $defaultWarehouseNames = [
+            'en' => "Default warehouse",
+            'zh' => "默认仓库",
+            'zhtw' => "默認倉庫",
+            'th' => "คลังสินค้าเบื้องต้น",
+            'my' => "ပုံမှန်ဂိုဒေါင်",
+            'ja' => "デフォルトの倉庫",
+            'ko' => "기본 창고",
+            'tr' => "Varsayılan depo",
+            'sv' => "Standardlager",
+        ];
+        $transitWarehouseNames = [
+            'en' => "Transit Warehouse",
+            'zh' => "在途仓库",
+            'zhtw' => "在途倉庫",
+            'th' => "คลังสินค้าระหว่างทาง",
+            'my' => "လမ်းခရီးရှိဂိုဒေါင်",
+            'ja' => "輸送中の倉庫",
+            'ko' => "운송 중 창고",
+            'tr' => "Yoldaki depo",
+            'sv' => "Transitlager",
+        ];
+
+        // 生成多语言UUID
+        $defaultNameUuid = createUuid();
+        $transitNameUuid = createUuid();
+
+        $multiLanguageRecords = [];
+        if (!$defaultWarehouse) {
+            $multiLanguageRecords[] = [
+                'uuid' => $defaultNameUuid,
+                'en_name' => $defaultWarehouseNames['en'],
+                'zh_name' => $defaultWarehouseNames['zh'],
+                'zh_tw_name' => $defaultWarehouseNames['zhtw'],
+                'th_name' => $defaultWarehouseNames['th'],
+                'my_name' => $defaultWarehouseNames['my'],
+                'ja_name' => $defaultWarehouseNames['ja'],
+                'ko_name' => $defaultWarehouseNames['ko'],
+                'tr_name' => $defaultWarehouseNames['tr'],
+                'sv_name' => $defaultWarehouseNames['sv'],
+                'create_time' => time(),
+                'update_time' => time(),
+                'delete_time' => 0,
+            ];
+        }
+        if (!$transitWarehouse) {
+            $multiLanguageRecords[] = [
+                'uuid' => $transitNameUuid,
+                'en_name' => $transitWarehouseNames['en'],
+                'zh_name' => $transitWarehouseNames['zh'],
+                'zh_tw_name' => $transitWarehouseNames['zhtw'],
+                'th_name' => $transitWarehouseNames['th'],
+                'my_name' => $transitWarehouseNames['my'],
+                'ja_name' => $transitWarehouseNames['ja'],
+                'ko_name' => $transitWarehouseNames['ko'],
+                'tr_name' => $transitWarehouseNames['tr'],
+                'sv_name' => $transitWarehouseNames['sv'],
+                'create_time' => time(),
+                'update_time' => time(),
+                'delete_time' => 0,
+            ];
+        }
+
+        // 插入多语言记录
+        foreach ($multiLanguageRecords as $multiLanguageRecord) {
+            $pdo->exec($this->getInsertSql($prefix . 'multi_language_name', $multiLanguageRecord, [
+                'uuid',
+                'en_name',
+                'zh_name',
+                'zh_tw_name',
+                'th_name',
+                'my_name',
+                'ja_name',
+                'ko_name',
+                'tr_name',
+                'sv_name',
+                'create_time',
+                'update_time',
+                'delete_time'
+            ]));
+        }
+
+        $warehouses = [];
+        if (!$defaultWarehouse) {
+            $warehouses[] = [
+                'uuid' => createUuid(),
+                'name' => json_encode($defaultWarehouseNames),
+                'multi_language_name_uuid' => $defaultNameUuid,
+                'type' => 'normal',
+                'code' => 'WH01',
+                'status' => 1,
+                'contact' => '',
+                'phone' => '',
+                'address' => '',
+                'is_default' => 1,
+                'erp_code' => '',
+                'headquarter_uuid' => 0,
+                'create_time' => time(),
+                'update_time' => time(),
+                'delete_time' => 0,
+            ];
+        }
+
+        if (!$transitWarehouse) {
+            $warehouses[] = [
+                'uuid' => createUuid(),
+                'name' => json_encode($transitWarehouseNames),
+                'multi_language_name_uuid' => $transitNameUuid,
+                'type' => 'transit',
+                'code' => 'WH02',
+                'status' => 1,
+                'contact' => '',
+                'phone' => '',
+                'address' => '',
+                'is_default' => 0,
+                'erp_code' => '',
+                'headquarter_uuid' => 0,
+                'create_time' => time(),
+                'update_time' => time(),
+                'delete_time' => 0,
+            ];
+        }
+
+
+        // 插入仓库数据
+        foreach ($warehouses as $warehouse) {
+            $pdo->exec($this->getInsertSql($prefix . 'warehouse', $warehouse, [
+                'uuid',
+                'name',
+                'multi_language_name_uuid',
+                'type',
+                'code',
+                'status',
+                'contact',
+                'phone',
+                'address',
+                'is_default',
+                'erp_code',
+                'headquarter_uuid',
+                'create_time',
+                'update_time',
+                'delete_time'
+            ]));
+        }
     }
 
     /**
@@ -280,8 +442,19 @@ class Supplier extends SupplierModel
         ];
         foreach ($paymentMethodList as $paymentMethodItem) {
             $pdo->exec($this->getInsertSql($prefix . 'payment_method', $paymentMethodItem, [
-                'uuid', 'name', 'code', 'payment_name', 'source', 'is_show_cashier', 'is_show_assistant',
-                'is_show_member_recharge', 'status', 'sort', 'default_img', 'create_time', 'update_time',
+                'uuid',
+                'name',
+                'code',
+                'payment_name',
+                'source',
+                'is_show_cashier',
+                'is_show_assistant',
+                'is_show_member_recharge',
+                'status',
+                'sort',
+                'default_img',
+                'create_time',
+                'update_time',
             ]));
         }
     }

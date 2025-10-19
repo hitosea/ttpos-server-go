@@ -37,6 +37,8 @@ func init() {
 	splitOrderEventHandler()
 	// 自动注册"取消拆单"事件处理器
 	cancelSplitOrderEventHandler()
+	// 自动注册"预送厨"事件处理器
+	sentCookingPreEventHandler()
 	// 自动注册"开桌"事件处理器
 	openDeskEventHandler()
 	// 自动注册"换桌,转台"事件处理器

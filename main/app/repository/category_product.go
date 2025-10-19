@@ -28,7 +28,16 @@ func (r *ProductCategoryRepoImpl) GetProductCategoryList() ([]model.ProductCateg
 // UpdateProductCategory 更新商品类别
 func (r *ProductCategoryRepoImpl) UpdateProductCategory(id uint, productCategory model.ProductCategory) error {
 	// 实现更新商品类别的逻辑
-	return r.db.Model(&model.ProductCategory{}).Where("id = ?", id).Updates(productCategory).Error
+	return r.db.Model(&model.ProductCategory{}).Where("id = ?", id).Updates(map[string]any{
+		"name":                     productCategory.Name,
+		"multi_language_name_uuid": productCategory.MultiLanguageNameUuid,
+		"status":                   productCategory.Status,
+		"parent_uuid":              productCategory.ParentUuid,
+		"is_special":               productCategory.IsSpecial,
+		"sort":                     productCategory.Sort,
+		"code":                     productCategory.Code,
+		"update_time":              uint(productCategory.UpdateTime),
+	}).Error
 }
 
 // CreateProductCategory 创建商品类别

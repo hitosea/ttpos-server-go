@@ -35,6 +35,7 @@ type IProductCheckSrv interface {
 	CheckProductMemberDiscount(isEnableMemberDiscount int) error                                                                // 检查商品会员折扣
 	CheckProductOverallDiscount(isEnableOverallDiscount int) error                                                              // 检查商品整单折扣
 	CheckProductPackage(ctx context.Context, db *gorm.DB, param CheckProductPackageParam) (*CheckProductPackageResult, error)   // 检查商品套餐
+	CheckProductPrinter(ctx context.Context, db *gorm.DB, productPackageUuid uint64, productPrinterUuids []uint64) error        // 检查商品打印机
 }
 
 // productCheckSrv 产品检查服务结构
@@ -169,13 +170,15 @@ type CheckProductFlavorResult struct {
 }
 
 type CheckProductFlavorItemResult struct {
-	Uuid         uint64  `json:"uuid"`          // 商品规格UUID
-	Name         string  `json:"name"`          // 商品规格名称
-	BarcodeValue string  `json:"barcode_value"` // 商品规格条码值
-	InternalCode string  `json:"internal_code"` // 商品规格内部编码
-	Price        float64 `json:"price"`         // 商品规格价格
-	BomUuid      uint64  `json:"bom_uuid"`      // 商品bomUUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID
-	IsDelete     bool    `json:"is_delete"`     // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	Uuid             uint64  `json:"uuid"`               // 商品规格UUID
+	Name             string  `json:"name"`               // 商品规格名称
+	BarcodeValue     string  `json:"barcode_value"`      // 商品规格条码值
+	InternalCode     string  `json:"internal_code"`      // 商品规格内部编码
+	Price            float64 `json:"price"`              // 商品规格价格
+	BomUuid          uint64  `json:"bom_uuid"`           // 商品bomUUID, 如果是新增，则传0，编辑或删除时传商品BOM UUID
+	IsDelete         bool    `json:"is_delete"`          // 是否删除, 如果是新增/编辑，则传false，删除时传true
+	ErpnextGroupName string  `json:"erpnext_group_name"` // ERPNext规格组名称
+	ErpnextValueName string  `json:"erpnext_value_name"` // ERPNext规格值名称
 }
 
 func (s *productCheckSrv) CheckProductFlavor(db *gorm.DB, flavors []CheckProductFlavorParam) (*CheckProductFlavorResult, error) {
@@ -246,13 +249,15 @@ func (s *productCheckSrv) CheckProductFlavor(db *gorm.DB, flavors []CheckProduct
 			}
 		}
 		flavorResults = append(flavorResults, CheckProductFlavorItemResult{
-			Uuid:         flavorReq.Uuid,
-			Name:         flavor.Name,
-			BarcodeValue: flavorReq.BarcodeValue,
-			InternalCode: flavorReq.InternalCode,
-			Price:        flavorReq.Price,
-			BomUuid:      flavorReq.BomUuid,
-			IsDelete:     flavorReq.IsDelete,
+			Uuid:             flavorReq.Uuid,
+			Name:             flavor.Name,
+			BarcodeValue:     flavorReq.BarcodeValue,
+			InternalCode:     flavorReq.InternalCode,
+			Price:            flavorReq.Price,
+			BomUuid:          flavorReq.BomUuid,
+			IsDelete:         flavorReq.IsDelete,
+			ErpnextGroupName: flavor.ErpnextGroupName,
+			ErpnextValueName: flavor.ErpnextValueName,
 		})
 		if !isDelete {
 			flavorCount++
@@ -691,4 +696,51 @@ func (s *productCheckSrv) CheckProductPackage(ctx context.Context, db *gorm.DB, 
 		StockNum: stockNum,
 		Groups:   groups,
 	}, nil
+}
+
+func (s *productCheckSrv) CheckProductPrinter(ctx context.Context, db *gorm.DB, productPackageUuid uint64, productPrinterUuids []uint64) error {
+	productPrinterRepo := repository.NewProductPrinterRepo(db)
+	// 如果商品打印机列表为空，则直接返回
+	if len(productPrinterUuids) == 0 {
+		return nil
+	}
+	// 获取商品打印机列表
+	productPrinterList, err := productPrinterRepo.GetProductPrinters()
+	if err != nil {
+		return errors.New("获取商品打印机列表失败")
+	}
+
+	// 将商品打印机列表转换为UUID列表，方便查找
+	printProductSelect := 0
+	existingPrinterUuids := make([]uint64, 0, len(productPrinterList))
+	for _, productPrinter := range productPrinterList {
+		existingPrinterUuids = append(existingPrinterUuids, productPrinter.Uuid)
+		// 获取打印商品选择
+		if slices.Contains(productPrinterUuids, productPrinter.Uuid) && productPrinter.PrintProductSelect == 1 {
+			printProductSelect = productPrinter.PrintProductSelect
+		}
+	}
+
+	// 判断 productPrinterUuids 中的每个UUID是否都在数据库中存在
+	for _, productPrinterUuid := range productPrinterUuids {
+		if !slices.Contains(existingPrinterUuids, productPrinterUuid) {
+			return errors.New("商品打印档口不存在")
+		}
+	}
+
+	// 判断 productPackageUuid 是否在商品包列表中
+	if printProductSelect != 0 {
+		productPackage, err := repository.NewProductPackageRepo(db).GetProductPackage(repository.CommonRepo.WhereByUuid(productPackageUuid))
+		if err != nil {
+			return errors.New("未设置打印标签")
+		}
+		if productPackage.ID == 0 {
+			return errors.New("商品包不存在")
+		}
+		if productPackage.PrinterTagUuid == 0 {
+			return errors.New("未设置打印标签")
+		}
+	}
+
+	return nil
 }

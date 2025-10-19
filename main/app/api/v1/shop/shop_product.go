@@ -19,6 +19,7 @@ import (
 type ProductHandler struct {
 	productSrv    service.IProductSrv    // 商品服务
 	uploadFileSrv service.IUploadFileSrv // 文件上传服务
+	pinterSrv     service.IPrinterSrv    // 打印服务
 }
 
 // GetProductCategoryList 获取商品分类列表
@@ -991,6 +992,25 @@ func (h *ProductHandler) GetProductShopList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetProductPrinterList 获取打印档口列表
+// @Summary 获取打印档口列表
+// @Description 获取打印档口列表
+// @Tags 商家端.商品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.ProductPrinterList}
+// @Router /shop/product/printer_list [get]
+func (h *ProductHandler) GetProductPrinterList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	data, err := h.pinterSrv.GetProductPrinterList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, data)
+}
+
 // SortProductShopList 排序商品列表
 // @Summary 排序商品列表
 // @Description 排序商品列表
@@ -1250,6 +1270,7 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	statisticsSrv := service.NewStatisticsSrv()
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
+	translateSrv := service.NewTranslateSrv(dbm, cache)
 
 	// 创建收银产品处理程序
 	wrapper := ProductHandler{
@@ -1258,8 +1279,10 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 			service.NewLocaleSrv(), // 多语言服务
 			settingSrv,             // 设置服务
 			cache,
+			translateSrv,
 		),
 		uploadFileSrv: service.NewUploadFileSrv(dbm),
+		pinterSrv:     service.NewPrinterSrv(dbm, cache),
 	}
 
 	// 需要认证
@@ -1308,6 +1331,7 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/product/single/list", wrapper.GetProductSingleList) // 获取单规格商品列表
 
 		privateApi.GET("/product/list", wrapper.GetProductShopList)              // 获取商品列表
+		privateApi.GET("/product/printer_list", wrapper.GetProductPrinterList)   // 获取商品打印机列表
 		privateApi.POST("/product/sort", wrapper.SortProductShopList)            // 排序商品列表
 		privateApi.GET("/product/detail", wrapper.GetProductDetail)              // 获取商品详情
 		privateApi.POST("/product/status", wrapper.ProductShopStatus)            // 修改商品状态

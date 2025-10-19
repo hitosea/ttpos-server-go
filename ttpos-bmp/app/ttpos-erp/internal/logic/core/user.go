@@ -5,7 +5,6 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
-	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 )
@@ -44,14 +43,10 @@ func (s *sUser) GetUserByUsername(ctx context.Context, userEmail string) (*erp.U
 	}
 
 	// 解析响应数据
-	j, err := gjson.DecodeToJson(resp.Bytes())
-	if err != nil {
-		g.Log().Error(ctx, "解析用户信息响应失败", err, g.Map{"userEmail": userEmail})
-		return nil, gerror.Wrapf(err, "解析用户信息响应失败")
-	}
+	j := resp
 
 	// 提取用户数据
-	userData := j.Get("data")
+	userData := j.GetJson("data")
 	if userData == nil {
 		g.Log().Error(ctx, "用户不存在", g.Map{"userEmail": userEmail})
 		return nil, gerror.Newf("用户不存在: %s", userEmail)

@@ -107,7 +107,7 @@ class Erpnext extends Controller
         $res = HttpHelp::postRequest('http://nginx/api/v1/admin/erpnext/shop/init', json_encode($params), [
             'X-API-KEY: ' . env('JWT_SECRET'),
             'Accept-Language: ' . request()->header('language'),
-        ]);
+        ], 60);
         if (!$res) {
             return $this->renderError('请求失败');
         }

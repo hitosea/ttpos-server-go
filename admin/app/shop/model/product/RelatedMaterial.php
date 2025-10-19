@@ -79,10 +79,12 @@ class RelatedMaterial extends RelatedMaterialModel
             $db->execute("
                 UPDATE {$prefix}product_bom AS rm 
                 JOIN (
-                    SELECT rms.related_uuid, LEAST(FLOOR(MIN(m.stock_num / rms.num)), 99999999) AS min_stock_num
+                    SELECT rms.related_uuid, LEAST(FLOOR(MIN(m.stock / rms.num)), 99999999) AS min_stock_num
                     FROM {$prefix}related_material AS rms
-                    JOIN {$prefix}material AS m ON rms.material_uuid = m.uuid
+                    JOIN {$prefix}warehouse_item AS m ON rms.material_uuid = m.material_uuid
+                    JOIN {$prefix}warehouse AS w ON m.warehouse_uuid = w.uuid
                     WHERE rms.uuid IN ({$relatedMaterialUuidList})
+                    AND (w.is_default = 1 AND w.headquarter_uuid = 0)
                     GROUP BY rms.uuid
                 ) AS sub ON rm.uuid = sub.related_uuid
                 SET rm.stock_num = sub.min_stock_num

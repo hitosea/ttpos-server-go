@@ -107,6 +107,11 @@ type SaleOrderProduct struct {
 	// ERP相关
 	ErpCode string `gorm:"column:erp_code;type:varchar(255);default:'';comment:ERP系统商品编码;NOT NULL" json:"erp_code"`
 
+	// 分批相关
+	BatchTagUuid uint64 `gorm:"column:batch_tag_uuid;type:bigint(20);not null;default:0;comment:'分批类型UUID'" json:"batch_tag_uuid"`
+	BatchTime    int64  `gorm:"column:batch_time;type:int(10);not null;default:0;comment:'分批时间(时间戳)，表示该商品实际送厨到厨房的时间'" json:"batch_time"`
+	IsBatch      uint8  `gorm:"column:is_batch;type:tinyint(1);not null;default:0;comment:'是否是分批商品, 0-否 1-是'" json:"is_batch"`
+
 	// 关联对象
 	MultiLanguageName          *MultiLanguageName           `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
 	ImageFile                  *File                        `gorm:"foreignKey:image_file_uuid;references:uuid"`
@@ -119,6 +124,7 @@ type SaleOrderProduct struct {
 	ProductionOrderProduct     *ProductionOrderProduct      `gorm:"foreignKey:SaleOrderProductUuid;references:uuid"`
 	H5Order                    *H5Order                     `gorm:"foreignKey:H5OrderUuid;references:uuid"`
 	ProductMustPlan            *ProductMustPlan             `gorm:"foreignKey:MustPlanUuid;references:uuid"`
+	BatchTag                   *BatchTag                    `gorm:"foreignKey:BatchTagUuid;references:uuid"`
 
 	// 内部字段
 	operation        string `gorm:"-"` // 操作类型。add: 加购，sub: 减购
@@ -128,6 +134,26 @@ type SaleOrderProduct struct {
 // IsCookingDeductStock 判断商品是否是下单减库存
 func (model *SaleOrderProduct) IsCookingDeductStock() bool {
 	return model.DeductStockType == constant.ProductPackageDeductStockTypeCooking
+}
+
+// 是否是分批商品
+func (model *SaleOrderProduct) IsBatchBool() bool {
+	return model.IsBatch == 1
+}
+
+// 是否在购物车中显示分批类型标签。 如果商品是分批商品，且有分批类型，则显示分批类型标签
+func (model *SaleOrderProduct) IsShowBatchTag(openIsBatch bool) bool {
+	if !openIsBatch { // 如果未开启分批商品，则不显示分批类型标签
+		return false
+	}
+	return model.IsBatchBool() && model.BatchTagUuid != 0
+}
+
+// 分批商品的送厨状态有两个阶段：阶段1-预送厨 阶段2-已送厨
+// 是否处于预送厨阶段
+func (model *SaleOrderProduct) IsPreCooking() bool {
+	// status是已送厨，不能再操作商品，只能退菜。且没有被标记分批类型，所以是预送厨阶段
+	return model.Status == constant.SaleOrderProductStatusCooking && model.BatchTagUuid == 0
 }
 
 // 获取商品的原材料
@@ -651,6 +677,13 @@ func (model *SaleOrderProduct) SetCooking(productionOrderUuid uint64) {
 	model.SetUpdate()                         // 标记该model需要更新
 }
 
+// 设置商品状态为送厨状态，分批商品的二阶段：已送厨。 一阶段是预送厨
+func (model *SaleOrderProduct) SetCookingBatch(batchTagUuid uint64, batchTime int64) {
+	model.BatchTagUuid = batchTagUuid
+	model.BatchTime = batchTime
+	model.SetUpdate() // 标记该model需要更新
+}
+
 // 结账检查
 func (model *SaleOrderProduct) CheckOutProduct() (int, string) {
 	// 检查商品是否删除、下架、库存是否充足、价格变动
@@ -796,7 +829,7 @@ func (model *SaleOrderProduct) memberDiscountChanged() bool {
 
 // 商品是否享受整单折扣发生变动
 func (model *SaleOrderProduct) overallDiscountChanged() bool {
-	latestOpenOverallDiscount := model.ProductPackage.OpenOverallDiscount
+	latestOpenOverallDiscount := *model.ProductPackage.OpenOverallDiscount
 	return latestOpenOverallDiscount != model.OpenOverallDiscount
 }
 
@@ -824,6 +857,11 @@ func (model *SaleOrderProduct) SetNil() {
 	model.ReturnOrderProducts = nil
 	model.ProductPackage = nil
 	model.SaleBill = nil
+	model.CancelReasons = nil
+	model.ProductionOrderProduct = nil
+	model.H5Order = nil
+	model.ProductMustPlan = nil
+	model.BatchTag = nil
 }
 
 // 复制销售订单商品
@@ -1508,6 +1546,7 @@ type DefaultSaleOrderProduct struct {
 	PackageGroupUuid        uint64  // 套餐分组uuid
 	ProductType             uint8   // 商品类型
 	PackageSubProductParams string  // 套餐子商品参数
+	IsBatch                 uint8   // 是否是分批商品 0-否 1-是
 }
 
 func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *ProductPackage, operation string) *SaleOrderProduct {
@@ -1542,7 +1581,7 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 		MemberDiscountRate:         def.MemberDiscountRate,
 		MemberCardDiscountRate:     def.MemberCardDiscountRate,
 		CustomDiscountRate:         def.CustomDiscountRate,
-		OpenOverallDiscount:        productPackage.OpenOverallDiscount,
+		OpenOverallDiscount:        *productPackage.OpenOverallDiscount,
 		DeductStockType:            def.DeductStockType,
 		MultiLanguageNameUuid:      def.MultiLanguageNameUuid,
 		ImageFileUuid:              def.ImageFileUuid,
@@ -1555,6 +1594,7 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 		PackageGroupUuid:           def.PackageGroupUuid,
 		ProductType:                def.ProductType,
 		PackageSubProductParams:    def.PackageSubProductParams,
+		IsBatch:                    def.IsBatch,
 	}
 	// 套餐子商品，设置单位数量
 	if def.ProductType == constant.ProductTypePackageSubProduct {

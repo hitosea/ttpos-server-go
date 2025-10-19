@@ -15,6 +15,7 @@ type IProductCategoryRepo interface {
 	CreateProductCategory(productCategory model.ProductCategory) (uint64, error)
 	UpdateProductCategory(id uint, productCategory model.ProductCategory) error
 	GetProductCategory(opts ...DBOption) (*model.ProductCategory, error)
+	WithMultiLanguageName(opts ...DBOption) DBOption
 }
 
 func NewProductCategoryRepo(db *gorm.DB) IProductCategoryRepo {
@@ -149,4 +150,15 @@ func (r *ProductCategoryRepoImpl) GetProductCategory(opts ...DBOption) (*model.P
 		return nil, errors.WithMessage(err)
 	}
 	return &productCategory, nil
+}
+
+func (r *ProductCategoryRepoImpl) WithMultiLanguageName(opts ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("MultiLanguageName", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
+	}
 }

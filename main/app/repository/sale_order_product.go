@@ -102,9 +102,11 @@ func (r *saleOrderProductRepo) CreateSaleOrderProduct(model *model.SaleOrderProd
 }
 
 // UpdateSaleOrderProduct 更新销售订单商品
-func (r *saleOrderProductRepo) UpdateSaleOrderProduct(model *model.SaleOrderProduct) error {
+func (r *saleOrderProductRepo) UpdateSaleOrderProduct(obj *model.SaleOrderProduct) error {
+	object := *obj
+	object.SetNil() // 清空关联对象,防止更新时关联对象被更新
 	db := r.db
-	if err := db.Model(&model).Updates(model).Error; err != nil {
+	if err := db.Model(&model.SaleOrderProduct{}).Where("uuid = ?", object.Uuid).Updates(object).Error; err != nil {
 		return errors.WithMessage(err)
 	}
 	return nil

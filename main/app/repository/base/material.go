@@ -16,6 +16,7 @@ type IMaterialRepo interface {
 	CreateMaterial(material model.Material) (uint64, error)
 	DeleteMaterial(id uint) error
 	UpdateMaterials(materials []*model.Material) error
+	UpdateMaterialsStockNum(materialUuid uint64, warehouseUuid uint64, addStockNum float64) error // 更新仓库物品库存
 	GetMaterialByUuids(uuid []uint64, opts ...repository.DBOption) ([]*model.Material, error)
 
 	WithPreload(query string) repository.DBOption
@@ -94,6 +95,15 @@ func (r *MaterialRepoImpl) UpdateMaterials(materials []*model.Material) error {
 	}
 	if err := r.db.Model(&model.Material{}).Save(list).Error; err != nil {
 		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// 更新仓库物品库存
+// addStockNum表示增加库存数量, 正数表示增加, 负数表示减少
+func (r *MaterialRepoImpl) UpdateMaterialsStockNum(materialUuid uint64, warehouseUuid uint64, addStockNum float64) error {
+	if err := r.db.Model(&model.WarehouseItem{}).Where("material_uuid = ?", materialUuid).Where("warehouse_uuid = ?", warehouseUuid).Update("stock", gorm.Expr("stock + ?", addStockNum)).Error; err != nil {
+		return errors.WithMessage(err, "更新仓库物品库存失败")
 	}
 	return nil
 }

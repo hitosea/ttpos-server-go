@@ -9,8 +9,8 @@ import (
 
 // Cache 缓存接口
 type Cache interface {
-	Set(key string, value interface{}, expiration time.Duration) error
-	Get(key string) (interface{}, bool)
+	Set(key string, value any, expiration time.Duration) error
+	Get(key string) (any, bool)
 	GetBytes(key string) ([]byte, bool)
 	GetBatchBytes(keys []string) (map[string][]byte, []string)
 	Del(keys ...string)

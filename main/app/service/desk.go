@@ -123,11 +123,45 @@ func (s *deskSrv) GetDeskList(ctx context.Context, dbId uint64, req req.DeskList
 		deskResp[i] = desk.GetDeskResp()
 	}
 
+	// 获取门店业务设置
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return resp.DeskListWithPaginationResp{}, errors.WithMessage(err)
+	}
+
+	var batchTagResp []resp.BatchTagRes
+	if businessSetting.OpenIsBatch() {
+		// 统计各个桌台的分批类型数量
+		batchTagCountMap := make(map[uint64]uint)
+		for _, desk := range desks {
+			if desk.SaleBill != nil && desk.SaleBill.BatchTag != nil {
+				batchTagCountMap[desk.SaleBill.BatchTag.Uuid]++
+			}
+		}
+
+		// 获取分批类型列表
+		batchTags, err := repository.NewBatchTagRepo(s.dbm.GetDB(ctx.GetDbId())).GetBatchTagList()
+		if err != nil {
+			return resp.DeskListWithPaginationResp{}, errors.WithMessage(err)
+		}
+		batchTagList := make([]resp.BatchTagRes, len(batchTags))
+		for i, batchTag := range batchTags {
+			batchTagList[i] = resp.BatchTagRes{
+				Uuid:       batchTag.Uuid,
+				LocaleName: batchTag.MultiLanguageName.GetNames(),
+				Color:      batchTag.Color,
+				Sort:       batchTag.Sort,
+				Count:      batchTagCountMap[batchTag.Uuid],
+			}
+		}
+		batchTagResp = batchTagList
+	}
 	// 返回响应对象
 	return resp.DeskListWithPaginationResp{
 		List: deskResp,
 		Extra: resp.DeskExtra{
 			UpdateTime: time.Now().Unix(),
+			BatchTags:  batchTagResp,
 		},
 		Meta: dto.PageResponse{
 			PageNo:   req.PageNo,

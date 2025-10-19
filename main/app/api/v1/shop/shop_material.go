@@ -303,32 +303,6 @@ func (h *MaterialHandler) AddMaterial(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
-// AddMaterialByErpItem 从erp同步物品
-// @Summary 从erp同步物品
-// @Description 从erp同步物品
-// @Tags 商家端.物品管理
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Param data body req.MaterialAddErpReq true "物品添加请求"
-// @Success 200 {object} nil "成功"
-// @Failure 400 {object} nil "错误请求"
-// @Router /shop/material/add/erp [post]
-func (h *MaterialHandler) AddMaterialByErpItem(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	// addReq := req.MaterialAddErpReq{}
-	// if err := c.ShouldBindJSON(&addReq); err != nil {
-	// 	helper.HandleValidationError(c, err, addReq, dto.PageReqMessage)
-	// 	return
-	// }
-	err := h.materialSrv.SyncHeadquarterMaterial(ctx)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	helper.Success(c, nil)
-}
-
 // EditMaterial 编辑物品
 // @Summary 编辑物品
 // @Description 编辑物品
@@ -634,13 +608,13 @@ func (h *MaterialHandler) SyncMaterialCategory(c *gin.Context) {
 // @Failure 400 {object} nil "错误请求"
 // @Router /shop/test/product_bom/card/sync [post]
 func (h *MaterialHandler) SyncProductBomCard(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	err := h.materialSrv.SyncProductBomCard(ctx)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	helper.Success(c, nil)
+	// ctx := helper.GetContext(c)
+	// err := h.materialSrv.SyncProductBomCard(ctx)
+	// if err != nil {
+	// 	helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+	// 	return
+	// }
+	// helper.Success(c, nil)
 }
 
 func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
@@ -653,6 +627,7 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 	statisticsSrv := service.NewStatisticsSrv()
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
+	translateSrv := service.NewTranslateSrv(dbm, cache)
 
 	// 创建物品处理程序
 	wrapper := MaterialHandler{
@@ -660,6 +635,7 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 			dbm,                    // 数据库管理器
 			service.NewLocaleSrv(), // 多语言服务
 			settingSrv,
+			translateSrv,
 		),
 	}
 
@@ -689,7 +665,6 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 		privateApi.POST("/material/import/list", wrapper.ImportMaterialList) // 导入物品列表
 		privateApi.POST("/material/import", wrapper.ImportMaterial)          // 导入物品
 
-		privateApi.POST("/material/add/erp", wrapper.AddMaterialByErpItem)            // 从erp同步物品
 		privateApi.POST("/test/material/category/sync", wrapper.SyncMaterialCategory) // 同步物品分类
 		privateApi.POST("/test/product_bom/card/sync", wrapper.SyncProductBomCard)    // 同步成本卡
 	}

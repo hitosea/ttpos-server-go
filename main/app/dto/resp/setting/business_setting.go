@@ -26,12 +26,21 @@ type Business struct {
 	OpeningHours              string                      `json:"opening_hours"`                // 营业时间 18:00-02:00
 	DeliveryPriceRatio        uint                        `json:"delivery_price_ratio"`         // 外送商品价格和商品原价比例. 取值范围1-300， 表示原价的1%到300%
 	StartSerialNo             string                      `json:"start_serial_no"`              // 开始序列号
+	// 分批商品相关
+	IsBatch           string   `json:"is_batch"`            // 是否是分批商品 0-否 1-是
+	BatchProductUuids []uint64 `json:"batch_product_uuids"` // 分批商品UUID列表
+	BatchTagNum       uint     `json:"batch_tag_num"`       // 分批类型数量
 }
 
 type ShopBusiness struct {
 	Business
 	FreeReasonCount       int `json:"free_reason_count"`        // 免单原因数量
 	ReturnFoodReasonCount int `json:"return_food_reason_count"` // 退菜原因数量
+}
+
+// 是否开启了分批送厨商品
+func (resp *Business) OpenIsBatch() bool {
+	return resp.IsBatch == "1"
 }
 
 func (resp *Business) IsAutoClearDesk() bool {

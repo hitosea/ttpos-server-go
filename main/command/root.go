@@ -12,6 +12,7 @@ import (
 	"time"
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/queue"
+	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/tasks"
 	"ttpos-server-go/config"
 	"ttpos-server-go/docs"
@@ -203,25 +204,23 @@ func gracefulShutdown(srv *http.Server) {
 func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 	c := cron.New(cron.WithSeconds())
 
-	// 1秒检查打印
-	// _, _ = c.AddFunc("*/1 * * * * *", func() {
-	// 	printer_tasks.NewPrinterTask(dbm, cache).Execute()
-	// })
-
-	// NOTE: 舍弃5分钟自动切换
-	// 1分钟检查Usb打印是否在线
-	// _, _ = c.AddFunc("0 */2 * * * *", func() {
-	// 	tasks.NewUsbPrintTask(dbm, cache).Execute()
-	// })
-
 	// 删除7天前的打印日志
 	_, _ = c.AddFunc("0 6 * * *", func() {
 		tasks.NewDelPrintTask(dbm, cache).Execute()
 	})
 
-	// 每小时执行销售出库汇总任务
+	// // 每小时执行销售出库汇总任务
 	_, _ = c.AddFunc("0 0 * * * *", func() {
+		// 每5分钟执行一次
+		// _, _ = c.AddFunc("*/5 * * * * *", func() {
+		// _, _ = c.AddFunc("0 * * * * *", func() {
 		tasks.NewDailySalesOutboundSummaryTask(dbm, cache).Execute()
+	})
+
+	// 每分钟执行翻译任务
+	_, _ = c.AddFunc("0 * * * * *", func() {
+		logger.Logger.Info("开始执行翻译任务")
+		service.NewTranslateSrv(dbm, cache).TranslateAll()
 	})
 
 	// 启动定时器

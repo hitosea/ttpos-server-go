@@ -21,16 +21,16 @@ const (
 	// ItemGroupRawMaterial 原材料
 	ItemGroupRawMaterial ItemGroup = "Raw Material"
 	// ItemGroupProducts 商品
-	ItemGroupProducts ItemGroup = "Products"
+	ItemGroupProducts ItemGroup = "CFG Products" // 2.7版本后使用 CFG Products 这个名字
 	// ItemGroupPosAttribute Pos系统中特殊的item ，如 属性/加料
 	ItemGroupPosAttribute ItemGroup = "Pos Attribute"
 	// ItemGroupPosAddon Pos系统中特殊的item ，如 加料
 	ItemGroupPosAddon ItemGroup = "Pos Addon"
 	// ItemGroupOthers 其他
-	ItemGroupOthers ItemGroup = ""
+	ItemGroupOthers ItemGroup = "Others"
 
-	ItemGroupPrefixPosAttributeGroup = "SX" // 属性前缀
-	ItemGroupPrefixPosAddonGroup     = "JL" // 属性前缀
+	ItemGroupPrefixPosAttributeGroup = "SXG" // 属性前缀
+	ItemGroupPrefixPosAddonGroup     = "JLG" // 属性前缀
 
 )
 
@@ -38,8 +38,8 @@ const (
 	ItemCodePrefixProduct      = "SP"  //商品前缀
 	ItemCodePrefixRawMaterial  = "WPR" //原材料前缀
 	ItemCodePrefixPackage      = "TC"  //套餐前缀
-	ItemCodePrefixPosAttribute = "SXZ" // 属性前缀
-	ItemCodePrefixPosAddon     = "JLZ" // 加料前缀
+	ItemCodePrefixPosAttribute = "SXV" // 属性前缀
+	ItemCodePrefixPosAddon     = "JLV" // 加料前缀
 )
 
 // CustomerName 客户名称
