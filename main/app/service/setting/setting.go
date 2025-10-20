@@ -1895,7 +1895,7 @@ func (s *Srv) GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness,
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
 
-	var freeReasonCount, returnFoodReasonCount int64
+	var freeReasonCount, returnFoodReasonCount, orderRemarkCount int64
 	err = db.Model(&model.FreeReason{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&freeReasonCount).Error
 	if err != nil {
 		return setting.ShopBusiness{}, errors.WithMessage(err)
@@ -1904,11 +1904,16 @@ func (s *Srv) GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness,
 	if err != nil {
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
+	err = db.Model(&model.OrderRemark{}).Scopes(repository.NotDeleted).Select("count(*)").Scan(&orderRemarkCount).Error
+	if err != nil {
+		return setting.ShopBusiness{}, errors.WithMessage(err)
+	}
 
 	return setting.ShopBusiness{
 		Business:              businessSetting,
 		FreeReasonCount:       int(freeReasonCount),
 		ReturnFoodReasonCount: int(returnFoodReasonCount),
+		OrderRemarkCount:      int(orderRemarkCount),
 	}, nil
 }
 

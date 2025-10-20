@@ -36,6 +36,7 @@ type ShopBusiness struct {
 	Business
 	FreeReasonCount       int `json:"free_reason_count"`        // 免单原因数量
 	ReturnFoodReasonCount int `json:"return_food_reason_count"` // 退菜原因数量
+	OrderRemarkCount      int `json:"order_remark_count"`       // 整单备注原因数量
 }
 
 // 是否开启了分批送厨商品
