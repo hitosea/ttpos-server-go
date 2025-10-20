@@ -43,3 +43,16 @@ type EditReturnFoodReasonReq struct {
 type DeleteReturnFoodReasonReq struct {
 	Uuid uint64 `json:"uuid" binding:"required"`
 }
+
+type AddOrderRemarkReq struct {
+	LocaleName dto.LocaleResponse `json:"locale_name" binding:"required"` // 名称列表
+}
+
+type EditOrderRemarkReq struct {
+	Uuid       uint64             `json:"uuid" binding:"required"`
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 名称列表
+}
+
+type DeleteOrderRemarkReq struct {
+	Uuid uint64 `json:"uuid" binding:"required"`
+}

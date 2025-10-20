@@ -13,18 +13,24 @@ import (
 	"ttpos-server-go/pkg/captcha"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+
+	"gorm.io/gorm"
 )
 
 type IOtherSrv interface {
 	Generate() (*resp.Captcha, error)
 	GetReturnFoodReasonList(ctx context.Context) (*resp.ReturnFoodReasonResp, error)
 	GetGiftOrFreeReasonList(ctx context.Context) (*resp.GiftOrFreeOrderReasonResp, error)
+	GetOrderRemarkList(ctx context.Context) (*resp.OrderRemarkResp, error)
 	AddFreeOrGiftReason(ctx context.Context, addFreeOrGiftReasonReq req.AddFreeOrGiftReasonReq) error
 	EditFreeOrGiftReason(ctx context.Context, editFreeReason req.EditFreeOrGiftReasonReq) error
 	DeleteFreeOrGiftReason(ctx context.Context, deleteFreeReason req.DeleteFreeOrGiftReasonReq) error
 	AddReturnFoodReason(ctx context.Context, addReturnFoodReason req.AddReturnFoodReasonReq) error
 	EditReturnFoodReason(ctx context.Context, editReturnFoodReason req.EditReturnFoodReasonReq) error
 	DeleteReturnFoodReason(ctx context.Context, deleteReturnFoodReason req.DeleteReturnFoodReasonReq) error
+	AddOrderRemark(ctx context.Context, addOrderRemark req.AddOrderRemarkReq) error
+	EditOrderRemark(ctx context.Context, editOrderRemark req.EditOrderRemarkReq) error
+	DeleteOrderRemark(ctx context.Context, deleteOrderRemark req.DeleteOrderRemarkReq) error
 }
 
 func NewOtherSrv(dbm *database.DBManager, cache cache.Cache, settingSrv setting.ISrv) IOtherSrv {
@@ -242,6 +248,107 @@ func (s *otherSrv) DeleteReturnFoodReason(ctx context.Context, deleteReturnFoodR
 	err := base.NewReturnFoodReasonRepo(db).DeleteReturnFoodReason(deleteReturnFoodReason.Uuid)
 	if err != nil {
 		return errors.WithMessage(err, "删除退菜原因失败")
+	}
+	return nil
+}
+
+// GetOrderRemarkList 获取整单备注列表
+func (s *otherSrv) GetOrderRemarkList(ctx context.Context) (*resp.OrderRemarkResp, error) {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	productRepo := base.NewOrderRemarkRepo(db)
+	list, err := productRepo.GetOrderRemarkList()
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取整单备注列表失败")
+	}
+
+	result := make([]resp.OrderRemark, 0, len(list))
+	for _, remark := range list {
+		result = append(result, resp.OrderRemark{
+			Uuid:       remark.Uuid,
+			LocaleName: remark.MultiLanguageName.GetNames(),
+		})
+	}
+
+	return &resp.OrderRemarkResp{
+		List: result,
+	}, nil
+}
+
+// AddOrderRemark 新增整单备注
+func (s *otherSrv) AddOrderRemark(ctx context.Context, addOrderRemark req.AddOrderRemarkReq) error {
+	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+	if !addOrderRemark.LocaleName.CheckRequiredLocale(storeLanguages) {
+		return errors.New("多语言名称不完整")
+	}
+
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	err := db.Transaction(func(tx *gorm.DB) error {
+		repo := base.NewOrderRemarkRepo(tx)
+		_, err := repo.CreateOrderRemark(model.OrderRemark{
+			Name: addOrderRemark.LocaleName.GetLocale("zh"),
+			MultiLanguageName: model.MultiLanguageName{
+				ZhName:   addOrderRemark.LocaleName.ZH,
+				ThName:   addOrderRemark.LocaleName.TH,
+				EnName:   addOrderRemark.LocaleName.EN,
+				ZhTwName: addOrderRemark.LocaleName.ZHTW,
+				JaName:   addOrderRemark.LocaleName.JA,
+				KoName:   addOrderRemark.LocaleName.KO,
+				MyName:   addOrderRemark.LocaleName.MY,
+				TrName:   addOrderRemark.LocaleName.TR,
+				SvName:   addOrderRemark.LocaleName.SV,
+			},
+		})
+		return err
+	})
+	if err != nil {
+		return errors.WithMessage(err, "保存整单备注失败")
+	}
+	return nil
+}
+
+// EditOrderRemark 编辑整单备注
+func (s *otherSrv) EditOrderRemark(ctx context.Context, editOrderRemark req.EditOrderRemarkReq) error {
+	storeLanguages, _ := s.settingSrv.GetStoreLanguage(ctx)
+	if !editOrderRemark.LocaleName.CheckRequiredLocale(storeLanguages) {
+		return errors.New("多语言名称不完整")
+	}
+
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	err := db.Transaction(func(tx *gorm.DB) error {
+		repo := base.NewOrderRemarkRepo(tx)
+		remark, err := repo.GetOrderRemarkByUuid(editOrderRemark.Uuid)
+		if err != nil {
+			return errors.WithMessage(err, "整单备注不存在")
+		}
+
+		remark.Name = editOrderRemark.LocaleName.GetLocale("zh")
+		remark.MultiLanguageName.ZhName = editOrderRemark.LocaleName.ZH
+		remark.MultiLanguageName.ThName = editOrderRemark.LocaleName.TH
+		remark.MultiLanguageName.EnName = editOrderRemark.LocaleName.EN
+		remark.MultiLanguageName.ZhTwName = editOrderRemark.LocaleName.ZHTW
+		remark.MultiLanguageName.JaName = editOrderRemark.LocaleName.JA
+		remark.MultiLanguageName.KoName = editOrderRemark.LocaleName.KO
+		remark.MultiLanguageName.MyName = editOrderRemark.LocaleName.MY
+		remark.MultiLanguageName.TrName = editOrderRemark.LocaleName.TR
+		remark.MultiLanguageName.SvName = editOrderRemark.LocaleName.SV
+
+		return repo.UpdateOrderRemark(editOrderRemark.Uuid, *remark)
+	})
+	if err != nil {
+		return errors.WithMessage(err, "更新整单备注失败")
+	}
+	return nil
+}
+
+// DeleteOrderRemark 删除整单备注
+func (s *otherSrv) DeleteOrderRemark(ctx context.Context, deleteOrderRemark req.DeleteOrderRemarkReq) error {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	err := db.Transaction(func(tx *gorm.DB) error {
+		repo := base.NewOrderRemarkRepo(tx)
+		return repo.DeleteOrderRemark(deleteOrderRemark.Uuid)
+	})
+	if err != nil {
+		return errors.WithMessage(err, "删除整单备注失败")
 	}
 	return nil
 }
