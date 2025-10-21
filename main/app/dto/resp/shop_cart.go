@@ -69,7 +69,7 @@ func (res *OrderRemarkInfo) GetOrderRemarkResponse() OrderRemarkRes {
 
 	// 按创建时间排序，最新的在最后
 	sort.Slice(result, func(i, j int) bool {
-		return result[i].CreateTime < result[j].CreateTime
+		return result[i].CreateTime > result[j].CreateTime
 	})
 
 	// 判断是否有多个最新的整单备注
