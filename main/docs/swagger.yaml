@@ -10503,6 +10503,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 序列号
+      order_remark:
+        allOf:
+        - $ref: '#/definitions/resp.OrderRemarkRes'
+        description: 订单备注
       product_list:
         allOf:
         - $ref: '#/definitions/resp.ProductionList'
@@ -10552,6 +10556,10 @@ definitions:
       num:
         description: 送厨商品数量
         type: number
+      order_remark:
+        allOf:
+        - $ref: '#/definitions/resp.OrderRemarkRes'
+        description: 整单备注
       product_attribute_names:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'

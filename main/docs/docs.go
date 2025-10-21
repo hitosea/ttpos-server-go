@@ -42760,6 +42760,14 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "order_remark": {
+                    "description": "订单备注",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.OrderRemarkRes"
+                        }
+                    ]
+                },
                 "product_list": {
                     "description": "送厨商品列表",
                     "allOf": [
@@ -42835,6 +42843,14 @@ const docTemplate = `{
                 "num": {
                     "description": "送厨商品数量",
                     "type": "number"
+                },
+                "order_remark": {
+                    "description": "整单备注",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.OrderRemarkRes"
+                        }
+                    ]
                 },
                 "product_attribute_names": {
                     "description": "商品属性",
