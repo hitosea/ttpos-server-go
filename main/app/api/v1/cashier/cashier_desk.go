@@ -32,7 +32,8 @@ import (
 type DeskHandler struct {
 	deskSrv   service.IDeskSrv   // 主服务
 	memberSrv service.IMemberSrv // 会员服务
-	orderSrv  service.IOrderSrv
+	orderSrv  service.IOrderSrv  // 订单服务
+	otherSrv  service.IOtherSrv  // 其他服务
 }
 
 // GetDeskRegionAndType 处理获取桌台的区域和类型
@@ -615,6 +616,27 @@ func (h *DeskHandler) OrderRemark(c *gin.Context) {
 	}
 	//
 	info, err := h.orderSrv.OrderRemark(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
+// OrderRemarkList 处理获取整单备注列表
+// @Summary 获取整单备注列表
+// @Description 获取整单备注列表
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.OrderRemarkResp}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/order/remark/list [get]
+func (h *DeskHandler) OrderRemarkList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	info, err := h.otherSrv.GetOrderRemarkList(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1898,12 +1920,13 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
 	memberSrv := service.NewMemberSrv(dbm, cache)
 	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, service.WithSmsSrv(dbm))
-
+	otherSrv := service.NewOtherSrv(dbm, cache, settingSrv)
 	// 初始化处理器
 	wrapper := DeskHandler{
 		deskSrv:   service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv, mustPlanSrv),
 		memberSrv: memberSrv,
 		orderSrv:  orderSrv,
+		otherSrv:  otherSrv,
 	}
 
 	// 需要认证
@@ -1928,6 +1951,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/order/buffet/product/list", wrapper.GetDeskBuffetProductList)                                // 获取自助餐商品列表
 		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)                                          // 桌台订单商品备注
 		privateApi.POST("/desk/order/remark", wrapper.OrderRemark)                                                         // 整单备注
+		privateApi.GET("/desk/order/remark/list", wrapper.OrderRemarkList)                                                 // 获取整单备注列表
 		privateApi.GET("/desk/order/cart/info", wrapper.OrderCartInfo)                                                     // 查询点餐购物车信息
 		privateApi.POST("/desk/order/cart/product/add", wrapper.OrderCartProductAdd)                                       // 向购物车添加商品
 		privateApi.POST("/desk/order/cart/product_package/add", wrapper.OrderCartProductPackageAdd)                        // 向购物车添加套餐
