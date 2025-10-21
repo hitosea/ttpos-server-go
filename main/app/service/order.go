@@ -10293,35 +10293,26 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 	// 订单商品列表
 	items := make([]*selling.PosInvoiceItem, 0)
 	isFreeOrder := saleOrder.IsFreeSaleOrder()
-	// for _, product := range saleOrder.SaleOrderBuffetCustomerTypes {
-	// 	// 自助餐名称
-	// 	buffetName := product.BuffetPackage.MultiLanguageName.EnName
-	// 	items = append(items, &selling.PosInvoiceItem{
-	// 		ItemCode:    "ZZC001",
-	// 		Qty:         float64(product.Num),
-	// 		Rate:        product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
-	// 		Amount:      product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
-	// 		Description: fmt.Sprintf("%s-%s", buffetName, product.Name),
-	// 	})
-	// }
-	// for _, product := range saleOrder.SaleOrderBuffetDelayProducts {
-	// 	buffetName := product.BuffetPackage.MultiLanguageName.EnName
-	// 	items = append(items, &selling.PosInvoiceItem{
-	// 		ItemCode:    "ZZC001",
-	// 		Qty:         float64(product.Num),
-	// 		Rate:        product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
-	// 		Amount:      product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
-	// 		Description: fmt.Sprintf("%s-%s", buffetName, product.Name),
-	// 	})
-	// }
-	// for _, product := range saleOrder.SaleOrderBuffetDelayProducts {
-	// 	items = append(items, &selling.PosInvoiceItem{
-	// 		ItemCode: "ZZC001",
-	// 		Qty:      float64(product.Num),
-	// 		Rate:     product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
-	// 		Amount:   product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
-	// 	})
-	// }
+	for _, product := range saleOrder.SaleOrderBuffetCustomerTypes {
+		// 自助餐名称
+		buffetName := product.BuffetPackage.MultiLanguageName.EnName
+		items = append(items, &selling.PosInvoiceItem{
+			ItemCode:    "ZZC001",
+			Qty:         float64(product.Num),
+			Rate:        product.GetFinalSalePriceNoneTax(),                                                                                                             // 商品未含税价格（折后）
+			Amount:      decimal.NewFromFloat(product.GetFinalSalePriceNoneTax()).Mul(decimal.NewFromFloat(float64(product.Num))).Truncate(3).Round(2).InexactFloat64(), // 商品未含税价格（折后）* 数量
+			Description: fmt.Sprintf("%s-%s", buffetName, product.Name),
+		})
+	}
+	for _, product := range saleOrder.SaleOrderBuffetDelayProducts {
+		items = append(items, &selling.PosInvoiceItem{
+			ItemCode:    "ZZC001",
+			Qty:         float64(product.Num),
+			Rate:        product.Price,                                                                                                             // 商品未含税价格（折后）
+			Amount:      decimal.NewFromFloat(product.Price).Mul(decimal.NewFromFloat(float64(product.Num))).Truncate(3).Round(2).InexactFloat64(), // 商品未含税价格（折后）* 数量
+			Description: fmt.Sprintf("%s", product.Name),
+		})
+	}
 	for _, product := range saleOrder.SaleOrderProducts {
 		// 如果商品已删除，则跳过
 		if product.IsDelete() || product.IsCancelProduct() {

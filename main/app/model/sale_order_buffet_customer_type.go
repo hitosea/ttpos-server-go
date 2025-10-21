@@ -51,6 +51,22 @@ func (model *SaleOrderBuffetCustomerType) GetCustomDiscountRate() float64 {
 	return model.CustomDiscountRate
 }
 
+// 商品未含税价格（折后）
+func (model *SaleOrderBuffetCustomerType) GetFinalSalePriceNoneTax() float64 {
+	// 商品是否含税
+	isTax := true                                // 默认商品含税
+	if model.SalePriceNoTax == model.SalePrice { // 折前价格未含税价格和折前价格相同时，说明商品未含税
+		isTax = false
+	}
+	if isTax {
+		// 商品含税，则返回折后价格-税费
+		return decimal.NewFromFloat(model.Price).Sub(decimal.NewFromFloat(model.TaxFee)).Truncate(3).Round(2).InexactFloat64()
+	} else {
+		// 商品未含税，则返回折后价格
+		return model.Price
+	}
+}
+
 // 设置为空。为了更新数据库数据时，不更新关联对象
 func (model *SaleOrderBuffetCustomerType) SetNil() {
 	model.BuffetPackage = BuffetPackage{}
