@@ -14935,6 +14935,61 @@ paths:
       summary: 桌台订单商品备注
       tags:
       - 点餐助手端.桌台
+  /assistant/desk/order/remark:
+    post:
+      consumes:
+      - application/json
+      description: 桌台订单整单备注
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderRemarkReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 桌台订单整单备注
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/order/remark/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取整单备注列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderRemarkResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取整单备注列表
+      tags:
+      - 点餐助手端.桌台
   /assistant/desk/order/sent_kitchen:
     get:
       consumes:

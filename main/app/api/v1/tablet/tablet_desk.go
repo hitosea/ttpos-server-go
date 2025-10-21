@@ -24,6 +24,7 @@ import (
 type DeskHandler struct {
 	deskSrv  service.IDeskSrv
 	orderSrv service.IOrderSrv
+	otherSrv service.IOtherSrv
 }
 
 // GetDeskList 处理获取桌台列表
@@ -280,6 +281,62 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderRemark 处理桌台订单整单备注
+// @Summary 桌台订单整单备注
+// @Description 桌台订单整单备注
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderRemarkReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/order/remark [post]
+func (h *DeskHandler) OrderRemark(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderRemarkReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	//
+	shopCart, err := h.orderSrv.OrderRemark(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderRemarkList 处理获取整单备注列表
+// @Summary 获取整单备注列表
+// @Description 获取整单备注列表
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.OrderRemarkResp}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/order/remark/list [get]
+func (h *DeskHandler) OrderRemarkList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	info, err := h.otherSrv.GetOrderRemarkList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
 // OrderMustPlanConfirm 确认必点商品
 // @Summary 确认必点商品
 // @Description 确认必点商品
@@ -330,12 +387,13 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
 	memberSrv := service.NewMemberSrv(dbm, cache)
 	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, service.WithSmsSrv(dbm))
-
+	otherSrv := service.NewOtherSrv(dbm, cache, settingSrv)
 	deskSrv := service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv, mustPlanSrv)
 
 	wrapper := &DeskHandler{
 		deskSrv:  deskSrv,
 		orderSrv: orderSrv,
+		otherSrv: otherSrv,
 	}
 
 	// 需要认证
@@ -351,6 +409,8 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/order/sent_kitchen", wrapper.GetSentKitchen)                                 // 获取已送厨商品
 		privateApi.GET("/desk/order/buffet/product/list", wrapper.GetDeskBuffetProductList)                // 获取自助餐商品列表
 		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)                          // 桌台订单商品备注
+		privateApi.POST("/desk/order/remark", wrapper.OrderRemark)                                         // 整单备注
+		privateApi.GET("/desk/order/remark/list", wrapper.OrderRemarkList)                                 // 获取整单备注列表
 		privateApi.POST("/desk/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)                     // 确认必点商品
 	}
 }
