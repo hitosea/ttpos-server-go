@@ -470,7 +470,10 @@ class Material extends BaseModel
             if ($product->hasInventoryAuth()) {
                 $relatedMaterialUuidList = [];
                 foreach ($this->relatedMaterial as $relatedMaterial) {
-                    $relatedMaterialUuidList[] = $relatedMaterial->uuid;
+                    $relatedMaterialList = RelatedMaterial::where('related_uuid', $relatedMaterial->related_uuid)->select();
+                    foreach ($relatedMaterialList as $relatedMaterialItem) {
+                        $relatedMaterialUuidList[] = $relatedMaterialItem->uuid;
+                    }
                 }
 
                 // 更新规格/加料关联材料库存
