@@ -289,7 +289,7 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.OrderRemarkReq true "详情参数"
-// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Success 200 {object} dto.Response{data=resp.DeskPing}
 // @Failure 404 {object} nil "未找到"
 // @Router /tablet/desk/order/remark [post]
 func (h *DeskHandler) OrderRemark(c *gin.Context) {

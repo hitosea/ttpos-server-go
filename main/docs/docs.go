@@ -3026,7 +3026,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.ShopCart"
+                                            "$ref": "#/definitions/resp.DeskPing"
                                         }
                                     }
                                 }
@@ -15629,7 +15629,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.ShopCart"
+                                            "$ref": "#/definitions/resp.H5DeskPing"
                                         }
                                     }
                                 }
@@ -15657,7 +15657,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.桌台"
+                    "扫码点餐"
                 ],
                 "summary": "获取整单备注列表",
                 "responses": {
@@ -26910,7 +26910,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.ShopCart"
+                                            "$ref": "#/definitions/resp.DeskPing"
                                         }
                                     }
                                 }

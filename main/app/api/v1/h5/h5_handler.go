@@ -245,7 +245,7 @@ func (h *Handler) OrderProductRemark(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.OrderRemarkReq true "详情参数"
-// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Success 200 {object} dto.Response{data=resp.H5DeskPing}
 // @Failure 404 {object} nil "未找到"
 // @Router /h5/order/remark [post]
 func (h *Handler) OrderRemark(c *gin.Context) {
@@ -274,7 +274,7 @@ func (h *Handler) OrderRemark(c *gin.Context) {
 // OrderRemarkList 处理获取整单备注列表
 // @Summary 获取整单备注列表
 // @Description 获取整单备注列表
-// @Tags 收银端.桌台
+// @Tags 扫码点餐
 // @Accept json
 // @Produce json
 // @Security JwtToken

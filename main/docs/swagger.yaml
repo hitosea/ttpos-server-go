@@ -14957,7 +14957,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.ShopCart'
+                  $ref: '#/definitions/resp.DeskPing'
               type: object
         "404":
           description: 未找到
@@ -22339,7 +22339,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.ShopCart'
+                  $ref: '#/definitions/resp.H5DeskPing'
               type: object
         "404":
           description: 未找到
@@ -22371,7 +22371,7 @@ paths:
       - JwtToken: []
       summary: 获取整单备注列表
       tags:
-      - 收银端.桌台
+      - 扫码点餐
   /h5/product/category/list:
     get:
       consumes:
@@ -29149,7 +29149,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.ShopCart'
+                  $ref: '#/definitions/resp.DeskPing'
               type: object
         "404":
           description: 未找到
