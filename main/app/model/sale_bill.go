@@ -136,6 +136,26 @@ func (model *SaleBill) GetOrderRemarkRes() (*resp.OrderRemarkRes, error) {
 	return &result, nil
 }
 
+// 获取整单备注信息, 最新的一条
+func (model *SaleBill) GetLatestOrderRemarkRes() *resp.OrderRemarkResItem {
+	orderRemark, err := model.GetOrderRemarkRes()
+	if err != nil {
+		return nil
+	}
+	if orderRemark == nil {
+		return nil
+	}
+	if len(orderRemark.List) == 0 {
+		return nil
+	}
+	for _, remark := range orderRemark.List {
+		if remark.IsLatest {
+			return &remark
+		}
+	}
+	return nil
+}
+
 // 设置为“已取消”状态
 func (model *SaleBill) SetCanceled() {
 	model.Status = constant.SaleBillStatusCanceled
