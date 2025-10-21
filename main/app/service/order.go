@@ -10310,7 +10310,7 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 			Qty:         float64(product.Num),
 			Rate:        product.Price,                                                                                                             // 商品未含税价格（折后）
 			Amount:      decimal.NewFromFloat(product.Price).Mul(decimal.NewFromFloat(float64(product.Num))).Truncate(3).Round(2).InexactFloat64(), // 商品未含税价格（折后）* 数量
-			Description: fmt.Sprintf("%s", product.Name),
+			Description: fmt.Sprintf("Delay:%s", product.Name),
 		})
 	}
 	for _, product := range saleOrder.SaleOrderProducts {
@@ -10598,58 +10598,110 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 	totalTaxFee := decimal.NewFromFloat(0)
 	totalServiceFee := decimal.NewFromFloat(0)
 	for _, product := range returnOrder.ReturnOrderProducts {
-		saleOrderProduct, _, _ := saleOrder.GetSaleOrderProduct(product.SaleOrderProductUuid)
-		if saleOrderProduct.IsPackageSubProduct() {
-			continue // 跳过子商品，因为在套餐商品中已经录入了子商品
-		}
-		if isPartReturn && saleOrderProduct.IsGiftProduct() {
-			continue // 部分退款时，如果有赠菜，先不传给erp
-		}
-		if saleOrderProduct.IsPackageProduct() {
-			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
-			for _, subProduct := range subProducts {
-				packageName := language.JsonToLocaleResponse(saleOrderProduct.Name) // 套餐名称
-				num := decimal.NewFromFloat(product.Num).Mul(decimal.NewFromFloat(subProduct.UnitNum)).Round(3).InexactFloat64()
+		if product.ProductType == constant.ReturnOrderProductTypeSaleOrderProduct {
+			saleOrderProduct, _, _ := saleOrder.GetSaleOrderProduct(product.SaleOrderProductUuid)
+			if saleOrderProduct.IsPackageSubProduct() {
+				continue // 跳过子商品，因为在套餐商品中已经录入了子商品
+			}
+			if isPartReturn && saleOrderProduct.IsGiftProduct() {
+				continue // 部分退款时，如果有赠菜，先不传给erp
+			}
+			if saleOrderProduct.IsPackageProduct() {
+				subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+				for _, subProduct := range subProducts {
+					packageName := language.JsonToLocaleResponse(saleOrderProduct.Name) // 套餐名称
+					num := decimal.NewFromFloat(product.Num).Mul(decimal.NewFromFloat(subProduct.UnitNum)).Round(3).InexactFloat64()
+					items = append(items, &selling.PosInvoiceItem{
+						ItemCode:    subProduct.ErpCode,
+						Qty:         -num,
+						Rate:        0,                                                  // 套餐子商品没有单价
+						Amount:      0,                                                  // 套餐子商品没有金额
+						Description: fmt.Sprintf("Sales in package:%s", packageName.EN), // 套餐子商品描述
+						IsFreeItem:  true,
+					})
+				}
+			}
+			taxFee := saleOrderProduct.TaxFee // 商品税费,仅消费税
+			// 无论商品是否“已含税”或“未含税”都是要累积税费
+			{
+				// 累计本次退款操作中退款商品的税费
+				tax := decimal.NewFromFloat(taxFee).Mul(decimal.NewFromFloat(product.Num)).Round(2).InexactFloat64()                                   // 仅消费税
+				serviceTaxFee := decimal.NewFromFloat(saleOrderProduct.ServiceTaxFee).Mul(decimal.NewFromFloat(product.Num)).Round(2).InexactFloat64() // 仅服务费税费
+				totalTaxFee = totalTaxFee.Add(decimal.NewFromFloat(tax)).Add(decimal.NewFromFloat(serviceTaxFee))                                      // +消费税+服务费税费
+				serviceFee := decimal.NewFromFloat(saleOrderProduct.ServiceFee).Mul(decimal.NewFromFloat(product.Num))
+				totalServiceFee = totalServiceFee.Add(serviceFee)
+			}
+			if saleOrderProduct.SalePrice == 0 { // 当商品是0元商品时，可能是通过商品改价为0或原本售价就是0
 				items = append(items, &selling.PosInvoiceItem{
-					ItemCode:    subProduct.ErpCode,
-					Qty:         -num,
-					Rate:        0,                                                  // 套餐子商品没有单价
-					Amount:      0,                                                  // 套餐子商品没有金额
-					Description: fmt.Sprintf("Sales in package:%s", packageName.EN), // 套餐子商品描述
-					IsFreeItem:  true,
+					ItemCode:   product.ErpCode,
+					Qty:        -product.Num,
+					Rate:       0,    // 商品未含税价格（折后）
+					Amount:     0,    // 商品未含税价格（折后）* 数量
+					IsFreeItem: true, // 零元商品当作赠菜
 				})
-			}
-		}
-		taxFee := saleOrderProduct.TaxFee // 商品税费,仅消费税
-		// 无论商品是否“已含税”或“未含税”都是要累积税费
-		{
-			// 累计本次退款操作中退款商品的税费
-			tax := decimal.NewFromFloat(taxFee).Mul(decimal.NewFromFloat(product.Num)).Round(2).InexactFloat64()                                   // 仅消费税
-			serviceTaxFee := decimal.NewFromFloat(saleOrderProduct.ServiceTaxFee).Mul(decimal.NewFromFloat(product.Num)).Round(2).InexactFloat64() // 仅服务费税费
-			totalTaxFee = totalTaxFee.Add(decimal.NewFromFloat(tax)).Add(decimal.NewFromFloat(serviceTaxFee))
-			serviceFee := decimal.NewFromFloat(saleOrderProduct.ServiceFee).Mul(decimal.NewFromFloat(product.Num))
-			totalServiceFee = totalServiceFee.Add(serviceFee)
-		}
-		if saleOrderProduct.SalePrice == 0 { // 当商品是0元商品时，可能是通过商品改价为0或原本售价就是0
-			items = append(items, &selling.PosInvoiceItem{
-				ItemCode:   product.ErpCode,
-				Qty:        -product.Num,
-				Rate:       0,    // 商品未含税价格（折后）
-				Amount:     0,    // 商品未含税价格（折后）* 数量
-				IsFreeItem: true, // 零元商品当作赠菜
-			})
-		} else {
-			item := &selling.PosInvoiceItem{
-				ItemCode: product.ErpCode,
-				Qty:      -product.Num,
-				Rate:     product.GetProductPriceNoneTax(taxFee, saleOrderProduct.HasTax()),        // 商品未含税价格（折后）
-				Amount:   -product.GetProductTotalAmountNoneTax(taxFee, saleOrderProduct.HasTax()), // 商品未含税价格（折后）* 数量
-			}
-			if saleOrderProduct.IsGiftProduct() {
-				item.IsFreeItem = true
-			}
-			items = append(items, item)
+			} else {
+				item := &selling.PosInvoiceItem{
+					ItemCode: product.ErpCode,
+					Qty:      -product.Num,
+					Rate:     product.GetProductPriceNoneTax(taxFee, saleOrderProduct.HasTax()),        // 商品未含税价格（折后）
+					Amount:   -product.GetProductTotalAmountNoneTax(taxFee, saleOrderProduct.HasTax()), // 商品未含税价格（折后）* 数量
+				}
+				if saleOrderProduct.IsGiftProduct() {
+					item.IsFreeItem = true
+				}
+				items = append(items, item)
 
+			}
+		} else if product.ProductType == constant.ReturnOrderProductTypeSaleOrderBuffetCustomer {
+			buffetCustomer, _, _ := saleOrder.GetSaleOrderBuffetCustomerType(product.SaleOrderProductUuid)
+			// 无论商品是否“已含税”或“未含税”都是要累积税费
+			{
+				// 累计本次退款操作中退款商品的税费
+				taxFee := buffetCustomer.TaxFee                                                                                                      // 商品税费,仅消费税
+				tax := decimal.NewFromFloat(taxFee).Mul(decimal.NewFromFloat(product.Num)).Round(2).InexactFloat64()                                 // 仅消费税
+				serviceTaxFee := decimal.NewFromFloat(buffetCustomer.ServiceTaxFee).Mul(decimal.NewFromFloat(product.Num)).Round(2).InexactFloat64() // 仅服务费税费
+				totalTaxFee = totalTaxFee.Add(decimal.NewFromFloat(tax)).Add(decimal.NewFromFloat(serviceTaxFee))                                    // +消费税+服务费税费
+				serviceFee := decimal.NewFromFloat(buffetCustomer.ServiceFee).Mul(decimal.NewFromFloat(product.Num))
+				totalServiceFee = totalServiceFee.Add(serviceFee)
+			}
+			if buffetCustomer.SalePrice == 0 { // 当商品是0元商品时，可能是通过商品改价为0或原本售价就是0
+				item := &selling.PosInvoiceItem{
+					ItemCode:   "ZZC001",
+					Qty:        -product.Num,
+					Rate:       0,
+					Amount:     0,
+					IsFreeItem: true,
+				}
+				items = append(items, item)
+			} else {
+				item := &selling.PosInvoiceItem{
+					ItemCode: "ZZC001",
+					Qty:      -product.Num,
+					Rate:     buffetCustomer.GetFinalSalePriceNoneTax(),
+					Amount:   -decimal.NewFromFloat(buffetCustomer.GetFinalSalePriceNoneTax()).Mul(decimal.NewFromFloat(product.Num)).Truncate(3).Round(2).InexactFloat64(),
+				}
+				items = append(items, item)
+			}
+		} else if product.ProductType == constant.ReturnOrderProductTypeBuffetAddTimeProduct {
+			buffetDelayProduct, _, _ := saleOrder.GetSaleOrderBuffetDelayProduct(product.SaleOrderProductUuid)
+			if buffetDelayProduct.Price == 0 { // 当商品是0元商品时，可能是通过商品改价为0或原本售价就是0
+				item := &selling.PosInvoiceItem{
+					ItemCode:   "ZZC001",
+					Qty:        -product.Num,
+					Rate:       0,
+					Amount:     0,
+					IsFreeItem: true,
+				}
+				items = append(items, item)
+			} else {
+				item := &selling.PosInvoiceItem{
+					ItemCode: "ZZC001",
+					Qty:      -product.Num,
+					Rate:     buffetDelayProduct.Price,
+					Amount:   -decimal.NewFromFloat(buffetDelayProduct.Price).Mul(decimal.NewFromFloat(product.Num)).Truncate(3).Round(2).InexactFloat64(),
+				}
+				items = append(items, item)
+			}
 		}
 	}
 

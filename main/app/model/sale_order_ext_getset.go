@@ -131,6 +131,26 @@ func (model *SaleOrder) GetSaleOrderProduct(saleOrderProductUuid uint64) (*SaleO
 	return nil, 0, errors.New("销售订单商品不存在")
 }
 
+// 返回自助餐顾客类型
+func (model *SaleOrder) GetSaleOrderBuffetCustomerType(saleOrderBuffetCustomerTypeUuid uint64) (*SaleOrderBuffetCustomerType, int, error) {
+	for i, saleOrderBuffetCustomerType := range model.SaleOrderBuffetCustomerTypes {
+		if saleOrderBuffetCustomerTypeUuid == saleOrderBuffetCustomerType.Uuid {
+			return saleOrderBuffetCustomerType, i, nil
+		}
+	}
+	return nil, 0, errors.New("自助餐顾客类型不存在")
+}
+
+// 返回自助餐加钟商品
+func (model *SaleOrder) GetSaleOrderBuffetDelayProduct(saleOrderBuffetDelayProductUuid uint64) (*SaleOrderBuffetDelayProduct, int, error) {
+	for i, saleOrderBuffetDelayProduct := range model.SaleOrderBuffetDelayProducts {
+		if saleOrderBuffetDelayProductUuid == saleOrderBuffetDelayProduct.Uuid {
+			return saleOrderBuffetDelayProduct, i, nil
+		}
+	}
+	return nil, 0, errors.New("自助餐加钟商品不存在")
+}
+
 // 获取退款商品列表
 func (model *SaleOrder) GetSaleOrderProductList(saleOrderProductUuids []uint64) []*SaleOrderProduct {
 	saleOrderProducts := make([]*SaleOrderProduct, 0)
