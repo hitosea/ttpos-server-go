@@ -19,7 +19,7 @@ type IOrderRemarkRepo interface {
 	ExistsByUuids(uuids []uint64) ([][2]uint64, []uint64, error)               // 根据uuid数组验证整单备注是否存在，返回[uuid, 多语言名称UUID]数组和不存在的UUID列表
 	GetOrderRemarkByUuid(uuid uint64) (*model.OrderRemark, error)              // 根据uuid获取整单备注
 	GetOrderRemarks(opts ...repository.DBOption) ([]*model.OrderRemark, error) // 获取整单备注列表
-	GetOrderRemarkListByUuids(uuids []uint64) ([]*model.OrderRemark, error)
+	GetOrderRemarkListByUuids(uuids []uint64) ([]*model.OrderRemark, error)    // 根据uuid数组获取整单备注列表
 }
 
 // NewOrderRemarkRepo 创建新的整单备注仓库
@@ -162,7 +162,7 @@ func (r *OrderRemarkRepoImpl) DeleteOrderRemarks(uuids []uint64) error {
 
 func (r *OrderRemarkRepoImpl) GetOrderRemarkByUuid(uuid uint64) (*model.OrderRemark, error) {
 	var remark model.OrderRemark
-	err := r.db.Where("uuid = ?", uuid).Scopes(repository.NotDeleted).First(&remark).Error
+	err := r.db.Where("uuid = ?", uuid).Scopes(repository.NotDeleted).Preload("MultiLanguageName").First(&remark).Error
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}

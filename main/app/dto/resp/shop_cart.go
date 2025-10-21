@@ -1,6 +1,8 @@
 package resp
 
 import (
+	"encoding/json"
+	"sort"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp/product_resp"
 
@@ -32,18 +34,115 @@ type PackageSelectedInfo struct {
 	AttributeUuidList       []uint64 `json:"attribute_uuid"`             // 属性ID列表
 }
 
+type OrderRemarkRes struct {
+	List []OrderRemarkResItem `json:"list"`
+}
+
+type OrderRemarkResItem struct {
+	IsLatest   bool               `json:"is_latest"`   // 是否是最新备注
+	Remark     dto.LocaleResponse `json:"remark"`      // 备注
+	CreateTime int64              `json:"create_time"` // 创建时间(时间戳)
+}
+
+// 整单备注信息
+type OrderRemarkInfo struct {
+	List []OrderRemarkItem `json:"list"`
+}
+
+func (res *OrderRemarkInfo) ToJson() string {
+	json, err := json.Marshal(res)
+	if err != nil {
+		return ""
+	}
+	return string(json)
+}
+
+func (res *OrderRemarkInfo) GetOrderRemarkResponse() OrderRemarkRes {
+	result := make([]OrderRemarkResItem, 0)
+	for _, item := range res.List {
+		result = append(result, OrderRemarkResItem{
+			IsLatest:   item.IsLatest,
+			Remark:     item.GetOrderRemarkResponse(),
+			CreateTime: item.CreateTime,
+		})
+	}
+
+	// 按创建时间排序，最新的在最后
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].CreateTime < result[j].CreateTime
+	})
+
+	// 判断是否有多个最新的整单备注
+	latestMap := make(map[int64]bool)
+	for _, item := range result {
+		if item.IsLatest {
+			latestMap[item.CreateTime] = true
+		}
+	}
+	if len(latestMap) > 1 {
+		for index, item := range result {
+			if item.IsLatest {
+				result[index].IsLatest = false
+			}
+		}
+		result[len(result)-1].IsLatest = true // 最后一个整单备注是最新的
+	}
+
+	return OrderRemarkRes{
+		List: result,
+	}
+}
+
+type OrderRemarkItem struct {
+	IsLatest   bool                 `json:"is_latest"`   // 是否是最新备注
+	Remarks    []dto.LocaleResponse `json:"remarks"`     // 备注列表
+	Remark     string               `json:"remark"`      // 备注，自定义备注
+	CreateTime int64                `json:"create_time"` // 创建时间(时间戳)
+}
+
+// 获取整单备注响应. item1;item2;custom_remark
+func (item *OrderRemarkItem) GetOrderRemarkResponse() dto.LocaleResponse {
+	name := dto.LocaleResponse{}
+	if len(item.Remarks) > 0 {
+		for _, remark := range item.Remarks {
+			name.EN += remark.EN + ";"
+			name.TH += remark.TH + ";"
+			name.ZH += remark.ZH + ";"
+			name.ZHTW += remark.ZHTW + ";"
+			name.JA += remark.JA + ";"
+			name.KO += remark.KO + ";"
+			name.MY += remark.MY + ";"
+			name.TR += remark.TR + ";"
+			name.SV += remark.SV + ";"
+		}
+	}
+	if item.Remark != "" {
+		name.EN += item.Remark
+		name.TH += item.Remark
+		name.ZH += item.Remark
+		name.ZHTW += item.Remark
+		name.JA += item.Remark
+		name.KO += item.Remark
+		name.MY += item.Remark
+		name.TR += item.Remark
+		name.SV += item.Remark
+	}
+	return name
+}
+
 // 桌台购物车
 type ShopCart struct {
-	SaleBillUuid  uint64               `json:"sale_bill_uuid"`       // 销售账单ID
-	Takeout       *bool                `json:"takeout,omitempty"`    // 是否是打包订单，false:堂食订单 true:打包订单。只有点餐订单才有这个字段
-	IsDeskOrder   bool                 `json:"is_desk_order"`        // 购物车类型 true:桌台购物车 false:点餐购物车
-	IsLock        bool                 `json:"is_lock"`              // 购物车是否锁定 true:锁定 false:未锁定
-	Desk          *DeskInfo            `json:"desk,omitempty"`       // 桌台信息
-	Buffet        *BuffetInfo          `json:"buffet,omitempty"`     // 自助餐信息
-	MustPlans     *ProductMustPlanList `json:"must_plans,omitempty"` // 必点方案列表信息
-	DiningMethod  uint                 `json:"dining_method"`        // 用餐方式 0:堂食 1:打包。与Takeout重复，废弃
-	SaleOrderList []SaleOrder          `json:"sale_order_list"`      // 销售订单列表
-	UpdateTime    int64                `json:"update_time"`          // 更新时间
+	SaleBillUuid  uint64               `json:"sale_bill_uuid"`         // 销售账单ID
+	Takeout       *bool                `json:"takeout,omitempty"`      // 是否是打包订单，false:堂食订单 true:打包订单。只有点餐订单才有这个字段
+	IsDeskOrder   bool                 `json:"is_desk_order"`          // 购物车类型 true:桌台购物车 false:点餐购物车
+	IsLock        bool                 `json:"is_lock"`                // 购物车是否锁定 true:锁定 false:未锁定
+	Desk          *DeskInfo            `json:"desk,omitempty"`         // 桌台信息
+	Buffet        *BuffetInfo          `json:"buffet,omitempty"`       // 自助餐信息
+	MustPlans     *ProductMustPlanList `json:"must_plans,omitempty"`   // 必点方案列表信息
+	DiningMethod  uint                 `json:"dining_method"`          // 用餐方式 0:堂食 1:打包。与Takeout重复，废弃
+	SaleOrderList []SaleOrder          `json:"sale_order_list"`        // 销售订单列表
+	UpdateTime    int64                `json:"update_time"`            // 更新时间
+	OrderRemark   *OrderRemarkRes      `json:"order_remark,omitempty"` // 整单备注信息
 
 	Product *product_resp.Product `json:"product,omitempty"` // 商品信息。 当加购商品时商品价格变化时，返回最新的商品信息
 

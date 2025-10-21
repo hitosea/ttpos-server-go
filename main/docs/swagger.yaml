@@ -4394,6 +4394,22 @@ definitions:
         description: 退款订单UUID
         type: integer
     type: object
+  req.OrderRemarkReq:
+    properties:
+      remark:
+        description: 自定义的整单备注文本
+        type: string
+      remark_uuids:
+        description: 选择的整单备注
+        items:
+          type: integer
+        type: array
+      sale_bill_uuid:
+        description: 销售账单UUID
+        type: integer
+    required:
+    - sale_bill_uuid
+    type: object
   req.OrderReturnProduct:
     properties:
       num:
@@ -9650,6 +9666,26 @@ definitions:
       uuid:
         type: integer
     type: object
+  resp.OrderRemarkRes:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.OrderRemarkResItem'
+        type: array
+    type: object
+  resp.OrderRemarkResItem:
+    properties:
+      create_time:
+        description: 创建时间(时间戳)
+        type: integer
+      is_latest:
+        description: 是否是最新备注
+        type: boolean
+      remark:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 备注
+    type: object
   resp.OrderRemarkResp:
     properties:
       list:
@@ -11629,6 +11665,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.ProductMustPlanList'
         description: 必点方案列表信息
+      order_remark:
+        allOf:
+        - $ref: '#/definitions/resp.OrderRemarkRes'
+        description: 整单备注信息
       product:
         allOf:
         - $ref: '#/definitions/product_resp.Product'
@@ -13020,6 +13060,9 @@ definitions:
       opening_hours:
         description: 营业时间 18:00-02:00
         type: string
+      order_remark_count:
+        description: 整单备注原因数量
+        type: integer
       qr_code:
         description: 电子菜单二维码校验失效值，6位数数字
         type: string
@@ -17449,6 +17492,37 @@ paths:
       security:
       - JwtToken: []
       summary: 桌台订单商品备注
+      tags:
+      - 收银端.桌台
+  /cashier/desk/order/remark:
+    post:
+      consumes:
+      - application/json
+      description: 桌台订单整单备注
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderRemarkReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 桌台订单整单备注
       tags:
       - 收银端.桌台
   /cashier/desk/order/sale_order/create:

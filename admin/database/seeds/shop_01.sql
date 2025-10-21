@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `meal_num` INT(11) NOT NULL DEFAULT 0 COMMENT '就餐人数',
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '订单状态, 0-待付款、1-已完成、2-已取消。',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注(开台备注)',
+    `order_remark` TEXT COMMENT '整单备注JSON。保存整单备注信息，包括备注内容和备注时间',
     -- 收银员名称
     `cashier_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '收银员名称',
 

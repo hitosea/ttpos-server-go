@@ -88,6 +88,7 @@ type IOrderSrv interface {
 	OrderDeskBuffetProductList(ctx context.Context, req req.OrderChangeBuffetProductListReq) (*resp.BuffetProductList, error)                                    // 获取桌台的自助餐商品列表
 	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                                             // 通过桌台uuid获取到销售账单信息
 	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                   // 修改订单商品备注
+	OrderRemark(ctx context.Context, req req.OrderRemarkReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                                 // 修改订单备注
 	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, saleBillUuid uint64, deskUuid uint64, isMember bool) (*model.SaleBillSetting, error)                 // 创建销售账单设置
 	GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error)                                                                     // 通过设备SN获取点餐购物车信息
 	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                              // 获取购物车信息
@@ -4968,6 +4969,94 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 	return info, nil
 }
 
+// OrderRemark 修改订单备注
+func (s *orderSrv) OrderRemark(ctx context.Context, req req.OrderRemarkReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
+	dbId := ctx.GetDbId()
+	db := s.dbm.GetDB(dbId)
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	// 获取信息源
+	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
+
+	// 获取订单信息
+	billInfo, err := orderRepo.GetSaleBillAllInfo(req.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 判断订单状态
+	if err := billInfo.ValidateOrderStatus(ctx.GetSource(), constant.OrderOrderRemark, 0); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 查询整单备注信息
+	orderRemarkList, err := base.NewOrderRemarkRepo(db).GetOrderRemarkListByUuids(req.RemarkUuids)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询整单备注信息失败")
+	}
+	if len(orderRemarkList) != len(req.RemarkUuids) {
+		return nil, errors.WithMessage(errors.New("整单备注信息不存在"), "整单备注信息不存在")
+	}
+
+	// 整单备注信息
+	orderRemark, err := billInfo.GetOrderRemark()
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取整单备注信息失败")
+	}
+
+	// 创建新的备注信息
+	orderRemarkItem := resp.OrderRemarkItem{
+		IsLatest: true,
+		Remark:   req.Remark,
+		Remarks: func() []dto.LocaleResponse {
+			remarks := make([]dto.LocaleResponse, 0)
+			for _, remark := range orderRemarkList {
+				remarks = append(remarks, remark.MultiLanguageName.GetNames())
+			}
+			return remarks
+		}(),
+		CreateTime: time.Now().Unix(),
+	}
+	if orderRemark != nil {
+		// 有历史备注信息
+		// 修改历史备注信息为不是最新
+		for _, remark := range orderRemark.List {
+			remark.IsLatest = false
+		}
+		orderRemark.List = append(orderRemark.List, orderRemarkItem)
+		billInfo.OrderRemark = orderRemark.ToJson()
+	} else {
+		// 没有历史备注信息
+		orderRemarkInfo := &resp.OrderRemarkInfo{
+			List: []resp.OrderRemarkItem{orderRemarkItem},
+		}
+		billInfo.OrderRemark = orderRemarkInfo.ToJson()
+	}
+
+	// 修改订单备注
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		if err := repository.NewOrderRepo(db).UpdateSaleBillOrderRemark(req.SaleBillUuid, billInfo.OrderRemark); err != nil {
+			return errors.WithMessage(err)
+		}
+		return nil
+	}); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 获取新的数据
+	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid, opts...)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return info, nil
+}
+
 // 通过设备SN获取销售账单uuid
 func (s *orderSrv) getSaleBillUuidByDeviceSn(ctx context.Context) (uint64, error) {
 	var saleBillUuid uint64
@@ -5108,6 +5197,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 	}
 
 	takeout := shopCart.SaleBill.IsTakeout()
+	orderRemark, _ := shopCart.SaleBill.GetOrderRemarkRes()
 	shopCartInfo := &resp.ShopCart{
 		SaleBillUuid:  saleBillUuid,
 		IsDeskOrder:   shopCart.IsDeskShopCart(),
@@ -5118,6 +5208,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		DiningMethod:  shopCart.SaleBill.DiningMethod,
 		SaleOrderList: saleOrderList,
 		UpdateTime:    shopCart.SaleBill.UpdateTime,
+		OrderRemark:   orderRemark,
 	}
 	// 如果是桌台购物车
 	if shopCart.IsDeskShopCart() {

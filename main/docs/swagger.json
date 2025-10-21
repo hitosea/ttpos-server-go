@@ -7354,6 +7354,60 @@
                 }
             }
         },
+        "/cashier/desk/order/remark": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "桌台订单整单备注",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "桌台订单整单备注",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderRemarkReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopCart"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/cashier/desk/order/sale_order/create": {
             "post": {
                 "security": [
@@ -33265,6 +33319,29 @@
                 }
             }
         },
+        "req.OrderRemarkReq": {
+            "type": "object",
+            "required": [
+                "sale_bill_uuid"
+            ],
+            "properties": {
+                "remark": {
+                    "description": "自定义的整单备注文本",
+                    "type": "string"
+                },
+                "remark_uuids": {
+                    "description": "选择的整单备注",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.OrderReturnProduct": {
             "type": "object",
             "properties": {
@@ -41007,6 +41084,38 @@
                 }
             }
         },
+        "resp.OrderRemarkRes": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.OrderRemarkResItem"
+                    }
+                }
+            }
+        },
+        "resp.OrderRemarkResItem": {
+            "type": "object",
+            "properties": {
+                "create_time": {
+                    "description": "创建时间(时间戳)",
+                    "type": "integer"
+                },
+                "is_latest": {
+                    "description": "是否是最新备注",
+                    "type": "boolean"
+                },
+                "remark": {
+                    "description": "备注",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                }
+            }
+        },
         "resp.OrderRemarkResp": {
             "type": "object",
             "properties": {
@@ -43936,6 +44045,14 @@
                         }
                     ]
                 },
+                "order_remark": {
+                    "description": "整单备注信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.OrderRemarkRes"
+                        }
+                    ]
+                },
                 "product": {
                     "description": "商品信息。 当加购商品时商品价格变化时，返回最新的商品信息",
                     "allOf": [
@@ -45956,6 +46073,10 @@
                 "opening_hours": {
                     "description": "营业时间 18:00-02:00",
                     "type": "string"
+                },
+                "order_remark_count": {
+                    "description": "整单备注原因数量",
+                    "type": "integer"
                 },
                 "qr_code": {
                     "description": "电子菜单二维码校验失效值，6位数数字",
