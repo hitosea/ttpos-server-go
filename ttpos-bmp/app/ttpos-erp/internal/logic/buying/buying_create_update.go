@@ -44,9 +44,6 @@ func (s *sBuying) CreatePurchaseOrder(ctx context.Context, req *buying.CreatePur
 
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析创建采购订单响应失败")
-	}
 
 	//提交采购订单
 	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypePurchaseOrder, j.Get("data.name").String(), erp.DocstatusSubmitted)
@@ -92,9 +89,6 @@ func (s *sBuying) UpdatePurchaseOrder(ctx context.Context, req *buying.UpdatePur
 
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析更新采购订单响应失败")
-	}
 
 	return &buying.UpdatePurchaseOrderResp{
 		Name:       j.Get("data.name").String(),
@@ -151,47 +145,61 @@ func (s *sBuying) validateUpdatePurchaseOrderReq(req *buying.UpdatePurchaseOrder
 }
 
 // buildCreatePurchaseOrderData 构建创建采购订单的数据
-func (s *sBuying) buildCreatePurchaseOrderData(ctx context.Context, req *buying.CreatePurchaseOrderReq, companyName string) (g.Map, error) {
+func (s *sBuying) buildCreatePurchaseOrderData(ctx context.Context, req *buying.CreatePurchaseOrderReq, companyName string) (*erp.PurchaseOrder, error) {
 	// 基础数据
-	purchaseOrderData := g.Map{
-		"supplier": req.Supplier,
-		"company":  companyName,
+	purchaseOrderData := &erp.PurchaseOrder{
+		Supplier: req.Supplier,
+		Company:  companyName,
 	}
 
 	// 可选字段
 	if len(req.ScheduleDate) > 0 {
-		purchaseOrderData["schedule_date"] = req.ScheduleDate
+		purchaseOrderData.ScheduleDate = req.ScheduleDate
 	}
 	if len(req.Currency) > 0 {
-		purchaseOrderData["currency"] = req.Currency
+		purchaseOrderData.Currency = req.Currency
 	} else {
-		purchaseOrderData["currency"] = "THB" // 默认泰铢
+		purchaseOrderData.Currency = "THB" // 默认泰铢
 	}
-	if len(req.Remarks) > 0 {
-		purchaseOrderData["remarks"] = req.Remarks
-	}
+	// 注意：PurchaseOrder 结构体没有 Remarks 字段，如果需要备注请使用其他字段
 	if len(req.TargetWarehouse) > 0 {
-		purchaseOrderData["set_warehouse"] = req.TargetWarehouse
+		purchaseOrderData.SetWarehouse = req.TargetWarehouse
 	}
 
 	// 构建项目列表
-	items := make([]g.Map, 0, len(req.Items))
+	items := make([]erp.PurchaseOrderItem, 0, len(req.Items))
 	for _, item := range req.Items {
-		itemData := g.Map{
-			"item_code": item.ItemCode,
-			"qty":       item.Qty,
+		itemData := erp.PurchaseOrderItem{
+			ItemCode: item.ItemCode,
+			Qty:      item.Qty,
 		}
 
 		if item.Rate > 0 {
-			itemData["rate"] = item.Rate
+			itemData.Rate = item.Rate
 		}
 		if len(item.Uom) > 0 {
-			itemData["uom"] = item.Uom
+			itemData.Uom = item.Uom
 		}
 
 		items = append(items, itemData)
 	}
-	purchaseOrderData["items"] = items
+	purchaseOrderData.Items = items
+
+	//设置采购价格
+	if req.BuyingPriceList != "" {
+		purchaseOrderData.BuyingPriceList = req.BuyingPriceList
+	} else {
+		//获取默认采购价格表
+		defaultPriceList, err := service.PosPriceList().GetPosPriceListByCompany(ctx, purchaseOrderData.Company)
+		if err != nil {
+			g.Log().Warningf(ctx, "获取采购价格表失败，company: %s", purchaseOrderData.Company)
+			defaultPriceList, err = service.PosPriceList().GetDefaultPosPriceList(ctx)
+			if err != nil {
+				return nil, gerror.Wrapf(err, "获取默认采购价格表失败")
+			}
+		}
+		purchaseOrderData.BuyingPriceList = defaultPriceList.BuyingPriceList
+	}
 
 	return purchaseOrderData, nil
 }
