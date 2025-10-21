@@ -284,14 +284,14 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 // OrderRemark 处理桌台订单整单备注
 // @Summary 桌台订单整单备注
 // @Description 桌台订单整单备注
-// @Tags 收银端.桌台
+// @Tags 平板端.桌台
 // @Accept json
 // @Produce json
 // @Security JwtToken
 // @param data body req.OrderRemarkReq true "详情参数"
 // @Success 200 {object} dto.Response{data=resp.ShopCart}
 // @Failure 404 {object} nil "未找到"
-// @Router /cashier/desk/order/remark [post]
+// @Router /tablet/desk/order/remark [post]
 func (h *DeskHandler) OrderRemark(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
@@ -319,13 +319,13 @@ func (h *DeskHandler) OrderRemark(c *gin.Context) {
 // OrderRemarkList 处理获取整单备注列表
 // @Summary 获取整单备注列表
 // @Description 获取整单备注列表
-// @Tags 收银端.桌台
+// @Tags 平板端.桌台
 // @Accept json
 // @Produce json
 // @Security JwtToken
 // @Success 200 {object} dto.Response{data=resp.OrderRemarkResp}
 // @Failure 404 {object} nil "未找到"
-// @Router /cashier/desk/order/remark/list [get]
+// @Router /tablet/desk/order/remark/list [get]
 func (h *DeskHandler) OrderRemarkList(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	info, err := h.otherSrv.GetOrderRemarkList(ctx)
