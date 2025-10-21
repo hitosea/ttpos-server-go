@@ -281,8 +281,21 @@ func (s *otherSrv) AddOrderRemark(ctx context.Context, addOrderRemark req.AddOrd
 		return errors.New("多语言名称不完整")
 	}
 
+	if !addOrderRemark.LocaleName.CheckLen(100) {
+		return errors.New("名称长度不能超过100个字符")
+	}
+
+	// 限制整单备注数量,不能超过100个
+	count, err := base.NewOrderRemarkRepo(s.dbm.GetDB(ctx.GetCompanyUuid())).CountOrderRemark()
+	if err != nil {
+		return errors.WithMessage(err, "获取整单备注数量失败")
+	}
+	if count >= 100 {
+		return errors.New("整单备注数量不能超过100个")
+	}
+
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
-	err := db.Transaction(func(tx *gorm.DB) error {
+	if err := db.Transaction(func(tx *gorm.DB) error {
 		repo := base.NewOrderRemarkRepo(tx)
 		_, err := repo.CreateOrderRemark(model.OrderRemark{
 			Name: addOrderRemark.LocaleName.GetLocale("zh"),
@@ -299,8 +312,7 @@ func (s *otherSrv) AddOrderRemark(ctx context.Context, addOrderRemark req.AddOrd
 			},
 		})
 		return err
-	})
-	if err != nil {
+	}); err != nil {
 		return errors.WithMessage(err, "保存整单备注失败")
 	}
 	return nil

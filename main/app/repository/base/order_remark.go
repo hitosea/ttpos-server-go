@@ -20,6 +20,7 @@ type IOrderRemarkRepo interface {
 	GetOrderRemarkByUuid(uuid uint64) (*model.OrderRemark, error)              // 根据uuid获取整单备注
 	GetOrderRemarks(opts ...repository.DBOption) ([]*model.OrderRemark, error) // 获取整单备注列表
 	GetOrderRemarkListByUuids(uuids []uint64) ([]*model.OrderRemark, error)    // 根据uuid数组获取整单备注列表
+	CountOrderRemark() (int64, error)                                          // 获取整单备注数量
 }
 
 // NewOrderRemarkRepo 创建新的整单备注仓库
@@ -167,4 +168,13 @@ func (r *OrderRemarkRepoImpl) GetOrderRemarkByUuid(uuid uint64) (*model.OrderRem
 		return nil, errors.WithMessage(err)
 	}
 	return &remark, nil
+}
+
+func (r *OrderRemarkRepoImpl) CountOrderRemark() (int64, error) {
+	var count int64
+	err := r.db.Model(&model.OrderRemark{}).Where("delete_time = 0").Count(&count).Error
+	if err != nil {
+		return 0, errors.WithMessage(err)
+	}
+	return count, nil
 }
