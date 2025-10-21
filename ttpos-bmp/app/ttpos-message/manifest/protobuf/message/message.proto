@@ -1,0 +1,96 @@
+// 消息中心服务 Protobuf 定义文件
+// 用于定义消息发送相关的 gRPC 服务接口和消息结构
+syntax = "proto3";
+
+package message;
+
+// Go 包路径配置
+option go_package = "ttpos-bmp/app/ttpos-message/api/message/v1";
+
+// 导入标准库
+import "google/protobuf/timestamp.proto";
+
+// 消息服务接口定义
+// 提供消息发送、查询、重发等相关的 gRPC 服务方法
+service Message {
+  // 发送消息
+  // 接收消息发送请求，创建消息记录并提交到消息队列
+  // 参数：消息发送请求参数
+  // 返回：发送结果
+  rpc SendMessage(SendMessageReq) returns (SendMessageResp);
+  
+  // 查询消息状态
+  // 根据消息UUID查询消息的发送状态和详细信息
+  // 参数：消息UUID
+  // 返回：消息详细信息
+  rpc GetMessageStatus(GetMessageStatusReq) returns (GetMessageStatusResp);
+  
+  // 重发消息
+  // 针对发送失败的消息，支持重新发送
+  // 参数：消息UUID
+  // 返回：重发结果
+  rpc ResendMessage(ResendMessageReq) returns (ResendMessageResp);
+}
+
+// 发送消息请求消息
+// 用于向服务端发送消息发送请求
+message SendMessageReq {
+  string message_uuid = 1;    // 消息唯一标识（由调用方生成，用于幂等性）
+  uint64 template_id = 2;     // 消息模板ID
+  string message_args = 3;    // 消息参数（JSON格式，用于模板变量替换）
+  string message_type = 4;    // 消息类型（email/sms）
+  string recipient = 5;       // 接收人（邮箱地址或手机号）
+  string subject = 6;         // 消息主题（可选，邮件使用）
+  string company_uuid = 7;    // 公司UUID
+  string operator_uuid = 8;   // 操作人UUID
+}
+
+// 发送消息响应消息
+// 服务端返回的消息发送结果
+message SendMessageResp {
+  bool success = 1;           // 是否成功提交到消息队列
+  string message = 2;         // 响应消息描述
+  string message_uuid = 3;    // 消息UUID（用于后续查询）
+}
+
+// 查询消息状态请求消息
+// 用于查询消息的发送状态
+message GetMessageStatusReq {
+  string message_uuid = 1;    // 消息UUID
+}
+
+// 查询消息状态响应消息
+// 服务端返回的消息状态信息
+message GetMessageStatusResp {
+  bool success = 1;           // 查询是否成功
+  string message = 2;         // 响应消息描述
+  MessageInfo message_info = 3; // 消息详细信息
+}
+
+// 消息信息
+// 包含消息的完整状态信息
+message MessageInfo {
+  uint64 message_id = 1;        // 消息ID
+  string message_uuid = 2;      // 消息UUID
+  uint64 template_id = 3;       // 模板ID
+  string message_type = 4;      // 消息类型（email/sms）
+  string recipient = 5;         // 接收人
+  int32 status = 6;             // 消息状态（0-待发送，1-发送中，2-发送成功，3-发送失败）
+  string error_message = 7;     // 错误信息（发送失败时记录）
+  int64 created_at = 8;         // 创建时间（Unix时间戳）
+  int64 send_time = 9;          // 发送时间（Unix时间戳）
+}
+
+// 重发消息请求消息
+// 用于重新发送失败的消息
+message ResendMessageReq {
+  string message_uuid = 1;    // 消息UUID
+}
+
+// 重发消息响应消息
+// 服务端返回的重发结果
+message ResendMessageResp {
+  bool success = 1;           // 重发是否成功
+  string message = 2;         // 响应消息描述
+}
+
