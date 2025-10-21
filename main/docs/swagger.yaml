@@ -22317,6 +22317,61 @@ paths:
       summary: 向购物车添加套餐
       tags:
       - 扫码点餐
+  /h5/order/remark:
+    post:
+      consumes:
+      - application/json
+      description: 点餐订单整单备注
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderRemarkReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 点餐订单整单备注
+      tags:
+      - 扫码点餐
+  /h5/order/remark/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取整单备注列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderRemarkResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取整单备注列表
+      tags:
+      - 收银端.桌台
   /h5/product/category/list:
     get:
       consumes:
