@@ -99,6 +99,68 @@ message GetStockLedgerResp {
   repeated StockLedger stock_ledger_list = 1; // 库存分类账列表，最大返回1000条，超过1000条时，调整查询条件
 }
 
+// 库存盘点明细
+message StockReconciliationItem {
+  string item_code = 1;            // 物品编码，必填
+  string item_name = 2;            // 物品名称, 可选
+  double qty = 3;                  // 盘点数量，必填
+  string warehouse = 4;            // 仓库名称，可选
+  double valuation_rate = 5;       // 估值价格，可选, 默认1
+}
+
+// 保存库存盘点请求
+message SaveStockReconciliationReq {
+  string company_abbr = 1;                            // 公司缩写，必填
+  string branch = 2;                                  // 分支名称，可选
+  string posting_date = 3;                            // 过账日期，必填，格式：YYYY-MM-DD
+  string posting_time = 4;                            // 过账时间，可选，格式：HH:MM:SS，如 18:20:11
+  string purpose = 5;                                 // 用途，可选，默认 Stock Reconciliation / Opening Stock
+  string warehouse = 6;                               // 仓库名称，可选
+  repeated StockReconciliationItem items = 7;         // 盘点明细，必填
+}
+
+// 保存库存盘点响应
+message SaveStockReconciliationResp {
+  string stock_reconciliation_name = 1;               // 库存盘点单号
+}
+
+// 获取库存盘点列表请求
+message GetStockReconciliationListReq {
+  string company_abbr = 1;                            // 公司缩写，必填
+  string branch = 2;                                  // 分支名称，可选
+  string from_date = 3;                               // 开始日期，可选，格式：YYYY-MM-DD
+  string to_date = 4;                                 // 结束日期，可选，格式：YYYY-MM-DD
+  string warehouse = 5;                               // 仓库名称，可选
+  string purpose = 6;                                 // 用途，可选
+  int32 limit = 7;                                    // 查询限制数量，可选，默认100
+}
+
+// 库存盘点信息
+message StockReconciliation {
+  string name = 1;                                    // 单据编号
+  string company = 2;                                 // 公司
+  string purpose = 3;                                 // 用途
+  string posting_date = 4;                            // 过账日期
+  string posting_time = 5;                            // 过账时间
+  string set_warehouse = 6;                           // 设置仓库
+  repeated StockReconciliationItem items = 7;        // 盘点明细
+}
+
+// 获取库存盘点列表响应
+message GetStockReconciliationListResp {
+  repeated StockReconciliation stock_reconciliation_list = 1; // 库存盘点列表
+}
+
+// 提交库存盘点请求
+message SubmitStockReconciliationReq {
+  string stock_reconciliation_name = 1;               // 库存盘点单号，必填
+}
+
+// 提交库存盘点响应
+message SubmitStockReconciliationResp {
+  string message = 1;                                 // 操作结果消息
+}
+
 service StockService {
   // 保存物品申请单
   // 参数：物品申请单信息
@@ -114,4 +176,19 @@ service StockService {
   // 参数：查询条件，包含公司、仓库、物品编码等过滤条件
   // 返回：库存分类账列表
   rpc GetStockLedger(GetStockLedgerReq) returns (erp.ResponseInfo);
+
+  // 保存库存盘点
+  // 参数：库存盘点信息
+  // 返回：操作结果
+  rpc SaveStockReconciliation(SaveStockReconciliationReq) returns (erp.ResponseInfo);
+
+  // 获取库存盘点列表
+  // 参数：查询条件
+  // 返回：库存盘点列表
+  rpc GetStockReconciliationList(GetStockReconciliationListReq) returns (erp.ResponseInfo);
+
+  // 提交库存盘点
+  // 参数：库存盘点单号
+  // 返回：操作结果
+  rpc SubmitStockReconciliation(SubmitStockReconciliationReq) returns (erp.ResponseInfo);
 }

@@ -138,3 +138,76 @@ func (*Controller) GetStockLedger(ctx context.Context, req *stock.GetStockLedger
 	// 返回成功响应
 	return rpc.ApiSuccessWithData("获取库存分类账成功", resp), nil
 }
+
+// SaveStockReconciliation 保存库存盘点
+// 参数：ctx 上下文，req 保存库存盘点请求
+// 返回：保存结果和操作信息
+func (*Controller) SaveStockReconciliation(ctx context.Context, req *stock.SaveStockReconciliationReq) (*api.ResponseInfo, error) {
+	// 参数验证
+	if len(req.CompanyAbbr) == 0 {
+		return rpc.ApiError("公司简称不能为空"), nil
+	}
+	if len(req.PostingDate) == 0 {
+		return rpc.ApiError("过账日期不能为空"), nil
+	}
+	if len(req.Items) == 0 {
+		return rpc.ApiError("盘点明细不能为空"), nil
+	}
+
+	// 验证明细项目
+	for i, item := range req.Items {
+		if len(item.ItemCode) == 0 {
+			return rpc.ApiError(g.I18n().Tf(ctx, "第{0}项物品编码不能为空", i+1)), nil
+		}
+		if item.Qty <= 0 {
+			return rpc.ApiError(g.I18n().Tf(ctx, "第{0}项盘点数量必须大于0", i+1)), nil
+		}
+	}
+
+	// 调用服务层处理业务逻辑
+	resp, err := service.Stock().SaveStockReconciliation(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	// 返回成功响应
+	return rpc.ApiSuccessWithData("保存库存盘点成功", resp), nil
+}
+
+// GetStockReconciliationList 获取库存盘点列表
+// 参数：ctx 上下文，req 查询条件
+// 返回：库存盘点列表和操作结果
+func (*Controller) GetStockReconciliationList(ctx context.Context, req *stock.GetStockReconciliationListReq) (*api.ResponseInfo, error) {
+	// 参数验证
+	if len(req.CompanyAbbr) == 0 {
+		return rpc.ApiError("公司简称不能为空"), nil
+	}
+
+	// 调用服务层获取数据
+	resp, err := service.Stock().GetStockReconciliationList(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	// 返回成功响应
+	return rpc.ApiSuccessWithData("获取库存盘点列表成功", resp), nil
+}
+
+// SubmitStockReconciliation 提交库存盘点
+// 参数：ctx 上下文，req 提交库存盘点请求
+// 返回：提交结果和操作信息
+func (*Controller) SubmitStockReconciliation(ctx context.Context, req *stock.SubmitStockReconciliationReq) (*api.ResponseInfo, error) {
+	// 参数验证
+	if len(req.StockReconciliationName) == 0 {
+		return rpc.ApiError("库存盘点单号不能为空"), nil
+	}
+
+	// 调用服务层处理业务逻辑
+	resp, err := service.Stock().SubmitStockReconciliation(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	// 返回成功响应
+	return rpc.ApiSuccessWithData(resp.Message, resp), nil
+}

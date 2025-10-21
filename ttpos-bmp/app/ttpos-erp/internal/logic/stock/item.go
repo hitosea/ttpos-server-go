@@ -767,11 +767,11 @@ func (s *sItem) SavePosAttribute(ctx context.Context, req *item.SavePosAttribute
 	itemInfo := s.convertPosSpecItemToItemInfo(req.Item)
 
 	// 设置属性物品的特定属性
-	itemInfo.ItemGroup = item.ItemGroup_PosAttribute // 属性物品归类
-	itemInfo.StockUom = "Nos"                        // 默认单位为个
-	itemInfo.ValuationRate = 0                       // 属性物品估值率为0
-	itemInfo.IsStockItem = false                     // 属性物品不是库存物品
-	itemInfo.ItemGroupName = req.Item.ItemGroupName  // 属性物品分组名称,实际名称
+	itemInfo.ItemGroup = item.ItemGroup_PosAttribute             // 属性物品归类
+	itemInfo.StockUom = "Nos"                                    // 默认单位为个
+	itemInfo.ValuationRate = consts.ProductsDefaultValuationRate // 属性物品估值率为0
+	itemInfo.IsStockItem = false                                 // 属性物品不是库存物品
+	itemInfo.ItemGroupName = req.Item.ItemGroupName              // 属性物品分组名称,实际名称
 
 	// 调用通用的保存物品方法
 	return s.SaveItem(ctx, itemInfo)
@@ -785,11 +785,11 @@ func (s *sItem) SavePosAddon(ctx context.Context, req *item.SavePosAddonReq) (re
 	itemInfo := s.convertPosSpecItemToItemInfo(req.Item)
 
 	// 设置加料物品的特定属性
-	itemInfo.ItemGroup = item.ItemGroup_PosAddon    // 加料物品归类为原材料
-	itemInfo.StockUom = "Nos"                       // 默认单位为个
-	itemInfo.ValuationRate = 0                      // 加料物品估值率为0
-	itemInfo.IsStockItem = false                    // 加料物品不是库存物品
-	itemInfo.ItemGroupName = req.Item.ItemGroupName // 加料物品分组名称,实际名称
+	itemInfo.ItemGroup = item.ItemGroup_PosAddon                 // 加料物品归类为原材料
+	itemInfo.StockUom = "Nos"                                    // 默认单位为个
+	itemInfo.ValuationRate = consts.ProductsDefaultValuationRate // 加料物品估值率为0
+	itemInfo.IsStockItem = false                                 // 加料物品不是库存物品
+	itemInfo.ItemGroupName = req.Item.ItemGroupName              // 加料物品分组名称,实际名称
 
 	// 调用通用的保存物品方法
 	return s.SaveItem(ctx, itemInfo)
