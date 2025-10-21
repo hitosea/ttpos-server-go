@@ -60,3 +60,18 @@ type PrinterReportResp struct {
 	NewPrinterName string `json:"new_printer_name"` // 新打印机名称
 	NewPrinterSn   string `json:"new_printer_sn"`   // 新打印机SN
 }
+
+type PrintMenu struct {
+	ID         uint64             `json:"id"`          // 打印菜单ID
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 打印菜单名称
+}
+
+type PrintMenuGroup struct {
+	LocaleName dto.LocaleResponse `json:"locale_name"`
+	GroupType  int                `json:"group_type"` // 分组类型
+	List       []PrintMenu        `json:"list"`       // 打印菜单列表
+}
+
+type PrintMenuListResp struct {
+	List []PrintMenuGroup `json:"list"` // 打印菜单分组列表
+}

@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	respSetting "ttpos-server-go/app/dto/resp/setting"
@@ -12,6 +13,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -22,6 +24,8 @@ import (
 type IPrinterSrv interface {
 	GetProductPrinterList(ctx context.Context) (resp.ProductPrinterList, error)                              // 获取打印档口列表
 	UsbPrinterReport(ctx context.Context, reportReq req.UsbPrinterReportReq) (resp.PrinterReportResp, error) // usb打印机上报
+	// 获取打印菜单列表
+	GetPrintMenuList(ctx context.Context) (resp.PrintMenuListResp, error)
 }
 
 type printerSrv struct {
@@ -236,4 +240,101 @@ func (s *printerSrv) UsbPrinterReport(ctx context.Context, reportReq req.UsbPrin
 		// 返回数据
 		return resp.PrinterReportResp{}, nil
 	}
+}
+
+// GetPrintMenuList 获取打印菜单列表
+func (s *printerSrv) GetPrintMenuList(ctx context.Context) (resp.PrintMenuListResp, error) {
+	printerTemplateRepo := repository.NewPrinterTemplateRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+	templates, err := printerTemplateRepo.GetPrinterTemplates()
+	if err != nil {
+		return resp.PrintMenuListResp{List: make([]resp.PrintMenuGroup, 0)}, errors.ErrInternal
+	}
+
+	// 转换为分组列表
+	var groups []resp.PrintMenuGroup
+	groups = append(groups, resp.PrintMenuGroup{
+		LocaleName: dto.LocaleResponse{
+			ZH:   "收银小票",
+			EN:   "Cashier Receipt",
+			TH:   "รายการชำระเงิน",
+			JA:   "現金レシート",
+			KO:   "현금 영수증",
+			MY:   "Keluaran Tunai",
+			TR:   "Nakit Alış Fişi",
+			SV:   "Kassafaktura",
+			ZHTW: "收銀小票",
+		},
+		GroupType: 1,
+		List:      make([]resp.PrintMenu, 0),
+	})
+	groups = append(groups, resp.PrintMenuGroup{
+		LocaleName: dto.LocaleResponse{
+			ZH:   "厨房小票",
+			EN:   "Kitchen Menu",
+			TH:   "เมนูอาหาร",
+			JA:   "キッチンメニュー",
+			KO:   "주방 메뉴",
+			MY:   "Resipi Makanan",
+			TR:   "Yemek Menüsü",
+			SV:   "Maträtmeny",
+			ZHTW: "廚房菜單",
+		},
+		GroupType: 2,
+		List:      make([]resp.PrintMenu, 0),
+	})
+
+	// 模版ID列表
+	templateOrders := []uint64{
+		constant.PrinterTemplatePreBilling,    // 预结账单
+		constant.PrinterTemplateBilling,       // 结账单
+		constant.PrinterTemplateInvoice,       // 发票
+		constant.PrinterTemplateRecharge,      // 充值单
+		constant.PrinterTemplateBusiness,      // 营业数据
+		constant.PrinterTemplateHandoverSheet, // 交班单
+		constant.PrinterTemplateTakeoutOrder,  // 外送单
+	}
+	templateKitchen := []uint64{
+		constant.PrinterTemplateOneDishOneMenu, // 一菜一单
+		constant.PrinterTemplateEntireOrder,    // 整单打印
+		constant.PrinterTemplateReturnDish,     // 退菜单
+		constant.PrinterTemplateOutMenu,        // 出菜单
+	}
+
+	// 创建模板ID到模板的映射
+	templateMap := make(map[uint64]model.PrinterTemplate)
+	for _, template := range templates {
+		templateMap[template.ID] = template
+	}
+
+	// 按照预定义顺序添加打印菜单
+	for i := range groups {
+		var orderedTemplateIds []uint64
+		if groups[i].GroupType == 1 {
+			orderedTemplateIds = templateOrders
+		} else if groups[i].GroupType == 2 {
+			orderedTemplateIds = templateKitchen
+		}
+
+		for _, templateId := range orderedTemplateIds {
+			if template, exists := templateMap[templateId]; exists {
+				groups[i].List = append(groups[i].List, resp.PrintMenu{
+					ID: template.ID,
+					LocaleName: dto.LocaleResponse{
+						ZH:   i18n.Translate(i18n.LanguageZH, template.Name),
+						EN:   i18n.Translate(i18n.LanguageEN, template.Name),
+						TH:   i18n.Translate(i18n.LanguageTH, template.Name),
+						JA:   i18n.Translate(i18n.LanguageJA, template.Name),
+						KO:   i18n.Translate(i18n.LanguageKO, template.Name),
+						MY:   i18n.Translate(i18n.LanguageMY, template.Name),
+						TR:   i18n.Translate(i18n.LanguageTR, template.Name),
+						SV:   i18n.Translate(i18n.LanguageSV, template.Name),
+						ZHTW: i18n.Translate(i18n.LanguageZHTW, template.Name),
+					},
+				})
+			}
+		}
+	}
+
+	//
+	return resp.PrintMenuListResp{List: groups}, nil
 }
