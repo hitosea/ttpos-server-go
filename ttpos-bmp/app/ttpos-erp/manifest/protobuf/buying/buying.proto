@@ -248,6 +248,21 @@ message UpdatePurchaseOrderResp {
   double grand_total = 3; // 总金额
 }
 
+message GetSupplierItemListReq {
+  string supplier = 1; // 供应商，必填
+  int64 page_no = 2; // 页码，可选默认从1开始
+  int64 page_size = 3; // 每页数量,可选 默认100
+}
+
+message GetSupplierItemListResp {
+  repeated SupplierItemInfo items = 1; // 供应商物品列表
+}
+
+message SupplierItemInfo {
+  string item_code = 1; // 物品编码
+  string item_name = 2; // 物品名称
+}
+
 service BuyingService {
   // 获取内部供应商列表
   // 参数：公司缩写编码
@@ -309,4 +324,9 @@ service BuyingService {
   // 参数：采购订单更新信息
   // 返回：更新结果
   rpc UpdatePurchaseOrder(UpdatePurchaseOrderReq) returns (erp.ResponseInfo);
+
+  // 获取供应商下所有商品
+  // 参数：供应商，分页参数
+  // 返回：供应商物品列表
+  rpc GetSupplierItemList(GetSupplierItemListReq) returns (erp.ResponseInfo);
 }

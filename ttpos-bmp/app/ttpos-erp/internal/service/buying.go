@@ -125,6 +125,7 @@ type (
 		//   - res: 获取供应商列表响应，包含供应商列表和分页信息
 		//   - err: 操作过程中产生的错误（若有）
 		ListSuppliers(ctx context.Context, req *buying.ListSuppliersReq) (*buying.ListSuppliersResp, error)
+		GetSupplierItemList(ctx context.Context, req *buying.GetSupplierItemListReq) (*buying.GetSupplierItemListResp, error)
 	}
 )
 
