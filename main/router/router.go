@@ -93,7 +93,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterSupplierHandlers(shopGroup, dbm, cache)  // 供应商
 			shop.RegisterCallBoardHandlers(shopGroup, dbm, cache) // 叫号展示
 			shop.RegisterWarehouseHandlers(shopGroup, dbm, cache) // 仓库管理
-			//shop.RegisterPrintHandlers(shopGroup, dbm, cache)     // 打印管理
+			shop.RegisterPrintHandlers(shopGroup, dbm, cache)     // 打印管理
 
 			shop.RegisterBatchProductHandlers(shopGroup, dbm, cache) // 分批商品
 		}

@@ -1907,6 +1907,23 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer_template` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '打印机模板表';
 
+CREATE TABLE IF NOT EXISTS `ttpos_printer_customize` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'ID',
+    `name` VARCHAR(255) DEFAULT '' COMMENT '名称',
+    `is_adv` INT(11) DEFAULT 0 COMMENT '是否高级',
+    `is_use` INT(11) DEFAULT 0 COMMENT '是否使用',
+    `data` LONGTEXT COMMENT '定制数据',
+    `create_time` INT(11) NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(11) NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    KEY `idx_name` (`name`),
+    KEY `idx_is_use` (`is_use`),
+    KEY `idx_create_time` (`create_time`),
+    KEY `idx_delete_time` (`delete_time`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '打印机定制表';
+
 CREATE TABLE IF NOT EXISTS `ttpos_printer` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '打印机ID',

@@ -68,3 +68,9 @@ type UsbPrinterReportReq struct {
 	List       []UsbPrinterReportPrinterData `json:"list"`        // 所有在线的USB打印机数据
 	SelectedSn string                        `json:"selected_sn"` // 选择的打印机SN
 }
+
+// EditPrinterCustomizeReq 编辑打印机定制请求
+type EditPrinterCustomizeReq struct {
+	ID   uint64 `json:"id"`   // 打印机定制ID
+	Data string `json:"data"` // 打印机定制数据
+}

@@ -1,7 +1,10 @@
 package service
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -11,6 +14,7 @@ import (
 	respSetting "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
@@ -26,6 +30,12 @@ type IPrinterSrv interface {
 	UsbPrinterReport(ctx context.Context, reportReq req.UsbPrinterReportReq) (resp.PrinterReportResp, error) // usb打印机上报
 	// 获取打印菜单列表
 	GetPrintMenuList(ctx context.Context) (resp.PrintMenuListResp, error)
+	// 获取菜单详情
+	GetPrintMenuDetail(ctx context.Context, id uint64) (resp.PrintMenuDetailResp, error)
+	// 编辑打印机定制
+	EditPrinterCustomize(ctx context.Context, id uint64, data string) error
+	// 删除打印机定制
+	DeletePrinterCustomize(ctx context.Context, id uint64) error
 }
 
 type printerSrv struct {
@@ -337,4 +347,211 @@ func (s *printerSrv) GetPrintMenuList(ctx context.Context) (resp.PrintMenuListRe
 
 	//
 	return resp.PrintMenuListResp{List: groups}, nil
+}
+
+// 解析器
+func (s *printerSrv) Parser(ctx context.Context, templateJSONStr string, testData map[string]interface{}) (string, error) {
+	currencySetting, err := setting.NewSrv(s.dbm, s.cache).GetCurrencySetting(ctx)
+	if err != nil {
+		return "", errors.WithMessage(err, "获取打印设置失败")
+	}
+
+	// 创建解析器
+	unitPosition, err := strconv.ParseInt(currencySetting.UnitPosition, 10, 64)
+	if err != nil {
+		return "", errors.WithMessage(err, "转换货币单位位置失败")
+	}
+	parser, err := pkg.NewImgTemplateParser(pkg.ImgBaseData{
+		Language:             ctx.GetLanguage(),
+		CurrencyUnit:         currencySetting.PrintUnit,
+		CurrencyUnitPosition: int(unitPosition),
+	}, templateJSONStr, testData)
+	if err != nil {
+		return "", errors.WithMessage(err, "创建模板解析器失败")
+	}
+
+	// 验证模板
+	err = parser.ValidateTemplate()
+	if err != nil {
+		return "", errors.WithMessage(err, "验证模板失败")
+	}
+
+	// 解析模板
+	img, err := parser.Parse()
+	if err != nil {
+		return "", errors.WithMessage(err, "解析模板失败")
+	}
+
+	// 保存测试图片
+	path := "app/printer/pkg/text/tmp/printer/complex_template_test.png"
+
+	// 设置分割高度为200000
+	img.SegmentationHeight = 200000
+	img.Save(path, false, 0)
+
+	// 读取保存的图片文件并转换为base64
+	imageData, err := os.ReadFile(path)
+	if err != nil {
+		return "", errors.WithMessage(err, "读取生成的图片文件失败")
+	}
+
+	// 转换为base64字符串
+	base64Str := base64.StdEncoding.EncodeToString(imageData)
+
+	// 添加data URL前缀
+	dataURL := "data:image/png;base64," + base64Str
+
+	return dataURL, nil
+}
+
+// GetTestData 获取测试数据
+func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[string]interface{}, error) {
+	// 从JSON文件读取测试数据
+	testDataBytes, err := os.ReadFile(fmt.Sprintf("app/printer/pkg/template_json/%s_data.json", templateName))
+	if err != nil {
+		return nil, errors.WithMessage(err, "读取测试数据文件失败")
+	}
+	var testData map[string]interface{}
+	if err := json.Unmarshal(testDataBytes, &testData); err != nil {
+		return nil, errors.WithMessage(err, "解析测试数据JSON失败")
+	}
+	return testData, nil
+}
+
+// GetTemplateJSONStr 获取模板JSON字符串
+func (s *printerSrv) GetTemplateJSONStr(ctx context.Context, templateName string) (string, error) {
+	templateJSON, err := os.ReadFile(fmt.Sprintf("app/printer/pkg/template_json/%s.json", templateName))
+	if err != nil {
+		return "", errors.WithMessage(err, "读取模板文件失败")
+	}
+	return string(templateJSON), nil
+}
+
+// GetPrintMenuDetail 获取菜单详情
+func (s *printerSrv) GetPrintMenuDetail(ctx context.Context, id uint64) (resp.PrintMenuDetailResp, error) {
+	db := ctx.GetDB()
+	commonRepo := repository.NewCommonRepo()
+	printerCustomizeRepo := repository.NewPrinterCustomizeRepo(db)
+
+	// 获取打印模板详情
+	template, err := repository.NewPrinterTemplateRepo(db).GetPrinterTemplateInfo(id)
+	if err != nil {
+		return resp.PrintMenuDetailResp{}, errors.WithMessage(err, "获取打印模板详情失败")
+	}
+
+	// 创建复杂的测试模板
+	templateJSONStr, err := s.GetTemplateJSONStr(ctx, template.Name)
+
+	// 获取打印机定制列表
+	customizes, err := printerCustomizeRepo.GetPrinterCustomizeList(
+		commonRepo.DBOption(commonRepo.WhereBySoftDelete()),
+	)
+	if err != nil {
+		return resp.PrintMenuDetailResp{}, errors.WithMessage(err, "获取打印机定制列表失败")
+	}
+
+	// 获取测试数据
+	testData, err := s.GetTestData(ctx, template.Name)
+	if err != nil {
+		return resp.PrintMenuDetailResp{}, errors.WithMessage(err, "获取测试数据失败")
+	}
+
+	// 默认模板
+	defaultTemplate := resp.PrintMenuDetail{
+		ID:      template.ID,
+		Name:    "门店-默认模版",
+		IsUse:   false,
+		TmpUuid: template.TmpUuid,
+	}
+
+	// 高级模板列表(高级模版列表)
+	advReceiptTpls := make([]resp.PrintMenuDetail, 0)
+	for _, customize := range customizes {
+		if customize.IsAdv == 1 {
+			advReceiptTpls = append(advReceiptTpls, resp.PrintMenuDetail{
+				ID:      customize.ID,
+				Name:    customize.Name,
+				IsUse:   customize.IsUse == 1,
+				TmpUuid: customize.Uuid,
+				TempImg: func() string {
+					printContent, err := s.Parser(ctx, customize.Data, testData)
+					if err != nil {
+						return ""
+					}
+					return printContent
+				}(),
+			})
+		} else if customize.Uuid == template.TmpUuid {
+			defaultTemplate.Name = customize.Name
+			defaultTemplate.IsUse = customize.IsUse == 1
+			defaultTemplate.TmpUuid = customize.Uuid
+			printContent, err := s.Parser(ctx, customize.Data, testData)
+			if err != nil {
+				return resp.PrintMenuDetailResp{}, errors.WithMessage(err, "解析模板失败")
+			}
+			defaultTemplate.TempImg = printContent
+		}
+	}
+
+	// 默认模板没有设置，则使用门店默认模版解析
+	if defaultTemplate.TempImg == "" {
+		defaultTemplate.TempImg, err = s.Parser(ctx, templateJSONStr, testData)
+		if err != nil {
+			return resp.PrintMenuDetailResp{}, errors.WithMessage(err, "解析模板失败")
+		}
+	}
+
+	// 返回结果
+	return resp.PrintMenuDetailResp{
+		DefaultTpl:      defaultTemplate,
+		AdvReceiptTpls:  advReceiptTpls,
+		IsAdvReceiptTpl: true,
+	}, nil
+}
+
+// EditPrinterCustomize 编辑打印机定制
+func (s *printerSrv) EditPrinterCustomize(ctx context.Context, id uint64, data string) error {
+	db := ctx.GetDB()
+	printerCustomizeRepo := repository.NewPrinterCustomizeRepo(db)
+	// 检查打印机定制是否存在
+	customizeInfo, err := printerCustomizeRepo.GetPrinterCustomizeInfo(id)
+	if err != nil {
+		return errors.WithMessage(err, "检查打印机定制是否存在失败")
+	}
+	//
+	testData, err := s.GetTestData(ctx, customizeInfo.Name)
+	if err != nil {
+		return errors.WithMessage(err, "获取测试数据失败")
+	}
+	// 解析模板
+	_, err = s.Parser(ctx, data, testData)
+	if err != nil {
+		return errors.WithMessage(err, "解析模板失败")
+	}
+	// 更新打印机定制
+	return printerCustomizeRepo.UpdatePrinterCustomize(model.PrinterCustomize{
+		ID:         id,
+		Data:       data,
+		UpdateTime: time.Now().Unix(),
+	})
+}
+
+// DeletePrinterCustomize 删除打印机定制
+func (s *printerSrv) DeletePrinterCustomize(ctx context.Context, id uint64) error {
+	db := ctx.GetDB()
+	// 检查打印机定制是否存在
+	customizeInfo, err := repository.NewPrinterCustomizeRepo(db).GetPrinterCustomizeInfo(id)
+	if err != nil {
+		return errors.WithMessage(err, "检查打印机定制是否存在失败")
+	}
+	// 检查打印机定制是否正在使用中
+	if customizeInfo.IsUse == 1 {
+		return errors.New("打印机定制正在使用中，不能删除")
+	}
+	// 删除打印机定制
+	err = repository.NewPrinterCustomizeRepo(db).DeletePrinterCustomize(id)
+	if err != nil {
+		return errors.WithMessage(err, "删除打印机定制失败")
+	}
+	return nil
 }

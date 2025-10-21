@@ -20798,6 +20798,197 @@
                 }
             }
         },
+        "/shop/printer/customize/delete": {
+            "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除打印机定制",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.打印管理"
+                ],
+                "summary": "删除打印机定制",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "打印机定制ID",
+                        "name": "id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/printer/customize/edit": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "编辑打印机定制",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.打印管理"
+                ],
+                "summary": "编辑打印机定制",
+                "parameters": [
+                    {
+                        "description": "编辑打印机定制请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.EditPrinterCustomizeReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/printer/menu/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取打印菜单详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.打印管理"
+                ],
+                "summary": "获取打印菜单详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "模板ID",
+                        "name": "id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PrintMenuDetailResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/printer/menu/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取打印菜单列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.打印管理"
+                ],
+                "summary": "获取打印菜单列表",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PrintMenuListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/product/add": {
             "post": {
                 "security": [
@@ -32367,6 +32558,19 @@
                 }
             }
         },
+        "req.EditPrinterCustomizeReq": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "description": "打印机定制数据",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "打印机定制ID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.EditReturnFoodReasonReq": {
             "type": "object",
             "required": [
@@ -42119,6 +42323,103 @@
                 }
             }
         },
+        "resp.PrintMenu": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "打印菜单ID",
+                    "type": "integer"
+                },
+                "locale_name": {
+                    "description": "打印菜单名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                }
+            }
+        },
+        "resp.PrintMenuDetail": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "模板ID",
+                    "type": "integer"
+                },
+                "is_use": {
+                    "description": "是否USB模板",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "模板名称",
+                    "type": "string"
+                },
+                "temp_img": {
+                    "description": "模板图片路径",
+                    "type": "string"
+                },
+                "tmp_uuid": {
+                    "description": "临时模板UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.PrintMenuDetailResp": {
+            "type": "object",
+            "properties": {
+                "adv_receipt_tpls": {
+                    "description": "高级模板列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PrintMenuDetail"
+                    }
+                },
+                "default_tpl": {
+                    "description": "默认模板",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.PrintMenuDetail"
+                        }
+                    ]
+                },
+                "is_adv_receipt_tpl": {
+                    "description": "是否启用高级模板",
+                    "type": "boolean"
+                }
+            }
+        },
+        "resp.PrintMenuGroup": {
+            "type": "object",
+            "properties": {
+                "group_type": {
+                    "description": "分组类型",
+                    "type": "integer"
+                },
+                "list": {
+                    "description": "打印菜单列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PrintMenu"
+                    }
+                },
+                "locale_name": {
+                    "$ref": "#/definitions/dto.LocaleResponse"
+                }
+            }
+        },
+        "resp.PrintMenuListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "打印菜单分组列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PrintMenuGroup"
+                    }
+                }
+            }
+        },
         "resp.PrinterBase": {
             "type": "object",
             "properties": {
@@ -42755,7 +43056,7 @@
                     ]
                 },
                 "order_remark": {
-                    "description": "订单备注",
+                    "description": "整单备注",
                     "allOf": [
                         {
                             "$ref": "#/definitions/resp.OrderRemarkRes"

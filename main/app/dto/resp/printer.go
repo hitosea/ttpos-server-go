@@ -1,6 +1,8 @@
 package resp
 
-import "ttpos-server-go/app/dto"
+import (
+	"ttpos-server-go/app/dto"
+)
 
 type PrinterData struct {
 	Uuid              uint64 `json:"uuid"`                // 打印日志Uuid
@@ -74,4 +76,18 @@ type PrintMenuGroup struct {
 
 type PrintMenuListResp struct {
 	List []PrintMenuGroup `json:"list"` // 打印菜单分组列表
+}
+
+type PrintMenuDetail struct {
+	ID      uint64 `json:"id"`       // 模板ID
+	Name    string `json:"name"`     // 模板名称
+	IsUse   bool   `json:"is_use"`   // 是否USB模板
+	TempImg string `json:"temp_img"` // 模板图片路径
+	TmpUuid uint64 `json:"tmp_uuid"` // 临时模板UUID
+}
+
+type PrintMenuDetailResp struct {
+	DefaultTpl      PrintMenuDetail   `json:"default_tpl"`        // 默认模板
+	AdvReceiptTpls  []PrintMenuDetail `json:"adv_receipt_tpls"`   // 高级模板列表
+	IsAdvReceiptTpl bool              `json:"is_adv_receipt_tpl"` // 是否启用高级模板
 }
