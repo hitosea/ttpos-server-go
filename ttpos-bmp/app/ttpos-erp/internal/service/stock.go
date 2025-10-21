@@ -95,6 +95,22 @@ type (
 		// GetStockLedger 获取库存分类账信息
 		// 根据查询条件过滤并返回库存分类账记录列表
 		GetStockLedger(ctx context.Context, req *stock.GetStockLedgerReq) (res *stock.GetStockLedgerResp, err error)
+		// SaveStockReconciliation 保存库存盘点
+		// 参数：ctx 上下文，req 保存库存盘点请求
+		// 返回：保存库存盘点响应，错误信息
+		SaveStockReconciliation(ctx context.Context, req *stock.SaveStockReconciliationReq) (res *stock.SaveStockReconciliationResp, err error)
+		// GetStockReconciliationList 获取库存盘点列表
+		// 参数：ctx 上下文，req 获取库存盘点列表请求
+		// 返回：获取库存盘点列表响应，错误信息
+		GetStockReconciliationList(ctx context.Context, req *stock.GetStockReconciliationListReq) (res *stock.GetStockReconciliationListResp, err error)
+		// SubmitStockReconciliation 提交库存盘点
+		// 参数：ctx 上下文，req 提交库存盘点请求
+		// 返回：提交库存盘点响应，错误信息
+		SubmitStockReconciliation(ctx context.Context, req *stock.SubmitStockReconciliationReq) (res *stock.SubmitStockReconciliationResp, err error)
+		// CancelStockReconciliation 取消库存盘点
+		// 参数：ctx 上下文，req 取消库存盘点请求
+		// 返回：取消库存盘点响应，错误信息
+		CancelStockReconciliation(ctx context.Context, req *stock.CancelStockReconciliationReq) (res *stock.CancelStockReconciliationResp, err error)
 	}
 	IUom interface {
 		DeleteUom(ctx context.Context, req *item.DeleteUomReq) (*item.DeleteUomResp, error)

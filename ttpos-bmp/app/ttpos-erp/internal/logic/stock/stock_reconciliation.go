@@ -1,0 +1,268 @@
+package stock
+
+import (
+	"context"
+	"ttpos-bmp/app/ttpos-erp/api/stock"
+	"ttpos-bmp/app/ttpos-erp/internal/consts"
+	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
+	"ttpos-bmp/app/ttpos-erp/internal/service"
+
+	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/gtime"
+)
+
+// SaveStockReconciliation 保存库存盘点
+// 参数：ctx 上下文，req 保存库存盘点请求
+// 返回：保存库存盘点响应，错误信息
+func (s *sStock) SaveStockReconciliation(ctx context.Context, req *stock.SaveStockReconciliationReq) (res *stock.SaveStockReconciliationResp, err error) {
+	// 获取公司信息
+	company, err := service.Company().GetCompanyWithAbbr(ctx, req.CompanyAbbr)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "获取公司信息失败")
+	}
+
+	// 设置仓库
+	warehouseName := req.Warehouse
+	if len(warehouseName) == 0 && len(req.Branch) > 0 {
+		// 如果没有指定仓库但指定了分支，获取默认仓库
+		warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, company.CompanyName, req.Branch)
+		if err != nil {
+			return nil, gerror.Wrapf(err, "获取默认仓库失败")
+		}
+		warehouseName = warehouse.Name
+	}
+
+	// 构建库存盘点数据
+	data := &erp.StockReconciliation{
+		NamingSeries: erp.DefaultStockReconciliationSeries,
+		Company:      company.CompanyName,
+		PostingDate:  req.PostingDate,
+		DocType:      erp.DocTypeStockReconciliation,
+	}
+
+	// 设置过账时间
+	if len(req.PostingTime) > 0 {
+		data.PostingTime = req.PostingTime
+		data.SetPostingTime = 1
+	} else {
+		data.PostingTime = service.Setup().MustGetLocalDateTime(ctx, gtime.Now()).Format("H:i:s")
+	}
+
+	// 设置用途
+	if len(req.Purpose) > 0 {
+		data.Purpose = req.Purpose
+	} else {
+		data.Purpose = erp.StockReconciliationPurposeStockReconciliation
+	}
+
+	// 设置仓库
+	if len(warehouseName) > 0 {
+		data.SetWarehouse = warehouseName
+	}
+
+	// 构建明细项目
+	itemList := make([]erp.StockReconciliationItem, 0)
+	for _, item := range req.Items {
+		itemData := erp.StockReconciliationItem{
+			ItemCode: item.ItemCode,
+			ItemName: item.ItemName,
+			Qty:      item.Qty,
+			DocType:  erp.DocTypeStockReconciliationItem,
+		}
+
+		// 如果明细项目指定了仓库，使用明细仓库
+		if len(item.Warehouse) > 0 {
+			itemData.Warehouse = item.Warehouse
+		} else if len(warehouseName) > 0 {
+			itemData.Warehouse = warehouseName
+		}
+
+		// 设置估值价格
+		if item.ValuationRate > 0 {
+			itemData.ValuationRate = item.ValuationRate
+		} else {
+			//默认估值率1
+			itemData.ValuationRate = consts.DefaultValuationRate
+		}
+
+		itemList = append(itemList, itemData)
+	}
+	data.Items = itemList
+
+	// 创建库存盘点单据
+	resp, err := service.Document().Create(ctx, erp.DocTypeStockReconciliation, data)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建库存盘点单据失败")
+	}
+
+	j := resp
+	if !j.Contains("data") {
+		return nil, gerror.New("创建库存盘点单据失败：响应数据为空")
+	}
+
+	return &stock.SaveStockReconciliationResp{
+		StockReconciliationName: j.Get("data.name").String(),
+	}, nil
+}
+
+// GetStockReconciliationList 获取库存盘点列表
+// 参数：ctx 上下文，req 获取库存盘点列表请求
+// 返回：获取库存盘点列表响应，错误信息
+func (s *sStock) GetStockReconciliationList(ctx context.Context, req *stock.GetStockReconciliationListReq) (res *stock.GetStockReconciliationListResp, err error) {
+	// 获取公司信息
+	company, err := service.Company().GetCompanyWithAbbr(ctx, req.CompanyAbbr)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "获取公司信息失败")
+	}
+
+	// 构建查询过滤器
+	filters := [][]string{
+		{"company", "=", company.CompanyName},
+	}
+
+	// 按仓库过滤
+	if len(req.Warehouse) > 0 {
+		filters = append(filters, []string{"set_warehouse", "like", "%" + req.Warehouse + "%"})
+	} else if len(req.Branch) > 0 {
+		// 如果没有指定仓库但指定了分支，获取默认仓库
+		warehouse, err := service.Warehouse().GetDefaultWarehouse(ctx, company.CompanyName, req.Branch)
+		if err == nil && len(warehouse.Name) > 0 {
+			filters = append(filters, []string{"set_warehouse", "like", "%" + warehouse.Name + "%"})
+		}
+	}
+
+	// 按用途过滤
+	if len(req.Purpose) > 0 {
+		filters = append(filters, []string{"purpose", "=", req.Purpose})
+	}
+
+	// 按日期范围过滤
+	if len(req.FromDate) > 0 {
+		filters = append(filters, []string{"posting_date", ">=", req.FromDate})
+	}
+	if len(req.ToDate) > 0 {
+		filters = append(filters, []string{"posting_date", "<=", req.ToDate})
+	}
+
+	// 设置查询限制
+	limit := consts.Limit100
+	if req.Limit > 0 && req.Limit <= 1000 {
+		limit = int(req.Limit)
+	}
+
+	// 执行查询
+	resp, err := service.Document().List(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeStockReconciliation,
+	}, &erp.RequestParams{
+		Fields: g.ArrayStr{
+			"name", "company", "purpose", "posting_date", "posting_time",
+			"set_warehouse", "difference_amount", "expense_account", "cost_center", "docstatus",
+		},
+		Filters: filters,
+		Limit:   limit,
+	})
+
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询库存盘点列表失败")
+	}
+
+	// 解析响应数据
+	j := resp
+	res = &stock.GetStockReconciliationListResp{
+		StockReconciliationList: make([]*stock.StockReconciliation, 0),
+	}
+
+	dataArray := j.GetJsons("data")
+	for _, data := range dataArray {
+		reconciliation := &stock.StockReconciliation{
+			Name:         data.Get("name").String(),
+			Company:      data.Get("company").String(),
+			Purpose:      data.Get("purpose").String(),
+			PostingDate:  data.Get("posting_date").String(),
+			PostingTime:  data.Get("posting_time").String(),
+			SetWarehouse: data.Get("set_warehouse").String(),
+		}
+
+		// 获取明细项目
+		if len(reconciliation.Name) > 0 {
+			items, _ := s.getStockReconciliationItems(ctx, reconciliation.Name)
+			reconciliation.Items = items
+		}
+
+		res.StockReconciliationList = append(res.StockReconciliationList, reconciliation)
+	}
+
+	return res, nil
+}
+
+// getStockReconciliationItems 获取库存盘点明细
+func (s *sStock) getStockReconciliationItems(ctx context.Context, stockReconciliationName string) ([]*stock.StockReconciliationItem, error) {
+	// 查询库存盘点单据详情
+	resp, err := service.Document().Get(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeStockReconciliation,
+		Name:    stockReconciliationName,
+	}, nil)
+
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询库存盘点单据详情失败")
+	}
+
+	// 解析响应数据
+	j := resp
+	items := make([]*stock.StockReconciliationItem, 0)
+
+	itemsArray := j.GetJsons("data.items")
+	for _, itemData := range itemsArray {
+		item := &stock.StockReconciliationItem{
+			ItemCode:      itemData.Get("item_code").String(),
+			ItemName:      itemData.Get("item_name").String(),
+			Qty:           itemData.Get("qty").Float64(),
+			Warehouse:     itemData.Get("warehouse").String(),
+			ValuationRate: itemData.Get("valuation_rate").Float64(),
+		}
+		items = append(items, item)
+	}
+
+	return items, nil
+}
+
+// SubmitStockReconciliation 提交库存盘点
+// 参数：ctx 上下文，req 提交库存盘点请求
+// 返回：提交库存盘点响应，错误信息
+func (s *sStock) SubmitStockReconciliation(ctx context.Context, req *stock.SubmitStockReconciliationReq) (res *stock.SubmitStockReconciliationResp, err error) {
+	// 参数验证
+	if len(req.StockReconciliationName) == 0 {
+		return nil, gerror.New("库存盘点单号不能为空")
+	}
+
+	// 提交库存盘点单据
+	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeStockReconciliation, req.StockReconciliationName, erp.DocstatusSubmitted)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "提交库存盘点单据失败")
+	}
+
+	return &stock.SubmitStockReconciliationResp{
+		Message: "库存盘点单据提交成功",
+	}, nil
+}
+
+// CancelStockReconciliation 取消库存盘点
+// 参数：ctx 上下文，req 取消库存盘点请求
+// 返回：取消库存盘点响应，错误信息
+func (s *sStock) CancelStockReconciliation(ctx context.Context, req *stock.CancelStockReconciliationReq) (res *stock.CancelStockReconciliationResp, err error) {
+	// 参数验证
+	if len(req.StockReconciliationName) == 0 {
+		return nil, gerror.New("库存盘点单号不能为空")
+	}
+
+	// 取消库存盘点单据
+	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeStockReconciliation, req.StockReconciliationName, erp.DocstatusCancelled)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "取消库存盘点单据失败")
+	}
+
+	return &stock.CancelStockReconciliationResp{
+		Message: "库存盘点单据取消成功",
+	}, nil
+}

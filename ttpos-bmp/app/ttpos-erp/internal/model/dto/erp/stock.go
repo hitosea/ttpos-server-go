@@ -158,3 +158,68 @@ type UOM struct {
 	CustomBranch         string           `json:"custom_branch,omitempty"`          // 自定义分支
 	CustomPermissionRule []PermissionRule `json:"custom_permission_rule,omitempty"` // 自定义权限规则
 }
+
+// StockReconciliation 库存盘点单据
+type StockReconciliation struct {
+	Name             string                    `json:"name,omitempty"`              // 单据编号
+	Owner            string                    `json:"owner,omitempty"`             // 所有者
+	Creation         string                    `json:"creation,omitempty"`          // 创建时间
+	Modified         string                    `json:"modified,omitempty"`          // 修改时间
+	ModifiedBy       string                    `json:"modified_by,omitempty"`       // 修改人
+	DocStatus        int                       `json:"docstatus,omitempty"`         // 单据状态
+	Idx              int                       `json:"idx,omitempty"`               // 索引
+	NamingSeries     string                    `json:"naming_series,omitempty"`     // 编号系列
+	Company          string                    `json:"company,omitempty"`           // 公司
+	Purpose          string                    `json:"purpose,omitempty"`           // 用途
+	PostingDate      string                    `json:"posting_date,omitempty"`      // 过账日期
+	PostingTime      string                    `json:"posting_time,omitempty"`      // 过账时间
+	SetPostingTime   int                       `json:"set_posting_time,omitempty"`  // 设置过账时间
+	SetWarehouse     string                    `json:"set_warehouse,omitempty"`     // 设置仓库
+	ScanMode         int                       `json:"scan_mode,omitempty"`         // 扫描模式
+	ExpenseAccount   string                    `json:"expense_account,omitempty"`   // 费用科目
+	DifferenceAmount float64                   `json:"difference_amount,omitempty"` // 差异金额
+	CostCenter       string                    `json:"cost_center,omitempty"`       // 成本中心
+	DocType          string                    `json:"doctype,omitempty"`           // 文档类型
+	Items            []StockReconciliationItem `json:"items,omitempty"`             // 明细项目
+}
+
+// StockReconciliationItem 库存盘点明细
+type StockReconciliationItem struct {
+	Name                    string  `json:"name,omitempty"`                       // 明细编号
+	Owner                   string  `json:"owner,omitempty"`                      // 所有者
+	Creation                string  `json:"creation,omitempty"`                   // 创建时间
+	Modified                string  `json:"modified,omitempty"`                   // 修改时间
+	ModifiedBy              string  `json:"modified_by,omitempty"`                // 修改人
+	DocStatus               int     `json:"docstatus,omitempty"`                  // 单据状态
+	Idx                     int     `json:"idx,omitempty"`                        // 索引
+	ItemCode                string  `json:"item_code,omitempty"`                  // 物品编码
+	ItemName                string  `json:"item_name,omitempty"`                  // 物品名称
+	ItemGroup               string  `json:"item_group,omitempty"`                 // 物品分组
+	Warehouse               string  `json:"warehouse,omitempty"`                  // 仓库
+	Qty                     float64 `json:"qty,omitempty"`                        // 数量
+	ValuationRate           float64 `json:"valuation_rate,omitempty"`             // 估值价格
+	Amount                  float64 `json:"amount,omitempty"`                     // 金额
+	AllowZeroValuationRate  int     `json:"allow_zero_valuation_rate,omitempty"`  // 允许零估值价格
+	UseSerialBatchFields    int     `json:"use_serial_batch_fields,omitempty"`    // 使用序列批次字段
+	ReconcileAllSerialBatch int     `json:"reconcile_all_serial_batch,omitempty"` // 核对所有序列批次
+	CurrentQty              float64 `json:"current_qty,omitempty"`                // 当前数量
+	CurrentAmount           float64 `json:"current_amount,omitempty"`             // 当前金额
+	CurrentValuationRate    float64 `json:"current_valuation_rate,omitempty"`     // 当前估值价格
+	QuantityDifference      string  `json:"quantity_difference,omitempty"`        // 数量差异
+	AmountDifference        float64 `json:"amount_difference,omitempty"`          // 金额差异
+	Parent                  string  `json:"parent,omitempty"`                     // 父单据
+	ParentField             string  `json:"parentfield,omitempty"`                // 父字段
+	ParentType              string  `json:"parenttype,omitempty"`                 // 父类型
+	DocType                 string  `json:"doctype,omitempty"`                    // 文档类型
+}
+
+// StockReconciliationConstants 库存盘点常量
+const (
+	// StockReconciliationPurposeOpeningStock 期初库存
+	StockReconciliationPurposeOpeningStock = "Opening Stock"
+	// StockReconciliationPurposeStockReconciliation 库存盘点
+	StockReconciliationPurposeStockReconciliation = "Stock Reconciliation"
+
+	// DefaultStockReconciliationSeries 默认库存盘点命名序列
+	DefaultStockReconciliationSeries = "MAT-RECO-.YYYY.-"
+)

@@ -40,6 +40,11 @@ const (
 	DocTypeStockLedger = "Stock Ledger"
 	//DocTypeUom 商品单位
 	DocTypeUom = "UOM"
+
+	// DocTypeStockReconciliation 库存盘点单据类型
+	DocTypeStockReconciliation = "Stock Reconciliation"
+	// DocTypeStockReconciliationItem 库存盘点明细类型
+	DocTypeStockReconciliationItem = "Stock Reconciliation Item"
 )
 
 const (
