@@ -1,14 +1,17 @@
 package resp
 
-import "ttpos-server-go/app/dto"
+import (
+	"ttpos-server-go/app/dto"
+)
 
 type ProductionGroup struct {
-	LocaleName        *dto.LocaleResponse `json:"locale_name"`          // 序列号
-	DiningMethod      uint                `json:"dining_method"`        // 用餐方式,0-堂食(店内就餐) 1-打包
-	IsTakeoutBill     bool                `json:"is_takeout_bill"`      // 是否是外送订单
-	ProductionList    ProductionList      `json:"product_list"`         // 送厨商品列表
-	SaleBillUuid      uint64              `json:"sale_bill_uuid"`       // 销售账单Uuid
-	IsSaleBillDeleted bool                `json:"is_sale_bill_deleted"` // 销售账单是否已删除
+	LocaleName        *dto.LocaleResponse `json:"locale_name"`            // 序列号
+	DiningMethod      uint                `json:"dining_method"`          // 用餐方式,0-堂食(店内就餐) 1-打包
+	IsTakeoutBill     bool                `json:"is_takeout_bill"`        // 是否是外送订单
+	ProductionList    ProductionList      `json:"product_list"`           // 送厨商品列表
+	SaleBillUuid      uint64              `json:"sale_bill_uuid"`         // 销售账单Uuid
+	IsSaleBillDeleted bool                `json:"is_sale_bill_deleted"`   // 销售账单是否已删除
+	OrderRemark       *OrderRemarkRes     `json:"order_remark,omitempty"` // 订单备注
 }
 
 type ProductionList struct {
@@ -30,6 +33,7 @@ type ProductionItem struct {
 	MakeStatus            uint               `json:"make_status"`             // 制作状态，0-默认，未制作完成，1-已制作完成，2-已恢复到制作中
 	MadeTime              int64              `json:"made_time"`               // 制作完成时间
 	BatchTag              BatchTagInfo       `json:"batch_tag"`               // 分批类型
+	OrderRemark           *OrderRemarkRes    `json:"order_remark,omitempty"`  // 整单备注
 }
 
 type BatchTagInfo struct {
