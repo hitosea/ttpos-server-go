@@ -161,6 +161,16 @@ message SubmitStockReconciliationResp {
   string message = 1;                                 // 操作结果消息
 }
 
+// 取消库存盘点请求
+message CancelStockReconciliationReq {
+  string stock_reconciliation_name = 1;               // 库存盘点单号，必填
+}
+
+// 取消库存盘点响应
+message CancelStockReconciliationResp {
+  string message = 1;                                 // 操作结果消息
+}
+
 service StockService {
   // 保存物品申请单
   // 参数：物品申请单信息
@@ -191,4 +201,9 @@ service StockService {
   // 参数：库存盘点单号
   // 返回：操作结果
   rpc SubmitStockReconciliation(SubmitStockReconciliationReq) returns (erp.ResponseInfo);
+
+  // 取消库存盘点
+  // 参数：库存盘点单号
+  // 返回：操作结果
+  rpc CancelStockReconciliation(CancelStockReconciliationReq) returns (erp.ResponseInfo);
 }

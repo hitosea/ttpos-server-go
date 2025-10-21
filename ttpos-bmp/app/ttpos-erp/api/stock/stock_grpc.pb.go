@@ -27,6 +27,7 @@ const (
 	StockService_SaveStockReconciliation_FullMethodName    = "/stock.StockService/SaveStockReconciliation"
 	StockService_GetStockReconciliationList_FullMethodName = "/stock.StockService/GetStockReconciliationList"
 	StockService_SubmitStockReconciliation_FullMethodName  = "/stock.StockService/SubmitStockReconciliation"
+	StockService_CancelStockReconciliation_FullMethodName  = "/stock.StockService/CancelStockReconciliation"
 )
 
 // StockServiceClient is the client API for StockService service.
@@ -57,6 +58,10 @@ type StockServiceClient interface {
 	// 参数：库存盘点单号
 	// 返回：操作结果
 	SubmitStockReconciliation(ctx context.Context, in *SubmitStockReconciliationReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 取消库存盘点
+	// 参数：库存盘点单号
+	// 返回：操作结果
+	CancelStockReconciliation(ctx context.Context, in *CancelStockReconciliationReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 }
 
 type stockServiceClient struct {
@@ -127,6 +132,16 @@ func (c *stockServiceClient) SubmitStockReconciliation(ctx context.Context, in *
 	return out, nil
 }
 
+func (c *stockServiceClient) CancelStockReconciliation(ctx context.Context, in *CancelStockReconciliationReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, StockService_CancelStockReconciliation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // StockServiceServer is the server API for StockService service.
 // All implementations must embed UnimplementedStockServiceServer
 // for forward compatibility.
@@ -155,6 +170,10 @@ type StockServiceServer interface {
 	// 参数：库存盘点单号
 	// 返回：操作结果
 	SubmitStockReconciliation(context.Context, *SubmitStockReconciliationReq) (*api.ResponseInfo, error)
+	// 取消库存盘点
+	// 参数：库存盘点单号
+	// 返回：操作结果
+	CancelStockReconciliation(context.Context, *CancelStockReconciliationReq) (*api.ResponseInfo, error)
 	mustEmbedUnimplementedStockServiceServer()
 }
 
@@ -182,6 +201,9 @@ func (UnimplementedStockServiceServer) GetStockReconciliationList(context.Contex
 }
 func (UnimplementedStockServiceServer) SubmitStockReconciliation(context.Context, *SubmitStockReconciliationReq) (*api.ResponseInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitStockReconciliation not implemented")
+}
+func (UnimplementedStockServiceServer) CancelStockReconciliation(context.Context, *CancelStockReconciliationReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CancelStockReconciliation not implemented")
 }
 func (UnimplementedStockServiceServer) mustEmbedUnimplementedStockServiceServer() {}
 func (UnimplementedStockServiceServer) testEmbeddedByValue()                      {}
@@ -312,6 +334,24 @@ func _StockService_SubmitStockReconciliation_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _StockService_CancelStockReconciliation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelStockReconciliationReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StockServiceServer).CancelStockReconciliation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StockService_CancelStockReconciliation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StockServiceServer).CancelStockReconciliation(ctx, req.(*CancelStockReconciliationReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // StockService_ServiceDesc is the grpc.ServiceDesc for StockService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -342,6 +382,10 @@ var StockService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SubmitStockReconciliation",
 			Handler:    _StockService_SubmitStockReconciliation_Handler,
+		},
+		{
+			MethodName: "CancelStockReconciliation",
+			Handler:    _StockService_CancelStockReconciliation_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

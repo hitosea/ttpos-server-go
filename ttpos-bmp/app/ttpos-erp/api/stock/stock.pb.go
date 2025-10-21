@@ -1382,6 +1382,96 @@ func (x *SubmitStockReconciliationResp) GetMessage() string {
 	return ""
 }
 
+// 取消库存盘点请求
+type CancelStockReconciliationReq struct {
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	StockReconciliationName string                 `protobuf:"bytes,1,opt,name=stock_reconciliation_name,json=stockReconciliationName,proto3" json:"stock_reconciliation_name,omitempty" dc:"库存盘点单号，必填"` // 库存盘点单号，必填
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *CancelStockReconciliationReq) Reset() {
+	*x = CancelStockReconciliationReq{}
+	mi := &file_stock_stock_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelStockReconciliationReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelStockReconciliationReq) ProtoMessage() {}
+
+func (x *CancelStockReconciliationReq) ProtoReflect() protoreflect.Message {
+	mi := &file_stock_stock_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelStockReconciliationReq.ProtoReflect.Descriptor instead.
+func (*CancelStockReconciliationReq) Descriptor() ([]byte, []int) {
+	return file_stock_stock_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *CancelStockReconciliationReq) GetStockReconciliationName() string {
+	if x != nil {
+		return x.StockReconciliationName
+	}
+	return ""
+}
+
+// 取消库存盘点响应
+type CancelStockReconciliationResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty" dc:"操作结果消息"` // 操作结果消息
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelStockReconciliationResp) Reset() {
+	*x = CancelStockReconciliationResp{}
+	mi := &file_stock_stock_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelStockReconciliationResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelStockReconciliationResp) ProtoMessage() {}
+
+func (x *CancelStockReconciliationResp) ProtoReflect() protoreflect.Message {
+	mi := &file_stock_stock_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelStockReconciliationResp.ProtoReflect.Descriptor instead.
+func (*CancelStockReconciliationResp) Descriptor() ([]byte, []int) {
+	return file_stock_stock_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *CancelStockReconciliationResp) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 var File_stock_stock_proto protoreflect.FileDescriptor
 
 const file_stock_stock_proto_rawDesc = "" +
@@ -1503,14 +1593,19 @@ const file_stock_stock_proto_rawDesc = "" +
 	"\x1cSubmitStockReconciliationReq\x12:\n" +
 	"\x19stock_reconciliation_name\x18\x01 \x01(\tR\x17stockReconciliationName\"9\n" +
 	"\x1dSubmitStockReconciliationResp\x12\x18\n" +
-	"\amessage\x18\x01 \x01(\tR\amessage2\xe2\x03\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage\"Z\n" +
+	"\x1cCancelStockReconciliationReq\x12:\n" +
+	"\x19stock_reconciliation_name\x18\x01 \x01(\tR\x17stockReconciliationName\"9\n" +
+	"\x1dCancelStockReconciliationResp\x12\x18\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage2\xb7\x04\n" +
 	"\fStockService\x12G\n" +
 	"\x13SaveMaterialRequest\x12\x1d.stock.SaveMaterialRequestReq\x1a\x11.erp.ResponseInfo\x12M\n" +
 	"\x16GetMaterialRequestList\x12 .stock.GetMaterialRequestListReq\x1a\x11.erp.ResponseInfo\x12=\n" +
 	"\x0eGetStockLedger\x12\x18.stock.GetStockLedgerReq\x1a\x11.erp.ResponseInfo\x12O\n" +
 	"\x17SaveStockReconciliation\x12!.stock.SaveStockReconciliationReq\x1a\x11.erp.ResponseInfo\x12U\n" +
 	"\x1aGetStockReconciliationList\x12$.stock.GetStockReconciliationListReq\x1a\x11.erp.ResponseInfo\x12S\n" +
-	"\x19SubmitStockReconciliation\x12#.stock.SubmitStockReconciliationReq\x1a\x11.erp.ResponseInfoB#Z!ttpos-bmp/app/ttpos-erp/api/stockb\x06proto3"
+	"\x19SubmitStockReconciliation\x12#.stock.SubmitStockReconciliationReq\x1a\x11.erp.ResponseInfo\x12S\n" +
+	"\x19CancelStockReconciliation\x12#.stock.CancelStockReconciliationReq\x1a\x11.erp.ResponseInfoB#Z!ttpos-bmp/app/ttpos-erp/api/stockb\x06proto3"
 
 var (
 	file_stock_stock_proto_rawDescOnce sync.Once
@@ -1524,7 +1619,7 @@ func file_stock_stock_proto_rawDescGZIP() []byte {
 	return file_stock_stock_proto_rawDescData
 }
 
-var file_stock_stock_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_stock_stock_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_stock_stock_proto_goTypes = []any{
 	(*MaterialRequest)(nil),                // 0: stock.MaterialRequest
 	(*MaterialRequestItem)(nil),            // 1: stock.MaterialRequestItem
@@ -1543,7 +1638,9 @@ var file_stock_stock_proto_goTypes = []any{
 	(*GetStockReconciliationListResp)(nil), // 14: stock.GetStockReconciliationListResp
 	(*SubmitStockReconciliationReq)(nil),   // 15: stock.SubmitStockReconciliationReq
 	(*SubmitStockReconciliationResp)(nil),  // 16: stock.SubmitStockReconciliationResp
-	(*api.ResponseInfo)(nil),               // 17: erp.ResponseInfo
+	(*CancelStockReconciliationReq)(nil),   // 17: stock.CancelStockReconciliationReq
+	(*CancelStockReconciliationResp)(nil),  // 18: stock.CancelStockReconciliationResp
+	(*api.ResponseInfo)(nil),               // 19: erp.ResponseInfo
 }
 var file_stock_stock_proto_depIdxs = []int32{
 	1,  // 0: stock.MaterialRequest.items:type_name -> stock.MaterialRequestItem
@@ -1559,14 +1656,16 @@ var file_stock_stock_proto_depIdxs = []int32{
 	10, // 10: stock.StockService.SaveStockReconciliation:input_type -> stock.SaveStockReconciliationReq
 	12, // 11: stock.StockService.GetStockReconciliationList:input_type -> stock.GetStockReconciliationListReq
 	15, // 12: stock.StockService.SubmitStockReconciliation:input_type -> stock.SubmitStockReconciliationReq
-	17, // 13: stock.StockService.SaveMaterialRequest:output_type -> erp.ResponseInfo
-	17, // 14: stock.StockService.GetMaterialRequestList:output_type -> erp.ResponseInfo
-	17, // 15: stock.StockService.GetStockLedger:output_type -> erp.ResponseInfo
-	17, // 16: stock.StockService.SaveStockReconciliation:output_type -> erp.ResponseInfo
-	17, // 17: stock.StockService.GetStockReconciliationList:output_type -> erp.ResponseInfo
-	17, // 18: stock.StockService.SubmitStockReconciliation:output_type -> erp.ResponseInfo
-	13, // [13:19] is the sub-list for method output_type
-	7,  // [7:13] is the sub-list for method input_type
+	17, // 13: stock.StockService.CancelStockReconciliation:input_type -> stock.CancelStockReconciliationReq
+	19, // 14: stock.StockService.SaveMaterialRequest:output_type -> erp.ResponseInfo
+	19, // 15: stock.StockService.GetMaterialRequestList:output_type -> erp.ResponseInfo
+	19, // 16: stock.StockService.GetStockLedger:output_type -> erp.ResponseInfo
+	19, // 17: stock.StockService.SaveStockReconciliation:output_type -> erp.ResponseInfo
+	19, // 18: stock.StockService.GetStockReconciliationList:output_type -> erp.ResponseInfo
+	19, // 19: stock.StockService.SubmitStockReconciliation:output_type -> erp.ResponseInfo
+	19, // 20: stock.StockService.CancelStockReconciliation:output_type -> erp.ResponseInfo
+	14, // [14:21] is the sub-list for method output_type
+	7,  // [7:14] is the sub-list for method input_type
 	7,  // [7:7] is the sub-list for extension type_name
 	7,  // [7:7] is the sub-list for extension extendee
 	0,  // [0:7] is the sub-list for field type_name
@@ -1583,7 +1682,7 @@ func file_stock_stock_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_stock_stock_proto_rawDesc), len(file_stock_stock_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   17,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

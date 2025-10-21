@@ -211,3 +211,22 @@ func (*Controller) SubmitStockReconciliation(ctx context.Context, req *stock.Sub
 	// 返回成功响应
 	return rpc.ApiSuccessWithData(resp.Message, resp), nil
 }
+
+// CancelStockReconciliation 取消库存盘点
+// 参数：ctx 上下文，req 取消库存盘点请求
+// 返回：取消结果和操作信息
+func (*Controller) CancelStockReconciliation(ctx context.Context, req *stock.CancelStockReconciliationReq) (*api.ResponseInfo, error) {
+	// 参数验证
+	if len(req.StockReconciliationName) == 0 {
+		return rpc.ApiError("库存盘点单号不能为空"), nil
+	}
+
+	// 调用服务层处理业务逻辑
+	resp, err := service.Stock().CancelStockReconciliation(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+
+	// 返回成功响应
+	return rpc.ApiSuccessWithData(resp.Message, resp), nil
+}

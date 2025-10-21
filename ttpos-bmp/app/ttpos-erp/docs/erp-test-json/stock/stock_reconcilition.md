@@ -88,3 +88,22 @@
     }
 }
 ```
+
+## 取消盘点单 stock.StockService / CancelStockReconciliation
+
+```json
+{
+    "stock_reconciliation_name": "MAT-RECO-2025-00012"
+}
+```
+
+```json
+{
+    "code": "0",
+    "message": "库存盘点单据取消成功",
+    "data": {
+        "message": "库存盘点单据取消成功",
+        "@type": "type.googleapis.com/stock.CancelStockReconciliationResp"
+    }
+}
+```
