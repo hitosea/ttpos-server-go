@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // DailySalesOutboundSummaryTask 每日销售出库汇总定时任务
@@ -164,23 +166,18 @@ func (t *DailySalesOutboundSummaryTask) getDailySalesOutboundRecords(companyUuid
 	todayEnd := todayStart.AddDate(0, 0, 1).Add(-time.Second)
 
 	// 使用 repository 方法查询出库单明细
-	warehouseFormRepo := repository.NewWarehouseFormRepo(db)
-	outFormItems, err := warehouseFormRepo.GetValidWarehouseOutFormItem(
+	saleOrderMaterialRepo := repository.NewSaleOrderMaterialRepo(db)
+	saleOrderMaterials, err := saleOrderMaterialRepo.GetSaleOrderMaterialByCreateTimeBetween(
 		todayStart.Unix(),
 		todayEnd.Unix(),
 	)
-
 	if err != nil {
 		return nil, err
 	}
 
 	// 按仓库和物料分组汇总数量
 	recordMap := make(map[string]*OutboundRecord)
-	for _, item := range outFormItems {
-		if item.MaterialUuid == 0 {
-			continue // 跳过非物料记录
-		}
-
+	for _, item := range saleOrderMaterials {
 		key := fmt.Sprintf("%d_%d", item.WarehouseUuid, item.MaterialUuid)
 		if record, exists := recordMap[key]; exists {
 			record.TotalNum += item.Num
@@ -203,6 +200,7 @@ func (t *DailySalesOutboundSummaryTask) getDailySalesOutboundRecords(companyUuid
 			}
 
 			recordMap[key] = &OutboundRecord{
+				Uuid:                 item.Uuid,
 				WarehouseUuid:        item.WarehouseUuid,
 				MaterialUuid:         item.MaterialUuid,
 				TotalNum:             item.Num,
@@ -226,6 +224,7 @@ func (t *DailySalesOutboundSummaryTask) getDailySalesOutboundRecords(companyUuid
 
 // OutboundRecord 出库记录汇总
 type OutboundRecord struct {
+	Uuid                 uint64  `json:"uuid"` // 出库记录ID
 	WarehouseUuid        uint64  `json:"warehouse_uuid"`
 	MaterialUuid         uint64  `json:"material_uuid"`
 	TotalNum             float64 `json:"total_num"`
@@ -246,29 +245,41 @@ func (t *DailySalesOutboundSummaryTask) saveOutboundSummaryRecords(companyUuid u
 		return fmt.Errorf("生成出库单号失败: %w", err)
 	}
 
-	// 使用 repository 方法创建记录
-	warehouseLogRepo := repository.NewWarehouseInOutLogRepo(db)
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		// 使用 repository 方法创建记录
+		warehouseLogRepo := repository.NewWarehouseInOutLogRepo(tx)
 
-	for _, record := range records {
-		logRecord := &model.WarehouseInOutLog{
-			LogType:              1, // 出库
-			Scene:                1, // 销售出库
-			WarehouseUuid:        record.WarehouseUuid,
-			MaterialUuid:         record.MaterialUuid,
-			MaterialName:         record.MaterialName,
-			MaterialBaseUnitUuid: record.MaterialBaseUnitUuid,
-			MaterialBaseUnitName: record.MaterialBaseUnitName,
-			Num:                  record.TotalNum,
-			Price:                record.Valuation,
-			Amount:               decimal.NewFromFloat(record.TotalNum).Mul(decimal.NewFromFloat(record.Valuation)).Round(2).InexactFloat64(),
-			SupplierUuid:         record.SupplierUuid,
-			OrderNo:              orderNo,
-		}
+		uuids := make([]uint64, 0)
+		for _, record := range records {
+			uuids = append(uuids, record.Uuid)
+			logRecord := &model.WarehouseInOutLog{
+				LogType:              1, // 出库
+				Scene:                1, // 销售出库
+				WarehouseUuid:        record.WarehouseUuid,
+				MaterialUuid:         record.MaterialUuid,
+				MaterialName:         record.MaterialName,
+				MaterialBaseUnitUuid: record.MaterialBaseUnitUuid,
+				MaterialBaseUnitName: record.MaterialBaseUnitName,
+				Num:                  record.TotalNum,
+				Price:                record.Valuation,
+				Amount:               decimal.NewFromFloat(record.TotalNum).Mul(decimal.NewFromFloat(record.Valuation)).Round(2).InexactFloat64(),
+				SupplierUuid:         record.SupplierUuid,
+				OrderNo:              orderNo,
+			}
 
-		if err := warehouseLogRepo.Create(logRecord); err != nil {
-			logger.Logger.Error("保存出库记录失败: warehouse_uuid=%d, material_uuid=%d, error=%v", zap.Uint64("warehouse_uuid", record.WarehouseUuid), zap.Uint64("material_uuid", record.MaterialUuid), zap.Error(err))
-			continue
+			if err := warehouseLogRepo.Create(logRecord); err != nil {
+				logger.Logger.Error("保存出库记录失败: warehouse_uuid=%d, material_uuid=%d, error=%v", zap.Uint64("warehouse_uuid", record.WarehouseUuid), zap.Uint64("material_uuid", record.MaterialUuid), zap.Error(err))
+				continue
+			}
 		}
+		// 更新销售订单原料的统计状态
+		saleOrderMaterialRepo := repository.NewSaleOrderMaterialRepo(tx)
+		if err := saleOrderMaterialRepo.UpdateSaleOrderMaterialIsSummarized(uuids); err != nil {
+			return errors.WithMessage(err)
+		}
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	return nil
