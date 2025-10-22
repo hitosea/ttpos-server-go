@@ -64,18 +64,18 @@ type PrinterReportResp struct {
 }
 
 type PrintMenu struct {
-	ID         uint64             `json:"id"`          // 打印菜单ID
-	LocaleName dto.LocaleResponse `json:"locale_name"` // 打印菜单名称
+	ID         uint64             `json:"id"`          // 模版ID
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 模版名称
 }
 
 type PrintMenuGroup struct {
-	LocaleName dto.LocaleResponse `json:"locale_name"`
-	GroupType  int                `json:"group_type"` // 分组类型
-	List       []PrintMenu        `json:"list"`       // 打印菜单列表
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 分组名称
+	GroupType  int                `json:"group_type"`  // 分组类型
+	List       []PrintMenu        `json:"list"`        // 模版列表
 }
 
 type PrintMenuListResp struct {
-	List []PrintMenuGroup `json:"list"` // 打印菜单分组列表
+	List []PrintMenuGroup `json:"list"` // 模版分组列表
 }
 
 type PrintMenuDetail struct {
@@ -90,4 +90,22 @@ type PrintMenuDetailResp struct {
 	DefaultTpl      PrintMenuDetail   `json:"default_tpl"`        // 默认模板
 	AdvReceiptTpls  []PrintMenuDetail `json:"adv_receipt_tpls"`   // 高级模板列表
 	IsAdvReceiptTpl bool              `json:"is_adv_receipt_tpl"` // 是否启用高级模板
+}
+
+type ConfigInfo struct {
+	Name  string `json:"name"`  // 模块名称
+	Value string `json:"value"` // 模块数据
+}
+
+type ConfigInfoGroup struct {
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 分组名称
+	List       []ConfigInfo       `json:"list"`        // 分组列表
+}
+
+// ConfigInfoResp
+type ConfigInfoResp struct {
+	ConfigList   []ConfigInfoGroup `json:"config_list"`   // 模版配置分组列表
+	TemplateJson string            `json:"template_json"` // 模版 (JSON字符串)
+	TemplateName string            `json:"template_name"` // 模版名称
+	TemplateData string            `json:"template_data"` // 模版数据(JSON字符串)
 }

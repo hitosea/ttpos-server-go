@@ -536,7 +536,7 @@ func (s *purchaseReceiptOrderSrv) updateMaterialStock(
 	// 记录erp的入库记录
 	err := s.helper.recordErpStockInLog(db, receiptOrder)
 	if err != nil {
-		return errors.WithMessage(errors.New("记录ERP入库记录失败"), err.Error())
+		return errors.WithMessage(err)
 	}
 
 	// 获取供应商ID
