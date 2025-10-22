@@ -20804,6 +20804,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/printer/customize/create": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "创建打印机定制",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.打印管理"
+                ],
+                "summary": "创建打印机定制",
+                "parameters": [
+                    {
+                        "description": "创建打印机定制请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.CreatePrinterCustomizeReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/printer/customize/delete": {
             "delete": {
                 "security": [
@@ -20881,6 +20932,56 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/req.EditPrinterCustomizeReq"
                         }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/printer/customize/use": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "使用打印机定制",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.打印管理"
+                ],
+                "summary": "使用打印机定制",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "打印机定制ID",
+                        "name": "id",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -32347,6 +32448,23 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/req.OrderProductAddReq"
                     }
+                }
+            }
+        },
+        "req.CreatePrinterCustomizeReq": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "description": "打印机定制数据",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "打印机定制名称",
+                    "type": "string"
+                },
+                "template_id": {
+                    "description": "模板ID",
+                    "type": "integer"
                 }
             }
         },

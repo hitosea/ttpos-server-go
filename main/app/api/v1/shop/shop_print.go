@@ -124,6 +124,58 @@ func (h *PrintHandler) DeletePrinterCustomize(c *gin.Context) {
 	helper.Success(c, nil, "删除打印机定制成功")
 }
 
+// CreatePrinterCustomize 创建打印机定制
+// @Summary 创建打印机定制
+// @Description 创建打印机定制
+// @Tags 商家端.打印管理
+// @Accept json
+// @Produce json
+// @Param data body req.CreatePrinterCustomizeReq true "创建打印机定制请求"
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=string} "成功"
+// @Router /shop/printer/customize/create [post]
+func (h *PrintHandler) CreatePrinterCustomize(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	createPrinterCustomizeReq := req.CreatePrinterCustomizeReq{}
+	if err := c.ShouldBindJSON(&createPrinterCustomizeReq); err != nil {
+		helper.HandleValidationError(c, err, createPrinterCustomizeReq, nil)
+		return
+	}
+	err := h.printerSrv.CreatePrinterCustomize(ctx, createPrinterCustomizeReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil, "创建打印机定制成功")
+}
+
+// UsePrinterCustomize 使用打印机定制
+
+// @Summary 使用打印机定制
+// @Description 使用打印机定制
+// @Tags 商家端.打印管理
+// @Accept json
+// @Produce json
+// @Param id query uint64 true "打印机定制ID"
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=string} "成功"
+// @Router /shop/printer/customize/use [post]
+func (h *PrintHandler) UsePrinterCustomize(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	id := c.Query("id")
+	idUint, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		helper.Fail(c, constant.CodeFail, "打印机定制ID参数值错误")
+		return
+	}
+	err = h.printerSrv.UsePrinterCustomize(ctx, idUint)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil, "使用打印机定制成功")
+}
+
 // RegisterPrintHandlers 注册打印相关路由
 func RegisterPrintHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -150,5 +202,7 @@ func RegisterPrintHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.GET("/printer/menu/detail", printerHandler.GetPrintMenuDetail)             // 打印菜单详情
 		privateApi.POST("/printer/customize/edit", printerHandler.EditPrinterCustomize)       // 编辑打印机定制
 		privateApi.DELETE("/printer/customize/delete", printerHandler.DeletePrinterCustomize) // 删除打印机定制
+		privateApi.POST("/printer/customize/create", printerHandler.CreatePrinterCustomize)   // 创建打印机定制
+		privateApi.POST("/printer/customize/use", printerHandler.UsePrinterCustomize)         // 使用打印机定制
 	}
 }

@@ -3281,6 +3281,18 @@ definitions:
           $ref: '#/definitions/req.OrderProductAddReq'
         type: array
     type: object
+  req.CreatePrinterCustomizeReq:
+    properties:
+      data:
+        description: 打印机定制数据
+        type: string
+      name:
+        description: 打印机定制名称
+        type: string
+      template_id:
+        description: 模板ID
+        type: integer
+    type: object
   req.CreateWarehouseReq:
     properties:
       address:
@@ -25550,6 +25562,35 @@ paths:
       summary: 退款订单
       tags:
       - 商家端.订单
+  /shop/printer/customize/create:
+    post:
+      consumes:
+      - application/json
+      description: 创建打印机定制
+      parameters:
+      - description: 创建打印机定制请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.CreatePrinterCustomizeReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+      security:
+      - JwtToken: []
+      summary: 创建打印机定制
+      tags:
+      - 商家端.打印管理
   /shop/printer/customize/delete:
     delete:
       consumes:
@@ -25606,6 +25647,35 @@ paths:
       security:
       - JwtToken: []
       summary: 编辑打印机定制
+      tags:
+      - 商家端.打印管理
+  /shop/printer/customize/use:
+    post:
+      consumes:
+      - application/json
+      description: 使用打印机定制
+      parameters:
+      - description: 打印机定制ID
+        format: int64
+        in: query
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+      security:
+      - JwtToken: []
+      summary: 使用打印机定制
       tags:
       - 商家端.打印管理
   /shop/printer/menu/detail:
