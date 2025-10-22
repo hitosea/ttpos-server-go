@@ -32,6 +32,7 @@ class Supplier extends SupplierModel
         $data['pick_time'] = json_encode(["00:00", "23:59"]);
         $data['store_time'] = json_encode(["00:00", "23:59"]);
         $data['parent_id'] = ($data['parent_id'] ?? 0) ?: 0;
+        $data['is_open_advanced_ticket_print'] = $data['is_open_advanced_ticket_print'] ?? 0;
         $this->save($data);
 
         // 新增商家用户信息

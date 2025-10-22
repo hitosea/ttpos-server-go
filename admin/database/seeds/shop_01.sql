@@ -2179,6 +2179,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     `is_open_buffet` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启自助餐: 0不开启, 1开启',
     `is_open_h5_order` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启扫码点餐接单 0不开启, 1开启',
     `is_open_local_print` INT(10) NOT NULL DEFAULT 1 COMMENT '是否开启本地打印服务 0不开启, 1开启',
+    `is_open_advanced_ticket_print` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启高级票据打印模板: 0不开启, 1开启',
     `is_open_coupon` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启优惠券: 0不开启, 1开启',
     `is_open_marketing` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启营销活动: 0不开启, 1开启',
     `enable_sms` INT(11) NOT NULL DEFAULT 0 COMMENT '是否启用短信功能：0-否；1-是',

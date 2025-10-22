@@ -82,6 +82,7 @@ class App extends AppModel
             "su.is_open_buffet",
             "su.is_open_h5_order as is_accept_scan_order",
             "su.is_open_local_print",
+            "su.is_open_advanced_ticket_print",
             "su.table_limit",
             "su.printer_limit",
             "su.languages",
