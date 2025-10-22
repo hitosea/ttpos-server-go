@@ -88,6 +88,11 @@ func (t *DailySalesOutboundSummaryTask) getAllCompanies() ([]*model.Company, err
 
 // processCompany 处理单个门店
 func (t *DailySalesOutboundSummaryTask) ProcessCompany(company *model.Company) error {
+	// 判断是否是erp商品,不是的不处理
+	if !company.IsOpenErp() {
+		return nil
+	}
+
 	// 获取门店营业时间
 	openingHours, err := t.getOpeningHours(company.Uuid)
 	if err != nil {
