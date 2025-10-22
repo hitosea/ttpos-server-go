@@ -189,16 +189,19 @@ func (s *sBuying) buildCreatePurchaseOrderData(ctx context.Context, req *buying.
 	if req.BuyingPriceList != "" {
 		purchaseOrderData.BuyingPriceList = req.BuyingPriceList
 	} else {
-		//获取默认采购价格表
-		defaultPriceList, err := service.PosPriceList().GetPosPriceListByCompany(ctx, purchaseOrderData.Company)
-		if err != nil {
-			g.Log().Warningf(ctx, "获取采购价格表失败，company: %s", purchaseOrderData.Company)
-			defaultPriceList, err = service.PosPriceList().GetDefaultPosPriceList(ctx)
-			if err != nil {
-				return nil, gerror.Wrapf(err, "获取默认采购价格表失败")
-			}
-		}
-		purchaseOrderData.BuyingPriceList = defaultPriceList.BuyingPriceList
+		//子店、总店向外部采购的采购单使用“Standard Buying”
+		purchaseOrderData.BuyingPriceList = "Standard Buying"
+		//
+		////获取默认采购价格表
+		//defaultPriceList, err := service.PosPriceList().GetPosPriceListByCompany(ctx, purchaseOrderData.Company)
+		//if err != nil {
+		//	g.Log().Warningf(ctx, "获取采购价格表失败，company: %s", purchaseOrderData.Company)
+		//	defaultPriceList, err = service.PosPriceList().GetDefaultPosPriceList(ctx)
+		//	if err != nil {
+		//		return nil, gerror.Wrapf(err, "获取默认采购价格表失败")
+		//	}
+		//}
+		//purchaseOrderData.BuyingPriceList = defaultPriceList.BuyingPriceList
 	}
 
 	return purchaseOrderData, nil
