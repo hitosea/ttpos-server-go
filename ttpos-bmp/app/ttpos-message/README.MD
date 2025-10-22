@@ -71,6 +71,18 @@ cd ttpos-bmp/app/ttpos-message
 go mod tidy
 ```
 
+### 创建环境变量文件
+
+在项目根目录创建 `.env` 文件（注意：`.env` 文件不会被提交到 Git）：
+
+```bash
+# 在 ttpos-bmp 根目录创建 .env 文件
+cd /path/to/ttpos-bmp
+touch .env
+```
+
+编辑 `.env` 文件，添加必需的环境变量（参考下面的"环境变量配置"章节）。
+
 ### 配置文件
 
 复制配置模板并修改：
@@ -92,22 +104,118 @@ grpc:
   name: "ttpos-message"
   address: ":14032"
 
+# Nacos 配置
+nacos:
+  server:
+    ip: $NACOS_SERVER_IP
+    port: $NACOS_SERVER_PORT
+  config:
+    dataId: ttpos-message.yaml
+    group: DEFAULT_GROUP
+
 # RocketMQ 配置
 queue:
   switch: true
   driver: "rocketmq"
   groupName: "ttpos-message"
   rocketmq:
-    endpoint: "your-rocketmq-endpoint"
-    nameSrvAdders: ["your-rocketmq-addr:9876"]
+    endpoint: "$ROCKETMQ_ENDPOINT"
+    nameSrvAdders: ["$ROCKETMQ_NAME_SRV_ADDR"]
+    accessKey: "$ROCKETMQ_ACCESS_KEY"
+    secretKey: "$ROCKETMQ_SECRET_KEY"
 
 # Mailgun 配置
 mailgun:
-  domain: "your-domain.mailgun.org"
-  apiKey: "your-api-key"
-  fromEmail: "noreply@yourdomain.com"
+  domain: "$MAILGUN_DOMAIN"
+  apiKey: "$MAILGUN_API_KEY"
+  fromEmail: "$MAILGUN_FROM_EMAIL"
   fromName: "TTPOS System"
 ```
+
+### 环境变量配置
+
+在项目根目录创建 `.env` 文件（或在部署环境中设置环境变量）：
+
+```bash
+# .env 文件示例
+
+# ==================== 数据库配置 ====================
+DB_USERNAME=root
+DB_PASSWORD=your_password
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_PORT_OPEN=3306
+DB_NAME=messages
+
+# ==================== Nacos 配置 ====================
+NACOS_SERVER_IP=127.0.0.1
+NACOS_SERVER_PORT=8848
+
+# ==================== RocketMQ 配置 ====================
+ROCKETMQ_ENDPOINT=127.0.0.1:8081
+ROCKETMQ_NAME_SRV_ADDR=127.0.0.1:9876
+ROCKETMQ_ACCESS_KEY=your_access_key      # 可选，如果启用 ACL
+ROCKETMQ_SECRET_KEY=your_secret_key      # 可选，如果启用 ACL
+ROCKETMQ_BROKER_ADDR=127.0.0.1:10911     # 可选
+
+# ==================== Mailgun 配置 ====================
+# 重要：这些配置必须设置，否则邮件发送功能无法使用
+MAILGUN_DOMAIN=your-domain.mailgun.org
+MAILGUN_API_KEY=key-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+MAILGUN_FROM_EMAIL=noreply@yourdomain.com
+
+# ==================== gRPC 配置（可选）====================
+# 手动指定服务注册地址（多个地址用逗号分隔）
+GRPC_ENDPOINTS=192.168.1.100:14032,192.168.1.101:14032
+```
+
+#### Mailgun 配置获取步骤
+
+1. **注册 Mailgun 账号**
+   - 访问 [Mailgun 官网](https://www.mailgun.com/)
+   - 注册并验证账号
+
+2. **获取 API Key**
+   - 登录 [Mailgun 控制台](https://app.mailgun.com/)
+   - 进入 "Settings" → "API Keys"
+   - 复制 "Private API key"（以 `key-` 开头）
+   - 设置到环境变量 `MAILGUN_API_KEY`
+
+3. **配置域名**
+   - 进入 "Sending" → "Domains"
+   - 选择或添加域名
+   - 复制域名（如 `sandbox12345.mailgun.org` 或 `yourdomain.com`）
+   - 设置到环境变量 `MAILGUN_DOMAIN`
+
+4. **设置发件人邮箱**
+   - 发件人邮箱必须是已验证域名下的邮箱
+   - 例如：`noreply@yourdomain.com`
+   - 设置到环境变量 `MAILGUN_FROM_EMAIL`
+
+#### 环境变量优先级
+
+配置读取优先级：**环境变量 > 配置文件**
+
+例如，配置文件中写：
+```yaml
+mailgun:
+  domain: "$MAILGUN_DOMAIN"
+```
+
+GoFrame 会自动从环境变量中读取 `MAILGUN_DOMAIN` 的值。
+
+#### 开发环境配置
+
+开发环境可以直接修改 `config.yaml` 文件：
+
+```yaml
+mailgun:
+  domain: "sandbox12345.mailgun.org"        # 直接写死值
+  apiKey: "key-xxxxxx"                      # 直接写死值（不推荐）
+  fromEmail: "test@sandbox12345.mailgun.org"
+```
+
+**注意**：生产环境建议使用环境变量，避免敏感信息泄露。
 
 ### 数据库初始化
 
@@ -269,25 +377,122 @@ docker run -d \
 
 ## 📝 常见问题
 
-### 1. 消息发送失败怎么办？
+### 1. 环境变量未生效
+
+**问题**：配置了环境变量但服务仍然报错配置未找到
+
+**解决方案**：
+```bash
+# 1. 确认 .env 文件位置正确（项目根目录）
+ls -la .env
+
+# 2. 确认环境变量格式正确（无空格）
+# ✅ 正确
+MAILGUN_API_KEY=key-xxxx
+# ❌ 错误
+MAILGUN_API_KEY = key-xxxx
+
+# 3. 重启服务使环境变量生效
+make restart
+
+# 4. 验证环境变量是否加载
+curl http://localhost:14031/debug/config
+```
+
+### 2. 消息发送失败怎么办？
 
 - 检查消息状态：使用 `GetMessageStatus` 接口查询
 - 查看错误信息：`error_message` 字段包含详细错误
 - 重试发送：使用 `ResendMessage` 接口（最多重试5次）
+- 检查日志：查看 `./log/message/` 目录下的日志文件
 
-### 2. Mailgun 配置错误
+### 3. Mailgun 配置错误
 
-确保以下配置正确：
-- `domain`: Mailgun 验证过的域名
-- `apiKey`: 从 Mailgun 控制台获取
-- `fromEmail`: 必须是验证域名下的邮箱
+**常见错误信息**：
+- `Mailgun domain 未配置` - 检查 `MAILGUN_DOMAIN` 环境变量
+- `Mailgun apiKey 未配置` - 检查 `MAILGUN_API_KEY` 环境变量
+- `Mailgun fromEmail 未配置` - 检查 `MAILGUN_FROM_EMAIL` 环境变量
+- `Forbidden` - API Key 无效或权限不足
+- `Domain not found` - 域名未在 Mailgun 中验证
 
-### 3. RocketMQ 连接失败
+**排查步骤**：
+```bash
+# 1. 验证配置是否正确加载
+curl http://localhost:14031/debug/config
 
-检查配置：
-- `nameSrvAdders`: 确保 RocketMQ NameServer 地址正确
+# 2. 查看 Mailgun 配置
+# 输出应该包含 domain、fromEmail、fromName
+
+# 3. 测试 Mailgun 连接
+# 发送一条测试消息并查看日志
+```
+
+**确保以下配置正确**：
+- `MAILGUN_DOMAIN`: Mailgun 验证过的域名（如 `sandbox12345.mailgun.org`）
+- `MAILGUN_API_KEY`: 从 Mailgun 控制台获取（以 `key-` 开头）
+- `MAILGUN_FROM_EMAIL`: 必须是验证域名下的邮箱
+
+### 4. RocketMQ 连接失败
+
+**常见错误信息**：
+- `connect timeout` - 网络不通或地址错误
+- `no route to host` - 防火墙阻止或 IP 地址错误
+- `authentication failed` - ACL 认证失败
+
+**检查配置**：
+- `ROCKETMQ_NAME_SRV_ADDR`: 确保 RocketMQ NameServer 地址正确
 - 网络连通性：确保服务能访问 RocketMQ
-- 权限：如果启用了 ACL，需要配置 `accessKey` 和 `secretKey`
+- 权限：如果启用了 ACL，需要配置 `ROCKETMQ_ACCESS_KEY` 和 `ROCKETMQ_SECRET_KEY`
+
+**测试连接**：
+```bash
+# 测试 NameServer 连通性
+telnet 127.0.0.1 9876
+
+# 查看 RocketMQ 日志
+tail -f ./log/queue/*.log
+```
+
+### 5. Nacos 注册失败
+
+**常见错误**：
+- `connect refused` - Nacos 服务未启动或地址错误
+- `service register failed` - 服务注册失败
+
+**解决方案**：
+```bash
+# 1. 检查 Nacos 服务状态
+curl http://127.0.0.1:8848/nacos/v1/console/health/readiness
+
+# 2. 验证 Nacos 配置
+echo $NACOS_SERVER_IP
+echo $NACOS_SERVER_PORT
+
+# 3. 查看服务注册情况
+# 访问 Nacos 控制台：http://127.0.0.1:8848/nacos
+# 查看服务列表中是否有 ttpos-message
+```
+
+### 6. gRPC 服务无法访问
+
+**问题**：其他服务无法调用 ttpos-message 的 gRPC 接口
+
+**排查步骤**：
+```bash
+# 1. 检查 gRPC 端口是否监听
+netstat -tuln | grep 14032
+# 或
+lsof -i :14032
+
+# 2. 使用 grpcurl 测试
+grpcurl -plaintext localhost:14032 list
+
+# 3. 检查防火墙
+sudo firewall-cmd --list-ports
+
+# 4. 查看服务日志
+tail -f ./log/message/*.log
+```
 
 ## 🤝 贡献指南
 

@@ -6,12 +6,23 @@ import (
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
+	"github.com/gogf/gf/v2/os/gctx"
 
 	_ "ttpos-bmp/app/ttpos-message/internal/logic/message"
 	_ "ttpos-bmp/app/ttpos-message/internal/logic/queue"
 	_ "ttpos-bmp/app/ttpos-message/internal/logic/sender"
 	"ttpos-bmp/app/ttpos-message/internal/service"
+	"ttpos-bmp/utility/uuid"
 )
+
+var (
+	ctx = gctx.GetInitCtx()
+)
+
+func init() {
+	InitRpc(ctx)
+	uuid.InitIdGenerator(ctx)
+}
 
 // Init 初始化服务
 // 在服务启动时执行，初始化各个组件

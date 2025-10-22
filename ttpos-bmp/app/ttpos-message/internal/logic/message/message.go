@@ -46,11 +46,10 @@ func (s *sMessage) SendMessage(ctx context.Context, in *dto.SendMessageInput) (o
 		out.Message = err.Error()
 		return out, err
 	}
-
 	// 检查消息是否已存在（幂等性）
 	var existingRecord *dto.MessageRecordDTO
 	existingRecord, err = s.GetMessageByUuid(ctx, in.MessageUuid)
-	if err != nil && !gerror.Is(err, gerror.New(consts.ErrMsgMessageNotFound)) {
+	if err != nil && !gerror.Equal(err, gerror.New(consts.ErrMsgMessageNotFound)) {
 		out.Success = false
 		out.Message = "检查消息是否存在失败"
 		return out, err

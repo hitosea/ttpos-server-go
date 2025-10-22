@@ -1,7 +1,7 @@
 # TTPOS 消息中心服务配置文件
 # https://goframe.org/docs/web/server-config-file-template
 server:
-  address: ":14031"
+  address: ":14041"
   openapiPath: "/api.json"
   swaggerPath: "/swagger"
 
@@ -18,7 +18,7 @@ logger:
 # https://goframe.org/docs/core/gdb-config-file
 database:
   default:
-    link: "mysql:$DB_USERNAME:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/messages"
+    link: "mysql:$DB_USERNAME:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/message"
     maxIdle: 10
     maxOpen: 100
     maxLifetime: 30
@@ -26,7 +26,7 @@ database:
 # gRPC 服务配置
 grpc:
   name: "ttpos-message"
-  address: ":14032"
+  address: ":14042"
   logPath: "./log"
   logStdout: true
   errorLogEnabled: true
