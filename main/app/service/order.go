@@ -5012,6 +5012,7 @@ func (s *orderSrv) OrderRemark(ctx context.Context, req req.OrderRemarkReq, opts
 	// 创建新的备注信息
 	orderRemarkItem := resp.OrderRemarkItem{
 		IsLatest: true,
+		Uuids:    req.RemarkUuids,
 		Remark:   req.Remark,
 		Remarks: func() []dto.LocaleResponse {
 			remarks := make([]dto.LocaleResponse, 0)
@@ -5025,8 +5026,8 @@ func (s *orderSrv) OrderRemark(ctx context.Context, req req.OrderRemarkReq, opts
 	if orderRemark != nil {
 		// 有历史备注信息
 		// 修改历史备注信息为不是最新
-		for _, remark := range orderRemark.List {
-			remark.IsLatest = false
+		for i := range orderRemark.List {
+			orderRemark.List[i].IsLatest = false
 		}
 		orderRemark.List = append(orderRemark.List, orderRemarkItem)
 		billInfo.OrderRemark = orderRemark.ToJson()
