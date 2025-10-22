@@ -138,6 +138,8 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 		// 添加分隔线
 		printer.AppendText("\n------------------------------------------------\n")
 
+		printer.SetAlignment(pkg.AlignLeft)
+
 		// 设置列
 		printer.SetupColumns(
 			[]int{490, pkg.AlignLeft, 0},
@@ -177,9 +179,7 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 				// 设置字符大小和行间距
 				printer.SetCharacterSize(1, 1)
 				// 打印行间距和换行
-				if isSubProduct {
-					printer.LineFeed()
-				}
+				printer.LineFeed()
 				printer.SetLineSpacing(45)
 				// 分割处理属性
 				for _, attr := range utils.IfSlice(isShowSku == 0, product.ProductSauceNamesList, product.ProductAttrList) {
