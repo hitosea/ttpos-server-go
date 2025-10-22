@@ -1677,6 +1677,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_in_out_log` (
     `other_org_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '对方机构ID',
     `other_org_type` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '对方机构类型 0:供应商 1:客户',
     `other_org_name` TEXT COMMENT '对方机构名称',
+    `opening_hours` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '营业时段,2025 00:00-23:59,仅用于Scene销售出库的场景',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

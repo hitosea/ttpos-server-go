@@ -105,6 +105,27 @@ func (t *DailySalesOutboundSummaryTask) ProcessCompany(company *model.Company) e
 		return nil
 	}
 
+	// 判断该营业时段是否已经统计过
+	year := time.Now().Year()
+	openingYearHours := fmt.Sprintf("%d %s", year, openingHours)
+	db := t.dbm.GetDB(company.Uuid)
+	warehouseLogRepo := repository.NewWarehouseInOutLogRepo(db)
+	opts := []repository.DBOption{
+		warehouseLogRepo.WhereLogType(1), // 出库
+		warehouseLogRepo.WhereScene(1),   // 销售出库
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("opening_hours = ?", openingYearHours)
+		},
+	}
+	existingLogs, err := warehouseLogRepo.GetWarehouseInOutLogs(opts...)
+	if err != nil {
+		return fmt.Errorf("获取营业时段记录失败: %w", err)
+	}
+	if len(existingLogs) > 0 {
+		logger.Logger.Info(fmt.Sprintf("门店 %s 该营业时段%s已统计过，跳过处理", company.Name, openingYearHours))
+		return nil
+	}
+
 	logger.Logger.Info("门店 %s 已到达营业结束时间，开始统计销售出库记录", zap.String("company_name", company.Name))
 
 	// 统计当天销售出库记录
@@ -119,7 +140,7 @@ func (t *DailySalesOutboundSummaryTask) ProcessCompany(company *model.Company) e
 	}
 
 	// 生成汇总记录并写入数据库
-	if err := t.saveOutboundSummaryRecords(company.Uuid, outboundRecords); err != nil {
+	if err := t.saveOutboundSummaryRecords(company.Uuid, outboundRecords, openingYearHours); err != nil {
 		return fmt.Errorf("保存出库汇总记录失败: %w", err)
 	}
 
@@ -241,7 +262,7 @@ type OutboundRecord struct {
 }
 
 // saveOutboundSummaryRecords 保存出库汇总记录到ttpos_warehouse_in_out_log表
-func (t *DailySalesOutboundSummaryTask) saveOutboundSummaryRecords(companyUuid uint64, records []*OutboundRecord) error {
+func (t *DailySalesOutboundSummaryTask) saveOutboundSummaryRecords(companyUuid uint64, records []*OutboundRecord, openingHours string) error {
 	db := t.dbm.GetDB(companyUuid)
 
 	// 生成出库单号
@@ -270,6 +291,7 @@ func (t *DailySalesOutboundSummaryTask) saveOutboundSummaryRecords(companyUuid u
 				Amount:               decimal.NewFromFloat(record.TotalNum).Mul(decimal.NewFromFloat(record.Valuation)).Round(2).InexactFloat64(),
 				SupplierUuid:         record.SupplierUuid,
 				OrderNo:              orderNo,
+				OpeningHours:         openingHours,
 			}
 
 			if err := warehouseLogRepo.Create(logRecord); err != nil {
