@@ -4,6 +4,8 @@ package queue
 import (
 	"context"
 	"encoding/json"
+	"ttpos-bmp/app/ttpos-message/internal/logic/consumer"
+	"ttpos-bmp/internal/pkg/queue"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -36,8 +38,11 @@ func (s *sQueue) Init(ctx context.Context) error {
 
 	g.Log().Info(ctx, "RocketMQ 队列服务初始化成功")
 
+	//注册消费者
+	queue.RegisterConsumer(&consumer.MailgunConsumer{})
 	// 启动消费者
-	go s.startConsumer(ctx)
+	//go s.startConsumer(ctx)
+	go queue.StartConsumersListener(ctx)
 
 	return nil
 }
@@ -55,15 +60,21 @@ func (s *sQueue) PublishMessage(ctx context.Context, msg *dto.RocketMQMessage) e
 		return gerror.New("队列服务未启用")
 	}
 
-	// TODO: 实现 RocketMQ 生产者发送消息
-	// 临时处理：直接同步处理消息（绕过队列）
-	sendErr := s.processMessage(ctx, msg)
-	if sendErr != nil {
-		g.Log().Error(ctx, "处理消息失败", "error", sendErr, "uuid", msg.MessageUuid)
-		return gerror.Wrap(sendErr, consts.ErrMsgRocketMQError)
+	//发送消息
+	if err := queue.Push(consts.TopicMessageSend, msg); err != nil {
+		g.Log().Errorf(ctx, "发送消息失败，发送异步消息失败: %v", err)
+		return gerror.Wrapf(err, "发送消息失败，发送异步消息失败: %v", msg)
 	}
 
-	g.Log().Info(ctx, "消息已同步处理",
+	//// TODO: 实现 RocketMQ 生产者发送消息
+	//// 临时处理：直接同步处理消息（绕过队列）
+	//sendErr := s.processMessage(ctx, msg)
+	//if sendErr != nil {
+	//	g.Log().Error(ctx, "处理消息失败", "error", sendErr, "uuid", msg.MessageUuid)
+	//	return gerror.Wrap(sendErr, consts.ErrMsgRocketMQError)
+	//}
+
+	g.Log().Info(ctx, "消息已发送",
 		"uuid", msg.MessageUuid,
 		"type", msg.MessageType,
 	)

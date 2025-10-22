@@ -6,3 +6,5 @@ save-pos-invoice
 return-pos-invoice
 cancel-pos-invoice
 close-pos-entry
+#发送消息
+ttpos-message-send

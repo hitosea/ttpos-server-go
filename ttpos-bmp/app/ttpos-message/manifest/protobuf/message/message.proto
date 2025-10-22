@@ -7,8 +7,6 @@ package message;
 // Go 包路径配置
 option go_package = "ttpos-bmp/app/ttpos-message/api/message/v1";
 
-// 导入标准库
-import "google/protobuf/timestamp.proto";
 
 // 消息服务接口定义
 // 提供消息发送、查询、重发等相关的 gRPC 服务方法

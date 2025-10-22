@@ -29,7 +29,7 @@ const (
 
 // RocketMQ 配置常量
 const (
-	TopicMessageSend = "message-send-topic" // 消息发送主题
+	TopicMessageSend = "ttpos-message-send" // 消息发送主题
 	TagEmail         = "email"              // 邮件标签
 	TagSMS           = "sms"                // 短信标签
 )

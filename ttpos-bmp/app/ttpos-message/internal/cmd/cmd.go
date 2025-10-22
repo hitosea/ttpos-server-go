@@ -7,7 +7,7 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gcmd"
 
-	v1 "ttpos-bmp/app/ttpos-message/api/message/v1"
+	v1 "ttpos-bmp/app/ttpos-message/api/message"
 	"ttpos-bmp/app/ttpos-message/internal/boot"
 	"ttpos-bmp/app/ttpos-message/internal/controller/rpc/message"
 )

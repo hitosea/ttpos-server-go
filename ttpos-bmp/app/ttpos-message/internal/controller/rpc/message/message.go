@@ -7,7 +7,7 @@ import (
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 
-	v1 "ttpos-bmp/app/ttpos-message/api/message/v1"
+	v1 "ttpos-bmp/app/ttpos-message/api/message"
 	"ttpos-bmp/app/ttpos-message/internal/consts"
 	"ttpos-bmp/app/ttpos-message/internal/model/dto"
 	"ttpos-bmp/app/ttpos-message/internal/service"
