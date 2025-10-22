@@ -1047,7 +1047,7 @@
                 "block_type": "label:value",
                 "block_label": {
                     "zh": "手动抹零:",
-                    "en": "Manual Rounding:",
+                    "en": "Manual rounding:",
                     "ko": "수동 반올림:",
                     "my": "လက်ဖြင့် ပတ်သတ်:",
                     "tr": "Manuel Yuvarlama:",

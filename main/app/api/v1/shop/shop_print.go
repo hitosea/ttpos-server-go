@@ -17,8 +17,9 @@ import (
 
 // PrintHandler 打印控制器
 type PrintHandler struct {
-	authSrv    service.IAuthSrv
-	printerSrv service.IPrinterSrv
+	authSrv       service.IAuthSrv
+	printerSrv    service.IPrinterSrv
+	uploadFileSrv service.IUploadFileSrv
 }
 
 // GetPrintTemplateList 获取打印模板列表
@@ -199,6 +200,39 @@ func (h *PrintHandler) GetPrinterCustomizeConfigInfo(c *gin.Context) {
 	helper.Success(c, result)
 }
 
+// UploadImage 上传自定义图片
+// @Summary 上传自定义图片
+// @Description 上传自定义图片
+// @Tags 商家端.打印管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param file formData file true "上传自定义图片"
+// @Success 200 {object} dto.Response{data=resp.UploadFileResp}
+// @Success 200 {object} dto.Response
+// @Router /shop/printer/image/upload [post]
+func (h *PrintHandler) UploadImage(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	file, err := c.FormFile("file")
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	fileReader, err := file.Open()
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	uploadFileResp, err := h.uploadFileSrv.UploadImage(ctx, fileReader, file.Filename, file.Size, 0, "printerTemplateImage")
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	helper.Success(c, uploadFileResp)
+}
+
 // RegisterPrintHandlers 注册打印相关路由
 func RegisterPrintHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -214,8 +248,9 @@ func RegisterPrintHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 
 	// 初始化控制器
 	printerHandler := &PrintHandler{
-		authSrv:    authSrv,
-		printerSrv: printerSrv,
+		authSrv:       authSrv,
+		printerSrv:    printerSrv,
+		uploadFileSrv: service.NewUploadFileSrv(dbm),
 	}
 
 	// 需要认证的路由
@@ -228,5 +263,6 @@ func RegisterPrintHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.POST("/printer/customize/create", printerHandler.CreatePrinterCustomize)            // 创建打印机定制
 		privateApi.POST("/printer/customize/use", printerHandler.UsePrinterCustomize)                  // 使用打印机定制
 		privateApi.GET("/printer/customize/config/info", printerHandler.GetPrinterCustomizeConfigInfo) // 获取配置信息
+		privateApi.POST("/printer/image/upload", printerHandler.UploadImage)                           // 上传自定义图片
 	}
 }

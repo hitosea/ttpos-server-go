@@ -14,9 +14,11 @@
     },
     "order": {
         "status": 0,
-        "serial_no": "桌号: A9 (5人)",
+        "serial_no": "A9",
+        "serial_nos": "桌号: A9 (5人)",
         "order_no": "202509242875625440",
-        "remark": "",
+        "meal_num": 5,
+        "remark": "开桌备注",
         "cashier_name": "wfs@qq.com",
         "finish_time": "2025-09-24 10:01:37",
         "create_time": "2025-09-24 10:01:37",
