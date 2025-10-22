@@ -63,33 +63,33 @@ type PrinterReportResp struct {
 	NewPrinterSn   string `json:"new_printer_sn"`   // 新打印机SN
 }
 
-type PrintMenu struct {
+type PrintTemplate struct {
 	ID         uint64             `json:"id"`          // 模版ID
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 模版名称
 }
 
-type PrintMenuGroup struct {
+type PrintTemplateGroup struct {
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 分组名称
 	GroupType  int                `json:"group_type"`  // 分组类型
-	List       []PrintMenu        `json:"list"`        // 模版列表
+	List       []PrintTemplate    `json:"list"`        // 模版列表
 }
 
-type PrintMenuListResp struct {
-	List []PrintMenuGroup `json:"list"` // 模版分组列表
+type PrintTemplateListResp struct {
+	List []PrintTemplateGroup `json:"list"` // 模版分组列表
 }
 
-type PrintMenuDetail struct {
-	ID      uint64 `json:"id"`       // 模板ID
-	Name    string `json:"name"`     // 模板名称
-	IsUse   bool   `json:"is_use"`   // 是否USB模板
-	TempImg string `json:"temp_img"` // 模板图片路径
-	TmpUuid uint64 `json:"tmp_uuid"` // 临时模板UUID
+type PrintTemplateDetail struct {
+	ID            uint64 `json:"id"`             // 模板ID
+	Name          string `json:"name"`           // 模板名称
+	IsUse         bool   `json:"is_use"`         // 是否使用
+	ImgUrl        string `json:"img_url"`        // 模板图片URL
+	CustomizeUuid uint64 `json:"customize_uuid"` // 定制UUID
 }
 
-type PrintMenuDetailResp struct {
-	DefaultTpl      PrintMenuDetail   `json:"default_tpl"`        // 默认模板
-	AdvReceiptTpls  []PrintMenuDetail `json:"adv_receipt_tpls"`   // 高级模板列表
-	IsAdvReceiptTpl bool              `json:"is_adv_receipt_tpl"` // 是否启用高级模板
+type PrintTemplateDetailResp struct {
+	DefaultTpl      PrintTemplateDetail   `json:"default_tpl"`        // 默认模板
+	AdvReceiptTpls  []PrintTemplateDetail `json:"adv_receipt_tpls"`   // 高级模板列表
+	IsAdvReceiptTpl bool                  `json:"is_adv_receipt_tpl"` // 是否启用高级模板
 }
 
 type ConfigInfo struct {

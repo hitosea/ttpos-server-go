@@ -21,18 +21,18 @@ type PrintHandler struct {
 	printerSrv service.IPrinterSrv
 }
 
-// GetPrintMenuList 获取打印菜单列表
-// @Summary 获取打印菜单列表
-// @Description 获取打印菜单列表
+// GetPrintTemplateList 获取打印模板列表
+// @Summary 获取打印模板列表
+// @Description 获取打印模板列表
 // @Tags 商家端.打印管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} dto.Response{data=resp.PrintMenuListResp} "成功"
-// @Router /shop/printer/menu/list [get]
-func (h *PrintHandler) GetPrintMenuList(c *gin.Context) {
+// @Success 200 {object} dto.Response{data=resp.PrintTemplateListResp} "成功"
+// @Router /shop/printer/template/list [get]
+func (h *PrintHandler) GetPrintTemplateList(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	result, err := h.printerSrv.GetPrintMenuList(ctx)
+	result, err := h.printerSrv.GetPrintTemplateList(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -41,17 +41,17 @@ func (h *PrintHandler) GetPrintMenuList(c *gin.Context) {
 	helper.Success(c, result)
 }
 
-// GetPrintMenuDetail 获取打印菜单详情
-// @Summary 获取打印菜单详情
-// @Description 获取打印菜单详情
+// GetPrintTemplateDetail 获取打印模板详情
+// @Summary 获取打印模板详情
+// @Description 获取打印模板详情
 // @Tags 商家端.打印管理
 // @Accept json
 // @Produce json
 // @Param id query uint64 true "模板ID"
 // @Security JwtToken
-// @Success 200 {object} dto.Response{data=resp.PrintMenuDetailResp} "成功"
-// @Router /shop/printer/menu/detail [get]
-func (h *PrintHandler) GetPrintMenuDetail(c *gin.Context) {
+// @Success 200 {object} dto.Response{data=resp.PrintTemplateDetailResp} "成功"
+// @Router /shop/printer/template/detail [get]
+func (h *PrintHandler) GetPrintTemplateDetail(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 获取路径参数
 	id := c.Query("id")
@@ -64,7 +64,7 @@ func (h *PrintHandler) GetPrintMenuDetail(c *gin.Context) {
 		helper.Fail(c, constant.CodeFail, "模板ID参数值错误")
 		return
 	}
-	result, err := h.printerSrv.GetPrintMenuDetail(ctx, idUint)
+	result, err := h.printerSrv.GetPrintTemplateDetail(ctx, idUint)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -82,7 +82,7 @@ func (h *PrintHandler) GetPrintMenuDetail(c *gin.Context) {
 // @Param data body req.EditPrinterCustomizeReq true "编辑打印机定制请求"
 // @Security JwtToken
 // @Success 200 {object} dto.Response{data=string} "成功"
-// @Router /shop/printer/customize/edit [post]
+// @Router /shop/printer/template/customize/edit [post]
 func (h *PrintHandler) EditPrinterCustomize(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	editPrinterCustomizeReq := req.EditPrinterCustomizeReq{}
@@ -104,19 +104,19 @@ func (h *PrintHandler) EditPrinterCustomize(c *gin.Context) {
 // @Tags 商家端.打印管理
 // @Accept json
 // @Produce json
-// @Param tmp_uuid query uint64 true "打印机定制UUID"
+// @Param customize_uuid query uint64 true "打印机定制UUID"
 // @Security JwtToken
 // @Success 200 {object} dto.Response{data=string} "成功"
 // @Router /shop/printer/customize/delete [delete]
 func (h *PrintHandler) DeletePrinterCustomize(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	tmp_uuid := c.Query("tmp_uuid")
-	tmpUuidUint, err := strconv.ParseUint(tmp_uuid, 10, 64)
+	customize_uuid := c.Query("customize_uuid")
+	customizeUuidUint, err := strconv.ParseUint(customize_uuid, 10, 64)
 	if err != nil {
 		helper.Fail(c, constant.CodeFail, "打印机定制UUID参数值错误")
 		return
 	}
-	err = h.printerSrv.DeletePrinterCustomize(ctx, tmpUuidUint)
+	err = h.printerSrv.DeletePrinterCustomize(ctx, customizeUuidUint)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -155,19 +155,19 @@ func (h *PrintHandler) CreatePrinterCustomize(c *gin.Context) {
 // @Tags 商家端.打印管理
 // @Accept json
 // @Produce json
-// @Param tmp_uuid query uint64 true "打印机定制UUID"
+// @Param customize_uuid query uint64 true "打印机定制UUID"
 // @Security JwtToken
 // @Success 200 {object} dto.Response{data=string} "成功"
 // @Router /shop/printer/customize/use [post]
 func (h *PrintHandler) UsePrinterCustomize(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	tmp_uuid := c.Query("tmp_uuid")
-	tmpUuidUint, err := strconv.ParseUint(tmp_uuid, 10, 64)
+	customize_uuid := c.Query("customize_uuid")
+	customizeUuidUint, err := strconv.ParseUint(customize_uuid, 10, 64)
 	if err != nil {
 		helper.Fail(c, constant.CodeFail, "打印机定制UUID参数值错误")
 		return
 	}
-	err = h.printerSrv.UsePrinterCustomize(ctx, tmpUuidUint)
+	err = h.printerSrv.UsePrinterCustomize(ctx, customizeUuidUint)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -197,8 +197,8 @@ func RegisterPrintHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	// 需要认证的路由
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/printer/menu/list", printerHandler.GetPrintMenuList)                 // 打印菜单列表
-		privateApi.GET("/printer/menu/detail", printerHandler.GetPrintMenuDetail)             // 打印菜单详情
+		privateApi.GET("/printer/template/list", printerHandler.GetPrintTemplateList)         // 打印模板列表
+		privateApi.GET("/printer/template/detail", printerHandler.GetPrintTemplateDetail)     // 打印模板详情
 		privateApi.POST("/printer/customize/edit", printerHandler.EditPrinterCustomize)       // 编辑打印机定制
 		privateApi.DELETE("/printer/customize/delete", printerHandler.DeletePrinterCustomize) // 删除打印机定制
 		privateApi.POST("/printer/customize/create", printerHandler.CreatePrinterCustomize)   // 创建打印机定制
