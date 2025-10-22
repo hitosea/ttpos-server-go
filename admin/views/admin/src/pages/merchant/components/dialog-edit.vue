@@ -140,6 +140,13 @@
             <el-radio :value="0">{{ $t('关闭') }}</el-radio>
           </el-radio-group>
         </el-form-item>
+        <el-form-item :label="$t('高级票据打印')" prop="is_open_advanced_ticket_print">
+          <el-radio-group v-model="formData.is_open_advanced_ticket_print">
+            <el-radio :value="1">{{ $t('开启') }}</el-radio>
+            <el-radio :value="0">{{ $t('关闭') }}</el-radio>
+          </el-radio-group>
+        </el-form-item>
+
         <el-form-item :label="$t('授权开始时间')" prop="auth_start_time">
           <el-date-picker v-model="formData.auth_start_time" type="datetime" @change="handleDateChange" :placeholder="$t('选择日期时间')"></el-date-picker>
         </el-form-item>
@@ -352,6 +359,7 @@
     sms_quota: 200, // 短信额度
     is_open_coupon: 0, // 是否开启优惠券: 0不开启, 1开启
     is_open_marketing: 0, // 是否开启营销活动: 0不开启, 1开启
+    is_open_advanced_ticket_print: 0, // 是否开启高级票据打印: 0不开启, 1开启
     coordinates: '', // 经纬度
   });
 
@@ -389,6 +397,7 @@
     sms_quota: [{ required: true, message: $t('请输入短信额度'), trigger: 'blur' }],
     is_open_coupon: [{ required: true, message: $t('请选择'), trigger: 'blur' }],
     is_open_marketing: [{ required: true, message: $t('请选择'), trigger: 'blur' }],
+    is_open_advanced_ticket_print: [{ required: true, message: $t('请选择'), trigger: 'blur' }],
     printer_limit: [
       {
         required: true,
@@ -620,6 +629,7 @@
         printer_limit: props.detail?.printer_limit == -1 ? undefined : props.detail?.printer_limit || undefined, //
         is_open_coupon: props.detail?.is_open_coupon || 0, //
         is_open_marketing: props.detail?.is_open_marketing || 0, //
+        is_open_advanced_ticket_print: props.detail?.is_open_advanced_ticket_print || 0, //
         coordinates: props.detail?.coordinates || '', //
       };
       props.detail?.printer_limit == -1 ? (limitPrinter.value = true) : (limitPrinter.value = false);
