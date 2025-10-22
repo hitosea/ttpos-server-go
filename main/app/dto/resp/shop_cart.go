@@ -39,9 +39,11 @@ type OrderRemarkRes struct {
 }
 
 type OrderRemarkResItem struct {
-	IsLatest   bool               `json:"is_latest"`   // 是否是最新备注
-	Remark     dto.LocaleResponse `json:"remark"`      // 备注
-	CreateTime int64              `json:"create_time"` // 创建时间(时间戳)
+	IsLatest     bool               `json:"is_latest"`     // 是否是最新备注
+	Uuids        []uint64           `json:"uuids"`         // 备注UUID列表
+	Remark       dto.LocaleResponse `json:"remark"`        // 备注
+	CustomRemark string             `json:"custom_remark"` // 自定义备注
+	CreateTime   int64              `json:"create_time"`   // 创建时间(时间戳)
 }
 
 // 整单备注信息
@@ -61,9 +63,11 @@ func (res *OrderRemarkInfo) GetOrderRemarkResponse() OrderRemarkRes {
 	result := make([]OrderRemarkResItem, 0)
 	for _, item := range res.List {
 		result = append(result, OrderRemarkResItem{
-			IsLatest:   item.IsLatest,
-			Remark:     item.GetOrderRemarkResponse(),
-			CreateTime: item.CreateTime,
+			IsLatest:     item.IsLatest,
+			Uuids:        item.Uuids,
+			Remark:       item.GetOrderRemarkResponse(),
+			CustomRemark: item.Remark, // 自定义备注
+			CreateTime:   item.CreateTime,
 		})
 	}
 
@@ -95,6 +99,7 @@ func (res *OrderRemarkInfo) GetOrderRemarkResponse() OrderRemarkRes {
 
 type OrderRemarkItem struct {
 	IsLatest   bool                 `json:"is_latest"`   // 是否是最新备注
+	Uuids      []uint64             `json:"uuids"`       // 备注UUID列表
 	Remarks    []dto.LocaleResponse `json:"remarks"`     // 备注列表
 	Remark     string               `json:"remark"`      // 备注，自定义备注
 	CreateTime int64                `json:"create_time"` // 创建时间(时间戳)
