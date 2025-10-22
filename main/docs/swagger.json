@@ -20872,7 +20872,7 @@
                         "type": "integer",
                         "format": "int64",
                         "description": "打印机定制UUID",
-                        "name": "tmp_uuid",
+                        "name": "customize_uuid",
                         "in": "query",
                         "required": true
                     }
@@ -20899,7 +20899,57 @@
                 }
             }
         },
-        "/shop/printer/customize/edit": {
+        "/shop/printer/customize/use": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "使用打印机定制",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.打印管理"
+                ],
+                "summary": "使用打印机定制",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "打印机定制UUID",
+                        "name": "customize_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/printer/template/customize/edit": {
             "post": {
                 "security": [
                     {
@@ -20950,64 +21000,14 @@
                 }
             }
         },
-        "/shop/printer/customize/use": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "使用打印机定制",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.打印管理"
-                ],
-                "summary": "使用打印机定制",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "format": "int64",
-                        "description": "打印机定制UUID",
-                        "name": "tmp_uuid",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/shop/printer/menu/detail": {
+        "/shop/printer/template/detail": {
             "get": {
                 "security": [
                     {
                         "JwtToken": []
                     }
                 ],
-                "description": "获取打印菜单详情",
+                "description": "获取打印模板详情",
                 "consumes": [
                     "application/json"
                 ],
@@ -21017,7 +21017,7 @@
                 "tags": [
                     "商家端.打印管理"
                 ],
-                "summary": "获取打印菜单详情",
+                "summary": "获取打印模板详情",
                 "parameters": [
                     {
                         "type": "integer",
@@ -21040,7 +21040,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.PrintMenuDetailResp"
+                                            "$ref": "#/definitions/resp.PrintTemplateDetailResp"
                                         }
                                     }
                                 }
@@ -21050,14 +21050,14 @@
                 }
             }
         },
-        "/shop/printer/menu/list": {
+        "/shop/printer/template/list": {
             "get": {
                 "security": [
                     {
                         "JwtToken": []
                     }
                 ],
-                "description": "获取打印菜单列表",
+                "description": "获取打印模板列表",
                 "consumes": [
                     "application/json"
                 ],
@@ -21067,7 +21067,7 @@
                 "tags": [
                     "商家端.打印管理"
                 ],
-                "summary": "获取打印菜单列表",
+                "summary": "获取打印模板列表",
                 "responses": {
                     "200": {
                         "description": "成功",
@@ -21080,7 +21080,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.PrintMenuListResp"
+                                            "$ref": "#/definitions/resp.PrintTemplateListResp"
                                         }
                                     }
                                 }
@@ -25672,6 +25672,431 @@
                 }
             }
         },
+        "/shop/stock_reconciliation/approve": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "审核通过盘点单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.盘点管理"
+                ],
+                "summary": "审核盘点单",
+                "parameters": [
+                    {
+                        "description": "审核盘点单请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StockReconciliationApproveReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/stock_reconciliation/create": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "创建新的盘点单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.盘点管理"
+                ],
+                "summary": "创建盘点单",
+                "parameters": [
+                    {
+                        "description": "创建盘点单请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StockReconciliationCreateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.StockReconciliationCreateResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/stock_reconciliation/delete": {
+            "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除盘点单（软删除）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.盘点管理"
+                ],
+                "summary": "删除盘点单",
+                "parameters": [
+                    {
+                        "description": "删除盘点单请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StockReconciliationDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/stock_reconciliation/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "根据UUID获取盘点单详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.盘点管理"
+                ],
+                "summary": "获取盘点单详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "盘点单UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.StockReconciliationDetailResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/stock_reconciliation/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "分页获取盘点单列表，支持多仓库筛选、关键字搜索、创建时间范围筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.盘点管理"
+                ],
+                "summary": "获取盘点单列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量",
+                        "name": "page_size",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "仓库UUID列表",
+                        "name": "warehouse_uuids",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "关键字（搜索单据编号和ERP盘点单号）",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "创建开始时间（时间戳）",
+                        "name": "start_create_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "创建结束时间（时间戳）",
+                        "name": "end_create_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "状态列表",
+                        "name": "status_in",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.StockReconciliationListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/stock_reconciliation/reject": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "驳回盘点单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.盘点管理"
+                ],
+                "summary": "驳回盘点单",
+                "parameters": [
+                    {
+                        "description": "驳回盘点单请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StockReconciliationRejectReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/stock_reconciliation/save": {
+            "put": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "保存盘点单信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.盘点管理"
+                ],
+                "summary": "保存盘点单",
+                "parameters": [
+                    {
+                        "description": "保存盘点单请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StockReconciliationSaveReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/stock_reconciliation/submit": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "提交盘点单进行审核",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.盘点管理"
+                ],
+                "summary": "提交盘点单",
+                "parameters": [
+                    {
+                        "description": "提交盘点单请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StockReconciliationSaveReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/supplier": {
             "get": {
                 "security": [
@@ -26523,6 +26948,67 @@
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/resp.WarehouseListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/warehouse/material/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "根据仓库ID获取仓库物品列表，包含物品多语言名称、库存数量、所有单位及转换率",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.仓库档案"
+                ],
+                "summary": "获取仓库物品列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "仓库UUID",
+                        "name": "warehouse_uuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码，默认1",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量，默认20",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.WarehouseMaterialListResp"
                                         }
                                     }
                                 }
@@ -32679,13 +33165,17 @@
         "req.EditPrinterCustomizeReq": {
             "type": "object",
             "properties": {
-                "data": {
-                    "description": "打印机定制数据",
-                    "type": "string"
-                },
-                "tmp_uuid": {
+                "customize_uuid": {
                     "description": "打印机定制UUID",
                     "type": "integer"
+                },
+                "data": {
+                    "description": "定制数据",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "模板名称",
+                    "type": "string"
                 }
             }
         },
@@ -36811,6 +37301,171 @@
                 }
             }
         },
+        "req.StockReconciliationApproveReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "盘点单UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.StockReconciliationCreateReq": {
+            "type": "object",
+            "required": [
+                "items",
+                "purpose",
+                "type",
+                "warehouse_uuid"
+            ],
+            "properties": {
+                "items": {
+                    "description": "盘点单物品明细",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/req.StockReconciliationItemReq"
+                    }
+                },
+                "purpose": {
+                    "description": "盘点目的 1-库存盘点 2-期初盘点",
+                    "type": "integer",
+                    "enum": [
+                        1,
+                        2
+                    ]
+                },
+                "type": {
+                    "description": "盘点类型 1-指定物品盘点 2-全部物品盘点",
+                    "type": "integer",
+                    "enum": [
+                        1,
+                        2
+                    ]
+                },
+                "warehouse_uuid": {
+                    "description": "仓库UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.StockReconciliationDeleteReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "盘点单UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.StockReconciliationItemReq": {
+            "type": "object",
+            "required": [
+                "material_uuid",
+                "units"
+            ],
+            "properties": {
+                "material_uuid": {
+                    "description": "物品UUID",
+                    "type": "integer"
+                },
+                "units": {
+                    "description": "盘点单物品单位明细",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/req.StockReconciliationItemUnitReq"
+                    }
+                }
+            }
+        },
+        "req.StockReconciliationItemUnitReq": {
+            "type": "object",
+            "required": [
+                "material_unit_uuid"
+            ],
+            "properties": {
+                "material_unit_uuid": {
+                    "description": "单位UUID",
+                    "type": "integer"
+                },
+                "quantity": {
+                    "description": "单位数量",
+                    "type": "number"
+                }
+            }
+        },
+        "req.StockReconciliationRejectReq": {
+            "type": "object",
+            "required": [
+                "reason",
+                "uuid"
+            ],
+            "properties": {
+                "reason": {
+                    "description": "驳回原因",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "盘点单UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.StockReconciliationSaveReq": {
+            "type": "object",
+            "required": [
+                "items",
+                "purpose",
+                "type",
+                "uuid",
+                "warehouse_uuid"
+            ],
+            "properties": {
+                "is_submit": {
+                    "description": "是否提交",
+                    "type": "boolean"
+                },
+                "items": {
+                    "description": "盘点单物品明细",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/req.StockReconciliationItemReq"
+                    }
+                },
+                "purpose": {
+                    "description": "盘点目的 1-库存盘点 2-期初盘点",
+                    "type": "integer",
+                    "enum": [
+                        1,
+                        2
+                    ]
+                },
+                "type": {
+                    "description": "盘点类型 1-指定物品盘点 2-全部物品盘点",
+                    "type": "integer",
+                    "enum": [
+                        1,
+                        2
+                    ]
+                },
+                "uuid": {
+                    "description": "盘点单UUID",
+                    "type": "integer"
+                },
+                "warehouse_uuid": {
+                    "description": "仓库UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.SubmitShiftReq": {
             "type": "object",
             "properties": {
@@ -38923,6 +39578,14 @@
                         }
                     ]
                 },
+                "order_remark": {
+                    "description": "整单备注信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.OrderRemarkRes"
+                        }
+                    ]
+                },
                 "product": {
                     "description": "商品信息。 当加购商品时商品价格变化时，返回最新的商品信息",
                     "allOf": [
@@ -40288,6 +40951,35 @@
                 },
                 "token": {
                     "type": "string"
+                }
+            }
+        },
+        "resp.MaterialUnitInfo": {
+            "type": "object",
+            "properties": {
+                "conversion_rate": {
+                    "description": "转换率（相对于基准单位）",
+                    "type": "number"
+                },
+                "is_default": {
+                    "description": "是否为基准单位：0-否；1-是",
+                    "type": "integer"
+                },
+                "material_unit_uuid": {
+                    "description": "物品单位UUID",
+                    "type": "integer"
+                },
+                "unit_name": {
+                    "description": "单位多语言名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "unit_uuid": {
+                    "description": "单位UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -41855,6 +42547,10 @@
                     "description": "创建时间(时间戳)",
                     "type": "integer"
                 },
+                "custom_remark": {
+                    "description": "自定义备注",
+                    "type": "string"
+                },
                 "is_latest": {
                     "description": "是否是最新备注",
                     "type": "boolean"
@@ -41866,6 +42562,13 @@
                             "$ref": "#/definitions/dto.LocaleResponse"
                         }
                     ]
+                },
+                "uuids": {
+                    "description": "备注UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 }
             }
         },
@@ -42441,15 +43144,15 @@
                 }
             }
         },
-        "resp.PrintMenu": {
+        "resp.PrintTemplate": {
             "type": "object",
             "properties": {
                 "id": {
-                    "description": "打印菜单ID",
+                    "description": "模版ID",
                     "type": "integer"
                 },
                 "locale_name": {
-                    "description": "打印菜单名称",
+                    "description": "模版名称",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.LocaleResponse"
@@ -42458,46 +43161,46 @@
                 }
             }
         },
-        "resp.PrintMenuDetail": {
+        "resp.PrintTemplateDetail": {
             "type": "object",
             "properties": {
+                "customize_uuid": {
+                    "description": "定制UUID",
+                    "type": "integer"
+                },
                 "id": {
                     "description": "模板ID",
                     "type": "integer"
                 },
+                "img_url": {
+                    "description": "模板图片URL",
+                    "type": "string"
+                },
                 "is_use": {
-                    "description": "是否USB模板",
+                    "description": "是否使用",
                     "type": "boolean"
                 },
                 "name": {
                     "description": "模板名称",
                     "type": "string"
-                },
-                "temp_img": {
-                    "description": "模板图片路径",
-                    "type": "string"
-                },
-                "tmp_uuid": {
-                    "description": "临时模板UUID",
-                    "type": "integer"
                 }
             }
         },
-        "resp.PrintMenuDetailResp": {
+        "resp.PrintTemplateDetailResp": {
             "type": "object",
             "properties": {
                 "adv_receipt_tpls": {
                     "description": "高级模板列表",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/resp.PrintMenuDetail"
+                        "$ref": "#/definitions/resp.PrintTemplateDetail"
                     }
                 },
                 "default_tpl": {
                     "description": "默认模板",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/resp.PrintMenuDetail"
+                            "$ref": "#/definitions/resp.PrintTemplateDetail"
                         }
                     ]
                 },
@@ -42507,7 +43210,7 @@
                 }
             }
         },
-        "resp.PrintMenuGroup": {
+        "resp.PrintTemplateGroup": {
             "type": "object",
             "properties": {
                 "group_type": {
@@ -42515,25 +43218,30 @@
                     "type": "integer"
                 },
                 "list": {
-                    "description": "打印菜单列表",
+                    "description": "模版列表",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/resp.PrintMenu"
+                        "$ref": "#/definitions/resp.PrintTemplate"
                     }
                 },
                 "locale_name": {
-                    "$ref": "#/definitions/dto.LocaleResponse"
+                    "description": "分组名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
                 }
             }
         },
-        "resp.PrintMenuListResp": {
+        "resp.PrintTemplateListResp": {
             "type": "object",
             "properties": {
                 "list": {
-                    "description": "打印菜单分组列表",
+                    "description": "模版分组列表",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/resp.PrintMenuGroup"
+                        "$ref": "#/definitions/resp.PrintTemplateGroup"
                     }
                 }
             }
@@ -45137,6 +45845,193 @@
                 }
             }
         },
+        "resp.StockReconciliationCreateResp": {
+            "type": "object",
+            "properties": {
+                "uuid": {
+                    "description": "盘点单UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.StockReconciliationDetailResp": {
+            "type": "object",
+            "properties": {
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "erp_code": {
+                    "description": "ERP盘点单号",
+                    "type": "string"
+                },
+                "items": {
+                    "description": "盘点单物品明细",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.StockReconciliationItemInfo"
+                    }
+                },
+                "order_no": {
+                    "description": "单据编号",
+                    "type": "string"
+                },
+                "purpose": {
+                    "description": "盘点目的 1-库存盘点 2-期初盘点",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "状态 0-已保存 1-已提交 2-已审核 3-已驳回",
+                    "type": "integer"
+                },
+                "type": {
+                    "description": "盘点类型 1-指定物品盘点 2-全部物品盘点",
+                    "type": "integer"
+                },
+                "update_time": {
+                    "description": "更新时间",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "盘点单UUID",
+                    "type": "integer"
+                },
+                "warehouse_uuid": {
+                    "description": "仓库UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.StockReconciliationInfo": {
+            "type": "object",
+            "properties": {
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "erp_code": {
+                    "description": "ERP盘点单号",
+                    "type": "string"
+                },
+                "order_no": {
+                    "description": "单据编号",
+                    "type": "string"
+                },
+                "purpose": {
+                    "description": "盘点目的 1-库存盘点 2-期初盘点",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "状态 0-已保存 1-已提交 2-已审核 3-已驳回",
+                    "type": "integer"
+                },
+                "type": {
+                    "description": "盘点类型 1-指定物品盘点 2-全部物品盘点",
+                    "type": "integer"
+                },
+                "update_time": {
+                    "description": "更新时间",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "盘点单UUID",
+                    "type": "integer"
+                },
+                "warehouse_uuid": {
+                    "description": "仓库UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.StockReconciliationItemInfo": {
+            "type": "object",
+            "properties": {
+                "booked_quantity": {
+                    "description": "账面库存数量",
+                    "type": "number"
+                },
+                "counted_quantity": {
+                    "description": "实盘库存数量",
+                    "type": "number"
+                },
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "inventory_status": {
+                    "description": "库存状态 1-盘盈 2-盘亏 3-正常",
+                    "type": "integer"
+                },
+                "is_inventory_status_exception": {
+                    "description": "是否盘盈盘亏异常（差值大于20%）",
+                    "type": "boolean"
+                },
+                "locale_name": {
+                    "description": "物品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "material_code": {
+                    "description": "物品编码",
+                    "type": "string"
+                },
+                "material_uuid": {
+                    "description": "物品UUID",
+                    "type": "integer"
+                },
+                "units": {
+                    "description": "盘点单物品单位明细",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.StockReconciliationItemUnitInfo"
+                    }
+                }
+            }
+        },
+        "resp.StockReconciliationItemUnitInfo": {
+            "type": "object",
+            "properties": {
+                "locale_name": {
+                    "description": "单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "material_unit_uuid": {
+                    "description": "单位UUID",
+                    "type": "integer"
+                },
+                "quantity": {
+                    "description": "单位数量",
+                    "type": "number"
+                }
+            }
+        },
+        "resp.StockReconciliationListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "盘点单列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.StockReconciliationInfo"
+                    }
+                },
+                "meta": {
+                    "description": "分页信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.PageResponse"
+                        }
+                    ]
+                }
+            }
+        },
         "resp.SubProductItem": {
             "type": "object",
             "properties": {
@@ -46028,6 +46923,64 @@
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/resp.WarehouseResp"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "resp.WarehouseMaterialInfo": {
+            "type": "object",
+            "properties": {
+                "base_unit": {
+                    "description": "基准单位",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.MaterialUnitInfo"
+                        }
+                    ]
+                },
+                "material_barcode": {
+                    "description": "物品条形码",
+                    "type": "string"
+                },
+                "material_code": {
+                    "description": "物品编码",
+                    "type": "string"
+                },
+                "material_name": {
+                    "description": "物品多语言名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "material_uuid": {
+                    "description": "物品UUID",
+                    "type": "integer"
+                },
+                "stock_quantity": {
+                    "description": "账面库存数量",
+                    "type": "number"
+                },
+                "units": {
+                    "description": "所有单位（包含基准单位）",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.MaterialUnitInfo"
+                    }
+                }
+            }
+        },
+        "resp.WarehouseMaterialListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.WarehouseMaterialInfo"
                     }
                 },
                 "meta": {
@@ -47120,13 +48073,6 @@
                     "type": "string"
                 }
             }
-        }
-    },
-    "securityDefinitions": {
-        "JwtToken": {
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
         }
     }
 }

@@ -67,3 +67,29 @@ type OtherOrgResp struct {
 	Code          string `json:"code"`           // 对方机构编码
 	IsHeadquarter bool   `json:"is_headquarter"` // 是否总部机构：0-否；1-是
 }
+
+// WarehouseMaterialListResp 仓库物品列表响应
+type WarehouseMaterialListResp struct {
+	List []WarehouseMaterialInfo `json:"list"`
+	Meta dto.PageResponse        `json:"meta"`
+}
+
+// WarehouseMaterialInfo 仓库物品信息
+type WarehouseMaterialInfo struct {
+	MaterialUuid    uint64             `json:"material_uuid"`    // 物品UUID
+	MaterialName    dto.LocaleResponse `json:"material_name"`    // 物品多语言名称
+	MaterialCode    string             `json:"material_code"`    // 物品编码
+	MaterialBarcode string             `json:"material_barcode"` // 物品条形码
+	StockQuantity   float64            `json:"stock_quantity"`   // 账面库存数量
+	BaseUnit        MaterialUnitInfo   `json:"base_unit"`        // 基准单位
+	Units           []MaterialUnitInfo `json:"units"`            // 所有单位（包含基准单位）
+}
+
+// MaterialUnitInfo 物品单位信息
+type MaterialUnitInfo struct {
+	MaterialUnitUuid uint64             `json:"material_unit_uuid"` // 物品单位UUID
+	UnitUuid         uint64             `json:"unit_uuid"`          // 单位UUID
+	UnitName         dto.LocaleResponse `json:"unit_name"`          // 单位多语言名称
+	ConversionRate   float64            `json:"conversion_rate"`    // 转换率（相对于基准单位）
+	IsDefault        int                `json:"is_default"`         // 是否为基准单位：0-否；1-是
+}

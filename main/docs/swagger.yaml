@@ -3438,12 +3438,15 @@ definitions:
     type: object
   req.EditPrinterCustomizeReq:
     properties:
-      data:
-        description: 打印机定制数据
-        type: string
-      tmp_uuid:
+      customize_uuid:
         description: 打印机定制UUID
         type: integer
+      data:
+        description: 定制数据
+        type: string
+      name:
+        description: 模板名称
+        type: string
     type: object
   req.EditReturnFoodReasonReq:
     properties:
@@ -6316,6 +6319,125 @@ definitions:
     required:
     - list
     type: object
+  req.StockReconciliationApproveReq:
+    properties:
+      uuid:
+        description: 盘点单UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.StockReconciliationCreateReq:
+    properties:
+      items:
+        description: 盘点单物品明细
+        items:
+          $ref: '#/definitions/req.StockReconciliationItemReq'
+        minItems: 1
+        type: array
+      purpose:
+        description: 盘点目的 1-库存盘点 2-期初盘点
+        enum:
+        - 1
+        - 2
+        type: integer
+      type:
+        description: 盘点类型 1-指定物品盘点 2-全部物品盘点
+        enum:
+        - 1
+        - 2
+        type: integer
+      warehouse_uuid:
+        description: 仓库UUID
+        type: integer
+    required:
+    - items
+    - purpose
+    - type
+    - warehouse_uuid
+    type: object
+  req.StockReconciliationDeleteReq:
+    properties:
+      uuid:
+        description: 盘点单UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.StockReconciliationItemReq:
+    properties:
+      material_uuid:
+        description: 物品UUID
+        type: integer
+      units:
+        description: 盘点单物品单位明细
+        items:
+          $ref: '#/definitions/req.StockReconciliationItemUnitReq'
+        minItems: 1
+        type: array
+    required:
+    - material_uuid
+    - units
+    type: object
+  req.StockReconciliationItemUnitReq:
+    properties:
+      material_unit_uuid:
+        description: 单位UUID
+        type: integer
+      quantity:
+        description: 单位数量
+        type: number
+    required:
+    - material_unit_uuid
+    type: object
+  req.StockReconciliationRejectReq:
+    properties:
+      reason:
+        description: 驳回原因
+        type: string
+      uuid:
+        description: 盘点单UUID
+        type: integer
+    required:
+    - reason
+    - uuid
+    type: object
+  req.StockReconciliationSaveReq:
+    properties:
+      is_submit:
+        description: 是否提交
+        type: boolean
+      items:
+        description: 盘点单物品明细
+        items:
+          $ref: '#/definitions/req.StockReconciliationItemReq'
+        minItems: 1
+        type: array
+      purpose:
+        description: 盘点目的 1-库存盘点 2-期初盘点
+        enum:
+        - 1
+        - 2
+        type: integer
+      type:
+        description: 盘点类型 1-指定物品盘点 2-全部物品盘点
+        enum:
+        - 1
+        - 2
+        type: integer
+      uuid:
+        description: 盘点单UUID
+        type: integer
+      warehouse_uuid:
+        description: 仓库UUID
+        type: integer
+    required:
+    - items
+    - purpose
+    - type
+    - uuid
+    - warehouse_uuid
+    type: object
   req.SubmitShiftReq:
     properties:
       is_background:
@@ -7771,6 +7893,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.ProductMustPlanList'
         description: 必点方案列表
+      order_remark:
+        allOf:
+        - $ref: '#/definitions/resp.OrderRemarkRes'
+        description: 整单备注信息
       product:
         allOf:
         - $ref: '#/definitions/product_resp.Product'
@@ -8633,6 +8759,25 @@ definitions:
         type: string
       token:
         type: string
+    type: object
+  resp.MaterialUnitInfo:
+    properties:
+      conversion_rate:
+        description: 转换率（相对于基准单位）
+        type: number
+      is_default:
+        description: 是否为基准单位：0-否；1-是
+        type: integer
+      material_unit_uuid:
+        description: 物品单位UUID
+        type: integer
+      unit_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 单位多语言名称
+      unit_uuid:
+        description: 单位UUID
+        type: integer
     type: object
   resp.MemberCardType:
     properties:
@@ -9699,6 +9844,9 @@ definitions:
       create_time:
         description: 创建时间(时间戳)
         type: integer
+      custom_remark:
+        description: 自定义备注
+        type: string
       is_latest:
         description: 是否是最新备注
         type: boolean
@@ -9706,6 +9854,11 @@ definitions:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 备注
+      uuids:
+        description: 备注UUID列表
+        items:
+          type: integer
+        type: array
     type: object
   resp.OrderRemarkResp:
     properties:
@@ -10103,68 +10256,70 @@ definitions:
         description: 积分抵扣比例。1个积分抵扣多少金额
         type: number
     type: object
-  resp.PrintMenu:
+  resp.PrintTemplate:
     properties:
       id:
-        description: 打印菜单ID
+        description: 模版ID
         type: integer
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
-        description: 打印菜单名称
+        description: 模版名称
     type: object
-  resp.PrintMenuDetail:
+  resp.PrintTemplateDetail:
     properties:
+      customize_uuid:
+        description: 定制UUID
+        type: integer
       id:
         description: 模板ID
         type: integer
+      img_url:
+        description: 模板图片URL
+        type: string
       is_use:
-        description: 是否USB模板
+        description: 是否使用
         type: boolean
       name:
         description: 模板名称
         type: string
-      temp_img:
-        description: 模板图片路径
-        type: string
-      tmp_uuid:
-        description: 临时模板UUID
-        type: integer
     type: object
-  resp.PrintMenuDetailResp:
+  resp.PrintTemplateDetailResp:
     properties:
       adv_receipt_tpls:
         description: 高级模板列表
         items:
-          $ref: '#/definitions/resp.PrintMenuDetail'
+          $ref: '#/definitions/resp.PrintTemplateDetail'
         type: array
       default_tpl:
         allOf:
-        - $ref: '#/definitions/resp.PrintMenuDetail'
+        - $ref: '#/definitions/resp.PrintTemplateDetail'
         description: 默认模板
       is_adv_receipt_tpl:
         description: 是否启用高级模板
         type: boolean
     type: object
-  resp.PrintMenuGroup:
+  resp.PrintTemplateGroup:
     properties:
       group_type:
         description: 分组类型
         type: integer
       list:
-        description: 打印菜单列表
+        description: 模版列表
         items:
-          $ref: '#/definitions/resp.PrintMenu'
+          $ref: '#/definitions/resp.PrintTemplate'
         type: array
       locale_name:
-        $ref: '#/definitions/dto.LocaleResponse'
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 分组名称
     type: object
-  resp.PrintMenuListResp:
+  resp.PrintTemplateListResp:
     properties:
       list:
-        description: 打印菜单分组列表
+        description: 模版分组列表
         items:
-          $ref: '#/definitions/resp.PrintMenuGroup'
+          $ref: '#/definitions/resp.PrintTemplateGroup'
         type: array
     type: object
   resp.PrinterBase:
@@ -11910,6 +12065,135 @@ definitions:
         description: 角色UUID
         type: integer
     type: object
+  resp.StockReconciliationCreateResp:
+    properties:
+      uuid:
+        description: 盘点单UUID
+        type: integer
+    type: object
+  resp.StockReconciliationDetailResp:
+    properties:
+      create_time:
+        description: 创建时间
+        type: integer
+      erp_code:
+        description: ERP盘点单号
+        type: string
+      items:
+        description: 盘点单物品明细
+        items:
+          $ref: '#/definitions/resp.StockReconciliationItemInfo'
+        type: array
+      order_no:
+        description: 单据编号
+        type: string
+      purpose:
+        description: 盘点目的 1-库存盘点 2-期初盘点
+        type: integer
+      status:
+        description: 状态 0-已保存 1-已提交 2-已审核 3-已驳回
+        type: integer
+      type:
+        description: 盘点类型 1-指定物品盘点 2-全部物品盘点
+        type: integer
+      update_time:
+        description: 更新时间
+        type: integer
+      uuid:
+        description: 盘点单UUID
+        type: integer
+      warehouse_uuid:
+        description: 仓库UUID
+        type: integer
+    type: object
+  resp.StockReconciliationInfo:
+    properties:
+      create_time:
+        description: 创建时间
+        type: integer
+      erp_code:
+        description: ERP盘点单号
+        type: string
+      order_no:
+        description: 单据编号
+        type: string
+      purpose:
+        description: 盘点目的 1-库存盘点 2-期初盘点
+        type: integer
+      status:
+        description: 状态 0-已保存 1-已提交 2-已审核 3-已驳回
+        type: integer
+      type:
+        description: 盘点类型 1-指定物品盘点 2-全部物品盘点
+        type: integer
+      update_time:
+        description: 更新时间
+        type: integer
+      uuid:
+        description: 盘点单UUID
+        type: integer
+      warehouse_uuid:
+        description: 仓库UUID
+        type: integer
+    type: object
+  resp.StockReconciliationItemInfo:
+    properties:
+      booked_quantity:
+        description: 账面库存数量
+        type: number
+      counted_quantity:
+        description: 实盘库存数量
+        type: number
+      create_time:
+        description: 创建时间
+        type: integer
+      inventory_status:
+        description: 库存状态 1-盘盈 2-盘亏 3-正常
+        type: integer
+      is_inventory_status_exception:
+        description: 是否盘盈盘亏异常（差值大于20%）
+        type: boolean
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物品名称
+      material_code:
+        description: 物品编码
+        type: string
+      material_uuid:
+        description: 物品UUID
+        type: integer
+      units:
+        description: 盘点单物品单位明细
+        items:
+          $ref: '#/definitions/resp.StockReconciliationItemUnitInfo'
+        type: array
+    type: object
+  resp.StockReconciliationItemUnitInfo:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 单位名称
+      material_unit_uuid:
+        description: 单位UUID
+        type: integer
+      quantity:
+        description: 单位数量
+        type: number
+    type: object
+  resp.StockReconciliationListResp:
+    properties:
+      list:
+        description: 盘点单列表
+        items:
+          $ref: '#/definitions/resp.StockReconciliationInfo'
+        type: array
+      meta:
+        allOf:
+        - $ref: '#/definitions/dto.PageResponse'
+        description: 分页信息
+    type: object
   resp.SubProductItem:
     properties:
       locale_name:
@@ -12512,6 +12796,43 @@ definitions:
       list:
         items:
           $ref: '#/definitions/resp.WarehouseResp'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
+  resp.WarehouseMaterialInfo:
+    properties:
+      base_unit:
+        allOf:
+        - $ref: '#/definitions/resp.MaterialUnitInfo'
+        description: 基准单位
+      material_barcode:
+        description: 物品条形码
+        type: string
+      material_code:
+        description: 物品编码
+        type: string
+      material_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物品多语言名称
+      material_uuid:
+        description: 物品UUID
+        type: integer
+      stock_quantity:
+        description: 账面库存数量
+        type: number
+      units:
+        description: 所有单位（包含基准单位）
+        items:
+          $ref: '#/definitions/resp.MaterialUnitInfo'
+        type: array
+    type: object
+  resp.WarehouseMaterialListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.WarehouseMaterialInfo'
         type: array
       meta:
         $ref: '#/definitions/dto.PageResponse'
@@ -25600,7 +25921,7 @@ paths:
       - description: 打印机定制UUID
         format: int64
         in: query
-        name: tmp_uuid
+        name: customize_uuid
         required: true
         type: integer
       produces:
@@ -25620,7 +25941,36 @@ paths:
       summary: 删除打印机定制
       tags:
       - 商家端.打印管理
-  /shop/printer/customize/edit:
+  /shop/printer/customize/use:
+    post:
+      consumes:
+      - application/json
+      description: 使用打印机定制
+      parameters:
+      - description: 打印机定制UUID
+        format: int64
+        in: query
+        name: customize_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+      security:
+      - JwtToken: []
+      summary: 使用打印机定制
+      tags:
+      - 商家端.打印管理
+  /shop/printer/template/customize/edit:
     post:
       consumes:
       - application/json
@@ -25649,40 +25999,11 @@ paths:
       summary: 编辑打印机定制
       tags:
       - 商家端.打印管理
-  /shop/printer/customize/use:
-    post:
-      consumes:
-      - application/json
-      description: 使用打印机定制
-      parameters:
-      - description: 打印机定制UUID
-        format: int64
-        in: query
-        name: tmp_uuid
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
-      security:
-      - JwtToken: []
-      summary: 使用打印机定制
-      tags:
-      - 商家端.打印管理
-  /shop/printer/menu/detail:
+  /shop/printer/template/detail:
     get:
       consumes:
       - application/json
-      description: 获取打印菜单详情
+      description: 获取打印模板详情
       parameters:
       - description: 模板ID
         format: int64
@@ -25700,18 +26021,18 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.PrintMenuDetailResp'
+                  $ref: '#/definitions/resp.PrintTemplateDetailResp'
               type: object
       security:
       - JwtToken: []
-      summary: 获取打印菜单详情
+      summary: 获取打印模板详情
       tags:
       - 商家端.打印管理
-  /shop/printer/menu/list:
+  /shop/printer/template/list:
     get:
       consumes:
       - application/json
-      description: 获取打印菜单列表
+      description: 获取打印模板列表
       produces:
       - application/json
       responses:
@@ -25722,11 +26043,11 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.PrintMenuListResp'
+                  $ref: '#/definitions/resp.PrintTemplateListResp'
               type: object
       security:
       - JwtToken: []
-      summary: 获取打印菜单列表
+      summary: 获取打印模板列表
       tags:
       - 商家端.打印管理
   /shop/product/add:
@@ -28501,6 +28822,266 @@ paths:
       summary: 统计班次退款金额
       tags:
       - 商家端.营业数据
+  /shop/stock_reconciliation/approve:
+    post:
+      consumes:
+      - application/json
+      description: 审核通过盘点单
+      parameters:
+      - description: 审核盘点单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StockReconciliationApproveReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 审核盘点单
+      tags:
+      - 商家端.盘点管理
+  /shop/stock_reconciliation/create:
+    post:
+      consumes:
+      - application/json
+      description: 创建新的盘点单
+      parameters:
+      - description: 创建盘点单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StockReconciliationCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.StockReconciliationCreateResp'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 创建盘点单
+      tags:
+      - 商家端.盘点管理
+  /shop/stock_reconciliation/delete:
+    delete:
+      consumes:
+      - application/json
+      description: 删除盘点单（软删除）
+      parameters:
+      - description: 删除盘点单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StockReconciliationDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除盘点单
+      tags:
+      - 商家端.盘点管理
+  /shop/stock_reconciliation/detail:
+    get:
+      consumes:
+      - application/json
+      description: 根据UUID获取盘点单详情
+      parameters:
+      - description: 盘点单UUID
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.StockReconciliationDetailResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取盘点单详情
+      tags:
+      - 商家端.盘点管理
+  /shop/stock_reconciliation/list:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取盘点单列表，支持多仓库筛选、关键字搜索、创建时间范围筛选
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        required: true
+        type: integer
+      - description: 每页数量
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      - collectionFormat: csv
+        description: 仓库UUID列表
+        in: query
+        items:
+          type: integer
+        name: warehouse_uuids
+        type: array
+      - description: 关键字（搜索单据编号和ERP盘点单号）
+        in: query
+        name: keyword
+        type: string
+      - description: 创建开始时间（时间戳）
+        in: query
+        name: start_create_time
+        type: integer
+      - description: 创建结束时间（时间戳）
+        in: query
+        name: end_create_time
+        type: integer
+      - collectionFormat: csv
+        description: 状态列表
+        in: query
+        items:
+          type: integer
+        name: status_in
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.StockReconciliationListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取盘点单列表
+      tags:
+      - 商家端.盘点管理
+  /shop/stock_reconciliation/reject:
+    post:
+      consumes:
+      - application/json
+      description: 驳回盘点单
+      parameters:
+      - description: 驳回盘点单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StockReconciliationRejectReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 驳回盘点单
+      tags:
+      - 商家端.盘点管理
+  /shop/stock_reconciliation/save:
+    put:
+      consumes:
+      - application/json
+      description: 保存盘点单信息
+      parameters:
+      - description: 保存盘点单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StockReconciliationSaveReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 保存盘点单
+      tags:
+      - 商家端.盘点管理
+  /shop/stock_reconciliation/submit:
+    post:
+      consumes:
+      - application/json
+      description: 提交盘点单进行审核
+      parameters:
+      - description: 提交盘点单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StockReconciliationSaveReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 提交盘点单
+      tags:
+      - 商家端.盘点管理
   /shop/supplier:
     get:
       consumes:
@@ -29009,6 +29590,42 @@ paths:
       security:
       - JwtToken: []
       summary: 获取仓库列表
+      tags:
+      - 商家端.仓库档案
+  /shop/warehouse/material/list:
+    get:
+      consumes:
+      - application/json
+      description: 根据仓库ID获取仓库物品列表，包含物品多语言名称、库存数量、所有单位及转换率
+      parameters:
+      - description: 仓库UUID
+        in: query
+        name: warehouse_uuid
+        required: true
+        type: integer
+      - description: 页码，默认1
+        in: query
+        name: page_no
+        type: integer
+      - description: 每页数量，默认20
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.WarehouseMaterialListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取仓库物品列表
       tags:
       - 商家端.仓库档案
   /shop/warehouse/org/list:
@@ -29657,9 +30274,4 @@ paths:
       summary: 验证高级密码
       tags:
       - 平板端.基础信息
-securityDefinitions:
-  JwtToken:
-    in: header
-    name: Authorization
-    type: apiKey
 swagger: "2.0"

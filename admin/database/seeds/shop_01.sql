@@ -3083,4 +3083,59 @@ CREATE TABLE IF NOT EXISTS `ttpos_sync_task_item` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='同步任务明细表';
 
+-- 盘点单表
+CREATE TABLE IF NOT EXISTS `ttpos_stock_reconciliation` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT '盘点单ID',
+  `order_no` varchar(255) NOT NULL DEFAULT '' COMMENT '单据编号',
+  `erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT 'ERP盘点单号',
+  `type` int(10) NOT NULL DEFAULT 1 COMMENT '盘点类型 1-指定物品盘点 2-全部物品盘点',
+  `warehouse_uuid` bigint NOT NULL DEFAULT 0 COMMENT '仓库ID',
+  `purpose` int(10) NOT NULL DEFAULT 1 COMMENT '盘点目的 1-库存盘点 2-期初盘点',
+  `status` int(10) NOT NULL DEFAULT 0 COMMENT '状态 0-已保存 1-已提交 2-已审核 3-已驳回',
+  `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+  `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+  `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_warehouse_uuid` (`warehouse_uuid`),
+  KEY `idx_status` (`status`),
+  KEY `idx_order_no` (`order_no`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='盘点单表';
+
+-- 盘点单物品明细表
+CREATE TABLE IF NOT EXISTS `ttpos_stock_reconciliation_item` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT '盘点单物品明细ID',
+  `stock_reconciliation_uuid` bigint NOT NULL DEFAULT 0 COMMENT '盘点单ID',
+  `material_uuid` bigint NOT NULL DEFAULT 0 COMMENT '物品ID',
+  `material_name` text COMMENT '物品名称，用于备份多语言',
+  `booked_quantity` decimal(22,4) NOT NULL DEFAULT 0.0000 COMMENT '账面库存数量，基准单位后的数量',
+  `counted_quantity` decimal(22,4) NOT NULL DEFAULT 0.0000 COMMENT '实盘库存数量，物品所有单位换算成基准单位后的数量',
+  `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+  `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+  `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_stock_reconciliation_uuid` (`stock_reconciliation_uuid`),
+  KEY `idx_material_uuid` (`material_uuid`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='盘点单物品明细表';
+
+-- 盘点单物品单位明细表
+CREATE TABLE IF NOT EXISTS `ttpos_stock_reconciliation_item_unit` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT '盘点单物品单位明细ID',
+  `stock_reconciliation_item_uuid` bigint NOT NULL DEFAULT 0 COMMENT '盘点单物品明细ID',
+  `material_unit_uuid` bigint NOT NULL DEFAULT 0 COMMENT '单位ID',
+  `material_unit_name` text COMMENT '物品单位名称，用于备份多语言',
+  `quantity` decimal(22,4) DEFAULT NULL COMMENT '单位数量',
+  `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+  `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+  `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_stock_reconciliation_item_uuid` (`stock_reconciliation_item_uuid`),
+  KEY `idx_material_unit_uuid` (`material_unit_uuid`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='盘点单物品单位明细表';
+
 SET FOREIGN_KEY_CHECKS = 1;

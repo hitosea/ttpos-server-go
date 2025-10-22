@@ -153,6 +153,7 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 			printer.AppendText(t.base.PrintText(t.base.Translate("商品"), "", t.base.Translate("数量"), 47))
 		}
 
+		printer.SetAlignment(pkg.AlignLeft)
 		// 添加分隔线
 		printer.AppendText("\n------------------------------------------------\n")
 
@@ -194,9 +195,7 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 				// 设置字符大小和行间距
 				printer.SetCharacterSize(1, 1)
 				// 打印行间距和换行
-				if isSubProduct {
-					printer.LineFeed()
-				}
+				printer.LineFeed()
 				if printerType == PrinterTypeXPrinterLan {
 					printer.SetLineSpacing(90)
 				} else if printerType == PrinterTypeXPrinterWifi {

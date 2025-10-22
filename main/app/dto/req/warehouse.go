@@ -64,3 +64,9 @@ type WarehouseSelectReq struct {
 type SetDefaultWarehouseReq struct {
 	Uuid uint64 `json:"uuid" binding:"required"` // 仓库ID
 }
+
+// WarehouseMaterialListReq 仓库物品列表请求
+type WarehouseMaterialListReq struct {
+	dto.PageReq
+	WarehouseUuid uint64 `json:"warehouse_uuid" form:"warehouse_uuid" binding:"required"` // 仓库UUID
+}
