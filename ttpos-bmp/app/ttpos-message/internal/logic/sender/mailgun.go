@@ -5,15 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
-	"strings"
 	"time"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
+	"github.com/mailgun/mailgun-go/v4"
 
 	"ttpos-bmp/app/ttpos-message/internal/consts"
 	"ttpos-bmp/app/ttpos-message/internal/model/dto"
@@ -26,9 +23,8 @@ type sMailgun struct {
 	apiKey    string
 	fromEmail string
 	fromName  string
-	apiBase   string
 	timeout   int
-	client    *http.Client
+	mg        *mailgun.MailgunImpl
 }
 
 // Mailgun Mailgun 服务单例
@@ -45,13 +41,7 @@ func (s *sMailgun) Init(ctx context.Context) error {
 	s.apiKey = g.Cfg().MustGet(ctx, "mailgun.apiKey").String()
 	s.fromEmail = g.Cfg().MustGet(ctx, "mailgun.fromEmail").String()
 	s.fromName = g.Cfg().MustGet(ctx, "mailgun.fromName", "TTPOS System").String()
-	s.apiBase = g.Cfg().MustGet(ctx, "mailgun.apiBase", "https://api.mailgun.net/v3").String()
 	s.timeout = g.Cfg().MustGet(ctx, "mailgun.timeout", 30).Int()
-
-	// 创建 HTTP 客户端
-	s.client = &http.Client{
-		Timeout: time.Duration(s.timeout) * time.Second,
-	}
 
 	// 验证必要配置
 	if s.domain == "" {
@@ -63,6 +53,12 @@ func (s *sMailgun) Init(ctx context.Context) error {
 	if s.fromEmail == "" {
 		return gerror.New("Mailgun fromEmail 未配置")
 	}
+
+	// 创建 Mailgun 客户端
+	s.mg = mailgun.NewMailgun(s.domain, s.apiKey)
+
+	// 设置超时时间
+	s.mg.SetAPIBase(mailgun.APIBase)
 
 	g.Log().Info(ctx, "Mailgun 服务初始化成功", "domain", s.domain)
 	return nil
@@ -80,47 +76,36 @@ func (s *sMailgun) Init(ctx context.Context) error {
 // 返回：
 //   - err: 错误信息
 func (s *sMailgun) SendEmail(ctx context.Context, messageUuid, recipient, subject, content string) error {
-	// 构建 API URL
-	apiURL := fmt.Sprintf("%s/%s/messages", s.apiBase, s.domain)
+	// 创建邮件消息（使用独立构造函数）
+	message := mailgun.NewMessage(
+		fmt.Sprintf("%s <%s>", s.fromName, s.fromEmail), // 发件人
+		subject, // 主题
+		"",      // 纯文本内容（留空）
+	)
 
-	// 构建表单数据
-	formData := url.Values{}
-	formData.Set("from", fmt.Sprintf("%s <%s>", s.fromName, s.fromEmail))
-	formData.Set("to", recipient)
-	formData.Set("subject", subject)
-	formData.Set("html", content)
+	// 添加收件人
+	message.AddRecipient(recipient)
 
-	// 创建请求
-	req, err := http.NewRequestWithContext(ctx, "POST", apiURL, strings.NewReader(formData.Encode()))
-	if err != nil {
-		return gerror.Wrap(err, "创建HTTP请求失败")
-	}
-
-	// 设置请求头
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.SetBasicAuth("api", s.apiKey)
+	// 设置 HTML 内容
+	message.SetHTML(content)
 
 	// 记录请求数据
-	requestData, _ := json.Marshal(map[string]interface{}{
+	requestData, _ := json.Marshal(map[string]any{
 		"from":    fmt.Sprintf("%s <%s>", s.fromName, s.fromEmail),
 		"to":      recipient,
 		"subject": subject,
 	})
 
-	// 发送请求
+	// 发送邮件
 	startTime := time.Now()
-	resp, err := s.client.Do(req)
+	respMsg, respId, err := s.mg.Send(ctx, message)
 	duration := time.Since(startTime)
 
 	g.Log().Info(ctx, "Mailgun API 请求完成",
 		"uuid", messageUuid,
 		"duration", duration,
-		"status", func() int {
-			if resp != nil {
-				return resp.StatusCode
-			}
-			return 0
-		}(),
+		"message_id", respId,
+		"response", respMsg,
 	)
 
 	if err != nil {
@@ -132,41 +117,14 @@ func (s *sMailgun) SendEmail(ctx context.Context, messageUuid, recipient, subjec
 			ErrorMessage: err.Error(),
 			RequestData:  string(requestData),
 		})
-		return gerror.Wrap(err, "发送HTTP请求失败")
-	}
-	defer resp.Body.Close()
-
-	// 读取响应
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return gerror.Wrap(err, "读取响应失败")
+		return gerror.Wrap(err, "发送邮件失败")
 	}
 
-	// 记录响应数据
-	responseData := string(body)
-
-	// 检查响应状态码
-	if resp.StatusCode != http.StatusOK {
-		errorMsg := fmt.Sprintf("Mailgun API 返回错误: %s (HTTP %d)", responseData, resp.StatusCode)
-
-		// 创建发送失败日志
-		_ = service.Message().CreateSendLog(ctx, &dto.MessageSendLogDTO{
-			MessageUuid:  messageUuid,
-			SendTime:     gtime.Now().Unix(),
-			SendResult:   consts.SendResultFailed,
-			ErrorMessage: errorMsg,
-			RequestData:  string(requestData),
-			ResponseData: responseData,
-		})
-
-		return gerror.New(errorMsg)
-	}
-
-	// 解析响应
-	var mailgunResp dto.MailgunSendResponse
-	if err := json.Unmarshal(body, &mailgunResp); err != nil {
-		g.Log().Warning(ctx, "解析 Mailgun 响应失败", err)
-	}
+	// 构建响应数据
+	responseData, _ := json.Marshal(map[string]any{
+		"id":      respId,
+		"message": respMsg,
+	})
 
 	// 创建发送成功日志
 	_ = service.Message().CreateSendLog(ctx, &dto.MessageSendLogDTO{
@@ -174,13 +132,14 @@ func (s *sMailgun) SendEmail(ctx context.Context, messageUuid, recipient, subjec
 		SendTime:     gtime.Now().Unix(),
 		SendResult:   consts.SendResultSuccess,
 		RequestData:  string(requestData),
-		ResponseData: responseData,
+		ResponseData: string(responseData),
 	})
 
 	g.Log().Info(ctx, "邮件发送成功",
 		"uuid", messageUuid,
 		"recipient", recipient,
-		"mailgun_id", mailgunResp.Id,
+		"mailgun_id", respId,
+		"message", respMsg,
 	)
 
 	return nil
@@ -200,7 +159,6 @@ func (s *sMailgun) GetConfig() map[string]string {
 		"domain":    s.domain,
 		"fromEmail": s.fromEmail,
 		"fromName":  s.fromName,
-		"apiBase":   s.apiBase,
 		"timeout":   fmt.Sprintf("%d", s.timeout),
 	}
 }

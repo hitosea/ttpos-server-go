@@ -105,15 +105,8 @@ type MailgunSendResponse struct {
 	Message string `json:"message" description:"响应消息"`
 }
 
-// RocketMQMessage RocketMQ 消息体
+// RocketMQMessage RocketMQ 消息体（优化版：只传递消息UUID，详细内容从数据库获取）
 type RocketMQMessage struct {
-	MessageUuid  string `json:"message_uuid" description:"消息UUID"`
-	TemplateId   uint64 `json:"template_id" description:"模板ID"`
-	MessageType  string `json:"message_type" description:"消息类型"`
-	Recipient    string `json:"recipient" description:"接收人"`
-	Subject      string `json:"subject" description:"消息主题"`
-	Content      string `json:"content" description:"消息内容"`
-	MessageArgs  string `json:"message_args" description:"消息参数"`
-	CompanyUuid  string `json:"company_uuid" description:"公司UUID"`
-	OperatorUuid string `json:"operator_uuid" description:"操作人UUID"`
+	MessageUuid string `json:"message_uuid" description:"消息UUID"`
+	MessageType string `json:"message_type" description:"消息类型"`
 }

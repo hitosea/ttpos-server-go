@@ -55,31 +55,17 @@ func (s *sQueue) PublishMessage(ctx context.Context, msg *dto.RocketMQMessage) e
 		return gerror.New("队列服务未启用")
 	}
 
-	// 将消息序列化为JSON
-	msgBody, err := json.Marshal(msg)
-	if err != nil {
-		return gerror.Wrap(err, "序列化消息失败")
+	// TODO: 实现 RocketMQ 生产者发送消息
+	// 临时处理：直接同步处理消息（绕过队列）
+	sendErr := s.processMessage(ctx, msg)
+	if sendErr != nil {
+		g.Log().Error(ctx, "处理消息失败", "error", sendErr, "uuid", msg.MessageUuid)
+		return gerror.Wrap(sendErr, consts.ErrMsgRocketMQError)
 	}
 
-	// 确定消息标签
-	tag := msg.MessageType
-	if tag == "" {
-		tag = consts.TagEmail
-	}
-
-	// 发送到队列（使用 GoFrame 的队列组件）
-	// 注意：这里需要根据实际项目中使用的队列组件进行调整
-	err = g.Queue().Push(ctx, consts.TopicMessageSend, msgBody, tag)
-	if err != nil {
-		g.Log().Error(ctx, "发送消息到队列失败", "error", err, "uuid", msg.MessageUuid)
-		return gerror.Wrap(err, consts.ErrMsgRocketMQError)
-	}
-
-	g.Log().Info(ctx, "消息已发送到队列",
+	g.Log().Info(ctx, "消息已同步处理",
 		"uuid", msg.MessageUuid,
 		"type", msg.MessageType,
-		"topic", consts.TopicMessageSend,
-		"tag", tag,
 	)
 
 	return nil
@@ -97,13 +83,8 @@ func (s *sQueue) startConsumer(ctx context.Context) {
 		"group", "ttpos-message",
 	)
 
-	// 订阅队列（使用 GoFrame 的队列组件）
-	// 注意：这里需要根据实际项目中使用的队列组件进行调整
-	err := g.Queue().Subscribe(ctx, consts.TopicMessageSend, s.handleMessage)
-	if err != nil {
-		g.Log().Error(ctx, "订阅队列失败", err)
-		return
-	}
+	// TODO: 实现 RocketMQ 消费者订阅
+	g.Log().Warning(ctx, "RocketMQ 消费者未实现，消息将通过同步方式发送")
 }
 
 // handleMessage 处理消息
@@ -116,26 +97,39 @@ func (s *sQueue) handleMessage(ctx context.Context, msgBody []byte) error {
 		return err
 	}
 
+	return s.processMessage(ctx, &msg)
+}
+
+// processMessage 处理消息（统一的消息处理逻辑）
+// 从数据库获取消息详情后进行处理
+func (s *sQueue) processMessage(ctx context.Context, msg *dto.RocketMQMessage) error {
 	g.Log().Info(ctx, "开始处理消息",
 		"uuid", msg.MessageUuid,
 		"type", msg.MessageType,
 	)
 
+	// 从数据库获取消息详情
+	record, err := service.Message().GetMessageByUuid(ctx, msg.MessageUuid)
+	if err != nil {
+		g.Log().Error(ctx, "获取消息详情失败", "error", err, "uuid", msg.MessageUuid)
+		return gerror.Wrap(err, "获取消息详情失败")
+	}
+
 	// 更新消息状态为发送中
-	err := service.Message().UpdateMessageStatus(ctx, msg.MessageUuid, consts.MessageStatusSending, "")
+	err = service.Message().UpdateMessageStatus(ctx, msg.MessageUuid, consts.MessageStatusSending, "")
 	if err != nil {
 		g.Log().Error(ctx, "更新消息状态失败", err)
 	}
 
 	// 根据消息类型调用对应的发送服务
 	var sendErr error
-	switch msg.MessageType {
+	switch record.MessageType {
 	case consts.MessageTypeEmail:
-		sendErr = s.sendEmail(ctx, &msg)
+		sendErr = s.sendEmail(ctx, record)
 	case consts.MessageTypeSMS:
-		sendErr = s.sendSMS(ctx, &msg)
+		sendErr = s.sendSMS(ctx, record)
 	default:
-		sendErr = gerror.Newf("不支持的消息类型: %s", msg.MessageType)
+		sendErr = gerror.Newf("不支持的消息类型: %s", record.MessageType)
 	}
 
 	// 更新消息状态
@@ -163,12 +157,12 @@ func (s *sQueue) handleMessage(ctx context.Context, msgBody []byte) error {
 }
 
 // sendEmail 发送邮件
-func (s *sQueue) sendEmail(ctx context.Context, msg *dto.RocketMQMessage) error {
-	return service.Mailgun().SendEmail(ctx, msg.MessageUuid, msg.Recipient, msg.Subject, msg.Content)
+func (s *sQueue) sendEmail(ctx context.Context, record *dto.MessageRecordDTO) error {
+	return service.Mailgun().SendEmail(ctx, record.Uuid, record.Recipient, record.Subject, record.Content)
 }
 
 // sendSMS 发送短信（预留）
-func (s *sQueue) sendSMS(ctx context.Context, msg *dto.RocketMQMessage) error {
+func (s *sQueue) sendSMS(ctx context.Context, record *dto.MessageRecordDTO) error {
 	// TODO: 实现短信发送逻辑
 	return gerror.New("短信发送功能暂未实现")
 }

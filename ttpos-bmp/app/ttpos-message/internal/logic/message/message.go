@@ -131,17 +131,10 @@ func (s *sMessage) SendMessage(ctx context.Context, in *dto.SendMessageInput) (o
 		return out, err
 	}
 
-	// 提交到消息队列
+	// 提交到消息队列（只发送 UUID 和类型，详细内容从数据库获取）
 	err = service.Queue().PublishMessage(ctx, &dto.RocketMQMessage{
-		MessageUuid:  in.MessageUuid,
-		TemplateId:   in.TemplateId,
-		MessageType:  in.MessageType,
-		Recipient:    in.Recipient,
-		Subject:      subject,
-		Content:      content,
-		MessageArgs:  in.MessageArgs,
-		CompanyUuid:  in.CompanyUuid,
-		OperatorUuid: in.OperatorUuid,
+		MessageUuid: in.MessageUuid,
+		MessageType: in.MessageType,
 	})
 	if err != nil {
 		g.Log().Error(ctx, "提交消息到队列失败", err)
@@ -233,17 +226,10 @@ func (s *sMessage) ResendMessage(ctx context.Context, in *dto.ResendMessageInput
 		return out, err
 	}
 
-	// 重新提交到消息队列
+	// 重新提交到消息队列（只发送 UUID 和类型，详细内容从数据库获取）
 	err = service.Queue().PublishMessage(ctx, &dto.RocketMQMessage{
-		MessageUuid:  record.Uuid,
-		TemplateId:   record.TemplateId,
-		MessageType:  record.MessageType,
-		Recipient:    record.Recipient,
-		Subject:      record.Subject,
-		Content:      record.Content,
-		MessageArgs:  record.MessageArgs,
-		CompanyUuid:  record.CompanyUuid,
-		OperatorUuid: record.OperatorUuid,
+		MessageUuid: record.Uuid,
+		MessageType: record.MessageType,
 	})
 	if err != nil {
 		g.Log().Error(ctx, "重新提交消息到队列失败", err)
@@ -372,7 +358,7 @@ func (s *sMessage) UpdateMessageStatus(ctx context.Context, uuid string, status 
 
 	// 如果是发送中或失败状态，增加重试次数
 	if status == consts.MessageStatusSending || status == consts.MessageStatusFailed {
-		err := g.DB().Model("message_record").
+		_, err := g.DB().Model("message_record").
 			Where("uuid", uuid).
 			Increment("retry_count", 1)
 		if err != nil {
