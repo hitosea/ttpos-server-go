@@ -13,6 +13,9 @@ type IPrinterCustomizeRepo interface {
 	CreatePrinterCustomize(printerCustomize model.PrinterCustomize) error
 	UpdatePrinterCustomize(printerCustomize model.PrinterCustomize) error
 	DeletePrinterCustomize(id uint64) error
+	UpdatePrinterCustomizeByTemplateId(templateId uint64) error // 按template_id更新is_use为0, 其他字段不变
+
+	WhereByTemplateId(templateId uint64) DBOption
 }
 
 type PrinterCustomizeRepoImpl struct {
@@ -52,7 +55,7 @@ func (r *PrinterCustomizeRepoImpl) CreatePrinterCustomize(printerCustomize model
 
 // UpdatePrinterCustomize 更新打印机定制
 func (r *PrinterCustomizeRepoImpl) UpdatePrinterCustomize(printerCustomize model.PrinterCustomize) error {
-	if err := r.db.Save(&printerCustomize).Error; err != nil {
+	if err := r.db.Model(&model.PrinterCustomize{}).Where("id = ?", printerCustomize.ID).Updates(printerCustomize).Error; err != nil {
 		return err
 	}
 	return nil
@@ -61,6 +64,21 @@ func (r *PrinterCustomizeRepoImpl) UpdatePrinterCustomize(printerCustomize model
 // DeletePrinterCustomize 删除打印机定制
 func (r *PrinterCustomizeRepoImpl) DeletePrinterCustomize(id uint64) error {
 	if err := r.db.Delete(&model.PrinterCustomize{}).Where("id = ?", id).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+// WhereByTemplateId 根据模板ID查询
+func (r *PrinterCustomizeRepoImpl) WhereByTemplateId(templateId uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("template_id = ?", templateId)
+	}
+}
+
+// UpdatePrinterCustomizeByTemplateId 按template_id更新is_use为0, 其他字段不变
+func (r *PrinterCustomizeRepoImpl) UpdatePrinterCustomizeByTemplateId(templateId uint64) error {
+	if err := r.db.Model(&model.PrinterCustomize{}).Where("template_id = ?", templateId).Update("is_use", 0).Error; err != nil {
 		return err
 	}
 	return nil

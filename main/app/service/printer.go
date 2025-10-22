@@ -23,19 +23,19 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
+
+	"gorm.io/gorm"
 )
 
 type IPrinterSrv interface {
-	GetProductPrinterList(ctx context.Context) (resp.ProductPrinterList, error)                              // 获取打印档口列表
-	UsbPrinterReport(ctx context.Context, reportReq req.UsbPrinterReportReq) (resp.PrinterReportResp, error) // usb打印机上报
-	// 获取打印菜单列表
-	GetPrintMenuList(ctx context.Context) (resp.PrintMenuListResp, error)
-	// 获取菜单详情
-	GetPrintMenuDetail(ctx context.Context, id uint64) (resp.PrintMenuDetailResp, error)
-	// 编辑打印机定制
-	EditPrinterCustomize(ctx context.Context, id uint64, data string) error
-	// 删除打印机定制
-	DeletePrinterCustomize(ctx context.Context, id uint64) error
+	GetProductPrinterList(ctx context.Context) (resp.ProductPrinterList, error)                                // 获取打印档口列表
+	UsbPrinterReport(ctx context.Context, reportReq req.UsbPrinterReportReq) (resp.PrinterReportResp, error)   // usb打印机上报
+	GetPrintMenuList(ctx context.Context) (resp.PrintMenuListResp, error)                                      // 获取打印菜单列表
+	GetPrintMenuDetail(ctx context.Context, id uint64) (resp.PrintMenuDetailResp, error)                       // 获取菜单详情
+	EditPrinterCustomize(ctx context.Context, editPrinterCustomizeReq req.EditPrinterCustomizeReq) error       // 编辑打印机定制
+	DeletePrinterCustomize(ctx context.Context, id uint64) error                                               // 删除打印机定制
+	CreatePrinterCustomize(ctx context.Context, createPrinterCustomizeReq req.CreatePrinterCustomizeReq) error // 创建打印机定制
+	UsePrinterCustomize(ctx context.Context, id uint64) error                                                  // 使用打印机定制
 }
 
 type printerSrv struct {
@@ -444,7 +444,8 @@ func (s *printerSrv) GetPrintMenuDetail(ctx context.Context, id uint64) (resp.Pr
 
 	// 获取打印机定制列表
 	customizes, err := printerCustomizeRepo.GetPrinterCustomizeList(
-		commonRepo.DBOption(commonRepo.WhereBySoftDelete()),
+		commonRepo.WhereBySoftDelete(),
+		printerCustomizeRepo.WhereByTemplateId(template.ID),
 	)
 	if err != nil {
 		return resp.PrintMenuDetailResp{}, errors.WithMessage(err, "获取打印机定制列表失败")
@@ -510,11 +511,11 @@ func (s *printerSrv) GetPrintMenuDetail(ctx context.Context, id uint64) (resp.Pr
 }
 
 // EditPrinterCustomize 编辑打印机定制
-func (s *printerSrv) EditPrinterCustomize(ctx context.Context, id uint64, data string) error {
+func (s *printerSrv) EditPrinterCustomize(ctx context.Context, editPrinterCustomizeReq req.EditPrinterCustomizeReq) error {
 	db := ctx.GetDB()
 	printerCustomizeRepo := repository.NewPrinterCustomizeRepo(db)
 	// 检查打印机定制是否存在
-	customizeInfo, err := printerCustomizeRepo.GetPrinterCustomizeInfo(id)
+	customizeInfo, err := printerCustomizeRepo.GetPrinterCustomizeInfo(editPrinterCustomizeReq.ID)
 	if err != nil {
 		return errors.WithMessage(err, "检查打印机定制是否存在失败")
 	}
@@ -524,14 +525,14 @@ func (s *printerSrv) EditPrinterCustomize(ctx context.Context, id uint64, data s
 		return errors.WithMessage(err, "获取测试数据失败")
 	}
 	// 解析模板
-	_, err = s.Parser(ctx, data, testData)
+	_, err = s.Parser(ctx, editPrinterCustomizeReq.Data, testData)
 	if err != nil {
 		return errors.WithMessage(err, "解析模板失败")
 	}
 	// 更新打印机定制
 	return printerCustomizeRepo.UpdatePrinterCustomize(model.PrinterCustomize{
-		ID:         id,
-		Data:       data,
+		ID:         editPrinterCustomizeReq.ID,
+		Data:       editPrinterCustomizeReq.Data,
 		UpdateTime: time.Now().Unix(),
 	})
 }
@@ -544,6 +545,9 @@ func (s *printerSrv) DeletePrinterCustomize(ctx context.Context, id uint64) erro
 	if err != nil {
 		return errors.WithMessage(err, "检查打印机定制是否存在失败")
 	}
+	if customizeInfo.IsAdv == 0 {
+		return errors.New("默认模版不能删除")
+	}
 	// 检查打印机定制是否正在使用中
 	if customizeInfo.IsUse == 1 {
 		return errors.New("打印机定制正在使用中，不能删除")
@@ -554,4 +558,68 @@ func (s *printerSrv) DeletePrinterCustomize(ctx context.Context, id uint64) erro
 		return errors.WithMessage(err, "删除打印机定制失败")
 	}
 	return nil
+}
+
+// CreatePrinterCustomize 创建打印机定制
+func (s *printerSrv) CreatePrinterCustomize(ctx context.Context, createPrinterCustomizeReq req.CreatePrinterCustomizeReq) error {
+	db := ctx.GetDB()
+	printerCustomizeRepo := repository.NewPrinterCustomizeRepo(db)
+	// 检查模板是否存在
+	template, err := repository.NewPrinterTemplateRepo(db).GetPrinterTemplateInfo(createPrinterCustomizeReq.TemplateId)
+	if err != nil {
+		return errors.WithMessage(err, "检查模板是否存在失败")
+	}
+	// 创建打印机定制
+	err = printerCustomizeRepo.CreatePrinterCustomize(model.PrinterCustomize{
+		Name:       createPrinterCustomizeReq.Name,
+		Data:       createPrinterCustomizeReq.Data,
+		TemplateId: template.ID,
+		IsAdv:      1,
+	})
+	if err != nil {
+		return errors.WithMessage(err, "创建打印机定制失败")
+	}
+	return nil
+}
+
+// UsePrinterCustomize 使用打印机定制
+func (s *printerSrv) UsePrinterCustomize(ctx context.Context, id uint64) error {
+	db := ctx.GetDB()
+	printerCustomizeRepo := repository.NewPrinterCustomizeRepo(db)
+	// 检查打印机定制是否存在
+	customizeInfo, err := printerCustomizeRepo.GetPrinterCustomizeInfo(id)
+	if err != nil {
+		return errors.WithMessage(err, "检查打印机定制是否存在失败")
+	}
+	if customizeInfo.IsAdv == 0 {
+		return errors.New("默认模版不能使用")
+	}
+	return db.Transaction(func(tx *gorm.DB) error {
+		// 按template_id更新is_use为0, 其他字段不变
+		err = repository.NewPrinterCustomizeRepo(tx).UpdatePrinterCustomizeByTemplateId(customizeInfo.TemplateId)
+		if err != nil {
+			return errors.WithMessage(err, "使用打印机定制失败")
+		}
+
+		// 使用打印机定制
+		customizeInfo.IsUse = 1
+		customizeInfo.UpdateTime = time.Now().Unix()
+		err = repository.NewPrinterCustomizeRepo(tx).UpdatePrinterCustomize(customizeInfo)
+		if err != nil {
+			return errors.WithMessage(err, "更新打印机定制失败")
+		}
+
+		// 更新打印机模板
+		err = repository.NewPrinterTemplateRepo(tx).UpdatePrinterTemplate(model.PrinterTemplate{
+			ID:       customizeInfo.TemplateId,
+			TmpUuid:  customizeInfo.Uuid,
+			TmpData:  customizeInfo.Data,
+			Template: utils.IfInt(customizeInfo.IsAdv == 1, -2, -1),
+		})
+		if err != nil {
+			return errors.WithMessage(err, "更新打印机定制失败")
+		}
+
+		return nil
+	})
 }

@@ -25,6 +25,7 @@ class AddPrinterCustomizeTable extends Migrator
 
         $table->addColumn('uuid', 'biginteger', ['null' => false, 'default' => 0, 'comment' => 'ID'])
               ->addColumn('name', 'string', ['limit' => 255, 'default' => '', 'comment' => '名称'])
+              ->addColumn('template_id', 'biginteger', ['null' => false, 'default' => 0, 'comment' => '模板ID'])
               ->addColumn('is_adv', 'integer', ['null' => false, 'default' => 0, 'comment' => '是否高级'])
               ->addColumn('is_use', 'integer', ['null' => false, 'default' => 0, 'comment' => '是否使用'])
               ->addColumn('data', 'text', ['limit' => \Phinx\Db\Adapter\MysqlAdapter::TEXT_LONG, 'null' => true, 'comment' => '定制数据'])

@@ -74,3 +74,10 @@ type EditPrinterCustomizeReq struct {
 	ID   uint64 `json:"id"`   // 打印机定制ID
 	Data string `json:"data"` // 打印机定制数据
 }
+
+// CreatePrinterCustomizeReq 创建打印机定制请求
+type CreatePrinterCustomizeReq struct {
+	TemplateId uint64 `json:"template_id"` // 模板ID
+	Name       string `json:"name"`        // 打印机定制名称
+	Data       string `json:"data"`        // 打印机定制数据
+}

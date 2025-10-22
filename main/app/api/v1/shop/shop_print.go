@@ -90,7 +90,7 @@ func (h *PrintHandler) EditPrinterCustomize(c *gin.Context) {
 		helper.HandleValidationError(c, err, editPrinterCustomizeReq, nil)
 		return
 	}
-	err := h.printerSrv.EditPrinterCustomize(ctx, editPrinterCustomizeReq.ID, editPrinterCustomizeReq.Data)
+	err := h.printerSrv.EditPrinterCustomize(ctx, editPrinterCustomizeReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -116,7 +116,12 @@ func (h *PrintHandler) DeletePrinterCustomize(c *gin.Context) {
 		helper.Fail(c, constant.CodeFail, "打印机定制ID参数值错误")
 		return
 	}
-	h.printerSrv.DeletePrinterCustomize(ctx, idUint)
+	err = h.printerSrv.DeletePrinterCustomize(ctx, idUint)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil, "删除打印机定制成功")
 }
 
 // RegisterPrintHandlers 注册打印相关路由
