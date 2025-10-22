@@ -32,6 +32,7 @@ type OrderProductPre struct {
 	IsPackage             bool                 `json:"is_package"`          // 是否套餐
 	IsSubProduct          bool                 `json:"is_sub_product"`      // 是否套餐子商品
 	Remark                string               `json:"remark"`              // 备注
+	BatchTagUuid          uint64               `json:"batch_tag_uuid"`      // 分批类型UUID, 必填
 	SubProducts           []OrderProduct       `json:"sub_products"`        // 套餐子商品
 }
 
