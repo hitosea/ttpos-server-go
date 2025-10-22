@@ -481,7 +481,7 @@ func (s *printerSrv) GetPrintMenuDetail(ctx context.Context, id uint64) (resp.Pr
 					return printContent
 				}(),
 			})
-		} else if customize.Uuid == template.TmpUuid {
+		} else if customize.TemplateId == template.ID {
 			defaultTemplate.Name = customize.Name
 			defaultTemplate.IsUse = customize.IsUse == 1
 			defaultTemplate.TmpUuid = customize.Uuid
