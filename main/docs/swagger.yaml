@@ -4516,6 +4516,18 @@ definitions:
     required:
     - recharge_order_uuid
     type: object
+  req.PrinterGetConfigInfoReq:
+    properties:
+      customize_uuid:
+        description: 定制UUID, 编辑的时候使用，新增的时候 传0
+        type: integer
+      is_adv:
+        description: 是否高级模版 0=否, 1=是
+        type: integer
+      template_id:
+        description: 模板ID
+        type: integer
+    type: object
   req.PrinterLogReq:
     properties:
       uuid:
@@ -4549,6 +4561,12 @@ definitions:
         items:
           $ref: '#/definitions/req.PrinterReportReq'
         type: array
+    type: object
+  req.PrinterUseCustomizeReq:
+    properties:
+      customize_uuid:
+        description: 定制UUID, 编辑的时候使用，新增的时候 传0
+        type: integer
     type: object
   req.ProcessedCallReq:
     properties:
@@ -7584,6 +7602,24 @@ definitions:
       uuid:
         description: 商家UUID
         type: integer
+    type: object
+  resp.ConfigInfoResp:
+    properties:
+      config_list_json:
+        description: 模版配置分组列表 (JSON字符串)
+        type: string
+      customize_data:
+        description: 定制模版数据(JSON字符串) （点击编辑的时候使用）
+        type: string
+      customize_json:
+        description: 定制模版 (JSON字符串) （点击编辑的时候使用）
+        type: string
+      customize_name:
+        description: 定制模版名称 （点击编辑的时候使用）
+        type: string
+      default_json:
+        description: 默认模版 (JSON字符串) （点击还原默认的时候使用）
+        type: string
     type: object
   resp.ConfirmRechargeOrder:
     properties:
@@ -25883,6 +25919,35 @@ paths:
       summary: 退款订单
       tags:
       - 商家端.订单
+  /shop/printer/customize/config/info:
+    get:
+      consumes:
+      - application/json
+      description: 获取配置信息
+      parameters:
+      - description: 获取配置信息请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PrinterGetConfigInfoReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ConfigInfoResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取配置信息
+      tags:
+      - 商家端.打印管理
   /shop/printer/customize/create:
     post:
       consumes:
@@ -25941,36 +26006,7 @@ paths:
       summary: 删除打印机定制
       tags:
       - 商家端.打印管理
-  /shop/printer/customize/use:
-    post:
-      consumes:
-      - application/json
-      description: 使用打印机定制
-      parameters:
-      - description: 打印机定制UUID
-        format: int64
-        in: query
-        name: customize_uuid
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
-      security:
-      - JwtToken: []
-      summary: 使用打印机定制
-      tags:
-      - 商家端.打印管理
-  /shop/printer/template/customize/edit:
+  /shop/printer/customize/edit:
     post:
       consumes:
       - application/json
@@ -25997,6 +26033,35 @@ paths:
       security:
       - JwtToken: []
       summary: 编辑打印机定制
+      tags:
+      - 商家端.打印管理
+  /shop/printer/customize/use:
+    post:
+      consumes:
+      - application/json
+      description: 使用打印机定制
+      parameters:
+      - description: 获取配置信息请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.PrinterUseCustomizeReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+      security:
+      - JwtToken: []
+      summary: 使用打印机定制
       tags:
       - 商家端.打印管理
   /shop/printer/template/detail:

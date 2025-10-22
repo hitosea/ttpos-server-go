@@ -92,20 +92,11 @@ type PrintTemplateDetailResp struct {
 	IsAdvReceiptTpl bool                  `json:"is_adv_receipt_tpl"` // 是否启用高级模板
 }
 
-type ConfigInfo struct {
-	Name  string `json:"name"`  // 模块名称
-	Value string `json:"value"` // 模块数据
-}
-
-type ConfigInfoGroup struct {
-	LocaleName dto.LocaleResponse `json:"locale_name"` // 分组名称
-	List       []ConfigInfo       `json:"list"`        // 分组列表
-}
-
 // ConfigInfoResp
 type ConfigInfoResp struct {
-	ConfigList   []ConfigInfoGroup `json:"config_list"`   // 模版配置分组列表
-	TemplateJson string            `json:"template_json"` // 模版 (JSON字符串)
-	TemplateName string            `json:"template_name"` // 模版名称
-	TemplateData string            `json:"template_data"` // 模版数据(JSON字符串)
+	ConfigListJson string `json:"config_list_json"` // 模版配置分组列表 (JSON字符串)
+	DefaultJson    string `json:"default_json"`     // 默认模版 (JSON字符串) （点击还原默认的时候使用）
+	CustomizeJson  string `json:"customize_json"`   // 定制模版 (JSON字符串) （点击编辑的时候使用）
+	CustomizeName  string `json:"customize_name"`   // 定制模版名称 （点击编辑的时候使用）
+	CustomizeData  string `json:"customize_data"`   // 定制模版数据(JSON字符串) （点击编辑的时候使用）
 }

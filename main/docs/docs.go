@@ -20804,6 +20804,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/printer/customize/config/info": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取配置信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.打印管理"
+                ],
+                "summary": "获取配置信息",
+                "parameters": [
+                    {
+                        "description": "获取配置信息请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.PrinterGetConfigInfoReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ConfigInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/printer/customize/create": {
             "post": {
                 "security": [
@@ -20905,57 +20956,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/shop/printer/customize/use": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "使用打印机定制",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.打印管理"
-                ],
-                "summary": "使用打印机定制",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "format": "int64",
-                        "description": "打印机定制UUID",
-                        "name": "customize_uuid",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/shop/printer/template/customize/edit": {
+        "/shop/printer/customize/edit": {
             "post": {
                 "security": [
                     {
@@ -20981,6 +20982,57 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/req.EditPrinterCustomizeReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/printer/customize/use": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "使用打印机定制",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.打印管理"
+                ],
+                "summary": "使用打印机定制",
+                "parameters": [
+                    {
+                        "description": "获取配置信息请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.PrinterUseCustomizeReq"
                         }
                     }
                 ],
@@ -34708,6 +34760,23 @@ const docTemplate = `{
                 }
             }
         },
+        "req.PrinterGetConfigInfoReq": {
+            "type": "object",
+            "properties": {
+                "customize_uuid": {
+                    "description": "定制UUID, 编辑的时候使用，新增的时候 传0",
+                    "type": "integer"
+                },
+                "is_adv": {
+                    "description": "是否高级模版 0=否, 1=是",
+                    "type": "integer"
+                },
+                "template_id": {
+                    "description": "模板ID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.PrinterLogReq": {
             "type": "object",
             "required": [
@@ -34755,6 +34824,15 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/req.PrinterReportReq"
                     }
+                }
+            }
+        },
+        "req.PrinterUseCustomizeReq": {
+            "type": "object",
+            "properties": {
+                "customize_uuid": {
+                    "description": "定制UUID, 编辑的时候使用，新增的时候 传0",
+                    "type": "integer"
                 }
             }
         },
@@ -39138,6 +39216,31 @@ const docTemplate = `{
                 "uuid": {
                     "description": "商家UUID",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.ConfigInfoResp": {
+            "type": "object",
+            "properties": {
+                "config_list_json": {
+                    "description": "模版配置分组列表 (JSON字符串)",
+                    "type": "string"
+                },
+                "customize_data": {
+                    "description": "定制模版数据(JSON字符串) （点击编辑的时候使用）",
+                    "type": "string"
+                },
+                "customize_json": {
+                    "description": "定制模版 (JSON字符串) （点击编辑的时候使用）",
+                    "type": "string"
+                },
+                "customize_name": {
+                    "description": "定制模版名称 （点击编辑的时候使用）",
+                    "type": "string"
+                },
+                "default_json": {
+                    "description": "默认模版 (JSON字符串) （点击还原默认的时候使用）",
+                    "type": "string"
                 }
             }
         },

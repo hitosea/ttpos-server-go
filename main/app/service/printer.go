@@ -28,17 +28,21 @@ import (
 )
 
 type IPrinterSrv interface {
-	GetProductPrinterList(ctx context.Context) (resp.ProductPrinterList, error)                                // 获取打印档口列表
-	UsbPrinterReport(ctx context.Context, reportReq req.UsbPrinterReportReq) (resp.PrinterReportResp, error)   // usb打印机上报
-	GetPrintTemplateList(ctx context.Context) (resp.PrintTemplateListResp, error)                              // 获取打印模板列表
-	GetPrintTemplateDetail(ctx context.Context, id uint64) (resp.PrintTemplateDetailResp, error)               // 获取模板详情
-	EditPrinterCustomize(ctx context.Context, editPrinterCustomizeReq req.EditPrinterCustomizeReq) error       // 编辑打印机定制
-	DeletePrinterCustomize(ctx context.Context, customizeUuid uint64) error                                    // 删除打印机定制
-	CreatePrinterCustomize(ctx context.Context, createPrinterCustomizeReq req.CreatePrinterCustomizeReq) error // 创建打印机定制
-	UsePrinterCustomize(ctx context.Context, customizeUuid uint64) error                                       // 使用打印机定制
-	// 获取配置信息
-	GetCustomizeConfigInfo(ctx context.Context, configInfoReq req.GetConfigInfoReq) (resp.ConfigInfoResp, error)
+	GetProductPrinterList(ctx context.Context) (resp.ProductPrinterList, error)                                                // 获取打印档口列表
+	UsbPrinterReport(ctx context.Context, reportReq req.UsbPrinterReportReq) (resp.PrinterReportResp, error)                   // usb打印机上报
+	GetPrintTemplateList(ctx context.Context) (resp.PrintTemplateListResp, error)                                              // 获取打印模板列表
+	GetPrintTemplateDetail(ctx context.Context, id uint64) (resp.PrintTemplateDetailResp, error)                               // 获取模板详情
+	EditPrinterCustomize(ctx context.Context, editPrinterCustomizeReq req.EditPrinterCustomizeReq) error                       // 编辑打印机定制
+	DeletePrinterCustomize(ctx context.Context, customizeUuid uint64) error                                                    // 删除打印机定制
+	CreatePrinterCustomize(ctx context.Context, createPrinterCustomizeReq req.CreatePrinterCustomizeReq) error                 // 创建打印机定制
+	UsePrinterCustomize(ctx context.Context, customizeUuid uint64) error                                                       // 使用打印机定制
+	GetPrinterCustomizeConfigInfo(ctx context.Context, configInfoReq req.PrinterGetConfigInfoReq) (resp.ConfigInfoResp, error) // 获取配置信息
 }
+
+const (
+	DefaultTemplateName = "门店-默认模版"
+	TemplatePngPath     = "app/printer/pkg/text/tmp/printer/complex_template_test.png"
+)
 
 type printerSrv struct {
 	dbm   *database.DBManager
@@ -384,15 +388,12 @@ func (s *printerSrv) Parser(ctx context.Context, templateJSONStr string, testDat
 		return "", errors.WithMessage(err, "解析模板失败")
 	}
 
-	// 保存测试图片
-	path := "app/printer/pkg/text/tmp/printer/complex_template_test.png"
-
 	// 设置分割高度为200000
 	img.SegmentationHeight = 200000
-	img.Save(path, false, 0)
+	img.Save(TemplatePngPath, false, 0)
 
 	// 读取保存的图片文件并转换为base64
-	imageData, err := os.ReadFile(path)
+	imageData, err := os.ReadFile(TemplatePngPath)
 	if err != nil {
 		return "", errors.WithMessage(err, "读取生成的图片文件失败")
 	}
@@ -422,11 +423,28 @@ func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[
 
 // GetTemplateJSONStr 获取模板JSON字符串
 func (s *printerSrv) GetTemplateJSONStr(ctx context.Context, templateName string) (string, error) {
-	templateJSON, err := os.ReadFile(fmt.Sprintf("app/printer/pkg/template_json/%s.json", templateName))
+	templateJSON, err := os.ReadFile(fmt.Sprintf("app/printer/pkg/template_json/%s_tmp.json", templateName))
 	if err != nil {
 		return "", errors.WithMessage(err, "读取模板文件失败")
 	}
 	return string(templateJSON), nil
+}
+
+// GetTemplateConfigInfo 获取模板配置信息
+func (s *printerSrv) GetTemplateConfigInfo(ctx context.Context, templateName string, isAdv bool) (string, error) {
+	if isAdv {
+		templateJSON, err := os.ReadFile(fmt.Sprintf("app/printer/pkg/template_json/%s_adv_config.json", templateName))
+		if err != nil {
+			return "", errors.WithMessage(err, "读取模板文件失败")
+		}
+		return string(templateJSON), nil
+	} else {
+		templateJSON, err := os.ReadFile(fmt.Sprintf("app/printer/pkg/template_json/%s_config.json", templateName))
+		if err != nil {
+			return "", errors.WithMessage(err, "读取模板文件失败")
+		}
+		return string(templateJSON), nil
+	}
 }
 
 // GetPrintTemplateDetail 获取菜单详情
@@ -462,7 +480,7 @@ func (s *printerSrv) GetPrintTemplateDetail(ctx context.Context, id uint64) (res
 	// 默认模板
 	defaultTemplate := resp.PrintTemplateDetail{
 		ID:    template.ID,
-		Name:  "门店-默认模版",
+		Name:  i18n.Translate(ctx.GetLanguage(), DefaultTemplateName),
 		IsUse: false,
 	}
 
@@ -484,7 +502,7 @@ func (s *printerSrv) GetPrintTemplateDetail(ctx context.Context, id uint64) (res
 				}(),
 			})
 		} else if customize.TemplateId == template.ID {
-			defaultTemplate.Name = customize.Name
+			defaultTemplate.Name = utils.IfString(customize.Name == DefaultTemplateName, i18n.Translate(ctx.GetLanguage(), DefaultTemplateName), customize.Name)
 			defaultTemplate.IsUse = customize.IsUse == 1
 			defaultTemplate.CustomizeUuid = customize.Uuid
 			printContent, err := s.Parser(ctx, customize.Data, testData)
@@ -508,7 +526,7 @@ func (s *printerSrv) GetPrintTemplateDetail(ctx context.Context, id uint64) (res
 		}
 		err = printerCustomizeRepo.CreatePrinterCustomize(model.PrinterCustomize{
 			BaseModel:  model.BaseModel{Uuid: uuid},
-			Name:       defaultTemplate.Name,
+			Name:       DefaultTemplateName,
 			Data:       templateJSONStr,
 			TemplateId: template.ID,
 			IsAdv:      0,
@@ -626,9 +644,6 @@ func (s *printerSrv) UsePrinterCustomize(ctx context.Context, customizeUuid uint
 	if err != nil {
 		return errors.WithMessage(err, "检查打印机定制是否存在失败")
 	}
-	if customizeInfo.IsAdv == 0 {
-		return errors.New("默认模版不能使用")
-	}
 	// 检查打印机定制是否正在使用中
 	return db.Transaction(func(tx *gorm.DB) error {
 		// 按template_id更新is_use为0, 其他字段不变
@@ -661,50 +676,88 @@ func (s *printerSrv) UsePrinterCustomize(ctx context.Context, customizeUuid uint
 }
 
 // GetConfigInfo 获取配置信息
-func (s *printerSrv) GetCustomizeConfigInfo(ctx context.Context, configInfoReq req.GetConfigInfoReq) (resp.ConfigInfoResp, error) {
-	// db := ctx.GetDB()
+func (s *printerSrv) GetPrinterCustomizeConfigInfo(ctx context.Context, configInfoReq req.PrinterGetConfigInfoReq) (resp.ConfigInfoResp, error) {
+	db := ctx.GetDB()
 	// 检查模板是否存在
-	// template, err := repository.NewPrinterTemplateRepo(db).GetPrinterTemplateInfo(configInfoReq.TemplateId)
-	// if err != nil {
-	// 	return resp.ConfigInfoResp{}, errors.WithMessage(err, "检查模板不存在")
-	// }
-	// templateJson, err := json.Marshal(template)
-	// if err != nil {
-	// 	return resp.ConfigInfoResp{}, errors.WithMessage(err, "序列化模版数据失败")
-	// }
-	// //
-	// configList := make([]resp.ConfigInfoGroup, 0)
-	// configList = append(configList, resp.ConfigInfoGroup{
-	// 	LocaleName: dto.LocaleResponse{
-	// 		Locale: ctx.GetLanguage(),
-	// 		Value:  template.Name,
-	// 	},
-	// 	List: make([]resp.ConfigInfo, 0),
-	// })
-	// //
-	// configInfo := make([]resp.ConfigInfo, 0)
-	// for _, config := range template.Config {
-	// 	configInfo = append(configInfo, resp.ConfigInfo{
-	// 		Name:  config.Name,
-	// 		Value: config.Value,
-	// 	})
-	// }
+	template, err := repository.NewPrinterTemplateRepo(db).GetPrinterTemplateInfo(configInfoReq.TemplateId)
+	if err != nil {
+		return resp.ConfigInfoResp{}, errors.WithMessage(err, "检查模板不存在")
+	}
 
-	// // 检查打印机定制是否存在
-	// printerCustomizeRepo := repository.NewPrinterCustomizeRepo(db)
-	// // 检查打印机定制是否存在
-	// customizeInfo, err := printerCustomizeRepo.GetPrinterCustomizeInfo(configInfoReq.TmpUuid)
-	// if err != nil {
-	// 	return errors.WithMessage(err, "检查打印机定制是否存在失败")
-	// }
-	// if customizeInfo.IsAdv == 0 {
-	// 	return errors.New("默认模版不能使用")
-	// }
-	//
-	return resp.ConfigInfoResp{
-		ConfigList:   make([]resp.ConfigInfoGroup, 0),
-		TemplateJson: "",
-		TemplateName: "",
-		TemplateData: "",
-	}, nil
+	// 获取模板名称
+	templateName := utils.IfString(configInfoReq.IsAdv == 0, i18n.Translate(ctx.GetLanguage(), DefaultTemplateName), template.Name)
+
+	// 获取模板JSON字符串
+	defaultJsonStr, err := s.GetTemplateJSONStr(ctx, template.Name)
+	if err != nil {
+		return resp.ConfigInfoResp{}, errors.WithMessage(err, "获取模板JSON字符串失败")
+	}
+
+	// 格式化模板JSON字符串
+	var templateObj map[string]interface{}
+	if err := json.Unmarshal([]byte(defaultJsonStr), &templateObj); err == nil {
+		if formattedJSON, err := json.Marshal(templateObj); err == nil {
+			defaultJsonStr = string(formattedJSON)
+		}
+	}
+
+	// 获取打印机定制
+	templateJSONStr := defaultJsonStr
+	if configInfoReq.CustomizeUuid != 0 {
+		// 获取打印机定制信息
+		customizeInfo, err := repository.NewPrinterCustomizeRepo(db).GetPrinterCustomizeInfo(configInfoReq.CustomizeUuid)
+		if err != nil {
+			return resp.ConfigInfoResp{}, errors.WithMessage(err, "检查打印机定制是否存在失败")
+		}
+		// 格式化模板JSON字符串
+		var templateObj map[string]interface{}
+		if err := json.Unmarshal([]byte(customizeInfo.Data), &templateObj); err == nil {
+			if formattedJSON, err := json.Marshal(templateObj); err == nil {
+				templateJSONStr = string(formattedJSON)
+			}
+		}
+		//
+		templateName = customizeInfo.Name
+	}
+
+	// 获取测试数据
+	testData, err := s.GetTestData(ctx, template.Name)
+	if err != nil {
+		return resp.ConfigInfoResp{}, errors.WithMessage(err, "获取测试数据失败")
+	}
+	_, err = s.Parser(ctx, templateJSONStr, testData)
+	if err != nil {
+		return resp.ConfigInfoResp{}, errors.WithMessage(err, "解析模板失败")
+	}
+	testDataJSON, err := json.Marshal(testData)
+	if err != nil {
+		return resp.ConfigInfoResp{}, errors.WithMessage(err, "序列化测试数据失败")
+	}
+
+	// 获取模板配置信息
+	templateConfigInfoStr, err := s.GetTemplateConfigInfo(ctx, template.Name, configInfoReq.IsAdv == 1)
+	if err != nil {
+		return resp.ConfigInfoResp{}, errors.WithMessage(err, "获取模板配置信息失败")
+	}
+	// 格式化模板JSON字符串
+	var templateConfigObj map[string]interface{}
+	if err := json.Unmarshal([]byte(templateConfigInfoStr), &templateConfigObj); err == nil {
+		if formattedJSON, err := json.Marshal(templateConfigObj); err == nil {
+			templateConfigInfoStr = string(formattedJSON)
+		}
+	} else {
+		return resp.ConfigInfoResp{}, errors.WithMessage(err, "格式化模板配置信息失败")
+	}
+
+	// 结果
+	result := resp.ConfigInfoResp{
+		ConfigListJson: templateConfigInfoStr,
+		DefaultJson:    defaultJsonStr,
+		CustomizeJson:  templateJSONStr,
+		CustomizeName:  templateName,
+		CustomizeData:  string(testDataJSON),
+	}
+
+	// 返回
+	return result, nil
 }

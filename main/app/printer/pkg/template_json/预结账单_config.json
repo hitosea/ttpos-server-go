@@ -1,0 +1,617 @@
+{
+    "metadata": {
+        "name": "预结账单"
+    },
+    "rows": [
+        {
+            "group_name": {
+                "th": "基础信息",
+                "en": "基础信息",
+                "ko": "基础信息",
+                "my": "基础信息",
+                "tr": "基础信息",
+                "de": "基础信息",
+                "sv": "基础信息",
+                "ja": "基础信息",
+                "zhtw": "基础信息",
+                "zh": "基础信息"
+            },
+            "group_id": 1,
+            "blocks": [
+                {
+                    "block_name" : {
+                        "th": "票据名称",
+                        "en": "票据名称",
+                        "ko": "票据名称",
+                        "my": "票据名称",
+                        "tr": "票据名称",
+                        "de": "票据名称",
+                        "sv": "票据名称",
+                        "ja": "票据名称",
+                        "zhtw": "票据名称",
+                        "zh": "票据名称"
+                    },
+                    "data_rows": [
+                        [
+                            {
+                                "block_id": "title",
+                                "block_type": "label", 
+                                "block_label": {
+                                    "zh": "预结账单",
+                                    "en": "Pre-bill",
+                                    "ko": "사전 청구",
+                                    "my": "ကြိုတင်ငွေတောင်းခံလွှာ",
+                                    "tr": "Ön fatura",
+                                    "de": "Vorabrechnung",
+                                    "sv": "Preliminär nota",
+                                    "ja": "事前請求",
+                                    "zhtw": "預結賬單",
+                                    "th": "เรียกเก็บเงินล่วงหน้า"
+                                },
+                                "block_attr": {
+                                    "font_size": 32,
+                                    "align": "center",
+                                    "font_bold": true,
+                                    "dividing_line": false,
+                                    "leading_blank_lines": 0,
+                                    "trailing_blank_lines": 2,
+                                    "width": 100
+                                }
+                            }
+                        ]
+                    ]
+                },
+                {
+                    "block_name" : {
+                        "th": "店铺名称",
+                        "en": "店铺名称",
+                        "ko": "店铺名称",
+                        "my": "店铺名称",
+                        "tr": "店铺名称",
+                        "de": "店铺名称",
+                        "sv": "店铺名称",
+                        "ja": "店铺名称",
+                        "zhtw": "店铺名称",
+                        "zh": "店铺名称"
+                    },
+                    "data_rows": [
+                        [
+                            {
+                                "block_id": "store.name",
+                                "block_type": "value", 
+                                "block_label": {
+                                    "th": "店铺名称",
+                                    "en": "店铺名称",
+                                    "ko": "店铺名称",
+                                    "my": "店铺名称",
+                                    "tr": "店铺名称",
+                                    "de": "店铺名称",
+                                    "sv": "店铺名称",
+                                    "ja": "店铺名称",
+                                    "zhtw": "店铺名称",
+                                    "zh": "店铺名称"
+                                },
+                                "block_attr": {
+                                    "font_size": 26,
+                                    "align": "center",
+                                    "font_bold": true,
+                                    "dividing_line": false,
+                                    "leading_blank_lines": 0,
+                                    "trailing_blank_lines": 0,           
+                                    "width": 100
+                                },
+                                "conditions": [
+                                    {
+                                        "field": "store.name",
+                                        "operator": "not_empty",
+                                        "value": 0
+                                    }
+                                ]
+                            }
+                        ]
+                    ]
+                },
+                {
+                    "block_name" : {
+                        "th": "店铺信息",
+                        "en": "店铺信息",
+                        "ko": "店铺信息",
+                        "my": "店铺信息",
+                        "tr": "店铺信息",
+                        "de": "店铺信息",
+                        "sv": "店铺信息",
+                        "ja": "店铺信息",
+                        "zhtw": "店铺信息",
+                        "zh": "店铺信息"
+                    },
+                    "data_rows": [
+                        [
+                            {
+                                "block_id": "store.logo",
+                                "block_type": "img", 
+                                "block_label": {},
+                                "block_attr": {
+                                    "font_size": 22,
+                                    "align": "center",
+                                    "font_bold": false,
+                                    "dividing_line": false,
+                                    "leading_blank_lines": 0,
+                                    "trailing_blank_lines": 0,
+                                    "width": 180
+                                },
+                                "conditions": [
+                                    {
+                                        "field": "store.logo",
+                                        "operator": "not_empty",
+                                        "value": 0
+                                    }
+                                ]
+                            }
+                        ],
+                        [
+                            {
+                                "block_id": "store.company",
+                                "block_type": "label:value",
+                                "block_label": {
+                                    "zh": "公司名称:",
+                                    "en": "Company Name:",
+                                    "ko": "매장명:",
+                                    "my": "Nama Kedai:",
+                                    "tr": "Mağaza Adı:",
+                                    "de": "Ladenname:",
+                                    "sv": "Butiksnamn:",
+                                    "ja": "店舗名:",
+                                    "zhtw": "店鋪名稱:",
+                                    "th": "ชื่อบริษัท:"
+                                },
+                                "block_attr": {
+                                    "font_size": 20,
+                                    "align": "center",
+                                    "font_bold": true,
+                                    "dividing_line": false,
+                                    "leading_blank_lines": 0,
+                                    "trailing_blank_lines": 0,
+                                    "width": 100
+                                },
+                                "conditions": [
+                                    {
+                                        "field": "store.company",
+                                        "operator": "not_empty",
+                                        "value": 0
+                                    }
+                                ]
+                            }
+                        ],
+                        [
+                            {
+                                "block_id": "store.company_addr",
+                                "block_type": "label:value",
+                                "block_label": {
+                                    "zh": "商家地址:",
+                                    "en": "Business Address:",
+                                    "ko": "사업자 주소:",
+                                    "my": "လုပ်ငန်းလိပ်စာ:",
+                                    "tr": "İş Adresi:",
+                                    "de": "Geschäftsadresse:",
+                                    "sv": "Företagsadress:",
+                                    "ja": "事業者住所:",
+                                    "zhtw": "商家地址:",
+                                    "th": "ที่อยู่ธุรกิจ:"
+                                },
+                                "block_attr": {
+                                    "font_size": 20,
+                                    "align": "center",
+                                    "font_bold": true,
+                                    "dividing_line": false,
+                                    "leading_blank_lines": 0,
+                                    "trailing_blank_lines": 0,
+                                    "width": 100
+                                },
+                                "conditions": [
+                                    {
+                                        "field": "store.company_addr",
+                                        "operator": "not_empty",
+                                        "value": 0
+                                    }
+                                ]
+                            }
+                        ],
+                        [
+                            {
+                                "block_id": "store.company_phone",
+                                "block_type": "label:value",
+                                "block_label": {
+                                    "zh": "电话:",
+                                    "en": "Phone:",
+                                    "ko": "전화:",
+                                    "my": "ဖုန်း:",
+                                    "tr": "Telefon:",
+                                    "de": "Telefon:",
+                                    "sv": "Telefon:",
+                                    "ja": "電話:",
+                                    "zhtw": "電話:",
+                                    "th": "โทรศัพท์:"
+                                },
+                                "block_attr": {
+                                    "font_size": 20,
+                                    "align": "center",
+                                    "font_bold": true,
+                                    "dividing_line": false,
+                                    "leading_blank_lines": 0,
+                                    "trailing_blank_lines": 0,
+                                    "width": 100
+                                },
+                                "conditions": [
+                                    {
+                                        "field": "store.company_phone",
+                                        "operator": "not_empty",
+                                        "value": 0
+                                    }
+                                ]
+                            }
+                        ],
+                        [
+                            {
+                                "block_id": "store.company_tax_number",
+                                "block_type": "label:value",
+                                "block_label": {
+                                    "zh": "税号:",
+                                    "en": "Tax Number:",
+                                    "ko": "세금번호:",
+                                    "my": "အခွန်နံပါတ်:",
+                                    "tr": "Vergi Numarası:",
+                                    "de": "Steuer-ID:",
+                                    "sv": "Skattenummer:",
+                                    "ja": "税番号:",
+                                    "zhtw": "稅號:",
+                                    "th": "หมายเลขภาษี:"
+                                },
+                                "block_attr": {
+                                    "font_size": 20,
+                                    "align": "center",
+                                    "font_bold": true,
+                                    "dividing_line": false,
+                                    "leading_blank_lines": 0,
+                                    "trailing_blank_lines": 0,
+                                    "width": 100
+                                },
+                                "conditions": [
+                                    {
+                                        "field": "store.company_tax_number",
+                                        "operator": "not_empty",
+                                        "value": 0
+                                    }
+                                ]
+                            }
+                        ]
+                    ]
+                },
+                {
+                    "block_name" : {
+                        "th": "桌号/取单号",
+                        "en": "桌号/取单号",
+                        "ko": "桌号/取单号",
+                        "my": "桌号/取单号",
+                        "tr": "桌号/取单号",
+                        "de": "桌号/取单号",
+                        "sv": "桌号/取单号",
+                        "ja": "桌号/取单号",
+                        "zhtw": "桌号/取单号",
+                        "zh": "桌号/取单号"
+                    },
+                    "data_rows": [
+                        [
+                            {
+                                "block_id": "order.serial_no",
+                                "block_type": "value",
+                                "block_label": {
+                                    "th": "桌号/取单号",
+                                    "en": "桌号/取单号",
+                                    "ko": "桌号/取单号",
+                                    "my": "桌号/取单号",
+                                    "tr": "桌号/取单号",
+                                    "de": "桌号/取单号",
+                                    "sv": "桌号/取单号",
+                                    "ja": "桌号/取单号",
+                                    "zhtw": "桌号/取单号",
+                                    "zh": "桌号/取单号"
+                                },
+                                "block_attr": {
+                                    "font_size": 28,
+                                    "align": "left",
+                                    "font_bold": true,
+                                    "dividing_line": false,
+                                    "leading_blank_lines": 0,
+                                    "trailing_blank_lines": 1,
+                                    "width": 100
+                                }
+                            }
+                        ]
+                    ]
+                },
+                {
+                    "block_name" : {
+                        "th": "订单号",
+                        "en": "订单号",
+                        "ko": "订单号",
+                        "my": "订单号",
+                        "tr": "订单号",
+                        "de": "订单号",
+                        "sv": "订单号",
+                        "ja": "订单号",
+                        "zhtw": "订单号",
+                        "zh": "订单号"
+                    },
+                    "data_rows": [
+                        [
+                            {
+                                "block_id": "order.order_no",
+                                "block_type": "label:value",
+                                "block_label": {
+                                    "zh": "订单号:",
+                                    "en": "Order No:",
+                                    "ko": "주문번호:",
+                                    "my": "အမှာစာနံပါတ်:",
+                                    "tr": "Sipariş No:",
+                                    "de": "Bestell-Nr:",
+                                    "sv": "Beställningsnr:",
+                                    "ja": "注文番号:",
+                                    "zhtw": "訂單號:",
+                                    "th": "หมายเลขคำสั่งซื้อ:"
+                                },
+                                "block_attr": {
+                                    "font_size": 20,
+                                    "align": "left",
+                                    "font_bold": false,
+                                    "dividing_line": false,
+                                    "leading_blank_lines": 0,
+                                    "trailing_blank_lines": 1,
+                                    "width": 100
+                                }
+                            }
+                        ]
+                    ]
+                },
+                {
+                    "block_name" : {
+                        "th": "人数",
+                        "en": "人数",
+                        "ko": "人数",
+                        "my": "人数",
+                        "tr": "人数",
+                        "de": "人数",
+                        "sv": "人数",
+                        "ja": "人数",
+                        "zhtw": "人数",
+                        "zh": "人数"
+                    },
+                    "data_rows": [
+
+                    ]
+                },
+                {
+                    "block_name" : {
+                        "th": "开桌备注",
+                        "en": "开桌备注",
+                        "ko": "开桌备注",
+                        "my": "开桌备注",
+                        "tr": "开桌备注",
+                        "de": "开桌备注",
+                        "sv": "开桌备注",
+                        "ja": "开桌备注",
+                        "zhtw": "开桌备注",
+                        "zh": "开桌备注"
+                    },
+                    "data_rows": [
+
+                    ]
+                },
+                {
+                    "block_name" : {
+                        "th": "收银员",
+                        "en": "收银员",
+                        "ko": "收银员",
+                        "my": "收银员",
+                        "tr": "收银员",
+                        "de": "收银员",
+                        "sv": "收银员",
+                        "ja": "收银员",
+                        "zhtw": "收银员",
+                        "zh": "收银员"
+                    },
+                    "data_rows": [
+
+                    ]
+                }
+            ]
+        },
+        {
+            "group_name": {
+                "th": "商品信息",
+                "en": "商品信息",
+                "ko": "商品信息",
+                "my": "商品信息",
+                "tr": "商品信息",
+                "de": "商品信息",
+                "sv": "商品信息",
+                "ja": "商品信息",
+                "zhtw": "商品信息",
+                "zh": "商品信息"
+            },
+            "group_id": 2,
+            "blocks": [
+                {
+                    "block_name" : {
+                        "th": "商品",
+                        "en": "商品",
+                        "ko": "商品",
+                        "my": "商品",
+                        "tr": "商品",
+                        "de": "商品",
+                        "sv": "商品",
+                        "ja": "商品",
+                        "zhtw": "商品",
+                        "zh": "商品"
+                    },
+                    "data_rows": [
+
+                    ]
+                },
+                {
+                    "block_name" : {
+                        "th": "商品数量",
+                        "en": "商品数量",
+                        "ko": "商品数量",
+                        "my": "商品数量",
+                        "tr": "商品数量",
+                        "de": "商品数量",
+                        "sv": "商品数量",
+                        "ja": "商品数量",
+                        "zhtw": "商品数量",
+                        "zh": "商品数量"
+                    },
+                    "data_rows": [
+
+                    ]
+                },
+                {
+                    "block_name" : {
+                        "th": "商品金额",
+                        "en": "商品金额",
+                        "ko": "商品金额",
+                        "my": "商品金额",
+                        "tr": "商品金额",
+                        "de": "商品金额",
+                        "sv": "商品金额",
+                        "ja": "商品金额",
+                        "zhtw": "商品金额",
+                        "zh": "商品金额"
+                    },
+                    "data_rows": [
+
+                    ]
+                }
+            ]
+        },
+        {
+            "group_name": {
+                "th": "结算信息",
+                "en": "结算信息",
+                "ko": "结算信息",
+                "my": "结算信息",
+                "tr": "结算信息",
+                "de": "结算信息",
+                "sv": "结算信息",
+                "ja": "结算信息",
+                "zhtw": "结算信息",
+                "zh": "结算信息"
+            },
+            "group_id": 3,
+            "blocks": [
+                {
+                    "block_name" : { 
+                        "th": "应付信息",
+                        "en": "应付信息",
+                        "ko": "应付信息",
+                        "my": "应付信息",
+                        "tr": "应付信息",
+                        "de": "应付信息",
+                        "sv": "应付信息",
+                        "ja": "应付信息",
+                        "zhtw": "应付信息",
+                        "zh": "应付信息"
+                    },
+                    "data_rows": [
+
+                    ]
+                },
+                {
+                    "block_name" : { 
+                        "th": "收款二维码",
+                        "en": "收款二维码",
+                        "ko": "收款二维码",
+                        "my": "收款二维码",
+                        "tr": "收款二维码",
+                        "de": "收款二维码",
+                        "sv": "收款二维码",
+                        "ja": "收款二维码",
+                        "zhtw": "收款二维码",
+                        "zh": "收款二维码"
+                    },
+                    "data_rows": [
+
+                    ]
+                }
+            ]
+        },
+        {
+            "group_name": {
+                "th": "底部",
+                "en": "底部",
+                "ko": "底部",
+                "my": "底部",
+                "tr": "底部",
+                "de": "底部",
+                "sv": "底部",
+                "ja": "底部",
+                "zhtw": "底部",
+                "zh": "底部"
+            },
+            "group_id": 4,
+            "blocks": [
+                {
+                    "block_name" : { 
+                        "th": "自定义图片",
+                        "en": "自定义图片",
+                        "ko": "自定义图片",
+                        "my": "自定义图片",
+                        "tr": "自定义图片",
+                        "de": "自定义图片",
+                        "sv": "自定义图片",
+                        "ja": "自定义图片",
+                        "zhtw": "自定义图片",
+                        "zh": "自定义图片"
+                    },
+                    "data_rows": [
+
+                    ]
+                },
+                {
+                    "block_name" : { 
+                        "th": "自定义文字",
+                        "en": "自定义文字",
+                        "ko": "自定义文字",
+                        "my": "自定义文字",
+                        "tr": "自定义文字",
+                        "de": "自定义文字",
+                        "sv": "自定义文字",
+                        "ja": "自定义文字",
+                        "zhtw": "自定义文字",
+                        "zh": "自定义文字"
+                    },
+                    "data_rows": [
+
+                    ]
+                },
+                {
+                    "block_name" : { 
+                        "th": "系统支持",
+                        "en": "系统支持",
+                        "ko": "系统支持",
+                        "my": "系统支持",
+                        "tr": "系统支持",
+                        "de": "系统支持",
+                        "sv": "系统支持",
+                        "ja": "系统支持",
+                        "zhtw": "系统支持",
+                        "zh": "系统支持"
+                    },
+                    "data_rows": [
+
+                    ]
+                }
+            ]
+        }
+    ]
+   
+}
