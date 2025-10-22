@@ -14055,6 +14055,7 @@ func (s *orderSrv) OrderCartProductBatchCooking(ctx context.Context, req req.Ord
 	if err := req.Validate(); err != nil {
 		return nil, errors.WithMessage(err)
 	}
+
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {
@@ -14105,6 +14106,7 @@ func (s *orderSrv) OrderCartProductBatchCooking(ctx context.Context, req req.Ord
 		Products: func() event.ProductsPre {
 			products := make(event.ProductsPre, 0)
 			for _, unCookingSaleOrderProduct := range saleBillProducts {
+				unCookingSaleOrderProduct.BatchTagUuid = req.BatchTagUuid
 				products = append(products, s.convertToEventOrderProductPre(
 					unCookingSaleOrderProduct,
 					saleBill,

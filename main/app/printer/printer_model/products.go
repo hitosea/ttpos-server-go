@@ -23,6 +23,7 @@ type OrderProduct struct {
 	IsWrap                bool                 `json:"is_wrap"`             // 是否打包
 	IsGift                bool                 `json:"is_gift"`             // 是否赠品
 	Remark                string               `json:"remark"`              // 备注
+	BatchTagUuid          uint64               `json:"batch_tag_uuid"`      // 分批类型UUID
 	Reason                dto.LocaleResponse   `json:"reason"`              // 退菜原因
 	CustomReason          string               `json:"custom_reason"`       // 自定义退菜原因
 	SubProducts           []OrderProduct       `json:"sub_products"`        // 套餐子商品
