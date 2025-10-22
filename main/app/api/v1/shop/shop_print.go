@@ -104,19 +104,19 @@ func (h *PrintHandler) EditPrinterCustomize(c *gin.Context) {
 // @Tags 商家端.打印管理
 // @Accept json
 // @Produce json
-// @Param id query uint64 true "打印机定制ID"
+// @Param tmp_uuid query uint64 true "打印机定制UUID"
 // @Security JwtToken
 // @Success 200 {object} dto.Response{data=string} "成功"
 // @Router /shop/printer/customize/delete [delete]
 func (h *PrintHandler) DeletePrinterCustomize(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	id := c.Query("id")
-	idUint, err := strconv.ParseUint(id, 10, 64)
+	tmp_uuid := c.Query("tmp_uuid")
+	tmpUuidUint, err := strconv.ParseUint(tmp_uuid, 10, 64)
 	if err != nil {
-		helper.Fail(c, constant.CodeFail, "打印机定制ID参数值错误")
+		helper.Fail(c, constant.CodeFail, "打印机定制UUID参数值错误")
 		return
 	}
-	err = h.printerSrv.DeletePrinterCustomize(ctx, idUint)
+	err = h.printerSrv.DeletePrinterCustomize(ctx, tmpUuidUint)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -150,25 +150,24 @@ func (h *PrintHandler) CreatePrinterCustomize(c *gin.Context) {
 }
 
 // UsePrinterCustomize 使用打印机定制
-
 // @Summary 使用打印机定制
 // @Description 使用打印机定制
 // @Tags 商家端.打印管理
 // @Accept json
 // @Produce json
-// @Param id query uint64 true "打印机定制ID"
+// @Param tmp_uuid query uint64 true "打印机定制UUID"
 // @Security JwtToken
 // @Success 200 {object} dto.Response{data=string} "成功"
 // @Router /shop/printer/customize/use [post]
 func (h *PrintHandler) UsePrinterCustomize(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	id := c.Query("id")
-	idUint, err := strconv.ParseUint(id, 10, 64)
+	tmp_uuid := c.Query("tmp_uuid")
+	tmpUuidUint, err := strconv.ParseUint(tmp_uuid, 10, 64)
 	if err != nil {
-		helper.Fail(c, constant.CodeFail, "打印机定制ID参数值错误")
+		helper.Fail(c, constant.CodeFail, "打印机定制UUID参数值错误")
 		return
 	}
-	err = h.printerSrv.UsePrinterCustomize(ctx, idUint)
+	err = h.printerSrv.UsePrinterCustomize(ctx, tmpUuidUint)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

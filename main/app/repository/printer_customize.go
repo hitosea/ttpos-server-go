@@ -9,10 +9,10 @@ import (
 // IPrinterCustomizeRepo 打印机定制
 type IPrinterCustomizeRepo interface {
 	GetPrinterCustomizeList(opts ...DBOption) ([]model.PrinterCustomize, error)
-	GetPrinterCustomizeInfo(id uint64) (model.PrinterCustomize, error)
+	GetPrinterCustomizeInfo(uuid uint64) (model.PrinterCustomize, error)
 	CreatePrinterCustomize(printerCustomize model.PrinterCustomize) error
 	UpdatePrinterCustomize(printerCustomize model.PrinterCustomize) error
-	DeletePrinterCustomize(id uint64) error
+	DeletePrinterCustomize(uuid uint64) error
 	UpdatePrinterCustomizeByTemplateId(templateId uint64) error // 按template_id更新is_use为0, 其他字段不变
 
 	WhereByTemplateId(templateId uint64) DBOption
@@ -38,9 +38,9 @@ func (r *PrinterCustomizeRepoImpl) GetPrinterCustomizeList(opts ...DBOption) ([]
 }
 
 // GetPrinterCustomizeInfo 获取打印机定制详情
-func (r *PrinterCustomizeRepoImpl) GetPrinterCustomizeInfo(id uint64) (model.PrinterCustomize, error) {
+func (r *PrinterCustomizeRepoImpl) GetPrinterCustomizeInfo(uuid uint64) (model.PrinterCustomize, error) {
 	var printerCustomize model.PrinterCustomize
-	db := r.db.Model(&model.PrinterCustomize{}).Where("id = ?", id)
+	db := r.db.Model(&model.PrinterCustomize{}).Where("uuid = ?", uuid)
 	err := db.First(&printerCustomize).Error
 	return printerCustomize, err
 }
@@ -55,15 +55,15 @@ func (r *PrinterCustomizeRepoImpl) CreatePrinterCustomize(printerCustomize model
 
 // UpdatePrinterCustomize 更新打印机定制
 func (r *PrinterCustomizeRepoImpl) UpdatePrinterCustomize(printerCustomize model.PrinterCustomize) error {
-	if err := r.db.Model(&model.PrinterCustomize{}).Where("id = ?", printerCustomize.ID).Updates(printerCustomize).Error; err != nil {
+	if err := r.db.Model(&model.PrinterCustomize{}).Where("uuid = ?", printerCustomize.Uuid).Updates(printerCustomize).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
 // DeletePrinterCustomize 删除打印机定制
-func (r *PrinterCustomizeRepoImpl) DeletePrinterCustomize(id uint64) error {
-	if err := r.db.Delete(&model.PrinterCustomize{}).Where("id = ?", id).Error; err != nil {
+func (r *PrinterCustomizeRepoImpl) DeletePrinterCustomize(uuid uint64) error {
+	if err := r.db.Delete(&model.PrinterCustomize{}).Where("uuid = ?", uuid).Error; err != nil {
 		return err
 	}
 	return nil

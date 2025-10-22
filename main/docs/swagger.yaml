@@ -3441,8 +3441,8 @@ definitions:
       data:
         description: 打印机定制数据
         type: string
-      id:
-        description: 打印机定制ID
+      tmp_uuid:
+        description: 打印机定制UUID
         type: integer
     type: object
   req.EditReturnFoodReasonReq:
@@ -25597,10 +25597,10 @@ paths:
       - application/json
       description: 删除打印机定制
       parameters:
-      - description: 打印机定制ID
+      - description: 打印机定制UUID
         format: int64
         in: query
-        name: id
+        name: tmp_uuid
         required: true
         type: integer
       produces:
@@ -25655,10 +25655,10 @@ paths:
       - application/json
       description: 使用打印机定制
       parameters:
-      - description: 打印机定制ID
+      - description: 打印机定制UUID
         format: int64
         in: query
-        name: id
+        name: tmp_uuid
         required: true
         type: integer
       produces:

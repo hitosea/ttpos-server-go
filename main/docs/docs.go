@@ -20877,8 +20877,8 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "format": "int64",
-                        "description": "打印机定制ID",
-                        "name": "id",
+                        "description": "打印机定制UUID",
+                        "name": "tmp_uuid",
                         "in": "query",
                         "required": true
                     }
@@ -20978,8 +20978,8 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "format": "int64",
-                        "description": "打印机定制ID",
-                        "name": "id",
+                        "description": "打印机定制UUID",
+                        "name": "tmp_uuid",
                         "in": "query",
                         "required": true
                     }
@@ -32689,8 +32689,8 @@ const docTemplate = `{
                     "description": "打印机定制数据",
                     "type": "string"
                 },
-                "id": {
-                    "description": "打印机定制ID",
+                "tmp_uuid": {
+                    "description": "打印机定制UUID",
                     "type": "integer"
                 }
             }

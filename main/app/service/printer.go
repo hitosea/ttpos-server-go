@@ -33,9 +33,9 @@ type IPrinterSrv interface {
 	GetPrintMenuList(ctx context.Context) (resp.PrintMenuListResp, error)                                      // 获取打印菜单列表
 	GetPrintMenuDetail(ctx context.Context, id uint64) (resp.PrintMenuDetailResp, error)                       // 获取菜单详情
 	EditPrinterCustomize(ctx context.Context, editPrinterCustomizeReq req.EditPrinterCustomizeReq) error       // 编辑打印机定制
-	DeletePrinterCustomize(ctx context.Context, id uint64) error                                               // 删除打印机定制
+	DeletePrinterCustomize(ctx context.Context, tmpUuid uint64) error                                          // 删除打印机定制
 	CreatePrinterCustomize(ctx context.Context, createPrinterCustomizeReq req.CreatePrinterCustomizeReq) error // 创建打印机定制
-	UsePrinterCustomize(ctx context.Context, id uint64) error                                                  // 使用打印机定制
+	UsePrinterCustomize(ctx context.Context, tmpUuid uint64) error                                             // 使用打印机定制
 }
 
 type printerSrv struct {
@@ -349,7 +349,7 @@ func (s *printerSrv) GetPrintMenuList(ctx context.Context) (resp.PrintMenuListRe
 	return resp.PrintMenuListResp{List: groups}, nil
 }
 
-// 解析器
+// Parser 解析器
 func (s *printerSrv) Parser(ctx context.Context, templateJSONStr string, testData map[string]interface{}) (string, error) {
 	currencySetting, err := setting.NewSrv(s.dbm, s.cache).GetCurrencySetting(ctx)
 	if err != nil {
@@ -459,10 +459,9 @@ func (s *printerSrv) GetPrintMenuDetail(ctx context.Context, id uint64) (resp.Pr
 
 	// 默认模板
 	defaultTemplate := resp.PrintMenuDetail{
-		ID:      template.ID,
-		Name:    "门店-默认模版",
-		IsUse:   false,
-		TmpUuid: template.TmpUuid,
+		ID:    template.ID,
+		Name:  "门店-默认模版",
+		IsUse: false,
 	}
 
 	// 高级模板列表(高级模版列表)
@@ -470,7 +469,7 @@ func (s *printerSrv) GetPrintMenuDetail(ctx context.Context, id uint64) (resp.Pr
 	for _, customize := range customizes {
 		if customize.IsAdv == 1 {
 			advReceiptTpls = append(advReceiptTpls, resp.PrintMenuDetail{
-				ID:      customize.ID,
+				ID:      template.ID,
 				Name:    customize.Name,
 				IsUse:   customize.IsUse == 1,
 				TmpUuid: customize.Uuid,
@@ -495,11 +494,27 @@ func (s *printerSrv) GetPrintMenuDetail(ctx context.Context, id uint64) (resp.Pr
 	}
 
 	// 默认模板没有设置，则使用门店默认模版解析
-	if defaultTemplate.TempImg == "" {
+	if defaultTemplate.TempImg == "" && defaultTemplate.TmpUuid == 0 {
 		defaultTemplate.TempImg, err = s.Parser(ctx, templateJSONStr, testData)
 		if err != nil {
 			return resp.PrintMenuDetailResp{}, errors.WithMessage(err, "解析模板失败")
 		}
+		// 创建打印机定制
+		uuid, err := utils.GetID()
+		if err != nil {
+			return resp.PrintMenuDetailResp{}, errors.WithMessage(err, "生成雪花ID失败")
+		}
+		err = printerCustomizeRepo.CreatePrinterCustomize(model.PrinterCustomize{
+			BaseModel:  model.BaseModel{Uuid: uuid},
+			Name:       defaultTemplate.Name,
+			Data:       templateJSONStr,
+			TemplateId: template.ID,
+			IsAdv:      0,
+		})
+		if err != nil {
+			return resp.PrintMenuDetailResp{}, errors.WithMessage(err, "创建打印机定制失败")
+		}
+		defaultTemplate.TmpUuid = uuid
 	}
 
 	// 返回结果
@@ -515,7 +530,7 @@ func (s *printerSrv) EditPrinterCustomize(ctx context.Context, editPrinterCustom
 	db := ctx.GetDB()
 	printerCustomizeRepo := repository.NewPrinterCustomizeRepo(db)
 	// 检查打印机定制是否存在
-	customizeInfo, err := printerCustomizeRepo.GetPrinterCustomizeInfo(editPrinterCustomizeReq.ID)
+	customizeInfo, err := printerCustomizeRepo.GetPrinterCustomizeInfo(editPrinterCustomizeReq.TmpUuid)
 	if err != nil {
 		return errors.WithMessage(err, "检查打印机定制是否存在失败")
 	}
@@ -531,17 +546,16 @@ func (s *printerSrv) EditPrinterCustomize(ctx context.Context, editPrinterCustom
 	}
 	// 更新打印机定制
 	return printerCustomizeRepo.UpdatePrinterCustomize(model.PrinterCustomize{
-		ID:         editPrinterCustomizeReq.ID,
-		Data:       editPrinterCustomizeReq.Data,
-		UpdateTime: time.Now().Unix(),
+		BaseModel: model.BaseModel{Uuid: customizeInfo.Uuid},
+		Data:      editPrinterCustomizeReq.Data,
 	})
 }
 
 // DeletePrinterCustomize 删除打印机定制
-func (s *printerSrv) DeletePrinterCustomize(ctx context.Context, id uint64) error {
+func (s *printerSrv) DeletePrinterCustomize(ctx context.Context, tmpUuid uint64) error {
 	db := ctx.GetDB()
 	// 检查打印机定制是否存在
-	customizeInfo, err := repository.NewPrinterCustomizeRepo(db).GetPrinterCustomizeInfo(id)
+	customizeInfo, err := repository.NewPrinterCustomizeRepo(db).GetPrinterCustomizeInfo(tmpUuid)
 	if err != nil {
 		return errors.WithMessage(err, "检查打印机定制是否存在失败")
 	}
@@ -553,7 +567,7 @@ func (s *printerSrv) DeletePrinterCustomize(ctx context.Context, id uint64) erro
 		return errors.New("打印机定制正在使用中，不能删除")
 	}
 	// 删除打印机定制
-	err = repository.NewPrinterCustomizeRepo(db).DeletePrinterCustomize(id)
+	err = repository.NewPrinterCustomizeRepo(db).DeletePrinterCustomize(customizeInfo.Uuid)
 	if err != nil {
 		return errors.WithMessage(err, "删除打印机定制失败")
 	}
@@ -583,11 +597,11 @@ func (s *printerSrv) CreatePrinterCustomize(ctx context.Context, createPrinterCu
 }
 
 // UsePrinterCustomize 使用打印机定制
-func (s *printerSrv) UsePrinterCustomize(ctx context.Context, id uint64) error {
+func (s *printerSrv) UsePrinterCustomize(ctx context.Context, tmpUuid uint64) error {
 	db := ctx.GetDB()
 	printerCustomizeRepo := repository.NewPrinterCustomizeRepo(db)
 	// 检查打印机定制是否存在
-	customizeInfo, err := printerCustomizeRepo.GetPrinterCustomizeInfo(id)
+	customizeInfo, err := printerCustomizeRepo.GetPrinterCustomizeInfo(tmpUuid)
 	if err != nil {
 		return errors.WithMessage(err, "检查打印机定制是否存在失败")
 	}

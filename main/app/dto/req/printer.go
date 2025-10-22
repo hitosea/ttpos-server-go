@@ -71,8 +71,8 @@ type UsbPrinterReportReq struct {
 
 // EditPrinterCustomizeReq 编辑打印机定制请求
 type EditPrinterCustomizeReq struct {
-	ID   uint64 `json:"id"`   // 打印机定制ID
-	Data string `json:"data"` // 打印机定制数据
+	TmpUuid uint64 `json:"tmp_uuid"` // 打印机定制UUID
+	Data    string `json:"data"`     // 打印机定制数据
 }
 
 // CreatePrinterCustomizeReq 创建打印机定制请求
