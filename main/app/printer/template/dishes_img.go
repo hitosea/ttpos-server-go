@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/app/printer/printer_model"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/utils"
 )
 
@@ -86,6 +87,27 @@ func (t *dishesImgTemplate) CompleteOrder(
 	)
 	img.LineFeed(1)
 
+	// 分批类型
+	batchTagText := ""
+	for _, product := range products {
+		if product.BatchTagUuid > 0 {
+			batchTag, err := repository.NewBatchTagRepo(t.base.Ctx.GetDB()).GetBatchTagInfo(product.BatchTagUuid)
+			if err == nil {
+				batchTagText = batchTag.MultiLanguageName.GetNameByLang(t.base.Lang)
+				break
+			}
+		}
+	}
+	if batchTagText != "" && !order.IsTakeoutBill() {
+		img.SetFontSize(28)
+		img.SetFontWeight(2)
+		img.SetAlignment(pkg.AlignCenter)
+		img.AppendText(batchTagText)
+		img.LineFeed(1, 60)
+		img.SetFontSize(20)
+		img.SetFontWeight(1)
+	}
+
 	// 商品和数量
 	img.PrintInColumns(
 		pkg.ColumnConfig{Text: t.base.Translate("商品"), Width: 280, Align: pkg.AlignLeft},
@@ -128,7 +150,19 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 	isPrinter := false
 	// 创建打印机实例
 	img := pkg.NewImgFont(568, 0, 0)
-	//
+
+	// 分批类型
+	batchTagText := ""
+	for _, product := range products {
+		if product.BatchTagUuid > 0 {
+			batchTag, err := repository.NewBatchTagRepo(t.base.Ctx.GetDB()).GetBatchTagInfo(product.BatchTagUuid)
+			if err == nil {
+				batchTagText = batchTag.MultiLanguageName.GetNameByLang(t.base.Lang)
+				break
+			}
+		}
+	}
+
 	if tmp == 2 {
 		img.SetAlignment(pkg.AlignCenter)
 		img.SetImagePadding(0) // 确保没有填充
@@ -159,6 +193,16 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 		img.LineFeed(1, 40)
 		img.LineFeed(2)
 		img.SetTextLineHeight(50)
+
+		// 分批类型
+		if batchTagText != "" && !order.IsTakeoutBill() {
+			img.SetFontSize(28)
+			img.SetFontWeight(2)
+			img.AppendText(batchTagText)
+			img.LineFeed(1, 60)
+			img.SetFontSize(20)
+			img.SetFontWeight(1)
+		}
 
 		// 商品和数量
 		for _, product := range products {
@@ -279,6 +323,18 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 		img.AppendText(updateTime)
 		img.LineFeed(1)
 		img.LineFeed(1, 24)
+
+		// 分批类型
+		if batchTagText != "" && !order.IsTakeoutBill() {
+			img.SetFontSize(28)
+			img.SetFontWeight(2)
+			img.SetAlignment(pkg.AlignCenter)
+			img.AppendText(batchTagText)
+			img.LineFeed(1, 65)
+			img.SetFontSize(20)
+			img.SetFontWeight(1)
+			img.SetAlignment(pkg.AlignLeft)
+		}
 
 		// 商品和数量
 		for _, product := range products {

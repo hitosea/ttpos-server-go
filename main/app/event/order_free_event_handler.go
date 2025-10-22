@@ -38,6 +38,7 @@ func freeSaleOrderEventHandler() {
 				}
 				products = append(products, printer_model.OrderProduct{
 					OrderProductId:        saleOrderProduct.Uuid,
+					BatchTagUuid:          saleOrderProduct.BatchTagUuid,
 					ProductId:             saleOrderProduct.ProductPackageUuid,
 					ProductName:           saleOrderProduct.MultiLanguageName.GetNames(),
 					ProductType:           saleOrderProduct.ProductType,

@@ -57,6 +57,7 @@ func WithOnlyCheckCooking() func(option *ActionCookingOption) {
 func (s *orderSrv) convertToEventOrderProductPre(saleOrderProduct *model.SaleOrderProduct, saleBill *model.SaleBill) event.OrderProductPre {
 	orderProduct := event.OrderProductPre{
 		OrderProductId:        saleOrderProduct.Uuid,
+		BatchTagUuid:          saleOrderProduct.BatchTagUuid,
 		ProductId:             saleOrderProduct.ProductPackageUuid,
 		ProductName:           saleOrderProduct.MultiLanguageName.GetNames(),
 		ProductAttr:           saleOrderProduct.GetAttributeName(),
