@@ -117,7 +117,7 @@ func (h *StockReconciliationHandler) CreateStockReconciliation(c *gin.Context) {
 // @Param data body req.StockReconciliationSaveReq true "保存盘点单请求参数"
 // @Success 200 {object} dto.Response "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
-// @Router /shop/stock_reconciliation/save [put]
+// @Router /shop/stock_reconciliation/save [post]
 func (h *StockReconciliationHandler) SaveStockReconciliation(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var saveReq req.StockReconciliationSaveReq
@@ -275,7 +275,5 @@ func RegisterStockReconciliationHandlers(router gin.IRouter, dbm *database.DBMan
 		privateApi.POST("/stock_reconciliation/submit", wrapper.SubmitStockReconciliation)
 		privateApi.POST("/stock_reconciliation/approve", wrapper.ApproveStockReconciliation)
 		privateApi.POST("/stock_reconciliation/reject", wrapper.RejectStockReconciliation)
-		// privateApi.POST("/stock_reconciliation/copy", wrapper.CopyStockReconciliation)
-		// privateApi.POST("/stock_reconciliation/recheck_diff", wrapper.ReCheckDiffStockReconciliation)
 	}
 }

@@ -45,6 +45,11 @@ type IErpSrv interface {
 	CreatePurchaseOrder(ctx pkgCtx.Context, createPurchaseOrderReq *buying.CreatePurchaseOrderReq) (*buying.CreatePurchaseOrderResp, error)
 	SavePurchaseReceipt(ctx pkgCtx.Context, savePurchaseReceiptReq *buying.SavePurchaseReceiptReq) (*buying.SavePurchaseReceiptResp, error)
 
+	// 盘点单
+	SubmitStockReconciliation(ctx cc.Context, companySetting model.CompanySetting, saveStockReconciliationReq *stock.SaveStockReconciliationReq) (*stock.SaveStockReconciliationResp, error)
+	ApproveStockReconciliation(ctx cc.Context, companySetting model.CompanySetting, saveStockReconciliationReq *stock.SubmitStockReconciliationReq) (*stock.SubmitStockReconciliationReq, error)
+	RejectStockReconciliation(ctx cc.Context, companySetting model.CompanySetting, cancelStockReconciliationReq *stock.CancelStockReconciliationReq) (*stock.CancelStockReconciliationReq, error)
+
 	// 供应商
 	GetSupplierList(ctx pkgCtx.Context) (*buying.GetSupplierListResp, error)                                      // 获取内部供应商
 	ListSuppliers(ctx cc.Context, listSuppliersReq req.GetErpnextSupplierListReq) ([]*buying.SupplierData, error) // 获取自己和总部创建可以看到的

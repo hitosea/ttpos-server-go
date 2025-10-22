@@ -9,6 +9,10 @@ import (
 // @version 1.0
 // @description 点餐系统服务端接口文档
 
+// @securityDefinitions.apikey JwtToken
+// @in header
+// @name Authorization
+
 // @host 127.0.0.1:8080
 // @BasePath /
 func main() {

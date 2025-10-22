@@ -25,6 +25,7 @@ class AddStockReconciliationTables extends Migrator
                 ->addColumn('warehouse_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '仓库ID'])
                 ->addColumn('purpose', 'integer', ['signed' => true, 'default' => 1, 'comment' => '盘点目的 1-库存盘点 2-期初盘点'])
                 ->addColumn('status', 'integer', ['signed' => true, 'default' => 0, 'comment' => '状态 0-已保存 1-已提交 2-已审核 3-已驳回'])
+                ->addColumn('submit_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '提交时间(时间戳)'])
                 ->addColumn('create_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '创建时间(时间戳)'])
                 ->addColumn('update_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '更新时间(时间戳)'])
                 ->addColumn('delete_time', 'integer', ['signed' => false, 'default' => 0, 'comment' => '删除时间(时间戳)'])

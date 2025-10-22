@@ -20,6 +20,10 @@ type IStockReconciliationRepo interface {
 	GetStockReconciliationByUuid(uuid uint64) (*model.StockReconciliation, error)
 	GetStockReconciliationByOrderNo(orderNo string) (*model.StockReconciliation, error)
 	GetMaxOrderNoByPrefix(prefix string) (string, error)
+	WithMaterialUnitUnitMultiLanguageName() DBOption
+	WithWarehouseMultiLanguageName() DBOption
+	WithWarehouse() DBOption
+	WithStockReconciliationItems() DBOption
 
 	// 盘点单物品明细操作
 	CreateStockReconciliationItem(item *model.StockReconciliationItem) error
@@ -32,6 +36,7 @@ type IStockReconciliationRepo interface {
 	GetStockReconciliationItemList(opts ...DBOption) ([]*model.StockReconciliationItem, error)
 	GetStockReconciliationItemByUuid(uuid uint64) (*model.StockReconciliationItem, error)
 	GetStockReconciliationItemListByReconciliationUuid(reconciliationUuid uint64) ([]*model.StockReconciliationItem, error)
+	GetStockReconciliationItemCountListByReconciliationUuidList(reconciliationUuids []uint64) (map[uint64]int, error)
 
 	// 盘点单物品单位明细操作
 	CreateStockReconciliationItemUnit(unit *model.StockReconciliationItemUnit) error
@@ -201,6 +206,30 @@ func (r *StockReconciliationRepoImpl) GetMaxOrderNoByPrefix(prefix string) (stri
 	return maxOrderNo, nil
 }
 
+func (r *StockReconciliationRepoImpl) WithMaterialUnitUnitMultiLanguageName() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("MaterialUnit.Unit.MultiLanguageName")
+	}
+}
+
+func (r *StockReconciliationRepoImpl) WithWarehouseMultiLanguageName() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Warehouse.MultiLanguageName")
+	}
+}
+
+func (r *StockReconciliationRepoImpl) WithWarehouse() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Warehouse")
+	}
+}
+
+func (r *StockReconciliationRepoImpl) WithStockReconciliationItems() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("StockReconciliationItems.Material")
+	}
+}
+
 // CreateStockReconciliationItem 创建盘点单物品明细
 func (r *StockReconciliationRepoImpl) CreateStockReconciliationItem(item *model.StockReconciliationItem) error {
 	if err := r.db.Create(item).Error; err != nil {
@@ -291,6 +320,48 @@ func (r *StockReconciliationRepoImpl) GetStockReconciliationItemListByReconcilia
 	return r.GetStockReconciliationItemList(r.WhereReconciliationUuid(reconciliationUuid))
 }
 
+// GetStockReconciliationItemCountListByReconciliationUuidList 根据盘点单UUID列表获取每个盘点单的物品数量
+func (r *StockReconciliationRepoImpl) GetStockReconciliationItemCountListByReconciliationUuidList(reconciliationUuids []uint64) (map[uint64]int, error) {
+	// 如果列表为空，直接返回空map
+	if len(reconciliationUuids) == 0 {
+		return make(map[uint64]int), nil
+	}
+
+	// 定义查询结果结构
+	type CountResult struct {
+		StockReconciliationUuid uint64 `gorm:"column:stock_reconciliation_uuid"`
+		Count                   int    `gorm:"column:count"`
+	}
+
+	// 执行分组统计查询
+	var results []CountResult
+	err := r.db.Model(&model.StockReconciliationItem{}).
+		Select("stock_reconciliation_uuid, COUNT(*) as count").
+		Where("stock_reconciliation_uuid IN ?", reconciliationUuids).
+		Where("delete_time = ?", 0).
+		Group("stock_reconciliation_uuid").
+		Scan(&results).Error
+
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询盘点单物品数量失败")
+	}
+
+	// 转换为map
+	countMap := make(map[uint64]int)
+	for _, result := range results {
+		countMap[result.StockReconciliationUuid] = result.Count
+	}
+
+	// 为没有物品的盘点单补充0值
+	for _, uuid := range reconciliationUuids {
+		if _, exists := countMap[uuid]; !exists {
+			countMap[uuid] = 0
+		}
+	}
+
+	return countMap, nil
+}
+
 // CreateStockReconciliationItemUnit 创建盘点单物品单位明细
 func (r *StockReconciliationRepoImpl) CreateStockReconciliationItemUnit(unit *model.StockReconciliationItemUnit) error {
 	if err := r.db.Create(unit).Error; err != nil {
@@ -357,7 +428,7 @@ func (r *StockReconciliationRepoImpl) GetStockReconciliationItemUnitList(opts ..
 	for _, opt := range opts {
 		query = opt(query)
 	}
-	if err := query.Preload("MaterialUnit.Unit.MultiLanguageName").Find(&list).Error; err != nil {
+	if err := query.Find(&list).Error; err != nil {
 		return nil, errors.WithMessage(err, "获取盘点单物品单位明细列表失败")
 	}
 	return list, nil
@@ -370,7 +441,7 @@ func (r *StockReconciliationRepoImpl) GetStockReconciliationItemUnitByUuid(uuid 
 
 // GetStockReconciliationItemUnitListByItemUuid 根据盘点单物品明细UUID获取单位明细列表
 func (r *StockReconciliationRepoImpl) GetStockReconciliationItemUnitListByItemUuid(itemUuid uint64) ([]*model.StockReconciliationItemUnit, error) {
-	return r.GetStockReconciliationItemUnitList(r.WhereItemUuid(itemUuid))
+	return r.GetStockReconciliationItemUnitList(r.WhereItemUuid(itemUuid), r.WithMaterialUnitUnitMultiLanguageName())
 }
 
 // WhereUuid UUID查询选项

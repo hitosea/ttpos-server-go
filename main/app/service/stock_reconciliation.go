@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"time"
+	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -10,6 +11,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/language"
@@ -81,6 +83,8 @@ func (s *stockReconciliationSrv) GetStockReconciliationList(ctx context.Context,
 		opts = append(opts, stockReconciliationRepo.WhereStatusIn(req.StatusIn))
 	}
 
+	opts = append(opts, stockReconciliationRepo.WithWarehouseMultiLanguageName())
+
 	// 查询数据
 	list, total, err := stockReconciliationRepo.GetStockReconciliationListWithPagination(req.PageNo, req.PageSize, opts...)
 	if err != nil {
@@ -89,10 +93,28 @@ func (s *stockReconciliationSrv) GetStockReconciliationList(ctx context.Context,
 
 	// 转换响应数据
 	listResp := make([]*resp.StockReconciliationInfo, 0, len(list))
+
+	stockReconciliationUuidList := make([]uint64, 0, len(list))
+	for _, item := range list {
+		stockReconciliationUuidList = append(stockReconciliationUuidList, item.Uuid)
+	}
+
+	// 根据盘点单获取每个盘点单的物品数量，返回map[盘点单UUID]物品数量
+	itemsCountMap, err := stockReconciliationRepo.GetStockReconciliationItemCountListByReconciliationUuidList(stockReconciliationUuidList)
+	if err != nil {
+		return resp.StockReconciliationListResp{}, errors.WithMessage(err, "查询盘点单物品明细失败")
+	}
+
 	for _, item := range list {
 		info := &resp.StockReconciliationInfo{}
 		if err := copier.Copy(info, item); err != nil {
 			continue
+		}
+		info.WarehouseLocaleName = item.Warehouse.MultiLanguageName.GetNames()
+		info.ItemsCount = itemsCountMap[item.Uuid]
+		// 如果提交时间为0，则返回当前时间戳
+		if info.SubmitTime == 0 {
+			info.SubmitTime = int(time.Now().Unix())
 		}
 		listResp = append(listResp, info)
 	}
@@ -193,7 +215,7 @@ func (s *stockReconciliationSrv) CreateStockReconciliation(ctx context.Context, 
 	defer s.lock.UnlockUuidString(lockKey)
 
 	db := ctx.GetDB()
-	warehouseItems, materials, err := s.validateWarehouseAndItems(db, req.WarehouseUuid, req.Items)
+	warehouseItems, materials, err := s.validateWarehouseAndItems(db, req)
 	if err != nil {
 		return err
 	}
@@ -205,6 +227,7 @@ func (s *stockReconciliationSrv) CreateStockReconciliation(ctx context.Context, 
 
 	materialUnitMap := make(map[uint64]map[uint64]float64)
 	for _, material := range materials {
+		materialUnitMap[material.Uuid] = make(map[uint64]float64)
 		for _, materialUnit := range material.NotBaseUnitList {
 			materialUnitMap[material.Uuid][materialUnit.Uuid] = materialUnit.ConversionRate
 		}
@@ -279,16 +302,16 @@ func (s *stockReconciliationSrv) CreateStockReconciliation(ctx context.Context, 
 }
 
 // SaveStockReconciliation 保存盘点单
-func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, req req.StockReconciliationSaveReq) error {
+func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, saveReq req.StockReconciliationSaveReq) error {
 	db := ctx.GetDB()
 
 	// 加锁
-	s.lock.LockUuid(req.Uuid)
-	defer s.lock.UnlockUuid(req.Uuid)
+	s.lock.LockUuid(saveReq.Uuid)
+	defer s.lock.UnlockUuid(saveReq.Uuid)
 
 	stockReconciliationRepo := repository.NewStockReconciliationRepo(db)
 	// 查询盘点单
-	stockReconciliation, err := stockReconciliationRepo.GetStockReconciliationByUuid(req.Uuid)
+	stockReconciliation, err := stockReconciliationRepo.GetStockReconciliationByUuid(saveReq.Uuid)
 	if err != nil {
 		return errors.WithMessage(err, "查询盘点单失败")
 	}
@@ -298,11 +321,28 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, re
 
 	// 只有已保存状态的盘点单才能修改
 	if stockReconciliation.Status != constant.StockReconciliationStatusSaved {
-		return errors.New("当前状态不允许修改")
+		if saveReq.IsSubmit {
+			return errors.New("当前状态不允许提交")
+		} else {
+			return errors.New("当前状态不允许修改")
+		}
 	}
 
+	// A、在列表上直接提交
+	if saveReq.IsSubmit && !saveReq.SubmitAfterSave {
+		// 直接提交
+		return s.submitStockReconciliation(ctx, saveReq.Uuid)
+	}
+
+	// B、在详情中保存或者提交
+
 	// 验证仓库和物品明细
-	warehouseItems, materials, err := s.validateWarehouseAndItems(db, req.WarehouseUuid, req.Items)
+	warehouseItems, materials, err := s.validateWarehouseAndItems(db, req.StockReconciliationCreateReq{
+		Type:          saveReq.Type,
+		WarehouseUuid: saveReq.WarehouseUuid,
+		Purpose:       saveReq.Purpose,
+		Items:         saveReq.Items,
+	})
 	if err != nil {
 		return err
 	}
@@ -324,24 +364,24 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, re
 		stockReconciliationRepo := repository.NewStockReconciliationRepo(tx)
 
 		// 更新盘点单
-		stockReconciliation.WarehouseUuid = req.WarehouseUuid
-		stockReconciliation.Purpose = req.Purpose
-		stockReconciliation.Type = req.Type
+		stockReconciliation.WarehouseUuid = saveReq.WarehouseUuid
+		stockReconciliation.Purpose = saveReq.Purpose
+		stockReconciliation.Type = saveReq.Type
 
 		if err := stockReconciliationRepo.UpdateStockReconciliation(stockReconciliation); err != nil {
 			return errors.WithMessage(err, "更新盘点单失败")
 		}
 		// 删除原有的物品明细
-		if err := stockReconciliationRepo.DeleteStockReconciliationItemByReconciliationUuid(req.Uuid); err != nil {
+		if err := stockReconciliationRepo.DeleteStockReconciliationItemByReconciliationUuid(saveReq.Uuid); err != nil {
 			return errors.WithMessage(err, "删除盘点单物品明细失败")
 		}
 		// 删除原有物品单位明细
-		if err := stockReconciliationRepo.DeleteStockReconciliationItemUnitByReconciliationUuid(req.Uuid); err != nil {
+		if err := stockReconciliationRepo.DeleteStockReconciliationItemUnitByReconciliationUuid(saveReq.Uuid); err != nil {
 			return errors.WithMessage(err, "删除盘点单物品单位明细失败")
 		}
 
 		var stockReconciliationItemUnits []*model.StockReconciliationItemUnit
-		for _, reqItem := range req.Items {
+		for _, reqItem := range saveReq.Items {
 			// 计算实盘数量（基准单位）
 			countedQuantity := decimal.Zero
 			if len(reqItem.Units) > 0 {
@@ -383,21 +423,74 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, re
 	})
 
 	if err != nil {
-		errMsg := "保存盘点单失败"
-		if req.IsSubmit {
-			errMsg = "提交盘点单失败"
+		errMsg := "保存失败"
+		if saveReq.IsSubmit {
+			errMsg = "提交失败"
 		}
 		return errors.WithMessage(errors.New(errMsg), err.Error())
 	}
 
 	// 提交盘点单
-	if req.IsSubmit && ctx.GetCompany().IsOpenErp() {
-		// TODO 组合数据提交erp盘点单
-		// return s.ApproveStockReconciliation(ctx, req.Uuid)
-
-		// 更新盘点单erp_code
+	if saveReq.IsSubmit && ctx.GetCompany().IsOpenErp() {
+		err = s.submitStockReconciliation(ctx, saveReq.Uuid)
+		if err != nil {
+			return errors.WithMessage(err, "提交盘点单失败")
+		}
 	}
 
+	return nil
+}
+
+func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, stockReconciliationUuid uint64) error {
+	db := ctx.GetDB()
+	stockReconciliationRepo := repository.NewStockReconciliationRepo(db)
+
+	opts := []repository.DBOption{
+		stockReconciliationRepo.WhereUuid(stockReconciliationUuid),
+		stockReconciliationRepo.WithStockReconciliationItems(),
+		stockReconciliationRepo.WithWarehouse(),
+	}
+	stockReconciliation, err := stockReconciliationRepo.GetStockReconciliation(opts...)
+
+	if err != nil {
+		return errors.WithMessage(err, "查询盘点单失败")
+	}
+	if stockReconciliation == nil {
+		return errors.New("盘点单不存在")
+	}
+
+	companySetting := ctx.GetCompanySetting()
+
+	// 根据时区获取过账日期和时间
+	now := utils.SetTimezone(companySetting.GetTimezone()).Now()
+
+	var erpItems []*stock.StockReconciliationItem
+	for _, item := range stockReconciliation.StockReconciliationItems {
+		erpItems = append(erpItems, &stock.StockReconciliationItem{
+			ItemCode: item.Material.Code,
+			Qty:      item.CountedQuantity.InexactFloat64(),
+		})
+	}
+
+	erpSrv := erp.NewIErpSrv(s.dbm)
+	erpReq, err := erpSrv.SubmitStockReconciliation(ctx, companySetting, &stock.SaveStockReconciliationReq{
+		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+		Branch:      companySetting.ErpnextBranchName,
+		PostingDate: now.Format("2006-01-02"),
+		PostingTime: now.Format("15:04:05"),
+		Warehouse:   stockReconciliation.Warehouse.ErpCode,
+		Items:       erpItems,
+	})
+	if err != nil {
+		return errors.WithMessage(err, "提交盘点单失败")
+	}
+	// 更新盘点单erp_code和提交时间
+	stockReconciliation.ErpCode = erpReq.StockReconciliationName
+	stockReconciliation.SubmitTime = int(time.Now().Unix())
+	stockReconciliation.Status = constant.StockReconciliationStatusSubmitted
+	if err := stockReconciliationRepo.UpdateStockReconciliation(stockReconciliation); err != nil {
+		return errors.WithMessage(err, "更新盘点单失败")
+	}
 	return nil
 }
 
@@ -502,9 +595,16 @@ func (s *stockReconciliationSrv) RejectStockReconciliation(ctx context.Context, 
 		return errors.New("盘点单状态不允许驳回")
 	}
 
-	if ctx.GetCompany().IsOpenErp() {
-		// 调用erp接口拒绝
-		// return errors.New("当前公司未开通ERP，无法驳回盘点单")
+	// 调用erp接口取消盘点单
+	if ctx.GetCompany().IsOpenErp() && stockReconciliation.ErpCode != "" {
+		companySetting := ctx.GetCompanySetting()
+		erpSrv := erp.NewIErpSrv(s.dbm)
+		_, err := erpSrv.RejectStockReconciliation(ctx, companySetting, &stock.CancelStockReconciliationReq{
+			StockReconciliationName: stockReconciliation.ErpCode,
+		})
+		if err != nil {
+			return errors.WithMessage(err, "驳回盘点单失败")
+		}
 	}
 
 	// 更新盘点单状态为已驳回
@@ -565,7 +665,17 @@ func (s *stockReconciliationSrv) generateOrderNo(db *gorm.DB, timezone string) s
 // 1. 仓库是否存在且类型为 normal
 // 2. 物品是否属于该仓库
 // 3. 物品单位是否正确
-func (s *stockReconciliationSrv) validateWarehouseAndItems(db *gorm.DB, warehouseUuid uint64, items []*req.StockReconciliationItemReq) ([]model.WarehouseItem, []*model.Material, error) {
+func (s *stockReconciliationSrv) validateWarehouseAndItems(db *gorm.DB, req req.StockReconciliationCreateReq) ([]model.WarehouseItem, []*model.Material, error) {
+	warehouseUuid := req.WarehouseUuid
+	if warehouseUuid == 0 {
+		return nil, nil, errors.New("仓库参数错误")
+	}
+	if req.Type != 1 && req.Type != 2 {
+		return nil, nil, errors.New("盘点类型参数错误")
+	}
+	if req.Purpose != 1 && req.Purpose != 2 {
+		return nil, nil, errors.New("盘点目的参数错误")
+	}
 	// 判断仓库是否存在，且类型为normal
 	warehouseRepo := repository.NewWarehouseRepo(db)
 	warehouse, err := warehouseRepo.GetByUuid(warehouseUuid)
@@ -609,7 +719,7 @@ func (s *stockReconciliationSrv) validateWarehouseAndItems(db *gorm.DB, warehous
 	}
 
 	// 验证请求中的物品和单位
-	for _, item := range items {
+	for _, item := range req.Items {
 		material, exists := materialMap[item.MaterialUuid]
 		if !exists {
 			return nil, nil, errors.New("物品参数错误")
