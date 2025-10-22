@@ -3281,6 +3281,18 @@ definitions:
           $ref: '#/definitions/req.OrderProductAddReq'
         type: array
     type: object
+  req.CreatePrinterCustomizeReq:
+    properties:
+      data:
+        description: 打印机定制数据
+        type: string
+      name:
+        description: 打印机定制名称
+        type: string
+      template_id:
+        description: 模板ID
+        type: integer
+    type: object
   req.CreateWarehouseReq:
     properties:
       address:
@@ -3423,6 +3435,15 @@ definitions:
         type: integer
     required:
     - uuid
+    type: object
+  req.EditPrinterCustomizeReq:
+    properties:
+      data:
+        description: 打印机定制数据
+        type: string
+      tmp_uuid:
+        description: 打印机定制UUID
+        type: integer
     type: object
   req.EditReturnFoodReasonReq:
     properties:
@@ -10082,6 +10103,70 @@ definitions:
         description: 积分抵扣比例。1个积分抵扣多少金额
         type: number
     type: object
+  resp.PrintMenu:
+    properties:
+      id:
+        description: 打印菜单ID
+        type: integer
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 打印菜单名称
+    type: object
+  resp.PrintMenuDetail:
+    properties:
+      id:
+        description: 模板ID
+        type: integer
+      is_use:
+        description: 是否USB模板
+        type: boolean
+      name:
+        description: 模板名称
+        type: string
+      temp_img:
+        description: 模板图片路径
+        type: string
+      tmp_uuid:
+        description: 临时模板UUID
+        type: integer
+    type: object
+  resp.PrintMenuDetailResp:
+    properties:
+      adv_receipt_tpls:
+        description: 高级模板列表
+        items:
+          $ref: '#/definitions/resp.PrintMenuDetail'
+        type: array
+      default_tpl:
+        allOf:
+        - $ref: '#/definitions/resp.PrintMenuDetail'
+        description: 默认模板
+      is_adv_receipt_tpl:
+        description: 是否启用高级模板
+        type: boolean
+    type: object
+  resp.PrintMenuGroup:
+    properties:
+      group_type:
+        description: 分组类型
+        type: integer
+      list:
+        description: 打印菜单列表
+        items:
+          $ref: '#/definitions/resp.PrintMenu'
+        type: array
+      locale_name:
+        $ref: '#/definitions/dto.LocaleResponse'
+    type: object
+  resp.PrintMenuListResp:
+    properties:
+      list:
+        description: 打印菜单分组列表
+        items:
+          $ref: '#/definitions/resp.PrintMenuGroup'
+        type: array
+    type: object
   resp.PrinterBase:
     properties:
       name:
@@ -10506,7 +10591,7 @@ definitions:
       order_remark:
         allOf:
         - $ref: '#/definitions/resp.OrderRemarkRes'
-        description: 订单备注
+        description: 整单备注
       product_list:
         allOf:
         - $ref: '#/definitions/resp.ProductionList'
@@ -25477,6 +25562,173 @@ paths:
       summary: 退款订单
       tags:
       - 商家端.订单
+  /shop/printer/customize/create:
+    post:
+      consumes:
+      - application/json
+      description: 创建打印机定制
+      parameters:
+      - description: 创建打印机定制请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.CreatePrinterCustomizeReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+      security:
+      - JwtToken: []
+      summary: 创建打印机定制
+      tags:
+      - 商家端.打印管理
+  /shop/printer/customize/delete:
+    delete:
+      consumes:
+      - application/json
+      description: 删除打印机定制
+      parameters:
+      - description: 打印机定制UUID
+        format: int64
+        in: query
+        name: tmp_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+      security:
+      - JwtToken: []
+      summary: 删除打印机定制
+      tags:
+      - 商家端.打印管理
+  /shop/printer/customize/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑打印机定制
+      parameters:
+      - description: 编辑打印机定制请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.EditPrinterCustomizeReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+      security:
+      - JwtToken: []
+      summary: 编辑打印机定制
+      tags:
+      - 商家端.打印管理
+  /shop/printer/customize/use:
+    post:
+      consumes:
+      - application/json
+      description: 使用打印机定制
+      parameters:
+      - description: 打印机定制UUID
+        format: int64
+        in: query
+        name: tmp_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+      security:
+      - JwtToken: []
+      summary: 使用打印机定制
+      tags:
+      - 商家端.打印管理
+  /shop/printer/menu/detail:
+    get:
+      consumes:
+      - application/json
+      description: 获取打印菜单详情
+      parameters:
+      - description: 模板ID
+        format: int64
+        in: query
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PrintMenuDetailResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取打印菜单详情
+      tags:
+      - 商家端.打印管理
+  /shop/printer/menu/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取打印菜单列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PrintMenuListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取打印菜单列表
+      tags:
+      - 商家端.打印管理
   /shop/product/add:
     post:
       consumes:
