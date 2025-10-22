@@ -45,6 +45,9 @@ type IWarehouseItemRepo interface {
 	WhereReservedStockGreaterThan(reservedStock float64) DBOption
 	OrderByCreateTime(desc bool) DBOption
 	OrderByStock(desc bool) DBOption
+
+	// 获取仓库物品列表（带物品详细信息）
+	GetWarehouseMaterialsWithPagination(pageNo, pageSize int, opts ...DBOption) ([]*model.WarehouseItem, int64, error)
 }
 
 // WarehouseItemRepoImpl 仓库商品库存Repository实现
@@ -330,4 +333,30 @@ func (r *WarehouseItemRepoImpl) GetWarehouseItemsByMaterialUuid(materialUuid uin
 			},
 		),
 	)
+}
+
+// GetWarehouseMaterialsWithPagination 获取仓库物品列表（带物品详细信息）
+func (r *WarehouseItemRepoImpl) GetWarehouseMaterialsWithPagination(pageNo, pageSize int, opts ...DBOption) ([]*model.WarehouseItem, int64, error) {
+	var items []*model.WarehouseItem
+	var total int64
+
+	query := r.db.Model(&model.WarehouseItem{}).Scopes(NotDeleted)
+
+	// 应用查询选项
+	for _, opt := range opts {
+		query = opt(query)
+	}
+
+	// 计算总数
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// 分页查询
+	offset := (pageNo - 1) * pageSize
+	if err := query.Offset(offset).Limit(pageSize).Order("create_time DESC").Find(&items).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return items, total, nil
 }

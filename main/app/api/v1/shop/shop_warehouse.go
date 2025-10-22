@@ -270,6 +270,35 @@ func (h *WarehouseHandler) CheckCodeExists(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetWarehouseMaterialList 获取仓库物品列表
+// @Summary 获取仓库物品列表
+// @Description 根据仓库ID获取仓库物品列表，包含物品多语言名称、库存数量、所有单位及转换率
+// @Tags 商家端.仓库档案
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param warehouse_uuid query int true "仓库UUID"
+// @Param page_no query int false "页码，默认1"
+// @Param page_size query int false "每页数量，默认20"
+// @Success 200 {object} dto.Response{data=resp.WarehouseMaterialListResp} "成功"
+// @Router /shop/warehouse/material/list [get]
+func (h *WarehouseHandler) GetWarehouseMaterialList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var request req.WarehouseMaterialListReq
+	if err := c.ShouldBindQuery(&request); err != nil {
+		helper.HandleValidationError(c, err, request, nil)
+		return
+	}
+
+	result, err := h.warehouseSrv.GetWarehouseMaterialList(ctx, request)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, result)
+}
+
 // RegisterWarehouseHandlers 注册仓库相关路由
 func RegisterWarehouseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -306,5 +335,7 @@ func RegisterWarehouseHandlers(router gin.IRouter, dbm *database.DBManager, cach
 		privateApi.GET("/warehouse/in_out/list", warehouseHandler.GetWarehouseInOutList) // 出入库明细列表
 
 		privateApi.GET("/warehouse/org/list", warehouseHandler.GetOtherOrgList) // 对方机构列表
+
+		privateApi.GET("/warehouse/material/list", warehouseHandler.GetWarehouseMaterialList) // 仓库物品列表
 	}
 }

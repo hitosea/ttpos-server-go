@@ -13,8 +13,3 @@ type WarehouseItem struct {
 	// 关联模型
 	Warehouse *Warehouse `gorm:"foreignKey:WarehouseUuid;references:Uuid" json:"warehouse,omitempty"`
 }
-
-// TableName 返回表名
-func (WarehouseItem) TableName() string {
-	return "ttpos_warehouse_item"
-}
