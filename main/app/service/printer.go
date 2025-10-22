@@ -608,6 +608,7 @@ func (s *printerSrv) UsePrinterCustomize(ctx context.Context, tmpUuid uint64) er
 	if customizeInfo.IsAdv == 0 {
 		return errors.New("默认模版不能使用")
 	}
+	// 检查打印机定制是否正在使用中
 	return db.Transaction(func(tx *gorm.DB) error {
 		// 按template_id更新is_use为0, 其他字段不变
 		err = repository.NewPrinterCustomizeRepo(tx).UpdatePrinterCustomizeByTemplateId(customizeInfo.TemplateId)
