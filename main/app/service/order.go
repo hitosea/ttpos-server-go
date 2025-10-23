@@ -5012,36 +5012,43 @@ func (s *orderSrv) OrderRemark(ctx context.Context, req req.OrderRemarkReq, opts
 		return nil, errors.WithMessage(err, "获取整单备注信息失败")
 	}
 
-	// 创建新的备注信息
-	orderRemarkItem := resp.OrderRemarkItem{
-		IsLatest: true,
-		Uuids:    req.RemarkUuids,
-		Remark:   req.Remark,
-		Remarks: func() []dto.LocaleResponse {
-			remarks := make([]dto.LocaleResponse, 0)
-			for _, remark := range orderRemarkList {
-				remarks = append(remarks, remark.MultiLanguageName.GetNames())
-			}
-			return remarks
-		}(),
-		CreateTime: time.Now().Unix(),
-	}
-	if orderRemark != nil {
-		// 有历史备注信息
-		// 修改历史备注信息为不是最新
+	if req.IsNullRemark() && orderRemark != nil { // 历史备注信息存在，但是没有选择整单备注或输入整单备注文本
+		// 划线所有历史备注
 		for i := range orderRemark.List {
 			orderRemark.List[i].IsLatest = false
 		}
-		orderRemark.List = append(orderRemark.List, orderRemarkItem)
 		billInfo.OrderRemark = orderRemark.ToJson()
 	} else {
-		// 没有历史备注信息
-		orderRemarkInfo := &resp.OrderRemarkInfo{
-			List: []resp.OrderRemarkItem{orderRemarkItem},
+		// 创建新的备注信息
+		orderRemarkItem := resp.OrderRemarkItem{
+			IsLatest: true,
+			Uuids:    req.RemarkUuids,
+			Remark:   req.Remark,
+			Remarks: func() []dto.LocaleResponse {
+				remarks := make([]dto.LocaleResponse, 0)
+				for _, remark := range orderRemarkList {
+					remarks = append(remarks, remark.MultiLanguageName.GetNames())
+				}
+				return remarks
+			}(),
+			CreateTime: time.Now().Unix(),
 		}
-		billInfo.OrderRemark = orderRemarkInfo.ToJson()
+		if orderRemark != nil {
+			// 有历史备注信息
+			// 修改历史备注信息为不是最新
+			for i := range orderRemark.List {
+				orderRemark.List[i].IsLatest = false
+			}
+			orderRemark.List = append(orderRemark.List, orderRemarkItem)
+			billInfo.OrderRemark = orderRemark.ToJson()
+		} else {
+			// 没有历史备注信息
+			orderRemarkInfo := &resp.OrderRemarkInfo{
+				List: []resp.OrderRemarkItem{orderRemarkItem},
+			}
+			billInfo.OrderRemark = orderRemarkInfo.ToJson()
+		}
 	}
-
 	// 修改订单备注
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		if err := repository.NewOrderRepo(db).UpdateSaleBillOrderRemark(req.SaleBillUuid, billInfo.OrderRemark); err != nil {
