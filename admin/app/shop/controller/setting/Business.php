@@ -6,6 +6,7 @@ use help\StringHelp;
 use help\ValidateHelp;
 use Endroid\QrCode\QrCode;
 use app\common\model\store\FreeTag;
+use app\common\model\store\OrderRemark;
 use app\shop\controller\Controller;
 use app\shop\model\store\TableArea;
 use hg\apidoc\annotation as Apidoc;
@@ -299,6 +300,84 @@ class Business extends Controller
                         $item['name'] = $name;
                         $item['multi_language_name_uuid'] = $languageUuid;
                         (new ReturnReason)->save($item);
+                    } elseif ($item['action'] == 'delete') {
+                        if ($id) {
+                            (new MultiLanguageName)->where('uuid', $model->where('id', $id)->value('multi_language_name_uuid'))->delete();
+                            $model->where('id', $id)->delete();
+                        }
+                    } elseif ($item['action'] == 'edit') {
+                        if ($id) {
+                            unset($item['action']);
+                            $item['name'] = $name;
+                            (new MultiLanguageName)->saveNames($languageData, $languageUuid);
+                            $model->update($item, ['id' => $id]);
+                        }
+                    }
+                }
+            }
+        }
+        return $this->renderSuccess('操作成功');
+    }
+
+    /**
+     * @Apidoc\Title("整单备注(get-获取/post-提交) v2.8.0")
+     * @Apidoc\Method ("POST")
+     * @Apidoc\Url ("/index.php/shop/setting.Business/orderRemark")
+     * @Apidoc\Param("remark", type="array", require=true, desc="整单备注", children={
+     *     @Apidoc\Returned("id", type="int", desc="ID"),
+     *     @Apidoc\Returned("remark", type="string", desc="整单备注名称"),
+     *     @Apidoc\Returned("action", type="string", desc="操作结果 delete-删除 edit-编辑 add-新增"),
+     * })
+     * @Apidoc\Returned()
+     */
+    public function orderRemark()
+    {
+        $shop_supplier_id = $this->store['user']['shop_supplier_id'] ?: 0;
+        $app_id = $this->store['app']['app_id'] ?: 0;
+        $model = new OrderRemark;
+
+        if ($this->request->isGet()) {
+            return $this->renderSuccess('操作成功', $model->getList($app_id, $shop_supplier_id));
+        }
+
+        $data = $this->request->param();
+        $defaultLang = getDefaultLanguage();
+        if (isset($data['remark'])) {
+            if (empty($data['remark'])) {
+                return $this->renderError('请输入整单备注');
+            }
+            foreach ($data['remark'] as $item) {
+                $remark = $item['remark'] ?? '';
+                if (ValidateHelp::hasEmptyValue($remark)) {
+                    return $this->renderError('整单备注不能为空');
+                }
+                $id = $item['id'] ?? 0;
+                $languageUuid = $item['multi_language_name_uuid'] ?? 0;
+                $languageData = json_decode($remark, true);
+                $name = $languageData[$defaultLang] ?? '';
+
+                if (isset($item['action'])) {
+                    if ($item['action'] == 'add' || $item['action'] == 'edit') {
+                        $existing = $model->where('id', $id)->find();
+                        if ($existing) {
+                            $id = $existing['id'];
+                            $languageUuid = $existing['multi_language_name_uuid'];
+                            $item['action'] = 'edit';
+                        } else {
+                            $item['app_id'] = $app_id;
+                            $item['shop_supplier_id'] = $shop_supplier_id;
+                        }
+                    }
+                    //
+                    if ($item['action'] == 'add') {
+                        unset($item['id']);
+                        unset($item['action']);
+                        //
+                        $languageUuid = (new MultiLanguageName)->saveNames($languageData);
+                        $item['uuid'] = createUuid();
+                        $item['name'] = $name;
+                        $item['multi_language_name_uuid'] = $languageUuid;
+                        (new OrderRemark())->save($item);
                     } elseif ($item['action'] == 'delete') {
                         if ($id) {
                             (new MultiLanguageName)->where('uuid', $model->where('id', $id)->value('multi_language_name_uuid'))->delete();
