@@ -1737,13 +1737,14 @@ func (x *GetPurchaseOrderCountResp) GetCount() int32 {
 // 创建采购订单请求消息，外部采购
 type CreatePurchaseOrderReq struct {
 	state           protoimpl.MessageState    `protogen:"open.v1"`
-	Supplier        string                    `protobuf:"bytes,1,opt,name=supplier,proto3" json:"supplier,omitempty" dc:"供应商，必填"`                                       // 供应商，必填
-	CompanyAbbr     string                    `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写，必填"`             // 公司缩写，必填
-	ScheduleDate    string                    `protobuf:"bytes,3,opt,name=schedule_date,json=scheduleDate,proto3" json:"schedule_date,omitempty" dc:"计划日期 Y-m-d，必填"`    // 计划日期 Y-m-d，必填
-	TargetWarehouse string                    `protobuf:"bytes,4,opt,name=target_warehouse,json=targetWarehouse,proto3" json:"target_warehouse,omitempty" dc:"目标仓库，必填"` //目标仓库，必填
-	Currency        string                    `protobuf:"bytes,5,opt,name=currency,proto3" json:"currency,omitempty" dc:"货币，可选，默认THB"`                                  // 货币，可选，默认THB
-	Items           []*PurchaseOrderItemInput `protobuf:"bytes,6,rep,name=items,proto3" json:"items,omitempty" dc:"采购订单项目列表，必填"`                                        // 采购订单项目列表，必填
-	Remarks         string                    `protobuf:"bytes,7,opt,name=remarks,proto3" json:"remarks,omitempty" dc:"备注，可选"`                                          // 备注，可选
+	Supplier        string                    `protobuf:"bytes,1,opt,name=supplier,proto3" json:"supplier,omitempty" dc:"供应商，必填"`                                          // 供应商，必填
+	CompanyAbbr     string                    `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写，必填"`                // 公司缩写，必填
+	ScheduleDate    string                    `protobuf:"bytes,3,opt,name=schedule_date,json=scheduleDate,proto3" json:"schedule_date,omitempty" dc:"计划日期 Y-m-d，必填"`       // 计划日期 Y-m-d，必填
+	TargetWarehouse string                    `protobuf:"bytes,4,opt,name=target_warehouse,json=targetWarehouse,proto3" json:"target_warehouse,omitempty" dc:"目标仓库，必填"`    //目标仓库，必填
+	Currency        string                    `protobuf:"bytes,5,opt,name=currency,proto3" json:"currency,omitempty" dc:"货币，可选，默认THB"`                                     // 货币，可选，默认THB
+	Items           []*PurchaseOrderItemInput `protobuf:"bytes,6,rep,name=items,proto3" json:"items,omitempty" dc:"采购订单项目列表，必填"`                                           // 采购订单项目列表，必填
+	Remarks         string                    `protobuf:"bytes,7,opt,name=remarks,proto3" json:"remarks,omitempty" dc:"备注，可选"`                                             // 备注，可选
+	BuyingPriceList string                    `protobuf:"bytes,8,opt,name=buying_price_list,json=buyingPriceList,proto3" json:"buying_price_list,omitempty" dc:"采购价格表，可选"` // 采购价格表，可选
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -1823,6 +1824,13 @@ func (x *CreatePurchaseOrderReq) GetItems() []*PurchaseOrderItemInput {
 func (x *CreatePurchaseOrderReq) GetRemarks() string {
 	if x != nil {
 		return x.Remarks
+	}
+	return ""
+}
+
+func (x *CreatePurchaseOrderReq) GetBuyingPriceList() string {
+	if x != nil {
+		return x.BuyingPriceList
 	}
 	return ""
 }
@@ -2240,7 +2248,7 @@ const file_buying_buying_proto_rawDesc = "" +
 	"\tfrom_date\x18\x04 \x01(\tR\bfromDate\x12\x17\n" +
 	"\ato_date\x18\x05 \x01(\tR\x06toDate\"1\n" +
 	"\x19GetPurchaseOrderCountResp\x12\x14\n" +
-	"\x05count\x18\x01 \x01(\x05R\x05count\"\x93\x02\n" +
+	"\x05count\x18\x01 \x01(\x05R\x05count\"\xbf\x02\n" +
 	"\x16CreatePurchaseOrderReq\x12\x1a\n" +
 	"\bsupplier\x18\x01 \x01(\tR\bsupplier\x12!\n" +
 	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12#\n" +
@@ -2248,7 +2256,8 @@ const file_buying_buying_proto_rawDesc = "" +
 	"\x10target_warehouse\x18\x04 \x01(\tR\x0ftargetWarehouse\x12\x1a\n" +
 	"\bcurrency\x18\x05 \x01(\tR\bcurrency\x124\n" +
 	"\x05items\x18\x06 \x03(\v2\x1e.buying.PurchaseOrderItemInputR\x05items\x12\x18\n" +
-	"\aremarks\x18\a \x01(\tR\aremarks\"m\n" +
+	"\aremarks\x18\a \x01(\tR\aremarks\x12*\n" +
+	"\x11buying_price_list\x18\b \x01(\tR\x0fbuyingPriceList\"m\n" +
 	"\x16PurchaseOrderItemInput\x12\x1b\n" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x10\n" +
 	"\x03qty\x18\x02 \x01(\x01R\x03qty\x12\x12\n" +

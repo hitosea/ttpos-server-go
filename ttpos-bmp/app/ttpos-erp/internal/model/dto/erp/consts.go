@@ -35,6 +35,7 @@ const (
 	DocTypeItemGroup         = "Item Group"
 	DocTypeCustomer          = "Customer"
 	DocTypeDeliveryNote      = "Delivery Note"
+	DocTypePosPriceList      = "Pos Price List"
 
 	//DocTypeStockLedger 库存台账查询
 	DocTypeStockLedger = "Stock Ledger"

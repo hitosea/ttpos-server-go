@@ -43,6 +43,11 @@ app:
     dump: true
     webhook:
       secret: $WEBHOOK_SECRET
+    core:
+      pos_price_list:
+        default:
+          buying_price_list: "Buying - External"
+          selling_price_list: "Selling - Internal"
 
 # 消息队列
 queue:
