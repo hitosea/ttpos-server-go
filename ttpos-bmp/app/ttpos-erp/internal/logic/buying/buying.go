@@ -106,7 +106,7 @@ func (*sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req *
 	}
 
 	//创建采购订单
-	resp, err = service.Document().Create(ctx, "Sales Order", salesOrder)
+	resp, err = service.Document().Create(ctx, erp.DocTypeSaleOrder, salesOrder)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建内部销售订单失败")
 	}
