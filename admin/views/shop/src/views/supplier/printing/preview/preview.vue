@@ -600,6 +600,7 @@
       modeChange(e) {
         this.mode = e;
         this.customize_uuid = 0;
+        this.imgUrl = "";
         if (this.title == $t('发票')) {
           if (e == 1) {
             this.details = previewData.seven;
