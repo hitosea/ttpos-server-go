@@ -181,14 +181,16 @@ func (h *PrintHandler) UsePrinterCustomize(c *gin.Context) {
 // @Tags 商家端.打印管理
 // @Accept json
 // @Produce json
-// @Param data body req.PrinterGetConfigInfoReq true "获取配置信息请求"
+// @Param template_id query uint64 true "模板ID"
+// @Param customize_uuid query uint64 true "定制UUID, 编辑的时候使用，新增的时候 传0"
+// @Param is_adv query int true "是否高级模版 0=否, 1=是"
 // @Security JwtToken
 // @Success 200 {object} dto.Response{data=resp.ConfigInfoResp} "成功"
 // @Router /shop/printer/customize/config/info [get]
 func (h *PrintHandler) GetPrinterCustomizeConfigInfo(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	getConfigInfoReq := req.PrinterGetConfigInfoReq{}
-	if err := c.ShouldBindJSON(&getConfigInfoReq); err != nil {
+	if err := c.ShouldBindQuery(&getConfigInfoReq); err != nil {
 		helper.HandleValidationError(c, err, getConfigInfoReq, nil)
 		return
 	}
