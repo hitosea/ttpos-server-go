@@ -12,6 +12,18 @@
                 "block_id": "store.name",
                 "block_type": "value", 
                 "block_label": {},
+                "block_name" : {
+                    "th": "ชื่อร้านค้า",
+                    "en": "Store name",
+                    "ko": "매장명",
+                    "my": "Nama Kedai",
+                    "tr": "Mağaza Adı",
+                    "de": "Ladenname",
+                    "sv": "Butiksnamn",
+                    "ja": "店舗名",
+                    "zhtw": "店鋪名稱",
+                    "zh": "店铺名称"
+                },
                 "block_attr": {
                     "font_size": 26,
                     "align": "center",
@@ -36,6 +48,18 @@
                 "block_id": "store.logo",
                 "block_type": "img", 
                 "block_label": {},
+                "block_name" : {
+                    "th": "ร่พราสัญญา",
+                    "en": "Store Logo",
+                    "ko": "매장 로고",
+                    "my": "Nama Logo",
+                    "tr": "Mağaza Logo",
+                    "de": "Laden Logo",
+                    "sv": "Logotyp",
+                    "ja": "店舗Logo",
+                    "zhtw": "店鋪LOGO",
+                    "zh": "店铺LOGO"
+                },
                 "block_attr": {
                     "font_size": 22,
                     "align": "center",
@@ -71,6 +95,18 @@
                     "zhtw": "預結賬單",
                     "th": "เรียกเก็บเงินล่วงหน้า"
                 },
+                "block_name" : {
+                    "th": "ชื่อใบเสร็จ",
+                    "en": "Receipt name",
+                    "ko": "영수증 이름",
+                    "my": "ပြေစာနာမည်",
+                    "tr": "Makbuz adı",
+                    "de": "Belegname",
+                    "sv": "Kvittonamn",
+                    "ja": "レシート名",
+                    "zhtw": "收據名稱",
+                    "zh": "票据名称"
+                },
                 "block_attr": {
                     "font_size": 32,
                     "align": "center",
@@ -95,9 +131,21 @@
                     "tr": "Mağaza Adı:",
                     "de": "Ladenname:",
                     "sv": "Butiksnamn:",
-                    "ja": "店舗名:",
-                    "zhtw": "店鋪名稱:",
+                    "ja": "会社名:",
+                    "zhtw": "公司名稱:",
                     "th": "ชื่อบริษัท:"
+                },
+                "block_name" : {
+                    "zh": "公司名称",
+                    "en": "Company Name",
+                    "ko": "매장명",
+                    "my": "Nama Kedai",
+                    "tr": "Mağaza Adı",
+                    "de": "Ladenname",
+                    "sv": "Butiksnamn",
+                    "ja": "会社名",
+                    "zhtw": "公司名稱",
+                    "th": "ชื่อบริษัท"
                 },
                 "block_attr": {
                     "font_size": 20,
@@ -134,6 +182,18 @@
                     "zhtw": "商家地址:",
                     "th": "ที่อยู่ธุรกิจ:"
                 },
+                "block_name" : {
+                    "zh": "商家地址",
+                    "en": "Business Address",
+                    "ko": "사업자 주소",
+                    "my": "လုပ်ငန်းလိပ်စာ",
+                    "tr": "İş Adresi",
+                    "de": "Geschäftsadresse",
+                    "sv": "Företagsadress",
+                    "ja": "事業者住所",
+                    "zhtw": "商家地址",
+                    "th": "ที่อยู่ธุรกิจ"
+                },
                 "block_attr": {
                     "font_size": 20,
                     "align": "center",
@@ -169,6 +229,18 @@
                     "zhtw": "電話:",
                     "th": "โทรศัพท์:"
                 },
+                "block_name" : {
+                    "zh": "电话",
+                    "en": "Phone",
+                    "ko": "전화",
+                    "my": "ဖုန်း",
+                    "tr": "Telefon",
+                    "de": "Telefon",
+                    "sv": "Telefon",
+                    "ja": "電話",
+                    "zhtw": "電話",
+                    "th": "โทรศัพท์"
+                },
                 "block_attr": {
                     "font_size": 20,
                     "align": "center",
@@ -203,6 +275,18 @@
                     "ja": "税番号:",
                     "zhtw": "稅號:",
                     "th": "หมายเลขภาษี:"
+                },
+                "block_name" : {
+                    "zh": "税号",
+                    "en": "Tax Number",
+                    "ko": "세금번호",
+                    "my": "အခွန်နံပါတ်",
+                    "tr": "Vergi Numarası",
+                    "de": "Steuer-ID",
+                    "sv": "Skattenummer",
+                    "ja": "税番号",
+                    "zhtw": "稅號",
+                    "th": "หมายเลขภาษี"
                 },
                 "block_attr": {
                     "font_size": 20,
@@ -245,6 +329,18 @@
                 "block_id": "order.serial_no",
                 "block_type": "value",
                 "block_label": {},
+                "block_name" : {
+                    "zh": "序号",
+                    "en": "Serial No",
+                    "ko": "시리얼 번호",
+                    "my": "နံပါတ်စဥ်",
+                    "tr": "Sıra No",
+                    "de": "Serienummer",
+                    "sv": "Serienummer",
+                    "ja": "シリアル番号",
+                    "zhtw": "序號",
+                    "th": "หมายเลขซีรี่ย์"
+                },
                 "block_attr": {
                     "font_size": 28,
                     "align": "left",
@@ -262,6 +358,18 @@
                 "block_id": "order.remark",
                 "block_type": "value",
                 "block_label": {},
+                "block_name" : {
+                    "zh": "备注",
+                    "en": "Remark",
+                    "ko": "비고",
+                    "my": "မှတ်ချက်",
+                    "tr": "Not",
+                    "de": "Anmerkung",
+                    "sv": "Kommentar",
+                    "ja": "備考",
+                    "zhtw": "備註",
+                    "th": "หมายเหตุ"
+                },
                 "block_attr": {
                     "font_size": 20,
                     "align": "left",
@@ -297,6 +405,18 @@
                     "zhtw": "收銀員:",
                     "th": "แคชเชียร์:"
                 },
+                "block_name" : {
+                    "zh": "收银员",
+                    "en": "Cashier",
+                    "ko": "캐셔",
+                    "my": "ငွေကောင်တာ",
+                    "tr": "Kasiyer",
+                    "de": "Kassierer",
+                    "sv": "Kassör",
+                    "ja": "レジ係",
+                    "zhtw": "收銀員",
+                    "th": "แคชเชียร์"
+                },
                 "block_attr": {
                     "font_size": 20,
                     "align": "left",
@@ -324,6 +444,18 @@
                     "ja": "注文番号:",
                     "zhtw": "訂單號:",
                     "th": "หมายเลขคำสั่งซื้อ:"
+                },
+                "block_name" : {
+                    "zh": "订单号",
+                    "en": "Order No",
+                    "ko": "주문번호",
+                    "my": "အမှာစာနံပါတ်",
+                    "tr": "Sipariş No",
+                    "de": "Bestell-Nr",
+                    "sv": "Beställningsnr",
+                    "ja": "注文番号",
+                    "zhtw": "訂單號",
+                    "th": "หมายเลขคำสั่งซื้อ"
                 },
                 "block_attr": {
                     "font_size": 20,
@@ -353,6 +485,18 @@
                     "zhtw": "人數:",
                     "th": "จำนวนคน:"
                 },
+                "block_name" : {
+                    "zh": "人数",
+                    "en": "Number of people",
+                    "ko": "인원수",
+                    "my": "လူအရေအတွက်",
+                    "tr": "Kişi sayısı",
+                    "de": "Anzahl der Personen",
+                    "sv": "Antal personer",
+                    "ja": "人数",
+                    "zhtw": "人數",
+                    "th": "จำนวนคน"
+                },
                 "block_attr": {
                     "font_size": 20,
                     "align": "left",
@@ -370,6 +514,18 @@
                 "block_id": "title",
                 "block_type": "label",
                 "block_label": {
+                    "zh": "商品",
+                    "en": "Commodity",
+                    "ko": "상품",
+                    "my": "ကုန်စည်",
+                    "tr": "Emtia",
+                    "de": "Produkt",
+                    "sv": "Produkt",
+                    "ja": "商品",
+                    "zhtw": "商品",
+                    "th": "สินค้า"
+                },
+                "block_name" : {
                     "zh": "商品",
                     "en": "Commodity",
                     "ko": "상품",
@@ -413,6 +569,18 @@
                     "zhtw": "單價|數量",
                     "th": "ราคาต่อหน่วย|จำนวน"
                 },
+                "block_name" : {
+                    "zh": "单价|数量",
+                    "en": "Price|Qty",
+                    "ko": "단가|수량",
+                    "my": "တစ်ခုဈေး|အရေအတွက်",
+                    "tr": "Birim Fiyat|Miktar",
+                    "de": "Einzelpreis|Menge",
+                    "sv": "Enhetspris|Antal",
+                    "ja": "単価|数量",
+                    "zhtw": "單價|數量",
+                    "th": "ราคาต่อหน่วย|จำนวน"
+                },
                 "block_attr": {
                     "font_size": 18,
                     "align": "center",
@@ -433,6 +601,18 @@
                 "block_id": "title",
                 "block_type": "label",
                 "block_label": {
+                    "zh": "小计",
+                    "en": "Subtotal",
+                    "ko": "소계",
+                    "my": "အပေါင်း",
+                    "tr": "Ara Toplam",
+                    "de": "Zwischensumme",
+                    "sv": "Delsumma",
+                    "ja": "小計",
+                    "zhtw": "小計",
+                    "th": "ยอดรวมย่อย"
+                },
+                "block_name" : {
                     "zh": "小计",
                     "en": "Subtotal",
                     "ko": "소계",
@@ -647,6 +827,18 @@
                     "zhtw": "商品數量:",
                     "th": "จำนวนสินค้า:"
                 },
+                "block_name" : {
+                    "zh": "商品数量",
+                    "en": "Total text",
+                    "ko": "상품 수량",
+                    "my": "ကုန်ပစ္စည်းအရေအတွက်",
+                    "tr": "Toplam Miktar",
+                    "de": "Gesamtmenge",
+                    "sv": "Total kvantitet",
+                    "ja": "商品数量",
+                    "zhtw": "商品數量",
+                    "th": "จำนวนสินค้า"
+                },
                 "block_attr": {
                     "font_size": 20,
                     "align": "left",
@@ -672,6 +864,18 @@
                     "ja": "商品金額:",
                     "zhtw": "商品金額:",
                     "th": "จำนวนเงินสินค้า:"
+                },
+                "block_name" : {
+                    "zh": "商品金额",
+                    "en": "Product Amount",
+                    "ko": "상품 금액",
+                    "my": "ကုန်ပစ္စည်းပမာဏ",
+                    "tr": "Ürün Tutarı",
+                    "de": "Produktbetrag",
+                    "sv": "Produktbelopp",
+                    "ja": "商品金額",
+                    "zhtw": "商品金額",
+                    "th": "จำนวนเงินสินค้า"
                 },
                 "block_attr": {
                     "font_size": 20,
@@ -702,6 +906,18 @@
                     "zhtw": "服務費:",
                     "th": "ค่าบริการ:"
                 },
+                "block_name" : {
+                    "zh": "服务费",
+                    "en": "Service Fee",
+                    "ko": "서비스 요금",
+                    "my": "ဝန်ဆောင်မှုကြေး",
+                    "tr": "Hizmet Ücreti",
+                    "de": "Servicegebühr",
+                    "sv": "Serviceavgift",
+                    "ja": "サービス料",
+                    "zhtw": "服務費",
+                    "th": "ค่าบริการ"
+                },
                 "block_attr": {
                     "font_size": 20,
                     "align": "right",
@@ -727,6 +943,18 @@
                 "block_id": "order.percentage_lists",
                 "block_type": "column",
                 "block_label": {},
+                "block_name" : {
+                    "zh": "税费",
+                    "en": "Tax Fee",
+                    "ko": "세금",
+                    "my": "အခွန်",
+                    "tr": "Vergi",
+                    "de": "Steuer",
+                    "sv": "Skatt",
+                    "ja": "税",
+                    "zhtw": "稅",
+                    "th": "ภาษี"
+                },
                 "block_attr": {
                     "font_size": 20,
                     "align": "right",
@@ -792,6 +1020,18 @@
                     "zhtw": "優惠折扣:",
                     "th": "ส่วนลด:"
                 },
+                "block_name" : {
+                    "zh": "优惠折扣",
+                    "en": "Discount",
+                    "ko": "할인",
+                    "my": "လျှော့စျေး",
+                    "tr": "İndirim",
+                    "de": "Rabatt",
+                    "sv": "Rabatt",
+                    "ja": "割引",
+                    "zhtw": "優惠折扣",
+                    "th": "ส่วนลด"
+                },
                 "block_after_label": {
                     "zh": "  ({order.discount_rate}% OFF)",
                     "en": "  ({order.discount_rate}% OFF)",
@@ -840,6 +1080,18 @@
                     "zhtw": "會員優惠:",
                     "th": "ส่วนลดสมาชิก:"
                 },
+                "block_name" : {
+                    "zh": "会员优惠",
+                    "en": "Member Discount",
+                    "ko": "회원 할인",
+                    "my": "အဖွဲ့ဝင် လျှော့စျေး",
+                    "tr": "Üye İndirimi",
+                    "de": "Mitgliederrabatt",
+                    "sv": "Medlemsrabatt",
+                    "ja": "会員割引",
+                    "zhtw": "會員優惠",
+                    "th": "ส่วนลดสมาชิก"
+                },
                 "block_attr": {
                     "font_size": 20,
                     "align": "right",
@@ -875,6 +1127,18 @@
                     "ja": "会員割引率:",
                     "zhtw": "會員折扣:",
                     "th": "อัตราสมาชิก:"
+                },
+                "block_name" : {
+                    "zh": "会员折扣",
+                    "en": "Member Rate",
+                    "ko": "회원 할인율",
+                    "my": "အဖွဲ့ဝင် လျှော့စျေးနှုန်း",
+                    "tr": "Üye Oranı",
+                    "de": "Mitgliederrate",
+                    "sv": "Medlemsränta",
+                    "ja": "会員割引率",
+                    "zhtw": "會員折扣",
+                    "th": "อัตราสมาชิก"
                 },
                 "block_after_label": {
                     "zh": "拆",
@@ -923,6 +1187,18 @@
                     "ja": "カード割引:",
                     "zhtw": "會員卡折扣:"
                 },
+                "block_name" : {
+                    "zh": "会员卡折扣",
+                    "en": "Card Discount",
+                    "ko": "카드 할인",
+                    "my": "ကတ်လျှော့စျေး",
+                    "tr": "Kart İndirimi",
+                    "de": "Kartenrabatt",
+                    "sv": "Kortrabatt",
+                    "ja": "カード割引",
+                    "zhtw": "會員卡折扣",
+                    "th": "ส่วนลดบัตร"
+                },
                 "block_after_label": {
                     "zh": "拆",
                     "en": "%",
@@ -970,6 +1246,18 @@
                     "ja": "ポイント控除:",
                     "zhtw": "會員積分抵扣:"
                 },
+                "block_name" : {
+                    "zh": "会员积分抵扣",
+                    "en": "Points Deduction",
+                    "ko": "포인트 차감",
+                    "my": "အမှတ်များ နုတ်ယူ",
+                    "tr": "Puan Düşümü",
+                    "de": "Punkte Abzug",
+                    "sv": "Poäng Avdrag",
+                    "ja": "ポイント控除",
+                    "zhtw": "會員積分抵扣",
+                    "th": "ส่วนลดคะแนน"
+                },
                 "block_attr": {
                     "font_size": 20,
                     "align": "right",
@@ -1005,6 +1293,18 @@
                     "ja": "クーポン控除:",
                     "zhtw": "優惠券抵扣:"
                 },
+                "block_name" : {
+                    "zh": "优惠券抵扣",
+                    "en": "Coupon Deduction",
+                    "ko": "쿠폰 차감",
+                    "my": "ကူပွန်နုတ်ယူ",
+                    "tr": "Kupon Düşümü",
+                    "de": "Gutschein Abzug",
+                    "sv": "Kupong Avdrag",
+                    "ja": "クーポン控除",
+                    "zhtw": "優惠券抵扣",
+                    "th": "ส่วนลดคูปอง"
+                },
                 "block_attr": {
                     "font_size": 20,
                     "align": "right",
@@ -1039,6 +1339,18 @@
                     "sv": "Manuell Avrundning:",
                     "ja": "手動四捨五入:",
                     "zhtw": "手動抹零:"
+                },
+                "block_name" : {
+                    "zh": "手动抹零",
+                    "en": "Manual Rounding",
+                    "ko": "수동 반올림",
+                    "my": "လက်ဖြင့် ပတ်သတ်",
+                    "tr": "Manuel Yuvarlama",
+                    "de": "Manuelle Rundung",
+                    "sv": "Manuell Avrundning",
+                    "ja": "手動四捨五入",
+                    "zhtw": "手動抹零",
+                    "th": "ตัดปัดด้วยมือ"
                 },
                 "block_attr": {
                     "font_size": 20,
@@ -1093,6 +1405,18 @@
                     "zhtw": "合計應收:",
                     "th": "รวมที่ต้องชำระ:"
                 },
+                "block_name" : {
+                    "zh": "合计应收",
+                    "en": "Total Due",
+                    "ko": "총 미수금",
+                    "my": "စုစုပေါင်း ရရန်ရှိ",
+                    "tr": "Toplam Borç",
+                    "de": "Gesamtschuld",
+                    "sv": "Total Skuld",
+                    "ja": "合計未収",
+                    "zhtw": "合計應收",
+                    "th": "รวมที่ต้องชำระ"
+                },
                 "block_attr": {
                     "font_size": 26,
                     "align": "right",
@@ -1127,6 +1451,18 @@
                     "ja": "合計 (VAT含む)",
                     "zhtw": "合計 (含VAT)"
                 },
+                "block_name" : {
+                    "zh": "合计 (其中VAT)",
+                    "en": "Total (incl. VAT)",
+                    "ko": "합계 (VAT 포함)",
+                    "my": "စုစုပေါင်း (VAT ပါဝင်)",
+                    "tr": "Toplam (KDV Dahil)",
+                    "de": "Gesamt (inkl. MwSt)",
+                    "sv": "Totalt (inkl. moms)",
+                    "ja": "合計 (VAT含む)",
+                    "zhtw": "合計 (含VAT)",
+                    "th": "รวมที่ต้องชำระ (รวมภาษี)"
+                },
                 "block_attr": {
                     "font_size": 20,
                     "align": "right",
@@ -1152,6 +1488,18 @@
                 "block_id": "order.percentage_lists",
                 "block_type": "column",
                 "block_label": {},
+                "block_name" : {
+                    "zh": "税费",
+                    "en": "Tax Fee",
+                    "ko": "세금",
+                    "my": "အခွန်",
+                    "tr": "Vergi",
+                    "de": "Steuer",
+                    "sv": "Skatt",
+                    "ja": "税",
+                    "zhtw": "稅",
+                    "th": "ภาษี"
+                },
                 "block_attr": {
                     "font_size": 18,
                     "align": "center",
@@ -1254,6 +1602,18 @@
                     "zhtw": "請用{order.payment_name}掃一掃支付",
                     "th": "กรุณาสแกนด้วย {order.payment_name} เพื่อชำระเงิน"
                 },
+                "block_name" : {
+                    "zh": "支付描述",
+                    "en": "Payment Description",
+                    "ko": "결제 설명",
+                    "my": "ပေးချေခြင်းအကြောင်း",
+                    "tr": "Ödeme Açıklaması",
+                    "de": "Zahlungsbeschreibung",
+                    "sv": "Betalningsbeskrivning",
+                    "ja": "支払い説明",
+                    "zhtw": "支付描述",
+                    "th": "คำอธิบายการชำระเงิน"
+                },
                 "block_attr": {
                     "font_size": 20,
                     "align": "center",
@@ -1278,6 +1638,18 @@
                 "block_id": "order.payment_qrcode",
                 "block_type": "qrcode", 
                 "block_label": {},
+                "block_name" : {
+                    "zh": "二维码",
+                    "en": "QR Code",
+                    "ko": "QR 코드",
+                    "my": "QR 코드",
+                    "tr": "QR Kodu",
+                    "de": "QR-Code",
+                    "sv": "QR-kod",
+                    "ja": "QRコード",
+                    "zhtw": "QR碼",
+                    "th": "QR コード"
+                },
                 "block_attr": {
                     "font_size": 22,
                     "align": "center",
@@ -1312,6 +1684,18 @@
                     "ja": "ご来店ありがとうございます！この店舗は {brand_name} システムでサポートされています。",
                     "zhtw": "感謝您的光臨！本店由 {brand_name} 系統提供支持。",
                     "th": "ขอบคุณที่แวะมาหากัน!สนับสนุนโดย  {brand_name} "
+                },
+                "block_name" : {
+                    "zh": "系统支持",
+                    "en": "System Support",
+                    "ko": "시스템 지원",
+                    "my": "စနစ် ပံ့ပိုးထားပါတယ်",
+                    "tr": "Sistem Desteği",
+                    "de": "Systemunterstützung",
+                    "sv": "Systemstöd",
+                    "ja": "システムサポート",
+                    "zhtw": "系統支持",
+                    "th": "รองรับระบบ"
                 },
                 "block_attr": {
                     "font_size": 20,
