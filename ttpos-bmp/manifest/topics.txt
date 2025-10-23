@@ -6,3 +6,5 @@ save-pos-invoice
 return-pos-invoice
 cancel-pos-invoice
 close-pos-entry
+#重做pos订单
+redo-pos
