@@ -72,6 +72,15 @@ func (t *dishesImgTemplate) CompleteOrder(
 		img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
 	}
 
+	// 整单备注
+	if orderRemark := order.GetLatestOrderRemarkRes(); orderRemark != nil {
+		img.LineFeed(1, 20)
+		img.AppendSplitLine()
+		img.AppendText(t.base.Translate("整单备注") + ": " + orderRemark.Remark.GetLocale(t.base.Lang))
+		img.LineFeed(1)
+		img.AppendSplitLine()
+	}
+
 	// 订单号和时间
 	img.SetFontSize(20)
 	img.SetFontWeight(1)
@@ -184,6 +193,17 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 			img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo)
 		} else {
 			img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo)
+		}
+
+		// 整单备注
+		if orderRemark := order.GetLatestOrderRemarkRes(); orderRemark != nil {
+			img.LineFeed(1, 60)
+			img.AppendSplitLine()
+			img.SetAlignment(pkg.AlignLeft)
+			img.AppendText(t.base.Translate("整单备注") + ": " + orderRemark.Remark.GetLocale(t.base.Lang))
+			img.SetAlignment(pkg.AlignCenter)
+			img.LineFeed(1)
+			img.AppendSplitLine()
 		}
 
 		// 设置边距
@@ -318,7 +338,16 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 			img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo)
 		}
 
-		img.LineFeed(1, 60)
+		// 整单备注
+		if orderRemark := order.GetLatestOrderRemarkRes(); orderRemark != nil {
+			img.LineFeed(1, 60)
+			img.AppendSplitLine()
+			img.AppendText(t.base.Translate("整单备注") + ": " + orderRemark.Remark.GetLocale(t.base.Lang))
+			img.LineFeed(1)
+			img.AppendSplitLine()
+		}
+
+		img.LineFeed(1, 50)
 		img.SetFontSize(20)
 		img.AppendText(updateTime)
 		img.LineFeed(1)
@@ -487,6 +516,19 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 	} else {
 		img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
 	}
+
+	// 整单备注
+	if orderRemark := order.GetLatestOrderRemarkRes(); orderRemark != nil {
+		img.LineFeed(1, 20)
+		img.AppendSplitLine()
+		img.SetAlignment(pkg.AlignLeft)
+		img.AppendText(t.base.Translate("整单备注") + ": " + orderRemark.Remark.GetLocale(t.base.Lang))
+		img.SetAlignment(pkg.AlignCenter)
+		img.LineFeed(1)
+		img.AppendSplitLine()
+		img.LineFeed(1, 20)
+	}
+
 	// 设置字体
 	img.SetFontSize(20)
 	img.SetFontWeight(1)
@@ -663,6 +705,19 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 	} else {
 		img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
 	}
+
+	// 整单备注
+	if orderRemark := order.GetLatestOrderRemarkRes(); orderRemark != nil {
+		img.LineFeed(1, 20)
+		img.AppendSplitLine()
+		img.SetAlignment(pkg.AlignLeft)
+		img.AppendText(t.base.Translate("整单备注") + ": " + orderRemark.Remark.GetLocale(t.base.Lang))
+		img.SetAlignment(pkg.AlignCenter)
+		img.LineFeed(1)
+		img.AppendSplitLine()
+		img.LineFeed(1, 20)
+	}
+
 	// 设置字体
 	img.SetFontSize(20)
 	img.SetFontWeight(1)

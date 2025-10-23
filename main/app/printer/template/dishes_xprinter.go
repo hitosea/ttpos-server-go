@@ -110,6 +110,14 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
 		}
 
+		// 整单备注
+		if orderRemark := order.GetLatestOrderRemarkRes(); orderRemark != nil {
+			printer.AppendText("\n------------------------------------------------\n")
+			printer.SetAlignment(pkg.AlignLeft)
+			printer.AppendText(t.base.Translate("整单备注") + ": " + orderRemark.Remark.GetLocale(t.base.Lang))
+			printer.AppendText("\n------------------------------------------------\n")
+		}
+
 		printer.LineFeed()
 		printer.SetLineSpacing(50)
 
@@ -268,6 +276,14 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 			printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
 		} else if order.SerialNo != "" {
 			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
+		}
+
+		// 整单备注
+		if orderRemark := order.GetLatestOrderRemarkRes(); orderRemark != nil {
+			printer.SetAlignment(pkg.AlignLeft)
+			printer.AppendText("\n------------------------------------------------\n")
+			printer.AppendText(t.base.Translate("整单备注") + ": " + orderRemark.Remark.GetLocale(t.base.Lang))
+			printer.AppendText("\n------------------------------------------------\n")
 		}
 
 		printer.LineFeed()
@@ -528,6 +544,15 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 		} else {
 			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + mealNumStr)
 		}
+
+		// 整单备注
+		if orderRemark := order.GetLatestOrderRemarkRes(); orderRemark != nil {
+			printer.LineFeed(1)
+			printer.AppendText("\n------------------------\n")
+			printer.AppendText(t.base.Translate("整单备注") + ": " + orderRemark.Remark.GetLocale(t.base.Lang))
+			printer.AppendText("\n------------------------\n")
+		}
+
 		printer.LineFeed(3)
 
 		// 分批类型
@@ -685,11 +710,21 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + mealNumStr)
 		}
 
-		// 行间距
-		if printerType != PrinterTypeXPrinterLan {
+		// 整单备注
+		if orderRemark := order.GetLatestOrderRemarkRes(); orderRemark != nil {
+			printer.LineFeed(1)
+			printer.AppendText("\n------------------------\n")
+			printer.SetLineSpacing(120)
+			printer.AppendText(t.base.Translate("整单备注") + ": " + orderRemark.Remark.GetLocale(t.base.Lang))
+			printer.RestoreDefaultLineSpacing()
+			printer.AppendText("\n------------------------\n")
+		} else {
+			// 行间距
+			if printerType != PrinterTypeXPrinterLan {
+				printer.LineFeed(1)
+			}
 			printer.LineFeed(1)
 		}
-		printer.LineFeed(1)
 
 		// 设置字符大小和打印模式
 		printer.SetCharacterSize(1, 1)
@@ -908,6 +943,14 @@ func (t *dishesXprinterTemplate) ReturnMenuTemplate(
 		printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo)
 	} else {
 		printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo)
+	}
+
+	// 整单备注
+	if orderRemark := order.GetLatestOrderRemarkRes(); orderRemark != nil {
+		printer.LineFeed(1)
+		printer.AppendText("\n------------------------\n")
+		printer.AppendText(t.base.Translate("整单备注") + ": " + orderRemark.Remark.GetLocale(t.base.Lang))
+		printer.AppendText("\n------------------------\n")
 	}
 
 	printer.LineFeed()
@@ -1159,6 +1202,14 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 		printer.LineFeed()
 	} else {
 		printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo)
+	}
+
+	// 整单备注
+	if orderRemark := order.GetLatestOrderRemarkRes(); orderRemark != nil {
+		printer.LineFeed(1)
+		printer.AppendText("\n------------------------\n")
+		printer.AppendText(t.base.Translate("整单备注") + ": " + orderRemark.Remark.GetLocale(t.base.Lang))
+		printer.AppendText("\n------------------------\n")
 	}
 
 	printer.LineFeed()

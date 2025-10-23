@@ -94,6 +94,14 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
 		}
 
+		// 整单备注
+		if orderRemark := order.GetLatestOrderRemarkRes(); orderRemark != nil {
+			printer.AppendText("\n------------------------------------------------\n")
+			printer.SetAlignment(pkg.AlignLeft)
+			printer.AppendText(t.base.Translate("整单备注") + ": " + orderRemark.Remark.GetLocale(t.base.Lang))
+			printer.AppendText("\n------------------------------------------------\n")
+		}
+
 		printer.LineFeed()
 		printer.SetLineSpacing(50)
 
@@ -242,6 +250,14 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 			printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
 		} else {
 			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
+		}
+
+		// 整单备注
+		if orderRemark := order.GetLatestOrderRemarkRes(); orderRemark != nil {
+			printer.SetAlignment(pkg.AlignLeft)
+			printer.AppendText("\n------------------------------------------------\n")
+			printer.AppendText(t.base.Translate("整单备注") + ": " + orderRemark.Remark.GetLocale(t.base.Lang))
+			printer.AppendText("\n------------------------------------------------\n")
 		}
 
 		printer.LineFeed()
@@ -464,6 +480,15 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 		} else {
 			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + mealNumStr)
 		}
+
+		// 整单备注
+		if orderRemark := order.GetLatestOrderRemarkRes(); orderRemark != nil {
+			printer.LineFeed(1)
+			printer.AppendText("\n------------------------\n")
+			printer.AppendText(t.base.Translate("整单备注") + ": " + orderRemark.Remark.GetLocale(t.base.Lang))
+			printer.AppendText("\n------------------------\n")
+		}
+
 		printer.LineFeed(3)
 
 		// 分批类型
@@ -588,7 +613,18 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + mealNumStr)
 		}
 
-		printer.LineFeed(2)
+		// 整单备注
+		if orderRemark := order.GetLatestOrderRemarkRes(); orderRemark != nil {
+			printer.LineFeed(1)
+			printer.AppendText("\n------------------------\n")
+			printer.SetLineSpacing(120)
+			printer.AppendText(t.base.Translate("整单备注") + ": " + orderRemark.Remark.GetLocale(t.base.Lang))
+			printer.RestoreDefaultLineSpacing()
+			printer.AppendText("\n------------------------\n")
+		} else {
+			printer.LineFeed(2)
+		}
+
 		printer.SetCharacterSize(1, 1)
 		printer.SetPrintModes(false, false, false)
 		printer.AppendText(updateTime)
