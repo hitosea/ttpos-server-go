@@ -685,7 +685,7 @@ func (s *sSupplier) parseUpdateSupplierResponse(data []byte) (*buying.SupplierDa
 
 func (s *sSupplier) GetSupplierItemList(ctx context.Context, req *buying.GetSupplierItemListReq) (*buying.GetSupplierItemListResp, error) {
 	var (
-		pageNo   = 1
+		pageNo   = 0
 		pageSize = 100
 		filters  = make([][]string, 0, 1)
 	)
@@ -693,7 +693,7 @@ func (s *sSupplier) GetSupplierItemList(ctx context.Context, req *buying.GetSupp
 		filters = append(filters, []string{"Item Supplier", "supplier", "=", req.Supplier})
 	}
 	if req.PageNo > 0 {
-		pageNo = int(req.PageNo)
+		pageNo = int(req.PageNo) - 1
 	}
 	if req.PageSize > 0 {
 		pageSize = int(req.PageSize)
