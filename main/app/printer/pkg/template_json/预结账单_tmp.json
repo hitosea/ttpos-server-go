@@ -8,6 +8,7 @@
     "rows": [
         [
             {
+                "group_block_id": "store_name",
                 "block_id": "store.name",
                 "block_type": "value", 
                 "block_label": {},
@@ -31,6 +32,7 @@
         ],
         [
             {
+                "group_block_id": "store_information",
                 "block_id": "store.logo",
                 "block_type": "img", 
                 "block_label": {},
@@ -54,6 +56,7 @@
         ],
         [
             {
+                "group_block_id": "receipt_name",
                 "block_id": "title",
                 "block_type": "label", 
                 "block_label": {
@@ -81,6 +84,7 @@
         ],
         [
             {
+                "group_block_id": "store_information",
                 "block_id": "store.company",
                 "block_type": "label:value",
                 "block_label": {
@@ -115,6 +119,7 @@
         ],
         [
             {
+                "group_block_id": "store_information",
                 "block_id": "store.company_addr",
                 "block_type": "label:value",
                 "block_label": {
@@ -149,6 +154,7 @@
         ],
         [
             {
+                "group_block_id": "store_information",
                 "block_id": "store.company_phone",
                 "block_type": "label:value",
                 "block_label": {
@@ -183,6 +189,7 @@
         ],
         [
             {
+                "group_block_id": "store_information",
                 "block_id": "store.company_tax_number",
                 "block_type": "label:value",
                 "block_label": {
@@ -217,74 +224,6 @@
         ],
         [
             {
-                "block_id": "store.cashier_sn",
-                "block_type": "label:value",
-                "block_label": {
-                    "zh": "收银机SN:",
-                    "en": "Cashier SN:",
-                    "ko": "캐셔 SN:",
-                    "my": "ငွေကောင်တာ SN:",
-                    "tr": "Kasa SN:",
-                    "de": "Kassen-SN:",
-                    "sv": "Kassör SN:",
-                    "ja": "レジ SN:",
-                    "zhtw": "收銀機SN:",
-                    "th": "เครื่องคิดเงิน SN:"
-                },
-                "block_attr": {
-                    "font_size": 20,
-                    "align": "center",
-                    "font_bold": true,
-                    "dividing_line": false,
-                    "leading_blank_lines": 0,
-                    "trailing_blank_lines": 0,
-                    "width": 100
-                },
-                "conditions": [
-                    {
-                        "field": "store.cashier_sn",
-                        "operator": "not_empty",
-                        "value": 0
-                    }
-                ]
-            }
-        ],
-        [
-            {
-                "block_id": "store.printer_sn",
-                "block_type": "label:value",
-                "block_label": {
-                    "zh": "打印机SN:",
-                    "en": "Printer SN:",
-                    "ko": "프린터 SN:",
-                    "my": "ပုံနှိပ်စက် SN:",
-                    "tr": "Yazıcı SN:",
-                    "de": "Drucker-SN:",
-                    "sv": "Skrivare SN:",
-                    "ja": "プリンター SN:",
-                    "zhtw": "印表機SN:",
-                    "th": "เครื่องพิมพ์ SN:"
-                },
-                "block_attr": {
-                    "font_size": 20,
-                    "align": "center",
-                    "font_bold": true,
-                    "dividing_line": false,
-                    "leading_blank_lines": 0,
-                    "trailing_blank_lines": 0,
-                    "width": 100
-                },
-                "conditions": [
-                    {
-                        "field": "store.printer_sn",
-                        "operator": "not_empty",
-                        "value": 0
-                    }
-                ]
-            }
-        ],
-        [
-            {
                 "block_id": "blank_line",
                 "block_type": "blank_line",
                 "block_label": {},
@@ -302,6 +241,7 @@
         ],
         [
             {
+                "group_block_id": "table_no_order_no",
                 "block_id": "order.serial_no",
                 "block_type": "value",
                 "block_label": {},
@@ -318,6 +258,7 @@
         ],
         [
             {
+                "group_block_id": "table_remarks",
                 "block_id": "order.remark",
                 "block_type": "value",
                 "block_label": {},
@@ -341,6 +282,7 @@
         ],
         [
             {
+                "group_block_id": "cashier_staff",
                 "block_id": "order.cashier_name",
                 "block_type": "label:value",
                 "block_label": {
@@ -368,6 +310,7 @@
         ],
         [
             {
+                "group_block_id": "order_no",
                 "block_id": "order.order_no",
                 "block_type": "label:value",
                 "block_label": {
@@ -395,6 +338,35 @@
         ],
         [
             {
+                "group_block_id": "number_of_people",
+                "block_id": "order.meal_num",
+                "block_type": "label:value",
+                "block_label": {
+                    "zh": "人数:",
+                    "en": "Number of people:",
+                    "ko": "인원수:",
+                    "my": "လူအရေအတွက်:",
+                    "tr": "Kişi sayısı:",
+                    "de": "Anzahl der Personen:",
+                    "sv": "Antal personer:",
+                    "ja": "人数:",
+                    "zhtw": "人數:",
+                    "th": "จำนวนคน:"
+                },
+                "block_attr": {
+                    "font_size": 20,
+                    "align": "left",
+                    "font_bold": false,
+                    "dividing_line": false,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 0,
+                    "width": 100
+                }
+            }
+        ],
+        [
+            {
+                "group_block_id": "commodity",
                 "block_id": "title",
                 "block_type": "label",
                 "block_label": {
@@ -426,6 +398,7 @@
                 }
             },
             {
+                "group_block_id": "commodity",
                 "block_id": "title",
                 "block_type": "label",
                 "block_label": {
@@ -456,6 +429,7 @@
                 }
             },
             {
+                "group_block_id": "commodity",
                 "block_id": "title",
                 "block_type": "label",
                 "block_label": {
@@ -484,6 +458,7 @@
         ],
         [
             {
+                "group_block_id": "commodity",
                 "block_id": "order.products",
                 "block_type": "column",
                 "block_label": {},
@@ -657,6 +632,7 @@
         ],
         [
             {
+                "group_block_id": "total_items",
                 "block_id": "order.product_num",
                 "block_type": "label:value",
                 "block_label": {
@@ -682,6 +658,7 @@
                 }
             },
             {
+                "group_block_id": "product_amount",
                 "block_id": "order.product_amount",
                 "block_type": "label:value",
                 "block_label": {
@@ -710,6 +687,7 @@
         ],
         [
             {
+                "group_block_id": "amount_due_information",
                 "block_id": "order.service_fee",
                 "block_type": "label:value",
                 "block_label": {
@@ -745,6 +723,7 @@
         ],
         [
             {
+                "group_block_id": "amount_due_information",
                 "block_id": "order.percentage_lists",
                 "block_type": "column",
                 "block_label": {},
@@ -798,6 +777,7 @@
         ],
         [
             {
+                "group_block_id": "amount_due_information",
                 "block_id": "order.discount_fee",
                 "block_type": "label:value",
                 "block_label": {
@@ -845,6 +825,7 @@
         ],
         [
             {
+                "group_block_id": "amount_due_information",
                 "block_id": "order.member_discount_fee",
                 "block_type": "label:value",
                 "block_label": {
@@ -880,6 +861,7 @@
         ],
         [
             {
+                "group_block_id": "amount_due_information",
                 "block_id": "order.member_discount_rate",
                 "block_type": "label:value",
                 "block_label": {
@@ -927,6 +909,7 @@
         ],
         [
             {
+                "group_block_id": "amount_due_information",
                 "block_id": "order.member_card_discount_rate",
                 "block_type": "label:value",
                 "block_label": {
@@ -973,6 +956,7 @@
         ],
         [
             {
+                "group_block_id": "amount_due_information",
                 "block_id": "order.member_points_discount",
                 "block_type": "label:value",
                 "block_label": {
@@ -1007,6 +991,7 @@
         ],
         [
             {
+                "group_block_id": "amount_due_information",
                 "block_id": "order.coupon_exchange_amount",
                 "block_type": "label:value",
                 "block_label": {
@@ -1041,6 +1026,7 @@
         ],
         [
             {
+                "group_block_id": "amount_due_information",
                 "block_id": "order.check_out_zero_fee",
                 "block_type": "label:value",
                 "block_label": {
@@ -1075,108 +1061,6 @@
         ],
         [
             {
-                "block_id": "order.return_amount",
-                "block_type": "label:value",
-                "block_label": {
-                    "zh": "退款金额:",
-                    "en": "Refund Amount:",
-                    "ko": "환불 금액:",
-                    "my": "ပြန်လည်ပေးခြင်း ပမာဏ:",
-                    "tr": "İade Tutarı:",
-                    "de": "Rückerstattungsbetrag:",
-                    "sv": "Återbetalningsbelopp:",
-                    "ja": "返金金額:",
-                    "zhtw": "退款金額:"
-                },
-                "block_attr": {
-                    "font_size": 20,
-                    "align": "right",
-                    "font_bold": false,
-                    "dividing_line": false,
-                    "leading_blank_lines": 0,
-                    "trailing_blank_lines": 0,
-                    "show_currency_unit": true,
-                    "width": 100
-                },
-                "conditions": [
-                    {
-                        "field": "order.return_amount",
-                        "operator": "not_empty",
-                        "value": 0
-                    }
-                ]
-            }
-        ],
-        [
-            {
-                "block_id": "order.payment_commission_fee",
-                "block_type": "label:value",
-                "block_label": {
-                    "zh": "支付手续费:",
-                    "en": "Payment Fee:",
-                    "ko": "결제 수수료:",
-                    "my": "ငွေပေးချေမှု ကြေး:",
-                    "tr": "Ödeme Ücreti:",
-                    "de": "Zahlungsgebühr:",
-                    "sv": "Betalningsavgift:",
-                    "ja": "支払い手数料:",
-                    "zhtw": "支付手續費:"
-                },
-                "block_attr": {
-                    "font_size": 20,
-                    "align": "right",
-                    "font_bold": false,
-                    "dividing_line": false,
-                    "leading_blank_lines": 0,
-                    "trailing_blank_lines": 0,
-                    "show_currency_unit": true,
-                    "width": 100
-                },
-                "conditions": [
-                    {
-                        "field": "order.payment_commission_fee",
-                        "operator": "not_empty",
-                        "value": 0
-                    }
-                ]
-            }
-        ],
-        [
-            {
-                "block_id": "order.free_amount",
-                "block_type": "label:value",
-                "block_label": {
-                    "zh": "免单金额:",
-                    "en": "Free Amount:",
-                    "ko": "무료 금액:",
-                    "my": "အခမဲ့ ပမာဏ:",
-                    "tr": "Ücretsiz Tutar:",
-                    "de": "Kostenloser Betrag:",
-                    "sv": "Gratis Belopp:",
-                    "ja": "無料金額:",
-                    "zhtw": "免單金額:"
-                },
-                "block_attr": {
-                    "font_size": 20,
-                    "align": "right",
-                    "font_bold": false,
-                    "dividing_line": false,
-                    "leading_blank_lines": 0,
-                    "trailing_blank_lines": 0,
-                    "show_currency_unit": true,
-                    "width": 100
-                },
-                "conditions": [
-                    {
-                        "field": "order.free_amount",
-                        "operator": "not_empty",
-                        "value": 0
-                    }
-                ]
-            }
-        ],
-        [
-            {
                 "block_id": "blank_line",
                 "block_type": "blank_line",
                 "block_label": {},
@@ -1194,6 +1078,7 @@
         ],
         [
             {
+                "group_block_id": "amount_due_information",
                 "block_id": "order.actual_receive_price",
                 "block_type": "label:auto:value",
                 "block_label": {
@@ -1263,6 +1148,7 @@
         ],
         [
             {
+                "group_block_id": "amount_due_information",
                 "block_id": "order.percentage_lists",
                 "block_type": "column",
                 "block_label": {},
@@ -1353,132 +1239,7 @@
         ],
         [
             {
-                "block_id": "order.payment_methods",
-                "block_type": "column",
-                "block_label": {},
-                "block_attr": {
-                    "font_size": 18,
-                    "align": "center",
-                    "font_bold": false,
-                    "dividing_line": true,
-                    "leading_blank_lines": 0,
-                    "trailing_blank_lines": 0,
-                    "width": 100
-                },
-                "rows": [
-                    [
-                        {
-                            "block_id": "name",
-                            "block_type": "value",
-                            "block_label": {},
-                            "block_attr": {
-                                "font_size": 20,
-                                "align": "left",
-                                "font_bold": false,
-                                "dividing_line": false,
-                                "leading_blank_lines": 0,
-                                "trailing_blank_lines": 0,
-                                "width": 60
-                            }
-                        },
-                        {
-                            "block_id": "text",
-                            "block_type": "value",
-                            "block_label": {},
-                            "block_attr": {
-                                "font_size": 20,
-                                "align": "right",
-                                "font_bold": false,
-                                "dividing_line": false,
-                                "leading_blank_lines": 0,
-                                "trailing_blank_lines": 0,
-                                "show_currency_unit": false,
-                                "width": 40
-                            }
-                        }
-                    ]
-                ],
-                "conditions": [
-                    {
-                        "field": "order.payment_methods",
-                        "operator": "not_empty",
-                        "value": 0
-                    }
-                ]
-            }
-        ],
-        [
-            {
-                "block_id": "order.member_remaining_balance",
-                "block_type": "label:auto:value",
-                "block_label": {
-                    "zh": "会员剩余余额",
-                    "en": "Member Remaining Balance",
-                    "ko": "회원 잔액",
-                    "my": "အဖွဲ့ဝင် ကျန်ရှိသော လက်ကျန်ငွေ:",
-                    "th": "ยอดคงเหลือสมาชิก",
-                    "tr": "Üye Kalan Bakiye",
-                    "de": "Mitgliedsrestguthaben",
-                    "sv": "Medlemsåterstående saldo",
-                    "ja": "会員残高",
-                    "zhtw": "會員剩餘餘額"
-                },
-                "block_attr": {
-                    "font_size": 20,
-                    "align": "right",
-                    "font_bold": false,
-                    "dividing_line": false,
-                    "leading_blank_lines": 0,
-                    "trailing_blank_lines": 0,
-                    "show_currency_unit": true,
-                    "width": 50
-                },
-                "conditions": [
-                    {
-                        "field": "order.is_member",
-                        "operator": "not_empty",
-                        "value": 0
-                    }
-                ]
-            }
-        ],
-        [
-            {
-                "block_id": "order.member_points",
-                "block_type": "label:auto:value",
-                "block_label": {
-                    "zh": "本次积分",
-                    "en": "Points Earned",
-                    "ko": "이번 적립 포인트",
-                    "my": "ဒီအကြိမ် ရရှိသော အမှတ်များ:",
-                    "th": "แต้มที่ได้รับ",
-                    "tr": "Bu Sefer Kazanılan Puanlar",
-                    "de": "Diesmal Verdiente Punkte",
-                    "sv": "Denna Gång Förtjänade Poäng",
-                    "ja": "今回のポイント",
-                    "zhtw": "本次積分"
-                },
-                "block_attr": {
-                    "font_size": 20,
-                    "align": "right",
-                    "font_bold": false,
-                    "dividing_line": true,
-                    "leading_blank_lines": 0,
-                    "trailing_blank_lines": 0,
-                    "show_currency_unit": false,
-                    "width": 50
-                },
-                "conditions": [
-                    {
-                        "field": "order.is_member",
-                        "operator": "not_empty",
-                        "value": 0
-                    }
-                ]
-            }
-        ],
-        [
-            {
+                "group_block_id": "payment_qrcode",
                 "block_id": "title",
                 "block_type": "label", 
                 "block_label": {
@@ -1513,6 +1274,7 @@
         ],
         [
             {
+                "group_block_id": "payment_qrcode",
                 "block_id": "order.payment_qrcode",
                 "block_type": "qrcode", 
                 "block_label": {},
@@ -1536,6 +1298,7 @@
         ],
         [
             {
+                "group_block_id": "system_support",
                 "block_id": "title",
                 "block_type": "label", 
                 "block_label": {

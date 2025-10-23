@@ -160,6 +160,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 		req.Uuid,
 		purchaseOrderRepo.WithItems(),
 		purchaseOrderRepo.WithWarehouse(),
+		purchaseOrderRepo.WithSupplier(),
 	)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -177,6 +178,11 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 	// 转换仓库名称
 	if purchaseOrder.Warehouse != nil {
 		detailResp.WarehouseName = *language.JsonToLocaleResponse(purchaseOrder.Warehouse.Name)
+	}
+
+	// 转换供应商名称
+	if purchaseOrder.Supplier != nil {
+		detailResp.SupplierName = purchaseOrder.Supplier.Name
 	}
 
 	// 初始化数组字段

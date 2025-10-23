@@ -16,7 +16,6 @@
                 "zhtw": "基礎資訊",
                 "zh": "基础信息"
             },
-            "group_id": "basic_information",
             "group_blocks": [
                 {
                     "block_name" : {
@@ -31,9 +30,11 @@
                         "zhtw": "收據名稱",
                         "zh": "票据名称"
                     },
+                    "block_id": "receipt_name",
                     "data_rows": [
                         [
                             {   
+                                "group_block_id": "receipt_name",
                                 "block_id": "title",
                                 "block_type": "label", 
                                 "block_label": {
@@ -74,9 +75,11 @@
                         "zhtw": "店家名稱",
                         "zh": "店铺名称"
                     },
+                    "block_id": "store_name",
                     "data_rows": [
                         [
                             {
+                                "group_block_id": "store_name",
                                 "block_id": "store.name",
                                 "block_type": "value", 
                                 "block_label": {
@@ -124,9 +127,11 @@
                         "zhtw": "店家資訊",
                         "zh": "店铺信息"
                     },
+                    "block_id": "store_information",
                     "data_rows": [
                         [
                             {
+                                "group_block_id": "store_information",
                                 "block_id": "store.logo",
                                 "block_type": "img", 
                                 "block_label": {},
@@ -150,6 +155,7 @@
                         ],
                         [
                             {
+                                "group_block_id": "store_information",
                                 "block_id": "store.company",
                                 "block_type": "label:value",
                                 "block_label": {
@@ -184,6 +190,7 @@
                         ],
                         [
                             {
+                                "group_block_id": "store_information",
                                 "block_id": "store.company_addr",
                                 "block_type": "label:value",
                                 "block_label": {
@@ -218,6 +225,7 @@
                         ],
                         [
                             {
+                                "group_block_id": "store_information",
                                 "block_id": "store.company_phone",
                                 "block_type": "label:value",
                                 "block_label": {
@@ -252,6 +260,7 @@
                         ],
                         [
                             {
+                                "group_block_id": "store_information",
                                 "block_id": "store.company_tax_number",
                                 "block_type": "label:value",
                                 "block_label": {
@@ -299,9 +308,11 @@
                         "zhtw": "桌號/取單號",
                         "zh": "桌号/取单号"
                     },
+                    "block_id": "table_no_order_no",
                     "data_rows": [
                         [
                             {
+                                "group_block_id": "table_no_order_no",
                                 "block_id": "order.serial_no",
                                 "block_type": "value",
                                 "block_label": {
@@ -342,9 +353,11 @@
                         "zhtw": "訂單號",
                         "zh": "订单号"
                     },
+                    "block_id": "order_no",
                     "data_rows": [
                         [
                             {
+                                "group_block_id": "order_no",
                                 "block_id": "order.order_no",
                                 "block_type": "label:value",
                                 "block_label": {
@@ -385,9 +398,11 @@
                         "zhtw": "人數",
                         "zh": "人数"
                     },
+                    "block_id": "number_of_people",
                     "data_rows": [
                         [
                             {
+                                "group_block_id": "number_of_people",
                                 "block_id": "order.meal_num",
                                 "block_type": "label:value",
                                 "block_label": {
@@ -428,9 +443,11 @@
                         "zhtw": "開桌備註",
                         "zh": "开桌备注"
                     },
+                    "block_id": "table_remarks",
                     "data_rows": [
                         [
                             {
+                                "group_block_id": "table_remarks",
                                 "block_id": "order.remark",
                                 "block_type": "label:value",
                                 "block_label": {
@@ -471,9 +488,11 @@
                         "zhtw": "收銀員",
                         "zh": "收银员"
                     },
+                    "block_id": "cashier_staff",
                     "data_rows": [
                         [
                             {
+                                "group_block_id": "cashier_staff",
                                 "block_id": "order.cashier_name",
                                 "block_type": "label:value",
                                 "block_label": {
@@ -516,7 +535,6 @@
                 "zhtw": "商品資訊",
                 "zh": "商品信息"
             },
-            "group_id": "commodity_information",
             "group_blocks": [
                 {
                     "block_name" : {
@@ -531,9 +549,11 @@
                         "zhtw": "商品",
                         "zh": "商品"
                     },
+                    "block_id": "commodity",
                     "data_rows": [
                         [
                             {
+                                "group_block_id": "commodity",
                                 "block_id": "title",
                                 "block_type": "label",
                                 "block_label": {
@@ -565,6 +585,7 @@
                                 }
                             },
                             {
+                                "group_block_id": "commodity",
                                 "block_id": "title",
                                 "block_type": "label",
                                 "block_label": {
@@ -595,6 +616,7 @@
                                 }
                             },
                             {
+                                "group_block_id": "commodity",
                                 "block_id": "title",
                                 "block_type": "label",
                                 "block_label": {
@@ -623,6 +645,7 @@
                         ],
                         [
                             {
+                                "group_block_id": "commodity",
                                 "block_id": "order.products",
                                 "block_type": "column",
                                 "block_label": {},
@@ -809,9 +832,11 @@
                         "zhtw": "商品數量",
                         "zh": "商品数量"
                     },
+                    "block_id": "total_items",
                     "data_rows": [
                         [
                             {
+                                "group_block_id": "total_items",
                                 "block_id": "order.product_num",
                                 "block_type": "label:value",
                                 "block_label": {
@@ -852,9 +877,11 @@
                         "zhtw": "商品金額",
                         "zh": "商品金额"
                     },
+                    "block_id": "product_amount",
                     "data_rows": [
                         [
                             {
+                                "group_block_id": "product_amount",
                                 "block_id": "order.product_amount",
                                 "block_type": "label:value",
                                 "block_label": {
@@ -898,7 +925,6 @@
                 "zhtw": "結算資訊",
                 "zh": "结算信息"
             },
-            "group_id": "payment_information",
             "group_blocks": [
                 {
                     "block_name" : { 
@@ -913,9 +939,11 @@
                         "zhtw": "應付資訊",
                         "zh": "应付信息"
                     },
+                    "block_id": "amount_due_information",
                     "data_rows": [
                         [
                             {
+                                "group_block_id": "amount_due_information",
                                 "block_id": "order.service_fee",
                                 "block_type": "label:value",
                                 "block_label": {
@@ -951,6 +979,7 @@
                         ],
                         [
                             {
+                                "group_block_id": "amount_due_information",
                                 "block_id": "order.percentage_lists",
                                 "block_type": "column",
                                 "block_label": {},
@@ -967,6 +996,7 @@
                                 "rows": [
                                     [
                                         {
+                                            "group_block_id": "amount_due_information",
                                             "block_id": "tax_fee",
                                             "block_type": "label:value",
                                             "block_label": {
@@ -1004,6 +1034,7 @@
                         ],
                         [
                             {
+                                "group_block_id": "amount_due_information",
                                 "block_id": "order.discount_fee",
                                 "block_type": "label:value",
                                 "block_label": {
@@ -1051,6 +1082,7 @@
                         ],
                         [
                             {
+                                "group_block_id": "amount_due_information",
                                 "block_id": "order.member_discount_fee",
                                 "block_type": "label:value",
                                 "block_label": {
@@ -1086,6 +1118,7 @@
                         ],
                         [
                             {
+                                "group_block_id": "amount_due_information",
                                 "block_id": "order.member_discount_rate",
                                 "block_type": "label:value",
                                 "block_label": {
@@ -1133,6 +1166,7 @@
                         ],
                         [
                             {
+                                "group_block_id": "amount_due_information",
                                 "block_id": "order.member_card_discount_rate",
                                 "block_type": "label:value",
                                 "block_label": {
@@ -1180,6 +1214,7 @@
                         ],
                         [
                             {
+                                "group_block_id": "amount_due_information",
                                 "block_id": "order.member_points_discount",
                                 "block_type": "label:value",
                                 "block_label": {
@@ -1215,6 +1250,7 @@
                         ],
                         [
                             {
+                                "group_block_id": "amount_due_information",
                                 "block_id": "order.coupon_exchange_amount",
                                 "block_type": "label:value",
                                 "block_label": {
@@ -1250,6 +1286,7 @@
                         ],
                         [
                             {
+                                "group_block_id": "amount_due_information",
                                 "block_id": "order.check_out_zero_fee",
                                 "block_type": "label:value",
                                 "block_label": {
@@ -1285,6 +1322,7 @@
                         ],
                         [
                             {
+                                "group_block_id": "amount_due_information",
                                 "block_id": "blank_line",
                                 "block_type": "blank_line",
                                 "block_label": {},
@@ -1302,6 +1340,7 @@
                         ],
                         [
                             {
+                                "group_block_id": "amount_due_information",
                                 "block_id": "order.actual_receive_price",
                                 "block_type": "label:auto:value",
                                 "block_label": {
@@ -1350,9 +1389,11 @@
                         "zhtw": "收款二維碼",
                         "zh": "收款二维码"
                     },
+                    "block_id": "payment_qrcode",
                     "data_rows": [
                         [
                             {
+                                "group_block_id": "payment_qrcode",
                                 "block_id": "title",
                                 "block_type": "label", 
                                 "block_label": {
@@ -1387,6 +1428,7 @@
                         ],
                         [
                             {
+                                "group_block_id": "payment_qrcode",
                                 "block_id": "order.payment_qrcode",
                                 "block_type": "qrcode", 
                                 "block_label": {},
@@ -1425,7 +1467,6 @@
                 "zhtw": "底部",
                 "zh": "底部"
             },
-            "group_id": "footer",
             "group_blocks": [
                 {
                     "block_name" : { 
@@ -1440,9 +1481,11 @@
                         "zhtw": "自定義圖片",
                         "zh": "自定义图片"
                     },
+                    "block_id": "custom_image",
                     "data_rows": [
                         [
                             {
+                                "group_block_id": "custom_image",
                                 "block_id": "custom_image",
                                 "block_type": "img", 
                                 "block_value": "",
@@ -1473,9 +1516,11 @@
                         "zhtw": "自定義文字",
                         "zh": "自定义文字"
                     },
+                    "block_id": "custom_text",
                     "data_rows": [
                         [
                             {
+                                "group_block_id": "custom_text",
                                 "block_id": "custom_text",
                                 "block_type": "label", 
                                 "block_label": {
@@ -1517,9 +1562,11 @@
                         "zhtw": "系統支援",
                         "zh": "系统支持"
                     },
+                    "block_id": "system_support",
                     "data_rows": [
                         [
                             {
+                                "group_block_id": "system_support",
                                 "block_id": "title",
                                 "block_type": "label", 
                                 "block_label": {

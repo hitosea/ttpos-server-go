@@ -42,6 +42,7 @@ type PurchaseOrder struct {
 	Logs      []PurchaseOrderLog     `gorm:"foreignKey:PurchaseOrderUuid;references:Uuid" json:"logs,omitempty"`
 	Receipts  []PurchaseReceiptOrder `gorm:"foreignKey:PurchaseOrderUuid;references:Uuid" json:"receipts,omitempty"`
 	Warehouse *Warehouse             `gorm:"foreignKey:WarehouseErpCode;references:ErpCode" json:"warehouse,omitempty"`
+	Supplier  *Supplier              `gorm:"foreignKey:SupplierErpCode;references:ErpCode" json:"supplier,omitempty"`
 }
 
 // TableName 指定表名
