@@ -4973,6 +4973,9 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 func (s *orderSrv) OrderRemark(ctx context.Context, req req.OrderRemarkReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
 	dbId := ctx.GetDbId()
 	db := s.dbm.GetDB(dbId)
+	if req.SaleBillUuid == 0 {
+		return nil, errors.New("请先下单再整单备注")
+	}
 	// 禁止并发操作
 	if ctx.NoLock() {
 		lock.NewSystemLock().LockUuid(req.SaleBillUuid)

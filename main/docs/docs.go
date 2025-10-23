@@ -34673,9 +34673,6 @@ const docTemplate = `{
         },
         "req.OrderRemarkReq": {
             "type": "object",
-            "required": [
-                "sale_bill_uuid"
-            ],
             "properties": {
                 "remark": {
                     "description": "自定义的整单备注文本",

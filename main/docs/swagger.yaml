@@ -4431,8 +4431,6 @@ definitions:
       sale_bill_uuid:
         description: 销售账单UUID
         type: integer
-    required:
-    - sale_bill_uuid
     type: object
   req.OrderReturnProduct:
     properties:
