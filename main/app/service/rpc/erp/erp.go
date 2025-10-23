@@ -51,8 +51,9 @@ type IErpSrv interface {
 	RejectStockReconciliation(ctx cc.Context, companySetting model.CompanySetting, cancelStockReconciliationReq *stock.CancelStockReconciliationReq) (*stock.CancelStockReconciliationReq, error)
 
 	// 供应商
-	GetSupplierList(ctx pkgCtx.Context) (*buying.GetSupplierListResp, error)                                      // 获取内部供应商
-	ListSuppliers(ctx cc.Context, listSuppliersReq req.GetErpnextSupplierListReq) ([]*buying.SupplierData, error) // 获取自己和总部创建可以看到的
+	GetSupplierList(ctx pkgCtx.Context) (*buying.GetSupplierListResp, error)                                                          // 获取内部供应商
+	ListSuppliers(ctx cc.Context, listSuppliersReq req.GetErpnextSupplierListReq) ([]*buying.SupplierData, error)                     // 获取自己和总部创建可以看到的
+	GetSupplierItemList(ctx cc.Context, getSupplierItemListReq req.GetErpnextSupplierItemListReq) ([]*buying.SupplierItemInfo, error) // 获取供应商物品列表
 	CreateSupplier(ctx context.Context, createSupplierReq req.CreateSupplierReq) (string, error)
 	UpdateSupplier(ctx context.Context, updateSupplierReq req.UpdateSupplierReq) error
 	DeleteSupplier(ctx context.Context, deleteSupplierReq req.DeleteSupplierReq) error

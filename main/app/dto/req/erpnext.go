@@ -239,6 +239,11 @@ type GetErpnextSupplierListReq struct {
 	SubCompanyAbbr string // 连锁子店公司简称
 }
 
+type GetErpnextSupplierItemListReq struct {
+	SiteCode string // 站点编码
+	Supplier string
+}
+
 type GetHeadquarterMaterialListReq struct {
 }
 

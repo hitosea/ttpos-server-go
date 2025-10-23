@@ -153,6 +153,7 @@ type ICommonRepo interface {
 	WhereByCategoryUuid(categoryUuid uint64) DBOption                                         // 根据分类UUID查询
 	WhereByCategoryUuids(categoryUuids []uint64) DBOption                                     // 根据分类UUID列表查询
 	WhereByHeadquarterUuid(headquarterUuid uint64) DBOption                                   // 根据总部UUID查询
+	WhereByMaterialSupplierErpCode(supplierErpCode string) DBOption                           // 根据物品供应商ERP编码查询
 	WhereIsHeadquarter() DBOption                                                             // 是否是总部
 	WhereByErpnextGroupName(groupName string) DBOption                                        // 根据erpnext规格组名称查询
 	WhereByErpnextValueName(valueName string) DBOption                                        // 根据erpnext规格值名称查询
@@ -925,5 +926,19 @@ func (r *commonRepo) WhereByCode(code string) DBOption {
 func (r *commonRepo) WhereByErpnextUom(erpnextUom string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("erpnext_uom = ?", erpnextUom)
+	}
+}
+
+// WhereByMaterialSupplierErpCode 根据物品供应商ERP编码查询
+func (r *commonRepo) WhereByMaterialSupplierErpCode(supplierErpCode string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where(`
+			exists (
+				select 1 from ttpos_material_supplier 
+				where ttpos_material_supplier.material_uuid = ttpos_material.uuid 
+				and ttpos_material_supplier.supplier_erp_code = ? 
+				and ttpos_material_supplier.delete_time = 0
+			)
+		`, supplierErpCode)
 	}
 }

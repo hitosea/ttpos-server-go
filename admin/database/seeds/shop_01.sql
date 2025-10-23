@@ -3140,4 +3140,26 @@ CREATE TABLE IF NOT EXISTS `ttpos_stock_reconciliation_item_unit` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='盘点单物品单位明细表';
 
+-- 原料供应商关联表
+CREATE TABLE IF NOT EXISTS `ttpos_material_supplier` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT '唯一标识',
+  `material_uuid` bigint NOT NULL DEFAULT 0 COMMENT '原料UUID',
+  `material_code` varchar(100) NOT NULL DEFAULT '' COMMENT '原料编码',
+  `supplier_uuid` bigint NOT NULL DEFAULT 0 COMMENT '供应商UUID',
+  `supplier_erp_code` varchar(100) NOT NULL DEFAULT '' COMMENT '供应商ERP编码',
+  `headquarter_uuid` bigint NOT NULL DEFAULT 0 COMMENT '总部UUID',
+  `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  KEY `idx_material_uuid` (`material_uuid`),
+  KEY `idx_supplier_uuid` (`supplier_uuid`),
+  KEY `idx_headquarter_uuid` (`headquarter_uuid`),
+  KEY `idx_material_code` (`material_code`),
+  KEY `idx_supplier_erp_code` (`supplier_erp_code`),
+  KEY `idx_delete_time` (`delete_time`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='原料供应商关联表';
+
 SET FOREIGN_KEY_CHECKS = 1;
