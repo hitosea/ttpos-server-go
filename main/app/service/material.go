@@ -2893,7 +2893,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 							MaterialUuid:   existsUuid,
 						})
 						if err != nil {
-							return errors.WithMessage(err, "新增物品单位失败 erp code: "+material.Code+" material uuid: "+fmt.Sprintf("%d", unit.Unit))
+							return errors.WithMessage(err, "新增物品单位失败 erp code: "+material.Code+" material uuid: "+fmt.Sprintf("%d", unit.Uuid))
 						}
 					}
 				} else {
