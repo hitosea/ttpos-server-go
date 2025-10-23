@@ -160,8 +160,20 @@
           {{ $t('模板5') }}
         </div>
       </div>
-
-      <div class="box-border">
+      <div class="tabs-box" v-if="detail">
+        <div @click="customizeChange(detail?.default_tpl)" v-if="detail?.default_tpl?.name" class="tabs-button" :class="detail?.default_tpl?.customize_uuid == customize_uuid ? 'tabs-active' : ''">
+          {{ $t(detail?.default_tpl?.name) }}
+        </div>
+        <div @click="customizeChange(item)" v-if="detail?.is_adv_receipt_tpl" v-for="item in detail?.adv_receipt_tpls" :key="item.customize_uuid" class="tabs-button" :class="item.customize_uuid == customize_uuid ? 'tabs-active' : ''">
+          {{ $t(item.name) }}
+        </div>
+      </div>
+      <div class="box-border" v-if="imgUrl">
+        <p class="title-name">
+          <img style="width: 100%; height: 100%;" :src="imgUrl" alt="" class="logo" />
+        </p>
+      </div>
+      <div v-else class="box-border">
         <p class="title-name" v-if="(title == $t('结账单') || title == $t('预结账单')) && mode != 3 && mode != 4 && mode != 5">
           {{ title }}
         </p>
@@ -433,14 +445,18 @@
         titleName: '',
         mode: 1,
         is_show_sku: 0,
+        detail: null,
+        customize_uuid: 0,
+        imgUrl: '',
       };
     },
-    props: ['open', 'title', 'template', 'editId', 'print_method', 'isShowSku'],
+    props: ['open', 'title', 'template', 'editId', 'print_method', 'isShowSku', 'tmpUuid'],
     created() {
       this.dialogVisible = this.open;
       this.brand = this.cloudBasic.base.brand_name;
-      this.mode = this.template;
       this.is_show_sku = this.isShowSku;
+      this.customize_uuid = this.tmpUuid;
+      this.mode =  this.tmpUuid ? 0 : this.template;
       if (this.title == $t('交班单')) {
         if (this.mode == 1) {
           this.details = previewData.one;
@@ -508,8 +524,26 @@
         this.storeShow = false;
         this.titleName = $t('外送: 0001');
       }
+      // 获取模板数据
+      this.getData();
     },
     methods: {
+      getData() {
+        let self = this;
+        let Params = {};
+        Params.id = self.editId;
+        SettingApi.printerTemplateDetail(Params, true).then((data) => {
+          self.detail = data.data;
+          if (this.customize_uuid != 0) {
+            let customize = self.detail?.adv_receipt_tpls?.find(item => item.customize_uuid == this.customize_uuid);
+            if (customize) {
+              self.customizeChange(customize);
+            } else if (self.detail?.default_tpl) {
+              self.customizeChange(self.detail?.default_tpl);
+            }
+          }
+        });
+      },
       onSubmit() {
         if (((this.title == $t('结账单') && this.mode == '3') || (this.title == $t('发票') && this.mode == '2') || this.title == $t('预结账单')) && this.print_method == 1) {
           ElMessageBox.confirm($t('请前去打印设置调整打印方式为“图片打印”，否则图片将无法正常打印，如已设置，请忽略此步骤'), $t('提示'), {
@@ -537,6 +571,7 @@
         form.id = this.editId;
         form.template = this.mode;
         form.is_show_sku = this.is_show_sku;
+        form.tmp_uuid = this.customize_uuid;
         self.loading = true;
         SettingApi.setTemplate(form, true)
           .then((data) => {
@@ -556,8 +591,15 @@
         this.$emit('close');
       },
 
+      customizeChange(e) {
+        this.imgUrl = e.img_url;
+        this.customize_uuid = e.customize_uuid;
+        this.mode = 0;
+      },
+
       modeChange(e) {
         this.mode = e;
+        this.customize_uuid = 0;
         if (this.title == $t('发票')) {
           if (e == 1) {
             this.details = previewData.seven;

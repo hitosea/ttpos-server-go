@@ -38,6 +38,7 @@
       :open="open"
       :title="title"
       :editId="editId"
+      :tmpUuid="tmpUuid"
       :template="template"
       :print_method="print_method"
       :isShowSku="is_show_sku"
@@ -122,6 +123,7 @@
         editId: 1,
         print_method: 1,
         is_show_sku: 0,
+        tmpUuid: 0,
       };
     },
     mounted() {
@@ -153,6 +155,7 @@
         this.print_method = e.print_method;
         this.is_show_sku = e.is_show_sku;
         this.title = $t(e.name);
+        this.tmpUuid = e.tmp_uuid;
         this.open = true;
       },
 
