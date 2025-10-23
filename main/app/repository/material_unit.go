@@ -18,6 +18,7 @@ type IMaterialUnitRepo interface {
 	CreateMaterialUnitList(materialUnits []model.MaterialUnit) error
 	UpdateMaterialUnit(data map[string]any, opts ...DBOption) error
 	GetMaterialUnitListByBaseUnitUuid(baseUnitUuid uint64) ([]*model.MaterialUnit, error)
+	DestroyMaterialUnit(opts ...DBOption) error
 }
 
 // NewMaterialUnitRepo 创建新的原料单位仓库
@@ -126,4 +127,12 @@ func (r *MaterialUnitRepoImpl) GetMaterialUnitListByBaseUnitUuid(baseUnitUuid ui
 			},
 		),
 	)
+}
+
+func (r *MaterialUnitRepoImpl) DestroyMaterialUnit(opts ...DBOption) error {
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	return db.Delete(&model.MaterialUnit{}).Error
 }

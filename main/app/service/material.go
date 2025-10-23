@@ -2836,8 +2836,10 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 				// 判断该物品是否已经存在
 				existingMaterial := materialRepo.GetMaterial(commonRepo.WhereByErpCode(material.Code))
 				if existingMaterial.Uuid != 0 {
+					existsUuid := existingMaterial.Uuid
 					// 更新物品
 					existingMaterial.BaseModel = model.BaseModel{
+						Uuid:       existsUuid,
 						DeleteTime: material.DeleteTime,
 						UpdateTime: material.UpdateTime,
 						CreateTime: material.CreateTime,
@@ -2852,11 +2854,14 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 					existingMaterial.Price = material.Price
 					existingMaterial.BarcodeValue = material.BarcodeValue
 					existingMaterial.InternalCode = material.InternalCode
-					existingMaterial.Status = material.Status
 					if err := materialRepo.UpdateMaterial(existingMaterial); err != nil {
-						return errors.WithMessage(err, "更新物品失败")
+						return errors.WithMessage(err, "更新物品失败 erp code: "+material.Code)
 					}
-					multiLanguageNameRepo.UpdateMultiLanguageName(existingMaterial.MultiLanguageNameUuid, model.MultiLanguageName{
+					err = materialRepo.UpdateMaterialStatus(existsUuid, material.Status)
+					if err != nil {
+						return errors.WithMessage(err, "更新物品状态失败 erp code: "+material.Code)
+					}
+					err = multiLanguageNameRepo.UpdateMultiLanguageName(existingMaterial.MultiLanguageNameUuid, model.MultiLanguageName{
 						BaseModel: model.BaseModel{Uuid: existingMaterial.MultiLanguageNameUuid, CreateTime: time, UpdateTime: time},
 						EnName:    material.MultiLanguageName.EnName,
 						ZhName:    material.MultiLanguageName.ZhName,
@@ -2868,6 +2873,29 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 						TrName:    material.MultiLanguageName.TrName,
 						SvName:    material.MultiLanguageName.SvName,
 					})
+					if err != nil {
+						return errors.WithMessage(err, "更新多语言名称失败 erp code: "+material.Code)
+					}
+					// 删除物品单位
+					err = materialUnitRepo.DestroyMaterialUnit(commonRepo.WhereByMaterialUuid(existsUuid))
+					if err != nil {
+						return errors.WithMessage(err, "删除物品单位失败 erp code: "+material.Code)
+					}
+					// 新增物品单位
+					for _, unit := range material.NotBaseUnitList {
+						_, err := materialUnitRepo.CreateMaterialUnit(model.MaterialUnit{
+							BaseModel:      model.BaseModel{Uuid: unit.Uuid, CreateTime: unit.CreateTime, UpdateTime: unit.UpdateTime},
+							Name:           unit.Name,
+							UnitUuid:       unit.UnitUuid,
+							ConversionRate: unit.ConversionRate,
+							FromUnitUuid:   unit.FromUnitUuid,
+							IsDefault:      unit.IsDefault,
+							MaterialUuid:   existsUuid,
+						})
+						if err != nil {
+							return errors.WithMessage(err, "新增物品单位失败 erp code: "+material.Code+" material uuid: "+fmt.Sprintf("%d", unit.Unit))
+						}
+					}
 				} else {
 					// 新增物品
 					addMaterialList = append(addMaterialList, model.Material{
