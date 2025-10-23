@@ -59,6 +59,7 @@ queue:
     logLevel: "warn"                                  # rocketmq 客户端输出日志级别
     invisibleDuration: 25                             # invisibleDuration should > 20s
     awaitDuration: 5                                  # maximum waiting time for receive func
+    unitName: "" # 消费者单元名称，默认使用GUID
 
 # Mailgun 邮件服务配置
 mailgun:
