@@ -39,10 +39,10 @@ type StockReconciliationItem struct {
 // StockReconciliationItemUnit 盘点单物品单位明细表
 type StockReconciliationItemUnit struct {
 	BaseModel
-	StockReconciliationItemUuid uint64           `gorm:"column:stock_reconciliation_item_uuid;not null;default:0;index:idx_stock_reconciliation_item_uuid;comment:盘点单物品明细ID" json:"stock_reconciliation_item_uuid"`
-	MaterialUnitUuid            uint64           `gorm:"column:material_unit_uuid;not null;default:0;index:idx_material_unit_uuid;comment:单位ID" json:"material_unit_uuid"`
-	MaterialUnitName            string           `gorm:"column:material_unit_name;type:text;comment:物品单位名称，用于备份多语言" json:"material_unit_name"`
-	Quantity                    *decimal.Decimal `gorm:"column:quantity;type:decimal(22,4);comment:单位数量" json:"quantity"`
+	StockReconciliationItemUuid uint64   `gorm:"column:stock_reconciliation_item_uuid;not null;default:0;index:idx_stock_reconciliation_item_uuid;comment:盘点单物品明细ID" json:"stock_reconciliation_item_uuid"`
+	MaterialUnitUuid            uint64   `gorm:"column:material_unit_uuid;not null;default:0;index:idx_material_unit_uuid;comment:单位ID" json:"material_unit_uuid"`
+	MaterialUnitName            string   `gorm:"column:material_unit_name;type:text;comment:物品单位名称，用于备份多语言" json:"material_unit_name"`
+	Quantity                    *float64 `gorm:"column:quantity;type:decimal(22,4);comment:单位数量" json:"quantity"`
 
 	// 关联 ttpos_material_unit 表
 	MaterialUnit *MaterialUnit `gorm:"foreignKey:MaterialUnitUuid;references:Uuid"`

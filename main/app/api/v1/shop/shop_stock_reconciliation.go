@@ -4,6 +4,7 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
@@ -79,34 +80,6 @@ func (h *StockReconciliationHandler) GetStockReconciliationDetail(c *gin.Context
 	helper.Success(c, resp)
 }
 
-// CreateStockReconciliation 创建盘点单
-// @Summary 创建盘点单
-// @Description 创建新的盘点单
-// @Tags 商家端.盘点管理
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Param data body req.StockReconciliationCreateReq true "创建盘点单请求参数"
-// @Success 200 {object} dto.Response{data=resp.StockReconciliationCreateResp} "成功"
-// @Failure 400 {object} dto.Response "请求参数错误"
-// @Router /shop/stock_reconciliation/create [post]
-func (h *StockReconciliationHandler) CreateStockReconciliation(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	var createReq req.StockReconciliationCreateReq
-	if err := c.ShouldBindJSON(&createReq); err != nil {
-		helper.HandleValidationError(c, err, createReq, nil)
-		return
-	}
-
-	err := h.stockReconciliationSrv.CreateStockReconciliation(ctx, createReq)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-
-	helper.Success(c, gin.H{})
-}
-
 // SaveStockReconciliation 保存盘点单
 // @Summary 保存盘点单
 // @Description 保存盘点单信息
@@ -115,7 +88,7 @@ func (h *StockReconciliationHandler) CreateStockReconciliation(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param data body req.StockReconciliationSaveReq true "保存盘点单请求参数"
-// @Success 200 {object} dto.Response "成功"
+// @Success 200 {object} dto.Response{data=resp.StockReconciliationUuidResp} "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
 // @Router /shop/stock_reconciliation/save [post]
 func (h *StockReconciliationHandler) SaveStockReconciliation(c *gin.Context) {
@@ -126,13 +99,18 @@ func (h *StockReconciliationHandler) SaveStockReconciliation(c *gin.Context) {
 		return
 	}
 
-	err := h.stockReconciliationSrv.SaveStockReconciliation(ctx, saveReq)
+	stockReconciliationUuid, err := h.stockReconciliationSrv.SaveStockReconciliation(ctx, saveReq)
+
+	retData := resp.StockReconciliationUuidResp{
+		Uuid: stockReconciliationUuid,
+	}
+
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		helper.ErrorWithData(c, constant.CodeFail, retData, errors.WithMessage(err))
 		return
 	}
 
-	helper.Success(c, nil)
+	helper.Success(c, retData, "保存成功")
 }
 
 // DeleteStockReconciliation 删除盘点单
@@ -160,7 +138,7 @@ func (h *StockReconciliationHandler) DeleteStockReconciliation(c *gin.Context) {
 		return
 	}
 
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "删除成功")
 }
 
 // SubmitStockReconciliation 提交盘点单
@@ -171,7 +149,7 @@ func (h *StockReconciliationHandler) DeleteStockReconciliation(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param data body req.StockReconciliationSaveReq true "提交盘点单请求参数"
-// @Success 200 {object} dto.Response "成功"
+// @Success 200 {object} dto.Response{data=resp.StockReconciliationUuidResp} "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
 // @Router /shop/stock_reconciliation/submit [post]
 func (h *StockReconciliationHandler) SubmitStockReconciliation(c *gin.Context) {
@@ -181,14 +159,16 @@ func (h *StockReconciliationHandler) SubmitStockReconciliation(c *gin.Context) {
 		helper.HandleValidationError(c, err, saveReq, nil)
 		return
 	}
-
-	err := h.stockReconciliationSrv.SaveStockReconciliation(ctx, saveReq)
+	stockReconciliationUuid, err := h.stockReconciliationSrv.SaveStockReconciliation(ctx, saveReq)
+	retData := resp.StockReconciliationUuidResp{
+		Uuid: stockReconciliationUuid,
+	}
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		helper.ErrorWithData(c, constant.CodeFail, retData, errors.WithMessage(err))
 		return
 	}
 
-	helper.Success(c, nil)
+	helper.Success(c, retData, "提交成功")
 }
 
 // ApproveStockReconciliation 审核盘点单
@@ -199,7 +179,7 @@ func (h *StockReconciliationHandler) SubmitStockReconciliation(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param data body req.StockReconciliationApproveReq true "审核盘点单请求参数"
-// @Success 200 {object} dto.Response "成功"
+// @Success 200 {object} dto.Response{data=resp.StockReconciliationApproveResp} "成功"
 // @Failure 400 {object} dto.Response "请求参数错误"
 // @Router /shop/stock_reconciliation/approve [post]
 func (h *StockReconciliationHandler) ApproveStockReconciliation(c *gin.Context) {
@@ -210,13 +190,19 @@ func (h *StockReconciliationHandler) ApproveStockReconciliation(c *gin.Context) 
 		return
 	}
 
-	err := h.stockReconciliationSrv.ApproveStockReconciliation(ctx, approveReq)
+	disabledMaterials, err := h.stockReconciliationSrv.ApproveStockReconciliation(ctx, approveReq)
 	if err != nil {
+		if len(disabledMaterials) > 0 {
+			helper.ErrorWithData(c, constant.CodeMaterialDisabled, resp.StockReconciliationApproveResp{
+				List: disabledMaterials,
+			}, err)
+			return
+		}
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "审核成功")
 }
 
 // RejectStockReconciliation 驳回盘点单
@@ -244,7 +230,7 @@ func (h *StockReconciliationHandler) RejectStockReconciliation(c *gin.Context) {
 		return
 	}
 
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{}, "驳回成功")
 }
 
 // RegisterStockReconciliationHandlers 注册盘点单相关路由
@@ -258,8 +244,10 @@ func RegisterStockReconciliationHandlers(router gin.IRouter, dbm *database.DBMan
 	statisticsSrv := service.NewStatisticsSrv()
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
-
-	stockReconciliationSrv := service.NewStockReconciliationSrv(dbm)
+	localeSrv := service.NewLocaleSrv()
+	translateSrv := service.NewTranslateSrv(dbm, cache)
+	productSrv := service.NewProductSrv(dbm, localeSrv, settingSrv, cache, translateSrv)
+	stockReconciliationSrv := service.NewStockReconciliationSrv(dbm, productSrv)
 
 	wrapper := &StockReconciliationHandler{
 		stockReconciliationSrv: stockReconciliationSrv,
@@ -269,7 +257,6 @@ func RegisterStockReconciliationHandlers(router gin.IRouter, dbm *database.DBMan
 	{
 		privateApi.GET("/stock_reconciliation/list", wrapper.GetStockReconciliationList)
 		privateApi.GET("/stock_reconciliation/detail", wrapper.GetStockReconciliationDetail)
-		privateApi.POST("/stock_reconciliation/create", wrapper.CreateStockReconciliation)
 		privateApi.POST("/stock_reconciliation/save", wrapper.SaveStockReconciliation)
 		privateApi.DELETE("/stock_reconciliation/delete", wrapper.DeleteStockReconciliation)
 		privateApi.POST("/stock_reconciliation/submit", wrapper.SubmitStockReconciliation)

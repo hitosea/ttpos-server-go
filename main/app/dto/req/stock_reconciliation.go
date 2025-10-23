@@ -18,14 +18,6 @@ type StockReconciliationDetailReq struct {
 	Uuid uint64 `json:"uuid" form:"uuid" binding:"required"` // 盘点单UUID
 }
 
-// StockReconciliationCreateReq 创建盘点单请求
-type StockReconciliationCreateReq struct {
-	WarehouseUuid uint64                        `json:"warehouse_uuid"` // 仓库UUID
-	Purpose       int                           `json:"purpose"`        // 盘点目的 1-库存盘点 2-期初盘点
-	Type          int                           `json:"type"`           // 盘点类型 1-指定物品盘点 2-全部物品盘点
-	Items         []*StockReconciliationItemReq `json:"items"`          // 盘点单物品明细
-}
-
 // StockReconciliationItemReq 盘点单物品明细请求
 type StockReconciliationItemReq struct {
 	MaterialUuid uint64                            `json:"material_uuid" binding:"required"`    // 物品UUID
@@ -40,10 +32,13 @@ type StockReconciliationItemUnitReq struct {
 
 // StockReconciliationSaveReq 更新盘点单请求
 type StockReconciliationSaveReq struct {
-	Uuid            uint64 `json:"uuid" binding:"required"` // 盘点单UUID
-	IsSubmit        bool   `json:"is_submit"`               // 是否提交
-	SubmitAfterSave bool   `json:"submit_after_save"`       // 是否在保存后提交
-	StockReconciliationCreateReq
+	Uuid            uint64                        `json:"uuid"`              // 盘点单UUID，如果为0，表示新建
+	IsSubmit        bool                          `json:"is_submit"`         // 是否提交
+	SubmitAfterSave bool                          `json:"submit_after_save"` // 是否在保存后提交
+	WarehouseUuid   uint64                        `json:"warehouse_uuid"`    // 仓库UUID
+	Purpose         int                           `json:"purpose"`           // 盘点目的 1-库存盘点 2-期初盘点
+	Type            int                           `json:"type"`              // 盘点类型 1-指定物品盘点 2-全部物品盘点
+	Items           []*StockReconciliationItemReq `json:"items"`             // 盘点单物品明细
 }
 
 // StockReconciliationDeleteReq 删除盘点单请求
@@ -58,8 +53,7 @@ type StockReconciliationApproveReq struct {
 
 // StockReconciliationRejectReq 驳回盘点单请求
 type StockReconciliationRejectReq struct {
-	Uuid   uint64 `json:"uuid" binding:"required"`   // 盘点单UUID
-	Reason string `json:"reason" binding:"required"` // 驳回原因
+	Uuid uint64 `json:"uuid" binding:"required"` // 盘点单UUID
 }
 
 // StockReconciliationCopyReq 新增盘点单请求

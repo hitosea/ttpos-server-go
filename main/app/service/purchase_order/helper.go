@@ -430,8 +430,8 @@ func (h *purchaseOrderHelper) recordErpStockInLog(
 			}()
 
 			warehouseLog := &model.WarehouseInOutLog{
-				LogType:              0, // 入库
-				Scene:                0, // 采购入库
+				LogType:              constant.WarehouseInOutLogLogTypeIn,     // 入库
+				Scene:                constant.WarehouseInOutLogScenePurchase, // 采购入库
 				WarehouseUuid:        targetWarehouse.Uuid,
 				MaterialUuid:         item.MaterialUuid,
 				MaterialName:         item.MaterialName,
@@ -568,8 +568,8 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 
 			// 记录出库日志
 			warehouseLog := &model.WarehouseInOutLog{
-				LogType:              1, // 出库
-				Scene:                2, // 发货出库
+				LogType:              constant.WarehouseInOutLogLogTypeOut,    // 出库
+				Scene:                constant.WarehouseInOutLogSceneDelivery, // 发货出库
 				WarehouseUuid:        targetWarehouse.Uuid,
 				MaterialUuid:         item.MaterialUuid,
 				MaterialName:         item.MaterialName,
@@ -772,8 +772,8 @@ func (h *purchaseOrderHelper) AddToTransitWarehouse(
 	}
 	// 记录在途仓出库日志
 	warehouseLog := &model.WarehouseInOutLog{
-		LogType:              0,  // 入库
-		Scene:                20, // 在途入库
+		LogType:              constant.WarehouseInOutLogLogTypeIn,      // 入库
+		Scene:                constant.WarehouseInOutLogSceneTransitIn, // 在途入库
 		WarehouseUuid:        transitWarehouse.Uuid,
 		MaterialUuid:         item.MaterialUuid,
 		MaterialName:         item.MaterialName,
