@@ -528,7 +528,7 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 				map[string][]string{
 					"material_names": errMaterialsList,
 				},
-				strings.Join(errMaterialsList, ", ")+
+				strings.Join(errMaterialsList, ", ")+" "+
 					i18n.Translate(lang, "的物品库存不足")+"\n"+
 					i18n.Translate(lang, "请补充库存"),
 			)
@@ -643,7 +643,7 @@ func (h *purchaseOrderHelper) extractName(name, after, errorMsg string) string {
 }
 
 // handleErpError 处理ERP错误
-func (h *purchaseOrderHelper) handleErpError(ctx context.Context, err error) error {
+func (h *purchaseOrderHelper) handleErpError(ctx context.Context, err error, purchaseOrder *model.PurchaseOrder) error {
 	// 检查供应商状态
 	if strings.Contains(err.Error(), "Supplier") && strings.Contains(err.Error(), "is disabled") {
 		// 提取供应商名称
@@ -706,7 +706,23 @@ func (h *purchaseOrderHelper) handleErpError(ctx context.Context, err error) err
 		}
 		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "单位只能使用整数")
 	}
-
+	// 检查发货库存不足
+	if strings.Contains(err.Error(), "创建发货单失败") && strings.Contains(err.Error(), "NegativeStockError") {
+		itemName := h.extractName("Item ", "</a> needed in", err.Error())
+		if itemName != "" {
+			return errors.NewWithCode(
+				constant.CodePurchaseOrderSupplierDisabled,
+				fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 库存不足，请补充库存"), itemName),
+			)
+		}
+		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "物品库存不足，请补充库存")
+	}
+	// 创建采购单失败
+	if purchaseOrder != nil && strings.Contains(err.Error(), "调用erp接口返回空") {
+		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled,
+			i18n.Translate(ctx.GetLanguage(), "审批失败")+": "+purchaseOrder.OrderNo,
+		)
+	}
 	return err
 }
 
