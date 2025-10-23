@@ -1,6 +1,6 @@
 -- erp.erp_receive_close_pos definition
 
-CREATE TABLE `erp_receive_close_pos` (
+CREATE TABLE IF NOT EXISTS `erp_receive_close_pos` (
                                          `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT 'ID',
                                          `pos_open_entry_name` varchar(200) DEFAULT NULL COMMENT '开帐名称',
                                          `period_end_date` bigint(20) DEFAULT NULL COMMENT '结账时间',
@@ -16,7 +16,7 @@ CREATE TABLE `erp_receive_close_pos` (
 
 -- erp.erp_receive_pos_invoice definition
 
-CREATE TABLE `erp_receive_pos_invoice` (
+CREATE TABLE IF NOT EXISTS  `erp_receive_pos_invoice` (
                                            `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT 'ID',
                                            `order_no` varchar(100) NOT NULL COMMENT '销售订单号，来自ttpos',
                                            `open_pos_entry_name` varchar(200) NOT NULL COMMENT 'POS开帐名称',
@@ -37,7 +37,7 @@ CREATE TABLE `erp_receive_pos_invoice` (
 
 -- erp.erp_receive_return_pos_invoice definition
 
-CREATE TABLE `erp_receive_return_pos_invoice` (
+CREATE TABLE IF NOT EXISTS `erp_receive_return_pos_invoice` (
                                                   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT 'ID',
                                                   `order_no` varchar(100) NOT NULL COMMENT '退款订单号，来自ttpos',
                                                   `open_pos_entry_name` varchar(200) NOT NULL COMMENT 'POS开帐名称',
@@ -56,7 +56,7 @@ CREATE TABLE `erp_receive_return_pos_invoice` (
 
 -- erp.erp_receive_cancel_pos_invoice definition
 
-CREATE TABLE `erp_receive_cancel_pos_invoice` (
+CREATE TABLE IF NOT EXISTS  `erp_receive_cancel_pos_invoice` (
                                                   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT 'ID',
                                                   `order_no` varchar(100) NOT NULL COMMENT '退款订单号，来自ttpos',
                                                   `open_pos_entry_name` varchar(200) NOT NULL COMMENT 'POS开帐名称',

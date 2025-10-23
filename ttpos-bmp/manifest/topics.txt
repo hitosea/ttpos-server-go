@@ -8,3 +8,5 @@ cancel-pos-invoice
 close-pos-entry
 #重做pos订单
 redo-pos
+#发送消息
+ttpos-message-send

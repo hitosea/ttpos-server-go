@@ -78,7 +78,30 @@ services:
 #    networks:
 #      bmp-network:
 #        ipv4_address: 10.0.10.43
-
+  # 消息中心模块
+  bmp-message:
+    container_name: "ttpos-bmp-message-${APP_ID}"
+    build:
+      args:
+        MODULE: erp
+        HTTP_PORT: 14041
+        RPC_PORT: 14042
+    image: ttpos-bmp-message
+    environment:
+      GRPC_ENDPOINTS: "${GRPC_ENDPOINTS}:14042"  #生产环境调成服务IP
+      SW_AGENT_NAME: "ttpos-bmp-message"
+      SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
+      SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
+    volumes:
+      - ./app/ttpos-message/manifest/config:/app/config  #生产环境根据需要调整
+      - ../docker/bmp-message/logs:/app/log  #生产环境根据需要调整
+    restart: always
+    ports:
+      - "14041:14041"
+      - "14042:14042"
+    networks:
+      bmp-network:
+        ipv4_address: 10.0.10.44
 networks:
   bmp-network:
     driver: bridge
