@@ -89,7 +89,7 @@ type PrinterUseCustomizeReq struct {
 
 // GetConfigInfoReq 获取配置信息请求
 type PrinterGetConfigInfoReq struct {
-	TemplateId    uint64 `json:"template_id"`    // 模板ID
-	CustomizeUuid uint64 `json:"customize_uuid"` // 定制UUID, 编辑的时候使用，新增的时候 传0
-	IsAdv         int    `json:"is_adv"`         // 是否高级模版 0=否, 1=是
+	TemplateId    uint64 `form:"template_id"`    // 模板ID
+	CustomizeUuid uint64 `form:"customize_uuid"` // 定制UUID, 编辑的时候使用，新增的时候 传0
+	IsAdv         int    `form:"is_adv"`         // 是否高级模版 0=否, 1=是
 }

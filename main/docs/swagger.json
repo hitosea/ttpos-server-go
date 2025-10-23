@@ -20818,13 +20818,27 @@
                 "summary": "获取配置信息",
                 "parameters": [
                     {
-                        "description": "获取配置信息请求",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.PrinterGetConfigInfoReq"
-                        }
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "模板ID",
+                        "name": "template_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "定制UUID, 编辑的时候使用，新增的时候 传0",
+                        "name": "customize_uuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "是否高级模版 0=否, 1=是",
+                        "name": "is_adv",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -34787,23 +34801,6 @@
                 },
                 "recharge_order_uuid": {
                     "description": "充值订单Uuid",
-                    "type": "integer"
-                }
-            }
-        },
-        "req.PrinterGetConfigInfoReq": {
-            "type": "object",
-            "properties": {
-                "customize_uuid": {
-                    "description": "定制UUID, 编辑的时候使用，新增的时候 传0",
-                    "type": "integer"
-                },
-                "is_adv": {
-                    "description": "是否高级模版 0=否, 1=是",
-                    "type": "integer"
-                },
-                "template_id": {
-                    "description": "模板ID",
                     "type": "integer"
                 }
             }

@@ -4516,18 +4516,6 @@ definitions:
     required:
     - recharge_order_uuid
     type: object
-  req.PrinterGetConfigInfoReq:
-    properties:
-      customize_uuid:
-        description: 定制UUID, 编辑的时候使用，新增的时候 传0
-        type: integer
-      is_adv:
-        description: 是否高级模版 0=否, 1=是
-        type: integer
-      template_id:
-        description: 模板ID
-        type: integer
-    type: object
   req.PrinterLogReq:
     properties:
       uuid:
@@ -25912,12 +25900,23 @@ paths:
       - application/json
       description: 获取配置信息
       parameters:
-      - description: 获取配置信息请求
-        in: body
-        name: data
+      - description: 模板ID
+        format: int64
+        in: query
+        name: template_id
         required: true
-        schema:
-          $ref: '#/definitions/req.PrinterGetConfigInfoReq'
+        type: integer
+      - description: 定制UUID, 编辑的时候使用，新增的时候 传0
+        format: int64
+        in: query
+        name: customize_uuid
+        required: true
+        type: integer
+      - description: 是否高级模版 0=否, 1=是
+        in: query
+        name: is_adv
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
