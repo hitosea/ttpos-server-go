@@ -78,8 +78,8 @@ func (*Controller) SaveMaterialRequest(ctx context.Context, req *stock.SaveMater
 			DeliveryDate:    requiredBy,
 			SourceWarehouse: req.SourceWarehouse,
 		}); err != nil {
-			//需要回退之前创建的采购订单
-			g.Log().Warningf(ctx, "创建内部销售订单失败，回退之前创建的采购订单:%s\n %v", resp.MaterialRequestName, err)
+			//需要回退之前创建的材料申请，erp会自动取消采购订单
+			g.Log().Warningf(ctx, "创建内部销售订单失败，回退之前创建的材料申请:%s\n %v", resp.MaterialRequestName, err)
 			service.Document().ChangeDocStatus(ctx, erp.DocTypeMaterialRequest, resp.MaterialRequestName, erp.DocstatusCancelled)
 			return rpc.ApiError(err.Error()), nil
 		}
@@ -92,8 +92,11 @@ func (*Controller) SaveMaterialRequest(ctx context.Context, req *stock.SaveMater
 			//TargetWarehouse: "", // TODO 取在途仓
 		})
 		if err != nil {
-			g.Log().Warningf(ctx, "创建发货单失败，回退之前创建的采购订单:%s\n %v", saleOrder.Name, err)
+			g.Log().Warningf(ctx, "创建发货单失败，回退之前创建的内部销售订单及材料申请:%s, %s\n %v", saleOrder.Name, resp.MaterialRequestName, err)
 			service.Document().ChangeDocStatus(ctx, erp.DocTypeSaleOrder, saleOrder.Name, erp.DocstatusCancelled)
+			service.Document().ChangeDocStatus(ctx, erp.DocTypePurchaseOrder, purchaseOrder.Name, erp.DocstatusCancelled)
+			service.Document().ChangeDocStatus(ctx, erp.DocTypeMaterialRequest, resp.MaterialRequestName, erp.DocstatusCancelled)
+
 			return rpc.ApiError(err.Error()), nil
 		}
 	}
