@@ -2147,5 +2147,6 @@
     "打印档口：": "Utskriftsdisk:",
     "请选择打印档口": "Vänligen välj utskriftsdisk",
     "整单备注": "Anmärkning för hela dokumentet",
-    "单品备注": "Produktanmärkning"
+    "单品备注": "Produktanmärkning",
+    "整单备注：这是整单备注备注": "Orderanmärkning: Detta är orderns anmärkning."
 }
