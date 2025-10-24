@@ -2149,5 +2149,7 @@
     "删除优惠券": "Delete Coupon",
     "打印提示音": "Print notification sound",
     "打印档口：": "Print Counter:",
-    "请选择打印档口": "Please select a print counter"
+    "请选择打印档口": "Please select a print counter",
+    "整单备注": "Remarks for the entire sheet",
+    "单品备注": "Item Remark"
 }
