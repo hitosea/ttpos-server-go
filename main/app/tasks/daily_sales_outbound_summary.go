@@ -106,8 +106,8 @@ func (t *DailySalesOutboundSummaryTask) ProcessCompany(company *model.Company) e
 	}
 
 	// 判断该营业时段是否已经统计过
-	year := time.Now().Year()
-	openingYearHours := fmt.Sprintf("%d %s", year, openingHours)
+	year := time.Now().Format("20060102") // 20251023
+	openingYearHours := fmt.Sprintf("%s %s", year, openingHours)
 	db := t.dbm.GetDB(company.Uuid)
 	warehouseLogRepo := repository.NewWarehouseInOutLogRepo(db)
 	opts := []repository.DBOption{
