@@ -47033,6 +47033,10 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "booked_quantity": {
+                    "description": "账面库存数量",
+                    "type": "number"
+                },
                 "category_uuid": {
                     "description": "物料分类UUID",
                     "type": "integer"
@@ -47072,10 +47076,6 @@ const docTemplate = `{
                 "status": {
                     "description": "状态：true-上架；false-下架，用于提交和审核通过时判断",
                     "type": "boolean"
-                },
-                "stock_quantity": {
-                    "description": "账面库存数量",
-                    "type": "number"
                 },
                 "units": {
                     "description": "所有单位（包含基准单位）",

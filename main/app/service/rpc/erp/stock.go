@@ -111,29 +111,29 @@ func (s *erpSrv) SubmitStockReconciliation(ctx cc.Context, companySetting model.
 }
 
 // 审核盘点单，对应erp的提交盘点单
-func (s *erpSrv) ApproveStockReconciliation(ctx cc.Context, companySetting model.CompanySetting, saveStockReconciliationReq *stock.SubmitStockReconciliationReq) (*stock.SubmitStockReconciliationReq, error) {
+func (s *erpSrv) ApproveStockReconciliation(ctx cc.Context, companySetting model.CompanySetting, saveStockReconciliationReq *stock.SubmitStockReconciliationReq) (*stock.SubmitStockReconciliationResp, error) {
 	client, conn, err := NewErpStockClient()
 	if err != nil {
-		return &stock.SubmitStockReconciliationReq{}, err
+		return &stock.SubmitStockReconciliationResp{}, err
 	}
 	defer conn.Close()
 
 	result, err := client.SubmitStockReconciliation(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), saveStockReconciliationReq)
 	if err != nil {
-		return &stock.SubmitStockReconciliationReq{}, err
+		return &stock.SubmitStockReconciliationResp{}, err
 	}
 	if result.Code != "0" {
-		return &stock.SubmitStockReconciliationReq{}, errors.New(result.Message)
+		return &stock.SubmitStockReconciliationResp{}, errors.New(result.Message)
 	}
 	if result.Data != nil {
-		var resp stock.SubmitStockReconciliationReq
+		var resp stock.SubmitStockReconciliationResp
 		if err := result.Data.UnmarshalTo(&resp); err != nil {
 			logger.Logger.Error("SubmitStockReconciliation-UnmarshalTo", zap.Any("err", err))
-			return &stock.SubmitStockReconciliationReq{}, err
+			return &stock.SubmitStockReconciliationResp{}, err
 		}
 		return &resp, nil
 	}
-	return &stock.SubmitStockReconciliationReq{}, nil
+	return &stock.SubmitStockReconciliationResp{}, nil
 }
 
 // 驳回盘点单，对应erp取消盘点单

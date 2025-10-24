@@ -26,8 +26,8 @@ type StockReconciliationItemReq struct {
 
 // StockReconciliationItemUnitReq 盘点单物品单位明细请求
 type StockReconciliationItemUnitReq struct {
-	MaterialUnitUuid uint64          `json:"material_unit_uuid" binding:"required"` // 单位UUID
-	Quantity         decimal.Decimal `json:"quantity"`                              // 单位数量
+	MaterialUnitUuid uint64           `json:"material_unit_uuid" binding:"required"` // 单位UUID
+	Quantity         *decimal.Decimal `json:"quantity"`                              // 单位数量
 }
 
 // StockReconciliationSaveReq 更新盘点单请求

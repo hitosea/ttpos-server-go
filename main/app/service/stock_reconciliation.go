@@ -130,6 +130,20 @@ func (s *stockReconciliationSrv) GetStockReconciliationList(ctx context.Context,
 	}, nil
 }
 
+// getBookedStockMap 获取仓库物品的账面库存数量
+func (s *stockReconciliationSrv) getBookedQuantityMap(db *gorm.DB, warehouseUuid uint64) (map[uint64]decimal.Decimal, error) {
+	bookedStockMap := make(map[uint64]decimal.Decimal)
+	warehouseItemRepo := repository.NewWarehouseItemRepo(db)
+	warehouseItems, err := warehouseItemRepo.GetWarehouseMaterials(warehouseItemRepo.WhereWarehouseUuid(warehouseUuid))
+	if err != nil {
+		return bookedStockMap, errors.WithMessage(err, "查询仓库物品列表失败")
+	}
+	for _, warehouseItem := range warehouseItems {
+		bookedStockMap[warehouseItem.MaterialUuid] = decimal.NewFromFloat(warehouseItem.Stock)
+	}
+	return bookedStockMap, nil
+}
+
 // GetStockReconciliationDetail 获取盘点单详情
 func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Context, req req.StockReconciliationDetailReq) (resp.StockReconciliationDetailResp, error) {
 	db := ctx.GetDB()
@@ -155,6 +169,11 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 		return resp.StockReconciliationDetailResp{}, errors.WithMessage(err, "转换盘点单数据失败")
 	}
 	detailResp.WarehouseName = stockReconciliation.Warehouse.MultiLanguageName.GetNames()
+
+	bookedQuantityMap, err := s.getBookedQuantityMap(db, stockReconciliation.WarehouseUuid)
+	if err != nil {
+		return resp.StockReconciliationDetailResp{}, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
+	}
 
 	// 查询物品单位明细
 	materialRepo := repository.NewMaterialRepo(db)
@@ -188,6 +207,7 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 					UnitUuid:         unit.UnitUuid,
 					UnitName:         unit.Unit.MultiLanguageName.GetNames(),
 					ConversionRate:   unit.ConversionRate,
+					IsDefault:        unit.IsDefault,
 				})
 			}
 		}
@@ -213,16 +233,21 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 			itemInfo.ItemUnits = unitsResp
 		}
 
+		bookedQuantity := item.BookedQuantity
+		// 已保存状态，账面库存数量要实时读取；其他状态，账面库存数量为盘点单中的数量
+		if stockReconciliation.Status == constant.StockReconciliationStatusSaved {
+			bookedQuantity = bookedQuantityMap[item.MaterialUuid]
+		}
 		// 盘盈盘亏状态
-		if item.CountedQuantity.GreaterThan(item.BookedQuantity) {
+		if item.CountedQuantity.GreaterThan(bookedQuantity) {
 			itemInfo.InventoryStatus = constant.StockReconciliationInventoryStatusProfit
-		} else if item.CountedQuantity.LessThan(item.BookedQuantity) {
+		} else if item.CountedQuantity.LessThan(bookedQuantity) {
 			itemInfo.InventoryStatus = constant.StockReconciliationInventoryStatusLoss
 		} else {
 			itemInfo.InventoryStatus = constant.StockReconciliationInventoryStatusNormal
 		}
 		// 是否盘盈盘亏异常（账面和实盘数量差值的绝对值大于20%）
-		itemInfo.IsInventoryStatusException = item.CountedQuantity.Sub(item.BookedQuantity).Abs().Div(item.BookedQuantity).GreaterThan(decimal.NewFromFloat(0.2))
+		itemInfo.IsInventoryStatusException = item.CountedQuantity.Sub(bookedQuantity).Abs().Div(bookedQuantity).GreaterThan(decimal.NewFromFloat(0.2))
 
 		itemsResp = append(itemsResp, itemInfo)
 	}
@@ -275,7 +300,7 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 	// A、在列表上直接提交
 	if saveReq.IsSubmit && !saveReq.SubmitAfterSave && saveReq.Uuid > 0 {
 		// 直接提交
-		return stockReconciliationUuid, s.submitStockReconciliation(ctx, saveReq.Uuid)
+		return stockReconciliationUuid, s.submitStockReconciliation(ctx, saveReq.Uuid, true)
 	}
 
 	// B、在详情中保存或者提交
@@ -286,9 +311,9 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 		return stockReconciliationUuid, err
 	}
 
-	materialUuidStockMap := map[uint64]float64{}
+	bookedQuantityMap := map[uint64]float64{}
 	for _, warehouseItem := range warehouseItems {
-		materialUuidStockMap[warehouseItem.MaterialUuid] = warehouseItem.Stock
+		bookedQuantityMap[warehouseItem.MaterialUuid] = warehouseItem.Stock
 	}
 
 	materialUnitMap := make(map[uint64]map[uint64]float64)
@@ -307,7 +332,7 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 			// 在事务内部生成单据编号
 			orderNo := s.generateOrderNo(tx, timezone)
 			// 创建盘点单
-			stockReconciliation := &model.StockReconciliation{
+			stockReconciliation = &model.StockReconciliation{
 				OrderNo:       orderNo,
 				Type:          saveReq.Type,
 				WarehouseUuid: saveReq.WarehouseUuid,
@@ -344,6 +369,9 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 			countedQuantity := decimal.Zero
 			if len(reqItem.Units) > 0 {
 				for _, unitItem := range reqItem.Units {
+					if unitItem.Quantity == nil {
+						continue
+					}
 					conversionRate := materialUnitMap[reqItem.MaterialUuid][unitItem.MaterialUnitUuid]
 					unitQuantity := unitItem.Quantity.Mul(decimal.NewFromFloat(conversionRate))
 					countedQuantity = countedQuantity.Add(unitQuantity)
@@ -354,7 +382,7 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 			item := &model.StockReconciliationItem{
 				StockReconciliationUuid: stockReconciliation.Uuid,
 				MaterialUuid:            reqItem.MaterialUuid,
-				BookedQuantity:          decimal.NewFromFloat(materialUuidStockMap[reqItem.MaterialUuid]),
+				BookedQuantity:          decimal.NewFromFloat(bookedQuantityMap[reqItem.MaterialUuid]), // 每次保存都实时读取账面库存数量
 				CountedQuantity:         countedQuantity,
 			}
 
@@ -365,17 +393,23 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 
 			// 创建单位明细
 			for _, unitItem := range reqItem.Units {
-				quantity := unitItem.Quantity.InexactFloat64()
+				var quantity *float64
+				if unitItem.Quantity != nil {
+					quantityDecimal := unitItem.Quantity.InexactFloat64()
+					quantity = &quantityDecimal
+				}
 				stockReconciliationItemUnits = append(stockReconciliationItemUnits, &model.StockReconciliationItemUnit{
 					StockReconciliationItemUuid: item.Uuid,
 					MaterialUnitUuid:            unitItem.MaterialUnitUuid,
-					Quantity:                    &quantity,
+					Quantity:                    quantity,
 				})
 			}
 		}
 
-		if err := stockReconciliationRepo.CreateStockReconciliationItemUnitBatch(stockReconciliationItemUnits); err != nil {
-			return errors.WithMessage(errors.New("创建盘点单物品单位明细失败"), err.Error())
+		if len(stockReconciliationItemUnits) > 0 {
+			if err := stockReconciliationRepo.CreateStockReconciliationItemUnitBatch(stockReconciliationItemUnits); err != nil {
+				return errors.WithMessage(errors.New("创建盘点单物品单位明细失败"), err.Error())
+			}
 		}
 
 		return nil
@@ -391,7 +425,7 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 
 	// 提交盘点单
 	if saveReq.IsSubmit && ctx.GetCompany().IsOpenErp() {
-		err = s.submitStockReconciliation(ctx, stockReconciliation.Uuid)
+		err = s.submitStockReconciliation(ctx, stockReconciliation.Uuid, false)
 		if err != nil {
 			return stockReconciliationUuid, errors.WithMessage(err, "提交盘点单失败")
 		}
@@ -400,7 +434,10 @@ func (s *stockReconciliationSrv) SaveStockReconciliation(ctx context.Context, sa
 	return stockReconciliationUuid, nil
 }
 
-func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, stockReconciliationUuid uint64) error {
+// 提交盘点单
+// stockReconciliationUuid: 盘点单UUID
+// isDirectSubmit: 是否列表上直接提交，true表示在列表上点击提交，false表示保存后提交
+func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, stockReconciliationUuid uint64, isDirectSubmit bool) error {
 	db := ctx.GetDB()
 	stockReconciliationRepo := repository.NewStockReconciliationRepo(db)
 
@@ -416,6 +453,15 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 	}
 	if stockReconciliation == nil {
 		return errors.New("盘点单不存在")
+	}
+
+	bookedQuantityMap := make(map[uint64]decimal.Decimal)
+	if isDirectSubmit {
+		var err error
+		bookedQuantityMap, err = s.getBookedQuantityMap(db, stockReconciliation.WarehouseUuid)
+		if err != nil {
+			return errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
+		}
 	}
 
 	companySetting := ctx.GetCompanySetting()
@@ -438,6 +484,15 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 			if item.DeleteTime > 0 {
 				continue
 			}
+
+			if isDirectSubmit {
+				stockReconciliationItem := *item
+				stockReconciliationItem.BookedQuantity = bookedQuantityMap[item.MaterialUuid]
+				if err := stockReconciliationRepo.UpdateStockReconciliationItem(&stockReconciliationItem); err != nil {
+					return errors.WithMessage(errors.New("更新盘点单物品明细失败"), err.Error())
+				}
+			}
+
 			erpItems = append(erpItems, &stock.StockReconciliationItem{
 				ItemCode: item.Material.Code,
 				Qty:      item.CountedQuantity.InexactFloat64(),
@@ -449,6 +504,9 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 		return errors.WithMessage(errors.New("提交盘点单失败"), err.Error())
 	}
 
+	if len(erpItems) == 0 {
+		return errors.New("物品列表为空，请先添加物品后再操作")
+	}
 	erpSrv := erp.NewIErpSrv(s.dbm)
 	erpReq, err := erpSrv.SubmitStockReconciliation(ctx, companySetting, &stock.SaveStockReconciliationReq{
 		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
@@ -773,24 +831,19 @@ func (s *stockReconciliationSrv) validateWarehouseAndItems(db *gorm.DB, req req.
 			return nil, nil, errors.New("物品参数错误")
 		}
 
+		unitExists := false
 		// 验证物品单位
 		for _, unit := range item.Units {
-			unitExists := false
-			// 检查基准单位
-			if material.Unit != nil && unit.MaterialUnitUuid == material.Unit.Uuid {
-				unitExists = true
-			} else {
-				// 检查非基准单位列表
-				for _, materialUnit := range material.NotBaseUnitList {
-					if unit.MaterialUnitUuid == materialUnit.Uuid {
-						unitExists = true
-						break
-					}
+			// 检查单位列表
+			for _, materialUnit := range material.NotBaseUnitList {
+				if unit.MaterialUnitUuid == materialUnit.Uuid && unit.Quantity != nil {
+					unitExists = true
+					break
 				}
 			}
-			if !unitExists {
-				return nil, nil, errors.New("物品单位参数错误")
-			}
+		}
+		if !unitExists && req.IsSubmit {
+			return nil, nil, errors.New("物品单位参数错误")
 		}
 	}
 
