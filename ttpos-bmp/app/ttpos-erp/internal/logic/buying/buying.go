@@ -47,7 +47,22 @@ func (s *sBuying) CreatePurchaseFromMq(ctx context.Context, req *dto.CreatePurch
 	purchaseOrder.Currency = purchaseOrder.PriceListCurrency
 	purchaseOrder.Supplier = req.Supplier
 	purchaseOrder.ScheduleDate = req.RequiredBy
-	//purchaseOrder.
+
+	//设置采购价格
+	if req.BuyingPriceList != "" {
+		purchaseOrder.BuyingPriceList = req.BuyingPriceList
+	} else {
+		//获取默认采购价格表
+		defaultPriceList, err := service.PosPriceList().GetPosPriceListByCompany(ctx, purchaseOrder.Company)
+		if err != nil {
+			g.Log().Warningf(ctx, "获取采购价格表失败，company: %s", purchaseOrder.Company)
+			defaultPriceList, err = service.PosPriceList().GetDefaultPosPriceList(ctx)
+			if err != nil {
+				return nil, gerror.Wrapf(err, "获取默认采购价格表失败")
+			}
+		}
+		purchaseOrder.BuyingPriceList = defaultPriceList.BuyingPriceList
+	}
 
 	//创建采购订单
 	resp, err = service.Document().Create(ctx, erp.DocTypePurchaseOrder, purchaseOrder)
@@ -105,7 +120,23 @@ func (*sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req *
 		salesOrder.SetWarehouse = warehouse.Name
 	}
 
-	//创建采购订单
+	//设置采购价格
+	if req.SellingPriceList != "" {
+		salesOrder.SellingPriceList = req.SellingPriceList
+	} else {
+		//获取默认销售价格表
+		defaultPriceList, err := service.PosPriceList().GetPosPriceListByCompany(ctx, salesOrder.Company)
+		if err != nil {
+			g.Log().Warningf(ctx, "获取销售价格表失败，company: %s", salesOrder.Company)
+			defaultPriceList, err = service.PosPriceList().GetDefaultPosPriceList(ctx)
+			if err != nil {
+				return nil, gerror.Wrapf(err, "获取默认销售价格表失败")
+			}
+		}
+		salesOrder.SellingPriceList = defaultPriceList.SellingPriceList
+	}
+
+	//创建内部销售订单
 	resp, err = service.Document().Create(ctx, erp.DocTypeSaleOrder, salesOrder)
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建内部销售订单失败")
