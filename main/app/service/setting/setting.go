@@ -19,9 +19,11 @@ import (
 	errors2 "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
 
@@ -31,6 +33,7 @@ import (
 	"github.com/nahid/gohttp"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 type GetSettingReq struct {
@@ -1529,7 +1532,11 @@ func (s *Srv) UpdateSetting(ctx context.Context, settingKey string, values any) 
 		value = strings.ReplaceAll(value, "\"logo_url\"", "\"logoUrl\"")
 		value = strings.ReplaceAll(value, "\"avatar_url\"", "\"avatarUrl\"")
 	}
-	settingRepo := repository.NewSettingRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+	db := ctx.GetDB()
+	if db == nil {
+		db = s.dbm.GetDB(ctx.GetCompanyUuid())
+	}
+	settingRepo := repository.NewSettingRepo(db)
 	set := settingRepo.GetByKey(settingKey)
 	if set.Key == "" {
 		if _, err := settingRepo.Create(model.Setting{
@@ -1565,6 +1572,7 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 	if err != nil {
 		return errors.WithMessage(err)
 	}
+	company := ctx.GetCompany()
 
 	// 判断saas库中商家名称是否已存在
 	saasCompanyRepo := repository.NewCompanyRepo(saasDB)
@@ -1599,42 +1607,14 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 
 	storeSetting.LogoURL = storeSettingReq.LogoUrl
 	storeSetting.Company = storeSettingReq.CompanyName
-	// 保存设置到store_setting表
-	err = s.UpdateSetting(ctx, constant.SettingStore, storeSetting)
-	if err != nil {
-		return errors.WithMessage(errors.New("保存失败"), err.Error())
-	}
-
-	// 保存到saas.company_setting\saas.company\商家company_setting\商家company表
-	saasDB.Model(&model.Company{}).Where("uuid = ?", companyUuid).Updates(map[string]any{
-		"name": storeSettingReq.Name,
-		"logo": storeSettingReq.LogoUrl,
-	})
-
-	saasDB.Model(&model.CompanySetting{}).Where("company_uuid = ?", companyUuid).Updates(map[string]any{
-		"timezone":    storeSettingReq.TimeZone,
-		"link_phone":  storeSettingReq.Phone,
-		"address":     storeSettingReq.Address,
-		"coordinates": storeSettingReq.Coordinates,
-	})
-	companyDB.Model(&model.Company{}).Where("uuid = ?", companyUuid).Updates(map[string]any{
-		"name": storeSettingReq.Name,
-		"logo": storeSettingReq.LogoUrl,
-	})
-	companyDB.Model(&model.CompanySetting{}).Where("company_uuid = ?", companyUuid).Updates(map[string]any{
-		"timezone":    storeSettingReq.TimeZone,
-		"link_phone":  storeSettingReq.Phone,
-		"address":     storeSettingReq.Address,
-		"coordinates": storeSettingReq.Coordinates,
-	})
 
 	// ##### 处理 cashier tablet h5 kitchen assistant printer 各端的语言设置 #####
+	// ##### 1、处理 cashier 设置 #####
+	cashierSetting, err := s.GetCashierSetting(ctx, storeSettingReq.Language)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
 	{
-		// 1、处理 cashier 设置
-		cashierSetting, err := s.GetCashierSetting(ctx, storeSettingReq.Language)
-		if err != nil {
-			return errors.WithMessage(err)
-		}
 		// 去掉cashierSetting.Language中不在storeSettingReq.Language中的语言
 		for _, language := range cashierSetting.Language {
 			if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
@@ -1656,13 +1636,14 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 		}
 		// 清除 cashierSetting.LanguageList 中的数据
 		cashierSetting.LanguageList = []dto.LanguageItem{}
-		s.UpdateSetting(ctx, constant.SettingCashier, cashierSetting)
+	}
 
-		// 2、处理 tablet 设置
-		tabletSetting, err := s.GetTabletSetting(ctx, storeSettingReq.Language)
-		if err != nil {
-			return errors.WithMessage(err)
-		}
+	// ##### 2、处理 tablet 设置 #####
+	tabletSetting, err := s.GetTabletSetting(ctx, storeSettingReq.Language)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	{
 		// 去掉tabletSetting.Language中不在storeSettingReq.Language中的语言
 		for _, language := range tabletSetting.Language {
 			if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
@@ -1683,14 +1664,14 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 			tabletSetting.DefaultLanguage = tabletSetting.Language[0]
 		}
 		tabletSetting.LanguageList = nil
-		s.UpdateSetting(ctx, constant.SettingTablet, tabletSetting)
+	}
 
-		// 3、处理 h5 设置
-		h5Setting, err := s.GetH5Setting(ctx, storeSettingReq.Language)
-		if err != nil {
-			return errors.WithMessage(err)
-		}
-
+	// ##### 3、处理 h5 设置 #####
+	h5Setting, err := s.GetH5Setting(ctx, storeSettingReq.Language)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	{
 		// 去掉h5Setting.Language中不在storeSettingReq.Language中的语言
 		for _, language := range h5Setting.Language {
 			if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
@@ -1711,13 +1692,14 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 			h5Setting.DefaultLanguage = h5Setting.Language[0]
 		}
 		h5Setting.LanguageList = nil
-		s.UpdateSetting(ctx, constant.SettingH5, h5Setting)
+	}
 
-		// 4、处理 kitchen 设置
-		kitchenSetting, err := s.GetKitchenSetting(ctx, companySetting, storeSettingReq.Language)
-		if err != nil {
-			return errors.WithMessage(err)
-		}
+	// ##### 4、处理 kitchen 设置 #####
+	kitchenSetting, err := s.GetKitchenSetting(ctx, companySetting, storeSettingReq.Language)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	{
 		// 去掉kitchenSetting.Language中不在storeSettingReq.Language中的语言
 		for _, language := range kitchenSetting.Language {
 			if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
@@ -1738,13 +1720,14 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 			kitchenSetting.DefaultLanguage = kitchenSetting.Language[0]
 		}
 		kitchenSetting.LanguageList = nil
-		s.UpdateSetting(ctx, constant.SettingKitchen, kitchenSetting)
+	}
 
-		// 5、处理 assistant 设置
-		assistantSetting, err := s.GetAssistantSetting(ctx, storeSettingReq.Language)
-		if err != nil {
-			return errors.WithMessage(err)
-		}
+	// ##### 5、处理 assistant 设置 #####
+	assistantSetting, err := s.GetAssistantSetting(ctx, storeSettingReq.Language)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	{
 		// 去掉assistantSetting.Language中不在storeSettingReq.Language中的语言
 		for _, language := range assistantSetting.Language {
 			if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
@@ -1765,13 +1748,14 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 			assistantSetting.DefaultLanguage = assistantSetting.Language[0]
 		}
 		assistantSetting.LanguageList = nil
-		s.UpdateSetting(ctx, constant.SettingAssistant, assistantSetting)
+	}
 
-		// 6、处理 printer 设置
-		printerSetting, err := s.GetPrinterSetting(ctx, storeSettingReq.Language)
-		if err != nil {
-			return errors.WithMessage(err)
-		}
+	// ##### 6、处理 printer 设置 #####
+	printerSetting, err := s.GetPrinterSetting(ctx, storeSettingReq.Language)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	{
 		// 去掉printerSetting.Language中不在storeSettingReq.Language中的语言
 		for _, language := range printerSetting.Language {
 			if !slices.ContainsFunc(storeSettingReq.Language, func(item dto.LanguageItem) bool {
@@ -1798,7 +1782,90 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 			printerSetting.KitchenLanguage = printerSetting.Language[0]
 		}
 		printerSetting.LanguageList = nil
-		s.UpdateSetting(ctx, constant.SettingPrinter, printerSetting)
+	}
+
+	updateCompany := map[string]any{
+		"name": storeSettingReq.Name,
+		"logo": storeSettingReq.LogoUrl,
+	}
+	updateCompanySetting := map[string]any{
+		"timezone":    storeSettingReq.TimeZone,
+		"link_phone":  storeSettingReq.Phone,
+		"address":     storeSettingReq.Address,
+		"coordinates": storeSettingReq.Coordinates,
+	}
+
+	err = companyDB.Transaction(func(tx *gorm.DB) error {
+		// 保存到saas.company_setting\saas.company\商家company_setting\商家company表
+		err := saasDB.Transaction(func(tx *gorm.DB) error {
+			if err := tx.Model(&model.Company{}).Where("uuid = ?", companyUuid).Updates(updateCompany).Error; err != nil {
+				return errors.WithMessage(errors.New("保存saas.company设置失败"), err.Error())
+			}
+			if err := tx.Model(&model.CompanySetting{}).Where("company_uuid = ?", companyUuid).Updates(updateCompanySetting).Error; err != nil {
+				return errors.WithMessage(errors.New("保存saas.company_setting设置失败"), err.Error())
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		if err := tx.Model(&model.Company{}).Where("uuid = ?", companyUuid).Updates(updateCompany).Error; err != nil {
+			return errors.WithMessage(errors.New("保存商家company设置失败"), err.Error())
+		}
+		if err := tx.Model(&model.CompanySetting{}).Where("company_uuid = ?", companyUuid).Updates(updateCompanySetting).Error; err != nil {
+			return errors.WithMessage(errors.New("保存store设置失败"), err.Error())
+		}
+
+		ctx.SetDB(tx)
+		// 保存设置到store_setting表
+		if err := s.UpdateSetting(ctx, constant.SettingStore, storeSetting); err != nil {
+			return errors.WithMessage(errors.New("保存store设置失败"), err.Error())
+		}
+		if err := s.UpdateSetting(ctx, constant.SettingCashier, cashierSetting); err != nil {
+			return errors.WithMessage(errors.New("保存cashier设置失败"), err.Error())
+		}
+		if err := s.UpdateSetting(ctx, constant.SettingTablet, tabletSetting); err != nil {
+			return errors.WithMessage(errors.New("保存tablet设置失败"), err.Error())
+		}
+		if err := s.UpdateSetting(ctx, constant.SettingH5, h5Setting); err != nil {
+			return errors.WithMessage(errors.New("保存h5设置失败"), err.Error())
+		}
+		if err := s.UpdateSetting(ctx, constant.SettingKitchen, kitchenSetting); err != nil {
+			return errors.WithMessage(errors.New("保存kitchen设置失败"), err.Error())
+		}
+		if err := s.UpdateSetting(ctx, constant.SettingAssistant, assistantSetting); err != nil {
+			return errors.WithMessage(errors.New("保存assistant设置失败"), err.Error())
+		}
+		if err := s.UpdateSetting(ctx, constant.SettingPrinter, printerSetting); err != nil {
+			return errors.WithMessage(errors.New("保存printer设置失败"), err.Error())
+		}
+
+		// 总店修改商家名称，更新Headquarters - Supplier供应商名称
+		if company.IsOpenErp() && companySetting.IsHeadquarter() {
+			erpSrv := erp.NewIErpSrv(s.dbm)
+			err = erpSrv.UpdateSupplier(ctx.GetContext(), req.UpdateSupplierReq{
+				CreateSupplierReq: req.CreateSupplierReq{
+					SiteCode:     companySetting.ErpnextSiteCode,
+					CompanyAbbr:  companySetting.ErpnextCompanyAbbr,
+					Branch:       companySetting.ErpnextBranchName,
+					SupplierName: storeSettingReq.Name,
+				},
+				Name: constant.ErpHeadquartersSupplierCode,
+			})
+			if err != nil {
+				return errors.WithMessage(errors.New("更新Headquarters - Supplier供应商名称失败"), err.Error())
+			}
+			if err := tx.Model(&model.Supplier{}).Where("headquarter_uuid = 0 AND erp_code = ?", constant.ErpHeadquartersSupplierCode).Update("name", storeSettingReq.Name).Error; err != nil {
+				return errors.WithMessage(errors.New("更新Headquarters - Supplier供应商名称失败"), err.Error())
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		logger.Logger.Error("保存设置失败", zap.Error(err))
+		return errors.WithMessage(errors.New("保存失败"), err.Error())
 	}
 
 	// 删除系统设置缓存
