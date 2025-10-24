@@ -95,6 +95,9 @@
       <div class="box-border one-menu">
         <template v-if="mode == 1">
           <p class="font24"> {{ $t('桌位: A01 (4人)') }} </p>
+          <div class="text-order—remark">
+            {{ $t('整单备注：这是整单备注备注') }}
+          </div>
           <p class="mb-14"> <span class="span1">2024/05/04 14:15:12</span> </p>
           <p>
             <span class="span3">{{ $t('（打包）') }}{{ $t('商品名称商品名称') }}</span> <span class="span3">X1</span>
@@ -119,6 +122,9 @@
           <h3>
             {{ $t('桌位: A01 (4人)') }}
           </h3>
+          <div class="text-order—remark">
+            {{ $t('整单备注：这是整单备注备注') }}
+          </div>
           <p>
             <span class="span3">{{ $t('（打包）') }}{{ $t('商品名称商品名称') }}</span> <span class="span3">X1</span>
           </p>
@@ -161,16 +167,28 @@
         </div>
       </div>
       <div class="tabs-box" v-if="detail">
-        <div @click="customizeChange(detail?.default_tpl)" v-if="detail?.default_tpl?.name" class="tabs-button" :class="detail?.default_tpl?.customize_uuid == customize_uuid ? 'tabs-active' : ''">
+        <div
+          @click="customizeChange(detail?.default_tpl)"
+          v-if="detail?.default_tpl?.name"
+          class="tabs-button"
+          :class="detail?.default_tpl?.customize_uuid == customize_uuid ? 'tabs-active' : ''"
+        >
           {{ $t(detail?.default_tpl?.name) }}
         </div>
-        <div @click="customizeChange(item)" v-if="detail?.is_adv_receipt_tpl" v-for="item in detail?.adv_receipt_tpls" :key="item.customize_uuid" class="tabs-button" :class="item.customize_uuid == customize_uuid ? 'tabs-active' : ''">
+        <div
+          @click="customizeChange(item)"
+          v-if="detail?.is_adv_receipt_tpl"
+          v-for="item in detail?.adv_receipt_tpls"
+          :key="item.customize_uuid"
+          class="tabs-button"
+          :class="item.customize_uuid == customize_uuid ? 'tabs-active' : ''"
+        >
           {{ $t(item.name) }}
         </div>
       </div>
       <div class="box-border" v-if="imgUrl">
         <p class="title-name">
-          <img style="width: 100%; height: 100%;" :src="imgUrl" alt="" class="logo" />
+          <img style="width: 100%; height: 100%" :src="imgUrl" alt="" class="logo" />
         </p>
       </div>
       <div v-else class="box-border">
@@ -267,6 +285,9 @@
           <h3 v-if="mode == 2 || mode == 3">
             {{ $t('桌位: A01 (4人)') }}
           </h3>
+          <div class="text-order—remark">
+            {{ $t('整单备注：这是整单备注备注') }}
+          </div>
         </template>
         <template v-if="title == $t('退菜单')">
           <h2 class="mb-8" v-if="mode == 2">*******************************************</h2>
@@ -275,12 +296,18 @@
           <h4 class="Invoice-h4 mb-8" v-if="mode == 1 || mode == 2">
             {{ $t('桌位: A01 (4人)') }}
           </h4>
+          <div class="text-order—remark">
+            {{ $t('整单备注：这是整单备注备注') }}
+          </div>
         </template>
         <template v-if="title == $t('出菜单')">
           <h4 class="mb-8"> {{ $t('出菜单') }}</h4>
           <h4 class="Invoice-h4 mb-8">
             {{ $t('桌号/序号/外送: A01 (4人)') }}
           </h4>
+          <div class="text-order—remark">
+            {{ $t('整单备注：这是整单备注备注') }}
+          </div>
         </template>
         <!-- 小字的数据 -->
         <div
@@ -456,7 +483,7 @@
       this.brand = this.cloudBasic.base.brand_name;
       this.is_show_sku = this.isShowSku;
       this.customize_uuid = this.tmpUuid;
-      this.mode =  this.tmpUuid ? 0 : this.template;
+      this.mode = this.tmpUuid ? 0 : this.template;
       if (this.title == $t('交班单')) {
         if (this.mode == 1) {
           this.details = previewData.one;
@@ -535,7 +562,7 @@
         SettingApi.printerTemplateDetail(Params, true).then((data) => {
           self.detail = data.data;
           if (this.customize_uuid != 0) {
-            let customize = self.detail?.adv_receipt_tpls?.find(item => item.customize_uuid == this.customize_uuid);
+            let customize = self.detail?.adv_receipt_tpls?.find((item) => item.customize_uuid == this.customize_uuid);
             if (customize) {
               self.customizeChange(customize);
             } else if (self.detail?.default_tpl) {
@@ -600,7 +627,7 @@
       modeChange(e) {
         this.mode = e;
         this.customize_uuid = 0;
-        this.imgUrl = "";
+        this.imgUrl = '';
         if (this.title == $t('发票')) {
           if (e == 1) {
             this.details = previewData.seven;
@@ -773,6 +800,17 @@
 
   .box-border .Invoice-h4 {
     margin-bottom: 0;
+  }
+  
+  .text-order—remark{
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--el-color-black);
+    margin-bottom: 12px;
+    margin-top: 4px;
+    border-top: 1px dashed var(--el-color-black);
+    border-bottom: 1px dashed var(--el-color-black);
+    padding: 12px 0;
   }
 
   .box-border h4.mb-8 {

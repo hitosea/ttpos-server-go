@@ -6331,6 +6331,17 @@ definitions:
     required:
     - uuid
     type: object
+  req.StockReconciliationCheckMaterialsReq:
+    properties:
+      material_uuids:
+        description: 待盘点物品UUID列表
+        items:
+          type: integer
+        type: array
+      uuid:
+        description: 盘点单UUID
+        type: integer
+    type: object
   req.StockReconciliationDeleteReq:
     properties:
       uuid:
@@ -12052,6 +12063,33 @@ definitions:
           $ref: '#/definitions/dto.LocaleResponse'
         type: array
     type: object
+  resp.StockReconciliationCheckMaterialsListResp:
+    properties:
+      list:
+        description: 物品列表
+        items:
+          $ref: '#/definitions/resp.StockReconciliationCheckMaterialsResp'
+        type: array
+    type: object
+  resp.StockReconciliationCheckMaterialsResp:
+    properties:
+      is_deleted:
+        description: 是否已删除
+        type: boolean
+      is_inventory_status_exception:
+        description: 是否盈亏异常
+        type: boolean
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物品名称
+      status:
+        description: 物品状态,true上架 false下架
+        type: boolean
+      unit_count:
+        description: 单位数量
+        type: integer
+    type: object
   resp.StockReconciliationDetailResp:
     properties:
       create_time:
@@ -12812,6 +12850,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.MaterialUnitInfo'
         description: 基准单位
+      booked_quantity:
+        description: 账面库存数量
+        type: number
       category_uuid:
         description: 物料分类UUID
         type: integer
@@ -12840,9 +12881,6 @@ definitions:
       status:
         description: 状态：true-上架；false-下架，用于提交和审核通过时判断
         type: boolean
-      stock_quantity:
-        description: 账面库存数量
-        type: number
       units:
         description: 所有单位（包含基准单位）
         items:
@@ -28928,6 +28966,39 @@ paths:
       security:
       - JwtToken: []
       summary: 审核盘点单
+      tags:
+      - 商家端.盘点管理
+  /shop/stock_reconciliation/check_materials:
+    post:
+      consumes:
+      - application/json
+      description: 检查物品
+      parameters:
+      - description: 检查物品请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.StockReconciliationCheckMaterialsReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.StockReconciliationCheckMaterialsListResp'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 检查物品
       tags:
       - 商家端.盘点管理
   /shop/stock_reconciliation/delete:
