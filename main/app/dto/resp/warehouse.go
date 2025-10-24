@@ -81,7 +81,7 @@ type WarehouseMaterialInfo struct {
 	MaterialCode    string             `json:"material_code"`    // 物品编码
 	MaterialBarcode string             `json:"material_barcode"` // 物品条形码
 	InternalCode    string             `json:"internal_code"`    // 内部编码
-	StockQuantity   float64            `json:"stock_quantity"`   // 账面库存数量
+	BookedQuantity  float64            `json:"booked_quantity"`  // 账面库存数量
 	BaseUnit        MaterialUnitInfo   `json:"base_unit"`        // 基准单位
 	Units           []MaterialUnitInfo `json:"units"`            // 所有单位（包含基准单位）
 	CategoryUuid    uint64             `json:"category_uuid"`    // 物料分类UUID

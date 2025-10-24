@@ -70,3 +70,15 @@ type StockReconciliationUuidResp struct {
 type StockReconciliationApproveResp struct {
 	List []dto.LocaleResponse `json:"list"` // 禁用物品列表
 }
+
+type StockReconciliationCheckMaterialsResp struct {
+	LocaleName                 dto.LocaleResponse `json:"locale_name"`                   // 物品名称
+	IsInventoryStatusException bool               `json:"is_inventory_status_exception"` // 是否盈亏异常
+	Status                     bool               `json:"status"`                        // 物品状态,true上架 false下架
+	IsDeleted                  bool               `json:"is_deleted"`                    // 是否已删除
+	UnitCount                  uint               `json:"unit_count"`                    // 单位数量
+}
+
+type StockReconciliationCheckMaterialsListResp struct {
+	List []StockReconciliationCheckMaterialsResp `json:"list"` // 物品列表
+}

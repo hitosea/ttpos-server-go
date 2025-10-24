@@ -492,15 +492,13 @@ func (s *warehouseSrv) buildWarehouseInOutResp(log model.WarehouseInOutLog) resp
 		warehouseName = log.Warehouse.MultiLanguageName.GetNames()
 	}
 
-	// 转换类型
-	typeStr := ""
-	switch log.Scene {
-	case 0:
-		typeStr = "purchase"
-	case 1:
-		typeStr = "sale"
-	case 2:
-		typeStr = "delivery"
+	// 类型
+	typeStrMap := map[int]string{
+		constant.WarehouseInOutLogScenePurchase: "purchase",
+		constant.WarehouseInOutLogSceneSale:     "sale",
+		constant.WarehouseInOutLogSceneDelivery: "delivery",
+		constant.WarehouseInOutLogSceneProfitIn: "profit_in",
+		constant.WarehouseInOutLogSceneLossOut:  "loss_out",
 	}
 
 	// 格式化日期
@@ -512,7 +510,7 @@ func (s *warehouseSrv) buildWarehouseInOutResp(log model.WarehouseInOutLog) resp
 	return resp.WarehouseInOutResp{
 		Uuid:    log.Uuid,
 		OrderNo: log.OrderNo,
-		Type:    typeStr,
+		Type:    typeStrMap[log.Scene],
 		Date:    date,
 		Num:     log.Num,
 		Amount:  log.Amount,
@@ -1188,7 +1186,7 @@ func (s *warehouseSrv) GetWarehouseMaterialList(ctx context.Context, req req.War
 			MaterialCode:    material.Code,
 			MaterialBarcode: material.BarcodeValue,
 			InternalCode:    material.InternalCode,
-			StockQuantity:   item.Stock,
+			BookedQuantity:  item.Stock, // 账面库存数量
 			BaseUnit:        baseUnit,
 			Units:           units,
 			CategoryUuid:    material.CategoryUuid,

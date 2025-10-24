@@ -25823,6 +25823,63 @@
                 }
             }
         },
+        "/shop/stock_reconciliation/check_materials": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "检查物品",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.盘点管理"
+                ],
+                "summary": "检查物品",
+                "parameters": [
+                    {
+                        "description": "检查物品请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.StockReconciliationCheckMaterialsReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.StockReconciliationCheckMaterialsListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/stock_reconciliation/delete": {
             "delete": {
                 "security": [
@@ -37387,6 +37444,22 @@
                 }
             }
         },
+        "req.StockReconciliationCheckMaterialsReq": {
+            "type": "object",
+            "properties": {
+                "material_uuids": {
+                    "description": "待盘点物品UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "uuid": {
+                    "description": "盘点单UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.StockReconciliationDeleteReq": {
             "type": "object",
             "required": [
@@ -45900,6 +45973,47 @@
                 }
             }
         },
+        "resp.StockReconciliationCheckMaterialsListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "物品列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.StockReconciliationCheckMaterialsResp"
+                    }
+                }
+            }
+        },
+        "resp.StockReconciliationCheckMaterialsResp": {
+            "type": "object",
+            "properties": {
+                "is_deleted": {
+                    "description": "是否已删除",
+                    "type": "boolean"
+                },
+                "is_inventory_status_exception": {
+                    "description": "是否盈亏异常",
+                    "type": "boolean"
+                },
+                "locale_name": {
+                    "description": "物品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "status": {
+                    "description": "物品状态,true上架 false下架",
+                    "type": "boolean"
+                },
+                "unit_count": {
+                    "description": "单位数量",
+                    "type": "integer"
+                }
+            }
+        },
         "resp.StockReconciliationDetailResp": {
             "type": "object",
             "properties": {
@@ -47027,6 +47141,10 @@
                         }
                     ]
                 },
+                "booked_quantity": {
+                    "description": "账面库存数量",
+                    "type": "number"
+                },
                 "category_uuid": {
                     "description": "物料分类UUID",
                     "type": "integer"
@@ -47066,10 +47184,6 @@
                 "status": {
                     "description": "状态：true-上架；false-下架，用于提交和审核通过时判断",
                     "type": "boolean"
-                },
-                "stock_quantity": {
-                    "description": "账面库存数量",
-                    "type": "number"
                 },
                 "units": {
                     "description": "所有单位（包含基准单位）",
