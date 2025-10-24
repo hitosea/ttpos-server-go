@@ -1918,17 +1918,17 @@
                                     "zhtw": "感謝您的光臨！本店由 {brand_name} 系統提供支持。",
                                     "th": "ขอบคุณที่แวะมาหากัน!สนับสนุนโดย  {brand_name} "
                                 },
-                                "block_name": {
-                                    "th": "ชื่อใบเสร็จ",
-                                    "en": "Receipt name",
-                                    "ko": "영수증 이름",
-                                    "my": "ပြေစာနာမည်",
-                                    "tr": "Makbuz adı",
-                                    "de": "Belegname",
-                                    "sv": "Kvittonamn",
-                                    "ja": "レシート名",
-                                    "zhtw": "收據名稱",
-                                    "zh": "票据名称"
+                               "block_name" : {
+                                    "zh": "系统支持",
+                                    "en": "System Support",
+                                    "ko": "시스템 지원",
+                                    "my": "စနစ် ပံ့ပိုးထားပါတယ်",
+                                    "tr": "Sistem Desteği",
+                                    "de": "Systemunterstützung",
+                                    "sv": "Systemstöd",
+                                    "ja": "システムサポート",
+                                    "zhtw": "系統支持",
+                                    "th": "รองรับระบบ"
                                 },
                                 "block_attr": {
                                     "font_size": 20,
@@ -1937,7 +1937,8 @@
                                     "dividing_line": false,
                                     "leading_blank_lines": 0,
                                     "trailing_blank_lines": 6,
-                                    "width": 100
+                                    "width": 100,
+                                    "cannot_delete": true
                                 }
                             }
                         ]

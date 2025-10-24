@@ -2,15 +2,15 @@
     "brand_name": "TTPOS",
     "store": {
         "name": "店铺名称",
-        "address": "1167,17-20 Ratchadaphisek Rd,Din Daeng,Din Daeng,  Bangkok 10400",
-        "phone": "025508999212",
+        "address": "商家地址商家地址商家地址商家地址商家地址",
+        "phone": "00-14-14552",
         "logo": "./tmp/printer/shop/logo/79d5d080453715c8d1b0fa73801ecca0.png",
         "company": "",
-        "company_addr": "1167,17-20 Ratchadaphisek Rd,Din Daeng,Din Daeng,  Bangkok 10400",
+        "company_addr": "公司地址公司地址公司地址",
         "company_phone": "025508999212",
         "company_tax_number": "",
-        "cashier_sn": "",
-        "printer_sn": ""
+        "cashier_sn": "收银机SN-1234567890",
+        "printer_sn": "打印机SN-1234567890"
     },
     "order": {
         "status": 0,
@@ -19,7 +19,7 @@
         "order_no": "202509242875625440",
         "meal_num": 5,
         "remark": "开桌备注",
-        "cashier_name": "wfs@qq.com",
+        "cashier_name": "0001",
         "finish_time": "2025-09-24 10:01:37",
         "create_time": "2025-09-24 10:01:37",
         "pay_time": "2025-09-24 10:01:37",

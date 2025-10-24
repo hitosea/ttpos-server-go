@@ -15,7 +15,7 @@ type IPrinterCustomizeRepo interface {
 	DeletePrinterCustomize(uuid uint64) error
 	UpdatePrinterCustomizeByTemplateId(templateId uint64) error // 按template_id更新is_use为0, 其他字段不变
 	// 检查打印机定制名称是否存在
-	CheckPrinterCustomizeNameExists(name string) (bool, error)
+	CheckPrinterCustomizeNameExists(uuid uint64, name string) (bool, error)
 
 	WhereByTemplateId(templateId uint64) DBOption
 }
@@ -48,10 +48,13 @@ func (r *PrinterCustomizeRepoImpl) GetPrinterCustomizeInfo(uuid uint64) (model.P
 }
 
 // CheckPrinterCustomizeNameExists 检查打印机定制名称是否存在
-func (r *PrinterCustomizeRepoImpl) CheckPrinterCustomizeNameExists(name string) (bool, error) {
+func (r *PrinterCustomizeRepoImpl) CheckPrinterCustomizeNameExists(uuid uint64, name string) (bool, error) {
 	var printerCustomize model.PrinterCustomize
-	db := r.db.Model(&model.PrinterCustomize{}).Where("name = ?", name)
+	db := r.db.Model(&model.PrinterCustomize{}).Where("name = ? AND uuid != ?", name, uuid)
 	err := db.First(&printerCustomize).Error
+	if err == gorm.ErrRecordNotFound {
+		return false, nil
+	}
 	return printerCustomize.Uuid > 0, err
 }
 
@@ -73,7 +76,7 @@ func (r *PrinterCustomizeRepoImpl) UpdatePrinterCustomize(printerCustomize model
 
 // DeletePrinterCustomize 删除打印机定制
 func (r *PrinterCustomizeRepoImpl) DeletePrinterCustomize(uuid uint64) error {
-	if err := r.db.Delete(&model.PrinterCustomize{}).Where("uuid = ?", uuid).Error; err != nil {
+	if err := r.db.Where("uuid = ?", uuid).Delete(&model.PrinterCustomize{}).Error; err != nil {
 		return err
 	}
 	return nil

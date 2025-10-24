@@ -360,13 +360,13 @@ func (s *printerSrv) GetPrintTemplateList(ctx context.Context) (resp.PrintTempla
 func (s *printerSrv) Parser(ctx context.Context, templateJSONStr string, testData map[string]interface{}) (string, error) {
 	currencySetting, err := setting.NewSrv(s.dbm, s.cache).GetCurrencySetting(ctx)
 	if err != nil {
-		return "", errors.WithMessage(err, "获取打印设置失败")
+		return "", errors.WithMessage(errors.New("获取打印设置失败"), err.Error())
 	}
 
 	// 创建解析器
 	unitPosition, err := strconv.ParseInt(currencySetting.UnitPosition, 10, 64)
 	if err != nil {
-		return "", errors.WithMessage(err, "转换货币单位位置失败")
+		return "", errors.WithMessage(errors.New("转换货币单位位置失败"), err.Error())
 	}
 	parser, err := pkg.NewImgTemplateParser(pkg.ImgBaseData{
 		Language:             ctx.GetLanguage(),
@@ -374,19 +374,19 @@ func (s *printerSrv) Parser(ctx context.Context, templateJSONStr string, testDat
 		CurrencyUnitPosition: int(unitPosition),
 	}, templateJSONStr, testData)
 	if err != nil {
-		return "", errors.WithMessage(err, "创建模板解析器失败")
+		return "", errors.WithMessage(errors.New("创建模板解析器失败"), err.Error())
 	}
 
 	// 验证模板
 	err = parser.ValidateTemplate()
 	if err != nil {
-		return "", errors.WithMessage(err, "验证模板失败")
+		return "", errors.WithMessage(errors.New("验证模板失败"), err.Error())
 	}
 
 	// 解析模板
 	img, err := parser.Parse()
 	if err != nil {
-		return "", errors.WithMessage(err, "解析模板失败")
+		return "", errors.WithMessage(errors.New("解析模板失败"), err.Error())
 	}
 
 	// 设置分割高度为200000
@@ -396,7 +396,7 @@ func (s *printerSrv) Parser(ctx context.Context, templateJSONStr string, testDat
 	// 读取保存的图片文件并转换为base64
 	imageData, err := os.ReadFile(TemplatePngPath)
 	if err != nil {
-		return "", errors.WithMessage(err, "读取生成的图片文件失败")
+		return "", errors.WithMessage(errors.New("读取生成的图片文件失败"), err.Error())
 	}
 
 	// 转换为base64字符串
@@ -413,11 +413,11 @@ func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[
 	// 从JSON文件读取测试数据
 	testDataBytes, err := template_json.GetTemplateJsonData(templateName + "_data.json")
 	if err != nil {
-		return nil, errors.WithMessage(err, "读取测试数据文件失败")
+		return nil, errors.WithMessage(errors.New("读取测试数据文件失败"), err.Error())
 	}
 	var testData map[string]interface{}
 	if err := json.Unmarshal(testDataBytes, &testData); err != nil {
-		return nil, errors.WithMessage(err, "解析测试数据JSON失败")
+		return nil, errors.WithMessage(errors.New("解析测试数据JSON失败"), err.Error())
 	}
 	return testData, nil
 }
@@ -426,7 +426,7 @@ func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[
 func (s *printerSrv) GetTemplateJSONStr(ctx context.Context, templateName string) (string, error) {
 	templateJSON, err := template_json.GetTemplateJsonData(templateName + "_tmp.json")
 	if err != nil {
-		return "", errors.WithMessage(err, "读取模板文件失败")
+		return "", errors.WithMessage(errors.New("读取模板文件失败"), err.Error())
 	}
 	return string(templateJSON), nil
 }
@@ -436,13 +436,13 @@ func (s *printerSrv) GetTemplateConfigInfo(ctx context.Context, templateName str
 	if isAdv {
 		templateJSON, err := template_json.GetTemplateJsonData(templateName + "_adv_config.json")
 		if err != nil {
-			return "", errors.WithMessage(err, "读取模板文件失败")
+			return "", errors.WithMessage(errors.New("读取模板文件失败"), err.Error())
 		}
 		return string(templateJSON), nil
 	} else {
 		templateJSON, err := template_json.GetTemplateJsonData(templateName + "_config.json")
 		if err != nil {
-			return "", errors.WithMessage(err, "读取模板文件失败")
+			return "", errors.WithMessage(errors.New("读取模板文件失败"), err.Error())
 		}
 		return string(templateJSON), nil
 	}
@@ -458,7 +458,7 @@ func (s *printerSrv) GetPrintTemplateDetail(ctx context.Context, id uint64) (res
 	// 获取打印模板详情
 	template, err := repository.NewPrinterTemplateRepo(db).GetPrinterTemplateInfo(id)
 	if err != nil {
-		return resp.PrintTemplateDetailResp{}, errors.WithMessage(err, "获取打印模板详情失败")
+		return resp.PrintTemplateDetailResp{}, errors.WithMessage(errors.New("获取打印模板详情失败"), err.Error())
 	}
 
 	// 创建复杂的测试模板
@@ -470,13 +470,13 @@ func (s *printerSrv) GetPrintTemplateDetail(ctx context.Context, id uint64) (res
 		printerCustomizeRepo.WhereByTemplateId(template.ID),
 	)
 	if err != nil {
-		return resp.PrintTemplateDetailResp{}, errors.WithMessage(err, "获取打印机定制列表失败")
+		return resp.PrintTemplateDetailResp{}, errors.WithMessage(errors.New("获取打印机定制列表失败"), err.Error())
 	}
 
 	// 获取测试数据
 	testData, err := s.GetTestData(ctx, template.Name)
 	if err != nil {
-		return resp.PrintTemplateDetailResp{}, errors.WithMessage(err, "获取测试数据失败")
+		return resp.PrintTemplateDetailResp{}, errors.WithMessage(errors.New("获取测试数据失败"), err.Error())
 	}
 
 	// 默认模板
@@ -509,7 +509,7 @@ func (s *printerSrv) GetPrintTemplateDetail(ctx context.Context, id uint64) (res
 			defaultTemplate.CustomizeUuid = customize.Uuid
 			printContent, err := s.Parser(ctx, customize.Data, testData)
 			if err != nil {
-				return resp.PrintTemplateDetailResp{}, errors.WithMessage(err, "解析模板失败")
+				return resp.PrintTemplateDetailResp{}, errors.WithMessage(errors.New("解析模板失败"), err.Error())
 			}
 			defaultTemplate.ImgUrl = printContent
 		}
@@ -519,12 +519,12 @@ func (s *printerSrv) GetPrintTemplateDetail(ctx context.Context, id uint64) (res
 	if defaultTemplate.ImgUrl == "" && defaultTemplate.CustomizeUuid == 0 {
 		defaultTemplate.ImgUrl, err = s.Parser(ctx, templateJSONStr, testData)
 		if err != nil {
-			return resp.PrintTemplateDetailResp{}, errors.WithMessage(err, "解析模板失败")
+			return resp.PrintTemplateDetailResp{}, errors.WithMessage(errors.New("解析模板失败"), err.Error())
 		}
 		// 创建打印机定制
 		uuid, err := utils.GetID()
 		if err != nil {
-			return resp.PrintTemplateDetailResp{}, errors.WithMessage(err, "生成雪花ID失败")
+			return resp.PrintTemplateDetailResp{}, errors.WithMessage(errors.New("生成雪花ID失败"), err.Error())
 		}
 		err = printerCustomizeRepo.CreatePrinterCustomize(model.PrinterCustomize{
 			BaseModel:  model.BaseModel{Uuid: uuid},
@@ -534,12 +534,10 @@ func (s *printerSrv) GetPrintTemplateDetail(ctx context.Context, id uint64) (res
 			IsAdv:      0,
 		})
 		if err != nil {
-			return resp.PrintTemplateDetailResp{}, errors.WithMessage(err, "创建打印机定制失败")
+			return resp.PrintTemplateDetailResp{}, errors.WithMessage(errors.New("创建打印机定制失败"), err.Error())
 		}
 		defaultTemplate.CustomizeUuid = uuid
 	}
-
-	fmt.Println(utils.ToJsonString(companySetting))
 
 	// 返回结果
 	return resp.PrintTemplateDetailResp{
@@ -556,21 +554,21 @@ func (s *printerSrv) EditPrinterCustomize(ctx context.Context, editPrinterCustom
 	// 检查打印机定制是否存在
 	customizeInfo, err := printerCustomizeRepo.GetPrinterCustomizeInfo(editPrinterCustomizeReq.CustomizeUuid)
 	if err != nil {
-		return errors.WithMessage(err, "检查打印机定制是否存在失败")
+		return errors.WithMessage(errors.New("检查打印机定制是否存在失败"), err.Error())
 	}
 	// 获取打印模板详情
 	template, err := repository.NewPrinterTemplateRepo(db).GetPrinterTemplateInfo(customizeInfo.TemplateId)
 	if err != nil {
-		return errors.WithMessage(err, "获取打印模板详情失败")
+		return errors.WithMessage(errors.New("获取打印模板详情失败"), err.Error())
 	}
 	//
 	if customizeInfo.IsAdv == 1 {
 		if ctx.GetCompanySetting().IsOpenAdvancedTicketPrint == 0 {
 			return errors.New("未开启高级模版打印")
 		}
-		exists, err := printerCustomizeRepo.CheckPrinterCustomizeNameExists(editPrinterCustomizeReq.Name)
+		exists, err := printerCustomizeRepo.CheckPrinterCustomizeNameExists(customizeInfo.Uuid, editPrinterCustomizeReq.Name)
 		if err != nil {
-			return errors.WithMessage(err, "检查打印机定制名称是否存在失败")
+			return errors.WithMessage(errors.New("检查打印机定制名称是否存在失败"), err.Error())
 		}
 		if exists {
 			return errors.New("高级模版名称已存在")
@@ -580,12 +578,12 @@ func (s *printerSrv) EditPrinterCustomize(ctx context.Context, editPrinterCustom
 	//
 	testData, err := s.GetTestData(ctx, template.Name)
 	if err != nil {
-		return errors.WithMessage(err, "获取测试数据失败")
+		return errors.WithMessage(errors.New("获取测试数据失败"), err.Error())
 	}
 	// 解析模板
 	_, err = s.Parser(ctx, editPrinterCustomizeReq.Data, testData)
 	if err != nil {
-		return errors.WithMessage(err, "解析模板失败")
+		return errors.WithMessage(errors.New("解析模板失败"), err.Error())
 	}
 	// 更新打印机定制
 	customizeInfo.Name = func() string {
@@ -595,10 +593,27 @@ func (s *printerSrv) EditPrinterCustomize(ctx context.Context, editPrinterCustom
 		return customizeInfo.Name
 	}()
 	customizeInfo.Data = editPrinterCustomizeReq.Data
-	err = printerCustomizeRepo.UpdatePrinterCustomize(customizeInfo)
-	if err != nil {
-		return errors.WithMessage(err, "更新打印机定制失败")
-	}
+
+	// 更新打印机定制
+	db.Transaction(func(tx *gorm.DB) error {
+		err = repository.NewPrinterCustomizeRepo(tx).UpdatePrinterCustomize(customizeInfo)
+		if err != nil {
+			return errors.WithMessage(errors.New("更新打印机定制失败"), err.Error())
+		}
+		// 更新打印机模板
+		if customizeInfo.IsUse == 1 {
+			err = repository.NewPrinterTemplateRepo(tx).UpdatePrinterTemplate(model.PrinterTemplate{
+				ID:      customizeInfo.TemplateId,
+				TmpUuid: customizeInfo.Uuid,
+				TmpData: customizeInfo.Data,
+			})
+			if err != nil {
+				return errors.WithMessage(errors.New("更新打印机模板失败"), err.Error())
+			}
+		}
+		return nil
+	})
+
 	return nil
 }
 
@@ -608,7 +623,7 @@ func (s *printerSrv) DeletePrinterCustomize(ctx context.Context, customizeUuid u
 	// 检查打印机定制是否存在
 	customizeInfo, err := repository.NewPrinterCustomizeRepo(db).GetPrinterCustomizeInfo(customizeUuid)
 	if err != nil {
-		return errors.WithMessage(err, "检查打印机定制是否存在失败")
+		return errors.WithMessage(errors.New("检查打印机定制是否存在失败"), err.Error())
 	}
 	if customizeInfo.IsAdv == 0 {
 		return errors.New("默认模版不能删除")
@@ -620,7 +635,7 @@ func (s *printerSrv) DeletePrinterCustomize(ctx context.Context, customizeUuid u
 	// 删除打印机定制
 	err = repository.NewPrinterCustomizeRepo(db).DeletePrinterCustomize(customizeInfo.Uuid)
 	if err != nil {
-		return errors.WithMessage(err, "删除打印机定制失败")
+		return errors.WithMessage(errors.New("删除打印机定制失败"), err.Error())
 	}
 	return nil
 }
@@ -636,7 +651,7 @@ func (s *printerSrv) CreatePrinterCustomize(ctx context.Context, createPrinterCu
 	printerCustomizeRepo := repository.NewPrinterCustomizeRepo(db)
 	template, err := repository.NewPrinterTemplateRepo(db).GetPrinterTemplateInfo(createPrinterCustomizeReq.TemplateId)
 	if err != nil {
-		return errors.WithMessage(err, "检查模板是否存在失败")
+		return errors.WithMessage(errors.New("检查模板是否存在失败"), err.Error())
 	}
 	// 创建打印机定制
 	err = printerCustomizeRepo.CreatePrinterCustomize(model.PrinterCustomize{
@@ -646,7 +661,7 @@ func (s *printerSrv) CreatePrinterCustomize(ctx context.Context, createPrinterCu
 		IsAdv:      1,
 	})
 	if err != nil {
-		return errors.WithMessage(err, "创建打印机定制失败")
+		return errors.WithMessage(errors.New("创建打印机定制失败"), err.Error())
 	}
 	return nil
 }
@@ -658,14 +673,14 @@ func (s *printerSrv) UsePrinterCustomize(ctx context.Context, customizeUuid uint
 	// 检查打印机定制是否存在
 	customizeInfo, err := printerCustomizeRepo.GetPrinterCustomizeInfo(customizeUuid)
 	if err != nil {
-		return errors.WithMessage(err, "检查打印机定制是否存在失败")
+		return errors.WithMessage(errors.New("检查打印机定制是否存在失败"), err.Error())
 	}
 	// 检查打印机定制是否正在使用中
 	return db.Transaction(func(tx *gorm.DB) error {
 		// 按template_id更新is_use为0, 其他字段不变
 		err = repository.NewPrinterCustomizeRepo(tx).UpdatePrinterCustomizeByTemplateId(customizeInfo.TemplateId)
 		if err != nil {
-			return errors.WithMessage(err, "使用打印机定制失败")
+			return errors.WithMessage(errors.New("使用打印机定制失败"), err.Error())
 		}
 
 		// 使用打印机定制
@@ -673,18 +688,17 @@ func (s *printerSrv) UsePrinterCustomize(ctx context.Context, customizeUuid uint
 		customizeInfo.UpdateTime = time.Now().Unix()
 		err = repository.NewPrinterCustomizeRepo(tx).UpdatePrinterCustomize(customizeInfo)
 		if err != nil {
-			return errors.WithMessage(err, "更新打印机定制失败")
+			return errors.WithMessage(errors.New("更新打印机定制失败"), err.Error())
 		}
 
 		// 更新打印机模板
 		err = repository.NewPrinterTemplateRepo(tx).UpdatePrinterTemplate(model.PrinterTemplate{
-			ID:       customizeInfo.TemplateId,
-			TmpUuid:  customizeInfo.Uuid,
-			TmpData:  customizeInfo.Data,
-			Template: utils.IfInt(customizeInfo.IsAdv == 1, -2, -1),
+			ID:      customizeInfo.TemplateId,
+			TmpUuid: customizeInfo.Uuid,
+			TmpData: customizeInfo.Data,
 		})
 		if err != nil {
-			return errors.WithMessage(err, "更新打印机定制失败")
+			return errors.WithMessage(errors.New("更新打印机定制失败"), err.Error())
 		}
 
 		return nil
@@ -697,7 +711,7 @@ func (s *printerSrv) GetPrinterCustomizeConfigInfo(ctx context.Context, configIn
 	// 检查模板是否存在
 	template, err := repository.NewPrinterTemplateRepo(db).GetPrinterTemplateInfo(configInfoReq.TemplateId)
 	if err != nil {
-		return resp.ConfigInfoResp{}, errors.WithMessage(err, "检查模板不存在")
+		return resp.ConfigInfoResp{}, errors.WithMessage(errors.New("检查模板不存在"), err.Error())
 	}
 
 	// 获取模板名称
@@ -706,7 +720,7 @@ func (s *printerSrv) GetPrinterCustomizeConfigInfo(ctx context.Context, configIn
 	// 获取模板JSON字符串
 	defaultJsonStr, err := s.GetTemplateJSONStr(ctx, template.Name)
 	if err != nil {
-		return resp.ConfigInfoResp{}, errors.WithMessage(err, "获取模板JSON字符串失败")
+		return resp.ConfigInfoResp{}, errors.WithMessage(errors.New("获取模板JSON字符串失败"), err.Error())
 	}
 
 	// 格式化模板JSON字符串
@@ -723,7 +737,7 @@ func (s *printerSrv) GetPrinterCustomizeConfigInfo(ctx context.Context, configIn
 		// 获取打印机定制信息
 		customizeInfo, err := repository.NewPrinterCustomizeRepo(db).GetPrinterCustomizeInfo(configInfoReq.CustomizeUuid)
 		if err != nil {
-			return resp.ConfigInfoResp{}, errors.WithMessage(err, "检查打印机定制是否存在失败")
+			return resp.ConfigInfoResp{}, errors.WithMessage(errors.New("检查打印机定制是否存在失败"), err.Error())
 		}
 		// 格式化模板JSON字符串
 		var templateObj map[string]interface{}
@@ -739,21 +753,21 @@ func (s *printerSrv) GetPrinterCustomizeConfigInfo(ctx context.Context, configIn
 	// 获取测试数据
 	testData, err := s.GetTestData(ctx, template.Name)
 	if err != nil {
-		return resp.ConfigInfoResp{}, errors.WithMessage(err, "获取测试数据失败")
+		return resp.ConfigInfoResp{}, errors.WithMessage(errors.New("获取测试数据失败"), err.Error())
 	}
 	_, err = s.Parser(ctx, templateJSONStr, testData)
 	if err != nil {
-		return resp.ConfigInfoResp{}, errors.WithMessage(err, "解析模板失败")
+		return resp.ConfigInfoResp{}, errors.WithMessage(errors.New("解析模板失败"), err.Error())
 	}
 	testDataJSON, err := json.Marshal(testData)
 	if err != nil {
-		return resp.ConfigInfoResp{}, errors.WithMessage(err, "序列化测试数据失败")
+		return resp.ConfigInfoResp{}, errors.WithMessage(errors.New("序列化测试数据失败"), err.Error())
 	}
 
 	// 获取模板配置信息
 	templateConfigInfoStr, err := s.GetTemplateConfigInfo(ctx, template.Name, configInfoReq.IsAdv == 1)
 	if err != nil {
-		return resp.ConfigInfoResp{}, errors.WithMessage(err, "获取模板配置信息失败")
+		return resp.ConfigInfoResp{}, errors.WithMessage(errors.New("获取模板配置信息失败"), err.Error())
 	}
 	// 格式化模板JSON字符串
 	var templateConfigObj map[string]interface{}
@@ -762,7 +776,7 @@ func (s *printerSrv) GetPrinterCustomizeConfigInfo(ctx context.Context, configIn
 			templateConfigInfoStr = string(formattedJSON)
 		}
 	} else {
-		return resp.ConfigInfoResp{}, errors.WithMessage(err, "格式化模板配置信息失败")
+		return resp.ConfigInfoResp{}, errors.WithMessage(errors.New("格式化模板配置信息失败"), err.Error())
 	}
 
 	// 结果
