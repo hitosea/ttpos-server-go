@@ -4,7 +4,7 @@ package model
 type WarehouseInOutLog struct {
 	BaseModel
 	LogType              int     `json:"log_type" gorm:"type:int;default:0;comment:日志类型,0-入库 1-出库"`
-	Scene                int     `json:"scene" gorm:"type:int;default:0;comment:场景,0-采购入库 1-销售出库 2-发货出库"`
+	Scene                int     `json:"scene" gorm:"type:int;default:0;comment:场景,0-采购入库 1-销售出库 2-发货出库 3-盘盈入库 4-盘亏出库 20-在途入库 21-在途出库"`
 	WarehouseUuid        uint64  `json:"warehouse_uuid" gorm:"type:bigint;default:0;comment:仓库ID"`
 	MaterialUuid         uint64  `json:"material_uuid" gorm:"type:bigint;default:0;comment:物品ID"`
 	MaterialName         string  `json:"material_name" gorm:"type:text;default:'';comment:物品名称JSON,记录当时物品名称"`

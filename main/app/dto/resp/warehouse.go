@@ -84,6 +84,10 @@ type WarehouseMaterialInfo struct {
 	StockQuantity   float64            `json:"stock_quantity"`   // 账面库存数量
 	BaseUnit        MaterialUnitInfo   `json:"base_unit"`        // 基准单位
 	Units           []MaterialUnitInfo `json:"units"`            // 所有单位（包含基准单位）
+	CategoryUuid    uint64             `json:"category_uuid"`    // 物料分类UUID
+	Image           string             `json:"image"`            // 图片
+	Status          bool               `json:"status"`           // 状态：true-上架；false-下架，用于提交和审核通过时判断
+	DeleteTime      int64              `json:"delete_time"`      // 删除时间，用于提交和审核通过时判断
 }
 
 // MaterialUnitInfo 物品单位信息

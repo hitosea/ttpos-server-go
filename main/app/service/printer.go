@@ -15,6 +15,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
+	"ttpos-server-go/app/printer/pkg/template_json"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
@@ -410,7 +411,7 @@ func (s *printerSrv) Parser(ctx context.Context, templateJSONStr string, testDat
 // GetTestData 获取测试数据
 func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[string]interface{}, error) {
 	// 从JSON文件读取测试数据
-	testDataBytes, err := os.ReadFile(fmt.Sprintf("app/printer/pkg/template_json/%s_data.json", templateName))
+	testDataBytes, err := template_json.GetTemplateJsonData(templateName + "_data.json")
 	if err != nil {
 		return nil, errors.WithMessage(err, "读取测试数据文件失败")
 	}
@@ -423,7 +424,7 @@ func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[
 
 // GetTemplateJSONStr 获取模板JSON字符串
 func (s *printerSrv) GetTemplateJSONStr(ctx context.Context, templateName string) (string, error) {
-	templateJSON, err := os.ReadFile(fmt.Sprintf("app/printer/pkg/template_json/%s_tmp.json", templateName))
+	templateJSON, err := template_json.GetTemplateJsonData(templateName + "_tmp.json")
 	if err != nil {
 		return "", errors.WithMessage(err, "读取模板文件失败")
 	}
@@ -433,13 +434,13 @@ func (s *printerSrv) GetTemplateJSONStr(ctx context.Context, templateName string
 // GetTemplateConfigInfo 获取模板配置信息
 func (s *printerSrv) GetTemplateConfigInfo(ctx context.Context, templateName string, isAdv bool) (string, error) {
 	if isAdv {
-		templateJSON, err := os.ReadFile(fmt.Sprintf("app/printer/pkg/template_json/%s_adv_config.json", templateName))
+		templateJSON, err := template_json.GetTemplateJsonData(templateName + "_adv_config.json")
 		if err != nil {
 			return "", errors.WithMessage(err, "读取模板文件失败")
 		}
 		return string(templateJSON), nil
 	} else {
-		templateJSON, err := os.ReadFile(fmt.Sprintf("app/printer/pkg/template_json/%s_config.json", templateName))
+		templateJSON, err := template_json.GetTemplateJsonData(templateName + "_config.json")
 		if err != nil {
 			return "", errors.WithMessage(err, "读取模板文件失败")
 		}
@@ -557,6 +558,11 @@ func (s *printerSrv) EditPrinterCustomize(ctx context.Context, editPrinterCustom
 	if err != nil {
 		return errors.WithMessage(err, "检查打印机定制是否存在失败")
 	}
+	// 获取打印模板详情
+	template, err := repository.NewPrinterTemplateRepo(db).GetPrinterTemplateInfo(customizeInfo.TemplateId)
+	if err != nil {
+		return errors.WithMessage(err, "获取打印模板详情失败")
+	}
 	//
 	if customizeInfo.IsAdv == 1 {
 		if ctx.GetCompanySetting().IsOpenAdvancedTicketPrint == 0 {
@@ -572,7 +578,7 @@ func (s *printerSrv) EditPrinterCustomize(ctx context.Context, editPrinterCustom
 		return errors.New("高级模版不能编辑")
 	}
 	//
-	testData, err := s.GetTestData(ctx, customizeInfo.Name)
+	testData, err := s.GetTestData(ctx, template.Name)
 	if err != nil {
 		return errors.WithMessage(err, "获取测试数据失败")
 	}

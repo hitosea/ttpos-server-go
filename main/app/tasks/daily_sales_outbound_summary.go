@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
@@ -279,8 +280,8 @@ func (t *DailySalesOutboundSummaryTask) saveOutboundSummaryRecords(companyUuid u
 		for _, record := range records {
 			uuids = append(uuids, record.Uuid)
 			logRecord := &model.WarehouseInOutLog{
-				LogType:              1, // 出库
-				Scene:                1, // 销售出库
+				LogType:              constant.WarehouseInOutLogLogTypeOut, // 出库
+				Scene:                constant.WarehouseInOutLogSceneSale,  // 销售出库
 				WarehouseUuid:        record.WarehouseUuid,
 				MaterialUuid:         record.MaterialUuid,
 				MaterialName:         record.MaterialName,

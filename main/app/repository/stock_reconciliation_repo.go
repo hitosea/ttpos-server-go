@@ -24,6 +24,9 @@ type IStockReconciliationRepo interface {
 	WithWarehouseMultiLanguageName() DBOption
 	WithWarehouse() DBOption
 	WithStockReconciliationItems() DBOption
+	WithStockReconciliationItemsMultiLanguageName() DBOption
+	WithStockReconciliationItemsMaterialBaseUnit() DBOption
+	WithStockReconciliationItemMaterialUnits() DBOption
 
 	// 盘点单物品明细操作
 	CreateStockReconciliationItem(item *model.StockReconciliationItem) error
@@ -230,6 +233,24 @@ func (r *StockReconciliationRepoImpl) WithStockReconciliationItems() DBOption {
 	}
 }
 
+func (r *StockReconciliationRepoImpl) WithStockReconciliationItemsMultiLanguageName() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("StockReconciliationItems.Material.MultiLanguageName")
+	}
+}
+
+func (r *StockReconciliationRepoImpl) WithStockReconciliationItemsMaterialBaseUnit() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("StockReconciliationItems.Material.Unit")
+	}
+}
+
+func (r *StockReconciliationRepoImpl) WithStockReconciliationItemMaterialUnits() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("StockReconciliationItems.Material.NotBaseUnitList.Unit.MultiLanguageName")
+	}
+}
+
 // CreateStockReconciliationItem 创建盘点单物品明细
 func (r *StockReconciliationRepoImpl) CreateStockReconciliationItem(item *model.StockReconciliationItem) error {
 	if err := r.db.Create(item).Error; err != nil {
@@ -275,7 +296,10 @@ func (r *StockReconciliationRepoImpl) DeleteStockReconciliationItemByReconciliat
 
 // ByReconciliationUuid 根据盘点单物品明细UUID删除单位明细
 func (r *StockReconciliationRepoImpl) DeleteStockReconciliationItemUnitByReconciliationUuid(reconciliationUuid uint64) error {
-	if err := r.db.Model(&model.StockReconciliationItemUnit{}).Where("stock_reconciliation_item_uuid = ?", r.db.Model(&model.StockReconciliationItem{}).Where("stock_reconciliation_uuid = ?", reconciliationUuid).Select("uuid")).Update("delete_time", gorm.Expr("UNIX_TIMESTAMP()")).Error; err != nil {
+	if err := r.db.Model(&model.StockReconciliationItemUnit{}).
+		Where("stock_reconciliation_item_uuid IN (?)", r.db.Model(&model.StockReconciliationItem{}).
+			Where("stock_reconciliation_uuid = ?", reconciliationUuid).Select("uuid")).
+		Update("delete_time", gorm.Expr("UNIX_TIMESTAMP()")).Error; err != nil {
 		return errors.WithMessage(err, "删除盘点单物品单位明细失败")
 	}
 	return nil

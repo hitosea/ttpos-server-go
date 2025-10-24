@@ -17,6 +17,7 @@ import (
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/grpool"
+	"github.com/gogf/gf/v2/util/guid"
 )
 
 type RocketMq struct {
@@ -381,6 +382,11 @@ func RegisterRocketMqConsumer() (mqIns *RocketMq, err error) {
 		return nil, err
 	}
 
+	//自定义UnitName，默认使用GUID
+	consumerUnitName := config.Rocketmq.UnitName
+	if consumerUnitName == "" {
+		consumerUnitName = guid.S()
+	}
 	mqIns = new(RocketMq)
 	mqIns.consumerIns, err = rocketmq.NewPushConsumer(
 		consumer.WithConsumerModel(consumer.Clustering),
@@ -390,6 +396,7 @@ func RegisterRocketMqConsumer() (mqIns *RocketMq, err error) {
 			AccessKey: config.Rocketmq.AccessKey,
 			SecretKey: config.Rocketmq.SecretKey,
 		}),
+		consumer.WithUnitName(consumerUnitName),
 	)
 
 	if err != nil {

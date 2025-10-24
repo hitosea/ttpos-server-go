@@ -154,6 +154,8 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 		dbOptions = append(dbOptions, commonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
 			return db.Where("headquarter_uuid > ?", 0)
 		}))
+	} else if req.SupplierErpCode != "" {
+		dbOptions = append(dbOptions, commonRepo.WhereByMaterialSupplierErpCode(req.SupplierErpCode))
 	}
 
 	if len(req.CategoryUuids) > 0 {

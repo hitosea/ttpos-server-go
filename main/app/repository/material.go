@@ -18,6 +18,7 @@ type IMaterialRepo interface {
 	GetMaterial(opts ...DBOption) model.Material
 	GetMaterialList(opts ...DBOption) []model.Material
 	GetMaterialUuids(opts ...DBOption) []uint64
+	GetMaterialByCode(code string, opts ...DBOption) (model.Material, error)
 	GetMaterialByUuid(uuid uint64, opts ...DBOption) (model.Material, error)
 	GetMaterialByUuids(uuids []uint64, opts ...DBOption) ([]*model.Material, error)
 	GetMaterialByCategoryUuid(categoryUuid uint64) ([]*model.Material, error)
@@ -739,4 +740,16 @@ func (r *MaterialRepoImpl) DestroyMaterialUnit(opts ...DBOption) error {
 	}
 
 	return db.Delete(&model.MaterialUnit{}).Error
+}
+
+func (r *MaterialRepoImpl) GetMaterialByCode(code string, opts ...DBOption) (model.Material, error) {
+	var material model.Material
+	db := r.db.Model(&model.Material{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	if err := db.Where("code = ? and code <> ''", code).First(&material).Error; err != nil {
+		return model.Material{}, errors.WithMessage(err, "根据编码获取物品失败")
+	}
+	return material, nil
 }

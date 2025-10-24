@@ -1191,6 +1191,10 @@ func (s *warehouseSrv) GetWarehouseMaterialList(ctx context.Context, req req.War
 			StockQuantity:   item.Stock,
 			BaseUnit:        baseUnit,
 			Units:           units,
+			CategoryUuid:    material.CategoryUuid,
+			Image:           material.GetImage(utils.GetBaseURL(ctx.GetGin().Request)),
+			Status:          material.Status,
+			DeleteTime:      material.DeleteTime,
 		}
 		list = append(list, info)
 	}

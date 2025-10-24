@@ -348,3 +348,127 @@ func (*ClosePosEntryConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg) (er
 	}
 	return nil
 }
+
+type RedoPosConsumer struct {
+}
+
+func (*RedoPosConsumer) GetTopic() string {
+	return string(consts.TopicRedoPos)
+}
+func (*RedoPosConsumer) GetConcurrency() int {
+	return 10
+}
+
+// Handle 重做未处理的订单
+// 消息参考: {"msg_type":"save-pos-invoice","pos_open_entry_name":"POS-OPE-2025-00238"}
+func (*RedoPosConsumer) Handle(ctx context.Context, mqMsg queue.MqMsg) (err error) {
+	g.Log().Info(ctx, "收到重做消息：", string(mqMsg.Body))
+	j, err := gjson.DecodeToJson(mqMsg.Body)
+	if err != nil {
+		return gerror.Wrap(err, "解析JSON数据失败")
+	}
+	msg := &mq.AsyncSellingMsg{}
+	if err = j.Scan(msg); err != nil {
+		return gerror.Wrap(err, "扫描JSON数据失败")
+	}
+	if msg.PosOpenEntryName == "" {
+		g.Log().Infof(ctx, "重做开单名称不能为空：%s", msg.PosOpenEntryName)
+		return nil
+	}
+	//重发所有未处理的商品发票
+	switch msg.MsgType {
+	case mq.MsgTypeSavePosInvoice:
+		posInvoiceDao := dao.ReceivePosInvoice.Ctx(ctx)
+		//查询所有未处理的商品发票
+		posInvoiceList := make([]*entity.ReceivePosInvoice, 0)
+		err = posInvoiceDao.Where(do.ReceivePosInvoice{
+			OpenPosEntryName: msg.PosOpenEntryName,
+			Docstatus:        erp.DocstatusDraft,
+		}).Scan(&posInvoiceList)
+		if err != nil {
+			return gerror.Wrapf(err, "查询商品发票失败")
+		}
+		//重发所有未处理的商品发票
+		for _, posInvoice := range posInvoiceList {
+			//发送消息
+			if err = queue.Push(string(consts.TopicSavePosInvoice), &mq.AsyncSellingMsg{
+				RecordId: posInvoice.Id,
+				MsgType:  mq.MsgTypeSavePosInvoice,
+			}); err != nil {
+				g.Log().Errorf(ctx, "保存发票失败，发送异步消息失败: %v", err)
+				return gerror.Wrapf(err, "保存发票失败，发送异步消息失败: %v", posInvoice.Id)
+			}
+		}
+	case mq.MsgTypeCancelPosInvoice:
+		cancelDao := dao.ReceiveCancelPosInvoice.Ctx(ctx)
+		//查询所有未处理的商品发票
+		cancelList := make([]*entity.ReceiveCancelPosInvoice, 0)
+		err = cancelDao.Where(do.ReceiveCancelPosInvoice{
+			OpenPosEntryName: msg.PosOpenEntryName,
+			Docstatus:        erp.DocstatusDraft,
+		}).Scan(&cancelList)
+		if err != nil {
+			return gerror.Wrapf(err, "查询商品发票失败")
+		}
+		//重发所有未处理的商品发票
+		for _, cancel := range cancelList {
+			//发送消息
+			if err = queue.Push(string(consts.TopicCancelPosInvoice), &mq.AsyncSellingMsg{
+				RecordId: cancel.Id,
+				MsgType:  mq.MsgTypeCancelPosInvoice,
+			}); err != nil {
+				g.Log().Errorf(ctx, "取消发票失败，发送异步消息失败: %v", err)
+				return gerror.Wrapf(err, "取消发票失败，发送异步消息失败: %v", cancel.Id)
+			}
+		}
+	case mq.MsgTypeReturnPosInvoice:
+		returnDao := dao.ReceiveReturnPosInvoice.Ctx(ctx)
+		//查询所有未处理的商品发票
+		returnList := make([]*entity.ReceiveReturnPosInvoice, 0)
+		err = returnDao.Where(do.ReceiveReturnPosInvoice{
+			OpenPosEntryName: msg.PosOpenEntryName,
+			Docstatus:        erp.DocstatusDraft,
+		}).Scan(&returnList)
+		if err != nil {
+			return gerror.Wrapf(err, "查询商品发票失败")
+		}
+		//重发所有未处理的商品发票
+		for _, returnInvoice := range returnList {
+			//发送消息
+			if err = queue.Push(string(consts.TopicReturnPosInvoice), &mq.AsyncSellingMsg{
+				RecordId: returnInvoice.Id,
+				MsgType:  mq.MsgTypeReturnPosInvoice,
+			}); err != nil {
+				g.Log().Errorf(ctx, "退货发票失败，发送异步消息失败: %v", err)
+				return gerror.Wrapf(err, "退货发票失败，发送异步消息失败: %v", returnInvoice.Id)
+			}
+		}
+	case mq.MsgTypeClosePosEntry:
+		closePosDao := dao.ReceiveClosePos.Ctx(ctx)
+		//查询所有未处理的商品发票
+		closePosList := make([]*entity.ReceiveClosePos, 0)
+		err = closePosDao.Where(do.ReceiveClosePos{
+			PosOpenEntryName: msg.PosOpenEntryName,
+			Docstatus:        erp.DocstatusDraft,
+		}).Scan(&closePosList)
+		if err != nil {
+			return gerror.Wrapf(err, "查询关账记录失败")
+		}
+		//重发所有未处理的商品发票
+		for _, closePos := range closePosList {
+			//发送消息
+			if err = queue.Push(string(consts.TopicClosePosEntry), &mq.AsyncSellingMsg{
+				RecordId: closePos.Id,
+				MsgType:  mq.MsgTypeClosePosEntry,
+			}); err != nil {
+				g.Log().Errorf(ctx, "关帐失败，发送异步消息失败: %v", err)
+				return gerror.Wrapf(err, "关帐失败，发送异步消息失败: %v", closePos.Id)
+			}
+		}
+	default:
+		g.Log().Infof(ctx, "重做消息类型[%s]未处理", msg.MsgType)
+		return nil
+	}
+
+	return nil
+}

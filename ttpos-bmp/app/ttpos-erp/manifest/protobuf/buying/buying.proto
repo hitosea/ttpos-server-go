@@ -212,6 +212,7 @@ message CreatePurchaseOrderReq {
   string currency = 5; // 货币，可选，默认THB
   repeated PurchaseOrderItemInput items = 6; // 采购订单项目列表，必填
   string remarks = 7; // 备注，可选
+  string buying_price_list = 8; // 采购价格表，可选
 }
 
 // 采购订单项目输入

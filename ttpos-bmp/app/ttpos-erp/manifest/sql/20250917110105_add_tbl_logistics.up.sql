@@ -1,4 +1,4 @@
-CREATE TABLE erp_logistics (
+CREATE TABLE IF NOT EXISTS  erp_logistics (
                                    id BIGINT NOT NULL COMMENT 'ID',
                                    uuid varchar(100) NULL COMMENT 'UUID',
                                    vendor varchar(100) NOT NULL COMMENT '供应商，如 JT:极兔',
@@ -17,7 +17,7 @@ ALTER TABLE erp_logistics
     COMMENT='物流配置';
 
 
-CREATE TABLE erp_warehouse_logistics (
+CREATE TABLE IF NOT EXISTS  erp_warehouse_logistics (
                                             id BIGINT NOT NULL COMMENT 'ID',
                                             site_code varchar(100) NOT NULL COMMENT '站点编码。 关联 erp_site.site_code',
                                             shop_uuid varchar(100) NOT NULL COMMENT 'ttpos商铺ID',
