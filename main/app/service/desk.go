@@ -197,7 +197,12 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *re
 		},
 		SaleOrderList: make([]resp.SaleOrder, 0),
 		UpdateTime:    time.Now().Unix(),
-		OrderRemark:   shopCart.OrderRemark,
+		OrderRemark: func() *resp.OrderRemarkRes {
+			if shopCart != nil {
+				return shopCart.OrderRemark
+			}
+			return nil
+		}(),
 	}
 	// 获取桌台详情
 	desk, err := repository.NewDeskRepo(ctx.GetDB()).GetDeskInfo(deskUuid)
@@ -268,6 +273,7 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *re
 	res.SentKitchenProducts = resp.SentKitchenProductList{
 		List: sentKitchenProducts,
 	}
+	res.OrderRemark = shopCart.OrderRemark
 	return res, nil
 }
 
