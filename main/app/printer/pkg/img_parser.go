@@ -1024,11 +1024,6 @@ func (p *ImgTemplateParser) ValidateTemplate() error {
 	if p.template.Metadata.Name == "" {
 		return fmt.Errorf("模板名称不能为空")
 	}
-
-	if p.template.Metadata.PaperWidth <= 0 {
-		return fmt.Errorf("纸张宽度必须大于0")
-	}
-
 	// 验证模板行
 	return p.validateRows(p.template.Rows)
 }

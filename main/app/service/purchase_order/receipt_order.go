@@ -14,10 +14,12 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/language"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -66,7 +68,8 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 		// 查询采购申请
 		purchaseOrder, err := purchaseOrderRepo.GetByUuid(req.PurchaseOrderUuid)
 		if err != nil {
-			return errors.WithMessage(err, "采购申请不存在")
+			logger.Logger.Error("CreatePurchaseReceiptOrder-GetByUuid", zap.Any("purchaseOrderUuid", req.PurchaseOrderUuid), zap.Any("err", err))
+			return errors.WithMessage(errors.New("采购申请不存在"), err.Error())
 		}
 		if !purchaseOrder.CanReceive() {
 			return errors.New("采购单状态不允许收货")
@@ -109,7 +112,8 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 
 		err = receiptOrderRepo.Create(receiptOrder)
 		if err != nil {
-			return errors.WithMessage(err, "创建收货单失败")
+			logger.Logger.Error("CreatePurchaseReceiptOrder-Create", zap.Any("receiptOrder", receiptOrder), zap.Any("err", err))
+			return errors.WithMessage(errors.New("创建收货单失败"))
 		}
 
 		// 创建收货明细并更新采购申请明细的到货数量
@@ -118,6 +122,7 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 			// 查询采购申请明细
 			orderItem, err := purchaseOrderItemRepo.GetByUuid(itemReq.PurchaseOrderItemUuid)
 			if err != nil {
+				logger.Logger.Error("CreatePurchaseReceiptOrder-GetByUuid", zap.Any("purchaseOrderItemUuid", itemReq.PurchaseOrderItemUuid), zap.Any("err", err))
 				return errors.WithMessage(errors.New("查询采购申请明细失败"), err.Error())
 			}
 
@@ -153,6 +158,7 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 				orderItem.ArrivalNum = newArrivalNum
 				err = purchaseOrderItemRepo.Update(orderItem)
 				if err != nil {
+					logger.Logger.Error("CreatePurchaseReceiptOrder-Update", zap.Any("orderItem", orderItem), zap.Any("err", err))
 					return errors.WithMessage(errors.New("更新采购申请明细失败"), err.Error())
 				}
 
@@ -169,6 +175,7 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 		// 批量创建收货明细
 		err = receiptOrderItemRepo.CreateBatch(receiptItems)
 		if err != nil {
+			logger.Logger.Error("CreatePurchaseReceiptOrder-CreateBatch", zap.Any("receiptItems", receiptItems), zap.Any("err", err))
 			return errors.WithMessage(errors.New("创建收货明细失败"), err.Error())
 		}
 
@@ -179,7 +186,8 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 		if headquarterInfo != nil && len(headquarterInfo.ItemsToUpdate) > 0 {
 			err = s.helper.batchUpdateHeadquarterItems(ctx, headquarterInfo)
 			if err != nil {
-				return err
+				logger.Logger.Error("CreatePurchaseReceiptOrder-batchUpdateHeadquarterItems", zap.Any("headquarterInfo", headquarterInfo), zap.Any("err", err))
+				return errors.WithMessage(errors.New("批量更新总部采购申请明细失败"), err.Error())
 			}
 		}
 
@@ -243,7 +251,7 @@ func (s *purchaseReceiptOrderSrv) UpdatePurchaseReceiptOrder(
 		// 查询收货单
 		receiptOrder, err := receiptOrderRepo.GetByUuid(req.Uuid)
 		if err != nil {
-			return errors.WithMessage(err, "收货单不存在")
+			return errors.WithMessage(errors.New("收货单不存在"), err.Error())
 		}
 
 		// 查询采购申请

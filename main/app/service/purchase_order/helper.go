@@ -363,6 +363,7 @@ func (h *purchaseOrderHelper) recordErpStockInLog(
 		// 获取目标仓库信息（通过ERP编码查找）
 		targetWarehouse, err := repository.NewWarehouseRepo(tx).GetByErpCode(receiptOrder.TargetWarehouseErpCode)
 		if err != nil {
+			logger.Logger.Error("recordErpStockInLog-GetByErpCode", zap.Any("targetWarehouseErpCode", receiptOrder.TargetWarehouseErpCode), zap.Any("err", err))
 			return errors.WithMessage(errors.New("获取目标仓库信息失败"), err.Error())
 		}
 
@@ -388,21 +389,25 @@ func (h *purchaseOrderHelper) recordErpStockInLog(
 					}
 					err = warehouseItemRepo.Create(newWarehouseItem)
 					if err != nil {
+						logger.Logger.Error("recordErpStockInLog-Create", zap.Any("newWarehouseItem", newWarehouseItem), zap.Any("err", err))
 						return errors.WithMessage(errors.New("创建仓库商品库存记录失败"), err.Error())
 					}
 					warehouseItem = newWarehouseItem
 				} else {
+					logger.Logger.Error("recordErpStockInLog-GetByWarehouseAndMaterial", zap.Any("targetWarehouseUuid", targetWarehouse.Uuid), zap.Any("itemMaterialUuid", item.MaterialUuid), zap.Any("err", err))
 					return errors.WithMessage(errors.New("查询仓库商品库存失败"), err.Error())
 				}
 			}
 			err = warehouseItemRepo.AddStock(warehouseItem.Uuid, actualNum)
 			if err != nil {
+				logger.Logger.Error("recordErpStockInLog-AddStock", zap.Any("warehouseItemUuid", warehouseItem.Uuid), zap.Any("actualNum", actualNum), zap.Any("err", err))
 				return errors.WithMessage(errors.New("更新仓库商品库存失败"), err.Error())
 			}
 
 			// 更新规格/加料关联材料库存
 			material, err := materialRepo.GetMaterialByUuid(item.MaterialUuid, materialRepo.WithRelatedMaterialList())
 			if err != nil {
+				logger.Logger.Error("recordErpStockInLog-GetMaterialByUuid", zap.Any("materialUuid", item.MaterialUuid), zap.Any("err", err))
 				return errors.WithMessage(errors.New("获取物品信息失败"), err.Error())
 			}
 			relatedMaterialUuids := make([]uint64, 0)
@@ -417,6 +422,7 @@ func (h *purchaseOrderHelper) recordErpStockInLog(
 			}
 			err = h.updateRelatedMaterialStock(tx, relatedMaterialUuids)
 			if err != nil {
+				logger.Logger.Error("recordErpStockInLog-updateRelatedMaterialStock", zap.Any("relatedMaterialUuids", relatedMaterialUuids), zap.Any("err", err))
 				return errors.WithMessage(errors.New("更新规格/加料关联材料库存失败"), err.Error())
 			}
 
@@ -452,6 +458,7 @@ func (h *purchaseOrderHelper) recordErpStockInLog(
 			}
 			err = warehouseLogRepo.Create(warehouseLog)
 			if err != nil {
+				logger.Logger.Error("recordErpStockInLog-Create", zap.Any("warehouseLog", warehouseLog), zap.Any("err", err))
 				return errors.WithMessage(errors.New("记录入库日志失败"), err.Error())
 			}
 		}
@@ -478,7 +485,8 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 		// 获取目标仓库
 		targetWarehouse, err := repository.NewWarehouseRepo(tx).GetByErpCode(purchaseOrder.WarehouseErpCode)
 		if err != nil {
-			return errors.WithMessage(err, "获取总部出库仓库信息失败")
+			logger.Logger.Error("reduceHeadquarterStockAndLog-GetByErpCode", zap.Any("warehouseErpCode", purchaseOrder.WarehouseErpCode), zap.Any("err", err))
+			return errors.WithMessage(errors.New("获取总部出库仓库信息失败"), err.Error())
 		}
 
 		// 获取在途仓库
@@ -511,7 +519,8 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 				if err == gorm.ErrRecordNotFound {
 					errMaterialsList = append(errMaterialsList, materialName.GetLocale(lang))
 				} else {
-					return errors.WithMessage(err, "查询仓库商品库存失败")
+					logger.Logger.Error("reduceHeadquarterStockAndLog-GetByWarehouseAndMaterial", zap.Any("targetWarehouseUuid", targetWarehouse.Uuid), zap.Any("itemMaterialUuid", item.MaterialUuid), zap.Any("err", err))
+					return errors.WithMessage(errors.New("查询仓库商品库存失败"), err.Error())
 				}
 				// 如果查询失败，跳过后续处理
 				continue
@@ -550,6 +559,7 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 			// 更新规格/加料关联材料库存
 			err = warehouseItemRepo.ReduceStock(warehouseItemUuid, actualNum)
 			if err != nil {
+				logger.Logger.Error("reduceHeadquarterStockAndLog-ReduceStock", zap.Any("warehouseItemUuid", warehouseItemUuid), zap.Any("actualNum", actualNum), zap.Any("err", err))
 				return errors.WithMessage(errors.New("减少总部库存失败"), err.Error())
 			}
 
@@ -563,6 +573,7 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 			}
 			err = h.updateRelatedMaterialStock(tx, relatedMaterialUuids)
 			if err != nil {
+				logger.Logger.Error("reduceHeadquarterStockAndLog-updateRelatedMaterialStock", zap.Any("relatedMaterialUuids", relatedMaterialUuids), zap.Any("err", err))
 				return errors.WithMessage(errors.New("更新规格/加料关联材料库存失败"), err.Error())
 			}
 
@@ -590,6 +601,7 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 			}
 			err = warehouseLogRepo.Create(warehouseLog)
 			if err != nil {
+				logger.Logger.Error("reduceHeadquarterStockAndLog-Create", zap.Any("warehouseLog", warehouseLog), zap.Any("err", err))
 				return errors.WithMessage(errors.New("记录出库日志失败"), err.Error())
 			}
 
@@ -602,6 +614,7 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 				item.MaterialUuid = material.Uuid
 				err = h.AddToTransitWarehouse(subDb, transitWarehouse, purchaseOrder, supplierUuid, &item, actualNum)
 				if err != nil {
+					logger.Logger.Error("reduceHeadquarterStockAndLog-AddToTransitWarehouse", zap.Any("transitWarehouse", transitWarehouse), zap.Any("purchaseOrder", purchaseOrder), zap.Any("supplierUuid", supplierUuid), zap.Any("item", item), zap.Any("actualNum", actualNum), zap.Any("err", err))
 					return errors.WithMessage(errors.New("添加到在途仓库失败"), err.Error())
 				}
 			}
@@ -644,6 +657,12 @@ func (h *purchaseOrderHelper) extractName(name, after, errorMsg string) string {
 
 // handleErpError 处理ERP错误
 func (h *purchaseOrderHelper) handleErpError(ctx context.Context, err error, purchaseOrder *model.PurchaseOrder) error {
+	// 记录日志，方便排查问题
+	if purchaseOrder != nil {
+		logger.Logger.Error("handleErpError", zap.Any("purchaseOrder", purchaseOrder), zap.Any("err", err))
+	} else {
+		logger.Logger.Error("handleErpError", zap.Any("err", err))
+	}
 	// 检查供应商状态
 	if strings.Contains(err.Error(), "Supplier") && strings.Contains(err.Error(), "is disabled") {
 		// 提取供应商名称
@@ -717,13 +736,10 @@ func (h *purchaseOrderHelper) handleErpError(ctx context.Context, err error, pur
 		}
 		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "物品库存不足，请补充库存")
 	}
-	// 创建采购单失败
-	if purchaseOrder != nil && strings.Contains(err.Error(), "调用erp接口返回空") {
-		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled,
-			i18n.Translate(ctx.GetLanguage(), "审批失败")+": "+purchaseOrder.OrderNo,
-		)
-	}
-	return err
+	// 未知错误
+	return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled,
+		i18n.Translate(ctx.GetLanguage(), "操作失败")+": "+purchaseOrder.OrderNo,
+	)
 }
 
 // addToTransitWarehouse 添加到在途仓库

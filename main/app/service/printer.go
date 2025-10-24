@@ -558,6 +558,11 @@ func (s *printerSrv) EditPrinterCustomize(ctx context.Context, editPrinterCustom
 	if err != nil {
 		return errors.WithMessage(err, "检查打印机定制是否存在失败")
 	}
+	// 获取打印模板详情
+	template, err := repository.NewPrinterTemplateRepo(db).GetPrinterTemplateInfo(customizeInfo.TemplateId)
+	if err != nil {
+		return errors.WithMessage(err, "获取打印模板详情失败")
+	}
 	//
 	if customizeInfo.IsAdv == 1 {
 		if ctx.GetCompanySetting().IsOpenAdvancedTicketPrint == 0 {
@@ -573,7 +578,7 @@ func (s *printerSrv) EditPrinterCustomize(ctx context.Context, editPrinterCustom
 		return errors.New("高级模版不能编辑")
 	}
 	//
-	testData, err := s.GetTestData(ctx, customizeInfo.Name)
+	testData, err := s.GetTestData(ctx, template.Name)
 	if err != nil {
 		return errors.WithMessage(err, "获取测试数据失败")
 	}
