@@ -113,6 +113,33 @@ func (h *StockReconciliationHandler) SaveStockReconciliation(c *gin.Context) {
 	helper.Success(c, retData, "保存成功")
 }
 
+// CheckMaterials 检查物品
+// @Summary 检查物品
+// @Description 检查物品
+// @Tags 商家端.盘点管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.StockReconciliationCheckMaterialsReq true "检查物品请求参数"
+// @Success 200 {object} dto.Response{data=resp.StockReconciliationCheckMaterialsListResp} "成功"
+// @Failure 400 {object} dto.Response "请求参数错误"
+// @Router /shop/stock_reconciliation/check_materials [post]
+func (h *StockReconciliationHandler) CheckMaterials(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var checkMaterialsReq req.StockReconciliationCheckMaterialsReq
+	if err := c.ShouldBindJSON(&checkMaterialsReq); err != nil {
+		helper.HandleValidationError(c, err, checkMaterialsReq, nil)
+		return
+	}
+	materials, err := h.stockReconciliationSrv.CheckMaterials(ctx, checkMaterialsReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, materials, "检查成功")
+}
+
 // DeleteStockReconciliation 删除盘点单
 // @Summary 删除盘点单
 // @Description 删除盘点单（软删除）
@@ -262,5 +289,6 @@ func RegisterStockReconciliationHandlers(router gin.IRouter, dbm *database.DBMan
 		privateApi.POST("/stock_reconciliation/submit", wrapper.SubmitStockReconciliation)
 		privateApi.POST("/stock_reconciliation/approve", wrapper.ApproveStockReconciliation)
 		privateApi.POST("/stock_reconciliation/reject", wrapper.RejectStockReconciliation)
+		privateApi.POST("/stock_reconciliation/check_materials", wrapper.CheckMaterials)
 	}
 }

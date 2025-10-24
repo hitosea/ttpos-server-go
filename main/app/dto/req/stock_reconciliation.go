@@ -65,3 +65,8 @@ type StockReconciliationCopyReq struct {
 type StockReconciliationReCheckDiffReq struct {
 	Uuid uint64 `json:"uuid" binding:"required"` // 盘点单UUID
 }
+
+type StockReconciliationCheckMaterialsReq struct {
+	Uuid          uint64   `json:"uuid"`            // 盘点单UUID
+	MaterialUuids []uint64 `json:"material_uuids" ` // 待盘点物品UUID列表
+}

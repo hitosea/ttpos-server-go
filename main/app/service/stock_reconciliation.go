@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"slices"
 	"time"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-server-go/app/constant"
@@ -27,12 +28,13 @@ import (
 
 // IStockReconciliationSrv 盘点单服务接口
 type IStockReconciliationSrv interface {
-	GetStockReconciliationList(ctx context.Context, req req.StockReconciliationListReq) (resp.StockReconciliationListResp, error)       // 获取盘点单列表
-	GetStockReconciliationDetail(ctx context.Context, req req.StockReconciliationDetailReq) (resp.StockReconciliationDetailResp, error) // 获取盘点单详情
-	SaveStockReconciliation(ctx context.Context, req req.StockReconciliationSaveReq) (uint64, error)                                    // 更新盘点单
-	DeleteStockReconciliation(ctx context.Context, req req.StockReconciliationDeleteReq) error                                          // 删除盘点单
-	ApproveStockReconciliation(ctx context.Context, req req.StockReconciliationApproveReq) ([]dto.LocaleResponse, error)                // 审核盘点单
-	RejectStockReconciliation(ctx context.Context, req req.StockReconciliationRejectReq) error                                          // 驳回盘点单
+	GetStockReconciliationList(ctx context.Context, req req.StockReconciliationListReq) (resp.StockReconciliationListResp, error)             // 获取盘点单列表
+	GetStockReconciliationDetail(ctx context.Context, req req.StockReconciliationDetailReq) (resp.StockReconciliationDetailResp, error)       // 获取盘点单详情
+	SaveStockReconciliation(ctx context.Context, req req.StockReconciliationSaveReq) (uint64, error)                                          // 更新盘点单
+	DeleteStockReconciliation(ctx context.Context, req req.StockReconciliationDeleteReq) error                                                // 删除盘点单
+	ApproveStockReconciliation(ctx context.Context, req req.StockReconciliationApproveReq) ([]dto.LocaleResponse, error)                      // 审核盘点单
+	RejectStockReconciliation(ctx context.Context, req req.StockReconciliationRejectReq) error                                                // 驳回盘点单
+	CheckMaterials(ctx context.Context, req req.StockReconciliationCheckMaterialsReq) (resp.StockReconciliationCheckMaterialsListResp, error) // 检查物品
 }
 
 // stockReconciliationSrv 盘点单服务实现
@@ -217,6 +219,9 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 		if err == nil && len(itemUnits) > 0 {
 			unitsResp := make([]*resp.StockReconciliationItemUnitInfo, 0, len(itemUnits))
 			for _, itemUnit := range itemUnits {
+				if itemUnit.MaterialUnit == nil || itemUnit.MaterialUnit.Unit == nil || itemUnit.MaterialUnit.Unit.MultiLanguageName.Uuid == 0 {
+					continue
+				}
 				unitInfo := &resp.StockReconciliationItemUnitInfo{}
 				if err := copier.Copy(unitInfo, itemUnit); err != nil {
 					continue
@@ -848,4 +853,87 @@ func (s *stockReconciliationSrv) validateWarehouseAndItems(db *gorm.DB, req req.
 	}
 
 	return warehouseItems, materials, nil
+}
+
+func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, req req.StockReconciliationCheckMaterialsReq) (resp.StockReconciliationCheckMaterialsListResp, error) {
+
+	var listResp resp.StockReconciliationCheckMaterialsListResp
+	var itemResp []resp.StockReconciliationCheckMaterialsResp
+
+	db := ctx.GetDB()
+
+	var materialUuids []uint64
+	if req.Uuid != 0 {
+		stockReconciliationRepo := repository.NewStockReconciliationRepo(db)
+		opts := []repository.DBOption{
+			stockReconciliationRepo.WhereUuid(req.Uuid),
+			stockReconciliationRepo.WithStockReconciliationItemsMultiLanguageName(),
+			stockReconciliationRepo.WithStockReconciliationItemsUnits(),
+		}
+		// 查询盘点单
+		stockReconciliation, err := stockReconciliationRepo.GetStockReconciliation(opts...)
+		if err != nil {
+			return listResp, errors.WithMessage(err, "查询盘点单失败")
+		}
+		if stockReconciliation == nil {
+			return listResp, errors.New("盘点单不存在")
+		}
+
+		bookedQuantityMap, err := s.getBookedQuantityMap(db, stockReconciliation.WarehouseUuid)
+		if err != nil {
+			return listResp, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
+		}
+
+		for _, item := range stockReconciliation.StockReconciliationItems {
+			if item.DeleteTime > 0 {
+				continue
+			}
+			materialUuids = append(materialUuids, item.MaterialUuid)
+			bookedQuantity := item.BookedQuantity
+			// 已保存状态，账面库存数量要实时读取；其他状态，账面库存数量为盘点单中的数量
+			if stockReconciliation.Status == constant.StockReconciliationStatusSaved {
+				bookedQuantity = bookedQuantityMap[item.MaterialUuid]
+			}
+
+			var unitCount uint
+			for _, unit := range item.StockReconciliationItemUnits {
+				if unit.Quantity != nil {
+					unitCount++
+				}
+			}
+
+			itemResp = append(itemResp, resp.StockReconciliationCheckMaterialsResp{
+				LocaleName:                 item.Material.MultiLanguageName.GetNames(),
+				IsInventoryStatusException: item.CountedQuantity.Sub(bookedQuantity).Abs().Div(bookedQuantity).GreaterThan(decimal.NewFromFloat(0.2)),
+				Status:                     item.Material.Status,
+				IsDeleted:                  item.Material.DeleteTime > 0,
+				UnitCount:                  unitCount,
+			})
+		}
+	}
+
+	if len(req.MaterialUuids) > 0 {
+		var newMaterialUuids []uint64
+		// 过滤掉在materialUuids中的物品
+		for _, materialUuid := range req.MaterialUuids {
+			if !slices.Contains(materialUuids, materialUuid) {
+				newMaterialUuids = append(newMaterialUuids, materialUuid)
+			}
+		}
+
+		var materials []model.Material
+		db.Model(&model.Material{}).Where("uuid IN (?)", newMaterialUuids).Find(&materials)
+
+		for _, material := range materials {
+			itemResp = append(itemResp, resp.StockReconciliationCheckMaterialsResp{
+				LocaleName: material.MultiLanguageName.GetNames(),
+				Status:     material.Status,
+				IsDeleted:  material.DeleteTime > 0,
+			})
+		}
+	}
+
+	return resp.StockReconciliationCheckMaterialsListResp{
+		List: itemResp,
+	}, nil
 }

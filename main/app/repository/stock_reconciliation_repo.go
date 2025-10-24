@@ -24,6 +24,7 @@ type IStockReconciliationRepo interface {
 	WithWarehouseMultiLanguageName() DBOption
 	WithWarehouse() DBOption
 	WithStockReconciliationItems() DBOption
+	WithStockReconciliationItemsUnits() DBOption
 	WithStockReconciliationItemsMultiLanguageName() DBOption
 	WithStockReconciliationItemsMaterialBaseUnit() DBOption
 	WithStockReconciliationItemMaterialUnits() DBOption
@@ -121,7 +122,7 @@ func (r *StockReconciliationRepoImpl) DeleteStockReconciliation(uuid uint64) err
 	if err := r.db.Model(&model.StockReconciliationItem{}).Where("stock_reconciliation_uuid = ?", uuid).Update("delete_time", gorm.Expr("UNIX_TIMESTAMP()")).Error; err != nil {
 		return errors.WithMessage(err, "删除盘点单物品明细失败")
 	}
-	if err := r.db.Model(&model.StockReconciliationItemUnit{}).Where("stock_reconciliation_item_uuid = ?", r.db.Model(&model.StockReconciliationItem{}).Where("stock_reconciliation_uuid = ?", uuid).Select("uuid")).Update("delete_time", gorm.Expr("UNIX_TIMESTAMP()")).Error; err != nil {
+	if err := r.db.Model(&model.StockReconciliationItemUnit{}).Where("stock_reconciliation_item_uuid in (?)", r.db.Model(&model.StockReconciliationItem{}).Where("stock_reconciliation_uuid = ?", uuid).Select("uuid")).Update("delete_time", gorm.Expr("UNIX_TIMESTAMP()")).Error; err != nil {
 		return errors.WithMessage(err, "删除盘点单物品单位明细失败")
 	}
 	return nil
@@ -230,6 +231,12 @@ func (r *StockReconciliationRepoImpl) WithWarehouse() DBOption {
 func (r *StockReconciliationRepoImpl) WithStockReconciliationItems() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("StockReconciliationItems.Material")
+	}
+}
+
+func (r *StockReconciliationRepoImpl) WithStockReconciliationItemsUnits() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("StockReconciliationItems.StockReconciliationItemUnits")
 	}
 }
 
