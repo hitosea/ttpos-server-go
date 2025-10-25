@@ -3550,11 +3550,14 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 		if err != nil {
 			return errors.WithMessage(err)
 		}
+		staffShiftLogUuid := uint64(0)
 		staffShiftLog, err := GetCurrentStaffShiftLog(db, ctx.GetStaffUuid())
 		if err != nil {
-			return errors.WithMessage(err)
+			logger.Logger.Error("获取当前未交班的班次列表失败", zap.Uint64("staffUuid", ctx.GetStaffUuid()), zap.Error(err))
+		} else {
+			staffShiftLogUuid = staffShiftLog.Uuid
 		}
-		warehouseOutForms = model.NewWarehouseOutForm(productList, false, saleBill.Uuid, ctx.GetStaffUuid(), staffShiftLog.Uuid)
+		warehouseOutForms = model.NewWarehouseOutForm(productList, false, saleBill.Uuid, ctx.GetStaffUuid(), staffShiftLogUuid)
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
