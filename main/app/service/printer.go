@@ -25,6 +25,7 @@ import (
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -768,9 +769,65 @@ func (s *printerSrv) GetPrinterCustomizeConfigInfo(ctx context.Context, configIn
 	if err != nil {
 		return resp.ConfigInfoResp{}, errors.WithMessage(errors.New("获取模板配置信息失败"), err.Error())
 	}
-	// 格式化模板JSON字符串
+
+	// 从模板JSON中提取 block 数据，并追加到配置信息的 group_blocks 的 data_rows 中
+	extractedBlocks, err := s.ExtractBlocksFromTemplate(defaultJsonStr)
+	if err != nil {
+		logger.Logger.Warn("提取模板blocks失败", zap.Error(err))
+	}
+
+	// 格式化模板JSON字符串并添加 data_rows
 	var templateConfigObj map[string]interface{}
 	if err := json.Unmarshal([]byte(templateConfigInfoStr), &templateConfigObj); err == nil {
+		// 如果有提取的blocks，将它们添加到配置信息的 data_rows 中
+		if extractedBlocks != nil && len(extractedBlocks) > 0 {
+			if rows, ok := templateConfigObj["rows"].([]interface{}); ok {
+				// 遍历每个 group
+				for _, row := range rows {
+					rowMap, ok := row.(map[string]interface{})
+					if !ok {
+						continue
+					}
+
+					groupBlocks, ok := rowMap["group_blocks"].([]interface{})
+					if !ok {
+						continue
+					}
+
+					// 遍历该组的每个 group_block
+					for _, groupBlockInterface := range groupBlocks {
+						groupBlockMap, ok := groupBlockInterface.(map[string]interface{})
+						if !ok {
+							continue
+						}
+
+						blockId, exists := groupBlockMap["block_id"].(string)
+						if !exists {
+							continue
+						}
+
+						// 从提取的blocks中找到匹配的 block_id，添加到 data_rows
+						if templateBlocks, found := extractedBlocks[blockId]; found && len(templateBlocks) > 0 {
+							dataRows, _ := groupBlockMap["data_rows"].([]interface{})
+							if dataRows == nil {
+								dataRows = make([]interface{}, 0)
+							}
+
+							// 将每个 template block 作为单独的数组添加到 data_rows
+							// 格式：data_rows = [[block1], [block2], [block3]]
+							for _, templateBlock := range templateBlocks {
+								dataRows = append(dataRows, []interface{}{templateBlock})
+							}
+
+							groupBlockMap["data_rows"] = dataRows
+						}
+					}
+				}
+				templateConfigObj["rows"] = rows
+			}
+		}
+
+		// 格式化JSON字符串
 		if formattedJSON, err := json.Marshal(templateConfigObj); err == nil {
 			templateConfigInfoStr = string(formattedJSON)
 		}
@@ -789,4 +846,63 @@ func (s *printerSrv) GetPrinterCustomizeConfigInfo(ctx context.Context, configIn
 
 	// 返回
 	return result, nil
+}
+
+// ExtractBlocksFromTemplate 从模板JSON中提取 block 数据
+// 返回 map[string][]interface{}，key 是 group_block_id（对应配置中的 block_id），value 是该 group_block_id 的所有 block 数据数组
+func (s *printerSrv) ExtractBlocksFromTemplate(templateJSONStr string) (map[string][]interface{}, error) {
+	var templateObj map[string]interface{}
+	if err := json.Unmarshal([]byte(templateJSONStr), &templateObj); err != nil {
+		return nil, errors.WithMessage(errors.New("解析模板JSON失败"), err.Error())
+	}
+
+	// 存储按 group_block_id 索引的blocks（因为配置中的 block_id 对应的是模板的 group_block_id）
+	blocksByGroupBlockId := make(map[string][]interface{})
+
+	// 获取 rows 数组
+	rows, ok := templateObj["rows"].([]interface{})
+	if !ok {
+		return blocksByGroupBlockId, nil
+	}
+
+	// 递归遍历所有 blocks
+	s.extractBlocksRecursive(rows, blocksByGroupBlockId)
+
+	return blocksByGroupBlockId, nil
+}
+
+// extractBlocksRecursive 递归提取 blocks
+func (s *printerSrv) extractBlocksRecursive(rows []interface{}, blocksByGroupBlockId map[string][]interface{}) {
+	for _, row := range rows {
+		rowArray, ok := row.([]interface{})
+		if !ok {
+			continue
+		}
+
+		// 遍历每行的blocks
+		for _, blockInterface := range rowArray {
+			block, ok := blockInterface.(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			// 获取 group_block_id（这是配置文件中 block_id 的值）
+			groupBlockId, exists := block["group_block_id"].(string)
+			if !exists || groupBlockId == "" {
+				// 如果没有 group_block_id，尝试递归检查是否有嵌套的 rows
+				if nestedRows, ok := block["rows"].([]interface{}); ok {
+					s.extractBlocksRecursive(nestedRows, blocksByGroupBlockId)
+				}
+				continue
+			}
+
+			// 将 block 添加到对应的 group_block_id 数组中
+			blocksByGroupBlockId[groupBlockId] = append(blocksByGroupBlockId[groupBlockId], block)
+
+			// 如果有嵌套的 rows，也递归处理
+			if nestedRows, ok := block["rows"].([]interface{}); ok {
+				s.extractBlocksRecursive(nestedRows, blocksByGroupBlockId)
+			}
+		}
+	}
 }

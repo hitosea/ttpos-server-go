@@ -914,7 +914,7 @@
         ],
         [
             {
-                "group_block_id": "total_items",
+                "group_block_id": "product_total_num",
                 "block_id": "order.product_num",
                 "block_type": "label:auto:value",
                 "block_label": {
@@ -955,7 +955,7 @@
         ],
         [
             {
-                "group_block_id": "product_amount",
+                "group_block_id": "product_total_amount",
                 "block_id": "order.product_amount",
                 "block_type": "label:auto:value",
                 "block_label": {

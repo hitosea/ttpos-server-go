@@ -1,6 +1,6 @@
 {
     "metadata": {
-        "name": "预结账单",
+        "name": "结账单",
         "description": "",
         "paper_width": 0,
         "version": "1.0"
@@ -12,28 +12,28 @@
                 "block_id": "title",
                 "block_type": "label",
                 "block_label": {
-                    "de": "Vorabrechnung",
-                    "en": "Pre-bill",
-                    "ja": "事前請求",
-                    "ko": "사전 청구",
-                    "my": "ကြိုတင်ငွေတောင်းခံလွှာ",
-                    "sv": "Preliminär nota",
-                    "th": "เรียกเก็บเงินล่วงหน้า",
-                    "tr": "Ön fatura",
-                    "zh": "预结账单",
-                    "zhtw": "預結賬單"
+                    "de": "Rechnung",
+                    "en": "INVOICE / RECEIPT",
+                    "ja": "レシート",
+                    "ko": "점검",
+                    "my": "ထွက်ခွာသည်",
+                    "sv": "Slutnota",
+                    "th": "ใบเสร็จรับเงิน",
+                    "tr": "Çıkış yapmak",
+                    "zh": "结账单",
+                    "zhtw": "結賬單"
                 },
                 "block_name": {
-                    "en": "Receipt name",
-                    "ja": "レシート名",
-                    "ko": "영수증 이름",
-                    "my": "ပြေစာနာမည်",
-                    "th": "ชื่อใบเสร็จ",
-                    "tr": "Makbuz adı",
-                    "zh": "票据名称",
-                    "zhtw": "收據名稱",
-                    "de": "Belegname",
-                    "sv": "Kvittonamn"
+                   "de": "Rechnung",
+                    "en": "INVOICE / RECEIPT",
+                    "ja": "レシート",
+                    "ko": "점검",
+                    "my": "ထွက်ခွာသည်",
+                    "sv": "Slutnota",
+                    "th": "ใบเสร็จรับเงิน",
+                    "tr": "Çıkış yapmak",
+                    "zh": "结账单",
+                    "zhtw": "結賬單"
                 },
                 "block_attr": {
                     "font_size": 32,
@@ -317,6 +317,100 @@
         ],
         [
             {
+                "group_block_id": "cashier_sn",
+                "block_id": "store.cashier_sn",
+                "block_type": "label:value",
+                "block_label": {
+                    "zh": "收银机SN: ",
+                    "en": "Cashier SN: ",
+                    "ko": "캐셔 SN: ",
+                    "my": "ငွေကောင်တာ SN: ",
+                    "tr": "Kasa SN: ",
+                    "de": "Kassen-SN: ",
+                    "sv": "Kassör SN: ",
+                    "ja": "レジ SN: ",
+                    "zhtw": "收銀機SN: ",
+                    "th": "เครื่องคิดเงิน SN: "
+                },
+                "block_name": {
+                    "zh": "收银机SN",
+                    "en": "Cashier SN",
+                    "ko": "캐셔 SN",
+                    "my": "ငွေကောင်တာ SN",
+                    "tr": "Kasa SN",
+                    "de": "Kassen-SN",
+                    "sv": "Kassör SN",
+                    "ja": "レジ SN",
+                    "zhtw": "收銀機SN",
+                    "th": "เครื่องคิดเงิน SN"
+                },
+                "block_attr": {
+                    "font_size": 20,
+                    "align": "left",
+                    "font_bold": false,
+                    "dividing_line": false,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 0,
+                    "width": 100
+                },
+                "conditions": [
+                    {
+                        "field": "store.cashier_sn",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
+                ]
+            }
+        ],
+        [
+            {
+                "group_block_id": "printer_sn",
+                "block_id": "store.printer_sn",
+                "block_type": "label:value",
+                "block_label": {
+                    "zh": "打印机SN: ",
+                    "en": "Printer SN: ",
+                    "ko": "프린터 SN: ",
+                    "my": "ပုံနှိပ်စက် SN: ",
+                    "tr": "Yazıcı SN: ",
+                    "de": "Drucker-SN: ",
+                    "sv": "Skrivare SN: ",
+                    "ja": "プリンター SN: ",
+                    "zhtw": "印表機SN: ",
+                    "th": "เครื่องพิมพ์ SN: "
+                },
+                "block_name": {
+                    "zh": "打印机SN",
+                    "en": "Printer SN",
+                    "ko": "프린터 SN",
+                    "my": "ပုံနှိပ်စက် SN",
+                    "tr": "Yazıcı SN",
+                    "de": "Drucker-SN",
+                    "sv": "Skrivare SN",
+                    "ja": "プリンター SN",
+                    "zhtw": "印表機SN",
+                    "th": "เครื่องพิมพ์ SN"
+                },
+                "block_attr": {
+                    "font_size": 20,
+                    "align": "left",
+                    "font_bold": false,
+                    "dividing_line": false,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 0,
+                    "width": 100
+                },
+                "conditions": [
+                    {
+                        "field": "store.printer_sn",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
+                ]
+            }
+        ],
+        [
+            {
                 "block_id": "blank_line",
                 "block_type": "blank_line",
                 "block_label": {},
@@ -536,6 +630,47 @@
                     "zhtw": "收銀員",
                     "de": "Kassierer",
                     "sv": "Kassör"
+                },
+                "block_attr": {
+                    "font_size": 20,
+                    "align": "left",
+                    "font_bold": false,
+                    "dividing_line": false,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 0,
+                    "width": 100
+                },
+                "conditions": []
+            }
+        ],
+        [
+            {
+                "group_block_id": "finish_time",
+                "block_id": "order.finish_time",
+                "block_type": "label:value",
+                "block_label": {
+                    "th": "วันที่สิ้นสุด: ",
+                    "en": "Time: ",
+                    "ko": "시간: ",
+                    "my": "အချိန်: ",
+                    "tr": "Zaman: ",
+                    "de": "Zeit: ",
+                    "sv": "Tid: ",
+                    "ja": "時間: ", 
+                    "zhtw": "時間: ",
+                    "zh": "时间: "
+                },
+                "block_name": {
+                    "th": "วันที่สิ้นสุด",
+                    "en": "Finish Time",
+                    "ko": "종료 시간",
+                    "my": "အဆုံးသတ်ချက်",
+                    "tr": "Son Zamanı",
+                    "de": "Endzeit",
+                    "sv": "Sluttid",
+                    "ja": "終了時間",
+                    "zhtw": "結账時間",
+                    "zh": "结账时间"
                 },
                 "block_attr": {
                     "font_size": 20,
@@ -914,7 +1049,7 @@
         ],
         [
             {
-                "group_block_id": "total_items",
+                "group_block_id": "product_total_num",
                 "block_id": "order.product_num",
                 "block_type": "label:auto:value",
                 "block_label": {
@@ -955,7 +1090,7 @@
         ],
         [
             {
-                "group_block_id": "product_amount",
+                "group_block_id": "product_total_amount",
                 "block_id": "order.product_amount",
                 "block_type": "label:auto:value",
                 "block_label": {
@@ -1792,35 +1927,65 @@
         ],
         [
             {
-                "group_block_id": "payment_qrcode",
-                "block_id": "order.payment_qrcode",
-                "block_type": "qrcode",
+                "group_block_id": "payment_info",
+                "block_id": "order.payment_methods",
+                "block_type": "column",
                 "block_label": {},
                 "block_name": {
-                    "en": "QR Code",
-                    "ja": "QRコード",
-                    "ko": "QR 코드",
-                    "my": "QR 코드",
-                    "th": "QR コード",
-                    "tr": "QR Kodu",
-                    "zh": "二维码",
-                    "zhtw": "QR碼",
-                    "de": "QR-Code",
-                    "sv": "QR-kod"
+                    "en": "Payment Methods",
+                    "ja": "支払い方法",
+                    "ko": "결제 방법",
+                    "my": "ငွေပေးချေမှုနည်းလမ်း",
+                    "th": "วิธีการชำระเงิน",
+                    "tr": "Ödeme Yöntemi",
+                    "zh": "支付方式",
+                    "zhtw": "支付方式"
                 },
                 "block_attr": {
-                    "font_size": 22,
+                    "font_size": 18,
                     "align": "center",
                     "font_bold": false,
-                    "dividing_line": false,
+                    "dividing_line": true,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
-                    "width": 280,
-                    "line_height": 40
+                    "width": 100
                 },
+                "rows": [
+                    [
+                        {
+                            "block_id": "name",
+                            "block_type": "value",
+                            "block_label": {},
+                            "block_attr": {
+                                "font_size": 20,
+                                "align": "left",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 0,
+                                "width": 60
+                            }
+                        },
+                        {
+                            "block_id": "text",
+                            "block_type": "value",
+                            "block_label": {},
+                            "block_attr": {
+                                "font_size": 20,
+                                "align": "right",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 0,
+                                "show_currency_unit": false,
+                                "width": 40
+                            }
+                        }
+                    ]
+                ],
                 "conditions": [
                     {
-                        "field": "order.payment_qrcode",
+                        "field": "order.payment_methods",
                         "operator": "not_empty",
                         "value": 0
                     }
@@ -1829,45 +1994,118 @@
         ],
         [
             {
-                "group_block_id": "payment_qrcode",
-                "block_id": "title",
-                "block_type": "label",
+                "group_block_id": "member_details",
+                "block_id": "order.member_remaining_balance",
+                "block_type": "label:auto:value",
                 "block_label": {
-                    "de": "Bitte mit {order.payment_name} scannen um zu bezahlen",
-                    "en": "Please scan with {order.payment_name} to pay",
-                    "ja": "{order.payment_name}でスキャンして支払いしてください",
-                    "ko": "{order.payment_name}로 스캔하여 결제하세요",
-                    "my": "ကျေးဇူးပြု၍ {order.payment_name} ဖြင့် စကင်န်ပြီး ပေးချေပါ",
-                    "sv": "Vänligen skanna med {order.payment_name} för att betala",
-                    "th": "กรุณาสแกนด้วย {order.payment_name} เพื่อชำระเงิน",
-                    "tr": "Lütfen ödeme yapmak için {order.payment_name} ile tarayın",
-                    "zh": "请用{order.payment_name}扫一扫支付",
-                    "zhtw": "請用{order.payment_name}掃一掃支付"
+                    "zh": "会员剩余余额",
+                    "en": "Member Remaining Balance",
+                    "ko": "회원 잔액",
+                    "my": "အဖွဲ့ဝင် ကျန်ရှိသော လက်ကျန်ငွေ:",
+                    "th": "ยอดคงเหลือสมาชิก",
+                    "tr": "Üye Kalan Bakiye",
+                    "de": "Mitgliedsrestguthaben",
+                    "sv": "Medlemsåterstående saldo",
+                    "ja": "会員残高",
+                    "zhtw": "會員剩餘餘額"
                 },
                 "block_name": {
-                    "en": "Payment Description",
-                    "ja": "支払い説明",
-                    "ko": "결제 설명",
-                    "my": "ပေးချေခြင်းအကြောင်း",
-                    "th": "คำอธิบายการชำระเงิน",
-                    "tr": "Ödeme Açıklaması",
-                    "zh": "支付描述",
-                    "zhtw": "支付描述",
-                    "de": "Zahlungsbeschreibung",
-                    "sv": "Betalningsbeskrivning"
+                    "zh": "会员剩余余额",
+                    "en": "Member Remaining Balance",
+                    "ko": "회원 잔액",
+                    "my": "အဖွဲ့ဝင် ကျန်ရှိသော လက်ကျန်ငွေ:",
+                    "th": "ยอดคงเหลือสมาชิก",
+                    "tr": "Üye Kalan Bakiye",
+                    "de": "Mitgliedsrestguthaben",
+                    "sv": "Medlemsåterstående saldo",
+                    "ja": "会員残高",
+                    "zhtw": "會員剩餘餘額"
                 },
                 "block_attr": {
                     "font_size": 20,
-                    "align": "center",
-                    "font_bold": true,
-                    "dividing_line": true,
+                    "align": "right",
+                    "font_bold": false,
+                    "dividing_line": false,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
-                    "width": 100
+                    "show_currency_unit": true,
+                    "width": 50
                 },
                 "conditions": [
                     {
-                        "field": "order.payment_qrcode",
+                        "field": "order.is_member",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
+                ]
+            }
+        ],
+        [
+            {
+                "group_block_id": "member_details",
+                "block_id": "order.member_points",
+                "block_type": "label:auto:value",
+                "block_label": {
+                    "zh": "本次积分",
+                    "en": "Points Earned",
+                    "ko": "이번 적립 포인트",
+                    "my": "ဒီအကြိမ် ရရှိသော အမှတ်များ:",
+                    "th": "แต้มที่ได้รับ",
+                    "tr": "Bu Sefer Kazanılan Puanlar",
+                    "de": "Diesmal Verdiente Punkte",
+                    "sv": "Denna Gång Förtjänade Poäng",
+                    "ja": "今回のポイント",
+                    "zhtw": "本次積分"
+                },
+                "block_name": {
+                    "zh": "本次积分",
+                    "en": "Points Earned",
+                    "ko": "이번 적립 포인트",
+                    "my": "ဒီအကြိမ် ရရှိသော အမှတ်များ:",
+                    "th": "แต้มที่ได้รับ",
+                    "tr": "Bu Sefer Kazanılan Puanlar",
+                    "de": "Diesmal Verdiente Punkte",
+                    "sv": "Denna Gång Förtjänade Poäng",
+                    "ja": "今回のポイント",
+                    "zhtw": "本次積分"
+                },
+                "block_attr": {
+                    "font_size": 20,
+                    "align": "right",
+                    "font_bold": false,
+                    "dividing_line": true,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 0,
+                    "show_currency_unit": false,
+                    "width": 50
+                },
+                "conditions": [
+                    {
+                        "field": "order.is_member",
+                        "operator": "not_empty",
+                        "value": 0
+                    }
+                ]
+            }
+        ],
+        [
+            {
+                "group_block_id": "barcode_info",
+                "block_id": "order.barcode",
+                "block_type": "barcode", 
+                "block_label": {},
+                "block_attr": {
+                    "font_size": 22,
+                    "align": "center",
+                    "font_bold": false,
+                    "dividing_line": true,
+                    "leading_blank_lines": 0,
+                    "trailing_blank_lines": 0,
+                    "width": 500
+                },
+                "conditions": [
+                    {
+                        "field": "order.barcode",
                         "operator": "not_empty",
                         "value": 0
                     }
