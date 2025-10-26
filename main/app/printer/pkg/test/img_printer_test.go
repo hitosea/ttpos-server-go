@@ -54,6 +54,7 @@ func TestComplexImgTemplate(t *testing.T) {
 	}
 
 	// 保存测试图片
+	img.SegmentationHeight = 200000
 	img.Save("./tmp/printer/complex_template_test.png", false, 0)
 
 	fmt.Println("复杂模板测试完成，图片已保存到: ./tmp/printer/complex_template_test.png")

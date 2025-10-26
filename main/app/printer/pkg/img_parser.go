@@ -290,7 +290,7 @@ func (p *ImgTemplateParser) parseRow(
 				img.AppendImg(text, widthInt, false, 0)
 				img.RecoverDefaultTextLineHeight()
 			} else if block.BlockType == "qrcode" {
-				img.SetTextTotalHeight(20)
+				img.SetTextTotalHeight(30)
 				img.SetTextLineHeight(25)
 				if strings.HasPrefix(text, "data:image/png;base64,") {
 					img.AppendQrcode(text, widthInt, 0, true)

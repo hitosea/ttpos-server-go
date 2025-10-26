@@ -573,7 +573,6 @@ func (s *printerSrv) EditPrinterCustomize(ctx context.Context, editPrinterCustom
 		if exists {
 			return errors.New("高级模版名称已存在")
 		}
-		return errors.New("高级模版不能编辑")
 	}
 	//
 	testData, err := s.GetTestData(ctx, template.Name)
