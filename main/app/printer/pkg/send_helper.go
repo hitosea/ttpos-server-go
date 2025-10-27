@@ -19,12 +19,15 @@ import (
 )
 
 // PrintSunmiTicket 商米打印
-func PrintSunmiTicket(config model.PrinterConfigJson, content string) error {
+func PrintSunmiTicket(config model.PrinterConfigJson, content string, tradeNo string) error {
 	printer := NewPrinter(567, config.APP_ID, config.APP_KEY)
 	// 云打印
 	if config.SN != "" && config.APP_ID != "" && config.APP_KEY != "" {
 		printer.orderData = content
-		res, err := printer.PushContent(config.SN, fmt.Sprintf("%d%s", time.Now().Unix(), hex.EncodeToString([]byte(uniqid()))[:8]), 1, 1, "", 1)
+		if tradeNo == "" {
+			tradeNo = fmt.Sprintf("%d%s", time.Now().Unix(), hex.EncodeToString([]byte(uniqid()))[:8])
+		}
+		res, err := printer.PushContent(config.SN, tradeNo, 1, 1, "", 1)
 		if err != nil {
 			fmt.Println("请求错误", err)
 			return fmt.Errorf("请求错误")

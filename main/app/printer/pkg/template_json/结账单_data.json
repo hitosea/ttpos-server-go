@@ -35,7 +35,7 @@
                 "sauce_names": "",
                 "is_delay": false,
                 "is_buffet": false,
-                "is_gift": false,
+                "is_gift": true,
                 "is_package": false,
                 "is_sub_product": false,
                 "is_buffet_product": false
