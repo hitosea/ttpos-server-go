@@ -1157,9 +1157,14 @@ func (s *warehouseSrv) GetWarehouseMaterialList(ctx context.Context, req req.War
 			baseUnit = resp.MaterialUnitInfo{
 				MaterialUnitUuid: material.Unit.Uuid,
 				UnitUuid:         material.Unit.UnitUuid,
-				UnitName:         material.Unit.Unit.MultiLanguageName.GetNames(),
-				ConversionRate:   material.Unit.ConversionRate,
-				IsDefault:        material.Unit.IsDefault,
+				UnitName: func() dto.LocaleResponse {
+					if material.Unit.Unit != nil && material.Unit.Unit.MultiLanguageName.Uuid != 0 {
+						return material.Unit.Unit.MultiLanguageName.GetNames()
+					}
+					return dto.LocaleResponse{}
+				}(),
+				ConversionRate: material.Unit.ConversionRate,
+				IsDefault:      material.Unit.IsDefault,
 			}
 		}
 
