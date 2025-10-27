@@ -2,5 +2,6 @@
   "item_name": "Membership Recharge",
   "item_code": "VP002",
   "item_group": "Virtual Product",
-  "stock_uom": "Nos"
+  "stock_uom": "Nos",
+  "is_stock_item": false
 }

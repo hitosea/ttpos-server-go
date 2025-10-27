@@ -62,6 +62,10 @@ func NewCallBoardService(dbm *database.DBManager, cache cache.Cache) ICallBoardS
 
 	// 订阅处理结账事件
 	srv.bus.SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
+		logger.Logger.Info("callboard srv received checkout sale order event",
+			zap.Uint64("companyUuid", payload.CompanyUuid),
+			zap.Uint64("saleBillUuid", payload.SaleBillUuid),
+		)
 		err := srv.handleSaleBillEvent(payload.CompanyUuid, payload.SaleBillUuid, _ActionPushToPreparingQueue)
 		if err != nil {
 			logger.Logger.Error("callboard srv handleSaleBillEvent failed", zap.Error(err))
@@ -196,6 +200,12 @@ func (s *callBoardService) GetQueueData(ctx context.Context, companyUuid uint64,
 	if err != nil {
 		return nil, err
 	}
+
+	utils.SafeGo(func() {
+		maxScore := time.Now().Add(-7 * 24 * time.Hour).Unix() // 删除7天前的数据
+		s.removeExpireMemberFromQueues(cachekey.GetPreparingQueueKey(companyUuid), maxScore)
+		s.removeExpireMemberFromQueues(cachekey.GetPreparedQueueKey(companyUuid), maxScore)
+	})
 
 	return &resp.QueueDataResp{
 		Lang1:          bindInfo.Lang1,
@@ -637,4 +647,8 @@ func parseQueueMember(member string) (queueMember, bool) {
 		SerialNo:   serialNo,
 		CreateTime: createTime,
 	}, true
+}
+
+func (s *callBoardService) removeExpireMemberFromQueues(queueKey string, maxScore int64) error {
+	return s.getRedisClient().ZRemRangeByScore(context.Background(), queueKey, "-inf", strconv.FormatInt(maxScore, 10)).Err()
 }

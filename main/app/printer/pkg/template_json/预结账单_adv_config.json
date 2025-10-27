@@ -206,7 +206,7 @@
                         "de": "Produktbetrag",
                         "sv": "Produktbelopp"
                     },
-                    "block_id": "product_amount",
+                    "block_id": "product_total_amount",
                     "data_rows": []
                 }
             ]

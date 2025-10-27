@@ -10,6 +10,9 @@
         "--port",
         "60030"
       ]
+    },
+    "DooTask": {
+        "url": "http://localhost:22224/mcp"
     }
   }
 }
