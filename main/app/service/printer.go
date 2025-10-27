@@ -908,6 +908,10 @@ func (s *printerSrv) extractBlocksRecursive(rows []interface{}, blocksByGroupBlo
 				continue
 			}
 
+			if block["block_type"] == "blank_line" {
+				continue
+			}
+
 			// 获取 group_block_id（这是配置文件中 block_id 的值）
 			groupBlockId, exists := block["group_block_id"].(string)
 			if !exists || groupBlockId == "" {
