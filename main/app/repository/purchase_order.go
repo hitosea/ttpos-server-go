@@ -47,6 +47,7 @@ type IPurchaseOrderRepo interface {
 	WithWarehouse() DBOption
 	WithLogs() DBOption
 	WithReceipts() DBOption
+	WithSupplier() DBOption
 	OrderByCreateTime(desc bool) DBOption
 	OrderByOrderTime(desc bool) DBOption
 
@@ -340,6 +341,15 @@ func (r *PurchaseOrderRepoImpl) WithReceipts() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("Receipts", func(db *gorm.DB) *gorm.DB {
 			return db.Order("receipt_time DESC")
+		})
+	}
+}
+
+// WithSupplier 预加载供应商
+func (r *PurchaseOrderRepoImpl) WithSupplier() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Supplier", func(db *gorm.DB) *gorm.DB {
+			return db.Order("create_time ASC")
 		})
 	}
 }

@@ -17,10 +17,10 @@ import (
 )
 
 type IDeviceSrv interface {
-	AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uint64, error)         // 添加绑定记录
-	GetRemark(companyUuid uint64, source string, deviceId string) string            // 获取设备绑定备注
-	IsDeviceBind(companyUuid uint64, source string, deviceId string) bool           // 设备是否绑定
-	UpdateRemark(ctx context.Context, editSettingReq req.EditDeviceRemarkReq) error // 更新备注
+	AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uint64, error)                    // 添加绑定记录
+	GetRemark(companyUuid uint64, source string, deviceId string) string                       // 获取设备绑定备注
+	IsDeviceBind(ctx context.Context, companyUuid uint64, source string, deviceId string) bool // 设备是否绑定
+	UpdateRemark(ctx context.Context, editSettingReq req.EditDeviceRemarkReq) error            // 更新备注
 }
 
 func NewDeviceSrv(settingSrv setting.ISrv, dbm *database.DBManager) IDeviceSrv {
@@ -212,10 +212,16 @@ func (s *deviceSrv) GetRemark(companyUuid uint64, source string, deviceId string
 	return device.Remark
 }
 
-func (s *deviceSrv) IsDeviceBind(companyUuid uint64, source string, deviceId string) bool {
+func (s *deviceSrv) IsDeviceBind(ctx context.Context, companyUuid uint64, source string, deviceId string) bool {
 	deviceRepo := repository.NewDeviceRepo(s.dbm.GetDB(companyUuid))
 	device, _ := deviceRepo.GetDevice(deviceRepo.WhereSource(source), deviceRepo.WhereSn(deviceId))
-	return device.Uuid > 0
+	if device.Uuid == 0 {
+		return false
+	}
+	if version := ctx.GetVersion(); device.Version != version {
+		deviceRepo.UpdateDevice(device.Uuid, map[string]any{"version": version})
+	}
+	return true
 }
 
 func (s *deviceSrv) UpdateRemark(ctx context.Context, editSettingReq req.EditDeviceRemarkReq) error {

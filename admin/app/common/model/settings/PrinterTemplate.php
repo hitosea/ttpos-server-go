@@ -29,7 +29,7 @@ class PrinterTemplate extends BaseModel
         // 未开启外送，不显示外送单模板
         $list = $this->when(request()->licenses['is_open_delivery'] == 0, function ($q) {
             return $q->where('uuid', '<>', 12);
-        })->select()->toArray() ?: [];
+        })->field('id, name, template, is_show_sku, tmp_uuid, create_time,update_time,delete_time')->select()->toArray() ?: [];
         $printerSettings = Setting::getSupplierItem(SettingEnum::PRINTER, $shop_supplier_id);
         // 授权无排队叫号权限
         foreach ($list as $key => &$item) {
@@ -44,9 +44,17 @@ class PrinterTemplate extends BaseModel
      */
     public function setTemplate($data)
     {
+        $customizeData = '';
+        if ($data['tmp_uuid'] ?? 0) {
+            $customizeData = PrinterCustomize::where('uuid', $data['tmp_uuid'])->value('data') ?: '';
+            PrinterCustomize::where('template_id', $this->id)->update(['is_use' => 0]);
+            PrinterCustomize::where('uuid', $data['tmp_uuid'])->update(['is_use' => 1]);
+        }
         return $this->save([
             'template' => $data['template'] ?? 1,
             'is_show_sku' => $data['is_show_sku'] ?? 1,
+            'tmp_uuid' => $data['tmp_uuid'] ?? 0,
+            'tmp_data' => $customizeData,
         ]);
     }
 

@@ -34,6 +34,7 @@ type ImgTemplateBlock struct {
 	BlockID           string                   `json:"block_id"`            // 块唯一标识
 	BlockType         string                   `json:"block_type"`          // 块类型 label, value, label:auto:value, array, img, qrcode, barcode, blank_line
 	BlockLabel        interface{}              `json:"block_label"`         // 标签（支持字符串或多语言）
+	BlockValue        interface{}              `json:"block_value"`         // 块值
 	BlockBeforeLabel  interface{}              `json:"block_before_label"`  // 块前标签（支持字符串或多语言）
 	BlockAfterLabel   interface{}              `json:"block_after_label"`   // 块后标签（支持字符串或多语言）
 	BlockExpandLabels []ImgTemplateExpandLabel `json:"block_expand_labels"` // 块扩展标签（支持条件显示）
@@ -289,7 +290,7 @@ func (p *ImgTemplateParser) parseRow(
 				img.AppendImg(text, widthInt, false, 0)
 				img.RecoverDefaultTextLineHeight()
 			} else if block.BlockType == "qrcode" {
-				img.SetTextTotalHeight(20)
+				img.SetTextTotalHeight(30)
 				img.SetTextLineHeight(25)
 				if strings.HasPrefix(text, "data:image/png;base64,") {
 					img.AppendQrcode(text, widthInt, 0, true)
@@ -495,6 +496,9 @@ func (p *ImgTemplateParser) convertToFloat64(value interface{}) float64 {
 
 // getBlockText 获取块的显示文本
 func (p *ImgTemplateParser) getBlockText(block ImgTemplateBlock) string {
+	if block.BlockValue != nil {
+		return block.BlockValue.(string)
+	}
 	// 如果有数据源，检查是否需要隐藏空值
 	if block.BlockID != "" && (strings.Contains(block.BlockType, "value") || block.BlockType == "img" || block.BlockType == "qrcode" || block.BlockType == "barcode") {
 		value := p.getDataValue(block.BlockID)
@@ -1020,11 +1024,6 @@ func (p *ImgTemplateParser) ValidateTemplate() error {
 	if p.template.Metadata.Name == "" {
 		return fmt.Errorf("模板名称不能为空")
 	}
-
-	if p.template.Metadata.PaperWidth <= 0 {
-		return fmt.Errorf("纸张宽度必须大于0")
-	}
-
 	// 验证模板行
 	return p.validateRows(p.template.Rows)
 }

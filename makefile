@@ -19,7 +19,7 @@ install:
 install-bmp:
 	@echo "🗄️  初始化中台模块..."
 	@make init-bmp-env
-	@cd ttpos-bmp && make conf && make migrate && make mid && make up
+	@cd ttpos-bmp && make update-ip && make conf && make mid && make migrate && make up
 
 # 重新构建项目
 build:

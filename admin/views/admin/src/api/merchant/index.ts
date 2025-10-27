@@ -115,6 +115,7 @@ export interface ShowAddType {
   sms_quota?: number; // 短信额度
   is_open_coupon?: number; // 是否开启优惠券: 0不开启, 1开启
   is_open_marketing?: number; // 是否开启营销活动: 0不开启, 1开启
+  is_open_advanced_ticket_print?: number; // 是否开启高级票据打印: 0不开启, 1开启
   coordinates?: string; // 经纬度
 }
 

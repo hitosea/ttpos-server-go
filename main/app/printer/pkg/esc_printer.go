@@ -132,7 +132,7 @@ func (p *Printers) httpPost(path string, body map[string]interface{}) (map[strin
 		},
 		TLSHandshakeTimeout:   10 * time.Second, // TLS握手超时
 		ResponseHeaderTimeout: 15 * time.Second, // 响应头超时
-		ExpectContinueTimeout: 1 * time.Second,  // Expect: 100-continue超时：1秒
+		ExpectContinueTimeout: 5 * time.Second,  // Expect: 100-continue超时：1秒
 	}
 	client := &http.Client{Transport: transport}
 	resp, err := client.Do(req)

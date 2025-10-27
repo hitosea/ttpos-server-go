@@ -20,6 +20,7 @@ type CancelSaleOrderProductProduct struct {
 	CustomReason    string                          `json:"custom_reason"`    // 自定义退菜原因
 	Sign            string                          `json:"sign"`             // sign
 	SubProducts     []CancelSaleOrderProductProduct `json:"sub_products"`     // 套餐子商品
+	BatchTagUuid    uint64                          `json:"batch_tag_uuid"`   // 分批类型UUID
 }
 
 type CancelSaleOrderProductPayload struct {

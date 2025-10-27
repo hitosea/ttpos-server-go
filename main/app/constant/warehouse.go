@@ -65,6 +65,24 @@ const (
 	WarehouseInOutLogTypeDeliveryInt = 2 // 发货出库 2
 )
 
+// WarehouseInOutLogLogType 出入库日志类型
+const (
+	WarehouseInOutLogLogTypeIn  = 0 // 入库
+	WarehouseInOutLogLogTypeOut = 1 // 出库
+)
+
+// WarehouseInOutLogScene 出入库日志场景
+const (
+	WarehouseInOutLogScenePurchase = 0 // 采购入库
+	WarehouseInOutLogSceneSale     = 1 // 销售出库
+	WarehouseInOutLogSceneDelivery = 2 // 发货出库
+	WarehouseInOutLogSceneProfitIn = 3 // 盘盈入库
+	WarehouseInOutLogSceneLossOut  = 4 // 盘亏出库
+
+	WarehouseInOutLogSceneTransitIn  = 20 // 在途入库
+	WarehouseInOutLogSceneTransitOut = 21 // 在途出库
+)
+
 func WarehouseInOutLogTypeToInt(typ string) int {
 	switch typ {
 	case WarehouseInOutLogTypePurchase:

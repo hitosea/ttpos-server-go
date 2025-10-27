@@ -137,8 +137,82 @@ func (model *SaleOrder) GetValidSaleOrderProductList() []*SaleOrderProduct {
 }
 
 type MaterialStock struct {
-	MaterialUuid uint64
-	StockNum     float64
+	MaterialUuid  uint64
+	WarehouseUuid uint64
+	StockNum      float64
+}
+
+// 使用成本卡的计算方式
+func flavorUseCard(saleOrderProduct *SaleOrderProduct, saleOrderProductBom *SaleOrderProductBom, materialStocks map[uint64]*MaterialStock) {
+	card := saleOrderProductBom.ProductBom.ProductBomCard
+	for _, relatedMaterial := range card.RelatedMaterials {
+		num := relatedMaterial.GetDecreaseNum(saleOrderProduct.Num) // 某个商品（sale_order_product）的材料消耗量（单位为基准单位）
+		materialStock := materialStocks[relatedMaterial.MaterialUuid]
+		if _, ok := materialStocks[relatedMaterial.MaterialUuid]; ok {
+			materialStock.StockNum = decimal.NewFromFloat(materialStock.StockNum).Add(decimal.NewFromFloat(num)).Round(4).InexactFloat64()
+		} else {
+			materialStock = &MaterialStock{
+				MaterialUuid:  relatedMaterial.MaterialUuid,
+				WarehouseUuid: relatedMaterial.Material.WarehouseUuid,
+				StockNum:      num,
+			}
+			materialStocks[relatedMaterial.MaterialUuid] = materialStock
+		}
+	}
+}
+
+// 使用关联材料的计算方式
+func sauceUseCard(saleOrderProduct *SaleOrderProduct, saleOrderProductBom *SaleOrderProductBom, materialStocks map[uint64]*MaterialStock) {
+	card := saleOrderProductBom.ProductBom.ProductSauce.ProductBomCard
+	for _, relatedMaterial := range card.RelatedMaterials {
+		num := relatedMaterial.GetDecreaseNum(saleOrderProduct.Num) // 某个商品（sale_order_product）的材料消耗量（单位为基准单位）
+		if materialStock, ok := materialStocks[relatedMaterial.MaterialUuid]; ok {
+			materialStock.StockNum = decimal.NewFromFloat(materialStock.StockNum).Add(decimal.NewFromFloat(num)).Round(4).InexactFloat64()
+		} else {
+			materialStock = &MaterialStock{
+				MaterialUuid:  relatedMaterial.MaterialUuid,
+				WarehouseUuid: relatedMaterial.Material.WarehouseUuid,
+				StockNum:      num,
+			}
+			materialStocks[relatedMaterial.MaterialUuid] = materialStock
+		}
+	}
+}
+
+func flavorUseRelatedMaterial(saleOrderProduct *SaleOrderProduct, saleOrderProductBom *SaleOrderProductBom, materialStocks map[uint64]*MaterialStock) {
+	relatedMaterials := saleOrderProductBom.ProductBom.FlavorMaterials
+	for _, relatedMaterial := range relatedMaterials {
+		num := relatedMaterial.GetDecreaseNum(saleOrderProduct.Num) // 某个商品（sale_order_product）的材料消耗量（单位为基准单位）
+		materialStock := materialStocks[relatedMaterial.MaterialUuid]
+		if _, ok := materialStocks[relatedMaterial.MaterialUuid]; ok {
+			materialStock.StockNum = decimal.NewFromFloat(materialStock.StockNum).Add(decimal.NewFromFloat(num)).Round(4).InexactFloat64()
+		} else {
+			materialStock = &MaterialStock{
+				MaterialUuid:  relatedMaterial.MaterialUuid,
+				WarehouseUuid: relatedMaterial.Material.WarehouseUuid,
+				StockNum:      num,
+			}
+			materialStocks[relatedMaterial.MaterialUuid] = materialStock
+		}
+	}
+}
+
+func sauceUseRelatedMaterial(saleOrderProduct *SaleOrderProduct, saleOrderProductBom *SaleOrderProductBom, materialStocks map[uint64]*MaterialStock) {
+	relatedMaterials := saleOrderProductBom.ProductBom.ProductSauce.SauceMaterials
+	for _, relatedMaterial := range relatedMaterials {
+		num := relatedMaterial.GetDecreaseNum(saleOrderProduct.Num) // 某个商品（sale_order_product）的材料消耗量（单位为基准单位）
+		materialStock := materialStocks[relatedMaterial.MaterialUuid]
+		if _, ok := materialStocks[relatedMaterial.MaterialUuid]; ok {
+			materialStock.StockNum = decimal.NewFromFloat(materialStock.StockNum).Add(decimal.NewFromFloat(num)).Round(4).InexactFloat64()
+		} else {
+			materialStock = &MaterialStock{
+				MaterialUuid:  relatedMaterial.MaterialUuid,
+				WarehouseUuid: relatedMaterial.Material.WarehouseUuid,
+				StockNum:      num,
+			}
+			materialStocks[relatedMaterial.MaterialUuid] = materialStock
+		}
+	}
 }
 
 // 获取订单中有效售出的商品的材料用量
@@ -148,33 +222,16 @@ func (model *SaleOrder) GetValidSaleOrderProductMaterialList() []*MaterialStock 
 	for _, saleOrderProduct := range saleOrderProducts {
 		for _, saleOrderProductBom := range saleOrderProduct.SaleOrderProductBoms {
 			if saleOrderProductBom.IsFlavor() {
-				card := saleOrderProductBom.ProductBom.ProductBomCard
-				for _, relatedMaterial := range card.RelatedMaterials {
-					num := relatedMaterial.GetDecreaseNum(saleOrderProduct.Num) // 某个商品（sale_order_product）的材料消耗量（单位为基准单位）
-					materialStock := materialStocks[relatedMaterial.MaterialUuid]
-					if _, ok := materialStocks[relatedMaterial.MaterialUuid]; ok {
-						materialStock.StockNum = decimal.NewFromFloat(materialStock.StockNum).Add(decimal.NewFromFloat(num)).Round(4).InexactFloat64()
-					} else {
-						materialStock = &MaterialStock{
-							MaterialUuid: relatedMaterial.MaterialUuid,
-							StockNum:     num,
-						}
-						materialStocks[relatedMaterial.MaterialUuid] = materialStock
-					}
+				if saleOrderProductBom.ProductBom.ProductBomCard != nil {
+					flavorUseCard(saleOrderProduct, saleOrderProductBom, materialStocks) // 使用成本卡的计算方式
+				} else if len(saleOrderProductBom.ProductBom.FlavorMaterials) > 0 {
+					flavorUseRelatedMaterial(saleOrderProduct, saleOrderProductBom, materialStocks) // 使用关联材料的计算方式
 				}
 			} else if saleOrderProductBom.IsSauce() {
-				card := saleOrderProductBom.ProductBom.ProductSauce.ProductBomCard
-				for _, relatedMaterial := range card.RelatedMaterials {
-					num := relatedMaterial.GetDecreaseNum(saleOrderProduct.Num) // 某个商品（sale_order_product）的材料消耗量（单位为基准单位）
-					if materialStock, ok := materialStocks[relatedMaterial.MaterialUuid]; ok {
-						materialStock.StockNum = decimal.NewFromFloat(materialStock.StockNum).Add(decimal.NewFromFloat(num)).Round(4).InexactFloat64()
-					} else {
-						materialStock = &MaterialStock{
-							MaterialUuid: relatedMaterial.MaterialUuid,
-							StockNum:     num,
-						}
-						materialStocks[relatedMaterial.MaterialUuid] = materialStock
-					}
+				if saleOrderProductBom.ProductBom.ProductSauce.ProductBomCard != nil {
+					sauceUseCard(saleOrderProduct, saleOrderProductBom, materialStocks) // 使用成本卡的计算方式
+				} else if len(saleOrderProductBom.ProductBom.ProductSauce.SauceMaterials) > 0 {
+					sauceUseRelatedMaterial(saleOrderProduct, saleOrderProductBom, materialStocks) // 使用关联材料的计算方式
 				}
 			}
 		}

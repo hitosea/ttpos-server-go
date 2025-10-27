@@ -88,6 +88,7 @@ type IOrderSrv interface {
 	OrderDeskBuffetProductList(ctx context.Context, req req.OrderChangeBuffetProductListReq) (*resp.BuffetProductList, error)                                    // 获取桌台的自助餐商品列表
 	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                                             // 通过桌台uuid获取到销售账单信息
 	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                   // 修改订单商品备注
+	OrderRemark(ctx context.Context, req req.OrderRemarkReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                                 // 修改订单备注
 	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, saleBillUuid uint64, deskUuid uint64, isMember bool) (*model.SaleBillSetting, error)                 // 创建销售账单设置
 	GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error)                                                                     // 通过设备SN获取点餐购物车信息
 	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                              // 获取购物车信息
@@ -3550,11 +3551,14 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 		if err != nil {
 			return errors.WithMessage(err)
 		}
+		staffShiftLogUuid := uint64(0)
 		staffShiftLog, err := GetCurrentStaffShiftLog(db, ctx.GetStaffUuid())
 		if err != nil {
-			return errors.WithMessage(err)
+			logger.Logger.Error("获取当前未交班的班次列表失败", zap.Uint64("staffUuid", ctx.GetStaffUuid()), zap.Error(err))
+		} else {
+			staffShiftLogUuid = staffShiftLog.Uuid
 		}
-		warehouseOutForms = model.NewWarehouseOutForm(productList, false, saleBill.Uuid, ctx.GetStaffUuid(), staffShiftLog.Uuid)
+		warehouseOutForms = model.NewWarehouseOutForm(productList, false, saleBill.Uuid, ctx.GetStaffUuid(), staffShiftLogUuid)
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
@@ -4968,6 +4972,105 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 	return info, nil
 }
 
+// OrderRemark 修改订单备注
+func (s *orderSrv) OrderRemark(ctx context.Context, req req.OrderRemarkReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
+	dbId := ctx.GetDbId()
+	db := s.dbm.GetDB(dbId)
+	if req.SaleBillUuid == 0 {
+		return nil, errors.New("请先下单再整单备注")
+	}
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(req.SaleBillUuid)
+		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	// 获取信息源
+	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
+
+	// 获取订单信息
+	billInfo, err := orderRepo.GetSaleBillAllInfo(req.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 判断订单状态
+	if err := billInfo.ValidateOrderStatus(ctx.GetSource(), constant.OrderOrderRemark, 0); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 查询整单备注信息
+	orderRemarkList, err := base.NewOrderRemarkRepo(db).GetOrderRemarkListByUuids(req.RemarkUuids)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询整单备注信息失败")
+	}
+	if len(orderRemarkList) != len(req.RemarkUuids) {
+		return nil, errors.WithMessage(errors.New("整单备注信息不存在"), "整单备注信息不存在")
+	}
+
+	// 整单备注信息
+	orderRemark, err := billInfo.GetOrderRemark()
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取整单备注信息失败")
+	}
+
+	if req.IsNullRemark() && orderRemark != nil { // 历史备注信息存在，但是没有选择整单备注或输入整单备注文本
+		// 划线所有历史备注
+		for i := range orderRemark.List {
+			orderRemark.List[i].IsLatest = false
+		}
+		billInfo.OrderRemark = orderRemark.ToJson()
+	} else {
+		// 创建新的备注信息
+		orderRemarkItem := resp.OrderRemarkItem{
+			IsLatest: true,
+			Uuids:    req.RemarkUuids,
+			Remark:   req.Remark,
+			Remarks: func() []dto.LocaleResponse {
+				remarks := make([]dto.LocaleResponse, 0)
+				for _, remark := range orderRemarkList {
+					remarks = append(remarks, remark.MultiLanguageName.GetNames())
+				}
+				return remarks
+			}(),
+			CreateTime: time.Now().Unix(),
+		}
+		if orderRemark != nil {
+			// 有历史备注信息
+			// 修改历史备注信息为不是最新
+			for i := range orderRemark.List {
+				orderRemark.List[i].IsLatest = false
+			}
+			orderRemark.List = append(orderRemark.List, orderRemarkItem)
+			billInfo.OrderRemark = orderRemark.ToJson()
+		} else {
+			// 没有历史备注信息
+			orderRemarkInfo := &resp.OrderRemarkInfo{
+				List: []resp.OrderRemarkItem{orderRemarkItem},
+			}
+			billInfo.OrderRemark = orderRemarkInfo.ToJson()
+		}
+	}
+	// 修改订单备注
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		if err := repository.NewOrderRepo(db).UpdateSaleBillOrderRemark(req.SaleBillUuid, billInfo.OrderRemark); err != nil {
+			return errors.WithMessage(err)
+		}
+		return nil
+	}); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 获取新的数据
+	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid, opts...)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return info, nil
+}
+
 // 通过设备SN获取销售账单uuid
 func (s *orderSrv) getSaleBillUuidByDeviceSn(ctx context.Context) (uint64, error) {
 	var saleBillUuid uint64
@@ -5108,6 +5211,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 	}
 
 	takeout := shopCart.SaleBill.IsTakeout()
+	orderRemark, _ := shopCart.SaleBill.GetOrderRemarkRes()
 	shopCartInfo := &resp.ShopCart{
 		SaleBillUuid:  saleBillUuid,
 		IsDeskOrder:   shopCart.IsDeskShopCart(),
@@ -5118,6 +5222,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		DiningMethod:  shopCart.SaleBill.DiningMethod,
 		SaleOrderList: saleOrderList,
 		UpdateTime:    shopCart.SaleBill.UpdateTime,
+		OrderRemark:   orderRemark,
 	}
 	// 如果是桌台购物车
 	if shopCart.IsDeskShopCart() {
@@ -10202,35 +10307,26 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 	// 订单商品列表
 	items := make([]*selling.PosInvoiceItem, 0)
 	isFreeOrder := saleOrder.IsFreeSaleOrder()
-	// for _, product := range saleOrder.SaleOrderBuffetCustomerTypes {
-	// 	// 自助餐名称
-	// 	buffetName := product.BuffetPackage.MultiLanguageName.EnName
-	// 	items = append(items, &selling.PosInvoiceItem{
-	// 		ItemCode:    "ZZC001",
-	// 		Qty:         float64(product.Num),
-	// 		Rate:        product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
-	// 		Amount:      product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
-	// 		Description: fmt.Sprintf("%s-%s", buffetName, product.Name),
-	// 	})
-	// }
-	// for _, product := range saleOrder.SaleOrderBuffetDelayProducts {
-	// 	buffetName := product.BuffetPackage.MultiLanguageName.EnName
-	// 	items = append(items, &selling.PosInvoiceItem{
-	// 		ItemCode:    "ZZC001",
-	// 		Qty:         float64(product.Num),
-	// 		Rate:        product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
-	// 		Amount:      product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
-	// 		Description: fmt.Sprintf("%s-%s", buffetName, product.Name),
-	// 	})
-	// }
-	// for _, product := range saleOrder.SaleOrderBuffetDelayProducts {
-	// 	items = append(items, &selling.PosInvoiceItem{
-	// 		ItemCode: "ZZC001",
-	// 		Qty:      float64(product.Num),
-	// 		Rate:     product.GetFinalSalePriceNoneTax(),        // 商品未含税价格（折后）
-	// 		Amount:   product.GetProductFinalSalePriceNoneTax(), // 商品未含税价格（折后）* 数量
-	// 	})
-	// }
+	for _, product := range saleOrder.SaleOrderBuffetCustomerTypes {
+		// 自助餐名称
+		buffetName := product.BuffetPackage.MultiLanguageName.EnName
+		items = append(items, &selling.PosInvoiceItem{
+			ItemCode:    "ZZC001",
+			Qty:         float64(product.Num),
+			Rate:        product.GetFinalSalePriceNoneTax(),                                                                                                             // 商品未含税价格（折后）
+			Amount:      decimal.NewFromFloat(product.GetFinalSalePriceNoneTax()).Mul(decimal.NewFromFloat(float64(product.Num))).Truncate(3).Round(2).InexactFloat64(), // 商品未含税价格（折后）* 数量
+			Description: fmt.Sprintf("%s-%s", buffetName, product.Name),
+		})
+	}
+	for _, product := range saleOrder.SaleOrderBuffetDelayProducts {
+		items = append(items, &selling.PosInvoiceItem{
+			ItemCode:    "ZZC001",
+			Qty:         float64(product.Num),
+			Rate:        product.Price,                                                                                                             // 商品未含税价格（折后）
+			Amount:      decimal.NewFromFloat(product.Price).Mul(decimal.NewFromFloat(float64(product.Num))).Truncate(3).Round(2).InexactFloat64(), // 商品未含税价格（折后）* 数量
+			Description: fmt.Sprintf("Delay:%s", product.Name),
+		})
+	}
 	for _, product := range saleOrder.SaleOrderProducts {
 		// 如果商品已删除，则跳过
 		if product.IsDelete() || product.IsCancelProduct() {
@@ -10516,58 +10612,110 @@ func (s *orderSrv) ReturnPosInvoice(ctx context.Context, saleOrder *model.SaleOr
 	totalTaxFee := decimal.NewFromFloat(0)
 	totalServiceFee := decimal.NewFromFloat(0)
 	for _, product := range returnOrder.ReturnOrderProducts {
-		saleOrderProduct, _, _ := saleOrder.GetSaleOrderProduct(product.SaleOrderProductUuid)
-		if saleOrderProduct.IsPackageSubProduct() {
-			continue // 跳过子商品，因为在套餐商品中已经录入了子商品
-		}
-		if isPartReturn && saleOrderProduct.IsGiftProduct() {
-			continue // 部分退款时，如果有赠菜，先不传给erp
-		}
-		if saleOrderProduct.IsPackageProduct() {
-			subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
-			for _, subProduct := range subProducts {
-				packageName := language.JsonToLocaleResponse(saleOrderProduct.Name) // 套餐名称
-				num := decimal.NewFromFloat(product.Num).Mul(decimal.NewFromFloat(subProduct.UnitNum)).Round(3).InexactFloat64()
+		if product.ProductType == constant.ReturnOrderProductTypeSaleOrderProduct {
+			saleOrderProduct, _, _ := saleOrder.GetSaleOrderProduct(product.SaleOrderProductUuid)
+			if saleOrderProduct.IsPackageSubProduct() {
+				continue // 跳过子商品，因为在套餐商品中已经录入了子商品
+			}
+			if isPartReturn && saleOrderProduct.IsGiftProduct() {
+				continue // 部分退款时，如果有赠菜，先不传给erp
+			}
+			if saleOrderProduct.IsPackageProduct() {
+				subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+				for _, subProduct := range subProducts {
+					packageName := language.JsonToLocaleResponse(saleOrderProduct.Name) // 套餐名称
+					num := decimal.NewFromFloat(product.Num).Mul(decimal.NewFromFloat(subProduct.UnitNum)).Round(3).InexactFloat64()
+					items = append(items, &selling.PosInvoiceItem{
+						ItemCode:    subProduct.ErpCode,
+						Qty:         -num,
+						Rate:        0,                                                  // 套餐子商品没有单价
+						Amount:      0,                                                  // 套餐子商品没有金额
+						Description: fmt.Sprintf("Sales in package:%s", packageName.EN), // 套餐子商品描述
+						IsFreeItem:  true,
+					})
+				}
+			}
+			taxFee := saleOrderProduct.TaxFee // 商品税费,仅消费税
+			// 无论商品是否“已含税”或“未含税”都是要累积税费
+			{
+				// 累计本次退款操作中退款商品的税费
+				tax := decimal.NewFromFloat(taxFee).Mul(decimal.NewFromFloat(product.Num)).Round(2).InexactFloat64()                                   // 仅消费税
+				serviceTaxFee := decimal.NewFromFloat(saleOrderProduct.ServiceTaxFee).Mul(decimal.NewFromFloat(product.Num)).Round(2).InexactFloat64() // 仅服务费税费
+				totalTaxFee = totalTaxFee.Add(decimal.NewFromFloat(tax)).Add(decimal.NewFromFloat(serviceTaxFee))                                      // +消费税+服务费税费
+				serviceFee := decimal.NewFromFloat(saleOrderProduct.ServiceFee).Mul(decimal.NewFromFloat(product.Num))
+				totalServiceFee = totalServiceFee.Add(serviceFee)
+			}
+			if saleOrderProduct.SalePrice == 0 { // 当商品是0元商品时，可能是通过商品改价为0或原本售价就是0
 				items = append(items, &selling.PosInvoiceItem{
-					ItemCode:    subProduct.ErpCode,
-					Qty:         -num,
-					Rate:        0,                                                  // 套餐子商品没有单价
-					Amount:      0,                                                  // 套餐子商品没有金额
-					Description: fmt.Sprintf("Sales in package:%s", packageName.EN), // 套餐子商品描述
-					IsFreeItem:  true,
+					ItemCode:   product.ErpCode,
+					Qty:        -product.Num,
+					Rate:       0,    // 商品未含税价格（折后）
+					Amount:     0,    // 商品未含税价格（折后）* 数量
+					IsFreeItem: true, // 零元商品当作赠菜
 				})
-			}
-		}
-		taxFee := saleOrderProduct.TaxFee // 商品税费,仅消费税
-		// 无论商品是否“已含税”或“未含税”都是要累积税费
-		{
-			// 累计本次退款操作中退款商品的税费
-			tax := decimal.NewFromFloat(taxFee).Mul(decimal.NewFromFloat(product.Num)).Round(2).InexactFloat64()                                   // 仅消费税
-			serviceTaxFee := decimal.NewFromFloat(saleOrderProduct.ServiceTaxFee).Mul(decimal.NewFromFloat(product.Num)).Round(2).InexactFloat64() // 仅服务费税费
-			totalTaxFee = totalTaxFee.Add(decimal.NewFromFloat(tax)).Add(decimal.NewFromFloat(serviceTaxFee))
-			serviceFee := decimal.NewFromFloat(saleOrderProduct.ServiceFee).Mul(decimal.NewFromFloat(product.Num))
-			totalServiceFee = totalServiceFee.Add(serviceFee)
-		}
-		if saleOrderProduct.SalePrice == 0 { // 当商品是0元商品时，可能是通过商品改价为0或原本售价就是0
-			items = append(items, &selling.PosInvoiceItem{
-				ItemCode:   product.ErpCode,
-				Qty:        -product.Num,
-				Rate:       0,    // 商品未含税价格（折后）
-				Amount:     0,    // 商品未含税价格（折后）* 数量
-				IsFreeItem: true, // 零元商品当作赠菜
-			})
-		} else {
-			item := &selling.PosInvoiceItem{
-				ItemCode: product.ErpCode,
-				Qty:      -product.Num,
-				Rate:     product.GetProductPriceNoneTax(taxFee, saleOrderProduct.HasTax()),        // 商品未含税价格（折后）
-				Amount:   -product.GetProductTotalAmountNoneTax(taxFee, saleOrderProduct.HasTax()), // 商品未含税价格（折后）* 数量
-			}
-			if saleOrderProduct.IsGiftProduct() {
-				item.IsFreeItem = true
-			}
-			items = append(items, item)
+			} else {
+				item := &selling.PosInvoiceItem{
+					ItemCode: product.ErpCode,
+					Qty:      -product.Num,
+					Rate:     product.GetProductPriceNoneTax(taxFee, saleOrderProduct.HasTax()),        // 商品未含税价格（折后）
+					Amount:   -product.GetProductTotalAmountNoneTax(taxFee, saleOrderProduct.HasTax()), // 商品未含税价格（折后）* 数量
+				}
+				if saleOrderProduct.IsGiftProduct() {
+					item.IsFreeItem = true
+				}
+				items = append(items, item)
 
+			}
+		} else if product.ProductType == constant.ReturnOrderProductTypeSaleOrderBuffetCustomer {
+			buffetCustomer, _, _ := saleOrder.GetSaleOrderBuffetCustomerType(product.SaleOrderProductUuid)
+			// 无论商品是否“已含税”或“未含税”都是要累积税费
+			{
+				// 累计本次退款操作中退款商品的税费
+				taxFee := buffetCustomer.TaxFee                                                                                                      // 商品税费,仅消费税
+				tax := decimal.NewFromFloat(taxFee).Mul(decimal.NewFromFloat(product.Num)).Round(2).InexactFloat64()                                 // 仅消费税
+				serviceTaxFee := decimal.NewFromFloat(buffetCustomer.ServiceTaxFee).Mul(decimal.NewFromFloat(product.Num)).Round(2).InexactFloat64() // 仅服务费税费
+				totalTaxFee = totalTaxFee.Add(decimal.NewFromFloat(tax)).Add(decimal.NewFromFloat(serviceTaxFee))                                    // +消费税+服务费税费
+				serviceFee := decimal.NewFromFloat(buffetCustomer.ServiceFee).Mul(decimal.NewFromFloat(product.Num))
+				totalServiceFee = totalServiceFee.Add(serviceFee)
+			}
+			if buffetCustomer.SalePrice == 0 { // 当商品是0元商品时，可能是通过商品改价为0或原本售价就是0
+				item := &selling.PosInvoiceItem{
+					ItemCode:   "ZZC001",
+					Qty:        -product.Num,
+					Rate:       0,
+					Amount:     0,
+					IsFreeItem: true,
+				}
+				items = append(items, item)
+			} else {
+				item := &selling.PosInvoiceItem{
+					ItemCode: "ZZC001",
+					Qty:      -product.Num,
+					Rate:     buffetCustomer.GetFinalSalePriceNoneTax(),
+					Amount:   -decimal.NewFromFloat(buffetCustomer.GetFinalSalePriceNoneTax()).Mul(decimal.NewFromFloat(product.Num)).Truncate(3).Round(2).InexactFloat64(),
+				}
+				items = append(items, item)
+			}
+		} else if product.ProductType == constant.ReturnOrderProductTypeBuffetAddTimeProduct {
+			buffetDelayProduct, _, _ := saleOrder.GetSaleOrderBuffetDelayProduct(product.SaleOrderProductUuid)
+			if buffetDelayProduct.Price == 0 { // 当商品是0元商品时，可能是通过商品改价为0或原本售价就是0
+				item := &selling.PosInvoiceItem{
+					ItemCode:   "ZZC001",
+					Qty:        -product.Num,
+					Rate:       0,
+					Amount:     0,
+					IsFreeItem: true,
+				}
+				items = append(items, item)
+			} else {
+				item := &selling.PosInvoiceItem{
+					ItemCode: "ZZC001",
+					Qty:      -product.Num,
+					Rate:     buffetDelayProduct.Price,
+					Amount:   -decimal.NewFromFloat(buffetDelayProduct.Price).Mul(decimal.NewFromFloat(product.Num)).Truncate(3).Round(2).InexactFloat64(),
+				}
+				items = append(items, item)
+			}
 		}
 	}
 
@@ -13920,6 +14068,7 @@ func (s *orderSrv) OrderCartProductBatchCooking(ctx context.Context, req req.Ord
 	if err := req.Validate(); err != nil {
 		return nil, errors.WithMessage(err)
 	}
+
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {
@@ -13970,6 +14119,7 @@ func (s *orderSrv) OrderCartProductBatchCooking(ctx context.Context, req req.Ord
 		Products: func() event.ProductsPre {
 			products := make(event.ProductsPre, 0)
 			for _, unCookingSaleOrderProduct := range saleBillProducts {
+				unCookingSaleOrderProduct.BatchTagUuid = req.BatchTagUuid
 				products = append(products, s.convertToEventOrderProductPre(
 					unCookingSaleOrderProduct,
 					saleBill,

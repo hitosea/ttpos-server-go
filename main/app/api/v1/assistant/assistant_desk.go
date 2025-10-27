@@ -29,6 +29,7 @@ type DeskHandler struct {
 	deskSrv   service.IDeskSrv
 	orderSrv  service.IOrderSrv
 	memberSrv service.IMemberSrv
+	otherSrv  service.IOtherSrv
 }
 
 // GetDeskRegionAndType 处理获取桌台的区域和类型
@@ -208,6 +209,62 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 	}
 	// 返回结果
 	helper.Success(c, res)
+}
+
+// OrderRemark 处理桌台订单整单备注
+// @Summary 桌台订单整单备注
+// @Description 桌台订单整单备注
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderRemarkReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.DeskPing}
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/remark [post]
+func (h *DeskHandler) OrderRemark(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderRemarkReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	//
+	shopCart, err := h.orderSrv.OrderRemark(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderRemarkList 处理获取整单备注列表
+// @Summary 获取整单备注列表
+// @Description 获取整单备注列表
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.OrderRemarkResp}
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/order/remark/list [get]
+func (h *DeskHandler) OrderRemarkList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	info, err := h.otherSrv.GetOrderRemarkList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
 }
 
 // OrderCartInfo 处理查询桌台购物车信息
@@ -1850,12 +1907,14 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
 	memberSrv := service.NewMemberSrv(dbm, cache)
 	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, service.WithSmsSrv(dbm))
+	otherSrv := service.NewOtherSrv(dbm, cache, settingSrv)
 
 	// 创建处理程序
 	wrapper := DeskHandler{
 		deskSrv:   service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv, mustPlanSrv),
 		orderSrv:  orderSrv,
 		memberSrv: service.NewMemberSrv(dbm, cache),
+		otherSrv:  otherSrv,
 	}
 
 	// 需要认证
@@ -1887,6 +1946,8 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/cart/product/returning", wrapper.OrderCartProductReturning)                           // 退菜购物车商品
 		privateApi.POST("/desk/order/cart/product/cancel_returning", wrapper.OrderCartProductCancelReturning)              // 取消退菜购物车商品
 		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)                                          // 桌台订单商品备注
+		privateApi.POST("/desk/order/remark", wrapper.OrderRemark)                                                         // 整单备注
+		privateApi.GET("/desk/order/remark/list", wrapper.OrderRemarkList)                                                 // 获取整单备注列表
 		privateApi.GET("/desk/order/cart/info", wrapper.OrderCartInfo)                                                     // 查询点餐购物车信息
 		privateApi.GET("/desk/order/check", wrapper.OrderCheck)                                                            // 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
 		privateApi.GET("/desk/order/payment/info", wrapper.OrderPaymentInfo)                                               // 获取结账页面信息

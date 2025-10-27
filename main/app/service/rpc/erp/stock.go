@@ -80,3 +80,84 @@ func (s *erpSrv) GetMaterialRequestList(ctx cc.Context, getMaterialRequestListRe
 	}
 	return &stock.GetMaterialRequestListResp{}, nil
 }
+
+// 提交盘点单，对应erp的保存盘点单
+func (s *erpSrv) SubmitStockReconciliation(ctx cc.Context, companySetting model.CompanySetting, saveStockReconciliationReq *stock.SaveStockReconciliationReq) (*stock.SaveStockReconciliationResp, error) {
+	var resp stock.SaveStockReconciliationResp
+	client, conn, err := NewErpStockClient()
+	if err != nil {
+		return &resp, err
+	}
+	defer conn.Close()
+
+	saveStockReconciliationReq.CompanyAbbr = companySetting.ErpnextCompanyAbbr
+	saveStockReconciliationReq.Branch = companySetting.ErpnextBranchName
+
+	result, err := client.SaveStockReconciliation(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), saveStockReconciliationReq)
+	if err != nil {
+		return &resp, err
+	}
+	if result.Code != "0" {
+		return &resp, errors.New(result.Message)
+	}
+	if result.Data != nil {
+		if err := result.Data.UnmarshalTo(&resp); err != nil {
+			logger.Logger.Error("SaveStockReconciliation-UnmarshalTo", zap.Any("err", err))
+			return &resp, err
+		}
+		return &resp, nil
+	}
+	return &resp, nil
+}
+
+// 审核盘点单，对应erp的提交盘点单
+func (s *erpSrv) ApproveStockReconciliation(ctx cc.Context, companySetting model.CompanySetting, saveStockReconciliationReq *stock.SubmitStockReconciliationReq) (*stock.SubmitStockReconciliationResp, error) {
+	var resp stock.SubmitStockReconciliationResp
+	client, conn, err := NewErpStockClient()
+	if err != nil {
+		return &resp, err
+	}
+	defer conn.Close()
+
+	result, err := client.SubmitStockReconciliation(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), saveStockReconciliationReq)
+	if err != nil {
+		return &resp, err
+	}
+	if result.Code != "0" {
+		return &resp, errors.New(result.Message)
+	}
+	if result.Data != nil {
+		if err := result.Data.UnmarshalTo(&resp); err != nil {
+			logger.Logger.Error("SubmitStockReconciliation-UnmarshalTo", zap.Any("err", err))
+			return &resp, err
+		}
+		return &resp, nil
+	}
+	return &resp, nil
+}
+
+// 驳回盘点单，对应erp取消盘点单
+func (s *erpSrv) RejectStockReconciliation(ctx cc.Context, companySetting model.CompanySetting, cancelStockReconciliationReq *stock.CancelStockReconciliationReq) (*stock.CancelStockReconciliationReq, error) {
+	var resp stock.CancelStockReconciliationReq
+	client, conn, err := NewErpStockClient()
+	if err != nil {
+		return &resp, err
+	}
+	defer conn.Close()
+
+	result, err := client.CancelStockReconciliation(WithSiteCode(ctx.GetContext(), companySetting.ErpnextSiteCode), cancelStockReconciliationReq)
+	if err != nil {
+		return &resp, err
+	}
+	if result.Code != "0" {
+		return &resp, errors.New(result.Message)
+	}
+	if result.Data != nil {
+		if err := result.Data.UnmarshalTo(&resp); err != nil {
+			logger.Logger.Error("CancelStockReconciliation-UnmarshalTo", zap.Any("err", err))
+			return &resp, err
+		}
+		return &resp, nil
+	}
+	return &resp, nil
+}

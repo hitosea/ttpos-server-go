@@ -37,6 +37,18 @@ func (l *LocaleResponse) IsNull() bool {
 	return l.ZH == "" && l.TH == "" && l.EN == "" && l.ZHTW == "" && l.JA == "" && l.KO == "" && l.MY == "" && l.TR == "" && l.SV == ""
 }
 
+func (l *LocaleResponse) CheckLen(length int) bool {
+	return utf8.RuneCountInString(l.ZH) <= length &&
+		utf8.RuneCountInString(l.TH) <= length &&
+		utf8.RuneCountInString(l.EN) <= length &&
+		utf8.RuneCountInString(l.ZHTW) <= length &&
+		utf8.RuneCountInString(l.JA) <= length &&
+		utf8.RuneCountInString(l.KO) <= length &&
+		utf8.RuneCountInString(l.MY) <= length &&
+		utf8.RuneCountInString(l.TR) <= length &&
+		utf8.RuneCountInString(l.SV) <= length
+}
+
 type LocaleType string
 
 const (

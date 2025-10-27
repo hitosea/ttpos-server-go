@@ -1,6 +1,8 @@
 package resp
 
-import "ttpos-server-go/app/dto"
+import (
+	"ttpos-server-go/app/dto"
+)
 
 type PrinterData struct {
 	Uuid              uint64 `json:"uuid"`                // 打印日志Uuid
@@ -59,4 +61,42 @@ type PrinterReportResp struct {
 	OldPrinterSn   string `json:"old_printer_sn"`   // 旧打印机SN
 	NewPrinterName string `json:"new_printer_name"` // 新打印机名称
 	NewPrinterSn   string `json:"new_printer_sn"`   // 新打印机SN
+}
+
+type PrintTemplate struct {
+	ID         uint64             `json:"id"`          // 模版ID
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 模版名称
+}
+
+type PrintTemplateGroup struct {
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 分组名称
+	GroupType  int                `json:"group_type"`  // 分组类型
+	List       []PrintTemplate    `json:"list"`        // 模版列表
+}
+
+type PrintTemplateListResp struct {
+	List []PrintTemplateGroup `json:"list"` // 模版分组列表
+}
+
+type PrintTemplateDetail struct {
+	ID            uint64 `json:"id"`             // 模板ID
+	Name          string `json:"name"`           // 模板名称
+	IsUse         bool   `json:"is_use"`         // 是否使用
+	ImgUrl        string `json:"img_url"`        // 模板图片URL
+	CustomizeUuid uint64 `json:"customize_uuid"` // 定制UUID
+}
+
+type PrintTemplateDetailResp struct {
+	DefaultTpl      PrintTemplateDetail   `json:"default_tpl"`        // 默认模板
+	AdvReceiptTpls  []PrintTemplateDetail `json:"adv_receipt_tpls"`   // 高级模板列表
+	IsAdvReceiptTpl bool                  `json:"is_adv_receipt_tpl"` // 是否启用高级模板
+}
+
+// ConfigInfoResp
+type ConfigInfoResp struct {
+	ConfigListJson string `json:"config_list_json"` // 模版配置分组列表 (JSON字符串)
+	DefaultJson    string `json:"default_json"`     // 默认模版 (JSON字符串) （点击还原默认的时候使用）
+	CustomizeJson  string `json:"customize_json"`   // 定制模版 (JSON字符串) （点击编辑的时候使用）
+	CustomizeName  string `json:"customize_name"`   // 定制模版名称 （点击编辑的时候使用）
+	CustomizeData  string `json:"customize_data"`   // 定制模版数据(JSON字符串) （点击编辑的时候使用）
 }

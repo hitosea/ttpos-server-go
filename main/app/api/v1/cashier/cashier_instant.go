@@ -28,6 +28,7 @@ import (
 type InstantHandler struct {
 	orderSrv  service.IOrderSrv  // 订单服务
 	memberSrv service.IMemberSrv // 会员服务
+	otherSrv  service.IOtherSrv  // 其他服务
 }
 
 func (h *InstantHandler) CreateInstantOrder(c *gin.Context) {
@@ -375,6 +376,56 @@ func (h *InstantHandler) OrderProductRemark(c *gin.Context) {
 	}
 	//
 	info, err := h.orderSrv.OrderProductRemark(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
+// OrderRemark 处理点餐订单整单备注
+// @Summary 点餐订单整单备注
+// @Description 点餐订单整单备注
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderRemarkReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/remark [post]
+func (h *InstantHandler) OrderRemark(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderRemarkReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	//
+	info, err := h.orderSrv.OrderRemark(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
+}
+
+// OrderRemarkList 处理获取整单备注列表
+// @Summary 获取整单备注列表
+// @Description 获取整单备注列表
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.OrderRemarkResp}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/remark/list [get]
+func (h *InstantHandler) OrderRemarkList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	info, err := h.otherSrv.GetOrderRemarkList(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1515,10 +1566,12 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
 	memberSrv := service.NewMemberSrv(dbm, cache)
 	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, service.WithSmsSrv(dbm))
+	otherSrv := service.NewOtherSrv(dbm, cache, settingSrv)
 	// 创建收银产品处理程序
 	wrapper := InstantHandler{
 		orderSrv:  orderSrv,  // 订单服务
 		memberSrv: memberSrv, // 会员服务
+		otherSrv:  otherSrv,  // 其他服务
 	}
 
 	// 需要认证
@@ -1535,6 +1588,8 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/discount", wrapper.OrderDiscount)                                                     // 点餐订单打折
 		privateApi.POST("/instant/order/discount/cancel", wrapper.OrderDiscountCancel)                                        // 取消点餐订单所有优惠折扣，包括改价、打折、抹零（撤销优惠折扣）
 		privateApi.POST("/instant/order/product/remark", wrapper.OrderProductRemark)                                          // 点餐订单商品备注
+		privateApi.POST("/instant/order/remark", wrapper.OrderRemark)                                                         // 整单备注
+		privateApi.GET("/instant/order/remark/list", wrapper.OrderRemarkList)                                                 // 获取整单备注列表
 		privateApi.GET("/instant/order/cart/info", wrapper.OrderCartInfo)                                                     // 查询点餐购物车信息
 		privateApi.POST("/instant/order/cart/product/add", wrapper.OrderCartProductAdd)                                       // 向购物车添加商品
 		privateApi.POST("/instant/order/cart/product_package/add", wrapper.OrderCartProductPackageAdd)                        // 向购物车添加套餐

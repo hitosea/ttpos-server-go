@@ -86,6 +86,35 @@ func (s *erpSrv) ListSuppliers(ctx cc.Context, listSuppliersReq req.GetErpnextSu
 	return nil, nil
 }
 
+// GetSupplierItemList 获取供应商详情
+func (s *erpSrv) GetSupplierItemList(ctx cc.Context, getSupplierItemListReq req.GetErpnextSupplierItemListReq) ([]*buying.SupplierItemInfo, error) {
+	client, conn, err := NewErpBuyingClient()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	result, err := client.GetSupplierItemList(WithSiteCode(context.Background(), getSupplierItemListReq.SiteCode), &buying.GetSupplierItemListReq{
+		Supplier: getSupplierItemListReq.Supplier,
+		PageSize: 20000,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if result.Code != "0" {
+		logger.Logger.Error("GetSupplierItemList-GetSupplierItemList", zap.Any("err", err))
+		return nil, errors.New("调用erp接口失败-20002-" + result.GetMessage())
+	}
+	if result.Data != nil {
+		var resp buying.GetSupplierItemListResp
+		if err := result.Data.UnmarshalTo(&resp); err != nil {
+			logger.Logger.Error("GetSupplierItemList-UnmarshalTo", zap.Any("err", err))
+			return nil, err
+		}
+		return resp.Items, nil
+	}
+	return nil, nil
+}
+
 // SavePurchaseReceipt 保存收货单
 func (s *erpSrv) SavePurchaseReceipt(ctx pkgCtx.Context, savePurchaseReceiptReq *buying.SavePurchaseReceiptReq) (*buying.SavePurchaseReceiptResp, error) {
 	client, conn, err := NewErpBuyingClient()

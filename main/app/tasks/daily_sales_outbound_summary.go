@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
@@ -18,6 +20,7 @@ import (
 
 	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // DailySalesOutboundSummaryTask 每日销售出库汇总定时任务
@@ -86,6 +89,11 @@ func (t *DailySalesOutboundSummaryTask) getAllCompanies() ([]*model.Company, err
 
 // processCompany 处理单个门店
 func (t *DailySalesOutboundSummaryTask) ProcessCompany(company *model.Company) error {
+	// 判断是否是erp商品,不是的不处理
+	if !company.IsOpenErp() {
+		return nil
+	}
+
 	// 获取门店营业时间
 	openingHours, err := t.getOpeningHours(company.Uuid)
 	if err != nil {
@@ -95,6 +103,27 @@ func (t *DailySalesOutboundSummaryTask) ProcessCompany(company *model.Company) e
 	// 检查是否到达营业结束时间
 	if !t.isBusinessEndTime(company, openingHours) {
 		logger.Logger.Info("门店 %s 未到达营业结束时间，跳过处理", zap.String("company_name", company.Name))
+		return nil
+	}
+
+	// 判断该营业时段是否已经统计过
+	year := time.Now().Format("20060102") // 20251023
+	openingYearHours := fmt.Sprintf("%s %s", year, openingHours)
+	db := t.dbm.GetDB(company.Uuid)
+	warehouseLogRepo := repository.NewWarehouseInOutLogRepo(db)
+	opts := []repository.DBOption{
+		warehouseLogRepo.WhereLogType(1), // 出库
+		warehouseLogRepo.WhereScene(1),   // 销售出库
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("opening_hours = ?", openingYearHours)
+		},
+	}
+	existingLogs, err := warehouseLogRepo.GetWarehouseInOutLogs(opts...)
+	if err != nil {
+		return fmt.Errorf("获取营业时段记录失败: %w", err)
+	}
+	if len(existingLogs) > 0 {
+		logger.Logger.Info(fmt.Sprintf("门店 %s 该营业时段%s已统计过，跳过处理", company.Name, openingYearHours))
 		return nil
 	}
 
@@ -112,7 +141,7 @@ func (t *DailySalesOutboundSummaryTask) ProcessCompany(company *model.Company) e
 	}
 
 	// 生成汇总记录并写入数据库
-	if err := t.saveOutboundSummaryRecords(company.Uuid, outboundRecords); err != nil {
+	if err := t.saveOutboundSummaryRecords(company.Uuid, outboundRecords, openingYearHours); err != nil {
 		return fmt.Errorf("保存出库汇总记录失败: %w", err)
 	}
 
@@ -164,23 +193,18 @@ func (t *DailySalesOutboundSummaryTask) getDailySalesOutboundRecords(companyUuid
 	todayEnd := todayStart.AddDate(0, 0, 1).Add(-time.Second)
 
 	// 使用 repository 方法查询出库单明细
-	warehouseFormRepo := repository.NewWarehouseFormRepo(db)
-	outFormItems, err := warehouseFormRepo.GetValidWarehouseOutFormItem(
+	saleOrderMaterialRepo := repository.NewSaleOrderMaterialRepo(db)
+	saleOrderMaterials, err := saleOrderMaterialRepo.GetSaleOrderMaterialByCreateTimeBetween(
 		todayStart.Unix(),
 		todayEnd.Unix(),
 	)
-
 	if err != nil {
 		return nil, err
 	}
 
 	// 按仓库和物料分组汇总数量
 	recordMap := make(map[string]*OutboundRecord)
-	for _, item := range outFormItems {
-		if item.MaterialUuid == 0 {
-			continue // 跳过非物料记录
-		}
-
+	for _, item := range saleOrderMaterials {
 		key := fmt.Sprintf("%d_%d", item.WarehouseUuid, item.MaterialUuid)
 		if record, exists := recordMap[key]; exists {
 			record.TotalNum += item.Num
@@ -203,6 +227,7 @@ func (t *DailySalesOutboundSummaryTask) getDailySalesOutboundRecords(companyUuid
 			}
 
 			recordMap[key] = &OutboundRecord{
+				Uuid:                 item.Uuid,
 				WarehouseUuid:        item.WarehouseUuid,
 				MaterialUuid:         item.MaterialUuid,
 				TotalNum:             item.Num,
@@ -226,6 +251,7 @@ func (t *DailySalesOutboundSummaryTask) getDailySalesOutboundRecords(companyUuid
 
 // OutboundRecord 出库记录汇总
 type OutboundRecord struct {
+	Uuid                 uint64  `json:"uuid"` // 出库记录ID
 	WarehouseUuid        uint64  `json:"warehouse_uuid"`
 	MaterialUuid         uint64  `json:"material_uuid"`
 	TotalNum             float64 `json:"total_num"`
@@ -237,7 +263,7 @@ type OutboundRecord struct {
 }
 
 // saveOutboundSummaryRecords 保存出库汇总记录到ttpos_warehouse_in_out_log表
-func (t *DailySalesOutboundSummaryTask) saveOutboundSummaryRecords(companyUuid uint64, records []*OutboundRecord) error {
+func (t *DailySalesOutboundSummaryTask) saveOutboundSummaryRecords(companyUuid uint64, records []*OutboundRecord, openingHours string) error {
 	db := t.dbm.GetDB(companyUuid)
 
 	// 生成出库单号
@@ -246,29 +272,42 @@ func (t *DailySalesOutboundSummaryTask) saveOutboundSummaryRecords(companyUuid u
 		return fmt.Errorf("生成出库单号失败: %w", err)
 	}
 
-	// 使用 repository 方法创建记录
-	warehouseLogRepo := repository.NewWarehouseInOutLogRepo(db)
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		// 使用 repository 方法创建记录
+		warehouseLogRepo := repository.NewWarehouseInOutLogRepo(tx)
 
-	for _, record := range records {
-		logRecord := &model.WarehouseInOutLog{
-			LogType:              1, // 出库
-			Scene:                1, // 销售出库
-			WarehouseUuid:        record.WarehouseUuid,
-			MaterialUuid:         record.MaterialUuid,
-			MaterialName:         record.MaterialName,
-			MaterialBaseUnitUuid: record.MaterialBaseUnitUuid,
-			MaterialBaseUnitName: record.MaterialBaseUnitName,
-			Num:                  record.TotalNum,
-			Price:                record.Valuation,
-			Amount:               decimal.NewFromFloat(record.TotalNum).Mul(decimal.NewFromFloat(record.Valuation)).Round(2).InexactFloat64(),
-			SupplierUuid:         record.SupplierUuid,
-			OrderNo:              orderNo,
-		}
+		uuids := make([]uint64, 0)
+		for _, record := range records {
+			uuids = append(uuids, record.Uuid)
+			logRecord := &model.WarehouseInOutLog{
+				LogType:              constant.WarehouseInOutLogLogTypeOut, // 出库
+				Scene:                constant.WarehouseInOutLogSceneSale,  // 销售出库
+				WarehouseUuid:        record.WarehouseUuid,
+				MaterialUuid:         record.MaterialUuid,
+				MaterialName:         record.MaterialName,
+				MaterialBaseUnitUuid: record.MaterialBaseUnitUuid,
+				MaterialBaseUnitName: record.MaterialBaseUnitName,
+				Num:                  record.TotalNum,
+				Price:                record.Valuation,
+				Amount:               decimal.NewFromFloat(record.TotalNum).Mul(decimal.NewFromFloat(record.Valuation)).Round(2).InexactFloat64(),
+				SupplierUuid:         record.SupplierUuid,
+				OrderNo:              orderNo,
+				OpeningHours:         openingHours,
+			}
 
-		if err := warehouseLogRepo.Create(logRecord); err != nil {
-			logger.Logger.Error("保存出库记录失败: warehouse_uuid=%d, material_uuid=%d, error=%v", zap.Uint64("warehouse_uuid", record.WarehouseUuid), zap.Uint64("material_uuid", record.MaterialUuid), zap.Error(err))
-			continue
+			if err := warehouseLogRepo.Create(logRecord); err != nil {
+				logger.Logger.Error("保存出库记录失败: warehouse_uuid=%d, material_uuid=%d, error=%v", zap.Uint64("warehouse_uuid", record.WarehouseUuid), zap.Uint64("material_uuid", record.MaterialUuid), zap.Error(err))
+				continue
+			}
 		}
+		// 更新销售订单原料的统计状态
+		saleOrderMaterialRepo := repository.NewSaleOrderMaterialRepo(tx)
+		if err := saleOrderMaterialRepo.UpdateSaleOrderMaterialIsSummarized(uuids); err != nil {
+			return errors.WithMessage(err)
+		}
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	return nil

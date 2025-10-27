@@ -57,6 +57,7 @@ func WithOnlyCheckCooking() func(option *ActionCookingOption) {
 func (s *orderSrv) convertToEventOrderProductPre(saleOrderProduct *model.SaleOrderProduct, saleBill *model.SaleBill) event.OrderProductPre {
 	orderProduct := event.OrderProductPre{
 		OrderProductId:        saleOrderProduct.Uuid,
+		BatchTagUuid:          saleOrderProduct.BatchTagUuid,
 		ProductId:             saleOrderProduct.ProductPackageUuid,
 		ProductName:           saleOrderProduct.MultiLanguageName.GetNames(),
 		ProductAttr:           saleOrderProduct.GetAttributeName(),
@@ -233,7 +234,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		if staffUuid > 0 {
 			staffShiftLog, err := GetCurrentStaffShiftLog(db, staffUuid)
 			if err != nil {
-				return nil, errors.WithMessage(err, "GetCurrentStaffShiftLog failed")
+				logger.Logger.Error("获取当前未交班的班次列表失败", zap.Uint64("staffUuid", staffUuid), zap.Error(err))
 			} else {
 				staffShiftLogUuid = staffShiftLog.Uuid
 			}

@@ -1,9 +1,11 @@
 package model
 
 import (
+	"encoding/json"
 	"slices"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/utils"
 
@@ -36,9 +38,10 @@ type SaleBill struct {
 	ReminderOrderTime uint `gorm:"default:0;column:reminder_order_time;comment:提醒下单时间（分钟）"`
 
 	// 订单基本信息
-	MealNum uint   `gorm:"column:meal_num;type:int(10);default:0;comment:就餐人数" json:"meal_num"`
-	Remark  string `gorm:"column:remark;type:varchar(255);default:'';comment:备注(开台备注)" json:"remark"`
-	Reason  string `gorm:"column:reason;type:varchar(255);default:'';comment:原因" json:"reason"`
+	MealNum     uint   `gorm:"column:meal_num;type:int(10);default:0;comment:就餐人数" json:"meal_num"`
+	Remark      string `gorm:"column:remark;type:varchar(255);default:'';comment:备注(开台备注)" json:"remark"`
+	OrderRemark string `gorm:"column:order_remark;type:text;default:'';comment:整单备注JSON" json:"order_remark"`
+	Reason      string `gorm:"column:reason;type:varchar(255);default:'';comment:原因" json:"reason"`
 
 	// 金额字段 - 主要金额
 	Amount                float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:订单总金额,关联销售订单的总金额之和" json:"amount"`
@@ -105,6 +108,52 @@ type SaleBill struct {
 // 是否是“已取消”状态
 func (model *SaleBill) IsCanceled() bool {
 	return model.Status == constant.SaleBillStatusCanceled
+}
+
+// 获取整单备注信息
+func (model *SaleBill) GetOrderRemark() (*resp.OrderRemarkInfo, error) {
+	jsonStr := model.OrderRemark
+	if jsonStr == "" {
+		return nil, nil
+	}
+	data := resp.OrderRemarkInfo{}
+	if err := json.Unmarshal([]byte(jsonStr), &data); err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+// 获取整单备注信息
+func (model *SaleBill) GetOrderRemarkRes() (*resp.OrderRemarkRes, error) {
+	orderRemark, err := model.GetOrderRemark()
+	if err != nil {
+		return nil, err
+	}
+	if orderRemark == nil {
+		return nil, nil
+	}
+	result := orderRemark.GetOrderRemarkResponse()
+	return &result, nil
+}
+
+// 获取整单备注信息, 最新的一条
+func (model *SaleBill) GetLatestOrderRemarkRes() *resp.OrderRemarkResItem {
+	orderRemark, err := model.GetOrderRemarkRes()
+	if err != nil {
+		return nil
+	}
+	if orderRemark == nil {
+		return nil
+	}
+	if len(orderRemark.List) == 0 {
+		return nil
+	}
+	for _, remark := range orderRemark.List {
+		if remark.IsLatest {
+			return &remark
+		}
+	}
+	return nil
 }
 
 // 设置为“已取消”状态

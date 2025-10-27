@@ -1,0 +1,72 @@
+# TTPOS 消息中心服务配置文件
+# https://goframe.org/docs/web/server-config-file-template
+server:
+  address: ":14041"
+  openapiPath: "/api.json"
+  swaggerPath: "/swagger"
+
+# https://goframe.org/docs/core/glog-config
+logger:
+  level: "all"
+  stdout: true
+  path: "./log/message"
+  # 队列业务日志输出
+  queue:
+    level: "info"
+    path: "./log/queue"
+
+# https://goframe.org/docs/core/gdb-config-file
+database:
+  default:
+    link: "mysql:$DB_USERNAME:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/message"
+    maxIdle: 10
+    maxOpen: 100
+    maxLifetime: 30
+
+# gRPC 服务配置
+grpc:
+  name: "ttpos-message"
+  address: ":14042"
+  logPath: "./log"
+  logStdout: true
+  errorLogEnabled: true
+  accessLogEnabled: true
+  errorStack: true
+
+# Nacos 配置
+nacos:
+  server:
+    ip: $NACOS_SERVER_IP
+    port: $NACOS_SERVER_PORT
+  config:
+    dataId: ttpos-message.yaml
+    group: DEFAULT_GROUP
+
+# 消息队列配置
+queue:
+  switch: true                                        # 队列开关，可选：true|false，默认为true
+  driver: "rocketmq"                                  # 队列驱动，可选：redis|rocketmq，默认为redis
+  groupName: "ttpos-message"                          # mq群组名称
+  poolSize: 20                                        # 消息处理线程池大小，默认20
+  # RocketMQ 配置
+  rocketmq:
+    endpoint: "$ROCKETMQ_ENDPOINT"                    # 代理接入点 新版v5客户端支持
+    nameSrvAdders: [ "$ROCKETMQ_NAME_SRV_ADDR" ]      # nameSrvAdder+端口，支持多个
+    accessKey: "$ROCKETMQ_ACCESS_KEY"                 # 选填。如果开启了acl控制就必填
+    secretKey: "$ROCKETMQ_SECRET_KEY"                 # 选填。如果开启了acl控制就必填
+    brokerAddr: "$ROCKETMQ_BROKER_ADDR"               # brokerAddr+端口，选填
+    retry: 3                                          # 重试次数
+    logLevel: "warn"                                  # rocketmq 客户端输出日志级别
+    invisibleDuration: 25                             # invisibleDuration should > 20s
+    awaitDuration: 5                                  # maximum waiting time for receive func
+    unitName: "" # 消费者单元名称，默认使用GUID
+
+# Mailgun 邮件服务配置
+mailgun:
+  domain: "$MAILGUN_DOMAIN"                           # Mailgun 域名
+  apiKey: "$MAILGUN_API_KEY"                          # Mailgun API Key
+  fromEmail: "$MAILGUN_FROM_EMAIL"                    # 发件人邮箱地址
+  fromName: "TTPOS System"                            # 发件人名称
+  apiBase: "https://api.mailgun.net/v3"               # Mailgun API 基础地址
+  timeout: 30                                         # 请求超时时间（秒）
+

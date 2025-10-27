@@ -165,6 +165,7 @@ const (
 	OrderCancelSplitOrder    = "CANCEL_SPLIT_ORDER"    // 撤销拆单
 	// -----订单操作类型-----
 	OrderProductRemark    = "PRODUCT_REMARK"     // 产品备注
+	OrderOrderRemark      = "ORDER_REMARK"       // 整单备注
 	OrderAddProduct       = "ADD_PRODUCT"        // 增加菜品
 	OrderDeleteProduct    = "DELETE_PRODUCT"     // 删除菜品
 	OrderUpdateProductNum = "UPDATE_PRODUCT_NUM" // 修改桌台就餐人数

@@ -262,6 +262,17 @@ type OrderProductRemarkReq struct {
 	Remark           string `json:"remark"`                                // remark
 }
 
+// OrderRemarkReq 订单备注
+type OrderRemarkReq struct {
+	SaleBillUuid uint64   `json:"sale_bill_uuid"` // 销售账单UUID
+	RemarkUuids  []uint64 `json:"remark_uuids"`   // 选择的整单备注
+	Remark       string   `json:"remark"`         // 自定义的整单备注文本
+}
+
+func (req OrderRemarkReq) IsNullRemark() bool {
+	return len(req.RemarkUuids) == 0 && req.Remark == ""
+}
+
 // OrderChangeBuffetReq 订单调整自助餐
 type OrderChangeBuffetReq struct {
 	SaleBillUuid        uint64                   `json:"sale_bill_uuid"`        // 销售账单UUID

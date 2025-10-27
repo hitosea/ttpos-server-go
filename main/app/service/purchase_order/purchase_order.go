@@ -3,6 +3,7 @@ package purchase_order
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
@@ -160,6 +161,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 		req.Uuid,
 		purchaseOrderRepo.WithItems(),
 		purchaseOrderRepo.WithWarehouse(),
+		purchaseOrderRepo.WithSupplier(),
 	)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -177,6 +179,11 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 	// 转换仓库名称
 	if purchaseOrder.Warehouse != nil {
 		detailResp.WarehouseName = *language.JsonToLocaleResponse(purchaseOrder.Warehouse.Name)
+	}
+
+	// 转换供应商名称
+	if purchaseOrder.Supplier != nil {
+		detailResp.SupplierName = purchaseOrder.Supplier.Name
 	}
 
 	// 初始化数组字段
@@ -919,7 +926,7 @@ func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 		Items:           stockItems,
 	})
 	if err != nil {
-		return "", s.helper.handleErpError(ctx, err)
+		return "", s.helper.handleErpError(ctx, err, purchaseOrder)
 	}
 
 	return stockResp.PurchaseOrder, nil
@@ -997,7 +1004,7 @@ func (s *purchaseOrderSrv) handleExternalPurchaseErp(
 		Items:           stockItems,
 	})
 	if err != nil {
-		return "", s.helper.handleErpError(ctx, err)
+		return "", s.helper.handleErpError(ctx, err, purchaseOrder)
 	}
 
 	return erpResp.Name, nil
@@ -1040,10 +1047,19 @@ func (s *purchaseOrderSrv) CreatePurchaseReceiptOrder(
 	// 加锁
 	s.lock.LockUuid(req.PurchaseOrderUuid)
 	defer s.lock.UnlockUuid(req.PurchaseOrderUuid)
+	// 查询采购申请
+	purchaseOrder, err := repository.NewPurchaseOrderRepo(ctx.GetDB()).GetByUuid(req.PurchaseOrderUuid)
+	if err != nil {
+		return resp.PurchaseReceiptOrderCreateResp{}, errors.WithMessage(errors.New("采购申请不存在"), err.Error())
+	}
 	// 创建收货单
 	result, err := s.receiptSrv.CreatePurchaseReceiptOrder(ctx, req)
 	if err != nil {
-		return resp.PurchaseReceiptOrderCreateResp{}, s.helper.handleErpError(ctx, err)
+		// 调用erp接口失败
+		if purchaseOrder != nil && strings.Contains(err.Error(), "调用erp接口失败") {
+			return resp.PurchaseReceiptOrderCreateResp{}, s.helper.handleErpError(ctx, err, purchaseOrder)
+		}
+		return resp.PurchaseReceiptOrderCreateResp{}, err
 	}
 	return result, nil
 }
@@ -1056,10 +1072,24 @@ func (s *purchaseOrderSrv) UpdatePurchaseReceiptOrder(
 	// 加锁
 	s.lock.LockUuid(req.Uuid)
 	defer s.lock.UnlockUuid(req.Uuid)
-
-	err := s.receiptSrv.UpdatePurchaseReceiptOrder(ctx, req)
+	// 查询收货单
+	receiptOrder, err := repository.NewPurchaseReceiptOrderRepo(ctx.GetDB()).GetByUuid(req.Uuid)
 	if err != nil {
-		return s.helper.handleErpError(ctx, err)
+		return errors.WithMessage(errors.New("收货单不存在"), err.Error())
+	}
+	// 查询采购申请
+	purchaseOrder, err := repository.NewPurchaseOrderRepo(ctx.GetDB()).GetByUuid(receiptOrder.PurchaseOrderUuid)
+	if err != nil {
+		return errors.WithMessage(errors.New("采购申请不存在"), err.Error())
+	}
+	//
+	err = s.receiptSrv.UpdatePurchaseReceiptOrder(ctx, req)
+	if err != nil {
+		// 调用erp接口失败
+		if purchaseOrder != nil && strings.Contains(err.Error(), "调用erp接口失败") {
+			return s.helper.handleErpError(ctx, err, purchaseOrder)
+		}
+		return err
 	}
 	return nil
 }

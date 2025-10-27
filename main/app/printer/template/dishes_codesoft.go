@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/app/printer/printer_model"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/utils"
 )
 
@@ -52,6 +53,18 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 		mealNumStr = fmt.Sprintf(" (%d%s)", order.MealNum, name)
 	}
 
+	// 分批类型
+	batchTagText := ""
+	for _, product := range products {
+		if product.BatchTagUuid > 0 {
+			batchTag, err := repository.NewBatchTagRepo(t.base.Ctx.GetDB()).GetBatchTagInfo(product.BatchTagUuid)
+			if err == nil {
+				batchTagText = batchTag.MultiLanguageName.GetNameByLang(t.base.Lang)
+				break
+			}
+		}
+	}
+
 	// 创建打印机实例
 	printer := pkg.NewPrinter(567, "", "")
 	printer.LineFeed(1)
@@ -81,6 +94,14 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
 		}
 
+		// 整单备注
+		if orderRemark := order.GetLatestOrderRemarkRes(); orderRemark != nil {
+			printer.AppendText("\n------------------------------------------------\n")
+			printer.SetAlignment(pkg.AlignLeft)
+			printer.AppendText(t.base.Translate("整单备注") + ": " + orderRemark.Remark.GetLocale(t.base.Lang))
+			printer.AppendText("\n------------------------------------------------\n")
+		}
+
 		printer.LineFeed()
 		printer.SetLineSpacing(50)
 
@@ -101,6 +122,17 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 		printer.PrintInColumns(t.base.Translate("时间"), updateTime)
 		printer.LineFeed()
 
+		// 分批类型
+		if batchTagText != "" && !order.IsTakeoutBill() {
+			printer.SetCharacterSize(2, 2)
+			printer.SetPrintModes(true, true, false)
+			printer.SetAlignment(pkg.AlignCenter)
+			printer.AppendText(batchTagText)
+			printer.LineFeed(2)
+			printer.SetCharacterSize(1, 1)
+			printer.SetPrintModes(false, false, false)
+		}
+
 		// 设置行间距
 		printer.SetLineSpacing(40)
 
@@ -113,6 +145,8 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 
 		// 添加分隔线
 		printer.AppendText("\n------------------------------------------------\n")
+
+		printer.SetAlignment(pkg.AlignLeft)
 
 		// 设置列
 		printer.SetupColumns(
@@ -153,9 +187,7 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 				// 设置字符大小和行间距
 				printer.SetCharacterSize(1, 1)
 				// 打印行间距和换行
-				if isSubProduct {
-					printer.LineFeed()
-				}
+				printer.LineFeed()
 				printer.SetLineSpacing(45)
 				// 分割处理属性
 				for _, attr := range utils.IfSlice(isShowSku == 0, product.ProductSauceNamesList, product.ProductAttrList) {
@@ -220,6 +252,14 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
 		}
 
+		// 整单备注
+		if orderRemark := order.GetLatestOrderRemarkRes(); orderRemark != nil {
+			printer.SetAlignment(pkg.AlignLeft)
+			printer.AppendText("\n------------------------------------------------\n")
+			printer.AppendText(t.base.Translate("整单备注") + ": " + orderRemark.Remark.GetLocale(t.base.Lang))
+			printer.AppendText("\n------------------------------------------------\n")
+		}
+
 		printer.LineFeed()
 		printer.SetLineSpacing(50)
 
@@ -240,6 +280,18 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 		printer.RestoreDefaultLineSpacing()
 		printer.PrintInColumns(t.base.Translate("时间"), updateTime) // 这里应该用i18n包来处理"时间"的翻译
 		printer.LineFeed()
+
+		// 分批类型
+		if batchTagText != "" && !order.IsTakeoutBill() {
+			printer.SetCharacterSize(2, 2)
+			printer.SetPrintModes(true, true, false)
+			printer.SetAlignment(pkg.AlignCenter)
+			printer.AppendText(batchTagText)
+			printer.LineFeed(2)
+			printer.SetAlignment(pkg.AlignLeft)
+			printer.SetCharacterSize(1, 1)
+			printer.SetPrintModes(false, false, false)
+		}
 
 		// 设置行间距
 		printer.SetLineSpacing(40)
@@ -389,6 +441,18 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 	// 是否有打印内容
 	isPrinter := false
 
+	// 分批类型
+	batchTagText := ""
+	for _, product := range products {
+		if product.BatchTagUuid > 0 {
+			batchTag, err := repository.NewBatchTagRepo(t.base.Ctx.GetDB()).GetBatchTagInfo(product.BatchTagUuid)
+			if err == nil {
+				batchTagText = batchTag.MultiLanguageName.GetNameByLang(t.base.Lang)
+				break
+			}
+		}
+	}
+
 	// 创建打印机实例
 	printer := pkg.NewPrinter(567)
 	printer.LineFeed()
@@ -416,7 +480,23 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 		} else {
 			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + mealNumStr)
 		}
+
+		// 整单备注
+		if orderRemark := order.GetLatestOrderRemarkRes(); orderRemark != nil {
+			printer.LineFeed(1)
+			printer.AppendText("\n------------------------\n")
+			printer.AppendText(t.base.Translate("整单备注") + ": " + orderRemark.Remark.GetLocale(t.base.Lang))
+			printer.AppendText("\n------------------------\n")
+		}
+
 		printer.LineFeed(3)
+
+		// 分批类型
+		if batchTagText != "" && !order.IsTakeoutBill() {
+			printer.SetAlignment(pkg.AlignCenter)
+			printer.AppendText(batchTagText)
+			printer.LineFeed(2)
+		}
 
 		// 设置对齐方式和列
 		printer.SetAlignment(pkg.AlignLeft)
@@ -533,10 +613,31 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 			printer.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + mealNumStr)
 		}
 
-		printer.LineFeed(2)
+		// 整单备注
+		if orderRemark := order.GetLatestOrderRemarkRes(); orderRemark != nil {
+			printer.LineFeed(1)
+			printer.AppendText("\n------------------------\n")
+			printer.SetLineSpacing(120)
+			printer.AppendText(t.base.Translate("整单备注") + ": " + orderRemark.Remark.GetLocale(t.base.Lang))
+			printer.RestoreDefaultLineSpacing()
+			printer.AppendText("\n------------------------\n")
+		} else {
+			printer.LineFeed(2)
+		}
+
 		printer.SetCharacterSize(1, 1)
 		printer.SetPrintModes(false, false, false)
 		printer.AppendText(updateTime)
+
+		// 分批类型
+		if batchTagText != "" && !order.IsTakeoutBill() {
+			printer.SetCharacterSize(2, 2)
+			printer.SetPrintModes(true, true, false)
+			printer.LineFeed(2)
+			printer.SetAlignment(pkg.AlignCenter)
+			printer.AppendText(batchTagText)
+		}
+
 		printer.LineFeed(3)
 		printer.SetAlignment(pkg.AlignLeft)
 		printer.SetupColumns(

@@ -23,7 +23,7 @@ migrate.install:
 
 .PHONY: create_db
 create_db:
-	@echo "通过mysql客户端容器创建 erp, takeout 数据库"
+	@echo "通过mysql客户端容器创建 erp, takeout, message 数据库"
 	@./hack/init_db.sh
 
 # 重新构建所有应用并启动
@@ -79,6 +79,7 @@ migrate:
 	#@cd app/ttpos-manager  && make db_up.docker
 	#@cd app/ttpos-shop  && make db_up.docker
 	@cd app/ttpos-erp  && make db_up.docker
+	@cd app/ttpos-message  && make db_up.docker
 	@make update-topic
 
 

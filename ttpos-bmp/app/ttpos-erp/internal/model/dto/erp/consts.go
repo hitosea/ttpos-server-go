@@ -35,11 +35,17 @@ const (
 	DocTypeItemGroup         = "Item Group"
 	DocTypeCustomer          = "Customer"
 	DocTypeDeliveryNote      = "Delivery Note"
+	DocTypePosPriceList      = "Pos Price List"
 
 	//DocTypeStockLedger 库存台账查询
 	DocTypeStockLedger = "Stock Ledger"
 	//DocTypeUom 商品单位
 	DocTypeUom = "UOM"
+
+	// DocTypeStockReconciliation 库存盘点单据类型
+	DocTypeStockReconciliation = "Stock Reconciliation"
+	// DocTypeStockReconciliationItem 库存盘点明细类型
+	DocTypeStockReconciliationItem = "Stock Reconciliation Item"
 )
 
 const (

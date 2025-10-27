@@ -58,3 +58,10 @@ const (
 	SiteCodeTtpos   = "1"
 	SiteCodeWallace = "4"
 )
+
+const (
+	//原材料默认估值率1
+	DefaultValuationRate = 1
+	//商品默认估值率0
+	ProductsDefaultValuationRate = 0
+)

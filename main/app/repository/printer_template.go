@@ -10,6 +10,9 @@ import (
 type IPrinterTemplateRepo interface {
 	GetPrinterTemplateInfo(id uint64) (model.PrinterTemplate, error)
 	CreatePrinterTemplate(printerTemplate model.PrinterTemplate) error
+	// 获取打印菜单列表
+	GetPrinterTemplates() ([]model.PrinterTemplate, error)             // 获取所有打印模版列表
+	UpdatePrinterTemplate(printerTemplate model.PrinterTemplate) error // 更新打印机模板
 }
 
 func NewPrinterTemplateRepo(db *gorm.DB) IPrinterTemplateRepo {
@@ -36,6 +39,24 @@ func (r *PrinterTemplateRepoImpl) GetPrinterTemplateInfo(id uint64) (model.Print
 // CreatePrinterTemplate 创建打印机模板
 func (r *PrinterTemplateRepoImpl) CreatePrinterTemplate(printerTemplate model.PrinterTemplate) error {
 	if err := r.db.Create(&printerTemplate).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetPrinterTemplates 获取所有打印模版列表
+func (r *PrinterTemplateRepoImpl) GetPrinterTemplates() ([]model.PrinterTemplate, error) {
+	var templates []model.PrinterTemplate
+	err := r.db.Model(&model.PrinterTemplate{}).
+		Where("delete_time = ?", 0). // 只查询未删除的记录
+		Order("create_time DESC").   // 按创建时间倒序排列
+		Find(&templates).Error
+	return templates, err
+}
+
+// UpdatePrinterTemplate 更新打印机模板
+func (r *PrinterTemplateRepoImpl) UpdatePrinterTemplate(printerTemplate model.PrinterTemplate) error {
+	if err := r.db.Model(&model.PrinterTemplate{}).Where("id = ?", printerTemplate.ID).Updates(printerTemplate).Error; err != nil {
 		return err
 	}
 	return nil

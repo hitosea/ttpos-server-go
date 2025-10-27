@@ -64,6 +64,7 @@ type IOrderQueryRepo interface {
 	GetSaleBillSaleOrderRecord(saleOrderUuid uint64) (*model.SaleOrder, error)                                                                 // 获取销售账单记录
 	GetInvoiceInfo(saleOrderUuid uint64) (*model.SaleOrderInvoiceInfo, error)                                                                  // 获取订单发票信息
 	GetMonthlyOrderRanks(saleBillUuids []uint64) ([]MonthlyOrderRank, error)                                                                   // 获取订单的月排名信息（基于全表数据）
+	UpdateSaleBillOrderRemark(saleBillUuid uint64, orderRemark string) error                                                                   // 更新销售账单整单备注
 }
 
 // orderRepo 订单仓库
@@ -2251,4 +2252,11 @@ func (r *orderRepo) GetMonthlyOrderRanks(saleBillUuids []uint64) ([]MonthlyOrder
 	}
 
 	return results, nil
+}
+
+// UpdateSaleBillOrderRemark 更新销售账单整单备注
+func (r *orderRepo) UpdateSaleBillOrderRemark(saleBillUuid uint64, orderRemark string) error {
+	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Updates(model.SaleBill{
+		OrderRemark: orderRemark,
+	}).Error
 }

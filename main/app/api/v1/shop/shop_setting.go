@@ -285,6 +285,100 @@ func (h *SettingHandler) DeleteReturnFoodReason(c *gin.Context) {
 	helper.Success(c, "删除成功")
 }
 
+// GetOrderRemark 获取整单备注
+// @Summary 获取整单备注
+// @Description 获取整单备注列表
+// @Tags 商家端.业务设置
+// @Accept json
+// @Produce json
+// @Success 200 {object} resp.OrderRemarkResp
+// @Security JwtToken
+// @Router /shop/setting/order_remark [get]
+func (h *SettingHandler) GetOrderRemark(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	orderRemark, err := h.otherSrv.GetOrderRemarkList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, orderRemark)
+}
+
+// AddOrderRemark 新增整单备注
+// @Summary 新增整单备注
+// @Description 新增整单备注
+// @Tags 商家端.业务设置
+// @Accept json
+// @Produce json
+// @Param data body req.AddOrderRemarkReq true "新增整单备注"
+// @Success 200 {object} dto.Response
+// @Security JwtToken
+// @Router /shop/setting/order_remark/add [post]
+func (h *SettingHandler) AddOrderRemark(c *gin.Context) {
+	var addOrderRemark req.AddOrderRemarkReq
+	if err := c.ShouldBindJSON(&addOrderRemark); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx := helper.GetContext(c)
+	err := h.otherSrv.AddOrderRemark(ctx, addOrderRemark)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "新增成功")
+}
+
+// EditOrderRemark 编辑整单备注
+// @Summary 编辑整单备注
+// @Description 编辑整单备注
+// @Tags 商家端.业务设置
+// @Accept json
+// @Produce json
+// @Param data body req.EditOrderRemarkReq true "编辑整单备注"
+// @Success 200 {object} dto.Response
+// @Security JwtToken
+// @Router /shop/setting/order_remark/edit [post]
+func (h *SettingHandler) EditOrderRemark(c *gin.Context) {
+	var editOrderRemark req.EditOrderRemarkReq
+	if err := c.ShouldBindJSON(&editOrderRemark); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx := helper.GetContext(c)
+	err := h.otherSrv.EditOrderRemark(ctx, editOrderRemark)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "编辑成功")
+}
+
+// DeleteOrderRemark 删除整单备注
+// @Summary 删除整单备注
+// @Description 删除整单备注
+// @Tags 商家端.业务设置
+// @Accept json
+// @Produce json
+// @Param data body req.DeleteOrderRemarkReq true "删除整单备注"
+// @Success 200 {object} dto.Response
+// @Security JwtToken
+// @Router /shop/setting/order_remark [delete]
+func (h *SettingHandler) DeleteOrderRemark(c *gin.Context) {
+	var deleteOrderRemark req.DeleteOrderRemarkReq
+	if err := c.ShouldBindJSON(&deleteOrderRemark); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	ctx := helper.GetContext(c)
+	err := h.otherSrv.DeleteOrderRemark(ctx, deleteOrderRemark)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, "删除成功")
+}
+
 // GetMenuQrcode 获取电子菜单二维码
 // @Summary 获取电子菜单二维码
 // @Description 获取电子菜单二维码
@@ -461,6 +555,10 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/setting/return_food_reason/add", wrapper.AddReturnFoodReason)   // 新增退菜原因
 		privateApi.POST("/setting/return_food_reason/edit", wrapper.EditReturnFoodReason) // 编辑退菜原因
 		privateApi.DELETE("/setting/return_food_reason", wrapper.DeleteReturnFoodReason)  // 删除退菜原因
+		privateApi.GET("/setting/order_remark", wrapper.GetOrderRemark)                   // 获取整单备注
+		privateApi.POST("/setting/order_remark/add", wrapper.AddOrderRemark)              // 新增整单备注
+		privateApi.POST("/setting/order_remark/edit", wrapper.EditOrderRemark)            // 编辑整单备注
+		privateApi.DELETE("/setting/order_remark", wrapper.DeleteOrderRemark)             // 删除整单备注
 		// 电子菜单二维码
 		privateApi.GET("/setting/menu_qrcode", wrapper.GetMenuQrcode) // 获取电子菜单二维码
 		// 会员端二维码

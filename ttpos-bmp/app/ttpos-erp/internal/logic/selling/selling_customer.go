@@ -20,7 +20,7 @@ import (
 //   - error: 错误信息
 func (s *sSelling) CountCustomer(ctx context.Context, filter *erp.Customer) (int, error) {
 	// 构建查询过滤器
-	filters := s.buildCustomerCountFilters(ctx, filter)
+	filters := s.buildCustomerCountFilters(filter)
 
 	count, err := service.Doctype().Count(ctx, &erp.ErpReq{
 		DocType: erp.DocTypeCustomer,
@@ -137,12 +137,11 @@ func (s *sSelling) parseCustomerResponse(data []byte) (*erp.Customer, error) {
 
 // buildCustomerCountFilters 构建客户数量查询过滤器
 // 参数：
-//   - ctx: 上下文对象
 //   - filter: 客户过滤条件，可选
 //
 // 返回：
 //   - [][]string: 过滤条件数组
-func (s *sSelling) buildCustomerCountFilters(ctx context.Context, filter *erp.Customer) [][]string {
+func (s *sSelling) buildCustomerCountFilters(filter *erp.Customer) [][]string {
 	filters := make([][]string, 0, 8) // 预分配容量，提高性能
 
 	// 如果没有过滤条件，只返回基础过滤

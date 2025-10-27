@@ -27,7 +27,9 @@ type StatementStoreData struct {
 type StatementOrderInfoData struct {
 	Status                 uint                      `json:"status"`                    // 订单状态
 	SerialNo               string                    `json:"serial_no"`                 // 桌位编号
+	SerialNos              string                    `json:"serial_nos"`                // 桌位编号（带人数）
 	OrderNo                string                    `json:"order_no"`                  // 订单号
+	MealNum                uint                      `json:"meal_num"`                  // 就餐人数
 	Remark                 string                    `json:"remark"`                    // 订单备注
 	CashierName            string                    `json:"cashier_name"`              // 收银员名称
 	FinishTime             string                    `json:"finish_time"`               // 完成时间

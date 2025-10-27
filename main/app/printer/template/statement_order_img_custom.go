@@ -281,8 +281,9 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 			PrinterSn:        settingPrinterInfo.PrinterSn,
 		},
 		Order: template_struct.StatementOrderInfoData{
-			Status: saleOrder.Status,
-			SerialNo: func() string {
+			Status:   saleOrder.Status,
+			SerialNo: saleBill.SerialNo,
+			SerialNos: func() string {
 				if saleBill.DeskUuid > 0 {
 					return fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr)
 				} else {
@@ -290,6 +291,7 @@ func (t *statementOrderImgTemplateCustom) GetPrintContent(
 				}
 			}(),
 			OrderNo:     saleOrder.OrderNo,
+			MealNum:     saleBill.MealNum,
 			Remark:      saleBill.Remark,
 			CashierName: saleOrder.CashierName,
 			FinishTime:  t.base.FormatUnixTimeDefault(saleOrder.FinishTime),

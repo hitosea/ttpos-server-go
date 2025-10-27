@@ -321,6 +321,16 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 				}
 				return resp.BatchTagInfo{}
 			}()
+			item.OrderRemark = func() resp.OrderRemarkRes {
+				remark, err := product.SaleBill.GetOrderRemarkRes()
+				if err != nil {
+					return resp.OrderRemarkRes{}
+				}
+				if remark == nil {
+					return resp.OrderRemarkRes{}
+				}
+				return *remark
+			}()
 			items = append(items, item)
 		}
 		if group.LocaleName == nil {
@@ -463,6 +473,16 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 			group.SaleBillUuid = product.SaleBillUuid                                                                               // 销售账单Uuid
 			group.IsSaleBillDeleted = product.SaleBill.DeleteTime > 0 || product.SaleBill.Status == constant.SaleBillStatusCanceled // 是否已经整单取消
 			group.IsTakeoutBill = product.SaleBill.IsTakeoutBill()
+			group.OrderRemark = func() resp.OrderRemarkRes {
+				remark, err := product.SaleBill.GetOrderRemarkRes()
+				if err != nil {
+					return resp.OrderRemarkRes{}
+				}
+				if remark == nil {
+					return resp.OrderRemarkRes{}
+				}
+				return *remark
+			}()
 			if product.SaleBill.SerialNo != "" && group.LocaleName == nil {
 				group.LocaleName = &dto.LocaleResponse{
 					ZH:   product.SaleBill.SerialNo,

@@ -2,6 +2,7 @@
 
 namespace app\shop\controller\supplier;
 
+use help\HttpHelp;
 use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
 use app\common\model\settings\PrinterTemplate as PrinterTemplateModel;
@@ -27,6 +28,31 @@ class PrinterTemplate extends Controller
         return $this->renderSuccess('', compact('list'));
     }
 
+    /**
+     * @Apidoc\Title("详情")
+     * @Apidoc\Method ("POST")
+     * @Apidoc\Url ("/index.php/shop/supplier.PrinterTemplate/detail")
+     * @Apidoc\Param("id", type="int", require=true, default="", desc="id")
+     */
+    public function detail()
+    {
+        $id = $this->postData()['id'];
+        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/printer/template/detail', [
+            'id' => $id,
+        ], [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+            'Content-Type: application/json; charset=utf-8',
+        ]);
+        if (!$res) {
+            return $this->renderError('请求失败');
+        }
+        $res = json_decode($res, true);
+        if (($res['code'] ?? -1) != 0) {
+            return $this->renderSuccess();
+        }
+        return $this->renderSuccess('success', $res['data']);
+    }
 
     /**
      * @Apidoc\Title("设置模板")

@@ -14,4 +14,6 @@ const (
 	TopicReturnPosInvoice = Topic("return-pos-invoice")
 	TopicCancelPosInvoice = Topic("cancel-pos-invoice")
 	TopicClosePosEntry    = Topic("close-pos-entry")
+	//TopicRedoPos 重做发票订单
+	TopicRedoPos = Topic("redo-pos")
 )

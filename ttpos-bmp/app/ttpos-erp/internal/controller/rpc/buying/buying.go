@@ -235,3 +235,11 @@ func (*Controller) UpdatePurchaseOrder(ctx context.Context, req *buying.UpdatePu
 	}
 	return rpc.ApiSuccessWithData("更新采购订单成功", resp), nil
 }
+
+func (*Controller) GetSupplierItemList(ctx context.Context, req *buying.GetSupplierItemListReq) (*api.ResponseInfo, error) {
+	resp, err := service.Supplier().GetSupplierItemList(ctx, req)
+	if err != nil {
+		return rpc.ApiError(err.Error()), nil
+	}
+	return rpc.ApiSuccessWithData("获取供应商物品列表成功", resp), nil
+}

@@ -30,6 +30,7 @@ type Handler struct {
 	productSrv service.IProductSrv // 产品服务
 	callSrv    service.ICallSrv    // 呼叫服务
 	orderSrv   service.IOrderSrv   // 订单服务
+	otherSrv   service.IOtherSrv   // 其他服务
 }
 
 // BaseInfo 获取桌码基础信息
@@ -234,6 +235,61 @@ func (h *Handler) OrderProductRemark(c *gin.Context) {
 	}
 	// 返回结果
 	helper.Success(c, res)
+}
+
+// OrderRemark 处理桌台订单整单备注
+// @Summary 点餐订单整单备注
+// @Description 点餐订单整单备注
+// @Tags 扫码点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderRemarkReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.H5DeskPing}
+// @Failure 404 {object} nil "未找到"
+// @Router /h5/order/remark [post]
+func (h *Handler) OrderRemark(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderRemarkReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	shopCart, err := h.orderSrv.OrderRemark(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	res, err := h.deskSrv.GetH5DeskPing(helper.GetContext(c), shopCart.Desk.Uuid, shopCart)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderRemarkList 处理获取整单备注列表
+// @Summary 获取整单备注列表
+// @Description 获取整单备注列表
+// @Tags 扫码点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.OrderRemarkResp}
+// @Failure 404 {object} nil "未找到"
+// @Router /h5/order/remark/list [get]
+func (h *Handler) OrderRemarkList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	info, err := h.otherSrv.GetOrderRemarkList(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, info)
 }
 
 // OrderCartProductAdd 向购物车添加商品
@@ -743,6 +799,7 @@ func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache
 	buffetSrv := service.NewBuffetSrv(dbm)
 	h5Srv := service.NewH5Srv(dbm, deskSrv, orderSrv, buffetSrv, settingSrv)
 	productService := service.NewProductSrv(dbm, localeSrv, settingSrv, cache, translateSrv)
+	otherSrv := service.NewOtherSrv(dbm, cache, settingSrv)
 	callSrv := service.NewCallSrv(dbm)
 	// 初始化处理器
 	wrapper := Handler{
@@ -752,6 +809,7 @@ func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache
 		productSrv: productService,
 		callSrv:    callSrv,
 		orderSrv:   orderSrv,
+		otherSrv:   otherSrv,
 	}
 
 	// 需要认证
@@ -764,6 +822,8 @@ func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache
 		privateApi.GET("/product/list", wrapper.GetProductList)                                                            // 获取收银产品列表
 		privateApi.POST("/call", wrapper.Call)                                                                             // 发起呼叫
 		privateApi.POST("/remark", wrapper.OrderProductRemark)                                                             // 给商品添加备注
+		privateApi.POST("/order/remark", wrapper.OrderRemark)                                                              // 整单备注
+		privateApi.GET("/order/remark/list", wrapper.OrderRemarkList)                                                      // 获取整单备注列表
 		privateApi.POST("/order/cart/product/add", wrapper.OrderCartProductAdd)                                            // 向购物车添加商品
 		privateApi.POST("/desk/order/cart/product_package/add", wrapper.OrderCartProductPackageAdd)                        // 向购物车添加套餐
 		privateApi.GET("/desk/order/cart/product/flavor_and_attribute", wrapper.OrderCartProductFlavorAndAttribute)        // 查询购物车商品“规格/属性”

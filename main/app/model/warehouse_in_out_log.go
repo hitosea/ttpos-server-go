@@ -1,10 +1,10 @@
 package model
 
-// WarehouseInOutLog 仓库出入库记录表
+// WarehouseInOutLog 仓库出入库记录表 `ttpos_warehouse_in_out_log`
 type WarehouseInOutLog struct {
 	BaseModel
 	LogType              int     `json:"log_type" gorm:"type:int;default:0;comment:日志类型,0-入库 1-出库"`
-	Scene                int     `json:"scene" gorm:"type:int;default:0;comment:场景,0-采购入库 1-销售出库 2-发货出库"`
+	Scene                int     `json:"scene" gorm:"type:int;default:0;comment:场景,0-采购入库 1-销售出库 2-发货出库 3-盘盈入库 4-盘亏出库 20-在途入库 21-在途出库"`
 	WarehouseUuid        uint64  `json:"warehouse_uuid" gorm:"type:bigint;default:0;comment:仓库ID"`
 	MaterialUuid         uint64  `json:"material_uuid" gorm:"type:bigint;default:0;comment:物品ID"`
 	MaterialName         string  `json:"material_name" gorm:"type:text;default:'';comment:物品名称JSON,记录当时物品名称"`
@@ -20,6 +20,7 @@ type WarehouseInOutLog struct {
 	OtherOrgUuid         uint64  `json:"other_org_uuid" gorm:"type:bigint;default:0;comment:对方机构ID"`
 	OtherOrgType         uint64  `json:"other_org_type" gorm:"type:bigint;default:0;comment:对方机构类型 0:供应商 1:客户"`
 	OtherOrgName         string  `json:"other_org_name" gorm:"type:text;comment:对方机构名称"`
+	OpeningHours         string  `json:"opening_hours" gorm:"type:varchar(255);default:'';comment:营业时段,仅用于Scene销售出库的场景"`
 
 	// 关联模型
 	Material  *Material  `gorm:"foreignKey:MaterialUuid;references:Uuid" json:"material,omitempty"`

@@ -64,6 +64,7 @@ type RocketmqConf struct {
 	BrokerAddr    string   `json:"brokerAddr"`    // Broker地址
 	Retry         int      `json:"retry"`         // 重试次数
 	LogLevel      string   `json:"logLevel"`      // 日志级别
+	UnitName      string   `json:"unitName"`      // 单元名称,可选
 }
 
 // KafkaConf Kafka消息队列配置

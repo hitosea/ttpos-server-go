@@ -682,3 +682,44 @@ func (s *sSupplier) parseUpdateSupplierResponse(data []byte) (*buying.SupplierDa
 
 	return &supplier, nil
 }
+
+func (s *sSupplier) GetSupplierItemList(ctx context.Context, req *buying.GetSupplierItemListReq) (*buying.GetSupplierItemListResp, error) {
+	var (
+		pageNo   = 0
+		pageSize = 100
+		filters  = make([][]string, 0, 1)
+	)
+	if len(req.Supplier) > 0 {
+		filters = append(filters, []string{"Item Supplier", "supplier", "=", req.Supplier})
+	}
+	if req.PageNo > 0 {
+		pageNo = int(req.PageNo) - 1
+	}
+	if req.PageSize > 0 {
+		pageSize = int(req.PageSize)
+	}
+
+	resp, err := service.Document().List(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeItem,
+	}, &erp.RequestParams{
+		Fields:     []string{"item_code", "item_name"},
+		Filters:    filters,
+		LimitStart: pageNo,
+		Limit:      pageSize,
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "查询供应商物品列表失败")
+	}
+
+	items := make([]*buying.SupplierItemInfo, 0)
+	for _, item := range resp.GetJsons("data") {
+		items = append(items, &buying.SupplierItemInfo{
+			ItemCode: item.Get("item_code").String(),
+			ItemName: item.Get("item_name").String(),
+		})
+	}
+
+	return &buying.GetSupplierItemListResp{
+		Items: items,
+	}, nil
+}

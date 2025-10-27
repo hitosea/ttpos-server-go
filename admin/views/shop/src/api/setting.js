@@ -236,6 +236,9 @@ let SettingApi = {
   printerTemplateList(data, errorback) {
     return request._post('/shop/supplier.PrinterTemplate/list', data, errorback);
   },
+  printerTemplateDetail(data, errorback) {
+    return request._post('/shop/supplier.PrinterTemplate/detail', data, errorback);
+  },
   /*打印模板*/
   setTemplate(data, errorback) {
     return request._post('/shop/supplier.PrinterTemplate/setTemplate', data, errorback);

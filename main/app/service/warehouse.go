@@ -38,6 +38,7 @@ type IWarehouseSrv interface {
 	GetWarehouseInOutList(ctx context.Context, req req.GetWarehouseInOutListReq) (resp.WarehouseInOutListResp, error)       // 出入库明细列表
 	CheckCodeExists(ctx context.Context, req req.CheckCodeExistsReq) (resp.CheckNameCodeExistsResp, error)                  // 检查仓库编码是否存在
 	GetOtherOrgList(ctx context.Context) (resp.OtherOrgListResp, error)                                                     // 对方机构列表
+	GetWarehouseMaterialList(ctx context.Context, req req.WarehouseMaterialListReq) (resp.WarehouseMaterialListResp, error) // 获取仓库物品列表
 
 	SyncWarehouse(ctx context.Context) error          // 同步仓库列表
 	SyncWarehouseItemStock(ctx context.Context) error // 同步仓库物品库存
@@ -491,15 +492,13 @@ func (s *warehouseSrv) buildWarehouseInOutResp(log model.WarehouseInOutLog) resp
 		warehouseName = log.Warehouse.MultiLanguageName.GetNames()
 	}
 
-	// 转换类型
-	typeStr := ""
-	switch log.Scene {
-	case 0:
-		typeStr = "purchase"
-	case 1:
-		typeStr = "sale"
-	case 2:
-		typeStr = "delivery"
+	// 类型
+	typeStrMap := map[int]string{
+		constant.WarehouseInOutLogScenePurchase: "purchase",
+		constant.WarehouseInOutLogSceneSale:     "sale",
+		constant.WarehouseInOutLogSceneDelivery: "delivery",
+		constant.WarehouseInOutLogSceneProfitIn: "profit_in",
+		constant.WarehouseInOutLogSceneLossOut:  "loss_out",
 	}
 
 	// 格式化日期
@@ -511,7 +510,7 @@ func (s *warehouseSrv) buildWarehouseInOutResp(log model.WarehouseInOutLog) resp
 	return resp.WarehouseInOutResp{
 		Uuid:    log.Uuid,
 		OrderNo: log.OrderNo,
-		Type:    typeStr,
+		Type:    typeStrMap[log.Scene],
 		Date:    date,
 		Num:     log.Num,
 		Amount:  log.Amount,
@@ -786,6 +785,10 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 	// 待翻译多语言Uuid
 	var multiLanguageNameUuids []uint64
 
+	// 已存在的多语言Uuid
+	var existsMultiLanguageUuids []uint64
+	db.Model(&model.MultiLanguageName{}).Pluck("uuid", &existsMultiLanguageUuids)
+
 	err = db.Transaction(func(tx *gorm.DB) error {
 		if len(deletingWarehouseUuids) > 0 {
 			err = tx.Model(&model.Warehouse{}).Where("uuid IN (?)", deletingWarehouseUuids).Update("delete_time", time.Now().Unix()).Error
@@ -887,17 +890,11 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 
 		// 同步ttpos总店数据
 		if len(headquarterWarehouses) > 0 {
-			// 删除多语言
-			tx.Where("uuid IN (?)", tx.Model(&model.Warehouse{}).Where("headquarter_uuid > 0").Select("multi_language_name_uuid")).Delete(&model.MultiLanguageName{})
 			// 删除仓库
 			tx.Where("headquarter_uuid > 0").Delete(&model.Warehouse{})
 
 			var insertingMultiLanguageNames []model.MultiLanguageName
 			for _, headquarterWarehouse := range headquarterWarehouses {
-				// 未关联上多语言，直接跳过
-				if headquarterWarehouse.MultiLanguageName == nil {
-					continue
-				}
 				multiLanguageName := headquarterWarehouse.MultiLanguageName.GetNames()
 				insertingWarehouses = append(insertingWarehouses, model.Warehouse{
 					BaseModel: model.BaseModel{
@@ -918,23 +915,30 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 					Address:               headquarterWarehouse.Address,
 					HeadquarterUuid:       headquarter.Uuid,
 				})
-				insertingMultiLanguageNames = append(insertingMultiLanguageNames, model.MultiLanguageName{
-					BaseModel: model.BaseModel{
-						Uuid:       headquarterWarehouse.MultiLanguageNameUuid,
-						CreateTime: headquarterWarehouse.MultiLanguageName.CreateTime,
-						UpdateTime: headquarterWarehouse.MultiLanguageName.UpdateTime,
-						DeleteTime: headquarterWarehouse.MultiLanguageName.DeleteTime,
-					},
-					ZhName:   headquarterWarehouse.MultiLanguageName.ZhName,
-					ThName:   headquarterWarehouse.MultiLanguageName.ThName,
-					EnName:   headquarterWarehouse.MultiLanguageName.EnName,
-					ZhTwName: headquarterWarehouse.MultiLanguageName.ZhTwName,
-					JaName:   headquarterWarehouse.MultiLanguageName.JaName,
-					KoName:   headquarterWarehouse.MultiLanguageName.KoName,
-					MyName:   headquarterWarehouse.MultiLanguageName.MyName,
-					TrName:   headquarterWarehouse.MultiLanguageName.TrName,
-					SvName:   headquarterWarehouse.MultiLanguageName.SvName,
-				})
+
+				// 新增的多语言
+				if headquarterWarehouse.MultiLanguageName != nil &&
+					headquarterWarehouse.MultiLanguageName.Uuid != 0 &&
+					!slices.Contains(existsMultiLanguageUuids, headquarterWarehouse.MultiLanguageName.Uuid) {
+
+					insertingMultiLanguageNames = append(insertingMultiLanguageNames, model.MultiLanguageName{
+						BaseModel: model.BaseModel{
+							Uuid:       headquarterWarehouse.MultiLanguageNameUuid,
+							CreateTime: headquarterWarehouse.MultiLanguageName.CreateTime,
+							UpdateTime: headquarterWarehouse.MultiLanguageName.UpdateTime,
+							DeleteTime: headquarterWarehouse.MultiLanguageName.DeleteTime,
+						},
+						ZhName:   headquarterWarehouse.MultiLanguageName.ZhName,
+						ThName:   headquarterWarehouse.MultiLanguageName.ThName,
+						EnName:   headquarterWarehouse.MultiLanguageName.EnName,
+						ZhTwName: headquarterWarehouse.MultiLanguageName.ZhTwName,
+						JaName:   headquarterWarehouse.MultiLanguageName.JaName,
+						KoName:   headquarterWarehouse.MultiLanguageName.KoName,
+						MyName:   headquarterWarehouse.MultiLanguageName.MyName,
+						TrName:   headquarterWarehouse.MultiLanguageName.TrName,
+						SvName:   headquarterWarehouse.MultiLanguageName.SvName,
+					})
+				}
 			}
 			if len(insertingMultiLanguageNames) > 0 {
 				err = tx.Model(&model.MultiLanguageName{}).Create(&insertingMultiLanguageNames).Error
@@ -1097,4 +1101,108 @@ func (s *warehouseSrv) GetOtherOrgList(ctx context.Context) (resp.OtherOrgListRe
 	}
 
 	return resp.OtherOrgListResp{List: otherOrgs}, nil
+}
+
+// GetWarehouseMaterialList 获取仓库物品列表
+func (s *warehouseSrv) GetWarehouseMaterialList(ctx context.Context, req req.WarehouseMaterialListReq) (resp.WarehouseMaterialListResp, error) {
+	db := ctx.GetDB()
+	warehouseItemRepo := repository.NewWarehouseItemRepo(db)
+	materialRepo := repository.NewMaterialRepo(db)
+
+	// 构建查询选项
+	var opts []repository.DBOption
+	opts = append(opts, warehouseItemRepo.WhereWarehouseUuid(req.WarehouseUuid))
+
+	// 查询仓库物品列表
+	warehouseItems, total, err := warehouseItemRepo.GetWarehouseMaterialsWithPagination(req.PageNo, req.PageSize, opts...)
+	if err != nil {
+		return resp.WarehouseMaterialListResp{}, errors.WithMessage(err, "查询仓库物品列表失败")
+	}
+
+	// 获取所有物品UUID
+	materialUuids := make([]uint64, 0, len(warehouseItems))
+	for _, item := range warehouseItems {
+		materialUuids = append(materialUuids, item.MaterialUuid)
+	}
+
+	// 批量查询物品详情（包含多语言名称和单位信息）
+	var materials []*model.Material
+	if len(materialUuids) > 0 {
+		materials, err = materialRepo.GetMaterialDetailByUuids(materialUuids)
+		if err != nil {
+			return resp.WarehouseMaterialListResp{}, errors.WithMessage(err, "查询物品详情失败")
+		}
+	}
+
+	// 构建物品UUID到物品详情的映射
+	materialMap := make(map[uint64]*model.Material)
+	for _, material := range materials {
+		materialMap[material.Uuid] = material
+	}
+
+	// 转换响应数据
+	list := make([]resp.WarehouseMaterialInfo, 0, len(warehouseItems))
+	for _, item := range warehouseItems {
+		material, exists := materialMap[item.MaterialUuid]
+		if !exists {
+			continue
+		}
+
+		// 构建物品单位信息
+		units := make([]resp.MaterialUnitInfo, 0)
+		var baseUnit resp.MaterialUnitInfo
+
+		// 获取基准单位
+		if material.Unit != nil {
+			baseUnit = resp.MaterialUnitInfo{
+				MaterialUnitUuid: material.Unit.Uuid,
+				UnitUuid:         material.Unit.UnitUuid,
+				UnitName:         material.Unit.Unit.MultiLanguageName.GetNames(),
+				ConversionRate:   material.Unit.ConversionRate,
+				IsDefault:        material.Unit.IsDefault,
+			}
+		}
+
+		// 获取所有非基准单位
+		if len(material.NotBaseUnitList) > 0 {
+			for _, unit := range material.NotBaseUnitList {
+				if unit.Unit != nil {
+					unitInfo := resp.MaterialUnitInfo{
+						MaterialUnitUuid: unit.Uuid,
+						UnitUuid:         unit.UnitUuid,
+						UnitName:         unit.Unit.MultiLanguageName.GetNames(),
+						ConversionRate:   unit.ConversionRate,
+						IsDefault:        unit.IsDefault,
+					}
+					units = append(units, unitInfo)
+				}
+			}
+		}
+
+		// 构建响应数据
+		info := resp.WarehouseMaterialInfo{
+			MaterialUuid:    material.Uuid,
+			MaterialName:    material.MultiLanguageName.GetNames(),
+			MaterialCode:    material.Code,
+			MaterialBarcode: material.BarcodeValue,
+			InternalCode:    material.InternalCode,
+			BookedQuantity:  item.Stock, // 账面库存数量
+			BaseUnit:        baseUnit,
+			Units:           units,
+			CategoryUuid:    material.CategoryUuid,
+			Image:           material.GetImage(utils.GetBaseURL(ctx.GetGin().Request)),
+			Status:          material.Status,
+			DeleteTime:      material.DeleteTime,
+		}
+		list = append(list, info)
+	}
+
+	return resp.WarehouseMaterialListResp{
+		List: list,
+		Meta: dto.PageResponse{
+			PageNo:   req.PageNo,
+			PageSize: req.PageSize,
+			Total:    total,
+		},
+	}, nil
 }
