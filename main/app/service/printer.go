@@ -30,15 +30,16 @@ import (
 )
 
 type IPrinterSrv interface {
-	GetProductPrinterList(ctx context.Context) (resp.ProductPrinterList, error)                                                // 获取打印档口列表
-	UsbPrinterReport(ctx context.Context, reportReq req.UsbPrinterReportReq) (resp.PrinterReportResp, error)                   // usb打印机上报
-	GetPrintTemplateList(ctx context.Context) (resp.PrintTemplateListResp, error)                                              // 获取打印模板列表
-	GetPrintTemplateDetail(ctx context.Context, id uint64) (resp.PrintTemplateDetailResp, error)                               // 获取模板详情
-	EditPrinterCustomize(ctx context.Context, editPrinterCustomizeReq req.EditPrinterCustomizeReq) error                       // 编辑打印机定制
-	DeletePrinterCustomize(ctx context.Context, customizeUuid uint64) error                                                    // 删除打印机定制
-	CreatePrinterCustomize(ctx context.Context, createPrinterCustomizeReq req.CreatePrinterCustomizeReq) error                 // 创建打印机定制
-	UsePrinterCustomize(ctx context.Context, customizeUuid uint64) error                                                       // 使用打印机定制
-	GetPrinterCustomizeConfigInfo(ctx context.Context, configInfoReq req.PrinterGetConfigInfoReq) (resp.ConfigInfoResp, error) // 获取配置信息
+	GetProductPrinterList(ctx context.Context) (resp.ProductPrinterList, error)                                                                       // 获取打印档口列表
+	UsbPrinterReport(ctx context.Context, reportReq req.UsbPrinterReportReq) (resp.PrinterReportResp, error)                                          // usb打印机上报
+	GetPrintTemplateList(ctx context.Context) (resp.PrintTemplateListResp, error)                                                                     // 获取打印模板列表
+	GetPrintTemplateDetail(ctx context.Context, id uint64) (resp.PrintTemplateDetailResp, error)                                                      // 获取模板详情
+	EditPrinterCustomize(ctx context.Context, editPrinterCustomizeReq req.EditPrinterCustomizeReq) error                                              // 编辑打印机定制
+	PreviewPrinterCustomize(ctx context.Context, previewPrinterCustomizeReq req.PreviewPrinterCustomizeReq) (resp.PreviewPrinterCustomizeResp, error) // 预览打印机定制
+	DeletePrinterCustomize(ctx context.Context, customizeUuid uint64) error                                                                           // 删除打印机定制
+	CreatePrinterCustomize(ctx context.Context, createPrinterCustomizeReq req.CreatePrinterCustomizeReq) error                                        // 创建打印机定制
+	UsePrinterCustomize(ctx context.Context, customizeUuid uint64) error                                                                              // 使用打印机定制
+	GetPrinterCustomizeConfigInfo(ctx context.Context, configInfoReq req.PrinterGetConfigInfoReq) (resp.ConfigInfoResp, error)                        // 获取配置信息
 }
 
 const (
@@ -615,6 +616,27 @@ func (s *printerSrv) EditPrinterCustomize(ctx context.Context, editPrinterCustom
 	})
 
 	return nil
+}
+
+// PreviewPrinterCustomize 预览打印机定制
+func (s *printerSrv) PreviewPrinterCustomize(ctx context.Context, previewPrinterCustomizeReq req.PreviewPrinterCustomizeReq) (resp.PreviewPrinterCustomizeResp, error) {
+	db := ctx.GetDB()
+	// 获取模板详情
+	template, err := repository.NewPrinterTemplateRepo(db).GetPrinterTemplateInfo(previewPrinterCustomizeReq.TemplateId)
+	if err != nil {
+		return resp.PreviewPrinterCustomizeResp{}, errors.WithMessage(errors.New("获取模板详情失败"), err.Error())
+	}
+	// 获取测试数据
+	testData, err := s.GetTestData(ctx, template.Name)
+	if err != nil {
+		return resp.PreviewPrinterCustomizeResp{}, errors.WithMessage(errors.New("获取测试数据失败"), err.Error())
+	}
+	// 解析模板
+	printContent, err := s.Parser(ctx, previewPrinterCustomizeReq.Data, testData)
+	if err != nil {
+		return resp.PreviewPrinterCustomizeResp{}, errors.WithMessage(errors.New("解析模板失败"), err.Error())
+	}
+	return resp.PreviewPrinterCustomizeResp{ImageUrl: printContent}, nil
 }
 
 // DeletePrinterCustomize 删除打印机定制

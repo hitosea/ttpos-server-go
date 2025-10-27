@@ -108,16 +108,9 @@
                     "font_bold": false,
                     "dividing_line": false,
                     "leading_blank_lines": 0,
-                    "trailing_blank_lines": 0,
-                    "width": 180,
-                    "line_height": null,
-                    "padding_right": null,
-                    "show_currency_unit": null,
-                    "show_column_title": null,
-                    "disabled": null
+                    "trailing_blank_lines": 2,
+                    "width": 180
                 },
-                "block_after_label": null,
-                "block_expand_labels": null,
                 "conditions": [
                     {
                         "field": "store.logo",
