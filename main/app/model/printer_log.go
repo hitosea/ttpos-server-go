@@ -4,10 +4,15 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/base64"
+	"encoding/hex"
+	"fmt"
 	"math"
 	"slices"
 	"strings"
+	"time"
 	"ttpos-server-go/app/constant"
+
+	"github.com/google/uuid"
 )
 
 // PrinterLog 打印日志表 ttpos_printer_log
@@ -38,6 +43,20 @@ type PrinterLog struct {
 	ProductPrinter      *ProductPrinter      `gorm:"foreignKey:ProductPrinterUuid;references:Uuid"` // 关联 sale_order
 	MemberRechargeOrder *MemberRechargeOrder `gorm:"foreignKey:RelatedUuid;references:Uuid"`        // 关联 sale_order
 	PrinterLogData      *PrinterLogData      `gorm:"foreignKey:LogUuid;references:Uuid"`            // 关联 printer_log_data
+}
+
+// GetTradeNo 获取交易号
+func (model *BaseModel) GetTradeNo(CompanyUuid uint64) string {
+	tradeNo := fmt.Sprintf("%d%d", CompanyUuid, model.Uuid)
+	if len(tradeNo) > 32 {
+		tradeNo = tradeNo[len(tradeNo)-32:]
+	}
+	return tradeNo
+}
+
+// GetRandomTradeNo 获取交易号
+func (model *PrinterLog) GetRandomTradeNo() string {
+	return fmt.Sprintf("%d%s", time.Now().Unix(), hex.EncodeToString([]byte(strings.Replace(uuid.New().String(), "-", "", -1)))[:8])
 }
 
 // 压缩数据

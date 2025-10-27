@@ -15,6 +15,7 @@ type PrinterData struct {
 	IsUsbPrinter      bool   `json:"is_usb_printer"`      // 是否是usb打印机
 	PrintingTime      int64  `json:"printing_time"`       // 打印耗时
 	EnableStatusCheck int    `json:"enable_status_check"` // 是否启用状态检查
+	TradeNo           string `json:"trade_no"`            // 交易号
 }
 
 type PrinterDataList struct {
