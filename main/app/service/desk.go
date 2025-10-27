@@ -359,6 +359,7 @@ func (s *deskSrv) GetH5DeskPing(ctx context.Context, deskUuid uint64, shopCart *
 			List: mustProductList,
 		}
 	}
+	res.OrderRemark = shopCart.OrderRemark
 	return res, nil
 }
 
