@@ -868,20 +868,31 @@
                     ],
                     [
                         {
-                            "block_id": "attrs",
-                            "block_type": "label",
-                            "block_label": "({attrs})",
+                            "block_id": "attr",
+                            "block_type": "label:value",
+                            "block_label": {
+                                "en": "-Attributes: ",
+                                "ja": "-属性: ",
+                                "ko": "-속성: ",
+                                "my": "-အရွယ်အဆင့်: ",
+                                "th": "-คุณลักษณะ: ",
+                                "tr": "-Özellikler: ",
+                                "zh": "-属性: ",
+                                "zhtw": "-屬性: ",
+                                "de": "-Eigenschaften: ",
+                                "sv": "-Egenskap: "
+                            },
                             "block_name": {
                                 "en": "Attributes",
                                 "ja": "属性",
                                 "ko": "속성",
-                                "my": "အရေးအကျမ်း",
+                                "my": "အရွယ်အဆင့်",
                                 "th": "คุณลักษณะ",
                                 "tr": "Özellikler",
                                 "zh": "属性",
                                 "zhtw": "屬性",
-                                "de": "Attribute",
-                                "sv": "Attribut"
+                                "de": "Eigenschaften",
+                                "sv": "Egenskap"
                             },
                             "block_attr": {
                                 "font_size": 18,
@@ -889,9 +900,9 @@
                                 "font_bold": false,
                                 "dividing_line": false,
                                 "leading_blank_lines": 0,
-                                "trailing_blank_lines": 1,
+                                "trailing_blank_lines": 0,
                                 "width": 52,
-                                "line_height": 35
+                                "line_height": 40
                             },
                             "block_expand_labels": [
                                 {
@@ -907,11 +918,146 @@
                             ],
                             "conditions": [
                                 {
-                                    "field": "attrs",
+                                    "field": "attr",
                                     "operator": "not_empty",
                                     "value": 0
                                 }
                             ]
+                        }
+                    ],
+                    [
+                        {
+                            "block_id": "flavor_name",
+                            "block_type": "label:value",
+                            "block_label": {
+                                "en": "-Specification: ",
+                                "ja": "-仕様: ",
+                                "ko": "-사양: ",
+                                "my": "-အရွယ်အဆင့်: ",
+                                "th": "-ขนาด: ",
+                                "tr": "-Ölçü: ",
+                                "zh": "-规格: ",
+                                "zhtw": "-規格: ",
+                                "de": "-Größe: ",
+                                "sv": "-Mått: "
+                            },
+                            "block_name": {
+                                "en": "-Specification",
+                                "ja": "-仕様",
+                                "ko": "-사양",
+                                "my": "-အရွယ်အဆင့်",
+                                "th": "-ขนาด",
+                                "tr": "-Ölçü",
+                                "zh": "-规格",
+                                "zhtw": "-規格",
+                                "de": "-Größe",
+                                "sv": "-Mått"
+                            },
+                            "block_attr": {
+                                "font_size": 18,
+                                "align": "left",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 0,
+                                "width": 52,
+                                "line_height": 40
+                            },
+                            "block_expand_labels": [
+                                {
+                                    "text": "   ",
+                                    "conditions": [
+                                        {
+                                            "field": "is_sub_product",
+                                            "operator": "not_empty",
+                                            "value": 0
+                                        }
+                                    ]
+                                }
+                            ],
+                            "conditions": [
+                                {
+                                    "field": "flavor_name",
+                                    "operator": "not_empty",
+                                    "value": 0
+                                }
+                            ]
+                        }
+                    ],
+                    [
+                        {
+                            "block_id": "sauce_names",
+                            "block_type": "label:value",
+                            "block_label": {
+                                "en": "-Toppings: ",
+                                "ja": "-トッピング: ",
+                                "ko": "-토핑: ",
+                                "my": "-ပေးပာမှု: ",
+                                "th": "-วัตถุดิบติดเติม: ",
+                                "tr": "-Ekstra Malzeme: ",
+                                "zh": "-加料: ",
+                                "zhtw": "-加料: ",
+                                "de": "-Zusatz: ",
+                                "sv": "-Tillbehör: "
+                            },
+                            "block_name": {
+                                "en": "-Toppings",
+                                "ja": "-トッピング",
+                                "ko": "-토핑",
+                                "my": "-ပေးပာမှု",
+                                "th": "-วัตถุดิบติดเติม",
+                                "tr": "-Ekstra Malzeme",
+                                "zh": "-加料",
+                                "zhtw": "-加料",
+                                "de": "-Zusatz",
+                                "sv": "-Tillbehör"
+                            },
+                            "block_attr": {
+                                "font_size": 18,
+                                "align": "left",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 0,
+                                "width": 52,
+                                "line_height": 40
+                            },
+                            "block_expand_labels": [
+                                {
+                                    "text": "   ",
+                                    "conditions": [
+                                        {
+                                            "field": "is_sub_product",
+                                            "operator": "not_empty",
+                                            "value": 0
+                                        }
+                                    ]
+                                }
+                            ],
+                            "conditions": [
+                                {
+                                    "field": "sauce_names",
+                                    "operator": "not_empty",
+                                    "value": 0
+                                }
+                            ]
+                        }
+                    ],
+                    [
+                        {
+                            "block_id": "blank",
+                            "block_type": "blank",
+                            "block_label": null,
+                            "block_name": null,
+                            "block_attr": {
+                                "font_size": 20,
+                                "align": "center",
+                                "font_bold": false,
+                                "dividing_line": false,
+                                "leading_blank_lines": 0,
+                                "trailing_blank_lines": 1,
+                                "width": 52
+                            }
                         }
                     ]
                 ]

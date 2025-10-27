@@ -395,7 +395,7 @@ func (p *ImgTemplateParser) parseRow(
 	}
 
 	// 添加分割线
-	if block.BlockAttr.DividingLine || block.BlockType == "blank_line" {
+	if block.BlockAttr.DividingLine || (block.BlockType == "blank_line" && block.BlockAttr.DividingLine) {
 		img.AppendSplitLine(WithLineFeed(true))
 	}
 
