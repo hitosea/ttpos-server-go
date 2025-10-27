@@ -10,8 +10,10 @@ import (
 	"ttpos-server-go/pkg/cache"
 	ttcontext "ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type Handler struct {
@@ -36,6 +38,7 @@ func (h *Handler) GetBindCode(c *gin.Context) {
 
 	resp, err := h.service.GetBindCode(c.Request.Context(), reqData)
 	if err != nil {
+		logger.Logger.Error("callboard handler GetBindCode failed", zap.Error(err))
 		helper.ErrorWithMessage(c, constant.CodeFail, err)
 		return
 	}
@@ -61,6 +64,7 @@ func (h *Handler) GetBindInfo(c *gin.Context) {
 
 	resp, err := h.service.GetBindInfo(c.Request.Context(), reqData)
 	if err != nil {
+		logger.Logger.Error("callboard handler GetBindInfo failed", zap.Error(err))
 		helper.ErrorWithMessage(c, constant.CodeFail, err)
 		return
 	}
@@ -93,6 +97,7 @@ func (h *Handler) GetQueueData(c *gin.Context) {
 	companyUuid := ttcontext.GetCompanyUuid(c.Request.Context())
 	resp, err := h.service.GetQueueData(c.Request.Context(), companyUuid, reqData)
 	if err != nil {
+		logger.Logger.Error("callboard handler GetQueueData failed", zap.Error(err))
 		helper.ErrorWithMessage(c, constant.CodeFail, err)
 		return
 	}
