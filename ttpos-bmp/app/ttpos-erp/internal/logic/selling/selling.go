@@ -298,14 +298,16 @@ func (s *sSelling) CreatePosProfile(ctx context.Context, req *setup.CreatePosPro
 //   - *erp.POSProfile: POS配置文件
 func (s *sSelling) buildPosProfile(req *setup.CreatePosProfileInp, companyName string) *erp.POSProfile {
 	profile := &erp.POSProfile{
-		Name:               req.PosProfileName,
-		Company:            companyName,
-		Warehouse:          req.Warehouse,
-		Branch:             req.Branch,
-		Currency:           req.Currency,
-		WriteOffAccount:    req.WriteOffAccount,
-		WriteOffLimit:      req.WriteOffLimit,
-		WriteOffCostCenter: req.WriteOffCostCenter,
+		Name:                req.PosProfileName,
+		Company:             companyName,
+		Warehouse:           req.Warehouse,
+		Branch:              req.Branch,
+		Currency:            req.Currency,
+		WriteOffAccount:     req.WriteOffAccount,
+		WriteOffLimit:       req.WriteOffLimit,
+		WriteOffCostCenter:  req.WriteOffCostCenter,
+		AllowPartialPayment: 1, // 允许部分支付
+		DisableRoundedTotal: 1, // 禁用四舍五入总金额
 	}
 	if len(req.ApplicableForUsers) > 0 {
 		profile.ApplicableForUsers = make([]erp.POSProfileUser, 0)
