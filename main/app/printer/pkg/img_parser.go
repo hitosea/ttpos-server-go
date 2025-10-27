@@ -286,6 +286,14 @@ func (p *ImgTemplateParser) parseRow(
 
 			// 添加文本
 			if block.BlockType == "img" {
+				if strings.HasPrefix(text, "http://") || strings.HasPrefix(text, "https://") {
+					// 使用永久保存，下次可以直接使用缓存
+					tempPath, downloadErr := utils.DownloadImageToLocal(text, true)
+					if downloadErr != nil {
+						return fmt.Errorf("下载图片失败: %v, URL: %s\n", downloadErr, text)
+					}
+					text = tempPath
+				}
 				img.SetTextLineHeight(25)
 				img.AppendImg(text, widthInt, false, 0)
 				img.RecoverDefaultTextLineHeight()
