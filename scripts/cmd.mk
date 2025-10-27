@@ -93,6 +93,7 @@ help:
 # 初始化项目
 init-env:
 	@echo "🔍 初始化env文件"
+	corepack enable
 	if [ ! -f ".env" ]; then \
 		cp .env.example .env; \
 		echo "Created .env file from .env.example"; \
