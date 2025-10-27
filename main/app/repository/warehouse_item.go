@@ -49,6 +49,9 @@ type IWarehouseItemRepo interface {
 	// 获取仓库物品列表（带物品详细信息）
 	GetWarehouseMaterialsWithPagination(pageNo, pageSize int, opts ...DBOption) ([]*model.WarehouseItem, int64, error)
 	GetWarehouseMaterials(opts ...DBOption) ([]*model.WarehouseItem, error)
+
+	// 更新仓库物品信息
+	UpdateWarehouseItem(data map[string]any, opts ...DBOption) error
 }
 
 // WarehouseItemRepoImpl 仓库商品库存Repository实现
@@ -379,4 +382,13 @@ func (r *WarehouseItemRepoImpl) GetWarehouseMaterials(opts ...DBOption) ([]*mode
 	}
 
 	return items, nil
+}
+
+// UpdateWarehouseItem 更新仓库物品信息
+func (r *WarehouseItemRepoImpl) UpdateWarehouseItem(data map[string]any, opts ...DBOption) error {
+	query := r.db.Model(&model.WarehouseItem{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		query = opt(query)
+	}
+	return query.Updates(data).Error
 }

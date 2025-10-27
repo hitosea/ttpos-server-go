@@ -557,6 +557,7 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		productUnitRepo := repository.NewProductRepo(tx)
+		warehouseItemRepo := repository.NewWarehouseItemRepo(tx)
 
 		// 获取物品分类信息
 		commonRepo := repository.NewCommonRepo()
@@ -634,6 +635,11 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 		err = materialRepo.UpdateMaterialData(updateData, commonRepo.WhereByUuid(material.Uuid))
 		if err != nil {
 			return errors.WithMessage(err, "更新物品数据失败")
+		}
+		// 更新仓库物品信息
+		err = warehouseItemRepo.UpdateWarehouseItem(map[string]any{"material_code": request.ItemCode}, commonRepo.WhereByMaterialUuid(material.Uuid))
+		if err != nil {
+			return errors.WithMessage(err, "更新仓库物品信息失败")
 		}
 		return nil
 	}); err != nil {
