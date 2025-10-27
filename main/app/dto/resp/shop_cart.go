@@ -3,6 +3,7 @@ package resp
 import (
 	"encoding/json"
 	"sort"
+	"strings"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp/product_resp"
 
@@ -132,6 +133,16 @@ func (item *OrderRemarkItem) GetOrderRemarkResponse() dto.LocaleResponse {
 		name.TR += item.Remark
 		name.SV += item.Remark
 	}
+	// 去掉最后一个分号
+	name.EN = strings.TrimSuffix(name.EN, ";")
+	name.TH = strings.TrimSuffix(name.TH, ";")
+	name.ZH = strings.TrimSuffix(name.ZH, ";")
+	name.ZHTW = strings.TrimSuffix(name.ZHTW, ";")
+	name.JA = strings.TrimSuffix(name.JA, ";")
+	name.KO = strings.TrimSuffix(name.KO, ";")
+	name.MY = strings.TrimSuffix(name.MY, ";")
+	name.TR = strings.TrimSuffix(name.TR, ";")
+	name.SV = strings.TrimSuffix(name.SV, ";")
 	return name
 }
 
