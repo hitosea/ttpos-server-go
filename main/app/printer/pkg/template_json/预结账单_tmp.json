@@ -310,10 +310,22 @@
         ],
         [
             {
+                "group_block_id": "blank_line",
                 "block_id": "blank_line",
                 "block_type": "blank_line",
                 "block_label": {},
-                "block_name": null,
+                "block_name": {
+                    "th": "ส่วนขวาง",
+                    "en": "Dividing line",
+                    "ko": "구분선",
+                    "my": "ခွဲစိုက်ခြင်း",
+                    "tr": "Bölme çizgisi",
+                    "de": "Trennlinie",
+                    "sv": "Delningslinje",
+                    "ja": "区切り線",
+                    "zhtw": "分割線",
+                    "zh": "分割线"
+                },
                 "block_attr": {
                     "font_size": 20,
                     "align": "center",
@@ -1104,10 +1116,22 @@
         ],
         [
             {
+                "group_block_id": "amount_due_information",
                 "block_id": "blank_line",
                 "block_type": "blank_line",
                 "block_label": {},
-                "block_name": null,
+                "block_name": {
+                    "th": "ส่วนขวาง",
+                    "en": "Dividing line",
+                    "ko": "구분선",
+                    "my": "ခွဲစိုက်ခြင်း",
+                    "tr": "Bölme çizgisi",
+                    "de": "Trennlinie",
+                    "sv": "Delningslinje",
+                    "ja": "区切り線",
+                    "zhtw": "分割線",
+                    "zh": "分割线"
+                },
                 "block_attr": {
                     "font_size": 20,
                     "align": "center",
@@ -1537,6 +1561,7 @@
         ],
         [
             {
+                "group_block_id": "amount_due_information",
                 "block_id": "order.total_due_with_vat",
                 "block_type": "label:value",
                 "block_label": {
