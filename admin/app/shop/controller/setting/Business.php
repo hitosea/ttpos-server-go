@@ -543,10 +543,10 @@ class Business extends Controller
         }
         //
         $free_tag_count = FreeTag::count();
-
+        $order_remark_count = OrderRemark::count();
         $return_reason_count = ReturnReason::count();
         $company_link = request()->licenses['is_open_member'] == 1 ? env('MEMBER_BASE_URL') . "/launch/{$shop_supplier_id}" : '';
         $vars['values'] = $ret;
-        return $this->renderSuccess('', compact('vars', 'free_tag_count', 'return_reason_count', 'company_link'));
+        return $this->renderSuccess('', compact('vars', 'free_tag_count', 'return_reason_count', 'order_remark_count', 'company_link'));
     }
 }

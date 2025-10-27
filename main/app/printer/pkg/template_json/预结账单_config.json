@@ -206,7 +206,7 @@
                         "de": "Produktbetrag",
                         "sv": "Produktbelopp"
                     },
-                    "block_id": "product_amount",
+                    "block_id": "product_total_amount",
                     "data_rows": []
                 }
             ]
@@ -369,6 +369,67 @@
                     },
                     "block_id": "system_support",
                     "data_rows": []
+                }
+            ]
+        },
+        {
+            "group_name": {
+                "th": "อื่นๆ",
+                "en": "Other",
+                "ko": "기타",
+                "my": "မှတ်ချက်များ",
+                "tr": "Diğer",
+                "de": "Andere",
+                "sv": "Andra",
+                "ja": "その他",
+                "zhtw": "其他",
+                "zh": "其他"
+            },
+            "group_blocks": [
+                {
+                    "block_name": {
+                        "th": "ส่วนขวาง",
+                        "en": "Dividing line",
+                        "ko": "구분선",
+                        "my": "ခွဲစိုက်ခြင်း",
+                        "tr": "Bölme çizgisi",
+                        "de": "Trennlinie",
+                        "sv": "Delningslinje",
+                        "ja": "区切り線",
+                        "zhtw": "分割線",
+                        "zh": "分割线"
+                    },
+                    "block_id": "blank_line",
+                    "data_rows": [
+                        [
+                            {
+                                "block_id": "blank_line",
+                                "block_type": "blank_line",
+                                "block_label": {},
+                                "block_name": {
+                                        "th": "ส่วนขวาง",
+                                        "en": "Dividing line",
+                                        "ko": "구분선",
+                                        "my": "ခွဲစိုက်ခြင်း",
+                                        "tr": "Bölme çizgisi",
+                                        "de": "Trennlinie",
+                                        "sv": "Delningslinje",
+                                        "ja": "区切り線",
+                                        "zhtw": "分割線",
+                                        "zh": "分割线"
+                                },
+                                "block_attr": {
+                                    "font_size": 20,
+                                    "align": "center",
+                                    "font_bold": false,
+                                    "dividing_line": true,
+                                    "leading_blank_lines": 0,
+                                    "trailing_blank_lines": 0,
+                                    "width": 100
+                                }
+                            }
+                        ]
+                    ]
                 }
             ]
         }

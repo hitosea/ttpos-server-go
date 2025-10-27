@@ -2,5 +2,6 @@
   "item_name": "Service Fee",
   "item_code": "VP001",
   "item_group": "Virtual Product",
-  "stock_uom": "Nos"
+  "stock_uom": "Nos",
+  "is_stock_item": false
 }

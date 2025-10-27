@@ -1,8 +1,10 @@
 package utils
 
 import (
+	"crypto/md5"
 	"crypto/tls"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"image"
 	"image/color"
@@ -84,8 +86,9 @@ func IsNetworkImage(imgPath string) bool {
 	return scheme == "http" || scheme == "https"
 }
 
-// DownloadImageToLocal 下载网络图片到本地临时文件
-func DownloadImageToLocal(imageURL string) (string, error) {
+// DownloadImageToLocal 下载网络图片到本地文件
+// permanent: true表示永久保存到缓存目录，false表示保存到临时文件
+func DownloadImageToLocal(imageURL string, permanent bool) (string, error) {
 	if imageURL == "" {
 		return "", fmt.Errorf("图片URL不能为空")
 	}
@@ -102,12 +105,36 @@ func DownloadImageToLocal(imageURL string) (string, error) {
 		ext = ".jpg"
 	}
 
-	// 创建临时文件
-	tmpFile, err := os.CreateTemp("", "downloaded_image_*"+ext)
-	if err != nil {
-		return "", fmt.Errorf("创建临时文件失败: %v", err)
+	var filePath string
+
+	if permanent {
+		// 永久保存：使用URL的MD5哈希作为文件名
+		hash := md5.Sum([]byte(imageURL))
+		fileName := hex.EncodeToString(hash[:]) + ext
+
+		// 创建缓存目录
+		cacheDir := "./tmp/image_cache"
+		err := os.MkdirAll(cacheDir, 0755)
+		if err != nil {
+			return "", fmt.Errorf("创建缓存目录失败: %v", err)
+		}
+
+		filePath = filepath.Join(cacheDir, fileName)
+
+		// 检查文件是否已存在
+		if _, err := os.Stat(filePath); err == nil {
+			// 文件已存在，直接返回路径
+			return filePath, nil
+		}
+	} else {
+		// 临时文件：创建临时文件
+		tmpFile, err := os.CreateTemp("", "downloaded_image_*"+ext)
+		if err != nil {
+			return "", fmt.Errorf("创建临时文件失败: %v", err)
+		}
+		tmpFile.Close() // 关闭文件句柄，稍后重新打开写入
+		filePath = tmpFile.Name()
 	}
-	defer tmpFile.Close()
 
 	// 下载图片
 	client := &http.Client{
@@ -116,25 +143,49 @@ func DownloadImageToLocal(imageURL string) (string, error) {
 
 	resp, err := client.Get(imageURL)
 	if err != nil {
-		os.Remove(tmpFile.Name()) // 清理临时文件
+		if !permanent {
+			os.Remove(filePath) // 清理临时文件
+		}
 		return "", fmt.Errorf("下载图片失败: %v", err)
 	}
 	defer resp.Body.Close()
 
 	// 检查HTTP状态码
 	if resp.StatusCode != http.StatusOK {
-		os.Remove(tmpFile.Name())
+		if !permanent {
+			os.Remove(filePath)
+		}
 		return "", fmt.Errorf("下载图片失败，状态码: %d", resp.StatusCode)
 	}
 
-	// 保存到临时文件
-	_, err = io.Copy(tmpFile, resp.Body)
+	// 创建目标文件
+	outFile, err := os.Create(filePath)
 	if err != nil {
-		os.Remove(tmpFile.Name())
+		if !permanent {
+			os.Remove(filePath)
+		}
+		return "", fmt.Errorf("创建文件失败: %v", err)
+	}
+	defer outFile.Close()
+
+	// 保存图片内容
+	_, err = io.Copy(outFile, resp.Body)
+	if err != nil {
+		os.Remove(filePath) // 下载失败时清理文件
 		return "", fmt.Errorf("保存图片失败: %v", err)
 	}
 
-	return tmpFile.Name(), nil
+	return filePath, nil
+}
+
+// DownloadImage 下载网络图片到本地临时文件（兼容旧版本的函数）
+func DownloadImage(imageURL string) (string, error) {
+	return DownloadImageToLocal(imageURL, false)
+}
+
+// DownloadImagePermanent 下载网络图片到本地缓存目录（永久保存）
+func DownloadImagePermanent(imageURL string) (string, error) {
+	return DownloadImageToLocal(imageURL, true)
 }
 
 // GetLocalImagePath 获取本地图片路径
@@ -146,8 +197,8 @@ func GetLocalImagePath(imgPath string) (localPath string, isTemporary bool, err 
 
 	// 判断是否为网络图片
 	if IsNetworkImage(imgPath) {
-		// 下载到本地
-		localPath, err = DownloadImageToLocal(imgPath)
+		// 下载到本地临时文件
+		localPath, err = DownloadImageToLocal(imgPath, false)
 		if err != nil {
 			return "", false, fmt.Errorf("下载网络图片失败: %v", err)
 		}

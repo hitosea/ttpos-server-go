@@ -125,6 +125,9 @@
       <el-form-item :label="$t('退菜原因')">
         <el-button @click="setRefundReason()" type="primary">{{ $t('管理') }} ({{ returnReasonCount }})</el-button>
       </el-form-item>
+      <el-form-item for="no_click" :label="$t('整单备注')">
+        <el-button @click="setOrderRemark()" type="primary">{{ $t('管理') }} ({{ orderRemarkCount }})</el-button>
+      </el-form-item>
       <el-form-item for="no_click" :label="$t('取消订单/退菜')" prop="is_need_password" :rules="[{ required: true, message: '' }]">
         <el-radio-group v-model="form.is_need_password">
           <el-radio :label="1">{{ $t('需要密码') }}</el-radio>
@@ -181,6 +184,20 @@
   >
   </ManageRefundReason>
 
+  <ManageOrderRemark
+    v-if="openOrderRemarkDialog"
+    :open="openOrderRemarkDialog"
+    @close="
+      (refresh) => {
+        openOrderRemarkDialog = false;
+        if (refresh) {
+          this.getData();
+        }
+      }
+    "
+  >
+  </ManageOrderRemark>
+
   <Qrcode :open="isQrcode" @close="closeQrcode" :type="qrcodeType"></Qrcode>
 </template>
 <script>
@@ -189,6 +206,7 @@
   import SvgIcon from '@/components/svg-icon/SvgIcon.vue';
   import ManageFreeReason from './ManageFreeReason.vue';
   import ManageRefundReason from './ManageRefundReason.vue';
+  import ManageOrderRemark from './ManageOrderRemark.vue';
   import Qrcode from './Qrcode.vue';
   import TimePicker from '@/components/time-picker/index.vue';
 
@@ -201,6 +219,7 @@
       SvgIcon,
       ManageFreeReason,
       ManageRefundReason,
+      ManageOrderRemark,
       Qrcode,
       TimePicker,
     },
@@ -211,6 +230,7 @@
         loading: false,
         openFreeReasonDialog: false,
         openRefundReasonDialog: false,
+        openOrderRemarkDialog: false,
         isQrcode: false,
         qrcodeType: '',
         form: {
@@ -322,6 +342,7 @@
         ],
         freeTagCount: 0,
         returnReasonCount: 0,
+        orderRemarkCount: 0,
       };
     },
     created() {
@@ -374,6 +395,7 @@
 
             self.freeTagCount = Number(data.data.free_tag_count) || 0;
             self.returnReasonCount = Number(data.data.return_reason_count) || 0;
+            self.orderRemarkCount = Number(data.data.order_remark_count) || 0;
             self.company_link = data.data.company_link;
 
             self.$nextTick(() => {
@@ -412,6 +434,10 @@
       },
       setRefundReason() {
         this.openRefundReasonDialog = true;
+      },
+
+      setOrderRemark() {
+        this.openOrderRemarkDialog = true;
       },
 
       downloadFile(type) {

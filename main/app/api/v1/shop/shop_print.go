@@ -99,6 +99,31 @@ func (h *PrintHandler) EditPrinterCustomize(c *gin.Context) {
 	helper.Success(c, nil, "编辑打印机定制成功")
 }
 
+// EditPrinterCustomize 预览打印机定制
+// @Summary 预览打印机定制
+// @Description 预览打印机定制
+// @Tags 商家端.打印管理
+// @Accept json
+// @Produce json
+// @Param data body req.PreviewPrinterCustomizeReq true "预览打印机定制请求"
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.PreviewPrinterCustomizeResp} "成功"
+// @Router /shop/printer/customize/preview [post]
+func (h *PrintHandler) PreviewPrinterCustomize(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	previewPrinterCustomizeReq := req.PreviewPrinterCustomizeReq{}
+	if err := c.ShouldBindJSON(&previewPrinterCustomizeReq); err != nil {
+		helper.HandleValidationError(c, err, previewPrinterCustomizeReq, nil)
+		return
+	}
+	resp, err := h.printerSrv.PreviewPrinterCustomize(ctx, previewPrinterCustomizeReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, resp, "预览打印机定制成功")
+}
+
 // DeletePrinterCustomize 删除打印机定制
 // @Summary 删除打印机定制
 // @Description 删除打印机定制
@@ -261,6 +286,7 @@ func RegisterPrintHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.GET("/printer/template/list", printerHandler.GetPrintTemplateList)                  // 打印模板列表
 		privateApi.GET("/printer/template/detail", printerHandler.GetPrintTemplateDetail)              // 打印模板详情
 		privateApi.POST("/printer/customize/edit", printerHandler.EditPrinterCustomize)                // 编辑打印机定制
+		privateApi.POST("/printer/customize/preview", printerHandler.PreviewPrinterCustomize)          // 预览打印机定制
 		privateApi.DELETE("/printer/customize/delete", printerHandler.DeletePrinterCustomize)          // 删除打印机定制
 		privateApi.POST("/printer/customize/create", printerHandler.CreatePrinterCustomize)            // 创建打印机定制
 		privateApi.POST("/printer/customize/use", printerHandler.UsePrinterCustomize)                  // 使用打印机定制

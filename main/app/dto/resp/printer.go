@@ -100,3 +100,7 @@ type ConfigInfoResp struct {
 	CustomizeName  string `json:"customize_name"`   // 定制模版名称 （点击编辑的时候使用）
 	CustomizeData  string `json:"customize_data"`   // 定制模版数据(JSON字符串) （点击编辑的时候使用）
 }
+
+type PreviewPrinterCustomizeResp struct {
+	ImageUrl string `json:"image_url"` // 图片URL
+}
