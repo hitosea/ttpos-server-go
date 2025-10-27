@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"slices"
@@ -25,6 +26,7 @@ import (
 
 	"ttpos-server-go/app/printer/printer_tasks"
 
+	"github.com/google/uuid"
 	"github.com/jinzhu/copier"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -371,6 +373,7 @@ func (s *printerLogSrv) GetPrinterData(ctx context.Context) (*resp.PrinterDataLi
 				}
 				return log.Printer.EnableStatusCheck
 			}(),
+			TradeNo: log.GetTradeNo(companyUuid),
 		})
 	}
 
@@ -453,6 +456,7 @@ func (s *printerLogSrv) PrinterPrint(ctx context.Context, req req.PrinterPrintRe
 			}
 			return printerLog.Printer.EnableStatusCheck
 		}(),
+		TradeNo: printerLog.GetRandomTradeNo(),
 	}, nil
 }
 
@@ -575,6 +579,7 @@ func (s *printerLogSrv) GetStaticOpenCashBoxPrinterConfig(ctx context.Context) (
 		PrintingTime:      200,
 		IsUsbPrinter:      settingPrinterInfo.IsUsbPrinter,
 		EnableStatusCheck: settingPrinterInfo.EnableStatusCheck,
+		TradeNo:           fmt.Sprintf("%d%s", time.Now().Unix(), hex.EncodeToString([]byte(strings.Replace(uuid.New().String(), "-", "", -1)))[:8]),
 	}, nil
 }
 
@@ -646,5 +651,6 @@ func (s *printerLogSrv) GetOldOrderPrinterConfig(ctx context.Context, data strin
 		IsUsbPrinter:      settingPrinterInfo.IsUsbPrinter,
 		PrintingTime:      200,
 		EnableStatusCheck: settingPrinterInfo.EnableStatusCheck,
+		TradeNo:           fmt.Sprintf("%d%s", time.Now().Unix(), hex.EncodeToString([]byte(strings.Replace(uuid.New().String(), "-", "", -1)))[:8]),
 	}, nil
 }

@@ -42,7 +42,7 @@ type IPrinterLogRepo interface {
 	GetPrinterLogList(opts ...DBOption) ([]model.PrinterLog, error)
 	GetPrinterData(deviceSn string, opts ...DBOption) ([]model.PrinterLog, error)
 	GetByUuids(uuids []uint64) ([]model.PrinterLog, error)
-	GetShiftPrinterData(deviceSn string, opts ...DBOption) *resp.PrinterData
+	GetShiftPrinterData(companyUuid uint64, deviceSn string, opts ...DBOption) *resp.PrinterData
 
 	GetPrinter(opts ...DBOption) *model.Printer
 
@@ -176,7 +176,7 @@ func (r *printerLogRepo) GetPrinterData(deviceSn string, opts ...DBOption) ([]mo
 }
 
 // GetShiftPrinterData 获取交班打印数据
-func (r *printerLogRepo) GetShiftPrinterData(deviceSn string, opts ...DBOption) *resp.PrinterData {
+func (r *printerLogRepo) GetShiftPrinterData(companyUuid uint64, deviceSn string, opts ...DBOption) *resp.PrinterData {
 	printerLog := r.GetPrinterLog(
 		r.WithPrinter(),
 		r.WithPrinterPrinterType(),
@@ -239,6 +239,7 @@ func (r *printerLogRepo) GetShiftPrinterData(deviceSn string, opts ...DBOption) 
 				}
 				return printerLog.Printer.EnableStatusCheck
 			}(),
+			TradeNo: printerLog.GetTradeNo(companyUuid),
 		}
 	}
 

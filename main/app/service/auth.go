@@ -642,7 +642,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 		deviceId = auth.Assistant.DeviceId
 	}
 	if auth.Source != constant.SourceShop && !s.deviceSrv.IsDeviceBind(ctx, auth.CompanyUuid, auth.Source, deviceId) {
-		if printerData := repository.NewPrinterLogRepo(db).GetShiftPrinterData(deviceId); printerData != nil {
+		if printerData := repository.NewPrinterLogRepo(db).GetShiftPrinterData(auth.CompanyUuid, deviceId); printerData != nil {
 			return company, companySetting, staff, desk, errors.NewWithCodeAndData(constant.CodeTokenInvalid, map[string]any{
 				"printer_data": printerData,
 			}, "设备已解绑，请重新绑定")

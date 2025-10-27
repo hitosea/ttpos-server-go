@@ -122,11 +122,7 @@ func (t *printerTask) ExecutePrinter(companyUuid uint64, printerLog model.Printe
 				constant.PrinterTypeSunmiCloud,
 				constant.PrinterTypeCashierSunmi,
 			}, printerLog.PrinterType) {
-				tradeNo := fmt.Sprintf("%d%d", companyUuid, printerLog.Uuid)
-				if len(tradeNo) > 32 {
-					tradeNo = tradeNo[len(tradeNo)-32:]
-				}
-				err = pkg.PrintSunmiTicket(configJson, content, tradeNo)
+				err = pkg.PrintSunmiTicket(configJson, content, printerLog.GetTradeNo(companyUuid))
 			} else {
 				err = pkg.PrintTicket(configJson.IP, configJson.PORT, content, printerLog.PrintMethod)
 			}

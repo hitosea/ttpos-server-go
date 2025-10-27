@@ -102,6 +102,7 @@ func (p *PrinterRepoImpl) PrintingHandoverOrder(
 		IsUsbPrinter:      settingPrinterInfo.IsUsbPrinter,
 		PrintingTime:      printerLogData.PrintingTime,
 		EnableStatusCheck: settingPrinterInfo.EnableStatusCheck,
+		TradeNo:           printerLogData.GetTradeNo(p.ctx.GetCompanyUuid()),
 	}, nil
 }
 

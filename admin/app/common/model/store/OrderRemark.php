@@ -5,6 +5,7 @@ namespace app\common\model\store;
 use think\facade\Db;
 use app\common\model\BaseModel;
 use app\common\model\store\MultiLanguageName;
+use think\model\concern\SoftDelete;
 
 /**
  * 整单备注
@@ -12,9 +13,11 @@ use app\common\model\store\MultiLanguageName;
 class OrderRemark extends BaseModel
 {
     // 属性定义
+    use SoftDelete;
     protected $name = 'order_remark';
     protected $pk   = 'id';
-
+    protected $deleteTime = 'delete_time';
+    protected $defaultSoftDelete = 0;
     /**
      * 追加字段
      * @var string[]
