@@ -85,6 +85,9 @@ else
             docker run --rm apache/rocketmq:5.3.2 ./mqadmin updateTopic \
                 -n "$ROCKETMQ_NAME_SRV_ADDR" \
                 -t "$topic" \
+                -p 6 \
+                -r 4 \
+                -w 4 \
                 -c DefaultCluster
             
             if [ $? -eq 0 ]; then
