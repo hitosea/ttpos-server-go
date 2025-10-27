@@ -122,7 +122,7 @@ func (t *printerTask) ExecutePrinter(companyUuid uint64, printerLog model.Printe
 				constant.PrinterTypeSunmiCloud,
 				constant.PrinterTypeCashierSunmi,
 			}, printerLog.PrinterType) {
-				err = pkg.PrintSunmiTicket(configJson, content)
+				err = pkg.PrintSunmiTicket(configJson, content, fmt.Sprintf("%d", printerLog.Uuid))
 			} else {
 				err = pkg.PrintTicket(configJson.IP, configJson.PORT, content, printerLog.PrintMethod)
 			}
