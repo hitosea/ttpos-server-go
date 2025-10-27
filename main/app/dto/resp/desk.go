@@ -112,14 +112,15 @@ type DeskPing struct {
 }
 
 type H5DeskPing struct {
-	DeskInfo      Desk                  `json:"desk_info"`         // 桌台信息
-	SentKitchen   H5CartSendProduct     `json:"sent_kitchen"`      // 已送厨商品信息
-	UnsentKitchen UnsentKitchen         `json:"unsent_kitchen"`    // 未送厨商品信息
-	Buffet        BuffetInfo            `json:"buffet"`            // 自助餐信息
-	MustPlans     ProductMustPlanList   `json:"must_plans"`        // 必点方案列表
-	MustProducts  BuffetProductList     `json:"must_products"`     // 必点商品列表
-	UpdateTime    int64                 `json:"update_time"`       // 更新时间
-	Product       *product_resp.Product `json:"product,omitempty"` // 商品信息。 当加购商品时商品价格变化时，返回最新的商品信息
+	DeskInfo      Desk                  `json:"desk_info"`              // 桌台信息
+	SentKitchen   H5CartSendProduct     `json:"sent_kitchen"`           // 已送厨商品信息
+	UnsentKitchen UnsentKitchen         `json:"unsent_kitchen"`         // 未送厨商品信息
+	Buffet        BuffetInfo            `json:"buffet"`                 // 自助餐信息
+	MustPlans     ProductMustPlanList   `json:"must_plans"`             // 必点方案列表
+	MustProducts  BuffetProductList     `json:"must_products"`          // 必点商品列表
+	UpdateTime    int64                 `json:"update_time"`            // 更新时间
+	Product       *product_resp.Product `json:"product,omitempty"`      // 商品信息。 当加购商品时商品价格变化时，返回最新的商品信息
+	OrderRemark   *OrderRemarkRes       `json:"order_remark,omitempty"` // 整单备注信息
 }
 
 type UnsentKitchenInfo struct {

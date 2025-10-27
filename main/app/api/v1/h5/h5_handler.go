@@ -247,7 +247,7 @@ func (h *Handler) OrderProductRemark(c *gin.Context) {
 // @param data body req.OrderRemarkReq true "详情参数"
 // @Success 200 {object} dto.Response{data=resp.H5DeskPing}
 // @Failure 404 {object} nil "未找到"
-// @Router /h5/order/remark [post]
+// @Router /h5/desk/order/remark [post]
 func (h *Handler) OrderRemark(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
@@ -822,8 +822,8 @@ func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache
 		privateApi.GET("/product/list", wrapper.GetProductList)                                                            // 获取收银产品列表
 		privateApi.POST("/call", wrapper.Call)                                                                             // 发起呼叫
 		privateApi.POST("/remark", wrapper.OrderProductRemark)                                                             // 给商品添加备注
-		privateApi.POST("/order/remark", wrapper.OrderRemark)                                                              // 整单备注
-		privateApi.GET("/order/remark/list", wrapper.OrderRemarkList)                                                      // 获取整单备注列表
+		privateApi.POST("/desk/order/remark", wrapper.OrderRemark)                                                         // 整单备注
+		privateApi.GET("/desk/order/remark/list", wrapper.OrderRemarkList)                                                 // 获取整单备注列表
 		privateApi.POST("/order/cart/product/add", wrapper.OrderCartProductAdd)                                            // 向购物车添加商品
 		privateApi.POST("/desk/order/cart/product_package/add", wrapper.OrderCartProductPackageAdd)                        // 向购物车添加套餐
 		privateApi.GET("/desk/order/cart/product/flavor_and_attribute", wrapper.OrderCartProductFlavorAndAttribute)        // 查询购物车商品“规格/属性”
