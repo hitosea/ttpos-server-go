@@ -346,6 +346,15 @@ class Business extends Controller
             if (empty($data['remark'])) {
                 return $this->renderError('请输入整单备注');
             }
+            $count = 0;
+            foreach ($data['remark'] as $item) {
+                if (isset($item['action']) && $item['action'] != 'delete') {
+                    $count++;
+                }
+            }
+            if ($count > 100) {
+                return $this->renderError('整单备注数量不能超过100个');
+            }
             foreach ($data['remark'] as $item) {
                 $remark = $item['remark'] ?? '';
                 if (ValidateHelp::hasEmptyValue($remark)) {
@@ -381,7 +390,7 @@ class Business extends Controller
                     } elseif ($item['action'] == 'delete') {
                         if ($id) {
                             (new MultiLanguageName)->where('uuid', $model->where('id', $id)->value('multi_language_name_uuid'))->delete();
-                            $model->where('id', $id)->delete();
+                            OrderRemark::destroy($id);
                         }
                     } elseif ($item['action'] == 'edit') {
                         if ($id) {
