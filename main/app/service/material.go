@@ -557,7 +557,6 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		productUnitRepo := repository.NewProductRepo(tx)
-		warehouseItemRepo := repository.NewWarehouseItemRepo(tx)
 
 		// 获取物品分类信息
 		commonRepo := repository.NewCommonRepo()
@@ -619,7 +618,8 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 			return errors.WithMessage(err, "默认仓库不存在")
 		}
 		params.SetWarehouseUuid(warehouseUuid.Uuid)
-		params.SetIsSync(true) // 从总店同步物品到本地，忽略检查内部编码唯一性
+		params.SetIsSync(true)    // 从总店同步物品到本地，忽略检查内部编码唯一性
+		params.SetIsErpSync(true) // 从ERP同步物品到本地，不创建仓库物品
 		material, _, err = addMaterial(ctx, tx, s.settingSrv, params)
 		if err != nil {
 			return errors.WithMessage(err)
@@ -635,11 +635,6 @@ func (s *materialSrv) AddMaterialByEprItem(ctx context.Context, request req.Mate
 		err = materialRepo.UpdateMaterialData(updateData, commonRepo.WhereByUuid(material.Uuid))
 		if err != nil {
 			return errors.WithMessage(err, "更新物品数据失败")
-		}
-		// 更新仓库物品信息
-		err = warehouseItemRepo.UpdateWarehouseItem(map[string]any{"material_code": request.ItemCode}, commonRepo.WhereByMaterialUuid(material.Uuid))
-		if err != nil {
-			return errors.WithMessage(err, "更新仓库物品信息失败")
 		}
 		return nil
 	}); err != nil {
@@ -798,13 +793,6 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 		}
 		warehouseUuid = warehouse.Uuid
 	}
-	warehouseItem := model.WarehouseItem{
-		WarehouseUuid: warehouseUuid,
-		MaterialUuid:  materialUuid,
-		MaterialCode:  "",
-		Stock:         request.InitStock,
-		Valuation:     request.Valuation,
-	}
 
 	// 创建物品
 	material := model.Material{
@@ -848,9 +836,19 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 		return nil, nil, errors.WithMessage(err, "创建物品失败")
 	}
 
-	err = repository.NewWarehouseItemRepo(tx).Create(&warehouseItem)
-	if err != nil {
-		return nil, nil, errors.WithMessage(err, "创建仓库商品库存记录失败")
+	// 如果不是从ERP同步物品到本地，则创建仓库物品库存记录
+	if !request.GetIsErpSync() {
+		warehouseItem := model.WarehouseItem{
+			WarehouseUuid: warehouseUuid,
+			MaterialUuid:  materialUuid,
+			MaterialCode:  "",
+			Stock:         request.InitStock,
+			Valuation:     request.Valuation,
+		}
+		err = repository.NewWarehouseItemRepo(tx).Create(&warehouseItem)
+		if err != nil {
+			return nil, nil, errors.WithMessage(err, "创建仓库商品库存记录失败")
+		}
 	}
 
 	for _, unit := range notBaseUnitList {
