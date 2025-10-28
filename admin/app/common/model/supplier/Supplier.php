@@ -61,6 +61,7 @@ class Supplier extends BaseModel
      */
     public function setLanguagesAttr($value)
     {
+        $value = !is_array($value) ? json_decode($value, true) : $value;
         return json_encode($value ?: [], true);
     }
 

@@ -67,7 +67,7 @@ type StockReconciliationReCheckDiffReq struct {
 }
 
 type StockReconciliationCheckMaterialsItem struct {
-	MaterialUuid    uint64          `json:"material_uuids" `  // 待盘点物品UUID列表
+	MaterialUuid    uint64          `json:"material_uuid"`    // 待盘点物品UUID
 	CountedQuantity decimal.Decimal `json:"counted_quantity"` // 实盘库存数量
 }
 

@@ -806,9 +806,6 @@ func (s *stockReconciliationSrv) validateWarehouseAndItems(db *gorm.DB, req req.
 	if warehouseUuid == 0 {
 		return nil, nil, errors.New("仓库参数错误")
 	}
-	if req.Type != 1 && req.Type != 2 {
-		return nil, nil, errors.New("盘点类型参数错误")
-	}
 	if req.Purpose != 1 && req.Purpose != 2 {
 		return nil, nil, errors.New("盘点目的参数错误")
 	}
