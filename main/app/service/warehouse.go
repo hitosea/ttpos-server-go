@@ -1114,15 +1114,27 @@ func (s *warehouseSrv) GetWarehouseMaterialList(ctx context.Context, req req.War
 	opts = append(opts, warehouseItemRepo.WhereWarehouseUuid(req.WarehouseUuid))
 
 	// 查询仓库物品列表
-	warehouseItems, total, err := warehouseItemRepo.GetWarehouseMaterialsWithPagination(req.PageNo, req.PageSize, opts...)
+	warehouseItemMap := make(map[uint64]model.WarehouseItem)
+	warehouseItems, err := warehouseItemRepo.GetWarehouseMaterials(opts...)
 	if err != nil {
 		return resp.WarehouseMaterialListResp{}, errors.WithMessage(err, "查询仓库物品列表失败")
 	}
+	for _, warehouseItem := range warehouseItems {
+		warehouseItemMap[warehouseItem.MaterialUuid] = *warehouseItem
+	}
+
+	// 获取物品列表
+	paginatedMaterials, total, err := materialRepo.GetMaterialListWithPagination(
+		req.PageNo,
+		req.PageSize,
+		repository.NewCommonRepo().WhereByStatus(uint(1)),
+		repository.NotDeleted,
+	)
 
 	// 获取所有物品UUID
-	materialUuids := make([]uint64, 0, len(warehouseItems))
-	for _, item := range warehouseItems {
-		materialUuids = append(materialUuids, item.MaterialUuid)
+	materialUuids := make([]uint64, 0, len(paginatedMaterials))
+	for _, material := range paginatedMaterials {
+		materialUuids = append(materialUuids, material.Uuid)
 	}
 
 	// 批量查询物品详情（包含多语言名称和单位信息）
@@ -1141,15 +1153,9 @@ func (s *warehouseSrv) GetWarehouseMaterialList(ctx context.Context, req req.War
 	}
 
 	// 转换响应数据
-	list := make([]resp.WarehouseMaterialInfo, 0, len(warehouseItems))
-	for _, item := range warehouseItems {
-		material, exists := materialMap[item.MaterialUuid]
-		if !exists {
-			continue
-		}
-		if !material.Status || material.DeleteTime != 0 {
-			continue
-		}
+	list := make([]resp.WarehouseMaterialInfo, 0, len(materials))
+	for _, material := range materials {
+		item, _ := warehouseItemMap[material.Uuid]
 
 		// 构建物品单位信息
 		units := make([]resp.MaterialUnitInfo, 0)
