@@ -2214,4 +2214,13 @@ return [
     "该优惠券已关联正在进行的活动，请在活动失效后删除" => "This coupon is linked to an ongoing event. Please delete it after the event ends.",
     "修改状态失败" => "Failed to change status",
     "修改状态成功" => "Status changed successfully",
+    "未设置打印标签" => "Print label not set",
+    "请输入整单备注" => "Please enter order remark",
+    "整单备注数量不能超过100个" => "Total order remark count cannot exceed 100",
+    "整单备注不能为空" => "Order remark cannot be empty",
+    "默认仓库" => "Default warehouse",
+    "默認倉庫" => "Default warehouse",
+    "在途仓库" => "In-transit warehouse",
+    "在途倉庫" => "In-transit warehouse",
+    "輸送中の倉庫" => "In-transit warehouse",
 ];

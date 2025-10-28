@@ -18,6 +18,8 @@ class OrderRemark extends BaseModel
     protected $pk   = 'id';
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
+    protected $autoWriteTimestamp = true;
+    
     /**
      * 追加字段
      * @var string[]

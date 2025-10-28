@@ -2214,4 +2214,13 @@ return [
     "该优惠券已关联正在进行的活动，请在活动失效后删除" => "Denna kupong är kopplad till en pågående kampanj. Ta bort den efter att kampanjen har avslutats.",
     "修改状态失败" => "Misslyckades med att ändra status",
     "修改状态成功" => "Status ändrades framgångsrikt",
+    "未设置打印标签" => "Utskriftsetikett ej inställd",
+    "请输入整单备注" => "Vänligen ange en kommentar för hela ordern",
+    "整单备注数量不能超过100个" => "Antalet orderkommentarer får inte överstiga 100",
+    "整单备注不能为空" => "Orderkommentaren får inte vara tom",
+    "默认仓库" => "Standardlager",
+    "默認倉庫" => "Standardlager",
+    "在途仓库" => "Lager på väg",
+    "在途倉庫" => "Transitlager",
+    "輸送中の倉庫" => "Transitlager",
 ];
