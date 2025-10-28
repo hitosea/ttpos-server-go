@@ -36,7 +36,7 @@
                     "sv": "Kvittonamn"
                 },
                 "block_attr": {
-                    "font_size": 32,
+                    "font_size": 26,
                     "align": "center",
                     "font_bold": true,
                     "dividing_line": false,
@@ -930,7 +930,7 @@
                             "block_id": "flavor_name",
                             "block_type": "label:value",
                             "block_label": {
-                                "en": "-Specification: ",
+                                "en": "-Specs: ",
                                 "ja": "-仕様: ",
                                 "ko": "-사양: ",
                                 "my": "-အရွယ်အဆင့်: ",
@@ -942,7 +942,7 @@
                                 "sv": "-Mått: "
                             },
                             "block_name": {
-                                "en": "-Specification",
+                                "en": "-Specs",
                                 "ja": "-仕様",
                                 "ko": "-사양",
                                 "my": "-အရွယ်အဆင့်",
@@ -1443,8 +1443,8 @@
                     "my": "%",
                     "th": "%",
                     "tr": "%",
-                    "zh": "拆",
-                    "zhtw": "拆",
+                    "zh": "折",
+                    "zhtw": "折",
                     "de": "%",
                     "sv": "%"
                 },
@@ -1502,8 +1502,8 @@
                     "my": "%",
                     "th": "%",
                     "tr": "%",
-                    "zh": "拆",
-                    "zhtw": "拆",
+                    "zh": "折",
+                    "zhtw": "折",
                     "de": "%",
                     "sv": "%"
                 },
@@ -1909,8 +1909,8 @@
                     "sv": "Vänligen skanna med {order.payment_name} för att betala",
                     "th": "กรุณาสแกนด้วย {order.payment_name} เพื่อชำระเงิน",
                     "tr": "Lütfen ödeme yapmak için {order.payment_name} ile tarayın",
-                    "zh": "请用{order.payment_name}扫一扫支付",
-                    "zhtw": "請用{order.payment_name}掃一掃支付"
+                    "zh": "请用 {order.payment_name} 扫一扫支付",
+                    "zhtw": "請用 {order.payment_name} 掃一掃支付"
                 },
                 "block_name": {
                     "en": "Payment Description",

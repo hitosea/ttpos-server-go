@@ -36,7 +36,7 @@
                     "zhtw": "結賬單"
                 },
                 "block_attr": {
-                    "font_size": 32,
+                    "font_size": 26,
                     "align": "center",
                     "font_bold": true,
                     "dividing_line": false,
@@ -1065,7 +1065,7 @@
                             "block_id": "flavor_name",
                             "block_type": "label:value",
                             "block_label": {
-                                "en": "-Specification: ",
+                                "en": "-Specs: ",
                                 "ja": "-仕様: ",
                                 "ko": "-사양: ",
                                 "my": "-အရွယ်အဆင့်: ",
@@ -1077,7 +1077,7 @@
                                 "sv": "-Mått: "
                             },
                             "block_name": {
-                                "en": "-Specification",
+                                "en": "-Specs",
                                 "ja": "-仕様",
                                 "ko": "-사양",
                                 "my": "-အရွယ်အဆင့်",
@@ -1578,8 +1578,8 @@
                     "my": "%",
                     "th": "%",
                     "tr": "%",
-                    "zh": "拆",
-                    "zhtw": "拆",
+                    "zh": "折",
+                    "zhtw": "折",
                     "de": "%",
                     "sv": "%"
                 },
@@ -1637,8 +1637,8 @@
                     "my": "%",
                     "th": "%",
                     "tr": "%",
-                    "zh": "拆",
-                    "zhtw": "拆",
+                    "zh": "折",
+                    "zhtw": "折",
                     "de": "%",
                     "sv": "%"
                 },
