@@ -455,19 +455,11 @@ func (s *printerSrv) GetTemplateJSONStr(ctx context.Context, templateName string
 
 // GetTemplateConfigInfo 获取模板配置信息
 func (s *printerSrv) GetTemplateConfigInfo(ctx context.Context, templateName string, isAdv bool) (string, error) {
-	if isAdv {
-		templateJSON, err := template_json.GetTemplateJsonData(templateName + "_adv_config.json")
-		if err != nil {
-			return "", errors.WithMessage(errors.New("读取模板文件失败"), err.Error())
-		}
-		return string(templateJSON), nil
-	} else {
-		templateJSON, err := template_json.GetTemplateJsonData(templateName + "_config.json")
-		if err != nil {
-			return "", errors.WithMessage(errors.New("读取模板文件失败"), err.Error())
-		}
-		return string(templateJSON), nil
+	templateJSON, err := template_json.GetTemplateJsonData(templateName + "_config.json")
+	if err != nil {
+		return "", errors.WithMessage(errors.New("读取模板文件失败"), err.Error())
 	}
+	return string(templateJSON), nil
 }
 
 // GetPrintTemplateDetail 获取菜单详情

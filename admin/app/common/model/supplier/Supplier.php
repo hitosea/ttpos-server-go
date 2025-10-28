@@ -269,6 +269,7 @@ class Supplier extends BaseModel
             return [];
         }
         $languages = is_array($languages) ? $languages : json_decode($languages, true);
+        $languages = is_array($languages) ? $languages : json_decode($languages, true);
         return array_values(array_filter(LanguageEnum::data(), function ($language) use ($languages) {
             return in_array($language['name'], $languages);
         }));
@@ -285,6 +286,7 @@ class Supplier extends BaseModel
         $companyUuid = $data->company_uuid;
         try {
             $languages = $data['languages'] ?? [];
+            $languages = !is_array($languages) ? json_decode($languages, true) : $languages;
             $languages = !is_array($languages) ? json_decode($languages, true) : $languages;
             //
             if ($type == 'initShopBaseData') {

@@ -147,6 +147,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/erpnext/shop/update_headquarter_supplier_name": {
+            "post": {
+                "description": "更新总部供应商名称",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "平台端.商家授权"
+                ],
+                "summary": "更新总部供应商名称",
+                "parameters": [
+                    {
+                        "description": "更新总部供应商名称请求",
+                        "name": "update_headquarter_supplier_name_req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.UpdateHeadquarterSupplierNameReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/admin/erpnext/site/company": {
             "get": {
                 "description": "获取ERPNext站点公司名称",
@@ -15259,6 +15293,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/h5/desk/order/remark": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "点餐订单整单备注",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "扫码点餐"
+                ],
+                "summary": "点餐订单整单备注",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderRemarkReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.H5DeskPing"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/h5/desk/ping": {
             "get": {
                 "security": [
@@ -15576,60 +15664,6 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/resp.ShopCart"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/h5/order/remark": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "点餐订单整单备注",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "扫码点餐"
-                ],
-                "summary": "点餐订单整单备注",
-                "parameters": [
-                    {
-                        "description": "详情参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.OrderRemarkReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.H5DeskPing"
                                         }
                                     }
                                 }
@@ -37993,6 +38027,32 @@ const docTemplate = `{
                 }
             }
         },
+        "req.UpdateHeadquarterSupplierNameReq": {
+            "type": "object",
+            "required": [
+                "branch",
+                "company_abbr",
+                "site_code",
+                "supplier_name"
+            ],
+            "properties": {
+                "branch": {
+                    "description": "分支",
+                    "type": "string"
+                },
+                "company_abbr": {
+                    "description": "公司缩写编码",
+                    "type": "string"
+                },
+                "site_code": {
+                    "type": "string"
+                },
+                "supplier_name": {
+                    "description": "总部供应商名称",
+                    "type": "string"
+                }
+            }
+        },
         "req.UpdateStaffReq": {
             "type": "object",
             "required": [
@@ -40477,6 +40537,14 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/resp.BuffetProductList"
+                        }
+                    ]
+                },
+                "order_remark": {
+                    "description": "整单备注信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.OrderRemarkRes"
                         }
                     ]
                 },
@@ -43525,6 +43593,10 @@ const docTemplate = `{
                 "printing_time": {
                     "description": "打印耗时",
                     "type": "integer"
+                },
+                "trade_no": {
+                    "description": "交易号",
+                    "type": "string"
                 },
                 "uuid": {
                     "description": "打印日志Uuid",

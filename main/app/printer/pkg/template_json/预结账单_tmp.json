@@ -36,7 +36,7 @@
                     "sv": "Kvittonamn"
                 },
                 "block_attr": {
-                    "font_size": 32,
+                    "font_size": 26,
                     "align": "center",
                     "font_bold": true,
                     "dividing_line": false,
@@ -557,7 +557,8 @@
         [
             {
                 "group_block_id": "commodity",
-                "block_id": "title",
+                "block_id": "title_commodity",
+                "block_column_id": "column_commodity_name",
                 "block_type": "label",
                 "block_label": {
                     "de": "Produkt",
@@ -572,16 +573,16 @@
                     "zhtw": "商品"
                 },
                 "block_name": {
-                    "en": "Commodity",
-                    "ja": "商品",
-                    "ko": "상품",
-                    "my": "ကုန်စည်",
-                    "th": "สินค้า",
-                    "tr": "Emtia",
-                    "zh": "商品",
-                    "zhtw": "商品",
-                    "de": "Produkt",
-                    "sv": "Produkt"
+                    "en": "Commodity Name",
+                    "ja": "商品名",
+                    "ko": "상품 이름",
+                    "my": "ကုန်စည်နာမည်",
+                    "th": "ชื่อสินค้า",
+                    "tr": "Ürün Adı",
+                    "zh": "商品名称",
+                    "zhtw": "商品名稱",
+                    "de": "Produktname",
+                    "sv": "Produktnamn"
                 },
                 "block_attr": {
                     "font_size": 18,
@@ -602,7 +603,8 @@
             },
             {
                 "group_block_id": "commodity",
-                "block_id": "title",
+                "block_id": "title_price_num",
+                "block_column_id": "column_price_num",
                 "block_type": "label",
                 "block_label": {
                     "de": "Einzelpreis|Menge",
@@ -646,7 +648,8 @@
             },
             {
                 "group_block_id": "commodity",
-                "block_id": "title",
+                "block_id": "title_subtotal",
+                "block_column_id": "column_subtotal",
                 "block_type": "label",
                 "block_label": {
                     "de": "Zwischensumme",
@@ -713,6 +716,7 @@
                     [
                         {
                             "block_id": "name",
+                            "block_column_id": "column_commodity_name",
                             "block_type": "value",
                             "block_label": {},
                             "block_name": {
@@ -806,6 +810,7 @@
                         },
                         {
                             "block_id": "price_num",
+                            "block_column_id": "column_price_num",
                             "block_type": "value",
                             "block_label": {},
                             "block_name": {
@@ -833,6 +838,7 @@
                         },
                         {
                             "block_id": "subtotal",
+                            "block_column_id": "column_subtotal",
                             "block_type": "value",
                             "block_label": {},
                             "block_name": {
@@ -869,26 +875,27 @@
                     [
                         {
                             "block_id": "attr",
+                            "block_column_id": "column_attr",
                             "block_type": "label:value",
                             "block_label": {
-                                "en": "-Attributes: ",
-                                "ja": "-属性: ",
+                                "en": "-Attribute: ",
+                                "ja": "-ぞくせい: ",
                                 "ko": "-속성: ",
-                                "my": "-အရွယ်အဆင့်: ",
+                                "my": "-ဂုဏ်သတ္တိ: ",
                                 "th": "-คุณลักษณะ: ",
-                                "tr": "-Özellikler: ",
+                                "tr": "-özellikleri: ",
                                 "zh": "-属性: ",
                                 "zhtw": "-屬性: ",
                                 "de": "-Eigenschaften: ",
                                 "sv": "-Egenskap: "
                             },
                             "block_name": {
-                                "en": "Attributes",
-                                "ja": "属性",
+                                "en": "Attribute",
+                                "ja": "ぞくせい",
                                 "ko": "속성",
-                                "my": "အရွယ်အဆင့်",
+                                "my": "ဂုဏ်သတ္တိ",
                                 "th": "คุณลักษณะ",
-                                "tr": "Özellikler",
+                                "tr": "özellikleri",
                                 "zh": "属性",
                                 "zhtw": "屬性",
                                 "de": "Eigenschaften",
@@ -928,30 +935,31 @@
                     [
                         {
                             "block_id": "flavor_name",
+                            "block_column_id": "column_commodity_name",
                             "block_type": "label:value",
                             "block_label": {
-                                "en": "-Specification: ",
+                                "en": "-Specs: ",
                                 "ja": "-仕様: ",
                                 "ko": "-사양: ",
-                                "my": "-အရွယ်အဆင့်: ",
-                                "th": "-ขนาด: ",
-                                "tr": "-Ölçü: ",
+                                "my": "-အရွယ်: ",
+                                "th": "-ข้อกำหนด: ",
+                                "tr": "-özellik: ",
                                 "zh": "-规格: ",
                                 "zhtw": "-規格: ",
                                 "de": "-Größe: ",
-                                "sv": "-Mått: "
+                                "sv": "-Storlek: "
                             },
                             "block_name": {
-                                "en": "-Specification",
-                                "ja": "-仕様",
-                                "ko": "-사양",
-                                "my": "-အရွယ်အဆင့်",
-                                "th": "-ขนาด",
-                                "tr": "-Ölçü",
-                                "zh": "-规格",
-                                "zhtw": "-規格",
-                                "de": "-Größe",
-                                "sv": "-Mått"
+                                "en": "Specs",
+                                "ja": "仕様",
+                                "ko": "사양",
+                                "my": "အရွယ်",
+                                "th": "ข้อกำหนด",
+                                "tr": "özellik",
+                                "zh": "规格",
+                                "zhtw":"-規格",
+                                "de": "Größe",
+                                "sv": "Storlek"
                             },
                             "block_attr": {
                                 "font_size": 18,
@@ -987,30 +995,31 @@
                     [
                         {
                             "block_id": "sauce_names",
+                            "block_column_id": "column_commodity_name",
                             "block_type": "label:value",
                             "block_label": {
-                                "en": "-Toppings: ",
-                                "ja": "-トッピング: ",
-                                "ko": "-토핑: ",
-                                "my": "-ပေးပာမှု: ",
-                                "th": "-วัตถุดิบติดเติม: ",
-                                "tr": "-Ekstra Malzeme: ",
+                                "en": "-Add material: ",
+                                "ja": "-ついか: ",
+                                "ko": "-재료를 넣다: ",
+                                "my": "-ပစ္စည်းထည့်: ",
+                                "th": "-เพิ่มวัสดุ: ",
+                                "tr": "-malzeme ekle: ",
                                 "zh": "-加料: ",
                                 "zhtw": "-加料: ",
                                 "de": "-Zusatz: ",
-                                "sv": "-Tillbehör: "
+                                "sv": "-Tillsätt: "
                             },
                             "block_name": {
-                                "en": "-Toppings",
-                                "ja": "-トッピング",
-                                "ko": "-토핑",
-                                "my": "-ပေးပာမှု",
-                                "th": "-วัตถุดิบติดเติม",
-                                "tr": "-Ekstra Malzeme",
-                                "zh": "-加料",
-                                "zhtw": "-加料",
-                                "de": "-Zusatz",
-                                "sv": "-Tillbehör"
+                                "en": "Toppings",
+                                "ja": "トッピング",
+                                "ko": "토핑",
+                                "my": "ပစ္စည်းထည့်",
+                                "th": "วัตถุดิบติดเติม",
+                                "tr": "malzeme ekle",
+                                "zh": "加料",
+                                "zhtw":"-加料",
+                                "de": "Zusatz",
+                                "sv": "Tillsätt"
                             },
                             "block_attr": {
                                 "font_size": 18,
@@ -1244,6 +1253,16 @@
                                 "zh": "VAT ({tax_rate}%)",
                                 "zhtw": "VAT ({tax_rate}%)"
                             },
+                            "block_name": {
+                                "en": "VAT",
+                                "ja": "VAT",
+                                "ko": "VAT",
+                                "my": "VAT",
+                                "sv": "VAT",
+                                "tr": "VAT",
+                                "zh": "VAT",
+                                "zhtw": "VAT"
+                            },
                             "block_attr": {
                                 "font_size": 20,
                                 "align": "right",
@@ -1443,8 +1462,8 @@
                     "my": "%",
                     "th": "%",
                     "tr": "%",
-                    "zh": "拆",
-                    "zhtw": "拆",
+                    "zh": "折",
+                    "zhtw": "折",
                     "de": "%",
                     "sv": "%"
                 },
@@ -1502,8 +1521,8 @@
                     "my": "%",
                     "th": "%",
                     "tr": "%",
-                    "zh": "拆",
-                    "zhtw": "拆",
+                    "zh": "折",
+                    "zhtw": "折",
                     "de": "%",
                     "sv": "%"
                 },
@@ -1802,6 +1821,16 @@
                                 "zh": "VAT ({tax_rate}%)",
                                 "zhtw": "VAT ({tax_rate}%)"
                             },
+                            "block_name": {
+                                "en": "VAT",
+                                "ja": "VAT",
+                                "ko": "VAT",
+                                "my": "VAT",
+                                "sv": "VAT",
+                                "tr": "VAT",
+                                "zh": "VAT",
+                                "zhtw": "VAT"
+                            },
                             "block_attr": {
                                 "font_size": 20,
                                 "align": "left",
@@ -1828,7 +1857,16 @@
                                 "zh": "{total_price}(",
                                 "zhtw": "{total_price}("
                             },
-                            "block_name": null,
+                            "block_name": {
+                                "en": "VAT Amount",
+                                "ja": "VAT Amount",
+                                "ko": "VAT Amount",
+                                "my": "VAT Amount",
+                                "sv": "VAT Amount",
+                                "tr": "VAT Amount",
+                                "zh": "VAT Amount",
+                                "zhtw": "VAT Amount"
+                            },
                             "block_attr": {
                                 "font_size": 20,
                                 "align": "right",
@@ -1909,8 +1947,8 @@
                     "sv": "Vänligen skanna med {order.payment_name} för att betala",
                     "th": "กรุณาสแกนด้วย {order.payment_name} เพื่อชำระเงิน",
                     "tr": "Lütfen ödeme yapmak için {order.payment_name} ile tarayın",
-                    "zh": "请用{order.payment_name}扫一扫支付",
-                    "zhtw": "請用{order.payment_name}掃一掃支付"
+                    "zh": "请用 {order.payment_name} 扫一扫支付",
+                    "zhtw": "請用 {order.payment_name} 掃一掃支付"
                 },
                 "block_name": {
                     "en": "Payment Description",

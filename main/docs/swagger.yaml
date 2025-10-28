@@ -6680,6 +6680,25 @@ definitions:
     - start_serial_no
     - zeroing_method
     type: object
+  req.UpdateHeadquarterSupplierNameReq:
+    properties:
+      branch:
+        description: 分支
+        type: string
+      company_abbr:
+        description: 公司缩写编码
+        type: string
+      site_code:
+        type: string
+      supplier_name:
+        description: 总部供应商名称
+        type: string
+    required:
+    - branch
+    - company_abbr
+    - site_code
+    - supplier_name
+    type: object
   req.UpdateStaffReq:
     properties:
       confirm_password:
@@ -8335,6 +8354,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.BuffetProductList'
         description: 必点商品列表
+      order_remark:
+        allOf:
+        - $ref: '#/definitions/resp.OrderRemarkRes'
+        description: 整单备注信息
       product:
         allOf:
         - $ref: '#/definitions/product_resp.Product'
@@ -10379,6 +10402,9 @@ definitions:
       printing_time:
         description: 打印耗时
         type: integer
+      trade_no:
+        description: 交易号
+        type: string
       uuid:
         description: 打印日志Uuid
         type: integer
@@ -13763,6 +13789,28 @@ paths:
           schema:
             $ref: '#/definitions/dto.Response'
       summary: 初始化店铺
+      tags:
+      - 平台端.商家授权
+  /admin/erpnext/shop/update_headquarter_supplier_name:
+    post:
+      consumes:
+      - application/json
+      description: 更新总部供应商名称
+      parameters:
+      - description: 更新总部供应商名称请求
+        in: body
+        name: update_headquarter_supplier_name_req
+        required: true
+        schema:
+          $ref: '#/definitions/req.UpdateHeadquarterSupplierNameReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 更新总部供应商名称
       tags:
       - 平台端.商家授权
   /admin/erpnext/site/company:
@@ -22618,6 +22666,37 @@ paths:
       summary: 确认必点商品
       tags:
       - 扫码点餐
+  /h5/desk/order/remark:
+    post:
+      consumes:
+      - application/json
+      description: 点餐订单整单备注
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderRemarkReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.H5DeskPing'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 点餐订单整单备注
+      tags:
+      - 扫码点餐
   /h5/desk/ping:
     get:
       consumes:
@@ -22803,37 +22882,6 @@ paths:
       security:
       - JwtToken: []
       summary: 向购物车添加套餐
-      tags:
-      - 扫码点餐
-  /h5/order/remark:
-    post:
-      consumes:
-      - application/json
-      description: 点餐订单整单备注
-      parameters:
-      - description: 详情参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.OrderRemarkReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.H5DeskPing'
-              type: object
-        "404":
-          description: 未找到
-      security:
-      - JwtToken: []
-      summary: 点餐订单整单备注
       tags:
       - 扫码点餐
   /h5/order/remark/list:
