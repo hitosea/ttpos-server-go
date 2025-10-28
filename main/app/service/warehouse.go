@@ -1147,6 +1147,9 @@ func (s *warehouseSrv) GetWarehouseMaterialList(ctx context.Context, req req.War
 		if !exists {
 			continue
 		}
+		if !material.Status || material.DeleteTime != 0 {
+			continue
+		}
 
 		// 构建物品单位信息
 		units := make([]resp.MaterialUnitInfo, 0)
