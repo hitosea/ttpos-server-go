@@ -172,14 +172,16 @@ func (t *DailySalesOutboundSummaryTask) isBusinessEndTime(company *model.Company
 	if company.CompanySetting != nil {
 		timezone = company.CompanySetting.GetTimezone()
 	}
+	logger.Logger.Info(fmt.Sprintf("时区: %s", timezone))
 	timeUtil := utils.Timezone(timezone)
 
 	// 获取营业时间的开始和结束时间戳
-	_, endTime := timeUtil.OpeningHoursStartEndUnix(openingHours, utils.WithOpeningHoursType(1))
-
+	startTime, endTime := timeUtil.OpeningHoursStartEndUnix(openingHours, utils.WithOpeningHoursType(1))
+	logger.Logger.Info(fmt.Sprintf("营业开始时间: %s,营业结束时间: %s", time.Unix(startTime, 0).Format("2006-01-02 15:04:05"), time.Unix(endTime, 0).Format("2006-01-02 15:04:05")))
 	now := timeUtil.Now().Unix()
 
 	// 如果当前时间在营业结束时间之后，则认为已到达营业结束时间
+	logger.Logger.Info(fmt.Sprintf("当前时间: %s, 营业结束时间: %s", time.Unix(now, 0).Format("2006-01-02 15:04:05"), time.Unix(endTime, 0).Format("2006-01-02 15:04:05")))
 	return now >= endTime
 }
 
