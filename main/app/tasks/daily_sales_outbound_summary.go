@@ -177,11 +177,11 @@ func (t *DailySalesOutboundSummaryTask) isBusinessEndTime(company *model.Company
 
 	// 获取营业时间的开始和结束时间戳
 	startTime, endTime := timeUtil.OpeningHoursStartEndUnix(openingHours, utils.WithOpeningHoursType(1))
-	logger.Logger.Info(fmt.Sprintf("openingHours: %s,营业开始时间: %s(%d),营业结束时间: %s(%d)", openingHours, time.Unix(startTime, 0).Format("2006-01-02 15:04:05"), startTime, time.Unix(endTime, 0).Format("2006-01-02 15:04:05"), endTime))
+	logger.Logger.Info(fmt.Sprintf("openingHours: %s,营业开始时间: %s(%d),营业结束时间: %s(%d)", openingHours, timeUtil.FormatUnixTime(startTime, "2006-01-02 15:04:05"), startTime, timeUtil.FormatUnixTime(endTime, "2006-01-02 15:04:05"), endTime))
 	now := timeUtil.Now().Unix()
 
 	// 如果当前时间在营业结束时间之后，则认为已到达营业结束时间
-	logger.Logger.Info(fmt.Sprintf("当前时间: %s(%d), 营业结束时间: %s(%d)", time.Unix(now, 0).Format("2006-01-02 15:04:05"), now, time.Unix(endTime, 0).Format("2006-01-02 15:04:05"), endTime))
+	logger.Logger.Info(fmt.Sprintf("当前时间: %s(%d), 营业结束时间: %s(%d)", timeUtil.FormatUnixTime(now, "2006-01-02 15:04:05"), now, timeUtil.FormatUnixTime(endTime, "2006-01-02 15:04:05"), endTime))
 	return now >= endTime
 }
 
