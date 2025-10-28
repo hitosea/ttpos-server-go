@@ -2222,4 +2222,13 @@ return [
     "该优惠券已关联正在进行的活动，请在活动失效后删除" => "Dieser Gutschein ist mit einer laufenden Aktion verknüpft. Bitte löschen Sie ihn nach Ablauf der Aktion.",
     "修改状态失败" => "Statusänderung fehlgeschlagen",
     "修改状态成功" => "Statusänderung erfolgreich",
+    "未设置打印标签" => "Drucketikett nicht festgelegt",
+    "请输入整单备注" => "Bitte geben Sie eine Gesamtnotiz zur Bestellung ein",
+    "整单备注数量不能超过100个" => "Die Gesamtanzahl der Bestellbemerkungen darf 100 nicht überschreiten",
+    "整单备注不能为空" => "Die Gesamtnotiz zur Bestellung darf nicht leer sein",
+    "默认仓库" => "Standardlager",
+    "默認倉庫" => "Standardlager",
+    "在途仓库" => "Lager unterwegs",
+    "在途倉庫" => "Lager im Transit",
+    "輸送中の倉庫" => "Lager im Transit",
 ];

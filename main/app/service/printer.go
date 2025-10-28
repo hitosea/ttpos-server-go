@@ -16,6 +16,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/app/printer/pkg/template_json"
+	"ttpos-server-go/app/printer/template"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
@@ -420,6 +421,25 @@ func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[
 	var testData map[string]interface{}
 	if err := json.Unmarshal(testDataBytes, &testData); err != nil {
 		return nil, errors.WithMessage(errors.New("解析测试数据JSON失败"), err.Error())
+	}
+	if testData["store"] != nil && testData["store"].(map[string]interface{})["logo"] != nil {
+		settingSrv := setting.NewSrvImpl(s.dbm, s.cache)
+		storeSetting, err := settingSrv.GetStoreSetting(ctx)
+		if err != nil {
+			return nil, errors.WithMessage(errors.New("获取门店设置失败"), err.Error())
+		}
+		printerSetting, err := settingSrv.GetPrinterSetting(ctx, nil)
+		if err != nil {
+			return nil, errors.WithMessage(errors.New("获取打印机设置失败"), err.Error())
+		}
+		currencySetting, err := settingSrv.GetCurrencySetting(ctx)
+		if err != nil {
+			return nil, errors.WithMessage(errors.New("获取货币设置失败"), err.Error())
+		}
+		logoAddr := template.NewPrinterTemplate(ctx, settingSrv, &storeSetting, &printerSetting, &currencySetting, false, ctx.GetLanguage()).GetLogoAddr()
+		if logoAddr != "" {
+			testData["store"].(map[string]interface{})["logo"] = logoAddr
+		}
 	}
 	return testData, nil
 }

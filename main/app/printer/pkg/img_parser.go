@@ -65,6 +65,7 @@ type ImgTemplateBlockAttr struct {
 	ShowCurrencyUnit   bool        `json:"show_currency_unit"`   // 是否显示货币单位
 	NotShowEmpty       bool        `json:"not_show_empty"`       // 是否不显示空值
 	ShowColumnTitle    bool        `json:"show_column_title"`    // 是否显示列标题
+	Disabled           bool        `json:"disabled"`             // 是否禁用
 
 	// 数据绑定
 	DefaultValue string `json:"default_value"` // 默认值
@@ -257,7 +258,7 @@ func (p *ImgTemplateParser) parseRow(
 
 	block := blocks[0]
 
-	if !p.validBlock(block) {
+	if block.BlockAttr.Disabled || !p.validBlock(block) {
 		return nil
 	}
 
@@ -394,7 +395,7 @@ func (p *ImgTemplateParser) parseRow(
 	}
 
 	// 添加分割线
-	if block.BlockAttr.DividingLine || block.BlockType == "blank_line" {
+	if block.BlockAttr.DividingLine || (block.BlockType == "blank_line" && block.BlockAttr.DividingLine) {
 		img.AppendSplitLine(WithLineFeed(true))
 	}
 

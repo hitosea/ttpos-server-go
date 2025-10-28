@@ -2214,4 +2214,13 @@ return [
     "该优惠券已关联正在进行的活动，请在活动失效后删除" => "Bu kupon, devam eden bir etkinliğe bağlı. Lütfen etkinlik sona erdikten sonra silin.",
     "修改状态失败" => "Durum güncellenemedi",
     "修改状态成功" => "Durum başarıyla güncellendi",
+    "未设置打印标签" => "Yazdırma etiketi ayarlanmadı",
+    "请输入整单备注" => "Lütfen tüm sipariş için not girin",
+    "整单备注数量不能超过100个" => "Toplam sipariş notu sayısı 100'ü geçemez",
+    "整单备注不能为空" => "Sipariş notu boş olamaz",
+    "默认仓库" => "Varsayılan depo",
+    "默認倉庫" => "Varsayılan depo",
+    "在途仓库" => "Yoldaki depo",
+    "在途倉庫" => "Yolda depo",
+    "輸送中の倉庫" => "Yolda depo",
 ];
