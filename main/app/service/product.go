@@ -6374,6 +6374,8 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 							flavorUuid = bom.Uuid
 						}
 
+					} else {
+						isAdd = true
 					}
 				}
 
