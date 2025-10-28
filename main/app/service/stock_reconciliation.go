@@ -876,7 +876,7 @@ func (s *stockReconciliationSrv) validateWarehouseAndItems(db *gorm.DB, req req.
 	return warehouseItems, materials, nil
 }
 
-func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, req req.StockReconciliationCheckMaterialsReq) (resp.StockReconciliationCheckMaterialsListResp, error) {
+func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq req.StockReconciliationCheckMaterialsReq) (resp.StockReconciliationCheckMaterialsListResp, error) {
 
 	var listResp resp.StockReconciliationCheckMaterialsListResp
 	var itemResp []resp.StockReconciliationCheckMaterialsResp
@@ -884,10 +884,13 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, req req.Sto
 	db := ctx.GetDB()
 
 	var materialUuids []uint64
-	if req.Uuid != 0 {
+
+	bookedQuantityMap := make(map[uint64]decimal.Decimal)
+
+	if checkReq.Uuid != 0 {
 		stockReconciliationRepo := repository.NewStockReconciliationRepo(db)
 		opts := []repository.DBOption{
-			stockReconciliationRepo.WhereUuid(req.Uuid),
+			stockReconciliationRepo.WhereUuid(checkReq.Uuid),
 			stockReconciliationRepo.WithStockReconciliationItemsMultiLanguageName(),
 			stockReconciliationRepo.WithStockReconciliationItemsUnits(),
 		}
@@ -900,7 +903,7 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, req req.Sto
 			return listResp, errors.New("盘点单不存在")
 		}
 
-		bookedQuantityMap, err := s.getBookedQuantityMap(db, stockReconciliation.WarehouseUuid)
+		bookedQuantityMap, err = s.getBookedQuantityMap(db, stockReconciliation.WarehouseUuid)
 		if err != nil {
 			return listResp, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
 		}
@@ -933,23 +936,35 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, req req.Sto
 		}
 	}
 
-	if len(req.MaterialUuids) > 0 {
+	// 没传递盘点单UUID，则根据仓库UUID查询仓库物品
+	if checkReq.WarehouseUuid != 0 && checkReq.Uuid == 0 {
+		var err error
+		bookedQuantityMap, err = s.getBookedQuantityMap(db, checkReq.WarehouseUuid)
+		if err != nil {
+			return listResp, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
+		}
+	}
+
+	if len(checkReq.Items) > 0 {
 		var newMaterialUuids []uint64
+		itemMap := make(map[uint64]req.StockReconciliationCheckMaterialsItem)
 		// 过滤掉在materialUuids中的物品
-		for _, materialUuid := range req.MaterialUuids {
-			if !slices.Contains(materialUuids, materialUuid) {
-				newMaterialUuids = append(newMaterialUuids, materialUuid)
+		for _, item := range checkReq.Items {
+			if !slices.Contains(materialUuids, item.MaterialUuid) {
+				newMaterialUuids = append(newMaterialUuids, item.MaterialUuid)
 			}
+			itemMap[item.MaterialUuid] = item
 		}
 
 		var materials []model.Material
-		db.Model(&model.Material{}).Where("uuid IN (?)", newMaterialUuids).Find(&materials)
+		db.Model(&model.Material{}).Preload("MultiLanguageName").Where("uuid IN (?)", newMaterialUuids).Find(&materials)
 
 		for _, material := range materials {
 			itemResp = append(itemResp, resp.StockReconciliationCheckMaterialsResp{
-				LocaleName: material.MultiLanguageName.GetNames(),
-				Status:     material.Status,
-				IsDeleted:  material.DeleteTime > 0,
+				LocaleName:                 material.MultiLanguageName.GetNames(),
+				Status:                     material.Status,
+				IsDeleted:                  material.DeleteTime > 0,
+				IsInventoryStatusException: itemMap[material.Uuid].CountedQuantity.Sub(bookedQuantityMap[material.Uuid]).Abs().Div(bookedQuantityMap[material.Uuid]).GreaterThan(decimal.NewFromFloat(0.2)),
 			})
 		}
 	}
