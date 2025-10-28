@@ -252,7 +252,7 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 			itemInfo.InventoryStatus = constant.StockReconciliationInventoryStatusNormal
 		}
 		// 是否盘盈盘亏异常（账面和实盘数量差值的绝对值大于20%）
-		itemInfo.IsInventoryStatusException = item.CountedQuantity.Sub(bookedQuantity).Abs().Div(bookedQuantity).GreaterThan(decimal.NewFromFloat(0.2))
+		itemInfo.IsInventoryStatusException = s.getIsInventoryStatusException(bookedQuantity, item.CountedQuantity)
 
 		itemsResp = append(itemsResp, itemInfo)
 	}
@@ -876,6 +876,14 @@ func (s *stockReconciliationSrv) validateWarehouseAndItems(db *gorm.DB, req req.
 	return warehouseItems, materials, nil
 }
 
+// getIsInventoryStatusException 获取是否盘盈盘亏异常
+func (s *stockReconciliationSrv) getIsInventoryStatusException(bookedQuantity decimal.Decimal, countedQuantity decimal.Decimal) bool {
+	if bookedQuantity.IsZero() {
+		return true
+	}
+	return countedQuantity.Sub(bookedQuantity).Abs().Div(bookedQuantity).GreaterThan(decimal.NewFromFloat(0.2))
+}
+
 func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq req.StockReconciliationCheckMaterialsReq) (resp.StockReconciliationCheckMaterialsListResp, error) {
 
 	var listResp resp.StockReconciliationCheckMaterialsListResp
@@ -928,7 +936,7 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 
 			itemResp = append(itemResp, resp.StockReconciliationCheckMaterialsResp{
 				LocaleName:                 item.Material.MultiLanguageName.GetNames(),
-				IsInventoryStatusException: item.CountedQuantity.Sub(bookedQuantity).Abs().Div(bookedQuantity).GreaterThan(decimal.NewFromFloat(0.2)),
+				IsInventoryStatusException: s.getIsInventoryStatusException(bookedQuantity, item.CountedQuantity),
 				Status:                     item.Material.Status,
 				IsDeleted:                  item.Material.DeleteTime > 0,
 				UnitCount:                  unitCount,
@@ -960,11 +968,12 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 		db.Model(&model.Material{}).Preload("MultiLanguageName").Where("uuid IN (?)", newMaterialUuids).Find(&materials)
 
 		for _, material := range materials {
+			countedQuantity := itemMap[material.Uuid].CountedQuantity
 			itemResp = append(itemResp, resp.StockReconciliationCheckMaterialsResp{
 				LocaleName:                 material.MultiLanguageName.GetNames(),
 				Status:                     material.Status,
 				IsDeleted:                  material.DeleteTime > 0,
-				IsInventoryStatusException: itemMap[material.Uuid].CountedQuantity.Sub(bookedQuantityMap[material.Uuid]).Abs().Div(bookedQuantityMap[material.Uuid]).GreaterThan(decimal.NewFromFloat(0.2)),
+				IsInventoryStatusException: s.getIsInventoryStatusException(bookedQuantityMap[material.Uuid], countedQuantity),
 			})
 		}
 	}
