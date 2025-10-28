@@ -1850,7 +1850,8 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 					Branch:       companySetting.ErpnextBranchName,
 					SupplierName: storeSettingReq.Name,
 				},
-				Name: constant.ErpHeadquartersSupplierCode,
+				CompanyUuid: companyUuid,
+				Name:        constant.ErpHeadquartersSupplierCode,
 			})
 			if err != nil {
 				return errors.WithMessage(errors.New("更新Headquarters - Supplier供应商名称失败"), err.Error())

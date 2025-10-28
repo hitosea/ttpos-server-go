@@ -227,7 +227,8 @@ func (s *supplierSrv) UpdateSupplier(ctx context.Context, updateSupplierReq req.
 				Branch:      companySetting.ErpnextBranchName,
 				Disabled:    updateSupplierReq.Status == 0,
 			},
-			Name: supplier.ErpCode,
+			Name:        supplier.ErpCode,
+			CompanyUuid: ctx.GetCompanyUuid(),
 		})
 		if err != nil {
 			return errors.WithMessage(errors.New("更新供应商失败"), err.Error())

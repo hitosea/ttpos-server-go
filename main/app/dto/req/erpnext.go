@@ -197,7 +197,8 @@ type CreateSupplierReq struct {
 
 type UpdateSupplierReq struct {
 	CreateSupplierReq
-	Name string // 供应商erp_code
+	Name        string // 供应商erp_code
+	CompanyUuid uint64 // 公司UUID
 }
 
 type DeleteSupplierReq struct {
@@ -255,8 +256,9 @@ type GetErpSauceListReq struct {
 }
 
 type UpdateHeadquarterSupplierNameReq struct {
-	SiteCode     string `json:"site_code" binding:"required"`
+	CompanyUuid  uint64 `json:"company_uuid" binding:"required"`  // 公司UUID
+	SiteCode     string `json:"site_code" binding:"required"`     // 站点编码
 	SupplierName string `json:"supplier_name" binding:"required"` // 总部供应商名称
 	CompanyAbbr  string `json:"company_abbr" binding:"required"`  // 公司缩写编码
-	Branch       string `json:"branch" binding:"required"`        // 分支
+	Branch       string `json:"branch" binding:"required"`        // 分支名称
 }
