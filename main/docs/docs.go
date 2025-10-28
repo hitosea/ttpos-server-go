@@ -37555,7 +37555,7 @@ const docTemplate = `{
                     "description": "实盘库存数量",
                     "type": "number"
                 },
-                "material_uuids": {
+                "material_uuid": {
                     "description": "待盘点物品UUID列表",
                     "type": "integer"
                 }
