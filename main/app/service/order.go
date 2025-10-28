@@ -10318,13 +10318,14 @@ func (s *orderSrv) SavePosInvoice(ctx context.Context, saleOrder *model.SaleOrde
 			Description: fmt.Sprintf("%s-%s", buffetName, product.Name),
 		})
 	}
+	buffetPackageName := saleBill.GetBuffetPackageName()
 	for _, product := range saleOrder.SaleOrderBuffetDelayProducts {
 		items = append(items, &selling.PosInvoiceItem{
-			ItemCode:    "ZZC001",
+			ItemCode:    "ZZCJZ001",
 			Qty:         float64(product.Num),
 			Rate:        product.Price,                                                                                                             // 商品未含税价格（折后）
 			Amount:      decimal.NewFromFloat(product.Price).Mul(decimal.NewFromFloat(float64(product.Num))).Truncate(3).Round(2).InexactFloat64(), // 商品未含税价格（折后）* 数量
-			Description: fmt.Sprintf("Delay:%s", product.Name),
+			Description: fmt.Sprintf("Delay:%s %s", buffetPackageName.EnName, product.Name),
 		})
 	}
 	for _, product := range saleOrder.SaleOrderProducts {

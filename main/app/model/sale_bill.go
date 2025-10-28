@@ -105,6 +105,33 @@ type SaleBill struct {
 	BatchTag        *BatchTag         `gorm:"foreignKey:BatchTagUuid;references:uuid"`
 }
 
+// 获取自助餐套餐名称
+func (model *SaleBill) GetBuffetPackageName() MultiLanguageName {
+	if model.BuffetPackage1 != nil && model.BuffetPackage1 == nil {
+		return model.BuffetPackage1.MultiLanguageName
+	}
+	if model.BuffetPackage2 != nil && model.BuffetPackage1 == nil {
+		return model.BuffetPackage2.MultiLanguageName
+	}
+	if model.BuffetPackage1 != nil && model.BuffetPackage2 != nil {
+		return MultiLanguageName{
+			EnName:   model.BuffetPackage1.MultiLanguageName.EnName + " + " + model.BuffetPackage2.MultiLanguageName.EnName,
+			ZhName:   model.BuffetPackage1.MultiLanguageName.ZhName + " + " + model.BuffetPackage2.MultiLanguageName.ZhName,
+			ThName:   model.BuffetPackage1.MultiLanguageName.ThName + "+ " + model.BuffetPackage2.MultiLanguageName.ThName,
+			ZhTwName: model.BuffetPackage1.MultiLanguageName.ZhTwName + " + " + model.BuffetPackage2.MultiLanguageName.ZhTwName,
+			JaName:   model.BuffetPackage1.MultiLanguageName.JaName + "+ " + model.BuffetPackage2.MultiLanguageName.JaName,
+			KoName:   model.BuffetPackage1.MultiLanguageName.KoName + "+ " + model.BuffetPackage2.MultiLanguageName.KoName,
+			MyName:   model.BuffetPackage1.MultiLanguageName.MyName + "+ " + model.BuffetPackage2.MultiLanguageName.MyName,
+			TrName:   model.BuffetPackage1.MultiLanguageName.TrName + "+ " + model.BuffetPackage2.MultiLanguageName.TrName,
+			SvName:   model.BuffetPackage1.MultiLanguageName.SvName + "+ " + model.BuffetPackage2.MultiLanguageName.SvName,
+		}
+	}
+	if model.BuffetPackage1 == nil && model.BuffetPackage2 == nil {
+		return MultiLanguageName{}
+	}
+	return MultiLanguageName{}
+}
+
 // 是否是“已取消”状态
 func (model *SaleBill) IsCanceled() bool {
 	return model.Status == constant.SaleBillStatusCanceled
