@@ -2,88 +2,124 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "构建Go项目",
-      "type": "shell",
-      "command": "make",
-      "args": ["build"],
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      },
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared",
-        "showReuseMessage": true,
-        "clear": false
-      },
-      "problemMatcher": ["$go"]
-    },
-    {
-      "label": "运行Go项目-dev",
-      "type": "shell",
-      "command": "make",
-      "args": ["dev"],
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared",
-        "showReuseMessage": true,
-        "clear": false
-      },
-      "problemMatcher": ["$go"]
-    },
-    {
-        "label": "运行Go项目-run",
+        "label": "Go项目-构建Main",
         "type": "shell",
         "command": "make",
-        "args": ["run"],
+        "args": [
+            "build"
+        ],
+        "group": {
+            "kind": "build",
+            "isDefault": true
+        },
+        "presentation": {
+            "echo": true,
+            "reveal": "always",
+            "focus": false,
+            "panel": "shared",
+            "showReuseMessage": true,
+            "clear": false
+        },
+        "problemMatcher": [
+            "$go"
+        ]
+    },
+    {
+        "label": "Go项目-查看日志",
+        "type": "shell",
+        "command": "make",
+        "args": [
+            "log"
+        ],
         "group": "build",
         "presentation": {
-          "echo": true,
-          "reveal": "always",
-          "focus": false,
-          "panel": "shared",
-          "showReuseMessage": true,
-          "clear": false
+            "echo": true,
+            "reveal": "always",
+            "focus": false,
+            "panel": "shared",
+            "showReuseMessage": true,
+            "clear": false
         },
-        "problemMatcher": ["$go"]
-      },
-    {
-      "label": "生成Swagger文档",
-      "type": "shell",
-      "command": "make",
-      "args": ["build-doc"],
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared",
-        "showReuseMessage": true,
-        "clear": false
-      }
+        "problemMatcher": [
+            "$go"
+        ]
     },
     {
-      "label": "前端构建",
-      "type": "shell",
-      "command": "make",
-      "args": ["build-web"],
-      "options": {
-        "cwd": "${workspaceFolder}/admin/views/admin"
-      },
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared",
-        "showReuseMessage": true,
-        "clear": false
-      }
+        "label": "Go项目-生成Swagger文档",
+        "type": "shell",
+        "command": "make",
+        "args": [
+            "build-doc"
+        ],
+        "group": "build",
+        "presentation": {
+            "echo": true,
+            "reveal": "always",
+            "focus": false,
+            "panel": "shared",
+            "showReuseMessage": true,
+            "clear": false
+        }
     },
-  ]
+    {
+        "label": "Go项目-前端构建",
+        "type": "shell",
+        "command": "make",
+        "args": [
+            "build-web"
+        ],
+        "options": {
+            "cwd": "${workspaceFolder}/admin/views/admin"
+        },
+        "group": "build",
+        "presentation": {
+            "echo": true,
+            "reveal": "always",
+            "focus": false,
+            "panel": "shared",
+            "showReuseMessage": true,
+            "clear": false
+        }
+    },
+    {
+        "label": "Go项目-构建中台",
+        "type": "shell",
+        "command": "make",
+        "args": [
+            "install-bmp"
+        ],
+        "group": "build",
+        "presentation": {
+            "echo": true,
+            "reveal": "always",
+            "focus": false,
+            "panel": "shared",
+            "showReuseMessage": true,
+            "clear": false
+        },
+        "problemMatcher": [
+            "$go"
+        ]
+    },
+    {
+        "label": "Go项目-项目翻译",
+        "type": "shell",
+        "command": "make",
+        "args": [
+            "translate"
+        ],
+        "group": "build",
+        "presentation": {
+            "echo": true,
+            "reveal": "always",
+            "focus": false,
+            "panel": "shared",
+            "showReuseMessage": true,
+            "clear": false
+        },
+        "problemMatcher": [
+            "$go"
+        ]
+    },
+]
 } 
