@@ -508,6 +508,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 	materialRepo := repository.NewMaterialRepo(db)
 	materialSupplierRepo := repository.NewMaterialSupplierRepo(db)
 	for _, supplier := range suppliers {
+		// 如果供应商不在erp供应商列表中，则跳过
 		if !slices.Contains(supplierErpCodes, supplier.ErpCode) {
 			continue
 		}
@@ -519,13 +520,11 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 		if err != nil {
 			return errors.WithMessage(errors.New("同步供应商物品失败"), err.Error())
 		}
-
 		// 永久删除所有供应商物品关联关系
 		materialSupplierRepo.DeletePermanently(
 			materialSupplierRepo.WhereSupplierErpCode(supplier.ErpCode),
 			materialSupplierRepo.WhereIsHeadquarter(false),
 		)
-
 		// 添加供应商物品关联关系
 		if len(erpSupplierItems) > 0 {
 			for _, supplierErp := range erpSupplierItems {
@@ -546,7 +545,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 		}
 	}
 
-	// 永久删除所有供应商物品关联关系
+	// 同步总部供应商物品关联关系
 	if companySetting.IsSubShop() && companySetting.HeadquarterUuid > 0 {
 		headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
 		if headquarterDb != nil {
@@ -583,6 +582,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 					MaterialCode:    material.Code,
 					SupplierUuid:    supplier.Uuid,
 					SupplierErpCode: supplier.ErpCode,
+					HeadquarterUuid: companySetting.HeadquarterUuid,
 				})
 			}
 		}
