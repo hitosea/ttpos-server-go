@@ -38029,19 +38029,25 @@
             "required": [
                 "branch",
                 "company_abbr",
+                "company_uuid",
                 "site_code",
                 "supplier_name"
             ],
             "properties": {
                 "branch": {
-                    "description": "分支",
+                    "description": "分支名称",
                     "type": "string"
                 },
                 "company_abbr": {
                     "description": "公司缩写编码",
                     "type": "string"
                 },
+                "company_uuid": {
+                    "description": "公司UUID",
+                    "type": "integer"
+                },
                 "site_code": {
+                    "description": "站点编码",
                     "type": "string"
                 },
                 "supplier_name": {

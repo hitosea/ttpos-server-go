@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"fmt"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -91,7 +90,6 @@ func (h *Handler) InitShop(c *gin.Context) {
 // @Success 200 {object} dto.Response
 // @Router /admin/erpnext/shop/update_headquarter_supplier_name [post]
 func (h *Handler) UpdateHeadquarterSupplierName(c *gin.Context) {
-	fmt.Println("------")
 	var updateReq req.UpdateHeadquarterSupplierNameReq
 	if err := c.ShouldBindJSON(&updateReq); err != nil {
 		helper.HandleValidationError(c, err, updateReq, nil)
@@ -106,7 +104,8 @@ func (h *Handler) UpdateHeadquarterSupplierName(c *gin.Context) {
 			Branch:       updateReq.Branch,
 			SupplierName: updateReq.SupplierName,
 		},
-		Name: constant.ErpHeadquartersSupplierCode,
+		Name:        constant.ErpHeadquartersSupplierCode,
+		CompanyUuid: updateReq.CompanyUuid,
 	})
 	if err != nil {
 		helper.ErrorWithMessage(c, constant.CodeFail, err)

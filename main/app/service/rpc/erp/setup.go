@@ -31,7 +31,7 @@ func NewErpSetupClient() (setup.SetupServiceClient, *grpc.ClientConn, error) {
 func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.InitShopResp, error) {
 	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(0))
 	// 判断是否已经有店铺
-	companySetting, _ := companySettingRepo.GetOne(companySettingRepo.WhereErpnextCompanyAbbr(initShopReq.CompanyAbbr), companySettingRepo.WhereSiteCode(initShopReq.SiteCode))
+	companySetting, _ := companySettingRepo.GetOne(companySettingRepo.WhereErpnextCompanyAbbr(initShopReq.CompanyAbbr), companySettingRepo.WhereSiteCode(initShopReq.SiteCode), repository.NotDeleted)
 	if companySetting.Uuid != 0 {
 		return resp.InitShopResp{}, errors.New("所属erpnext公司已授权其他商家")
 	}

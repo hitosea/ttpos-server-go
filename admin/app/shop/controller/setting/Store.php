@@ -126,6 +126,7 @@ class Store extends Controller
                     'company_abbr' => $companySetting->erpnext_company_abbr,
                     'branch' => $companySetting->erpnext_branch_name,
                     'supplier_name' => $data['name'],
+                    'company_uuid' => $companySetting->company_uuid,
                 ]), [
                     'X-API-KEY: ' . env('JWT_SECRET'),
                     'Accept-Language: ' . request()->header('language'),
