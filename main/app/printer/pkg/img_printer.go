@@ -1117,6 +1117,9 @@ func (i *ImgFont) AppendImg(imgPath string, size int, isRoundness bool, topHeigh
 		x = i.ImageWidth - width - i.ImagePadding
 	}
 
+	// 添加高度
+	i.expandImageHeight(i.Image.Bounds().Dy() + height + 100)
+
 	// 将图片绘制到目标图像上
 	draw.Draw(
 		i.Image,
@@ -1229,6 +1232,9 @@ func (i *ImgFont) AppendEmbeddedImg(imageName string, size int, isRoundness bool
 		x = i.ImageWidth - width - i.ImagePadding
 	}
 
+	// 添加高度
+	i.expandImageHeight(i.Image.Bounds().Dy() + height + 100)
+
 	// 将图片绘制到目标图像上
 	draw.Draw(
 		i.Image,
@@ -1317,6 +1323,100 @@ func (i *ImgFont) AppendQrcode(data string, size int, margin int, isBase64 bool)
 	// 计算二维码位置 (水平居中)
 	x := (i.ImageWidth - width) / 2
 
+	// 添加高度
+	i.expandImageHeight(i.Image.Bounds().Dy() + height + 100)
+
+	// 将二维码绘制到目标图像上
+	draw.Draw(
+		i.Image,
+		image.Rect(x, i.TextTotalHeight, x+width, i.TextTotalHeight+height),
+		qrImg,
+		image.Point{0, 0},
+		draw.Over,
+	)
+
+	// 更新文本总高度和最后一行已使用宽度
+	i.TextTotalHeight += height - 40
+	i.TextLastLineUsedWidth += width
+
+	// 添加换行
+	i.LineFeed(1)
+
+	return i
+}
+
+// AppendQrcode 添加二维码
+func (i *ImgFont) AppendQrcodeDisableBorder(data string, size int, margin int, isBase64 bool) *ImgFont {
+	var qrImg image.Image
+	var err error
+
+	// 处理二维码数据
+	if isBase64 {
+		// 检查并去除可能的前缀
+		base64Data := data
+		// 查找常见的Base64前缀
+		prefixIndex := strings.Index(data, ";base64,")
+		if prefixIndex != -1 {
+			base64Data = data[prefixIndex+8:] // 跳过";base64,"及其前面的内容
+		}
+
+		// 如果是Base64编码的图片数据
+		decoded, decodeErr := base64.StdEncoding.DecodeString(base64Data)
+		if decodeErr != nil {
+			fmt.Println("解码Base64图片错误:", decodeErr)
+			// 尝试使用URL安全的Base64解码
+			decoded, decodeErr = base64.URLEncoding.DecodeString(base64Data)
+			if decodeErr != nil {
+				fmt.Println("URL安全Base64解码也失败:", decodeErr)
+				return i
+			}
+		}
+
+		// 解码图片
+		qrImg, _, err = image.Decode(bytes.NewReader(decoded))
+		if err != nil {
+			fmt.Println("解码图片错误", err)
+			return i
+		}
+
+		// 调整总高度
+		i.TextTotalHeight = i.TextTotalHeight - (margin * 2)
+	} else {
+		// 创建二维码
+		qr, err := qrcode.New(data, qrcode.Medium)
+		if err != nil {
+			fmt.Println("Error generating QR code:", err)
+			return i
+		}
+		// 设置二维码属性
+		qr.DisableBorder = true
+		// 生成指定大小的二维码图片
+		qrImg = qr.Image(size)
+	}
+
+	// 获取二维码尺寸
+	width := qrImg.Bounds().Dx()
+	height := qrImg.Bounds().Dy()
+
+	// 调整图片大小
+	if size > 0 && (width != size || height != size) {
+		// 使用resize包来调整图片大小
+		resized := resize.Resize(uint(size), uint(height*size/width), qrImg, resize.Lanczos3)
+
+		// 转换为image.Image接口
+		qrImg = resized
+
+		// 更新尺寸
+		width = size
+		height = height * size / width
+	}
+
+	// 计算二维码位置 (水平居中)
+	x := (i.ImageWidth - width) / 2
+
+	// 添加高度
+	i.expandImageHeight(i.Image.Bounds().Dy() + height + 100)
+
 	// 将二维码绘制到目标图像上
 	draw.Draw(
 		i.Image,
@@ -1354,6 +1454,9 @@ func (i *ImgFont) AppendBarcode(data string, w, h int) *ImgFont {
 
 	// 计算条形码位置 (水平居中)
 	x := (i.ImageWidth - width) / 2
+
+	// 添加高度
+	i.expandImageHeight(i.Image.Bounds().Dy() + height + 100)
 
 	// 将条形码绘制到目标图像上
 	draw.Draw(

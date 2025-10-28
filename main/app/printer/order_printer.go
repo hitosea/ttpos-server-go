@@ -60,8 +60,14 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 		return nil, errors.New("销售订单不存在")
 	}
 
+	// 获取打印模板
+	tmp, tmpUuid, tmpData := p.GetPrinterTemplate(uint64(printType))
+
 	// 打印方式
 	printMethod := p.SetPrinterMethod(settingPrinterInfo.PrintMethod)
+	if tmpUuid > 0 {
+		printMethod = p.SetPrinterMethod(2)
+	}
 
 	// 设置打印机宽度
 	p.SetPrinterWidth(settingPrinterInfo.PrinterWidth)
@@ -70,7 +76,16 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
 
 	// 获取打印内容
-	printContent := p.getPrintingStatementOrderContent(settingPrinterInfo, printType, saleBill, saleOrder, payMethodUuid)
+	printContent := p.getPrintingStatementOrderContent(
+		settingPrinterInfo,
+		printType,
+		saleBill,
+		saleOrder,
+		payMethodUuid,
+		tmp,
+		tmpUuid,
+		tmpData,
+	)
 	if printContent == "" {
 		return nil, errors.New("获取打印内容失败")
 	}
@@ -123,9 +138,10 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
 	payMethodUuid uint64,
+	tmp int,
+	tmpUuid uint64,
+	tmpData string,
 ) string {
-	// 获取打印模板
-	tmp, tmpUuid, tmpData := p.GetPrinterTemplate(uint64(printType))
 
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(

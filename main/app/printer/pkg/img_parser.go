@@ -299,12 +299,18 @@ func (p *ImgTemplateParser) parseRow(
 				img.AppendImg(text, widthInt, false, 0)
 				img.RecoverDefaultTextLineHeight()
 			} else if block.BlockType == "qrcode" {
-				img.SetTextTotalHeight(30)
-				img.SetTextLineHeight(25)
 				if strings.HasPrefix(text, "data:image/png;base64,") {
-					img.AppendQrcode(text, widthInt, 0, true)
+					img.SetTextTotalHeight(20)
+					img.SetTextLineHeight(5)
+					img.AppendQrcodeDisableBorder(text, widthInt, 0, true)
+				} else if strings.HasPrefix(text, "./tmp") {
+					img.SetTextLineHeight(20)
+					img.AppendImg(text, widthInt, false, 0)
 				} else {
-					img.AppendQrcode(text, widthInt, 0, false)
+					widthInt = widthInt - 20
+					img.SetTextTotalHeight(0)
+					img.SetTextLineHeight(65)
+					img.AppendQrcodeDisableBorder(text, widthInt, 0, false)
 				}
 				img.RecoverDefaultTextLineHeight()
 			} else if block.BlockType == "barcode" {
