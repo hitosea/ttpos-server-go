@@ -37556,7 +37556,7 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "material_uuid": {
-                    "description": "待盘点物品UUID列表",
+                    "description": "待盘点物品UUID",
                     "type": "integer"
                 }
             }
