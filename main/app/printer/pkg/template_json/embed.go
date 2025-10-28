@@ -4,11 +4,9 @@ import (
 	"embed"
 )
 
-//go:embed 结账单_adv_config.json
 //go:embed 结账单_config.json
 //go:embed 结账单_data.json
 //go:embed 结账单_tmp.json
-//go:embed 预结账单_adv_config.json
 //go:embed 预结账单_config.json
 //go:embed 预结账单_data.json
 //go:embed 预结账单_tmp.json
