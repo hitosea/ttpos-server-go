@@ -101,7 +101,8 @@ func (t *DailySalesOutboundSummaryTask) ProcessCompany(company *model.Company) e
 	}
 
 	// 检查是否到达营业结束时间
-	if !t.isBusinessEndTime(company, openingHours) {
+	isBusinessEndTime, startTime, endTime := t.isBusinessEndTime(company, openingHours)
+	if !isBusinessEndTime {
 		logger.Logger.Info("门店 %s 未到达营业结束时间，跳过处理", zap.String("company_name", company.Name))
 		return nil
 	}
@@ -130,7 +131,7 @@ func (t *DailySalesOutboundSummaryTask) ProcessCompany(company *model.Company) e
 	logger.Logger.Info("门店 %s 已到达营业结束时间，开始统计销售出库记录", zap.String("company_name", company.Name))
 
 	// 统计当天销售出库记录
-	outboundRecords, err := t.getDailySalesOutboundRecords(company.Uuid)
+	outboundRecords, err := t.getDailySalesOutboundRecords(company.Uuid, startTime, endTime)
 	if err != nil {
 		return fmt.Errorf("获取销售出库记录失败: %w", err)
 	}
@@ -167,7 +168,7 @@ func (t *DailySalesOutboundSummaryTask) getOpeningHours(companyUuid uint64) (str
 }
 
 // isBusinessEndTime 判断是否到达营业结束时间
-func (t *DailySalesOutboundSummaryTask) isBusinessEndTime(company *model.Company, openingHours string) bool {
+func (t *DailySalesOutboundSummaryTask) isBusinessEndTime(company *model.Company, openingHours string) (bool, int64, int64) {
 	timezone := "Asia/Shanghai" // 默认时区
 	if company.CompanySetting != nil {
 		timezone = company.CompanySetting.GetTimezone()
@@ -182,23 +183,18 @@ func (t *DailySalesOutboundSummaryTask) isBusinessEndTime(company *model.Company
 
 	// 如果当前时间在营业结束时间之后，则认为已到达营业结束时间
 	logger.Logger.Info(fmt.Sprintf("当前时间: %s(%d), 营业结束时间: %s(%d)", timeUtil.FormatUnixTime(now, "2006-01-02 15:04:05"), now, timeUtil.FormatUnixTime(endTime, "2006-01-02 15:04:05"), endTime))
-	return now >= endTime
+	return now >= endTime, startTime, endTime
 }
 
 // getDailySalesOutboundRecords 获取当天销售出库记录
-func (t *DailySalesOutboundSummaryTask) getDailySalesOutboundRecords(companyUuid uint64) ([]*OutboundRecord, error) {
+func (t *DailySalesOutboundSummaryTask) getDailySalesOutboundRecords(companyUuid uint64, startTime int64, endTime int64) ([]*OutboundRecord, error) {
 	db := t.dbm.GetDB(companyUuid)
-
-	// 获取今天的开始和结束时间戳
-	now := time.Now()
-	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	todayEnd := todayStart.AddDate(0, 0, 1).Add(-time.Second)
 
 	// 使用 repository 方法查询出库单明细
 	saleOrderMaterialRepo := repository.NewSaleOrderMaterialRepo(db)
 	saleOrderMaterials, err := saleOrderMaterialRepo.GetSaleOrderMaterialByCreateTimeBetween(
-		todayStart.Unix(),
-		todayEnd.Unix(),
+		startTime,
+		endTime,
 	)
 	if err != nil {
 		return nil, err
