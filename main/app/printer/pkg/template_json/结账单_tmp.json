@@ -692,7 +692,7 @@
         [
             {
                 "group_block_id": "commodity",
-                "block_id": "title",
+                "block_id": "title_commodity",
                 "block_column_id": "column_commodity_name",
                 "block_type": "label",
                 "block_label": {
@@ -738,7 +738,7 @@
             },
             {
                 "group_block_id": "commodity",
-                "block_id": "title",
+                "block_id": "title_price_num",
                 "block_column_id": "column_price_num",
                 "block_type": "label",
                 "block_label": {
@@ -783,7 +783,7 @@
             },
             {
                 "group_block_id": "commodity",
-                "block_id": "title",
+                "block_id": "title_subtotal",
                 "block_column_id": "column_subtotal",
                 "block_type": "label",
                 "block_label": {
