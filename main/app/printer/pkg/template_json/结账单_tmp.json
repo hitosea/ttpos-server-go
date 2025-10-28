@@ -1388,6 +1388,16 @@
                                 "zh": "VAT ({tax_rate}%)",
                                 "zhtw": "VAT ({tax_rate}%)"
                             },
+                            "block_name": {
+                                "en": "VAT",
+                                "ja": "VAT",
+                                "ko": "VAT",
+                                "my": "VAT",
+                                "sv": "VAT",
+                                "tr": "VAT",
+                                "zh": "VAT",
+                                "zhtw": "VAT"
+                            },
                             "block_attr": {
                                 "font_size": 20,
                                 "align": "right",
@@ -2042,6 +2052,16 @@
                                 "zh": "VAT ({tax_rate}%)",
                                 "zhtw": "VAT ({tax_rate}%)"
                             },
+                            "block_name": {
+                                "en": "VAT",
+                                "ja": "VAT",
+                                "ko": "VAT",
+                                "my": "VAT",
+                                "sv": "VAT",
+                                "tr": "VAT",
+                                "zh": "VAT",
+                                "zhtw": "VAT"
+                            },
                             "block_attr": {
                                 "font_size": 20,
                                 "align": "left",
@@ -2068,7 +2088,16 @@
                                 "zh": "{total_price}(",
                                 "zhtw": "{total_price}("
                             },
-                            "block_name": null,
+                            "block_name": {
+                                "en": "VAT Amount",
+                                "ja": "VAT Amount",
+                                "ko": "VAT Amount",
+                                "my": "VAT Amount",
+                                "sv": "VAT Amount",
+                                "tr": "VAT Amount",
+                                "zh": "VAT Amount",
+                                "zhtw": "VAT Amount"
+                            },
                             "block_attr": {
                                 "font_size": 20,
                                 "align": "right",
