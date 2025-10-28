@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"fmt"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -78,6 +79,40 @@ func (h *Handler) InitShop(c *gin.Context) {
 		return
 	}
 	helper.Success(c, initShopResp)
+}
+
+// 更新总部供应商名称
+// @Summary 更新总部供应商名称
+// @Description 更新总部供应商名称
+// @Tags 平台端.商家授权
+// @Accept json
+// @Produce json
+// @Param update_headquarter_supplier_name_req body req.UpdateHeadquarterSupplierNameReq true "更新总部供应商名称请求"
+// @Success 200 {object} dto.Response
+// @Router /admin/erpnext/shop/update_headquarter_supplier_name [post]
+func (h *Handler) UpdateHeadquarterSupplierName(c *gin.Context) {
+	fmt.Println("------")
+	var updateReq req.UpdateHeadquarterSupplierNameReq
+	if err := c.ShouldBindJSON(&updateReq); err != nil {
+		helper.HandleValidationError(c, err, updateReq, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+
+	err := erp.NewIErpSrv(h.dbm).UpdateSupplier(ctx.GetContext(), req.UpdateSupplierReq{
+		CreateSupplierReq: req.CreateSupplierReq{
+			SiteCode:     updateReq.SiteCode,
+			CompanyAbbr:  updateReq.CompanyAbbr,
+			Branch:       updateReq.Branch,
+			SupplierName: updateReq.SupplierName,
+		},
+		Name: constant.ErpHeadquartersSupplierCode,
+	})
+	if err != nil {
+		helper.ErrorWithMessage(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, gin.H{})
 }
 
 // 支付方式列表
@@ -165,6 +200,7 @@ func RegisterHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.C
 	}
 	router.GET("/erpnext/site/company", middleware.Internal(), wrapper.GetErpnextSiteCompany)
 	router.POST("/erpnext/shop/init", middleware.Internal(), wrapper.InitShop)
+	router.POST("/erpnext/shop/update_headquarter_supplier_name", middleware.Internal(), wrapper.UpdateHeadquarterSupplierName)
 	router.POST("/erpnext/lianlian/payment/add", middleware.Internal(), wrapper.AddLianLianPayment)
 	router.GET("/erpnext/payment_method/list", middleware.Internal(), wrapper.GetPaymentMethodList)
 	router.POST("/erpnext/payment_method/add", middleware.Internal(), wrapper.AddPaymentMethod)

@@ -253,3 +253,10 @@ type GetErpSauceListReq struct {
 	Branch         string
 	SubCompanyAbbr string // 连锁子店公司简称
 }
+
+type UpdateHeadquarterSupplierNameReq struct {
+	SiteCode     string `json:"site_code" binding:"required"`
+	SupplierName string `json:"supplier_name" binding:"required"` // 总部供应商名称
+	CompanyAbbr  string `json:"company_abbr" binding:"required"`  // 公司缩写编码
+	Branch       string `json:"branch" binding:"required"`        // 分支
+}

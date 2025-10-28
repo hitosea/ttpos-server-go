@@ -17,6 +17,7 @@ use app\common\enum\order\OrderPayTypeEnum;
 use app\common\service\websocket\Websocket;
 use app\common\model\shop\User as ShopStaffModel;
 use app\admin\model\supplier\Supplier as SupplierModel;
+use help\HttpHelp;
 
 class App extends AppModel
 {
@@ -215,7 +216,7 @@ class App extends AppModel
             })
             ->when(!$configured, function ($q) {
                 return $q->where(function ($qq) {
-                    $qq->where('app.expire_time', '=', "0")->whereOr('app.expire_time', '>', time())->where('app.status', '=', 1); 
+                    $qq->where('app.expire_time', '=', "0")->whereOr('app.expire_time', '>', time())->where('app.status', '=', 1);
                 });
             })
             ->order(["su.create_time" => 'asc'])
@@ -334,7 +335,8 @@ class App extends AppModel
             if (($data['enable_sms'] ?? 0) == 0) {
                 $data['sms_quota'] = 0;
             }
-            SupplierModel::where('company_uuid', '=', $this['uuid'])->find()?->save($data);
+            $companySetting = SupplierModel::where('company_uuid', '=', $this['uuid'])->find();
+            $companySetting?->save($data);
 
             // 用户
             $shop_user->save($user_data);
@@ -350,6 +352,32 @@ class App extends AppModel
             // 会员设置 - 支付方式关联
             if (isset($data['is_open_member'])) {
                 (new PayType([], $companyUuid))->setAppId($companyUuid)->setStatus(PayType::BALANCE_VALUE, $data['is_open_member']);
+            }
+
+
+            // 修改总部供应商名称
+            if (
+                $this->is_enable_erp == 1 &&
+                !($companySetting->erpnext_site_code == "1" || $companySetting->erpnext_site_code == "") &&
+                $companySetting->erpnext_company_abbr == $companySetting->erpnext_headquarter_abbr
+            ) {
+                $res = HttpHelp::postRequest('http://nginx/api/v1/admin/erpnext/shop/update_headquarter_supplier_name', json_encode([
+                    'site_code' => $companySetting->erpnext_site_code,
+                    'company_abbr' => $companySetting->erpnext_company_abbr,
+                    'branch' => $companySetting->erpnext_branch_name,
+                    'supplier_name' => $data['name'],
+                ]), [
+                    'X-API-KEY: ' . env('JWT_SECRET'),
+                    'Accept-Language: ' . request()->header('language'),
+                ], 60);
+
+                if (!$res) {
+                    return $this->renderError('请求失败');
+                }
+                $res = json_decode($res, true);
+                if ($res['code'] != 0) {
+                    return $this->renderError($res['message']);
+                }
             }
 
             //

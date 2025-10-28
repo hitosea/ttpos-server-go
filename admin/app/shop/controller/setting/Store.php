@@ -2,6 +2,7 @@
 
 namespace app\shop\controller\setting;
 
+use help\HttpHelp;
 use help\ImgHelp;
 use help\DiskHelp;
 use app\shop\controller\Controller;
@@ -68,7 +69,7 @@ class Store extends Controller
         // 判断商家名称是否存在
         if (empty($data['logoUrl'])) {
             return $this->renderError('商城logo不能为空');
-        } 
+        }
         // 判断商家联系电话
         if (empty($data['phone'])) {
             return $this->renderError('联系电话不能为空');
@@ -112,6 +113,33 @@ class Store extends Controller
             'coordinates' => $data['coordinates'] ?? '',
         ];
         if ($model->edit(SettingEnum::STORE, $arr, $this->store['user']['shop_supplier_id'])) {
+            $company = $this->store['app'];
+            $companySetting = $this->store['app']['supplier'];
+ 
+            if (
+                $company->is_enable_erp == 1 &&
+                !($companySetting->erpnext_site_code == "1" || $companySetting->erpnext_site_code == "") &&
+                $companySetting->erpnext_company_abbr == $companySetting->erpnext_headquarter_abbr
+            ) {
+                $res = HttpHelp::postRequest('http://nginx/api/v1/admin/erpnext/shop/update_headquarter_supplier_name', json_encode([
+                    'site_code' => $companySetting->erpnext_site_code,
+                    'company_abbr' => $companySetting->erpnext_company_abbr,
+                    'branch' => $companySetting->erpnext_branch_name,
+                    'supplier_name' => $data['name'],
+                ]), [
+                    'X-API-KEY: ' . env('JWT_SECRET'),
+                    'Accept-Language: ' . request()->header('language'),
+                ], 60);
+
+                if (!$res) {
+                    return $this->renderError('请求失败');
+                }
+                $res = json_decode($res, true);
+                if ($res['code'] != 0) {
+                    return $this->renderError($res['message']);
+                }
+            }
+
             return $this->renderSuccess('操作成功');
         }
         return $this->renderError($model->getError() ?: '操作失败');
