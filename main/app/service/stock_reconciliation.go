@@ -614,6 +614,16 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 		return disabledMaterials, errors.New("请修改物品状态")
 	}
 
+	// 获取仓库Uuid获取仓库物品信息列表
+	warehouseItems, err := repository.NewWarehouseItemRepo(db).GetByWarehouseUuid(stockReconciliation.WarehouseUuid)
+	if err != nil {
+		return disabledMaterials, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
+	}
+	warehouseMaterialUuids := make(map[uint64]struct{})
+	for _, item := range warehouseItems {
+		warehouseMaterialUuids[item.MaterialUuid] = struct{}{}
+	}
+
 	// 开启事务
 	return nil, db.Transaction(func(tx *gorm.DB) error {
 		stockReconciliationRepo := repository.NewStockReconciliationRepo(tx)
@@ -641,10 +651,25 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 				}
 				continue
 			}
-			// 更新仓库物品库存为实盘数量
-			tx.Model(&model.WarehouseItem{}).
-				Where("warehouse_uuid = ?", stockReconciliation.WarehouseUuid).
-				Where("material_uuid = ?", item.MaterialUuid).Update("stock", item.CountedQuantity.Truncate(3).InexactFloat64())
+			stockQuantity := item.CountedQuantity.Truncate(3).InexactFloat64()
+			_, exists := warehouseMaterialUuids[item.MaterialUuid]
+			if !exists { // 仓库不存在该物品，则新增仓库物品，库存数量为实盘数量
+				if err := tx.Create(&model.WarehouseItem{
+					WarehouseUuid: stockReconciliation.WarehouseUuid,
+					MaterialUuid:  item.MaterialUuid,
+					MaterialCode:  item.Material.Code,
+					Stock:         stockQuantity,
+					Valuation:     1.0, // 和同步仓库物品库存一致
+				}).Error; err != nil {
+					return errors.WithMessage(errors.New("创建仓库物品失败"), err.Error())
+				}
+			} else { // 仓库存在该物品，则更新仓库物品库存为实盘数量
+				if err := tx.Model(&model.WarehouseItem{}).
+					Where("warehouse_uuid = ?", stockReconciliation.WarehouseUuid).
+					Where("material_uuid = ?", item.MaterialUuid).Update("stock", stockQuantity).Error; err != nil {
+					return errors.WithMessage(errors.New("更新仓库物品库存失败"), err.Error())
+				}
+			}
 
 			scene := constant.WarehouseInOutLogSceneProfitIn        // 盘盈
 			logType := constant.WarehouseInOutLogLogTypeIn          // 入库
@@ -805,13 +830,9 @@ func (s *stockReconciliationSrv) validateWarehouseAndItems(db *gorm.DB, req req.
 		return nil, nil, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
 	}
 
-	if len(warehouseItems) == 0 {
-		return nil, nil, errors.New("仓库无物品")
-	}
-
 	// 获取所有物品UUID
-	materialUuids := make([]uint64, 0, len(warehouseItems))
-	for _, item := range warehouseItems {
+	materialUuids := make([]uint64, 0, len(req.Items))
+	for _, item := range req.Items {
 		materialUuids = append(materialUuids, item.MaterialUuid)
 	}
 
