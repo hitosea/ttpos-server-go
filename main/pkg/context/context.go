@@ -62,6 +62,7 @@ type Context interface {
 	SetCompanyUuid(uuid uint64)                            // 设置商家ID
 	SetCompanySetting(companySetting model.CompanySetting) // 设置商家设置
 	SetCompany(company model.Company)                      // 设置商家
+	SetLog(log *zap.Logger)                                // 设置日志
 	GetDB() *gorm.DB                                       // 获取gorm.DB
 
 	// 锁相关
@@ -366,6 +367,10 @@ func (c *ContextImpl) SetDB(tx *gorm.DB) {
 
 func (c *ContextImpl) SetCompanyUuid(uuid uint64) {
 	c.companyUuid = uuid
+}
+
+func (c *ContextImpl) SetLog(log *zap.Logger) {
+	c.log = log
 }
 
 func (c *ContextImpl) SetCompany(company model.Company) {

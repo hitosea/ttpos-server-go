@@ -13,6 +13,7 @@ type Material struct {
 	InternalCode     string             `json:"internal_code"`      // 内部编码
 	BarcodeValue     string             `json:"barcode_value"`      // 条形码值
 	Num              float64            `json:"num"`                // 库存数量
+	SafetyStock      *float64           `json:"safety_stock"`       // 安全库存数量
 	AvailableNum     float64            `json:"available_num"`      // 可用库存数量
 	TransitNum       float64            `json:"transit_num"`        // 在途库存数量
 	CategoryUuid     uint64             `json:"category_uuid"`      // 分类UUID
@@ -48,6 +49,7 @@ type MaterialDetailResp struct {
 	Valuation              float64              `json:"valuation"`                 // 估值率
 	BarcodeValue           string               `json:"barcode_value"`             // 条形码值
 	InternalCode           string               `json:"internal_code"`             // 内部编码
+	SafetyStock            *float64             `json:"safety_stock"`              // 安全库存数量
 	UnitName               string               `json:"unit_name"`                 // 单位名称
 	UnitUuid               uint64               `json:"unit_uuid"`                 // 单位UUID
 	FromUnitUuid           uint64               `json:"from_unit_uuid"`            // 来源单位UUID

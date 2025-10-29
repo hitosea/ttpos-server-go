@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"ttpos-bmp/app/ttpos-erp/api/manufacturing"
 	"ttpos-server-go/app/constant"
@@ -91,6 +92,8 @@ type IMaterialSrv interface {
 	SyncProductBomCard(ctx context.Context) error   // 同步成本卡
 
 	GetWarehouseItemConsumption(ctx context.Context, warehouseUuid uint64) (material_resp.MaterialConsumptionListResp, error) // 获取仓库物品消耗量
+
+	CheckMaterialSafetyStock(ctx context.Context, companyUuid uint64) error // 检查物品安全库存
 }
 
 type materialSrv struct {
@@ -265,6 +268,7 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 			InternalCode: material.InternalCode,
 			BarcodeValue: material.BarcodeValue,
 			Num:          num.Add(availableNum).Add(transitNum).InexactFloat64(),
+			SafetyStock:  material.SafetyStock,
 			AvailableNum: availableNum.InexactFloat64(),
 			TransitNum:   transitNum.InexactFloat64(),
 			CategoryUuid: material.CategoryUuid,
@@ -388,6 +392,7 @@ func (s *materialSrv) GetMaterialDetail(ctx context.Context, req req.MaterialDet
 		Valuation:              material.Valuation,
 		BarcodeValue:           material.BarcodeValue,
 		InternalCode:           material.InternalCode,
+		SafetyStock:            material.SafetyStock,
 		UnitName:               material.Unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
 		UnitUuid:               material.UnitUuid,
 		FromUnitUuid:           fromUnitUuid,
@@ -810,6 +815,7 @@ func addMaterial(ctx context.Context, tx *gorm.DB, settingSrv setting.ISrv, requ
 		BarcodeValue:          request.BarcodeValue,
 		PurchaseUnitUuid:      unitMap[request.PurchaseUnitUuid],
 		CostUnitUuid:          unitMap[request.CostUnitUuid],
+		SafetyStock:           request.SafetyStock,
 		Status: func() bool {
 			if request.Status == 1 {
 				return true
@@ -1020,6 +1026,7 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 			Valuation:    request.Valuation,
 			BarcodeValue: request.BarcodeValue,
 			InternalCode: request.InternalCode,
+			SafetyStock:  request.SafetyStock,
 			PurchaseUnitUuid: func() uint64 {
 				// 如果选择了已经存在的单位，则使用已存在的单位
 				if _, ok := notBaseUnitList[request.PurchaseUnitUuid]; ok {
@@ -3506,4 +3513,162 @@ func (s *materialSrv) GetWarehouseItemConsumption(ctx context.Context, warehouse
 	return material_resp.MaterialConsumptionListResp{
 		List: materialConsumptionList,
 	}, nil
+}
+
+func (s *materialSrv) CheckMaterialSafetyStock(ctx context.Context, companyUuid uint64) error {
+	// 加锁，当前方法执行完才能再次调用
+	lockKey := fmt.Sprintf("check_material_safety_stock_%d", companyUuid)
+	s.systemLock.LockUuidString(lockKey)
+	defer s.systemLock.UnlockUuidString(lockKey)
+
+	var companyUuids []uint64
+	if companyUuid == 0 {
+		s.dbm.GetDB(0).Model(&model.Company{}).Scopes(repository.NotDeleted).Pluck("uuid", &companyUuids)
+	} else {
+		companyUuids = append(companyUuids, companyUuid)
+	}
+
+	// 使用带缓冲的channel控制并发数量，最多10个协程
+	maxConcurrent := 10
+	semaphore := make(chan struct{}, maxConcurrent)
+	var wg sync.WaitGroup
+
+	// 用于收集错误
+	errChan := make(chan error, len(companyUuids))
+
+	// 分批处理每个公司的安全库存检查
+	for _, cid := range companyUuids {
+		wg.Add(1)
+		go func(companyId uint64) {
+			defer wg.Done()
+
+			// 获取信号量，控制并发数
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+
+			// 获取Context副本用于协程
+			ctxCopy := ctx.Copy()
+
+			// 处理单个公司的安全库存检查
+			if err := s.checkCompanySafetyStock(ctxCopy, companyId); err != nil {
+				errChan <- err
+			}
+		}(cid)
+	}
+
+	// 等待所有协程完成
+	wg.Wait()
+	close(errChan)
+
+	// 收集所有错误
+	var errs []error
+	for err := range errChan {
+		errs = append(errs, err)
+	}
+
+	if len(errs) > 0 {
+		// 返回第一个错误（或者可以返回所有错误的组合）
+		return errs[0]
+	}
+
+	return nil
+}
+
+// checkCompanySafetyStock 检查单个公司的物料安全库存
+func (s *materialSrv) checkCompanySafetyStock(ctx context.Context, companyUuid uint64) error {
+	// 设置上下文信息
+	ctx.SetCompanyUuid(companyUuid)
+	ctx.SetLog(logger.Logger)
+
+	// 获取公司默认语言
+	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(companyUuid))
+	companySetting := companySettingRepo.Get()
+	defaultLanguage := companySetting.GetDefaultLanguage()
+
+	// 检查是否有safety_stock不为空的物品
+	materialRepo := repository.NewMaterialRepo(s.dbm.GetDB(companyUuid))
+	materialList := materialRepo.GetMaterialList(repository.NotDeleted, materialRepo.WithMultiLanguageName(), func(db *gorm.DB) *gorm.DB {
+		return db.Where("safety_stock IS NOT NULL")
+	})
+	if len(materialList) == 0 {
+		return nil
+	}
+
+	// 获取业务设置
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return errors.WithMessage(err, "获取业务设置失败")
+	}
+
+	// 提取物料UUID列表
+	var materialUuids []uint64
+	for _, material := range materialList {
+		materialUuids = append(materialUuids, material.Uuid)
+	}
+
+	// 创建仓库物品repository
+	warehouseItemRepo := repository.NewWarehouseItemRepo(s.dbm.GetDB(companyUuid))
+
+	if businessSetting.SafetyStockType == "1" { // 门店纬度
+		// 获取所有物料在非在途仓库中的总库存
+		stockMap, err := warehouseItemRepo.GetMaterialStockInNormalWarehouses(materialUuids)
+		if err != nil {
+			return errors.WithMessage(err, "查询物料库存失败")
+		}
+
+		// 检查每个物料的库存是否低于安全库存
+		for _, material := range materialList {
+			totalStock := stockMap[material.Uuid] // 如果没有记录，默认为0
+			if material.SafetyStock != nil && totalStock < *material.SafetyStock {
+				// 库存低于安全库存，记录日志
+				logger.Logger.Warn("物料库存低于安全库存",
+					zap.Uint64("company_uuid", companyUuid),
+					zap.Uint64("material_uuid", material.Uuid),
+					zap.String("material_name", material.MultiLanguageName.GetNameByLang(defaultLanguage)),
+					zap.Float64("current_stock", totalStock),
+					zap.Float64("safety_stock", *material.SafetyStock),
+				)
+
+				// TODO: 可以在这里添加其他处理，如发送通知、创建预警等
+			}
+		}
+
+	} else if businessSetting.SafetyStockType == "2" { // 仓库纬度
+		// 获取所有物料在各个仓库中的库存
+		stockResults, err := warehouseItemRepo.GetMaterialStockByWarehouse(materialUuids)
+		if err != nil {
+			return errors.WithMessage(err, "查询物料仓库库存失败")
+		}
+
+		// 将结果转换为 map[物料UUID]map[仓库UUID]库存
+		stockByWarehouseMap := make(map[uint64]map[uint64]float64)
+		for _, result := range stockResults {
+			if _, exists := stockByWarehouseMap[result.MaterialUuid]; !exists {
+				stockByWarehouseMap[result.MaterialUuid] = make(map[uint64]float64)
+			}
+			stockByWarehouseMap[result.MaterialUuid][result.WarehouseUuid] = result.Stock
+		}
+
+		// 检查每个物料在每个仓库的库存是否低于安全库存
+		for _, material := range materialList {
+			warehouseStocks := stockByWarehouseMap[material.Uuid]
+			for warehouseUuid, stock := range warehouseStocks {
+				if material.SafetyStock != nil && stock < *material.SafetyStock {
+					// 库存低于安全库存，记录日志
+					logger.Logger.Warn("物料仓库库存低于安全库存",
+						zap.Uint64("company_uuid", companyUuid),
+						zap.Uint64("material_uuid", material.Uuid),
+						zap.String("material_name", material.MultiLanguageName.GetNameByLang(defaultLanguage)),
+						zap.Uint64("warehouse_uuid", warehouseUuid),
+						zap.Float64("current_stock", stock),
+						zap.Float64("safety_stock", *material.SafetyStock),
+					)
+
+					// TODO: 可以在这里添加其他处理，如发送通知、创建预警等
+				}
+			}
+		}
+	}
+
+	return nil
 }

@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/queue"
 	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/app/tasks"
 	"ttpos-server-go/config"
 	"ttpos-server-go/docs"
@@ -36,6 +37,8 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"
+
+	pkgCtx "ttpos-server-go/pkg/context"
 )
 
 var rootCommand = &cobra.Command{
@@ -221,6 +224,14 @@ func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 	_, _ = c.AddFunc("0 * * * * *", func() {
 		logger.Logger.Info("开始执行翻译任务")
 		service.NewTranslateSrv(dbm, cache).TranslateAll()
+	})
+
+	// 每分钟执行检查物品库存任务
+	_, _ = c.AddFunc("0 * * * * *", func() {
+		logger.Logger.Info("开始执行检查物品库存任务")
+		settingSrv := setting.NewSrv(dbm, cache)
+		translateSrv := service.NewTranslateSrv(dbm, cache)
+		service.NewMaterialSrv(dbm, service.NewLocaleSrv(), settingSrv, translateSrv).CheckMaterialSafetyStock(pkgCtx.NewDefaultContext(), 0)
 	})
 
 	// 启动定时器
