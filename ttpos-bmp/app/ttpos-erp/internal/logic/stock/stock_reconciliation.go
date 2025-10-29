@@ -266,7 +266,11 @@ func (s *sStock) SubmitStockReconciliation(ctx context.Context, req *stock.Submi
 	if len(req.StockReconciliationName) == 0 {
 		return nil, gerror.New("库存盘点单号不能为空")
 	}
-
+	if req.StockReconciliationName == consts.DefaultStockReconciliationName {
+		return &stock.SubmitStockReconciliationResp{
+			Message: "库存盘点使用默认单据号提交成功",
+		}, nil
+	}
 	// 提交库存盘点单据
 	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeStockReconciliation, req.StockReconciliationName, erp.DocstatusSubmitted)
 	if err != nil {
