@@ -176,8 +176,7 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 		return detailResp, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
 	}
 
-	// 查询物品单位明细
-	materialRepo := repository.NewMaterialRepo(db)
+	// 物品单位明细
 	itemsResp := make([]*resp.StockReconciliationItemInfo, 0, len(stockReconciliation.StockReconciliationItems))
 	for _, item := range stockReconciliation.StockReconciliationItems {
 		// 明细中的物品已删除，跳过
@@ -193,12 +192,11 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 		itemInfo.CountedQuantity = item.CountedQuantity.InexactFloat64()
 
 		// 查询物品信息
-		material, _ := materialRepo.GetMaterialByUuid(item.MaterialUuid)
-		if material.Uuid > 0 {
-			itemInfo.LocaleName = *language.JsonToLocaleResponse(material.Name)
-			itemInfo.MaterialCode = material.Code
-			itemInfo.InternalCode = material.InternalCode
-			itemInfo.MaterialBarcode = material.BarcodeValue
+		if item.Material != nil {
+			itemInfo.LocaleName = *language.JsonToLocaleResponse(item.Material.Name)
+			itemInfo.MaterialCode = item.Material.Code
+			itemInfo.InternalCode = item.Material.InternalCode
+			itemInfo.MaterialBarcode = item.Material.BarcodeValue
 		}
 
 		itemInfo.Units = make([]resp.MaterialUnitInfo, 0)
