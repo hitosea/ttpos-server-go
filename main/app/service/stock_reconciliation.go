@@ -149,6 +149,7 @@ func (s *stockReconciliationSrv) getBookedQuantityMap(db *gorm.DB, warehouseUuid
 func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Context, req req.StockReconciliationDetailReq) (resp.StockReconciliationDetailResp, error) {
 	db := ctx.GetDB()
 	stockReconciliationRepo := repository.NewStockReconciliationRepo(db)
+	var detailResp resp.StockReconciliationDetailResp
 
 	opts := []repository.DBOption{
 		stockReconciliationRepo.WhereUuid(req.Uuid),
@@ -158,22 +159,21 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 	// 查询盘点单
 	stockReconciliation, err := stockReconciliationRepo.GetStockReconciliation(opts...)
 	if err != nil {
-		return resp.StockReconciliationDetailResp{}, errors.WithMessage(err, "查询盘点单失败")
+		return detailResp, errors.WithMessage(err, "查询盘点单失败")
 	}
 	if stockReconciliation == nil {
-		return resp.StockReconciliationDetailResp{}, errors.New("盘点单不存在")
+		return detailResp, errors.New("盘点单不存在")
 	}
 
 	// 转换响应数据
-	var detailResp resp.StockReconciliationDetailResp
 	if err := copier.Copy(&detailResp, stockReconciliation); err != nil {
-		return resp.StockReconciliationDetailResp{}, errors.WithMessage(err, "转换盘点单数据失败")
+		return detailResp, errors.WithMessage(err, "转换盘点单数据失败")
 	}
 	detailResp.WarehouseName = stockReconciliation.Warehouse.MultiLanguageName.GetNames()
 
 	bookedQuantityMap, err := s.getBookedQuantityMap(db, stockReconciliation.WarehouseUuid)
 	if err != nil {
-		return resp.StockReconciliationDetailResp{}, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
+		return detailResp, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
 	}
 
 	// 查询物品单位明细
@@ -198,6 +198,7 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 			itemInfo.LocaleName = *language.JsonToLocaleResponse(material.Name)
 			itemInfo.MaterialCode = material.Code
 			itemInfo.InternalCode = material.InternalCode
+			itemInfo.MaterialBarcode = material.BarcodeValue
 		}
 
 		itemInfo.Units = make([]resp.MaterialUnitInfo, 0)
