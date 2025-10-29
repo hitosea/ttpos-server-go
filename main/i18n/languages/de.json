@@ -2056,6 +2056,7 @@
   "提交申请": "Antrag einreichen",
   "提交盘点单失败": "Übermittlung des Inventarformulars fehlgeschlagen",
   "提交盘点单时移除已关闭物品失败": "Entfernen geschlossener Artikel beim Übermitteln des Inventarformulars fehlgeschlagen",
+  "提交盘点单时移除待盘点物品失败": "Entfernen der zu inventarisierenden Artikel beim Einreichen des Inventarblatts fehlgeschlagen",
   "提交盘点单请求参数": "Parameter für Inventaranfrage einreichen",
   "提交订单检查不通过": "Bestellüberprüfung beim Absenden fehlgeschlagen",
   "提交采购订单请求参数": "Bestellanforderungsparameter übermitteln",

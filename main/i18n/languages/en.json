@@ -2056,6 +2056,7 @@
   "提交申请": "Submit application",
   "提交盘点单失败": "Failed to submit inventory form",
   "提交盘点单时移除已关闭物品失败": "Failed to remove closed items when submitting inventory form",
+  "提交盘点单时移除待盘点物品失败": "Failed to remove items pending inventory when submitting the inventory sheet",
   "提交盘点单请求参数": "Submit inventory sheet request parameter",
   "提交订单检查不通过": "Order submission check failed",
   "提交采购订单请求参数": "Submit purchase order request parameters",
