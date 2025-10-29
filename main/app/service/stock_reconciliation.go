@@ -2,7 +2,9 @@ package service
 
 import (
 	"fmt"
+	"regexp"
 	"slices"
+	"strings"
 	"time"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-server-go/app/constant"
@@ -13,6 +15,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/rpc/erp"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/language"
@@ -448,7 +451,7 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 
 	opts := []repository.DBOption{
 		stockReconciliationRepo.WhereUuid(stockReconciliationUuid),
-		stockReconciliationRepo.WithStockReconciliationItems(),
+		stockReconciliationRepo.WithStockReconciliationItemsMultiLanguageName(),
 		stockReconciliationRepo.WithWarehouse(),
 	}
 	stockReconciliation, err := stockReconciliationRepo.GetStockReconciliation(opts...)
@@ -522,6 +525,18 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 		Items:       erpItems,
 	})
 	if err != nil {
+		// 提取物品名称
+		itemName := s.extractName("Item", "is disabled", err.Error())
+		for _, item := range stockReconciliation.StockReconciliationItems {
+			if item.Material.Code == itemName {
+				materialName := item.Material.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+				message := i18n.Translate(ctx.GetLanguage(), "物品%s状态已关闭，请修改物品状态", materialName)
+				return errors.New(message)
+			}
+		}
+		if itemName != "" {
+			return errors.New(i18n.Translate(ctx.GetLanguage(), "物品%s状态已关闭，请修改物品状态"), itemName)
+		}
 		return errors.WithMessage(errors.New("提交盘点单失败"), err.Error())
 	}
 	// 更新盘点单erp_code和提交时间
@@ -985,4 +1000,33 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 	return resp.StockReconciliationCheckMaterialsListResp{
 		List: itemResp,
 	}, nil
+}
+
+// extractName 从错误信息中提取物品名称
+func (s *stockReconciliationSrv) extractName(name, after, errorMsg string) string {
+	// 转义正则表达式中的特殊字符
+	escapedName := regexp.QuoteMeta(name)
+	escapedAfter := regexp.QuoteMeta(after)
+	// 使用正则表达式匹配，支持HTML标签和普通文本
+	var re *regexp.Regexp
+	if strings.Contains(name, "<") || strings.Contains(after, "<") {
+		// HTML标签模式：不要求空格分隔
+		re = regexp.MustCompile(escapedName + `(.+?)` + escapedAfter)
+	} else {
+		// 普通文本模式：要求空格分隔
+		re = regexp.MustCompile(escapedName + `\s+(.+?)\s+` + escapedAfter)
+	}
+	matches := re.FindStringSubmatch(errorMsg)
+	if len(matches) > 1 {
+		supplierInfo := strings.TrimSpace(matches[1])
+		// 如果包含编码#名称格式，提取名称部分
+		if strings.Contains(supplierInfo, "#") {
+			parts := strings.SplitN(supplierInfo, "#", 2)
+			if len(parts) == 2 {
+				return parts[1] // 返回物品erp_code
+			}
+		}
+		return supplierInfo
+	}
+	return ""
 }
