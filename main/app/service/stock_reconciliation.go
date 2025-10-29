@@ -971,7 +971,7 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 
 			itemResp = append(itemResp, resp.StockReconciliationCheckMaterialsResp{
 				LocaleName:                 item.Material.MultiLanguageName.GetNames(),
-				IsInventoryStatusException: s.getIsInventoryStatusException(bookedQuantity, item.CountedQuantity),
+				IsInventoryStatusException: unitCount > 0 && s.getIsInventoryStatusException(bookedQuantity, item.CountedQuantity),
 				Status:                     item.Material.Status,
 				IsDeleted:                  item.Material.DeleteTime > 0,
 				UnitCount:                  unitCount,
