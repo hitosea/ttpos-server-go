@@ -46308,6 +46308,10 @@ const docTemplate = `{
                     "description": "创建时间",
                     "type": "integer"
                 },
+                "diff_quantity": {
+                    "description": "盈亏差值数量",
+                    "type": "number"
+                },
                 "internal_code": {
                     "description": "内部编码",
                     "type": "string"

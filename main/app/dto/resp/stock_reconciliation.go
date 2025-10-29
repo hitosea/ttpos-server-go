@@ -42,6 +42,7 @@ type StockReconciliationDetailResp struct {
 // StockReconciliationItemInfo 盘点单物品明细信息
 type StockReconciliationItemInfo struct {
 	MaterialUuid               uint64                             `json:"material_uuid"`                 // 物品UUID
+	MaterialBarcode            string                             `json:"material_barcode"`              // 物品条码
 	InternalCode               string                             `json:"internal_code"`                 // 内部编码
 	MaterialCode               string                             `json:"material_code"`                 // 物品编码
 	LocaleName                 dto.LocaleResponse                 `json:"locale_name"`                   // 物品名称
@@ -51,6 +52,7 @@ type StockReconciliationItemInfo struct {
 	Units                      []MaterialUnitInfo                 `json:"units"`                         // 所有单位（包含基准单位）
 	CreateTime                 int                                `json:"create_time"`                   // 创建时间
 	InventoryStatus            int                                `json:"inventory_status"`              // 库存状态 1-盘盈 2-盘亏 3-正常
+	DiffQuantity               float64                            `json:"diff_quantity"`                 // 盈亏差值数量
 	IsInventoryStatusException bool                               `json:"is_inventory_status_exception"` // 是否盘盈盘亏异常（差值大于20%）
 }
 

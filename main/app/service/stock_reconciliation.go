@@ -2,7 +2,9 @@ package service
 
 import (
 	"fmt"
+	"regexp"
 	"slices"
+	"strings"
 	"time"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-server-go/app/constant"
@@ -13,6 +15,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/rpc/erp"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/language"
@@ -115,10 +118,6 @@ func (s *stockReconciliationSrv) GetStockReconciliationList(ctx context.Context,
 		}
 		info.WarehouseLocaleName = item.Warehouse.MultiLanguageName.GetNames()
 		info.ItemsCount = itemsCountMap[item.Uuid]
-		// 如果提交时间为0，则返回当前时间戳
-		if info.SubmitTime == 0 {
-			info.SubmitTime = int(time.Now().Unix())
-		}
 		listResp = append(listResp, info)
 	}
 
@@ -150,6 +149,7 @@ func (s *stockReconciliationSrv) getBookedQuantityMap(db *gorm.DB, warehouseUuid
 func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Context, req req.StockReconciliationDetailReq) (resp.StockReconciliationDetailResp, error) {
 	db := ctx.GetDB()
 	stockReconciliationRepo := repository.NewStockReconciliationRepo(db)
+	var detailResp resp.StockReconciliationDetailResp
 
 	opts := []repository.DBOption{
 		stockReconciliationRepo.WhereUuid(req.Uuid),
@@ -159,26 +159,24 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 	// 查询盘点单
 	stockReconciliation, err := stockReconciliationRepo.GetStockReconciliation(opts...)
 	if err != nil {
-		return resp.StockReconciliationDetailResp{}, errors.WithMessage(err, "查询盘点单失败")
+		return detailResp, errors.WithMessage(err, "查询盘点单失败")
 	}
 	if stockReconciliation == nil {
-		return resp.StockReconciliationDetailResp{}, errors.New("盘点单不存在")
+		return detailResp, errors.New("盘点单不存在")
 	}
 
 	// 转换响应数据
-	var detailResp resp.StockReconciliationDetailResp
 	if err := copier.Copy(&detailResp, stockReconciliation); err != nil {
-		return resp.StockReconciliationDetailResp{}, errors.WithMessage(err, "转换盘点单数据失败")
+		return detailResp, errors.WithMessage(err, "转换盘点单数据失败")
 	}
 	detailResp.WarehouseName = stockReconciliation.Warehouse.MultiLanguageName.GetNames()
 
 	bookedQuantityMap, err := s.getBookedQuantityMap(db, stockReconciliation.WarehouseUuid)
 	if err != nil {
-		return resp.StockReconciliationDetailResp{}, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
+		return detailResp, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
 	}
 
-	// 查询物品单位明细
-	materialRepo := repository.NewMaterialRepo(db)
+	// 物品单位明细
 	itemsResp := make([]*resp.StockReconciliationItemInfo, 0, len(stockReconciliation.StockReconciliationItems))
 	for _, item := range stockReconciliation.StockReconciliationItems {
 		// 明细中的物品已删除，跳过
@@ -194,11 +192,11 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 		itemInfo.CountedQuantity = item.CountedQuantity.InexactFloat64()
 
 		// 查询物品信息
-		material, _ := materialRepo.GetMaterialByUuid(item.MaterialUuid)
-		if material.Uuid > 0 {
-			itemInfo.LocaleName = *language.JsonToLocaleResponse(material.Name)
-			itemInfo.MaterialCode = material.Code
-			itemInfo.InternalCode = material.InternalCode
+		if item.Material != nil {
+			itemInfo.LocaleName = *language.JsonToLocaleResponse(item.Material.Name)
+			itemInfo.MaterialCode = item.Material.Code
+			itemInfo.InternalCode = item.Material.InternalCode
+			itemInfo.MaterialBarcode = item.Material.BarcodeValue
 		}
 
 		itemInfo.Units = make([]resp.MaterialUnitInfo, 0)
@@ -219,7 +217,8 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 		if err == nil && len(itemUnits) > 0 {
 			unitsResp := make([]*resp.StockReconciliationItemUnitInfo, 0, len(itemUnits))
 			for _, itemUnit := range itemUnits {
-				if itemUnit.MaterialUnit == nil || itemUnit.MaterialUnit.Unit == nil || itemUnit.MaterialUnit.Unit.MultiLanguageName.Uuid == 0 {
+				if itemUnit.MaterialUnit == nil || itemUnit.MaterialUnit.Unit == nil || itemUnit.MaterialUnit.Unit.MultiLanguageName.Uuid == 0 ||
+					itemUnit.Quantity == nil {
 					continue
 				}
 				unitInfo := &resp.StockReconciliationItemUnitInfo{}
@@ -253,7 +252,7 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 		}
 		// 是否盘盈盘亏异常（账面和实盘数量差值的绝对值大于20%）
 		itemInfo.IsInventoryStatusException = s.getIsInventoryStatusException(bookedQuantity, item.CountedQuantity)
-
+		itemInfo.DiffQuantity = item.CountedQuantity.Sub(bookedQuantity).Truncate(3).InexactFloat64()
 		itemsResp = append(itemsResp, itemInfo)
 	}
 	detailResp.Items = itemsResp
@@ -448,7 +447,7 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 
 	opts := []repository.DBOption{
 		stockReconciliationRepo.WhereUuid(stockReconciliationUuid),
-		stockReconciliationRepo.WithStockReconciliationItems(),
+		stockReconciliationRepo.WithStockReconciliationItemsMultiLanguageName(),
 		stockReconciliationRepo.WithWarehouse(),
 	}
 	stockReconciliation, err := stockReconciliationRepo.GetStockReconciliation(opts...)
@@ -522,6 +521,18 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 		Items:       erpItems,
 	})
 	if err != nil {
+		// 提取物品名称
+		itemName := s.extractName("Item", "is disabled", err.Error())
+		for _, item := range stockReconciliation.StockReconciliationItems {
+			if item.Material.Code == itemName {
+				materialName := item.Material.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+				message := i18n.Translate(ctx.GetLanguage(), "物品%s状态已关闭，请修改物品状态", materialName)
+				return errors.New(message)
+			}
+		}
+		if itemName != "" {
+			return errors.New(i18n.Translate(ctx.GetLanguage(), "物品%s状态已关闭，请修改物品状态"), itemName)
+		}
 		return errors.WithMessage(errors.New("提交盘点单失败"), err.Error())
 	}
 	// 更新盘点单erp_code和提交时间
@@ -671,26 +682,29 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 				}
 			}
 
-			scene := constant.WarehouseInOutLogSceneProfitIn        // 盘盈
-			logType := constant.WarehouseInOutLogLogTypeIn          // 入库
-			if item.CountedQuantity.LessThan(item.BookedQuantity) { // 盘亏出库
-				logType = constant.WarehouseInOutLogLogTypeOut
-				scene = constant.WarehouseInOutLogSceneLossOut
+			// 有盈亏才记录日志
+			if !item.CountedQuantity.Equal(item.BookedQuantity) {
+				scene := constant.WarehouseInOutLogSceneProfitIn        // 盘盈
+				logType := constant.WarehouseInOutLogLogTypeIn          // 入库
+				if item.CountedQuantity.LessThan(item.BookedQuantity) { // 盘亏出库
+					logType = constant.WarehouseInOutLogLogTypeOut
+					scene = constant.WarehouseInOutLogSceneLossOut
+				}
+				diff := item.CountedQuantity.Sub(item.BookedQuantity).Abs()
+				warehouseLogs = append(warehouseLogs, &model.WarehouseInOutLog{
+					LogType:              logType,
+					Scene:                scene,
+					WarehouseUuid:        stockReconciliation.WarehouseUuid,
+					MaterialUuid:         item.MaterialUuid,
+					MaterialName:         item.MaterialName,
+					MaterialBaseUnitUuid: material.Unit.Uuid, // 基准单位
+					MaterialBaseUnitName: material.Unit.Name, // 基准单位名称
+					Num:                  diff.Truncate(3).InexactFloat64(),
+					Price:                material.Valuation,
+					Amount:               decimal.NewFromFloat(material.Valuation).Mul(diff).Truncate(3).InexactFloat64(),
+					OrderNo:              stockReconciliation.OrderNo,
+				})
 			}
-			diff := item.CountedQuantity.Sub(item.BookedQuantity).Abs()
-			warehouseLogs = append(warehouseLogs, &model.WarehouseInOutLog{
-				LogType:              logType,
-				Scene:                scene,
-				WarehouseUuid:        stockReconciliation.WarehouseUuid,
-				MaterialUuid:         item.MaterialUuid,
-				MaterialName:         item.MaterialName,
-				MaterialBaseUnitUuid: material.Unit.Uuid, // 基准单位
-				MaterialBaseUnitName: material.Unit.Name, // 基准单位名称
-				Num:                  diff.Truncate(3).InexactFloat64(),
-				Price:                material.Valuation,
-				Amount:               decimal.NewFromFloat(material.Valuation).Mul(diff).Truncate(3).InexactFloat64(),
-				OrderNo:              stockReconciliation.OrderNo,
-			})
 		}
 		if len(warehouseLogs) > 0 {
 			if err := tx.Create(&warehouseLogs).Error; err != nil {
@@ -913,8 +927,12 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 			return listResp, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
 		}
 
+		limitedMaterialUuids := make([]uint64, 0)
+		for _, item := range checkReq.Items {
+			limitedMaterialUuids = append(limitedMaterialUuids, item.MaterialUuid)
+		}
 		for _, item := range stockReconciliation.StockReconciliationItems {
-			if item.DeleteTime > 0 {
+			if item.DeleteTime > 0 || (len(limitedMaterialUuids) > 0 && !slices.Contains(limitedMaterialUuids, item.MaterialUuid)) {
 				continue
 			}
 			materialUuids = append(materialUuids, item.MaterialUuid)
@@ -978,4 +996,33 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 	return resp.StockReconciliationCheckMaterialsListResp{
 		List: itemResp,
 	}, nil
+}
+
+// extractName 从错误信息中提取物品名称
+func (s *stockReconciliationSrv) extractName(name, after, errorMsg string) string {
+	// 转义正则表达式中的特殊字符
+	escapedName := regexp.QuoteMeta(name)
+	escapedAfter := regexp.QuoteMeta(after)
+	// 使用正则表达式匹配，支持HTML标签和普通文本
+	var re *regexp.Regexp
+	if strings.Contains(name, "<") || strings.Contains(after, "<") {
+		// HTML标签模式：不要求空格分隔
+		re = regexp.MustCompile(escapedName + `(.+?)` + escapedAfter)
+	} else {
+		// 普通文本模式：要求空格分隔
+		re = regexp.MustCompile(escapedName + `\s+(.+?)\s+` + escapedAfter)
+	}
+	matches := re.FindStringSubmatch(errorMsg)
+	if len(matches) > 1 {
+		supplierInfo := strings.TrimSpace(matches[1])
+		// 如果包含编码#名称格式，提取名称部分
+		if strings.Contains(supplierInfo, "#") {
+			parts := strings.SplitN(supplierInfo, "#", 2)
+			if len(parts) == 2 {
+				return parts[1] // 返回物品erp_code
+			}
+		}
+		return supplierInfo
+	}
+	return ""
 }

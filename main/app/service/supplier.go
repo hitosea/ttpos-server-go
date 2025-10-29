@@ -505,27 +505,27 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 	})
 
 	// 同步供应商物品关联关系
+	erpSrv := erp.NewIErpSrv(s.dbm)
+	supplierRepo := repository.NewSupplierRepo(db)
 	materialRepo := repository.NewMaterialRepo(db)
 	materialSupplierRepo := repository.NewMaterialSupplierRepo(db)
-	for _, supplier := range suppliers {
-		if !slices.Contains(supplierErpCodes, supplier.ErpCode) {
-			continue
-		}
+	supplierList, err := supplierRepo.GetList(supplierRepo.WhereNotDeleted())
+	if err != nil {
+		return errors.WithMessage(errors.New("获取供应商列表失败"), err.Error())
+	}
+	for _, supplier := range supplierList {
 		// 获取供应商物品列表
-		erpSupplierItems, err := erp.NewIErpSrv(s.dbm).GetSupplierItemList(ctx, req.GetErpnextSupplierItemListReq{
+		erpSupplierItems, err := erpSrv.GetSupplierItemList(ctx, req.GetErpnextSupplierItemListReq{
 			SiteCode: companySetting.ErpnextSiteCode,
 			Supplier: supplier.ErpCode,
 		})
 		if err != nil {
 			return errors.WithMessage(errors.New("同步供应商物品失败"), err.Error())
 		}
-
 		// 永久删除所有供应商物品关联关系
 		materialSupplierRepo.DeletePermanently(
 			materialSupplierRepo.WhereSupplierErpCode(supplier.ErpCode),
-			materialSupplierRepo.WhereIsHeadquarter(false),
 		)
-
 		// 添加供应商物品关联关系
 		if len(erpSupplierItems) > 0 {
 			for _, supplierErp := range erpSupplierItems {
@@ -541,48 +541,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 					MaterialCode:    material.Code,
 					SupplierUuid:    supplier.Uuid,
 					SupplierErpCode: supplier.ErpCode,
-				})
-			}
-		}
-	}
-
-	// 永久删除所有供应商物品关联关系
-	if companySetting.IsSubShop() && companySetting.HeadquarterUuid > 0 {
-		headquarterDb := s.dbm.GetDB(companySetting.HeadquarterUuid)
-		if headquarterDb != nil {
-			supplierRepo := repository.NewSupplierRepo(db)
-			headquarterMaterialSupplierRepo := repository.NewMaterialSupplierRepo(headquarterDb)
-			// 永久删除所有总部供应商物品关联关系
-			headquarterMaterialSupplierRepo.DeletePermanently(
-				headquarterMaterialSupplierRepo.WhereIsHeadquarter(true),
-			)
-			// 获取总部供应商物品列表
-			headquarterMaterials, err := headquarterMaterialSupplierRepo.GetList(
-				headquarterMaterialSupplierRepo.WhereNotDeleted(),
-			)
-			if err != nil {
-				return errors.WithMessage(errors.New("获取总部供应商物品失败"), err.Error())
-			}
-			for _, headquarterMaterial := range headquarterMaterials {
-				material, err := materialRepo.GetMaterialByCode(headquarterMaterial.MaterialCode)
-				if err != nil {
-					if strings.Contains(err.Error(), "record not found") {
-						continue
-					}
-					return errors.WithMessage(errors.New("获取总部供应商物品失败"), err.Error())
-				}
-				supplier, err := supplierRepo.GetByErpCode(headquarterMaterial.SupplierErpCode)
-				if err != nil {
-					if strings.Contains(err.Error(), "record not found") {
-						continue
-					}
-					return errors.WithMessage(errors.New("获取总部供应商失败"), err.Error())
-				}
-				materialSupplierRepo.Create(&model.MaterialSupplier{
-					MaterialUuid:    material.Uuid,
-					MaterialCode:    material.Code,
-					SupplierUuid:    supplier.Uuid,
-					SupplierErpCode: supplier.ErpCode,
+					HeadquarterUuid: supplier.HeadquarterUuid,
 				})
 			}
 		}

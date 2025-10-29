@@ -1,0 +1,16 @@
+{
+  "name": "ttpos-server-go",
+  "version": "1.0.0",
+  "description": "TTPOS Server Go - Git hooks configuration",
+  "private": true,
+  "scripts": {
+    "prepare": "husky install"
+  },
+  "devDependencies": {
+    "husky": "^8.0.3"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
+
