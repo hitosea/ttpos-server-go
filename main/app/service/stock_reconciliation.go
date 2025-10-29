@@ -218,7 +218,7 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 			unitsResp := make([]*resp.StockReconciliationItemUnitInfo, 0, len(itemUnits))
 			for _, itemUnit := range itemUnits {
 				if itemUnit.MaterialUnit == nil || itemUnit.MaterialUnit.Unit == nil || itemUnit.MaterialUnit.Unit.MultiLanguageName.Uuid == 0 ||
-					itemUnit.Quantity == nil {
+					(stockReconciliation.Status == constant.StockReconciliationStatusSubmitted && itemUnit.Quantity == nil) {
 					continue
 				}
 				unitInfo := &resp.StockReconciliationItemUnitInfo{}
@@ -448,7 +448,7 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 	opts := []repository.DBOption{
 		stockReconciliationRepo.WhereUuid(stockReconciliationUuid),
 		stockReconciliationRepo.WithStockReconciliationItemsMultiLanguageName(),
-		stockReconciliationRepo.WithStockReconciliationItemUnitsMaterialUnit(),
+		stockReconciliationRepo.WithStockReconciliationItemsUnits(),
 		stockReconciliationRepo.WithWarehouse(),
 	}
 	stockReconciliation, err := stockReconciliationRepo.GetStockReconciliation(opts...)
@@ -490,28 +490,25 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 				continue
 			}
 
-			stockReconciliationItem := *item
-			if isDirectSubmit {
-				stockReconciliationItem.BookedQuantity = bookedQuantityMap[item.MaterialUuid]
-			}
-			if item.Material != nil && !item.Material.MultiLanguageName.IsNullName() {
-				// 提交时，保存物品名称多语言
-				stockReconciliationItem.MaterialName = item.Material.MultiLanguageName.ToJson()
-			}
-			if err := stockReconciliationRepo.UpdateStockReconciliationItem(&stockReconciliationItem); err != nil {
-				return errors.WithMessage(errors.New("更新盘点单物品明细失败"), err.Error())
-			}
+			var unitExists bool
 			for _, unit := range item.StockReconciliationItemUnits {
-				if unit.DeleteTime > 0 {
-					continue
+				if unit.DeleteTime == 0 && unit.Quantity != nil {
+					unitExists = true
+					break
 				}
-				if unit.MaterialUnit != nil {
-					// 提交时，保存物品单位名称多语言
-					stockReconciliationItemUnit := *unit
-					stockReconciliationItemUnit.MaterialUnitName = unit.MaterialUnit.Name
-					if err := stockReconciliationRepo.UpdateStockReconciliationItemUnit(&stockReconciliationItemUnit); err != nil {
-						return errors.WithMessage(errors.New("更新盘点单物品单位明细失败"), err.Error())
-					}
+			}
+			if !unitExists {
+				if err := stockReconciliationRepo.DeleteStockReconciliationItem(item.Uuid); err != nil {
+					return errors.WithMessage(errors.New("提交盘点单时移除待盘点物品失败"), err.Error())
+				}
+				continue
+			}
+
+			if isDirectSubmit {
+				stockReconciliationItem := *item
+				stockReconciliationItem.BookedQuantity = bookedQuantityMap[item.MaterialUuid]
+				if err := stockReconciliationRepo.UpdateStockReconciliationItem(&stockReconciliationItem); err != nil {
+					return errors.WithMessage(errors.New("更新盘点单物品明细失败"), err.Error())
 				}
 			}
 
@@ -520,46 +517,48 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 				Qty:      item.CountedQuantity.InexactFloat64(),
 			})
 		}
+
+		if len(erpItems) == 0 {
+			return errors.New("物品列表为空，请先添加物品后再操作")
+		}
+		erpSrv := erp.NewIErpSrv(s.dbm)
+		erpReq, err := erpSrv.SubmitStockReconciliation(ctx, companySetting, &stock.SaveStockReconciliationReq{
+			CompanyAbbr: companySetting.ErpnextCompanyAbbr,
+			Branch:      companySetting.ErpnextBranchName,
+			PostingDate: now.Format("2006-01-02"),
+			PostingTime: now.Format("15:04:05"),
+			Warehouse:   stockReconciliation.Warehouse.ErpCode,
+			Items:       erpItems,
+		})
+		if err != nil {
+			// 提取物品名称
+			itemName := s.extractName("Item", "is disabled", err.Error())
+			for _, item := range stockReconciliation.StockReconciliationItems {
+				if item.Material.Code == itemName {
+					materialName := item.Material.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+					message := i18n.Translate(ctx.GetLanguage(), "物品%s状态已关闭，请修改物品状态", materialName)
+					return errors.New(message)
+				}
+			}
+			if itemName != "" {
+				return errors.New(i18n.Translate(ctx.GetLanguage(), "物品%s状态已关闭，请修改物品状态"), itemName)
+			}
+			return errors.WithMessage(errors.New("提交盘点单失败"), err.Error())
+		}
+		// 更新盘点单erp_code和提交时间
+		stockReconciliation.ErpCode = erpReq.StockReconciliationName
+		stockReconciliation.SubmitTime = int(time.Now().Unix())
+		stockReconciliation.Status = constant.StockReconciliationStatusSubmitted
+		if err := stockReconciliationRepo.UpdateStockReconciliation(stockReconciliation); err != nil {
+			return errors.WithMessage(errors.New("更新盘点单状态失败"), err.Error())
+		}
+
 		return nil
 	})
 	if err != nil {
-		return errors.WithMessage(errors.New("提交盘点单失败"), err.Error())
+		return errors.WithMessage(err)
 	}
 
-	if len(erpItems) == 0 {
-		return errors.New("物品列表为空，请先添加物品后再操作")
-	}
-	erpSrv := erp.NewIErpSrv(s.dbm)
-	erpReq, err := erpSrv.SubmitStockReconciliation(ctx, companySetting, &stock.SaveStockReconciliationReq{
-		CompanyAbbr: companySetting.ErpnextCompanyAbbr,
-		Branch:      companySetting.ErpnextBranchName,
-		PostingDate: now.Format("2006-01-02"),
-		PostingTime: now.Format("15:04:05"),
-		Warehouse:   stockReconciliation.Warehouse.ErpCode,
-		Items:       erpItems,
-	})
-	if err != nil {
-		// 提取物品名称
-		itemName := s.extractName("Item", "is disabled", err.Error())
-		for _, item := range stockReconciliation.StockReconciliationItems {
-			if item.Material.Code == itemName {
-				materialName := item.Material.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
-				message := i18n.Translate(ctx.GetLanguage(), "物品%s状态已关闭，请修改物品状态", materialName)
-				return errors.New(message)
-			}
-		}
-		if itemName != "" {
-			return errors.New(i18n.Translate(ctx.GetLanguage(), "物品%s状态已关闭，请修改物品状态"), itemName)
-		}
-		return errors.WithMessage(errors.New("提交盘点单失败"), err.Error())
-	}
-	// 更新盘点单erp_code和提交时间
-	stockReconciliation.ErpCode = erpReq.StockReconciliationName
-	stockReconciliation.SubmitTime = int(time.Now().Unix())
-	stockReconciliation.Status = constant.StockReconciliationStatusSubmitted
-	if err := stockReconciliationRepo.UpdateStockReconciliation(stockReconciliation); err != nil {
-		return errors.WithMessage(errors.New("更新盘点单状态失败"), err.Error())
-	}
 	return nil
 }
 

@@ -2056,6 +2056,7 @@
   "提交申请": "başvuruyu Gönder",
   "提交盘点单失败": "Envanter formu gönderilemedi",
   "提交盘点单时移除已关闭物品失败": "Envanter formu gönderilirken kapalı öğeler kaldırılamadı",
+  "提交盘点单时移除待盘点物品失败": "Sayım formu gönderilirken sayılacak öğeler kaldırılamadı",
   "提交盘点单请求参数": "Envanter talebi parametresi gönder",
   "提交订单检查不通过": "Sipariş gönderim kontrolü başarısız",
   "提交采购订单请求参数": "Satın alma siparişi istek parametrelerini gönder",

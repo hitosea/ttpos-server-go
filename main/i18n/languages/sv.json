@@ -2056,6 +2056,7 @@
   "提交申请": "Skicka in ansökan",
   "提交盘点单失败": "Misslyckades att skicka in inventeringsformulär",
   "提交盘点单时移除已关闭物品失败": "Misslyckades att ta bort stängda artiklar vid inlämning av inventeringsformulär",
+  "提交盘点单时移除待盘点物品失败": "Misslyckades med att ta bort väntande inventarieartiklar vid inlämning av inventeringslistan",
   "提交盘点单请求参数": "Skicka in parameter för inventeringsblad",
   "提交订单检查不通过": "Orderkontroll vid inskick misslyckades",
   "提交采购订单请求参数": "Skicka inköpsorderförfrågningsparametrar",
