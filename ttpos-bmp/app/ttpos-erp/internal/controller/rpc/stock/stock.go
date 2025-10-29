@@ -164,9 +164,6 @@ func (*Controller) SaveStockReconciliation(ctx context.Context, req *stock.SaveS
 		if len(item.ItemCode) == 0 {
 			return rpc.ApiError(g.I18n().Tf(ctx, "第{%d}项物品编码不能为空", i+1)), nil
 		}
-		if item.Qty <= 0 {
-			return rpc.ApiError(g.I18n().Tf(ctx, "第{%d}项盘点数量必须大于0", i+1)), nil
-		}
 	}
 
 	// 调用服务层处理业务逻辑
