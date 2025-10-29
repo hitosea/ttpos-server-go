@@ -1,0 +1,58 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# 跳过 merge commit 的检查
+if git rev-parse -q --verify MERGE_HEAD >/dev/null; then
+  exit 0
+fi
+
+MESSAGE_FILE="$1"
+BRANCH_NAME="$(git branch --show-current)"
+
+# 检查分支命名是否符合 git flow 约定
+case "$BRANCH_NAME" in
+  feature/*|feat/*|hotfix/*|release/*|develop|dev|main|master) ;;
+  *) 
+    echo "❌ 分支命名不符合 git flow 约定：$BRANCH_NAME"
+    echo ""
+    echo "允许的分支格式："
+    echo "  - feature/* / feat/*  : 新功能分支"
+    echo "  - hotfix/*            : 紧急修复分支"
+    echo "  - release/*           : 发布分支"
+    echo "  - develop / dev       : 开发主分支"
+    echo "  - main / master       : 生产主分支"
+    exit 1
+    ;;
+esac
+
+# 允许 Revert 提交
+if grep -Eq '^Revert ' "$MESSAGE_FILE"; then
+  exit 0
+fi
+
+# 检查提交信息是否符合 Conventional Commits 规范
+CONVENTIONAL_REGEX='^(feat|fix|build|ci|docs|style|refactor|test|chore|perf)(\(.+\))?: .{1,72}$'
+if ! grep -Eq "$CONVENTIONAL_REGEX" "$MESSAGE_FILE"; then
+  echo "❌ 提交信息不符合 Conventional Commits 规范"
+  echo ""
+  echo "正确格式："
+  echo "  <type>(<scope>): <subject>"
+  echo ""
+  echo "类型（type）："
+  echo "  - feat     : 新功能"
+  echo "  - fix      : 修复 bug"
+  echo "  - docs     : 文档变更"
+  echo "  - style    : 代码格式（不影响代码运行）"
+  echo "  - refactor : 重构（既不是新增功能，也不是修复bug）"
+  echo "  - perf     : 性能优化"
+  echo "  - test     : 测试相关"
+  echo "  - build    : 构建系统或外部依赖的变更"
+  echo "  - ci       : CI 配置文件和脚本的变更"
+  echo "  - chore    : 其他不修改 src 或测试文件的变更"
+  echo ""
+  echo "示例："
+  echo "  feat(auth): 添加用户登录功能"
+  echo "  fix(order): 修复订单计算错误"
+  echo "  docs: 更新 README 文档"
+  exit 1
+fi
