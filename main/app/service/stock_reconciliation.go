@@ -253,7 +253,7 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 		}
 		// 是否盘盈盘亏异常（账面和实盘数量差值的绝对值大于20%）
 		itemInfo.IsInventoryStatusException = s.getIsInventoryStatusException(bookedQuantity, item.CountedQuantity)
-
+		itemInfo.DiffQuantity = item.CountedQuantity.Sub(bookedQuantity).Truncate(3).InexactFloat64()
 		itemsResp = append(itemsResp, itemInfo)
 	}
 	detailResp.Items = itemsResp
