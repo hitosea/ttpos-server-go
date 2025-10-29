@@ -217,7 +217,8 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 		if err == nil && len(itemUnits) > 0 {
 			unitsResp := make([]*resp.StockReconciliationItemUnitInfo, 0, len(itemUnits))
 			for _, itemUnit := range itemUnits {
-				if itemUnit.MaterialUnit == nil || itemUnit.MaterialUnit.Unit == nil || itemUnit.MaterialUnit.Unit.MultiLanguageName.Uuid == 0 {
+				if itemUnit.MaterialUnit == nil || itemUnit.MaterialUnit.Unit == nil || itemUnit.MaterialUnit.Unit.MultiLanguageName.Uuid == 0 ||
+					itemUnit.Quantity == nil {
 					continue
 				}
 				unitInfo := &resp.StockReconciliationItemUnitInfo{}
