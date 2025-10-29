@@ -46241,6 +46241,10 @@
                     "description": "状态 0-已保存 1-已提交 2-已审核 3-已驳回",
                     "type": "integer"
                 },
+                "submit_time": {
+                    "description": "提交时间",
+                    "type": "integer"
+                },
                 "type": {
                     "description": "盘点类型 1-指定物品盘点 2-全部物品盘点",
                     "type": "integer"

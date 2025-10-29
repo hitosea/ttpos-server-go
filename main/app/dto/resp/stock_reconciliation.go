@@ -35,6 +35,7 @@ type StockReconciliationDetailResp struct {
 	Purpose       int                            `json:"purpose"`        // 盘点目的 1-库存盘点 2-期初盘点
 	Status        int                            `json:"status"`         // 状态 0-已保存 1-已提交 2-已审核 3-已驳回
 	Items         []*StockReconciliationItemInfo `json:"items"`          // 盘点单物品明细
+	SubmitTime    int                            `json:"submit_time"`    // 提交时间
 	CreateTime    int                            `json:"create_time"`    // 创建时间
 	UpdateTime    int                            `json:"update_time"`    // 更新时间
 }

@@ -25,6 +25,7 @@ type IStockReconciliationRepo interface {
 	WithWarehouse() DBOption
 	WithStockReconciliationItems() DBOption
 	WithStockReconciliationItemsUnits() DBOption
+	WithStockReconciliationItemUnitsMaterialUnit() DBOption
 	WithStockReconciliationItemsMultiLanguageName() DBOption
 	WithStockReconciliationItemsMaterialBaseUnit() DBOption
 	WithStockReconciliationItemMaterialUnits() DBOption
@@ -237,6 +238,12 @@ func (r *StockReconciliationRepoImpl) WithStockReconciliationItems() DBOption {
 func (r *StockReconciliationRepoImpl) WithStockReconciliationItemsUnits() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("StockReconciliationItems.StockReconciliationItemUnits")
+	}
+}
+
+func (r *StockReconciliationRepoImpl) WithStockReconciliationItemUnitsMaterialUnit() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("StockReconciliationItems.StockReconciliationItemUnits.MaterialUnit")
 	}
 }
 
