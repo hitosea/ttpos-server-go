@@ -552,7 +552,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 			supplierRepo := repository.NewSupplierRepo(db)
 			headquarterMaterialSupplierRepo := repository.NewMaterialSupplierRepo(headquarterDb)
 			// 永久删除所有总部供应商物品关联关系
-			headquarterMaterialSupplierRepo.DeletePermanently(
+			materialSupplierRepo.DeletePermanently(
 				headquarterMaterialSupplierRepo.WhereIsHeadquarter(true),
 			)
 			// 获取总部供应商物品列表

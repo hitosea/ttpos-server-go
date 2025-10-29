@@ -253,7 +253,7 @@ func (s *stockReconciliationSrv) GetStockReconciliationDetail(ctx context.Contex
 		}
 		// 是否盘盈盘亏异常（账面和实盘数量差值的绝对值大于20%）
 		itemInfo.IsInventoryStatusException = s.getIsInventoryStatusException(bookedQuantity, item.CountedQuantity)
-
+		itemInfo.DiffQuantity = item.CountedQuantity.Sub(bookedQuantity).Truncate(3).InexactFloat64()
 		itemsResp = append(itemsResp, itemInfo)
 	}
 	detailResp.Items = itemsResp
@@ -671,26 +671,29 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 				}
 			}
 
-			scene := constant.WarehouseInOutLogSceneProfitIn        // 盘盈
-			logType := constant.WarehouseInOutLogLogTypeIn          // 入库
-			if item.CountedQuantity.LessThan(item.BookedQuantity) { // 盘亏出库
-				logType = constant.WarehouseInOutLogLogTypeOut
-				scene = constant.WarehouseInOutLogSceneLossOut
+			// 有盈亏才记录日志
+			if !item.CountedQuantity.Equal(item.BookedQuantity) {
+				scene := constant.WarehouseInOutLogSceneProfitIn        // 盘盈
+				logType := constant.WarehouseInOutLogLogTypeIn          // 入库
+				if item.CountedQuantity.LessThan(item.BookedQuantity) { // 盘亏出库
+					logType = constant.WarehouseInOutLogLogTypeOut
+					scene = constant.WarehouseInOutLogSceneLossOut
+				}
+				diff := item.CountedQuantity.Sub(item.BookedQuantity).Abs()
+				warehouseLogs = append(warehouseLogs, &model.WarehouseInOutLog{
+					LogType:              logType,
+					Scene:                scene,
+					WarehouseUuid:        stockReconciliation.WarehouseUuid,
+					MaterialUuid:         item.MaterialUuid,
+					MaterialName:         item.MaterialName,
+					MaterialBaseUnitUuid: material.Unit.Uuid, // 基准单位
+					MaterialBaseUnitName: material.Unit.Name, // 基准单位名称
+					Num:                  diff.Truncate(3).InexactFloat64(),
+					Price:                material.Valuation,
+					Amount:               decimal.NewFromFloat(material.Valuation).Mul(diff).Truncate(3).InexactFloat64(),
+					OrderNo:              stockReconciliation.OrderNo,
+				})
 			}
-			diff := item.CountedQuantity.Sub(item.BookedQuantity).Abs()
-			warehouseLogs = append(warehouseLogs, &model.WarehouseInOutLog{
-				LogType:              logType,
-				Scene:                scene,
-				WarehouseUuid:        stockReconciliation.WarehouseUuid,
-				MaterialUuid:         item.MaterialUuid,
-				MaterialName:         item.MaterialName,
-				MaterialBaseUnitUuid: material.Unit.Uuid, // 基准单位
-				MaterialBaseUnitName: material.Unit.Name, // 基准单位名称
-				Num:                  diff.Truncate(3).InexactFloat64(),
-				Price:                material.Valuation,
-				Amount:               decimal.NewFromFloat(material.Valuation).Mul(diff).Truncate(3).InexactFloat64(),
-				OrderNo:              stockReconciliation.OrderNo,
-			})
 		}
 		if len(warehouseLogs) > 0 {
 			if err := tx.Create(&warehouseLogs).Error; err != nil {
@@ -913,8 +916,12 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 			return listResp, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
 		}
 
+		limitedMaterialUuids := make([]uint64, 0)
+		for _, item := range checkReq.Items {
+			limitedMaterialUuids = append(limitedMaterialUuids, item.MaterialUuid)
+		}
 		for _, item := range stockReconciliation.StockReconciliationItems {
-			if item.DeleteTime > 0 {
+			if item.DeleteTime > 0 || (len(limitedMaterialUuids) > 0 && !slices.Contains(limitedMaterialUuids, item.MaterialUuid)) {
 				continue
 			}
 			materialUuids = append(materialUuids, item.MaterialUuid)
