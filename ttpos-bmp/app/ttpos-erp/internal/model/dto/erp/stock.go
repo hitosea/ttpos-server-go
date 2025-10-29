@@ -196,7 +196,7 @@ type StockReconciliationItem struct {
 	ItemName                string  `json:"item_name,omitempty"`                  // 物品名称
 	ItemGroup               string  `json:"item_group,omitempty"`                 // 物品分组
 	Warehouse               string  `json:"warehouse,omitempty"`                  // 仓库
-	Qty                     float64 `json:"qty,omitempty"`                        // 数量
+	Qty                     float64 `json:"qty"`                                  // 数量
 	ValuationRate           float64 `json:"valuation_rate,omitempty"`             // 估值价格
 	Amount                  float64 `json:"amount,omitempty"`                     // 金额
 	AllowZeroValuationRate  int     `json:"allow_zero_valuation_rate,omitempty"`  // 允许零估值价格
