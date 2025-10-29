@@ -913,8 +913,12 @@ func (s *stockReconciliationSrv) CheckMaterials(ctx context.Context, checkReq re
 			return listResp, errors.WithMessage(errors.New("查询仓库物品失败"), err.Error())
 		}
 
+		limitedMaterialUuids := make([]uint64, 0)
+		for _, item := range checkReq.Items {
+			limitedMaterialUuids = append(limitedMaterialUuids, item.MaterialUuid)
+		}
 		for _, item := range stockReconciliation.StockReconciliationItems {
-			if item.DeleteTime > 0 {
+			if item.DeleteTime > 0 || (len(limitedMaterialUuids) > 0 && !slices.Contains(limitedMaterialUuids, item.MaterialUuid)) {
 				continue
 			}
 			materialUuids = append(materialUuids, item.MaterialUuid)
