@@ -42,6 +42,7 @@ type StockReconciliationDetailResp struct {
 // StockReconciliationItemInfo 盘点单物品明细信息
 type StockReconciliationItemInfo struct {
 	MaterialUuid               uint64                             `json:"material_uuid"`                 // 物品UUID
+	MaterialBarcode            string                             `json:"material_barcode"`              // 物品条码
 	InternalCode               string                             `json:"internal_code"`                 // 内部编码
 	MaterialCode               string                             `json:"material_code"`                 // 物品编码
 	LocaleName                 dto.LocaleResponse                 `json:"locale_name"`                   // 物品名称
