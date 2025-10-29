@@ -2,7 +2,9 @@ package repository
 
 import (
 	"time"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/config"
 
 	"gorm.io/gorm"
 )
@@ -49,6 +51,11 @@ type IWarehouseItemRepo interface {
 	// 获取仓库物品列表（带物品详细信息）
 	GetWarehouseMaterialsWithPagination(pageNo, pageSize int, opts ...DBOption) ([]*model.WarehouseItem, int64, error)
 	GetWarehouseMaterials(opts ...DBOption) ([]*model.WarehouseItem, error)
+
+	// 获取物料在非在途仓库中的总库存
+	GetMaterialStockInNormalWarehouses(materialUuids []uint64) (map[uint64]float64, error)
+	// 按照物料UUID和仓库UUID分组获取物品库存
+	GetMaterialStockByWarehouse(materialUuids []uint64) ([]MaterialWarehouseStockResult, error)
 }
 
 // WarehouseItemRepoImpl 仓库商品库存Repository实现
@@ -379,4 +386,102 @@ func (r *WarehouseItemRepoImpl) GetWarehouseMaterials(opts ...DBOption) ([]*mode
 	}
 
 	return items, nil
+}
+
+// MaterialStockResult 物料库存统计结果
+type MaterialStockResult struct {
+	MaterialUuid uint64  `gorm:"column:material_uuid"` // 物料UUID
+	TotalStock   float64 `gorm:"column:total_stock"`   // 总库存
+}
+
+// MaterialWarehouseStockResult 物料在各仓库的库存统计结果
+type MaterialWarehouseStockResult struct {
+	MaterialUuid  uint64  `gorm:"column:material_uuid"`  // 物料UUID
+	WarehouseUuid uint64  `gorm:"column:warehouse_uuid"` // 仓库UUID
+	Stock         float64 `gorm:"column:stock"`          // 库存数量
+}
+
+// GetMaterialStockInNormalWarehouses 获取物料在非在途仓库中的总库存
+// 返回：map[物料UUID]总库存
+func (r *WarehouseItemRepoImpl) GetMaterialStockInNormalWarehouses(materialUuids []uint64) (map[uint64]float64, error) {
+	if len(materialUuids) == 0 {
+		return make(map[uint64]float64), nil
+	}
+
+	var results []MaterialStockResult
+
+	// 执行SQL查询：
+	// SELECT material_uuid, SUM(stock) as total_stock
+	// FROM ttpos_warehouse_item
+	// WHERE material_uuid IN (?)
+	//   AND warehouse_uuid IN (
+	//     SELECT uuid FROM ttpos_warehouse
+	//     WHERE type != 'transit' AND delete_time = 0
+	//   )
+	// GROUP BY material_uuid
+	// 获取表前缀
+	tablePrefix := config.Database.TablePrefix
+	err := r.db.Table(tablePrefix+"warehouse_item").
+		Select("material_uuid, SUM(stock) as total_stock").
+		Where("material_uuid IN (?)", materialUuids).
+		Where("warehouse_uuid IN (?)",
+			r.db.Table(tablePrefix+"warehouse").
+				Select("uuid").
+				Where("type != ?", constant.WarehouseTypeTransit).
+				Where("delete_time = ?", 0),
+		).
+		Group("material_uuid").
+		Scan(&results).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	// 将结果转换为 map
+	stockMap := make(map[uint64]float64)
+	for _, result := range results {
+		stockMap[result.MaterialUuid] = result.TotalStock
+	}
+
+	return stockMap, nil
+}
+
+// GetMaterialStockByWarehouse 按照物料UUID和仓库UUID分组获取物品库存
+// 返回：每个物料在每个仓库中的库存详情列表
+func (r *WarehouseItemRepoImpl) GetMaterialStockByWarehouse(materialUuids []uint64) ([]MaterialWarehouseStockResult, error) {
+	if len(materialUuids) == 0 {
+		return []MaterialWarehouseStockResult{}, nil
+	}
+
+	var results []MaterialWarehouseStockResult
+
+	// 获取表前缀
+	tablePrefix := config.Database.TablePrefix
+
+	// 执行SQL查询：
+	// SELECT material_uuid, warehouse_uuid, SUM(stock) as stock
+	// FROM ttpos_warehouse_item
+	// WHERE material_uuid IN (?)
+	//   AND warehouse_uuid IN (
+	//     SELECT uuid FROM ttpos_warehouse
+	//     WHERE type != 'transit' AND delete_time = 0
+	//   )
+	// GROUP BY material_uuid, warehouse_uuid
+	err := r.db.Table(tablePrefix+"warehouse_item").
+		Select("material_uuid, warehouse_uuid, SUM(stock) as stock").
+		Where("material_uuid IN (?)", materialUuids).
+		Where("warehouse_uuid IN (?)",
+			r.db.Table(tablePrefix+"warehouse").
+				Select("uuid").
+				Where("type != ?", constant.WarehouseTypeTransit).
+				Where("delete_time = ?", 0),
+		).
+		Group("material_uuid, warehouse_uuid").
+		Scan(&results).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return results, nil
 }

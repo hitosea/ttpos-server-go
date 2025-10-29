@@ -2,6 +2,8 @@ package stock
 
 import (
 	"context"
+	"math"
+	itemApi "ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
@@ -64,6 +66,28 @@ func (s *sStock) SaveStockReconciliation(ctx context.Context, req *stock.SaveSto
 	// 构建明细项目
 	itemList := make([]erp.StockReconciliationItem, 0)
 	for _, item := range req.Items {
+		//判断当前仓库已有库存是否与盘点数量一致，如果一致就不要继续新增盘点记录了
+		// 查询当前物品在当前仓库的库存数量
+		stockQtyResp, err := service.Item().GetItemStock(ctx, &itemApi.GetItemStockReq{
+			ItemCode:    item.ItemCode,
+			Warehouse:   warehouseName,
+			CompanyAbbr: req.CompanyAbbr,
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "查询物品%s在仓库%s的库存数量失败", item.ItemCode, warehouseName)
+		}
+		// 如果当前物品在当前仓库的库存数量与盘点数量不一致，就不要继续新增盘点记录了; 如果当前物品在当前仓库没有库存，也不要新增盘点记录
+		{
+			if len(stockQtyResp.ItemStockList) > 0 && math.Abs(stockQtyResp.ItemStockList[0].ActualQty-item.Qty) < consts.DefaultDecimalPrecision {
+				g.Log().Warningf(ctx, "物品[%s]在仓库[%s]的库存数量为[%.2f]，与盘点数量[%.2f]一致,无需新增盘点记录", item.ItemCode, warehouseName, stockQtyResp.ItemStockList[0].ActualQty, item.Qty)
+				continue
+			}
+			if len(stockQtyResp.ItemStockList) == 0 && item.Qty == 0 {
+				g.Log().Warningf(ctx, "物品[%s]在仓库[%s]的库存无库存且盘点数量为[0]无需新增盘点记录", item.ItemCode, warehouseName)
+				continue
+			}
+		}
+
 		itemData := erp.StockReconciliationItem{
 			ItemCode: item.ItemCode,
 			ItemName: item.ItemName,
@@ -89,6 +113,13 @@ func (s *sStock) SaveStockReconciliation(ctx context.Context, req *stock.SaveSto
 		itemList = append(itemList, itemData)
 	}
 	data.Items = itemList
+
+	//如果盘点的物品为0，则返回默认的盘点单号
+	if len(itemList) == 0 {
+		return &stock.SaveStockReconciliationResp{
+			StockReconciliationName: consts.DefaultStockReconciliationName,
+		}, nil
+	}
 
 	// 创建库存盘点单据
 	resp, err := service.Document().Create(ctx, erp.DocTypeStockReconciliation, data)
@@ -235,7 +266,11 @@ func (s *sStock) SubmitStockReconciliation(ctx context.Context, req *stock.Submi
 	if len(req.StockReconciliationName) == 0 {
 		return nil, gerror.New("库存盘点单号不能为空")
 	}
-
+	if req.StockReconciliationName == consts.DefaultStockReconciliationName {
+		return &stock.SubmitStockReconciliationResp{
+			Message: "库存盘点使用默认单据号提交成功",
+		}, nil
+	}
 	// 提交库存盘点单据
 	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeStockReconciliation, req.StockReconciliationName, erp.DocstatusSubmitted)
 	if err != nil {

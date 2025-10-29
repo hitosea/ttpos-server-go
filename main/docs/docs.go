@@ -29377,6 +29377,10 @@ const docTemplate = `{
                     "description": "采购单位UUID",
                     "type": "integer"
                 },
+                "safety_stock": {
+                    "description": "安全库存数量",
+                    "type": "number"
+                },
                 "status": {
                     "description": "状态 1-启用 0-停用",
                     "type": "integer"
@@ -29540,6 +29544,10 @@ const docTemplate = `{
                 "purchase_unit_uuid": {
                     "description": "采购单位UUID",
                     "type": "integer"
+                },
+                "safety_stock": {
+                    "description": "安全库存数量",
+                    "type": "number"
                 },
                 "status": {
                     "description": "状态 1-启用 0-停用",
@@ -33778,6 +33786,10 @@ const docTemplate = `{
                     "description": "采购单位UUID",
                     "type": "integer"
                 },
+                "safety_stock": {
+                    "description": "安全库存数量",
+                    "type": "number"
+                },
                 "status": {
                     "description": "状态，1-启用 0-停用",
                     "type": "integer"
@@ -33911,6 +33923,10 @@ const docTemplate = `{
                 "purchase_unit_uuid": {
                     "description": "采购单位UUID",
                     "type": "integer"
+                },
+                "safety_stock": {
+                    "description": "安全库存数量",
+                    "type": "number"
                 },
                 "status": {
                     "description": "状态，1-启用 0-停用",
@@ -35255,6 +35271,10 @@ const docTemplate = `{
                 "related_uuid": {
                     "description": "关联UUID,给规格商品绑定成本卡。规格商品时，关联UUID为规格商品UUID；",
                     "type": "integer"
+                },
+                "safety_stock": {
+                    "description": "安全库存数量",
+                    "type": "number"
                 },
                 "status": {
                     "description": "状态，1-启用 0-停用",
@@ -37925,6 +37945,7 @@ const docTemplate = `{
                 "is_need_password",
                 "no_clear_table",
                 "opening_hours",
+                "safety_stock_type",
                 "start_serial_no",
                 "zeroing_method"
             ],
@@ -38012,6 +38033,14 @@ const docTemplate = `{
                 "opening_hours": {
                     "description": "营业时间格式正则验证：HH:MM-HH:MM",
                     "type": "string"
+                },
+                "safety_stock_type": {
+                    "description": "安全库存类型 1-门店纬度 2-仓库纬度，默认为1",
+                    "type": "string",
+                    "enum": [
+                        "1",
+                        "2"
+                    ]
                 },
                 "start_serial_no": {
                     "description": "开始序列号",
@@ -46339,6 +46368,10 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "material_barcode": {
+                    "description": "物品条码",
+                    "type": "string"
+                },
                 "material_code": {
                     "description": "物品编码",
                     "type": "string"
@@ -47668,6 +47701,10 @@ const docTemplate = `{
                     "description": "电子菜单二维码校验失效值，6位数数字",
                     "type": "string"
                 },
+                "safety_stock_type": {
+                    "description": "安全库存类型 1-门店纬度 2-仓库纬度，默认为1",
+                    "type": "string"
+                },
                 "start_serial_no": {
                     "description": "开始序列号",
                     "type": "string"
@@ -48302,6 +48339,10 @@ const docTemplate = `{
                 "return_food_reason_count": {
                     "description": "退菜原因数量",
                     "type": "integer"
+                },
+                "safety_stock_type": {
+                    "description": "安全库存类型 1-门店纬度 2-仓库纬度，默认为1",
+                    "type": "string"
                 },
                 "start_serial_no": {
                     "description": "开始序列号",

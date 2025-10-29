@@ -109,6 +109,7 @@ type MaterialAddReq struct {
 	PurchaseUnitUuid uint64             `json:"purchase_unit_uuid"` // 采购单位UUID
 	CostUnitUuid     uint64             `json:"cost_unit_uuid"`     // 成本单位UUID
 	InternalCode     string             `json:"internal_code"`      // 内部编码
+	SafetyStock      *float64           `json:"safety_stock"`       // 安全库存数量
 
 	headquarterUuid uint64 // 总部uuid。 内部调用使用，同步总部物品时
 	warehouseUuid   uint64 // 仓库uuid。 内部调用使用，同步总部物品时
@@ -187,6 +188,11 @@ func (r *MaterialAddReq) Validate() error {
 	if r.InternalCode != "" {
 		if !utils.IsValidInternalCode(r.InternalCode) {
 			return errors.WithMessage(errors.New("内部编码长度应为1-13位，可输入纯数字/纯字母/数字+字母"))
+		}
+	}
+	if r.SafetyStock != nil {
+		if *r.SafetyStock <= 0 || *r.SafetyStock > 9999999 {
+			return errors.WithMessage(errors.New("安全库存数量范围为0-9999999"))
 		}
 	}
 	return nil
@@ -285,6 +291,7 @@ type MaterialEditReq struct {
 	PurchaseUnitUuid uint64             `json:"purchase_unit_uuid"` // 采购单位UUID
 	CostUnitUuid     uint64             `json:"cost_unit_uuid"`     // 成本单位UUID
 	InternalCode     string             `json:"internal_code"`      // 内部编码
+	SafetyStock      *float64           `json:"safety_stock"`       // 安全库存数量
 }
 
 func (r *MaterialEditReq) Validate() error {
@@ -319,6 +326,11 @@ func (r *MaterialEditReq) Validate() error {
 	if r.InternalCode != "" {
 		if !utils.IsValidInternalCode(r.InternalCode) {
 			return errors.WithMessage(errors.New("内部编码长度应为1-13位，可输入纯数字/纯字母/数字+字母"))
+		}
+	}
+	if r.SafetyStock != nil {
+		if *r.SafetyStock <= 0 || *r.SafetyStock > 9999999 {
+			return errors.WithMessage(errors.New("安全库存数量范围为0-9999999"))
 		}
 	}
 	return nil

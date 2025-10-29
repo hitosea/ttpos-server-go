@@ -162,10 +162,7 @@ func (*Controller) SaveStockReconciliation(ctx context.Context, req *stock.SaveS
 	// 验证明细项目
 	for i, item := range req.Items {
 		if len(item.ItemCode) == 0 {
-			return rpc.ApiError(g.I18n().Tf(ctx, "第{0}项物品编码不能为空", i+1)), nil
-		}
-		if item.Qty <= 0 {
-			return rpc.ApiError(g.I18n().Tf(ctx, "第{0}项盘点数量必须大于0", i+1)), nil
+			return rpc.ApiError(g.I18n().Tf(ctx, "第{%d}项物品编码不能为空", i+1)), nil
 		}
 	}
 

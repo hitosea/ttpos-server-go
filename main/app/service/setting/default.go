@@ -247,6 +247,7 @@ func (s *Srv) getDefaultBusiness(language string) setting.Business {
 		IsBatch:            "0",        // 是否是分批商品 0-否 1-是
 		BatchProductUuids:  []uint64{}, // 分批商品UUID列表
 		BatchTagNum:        0,          // 分批类型数量
+		SafetyStockType:    "1",        // 安全库存类型 1-门店纬度 2-仓库纬度，默认为1
 	}
 
 }

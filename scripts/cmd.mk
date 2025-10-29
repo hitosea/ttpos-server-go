@@ -1,4 +1,7 @@
 LOCAL_IP := $(shell ifconfig | grep "inet " | grep "192" | awk '{print $$2}' | head -n 1)
+ifeq ($(LOCAL_IP),)
+	LOCAL_IP := $(shell ifconfig | grep "inet " | grep "172.1" | awk '{print $$2}' | head -n 1)
+endif
 GO_PATH := $(shell go env GOPATH)
 
 # 定义一个函数来更新环境变量并执行脚本
@@ -10,8 +13,7 @@ endef
 # 定义一个函数来更新环境变量并执行脚本
 define update_env_and_run
 	sed -i.bak 's/^DB_HOST=.*/DB_HOST=$(LOCAL_IP)/' .env && rm .env.bak;
-	sed -i.bak 's/^REDIS_HOST=.*/REDIS_HOST=$(LOCAL_IP),$(LOCAL_IP),$(LOCAL_IP)/' .env && rm .env.bak;
-	sed -i.bak 's/^REDIS_PORT=.*/REDIS_PORT=7001,7002,7003/' .env && rm .env.bak;
+	sed -i.bak 's/^REDIS_HOST=.*/REDIS_HOST=$(LOCAL_IP)/' .env && rm .env.bak;
 	if grep -q '^REDIS_CLUSTER_ANNOUNCE_IP=' .env; then \
 		sed -i.bak 's/^REDIS_CLUSTER_ANNOUNCE_IP=.*/REDIS_CLUSTER_ANNOUNCE_IP=$(LOCAL_IP)/' .env && rm .env.bak; \
 	else \
@@ -175,7 +177,7 @@ build-web:
 		fi; \
 		if [ $$FRONTEND_CHANGED -eq 1 ]; then \
 			echo "🚀 正在构建前端项目..."; \
-			cd admin && ./build > /dev/null 2>&1 && echo "✅ 前端构建完成" || (echo "❌ 前端构建失败" && exit 1); \
+			cd admin && ./build && echo "✅ 前端构建完成" || (echo "❌ 前端构建失败" && exit 1); \
 			cd ..; \
 			git rev-parse HEAD > $$BUILD_MARKER 2>/dev/null || echo "unknown" > $$BUILD_MARKER; \
 		fi; \

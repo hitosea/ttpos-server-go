@@ -107,3 +107,53 @@
     }
 }
 ```
+
+
+## 重复盘点相同记录
+
+```json
+
+{
+  "company_abbr": "CFG",
+  "branch": "蓝象总店",
+  "posting_date": "2025-09-16",
+  "posting_time": "06:04:27",
+  "purpose": "Stock Reconciliation",
+  "warehouse": "蓝象总店-Normal-Default - CFG",
+  "items": [
+    {
+      "item_code": "WPR3685914633175041",
+      "qty": 10
+    }
+  ]
+}
+```
+
+```json
+
+{
+  "company_abbr": "CFG",
+  "branch": "蓝象总店",
+  "posting_date": "2025-09-16",
+  "posting_time": "06:04:27",
+  "purpose": "Stock Reconciliation",
+  "warehouse": "蓝象总店-Normal-Default - CFG",
+  "items": [
+    {
+      "item_code": "WPR3685914633175041",
+      "qty": 0
+    }
+  ]
+}
+```
+
+```json
+{
+    "code": "0",
+    "message": "保存库存盘点成功",
+    "data": {
+        "stock_reconciliation_name": "MAT-RECO-0000-00000",
+        "@type": "type.googleapis.com/stock.SaveStockReconciliationResp"
+    }
+}
+```

@@ -5,7 +5,7 @@ include ./scripts/cmd.mk
 install:
 	@make init-env
 	@make build-web
-	@make redis-clear-data-node-conf
+	# @make redis-clear-data-node-conf
 	# 启动容器
 	@echo "🗄️  启动容器..."
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
@@ -24,7 +24,7 @@ install-bmp:
 # 重新构建项目
 build:
 	@make build-web
-	@make redis-clear-data-node-conf
+	# @make redis-clear-data-node-conf
 	@echo "🐳 构建 Docker 容器..."
 	@cd ./main && GOOS=linux GOARCH=amd64 go build -o main main.go
 	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
@@ -75,7 +75,7 @@ restart:
 
 # docker-compose up -d
 up:
-	@make redis-clear-data-node-conf > /dev/null 2>&1
+	# @make redis-clear-data-node-conf > /dev/null 2>&1
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d
 	@echo "🔍 启动HTTP调试代理..."
 	@make start-http-debug-proxy
