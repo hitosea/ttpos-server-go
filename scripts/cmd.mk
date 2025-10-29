@@ -175,7 +175,7 @@ build-web:
 		fi; \
 		if [ $$FRONTEND_CHANGED -eq 1 ]; then \
 			echo "🚀 正在构建前端项目..."; \
-			cd admin && ./build > /dev/null 2>&1 && echo "✅ 前端构建完成" || (echo "❌ 前端构建失败" && exit 1); \
+			cd admin && ./build && echo "✅ 前端构建完成" || (echo "❌ 前端构建失败" && exit 1); \
 			cd ..; \
 			git rev-parse HEAD > $$BUILD_MARKER 2>/dev/null || echo "unknown" > $$BUILD_MARKER; \
 		fi; \
