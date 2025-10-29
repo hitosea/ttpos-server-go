@@ -118,10 +118,6 @@ func (s *stockReconciliationSrv) GetStockReconciliationList(ctx context.Context,
 		}
 		info.WarehouseLocaleName = item.Warehouse.MultiLanguageName.GetNames()
 		info.ItemsCount = itemsCountMap[item.Uuid]
-		// 如果提交时间为0，则返回当前时间戳
-		if info.SubmitTime == 0 {
-			info.SubmitTime = int(time.Now().Unix())
-		}
 		listResp = append(listResp, info)
 	}
 
