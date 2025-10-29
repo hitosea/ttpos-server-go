@@ -448,6 +448,7 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 	opts := []repository.DBOption{
 		stockReconciliationRepo.WhereUuid(stockReconciliationUuid),
 		stockReconciliationRepo.WithStockReconciliationItemsMultiLanguageName(),
+		stockReconciliationRepo.WithStockReconciliationItemUnitsMaterialUnit(),
 		stockReconciliationRepo.WithWarehouse(),
 	}
 	stockReconciliation, err := stockReconciliationRepo.GetStockReconciliation(opts...)
@@ -489,11 +490,28 @@ func (s *stockReconciliationSrv) submitStockReconciliation(ctx context.Context, 
 				continue
 			}
 
+			stockReconciliationItem := *item
 			if isDirectSubmit {
-				stockReconciliationItem := *item
 				stockReconciliationItem.BookedQuantity = bookedQuantityMap[item.MaterialUuid]
-				if err := stockReconciliationRepo.UpdateStockReconciliationItem(&stockReconciliationItem); err != nil {
-					return errors.WithMessage(errors.New("更新盘点单物品明细失败"), err.Error())
+			}
+			if item.Material != nil && !item.Material.MultiLanguageName.IsNullName() {
+				// 提交时，保存物品名称多语言
+				stockReconciliationItem.MaterialName = item.Material.MultiLanguageName.ToJson()
+			}
+			if err := stockReconciliationRepo.UpdateStockReconciliationItem(&stockReconciliationItem); err != nil {
+				return errors.WithMessage(errors.New("更新盘点单物品明细失败"), err.Error())
+			}
+			for _, unit := range item.StockReconciliationItemUnits {
+				if unit.DeleteTime > 0 {
+					continue
+				}
+				if unit.MaterialUnit != nil {
+					// 提交时，保存物品单位名称多语言
+					stockReconciliationItemUnit := *unit
+					stockReconciliationItemUnit.MaterialUnitName = unit.MaterialUnit.Name
+					if err := stockReconciliationRepo.UpdateStockReconciliationItemUnit(&stockReconciliationItemUnit); err != nil {
+						return errors.WithMessage(errors.New("更新盘点单物品单位明细失败"), err.Error())
+					}
 				}
 			}
 
@@ -890,6 +908,9 @@ func (s *stockReconciliationSrv) validateWarehouseAndItems(db *gorm.DB, req req.
 // getIsInventoryStatusException 获取是否盘盈盘亏异常
 func (s *stockReconciliationSrv) getIsInventoryStatusException(bookedQuantity decimal.Decimal, countedQuantity decimal.Decimal) bool {
 	if bookedQuantity.IsZero() {
+		if countedQuantity.IsZero() {
+			return false
+		}
 		return true
 	}
 	return countedQuantity.Sub(bookedQuantity).Abs().Div(bookedQuantity).GreaterThan(decimal.NewFromFloat(0.2))

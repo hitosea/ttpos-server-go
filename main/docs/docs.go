@@ -46247,6 +46247,10 @@ const docTemplate = `{
                     "description": "状态 0-已保存 1-已提交 2-已审核 3-已驳回",
                     "type": "integer"
                 },
+                "submit_time": {
+                    "description": "提交时间",
+                    "type": "integer"
+                },
                 "type": {
                     "description": "盘点类型 1-指定物品盘点 2-全部物品盘点",
                     "type": "integer"
@@ -47702,7 +47706,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "safety_stock_type": {
-                    "description": "安全库存类型 1-门店纬度 2-仓库纬度，默认为1",
+                    "description": "安全库存类型 1-门店维度 2-仓库维度，默认为1",
                     "type": "string"
                 },
                 "start_serial_no": {
@@ -48341,7 +48345,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "safety_stock_type": {
-                    "description": "安全库存类型 1-门店纬度 2-仓库纬度，默认为1",
+                    "description": "安全库存类型 1-门店维度 2-仓库维度，默认为1",
                     "type": "string"
                 },
                 "start_serial_no": {

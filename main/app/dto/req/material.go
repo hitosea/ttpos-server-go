@@ -191,7 +191,7 @@ func (r *MaterialAddReq) Validate() error {
 		}
 	}
 	if r.SafetyStock != nil {
-		if *r.SafetyStock <= 0 || *r.SafetyStock > 9999999 {
+		if *r.SafetyStock < 0 || *r.SafetyStock > 9999999 {
 			return errors.WithMessage(errors.New("安全库存数量范围为0-9999999"))
 		}
 	}
@@ -329,7 +329,7 @@ func (r *MaterialEditReq) Validate() error {
 		}
 	}
 	if r.SafetyStock != nil {
-		if *r.SafetyStock <= 0 || *r.SafetyStock > 9999999 {
+		if *r.SafetyStock < 0 || *r.SafetyStock > 9999999 {
 			return errors.WithMessage(errors.New("安全库存数量范围为0-9999999"))
 		}
 	}
