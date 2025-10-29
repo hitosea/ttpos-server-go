@@ -671,26 +671,29 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 				}
 			}
 
-			scene := constant.WarehouseInOutLogSceneProfitIn        // 盘盈
-			logType := constant.WarehouseInOutLogLogTypeIn          // 入库
-			if item.CountedQuantity.LessThan(item.BookedQuantity) { // 盘亏出库
-				logType = constant.WarehouseInOutLogLogTypeOut
-				scene = constant.WarehouseInOutLogSceneLossOut
+			// 有盈亏才记录日志
+			if !item.CountedQuantity.Equal(item.BookedQuantity) {
+				scene := constant.WarehouseInOutLogSceneProfitIn        // 盘盈
+				logType := constant.WarehouseInOutLogLogTypeIn          // 入库
+				if item.CountedQuantity.LessThan(item.BookedQuantity) { // 盘亏出库
+					logType = constant.WarehouseInOutLogLogTypeOut
+					scene = constant.WarehouseInOutLogSceneLossOut
+				}
+				diff := item.CountedQuantity.Sub(item.BookedQuantity).Abs()
+				warehouseLogs = append(warehouseLogs, &model.WarehouseInOutLog{
+					LogType:              logType,
+					Scene:                scene,
+					WarehouseUuid:        stockReconciliation.WarehouseUuid,
+					MaterialUuid:         item.MaterialUuid,
+					MaterialName:         item.MaterialName,
+					MaterialBaseUnitUuid: material.Unit.Uuid, // 基准单位
+					MaterialBaseUnitName: material.Unit.Name, // 基准单位名称
+					Num:                  diff.Truncate(3).InexactFloat64(),
+					Price:                material.Valuation,
+					Amount:               decimal.NewFromFloat(material.Valuation).Mul(diff).Truncate(3).InexactFloat64(),
+					OrderNo:              stockReconciliation.OrderNo,
+				})
 			}
-			diff := item.CountedQuantity.Sub(item.BookedQuantity).Abs()
-			warehouseLogs = append(warehouseLogs, &model.WarehouseInOutLog{
-				LogType:              logType,
-				Scene:                scene,
-				WarehouseUuid:        stockReconciliation.WarehouseUuid,
-				MaterialUuid:         item.MaterialUuid,
-				MaterialName:         item.MaterialName,
-				MaterialBaseUnitUuid: material.Unit.Uuid, // 基准单位
-				MaterialBaseUnitName: material.Unit.Name, // 基准单位名称
-				Num:                  diff.Truncate(3).InexactFloat64(),
-				Price:                material.Valuation,
-				Amount:               decimal.NewFromFloat(material.Valuation).Mul(diff).Truncate(3).InexactFloat64(),
-				OrderNo:              stockReconciliation.OrderNo,
-			})
 		}
 		if len(warehouseLogs) > 0 {
 			if err := tx.Create(&warehouseLogs).Error; err != nil {
