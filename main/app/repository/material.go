@@ -34,6 +34,7 @@ type IMaterialRepo interface {
 	ClearMaterialBarcodeValue(uuid uint64) error // 清空物品条形码值
 	ClearMaterialValuation(uuid uint64) error    // 清空物品估值率
 	ClearMaterialInternalCode(uuid uint64) error // 清空物品内部编码
+	ClearMaterialSafetyStock(uuid uint64) error  // 清空物品安全库存
 	DeleteMaterial(uuid uint64) error
 	GetMaterialCategory(opts ...DBOption) (*model.MaterialCategory, error)
 	GetMaterialCategoryByName(name string) (*model.MaterialCategory, error)
@@ -593,6 +594,13 @@ func (r *MaterialRepoImpl) GetMaterialDetailByErpCode(erpCode string) (*model.Ma
 func (r *MaterialRepoImpl) ClearMaterialInternalCode(uuid uint64) error {
 	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("internal_code", "").Error; err != nil {
 		return errors.WithMessage(err, "清空物品内部编码失败")
+	}
+	return nil
+}
+
+func (r *MaterialRepoImpl) ClearMaterialSafetyStock(uuid uint64) error {
+	if err := r.db.Model(&model.Material{}).Where("uuid = ?", uuid).Update("safety_stock", nil).Error; err != nil {
+		return errors.WithMessage(err, "清空物品安全库存失败")
 	}
 	return nil
 }

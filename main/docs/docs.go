@@ -47706,7 +47706,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "safety_stock_type": {
-                    "description": "安全库存类型 1-门店纬度 2-仓库纬度，默认为1",
+                    "description": "安全库存类型 1-门店维度 2-仓库维度，默认为1",
                     "type": "string"
                 },
                 "start_serial_no": {
@@ -48345,7 +48345,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "safety_stock_type": {
-                    "description": "安全库存类型 1-门店纬度 2-仓库纬度，默认为1",
+                    "description": "安全库存类型 1-门店维度 2-仓库维度，默认为1",
                     "type": "string"
                 },
                 "start_serial_no": {

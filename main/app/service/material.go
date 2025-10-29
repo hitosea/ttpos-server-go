@@ -1071,10 +1071,19 @@ func (s *materialSrv) EditMaterial(ctx context.Context, request req.MaterialEdit
 				return errors.WithMessage(err, "清空物品估值率失败")
 			}
 		}
+
 		if request.InternalCode == "" {
 			err = materialRepo.ClearMaterialInternalCode(request.Uuid)
 			if err != nil {
 				return errors.WithMessage(err, "清空物品内部编码失败")
+			}
+		}
+
+		// 如果安全库存为nil，则清空安全库存字段
+		if request.SafetyStock == nil {
+			err = materialRepo.ClearMaterialSafetyStock(request.Uuid)
+			if err != nil {
+				return errors.WithMessage(err, "清空物品安全库存失败")
 			}
 		}
 
@@ -3609,7 +3618,7 @@ func (s *materialSrv) checkCompanySafetyStock(ctx context.Context, companyUuid u
 	// 创建仓库物品repository
 	warehouseItemRepo := repository.NewWarehouseItemRepo(s.dbm.GetDB(companyUuid))
 
-	if businessSetting.SafetyStockType == "1" { // 门店纬度
+	if businessSetting.SafetyStockType == "1" { // 门店维度
 		// 获取所有物料在非在途仓库中的总库存
 		stockMap, err := warehouseItemRepo.GetMaterialStockInNormalWarehouses(materialUuids)
 		if err != nil {
@@ -3633,7 +3642,7 @@ func (s *materialSrv) checkCompanySafetyStock(ctx context.Context, companyUuid u
 			}
 		}
 
-	} else if businessSetting.SafetyStockType == "2" { // 仓库纬度
+	} else if businessSetting.SafetyStockType == "2" { // 仓库维度
 		// 获取所有物料在各个仓库中的库存
 		stockResults, err := warehouseItemRepo.GetMaterialStockByWarehouse(materialUuids)
 		if err != nil {

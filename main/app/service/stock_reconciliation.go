@@ -908,6 +908,9 @@ func (s *stockReconciliationSrv) validateWarehouseAndItems(db *gorm.DB, req req.
 // getIsInventoryStatusException 获取是否盘盈盘亏异常
 func (s *stockReconciliationSrv) getIsInventoryStatusException(bookedQuantity decimal.Decimal, countedQuantity decimal.Decimal) bool {
 	if bookedQuantity.IsZero() {
+		if countedQuantity.IsZero() {
+			return false
+		}
 		return true
 	}
 	return countedQuantity.Sub(bookedQuantity).Abs().Div(bookedQuantity).GreaterThan(decimal.NewFromFloat(0.2))
