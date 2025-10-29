@@ -17,9 +17,7 @@ services:
     restart: always
     depends_on:
       - db
-      - redis-node-1
-      - redis-node-2
-      - redis-node-3
+      - redis
       - redis-proxy
     networks:
       saas-network:
@@ -72,6 +70,16 @@ services:
     networks:
       saas-network:
         ipv4_address: 10.0.0.12
+  
+  redis:
+    container_name: "saas-redis-${APP_ID}"
+    image: redis:6
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - ./docker/redis/data:/data
+      - ./docker/redis/redis.conf:/etc/redis/redis.conf:ro
+    restart: always
 
   redis-proxy:
     container_name: "saas-redis-proxy-${APP_ID}"
@@ -81,10 +89,6 @@ services:
     volumes:
       - .env:/var/.env
     image: redis-proxy
-    depends_on:
-      - redis-node-1
-      - redis-node-2
-      - redis-node-3
     restart: always
     networks:
       saas-network:
