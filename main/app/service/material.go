@@ -2904,41 +2904,41 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 						MaterialUuid:   unit.MaterialUuid,
 					})
 				}
-				if len(delMaterialUuidList) > 0 {
-					err := materialRepo.DestroyMaterial(commonRepo.WhereInUuids(delMaterialUuidList))
-					if err != nil {
-						return errors.WithMessage(err, "删除总部物品列表失败")
-					}
+			}
+			if len(delMaterialUuidList) > 0 {
+				err := materialRepo.DestroyMaterial(commonRepo.WhereInUuids(delMaterialUuidList))
+				if err != nil {
+					return errors.WithMessage(err, "删除总部物品列表失败")
 				}
-				if len(delMaterialUnitUuidList) > 0 {
-					err := materialRepo.DestroyMaterialUnit(commonRepo.WhereInUuids(delMaterialUnitUuidList))
-					if err != nil {
-						return errors.WithMessage(err, "删除总部物品单位列表失败")
-					}
+			}
+			if len(delMaterialUnitUuidList) > 0 {
+				err := materialRepo.DestroyMaterialUnit(commonRepo.WhereInUuids(delMaterialUnitUuidList))
+				if err != nil {
+					return errors.WithMessage(err, "删除总部物品单位列表失败")
 				}
-				if len(delMultiLanguageNameList) > 0 {
-					err := multiLanguageNameRepo.DestroyMultiLanguageName(commonRepo.WhereInUuids(delMultiLanguageNameList))
-					if err != nil {
-						return errors.WithMessage(err, "删除总部多语言名称列表失败")
-					}
+			}
+			if len(delMultiLanguageNameList) > 0 {
+				err := multiLanguageNameRepo.DestroyMultiLanguageName(commonRepo.WhereInUuids(delMultiLanguageNameList))
+				if err != nil {
+					return errors.WithMessage(err, "删除总部多语言名称列表失败")
 				}
-				if len(addMaterialList) > 0 {
-					err := materialRepo.CreateMaterialList(addMaterialList)
-					if err != nil {
-						return errors.WithMessage(err, "创建总部物品列表失败")
-					}
+			}
+			if len(addMaterialList) > 0 {
+				err := materialRepo.CreateMaterialList(addMaterialList)
+				if err != nil {
+					return errors.WithMessage(err, "创建总部物品列表失败")
 				}
-				if len(addMaterialUnitList) > 0 {
-					err := materialUnitRepo.CreateMaterialUnitList(addMaterialUnitList)
-					if err != nil {
-						return errors.WithMessage(err, "创建总部物品单位列表失败")
-					}
+			}
+			if len(addMaterialUnitList) > 0 {
+				err := materialUnitRepo.CreateMaterialUnitList(addMaterialUnitList)
+				if err != nil {
+					return errors.WithMessage(err, "创建总部物品单位列表失败")
 				}
-				if len(addMultiLanguageNameList) > 0 {
-					err := multiLanguageNameRepo.CreateMultiLanguageNameList(addMultiLanguageNameList)
-					if err != nil {
-						return errors.WithMessage(err, "创建总部多语言名称列表失败")
-					}
+			}
+			if len(addMultiLanguageNameList) > 0 {
+				err := multiLanguageNameRepo.CreateMultiLanguageNameList(addMultiLanguageNameList)
+				if err != nil {
+					return errors.WithMessage(err, "创建总部多语言名称列表失败")
 				}
 			}
 			return nil
