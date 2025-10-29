@@ -260,6 +260,12 @@ func (r *MaterialRepoImpl) GetMaterialDetailByUuid(uuid uint64) (*model.Material
 				Query: "CostUnit.Unit.MultiLanguageName",
 			},
 			WithPreload{
+				Query: "NotBaseUnitList",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
 				Query: "NotBaseUnitList.Unit.MultiLanguageName",
 			},
 			WithPreload{
