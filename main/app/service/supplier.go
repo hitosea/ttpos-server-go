@@ -525,7 +525,6 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 		// 永久删除所有供应商物品关联关系
 		materialSupplierRepo.DeletePermanently(
 			materialSupplierRepo.WhereSupplierErpCode(supplier.ErpCode),
-			materialSupplierRepo.WhereIsHeadquarter(false),
 		)
 		// 添加供应商物品关联关系
 		if len(erpSupplierItems) > 0 {
