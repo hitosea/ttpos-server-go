@@ -6,6 +6,8 @@ var Limit9999 = 9999
 
 type ModeOfPayment string
 
+const DefaultDecimalPrecision = 0.001
+
 const (
 	// ModeOfPaymentCash 现金
 	ModeOfPaymentCash ModeOfPayment = "Cash"
@@ -64,4 +66,7 @@ const (
 	DefaultValuationRate = 1
 	//商品默认估值率0
 	ProductsDefaultValuationRate = 0
+
+	//默认盘点单号 MAT-RECO-0000-00000
+	DefaultStockReconciliationName = "MAT-RECO-0000-00000"
 )
