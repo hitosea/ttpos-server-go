@@ -687,6 +687,14 @@ func (s *printerSrv) CreatePrinterCustomize(ctx context.Context, createPrinterCu
 	if err != nil {
 		return errors.WithMessage(errors.New("检查模板是否存在失败"), err.Error())
 	}
+	// 检查打印机定制名称是否存在
+	exists, err := printerCustomizeRepo.CheckPrinterCustomizeNameExists(0, createPrinterCustomizeReq.Name)
+	if err != nil {
+		return errors.WithMessage(errors.New("检查打印机定制名称是否存在失败"), err.Error())
+	}
+	if exists {
+		return errors.New("高级模版名称已存在")
+	}
 	// 创建打印机定制
 	err = printerCustomizeRepo.CreatePrinterCustomize(model.PrinterCustomize{
 		Name:       createPrinterCustomizeReq.Name,
