@@ -258,21 +258,47 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 				}
 			}
 		}
+		stockNum := num.Add(availableNum).Add(transitNum).InexactFloat64()
+
+		// 非基准单位的库存数
+		notBasicUnitStocks := make([]material_resp.NotBasicUnitStock, 0)
+		for _, unit := range material.NotBaseUnitList {
+			if unit.IsDelete() || unit.IsDefault == 1 {
+				continue
+			}
+			notBasicUnitStocks = append(notBasicUnitStocks, material_resp.NotBasicUnitStock{
+				LocaleName: func() dto.LocaleResponse {
+					if unit.Unit == nil { // 没有关联单位，则使用名称
+						name := model.NewMultiLanguageName(unit.Name)
+						return name.GetNames()
+					}
+					return unit.Unit.MultiLanguageName.GetNames()
+				}(),
+				Num: func() float64 {
+					if unit.ConversionRate == 0 {
+						return 0
+					}
+					return decimal.NewFromFloat(stockNum).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
+				}(),
+				ConversionRate: unit.ConversionRate,
+			})
+		}
 
 		// 响应格式
 		respMaterial := material_resp.Material{
-			Uuid:         material.Uuid,
-			Name:         material.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-			LocaleName:   material.MultiLanguageName.GetNames(),
-			ErpCode:      material.Code,
-			InternalCode: material.InternalCode,
-			BarcodeValue: material.BarcodeValue,
-			Num:          num.Add(availableNum).Add(transitNum).InexactFloat64(),
-			SafetyStock:  material.SafetyStock,
-			AvailableNum: availableNum.InexactFloat64(),
-			TransitNum:   transitNum.InexactFloat64(),
-			CategoryUuid: material.CategoryUuid,
-			Image:        material.GetImage(utils.GetBaseURL(ctx.GetGin().Request)),
+			Uuid:               material.Uuid,
+			Name:               material.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			LocaleName:         material.MultiLanguageName.GetNames(),
+			ErpCode:            material.Code,
+			InternalCode:       material.InternalCode,
+			BarcodeValue:       material.BarcodeValue,
+			Num:                stockNum,
+			SafetyStock:        material.SafetyStock,
+			AvailableNum:       availableNum.InexactFloat64(),
+			TransitNum:         transitNum.InexactFloat64(),
+			NotBasicUnitStocks: material_resp.NotBasicUnitStockList{List: notBasicUnitStocks},
+			CategoryUuid:       material.CategoryUuid,
+			Image:              material.GetImage(utils.GetBaseURL(ctx.GetGin().Request)),
 			Status: func() int {
 				if material.Status {
 					return 1
@@ -432,10 +458,33 @@ func (s *materialSrv) GetMaterialStockDetail(ctx context.Context, req req.Materi
 		if warehouseItem.Warehouse != nil {
 			localeName = warehouseItem.Warehouse.MultiLanguageName.GetNames()
 		}
+		notBasicUnitStocks := make([]material_resp.NotBasicUnitStock, 0)
+		for _, unit := range warehouseItem.Material.NotBaseUnitList {
+			notBasicUnitStock := material_resp.NotBasicUnitStock{
+				LocaleName: func() dto.LocaleResponse {
+					if unit.Unit == nil { // 没有关联单位，则使用名称
+						name := model.NewMultiLanguageName(unit.Name)
+						return name.GetNames()
+					}
+					return unit.Unit.MultiLanguageName.GetNames()
+				}(),
+				Num: func() float64 {
+					if unit.ConversionRate == 0 {
+						return 0
+					}
+					return decimal.NewFromFloat(warehouseItem.Stock).Div(decimal.NewFromFloat(unit.ConversionRate)).Round(3).InexactFloat64()
+				}(),
+				ConversionRate: unit.ConversionRate,
+			}
+			notBasicUnitStocks = append(notBasicUnitStocks, notBasicUnitStock)
+		}
 		warehouseList = append(warehouseList, material_resp.Warehouse{
 			Uuid:       warehouseItem.WarehouseUuid,
 			LocaleName: localeName,
 			Num:        warehouseItem.Stock,
+			NotBasicUnitStockList: material_resp.NotBasicUnitStockList{
+				List: notBasicUnitStocks,
+			},
 		})
 		amount = amount.Add(decimal.NewFromFloat(warehouseItem.Stock))
 	}
