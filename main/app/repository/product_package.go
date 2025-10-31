@@ -38,6 +38,7 @@ type IProductPackageQueryRepo interface {
 	WithProductPackageGroups(opts ...DBOption) DBOption                   // 预加载商品套餐组
 	WithProductPackageGroupItems(opts ...DBOption) DBOption               // 预加载商品套餐组商品
 	WithProductPackageGroupMultiLanguageName(opts ...DBOption) DBOption   // 预加载商品套餐组多语言名称
+	WithProductLabel(opts ...DBOption) DBOption                           // 预加载商品标签
 }
 
 type productPackageRepoImpl struct {
@@ -363,6 +364,18 @@ func (r *productPackageRepoImpl) WithProductCategory(opts ...DBOption) DBOption 
 func (r *productPackageRepoImpl) WithProductCategoryMultiLanguageName(opts ...DBOption) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("ProductCategory.MultiLanguageName", func(db *gorm.DB) *gorm.DB {
+			for _, opt := range opts {
+				db = opt(db)
+			}
+			return db
+		})
+	}
+}
+
+// WithProductLabel 预加载商品标签
+func (r *productPackageRepoImpl) WithProductLabel(opts ...DBOption) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductLabel", func(db *gorm.DB) *gorm.DB {
 			for _, opt := range opts {
 				db = opt(db)
 			}

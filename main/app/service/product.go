@@ -491,6 +491,16 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 			if option.IsMember {
 				minPrice = calculateTakeoutProductPrice(minPrice, option.TakeoutDiscountRate, product.TakeoutTax.TaxRate, option.TaxFeeType)
 			}
+			// 构建标签信息
+			var labelInfo product_resp.ProductLabelInfo
+			if product.ProductLabelUuid > 0 && product.ProductLabel.Uuid > 0 {
+				labelInfo = product_resp.ProductLabelInfo{
+					Uuid:  product.ProductLabel.Uuid,
+					Name:  product.ProductLabel.Name,
+					Style: product.ProductLabel.Style,
+				}
+			}
+
 			list = append(list, product_resp.Product{
 				Uuid:                product.Uuid,
 				Image:               image,
@@ -515,6 +525,7 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 				},
 				Describe:      product.Describe,
 				IsShowKitchen: product.IsShowKitchen,
+				Label:         labelInfo, // 商品标签
 			})
 		}
 	}

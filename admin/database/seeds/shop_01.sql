@@ -1247,6 +1247,23 @@ CREATE TABLE IF NOT EXISTS `ttpos_tax` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '税率表';
 
+CREATE TABLE IF NOT EXISTS `ttpos_product_label` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '唯一标识UUID',
+    `name` TEXT COMMENT '标签名称',
+    `style` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '标签样式',
+    `is_show_cashier` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否在收银机显示, 0-否 1-是',
+    `is_show_tablet` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否在平板显示, 0-否 1-是',
+    `is_show_assistant` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否在助手显示, 0-否 1-是',
+    `is_show_h5` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否在H5显示, 0-否 1-是',
+    `is_show_delivery` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否在外送显示, 0-否 1-是',
+    `is_show_menu` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否在电子菜单显示, 0-否 1-是',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `idx_uuid` (`uuid`),
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品标签表';
+
 CREATE TABLE IF NOT EXISTS `ttpos_product_package` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包ID',
@@ -1283,6 +1300,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package` (
     `actual_sale_num` DECIMAL(22, 4) NOT NULL DEFAULT 0.0000 COMMENT '实际销量。每次卖出时,实际销量增加',
     `is_batch` INT(10) NOT NULL DEFAULT 0 COMMENT '是否是分批商品, 0-否 1-是',
     `headquarter_uuid` BIGINT DEFAULT 0 COMMENT '总部UUID',
+    `product_label_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品标签UUID',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
