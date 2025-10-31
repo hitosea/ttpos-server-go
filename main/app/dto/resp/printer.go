@@ -105,3 +105,7 @@ type ConfigInfoResp struct {
 type PreviewPrinterCustomizeResp struct {
 	ImageUrl string `json:"image_url"` // 图片URL
 }
+
+type CreatePrinterCustomizeResp struct {
+	CustomizeUuid uint64 `json:"customize_uuid"` // 定制UUID
+}

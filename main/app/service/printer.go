@@ -38,7 +38,7 @@ type IPrinterSrv interface {
 	EditPrinterCustomize(ctx context.Context, editPrinterCustomizeReq req.EditPrinterCustomizeReq) error                                              // 编辑打印机定制
 	PreviewPrinterCustomize(ctx context.Context, previewPrinterCustomizeReq req.PreviewPrinterCustomizeReq) (resp.PreviewPrinterCustomizeResp, error) // 预览打印机定制
 	DeletePrinterCustomize(ctx context.Context, customizeUuid uint64) error                                                                           // 删除打印机定制
-	CreatePrinterCustomize(ctx context.Context, createPrinterCustomizeReq req.CreatePrinterCustomizeReq) error                                        // 创建打印机定制
+	CreatePrinterCustomize(ctx context.Context, createPrinterCustomizeReq req.CreatePrinterCustomizeReq) (resp.CreatePrinterCustomizeResp, error)     // 创建打印机定制
 	UsePrinterCustomize(ctx context.Context, customizeUuid uint64) error                                                                              // 使用打印机定制
 	GetPrinterCustomizeConfigInfo(ctx context.Context, configInfoReq req.PrinterGetConfigInfoReq) (resp.ConfigInfoResp, error)                        // 获取配置信息
 }
@@ -675,29 +675,42 @@ func (s *printerSrv) DeletePrinterCustomize(ctx context.Context, customizeUuid u
 }
 
 // CreatePrinterCustomize 创建打印机定制
-func (s *printerSrv) CreatePrinterCustomize(ctx context.Context, createPrinterCustomizeReq req.CreatePrinterCustomizeReq) error {
+func (s *printerSrv) CreatePrinterCustomize(ctx context.Context, createPrinterCustomizeReq req.CreatePrinterCustomizeReq) (resp.CreatePrinterCustomizeResp, error) {
 	db := ctx.GetDB()
 	// 检查是否开启高级模版打印
 	if ctx.GetCompanySetting().IsOpenAdvancedTicketPrint == 0 {
-		return errors.New("未开启高级模版打印")
+		return resp.CreatePrinterCustomizeResp{}, errors.WithMessage(errors.New("未开启高级模版打印"))
 	}
 	// 检查模板是否存在
 	printerCustomizeRepo := repository.NewPrinterCustomizeRepo(db)
 	template, err := repository.NewPrinterTemplateRepo(db).GetPrinterTemplateInfo(createPrinterCustomizeReq.TemplateId)
 	if err != nil {
-		return errors.WithMessage(errors.New("检查模板是否存在失败"), err.Error())
+		return resp.CreatePrinterCustomizeResp{}, errors.WithMessage(errors.New("检查模板是否存在失败"), err.Error())
+	}
+	// 检查打印机定制名称是否存在
+	exists, err := printerCustomizeRepo.CheckPrinterCustomizeNameExists(0, createPrinterCustomizeReq.Name)
+	if err != nil {
+		return resp.CreatePrinterCustomizeResp{}, errors.WithMessage(errors.New("检查打印机定制名称是否存在失败"), err.Error())
+	}
+	if exists {
+		return resp.CreatePrinterCustomizeResp{}, errors.WithMessage(errors.New("高级模版名称已存在"))
 	}
 	// 创建打印机定制
+	customizeUuid, err := utils.GetID()
+	if err != nil {
+		return resp.CreatePrinterCustomizeResp{}, errors.WithMessage(errors.New("生成雪花ID失败"), err.Error())
+	}
 	err = printerCustomizeRepo.CreatePrinterCustomize(model.PrinterCustomize{
+		BaseModel:  model.BaseModel{Uuid: customizeUuid},
 		Name:       createPrinterCustomizeReq.Name,
 		Data:       createPrinterCustomizeReq.Data,
 		TemplateId: template.ID,
 		IsAdv:      1,
 	})
 	if err != nil {
-		return errors.WithMessage(errors.New("创建打印机定制失败"), err.Error())
+		return resp.CreatePrinterCustomizeResp{}, errors.WithMessage(errors.New("创建打印机定制失败"), err.Error())
 	}
-	return nil
+	return resp.CreatePrinterCustomizeResp{CustomizeUuid: customizeUuid}, nil
 }
 
 // UsePrinterCustomize 使用打印机定制

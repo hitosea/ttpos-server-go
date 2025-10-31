@@ -12261,9 +12261,23 @@ func (s *orderSrv) SaleOrderMoveProduct(ctx context.Context, req req.InstantOrde
 	if errSaleBill != nil {
 		return nil, errors.WithMessage(errSaleBill)
 	}
+	if req.From == 0 {
+		return nil, errors.WithMessage(errors.New("请指定来源订单"))
+	}
+	if req.To == 0 {
+		return nil, errors.WithMessage(errors.New("请指定目标订单"))
+	}
 	// 获取销售订单信息
 	saleOrderFrom := saleBill.GetSaleOrder(req.From)
 	saleOrderTo := saleBill.GetSaleOrder(req.To)
+	if saleOrderFrom == nil {
+		ctx.Log().Error("来源订单不存在", zap.Any("req", req), zap.Any("from saleOrder uuid", req.From), zap.Any("saleBill uuid", saleBillUuid), zap.Any("company uuid", ctx.GetCompanySetting().CompanyUuid))
+		return nil, errors.WithMessage(errors.New("来源订单不存在"))
+	}
+	if saleOrderTo == nil {
+		ctx.Log().Error("目标订单不存在", zap.Any("req", req), zap.Any("to saleOrder uuid", req.To), zap.Any("saleBill uuid", saleBillUuid), zap.Any("company uuid", ctx.GetCompanySetting().CompanyUuid))
+		return nil, errors.WithMessage(errors.New("目标订单不存在"))
+	}
 
 	// 构建移动到订单商品的map结构
 	moveProductMap := make(map[uint64]float64)

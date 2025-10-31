@@ -158,7 +158,7 @@ func (h *PrintHandler) DeletePrinterCustomize(c *gin.Context) {
 // @Produce json
 // @Param data body req.CreatePrinterCustomizeReq true "创建打印机定制请求"
 // @Security JwtToken
-// @Success 200 {object} dto.Response{data=string} "成功"
+// @Success 200 {object} dto.Response{data=resp.CreatePrinterCustomizeResp} "成功"
 // @Router /shop/printer/customize/create [post]
 func (h *PrintHandler) CreatePrinterCustomize(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -167,12 +167,12 @@ func (h *PrintHandler) CreatePrinterCustomize(c *gin.Context) {
 		helper.HandleValidationError(c, err, createPrinterCustomizeReq, nil)
 		return
 	}
-	err := h.printerSrv.CreatePrinterCustomize(ctx, createPrinterCustomizeReq)
+	resp, err := h.printerSrv.CreatePrinterCustomize(ctx, createPrinterCustomizeReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, nil, "创建打印机定制成功")
+	helper.Success(c, resp, "创建打印机定制成功")
 }
 
 // UsePrinterCustomize 使用打印机定制
