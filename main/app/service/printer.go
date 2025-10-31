@@ -287,31 +287,31 @@ func (s *printerSrv) GetPrintTemplateList(ctx context.Context) (resp.PrintTempla
 		GroupType: 1,
 		List:      make([]resp.PrintTemplate, 0),
 	})
-	groups = append(groups, resp.PrintTemplateGroup{
-		LocaleName: dto.LocaleResponse{
-			ZH:   "厨房小票",
-			EN:   "Kitchen Menu",
-			TH:   "เมนูอาหาร",
-			JA:   "キッチンメニュー",
-			KO:   "주방 메뉴",
-			MY:   "Resipi Makanan",
-			TR:   "Yemek Menüsü",
-			SV:   "Maträtmeny",
-			ZHTW: "廚房菜單",
-		},
-		GroupType: 2,
-		List:      make([]resp.PrintTemplate, 0),
-	})
+	// groups = append(groups, resp.PrintTemplateGroup{
+	// 	LocaleName: dto.LocaleResponse{
+	// 		ZH:   "厨房小票",
+	// 		EN:   "Kitchen Menu",
+	// 		TH:   "เมนูอาหาร",
+	// 		JA:   "キッチンメニュー",
+	// 		KO:   "주방 메뉴",
+	// 		MY:   "Resipi Makanan",
+	// 		TR:   "Yemek Menüsü",
+	// 		SV:   "Maträtmeny",
+	// 		ZHTW: "廚房菜單",
+	// 	},
+	// 	GroupType: 2,
+	// 	List:      make([]resp.PrintTemplate, 0),
+	// })
 
 	// 模版ID列表
 	templateOrders := []uint64{
-		constant.PrinterTemplatePreBilling,    // 预结账单
-		constant.PrinterTemplateBilling,       // 结账单
-		constant.PrinterTemplateInvoice,       // 发票
-		constant.PrinterTemplateRecharge,      // 充值单
-		constant.PrinterTemplateBusiness,      // 营业数据
-		constant.PrinterTemplateHandoverSheet, // 交班单
-		constant.PrinterTemplateTakeoutOrder,  // 外送单
+		constant.PrinterTemplatePreBilling, // 预结账单
+		constant.PrinterTemplateBilling,    // 结账单
+		// constant.PrinterTemplateInvoice,       // 发票
+		// constant.PrinterTemplateRecharge,      // 充值单
+		// constant.PrinterTemplateBusiness,      // 营业数据
+		// constant.PrinterTemplateHandoverSheet, // 交班单
+		// constant.PrinterTemplateTakeoutOrder,  // 外送单
 	}
 	templateKitchen := []uint64{
 		constant.PrinterTemplateOneDishOneMenu, // 一菜一单

@@ -60,7 +60,7 @@ func (model *PrinterLog) GetPrintChunkSize() int {
 	case 1:
 		return 5 * 1024 * 1024 // 5MB
 	case 2:
-		return 30 * 1024 // 30KB
+		return 20 * 1024 // 20KB
 	case 3:
 		return 4 * 1024 // 4KB
 	}
