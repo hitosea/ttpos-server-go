@@ -51,10 +51,15 @@ func (r *PurchaseOrderCreateReq) Validate() error {
 	return nil
 }
 
+type PurchaseOrderItemMaterialUnitReq struct {
+	Uuid uint64  `json:"uuid" binding:"required"` // 单位UUID
+	Num  float64 `json:"num"`                     // 数量
+}
+
 // PurchaseOrderItemCreateReq 采购订单物品明细创建请求
 type PurchaseOrderItemCreateReq struct {
-	MaterialUuid uint64  `json:"material_uuid" binding:"required,min=1"` // 物品ID
-	Num          float64 `json:"num"`                                    // 数量
+	MaterialUuid uint64                             `json:"material_uuid" binding:"required,min=1"` // 物品ID
+	UnitList     []PurchaseOrderItemMaterialUnitReq `json:"unit_list"`                              // 单位列表,新增的非基准单位
 }
 
 // PurchaseOrderUpdateReq 更新采购订单请求
@@ -87,8 +92,8 @@ func (r *PurchaseOrderUpdateReq) Validate() error {
 
 // PurchaseOrderItemUpdateReq 采购订单商品明细更新请求
 type PurchaseOrderItemUpdateReq struct {
-	MaterialUuid uint64  `json:"material_uuid" binding:"required,min=1"` // 物品ID
-	Num          float64 `json:"num"`                                    // 数量
+	MaterialUuid uint64                             `json:"material_uuid" binding:"required,min=1"` // 物品ID
+	UnitList     []PurchaseOrderItemMaterialUnitReq `json:"unit_list"`                              // 单位列表,新增的非基准单位
 }
 
 // PurchaseOrderDetailReq 采购订单详情请求

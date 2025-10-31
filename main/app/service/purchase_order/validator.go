@@ -3,6 +3,7 @@ package purchase_order
 import (
 	"fmt"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
@@ -10,8 +11,11 @@ import (
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/language"
+	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -159,8 +163,8 @@ func (v *purchaseOrderValidator) joinMaterialNames(names []string) string {
 
 // PurchaseOrderItemReq 采购订单明细请求（临时定义，实际应该在dto/req包中）
 type PurchaseOrderItemReq struct {
-	MaterialUuid uint64  `json:"material_uuid"`
-	Num          float64 `json:"num"`
+	MaterialUuid uint64                                 `json:"material_uuid"`
+	UnitList     []req.PurchaseOrderItemMaterialUnitReq `json:"unit_list"`
 }
 
 // buildPurchaseOrderItems 构建采购订单明细
@@ -179,7 +183,7 @@ func (v *purchaseOrderValidator) buildPurchaseOrderItems(
 	materialList, err := materialRepo.GetMaterialByUuids(
 		materialUuids,
 		materialRepo.WithPreload("Unit.Unit"),
-		materialRepo.WithPreload("PurchaseUnit.Unit"),
+		materialRepo.WithPreload("NotBaseUnitList.Unit"),
 	)
 	if err != nil {
 		return nil, errors.WithMessage(errors.New("查询物品失败"), err.Error())
@@ -202,7 +206,7 @@ func (v *purchaseOrderValidator) buildPurchaseOrderItems(
 	items := make([]model.PurchaseOrderItem, 0, len(itemReqs))
 	for _, itemReq := range itemReqs {
 		material := materials[itemReq.MaterialUuid]
-		item := v.buildPurchaseOrderItem(purchaseOrderUuid, material, itemReq.Num)
+		item := v.buildPurchaseOrderItem(purchaseOrderUuid, material, itemReq.UnitList)
 		items = append(items, item)
 	}
 
@@ -213,39 +217,51 @@ func (v *purchaseOrderValidator) buildPurchaseOrderItems(
 func (v *purchaseOrderValidator) buildPurchaseOrderItem(
 	purchaseOrderUuid uint64,
 	material *model.Material,
-	num float64,
+	unitList []req.PurchaseOrderItemMaterialUnitReq,
 ) model.PurchaseOrderItem {
+	itemUuid, err := utils.GetID()
+	if err != nil {
+		logger.Logger.Error("生成雪花ID失败", zap.Error(err))
+		return model.PurchaseOrderItem{}
+	}
+	totalNum := 0.0
+	purchaseOrderItemUnits := make([]model.PurchaseOrderItemUnit, 0)
+	for _, reqUnit := range unitList {
+		totalNum += reqUnit.Num
+		for _, materialUnit := range material.NotBaseUnitList {
+			if materialUnit.UnitUuid == reqUnit.Uuid {
+				purchaseOrderItemUnits = append(purchaseOrderItemUnits, model.PurchaseOrderItemUnit{
+					ItemUuid:           itemUuid,
+					UnitUuid:           reqUnit.Uuid,
+					Num:                reqUnit.Num,
+					UnitName:           materialUnit.Name,
+					UnitConversionRate: materialUnit.ConversionRate,
+					BaseUnitUuid:       materialUnit.Uuid,
+					BaseUnitName:       materialUnit.Name,
+					ErpnextUom:         materialUnit.Unit.ErpnextUom,
+				})
+				break
+			}
+		}
+	}
+
 	item := model.PurchaseOrderItem{
+		BaseModel: model.BaseModel{
+			Uuid: itemUuid,
+		},
 		PurchaseOrderUuid: purchaseOrderUuid,
 		MaterialUuid:      material.Uuid,
-		Num:               num,
 		MaterialCode:      material.Code,
 		MaterialName:      material.Name,
+		Num:               totalNum,
 		UnitUuid:          material.PurchaseUnitUuid,
 		Valuation:         material.GetValuation(),
-	}
-
-	// 设置采购单位信息
-	if material.PurchaseUnit != nil {
-		item.UnitName = material.PurchaseUnit.Name
-		item.UnitConversionRate = material.PurchaseUnit.ConversionRate
-		if material.PurchaseUnit.Unit != nil {
-			item.ErpnextUom = material.PurchaseUnit.Unit.ErpnextUom
-		}
-	}
-
-	// 设置基础单位信息
-	if material.Unit != nil {
-		item.BaseUnitUuid = material.Unit.UnitUuid
-		item.BaseUnitName = material.Unit.Name
-		if material.Unit.Unit != nil {
-			item.BaseErpnextUom = material.Unit.Unit.ErpnextUom
-		}
+		Units:             purchaseOrderItemUnits,
 	}
 
 	// 计算总价
 	item.TotalPrice = decimal.NewFromFloat(item.Valuation).
-		Mul(decimal.NewFromFloat(num)).
+		Mul(decimal.NewFromFloat(totalNum)).
 		InexactFloat64()
 
 	return item

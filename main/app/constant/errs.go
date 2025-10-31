@@ -16,6 +16,7 @@ const (
 	CodeParamError   = -3  // 参数错误
 	CodeNetworkError = -4  // 网络错误
 	CodeTimeoutError = -5  // 超时错误
+	CodeVersionError = -6  // 版本错误
 	UnknownError     = -99 // 未知错误
 
 	CodeUnauthorized      = -100 // 未授权

@@ -35,20 +35,30 @@ type PurchaseOrderDetailResp struct {
 	Items []PurchaseOrderItemInfo `json:"items"` // 采购明细
 }
 
+type PurchaseOrderItemMaterialUnit struct {
+	Uuid           uint64             `json:"uuid"`            // 单位UUID
+	FromUnitUuid   uint64             `json:"from_unit_uuid"`  // 来源单位UUID
+	Name           string             `json:"name"`            // 单位名称
+	LocaleName     dto.LocaleResponse `json:"locale_name"`     // 单位名称
+	ConversionRate float64            `json:"conversion_rate"` // 转换率
+}
+
 // PurchaseOrderItemInfo 采购订单商品明细信息
 type PurchaseOrderItemInfo struct {
-	Uuid               uint64             `json:"uuid"`                  // 明细ID
-	MaterialUuid       uint64             `json:"material_uuid"`         // 物品ID
-	MaterialCode       string             `json:"material_code"`         // 物品编码
-	LocaleName         dto.LocaleResponse `json:"locale_name"`           // 物品名称
-	Num                float64            `json:"num"`                   // 申请数量
-	ArrivalNum         float64            `json:"arrival_num"`           // 到货数量
-	UnitName           string             `json:"unit_name"`             // 采购单位名称
-	LocaleUnitName     dto.LocaleResponse `json:"locale_unit_name"`      // 采购单位名称
-	UnitConversionRate float64            `json:"unit_conversion_rate"`  // 基准单位转换率
-	BaseUnitName       string             `json:"base_unit_name"`        // 基准单位名称
-	LocaleBaseUnitName dto.LocaleResponse `json:"locale_base_unit_name"` // 基准单位名称
-	InternalCode       string             `json:"internal_code"`         // 内部编码
+	Uuid               uint64                          `json:"uuid"`                  // 明细ID
+	MaterialUuid       uint64                          `json:"material_uuid"`         // 物品ID
+	MaterialCode       string                          `json:"material_code"`         // 物品编码
+	LocaleName         dto.LocaleResponse              `json:"locale_name"`           // 物品名称
+	Num                float64                         `json:"num"`                   // 申请数量
+	ArrivalNum         float64                         `json:"arrival_num"`           // 到货数量
+	UnitName           string                          `json:"unit_name"`             // 采购单位名称
+	LocaleUnitName     dto.LocaleResponse              `json:"locale_unit_name"`      // 采购单位名称
+	UnitConversionRate float64                         `json:"unit_conversion_rate"`  // 基准单位转换率
+	BaseUnitName       string                          `json:"base_unit_name"`        // 基准单位名称
+	LocaleBaseUnitName dto.LocaleResponse              `json:"locale_base_unit_name"` // 基准单位名称
+	InternalCode       string                          `json:"internal_code"`         // 内部编码
+	BarcodeValue       string                          `json:"barcode_value"`         // 条形码值
+	UnitList           []PurchaseOrderItemMaterialUnit `json:"unit_list"`             // 单位列表
 }
 
 // PurchaseOrderLogInfo 采购订单操作日志信息
@@ -161,20 +171,22 @@ type PurchaseReceiptOrderInfo struct {
 
 // PurchaseReceiptItemInfo 收货明细信息
 type PurchaseReceiptItemInfo struct {
-	Uuid                  uint64             `json:"uuid"`                     // 明细ID
-	PurchaseOrderItemUuid uint64             `json:"purchase_order_item_uuid"` // 采购订单明细ID
-	MaterialCode          string             `json:"material_code"`            // 物品编码
-	MaterialUuid          uint64             `json:"material_uuid"`            // 物品ID
-	LocaleName            dto.LocaleResponse `json:"locale_name"`              // 物品名称
-	MaterialName          string             `json:"material_name"`            // 物品名称
-	PurchaseNum           float64            `json:"purchase_num"`             // 采购数量
-	ArrivalNum            float64            `json:"arrival_num"`              // 到货数量
-	UnitName              string             `json:"unit_name"`                // 采购单位名称
-	LocaleUnitName        dto.LocaleResponse `json:"locale_unit_name"`         // 采购单位名称
-	UnitConversionRate    float64            `json:"unit_conversion_rate"`     // 基准单位转换率
-	BaseUnitName          string             `json:"base_unit_name"`           // 基准单位名称
-	LocaleBaseUnitName    dto.LocaleResponse `json:"locale_base_unit_name"`    // 基准单位名称
-	InternalCode          string             `json:"internal_code"`            // 商品Bom内部编码
+	Uuid                  uint64                          `json:"uuid"`                     // 明细ID
+	PurchaseOrderItemUuid uint64                          `json:"purchase_order_item_uuid"` // 采购订单明细ID
+	MaterialCode          string                          `json:"material_code"`            // 物品编码
+	MaterialUuid          uint64                          `json:"material_uuid"`            // 物品ID
+	LocaleName            dto.LocaleResponse              `json:"locale_name"`              // 物品名称
+	MaterialName          string                          `json:"material_name"`            // 物品名称
+	PurchaseNum           float64                         `json:"purchase_num"`             // 采购数量
+	ArrivalNum            float64                         `json:"arrival_num"`              // 到货数量
+	UnitName              string                          `json:"unit_name"`                // 采购单位名称
+	LocaleUnitName        dto.LocaleResponse              `json:"locale_unit_name"`         // 采购单位名称
+	UnitConversionRate    float64                         `json:"unit_conversion_rate"`     // 基准单位转换率
+	BaseUnitName          string                          `json:"base_unit_name"`           // 基准单位名称
+	LocaleBaseUnitName    dto.LocaleResponse              `json:"locale_base_unit_name"`    // 基准单位名称
+	InternalCode          string                          `json:"internal_code"`            // 商品Bom内部编码
+	BarcodeValue          string                          `json:"barcode_value"`            // 条形码值
+	UnitList              []PurchaseOrderItemMaterialUnit `json:"unit_list"`                // 单位列表
 }
 
 // PurchaseReceiptOrderDetailResp 收货单详情响应

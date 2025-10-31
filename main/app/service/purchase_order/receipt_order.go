@@ -495,6 +495,41 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderDetail(
 			}
 			return item.Material.InternalCode
 		}(item)
+		itemInfo.BarcodeValue = func(item model.PurchaseReceiptOrderItem) string {
+			if item.Material == nil {
+				return ""
+			}
+			return item.Material.BarcodeValue
+		}(item)
+		// 采购单位列表
+		itemInfo.UnitList = func(item model.PurchaseReceiptOrderItem) []resp.PurchaseOrderItemMaterialUnit {
+			unitList := []resp.PurchaseOrderItemMaterialUnit{}
+			for _, unit := range item.Material.NotBaseUnitList {
+				unitList = append(unitList, resp.PurchaseOrderItemMaterialUnit{
+					Uuid: unit.Uuid,
+					Name: func() string {
+						if unit.Unit == nil {
+							return ""
+						}
+						if unit.Unit.MultiLanguageName == (model.MultiLanguageName{}) {
+							return ""
+						}
+						return unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+					}(),
+					LocaleName: func() dto.LocaleResponse {
+						if unit.Unit == nil {
+							return dto.LocaleResponse{}
+						}
+						if unit.Unit.MultiLanguageName == (model.MultiLanguageName{}) {
+							return dto.LocaleResponse{}
+						}
+						return unit.Unit.MultiLanguageName.GetNames()
+					}(),
+					ConversionRate: unit.ConversionRate,
+				})
+			}
+			return unitList
+		}(item)
 		detailResp.Items = append(detailResp.Items, itemInfo)
 	}
 
