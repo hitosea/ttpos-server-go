@@ -312,7 +312,7 @@
             IP: '',
             PORT: 9100,
           },
-          print_speed: 1,
+          print_speed: 2, // 默认选用稳定速度
         },
         loading: false,
 

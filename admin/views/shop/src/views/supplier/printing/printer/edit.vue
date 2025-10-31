@@ -318,7 +318,7 @@
             self.form.enable_sound = detail.enable_sound !== undefined ? detail.enable_sound : 1; // 打印提示音
             self.form.source_device_sn = detail.source_device_sn;
             self.form.print_method = detail.print_method || '';
-            self.form.print_speed = detail.print_speed || 1;
+            self.form.print_speed = detail.print_speed || 2; // 默认选用稳定速度
             if (detail.printer_type.value == 'FEI_E_YUN') {
               self.form.FEI_E_YUN.USER = detail.printer_config.USER;
               self.form.FEI_E_YUN.UKEY = detail.printer_config.UKEY;
