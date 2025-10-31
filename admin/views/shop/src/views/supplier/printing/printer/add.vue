@@ -227,6 +227,17 @@
           <el-option :label="$t('图片打印')" :value="2"></el-option>
         </el-select>
       </el-form-item>
+
+      <el-form-item for="no_click" :label="$t('打印优化')" prop="print_speed">
+        <el-radio-group v-model="form.print_speed">
+          <el-radio :label="1">{{ $t('流畅') }}</el-radio>
+          <el-radio :label="2">{{ $t('稳定') }}</el-radio>
+          <el-radio :label="3">{{ $t('兼容') }}</el-radio>
+        </el-radio-group>
+        <div class="tips">{{ $t('流畅：设备状态良好时选择此模式，可最大化打印效率') }}</div>
+        <div class="tips">{{ $t('稳定：遇到偶尔卡顿时切换到此模式，确保订单稳定输出') }}</div>
+        <div class="tips">{{ $t('兼容：设备性能不足时使用，保证每张订单都能完整打印') }}</div>
+      </el-form-item>
       <!--提交-->
     </el-form>
     <template #footer>
@@ -301,6 +312,7 @@
             IP: '',
             PORT: 9100,
           },
+          print_speed: 1,
         },
         loading: false,
 
