@@ -22,6 +22,7 @@ type Printer struct {
 	Width             int    `gorm:"column:width;type:int(11) unsigned;default:80;comment:纸张宽度（mm）;NOT NULL" json:"width"`
 	EnableStatusCheck int    `gorm:"column:enable_status_check;type:tinyint(1);default:1;comment:是否启用状态检查,0-关闭,1-开启;NOT NULL" json:"enable_status_check"`
 	EnableSound       int    `gorm:"column:enable_sound;type:tinyint(1);default:1;comment:是否启用打印提示音,0-关闭,1-开启;NOT NULL" json:"enable_sound"`
+	PrintSpeed        int    `gorm:"column:print_speed;type:tinyint(1);default:2;comment:打印速度,1-流畅(不分片打印),2-稳定(分片大包打印),3-兼容(分片小包打印);NOT NULL" json:"print_speed"`
 
 	PrinterType *PrinterType `gorm:"foreignKey:PrinterTypeUuid;references:Uuid"` // 关联 printer_type
 }
@@ -40,6 +41,47 @@ func (model *Printer) IsUsbPrinter() bool {
 		return false
 	}
 	return model.IsUsb == 1
+}
+
+// 获取打印速度模式名称
+func (model *Printer) GetPrintSpeedName() string {
+	if model == nil {
+		return "稳定"
+	}
+	switch model.PrintSpeed {
+	case 1:
+		return "流畅"
+	case 2:
+		return "稳定"
+	case 3:
+		return "兼容"
+	default:
+		return "稳定"
+	}
+}
+
+// 是否流畅模式（不分片打印）
+func (model *Printer) IsSmoothMode() bool {
+	if model == nil {
+		return false
+	}
+	return model.PrintSpeed == 1
+}
+
+// 是否稳定模式（分片大包打印）
+func (model *Printer) IsStableMode() bool {
+	if model == nil {
+		return true // 默认稳定模式
+	}
+	return model.PrintSpeed == 2
+}
+
+// 是否兼容模式（分片小包打印）
+func (model *Printer) IsCompatibleMode() bool {
+	if model == nil {
+		return false
+	}
+	return model.PrintSpeed == 3
 }
 
 type PrinterConfigJson struct {

@@ -62,6 +62,7 @@ class Printer extends Controller
      * @Apidoc\Param("width", type="int", require=false, default=80, desc="纸张宽度（mm）")
      * @Apidoc\Param("enable_status_check", type="int", require=false, default=0, desc="是否启用状态检查 0-关闭 1-开启")
      * @Apidoc\Param("enable_sound", type="int", require=false, default=1, desc="是否启用打印提示音 0-关闭 1-开启")
+     * @Apidoc\Param("print_speed", type="int", require=false, default=2, desc="打印速度 1-流畅（不分片打印）2-稳定（分片大包打印）3-兼容（分片小包打印）")
      * @Apidoc\Param("sort", type="int", require=true, default=0, desc="排序")
      * @Apidoc\Returned()
      */
@@ -131,6 +132,7 @@ class Printer extends Controller
      * @Apidoc\Param("width", type="int", require=false, default=80, desc="纸张宽度（mm）")
      * @Apidoc\Param("enable_status_check", type="int", require=false, default=0, desc="是否启用状态检查 0-关闭 1-开启")
      * @Apidoc\Param("enable_sound", type="int", require=false, default=1, desc="是否启用打印提示音 0-关闭 1-开启")
+     * @Apidoc\Param("print_speed", type="int", require=false, default=2, desc="打印速度 1-流畅（不分片打印）2-稳定（分片大包打印）3-兼容（分片小包打印）")
      * @Apidoc\Param("sort", type="int", require=true, default=0, desc="排序")
      * @Apidoc\Returned()
      */

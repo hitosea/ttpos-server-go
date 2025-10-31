@@ -26,7 +26,7 @@ class Printer extends BaseModel
     /**
      * 追加属性
      */
-    protected $append = ['printer_id', 'printer_name', 'printer_config', 'print_times'];
+    protected $append = ['printer_id', 'printer_name', 'printer_config', 'print_times', 'print_speed'];
 
     /**
      * 分类更新后推送通知
@@ -88,6 +88,14 @@ class Printer extends BaseModel
     public function getPrintTimesAttr($value, $data)
     {
         return $data['copies'];
+    }
+
+    /**
+     * 获取打印速度
+     */
+    public function getPrintSpeedAttr($value, $data)
+    {
+        return $data['print_speed'] ?? 2; // 默认稳定模式
     }
 
     /**
@@ -209,6 +217,7 @@ class Printer extends BaseModel
                 'is_usb' => $item['is_usb'],
                 'create_time' => $item['create_time'],
                 'printer_config' => $item['printer_config'],
+                'print_speed' => $item['print_speed'],
                 'is_use' => $item['is_use']
             ];
         }

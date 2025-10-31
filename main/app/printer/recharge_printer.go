@@ -90,6 +90,7 @@ func (p *PrinterRepoImpl) PrintingRechargeOrder(
 		PrintingTime:      printerLogData.PrintingTime,
 		EnableStatusCheck: settingPrinterInfo.EnableStatusCheck,
 		TradeNo:           printerLogData.GetTradeNo(p.ctx.GetCompanyUuid()),
+		PrintChunkSize:    printerLogData.GetPrintChunkSize(),
 	}, nil
 }
 
