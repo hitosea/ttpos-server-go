@@ -11,6 +11,7 @@ type Customer struct {
 	Idx                   int           `json:"idx,omitempty"`
 	NamingSeries          string        `json:"naming_series,omitempty"`
 	CustomerName          string        `json:"customer_name,omitempty"`
+	CustomerGroup         string        `json:"customer_group,omitempty"`
 	CustomerType          string        `json:"customer_type,omitempty"`
 	IsInternalCustomer    int           `json:"is_internal_customer,omitempty"`
 	RepresentsCompany     string        `json:"represents_company,omitempty"`
