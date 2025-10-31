@@ -726,6 +726,7 @@
                     "dividing_line": false,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 2,
+                    "cannot_delete": true,
                     "width": {
                         "de": 28,
                         "my": 35,
@@ -771,6 +772,7 @@
                     "dividing_line": false,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
+                    "cannot_delete": true,
                     "width": {
                         "de": 35,
                         "my": 45,
@@ -816,6 +818,7 @@
                     "dividing_line": false,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
+                    "cannot_delete": true,
                     "width": 0,
                     "line_height": 22
                 },
@@ -1009,7 +1012,7 @@
                     [
                         {
                             "block_id": "attr",
-                            "block_column_id": "column_attr",
+                            "block_column_id": "column_commodity_name",
                             "block_type": "label:value",
                             "block_label": {
                                 "en": "-Attribute: ",
