@@ -287,31 +287,31 @@ func (s *printerSrv) GetPrintTemplateList(ctx context.Context) (resp.PrintTempla
 		GroupType: 1,
 		List:      make([]resp.PrintTemplate, 0),
 	})
-	groups = append(groups, resp.PrintTemplateGroup{
-		LocaleName: dto.LocaleResponse{
-			ZH:   "厨房小票",
-			EN:   "Kitchen Menu",
-			TH:   "เมนูอาหาร",
-			JA:   "キッチンメニュー",
-			KO:   "주방 메뉴",
-			MY:   "Resipi Makanan",
-			TR:   "Yemek Menüsü",
-			SV:   "Maträtmeny",
-			ZHTW: "廚房菜單",
-		},
-		GroupType: 2,
-		List:      make([]resp.PrintTemplate, 0),
-	})
+	// groups = append(groups, resp.PrintTemplateGroup{
+	// 	LocaleName: dto.LocaleResponse{
+	// 		ZH:   "厨房小票",
+	// 		EN:   "Kitchen Menu",
+	// 		TH:   "เมนูอาหาร",
+	// 		JA:   "キッチンメニュー",
+	// 		KO:   "주방 메뉴",
+	// 		MY:   "Resipi Makanan",
+	// 		TR:   "Yemek Menüsü",
+	// 		SV:   "Maträtmeny",
+	// 		ZHTW: "廚房菜單",
+	// 	},
+	// 	GroupType: 2,
+	// 	List:      make([]resp.PrintTemplate, 0),
+	// })
 
 	// 模版ID列表
 	templateOrders := []uint64{
-		constant.PrinterTemplatePreBilling,    // 预结账单
-		constant.PrinterTemplateBilling,       // 结账单
-		constant.PrinterTemplateInvoice,       // 发票
-		constant.PrinterTemplateRecharge,      // 充值单
-		constant.PrinterTemplateBusiness,      // 营业数据
-		constant.PrinterTemplateHandoverSheet, // 交班单
-		constant.PrinterTemplateTakeoutOrder,  // 外送单
+		constant.PrinterTemplatePreBilling, // 预结账单
+		constant.PrinterTemplateBilling,    // 结账单
+		// constant.PrinterTemplateInvoice,       // 发票
+		// constant.PrinterTemplateRecharge,      // 充值单
+		// constant.PrinterTemplateBusiness,      // 营业数据
+		// constant.PrinterTemplateHandoverSheet, // 交班单
+		// constant.PrinterTemplateTakeoutOrder,  // 外送单
 	}
 	templateKitchen := []uint64{
 		constant.PrinterTemplateOneDishOneMenu, // 一菜一单
@@ -860,11 +860,10 @@ func (s *printerSrv) GetPrinterCustomizeConfigInfo(ctx context.Context, configIn
 								dataRows = make([]interface{}, 0)
 							}
 
-							// 将每个 template block 作为单独的数组添加到 data_rows
-							// 格式：data_rows = [[block1], [block2], [block3]]
-							for _, templateBlock := range templateBlocks {
-								dataRows = append(dataRows, []interface{}{templateBlock})
-							}
+							// templateBlocks 是二维数组：[[第1行blocks], [第2行blocks]]
+							// 直接展开添加到 data_rows，保持每一行作为一个数组
+							// 结果：data_rows = [[第1行blocks], [第2行blocks]]
+							dataRows = append(dataRows, templateBlocks...)
 
 							groupBlockMap["data_rows"] = dataRows
 						}
@@ -926,33 +925,81 @@ func (s *printerSrv) extractBlocksRecursive(rows []interface{}, blocksByGroupBlo
 			continue
 		}
 
-		// 遍历每行的blocks
+		// 检查当前行是否所有blocks都有相同的 group_block_id
+		var currentGroupId string
+		allSameGroup := true
+		blocksInRow := make([]interface{}, 0)
+
+		// 第一遍遍历：检查是否同组，并收集blocks
 		for _, blockInterface := range rowArray {
 			block, ok := blockInterface.(map[string]interface{})
 			if !ok {
-				continue
+				allSameGroup = false
+				break
 			}
 
 			if block["block_type"] == "blank_line" {
 				continue
 			}
 
-			// 获取 group_block_id（这是配置文件中 block_id 的值）
 			groupBlockId, exists := block["group_block_id"].(string)
 			if !exists || groupBlockId == "" {
-				// 如果没有 group_block_id，尝试递归检查是否有嵌套的 rows
+				allSameGroup = false
+				break
+			}
+
+			if currentGroupId == "" {
+				currentGroupId = groupBlockId
+			} else if currentGroupId != groupBlockId {
+				allSameGroup = false
+				break
+			}
+
+			blocksInRow = append(blocksInRow, block)
+		}
+
+		// 如果当前行所有blocks都是同一个 group_block_id，将这一行作为一个数组添加
+		if allSameGroup && currentGroupId != "" && len(blocksInRow) > 0 {
+			// 将当前行的blocks作为一个独立的数组添加到该组
+			// 格式：blocksByGroupBlockId["commodity"] = [[第1行blocks], [第2行blocks]]
+			blocksByGroupBlockId[currentGroupId] = append(blocksByGroupBlockId[currentGroupId], blocksInRow)
+
+			// 处理嵌套的 rows
+			for _, blockInterface := range rowArray {
+				block, _ := blockInterface.(map[string]interface{})
 				if nestedRows, ok := block["rows"].([]interface{}); ok {
 					s.extractBlocksRecursive(nestedRows, blocksByGroupBlockId)
 				}
-				continue
 			}
+		} else {
+			// 如果不是同一组，按原来的逻辑单独处理每个block
+			for _, blockInterface := range rowArray {
+				block, ok := blockInterface.(map[string]interface{})
+				if !ok {
+					continue
+				}
 
-			// 将 block 添加到对应的 group_block_id 数组中
-			blocksByGroupBlockId[groupBlockId] = append(blocksByGroupBlockId[groupBlockId], block)
+				if block["block_type"] == "blank_line" {
+					continue
+				}
 
-			// 如果有嵌套的 rows，也递归处理
-			if nestedRows, ok := block["rows"].([]interface{}); ok {
-				s.extractBlocksRecursive(nestedRows, blocksByGroupBlockId)
+				// 获取 group_block_id（这是配置文件中 block_id 的值）
+				groupBlockId, exists := block["group_block_id"].(string)
+				if !exists || groupBlockId == "" {
+					// 如果没有 group_block_id，尝试递归检查是否有嵌套的 rows
+					if nestedRows, ok := block["rows"].([]interface{}); ok {
+						s.extractBlocksRecursive(nestedRows, blocksByGroupBlockId)
+					}
+					continue
+				}
+
+				// 单个block也作为一个数组添加（保持格式统一）
+				blocksByGroupBlockId[groupBlockId] = append(blocksByGroupBlockId[groupBlockId], []interface{}{block})
+
+				// 如果有嵌套的 rows，也递归处理
+				if nestedRows, ok := block["rows"].([]interface{}); ok {
+					s.extractBlocksRecursive(nestedRows, blocksByGroupBlockId)
+				}
 			}
 		}
 	}

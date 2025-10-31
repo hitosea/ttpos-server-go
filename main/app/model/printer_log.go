@@ -36,6 +36,7 @@ type PrinterLog struct {
 	PrinterType        string `gorm:"column:printer_type;type:varchar(50);default:'';comment:打印机类型;NOT NULL" json:"printer_type"`
 	PrintingTime       int64  `gorm:"column:printing_time;type:int(11);default:0;comment:打印耗时;NOT NULL" json:"printing_time"`
 	Copies             uint   `gorm:"column:copies;type:int(11) unsigned;default:0;comment:打印份数;NOT NULL" json:"print_copies"`
+	PrintSpeed         int    `gorm:"column:print_speed;type:tinyint(1);default:2;comment:打印速度,1-流畅(不分片打印),2-稳定(分片大包打印),3-兼容(分片小包打印);NOT NULL" json:"print_speed"`
 
 	Printer             *Printer             `gorm:"foreignKey:PrinterUuid;references:Uuid"`        // 关联 printer
 	SaleBill            *SaleBill            `gorm:"foreignKey:RelatedUuid;references:Uuid"`        // 关联 sale_order
@@ -52,6 +53,18 @@ func (model *BaseModel) GetTradeNo(CompanyUuid uint64) string {
 		tradeNo = tradeNo[len(tradeNo)-32:]
 	}
 	return tradeNo
+}
+
+func (model *PrinterLog) GetPrintChunkSize() int {
+	switch model.PrintSpeed {
+	case 1:
+		return 5 * 1024 * 1024 // 5MB
+	case 2:
+		return 20 * 1024 // 20KB
+	case 3:
+		return 4 * 1024 // 4KB
+	}
+	return 4 * 1024
 }
 
 // GetRandomTradeNo 获取交易号
@@ -153,6 +166,35 @@ func (model *PrinterLog) IsUsbPrinter() bool {
 		return false
 	}
 	return model.Printer.IsUsb == 1
+}
+
+// 获取打印速度模式名称
+func (model *PrinterLog) GetPrintSpeedName() string {
+	switch model.PrintSpeed {
+	case 1:
+		return "流畅"
+	case 2:
+		return "稳定"
+	case 3:
+		return "兼容"
+	default:
+		return "稳定"
+	}
+}
+
+// 是否流畅模式（不分片打印）
+func (model *PrinterLog) IsSmoothMode() bool {
+	return model.PrintSpeed == 1
+}
+
+// 是否稳定模式（分片大包打印）
+func (model *PrinterLog) IsStableMode() bool {
+	return model.PrintSpeed == 2
+}
+
+// 是否兼容模式（分片小包打印）
+func (model *PrinterLog) IsCompatibleMode() bool {
+	return model.PrintSpeed == 3
 }
 
 // 计算打印耗时

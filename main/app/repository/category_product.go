@@ -36,7 +36,8 @@ func (r *ProductCategoryRepoImpl) UpdateProductCategory(id uint, productCategory
 		"is_special":               productCategory.IsSpecial,
 		"sort":                     productCategory.Sort,
 		"code":                     productCategory.Code,
-		"update_time":              uint(productCategory.UpdateTime),
+		"update_time":              productCategory.UpdateTime,
+		"delete_time":              productCategory.DeleteTime,
 	}).Error
 }
 

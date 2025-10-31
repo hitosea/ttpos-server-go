@@ -591,6 +591,7 @@
                     "dividing_line": false,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 2,
+                    "cannot_delete": true,
                     "width": {
                         "de": 28,
                         "my": 35,
@@ -874,7 +875,7 @@
                     [
                         {
                             "block_id": "attr",
-                            "block_column_id": "column_attr",
+                            "block_column_id": "column_commodity_name",
                             "block_type": "label:value",
                             "block_label": {
                                 "en": "-Attribute: ",
@@ -1107,6 +1108,7 @@
                     "dividing_line": false,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
+                    "cannot_delete": true,
                     "width": 60
                 },
                 "conditions": []
@@ -1148,6 +1150,7 @@
                     "dividing_line": false,
                     "leading_blank_lines": 0,
                     "trailing_blank_lines": 0,
+                    "cannot_delete": true,
                     "width": 60,
                     "show_currency_unit": true
                 },
