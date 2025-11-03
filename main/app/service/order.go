@@ -13631,12 +13631,20 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 			totalPrice := saleBill.GetUnAcceptH5OrderProductTotalPrice(h5OrderProducts) // 未接单的h5订单商品的商品金额之和
 			if acceptOrderSetting.CanAutoOrder(totalPrice) {
 				// 自动接单
-				s.AcceptH5Order(ctx, h5Order.Uuid, true)
+				if result, err := s.AcceptH5Order(ctx, h5Order.Uuid, true); err != nil {
+					ctx.Log().Error("自动接单失败", zap.Error(err))
+				} else if result != nil {
+					ctx.Log().Error("自动接单异常", zap.Any("result", result))
+				}
 			}
 		} else {
 			// 如果关闭h5接单功能
 			// 自动接单
-			s.AcceptH5Order(ctx, h5Order.Uuid, true)
+			if result, err := s.AcceptH5Order(ctx, h5Order.Uuid, true); err != nil {
+				ctx.Log().Error("关闭h5接单功能，自动接单失败", zap.Error(err))
+			} else if result != nil {
+				ctx.Log().Error("关闭h5接单功能，自动接单异常", zap.Any("result", result))
+			}
 		}
 	}
 
