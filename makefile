@@ -141,3 +141,7 @@ log:
 # 添加物品库存
 add-item-stock:
 	cd main && go run ./main.go add-item-stock
+
+# 添加父级公司UUID路径
+add-parent-company-uuid:
+	cd main && go run ./main.go add-parent-company-uuid

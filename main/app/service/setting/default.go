@@ -248,6 +248,9 @@ func (s *Srv) getDefaultBusiness(language string) setting.Business {
 		BatchProductUuids:  []uint64{}, // 分批商品UUID列表
 		BatchTagNum:        0,          // 分批类型数量
 		SafetyStockType:    "1",        // 安全库存类型 1-门店纬度 2-仓库纬度，默认为1
+
+		RequiredParentCompanyApproval: "0", // 调拨规则-经过上级门店审批 "0"-否 "1"-是, 总部和上级(有下级门店)支持此选项
+		ViaParentCompanyWarehouse:     "0", // 调拨规则-经过上级门店仓库 "0"-否 "1"-是, 总部和上级(有下级门店)支持此选项
 	}
 
 }

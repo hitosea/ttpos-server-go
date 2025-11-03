@@ -1019,6 +1019,7 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 		IsOpenTax:     taxSetting.IsOpen == "1",
 		IsSyncing:     slices.Contains(syncTaskManager.getRunningCompanyUuids(), company.Uuid),
 		LastSyncTime:  company.LastSyncTime,
+		HasChildren:   companySetting.HasChildren == 1,
 	}, nil
 }
 
