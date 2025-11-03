@@ -8,6 +8,7 @@ package service
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/item"
+	"ttpos-bmp/app/ttpos-erp/api/material_transfer"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-bmp/app/ttpos-erp/api/warehouse"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto/erp"
@@ -71,6 +72,11 @@ type (
 		// SaveAddonGroup 保存加料组
 		// 关联门店时，每个门店都会自动创建一个加料组,
 		SaveAddonGroup(ctx context.Context, req *item.SaveAddonGroupReq) (*item.SaveAddonGroupResp, error)
+	}
+	IMaterialTransfer interface {
+		MaterialTransfer(ctx context.Context, req *material_transfer.MaterialTransferReq) (*material_transfer.MaterialTransferResp, error)
+		// CreateInnerTransferReceipt  实际上是通过 创建内部销售单 -> 内部采购单来实现
+		CreateInnerTransferReceipt(ctx context.Context, req *material_transfer.MaterialTransferReq) (*material_transfer.TransferReceipt, error)
 	}
 	IProduct interface {
 		UpdateProduct(ctx context.Context, req *item.UpdateProductReq) (*item.UpdateProductResp, error)
@@ -147,12 +153,13 @@ type (
 )
 
 var (
-	localItem      IItem
-	localItemGroup IItemGroup
-	localProduct   IProduct
-	localStock     IStock
-	localUom       IUom
-	localWarehouse IWarehouse
+	localItem             IItem
+	localItemGroup        IItemGroup
+	localMaterialTransfer IMaterialTransfer
+	localProduct          IProduct
+	localStock            IStock
+	localUom              IUom
+	localWarehouse        IWarehouse
 )
 
 func Item() IItem {
@@ -175,6 +182,17 @@ func ItemGroup() IItemGroup {
 
 func RegisterItemGroup(i IItemGroup) {
 	localItemGroup = i
+}
+
+func MaterialTransfer() IMaterialTransfer {
+	if localMaterialTransfer == nil {
+		panic("implement not found for interface IMaterialTransfer, forgot register?")
+	}
+	return localMaterialTransfer
+}
+
+func RegisterMaterialTransfer(i IMaterialTransfer) {
+	localMaterialTransfer = i
 }
 
 func Product() IProduct {

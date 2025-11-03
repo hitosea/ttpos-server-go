@@ -1,0 +1,40 @@
+syntax = "proto3";
+import "erp.proto";
+
+package material_transfer;
+option go_package = "ttpos-bmp/app/ttpos-erp/api/material_transfer";
+
+
+message MaterialTransferReq {
+  string company_abbr = 1; // 公司缩写, 必填
+  string branch = 2; // 分店名称,可选
+  string from_warehouse = 3; // 来源仓库,必填
+  string to_warehouse = 4; // 目标仓库,必填
+  string required_date = 5; // 到货日期, 格式: 2023-01-01,可选。 默认 2035-12-31
+  string delivery_date = 6; // 发货日期, 格式: 2023-01-01,可选。 默认 2035-12-31
+  repeated MaterialTransferItem items = 7; // 材料列表,必填
+}
+
+
+message MaterialTransferResp {
+    TransferReceipt from_receipt = 1; // 出库单
+    TransferReceipt to_receipt = 2; // 入库单
+    TransferReceipt audit_receipt = 3; // 审核单
+}
+
+message TransferReceipt {
+  string po_no = 1; // 采购订单号
+  string so_no = 2; // 销售订单号
+}
+
+message MaterialTransferItem {
+  string item_code = 1; // 材料编码,必填
+  float qty = 3; // 数量,必填
+  string uom = 4; // 单位,必填
+  float rate = 5; // 单价,可选
+}
+
+service MaterialTransferService {
+  // 材料调拨
+  rpc MaterialTransfer (MaterialTransferReq) returns (erp.ResponseInfo);
+}
