@@ -10888,6 +10888,11 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, request req.In
 		return nil, errSaleBill
 	}
 
+	// 重新计算销售账单
+	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
 	// 当不是收银端的时候，拆单不可操作结账
 	if ctx.GetSource() != constant.SourceCashier && saleBill.IsSplit() {
 		return nil, errors.NewWithCode(constant.CodeOrderCheckSplit, "当前订单已经拆单，请前去收银机操作")
