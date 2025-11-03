@@ -34,6 +34,7 @@ type IProductRepo interface {
 	WithProductPackageImageFile() DBOption                                                        // 预加载产品包的图片信息
 	WithProductCategory() DBOption                                                                // 预加载分类
 	WithProductCategoryMultiLanguageName() DBOption                                               // 预加载分类多语言名称
+	WithProductLabel() DBOption                                                                   // 预加载商品标签
 	WithDineTax() DBOption                                                                        // 预加载堂食税
 	WithTakeoutTax() DBOption                                                                     // 预加载外卖税
 
@@ -180,6 +181,7 @@ func (r *productRepo) defaultPreload(hasPackage bool) []DBOption {
 		r.WithProductPackageAttributeGroupProductPackageAttributesAttributeMultiLanguageName(),
 		r.WithProductPackageImageFile(),
 		r.WithProductCategory(),
+		r.WithProductLabel(), // 预加载商品标签
 	}
 
 	// 如果有商品套餐，则添加商品套餐预加载
@@ -666,6 +668,13 @@ func (r *productRepo) WithProductPackageImageFile() DBOption {
 func (r *productRepo) WithProductCategory() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("ProductCategory")
+	}
+}
+
+// WithProductLabel 预加载商品标签
+func (r *productRepo) WithProductLabel() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductLabel")
 	}
 }
 

@@ -22294,6 +22294,154 @@
                 }
             }
         },
+        "/shop/product/label/add": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "添加商品标签",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品标签"
+                ],
+                "summary": "添加商品标签",
+                "parameters": [
+                    {
+                        "description": "商品标签添加请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductLabelAddReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/label/delete": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除商品标签",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品标签"
+                ],
+                "summary": "删除商品标签",
+                "parameters": [
+                    {
+                        "description": "商品标签删除请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductLabelDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/label/edit": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "编辑商品标签",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品标签"
+                ],
+                "summary": "编辑商品标签",
+                "parameters": [
+                    {
+                        "description": "商品标签编辑请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductLabelEditReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/label/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取商品标签列表，包含关联的商品信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品标签"
+                ],
+                "summary": "获取商品标签列表",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.ProductLabelListResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/product/list": {
             "get": {
                 "security": [
@@ -30761,6 +30909,14 @@
                     "description": "是否在厨显端显示：1-是；0-否",
                     "type": "integer"
                 },
+                "label": {
+                    "description": "商品标签",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/product_resp.ProductLabelInfo"
+                        }
+                    ]
+                },
                 "limit_num": {
                     "description": "商品限购数量",
                     "type": "integer"
@@ -31664,6 +31820,23 @@
                 },
                 "uuid": {
                     "description": "单位UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "product_resp.ProductLabelInfo": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "标签名称",
+                    "type": "string"
+                },
+                "style": {
+                    "description": "标签样式",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "标签UUID",
                     "type": "integer"
                 }
             }
@@ -35701,6 +35874,131 @@
                     "items": {
                         "$ref": "#/definitions/req.ProductImportItemReq"
                     }
+                }
+            }
+        },
+        "req.ProductLabelAddReq": {
+            "type": "object",
+            "required": [
+                "is_show_assistant",
+                "is_show_cashier",
+                "is_show_delivery",
+                "is_show_h5",
+                "is_show_menu",
+                "is_show_tablet",
+                "name",
+                "style"
+            ],
+            "properties": {
+                "is_show_assistant": {
+                    "description": "是否在助手显示, 0-否 1-是",
+                    "type": "integer"
+                },
+                "is_show_cashier": {
+                    "description": "是否在收银机显示, 0-否 1-是",
+                    "type": "integer"
+                },
+                "is_show_delivery": {
+                    "description": "是否在外送显示, 0-否 1-是",
+                    "type": "integer"
+                },
+                "is_show_h5": {
+                    "description": "是否在H5显示, 0-否 1-是",
+                    "type": "integer"
+                },
+                "is_show_menu": {
+                    "description": "是否在电子菜单显示, 0-否 1-是",
+                    "type": "integer"
+                },
+                "is_show_tablet": {
+                    "description": "是否在平板显示, 0-否 1-是",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "标签名称",
+                    "type": "string"
+                },
+                "product_package_uuids": {
+                    "description": "关联商品包UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "style": {
+                    "description": "标签样式",
+                    "type": "string"
+                }
+            }
+        },
+        "req.ProductLabelDeleteReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "标签UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.ProductLabelEditReq": {
+            "type": "object",
+            "required": [
+                "is_show_assistant",
+                "is_show_cashier",
+                "is_show_delivery",
+                "is_show_h5",
+                "is_show_menu",
+                "is_show_tablet",
+                "name",
+                "style",
+                "uuid"
+            ],
+            "properties": {
+                "is_show_assistant": {
+                    "description": "是否在助手显示, 0-否 1-是",
+                    "type": "integer"
+                },
+                "is_show_cashier": {
+                    "description": "是否在收银机显示, 0-否 1-是",
+                    "type": "integer"
+                },
+                "is_show_delivery": {
+                    "description": "是否在外送显示, 0-否 1-是",
+                    "type": "integer"
+                },
+                "is_show_h5": {
+                    "description": "是否在H5显示, 0-否 1-是",
+                    "type": "integer"
+                },
+                "is_show_menu": {
+                    "description": "是否在电子菜单显示, 0-否 1-是",
+                    "type": "integer"
+                },
+                "is_show_tablet": {
+                    "description": "是否在平板显示, 0-否 1-是",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "标签名称",
+                    "type": "string"
+                },
+                "product_package_uuids": {
+                    "description": "关联商品包UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "style": {
+                    "description": "标签样式",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "标签UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -44030,6 +44328,90 @@
                 "total_price": {
                     "description": "总价",
                     "type": "number"
+                }
+            }
+        },
+        "resp.ProductLabelDetail": {
+            "type": "object",
+            "properties": {
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "is_show_assistant": {
+                    "description": "是否在助手显示, 0-否 1-是",
+                    "type": "integer"
+                },
+                "is_show_cashier": {
+                    "description": "是否在收银机显示, 0-否 1-是",
+                    "type": "integer"
+                },
+                "is_show_delivery": {
+                    "description": "是否在外送显示, 0-否 1-是",
+                    "type": "integer"
+                },
+                "is_show_h5": {
+                    "description": "是否在H5显示, 0-否 1-是",
+                    "type": "integer"
+                },
+                "is_show_menu": {
+                    "description": "是否在电子菜单显示, 0-否 1-是",
+                    "type": "integer"
+                },
+                "is_show_tablet": {
+                    "description": "是否在平板显示, 0-否 1-是",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "标签名称",
+                    "type": "string"
+                },
+                "product_package_count": {
+                    "description": "关联商品数量",
+                    "type": "integer"
+                },
+                "product_packages": {
+                    "description": "关联商品列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ProductLabelPackageItem"
+                    }
+                },
+                "style": {
+                    "description": "标签样式",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "标签UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.ProductLabelListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ProductLabelDetail"
+                    }
+                }
+            }
+        },
+        "resp.ProductLabelPackageItem": {
+            "type": "object",
+            "properties": {
+                "locale_name": {
+                    "description": "商品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "uuid": {
+                    "description": "商品UUID",
+                    "type": "integer"
                 }
             }
         },

@@ -339,6 +339,17 @@ func (r *WarehouseItemRepoImpl) GetWarehouseItemsByMaterialUuid(materialUuid uin
 			WithPreload{
 				Query: "Warehouse.MultiLanguageName",
 			},
+			WithPreload{
+				Query: "Material.NotBaseUnitList",
+				Args: []any{
+					func(db *gorm.DB) *gorm.DB {
+						return db.Where("delete_time = ?", constant.NotDeleted)
+					},
+				},
+			},
+			WithPreload{
+				Query: "Material.NotBaseUnitList.Unit.MultiLanguageName",
+			},
 		),
 	)
 }

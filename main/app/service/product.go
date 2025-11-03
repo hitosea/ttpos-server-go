@@ -491,6 +491,16 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 			if option.IsMember {
 				minPrice = calculateTakeoutProductPrice(minPrice, option.TakeoutDiscountRate, product.TakeoutTax.TaxRate, option.TaxFeeType)
 			}
+			// 构建标签信息
+			var labelInfo product_resp.ProductLabelInfo
+			if product.ProductLabelUuid > 0 && product.ProductLabel.Uuid > 0 {
+				labelInfo = product_resp.ProductLabelInfo{
+					Uuid:  product.ProductLabel.Uuid,
+					Name:  product.ProductLabel.Name,
+					Style: product.ProductLabel.Style,
+				}
+			}
+
 			list = append(list, product_resp.Product{
 				Uuid:                product.Uuid,
 				Image:               image,
@@ -515,6 +525,7 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 				},
 				Describe:      product.Describe,
 				IsShowKitchen: product.IsShowKitchen,
+				Label:         labelInfo, // 商品标签
 			})
 		}
 	}
@@ -1464,7 +1475,6 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 	productRepo := repository.NewProductRepo(headquarterDB)
 	categories, err := productRepo.GetProductCategoryList(
 		commonRepo.WhereByCategoryKey(""),
-		commonRepo.WhereBySoftDelete(),
 		commonRepo.SortWithSort("ASC"),
 		commonRepo.WhereByHeadquarterUuid(0),
 		productRepo.WithMultiLanguageName(commonRepo.WhereBySoftDelete()),
@@ -1481,15 +1491,14 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 			subShopCategory, err := categoryRepo.GetProductCategory(
 				commonRepo.WhereByUuid(category.Uuid),
 				commonRepo.WhereByHeadquarterUuid(companySetting.HeadquarterUuid),
-				commonRepo.WhereBySoftDelete(),
 			)
 			if err != nil || subShopCategory.Uuid == 0 {
-				time := time.Now().Unix()
 				multiLanguageName := model.MultiLanguageName{
 					BaseModel: model.BaseModel{
 						Uuid:       category.MultiLanguageName.Uuid,
-						CreateTime: time,
-						UpdateTime: time,
+						CreateTime: category.CreateTime,
+						UpdateTime: category.UpdateTime,
+						DeleteTime: category.DeleteTime,
 					},
 					EnName:   category.MultiLanguageName.EnName,
 					ZhName:   category.MultiLanguageName.ZhName,
@@ -1516,6 +1525,7 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 						Uuid:       category.Uuid,
 						CreateTime: category.CreateTime,
 						UpdateTime: category.UpdateTime,
+						DeleteTime: category.DeleteTime,
 					},
 					Name:                  category.Name,
 					MultiLanguageNameUuid: category.MultiLanguageName.Uuid,
@@ -1544,6 +1554,7 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 				err = categoryRepo.UpdateProductCategory(subShopCategory.ID, model.ProductCategory{
 					BaseModel: model.BaseModel{
 						UpdateTime: category.UpdateTime,
+						DeleteTime: category.DeleteTime,
 					},
 					Name:                  category.Name,
 					MultiLanguageNameUuid: subShopCategory.MultiLanguageNameUuid,
@@ -7191,9 +7202,6 @@ func (s *productSrv) SyncSauce(ctx context.Context) error {
 					ZhTwName: headquarterSauce.MultiLanguageName.ZhTwName,
 				})
 				cardUuid := headquarterSauce.ProductBomCardUuid
-				if headquarterSauce.CreateTime > 1760516651 && companySetting.CompanyUuid == 7171274190848000 {
-					cardUuid = 0
-				}
 				insertingProductSauce = append(insertingProductSauce, model.ProductSauce{
 					BaseModel: model.BaseModel{
 						Uuid:       headquarterSauce.Uuid,
@@ -7663,10 +7671,6 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 			})
 			delMultiLanguageNameUuid = append(delMultiLanguageNameUuid, productPackage.MultiLanguageName.Uuid)
 			for _, productBom := range productPackage.ProductBoms {
-				cardUuid := productBom.ProductBomCardUuid
-				if productPackage.CreateTime > 1760516651 && companySetting.CompanyUuid == 7171274190848000 {
-					cardUuid = 0
-				}
 				newProductBomList = append(newProductBomList, model.ProductBom{
 					BaseModel:          model.BaseModel{Uuid: productBom.Uuid, CreateTime: productBom.CreateTime, UpdateTime: productBom.UpdateTime},
 					PurchasePrice:      productBom.PurchasePrice,
@@ -7684,7 +7688,7 @@ func (s *productSrv) SyncProduct(ctx context.Context) error {
 					ProductFlavorUuid:  productBom.ProductFlavorUuid,
 					ProductSauceUuid:   productBom.ProductSauceUuid,
 					ProductPackageUuid: productBom.ProductPackageUuid,
-					ProductBomCardUuid: cardUuid,
+					ProductBomCardUuid: productBom.ProductBomCardUuid,
 				})
 			}
 			for _, productPackageAttributeGroup := range productPackage.ProductPackageAttributeGroups {

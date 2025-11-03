@@ -168,7 +168,8 @@
               <template #content>
                 {{ $t('姓名') }}:{{ item.shopUser?.real_name || '-' }}<br />
                 {{ $t('登录时间') }}:{{ item.finally_login_time || '-' }}<br />
-                {{ $t('设备品牌') }}:{{ item.brand || '-' }}
+                {{ $t('设备品牌') }}:{{ item.brand || '-' }}<br />
+                <template v-if="item.version"> {{ $t('版本号') }}:{{ item.version }}</template>
               </template>
               <SvgIcon class="form-icon" name="man"></SvgIcon>
             </el-tooltip>

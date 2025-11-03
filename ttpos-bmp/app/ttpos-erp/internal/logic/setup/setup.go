@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-bmp/app/ttpos-erp/api/setup"
 	"ttpos-bmp/app/ttpos-erp/api/warehouse"
@@ -217,9 +218,20 @@ func (s *sSetup) CreateDefaultPosProfile(ctx context.Context, req *setup.CreateD
 //   - err: 错误信息
 func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *setup.InitShopResp, err error) {
 	var (
-		branchName string
-		adminEmail = fmt.Sprintf("%s@ttpos-user.com", req.AdminUuid)
+		branchName  string
+		adminEmail  = fmt.Sprintf("%s@ttpos-user.com", req.AdminUuid)
+		companyName string
 	)
+
+	// 根据公司缩写获取公司名称
+	companyName, err = service.Company().GetCompanyNameWithAbbr(ctx, req.CompanyAbbr)
+	if err != nil {
+		g.Log().Error(ctx, "查询公司名称失败", g.Map{
+			"company_abbr": req.CompanyAbbr,
+			"error":        err,
+		})
+		return nil, gerror.Wrapf(err, "查询公司失败")
+	}
 
 	// 创建分支
 	branchName, err = s.CreateBranch(ctx, req)
@@ -340,6 +352,32 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (resp *se
 		if err != nil {
 			return nil, gerror.Wrapf(err, "添加供应商内部交易对象失败")
 		}
+
+		//为实现调拨功能，每个新增的门店都属于内部供应商
+		supplierCount, err := service.Supplier().CountSupplier(ctx, &erp.Supplier{
+			IsInternalSupplier: true,
+			RepresentsCompany:  companyName,
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "查询供应商数量失败")
+		}
+		if supplierCount > 0 {
+			g.Log().Infof(ctx, "供应商已初始化,%s", branchName)
+			//return nil, gerror.New("供应商已初始化，不能重复初始化")
+		} else {
+			_, err = service.Supplier().CreateSupplier(ctx, &buying.CreateSupplierReq{
+				Supplier: &buying.SupplierData{
+					AliasName:          branchName,
+					Branch:             branchName,
+					CompanyAbbr:        req.CompanyAbbr,
+					IsInternalSupplier: true,
+				},
+			})
+			if err != nil {
+				return nil, gerror.Wrapf(err, "创建供应商失败")
+			}
+		}
+
 	}
 
 	return &setup.InitShopResp{

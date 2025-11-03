@@ -1014,6 +1014,26 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_order_item` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '采购申请物品表';
 
+-- 采购申请物品单位表
+CREATE TABLE IF NOT EXISTS `ttpos_purchase_order_item_unit` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '采购申请物品单位ID',
+    `item_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'ItemID',
+    `num` DECIMAL(22, 4) NOT NULL DEFAULT 0.0000 COMMENT '数量',
+    `arrival_num` DECIMAL(22, 4) NOT NULL DEFAULT 0.0000 COMMENT '到货数量',
+    `unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '单位ID',
+    `unit_name` TEXT COMMENT '单位名称',
+    `unit_conversion_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1.0000 COMMENT '基准单位转换率。申请数量*转换率=基准单位申请数量',
+    `base_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '基准单位ID',
+    `base_unit_name` TEXT COMMENT '基准单位名称',
+    `erpnext_uom` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext单位',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    KEY `idx_item_uuid` (`item_uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '采购申请物品单位表';
+
 -- 收货单
 CREATE TABLE IF NOT EXISTS `ttpos_purchase_receipt_order` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -1064,6 +1084,26 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_receipt_order_item` (
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '收货单物品表';
+
+-- 收货单物品单位表
+CREATE TABLE IF NOT EXISTS `ttpos_purchase_receipt_order_item_unit` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '收货单物品单位ID',
+    `item_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'ItemID',
+    `num` DECIMAL(22, 4) NOT NULL DEFAULT 0.0000 COMMENT '数量',
+    `arrival_num` DECIMAL(22, 4) NOT NULL DEFAULT 0.0000 COMMENT '到货数量',
+    `unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '单位ID',
+    `unit_name` TEXT COMMENT '单位名称',
+    `unit_conversion_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1.0000 COMMENT '基准单位转换率。申请数量*转换率=基准单位申请数量',
+    `base_unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '基准单位ID',
+    `base_unit_name` TEXT COMMENT '基准单位名称',
+    `erpnext_uom` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'ERPNext单位',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    KEY `idx_item_uuid` (`item_uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '收货单物品单位表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_product_bom_card` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -1247,6 +1287,23 @@ CREATE TABLE IF NOT EXISTS `ttpos_tax` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '税率表';
 
+CREATE TABLE IF NOT EXISTS `ttpos_product_label` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '唯一标识UUID',
+    `name` TEXT COMMENT '标签名称',
+    `style` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '标签样式',
+    `is_show_cashier` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否在收银机显示, 0-否 1-是',
+    `is_show_tablet` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否在平板显示, 0-否 1-是',
+    `is_show_assistant` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否在助手显示, 0-否 1-是',
+    `is_show_h5` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否在H5显示, 0-否 1-是',
+    `is_show_delivery` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否在外送显示, 0-否 1-是',
+    `is_show_menu` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否在电子菜单显示, 0-否 1-是',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `idx_uuid` (`uuid`),
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品标签表';
+
 CREATE TABLE IF NOT EXISTS `ttpos_product_package` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包ID',
@@ -1283,6 +1340,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package` (
     `actual_sale_num` DECIMAL(22, 4) NOT NULL DEFAULT 0.0000 COMMENT '实际销量。每次卖出时,实际销量增加',
     `is_batch` INT(10) NOT NULL DEFAULT 0 COMMENT '是否是分批商品, 0-否 1-是',
     `headquarter_uuid` BIGINT DEFAULT 0 COMMENT '总部UUID',
+    `product_label_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品标签UUID',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -1945,6 +2003,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer` (
     `width` INT UNSIGNED NOT NULL DEFAULT 80 COMMENT '纸张宽度（mm）',
     `enable_status_check` INT(1) UNSIGNED NOT NULL DEFAULT 1 COMMENT '是否启用状态检查 0-关闭 1-开启',
     `enable_sound` INT(1) UNSIGNED NOT NULL DEFAULT 1 COMMENT '是否启用打印提示音 0-关闭 1-开启',
+    `print_speed` INT(1) UNSIGNED NOT NULL DEFAULT 3 COMMENT '打印速度：1-流畅（不分片打印），2-稳定（分片大包打印），3-兼容（分片小包打印）',
     `sort` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '排序',
     `print_method` INT(10) NOT NULL DEFAULT 1 COMMENT '打印方式 1文本打印, 2图片打印',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
@@ -1985,6 +2044,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer_log` (
     `reason` VARCHAR(255) DEFAULT '' COMMENT '原因',
     `printer_time` INT(11) NOT NULL DEFAULT 0 COMMENT '打印时间',
     `copies` INT(10) NOT NULL DEFAULT 1 COMMENT '打印份数',
+    `print_speed` INT(1) UNSIGNED NOT NULL DEFAULT 2 COMMENT '打印速度：1-流畅（不分片打印），2-稳定（分片大包打印），3-兼容（分片小包打印）',
     `first_execution` INT(10) NOT NULL DEFAULT 0 COMMENT '是否首次执行打印 1-是 0-否',
     `printing_time` INT(11) NOT NULL DEFAULT 0 COMMENT '打印耗时(毫秒)',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',

@@ -83,17 +83,18 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterRechargeOrderHandlers(shopGroup, dbm, cache)
 			shop.RegisterStatisticsHandlers(shopGroup, dbm, cache)
 			shop.RegisterMemberOrderHandlers(shopGroup, dbm, cache)
-			shop.RegisterAuthHandlers(shopGroup, dbm, cache)      // 认证
-			shop.RegisterStaffHandlers(shopGroup, dbm, cache)     // 管理员管理
-			shop.RegisterSettingHandlers(shopGroup, dbm, cache)   // 设置
-			shop.RegisterProductHandlers(shopGroup, dbm, cache)   // 商品
-			shop.RegisterMaterialHandlers(shopGroup, dbm, cache)  // 物品管理
-			shop.RegisterMiscHandlers(shopGroup, dbm, cache)      // 杂项
-			shop.RegisterPurchaseHandlers(shopGroup, dbm, cache)  // 采购
-			shop.RegisterSupplierHandlers(shopGroup, dbm, cache)  // 供应商
-			shop.RegisterCallBoardHandlers(shopGroup, dbm, cache) // 叫号展示
-			shop.RegisterWarehouseHandlers(shopGroup, dbm, cache) // 仓库管理
-			shop.RegisterPrintHandlers(shopGroup, dbm, cache)     // 打印管理
+			shop.RegisterAuthHandlers(shopGroup, dbm, cache)         // 认证
+			shop.RegisterStaffHandlers(shopGroup, dbm, cache)        // 管理员管理
+			shop.RegisterSettingHandlers(shopGroup, dbm, cache)      // 设置
+			shop.RegisterProductHandlers(shopGroup, dbm, cache)      // 商品
+			shop.RegisterProductLabelHandlers(shopGroup, dbm, cache) // 商品标签
+			shop.RegisterMaterialHandlers(shopGroup, dbm, cache)     // 物品管理
+			shop.RegisterMiscHandlers(shopGroup, dbm, cache)         // 杂项
+			shop.RegisterPurchaseHandlers(shopGroup, dbm, cache)     // 采购
+			shop.RegisterSupplierHandlers(shopGroup, dbm, cache)     // 供应商
+			shop.RegisterCallBoardHandlers(shopGroup, dbm, cache)    // 叫号展示
+			shop.RegisterWarehouseHandlers(shopGroup, dbm, cache)    // 仓库管理
+			shop.RegisterPrintHandlers(shopGroup, dbm, cache)        // 打印管理
 
 			shop.RegisterStockReconciliationHandlers(shopGroup, dbm, cache) // 盘点
 

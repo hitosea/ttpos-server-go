@@ -206,6 +206,9 @@ type ProductPackage struct {
 	// 总部UUID
 	HeadquarterUuid uint64 `gorm:"default:0;column:headquarter_uuid;comment:'总部UUID'"`
 
+	// 商品标签UUID
+	ProductLabelUuid uint64 `gorm:"default:0;column:product_label_uuid;comment:'商品标签UUID'"`
+
 	MultiLanguageName             MultiLanguageName              `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`  // 多语言名称
 	ProductUnit                   ProductUnit                    `gorm:"foreignKey:unit_uuid;references:uuid" json:"-"`        // 单位
 	ProductBoms                   []ProductBom                   `gorm:"foreignKey:product_package_uuid;references:uuid"`      // BOM
@@ -215,6 +218,7 @@ type ProductPackage struct {
 	ProductCategory               ProductCategory                `gorm:"foreignKey:category_uuid;references:uuid" json:"-"`    // 类别
 	ImageFile                     File                           `gorm:"foreignKey:image_file_uuid;references:uuid" json:"-"`  // 图片
 	ProductPackageGroups          []ProductPackageGroup          `gorm:"foreignKey:product_package_uuid;references:uuid"`      // 商品套餐组
+	ProductLabel                  ProductLabel                   `gorm:"foreignKey:product_label_uuid;references:uuid"`        // 商品标签
 }
 
 func (model *ProductPackage) SetNil() {

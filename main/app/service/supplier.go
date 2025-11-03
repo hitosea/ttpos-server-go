@@ -443,7 +443,7 @@ func (s *supplierSrv) SyncSupplier(ctx context.Context) error {
 			contactName := supplier.ContactName
 			contactPhone := supplier.ContactPhone
 			code := supplier.Code
-			// “总部-供应商”固定code SP001
+			// “总部-供应商”固定code HSP00001
 			if erpSupplier.Name == constant.ErpHeadquartersSupplierCode {
 				code = constant.HeadquartersSupplierCode
 			}

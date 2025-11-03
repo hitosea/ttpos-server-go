@@ -6,30 +6,41 @@ import (
 
 // Material 物品信息
 type Material struct {
-	Uuid             uint64             `json:"uuid"`               // 物品UUID
-	Name             string             `json:"name"`               // 物品名称
-	LocaleName       dto.LocaleResponse `json:"locale_name"`        // 物品名称
-	ErpCode          string             `json:"erp_code"`           // erp编码
-	InternalCode     string             `json:"internal_code"`      // 内部编码
-	BarcodeValue     string             `json:"barcode_value"`      // 条形码值
-	Num              float64            `json:"num"`                // 库存数量
-	SafetyStock      *float64           `json:"safety_stock"`       // 安全库存数量
-	AvailableNum     float64            `json:"available_num"`      // 可用库存数量
-	TransitNum       float64            `json:"transit_num"`        // 在途库存数量
-	CategoryUuid     uint64             `json:"category_uuid"`      // 分类UUID
-	Image            string             `json:"image"`              // 图片
-	Status           int                `json:"status"`             // 状态 1-启用 0-停用
-	UnitName         string             `json:"unit_name"`          // 基准单位名称
-	UnitUuid         uint64             `json:"unit_uuid"`          // 基准单位UUID
-	PurchaseUnitName string             `json:"purchase_unit_name"` // 采购单位名称
-	PurchaseUnitUuid uint64             `json:"purchase_unit_uuid"` // 采购单位UUID
-	CostUnitName     string             `json:"cost_unit_name"`     // 成本单位名称
-	CostUnitUuid     uint64             `json:"cost_unit_uuid"`     // 成本单位UUID
-	UnitList         []MaterialUnit     `json:"unit_list"`          // 单位列表
+	Uuid               uint64                `json:"uuid"`                 // 物品UUID
+	Name               string                `json:"name"`                 // 物品名称
+	LocaleName         dto.LocaleResponse    `json:"locale_name"`          // 物品名称
+	ErpCode            string                `json:"erp_code"`             // erp编码
+	InternalCode       string                `json:"internal_code"`        // 内部编码
+	BarcodeValue       string                `json:"barcode_value"`        // 条形码值
+	Num                float64               `json:"num"`                  // 库存数量
+	SafetyStock        *float64              `json:"safety_stock"`         // 安全库存数量
+	AvailableNum       float64               `json:"available_num"`        // 可用库存数量
+	TransitNum         float64               `json:"transit_num"`          // 在途库存数量
+	NotBasicUnitStocks NotBasicUnitStockList `json:"not_basic_unit_stock"` // 非基准单位库存数量
+	CategoryUuid       uint64                `json:"category_uuid"`        // 分类UUID
+	Image              string                `json:"image"`                // 图片
+	Status             int                   `json:"status"`               // 状态 1-启用 0-停用
+	UnitName           string                `json:"unit_name"`            // 基准单位名称
+	UnitUuid           uint64                `json:"unit_uuid"`            // 基准单位UUID
+	PurchaseUnitName   string                `json:"purchase_unit_name"`   // 采购单位名称
+	PurchaseUnitUuid   uint64                `json:"purchase_unit_uuid"`   // 采购单位UUID
+	CostUnitName       string                `json:"cost_unit_name"`       // 成本单位名称
+	CostUnitUuid       uint64                `json:"cost_unit_uuid"`       // 成本单位UUID
+	UnitList           []MaterialUnit        `json:"unit_list"`            // 单位列表
 
 	UnitLocaleName         dto.LocaleResponse `json:"unit_locale_name"`          // 基准单位名称
 	CostUnitLocaleName     dto.LocaleResponse `json:"cost_unit_locale_name"`     // 成本单位名称
 	PurchaseUnitLocaleName dto.LocaleResponse `json:"purchase_unit_locale_name"` // 采购单位名称
+}
+
+type NotBasicUnitStockList struct {
+	List []NotBasicUnitStock `json:"list"`
+}
+
+type NotBasicUnitStock struct {
+	LocaleName     dto.LocaleResponse `json:"locale_name"`     // 单位名称
+	Num            float64            `json:"num"`             // 库存数量
+	ConversionRate float64            `json:"conversion_rate"` // 转换率
 }
 
 // MaterialListWithPaginationResp 物品列表响应
@@ -82,9 +93,10 @@ type WarehouseList struct {
 
 // Warehouse 仓库
 type Warehouse struct {
-	Uuid       uint64             `json:"uuid"`        // 仓库UUID
-	LocaleName dto.LocaleResponse `json:"locale_name"` // 仓库名称
-	Num        float64            `json:"num"`         // 物品库存数量
+	Uuid                  uint64                `json:"uuid"`                      // 仓库UUID
+	LocaleName            dto.LocaleResponse    `json:"locale_name"`               // 仓库名称
+	Num                   float64               `json:"num"`                       // 物品库存数量
+	NotBasicUnitStockList NotBasicUnitStockList `json:"not_basic_unit_stock_list"` // 非基准单位库存列表
 }
 
 // MaterialUnitListResp 物品单位列表响应

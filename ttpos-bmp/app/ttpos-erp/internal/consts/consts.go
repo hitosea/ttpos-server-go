@@ -70,3 +70,8 @@ const (
 	//默认盘点单号 MAT-RECO-0000-00000
 	DefaultStockReconciliationName = "MAT-RECO-0000-00000"
 )
+
+const (
+	DefaultCustomerGroupName = "System Add"
+	DefaultSupplierGroupName = "System Add"
+)

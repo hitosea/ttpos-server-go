@@ -26,9 +26,18 @@ type Product struct {
 	ProductType         uint                      `json:"product_type"`          // 商品类型 0-商品 1-套餐
 	// 套餐分组
 	PackageGroupList *ProductPackageGroupList `json:"package_group_list"`
+	// 商品标签
+	Label ProductLabelInfo `json:"label"` // 商品标签信息
 
 	Sort int `json:"-"` // 商品排序，内部字段，用于推荐商品列表排序
 
+}
+
+// ProductLabelInfo 商品标签信息
+type ProductLabelInfo struct {
+	Uuid  uint64 `json:"uuid"`  // 标签UUID
+	Name  string `json:"name"`  // 标签名称
+	Style string `json:"style"` // 标签样式
 }
 
 // ProductPackageGroupList 套餐分组列表
