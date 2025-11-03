@@ -3,6 +3,7 @@ package buying
 import (
 	"context"
 	"strings"
+	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	dto "ttpos-bmp/app/ttpos-erp/internal/model/dto/buying"
 
 	"ttpos-bmp/app/ttpos-erp/api/buying"
@@ -12,6 +13,7 @@ import (
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/text/gstr"
 	"github.com/gogf/gf/v2/util/gconv"
 )
 
@@ -159,6 +161,7 @@ func (s *sSupplier) AddSupplerTransactCompany(ctx context.Context, req *dto.AddS
 			CustomerType:       "Company",
 			IsInternalCustomer: 1,
 			RepresentsCompany:  companyName,
+			CustomerGroup:      consts.DefaultCustomerGroupName,
 		}); err != nil {
 			return gerror.Wrapf(err, "创建内部客户失败")
 		}
@@ -192,25 +195,10 @@ func (s *sSupplier) AddSupplerTransactCompany(ctx context.Context, req *dto.AddS
 		}
 	}
 
-	// 构建新的公司关联列表
-	companies := append(supplier.Companies, erp.AllowedToTransactWith{
-		Company: companyName,
-	})
-
-	// 调用ERP接口更新供应商
-	_, err = service.Document().Update(ctx, &erp.ErpReq{
-		DocType: erp.DocTypeSupplier,
-		Name:    supplier.Name,
-	}, &erp.Supplier{
-		Companies: companies,
-	})
+	// 添加公司到供应商关联列表
+	err = s.AddCompanyToSupplier(ctx, supplier, companyName)
 	if err != nil {
-		g.Log().Error(ctx, "更新供应商失败", g.Map{
-			"supplier":     req.Supplier,
-			"company_name": companyName,
-			"error":        err,
-		})
-		return gerror.Wrapf(err, "更新供应商失败")
+		return gerror.Wrapf(err, "添加公司到供应商失败")
 	}
 
 	g.Log().Info(ctx, "供应商关联公司添加成功", g.Map{
@@ -516,6 +504,29 @@ func (s *sSupplier) ListSuppliers(ctx context.Context, req *buying.ListSuppliers
 	}, nil
 }
 
+// CountSupplier 统计供应商数量
+// 参数：
+//   - ctx: 上下文对象，用于传递请求范围的元数据
+//   - filter: 供应商过滤条件
+//
+// 返回：
+//   - int: 符合条件的供应商数量
+//   - error: 操作过程中产生的错误（若有）
+func (s *sSupplier) CountSupplier(ctx context.Context, filter *erp.Supplier) (int, error) {
+	// 构建查询过滤器
+	filters := s.buildSupplierCountFilters(filter)
+
+	count, err := service.Doctype().Count(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeSupplier,
+	}, &erp.RequestParams{
+		Filters: filters,
+	})
+	if err != nil {
+		return 0, gerror.Wrapf(err, "统计供应商数量失败")
+	}
+	return count, nil
+}
+
 // validateCreateSupplierReq 验证创建供应商请求参数
 func (s *sSupplier) validateCreateSupplierReq(req *buying.CreateSupplierReq) error {
 	if req == nil {
@@ -523,9 +534,6 @@ func (s *sSupplier) validateCreateSupplierReq(req *buying.CreateSupplierReq) err
 	}
 	if req.GetSupplier() == nil {
 		return gerror.New("供应商信息不能为空")
-	}
-	if req.GetSupplier().GetSupplierName() == "" {
-		return gerror.New("供应商名称不能为空")
 	}
 	return nil
 }
@@ -547,6 +555,8 @@ func (s *sSupplier) validateUpdateSupplierReq(req *buying.UpdateSupplierReq) err
 // buildSupplierData 构建供应商数据
 func (s *sSupplier) buildSupplierData(ctx context.Context, supplier *buying.SupplierData) erp.Supplier {
 	companyName := supplier.Company
+	representsCompany := supplier.GetRepresentsCompany()
+
 	if supplier.CompanyAbbr != "" {
 		var err error
 		companyName, err = service.Company().GetCompanyNameWithAbbr(ctx, supplier.CompanyAbbr)
@@ -558,23 +568,26 @@ func (s *sSupplier) buildSupplierData(ctx context.Context, supplier *buying.Supp
 			companyName = supplier.Company
 		}
 	}
-
+	//默认使用本公司作为代表公司
+	if representsCompany == "" {
+		representsCompany = companyName
+	}
 	return erp.Supplier{
 		// 基础字段
 		Name:              supplier.GetName(),
 		SupplierName:      supplier.GetSupplierName(),
 		Country:           supplier.GetCountry(),
 		SupplierType:      supplier.GetSupplierType(),
-		RepresentsCompany: supplier.GetRepresentsCompany(),
+		RepresentsCompany: representsCompany,
 
 		// 状态标识
 		IsTransporter:      supplier.GetIsTransporter(),
 		IsInternalSupplier: supplier.GetIsInternalSupplier(),
 		Disabled:           supplier.GetDisabled(),
 
-		Company: companyName,
-		Branch:  supplier.GetBranch(),
-
+		Company:         companyName,
+		Branch:          supplier.GetBranch(),
+		SupplierGroup:   consts.DefaultSupplierGroupName,
 		CustomAliasName: supplier.GetAliasName(),
 	}
 }
@@ -623,6 +636,82 @@ func (s *sSupplier) buildSupplierFilters(ctx context.Context, req *buying.ListSu
 			})
 		}
 		filters = append(filters, []string{"custom_company", "=", companyName})
+	}
+
+	return filters
+}
+
+// buildSupplierCountFilters 构建供应商数量统计过滤条件
+func (s *sSupplier) buildSupplierCountFilters(filter *erp.Supplier) [][]string {
+	filters := make([][]string, 0, 8) // 预分配容量，提高性能
+
+	// 如果没有过滤条件，只返回基础过滤（排除禁用的供应商）
+	if filter == nil {
+		filters = append(filters, []string{"disabled", "!=", "1"})
+		return filters
+	}
+
+	// 按供应商名称过滤
+	if filter.SupplierName != "" {
+		filters = append(filters, []string{"supplier_name", "=" + filter.SupplierName})
+	}
+	if gstr.Contains(filter.SupplierName, "%") {
+		filters = append(filters, []string{"supplier_name", "like", filter.SupplierName})
+	}
+
+	// 按供应商类型过滤
+	if filter.SupplierType != "" {
+		filters = append(filters, []string{"supplier_type", "=", filter.SupplierType})
+	}
+
+	// 按代表公司过滤
+	if filter.RepresentsCompany != "" {
+		filters = append(filters, []string{"represents_company", "=", filter.RepresentsCompany})
+	}
+
+	// 按国家过滤
+	if filter.Country != "" {
+		filters = append(filters, []string{"country", "=", filter.Country})
+	}
+
+	// 按语言过滤
+	if filter.Language != "" {
+		filters = append(filters, []string{"language", "=", filter.Language})
+	}
+
+	// 按内部供应商标识过滤
+	if filter.IsInternalSupplier {
+		filters = append(filters, []string{"is_internal_supplier", "=", "1"})
+	}
+
+	// 按承运商标识过滤
+	if filter.IsTransporter {
+		filters = append(filters, []string{"is_transporter", "=", "1"})
+	}
+
+	// 按所属公司过滤
+	if filter.Company != "" {
+		filters = append(filters, []string{"custom_company", "=", filter.Company})
+	}
+
+	// 按所属分支过滤
+	if filter.Branch != "" {
+		filters = append(filters, []string{"custom_branch", "=", filter.Branch})
+	}
+
+	// 按禁用状态过滤（默认不包括禁用的）
+	if !filter.Disabled {
+		filters = append(filters, []string{"disabled", "!=", "1"})
+	}
+
+	// 按冻结状态过滤
+	if filter.IsFrozen {
+		filters = append(filters, []string{"is_frozen", "=", "1"})
+	}
+
+	// 按暂停状态过滤
+	if filter.OnHold {
+		filters = append(filters, []string{"on_hold", "=", "1"})
 	}
 
 	return filters
@@ -722,4 +811,38 @@ func (s *sSupplier) GetSupplierItemList(ctx context.Context, req *buying.GetSupp
 	return &buying.GetSupplierItemListResp{
 		Items: items,
 	}, nil
+}
+
+// addCompanyToSupplier 将公司添加到供应商的允许交易公司列表
+// 参数：
+//   - ctx: 上下文对象
+//   - supplier: 供应商信息
+//   - companyName: 要添加的公司名称
+//   - supplierName: 供应商名称（用于日志记录）
+//
+// 返回：
+//   - error: 错误信息
+func (s *sSupplier) AddCompanyToSupplier(ctx context.Context, supplier *erp.Supplier, companyName string) error {
+	// 构建新的公司关联列表
+	companies := append(supplier.Companies, erp.AllowedToTransactWith{
+		Company: companyName,
+	})
+
+	// 调用ERP接口更新供应商
+	_, err := service.Document().Update(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeSupplier,
+		Name:    supplier.Name,
+	}, &erp.Supplier{
+		Companies: companies,
+	})
+	if err != nil {
+		g.Log().Error(ctx, "更新供应商失败", g.Map{
+			"supplier":     supplier.Name,
+			"company_name": companyName,
+			"error":        err,
+		})
+		return gerror.Wrapf(err, "更新供应商失败")
+	}
+
+	return nil
 }

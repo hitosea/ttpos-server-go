@@ -125,7 +125,26 @@ type (
 		//   - res: 获取供应商列表响应，包含供应商列表和分页信息
 		//   - err: 操作过程中产生的错误（若有）
 		ListSuppliers(ctx context.Context, req *buying.ListSuppliersReq) (*buying.ListSuppliersResp, error)
+		// CountSupplier 统计供应商数量
+		// 参数：
+		//   - ctx: 上下文对象，用于传递请求范围的元数据
+		//   - filter: 供应商过滤条件
+		//
+		// 返回：
+		//   - int: 符合条件的供应商数量
+		//   - error: 操作过程中产生的错误（若有）
+		CountSupplier(ctx context.Context, filter *erp.Supplier) (int, error)
 		GetSupplierItemList(ctx context.Context, req *buying.GetSupplierItemListReq) (*buying.GetSupplierItemListResp, error)
+		// addCompanyToSupplier 将公司添加到供应商的允许交易公司列表
+		// 参数：
+		//   - ctx: 上下文对象
+		//   - supplier: 供应商信息
+		//   - companyName: 要添加的公司名称
+		//   - supplierName: 供应商名称（用于日志记录）
+		//
+		// 返回：
+		//   - error: 错误信息
+		AddCompanyToSupplier(ctx context.Context, supplier *erp.Supplier, companyName string) error
 	}
 )
 

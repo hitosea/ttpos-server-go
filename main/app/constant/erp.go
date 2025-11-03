@@ -14,7 +14,7 @@ const (
 const (
 	ErpHeadquartersSupplierCode = "Headquarters - Supplier"
 	ErpRequestPageSize          = 999
-	HeadquartersSupplierCode    = "SP001"
+	HeadquartersSupplierCode    = "HSP00001"
 )
 
 const (

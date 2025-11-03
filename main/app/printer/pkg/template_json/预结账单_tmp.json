@@ -707,6 +707,7 @@
                     "padding_right": null,
                     "show_currency_unit": null,
                     "show_column_title": false,
+                    "cannot_delete": true,
                     "disabled": null
                 },
                 "block_after_label": null,
@@ -740,7 +741,8 @@
                                 "trailing_blank_lines": 0,
                                 "width": 52,
                                 "line_height": 33,
-                                "padding_right": 10
+                                "padding_right": 10,
+                                "cannot_delete": true
                             },
                             "block_expand_labels": [
                                 {

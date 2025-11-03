@@ -55,6 +55,7 @@ type Supplier struct {
 	CustomPermissionRule []PermissionRule `json:"custom_permission_rule,omitempty"` //自定权限清单 多选表格
 
 	CustomAliasName string `json:"custom_aliasname,omitempty"` // 别名名称 ，对外显示的名称
+	SupplierGroup   string `json:"supplier_group,omitempty"`   // 供应商组
 
 }
 

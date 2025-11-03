@@ -137,3 +137,90 @@ func (s *sCompany) HasSubCompany(ctx context.Context, companyName string) (bool,
 	// 如果数量大于0，说明有子公司
 	return count > 0, nil
 }
+
+// GetAllSubCompanies 递归查询指定公司下的所有子公司
+// 通过 parent_company 字段递归查询，获取所有层级的子公司
+// 参数：
+//   - ctx: 上下文对象
+//   - companyName: 父公司名称
+//
+// 返回：
+//   - []*company.CompanyInfo: 所有子公司列表（包括所有层级的子公司）
+//   - error: 错误信息
+func (s *sCompany) GetAllSubCompanies(ctx context.Context, companyName string) ([]*company.CompanyInfo, error) {
+	if len(companyName) == 0 {
+		return nil, gerror.New("公司名称不能为空")
+	}
+
+	// 存储所有子公司的结果集
+	allSubCompanies := make([]*company.CompanyInfo, 0)
+
+	// 递归查询子公司
+	err := s.recursiveQuerySubCompanies(ctx, companyName, &allSubCompanies)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "递归查询子公司失败")
+	}
+
+	return allSubCompanies, nil
+}
+
+// recursiveQuerySubCompanies 递归查询子公司的内部方法
+// 参数：
+//   - ctx: 上下文对象
+//   - parentCompanyName: 父公司名称
+//   - result: 用于存储结果的指针，递归过程中不断追加子公司
+//
+// 返回：
+//   - error: 错误信息
+func (s *sCompany) recursiveQuerySubCompanies(ctx context.Context, parentCompanyName string, result *[]*company.CompanyInfo) error {
+	// 构建查询过滤器，查找 parent_company 等于当前公司的直接子公司
+	filters := [][]string{
+		{"parent_company", "=", parentCompanyName},
+	}
+
+	// 调用 erpnext document 服务获取直接子公司信息
+	erpCompanyList, err := service.Document().List(ctx, &erp.ErpReq{
+		DocType: "Company",
+	}, &erp.RequestParams{
+		Fields:  g.ArrayStr{"name", "abbr", "parent_company"},
+		Filters: filters,
+		Limit:   1000, // 设置合理的查询限制
+	})
+
+	if err != nil {
+		return gerror.Wrapf(err, "查询公司[%s]的子公司失败", parentCompanyName)
+	}
+
+	// 如果没有找到数据，直接返回
+	if erpCompanyList.IsNil() {
+		return nil
+	}
+
+	// 解析返回的子公司数据
+	dataArray := erpCompanyList.GetJsons("data")
+	if len(dataArray) == 0 {
+		return nil
+	}
+
+	// 遍历直接子公司
+	for _, item := range dataArray {
+		companyInfo := &company.CompanyInfo{
+			CompanyName:   item.Get("name").String(),
+			CompanyAbbr:   item.Get("abbr").String(),
+			ParentCompany: item.Get("parent_company").String(),
+		}
+
+		// 将当前子公司添加到结果集
+		*result = append(*result, companyInfo)
+
+		// 递归查询当前子公司的子公司
+		err = s.recursiveQuerySubCompanies(ctx, companyInfo.CompanyName, result)
+		if err != nil {
+			g.Log().Warning(ctx, "递归查询子公司[", companyInfo.CompanyName, "]失败:", err)
+			// 继续处理其他子公司，不因为单个失败而中断
+			continue
+		}
+	}
+
+	return nil
+}
