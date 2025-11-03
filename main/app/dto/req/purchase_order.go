@@ -142,11 +142,16 @@ type PurchaseReceiptOrderUpdateReq struct {
 	IsConfirm   bool                           `json:"is_confirm"`                                  // 是否确认收货
 }
 
+type PurchaseReceiptItemMaterialUnitReq struct {
+	Uuid uint64  `json:"uuid" binding:"required"` // 单位UUID
+	Num  float64 `json:"num"`                     // 数量
+}
+
 // PurchaseReceiptItemCreateReq 收货明细创建请求
 type PurchaseReceiptItemCreateReq struct {
-	Uuid                  uint64  `json:"uuid"`                                        // 收货明细ID
-	PurchaseOrderItemUuid uint64  `json:"purchase_order_item_uuid" binding:"required"` // 采购订单明细ID
-	Num                   float64 `json:"this_arrival_num"`                            // 本次收货数量
+	Uuid                  uint64                               `json:"uuid"`                                        // 收货明细ID
+	PurchaseOrderItemUuid uint64                               `json:"purchase_order_item_uuid" binding:"required"` // 采购订单明细ID
+	UnitList              []PurchaseReceiptItemMaterialUnitReq `json:"unit_list"`                                   // 单位列表,新增的非基准单位
 }
 
 // PurchaseReceiptListReq 收货记录列表请求

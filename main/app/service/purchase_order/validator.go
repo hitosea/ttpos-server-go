@@ -149,6 +149,35 @@ func (v *purchaseOrderValidator) validateReceiptQuantity(
 	return nil
 }
 
+// validateReceiptQuantity 验证收货数量
+func (v *purchaseOrderValidator) validateReceiptQuantityNew(
+	ctx context.Context,
+	orderItem *model.PurchaseOrderItem,
+	unitList []req.PurchaseReceiptItemMaterialUnitReq,
+) (error, float64) {
+	reqNum := 0.0
+	for _, unit := range unitList {
+		for _, orderItemUnit := range orderItem.Units {
+			if orderItemUnit.UnitUuid == unit.Uuid {
+				newArrivalNum := orderItemUnit.ArrivalNum + unit.Num
+				if newArrivalNum > orderItemUnit.Num {
+					return errors.New(
+						fmt.Sprintf(
+							i18n.Translate(ctx.GetLanguage(), "物品 %s 的收货数量不能超过申请数量（申请数量：%.0f，已到货：%.0f，本次收货：%.0f）"),
+							language.JsonToLocaleResponse(orderItem.MaterialName).GetLocale(ctx.GetLanguage()),
+							orderItemUnit.Num,
+							orderItemUnit.ArrivalNum,
+							unit.Num,
+						),
+					), reqNum
+				}
+				reqNum += unit.Num
+			}
+		}
+	}
+	return nil, reqNum
+}
+
 // joinMaterialNames 拼接物料名称
 func (v *purchaseOrderValidator) joinMaterialNames(names []string) string {
 	result := ""
@@ -172,7 +201,7 @@ func (v *purchaseOrderValidator) buildPurchaseOrderItems(
 	db *gorm.DB,
 	purchaseOrderUuid uint64,
 	itemReqs []PurchaseOrderItemReq,
-) ([]model.PurchaseOrderItem, error) {
+) ([]model.PurchaseOrderItem, []model.PurchaseOrderItemUnit, error) {
 	// 批量查询物料
 	materialUuids := make([]uint64, 0, len(itemReqs))
 	for _, itemReq := range itemReqs {
@@ -186,7 +215,7 @@ func (v *purchaseOrderValidator) buildPurchaseOrderItems(
 		materialRepo.WithPreload("NotBaseUnitList.Unit"),
 	)
 	if err != nil {
-		return nil, errors.WithMessage(errors.New("查询物品失败"), err.Error())
+		return nil, nil, errors.WithMessage(errors.New("查询物品失败"), err.Error())
 	}
 
 	// 转换为map方便查询
@@ -198,19 +227,21 @@ func (v *purchaseOrderValidator) buildPurchaseOrderItems(
 	// 验证所有物料存在
 	for _, itemReq := range itemReqs {
 		if _, exists := materials[itemReq.MaterialUuid]; !exists {
-			return nil, errors.New(fmt.Sprintf("物品UUID %d 不存在", itemReq.MaterialUuid))
+			return nil, nil, errors.New(fmt.Sprintf("物品UUID %d 不存在", itemReq.MaterialUuid))
 		}
 	}
 
 	// 构建明细
 	items := make([]model.PurchaseOrderItem, 0, len(itemReqs))
+	unitList := make([]model.PurchaseOrderItemUnit, 0, len(itemReqs))
 	for _, itemReq := range itemReqs {
 		material := materials[itemReq.MaterialUuid]
 		item := v.buildPurchaseOrderItem(purchaseOrderUuid, material, itemReq.UnitList)
 		items = append(items, item)
+		unitList = append(unitList, item.Units...)
 	}
 
-	return items, nil
+	return items, unitList, nil
 }
 
 // buildPurchaseOrderItem 构建单个采购订单明细
@@ -229,16 +260,17 @@ func (v *purchaseOrderValidator) buildPurchaseOrderItem(
 	for _, reqUnit := range unitList {
 		totalNum += reqUnit.Num
 		for _, materialUnit := range material.NotBaseUnitList {
-			if materialUnit.UnitUuid == reqUnit.Uuid {
+			if materialUnit.Uuid == reqUnit.Uuid {
 				purchaseOrderItemUnits = append(purchaseOrderItemUnits, model.PurchaseOrderItemUnit{
 					ItemUuid:           itemUuid,
+					PurchaseOrderUuid:  purchaseOrderUuid,
 					UnitUuid:           reqUnit.Uuid,
 					Num:                reqUnit.Num,
 					UnitName:           materialUnit.Name,
 					UnitConversionRate: materialUnit.ConversionRate,
-					BaseUnitUuid:       materialUnit.Uuid,
-					BaseUnitName:       materialUnit.Name,
 					ErpnextUom:         materialUnit.Unit.ErpnextUom,
+					BaseUnitUuid:       material.UnitUuid,
+					BaseUnitName:       material.Unit.Name,
 				})
 				break
 			}

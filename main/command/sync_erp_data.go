@@ -73,15 +73,6 @@ var syncErpDataCmd = &cobra.Command{
 			return
 		}
 
-		// 初始化目标数据库连接
-		targetSaas, err := database.NewMySQLConnection(config.Database, "saas")
-		if err != nil {
-			fmt.Printf("%s %s %s\n", redColor, err, resetColor)
-			fmt.Printf("%s 错误: 连接数据库失败, 检查是否正确配置了数据库信息，以及 -c 参数是否正确 %s\n", redColor, resetColor)
-			return
-		}
-		targetSaasDB = targetSaas
-
 		// 初始化数据库
 		companyDB, err := database.NewMySQLConnection(config.Database, fmt.Sprintf("%s%d", constant.DBNamePrefix, companyUuid))
 		if err != nil {

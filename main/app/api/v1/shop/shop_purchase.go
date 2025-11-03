@@ -398,8 +398,7 @@ func RegisterPurchaseHandlers(router gin.IRouter, dbm *database.DBManager, cache
 	}
 
 	// 需要认证
-	// TODO：2.9.0 版本
-	privateApi := router.Group("", middleware.MinVersionCheck("2.8.0"), middleware.Auth(authSrv, dbm))
+	privateApi := router.Group("", middleware.MinVersionCheck("2.9.0"), middleware.Auth(authSrv, dbm))
 	{
 		// 采购订单管理
 		privateApi.GET("/purchase/order/list", wrapper.GetPurchaseOrderList)

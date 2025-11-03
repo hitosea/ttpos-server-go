@@ -744,6 +744,10 @@ definitions:
       name:
         description: 物品名称
         type: string
+      not_basic_unit_stock:
+        allOf:
+        - $ref: '#/definitions/material_resp.NotBasicUnitStockList'
+        description: 非基准单位库存数量
       num:
         description: 库存数量
         type: number
@@ -961,6 +965,26 @@ definitions:
           $ref: '#/definitions/material_resp.MaterialUnit'
         type: array
     type: object
+  material_resp.NotBasicUnitStock:
+    properties:
+      conversion_rate:
+        description: 转换率
+        type: number
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 单位名称
+      num:
+        description: 库存数量
+        type: number
+    type: object
+  material_resp.NotBasicUnitStockList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/material_resp.NotBasicUnitStock'
+        type: array
+    type: object
   material_resp.ProductBomCardDetailResp:
     properties:
       is_editable:
@@ -1010,6 +1034,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 仓库名称
+      not_basic_unit_stock_list:
+        allOf:
+        - $ref: '#/definitions/material_resp.NotBasicUnitStockList'
+        description: 非基准单位库存列表
       num:
         description: 物品库存数量
         type: number
@@ -5097,15 +5125,6 @@ definitions:
       style:
         description: 标签样式
         type: string
-    required:
-    - is_show_assistant
-    - is_show_cashier
-    - is_show_delivery
-    - is_show_h5
-    - is_show_menu
-    - is_show_tablet
-    - name
-    - style
     type: object
   req.ProductLabelDeleteReq:
     properties:
@@ -5149,16 +5168,6 @@ definitions:
       uuid:
         description: 标签UUID
         type: integer
-    required:
-    - is_show_assistant
-    - is_show_cashier
-    - is_show_delivery
-    - is_show_h5
-    - is_show_menu
-    - is_show_tablet
-    - name
-    - style
-    - uuid
     type: object
   req.ProductParams:
     properties:
@@ -6009,11 +6018,24 @@ definitions:
         description: 物品ID
         minimum: 1
         type: integer
+      unit_list:
+        description: 单位列表,新增的非基准单位
+        items:
+          $ref: '#/definitions/req.PurchaseOrderItemMaterialUnitReq'
+        type: array
+    required:
+    - material_uuid
+    type: object
+  req.PurchaseOrderItemMaterialUnitReq:
+    properties:
       num:
         description: 数量
         type: number
+      uuid:
+        description: 单位UUID
+        type: integer
     required:
-    - material_uuid
+    - uuid
     type: object
   req.PurchaseOrderItemUpdateReq:
     properties:
@@ -6021,9 +6043,11 @@ definitions:
         description: 物品ID
         minimum: 1
         type: integer
-      num:
-        description: 数量
-        type: number
+      unit_list:
+        description: 单位列表,新增的非基准单位
+        items:
+          $ref: '#/definitions/req.PurchaseOrderItemMaterialUnitReq'
+        type: array
     required:
     - material_uuid
     type: object
@@ -10544,8 +10568,11 @@ definitions:
       is_usb_printer:
         description: 是否是usb打印机
         type: boolean
+      print_chunk_size:
+        description: 打印分片大小
+        type: integer
       print_method:
-        description: 打印方式 1文本打印, 2图片打印'
+        description: 打印方式 1文本打印, 2图片打印
         type: integer
       printer_config:
         description: 打印机.配置
@@ -11214,6 +11241,9 @@ definitions:
       arrival_num:
         description: 到货数量
         type: number
+      barcode_value:
+        description: 条形码值
+        type: string
       base_unit_name:
         description: 基准单位名称
         type: string
@@ -11244,11 +11274,47 @@ definitions:
       unit_conversion_rate:
         description: 基准单位转换率
         type: number
+      unit_list:
+        description: 基准单位列表
+        items:
+          $ref: '#/definitions/resp.PurchaseOrderItemMaterialUnit'
+        type: array
       unit_name:
         description: 采购单位名称
         type: string
+      units:
+        description: 单位列表
+        items:
+          $ref: '#/definitions/resp.PurchaseOrderItemUnit'
+        type: array
       uuid:
         description: 明细ID
+        type: integer
+    type: object
+  resp.PurchaseOrderItemMaterialUnit:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 单位名称
+      uuid:
+        description: 单位UUID
+        type: integer
+    type: object
+  resp.PurchaseOrderItemUnit:
+    properties:
+      arrival_num:
+        description: 到货数量
+        type: number
+      locale_unit_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 单位名称
+      num:
+        description: 数量
+        type: number
+      unit_uuid:
+        description: 单位UUID
         type: integer
     type: object
   resp.PurchaseOrderListResp:
@@ -11277,6 +11343,9 @@ definitions:
       arrival_num:
         description: 到货数量
         type: number
+      barcode_value:
+        description: 条形码值
+        type: string
       base_unit_name:
         description: 基准单位名称
         type: string
@@ -11313,6 +11382,11 @@ definitions:
       unit_conversion_rate:
         description: 基准单位转换率
         type: number
+      unit_list:
+        description: 单位列表
+        items:
+          $ref: '#/definitions/resp.PurchaseOrderItemMaterialUnit'
+        type: array
       unit_name:
         description: 采购单位名称
         type: string

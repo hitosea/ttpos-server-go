@@ -62,6 +62,7 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 	err := db.Transaction(func(tx *gorm.DB) error {
 		purchaseOrderRepo := repository.NewPurchaseOrderRepo(tx)
 		purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(tx)
+		purchaseOrderItemUnitRepo := repository.NewPurchaseOrderItemUnitRepo(tx)
 		receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(tx)
 		receiptOrderItemRepo := repository.NewPurchaseReceiptOrderItemRepo(tx)
 
@@ -120,28 +121,55 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 		var receiptItems []model.PurchaseReceiptOrderItem
 		for _, itemReq := range req.Items {
 			// 查询采购申请明细
-			orderItem, err := purchaseOrderItemRepo.GetByUuid(itemReq.PurchaseOrderItemUuid)
+			orderItem, err := purchaseOrderItemRepo.GetByUuid(
+				itemReq.PurchaseOrderItemUuid,
+				purchaseOrderItemRepo.WithPreloadUnits(),
+			)
 			if err != nil {
 				logger.Logger.Error("CreatePurchaseReceiptOrder-GetByUuid", zap.Any("purchaseOrderItemUuid", itemReq.PurchaseOrderItemUuid), zap.Any("err", err))
 				return errors.WithMessage(errors.New("查询采购申请明细失败"), err.Error())
 			}
 
-			// 验证收货数量
-			if err := s.validator.validateReceiptQuantity(ctx, orderItem, itemReq.Num); err != nil {
+			// 计算收货数量
+			reqNum := 0.0
+			if err, num := s.validator.validateReceiptQuantityNew(ctx, orderItem, itemReq.UnitList); err != nil {
 				return err
+			} else {
+				reqNum = num
 			}
 
 			// 更新采购申请明细的到货数量
-			newArrivalNum := orderItem.ArrivalNum + itemReq.Num
+			newArrivalNum := orderItem.ArrivalNum + reqNum
 
 			// 创建收货明细
+			units := func() []model.PurchaseReceiptOrderItemUnit {
+				units := make([]model.PurchaseReceiptOrderItemUnit, 0, len(itemReq.UnitList))
+				for _, unit := range itemReq.UnitList {
+					for _, orderItemUnit := range orderItem.Units {
+						if orderItemUnit.UnitUuid == unit.Uuid {
+							units = append(units, model.PurchaseReceiptOrderItemUnit{
+								ItemUuid:                 orderItem.Uuid,
+								PurchaseReceiptOrderUuid: receiptOrder.Uuid,
+								Num:                      unit.Num,
+								UnitUuid:                 unit.Uuid,
+								UnitName:                 orderItem.UnitName,
+								UnitConversionRate:       orderItemUnit.UnitConversionRate,
+								BaseUnitUuid:             orderItemUnit.BaseUnitUuid,
+								BaseUnitName:             orderItemUnit.BaseUnitName,
+								ErpnextUom:               orderItemUnit.ErpnextUom,
+							})
+						}
+					}
+				}
+				return units
+			}()
 			receiptItems = append(receiptItems, model.PurchaseReceiptOrderItem{
 				ReceiptOrderUuid:      receiptOrder.Uuid,
 				PurchaseOrderItemUuid: orderItem.Uuid,
 				MaterialCode:          orderItem.MaterialCode,
 				MaterialName:          orderItem.MaterialName,
 				MaterialUuid:          orderItem.MaterialUuid,
-				Num:                   itemReq.Num,
+				Num:                   reqNum,
 				UnitUuid:              orderItem.UnitUuid,
 				UnitName:              orderItem.UnitName,
 				BaseUnitUuid:          orderItem.BaseUnitUuid,
@@ -151,6 +179,7 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 				BaseErpnextUom:        orderItem.BaseErpnextUom,
 				Valuation:             orderItem.Valuation,
 				TotalPrice:            orderItem.TotalPrice,
+				Units:                 units,
 			})
 
 			// 确认收货时，更新采购申请明细的到货数量
@@ -162,11 +191,25 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 					return errors.WithMessage(errors.New("更新采购申请明细失败"), err.Error())
 				}
 
+				// 更新采购申请明细单位到货数量
+				for _, unit := range itemReq.UnitList {
+					for _, orderItemUnit := range orderItem.Units {
+						if orderItemUnit.UnitUuid == unit.Uuid {
+							orderItemUnit.ArrivalNum = orderItemUnit.ArrivalNum + unit.Num
+							err = purchaseOrderItemUnitRepo.Update(orderItemUnit)
+							if err != nil {
+								return errors.WithMessage(errors.New("更新采购申请明细单位失败"), err.Error())
+							}
+						}
+					}
+				}
+
 				// 收集需要更新的总部采购明细信息
 				if headquarterInfo != nil {
 					headquarterInfo.ItemsToUpdate = append(headquarterInfo.ItemsToUpdate, HeadquarterItemUpdate{
 						MaterialCode:  orderItem.MaterialCode,
 						NewArrivalNum: newArrivalNum,
+						UnitList:      itemReq.UnitList,
 					})
 				}
 			}
@@ -287,27 +330,51 @@ func (s *purchaseReceiptOrderSrv) UpdatePurchaseReceiptOrder(
 			}
 
 			// 查询采购申请明细
-			purchaseOrderItem, err := purchaseOrderItemRepo.GetByUuid(receiptOrderItem.PurchaseOrderItemUuid)
+			purchaseOrderItem, err := purchaseOrderItemRepo.GetByUuid(receiptOrderItem.PurchaseOrderItemUuid, purchaseOrderItemRepo.WithPreloadUnits())
 			if err != nil {
 				return errors.WithMessage(errors.New("查询采购申请明细失败"), err.Error())
 			}
 
 			// 验证收货数量
-			if err := s.validator.validateReceiptQuantity(ctx, purchaseOrderItem, itemReq.Num); err != nil {
+			reqNum := 0.0
+			if err, num := s.validator.validateReceiptQuantityNew(ctx, purchaseOrderItem, itemReq.UnitList); err != nil {
 				return err
+			} else {
+				reqNum = num
 			}
 
 			// 计算新的到货数量
-			newArrivalNum := purchaseOrderItem.ArrivalNum + itemReq.Num
+			newArrivalNum := purchaseOrderItem.ArrivalNum + reqNum
 
 			// 创建收货明细
+			units := func() []model.PurchaseReceiptOrderItemUnit {
+				units := make([]model.PurchaseReceiptOrderItemUnit, 0, len(itemReq.UnitList))
+				for _, unit := range itemReq.UnitList {
+					for _, orderItemUnit := range purchaseOrderItem.Units {
+						if orderItemUnit.UnitUuid == unit.Uuid {
+							units = append(units, model.PurchaseReceiptOrderItemUnit{
+								ItemUuid:                 receiptOrderItem.Uuid,
+								PurchaseReceiptOrderUuid: receiptOrder.Uuid,
+								Num:                      unit.Num,
+								UnitUuid:                 unit.Uuid,
+								UnitName:                 purchaseOrderItem.UnitName,
+								UnitConversionRate:       orderItemUnit.UnitConversionRate,
+								BaseUnitUuid:             orderItemUnit.BaseUnitUuid,
+								BaseUnitName:             orderItemUnit.BaseUnitName,
+								ErpnextUom:               orderItemUnit.ErpnextUom,
+							})
+						}
+					}
+				}
+				return units
+			}()
 			receiptItems = append(receiptItems, model.PurchaseReceiptOrderItem{
 				ReceiptOrderUuid:      receiptOrder.Uuid,
 				PurchaseOrderItemUuid: purchaseOrderItem.Uuid,
 				MaterialCode:          purchaseOrderItem.MaterialCode,
 				MaterialName:          purchaseOrderItem.MaterialName,
 				MaterialUuid:          purchaseOrderItem.MaterialUuid,
-				Num:                   itemReq.Num,
+				Num:                   reqNum,
 				UnitUuid:              purchaseOrderItem.UnitUuid,
 				UnitName:              purchaseOrderItem.UnitName,
 				BaseUnitUuid:          purchaseOrderItem.BaseUnitUuid,
@@ -317,6 +384,7 @@ func (s *purchaseReceiptOrderSrv) UpdatePurchaseReceiptOrder(
 				BaseErpnextUom:        purchaseOrderItem.BaseErpnextUom,
 				Valuation:             purchaseOrderItem.Valuation,
 				TotalPrice:            purchaseOrderItem.TotalPrice,
+				Units:                 units,
 			})
 
 			// 更新采购申请明细的到货数量
@@ -332,6 +400,7 @@ func (s *purchaseReceiptOrderSrv) UpdatePurchaseReceiptOrder(
 					headquarterInfo.ItemsToUpdate = append(headquarterInfo.ItemsToUpdate, HeadquarterItemUpdate{
 						MaterialCode:  purchaseOrderItem.MaterialCode,
 						NewArrivalNum: newArrivalNum,
+						UnitList:      itemReq.UnitList,
 					})
 				}
 			}
@@ -507,29 +576,55 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderDetail(
 			for _, unit := range item.Material.NotBaseUnitList {
 				unitList = append(unitList, resp.PurchaseOrderItemMaterialUnit{
 					Uuid: unit.Uuid,
-					Name: func() string {
-						if unit.Unit == nil {
-							return ""
-						}
-						if unit.Unit.MultiLanguageName == (model.MultiLanguageName{}) {
-							return ""
-						}
-						return unit.Unit.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
-					}(),
 					LocaleName: func() dto.LocaleResponse {
 						if unit.Unit == nil {
 							return dto.LocaleResponse{}
 						}
-						if unit.Unit.MultiLanguageName == (model.MultiLanguageName{}) {
-							return dto.LocaleResponse{}
-						}
 						return unit.Unit.MultiLanguageName.GetNames()
 					}(),
-					ConversionRate: unit.ConversionRate,
 				})
 			}
 			return unitList
 		}(item)
+		// 单位列表
+		itemInfo.Units = func(item model.PurchaseReceiptOrderItem) []resp.PurchaseOrderItemUnit {
+			unitList := []resp.PurchaseOrderItemUnit{}
+			if len(item.Units) == 0 {
+				unitList = append(unitList, resp.PurchaseOrderItemUnit{
+					Num:        item.Num,
+					ArrivalNum: item.Num,
+					UnitUuid:   item.UnitUuid,
+					LocaleName: *language.JsonToLocaleResponse(item.UnitName),
+				})
+			} else {
+				for _, unit := range item.Units {
+					unitList = append(unitList, resp.PurchaseOrderItemUnit{
+						Num:        unit.Num,
+						ArrivalNum: unit.Num,
+						UnitUuid:   unit.UnitUuid,
+						LocaleName: func() dto.LocaleResponse {
+							if item.Material == nil {
+								return *language.JsonToLocaleResponse(unit.UnitName)
+							}
+							if len(item.Material.NotBaseUnitList) == 0 {
+								return *language.JsonToLocaleResponse(unit.UnitName)
+							}
+							for _, materialUnit := range item.Material.NotBaseUnitList {
+								if materialUnit.Uuid == unit.UnitUuid {
+									if materialUnit.Unit == nil {
+										return *language.JsonToLocaleResponse(materialUnit.Name)
+									}
+									return materialUnit.Unit.MultiLanguageName.GetNames()
+								}
+							}
+							return *language.JsonToLocaleResponse(unit.UnitName)
+						}(),
+					})
+				}
+			}
+			return unitList
+		}(item)
+
 		detailResp.Items = append(detailResp.Items, itemInfo)
 	}
 
@@ -597,7 +692,7 @@ func (s *purchaseReceiptOrderSrv) updateMaterialStock(
 		warehouseItemRepo := repository.NewWarehouseItemRepo(db)
 		warehouseLogRepo := repository.NewWarehouseInOutLogRepo(db)
 		for _, item := range receiptOrder.Items {
-			actualNum := item.GetActualNum()
+			actualNum := item.GetUnitsTotalConversionRateNum()
 			if actualNum <= 0 {
 				continue
 			}
@@ -651,7 +746,19 @@ func (s *purchaseReceiptOrderSrv) updateMaterialStock(
 			Items:             make([]*buying.PurchaseOrderItem, 0, len(receiptOrder.Items)),
 		}
 		for _, item := range receiptOrder.Items {
-			if item.Num > 0 {
+			if item.GetUnitsTotalConversionRateNum() <= 0 {
+				continue
+			}
+			if len(item.Units) > 0 {
+				for _, unit := range item.Units {
+					erpReq.Items = append(erpReq.Items, &buying.PurchaseOrderItem{
+						ItemCode: item.MaterialCode,
+						ItemName: language.JsonToLocaleResponse(item.MaterialName).EN,
+						StockUom: language.JsonToLocaleResponse(unit.UnitName).EN,
+						Qty:      unit.Num,
+					})
+				}
+			} else if item.Num > 0 {
 				erpReq.Items = append(erpReq.Items, &buying.PurchaseOrderItem{
 					ItemCode: item.MaterialCode,
 					ItemName: language.JsonToLocaleResponse(item.MaterialName).EN,

@@ -18,7 +18,7 @@ type IPurchaseOrderItemRepo interface {
 	GetNotReceivedQuantityByMaterialUuid(materialUuid uint64) (int64, error)
 	DeleteByPurchaseOrderUuidAndNumIsZero(purchaseOrderUuid uint64) error
 	DeleteByPurchaseOrderUuidAndMaterialUuids(purchaseOrderUuid uint64, materialUuids []uint64) error
-	GetByUuid(uuid uint64) (*model.PurchaseOrderItem, error)
+	GetByUuid(uuid uint64, opts ...DBOption) (*model.PurchaseOrderItem, error)
 	GetByPurchaseOrderUuidAndMaterialCode(subUuid uint64, materialCode string) (*model.PurchaseOrderItem, error)
 
 	// 查询操作
@@ -30,6 +30,7 @@ type IPurchaseOrderItemRepo interface {
 	WhereUuid(uuid uint64) DBOption
 	WherePurchaseOrderUuid(purchaseOrderUuid uint64) DBOption
 	WhereProductUuid(productUuid uint64) DBOption
+	WithPreloadUnits() DBOption
 	OrderBySort() DBOption
 	OrderByCreateTime(desc bool) DBOption
 
@@ -74,7 +75,14 @@ func (r *PurchaseOrderItemRepoImpl) Delete(uuid uint64) error {
 
 // DeleteByPurchaseOrderUuid 根据采购订单UUID删除明细
 func (r *PurchaseOrderItemRepoImpl) DeleteByPurchaseOrderUuid(purchaseOrderUuid uint64) error {
-	return r.db.Where("purchase_order_uuid = ?", purchaseOrderUuid).Delete(&model.PurchaseOrderItem{}).Error
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		err := tx.Where("purchase_order_uuid = ?", purchaseOrderUuid).Delete(&model.PurchaseOrderItem{}).Error
+		if err != nil {
+			return err
+		}
+		return tx.Where("purchase_order_uuid = ?", purchaseOrderUuid).Delete(&model.PurchaseOrderItemUnit{}).Error
+	})
+	return err
 }
 
 // DeleteByPurchaseOrderUuidAndNumIsZero 根据采购订单UUID删除明细
@@ -91,7 +99,7 @@ func (r *PurchaseOrderItemRepoImpl) DeleteByPurchaseOrderUuidAndMaterialUuids(pu
 }
 
 // GetByUuid 根据UUID获取采购订单明细
-func (r *PurchaseOrderItemRepoImpl) GetByUuid(uuid uint64) (*model.PurchaseOrderItem, error) {
+func (r *PurchaseOrderItemRepoImpl) GetByUuid(uuid uint64, opts ...DBOption) (*model.PurchaseOrderItem, error) {
 	var item model.PurchaseOrderItem
 	err := r.db.Where("uuid = ?", uuid).First(&item).Error
 	if err != nil {
@@ -221,4 +229,11 @@ func (r *PurchaseOrderItemRepoImpl) GetNotReceivedQuantityByMaterialUuid(materia
 		return 0, fmt.Errorf("GetNotReceivedQuantityByMaterialUuid: %v", err)
 	}
 	return count, nil
+}
+
+// WithPreloadUnits 预加载单位
+func (r *PurchaseOrderItemRepoImpl) WithPreloadUnits() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Units")
+	}
 }

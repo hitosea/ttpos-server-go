@@ -45,13 +45,13 @@ type IMaterialRepo interface {
 	DeleteMaterialCategory(uuid uint64, multiLanguageNameUuid uint64) error
 	CreateMaterialCategory(materialCategory model.MaterialCategory) (uint64, error)
 	GetMaterialCategoryList() ([]model.MaterialCategory, error)
-	UpdateMaterialStatusBatch(uuids []uint64, status int) error          // 批量修改物品状态
-	UpdateMaterialStockNum(materials []*model.Material) error            // 更新物品库存数量
-	AddActualSaleNum(materialUuid uint64, saleNum float64) error         // 增加材料销量
-	GetMaterialByErpCode(erpCode string) (*model.Material, error)        // 根据erp_code获取物品
-	GetMaterialDetailByErpCode(erpCode string) (*model.Material, error)  // 根据erp_code获取物品详情
-	UpdateMaterialWarehouseUuid(uuid uint64, warehouseUuid uint64) error // 更新物品仓库uuid
-	UpdateAllMaterialWarehouseUuid(warehouseUuid uint64) error           // 将所有物品的仓库uuid设置为指定仓库uuid
+	UpdateMaterialStatusBatch(uuids []uint64, status int) error                     // 批量修改物品状态
+	UpdateMaterialStockNum(materials []*model.Material) error                       // 更新物品库存数量
+	AddActualSaleNum(materialUuid uint64, saleNum float64) error                    // 增加材料销量
+	GetMaterialByErpCode(erpCode string, opts ...DBOption) (*model.Material, error) // 根据erp_code获取物品
+	GetMaterialDetailByErpCode(erpCode string) (*model.Material, error)             // 根据erp_code获取物品详情
+	UpdateMaterialWarehouseUuid(uuid uint64, warehouseUuid uint64) error            // 更新物品仓库uuid
+	UpdateAllMaterialWarehouseUuid(warehouseUuid uint64) error                      // 将所有物品的仓库uuid设置为指定仓库uuid
 
 	CheckMultiLanguageNameExist(localeResponse dto.LocaleResponse) dto.LocaleResponse // 检查多语言名称是否存在
 	GetCategoryUuidByNameOptimized(name string) (uint64, error)
@@ -570,9 +570,13 @@ func (r *MaterialRepoImpl) CheckBarcodeExist(barcode string, uuid uint64) bool {
 	return db.First(&model.Material{}).Error == nil
 }
 
-func (r *MaterialRepoImpl) GetMaterialByErpCode(erpCode string) (*model.Material, error) {
+func (r *MaterialRepoImpl) GetMaterialByErpCode(erpCode string, opts ...DBOption) (*model.Material, error) {
 	var material model.Material
-	if err := r.db.Model(&model.Material{}).Preload("MultiLanguageName").Where("code = ? and code <> ''", erpCode).First(&material).Error; err != nil {
+	db := r.db.Model(&model.Material{}).Preload("MultiLanguageName")
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	if err := db.Where("code = ? and code <> ''", erpCode).First(&material).Error; err != nil {
 		return nil, errors.WithMessage(err, "根据erp_code获取物品失败"+erpCode)
 	}
 	return &material, nil

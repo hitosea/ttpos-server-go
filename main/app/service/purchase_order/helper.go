@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
@@ -266,16 +267,18 @@ func (h *purchaseOrderHelper) updateRelatedMaterialStock(db *gorm.DB, relatedMat
 
 // HeadquarterUpdateInfo 总部更新信息结构
 type HeadquarterUpdateInfo struct {
-	DB            *gorm.DB                          // 总部数据库连接
-	PurchaseOrder *model.PurchaseOrder              // 总部采购订单
-	ItemRepo      repository.IPurchaseOrderItemRepo // 总部采购明细Repository
-	ItemsToUpdate []HeadquarterItemUpdate           // 需要更新的明细信息
+	DB            *gorm.DB                              // 总部数据库连接
+	PurchaseOrder *model.PurchaseOrder                  // 总部采购订单
+	ItemRepo      repository.IPurchaseOrderItemRepo     // 总部采购明细Repository
+	ItemUnitRepo  repository.IPurchaseOrderItemUnitRepo // 总部采购明细单位Repository
+	ItemsToUpdate []HeadquarterItemUpdate               // 需要更新的明细信息
 }
 
 // HeadquarterItemUpdate 需要更新的总部明细信息
 type HeadquarterItemUpdate struct {
-	MaterialCode  string  // 物料编码
-	NewArrivalNum float64 // 新的到货数量
+	MaterialCode  string                                   // 物料编码
+	NewArrivalNum float64                                  // 新的到货数量
+	UnitList      []req.PurchaseReceiptItemMaterialUnitReq // 单位列表
 }
 
 // initHeadquarterInfo 初始化总部信息
@@ -306,6 +309,7 @@ func (h *purchaseOrderHelper) initHeadquarterInfo(
 		DB:            headquarterDb,
 		PurchaseOrder: headquarterPurchaseOrder,
 		ItemRepo:      repository.NewPurchaseOrderItemRepo(headquarterDb),
+		ItemUnitRepo:  repository.NewPurchaseOrderItemUnitRepo(headquarterDb),
 		ItemsToUpdate: make([]HeadquarterItemUpdate, 0),
 	}, nil
 }
@@ -331,6 +335,19 @@ func (h *purchaseOrderHelper) batchUpdateHeadquarterItems(
 			continue
 		}
 
+		// 更新总部采购申请明细单位到货数量
+		for _, unit := range itemUpdate.UnitList {
+			headquarterItemUnit, err := info.ItemUnitRepo.GetByUuid(unit.Uuid)
+			if err != nil {
+				return errors.WithMessage(errors.New("获取总部采购申请明细单位失败"), err.Error())
+			}
+			headquarterItemUnit.ArrivalNum = headquarterItemUnit.ArrivalNum + unit.Num
+			err = info.ItemUnitRepo.Update(*headquarterItemUnit)
+			if err != nil {
+				return errors.WithMessage(errors.New("更新总部采购申请明细单位到货数量失败"), err.Error())
+			}
+		}
+
 		// 更新到货数量
 		headquarterItem.ArrivalNum = itemUpdate.NewArrivalNum
 		err = info.ItemRepo.Update(headquarterItem)
@@ -343,6 +360,7 @@ func (h *purchaseOrderHelper) batchUpdateHeadquarterItems(
 				err.Error(),
 			)
 		}
+
 	}
 
 	return nil
@@ -496,8 +514,7 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 		var errMaterialsList []string
 		updateMaterialsMap := make(map[uint64]model.PurchaseOrderItem)
 		for _, item := range purchaseOrder.Items {
-			// 计算实际出库数量（考虑单位转换率）
-			actualNum := item.GetConversionRateNum()
+			actualNum := item.GetUnitsTotalConversionRateNum()
 			if actualNum <= 0 {
 				continue
 			}
@@ -554,7 +571,7 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 
 		// 减少库存
 		for warehouseItemUuid, item := range updateMaterialsMap {
-			actualNum := item.GetConversionRateNum()
+			actualNum := item.GetUnitsTotalConversionRateNum()
 
 			// 更新规格/加料关联材料库存
 			err = warehouseItemRepo.ReduceStock(warehouseItemUuid, actualNum)

@@ -29519,6 +29519,14 @@ const docTemplate = `{
                     "description": "物品名称",
                     "type": "string"
                 },
+                "not_basic_unit_stock": {
+                    "description": "非基准单位库存数量",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/material_resp.NotBasicUnitStockList"
+                        }
+                    ]
+                },
                 "num": {
                     "description": "库存数量",
                     "type": "number"
@@ -29849,6 +29857,38 @@ const docTemplate = `{
                 }
             }
         },
+        "material_resp.NotBasicUnitStock": {
+            "type": "object",
+            "properties": {
+                "conversion_rate": {
+                    "description": "转换率",
+                    "type": "number"
+                },
+                "locale_name": {
+                    "description": "单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "num": {
+                    "description": "库存数量",
+                    "type": "number"
+                }
+            }
+        },
+        "material_resp.NotBasicUnitStockList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/material_resp.NotBasicUnitStock"
+                    }
+                }
+            }
+        },
         "material_resp.ProductBomCardDetailResp": {
             "type": "object",
             "properties": {
@@ -29925,6 +29965,14 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "not_basic_unit_stock_list": {
+                    "description": "非基准单位库存列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/material_resp.NotBasicUnitStockList"
                         }
                     ]
                 },
@@ -35885,16 +35933,6 @@ const docTemplate = `{
         },
         "req.ProductLabelAddReq": {
             "type": "object",
-            "required": [
-                "is_show_assistant",
-                "is_show_cashier",
-                "is_show_delivery",
-                "is_show_h5",
-                "is_show_menu",
-                "is_show_tablet",
-                "name",
-                "style"
-            ],
             "properties": {
                 "is_show_assistant": {
                     "description": "是否在助手显示, 0-否 1-是",
@@ -35951,17 +35989,6 @@ const docTemplate = `{
         },
         "req.ProductLabelEditReq": {
             "type": "object",
-            "required": [
-                "is_show_assistant",
-                "is_show_cashier",
-                "is_show_delivery",
-                "is_show_h5",
-                "is_show_menu",
-                "is_show_tablet",
-                "name",
-                "style",
-                "uuid"
-            ],
             "properties": {
                 "is_show_assistant": {
                     "description": "是否在助手显示, 0-否 1-是",
@@ -37254,9 +37281,28 @@ const docTemplate = `{
                     "type": "integer",
                     "minimum": 1
                 },
+                "unit_list": {
+                    "description": "单位列表,新增的非基准单位",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.PurchaseOrderItemMaterialUnitReq"
+                    }
+                }
+            }
+        },
+        "req.PurchaseOrderItemMaterialUnitReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
                 "num": {
                     "description": "数量",
                     "type": "number"
+                },
+                "uuid": {
+                    "description": "单位UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -37271,9 +37317,12 @@ const docTemplate = `{
                     "type": "integer",
                     "minimum": 1
                 },
-                "num": {
-                    "description": "数量",
-                    "type": "number"
+                "unit_list": {
+                    "description": "单位列表,新增的非基准单位",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.PurchaseOrderItemMaterialUnitReq"
+                    }
                 }
             }
         },
@@ -43937,8 +43986,12 @@ const docTemplate = `{
                     "description": "是否是usb打印机",
                     "type": "boolean"
                 },
+                "print_chunk_size": {
+                    "description": "打印分片大小",
+                    "type": "integer"
+                },
                 "print_method": {
-                    "description": "打印方式 1文本打印, 2图片打印'",
+                    "description": "打印方式 1文本打印, 2图片打印",
                     "type": "integer"
                 },
                 "printer_config": {
@@ -44944,6 +44997,10 @@ const docTemplate = `{
                     "description": "到货数量",
                     "type": "number"
                 },
+                "barcode_value": {
+                    "description": "条形码值",
+                    "type": "string"
+                },
                 "base_unit_name": {
                     "description": "基准单位名称",
                     "type": "string"
@@ -44992,12 +45049,68 @@ const docTemplate = `{
                     "description": "基准单位转换率",
                     "type": "number"
                 },
+                "unit_list": {
+                    "description": "基准单位列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PurchaseOrderItemMaterialUnit"
+                    }
+                },
                 "unit_name": {
                     "description": "采购单位名称",
                     "type": "string"
                 },
+                "units": {
+                    "description": "单位列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PurchaseOrderItemUnit"
+                    }
+                },
                 "uuid": {
                     "description": "明细ID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.PurchaseOrderItemMaterialUnit": {
+            "type": "object",
+            "properties": {
+                "locale_name": {
+                    "description": "单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "uuid": {
+                    "description": "单位UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.PurchaseOrderItemUnit": {
+            "type": "object",
+            "properties": {
+                "arrival_num": {
+                    "description": "到货数量",
+                    "type": "number"
+                },
+                "locale_unit_name": {
+                    "description": "单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "num": {
+                    "description": "数量",
+                    "type": "number"
+                },
+                "unit_uuid": {
+                    "description": "单位UUID",
                     "type": "integer"
                 }
             }
@@ -45041,6 +45154,10 @@ const docTemplate = `{
                 "arrival_num": {
                     "description": "到货数量",
                     "type": "number"
+                },
+                "barcode_value": {
+                    "description": "条形码值",
+                    "type": "string"
                 },
                 "base_unit_name": {
                     "description": "基准单位名称",
@@ -45097,6 +45214,13 @@ const docTemplate = `{
                 "unit_conversion_rate": {
                     "description": "基准单位转换率",
                     "type": "number"
+                },
+                "unit_list": {
+                    "description": "单位列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PurchaseOrderItemMaterialUnit"
+                    }
                 },
                 "unit_name": {
                     "description": "采购单位名称",
