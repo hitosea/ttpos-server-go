@@ -7061,6 +7061,11 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 					var err error
 					if options.IsH5Check {
 						shopCartInfo, err = repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid, repository.WithUnorderedH5Product())
+						// 先计算一次未下单的商品价格, 用于更新h5订单中未下单的商品价格
+						saleBill := shopCartInfo.SaleBill
+						s.CalcAndSaveSaleBill(ctx, db, saleBill, model.WithLatestPrice())
+						// 重新获取销售账单信息, 用于更新桌台已下单的商品价格
+						shopCartInfo, err = repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid)
 					} else {
 						if options.H5OrderUuid != 0 {
 							// 接单场景下，检查h5订单商品金额
