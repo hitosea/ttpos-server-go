@@ -1301,7 +1301,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_label` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
-    UNIQUE KEY `idx_uuid` (`uuid`),
+    UNIQUE KEY `idx_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品标签表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_product_package` (
