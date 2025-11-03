@@ -21,5 +21,6 @@ if [ -f "$ENV_FILE" ] ;then
   else
     echo "REDIS_CLUSTER_ANNOUNCE_IP=${LOCAL_IP}" >> .env
   fi
+  sed -i.bak "s/^NACOS_SERVER_IP=.*/NACOS_SERVER_IP=${LOCAL_IP}/" .env && rm .env.bak
    echo "替换中台.env 本地IP成功 $LOCAL_IP"
 fi
