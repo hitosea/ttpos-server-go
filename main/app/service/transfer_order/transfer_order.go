@@ -95,9 +95,6 @@ func (s *transferOrderSrv) GetTransferOrderList(
 	if req.OrderTimeStart > 0 || req.OrderTimeEnd > 0 {
 		opts = append(opts, transferOrderRepo.WhereOrderTimeRange(req.OrderTimeStart, req.OrderTimeEnd))
 	}
-	if req.SubmitTimeStart > 0 || req.SubmitTimeEnd > 0 {
-		opts = append(opts, transferOrderRepo.WhereSubmitTimeRange(req.SubmitTimeStart, req.SubmitTimeEnd))
-	}
 	if len(req.UuidIn) > 0 {
 		opts = append(opts, transferOrderRepo.WhereUuidIn(req.UuidIn))
 	}

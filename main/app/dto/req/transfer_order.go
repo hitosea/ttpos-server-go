@@ -21,8 +21,6 @@ type TransferOrderListReq struct {
 	CreateTimeEnd       int      `json:"create_time_end" form:"create_time_end" binding:"omitempty,min=0"`         // 创建时间结束
 	OrderTimeStart      int      `json:"order_time_start" form:"order_time_start" binding:"omitempty,min=0"`       // 单据时间开始
 	OrderTimeEnd        int      `json:"order_time_end" form:"order_time_end" binding:"omitempty,min=0"`           // 单据时间结束
-	SubmitTimeStart     int      `json:"submit_time_start" form:"submit_time_start" binding:"omitempty,min=0"`     // 提交时间开始
-	SubmitTimeEnd       int      `json:"submit_time_end" form:"submit_time_end" binding:"omitempty,min=0"`         // 提交时间结束
 }
 
 // TransferOrderCreateReq 创建调拨单请求
