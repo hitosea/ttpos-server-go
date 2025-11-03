@@ -99,6 +99,8 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterStockReconciliationHandlers(shopGroup, dbm, cache) // 盘点
 
 			shop.RegisterBatchProductHandlers(shopGroup, dbm, cache) // 分批商品
+
+			shop.RegisterTransferOrderHandlers(shopGroup, dbm, cache) // 调拨单
 		}
 		// 收银端
 		cashierGroup := apiV1.Group("/cashier")

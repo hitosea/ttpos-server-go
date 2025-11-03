@@ -1,0 +1,176 @@
+package model
+
+// TransferOrder 调拨单主表 ttpos_transfer_order
+type TransferOrder struct {
+	BaseModel
+	CompanyUuid     uint64 `gorm:"column:company_uuid;type:bigint;default:0;comment:所属公司UUID" json:"company_uuid"`
+	HeadquarterUuid uint64 `gorm:"column:headquarter_uuid;type:bigint;default:0;comment:总部UUID" json:"headquarter_uuid"`
+	OrderNo         string `gorm:"column:order_no;type:varchar(255);default:'';comment:单据编号TR+12位数字" json:"order_no"`
+	ErpOrderNo      string `gorm:"column:erp_order_no;type:varchar(255);default:'';comment:ERP调拨单号（销售单号）" json:"erp_order_no"`
+
+	// 类型和方向
+	TransferType int `gorm:"column:transfer_type;type:int(4);default:1;comment:调拨类型：1-调入 2-调出" json:"transfer_type"`
+
+	// 门店信息
+	SenderCompanyUuid   uint64 `gorm:"column:sender_company_uuid;type:bigint;default:0;comment:发货门店UUID" json:"sender_company_uuid"`
+	SenderCompanyName   string `gorm:"column:sender_company_name;type:varchar(255);default:'';comment:发货门店名称" json:"sender_company_name"`
+	ReceiverCompanyUuid uint64 `gorm:"column:receiver_company_uuid;type:bigint;default:0;comment:收货门店UUID" json:"receiver_company_uuid"`
+	ReceiverCompanyName string `gorm:"column:receiver_company_name;type:varchar(255);default:'';comment:收货门店名称" json:"receiver_company_name"`
+
+	// 仓库信息
+	OutWarehouseErpCode string `gorm:"column:out_warehouse_erp_code;type:varchar(255);default:'';comment:出库仓库ERP编码" json:"out_warehouse_erp_code"`
+	OutWarehouseName    string `gorm:"column:out_warehouse_name;type:varchar(255);default:'';comment:出库仓库名称" json:"out_warehouse_name"`
+	InWarehouseErpCode  string `gorm:"column:in_warehouse_erp_code;type:varchar(255);default:'';comment:入库仓库ERP编码" json:"in_warehouse_erp_code"`
+	InWarehouseName     string `gorm:"column:in_warehouse_name;type:varchar(255);default:'';comment:入库仓库名称" json:"in_warehouse_name"`
+
+	// 时间记录
+	OrderTime  int `gorm:"column:order_time;type:int;default:0;comment:单据日期（提交时间戳）" json:"order_time"`
+	SubmitTime int `gorm:"column:submit_time;type:int;default:0;comment:提交时间" json:"submit_time"`
+
+	// 状态
+	Status int `gorm:"column:status;type:int(4);default:0;comment:状态：0-待提交 1-待审核 2-已驳回 3-待收货 4-已完成" json:"status"`
+
+	// 创建人信息
+	CreatorUuid uint64 `gorm:"column:creator_uuid;type:bigint;default:0;comment:创建人UUID" json:"creator_uuid"`
+	CreatorName string `gorm:"column:creator_name;type:varchar(100);default:'';comment:创建人姓名" json:"creator_name"`
+
+	// 下一个审批门店信息
+	NextApprovalCompanyUuid uint64 `gorm:"column:next_approval_company_uuid;type:bigint;default:0;comment:下一个审批门店UUID" json:"next_approval_company_uuid"`
+	NextApprovalCompanyName string `gorm:"column:next_approval_company_name;type:varchar(255);default:'';comment:下一个审批门店名称" json:"next_approval_company_name"`
+
+	// 备注
+	Remark string `gorm:"column:remark;type:text;comment:备注" json:"remark"`
+
+	// 物品统计
+	ItemCount int `gorm:"column:item_count;type:int;default:0;comment:物品种类数量" json:"item_count"`
+
+	// 关联模型
+	Items     []*TransferOrderItem     `gorm:"foreignKey:TransferOrderUuid;references:Uuid" json:"items,omitempty"`
+	Approvals []*TransferOrderApproval `gorm:"foreignKey:TransferOrderUuid;references:Uuid" json:"approvals,omitempty"`
+	Logs      []*TransferOrderLog      `gorm:"foreignKey:TransferOrderUuid;references:Uuid" json:"logs,omitempty"`
+}
+
+// TableName 指定表名
+func (TransferOrder) TableName() string {
+	return "ttpos_transfer_order"
+}
+
+// SetNil 设置为空
+func (to *TransferOrder) SetNil() {
+	to.Items = nil
+	to.Approvals = nil
+	to.Logs = nil
+}
+
+// TransferOrderItem 调拨单明细表 ttpos_transfer_order_item
+type TransferOrderItem struct {
+	BaseModel
+	TransferOrderUuid uint64 `gorm:"column:transfer_order_uuid;type:bigint;default:0;comment:调拨单UUID" json:"transfer_order_uuid"`
+	CompanyUuid       uint64 `gorm:"column:company_uuid;type:bigint;default:0;comment:所属公司UUID" json:"company_uuid"`
+	HeadquarterUuid   uint64 `gorm:"column:headquarter_uuid;type:bigint;default:0;comment:总部UUID" json:"headquarter_uuid"`
+
+	// 物品信息
+	MaterialUuid         uint64 `gorm:"column:material_uuid;type:bigint;default:0;comment:物品UUID" json:"material_uuid"`
+	MaterialCode         string `gorm:"column:material_code;type:varchar(255);default:'';comment:物品编码" json:"material_code"`
+	MaterialName         string `gorm:"column:material_name;type:text;comment:物品名称JSON" json:"material_name"`
+	MaterialInternalCode string `gorm:"column:material_internal_code;type:varchar(255);default:'';comment:物品内部编码" json:"material_internal_code"`
+
+	// 价格
+	Valuation float64 `gorm:"column:valuation;type:decimal(20,8);default:0.00000000;comment:估值单价（基准单位）" json:"valuation"`
+
+	// 关联模型
+	Material *Material                `gorm:"foreignKey:MaterialUuid;references:Uuid" json:"material,omitempty"`
+	Units    []*TransferOrderItemUnit `gorm:"foreignKey:ItemUuid;references:Uuid" json:"units,omitempty"`
+}
+
+// TableName 指定表名
+func (TransferOrderItem) TableName() string {
+	return "ttpos_transfer_order_item"
+}
+
+// SetNil 设置为空
+func (toi *TransferOrderItem) SetNil() {
+	toi.Material = nil
+	toi.Units = nil
+}
+
+// TransferOrderItemUnit 调拨单明细单位表 ttpos_transfer_order_item_unit
+type TransferOrderItemUnit struct {
+	BaseModel
+	ItemUuid          uint64 `gorm:"column:item_uuid;type:bigint;default:0;comment:调拨单明细UUID" json:"item_uuid"`
+	TransferOrderUuid uint64 `gorm:"column:transfer_order_uuid;type:bigint;default:0;comment:调拨单UUID" json:"transfer_order_uuid"`
+	MaterialUuid      uint64 `gorm:"column:material_uuid;type:bigint;default:0;comment:物品UUID" json:"material_uuid"`
+
+	// 单位信息
+	UnitUuid           uint64  `gorm:"column:unit_uuid;type:bigint;default:0;comment:单位UUID" json:"unit_uuid"`
+	UnitName           string  `gorm:"column:unit_name;type:text;comment:单位名称JSON" json:"unit_name"`
+	UnitConversionRate float64 `gorm:"column:unit_conversion_rate;type:decimal(12,4);default:1.0000;comment:单位转换率" json:"unit_conversion_rate"`
+
+	// 数量
+	Num float64 `gorm:"column:num;type:decimal(22,4);default:0.0000;comment:调拨数量" json:"num"`
+
+	// ERP相关
+	ErpnextUom string `gorm:"column:erpnext_uom;type:varchar(255);default:'';comment:ERP单位" json:"erpnext_uom"`
+}
+
+// TableName 指定表名
+func (TransferOrderItemUnit) TableName() string {
+	return "ttpos_transfer_order_item_unit"
+}
+
+// TransferOrderApproval 调拨单审批流程表 ttpos_transfer_order_approval
+type TransferOrderApproval struct {
+	BaseModel
+	TransferOrderUuid uint64 `gorm:"column:transfer_order_uuid;type:bigint;default:0;comment:调拨单UUID" json:"transfer_order_uuid"`
+	CompanyUuid       uint64 `gorm:"column:company_uuid;type:bigint;default:0;comment:所属公司UUID" json:"company_uuid"`
+	HeadquarterUuid   uint64 `gorm:"column:headquarter_uuid;type:bigint;default:0;comment:总部UUID" json:"headquarter_uuid"`
+
+	// 审批信息
+	ApprovalType        string `gorm:"column:approval_type;type:varchar(50);default:'';comment:审批类型：initiator/sender/sender_parent/receiver_parent/receiver" json:"approval_type"`
+	ApprovalCompanyUuid uint64 `gorm:"column:approval_company_uuid;type:bigint;default:0;comment:审批门店UUID" json:"approval_company_uuid"`
+	ApprovalCompanyName string `gorm:"column:approval_company_name;type:varchar(255);default:'';comment:审批门店名称" json:"approval_company_name"`
+	Sequence            int    `gorm:"column:sequence;type:int;default:0;comment:审批顺序，从1开始" json:"sequence"`
+
+	// 审批状态
+	Status       int    `gorm:"column:status;type:int(4);default:0;comment:审批状态：0-待审批 1-已通过 2-已驳回 3-已跳过" json:"status"`
+	ApproverUuid uint64 `gorm:"column:approver_uuid;type:bigint;default:0;comment:审批人UUID" json:"approver_uuid"`
+	ApproverName string `gorm:"column:approver_name;type:varchar(100);default:'';comment:审批人姓名" json:"approver_name"`
+	ApproveTime  int    `gorm:"column:approve_time;type:int;default:0;comment:审批时间" json:"approve_time"`
+	RejectReason string `gorm:"column:reject_reason;type:text;comment:驳回原因" json:"reject_reason"`
+
+	// 配置
+	IsRequired int    `gorm:"column:is_required;type:int(4);default:1;comment:是否必须审批：0-否 1-是" json:"is_required"`
+	Remark     string `gorm:"column:remark;type:text;comment:备注" json:"remark"`
+}
+
+// TableName 指定表名
+func (TransferOrderApproval) TableName() string {
+	return "ttpos_transfer_order_approval"
+}
+
+// TransferOrderLog 调拨单操作日志表 ttpos_transfer_order_log
+type TransferOrderLog struct {
+	BaseModel
+	TransferOrderUuid uint64 `gorm:"column:transfer_order_uuid;type:bigint;default:0;comment:调拨单UUID" json:"transfer_order_uuid"`
+	CompanyUuid       uint64 `gorm:"column:company_uuid;type:bigint;default:0;comment:所属公司UUID" json:"company_uuid"`
+
+	// 操作信息
+	Action     string `gorm:"column:action;type:varchar(50);default:'';comment:操作动作：create/submit/approve/reject/receive" json:"action"`
+	ActionDesc string `gorm:"column:action_desc;type:varchar(255);default:'';comment:操作描述" json:"action_desc"`
+	OldStatus  int    `gorm:"column:old_status;type:int(4);default:0;comment:操作前状态" json:"old_status"`
+	NewStatus  int    `gorm:"column:new_status;type:int(4);default:0;comment:操作后状态" json:"new_status"`
+
+	// 操作人
+	OperatorUuid uint64 `gorm:"column:operator_uuid;type:bigint;default:0;comment:操作人UUID" json:"operator_uuid"`
+	OperatorName string `gorm:"column:operator_name;type:varchar(100);default:'';comment:操作人姓名" json:"operator_name"`
+	OperatorRole string `gorm:"column:operator_role;type:varchar(50);default:'';comment:操作人角色：sender/sender_parent/receiver_parent/receiver" json:"operator_role"`
+
+	// 详细内容
+	Content string `gorm:"column:content;type:text;comment:操作内容详情JSON" json:"content"`
+	Remark  string `gorm:"column:remark;type:text;comment:备注" json:"remark"`
+}
+
+// TableName 指定表名
+func (TransferOrderLog) TableName() string {
+	return "ttpos_transfer_order_log"
+}
