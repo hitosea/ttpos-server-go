@@ -285,3 +285,22 @@ type BusinessDataHome struct {
 	TotalOrderNum          int        `json:"total_order_num"`           // 总订单数
 	MemberData             MemberData `json:"member_data"`               // 会员数据
 }
+
+// 营业数据 - 后厨效率分析
+type BusinessDataKitchenEfficiencyAnalysis struct {
+	Meta dto.PageResponse                `json:"meta"` // 元数据
+	List []KitchenEfficiencyAnalysisItem `json:"list"` // 后厨效率分析
+}
+
+// 营业数据 - 后厨效率分析 - 单条
+type KitchenEfficiencyAnalysisItem struct {
+	ProductName  dto.LocaleResponse `json:"product_name"`  // 商品名称
+	CategoryName dto.LocaleResponse `json:"category_name"` // 分类名称
+	Min          int                `json:"min"`           // 最短出品时长
+	Max          int                `json:"max"`           // 最长出品时长
+	Avg          int                `json:"avg"`           // 平均出品时长
+}
+
+type BusinessDataKitchenEfficiencyAnalysisAvg struct {
+	Avg int `json:"avg"` // 平均出品时长,单位:秒
+}

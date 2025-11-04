@@ -121,3 +121,17 @@ type BusinessDataCountProductSalesReq struct {
 	SortType       int    `form:"sort_type" json:"sort_type"`               // 排序类型 0=默认、 1=按销售数量、 2=按原销售额
 	SortDirection  int    `form:"sort_direction" json:"sort_direction"`     // 排序方向 0=默认、 1=升序、 2=降序
 }
+
+// KitchenEfficiencyAnalysisReq 统计后厨效率分析请求
+type KitchenEfficiencyAnalysisReq struct {
+	StartTime     int64    `form:"start_time" json:"start_time"`         // 查询开始时间戳
+	EndTime       int64    `form:"end_time" json:"end_time"`             // 查询结束时间戳
+	Keyword       string   `form:"keyword" json:"keyword"`               // 关键词, 仅商品名称模糊搜索
+	CategoryUuids []uint64 `form:"category_uuids" json:"category_uuids"` // 分类UUID列表
+}
+
+// KitchenEfficiencyAnalysisAvgReq 统计后厨效率分析平均时长请求
+type KitchenEfficiencyAnalysisAvgReq struct {
+	StartTime int64 `form:"start_time" json:"start_time"` // 查询开始时间戳
+	EndTime   int64 `form:"end_time" json:"end_time"`     // 查询结束时间戳
+}
