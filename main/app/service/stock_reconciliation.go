@@ -626,7 +626,7 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 		return nil, errors.New("当前状态不允许审核")
 	}
 
-	var disabledMaterials []dto.LocaleResponse
+	disabledMaterials := make([]dto.LocaleResponse, 0)
 	for _, item := range stockReconciliation.StockReconciliationItems {
 		// 跳过已删除物品明细
 		if item.DeleteTime > 0 {
@@ -653,7 +653,7 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 	}
 
 	// 开启事务
-	return nil, db.Transaction(func(tx *gorm.DB) error {
+	err = db.Transaction(func(tx *gorm.DB) error {
 		stockReconciliationRepo := repository.NewStockReconciliationRepo(tx)
 
 		// 更新盘点单状态为已审核
@@ -728,11 +728,6 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 				return errors.WithMessage(errors.New("创建盘盈盘亏出入库记录失败"), err.Error())
 			}
 		}
-		// 计算所有关联成本卡的商品的库存
-		err = s.productSrv.SyncProductStockByBomCard(ctx)
-		if err != nil {
-			return errors.WithMessage(errors.New("计算商品库存失败"), err.Error())
-		}
 
 		// 调用erp接口审核盘点单
 		if ctx.GetCompany().IsOpenErp() && stockReconciliation.ErpCode != "" {
@@ -748,6 +743,17 @@ func (s *stockReconciliationSrv) ApproveStockReconciliation(ctx context.Context,
 
 		return nil
 	})
+	if err != nil {
+		return disabledMaterials, err
+	}
+	utils.Go(func() {
+		// 计算所有关联成本卡的商品的库存
+		err = s.productSrv.SyncProductStockByBomCard(ctx)
+		if err != nil {
+			logger.Logger.Error("审核通过盘点单-计算商品库存失败", zap.Error(err))
+		}
+	})
+	return disabledMaterials, nil
 }
 
 // RejectStockReconciliation 驳回盘点单
