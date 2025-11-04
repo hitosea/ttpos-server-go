@@ -30,7 +30,6 @@ type ITransferOrderSrv interface {
 	// 调拨单管理
 	GetTransferOrderList(ctx context.Context, req req.TransferOrderListReq) (resp.TransferOrderListResp, error)
 	GetTransferOrderDetail(ctx context.Context, req req.TransferOrderDetailReq) (resp.TransferOrderDetailResp, error)
-	GetTransferOrderMaterialList(ctx context.Context, req req.TransferOrderMaterialListReq) (material_resp.MaterialListWithPaginationResp, error)
 	CreateTransferOrder(ctx context.Context, req req.TransferOrderCreateReq) (resp.TransferOrderCreateResp, error)
 	UpdateTransferOrder(ctx context.Context, req req.TransferOrderUpdateReq) error
 	DeleteTransferOrder(ctx context.Context, req req.TransferOrderDeleteReq) error
@@ -44,8 +43,9 @@ type ITransferOrderSrv interface {
 	GetTransferOrderLogList(ctx context.Context, req req.TransferOrderLogListReq) (resp.TransferOrderLogListResp, error)
 
 	// 下拉列表
-	GetTransferOrderCompanyList(ctx context.Context, req req.TransferOrderCompanyListReq) (resp.TransferOrderCompanyListResp, error)
-	GetTransferOrderWarehouseList(ctx context.Context, req req.TransferOrderWarehouseListReq) (resp.TransferOrderWarehouseListResp, error)
+	GetTransferOrderCompanyList(ctx context.Context) (resp.TransferOrderCompanyListResp, error)
+	GetTransferOrderWarehouseList(ctx context.Context) (resp.TransferOrderWarehouseListResp, error)
+	GetTransferOrderMaterialList(ctx context.Context, req req.TransferOrderMaterialListReq) (material_resp.MaterialListWithPaginationResp, error)
 }
 
 // transferOrderSrv 调拨单服务实现
@@ -367,6 +367,7 @@ func (s *transferOrderSrv) CreateTransferOrder(
 			return resp.TransferOrderCreateResp{}, errors.New("出库仓库不存在")
 		}
 	}
+
 	// 判断入库仓库是否存在
 	if req.InWarehouseErpCode != "" {
 		warehouse, err := warehouseRepo.GetByErpCode(req.InWarehouseErpCode)
@@ -928,51 +929,30 @@ func (s *transferOrderSrv) GetTransferOrderLogList(
 // GetTransferOrderCompanyList 获取调拨单门店列表
 func (s *transferOrderSrv) GetTransferOrderCompanyList(
 	ctx context.Context,
-	req req.TransferOrderCompanyListReq,
 ) (resp.TransferOrderCompanyListResp, error) {
-	db := ctx.GetDB()
+	db := s.dbm.GetDB(0)
 	companyRepo := repository.NewCompanyRepo(db)
 	currentCompanyUuid := ctx.GetCompanyUuid()
-
-	// 获取当前公司信息
-	currentCompany, err := companyRepo.GetCompanyInfoByUuid(currentCompanyUuid)
-	if err != nil {
-		return resp.TransferOrderCompanyListResp{}, errors.WithMessage(errors.New("获取当前公司信息失败"), err.Error())
-	}
+	companySetting := ctx.GetCompanySetting()
 
 	// 获取总部下的所有门店
-	headquarterUuid := currentCompany.CompanySetting.HeadquarterUuid
+	headquarterUuid := companySetting.HeadquarterUuid
 	if headquarterUuid == 0 {
 		headquarterUuid = currentCompanyUuid
 	}
 
-	// 查询所有门店（排除当前门店）
-	var companies []model.Company
-	query := db.Model(&model.Company{}).
-		Joins("LEFT JOIN ttpos_company_setting ON ttpos_company.uuid = ttpos_company_setting.company_uuid").
-		Where("(ttpos_company_setting.headquarter_uuid = ? OR ttpos_company.uuid = ?)", headquarterUuid, headquarterUuid).
-		Where("ttpos_company.status = ?", 1). // 只查询启用的门店
-		Where("ttpos_company.delete_time = ?", 0)
-
-	// 排除当前门店（调入时排除自己，调出时排除自己）
-	query = query.Where("ttpos_company.uuid != ?", currentCompanyUuid)
-
-	// 关键字搜索
-	if req.Keyword != "" {
-		query = query.Where("ttpos_company.name LIKE ?", "%"+req.Keyword+"%")
-	}
-
-	if err := query.Find(&companies).Error; err != nil {
-		return resp.TransferOrderCompanyListResp{}, errors.WithMessage(errors.New("查询门店列表失败"), err.Error())
+	companies, err := companyRepo.GetNoDeleteListByHeadquarterUuid(headquarterUuid)
+	if err != nil {
+		return resp.TransferOrderCompanyListResp{}, errors.WithMessage(errors.New("获取总部下的所有门店失败"), err.Error())
 	}
 
 	// 转换响应数据
-	list := make([]resp.TransferOrderCompanyItem, 0, len(companies))
+	list := make([]resp.TransferOrderCompanyItem, 0)
 	for _, company := range companies {
-		list = append(list, resp.TransferOrderCompanyItem{
-			Uuid: company.Uuid,
-			Name: company.Name,
-		})
+		if company.Status == 0 {
+			continue
+		}
+		list = append(list, resp.TransferOrderCompanyItem{Uuid: company.Uuid, Name: company.Name})
 	}
 
 	return resp.TransferOrderCompanyListResp{
@@ -983,65 +963,13 @@ func (s *transferOrderSrv) GetTransferOrderCompanyList(
 // GetTransferOrderWarehouseList 获取调拨单仓库列表
 func (s *transferOrderSrv) GetTransferOrderWarehouseList(
 	ctx context.Context,
-	req req.TransferOrderWarehouseListReq,
 ) (resp.TransferOrderWarehouseListResp, error) {
-	db := ctx.GetDB()
-	warehouseRepo := repository.NewWarehouseRepo(db)
-
-	// 根据调拨类型确定查询哪个公司的仓库
-	var targetCompanyUuid uint64
-	if req.TransferType == constant.TransferTypeIn {
-		// 调入：查询当前公司的仓库（入库仓库）
-		targetCompanyUuid = ctx.GetCompanyUuid()
-	} else {
-		// 调出：查询发货门店的仓库（出库仓库）
-		if req.CompanyUuid > 0 {
-			targetCompanyUuid = req.CompanyUuid
-		} else {
-			// 如果没有指定门店，查询当前公司的仓库
-			targetCompanyUuid = ctx.GetCompanyUuid()
-		}
-	}
-
 	// 获取目标公司的数据库连接
-	targetDb := s.dbm.GetDB(targetCompanyUuid)
+	targetDb := ctx.GetDB()
 	warehouseRepoTarget := repository.NewWarehouseRepo(targetDb)
-
-	// 查询仓库列表
-	query := targetDb.Model(&model.Warehouse{}).
-		Where("status = ?", 1). // 只查询启用的仓库
-		Where("delete_time = ?", 0).
-		Where("erp_code != ?", "") // ERP编码不为空
-
-	// 关键字搜索
-	if req.Keyword != "" {
-		query = query.Where("name LIKE ?", "%"+req.Keyword+"%")
-	}
-
-	var warehouses []model.Warehouse
-	if err := query.Find(&warehouses).Error; err != nil {
+	warehouses, err := warehouseRepoTarget.GetNormalWarehouse()
+	if err != nil {
 		return resp.TransferOrderWarehouseListResp{}, errors.WithMessage(errors.New("查询仓库列表失败"), err.Error())
-	}
-
-	// 预加载多语言名称
-	multiLanguageNameUuids := make([]uint64, 0, len(warehouses))
-	for _, warehouse := range warehouses {
-		if warehouse.MultiLanguageNameUuid > 0 {
-			multiLanguageNameUuids = append(multiLanguageNameUuids, warehouse.MultiLanguageNameUuid)
-		}
-	}
-
-	multiLanguageNameMap := make(map[uint64]model.MultiLanguageName)
-	if len(multiLanguageNameUuids) > 0 {
-		var multiLanguageNames []model.MultiLanguageName
-		if err := targetDb.Model(&model.MultiLanguageName{}).
-			Where("uuid IN ?", multiLanguageNameUuids).
-			Where("delete_time = ?", 0).
-			Find(&multiLanguageNames).Error; err == nil {
-			for _, name := range multiLanguageNames {
-				multiLanguageNameMap[name.Uuid] = name
-			}
-		}
 	}
 
 	// 转换响应数据
@@ -1050,26 +978,18 @@ func (s *transferOrderSrv) GetTransferOrderWarehouseList(
 		item := resp.TransferOrderWarehouseItem{
 			ErpCode: warehouse.ErpCode,
 			Type:    warehouse.Type,
+			Name: func() dto.LocaleResponse {
+				var localName dto.LocaleResponse
+				if warehouse.MultiLanguageName != nil {
+					localName = warehouse.MultiLanguageName.GetNames()
+				} else {
+					localName = *language.JsonToLocaleResponse(warehouse.Name)
+				}
+				return localName
+			}(),
 		}
-
-		// 处理多语言名称
-		if warehouse.MultiLanguageNameUuid > 0 {
-			if multiLanguageName, ok := multiLanguageNameMap[warehouse.MultiLanguageNameUuid]; ok {
-				// 将MultiLanguageName转换为JSON字符串
-				item.Name = *language.JsonToLocaleResponse(multiLanguageName.ToJson())
-			} else {
-				item.Name = *language.JsonToLocaleResponse(warehouse.Name)
-			}
-		} else {
-			item.Name = *language.JsonToLocaleResponse(warehouse.Name)
-		}
-
 		list = append(list, item)
 	}
-
-	// 使用warehouseRepo避免未使用变量警告
-	_ = warehouseRepo
-	_ = warehouseRepoTarget
 
 	return resp.TransferOrderWarehouseListResp{
 		List: list,

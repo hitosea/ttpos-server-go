@@ -211,16 +211,3 @@ func (r *TransferOrderMaterialListReq) Validate() error {
 	}
 	return nil
 }
-
-// TransferOrderCompanyListReq 获取调拨单门店列表请求
-type TransferOrderCompanyListReq struct {
-	TransferType int    `form:"transfer_type" json:"transfer_type" binding:"required,min=1,max=2"` // 调拨类型: 1-调入 2-调出
-	Keyword      string `form:"keyword" json:"keyword" binding:"omitempty,max=50"`                 // 搜索关键字（门店名称）
-}
-
-// TransferOrderWarehouseListReq 获取调拨单仓库列表请求
-type TransferOrderWarehouseListReq struct {
-	TransferType int    `form:"transfer_type" json:"transfer_type" binding:"required,min=1,max=2"` // 调拨类型: 1-调入 2-调出
-	CompanyUuid  uint64 `form:"company_uuid" json:"company_uuid" binding:"omitempty"`              // 门店UUID（可选，用于过滤该门店下的仓库）
-	Keyword      string `form:"keyword" json:"keyword" binding:"omitempty,max=50"`                 // 搜索关键字（仓库名称）
-}
