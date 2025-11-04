@@ -13,6 +13,8 @@ import (
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/queue"
 	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/service/rpc/message"
+	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/app/tasks"
 	"ttpos-server-go/config"
 	"ttpos-server-go/docs"
@@ -27,6 +29,8 @@ import (
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/validator"
 	"ttpos-server-go/router"
+
+	pkgCtx "ttpos-server-go/pkg/context"
 
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
@@ -224,12 +228,13 @@ func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 	})
 
 	// 每分钟执行检查物品库存任务
-	// _, _ = c.AddFunc("0 * * * * *", func() {
-	// 	logger.Logger.Info("开始执行检查物品库存任务")
-	// 	settingSrv := setting.NewSrv(dbm, cache)
-	// 	translateSrv := service.NewTranslateSrv(dbm, cache)
-	// 	service.NewMaterialSrv(dbm, service.NewLocaleSrv(), settingSrv, translateSrv).CheckMaterialSafetyStock(pkgCtx.NewDefaultContext(), 0)
-	// })
+	_, _ = c.AddFunc("0 * * * * *", func() {
+		logger.Logger.Info("开始执行检查物品库存任务")
+		settingSrv := setting.NewSrv(dbm, cache)
+		translateSrv := service.NewTranslateSrv(dbm, cache)
+		messageSrv := message.NewIMessageSrv(dbm)
+		service.NewMaterialSrv(dbm, service.NewLocaleSrv(), settingSrv, translateSrv, messageSrv).CheckMaterialSafetyStock(pkgCtx.NewDefaultContext(), 0)
+	})
 
 	// 启动定时器
 	c.Start()

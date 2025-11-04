@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/service/rpc/message"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
@@ -529,9 +530,10 @@ func RegisterSettingHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 	otherSrv := service.NewOtherSrv(dbm, cache, settingSrv)
 	translateSrv := service.NewTranslateSrv(dbm, cache)
+	messageSrv := message.NewIMessageSrv(dbm)
 	supplierSrv := service.NewSupplierSrv(dbm)
 	productSrv := service.NewProductSrv(dbm, service.NewLocaleSrv(), settingSrv, cache, translateSrv)
-	materialSrv := service.NewMaterialSrv(dbm, service.NewLocaleSrv(), settingSrv, translateSrv)
+	materialSrv := service.NewMaterialSrv(dbm, service.NewLocaleSrv(), settingSrv, translateSrv, messageSrv)
 	warehouseSrv := service.NewWarehouseSrv(dbm, settingSrv, materialSrv, translateSrv)
 	wrapper := &SettingHandler{
 		settingSrv:    settingSrv,

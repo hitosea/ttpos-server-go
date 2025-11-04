@@ -22,6 +22,7 @@ type ServiceName string
 const (
 	TakeOutServiceName ServiceName = "ttpos-takeout"
 	ErpServiceName     ServiceName = "ttpos-erp"
+	MessageServiceName ServiceName = "ttpos-message"
 )
 
 func Init() {

@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/service/rpc/message"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
@@ -628,6 +629,7 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 	translateSrv := service.NewTranslateSrv(dbm, cache)
+	messageSrv := message.NewIMessageSrv(dbm)
 
 	// 创建物品处理程序
 	wrapper := MaterialHandler{
@@ -636,6 +638,7 @@ func RegisterMaterialHandlers(router gin.IRouter, dbm *database.DBManager, cache
 			service.NewLocaleSrv(), // 多语言服务
 			settingSrv,
 			translateSrv,
+			messageSrv,
 		),
 	}
 

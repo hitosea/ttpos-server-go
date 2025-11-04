@@ -939,6 +939,28 @@ CREATE TABLE IF NOT EXISTS `ttpos_material_category` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '原料分类表';
 
+CREATE TABLE IF NOT EXISTS `ttpos_material_stock_alert_log` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '主键ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '唯一标识UUID',
+    `message_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '消息UUID，每次发送时随机生成',
+    `company_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '公司UUID',
+    `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物料UUID',
+    `warehouse_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '仓库UUID，0表示全部维度',
+    `alert_type` INT UNSIGNED NOT NULL DEFAULT 1 COMMENT '预警类型：1-公司维度 2-仓库维度',
+    `current_stock` DECIMAL(14, 4) NOT NULL DEFAULT 0 COMMENT '当前库存数量',
+    `safety_stock` DECIMAL(14, 4) NOT NULL DEFAULT 0 COMMENT '安全库存数量',
+    `last_alert_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '上次预警时间（时间戳）',
+    `alert_count` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '预警次数',
+    `send_status` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '发送状态：0-待发送 1-发送成功 2-发送失败',
+    `recipient` VARCHAR(500) NOT NULL DEFAULT '' COMMENT '收件人邮箱（多个用逗号分隔）',
+    `error_message` text COMMENT '错误信息',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
+    UNIQUE KEY `idx_uuid` (`uuid`),
+    KEY `idx_company_material_warehouse` (`company_uuid`, `material_uuid`, `warehouse_uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '物料库存预警邮件记录表';
+
 CREATE TABLE IF NOT EXISTS `ttpos_material_unit` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '原料单位ID',
