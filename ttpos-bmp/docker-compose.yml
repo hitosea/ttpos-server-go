@@ -20,7 +20,6 @@ services:
       - "14031:14031"
       - "14032:14032"
     networks:
-      ttpos-bmp-mid_bmp-mid-network:
       bmp-network:
         ipv4_address: 10.0.10.40
 
