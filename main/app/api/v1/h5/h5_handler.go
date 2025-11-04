@@ -644,6 +644,10 @@ func (h *Handler) ConfirmOrder(c *gin.Context) {
 	}
 
 	if failedData, err := h.orderSrv.ConfirmH5Order(ctx, saleBillUuid, saleOrderUuid, params.IgnoreMust); err != nil {
+		if strings.Contains(err.Error(), "关闭h5接单功能，自动接单失败/异常") {
+			helper.ErrorWithDetail(c, constant.UnknownError, fmt.Errorf("%s", i18n.Translate(ctx.GetLanguage(), "下单失败,请联系商家")))
+			return
+		}
 		helper.ErrorWithData(c, constant.CodeFail, failedData, err)
 		return
 	}
