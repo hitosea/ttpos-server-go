@@ -438,9 +438,7 @@ func (s *sSetup) GetUserApiKeySecret(ctx context.Context, userEmail string) (api
 
 	// 解析响应数据获取API密钥
 	j := resp
-	if err != nil {
-		return "", "", gerror.Wrapf(err, "解析生成API密钥响应失败")
-	}
+
 	apiSecret = j.Get("data.api_secret").String()
 
 	// 获取用户信息

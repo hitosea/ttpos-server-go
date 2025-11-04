@@ -79,9 +79,6 @@ func (s *sPermission) queryPermissionRuleList(ctx context.Context, filters [][]s
 
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析权限规则列表响应失败")
-	}
 
 	// 转换为权限规则信息列表
 	dataArray := j.GetJsons("data")
@@ -123,9 +120,6 @@ func (s *sPermission) getPermissionCompanyList(ctx context.Context, parentName s
 
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析公司列表响应失败")
-	}
 
 	// 转换为公司列表
 	dataArray := j.GetJsons("data")
@@ -168,9 +162,6 @@ func (s *sPermission) GetPosPermissionRule(ctx context.Context, ruleCode string)
 
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析权限规则详情响应失败")
-	}
 
 	// 转换为权限规则结构体
 	var permissionRule = &erp.PosPermissionRule{}
@@ -197,9 +188,6 @@ func (s *sPermission) CreatePosPermissionRule(ctx context.Context, req *erp.PosP
 
 	// 解析创建结果
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析创建权限规则响应失败")
-	}
 
 	// 转换为权限规则结构体
 	var permissionRule = &erp.PosPermissionRule{}
@@ -247,9 +235,6 @@ func (s *sPermission) UpdatePosPermissionRule(ctx context.Context, req *erp.PosP
 
 	// 解析更新结果
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析更新权限规则响应失败")
-	}
 
 	// 转换为权限规则结构体
 	var permissionRule = &erp.PosPermissionRule{}

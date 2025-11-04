@@ -66,10 +66,6 @@ func (s *sCrm) CreateContact(ctx context.Context, req *crm.CreateContactReq) (re
 
 	// 解析响应获取创建的联系人名称
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析创建联系人响应失败")
-	}
-
 	contactName := j.Get("data.name").String()
 	if contactName == "" {
 		return nil, gerror.New("创建联系人失败，未获取到联系人名称")
@@ -170,10 +166,6 @@ func (s *sCrm) queryContactList(ctx context.Context, filters [][]string, req *cr
 
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析联系人列表响应失败")
-	}
-
 	// 转换为联系人信息列表
 	dataArray := j.GetJsons("data")
 	contactList := make([]*crm.ContactInfo, 0, len(dataArray))
@@ -209,10 +201,6 @@ func (s *sCrm) queryContactDetail(ctx context.Context, name string) (*crm.Contac
 
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析联系人详情响应失败")
-	}
-
 	data := j.GetJson("data")
 	if data.IsNil() {
 		return nil, gerror.New("联系人不存在")
