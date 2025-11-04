@@ -290,6 +290,8 @@ type ShopBase struct {
 	ServerVersion string `json:"server_version"` // 服务端版本
 	UpdateTime    int64  `json:"update_time"`    // 更新时间
 
+	HasChildren bool `json:"has_children"` // 有下级公司，则表示为上级公司，用于判断调拨规则是否支持
+
 	IsSyncing    bool  `json:"is_syncing"`     // 是否erp数据同步中
 	LastSyncTime int64 `json:"last_sync_time"` // 上次同步erp数据完成时间
 }

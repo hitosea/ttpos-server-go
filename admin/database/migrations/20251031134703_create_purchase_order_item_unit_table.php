@@ -22,6 +22,7 @@ class CreatePurchaseOrderItemUnitTable extends Migrator
             
             $table->addColumn('id', 'integer', ['identity' => true, 'signed' => false, 'comment' => '自增ID'])
                 ->addColumn('uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '采购申请物品单位ID'])
+                ->addColumn('purchase_order_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '采购订单ID'])
                 ->addColumn('item_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => 'ItemID'])
                 ->addColumn('num', 'decimal', ['precision' => 22, 'scale' => 4, 'default' => 0.0000, 'comment' => '数量'])
                 ->addColumn('arrival_num', 'decimal', ['precision' => 22, 'scale' => 4, 'default' => 0.0000, 'comment' => '到货数量'])
@@ -51,9 +52,9 @@ class CreatePurchaseOrderItemUnitTable extends Migrator
             
             $table->addColumn('id', 'integer', ['identity' => true, 'signed' => false, 'comment' => '自增ID'])
                 ->addColumn('uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '收货单物品单位ID'])
-                ->addColumn('num', 'decimal', ['precision' => 22, 'scale' => 4, 'default' => 0.0000, 'comment' => '数量'])
-                ->addColumn('arrival_num', 'decimal', ['precision' => 22, 'scale' => 4, 'default' => 0.0000, 'comment' => '到货数量'])
+                ->addColumn('purchase_receipt_order_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '收货单ID'])
                 ->addColumn('item_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => 'ItemID'])
+                ->addColumn('num', 'decimal', ['precision' => 22, 'scale' => 4, 'default' => 0.0000, 'comment' => '数量'])
                 ->addColumn('unit_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '单位ID'])
                 ->addColumn('unit_name', 'text', ['null' => true, 'comment' => '单位名称'])
                 ->addColumn('unit_conversion_rate', 'decimal', ['precision' => 12, 'scale' => 4, 'default' => 1.0000, 'comment' => '基准单位转换率。申请数量*转换率=基准单位申请数量'])

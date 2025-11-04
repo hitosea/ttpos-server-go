@@ -44,6 +44,8 @@ type (
 		ResendMessage(ctx context.Context, in *dto.ResendMessageInput) (out *dto.ResendMessageOutput, err error)
 		// GetTemplateById 根据ID获取模板
 		GetTemplateById(ctx context.Context, templateId uint64) (*dto.MessageTemplateDTO, error)
+		// GetTemplateByUUId 根据UUID获取模板
+		GetTemplateByUUId(ctx context.Context, templateUuid string) (*dto.MessageTemplateDTO, error)
 		// GetMessageByUuid 根据UUID获取消息记录
 		GetMessageByUuid(ctx context.Context, uuid string) (*dto.MessageRecordDTO, error)
 		// CreateMessageRecord 创建消息记录

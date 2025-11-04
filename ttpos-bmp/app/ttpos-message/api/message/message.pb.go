@@ -30,7 +30,7 @@ const (
 type SendMessageReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	MessageUuid   string                 `protobuf:"bytes,1,opt,name=message_uuid,json=messageUuid,proto3" json:"message_uuid,omitempty" dc:"消息唯一标识（由调用方生成，用于幂等性）"`  // 消息唯一标识（由调用方生成，用于幂等性）
-	TemplateId    uint64                 `protobuf:"varint,2,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty" dc:"消息模板ID"`                  // 消息模板ID
+	TemplateUuid  string                 `protobuf:"bytes,2,opt,name=template_uuid,json=templateUuid,proto3" json:"template_uuid,omitempty" dc:"消息模板UUID"`           // 消息模板UUID
 	MessageArgs   string                 `protobuf:"bytes,3,opt,name=message_args,json=messageArgs,proto3" json:"message_args,omitempty" dc:"消息参数（JSON格式，用于模板变量替换）"` // 消息参数（JSON格式，用于模板变量替换）
 	MessageType   string                 `protobuf:"bytes,4,opt,name=message_type,json=messageType,proto3" json:"message_type,omitempty" dc:"消息类型（email/sms）"`       // 消息类型（email/sms）
 	Recipient     string                 `protobuf:"bytes,5,opt,name=recipient,proto3" json:"recipient,omitempty" dc:"接收人（邮箱地址或手机号）"`                                // 接收人（邮箱地址或手机号）
@@ -78,11 +78,11 @@ func (x *SendMessageReq) GetMessageUuid() string {
 	return ""
 }
 
-func (x *SendMessageReq) GetTemplateId() uint64 {
+func (x *SendMessageReq) GetTemplateUuid() string {
 	if x != nil {
-		return x.TemplateId
+		return x.TemplateUuid
 	}
-	return 0
+	return ""
 }
 
 func (x *SendMessageReq) GetMessageArgs() string {
@@ -511,11 +511,10 @@ var File_message_message_proto protoreflect.FileDescriptor
 
 const file_message_message_proto_rawDesc = "" +
 	"\n" +
-	"\x15message/message.proto\x12\amessage\"\x9a\x02\n" +
+	"\x15message/message.proto\x12\amessage\"\x9e\x02\n" +
 	"\x0eSendMessageReq\x12!\n" +
-	"\fmessage_uuid\x18\x01 \x01(\tR\vmessageUuid\x12\x1f\n" +
-	"\vtemplate_id\x18\x02 \x01(\x04R\n" +
-	"templateId\x12!\n" +
+	"\fmessage_uuid\x18\x01 \x01(\tR\vmessageUuid\x12#\n" +
+	"\rtemplate_uuid\x18\x02 \x01(\tR\ftemplateUuid\x12!\n" +
 	"\fmessage_args\x18\x03 \x01(\tR\vmessageArgs\x12!\n" +
 	"\fmessage_type\x18\x04 \x01(\tR\vmessageType\x12\x1c\n" +
 	"\trecipient\x18\x05 \x01(\tR\trecipient\x12\x18\n" +

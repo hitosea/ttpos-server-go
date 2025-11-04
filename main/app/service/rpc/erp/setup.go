@@ -3,6 +3,7 @@ package erp
 import (
 	"context"
 	"errors"
+	"slices"
 	"strconv"
 	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/setup"
@@ -67,13 +68,13 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		return resp.InitShopResp{}, err
 	}
 	defer conn.Close()
-	req := &setup.InitShopReq{
+	initReq := &setup.InitShopReq{
 		ShopName:    company.Name,
 		CompanyAbbr: initShopReq.CompanyAbbr,
 		ShopUuid:    strconv.FormatUint(initShopReq.CompanyUuid, 10),
 		AdminUuid:   strconv.FormatUint(staff.Uuid, 10),
 	}
-	result, err := client.InitShop(WithSiteCode(context.Background(), initShopReq.SiteCode), req)
+	result, err := client.InitShop(WithSiteCode(context.Background(), initShopReq.SiteCode), initReq)
 	if err != nil {
 		return resp.InitShopResp{}, err
 	}
@@ -164,6 +165,41 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		constant.PaymentMethodCodeLianLianAliPay:      "LianlianPay-AliPay",
 		constant.PaymentMethodCodeLianLianQRPromptPay: "LianlianPay-QR PromptPay",
 	})
+
+	// ##### 更新父级公司UUID树 #####
+	companyResp, err := NewIErpSrv(s.dbm).GetCompanyList(ctx, req.ErpnextSiteCompanyReq{
+		SiteCode: initShopReq.SiteCode,
+	})
+	if err != nil {
+		logger.Logger.Error("InitShop-GetCompanyList", zap.Any("err", err), zap.String("site_code", initShopReq.SiteCode))
+	}
+	// 遍历所有节点，如果IsUsed为true，则获取所有父级树的parent_company_uuid，以map[uuid][]parent_company_uuid形式存储，用于构建公司树
+	companyUuidMap := NewIErpSrv(s.dbm).BuildCompanyUuidMap(companyResp.List)
+	for uuid, parentUuids := range companyUuidMap {
+		if uuid != company.Uuid {
+			continue
+		}
+		hasChildren := 0
+		for _, parentUuids2 := range companyUuidMap {
+			if slices.Contains(parentUuids2, uuid) {
+				hasChildren = 1
+				break
+			}
+		}
+		parentCompanyUuids := make([]string, len(parentUuids))
+		for i, parentUuid := range parentUuids {
+			parentCompanyUuids[i] = strconv.FormatUint(parentUuid, 10)
+		}
+		parentCompanyUuidsStr := strings.Join(parentCompanyUuids, ",")
+		s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("company_uuid = ?", uuid).Updates(map[string]any{
+			"parent_company_uuids": parentCompanyUuidsStr,
+			"has_children":         hasChildren,
+		})
+		s.dbm.GetDB(uuid).Model(&model.CompanySetting{}).Where("company_uuid = ?", uuid).Updates(map[string]any{
+			"parent_company_uuids": parentCompanyUuidsStr,
+			"has_children":         hasChildren,
+		})
+	}
 
 	return resp.InitShopResp{
 		BranchName: response.BranchName,

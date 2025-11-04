@@ -31,6 +31,9 @@ type Business struct {
 	BatchProductUuids []uint64 `json:"batch_product_uuids"` // 分批商品UUID列表
 	BatchTagNum       uint     `json:"batch_tag_num"`       // 分批类型数量
 	SafetyStockType   string   `json:"safety_stock_type"`   // 安全库存类型 1-门店维度 2-仓库维度，默认为1
+
+	RequiredParentCompanyApproval string `json:"required_parent_company_approval"` // 调拨规则-经过上级门店审批 "0"-否 "1"-是，总部和上级支持此选项
+	ViaParentCompanyWarehouse     string `json:"via_parent_company_warehouse"`     // 调拨规则-经过上级门店仓库 "0"-否 "1"-是，总部和上级支持此选项
 }
 
 type ShopBusiness struct {

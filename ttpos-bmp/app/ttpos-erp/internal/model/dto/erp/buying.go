@@ -490,12 +490,12 @@ type SaleOrder struct {
 	InWords     string `json:"in_words,omitempty"`      // 金额大写
 
 	// 关联数据
-	PricingRules    []interface{}     `json:"pricing_rules,omitempty"`    // 定价规则
-	SalesTeam       []interface{}     `json:"sales_team,omitempty"`       // 销售团队
-	PaymentSchedule []PaymentSchedule `json:"payment_schedule,omitempty"` // 付款计划
-	Items           []SaleOrderItem   `json:"items,omitempty"`            // 项目
-	Taxes           []interface{}     `json:"taxes,omitempty"`            // 税费
-	PackedItems     []interface{}     `json:"packed_items,omitempty"`     // 包装项目
+	PricingRules    []interface{}      `json:"pricing_rules,omitempty"`    // 定价规则
+	SalesTeam       []interface{}      `json:"sales_team,omitempty"`       // 销售团队
+	PaymentSchedule []*PaymentSchedule `json:"payment_schedule,omitempty"` // 付款计划
+	Items           []*SaleOrderItem   `json:"items,omitempty"`            // 项目
+	Taxes           []interface{}      `json:"taxes,omitempty"`            // 税费
+	PackedItems     []interface{}      `json:"packed_items,omitempty"`     // 包装项目
 }
 
 // PurchaseReceiptItem 结构体，表示采购收货单项目

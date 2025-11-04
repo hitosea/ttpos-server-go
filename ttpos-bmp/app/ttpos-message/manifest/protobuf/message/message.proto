@@ -34,7 +34,7 @@ service Message {
 // 用于向服务端发送消息发送请求
 message SendMessageReq {
   string message_uuid = 1;    // 消息唯一标识（由调用方生成，用于幂等性）
-  uint64 template_id = 2;     // 消息模板ID
+  string template_uuid = 2;     // 消息模板UUID
   string message_args = 3;    // 消息参数（JSON格式，用于模板变量替换）
   string message_type = 4;    // 消息类型（email/sms）
   string recipient = 5;       // 接收人（邮箱地址或手机号）

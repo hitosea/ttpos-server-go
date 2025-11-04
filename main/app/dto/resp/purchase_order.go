@@ -36,11 +36,15 @@ type PurchaseOrderDetailResp struct {
 }
 
 type PurchaseOrderItemMaterialUnit struct {
-	Uuid           uint64             `json:"uuid"`            // 单位UUID
-	FromUnitUuid   uint64             `json:"from_unit_uuid"`  // 来源单位UUID
-	Name           string             `json:"name"`            // 单位名称
-	LocaleName     dto.LocaleResponse `json:"locale_name"`     // 单位名称
-	ConversionRate float64            `json:"conversion_rate"` // 转换率
+	Uuid       uint64             `json:"uuid"`        // 单位UUID
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 单位名称
+}
+
+type PurchaseOrderItemUnit struct {
+	Num        float64            `json:"num"`              // 数量
+	ArrivalNum float64            `json:"arrival_num"`      // 到货数量
+	UnitUuid   uint64             `json:"unit_uuid"`        // 单位UUID
+	LocaleName dto.LocaleResponse `json:"locale_unit_name"` // 单位名称
 }
 
 // PurchaseOrderItemInfo 采购订单商品明细信息
@@ -58,7 +62,8 @@ type PurchaseOrderItemInfo struct {
 	LocaleBaseUnitName dto.LocaleResponse              `json:"locale_base_unit_name"` // 基准单位名称
 	InternalCode       string                          `json:"internal_code"`         // 内部编码
 	BarcodeValue       string                          `json:"barcode_value"`         // 条形码值
-	UnitList           []PurchaseOrderItemMaterialUnit `json:"unit_list"`             // 单位列表
+	UnitList           []PurchaseOrderItemMaterialUnit `json:"unit_list"`             // 基准单位列表
+	Units              []PurchaseOrderItemUnit         `json:"units"`                 // 单位列表
 }
 
 // PurchaseOrderLogInfo 采购订单操作日志信息
@@ -187,6 +192,7 @@ type PurchaseReceiptItemInfo struct {
 	InternalCode          string                          `json:"internal_code"`            // 商品Bom内部编码
 	BarcodeValue          string                          `json:"barcode_value"`            // 条形码值
 	UnitList              []PurchaseOrderItemMaterialUnit `json:"unit_list"`                // 单位列表
+	Units                 []PurchaseOrderItemUnit         `json:"units"`                    // 单位列表
 }
 
 // PurchaseReceiptOrderDetailResp 收货单详情响应

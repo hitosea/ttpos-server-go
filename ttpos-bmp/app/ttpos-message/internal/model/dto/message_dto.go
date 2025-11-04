@@ -51,7 +51,8 @@ type MessageSendLogDTO struct {
 // SendMessageInput 发送消息输入参数
 type SendMessageInput struct {
 	MessageUuid  string `json:"message_uuid" v:"required#消息UUID不能为空"`
-	TemplateId   uint64 `json:"template_id" v:"required#模板ID不能为空"`
+	TemplateId   uint64 `json:"template_id"`
+	TemplateUUID string `json:"template_uuid" v:"required#模板UUID不能为空"`
 	MessageArgs  string `json:"message_args" v:"json#消息参数必须是有效的JSON格式"`
 	MessageType  string `json:"message_type" v:"required|in:email,sms#消息类型不能为空|消息类型只能是email或sms"`
 	Recipient    string `json:"recipient" v:"required#接收人不能为空"`

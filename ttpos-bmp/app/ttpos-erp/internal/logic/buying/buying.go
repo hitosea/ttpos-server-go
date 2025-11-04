@@ -98,11 +98,8 @@ func (*sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req *
 
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析采购订单响应失败")
-	}
 	salesOrder := &erp.SaleOrder{}
-	j.GetJson("data").Scan(salesOrder)
+	j.GetJson("data").Scan(&salesOrder)
 	// 发货时间
 	salesOrder.DeliveryDate = req.DeliveryDate
 	for _, item := range salesOrder.Items {
@@ -144,7 +141,7 @@ func (*sBuying) CreateInnerSaleOrderFromPurchaseOrder(ctx context.Context, req *
 
 	// 解析响应数据
 	j = resp
-	j.GetJson("data").Scan(salesOrder)
+	j.GetJson("data").Scan(&salesOrder)
 
 	// 提交订单
 	_, err = service.Document().ChangeDocStatus(ctx, erp.DocTypeSaleOrder, salesOrder.Name, erp.DocstatusSubmitted)
