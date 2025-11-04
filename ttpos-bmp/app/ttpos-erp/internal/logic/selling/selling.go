@@ -658,9 +658,6 @@ func (s *sSelling) GetPosInvoiceList(ctx context.Context, req *dtoSelling.GetPos
 	// 解析响应数据
 	res := make([]dtoSelling.SimplePosInvoice, 0)
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析POS发票列表响应失败")
-	}
 
 	err = gconv.Scan(j.Get("data"), &res)
 	if err != nil {
@@ -758,10 +755,6 @@ func (s *sSelling) SavePosInvoiceStep(ctx context.Context, req *selling.SavePosI
 
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return InvoiceName, gerror.Wrapf(err, "解析POS发票响应失败")
-	}
-
 	InvoiceName = j.Get("data.name").String()
 
 	// 提交发票记录
@@ -891,9 +884,6 @@ func (s *sSelling) GetPosOpeningEntry(ctx context.Context, name string) (*erp.PO
 	// 解析响应数据
 	res := &erp.POSOpeningEntry{}
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析POS开帐记录响应失败")
-	}
 
 	gconv.Scan(j.Get("data"), res)
 	return res, nil
@@ -947,9 +937,7 @@ func (s *sSelling) ReturnPosInvoice(ctx context.Context, req *selling.ReturnPosI
 	}
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析销售退款订单响应失败")
-	}
+
 	saleInvoice := &erp.POSInvoice{}
 	// 解析响应数据
 	err = j.GetJson("data").Scan(saleInvoice)
@@ -1093,9 +1081,7 @@ func (*sSelling) GetModeOfPaymentList(ctx context.Context, req *selling.GetModeO
 	}
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析支付方式列表响应失败")
-	}
+
 	var modeOfPaymentList []*selling.ModeOfPayment
 	j.GetJson("data").Scan(&modeOfPaymentList)
 	return &selling.GetModeOfPaymentListResp{

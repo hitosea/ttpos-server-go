@@ -80,6 +80,45 @@ func (s *sCompany) GetCompanyList(ctx context.Context, req *company.GetCompanyLi
 	return
 }
 
+// GetCompany 根据公司名称获取公司信息
+// 参数：
+//   - ctx: 上下文对象
+//   - name: 公司名称
+//
+// 返回：
+//   - res: 公司信息
+//   - err: 错误信息
+func (s *sCompany) GetCompany(ctx context.Context, name string) (res *erp.Company, err error) {
+	if len(name) == 0 {
+		return nil, gerror.New("公司名称不能为空")
+	}
+
+	// 调用 ERPNext Document 服务获取公司详情
+	resp, err := service.Document().Get(ctx, &erp.ErpReq{
+		DocType: erp.DocTypeCompany,
+		Name:    name,
+	}, &erp.RequestParams{})
+	if err != nil {
+		g.Log().Error(ctx, "获取公司详情失败", g.Map{
+			"name":  name,
+			"error": err,
+		})
+		return nil, gerror.Wrapf(err, "获取公司详情失败")
+	}
+
+	// 解析响应数据到 Company 结构体
+	erpCompany := &erp.Company{}
+	if err = resp.GetJson("data").Scan(&erpCompany); err != nil {
+		return nil, gerror.Wrapf(err, "解析公司详情失败")
+	}
+
+	g.Log().Debug(ctx, "获取公司详情成功", g.Map{
+		"name": name,
+	})
+
+	return erpCompany, nil
+}
+
 func (s *sCompany) GetCompanyWithAbbr(ctx context.Context, abbr string) (res *company.CompanyInfo, err error) {
 
 	var companyList *company.GetCompanyListResp

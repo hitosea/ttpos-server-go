@@ -161,14 +161,14 @@ func (s *sSelling) CountSalesOrder(ctx context.Context, req *dtoSelling.SalesOrd
 	return count, nil
 }
 
-// DeleteSalesOrder 删除销售订单（取消订单）
+// CancelSalesOrder 删除销售订单（取消订单）
 // 参数：
 //   - ctx: 上下文对象
 //   - name: 销售订单名称
 //
 // 返回：
 //   - error: 错误信息
-func (s *sSelling) DeleteSalesOrder(ctx context.Context, name string) error {
+func (s *sSelling) CancelSalesOrder(ctx context.Context, name string) error {
 	if name == "" {
 		return gerror.New("销售订单名称不能为空")
 	}

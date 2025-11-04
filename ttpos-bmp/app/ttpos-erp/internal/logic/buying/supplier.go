@@ -450,9 +450,6 @@ func (s *sSupplier) ListSuppliers(ctx context.Context, req *buying.ListSuppliers
 
 	// 解析响应数据
 	j := resp
-	if err != nil {
-		return nil, gerror.Wrapf(err, "解析物品列表响应失败")
-	}
 
 	// 解析供应商列表
 	supplierListData := j.GetJsons("data")
@@ -638,6 +635,9 @@ func (s *sSupplier) buildSupplierFilters(ctx context.Context, req *buying.ListSu
 		filters = append(filters, []string{"custom_company", "=", companyName})
 	}
 
+	if req.RepresentsCompany != "" {
+		filters = append(filters, []string{"represents_company", "=", req.RepresentsCompany})
+	}
 	return filters
 }
 

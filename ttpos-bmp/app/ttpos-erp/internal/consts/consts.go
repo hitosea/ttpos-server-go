@@ -74,4 +74,7 @@ const (
 const (
 	DefaultCustomerGroupName = "System Add"
 	DefaultSupplierGroupName = "System Add"
+
+	DefaultDeliveryDate   = "2035-12-31"
+	DefaultRequiredByDate = "2035-12-31"
 )

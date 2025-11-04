@@ -24,16 +24,18 @@ const (
 )
 
 type MaterialTransferReq struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
-	CompanyAbbr   string                  `protobuf:"bytes,1,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写, 必填"`                   // 公司缩写, 必填
-	Branch        string                  `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty" dc:"分店名称,可选"`                                                 // 分店名称,可选
-	FromWarehouse string                  `protobuf:"bytes,3,opt,name=from_warehouse,json=fromWarehouse,proto3" json:"from_warehouse,omitempty" dc:"来源仓库,必填"`              // 来源仓库,必填
-	ToWarehouse   string                  `protobuf:"bytes,4,opt,name=to_warehouse,json=toWarehouse,proto3" json:"to_warehouse,omitempty" dc:"目标仓库,必填"`                    // 目标仓库,必填
-	RequiredDate  string                  `protobuf:"bytes,5,opt,name=required_date,json=requiredDate,proto3" json:"required_date,omitempty" dc:"到货日期, 格式: 2023-01-01,必填"` // 到货日期, 格式: 2023-01-01,必填
-	DeliveryDate  string                  `protobuf:"bytes,6,opt,name=delivery_date,json=deliveryDate,proto3" json:"delivery_date,omitempty" dc:"发货日期, 格式: 2023-01-01,必填"` // 发货日期, 格式: 2023-01-01,必填
-	Items         []*MaterialTransferItem `protobuf:"bytes,7,rep,name=items,proto3" json:"items,omitempty" dc:"材料列表,必填"`                                                   // 材料列表,必填
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState  `protogen:"open.v1"`
+	FromCompanyAbbr string                  `protobuf:"bytes,1,opt,name=from_company_abbr,json=fromCompanyAbbr,proto3" json:"from_company_abbr,omitempty" dc:"调出方公司缩写, 必填"`                 // 调出方公司缩写, 必填
+	FromBranch      string                  `protobuf:"bytes,2,opt,name=from_branch,json=fromBranch,proto3" json:"from_branch,omitempty" dc:"调出方分店名称,可选"`                                   // 调出方分店名称,可选
+	ToCompanyAbbr   string                  `protobuf:"bytes,3,opt,name=to_company_abbr,json=toCompanyAbbr,proto3" json:"to_company_abbr,omitempty" dc:"调入方公司缩写, 必填"`                       // 调入方公司缩写, 必填
+	ToBranch        string                  `protobuf:"bytes,4,opt,name=to_branch,json=toBranch,proto3" json:"to_branch,omitempty" dc:"调入方分店名称,可选"`                                         // 调入方分店名称,可选
+	FromWarehouse   string                  `protobuf:"bytes,5,opt,name=from_warehouse,json=fromWarehouse,proto3" json:"from_warehouse,omitempty" dc:"来源仓库,必填"`                             // 来源仓库,必填
+	ToWarehouse     string                  `protobuf:"bytes,6,opt,name=to_warehouse,json=toWarehouse,proto3" json:"to_warehouse,omitempty" dc:"目标仓库,必填"`                                   // 目标仓库,必填
+	RequiredDate    string                  `protobuf:"bytes,7,opt,name=required_date,json=requiredDate,proto3" json:"required_date,omitempty" dc:"到货日期, 格式: 2023-01-01,可选。 默认 2035-12-31"` // 到货日期, 格式: 2023-01-01,可选。 默认 2035-12-31
+	DeliveryDate    string                  `protobuf:"bytes,8,opt,name=delivery_date,json=deliveryDate,proto3" json:"delivery_date,omitempty" dc:"发货日期, 格式: 2023-01-01,可选。 默认 2035-12-31"` // 发货日期, 格式: 2023-01-01,可选。 默认 2035-12-31
+	Items           []*MaterialTransferItem `protobuf:"bytes,9,rep,name=items,proto3" json:"items,omitempty" dc:"材料列表,必填"`                                                                  // 材料列表,必填
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *MaterialTransferReq) Reset() {
@@ -66,16 +68,30 @@ func (*MaterialTransferReq) Descriptor() ([]byte, []int) {
 	return file_material_transfer_material_transfer_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *MaterialTransferReq) GetCompanyAbbr() string {
+func (x *MaterialTransferReq) GetFromCompanyAbbr() string {
 	if x != nil {
-		return x.CompanyAbbr
+		return x.FromCompanyAbbr
 	}
 	return ""
 }
 
-func (x *MaterialTransferReq) GetBranch() string {
+func (x *MaterialTransferReq) GetFromBranch() string {
 	if x != nil {
-		return x.Branch
+		return x.FromBranch
+	}
+	return ""
+}
+
+func (x *MaterialTransferReq) GetToCompanyAbbr() string {
+	if x != nil {
+		return x.ToCompanyAbbr
+	}
+	return ""
+}
+
+func (x *MaterialTransferReq) GetToBranch() string {
+	if x != nil {
+		return x.ToBranch
 	}
 	return ""
 }
@@ -176,11 +192,13 @@ func (x *MaterialTransferResp) GetAuditReceipt() *TransferReceipt {
 }
 
 type TransferReceipt struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	PoNo          string                 `protobuf:"bytes,1,opt,name=po_no,json=poNo,proto3" json:"po_no,omitempty" dc:"采购订单号"` // 采购订单号
-	SoNo          string                 `protobuf:"bytes,2,opt,name=so_no,json=soNo,proto3" json:"so_no,omitempty" dc:"销售订单号"` // 销售订单号
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	PoNo            string                 `protobuf:"bytes,1,opt,name=po_no,json=poNo,proto3" json:"po_no,omitempty" dc:"采购订单号"`                                      // 采购订单号
+	SoNo            string                 `protobuf:"bytes,2,opt,name=so_no,json=soNo,proto3" json:"so_no,omitempty" dc:"销售订单号"`                                      // 销售订单号
+	FromCompanyAbbr string                 `protobuf:"bytes,3,opt,name=from_company_abbr,json=fromCompanyAbbr,proto3" json:"from_company_abbr,omitempty" dc:"调出方公司缩写"` // 调出方公司缩写
+	ToCompanyAbbr   string                 `protobuf:"bytes,4,opt,name=to_company_abbr,json=toCompanyAbbr,proto3" json:"to_company_abbr,omitempty" dc:"调入方公司缩写"`       // 调入方公司缩写
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *TransferReceipt) Reset() {
@@ -227,12 +245,26 @@ func (x *TransferReceipt) GetSoNo() string {
 	return ""
 }
 
+func (x *TransferReceipt) GetFromCompanyAbbr() string {
+	if x != nil {
+		return x.FromCompanyAbbr
+	}
+	return ""
+}
+
+func (x *TransferReceipt) GetToCompanyAbbr() string {
+	if x != nil {
+		return x.ToCompanyAbbr
+	}
+	return ""
+}
+
 type MaterialTransferItem struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"材料编码,必填"` // 材料编码,必填
-	Qty           float32                `protobuf:"fixed32,3,opt,name=qty,proto3" json:"qty,omitempty" dc:"数量,必填"`                           // 数量,必填
-	Uom           string                 `protobuf:"bytes,4,opt,name=uom,proto3" json:"uom,omitempty" dc:"单位,必填"`                             // 单位,必填
-	Rate          float32                `protobuf:"fixed32,5,opt,name=rate,proto3" json:"rate,omitempty" dc:"单价,可选"`                         // 单价,可选
+	Qty           float64                `protobuf:"fixed64,2,opt,name=qty,proto3" json:"qty,omitempty" dc:"数量,必填"`                           // 数量,必填
+	Uom           string                 `protobuf:"bytes,3,opt,name=uom,proto3" json:"uom,omitempty" dc:"单位,必填"`                             // 单位,必填
+	Rate          float64                `protobuf:"fixed64,4,opt,name=rate,proto3" json:"rate,omitempty" dc:"单价,可选"`                         // 单价,可选
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -274,7 +306,7 @@ func (x *MaterialTransferItem) GetItemCode() string {
 	return ""
 }
 
-func (x *MaterialTransferItem) GetQty() float32 {
+func (x *MaterialTransferItem) GetQty() float64 {
 	if x != nil {
 		return x.Qty
 	}
@@ -288,7 +320,7 @@ func (x *MaterialTransferItem) GetUom() string {
 	return ""
 }
 
-func (x *MaterialTransferItem) GetRate() float32 {
+func (x *MaterialTransferItem) GetRate() float64 {
 	if x != nil {
 		return x.Rate
 	}
@@ -299,28 +331,33 @@ var File_material_transfer_material_transfer_proto protoreflect.FileDescriptor
 
 const file_material_transfer_material_transfer_proto_rawDesc = "" +
 	"\n" +
-	")material_transfer/material_transfer.proto\x12\x11material_transfer\x1a\terp.proto\"\xa3\x02\n" +
-	"\x13MaterialTransferReq\x12!\n" +
-	"\fcompany_abbr\x18\x01 \x01(\tR\vcompanyAbbr\x12\x16\n" +
-	"\x06branch\x18\x02 \x01(\tR\x06branch\x12%\n" +
-	"\x0efrom_warehouse\x18\x03 \x01(\tR\rfromWarehouse\x12!\n" +
-	"\fto_warehouse\x18\x04 \x01(\tR\vtoWarehouse\x12#\n" +
-	"\rrequired_date\x18\x05 \x01(\tR\frequiredDate\x12#\n" +
-	"\rdelivery_date\x18\x06 \x01(\tR\fdeliveryDate\x12=\n" +
-	"\x05items\x18\a \x03(\v2'.material_transfer.MaterialTransferItemR\x05items\"\xe9\x01\n" +
+	")material_transfer/material_transfer.proto\x12\x11material_transfer\x1a\terp.proto\"\xfa\x02\n" +
+	"\x13MaterialTransferReq\x12*\n" +
+	"\x11from_company_abbr\x18\x01 \x01(\tR\x0ffromCompanyAbbr\x12\x1f\n" +
+	"\vfrom_branch\x18\x02 \x01(\tR\n" +
+	"fromBranch\x12&\n" +
+	"\x0fto_company_abbr\x18\x03 \x01(\tR\rtoCompanyAbbr\x12\x1b\n" +
+	"\tto_branch\x18\x04 \x01(\tR\btoBranch\x12%\n" +
+	"\x0efrom_warehouse\x18\x05 \x01(\tR\rfromWarehouse\x12!\n" +
+	"\fto_warehouse\x18\x06 \x01(\tR\vtoWarehouse\x12#\n" +
+	"\rrequired_date\x18\a \x01(\tR\frequiredDate\x12#\n" +
+	"\rdelivery_date\x18\b \x01(\tR\fdeliveryDate\x12=\n" +
+	"\x05items\x18\t \x03(\v2'.material_transfer.MaterialTransferItemR\x05items\"\xe9\x01\n" +
 	"\x14MaterialTransferResp\x12E\n" +
 	"\ffrom_receipt\x18\x01 \x01(\v2\".material_transfer.TransferReceiptR\vfromReceipt\x12A\n" +
 	"\n" +
 	"to_receipt\x18\x02 \x01(\v2\".material_transfer.TransferReceiptR\ttoReceipt\x12G\n" +
-	"\raudit_receipt\x18\x03 \x01(\v2\".material_transfer.TransferReceiptR\fauditReceipt\";\n" +
+	"\raudit_receipt\x18\x03 \x01(\v2\".material_transfer.TransferReceiptR\fauditReceipt\"\x8f\x01\n" +
 	"\x0fTransferReceipt\x12\x13\n" +
 	"\x05po_no\x18\x01 \x01(\tR\x04poNo\x12\x13\n" +
-	"\x05so_no\x18\x02 \x01(\tR\x04soNo\"k\n" +
+	"\x05so_no\x18\x02 \x01(\tR\x04soNo\x12*\n" +
+	"\x11from_company_abbr\x18\x03 \x01(\tR\x0ffromCompanyAbbr\x12&\n" +
+	"\x0fto_company_abbr\x18\x04 \x01(\tR\rtoCompanyAbbr\"k\n" +
 	"\x14MaterialTransferItem\x12\x1b\n" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x10\n" +
-	"\x03qty\x18\x03 \x01(\x02R\x03qty\x12\x10\n" +
-	"\x03uom\x18\x04 \x01(\tR\x03uom\x12\x12\n" +
-	"\x04rate\x18\x05 \x01(\x02R\x04rate2h\n" +
+	"\x03qty\x18\x02 \x01(\x01R\x03qty\x12\x10\n" +
+	"\x03uom\x18\x03 \x01(\tR\x03uom\x12\x12\n" +
+	"\x04rate\x18\x04 \x01(\x01R\x04rate2h\n" +
 	"\x17MaterialTransferService\x12M\n" +
 	"\x10MaterialTransfer\x12&.material_transfer.MaterialTransferReq\x1a\x11.erp.ResponseInfoB/Z-ttpos-bmp/app/ttpos-erp/api/material_transferb\x06proto3"
 

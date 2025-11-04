@@ -129,7 +129,7 @@ func (s *sWarehouse) GetDefaultWarehouse(ctx context.Context, company string, br
 			Company:       company,
 			WarehouseName: "Stores",
 		})
-		if len(warehouseList.WarehouseList) == 0 {
+		if err != nil || len(warehouseList.WarehouseList) == 0 {
 			return nil, gerror.New("默认仓库不存在")
 		}
 	}
