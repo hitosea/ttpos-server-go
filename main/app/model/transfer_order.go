@@ -24,8 +24,8 @@ type TransferOrder struct {
 	InWarehouseName     string `gorm:"column:in_warehouse_name;type:varchar(255);default:'';comment:入库仓库名称" json:"in_warehouse_name"`
 
 	// 时间记录
-	OrderTime  int `gorm:"column:order_time;type:int;default:0;comment:单据日期（提交时间戳）" json:"order_time"`
-	SubmitTime int `gorm:"column:submit_time;type:int;default:0;comment:提交时间" json:"submit_time"`
+	OrderTime  int64 `gorm:"column:order_time;type:bigint;default:0;comment:单据日期（提交时间戳）" json:"order_time"`
+	SubmitTime int64 `gorm:"column:submit_time;type:bigint;default:0;comment:提交时间" json:"submit_time"`
 
 	// 状态
 	Status int `gorm:"column:status;type:int(4);default:0;comment:状态：0-待提交 1-待审核 2-已驳回 3-待收货 4-已完成" json:"status"`
@@ -99,7 +99,6 @@ type TransferOrderItemUnit struct {
 	BaseModel
 	ItemUuid          uint64 `gorm:"column:item_uuid;type:bigint;default:0;comment:调拨单明细UUID" json:"item_uuid"`
 	TransferOrderUuid uint64 `gorm:"column:transfer_order_uuid;type:bigint;default:0;comment:调拨单UUID" json:"transfer_order_uuid"`
-	MaterialUuid      uint64 `gorm:"column:material_uuid;type:bigint;default:0;comment:物品UUID" json:"material_uuid"`
 
 	// 单位信息
 	UnitUuid           uint64  `gorm:"column:unit_uuid;type:bigint;default:0;comment:单位UUID" json:"unit_uuid"`

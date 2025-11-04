@@ -101,7 +101,8 @@ func (r *PurchaseOrderItemRepoImpl) DeleteByPurchaseOrderUuidAndMaterialUuids(pu
 // GetByUuid 根据UUID获取采购订单明细
 func (r *PurchaseOrderItemRepoImpl) GetByUuid(uuid uint64, opts ...DBOption) (*model.PurchaseOrderItem, error) {
 	var item model.PurchaseOrderItem
-	err := r.db.Where("uuid = ?", uuid).First(&item).Error
+	db := r.applyOptions(r.db, opts...)
+	err := db.Where("uuid = ?", uuid).First(&item).Error
 	if err != nil {
 		return nil, err
 	}

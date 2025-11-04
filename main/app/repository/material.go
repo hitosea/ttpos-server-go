@@ -108,7 +108,7 @@ func (r *MaterialRepoImpl) WithNotBaseUnitList(opts ...DBOption) DBOption {
 				db = opt(db)
 			}
 			return db
-		})
+		}).Preload("NotBaseUnitList.Unit")
 	}
 }
 

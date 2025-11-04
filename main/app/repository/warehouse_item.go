@@ -17,6 +17,7 @@ type IWarehouseItemRepo interface {
 	Update(warehouseItem *model.WarehouseItem) error
 	Delete(uuid uint64) error
 	GetByUuid(uuid uint64, opts ...DBOption) (*model.WarehouseItem, error)
+	GetNormalByMaterialCodes(materialCodes []string, warehouseErpCode string) ([]model.WarehouseItem, error)
 
 	// 查询操作
 	GetListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.WarehouseItem, int64, error)
@@ -104,6 +105,21 @@ func (r *WarehouseItemRepoImpl) GetByUuid(uuid uint64, opts ...DBOption) (*model
 		return nil, err
 	}
 	return &warehouseItem, nil
+}
+
+// GetNormalByMaterialCodes 根据物料编码获取仓库商品库存列表
+func (r *WarehouseItemRepoImpl) GetNormalByMaterialCodes(materialCodes []string, warehouseErpCode string) ([]model.WarehouseItem, error) {
+	var warehouseItems []model.WarehouseItem
+	query := r.db.Model(&model.WarehouseItem{}).
+		Joins("JOIN ttpos_warehouse ON ttpos_warehouse_item.warehouse_uuid = ttpos_warehouse.uuid").
+		Where("ttpos_warehouse_item.material_code IN (?)", materialCodes).
+		Where("ttpos_warehouse.type != ?", constant.WarehouseTypeTransit).
+		Where("ttpos_warehouse.delete_time = ?", 0)
+	if warehouseErpCode != "" {
+		query = query.Where("ttpos_warehouse.erp_code = ?", warehouseErpCode)
+	}
+	err := query.Find(&warehouseItems).Error
+	return warehouseItems, err
 }
 
 // GetListWithPagination 分页获取仓库商品库存列表

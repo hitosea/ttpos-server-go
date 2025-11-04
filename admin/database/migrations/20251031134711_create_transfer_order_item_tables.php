@@ -71,7 +71,6 @@ class CreateTransferOrderItemTables extends Migrator
                 ->addColumn('uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '主键UUID'])
                 ->addColumn('item_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '调拨单明细UUID'])
                 ->addColumn('transfer_order_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '调拨单UUID'])
-                ->addColumn('material_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '物品UUID'])
                 ->addColumn('unit_uuid', 'biginteger', ['signed' => false, 'default' => 0, 'comment' => '单位UUID'])
                 ->addColumn('unit_name', 'text', ['comment' => '单位名称JSON'])
                 ->addColumn('unit_conversion_rate', 'decimal', ['precision' => 12, 'scale' => 4, 'default' => 1.0000, 'comment' => '单位转换率'])

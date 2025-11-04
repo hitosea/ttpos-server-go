@@ -31,7 +31,6 @@ type TransferOrderInfo struct {
 	ItemCount               int                `json:"item_count"`                 // 物品种类数量
 	CreateTime              int                `json:"create_time"`                // 创建时间
 	UpdateTime              int                `json:"update_time"`                // 更新时间
-	ReceiveProgress         string             `json:"receive_progress"`           // 收货进度
 }
 
 // TransferOrderDetailResp 调拨单详情响应
@@ -137,4 +136,27 @@ type TransferOrderCompanyStatItem struct {
 	CompanyUuid uint64 `json:"company_uuid"` // 门店UUID
 	CompanyName string `json:"company_name"` // 门店名称
 	Count       int    `json:"count"`        // 数量
+}
+
+// TransferOrderCompanyListResp 调拨单门店列表响应
+type TransferOrderCompanyListResp struct {
+	List []TransferOrderCompanyItem `json:"list"` // 门店列表
+}
+
+// TransferOrderCompanyItem 调拨单门店项
+type TransferOrderCompanyItem struct {
+	Uuid uint64 `json:"uuid"` // 门店UUID
+	Name string `json:"name"` // 门店名称
+}
+
+// TransferOrderWarehouseListResp 调拨单仓库列表响应
+type TransferOrderWarehouseListResp struct {
+	List []TransferOrderWarehouseItem `json:"list"` // 仓库列表
+}
+
+// TransferOrderWarehouseItem 调拨单仓库项
+type TransferOrderWarehouseItem struct {
+	ErpCode string             `json:"erp_code"` // 仓库ERP编码
+	Name    dto.LocaleResponse `json:"name"`     // 仓库名称（多语言）
+	Type    string             `json:"type"`     // 仓库类型
 }

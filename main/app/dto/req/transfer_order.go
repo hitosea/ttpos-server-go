@@ -33,20 +33,23 @@ type TransferOrderCreateReq struct {
 }
 
 func (r *TransferOrderCreateReq) Validate() error {
-	if r.SenderCompanyUuid == 0 {
-		return errors.New("发货门店不能为空")
+	if r.TransferType != 1 && r.TransferType != 2 {
+		return errors.New("调拨类型错误")
 	}
-	if r.ReceiverCompanyUuid == 0 {
-		return errors.New("收货门店不能为空")
-	}
-	if r.SenderCompanyUuid == r.ReceiverCompanyUuid {
-		return errors.New("发货门店和收货门店不能相同")
-	}
-	if r.OutWarehouseErpCode == "" {
-		return errors.New("出库仓库不能为空")
-	}
-	if r.InWarehouseErpCode == "" {
-		return errors.New("入库仓库不能为空")
+	if r.TransferType == 1 {
+		if r.SenderCompanyUuid == 0 {
+			return errors.New("发货门店不能为空")
+		}
+		if r.OutWarehouseErpCode == "" {
+			return errors.New("出库仓库不能为空")
+		}
+	} else {
+		if r.ReceiverCompanyUuid == 0 {
+			return errors.New("收货门店不能为空")
+		}
+		if r.InWarehouseErpCode == "" {
+			return errors.New("入库仓库不能为空")
+		}
 	}
 	if len(r.Items) == 0 {
 		return errors.New("调拨明细不能为空")
@@ -83,7 +86,7 @@ type TransferOrderUpdateReq struct {
 	OutWarehouseErpCode string                       `json:"out_warehouse_erp_code" binding:"omitempty"`      // 出库仓库ERP编码
 	InWarehouseErpCode  string                       `json:"in_warehouse_erp_code" binding:"omitempty"`       // 入库仓库ERP编码
 	Remark              string                       `json:"remark" binding:"omitempty,max=500"`              // 备注
-	Items               []TransferOrderItemUpdateReq `json:"items" binding:"omitempty,min=1,max=500,dive"`    // 调拨明细
+	Items               []TransferOrderItemCreateReq `json:"items" binding:"omitempty,min=1,max=500,dive"`    // 调拨明细
 }
 
 func (r *TransferOrderUpdateReq) Validate() error {
@@ -104,12 +107,6 @@ func (r *TransferOrderUpdateReq) Validate() error {
 		}
 	}
 	return nil
-}
-
-// TransferOrderItemUpdateReq 调拨单明细更新请求
-type TransferOrderItemUpdateReq struct {
-	MaterialUuid uint64                           `json:"material_uuid" binding:"required,min=1"` // 物品UUID
-	Units        []TransferOrderItemUnitCreateReq `json:"units" binding:"required,min=1,dive"`    // 单位列表
 }
 
 // TransferOrderDetailReq 调拨单详情请求
@@ -192,4 +189,38 @@ type TransferOrderApprovalListReq struct {
 type TransferOrderLogListReq struct {
 	dto.PageReq
 	TransferOrderUuid uint64 `json:"transfer_order_uuid" form:"transfer_order_uuid" binding:"required,min=1"` // 调拨单UUID
+}
+
+// TransferOrderMaterialListReq 调拨单物品列表查询
+type TransferOrderMaterialListReq struct {
+	dto.PageReq                  // 分页参数
+	Keyword             string   `form:"keyword" json:"keyword"`                                                   // 关键字
+	Status              int      `form:"status" json:"status"`                                                     // 状态，0-全部 1-启用 2-停用
+	CategoryUuids       []uint64 `form:"category_uuids" json:"category_uuids"`                                     // 分类UUID列表,多选时
+	ReceiverCompanyUuid uint64   `form:"receiver_company_uuid" json:"receiver_company_uuid"`                       // 收货门店UUID
+	SenderCompanyUuid   uint64   `form:"sender_company_uuid" json:"sender_company_uuid"`                           // 发货门店UUID
+	OutWarehouseErpCode string   `json:"out_warehouse_erp_code" form:"out_warehouse_erp_code" binding:"omitempty"` // 出库仓库ERP编码
+}
+
+func (r *TransferOrderMaterialListReq) Validate() error {
+	if r.ReceiverCompanyUuid == 0 && r.SenderCompanyUuid == 0 {
+		return errors.New("收货门店和发货门店不能同时为空")
+	}
+	if r.ReceiverCompanyUuid != 0 && r.SenderCompanyUuid != 0 {
+		return errors.New("收货门店和发货门店不能同时有值")
+	}
+	return nil
+}
+
+// TransferOrderCompanyListReq 获取调拨单门店列表请求
+type TransferOrderCompanyListReq struct {
+	TransferType int    `form:"transfer_type" json:"transfer_type" binding:"required,min=1,max=2"` // 调拨类型: 1-调入 2-调出
+	Keyword      string `form:"keyword" json:"keyword" binding:"omitempty,max=50"`                 // 搜索关键字（门店名称）
+}
+
+// TransferOrderWarehouseListReq 获取调拨单仓库列表请求
+type TransferOrderWarehouseListReq struct {
+	TransferType int    `form:"transfer_type" json:"transfer_type" binding:"required,min=1,max=2"` // 调拨类型: 1-调入 2-调出
+	CompanyUuid  uint64 `form:"company_uuid" json:"company_uuid" binding:"omitempty"`              // 门店UUID（可选，用于过滤该门店下的仓库）
+	Keyword      string `form:"keyword" json:"keyword" binding:"omitempty,max=50"`                 // 搜索关键字（仓库名称）
 }

@@ -3,6 +3,7 @@ package shop
 import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
@@ -19,6 +20,7 @@ import (
 type TransferOrderHandler struct {
 	authSrv          service.IAuthSrv
 	transferOrderSrv transfer_order.ITransferOrderSrv
+	materialSrv      service.IMaterialSrv
 }
 
 // GetTransferOrderList 获取调拨单列表
@@ -73,6 +75,88 @@ func (h *TransferOrderHandler) GetTransferOrderDetail(c *gin.Context) {
 	}
 
 	helper.Success(c, resp)
+}
+
+// GetTransferOrderMaterialList 获取调拨单物品列表
+// @Summary 获取调拨单物品列表
+// @Description 根据调拨单UUID获取调拨单物品列表
+// @Tags 商家端.调拨单管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data query req.TransferOrderMaterialListReq true "物品列表请求参数"
+// @Success 200 {object} dto.Response{data=material_resp.MaterialListWithPaginationResp} "成功"
+// @Router /shop/transfer/material/list [get]
+func (h *TransferOrderHandler) GetTransferOrderMaterialList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var listReq req.TransferOrderMaterialListReq
+	if err := c.ShouldBindQuery(&listReq); err != nil {
+		helper.HandleValidationError(c, err, listReq, dto.PageReqMessage)
+		return
+	}
+	res, err := h.transferOrderSrv.GetTransferOrderMaterialList(ctx, listReq)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// GetTransferOrderCompanyList 获取门店列表
+// @Summary 获取调拨单门店列表
+// @Description 根据调拨类型获取可选的发货门店或收货门店列表
+// @Tags 商家端.调拨单管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param transfer_type query int true "调拨类型: 1-调入 2-调出"
+// @Param keyword query string false "搜索关键字"
+// @Success 200 {object} dto.Response{data=resp.TransferOrderCompanyListResp} "成功"
+func (h *TransferOrderHandler) GetTransferOrderCompanyList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var listReq req.TransferOrderCompanyListReq
+	if err := c.ShouldBindQuery(&listReq); err != nil {
+		helper.HandleValidationError(c, err, listReq, nil)
+		return
+	}
+
+	res, err := h.transferOrderSrv.GetTransferOrderCompanyList(ctx, listReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, res)
+}
+
+// GetTransferOrderWarehouseList 获取仓库列表
+// @Summary 获取调拨单仓库列表
+// @Description 根据调拨类型和门店获取可选的入库仓库或出库仓库列表
+// @Tags 商家端.调拨单管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param transfer_type query int true "调拨类型: 1-调入 2-调出"
+// @Param company_uuid query int false "门店UUID（调出时需要，用于查询该门店的仓库）"
+// @Param keyword query string false "搜索关键字"
+// @Success 200 {object} dto.Response{data=resp.TransferOrderWarehouseListResp} "成功"
+func (h *TransferOrderHandler) GetTransferOrderWarehouseList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var listReq req.TransferOrderWarehouseListReq
+	if err := c.ShouldBindQuery(&listReq); err != nil {
+		helper.HandleValidationError(c, err, listReq, nil)
+		return
+	}
+
+	res, err := h.transferOrderSrv.GetTransferOrderWarehouseList(ctx, listReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	helper.Success(c, res)
 }
 
 // CreateTransferOrder 创建调拨单
@@ -331,13 +415,17 @@ func RegisterTransferOrderHandlers(router gin.IRouter, dbm *database.DBManager, 
 	statisticsSrv := service.NewStatisticsSrv()
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
-
+	translateSrv := service.NewTranslateSrv(dbm, cache)
+	materialSrv := service.NewMaterialSrv(
+		dbm,                    // 数据库管理器
+		service.NewLocaleSrv(), // 多语言服务
+		settingSrv,
+		translateSrv,
+	)
 	// 调拨单服务
-	transferOrderSrv := transfer_order.NewTransferOrderSrv(dbm)
-
 	wrapper := &TransferOrderHandler{
 		authSrv:          authSrv,
-		transferOrderSrv: transferOrderSrv,
+		transferOrderSrv: transfer_order.NewTransferOrderSrv(dbm, materialSrv),
 	}
 
 	// 需要认证
@@ -346,6 +434,7 @@ func RegisterTransferOrderHandlers(router gin.IRouter, dbm *database.DBManager, 
 		// 调拨单管理
 		privateApi.GET("/transfer/order/list", wrapper.GetTransferOrderList)
 		privateApi.GET("/transfer/order/detail", wrapper.GetTransferOrderDetail)
+		privateApi.GET("/transfer/material/list", wrapper.GetTransferOrderMaterialList) // 获取调拨单物品列表
 		privateApi.POST("/transfer/order/create", wrapper.CreateTransferOrder)
 		privateApi.POST("/transfer/order/update", wrapper.UpdateTransferOrder)
 		privateApi.DELETE("/transfer/order/delete", wrapper.DeleteTransferOrder)
@@ -357,5 +446,9 @@ func RegisterTransferOrderHandlers(router gin.IRouter, dbm *database.DBManager, 
 		// 审批流程和操作日志
 		privateApi.GET("/transfer/order/approval/list", wrapper.GetTransferOrderApprovalList)
 		privateApi.GET("/transfer/order/log/list", wrapper.GetTransferOrderLogList)
+
+		// 下拉列表
+		privateApi.GET("/transfer/company/list", wrapper.GetTransferOrderCompanyList)     // 获取门店列表
+		privateApi.GET("/transfer/warehouse/list", wrapper.GetTransferOrderWarehouseList) // 获取仓库列表
 	}
 }

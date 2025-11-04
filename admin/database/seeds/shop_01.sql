@@ -3296,7 +3296,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_transfer_order_item_unit` (
   `uuid` bigint NOT NULL DEFAULT 0 COMMENT '主键UUID',
   `item_uuid` bigint NOT NULL DEFAULT 0 COMMENT '调拨单明细UUID',
   `transfer_order_uuid` bigint NOT NULL DEFAULT 0 COMMENT '调拨单UUID',
-  `material_uuid` bigint NOT NULL DEFAULT 0 COMMENT '物品UUID',
   `unit_uuid` bigint NOT NULL DEFAULT 0 COMMENT '单位UUID',
   `unit_name` text COMMENT '单位名称JSON',
   `unit_conversion_rate` decimal(12,4) NOT NULL DEFAULT 1.0000 COMMENT '单位转换率',

@@ -7,16 +7,20 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/dto/resp/material_resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/language"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
+	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -26,6 +30,7 @@ type ITransferOrderSrv interface {
 	// 调拨单管理
 	GetTransferOrderList(ctx context.Context, req req.TransferOrderListReq) (resp.TransferOrderListResp, error)
 	GetTransferOrderDetail(ctx context.Context, req req.TransferOrderDetailReq) (resp.TransferOrderDetailResp, error)
+	GetTransferOrderMaterialList(ctx context.Context, req req.TransferOrderMaterialListReq) (material_resp.MaterialListWithPaginationResp, error)
 	CreateTransferOrder(ctx context.Context, req req.TransferOrderCreateReq) (resp.TransferOrderCreateResp, error)
 	UpdateTransferOrder(ctx context.Context, req req.TransferOrderUpdateReq) error
 	DeleteTransferOrder(ctx context.Context, req req.TransferOrderDeleteReq) error
@@ -37,24 +42,34 @@ type ITransferOrderSrv interface {
 	// 审批流程和日志
 	GetTransferOrderApprovalList(ctx context.Context, req req.TransferOrderApprovalListReq) (resp.TransferOrderApprovalListResp, error)
 	GetTransferOrderLogList(ctx context.Context, req req.TransferOrderLogListReq) (resp.TransferOrderLogListResp, error)
+
+	// 下拉列表
+	GetTransferOrderCompanyList(ctx context.Context, req req.TransferOrderCompanyListReq) (resp.TransferOrderCompanyListResp, error)
+	GetTransferOrderWarehouseList(ctx context.Context, req req.TransferOrderWarehouseListReq) (resp.TransferOrderWarehouseListResp, error)
 }
 
 // transferOrderSrv 调拨单服务实现
 type transferOrderSrv struct {
-	dbm  *database.DBManager
-	lock lock.Lock
+	dbm         *database.DBManager
+	materialSrv service.IMaterialSrv
+	lock        lock.Lock
+	validator   *transferOrderValidator
+	helper      *transferOrderHelper
 }
 
 // NewTransferOrderSrv 创建调拨单服务
-func NewTransferOrderSrv(dbm *database.DBManager) ITransferOrderSrv {
-	return NewTransferOrderSrvImpl(dbm)
+func NewTransferOrderSrv(dbm *database.DBManager, materialSrv service.IMaterialSrv) ITransferOrderSrv {
+	return NewTransferOrderSrvImpl(dbm, materialSrv)
 }
 
 // NewTransferOrderSrvImpl 创建调拨单服务实现
-func NewTransferOrderSrvImpl(dbm *database.DBManager) ITransferOrderSrv {
+func NewTransferOrderSrvImpl(dbm *database.DBManager, materialSrv service.IMaterialSrv) ITransferOrderSrv {
 	return &transferOrderSrv{
-		dbm:  dbm,
-		lock: lock.NewSystemLock(),
+		dbm:         dbm,
+		materialSrv: materialSrv,
+		lock:        lock.NewSystemLock(),
+		validator:   &transferOrderValidator{},
+		helper:      &transferOrderHelper{},
 	}
 }
 
@@ -184,6 +199,137 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 	return detailResp, nil
 }
 
+// GetTransferOrderMaterialList 获取调拨单物品列表
+func (s *transferOrderSrv) GetTransferOrderMaterialList(
+	ctx context.Context,
+	listReq req.TransferOrderMaterialListReq,
+) (material_resp.MaterialListWithPaginationResp, error) {
+	if err := listReq.Validate(); err != nil {
+		return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(errors.New("参数验证失败"), err.Error())
+	}
+
+	// 本店UUID
+	companyUuid := ctx.GetCompanyUuid()
+
+	// 获取本店的物品列表
+	var materialListReq req.MaterialListReq
+	if err := copier.Copy(&materialListReq, &listReq); err != nil {
+		return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(errors.New("数据转换失败"), err.Error())
+	}
+	materialListReq.CategoryUuids = materialListReq.GetCategoryUuids() // 获取有效分类UUID列表。 /api/v1/shop/material/list?category_uuids&keyword&page_no=1&page_size=1000&status 时，CategoryUuids会有一个0值，是无效的
+	materialListReq.PurchaseType = 2
+	materialListReq.SupplierErpCode = ""
+	materialListReq.WarehouseErpCode = ""
+	res, err := s.materialSrv.GetMaterialList(ctx, materialListReq)
+	// 处理错误
+	if err != nil {
+		return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(errors.New("查询调拨单物品列表失败"), err.Error())
+	}
+
+	// 调入单 - 发货门店
+	if res.List != nil && len(res.List) > 0 && listReq.SenderCompanyUuid != 0 && listReq.SenderCompanyUuid != companyUuid {
+		otherDb := s.dbm.GetDB(listReq.SenderCompanyUuid)
+		if otherDb == nil {
+			return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(errors.New("获取其他店数据库失败"), "其他店数据库不存在")
+		}
+		erpCodes := []string{}
+		for _, item := range res.List {
+			erpCodes = append(erpCodes, item.ErpCode)
+		}
+		// 当前库存
+		warehouseItemRepo := repository.NewWarehouseItemRepo(otherDb)
+		warehouseItems, err := warehouseItemRepo.GetNormalByMaterialCodes(erpCodes, listReq.OutWarehouseErpCode)
+		if err != nil {
+			return material_resp.MaterialListWithPaginationResp{}, errors.WithMessage(errors.New("获取物品库存失败"), err.Error())
+		}
+		materialList := []material_resp.Material{}
+		for _, item := range res.List {
+			availableNum := decimal.NewFromFloat(0)
+			for _, warehouseItem := range warehouseItems {
+				if item.ErpCode == warehouseItem.MaterialCode {
+					availableNum = availableNum.Add(decimal.NewFromFloat(warehouseItem.Stock))
+				}
+			}
+			item.AvailableNum = availableNum.InexactFloat64()
+			materialList = append(materialList, item)
+		}
+		res.List = materialList
+	}
+
+	return res, nil
+}
+
+// 创建明细
+func (s *transferOrderSrv) createItems(ctx context.Context, tx *gorm.DB, transferOrderUuid uint64, items []req.TransferOrderItemCreateReq, materials []model.Material) error {
+	companyUuid := ctx.GetCompanyUuid()
+	headquarterUuid := ctx.GetCompanySetting().HeadquarterUuid
+	transferOrderItemRepoTx := repository.NewTransferOrderItemRepo(tx)
+	transferOrderItemUnitRepoTx := repository.NewTransferOrderItemUnitRepo(tx)
+	// 先删除旧明细
+	if err := transferOrderItemRepoTx.DeleteByTransferOrderUuid(transferOrderUuid); err != nil {
+		return errors.WithMessage(errors.New("删除旧明细失败"), err.Error())
+	}
+	if err := transferOrderItemUnitRepoTx.DeleteByTransferOrderUuid(transferOrderUuid); err != nil {
+		return errors.WithMessage(errors.New("删除旧单位明细失败"), err.Error())
+	}
+	// 如果有明细更新
+	if len(items) == 0 {
+		return nil
+	}
+	// 创建明细
+	for _, itemReq := range items {
+		var material model.Material
+		for _, m := range materials {
+			if m.Uuid == itemReq.MaterialUuid {
+				material = m
+				break
+			}
+		}
+		item := &model.TransferOrderItem{
+			TransferOrderUuid:    transferOrderUuid,
+			CompanyUuid:          companyUuid,
+			HeadquarterUuid:      headquarterUuid,
+			MaterialUuid:         material.Uuid,
+			MaterialCode:         material.Code,
+			MaterialName:         material.Name,
+			MaterialInternalCode: material.InternalCode,
+			Valuation:            material.GetValuation(),
+		}
+
+		if err := transferOrderItemRepoTx.Create(item); err != nil {
+			return errors.WithMessage(errors.New("创建调拨单明细失败"), err.Error())
+		}
+
+		// 创建单位明细
+		for _, unitReq := range itemReq.Units {
+			materialUnit := &model.MaterialUnit{}
+			for _, unit := range material.NotBaseUnitList {
+				if unit.Uuid == unitReq.UnitUuid {
+					materialUnit = unit
+					break
+				}
+			}
+			if materialUnit.Uuid == 0 {
+				return errors.WithMessage(errors.New("物品单位不存在"), fmt.Sprintf("物品%s的单位%d不存在", material.Code, unitReq.UnitUuid))
+			}
+			unit := &model.TransferOrderItemUnit{
+				ItemUuid:           item.Uuid,
+				TransferOrderUuid:  transferOrderUuid,
+				UnitUuid:           unitReq.UnitUuid,
+				Num:                unitReq.Num,
+				UnitName:           materialUnit.Name,
+				UnitConversionRate: materialUnit.ConversionRate,
+				ErpnextUom:         materialUnit.Unit.ErpnextUom,
+			}
+
+			if err := transferOrderItemUnitRepoTx.Create(unit); err != nil {
+				return errors.WithMessage(errors.New("创建调拨单单位明细失败"), err.Error())
+			}
+		}
+	}
+	return nil
+}
+
 // CreateTransferOrder 创建调拨单
 func (s *transferOrderSrv) CreateTransferOrder(
 	ctx context.Context,
@@ -195,73 +341,88 @@ func (s *transferOrderSrv) CreateTransferOrder(
 	}
 
 	db := ctx.GetDB()
-	transferOrderRepo := repository.NewTransferOrderRepo(db)
+	companyUuid := ctx.GetCompanyUuid()
+	headquarterUuid := ctx.GetCompanySetting().HeadquarterUuid
 
 	// 加锁防止并发创建（使用字符串锁保护编号生成）
-	lockKey := fmt.Sprintf("transfer_order_create_%d", ctx.GetCompanyUuid())
+	lockKey := fmt.Sprintf("transfer_order_create_%d_%d", companyUuid, req.TransferType)
 	s.lock.LockUuidString(lockKey)
 	defer s.lock.UnlockUuidString(lockKey)
 
-	// 生成调拨单编号
-	orderNo, err := s.generateOrderNo(db)
+	// 设置发货门店和收货门店
+	if req.TransferType == 1 {
+		req.ReceiverCompanyUuid = companyUuid
+	} else {
+		req.SenderCompanyUuid = companyUuid
+	}
+
+	// 判断仓库是否存在
+	warehouseRepo := repository.NewWarehouseRepo(db)
+	if req.OutWarehouseErpCode != "" {
+		warehouse, err := warehouseRepo.GetByErpCode(req.OutWarehouseErpCode)
+		if err != nil {
+			return resp.TransferOrderCreateResp{}, errors.WithMessage(errors.New("入库仓库不存在"), err.Error())
+		}
+		if warehouse == nil {
+			return resp.TransferOrderCreateResp{}, errors.New("出库仓库不存在")
+		}
+	}
+	// 判断入库仓库是否存在
+	if req.InWarehouseErpCode != "" {
+		warehouse, err := warehouseRepo.GetByErpCode(req.InWarehouseErpCode)
+		if err != nil {
+			return resp.TransferOrderCreateResp{}, errors.WithMessage(errors.New("入库仓库不存在"), err.Error())
+		}
+		if warehouse == nil {
+			return resp.TransferOrderCreateResp{}, errors.New("入库仓库不存在")
+		}
+	}
+
+	// 验证物品状态
+	materials, _, err := s.validator.validateMaterialStatus(ctx, db, req.Items, true)
 	if err != nil {
-		return resp.TransferOrderCreateResp{}, errors.WithMessage(errors.New("生成调拨单编号失败"), err.Error())
+		return resp.TransferOrderCreateResp{}, err
+	}
+
+	// 生成调拨单编号
+	orderNo := s.helper.GenerateOrderNo(db)
+
+	// 生成调拨单UUID
+	transferOrderUuid, err := utils.GetID()
+	if err != nil {
+		return resp.TransferOrderCreateResp{}, errors.WithMessage(errors.New("生成调拨单UUID失败"), err.Error())
 	}
 
 	// 开始事务
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 创建调拨单主表
 		transferOrder := &model.TransferOrder{
-			CompanyUuid:         ctx.GetCompanyUuid(),
-			HeadquarterUuid:     0, // 根据业务需要设置
+			BaseModel: model.BaseModel{
+				Uuid: transferOrderUuid,
+			},
+			CompanyUuid:         companyUuid,
+			HeadquarterUuid:     headquarterUuid,
 			OrderNo:             orderNo,
 			TransferType:        req.TransferType,
 			SenderCompanyUuid:   req.SenderCompanyUuid,
 			ReceiverCompanyUuid: req.ReceiverCompanyUuid,
 			OutWarehouseErpCode: req.OutWarehouseErpCode,
 			InWarehouseErpCode:  req.InWarehouseErpCode,
-			OrderTime:           int(req.OrderTime),
+			OrderTime:           req.OrderTime,
 			Status:              constant.TransferOrderStatusDraft,
 			CreatorUuid:         ctx.GetStaffUuid(),
 			CreatorName:         ctx.GetStaff().RealName,
 			Remark:              req.Remark,
 			ItemCount:           len(req.Items),
 		}
-
 		transferOrderRepoTx := repository.NewTransferOrderRepo(tx)
 		if err := transferOrderRepoTx.Create(transferOrder); err != nil {
 			return errors.WithMessage(errors.New("创建调拨单失败"), err.Error())
 		}
 
 		// 创建调拨单明细
-		for _, itemReq := range req.Items {
-			item := &model.TransferOrderItem{
-				TransferOrderUuid: transferOrder.Uuid,
-				CompanyUuid:       ctx.GetCompanyUuid(),
-				HeadquarterUuid:   0,
-				MaterialUuid:      itemReq.MaterialUuid,
-			}
-
-			transferOrderItemRepoTx := repository.NewTransferOrderItemRepo(tx)
-			if err := transferOrderItemRepoTx.Create(item); err != nil {
-				return errors.WithMessage(errors.New("创建调拨单明细失败"), err.Error())
-			}
-
-			// 创建单位明细
-			for _, unitReq := range itemReq.Units {
-				unit := &model.TransferOrderItemUnit{
-					ItemUuid:          item.Uuid,
-					TransferOrderUuid: transferOrder.Uuid,
-					MaterialUuid:      itemReq.MaterialUuid,
-					UnitUuid:          unitReq.UnitUuid,
-					Num:               unitReq.Num,
-				}
-
-				transferOrderItemUnitRepoTx := repository.NewTransferOrderItemUnitRepo(tx)
-				if err := transferOrderItemUnitRepoTx.Create(unit); err != nil {
-					return errors.WithMessage(errors.New("创建调拨单单位明细失败"), err.Error())
-				}
-			}
+		if err := s.createItems(ctx, tx, transferOrder.Uuid, req.Items, materials); err != nil {
+			return errors.WithMessage(errors.New("创建调拨单明细失败"), err.Error())
 		}
 
 		// 记录操作日志
@@ -276,15 +437,9 @@ func (s *transferOrderSrv) CreateTransferOrder(
 		return resp.TransferOrderCreateResp{}, err
 	}
 
-	// 查询创建的调拨单
-	transferOrder, err := transferOrderRepo.GetByOrderNo(orderNo)
-	if err != nil {
-		return resp.TransferOrderCreateResp{}, errors.WithMessage(errors.New("查询调拨单失败"), err.Error())
-	}
-
 	return resp.TransferOrderCreateResp{
-		Uuid:    transferOrder.Uuid,
-		OrderNo: transferOrder.OrderNo,
+		Uuid:    transferOrderUuid,
+		OrderNo: orderNo,
 	}, nil
 }
 
@@ -298,7 +453,12 @@ func (s *transferOrderSrv) UpdateTransferOrder(
 		return err
 	}
 
+	// 加锁
+	s.lock.LockUuid(req.Uuid)
+	defer s.lock.UnlockUuid(req.Uuid)
+
 	db := ctx.GetDB()
+	companyUuid := ctx.GetCompanyUuid()
 	transferOrderRepo := repository.NewTransferOrderRepo(db)
 
 	// 查询调拨单
@@ -310,92 +470,41 @@ func (s *transferOrderSrv) UpdateTransferOrder(
 		return errors.WithMessage(errors.New("查询调拨单失败"), err.Error())
 	}
 
+	// 验证物品状态
+	materials, _, err := s.validator.validateMaterialStatus(ctx, db, req.Items, true)
+	if err != nil {
+		return err
+	}
+
 	// 验证状态
 	if transferOrder.Status != constant.TransferOrderStatusDraft {
 		return errors.New("只有待提交状态的调拨单才能修改")
 	}
 
-	// 加锁
-	s.lock.LockUuid(req.Uuid)
-	defer s.lock.UnlockUuid(req.Uuid)
+	// 设置发货门店和收货门店
+	if transferOrder.TransferType == 1 {
+		req.ReceiverCompanyUuid = companyUuid
+	} else {
+		req.SenderCompanyUuid = companyUuid
+	}
 
 	// 开始事务
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 更新主表
-		updates := make(map[string]interface{})
-		if req.OrderTime > 0 {
-			updates["order_time"] = req.OrderTime
+		transferOrder.OrderTime = req.OrderTime
+		transferOrder.ItemCount = len(req.Items)
+		transferOrder.SenderCompanyUuid = req.SenderCompanyUuid
+		transferOrder.ReceiverCompanyUuid = req.ReceiverCompanyUuid
+		transferOrder.OutWarehouseErpCode = req.OutWarehouseErpCode
+		transferOrder.InWarehouseErpCode = req.InWarehouseErpCode
+		transferOrder.Remark = req.Remark
+		if err := transferOrderRepo.Update(transferOrder); err != nil {
+			return errors.WithMessage(errors.New("更新调拨单失败"), err.Error())
 		}
-		if req.SenderCompanyUuid > 0 {
-			updates["sender_company_uuid"] = req.SenderCompanyUuid
+		// 创建调拨单明细
+		if err := s.createItems(ctx, tx, transferOrder.Uuid, req.Items, materials); err != nil {
+			return errors.WithMessage(errors.New("创建调拨单明细失败"), err.Error())
 		}
-		if req.ReceiverCompanyUuid > 0 {
-			updates["receiver_company_uuid"] = req.ReceiverCompanyUuid
-		}
-		if req.OutWarehouseErpCode != "" {
-			updates["out_warehouse_erp_code"] = req.OutWarehouseErpCode
-		}
-		if req.InWarehouseErpCode != "" {
-			updates["in_warehouse_erp_code"] = req.InWarehouseErpCode
-		}
-		if req.Remark != "" {
-			updates["remark"] = req.Remark
-		}
-
-		if len(updates) > 0 {
-			if err := tx.Model(&model.TransferOrder{}).Where("uuid = ?", req.Uuid).Updates(updates).Error; err != nil {
-				return errors.WithMessage(errors.New("更新调拨单失败"), err.Error())
-			}
-		}
-
-		// 如果有明细更新，先删除旧明细
-		if len(req.Items) > 0 {
-			transferOrderItemUnitRepoTx := repository.NewTransferOrderItemUnitRepo(tx)
-			if err := transferOrderItemUnitRepoTx.DeleteByTransferOrderUuid(req.Uuid); err != nil {
-				return errors.WithMessage(errors.New("删除旧单位明细失败"), err.Error())
-			}
-
-			transferOrderItemRepoTx := repository.NewTransferOrderItemRepo(tx)
-			if err := transferOrderItemRepoTx.DeleteByTransferOrderUuid(req.Uuid); err != nil {
-				return errors.WithMessage(errors.New("删除旧明细失败"), err.Error())
-			}
-
-			// 创建新明细
-			for _, itemReq := range req.Items {
-				item := &model.TransferOrderItem{
-					TransferOrderUuid: req.Uuid,
-					CompanyUuid:       ctx.GetCompanyUuid(),
-					HeadquarterUuid:   0,
-					MaterialUuid:      itemReq.MaterialUuid,
-				}
-
-				if err := transferOrderItemRepoTx.Create(item); err != nil {
-					return errors.WithMessage(errors.New("创建调拨单明细失败"), err.Error())
-				}
-
-				// 创建单位明细
-				for _, unitReq := range itemReq.Units {
-					unit := &model.TransferOrderItemUnit{
-						ItemUuid:          item.Uuid,
-						TransferOrderUuid: req.Uuid,
-						MaterialUuid:      itemReq.MaterialUuid,
-						UnitUuid:          unitReq.UnitUuid,
-						Num:               unitReq.Num,
-					}
-
-					transferOrderItemUnitRepoTx := repository.NewTransferOrderItemUnitRepo(tx)
-					if err := transferOrderItemUnitRepoTx.Create(unit); err != nil {
-						return errors.WithMessage(errors.New("创建调拨单单位明细失败"), err.Error())
-					}
-				}
-			}
-
-			// 更新物品数量
-			if err := tx.Model(&model.TransferOrder{}).Where("uuid = ?", req.Uuid).Update("item_count", len(req.Items)).Error; err != nil {
-				return errors.WithMessage(errors.New("更新物品数量失败"), err.Error())
-			}
-		}
-
 		return nil
 	})
 
@@ -452,35 +561,6 @@ func (s *transferOrderSrv) DeleteTransferOrder(
 	return nil
 }
 
-// 生成调拨单编号
-func (s *transferOrderSrv) generateOrderNo(db *gorm.DB) (string, error) {
-	transferOrderRepo := repository.NewTransferOrderRepo(db)
-
-	// 获取今天最新的调拨单
-	latestOrder, err := transferOrderRepo.GetLatestOrderToday()
-	if err != nil && err != gorm.ErrRecordNotFound {
-		return "", err
-	}
-
-	// 生成新编号
-	now := time.Now()
-	dateStr := now.Format("20060102")
-	sequence := 1
-
-	if latestOrder != nil && latestOrder.OrderNo != "" {
-		// 解析最后的序号
-		if len(latestOrder.OrderNo) >= 12 {
-			lastSeq := latestOrder.OrderNo[len(latestOrder.OrderNo)-4:]
-			if seq, err := fmt.Sscanf(lastSeq, "%d", &sequence); err == nil && seq == 1 {
-				sequence++
-			}
-		}
-	}
-
-	orderNo := fmt.Sprintf("TR%s%04d", dateStr, sequence)
-	return orderNo, nil
-}
-
 // 创建操作日志
 func (s *transferOrderSrv) createLog(db *gorm.DB, transferOrderUuid uint64, action, actionDesc string, oldStatus, newStatus int, ctx context.Context) error {
 	logRepo := repository.NewTransferOrderLogRepo(db)
@@ -493,7 +573,12 @@ func (s *transferOrderSrv) createLog(db *gorm.DB, transferOrderUuid uint64, acti
 		OldStatus:         oldStatus,
 		NewStatus:         newStatus,
 		OperatorUuid:      ctx.GetStaffUuid(),
-		OperatorName:      ctx.GetStaff().RealName,
+		OperatorName: func() string {
+			if realName := ctx.GetStaff().RealName; realName != "" {
+				return realName
+			}
+			return ctx.GetStaff().Username
+		}(),
 	}
 
 	return logRepo.Create(log)
@@ -837,5 +922,156 @@ func (s *transferOrderSrv) GetTransferOrderLogList(
 			PageSize: req.PageSize,
 			Total:    total,
 		},
+	}, nil
+}
+
+// GetTransferOrderCompanyList 获取调拨单门店列表
+func (s *transferOrderSrv) GetTransferOrderCompanyList(
+	ctx context.Context,
+	req req.TransferOrderCompanyListReq,
+) (resp.TransferOrderCompanyListResp, error) {
+	db := ctx.GetDB()
+	companyRepo := repository.NewCompanyRepo(db)
+	currentCompanyUuid := ctx.GetCompanyUuid()
+
+	// 获取当前公司信息
+	currentCompany, err := companyRepo.GetCompanyInfoByUuid(currentCompanyUuid)
+	if err != nil {
+		return resp.TransferOrderCompanyListResp{}, errors.WithMessage(errors.New("获取当前公司信息失败"), err.Error())
+	}
+
+	// 获取总部下的所有门店
+	headquarterUuid := currentCompany.CompanySetting.HeadquarterUuid
+	if headquarterUuid == 0 {
+		headquarterUuid = currentCompanyUuid
+	}
+
+	// 查询所有门店（排除当前门店）
+	var companies []model.Company
+	query := db.Model(&model.Company{}).
+		Joins("LEFT JOIN ttpos_company_setting ON ttpos_company.uuid = ttpos_company_setting.company_uuid").
+		Where("(ttpos_company_setting.headquarter_uuid = ? OR ttpos_company.uuid = ?)", headquarterUuid, headquarterUuid).
+		Where("ttpos_company.status = ?", 1). // 只查询启用的门店
+		Where("ttpos_company.delete_time = ?", 0)
+
+	// 排除当前门店（调入时排除自己，调出时排除自己）
+	query = query.Where("ttpos_company.uuid != ?", currentCompanyUuid)
+
+	// 关键字搜索
+	if req.Keyword != "" {
+		query = query.Where("ttpos_company.name LIKE ?", "%"+req.Keyword+"%")
+	}
+
+	if err := query.Find(&companies).Error; err != nil {
+		return resp.TransferOrderCompanyListResp{}, errors.WithMessage(errors.New("查询门店列表失败"), err.Error())
+	}
+
+	// 转换响应数据
+	list := make([]resp.TransferOrderCompanyItem, 0, len(companies))
+	for _, company := range companies {
+		list = append(list, resp.TransferOrderCompanyItem{
+			Uuid: company.Uuid,
+			Name: company.Name,
+		})
+	}
+
+	return resp.TransferOrderCompanyListResp{
+		List: list,
+	}, nil
+}
+
+// GetTransferOrderWarehouseList 获取调拨单仓库列表
+func (s *transferOrderSrv) GetTransferOrderWarehouseList(
+	ctx context.Context,
+	req req.TransferOrderWarehouseListReq,
+) (resp.TransferOrderWarehouseListResp, error) {
+	db := ctx.GetDB()
+	warehouseRepo := repository.NewWarehouseRepo(db)
+
+	// 根据调拨类型确定查询哪个公司的仓库
+	var targetCompanyUuid uint64
+	if req.TransferType == constant.TransferTypeIn {
+		// 调入：查询当前公司的仓库（入库仓库）
+		targetCompanyUuid = ctx.GetCompanyUuid()
+	} else {
+		// 调出：查询发货门店的仓库（出库仓库）
+		if req.CompanyUuid > 0 {
+			targetCompanyUuid = req.CompanyUuid
+		} else {
+			// 如果没有指定门店，查询当前公司的仓库
+			targetCompanyUuid = ctx.GetCompanyUuid()
+		}
+	}
+
+	// 获取目标公司的数据库连接
+	targetDb := s.dbm.GetDB(targetCompanyUuid)
+	warehouseRepoTarget := repository.NewWarehouseRepo(targetDb)
+
+	// 查询仓库列表
+	query := targetDb.Model(&model.Warehouse{}).
+		Where("status = ?", 1). // 只查询启用的仓库
+		Where("delete_time = ?", 0).
+		Where("erp_code != ?", "") // ERP编码不为空
+
+	// 关键字搜索
+	if req.Keyword != "" {
+		query = query.Where("name LIKE ?", "%"+req.Keyword+"%")
+	}
+
+	var warehouses []model.Warehouse
+	if err := query.Find(&warehouses).Error; err != nil {
+		return resp.TransferOrderWarehouseListResp{}, errors.WithMessage(errors.New("查询仓库列表失败"), err.Error())
+	}
+
+	// 预加载多语言名称
+	multiLanguageNameUuids := make([]uint64, 0, len(warehouses))
+	for _, warehouse := range warehouses {
+		if warehouse.MultiLanguageNameUuid > 0 {
+			multiLanguageNameUuids = append(multiLanguageNameUuids, warehouse.MultiLanguageNameUuid)
+		}
+	}
+
+	multiLanguageNameMap := make(map[uint64]model.MultiLanguageName)
+	if len(multiLanguageNameUuids) > 0 {
+		var multiLanguageNames []model.MultiLanguageName
+		if err := targetDb.Model(&model.MultiLanguageName{}).
+			Where("uuid IN ?", multiLanguageNameUuids).
+			Where("delete_time = ?", 0).
+			Find(&multiLanguageNames).Error; err == nil {
+			for _, name := range multiLanguageNames {
+				multiLanguageNameMap[name.Uuid] = name
+			}
+		}
+	}
+
+	// 转换响应数据
+	list := make([]resp.TransferOrderWarehouseItem, 0, len(warehouses))
+	for _, warehouse := range warehouses {
+		item := resp.TransferOrderWarehouseItem{
+			ErpCode: warehouse.ErpCode,
+			Type:    warehouse.Type,
+		}
+
+		// 处理多语言名称
+		if warehouse.MultiLanguageNameUuid > 0 {
+			if multiLanguageName, ok := multiLanguageNameMap[warehouse.MultiLanguageNameUuid]; ok {
+				// 将MultiLanguageName转换为JSON字符串
+				item.Name = *language.JsonToLocaleResponse(multiLanguageName.ToJson())
+			} else {
+				item.Name = *language.JsonToLocaleResponse(warehouse.Name)
+			}
+		} else {
+			item.Name = *language.JsonToLocaleResponse(warehouse.Name)
+		}
+
+		list = append(list, item)
+	}
+
+	// 使用warehouseRepo避免未使用变量警告
+	_ = warehouseRepo
+	_ = warehouseRepoTarget
+
+	return resp.TransferOrderWarehouseListResp{
+		List: list,
 	}, nil
 }
