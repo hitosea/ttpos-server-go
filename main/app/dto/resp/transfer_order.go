@@ -25,14 +25,13 @@ type TransferOrderInfo struct {
 	OrderTime               int64              `json:"order_time"`                 // 单据日期
 	SubmitTime              int64              `json:"submit_time"`                // 提交时间
 	Status                  int                `json:"status"`                     // 状态: 0-待提交 1-待审核 2-已驳回 3-待收货 4-已完成
-	CreatorUuid             uint64             `json:"creator_uuid"`               // 创建人UUID
-	CreatorName             string             `json:"creator_name"`               // 创建人姓名
 	NextApprovalCompanyUuid uint64             `json:"next_approval_company_uuid"` // 下一个审批门店UUID
 	NextApprovalCompanyName string             `json:"next_approval_company_name"` // 下一个审批门店名称
 	Remark                  string             `json:"remark"`                     // 备注
 	ItemCount               int                `json:"item_count"`                 // 物品种类数量
 	CreateTime              int                `json:"create_time"`                // 创建时间
 	UpdateTime              int                `json:"update_time"`                // 更新时间
+	ReceiveProgress         string             `json:"receive_progress"`           // 收货进度
 }
 
 // TransferOrderDetailResp 调拨单详情响应

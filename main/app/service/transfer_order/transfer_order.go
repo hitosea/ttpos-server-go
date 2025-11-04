@@ -77,12 +77,6 @@ func (s *transferOrderSrv) GetTransferOrderList(
 	if req.TransferType > 0 {
 		opts = append(opts, transferOrderRepo.WhereTransferType(req.TransferType))
 	}
-	if req.SenderCompanyUuid > 0 {
-		opts = append(opts, transferOrderRepo.WhereSenderCompanyUuid(req.SenderCompanyUuid))
-	}
-	if req.ReceiverCompanyUuid > 0 {
-		opts = append(opts, transferOrderRepo.WhereReceiverCompanyUuid(req.ReceiverCompanyUuid))
-	}
 	if req.OutWarehouseErpCode != "" {
 		opts = append(opts, transferOrderRepo.WhereOutWarehouseErpCode(req.OutWarehouseErpCode))
 	}
@@ -94,9 +88,6 @@ func (s *transferOrderSrv) GetTransferOrderList(
 	}
 	if req.OrderTimeStart > 0 || req.OrderTimeEnd > 0 {
 		opts = append(opts, transferOrderRepo.WhereOrderTimeRange(req.OrderTimeStart, req.OrderTimeEnd))
-	}
-	if len(req.UuidIn) > 0 {
-		opts = append(opts, transferOrderRepo.WhereUuidIn(req.UuidIn))
 	}
 
 	// 排序
@@ -118,6 +109,7 @@ func (s *transferOrderSrv) GetTransferOrderList(
 		// 转换仓库名称
 		toInfo.OutWarehouseName = *language.JsonToLocaleResponse(to.OutWarehouseName)
 		toInfo.InWarehouseName = *language.JsonToLocaleResponse(to.InWarehouseName)
+		// 转换状态
 		listResp = append(listResp, toInfo)
 	}
 

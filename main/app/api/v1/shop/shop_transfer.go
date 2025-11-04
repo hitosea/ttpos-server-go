@@ -28,7 +28,7 @@ type TransferOrderHandler struct {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param data body req.TransferOrderListReq true "调拨单列表请求参数"
+// @Param data query req.TransferOrderListReq true "调拨单列表请求参数"
 // @Success 200 {object} dto.Response{data=resp.TransferOrderListResp} "成功"
 // @Router /shop/transfer/order/list [get]
 func (h *TransferOrderHandler) GetTransferOrderList(c *gin.Context) {

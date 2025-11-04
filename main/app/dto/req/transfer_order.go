@@ -8,19 +8,16 @@ import (
 
 // TransferOrderListReq 调拨单列表请求
 type TransferOrderListReq struct {
-	dto.PageReq                  // 分页参数
-	OrderNo             string   `json:"order_no" form:"order_no" binding:"omitempty,max=50"`                      // 单据编号
-	UuidIn              []uint64 `json:"uuid_in" form:"uuid_in" binding:"omitempty,min=1"`                         // 调拨单UUID列表
-	TransferType        int      `json:"transfer_type" form:"transfer_type" binding:"omitempty,min=0,max=2"`       // 调拨类型: 1-调入 2-调出
-	StatusIn            []int    `json:"status_in" form:"status_in" binding:"omitempty"`                           // 状态筛选: 0-待提交 1-待审核 2-已驳回 3-待收货 4-已完成
-	SenderCompanyUuid   uint64   `json:"sender_company_uuid" form:"sender_company_uuid" binding:"omitempty"`       // 发货门店UUID
-	ReceiverCompanyUuid uint64   `json:"receiver_company_uuid" form:"receiver_company_uuid" binding:"omitempty"`   // 收货门店UUID
-	OutWarehouseErpCode string   `json:"out_warehouse_erp_code" form:"out_warehouse_erp_code" binding:"omitempty"` // 出库仓库ERP编码
-	InWarehouseErpCode  string   `json:"in_warehouse_erp_code" form:"in_warehouse_erp_code" binding:"omitempty"`   // 入库仓库ERP编码
-	CreateTimeStart     int      `json:"create_time_start" form:"create_time_start" binding:"omitempty,min=0"`     // 创建时间开始
-	CreateTimeEnd       int      `json:"create_time_end" form:"create_time_end" binding:"omitempty,min=0"`         // 创建时间结束
-	OrderTimeStart      int      `json:"order_time_start" form:"order_time_start" binding:"omitempty,min=0"`       // 单据时间开始
-	OrderTimeEnd        int      `json:"order_time_end" form:"order_time_end" binding:"omitempty,min=0"`           // 单据时间结束
+	dto.PageReq                // 分页参数
+	OrderNo             string `json:"order_no" form:"order_no" binding:"omitempty,max=50"`                      // 单据编号
+	TransferType        int    `json:"transfer_type" form:"transfer_type" binding:"omitempty,min=0,max=2"`       // 调拨类型: 1-调入 2-调出
+	StatusIn            []int  `json:"status_in" form:"status_in" binding:"omitempty"`                           // 状态筛选: 0-待提交 1-待审核 2-已驳回 3-待收货 4-已完成
+	OutWarehouseErpCode string `json:"out_warehouse_erp_code" form:"out_warehouse_erp_code" binding:"omitempty"` // 出库仓库ERP编码
+	InWarehouseErpCode  string `json:"in_warehouse_erp_code" form:"in_warehouse_erp_code" binding:"omitempty"`   // 入库仓库ERP编码
+	CreateTimeStart     int    `json:"create_time_start" form:"create_time_start" binding:"omitempty,min=0"`     // 创建时间开始
+	CreateTimeEnd       int    `json:"create_time_end" form:"create_time_end" binding:"omitempty,min=0"`         // 创建时间结束
+	OrderTimeStart      int    `json:"order_time_start" form:"order_time_start" binding:"omitempty,min=0"`       // 单据时间开始
+	OrderTimeEnd        int    `json:"order_time_end" form:"order_time_end" binding:"omitempty,min=0"`           // 单据时间结束
 }
 
 // TransferOrderCreateReq 创建调拨单请求
