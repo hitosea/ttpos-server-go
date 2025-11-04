@@ -69,16 +69,18 @@ type ImportErrorDetail struct {
 // pushImportProgress 推送导入进度到前端
 func (s *productSrv) pushImportProgress(companyUuid uint64, deviceSn string, data ImportProgressData) {
 	data.Time = time.Now().Unix()
-	go websocket.PushClient(companyUuid, websocket.SourceShop, deviceSn, websocket.IMPORT_PRODUCT, map[string]any{
-		"time":     data.Time,
-		"status":   data.Status,
-		"progress": data.Progress,
-		"total":    data.Total,
-		"current":  data.Current,
-		"success":  data.Success,
-		"failed":   data.Failed,
-		"error":    data.Error,
-		"errors":   data.Errors,
+	utils.Go(func() {
+		websocket.PushClient(companyUuid, websocket.SourceShop, deviceSn, websocket.IMPORT_PRODUCT, map[string]any{
+			"time":     data.Time,
+			"status":   data.Status,
+			"progress": data.Progress,
+			"total":    data.Total,
+			"current":  data.Current,
+			"success":  data.Success,
+			"failed":   data.Failed,
+			"error":    data.Error,
+			"errors":   data.Errors,
+		})
 	})
 }
 
@@ -4873,7 +4875,7 @@ func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportRe
 	}
 
 	// 异步导入
-	go func() {
+	utils.Go(func() {
 		defer s.systemLock.UnlockUuidString(lockKey)
 
 		totalCount := len(lists)
@@ -4941,7 +4943,7 @@ func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportRe
 		time.Sleep(500 * time.Millisecond)
 		progressData.Time = time.Now().Unix()
 		s.pushImportProgress(companyUuid, deviceSn, progressData)
-	}()
+	})
 
 	return nil
 }

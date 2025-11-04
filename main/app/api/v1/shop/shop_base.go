@@ -15,6 +15,7 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/sms"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -93,7 +94,7 @@ func (h *BaseHandler) SendMemberRechargeSMS(c *gin.Context) {
 		helper.HandleValidationError(c, err, sendReq, nil)
 		return
 	}
-	go func() {
+	utils.Go(func() {
 		err := h.smsSrv.SendMemberRechargeSMS(ctx, sendReq.Phone, &sms.MemberRechargeRequest{
 			Company:       sendReq.Company,
 			Recharge:      sendReq.Recharge,
@@ -105,7 +106,7 @@ func (h *BaseHandler) SendMemberRechargeSMS(c *gin.Context) {
 		if err != nil {
 			logger.Logger.Error("SHOP_SendMemberRechargeSMS error", zap.Any("error", err))
 		}
-	}()
+	})
 	helper.Success(c, nil, "发送成功")
 }
 

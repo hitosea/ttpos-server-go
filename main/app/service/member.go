@@ -268,7 +268,7 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 
 	// 发卡可能会送积分，赠送余额
 	if memberPointsChanged || memberBalanceChanged {
-		go func() {
+		utils.Go(func() {
 			if memberBalanceChanged {
 				// 发布"会员余额变动"事件
 				s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
@@ -292,7 +292,7 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 					},
 				})
 			}
-		}()
+		})
 	}
 
 	if err != nil {

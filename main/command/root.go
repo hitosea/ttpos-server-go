@@ -139,12 +139,12 @@ func initializeExternalService(dbm *database.DBManager, cache cache.Cache) {
 	}
 
 	// 启动服务器的 goroutine
-	go func() {
+	utils.Go(func() {
 		logger.Logger.Info("HTTP 服务器启动", zap.String("port", config.Server.Port))
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Logger.Fatal("HTTP 服务器启动失败", zap.Error(err))
 		}
-	}()
+	})
 
 	// 等待中断信号来优雅关闭服务器
 	gracefulShutdown(srv)

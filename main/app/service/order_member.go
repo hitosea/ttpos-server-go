@@ -111,7 +111,7 @@ func (s *orderSrv) CompleteMemberSaleOrder(ctx context.Context, memberSaleOrderU
 		return errors.WithMessage(err)
 	}
 
-	go func() {
+	utils.Go(func() {
 		s.bus.PublishRiderCompletedMemberSaleOrderEvent(event.RiderCompletedMemberSaleOrderPayload{
 			BasePayload: event.BasePayload{
 				Ctx:                 ctx,
@@ -124,7 +124,7 @@ func (s *orderSrv) CompleteMemberSaleOrder(ctx context.Context, memberSaleOrderU
 			MemberSaleOrderUuid: memberSaleOrderUuid,
 			SaleBill:            saleBill,
 		})
-	}()
+	})
 	return nil
 }
 
@@ -158,7 +158,7 @@ func (s *orderSrv) CreateMemberOrder(ctx context.Context, req req.CreateMemberOr
 		}
 
 		// 	发布"创建外送订单"事件
-		go func() {
+		utils.Go(func() {
 			s.bus.PublishCreateMemberSaleOrderEvent(event.CreateMemberSaleOrderPayload{
 				BasePayload: event.BasePayload{
 					Ctx:                 ctx,
@@ -170,11 +170,11 @@ func (s *orderSrv) CreateMemberOrder(ctx context.Context, req req.CreateMemberOr
 					MemberUuid:          ctx.GetMemberUuid(),
 				},
 			})
-		}()
+		})
 
 		// 添加选购超时自动取消订单的延时队列任务
 		if Queue.MemberOrderCancelQueue != nil {
-			go func() {
+			utils.Go(func() {
 				memberSaleOrderUuidStr := strconv.FormatUint(result.MemberSaleOrderInfo.MemberSaleOrderUuid, 10)
 				// 构建队列消息参数
 				paramsJson := utils.ToJson(map[string]interface{}{
@@ -194,7 +194,7 @@ func (s *orderSrv) CreateMemberOrder(ctx context.Context, req req.CreateMemberOr
 						zap.String("memberSaleOrderUuid", memberSaleOrderUuidStr),
 						zap.Error(err))
 				}
-			}()
+			})
 		}
 
 		return result, nil, nil
@@ -362,7 +362,7 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 
 	// 添加24小时后自动取消订单的延时队列任务
 	if Queue.MemberOrderCancelQueue != nil {
-		go func() {
+		utils.Go(func() {
 			memberSaleOrderUuidStr := strconv.FormatUint(request.MemberSaleOrderUuid, 10)
 			// 构建队列消息参数
 			paramsJson := utils.ToJson(map[string]interface{}{
@@ -382,7 +382,7 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 					zap.String("memberSaleOrderUuid", memberSaleOrderUuidStr),
 					zap.Error(err))
 			}
-		}()
+		})
 	}
 
 	return nil
@@ -881,7 +881,7 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, request member_req.Can
 	}
 
 	// 发布“订单取消”操作事件
-	go func() {
+	utils.Go(func() {
 		s.bus.PublishCancelMemberOrderEvent(event.CancelMemberOrderPayload{
 			BasePayload: event.BasePayload{
 				Ctx:                 ctx,
@@ -915,18 +915,22 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, request member_req.Can
 				}(),
 			},
 		})
-	}()
+	})
 
 	// 发送短信通知
-	go NewSMSSrv(s.dbm).SendDeliveryOrderCancelSMS(ctx, memberSaleOrder.ContactPhone, &sms.DeliveryOrderCancel{
-		CancelScene: sms.TemplateDeliveryOrderCanceledBySelf,
-		Company:     ctx.GetCompany().Name,
-		OrderNo:     memberSaleOrder.OrderNo,
+	utils.Go(func() {
+		NewSMSSrv(s.dbm).SendDeliveryOrderCancelSMS(ctx, memberSaleOrder.ContactPhone, &sms.DeliveryOrderCancel{
+			CancelScene: sms.TemplateDeliveryOrderCanceledBySelf,
+			Company:     ctx.GetCompany().Name,
+			OrderNo:     memberSaleOrder.OrderNo,
+		})
 	})
 
 	// 成功后，推送到厨显端更新订单
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
-		"update_time": time.Now().Unix(),
+	utils.Go(func() {
+		websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
+			"update_time": time.Now().Unix(),
+		})
 	})
 
 	//
@@ -1030,7 +1034,7 @@ func (s *orderSrv) MemberOrderCancelInCashier(ctx context.Context, request membe
 	}
 
 	// 发布“整单取消”操作事件
-	go func() {
+	utils.Go(func() {
 
 		// 取消订单
 		s.bus.PublishCancelOrderEvent(event.CancelOrderPayload{
@@ -1065,18 +1069,22 @@ func (s *orderSrv) MemberOrderCancelInCashier(ctx context.Context, request membe
 				}(),
 			},
 		})
-	}()
+	})
 
 	// 发送短信通知
-	go NewSMSSrv(s.dbm).SendDeliveryOrderCancelSMS(ctx, memberSaleOrder.ContactPhone, &sms.DeliveryOrderCancel{
-		CancelScene: sms.TemplateDeliveryOrderCanceledByMerchant,
-		Company:     ctx.GetCompany().Name,
-		OrderNo:     memberSaleOrder.OrderNo,
+	utils.Go(func() {
+		NewSMSSrv(s.dbm).SendDeliveryOrderCancelSMS(ctx, memberSaleOrder.ContactPhone, &sms.DeliveryOrderCancel{
+			CancelScene: sms.TemplateDeliveryOrderCanceledByMerchant,
+			Company:     ctx.GetCompany().Name,
+			OrderNo:     memberSaleOrder.OrderNo,
+		})
 	})
 
 	// 成功后，推送到厨显端更新订单
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
-		"update_time": time.Now().Unix(),
+	utils.Go(func() {
+		websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
+			"update_time": time.Now().Unix(),
+		})
 	})
 
 	//
@@ -1611,7 +1619,7 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 
 	// 添加骑手接单超时自动取消订单的延时队列任务
 	if Queue.MemberOrderCancelQueue != nil {
-		go func() {
+		utils.Go(func() {
 			memberSaleOrderUuidStr := strconv.FormatUint(request.MemberSaleOrderUuid, 10)
 			// 构建队列消息参数
 			paramsJson := utils.ToJson(map[string]interface{}{
@@ -1630,11 +1638,11 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 					zap.String("memberSaleOrderUuid", memberSaleOrderUuidStr),
 					zap.Error(err))
 			}
-		}()
+		})
 	}
 
 	// 发布"外送接单"操作事件
-	go func() {
+	utils.Go(func() {
 		// 设置商品状态为送厨状态
 		memberSaleOrder.SaleBill.SetSaleOrderProductCooking()
 		// 发布"外送接单"操作事件
@@ -1652,7 +1660,7 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 			},
 			MemberSaleOrder: memberSaleOrder,
 		})
-	}()
+	})
 
 	return nil
 }
@@ -1757,7 +1765,7 @@ func (s *orderSrv) RejectMemberSaleOrder(ctx context.Context, request req.Reject
 	})
 
 	// 发布"外送拒单"操作事件
-	go func() {
+	utils.Go(func() {
 		s.bus.PublishRejectMemberSaleOrderEvent(event.RejectMemberSaleOrderPayload{
 			BasePayload: event.BasePayload{
 				Ctx:           ctx,
@@ -1792,13 +1800,15 @@ func (s *orderSrv) RejectMemberSaleOrder(ctx context.Context, request req.Reject
 				}(),
 			},
 		})
-	}()
+	})
 
 	// 发送短信通知
-	go NewSMSSrv(s.dbm).SendDeliveryOrderCancelSMS(ctx, memberSaleOrder.ContactPhone, &sms.DeliveryOrderCancel{
-		CancelScene: sms.TemplateDeliveryRejected,
-		Company:     ctx.GetCompany().Name,
-		OrderNo:     memberSaleOrder.OrderNo,
+	utils.Go(func() {
+		NewSMSSrv(s.dbm).SendDeliveryOrderCancelSMS(ctx, memberSaleOrder.ContactPhone, &sms.DeliveryOrderCancel{
+			CancelScene: sms.TemplateDeliveryRejected,
+			Company:     ctx.GetCompany().Name,
+			OrderNo:     memberSaleOrder.OrderNo,
+		})
 	})
 
 	return nil
@@ -1834,7 +1844,7 @@ func (s *orderSrv) CookFinishMemberSaleOrder(ctx context.Context, request req.Co
 	}
 
 	// 发布"外送备餐完成"操作事件
-	go func() {
+	utils.Go(func() {
 		s.bus.PublishCookFinishMemberSaleOrderEvent(event.CookFinishMemberSaleOrderPayload{
 			BasePayload: event.BasePayload{
 				Ctx:           ctx,
@@ -1848,7 +1858,7 @@ func (s *orderSrv) CookFinishMemberSaleOrder(ctx context.Context, request req.Co
 			MemberSaleOrderUuid: memberSaleOrder.Uuid,
 			MemberSaleOrder:     memberSaleOrder,
 		})
-	}()
+	})
 
 	return nil
 }
@@ -2103,7 +2113,7 @@ func (s *orderSrv) MemberOrderPayTimeoutAutoCancel(ctx context.Context, memberSa
 	}
 
 	// 发布“订单取消”操作事件
-	go func() {
+	utils.Go(func() {
 		event.NewSystemBus().PublishCancelMemberOrderEvent(event.CancelMemberOrderPayload{
 			BasePayload: event.BasePayload{ // 基础信息
 				Ctx:                 ctx,
@@ -2118,7 +2128,7 @@ func (s *orderSrv) MemberOrderPayTimeoutAutoCancel(ctx context.Context, memberSa
 				Type: "timeout_cancel",
 			},
 		})
-	}()
+	})
 
 	return nil
 }
@@ -2215,7 +2225,7 @@ func (s *orderSrv) MemberOrderRiderPickupTimeoutAutoCancel(ctx context.Context, 
 		}
 
 		// 发布“订单取消”操作事件
-		go func() {
+		utils.Go(func() {
 			s.bus.PublishCancelMemberOrderEvent(event.CancelMemberOrderPayload{
 				BasePayload: event.BasePayload{
 					Ctx:                 ctx,
@@ -2249,7 +2259,7 @@ func (s *orderSrv) MemberOrderRiderPickupTimeoutAutoCancel(ctx context.Context, 
 					}(),
 				},
 			})
-		}()
+		})
 
 		return nil
 	}); err != nil {

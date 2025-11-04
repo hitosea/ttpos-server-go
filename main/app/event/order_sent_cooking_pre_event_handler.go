@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/printer/printer_model"
 	"ttpos-server-go/pkg/eventbus/event"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
 )
@@ -21,7 +22,7 @@ func sentCookingPreEventHandler() {
 				return
 			}
 			//
-			go func() {
+			utils.Go(func() {
 				products := printer_model.Products{}
 				copier.Copy(&products, payload.Products)
 				printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
@@ -30,7 +31,7 @@ func sentCookingPreEventHandler() {
 					payload.SaleOrderUuid,
 					products,
 				)
-			}()
+			})
 		})
 	})
 }

@@ -444,7 +444,7 @@ func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateRe
 	}
 
 	// 发布“开台”操作事件
-	go func() {
+	utils.Go(func() {
 		s.bus.PublishOpenDeskEvent(event.OpenDeskPayload{
 			BasePayload: event.BasePayload{ // 开台
 				Ctx:           ctx,
@@ -459,7 +459,7 @@ func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateRe
 			TableId:  req.DeskUuid,
 			TableNo:  desk.DeskNo,
 		})
-	}()
+	})
 	return result, nil
 }
 
@@ -758,7 +758,7 @@ func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) (*resp
 	}
 
 	// 发布转台事件
-	go func() {
+	utils.Go(func() {
 		ctx.Log().Info("发布转台事件")
 		s.bus.PublishChangeDeskEvent(event.ChangeDeskPayload{
 			BasePayload: event.BasePayload{ // 转台
@@ -772,7 +772,7 @@ func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) (*resp
 			Old: event.Table{TableId: oldDesk.Uuid, TableNo: oldDesk.DeskNo},
 			New: event.Table{TableId: reqs.DeskUuid, TableNo: desk.DeskNo},
 		})
-	}()
+	})
 
 	// 返回购物车信息
 	info, err := s.orderSrv.GetOrderCartInfo(ctx, reqs.SaleBillUuid)
@@ -959,7 +959,7 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 		return nil, nil, errors.WithMessage(err)
 	}
 	// 发布“并台”操作事件
-	go func() {
+	utils.Go(func() {
 		s.bus.PublishMergeDeskEvent(event.MergeDeskPayload{
 			BasePayload: event.BasePayload{ // 并台
 				Ctx:          ctx,
@@ -970,7 +970,7 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 			},
 			DeskNos: deskNos,
 		})
-	}()
+	})
 	// 返回购物车信息
 	info, err := s.orderSrv.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if err != nil {

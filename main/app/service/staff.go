@@ -159,9 +159,11 @@ func (s *staffSrv) UpdateStaff(ctx context.Context, updateReq req.UpdateStaffReq
 	tc.TagClear("cashier")
 
 	// 推送配置更新
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_PERMISSION, map[string]any{
-		"staff_uuid":  updateReq.Uuid,
-		"update_time": time.Now().Unix(),
+	utils.Go(func() {
+		websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_PERMISSION, map[string]any{
+			"staff_uuid":  updateReq.Uuid,
+			"update_time": time.Now().Unix(),
+		})
 	})
 
 	return nil, exists

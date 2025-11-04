@@ -527,13 +527,13 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 
 	// 进行队列打印
 	if viper.GetString("CHECK_PRINT") == "false" || printerLog.Type == constant.PrinterLogTypeDefault {
-		go func() {
+		utils.Go(func() {
 			if printerLog.Printer == nil {
 				printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(companyUuid))
 				printerLog.Printer = printerLogRepo.GetPrinter(printerLogRepo.WhereUuid(printerLog.PrinterUuid))
 			}
 			printer_tasks.NewPrinterTask(s.dbm, cache.Global).ExecutePrinter(companyUuid, printerLog)
-		}()
+		})
 	}
 
 	return printerLog, nil

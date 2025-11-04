@@ -4,6 +4,7 @@ import (
 	"time"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -40,7 +41,9 @@ func (r *OrderOperationRecordRepoImpl) CreateSaleOrderOperationRecord(obj model.
 		return 0, errors.WithMessage(err)
 	}
 	// 添加异常日志
-	go NewOrderAbnormalRecordRepo(r.db).CreateSaleOrderAbnormalLog(obj)
+	utils.Go(func() {
+		NewOrderAbnormalRecordRepo(r.db).CreateSaleOrderAbnormalLog(obj)
+	})
 	// 返回
 	return obj.Uuid, nil
 }

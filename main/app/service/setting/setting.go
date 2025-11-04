@@ -1878,8 +1878,10 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 	tc.TagClear("cashier")
 
 	// 推送配置更新
-	go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_CONFIG, map[string]any{
-		"update_time": time.Now().Unix(),
+	utils.Go(func() {
+		websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_CONFIG, map[string]any{
+			"update_time": time.Now().Unix(),
+		})
 	})
 
 	return nil
@@ -1947,8 +1949,10 @@ func (s *Srv) EditBusinessSetting(ctx context.Context, businessSettingReq req.Up
 	tc.TagClear("cashier")
 
 	// 推送配置更新
-	go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_CONFIG, map[string]any{
-		"update_time": time.Now().Unix(),
+	utils.Go(func() {
+		websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_CONFIG, map[string]any{
+			"update_time": time.Now().Unix(),
+		})
 	})
 
 	return nil

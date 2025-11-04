@@ -89,13 +89,15 @@ func (t *usbPrintTask) Execute() {
 							fmt.Println("获取打印机列表失败", zap.Error(err))
 						}
 						// 推送更新打印机列表
-						go websocket.PushClient(company.Uuid, websocket.SourceCashier, printer.SourceDeviceSn, websocket.UPDATE_SELECTED_PRINTER, map[string]interface{}{
-							"type":             "update",
-							"update_time":      time.Now().Unix(),
-							"old_printer_name": printer.Name,
-							"old_printer_sn":   printer.GetConfigJson().SN,
-							"new_printer_name": utils.IfString(err == nil && newPrinter.Name != "", newPrinter.Name, "Built-in Printer"),
-							"new_printer_sn":   "",
+						utils.Go(func() {
+							websocket.PushClient(company.Uuid, websocket.SourceCashier, printer.SourceDeviceSn, websocket.UPDATE_SELECTED_PRINTER, map[string]interface{}{
+								"type":             "update",
+								"update_time":      time.Now().Unix(),
+								"old_printer_name": printer.Name,
+								"old_printer_sn":   printer.GetConfigJson().SN,
+								"new_printer_name": utils.IfString(err == nil && newPrinter.Name != "", newPrinter.Name, "Built-in Printer"),
+								"new_printer_sn":   "",
+							})
 						})
 					}
 				}

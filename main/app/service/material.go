@@ -121,16 +121,18 @@ func NewMaterialSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSr
 // pushMaterialImportProgress 推送物品导入进度到前端
 func (s *materialSrv) pushMaterialImportProgress(companyUuid uint64, deviceSn string, data MaterialImportProgressData) {
 	data.Time = time.Now().Unix()
-	go websocket.PushClient(companyUuid, websocket.SourceShop, deviceSn, websocket.IMPORT_MATERIAL, map[string]any{
-		"time":     data.Time,
-		"status":   data.Status,
-		"progress": data.Progress,
-		"total":    data.Total,
-		"current":  data.Current,
-		"success":  data.Success,
-		"failed":   data.Failed,
-		"error":    data.Error,
-		"errors":   data.Errors,
+	utils.Go(func() {
+		websocket.PushClient(companyUuid, websocket.SourceShop, deviceSn, websocket.IMPORT_MATERIAL, map[string]any{
+			"time":     data.Time,
+			"status":   data.Status,
+			"progress": data.Progress,
+			"total":    data.Total,
+			"current":  data.Current,
+			"success":  data.Success,
+			"failed":   data.Failed,
+			"error":    data.Error,
+			"errors":   data.Errors,
+		})
 	})
 }
 
@@ -1601,7 +1603,7 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 	}
 
 	// 异步执行同步erp物品，避免阻塞主线程造成前端请求超时
-	go func() {
+	utils.Go(func() {
 		// 如果修改了物品编码，同步更新所有关联了这个分类的erp物品
 		if ctx.GetCompany().IsOpenErp() {
 			if changeCode {
@@ -1671,7 +1673,7 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 				}
 			}
 		}
-	}()
+	})
 	return nil
 }
 
@@ -2566,7 +2568,7 @@ func (s *materialSrv) ImportMaterial(ctx context.Context, reqs req.MaterialImpor
 	}
 
 	// 异步导入
-	go func() {
+	utils.Go(func() {
 		defer s.systemLock.UnlockUuidString(lockKey)
 
 		totalCount := len(reqs.List)
@@ -2639,7 +2641,7 @@ func (s *materialSrv) ImportMaterial(ctx context.Context, reqs req.MaterialImpor
 		time.Sleep(500 * time.Millisecond)
 		progressData.Time = time.Now().Unix()
 		s.pushMaterialImportProgress(companyUuid, deviceSn, progressData)
-	}()
+	})
 
 	return nil
 }
@@ -3564,21 +3566,23 @@ func (s *materialSrv) CheckMaterialSafetyStock(ctx context.Context, companyUuid 
 	// 分批处理每个公司的安全库存检查
 	for _, cid := range companyUuids {
 		wg.Add(1)
-		go func(companyId uint64) {
-			defer wg.Done()
+		utils.Go(func() {
+			func(companyId uint64) {
+				defer wg.Done()
 
-			// 获取信号量，控制并发数
-			semaphore <- struct{}{}
-			defer func() { <-semaphore }()
+				// 获取信号量，控制并发数
+				semaphore <- struct{}{}
+				defer func() { <-semaphore }()
 
-			// 获取Context副本用于协程
-			ctxCopy := ctx.Copy()
+				// 获取Context副本用于协程
+				ctxCopy := ctx.Copy()
 
-			// 处理单个公司的安全库存检查
-			if err := s.checkCompanySafetyStock(ctxCopy, companyId); err != nil {
-				errChan <- err
-			}
-		}(cid)
+				// 处理单个公司的安全库存检查
+				if err := s.checkCompanySafetyStock(ctxCopy, companyId); err != nil {
+					errChan <- err
+				}
+			}(cid)
+		})
 	}
 
 	// 等待所有协程完成

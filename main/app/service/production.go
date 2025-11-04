@@ -15,6 +15,7 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
 
 	"github.com/jinzhu/copier"
@@ -629,9 +630,12 @@ func (s *productionSrv) Finish(ctx context.Context, req req.FinishReq) error {
 				return errors.WithMessage(errors.New("更新送厨单商品状态失败"), err.Error())
 			}
 			// 完成制作后，推送更新厨显
-			go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
-				"update_time": time.Now().Unix(),
+			utils.Go(func() {
+				websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
+					"update_time": time.Now().Unix(),
+				})
 			})
+
 			return nil
 		case constant.KdsModeDefault: // 传菜模式
 			if product.MakeStatus != constant.ProductionOrderProductMakeStatusFinished {
@@ -662,7 +666,7 @@ func (s *productionSrv) Finish(ctx context.Context, req req.FinishReq) error {
 	}
 
 	// 完成制作事件
-	go func() {
+	utils.Go(func() {
 		if product.SaleOrderProduct.ID == 0 {
 			return
 		}
@@ -698,17 +702,21 @@ func (s *productionSrv) Finish(ctx context.Context, req req.FinishReq) error {
 				},
 			},
 		})
-	}()
+	})
 
 	// 完成制作后，推送更新厨显
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
-		"update_time": time.Now().Unix(),
+	utils.Go(func() {
+		websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
+			"update_time": time.Now().Unix(),
+		})
 	})
 	// 完成制作后，推送更新订单
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]any{
-		"update_time":    time.Now().Unix(),
-		"sale_bill_uuid": product.SaleBillUuid,
-		"desk_uuid":      product.SaleBill.DeskUuid,
+	utils.Go(func() {
+		websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]any{
+			"update_time":    time.Now().Unix(),
+			"sale_bill_uuid": product.SaleBillUuid,
+			"desk_uuid":      product.SaleBill.DeskUuid,
+		})
 	})
 	return nil
 
@@ -744,8 +752,10 @@ func (s *productionSrv) Recovery(ctx context.Context, req req.RecoveryReq) error
 			return errors.WithMessage(errors.New("恢复送厨单商品制作状态失败"), err.Error())
 		}
 		// 恢复制作后，推送更新厨显
-		go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
-			"update_time": time.Now().Unix(),
+		utils.Go(func() {
+			websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
+				"update_time": time.Now().Unix(),
+			})
 		})
 		return nil
 	}
@@ -771,14 +781,18 @@ func (s *productionSrv) Recovery(ctx context.Context, req req.RecoveryReq) error
 	}
 
 	// 恢复制作后，推送更新厨显
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
-		"update_time": time.Now().Unix(),
+	utils.Go(func() {
+		websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
+			"update_time": time.Now().Unix(),
+		})
 	})
 	// 恢复制作后，推送更新订单
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]any{
-		"update_time":    time.Now().Unix(),
-		"sale_bill_uuid": product.SaleBillUuid,
-		"desk_uuid":      product.SaleBill.DeskUuid,
+	utils.Go(func() {
+		websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]any{
+			"update_time":    time.Now().Unix(),
+			"sale_bill_uuid": product.SaleBillUuid,
+			"desk_uuid":      product.SaleBill.DeskUuid,
+		})
 	})
 	return nil
 }
@@ -800,9 +814,12 @@ func (s *productionSrv) ConfirmReturn(ctx context.Context, productUuid uint64) e
 	}
 
 	// 恢复制作后，推送更新厨显
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
-		"update_time": time.Now().Unix(),
+	utils.Go(func() {
+		websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
+			"update_time": time.Now().Unix(),
+		})
 	})
+
 	return nil
 }
 
@@ -838,8 +855,10 @@ func (s *productionSrv) ConfirmReturnAll(ctx context.Context, saleBillUuid uint6
 	}
 
 	// 恢复制作后，推送更新厨显
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
-		"update_time": time.Now().Unix(),
+	utils.Go(func() {
+		websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
+			"update_time": time.Now().Unix(),
+		})
 	})
 	return nil
 }
