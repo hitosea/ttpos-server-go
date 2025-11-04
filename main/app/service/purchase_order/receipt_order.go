@@ -143,6 +143,17 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 
 			// 创建收货明细
 			units := func() []model.PurchaseReceiptOrderItemUnit {
+				if len(orderItem.Units) == 0 && orderItem.BaseUnitUuid != 0 {
+					orderItem.Units = make([]model.PurchaseOrderItemUnit, 0, len(itemReq.UnitList))
+					orderItem.Units = append(orderItem.Units, model.PurchaseOrderItemUnit{
+						UnitUuid:           orderItem.UnitUuid,
+						UnitName:           orderItem.UnitName,
+						UnitConversionRate: orderItem.UnitConversionRate,
+						BaseUnitUuid:       orderItem.BaseUnitUuid,
+						BaseUnitName:       orderItem.BaseUnitName,
+						ErpnextUom:         orderItem.ErpnextUom,
+					})
+				}
 				units := make([]model.PurchaseReceiptOrderItemUnit, 0, len(itemReq.UnitList))
 				for _, unit := range itemReq.UnitList {
 					for _, orderItemUnit := range orderItem.Units {
@@ -348,6 +359,17 @@ func (s *purchaseReceiptOrderSrv) UpdatePurchaseReceiptOrder(
 
 			// 创建收货明细
 			units := func() []model.PurchaseReceiptOrderItemUnit {
+				if len(purchaseOrderItem.Units) == 0 && purchaseOrderItem.BaseUnitUuid != 0 {
+					purchaseOrderItem.Units = make([]model.PurchaseOrderItemUnit, 0, len(itemReq.UnitList))
+					purchaseOrderItem.Units = append(purchaseOrderItem.Units, model.PurchaseOrderItemUnit{
+						UnitUuid:           purchaseOrderItem.UnitUuid,
+						UnitName:           purchaseOrderItem.UnitName,
+						UnitConversionRate: purchaseOrderItem.UnitConversionRate,
+						BaseUnitUuid:       purchaseOrderItem.BaseUnitUuid,
+						BaseUnitName:       purchaseOrderItem.BaseUnitName,
+						ErpnextUom:         purchaseOrderItem.ErpnextUom,
+					})
+				}
 				units := make([]model.PurchaseReceiptOrderItemUnit, 0, len(itemReq.UnitList))
 				for _, unit := range itemReq.UnitList {
 					for _, orderItemUnit := range purchaseOrderItem.Units {
