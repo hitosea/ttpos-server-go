@@ -158,7 +158,6 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 	}
 
 	// WarehouseErpCode 根据仓库ERP编码过滤
-	// FIXME: 没有看到产品说按仓库，现在只先按是否同步物品进行
 	if req.PurchaseType == 2 {
 		dbOptions = append(dbOptions, commonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
 			return db.Where("headquarter_uuid > ?", 0)

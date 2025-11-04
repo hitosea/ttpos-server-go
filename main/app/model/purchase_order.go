@@ -170,7 +170,7 @@ func (item PurchaseOrderItem) GetUnitsTotalConversionRateNum() float64 {
 		for _, unit := range item.Units {
 			actualNum += unit.GetConversionRateNum()
 		}
-	} else {
+	} else if item.BaseUnitUuid != 0 {
 		actualNum += item.GetConversionRateNum()
 	}
 	return actualNum

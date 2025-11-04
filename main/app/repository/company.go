@@ -13,8 +13,9 @@ type ICompanyRepo interface {
 	WhereName(name string) DBOption
 	WhereNotUuid(uuid uint64) DBOption
 
-	GetCompany(opts ...DBOption) (model.Company, error)                       // 获取公司
-	GetListByHeadquarterUuid(headquarterUuid uint64) ([]model.Company, error) // 获取公司列表
+	GetCompany(opts ...DBOption) (model.Company, error)                               // 获取公司
+	GetListByHeadquarterUuid(headquarterUuid uint64) ([]model.Company, error)         // 获取公司列表
+	GetNoDeleteListByHeadquarterUuid(headquarterUuid uint64) ([]model.Company, error) // 获取公司列表
 	GetCompanyInfo(ctx context.Context, opts ...DBOption) (model.Company, error)
 	GetCompanyInfoByUuid(uuid uint64) (*model.Company, error)
 	CreateCompany(obj model.Company) error
@@ -64,11 +65,26 @@ func (r *companyRepo) CreateCompany(obj model.Company) error {
 	return nil
 }
 
+// 获取总部下的所有门店
 func (r *companyRepo) GetListByHeadquarterUuid(headquarterUuid uint64) ([]model.Company, error) {
 	var companies []model.Company
 	db := r.db.Model(&model.Company{})
 	db = db.Joins("LEFT JOIN ttpos_company_setting ON ttpos_company.uuid = ttpos_company_setting.company_uuid")
 	db = db.Where("ttpos_company_setting.headquarter_uuid = ?", headquarterUuid)
+	result := db.Find(&companies)
+	if result.Error != nil {
+		return companies, result.Error
+	}
+	return companies, nil
+}
+
+// 获取总部下的所有门店（不包含已删除的门店） 包括总部
+func (r *companyRepo) GetNoDeleteListByHeadquarterUuid(headquarterUuid uint64) ([]model.Company, error) {
+	var companies []model.Company
+	db := r.db.Model(&model.Company{})
+	db = db.Joins("LEFT JOIN ttpos_company_setting ON ttpos_company.uuid = ttpos_company_setting.company_uuid")
+	db = db.Where("ttpos_company_setting.headquarter_uuid = ? OR ttpos_company.uuid = ?", headquarterUuid, headquarterUuid)
+	db = db.Where("ttpos_company.delete_time = ?", 0)
 	result := db.Find(&companies)
 	if result.Error != nil {
 		return companies, result.Error
