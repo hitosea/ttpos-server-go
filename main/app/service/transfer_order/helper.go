@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"time"
+	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/cache"
+	ttposContext "ttpos-server-go/pkg/context"
 
 	"gorm.io/gorm"
 )
@@ -57,4 +60,27 @@ func (h *transferOrderHelper) GenerateOrderNo(db *gorm.DB) string {
 	// 生成12位数字：TR + 8位日期 + 4位序号
 	orderNo := fmt.Sprintf("TR%s%04d", dateStr, seq)
 	return orderNo
+}
+
+// CreateLog 创建操作日志
+func (h *transferOrderHelper) CreateLog(ctx ttposContext.Context, db *gorm.DB, transferOrderUuid uint64, action, actionDesc string, oldStatus, newStatus int) error {
+	logRepo := repository.NewTransferOrderLogRepo(db)
+
+	log := &model.TransferOrderLog{
+		TransferOrderUuid: transferOrderUuid,
+		CompanyUuid:       ctx.GetCompanyUuid(),
+		Action:            action,
+		ActionDesc:        actionDesc,
+		OldStatus:         oldStatus,
+		NewStatus:         newStatus,
+		OperatorUuid:      ctx.GetStaffUuid(),
+		OperatorName: func() string {
+			if realName := ctx.GetStaff().RealName; realName != "" {
+				return realName
+			}
+			return ctx.GetStaff().Username
+		}(),
+	}
+
+	return logRepo.Create(log)
 }

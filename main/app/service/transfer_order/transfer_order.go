@@ -427,7 +427,7 @@ func (s *transferOrderSrv) CreateTransferOrder(
 		}
 
 		// 记录操作日志
-		if err := s.createLog(tx, transferOrder.Uuid, constant.TransferActionCreate, "创建调拨单", 0, constant.TransferOrderStatusDraft, ctx); err != nil {
+		if err := s.helper.CreateLog(ctx, db, transferOrder.Uuid, constant.TransferActionCreate, "创建调拨单", 0, constant.TransferOrderStatusDraft); err != nil {
 			logger.Logger.Error("记录调拨单日志失败", zap.Error(err))
 		}
 
@@ -514,7 +514,7 @@ func (s *transferOrderSrv) UpdateTransferOrder(
 	}
 
 	// 记录操作日志
-	if err := s.createLog(db, req.Uuid, "update", "更新调拨单", transferOrder.Status, transferOrder.Status, ctx); err != nil {
+	if err := s.helper.CreateLog(ctx, db, req.Uuid, "update", "更新调拨单", transferOrder.Status, transferOrder.Status); err != nil {
 		logger.Logger.Error("记录调拨单日志失败", zap.Error(err))
 	}
 
@@ -529,6 +529,10 @@ func (s *transferOrderSrv) DeleteTransferOrder(
 	if err := req.Validate(); err != nil {
 		return err
 	}
+
+	// 加锁
+	s.lock.LockUuid(req.Uuid)
+	defer s.lock.UnlockUuid(req.Uuid)
 
 	db := ctx.GetDB()
 	transferOrderRepo := repository.NewTransferOrderRepo(db)
@@ -547,42 +551,12 @@ func (s *transferOrderSrv) DeleteTransferOrder(
 		return errors.New("只有待提交状态的调拨单才能删除")
 	}
 
-	// 加锁
-	s.lock.LockUuid(req.Uuid)
-	defer s.lock.UnlockUuid(req.Uuid)
-
 	// 删除调拨单
 	if err := transferOrderRepo.Delete(req.Uuid); err != nil {
 		return errors.WithMessage(errors.New("删除调拨单失败"), err.Error())
 	}
 
-	// 清理锁资源
-	s.lock.ClearUuidLock(req.Uuid)
-
 	return nil
-}
-
-// 创建操作日志
-func (s *transferOrderSrv) createLog(db *gorm.DB, transferOrderUuid uint64, action, actionDesc string, oldStatus, newStatus int, ctx context.Context) error {
-	logRepo := repository.NewTransferOrderLogRepo(db)
-
-	log := &model.TransferOrderLog{
-		TransferOrderUuid: transferOrderUuid,
-		CompanyUuid:       ctx.GetCompanyUuid(),
-		Action:            action,
-		ActionDesc:        actionDesc,
-		OldStatus:         oldStatus,
-		NewStatus:         newStatus,
-		OperatorUuid:      ctx.GetStaffUuid(),
-		OperatorName: func() string {
-			if realName := ctx.GetStaff().RealName; realName != "" {
-				return realName
-			}
-			return ctx.GetStaff().Username
-		}(),
-	}
-
-	return logRepo.Create(log)
 }
 
 // SubmitTransferOrder 提交调拨单
@@ -631,7 +605,7 @@ func (s *transferOrderSrv) SubmitTransferOrder(
 		}
 
 		// 记录操作日志
-		if err := s.createLog(tx, req.Uuid, constant.TransferActionSubmit, "提交调拨单", constant.TransferOrderStatusDraft, constant.TransferOrderStatusPending, ctx); err != nil {
+		if err := s.helper.CreateLog(ctx, db, req.Uuid, constant.TransferActionSubmit, "提交调拨单", constant.TransferOrderStatusDraft, constant.TransferOrderStatusPending); err != nil {
 			logger.Logger.Error("记录调拨单日志失败", zap.Error(err))
 		}
 
@@ -722,7 +696,7 @@ func (s *transferOrderSrv) ApproveTransferOrder(
 		}
 
 		// 记录操作日志
-		if err := s.createLog(tx, req.Uuid, constant.TransferActionApprove, fmt.Sprintf("%s审批通过", currentApproval.ApprovalCompanyName), transferOrder.Status, newStatus, ctx); err != nil {
+		if err := s.helper.CreateLog(ctx, db, req.Uuid, constant.TransferActionApprove, fmt.Sprintf("%s审批通过", currentApproval.ApprovalCompanyName), transferOrder.Status, newStatus); err != nil {
 			logger.Logger.Error("记录调拨单日志失败", zap.Error(err))
 		}
 
@@ -798,7 +772,7 @@ func (s *transferOrderSrv) RejectTransferOrder(
 		}
 
 		// 记录操作日志
-		if err := s.createLog(tx, req.Uuid, constant.TransferActionReject, fmt.Sprintf("%s驳回：%s", currentApproval.ApprovalCompanyName, req.RejectReason), transferOrder.Status, constant.TransferOrderStatusRejected, ctx); err != nil {
+		if err := s.helper.CreateLog(ctx, db, req.Uuid, constant.TransferActionReject, fmt.Sprintf("%s驳回：%s", currentApproval.ApprovalCompanyName, req.RejectReason), transferOrder.Status, constant.TransferOrderStatusRejected); err != nil {
 			logger.Logger.Error("记录调拨单日志失败", zap.Error(err))
 		}
 
@@ -857,7 +831,7 @@ func (s *transferOrderSrv) ReceiveTransferOrder(
 		// TODO: 这里需要调用库存服务，处理库存入库逻辑
 
 		// 记录操作日志
-		if err := s.createLog(tx, req.Uuid, constant.TransferActionReceive, "收货完成", transferOrder.Status, constant.TransferOrderStatusCompleted, ctx); err != nil {
+		if err := s.helper.CreateLog(ctx, db, req.Uuid, constant.TransferActionReceive, "收货完成", transferOrder.Status, constant.TransferOrderStatusCompleted); err != nil {
 			logger.Logger.Error("记录调拨单日志失败", zap.Error(err))
 		}
 
