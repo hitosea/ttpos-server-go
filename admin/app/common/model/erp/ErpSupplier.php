@@ -98,12 +98,6 @@ class ErpSupplier extends BaseModel
     public function add($data)
     {
         $model = new self;
-        // 验证供应商名称唯一性
-        $exist = $model->where('name', $data['name'])->find();
-        if ($exist) {
-            $this->error = '该供应商名称已存在';
-            return false;
-        }
         //
         $data['contact_name'] = $data['contact_person'] ?? '';
         $data['staff_uuid'] = $data['purchaser_id'] ?? 0;
@@ -116,13 +110,6 @@ class ErpSupplier extends BaseModel
      */
     public function edit($data)
     {
-        // 验证供应商名称唯一性
-        $exist = (new self)->where('name', $data['name'])->where('uuid', '<>', $this->uuid)->find();
-        if ($exist) {
-            $this->error = '该供应商名称已存在';
-            return false;
-        }
-        //
         $data['contact_name'] = $data['contact_person'] ?? '';
         $data['staff_uuid'] = $data['purchaser_id'] ?? 0;
         $this->save($data);

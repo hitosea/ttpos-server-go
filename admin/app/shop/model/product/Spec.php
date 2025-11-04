@@ -78,11 +78,6 @@ class Spec extends SpecModel
             $this->error = '规格名称不能为空';
             return false;
         }
-        $isExist = $this->where('name', '=', $name)->count();
-        if ($isExist) {
-            $this->error = '名称已存在';
-            return false;
-        }
         //
         $data['name'] = $name;
         $data['multi_language_name_uuid'] = (new MultiLanguageName)->saveNames($name);
@@ -99,13 +94,6 @@ class Spec extends SpecModel
         $name = $data['spec_name'] ?? '';
         if (ValidateHelp::hasEmptyValue($name)) {
             $this->error = '规格名称不能为空';
-            return false;
-        }
-        $isExist = $this->where('name', '=', $name)
-            ->where('uuid', '<>', $this['uuid'])
-            ->count();
-        if ($isExist) {
-            $this->error = '名称已存在';
             return false;
         }
         //

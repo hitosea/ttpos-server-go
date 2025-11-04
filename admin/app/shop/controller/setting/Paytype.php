@@ -173,9 +173,6 @@ class Paytype extends Controller
             if (!$remark) {
                 return $this->renderError('请输入名称');
             }
-            if ((new PayTypeModel)->checkNameExist($remark, $shop_supplier_id, $id)) {
-                return $this->renderError('支付名称已存在');
-            }
             if (!($param['name'] ?? '')) {
                 return $this->renderError('请输入支付方式');
             }

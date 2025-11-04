@@ -50,10 +50,6 @@ class Table extends TableModel
             $this->error = '桌台数量已达上限，如有需要，请联系销售代表';
             return false;
         }
-        // 表单验证
-        if (!$this->validateForm($data, self::FORM_SCENE_ADD)) {
-            return false;
-        }
         $data = $this->sortData($data);
         $data['uuid'] = createUuid();
         $data['is_disable'] = 0;
@@ -65,10 +61,6 @@ class Table extends TableModel
      */
     public function edit($data)
     {
-        // 表单验证
-        if (!$this->validateForm($data, self::FORM_SCENE_EDIT)) {
-            return false;
-        }
         $areaInfo = (new TableArea)->where('uuid', '=', $data['area_id'])->findOrEmpty();
         if ($areaInfo->isEmpty()) {
             $this->error = '区域不存在';

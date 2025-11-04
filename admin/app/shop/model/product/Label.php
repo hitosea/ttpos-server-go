@@ -33,12 +33,6 @@ class Label extends LabelModel
      */
     public function add($data, $shop_supplier_id)
     {
-        $isExist = $this->where('name', '=', $data['label_name'])->count();
-        if ($isExist) {
-            $this->error = '名称已存在';
-            return false;
-        }
-        //
         $data['name'] = $data['label_name'] ?? '';
         return $this->save($data);
     }
@@ -48,14 +42,6 @@ class Label extends LabelModel
      */
     public function edit($data)
     {
-        $isExist = $this->where('name', '=', $data['label_name'])
-            ->where('uuid', '<>', $this['uuid'])
-            ->count();
-        if ($isExist) {
-            $this->error = '名称已存在';
-            return false;
-        }
-        //
         $data['name'] = $data['label_name'] ?? '';
         return $this->save($data);
     }

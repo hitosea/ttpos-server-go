@@ -21,10 +21,6 @@ class Printer extends PrinterModel
             $this->error = '打印机数量已达上限，如有需要，请联系销售代表';
             return false;
         }
-        if ($this->where('name', '=', $data['printer_name'])->count()) {
-            $this->error = '打印机名称已存在';
-            return false;
-        }
         $printerType = $data['printer_type'];
         $type = PrinterType::getPrinterTypeByKey($printerType);
         if (!$type) {
@@ -58,10 +54,6 @@ class Printer extends PrinterModel
      */
     public function edit($data)
     {
-        if ($this->where('name', '=', $data['printer_name'])->where('uuid', '<>', $data['printer_id'])->count()) {
-            $this->error = '打印机名称已存在';
-            return false;
-        }
         $printerType = $data['printer_type'];
         $type = PrinterType::getPrinterTypeByKey($printerType);
         if (!$type) {

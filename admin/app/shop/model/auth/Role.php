@@ -113,12 +113,6 @@ class Role extends RoleModel
      */
     public function add($data)
     {
-        $count = self::where('name', $data['role_name'])->count();
-        if ($count > 0) {
-            $this->error = '角色名称已存在';
-            return false;
-        }
-
         $this->startTrans();
         try {
             $res = self::create([
@@ -153,12 +147,6 @@ class Role extends RoleModel
     public function edit($data)
     {
         $role_id = $data['role_id'] ?? 0;
-        $count = self::where('name', $data['role_name'])->where('uuid', '<>', $role_id)->count();
-        if ($count > 0) {
-            $this->error = '角色名称已存在';
-            return false;
-        }
-
         $this->startTrans();
         try {
             $this->save([

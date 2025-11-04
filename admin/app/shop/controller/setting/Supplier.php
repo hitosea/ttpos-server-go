@@ -123,11 +123,6 @@ class Supplier extends Controller
                 if (mb_strlen($name) > 50) {
                     return $this->renderError('税率名称不能超过50字符');
                 }
-                // 税类名称不能重复
-                $exist = $taxCategoryModel->where('name', '=', $name)->find();
-                if ($exist && in_array($item['action'], ['add', 'edit']) && $exist['uuid'] != $item['id']) {
-                    return $this->renderError('税类名称已存在');
-                }
                 $taxRate = round($taxRate, 2);
                 $taxRate = max(0, $taxRate);
                 if ($taxRate < 0 || $taxRate > 100) {

@@ -12,7 +12,7 @@ class AppValidate extends  BaseValidate
     //定义验证规则
     protected $rule = [
         'app_id' => 'require|checkIdExist',
-        'name|商家名称' => 'require|max:100|checkNameExist',
+        'name|商家名称' => 'require|max:100',
         'level|商家等级' => 'require|integer',
         'logo' => 'require',
         'parent_id|上级商家ID' => 'requireIf:level,2|integer',
@@ -56,7 +56,6 @@ class AppValidate extends  BaseValidate
         'app_id.require' => '参数错误',
         'app_id.checkIdExist' => '商家不存在',
         'parent_id.requireIf' => '请选择上级商家',
-        'name.checkNameExist' => '商家名称已存在',
         'name.max' => '商家名称不能超过100个字符',
         'link_phone.require' => '联系电话不能为空',
         'link_phone.max' => '联系电话不能超过20个字符',

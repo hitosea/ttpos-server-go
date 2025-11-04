@@ -58,14 +58,9 @@ class Store extends Controller
         if (mb_strlen($name) > 100) {
             return $this->renderError('商家名称不能超过100个字符');
         }
-        $nameExist = (new App([], 0))->where('name', $name)->where('uuid', '<>', $this->store['user']['shop_supplier_id'])->find();
-        if ($nameExist) {
-            return $this->renderError('商家名称已存在');
-        } else {
-            // 更新云平台商家名称
-            $supplier = new App([], 0);
-            $supplier->where('uuid', $this->store['user']['shop_supplier_id'])->update(['name' => $name]);
-        }
+        // 更新云平台商家名称
+        $supplier = new App([], 0);
+        $supplier->where('uuid', $this->store['user']['shop_supplier_id'])->update(['name' => $name]);
         // 判断商家名称是否存在
         if (empty($data['logoUrl'])) {
             return $this->renderError('商城logo不能为空');
