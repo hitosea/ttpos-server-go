@@ -89,8 +89,20 @@ func (r *ProductLabelRepoImpl) CreateProductLabel(productLabel model.ProductLabe
 
 // UpdateProductLabel 更新商品标签
 func (r *ProductLabelRepoImpl) UpdateProductLabel(productLabel model.ProductLabel) error {
-	err := r.db.Model(&model.ProductLabel{}).Where("uuid = ?", productLabel.Uuid).Updates(&productLabel).Error
-	return errors.WithMessage(err)
+	err := r.db.Model(&model.ProductLabel{}).Where("uuid = ?", productLabel.Uuid).Updates(map[string]any{
+		"name":              productLabel.Name,
+		"style":             productLabel.Style,
+		"is_show_cashier":   productLabel.IsShowCashier,
+		"is_show_tablet":    productLabel.IsShowTablet,
+		"is_show_assistant": productLabel.IsShowAssistant,
+		"is_show_h5":        productLabel.IsShowH5,
+		"is_show_delivery":  productLabel.IsShowDelivery,
+		"is_show_menu":      productLabel.IsShowMenu,
+	}).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
 }
 
 // DeleteProductLabel 软删除商品标签
