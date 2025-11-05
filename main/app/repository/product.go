@@ -134,6 +134,10 @@ type IProductQueryRepo interface {
 	GetProductShopList(opts ...DBOption) ([]model.ProductPackage, error)                                          // 获取商品列表（商家端）
 	GetProductShopMaxSort(opts ...DBOption) (int64, error)                                                        // 获取商品最大排序
 
+	GetProductBomUuidsByKeyword(keyword string) ([]uint64, error)               // 根据Keyword(商品名称)查询所有商品的product_bom_uuid
+	GetProductBomUuidsByCategoryUuids(categoryUuids []uint64) ([]uint64, error) // 根据分类UUID查询所有商品的product_bom_uuid
+	GetProductBomUuidsByInternalCode(internalCode string) ([]uint64, error)     // 根据内部编码查询所有商品的product_bom_uuid
+
 	BatchUpdateSort(table any, sorts map[uint64]int) error // 批量更新排序
 }
 
@@ -1439,4 +1443,60 @@ func (r *productRepo) GetProductUnitByErpnextUom(erpnextUom string) (*model.Prod
 		return nil, errors.WithMessage(err)
 	}
 	return &productUnit, nil
+}
+
+// GetProductBomUuidsByKeyword 根据Keyword(商品名称)查询所有商品的product_bom_uuid
+func (r *productRepo) GetProductBomUuidsByKeyword(keyword string) ([]uint64, error) {
+	// 根据name查询product_package表
+	var productPackageUuids []uint64
+	err := r.db.Model(&model.ProductPackage{}).Where("delete_time = ?", constant.NotDeleted).Where("name LIKE ?", "%"+keyword+"%").Select("uuid").Find(&productPackageUuids).Error
+	if err != nil {
+		if strings.Contains(err.Error(), "record not found") {
+			return nil, nil
+		}
+		return nil, errors.WithMessage(err)
+	}
+	// 根据product_package_uuids查询product_bom表
+	var productBomUuids []uint64
+	if err := r.db.Model(&model.ProductBom{}).Where("delete_time = ?", constant.NotDeleted).Where("product_package_uuid IN ?", productPackageUuids).Select("uuid").Find(&productBomUuids).Error; err != nil {
+		if strings.Contains(err.Error(), "record not found") {
+			return nil, nil
+		}
+		return nil, errors.WithMessage(err)
+	}
+	return productBomUuids, nil
+}
+
+// 根据分类UUID查询所有商品的product_bom_uuid
+func (r *productRepo) GetProductBomUuidsByCategoryUuids(categoryUuids []uint64) ([]uint64, error) {
+	// 根据category_uuids查询product_package表
+	var productPackageUuids []uint64
+	if err := r.db.Model(&model.ProductPackage{}).Where("delete_time = ?", constant.NotDeleted).Where("category_uuid IN ?", categoryUuids).Select("uuid").Find(&productPackageUuids).Error; err != nil {
+		if strings.Contains(err.Error(), "record not found") {
+			return nil, nil
+		}
+		return nil, errors.WithMessage(err)
+	}
+	// 根据product_package_uuids查询product_bom表
+	var productBomUuids []uint64
+	if err := r.db.Model(&model.ProductBom{}).Where("delete_time = ?", constant.NotDeleted).Where("product_package_uuid IN ?", productPackageUuids).Select("uuid").Find(&productBomUuids).Error; err != nil {
+		if strings.Contains(err.Error(), "record not found") {
+			return nil, nil
+		}
+		return nil, errors.WithMessage(err)
+	}
+	return productBomUuids, nil
+}
+
+// 根据内部编码查询所有商品的product_bom_uuid
+func (r *productRepo) GetProductBomUuidsByInternalCode(internalCode string) ([]uint64, error) {
+	var productBomUuids []uint64
+	err := r.db.Model(&model.ProductBom{}).Where("delete_time = ?", constant.NotDeleted).Where("internal_code LIKE ?", "%"+internalCode+"%").Select("uuid").Find(&productBomUuids).Error
+	if err != nil {
+		if strings.Contains(err.Error(), "record not found") {
+			return nil, nil
+		}
+		return nil, errors.WithMessage(err)
+	}
+	return productBomUuids, nil
 }

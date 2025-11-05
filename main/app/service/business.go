@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"sort"
+	"time"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -940,14 +941,71 @@ func (s *businessSrv) CountKitchenEfficiencyAnalysisAvg(ctx context.Context, req
 }
 
 func (s *businessSrv) CountKitchenProductionDetail(ctx context.Context, req req.KitchenProductionDetailReq) (*business_data_resp.KitchenProductionDetail, error) {
+	// 参数默认值
+	if req.StartTime == 0 {
+		dayStart := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.Local)
+		req.StartTime = dayStart.Unix()
+	}
+	if req.EndTime == 0 {
+		dayEnd := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 23, 59, 59, 0, time.Local)
+		req.EndTime = dayEnd.Unix()
+	}
 	db := ctx.GetDB()
 	productionRepo := repository.NewProductionRepo(db)
-	productionOrderProducts, err := productionRepo.GetProductionOrderList(req.PageNo, req.PageSize, req.Keyword, req.CategoryUuids)
+	productBomUuids := []uint64{}
+	// 根据Keyword(商品名称)查询所有商品的product_bom_uuid
+	if req.Keyword != "" {
+		productBomUuidsByName, err := repository.NewProductRepo(db).GetProductBomUuidsByKeyword(req.Keyword)
+		if err != nil {
+			return nil, err
+		}
+		if len(productBomUuidsByName) > 0 {
+			productBomUuids = append(productBomUuids, productBomUuidsByName...)
+		}
+	}
+	// 根据Keyword(内部编码)查询所有商品的product_bom_uuid
+	if req.Keyword != "" {
+		productBomUuidsByInternalCode, err := repository.NewProductRepo(db).GetProductBomUuidsByInternalCode(req.Keyword)
+		if err != nil {
+			return nil, err
+		}
+		if len(productBomUuidsByInternalCode) > 0 {
+			productBomUuids = append(productBomUuids, productBomUuidsByInternalCode...)
+		}
+	}
+	// 根据CategoryUuids查询所有商品的product_bom_uuid
+	if len(req.CategoryUuids) > 0 {
+		productBomUuidsByCategoryUuids, err := repository.NewProductRepo(db).GetProductBomUuidsByCategoryUuids(req.CategoryUuids)
+		if err != nil {
+			return nil, err
+		}
+		if len(productBomUuidsByCategoryUuids) > 0 {
+			productBomUuids = append(productBomUuids, productBomUuidsByCategoryUuids...)
+		}
+	}
+
+	opts := []repository.DBOption{
+		repository.CommonRepo.Preload(
+			repository.WithPreload{
+				Query: "SaleOrderProduct.MultiLanguageName",
+				Args:  []any{},
+			},
+			repository.WithPreload{
+				Query: "SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductFlavor.MultiLanguageName",
+				Args:  []any{},
+			},
+			repository.WithPreload{
+				Query: "ProductCategory.MultiLanguageName",
+				Args:  []any{},
+			},
+		),
+	}
+	productionOrderProducts, err := productionRepo.GetProductionOrderList(req.PageNo, req.PageSize, productBomUuids, req.StartTime, req.EndTime, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	productionDataList := make([]business_data_resp.KitchenProductionDetailItem, 0, len(productionOrderProducts))
+	productionDataList := make([]business_data_resp.KitchenProductionDetailItem, 0)
 	for _, productionOrderProduct := range productionOrderProducts {
 		item := business_data_resp.KitchenProductionDetailItem{
 			ProductName:    productionOrderProduct.SaleOrderProduct.MultiLanguageName.GetNames(),

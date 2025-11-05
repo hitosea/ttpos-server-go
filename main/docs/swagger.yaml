@@ -607,6 +607,57 @@ definitions:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 商品名称
     type: object
+  business_data_resp.KitchenProductionDetail:
+    properties:
+      list:
+        description: 后厨菜品出品明细
+        items:
+          $ref: '#/definitions/business_data_resp.KitchenProductionDetailItem'
+        type: array
+      meta:
+        allOf:
+        - $ref: '#/definitions/dto.PageResponse'
+        description: 元数据
+    type: object
+  business_data_resp.KitchenProductionDetailItem:
+    properties:
+      all_duration:
+        description: 总时长,单位:秒
+        type: integer
+      category_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 分类名称
+      create_time:
+        description: 下单时间
+        type: integer
+      finish_time:
+        description: 完成时间
+        type: integer
+      flavor_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 规格名称
+      make_duration:
+        description: 制作时长,单位:秒
+        type: integer
+      make_finish_time:
+        description: 制作完成时间
+        type: integer
+      number:
+        description: 完成数量
+        type: number
+      product_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称
+      send_duration:
+        description: 传菜时长,单位:秒
+        type: integer
+      send_finish_time:
+        description: 传菜完成时间
+        type: integer
+    type: object
   business_data_resp.MemberData:
     properties:
       gift_money:
@@ -3569,14 +3620,14 @@ definitions:
     type: object
   req.GetBindCodeReq:
     properties:
-      deviceId:
+      device_id:
         type: string
     required:
-    - deviceId
+    - device_id
     type: object
   req.GetOrderCartProductBatchCookingListReq:
     properties:
-      saleBillUuid:
+      sale_bill_uuid:
         description: 销售账单UUID, 必填
         type: integer
     type: object
@@ -3778,6 +3829,41 @@ definitions:
       keyword:
         description: 关键词, 仅商品名称模糊搜索
         type: string
+      page_no:
+        description: 页码
+        minimum: 1
+        type: integer
+      page_size:
+        description: 每页大小
+        maximum: 1100
+        minimum: 1
+        type: integer
+      start_time:
+        description: 查询开始时间戳
+        type: integer
+    type: object
+  req.KitchenProductionDetailReq:
+    properties:
+      category_uuids:
+        description: 分类UUID列表
+        items:
+          type: integer
+        type: array
+      end_time:
+        description: 查询结束时间戳
+        type: integer
+      keyword:
+        description: 关键词, 仅商品名称、内部编码模糊搜索
+        type: string
+      page_no:
+        description: 页码
+        minimum: 1
+        type: integer
+      page_size:
+        description: 每页大小
+        maximum: 1100
+        minimum: 1
+        type: integer
       start_time:
         description: 查询开始时间戳
         type: integer
@@ -6778,6 +6864,197 @@ definitions:
     - products
     - sale_bill_uuid
     - sale_order_uuid
+    type: object
+  req.TransferOrderApproveReq:
+    properties:
+      remark:
+        description: 审批备注
+        maxLength: 500
+        type: string
+      uuid:
+        description: 调拨单UUID
+        minimum: 1
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.TransferOrderCreateReq:
+    properties:
+      in_warehouse_erp_code:
+        description: 入库仓库ERP编码
+        minLength: 1
+        type: string
+      items:
+        description: 调拨明细
+        items:
+          $ref: '#/definitions/req.TransferOrderItemCreateReq'
+        maxItems: 500
+        minItems: 1
+        type: array
+      order_time:
+        description: 单据日期
+        minimum: 0
+        type: integer
+      out_warehouse_erp_code:
+        description: 出库仓库ERP编码
+        minLength: 1
+        type: string
+      receiver_company_uuid:
+        description: 收货门店UUID
+        minimum: 1
+        type: integer
+      remark:
+        description: 备注
+        maxLength: 500
+        type: string
+      sender_company_uuid:
+        description: 发货门店UUID
+        minimum: 1
+        type: integer
+      transfer_type:
+        description: '调拨类型: 1-调入 2-调出'
+        maximum: 2
+        minimum: 1
+        type: integer
+    required:
+    - in_warehouse_erp_code
+    - items
+    - order_time
+    - out_warehouse_erp_code
+    - receiver_company_uuid
+    - sender_company_uuid
+    - transfer_type
+    type: object
+  req.TransferOrderDeleteReq:
+    properties:
+      uuid:
+        description: 调拨单UUID
+        minimum: 1
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.TransferOrderItemCreateReq:
+    properties:
+      material_uuid:
+        description: 物品UUID
+        minimum: 1
+        type: integer
+      units:
+        description: 单位列表
+        items:
+          $ref: '#/definitions/req.TransferOrderItemUnitCreateReq'
+        minItems: 1
+        type: array
+    required:
+    - material_uuid
+    - units
+    type: object
+  req.TransferOrderItemUnitCreateReq:
+    properties:
+      num:
+        description: 调拨数量
+        type: number
+      unit_uuid:
+        description: 单位UUID
+        minimum: 1
+        type: integer
+    required:
+    - num
+    - unit_uuid
+    type: object
+  req.TransferOrderLogListReq:
+    properties:
+      page_no:
+        description: 页码
+        minimum: 1
+        type: integer
+      page_size:
+        description: 每页大小
+        maximum: 1100
+        minimum: 1
+        type: integer
+      transfer_order_uuid:
+        description: 调拨单UUID
+        minimum: 1
+        type: integer
+    required:
+    - transfer_order_uuid
+    type: object
+  req.TransferOrderReceiveReq:
+    properties:
+      remark:
+        description: 收货备注
+        maxLength: 500
+        type: string
+      uuid:
+        description: 调拨单UUID
+        minimum: 1
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.TransferOrderRejectReq:
+    properties:
+      reject_reason:
+        description: 驳回原因
+        maxLength: 500
+        minLength: 1
+        type: string
+      uuid:
+        description: 调拨单UUID
+        minimum: 1
+        type: integer
+    required:
+    - reject_reason
+    - uuid
+    type: object
+  req.TransferOrderSubmitReq:
+    properties:
+      uuid:
+        description: 调拨单UUID
+        minimum: 1
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.TransferOrderUpdateReq:
+    properties:
+      in_warehouse_erp_code:
+        description: 入库仓库ERP编码
+        type: string
+      items:
+        description: 调拨明细
+        items:
+          $ref: '#/definitions/req.TransferOrderItemCreateReq'
+        maxItems: 500
+        minItems: 1
+        type: array
+      order_time:
+        description: 单据日期
+        minimum: 0
+        type: integer
+      out_warehouse_erp_code:
+        description: 出库仓库ERP编码
+        type: string
+      receiver_company_uuid:
+        description: 收货门店UUID
+        minimum: 1
+        type: integer
+      remark:
+        description: 备注
+        maxLength: 500
+        type: string
+      sender_company_uuid:
+        description: 发货门店UUID
+        minimum: 1
+        type: integer
+      uuid:
+        description: 调拨单UUID
+        minimum: 1
+        type: integer
+    required:
+    - uuid
     type: object
   req.UnbindDeviceReq:
     properties:
@@ -11156,6 +11433,9 @@ definitions:
       made_time:
         description: 制作完成时间
         type: integer
+      make_duration:
+        description: 制作时长(秒)
+        type: integer
       make_status:
         description: 制作状态，0-默认，未制作完成，1-已制作完成，2-已恢复到制作中
         type: integer
@@ -11173,6 +11453,9 @@ definitions:
       remark:
         description: 备注
         type: string
+      send_duration:
+        description: 传菜时长(秒)
+        type: integer
       serial_no:
         description: 序列号
         type: string
@@ -12969,6 +13252,364 @@ definitions:
         - $ref: '#/definitions/setting.TabletResp'
         description: 平板端设置
     type: object
+  resp.TransferOrderApprovalInfo:
+    properties:
+      approval_company_name:
+        description: 审批门店名称
+        type: string
+      approval_company_uuid:
+        description: 审批门店UUID
+        type: integer
+      approval_type:
+        description: '审批类型: initiator/sender/sender_parent/receiver_parent/receiver'
+        type: string
+      approve_time:
+        description: 审批时间
+        type: integer
+      approver_name:
+        description: 审批人姓名
+        type: string
+      approver_uuid:
+        description: 审批人UUID
+        type: integer
+      create_time:
+        description: 创建时间
+        type: integer
+      is_required:
+        description: '是否必须审批: 0-否 1-是'
+        type: integer
+      reject_reason:
+        description: 驳回原因
+        type: string
+      remark:
+        description: 备注
+        type: string
+      sequence:
+        description: 审批顺序
+        type: integer
+      status:
+        description: '审批状态: 0-待审批 1-已通过 2-已驳回 3-已跳过'
+        type: integer
+      transfer_order_uuid:
+        description: 调拨单UUID
+        type: integer
+      uuid:
+        description: 审批UUID
+        type: integer
+    type: object
+  resp.TransferOrderApprovalListResp:
+    properties:
+      list:
+        description: 审批流程列表
+        items:
+          $ref: '#/definitions/resp.TransferOrderApprovalInfo'
+        type: array
+    type: object
+  resp.TransferOrderCompanyItem:
+    properties:
+      name:
+        description: 门店名称
+        type: string
+      uuid:
+        description: 门店UUID
+        type: integer
+    type: object
+  resp.TransferOrderCompanyListResp:
+    properties:
+      list:
+        description: 门店列表
+        items:
+          $ref: '#/definitions/resp.TransferOrderCompanyItem'
+        type: array
+    type: object
+  resp.TransferOrderCreateResp:
+    properties:
+      order_no:
+        description: 调拨单编号
+        type: string
+      uuid:
+        description: 调拨单UUID
+        type: integer
+    type: object
+  resp.TransferOrderDetailResp:
+    properties:
+      approvals:
+        description: 审批流程
+        items:
+          $ref: '#/definitions/resp.TransferOrderApprovalInfo'
+        type: array
+      create_time:
+        description: 创建时间
+        type: integer
+      erp_order_no:
+        description: ERP调拨单号
+        type: string
+      in_warehouse_erp_code:
+        description: 入库仓库ERP编码
+        type: string
+      in_warehouse_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 入库仓库名称
+      item_count:
+        description: 物品种类数量
+        type: integer
+      items:
+        description: 调拨明细
+        items:
+          $ref: '#/definitions/resp.TransferOrderItemInfo'
+        type: array
+      next_approval_company_name:
+        description: 下一个审批门店名称
+        type: string
+      next_approval_company_uuid:
+        description: 下一个审批门店UUID
+        type: integer
+      order_no:
+        description: 单据编号
+        type: string
+      order_time:
+        description: 单据日期
+        type: integer
+      out_warehouse_erp_code:
+        description: 出库仓库ERP编码
+        type: string
+      out_warehouse_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 出库仓库名称
+      receiver_company_name:
+        description: 收货门店名称
+        type: string
+      receiver_company_uuid:
+        description: 收货门店UUID
+        type: integer
+      remark:
+        description: 备注
+        type: string
+      sender_company_name:
+        description: 发货门店名称
+        type: string
+      sender_company_uuid:
+        description: 发货门店UUID
+        type: integer
+      status:
+        description: '状态: 0-待提交 1-待审核 2-已驳回 3-待收货 4-已完成'
+        type: integer
+      submit_time:
+        description: 提交时间
+        type: integer
+      transfer_type:
+        description: '调拨类型: 1-调入 2-调出'
+        type: integer
+      update_time:
+        description: 更新时间
+        type: integer
+      uuid:
+        description: 调拨单UUID
+        type: integer
+    type: object
+  resp.TransferOrderInfo:
+    properties:
+      create_time:
+        description: 创建时间
+        type: integer
+      erp_order_no:
+        description: ERP调拨单号
+        type: string
+      in_warehouse_erp_code:
+        description: 入库仓库ERP编码
+        type: string
+      in_warehouse_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 入库仓库名称
+      item_count:
+        description: 物品种类数量
+        type: integer
+      next_approval_company_name:
+        description: 下一个审批门店名称
+        type: string
+      next_approval_company_uuid:
+        description: 下一个审批门店UUID
+        type: integer
+      order_no:
+        description: 单据编号
+        type: string
+      order_time:
+        description: 单据日期
+        type: integer
+      out_warehouse_erp_code:
+        description: 出库仓库ERP编码
+        type: string
+      out_warehouse_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 出库仓库名称
+      receiver_company_name:
+        description: 收货门店名称
+        type: string
+      receiver_company_uuid:
+        description: 收货门店UUID
+        type: integer
+      remark:
+        description: 备注
+        type: string
+      sender_company_name:
+        description: 发货门店名称
+        type: string
+      sender_company_uuid:
+        description: 发货门店UUID
+        type: integer
+      status:
+        description: '状态: 0-待提交 1-待审核 2-已驳回 3-待收货 4-已完成'
+        type: integer
+      submit_time:
+        description: 提交时间
+        type: integer
+      transfer_type:
+        description: '调拨类型: 1-调入 2-调出'
+        type: integer
+      update_time:
+        description: 更新时间
+        type: integer
+      uuid:
+        description: 调拨单UUID
+        type: integer
+    type: object
+  resp.TransferOrderItemInfo:
+    properties:
+      material_code:
+        description: 物品编码
+        type: string
+      material_internal_code:
+        description: 物品内部编码
+        type: string
+      material_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 物品名称
+      material_uuid:
+        description: 物品UUID
+        type: integer
+      units:
+        description: 单位列表
+        items:
+          $ref: '#/definitions/resp.TransferOrderItemUnitInfo'
+        type: array
+      uuid:
+        description: 明细UUID
+        type: integer
+      valuation:
+        description: 估值单价（基准单位）
+        type: number
+    type: object
+  resp.TransferOrderItemUnitInfo:
+    properties:
+      erpnext_uom:
+        description: ERP单位
+        type: string
+      num:
+        description: 调拨数量
+        type: number
+      unit_conversion_rate:
+        description: 单位转换率
+        type: number
+      unit_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 单位名称
+      unit_uuid:
+        description: 单位UUID
+        type: integer
+      uuid:
+        description: 明细单位UUID
+        type: integer
+    type: object
+  resp.TransferOrderListResp:
+    properties:
+      list:
+        description: 调拨单列表
+        items:
+          $ref: '#/definitions/resp.TransferOrderInfo'
+        type: array
+      meta:
+        allOf:
+        - $ref: '#/definitions/dto.PageResponse'
+        description: 分页信息
+    type: object
+  resp.TransferOrderLogInfo:
+    properties:
+      action:
+        description: '操作动作: create/submit/approve/reject/receive'
+        type: string
+      action_desc:
+        description: 操作描述
+        type: string
+      content:
+        description: 操作内容详情JSON
+        type: string
+      create_time:
+        description: 创建时间
+        type: integer
+      new_status:
+        description: 操作后状态
+        type: integer
+      old_status:
+        description: 操作前状态
+        type: integer
+      operator_name:
+        description: 操作人姓名
+        type: string
+      operator_role:
+        description: 操作人角色
+        type: string
+      operator_uuid:
+        description: 操作人UUID
+        type: integer
+      remark:
+        description: 备注
+        type: string
+      transfer_order_uuid:
+        description: 调拨单UUID
+        type: integer
+      uuid:
+        description: 日志UUID
+        type: integer
+    type: object
+  resp.TransferOrderLogListResp:
+    properties:
+      list:
+        description: 日志列表
+        items:
+          $ref: '#/definitions/resp.TransferOrderLogInfo'
+        type: array
+      meta:
+        allOf:
+        - $ref: '#/definitions/dto.PageResponse'
+        description: 分页信息
+    type: object
+  resp.TransferOrderWarehouseItem:
+    properties:
+      erp_code:
+        description: 仓库ERP编码
+        type: string
+      name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 仓库名称（多语言）
+      type:
+        description: 仓库类型
+        type: string
+    type: object
+  resp.TransferOrderWarehouseListResp:
+    properties:
+      list:
+        description: 仓库列表
+        items:
+          $ref: '#/definitions/resp.TransferOrderWarehouseItem'
+        type: array
+    type: object
   resp.UnprocessedAbnormalPrint:
     properties:
       list:
@@ -14568,7 +15209,7 @@ paths:
       parameters:
       - description: '是否是自助餐: -1=全都、0=否、1=是'
         in: query
-        name: isBuffet
+        name: is_buffet
         type: integer
       - description: 页码
         in: query
@@ -14722,7 +15363,7 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -15023,19 +15664,19 @@ paths:
       parameters:
       - description: 商品类型 0-商品 1-套餐
         in: query
-        name: productType
+        name: product_type
         type: integer
       - description: 销售账单ID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       - description: 销售订单商品ID
         in: query
-        name: saleOrderProductUuid
+        name: sale_order_product_uuid
         type: integer
       - description: 销售订单ID
         in: query
-        name: saleOrderUuid
+        name: sale_order_uuid
         type: integer
       produces:
       - application/json
@@ -16351,11 +16992,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: deskUuid
+        name: desk_uuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -17064,7 +17705,7 @@ paths:
       parameters:
       - description: '是否是自助餐: -1=全都、0=否、1=是'
         in: query
-        name: isBuffet
+        name: is_buffet
         type: integer
       - description: 页码
         in: query
@@ -17215,7 +17856,7 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -17523,19 +18164,19 @@ paths:
       parameters:
       - description: 商品类型 0-商品 1-套餐
         in: query
-        name: productType
+        name: product_type
         type: integer
       - description: 销售账单ID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       - description: 销售订单商品ID
         in: query
-        name: saleOrderProductUuid
+        name: sale_order_product_uuid
         type: integer
       - description: 销售订单ID
         in: query
-        name: saleOrderUuid
+        name: sale_order_uuid
         type: integer
       produces:
       - application/json
@@ -19096,19 +19737,19 @@ paths:
       parameters:
       - description: 商品类型 0-商品 1-套餐
         in: query
-        name: productType
+        name: product_type
         type: integer
       - description: 销售账单ID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       - description: 销售订单商品ID
         in: query
-        name: saleOrderProductUuid
+        name: sale_order_product_uuid
         type: integer
       - description: 销售订单ID
         in: query
-        name: saleOrderUuid
+        name: sale_order_uuid
         type: integer
       produces:
       - application/json
@@ -20552,15 +21193,15 @@ paths:
       parameters:
       - description: 支付金额, 必填
         in: query
-        name: paymentAmount
+        name: payment_amount
         type: number
       - description: 支付方式UUID, 必填
         in: query
-        name: paymentMethodUuid
+        name: payment_method_uuid
         type: integer
       - description: 充值订单UUID, 必填
         in: query
-        name: rechargeOrderUuid
+        name: recharge_order_uuid
         type: integer
       produces:
       - application/json
@@ -21391,11 +22032,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: deskUuid
+        name: desk_uuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -21415,27 +22056,27 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: billType
+        name: bill_type
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: dateType
+        name: date_type
         type: integer
       - description: 用餐方式, -1=全都、 0-堂食 1-打包
         in: query
-        name: diningMethod
+        name: dining_method
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enableCreateTime
+        name: enable_create_time
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enablePayTime
+        name: enable_pay_time
         type: boolean
       - description: 订单编号
         in: query
-        name: orderNo
+        name: order_no
         type: string
       - description: 页码
         in: query
@@ -21450,11 +22091,11 @@ paths:
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: queryEndTime
+        name: query_end_time
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: queryStartTime
+        name: query_start_time
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -21482,27 +22123,27 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: billType
+        name: bill_type
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: dateType
+        name: date_type
         type: integer
       - description: 用餐方式, -1=全都、 0-堂食 1-打包
         in: query
-        name: diningMethod
+        name: dining_method
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enableCreateTime
+        name: enable_create_time
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enablePayTime
+        name: enable_pay_time
         type: boolean
       - description: 订单编号
         in: query
-        name: orderNo
+        name: order_no
         type: string
       - description: 页码
         in: query
@@ -21517,11 +22158,11 @@ paths:
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: queryEndTime
+        name: query_end_time
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: queryStartTime
+        name: query_start_time
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -21631,11 +22272,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       - description: 销售订单UUID。退款都是针对子单进行退款
         in: query
-        name: saleOrderUuid
+        name: sale_order_uuid
         type: integer
       produces:
       - application/json
@@ -21687,7 +22328,7 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -21807,7 +22448,7 @@ paths:
       parameters:
       - description: 数据类型 (打印类型), -1=全都、.....
         in: query
-        name: dataType
+        name: data_type
         type: integer
       - description: 页码
         in: query
@@ -21822,15 +22463,15 @@ paths:
         type: integer
       - description: 打印机UUID
         in: query
-        name: printerUuid
+        name: printer_uuid
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: queryEndTime
+        name: query_end_time
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: queryStartTime
+        name: query_start_time
         type: integer
       - description: 状态, -1=全都、0=失败, 1=成功, 2=补打成功, 3=补打失败
         in: query
@@ -22967,7 +23608,7 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -22996,19 +23637,19 @@ paths:
       parameters:
       - description: 商品类型 0-商品 1-套餐
         in: query
-        name: productType
+        name: product_type
         type: integer
       - description: 销售账单ID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       - description: 销售订单商品ID
         in: query
-        name: saleOrderProductUuid
+        name: sale_order_product_uuid
         type: integer
       - description: 销售订单ID
         in: query
-        name: saleOrderUuid
+        name: sale_order_uuid
         type: integer
       produces:
       - application/json
@@ -23382,15 +24023,15 @@ paths:
       parameters:
       - description: 商品包uuid
         in: query
-        name: productPackageUuid
+        name: product_package_uuid
         type: integer
       - description: 销售账单ID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       - description: 销售订单ID
         in: query
-        name: saleOrderUuid
+        name: sale_order_uuid
         type: integer
       produces:
       - application/json
@@ -24484,7 +25125,7 @@ paths:
       parameters:
       - description: 会员端销售订单UUID
         in: query
-        name: memberSaleOrderUuid
+        name: member_sale_order_uuid
         required: true
         type: integer
       produces:
@@ -24573,12 +25214,12 @@ paths:
       parameters:
       - description: 会员端销售订单UUID
         in: query
-        name: memberSaleOrderUuid
+        name: member_sale_order_uuid
         required: true
         type: integer
       - description: 支付方式UUID - 如果为0，则使用订单的支付方式, 否则使用指定的支付方式
         in: query
-        name: paymentMethodUuid
+        name: payment_method_uuid
         type: integer
       produces:
       - application/json
@@ -24699,7 +25340,7 @@ paths:
       parameters:
       - description: 会员ID
         in: query
-        name: memberUuid
+        name: member_uuid
         type: integer
       - description: 页码
         in: query
@@ -26145,27 +26786,27 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: billType
+        name: bill_type
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: dateType
+        name: date_type
         type: integer
       - description: 用餐方式, -1=全都、 0-堂食 1-打包
         in: query
-        name: diningMethod
+        name: dining_method
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enableCreateTime
+        name: enable_create_time
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enablePayTime
+        name: enable_pay_time
         type: boolean
       - description: 订单编号
         in: query
-        name: orderNo
+        name: order_no
         type: string
       - description: 页码
         in: query
@@ -26180,11 +26821,11 @@ paths:
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: queryEndTime
+        name: query_end_time
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: queryStartTime
+        name: query_start_time
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -26240,11 +26881,11 @@ paths:
       parameters:
       - description: "桌台UUID\t   二选一, 销售账单UUID权重最大"
         in: query
-        name: deskUuid
+        name: desk_uuid
         type: integer
       - description: "销售账单UUID\t二选一，销售账单UUID权重最大"
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json
@@ -26264,27 +26905,27 @@ paths:
       parameters:
       - description: 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
         in: query
-        name: billType
+        name: bill_type
         type: integer
       - description: 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
         in: query
-        name: dateType
+        name: date_type
         type: integer
       - description: 用餐方式, -1=全都、 0-堂食 1-打包
         in: query
-        name: diningMethod
+        name: dining_method
         type: integer
       - description: 启用开台时间 false-不启用，true-启用
         in: query
-        name: enableCreateTime
+        name: enable_create_time
         type: boolean
       - description: 启用支付时间 false-不启用，true-启用
         in: query
-        name: enablePayTime
+        name: enable_pay_time
         type: boolean
       - description: 订单编号
         in: query
-        name: orderNo
+        name: order_no
         type: string
       - description: 页码
         in: query
@@ -26299,11 +26940,11 @@ paths:
         type: integer
       - description: 查询结束时间戳
         in: query
-        name: queryEndTime
+        name: query_end_time
         type: integer
       - description: 查询开始时间戳
         in: query
-        name: queryStartTime
+        name: query_start_time
         type: integer
       - description: 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
         in: query
@@ -26374,11 +27015,11 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       - description: 销售订单UUID。退款都是针对子单进行退款
         in: query
-        name: saleOrderUuid
+        name: sale_order_uuid
         type: integer
       produces:
       - application/json
@@ -26429,11 +27070,13 @@ paths:
       description: 获取配置信息
       parameters:
       - description: 模板ID
+        format: int64
         in: query
         name: template_id
         required: true
         type: integer
       - description: 定制UUID, 编辑的时候使用，新增的时候 传0
+        format: int64
         in: query
         name: customize_uuid
         required: true
@@ -26496,6 +27139,7 @@ paths:
       description: 删除打印机定制
       parameters:
       - description: 打印机定制UUID
+        format: int64
         in: query
         name: customize_uuid
         required: true
@@ -26634,6 +27278,7 @@ paths:
       description: 获取打印模板详情
       parameters:
       - description: 模板ID
+        format: int64
         in: query
         name: id
         required: true
@@ -27403,7 +28048,7 @@ paths:
       parameters:
       - description: 商品分类UUID（可选）
         in: query
-        name: categoryUuid
+        name: category_uuid
         type: string
       - description: 搜索商品名称（可选）
         in: query
@@ -27623,7 +28268,7 @@ paths:
       parameters:
       - description: 商品分类UUID, 可选
         in: query
-        name: categoryUuid
+        name: category_uuid
         type: integer
       - description: 搜索关键词, 可选
         in: query
@@ -28323,25 +28968,30 @@ paths:
         in: query
         name: order_no
         type: string
-      - description: 状态筛选
+      - collectionFormat: csv
+        description: 状态筛选
         in: query
         items:
           type: integer
         name: status_in
         type: array
       - description: 收货时间开始（时间戳）
+        format: int64
         in: query
         name: receive_time_start
         type: integer
       - description: 收货时间结束（时间戳）
+        format: int64
         in: query
         name: receive_time_end
         type: integer
       - description: 创建时间开始（时间戳）
+        format: int64
         in: query
         name: create_time_start
         type: integer
       - description: 创建时间结束（时间戳）
+        format: int64
         in: query
         name: create_time_end
         type: integer
@@ -29419,6 +30069,35 @@ paths:
       summary: 统计后厨效率分析平均时长
       tags:
       - 商家端.营业数据
+  /shop/statistics/kitchen/production_detail:
+    get:
+      consumes:
+      - application/json
+      description: 统计后厨菜品出品明细
+      parameters:
+      - description: 统计参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.KitchenProductionDetailReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 统计数据
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/business_data_resp.KitchenProductionDetail'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 统计后厨菜品出品明细
+      tags:
+      - 商家端.营业数据
   /shop/statistics/payment_method:
     get:
       consumes:
@@ -29731,7 +30410,8 @@ paths:
         name: page_size
         required: true
         type: integer
-      - description: 仓库UUID列表
+      - collectionFormat: csv
+        description: 仓库UUID列表
         in: query
         items:
           type: integer
@@ -29749,7 +30429,8 @@ paths:
         in: query
         name: end_create_time
         type: integer
-      - description: 状态列表
+      - collectionFormat: csv
+        description: 状态列表
         in: query
         items:
           type: integer
@@ -30130,6 +30811,413 @@ paths:
       summary: 同步成本卡
       tags:
       - 商家端.物品管理
+  /shop/transfer/material/list:
+    get:
+      consumes:
+      - application/json
+      description: 根据调拨单UUID获取调拨单物品列表
+      parameters:
+      - collectionFormat: csv
+        description: 分类UUID列表,多选时
+        in: query
+        items:
+          type: integer
+        name: category_uuids
+        type: array
+      - description: 关键字
+        in: query
+        name: keyword
+        type: string
+      - description: 出库仓库ERP编码
+        in: query
+        name: out_warehouse_erp_code
+        type: string
+      - description: 页码
+        in: query
+        minimum: 1
+        name: page_no
+        type: integer
+      - description: 每页大小
+        in: query
+        maximum: 1100
+        minimum: 1
+        name: page_size
+        type: integer
+      - description: 收货门店UUID
+        in: query
+        name: receiver_company_uuid
+        type: integer
+      - description: 发货门店UUID
+        in: query
+        name: sender_company_uuid
+        type: integer
+      - description: 状态，0-全部 1-启用 2-停用
+        in: query
+        name: status
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/material_resp.MaterialListWithPaginationResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取调拨单物品列表
+      tags:
+      - 商家端.调拨单管理
+  /shop/transfer/order/approval/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取调拨单的审批流程记录
+      parameters:
+      - description: 调拨单UUID
+        in: query
+        name: transfer_order_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.TransferOrderApprovalListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取调拨单审批流程列表
+      tags:
+      - 商家端.调拨单管理
+  /shop/transfer/order/approve:
+    post:
+      consumes:
+      - application/json
+      description: 审批通过调拨单
+      parameters:
+      - description: 审批调拨单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.TransferOrderApproveReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 审批通过调拨单
+      tags:
+      - 商家端.调拨单管理
+  /shop/transfer/order/create:
+    post:
+      consumes:
+      - application/json
+      description: 创建新的调拨单
+      parameters:
+      - description: 创建调拨单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.TransferOrderCreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.TransferOrderCreateResp'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 创建调拨单
+      tags:
+      - 商家端.调拨单管理
+  /shop/transfer/order/delete:
+    delete:
+      consumes:
+      - application/json
+      description: 删除调拨单（仅待提交状态可删除）
+      parameters:
+      - description: 删除调拨单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.TransferOrderDeleteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除调拨单
+      tags:
+      - 商家端.调拨单管理
+  /shop/transfer/order/detail:
+    get:
+      consumes:
+      - application/json
+      description: 根据UUID获取调拨单详情
+      parameters:
+      - description: 调拨单UUID
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.TransferOrderDetailResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取调拨单详情
+      tags:
+      - 商家端.调拨单管理
+  /shop/transfer/order/list:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取调拨单列表
+      parameters:
+      - description: 创建时间结束
+        in: query
+        minimum: 0
+        name: create_time_end
+        type: integer
+      - description: 创建时间开始
+        in: query
+        minimum: 0
+        name: create_time_start
+        type: integer
+      - description: 入库仓库ERP编码
+        in: query
+        name: in_warehouse_erp_code
+        type: string
+      - description: 单据编号
+        in: query
+        maxLength: 50
+        name: order_no
+        type: string
+      - description: 单据时间结束
+        in: query
+        minimum: 0
+        name: order_time_end
+        type: integer
+      - description: 单据时间开始
+        in: query
+        minimum: 0
+        name: order_time_start
+        type: integer
+      - description: 出库仓库ERP编码
+        in: query
+        name: out_warehouse_erp_code
+        type: string
+      - description: 页码
+        in: query
+        minimum: 1
+        name: page_no
+        type: integer
+      - description: 每页大小
+        in: query
+        maximum: 1100
+        minimum: 1
+        name: page_size
+        type: integer
+      - collectionFormat: csv
+        description: '状态筛选: 0-待提交 1-待审核 2-已驳回 3-待收货 4-已完成'
+        in: query
+        items:
+          type: integer
+        name: status_in
+        type: array
+      - description: '调拨类型: 1-调入 2-调出'
+        in: query
+        maximum: 2
+        minimum: 0
+        name: transfer_type
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.TransferOrderListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取调拨单列表
+      tags:
+      - 商家端.调拨单管理
+  /shop/transfer/order/log/list:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取调拨单的操作日志
+      parameters:
+      - description: 操作日志列表请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.TransferOrderLogListReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.TransferOrderLogListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取调拨单操作日志列表
+      tags:
+      - 商家端.调拨单管理
+  /shop/transfer/order/receive:
+    post:
+      consumes:
+      - application/json
+      description: 确认收货完成调拨
+      parameters:
+      - description: 收货调拨单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.TransferOrderReceiveReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 收货调拨单
+      tags:
+      - 商家端.调拨单管理
+  /shop/transfer/order/reject:
+    post:
+      consumes:
+      - application/json
+      description: 驳回调拨单
+      parameters:
+      - description: 驳回调拨单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.TransferOrderRejectReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 驳回调拨单
+      tags:
+      - 商家端.调拨单管理
+  /shop/transfer/order/submit:
+    post:
+      consumes:
+      - application/json
+      description: 提交调拨单进入审批流程
+      parameters:
+      - description: 提交调拨单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.TransferOrderSubmitReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 提交调拨单
+      tags:
+      - 商家端.调拨单管理
+  /shop/transfer/order/update:
+    post:
+      consumes:
+      - application/json
+      description: 更新调拨单信息（仅待提交状态可更新）
+      parameters:
+      - description: 更新调拨单请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.TransferOrderUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 更新调拨单
+      tags:
+      - 商家端.调拨单管理
   /shop/warehouse:
     get:
       consumes:
@@ -30272,7 +31360,8 @@ paths:
         in: query
         name: keyword
         type: string
-      - description: 物料分类ID列表,多选
+      - collectionFormat: csv
+        description: 物料分类ID列表,多选
         in: query
         items:
           type: integer
@@ -30282,7 +31371,8 @@ paths:
         in: query
         name: order_no
         type: string
-      - description: 对方机构Code列表,多选
+      - collectionFormat: csv
+        description: 对方机构Code列表,多选
         in: query
         items:
           type: string
@@ -30303,7 +31393,8 @@ paths:
         in: query
         name: start_time
         type: integer
-      - description: 供应商ID列表,多选
+      - collectionFormat: csv
+        description: 供应商ID列表,多选
         in: query
         items:
           type: integer
@@ -30618,7 +31709,7 @@ paths:
       parameters:
       - description: '是否是自助餐: -1=全都、0=否、1=是'
         in: query
-        name: isBuffet
+        name: is_buffet
         type: integer
       - description: 页码
         in: query
@@ -30685,7 +31776,7 @@ paths:
       parameters:
       - description: 销售账单UUID
         in: query
-        name: saleBillUuid
+        name: sale_bill_uuid
         type: integer
       produces:
       - application/json

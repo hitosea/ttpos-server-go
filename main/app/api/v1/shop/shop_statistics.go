@@ -348,7 +348,7 @@ func (h *statisticsHandler) CountKitchenEfficiencyAnalysisAvg(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.KitchenProductionDetailReq true "统计参数"
-// @Success 200 {object} dto.Response{data=business_data_resp.BusinessDataKitchenProductionDetail} "统计数据"
+// @Success 200 {object} dto.Response{data=business_data_resp.KitchenProductionDetail} "统计数据"
 // @Router /shop/statistics/kitchen/production_detail [get]
 func (h *statisticsHandler) CountKitchenProductionDetail(c *gin.Context) {
 	ctx := helper.GetContext(c)
