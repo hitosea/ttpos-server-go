@@ -25801,6 +25801,38 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/statistics/kitchen/production_detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "统计后厨菜品出品明细",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.营业数据"
+                ],
+                "summary": "统计后厨菜品出品明细",
+                "parameters": [
+                    {
+                        "description": "统计参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.KitchenProductionDetailReq"
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
         "/shop/statistics/payment_method": {
             "get": {
                 "security": [
@@ -27013,6 +27045,669 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/transfer/material/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "根据调拨单UUID获取调拨单物品列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.调拨单管理"
+                ],
+                "summary": "获取调拨单物品列表",
+                "parameters": [
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "description": "分类UUID列表,多选时",
+                        "name": "category_uuids",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "关键字",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "出库仓库ERP编码",
+                        "name": "out_warehouse_erp_code",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 1100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "每页大小",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "收货门店UUID",
+                        "name": "receiver_company_uuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "发货门店UUID",
+                        "name": "sender_company_uuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "状态，0-全部 1-启用 2-停用",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/material_resp.MaterialListWithPaginationResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/transfer/order/approval/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取调拨单的审批流程记录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.调拨单管理"
+                ],
+                "summary": "获取调拨单审批流程列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "调拨单UUID",
+                        "name": "transfer_order_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.TransferOrderApprovalListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/transfer/order/approve": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "审批通过调拨单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.调拨单管理"
+                ],
+                "summary": "审批通过调拨单",
+                "parameters": [
+                    {
+                        "description": "审批调拨单请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.TransferOrderApproveReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/transfer/order/create": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "创建新的调拨单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.调拨单管理"
+                ],
+                "summary": "创建调拨单",
+                "parameters": [
+                    {
+                        "description": "创建调拨单请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.TransferOrderCreateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.TransferOrderCreateResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/transfer/order/delete": {
+            "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除调拨单（仅待提交状态可删除）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.调拨单管理"
+                ],
+                "summary": "删除调拨单",
+                "parameters": [
+                    {
+                        "description": "删除调拨单请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.TransferOrderDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/transfer/order/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "根据UUID获取调拨单详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.调拨单管理"
+                ],
+                "summary": "获取调拨单详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "调拨单UUID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.TransferOrderDetailResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/transfer/order/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "分页获取调拨单列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.调拨单管理"
+                ],
+                "summary": "获取调拨单列表",
+                "parameters": [
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "description": "创建时间结束",
+                        "name": "create_time_end",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "description": "创建时间开始",
+                        "name": "create_time_start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "入库仓库ERP编码",
+                        "name": "in_warehouse_erp_code",
+                        "in": "query"
+                    },
+                    {
+                        "maxLength": 50,
+                        "type": "string",
+                        "description": "单据编号",
+                        "name": "order_no",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "description": "单据时间结束",
+                        "name": "order_time_end",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "description": "单据时间开始",
+                        "name": "order_time_start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "出库仓库ERP编码",
+                        "name": "out_warehouse_erp_code",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 1100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "每页大小",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "description": "状态筛选: 0-待提交 1-待审核 2-已驳回 3-待收货 4-已完成",
+                        "name": "status_in",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 2,
+                        "minimum": 0,
+                        "type": "integer",
+                        "description": "调拨类型: 1-调入 2-调出",
+                        "name": "transfer_type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.TransferOrderListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/transfer/order/log/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "分页获取调拨单的操作日志",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.调拨单管理"
+                ],
+                "summary": "获取调拨单操作日志列表",
+                "parameters": [
+                    {
+                        "description": "操作日志列表请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.TransferOrderLogListReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.TransferOrderLogListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/transfer/order/receive": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "确认收货完成调拨",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.调拨单管理"
+                ],
+                "summary": "收货调拨单",
+                "parameters": [
+                    {
+                        "description": "收货调拨单请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.TransferOrderReceiveReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/transfer/order/reject": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "驳回调拨单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.调拨单管理"
+                ],
+                "summary": "驳回调拨单",
+                "parameters": [
+                    {
+                        "description": "驳回调拨单请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.TransferOrderRejectReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/transfer/order/submit": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "提交调拨单进入审批流程",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.调拨单管理"
+                ],
+                "summary": "提交调拨单",
+                "parameters": [
+                    {
+                        "description": "提交调拨单请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.TransferOrderSubmitReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/transfer/order/update": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "更新调拨单信息（仅待提交状态可更新）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.调拨单管理"
+                ],
+                "summary": "更新调拨单",
+                "parameters": [
+                    {
+                        "description": "更新调拨单请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.TransferOrderUpdateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
                     }
                 }
             }
@@ -34136,6 +34831,52 @@ const docTemplate = `{
                     "description": "关键词, 仅商品名称模糊搜索",
                     "type": "string"
                 },
+                "page_no": {
+                    "description": "页码",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "page_size": {
+                    "description": "每页大小",
+                    "type": "integer",
+                    "maximum": 1100,
+                    "minimum": 1
+                },
+                "start_time": {
+                    "description": "查询开始时间戳",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.KitchenProductionDetailReq": {
+            "type": "object",
+            "properties": {
+                "category_uuids": {
+                    "description": "分类UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "end_time": {
+                    "description": "查询结束时间戳",
+                    "type": "integer"
+                },
+                "keyword": {
+                    "description": "关键词, 仅商品名称、内部编码模糊搜索",
+                    "type": "string"
+                },
+                "page_no": {
+                    "description": "页码",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "page_size": {
+                    "description": "每页大小",
+                    "type": "integer",
+                    "maximum": 1100,
+                    "minimum": 1
+                },
                 "start_time": {
                     "description": "查询开始时间戳",
                     "type": "integer"
@@ -38427,6 +39168,261 @@ const docTemplate = `{
                 "sale_order_uuid": {
                     "description": "销售订单ID。",
                     "type": "integer"
+                }
+            }
+        },
+        "req.TransferOrderApproveReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "remark": {
+                    "description": "审批备注",
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "uuid": {
+                    "description": "调拨单UUID",
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "req.TransferOrderCreateReq": {
+            "type": "object",
+            "required": [
+                "in_warehouse_erp_code",
+                "items",
+                "order_time",
+                "out_warehouse_erp_code",
+                "receiver_company_uuid",
+                "sender_company_uuid",
+                "transfer_type"
+            ],
+            "properties": {
+                "in_warehouse_erp_code": {
+                    "description": "入库仓库ERP编码",
+                    "type": "string",
+                    "minLength": 1
+                },
+                "items": {
+                    "description": "调拨明细",
+                    "type": "array",
+                    "maxItems": 500,
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/req.TransferOrderItemCreateReq"
+                    }
+                },
+                "order_time": {
+                    "description": "单据日期",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "out_warehouse_erp_code": {
+                    "description": "出库仓库ERP编码",
+                    "type": "string",
+                    "minLength": 1
+                },
+                "receiver_company_uuid": {
+                    "description": "收货门店UUID",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "remark": {
+                    "description": "备注",
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "sender_company_uuid": {
+                    "description": "发货门店UUID",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "transfer_type": {
+                    "description": "调拨类型: 1-调入 2-调出",
+                    "type": "integer",
+                    "maximum": 2,
+                    "minimum": 1
+                }
+            }
+        },
+        "req.TransferOrderDeleteReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "调拨单UUID",
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "req.TransferOrderItemCreateReq": {
+            "type": "object",
+            "required": [
+                "material_uuid",
+                "units"
+            ],
+            "properties": {
+                "material_uuid": {
+                    "description": "物品UUID",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "units": {
+                    "description": "单位列表",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/req.TransferOrderItemUnitCreateReq"
+                    }
+                }
+            }
+        },
+        "req.TransferOrderItemUnitCreateReq": {
+            "type": "object",
+            "required": [
+                "num",
+                "unit_uuid"
+            ],
+            "properties": {
+                "num": {
+                    "description": "调拨数量",
+                    "type": "number"
+                },
+                "unit_uuid": {
+                    "description": "单位UUID",
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "req.TransferOrderLogListReq": {
+            "type": "object",
+            "required": [
+                "transfer_order_uuid"
+            ],
+            "properties": {
+                "page_no": {
+                    "description": "页码",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "page_size": {
+                    "description": "每页大小",
+                    "type": "integer",
+                    "maximum": 1100,
+                    "minimum": 1
+                },
+                "transfer_order_uuid": {
+                    "description": "调拨单UUID",
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "req.TransferOrderReceiveReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "remark": {
+                    "description": "收货备注",
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "uuid": {
+                    "description": "调拨单UUID",
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "req.TransferOrderRejectReq": {
+            "type": "object",
+            "required": [
+                "reject_reason",
+                "uuid"
+            ],
+            "properties": {
+                "reject_reason": {
+                    "description": "驳回原因",
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                },
+                "uuid": {
+                    "description": "调拨单UUID",
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "req.TransferOrderSubmitReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "调拨单UUID",
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "req.TransferOrderUpdateReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "in_warehouse_erp_code": {
+                    "description": "入库仓库ERP编码",
+                    "type": "string"
+                },
+                "items": {
+                    "description": "调拨明细",
+                    "type": "array",
+                    "maxItems": 500,
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/req.TransferOrderItemCreateReq"
+                    }
+                },
+                "order_time": {
+                    "description": "单据日期",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "out_warehouse_erp_code": {
+                    "description": "出库仓库ERP编码",
+                    "type": "string"
+                },
+                "receiver_company_uuid": {
+                    "description": "收货门店UUID",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "remark": {
+                    "description": "备注",
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "sender_company_uuid": {
+                    "description": "发货门店UUID",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "uuid": {
+                    "description": "调拨单UUID",
+                    "type": "integer",
+                    "minimum": 1
                 }
             }
         },
@@ -44964,6 +45960,10 @@ const docTemplate = `{
                     "description": "制作完成时间",
                     "type": "integer"
                 },
+                "make_duration": {
+                    "description": "制作时长(秒)",
+                    "type": "integer"
+                },
                 "make_status": {
                     "description": "制作状态，0-默认，未制作完成，1-已制作完成，2-已恢复到制作中",
                     "type": "integer"
@@ -44991,6 +45991,10 @@ const docTemplate = `{
                 "remark": {
                     "description": "备注",
                     "type": "string"
+                },
+                "send_duration": {
+                    "description": "传菜时长(秒)",
+                    "type": "integer"
                 },
                 "serial_no": {
                     "description": "序列号",
@@ -47645,6 +48649,524 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.TransferOrderApprovalInfo": {
+            "type": "object",
+            "properties": {
+                "approval_company_name": {
+                    "description": "审批门店名称",
+                    "type": "string"
+                },
+                "approval_company_uuid": {
+                    "description": "审批门店UUID",
+                    "type": "integer"
+                },
+                "approval_type": {
+                    "description": "审批类型: initiator/sender/sender_parent/receiver_parent/receiver",
+                    "type": "string"
+                },
+                "approve_time": {
+                    "description": "审批时间",
+                    "type": "integer"
+                },
+                "approver_name": {
+                    "description": "审批人姓名",
+                    "type": "string"
+                },
+                "approver_uuid": {
+                    "description": "审批人UUID",
+                    "type": "integer"
+                },
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "is_required": {
+                    "description": "是否必须审批: 0-否 1-是",
+                    "type": "integer"
+                },
+                "reject_reason": {
+                    "description": "驳回原因",
+                    "type": "string"
+                },
+                "remark": {
+                    "description": "备注",
+                    "type": "string"
+                },
+                "sequence": {
+                    "description": "审批顺序",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "审批状态: 0-待审批 1-已通过 2-已驳回 3-已跳过",
+                    "type": "integer"
+                },
+                "transfer_order_uuid": {
+                    "description": "调拨单UUID",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "审批UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.TransferOrderApprovalListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "审批流程列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.TransferOrderApprovalInfo"
+                    }
+                }
+            }
+        },
+        "resp.TransferOrderCompanyItem": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "门店名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "门店UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.TransferOrderCompanyListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "门店列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.TransferOrderCompanyItem"
+                    }
+                }
+            }
+        },
+        "resp.TransferOrderCreateResp": {
+            "type": "object",
+            "properties": {
+                "order_no": {
+                    "description": "调拨单编号",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "调拨单UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.TransferOrderDetailResp": {
+            "type": "object",
+            "properties": {
+                "approvals": {
+                    "description": "审批流程",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.TransferOrderApprovalInfo"
+                    }
+                },
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "erp_order_no": {
+                    "description": "ERP调拨单号",
+                    "type": "string"
+                },
+                "in_warehouse_erp_code": {
+                    "description": "入库仓库ERP编码",
+                    "type": "string"
+                },
+                "in_warehouse_name": {
+                    "description": "入库仓库名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "item_count": {
+                    "description": "物品种类数量",
+                    "type": "integer"
+                },
+                "items": {
+                    "description": "调拨明细",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.TransferOrderItemInfo"
+                    }
+                },
+                "next_approval_company_name": {
+                    "description": "下一个审批门店名称",
+                    "type": "string"
+                },
+                "next_approval_company_uuid": {
+                    "description": "下一个审批门店UUID",
+                    "type": "integer"
+                },
+                "order_no": {
+                    "description": "单据编号",
+                    "type": "string"
+                },
+                "order_time": {
+                    "description": "单据日期",
+                    "type": "integer"
+                },
+                "out_warehouse_erp_code": {
+                    "description": "出库仓库ERP编码",
+                    "type": "string"
+                },
+                "out_warehouse_name": {
+                    "description": "出库仓库名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "receiver_company_name": {
+                    "description": "收货门店名称",
+                    "type": "string"
+                },
+                "receiver_company_uuid": {
+                    "description": "收货门店UUID",
+                    "type": "integer"
+                },
+                "remark": {
+                    "description": "备注",
+                    "type": "string"
+                },
+                "sender_company_name": {
+                    "description": "发货门店名称",
+                    "type": "string"
+                },
+                "sender_company_uuid": {
+                    "description": "发货门店UUID",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "状态: 0-待提交 1-待审核 2-已驳回 3-待收货 4-已完成",
+                    "type": "integer"
+                },
+                "submit_time": {
+                    "description": "提交时间",
+                    "type": "integer"
+                },
+                "transfer_type": {
+                    "description": "调拨类型: 1-调入 2-调出",
+                    "type": "integer"
+                },
+                "update_time": {
+                    "description": "更新时间",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "调拨单UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.TransferOrderInfo": {
+            "type": "object",
+            "properties": {
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "erp_order_no": {
+                    "description": "ERP调拨单号",
+                    "type": "string"
+                },
+                "in_warehouse_erp_code": {
+                    "description": "入库仓库ERP编码",
+                    "type": "string"
+                },
+                "in_warehouse_name": {
+                    "description": "入库仓库名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "item_count": {
+                    "description": "物品种类数量",
+                    "type": "integer"
+                },
+                "next_approval_company_name": {
+                    "description": "下一个审批门店名称",
+                    "type": "string"
+                },
+                "next_approval_company_uuid": {
+                    "description": "下一个审批门店UUID",
+                    "type": "integer"
+                },
+                "order_no": {
+                    "description": "单据编号",
+                    "type": "string"
+                },
+                "order_time": {
+                    "description": "单据日期",
+                    "type": "integer"
+                },
+                "out_warehouse_erp_code": {
+                    "description": "出库仓库ERP编码",
+                    "type": "string"
+                },
+                "out_warehouse_name": {
+                    "description": "出库仓库名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "receiver_company_name": {
+                    "description": "收货门店名称",
+                    "type": "string"
+                },
+                "receiver_company_uuid": {
+                    "description": "收货门店UUID",
+                    "type": "integer"
+                },
+                "remark": {
+                    "description": "备注",
+                    "type": "string"
+                },
+                "sender_company_name": {
+                    "description": "发货门店名称",
+                    "type": "string"
+                },
+                "sender_company_uuid": {
+                    "description": "发货门店UUID",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "状态: 0-待提交 1-待审核 2-已驳回 3-待收货 4-已完成",
+                    "type": "integer"
+                },
+                "submit_time": {
+                    "description": "提交时间",
+                    "type": "integer"
+                },
+                "transfer_type": {
+                    "description": "调拨类型: 1-调入 2-调出",
+                    "type": "integer"
+                },
+                "update_time": {
+                    "description": "更新时间",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "调拨单UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.TransferOrderItemInfo": {
+            "type": "object",
+            "properties": {
+                "material_code": {
+                    "description": "物品编码",
+                    "type": "string"
+                },
+                "material_internal_code": {
+                    "description": "物品内部编码",
+                    "type": "string"
+                },
+                "material_name": {
+                    "description": "物品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "material_uuid": {
+                    "description": "物品UUID",
+                    "type": "integer"
+                },
+                "units": {
+                    "description": "单位列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.TransferOrderItemUnitInfo"
+                    }
+                },
+                "uuid": {
+                    "description": "明细UUID",
+                    "type": "integer"
+                },
+                "valuation": {
+                    "description": "估值单价（基准单位）",
+                    "type": "number"
+                }
+            }
+        },
+        "resp.TransferOrderItemUnitInfo": {
+            "type": "object",
+            "properties": {
+                "erpnext_uom": {
+                    "description": "ERP单位",
+                    "type": "string"
+                },
+                "num": {
+                    "description": "调拨数量",
+                    "type": "number"
+                },
+                "unit_conversion_rate": {
+                    "description": "单位转换率",
+                    "type": "number"
+                },
+                "unit_name": {
+                    "description": "单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "unit_uuid": {
+                    "description": "单位UUID",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "明细单位UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.TransferOrderListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "调拨单列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.TransferOrderInfo"
+                    }
+                },
+                "meta": {
+                    "description": "分页信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.PageResponse"
+                        }
+                    ]
+                }
+            }
+        },
+        "resp.TransferOrderLogInfo": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "description": "操作动作: create/submit/approve/reject/receive",
+                    "type": "string"
+                },
+                "action_desc": {
+                    "description": "操作描述",
+                    "type": "string"
+                },
+                "content": {
+                    "description": "操作内容详情JSON",
+                    "type": "string"
+                },
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "new_status": {
+                    "description": "操作后状态",
+                    "type": "integer"
+                },
+                "old_status": {
+                    "description": "操作前状态",
+                    "type": "integer"
+                },
+                "operator_name": {
+                    "description": "操作人姓名",
+                    "type": "string"
+                },
+                "operator_role": {
+                    "description": "操作人角色",
+                    "type": "string"
+                },
+                "operator_uuid": {
+                    "description": "操作人UUID",
+                    "type": "integer"
+                },
+                "remark": {
+                    "description": "备注",
+                    "type": "string"
+                },
+                "transfer_order_uuid": {
+                    "description": "调拨单UUID",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "日志UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.TransferOrderLogListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "日志列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.TransferOrderLogInfo"
+                    }
+                },
+                "meta": {
+                    "description": "分页信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.PageResponse"
+                        }
+                    ]
+                }
+            }
+        },
+        "resp.TransferOrderWarehouseItem": {
+            "type": "object",
+            "properties": {
+                "erp_code": {
+                    "description": "仓库ERP编码",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "仓库名称（多语言）",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "type": {
+                    "description": "仓库类型",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.TransferOrderWarehouseListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "仓库列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.TransferOrderWarehouseItem"
+                    }
+                }
+            }
+        },
         "resp.UnprocessedAbnormalPrint": {
             "type": "object",
             "properties": {
@@ -49089,6 +50611,14 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/setting.GiftMethodItem"
                     }
+                },
+                "headquarter_required_parent_company_approval": {
+                    "description": "总部调拨规则-经过上级门店审批 \"0\"-否 \"1\"-是",
+                    "type": "string"
+                },
+                "headquarter_via_parent_company_warehouse": {
+                    "description": "总部调拨规则-经过上级门店仓库 \"0\"-否 \"1\"-是",
+                    "type": "string"
                 },
                 "is_batch": {
                     "description": "分批商品相关",

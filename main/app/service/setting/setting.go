@@ -1979,11 +1979,26 @@ func (s *Srv) GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness,
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
 
+	var headquarterRequiredParentCompanyApproval, headquarterViaParentCompanyWarehouse string
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.HeadquarterUuid > 0 {
+		ctx2 := ctx.Copy()
+		ctx2.SetCompanyUuid(companySetting.HeadquarterUuid)
+		headquarterBusinessSetting, err := s.GetBusinessSetting(ctx2)
+		if err != nil {
+			return setting.ShopBusiness{}, errors.WithMessage(err)
+		}
+		headquarterRequiredParentCompanyApproval = headquarterBusinessSetting.RequiredParentCompanyApproval
+		headquarterViaParentCompanyWarehouse = headquarterBusinessSetting.ViaParentCompanyWarehouse
+	}
+
 	return setting.ShopBusiness{
-		Business:              businessSetting,
-		FreeReasonCount:       int(freeReasonCount),
-		ReturnFoodReasonCount: int(returnFoodReasonCount),
-		OrderRemarkCount:      int(orderRemarkCount),
+		Business:                                 businessSetting,
+		FreeReasonCount:                          int(freeReasonCount),
+		ReturnFoodReasonCount:                    int(returnFoodReasonCount),
+		OrderRemarkCount:                         int(orderRemarkCount),
+		HeadquarterRequiredParentCompanyApproval: headquarterRequiredParentCompanyApproval,
+		HeadquarterViaParentCompanyWarehouse:     headquarterViaParentCompanyWarehouse,
 	}, nil
 }
 

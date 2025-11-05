@@ -41,6 +41,9 @@ type ShopBusiness struct {
 	FreeReasonCount       int `json:"free_reason_count"`        // 免单原因数量
 	ReturnFoodReasonCount int `json:"return_food_reason_count"` // 退菜原因数量
 	OrderRemarkCount      int `json:"order_remark_count"`       // 整单备注原因数量
+
+	HeadquarterRequiredParentCompanyApproval string `json:"headquarter_required_parent_company_approval"` // 总部调拨规则-经过上级门店审批 "0"-否 "1"-是
+	HeadquarterViaParentCompanyWarehouse     string `json:"headquarter_via_parent_company_warehouse"`     // 总部调拨规则-经过上级门店仓库 "0"-否 "1"-是
 }
 
 // 是否开启了分批送厨商品
