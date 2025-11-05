@@ -304,3 +304,22 @@ type KitchenEfficiencyAnalysisItem struct {
 type BusinessDataKitchenEfficiencyAnalysisAvg struct {
 	Avg int `json:"avg"` // 平均出品时长,单位:秒
 }
+
+type KitchenProductionDetail struct {
+	Meta dto.PageResponse              `json:"meta"` // 元数据
+	List []KitchenProductionDetailItem `json:"list"` // 后厨菜品出品明细
+}
+
+// 后厨菜品出品明细 - 单条
+type KitchenProductionDetailItem struct {
+	ProductName    dto.LocaleResponse `json:"product_name"`     // 商品名称
+	FlavorName     dto.LocaleResponse `json:"flavor_name"`      // 规格名称
+	CategoryName   dto.LocaleResponse `json:"category_name"`    // 分类名称
+	Number         int                `json:"number"`           // 完成数量
+	CreateTime     int64              `json:"create_time"`      // 下单时间
+	MakeFinishTime int64              `json:"make_finish_time"` // 制作完成时间
+	MakeDuration   int64              `json:"make_duration"`    // 制作时长,单位:秒
+	SendFinishTime int64              `json:"send_finish_time"` // 传菜完成时间
+	SendDuration   int64              `json:"send_duration"`    // 传菜时长,单位:秒
+	AllDuration    int64              `json:"all_duration"`     // 总时长,单位:秒
+}

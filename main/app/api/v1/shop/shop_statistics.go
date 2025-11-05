@@ -340,6 +340,31 @@ func (h *statisticsHandler) CountKitchenEfficiencyAnalysisAvg(c *gin.Context) {
 	helper.Success(c, kitchenEfficiencyAnalysisAvgData)
 }
 
+// CountKitchenProductionDetail 统计后厨菜品出品明细
+// @Summary 统计后厨菜品出品明细
+// @Description 统计后厨菜品出品明细
+// @Tags 商家端.营业数据
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.KitchenProductionDetailReq true "统计参数"
+// @Success 200 {object} dto.Response{data=business_data_resp.BusinessDataKitchenProductionDetail} "统计数据"
+// @Router /shop/statistics/kitchen/production_detail [get]
+func (h *statisticsHandler) CountKitchenProductionDetail(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var countReq req.KitchenProductionDetailReq
+	if err := c.ShouldBindQuery(&countReq); err != nil {
+		helper.HandleValidationError(c, err, countReq, nil)
+		return
+	}
+	kitchenProductionDetailData, err := h.businessSrv.CountKitchenProductionDetail(ctx, countReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, kitchenProductionDetailData)
+}
+
 func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -372,5 +397,6 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 		privateApi.GET("/statistics/home", wrapper.CountHome)                                                    // 统计首页
 		privateApi.GET("/statistics/kitchen/efficiency_analysis", wrapper.CountKitchenEfficiencyAnalysis)        // 统计后厨效率分析
 		privateApi.GET("/statistics/kitchen/efficiency_analysis/avg", wrapper.CountKitchenEfficiencyAnalysisAvg) // 统计后厨效率分析平均时长
+		privateApi.GET("/statistics/kitchen/production_detail", wrapper.CountKitchenProductionDetail)            // 后厨菜品出品明细
 	}
 }

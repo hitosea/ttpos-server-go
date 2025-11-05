@@ -136,3 +136,12 @@ type KitchenEfficiencyAnalysisAvgReq struct {
 	StartTime int64 `form:"start_time" json:"start_time"` // 查询开始时间戳
 	EndTime   int64 `form:"end_time" json:"end_time"`     // 查询结束时间戳
 }
+
+// KitchenProductionDetailReq 统计后厨菜品出品明细请求
+type KitchenProductionDetailReq struct {
+	dto.PageReq            // 分页参数
+	StartTime     int64    `form:"start_time" json:"start_time"`         // 查询开始时间戳
+	EndTime       int64    `form:"end_time" json:"end_time"`             // 查询结束时间戳
+	Keyword       string   `form:"keyword" json:"keyword"`               // 关键词, 仅商品名称、内部编码模糊搜索
+	CategoryUuids []uint64 `form:"category_uuids" json:"category_uuids"` // 分类UUID列表
+}
