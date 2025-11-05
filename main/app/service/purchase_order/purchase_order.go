@@ -231,7 +231,7 @@ func (s *purchaseOrderSrv) GetPurchaseOrderDetail(
 		// 单位列表
 		itemInfo.Units = func(item model.PurchaseOrderItem) []resp.PurchaseOrderItemUnit {
 			unitList := []resp.PurchaseOrderItemUnit{}
-			if len(item.Units) == 0 {
+			if len(item.Units) == 0 && item.BaseUnitUuid != 0 {
 				unitList = append(unitList, resp.PurchaseOrderItemUnit{
 					Num:        item.Num,
 					ArrivalNum: item.ArrivalNum,
@@ -963,7 +963,7 @@ func (s *purchaseOrderSrv) handleInternalPurchaseErp(
 	// 构建物料请求项
 	stockItems := make([]*stock.MaterialRequestItem, 0, len(purchaseOrder.Items))
 	for _, item := range purchaseOrder.Items {
-		if len(item.Units) == 0 {
+		if len(item.Units) == 0 && item.BaseUnitUuid != 0 {
 			if item.Num <= 0 {
 				continue
 			}
@@ -1056,7 +1056,7 @@ func (s *purchaseOrderSrv) handleExternalPurchaseErp(
 	stockItems := make([]*buying.PurchaseOrderItemInput, 0, len(purchaseOrder.Items))
 	for _, item := range purchaseOrder.Items {
 		actualNum := 0.0
-		if len(item.Units) == 0 {
+		if len(item.Units) == 0 && item.BaseUnitUuid != 0 {
 			// 获取实际数量
 			actualNum = item.GetConversionRateNum()
 			if actualNum <= 0 {

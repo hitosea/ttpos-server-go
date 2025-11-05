@@ -40,11 +40,6 @@ class Unit extends UnitModel
             $this->error = '单位名称不能为空';
             return false;
         }
-        $isExist = $this->where('name', '=', $data['unit_name'])->count();
-        if ($isExist) {
-            $this->error = '名称已存在';
-            return false;
-        }
         // 获取当前最大的排序值
         $maxSort = $this->where('uuid', '<>', $this['uuid'])->max('sort');
         $data['sort'] = $maxSort + 1;
@@ -62,13 +57,6 @@ class Unit extends UnitModel
     {
         if (ValidateHelp::hasEmptyValue($data['unit_name'] ?? '')) {
             $this->error = '单位名称不能为空';
-            return false;
-        }
-        $isExist = $this->where('name', '=', $data['unit_name'])
-            ->where('uuid', '<>', $this['uuid'])
-            ->count();
-        if ($isExist) {
-            $this->error = '名称已存在';
             return false;
         }
         //

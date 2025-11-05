@@ -70,11 +70,6 @@ class Feed extends FeedModel
             $this->error = '加料名称不能为空';
             return false;
         }
-        $isExist = $this->where('name', '=', $data['feed_name'])->count();
-        if ($isExist) {
-            $this->error = '名称已存在';
-            return false;
-        }
         //
         $this->startTrans();
         try {
@@ -111,13 +106,6 @@ class Feed extends FeedModel
     {
         if (ValidateHelp::hasEmptyValue($data['feed_name'] ?? '')) {
             $this->error = '加料名称不能为空';
-            return false;
-        }
-        $isExist = $this->where('name', '=', $data['feed_name'])
-            ->where('uuid', '<>', $this['uuid'])
-            ->count();
-        if ($isExist) {
-            $this->error = '名称已存在';
             return false;
         }
         //

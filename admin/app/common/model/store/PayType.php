@@ -276,10 +276,6 @@ class PayType extends BaseModel
             $this->error = '请输入名称';
             return false;
         }
-        if ($this->checkNameExist($remark, $param['shop_supplier_id'])) {
-            $this->error = '支付名称已存在';
-            return false;
-        }
         if (!($param['name'] ?? '')) {
             $this->error = '请输入支付方式';
             return false;

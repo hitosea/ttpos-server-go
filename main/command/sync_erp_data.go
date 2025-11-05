@@ -10,6 +10,7 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/service/rpc/message"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
@@ -138,9 +139,10 @@ var syncErpDataCmd = &cobra.Command{
 		localeSrv := service.NewLocaleSrv()
 		settingSrv := setting.NewSrv(dbm, cache)
 		translateSrv := service.NewTranslateSrv(dbm, cache)
+		messageSrv := message.NewIMessageSrv(dbm)
 		supplierSrv := service.NewSupplierSrv(dbm)
 		productSrv := service.NewProductSrv(dbm, localeSrv, settingSrv, cache, translateSrv)
-		materialSrv := service.NewMaterialSrv(dbm, localeSrv, settingSrv, translateSrv)
+		materialSrv := service.NewMaterialSrv(dbm, localeSrv, settingSrv, translateSrv, messageSrv)
 		warehouseSrv := service.NewWarehouseSrv(dbm, settingSrv, materialSrv, translateSrv)
 		syncSrv := service.NewSyncSrv(dbm, warehouseSrv, supplierSrv, productSrv, materialSrv)
 

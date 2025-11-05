@@ -25699,6 +25699,108 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/statistics/kitchen/efficiency_analysis": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "统计后厨效率分析",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.营业数据"
+                ],
+                "summary": "统计后厨效率分析",
+                "parameters": [
+                    {
+                        "description": "统计参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.KitchenEfficiencyAnalysisReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "统计数据",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/business_data_resp.BusinessDataKitchenEfficiencyAnalysis"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/statistics/kitchen/efficiency_analysis/avg": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "统计后厨效率分析平均时长",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.营业数据"
+                ],
+                "summary": "统计后厨效率分析平均时长",
+                "parameters": [
+                    {
+                        "description": "统计参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.KitchenEfficiencyAnalysisAvgReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "统计数据",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/business_data_resp.BusinessDataKitchenEfficiencyAnalysisAvg"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/statistics/payment_method": {
             "get": {
                 "security": [
@@ -29142,6 +29244,35 @@ const docTemplate = `{
                 }
             }
         },
+        "business_data_resp.BusinessDataKitchenEfficiencyAnalysis": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "后厨效率分析",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/business_data_resp.KitchenEfficiencyAnalysisItem"
+                    }
+                },
+                "meta": {
+                    "description": "元数据",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.PageResponse"
+                        }
+                    ]
+                }
+            }
+        },
+        "business_data_resp.BusinessDataKitchenEfficiencyAnalysisAvg": {
+            "type": "object",
+            "properties": {
+                "avg": {
+                    "description": "平均出品时长,单位:秒",
+                    "type": "integer"
+                }
+            }
+        },
         "business_data_resp.BusinessDataPaymentMethod": {
             "type": "object",
             "properties": {
@@ -29252,6 +29383,39 @@ const docTemplate = `{
                 "sales_num": {
                     "description": "销售数量",
                     "type": "number"
+                }
+            }
+        },
+        "business_data_resp.KitchenEfficiencyAnalysisItem": {
+            "type": "object",
+            "properties": {
+                "avg": {
+                    "description": "平均出品时长",
+                    "type": "integer"
+                },
+                "category_name": {
+                    "description": "分类名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "max": {
+                    "description": "最长出品时长",
+                    "type": "integer"
+                },
+                "min": {
+                    "description": "最短出品时长",
+                    "type": "integer"
+                },
+                "product_name": {
+                    "description": "商品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
                 }
             }
         },
@@ -33938,6 +34102,43 @@ const docTemplate = `{
                 "remark": {
                     "description": "备注",
                     "type": "string"
+                }
+            }
+        },
+        "req.KitchenEfficiencyAnalysisAvgReq": {
+            "type": "object",
+            "properties": {
+                "end_time": {
+                    "description": "查询结束时间戳",
+                    "type": "integer"
+                },
+                "start_time": {
+                    "description": "查询开始时间戳",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.KitchenEfficiencyAnalysisReq": {
+            "type": "object",
+            "properties": {
+                "category_uuids": {
+                    "description": "分类UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "end_time": {
+                    "description": "查询结束时间戳",
+                    "type": "integer"
+                },
+                "keyword": {
+                    "description": "关键词, 仅商品名称模糊搜索",
+                    "type": "string"
+                },
+                "start_time": {
+                    "description": "查询开始时间戳",
+                    "type": "integer"
                 }
             }
         },

@@ -1955,6 +1955,12 @@ func (s *Srv) EditBusinessSetting(ctx context.Context, businessSettingReq req.Up
 		})
 	})
 
+	// 将本店非当前安全库存类型的预警记录删除
+	err = s.dbm.GetDB(companyUuid).Model(&model.MaterialStockAlertLog{}).Where("alert_type != ?", businessSetting.SafetyStockType).Update("delete_time", time.Now().Unix()).Error
+	if err != nil {
+		logger.Logger.Error("删除本店非当前安全库存类型的预警记录失败", zap.Error(err))
+	}
+
 	return nil
 }
 

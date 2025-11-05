@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 	"ttpos-bmp/app/ttpos-erp/api/manufacturing"
+	v1 "ttpos-bmp/app/ttpos-message/api/message"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -17,6 +18,7 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/service/rpc/erp"
+	"ttpos-server-go/app/service/rpc/message"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
@@ -101,19 +103,21 @@ type materialSrv struct {
 	translateSrv ITranslateSrv       // 翻译服务
 	localeSrv    ILocaleSrv          // 多语言名称服务
 	settingSrv   setting.ISrv        // 设置服务
+	messageSrv   message.IMessageSrv // 消息服务
 	systemLock   lock.Lock           // 系统锁
 }
 
-func NewMaterialSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, translateSrv ITranslateSrv) IMaterialSrv {
-	return NewMaterialSrvImpl(dbm, localeSrv, settingSrv, translateSrv)
+func NewMaterialSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, translateSrv ITranslateSrv, messageSrv message.IMessageSrv) IMaterialSrv {
+	return NewMaterialSrvImpl(dbm, localeSrv, settingSrv, translateSrv, messageSrv)
 }
 
-func NewMaterialSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, translateSrv ITranslateSrv) IMaterialSrv {
+func NewMaterialSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, translateSrv ITranslateSrv, messageSrv message.IMessageSrv) IMaterialSrv {
 	return &materialSrv{
 		dbm:          dbm,
 		translateSrv: translateSrv,
 		localeSrv:    localeSrv,
 		settingSrv:   settingSrv,
+		messageSrv:   messageSrv,
 		systemLock:   lock.NewSystemLock(),
 	}
 }
@@ -154,7 +158,6 @@ func (s *materialSrv) GetMaterialList(ctx context.Context, req req.MaterialListR
 	}
 
 	// WarehouseErpCode 根据仓库ERP编码过滤
-	// FIXME: 没有看到产品说按仓库，现在只先按是否同步物品进行
 	if req.PurchaseType == 2 {
 		dbOptions = append(dbOptions, commonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
 			return db.Where("headquarter_uuid > ?", 0)
@@ -3603,21 +3606,256 @@ func (s *materialSrv) CheckMaterialSafetyStock(ctx context.Context, companyUuid 
 	return nil
 }
 
+type SendParams struct {
+	CompanyUuid   uint64
+	CompanyName   string
+	MaterialUuid  uint64
+	MaterialName  string
+	WarehouseUuid uint64
+	WarehouseName string
+	CurrentStock  float64
+	SafetyStock   float64
+	MaterialUnit  string
+	TriggerTime   time.Time
+}
+
+// sendStockAlertEmail 发送库存预警邮件（带重试机制）
+// 参数：
+//   - ctx: 上下文
+//   - alertType: 预警类型
+//   - sendReq: 发送参数
+func (s *materialSrv) sendStockAlertEmail(ctx context.Context, alertType uint8, sendReq *SendParams) {
+	// 获取预警记录repository
+	alertLogRepo := repository.NewMaterialStockAlertLogRepo(s.dbm.GetDB(sendReq.CompanyUuid))
+
+	// 判断是否需要发送预警邮件
+	shouldSend, existingLog, err := alertLogRepo.ShouldSendAlert(sendReq.CompanyUuid, sendReq.MaterialUuid, sendReq.WarehouseUuid)
+	if err != nil {
+		logger.Logger.Error("检查是否需要发送预警邮件失败",
+			zap.Uint64("company_uuid", sendReq.CompanyUuid),
+			zap.Uint64("material_uuid", sendReq.MaterialUuid),
+			zap.Uint64("warehouse_uuid", sendReq.WarehouseUuid),
+			zap.Error(err),
+		)
+		return
+	}
+
+	if !shouldSend {
+		logger.Logger.Info("24小时内已发送过预警邮件，跳过",
+			zap.Uint64("company_uuid", sendReq.CompanyUuid),
+			zap.Uint64("material_uuid", sendReq.MaterialUuid),
+			zap.Uint64("warehouse_uuid", sendReq.WarehouseUuid),
+		)
+		return
+	}
+
+	// 获取收件人邮箱（从设置中获取，这里暂时使用配置，实际应从数据库获取）
+	recipient := s.getStockAlertRecipient(ctx, sendReq.CompanyUuid)
+	if recipient == "" {
+		logger.Logger.Warn("未配置库存预警邮箱，跳过发送",
+			zap.Uint64("company_uuid", sendReq.CompanyUuid),
+		)
+		return
+	}
+
+	triggerTime := sendReq.TriggerTime.Format("15:04, January 2, 2006")
+	triggerDate := sendReq.TriggerTime.Format("January 2, 2006")
+	// 准备邮件内容
+	var subject, messageArgs, templateUuid string
+	if sendReq.WarehouseUuid == 0 { // 公司维度
+		templateUuid = constant.TplCompanySafetyStockAlert
+		messageArgs = fmt.Sprintf(`{"company":"%s","material":"%s","current_stock":"%s %s","safety_stock":"%s %s","time":"%s","date":"%s"}`,
+			sendReq.CompanyName, sendReq.MaterialName, utils.FormatFloat(sendReq.CurrentStock), sendReq.MaterialUnit, utils.FormatFloat(sendReq.SafetyStock), sendReq.MaterialUnit, triggerTime, triggerDate)
+		subject = fmt.Sprintf("[Alert] %s - Insufficient Safety Stock of %s!", sendReq.CompanyName, sendReq.MaterialName)
+	} else {
+		templateUuid = constant.TplWarehouseSafetyStockAlert // 仓库维度
+		messageArgs = fmt.Sprintf(`{"company":"%s","material":"%s","warehouse":"%s","current_stock":"%s %s","safety_stock":"%s %s","time":"%s","date":"%s"}`,
+			sendReq.CompanyName, sendReq.MaterialName, sendReq.WarehouseName, utils.FormatFloat(sendReq.CurrentStock), sendReq.MaterialUnit, utils.FormatFloat(sendReq.SafetyStock), sendReq.MaterialUnit, triggerTime, triggerDate)
+		subject = fmt.Sprintf("[Alert] %s - %s - Insufficient Safety Stock of %s!", sendReq.CompanyName, sendReq.WarehouseName, sendReq.MaterialName)
+	}
+
+	messageUuid, _ := utils.GetID()
+	// 构建发送请求
+	sendMessageReq := &v1.SendMessageReq{
+		MessageUuid:  strconv.FormatUint(messageUuid, 10),
+		TemplateUuid: templateUuid,
+		MessageArgs:  messageArgs,
+		MessageType:  "email",
+		Recipient:    recipient,
+		Subject:      subject,
+		CompanyUuid:  strconv.FormatUint(sendReq.CompanyUuid, 10),
+		OperatorUuid: recipient,
+	}
+
+	// 尝试发送邮件，失败时重试2次（共3次）
+	maxRetries := 2
+	var lastErr error
+	sendSuccess := false
+
+	for i := 0; i <= maxRetries; i++ {
+		if i > 0 {
+			logger.Logger.Info("重试发送库存预警邮件",
+				zap.Uint64("company_uuid", sendReq.CompanyUuid),
+				zap.Uint64("material_uuid", sendReq.MaterialUuid),
+				zap.Uint64("warehouse_uuid", sendReq.WarehouseUuid),
+				zap.Int("retry_count", i),
+			)
+			time.Sleep(time.Second * 2) // 重试前等待2秒
+		}
+
+		_, err = s.messageSrv.SendMessage(ctx.GetContext(), sendMessageReq)
+		if err == nil {
+			sendSuccess = true
+			logger.Logger.Info("库存预警邮件发送成功",
+				zap.Uint64("company_uuid", sendReq.CompanyUuid),
+				zap.Uint64("material_uuid", sendReq.MaterialUuid),
+				zap.Uint64("warehouse_uuid", sendReq.WarehouseUuid),
+				zap.String("material_name", sendReq.MaterialName),
+				zap.String("recipient", recipient),
+			)
+			break
+		}
+
+		lastErr = err
+		logger.Logger.Warn("库存预警邮件发送失败",
+			zap.Uint64("company_uuid", sendReq.CompanyUuid),
+			zap.Uint64("material_uuid", sendReq.MaterialUuid),
+			zap.Uint64("warehouse_uuid", sendReq.WarehouseUuid),
+			zap.Int("retry_count", i),
+			zap.Error(err),
+		)
+	}
+
+	// 创建或更新预警记录
+	now := uint64(time.Now().Unix())
+	if existingLog == nil {
+		// 创建新记录
+		newLog := &model.MaterialStockAlertLog{
+			CompanyUuid:   sendReq.CompanyUuid,
+			MessageUuid:   messageUuid,
+			MaterialUuid:  sendReq.MaterialUuid,
+			WarehouseUuid: sendReq.WarehouseUuid,
+			AlertType:     alertType,
+			CurrentStock:  sendReq.CurrentStock,
+			SafetyStock:   sendReq.SafetyStock,
+			LastAlertTime: now,
+			AlertCount:    1,
+			Recipient:     recipient,
+		}
+
+		if sendSuccess {
+			newLog.SendStatus = model.SendStatusSuccess
+		} else {
+			newLog.SendStatus = model.SendStatusFailed
+			if lastErr != nil {
+				newLog.ErrorMessage = lastErr.Error()
+			}
+		}
+
+		err = alertLogRepo.CreateAlertLog(newLog)
+		if err != nil {
+			logger.Logger.Error("创建预警记录失败",
+				zap.Uint64("company_uuid", sendReq.CompanyUuid),
+				zap.Uint64("material_uuid", sendReq.MaterialUuid),
+				zap.Uint64("warehouse_uuid", sendReq.WarehouseUuid),
+				zap.Error(err),
+			)
+		}
+	} else {
+		// 更新现有记录
+		existingLog.CurrentStock = sendReq.CurrentStock
+		existingLog.SafetyStock = sendReq.SafetyStock
+		existingLog.LastAlertTime = now
+		existingLog.AlertCount++
+		existingLog.Recipient = recipient
+		existingLog.MessageUuid = messageUuid
+
+		if sendSuccess {
+			existingLog.SendStatus = model.SendStatusSuccess
+			existingLog.ErrorMessage = ""
+		} else {
+			existingLog.SendStatus = model.SendStatusFailed
+			if lastErr != nil {
+				existingLog.ErrorMessage = lastErr.Error()
+			}
+		}
+
+		err = alertLogRepo.UpdateAlertLog(existingLog)
+		if err != nil {
+			logger.Logger.Error("更新预警记录失败",
+				zap.Uint64("company_uuid", sendReq.CompanyUuid),
+				zap.Uint64("material_uuid", sendReq.MaterialUuid),
+				zap.Uint64("warehouse_uuid", sendReq.WarehouseUuid),
+				zap.Error(err),
+			)
+		}
+	}
+}
+
+// getStockAlertRecipient 获取库存预警邮件收件人
+// 从staff表中查询is_super=1的记录，获取user_name字段（邮箱）
+func (s *materialSrv) getStockAlertRecipient(ctx context.Context, companyUuid uint64) string {
+	// 获取数据库连接
+	db := s.dbm.GetDB(companyUuid)
+	staffRepo := repository.NewStaffRepo(db)
+
+	// 查询该公司所有is_super=1的员工
+	staffs := staffRepo.GetStaffs(
+		staffRepo.WhereIsSuper(1),
+	)
+
+	if len(staffs) == 0 {
+		logger.Logger.Warn("未找到超级管理员，无法获取预警邮箱",
+			zap.Uint64("company_uuid", companyUuid),
+		)
+		return ""
+	}
+
+	// 收集所有超级管理员的邮箱（Username字段存储邮箱）
+	var emails []string
+	for _, staff := range staffs {
+		if staff.Username != "" {
+			emails = append(emails, staff.Username)
+		}
+	}
+
+	if len(emails) == 0 {
+		logger.Logger.Warn("超级管理员的邮箱为空",
+			zap.Uint64("company_uuid", companyUuid),
+		)
+		return ""
+	}
+
+	return emails[0]
+}
+
 // checkCompanySafetyStock 检查单个公司的物料安全库存
 func (s *materialSrv) checkCompanySafetyStock(ctx context.Context, companyUuid uint64) error {
 	// 设置上下文信息
 	ctx.SetCompanyUuid(companyUuid)
 	ctx.SetLog(logger.Logger)
 
-	// 获取公司默认语言
-	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(companyUuid))
-	companySetting := companySettingRepo.Get()
+	company, err := repository.NewCompanyRepo(s.dbm.GetDB(companyUuid)).GetCompanyInfoByUuid(companyUuid)
+	if err != nil {
+		return errors.WithMessage(err, "查询公司信息失败")
+	}
+	companySetting := company.CompanySetting
+	if companySetting == nil {
+		return errors.WithMessage(errors.New("公司设置为空"), "公司设置为空")
+	}
+
+	tz := utils.SetTimezone(companySetting.GetTimezone())
+	now := tz.Now()
+
 	defaultLanguage := companySetting.GetDefaultLanguage()
+	companyName := company.Name
 
 	// 检查是否有safety_stock不为空的物品
 	materialRepo := repository.NewMaterialRepo(s.dbm.GetDB(companyUuid))
 	materialList := materialRepo.GetMaterialList(repository.NotDeleted, materialRepo.WithMultiLanguageName(), func(db *gorm.DB) *gorm.DB {
 		return db.Where("safety_stock IS NOT NULL")
+	}, func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Unit")
 	})
 	if len(materialList) == 0 {
 		return nil
@@ -3635,8 +3873,9 @@ func (s *materialSrv) checkCompanySafetyStock(ctx context.Context, companyUuid u
 		materialUuids = append(materialUuids, material.Uuid)
 	}
 
-	// 创建仓库物品repository
+	// 创建仓库物品repository和预警记录repository
 	warehouseItemRepo := repository.NewWarehouseItemRepo(s.dbm.GetDB(companyUuid))
+	alertLogRepo := repository.NewMaterialStockAlertLogRepo(s.dbm.GetDB(companyUuid))
 
 	if businessSetting.SafetyStockType == "1" { // 门店维度
 		// 获取所有物料在非在途仓库中的总库存
@@ -3647,6 +3886,19 @@ func (s *materialSrv) checkCompanySafetyStock(ctx context.Context, companyUuid u
 
 		// 检查每个物料的库存是否低于安全库存
 		for _, material := range materialList {
+			unit := material.Unit
+			var unitName string
+			if unit != nil {
+				unitName = model.NewMultiLanguageName(unit.Name).GetNames().EN
+				if unitName == "" {
+					unitName = model.NewMultiLanguageName(unit.Name).GetNameByLang(defaultLanguage)
+				}
+			}
+			materialName := material.MultiLanguageName.GetNames().EN
+			if materialName == "" {
+				materialName = material.MultiLanguageName.GetNameByLang(defaultLanguage)
+			}
+
 			totalStock := stockMap[material.Uuid] // 如果没有记录，默认为0
 			if material.SafetyStock != nil && totalStock < *material.SafetyStock {
 				// 库存低于安全库存，记录日志
@@ -3658,7 +3910,33 @@ func (s *materialSrv) checkCompanySafetyStock(ctx context.Context, companyUuid u
 					zap.Float64("safety_stock", *material.SafetyStock),
 				)
 
-				// TODO: 可以在这里添加其他处理，如发送通知、创建预警等
+				// 发送库存预警邮件（异步）
+				utils.Go(func() {
+					s.sendStockAlertEmail(
+						ctx.Copy(),
+						model.AlertTypeCompany,
+						&SendParams{
+							CompanyUuid:  companyUuid,
+							CompanyName:  companyName,
+							MaterialUuid: material.Uuid,
+							MaterialName: materialName,
+							CurrentStock: totalStock,
+							SafetyStock:  *material.SafetyStock,
+							MaterialUnit: unitName,
+							TriggerTime:  now,
+						},
+					)
+				})
+			} else if material.SafetyStock != nil && totalStock >= *material.SafetyStock {
+				// 库存已恢复正常，清除预警记录
+				err := alertLogRepo.ClearAlertLog(companyUuid, material.Uuid, 0)
+				if err != nil {
+					logger.Logger.Error("清除预警记录失败",
+						zap.Uint64("company_uuid", companyUuid),
+						zap.Uint64("material_uuid", material.Uuid),
+						zap.Error(err),
+					)
+				}
 			}
 		}
 
@@ -3678,10 +3956,42 @@ func (s *materialSrv) checkCompanySafetyStock(ctx context.Context, companyUuid u
 			stockByWarehouseMap[result.MaterialUuid][result.WarehouseUuid] = result.Stock
 		}
 
+		warehouseNameMap := make(map[uint64]string)
 		// 检查每个物料在每个仓库的库存是否低于安全库存
 		for _, material := range materialList {
+			unit := material.Unit
+			var unitName string
+			if unit != nil {
+				unitName = model.NewMultiLanguageName(unit.Name).GetNames().EN
+				if unitName == "" {
+					unitName = model.NewMultiLanguageName(unit.Name).GetNameByLang(defaultLanguage)
+				}
+			}
+
+			materialName := material.MultiLanguageName.GetNames().EN
+			if materialName == "" {
+				materialName = material.MultiLanguageName.GetNameByLang(defaultLanguage)
+			}
 			warehouseStocks := stockByWarehouseMap[material.Uuid]
 			for warehouseUuid, stock := range warehouseStocks {
+				warehouseName, exists := warehouseNameMap[warehouseUuid]
+				if !exists {
+					var warehouse model.Warehouse
+					err := s.dbm.GetDB(companyUuid).Model(&model.Warehouse{}).Preload("MultiLanguageName").Where("uuid = ?", warehouseUuid).Find(&warehouse).Error
+					if err != nil {
+						logger.Logger.Error("查询仓库失败",
+							zap.Uint64("company_uuid", companyUuid),
+							zap.Uint64("warehouse_uuid", warehouseUuid),
+							zap.Error(err),
+						)
+						continue
+					}
+					warehouseName = warehouse.MultiLanguageName.GetNames().EN
+					if warehouseName == "" {
+						warehouseName = warehouse.MultiLanguageName.GetNameByLang(defaultLanguage)
+					}
+					warehouseNameMap[warehouseUuid] = warehouseName
+				}
 				if material.SafetyStock != nil && stock < *material.SafetyStock {
 					// 库存低于安全库存，记录日志
 					logger.Logger.Warn("物料仓库库存低于安全库存",
@@ -3692,8 +4002,36 @@ func (s *materialSrv) checkCompanySafetyStock(ctx context.Context, companyUuid u
 						zap.Float64("current_stock", stock),
 						zap.Float64("safety_stock", *material.SafetyStock),
 					)
-
-					// TODO: 可以在这里添加其他处理，如发送通知、创建预警等
+					// 发送库存预警邮件（异步）
+					utils.Go(func() {
+						s.sendStockAlertEmail(
+							ctx.Copy(),
+							model.AlertTypeWarehouse,
+							&SendParams{
+								CompanyUuid:   companyUuid,
+								CompanyName:   companyName,
+								MaterialUuid:  material.Uuid,
+								MaterialName:  materialName,
+								WarehouseUuid: warehouseUuid,
+								WarehouseName: warehouseName,
+								CurrentStock:  stock,
+								SafetyStock:   *material.SafetyStock,
+								MaterialUnit:  unitName,
+								TriggerTime:   now,
+							},
+						)
+					})
+				} else if material.SafetyStock != nil && stock >= *material.SafetyStock {
+					// 库存已恢复正常，清除预警记录
+					err := alertLogRepo.ClearAlertLog(companyUuid, material.Uuid, warehouseUuid)
+					if err != nil {
+						logger.Logger.Error("清除预警记录失败",
+							zap.Uint64("company_uuid", companyUuid),
+							zap.Uint64("material_uuid", material.Uuid),
+							zap.Uint64("warehouse_uuid", warehouseUuid),
+							zap.Error(err),
+						)
+					}
 				}
 			}
 		}

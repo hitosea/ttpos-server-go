@@ -490,6 +490,24 @@ definitions:
         description: 总会员折扣
         type: number
     type: object
+  business_data_resp.BusinessDataKitchenEfficiencyAnalysis:
+    properties:
+      list:
+        description: 后厨效率分析
+        items:
+          $ref: '#/definitions/business_data_resp.KitchenEfficiencyAnalysisItem'
+        type: array
+      meta:
+        allOf:
+        - $ref: '#/definitions/dto.PageResponse'
+        description: 元数据
+    type: object
+  business_data_resp.BusinessDataKitchenEfficiencyAnalysisAvg:
+    properties:
+      avg:
+        description: 平均出品时长,单位:秒
+        type: integer
+    type: object
   business_data_resp.BusinessDataPaymentMethod:
     properties:
       opening_hours:
@@ -568,6 +586,26 @@ definitions:
       sales_num:
         description: 销售数量
         type: number
+    type: object
+  business_data_resp.KitchenEfficiencyAnalysisItem:
+    properties:
+      avg:
+        description: 平均出品时长
+        type: integer
+      category_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 分类名称
+      max:
+        description: 最长出品时长
+        type: integer
+      min:
+        description: 最短出品时长
+        type: integer
+      product_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品名称
     type: object
   business_data_resp.MemberData:
     properties:
@@ -3717,6 +3755,32 @@ definitions:
       remark:
         description: 备注
         type: string
+    type: object
+  req.KitchenEfficiencyAnalysisAvgReq:
+    properties:
+      end_time:
+        description: 查询结束时间戳
+        type: integer
+      start_time:
+        description: 查询开始时间戳
+        type: integer
+    type: object
+  req.KitchenEfficiencyAnalysisReq:
+    properties:
+      category_uuids:
+        description: 分类UUID列表
+        items:
+          type: integer
+        type: array
+      end_time:
+        description: 查询结束时间戳
+        type: integer
+      keyword:
+        description: 关键词, 仅商品名称模糊搜索
+        type: string
+      start_time:
+        description: 查询开始时间戳
+        type: integer
     type: object
   req.LoginReq:
     properties:
@@ -29295,6 +29359,64 @@ paths:
       security:
       - JwtToken: []
       summary: 统计首页
+      tags:
+      - 商家端.营业数据
+  /shop/statistics/kitchen/efficiency_analysis:
+    get:
+      consumes:
+      - application/json
+      description: 统计后厨效率分析
+      parameters:
+      - description: 统计参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.KitchenEfficiencyAnalysisReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 统计数据
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/business_data_resp.BusinessDataKitchenEfficiencyAnalysis'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 统计后厨效率分析
+      tags:
+      - 商家端.营业数据
+  /shop/statistics/kitchen/efficiency_analysis/avg:
+    get:
+      consumes:
+      - application/json
+      description: 统计后厨效率分析平均时长
+      parameters:
+      - description: 统计参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.KitchenEfficiencyAnalysisAvgReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 统计数据
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/business_data_resp.BusinessDataKitchenEfficiencyAnalysisAvg'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 统计后厨效率分析平均时长
       tags:
       - 商家端.营业数据
   /shop/statistics/payment_method:

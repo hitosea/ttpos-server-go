@@ -35,7 +35,7 @@ func New() *Controller {
 func (c *Controller) SendMessage(ctx context.Context, req *v1.SendMessageReq) (res *v1.SendMessageResp, err error) {
 	g.Log().Info(ctx, "收到发送消息请求",
 		"uuid", req.MessageUuid,
-		"template_id", req.TemplateId,
+		"template_uuid", req.TemplateUuid,
 		"type", req.MessageType,
 		"recipient", req.Recipient,
 	)
@@ -52,7 +52,7 @@ func (c *Controller) SendMessage(ctx context.Context, req *v1.SendMessageReq) (r
 	// 构建输入参数
 	in := &dto.SendMessageInput{
 		MessageUuid:  req.MessageUuid,
-		TemplateId:   req.TemplateId,
+		TemplateUUID: req.TemplateUuid,
 		MessageArgs:  req.MessageArgs,
 		MessageType:  req.MessageType,
 		Recipient:    req.Recipient,
@@ -188,8 +188,8 @@ func (c *Controller) validateSendMessageReq(req *v1.SendMessageReq) error {
 	if req.MessageUuid == "" {
 		return gerror.New("消息UUID不能为空")
 	}
-	if req.TemplateId == 0 {
-		return gerror.New("模板ID不能为空")
+	if req.TemplateUuid == "" {
+		return gerror.New("模板UUID不能为空")
 	}
 	if req.MessageType == "" {
 		return gerror.New("消息类型不能为空")

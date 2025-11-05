@@ -80,11 +80,6 @@ class Buffet extends Controller
         }
         if ($data['customer_type']) {
             $customerCommonModel = new CustomerTypeModel;
-            // 顾客类型名称已存在
-            $customerName = array_column($data['customer_type'], 'name');
-            if (count(array_unique($customerName)) != count($customerName)) {
-                return $this->renderError('顾客类型名称已存在，请重新输入');
-            }
             // 有多少个顾客类型
             $oldCount = $customerCommonModel->count();
             // 遍历除去删除的顾客类型 不判断数量
