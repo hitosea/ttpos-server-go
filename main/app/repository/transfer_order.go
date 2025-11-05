@@ -162,21 +162,30 @@ func (r *TransferOrderRepoImpl) GetListWithPaginationFromMultiDB(query TransferO
 	// 构建统计总数的SQL
 	baseApprovalSQL := ""
 	if slices.Contains(query.MyRole, "approver") {
-		baseApprovalSQL += fmt.Sprintf(" and (b.approval_company_uuid = %d) ", companyUuid)
+		baseApprovalSQL += fmt.Sprintf(" AND (b.approval_company_uuid = %d) ", companyUuid)
 	}
 
 	baseSQL := fmt.Sprintf(`
 		SELECT * FROM (
 			SELECT DISTINCT a.* FROM saas.ttpos_transfer_order a
-			LEFT JOIN saas.ttpos_transfer_order_approval b ON a.uuid = b.transfer_order_uuid
 			WHERE (
-				a.company_uuid = %d OR 
-				a.headquarter_uuid = %d OR
-				a.next_approval_company_uuid = %d OR
-				(b.approval_company_uuid = %d and b.status in (1, 2))	
+				a.company_uuid = %d 
+				OR a.headquarter_uuid = %d 
+				OR a.next_approval_company_uuid = %d 
+				OR EXISTS (
+					SELECT 1 FROM saas.ttpos_transfer_order_approval b
+					WHERE b.transfer_order_uuid = a.uuid
+					AND b.approval_company_uuid = %d
+					AND b.status IN (1, 2)
+					AND b.delete_time = 0
+				)
 			) %s
+			AND a.delete_time = 0
+
 			UNION
+			
 			SELECT * FROM %s.ttpos_transfer_order
+			WHERE delete_time = 0
 		) t
 		GROUP BY uuid
 	`, companyUuid, companyUuid, companyUuid, companyUuid, baseApprovalSQL, shopDbName)
