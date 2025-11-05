@@ -573,6 +573,7 @@ type ProductShopListItemResp struct {
 	Sort                int                               `json:"sort"`                  // 商品排序
 	Flavors             ProductShopListItemFlavorListResp `json:"flavors"`               // 商品规格列表
 	NumType             uint                              `json:"num_type"`              // 商品数量计算方法 0-整数 1-小数
+	IsEditable          bool                              `json:"is_editable"`           // 是否可编辑
 }
 
 // ProductShopListItemTagResp 商品标签列表

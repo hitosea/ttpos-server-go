@@ -5062,7 +5062,8 @@ func (s *productSrv) GetProductShopList(ctx context.Context, req req.ProductShop
 			Flavors: product_resp.ProductShopListItemFlavorListResp{
 				List: flavors,
 			},
-			NumType: productPackage.NumType,
+			NumType:    productPackage.NumType,
+			IsEditable: isEditable(ctx, productPackage.HeadquarterUuid),
 		}
 
 		productList = append(productList, productItem)
