@@ -868,13 +868,6 @@ func (s *productSrv) AddProductShopCategory(ctx context.Context, addReq req.Prod
 			return errors.New("名称长度不能超过50")
 		}
 	}
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Source: constant.CheckNameSourceCategory,
-		Names:  names,
-	})
-	if exists {
-		return errors.New("名称已存在")
-	}
 	if addReq.Status != 0 && addReq.Status != 1 {
 		return errors.New("分类状态不正确")
 	}
@@ -1020,14 +1013,6 @@ func (s *productSrv) EditProductShopCategory(ctx context.Context, editReq req.Pr
 		if !checkService.CheckNameLength(ctx, name.Text, 50) {
 			return errors.New("名称长度不能超过50")
 		}
-	}
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Uuid:   editReq.Uuid,
-		Source: constant.CheckNameSourceCategory,
-		Names:  names,
-	})
-	if exists {
-		return errors.New("名称已存在")
 	}
 	err = db.Transaction(func(tx *gorm.DB) error {
 		err := tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productCategory.MultiLanguageNameUuid).Updates(map[string]any{
@@ -1979,15 +1964,6 @@ func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitA
 		return errors.New("名称不能为空")
 	}
 	db := s.dbm.GetDB(ctx.GetDbId())
-	checkService := NewCheckNameSrv(s.dbm)
-	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Source: constant.CheckNameSourceUnit,
-		Names:  names,
-	})
-	if exists {
-		return errors.New("名称已存在")
-	}
 	// 获取当前最大的排序值
 	var maxSort int
 	db.Model(&model.ProductUnit{}).Scopes(repository.NotDeleted, repository.ExcludeHeadquarter).Select("ifnull(max(sort), 0)").Scan(&maxSort)
@@ -2186,17 +2162,6 @@ func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.Produc
 
 	if !isEditable(ctx, productUnit.HeadquarterUuid) {
 		return errors.New("单位不可编辑")
-	}
-	// 检查名称是否存在
-	checkService := NewCheckNameSrv(s.dbm)
-	names := checkService.MakeCheckNameList(ctx, editUnitReq.LocaleName)
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Uuid:   editUnitReq.Uuid,
-		Source: constant.CheckNameSourceUnit,
-		Names:  names,
-	})
-	if exists {
-		return errors.New("名称已存在")
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
@@ -2482,16 +2447,6 @@ func (s *productSrv) AddProductSauce(ctx context.Context, addReq req.ProductSauc
 		return errors.New("名称不能为空")
 	}
 	db := s.dbm.GetDB(ctx.GetDbId())
-	checkService := NewCheckNameSrv(s.dbm)
-	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Source: constant.CheckNameSourceSauce,
-		Names:  names,
-	})
-	if exists {
-		return errors.New("名称已存在")
-	}
-
 	if len(addReq.ProductPackageUuids) > 0 {
 		productRepo := repository.NewProductRepo(db)
 		// 检查商品是否存在
@@ -2594,18 +2549,6 @@ func (s *productSrv) EditProductSauce(ctx context.Context, editReq req.ProductSa
 	}
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
-
-	// 判断名称是否存在
-	checkService := NewCheckNameSrv(s.dbm)
-	names := checkService.MakeCheckNameList(ctx, editReq.LocaleName)
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Uuid:   editReq.Uuid,
-		Source: constant.CheckNameSourceSauce,
-		Names:  names,
-	})
-	if exists {
-		return errors.New("名称已存在")
-	}
 
 	// 获取商品加料
 	productSauce, err := productRepo.GetProductSauce(
@@ -2984,16 +2927,6 @@ func (s *productSrv) AddProductAttributeGroup(ctx context.Context, addReq req.Pr
 			return errors.New("属性值名称不能为空")
 		}
 	}
-	// 检查名称是否存在
-	checkService := NewCheckNameSrv(s.dbm)
-	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Source: constant.CheckNameSourceAttributeGroup,
-		Names:  names,
-	})
-	if exists {
-		return errors.New("属性组名称已存在")
-	}
 
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
@@ -3178,16 +3111,6 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 	db := s.dbm.GetDB(ctx.GetDbId())
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(db)
-	checkService := NewCheckNameSrv(s.dbm)
-	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Source: constant.CheckNameSourceFlavor,
-		Names:  names,
-	})
-	if exists {
-		return errors.New("名称已存在")
-	}
-
 	maxSort, err := productRepo.GetProductFlavorMaxSort(
 		commonRepo.WhereBySoftDelete(),
 	)
@@ -3316,6 +3239,9 @@ func (s *productSrv) AddProductFlavor(ctx context.Context, addReq req.ProductFla
 				})
 
 				setting, err := s.settingSrv.GetCompanySetting(ctx)
+				if err != nil {
+					return errors.WithMessage(err, "获取公司设置失败")
+				}
 				// 开启库存管理
 				if setting.SaleStock == 1 {
 					// 添加入库
@@ -3449,18 +3375,6 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 		}
 	}
 
-	// 检查名称是否已存在
-	checkService := NewCheckNameSrv(s.dbm)
-	names := checkService.MakeCheckNameList(ctx, editReq.LocaleName)
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Uuid:   editReq.Uuid,
-		Source: constant.CheckNameSourceAttributeGroup,
-		Names:  names,
-	})
-	if exists {
-		return errors.New("属性组名称已存在")
-	}
-
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
 
@@ -3522,7 +3436,7 @@ func (s *productSrv) EditProductAttributeGroup(ctx context.Context, editReq req.
 	}
 
 	// 原商品包属性组、商品包属性
-	productPackageAttributeGroups, err := productRepo.GetProductPackageAttributeGroups(
+	productPackageAttributeGroups, _ := productRepo.GetProductPackageAttributeGroups(
 		productRepo.WhereProductAttributeGroupUuid(attributeGroup.Uuid),
 		productRepo.WithProductPackageAttributes(),
 	)
@@ -3810,17 +3724,6 @@ func (s *productSrv) EditProductFlavor(ctx context.Context, editReq req.ProductF
 		return errors.New("名称不能为空")
 	}
 	db := s.dbm.GetDB(ctx.GetDbId())
-	checkService := NewCheckNameSrv(s.dbm)
-	names := checkService.MakeCheckNameList(ctx, editReq.LocaleName)
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Uuid:   editReq.Uuid,
-		Source: constant.CheckNameSourceFlavor,
-		Names:  names,
-	})
-	if exists {
-		return errors.New("名称已存在")
-	}
-
 	lang := ctx.GetLanguage()
 	commonRepo := repository.NewCommonRepo()
 	productRepo := repository.NewProductRepo(db)
@@ -4736,7 +4639,7 @@ func (s *productSrv) ImportProductList(ctx context.Context, req req.ProductImpor
 		products.IsShowH5 = strings.Contains(item.Shows, "5")
 		products.IsShowDelivery = strings.Contains(item.Shows, "6")
 		// 验证是否已经存在
-		products.LocaleNameIsExist = repository.NewProductRepo(db).CheckMultiLanguageNameExist(item.LocaleName)
+		products.LocaleNameIsExist = dto.LocaleResponse{}
 		// 验证条形码存在性检查
 		products.BarcodeIsExist = repository.NewProductRepo(db).CheckBarcodeExist(item.Barcode, 0)
 		// 添加到列表
@@ -4812,12 +4715,6 @@ func (s *productSrv) ImportProduct(ctx context.Context, reqs req.ProductImportRe
 
 	// 预验证阶段 - 检查商品名称和条形码是否已存在
 	for _, item := range reqs.List {
-		// 验证是否已经存在
-		productNameIsExist := repository.NewProductRepo(db).CheckMultiLanguageNameExist(item.LocaleName)
-		if !productNameIsExist.IsNull() {
-			s.systemLock.UnlockUuidString(lockKey)
-			return errors.New(i18n.Translate(language, "行") + "[" + strconv.Itoa(item.Row) + "]: " + i18n.Translate(language, "商品名称已存在"))
-		}
 		// 验证条形码存在性检查
 		if repository.NewProductRepo(db).CheckBarcodeExist(item.Barcode, 0) {
 			s.systemLock.UnlockUuidString(lockKey)

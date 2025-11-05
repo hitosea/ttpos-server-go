@@ -522,14 +522,6 @@ func (s *materialSrv) AddMaterialCategory(ctx context.Context, request req.Mater
 				return errors.New("名称长度不能超过50")
 			}
 		}
-		// 检查物品类别名称是否已存在
-		exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-			Source: constant.CheckNameSourceMaterialCategory,
-			Names:  names,
-		})
-		if exists {
-			return errors.New("名称已存在")
-		}
 
 		// 检查物品类别编码是否已存在
 		if request.Code != "" {
@@ -1573,15 +1565,6 @@ func (s *materialSrv) EditMaterialCategory(ctx context.Context, request req.Mate
 		if !checkService.CheckNameLength(ctx, name.Text, 50) {
 			return errors.New("名称长度不能超过50")
 		}
-	}
-	// 检查物品类别名称是否已存在
-	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
-		Uuid:   request.Uuid,
-		Source: constant.CheckNameSourceMaterialCategory,
-		Names:  names,
-	})
-	if exists {
-		return errors.New("名称已存在")
 	}
 
 	// 检查物品类别编码是否已存在

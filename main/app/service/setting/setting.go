@@ -1574,14 +1574,6 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 	}
 	company := ctx.GetCompany()
 
-	// 判断saas库中商家名称是否已存在
-	saasCompanyRepo := repository.NewCompanyRepo(saasDB)
-	saasCompany, _ := saasCompanyRepo.GetCompany(saasCompanyRepo.WhereName(storeSettingReq.Name), saasCompanyRepo.WhereNotUuid(companyUuid))
-
-	if saasCompany.Uuid != 0 {
-		return errors.New("商家名称已存在")
-	}
-
 	// 时区在时区列表中
 	timeZoneList := storeSetting.TimeZoneList
 	if !slices.ContainsFunc(timeZoneList, func(item setting.TimeZoneItem) bool {

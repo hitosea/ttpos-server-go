@@ -102,10 +102,6 @@ func (s *staffSrv) UpdateStaff(ctx context.Context, updateReq req.UpdateStaffReq
 	if existsCompanyStaff.Phone == updateReq.Phone {
 		exists = append(exists, "phone")
 	}
-	existsStaff, _ := staffRepo.GetStaff(staffRepo.WhereRealName(updateReq.RealName), staffRepo.WhereNotUuid(updateReq.Uuid))
-	if existsStaff.Uuid != 0 {
-		exists = append(exists, "real_name")
-	}
 	if len(exists) > 0 {
 		return errors.New("此内容已被占用"), exists
 	}
@@ -183,14 +179,6 @@ func (s *staffSrv) AddStaff(ctx context.Context, addReq req.AddStaffReq) (error,
 	}
 
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
-	staffRepo := repository.NewStaffRepo(db)
-	staff, _ := staffRepo.GetStaff(staffRepo.WhereRealName(addReq.RealName))
-	if staff.Uuid != 0 {
-		exists = append(exists, "real_name")
-	}
-	if len(exists) > 0 {
-		return errors.New("此内容已被占用"), exists
-	}
 	// 判断角色是否存在
 	roleRepo := repository.NewRoleRepo(db)
 	roles, err := roleRepo.GetRoleList([]repository.DBOption{roleRepo.WhereUuids(addReq.Roles)}...)
@@ -210,7 +198,7 @@ func (s *staffSrv) AddStaff(ctx context.Context, addReq req.AddStaffReq) (error,
 	// 保存saas库
 	saasDB.Model(&model.CompanyStaff{}).Create(&companyStaff)
 
-	staff = model.Staff{
+	staff := model.Staff{
 		CompanyUuid: ctx.GetCompanyUuid(),
 		Username:    addReq.Username,
 		RealName:    addReq.RealName,
