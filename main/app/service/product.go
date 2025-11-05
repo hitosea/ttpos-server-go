@@ -1410,7 +1410,7 @@ func (s *productSrv) DeleteProductShopCategory(ctx context.Context, deleteReq re
 		}
 		// 重新排序
 		productRepo := repository.NewProductRepo(tx)
-		productCategories := make([]model.ProductCategory, 0)
+		var productCategories []model.ProductCategory
 		if productCategory.IsSpecial == 1 {
 			productCategories, _ = productRepo.GetProductCategoryList(
 				commonRepo.WhereBySoftDelete(),
@@ -1423,8 +1423,8 @@ func (s *productSrv) DeleteProductShopCategory(ctx context.Context, deleteReq re
 			)
 		}
 		sorts := make(map[uint64]int)
-		for i, productCategory := range productCategories {
-			sorts[productCategory.Uuid] = i + 1
+		for i, category := range productCategories {
+			sorts[category.Uuid] = i + 1
 		}
 		err = productRepo.BatchUpdateSort(&model.ProductCategory{}, sorts)
 		if err != nil {
@@ -6124,6 +6124,9 @@ func (s *productSrv) SaveProductPackageBom(ctx context.Context, tx *gorm.DB, par
 	warehouseFormRepo := repository.NewWarehouseFormRepo(tx)
 	warehouseMonthlyFormRepo := repository.NewWarehouseMonthlyFormRepo(tx)
 	setting, err := s.settingSrv.GetCompanySetting(ctx)
+	if err != nil {
+		return errors.WithMessage(err, "获取公司设置失败")
+	}
 
 	// flavorListResult.Flavors 根据IsDelete排序，如果IsDelete=true，则排在前面，优先删除，然后再添加
 	sort.Slice(params.FlavorListResult.Flavors, func(i, j int) bool {
