@@ -14,4 +14,5 @@ type ShopCashier struct {
 	ApiSecret    string `json:"apiSecret"    orm:"api_secret"    description:""`          //
 	CompanyAbbr  string `json:"companyAbbr"  orm:"company_abbr"  description:"公司缩写"`      // 公司缩写
 	Branch       string `json:"branch"       orm:"branch"        description:"分支"`        // 分支
+	SiteCode     string `json:"siteCode"     orm:"site_code"     description:"站点编码"`      // 站点编码
 }

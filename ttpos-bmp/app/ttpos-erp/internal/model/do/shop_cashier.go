@@ -19,4 +19,5 @@ type ShopCashier struct {
 	ApiSecret    interface{} //
 	CompanyAbbr  interface{} // 公司缩写
 	Branch       interface{} // 分支
+	SiteCode     interface{} // 站点编码
 }
