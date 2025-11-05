@@ -19,9 +19,9 @@ type TransferOrder struct {
 
 	// 仓库信息
 	OutWarehouseErpCode string `gorm:"column:out_warehouse_erp_code;type:varchar(255);default:'';comment:出库仓库ERP编码" json:"out_warehouse_erp_code"`
-	OutWarehouseName    string `gorm:"column:out_warehouse_name;type:varchar(255);default:'';comment:出库仓库名称" json:"out_warehouse_name"`
+	OutWarehouseName    string `gorm:"column:out_warehouse_name;type:text;comment:出库仓库名称" json:"out_warehouse_name"`
 	InWarehouseErpCode  string `gorm:"column:in_warehouse_erp_code;type:varchar(255);default:'';comment:入库仓库ERP编码" json:"in_warehouse_erp_code"`
-	InWarehouseName     string `gorm:"column:in_warehouse_name;type:varchar(255);default:'';comment:入库仓库名称" json:"in_warehouse_name"`
+	InWarehouseName     string `gorm:"column:in_warehouse_name;type:text;comment:入库仓库名称" json:"in_warehouse_name"`
 
 	// 时间记录
 	OrderTime  int64 `gorm:"column:order_time;type:bigint;default:0;comment:单据日期（提交时间戳）" json:"order_time"`

@@ -13,8 +13,10 @@ import (
 	"ttpos-server-go/pkg/cache"
 	ttposContext "ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -292,4 +294,27 @@ func (h *transferOrderHelper) CreateApproval(
 	}
 
 	return approvalRepo.CreateBatch(approvals)
+}
+
+// GetOrderDb 获取调拨单数据库
+func (h *transferOrderHelper) GetOrderDb(
+	ctx ttposContext.Context,
+	dbm *database.DBManager,
+	transferOrderUuid uint64,
+) (*gorm.DB, error) {
+	// 查询调拨单详情
+	companyUuid := ctx.GetCompanyUuid()
+	headquarterTransferOrder, err := repository.NewTransferOrderRepo(dbm.GetDB(0)).GetByUuid(transferOrderUuid)
+	if err != nil && err != gorm.ErrRecordNotFound {
+		logger.Logger.Error("查询调拨单详情失败", zap.Error(err))
+		return nil, errors.WithMessage(errors.New("获取调拨单详情失败"), err.Error())
+	}
+	if headquarterTransferOrder != nil {
+		companyUuid = headquarterTransferOrder.CompanyUuid
+	}
+	db := dbm.GetDB(companyUuid)
+	if db == nil {
+		return nil, errors.WithMessage(errors.New("获取调拨单数据库失败"), "数据库不存在")
+	}
+	return db, nil
 }

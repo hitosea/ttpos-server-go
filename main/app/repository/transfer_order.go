@@ -1,6 +1,9 @@
 package repository
 
 import (
+	"fmt"
+	"slices"
+	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
@@ -20,6 +23,7 @@ type ITransferOrderRepo interface {
 	// 查询操作
 	GetList(opts ...DBOption) ([]model.TransferOrder, error)
 	GetListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.TransferOrder, int64, error)
+	GetListWithPaginationFromMultiDB(query TransferOrderQueryReq) ([]model.TransferOrder, int64, error)
 	Count(opts ...DBOption) (int64, error)
 
 	// 条件查询选项
@@ -128,6 +132,119 @@ func (r *TransferOrderRepoImpl) GetListWithPagination(pageNo, pageSize int, opts
 		Offset(offset).
 		Limit(pageSize).
 		Find(&transferOrders).Error
+	return transferOrders, total, err
+}
+
+// GetListWithPaginationFromMultiDB 从多个数据库分页获取调拨单列表（使用原生SQL）
+// 参数说明：
+//   - pageNo: 页码
+//   - pageSize: 每页大小
+//   - shopDbName: 门店数据库名称，例如 "shop8609817471094784"
+type TransferOrderQueryReq struct {
+	PageNo              int
+	PageSize            int
+	CompanyUuid         uint64
+	OrderNo             string
+	StatusIn            []int
+	OrderTimeStart      int
+	OrderTimeEnd        int
+	OppositeCompanyUuid []uint64
+	MyRole              []string // 我的角色: all-全部 sender-发货方 receiver-收货方 approver-上级审批
+}
+
+func (r *TransferOrderRepoImpl) GetListWithPaginationFromMultiDB(query TransferOrderQueryReq) ([]model.TransferOrder, int64, error) {
+	var transferOrders []model.TransferOrder
+	var total int64
+
+	companyUuid := query.CompanyUuid
+	shopDbName := fmt.Sprintf("shop%d", companyUuid)
+
+	// 构建统计总数的SQL
+	baseApprovalSQL := ""
+	if slices.Contains(query.MyRole, "approver") {
+		baseApprovalSQL += fmt.Sprintf(" and (b.approval_company_uuid = %d) ", companyUuid)
+	}
+
+	baseSQL := fmt.Sprintf(`
+		SELECT * FROM (
+			SELECT a.* FROM saas.ttpos_transfer_order a
+			LEFT JOIN saas.ttpos_transfer_order_approval b ON a.uuid = b.transfer_order_uuid
+			WHERE (
+				a.company_uuid = %d OR 
+				a.headquarter_uuid = %d OR
+				a.next_approval_company_uuid = %d OR
+				(b.approval_company_uuid = %d and b.status in (1, 2))	
+			) %s
+			UNION ALL
+			SELECT * FROM %s.ttpos_transfer_order
+		) t
+		GROUP BY uuid
+	`, companyUuid, companyUuid, companyUuid, companyUuid, baseApprovalSQL, shopDbName)
+
+	// 包裹查询结果
+	baseSQL = fmt.Sprintf("SELECT * FROM (%s) t WHERE delete_time = 0 ", baseSQL)
+
+	if query.OrderNo != "" {
+		baseSQL += fmt.Sprintf(" AND (order_no LIKE '%%%s%%' OR erp_order_no LIKE '%%%s%%') ", query.OrderNo, query.OrderNo)
+	}
+
+	if len(query.StatusIn) > 0 {
+		// 将int切片转换为字符串切片
+		statusStrings := make([]string, len(query.StatusIn))
+		for i, status := range query.StatusIn {
+			statusStrings[i] = fmt.Sprintf("%d", status)
+		}
+		baseSQL += fmt.Sprintf(" AND status IN (%s) ", strings.Join(statusStrings, ","))
+	}
+
+	if query.OrderTimeStart > 0 && query.OrderTimeEnd > 0 {
+		baseSQL += fmt.Sprintf(" AND order_time >= %d AND order_time <= %d ", query.OrderTimeStart, query.OrderTimeEnd)
+	}
+
+	if len(query.OppositeCompanyUuid) > 0 {
+		oppositeCompanyUuidStrings := make([]string, len(query.OppositeCompanyUuid))
+		for i, oppositeCompanyUuid := range query.OppositeCompanyUuid {
+			oppositeCompanyUuidStrings[i] = fmt.Sprintf("'%d'", oppositeCompanyUuid)
+		}
+		baseSQL += fmt.Sprintf(" AND (sender_company_uuid IN (%s) OR receiver_company_uuid IN (%s)) ",
+			strings.Join(oppositeCompanyUuidStrings, ","),
+			strings.Join(oppositeCompanyUuidStrings, ","),
+		)
+	}
+
+	if len(query.MyRole) > 0 {
+		if !slices.Contains(query.MyRole, "all") {
+			baseSQL += fmt.Sprintf(" AND (")
+			if slices.Contains(query.MyRole, "sender") {
+				baseSQL += fmt.Sprintf(" sender_company_uuid = %d OR ", companyUuid)
+			}
+			if slices.Contains(query.MyRole, "receiver") {
+				baseSQL += fmt.Sprintf(" receiver_company_uuid = %d OR ", companyUuid)
+			}
+			baseSQL += fmt.Sprintf(" 0 = 1 )")
+		}
+	}
+
+	// 统计总数
+	countSQL := fmt.Sprintf(`SELECT COUNT(*) FROM (%s) t`, baseSQL)
+	if err := r.db.Raw(countSQL).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// 构建分页查询SQL
+	offset := (query.PageNo - 1) * query.PageSize
+	querySQL := fmt.Sprintf(`
+		%s
+		ORDER BY create_time DESC
+		LIMIT ? OFFSET ?
+	`, baseSQL)
+
+	// 执行分页查询
+	err := r.db.Raw(querySQL, query.PageSize, offset).Scan(&transferOrders).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
 	return transferOrders, total, err
 }
 

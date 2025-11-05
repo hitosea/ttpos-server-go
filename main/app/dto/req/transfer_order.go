@@ -8,28 +8,25 @@ import (
 
 // TransferOrderListReq 调拨单列表请求
 type TransferOrderListReq struct {
-	dto.PageReq                // 分页参数
-	OrderNo             string `json:"order_no" form:"order_no" binding:"omitempty,max=50"`                      // 单据编号
-	TransferType        int    `json:"transfer_type" form:"transfer_type" binding:"omitempty,min=0,max=2"`       // 调拨类型: 1-调入 2-调出
-	StatusIn            []int  `json:"status_in" form:"status_in" binding:"omitempty"`                           // 状态筛选: 0-待提交 1-待审核 2-已驳回 3-待收货 4-已完成
-	OutWarehouseErpCode string `json:"out_warehouse_erp_code" form:"out_warehouse_erp_code" binding:"omitempty"` // 出库仓库ERP编码
-	InWarehouseErpCode  string `json:"in_warehouse_erp_code" form:"in_warehouse_erp_code" binding:"omitempty"`   // 入库仓库ERP编码
-	CreateTimeStart     int    `json:"create_time_start" form:"create_time_start" binding:"omitempty,min=0"`     // 创建时间开始
-	CreateTimeEnd       int    `json:"create_time_end" form:"create_time_end" binding:"omitempty,min=0"`         // 创建时间结束
-	OrderTimeStart      int    `json:"order_time_start" form:"order_time_start" binding:"omitempty,min=0"`       // 单据时间开始
-	OrderTimeEnd        int    `json:"order_time_end" form:"order_time_end" binding:"omitempty,min=0"`           // 单据时间结束
+	dto.PageReq                  // 分页参数
+	OrderNo             string   `json:"order_no" form:"order_no"`                             // 单据编号
+	StatusIn            []int    `json:"status_in" form:"status_in"`                           // 状态筛选: 0-待提交 1-待审核 2-已驳回 3-待收货 4-已完成
+	OrderTimeStart      int      `json:"order_time_start" form:"order_time_start"`             // 单据时间开始
+	OrderTimeEnd        int      `json:"order_time_end" form:"order_time_end"`                 // 单据时间结束
+	OppositeCompanyUuid []uint64 `json:"opposite_company_uuids" form:"opposite_company_uuids"` // 对方机构UUID列表
+	MyRole              []string `json:"my_role" form:"my_role"`                               // 我的角色: all-全部 sender-发货方 receiver-收货方 approver-上级审批
 }
 
 // TransferOrderCreateReq 创建调拨单请求
 type TransferOrderCreateReq struct {
-	OrderTime           int64                        `json:"order_time" binding:"required,min=0"`             // 单据日期
-	TransferType        int                          `json:"transfer_type" binding:"required,min=1,max=2"`    // 调拨类型: 1-调入 2-调出
-	SenderCompanyUuid   uint64                       `json:"sender_company_uuid" binding:"required,min=1"`    // 发货门店UUID
-	ReceiverCompanyUuid uint64                       `json:"receiver_company_uuid" binding:"required,min=1"`  // 收货门店UUID
-	OutWarehouseErpCode string                       `json:"out_warehouse_erp_code" binding:"required,min=1"` // 出库仓库ERP编码
-	InWarehouseErpCode  string                       `json:"in_warehouse_erp_code" binding:"required,min=1"`  // 入库仓库ERP编码
-	Remark              string                       `json:"remark" binding:"omitempty,max=500"`              // 备注
-	Items               []TransferOrderItemCreateReq `json:"items" binding:"required,min=1,max=500,dive"`     // 调拨明细
+	OrderTime           int64                        `json:"order_time" binding:"required,min=0"`          // 单据日期
+	TransferType        int                          `json:"transfer_type" binding:"required,min=1,max=2"` // 调拨类型: 1-调入 2-调出
+	SenderCompanyUuid   uint64                       `json:"sender_company_uuid"`                          // 发货门店UUID
+	ReceiverCompanyUuid uint64                       `json:"receiver_company_uuid"`                        // 收货门店UUID
+	OutWarehouseErpCode string                       `json:"out_warehouse_erp_code"`                       // 出库仓库ERP编码
+	InWarehouseErpCode  string                       `json:"in_warehouse_erp_code"`                        // 入库仓库ERP编码
+	Remark              string                       `json:"remark"`                                       // 备注
+	Items               []TransferOrderItemCreateReq `json:"items"`                                        // 调拨明细
 }
 
 func (r *TransferOrderCreateReq) Validate() error {
@@ -67,26 +64,26 @@ func (r *TransferOrderCreateReq) Validate() error {
 
 // TransferOrderItemCreateReq 调拨单明细创建请求
 type TransferOrderItemCreateReq struct {
-	MaterialUuid uint64                           `json:"material_uuid" binding:"required,min=1"` // 物品UUID
-	Units        []TransferOrderItemUnitCreateReq `json:"units" binding:"required,min=1,dive"`    // 单位列表
+	MaterialUuid uint64                           `json:"material_uuid"` // 物品UUID
+	Units        []TransferOrderItemUnitCreateReq `json:"units"`         // 单位列表
 }
 
 // TransferOrderItemUnitCreateReq 调拨单明细单位创建请求
 type TransferOrderItemUnitCreateReq struct {
-	UnitUuid uint64  `json:"unit_uuid" binding:"required,min=1"` // 单位UUID
-	Num      float64 `json:"num" binding:"required,gt=0"`        // 调拨数量
+	UnitUuid uint64  `json:"unit_uuid"` // 单位UUID
+	Num      float64 `json:"num"`       // 调拨数量
 }
 
 // TransferOrderUpdateReq 更新调拨单请求（待提交状态下可更新）
 type TransferOrderUpdateReq struct {
-	Uuid                uint64                       `json:"uuid" binding:"required,min=1"`                   // 调拨单UUID
-	OrderTime           int64                        `json:"order_time" binding:"omitempty,min=0"`            // 单据日期
-	SenderCompanyUuid   uint64                       `json:"sender_company_uuid" binding:"omitempty,min=1"`   // 发货门店UUID
-	ReceiverCompanyUuid uint64                       `json:"receiver_company_uuid" binding:"omitempty,min=1"` // 收货门店UUID
-	OutWarehouseErpCode string                       `json:"out_warehouse_erp_code" binding:"omitempty"`      // 出库仓库ERP编码
-	InWarehouseErpCode  string                       `json:"in_warehouse_erp_code" binding:"omitempty"`       // 入库仓库ERP编码
-	Remark              string                       `json:"remark" binding:"omitempty,max=500"`              // 备注
-	Items               []TransferOrderItemCreateReq `json:"items" binding:"omitempty,min=1,max=500,dive"`    // 调拨明细
+	Uuid                uint64                       `json:"uuid"`                   // 调拨单UUID
+	OrderTime           int64                        `json:"order_time"`             // 单据日期
+	SenderCompanyUuid   uint64                       `json:"sender_company_uuid"`    // 发货门店UUID
+	ReceiverCompanyUuid uint64                       `json:"receiver_company_uuid"`  // 收货门店UUID
+	OutWarehouseErpCode string                       `json:"out_warehouse_erp_code"` // 出库仓库ERP编码
+	InWarehouseErpCode  string                       `json:"in_warehouse_erp_code"`  // 入库仓库ERP编码
+	Remark              string                       `json:"remark"`                 // 备注
+	Items               []TransferOrderItemCreateReq `json:"items"`                  // 调拨明细
 }
 
 func (r *TransferOrderUpdateReq) Validate() error {
@@ -111,12 +108,12 @@ func (r *TransferOrderUpdateReq) Validate() error {
 
 // TransferOrderDetailReq 调拨单详情请求
 type TransferOrderDetailReq struct {
-	Uuid uint64 `json:"uuid" form:"uuid" binding:"required,min=1"` // 调拨单UUID
+	Uuid uint64 `json:"uuid" form:"uuid" ` // 调拨单UUID
 }
 
 // TransferOrderSubmitReq 提交调拨单请求
 type TransferOrderSubmitReq struct {
-	Uuid uint64 `json:"uuid" binding:"required,min=1"` // 调拨单UUID
+	Uuid uint64 `json:"uuid"` // 调拨单UUID
 }
 
 func (r *TransferOrderSubmitReq) Validate() error {
@@ -210,4 +207,9 @@ func (r *TransferOrderMaterialListReq) Validate() error {
 		return errors.New("收货门店和发货门店不能同时有值")
 	}
 	return nil
+}
+
+// TransferOrderCompanyListReq 调拨单对方机构列表查询
+type TransferOrderCompanyListReq struct {
+	Keyword string `form:"keyword" json:"keyword"` // 关键字
 }

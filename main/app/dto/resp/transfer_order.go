@@ -36,8 +36,9 @@ type TransferOrderInfo struct {
 // TransferOrderDetailResp 调拨单详情响应
 type TransferOrderDetailResp struct {
 	TransferOrderInfo
-	Items     []TransferOrderItemInfo     `json:"items"`     // 调拨明细
-	Approvals []TransferOrderApprovalInfo `json:"approvals"` // 审批流程
+	Items []TransferOrderItemInfo `json:"items"` // 调拨明细
+	// Approvals  []TransferOrderApprovalInfo `json:"approvals"`   // 审批流程
+	RejectInfo TransferOrderRejectInfo `json:"reject_info"` // 驳回信息
 }
 
 // TransferOrderItemInfo 调拨单明细信息
@@ -77,6 +78,13 @@ type TransferOrderApprovalInfo struct {
 	IsRequired          int    `json:"is_required"`           // 是否必须审批: 0-否 1-是
 	Remark              string `json:"remark"`                // 备注
 	CreateTime          int    `json:"create_time"`           // 创建时间
+}
+
+// TransferOrderRejectInfo 调拨单驳回信息
+type TransferOrderRejectInfo struct {
+	Title        string `json:"title"`         // 驳回节点标题（如：发货门店驳回）
+	RejectReason string `json:"reject_reason"` // 驳回原因
+	RejectTime   int64  `json:"reject_time"`   // 驳回时间
 }
 
 // TransferOrderLogInfo 调拨单操作日志信息
