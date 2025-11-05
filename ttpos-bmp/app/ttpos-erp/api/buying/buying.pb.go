@@ -589,19 +589,20 @@ func (x *DeleteSupplierResp) GetMessage() string {
 
 // 获取供应商列表请求消息
 type ListSuppliersReq struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Name           string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty" dc:"供应商主键，可选"`                                                                                                             //供应商主键，可选
-	SupplierName   string                 `protobuf:"bytes,2,opt,name=supplier_name,json=supplierName,proto3" json:"supplier_name,omitempty" dc:"供应商名称过滤，可选"`                                                                       // 供应商名称过滤，可选
-	Country        string                 `protobuf:"bytes,3,opt,name=country,proto3" json:"country,omitempty" dc:"国家过滤，可选"`                                                                                                        // 国家过滤，可选
-	SupplierType   string                 `protobuf:"bytes,4,opt,name=supplier_type,json=supplierType,proto3" json:"supplier_type,omitempty" dc:"供应商类型过滤，可选 Company, Individual, Partnership"`                                      // 供应商类型过滤，可选 Company, Individual, Partnership
-	Branch         string                 `protobuf:"bytes,6,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支过滤，可选"`                                                                                                          // 分支过滤，可选
-	CompanyAbbr    string                 `protobuf:"bytes,7,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"所属公司"`                                                                                //所属公司
-	Company        string                 `protobuf:"bytes,8,opt,name=company,proto3" json:"company,omitempty" dc:"所属公司"`                                                                                                           //所属公司
-	PageNo         int32                  `protobuf:"varint,9,opt,name=page_no,json=pageNo,proto3" json:"page_no,omitempty" dc:"页码，从1开始"`                                                                                           // 页码，从1开始
-	PageSize       int32                  `protobuf:"varint,10,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty" dc:"每页数量"`                                                                                       // 每页数量
-	SubCompanyAbbr string                 `protobuf:"bytes,11,opt,name=sub_company_abbr,json=subCompanyAbbr,proto3" json:"sub_company_abbr,omitempty" dc:"门店公司简称，可选。 sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。"` // 门店公司简称，可选。 sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Name              string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty" dc:"供应商主键，可选"`                                                                                                             //供应商主键，可选
+	SupplierName      string                 `protobuf:"bytes,2,opt,name=supplier_name,json=supplierName,proto3" json:"supplier_name,omitempty" dc:"供应商名称过滤，可选"`                                                                       // 供应商名称过滤，可选
+	Country           string                 `protobuf:"bytes,3,opt,name=country,proto3" json:"country,omitempty" dc:"国家过滤，可选"`                                                                                                        // 国家过滤，可选
+	SupplierType      string                 `protobuf:"bytes,4,opt,name=supplier_type,json=supplierType,proto3" json:"supplier_type,omitempty" dc:"供应商类型过滤，可选 Company, Individual, Partnership"`                                      // 供应商类型过滤，可选 Company, Individual, Partnership
+	Branch            string                 `protobuf:"bytes,6,opt,name=branch,proto3" json:"branch,omitempty" dc:"分支过滤，可选"`                                                                                                          // 分支过滤，可选
+	CompanyAbbr       string                 `protobuf:"bytes,7,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"所属公司"`                                                                                //所属公司
+	Company           string                 `protobuf:"bytes,8,opt,name=company,proto3" json:"company,omitempty" dc:"所属公司"`                                                                                                           //所属公司
+	PageNo            int32                  `protobuf:"varint,9,opt,name=page_no,json=pageNo,proto3" json:"page_no,omitempty" dc:"页码，从1开始"`                                                                                           // 页码，从1开始
+	PageSize          int32                  `protobuf:"varint,10,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty" dc:"每页数量"`                                                                                       // 每页数量
+	SubCompanyAbbr    string                 `protobuf:"bytes,11,opt,name=sub_company_abbr,json=subCompanyAbbr,proto3" json:"sub_company_abbr,omitempty" dc:"门店公司简称，可选。 sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。"` // 门店公司简称，可选。 sub_company_abbr(门店公司简称) ,会过滤  permission rule 下的物品，黑名单优先级高。
+	RepresentsCompany string                 `protobuf:"bytes,12,opt,name=represents_company,json=representsCompany,proto3" json:"represents_company,omitempty" dc:"代表公司，可选"`                                                          // 代表公司，可选
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ListSuppliersReq) Reset() {
@@ -700,6 +701,13 @@ func (x *ListSuppliersReq) GetPageSize() int32 {
 func (x *ListSuppliersReq) GetSubCompanyAbbr() string {
 	if x != nil {
 		return x.SubCompanyAbbr
+	}
+	return ""
+}
+
+func (x *ListSuppliersReq) GetRepresentsCompany() string {
+	if x != nil {
+		return x.RepresentsCompany
 	}
 	return ""
 }
@@ -2311,7 +2319,7 @@ const file_buying_buying_proto_rawDesc = "" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"H\n" +
 	"\x12DeleteSupplierResp\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"\xbf\x02\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\xee\x02\n" +
 	"\x10ListSuppliersReq\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12#\n" +
 	"\rsupplier_name\x18\x02 \x01(\tR\fsupplierName\x12\x18\n" +
@@ -2323,7 +2331,8 @@ const file_buying_buying_proto_rawDesc = "" +
 	"\apage_no\x18\t \x01(\x05R\x06pageNo\x12\x1b\n" +
 	"\tpage_size\x18\n" +
 	" \x01(\x05R\bpageSize\x12(\n" +
-	"\x10sub_company_abbr\x18\v \x01(\tR\x0esubCompanyAbbr\"G\n" +
+	"\x10sub_company_abbr\x18\v \x01(\tR\x0esubCompanyAbbr\x12-\n" +
+	"\x12represents_company\x18\f \x01(\tR\x11representsCompany\"G\n" +
 	"\x11ListSuppliersResp\x122\n" +
 	"\tsuppliers\x18\x01 \x03(\v2\x14.buying.SupplierDataR\tsuppliers\"\x80\x04\n" +
 	"\fSupplierData\x12\x12\n" +

@@ -228,6 +228,7 @@ CREATE TABLE `ttpos_company_setting` (
     `is_open_buffet` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启自助餐: 0不开启, 1开启',
     `is_open_h5_order` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启扫码点餐接单 0不开启, 1开启',
     `is_open_local_print` INT(11) NOT NULL DEFAULT 1 COMMENT '是否开启本地打印服务 0不开启, 1开启',
+    `is_open_advanced_ticket_print` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启高级票据打印模板: 0不开启, 1开启',
     `is_open_tax` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启税务对接: 0不开启, 1奥地利 2-其他',
     `is_open_coupon` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启优惠券: 0不开启, 1开启',
     `is_open_marketing` INT(11) NOT NULL DEFAULT 0 COMMENT '是否开启营销活动: 0不开启, 1开启',

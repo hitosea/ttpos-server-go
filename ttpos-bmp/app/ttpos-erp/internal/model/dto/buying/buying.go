@@ -25,3 +25,11 @@ type CreateDeliveryNoteFromInnerSaleOrderReq struct {
 	SourceWarehouse string `json:"source_warehouse,omitempty"`
 	TargetWarehouse string `json:"target_warehouse,omitempty"`
 }
+
+type CreatePurchaseOrderFromSalesOrderReq struct {
+	SourceName      string `json:"source_name,omitempty"`       // 销售订单名称
+	Supplier        string `json:"supplier,omitempty"`          // 供应商
+	ScheduleDate    string `json:"schedule_date,omitempty"`     // 预计交付日期
+	TargetWarehouse string `json:"target_warehouse,omitempty"`  // 目标仓库
+	BuyingPriceList string `json:"buying_price_list,omitempty"` // 采购价格表
+}

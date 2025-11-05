@@ -14,6 +14,7 @@ type MessageRecord struct {
 	Id           interface{} // 消息ID
 	Uuid         interface{} // 消息UUID
 	TemplateId   interface{} // 模板ID
+	TemplateUuid interface{} // 模板UUID
 	MessageType  interface{} // 消息类型(email/sms)
 	Recipient    interface{} // 接收人
 	Subject      interface{} // 消息主题

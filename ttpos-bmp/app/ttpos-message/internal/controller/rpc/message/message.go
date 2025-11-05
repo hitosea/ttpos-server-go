@@ -52,7 +52,7 @@ func (c *Controller) SendMessage(ctx context.Context, req *v1.SendMessageReq) (r
 	// 构建输入参数
 	in := &dto.SendMessageInput{
 		MessageUuid:  req.MessageUuid,
-		TemplateUUID: req.TemplateUuid,
+		TemplateUuid: req.TemplateUuid,
 		MessageArgs:  req.MessageArgs,
 		MessageType:  req.MessageType,
 		Recipient:    req.Recipient,

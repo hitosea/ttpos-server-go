@@ -38,6 +38,8 @@ class UpdateShopAccessAndRoleV220Table extends Migrator
             ['uuid' => 1731155610, 'name' => '优惠券管理', 'path' => '/marketing/coupon/manage/index', 'api_path' => '/marketing/coupon/list', 'parent_uuid' => 1731155609, 'sort' => 2, 'is_route' => 1,  'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 1,  'create_time' => time(), 'update_time' => time()],
             ['uuid' => 1731155611, 'name' => '添加', 'path' => '/marketing/coupon/add', 'api_path' => '/marketing/coupon/add', 'parent_uuid' => 1731155610, 'sort' => 2, 'is_route' => 1,  'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 1,  'create_time' => time(), 'update_time' => time()],
             ['uuid' => 1731155612, 'name' => '编辑', 'path' => '/marketing/coupon/edit', 'api_path' => '/marketing/coupon/edit', 'parent_uuid' => 1731155610, 'sort' => 2, 'is_route' => 1,  'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 1,  'create_time' => time(), 'update_time' => time()],
+            ['uuid' => 1731155613, 'name' => '删除', 'path' => '/marketing/coupon/delete', 'api_path' => '/marketing/coupon/delete', 'parent_uuid' => 1731155610, 'sort' => 3, 'is_route' => 1,  'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 1,  'create_time' => time(), 'update_time' => time()],
+            ['uuid' => 1731155614, 'name' => '状态', 'path' => '/marketing/coupon/status', 'api_path' => '/marketing/coupon/status', 'parent_uuid' => 1731155610, 'sort' => 4, 'is_route' => 1,  'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 1,  'create_time' => time(), 'update_time' => time()],
             ['uuid' => 1731155620, 'name' => '优惠券记录', 'path' => '/marketing/coupon/record/index', 'api_path' => '/marketing/coupon/record', 'parent_uuid' => 1731155609, 'sort' => 2, 'is_route' => 1,  'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 1,  'create_time' => time(), 'update_time' => time()],
             // 营销活动
             ['uuid' => 1731155710, 'name' => '营销活动', 'path' => '/marketing/activity/index', 'api_path' => '', 'parent_uuid' => 1731155608, 'sort' => 3, 'is_route' => 1,  'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 1,  'create_time' => time(), 'update_time' => time()],
@@ -57,6 +59,8 @@ class UpdateShopAccessAndRoleV220Table extends Migrator
                 ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '1731155610', 'create_time' => time()],
                 ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '1731155611', 'create_time' => time()],
                 ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '1731155612', 'create_time' => time()],
+                ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '1731155613', 'create_time' => time()],
+                ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '1731155614', 'create_time' => time()],
                 ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '1731155620', 'create_time' => time()],
                 ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '1731155710', 'create_time' => time()],
                 ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '1731155711', 'create_time' => time()],

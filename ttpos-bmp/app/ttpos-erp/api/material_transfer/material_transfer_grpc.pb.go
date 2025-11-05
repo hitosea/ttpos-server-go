@@ -29,6 +29,8 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MaterialTransferServiceClient interface {
 	// 材料调拨
+	// 参数：MaterialTransferReq 材料调拨请求
+	// 返回：MaterialTransferResp 材料调拨响应
 	MaterialTransfer(ctx context.Context, in *MaterialTransferReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 }
 
@@ -55,6 +57,8 @@ func (c *materialTransferServiceClient) MaterialTransfer(ctx context.Context, in
 // for forward compatibility.
 type MaterialTransferServiceServer interface {
 	// 材料调拨
+	// 参数：MaterialTransferReq 材料调拨请求
+	// 返回：MaterialTransferResp 材料调拨响应
 	MaterialTransfer(context.Context, *MaterialTransferReq) (*api.ResponseInfo, error)
 	mustEmbedUnimplementedMaterialTransferServiceServer()
 }
