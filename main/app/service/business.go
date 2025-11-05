@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes" // 引入 bytes 包
 	"fmt"
 	"sort"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/dto/resp/business_data_resp"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/printer/template"
 	"ttpos-server-go/app/repository"
@@ -21,6 +23,7 @@ import (
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
+	"github.com/xuri/excelize/v2"
 	"go.uber.org/zap"
 )
 
@@ -41,22 +44,25 @@ type IBusinessSrv interface {
 	CountKitchenEfficiencyAnalysis(ctx context.Context, req req.KitchenEfficiencyAnalysisReq) (*business_data_resp.BusinessDataKitchenEfficiencyAnalysis, error)          // 统计后厨效率分析
 	CountKitchenEfficiencyAnalysisAvg(ctx context.Context, req req.KitchenEfficiencyAnalysisAvgReq) (*business_data_resp.BusinessDataKitchenEfficiencyAnalysisAvg, error) // 统计后厨效率分析平均时长
 	CountKitchenProductionDetail(ctx context.Context, req req.KitchenProductionDetailReq) (*business_data_resp.KitchenProductionDetail, error)                            // 统计后厨菜品出品明细
+	ExportKitchenProductionDetail(ctx context.Context, req req.KitchenProductionDetailReq) (*resp.FileExportResp, error)                                                  // 导出后厨菜品出品明细
 }
 
 // businessSrv 收银服务结构体
 type businessSrv struct {
 	statisticsSrv IStatisticsSrv
+	uploadFileSrv IUploadFileSrv
 }
 
 // NewBusinessSrv 创建新的收银产品类别服务
-func NewBusinessSrv(statisticsSrv IStatisticsSrv) IBusinessSrv {
-	return NewBusinessSrvImpl(statisticsSrv)
+func NewBusinessSrv(statisticsSrv IStatisticsSrv, uploadFileSrv IUploadFileSrv) IBusinessSrv {
+	return NewBusinessSrvImpl(statisticsSrv, uploadFileSrv)
 }
 
 // NewBusinessSrvImpl 创建新的收银服务实现
-func NewBusinessSrvImpl(statisticsSrv IStatisticsSrv) IBusinessSrv {
+func NewBusinessSrvImpl(statisticsSrv IStatisticsSrv, uploadFileSrv IUploadFileSrv) IBusinessSrv {
 	return &businessSrv{
 		statisticsSrv: statisticsSrv,
+		uploadFileSrv: uploadFileSrv,
 	}
 }
 
@@ -1031,4 +1037,133 @@ func (s *businessSrv) CountKitchenProductionDetail(ctx context.Context, req req.
 			Total:    int64(len(productionOrderProducts)),
 		},
 	}, nil
+}
+
+// 导出厨房出品明细数据到谷歌桶
+func (s *businessSrv) ExportKitchenProductionDetail(ctx context.Context, req req.KitchenProductionDetailReq) (*resp.FileExportResp, error) { // 修改返回类型
+	req.PageNo = 1
+	req.PageSize = 1000 // 最多导出1000条数据
+	productionDetail, err := s.CountKitchenProductionDetail(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if productionDetail.Meta.Total > 1000 {
+		return nil, errors.WithMessage(errors.New("最多导出1000条数据"))
+	}
+	// 商家时区
+	timezone := ctx.GetCompanySetting().Timezone
+	timezoneUtil := utils.SetTimezone(timezone)
+	// 文件名多语言
+	fileNameMul := model.MultiLanguageName{
+		EnName:   "Detailed List of Dish Output",          // 英文
+		ZhName:   "菜品出品明细",                                // 中文
+		ZhTwName: "菜品出品明細",                                // 繁体中文
+		ThName:   "รายละเอียดการออกอาหาร",                 // 泰语
+		MyName:   "ဟင်းလျာထုတ်လုပ်မှု အသေးစိတ်စာရင်း",     // 缅甸语
+		JaName:   "料理の提供明細",                               // 日语
+		KoName:   "메뉴 출품 상세 내역",               // 韩语
+		TrName:   "Yemek Çıkış Ayrıntıları",             // 土耳其语
+		SvName:   "Detaljerad lista över maträttsutbud", // 瑞典语
+	}
+	headerMap := map[string][]string{
+		"zh": { // 中文
+			"名称", "规格", "分类", "完成数量", "下单时间", "制作完成时间", "制作总耗时", "传菜完成时间", "传菜总耗时", "完成时间", "总耗时",
+		},
+		"th": { // 泰语
+			"ชื่อ", "ข้อกำหนด", "ประเภท", "จำนวนที่เสร็จสิ้น", "เวลาสั่งซื้อ", "เวลาเสร็จสิ้นการผลิต", "เวลาที่ใช้ในการผลิตทั้งหมด", "เวลาเสร็จสิ้นการส่งอาหาร", "เวลาที่ใช้ในการส่งอาหารทั้งหมด", "เวลาเสร็จสิ้น", "เวลาที่ใช้ทั้งหมด",
+		},
+		"en": { // 英文
+			"Name", "Specification", "Category", "Quantity Completed", "Order Placement Time", "Production Completion Time", "Total Production Time", "Food Delivery Completion Time", "Total Food Delivery Time", "Completion Time", "Total Time Consumed",
+		},
+		"zhtw": { // 繁体中文
+			"名稱", "規格", "分類", "完成數量", "下單時間", "製作完成時間", "製作總耗時", "傳菜完成時間", "傳菜總耗時", "完成時間", "總耗時",
+		},
+		"zh_tw": { //
+			"名稱", "規格", "分類", "完成數量", "下單時間", "製作完成時間", "製作總耗時", "傳菜完成時間", "傳菜總耗時", "完成時間", "總耗時",
+		},
+		"ja": { // 日语
+			"名称", "規格", "分類", "完了数量", "発注時刻", "製作完了時刻", "製作総時間", "伝菜完了時刻", "伝菜総時間", "完了時刻", "総時間",
+		},
+		"ko": { // 韩语
+			"이름", "규격", "카테고리", "완료 수량", "주문 시간", "제작 완료 시간", "제작 총 소요 시간", "전송 완료 시간", "전송 총 소요 시간", "완료 시간", "총 소요 시간",
+		},
+		"my": { // 缅甸语
+			"အမည်", "အရွယ်အစား", "အမျိုးအစား", "ပြီးစီးအရေအတွက်", "မှာယူချိန်", "ပြုလုပ်ပြီးစီးချိန်", "ပြုလုပ်ရန်အချိန်ယူမှုစုစုပေါင်း", "စားပွဲတင်ပြီးစီးချိန်", "စားပွဲတင်အချိန်ယူမှုစုစုပေါင်း", "ပြီးစီးချိန်", "စုစုပေါင်းအချိန်ယူမှု",
+		},
+		"tr": { // 土耳其语
+			"Ad", "özellikler", "Kategori", "Tamamlanan Miktar", "Sipariş Verme Zamanı", "Üretim Tamamlama Zamanı", "Toplam Üretim Süresi", "Yemek Servis Tamamlama Zamanı", "Toplam Yemek Servis Süresi", "Tamamlama Zamanı", "Toplam Süre",
+		},
+		"sv": { // 瑞典语
+			"Namn", "specifikation", "Kategori", "Antal Färdigställda", "Beställningstid", "Produktionsfärdigställningstid", "Total Produktionstid", "Matleveransfärdigställningstid", "Total Matleveranstid", "Färdigställningstid", "Total Tid",
+		},
+	}
+	fileName := fmt.Sprintf("%s_%d.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), time.Now().Unix()) // 文件名,格式
+	xlsxFile := excelize.NewFile()                                                                         // 修改这里，直接使用 NewFile()
+	sheetName := fileNameMul.GetNameByLang(ctx.GetLanguage())
+	// 创建一个新的工作表
+	index, err := xlsxFile.NewSheet(sheetName)
+	if err != nil {
+		logger.Logger.Error("创建Excel工作表失败", zap.Error(err))
+		return nil, errors.WithMessage(err)
+	}
+	xlsxFile.SetActiveSheet(index)
+
+	lang := ctx.GetLanguage()
+	// 设置表头
+	headers := func() []string {
+		headers := headerMap[lang]
+		if headers == nil {
+			headers = headerMap["en"]
+		}
+		return headers
+	}() // 根据语言获取表头
+
+	// 写入表头
+	for i, header := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1) // 从第一行开始
+		xlsxFile.SetCellValue(sheetName, cell, header)
+		// 设置样式，加粗表头
+		style, _ := xlsxFile.NewStyle(&excelize.Style{
+			Font: &excelize.Font{Bold: true},
+		})
+		xlsxFile.SetCellStyle(sheetName, cell, cell, style)
+	}
+
+	// 写入数据
+	for rowIdx, item := range productionDetail.List {
+		// 数据从第二行开始写入
+		offsetRow := rowIdx + 2 // +1 for 0-based index, +1 for header row
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("A%d", offsetRow), item.ProductName.GetLocale(lang))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", offsetRow), item.FlavorName.GetLocale(lang))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", offsetRow), item.CategoryName.GetLocale(lang))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("D%d", offsetRow), item.Number)
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("E%d", offsetRow), timezoneUtil.FormatUnixTime(item.CreateTime, "2006-01-02 15:04:05"))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("F%d", offsetRow), timezoneUtil.FormatUnixTime(item.MakeFinishTime, "2006-01-02 15:04:05"))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("G%d", offsetRow), utils.FormatIntToTime(item.MakeDuration))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("H%d", offsetRow), timezoneUtil.FormatUnixTime(item.SendFinishTime, "2006-01-02 15:04:05"))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("I%d", offsetRow), utils.FormatIntToTime(item.SendDuration))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("J%d", offsetRow), timezoneUtil.FormatUnixTime(item.FinishTime, "2006-01-02 15:04:05"))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("K%d", offsetRow), utils.FormatIntToTime(item.AllDuration))
+	}
+
+	// 自动调整列宽
+	for i := 0; i < len(headers); i++ {
+		colName, _ := excelize.ColumnNumberToName(i + 1)
+		xlsxFile.SetColWidth(sheetName, colName, colName, 20)
+	}
+
+	// 将 Excel 文件写入内存
+	var b bytes.Buffer
+	if err := xlsxFile.Write(&b); err != nil {
+		logger.Logger.Error("写入Excel文件到内存失败", zap.Error(err))
+		return nil, errors.WithMessage(err)
+	}
+
+	// 上传文档
+	res, err := s.uploadFileSrv.UploadDocument(ctx, &b, fileName, int64(b.Len()), 0)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return &resp.FileExportResp{FileURL: res.FileUrl}, nil // 返回文件URL
 }

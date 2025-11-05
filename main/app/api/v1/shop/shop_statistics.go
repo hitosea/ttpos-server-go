@@ -365,6 +365,31 @@ func (h *statisticsHandler) CountKitchenProductionDetail(c *gin.Context) {
 	helper.Success(c, kitchenProductionDetailData)
 }
 
+// ExportKitchenProductionDetail 导出后厨菜品出品明细
+// @Summary 导出后厨菜品出品明细
+// @Description 导出后厨菜品出品明细
+// @Tags 商家端.营业数据
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.KitchenProductionDetailReq true "统计参数"
+// @Success 200 {object} dto.Response{data=resp.FileExportResp} "统计数据"
+// @Router /shop/statistics/kitchen/production_detail/export [get]
+func (h *statisticsHandler) ExportKitchenProductionDetail(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var countReq req.KitchenProductionDetailReq
+	if err := c.ShouldBindQuery(&countReq); err != nil {
+		helper.HandleValidationError(c, err, countReq, nil)
+		return
+	}
+	exportKitchenProductionDetailData, err := h.businessSrv.ExportKitchenProductionDetail(ctx, countReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, exportKitchenProductionDetailData)
+}
+
 func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -375,7 +400,8 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 	statisticsSrv := service.NewStatisticsSrv()
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
-	businessSrv := service.NewBusinessSrv(statisticsSrv)
+	uploadFileSrv := service.NewUploadFileSrv(dbm)
+	businessSrv := service.NewBusinessSrv(statisticsSrv, uploadFileSrv)
 
 	wrapper := &statisticsHandler{
 		businessSrv: businessSrv,
@@ -398,5 +424,6 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 		privateApi.GET("/statistics/kitchen/efficiency_analysis", wrapper.CountKitchenEfficiencyAnalysis)        // 统计后厨效率分析
 		privateApi.GET("/statistics/kitchen/efficiency_analysis/avg", wrapper.CountKitchenEfficiencyAnalysisAvg) // 统计后厨效率分析平均时长
 		privateApi.GET("/statistics/kitchen/production_detail", wrapper.CountKitchenProductionDetail)            // 后厨菜品出品明细
+		privateApi.GET("/statistics/kitchen/production_detail/export", wrapper.ExportKitchenProductionDetail)    // 导出后厨菜品出品明细
 	}
 }

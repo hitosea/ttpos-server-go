@@ -884,7 +884,8 @@ func (s *staffShiftSrv) CreateShiftSnapshot(ctx context.Context, shiftLog model.
 	}
 
 	// 获取交班详情
-	businessSrv := NewBusinessSrvImpl(s.statisticsSrv)
+	// uploadFileSrv := service.NewUploadFileSrv(s.dbm)
+	businessSrv := NewBusinessSrv(s.statisticsSrv, nil)
 	businessData, err := businessSrv.CountBusiness(ctx, req.BusinessDataCountReq{
 		QueryStartTime: log.ShiftStartTime,
 		QueryEndTime:   log.ShiftEndTime,
