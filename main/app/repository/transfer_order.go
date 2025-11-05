@@ -167,7 +167,7 @@ func (r *TransferOrderRepoImpl) GetListWithPaginationFromMultiDB(query TransferO
 
 	baseSQL := fmt.Sprintf(`
 		SELECT * FROM (
-			SELECT a.* FROM saas.ttpos_transfer_order a
+			SELECT DISTINCT a.* FROM saas.ttpos_transfer_order a
 			LEFT JOIN saas.ttpos_transfer_order_approval b ON a.uuid = b.transfer_order_uuid
 			WHERE (
 				a.company_uuid = %d OR 
@@ -175,7 +175,7 @@ func (r *TransferOrderRepoImpl) GetListWithPaginationFromMultiDB(query TransferO
 				a.next_approval_company_uuid = %d OR
 				(b.approval_company_uuid = %d and b.status in (1, 2))	
 			) %s
-			UNION ALL
+			UNION
 			SELECT * FROM %s.ttpos_transfer_order
 		) t
 		GROUP BY uuid
