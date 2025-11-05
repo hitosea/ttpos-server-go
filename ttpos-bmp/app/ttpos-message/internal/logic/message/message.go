@@ -63,7 +63,7 @@ func (s *sMessage) SendMessage(ctx context.Context, in *dto.SendMessageInput) (o
 
 	// 查询模板信息
 	var template *dto.MessageTemplateDTO
-	template, err = s.GetTemplateByUUId(ctx, in.TemplateUUID)
+	template, err = s.GetTemplateByUUId(ctx, in.TemplateUuid)
 	if err != nil {
 		out.Success = false
 		out.Message = consts.ErrMsgTemplateNotFound
@@ -110,6 +110,7 @@ func (s *sMessage) SendMessage(ctx context.Context, in *dto.SendMessageInput) (o
 	record := &dto.MessageRecordDTO{
 		Uuid:         in.MessageUuid,
 		TemplateId:   in.TemplateId,
+		TemplateUuid: in.TemplateUuid,
 		MessageType:  in.MessageType,
 		Recipient:    in.Recipient,
 		Subject:      subject,
