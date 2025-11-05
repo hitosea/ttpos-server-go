@@ -269,7 +269,7 @@ func (s *sBuying) CreatePurchaseOrderFromSalesOrder(ctx context.Context, req *dt
 		"source_name": req.SourceName,
 	})
 	if err != nil {
-		return nil, gerror.Wrapf(err, "创建采购订单失败")
+		return nil, gerror.Wrapf(err, "创建内部采购订单失败")
 	}
 
 	// 解析响应数据

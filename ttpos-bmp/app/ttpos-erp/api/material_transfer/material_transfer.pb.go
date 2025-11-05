@@ -24,18 +24,22 @@ const (
 )
 
 type MaterialTransferReq struct {
-	state           protoimpl.MessageState  `protogen:"open.v1"`
-	FromCompanyAbbr string                  `protobuf:"bytes,1,opt,name=from_company_abbr,json=fromCompanyAbbr,proto3" json:"from_company_abbr,omitempty" dc:"调出方公司缩写, 必填"`                 // 调出方公司缩写, 必填
-	FromBranch      string                  `protobuf:"bytes,2,opt,name=from_branch,json=fromBranch,proto3" json:"from_branch,omitempty" dc:"调出方分店名称,可选"`                                   // 调出方分店名称,可选
-	ToCompanyAbbr   string                  `protobuf:"bytes,3,opt,name=to_company_abbr,json=toCompanyAbbr,proto3" json:"to_company_abbr,omitempty" dc:"调入方公司缩写, 必填"`                       // 调入方公司缩写, 必填
-	ToBranch        string                  `protobuf:"bytes,4,opt,name=to_branch,json=toBranch,proto3" json:"to_branch,omitempty" dc:"调入方分店名称,可选"`                                         // 调入方分店名称,可选
-	FromWarehouse   string                  `protobuf:"bytes,5,opt,name=from_warehouse,json=fromWarehouse,proto3" json:"from_warehouse,omitempty" dc:"来源仓库,必填"`                             // 来源仓库,必填
-	ToWarehouse     string                  `protobuf:"bytes,6,opt,name=to_warehouse,json=toWarehouse,proto3" json:"to_warehouse,omitempty" dc:"目标仓库,必填"`                                   // 目标仓库,必填
-	RequiredDate    string                  `protobuf:"bytes,7,opt,name=required_date,json=requiredDate,proto3" json:"required_date,omitempty" dc:"到货日期, 格式: 2023-01-01,可选。 默认 2035-12-31"` // 到货日期, 格式: 2023-01-01,可选。 默认 2035-12-31
-	DeliveryDate    string                  `protobuf:"bytes,8,opt,name=delivery_date,json=deliveryDate,proto3" json:"delivery_date,omitempty" dc:"发货日期, 格式: 2023-01-01,可选。 默认 2035-12-31"` // 发货日期, 格式: 2023-01-01,可选。 默认 2035-12-31
-	Items           []*MaterialTransferItem `protobuf:"bytes,9,rep,name=items,proto3" json:"items,omitempty" dc:"材料列表,必填"`                                                                  // 材料列表,必填
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state                 protoimpl.MessageState  `protogen:"open.v1"`
+	FromCompanyAbbr       string                  `protobuf:"bytes,1,opt,name=from_company_abbr,json=fromCompanyAbbr,proto3" json:"from_company_abbr,omitempty" dc:"调出方公司缩写, 必填"`                       // 调出方公司缩写, 必填
+	FromBranch            string                  `protobuf:"bytes,2,opt,name=from_branch,json=fromBranch,proto3" json:"from_branch,omitempty" dc:"调出方分店名称,可选"`                                         // 调出方分店名称,可选
+	ToCompanyAbbr         string                  `protobuf:"bytes,3,opt,name=to_company_abbr,json=toCompanyAbbr,proto3" json:"to_company_abbr,omitempty" dc:"调入方公司缩写, 必填"`                             // 调入方公司缩写, 必填
+	ToBranch              string                  `protobuf:"bytes,4,opt,name=to_branch,json=toBranch,proto3" json:"to_branch,omitempty" dc:"调入方分店名称,可选"`                                               // 调入方分店名称,可选
+	FromWarehouse         string                  `protobuf:"bytes,5,opt,name=from_warehouse,json=fromWarehouse,proto3" json:"from_warehouse,omitempty" dc:"来源仓库,必填"`                                   // 来源仓库,必填
+	ToWarehouse           string                  `protobuf:"bytes,6,opt,name=to_warehouse,json=toWarehouse,proto3" json:"to_warehouse,omitempty" dc:"目标仓库,必填"`                                         // 目标仓库,必填
+	RequiredDate          string                  `protobuf:"bytes,7,opt,name=required_date,json=requiredDate,proto3" json:"required_date,omitempty" dc:"到货日期, 格式: 2023-01-01,可选。 默认 2035-12-31"`       // 到货日期, 格式: 2023-01-01,可选。 默认 2035-12-31
+	DeliveryDate          string                  `protobuf:"bytes,8,opt,name=delivery_date,json=deliveryDate,proto3" json:"delivery_date,omitempty" dc:"发货日期, 格式: 2023-01-01,可选。 默认 2035-12-31"`       // 发货日期, 格式: 2023-01-01,可选。 默认 2035-12-31
+	Items                 []*MaterialTransferItem `protobuf:"bytes,9,rep,name=items,proto3" json:"items,omitempty" dc:"材料列表,必填"`                                                                        // 材料列表,必填
+	FromParentCompanyAbbr string                  `protobuf:"bytes,10,opt,name=from_parent_company_abbr,json=fromParentCompanyAbbr,proto3" json:"from_parent_company_abbr,omitempty" dc:"调出方父级公司缩写,可选"` // 调出方父级公司缩写,可选
+	FromParentBranch      string                  `protobuf:"bytes,11,opt,name=from_parent_branch,json=fromParentBranch,proto3" json:"from_parent_branch,omitempty" dc:"调出方父级公司分店名称,可选"`                // 调出方父级公司分店名称,可选
+	ToParentCompanyAbbr   string                  `protobuf:"bytes,12,opt,name=to_parent_company_abbr,json=toParentCompanyAbbr,proto3" json:"to_parent_company_abbr,omitempty" dc:"调入方父级公司缩写,可选"`       // 调入方父级公司缩写,可选
+	ToParentBranch        string                  `protobuf:"bytes,13,opt,name=to_parent_branch,json=toParentBranch,proto3" json:"to_parent_branch,omitempty" dc:"调入方父级公司分店名称,可选"`                      // 调入方父级公司分店名称,可选
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *MaterialTransferReq) Reset() {
@@ -129,6 +133,34 @@ func (x *MaterialTransferReq) GetItems() []*MaterialTransferItem {
 		return x.Items
 	}
 	return nil
+}
+
+func (x *MaterialTransferReq) GetFromParentCompanyAbbr() string {
+	if x != nil {
+		return x.FromParentCompanyAbbr
+	}
+	return ""
+}
+
+func (x *MaterialTransferReq) GetFromParentBranch() string {
+	if x != nil {
+		return x.FromParentBranch
+	}
+	return ""
+}
+
+func (x *MaterialTransferReq) GetToParentCompanyAbbr() string {
+	if x != nil {
+		return x.ToParentCompanyAbbr
+	}
+	return ""
+}
+
+func (x *MaterialTransferReq) GetToParentBranch() string {
+	if x != nil {
+		return x.ToParentBranch
+	}
+	return ""
 }
 
 type MaterialTransferResp struct {
@@ -331,7 +363,7 @@ var File_material_transfer_material_transfer_proto protoreflect.FileDescriptor
 
 const file_material_transfer_material_transfer_proto_rawDesc = "" +
 	"\n" +
-	")material_transfer/material_transfer.proto\x12\x11material_transfer\x1a\terp.proto\"\xfa\x02\n" +
+	")material_transfer/material_transfer.proto\x12\x11material_transfer\x1a\terp.proto\"\xc0\x04\n" +
 	"\x13MaterialTransferReq\x12*\n" +
 	"\x11from_company_abbr\x18\x01 \x01(\tR\x0ffromCompanyAbbr\x12\x1f\n" +
 	"\vfrom_branch\x18\x02 \x01(\tR\n" +
@@ -342,7 +374,12 @@ const file_material_transfer_material_transfer_proto_rawDesc = "" +
 	"\fto_warehouse\x18\x06 \x01(\tR\vtoWarehouse\x12#\n" +
 	"\rrequired_date\x18\a \x01(\tR\frequiredDate\x12#\n" +
 	"\rdelivery_date\x18\b \x01(\tR\fdeliveryDate\x12=\n" +
-	"\x05items\x18\t \x03(\v2'.material_transfer.MaterialTransferItemR\x05items\"\xe9\x01\n" +
+	"\x05items\x18\t \x03(\v2'.material_transfer.MaterialTransferItemR\x05items\x127\n" +
+	"\x18from_parent_company_abbr\x18\n" +
+	" \x01(\tR\x15fromParentCompanyAbbr\x12,\n" +
+	"\x12from_parent_branch\x18\v \x01(\tR\x10fromParentBranch\x123\n" +
+	"\x16to_parent_company_abbr\x18\f \x01(\tR\x13toParentCompanyAbbr\x12(\n" +
+	"\x10to_parent_branch\x18\r \x01(\tR\x0etoParentBranch\"\xe9\x01\n" +
 	"\x14MaterialTransferResp\x12E\n" +
 	"\ffrom_receipt\x18\x01 \x01(\v2\".material_transfer.TransferReceiptR\vfromReceipt\x12A\n" +
 	"\n" +

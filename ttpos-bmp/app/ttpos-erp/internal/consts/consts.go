@@ -77,4 +77,7 @@ const (
 
 	DefaultDeliveryDate   = "2035-12-31"
 	DefaultRequiredByDate = "2035-12-31"
+
+	//需求默认调拨都使用此价格列表
+	DefaultTransferPriceList = "Standard Buying"
 )

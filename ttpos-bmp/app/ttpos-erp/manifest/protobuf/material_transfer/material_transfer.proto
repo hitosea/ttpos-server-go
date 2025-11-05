@@ -15,6 +15,11 @@ message MaterialTransferReq {
   string required_date = 7; // 到货日期, 格式: 2023-01-01,可选。 默认 2035-12-31
   string delivery_date = 8; // 发货日期, 格式: 2023-01-01,可选。 默认 2035-12-31
   repeated MaterialTransferItem items = 9; // 材料列表,必填
+
+  string from_parent_company_abbr = 10; // 调出方父级公司缩写,可选
+  string from_parent_branch = 11; // 调出方父级公司分店名称,可选
+  string to_parent_company_abbr = 12; // 调入方父级公司缩写,可选
+  string to_parent_branch = 13; // 调入方父级公司分店名称,可选
 }
 
 
@@ -40,5 +45,7 @@ message MaterialTransferItem {
 
 service MaterialTransferService {
   // 材料调拨
+  // 参数：MaterialTransferReq 材料调拨请求
+  // 返回：MaterialTransferResp 材料调拨响应
   rpc MaterialTransfer (MaterialTransferReq) returns (erp.ResponseInfo);
 }

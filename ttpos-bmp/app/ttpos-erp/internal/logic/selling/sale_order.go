@@ -221,9 +221,9 @@ func (s *sSelling) validateSalesOrder(req *dtoSelling.SalesOrder) error {
 	if req.Company == "" {
 		return gerror.New("公司信息不能为空")
 	}
-	if req.TransactionDate == "" {
-		return gerror.New("交易日期不能为空")
-	}
+	//if req.TransactionDate == "" {
+	//	return gerror.New("交易日期不能为空")
+	//}
 	if req.DeliveryDate == "" {
 		return gerror.New("交付日期不能为空")
 	}

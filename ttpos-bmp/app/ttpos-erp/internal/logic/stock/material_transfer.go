@@ -30,7 +30,87 @@ type sMaterialTransfer struct {
 }
 
 func init() {
+	service.RegisterMaterialTransfer(MaterialTransfer)
+}
 
+// getCompanyBranchAndWarehouse 获取公司的分支和在途仓库
+// 参数：
+//   - ctx: 上下文对象
+//   - companyAbbr: 公司简称
+//
+// 返回：
+//   - branch: 分支名称
+//   - warehouseName: 在途仓库名称
+//   - err: 错误信息
+func (s *sMaterialTransfer) getCompanyBranchAndWarehouse(ctx context.Context, companyAbbr string) (branch string, warehouseName string, err error) {
+	// 获取公司的 branch
+	record, err := dao.ShopCashier.Ctx(ctx).Where(dao.ShopCashier.Columns().CompanyAbbr, companyAbbr).One()
+	if err != nil {
+		return "", "", gerror.Wrapf(err, "获取公司[%s]的branch失败", companyAbbr)
+	}
+
+	shopCashier := &entity.ShopCashier{}
+	err = record.Struct(&shopCashier)
+	if err != nil {
+		g.Log().Error(ctx, "解析公司branch信息失败", err)
+		//return "", "", gerror.Wrapf(err, "解析公司[%s]的branch失败", companyAbbr)
+	}
+	branch = shopCashier.Branch
+
+	// 获取在途仓库列表
+	warehouseList, err := service.Warehouse().GetWarehouseList(ctx, &warehouse.GetWarehouseListReq{
+		Company:       companyAbbr,
+		WarehouseType: erp.WarehouseTypeTransit,
+	})
+	if err != nil || len(warehouseList.WarehouseList) == 0 {
+		return "", "", gerror.Newf("公司[%s]的默认在途仓库不存在", companyAbbr)
+	}
+
+	// 优先选择与分支相同的在途仓
+	for _, warehouseInfo := range warehouseList.WarehouseList {
+		if warehouseInfo.Branch == branch {
+			warehouseName = warehouseInfo.WarehouseName
+			return branch, warehouseName, nil
+		}
+		warehouseName = warehouseInfo.WarehouseName
+	}
+
+	return branch, warehouseName, nil
+}
+
+// getTransitWarehouse 获取在途仓库
+// 参数：
+//   - ctx: 上下文对象
+//   - companyAbbr: 公司简称
+//   - branch: 分支名称
+//
+// 返回：
+//   - warehouseName: 在途仓库名称
+//   - err: 错误信息
+func (s *sMaterialTransfer) getTransitWarehouse(ctx context.Context, companyAbbr string, branch string) (warehouseName string, err error) {
+	companyName, err := service.Company().GetCompanyNameWithAbbr(ctx, companyAbbr)
+	if err != nil {
+		return "", gerror.Wrapf(err, "获取公司[%s]的名称失败", companyAbbr)
+	}
+	// 获取在途仓库列表
+	warehouseList, err := service.Warehouse().GetWarehouseList(ctx, &warehouse.GetWarehouseListReq{
+		Company:       companyName,
+		WarehouseType: erp.WarehouseTypeTransit,
+	})
+	if err != nil || len(warehouseList.WarehouseList) == 0 {
+		return "", gerror.Newf("公司[%s]的默认在途仓库不存在", companyAbbr)
+	}
+
+	// 优先选择与分支相同的在途仓
+	for _, warehouseInfo := range warehouseList.WarehouseList {
+		if warehouseInfo.Branch == branch {
+			warehouseName = warehouseInfo.Name
+			return warehouseName, nil
+		}
+		warehouseName = warehouseInfo.Name
+	}
+
+	return warehouseName, nil
 }
 
 // MaterialTransfer 调入调出
@@ -39,34 +119,11 @@ func init() {
 // 3. 调出方与调入方父级公司不同时，先调出到调出方父级公司， 再调出到对方父级公司，再调出到调入方公司。返回节点的3组单号都不相同
 
 func (s *sMaterialTransfer) MaterialTransfer(ctx context.Context, req *material_transfer.MaterialTransferReq) (*material_transfer.MaterialTransferResp, error) {
-	//获取调出/入方父级公司
-	fromCompany, err := service.Company().GetCompanyWithAbbr(ctx, req.FromCompanyAbbr)
-	if err != nil {
-		return nil, gerror.Wrapf(err, "获取调出方公司失败")
-	}
-	fromParentCompanyName := fromCompany.ParentCompany
-
-	toCompany, err := service.Company().GetCompanyWithAbbr(ctx, req.ToCompanyAbbr)
-	if err != nil {
-		return nil, gerror.Wrapf(err, "获取调入方公司失败")
-	}
-	toParentCompanyName := toCompany.ParentCompany
 
 	transferResp := &material_transfer.MaterialTransferResp{}
-
-	fromParentCompany, err := service.Company().GetCompany(ctx, fromParentCompanyName)
-	if err != nil {
-		return nil, gerror.Wrapf(err, "获取调出父级公司失败")
-	}
-
-	toParentCompany, err := service.Company().GetCompany(ctx, toParentCompanyName)
-	if err != nil {
-		return nil, gerror.Wrapf(err, "获取调入方父级公司失败")
-	}
-
 	//case 1
-	//判断调入方是否自己的父级公司
-	if fromParentCompanyName == toCompany.CompanyName {
+	//判断调入方是否自己的父级公司, 或者 调出方与调入方父级公司为空时
+	if (req.FromParentCompanyAbbr == "" && req.ToParentCompanyAbbr == "") || req.FromParentCompanyAbbr == req.ToCompanyAbbr {
 		transferReceipt, err := s.CreateInnerTransferReceipt(ctx, &material_transfer.MaterialTransferReq{
 			FromCompanyAbbr: req.FromCompanyAbbr,
 			FromBranch:      req.FromBranch,
@@ -92,39 +149,36 @@ func (s *sMaterialTransfer) MaterialTransfer(ctx context.Context, req *material_
 
 	}
 	//case 2
-	if fromParentCompanyName == toParentCompanyName {
-		//调出方与调入方父级公司相同时，先调入父公司，再调入到调入方公司。 返回 审核节点和调入方节点的单号都是相同的
+	//调出方与调入方父级公司相同、调入调出方父级任意一个为空时，先调入审核公司，再调入到调入方公司。 返回 审核节点和调入方节点的单号都是相同的
+	if (req.FromParentCompanyAbbr != "" && req.ToParentCompanyAbbr == "") ||
+		(req.FromParentCompanyAbbr == "" && req.ToParentCompanyAbbr != "") ||
+		((req.FromParentCompanyAbbr != "" && req.ToParentCompanyAbbr != "") && req.FromParentCompanyAbbr == req.ToParentCompanyAbbr) {
+		var (
+			auditCompanyAbbr, auditBranch string
+		)
+		if req.FromParentCompanyAbbr != "" && req.ToParentCompanyAbbr != "" {
+			auditCompanyAbbr = req.FromParentCompanyAbbr
+			auditBranch = req.FromParentBranch
+		} else {
+			//合并空字符串
+			auditCompanyAbbr = req.FromParentCompanyAbbr + req.ToParentCompanyAbbr
+			auditBranch = req.ToParentCompanyAbbr + req.ToParentBranch
+		}
 
-		//获取调出方父公司的branch
-		record, err := dao.ShopCashier.Ctx(ctx).Where(dao.ShopCashier.Columns().CompanyAbbr, fromParentCompany.Abbr).One()
+		// 获取调出方父公司的分支和在途仓
+		auditWarehouse, err := s.getTransitWarehouse(ctx, auditCompanyAbbr, auditBranch)
 		if err != nil {
-			return nil, gerror.Wrapf(err, "获取调出方父公司的branch失败")
+			return nil, err
 		}
-		shopCashier := &entity.ShopCashier{}
-		err = record.Struct(&shopCashier)
-		if err != nil {
-			return nil, gerror.Wrapf(err, "解析获取调出方父公司的branch失败")
-		}
-		//获取调入方父公司在途仓
-		toWarehouse := ""
-		warehouseList, err := service.Warehouse().GetWarehouseList(ctx, &warehouse.GetWarehouseListReq{
-			Company:       fromParentCompany.Abbr,
-			Branch:        shopCashier.Branch,
-			WarehouseType: erp.WarehouseTypeTransit,
-		})
-		if err != nil || len(warehouseList.WarehouseList) == 0 {
-			return nil, gerror.New("默认在途仓库不存在")
-		}
-		toWarehouse = warehouseList.WarehouseList[0].WarehouseName
 
-		//调出方发起销售订单，目标是父级公司
+		// 调出方发起销售订单，目标是父级公司
 		transferReceipt, err := s.CreateInnerTransferReceipt(ctx, &material_transfer.MaterialTransferReq{
 			FromCompanyAbbr: req.FromCompanyAbbr,
 			FromBranch:      req.FromBranch,
-			ToCompanyAbbr:   fromParentCompany.Abbr,
-			ToBranch:        shopCashier.Branch,
+			ToCompanyAbbr:   auditCompanyAbbr,
+			ToBranch:        auditBranch,
 			FromWarehouse:   req.FromWarehouse,
-			ToWarehouse:     toWarehouse,
+			ToWarehouse:     auditWarehouse,
 			RequiredDate:    req.RequiredDate,
 			DeliveryDate:    req.DeliveryDate,
 			Items:           req.Items,
@@ -136,14 +190,15 @@ func (s *sMaterialTransfer) MaterialTransfer(ctx context.Context, req *material_
 			PoNo:            transferReceipt.PoNo,
 			SoNo:            transferReceipt.SoNo,
 			FromCompanyAbbr: req.FromCompanyAbbr,
+			ToCompanyAbbr:   auditCompanyAbbr,
 		}
 		//父级公司发起销售订单，目标是调入公司
 		transferReceipt, err = s.CreateInnerTransferReceipt(ctx, &material_transfer.MaterialTransferReq{
-			FromCompanyAbbr: req.FromCompanyAbbr,
-			FromBranch:      req.FromBranch,
+			FromCompanyAbbr: auditCompanyAbbr,
+			FromBranch:      auditBranch,
 			ToCompanyAbbr:   req.ToCompanyAbbr,
 			ToBranch:        req.ToBranch,
-			FromWarehouse:   req.FromWarehouse,
+			FromWarehouse:   auditWarehouse,
 			ToWarehouse:     req.ToWarehouse,
 			RequiredDate:    req.RequiredDate,
 			DeliveryDate:    req.DeliveryDate,
@@ -155,54 +210,34 @@ func (s *sMaterialTransfer) MaterialTransfer(ctx context.Context, req *material_
 		transferResp.AuditReceipt = &material_transfer.TransferReceipt{
 			PoNo:            transferReceipt.PoNo,
 			SoNo:            transferReceipt.SoNo,
-			FromCompanyAbbr: req.FromCompanyAbbr,
+			FromCompanyAbbr: auditCompanyAbbr,
+			ToCompanyAbbr:   req.ToCompanyAbbr,
 		}
 		transferResp.ToReceipt = transferResp.AuditReceipt
 	}
 	//case 3
-	if fromParentCompanyName != toParentCompanyName {
+	//调出方与调入方父级公司不同时，先调出到调出方父级公司， 再调出到对方父级公司，再调出到调入方公司。返回节点的3组单号都不相同
+	if (req.FromParentCompanyAbbr != "" && req.ToParentCompanyAbbr != "") && req.FromParentCompanyAbbr != req.ToParentCompanyAbbr {
 		var (
-			fromParentWarehouse = ""
-			fromParentBranch    = ""
-			toParentWarehouse   = ""
-			toParentBranch      = ""
+			fromParentWarehouse, toParentWarehouse string
+			err                                    error
 		)
-
-		//调出方与调入方父级公司不同时，先调出到调出方父级公司， 再调出到对方父级公司，再调出到调入方公司。返回节点的3组单号都不相同
-
 		//step1 调出公司发起销售订单，目标是调出方父公司
 		{
-			//获取调出方父公司的branch
-			record, err := dao.ShopCashier.Ctx(ctx).Where(dao.ShopCashier.Columns().CompanyAbbr, fromParentCompany.Abbr).One()
+			// 获取调出方父公司的分支和在途仓
+			fromParentWarehouse, err = s.getTransitWarehouse(ctx, req.FromParentCompanyAbbr, req.FromParentBranch)
 			if err != nil {
-				return nil, gerror.Wrapf(err, "获取调出方父公司的branch失败")
+				return nil, err
 			}
-			shopCashier := &entity.ShopCashier{}
-			err = record.Struct(&shopCashier)
-			if err != nil {
-				return nil, gerror.Wrapf(err, "解析获取调出方父公司的branch失败")
-			}
-			fromParentBranch = shopCashier.Branch
 
-			//获取调入方父公司在途仓
-			warehouseList, err := service.Warehouse().GetWarehouseList(ctx, &warehouse.GetWarehouseListReq{
-				Company:       fromParentCompany.Abbr,
-				Branch:        fromParentBranch,
-				WarehouseType: erp.WarehouseTypeTransit,
-			})
-			if err != nil || len(warehouseList.WarehouseList) == 0 {
-				return nil, gerror.New("默认在途仓库不存在")
-			}
-			toWarehouse := warehouseList.WarehouseList[0].WarehouseName
-			fromParentWarehouse = toWarehouse
-			//调出方发起销售订单，目标是父级公司
+			// 调出方发起销售订单，目标是父级公司
 			transferReceipt, err := s.CreateInnerTransferReceipt(ctx, &material_transfer.MaterialTransferReq{
 				FromCompanyAbbr: req.FromCompanyAbbr,
 				FromBranch:      req.FromBranch,
-				ToCompanyAbbr:   fromParentCompany.Abbr,
-				ToBranch:        fromParentBranch,
+				ToCompanyAbbr:   req.FromParentCompanyAbbr,
+				ToBranch:        req.FromParentBranch,
 				FromWarehouse:   req.FromWarehouse,
-				ToWarehouse:     toWarehouse,
+				ToWarehouse:     fromParentWarehouse,
 				RequiredDate:    req.RequiredDate,
 				DeliveryDate:    req.DeliveryDate,
 				Items:           req.Items,
@@ -214,39 +249,23 @@ func (s *sMaterialTransfer) MaterialTransfer(ctx context.Context, req *material_
 				PoNo:            transferReceipt.PoNo,
 				SoNo:            transferReceipt.SoNo,
 				FromCompanyAbbr: req.FromCompanyAbbr,
+				ToCompanyAbbr:   req.FromParentCompanyAbbr,
 			}
 		}
 
 		//step2 父级公司发起销售订单，目标是调入方父公司
 		{
-			//获取调出方父公司的branch
-			record, err := dao.ShopCashier.Ctx(ctx).Where(dao.ShopCashier.Columns().CompanyAbbr, toParentCompany.Abbr).One()
+			// 获取调入方父公司的分支和在途仓
+			toParentWarehouse, err = s.getTransitWarehouse(ctx, req.ToParentCompanyAbbr, req.ToParentBranch)
 			if err != nil {
-				return nil, gerror.Wrapf(err, "获取调出方父公司的branch失败")
+				return nil, err
 			}
-			shopCashier := &entity.ShopCashier{}
-			err = record.Struct(&shopCashier)
-			if err != nil {
-				return nil, gerror.Wrapf(err, "解析获取调出方父公司的branch失败")
-			}
-			toParentBranch = shopCashier.Branch
-			//获取调入方父公司在途仓
-			warehouseList, err := service.Warehouse().GetWarehouseList(ctx, &warehouse.GetWarehouseListReq{
-				Company:       toParentCompany.Abbr,
-				Branch:        toParentBranch,
-				WarehouseType: erp.WarehouseTypeTransit,
-			})
-			if err != nil || len(warehouseList.WarehouseList) == 0 {
-				return nil, gerror.New("默认在途仓库不存在")
-			}
-			toWarehouse := warehouseList.WarehouseList[0].WarehouseName
-			toParentWarehouse = toWarehouse
 
 			transferReceipt, err := s.CreateInnerTransferReceipt(ctx, &material_transfer.MaterialTransferReq{
-				FromCompanyAbbr: fromParentCompany.Abbr,
-				FromBranch:      fromParentBranch,
-				ToCompanyAbbr:   toParentCompany.Abbr,
-				ToBranch:        toParentBranch,
+				FromCompanyAbbr: req.FromParentCompanyAbbr,
+				FromBranch:      req.FromParentBranch,
+				ToCompanyAbbr:   req.ToParentCompanyAbbr,
+				ToBranch:        req.ToParentBranch,
 				FromWarehouse:   fromParentWarehouse,
 				ToWarehouse:     toParentWarehouse,
 				RequiredDate:    req.RequiredDate,
@@ -259,15 +278,15 @@ func (s *sMaterialTransfer) MaterialTransfer(ctx context.Context, req *material_
 			transferResp.AuditReceipt = &material_transfer.TransferReceipt{
 				PoNo:            transferReceipt.PoNo,
 				SoNo:            transferReceipt.SoNo,
-				FromCompanyAbbr: fromParentCompany.Abbr,
-				ToCompanyAbbr:   toParentCompany.Abbr,
+				FromCompanyAbbr: req.FromParentCompanyAbbr,
+				ToCompanyAbbr:   req.ToParentCompanyAbbr,
 			}
 		}
 		{
 			//step3 调入方父公司发起销售订单，目标是调入方公司
 			transferReceipt, err := s.CreateInnerTransferReceipt(ctx, &material_transfer.MaterialTransferReq{
-				FromCompanyAbbr: toParentCompany.Abbr,
-				FromBranch:      toParentBranch,
+				FromCompanyAbbr: req.ToParentCompanyAbbr,
+				FromBranch:      req.ToParentBranch,
 				ToCompanyAbbr:   req.ToCompanyAbbr,
 				ToBranch:        req.ToBranch,
 				FromWarehouse:   toParentWarehouse,
@@ -282,7 +301,7 @@ func (s *sMaterialTransfer) MaterialTransfer(ctx context.Context, req *material_
 			transferResp.ToReceipt = &material_transfer.TransferReceipt{
 				PoNo:            transferReceipt.PoNo,
 				SoNo:            transferReceipt.SoNo,
-				FromCompanyAbbr: toParentCompany.Abbr,
+				FromCompanyAbbr: req.ToParentCompanyAbbr,
 				ToCompanyAbbr:   req.ToCompanyAbbr,
 			}
 		}
@@ -293,6 +312,16 @@ func (s *sMaterialTransfer) MaterialTransfer(ctx context.Context, req *material_
 
 // CreateInnerTransferReceipt  实际上是通过 创建内部销售单 -> 内部采购单来实现
 func (s *sMaterialTransfer) CreateInnerTransferReceipt(ctx context.Context, req *material_transfer.MaterialTransferReq) (*material_transfer.TransferReceipt, error) {
+	//判断 需求时间和发货时间是否为空， 默认使用
+	//          RequiredDate:    consts.DefaultRequiredByDate,
+	//			DeliveryDate:    consts.DefaultDeliveryDate,
+	if req.RequiredDate == "" {
+		req.RequiredDate = consts.DefaultRequiredByDate
+	}
+	if req.DeliveryDate == "" {
+		req.DeliveryDate = consts.DefaultDeliveryDate
+	}
+
 	transferReceipt := &material_transfer.TransferReceipt{}
 	//检查调入方的交易对象是否包含了调出公司，如果没有默认添加
 	toCompanyName, err := service.Company().GetCompanyNameWithAbbr(ctx, req.ToCompanyAbbr)
@@ -305,15 +334,31 @@ func (s *sMaterialTransfer) CreateInnerTransferReceipt(ctx context.Context, req 
 		return nil, gerror.Wrapf(err, "获取调出方公司失败")
 	}
 
+	var customer *erp.Customer
 	customers, err := service.Selling().ListCustomers(ctx, &dtoSelling.ListCustomersReq{
 		RepresentsCompany: toCompanyName,
 		PageSize:          1,
 	})
-	if err != nil || len(customers) == 0 {
+	if err != nil {
 		return nil, gerror.Wrapf(err, "获取调出方供应商的交易对象失败")
 	}
+	if len(customers) == 0 {
+		//创建内部客户
+		customer, err = service.Selling().CreateCustomer(ctx, &erp.Customer{
+			CustomerName:       toCompanyName + "-" + req.ToCompanyAbbr,
+			CustomerType:       "Company",
+			IsInternalCustomer: 1,
+			RepresentsCompany:  toCompanyName,
+			CustomerGroup:      consts.DefaultCustomerGroupName,
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "创建内部客户失败")
+		}
+	} else {
+		customer = customers[0]
+	}
 	containsCompany := false
-	for _, companyItem := range customers[0].Companies {
+	for _, companyItem := range customer.Companies {
 		if companyItem.Company == toCompanyName {
 			// 调出方公司已在调入方交易对象中
 			containsCompany = true
@@ -322,22 +367,40 @@ func (s *sMaterialTransfer) CreateInnerTransferReceipt(ctx context.Context, req 
 	}
 	if !containsCompany {
 		// 调出方公司不在调入方交易对象中，默认添加
-		err = service.Selling().AddCompanyToCustomer(ctx, customers[0], fromCompanyName)
+		err = service.Selling().AddCompanyToCustomer(ctx, customer, fromCompanyName)
 		if err != nil {
 			return nil, gerror.Wrapf(err, "添加调出方公司到调入方客户交易对象失败")
 		}
 	}
 
+	var supplier *buying.SupplierData
 	suppliers, err := service.Supplier().ListSuppliers(ctx, &buying.ListSuppliersReq{
 		RepresentsCompany: fromCompanyName,
 		PageSize:          1,
 	})
-	if err != nil || len(suppliers.Suppliers) == 0 {
+	if err != nil {
 		return nil, gerror.Wrapf(err, "获取调出方供应商的交易对象失败")
+	}
+	if len(suppliers.Suppliers) == 0 {
+		resp, err := service.Supplier().CreateSupplier(ctx, &buying.CreateSupplierReq{
+			Supplier: &buying.SupplierData{
+				SupplierName:       req.FromBranch + "-" + req.FromCompanyAbbr,
+				AliasName:          req.FromBranch,
+				Branch:             req.FromBranch,
+				CompanyAbbr:        req.FromCompanyAbbr,
+				IsInternalSupplier: true,
+			},
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "创建内部供应商失败")
+		}
+		supplier = resp.Supplier
+	} else {
+		supplier = suppliers.Suppliers[0]
 	}
 	//检查调入方父级公司的内部供应商的交易对象是否包含了调出方公司，如果没有默认添加
 	err = service.Supplier().AddSupplerTransactCompany(ctx, &dto.AddSupplerTransactCompanyReq{
-		Supplier:        suppliers.Suppliers[0].Name,
+		Supplier:        supplier.Name,
 		WithCompanyAbbr: req.ToCompanyAbbr,
 	})
 	if err != nil {
@@ -362,25 +425,25 @@ func (s *sMaterialTransfer) CreateInnerTransferReceipt(ctx context.Context, req 
 			Rate:     item.Rate,
 		})
 	}
-	//调出方发起销售订单，
+	//调出方发起销售订单
 
 	// 获取默认采购价格表
-	defaultPriceList, err := service.PosPriceList().GetPosPriceListByCompany(ctx, fromCompanyName)
-	if err != nil {
-		g.Log().Warningf(ctx, "获取采购价格表失败，company: %s", fromCompanyName)
-		defaultPriceList, err = service.PosPriceList().GetDefaultPosPriceList(ctx)
-		if err != nil {
-			return nil, gerror.Wrapf(err, "获取默认采购价格表失败")
-		}
-	}
+	//defaultPriceList, err := service.PosPriceList().GetPosPriceListByCompany(ctx, fromCompanyName)
+	//if err != nil {
+	//	g.Log().Warningf(ctx, "获取采购价格表失败，company: %s", fromCompanyName)
+	//	defaultPriceList, err = service.PosPriceList().GetDefaultPosPriceList(ctx)
+	//	if err != nil {
+	//		return nil, gerror.Wrapf(err, "获取默认采购价格表失败")
+	//	}
+	//}
 
 	saleOrder, err := service.Selling().CreateSalesOrder(ctx, &dtoSelling.SalesOrder{
 		Customer:         customers[0].Name,
 		Company:          fromCompanyName,
-		DeliveryDate:     consts.DefaultDeliveryDate,
+		DeliveryDate:     req.DeliveryDate,
 		SetWarehouse:     req.FromWarehouse,
 		Items:            saleOrderItems,
-		SellingPriceList: defaultPriceList.Name,
+		SellingPriceList: consts.DefaultTransferPriceList,
 	})
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建销售订单失败")
@@ -392,7 +455,8 @@ func (s *sMaterialTransfer) CreateInnerTransferReceipt(ctx context.Context, req 
 		SourceName:      saleOrder.Name,
 		Supplier:        suppliers.Suppliers[0].Name,
 		TargetWarehouse: req.ToWarehouse,
-		ScheduleDate:    consts.DefaultRequiredByDate,
+		ScheduleDate:    req.RequiredDate,
+		BuyingPriceList: consts.DefaultTransferPriceList,
 	})
 	if err != nil {
 		//失败时取消销售订单
