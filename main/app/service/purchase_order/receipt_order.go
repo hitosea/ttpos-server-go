@@ -10,6 +10,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -25,17 +26,19 @@ import (
 
 // purchaseReceiptOrderSrv 收货单服务
 type purchaseReceiptOrderSrv struct {
-	dbm       *database.DBManager
-	validator *purchaseOrderValidator
-	helper    *purchaseOrderHelper
+	dbm            *database.DBManager
+	validator      *purchaseOrderValidator
+	helper         *purchaseOrderHelper
+	receiptFileSrv service.IPurchaseReceiptFileSrv
 }
 
 // newPurchaseReceiptOrderSrv 创建收货单服务实例
 func newPurchaseReceiptOrderSrv(dbm *database.DBManager) *purchaseReceiptOrderSrv {
 	return &purchaseReceiptOrderSrv{
-		dbm:       dbm,
-		validator: &purchaseOrderValidator{},
-		helper:    &purchaseOrderHelper{},
+		dbm:            dbm,
+		validator:      &purchaseOrderValidator{},
+		helper:         &purchaseOrderHelper{},
+		receiptFileSrv: service.NewPurchaseReceiptFileSrv(dbm),
 	}
 }
 
@@ -276,6 +279,19 @@ func (s *purchaseReceiptOrderSrv) CreatePurchaseReceiptOrder(
 		return resp.PurchaseReceiptOrderCreateResp{}, err
 	}
 
+	// 保存附件关联（在事务外进行，避免影响主流程）
+	if len(req.FileUuids) > 0 {
+		if len(req.FileUuids) > 10 {
+			return resp.PurchaseReceiptOrderCreateResp{}, errors.New("最多支持10个附件")
+		}
+
+		err = s.receiptFileSrv.SaveReceiptFiles(ctx, result.Uuid, req.FileUuids)
+		if err != nil {
+			logger.Logger.Warn("保存收货单附件失败", zap.Error(err), zap.Uint64("receiptOrderUuid", result.Uuid))
+			// 不影响收货单创建，只记录日志
+		}
+	}
+
 	return result, nil
 }
 
@@ -297,6 +313,7 @@ func (s *purchaseReceiptOrderSrv) UpdatePurchaseReceiptOrder(
 		}
 	}
 
+	var status int
 	err := db.Transaction(func(tx *gorm.DB) error {
 		purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepo(tx)
 		receiptOrderRepo := repository.NewPurchaseReceiptOrderRepo(tx)
@@ -307,6 +324,8 @@ func (s *purchaseReceiptOrderSrv) UpdatePurchaseReceiptOrder(
 		if err != nil {
 			return errors.WithMessage(errors.New("收货单不存在"), err.Error())
 		}
+
+		status = receiptOrder.Status
 
 		// 查询采购申请
 		var purchaseOrder *model.PurchaseOrder
@@ -485,6 +504,30 @@ func (s *purchaseReceiptOrderSrv) UpdatePurchaseReceiptOrder(
 		return err
 	}
 
+	// 处理附件（仅草稿状态可修改）
+	if status == constant.ReceiptOrderStatusPending {
+		// 验证附件数量
+		if len(req.FileUuids) > 10 {
+			return errors.New("最多支持10个附件")
+		}
+
+		// 删除旧的附件关联
+		err = s.receiptFileSrv.DeleteAllReceiptFiles(ctx, req.Uuid)
+		if err != nil {
+			logger.Logger.Warn("删除收货单附件失败", zap.Error(err), zap.Uint64("receiptOrderUuid", req.Uuid))
+			// 不影响收货单更新，只记录日志
+		}
+
+		// 保存新的附件关联
+		if len(req.FileUuids) > 0 {
+			err = s.receiptFileSrv.SaveReceiptFiles(ctx, req.Uuid, req.FileUuids)
+			if err != nil {
+				logger.Logger.Warn("保存收货单附件失败", zap.Error(err), zap.Uint64("receiptOrderUuid", req.Uuid))
+				// 不影响收货单更新，只记录日志
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -648,6 +691,16 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderDetail(
 		}(item)
 
 		detailResp.Items = append(detailResp.Items, itemInfo)
+	}
+
+	// 查询附件列表
+	files, err := s.receiptFileSrv.GetReceiptFiles(ctx, req.Uuid)
+	if err != nil {
+		logger.Logger.Warn("查询收货单附件失败", zap.Error(err), zap.Uint64("receiptOrderUuid", req.Uuid))
+		// 不影响收货单详情查询，只记录日志
+		detailResp.Files = []resp.ReceiptFileInfo{}
+	} else {
+		detailResp.Files = files
 	}
 
 	return detailResp, nil

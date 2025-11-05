@@ -1114,6 +1114,21 @@ CREATE TABLE IF NOT EXISTS `ttpos_purchase_receipt_order_item` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '收货单物品表';
 
+-- 收货单附件表
+CREATE TABLE IF NOT EXISTS `ttpos_purchase_receipt_file` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '附件关联ID',
+    `receipt_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '收货单UUID',
+    `file_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '文件UUID',
+    `sort_order` INT(11) NOT NULL DEFAULT 0 COMMENT '排序顺序',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `idx_uuid` (`uuid`),
+    KEY `idx_receipt_order_uuid` (`receipt_order_uuid`),
+    KEY `idx_file_uuid` (`file_uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '收货单附件表';
+
 -- 收货单物品单位表
 CREATE TABLE IF NOT EXISTS `ttpos_purchase_receipt_order_item_unit` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',

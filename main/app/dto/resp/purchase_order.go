@@ -199,4 +199,18 @@ type PurchaseReceiptItemInfo struct {
 type PurchaseReceiptOrderDetailResp struct {
 	PurchaseReceiptOrderInfo
 	Items []PurchaseReceiptItemInfo `json:"items"` // 收货明细
+	Files []ReceiptFileInfo         `json:"files"` // 附件列表
+}
+
+// ReceiptFileInfo 收货单附件信息
+type ReceiptFileInfo struct {
+	Uuid       uint64 `json:"uuid"`        // 附件关联UUID
+	FileUuid   uint64 `json:"file_uuid"`   // 文件UUID
+	FileName   string `json:"file_name"`   // 文件名
+	FileSize   int64  `json:"file_size"`   // 文件大小（字节）
+	FileType   string `json:"file_type"`   // 文件类型（image/document）
+	Extension  string `json:"extension"`   // 文件扩展名
+	FilePath   string `json:"file_path"`   // 文件访问路径
+	SortOrder  int    `json:"sort_order"`  // 排序
+	CreateTime int    `json:"create_time"` // 创建时间
 }

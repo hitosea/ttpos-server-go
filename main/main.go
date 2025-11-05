@@ -13,7 +13,7 @@ import (
 // @in header
 // @name Authorization
 
-// @host 127.0.0.1:8080
+// @host 10.144.144.5:8080
 // @BasePath /
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())

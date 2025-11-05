@@ -132,6 +132,7 @@ type PurchaseReceiptCreateReq struct {
 	ReceiptType       int                            `json:"receipt_type" binding:"required,min=1,max=2"`  // 收货类型 1-外部收货 2-内部收货
 	Items             []PurchaseReceiptItemCreateReq `json:"items" binding:"required,min=1,max=200,dive"`  // 收货明细
 	IsConfirm         bool                           `json:"is_confirm"`                                   // 是否确认收货
+	FileUuids         []uint64                       `json:"file_uuids" binding:"omitempty,max=10"`        // 附件UUID列表，最多10个
 }
 
 // PurchaseReceiptUpdateReq 更新收货记录请求
@@ -140,6 +141,7 @@ type PurchaseReceiptOrderUpdateReq struct {
 	ReceiveTime int64                          `json:"receive_time" binding:"required,min=0"`       // 收货时间(时间戳)
 	Items       []PurchaseReceiptItemCreateReq `json:"items" binding:"required,min=1,max=200,dive"` // 收货明细
 	IsConfirm   bool                           `json:"is_confirm"`                                  // 是否确认收货
+	FileUuids   []uint64                       `json:"file_uuids" binding:"omitempty,max=10"`       // 附件UUID列表，最多10个
 }
 
 type PurchaseReceiptItemMaterialUnitReq struct {
@@ -197,4 +199,10 @@ type PurchaseReceiptOrderDetailReq struct {
 // PurchaseReceiptOrderCancelReq 取消收货单请求
 type PurchaseReceiptOrderCancelReq struct {
 	Uuid uint64 `json:"uuid" binding:"required,min=1"` // 收货单ID
+}
+
+// DeleteReceiptFileReq 删除收货单附件请求
+type DeleteReceiptFileReq struct {
+	ReceiptOrderUuid uint64 `json:"receipt_order_uuid" binding:"required,min=1"` // 收货单UUID
+	FileUuid         uint64 `json:"file_uuid" binding:"required,min=1"`          // 文件UUID
 }
