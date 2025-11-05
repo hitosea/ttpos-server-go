@@ -44,6 +44,7 @@ type IProductionOrderQueryRepo interface {
 	GetLimitedProducts(column string, pageNo, pageSize int, opts ...DBOption) ([]model.ProductionOrderProduct, int64, error)      // 分页获取账单ID、分类ID
 	GetLimitedHistoryProducts(orderField string, opts ...DBOption) ([]model.ProductionOrderProduct, error)                        // 历史获取销售账单Uuid
 	GetProducts(limit int, orderBy string, statusOpt DBOption, opts ...DBOption) (float64, []model.ProductionOrderProduct, error) // 获取生产订单商品
+	GetProductionOrderList(pageNo, pageSize int, keyword string, categoryUuids []uint64) ([]*model.ProductionOrderProduct, error) // 获取生产订单列表
 
 	GetProductsByPackageUuid(packageUuid uint64) ([]model.ProductionOrderProduct, error) // 根据套餐uuid获取套餐下所有子商品
 }
@@ -371,4 +372,17 @@ func (r *productionRepo) WhereIsNotBatchOrBatchTimeGT0() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("is_batch = 0 OR batch_time > 0")
 	}
+}
+
+// GetProductionOrderList 获取生产订单列表
+func (r *productionRepo) GetProductionOrderList(pageNo, pageSize int, keyword string, categoryUuids []uint64) ([]*model.ProductionOrderProduct, error) {
+	var productionOrderProducts []*model.ProductionOrderProduct
+	err := r.db.Model(&model.ProductionOrderProduct{}).Scopes(NotDeleted).
+		Where("product_name LIKE ?", "%"+keyword+"%").
+		Where("category_uuid in (?)", categoryUuids).
+		Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&productionOrderProducts).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productionOrderProducts, nil
 }

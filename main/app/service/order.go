@@ -5605,7 +5605,7 @@ func EditProduct(ctx context.Context, db *gorm.DB, saleOrder *model.SaleOrder, s
 			return nil, errors.WithMessage(errFlavorProductBom)
 		}
 		flavor := model.NewSaleOrderProductFlavor(saleOrderProduct.Uuid, saleOrder.Uuid, model.Flavor{
-			Name:           flavorProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			Name:           flavorProductBom.ProductFlavor.MultiLanguageName.ToJson(),
 			Price:          flavorProductBom.Price,
 			ProductBomUuid: request.FlavorUuid,
 			ErpCode:        flavorProductBom.ErpCode,
@@ -6003,7 +6003,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				return 0
 			}(),
 			Flavor: model.Flavor{
-				Name:           flavorProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 填顾客下单时规格的名字 todo preload
+				Name:           flavorProductBom.ProductFlavor.MultiLanguageName.ToJson(), // 填顾客下单时规格的名字
 				Price:          flavorPrice,
 				ProductBomUuid: product.FlavorProductBomUuid,
 				ErpCode:        flavorProductBom.ErpCode,
@@ -6402,7 +6402,7 @@ func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, 
 		PackageUuid:      packageUuid,
 		PackageGroupUuid: product.ProductPackageGroupUuid,
 		Flavor: model.Flavor{
-			Name:           flavorProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 填顾客下单时规格的名字 todo preload
+			Name:           flavorProductBom.ProductFlavor.MultiLanguageName.ToJson(), // 填顾客下单时规格的名字
 			Price:          flavorProductBom.Price,
 			ProductBomUuid: product.FlavorProductBomUuid,
 			ErpCode:        flavorProductBom.ErpCode,
@@ -7662,7 +7662,8 @@ func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid, deskUu
 			ProductPackageUuid:    unCookingSaleOrderProduct.ProductPackageUuid,
 			Num:                   unCookingSaleOrderProduct.Num,
 			InitNum:               unCookingSaleOrderProduct.Num,
-			FlavorName:            unCookingSaleOrderProduct.Name,
+			Name:                  unCookingSaleOrderProduct.Name,
+			FlavorName:            unCookingSaleOrderProduct.FlavorName,
 			ProductAttributeNames: attributeName.ToJson(),
 			Status:                constant.ProductionOrderProductStatusCooking,
 			Remark:                unCookingSaleOrderProduct.Remark,

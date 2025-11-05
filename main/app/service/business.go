@@ -940,5 +940,37 @@ func (s *businessSrv) CountKitchenEfficiencyAnalysisAvg(ctx context.Context, req
 }
 
 func (s *businessSrv) CountKitchenProductionDetail(ctx context.Context, req req.KitchenProductionDetailReq) (*business_data_resp.KitchenProductionDetail, error) {
-	return nil, nil
+	db := ctx.GetDB()
+	productionRepo := repository.NewProductionRepo(db)
+	productionOrderProducts, err := productionRepo.GetProductionOrderList(req.PageNo, req.PageSize, req.Keyword, req.CategoryUuids)
+	if err != nil {
+		return nil, err
+	}
+
+	productionDataList := make([]business_data_resp.KitchenProductionDetailItem, 0, len(productionOrderProducts))
+	for _, productionOrderProduct := range productionOrderProducts {
+		item := business_data_resp.KitchenProductionDetailItem{
+			ProductName:    productionOrderProduct.SaleOrderProduct.MultiLanguageName.GetNames(),
+			FlavorName:     productionOrderProduct.SaleOrderProduct.GetFlavorName(),
+			CategoryName:   productionOrderProduct.ProductCategory.MultiLanguageName.GetNames(),
+			Number:         productionOrderProduct.Num,
+			CreateTime:     productionOrderProduct.CreateTime,
+			MakeFinishTime: productionOrderProduct.MadeTime,
+			MakeDuration:   productionOrderProduct.MakeDuration,
+			SendFinishTime: int64(productionOrderProduct.FinishedTime),
+			SendDuration:   productionOrderProduct.SendDuration,
+			FinishTime:     int64(productionOrderProduct.FinishedTime),
+			AllDuration:    productionOrderProduct.AllDuration,
+		}
+		productionDataList = append(productionDataList, item)
+	}
+
+	return &business_data_resp.KitchenProductionDetail{
+		List: productionDataList,
+		Meta: dto.PageResponse{
+			PageNo:   req.PageNo,
+			PageSize: req.PageSize,
+			Total:    int64(len(productionOrderProducts)),
+		},
+	}, nil
 }
