@@ -1574,14 +1574,6 @@ func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateSt
 	}
 	company := ctx.GetCompany()
 
-	// 判断saas库中商家名称是否已存在
-	saasCompanyRepo := repository.NewCompanyRepo(saasDB)
-	saasCompany, _ := saasCompanyRepo.GetCompany(saasCompanyRepo.WhereName(storeSettingReq.Name), saasCompanyRepo.WhereNotUuid(companyUuid))
-
-	if saasCompany.Uuid != 0 {
-		return errors.New("商家名称已存在")
-	}
-
 	// 时区在时区列表中
 	timeZoneList := storeSetting.TimeZoneList
 	if !slices.ContainsFunc(timeZoneList, func(item setting.TimeZoneItem) bool {
@@ -1987,11 +1979,26 @@ func (s *Srv) GetShopBusinessSetting(ctx context.Context) (setting.ShopBusiness,
 		return setting.ShopBusiness{}, errors.WithMessage(err)
 	}
 
+	var headquarterRequiredParentCompanyApproval, headquarterViaParentCompanyWarehouse string
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.HeadquarterUuid > 0 {
+		ctx2 := ctx.Copy()
+		ctx2.SetCompanyUuid(companySetting.HeadquarterUuid)
+		headquarterBusinessSetting, err := s.GetBusinessSetting(ctx2)
+		if err != nil {
+			return setting.ShopBusiness{}, errors.WithMessage(err)
+		}
+		headquarterRequiredParentCompanyApproval = headquarterBusinessSetting.RequiredParentCompanyApproval
+		headquarterViaParentCompanyWarehouse = headquarterBusinessSetting.ViaParentCompanyWarehouse
+	}
+
 	return setting.ShopBusiness{
-		Business:              businessSetting,
-		FreeReasonCount:       int(freeReasonCount),
-		ReturnFoodReasonCount: int(returnFoodReasonCount),
-		OrderRemarkCount:      int(orderRemarkCount),
+		Business:                                 businessSetting,
+		FreeReasonCount:                          int(freeReasonCount),
+		ReturnFoodReasonCount:                    int(returnFoodReasonCount),
+		OrderRemarkCount:                         int(orderRemarkCount),
+		HeadquarterRequiredParentCompanyApproval: headquarterRequiredParentCompanyApproval,
+		HeadquarterViaParentCompanyWarehouse:     headquarterViaParentCompanyWarehouse,
 	}, nil
 }
 

@@ -132,14 +132,6 @@ func (s *supplierSrv) CreateSupplier(ctx context.Context, createSupplierReq req.
 	createSupplierReq.Code = strings.ToUpper(createSupplierReq.Code)
 	db := s.dbm.GetDB(ctx.GetDbId())
 	supplierRepo := repository.NewSupplierRepo(db)
-	// 检查供应商名称是否重复
-	exists, err := supplierRepo.IsNameExists(createSupplierReq.Name, 0)
-	if err != nil {
-		return errors.WithMessage(err, "检查供应商名称失败")
-	}
-	if exists {
-		return errors.New("供应商名称已存在")
-	}
 	// 检查供应商编码是否重复
 	codeExists, err := supplierRepo.IsCodeExists(createSupplierReq.Code, 0)
 	if err != nil {
@@ -197,15 +189,6 @@ func (s *supplierSrv) UpdateSupplier(ctx context.Context, updateSupplierReq req.
 
 	if !isEditable(ctx, supplier.HeadquarterUuid) {
 		return errors.New("供应商不可编辑")
-	}
-
-	// 检查供应商名称是否重复（排除自己）
-	exists, err := supplierRepo.IsNameExists(updateSupplierReq.Name, updateSupplierReq.Uuid)
-	if err != nil {
-		return errors.WithMessage(err, "检查供应商名称失败")
-	}
-	if exists {
-		return errors.New("供应商名称已存在")
 	}
 
 	// 检查供应商编码是否重复（排除自己）
