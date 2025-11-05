@@ -7664,6 +7664,7 @@ func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid, deskUu
 			InitNum:               unCookingSaleOrderProduct.Num,
 			Name:                  unCookingSaleOrderProduct.Name,
 			FlavorName:            unCookingSaleOrderProduct.FlavorName,
+			ProductBomUuid:        unCookingSaleOrderProduct.GetFlavorBomUuid(),
 			ProductAttributeNames: attributeName.ToJson(),
 			Status:                constant.ProductionOrderProductStatusCooking,
 			Remark:                unCookingSaleOrderProduct.Remark,

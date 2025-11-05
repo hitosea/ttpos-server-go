@@ -20,6 +20,7 @@ type ProductionOrderProduct struct {
 	Num                   float64 `gorm:"column:num;type:decimal(12,2);default:0;comment:商品数量;NOT NULL" json:"num"`
 	InitNum               float64 `gorm:"column:init_num;type:decimal(12,2);default:0;comment:送厨时商品数量;NOT NULL" json:"init_num"`
 	FlavorName            string  `gorm:"column:flavor_name;type:text;comment:规格名称,不随后台改变;" json:"flavor_name"`
+	ProductBomUuid        uint64  `gorm:"column:product_bom_uuid;type:bigint(20) unsigned;default:0;comment:商品BOM ID;NOT NULL" json:"product_bom_uuid"`
 	ProductAttributeNames string  `gorm:"column:product_attribute_names;type:varchar(255);comment:商品属性名称,多个属性名用逗号分隔,不随后台改变;NOT NULL" json:"product_attribute_names"`
 	ProductSaucesNames    string  `gorm:"column:product_sauces_names;type:varchar(255);comment:商品加料名称,多个加料名用逗号分隔,不随后台改变;NOT NULL" json:"product_sauces_names"`
 	Status                int     `gorm:"column:status;type:tinyint(1);default:0;comment:状态, 0-待制作 1-制作中 2-已完成 3-已退菜;NOT NULL" json:"status"`
