@@ -167,7 +167,7 @@ func (r *TransferOrderRepoImpl) GetListWithPaginationFromMultiDB(query TransferO
 
 	baseSQL := fmt.Sprintf(`
 		SELECT * FROM (
-			SELECT DISTINCT a.* FROM saas.ttpos_transfer_order a
+			SELECT a.* FROM saas.ttpos_transfer_order a
 			WHERE (
 				a.company_uuid = %d 
 				OR a.headquarter_uuid = %d 
