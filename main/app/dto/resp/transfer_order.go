@@ -145,8 +145,9 @@ type TransferOrderCompanyListResp struct {
 
 // TransferOrderCompanyItem 调拨单门店项
 type TransferOrderCompanyItem struct {
-	Uuid uint64 `json:"uuid"` // 门店UUID
-	Name string `json:"name"` // 门店名称
+	Uuid          uint64 `json:"uuid"`           // 门店UUID
+	Name          string `json:"name"`           // 门店名称
+	IsHeadquarter bool   `json:"is_headquarter"` // 是否总部
 }
 
 // TransferOrderWarehouseListResp 调拨单仓库列表响应

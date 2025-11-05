@@ -3370,6 +3370,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_transfer_order_approval` (
   `reject_reason` text COMMENT '驳回原因',
   `is_required` int(4) NOT NULL DEFAULT 1 COMMENT '是否必须审批：0-否 1-是',
   `remark` text COMMENT '备注',
+  `is_via_company_warehouse` int(4) NOT NULL DEFAULT 0 COMMENT '是否通过公司仓库：0-否 1-是',
+  `erpnext_company_abbr` varchar(255) NOT NULL DEFAULT '' COMMENT 'ERP公司简称',
   `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
   `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
   `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',

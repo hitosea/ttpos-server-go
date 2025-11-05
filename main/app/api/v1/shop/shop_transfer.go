@@ -86,6 +86,7 @@ func (h *TransferOrderHandler) GetTransferOrderDetail(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Success 200 {object} dto.Response{data=resp.TransferOrderCompanyListResp} "成功"
+// @Router /shop/transfer/company/list [get]
 func (h *TransferOrderHandler) GetTransferOrderCompanyList(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	res, err := h.transferOrderSrv.GetTransferOrderCompanyList(ctx)
@@ -104,6 +105,7 @@ func (h *TransferOrderHandler) GetTransferOrderCompanyList(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Success 200 {object} dto.Response{data=resp.TransferOrderWarehouseListResp} "成功"
+// @Router /shop/transfer/warehouse/list [get]
 func (h *TransferOrderHandler) GetTransferOrderWarehouseList(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	res, err := h.transferOrderSrv.GetTransferOrderWarehouseList(ctx)

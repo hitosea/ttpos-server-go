@@ -304,14 +304,18 @@ func (r *TransferOrderRepoImpl) WithItems() DBOption {
 // WithApprovals 预加载审批流程
 func (r *TransferOrderRepoImpl) WithApprovals() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("Approvals", "delete_time = ?", constant.NotDeleted).Order("Approvals.sequence ASC")
+		return db.Preload("Approvals", "delete_time = ?", constant.NotDeleted, func(db *gorm.DB) *gorm.DB {
+			return db.Order("sequence ASC")
+		})
 	}
 }
 
 // WithLogs 预加载操作日志
 func (r *TransferOrderRepoImpl) WithLogs() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("Logs", "delete_time = ?", constant.NotDeleted).Order("Logs.create_time DESC")
+		return db.Preload("Logs", "delete_time = ?", constant.NotDeleted, func(db *gorm.DB) *gorm.DB {
+			return db.Order("create_time DESC")
+		})
 	}
 }
 

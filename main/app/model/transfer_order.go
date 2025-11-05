@@ -125,7 +125,7 @@ type TransferOrderApproval struct {
 	HeadquarterUuid   uint64 `gorm:"column:headquarter_uuid;type:bigint;default:0;comment:总部UUID" json:"headquarter_uuid"`
 
 	// 审批信息
-	ApprovalType        string `gorm:"column:approval_type;type:varchar(50);default:'';comment:审批类型：initiator/sender/sender_parent/receiver_parent/receiver" json:"approval_type"`
+	ApprovalType        string `gorm:"column:approval_type;type:varchar(50);default:'';comment:审批类型：sender/sender_parent/receiver/receiver_parent" json:"approval_type"`
 	ApprovalCompanyUuid uint64 `gorm:"column:approval_company_uuid;type:bigint;default:0;comment:审批门店UUID" json:"approval_company_uuid"`
 	ApprovalCompanyName string `gorm:"column:approval_company_name;type:varchar(255);default:'';comment:审批门店名称" json:"approval_company_name"`
 	Sequence            int    `gorm:"column:sequence;type:int;default:0;comment:审批顺序，从1开始" json:"sequence"`
@@ -134,12 +134,14 @@ type TransferOrderApproval struct {
 	Status       int    `gorm:"column:status;type:int(4);default:0;comment:审批状态：0-待审批 1-已通过 2-已驳回 3-已跳过" json:"status"`
 	ApproverUuid uint64 `gorm:"column:approver_uuid;type:bigint;default:0;comment:审批人UUID" json:"approver_uuid"`
 	ApproverName string `gorm:"column:approver_name;type:varchar(100);default:'';comment:审批人姓名" json:"approver_name"`
-	ApproveTime  int    `gorm:"column:approve_time;type:int;default:0;comment:审批时间" json:"approve_time"`
+	ApproveTime  int64  `gorm:"column:approve_time;type:int;default:0;comment:审批时间" json:"approve_time"`
 	RejectReason string `gorm:"column:reject_reason;type:text;comment:驳回原因" json:"reject_reason"`
 
 	// 配置
-	IsRequired int    `gorm:"column:is_required;type:int(4);default:1;comment:是否必须审批：0-否 1-是" json:"is_required"`
-	Remark     string `gorm:"column:remark;type:text;comment:备注" json:"remark"`
+	IsRequired            int    `gorm:"column:is_required;type:int(4);default:1;comment:是否必须审批：0-否 1-是" json:"is_required"`
+	Remark                string `gorm:"column:remark;type:text;comment:备注" json:"remark"`
+	IsViaCompanyWarehouse int    `gorm:"column:is_via_company_warehouse;type:int(4);default:0;comment:是否通过公司仓库：0-否 1-是" json:"is_via_company_warehouse"`
+	ErpnextCompanyAbbr    string `gorm:"column:erpnext_company_abbr;type:varchar(255);default:'';comment:ERP公司简称" json:"erpnext_company_abbr"`
 }
 
 // TableName 指定表名

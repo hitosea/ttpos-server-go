@@ -124,6 +124,42 @@ func (model *CompanySetting) IsTtposSite() bool {
 	return model.ErpnextSiteCode == "1" || model.ErpnextSiteCode == ""
 }
 
+func (model *CompanySetting) GetParentCompanyUuid(level int) uint64 {
+	parentCompanyUuids := model.GetParentCompanyUuids(level)
+	if len(parentCompanyUuids) == 0 {
+		return 0
+	}
+	return parentCompanyUuids[0]
+}
+
+// 获取父级公司UUID列表
+// level: 层级。0-所有父级。1-直接父级。2-直接父级的父级。以此类推
+func (model *CompanySetting) GetParentCompanyUuids(level ...int) []uint64 {
+	levelIndex := 0
+	if len(level) > 0 {
+		levelIndex = level[0]
+	}
+	if model.ParentCompanyUuids == "" {
+		return nil
+	}
+	uuids := make([]uint64, 0)
+	for _, uuid := range strings.Split(model.ParentCompanyUuids, ",") {
+		uuidUint, err := strconv.ParseUint(uuid, 10, 64)
+		if err != nil {
+			continue
+		}
+		uuids = append(uuids, uuidUint)
+	}
+	if levelIndex == 0 {
+		return uuids
+	}
+	if levelIndex >= len(uuids) {
+		return uuids
+	}
+	return uuids[levelIndex-1 : levelIndex]
+}
+
+// 获取时区
 func (model *CompanySetting) GetTimezone() string {
 	if model.Timezone == "" {
 		return string(utils.ZH_TIMEZONE)

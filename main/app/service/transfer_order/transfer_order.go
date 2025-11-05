@@ -156,12 +156,14 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 		if err == gorm.ErrRecordNotFound {
 			return resp.TransferOrderDetailResp{}, errors.New("调拨单不存在")
 		}
+		logger.Logger.Error("查询调拨单详情失败", zap.Error(err))
 		return resp.TransferOrderDetailResp{}, errors.WithMessage(errors.New("查询调拨单详情失败"), err.Error())
 	}
 
 	// 转换响应数据
 	var detailResp resp.TransferOrderDetailResp
 	if err = copier.Copy(&detailResp, transferOrder); err != nil {
+		logger.Logger.Error("数据转换失败", zap.Error(err))
 		return resp.TransferOrderDetailResp{}, errors.WithMessage(errors.New("数据转换失败"), err.Error())
 	}
 
@@ -401,20 +403,24 @@ func (s *transferOrderSrv) CreateTransferOrder(
 			BaseModel: model.BaseModel{
 				Uuid: transferOrderUuid,
 			},
-			CompanyUuid:         companyUuid,
-			HeadquarterUuid:     headquarterUuid,
-			OrderNo:             orderNo,
-			TransferType:        req.TransferType,
-			SenderCompanyUuid:   req.SenderCompanyUuid,
+			CompanyUuid:       companyUuid,
+			HeadquarterUuid:   headquarterUuid,
+			OrderNo:           orderNo,
+			TransferType:      req.TransferType,
+			SenderCompanyUuid: req.SenderCompanyUuid,
+			// SenderCompanyName:   ctx.GetCompany().Name,
 			ReceiverCompanyUuid: req.ReceiverCompanyUuid,
+			// ReceiverCompanyName: ctx.GetCompany().Name,
 			OutWarehouseErpCode: req.OutWarehouseErpCode,
-			InWarehouseErpCode:  req.InWarehouseErpCode,
-			OrderTime:           req.OrderTime,
-			Status:              constant.TransferOrderStatusDraft,
-			CreatorUuid:         ctx.GetStaffUuid(),
-			CreatorName:         ctx.GetStaff().RealName,
-			Remark:              req.Remark,
-			ItemCount:           len(req.Items),
+			// OutWarehouseName:   ctx.GetCompany().Name,
+			InWarehouseErpCode: req.InWarehouseErpCode,
+			// InWarehouseName:   ctx.GetCompany().Name,
+			OrderTime:   req.OrderTime,
+			Status:      constant.TransferOrderStatusDraft,
+			CreatorUuid: ctx.GetStaffUuid(),
+			CreatorName: ctx.GetStaff().RealName,
+			Remark:      req.Remark,
+			ItemCount:   len(req.Items),
 		}
 		transferOrderRepoTx := repository.NewTransferOrderRepo(tx)
 		if err := transferOrderRepoTx.Create(transferOrder); err != nil {
@@ -591,8 +597,11 @@ func (s *transferOrderSrv) SubmitTransferOrder(
 
 	// 开始事务
 	err = db.Transaction(func(tx *gorm.DB) error {
-		// TODO: 初始化审批流程（根据业务规则创建审批节点）
-		// 这里简化处理，实际需要根据发货门店、收货门店、总部等关系来确定审批流程
+
+		// 创建审批流程
+		if err := s.helper.CreateApproval(ctx, tx, s.dbm, transferOrder); err != nil {
+			return errors.WithMessage(errors.New("创建审批失败"), err.Error())
+		}
 
 		// 更新状态为待审核
 		updates := map[string]interface{}{
@@ -662,7 +671,7 @@ func (s *transferOrderSrv) ApproveTransferOrder(
 		currentApproval.Status = constant.TransferApprovalApproved
 		currentApproval.ApproverUuid = ctx.GetStaffUuid()
 		currentApproval.ApproverName = ctx.GetStaff().RealName
-		currentApproval.ApproveTime = int(time.Now().Unix())
+		currentApproval.ApproveTime = time.Now().Unix()
 		currentApproval.Remark = req.Remark
 
 		if err := approvalRepoTx.Update(currentApproval); err != nil {
@@ -753,7 +762,7 @@ func (s *transferOrderSrv) RejectTransferOrder(
 		currentApproval.Status = constant.TransferApprovalRejected
 		currentApproval.ApproverUuid = ctx.GetStaffUuid()
 		currentApproval.ApproverName = ctx.GetStaff().RealName
-		currentApproval.ApproveTime = int(time.Now().Unix())
+		currentApproval.ApproveTime = time.Now().Unix()
 		currentApproval.RejectReason = req.RejectReason
 
 		if err := approvalRepoTx.Update(currentApproval); err != nil {
@@ -926,7 +935,11 @@ func (s *transferOrderSrv) GetTransferOrderCompanyList(
 		if company.Status == 0 {
 			continue
 		}
-		list = append(list, resp.TransferOrderCompanyItem{Uuid: company.Uuid, Name: company.Name})
+		list = append(list, resp.TransferOrderCompanyItem{
+			Uuid:          company.Uuid,
+			Name:          company.Name,
+			IsHeadquarter: company.Uuid == headquarterUuid,
+		})
 	}
 
 	return resp.TransferOrderCompanyListResp{
