@@ -665,6 +665,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_production_order_product` (
     `is_batch` INT(10) NOT NULL DEFAULT 0 COMMENT '是否是分批商品, 0-否 1-是',
     `batch_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '分批时间(时间戳)，表示该商品实际送厨到厨房的时间',
     `batch_tag_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '分批类型UUID',
+    -- 效率分析相关
+    `make_duration` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '制作时长(秒)',
+    `send_duration` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '传菜时长(秒)',
+    `all_duration` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '总时长(秒)',
     -- 时间信息
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳),送厨时间',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',

@@ -38,12 +38,32 @@ type ProductionOrderProduct struct {
 	BatchTagUuid uint64 `gorm:"column:batch_tag_uuid;type:bigint(20) unsigned;default:0;comment:分批类型UUID;NOT NULL" json:"batch_tag_uuid"`
 	BatchTime    int64  `gorm:"column:batch_time;type:int(10) unsigned;default:0;comment:分批时间(时间戳)，表示该商品实际送厨到厨房的时间;NOT NULL" json:"batch_time"`
 	IsBatch      uint8  `gorm:"column:is_batch;type:tinyint(1);default:0;comment:是否是分批商品, 0-否 1-是;NOT NULL" json:"is_batch"`
+	// 效率分析相关
+	MakeDuration int64 `gorm:"column:make_duration;type:int(10) unsigned;default:0;comment:制作时长(秒);NOT NULL" json:"make_duration"`
+	SendDuration int64 `gorm:"column:send_duration;type:int(10) unsigned;default:0;comment:传菜时长(秒);NOT NULL" json:"send_duration"`
+	AllDuration  int64 `gorm:"column:all_duration;type:int(10) unsigned;default:0;comment:总时长(秒);NOT NULL" json:"all_duration"`
 
 	ProductionOrderMaterials []*ProductionOrderMaterial `gorm:"foreignKey:ProductionOrderProductUuid;references:Uuid" json:"production_order_materials"`
 	SaleOrderProduct         SaleOrderProduct           `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid" json:"sale_order_product"`
 	SaleBill                 SaleBill                   `gorm:"foreignKey:SaleBillUuid;references:Uuid" json:"sale_bill"`
 	ProductCategory          ProductCategory            `gorm:"foreignKey:FirstCategoryUuid;references:Uuid" json:"product_category"`
 	BatchTag                 *BatchTag                  `gorm:"foreignKey:BatchTagUuid;references:Uuid" json:"batch_tag"`
+}
+
+// 获取商品的送厨时间
+func (p *ProductionOrderProduct) GetCreateTime() int64 {
+	if p.IsBatchBool() {
+		return p.BatchTime // 如果商品是分批商品,则送厨时间是分批送厨的时间
+	}
+	return p.CreateTime
+}
+
+// 只能厨显模式下,获取商品的制作完成时间
+func (p *ProductionOrderProduct) GetMadeTime() int64 {
+	if p.MadeTime == 0 { // 如果商品没有制作完成时间,则使用送厨时间
+		return p.GetCreateTime()
+	}
+	return p.MadeTime
 }
 
 // 是否是分批商品

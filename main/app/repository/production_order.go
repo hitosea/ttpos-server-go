@@ -335,9 +335,12 @@ func (r *productionRepo) UpdateOrder(opts []DBOption, vars map[string]any) error
 	return db.Updates(vars).Error
 }
 
+// GetProductsByPackageUuid 根据套餐SaleOrderProduct的uuid获取套餐下所有子商品的送厨单商品列表
 func (r *productionRepo) GetProductsByPackageUuid(packageUuid uint64) ([]model.ProductionOrderProduct, error) {
 	var productionOrderProducts []model.ProductionOrderProduct
 	err := r.db.Model(&model.ProductionOrderProduct{}).Scopes(NotDeleted).
+		// r.db.Model(&model.SaleOrderProduct{}).Select("uuid").Where("package_uuid = ?" 表示获取套餐的子商品的sale_order_product_uuid列表
+		// 然后通过子商品的sale_order_product_uuid获取生产订单商品列表
 		Where("sale_order_product_uuid in (?)", r.db.Model(&model.SaleOrderProduct{}).Select("uuid").Where("package_uuid = ?", packageUuid).Scopes(NotDeleted)).
 		Find(&productionOrderProducts).Error
 

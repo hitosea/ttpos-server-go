@@ -124,6 +124,7 @@ type BusinessDataCountProductSalesReq struct {
 
 // KitchenEfficiencyAnalysisReq 统计后厨效率分析请求
 type KitchenEfficiencyAnalysisReq struct {
+	dto.PageReq            // 分页参数
 	StartTime     int64    `form:"start_time" json:"start_time"`         // 查询开始时间戳
 	EndTime       int64    `form:"end_time" json:"end_time"`             // 查询结束时间戳
 	Keyword       string   `form:"keyword" json:"keyword"`               // 关键词, 仅商品名称模糊搜索
