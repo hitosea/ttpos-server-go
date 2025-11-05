@@ -131,6 +131,9 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		ctx.AddLock()
 	}
 	db := s.dbm.GetDB(ctx.GetDbId())
+	if ctx.GetDB() != nil && isAutoOrder { // 自动接单时，使用当前事务
+		db = ctx.GetDB()
+	}
 	if len(unCookingSaleOrderProducts) == 0 {
 		return nil, errors.New("没有未送厨的商品")
 	}

@@ -13630,6 +13630,24 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 				return errors.WithMessage(err, "更新销售订单商品失败")
 			}
 		}
+
+		// 关闭h5接单功能时,自动接单
+		{
+			companySetting := ctx.GetCompanySetting()
+			if !companySetting.GetIsOpenH5Order() {
+				// 如果关闭h5接单功能
+				// 自动接单
+				ctx.SetDB(tx) // 使用当前事务
+				if result, err := s.AcceptH5Order(ctx, h5Order.Uuid, true); err != nil {
+					ctx.Log().Error("关闭h5接单功能，自动接单失败", zap.Error(err))
+					return errors.WithMessage(err, "关闭h5接单功能，自动接单失败/异常")
+				} else if result != nil {
+					ctx.Log().Error("关闭h5接单功能，自动接单异常", zap.Any("result", result))
+					return errors.WithMessage(errors.New("关闭h5接单功能，自动接单异常"), "关闭h5接单功能，自动接单失败/异常")
+				}
+				ctx.SetDB(nil) // 清空db,避免影响后续的逻辑
+			}
+		}
 		return nil
 	}); err != nil {
 		return res, errors.WithMessage(err, "下单扫码h5订单失败")
@@ -13653,14 +13671,6 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 					ctx.Log().Error("自动接单异常", zap.Any("result", result))
 				}
 			}
-		} else {
-			// 如果关闭h5接单功能
-			// 自动接单
-			if result, err := s.AcceptH5Order(ctx, h5Order.Uuid, true); err != nil {
-				ctx.Log().Error("关闭h5接单功能，自动接单失败", zap.Error(err))
-			} else if result != nil {
-				ctx.Log().Error("关闭h5接单功能，自动接单异常", zap.Any("result", result))
-			}
 		}
 	}
 
@@ -13669,6 +13679,9 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 
 func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAutoOrder bool) (*resp.OrderCheckServiceRes, error) {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	if ctx.GetDB() != nil && isAutoOrder { // 关闭h5接单功能时，使用当前事务
+		db = ctx.GetDB()
+	}
 	companySetting := ctx.GetCompanySetting()
 	h5OrderRepo := repository.NewH5OrderRepo(db)
 	// 获取h5订单
