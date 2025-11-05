@@ -100,6 +100,7 @@ var addParentCompanyUuidCmd = &cobra.Command{
 			for i, parentUuid := range parentUuids {
 				parentCompanyUuids[i] = strconv.FormatUint(parentUuid, 10)
 			}
+			slices.Reverse(parentCompanyUuids)
 			parentCompanyUuidsStr := strings.Join(parentCompanyUuids, ",")
 
 			dbm.GetDB(0).Model(&model.CompanySetting{}).Where("company_uuid = ?", uuid).Updates(map[string]any{

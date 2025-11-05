@@ -190,6 +190,7 @@ func (s *erpSrv) InitShop(ctx cc.Context, initShopReq req.InitShopReq) (resp.Ini
 		for i, parentUuid := range parentUuids {
 			parentCompanyUuids[i] = strconv.FormatUint(parentUuid, 10)
 		}
+		slices.Reverse(parentCompanyUuids)
 		parentCompanyUuidsStr := strings.Join(parentCompanyUuids, ",")
 		s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("company_uuid = ?", uuid).Updates(map[string]any{
 			"parent_company_uuids": parentCompanyUuidsStr,
