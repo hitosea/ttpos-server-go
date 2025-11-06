@@ -19254,7 +19254,7 @@ const docTemplate = `{
             }
         },
         "/shop/export_record/delete": {
-            "post": {
+            "delete": {
                 "security": [
                     {
                         "JwtToken": []

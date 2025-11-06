@@ -56,7 +56,7 @@ func (h *exportRecordHandler) GetExportRecordList(c *gin.Context) {
 // @Security JwtToken
 // @Param data body req.ExportRecordDeleteReq true "删除参数"
 // @Success 200 {object} dto.Response "删除成功"
-// @Router /shop/export_record/delete [post]
+// @Router /shop/export_record/delete [delete]
 func (h *exportRecordHandler) DeleteExportRecords(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var deleteReq req.ExportRecordDeleteReq
@@ -95,6 +95,6 @@ func RegisterExportRecordHandlers(router gin.IRouter, dbm *database.DBManager, c
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/export_record/list", handler.GetExportRecordList)
-		privateApi.POST("/export_record/delete", handler.DeleteExportRecords)
+		privateApi.DELETE("/export_record/delete", handler.DeleteExportRecords)
 	}
 }

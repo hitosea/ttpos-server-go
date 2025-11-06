@@ -26197,7 +26197,7 @@ paths:
       tags:
       - 商家端.基础信息
   /shop/export_record/delete:
-    post:
+    delete:
       consumes:
       - application/json
       description: 批量删除导出记录（软删除）
