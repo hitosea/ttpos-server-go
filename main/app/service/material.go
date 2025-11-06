@@ -2919,6 +2919,7 @@ func (s *materialSrv) SyncMaterial(ctx context.Context) error {
 					CostUnitUuid:          material.CostUnitUuid,
 					Price:                 material.Price,
 					StockNum:              material.StockNum,
+					SafetyStock:           material.SafetyStock, // 安全库存跟随总部
 					ActualSaleNum:         material.ActualSaleNum,
 					BarcodeValue:          material.BarcodeValue,
 					InternalCode:          material.InternalCode,

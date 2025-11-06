@@ -3408,4 +3408,23 @@ CREATE TABLE IF NOT EXISTS `ttpos_transfer_order_log` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='调拨单操作日志表';
 
+-- 导出记录表
+CREATE TABLE IF NOT EXISTS `ttpos_export_record` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT '导出记录UUID',
+  `export_type` int NOT NULL DEFAULT 0 COMMENT '导出类型: 1-时段营业统计, 2-综合运营统计, 3-营业应收统计, 4-菜品出品明细, 5-菜品出品详情',
+  `export_name` varchar(200) NOT NULL DEFAULT '' COMMENT '导出文件名称',
+  `file_uuid` bigint NOT NULL DEFAULT 0 COMMENT '文件UUID，关联ttpos_file表',
+  `status` int NOT NULL DEFAULT 0 COMMENT '状态: 0-导出中, 1-导出成功, 2-导出失败',
+  `error_msg` text COMMENT '错误信息',
+  `export_params` text COMMENT '导出参数JSON',
+  `staff_uuid` bigint NOT NULL DEFAULT 0 COMMENT '操作员工UUID',
+  `create_time` int NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int NOT NULL DEFAULT 0 COMMENT '删除时间',
+  KEY `idx_export_type` (`export_type`),
+  KEY `idx_status` (`status`),
+  KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='导出记录表';
+
 SET FOREIGN_KEY_CHECKS = 1;
