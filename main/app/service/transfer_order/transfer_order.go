@@ -229,8 +229,26 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 		detailResp.Items = append(detailResp.Items, itemInfo)
 	}
 
-	// 转换审批流程
-	// detailResp.Approvals = make([]resp.TransferOrderApprovalInfo, 0, len(transferOrder.Approvals))
+	// 审批状态
+	detailResp.ApprovalProgress = func() string {
+		nextApproval := transferOrder.GetNextApproval()
+		if nextApproval != nil {
+			if nextApproval.Sequence == 1 {
+				return "wait"
+			}
+			if nextApproval.ApprovalType == constant.TransferApprovalTypeSenderParent || nextApproval.ApprovalType == constant.TransferApprovalTypeReceiverParent {
+				senderParentApproval := transferOrder.GetApprovalByApprovalType(constant.TransferApprovalTypeSenderParent)
+				receiverParentApproval := transferOrder.GetApprovalByApprovalType(constant.TransferApprovalTypeReceiverParent)
+				if senderParentApproval != nil && receiverParentApproval != nil {
+					if senderParentApproval.ApprovalCompanyUuid == receiverParentApproval.ApprovalCompanyUuid {
+						return "parent"
+					}
+				}
+			}
+			return nextApproval.ApprovalType
+		}
+		return "wait"
+	}()
 
 	// 审批类型文本映射
 	approvalTypeText := map[string]string{
@@ -243,7 +261,6 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 	for _, approval := range transferOrder.Approvals {
 		approvalInfo := resp.TransferOrderApprovalInfo{}
 		copier.Copy(&approvalInfo, &approval)
-		// detailResp.Approvals = append(detailResp.Approvals, approvalInfo)
 
 		// 只保留第一个驳回信息（因为永远只能有一个驳回）
 		if detailResp.RejectInfo.Title == "" && approval.Status == constant.TransferApprovalRejected && approval.RejectReason != "" {
@@ -765,22 +782,19 @@ func (s *transferOrderSrv) SubmitTransferOrder(
 
 	// 开始事务
 	err = db.Transaction(func(tx *gorm.DB) error {
+		// 更新状态为待审核
+		transferOrder.Status = constant.TransferOrderStatusPending
+		transferOrder.SubmitTime = time.Now().Unix()
+		transferOrder.NextApprovalCompanyUuid = ctx.GetCompanyUuid()
+		transferOrder.NextApprovalCompanyName = ctx.GetCompany().Name
+		if err := repository.NewTransferOrderRepo(tx).Update(transferOrder); err != nil {
+			return errors.WithMessage(errors.New("更新调拨单状态失败"), err.Error())
+		}
 
 		// 创建审批流程
 		if err := s.helper.CreateApproval(ctx, tx, s.dbm, transferOrder); err != nil {
+			logger.Logger.Error("创建审批失败", zap.Error(err))
 			return errors.WithMessage(errors.New("创建审批失败"), err.Error())
-		}
-
-		// 更新状态为待审核
-		updates := map[string]interface{}{
-			"status":                     constant.TransferOrderStatusPending,
-			"submit_time":                time.Now().Unix(),
-			"next_approval_company_uuid": ctx.GetCompanyUuid(),
-			"next_approval_company_name": ctx.GetCompany().Name,
-		}
-
-		if err := tx.Model(&model.TransferOrder{}).Where("uuid = ?", req.Uuid).Updates(updates).Error; err != nil {
-			return errors.WithMessage(errors.New("提交调拨单失败"), err.Error())
 		}
 
 		// 记录操作日志
@@ -847,13 +861,19 @@ func (s *transferOrderSrv) ApproveTransferOrder(
 	}
 
 	// 如果入库仓库为空，且当前审批节点为发货门店上级，则无审批权限
-	if transferOrder.OutWarehouseErpCode == "" && currentApproval.ApprovalType == constant.TransferApprovalTypeSender {
-		return errors.New("请选择出库仓库")
+	if currentApproval.ApprovalType == constant.TransferApprovalTypeSender {
+		if req.OutWarehouseErpCode == "" {
+			return errors.New("请选择出库仓库")
+		}
+		transferOrder.OutWarehouseErpCode = req.OutWarehouseErpCode
 	}
 
 	// 如果入库仓库为空，且当前审批节点为收货门店上级，则无审批权限
-	if transferOrder.InWarehouseErpCode == "" && currentApproval.ApprovalType == constant.TransferApprovalTypeReceiver {
-		return errors.New("请选择入库仓库")
+	if currentApproval.ApprovalType == constant.TransferApprovalTypeReceiver {
+		if req.InWarehouseErpCode == "" {
+			return errors.New("请选择入库仓库")
+		}
+		transferOrder.InWarehouseErpCode = req.InWarehouseErpCode
 	}
 
 	// 开始事务
@@ -869,12 +889,14 @@ func (s *transferOrderSrv) ApproveTransferOrder(
 		currentApproval.ApproveTime = time.Now().Unix()
 		currentApproval.Remark = req.Remark
 		if err := approvalRepoTx.Update(currentApproval); err != nil {
+			logger.Logger.Error("更新审批节点失败", zap.Error(err))
 			return errors.WithMessage(errors.New("更新审批节点失败"), err.Error())
 		}
 
 		// 查找下一个审批节点
 		nextApproval, err := approvalRepoTx.GetNextApproval(req.Uuid, currentApproval.Sequence)
 		if err != nil && err != gorm.ErrRecordNotFound {
+			logger.Logger.Error("查询下一审批节点失败", zap.Error(err))
 			return errors.WithMessage(errors.New("查询下一审批节点失败"), err.Error())
 		}
 
@@ -892,33 +914,43 @@ func (s *transferOrderSrv) ApproveTransferOrder(
 		}
 
 		if err := transferOrderRepoTx.Update(transferOrder); err != nil {
+			logger.Logger.Error("更新调拨单状态失败", zap.Error(err))
 			return errors.WithMessage(errors.New("更新调拨单状态失败"), err.Error())
+		}
+
+		// 复制数据到总部
+		if err := s.helper.CopyDataToHeadquarter(ctx, s.dbm, tx, req.Uuid); err != nil {
+			logger.Logger.Error("复制数据到总部失败", zap.Error(err))
+			return errors.WithMessage(errors.New("复制数据到总部失败"), err.Error())
 		}
 
 		if newStatus == constant.TransferOrderStatusReceiving {
 			// 进入在途仓库存
 			if err := s.helper.UpdateStockInTransit(ctx, s.dbm, tx, transferOrder); err != nil {
-				return errors.WithMessage(errors.New("更新在途仓库存失败"), err.Error())
+				logger.Logger.Error("更新在途仓库存失败", zap.Error(err))
+				return err
 			}
 
 			// 调用erp接口
 			if ctx.GetCompany().IsOpenErp() {
 				erpResp, err := s.helper.SaveMaterialTransfer(ctx, s.dbm, tx, transferOrder)
 				if err != nil {
-					return errors.WithMessage(errors.New("调用erp接口失败"), err.Error())
+					logger.Logger.Error("调用erp接口失败", zap.Error(err))
+					return err
 				}
 				// 更新调拨单状态
 				transferOrder.ErpOrderNo = erpResp.FromReceipt.SoNo
 				transferOrder.ErpResp = utils.ToJson(erpResp)
 				if err := transferOrderRepoTx.Update(transferOrder); err != nil {
+					logger.Logger.Error("更新调拨单ERP响应数据失败", zap.Error(err))
 					return errors.WithMessage(errors.New("更新调拨单ERP响应数据失败"), err.Error())
 				}
+				// 复制数据到总部
+				if err := s.helper.CopyDataToHeadquarter(ctx, s.dbm, tx, req.Uuid); err != nil {
+					logger.Logger.Error("复制数据到总部失败", zap.Error(err))
+					return errors.WithMessage(errors.New("复制数据到总部失败"), err.Error())
+				}
 			}
-		}
-
-		// 复制数据到总部
-		if err := s.helper.CopyDataToHeadquarter(ctx, s.dbm, tx, req.Uuid); err != nil {
-			return errors.WithMessage(errors.New("复制数据到总部失败"), err.Error())
 		}
 
 		// 记录操作日志
@@ -990,6 +1022,7 @@ func (s *transferOrderSrv) RejectTransferOrder(
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 更新当前审批节点为已驳回
 		approvalRepoTx := repository.NewTransferOrderApprovalRepo(tx)
+		transferOrderRepoTx := repository.NewTransferOrderRepo(tx)
 		currentApproval.Status = constant.TransferApprovalRejected
 		currentApproval.ApproverUuid = staff.Uuid
 		currentApproval.ApproverName = staff.GetUserName()
@@ -1001,13 +1034,10 @@ func (s *transferOrderSrv) RejectTransferOrder(
 		}
 
 		// 更新调拨单为已驳回状态
-		updates := map[string]interface{}{
-			"status":                     constant.TransferOrderStatusRejected,
-			"next_approval_company_uuid": 0,
-			"next_approval_company_name": "",
-		}
-
-		if err := tx.Model(&model.TransferOrder{}).Where("uuid = ?", req.Uuid).Updates(updates).Error; err != nil {
+		transferOrder.Status = constant.TransferOrderStatusRejected
+		transferOrder.NextApprovalCompanyUuid = 0
+		transferOrder.NextApprovalCompanyName = ""
+		if err := transferOrderRepoTx.Update(transferOrder); err != nil {
 			return errors.WithMessage(errors.New("更新调拨单状态失败"), err.Error())
 		}
 
@@ -1067,14 +1097,16 @@ func (s *transferOrderSrv) ReceiveTransferOrder(
 		return errors.New("无收货权限")
 	}
 
+	if req.InWarehouseErpCode == "" {
+		return errors.New("请选择入库仓库")
+	}
+
 	// 开始事务
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 更新调拨单为已完成状态
-		updates := map[string]interface{}{
-			"status": constant.TransferOrderStatusCompleted,
-		}
-
-		if err := tx.Model(&model.TransferOrder{}).Where("uuid = ?", req.Uuid).Updates(updates).Error; err != nil {
+		transferOrder.InWarehouseErpCode = req.InWarehouseErpCode
+		transferOrder.Status = constant.TransferOrderStatusCompleted
+		if err := transferOrderRepo.Update(transferOrder); err != nil {
 			return errors.WithMessage(errors.New("更新调拨单状态失败"), err.Error())
 		}
 
@@ -1083,7 +1115,11 @@ func (s *transferOrderSrv) ReceiveTransferOrder(
 			return errors.WithMessage(errors.New("复制数据到总部失败"), err.Error())
 		}
 
-		// TODO: 这里需要调用库存服务，处理库存入库逻辑
+		// 移动在途库存
+		if err := s.helper.MoveStockInTransit(ctx, s.dbm, tx, transferOrder); err != nil {
+			logger.Logger.Error("移动在途库存失败", zap.Error(err))
+			return errors.WithMessage(errors.New("移动在途库存失败"), err.Error())
+		}
 
 		// 记录操作日志
 		if err := s.helper.CreateLog(ctx, db, req.Uuid, constant.TransferActionReceive, "收货完成", transferOrder.Status, constant.TransferOrderStatusCompleted); err != nil {

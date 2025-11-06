@@ -128,8 +128,10 @@ func (r *TransferOrderSubmitReq) Validate() error {
 
 // TransferOrderApproveReq 审批调拨单请求（通过）
 type TransferOrderApproveReq struct {
-	Uuid   uint64 `json:"uuid" binding:"required,min=1"`      // 调拨单UUID
-	Remark string `json:"remark" binding:"omitempty,max=500"` // 审批备注
+	Uuid                uint64 `json:"uuid" binding:"required,min=1"`      // 调拨单UUID
+	Remark              string `json:"remark" binding:"omitempty,max=500"` // 审批备注
+	OutWarehouseErpCode string `json:"out_warehouse_erp_code"`             // 出库仓库ERP编码
+	InWarehouseErpCode  string `json:"in_warehouse_erp_code"`              // 入库仓库ERP编码
 }
 
 func (r *TransferOrderApproveReq) Validate() error {
@@ -157,8 +159,9 @@ func (r *TransferOrderRejectReq) Validate() error {
 
 // TransferOrderReceiveReq 收货调拨单请求
 type TransferOrderReceiveReq struct {
-	Uuid   uint64 `json:"uuid" binding:"required,min=1"`      // 调拨单UUID
-	Remark string `json:"remark" binding:"omitempty,max=500"` // 收货备注
+	Uuid               uint64 `json:"uuid" binding:"required,min=1"`      // 调拨单UUID
+	Remark             string `json:"remark" binding:"omitempty,max=500"` // 收货备注
+	InWarehouseErpCode string `json:"in_warehouse_erp_code"`              // 入库仓库ERP编码
 }
 
 func (r *TransferOrderReceiveReq) Validate() error {

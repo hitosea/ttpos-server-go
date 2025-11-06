@@ -3,6 +3,7 @@ package repository
 import (
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/config"
 
@@ -30,6 +31,8 @@ type IWarehouseItemRepo interface {
 	// 通过物品UUID获取该物品在各个仓库的库存情况
 	GetWarehouseItems(opts ...DBOption) ([]*model.WarehouseItem, error)
 	GetWarehouseItemsByMaterialUuid(materialUuid uint64) ([]*model.WarehouseItem, error)
+	// 获取在途仓库库存
+	GetTransitWarehouseItemByWarehouseAndMaterial(warehouseUuid, materialUuid uint64, materialCode string, valuation float64) (*model.WarehouseItem, error)
 
 	// 库存操作
 	UpdateStock(uuid uint64, stock, reservedStock float64) error
@@ -511,4 +514,36 @@ func (r *WarehouseItemRepoImpl) GetMaterialStockByWarehouse(materialUuids []uint
 	}
 
 	return results, nil
+}
+
+// GetTransitWarehouseItemByWarehouseAndMaterial 获取在途仓库库存
+func (r *WarehouseItemRepoImpl) GetTransitWarehouseItemByWarehouseAndMaterial(
+	warehouseUuid, materialUuid uint64,
+	materialCode string,
+	valuation float64,
+) (*model.WarehouseItem, error) {
+	warehouseItem, err := r.GetByWarehouseAndMaterial(
+		warehouseUuid,
+		materialUuid,
+	)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			// 没有找到记录时创建新记录
+			newWarehouseItem := &model.WarehouseItem{
+				WarehouseUuid: warehouseUuid,
+				MaterialUuid:  materialUuid,
+				MaterialCode:  materialCode,
+				Stock:         0,
+				Valuation:     valuation,
+			}
+			err = r.Create(newWarehouseItem)
+			if err != nil {
+				return nil, errors.WithMessage(errors.New("创建仓库商品库存记录失败"), err.Error())
+			}
+			warehouseItem = newWarehouseItem
+		} else {
+			return nil, errors.WithMessage(errors.New("查询在途仓库库存失败"), err.Error())
+		}
+	}
+	return warehouseItem, nil
 }

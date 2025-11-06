@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/json"
 	"ttpos-bmp/app/ttpos-erp/api/material_transfer"
+	"ttpos-server-go/app/constant"
 
 	"github.com/shopspring/decimal"
 )
@@ -103,6 +104,36 @@ func (to *TransferOrder) GetErpOrderNos() []string {
 		}
 	}
 	return erpOrderNos
+}
+
+// 获取指定的审批流程
+func (to *TransferOrder) GetApprovalByApprovalType(approvalType string) *TransferOrderApproval {
+	for _, approval := range to.Approvals {
+		if approval.ApprovalType == approvalType {
+			return approval
+		}
+	}
+	return nil
+}
+
+// 获取下一个审批流程（按 Sequence 顺序，在已审批的基础上找下一个）
+func (to *TransferOrder) GetNextApproval() *TransferOrderApproval {
+	if len(to.Approvals) == 0 {
+		return nil
+	}
+	// 查找 Sequence 最小的待审批的、必须审批的审批流程
+	var minSequence int = 99999
+	var nextApproval *TransferOrderApproval
+	for i := range to.Approvals {
+		approval := to.Approvals[i]
+		// 条件：状态为待审批、必须审批、Sequence 最小的
+		if approval.Status == constant.TransferApprovalPending && approval.IsRequired == 1 &&
+			approval.Sequence < minSequence {
+			minSequence = approval.Sequence
+			nextApproval = to.Approvals[i]
+		}
+	}
+	return nextApproval
 }
 
 // TransferOrderItem 调拨单明细表 ttpos_transfer_order_item

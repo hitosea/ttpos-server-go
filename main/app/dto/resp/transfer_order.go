@@ -25,6 +25,7 @@ type TransferOrderInfo struct {
 	OrderTime                int64              `json:"order_time"`                   // 单据日期
 	SubmitTime               int64              `json:"submit_time"`                  // 提交时间
 	Status                   int                `json:"status"`                       // 状态: 0-待提交 1-待审核 2-已驳回 3-待收货 4-已完成
+	ApprovalProgress         string             `json:"approval_progress"`            // 审批中进度: wait-待审核 sender-待发货门店审批 sender_parent-待发货门店上级审批 receiver-待收货门店审批 receiver_parent-待收货门店上级审批 parent-待上级审批
 	NextApprovalCompanyUuid  uint64             `json:"next_approval_company_uuid"`   // 下一个审批门店UUID
 	NextApprovalCompanyName  string             `json:"next_approval_company_name"`   // 下一个审批门店名称
 	Remark                   string             `json:"remark"`                       // 备注

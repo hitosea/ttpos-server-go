@@ -387,16 +387,7 @@ func (h *purchaseOrderHelper) recordErpStockInLog(
 				logger.Logger.Error("recordErpStockInLog-GetMaterialByUuid", zap.Any("materialUuid", item.MaterialUuid), zap.Any("err", err))
 				return errors.WithMessage(errors.New("获取物品信息失败"), err.Error())
 			}
-			relatedMaterialUuids := make([]uint64, 0)
-			for _, relatedMaterial := range material.RelatedMaterialList {
-				if relatedMaterial.IsDelete() {
-					continue
-				}
-				if relatedMaterial.IsUsed == 0 {
-					continue
-				}
-				relatedMaterialUuids = append(relatedMaterialUuids, relatedMaterial.Uuid)
-			}
+			relatedMaterialUuids := material.GetRelatedMaterialUuids()
 			err = materialRepo.UpdateRelatedMaterialStock(relatedMaterialUuids)
 			if err != nil {
 				logger.Logger.Error("recordErpStockInLog-updateRelatedMaterialStock", zap.Any("relatedMaterialUuids", relatedMaterialUuids), zap.Any("err", err))
@@ -532,7 +523,7 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 		for warehouseItemUuid, item := range updateMaterialsMap {
 			actualNum := item.GetUnitsTotalConversionRateNum()
 
-			// 更新规格/加料关联材料库存
+			// 减少仓库物品库存
 			err = warehouseItemRepo.ReduceStock(warehouseItemUuid, actualNum)
 			if err != nil {
 				logger.Logger.Error("reduceHeadquarterStockAndLog-ReduceStock", zap.Any("warehouseItemUuid", warehouseItemUuid), zap.Any("actualNum", actualNum), zap.Any("err", err))
@@ -727,32 +718,19 @@ func (h *purchaseOrderHelper) AddToTransitWarehouse(
 	}
 	// 获取在途仓库出入库日志Repository
 	warehouseLogRepo := repository.NewWarehouseInOutLogRepo(tx)
+	warehouseItemRepo := repository.NewWarehouseItemRepo(tx)
 	// 获取在途仓库库存
-	warehouseItem, err := repository.NewWarehouseItemRepo(tx).GetByWarehouseAndMaterial(
+	warehouseItem, err := warehouseItemRepo.GetTransitWarehouseItemByWarehouseAndMaterial(
 		transitWarehouse.Uuid,
 		item.MaterialUuid,
+		item.MaterialCode,
+		item.Valuation,
 	)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			// 没有找到记录时创建新记录
-			newWarehouseItem := &model.WarehouseItem{
-				WarehouseUuid: transitWarehouse.Uuid,
-				MaterialUuid:  item.MaterialUuid,
-				MaterialCode:  item.MaterialCode,
-				Stock:         0,
-				Valuation:     item.Valuation,
-			}
-			err = repository.NewWarehouseItemRepo(tx).Create(newWarehouseItem)
-			if err != nil {
-				return errors.WithMessage(errors.New("创建仓库商品库存记录失败"), err.Error())
-			}
-			warehouseItem = newWarehouseItem
-		} else {
-			return errors.WithMessage(errors.New("查询在途仓库库存失败"), err.Error())
-		}
+		return errors.WithMessage(errors.New("查询在途仓库库存失败"), err.Error())
 	}
 	//
-	err = repository.NewWarehouseItemRepo(tx).AddStock(warehouseItem.Uuid, actualNum)
+	err = warehouseItemRepo.AddStock(warehouseItem.Uuid, actualNum)
 	if err != nil {
 		return errors.WithMessage(errors.New("增加在途仓库库存失败"), err.Error())
 	}
