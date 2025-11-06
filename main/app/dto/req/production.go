@@ -25,8 +25,9 @@ type HistoryReq struct {
 }
 
 type FinishReq struct {
-	ProductUuid uint64 `json:"product_uuid"` // 送厨商品ID
-	Mode        uint   `json:"mode"`         // 模式 0-传菜完成 ; 1-制作完成
+	ProductUuid  uint64   `json:"product_uuid"`  // 送厨商品ID
+	ProductUuids []uint64 `json:"product_uuids"` // 送厨商品ID列表 v2.9新增"一键完成"
+	Mode         uint     `json:"mode"`          // 模式 0-传菜完成 ; 1-制作完成
 }
 
 type RecoveryReq struct {

@@ -19,6 +19,7 @@ type IProductionOrderRepo interface {
 	WhereProductMadeTime(madeTime int64) DBOption             // 生产商品制作时间条件
 	WhereProductMakeStatus(finishStatus []uint) DBOption      // 制作状态
 	WhereProductUuid(uuid uint64) DBOption                    // 生产商品Uuid条件
+	WhereProductUuidIn(uuids []uint64) DBOption               // 生产商品Uuid条件列表
 	WhereSaleOrderProductUuid(uuid uint64) DBOption           // 生产商品销售订单uuid条件
 	WhereSaleBillUuidIn(uuids []uint64) DBOption              // 销售账单uuid条件
 	WhereSaleBillUuid(uuid uint64) DBOption                   // 销售账单uuid条件
@@ -41,6 +42,7 @@ type IProductionOrderRepo interface {
 type IProductionOrderQueryRepo interface {
 	GetProductionOrder(opts ...DBOption) (*model.ProductionOrder, error)                                                                                              // 获取生产订单
 	GetProduct(opts ...DBOption) (*model.ProductionOrderProduct, error)                                                                                               // 获取生产订单商品
+	GetProductsByUuids(uuids []uint64, opts ...DBOption) ([]model.ProductionOrderProduct, error)                                                                      // 根据Uuid列表获取生产订单商品
 	GetLimitedProducts(column string, pageNo, pageSize int, opts ...DBOption) ([]model.ProductionOrderProduct, int64, error)                                          // 分页获取账单ID、分类ID
 	GetLimitedHistoryProducts(orderField string, opts ...DBOption) ([]model.ProductionOrderProduct, error)                                                            // 历史获取销售账单Uuid
 	GetProducts(limit int, orderBy string, statusOpt DBOption, opts ...DBOption) (float64, []model.ProductionOrderProduct, error)                                     // 获取生产订单商品
@@ -239,6 +241,13 @@ func (r *productionRepo) WhereProductUuid(uuid uint64) DBOption {
 	}
 }
 
+// WhereProductUuidIn 生产商品Uuid条件列表
+func (r *productionRepo) WhereProductUuidIn(uuids []uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid in (?)", uuids)
+	}
+}
+
 // WhereSaleOrderProductUuid 生产商品销售订单商品Uuid条件
 func (r *productionRepo) WhereSaleOrderProductUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
@@ -390,6 +399,20 @@ func (r *productionRepo) GetProductionOrderList(pageNo, pageSize int, productBom
 		Where("finished_time BETWEEN ? AND ?", startTime, endTime).         // 选择时间区间
 		Order("finished_time desc").                                        // 按照完成时间最新的在前
 		Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&productionOrderProducts).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productionOrderProducts, nil
+}
+
+// GetProductsByUuids 根据Uuid列表获取生产订单商品
+func (r *productionRepo) GetProductsByUuids(uuids []uint64, opts ...DBOption) ([]model.ProductionOrderProduct, error) {
+	var productionOrderProducts []model.ProductionOrderProduct
+	db := r.db.Model(&model.ProductionOrderProduct{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Where("uuid in (?)", uuids).Find(&productionOrderProducts).Error
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}

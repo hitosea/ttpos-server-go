@@ -27391,7 +27391,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "根据调拨类型获取可选的发货门店或收货门店列表",
+                "description": "根据调拨类型获取可选的发货门店/对方机构列表",
                 "consumes": [
                     "application/json"
                 ],
@@ -27401,7 +27401,7 @@ const docTemplate = `{
                 "tags": [
                     "商家端.调拨单管理"
                 ],
-                "summary": "获取调拨单门店列表",
+                "summary": "获取调拨单门店列表/对方机构",
                 "responses": {
                     "200": {
                         "description": "成功",
@@ -35044,6 +35044,13 @@ const docTemplate = `{
                 "product_uuid": {
                     "description": "送厨商品ID",
                     "type": "integer"
+                },
+                "product_uuids": {
+                    "description": "送厨商品ID列表 v2.9新增\"一键完成\"",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 }
             }
         },
@@ -49402,6 +49409,18 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "is_can_approve": {
+                    "description": "是否可审批",
+                    "type": "boolean"
+                },
+                "is_need_select_in_warehouse": {
+                    "description": "是否需要选择入库仓库",
+                    "type": "boolean"
+                },
+                "is_need_select_out_warehouse": {
+                    "description": "是否需要选择出库仓库",
+                    "type": "boolean"
+                },
                 "item_count": {
                     "description": "物品种类数量",
                     "type": "integer"
@@ -49513,6 +49532,18 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.LocaleResponse"
                         }
                     ]
+                },
+                "is_can_approve": {
+                    "description": "是否可审批",
+                    "type": "boolean"
+                },
+                "is_need_select_in_warehouse": {
+                    "description": "是否需要选择入库仓库",
+                    "type": "boolean"
+                },
+                "is_need_select_out_warehouse": {
+                    "description": "是否需要选择出库仓库",
+                    "type": "boolean"
                 },
                 "item_count": {
                     "description": "物品种类数量",
