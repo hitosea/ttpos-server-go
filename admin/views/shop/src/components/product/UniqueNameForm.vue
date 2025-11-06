@@ -258,8 +258,8 @@
         form[key] = key === 'zhtw' ? translateData[0]['zh-TW'].substring(0, props.maxlength) ?? '' : translateData[0][key].substring(0, props.maxlength) ?? '';
       }
       await nextTick();
-      await handleValidateUnique();
-      await validateOtherGroupNames();
+      //   await handleValidateUnique();
+      //   await validateOtherGroupNames();
     } catch (error) {
       console.error(error);
     } finally {
@@ -273,10 +273,10 @@
     try {
       const baseValidateResult = await uniqueNameFormRef.value.validate();
       if (!baseValidateResult) return false;
-      const uniqueValidateResult = await handleValidateUnique();
-      if (!uniqueValidateResult) return false;
-      const otherGroupNamesValidateResult = await validateOtherGroupNames();
-      if (!otherGroupNamesValidateResult) return false;
+      //   const uniqueValidateResult = await handleValidateUnique();
+      //   if (!uniqueValidateResult) return false;
+      //   const otherGroupNamesValidateResult = await validateOtherGroupNames();
+      //   if (!otherGroupNamesValidateResult) return false;
       return true;
     } catch (error) {
       console.error('validate error', error);
@@ -289,69 +289,69 @@
   const handleValidate = async (prop, isValid, message) => {
     formErrors[prop] = isValid ? '' : message;
   };
+  //  TODO: 2025年11月06日09:24:06 去掉唯一性
+  //   const handleValidateUnique = async () => {
+  //     if (!props.isUnique) return true;
+  //     const params = {
+  //       name: form,
+  //       source: props.apiSource,
+  //       id: props.apiId,
+  //     };
+  //     if (props.apiSource == 'attribute') {
+  //       params.parent_id = props.parent_id;
+  //     }
+  //     validateLoading.value = true;
+  //     try {
+  //       const res = await IndexApi.checkNameExist(params, true);
+  //       await handleValidateUniqueResult(res.data);
+  //       return Object.values(res.data).every((value) => value === false);
+  //     } catch (error) {
+  //       console.error('validate unique error', error);
+  //       return false;
+  //     } finally {
+  //       validateLoading.value = false;
+  //     }
+  //   };
 
-  const handleValidateUnique = async () => {
-    if (!props.isUnique) return true;
-    const params = {
-      name: form,
-      source: props.apiSource,
-      id: props.apiId,
-    };
-    if (props.apiSource == 'attribute') {
-      params.parent_id = props.parent_id;
-    }
-    validateLoading.value = true;
-    try {
-      const res = await IndexApi.checkNameExist(params, true);
-      await handleValidateUniqueResult(res.data);
-      return Object.values(res.data).every((value) => value === false);
-    } catch (error) {
-      console.error('validate unique error', error);
-      return false;
-    } finally {
-      validateLoading.value = false;
-    }
-  };
+  // 校验是否与其他分组名称重复 2025年11月06日09:26:25 去掉唯一性
+  //   const validateOtherGroupNames = async () => {
+  //     if (!props.otherGroupNames.length) return true;
 
-  // 校验是否与其他分组名称重复
-  const validateOtherGroupNames = async () => {
-    if (!props.otherGroupNames.length) return true;
-    
-    // 清空之前的重复错误信息
-    for (const key of Object.keys(formErrors)) {
-      if (formErrors[key] === $t('此名称与其他分组重复')) {
-        formErrors[key] = '';
-      }
-    }
-    
-    let hasRepeat = false;
-    
-    // 检查每个语言字段是否与其他分组对应的key值的名称重复
-    for (const languageKey of Object.keys(form)) {
-      const currentValue = form[languageKey];
-      if (!currentValue || currentValue.trim() === '') continue;
-      
-      // 只比较相同语言键的值
-      const isRepeat = props.otherGroupNames.some((item) => {
-        return item[languageKey] === currentValue;
-      });
-      
-      if (isRepeat) {
-        formErrors[languageKey] = $t('此名称与其他分组重复');
-        hasRepeat = true;
-      }
-    }
-    
-    return !hasRepeat;
-  };
+  //     // 清空之前的重复错误信息
+  //     for (const key of Object.keys(formErrors)) {
+  //       if (formErrors[key] === $t('此名称与其他分组重复')) {
+  //         formErrors[key] = '';
+  //       }
+  //     }
 
-  const handleValidateUniqueResult = async (data) => {
-    formErrors.value = {};
-    await nextTick();
-    for (const key of Object.keys(formErrors)) {
-      formErrors[key] = data[key] ? $t('此名称已存在') : '';
-    }
-  };
+  //     let hasRepeat = false;
+
+  //     // 检查每个语言字段是否与其他分组对应的key值的名称重复
+  //     for (const languageKey of Object.keys(form)) {
+  //       const currentValue = form[languageKey];
+  //       if (!currentValue || currentValue.trim() === '') continue;
+
+  //       // 只比较相同语言键的值
+  //       const isRepeat = props.otherGroupNames.some((item) => {
+  //         return item[languageKey] === currentValue;
+  //       });
+
+  //       if (isRepeat) {
+  //         formErrors[languageKey] = $t('此名称与其他分组重复');
+  //         hasRepeat = true;
+  //       }
+  //     }
+
+  //     return !hasRepeat;
+  //   };
+
+  //   const handleValidateUniqueResult = async (data) => {
+  //     formErrors.value = {};
+  //     await nextTick();
+  //     for (const key of Object.keys(formErrors)) {
+  //       formErrors[key] = data[key] ? $t('此名称已存在') : '';
+  //     }
+  //   };
 
   const focusLanguageKey = ref('');
   const handleFocus = (languageKey) => {
