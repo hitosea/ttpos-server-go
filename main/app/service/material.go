@@ -495,9 +495,10 @@ func (s *materialSrv) GetMaterialStockDetail(ctx context.Context, req req.Materi
 	}
 
 	return material_resp.MaterialStockDetailResp{
-		Uuid:       req.Uuid,
-		LocaleName: material.MultiLanguageName.GetNames(),
-		Code:       material.Code,
+		Uuid:         req.Uuid,
+		LocaleName:   material.MultiLanguageName.GetNames(),
+		Code:         material.Code,
+		InternalCode: material.InternalCode,
 		Warehouses: material_resp.WarehouseList{
 			Amount: amount.InexactFloat64(),
 			List:   warehouseList,

@@ -79,10 +79,11 @@ type MaterialDetailResp struct {
 
 // MaterialStockDetailResp 物品库存详情响应
 type MaterialStockDetailResp struct {
-	Uuid       uint64             `json:"uuid"`        // 物品UUID
-	LocaleName dto.LocaleResponse `json:"locale_name"` // 物品名称
-	Code       string             `json:"code"`        // 物品编码
-	Warehouses WarehouseList      `json:"warehouses"`  // 库存列表
+	Uuid         uint64             `json:"uuid"`          // 物品UUID
+	LocaleName   dto.LocaleResponse `json:"locale_name"`   // 物品名称
+	Code         string             `json:"code"`          // 物品编码
+	InternalCode string             `json:"internal_code"` // 内部编码
+	Warehouses   WarehouseList      `json:"warehouses"`    // 库存列表
 }
 
 // WarehouseList 仓库列表
