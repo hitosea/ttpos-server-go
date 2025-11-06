@@ -3406,4 +3406,23 @@ CREATE TABLE IF NOT EXISTS `ttpos_transfer_order_log` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='调拨单操作日志表';
 
+-- 后厨效率分析表
+CREATE TABLE IF NOT EXISTS `ttpos_kitchen_efficiency_analysis` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `uuid` bigint NOT NULL DEFAULT 0 COMMENT '唯一标识',
+  `product_package_uuid` bigint NOT NULL DEFAULT 0 COMMENT '商品包UUID',
+  `min` int(10) NOT NULL DEFAULT 0 COMMENT '最短出品时长',
+  `max` int(10) NOT NULL DEFAULT 0 COMMENT '最长出品时长',
+  `avg` int(10) NOT NULL DEFAULT 0 COMMENT '平均出品时长',
+  `total` int(10) NOT NULL DEFAULT 0 COMMENT '总出品时长',
+  `count` int(10) NOT NULL DEFAULT 0 COMMENT '出品次数',
+  `date` int(10) NOT NULL DEFAULT 0 COMMENT '统计日期,格式:yyyyMMdd,如20251103.一个商品一天只有唯一的一条记录',
+  `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+  UNIQUE KEY `unique_uuid` (`uuid`),
+  UNIQUE KEY `unique_product_package_date` (`product_package_uuid`, `date`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='后厨效率分析表';
+
 SET FOREIGN_KEY_CHECKS = 1;
