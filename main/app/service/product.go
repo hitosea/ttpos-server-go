@@ -1497,7 +1497,10 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 					TrName:   category.MultiLanguageName.TrName,
 					SvName:   category.MultiLanguageName.SvName,
 				}
-				multiLanguageNameRepo.CreateMultiLanguageName(multiLanguageName)
+				_, err = multiLanguageNameRepo.CreateMultiLanguageName(multiLanguageName)
+				if err != nil {
+					return errors.WithMessage(err, "创建多语言名称失败")
+				}
 				maxSort, err := productRepo.GetProductCategoryMaxSort(
 					commonRepo.WhereBySoftDelete(),
 					productRepo.WhereParentUuid(category.ParentUuid),
@@ -1544,7 +1547,7 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 						DeleteTime: category.DeleteTime,
 					},
 					Name:                  category.Name,
-					MultiLanguageNameUuid: subShopCategory.MultiLanguageNameUuid,
+					MultiLanguageNameUuid: category.MultiLanguageNameUuid,
 					Status:                category.Status,
 					ParentUuid:            category.ParentUuid,
 					IsSpecial:             category.IsSpecial,
@@ -1553,6 +1556,46 @@ func (s *productSrv) SyncProductShopCategory(ctx context.Context) error {
 				})
 				if err != nil {
 					return errors.WithMessage(err, "更新分类失败")
+				}
+				multiLanguageName, err := multiLanguageNameRepo.GetMultiLanguageNameByUuid(category.MultiLanguageNameUuid)
+				if err != nil || multiLanguageName.Uuid == 0 {
+					newMultiLanguageName := model.MultiLanguageName{
+						BaseModel: model.BaseModel{
+							Uuid:       category.MultiLanguageNameUuid,
+							CreateTime: category.CreateTime,
+							UpdateTime: category.UpdateTime,
+							DeleteTime: category.DeleteTime,
+						},
+						EnName:   category.MultiLanguageName.EnName,
+						ZhName:   category.MultiLanguageName.ZhName,
+						ZhTwName: category.MultiLanguageName.ZhTwName,
+						ThName:   category.MultiLanguageName.ThName,
+						MyName:   category.MultiLanguageName.MyName,
+						JaName:   category.MultiLanguageName.JaName,
+						KoName:   category.MultiLanguageName.KoName,
+						TrName:   category.MultiLanguageName.TrName,
+						SvName:   category.MultiLanguageName.SvName,
+					}
+					_, err = multiLanguageNameRepo.CreateMultiLanguageName(newMultiLanguageName)
+					if err != nil {
+						return errors.WithMessage(err, "创建多语言名称失败")
+					}
+
+				} else {
+					err = multiLanguageNameRepo.UpdateMultiLanguageName(category.MultiLanguageNameUuid, model.MultiLanguageName{
+						EnName:   category.MultiLanguageName.EnName,
+						ZhName:   category.MultiLanguageName.ZhName,
+						ZhTwName: category.MultiLanguageName.ZhTwName,
+						ThName:   category.MultiLanguageName.ThName,
+						MyName:   category.MultiLanguageName.MyName,
+						JaName:   category.MultiLanguageName.JaName,
+						KoName:   category.MultiLanguageName.KoName,
+						TrName:   category.MultiLanguageName.TrName,
+						SvName:   category.MultiLanguageName.SvName,
+					})
+					if err != nil {
+						return errors.WithMessage(err, "更新多语言名称失败")
+					}
 				}
 				if ctx.GetCompany().IsOpenErp() {
 					if changeCode {
@@ -7165,9 +7208,12 @@ func (s *productSrv) SyncAttributeGroup(ctx context.Context) error {
 	s.dbm.GetDB(headquarter.Uuid).Model(&model.ProductAttributeGroup{}).Preload("MultiLanguageName").Preload("ProductAttributes").Preload("ProductAttributes.MultiLanguageName").Find(&headquarterAttributeGroups)
 
 	var existsMultiLanguageUuids []uint64
-	s.dbm.GetDB(companySetting.CompanyUuid).Model(&model.MultiLanguageName{}).Pluck("uuid", &existsMultiLanguageUuids)
 	if len(headquarterAttributeGroups) > 0 {
 		err := s.dbm.GetDB(companySetting.CompanyUuid).Transaction(func(tx *gorm.DB) error {
+			// 删除属性值多语言
+			tx.Where("uuid IN (?)", tx.Model(&model.ProductAttribute{}).Where("headquarter_uuid > 0").Select("multi_language_name_uuid")).Delete(&model.MultiLanguageName{})
+			// 删除属性组多语言
+			tx.Where("uuid IN (?)", tx.Model(&model.ProductAttributeGroup{}).Where("headquarter_uuid > 0").Select("multi_language_name_uuid")).Delete(&model.MultiLanguageName{})
 			// 删除属性值
 			tx.Where("attribute_group_uuid IN (?)", tx.Model(&model.ProductAttributeGroup{}).Where("headquarter_uuid > 0").Select("uuid")).Delete(&model.ProductAttribute{})
 			// 删除属性组
