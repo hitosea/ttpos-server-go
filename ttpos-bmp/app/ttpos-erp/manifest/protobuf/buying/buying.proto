@@ -147,8 +147,9 @@ message PurchaseReceiptInfo {
 message PurchaseReceiptItem {
   string item_code = 1; // 物品编码,必填
   string item_name = 2; // 物品名称
-  string stock_uom = 3; // 物品单位
-  double qty = 4; // 物品数量,必填
+  string stock_uom = 3; // 物品库存单位
+  string uom = 4; // 物品收货单位
+  double qty = 5; // 物品数量,必填
 }
 
 message SavePurchaseReceiptReq {
