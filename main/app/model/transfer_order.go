@@ -1,5 +1,10 @@
 package model
 
+import (
+	"encoding/json"
+	"ttpos-bmp/app/ttpos-erp/api/material_transfer"
+)
+
 // TransferOrder 调拨单主表 ttpos_transfer_order
 type TransferOrder struct {
 	BaseModel
@@ -44,6 +49,9 @@ type TransferOrder struct {
 	// 物品统计
 	ItemCount int `gorm:"column:item_count;type:int;default:0;comment:物品种类数量" json:"item_count"`
 
+	// ERP响应数据
+	ErpResp string `gorm:"column:erp_resp;type:text;comment:ERP响应数据" json:"erp_resp"`
+
 	// 关联模型
 	Items     []*TransferOrderItem     `gorm:"foreignKey:TransferOrderUuid;references:Uuid" json:"items,omitempty"`
 	Approvals []*TransferOrderApproval `gorm:"foreignKey:TransferOrderUuid;references:Uuid" json:"approvals,omitempty"`
@@ -60,6 +68,39 @@ func (to *TransferOrder) SetNil() {
 	to.Items = nil
 	to.Approvals = nil
 	to.Logs = nil
+}
+
+// getErpResp 获取ERP响应数据
+func (to *TransferOrder) GetErpResp() *material_transfer.MaterialTransferResp {
+	erpResp := &material_transfer.MaterialTransferResp{}
+	if err := json.Unmarshal([]byte(to.ErpResp), erpResp); err != nil {
+		return nil
+	}
+	return erpResp
+}
+
+// getErpResp 获取ERP响应数据
+func (to *TransferOrder) GetErpOrderNos() []string {
+	var erpOrderNos []string
+	erpResp := to.GetErpResp()
+	if erpResp == nil {
+		return erpOrderNos
+	}
+	// 使用map去重
+	uniqueMap := make(map[string]bool)
+	soNos := []string{
+		erpResp.FromReceipt.SoNo,
+		erpResp.ToReceipt.SoNo,
+		erpResp.AuditReceipt.SoNo,
+	}
+	for _, soNo := range soNos {
+		// 过滤空字符串并去重
+		if soNo != "" && !uniqueMap[soNo] {
+			uniqueMap[soNo] = true
+			erpOrderNos = append(erpOrderNos, soNo)
+		}
+	}
+	return erpOrderNos
 }
 
 // TransferOrderItem 调拨单明细表 ttpos_transfer_order_item
@@ -147,6 +188,11 @@ type TransferOrderApproval struct {
 // TableName 指定表名
 func (TransferOrderApproval) TableName() string {
 	return "ttpos_transfer_order_approval"
+}
+
+// IsViaCompanyWarehouseBool 获取是否通过公司仓库
+func (toa *TransferOrderApproval) IsViaCompanyWarehouseBool() bool {
+	return toa.IsViaCompanyWarehouse == 1
 }
 
 // TransferOrderLog 调拨单操作日志表 ttpos_transfer_order_log

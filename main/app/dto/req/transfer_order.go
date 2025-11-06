@@ -37,14 +37,14 @@ func (r *TransferOrderCreateReq) Validate() error {
 		if r.SenderCompanyUuid == 0 {
 			return errors.New("发货门店不能为空")
 		}
-		if r.OutWarehouseErpCode == "" {
+		if r.InWarehouseErpCode == "" {
 			return errors.New("出库仓库不能为空")
 		}
 	} else {
 		if r.ReceiverCompanyUuid == 0 {
 			return errors.New("收货门店不能为空")
 		}
-		if r.InWarehouseErpCode == "" {
+		if r.OutWarehouseErpCode == "" {
 			return errors.New("入库仓库不能为空")
 		}
 	}
@@ -92,6 +92,9 @@ func (r *TransferOrderUpdateReq) Validate() error {
 	}
 	if r.SenderCompanyUuid != 0 && r.ReceiverCompanyUuid != 0 && r.SenderCompanyUuid == r.ReceiverCompanyUuid {
 		return errors.New("发货门店和收货门店不能相同")
+	}
+	if len(r.Items) == 0 {
+		return errors.New("调拨明细不能为空")
 	}
 	if len(r.Items) > 0 {
 		for i, item := range r.Items {

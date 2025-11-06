@@ -79,8 +79,8 @@ func (h *TransferOrderHandler) GetTransferOrderDetail(c *gin.Context) {
 }
 
 // GetTransferOrderCompanyList 获取门店列表/对方机构
-// @Summary 获取调拨单门店列表
-// @Description 根据调拨类型获取可选的发货门店或收货门店列表
+// @Summary 获取调拨单门店列表/对方机构
+// @Description 根据调拨类型获取可选的发货门店/对方机构列表
 // @Tags 商家端.调拨单管理
 // @Accept json
 // @Produce json

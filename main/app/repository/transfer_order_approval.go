@@ -79,7 +79,9 @@ func (r *TransferOrderApprovalRepoImpl) GetCurrentApproval(transferOrderUuid uin
 		Where("transfer_order_uuid = ?", transferOrderUuid).
 		Where("approval_company_uuid = ?", companyUuid).
 		Where("status = ?", constant.TransferApprovalPending).
+		Where("is_required = ?", 1).
 		Where("delete_time = ?", constant.NotDeleted).
+		Order("sequence ASC").
 		First(&approval).Error
 	if err != nil {
 		return nil, err

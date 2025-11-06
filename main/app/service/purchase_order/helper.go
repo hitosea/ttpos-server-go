@@ -641,7 +641,7 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 	})
 }
 
-// extractName 从错误信息中提取供应商名称
+// extractName 从错误信息中提取名称
 func (h *purchaseOrderHelper) extractName(name, after, errorMsg string) string {
 	// 转义正则表达式中的特殊字符
 	escapedName := regexp.QuoteMeta(name)
