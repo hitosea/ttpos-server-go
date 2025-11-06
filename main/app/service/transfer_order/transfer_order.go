@@ -895,17 +895,24 @@ func (s *transferOrderSrv) ApproveTransferOrder(
 			return errors.WithMessage(errors.New("更新调拨单状态失败"), err.Error())
 		}
 
-		// 调用erp接口
-		if ctx.GetCompany().IsOpenErp() && newStatus == constant.TransferOrderStatusReceiving {
-			erpResp, err := s.helper.SaveMaterialTransfer(ctx, s.dbm, tx, transferOrder)
-			if err != nil {
-				return errors.WithMessage(errors.New("调用erp接口失败"), err.Error())
+		if newStatus == constant.TransferOrderStatusReceiving {
+			// 进入在途仓库存
+			if err := s.helper.UpdateStockInTransit(ctx, s.dbm, tx, transferOrder); err != nil {
+				return errors.WithMessage(errors.New("更新在途仓库存失败"), err.Error())
 			}
-			// 更新调拨单状态
-			transferOrder.ErpOrderNo = erpResp.FromReceipt.SoNo
-			transferOrder.ErpResp = utils.ToJson(erpResp)
-			if err := transferOrderRepoTx.Update(transferOrder); err != nil {
-				return errors.WithMessage(errors.New("更新调拨单ERP响应数据失败"), err.Error())
+
+			// 调用erp接口
+			if ctx.GetCompany().IsOpenErp() {
+				erpResp, err := s.helper.SaveMaterialTransfer(ctx, s.dbm, tx, transferOrder)
+				if err != nil {
+					return errors.WithMessage(errors.New("调用erp接口失败"), err.Error())
+				}
+				// 更新调拨单状态
+				transferOrder.ErpOrderNo = erpResp.FromReceipt.SoNo
+				transferOrder.ErpResp = utils.ToJson(erpResp)
+				if err := transferOrderRepoTx.Update(transferOrder); err != nil {
+					return errors.WithMessage(errors.New("更新调拨单ERP响应数据失败"), err.Error())
+				}
 			}
 		}
 

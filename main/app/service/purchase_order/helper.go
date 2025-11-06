@@ -26,6 +26,11 @@ import (
 // purchaseOrderHelper 采购订单辅助方法
 type purchaseOrderHelper struct{}
 
+// NewPurchaseOrderHelper 创建采购订单辅助方法
+func NewPurchaseOrderHelper() *purchaseOrderHelper {
+	return &purchaseOrderHelper{}
+}
+
 // generateOrderNo 生成采购申请订单编号
 // 格式：prefix+年月日+0000自增序列号
 func (h *purchaseOrderHelper) generateOrderNo(db *gorm.DB, prefix string, timezone string) string {
@@ -214,55 +219,9 @@ func (h *purchaseOrderHelper) checkAndUpdatePurchaseOrderStatus(
 	return nil
 }
 
-// updateRelatedMaterialStock 更新规格/加料关联材料库存
-func (h *purchaseOrderHelper) updateRelatedMaterialStock(db *gorm.DB, relatedMaterialUuids []uint64) error {
-	// 如果材料UUID列表为空，直接返回
-	if len(relatedMaterialUuids) == 0 {
-		return nil
-	}
-
-	// 使用事务确保数据一致性
-	return db.Transaction(func(tx *gorm.DB) error {
-		// 构建复杂SQL查询来按成本卡更新产品BOM的库存数量
-		sql := `
-			UPDATE ttpos_product_bom AS pb 
-			JOIN (
-				SELECT 
-					rm.related_uuid, 
-					LEAST(IFNULL(
-						FLOOR(
-							MIN(
-								wi.stock / rm.num
-							)
-						)
-					, 0), 99999999) AS min_stock_num
-				FROM ttpos_related_material AS rm
-				JOIN ttpos_warehouse_item AS wi ON rm.material_uuid = wi.material_uuid
-				JOIN ttpos_warehouse AS w ON wi.warehouse_uuid = w.uuid
-				WHERE rm.uuid IN (?) 
-				  AND rm.delete_time = 0 
-				  AND rm.unit_uuid > 0
-				  AND w.is_default = 1
-				GROUP BY rm.related_uuid
-			) AS sub ON pb.product_bom_card_uuid = sub.related_uuid
-			SET pb.stock_num = sub.min_stock_num
-			WHERE pb.product_bom_card_uuid IN (
-				SELECT DISTINCT related_uuid 
-				FROM ttpos_related_material 
-				WHERE uuid IN (?) 
-				AND delete_time = 0 
-				AND unit_uuid > 0
-			)
-		`
-
-		// 执行SQL更新
-		err := tx.Exec(sql, relatedMaterialUuids, relatedMaterialUuids).Error
-		if err != nil {
-			return errors.WithMessage(errors.New("更新规格/加料关联材料库存失败"), err.Error())
-		}
-
-		return nil
-	})
+// UpdateRelatedMaterialStock 更新规格/加料关联材料库存
+func (h *purchaseOrderHelper) UpdateRelatedMaterialStock(db *gorm.DB, relatedMaterialUuids []uint64) error {
+	return repository.NewMaterialRepo(db).UpdateRelatedMaterialStock(relatedMaterialUuids)
 }
 
 // HeadquarterUpdateInfo 总部更新信息结构
@@ -438,7 +397,7 @@ func (h *purchaseOrderHelper) recordErpStockInLog(
 				}
 				relatedMaterialUuids = append(relatedMaterialUuids, relatedMaterial.Uuid)
 			}
-			err = h.updateRelatedMaterialStock(tx, relatedMaterialUuids)
+			err = materialRepo.UpdateRelatedMaterialStock(relatedMaterialUuids)
 			if err != nil {
 				logger.Logger.Error("recordErpStockInLog-updateRelatedMaterialStock", zap.Any("relatedMaterialUuids", relatedMaterialUuids), zap.Any("err", err))
 				return errors.WithMessage(errors.New("更新规格/加料关联材料库存失败"), err.Error())
@@ -581,14 +540,8 @@ func (h *purchaseOrderHelper) reduceHeadquarterStockAndLog(
 			}
 
 			// 更新规格/加料关联材料库存
-			relatedMaterialUuids := make([]uint64, 0)
-			for _, relatedMaterial := range item.Material.RelatedMaterialList {
-				if relatedMaterial.IsDelete() || relatedMaterial.IsUsed == 0 {
-					continue
-				}
-				relatedMaterialUuids = append(relatedMaterialUuids, relatedMaterial.Uuid)
-			}
-			err = h.updateRelatedMaterialStock(tx, relatedMaterialUuids)
+			relatedMaterialUuids := item.Material.GetRelatedMaterialUuids()
+			err = materialRepo.UpdateRelatedMaterialStock(relatedMaterialUuids)
 			if err != nil {
 				logger.Logger.Error("reduceHeadquarterStockAndLog-updateRelatedMaterialStock", zap.Any("relatedMaterialUuids", relatedMaterialUuids), zap.Any("err", err))
 				return errors.WithMessage(errors.New("更新规格/加料关联材料库存失败"), err.Error())

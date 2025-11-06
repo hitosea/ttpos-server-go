@@ -3,6 +3,8 @@ package model
 import (
 	"encoding/json"
 	"ttpos-bmp/app/ttpos-erp/api/material_transfer"
+
+	"github.com/shopspring/decimal"
 )
 
 // TransferOrder 调拨单主表 ttpos_transfer_order
@@ -133,6 +135,17 @@ func (TransferOrderItem) TableName() string {
 func (toi *TransferOrderItem) SetNil() {
 	toi.Material = nil
 	toi.Units = nil
+}
+
+// GetRelatedMaterialList 获取关联材料列表
+func (item TransferOrderItem) GetUnitsTotalConversionRateNum() float64 {
+	actualNum := decimal.NewFromFloat(0)
+	if len(item.Units) > 0 {
+		for _, unit := range item.Units {
+			actualNum = actualNum.Add(decimal.NewFromFloat(unit.Num).Mul(decimal.NewFromFloat(unit.UnitConversionRate)))
+		}
+	}
+	return actualNum.InexactFloat64()
 }
 
 // TransferOrderItemUnit 调拨单明细单位表 ttpos_transfer_order_item_unit

@@ -21,6 +21,7 @@ import (
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -651,4 +652,150 @@ func (h *transferOrderHelper) SaveMaterialTransfer(ctx ttposContext.Context, dbm
 	}
 
 	return erpResp, nil
+}
+
+// 更新在途仓库存
+func (h *transferOrderHelper) UpdateStockInTransit(
+	ctx ttposContext.Context,
+	dbm *database.DBManager,
+	db *gorm.DB,
+	transferOrder *model.TransferOrder,
+) error {
+	approvals, err := repository.NewTransferOrderApprovalRepo(db).GetListByTransferOrderUuid(transferOrder.Uuid)
+	if err != nil {
+		return errors.WithMessage(errors.New("查询审批流程失败"), err.Error())
+	}
+
+	// TODO：优化代码，减少重复代码
+	// TODO：同一个父亲的处理的逻辑
+
+	// 遍历审批流程
+	for _, approval := range approvals {
+		if !approval.IsViaCompanyWarehouseBool() {
+			continue
+		}
+		// 获取数据库连接
+		targetDb := dbm.GetDB(approval.ApprovalCompanyUuid)
+		if targetDb == nil {
+			return errors.WithMessage(errors.New("获取数据库连接失败"), "获取数据库连接失败")
+		}
+		err = targetDb.Transaction(func(tx *gorm.DB) error {
+
+			// 获取Repository
+			warehouseRepo := repository.NewWarehouseRepo(tx)
+			warehouseItemRepo := repository.NewWarehouseItemRepo(tx)
+			materialRepo := repository.NewMaterialRepo(tx)
+			warehouseLogRepo := repository.NewWarehouseInOutLogRepo(tx)
+
+			// 发货门店
+			if approval.ApprovalType == constant.TransferApprovalTypeSender {
+
+				// 获取目标仓库信息（通过ERP编码查找）
+				targetWarehouse, err := warehouseRepo.GetByErpCode(transferOrder.OutWarehouseErpCode)
+				if err != nil {
+					logger.Logger.Error("recordErpStockInLog-GetByErpCode", zap.Any("targetWarehouseErpCode", transferOrder.OutWarehouseErpCode), zap.Any("err", err))
+					return errors.WithMessage(errors.New("获取目标仓库信息失败"), err.Error())
+				}
+
+				// 减少库存
+				for _, item := range transferOrder.Items {
+					actualNum := item.GetUnitsTotalConversionRateNum()
+
+					// 获取物品信息
+					material, err := materialRepo.GetMaterialByCode(item.MaterialCode,
+						materialRepo.WithUnit(),
+						materialRepo.WithRelatedMaterialList(),
+					)
+					if err != nil {
+						logger.Logger.Error("reduceHeadquarterStockAndLog-GetMaterialByCode", zap.Any("materialCode", item.MaterialCode), zap.Any("err", err))
+						return errors.WithMessage(errors.New("获取物品失败"), err.Error())
+					}
+
+					// 获取仓库物品
+					warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(targetWarehouse.Uuid, material.Uuid)
+					if err != nil {
+						logger.Logger.Error("查询仓库存失败", zap.Error(err), zap.Any("transferOrder", transferOrder), zap.Any("item", item))
+						return errors.WithMessage(errors.New("查询仓库存失败"), err.Error())
+					}
+
+					// 减少仓库物品库存
+					err = warehouseItemRepo.ReduceStock(warehouseItem.Uuid, actualNum)
+					if err != nil {
+						logger.Logger.Error("reduceHeadquarterStockAndLog-ReduceStock", zap.Any("warehouseItem", warehouseItem), zap.Any("actualNum", actualNum), zap.Any("err", err))
+						return errors.WithMessage(errors.New("减少总部库存失败"), err.Error())
+					}
+
+					// 更新规格/加料关联材料库存
+					relatedMaterialUuids := material.GetRelatedMaterialUuids()
+					err = materialRepo.UpdateRelatedMaterialStock(relatedMaterialUuids)
+					if err != nil {
+						logger.Logger.Error("reduceHeadquarterStockAndLog-updateRelatedMaterialStock", zap.Any("relatedMaterialUuids", relatedMaterialUuids), zap.Any("err", err))
+						return errors.WithMessage(errors.New("更新规格/加料关联材料库存失败"), err.Error())
+					}
+
+					// 记录出库日志
+					warehouseLog := &model.WarehouseInOutLog{
+						LogType:              constant.WarehouseInOutLogLogTypeOut,    // 出库
+						Scene:                constant.WarehouseInOutLogSceneDelivery, // 发货出库
+						WarehouseUuid:        targetWarehouse.Uuid,
+						MaterialUuid:         material.Uuid,
+						MaterialName:         material.Name,
+						MaterialBaseUnitUuid: material.UnitUuid,
+						MaterialBaseUnitName: func() string {
+							if material.Unit != nil {
+								return material.Unit.Name
+							}
+							return ""
+						}(),
+						Num:          actualNum,
+						Price:        item.Valuation,
+						Amount:       decimal.NewFromFloat(item.Valuation).Mul(decimal.NewFromFloat(actualNum)).InexactFloat64(),
+						OrderNo:      transferOrder.OrderNo,
+						OtherOrgType: 1,
+						OtherOrgUuid: approval.ApprovalCompanyUuid,
+						OtherOrgName: approval.ApprovalCompanyName,
+					}
+					err = warehouseLogRepo.Create(warehouseLog)
+					if err != nil {
+						logger.Logger.Error("reduceHeadquarterStockAndLog-Create", zap.Any("warehouseLog", warehouseLog), zap.Any("err", err))
+						return errors.WithMessage(errors.New("记录出库日志失败"), err.Error())
+					}
+				}
+
+			}
+			// 发货门店上级
+			if approval.ApprovalType == constant.TransferApprovalTypeSenderParent {
+				// // 获取在途仓库
+				// transitWarehouse, err := repository.NewWarehouseRepo(db).GetTransitWarehouse()
+				// if err != nil {
+				// 	logger.Logger.Error("查询在途仓仓库失败", zap.Error(err), zap.Any("transferOrder", transferOrder))
+				// 	return errors.WithMessage(errors.New("查询在途仓仓库失败"), err.Error())
+				// }
+				// warehouse, err := repository.NewWarehouseRepo(db).GetByErpCode(transferOrder.OutParentWarehouseErpCode)
+				// if err != nil {
+				// 	return errors.WithMessage(errors.New("查询在途仓仓库失败"), err.Error())
+				// }
+			}
+			// 收货门店上级
+			if approval.ApprovalType == constant.TransferApprovalTypeReceiverParent {
+				// warehouse, err := repository.NewWarehouseRepo(db).GetByErpCode(transferOrder.InParentWarehouseErpCode)
+				// if err != nil {
+				// 	return errors.WithMessage(errors.New("查询在途仓仓库失败"), err.Error())
+				// }
+			}
+			// 收货门店
+			if approval.ApprovalType == constant.TransferApprovalTypeReceiver {
+				// warehouse, err := repository.NewWarehouseRepo(db).GetByErpCode(transferOrder.InWarehouseErpCode)
+				// if err != nil {
+				// 	return errors.WithMessage(errors.New("查询在途仓仓库失败"), err.Error())
+				// }
+			}
+			return nil
+		})
+		if err != nil {
+			logger.Logger.Error("更新在途仓库存失败", zap.Error(err), zap.Any("transferOrder", transferOrder))
+			return errors.WithMessage(errors.New("更新在途仓库存失败"), err.Error())
+		}
+	}
+	return nil
 }
