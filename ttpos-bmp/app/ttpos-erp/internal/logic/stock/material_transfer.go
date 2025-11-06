@@ -3,6 +3,7 @@ package stock
 import (
 	"context"
 	"ttpos-bmp/app/ttpos-erp/api/buying"
+	"ttpos-bmp/app/ttpos-erp/api/delivery_note"
 	"ttpos-bmp/app/ttpos-erp/api/material_transfer"
 	"ttpos-bmp/app/ttpos-erp/api/warehouse"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
@@ -134,7 +135,7 @@ func (s *sMaterialTransfer) MaterialTransfer(ctx context.Context, req *material_
 			RequiredDate:    req.RequiredDate,
 			DeliveryDate:    req.DeliveryDate,
 			Items:           req.Items,
-		})
+		}, false)
 		if err != nil {
 			return nil, gerror.Wrapf(err, "创建内部采购单失败")
 		}
@@ -146,7 +147,6 @@ func (s *sMaterialTransfer) MaterialTransfer(ctx context.Context, req *material_
 		}
 		transferResp.AuditReceipt = transferResp.FromReceipt
 		transferResp.ToReceipt = transferResp.FromReceipt
-
 	}
 	//case 2
 	//调出方与调入方父级公司相同、调入调出方父级任意一个为空时，先调入审核公司，再调入到调入方公司。 返回 审核节点和调入方节点的单号都是相同的
@@ -182,7 +182,7 @@ func (s *sMaterialTransfer) MaterialTransfer(ctx context.Context, req *material_
 			RequiredDate:    req.RequiredDate,
 			DeliveryDate:    req.DeliveryDate,
 			Items:           req.Items,
-		})
+		}, true)
 		if err != nil {
 			return nil, gerror.Wrapf(err, "创建内部采购单失败")
 		}
@@ -203,7 +203,7 @@ func (s *sMaterialTransfer) MaterialTransfer(ctx context.Context, req *material_
 			RequiredDate:    req.RequiredDate,
 			DeliveryDate:    req.DeliveryDate,
 			Items:           req.Items,
-		})
+		}, false)
 		if err != nil {
 			return nil, gerror.Wrapf(err, "创建内部采购单失败")
 		}
@@ -241,7 +241,7 @@ func (s *sMaterialTransfer) MaterialTransfer(ctx context.Context, req *material_
 				RequiredDate:    req.RequiredDate,
 				DeliveryDate:    req.DeliveryDate,
 				Items:           req.Items,
-			})
+			}, true)
 			if err != nil {
 				return nil, gerror.Wrapf(err, "创建内部采购单失败")
 			}
@@ -271,7 +271,7 @@ func (s *sMaterialTransfer) MaterialTransfer(ctx context.Context, req *material_
 				RequiredDate:    req.RequiredDate,
 				DeliveryDate:    req.DeliveryDate,
 				Items:           req.Items,
-			})
+			}, true)
 			if err != nil {
 				return nil, gerror.Wrapf(err, "创建内部采购单失败")
 			}
@@ -294,7 +294,7 @@ func (s *sMaterialTransfer) MaterialTransfer(ctx context.Context, req *material_
 				RequiredDate:    req.RequiredDate,
 				DeliveryDate:    req.DeliveryDate,
 				Items:           req.Items,
-			})
+			}, false)
 			if err != nil {
 				return nil, gerror.Wrapf(err, "创建内部采购单失败")
 			}
@@ -311,7 +311,7 @@ func (s *sMaterialTransfer) MaterialTransfer(ctx context.Context, req *material_
 }
 
 // CreateInnerTransferReceipt  实际上是通过 创建内部销售单 -> 内部采购单来实现
-func (s *sMaterialTransfer) CreateInnerTransferReceipt(ctx context.Context, req *material_transfer.MaterialTransferReq) (*material_transfer.TransferReceipt, error) {
+func (s *sMaterialTransfer) CreateInnerTransferReceipt(ctx context.Context, req *material_transfer.MaterialTransferReq, autoReceipt bool) (*material_transfer.TransferReceipt, error) {
 	//判断 需求时间和发货时间是否为空， 默认使用
 	//          RequiredDate:    consts.DefaultRequiredByDate,
 	//			DeliveryDate:    consts.DefaultDeliveryDate,
@@ -438,7 +438,7 @@ func (s *sMaterialTransfer) CreateInnerTransferReceipt(ctx context.Context, req 
 	//}
 
 	saleOrder, err := service.Selling().CreateSalesOrder(ctx, &dtoSelling.SalesOrder{
-		Customer:         customers[0].Name,
+		Customer:         customer.Name,
 		Company:          fromCompanyName,
 		DeliveryDate:     req.DeliveryDate,
 		SetWarehouse:     req.FromWarehouse,
@@ -448,12 +448,23 @@ func (s *sMaterialTransfer) CreateInnerTransferReceipt(ctx context.Context, req 
 	if err != nil {
 		return nil, gerror.Wrapf(err, "创建销售订单失败")
 	}
+	saleOrder, err = service.Selling().SubmitSalesOrder(ctx, saleOrder.Name)
+	if err != nil {
+		return nil, gerror.Wrapf(err, "提交销售订单失败")
+	}
 	transferReceipt.SoNo = saleOrder.Name
+
+	_, err = service.DeliveryNote().CreateDeliveryNoteFromSaleOrder(ctx, &delivery_note.CreateDeliveryNoteFromSaleOrderReq{
+		SourceName: saleOrder.Name,
+	})
+	if err != nil {
+		return nil, gerror.Wrapf(err, "创建发货单失败 sale_order [%s]", saleOrder.Name)
+	}
 
 	//根据调出方销售订单，创建内部采购单
 	purchaseOrder, err := service.Buying().CreatePurchaseOrderFromSalesOrder(ctx, &dto.CreatePurchaseOrderFromSalesOrderReq{
 		SourceName:      saleOrder.Name,
-		Supplier:        suppliers.Suppliers[0].Name,
+		Supplier:        supplier.Name,
 		TargetWarehouse: req.ToWarehouse,
 		ScheduleDate:    req.RequiredDate,
 		BuyingPriceList: consts.DefaultTransferPriceList,
@@ -467,5 +478,14 @@ func (s *sMaterialTransfer) CreateInnerTransferReceipt(ctx context.Context, req 
 		return nil, gerror.Wrapf(err, "创建采购订单失败")
 	}
 	transferReceipt.PoNo = purchaseOrder.Name
+	//直接收货
+	if autoReceipt {
+		_, err = service.Buying().CreatePurchaseReceiptFromOrder(ctx, &buying.SavePurchaseReceiptReq{
+			PurchaseOrderName: purchaseOrder.Name,
+		})
+		if err != nil {
+			return nil, gerror.Wrapf(err, "创建采购订单收货单失败")
+		}
+	}
 	return transferReceipt, nil
 }

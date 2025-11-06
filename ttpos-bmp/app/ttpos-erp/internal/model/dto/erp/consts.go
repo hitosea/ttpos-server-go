@@ -11,6 +11,9 @@ const (
 
 	//ApiMethodCreateInnerPurchaseOrder 根据SaleOrder创建内部采购单
 	ApiMethodCreateInnerPurchaseOrder = "erpnext.selling.doctype.sales_order.sales_order.make_inter_company_purchase_order"
+
+	//ApiMethodCreateDeliveryNote 根据SaleOrder创建交货单
+	ApiMethodCreateDeliveryNote = "erpnext.selling.doctype.sales_order.sales_order.make_delivery_note"
 )
 
 // 文档类型
@@ -49,6 +52,9 @@ const (
 	DocTypeStockReconciliation = "Stock Reconciliation"
 	// DocTypeStockReconciliationItem 库存盘点明细类型
 	DocTypeStockReconciliationItem = "Stock Reconciliation Item"
+
+	// DocTypeDeliveryNoteItem 送货单明细类型
+	DocTypeDeliveryNoteItem = "Delivery Note Item"
 
 	DocTypeCompany = "Company"
 )
