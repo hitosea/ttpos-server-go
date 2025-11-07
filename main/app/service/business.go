@@ -1,7 +1,6 @@
 package service
 
 import (
-	"bytes" // 引入 bytes 包
 	"fmt"
 	"sort"
 	"time"
@@ -23,8 +22,8 @@ import (
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
-	"github.com/xuri/excelize/v2"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // IBusinessSrv 定义收银服务接口
@@ -43,8 +42,10 @@ type IBusinessSrv interface {
 	CountHome(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataHome, error)                                                            // 统计首页
 	CountKitchenEfficiencyAnalysis(ctx context.Context, req req.KitchenEfficiencyAnalysisReq) (*business_data_resp.BusinessDataKitchenEfficiencyAnalysis, error)          // 统计后厨效率分析
 	CountKitchenEfficiencyAnalysisAvg(ctx context.Context, req req.KitchenEfficiencyAnalysisAvgReq) (*business_data_resp.BusinessDataKitchenEfficiencyAnalysisAvg, error) // 统计后厨效率分析平均时长
-	CountKitchenProductionDetail(ctx context.Context, req req.KitchenProductionDetailReq) (*business_data_resp.KitchenProductionDetail, error)                            // 统计后厨菜品出品明细
-	ExportKitchenProductionDetail(ctx context.Context, req req.KitchenProductionDetailReq) (*resp.FileExportResp, error)                                                  // 导出后厨菜品出品明细
+	KitchenProductionDetail(ctx context.Context, req req.KitchenProductionDetailReq) (*business_data_resp.KitchenProductionDetail, error)                                 // 统计后厨菜品出品明细
+	KitchenProductionDetailCount(ctx context.Context, req req.KitchenProductionDetailReq) (int64, error)                                                                  // 统计后厨菜品出品明细数量
+	ExportKitchenProductionDetail(ctx context.Context, req req.KitchenProductionDetailReq) error                                                                          // 导出后厨菜品出品明细
+	StatsKitchenEfficiencyAnalysis(ctx context.Context) (string, error)                                                                                                   // 统计后厨效率分析
 }
 
 // businessSrv 收银服务结构体
@@ -939,14 +940,81 @@ func (s *businessSrv) CountHome(ctx context.Context, req req.BusinessDataCountRe
 }
 
 func (s *businessSrv) CountKitchenEfficiencyAnalysis(ctx context.Context, req req.KitchenEfficiencyAnalysisReq) (*business_data_resp.BusinessDataKitchenEfficiencyAnalysis, error) {
-	return nil, nil
+	// 根据名称进行模糊搜索
+	// 根据分类
+	// 获取商品列表
+	productList, err := repository.NewProductRepo(ctx.GetDB()).GetProductListByKeywordAndCategory(req.Keyword, req.CategoryUuids)
+	if err != nil {
+		return nil, err
+	}
+	productPackageUuids := make([]uint64, 0)
+	efficiencyAnalysisDataList := make(map[uint64]*business_data_resp.KitchenEfficiencyAnalysisItem)
+	for _, product := range productList {
+		efficiencyAnalysisDataList[product.Uuid] = &business_data_resp.KitchenEfficiencyAnalysisItem{
+			ProductPackageUuid: product.Uuid,
+			ProductName:        product.MultiLanguageName.GetNames(),
+			CategoryName:       product.ProductCategory.MultiLanguageName.GetNames(),
+		}
+		productPackageUuids = append(productPackageUuids, product.Uuid)
+	}
+
+	efficiencyAnalysisResults, err := repository.NewKitchenEfficiencyAnalysisRepo(ctx.GetDB()).GetKitchenEfficiencyAnalysisByProductPackageUuid(productPackageUuids, req.StartTime, req.EndTime)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(efficiencyAnalysisResults) > 0 {
+		for _, result := range efficiencyAnalysisResults {
+			efficiencyAnalysisData, ok := efficiencyAnalysisDataList[result.ProductPackageUuid]
+			if ok {
+				efficiencyAnalysisData.Min = result.Min
+				efficiencyAnalysisData.Max = result.Max
+				efficiencyAnalysisData.Avg = result.Avg
+				efficiencyAnalysisData.SetExist(true)
+			}
+		}
+	} else {
+		efficiencyAnalysisDataList = make(map[uint64]*business_data_resp.KitchenEfficiencyAnalysisItem)
+	}
+
+	list := make([]business_data_resp.KitchenEfficiencyAnalysisItem, 0)
+	for _, efficiencyAnalysisData := range efficiencyAnalysisDataList {
+		if efficiencyAnalysisData.GetExist() {
+			list = append(list, *efficiencyAnalysisData)
+		}
+	}
+
+	// 分页返回
+	pageNo := req.PageNo
+	pageSize := req.PageSize
+	total := len(list)
+	start := (pageNo - 1) * pageSize
+	end := start + pageSize
+	if end > total {
+		end = total
+	}
+	list = list[start:end]
+	return &business_data_resp.BusinessDataKitchenEfficiencyAnalysis{
+		List: list,
+		Meta: dto.PageResponse{
+			PageNo:   req.PageNo,
+			PageSize: req.PageSize,
+			Total:    int64(total),
+		},
+	}, nil
 }
 
 func (s *businessSrv) CountKitchenEfficiencyAnalysisAvg(ctx context.Context, req req.KitchenEfficiencyAnalysisAvgReq) (*business_data_resp.BusinessDataKitchenEfficiencyAnalysisAvg, error) {
-	return nil, nil
+	avg, err := repository.NewKitchenEfficiencyAnalysisRepo(ctx.GetDB()).GetKitchenEfficiencyAnalysisAvg(req.StartTime, req.EndTime)
+	if err != nil {
+		return nil, err
+	}
+	return &business_data_resp.BusinessDataKitchenEfficiencyAnalysisAvg{
+		Avg: avg,
+	}, nil
 }
 
-func (s *businessSrv) CountKitchenProductionDetail(ctx context.Context, req req.KitchenProductionDetailReq) (*business_data_resp.KitchenProductionDetail, error) {
+func (s *businessSrv) KitchenProductionDetail(ctx context.Context, req req.KitchenProductionDetailReq) (*business_data_resp.KitchenProductionDetail, error) {
 	// 参数默认值
 	if req.StartTime == 0 {
 		dayStart := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.Local)
@@ -958,6 +1026,68 @@ func (s *businessSrv) CountKitchenProductionDetail(ctx context.Context, req req.
 	}
 	db := ctx.GetDB()
 	productionRepo := repository.NewProductionRepo(db)
+	// 根据过滤条件,获取商品bom_uuid列表
+	productBomUuids, err := s.getKitchenProductionDetailProductBomUuids(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := []repository.DBOption{
+		repository.CommonRepo.Preload(
+			repository.WithPreload{
+				Query: "SaleOrderProduct.MultiLanguageName",
+				Args:  []any{},
+			},
+			repository.WithPreload{
+				Query: "SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductFlavor.MultiLanguageName",
+				Args:  []any{},
+			},
+			repository.WithPreload{
+				Query: "ProductCategory.MultiLanguageName",
+				Args:  []any{},
+			},
+		),
+	}
+	productionOrderProducts, err := productionRepo.GetProductionOrderList(req.PageNo, req.PageSize, productBomUuids, req.StartTime, req.EndTime, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	count, err := productionRepo.GetProductionOrderListCount(productBomUuids, req.StartTime, req.EndTime)
+	if err != nil {
+		return nil, err
+	}
+
+	productionDataList := make([]business_data_resp.KitchenProductionDetailItem, 0)
+	for _, productionOrderProduct := range productionOrderProducts {
+		item := business_data_resp.KitchenProductionDetailItem{
+			ProductName:    productionOrderProduct.SaleOrderProduct.MultiLanguageName.GetNames(),
+			FlavorName:     productionOrderProduct.SaleOrderProduct.GetFlavorName(),
+			CategoryName:   productionOrderProduct.ProductCategory.MultiLanguageName.GetNames(),
+			Number:         productionOrderProduct.Num,
+			CreateTime:     productionOrderProduct.CreateTime,
+			MakeFinishTime: productionOrderProduct.MadeTime,
+			MakeDuration:   productionOrderProduct.MakeDuration,
+			SendFinishTime: int64(productionOrderProduct.FinishedTime),
+			SendDuration:   productionOrderProduct.SendDuration,
+			FinishTime:     int64(productionOrderProduct.FinishedTime),
+			AllDuration:    productionOrderProduct.AllDuration,
+		}
+		productionDataList = append(productionDataList, item)
+	}
+
+	return &business_data_resp.KitchenProductionDetail{
+		List: productionDataList,
+		Meta: dto.PageResponse{
+			PageNo:   req.PageNo,
+			PageSize: req.PageSize,
+			Total:    count,
+		},
+	}, nil
+}
+
+func (s *businessSrv) getKitchenProductionDetailProductBomUuids(ctx context.Context, req req.KitchenProductionDetailReq) ([]uint64, error) {
+	db := ctx.GetDB()
 	productBomUuids := []uint64{}
 	// 根据Keyword(商品名称)查询所有商品的product_bom_uuid
 	if req.Keyword != "" {
@@ -989,181 +1119,159 @@ func (s *businessSrv) CountKitchenProductionDetail(ctx context.Context, req req.
 			productBomUuids = append(productBomUuids, productBomUuidsByCategoryUuids...)
 		}
 	}
+	return productBomUuids, nil
+}
 
-	opts := []repository.DBOption{
-		repository.CommonRepo.Preload(
-			repository.WithPreload{
-				Query: "SaleOrderProduct.MultiLanguageName",
-				Args:  []any{},
-			},
-			repository.WithPreload{
-				Query: "SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductFlavor.MultiLanguageName",
-				Args:  []any{},
-			},
-			repository.WithPreload{
-				Query: "ProductCategory.MultiLanguageName",
-				Args:  []any{},
-			},
-		),
+// KitchenProductionDetailCount 统计后厨菜品出品明细数量
+func (s *businessSrv) KitchenProductionDetailCount(ctx context.Context, req req.KitchenProductionDetailReq) (int64, error) {
+	// 参数默认值
+	if req.StartTime == 0 {
+		dayStart := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.Local)
+		req.StartTime = dayStart.Unix()
 	}
-	productionOrderProducts, err := productionRepo.GetProductionOrderList(req.PageNo, req.PageSize, productBomUuids, req.StartTime, req.EndTime, opts...)
+	if req.EndTime == 0 {
+		dayEnd := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 23, 59, 59, 0, time.Local)
+		req.EndTime = dayEnd.Unix()
+	}
+	db := ctx.GetDB()
+	productionRepo := repository.NewProductionRepo(db)
+	// 根据过滤条件,获取商品bom_uuid列表
+	productBomUuids, err := s.getKitchenProductionDetailProductBomUuids(ctx, req)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
-	productionDataList := make([]business_data_resp.KitchenProductionDetailItem, 0)
-	for _, productionOrderProduct := range productionOrderProducts {
-		item := business_data_resp.KitchenProductionDetailItem{
-			ProductName:    productionOrderProduct.SaleOrderProduct.MultiLanguageName.GetNames(),
-			FlavorName:     productionOrderProduct.SaleOrderProduct.GetFlavorName(),
-			CategoryName:   productionOrderProduct.ProductCategory.MultiLanguageName.GetNames(),
-			Number:         productionOrderProduct.Num,
-			CreateTime:     productionOrderProduct.CreateTime,
-			MakeFinishTime: productionOrderProduct.MadeTime,
-			MakeDuration:   productionOrderProduct.MakeDuration,
-			SendFinishTime: int64(productionOrderProduct.FinishedTime),
-			SendDuration:   productionOrderProduct.SendDuration,
-			FinishTime:     int64(productionOrderProduct.FinishedTime),
-			AllDuration:    productionOrderProduct.AllDuration,
-		}
-		productionDataList = append(productionDataList, item)
+	count, err := productionRepo.GetProductionOrderListCount(productBomUuids, req.StartTime, req.EndTime)
+	if err != nil {
+		return 0, err
 	}
-
-	return &business_data_resp.KitchenProductionDetail{
-		List: productionDataList,
-		Meta: dto.PageResponse{
-			PageNo:   req.PageNo,
-			PageSize: req.PageSize,
-			Total:    int64(len(productionOrderProducts)),
-		},
-	}, nil
+	return count, nil
 }
 
 // 导出厨房出品明细数据到谷歌桶
-func (s *businessSrv) ExportKitchenProductionDetail(ctx context.Context, req req.KitchenProductionDetailReq) (*resp.FileExportResp, error) { // 修改返回类型
+func (s *businessSrv) ExportKitchenProductionDetail(ctx context.Context, req req.KitchenProductionDetailReq) error { // 修改返回类型
 	req.PageNo = 1
 	req.PageSize = 1000 // 最多导出1000条数据
-	productionDetail, err := s.CountKitchenProductionDetail(ctx, req)
+	count, err := s.KitchenProductionDetailCount(ctx, req)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	if productionDetail.Meta.Total > 1000 {
-		return nil, errors.WithMessage(errors.New("最多导出1000条数据"))
+	if count > 1000 {
+		return errors.WithMessage(errors.New("最多导出1000条数据"))
 	}
-	// 商家时区
+
+	// 判断是否还有正在导出的任务
+
+	// 创建导出任务
+	//params, err := json.Marshal(req)
+	//if err != nil {
+	//	return err
+	//}
+	//err = repository.NewTaskRepo(ctx.GetDB()).CreateTaskExportKitchenProductionDetail(string(params))
+	//if err != nil {
+	//	return err
+	//}
+
+	return nil
+}
+
+// 统计某商家当天的商品后厨效率
+func (s *businessSrv) StatsKitchenEfficiencyAnalysis(ctx context.Context) (string, error) {
+	db := ctx.GetDB()
 	timezone := ctx.GetCompanySetting().Timezone
-	timezoneUtil := utils.SetTimezone(timezone)
-	// 文件名多语言
-	fileNameMul := model.MultiLanguageName{
-		EnName:   "Detailed List of Dish Output",          // 英文
-		ZhName:   "菜品出品明细",                                // 中文
-		ZhTwName: "菜品出品明細",                                // 繁体中文
-		ThName:   "รายละเอียดการออกอาหาร",                 // 泰语
-		MyName:   "ဟင်းလျာထုတ်လုပ်မှု အသေးစိတ်စာရင်း",     // 缅甸语
-		JaName:   "料理の提供明細",                               // 日语
-		KoName:   "메뉴 출품 상세 내역",               // 韩语
-		TrName:   "Yemek Çıkış Ayrıntıları",             // 土耳其语
-		SvName:   "Detaljerad lista över maträttsutbud", // 瑞典语
-	}
-	headerMap := map[string][]string{
-		"zh": { // 中文
-			"名称", "规格", "分类", "完成数量", "下单时间", "制作完成时间", "制作总耗时", "传菜完成时间", "传菜总耗时", "完成时间", "总耗时",
-		},
-		"th": { // 泰语
-			"ชื่อ", "ข้อกำหนด", "ประเภท", "จำนวนที่เสร็จสิ้น", "เวลาสั่งซื้อ", "เวลาเสร็จสิ้นการผลิต", "เวลาที่ใช้ในการผลิตทั้งหมด", "เวลาเสร็จสิ้นการส่งอาหาร", "เวลาที่ใช้ในการส่งอาหารทั้งหมด", "เวลาเสร็จสิ้น", "เวลาที่ใช้ทั้งหมด",
-		},
-		"en": { // 英文
-			"Name", "Specification", "Category", "Quantity Completed", "Order Placement Time", "Production Completion Time", "Total Production Time", "Food Delivery Completion Time", "Total Food Delivery Time", "Completion Time", "Total Time Consumed",
-		},
-		"zhtw": { // 繁体中文
-			"名稱", "規格", "分類", "完成數量", "下單時間", "製作完成時間", "製作總耗時", "傳菜完成時間", "傳菜總耗時", "完成時間", "總耗時",
-		},
-		"zh_tw": { //
-			"名稱", "規格", "分類", "完成數量", "下單時間", "製作完成時間", "製作總耗時", "傳菜完成時間", "傳菜總耗時", "完成時間", "總耗時",
-		},
-		"ja": { // 日语
-			"名称", "規格", "分類", "完了数量", "発注時刻", "製作完了時刻", "製作総時間", "伝菜完了時刻", "伝菜総時間", "完了時刻", "総時間",
-		},
-		"ko": { // 韩语
-			"이름", "규격", "카테고리", "완료 수량", "주문 시간", "제작 완료 시간", "제작 총 소요 시간", "전송 완료 시간", "전송 총 소요 시간", "완료 시간", "총 소요 시간",
-		},
-		"my": { // 缅甸语
-			"အမည်", "အရွယ်အစား", "အမျိုးအစား", "ပြီးစီးအရေအတွက်", "မှာယူချိန်", "ပြုလုပ်ပြီးစီးချိန်", "ပြုလုပ်ရန်အချိန်ယူမှုစုစုပေါင်း", "စားပွဲတင်ပြီးစီးချိန်", "စားပွဲတင်အချိန်ယူမှုစုစုပေါင်း", "ပြီးစီးချိန်", "စုစုပေါင်းအချိန်ယူမှု",
-		},
-		"tr": { // 土耳其语
-			"Ad", "özellikler", "Kategori", "Tamamlanan Miktar", "Sipariş Verme Zamanı", "Üretim Tamamlama Zamanı", "Toplam Üretim Süresi", "Yemek Servis Tamamlama Zamanı", "Toplam Yemek Servis Süresi", "Tamamlama Zamanı", "Toplam Süre",
-		},
-		"sv": { // 瑞典语
-			"Namn", "specifikation", "Kategori", "Antal Färdigställda", "Beställningstid", "Produktionsfärdigställningstid", "Total Produktionstid", "Matleveransfärdigställningstid", "Total Matleveranstid", "Färdigställningstid", "Total Tid",
-		},
-	}
-	fileName := fmt.Sprintf("%s_%d.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), time.Now().Unix()) // 文件名,格式
-	xlsxFile := excelize.NewFile()                                                                         // 修改这里，直接使用 NewFile()
-	sheetName := fileNameMul.GetNameByLang(ctx.GetLanguage())
-	// 创建一个新的工作表
-	index, err := xlsxFile.NewSheet(sheetName)
-	if err != nil {
-		logger.Logger.Error("创建Excel工作表失败", zap.Error(err))
-		return nil, errors.WithMessage(err)
-	}
-	xlsxFile.SetActiveSheet(index)
+	timezoneUtils := utils.SetTimezone(timezone)
+	startTime, endTime := timezoneUtils.TodayStartEndUnix()
+	dateString := timezoneUtils.FormatUnixTime(startTime, "2006-01-02")
 
-	lang := ctx.GetLanguage()
-	// 设置表头
-	headers := func() []string {
-		headers := headerMap[lang]
-		if headers == nil {
-			headers = headerMap["en"]
+	logger.Logger.Info("统计当天后厨效率分析数据", zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.String("timezone", timezone), zap.String("dateString", dateString), zap.Int64("startTime", startTime), zap.Int64("endTime", endTime))
+
+	// 统计当天各个商品的后厨效率分析数据
+	kitchenEfficiencyAnalysisRepo := repository.NewKitchenEfficiencyAnalysisRepo(db)
+	kitchenEfficiencyAnalysis, err := kitchenEfficiencyAnalysisRepo.CalculateKitchenEfficiencyAnalysis(startTime, endTime)
+	if err != nil {
+		return "", err
+	}
+
+	// 查询效率表中是否存在当天数据
+	list, err := kitchenEfficiencyAnalysisRepo.KitchenEfficiencyAnalysisDay(startTime, endTime)
+	if err != nil {
+		return "", err
+	}
+
+	existItemMap := make(map[uint64]*model.KitchenEfficiencyAnalysis)
+
+	if len(list) > 0 {
+		for _, item := range list {
+			if result, ok := existItemMap[item.ProductPackageUuid]; ok { // 正常数据是没有重复的,如果重复了,则说明数据有问题
+				logger.Logger.Warn("商品后厨效率分析数据已存在", zap.Any("product_package_uuid", item.ProductPackageUuid), zap.Any("result", *result))
+				continue
+			}
+			existItemMap[item.ProductPackageUuid] = item
 		}
-		return headers
-	}() // 根据语言获取表头
-
-	// 写入表头
-	for i, header := range headers {
-		cell, _ := excelize.CoordinatesToCellName(i+1, 1) // 从第一行开始
-		xlsxFile.SetCellValue(sheetName, cell, header)
-		// 设置样式，加粗表头
-		style, _ := xlsxFile.NewStyle(&excelize.Style{
-			Font: &excelize.Font{Bold: true},
-		})
-		xlsxFile.SetCellStyle(sheetName, cell, cell, style)
 	}
 
-	// 写入数据
-	for rowIdx, item := range productionDetail.List {
-		// 数据从第二行开始写入
-		offsetRow := rowIdx + 2 // +1 for 0-based index, +1 for header row
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("A%d", offsetRow), item.ProductName.GetLocale(lang))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", offsetRow), item.FlavorName.GetLocale(lang))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", offsetRow), item.CategoryName.GetLocale(lang))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("D%d", offsetRow), item.Number)
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("E%d", offsetRow), timezoneUtil.FormatUnixTime(item.CreateTime, "2006-01-02 15:04:05"))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("F%d", offsetRow), timezoneUtil.FormatUnixTime(item.MakeFinishTime, "2006-01-02 15:04:05"))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("G%d", offsetRow), utils.FormatIntToTime(item.MakeDuration))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("H%d", offsetRow), timezoneUtil.FormatUnixTime(item.SendFinishTime, "2006-01-02 15:04:05"))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("I%d", offsetRow), utils.FormatIntToTime(item.SendDuration))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("J%d", offsetRow), timezoneUtil.FormatUnixTime(item.FinishTime, "2006-01-02 15:04:05"))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("K%d", offsetRow), utils.FormatIntToTime(item.AllDuration))
+	createList := make([]*model.KitchenEfficiencyAnalysis, 0)
+	for _, item := range kitchenEfficiencyAnalysis {
+		if result, ok := existItemMap[item.ProductPackageUuid]; ok {
+			// 存在商品,则更新分析数据
+			result.Min = item.Min
+			result.Max = item.Max
+			result.Avg = item.Avg
+			result.Total = item.Total
+			result.Count = item.Count
+			//
+			result.Date = startTime
+			result.DateString = dateString
+			result.Timezone = timezone
+			result.SetUpdate()
+		} else {
+			item := &model.KitchenEfficiencyAnalysis{
+				ProductPackageUuid: item.ProductPackageUuid,
+				Min:                item.Min,
+				Max:                item.Max,
+				Avg:                item.Avg,
+				Total:              item.Total,
+				Count:              item.Count,
+				Date:               startTime,
+				DateString:         dateString,
+				Timezone:           timezone,
+			}
+			createList = append(createList, item)
+		}
 	}
 
-	// 自动调整列宽
-	for i := 0; i < len(headers); i++ {
-		colName, _ := excelize.ColumnNumberToName(i + 1)
-		xlsxFile.SetColWidth(sheetName, colName, colName, 20)
+	updateList := make([]*model.KitchenEfficiencyAnalysis, 0)
+	for _, item := range list {
+		if item, ok := existItemMap[item.ProductPackageUuid]; ok {
+			if item.GetUpdate() {
+				updateList = append(updateList, item)
+			}
+		}
 	}
 
-	// 将 Excel 文件写入内存
-	var b bytes.Buffer
-	if err := xlsxFile.Write(&b); err != nil {
-		logger.Logger.Error("写入Excel文件到内存失败", zap.Error(err))
-		return nil, errors.WithMessage(err)
+	//
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		if len(updateList) > 0 {
+			for _, item := range updateList {
+				item.UpdateTime = time.Now().Unix()
+				if err := tx.Model(&model.KitchenEfficiencyAnalysis{}).Where("product_package_uuid = ?", item.ProductPackageUuid).Where("date = ?", item.Date).Updates(item).Error; err != nil {
+					return err
+				}
+			}
+		}
+		if len(createList) > 0 {
+			for _, item := range createList {
+				item.CreateTime = time.Now().Unix()
+				item.UpdateTime = time.Now().Unix()
+				if err := repository.NewKitchenEfficiencyAnalysisRepo(tx).CreateKitchenEfficiencyAnalysis(*item); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}); err != nil {
+		return "", err
 	}
 
-	// 上传文档
-	res, err := s.uploadFileSrv.UploadDocument(ctx, &b, fileName, int64(b.Len()), 0)
-	if err != nil {
-		return nil, errors.WithMessage(err)
-	}
-
-	return &resp.FileExportResp{FileURL: res.FileUrl}, nil // 返回文件URL
+	return "success", nil
 }

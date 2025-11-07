@@ -357,7 +357,7 @@ func (h *statisticsHandler) CountKitchenProductionDetail(c *gin.Context) {
 		helper.HandleValidationError(c, err, countReq, nil)
 		return
 	}
-	kitchenProductionDetailData, err := h.businessSrv.CountKitchenProductionDetail(ctx, countReq)
+	kitchenProductionDetailData, err := h.businessSrv.KitchenProductionDetail(ctx, countReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -382,12 +382,12 @@ func (h *statisticsHandler) ExportKitchenProductionDetail(c *gin.Context) {
 		helper.HandleValidationError(c, err, countReq, nil)
 		return
 	}
-	exportKitchenProductionDetailData, err := h.businessSrv.ExportKitchenProductionDetail(ctx, countReq)
+	err := h.businessSrv.ExportKitchenProductionDetail(ctx, countReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, exportKitchenProductionDetailData)
+	helper.Success(c, nil)
 }
 
 func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {

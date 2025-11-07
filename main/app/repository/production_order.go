@@ -45,6 +45,7 @@ type IProductionOrderQueryRepo interface {
 	GetLimitedHistoryProducts(orderField string, opts ...DBOption) ([]model.ProductionOrderProduct, error)                                                            // 历史获取销售账单Uuid
 	GetProducts(limit int, orderBy string, statusOpt DBOption, opts ...DBOption) (float64, []model.ProductionOrderProduct, error)                                     // 获取生产订单商品
 	GetProductionOrderList(pageNo, pageSize int, productBomUuids []uint64, startTime int64, endTime int64, opts ...DBOption) ([]*model.ProductionOrderProduct, error) // 获取生产订单列表
+	GetProductionOrderListCount(productBomUuids []uint64, startTime int64, endTime int64, opts ...DBOption) (int64, error)                                            // 获取生产订单列表数量
 
 	GetProductsByPackageUuid(packageUuid uint64) ([]model.ProductionOrderProduct, error) // 根据套餐uuid获取套餐下所有子商品
 }
@@ -394,4 +395,25 @@ func (r *productionRepo) GetProductionOrderList(pageNo, pageSize int, productBom
 		return nil, errors.WithMessage(err)
 	}
 	return productionOrderProducts, nil
+}
+
+// GetProductionOrderList 获取生产订单列表
+func (r *productionRepo) GetProductionOrderListCount(productBomUuids []uint64, startTime int64, endTime int64, opts ...DBOption) (int64, error) {
+	var count int64
+
+	db := r.db.Model(&model.ProductionOrderProduct{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	if len(productBomUuids) > 0 {
+		db = db.Where("product_bom_uuid in (?)", productBomUuids)
+	}
+	err := db.
+		Where("status = ?", constant.ProductionOrderProductStatusFinished). // 已经完成出餐的商品
+		Where("finished_time BETWEEN ? AND ?", startTime, endTime).         // 选择时间区间
+		Count(&count).Error
+	if err != nil {
+		return 0, errors.WithMessage(err)
+	}
+	return count, nil
 }

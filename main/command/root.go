@@ -221,6 +221,12 @@ func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 		tasks.NewDailySalesOutboundSummaryTask(dbm, cache).Execute()
 	})
 
+	// 每15分钟
+	// _, _ = c.AddFunc("0 */15 * * * *", func() {
+	_, _ = c.AddFunc("0 * * * * *", func() {
+		tasks.NewKitchenEfficiencyAnalysisTask(dbm, cache).Execute()
+	})
+
 	// 每分钟执行翻译任务
 	_, _ = c.AddFunc("0 * * * * *", func() {
 		logger.Logger.Info("开始执行翻译任务")

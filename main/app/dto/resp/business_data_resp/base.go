@@ -294,15 +294,26 @@ type BusinessDataKitchenEfficiencyAnalysis struct {
 
 // 营业数据 - 后厨效率分析 - 单条
 type KitchenEfficiencyAnalysisItem struct {
-	ProductName  dto.LocaleResponse `json:"product_name"`  // 商品名称
-	CategoryName dto.LocaleResponse `json:"category_name"` // 分类名称
-	Min          int                `json:"min"`           // 最短出品时长
-	Max          int                `json:"max"`           // 最长出品时长
-	Avg          int                `json:"avg"`           // 平均出品时长
+	ProductPackageUuid uint64             `json:"product_package_uuid"` // 商品包UUID
+	ProductName        dto.LocaleResponse `json:"product_name"`         // 商品名称
+	CategoryName       dto.LocaleResponse `json:"category_name"`        // 分类名称
+	Min                float64            `json:"min"`                  // 最短出品时长
+	Max                float64            `json:"max"`                  // 最长出品时长
+	Avg                float64            `json:"avg"`                  // 平均出品时长
+
+	exist bool `json:"exist"` // 是否存在
+}
+
+func (item *KitchenEfficiencyAnalysisItem) SetExist(exist bool) {
+	item.exist = exist
+}
+
+func (item *KitchenEfficiencyAnalysisItem) GetExist() bool {
+	return item.exist
 }
 
 type BusinessDataKitchenEfficiencyAnalysisAvg struct {
-	Avg int `json:"avg"` // 平均出品时长,单位:秒
+	Avg float64 `json:"avg"` // 平均出品时长,单位:秒
 }
 
 type KitchenProductionDetail struct {

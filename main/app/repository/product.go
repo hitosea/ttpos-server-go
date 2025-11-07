@@ -138,6 +138,8 @@ type IProductQueryRepo interface {
 	GetProductBomUuidsByCategoryUuids(categoryUuids []uint64) ([]uint64, error) // 根据分类UUID查询所有商品的product_bom_uuid
 	GetProductBomUuidsByInternalCode(internalCode string) ([]uint64, error)     // 根据内部编码查询所有商品的product_bom_uuid
 
+	GetProductListByKeywordAndCategory(keyword string, categoryUuids []uint64) ([]*model.ProductPackage, error) // 根据name进行模糊查询、根据分类进行查询商品列表
+
 	BatchUpdateSort(table any, sorts map[uint64]int) error // 批量更新排序
 }
 
@@ -1499,4 +1501,25 @@ func (r *productRepo) GetProductBomUuidsByInternalCode(internalCode string) ([]u
 		return nil, errors.WithMessage(err)
 	}
 	return productBomUuids, nil
+}
+
+// 根据name进行模糊查询、根据分类进行查询商品列表
+func (r *productRepo) GetProductListByKeywordAndCategory(keyword string, categoryUuids []uint64) ([]*model.ProductPackage, error) {
+	var products []*model.ProductPackage
+	db := r.db.Model(&model.ProductPackage{}).Where("delete_time = ?", constant.NotDeleted)
+	if keyword != "" {
+		db = db.Where("name LIKE ?", "%"+keyword+"%")
+	}
+	if len(categoryUuids) > 0 {
+		db = db.Where("category_uuid IN ?", categoryUuids)
+	}
+	db = db.Preload("ProductCategory.MultiLanguageName").Preload("MultiLanguageName")
+	err := db.Find(&products).Error
+	if err != nil {
+		if strings.Contains(err.Error(), "record not found") {
+			return nil, nil
+		}
+		return nil, errors.WithMessage(err)
+	}
+	return products, nil
 }

@@ -30337,7 +30337,7 @@ const docTemplate = `{
             "properties": {
                 "avg": {
                     "description": "平均出品时长",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "category_name": {
                     "description": "分类名称",
@@ -30349,11 +30349,11 @@ const docTemplate = `{
                 },
                 "max": {
                     "description": "最长出品时长",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "min": {
                     "description": "最短出品时长",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "product_name": {
                     "description": "商品名称",
@@ -30362,6 +30362,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.LocaleResponse"
                         }
                     ]
+                },
+                "product_package_uuid": {
+                    "description": "商品包UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -30970,6 +30974,10 @@ const docTemplate = `{
             "properties": {
                 "code": {
                     "description": "物品编码",
+                    "type": "string"
+                },
+                "internal_code": {
+                    "description": "内部编码",
                     "type": "string"
                 },
                 "locale_name": {
