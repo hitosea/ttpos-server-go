@@ -3437,7 +3437,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_kitchen_efficiency_analysis` (
     `product_package_uuid` bigint NOT NULL DEFAULT 0 COMMENT '商品包UUID',
     `min` decimal(22,4) NOT NULL DEFAULT 0 COMMENT '最短出品时长',
     `max` decimal(22,4) NOT NULL DEFAULT 0 COMMENT '最长出品时长',
-    `avg` decimal(22,4)) NOT NULL DEFAULT 0 COMMENT '平均出品时长',
+    `avg` decimal(22,4) NOT NULL DEFAULT 0 COMMENT '平均出品时长',
     `total` decimal(22,4) NOT NULL DEFAULT 0 COMMENT '总出品时长',
     `count` decimal(22,4) NOT NULL DEFAULT 0 COMMENT '出品次数',
     `date` int(10) NOT NULL DEFAULT 0 COMMENT '统计日期,某天零点的时间戳.一个商品一天只有唯一的一条记录',
