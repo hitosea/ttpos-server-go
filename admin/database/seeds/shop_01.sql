@@ -1937,7 +1937,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_out_form_item` (
     UNIQUE KEY `unique_uuid` (`uuid`),
     INDEX `idx_warehouse_out_form_uuid` (`warehouse_out_form_uuid`),
     INDEX `idx_material_uuid` (`material_uuid`),
-    INDEX `idx_product_bom_uuid` (`product_bom_uuid`)
+    INDEX `idx_product_bom_uuid` (`product_bom_uuid`),
+    INDEX `idx_sale_bill_uuid` (`sale_bill_uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '出库单明细表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_loss_report_form` (

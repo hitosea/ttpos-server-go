@@ -21,25 +21,22 @@ class UpdateTTPOSKitchenEfficiencyAnalysisTable extends Migrator
         $table = $this->table('kitchen_efficiency_analysis');
 
         // 定义表字段
-        $table->changeColumn('min', 'decimal', ['comment' => '最短出品时长', 'default' => 0, 'signed' => false, 'precision' => 22, 'scale' => 4]);
-        $table->changeColumn('max', 'decimal', ['comment' => '最长出品时长', 'default' => 0, 'signed' => false, 'precision' => 22, 'scale' => 4]);
-        $table->changeColumn('avg', 'decimal', ['comment' => '平均出品时长', 'default' => 0, 'signed' => false, 'precision' => 22, 'scale' => 4]);
-        $table->changeColumn('total', 'decimal', ['comment' => '总出品时长', 'default' => 0, 'signed' => false, 'precision' => 22, 'scale' => 4]);
-        $table->changeColumn('count', 'decimal', ['comment' => '出品次数', 'default' => 0, 'signed' => false, 'precision' => 22, 'scale' => 4]);
-
+        if ($table->hasColumn('min')) {
+            $table->changeColumn('min', 'decimal', ['comment' => '最短出品时长', 'default' => 0, 'signed' => false, 'precision' => 22, 'scale' => 4]);
+        }
+        if ($table->hasColumn('max')) {
+            $table->changeColumn('max', 'decimal', ['comment' => '最长出品时长', 'default' => 0, 'signed' => false, 'precision' => 22, 'scale' => 4]);
+        }
+        if ($table->hasColumn('avg')) {
+            $table->changeColumn('avg', 'decimal', ['comment' => '平均出品时长', 'default' => 0, 'signed' => false, 'precision' => 22, 'scale' => 4]);
+        }
+        if ($table->hasColumn('total')) {
+            $table->changeColumn('total', 'decimal', ['comment' => '总出品时长', 'default' => 0, 'signed' => false, 'precision' => 22, 'scale' => 4]);
+        }
+        if ($table->hasColumn('count')) {
+            $table->changeColumn('count', 'decimal', ['comment' => '出品次数', 'default' => 0, 'signed' => false, 'precision' => 22, 'scale' => 4]);
+        }
         $table->update();
     }
-
-    /**
-     * Down Method.
-     *
-     * @return void
-     */
-    public function down()
-    {
-        // 检查表是否存在，如果存在则删除
-        if ($this->hasTable('kitchen_efficiency_analysis')) {
-            $this->dropTable('kitchen_efficiency_analysis');
-        }
-    }
+    
 }

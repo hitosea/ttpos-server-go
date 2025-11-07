@@ -18,6 +18,11 @@ class CreateTTPOSTaskTable extends Migrator
      */
     public function change()
     {
+        // 检查表是否已经存在
+        if ($this->hasTable('ttpos_task')) {
+            return;
+        }
+
         $table = $this->table('ttpos_task', [
             'comment' => '任务中心表',
             'engine' => 'InnoDB',
@@ -47,17 +52,5 @@ class CreateTTPOSTaskTable extends Migrator
 
         $table->create();
     }
-
-    /**
-     * Down Method.
-     *
-     * @return void
-     */
-    public function down()
-    {
-        // 检查表是否存在，如果存在则删除
-        if ($this->hasTable('ttpos_task')) {
-            $this->dropTable('ttpos_task');
-        }
-    }
+    
 }
