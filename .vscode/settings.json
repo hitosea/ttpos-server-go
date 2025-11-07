@@ -82,15 +82,19 @@
             "protocol": "http"
         },
         "3306": {
-            "label": "MySQL服务(3306) ", 
+            "label": "MySQL服务", 
             "onAutoForward": "silent"
         },
         "13306": {
-            "label": "MySQL服务(13306)", 
+            "label": "MySQL服务", 
             "onAutoForward": "silent"
         },
         "6379": {
-            "label": "Redis服务(6379)", 
+            "label": "Redis服务", 
+            "onAutoForward": "silent"
+        },
+        "8091": {
+            "label": "HTTP检测服务", 
             "onAutoForward": "silent"
         },
         //忽略端口范围配置
@@ -110,7 +114,7 @@
             "label": "忽略",
             "onAutoForward": "ignore"
         },
-        "11010": {
+        "9000-11010": {
             "label": "忽略",
             "onAutoForward": "ignore"
         },

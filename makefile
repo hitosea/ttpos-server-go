@@ -147,3 +147,7 @@ add-item-stock:
 # 添加父级公司UUID路径
 add-parent-company-uuid:
 	cd main && go run ./main.go add-parent-company-uuid
+
+# 删除 dangling 镜像
+rmi:
+	docker rmi $$(docker images -qf "dangling=true")
