@@ -72,6 +72,7 @@ queue:
 
 # 调用链监控配置
 otlp:
+  enabled: true
   serviceName: "ttpos-erp"
   endpoint: "103.63.136.110:32481"
   path: "/v1/traces"
