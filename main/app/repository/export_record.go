@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"strings"
 	"time"
 	"ttpos-server-go/app/model"
 
@@ -13,6 +14,7 @@ type IExportRecordRepo interface {
 	Create(record *model.ExportRecord) error
 	Update(uuid uint64, data map[string]any) error
 	GetByUuid(uuid uint64, opts ...DBOption) (*model.ExportRecord, error)
+	GetUnfinishedExportRecord(exportType uint8) (*model.ExportRecord, error) // 查询3小时内未完成的导出记录
 	GetList(opts ...DBOption) ([]model.ExportRecord, error)
 	GetListWithPagination(pageNo, pageSize int, opts ...DBOption) ([]model.ExportRecord, int64, error)
 	GetByUuids(uuids []uint64, opts ...DBOption) ([]model.ExportRecord, error)
@@ -165,4 +167,23 @@ func (r *ExportRecordRepoImpl) PreloadFile() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("File")
 	}
+}
+
+// 查询1小时内未完成的导出记录.
+// 判定没有哪个导出会超过1个小时未完成,如果1小时后还未完成说明可能系统已经不在处理,则不再限时用户因为还有导出记录而不能新建导出
+func (r *ExportRecordRepoImpl) GetUnfinishedExportRecord(exportType uint8) (*model.ExportRecord, error) {
+	var record model.ExportRecord
+	beforeHours := time.Now().Add(-1 * time.Hour).Unix()
+	err := r.db.Model(&model.ExportRecord{}).
+		Where("export_type = ?", exportType).
+		Where("status = ?", model.ExportStatusPending).
+		Where("create_time > ?", beforeHours).
+		First(&record).Error
+	if err != nil {
+		if strings.Contains(err.Error(), "record not found") {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &record, err
 }

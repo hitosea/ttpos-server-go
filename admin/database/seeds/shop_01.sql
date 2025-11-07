@@ -3430,7 +3430,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_export_record` (
 
 -- 后厨效率分析表
 CREATE TABLE IF NOT EXISTS `ttpos_kitchen_efficiency_analysis` (
-                                                                   `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
     `uuid` bigint NOT NULL DEFAULT 0 COMMENT '唯一标识',
     `product_package_uuid` bigint NOT NULL DEFAULT 0 COMMENT '商品包UUID',
     `min` decimal(22,4) NOT NULL DEFAULT 0 COMMENT '最短出品时长',
@@ -3451,7 +3451,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_kitchen_efficiency_analysis` (
 
 -- 任务中心表
 CREATE TABLE IF NOT EXISTS `ttpos_task` (
-                                            `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+    `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
     `uuid` bigint NOT NULL DEFAULT 0 COMMENT '主键UUID',
     `company_uuid` bigint NOT NULL DEFAULT 0 COMMENT '所属公司UUID',
     `type` varchar(50) NOT NULL DEFAULT '' COMMENT '任务类型',
