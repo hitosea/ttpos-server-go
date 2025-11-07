@@ -506,7 +506,7 @@ definitions:
     properties:
       avg:
         description: 平均出品时长,单位:秒
-        type: integer
+        type: number
     type: object
   business_data_resp.BusinessDataPaymentMethod:
     properties:

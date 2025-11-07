@@ -17,6 +17,7 @@ type OtlpConfig struct {
 	ServiceName string `json:"serviceName"`
 	Endpoint    string `json:"endpoint"`
 	Path        string `json:"path"`
+	Enabled     bool   `json:"enabled"`
 }
 
 func init() {
@@ -31,11 +32,16 @@ func init() {
 }
 
 func InitOtlp() func(context.Context) {
-	shutdown, err := otlphttp.Init(config.ServiceName, config.Endpoint, config.Path)
-	if err != nil {
-		g.Log().Warningf(globalCtx, "otlp init error: %v", err)
-		return nil
+	if config.Enabled {
+		shutdown, err := otlphttp.Init(config.ServiceName, config.Endpoint, config.Path)
+		if err != nil {
+			g.Log().Warningf(globalCtx, "otlp init error: %v", err)
+			return nil
+		}
+		g.Log().Infof(globalCtx, "otlp init success")
+		return shutdown
 	}
-	g.Log().Infof(globalCtx, "otlp init success")
-	return shutdown
+	return func(ctx context.Context) {
+		g.Log().Info(ctx, "otlp not enabled, skip shutdown")
+	}
 }

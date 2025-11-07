@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"ttpos-server-go/pkg/otlp"
 	"ttpos-server-go/pkg/rocketmq"
 
 	"github.com/jinzhu/copier"
@@ -25,6 +26,7 @@ var Google GoogleConf
 var Nacos NacosConf
 
 var Rocketmq rocketmq.Config
+var Otlp *otlp.OtlpConfig
 
 func Init() error {
 	// 加载 .env 文件
@@ -60,6 +62,7 @@ func Init() error {
 		AesSecretKey:  "",
 	}
 
+	Otlp = otlp.LoadOtlpConfig(opt)
 	return nil
 }
 

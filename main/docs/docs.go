@@ -30302,7 +30302,7 @@ const docTemplate = `{
             "properties": {
                 "avg": {
                     "description": "平均出品时长,单位:秒",
-                    "type": "integer"
+                    "type": "number"
                 }
             }
         },
