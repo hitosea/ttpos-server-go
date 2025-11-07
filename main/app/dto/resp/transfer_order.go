@@ -41,8 +41,7 @@ type TransferOrderInfo struct {
 // TransferOrderDetailResp 调拨单详情响应
 type TransferOrderDetailResp struct {
 	TransferOrderInfo
-	Items []TransferOrderItemInfo `json:"items"` // 调拨明细
-	// Approvals  []TransferOrderApprovalInfo `json:"approvals"`   // 审批流程
+	Items      []TransferOrderItemInfo `json:"items"`       // 调拨明细
 	RejectInfo TransferOrderRejectInfo `json:"reject_info"` // 驳回信息
 }
 
@@ -54,6 +53,7 @@ type TransferOrderItemInfo struct {
 	MaterialName         dto.LocaleResponse          `json:"material_name"`          // 物品名称
 	MaterialInternalCode string                      `json:"material_internal_code"` // 物品内部编码
 	Valuation            float64                     `json:"valuation"`              // 估值单价（基准单位）
+	AvailableNum         float64                     `json:"available_num"`          // 可用库存数量
 	Units                []TransferOrderItemUnitInfo `json:"units"`                  // 单位列表
 }
 

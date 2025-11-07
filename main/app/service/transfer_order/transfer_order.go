@@ -233,12 +233,40 @@ func (s *transferOrderSrv) GetTransferOrderDetail(
 		detailResp.IsNeedSelectInWarehouse = true
 	}
 
+	// 待提交时 - 获取其他店库存
+	var warehouseItems []model.WarehouseItem
+	if transferOrder.Status == constant.TransferOrderStatusDraft {
+		otherDb := s.dbm.GetDB(transferOrder.SenderCompanyUuid)
+		if otherDb == nil {
+			return resp.TransferOrderDetailResp{}, errors.WithMessage(errors.New("获取其他店数据库失败"), "其他店数据库不存在")
+		}
+		// 当前库存
+		erpCodes := []string{}
+		for _, item := range transferOrder.Items {
+			erpCodes = append(erpCodes, item.MaterialCode)
+		}
+		warehouseItemList, err := repository.NewWarehouseItemRepo(otherDb).GetNormalByMaterialCodes(erpCodes, transferOrder.OutWarehouseErpCode)
+		if err != nil {
+			return resp.TransferOrderDetailResp{}, errors.WithMessage(errors.New("获取物品库存失败"), err.Error())
+		}
+		warehouseItems = warehouseItemList
+	}
+
 	// 转换明细数据
 	detailResp.Items = make([]resp.TransferOrderItemInfo, 0, len(transferOrder.Items))
 	for _, item := range transferOrder.Items {
 		itemInfo := resp.TransferOrderItemInfo{}
 		copier.Copy(&itemInfo, &item)
 		itemInfo.MaterialName = *language.JsonToLocaleResponse(item.MaterialName)
+
+		// AvailableNum
+		availableNum := decimal.NewFromFloat(0)
+		for _, warehouseItem := range warehouseItems {
+			if item.MaterialCode == warehouseItem.MaterialCode {
+				availableNum = availableNum.Add(decimal.NewFromFloat(warehouseItem.Stock))
+			}
+		}
+		itemInfo.AvailableNum = availableNum.InexactFloat64()
 
 		// 转换单位列表
 		itemInfo.Units = make([]resp.TransferOrderItemUnitInfo, 0, len(item.Units))
