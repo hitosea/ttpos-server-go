@@ -3530,6 +3530,11 @@ func (s *materialSrv) GetWarehouseItemConsumption(ctx context.Context, warehouse
 }
 
 func (s *materialSrv) CheckMaterialSafetyStock(ctx context.Context, companyUuid uint64) error {
+	defer func() {
+		if err := recover(); err != nil {
+			logger.Logger.Error("检查物品安全库存发生panic", zap.Any("company_uuid", companyUuid), zap.Any("error", err))
+		}
+	}()
 	// 加锁，当前方法执行完才能再次调用
 	lockKey := fmt.Sprintf("check_material_safety_stock_%d", companyUuid)
 	s.systemLock.LockUuidString(lockKey)
