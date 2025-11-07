@@ -1801,6 +1801,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_supplier` (
     `position` VARCHAR(100) NOT NULL DEFAULT '' COMMENT '职位',
     `staff_uuid` BIGINT UNSIGNED NOT NULL COMMENT '员工ID, 采购负责人',
     `erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT '关联erpnext',
+    `represents_company` varchar(255) NOT NULL DEFAULT '' COMMENT '代表公司',
+    `is_internal_supplier` int NOT NULL DEFAULT 0 COMMENT '是否内部供应商：0-否；1-是',
     `headquarter_uuid` BIGINT DEFAULT 0 COMMENT '总部UUID',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
