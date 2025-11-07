@@ -69,3 +69,9 @@ queue:
     invisibleDuration: 25   #invisibleDuration should > 20s
     awaitDuration: 5      # maximum waiting time for receive func
     unitName: "" # 消费者单元名称，默认使用GUID
+
+# 调用链监控配置
+otlp:
+  serviceName: "ttpos-erp"
+  endpoint: "103.63.136.110:32481"
+  path: "/v1/traces"

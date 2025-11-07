@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"ttpos-bmp/internal/pkg/otlp"
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -18,7 +19,9 @@ var (
 		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
 			// 初始化服务
 			boot.Init(ctx)
-
+			// 初始化OTLP
+			shutdownOtlp := otlp.InitOtlp()
+			defer shutdownOtlp(ctx)
 			// 启动 HTTP 服务（用于健康检查等）
 			s := g.Server()
 			s.Group("/", func(group *ghttp.RouterGroup) {
