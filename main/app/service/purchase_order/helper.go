@@ -352,28 +352,10 @@ func (h *purchaseOrderHelper) recordErpStockInLog(
 			}
 
 			// 查找或创建仓库商品库存记录
-			warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterial(targetWarehouse.Uuid, item.MaterialUuid)
+			warehouseItem, err := warehouseItemRepo.GetByWarehouseAndMaterialOrCreate(targetWarehouse.Uuid, item.MaterialUuid, item.MaterialCode, item.Valuation)
 			if err != nil {
-				if err == gorm.ErrRecordNotFound {
-					// 没有找到记录时创建新记录
-					newWarehouseItem := &model.WarehouseItem{
-						WarehouseUuid: targetWarehouse.Uuid,
-						MaterialUuid:  item.MaterialUuid,
-						MaterialCode:  item.MaterialCode,
-						Stock:         0,
-						ReservedStock: 0,
-						Valuation:     1,
-					}
-					err = warehouseItemRepo.Create(newWarehouseItem)
-					if err != nil {
-						logger.Logger.Error("recordErpStockInLog-Create", zap.Any("newWarehouseItem", newWarehouseItem), zap.Any("err", err))
-						return errors.WithMessage(errors.New("创建仓库商品库存记录失败"), err.Error())
-					}
-					warehouseItem = newWarehouseItem
-				} else {
-					logger.Logger.Error("recordErpStockInLog-GetByWarehouseAndMaterial", zap.Any("targetWarehouseUuid", targetWarehouse.Uuid), zap.Any("itemMaterialUuid", item.MaterialUuid), zap.Any("err", err))
-					return errors.WithMessage(errors.New("查询仓库商品库存失败"), err.Error())
-				}
+				logger.Logger.Error("MoveStockToTargetWarehouse-GetByWarehouseAndMaterialOrCreate", zap.Any("err", err))
+				return errors.WithMessage(errors.New("查询仓库商品库存失败"), err.Error())
 			}
 			err = warehouseItemRepo.AddStock(warehouseItem.Uuid, actualNum)
 			if err != nil {

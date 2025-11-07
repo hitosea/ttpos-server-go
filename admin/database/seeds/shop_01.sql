@@ -3300,6 +3300,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_transfer_order` (
   `remark` text COMMENT '备注',
   `item_count` int(10) NOT NULL DEFAULT 0 COMMENT '物品种类数量',
   `erp_resp` text COMMENT 'ERP响应数据',
+  `receipt_order_erp_code` varchar(255) NOT NULL DEFAULT '' COMMENT '收货单ERP编码',
+  `receipt_order_erp_resp` text COMMENT '收货单ERP响应数据',
   `create_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建时间',
   `update_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '更新时间',
   `delete_time` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',

@@ -273,7 +273,7 @@ func (h *TransferOrderHandler) ApproveTransferOrder(c *gin.Context) {
 
 	err := h.transferOrderSrv.ApproveTransferOrder(ctx, approveReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		helper.ErrorAutoWithData(c, constant.CodeFail, err)
 		return
 	}
 

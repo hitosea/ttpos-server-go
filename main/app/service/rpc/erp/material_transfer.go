@@ -36,7 +36,7 @@ func (s *erpSrv) SaveMaterialTransfer(ctx pkgCtx.Context, companySetting model.C
 		return &material_transfer.MaterialTransferResp{}, err
 	}
 	if result.Code != "0" {
-		logger.Logger.Error("SaveTransferOrder-SaveTransferOrder", zap.Any("err", err))
+		logger.Logger.Error("SaveTransferOrder-SaveTransferOrder", zap.Any("err", err.Error()))
 		return &material_transfer.MaterialTransferResp{}, errors.New("调用erp接口失败-10001-" + result.GetMessage())
 	}
 	if result.Data != nil {

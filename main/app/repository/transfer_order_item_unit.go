@@ -16,6 +16,7 @@ type ITransferOrderItemUnitRepo interface {
 	Delete(uuid uint64) error
 	DeleteByItemUuid(itemUuid uint64) error
 	DeleteByTransferOrderUuid(transferOrderUuid uint64) error
+	DeleteByTransferOrderUuidPhysical(transferOrderUuid uint64) error
 	GetByUuid(uuid uint64) (*model.TransferOrderItemUnit, error)
 	GetListByItemUuid(itemUuid uint64) ([]model.TransferOrderItemUnit, error)
 	GetListByTransferOrderUuid(transferOrderUuid uint64) ([]model.TransferOrderItemUnit, error)
@@ -56,6 +57,12 @@ func (r *TransferOrderItemUnitRepoImpl) DeleteByItemUuid(itemUuid uint64) error 
 
 func (r *TransferOrderItemUnitRepoImpl) DeleteByTransferOrderUuid(transferOrderUuid uint64) error {
 	return r.db.Model(&model.TransferOrderItemUnit{}).Where("transfer_order_uuid = ?", transferOrderUuid).Update("delete_time", time.Now().Unix()).Error
+}
+
+func (r *TransferOrderItemUnitRepoImpl) DeleteByTransferOrderUuidPhysical(transferOrderUuid uint64) error {
+	return r.db.Model(&model.TransferOrderItemUnit{}).
+		Where("transfer_order_uuid = ?", transferOrderUuid).
+		Delete(&model.TransferOrderItemUnit{}).Error
 }
 
 func (r *TransferOrderItemUnitRepoImpl) GetByUuid(uuid uint64) (*model.TransferOrderItemUnit, error) {

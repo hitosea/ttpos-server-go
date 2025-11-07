@@ -16,6 +16,7 @@ type ITransferOrderItemRepo interface {
 	Update(item *model.TransferOrderItem) error
 	Delete(uuid uint64) error
 	DeleteByTransferOrderUuid(transferOrderUuid uint64) error
+	DeleteByTransferOrderUuidPhysical(transferOrderUuid uint64) error
 	GetByUuid(uuid uint64, opts ...DBOption) (*model.TransferOrderItem, error)
 
 	// 查询操作
@@ -79,6 +80,13 @@ func (r *TransferOrderItemRepoImpl) DeleteByTransferOrderUuid(transferOrderUuid 
 	return r.db.Model(&model.TransferOrderItem{}).
 		Where("transfer_order_uuid = ?", transferOrderUuid).
 		Update("delete_time", time.Now().Unix()).Error
+}
+
+// DeleteByTransferOrderUuidPhysical 根据调拨单UUID删除所有明细（物理删除）
+func (r *TransferOrderItemRepoImpl) DeleteByTransferOrderUuidPhysical(transferOrderUuid uint64) error {
+	return r.db.Model(&model.TransferOrderItem{}).
+		Where("transfer_order_uuid = ?", transferOrderUuid).
+		Delete(&model.TransferOrderItem{}).Error
 }
 
 // GetByUuid 根据UUID获取调拨单明细
