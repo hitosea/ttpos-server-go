@@ -16379,7 +16379,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "完成制作、传菜",
+                "description": "完成制作、传菜，v2.9支持一键完成、确认退菜",
                 "consumes": [
                     "application/json"
                 ],
@@ -16389,10 +16389,10 @@ const docTemplate = `{
                 "tags": [
                     "厨显端.产品"
                 ],
-                "summary": "完成制作、传菜",
+                "summary": "完成制作、传菜，v2.9支持一键完成、确认退菜",
                 "parameters": [
                     {
-                        "description": "完成制作、传菜",
+                        "description": "完成制作、传菜，v2.9支持一键完成、确认退菜",
                         "name": "data",
                         "in": "body",
                         "required": true,
@@ -24124,64 +24124,6 @@ const docTemplate = `{
                         "description": "成功",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "请求参数错误",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/shop/purchase/receipt/files": {
-            "get": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "获取指定收货单的所有附件",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "商家端.采购管理"
-                ],
-                "summary": "获取收货单附件列表",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "收货单UUID",
-                        "name": "receipt_order_uuid",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/resp.ReceiptFileInfo"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
                         }
                     },
                     "400": {
@@ -35037,6 +34979,13 @@ const docTemplate = `{
         "req.FinishReq": {
             "type": "object",
             "properties": {
+                "confirm_return_product_uuids": {
+                    "description": "确认退菜送厨商品ID列表 v2.9新增\"一键完成\"",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "mode": {
                     "description": "模式 0-传菜完成 ; 1-制作完成",
                     "type": "integer"
@@ -39716,6 +39665,14 @@ const docTemplate = `{
                 "uuid"
             ],
             "properties": {
+                "in_warehouse_erp_code": {
+                    "description": "入库仓库ERP编码",
+                    "type": "string"
+                },
+                "out_warehouse_erp_code": {
+                    "description": "出库仓库ERP编码",
+                    "type": "string"
+                },
                 "remark": {
                     "description": "审批备注",
                     "type": "string",
@@ -39847,6 +39804,10 @@ const docTemplate = `{
                 "uuid"
             ],
             "properties": {
+                "in_warehouse_erp_code": {
+                    "description": "入库仓库ERP编码",
+                    "type": "string"
+                },
                 "remark": {
                     "description": "收货备注",
                     "type": "string",
@@ -47254,10 +47215,6 @@ const docTemplate = `{
                 "sort_order": {
                     "description": "排序",
                     "type": "integer"
-                },
-                "uuid": {
-                    "description": "附件关联UUID",
-                    "type": "integer"
                 }
             }
         },
@@ -49389,6 +49346,10 @@ const docTemplate = `{
         "resp.TransferOrderDetailResp": {
             "type": "object",
             "properties": {
+                "approval_progress": {
+                    "description": "审批中进度: wait-待审核 sender-待发货门店审批 sender_parent-待发货门店上级审批 receiver-待收货门店审批 receiver_parent-待收货门店上级审批 parent-待上级审批",
+                    "type": "string"
+                },
                 "create_time": {
                     "description": "创建时间",
                     "type": "integer"
@@ -49513,6 +49474,10 @@ const docTemplate = `{
         "resp.TransferOrderInfo": {
             "type": "object",
             "properties": {
+                "approval_progress": {
+                    "description": "审批中进度: wait-待审核 sender-待发货门店审批 sender_parent-待发货门店上级审批 receiver-待收货门店审批 receiver_parent-待收货门店上级审批 parent-待上级审批",
+                    "type": "string"
+                },
                 "create_time": {
                     "description": "创建时间",
                     "type": "integer"

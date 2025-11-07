@@ -698,7 +698,7 @@ func (s *purchaseReceiptOrderSrv) GetPurchaseReceiptOrderDetail(
 	if err != nil {
 		logger.Logger.Warn("查询收货单附件失败", zap.Error(err), zap.Uint64("receiptOrderUuid", req.Uuid))
 		// 不影响收货单详情查询，只记录日志
-		detailResp.Files = []resp.ReceiptFileInfo{}
+		detailResp.Files = make([]resp.ReceiptFileInfo, 0)
 	} else {
 		detailResp.Files = files
 	}

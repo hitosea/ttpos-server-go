@@ -3639,6 +3639,11 @@ definitions:
     type: object
   req.FinishReq:
     properties:
+      confirm_return_product_uuids:
+        description: 确认退菜送厨商品ID列表 v2.9新增"一键完成"
+        items:
+          type: integer
+        type: array
       mode:
         description: 模式 0-传菜完成 ; 1-制作完成
         type: integer
@@ -6912,6 +6917,12 @@ definitions:
     type: object
   req.TransferOrderApproveReq:
     properties:
+      in_warehouse_erp_code:
+        description: 入库仓库ERP编码
+        type: string
+      out_warehouse_erp_code:
+        description: 出库仓库ERP编码
+        type: string
       remark:
         description: 审批备注
         maxLength: 500
@@ -7007,6 +7018,9 @@ definitions:
     type: object
   req.TransferOrderReceiveReq:
     properties:
+      in_warehouse_erp_code:
+        description: 入库仓库ERP编码
+        type: string
       remark:
         description: 收货备注
         maxLength: 500
@@ -11988,9 +12002,6 @@ definitions:
       sort_order:
         description: 排序
         type: integer
-      uuid:
-        description: 附件关联UUID
-        type: integer
     type: object
   resp.RechargeMember:
     properties:
@@ -13434,6 +13445,10 @@ definitions:
     type: object
   resp.TransferOrderDetailResp:
     properties:
+      approval_progress:
+        description: '审批中进度: wait-待审核 sender-待发货门店审批 sender_parent-待发货门店上级审批 receiver-待收货门店审批
+          receiver_parent-待收货门店上级审批 parent-待上级审批'
+        type: string
       create_time:
         description: 创建时间
         type: integer
@@ -13521,6 +13536,10 @@ definitions:
     type: object
   resp.TransferOrderInfo:
     properties:
+      approval_progress:
+        description: '审批中进度: wait-待审核 sender-待发货门店审批 sender_parent-待发货门店上级审批 receiver-待收货门店审批
+          receiver_parent-待收货门店上级审批 parent-待上级审批'
+        type: string
       create_time:
         description: 创建时间
         type: integer
@@ -24496,9 +24515,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: 完成制作、传菜
+      description: 完成制作、传菜，v2.9支持一键完成、确认退菜
       parameters:
-      - description: 完成制作、传菜
+      - description: 完成制作、传菜，v2.9支持一键完成、确认退菜
         in: body
         name: data
         required: true
@@ -24509,7 +24528,7 @@ paths:
       responses: {}
       security:
       - JwtToken: []
-      summary: 完成制作、传菜
+      summary: 完成制作、传菜，v2.9支持一键完成、确认退菜
       tags:
       - 厨显端.产品
   /kitchen/product/history:
@@ -29204,40 +29223,6 @@ paths:
       security:
       - JwtToken: []
       summary: 删除收货单附件
-      tags:
-      - 商家端.采购管理
-  /shop/purchase/receipt/files:
-    get:
-      consumes:
-      - application/json
-      description: 获取指定收货单的所有附件
-      parameters:
-      - description: 收货单UUID
-        in: query
-        name: receipt_order_uuid
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/resp.ReceiptFileInfo'
-                  type: array
-              type: object
-        "400":
-          description: 请求参数错误
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - JwtToken: []
-      summary: 获取收货单附件列表
       tags:
       - 商家端.采购管理
   /shop/purchase/receipt/list:

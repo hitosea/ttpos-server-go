@@ -117,22 +117,22 @@ func (h *ProductHandler) GetHistory(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// Finish 完成制作、传菜
-// @Summary 完成制作、传菜
-// @Description 完成制作、传菜
+// Finish 完成制作、传菜，v2.9支持一键完成、确认退菜
+// @Summary 完成制作、传菜，v2.9支持一键完成、确认退菜
+// @Description 完成制作、传菜，v2.9支持一键完成、确认退菜
 // @Tags 厨显端.产品
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.FinishReq true "完成制作、传菜"
+// @param data body req.FinishReq true "完成制作、传菜，v2.9支持一键完成、确认退菜"
 // @Router /kitchen/product/finish [post]
 func (h *ProductHandler) Finish(c *gin.Context) {
-	var productionReq req.FinishReq
-	if err := c.ShouldBindJSON(&productionReq); err != nil {
-		helper.HandleValidationError(c, err, productionReq, nil)
+	var finishReq req.FinishReq
+	if err := c.ShouldBindJSON(&finishReq); err != nil {
+		helper.HandleValidationError(c, err, finishReq, nil)
 		return
 	}
-	err := h.productionSrv.Finish(helper.GetContext(c), productionReq)
+	err := h.productionSrv.Finish(helper.GetContext(c), finishReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

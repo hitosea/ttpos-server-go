@@ -429,43 +429,6 @@ func (h *PurchaseHandler) UploadDocument(c *gin.Context) {
 	helper.Success(c, resp)
 }
 
-// GetReceiptFiles 获取收货单附件列表
-// @Summary 获取收货单附件列表
-// @Description 获取指定收货单的所有附件
-// @Tags 商家端.采购管理
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Param receipt_order_uuid query uint64 true "收货单UUID"
-// @Success 200 {object} dto.Response{data=[]resp.ReceiptFileInfo} "成功"
-// @Failure 400 {object} dto.Response "请求参数错误"
-// @Router /shop/purchase/receipt/files [get]
-func (h *PurchaseHandler) GetReceiptFiles(c *gin.Context) {
-	ctx := helper.GetContext(c)
-
-	// 获取收货单UUID
-	receiptOrderUuidStr := c.Query("receipt_order_uuid")
-	if receiptOrderUuidStr == "" {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.New("收货单UUID不能为空")))
-		return
-	}
-
-	receiptOrderUuid, err := utils.StringToUint64(receiptOrderUuidStr)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.New("收货单UUID格式错误")))
-		return
-	}
-
-	// 查询附件列表
-	files, err := h.receiptFileSrv.GetReceiptFiles(ctx, receiptOrderUuid)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-
-	helper.Success(c, files)
-}
-
 // DeleteReceiptFile 删除收货单附件
 // @Summary 删除收货单附件
 // @Description 删除收货单的指定附件（仅草稿状态）
@@ -539,7 +502,6 @@ func RegisterPurchaseHandlers(router gin.IRouter, dbm *database.DBManager, cache
 
 		// 收货单附件管理
 		privateApi.POST("/file/upload_document", wrapper.UploadDocument)
-		privateApi.GET("/purchase/receipt/files", wrapper.GetReceiptFiles)
 		privateApi.DELETE("/purchase/receipt/file", wrapper.DeleteReceiptFile)
 	}
 }
