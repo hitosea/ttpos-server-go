@@ -496,10 +496,12 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 			// 构建标签信息
 			var labelInfo product_resp.ProductLabelInfo
 			if product.ProductLabelUuid > 0 && product.ProductLabel.Uuid > 0 {
-				labelInfo = product_resp.ProductLabelInfo{
-					Uuid:  product.ProductLabel.Uuid,
-					Name:  product.ProductLabel.Name,
-					Style: product.ProductLabel.Style,
+				if product.ProductLabel.ShouldShow(ctx.GetSource()) {
+					labelInfo = product_resp.ProductLabelInfo{
+						Uuid:  product.ProductLabel.Uuid,
+						Name:  product.ProductLabel.Name,
+						Style: product.ProductLabel.Style,
+					}
 				}
 			}
 
