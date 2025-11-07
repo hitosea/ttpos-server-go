@@ -25,6 +25,7 @@ import (
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/otlp"
 	"ttpos-server-go/pkg/sms"
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/validator"
@@ -82,6 +83,11 @@ var rootCommand = &cobra.Command{
 		}
 		//初始化服务发现
 		cloud.Init()
+
+		// 初始化 OTLP 调用链跟踪
+		if err := otlp.Init(context.Background(), config.Otlp); err != nil {
+			logger.Logger.Error("Failed to initialize OpenTelemetry", zap.Error(err))
+		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		defer logger.Logger.Sync()
@@ -121,6 +127,13 @@ func initializeExternalService(dbm *database.DBManager, cache cache.Cache) {
 	pprof.Register(r)
 	// 添加中间件
 	r.Use(middleware.Cors())
+
+	// 开启 OTLP 调用链跟踪
+	if config.Otlp.Enabled {
+		r.Use(otlp.OtlpMiddleware(config.Otlp.ServiceName))
+		// 添加记录特殊headers中间件
+		r.Use(otlp.RecordSpecialHeaders())
+	}
 	// 添加请求参数日志中间件
 	if config.Server.Mode == "debug" {
 		r.Use(middleware.Recovery(logger.Logger, config.Server.Mode))
@@ -191,6 +204,13 @@ func gracefulShutdown(srv *http.Server) {
 		logger.Logger.Error("Nacos 客户端关闭失败", zap.Error(err))
 	} else {
 		logger.Logger.Info("Nacos 客户端已关闭")
+	}
+
+	//关闭 OTLP
+	if err := otlp.Shutdown(ctx); err != nil {
+		logger.Logger.Error("OTLP 关闭失败", zap.Error(err))
+	} else {
+		logger.Logger.Info("OTLP 已关闭")
 	}
 
 	// 关闭数据库连接
