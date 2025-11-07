@@ -50,19 +50,11 @@
 
     // ===== 远程管理端口自动转发 =====
     // 启用自动转发，但只检测进程端口，忽略Docker内部服务端口
-    "remote.autoForwardPorts": true,
+    "remote.autoForwardPorts": false,
     "remote.autoForwardPortsSource": "process",
     "remote.portsAttributes": {
         "8080": {"label": "点餐8888", "onAutoForward": "ignore"},
         "8888": {"label": "开发地址", "onAutoForward": "ignore"},
         "8082": {"label": "RocketMQ Dashboard", "onAutoForward": "ignore"},
-        "9848": {"label": "Nacos gRPC", "onAutoForward": "ignore"},
-        "9876": {"label": "RocketMQ NameServer", "onAutoForward": "ignore"},
-        "10909": {"label": "RocketMQ Broker", "onAutoForward": "ignore"},
-        "10911": {"label": "RocketMQ Broker Admin", "onAutoForward": "ignore"},
-        "10912": {"label": "RocketMQ Broker HA", "onAutoForward": "ignore"},
-        "18080": {"label": "Nacos Console", "onAutoForward": "ignore"},
-        "28080": {"label": "RocketMQ Proxy HTTP", "onAutoForward": "ignore"},
-        "28081": {"label": "RocketMQ Proxy gRPC", "onAutoForward": "ignore"}
     }
   }
