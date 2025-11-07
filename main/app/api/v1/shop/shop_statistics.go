@@ -293,7 +293,7 @@ func (h *statisticsHandler) CountHome(c *gin.Context) {
 // CountKitchenEfficiencyAnalysis 统计后厨效率分析
 // @Summary 统计后厨效率分析
 // @Description 统计后厨效率分析
-// @Tags 商家端.报表
+// @Tags 商家端.营业数据
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -318,7 +318,7 @@ func (h *statisticsHandler) CountKitchenEfficiencyAnalysis(c *gin.Context) {
 // CountKitchenEfficiencyAnalysisAvg 统计后厨效率分析平均时长
 // @Summary 统计后厨效率分析平均时长
 // @Description 统计后厨效率分析平均时长
-// @Tags 商家端.报表
+// @Tags 商家端.营业数据
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -343,7 +343,7 @@ func (h *statisticsHandler) CountKitchenEfficiencyAnalysisAvg(c *gin.Context) {
 // CountKitchenProductionDetail 统计后厨菜品出品明细
 // @Summary 统计后厨菜品出品明细
 // @Description 统计后厨菜品出品明细
-// @Tags 商家端.报表
+// @Tags 商家端.营业数据
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -368,7 +368,7 @@ func (h *statisticsHandler) CountKitchenProductionDetail(c *gin.Context) {
 // ExportKitchenProductionDetail 导出后厨菜品出品明细
 // @Summary 导出后厨菜品出品明细
 // @Description 导出后厨菜品出品明细
-// @Tags 商家端.报表
+// @Tags 商家端.营业数据
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -393,7 +393,7 @@ func (h *statisticsHandler) ExportKitchenProductionDetail(c *gin.Context) {
 // CountBusinessTimePeriod 统计营业时段数据
 // @Summary 统计营业时段数据
 // @Description 移动端-报表-营业报表-时段营业统计
-// @Tags 商家端.报表
+// @Tags 商家端.营业数据
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -415,12 +415,12 @@ func (h *statisticsHandler) CountBusinessTimePeriod(c *gin.Context) {
 // CountBusinessComprehensive 统计综合运用
 // @Summary 统计综合运用
 // @Description 移动端-报表-营业报表-综合运用统计
-// @Tags 商家端.报表
+// @Tags 商家端.营业数据
 // @Accept json
 // @Produce json
 // @Security JwtToken
 // @param data body req.StatisticsComprehensiveOperationsReq true "统计参数"
-// @Success 200 {object} dto.Response{data=business_data_resp.StatisticsComprehensive} "统计数据"
+// @Success 200 {object} dto.Response{data=business_data_resp.StatisticsComprehensiveOperations} "统计数据"
 // @Router /shop/statistics/business/comprehensive_operations [get]
 func (h *statisticsHandler) CountBusinessComprehensiveOperations(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -436,7 +436,7 @@ func (h *statisticsHandler) CountBusinessComprehensiveOperations(c *gin.Context)
 // CountBusinessPaymentMethod 统计支付方式
 // @Summary 统计支付方式
 // @Description 统计支付方式
-// @Tags 商家端.报表
+// @Tags 商家端.营业数据
 // @Accept json
 // @Produce json
 // @Security JwtToken

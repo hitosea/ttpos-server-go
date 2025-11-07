@@ -16,6 +16,7 @@ import (
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/duke-git/lancet/v2/slice"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -113,6 +114,17 @@ func (s *TranslateSrv) Translate(companyUuid uint64) error {
 
 	logger.Logger.Info("开始翻译任务", zap.Uint64("companyUuid", companyUuid), zap.Any("multiLanguageNameUuids", multiLanguageNameUuids))
 
+	// redis中的多语言Uuid
+	var uuidsInRedis []uint64
+	for _, multiLanguageNameUuid := range multiLanguageNameUuids {
+		uuid, _ := strconv.ParseUint(multiLanguageNameUuid, 10, 64)
+		if uuid != 0 && !slices.Contains(uuidsInRedis, uuid) {
+			uuidsInRedis = append(uuidsInRedis, uuid)
+		}
+	}
+	// db中的多语言Uuid
+	var uuidsInDB []uint64
+
 	db := s.dbm.GetDB(companyUuid)
 	translateClient := utils.NewTranslateClient()
 	translatedMultiLanguageMap := make(map[uint64]dto.LocaleResponse)
@@ -128,6 +140,7 @@ func (s *TranslateSrv) Translate(companyUuid uint64) error {
 				Content: multiLanguageName.EnName,
 			})
 			uuidList = append(uuidList, multiLanguageName.Uuid)
+			uuidsInDB = append(uuidsInDB, multiLanguageName.Uuid)
 		}
 		logger.Logger.Info("Translate-TranslateWithRetry", zap.Any("translateItems", translateItems), zap.Any("uuidList", uuidList))
 		// 每次翻译20条
@@ -166,6 +179,13 @@ func (s *TranslateSrv) Translate(companyUuid uint64) error {
 		}
 		return nil
 	})
+
+	// 不在DB中的多语言Uuid，需要从集合中移除
+	uuidsNotInDB := slice.Difference(uuidsInRedis, uuidsInDB)
+	if len(uuidsNotInDB) > 0 {
+		logger.Logger.Info("无效的多语言uuid", zap.Any("uuidsNotInDB", uuidsNotInDB))
+		s.RemoveMultiLanguageNameUuidFromSet(companyUuid, uuidsNotInDB...)
+	}
 
 	// 修改多语言uuid对应的模型的name
 	if len(translatedMultiLanguageMap) > 0 {

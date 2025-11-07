@@ -3531,11 +3531,6 @@ func (s *materialSrv) GetWarehouseItemConsumption(ctx context.Context, warehouse
 }
 
 func (s *materialSrv) CheckMaterialSafetyStock(ctx context.Context, companyUuid uint64) error {
-	defer func() {
-		if err := recover(); err != nil {
-			logger.Logger.Error("检查物品安全库存发生panic", zap.Any("company_uuid", companyUuid), zap.Any("error", err))
-		}
-	}()
 	// 加锁，当前方法执行完才能再次调用
 	lockKey := fmt.Sprintf("check_material_safety_stock_%d", companyUuid)
 	s.systemLock.LockUuidString(lockKey)
@@ -3543,7 +3538,7 @@ func (s *materialSrv) CheckMaterialSafetyStock(ctx context.Context, companyUuid 
 
 	var companyUuids []uint64
 	if companyUuid == 0 {
-		s.dbm.GetDB(0).Model(&model.Company{}).Scopes(repository.NotDeleted).Pluck("uuid", &companyUuids)
+		s.dbm.GetDB(constant.DefaultDB).Model(&model.Company{}).Scopes(repository.NotDeleted).Pluck("uuid", &companyUuids)
 	} else {
 		companyUuids = append(companyUuids, companyUuid)
 	}
@@ -3631,10 +3626,24 @@ func (s *materialSrv) sendStockAlertEmail(ctx context.Context, alertType uint8, 
 	}
 
 	if !shouldSend {
-		logger.Logger.Info("24小时内已发送过预警邮件，跳过",
+		// 记录跳过原因
+		var skipReason string
+		var alertCount uint32 = 0
+		if existingLog != nil {
+			alertCount = existingLog.AlertCount
+			if alertCount >= 2 {
+				skipReason = "已发送2次预警邮件，不再发送"
+			} else {
+				skipReason = "24小时内已发送过预警邮件，等待24小时后发送第2次"
+			}
+		} else {
+			skipReason = "跳过发送预警邮件"
+		}
+		logger.Logger.Info(skipReason,
 			zap.Uint64("company_uuid", sendReq.CompanyUuid),
 			zap.Uint64("material_uuid", sendReq.MaterialUuid),
 			zap.Uint64("warehouse_uuid", sendReq.WarehouseUuid),
+			zap.Uint32("alert_count", alertCount),
 		)
 		return
 	}
@@ -3728,14 +3737,18 @@ func (s *materialSrv) sendStockAlertEmail(ctx context.Context, alertType uint8, 
 			AlertType:     alertType,
 			CurrentStock:  sendReq.CurrentStock,
 			SafetyStock:   sendReq.SafetyStock,
-			LastAlertTime: now,
-			AlertCount:    1,
 			Recipient:     recipient,
 		}
 
 		if sendSuccess {
+			// 只有发送成功时才设置计数和时间
+			newLog.AlertCount = 1
+			newLog.LastAlertTime = now
 			newLog.SendStatus = model.SendStatusSuccess
 		} else {
+			// 发送失败时计数为0，不设置发送时间，以便重试
+			newLog.AlertCount = 0
+			newLog.LastAlertTime = 0
 			newLog.SendStatus = model.SendStatusFailed
 			if lastErr != nil {
 				newLog.ErrorMessage = lastErr.Error()
@@ -3755,15 +3768,17 @@ func (s *materialSrv) sendStockAlertEmail(ctx context.Context, alertType uint8, 
 		// 更新现有记录
 		existingLog.CurrentStock = sendReq.CurrentStock
 		existingLog.SafetyStock = sendReq.SafetyStock
-		existingLog.LastAlertTime = now
-		existingLog.AlertCount++
 		existingLog.Recipient = recipient
 		existingLog.MessageUuid = messageUuid
 
 		if sendSuccess {
+			// 只有发送成功时才更新计数和时间
+			existingLog.AlertCount++
+			existingLog.LastAlertTime = now
 			existingLog.SendStatus = model.SendStatusSuccess
 			existingLog.ErrorMessage = ""
 		} else {
+			// 发送失败时不增加计数，不更新发送时间，以便重试
 			existingLog.SendStatus = model.SendStatusFailed
 			if lastErr != nil {
 				existingLog.ErrorMessage = lastErr.Error()

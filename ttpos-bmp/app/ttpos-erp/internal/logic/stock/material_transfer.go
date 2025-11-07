@@ -470,11 +470,13 @@ func (s *sMaterialTransfer) CreateInnerTransferReceipt(ctx context.Context, req 
 		BuyingPriceList: consts.DefaultTransferPriceList,
 	})
 	if err != nil {
-		//失败时取消销售订单
-		err2 := service.Selling().CancelSalesOrder(ctx, saleOrder.Name)
-		if err2 != nil {
-			g.Log().Warningf(ctx, "调拨时取消销售订单失败，销售订单名称：%s", saleOrder.Name)
-		}
+		go func() {
+			//失败时取消销售订单
+			err2 := service.Selling().CancelSalesOrder(ctx, saleOrder.Name)
+			if err2 != nil {
+				g.Log().Warningf(ctx, "调拨时取消销售订单失败，销售订单名称：%s", saleOrder.Name)
+			}
+		}()
 		return nil, gerror.Wrapf(err, "创建采购订单失败")
 	}
 	transferReceipt.PoNo = purchaseOrder.Name

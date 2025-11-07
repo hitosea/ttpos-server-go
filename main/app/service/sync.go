@@ -230,7 +230,7 @@ func (s *SyncSrv) executeSync(ctx context.Context, syncTask *model.SyncTask, all
 		// 未报错才记录上次同步完成时间
 		if !isExceptionOccurred {
 			s.dbm.GetDB(companyUuid).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
-			s.dbm.GetDB(0).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
+			s.dbm.GetDB(constant.DefaultDB).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", lastSyncTime)
 		}
 		// 推送websocket
 		utils.Go(func() {
@@ -280,7 +280,7 @@ func (s *SyncSrv) executeSync(ctx context.Context, syncTask *model.SyncTask, all
 	// 更新公司的最后同步时间
 	if finalStatus == constant.SyncTaskStatusSuccess {
 		s.dbm.GetDB(companyUuid).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", endTime)
-		s.dbm.GetDB(0).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", endTime)
+		s.dbm.GetDB(constant.DefaultDB).Model(&model.Company{}).Where("uuid = ?", companyUuid).Update("last_sync_time", endTime)
 	}
 }
 

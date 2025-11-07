@@ -9433,7 +9433,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 	methodItems := make([]resp.PaymentMethodItem, 0)
 	amounts := make([]resp.PaymentMethodAmount, 0)
 
-	paymentApp, paymentAppErr := saas.NewPaymentAppRepo(s.dbm.GetDB(0)).GetPaymentAppCompanyUuid(ctx.GetCompanyUuid())
+	paymentApp, paymentAppErr := saas.NewPaymentAppRepo(s.dbm.GetDB(constant.DefaultDB)).GetPaymentAppCompanyUuid(ctx.GetCompanyUuid())
 	for _, paymentMethod := range paymentMethods {
 		// 不显示免单
 		if paymentMethod.Code == constant.PaymentMethodCodeFreePay {

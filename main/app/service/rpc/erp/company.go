@@ -4,6 +4,7 @@ import (
 	"errors"
 	companyApi "ttpos-bmp/app/ttpos-erp/api/company"
 	"ttpos-server-go/app/cloud"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/repository"
@@ -52,7 +53,7 @@ func (s *erpSrv) GetCompanyList(ctx pkgCtx.Context, erpnextSiteCompanyReq req.Er
 		return resp.ErpnextSiteCompanyResp{}, err
 	}
 
-	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(0))
+	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(constant.DefaultDB))
 	erpnextCompanyAbbrUuidMap, err := companySettingRepo.GetErpnextCompanyAbbrUuidMap(companySettingRepo.WhereErpnextCompanyAbbrNotEmpty(), companySettingRepo.WhereSiteCode(erpnextSiteCompanyReq.SiteCode))
 	if err != nil {
 		return companyResp, errors.New("获取公司列表失败")

@@ -752,7 +752,7 @@ func (s *warehouseSrv) SyncWarehouse(ctx context.Context) error {
 	var headquarter model.CompanySetting
 	var headquarterWarehouses []model.Warehouse
 	if companySetting.IsSubShop() {
-		err := s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
+		err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
@@ -1088,7 +1088,7 @@ func (s *warehouseSrv) GetOtherOrgList(ctx context.Context) (resp.OtherOrgListRe
 	//
 	if companySetting.IsHeadquarter() {
 		// 获取公司列表
-		companies, err := repository.NewCompanyRepo(s.dbm.GetDB(0)).GetListByHeadquarterUuid(ctx.GetCompanyUuid())
+		companies, err := repository.NewCompanyRepo(s.dbm.GetDB(constant.DefaultDB)).GetListByHeadquarterUuid(ctx.GetCompanyUuid())
 		if err != nil {
 			return resp.OtherOrgListResp{}, errors.WithMessage(err, "获取公司列表失败")
 		}

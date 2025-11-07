@@ -66,7 +66,7 @@ func (r *materialStockAlertLogRepo) CreateAlertLog(log *model.MaterialStockAlert
 func (r *materialStockAlertLogRepo) UpdateAlertLog(log *model.MaterialStockAlertLog) error {
 	log.UpdateTime = time.Now().Unix()
 
-	err := r.db.Model(log).Where("uuid = ?", log.Uuid).Updates(map[string]interface{}{
+	err := r.db.Model(log).Where("uuid = ?", log.Uuid).Updates(map[string]any{
 		"current_stock":   log.CurrentStock,
 		"safety_stock":    log.SafetyStock,
 		"last_alert_time": log.LastAlertTime,
@@ -85,31 +85,46 @@ func (r *materialStockAlertLogRepo) UpdateAlertLog(log *model.MaterialStockAlert
 
 // ShouldSendAlert 判断是否需要发送预警
 // 规则：
-// 1. 如果没有预警记录，返回true（首次发送）
-// 2. 如果上次发送成功，且距离上次发送不足24小时，返回false（24小时内不重复发送）
-// 3. 如果上次发送失败，或距离上次发送超过24小时，返回true（需要重新发送）
+// 1. 如果没有预警记录，返回true（首次发送，第1次）
+// 2. 如果已发送2次或以上，返回false（最多只发送2次）
+// 3. 如果已发送1次：
+//   - 上次发送成功且距离上次发送不足24小时，返回false（等待24小时后发送第2次）
+//   - 上次发送成功且距离上次发送超过24小时，返回true（发送第2次）
+//   - 上次发送失败，返回true（重试发送）
 func (r *materialStockAlertLogRepo) ShouldSendAlert(companyUuid, materialUuid, warehouseUuid uint64) (bool, *model.MaterialStockAlertLog, error) {
 	log, err := r.GetAlertLog(companyUuid, materialUuid, warehouseUuid)
 	if err != nil {
 		return false, nil, err
 	}
 
-	// 没有记录，首次发送
+	// 没有记录，首次发送（第1次）
 	if log == nil {
 		return true, nil, nil
 	}
 
-	// 如果上次发送成功
-	if log.SendStatus == model.SendStatusSuccess {
-		// 检查是否超过24小时
-		now := time.Now().Unix()
-		if now-int64(log.LastAlertTime) < 24*3600 {
-			// 24小时内不重复发送
-			return false, log, nil
-		}
+	// 已经发送过2次或以上，不再发送
+	if log.AlertCount >= 2 {
+		return false, log, nil
 	}
 
-	// 上次发送失败，或超过24小时，需要重新发送
+	// 已发送1次的情况
+	if log.AlertCount == 1 {
+		// 如果上次发送成功
+		if log.SendStatus == model.SendStatusSuccess {
+			// 检查是否超过24小时
+			now := time.Now().Unix()
+			if now-int64(log.LastAlertTime) < 24*60*60 {
+				// 24小时内不发送第2次
+				return false, log, nil
+			}
+			// 超过24小时，可以发送第2次
+			return true, log, nil
+		}
+		// 上次发送失败，需要重试
+		return true, log, nil
+	}
+
+	// 其他情况（alert_count == 0，但有记录），需要发送
 	return true, log, nil
 }
 
