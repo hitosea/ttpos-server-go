@@ -346,7 +346,7 @@ func (h *purchaseOrderHelper) recordErpStockInLog(
 
 		// 处理每个收货单明细
 		for _, item := range receiptOrder.Items {
-			actualNum := item.GetActualNum()
+			actualNum := item.GetUnitsTotalConversionRateNum()
 			if actualNum <= 0 {
 				continue
 			}
