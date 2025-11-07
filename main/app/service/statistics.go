@@ -1,9 +1,13 @@
 package service
 
 import (
+	"fmt"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
@@ -18,31 +22,34 @@ import (
 
 // IStatisticsSrv 统计服务接口
 type IStatisticsSrv interface {
-	CountSale(ctx context.Context, req CountReq) CountSaleResp                                        // 统计销售
-	CountSaleDays(ctx context.Context, req CountReq, days []string) []CountSaleDaysResp               // 统计销售天数
-	CountPayment(ctx context.Context, req CountReq) CountPaymentResp                                  // 统计支付
-	CountPaymentDays(ctx context.Context, req CountReq, days []string) []CountPaymentDaysResp         // 统计支付天数
-	CountTax(ctx context.Context, req CountReq) []CountTaxResp                                        // 统计税类
-	CountCategory(ctx context.Context, req CountReq) CountCategoryResp                                // 统计分类
-	CountProduct(ctx context.Context, req CountReq) []CountProductResp                                // 统计商品
-	CountArea(ctx context.Context, req CountReq) []CountAreaResp                                      // 统计区域
-	CountAreaDays(ctx context.Context, req CountReq, days []string) []CountAreaDaysResp               // 统计区域天数
-	Count7Days(ctx context.Context, req CountReq) Count7DaysResp                                      // 统计销售天数
-	CountMemberNum(ctx context.Context, req CountReq) int64                                           // 统计会员数量
-	CountMemberNumDays(ctx context.Context, req CountReq, days []string) []CountMemberNumDaysResp     // 统计会员数量天数
-	CountMember(ctx context.Context, req CountReq) CountMemberResp                                    // 统计会员
-	CountMemberPayment(ctx context.Context, req CountReq) CountPaymentResp                            // 统计会员支付
-	CountMemberPaymentDays(ctx context.Context, req CountReq, days []string) []CountPaymentDaysResp   // 统计会员支付天数
-	CountUnpaidOrder(ctx context.Context, req CountReq) CountUnpaidOrderResp                          // 统计未结订单
-	CountProductSale(ctx context.Context, req CountReq) CountProductSaleResp                          // 统计商品销售
-	CountFreePayment(ctx context.Context, req CountReq) CountFreePaymentResp                          // 统计免单支付
-	CountFreePaymentDays(ctx context.Context, req CountReq, days []string) []CountFreePaymentDaysResp // 统计免单支付天数
-	CountExport(ctx context.Context, req CountReq) (CountExportResp, error)                           // 统计导出
-	CountShiftRefundAmount(ctx context.Context, req CountReq) float64                                 // 统计班次退款金额
-	CountCancelOrder(ctx context.Context, req CountReq) CountCancelOrderResp                          // 统计取消订单
-	RankProduct(ctx context.Context, req CountReq) []CountProductRankResp                             // 统计商品排行
-	SaveSale(ctx context.Context, req SaveSaleReq) error                                              // 保存销售
-	SaveMember(ctx context.Context, req SaveMemberReq) error                                          // 保存会员
+	CountSale(ctx context.Context, req CountReq) CountSaleResp                                                                                    // 统计销售
+	CountSaleDays(ctx context.Context, req CountReq, days []string) []CountSaleDaysResp                                                           // 统计销售天数
+	CountPayment(ctx context.Context, req CountReq) CountPaymentResp                                                                              // 统计支付
+	CountPaymentDays(ctx context.Context, req CountReq, days []string) []CountPaymentDaysResp                                                     // 统计支付天数
+	CountTax(ctx context.Context, req CountReq) []CountTaxResp                                                                                    // 统计税类
+	CountCategory(ctx context.Context, req CountReq) CountCategoryResp                                                                            // 统计分类
+	CountProduct(ctx context.Context, req CountReq) []CountProductResp                                                                            // 统计商品
+	CountArea(ctx context.Context, req CountReq) []CountAreaResp                                                                                  // 统计区域
+	CountAreaDays(ctx context.Context, req CountReq, days []string) []CountAreaDaysResp                                                           // 统计区域天数
+	Count7Days(ctx context.Context, req CountReq) Count7DaysResp                                                                                  // 统计销售天数
+	CountMemberNum(ctx context.Context, req CountReq) int64                                                                                       // 统计会员数量
+	CountMemberNumDays(ctx context.Context, req CountReq, days []string) []CountMemberNumDaysResp                                                 // 统计会员数量天数
+	CountMember(ctx context.Context, req CountReq) CountMemberResp                                                                                // 统计会员
+	CountMemberPayment(ctx context.Context, req CountReq) CountPaymentResp                                                                        // 统计会员支付
+	CountMemberPaymentDays(ctx context.Context, req CountReq, days []string) []CountPaymentDaysResp                                               // 统计会员支付天数
+	CountUnpaidOrder(ctx context.Context, req CountReq) CountUnpaidOrderResp                                                                      // 统计未结订单
+	CountProductSale(ctx context.Context, req CountReq) CountProductSaleResp                                                                      // 统计商品销售
+	CountFreePayment(ctx context.Context, req CountReq) CountFreePaymentResp                                                                      // 统计免单支付
+	CountFreePaymentDays(ctx context.Context, req CountReq, days []string) []CountFreePaymentDaysResp                                             // 统计免单支付天数
+	CountExport(ctx context.Context, req CountReq) (CountExportResp, error)                                                                       // 统计导出
+	CountShiftRefundAmount(ctx context.Context, req CountReq) float64                                                                             // 统计班次退款金额
+	CountCancelOrder(ctx context.Context, req CountReq) CountCancelOrderResp                                                                      // 统计取消订单
+	CountBusinessTimePeriod(ctx context.Context, req req.BusinessTimePeriodReq) CountBusinessTimePeriodResp                                       // 统计营业时段
+	CountBusinessComprehensiveOperations(ctx context.Context, req req.StatisticsComprehensiveOperationsReq) StatisticsComprehensiveOperationsResp // 统计综合运用
+	CountBusinessPaymentMethod(ctx context.Context, req req.StatisticsPaymentMethodReq) StatisticsPaymentMethodResp                               // 统计支付方式
+	RankProduct(ctx context.Context, req CountReq) []CountProductRankResp                                                                         // 统计商品排行
+	SaveSale(ctx context.Context, req SaveSaleReq) error                                                                                          // 保存销售
+	SaveMember(ctx context.Context, req SaveMemberReq) error                                                                                      // 保存会员
 }
 
 // statisticsSrv 统计服务实现
@@ -1972,5 +1979,252 @@ func (s *statisticsSrv) CountCancelOrder(ctx context.Context, req CountReq) Coun
 	return CountCancelOrderResp{
 		TotalCancelOrderNum:    cancelOrderData.TotalCancelOrderNum.Int64,
 		TotalCancelOrderAmount: cancelOrderData.TotalCancelOrderAmount.Float64,
+	}
+}
+
+// CountBusinessTimePeriodResp 统计营业时段响应
+type CountBusinessTimePeriodResp struct {
+	TotalBusinessTimePeriodNum int64                             `json:"total_business_time_period_num"` // 总时段数
+	BusinessTimePeriodList     []CountBusinessTimePeriodListResp `json:"business_time_period_list"`      // 时段列表
+}
+
+// CountBusinessTimePeriodListResp 统计营业时段列表响应
+type CountBusinessTimePeriodListResp struct {
+	TimePeriod         string  `json:"time_period"`           // 时段（如 "12:00-12:15"）
+	OrderAmount        float64 `json:"order_amount"`          // 订单金额（原始应收金额）
+	PayAmount          float64 `json:"pay_amount"`            // 支付金额（实际支付金额 = 订单金额 - 退款金额）
+	OrderNum           int64   `json:"order_num"`             // 订单数量（sale_bill数量）
+	MealNum            int64   `json:"meal_num"`              // 就餐人数
+	OrderAmountMealAvg float64 `json:"order_amount_meal_avg"` // 订单金额人均（订单金额 / 就餐人数）
+	PayAmountMealAvg   float64 `json:"pay_amount_meal_avg"`   // 支付金额人均（支付金额 / 就餐人数）
+}
+
+// CountBusinessTimePeriod 统计营业时段
+func (s *statisticsSrv) CountBusinessTimePeriod(ctx context.Context, req req.BusinessTimePeriodReq) CountBusinessTimePeriodResp {
+	statisticsRepo := repository.NewStatisticsRepo(ctx.GetDB())
+	timezone := ctx.GetCompanySetting().Timezone
+
+	// 如果查询开始时间或查询结束时间为0，则设置为昨天开始和结束时间
+	if req.QueryStartTime == 0 || req.QueryEndTime == 0 {
+		req.QueryStartTime, req.QueryEndTime = utils.SetTimezone(timezone).YesterdayStartEndUnix()
+	}
+	// 计算时段秒数
+	periodSeconds := map[int]int{
+		0: 3600, // 默认按小时统计
+		1: 900,  // 15分钟
+		2: 1800, // 30分钟
+		3: 3600, // 1小时
+	}[req.TimePeriod]
+
+	// 统计总时段数和时段数据
+	total, periodData := statisticsRepo.CountBusinessTimePeriod(repository.CountBusinessTimePeriodReq{
+		StartTime:     req.QueryStartTime,
+		EndTime:       req.QueryEndTime,
+		PeriodSeconds: periodSeconds,
+		IsCreateTime:  req.StatisticsType == 0,
+		PageNo:        utils.IfInt(req.PageNo > 0, req.PageNo, 1),
+		PageSize:      utils.IfInt(req.PageSize > 0, req.PageSize, 10),
+		IsDesk:        req.OrderDesk == 1,
+		IsInstant:     req.OrderInstant == 1,
+		IsTakeout:     req.OrderTakeout == 1,
+	})
+
+	// 构建时段列表
+	list := make([]CountBusinessTimePeriodListResp, 0, len(periodData))
+	for _, item := range periodData {
+		// 计算人均金额
+		orderAmountMealAvg := decimal.Zero
+		payAmountMealAvg := decimal.Zero
+		payAmountDec := decimal.NewFromFloat(item.PayAmount.Float64).Sub(decimal.NewFromFloat(item.RefundAmount.Float64))
+
+		if item.MealNum.Int64 > 0 {
+			orderAmountMealAvg = decimal.NewFromFloat(item.OrderAmount.Float64).Div(decimal.NewFromInt(item.MealNum.Int64))
+			payAmountMealAvg = payAmountDec.Div(decimal.NewFromInt(item.MealNum.Int64))
+		}
+
+		list = append(list, CountBusinessTimePeriodListResp{
+			TimePeriod:         s.formatTimePeriod(item.PeriodStartTime.Int64, periodSeconds, timezone),
+			OrderAmount:        item.OrderAmount.Float64,
+			PayAmount:          payAmountDec.InexactFloat64(),
+			OrderNum:           item.OrderNum.Int64,
+			MealNum:            item.MealNum.Int64,
+			OrderAmountMealAvg: orderAmountMealAvg.Round(2).InexactFloat64(),
+			PayAmountMealAvg:   payAmountMealAvg.Round(2).InexactFloat64(),
+		})
+	}
+
+	return CountBusinessTimePeriodResp{
+		TotalBusinessTimePeriodNum: total,
+		BusinessTimePeriodList:     list,
+	}
+}
+
+// formatTimePeriod 格式化时段字符串
+func (s *statisticsSrv) formatTimePeriod(timestamp int64, periodSeconds int, timezone string) string {
+	location, _ := time.LoadLocation(timezone)
+	if location == nil {
+		location = time.UTC
+	}
+
+	startTime := time.Unix(timestamp, 0).In(location)
+	endTime := startTime.Add(time.Duration(periodSeconds) * time.Second)
+
+	return fmt.Sprintf("%s-%s",
+		startTime.Format("15:04"),
+		endTime.Format("15:04"))
+}
+
+// StatisticsComprehensiveOperationsResp 统计综合运用响应
+type StatisticsComprehensiveOperationsResp struct {
+	TotalStatisticsComprehensiveNum int64                                   `json:"total_statistics_comprehensive_num"` // 总综合运用统计数
+	StatisticsComprehensiveList     []StatisticsComprehensiveOperationsItem `json:"statistics_comprehensive_list"`      // 综合运用统计列表
+}
+
+// StatisticsComprehensiveOperationsItem 统计综合运用列表
+type StatisticsComprehensiveOperationsItem struct {
+	Date               string  `json:"date"`                  // 日期
+	OrderAmount        float64 `json:"order_amount"`          // 订单金额
+	PayAmount          float64 `json:"pay_amount"`            // 实付金额
+	OrderNum           int64   `json:"order_num"`             // 订单数量
+	MealNum            int64   `json:"meal_num"`              // 用餐人数
+	DeskNum            int64   `json:"desk_num"`              // 桌台数
+	OrderAmountMealAvg float64 `json:"order_meal_avg_amount"` // 订单金额人均
+	PayAmountMealAvg   float64 `json:"pay_amount_meal_avg"`   // 实付金额人均
+	OrderAmountAvg     float64 `json:"order_amount_avg"`      // 订单金额平均
+	PayAmountAvg       float64 `json:"pay_amount_avg"`        // 实付金额平均
+	InstantOrderAmount float64 `json:"instant_order_amount"`  // 点餐订单金额
+	DeskOrderAmount    float64 `json:"desk_order_amount"`     // 桌台订单金额
+	TakeoutOrderAmount float64 `json:"takeout_order_amount"`  // 外送订单金额
+}
+
+// CountBusinessComprehensiveOperations 统计综合运用
+func (s *statisticsSrv) CountBusinessComprehensiveOperations(ctx context.Context, req req.StatisticsComprehensiveOperationsReq) StatisticsComprehensiveOperationsResp {
+	// 获取数据库连接
+	statisticsRepo := repository.NewStatisticsRepo(ctx.GetDB())
+
+	timezone := ctx.GetCompanySetting().Timezone
+
+	// 如果查询开始时间或查询结束时间为0，则设置为昨天开始和结束时间
+	if req.QueryStartTime == 0 || req.QueryEndTime == 0 {
+		req.QueryStartTime, req.QueryEndTime = utils.SetTimezone(timezone).TodayStartEndUnix()
+	}
+
+	// 调用Repository层查询
+	total, dataList := statisticsRepo.CountBusinessComprehensiveOperations(repository.CountBusinessComprehensiveOperationsReq{
+		StartTime: req.QueryStartTime,
+		EndTime:   req.QueryEndTime,
+		Cycle:     req.Cycle,
+	})
+
+	// 构建返回列表
+	list := make([]StatisticsComprehensiveOperationsItem, 0, len(dataList))
+	for _, data := range dataList {
+		// 计算实付金额
+		payAmount := decimal.NewFromFloat(data.PayAmount.Float64).Sub(decimal.NewFromFloat(data.RefundAmount.Float64))
+		// 计算人均订单金额
+		orderAmountMealAvgDec := decimal.Zero
+		payAmountMealAvgDec := decimal.Zero
+		if data.MealNum.Int64 > 0 {
+			orderAmountMealAvgDec = decimal.NewFromFloat(data.OrderAmount.Float64).Div(decimal.NewFromInt(data.MealNum.Int64))
+			payAmountMealAvgDec = payAmount.Div(decimal.NewFromInt(data.MealNum.Int64))
+		}
+
+		// 计算平均订单金额
+		orderAmountAvgDec := decimal.Zero
+		payAmountAvgDec := decimal.Zero
+		if data.OrderNum.Int64 > 0 {
+			orderAmountAvgDec = decimal.NewFromFloat(data.OrderAmount.Float64).Div(decimal.NewFromInt(data.OrderNum.Int64))
+			payAmountAvgDec = payAmount.Div(decimal.NewFromInt(data.OrderNum.Int64))
+		}
+
+		item := StatisticsComprehensiveOperationsItem{
+			Date:               data.Date.String,
+			OrderAmount:        data.OrderAmount.Float64,
+			PayAmount:          payAmount.InexactFloat64(),
+			OrderNum:           data.OrderNum.Int64,
+			MealNum:            data.MealNum.Int64,
+			DeskNum:            data.DeskNum.Int64,
+			OrderAmountMealAvg: orderAmountMealAvgDec.Round(2).InexactFloat64(),
+			PayAmountMealAvg:   payAmountMealAvgDec.Round(2).InexactFloat64(),
+			OrderAmountAvg:     orderAmountAvgDec.Round(2).InexactFloat64(),
+			PayAmountAvg:       payAmountAvgDec.Round(2).InexactFloat64(),
+			InstantOrderAmount: data.InstantOrderAmount.Float64,
+			DeskOrderAmount:    data.DeskOrderAmount.Float64,
+			TakeoutOrderAmount: data.TakeoutOrderAmount.Float64,
+		}
+
+		list = append(list, item)
+	}
+
+	return StatisticsComprehensiveOperationsResp{
+		TotalStatisticsComprehensiveNum: total,
+		StatisticsComprehensiveList:     list,
+	}
+}
+
+// StatisticsPaymentMethodResp 统计支付方式响应
+type StatisticsPaymentMethodResp struct {
+	TotalStatisticsPaymentMethodNum int64                             `json:"total_statistics_payment_method_num"` // 总支付方式统计数
+	StatisticsPaymentMethodList     []StatisticsPaymentMethodListResp `json:"statistics_payment_method_list"`      // 支付方式统计列表
+}
+
+// StatisticsPaymentMethodListResp 统计支付方式列表响应
+type StatisticsPaymentMethodListResp struct {
+	Date          string  `json:"date"`           // 日期
+	PaymentName   string  `json:"payment_name"`   // 支付方式名称
+	PaymentNum    int64   `json:"payment_num"`    // 支付次数
+	PaymentAmount float64 `json:"payment_amount"` // 支付金额
+}
+
+// CountBusinessPaymentMethod 统计支付方式
+func (s *statisticsSrv) CountBusinessPaymentMethod(ctx context.Context, req req.StatisticsPaymentMethodReq) StatisticsPaymentMethodResp {
+	// 获取数据库连接
+	statisticsRepo := repository.NewStatisticsRepo(ctx.GetDB())
+
+	timezone := ctx.GetCompanySetting().Timezone
+
+	// 如果查询开始时间或查询结束时间为0，则设置为昨天开始和结束时间
+	if req.QueryStartTime == 0 || req.QueryEndTime == 0 {
+		req.QueryStartTime, req.QueryEndTime = utils.SetTimezone(timezone).TodayStartEndUnix()
+	}
+	paymentMethodList := []uint64{}
+	if req.PaymentMethodList != "" {
+		paymentMethodListStrings := strings.Split(req.PaymentMethodList, ",")
+		for _, paymentMethod := range paymentMethodListStrings {
+			paymentMethodUuid, err := strconv.ParseUint(paymentMethod, 10, 64)
+			if err != nil {
+				continue
+			}
+			paymentMethodList = append(paymentMethodList, paymentMethodUuid)
+		}
+	}
+
+	// 调用Repository层查询
+	total, dataList := statisticsRepo.CountBusinessPaymentMethod(repository.CountBusinessPaymentMethodReq{
+		StartTime:         req.QueryStartTime,
+		EndTime:           req.QueryEndTime,
+		Cycle:             req.Cycle,
+		PageNo:            utils.IfInt(req.PageNo > 0, req.PageNo, 1),
+		PageSize:          utils.IfInt(req.PageSize > 0, req.PageSize, 10),
+		IsDesk:            req.OrderDesk == 1,
+		IsInstant:         req.OrderInstant == 1,
+		IsTakeout:         req.OrderTakeout == 1,
+		PaymentMethodList: paymentMethodList,
+	})
+
+	// 构建返回列表
+	list := make([]StatisticsPaymentMethodListResp, 0, len(dataList))
+	for _, data := range dataList {
+		list = append(list, StatisticsPaymentMethodListResp{
+			Date:          data.Date.String,
+			PaymentName:   data.PaymentName.String,
+			PaymentNum:    data.PaymentNum.Int64,
+			PaymentAmount: data.PaymentAmount.Float64,
+		})
+	}
+
+	return StatisticsPaymentMethodResp{
+		TotalStatisticsPaymentMethodNum: total,
+		StatisticsPaymentMethodList:     list,
 	}
 }

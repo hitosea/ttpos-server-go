@@ -330,3 +330,35 @@ type StatisticsCancelOrderData struct {
 	TotalCancelOrderNum    sql.NullInt64   `gorm:"column:total_cancel_order_num;comment:总取消订单数"`
 	TotalCancelOrderAmount sql.NullFloat64 `gorm:"column:total_cancel_order_amount;comment:总取消订单金额"`
 }
+
+// StatisticsBusinessTimePeriodData 营业时段统计数据
+type StatisticsBusinessTimePeriodData struct {
+	PeriodStartTime sql.NullInt64   `gorm:"column:period_start_time;comment:时段开始时间"`
+	OrderAmount     sql.NullFloat64 `gorm:"column:order_amount;comment:订单金额"`
+	PayAmount       sql.NullFloat64 `gorm:"column:pay_amount;comment:实付金额"`
+	RefundAmount    sql.NullFloat64 `gorm:"column:refund_amount;comment:退款金额"`
+	OrderNum        sql.NullInt64   `gorm:"column:order_num;comment:订单数量"`
+	MealNum         sql.NullInt64   `gorm:"column:meal_num;comment:用餐人数"`
+}
+
+// StatisticsBusinessComprehensiveOperationsData 综合运用统计数据
+type StatisticsBusinessComprehensiveOperationsData struct {
+	Date               sql.NullString  `gorm:"column:date;comment:日期"`
+	OrderAmount        sql.NullFloat64 `gorm:"column:order_amount;comment:订单金额"`
+	PayAmount          sql.NullFloat64 `gorm:"column:pay_amount;comment:实付金额"`
+	RefundAmount       sql.NullFloat64 `gorm:"column:refund_amount;comment:退款金额"`
+	OrderNum           sql.NullInt64   `gorm:"column:order_num;comment:订单数量"`
+	MealNum            sql.NullInt64   `gorm:"column:meal_num;comment:用餐人数"`
+	DeskNum            sql.NullInt64   `gorm:"column:desk_num;comment:桌台数"`
+	InstantOrderAmount sql.NullFloat64 `gorm:"column:instant_order_amount;comment:点餐订单金额"`
+	DeskOrderAmount    sql.NullFloat64 `gorm:"column:desk_order_amount;comment:桌台订单金额"`
+	TakeoutOrderAmount sql.NullFloat64 `gorm:"column:takeout_order_amount;comment:外送订单金额"`
+}
+
+// StatisticsBusinessPaymentMethodData 支付方式统计数据
+type StatisticsBusinessPaymentMethodData struct {
+	Date          sql.NullString  `gorm:"column:date;comment:日期"`
+	PaymentName   sql.NullString  `gorm:"column:payment_name;comment:支付方式名称"`
+	PaymentNum    sql.NullInt64   `gorm:"column:payment_num;comment:支付次数"`
+	PaymentAmount sql.NullFloat64 `gorm:"column:payment_amount;comment:支付金额"`
+}
