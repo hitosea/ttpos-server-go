@@ -16,6 +16,7 @@ COPY  ttpos-bmp/app/ttpos-takeout/api  app/ttpos-takeout/api
 COPY  ttpos-bmp/app/ttpos-erp/api  app/ttpos-erp/api
 COPY  ttpos-bmp/app/ttpos-shop/api  app/ttpos-shop/api
 COPY  ttpos-bmp/app/ttpos-manager/api  app/ttpos-manager/api
+COPY  ttpos-bmp/app/ttpos-message/api  app/ttpos-message/api
 
 WORKDIR /app
 
