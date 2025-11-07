@@ -46,7 +46,7 @@ app:
     core:
       pos_price_list:
         default:
-          buying_price_list: "Buying - External"
+          buying_price_list: "Buying - Internal"
           selling_price_list: "Selling - Internal"
 
 # 消息队列
