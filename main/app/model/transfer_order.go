@@ -1,5 +1,13 @@
 package model
 
+import (
+	"encoding/json"
+	"ttpos-bmp/app/ttpos-erp/api/material_transfer"
+	"ttpos-server-go/app/constant"
+
+	"github.com/shopspring/decimal"
+)
+
 // TransferOrder 调拨单主表 ttpos_transfer_order
 type TransferOrder struct {
 	BaseModel
@@ -19,9 +27,9 @@ type TransferOrder struct {
 
 	// 仓库信息
 	OutWarehouseErpCode string `gorm:"column:out_warehouse_erp_code;type:varchar(255);default:'';comment:出库仓库ERP编码" json:"out_warehouse_erp_code"`
-	OutWarehouseName    string `gorm:"column:out_warehouse_name;type:varchar(255);default:'';comment:出库仓库名称" json:"out_warehouse_name"`
+	OutWarehouseName    string `gorm:"column:out_warehouse_name;type:text;comment:出库仓库名称" json:"out_warehouse_name"`
 	InWarehouseErpCode  string `gorm:"column:in_warehouse_erp_code;type:varchar(255);default:'';comment:入库仓库ERP编码" json:"in_warehouse_erp_code"`
-	InWarehouseName     string `gorm:"column:in_warehouse_name;type:varchar(255);default:'';comment:入库仓库名称" json:"in_warehouse_name"`
+	InWarehouseName     string `gorm:"column:in_warehouse_name;type:text;comment:入库仓库名称" json:"in_warehouse_name"`
 
 	// 时间记录
 	OrderTime  int64 `gorm:"column:order_time;type:bigint;default:0;comment:单据日期（提交时间戳）" json:"order_time"`
@@ -44,6 +52,9 @@ type TransferOrder struct {
 	// 物品统计
 	ItemCount int `gorm:"column:item_count;type:int;default:0;comment:物品种类数量" json:"item_count"`
 
+	// ERP响应数据
+	ErpResp string `gorm:"column:erp_resp;type:text;comment:ERP响应数据" json:"erp_resp"`
+
 	// 关联模型
 	Items     []*TransferOrderItem     `gorm:"foreignKey:TransferOrderUuid;references:Uuid" json:"items,omitempty"`
 	Approvals []*TransferOrderApproval `gorm:"foreignKey:TransferOrderUuid;references:Uuid" json:"approvals,omitempty"`
@@ -60,6 +71,69 @@ func (to *TransferOrder) SetNil() {
 	to.Items = nil
 	to.Approvals = nil
 	to.Logs = nil
+}
+
+// getErpResp 获取ERP响应数据
+func (to *TransferOrder) GetErpResp() *material_transfer.MaterialTransferResp {
+	erpResp := &material_transfer.MaterialTransferResp{}
+	if err := json.Unmarshal([]byte(to.ErpResp), erpResp); err != nil {
+		return nil
+	}
+	return erpResp
+}
+
+// getErpResp 获取ERP响应数据
+func (to *TransferOrder) GetErpOrderNos() []string {
+	var erpOrderNos []string
+	erpResp := to.GetErpResp()
+	if erpResp == nil {
+		return erpOrderNos
+	}
+	// 使用map去重
+	uniqueMap := make(map[string]bool)
+	soNos := []string{
+		erpResp.FromReceipt.SoNo,
+		erpResp.ToReceipt.SoNo,
+		erpResp.AuditReceipt.SoNo,
+	}
+	for _, soNo := range soNos {
+		// 过滤空字符串并去重
+		if soNo != "" && !uniqueMap[soNo] {
+			uniqueMap[soNo] = true
+			erpOrderNos = append(erpOrderNos, soNo)
+		}
+	}
+	return erpOrderNos
+}
+
+// 获取指定的审批流程
+func (to *TransferOrder) GetApprovalByApprovalType(approvalType string) *TransferOrderApproval {
+	for _, approval := range to.Approvals {
+		if approval.ApprovalType == approvalType {
+			return approval
+		}
+	}
+	return nil
+}
+
+// 获取下一个审批流程（按 Sequence 顺序，在已审批的基础上找下一个）
+func (to *TransferOrder) GetNextApproval() *TransferOrderApproval {
+	if len(to.Approvals) == 0 {
+		return nil
+	}
+	// 查找 Sequence 最小的待审批的、必须审批的审批流程
+	var minSequence int = 99999
+	var nextApproval *TransferOrderApproval
+	for i := range to.Approvals {
+		approval := to.Approvals[i]
+		// 条件：状态为待审批、必须审批、Sequence 最小的
+		if approval.Status == constant.TransferApprovalPending && approval.IsRequired == 1 &&
+			approval.Sequence < minSequence {
+			minSequence = approval.Sequence
+			nextApproval = to.Approvals[i]
+		}
+	}
+	return nextApproval
 }
 
 // TransferOrderItem 调拨单明细表 ttpos_transfer_order_item
@@ -94,6 +168,17 @@ func (toi *TransferOrderItem) SetNil() {
 	toi.Units = nil
 }
 
+// GetRelatedMaterialList 获取关联材料列表
+func (item TransferOrderItem) GetUnitsTotalConversionRateNum() float64 {
+	actualNum := decimal.NewFromFloat(0)
+	if len(item.Units) > 0 {
+		for _, unit := range item.Units {
+			actualNum = actualNum.Add(decimal.NewFromFloat(unit.Num).Mul(decimal.NewFromFloat(unit.UnitConversionRate)))
+		}
+	}
+	return actualNum.InexactFloat64()
+}
+
 // TransferOrderItemUnit 调拨单明细单位表 ttpos_transfer_order_item_unit
 type TransferOrderItemUnit struct {
 	BaseModel
@@ -125,7 +210,7 @@ type TransferOrderApproval struct {
 	HeadquarterUuid   uint64 `gorm:"column:headquarter_uuid;type:bigint;default:0;comment:总部UUID" json:"headquarter_uuid"`
 
 	// 审批信息
-	ApprovalType        string `gorm:"column:approval_type;type:varchar(50);default:'';comment:审批类型：initiator/sender/sender_parent/receiver_parent/receiver" json:"approval_type"`
+	ApprovalType        string `gorm:"column:approval_type;type:varchar(50);default:'';comment:审批类型：sender/sender_parent/receiver/receiver_parent" json:"approval_type"`
 	ApprovalCompanyUuid uint64 `gorm:"column:approval_company_uuid;type:bigint;default:0;comment:审批门店UUID" json:"approval_company_uuid"`
 	ApprovalCompanyName string `gorm:"column:approval_company_name;type:varchar(255);default:'';comment:审批门店名称" json:"approval_company_name"`
 	Sequence            int    `gorm:"column:sequence;type:int;default:0;comment:审批顺序，从1开始" json:"sequence"`
@@ -134,17 +219,24 @@ type TransferOrderApproval struct {
 	Status       int    `gorm:"column:status;type:int(4);default:0;comment:审批状态：0-待审批 1-已通过 2-已驳回 3-已跳过" json:"status"`
 	ApproverUuid uint64 `gorm:"column:approver_uuid;type:bigint;default:0;comment:审批人UUID" json:"approver_uuid"`
 	ApproverName string `gorm:"column:approver_name;type:varchar(100);default:'';comment:审批人姓名" json:"approver_name"`
-	ApproveTime  int    `gorm:"column:approve_time;type:int;default:0;comment:审批时间" json:"approve_time"`
+	ApproveTime  int64  `gorm:"column:approve_time;type:int;default:0;comment:审批时间" json:"approve_time"`
 	RejectReason string `gorm:"column:reject_reason;type:text;comment:驳回原因" json:"reject_reason"`
 
 	// 配置
-	IsRequired int    `gorm:"column:is_required;type:int(4);default:1;comment:是否必须审批：0-否 1-是" json:"is_required"`
-	Remark     string `gorm:"column:remark;type:text;comment:备注" json:"remark"`
+	IsRequired            int    `gorm:"column:is_required;type:int(4);default:1;comment:是否必须审批：0-否 1-是" json:"is_required"`
+	Remark                string `gorm:"column:remark;type:text;comment:备注" json:"remark"`
+	IsViaCompanyWarehouse int    `gorm:"column:is_via_company_warehouse;type:int(4);default:0;comment:是否通过公司仓库：0-否 1-是" json:"is_via_company_warehouse"`
+	ErpnextCompanyAbbr    string `gorm:"column:erpnext_company_abbr;type:varchar(255);default:'';comment:ERP公司简称" json:"erpnext_company_abbr"`
 }
 
 // TableName 指定表名
 func (TransferOrderApproval) TableName() string {
 	return "ttpos_transfer_order_approval"
+}
+
+// IsViaCompanyWarehouseBool 获取是否通过公司仓库
+func (toa *TransferOrderApproval) IsViaCompanyWarehouseBool() bool {
+	return toa.IsViaCompanyWarehouse == 1
 }
 
 // TransferOrderLog 调拨单操作日志表 ttpos_transfer_order_log

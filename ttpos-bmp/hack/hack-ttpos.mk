@@ -31,7 +31,7 @@ create_db:
 up:
 	@# 指定项目名 -p ttpos-bmp
 	@set -o allexport; \
-	. ../.env && docker compose  -p ttpos-bmp -f ./docker-compose.yml up -d --build;\
+	. ../.env && docker compose  -p ttpos-bmp -f ./docker-compose-dev.yml up -d --build;\
 	set +o allexport;
 
 
@@ -48,7 +48,7 @@ mid:
 run:
 	@# 指定项目名 -p ttpos-bmp
 	@set -o allexport; \
-	. ../.env && docker compose -f ./docker-compose.yml -f ./docker-compose.mid.yml up -d ;\
+	. ../.env && docker compose -f ./docker-compose-dev.yml -f ./docker-compose.mid.yml up -d ;\
 	set +o allexport;
 
 # 构建并运行 ttpos-manager 服务

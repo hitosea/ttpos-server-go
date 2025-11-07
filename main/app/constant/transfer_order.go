@@ -17,11 +17,18 @@ const (
 
 // 审批状态
 const (
-	TransferApprovalPending   = 0 // 待审批
-	TransferApprovalApproved  = 1 // 已通过
-	TransferApprovalRejected  = 2 // 已驳回
-	TransferApprovalSkipped   = 3 // 已跳过
-	TransferApprovalNotNeeded = 3 // 无需审核（兼容旧常量）
+	TransferApprovalPending  = 0 // 待审批
+	TransferApprovalApproved = 1 // 已通过
+	TransferApprovalRejected = 2 // 已驳回
+	TransferApprovalSkipped  = 3 // 已跳过, 无需审核（兼容旧常量）
+)
+
+// 审批类型
+const (
+	TransferApprovalTypeSender         = "sender"          // 发货门店
+	TransferApprovalTypeSenderParent   = "sender_parent"   // 发货门店上级
+	TransferApprovalTypeReceiver       = "receiver"        // 收货门店
+	TransferApprovalTypeReceiverParent = "receiver_parent" // 收货门店上级
 )
 
 // 收货状态

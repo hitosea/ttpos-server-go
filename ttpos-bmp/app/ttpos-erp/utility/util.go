@@ -2,6 +2,7 @@ package utility
 
 import (
 	"fmt"
+	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/utility/uuid"
@@ -54,4 +55,17 @@ func ItemGroupToString(itemGroup item.ItemGroup) string {
 	default:
 		return ""
 	}
+}
+
+// GetFilterOperator 根据值是否包含 % 返回对应的操作符
+// 参数：
+//   - value: 查询值
+//
+// 返回：
+//   - operator: "like" 或 "="
+func GetFilterOperator(value string) string {
+	if strings.Contains(value, "%") {
+		return "like"
+	}
+	return "="
 }

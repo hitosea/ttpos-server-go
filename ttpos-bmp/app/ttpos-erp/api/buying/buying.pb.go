@@ -1205,8 +1205,9 @@ type PurchaseReceiptItem struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ItemCode      string                 `protobuf:"bytes,1,opt,name=item_code,json=itemCode,proto3" json:"item_code,omitempty" dc:"物品编码,必填"` // 物品编码,必填
 	ItemName      string                 `protobuf:"bytes,2,opt,name=item_name,json=itemName,proto3" json:"item_name,omitempty" dc:"物品名称"`    // 物品名称
-	StockUom      string                 `protobuf:"bytes,3,opt,name=stock_uom,json=stockUom,proto3" json:"stock_uom,omitempty" dc:"物品单位"`    // 物品单位
-	Qty           float64                `protobuf:"fixed64,4,opt,name=qty,proto3" json:"qty,omitempty" dc:"物品数量,必填"`                         // 物品数量,必填
+	StockUom      string                 `protobuf:"bytes,3,opt,name=stock_uom,json=stockUom,proto3" json:"stock_uom,omitempty" dc:"物品库存单位"`  // 物品库存单位
+	Uom           string                 `protobuf:"bytes,4,opt,name=uom,proto3" json:"uom,omitempty" dc:"物品收货单位"`                            // 物品收货单位
+	Qty           float64                `protobuf:"fixed64,5,opt,name=qty,proto3" json:"qty,omitempty" dc:"物品数量,必填"`                         // 物品数量,必填
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1258,6 +1259,13 @@ func (x *PurchaseReceiptItem) GetItemName() string {
 func (x *PurchaseReceiptItem) GetStockUom() string {
 	if x != nil {
 		return x.StockUom
+	}
+	return ""
+}
+
+func (x *PurchaseReceiptItem) GetUom() string {
+	if x != nil {
+		return x.Uom
 	}
 	return ""
 }
@@ -2370,12 +2378,13 @@ const file_buying_buying_proto_rawDesc = "" +
 	"\x03qty\x18\x04 \x01(\x01R\x03qty\"|\n" +
 	"\x13PurchaseReceiptInfo\x122\n" +
 	"\x15purchase_receipt_name\x18\x01 \x01(\tR\x13purchaseReceiptName\x121\n" +
-	"\x05items\x18\x02 \x03(\v2\x1b.buying.PurchaseReceiptItemR\x05items\"~\n" +
+	"\x05items\x18\x02 \x03(\v2\x1b.buying.PurchaseReceiptItemR\x05items\"\x90\x01\n" +
 	"\x13PurchaseReceiptItem\x12\x1b\n" +
 	"\titem_code\x18\x01 \x01(\tR\bitemCode\x12\x1b\n" +
 	"\titem_name\x18\x02 \x01(\tR\bitemName\x12\x1b\n" +
 	"\tstock_uom\x18\x03 \x01(\tR\bstockUom\x12\x10\n" +
-	"\x03qty\x18\x04 \x01(\x01R\x03qty\"y\n" +
+	"\x03uom\x18\x04 \x01(\tR\x03uom\x12\x10\n" +
+	"\x03qty\x18\x05 \x01(\x01R\x03qty\"y\n" +
 	"\x16SavePurchaseReceiptReq\x12.\n" +
 	"\x13purchase_order_name\x18\x01 \x01(\tR\x11purchaseOrderName\x12/\n" +
 	"\x05items\x18\x02 \x03(\v2\x19.buying.PurchaseOrderItemR\x05items\"a\n" +

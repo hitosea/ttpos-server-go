@@ -61,6 +61,16 @@ func (resp *Business) GetDeliveryPriceRatio() float64 {
 	return decimal.NewFromFloat(value).Div(decimal.NewFromInt(100)).Round(4).InexactFloat64() // 取值范围为0.01-3
 }
 
+// 是否需要经过上级门店审批
+func (resp *Business) IsRequiredParentCompanyApproval() bool {
+	return resp.RequiredParentCompanyApproval == "1"
+}
+
+// 是否经过上级门店仓库
+func (resp *Business) IsViaParentCompanyWarehouse() bool {
+	return resp.ViaParentCompanyWarehouse == "1"
+}
+
 type ZeroingMethodItem MethodItem
 
 type CheckoutZeroingMethodItem MethodItem

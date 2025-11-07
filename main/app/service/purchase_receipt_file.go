@@ -96,7 +96,7 @@ func (s *purchaseReceiptFileSrv) GetReceiptFiles(ctx context.Context, receiptOrd
 	}
 
 	// 转换为响应格式
-	var result []resp.ReceiptFileInfo
+	var result = make([]resp.ReceiptFileInfo, 0)
 	baseURL := utils.GetBaseURL(ctx.GetGin().Request)
 
 	for _, file := range files {
@@ -105,7 +105,6 @@ func (s *purchaseReceiptFileSrv) GetReceiptFiles(ctx context.Context, receiptOrd
 		}
 
 		result = append(result, resp.ReceiptFileInfo{
-			Uuid:       file.Uuid,
 			FileUuid:   file.FileUuid,
 			FileName:   file.File.RealName,
 			FileSize:   int64(file.File.FileSize),

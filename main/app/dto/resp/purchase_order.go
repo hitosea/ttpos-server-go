@@ -204,7 +204,6 @@ type PurchaseReceiptOrderDetailResp struct {
 
 // ReceiptFileInfo 收货单附件信息
 type ReceiptFileInfo struct {
-	Uuid       uint64 `json:"uuid"`        // 附件关联UUID
 	FileUuid   uint64 `json:"file_uuid"`   // 文件UUID
 	FileName   string `json:"file_name"`   // 文件名
 	FileSize   int64  `json:"file_size"`   // 文件大小（字节）

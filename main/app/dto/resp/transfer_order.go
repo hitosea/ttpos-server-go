@@ -10,34 +10,39 @@ type TransferOrderListResp struct {
 
 // TransferOrderInfo 调拨单信息
 type TransferOrderInfo struct {
-	Uuid                    uint64             `json:"uuid"`                       // 调拨单UUID
-	OrderNo                 string             `json:"order_no"`                   // 单据编号
-	ErpOrderNo              string             `json:"erp_order_no"`               // ERP调拨单号
-	TransferType            int                `json:"transfer_type"`              // 调拨类型: 1-调入 2-调出
-	SenderCompanyUuid       uint64             `json:"sender_company_uuid"`        // 发货门店UUID
-	SenderCompanyName       string             `json:"sender_company_name"`        // 发货门店名称
-	ReceiverCompanyUuid     uint64             `json:"receiver_company_uuid"`      // 收货门店UUID
-	ReceiverCompanyName     string             `json:"receiver_company_name"`      // 收货门店名称
-	OutWarehouseErpCode     string             `json:"out_warehouse_erp_code"`     // 出库仓库ERP编码
-	OutWarehouseName        dto.LocaleResponse `json:"out_warehouse_name"`         // 出库仓库名称
-	InWarehouseErpCode      string             `json:"in_warehouse_erp_code"`      // 入库仓库ERP编码
-	InWarehouseName         dto.LocaleResponse `json:"in_warehouse_name"`          // 入库仓库名称
-	OrderTime               int64              `json:"order_time"`                 // 单据日期
-	SubmitTime              int64              `json:"submit_time"`                // 提交时间
-	Status                  int                `json:"status"`                     // 状态: 0-待提交 1-待审核 2-已驳回 3-待收货 4-已完成
-	NextApprovalCompanyUuid uint64             `json:"next_approval_company_uuid"` // 下一个审批门店UUID
-	NextApprovalCompanyName string             `json:"next_approval_company_name"` // 下一个审批门店名称
-	Remark                  string             `json:"remark"`                     // 备注
-	ItemCount               int                `json:"item_count"`                 // 物品种类数量
-	CreateTime              int                `json:"create_time"`                // 创建时间
-	UpdateTime              int                `json:"update_time"`                // 更新时间
+	Uuid                     uint64             `json:"uuid"`                         // 调拨单UUID
+	OrderNo                  string             `json:"order_no"`                     // 单据编号
+	ErpOrderNo               string             `json:"erp_order_no"`                 // ERP调拨单号
+	TransferType             int                `json:"transfer_type"`                // 调拨类型: 1-调入 2-调出
+	SenderCompanyUuid        uint64             `json:"sender_company_uuid"`          // 发货门店UUID
+	SenderCompanyName        string             `json:"sender_company_name"`          // 发货门店名称
+	ReceiverCompanyUuid      uint64             `json:"receiver_company_uuid"`        // 收货门店UUID
+	ReceiverCompanyName      string             `json:"receiver_company_name"`        // 收货门店名称
+	OutWarehouseErpCode      string             `json:"out_warehouse_erp_code"`       // 出库仓库ERP编码
+	OutWarehouseName         dto.LocaleResponse `json:"out_warehouse_name"`           // 出库仓库名称
+	InWarehouseErpCode       string             `json:"in_warehouse_erp_code"`        // 入库仓库ERP编码
+	InWarehouseName          dto.LocaleResponse `json:"in_warehouse_name"`            // 入库仓库名称
+	OrderTime                int64              `json:"order_time"`                   // 单据日期
+	SubmitTime               int64              `json:"submit_time"`                  // 提交时间
+	Status                   int                `json:"status"`                       // 状态: 0-待提交 1-待审核 2-已驳回 3-待收货 4-已完成
+	ApprovalProgress         string             `json:"approval_progress"`            // 审批中进度: wait-待审核 sender-待发货门店审批 sender_parent-待发货门店上级审批 receiver-待收货门店审批 receiver_parent-待收货门店上级审批 parent-待上级审批
+	NextApprovalCompanyUuid  uint64             `json:"next_approval_company_uuid"`   // 下一个审批门店UUID
+	NextApprovalCompanyName  string             `json:"next_approval_company_name"`   // 下一个审批门店名称
+	Remark                   string             `json:"remark"`                       // 备注
+	ItemCount                int                `json:"item_count"`                   // 物品种类数量
+	CreateTime               int                `json:"create_time"`                  // 创建时间
+	UpdateTime               int                `json:"update_time"`                  // 更新时间
+	IsCanApprove             bool               `json:"is_can_approve"`               // 是否可审批
+	IsNeedSelectOutWarehouse bool               `json:"is_need_select_out_warehouse"` // 是否需要选择出库仓库
+	IsNeedSelectInWarehouse  bool               `json:"is_need_select_in_warehouse"`  // 是否需要选择入库仓库
 }
 
 // TransferOrderDetailResp 调拨单详情响应
 type TransferOrderDetailResp struct {
 	TransferOrderInfo
-	Items     []TransferOrderItemInfo     `json:"items"`     // 调拨明细
-	Approvals []TransferOrderApprovalInfo `json:"approvals"` // 审批流程
+	Items []TransferOrderItemInfo `json:"items"` // 调拨明细
+	// Approvals  []TransferOrderApprovalInfo `json:"approvals"`   // 审批流程
+	RejectInfo TransferOrderRejectInfo `json:"reject_info"` // 驳回信息
 }
 
 // TransferOrderItemInfo 调拨单明细信息
@@ -77,6 +82,13 @@ type TransferOrderApprovalInfo struct {
 	IsRequired          int    `json:"is_required"`           // 是否必须审批: 0-否 1-是
 	Remark              string `json:"remark"`                // 备注
 	CreateTime          int    `json:"create_time"`           // 创建时间
+}
+
+// TransferOrderRejectInfo 调拨单驳回信息
+type TransferOrderRejectInfo struct {
+	Title        string `json:"title"`         // 驳回节点标题（如：发货门店驳回）
+	RejectReason string `json:"reject_reason"` // 驳回原因
+	RejectTime   int64  `json:"reject_time"`   // 驳回时间
 }
 
 // TransferOrderLogInfo 调拨单操作日志信息
@@ -145,8 +157,9 @@ type TransferOrderCompanyListResp struct {
 
 // TransferOrderCompanyItem 调拨单门店项
 type TransferOrderCompanyItem struct {
-	Uuid uint64 `json:"uuid"` // 门店UUID
-	Name string `json:"name"` // 门店名称
+	Uuid          uint64 `json:"uuid"`           // 门店UUID
+	Name          string `json:"name"`           // 门店名称
+	IsHeadquarter bool   `json:"is_headquarter"` // 是否总部
 }
 
 // TransferOrderWarehouseListResp 调拨单仓库列表响应

@@ -5,6 +5,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-bmp/app/ttpos-erp/api/item"
 	"ttpos-bmp/app/ttpos-erp/api/manufacturing"
+	"ttpos-bmp/app/ttpos-erp/api/material_transfer"
 	"ttpos-bmp/app/ttpos-erp/api/selling"
 	"ttpos-bmp/app/ttpos-erp/api/stock"
 	"ttpos-bmp/app/ttpos-erp/api/warehouse"
@@ -50,6 +51,9 @@ type IErpSrv interface {
 	SubmitStockReconciliation(ctx cc.Context, companySetting model.CompanySetting, saveStockReconciliationReq *stock.SaveStockReconciliationReq) (*stock.SaveStockReconciliationResp, error)
 	ApproveStockReconciliation(ctx cc.Context, companySetting model.CompanySetting, saveStockReconciliationReq *stock.SubmitStockReconciliationReq) (*stock.SubmitStockReconciliationResp, error)
 	RejectStockReconciliation(ctx cc.Context, companySetting model.CompanySetting, cancelStockReconciliationReq *stock.CancelStockReconciliationReq) (*stock.CancelStockReconciliationReq, error)
+
+	// 调拨单
+	SaveMaterialTransfer(ctx pkgCtx.Context, companySetting model.CompanySetting, saveMaterialTransferReq *material_transfer.MaterialTransferReq) (*material_transfer.MaterialTransferResp, error)
 
 	// 供应商
 	GetSupplierList(ctx pkgCtx.Context) (*buying.GetSupplierListResp, error)                                                          // 获取内部供应商

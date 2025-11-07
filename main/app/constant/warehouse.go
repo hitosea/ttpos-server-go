@@ -75,11 +75,13 @@ const (
 
 // WarehouseInOutLogScene 出入库日志场景
 const (
-	WarehouseInOutLogScenePurchase = 0 // 采购入库
-	WarehouseInOutLogSceneSale     = 1 // 销售出库
-	WarehouseInOutLogSceneDelivery = 2 // 发货出库
-	WarehouseInOutLogSceneProfitIn = 3 // 盘盈入库
-	WarehouseInOutLogSceneLossOut  = 4 // 盘亏出库
+	WarehouseInOutLogScenePurchase    = 0 // 采购入库
+	WarehouseInOutLogSceneSale        = 1 // 销售出库
+	WarehouseInOutLogSceneDelivery    = 2 // 发货出库
+	WarehouseInOutLogSceneProfitIn    = 3 // 盘盈入库
+	WarehouseInOutLogSceneLossOut     = 4 // 盘亏出库
+	WarehouseInOutLogSceneTransferIn  = 5 // 调拨入库
+	WarehouseInOutLogSceneTransferOut = 6 // 调拨出库
 
 	WarehouseInOutLogSceneTransitIn  = 20 // 在途入库
 	WarehouseInOutLogSceneTransitOut = 21 // 在途出库

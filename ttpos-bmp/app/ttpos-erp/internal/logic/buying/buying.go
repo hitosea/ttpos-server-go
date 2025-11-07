@@ -220,17 +220,19 @@ func (*sBuying) CreatePurchaseReceiptFromOrder(ctx context.Context, req *buying.
 	j.GetJson("data").Scan(receipt)
 
 	//根据入参调整item
-	receiptItems := make([]erp.PurchaseReceiptItem, 0)
-	for _, item := range receipt.Items {
-		for _, itemReq := range req.Items {
-			if item.ItemCode == itemReq.ItemCode {
-				item.Qty = itemReq.Qty
-				receiptItems = append(receiptItems, item)
-				break
+	if req.Items != nil && len(req.Items) > 0 {
+		receiptItems := make([]erp.PurchaseReceiptItem, 0)
+		for _, item := range receipt.Items {
+			for _, itemReq := range req.Items {
+				if item.ItemCode == itemReq.ItemCode {
+					item.Qty = itemReq.Qty
+					receiptItems = append(receiptItems, item)
+					break
+				}
 			}
 		}
+		receipt.Items = receiptItems
 	}
-	receipt.Items = receiptItems
 
 	//创建采购收货订单
 	resp, err = service.Document().Create(ctx, erp.DocTypePurchaseReceipt, receipt)

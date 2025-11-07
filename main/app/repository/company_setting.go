@@ -14,7 +14,8 @@ type ICompanySettingRepo interface {
 
 	GetOne(opts ...DBOption) (model.CompanySetting, error)
 	Get() model.CompanySetting
-	UpdateSmsQuota(companyUuid uint64, quota int) error // 扣减公司的短信余额
+	GetAllByHeadquarterUuid(headquarterUuid uint64) ([]model.CompanySetting, error) // 获取总部下所有公司的设置
+	UpdateSmsQuota(companyUuid uint64, quota int) error                             // 扣减公司的短信余额
 
 	GetErpnextCompanyAbbrUuidMap(opts ...DBOption) (map[string]uint64, error)
 }
@@ -42,6 +43,15 @@ func (r *companySettingRepo) UpdateSmsQuota(companyUuid uint64, quota int) error
 		return errors.WithMessage(err, "failed to update SMS quota")
 	}
 	return nil
+}
+
+func (r *companySettingRepo) GetAllByHeadquarterUuid(headquarterUuid uint64) ([]model.CompanySetting, error) {
+	var companySettings []model.CompanySetting
+	err := r.db.Model(&model.CompanySetting{}).Scopes(NotDeleted).Where("headquarter_uuid = ? or (company_uuid = ? and headquarter_uuid = 0)", headquarterUuid, headquarterUuid).Find(&companySettings).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return companySettings, nil
 }
 
 func (r *companySettingRepo) WhereErpnextCompanyAbbr(erpCompanyAbbr string) DBOption {
