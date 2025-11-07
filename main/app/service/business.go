@@ -45,6 +45,7 @@ type IBusinessSrv interface {
 	CountHome(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataHome, error)                                                            // 统计首页
 	CountKitchenEfficiencyAnalysis(ctx context.Context, req req.KitchenEfficiencyAnalysisReq) (*business_data_resp.BusinessDataKitchenEfficiencyAnalysis, error)          // 统计后厨效率分析
 	CountKitchenEfficiencyAnalysisAvg(ctx context.Context, req req.KitchenEfficiencyAnalysisAvgReq) (*business_data_resp.BusinessDataKitchenEfficiencyAnalysisAvg, error) // 统计后厨效率分析平均时长
+	ExportKitchenEfficiencyAnalysis(ctx context.Context, req req.KitchenEfficiencyAnalysisReq) error                                                                      // 导出后厨效率分析
 	KitchenProductionDetail(ctx context.Context, req req.KitchenProductionDetailReq) (*business_data_resp.KitchenProductionDetail, error)                                 // 统计后厨菜品出品明细
 	KitchenProductionDetailCount(ctx context.Context, req req.KitchenProductionDetailReq) (int64, error)                                                                  // 统计后厨菜品出品明细数量
 	ExportKitchenProductionDetail(ctx context.Context, req req.KitchenProductionDetailReq) error                                                                          // 导出后厨菜品出品明细
@@ -1151,6 +1152,135 @@ func (s *businessSrv) KitchenProductionDetailCount(ctx context.Context, req req.
 	return count, nil
 }
 
+// 导出后厨效率分析数据
+func (s *businessSrv) ExportKitchenEfficiencyAnalysis(ctx context.Context, request req.KitchenEfficiencyAnalysisReq) error {
+	request.PageNo = 1
+	request.PageSize = 1000 // 最多导出1000条数据
+	result, err := s.CountKitchenEfficiencyAnalysis(ctx, request)
+	if err != nil {
+		return err
+	}
+	if result.Meta.Total > 1000 {
+		return errors.WithMessage(errors.New("最多导出1000条数据"))
+	}
+
+	fileNameMap := map[string]string{
+		"zh":    "菜品出品详情%s.xlsx",                       // 中文
+		"th":    "รายละเอียดเมนูอาหาร%s.xlsx",          // 泰文
+		"en":    "Details of Dish Presentation%s.xlsx", // 英文
+		"zhtw":  "菜品出品詳情%s.xlsx",                       // 繁体中文
+		"zh_tw": "菜品出品詳情%s.xlsx",                       // 繁体中文
+		"ja":    "料理の提供詳細%s.xlsx",                      // 日文
+		"ko":    "메뉴 세부 정보%s.xlsx",              // 韩文
+		"my":    "ဟင်းလျာအသေးစိတ်%s.xlsx",              // 缅甸文
+		"tr":    "Yemek Sunumu Detayları%s.xlsx",       // 土耳其文
+		"sv":    "Maträttsdetaljer%s.xlsx",            // 瑞典文
+	}
+
+	// 创建导出任务
+	params, err := json.Marshal(request)
+	if err != nil {
+		return err
+	}
+	timezoneUtils := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
+	dateString := timezoneUtils.FormatUnixTime(time.Now().Unix(), "2006-01-02")
+	fileName := fmt.Sprintf(fileNameMap[ctx.GetLanguage()], dateString)
+	uuid, _ := utils.GetID()
+	record := &model.ExportRecord{
+		BaseModel:    model.BaseModel{Uuid: uuid},
+		ExportType:   model.ExportTypeKitchenEfficiencyAnalysis,
+		ExportName:   fileName,
+		FileUuid:     0,
+		Status:       model.ExportStatusPending,
+		ErrorMsg:     "",
+		ExportParams: string(params),
+		StaffUuid:    ctx.GetStaffUuid(),
+	}
+
+	db := ctx.GetDB()
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		// 判断是否还有正在导出的任务
+		oldRecord, err := repository.NewExportRecordRepo(tx).GetUnfinishedExportRecord(model.ExportTypeKitchenEfficiencyAnalysis)
+		if err != nil {
+			return err
+		}
+		if oldRecord != nil {
+			return errors.WithMessage(errors.New("正在导出,请稍后再操作"))
+		}
+
+		err = repository.NewExportRecordRepo(tx).Create(record)
+		if err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	// 异步处理导出文件的任务
+	utils.Go(func() {
+		db := ctx.GetDB()
+		record, err := repository.NewExportRecordRepo(db).GetByUuid(record.Uuid)
+		if err != nil {
+			logger.Logger.Error("获取导出ExportKitchenProductionDetail失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
+			if err := repository.NewExportRecordRepo(db).Update(record.Uuid, map[string]any{
+				"status":    model.ExportStatusFailed,
+				"error_msg": err.Error(),
+			}); err != nil {
+				logger.Logger.Error("导出ExportKitchenProductionDetailTask失败,更新导出记录失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
+				return
+			}
+			return
+		}
+		if record == nil {
+			logger.Logger.Error("导出记录不存在", zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
+			if err := repository.NewExportRecordRepo(db).Update(record.Uuid, map[string]any{
+				"status":    model.ExportStatusFailed,
+				"error_msg": "导出记录不存在",
+			}); err != nil {
+				logger.Logger.Error("导出ExportKitchenProductionDetailTask失败,更新导出记录失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
+				return
+			}
+			return
+		}
+		params := &req.KitchenEfficiencyAnalysisReq{}
+		if err := json.Unmarshal([]byte(record.ExportParams), params); err != nil {
+			logger.Logger.Error("获取导出ExportKitchenProductionDetail失败,解析参数失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
+			if err := repository.NewExportRecordRepo(db).Update(record.Uuid, map[string]any{
+				"status":    model.ExportStatusFailed,
+				"error_msg": err.Error(),
+			}); err != nil {
+				logger.Logger.Error("导出ExportKitchenProductionDetailTask失败,更新导出记录失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
+				return
+			}
+			return
+		}
+		if res, err := s.ExportKitchenEfficiencyAnalysisTask(ctx, *params); err != nil {
+			logger.Logger.Error("导出ExportKitchenProductionDetailTask失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
+			if err := repository.NewExportRecordRepo(db).Update(record.Uuid, map[string]any{
+				"status":    model.ExportStatusFailed,
+				"error_msg": err.Error(),
+			}); err != nil {
+				logger.Logger.Error("导出ExportKitchenProductionDetailTask失败,更新导出记录失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
+				return
+			}
+			return
+		} else {
+			record.FileUuid = res.FileUuid
+			record.Status = model.ExportStatusSuccess
+			if err := repository.NewExportRecordRepo(db).Update(record.Uuid, map[string]any{
+				"file_uuid": record.FileUuid,
+				"status":    record.Status,
+			}); err != nil {
+				logger.Logger.Error("导出ExportKitchenProductionDetailTask失败,更新导出记录失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
+				return
+			}
+		}
+	})
+
+	return nil
+}
+
 // 导出厨房出品明细数据到谷歌桶
 func (s *businessSrv) ExportKitchenProductionDetail(ctx context.Context, request req.KitchenProductionDetailReq) error { // 修改返回类型
 	request.PageNo = 1
@@ -1199,7 +1329,7 @@ func (s *businessSrv) ExportKitchenProductionDetail(ctx context.Context, request
 	db := ctx.GetDB()
 	if err := db.Transaction(func(tx *gorm.DB) error {
 		// 判断是否还有正在导出的任务
-		oldRecord, err := repository.NewExportRecordRepo(db).GetUnfinishedExportRecord(model.ExportTypeKitchenProductionDetail)
+		oldRecord, err := repository.NewExportRecordRepo(tx).GetUnfinishedExportRecord(model.ExportTypeKitchenProductionDetail)
 		if err != nil {
 			return err
 		}
@@ -1207,7 +1337,7 @@ func (s *businessSrv) ExportKitchenProductionDetail(ctx context.Context, request
 			return errors.WithMessage(errors.New("正在导出,请稍后再操作"))
 		}
 
-		err = repository.NewExportRecordRepo(ctx.GetDB()).Create(record)
+		err = repository.NewExportRecordRepo(tx).Create(record)
 		if err != nil {
 			return err
 		}
@@ -1484,6 +1614,124 @@ func (s *businessSrv) ExportKitchenProductionDetailTask(ctx context.Context, req
 		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("I%d", offsetRow), utils.FormatIntToTime(item.SendDuration))
 		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("J%d", offsetRow), timezoneUtil.FormatUnixTime(item.FinishTime, "2006-01-02 15:04:05"))
 		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("K%d", offsetRow), utils.FormatIntToTime(item.AllDuration))
+	}
+
+	// 自动调整列宽
+	for i := 0; i < len(headers); i++ {
+		colName, _ := excelize.ColumnNumberToName(i + 1)
+		xlsxFile.SetColWidth(sheetName, colName, colName, 20)
+	}
+
+	// 将 Excel 文件写入内存
+	var b bytes.Buffer
+	if err := xlsxFile.Write(&b); err != nil {
+		logger.Logger.Error("写入Excel文件到内存失败", zap.Error(err))
+		return nil, errors.WithMessage(err)
+	}
+
+	// 上传文档
+	res, err := s.uploadFileSrv.UploadDocument(ctx, &b, fileName, int64(b.Len()), 0)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return &resp.FileExportResp{FileUuid: res.Uuid}, nil // 返回文件UUID
+}
+
+// 导出后厨菜品出品效率分析到谷歌桶
+func (s *businessSrv) ExportKitchenEfficiencyAnalysisTask(ctx context.Context, req req.KitchenEfficiencyAnalysisReq) (*resp.FileExportResp, error) { // 修改返回类型
+	req.PageNo = 1
+	req.PageSize = 1000 // 最多导出1000条数据
+	result, err := s.CountKitchenEfficiencyAnalysis(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	// 文件名多语言
+	fileNameMul := model.MultiLanguageName{
+		EnName:   "Details of Dish Presentation",      // 英文
+		ZhName:   "菜品出品明细",                            // 中文
+		ZhTwName: "菜品出品詳情",                            // 繁体中文
+		ThName:   "รายละเอียดเมนูอาหาร",               // 泰语
+		MyName:   "ဟင်းလျာထုတ်လုပ်မှု အသေးစိတ်စာရင်း", // 缅甸语
+		JaName:   "料理の提供詳細",                           // 日语
+		KoName:   "메뉴 세부 정보",                   // 韩语
+		TrName:   "Yemek Sunumu Detayları",            // 土耳其语
+		SvName:   "Maträttsdetaljer",                 // 瑞典语
+	}
+	headerMap := map[string][]string{
+		"zh": { // 中文
+			"名称", "分类", "最短出品时长", "最最长出品时长值", "平均出品时长",
+		},
+		"th": { // 泰语
+			"ชื่อ", "ประเภท", "ประเภท", "ระยะเวลาในการผลิตที่สั้นที่สุด", "ระยะเวลาในการผลิตที่ยาวที่สุด", "ระยะเวลาในการผลิตเฉลี่ย",
+		},
+		"en": { // 英文
+			"Name", "Category", "Shortest Production Time", "Longest Production Time", "Average Production Time",
+		},
+		"zhtw": { // 繁体中文
+			"名稱", "分類", "最短出品時長", "最長出品時長", "平均出品時長",
+		},
+		"zh_tw": { // 繁体中文
+			"名稱", "分類", "最短出品時長", "最長出品時長", "平均出品時長",
+		},
+		"ja": { // 日语
+			"名称", "分類", "最短の製造時間", "最長の製造時間", "平均製造時間",
+		},
+		"ko": { // 韩语
+			"명칭", "규격", "분류", "최단 제작 시간", "최단 제작 시간", "평균 제작 시간",
+		},
+		"my": { // 缅甸语
+			"အမည်", "အမျိုးအစား", "ထုတ်လုပ်ချိန်အတိုဆုံး", "ထုတ်လုပ်ချိန်အရှည်ဆုံး", "ပျမ်းမျှထုတ်လုပ်ချိန်",
+		},
+		"tr": { // 土耳其语
+			"İsim", "Kategori", "En Kısa Üretim Süresi", "En Uzun Üretim Süresi", "Ortalama Üretim Süresi",
+		},
+		"sv": { // 瑞典语
+			"Namn", "Kategori", "Kortaste Produktionstid", "Längsta Produktionstid", "Genomsnittlig Produktionstid",
+		},
+	}
+	fileName := fmt.Sprintf("%s_%d.xlsx", fileNameMul.GetNameByLang(ctx.GetLanguage()), time.Now().Unix()) // 文件名,格式
+	xlsxFile := excelize.NewFile()                                                                         // 修改这里，直接使用 NewFile()
+	sheetName := fileNameMul.GetNameByLang(ctx.GetLanguage())
+	// 创建一个新的工作表
+	index, err := xlsxFile.NewSheet(sheetName)
+	if err != nil {
+		logger.Logger.Error("创建Excel工作表失败", zap.Error(err))
+		return nil, errors.WithMessage(err)
+	}
+	xlsxFile.SetActiveSheet(index)
+
+	lang := ctx.GetLanguage()
+	// 设置表头
+	headers := func() []string {
+		headers := headerMap[lang]
+		if headers == nil {
+			headers = headerMap["en"]
+		}
+		return headers
+	}() // 根据语言获取表头
+
+	// 写入表头
+	for i, header := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1) // 从第一行开始
+		xlsxFile.SetCellValue(sheetName, cell, header)
+		// 设置样式，加粗表头
+		style, _ := xlsxFile.NewStyle(&excelize.Style{
+			Font: &excelize.Font{Bold: true},
+		})
+		xlsxFile.SetCellStyle(sheetName, cell, cell, style)
+	}
+
+	// 写入数据
+	for rowIdx, item := range result.List {
+		// 数据从第二行开始写入
+		offsetRow := rowIdx + 2 // +1 for 0-based index, +1 for header row
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("A%d", offsetRow), item.ProductName.GetLocale(lang))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("B%d", offsetRow), item.CategoryName.GetLocale(lang))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("C%d", offsetRow), utils.FormatIntToTime(int64(item.Min)))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("D%d", offsetRow), utils.FormatIntToTime(int64(item.Max)))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("E%d", offsetRow), utils.FormatIntToTime(int64(item.Avg)))
 	}
 
 	// 自动调整列宽
