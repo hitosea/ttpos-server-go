@@ -344,7 +344,6 @@ type BusinessTimePeriod struct {
 
 // 营业数据 - 时段营业统计 - 单条
 type BusinessTimePeriodItem struct {
-	No                 int     `json:"no"`                    // 序号
 	TimePeriod         string  `json:"time_period"`           // 时段, 00:00-01:00
 	OrderAmount        float64 `json:"order_amount"`          // 订单金额
 	OrderAmountMealAvg float64 `json:"order_meal_avg_amount"` // 订单金额人均
@@ -362,7 +361,6 @@ type StatisticsComprehensiveOperations struct {
 
 // 营业数据 - 综合运用统计 - 单条
 type StatisticsComprehensiveOperationsItem struct {
-	No                 int     `json:"no"`                    // 序号
 	Date               string  `json:"date"`                  // 日期
 	OrderAmount        float64 `json:"order_amount"`          // 订单金额
 	PayAmount          float64 `json:"pay_amount"`            // 实付金额
@@ -386,7 +384,6 @@ type StatisticsPaymentMethod struct {
 
 // 营业数据 - 支付方式统计 - 单条
 type StatisticsPaymentMethodItem struct {
-	No            int     `json:"no"`             // 序号
 	Date          string  `json:"date"`           // 日期
 	PaymentName   string  `json:"payment_name"`   // 支付方式名称
 	PaymentNum    int     `json:"payment_num"`    // 支付次数

@@ -1011,17 +1011,19 @@ func (r *StatisticsRepo) CountBusinessTimePeriod(req CountBusinessTimePeriodReq)
 	// 添加额外的查询条件
 	args := []any{constant.SaleBillStatusComplete, req.StartTime, req.EndTime}
 
-	if req.IsDesk {
-		mainQuery += " AND sb.bill_type = ?"
-		args = append(args, constant.SaleBillTypeDesk)
-	}
-	if req.IsInstant {
-		mainQuery += " AND sb.bill_type = ?"
-		args = append(args, constant.SaleBillTypeInstant)
-	}
-	if req.IsTakeout {
-		mainQuery += " AND sb.bill_type = ?"
-		args = append(args, constant.SaleBillTypeTakeout)
+	if req.IsDesk || req.IsInstant || req.IsTakeout {
+		var billTypeList []uint
+		if req.IsDesk {
+			billTypeList = append(billTypeList, constant.SaleBillTypeDesk)
+		}
+		if req.IsInstant {
+			billTypeList = append(billTypeList, constant.SaleBillTypeInstant)
+		}
+		if req.IsTakeout {
+			billTypeList = append(billTypeList, constant.SaleBillTypeTakeout)
+		}
+		mainQuery += " AND sb.bill_type IN (?)"
+		args = append(args, billTypeList)
 	}
 
 	// 分组、排序和分页
