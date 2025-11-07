@@ -1557,7 +1557,7 @@ func (s *Srv) UpdateSetting(ctx context.Context, settingKey string, values any) 
 }
 
 func (s *Srv) EditStoreSetting(ctx context.Context, storeSettingReq req.UpdateStoreSetting) error {
-	saasDB := s.dbm.GetDB(0)
+	saasDB := s.dbm.GetDB(constant.DefaultDB)
 	companyUuid := ctx.GetCompanyUuid()
 	companyDB := s.dbm.GetDB(companyUuid)
 

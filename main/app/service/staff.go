@@ -2,6 +2,7 @@ package service
 
 import (
 	"time"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -92,7 +93,7 @@ func (s *staffSrv) UpdateStaff(ctx context.Context, updateReq req.UpdateStaffReq
 	if staff.Uuid == 0 {
 		return errors.New("获取员工失败"), exists
 	}
-	saasDB := s.dbm.GetDB(0)
+	saasDB := s.dbm.GetDB(constant.DefaultDB)
 	companyStaffRepo := repository.NewCompanyStaffRepo(saasDB)
 	// 手机号、邮箱必填，可以这样判断
 	existsCompanyStaff := companyStaffRepo.GetCompanyStaff(companyStaffRepo.WhereUsernameOrPhone(updateReq.Username, updateReq.Phone), companyStaffRepo.WhereNotUuid(updateReq.Uuid))
@@ -167,7 +168,7 @@ func (s *staffSrv) UpdateStaff(ctx context.Context, updateReq req.UpdateStaffReq
 
 // AddStaff 添加员工
 func (s *staffSrv) AddStaff(ctx context.Context, addReq req.AddStaffReq) (error, []string) {
-	saasDB := s.dbm.GetDB(0)
+	saasDB := s.dbm.GetDB(constant.DefaultDB)
 	companyStaffRepo := repository.NewCompanyStaffRepo(saasDB)
 	existsCompanyStaff := companyStaffRepo.GetCompanyStaff(companyStaffRepo.WhereUsernameOrPhone(addReq.Username, addReq.Phone))
 	var exists []string

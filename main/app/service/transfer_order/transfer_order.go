@@ -81,7 +81,7 @@ func (s *transferOrderSrv) GetTransferOrderList(
 	req req.TransferOrderListReq,
 ) (resp.TransferOrderListResp, error) {
 	// 获取总部数据库
-	db := s.dbm.GetDB(0)
+	db := s.dbm.GetDB(constant.DefaultDB)
 	transferOrderRepo := repository.NewTransferOrderRepo(db)
 
 	// 查询数据
@@ -1207,7 +1207,7 @@ func (s *transferOrderSrv) GetTransferOrderLogList(
 func (s *transferOrderSrv) GetTransferOrderCompanyList(
 	ctx context.Context,
 ) (resp.TransferOrderCompanyListResp, error) {
-	db := s.dbm.GetDB(0)
+	db := s.dbm.GetDB(constant.DefaultDB)
 	companyRepo := repository.NewCompanyRepo(db)
 	currentCompanyUuid := ctx.GetCompanyUuid()
 	companySetting := ctx.GetCompanySetting()

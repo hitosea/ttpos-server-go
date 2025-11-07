@@ -78,7 +78,7 @@ func (s *erpSrv) AddLianPayment(ctx cc.Context, req req.ErpnextSiteAddLianLianPa
 	}
 	defer conn.Close()
 
-	company, err := repository.NewCompanyRepo(s.dbm.GetDB(0)).GetCompanyInfoByUuid(req.CompanyUuid)
+	company, err := repository.NewCompanyRepo(s.dbm.GetDB(constant.DefaultDB)).GetCompanyInfoByUuid(req.CompanyUuid)
 	if err != nil {
 		logger.Logger.Error("AddLianPayment-获取当前公司数据失败", zap.Error(err))
 		return err
@@ -330,7 +330,7 @@ func (s *erpSrv) ReturnPosInvoice(ctx pkgCtx.Context, returnPosInvoiceReq req.Re
 }
 
 func (s *erpSrv) GetPaymentMethodList(ctx pkgCtx.Context, getPaymentReq req.GetPaymentMethodListReq) (*resp.GetPaymentMethodListResp, error) {
-	company, err := repository.NewCompanyRepo(s.dbm.GetDB(0)).GetCompanyInfoByUuid(getPaymentReq.CompanyUuid)
+	company, err := repository.NewCompanyRepo(s.dbm.GetDB(constant.DefaultDB)).GetCompanyInfoByUuid(getPaymentReq.CompanyUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}

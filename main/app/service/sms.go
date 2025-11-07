@@ -143,7 +143,7 @@ func (s *smsSrv) deductQuota(ctx context.Context, companyUuid uint64) error {
 		err := fmt.Errorf("failed to update SMS quota: %v", err)
 		return errors.WithMessage(err, "扣减短信额度失败")
 	}
-	if err := repository.NewCompanySettingRepo(s.dbm.GetDB(0)).UpdateSmsQuota(companyUuid, 1); err != nil {
+	if err := repository.NewCompanySettingRepo(s.dbm.GetDB(constant.DefaultDB)).UpdateSmsQuota(companyUuid, 1); err != nil {
 		err := fmt.Errorf("failed to update saas SMS quota: %v", err)
 		return errors.WithMessage(err, "saas扣减短信额度失败")
 	}

@@ -6952,7 +6952,7 @@ func (s *productSrv) SyncUnit(ctx context.Context) error {
 	var headquarter model.CompanySetting
 	var headquarterUnits []model.ProductUnit
 	if companySetting.IsSubShop() {
-		err := s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
+		err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
 		if err != nil || headquarter.Uuid == 0 {
 			return errors.WithMessage(errors.New("获取总部公司失败"))
 		}
@@ -7110,7 +7110,7 @@ func (s *productSrv) SyncSauce(ctx context.Context) error {
 		return nil
 	}
 	var headquarter model.CompanySetting
-	err := s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
+	err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
 	if err != nil || headquarter.Uuid == 0 {
 		return errors.WithMessage(errors.New("获取总部公司失败"))
 	}
@@ -7199,7 +7199,7 @@ func (s *productSrv) SyncAttributeGroup(ctx context.Context) error {
 		return nil
 	}
 	var headquarter model.CompanySetting
-	err := s.dbm.GetDB(0).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
+	err := s.dbm.GetDB(constant.DefaultDB).Model(&model.CompanySetting{}).Where("uuid = ?", companySetting.HeadquarterUuid).Scopes(repository.NotDeleted).Debug().First(&headquarter).Error
 	if err != nil || headquarter.Uuid == 0 {
 		return errors.WithMessage(errors.New("获取总部公司失败"))
 	}
