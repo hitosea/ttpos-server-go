@@ -50,6 +50,9 @@ type IBusinessSrv interface {
 	KitchenProductionDetailCount(ctx context.Context, req req.KitchenProductionDetailReq) (int64, error)                                                                  // 统计后厨菜品出品明细数量
 	ExportKitchenProductionDetail(ctx context.Context, req req.KitchenProductionDetailReq) error                                                                          // 导出后厨菜品出品明细
 	StatsKitchenEfficiencyAnalysis(ctx context.Context) (string, error)                                                                                                   // 统计后厨效率分析
+	CountBusinessTimePeriod(ctx context.Context, req req.BusinessTimePeriodReq) business_data_resp.BusinessTimePeriod                                                     // 统计营业时段数据
+	CountBusinessComprehensiveOperations(ctx context.Context, req req.StatisticsComprehensiveOperationsReq) business_data_resp.StatisticsComprehensiveOperations          // 统计综合运用数据
+	CountBusinessPaymentMethod(ctx context.Context, req req.StatisticsPaymentMethodReq) business_data_resp.StatisticsPaymentMethod                                        // 统计支付方式数据
 }
 
 // businessSrv 收银服务结构体
@@ -1509,6 +1512,102 @@ func (s *businessSrv) StatsKitchenEfficiencyAnalysis(ctx context.Context) (strin
 	}
 
 	return "success", nil
+}
+
+// CountBusinessTimePeriod 统计营业时段
+func (s *businessSrv) CountBusinessTimePeriod(ctx context.Context, req req.BusinessTimePeriodReq) business_data_resp.BusinessTimePeriod {
+	// 调用统计服务
+	businessTimePeriodData := s.statisticsSrv.CountBusinessTimePeriod(ctx, req)
+
+	// 构建返回列表
+	businessTimePeriodList := make([]business_data_resp.BusinessTimePeriodItem, 0, len(businessTimePeriodData.BusinessTimePeriodList))
+	for i, period := range businessTimePeriodData.BusinessTimePeriodList {
+		no := (req.PageNo-1)*req.PageSize + i + 1
+		businessTimePeriodList = append(businessTimePeriodList, business_data_resp.BusinessTimePeriodItem{
+			No:                 no,
+			TimePeriod:         period.TimePeriod,
+			OrderAmount:        period.OrderAmount,
+			OrderAmountMealAvg: period.OrderAmountMealAvg,
+			PayAmount:          period.PayAmount,
+			PayAmountMealAvg:   period.PayAmountMealAvg,
+			OrderNum:           period.OrderNum,
+			MealNum:            period.MealNum,
+		})
+	}
+
+	return business_data_resp.BusinessTimePeriod{
+		Meta: dto.PageResponse{
+			PageNo:   req.PageNo,
+			PageSize: req.PageSize,
+			Total:    businessTimePeriodData.TotalBusinessTimePeriodNum,
+		},
+		List: businessTimePeriodList,
+	}
+}
+
+// CountBusinessComprehensiveOperations 统计综合运用
+func (s *businessSrv) CountBusinessComprehensiveOperations(ctx context.Context, req req.StatisticsComprehensiveOperationsReq) business_data_resp.StatisticsComprehensiveOperations {
+	// 调用统计服务
+	businessComprehensiveOperationsData := s.statisticsSrv.CountBusinessComprehensiveOperations(ctx, req)
+
+	// 构建返回列表
+	businessComprehensiveOperationsList := make([]business_data_resp.StatisticsComprehensiveOperationsItem, 0, len(businessComprehensiveOperationsData.StatisticsComprehensiveList))
+	for i, item := range businessComprehensiveOperationsData.StatisticsComprehensiveList {
+		no := (req.PageNo-1)*req.PageSize + i + 1
+		businessComprehensiveOperationsList = append(businessComprehensiveOperationsList, business_data_resp.StatisticsComprehensiveOperationsItem{
+			No:                 no,
+			Date:               item.Date,
+			OrderAmount:        item.OrderAmount,
+			PayAmount:          item.PayAmount,
+			OrderNum:           item.OrderNum,
+			MealNum:            item.MealNum,
+			DeskNum:            item.DeskNum,
+			OrderAmountMealAvg: item.OrderAmountMealAvg,
+			PayAmountMealAvg:   item.PayAmountMealAvg,
+			OrderAmountAvg:     item.OrderAmountAvg,
+			PayAmountAvg:       item.PayAmountAvg,
+			InstantOrderAmount: item.InstantOrderAmount,
+			DeskOrderAmount:    item.DeskOrderAmount,
+			TakeoutOrderAmount: item.TakeoutOrderAmount,
+		})
+	}
+
+	return business_data_resp.StatisticsComprehensiveOperations{
+		Meta: dto.PageResponse{
+			PageNo:   req.PageNo,
+			PageSize: req.PageSize,
+			Total:    businessComprehensiveOperationsData.TotalStatisticsComprehensiveNum,
+		},
+		List: businessComprehensiveOperationsList,
+	}
+}
+
+// CountBusinessPaymentMethod 统计支付方式
+func (s *businessSrv) CountBusinessPaymentMethod(ctx context.Context, req req.StatisticsPaymentMethodReq) business_data_resp.StatisticsPaymentMethod {
+	// 调用统计服务
+	businessPaymentMethodData := s.statisticsSrv.CountBusinessPaymentMethod(ctx, req)
+
+	// 构建返回列表
+	businessPaymentMethodList := make([]business_data_resp.StatisticsPaymentMethodItem, 0, len(businessPaymentMethodData.StatisticsPaymentMethodList))
+	for i, item := range businessPaymentMethodData.StatisticsPaymentMethodList {
+		no := (req.PageNo-1)*req.PageSize + i + 1
+		businessPaymentMethodList = append(businessPaymentMethodList, business_data_resp.StatisticsPaymentMethodItem{
+			No:            no,
+			Date:          item.Date,
+			PaymentName:   item.PaymentName,
+			PaymentNum:    int(item.PaymentNum),
+			PaymentAmount: item.PaymentAmount,
+		})
+	}
+
+	return business_data_resp.StatisticsPaymentMethod{
+		Meta: dto.PageResponse{
+			PageNo:   req.PageNo,
+			PageSize: req.PageSize,
+			Total:    businessPaymentMethodData.TotalStatisticsPaymentMethodNum,
+		},
+		List: businessPaymentMethodList,
+	}
 }
 
 // 导出厨房出品明细数据到谷歌桶

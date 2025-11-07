@@ -145,3 +145,35 @@ type KitchenProductionDetailReq struct {
 	Keyword       string   `form:"keyword" json:"keyword"`               // 关键词, 仅商品名称、内部编码模糊搜索
 	CategoryUuids []uint64 `form:"category_uuids" json:"category_uuids"` // 分类UUID列表
 }
+
+// BusinessTimePeriodReq 统计营业时段请求
+type BusinessTimePeriodReq struct {
+	dto.PageReq          // 分页参数
+	QueryStartTime int64 `form:"query_start_time" json:"query_start_time"` // 查询开始时间戳
+	QueryEndTime   int64 `form:"query_end_time" json:"query_end_time"`     // 查询结束时间戳
+	TimePeriod     int   `form:"time_period" json:"time_period"`           // 时段， 0=默认、 1=15分钟、 2=半小时、 3=小时
+	OrderInstant   int   `form:"order_instant" json:"order_instant"`       // 点餐订单， 0=否、 1=是
+	OrderDesk      int   `form:"order_desk" json:"order_desk"`             // 桌台订单， 0=否、 1=是
+	OrderTakeout   int   `form:"order_takeout" json:"order_takeout"`       // 外送订单， 0=否、 1=是
+	StatisticsType int   `form:"statistics_type" json:"statistics_type"`   // 统计类型， 0=开台时间、 1=结账时间
+}
+
+// StatisticsComprehensiveOperationsReq 统计综合运用请求
+type StatisticsComprehensiveOperationsReq struct {
+	dto.PageReq          // 分页参数
+	QueryStartTime int64 `form:"query_start_time" json:"query_start_time"` // 查询开始时间戳
+	QueryEndTime   int64 `form:"query_end_time" json:"query_end_time"`     // 查询结束时间戳
+	Cycle          int   `form:"cycle" json:"cycle"`                       // 周期: 0=按日、1=按月
+}
+
+// StatisticsPaymentMethodReq 统计支付方式请求
+type StatisticsPaymentMethodReq struct {
+	dto.PageReq              // 分页参数
+	QueryStartTime    int64  `form:"query_start_time" json:"query_start_time"`       // 查询开始时间戳
+	QueryEndTime      int64  `form:"query_end_time" json:"query_end_time"`           // 查询结束时间戳
+	Cycle             int    `form:"cycle" json:"cycle"`                             // 周期: 0=按日、1=按月
+	OrderInstant      int    `form:"order_instant" json:"order_instant"`             // 点餐订单， 0=否、 1=是
+	OrderDesk         int    `form:"order_desk" json:"order_desk"`                   // 桌台订单， 0=否、 1=是
+	OrderTakeout      int    `form:"order_takeout" json:"order_takeout"`             // 外送订单， 0=否、 1=是
+	PaymentMethodList string `form:"payment_method_list" json:"payment_method_list"` // 支付方式列表: 空=全部, 多个用"uuid1,uuid2,uuid3,,,"分割
+}

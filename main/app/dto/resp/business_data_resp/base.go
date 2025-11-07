@@ -335,3 +335,60 @@ type KitchenProductionDetailItem struct {
 	FinishTime     int64              `json:"finish_time"`      // 完成时间
 	AllDuration    int64              `json:"all_duration"`     // 总时长,单位:秒
 }
+
+// 营业数据 - 时段营业统计
+type BusinessTimePeriod struct {
+	Meta dto.PageResponse         `json:"meta"` // 元数据
+	List []BusinessTimePeriodItem `json:"list"` // 时段营业统计
+}
+
+// 营业数据 - 时段营业统计 - 单条
+type BusinessTimePeriodItem struct {
+	No                 int     `json:"no"`                    // 序号
+	TimePeriod         string  `json:"time_period"`           // 时段, 00:00-01:00
+	OrderAmount        float64 `json:"order_amount"`          // 订单金额
+	OrderAmountMealAvg float64 `json:"order_meal_avg_amount"` // 订单金额人均
+	PayAmount          float64 `json:"pay_amount"`            // 实付金额
+	PayAmountMealAvg   float64 `json:"pay_amount_meal_avg"`   // 实付金额人均
+	OrderNum           int64   `json:"order_num"`             // 订单数量
+	MealNum            int64   `json:"meal_num"`              // 用餐人数
+}
+
+// 营业数据 - 综合运用统计
+type StatisticsComprehensiveOperations struct {
+	Meta dto.PageResponse                        `json:"meta"` // 元数据
+	List []StatisticsComprehensiveOperationsItem `json:"list"` // 综合运用统计
+}
+
+// 营业数据 - 综合运用统计 - 单条
+type StatisticsComprehensiveOperationsItem struct {
+	No                 int     `json:"no"`                    // 序号
+	Date               string  `json:"date"`                  // 日期
+	OrderAmount        float64 `json:"order_amount"`          // 订单金额
+	PayAmount          float64 `json:"pay_amount"`            // 实付金额
+	OrderNum           int64   `json:"order_num"`             // 订单数量
+	MealNum            int64   `json:"meal_num"`              // 用餐人数
+	DeskNum            int64   `json:"desk_num"`              // 桌台数
+	OrderAmountMealAvg float64 `json:"order_meal_avg_amount"` // 订单金额人均
+	PayAmountMealAvg   float64 `json:"pay_amount_meal_avg"`   // 实付金额人均
+	OrderAmountAvg     float64 `json:"order_amount_avg"`      // 订单金额平均
+	PayAmountAvg       float64 `json:"pay_amount_avg"`        // 实付金额平均
+	InstantOrderAmount float64 `json:"instant_order_amount"`  // 点餐订单金额
+	DeskOrderAmount    float64 `json:"desk_order_amount"`     // 桌台订单金额
+	TakeoutOrderAmount float64 `json:"takeout_order_amount"`  // 外送订单金额
+}
+
+// 营业数据 - 支付方式统计
+type StatisticsPaymentMethod struct {
+	Meta dto.PageResponse              `json:"meta"` // 元数据
+	List []StatisticsPaymentMethodItem `json:"list"` // 支付方式统计
+}
+
+// 营业数据 - 支付方式统计 - 单条
+type StatisticsPaymentMethodItem struct {
+	No            int     `json:"no"`             // 序号
+	Date          string  `json:"date"`           // 日期
+	PaymentName   string  `json:"payment_name"`   // 支付方式名称
+	PaymentNum    int     `json:"payment_num"`    // 支付次数
+	PaymentAmount float64 `json:"payment_amount"` // 支付金额
+}
