@@ -76,9 +76,6 @@ services:
     image: redis:6
     ports:
       - "${REDIS_PORT:-6379}:6379"
-    volumes:
-      - ./docker/redis/data:/data
-      - ./docker/redis/redis.conf:/etc/redis/redis.conf:ro
     restart: always
 
   redis-proxy:

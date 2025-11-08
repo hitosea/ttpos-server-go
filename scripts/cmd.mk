@@ -74,6 +74,8 @@ help:
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "statistics-re" "重新统计数据"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "skootar-update-status" "更新Skootar状态"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "think" "执行think命令"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "chown-all" "修改文件权限"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "rmi-all" "删除所有无用镜像"
 	@echo ""
 	@printf "\033[1;32m"
 	@echo "📦 版本管理"
@@ -144,8 +146,7 @@ init-bmp-env:
 				echo "✅ 已同步 DB_USERNAME"; \
 			fi; \
 		fi; \
-		sed -i.bak 's/^REDIS_HOST=.*/REDIS_HOST=$(LOCAL_IP),$(LOCAL_IP),$(LOCAL_IP)/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
-		sed -i.bak 's/^REDIS_PORT=.*/REDIS_PORT=7001,7002,7003/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
+		sed -i.bak 's/^REDIS_HOST=.*/REDIS_HOST=$(LOCAL_IP)/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
 		sed -i.bak 's/^GRPC_ENDPOINTS=.*/GRPC_ENDPOINTS=$(LOCAL_IP)/' ttpos-bmp/.env && rm ttpos-bmp/.env.bak; \
 	fi
 

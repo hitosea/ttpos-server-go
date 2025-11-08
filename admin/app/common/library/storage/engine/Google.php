@@ -25,7 +25,7 @@ class Google extends Server
         parent::__construct();
         $this->config = $config;
         // 
-        $this->credentialsPath = root_path('runtime/storage') . $config['credentials_file'];
+        $this->credentialsPath = '/var/certificate/' . $config['credentials_file'];
         if (!file_exists($this->credentialsPath)) {
             throw new Exception('storage下未找到云存储配置文件');
         }
@@ -53,10 +53,10 @@ class Google extends Server
         if ($thumb && strpos($fileMimeType, 'image') !== false) {
             $image = Image::open($this->file)->thumb($thumb, $thumb, Image::THUMB_SCALING)->getImg();
             ob_start();
-            imagepng($image);
+            imagepng($image->getImg());
             $imageData = ob_get_contents();
             ob_end_clean();
-            imagedestroy($image);
+            imagedestroy($image->getImg());
         } else {
             $imageData = fopen($realPath, 'r');
         }
