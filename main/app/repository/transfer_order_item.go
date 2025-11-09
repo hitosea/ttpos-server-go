@@ -15,6 +15,7 @@ type ITransferOrderItemRepo interface {
 	CreateBatch(items []*model.TransferOrderItem) error
 	Update(item *model.TransferOrderItem) error
 	Delete(uuid uint64) error
+	DeletePhysical(uuid uint64) error
 	DeleteByTransferOrderUuid(transferOrderUuid uint64) error
 	DeleteByTransferOrderUuidPhysical(transferOrderUuid uint64) error
 	GetByUuid(uuid uint64, opts ...DBOption) (*model.TransferOrderItem, error)
@@ -73,6 +74,11 @@ func (r *TransferOrderItemRepoImpl) Update(item *model.TransferOrderItem) error 
 // Delete 删除调拨单明细（软删除）
 func (r *TransferOrderItemRepoImpl) Delete(uuid uint64) error {
 	return r.db.Model(&model.TransferOrderItem{}).Where("uuid = ?", uuid).Update("delete_time", time.Now().Unix()).Error
+}
+
+// DeletePhysical 物理删除调拨单明细
+func (r *TransferOrderItemRepoImpl) DeletePhysical(uuid uint64) error {
+	return r.db.Model(&model.TransferOrderItem{}).Where("uuid = ?", uuid).Delete(&model.TransferOrderItem{}).Error
 }
 
 // DeleteByTransferOrderUuid 根据调拨单UUID删除所有明细（软删除）

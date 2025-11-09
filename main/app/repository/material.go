@@ -21,6 +21,8 @@ type IMaterialRepo interface {
 	GetMaterialByCode(code string, opts ...DBOption) (model.Material, error)
 	GetMaterialByUuid(uuid uint64, opts ...DBOption) (model.Material, error)
 	GetMaterialByUuids(uuids []uint64, opts ...DBOption) ([]*model.Material, error)
+	GetMaterialContainsDeletedByUuids(uuids []uint64, opts ...DBOption) ([]*model.Material, error)
+	GetMaterialContainsDeletedByCodes(codes []string, opts ...DBOption) ([]*model.Material, error)
 	GetMaterialByCategoryUuid(categoryUuid uint64) ([]*model.Material, error)
 	GetMaterialDetailByUuids(uuids []uint64) ([]*model.Material, error)
 	GetMaterialDetailByUuid(uuid uint64) (*model.Material, error)
@@ -217,6 +219,41 @@ func (r *MaterialRepoImpl) GetMaterialContainsDeletedByUuid(uuid uint64, opts ..
 	}
 
 	return material, nil
+}
+
+// GetMaterialContainsDeletedByUuids 根据UUIDs获取物品详情
+func (r *MaterialRepoImpl) GetMaterialContainsDeletedByUuids(uuids []uint64, opts ...DBOption) ([]*model.Material, error) {
+	var materials []*model.Material
+
+	query := r.db.Model(&model.Material{}).Where("uuid IN (?)", uuids)
+
+	// 应用查询选项
+	for _, opt := range opts {
+		query = opt(query)
+	}
+
+	if err := query.Find(&materials).Error; err != nil {
+		return nil, errors.WithMessage(err, "查询物品详情失败")
+	}
+
+	return materials, nil
+}
+
+func (r *MaterialRepoImpl) GetMaterialContainsDeletedByCodes(codes []string, opts ...DBOption) ([]*model.Material, error) {
+	var materials []*model.Material
+
+	query := r.db.Model(&model.Material{}).Where("code IN (?)", codes)
+
+	// 应用查询选项
+	for _, opt := range opts {
+		query = opt(query)
+	}
+
+	if err := query.Find(&materials).Error; err != nil {
+		return nil, errors.WithMessage(err, "查询物品详情失败")
+	}
+
+	return materials, nil
 }
 
 // GetMaterialByUuids 根据UUIDs获取物品详情

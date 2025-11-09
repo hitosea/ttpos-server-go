@@ -9,6 +9,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/api/buying"
 	"ttpos-bmp/app/ttpos-erp/api/material_transfer"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req"
 	respSetting "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -496,20 +497,20 @@ func (h *transferOrderHelper) handleErpError(ctx ttposContext.Context, err error
 		// 提取物品名称
 		itemName := h.extractName("Item", "is disabled", err.Error())
 		if itemName != "" {
-			return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, fmt.Sprintf(
+			return errors.NewWithCode(constant.CodeErrorConfirmClose, fmt.Sprintf(
 				i18n.Translate(ctx.GetLanguage(), "物品 %s 已禁用，请修改物品状态"), itemName),
 			)
 		}
-		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "有物品已禁用，请修改物品状态")
+		return errors.NewWithCode(constant.CodeErrorConfirmClose, "有物品已禁用，请修改物品状态")
 	}
 	// 检查仓库状态
 	if strings.Contains(err.Error(), "Warehouse") && strings.Contains(err.Error(), "is disabled") {
 		// 提取仓库名称
 		warehouseName := h.extractName("Warehouse", "is disabled", err.Error())
 		if warehouseName != "" {
-			return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, fmt.Sprintf("仓库 %s 已禁用，请修改仓库状态", warehouseName))
+			return errors.NewWithCode(constant.CodeErrorConfirmClose, fmt.Sprintf("仓库 %s 已禁用，请修改仓库状态", warehouseName))
 		}
-		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "仓库已禁用，请修改仓库状态")
+		return errors.NewWithCode(constant.CodeErrorConfirmClose, "仓库已禁用，请修改仓库状态")
 	}
 	// 检查采购数量
 	if strings.Contains(err.Error(), "cannot be less than minimum order qty") {
@@ -517,44 +518,44 @@ func (h *transferOrderHelper) handleErpError(ctx ttposContext.Context, err error
 		if itemName != "" {
 			num := h.extractName("minimum order qty", "(defined in Item).", err.Error())
 			if num != "" {
-				return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled,
+				return errors.NewWithCode(constant.CodeErrorConfirmClose,
 					itemName+" "+i18n.Translate(ctx.GetLanguage(), "采购数量不能小于ERP中设置的最小采购数量")+" "+num,
 				)
 			}
-			return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled,
+			return errors.NewWithCode(constant.CodeErrorConfirmClose,
 				itemName+" "+i18n.Translate(ctx.GetLanguage(), "采购数量不能小于ERP中设置的最小采购数量"),
 			)
 		}
-		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "采购数量不能小于ERP中设置的最小采购数量")
+		return errors.NewWithCode(constant.CodeErrorConfirmClose, "采购数量不能小于ERP中设置的最小采购数量")
 	}
 	// before Transaction Date
 	if strings.Contains(err.Error(), "before Transaction Date") {
-		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, i18n.Translate(ctx.GetLanguage(), "期望到货日期不能小于今天"))
+		return errors.NewWithCode(constant.CodeErrorConfirmClose, i18n.Translate(ctx.GetLanguage(), "期望到货日期不能小于今天"))
 	}
 	// 检查单位是否为整数
 	if strings.Contains(err.Error(), "Must be Whole Number") {
 		itemName := h.extractName("UOM <strong>", "</strong>", err.Error())
 		if itemName != "" {
 			return errors.NewWithCode(
-				constant.CodePurchaseOrderSupplierDisabled,
+				constant.CodeErrorConfirmClose,
 				fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "单位 %s 只能使用整数"), itemName),
 			)
 		}
-		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "单位只能使用整数")
+		return errors.NewWithCode(constant.CodeErrorConfirmClose, "单位只能使用整数")
 	}
 	// 检查发货库存不足
 	if strings.Contains(err.Error(), "创建发货单失败") && strings.Contains(err.Error(), "NegativeStockError") {
 		itemName := h.extractName("Item ", "</a> needed in", err.Error())
 		if itemName != "" {
 			return errors.NewWithCode(
-				constant.CodePurchaseOrderSupplierDisabled,
+				constant.CodeErrorConfirmClose,
 				fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 库存不足，请补充库存"), itemName),
 			)
 		}
-		return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled, "物品库存不足，请补充库存")
+		return errors.NewWithCode(constant.CodeErrorConfirmClose, "物品库存不足，请补充库存")
 	}
 	// 未知错误
-	return errors.NewWithCode(constant.CodePurchaseOrderSupplierDisabled,
+	return errors.NewWithCode(constant.CodeErrorConfirmClose,
 		i18n.Translate(ctx.GetLanguage(), "操作失败")+": "+transferOrder.OrderNo,
 	)
 }
@@ -1233,4 +1234,107 @@ func (h *transferOrderHelper) SavePurchaseReceipt(
 		return nil, h.handleErpError(ctx, err, transferOrder)
 	}
 	return resp, nil
+}
+
+// 转换调拨单明细为请求参数
+func (h *transferOrderHelper) ConvertTransferOrderItemsToRequestItems(transferOrder *model.TransferOrder) []req.TransferOrderItemCreateReq {
+	var items []req.TransferOrderItemCreateReq
+	for _, item := range transferOrder.Items {
+		items = append(items, req.TransferOrderItemCreateReq{
+			MaterialUuid: item.MaterialUuid,
+			Units: func() []req.TransferOrderItemUnitCreateReq {
+				var units []req.TransferOrderItemUnitCreateReq
+				for _, unit := range item.Units {
+					units = append(units, req.TransferOrderItemUnitCreateReq{
+						UnitUuid: unit.UnitUuid,
+						Num:      unit.Num,
+					})
+				}
+				return units
+			}(),
+		})
+	}
+	return items
+}
+
+// 获取物品列表
+func (h *transferOrderHelper) GetMaterials(
+	ctx ttposContext.Context,
+	db *gorm.DB,
+	items []req.TransferOrderItemCreateReq,
+) (materials []model.Material, disabledMaterialNames []string, notFoundMaterialNames []string, err error) {
+	if len(items) == 0 {
+		return materials, disabledMaterialNames, notFoundMaterialNames, nil
+	}
+	materialRepo := repository.NewMaterialRepo(db)
+
+	// 收集所有的 MaterialUuid（去重）
+	materialUuidSet := make(map[uint64]bool)
+	materialUuids := make([]uint64, 0, len(items))
+	for _, item := range items {
+		if !materialUuidSet[item.MaterialUuid] {
+			materialUuidSet[item.MaterialUuid] = true
+			materialUuids = append(materialUuids, item.MaterialUuid)
+		}
+	}
+
+	// 批量查询所有材料
+	dbMaterials, err := materialRepo.GetMaterialContainsDeletedByUuids(materialUuids, materialRepo.WithNotBaseUnitList())
+	if err != nil {
+		return materials, disabledMaterialNames, notFoundMaterialNames, errors.WithMessage(errors.New("批量查询物品失败"), err.Error())
+	}
+
+	// 构建 map 用于快速查找
+	materialMap := make(map[uint64]*model.Material, len(dbMaterials))
+	for i := range dbMaterials {
+		materialMap[dbMaterials[i].Uuid] = dbMaterials[i]
+	}
+
+	// 按照原始 items 的顺序返回结果，并验证所有材料都存在
+	for _, item := range items {
+		material, exists := materialMap[item.MaterialUuid]
+		if !exists {
+			notFoundMaterialNames = append(notFoundMaterialNames, func() string {
+				if material != nil && material.Name != "" {
+					return language.JsonToLocaleResponse(material.Name).GetLocale(ctx.GetLanguage())
+				}
+				return fmt.Sprintf("%d", item.MaterialUuid)
+			}())
+		} else {
+			if material.DeleteTime > 0 {
+				notFoundMaterialNames = append(notFoundMaterialNames, language.JsonToLocaleResponse(material.Name).GetLocale(ctx.GetLanguage()))
+			}
+			if !material.Status {
+				disabledMaterialNames = append(disabledMaterialNames, language.JsonToLocaleResponse(material.Name).GetLocale(ctx.GetLanguage()))
+			}
+		}
+
+	}
+	if len(disabledMaterialNames) > 0 {
+		return materials, disabledMaterialNames, notFoundMaterialNames, errors.NewWithCodeAndData(
+			constant.CodeErrorConfirmClose,
+			disabledMaterialNames,
+			fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 的状态已关闭。\n\n请修改物品状态"), h.joinNames(disabledMaterialNames)),
+		)
+	}
+	if len(notFoundMaterialNames) > 0 {
+		return materials, disabledMaterialNames, notFoundMaterialNames, errors.NewWithCodeAndData(
+			constant.CodeErrorConfirmClose,
+			notFoundMaterialNames,
+			fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 未找到。"), h.joinNames(notFoundMaterialNames)),
+		)
+	}
+	return materials, disabledMaterialNames, notFoundMaterialNames, nil
+}
+
+// joinNames 拼接名称
+func (h *transferOrderHelper) joinNames(names []string) string {
+	result := ""
+	for i, name := range names {
+		if i > 0 {
+			result += "、"
+		}
+		result += name
+	}
+	return result
 }
