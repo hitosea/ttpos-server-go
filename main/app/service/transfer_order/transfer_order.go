@@ -870,13 +870,13 @@ func (s *transferOrderSrv) SubmitTransferOrder(
 			if len(disabledMaterialNames) > 0 {
 				return errors.NewWithCode(
 					constant.CodeErrorConfirmRequest,
-					fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 的状态已关闭。\n\n提交后将移除对应物品，是否确认提交？"), s.helper.joinNames(disabledMaterialNames)),
+					fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 的状态已关闭。\n\n提交后将移除该物品，是否继续提交？"), s.helper.joinNames(disabledMaterialNames)),
 				)
 			}
 			if len(notFoundMaterialNames) > 0 {
 				return errors.NewWithCode(
 					constant.CodeErrorConfirmRequest,
-					fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 未找到。\n\n提交后将移除对应物品，是否确认提交？"), s.helper.joinNames(notFoundMaterialNames)),
+					fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "物品 %s 未找到。\n\n提交后将移除该物品，是否继续提交？"), s.helper.joinNames(notFoundMaterialNames)),
 				)
 			}
 			return err

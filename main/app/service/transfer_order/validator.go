@@ -33,7 +33,7 @@ func (v *transferOrderValidator) validateOrderItemUnitNumZero(
 	if len(itemNames) > 0 {
 		return errors.NewWithCode(
 			constant.CodeErrorConfirmClose,
-			fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "单据存在调拨数量为0的物品%d个，提交后将移除对应物品，是否确认提交？"), len(itemNames)),
+			fmt.Sprintf(i18n.Translate(ctx.GetLanguage(), "单据存在调拨数量为0的物品%d个，提交后将移除该物品，是否继续提交？"), len(itemNames)),
 		)
 	}
 	return nil
