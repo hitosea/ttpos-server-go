@@ -448,6 +448,23 @@ func (s *productionSrv) GetHistory(ctx context.Context, req req.HistoryReq) (res
 
 // 根据销售账单分组
 func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.ProductionOrderProduct, products []model.ProductionOrderProduct, mode *uint) []resp.ProductionGroup {
+	notNullRes := []resp.ProductionGroup{
+		{
+			LocaleName: &dto.LocaleResponse{},
+			ProductionList: resp.ProductionList{
+				List: make([]resp.ProductionItem, 0),
+			},
+			OrderRemark: resp.OrderRemarkRes{
+				List: make([]resp.OrderRemarkResItem, 0),
+			},
+		},
+	}
+	// 获取门店业务设置
+	businessSetting, errGet := s.settingSrv.GetBusinessSetting(ctx)
+	if errGet != nil {
+		logger.Logger.Error("获取门店业务设置失败", zap.Error(errGet))
+		return notNullRes
+	}
 	groups := make([]resp.ProductionGroup, 0, len(limitProducts))
 	language := ctx.GetLanguage()
 	modeMake := mode != nil && *mode == constant.KdsModeMake
@@ -455,11 +472,6 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 		var group resp.ProductionGroup
 		items := make([]resp.ProductionItem, 0) // 生产单商品列表
 		for _, product := range products {
-			// 获取门店业务设置
-			businessSetting, errGet := s.settingSrv.GetBusinessSetting(ctx)
-			if errGet != nil {
-				return nil
-			}
 			if businessSetting.OpenIsBatch() {
 				// 如果开启了分批送厨， 如果商品是分批商品，且处于预送厨阶段，则不显示
 				if product.IsBatchBool() && product.IsPreCooking() {
@@ -519,11 +531,6 @@ func (s *productionSrv) groupByOrder(ctx context.Context, limitProducts []model.
 			item.DiningMethod = product.GetWrapStatus()                                                                            // 订单商品的打包状态
 			item.IsSaleBillDeleted = product.SaleBill.DeleteTime > 0 || product.SaleBill.Status == constant.SaleBillStatusCanceled // 是否已经整单取消
 			item.BatchTag = func() resp.BatchTagInfo {
-				// 获取门店业务设置
-				businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
-				if err != nil {
-					return resp.BatchTagInfo{}
-				}
 				if businessSetting.OpenIsBatch() {
 					if product.IsBatchBool() && product.BatchTag != nil {
 						return resp.BatchTagInfo{
