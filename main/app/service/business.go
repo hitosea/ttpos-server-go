@@ -1223,25 +1223,26 @@ func (s *businessSrv) ExportKitchenEfficiencyAnalysis(ctx context.Context, reque
 	// 异步处理导出文件的任务
 	utils.Go(func() {
 		db := ctx.GetDB()
-		record, err := repository.NewExportRecordRepo(db).GetByUuid(record.Uuid)
+		recordUuid := record.Uuid
+		record, err := repository.NewExportRecordRepo(db).GetByUuid(recordUuid)
 		if err != nil {
-			logger.Logger.Error("获取导出ExportKitchenProductionDetail失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
-			if err := repository.NewExportRecordRepo(db).Update(record.Uuid, map[string]any{
+			logger.Logger.Error("获取导出ExportKitchenProductionDetail失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", recordUuid))
+			if err := repository.NewExportRecordRepo(db).Update(recordUuid, map[string]any{
 				"status":    model.ExportStatusFailed,
 				"error_msg": err.Error(),
 			}); err != nil {
-				logger.Logger.Error("导出ExportKitchenProductionDetailTask失败,更新导出记录失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
+				logger.Logger.Error("导出ExportKitchenProductionDetailTask失败,更新导出记录失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", recordUuid))
 				return
 			}
 			return
 		}
 		if record == nil {
-			logger.Logger.Error("导出记录不存在", zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
-			if err := repository.NewExportRecordRepo(db).Update(record.Uuid, map[string]any{
+			logger.Logger.Error("导出记录不存在", zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", recordUuid))
+			if err := repository.NewExportRecordRepo(db).Update(recordUuid, map[string]any{
 				"status":    model.ExportStatusFailed,
 				"error_msg": "导出记录不存在",
 			}); err != nil {
-				logger.Logger.Error("导出ExportKitchenProductionDetailTask失败,更新导出记录失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
+				logger.Logger.Error("导出ExportKitchenProductionDetailTask失败,更新导出记录失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", recordUuid))
 				return
 			}
 			return
@@ -1352,25 +1353,26 @@ func (s *businessSrv) ExportKitchenProductionDetail(ctx context.Context, request
 	// 异步处理导出文件的任务
 	utils.Go(func() {
 		db := ctx.GetDB()
-		record, err := repository.NewExportRecordRepo(db).GetByUuid(record.Uuid)
+		recordUuid := record.Uuid
+		record, err := repository.NewExportRecordRepo(db).GetByUuid(recordUuid)
 		if err != nil {
-			logger.Logger.Error("获取导出ExportKitchenProductionDetail失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
-			if err := repository.NewExportRecordRepo(db).Update(record.Uuid, map[string]any{
+			logger.Logger.Error("获取导出ExportKitchenProductionDetail失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", recordUuid))
+			if err := repository.NewExportRecordRepo(db).Update(recordUuid, map[string]any{
 				"status":    model.ExportStatusFailed,
 				"error_msg": err.Error(),
 			}); err != nil {
-				logger.Logger.Error("导出ExportKitchenProductionDetailTask失败,更新导出记录失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
+				logger.Logger.Error("导出ExportKitchenProductionDetailTask失败,更新导出记录失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", recordUuid))
 				return
 			}
 			return
 		}
 		if record == nil {
-			logger.Logger.Error("导出记录不存在", zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
-			if err := repository.NewExportRecordRepo(db).Update(record.Uuid, map[string]any{
+			logger.Logger.Error("导出记录不存在", zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", recordUuid))
+			if err := repository.NewExportRecordRepo(db).Update(recordUuid, map[string]any{
 				"status":    model.ExportStatusFailed,
 				"error_msg": "导出记录不存在",
 			}); err != nil {
-				logger.Logger.Error("导出ExportKitchenProductionDetailTask失败,更新导出记录失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", record.Uuid))
+				logger.Logger.Error("导出ExportKitchenProductionDetailTask失败,更新导出记录失败", zap.Error(err), zap.Any("company_uuid", ctx.GetCompanySetting().CompanyUuid), zap.Any("record_uuid", recordUuid))
 				return
 			}
 			return
