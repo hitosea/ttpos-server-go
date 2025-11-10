@@ -84,9 +84,10 @@ func (s *productionSrv) getMode(ctx context.Context, reqMode uint) (*uint, error
 
 // GetProductListByOrder 根据订单获取送厨商品
 func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.ProductionListReq) (resp.ProductionListWithPagination, error) {
+	notNullResp := s.getNotNullProductionListResp()
 	mode, err := s.getMode(ctx, req.Mode)
 	if err != nil {
-		return resp.ProductionListWithPagination{}, err
+		return notNullResp, err
 	}
 	productPackageUuids, saleBillUuids, emptyRes, err := s.getProductPackageUuidsAndSaleBillUuids(ctx)
 	if err != nil || len(productPackageUuids) == 0 {
@@ -117,7 +118,7 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 	limitedProductOpts = append(limitedProductOpts, productionRepo.WhereIsNotBatchOrBatchTimeGT0())
 	limitedProducts, total, err := productionRepo.GetLimitedProducts(constant.ProductionOrderProductColumnSaleBill, req.PageNo, req.PageSize, limitedProductOpts...)
 	if err != nil {
-		return resp.ProductionListWithPagination{}, errors.ErrInternal
+		return notNullResp, errors.ErrInternal
 	}
 	var uuids []uint64
 	for _, limitedProduct := range limitedProducts {
@@ -140,11 +141,11 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 	}
 	sendKitchenNum, products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc, statusOpt, productOpts...)
 	if err != nil {
-		return resp.ProductionListWithPagination{}, errors.ErrInternal
+		return notNullResp, errors.ErrInternal
 	}
 	finishedList, err := s.getFinishedList(productionRepo, mode, productPackageUuidOpt, saleBillUuidOpt)
 	if err != nil {
-		return resp.ProductionListWithPagination{}, err
+		return notNullResp, err
 	}
 	return resp.ProductionListWithPagination{
 		SendKitchenNum: sendKitchenNum,
@@ -160,12 +161,7 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 
 func (s *productionSrv) getProductPackageUuidsAndSaleBillUuids(ctx context.Context) ([]uint64, []uint64, resp.ProductionListWithPagination, error) {
 	var productPackageUuids, saleBillUuids []uint64
-	emptyResp := resp.ProductionListWithPagination{
-		List: make([]resp.ProductionGroup, 0),
-		FinishedList: resp.ProductionList{
-			List: make([]resp.ProductionItem, 0),
-		},
-	}
+	emptyResp := s.getNotNullProductionListResp()
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	// 获取厨显设备信息
 	deviceRepo := repository.NewDeviceRepo(db)
@@ -200,11 +196,37 @@ func (s *productionSrv) getProductPackageUuidsAndSaleBillUuids(ctx context.Conte
 	return productPackageUuids, saleBillUuids, emptyResp, nil
 }
 
+func (s *productionSrv) getNotNullProductionListResp() resp.ProductionListWithPagination {
+	return resp.ProductionListWithPagination{
+		List: []resp.ProductionGroup{
+			{
+				LocaleName: &dto.LocaleResponse{},
+				ProductionList: resp.ProductionList{
+					List: make([]resp.ProductionItem, 0),
+				},
+				OrderRemark: resp.OrderRemarkRes{
+					List: make([]resp.OrderRemarkResItem, 0),
+				},
+			},
+		},
+		FinishedList: resp.ProductionList{
+			List: []resp.ProductionItem{
+				{
+					OrderRemark: resp.OrderRemarkRes{
+						List: make([]resp.OrderRemarkResItem, 0),
+					},
+				},
+			},
+		},
+	}
+}
+
 // GetProductListByCategory 根据订单获取送厨商品
 func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.ProductionListByCategoryReq) (resp.ProductionListWithPagination, error) {
+	notNullResp := s.getNotNullProductionListResp()
 	mode, err := s.getMode(ctx, req.Mode)
 	if err != nil {
-		return resp.ProductionListWithPagination{}, err
+		return notNullResp, err
 	}
 	productPackageUuids, saleBillUuids, emptyRes, err := s.getProductPackageUuidsAndSaleBillUuids(ctx)
 	if err != nil || len(productPackageUuids) == 0 {
@@ -238,7 +260,7 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 	limitedProductOpts = append(limitedProductOpts, productionRepo.WhereIsNotBatchOrBatchTimeGT0())
 	limitedProducts, total, err := productionRepo.GetLimitedProducts(constant.ProductionOrderProductColumnCategory, req.PageNo, req.PageSize, limitedProductOpts...)
 	if err != nil {
-		return resp.ProductionListWithPagination{}, errors.WithMessage(errors.ErrInternal)
+		return notNullResp, errors.WithMessage(errors.ErrInternal)
 	}
 	var uuids []uint64
 	for _, product := range limitedProducts {
@@ -263,18 +285,19 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 	}
 	sendKitchenNum, products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc, statusOpt, productOpts...)
 	if err != nil {
-		return resp.ProductionListWithPagination{}, errors.WithMessage(errors.ErrInternal)
+		return notNullResp, errors.WithMessage(errors.ErrInternal)
 	}
 	groups := make([]resp.ProductionGroup, 0)
+	// 获取门店业务设置
+	businessSetting, errGet := s.settingSrv.GetBusinessSetting(ctx)
+	if errGet != nil {
+		logger.Logger.Error("获取门店业务设置失败", zap.Error(errGet))
+		return notNullResp, errors.WithMessage(errors.ErrInternal)
+	}
 	for _, paginatedProduct := range limitedProducts {
 		var group resp.ProductionGroup
 		items := make([]resp.ProductionItem, 0)
 		for _, product := range products {
-			// 获取门店业务设置
-			businessSetting, errGet := s.settingSrv.GetBusinessSetting(ctx)
-			if errGet != nil {
-				return resp.ProductionListWithPagination{}, errors.WithMessage(errors.ErrInternal)
-			}
 			if businessSetting.OpenIsBatch() {
 				// 如果开启了分批送厨， 如果商品是分批商品，且处于预送厨阶段，则不显示
 				if product.IsBatchBool() && product.IsPreCooking() {
@@ -305,11 +328,6 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 			item.DiningMethod = product.GetWrapStatus()                                                                            // 订单商品的打包状态
 			item.IsSaleBillDeleted = product.SaleBill.DeleteTime > 0 || product.SaleBill.Status == constant.SaleBillStatusCanceled // 是否已经整单取消
 			item.BatchTag = func() resp.BatchTagInfo {
-				// 获取门店业务设置
-				businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
-				if err != nil {
-					return resp.BatchTagInfo{}
-				}
 				if businessSetting.OpenIsBatch() {
 					if product.IsBatchBool() && product.BatchTag != nil {
 						return resp.BatchTagInfo{
@@ -343,7 +361,7 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 	}
 	finishedList, err := s.getFinishedList(productionRepo, mode, productPackageUuidOpt, saleBillUuidOpt)
 	if err != nil {
-		return resp.ProductionListWithPagination{}, err
+		return notNullResp, err
 	}
 	return resp.ProductionListWithPagination{
 		SendKitchenNum: sendKitchenNum,
