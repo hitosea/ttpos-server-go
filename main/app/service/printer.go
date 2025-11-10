@@ -422,7 +422,7 @@ func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[
 	if err := json.Unmarshal(testDataBytes, &testData); err != nil {
 		return nil, errors.WithMessage(errors.New("解析测试数据JSON失败"), err.Error())
 	}
-	if testData["store"] != nil && testData["store"].(map[string]interface{})["logo"] != nil {
+	if testData["store"] != nil {
 		settingSrv := setting.NewSrvImpl(s.dbm, s.cache)
 		storeSetting, err := settingSrv.GetStoreSetting(ctx)
 		if err != nil {
@@ -436,9 +436,68 @@ func (s *printerSrv) GetTestData(ctx context.Context, templateName string) (map[
 		if err != nil {
 			return nil, errors.WithMessage(errors.New("获取货币设置失败"), err.Error())
 		}
-		logoAddr := template.NewPrinterTemplate(ctx, settingSrv, &storeSetting, &printerSetting, &currencySetting, false, ctx.GetLanguage()).GetLogoAddr()
-		if logoAddr != "" {
-			testData["store"].(map[string]interface{})["logo"] = logoAddr
+		if testData["store"].(map[string]interface{})["logo"] != nil {
+			logoAddr := template.NewPrinterTemplate(ctx, settingSrv, &storeSetting, &printerSetting, &currencySetting, false, ctx.GetLanguage()).GetLogoAddr()
+			if logoAddr != "" {
+				testData["store"].(map[string]interface{})["logo"] = logoAddr
+			}
+		}
+		if testData["store"].(map[string]interface{})["name"] != nil {
+			testData["store"].(map[string]interface{})["name"] = i18n.Translate(ctx.GetLanguage(), "店铺名称")
+		}
+		if testData["store"].(map[string]interface{})["address"] != nil {
+			testData["store"].(map[string]interface{})["address"] = i18n.Translate(ctx.GetLanguage(), "商家地址商家地址商家地址商家地址商家地址")
+		}
+		if testData["store"].(map[string]interface{})["company"] != nil {
+			testData["store"].(map[string]interface{})["company"] = i18n.Translate(ctx.GetLanguage(), "公司名称公司名称公司名称公司名称公司名称公司名称公司名称")
+		}
+		if testData["store"].(map[string]interface{})["company_addr"] != nil {
+			testData["store"].(map[string]interface{})["company_addr"] = i18n.Translate(ctx.GetLanguage(), "公司地址公司地址公司地址公司地址")
+		}
+	}
+	if testData["order"] != nil {
+		if testData["order"].(map[string]interface{})["remark"] != nil {
+			testData["order"].(map[string]interface{})["remark"] = i18n.Translate(ctx.GetLanguage(), "开桌备注")
+		}
+		if testData["order"].(map[string]interface{})["products"] != nil {
+			switch products := testData["order"].(map[string]interface{})["products"].(type) {
+			case []interface{}:
+				for _, p := range products {
+					product, ok := p.(map[string]interface{})
+					if !ok {
+						continue
+					}
+					if v, ok := product["attrs"].(string); ok {
+						product["attrs"] = i18n.Translate(ctx.GetLanguage(), v)
+					}
+					if v, ok := product["attr"].(string); ok {
+						product["attr"] = i18n.Translate(ctx.GetLanguage(), v)
+					}
+					if v, ok := product["sauce_names"].(string); ok {
+						product["sauce_names"] = i18n.Translate(ctx.GetLanguage(), v)
+					}
+					if v, ok := product["flavor_name"].(string); ok {
+						product["flavor_name"] = i18n.Translate(ctx.GetLanguage(), v)
+					}
+					if v, ok := product["name"].(string); ok {
+						product["name"] = i18n.Translate(ctx.GetLanguage(), v)
+					}
+				}
+			}
+		}
+		if testData["order"].(map[string]interface{})["payment_methods"] != nil {
+			switch methods := testData["order"].(map[string]interface{})["payment_methods"].(type) {
+			case []interface{}:
+				for _, m := range methods {
+					paymentMethod, ok := m.(map[string]interface{})
+					if !ok {
+						continue
+					}
+					if v, ok := paymentMethod["name"].(string); ok {
+						paymentMethod["name"] = i18n.Translate(ctx.GetLanguage(), v)
+					}
+				}
+			}
 		}
 	}
 	return testData, nil
