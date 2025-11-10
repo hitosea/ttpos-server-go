@@ -31,6 +31,11 @@ func NewKitchenEfficiencyAnalysisTask(dbm *database.DBManager, cache cache.Cache
 
 // Execute 执行定时任务
 func (t *KitchenEfficiencyAnalysisTask) Execute() {
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Logger.Error("后厨效率分析定时任务,发生panic: %v", zap.Any("panic", r))
+		}
+	}()
 	logger.Logger.Info("开始执行后厨效率分析定时任务")
 
 	start := time.Now()
