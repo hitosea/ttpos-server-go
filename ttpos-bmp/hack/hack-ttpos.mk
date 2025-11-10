@@ -71,6 +71,11 @@ run.erp:
 run.takeout:
 	@cd app/ttpos-takeout && gf run main.go
 
+ # 构建并运行 ttpos-message 服务
+.PHONY: run.message
+run.message:
+	@cd app/ttpos-message && gf run main.go
+
 # 迁移升级所有应用的数据库
 .PHONY: migrate
 migrate:
