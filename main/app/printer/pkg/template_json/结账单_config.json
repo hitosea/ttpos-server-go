@@ -409,16 +409,16 @@
                                 "block_id": "custom_text",
                                 "block_type": "label",
                                 "block_label": {
-                                    "zh": "自定义文字",
-                                    "en": "Custom Text",
-                                    "ko": "사용자 텍스트",
-                                    "my": "မှတ်ချက်များ",
-                                    "tr": "Özel Metin",
-                                    "de": "Benutzerdefinierter Text",
-                                    "sv": "Anpassad text",
-                                    "ja": "カスタムテキスト",
-                                    "zhtw": "自定义文字",
-                                    "th": "ข้อความที่กำหนดเอง"
+                                    "zh": "",
+                                    "en": "",
+                                    "ko": "",
+                                    "my": "",
+                                    "tr": "",
+                                    "de": "",
+                                    "sv": "",
+                                    "ja": "",
+                                    "zhtw": "",
+                                    "th": ""
                                 },
                                 "block_attr": {
                                     "font_size": 20,
@@ -427,7 +427,8 @@
                                     "dividing_line": false,
                                     "leading_blank_lines": 0,
                                     "trailing_blank_lines": 0,
-                                    "width": 100
+                                    "width": 100,
+                                    "not_show_empty": true
                                 },
                                 "conditions": []
                             }
