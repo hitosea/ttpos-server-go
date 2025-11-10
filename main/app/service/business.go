@@ -2201,13 +2201,13 @@ func (s *businessSrv) ExportBusinessSummaryTask(ctx context.Context, params Expo
 		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("D%d", offsetRow), item.OrderNum)
 		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("E%d", offsetRow), item.MealNum)
 		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("F%d", offsetRow), item.DeskNum)
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("F%d", offsetRow), fmt.Sprintf("%.2f", item.OrderAmountMealAvg))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("G%d", offsetRow), fmt.Sprintf("%.2f", item.PayAmountMealAvg))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("G%d", offsetRow), fmt.Sprintf("%.2f", item.OrderAmountAvg))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("G%d", offsetRow), fmt.Sprintf("%.2f", item.PayAmountAvg))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("G%d", offsetRow), fmt.Sprintf("%.2f", item.InstantOrderAmount))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("G%d", offsetRow), fmt.Sprintf("%.2f", item.DeskOrderAmount))
-		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("G%d", offsetRow), fmt.Sprintf("%.2f", item.TakeoutOrderAmount))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("G%d", offsetRow), fmt.Sprintf("%.2f", item.OrderAmountMealAvg))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("H%d", offsetRow), fmt.Sprintf("%.2f", item.PayAmountMealAvg))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("I%d", offsetRow), fmt.Sprintf("%.2f", item.OrderAmountAvg))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("J%d", offsetRow), fmt.Sprintf("%.2f", item.PayAmountAvg))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("K%d", offsetRow), fmt.Sprintf("%.2f", item.InstantOrderAmount))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("L%d", offsetRow), fmt.Sprintf("%.2f", item.DeskOrderAmount))
+		xlsxFile.SetCellValue(sheetName, fmt.Sprintf("M%d", offsetRow), fmt.Sprintf("%.2f", item.TakeoutOrderAmount))
 	}
 
 	// 自动调整列宽
