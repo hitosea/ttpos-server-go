@@ -1,10 +1,13 @@
 #!/bin/bash
 
-LOCAL_IP=`ifconfig | grep "inet " | grep "192" | awk '{print $2}' | head -n 1`
+# 如果 eth 网卡没有找到 IP，使用原来的逻辑作为兼容
+if [ -z "$LOCAL_IP" ] ;then
+  LOCAL_IP=`ifconfig | grep "inet " | grep "192" | awk '{print $2}' | head -n 1`
+fi
 
 if [ -z "$LOCAL_IP" ] ;then
   # 兼容 coder 环境
-  LOCAL_IP=`ifconfig | grep "inet " | grep "172.1" | awk '{print $2}' | head -n 1`
+  LOCAL_IP=$(../scripts/get_ip.sh)
 fi
 
 ENV_FILE=../.env
